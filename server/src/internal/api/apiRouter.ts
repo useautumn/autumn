@@ -21,6 +21,7 @@ import { analyticsMiddleware } from "@/middleware/analyticsMiddleware.js";
 import rewardRouter from "./rewards/rewardRouter.js";
 import expireRouter from "../customers/expire/expireRouter.js";
 import { handleSetupPayment } from "../customers/attach/handleSetupPayment.js";
+import { internalFeatureRouter } from "../features/internalFeatureRouter.js";
 
 const apiRouter: Router = Router();
 
@@ -35,6 +36,7 @@ apiRouter.use("/products_beta", productBetaRouter);
 apiRouter.use("/components", componentRouter);
 apiRouter.use("/rewards", rewardRouter);
 apiRouter.use("/features", featureRouter);
+apiRouter.use("/internal_features", internalFeatureRouter);
 
 apiRouter.use("/usage", usageRouter);
 apiRouter.use("/entities", entityRouter);

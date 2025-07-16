@@ -24,7 +24,7 @@ export const MainSidebar = () => {
 
   useHotkeys(["meta+b", "ctrl+b"], () => {
     setState((prev: "expanded" | "collapsed") =>
-      prev == "expanded" ? "collapsed" : "expanded",
+      prev == "expanded" ? "collapsed" : "expanded"
     );
   });
 
@@ -34,7 +34,7 @@ export const MainSidebar = () => {
         `h-full bg-stone-100 py-4 flex flex-col justify-between transition-all duration-150`,
         state == "expanded"
           ? "min-w-[200px] max-w-[200px]"
-          : "min-w-[50px] max-w-[50px]",
+          : "min-w-[50px] max-w-[50px]"
       )}
     >
       <div className="flex flex-col gap-6 relative">
@@ -48,7 +48,7 @@ export const MainSidebar = () => {
             "absolute top-1 right-4 text-t3 hover:bg-stone-200 w-5 h-5 p-0 border-none border-0 shadow-none bg-transparent",
             state == "expanded"
               ? "opacity-100 transition-opacity duration-100"
-              : "opacity-0 transition-opacity duration-100",
+              : "opacity-0 transition-opacity duration-100"
             // state == "expanded" ? "top-4" : "top-2",
           )}
         >
@@ -74,12 +74,12 @@ export const MainSidebar = () => {
             title="Customers"
             env={env}
           />
-          <NavButton
+          {/* <NavButton
             value="analytics"
             icon={<ChartBar size={20} />}
             title="Analytics"
             env={env}
-          />
+          /> */}
           <NavButton
             value="dev"
             icon={<Code size={15} />}

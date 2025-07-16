@@ -14,6 +14,7 @@ import { JobName } from "@/queue/JobName.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { handleUpdateFeature } from "./handlers/handleUpdateFeature.js";
+import { handleDeleteFeature } from "./handlers/handleDeleteFeature.js";
 
 export const featureRouter: Router = express.Router();
 
@@ -133,3 +134,5 @@ featureRouter.post("/:feature_id", async (req: any, res: any) =>
     },
   })
 );
+
+featureRouter.delete("/:featureId", handleDeleteFeature);

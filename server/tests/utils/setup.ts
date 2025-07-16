@@ -225,7 +225,7 @@ export const setupOrg = async ({
 
   let insertFeatures = [];
   for (const feature of Object.values(features)) {
-    insertFeatures.push(axiosInstance.post("/features", feature));
+    insertFeatures.push(axiosInstance.post("/v1/internal_features", feature));
   }
   await Promise.all(insertFeatures);
 

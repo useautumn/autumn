@@ -26,7 +26,15 @@ import { ViewUserEvents } from "../analytics/ViewUserEvents";
 import { useNavigate } from "react-router";
 import { AppEnv } from "@autumn/shared";
 
-export const CustomerEventsList = ({ events, customer, env }: { events: any, customer: any, env: AppEnv }) => {
+export const CustomerEventsList = ({
+  events,
+  customer,
+  env,
+}: {
+  events: any;
+  customer: any;
+  env: AppEnv;
+}) => {
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const navigate = useNavigate();
 
@@ -50,7 +58,18 @@ export const CustomerEventsList = ({ events, customer, env }: { events: any, cus
         <h2 className="text-sm text-t2 font-medium col-span-2 flex">Events</h2>
         <div className="flex w-full h-full items-center col-span-8 justify-end">
           <div className="flex w-fit h-full items-center gap-4">
-            <Button variant="analyse" onClick={() => navigateTo(`/analytics/?customer_id=${customer.id}`, navigate, env)}>Analyse Events</Button>
+            <Button
+              variant="analyse"
+              onClick={() =>
+                navigateTo(
+                  `/analytics?customer_id=${customer.id}`,
+                  navigate,
+                  env
+                )
+              }
+            >
+              Analyse Events
+            </Button>
           </div>
         </div>
       </div>
