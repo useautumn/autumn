@@ -56,6 +56,7 @@ export const getProductItemResponse = ({
 
   let quantity = undefined;
   let upcomingQuantity = undefined;
+
   if (item.usage_model == UsageModel.Prepaid && notNullish(options)) {
     let option = options!.find((o) => o.feature_id == item.feature_id);
     quantity = option?.quantity

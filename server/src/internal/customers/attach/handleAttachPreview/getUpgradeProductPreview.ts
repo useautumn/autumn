@@ -83,11 +83,13 @@ export const getUpgradeProductPreview = async ({
   attachParams,
   branch,
   now,
+  withPrepaid = false,
 }: {
   req: ExtendedRequest;
   attachParams: AttachParams;
   branch: AttachBranch;
   now: number;
+  withPrepaid?: boolean;
 }) => {
   const { logtail: logger } = req;
 
@@ -128,6 +130,7 @@ export const getUpgradeProductPreview = async ({
     freeTrial: attachParams.freeTrial,
     stripeSubs,
     logger,
+    withPrepaid,
   });
 
   // const lastInterval = getLastInterval({ prices: newProduct.prices });
@@ -149,6 +152,7 @@ export const getUpgradeProductPreview = async ({
       attachParams,
       interval: attachParams.freeTrial ? undefined : lastInterval,
       logger,
+      withPrepaid,
     });
 
     dueNextCycle = {

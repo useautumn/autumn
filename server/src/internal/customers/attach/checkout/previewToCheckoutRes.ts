@@ -15,6 +15,7 @@ import {
 import {
   cusProductToEnts,
   cusProductToPrices,
+  cusProductToProduct,
 } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import {
@@ -85,10 +86,28 @@ export const previewToCheckoutRes = async ({
     options: attachParams.optionsList,
   });
 
+  let curProduct = curCusProduct
+    ? await getProductResponse({
+        product: cusProductToProduct({ cusProduct: curCusProduct }),
+        features,
+        currency: org.default_currency,
+        options: curCusProduct?.options,
+      })
+    : null;
+
+  const total = lines.reduce((acc, line) => acc + line.amount, 0);
+
   return CheckoutResponseSchema.parse({
     customer_id: attachParams.customer.id,
     scenario,
     lines,
     product: newProduct,
+    current_product: curProduct,
+    total,
+    currency: org.default_currency || "usd",
+    // next_cycle: nextCycle,
+    next_cycle_at: notNullish(preview.due_next_cycle)
+      ? preview.due_next_cycle.due_at
+      : null,
   });
 };
