@@ -1,26 +1,44 @@
-import { FeatureService } from "@/internal/features/FeatureService.js";
+import express, { Router } from "express";
+
+import { FeatureService } from "./FeatureService.js";
+import {
+  ErrCode,
+  Feature,
+  FeatureType,
+  MinFeatureSchema,
+} from "@autumn/shared";
+import { validateCreditSystem, validateFeatureId } from "./featureUtils.js";
+import { generateId } from "@/utils/genUtils.js";
+import { handleUpdateFeature } from "@/internal/features/handlers/handleUpdateFeature.js";
+import { handleDeleteFeature } from "@/internal/features/handlers/handleDeleteFeature.js";
 import RecaseError, {
   formatZodError,
-  handleRequestError,
+  handleFrontendReqError,
 } from "@/utils/errorUtils.js";
-import { handleUpdateFeature } from "./handlers/handleUpdateFeature.js";
-import { Feature, FeatureResponseSchema, FeatureType } from "@autumn/shared";
+import { validateMeteredConfig } from "./featureUtils.js";
 import { CreateFeatureSchema } from "@autumn/shared";
-import express, { Router } from "express";
-import { generateId } from "@/utils/genUtils.js";
-import { ErrCode } from "@/errors/errCodes.js";
-
-import {
-  validateCreditSystem,
-  validateFeatureId,
-} from "@/internal/features/featureUtils.js";
-import { validateMeteredConfig } from "@/internal/features/featureUtils.js";
+import { OrgService } from "../orgs/OrgService.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-import { handleDeleteFeature } from "./handlers/handleDeleteFeature.js";
 
-export const featureApiRouter: Router = express.Router();
+export const internalFeatureRouter: Router = express.Router();
+
+internalFeatureRouter.get("", async (req: any, res: any) => {
+  try {
+    let features = await FeatureService.getFromReq(req);
+    res.status(200).json({ features });
+  } catch (error: any) {
+    console.log("Error fetching features:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+internalFeatureRouter.get("", async (req: any, res) => {
+  let features = await FeatureService.getFromReq(req);
+  res
+    .status(200)
+    .json(features.map((feature) => MinFeatureSchema.parse(feature)));
+});
 
 export const validateFeature = (data: any) => {
   let featureType = data.type;
@@ -64,14 +82,7 @@ export const initNewFeature = ({
   };
 };
 
-featureApiRouter.get("", async (req: any, res) => {
-  let features = await FeatureService.getFromReq(req);
-  res
-    .status(200)
-    .json(features.map((feature) => FeatureResponseSchema.parse(feature)));
-});
-
-featureApiRouter.post("", async (req: any, res) => {
+internalFeatureRouter.post("", async (req: any, res) => {
   let data = req.body;
 
   try {
@@ -105,9 +116,9 @@ featureApiRouter.post("", async (req: any, res) => {
       insertedData && insertedData.length > 0 ? insertedData[0] : null;
     res.status(200).json(insertedFeature);
   } catch (error) {
-    handleRequestError({ req, error, res, action: "Create feature" });
+    handleFrontendReqError({ req, error, res, action: "Create feature" });
   }
 });
 
-featureApiRouter.post("/:feature_id", handleUpdateFeature);
-featureApiRouter.delete("/:featureId", handleDeleteFeature);
+internalFeatureRouter.post("/:feature_id", handleUpdateFeature);
+internalFeatureRouter.delete("/:featureId", handleDeleteFeature);

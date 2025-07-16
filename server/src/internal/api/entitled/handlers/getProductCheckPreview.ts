@@ -21,14 +21,6 @@ import { notNullish } from "@/utils/genUtils.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
-const getNextCycle = (preview: AttachPreview) => {
-  if (!preview.due_next_cycle && !preview.due_today) {
-    return undefined;
-  }
-
-  if (!preview.due_today && preview.due_next_cycle) {
-  }
-};
 export const attachToCheckPreview = async ({
   preview,
   params,

@@ -1,5 +1,5 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { CusProductStatus, FullCusProduct, FullCustomer } from "@autumn/shared";
+import { FullCusProduct, FullCustomer } from "@autumn/shared";
 import { ACTIVE_STATUSES, CusProductService } from "../CusProductService.js";
 
 export const getActiveCusProduct = ({
@@ -15,7 +15,7 @@ export const getActiveCusProduct = ({
     return fullCus.customer_products.find(
       (cusProduct: FullCusProduct) =>
         cusProduct.product.id === productId &&
-        ACTIVE_STATUSES.includes(cusProduct.status),
+        ACTIVE_STATUSES.includes(cusProduct.status)
     );
   }
 
@@ -37,6 +37,6 @@ export const findCusProductById = async ({
   });
 
   return cusProducts.find(
-    (cusProduct: FullCusProduct) => cusProduct.product.id === productId,
+    (cusProduct: FullCusProduct) => cusProduct.product.id === productId
   );
 };

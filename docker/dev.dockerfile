@@ -5,6 +5,10 @@ WORKDIR /app
 
 RUN npm install -g pnpm
 
+# Skip Puppeteer Chromium download to speed up install
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+
 COPY package*.json ./
 COPY pnpm-workspace.yaml ./
 COPY pnpm-lock.yaml ./
@@ -12,7 +16,7 @@ COPY shared/package*.json ./shared/
 COPY server/package*.json ./server/
 COPY vite/package*.json ./vite/
 
-RUN pnpm install
+RUN pnpm install --frozen-lockfile
 RUN npm install -g nodemon tsx
 
 # Stage 1: /localtunnel

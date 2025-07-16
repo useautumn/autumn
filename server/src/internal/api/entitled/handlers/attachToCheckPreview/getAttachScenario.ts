@@ -6,16 +6,6 @@ import {
   FullProduct,
 } from "@autumn/shared";
 
-// New = "new", done
-// Downgrade = "downgrade",
-// Upgrade = "upgrade",
-// Cancel = "cancel",
-// Renew = "renew",
-
-// Scheduled = "scheduled",
-// Active = "active",
-// Expired = "expired",
-
 export const getAttachScenario = async ({
   preview,
   product,

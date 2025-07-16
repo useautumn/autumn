@@ -52,6 +52,9 @@ export const handleAddProduct = async ({
     products,
   });
 
+  // console.log("Free trial:", attachParams.freeTrial);
+  // throw new Error("test");
+
   for (const product of products) {
     let curCusProduct = attachParamsToCurCusProduct({ attachParams });
     let anchorToUnix = undefined;
@@ -72,7 +75,7 @@ export const handleAddProduct = async ({
         carryExistingUsages: config?.carryUsage || false,
         anchorToUnix,
         logger,
-      }),
+      })
     );
   }
   await Promise.all(batchInsert);
@@ -91,7 +94,7 @@ export const handleAddProduct = async ({
           message: `Successfully attached ${productNames} to ${customerName}`,
           product_ids: products.map((p) => p.id),
           customer_id: customer.id || customer.internal_id,
-        }),
+        })
       );
     } else {
       res.status(200).json({
