@@ -13,5 +13,9 @@ export const featureToResponse = (feature: Feature) => {
     id: feature.id,
     name: feature.name,
     type: featureType,
+    display: {
+      singular: feature.display?.singular || feature.name,
+      plural: feature.display?.plural || feature.name,
+    },
   });
 };

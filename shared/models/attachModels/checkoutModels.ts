@@ -2,6 +2,7 @@ import { z } from "zod";
 import { AttachScenario } from "../checkModels/checkPreviewModels.js";
 import { ProductItemResponseSchema } from "../productV2Models/productItemModels/prodItemResponseModels.js";
 import { ProductResponseSchema } from "../productV2Models/productResponseModels.js";
+import { FeatureOptionsSchema } from "../cusProductModels/cusProductModels.js";
 
 export const CheckoutLineSchema = z.object({
   description: z.string(),
@@ -15,6 +16,11 @@ export const CheckoutResponseSchema = z.object({
   scenario: z.nativeEnum(AttachScenario),
   lines: z.array(CheckoutLineSchema),
   product: ProductResponseSchema.nullish(),
+  current_product: ProductResponseSchema.nullish(),
+  options: z.array(FeatureOptionsSchema).nullish(),
+  total: z.number().nullish(),
+  currency: z.string().nullish(),
+  next_cycle_at: z.number().nullish(),
 });
 
 export type CheckoutLine = z.infer<typeof CheckoutLineSchema>;
