@@ -23,6 +23,8 @@ import { getAllEventNames } from "../utils/getAllEventNames";
 import { useEffect, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 
+const MAX_NUM_SELECTED = 10;
+
 export const SelectFeatureDropdown = ({
   classNames,
 }: {
@@ -137,8 +139,8 @@ export const SelectFeatureDropdown = ({
           currentEventNames,
         );
       } else {
-        if (numSelected === 10) {
-          toast.error("You can only select up to 10 events/features");
+        if (numSelected === MAX_NUM_SELECTED) {
+          toast.error(`You can only select up to ${MAX_NUM_SELECTED} events/features`);
         } else {
           updateQueryParams(
             [...currentFeatureIds, option.id],
@@ -153,8 +155,8 @@ export const SelectFeatureDropdown = ({
           currentEventNames.filter((name: string) => name !== option.id),
         );
       } else {
-        if (numSelected === 10) {
-          toast.error("You can only select up to 10 events/features");
+        if (numSelected === MAX_NUM_SELECTED) {
+          toast.error(`You can only select up to ${MAX_NUM_SELECTED} events/features`);
         } else {
           updateQueryParams(currentFeatureIds, [
             ...currentEventNames,
