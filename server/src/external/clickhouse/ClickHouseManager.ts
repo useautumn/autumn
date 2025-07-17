@@ -20,6 +20,11 @@ export class ClickHouseManager {
 	private client: ClickHouseClient | null = clickhouseClient;
 	private initialized = false;
 	private initPromise: Promise<void> | null = null;
+	static clickhouseAvailable =
+	process.env.CLICKHOUSE_URL &&
+	process.env.CLICKHOUSE_USERNAME &&
+	process.env.CLICKHOUSE_PASSWORD;
+
 
 	private constructor() {
 		// Empty private constructor
@@ -33,6 +38,11 @@ export class ClickHouseManager {
             console.groupEnd();
             return;
         }
+
+		if (!ClickHouseManager.clickhouseAvailable) {
+			console.log("0. ClickHouse is not available, please set the CLICKHOUSE_URL, CLICKHOUSE_USERNAME, and CLICKHOUSE_PASSWORD environment variables.");
+			return;
+		}
 
         console.log("1. Creating ClickHouse client...");
 		this.client = clickhouseClient;
