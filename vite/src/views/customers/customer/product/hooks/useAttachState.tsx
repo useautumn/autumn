@@ -113,6 +113,8 @@ export const useAttachState = ({
   }, [product]);
 
   const getButtonDisabled = () => {
+    if (flags.isOneOff) return false;
+
     if (product?.isActive && !itemsChanged && !flags.isCanceled) {
       if (flags.hasPrepaid) {
         return false;
