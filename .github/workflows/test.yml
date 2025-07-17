@@ -1,0 +1,79 @@
+name: Run Autumn Tests
+
+on: [push]
+
+env:
+  DATABASE_URL: ${{ secrets.SUPABASE_URL }}
+  UNIT_TEST_AUTUMN_SECRET_KEY: ${{ secrets.AUTUMN_KEY }}
+  REDIS_URL: redis://localhost:6379
+  ENCRYPTION_IV: ${{ secrets.ENCRYPTION_IV }}
+  ENCRYPTION_PASSWORD: ${{ secrets.ENCRYPTION_PASSWORD }}
+  TESTS_ORG: ${{ secrets.TESTS_ORG }}
+  TESTS_ORG_ID: ${{ secrets.TESTS_ORG_ID }}
+  LOCALTUNNEL_RESERVED_KEY: ${{ secrets.LOCALTUNNEL_RESERVED_KEY }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Show Filesystem
+        run: ls
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Setup CI
+        run: pnpm run setupci
+
+      - name: Debug
+        run: cat server/.env
+
+      - name: Build shared
+        run: |
+          cd shared
+          pnpm build
+
+      - name: Startup server
+        run: sudo docker compose -f docker-compose.unix.yml up --detach
+
+      - name: Wait for server to be ready
+        run: |
+          echo "Waiting for server to start..."
+          timeout 60s bash -c 'until curl -s --fail http://localhost:8080; do echo "Waiting..."; sleep 2; done'
+          echo "Server is up!"
+
+      - name: Run G1 tests
+        run: |
+          cd server/
+          chmod +x ./shell/g1.sh
+          ./shell/g1.sh
+
+      - name: Message
+        run:
+          echo "We're all setup!"
+
+      - name: Check logs
+        if: always()
+        run:
+          docker logs autumn-server-1
+
+      - name: Close Docker Containers
+        if: always()
+        run: sudo docker compose -f docker-compose.unix.yml down
+
+      
+

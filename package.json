@@ -18,6 +18,7 @@
     "dev": "concurrently \"cd server && npm run dev\" \"cd vite && npm run dev\" \"redis-server\"",
     "dev:wsl": "concurrently \"cd server && npm run dev\" \"cd vite && npm run dev\" \"cd shared && npm run dev\"",
     "setup": "node setup.js",
+    "setupci": "node setupci",
     "db:push": " pnpm -F shared db:push",
     "db:generate": "pnpm -F shared db:generate",
     "db:migrate": " pnpm -F shared db:migrate",
