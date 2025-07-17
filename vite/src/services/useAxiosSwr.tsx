@@ -9,12 +9,14 @@ export function useAxiosSWR({
   withAuth = true,
   options = {},
   enabled = true,
+  queryKey,
 }: {
   url: string;
   env?: AppEnv;
   withAuth?: boolean;
   options?: SWRConfiguration;
   enabled?: boolean;
+  queryKey?: any[];
 }) {
   const axiosInstance = useAxiosInstance({ isAuth: withAuth });
 
@@ -23,7 +25,7 @@ export function useAxiosSWR({
     return res.data;
   };
 
-  return useSWR(enabled ? url : null, fetcher, {
+  return useSWR(enabled ? queryKey || url : null, fetcher, {
     refreshInterval: 0,
     revalidateOnFocus: false,
     ...options,

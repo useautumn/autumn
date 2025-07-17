@@ -13,6 +13,7 @@ import { useOrg } from "@/hooks/useOrg";
 import { authClient } from "@/lib/auth-client";
 import { slugify } from "@/utils/formatUtils/formatTextUtils";
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
 export const CreateNewOrg = ({
@@ -22,6 +23,7 @@ export const CreateNewOrg = ({
   dialogType: "create" | "manage" | null;
   setDialogType: (dialogType: "create" | "manage" | null) => void;
 }) => {
+  const navigate = useNavigate();
   const { mutate } = useOrg();
   const [name, setName] = useState("");
   const [slugChanged, setSlugChanged] = useState(false);
@@ -46,6 +48,7 @@ export const CreateNewOrg = ({
 
       toast.success("Organization created");
       setDialogType(null);
+      navigate("/");
     } catch (error: any) {
       console.log(error);
       toast.error(error.message);

@@ -74,12 +74,12 @@ export const MainSidebar = () => {
             title="Customers"
             env={env}
           />
-          {/* <NavButton
+          <NavButton
             value="analytics"
             icon={<ChartBar size={20} />}
             title="Analytics"
             env={env}
-          /> */}
+          />
           <NavButton
             value="dev"
             icon={<Code size={15} />}
