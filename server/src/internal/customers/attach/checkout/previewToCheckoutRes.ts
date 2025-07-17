@@ -2,9 +2,8 @@ import {
   AttachPreview,
   CheckoutLine,
   CheckoutResponseSchema,
-  ProductItemResponse,
 } from "@autumn/shared";
-import {} from "./CheckoutResponse.js";
+
 import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { getAttachScenario } from "@/internal/api/entitled/handlers/attachToCheckPreview/getAttachScenario.js";
 import {
