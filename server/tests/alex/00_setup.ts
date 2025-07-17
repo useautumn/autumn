@@ -3,7 +3,7 @@ import { AppEnv } from "@autumn/shared";
 import { clearOrg, setupOrg } from "tests/utils/setup.js";
 import { alexFeatures, alexProducts } from "./init.js";
 
-const ORG_SLUG = "unit-test-org";
+const ORG_SLUG = process.env.TESTS_ORG!;
 const DEFAULT_ENV = AppEnv.Sandbox;
 
 describe("Initialize org for tests", () => {

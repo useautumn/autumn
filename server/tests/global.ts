@@ -849,8 +849,7 @@ export const referralPrograms = {
   }),
 };
 
-const ORG_SLUG = "unit-test-org";
-const DEFAULT_ENV = AppEnv.Sandbox;
+const ORG_SLUG = process.env.TESTS_ORG!;
 
 before(async function () {
   try {
