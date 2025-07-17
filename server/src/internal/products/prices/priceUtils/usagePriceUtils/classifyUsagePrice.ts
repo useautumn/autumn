@@ -29,11 +29,16 @@ export const isUsagePrice = ({
 
   if (featureId) {
     return (
-      isUsage && (price.config as UsagePriceConfig).feature_id === featureId
+      isUsage && (price.config as UsagePriceConfig).feature_id == featureId
     );
   }
 
   return isUsage;
+};
+
+export const isPrepaidPrice = ({ price }: { price: Price }) => {
+  let billingType = getBillingType(price.config);
+  return billingType == BillingType.UsageInAdvance;
 };
 
 export const isPayPerUse = ({ price }: { price: Price }) => {

@@ -95,18 +95,33 @@ export class AnalyticsService {
         ? await this.getBillingCycleStartDate(
             customer,
             db,
-            intervalType as "1bc" | "3bc",
+            intervalType as "1bc" | "3bc"
           )
         : null;
 
-    const countExpressions = params.event_names
-      .map(
-        (eventName: string) =>
-          `coalesce(sumIf(e.value, e.event_name = '${eventName}'), 0) as ${eventName.replace(/[^a-zA-Z0-9]/g, "_")}_count`,
-      )
-      .join(",\n  ");
+    const expressionsResult = await clickhouseClient.query({
+      query:
+        "SELECT generateEventCountExpressions({event_names:Array(String)}) as expressions",
+      query_params: {
+        event_names: params.event_names,
+      },
+    });
 
-    const startDate = isBillingCycle ? getBCResults?.startDate : null;
+    const expressionsResultJson = await expressionsResult.json();
+
+    if (expressionsResultJson.data.length === 0) {
+      throw new RecaseError({
+        message: "No expressions found",
+        code: ErrCode.ClickHouseDisabled,
+        statusCode: StatusCodes.SERVICE_UNAVAILABLE,
+      });
+    }
+
+    const countExpressions = (
+      expressionsResultJson.data as {
+        expressions: string;
+      }[]
+    )[0].expressions;
 
     if (this.clickhouseAvailable) {
       const query = `
@@ -219,7 +234,7 @@ order by dr.period;
         ? await this.getBillingCycleStartDate(
             customer,
             db,
-            intervalType as "1bc" | "3bc",
+            intervalType as "1bc" | "3bc"
           )
         : null;
 
@@ -291,7 +306,7 @@ order by dr.period;
   static async getBillingCycleStartDate(
     customer?: FullCustomer,
     db?: DrizzleCli,
-    intervalType?: "1bc" | "3bc",
+    intervalType?: "1bc" | "3bc"
   ) {
     // If no customer provided, return empty object (for aggregateAll case)
     if (!customer || !db || !intervalType) {
@@ -306,14 +321,16 @@ order by dr.period;
       return {}; // No products, return empty object
     }
 
+    console.log("customerHasSubscriptions", customerHasSubscriptions);
     if (!customerHasSubscriptions) {
       subscriptions = await SubService.getInStripeIds({
         db,
         ids:
           customer.customer_products?.flatMap(
-            (product: FullCusProduct) => product.subscription_ids ?? [],
+            (product: FullCusProduct) => product.subscription_ids ?? []
           ) ?? [],
       });
+      console.log("subscriptions", subscriptions);
     }
 
     let customerProductsFiltered = customer.customer_products?.filter(
@@ -324,12 +341,16 @@ order by dr.period;
           product.status === CusProductStatus.Active ||
           product.status === CusProductStatus.Trialing;
 
-        return !isAddon && !hasGroup && isActive;
-      },
+        return !isAddon && isActive;
+      }
     );
+
+    console.log("customerProductsFiltered", customerProductsFiltered);
 
     if (!customerProductsFiltered || customerProductsFiltered.length === 0)
       return {};
+
+    console.log("customerProductsFiltered", customerProductsFiltered);
 
     let startDates: any[] = [];
     let endDates: any[] = [];
@@ -338,23 +359,25 @@ order by dr.period;
       product.subscription_ids?.forEach((subscriptionId: string) => {
         let subscription = subscriptions.find(
           (subscription: Subscription) =>
-            subscription.stripe_id === subscriptionId,
+            subscription.stripe_id === subscriptionId
         );
         if (subscription) {
           startDates.push(
             new Date((subscription.current_period_start ?? 0) * 1000)
               .toISOString()
               .replace("T", " ")
-              .split(".")[0],
+              .split(".")[0]
           );
           endDates.push(
             new Date((subscription.current_period_end ?? 0) * 1000)
               .toISOString()
               .replace("T", " ")
-              .split(".")[0],
+              .split(".")[0]
           );
         }
       });
+      console.log("startDates", startDates);
+      console.log("endDates", endDates);
     });
 
     if (startDates.length === 0 || endDates.length === 0) {
@@ -365,6 +388,11 @@ order by dr.period;
     const endDate = new Date(endDates[0]);
     const gap = endDate.getTime() - startDate.getTime();
     const gapDays = Math.floor(gap / (1000 * 60 * 60 * 24));
+
+    console.log("startDates", startDates);
+    console.log("endDates", endDates);
+    console.log("gapDays", gapDays);
+    console.log("gap", gap);
 
     return {
       startDate: startDates[0],

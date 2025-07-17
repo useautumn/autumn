@@ -57,6 +57,9 @@ export class CusSearchService {
       filters.product_id
         ? eq(customerProducts.product_id, filters.product_id)
         : undefined,
+      filters.version
+        ? eq(products.version, parseInt(filters.version))
+        : undefined,
       filters.status === "canceled"
         ? and(activeProdFilter, isNotNull(customerProducts.canceled_at))
         : undefined,
