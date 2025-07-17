@@ -20,7 +20,7 @@ export enum TestFeature {
   Credits = "credits", // credit system
 }
 
-const orgId = "org_2sWv2S8LJ9iaTjLI6UtNsfL88Kt";
+const orgId = process.env.TESTS_ORG_ID!;
 
 export const features = {
   [TestFeature.AdminRights]: constructBooleanFeature({

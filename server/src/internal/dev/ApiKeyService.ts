@@ -40,8 +40,13 @@ export class ApiKeyService {
       },
     });
 
+
     if (!data || !data.org) {
       console.warn(`verify secret key ${secretKey} returned null`);
+      console.log("hashed key", hashedKey);
+      const keys = await db.query.apiKeys.findMany();
+
+      console.log("Keys:", keys.map((k) => `${k.org_id} - ${k.hashed_key}`));
       return null;
     }
 
