@@ -410,11 +410,8 @@ importers:
       ag-charts-community:
         specifier: ^12.0.2
         version: 12.0.2
-      ag-grid-community:
-        specifier: ^34.0.2
-        version: 34.0.2
       ag-grid-react:
-        specifier: ^34.0.1
+        specifier: ^34.0.2
         version: 34.0.2(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       autumn-js:
         specifier: ^0.0.93
