@@ -12,24 +12,23 @@ import {
 import { useCustomersContext } from "./CustomersContext";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { Check, ListFilter, X } from "lucide-react";
-import { useSearchParams } from "react-router";
 import { useSetSearchParams } from "@/utils/setSearchParams";
-import { useEffect } from "react";
+import { useSearchParams } from "react-router";
 
 function FilterButton() {
   const { setFilters } = useCustomersContext();
-  const [searchParams] = useSearchParams();
   const setSearchParams = useSetSearchParams();
-  // useEffect(() => {
-  //   let statusParam = searchParams.get("status");
-  //   let productIdParam = searchParams.get("product_id");
-  //   setFilters({ status: statusParam, product_id: productIdParam });
-  // }, [searchParams]);
+
+  const clearFilters = () => {
+    setFilters({
+      status: [],
+      product_id: [],
+    });
+  };
 
   return (
     <DropdownMenu>
       <RenderFilterTrigger />
-
       <DropdownMenuContent className="w-56" align="start">
         <FilterStatus />
         <ProductStatus />
@@ -59,10 +58,21 @@ export default FilterButton;
 
 export const FilterStatus = () => {
   const { filters, setFilters } = useCustomersContext();
-  const statuses = ["canceled", "free_trial"];
 
-  const [searchParams] = useSearchParams();
-  const setSearchParams = useSetSearchParams();
+  const statuses: string[] = ["canceled", "free_trial"];
+
+  const selectedStatuses = filters.status || [];
+
+  const toggleStatus = (status: string) => {
+    const selected = filters.status || [];
+    const isSelected = selected.includes(status);
+
+    const updated = isSelected
+      ? selected.filter((s: string) => s !== status)
+      : [...selected, status];
+
+    setFilters({ ...filters, status: updated });
+  };
 
   return (
     <DropdownMenuGroup>
@@ -70,19 +80,11 @@ export const FilterStatus = () => {
         Status
       </DropdownMenuLabel>
       {statuses.map((status: any) => {
-        const isActive = searchParams.get("status") === status;
+        const isActive = selectedStatuses.includes(status);
         return (
           <DropdownMenuItem
             key={status}
-            onClick={() => {
-              if (isActive) {
-                // setFilters({ ...filters, status: undefined });
-                setSearchParams({ status: "" });
-              } else {
-                // setFilters({ ...filters, status });
-                setSearchParams({ status });
-              }
-            }}
+            onClick={() => toggleStatus(status)}
             className="flex items-center justify-between cursor-pointer text-sm"
           >
             {keyToTitle(status)}
