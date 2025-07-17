@@ -84,14 +84,10 @@ export const initCustomer = async ({
   if (customer) {
     await autumn.customers.delete(customerId);
   }
-  // // Create and delete customer
-  // try {
 
-  // } catch (error) {}
-
-  let testClockId = null;
   try {
-    await autumn.customers.create(customerData);
+    const response = await autumn.customers.create(customerData);
+
     let customer = (await CusService.get({
       db,
       idOrInternalId: customerId,

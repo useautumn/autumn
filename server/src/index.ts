@@ -69,7 +69,7 @@ const init = async () => {
         "If-Modified-Since",
         "If-Unmodified-Since",
       ],
-    }),
+    })
   );
 
   app.all("/api/auth/*", toNodeHandler(auth));

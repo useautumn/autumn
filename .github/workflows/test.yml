@@ -30,9 +30,6 @@ jobs:
           node-version: '22'
           cache: 'pnpm'
 
-      - name: Show Filesystem
-        run: ls
-
       - name: Install dependencies
         run: pnpm install
 
@@ -66,10 +63,9 @@ jobs:
         run:
           echo "We're all setup!"
 
-      - name: Check logs
-        if: always()
-        run:
-          docker logs autumn-server-1
+      # - name: Check logs
+      #   if: always()
+      #   run: sudo docker compose -f docker-compose.unix.yml logs server
 
       - name: Close Docker Containers
         if: always()

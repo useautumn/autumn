@@ -72,8 +72,6 @@ export class AutumnInt {
   }
 
   async post(path: string, body: any) {
-    console.log("base url", this.baseUrl);
-    console.log("path", path);
     const response = await fetch(`${this.baseUrl}${path}`, {
       method: "POST",
       headers: this.headers,

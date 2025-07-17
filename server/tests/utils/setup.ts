@@ -34,7 +34,7 @@ import { features as v2Features } from "tests/setup/v2Features.js";
 import { timeout } from "./genUtils.js";
 
 export const getAxiosInstance = (
-  apiKey: string = process.env.UNIT_TEST_AUTUMN_SECRET_KEY!,
+  apiKey: string = process.env.UNIT_TEST_AUTUMN_SECRET_KEY!
 ) => {
   return axios.create({
     baseURL: "http://localhost:8080",
@@ -129,7 +129,7 @@ export const clearOrg = async ({
     console.log(
       `   ✅ Deleted ${i + batch.length}/${
         stripeCustomers.data.length
-      } Stripe customers`,
+      } Stripe customers`
     );
   }
 
@@ -167,7 +167,7 @@ export const clearOrg = async ({
     console.log(
       `   ✅ Deleted ${i + batch.length}/${
         stripeProducts.data.length
-      } Stripe products`,
+      } Stripe products`
     );
   }
 
@@ -225,19 +225,9 @@ export const setupOrg = async ({
 
   let insertFeatures = [];
   for (const feature of Object.values(features)) {
-    async function temp() {
-      try {
-        axiosInstance.post("/v1/features", feature);
-      } catch (error) {
-        if (error.response) {
-          console.log(error.response.data);
-        } else {
-          console.log("No response in error");
-        }
-      }
-    }
-    insertFeatures.push(temp);
+    insertFeatures.push(await axiosInstance.post("/v1/features", feature));
   }
+
   await Promise.all(insertFeatures);
 
   await FeatureService.insert({
@@ -245,6 +235,8 @@ export const setupOrg = async ({
     data: Object.values(v2Features),
     logger: console,
   });
+
+  const allFeatures = await FeatureService.list({ db, orgId, env });
 
   let org: Organization | null = null;
   let newFeatures: Feature[] = [];
@@ -262,11 +254,12 @@ export const setupOrg = async ({
     });
 
     newFeatures = (await FeatureService.list({ db, orgId, env })).filter((f) =>
-      Object.keys(features).includes(f.id),
+      Object.keys(features).includes(f.id)
     );
   } catch (error) {
     console.error("Error updating org", error);
   }
+
   await client.end();
 
   for (const feature of newFeatures!) {
@@ -298,7 +291,7 @@ export const setupOrg = async ({
         config: {
           ...p.config,
           internal_feature_id: newFeatures!.find(
-            (f) => f.id === (p.config as any)?.feature_id,
+            (f) => f.id === (p.config as any)?.feature_id
           )?.internal_id,
         },
       }));
@@ -308,7 +301,7 @@ export const setupOrg = async ({
           ...ent,
           internal_feature_id: newFeatures!.find((f) => f.id === ent.feature_id)
             ?.internal_id,
-        }),
+        })
       );
 
       const entWithFeatures = entitlements.map((ent) => ({
@@ -394,15 +387,15 @@ export const setupOrg = async ({
               .filter((price: Price) => price.config!.type === PriceType.Usage)
               .map((price) => {
                 return price.id;
-              }),
+              })
           );
         } else if (reward.product_ids) {
           priceIds = allProducts
             .filter((product: FullProduct) =>
-              reward.product_ids.includes(product.id),
+              reward.product_ids.includes(product.id)
             )
             .flatMap((product: FullProduct) =>
-              product.prices.map((price) => price.id),
+              product.prices.map((price) => price.id)
             );
         }
 
