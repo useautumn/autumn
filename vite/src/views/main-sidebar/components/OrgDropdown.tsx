@@ -48,6 +48,7 @@ import { OrgLogo } from "../org-dropdown/components/OrgLogo";
 import { AdminHover } from "@/components/general/AdminHover";
 
 import { AdminDropdownItems } from "./AdminDropdownItems";
+import { useSearchParams } from "react-router";
 
 export const OrgDropdown = () => {
   const { org, isLoading, error } = useOrg();
@@ -196,6 +197,7 @@ export const OrgDropdown = () => {
 
 const SwitchOrgItem = ({ org, setDropdownOpen }: any) => {
   const [loading, setLoading] = useState(false);
+  const [_, setSearchParams] = useSearchParams();
 
   const { mutate } = useOrg();
 
@@ -203,6 +205,8 @@ const SwitchOrgItem = ({ org, setDropdownOpen }: any) => {
     setLoading(true);
 
     try {
+      setSearchParams(new URLSearchParams())
+
       await authClient.organization.setActive({
         organizationId: orgId,
       });

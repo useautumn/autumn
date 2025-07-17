@@ -36,6 +36,28 @@ export class FeatureService {
     return features as Feature[];
   }
 
+  static async get({
+    db,
+    id,
+    orgId,
+    env,
+  }: {
+    db: DrizzleCli;
+    id: string;
+    orgId: string;
+    env: AppEnv;
+  }) {
+    const feature = await db.query.features.findFirst({
+      where: (features, { eq, and }) =>
+        and(
+          eq(features.id, id),
+          eq(features.org_id, orgId),
+          eq(features.env, env)
+        ),
+    });
+    return feature as Feature;
+  }
+
   static async update({
     db,
     id,
@@ -82,8 +104,8 @@ export class FeatureService {
           and(
             eq(features.id, id!),
             eq(features.org_id, orgId!),
-            eq(features.env, env!),
-          ),
+            eq(features.env, env!)
+          )
         )
         .returning();
     }
@@ -150,8 +172,8 @@ export class FeatureService {
         and(
           eq(features.id, featureId),
           eq(features.org_id, orgId),
-          eq(features.env, env),
-        ),
+          eq(features.env, env)
+        )
       )
       .returning();
 

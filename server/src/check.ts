@@ -60,7 +60,7 @@ const getSingleCustomer = async ({
   const stripeSubs = await getStripeSubs({
     stripeCli,
     subIds: customers[0].customer_products.flatMap(
-      (cp) => cp.subscription_ids || [],
+      (cp) => cp.subscription_ids || []
     ),
   });
 
@@ -95,22 +95,22 @@ const checkCustomerCorrect = async ({
           cp.id !== cusProduct.id &&
           !cp.product.is_add_on &&
           cp.status !== CusProductStatus.Scheduled &&
-          cp.internal_entity_id == cusProduct.internal_entity_id,
+          cp.internal_entity_id == cusProduct.internal_entity_id
       );
 
       assert(
         !otherCusProd,
-        `found two cus products from the same group: ${otherCusProd?.product.name} and ${cusProduct.product.name}`,
+        `found two cus products from the same group: ${otherCusProd?.product.name} and ${cusProduct.product.name}`
       );
     }
 
     let stripeSubs = subs.filter((sub: any) =>
-      cusProduct.subscription_ids!.some((id: string) => id === sub.id),
+      cusProduct.subscription_ids!.some((id: string) => id === sub.id)
     );
 
     assert(
       stripeSubs.length === cusProduct.subscription_ids!.length,
-      "number of stripe subs should be the same as number of subscription ids",
+      "number of stripe subs should be the same as number of subscription ids"
     );
 
     const subItems = stripeSubs.flatMap((sub: any) => sub.items.data);
@@ -138,19 +138,19 @@ const checkCustomerCorrect = async ({
       if (billingType == BillingType.UsageInAdvance) {
         const featureId = (price.config as any).feature_id;
         const options = cusProduct.options.find(
-          (o) => o.feature_id == featureId,
+          (o) => o.feature_id == featureId
         );
 
         assert(
           notNullish(options),
-          `options should exist for prepaid price (featureId: ${featureId})`,
+          `options should exist for prepaid price (featureId: ${featureId})`
         );
 
         let expectedQuantity = options?.upcoming_quantity || options?.quantity;
 
         assert(
           subItem?.quantity == expectedQuantity,
-          `sub item quantity for prepaid price (featureId: ${featureId}) should be ${expectedQuantity}`,
+          `sub item quantity for prepaid price (featureId: ${featureId}) should be ${expectedQuantity}`
         );
         continue;
       }
@@ -165,7 +165,7 @@ const checkCustomerCorrect = async ({
             nullish(subItem) ||
               (subItem?.quantity === 0 &&
                 isLicenseItem({ stripeItem: subItem! })),
-            `(${cusProduct.product.name}) sub item for price: ${priceName} should exist`,
+            `(${cusProduct.product.name}) sub item for price: ${priceName} should exist`
           );
         }
 
@@ -178,7 +178,7 @@ const checkCustomerCorrect = async ({
         // console.log("Sub items:", subItems);
         assert(
           subItem,
-          `(${cusProduct.product.name}) sub item for price: ${priceName} should exist`,
+          `(${cusProduct.product.name}) sub item for price: ${priceName} should exist`
         );
       }
     }
@@ -187,7 +187,7 @@ const checkCustomerCorrect = async ({
     // console.log("subItems:", subItems);
     assert(
       prices.length - missingUsageCount === subItems.length,
-      `(${cusProduct.product.name}) number of sub items equivalent to number of prices`,
+      `(${cusProduct.product.name}) number of sub items equivalent to number of prices`
     );
   }
 
@@ -247,6 +247,7 @@ export const check = async () => {
 
     let customerId;
 
+    // customerId = "487bacbf-dd33-465e-a25a-09dd736dc81b";
     // customerId = "0e87a086-89ce-4ad5-99c0-b78bea1c54ed";
 
     let customers: FullCustomer[] = [];
@@ -290,7 +291,7 @@ export const check = async () => {
           checkCustomerHandleError({
             fullCus: customer,
             subs: stripeSubs,
-          }),
+          })
         );
       }
 
@@ -331,7 +332,7 @@ export const check = async () => {
   }
 
   console.log(
-    `COMPLETED ERROR CHECK FOR ${new Date().toISOString().slice(0, 16)}`,
+    `COMPLETED ERROR CHECK FOR ${new Date().toISOString().slice(0, 16)}`
   );
 
   if (process.env.NODE_ENV == "production") {

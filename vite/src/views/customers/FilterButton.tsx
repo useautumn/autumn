@@ -12,9 +12,12 @@ import {
 import { useCustomersContext } from "./CustomersContext";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { Check, ListFilter, X } from "lucide-react";
+import { useSetSearchParams } from "@/utils/setSearchParams";
+import { useSearchParams } from "react-router";
 
 function FilterButton() {
   const { setFilters } = useCustomersContext();
+  const setSearchParams = useSetSearchParams();
 
   const clearFilters = () => {
     setFilters({
@@ -29,10 +32,17 @@ function FilterButton() {
       <DropdownMenuContent className="w-56" align="start">
         <FilterStatus />
         <ProductStatus />
+        <ProductVersionFilter />
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem
-            onClick={clearFilters}
+            onClick={() =>
+              setSearchParams({
+                status: "",
+                product_id: "",
+                version: "",
+              })
+            }
             className="cursor-pointer"
           >
             <X size={14} className="text-t3" />
@@ -86,33 +96,65 @@ export const FilterStatus = () => {
   );
 };
 
+export const ProductVersionFilter = () => {
+  const { versionCounts, products } = useCustomersContext();
+  const [searchParams] = useSearchParams();
+  const setSearchParams = useSetSearchParams();
+  const selectedProductId = searchParams.get("product_id");
+  if (!selectedProductId) return null;
+  const versionCount = versionCounts?.[selectedProductId] || 1;
+  const currentVersion = searchParams.get("version");
+  const versionOptions = Array.from({ length: versionCount }, (_, i) => i + 1);
+  return (
+    <DropdownMenuGroup>
+      <DropdownMenuLabel className="text-t3 !font-regular text-xs">
+        Version
+      </DropdownMenuLabel>
+      {versionOptions.map((version) => {
+        const isActive = String(currentVersion) === String(version);
+        return (
+          <DropdownMenuItem
+            key={version}
+            onClick={() => {
+              if (isActive) {
+                setSearchParams({ version: "" });
+              } else {
+                setSearchParams({ version: String(version) });
+              }
+            }}
+            className="flex items-center justify-between cursor-pointer text-sm"
+          >
+            v{version}
+            {isActive && <Check size={13} className="text-t3" />}
+          </DropdownMenuItem>
+        );
+      })}
+    </DropdownMenuGroup>
+  );
+};
+
 export const ProductStatus = () => {
-  const { products, filters, setFilters } = useCustomersContext();
-
-  const selectedProducts = filters.product_id || [];
-
-  const toggleProduct = (productId: string) => {
-    const selected = filters.product_id || [];
-    const isSelected = selected.includes(productId);
-
-    const updated = isSelected
-      ? selected.filter((s: string) => s !== productId)
-      : [...selected, productId];
-
-    setFilters({ ...filters, product_id: updated });
-  };
-
+  const { products } = useCustomersContext();
+  const setSearchParams = useSetSearchParams();
+  const [searchParams] = useSearchParams();
+  const selectedProductId = searchParams.get("product_id");
   return (
     <DropdownMenuGroup>
       <DropdownMenuLabel className="text-t3 !font-regular text-xs">
         Product
       </DropdownMenuLabel>
       {products.map((product: any) => {
-        const isActive = selectedProducts.includes(product.id);
+        const isActive = selectedProductId === product.id;
         return (
           <DropdownMenuItem
             key={product.id}
-            onClick={() => toggleProduct(product.id)}
+            onClick={() => {
+              if (isActive) {
+                setSearchParams({ product_id: "", version: "" });
+              } else {
+                setSearchParams({ product_id: product.id, version: "" });
+              }
+            }}
             className="flex items-center justify-between cursor-pointer"
           >
             {product.name}

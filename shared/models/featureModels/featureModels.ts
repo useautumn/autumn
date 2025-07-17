@@ -28,7 +28,7 @@ export const CreateFeatureSchema = FeatureSchema.pick({
   display: true,
 });
 
-export const FeatureResponseSchema = z.object({
+export const MinFeatureSchema = z.object({
   internal_id: z.string(),
   id: z.string(),
   name: z.string(),

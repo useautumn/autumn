@@ -25,12 +25,13 @@ function CustomersView({ env }: { env: AppEnv }) {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [searchQuery, setSearchQuery] = React.useState(
-    searchParams.get("q") || "",
+    searchParams.get("q") || ""
   );
 
   const [filters, setFilters] = React.useState<any>({
-    status: [],
-    product_id: []
+    status: searchParams.get("status"),
+    product_id: searchParams.get("product_id"),
+    version: searchParams.get("version"),
   });
 
   const [pagination, setPagination] = React.useState<{
@@ -55,8 +56,9 @@ function CustomersView({ env }: { env: AppEnv }) {
     data: {
       search: searchParams.get("q") || "",
       filters: {
-        status: filters.status.join(","),
-        product_id: filters.product_id.join(","),
+        status: searchParams.get("status"),
+        product_id: searchParams.get("product_id"),
+        version: searchParams.get("version"),
       },
 
       page: pagination.page,
@@ -112,14 +114,12 @@ function CustomersView({ env }: { env: AppEnv }) {
   }, [pagination]);
 
   useEffect(() => {
-    const urlStatus = searchParams
-    .get("status")?.split(",")
-    .filter(Boolean) || [];
-    
-    const urlProductIds = searchParams
-    .get("product_id")?.split(",").
-    filter(Boolean) || [];
-    
+    const urlStatus =
+      searchParams.get("status")?.split(",").filter(Boolean) || [];
+
+    const urlProductIds =
+      searchParams.get("product_id")?.split(",").filter(Boolean) || [];
+
     setFilters({
       status: urlStatus,
       product_id: urlProductIds,

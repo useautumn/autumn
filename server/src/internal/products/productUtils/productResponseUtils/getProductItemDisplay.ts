@@ -22,7 +22,7 @@ export const formatTiers = ({
   currency,
 }: {
   item: ProductItem;
-  currency?: string;
+  currency?: string | null;
 }) => {
   let tiers = item.tiers;
   if (tiers) {
@@ -106,7 +106,7 @@ export const getPriceItemDisplay = ({
   currency,
 }: {
   item: ProductItem;
-  currency?: string;
+  currency?: string | null;
 }) => {
   let primaryText = formatAmount({
     currency,
@@ -129,7 +129,7 @@ export const getFeaturePriceItemDisplay = ({
 }: {
   feature?: Feature;
   item: ProductItem;
-  currency?: string;
+  currency?: string | null;
   isMainPrice?: boolean;
   minifyIncluded?: boolean;
 }) => {
@@ -192,7 +192,7 @@ export const getProductItemDisplay = ({
 }: {
   item: ProductItem;
   features: Feature[];
-  currency?: string;
+  currency?: string | null;
 }) => {
   if (isFeatureItem(item)) {
     return getFeatureItemDisplay({

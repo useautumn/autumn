@@ -2,7 +2,7 @@ import { AxiosInstance } from "axios";
 
 export class FeatureService {
   static async createFeature(axiosInstance: AxiosInstance, data: any) {
-    return await axiosInstance.post("/v1/features", data);
+    return await axiosInstance.post("/features", data);
   }
 
   static async updateFeature(
@@ -10,10 +10,10 @@ export class FeatureService {
     featureId: string,
     data: any
   ) {
-    return await axiosInstance.post(`/v1/features/${featureId}`, data);
+    return await axiosInstance.post(`/features/${featureId}`, data);
   }
 
   static async deleteFeature(axiosInstance: AxiosInstance, featureId: string) {
-    return await axiosInstance.delete(`/v1/features/${featureId}`);
+    return await axiosInstance.delete(`/features/${featureId}`);
   }
 }
