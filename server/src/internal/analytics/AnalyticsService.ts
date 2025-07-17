@@ -335,7 +335,6 @@ order by dr.period;
 
     let customerProductsFiltered = customer.customer_products?.filter(
       (product: FullCusProduct) => {
-        let hasGroup = product.product.group != "";
         let isAddon = product.product.is_add_on;
         let isActive =
           product.status === CusProductStatus.Active ||
