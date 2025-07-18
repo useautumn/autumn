@@ -7,6 +7,7 @@
   "scripts": {
     "email": "email dev -p 3001",
     "dev": "cross-env NODE_ENV=development npx nodemon --no-deprecation --exec npx tsx src/index.ts --ignore scripts --ignore tests",
+    "dev:bun": "cross-env NODE_ENV=development bunx nodemon --no-deprecation --exec bun src/index.ts --ignore scripts --ignore tests",
     "start": "npx tsx src/index.ts",
     "workers": "npx tsx watch src/workers.ts",
     "workers:start": "node --no-deprecation dist/src/workers.js",

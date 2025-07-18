@@ -22,6 +22,7 @@ import rewardRouter from "./rewards/rewardRouter.js";
 import expireRouter from "../customers/expire/expireRouter.js";
 import { handleSetupPayment } from "../customers/attach/handleSetupPayment.js";
 import { internalFeatureRouter } from "../features/internalFeatureRouter.js";
+import { trmnlRouter } from "./trmnl/trmnlRouter.js";
 
 const apiRouter: Router = Router();
 
@@ -55,5 +56,8 @@ apiRouter.use("/check", checkRouter);
 apiRouter.use("/events", eventsRouter);
 apiRouter.use("/track", eventsRouter);
 apiRouter.post("/setup_payment", handleSetupPayment);
+
+// TRMNL
+apiRouter.use("/trmnl", trmnlRouter);
 
 export { apiRouter };

@@ -5,121 +5,167 @@ import { AuthType, ErrCode } from "@autumn/shared";
 import { floatToVersion } from "@/utils/versionUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { dashboardOrigins } from "@/utils/constants.js";
+import { readFile } from "@/external/supabase/storageUtils.js";
+import { ExtendedResponse } from "@/utils/models/Request.js";
 
 const verifyApiVersion = (version: string) => {
-  let versionFloat = parseFloat(version);
-  let apiVersion = floatToVersion(versionFloat);
+	let versionFloat = parseFloat(version);
+	let apiVersion = floatToVersion(versionFloat);
 
-  if (isNaN(versionFloat) || !apiVersion) {
-    throw new RecaseError({
-      message: `${version} is not a valid API version`,
-      code: ErrCode.InvalidApiVersion,
-      statusCode: 400,
-    });
-  }
+	if (isNaN(versionFloat) || !apiVersion) {
+		throw new RecaseError({
+			message: `${version} is not a valid API version`,
+			code: ErrCode.InvalidApiVersion,
+			statusCode: 400,
+		});
+	}
 
-  return apiVersion;
+	return apiVersion;
 };
 
 const maskApiKey = (apiKey: string) => {
-  return apiKey.slice(0, 15) + apiKey.slice(15).replace(/./g, "*");
+	return apiKey.slice(0, 15) + apiKey.slice(15).replace(/./g, "*");
 };
 
 export const verifySecretKey = async (req: any, res: any, next: any) => {
-  const authHeader =
-    req.headers["authorization"] || req.headers["Authorization"];
+	const authHeader =
+		req.headers["authorization"] || req.headers["Authorization"];
 
-  const logger = req.logtail;
-  const version = req.headers["x-api-version"];
+	const logger = req.logtail;
+	const version = req.headers["x-api-version"];
 
-  if (version) {
-    req.apiVersion = verifyApiVersion(version);
-  }
+	if (version) {
+		req.apiVersion = verifyApiVersion(version);
+	}
 
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    let origin = req.get("origin");
-    if (dashboardOrigins.includes(origin)) {
-      return withOrgAuth(req, res, next);
-    } else {
-      throw new RecaseError({
-        message: "Secret key not found in Authorization header",
-        code: ErrCode.NoSecretKey,
-        statusCode: 401,
-      });
-    }
-  }
+	if (!authHeader || !authHeader.startsWith("Bearer ")) {
+		let origin = req.get("origin");
+		if (dashboardOrigins.includes(origin)) {
+			return withOrgAuth(req, res, next);
+		} else {
+			throw new RecaseError({
+				message: "Secret key not found in Authorization header",
+				code: ErrCode.NoSecretKey,
+				statusCode: 401,
+			});
+		}
+	}
 
-  const apiKey = authHeader.split(" ")[1];
+	const apiKey = authHeader.split(" ")[1];
 
-  if (!apiKey.startsWith("am_")) {
-    throw new RecaseError({
-      message: "Invalid secret key",
-      code: ErrCode.InvalidSecretKey,
-      statusCode: 401,
-    });
-  }
+	if (!apiKey.startsWith("am_")) {
+		throw new RecaseError({
+			message: "Invalid secret key",
+			code: ErrCode.InvalidSecretKey,
+			statusCode: 401,
+		});
+	}
 
-  if (apiKey.startsWith("am_pk")) {
-    console.log("Verifying publishable key");
-    return await verifyBearerPublishableKey(apiKey, req, res, next);
-  }
+	if (apiKey.startsWith("am_pk")) {
+		console.log("Verifying publishable key");
+		return await verifyBearerPublishableKey(apiKey, req, res, next);
+	}
 
-  const { valid, data } = await verifyKey({
-    db: req.db,
-    key: apiKey,
-  });
+	const { valid, data } = await verifyKey({
+		db: req.db,
+		key: apiKey,
+	});
 
-  if (!valid || !data) {
-    throw new RecaseError({
-      message: "Invalid secret key",
-      code: ErrCode.InvalidSecretKey,
-      statusCode: 401,
-    });
-  }
+	if (!valid || !data) {
+		throw new RecaseError({
+			message: "Invalid secret key",
+			code: ErrCode.InvalidSecretKey,
+			statusCode: 401,
+		});
+	}
 
-  let { org, features, env } = data;
-  req.orgId = org.id;
-  req.env = env;
-  req.minOrg = {
-    id: org.id,
-    slug: org.slug,
-  };
-  req.org = org;
-  req.features = features;
-  req.authType = AuthType.SecretKey;
+	let { org, features, env } = data;
+	req.orgId = org.id;
+	req.env = env;
+	req.minOrg = {
+		id: org.id,
+		slug: org.slug,
+	};
+	req.org = org;
+	req.features = features;
+	req.authType = AuthType.SecretKey;
 
-  next();
+	next();
 };
 
+export const trmnlAuthMiddleware = async (
+	req: any,
+	res: ExtendedResponse,
+	next: any
+) => {
+	const logger = req.logtail;
+
+	const file = await readFile({ path: "trmnl.json" });
+	const fileString = await file.text();
+	const fileJson = JSON.parse(fileString);
+
+	let trmnlId = req.headers["x-trmnl-id"];
+	if (!trmnlId)
+		return res.status(401).json({
+			message: "Trmnl ID not found",
+			code: ErrCode.InvalidSecretKey,
+			statusCode: 401,
+		});
+
+	if (!fileJson[trmnlId]) {
+		return res.status(401).json({
+			message: "Trmnl ID not found",
+			code: ErrCode.InvalidSecretKey,
+			statusCode: 401,
+		});
+	}
+
+	req.org = {};
+  req.org.id = fileJson[trmnlId];
+  req.env = "sandbox"
+
+	next();
+};
+
+export const trmnlExclusions = ["/trmnl/screen"];
+
 export const apiAuthMiddleware = async (req: any, res: any, next: any) => {
-  const logger = req.logtail;
-  try {
-    await verifySecretKey(req, res, next);
+	const logger = req.logtail;
 
-    return;
-  } catch (error: any) {
-    if (error instanceof RecaseError) {
-      if (error.code === ErrCode.InvalidSecretKey) {
-        let apiKey = req.headers["authorization"]?.split(" ")[1];
-        error.message = `Invalid secret key: ${maskApiKey(apiKey)}`;
-      }
+	if (trmnlExclusions.includes(req.path)) {
+		logger.info(
+			`exluding TRMNL from auth middleware for device with ID ${req.headers["x-trmnl-id"] || "unknown"}`
+		);
+		return await trmnlAuthMiddleware(req, res, next);
+	}
 
-      logger.warn(`auth warning: ${error.message}`);
+	try {
+		await verifySecretKey(req, res, next);
 
-      res.status(error.statusCode).json({
-        message: error.message,
-        code: error.code,
-      });
-    } else {
-      logger.error(`auth error: ${error.message}`, {
-        error,
-      });
-      res.status(500).json({
-        message: `Failed to verify secret key: ${error.message}`,
-        code: ErrCode.InternalError,
-      });
-    }
+		return;
+	} catch (error: any) {
+		if (error instanceof RecaseError) {
+			if (error.code === ErrCode.InvalidSecretKey) {
+				let apiKey = req.headers["authorization"]?.split(" ")[1];
+				error.message = `Invalid secret key: ${maskApiKey(apiKey)}`;
+			}
 
-    return;
-  }
+			logger.warn(`auth warning: ${error.message}`);
+
+			res.status(error.statusCode).json({
+				message: error.message,
+				code: error.code,
+			});
+		} else {
+			logger.error(`auth error: ${error.message}`, {
+				error,
+			});
+			res.status(500).json({
+				message: `Failed to verify secret key: ${error.message}`,
+				code: ErrCode.InternalError,
+			});
+		}
+
+		return;
+	}
 };
