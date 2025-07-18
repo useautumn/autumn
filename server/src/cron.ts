@@ -72,11 +72,11 @@ const checkSubAnchor = async ({
   console.log("Checking billing cycle anchor");
   console.log(
     "Next reset at       ",
-    format(new UTCDate(nextResetAt), "dd MMM yyyy HH:mm:ss"),
+    format(new UTCDate(nextResetAt), "dd MMM yyyy HH:mm:ss")
   );
   console.log(
     "Billing cycle anchor",
-    format(new UTCDate(billingCycleAnchor), "dd MMM yyyy HH:mm:ss"),
+    format(new UTCDate(billingCycleAnchor), "dd MMM yyyy HH:mm:ss")
   );
 
   const billingCycleDay = getDate(new UTCDate(billingCycleAnchor));
@@ -116,7 +116,7 @@ const resetCustomerEntitlement = async ({
 
     const entOptions = getEntOptions(
       cusEnt.customer_product.options,
-      cusEnt.entitlement,
+      cusEnt.entitlement
     );
 
     const resetBalance = getResetBalance({
@@ -140,10 +140,10 @@ const resetCustomerEntitlement = async ({
 
       console.log(
         `Reset ${cusEnt.id} | customer: ${chalk.yellow(
-          cusEnt.customer_id,
+          cusEnt.customer_id
         )} | feature: ${chalk.yellow(
-          cusEnt.feature_id,
-        )} | new balance: unlimited`,
+          cusEnt.feature_id
+        )} | new balance: unlimited`
       );
       return;
     }
@@ -159,16 +159,16 @@ const resetCustomerEntitlement = async ({
 
       console.log(
         `Reset ${cusEnt.id} | customer: ${chalk.yellow(
-          cusEnt.customer_id,
+          cusEnt.customer_id
         )} | feature: ${chalk.yellow(
-          cusEnt.feature_id,
-        )} | reset to lifetime (next_reset_at: null)`,
+          cusEnt.feature_id
+        )} | reset to lifetime (next_reset_at: null)`
       );
       return;
     }
     let nextResetAt = getNextResetAt(
       new UTCDate(cusEnt.next_reset_at!),
-      cusEnt.entitlement.interval as EntInterval,
+      cusEnt.entitlement.interval as EntInterval
     );
 
     let resetBalanceUpdate = getResetBalancesUpdate({
@@ -199,18 +199,18 @@ const resetCustomerEntitlement = async ({
 
     console.log(
       `Reset ${cusEnt.id} | customer: ${chalk.yellow(
-        cusEnt.customer_id,
+        cusEnt.customer_id
       )} | feature: ${chalk.yellow(
-        cusEnt.feature_id,
+        cusEnt.feature_id
       )} | new balance: ${chalk.green(
-        resetBalance,
+        resetBalance
       )} | new next_reset_at: ${chalk.green(
-        format(new UTCDate(nextResetAt), "dd MMM yyyy HH:mm:ss"),
-      )}`,
+        format(new UTCDate(nextResetAt), "dd MMM yyyy HH:mm:ss")
+      )}`
     );
   } catch (error: any) {
     console.log(
-      `Failed to reset ${cusEnt.id} | ${cusEnt.customer_id} | ${cusEnt.feature_id}, error: ${error}`,
+      `Failed to reset ${cusEnt.id} | ${cusEnt.customer_id} | ${cusEnt.feature_id}, error: ${error}`
     );
   }
 };
@@ -218,16 +218,16 @@ const resetCustomerEntitlement = async ({
 export const cronTask = async () => {
   console.log(
     "\n----------------------------------\nRUNNING RESET CRON:",
-    format(new UTCDate(), "yyyy-MM-dd HH:mm:ss"),
+    format(new UTCDate(), "yyyy-MM-dd HH:mm:ss")
   );
 
   const { db, client } = initDrizzle();
 
   try {
     let cusEnts: FullCusEntWithProduct[] =
-      await CusEntService.getActiveResetPassed({ db });
+      await CusEntService.getActiveResetPassed({ db, batchSize: 500 });
 
-    const batchSize = 20;
+    const batchSize = 50;
     for (let i = 0; i < cusEnts.length; i += batchSize) {
       const batch = cusEnts.slice(i, i + batchSize);
       const batchResets = [];
@@ -236,7 +236,7 @@ export const cronTask = async () => {
           resetCustomerEntitlement({
             db,
             cusEnt: cusEnt as FullCusEntWithProduct,
-          }),
+          })
         );
       }
 
@@ -245,7 +245,7 @@ export const cronTask = async () => {
 
     console.log(
       "FINISHED RESET CRON:",
-      format(new UTCDate(), "yyyy-MM-dd HH:mm:ss"),
+      format(new UTCDate(), "yyyy-MM-dd HH:mm:ss")
     );
     console.log("----------------------------------\n");
   } catch (error) {
@@ -263,7 +263,7 @@ const job = new CronJob(
   },
   null, // onComplete
   true, // start immediately
-  "UTC", // timezone (adjust as needed)
+  "UTC" // timezone (adjust as needed)
 );
 
 // job.start();

@@ -32,8 +32,8 @@ export default function PricingTable({
 
   const intervals = Array.from(
     new Set(
-      products?.map((p) => p.properties?.interval_group).filter((i) => !!i),
-    ),
+      products?.map((p) => p.properties?.interval_group).filter((i) => !!i)
+    )
   );
 
   const multiInterval = intervals.length > 1;
@@ -151,7 +151,7 @@ export const PricingTableContainer = ({
         {multiInterval && (
           <div
             className={cn(
-              products.some((p) => p.display?.recommend_text) && "mb-8",
+              products.some((p) => p.display?.recommend_text) && "mb-8"
             )}
           >
             <AnnualSwitch
@@ -163,7 +163,7 @@ export const PricingTableContainer = ({
         <div
           className={cn(
             "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fit,minmax(200px,1fr))] w-full gap-2",
-            className,
+            className
           )}
         >
           {children}
@@ -214,7 +214,7 @@ export const PricingCard = ({
         " w-full h-full py-6 text-foreground border rounded-lg shadow-sm max-w-xl",
         isRecommended &&
           "lg:-translate-y-6 lg:shadow-lg dark:shadow-zinc-800/80 lg:h-[calc(100%+48px)] bg-secondary/40",
-        className,
+        className
       )}
     >
       {productDisplay?.recommend_text && (
@@ -223,7 +223,7 @@ export const PricingCard = ({
       <div
         className={cn(
           "flex flex-col h-full flex-grow",
-          isRecommended && "lg:translate-y-6",
+          isRecommended && "lg:translate-y-6"
         )}
       >
         <div className="h-full">
@@ -339,7 +339,7 @@ export const PricingCardButton = React.forwardRef<
     <Button
       className={cn(
         "w-full py-3 px-4 group overflow-hidden relative transition-all duration-300 hover:brightness-90 border rounded-lg",
-        className,
+        className
       )}
       {...props}
       variant={recommended ? "default" : "secondary"}

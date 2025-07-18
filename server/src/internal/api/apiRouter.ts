@@ -57,7 +57,4 @@ apiRouter.use("/events", eventsRouter);
 apiRouter.use("/track", eventsRouter);
 apiRouter.post("/setup_payment", handleSetupPayment);
 
-// TRMNL
-apiRouter.use("/trmnl", trmnlRouter);
-
 export { apiRouter };

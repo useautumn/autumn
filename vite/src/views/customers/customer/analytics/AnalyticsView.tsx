@@ -37,7 +37,6 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
     searchParams.get("feature_ids")?.split(",").filter(Boolean) || [];
   const currentEventNames =
     searchParams.get("event_names")?.split(",").filter(Boolean) || [];
-  const allSelectedItems = [...currentFeatureIds, ...currentEventNames];
 
   const { customer, features, events, queryLoading, error, bcExclusionFlag } =
     useAnalyticsData({ hasCleared });
@@ -66,7 +65,7 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
                   (filter: any) =>
                     filter.value &&
                     Array.isArray(filter.value) &&
-                    filter.value.includes(eventName),
+                    filter.value.includes(eventName)
                 );
               }
               return false;
@@ -125,14 +124,14 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
         <h1
           className={cn(
             "text-xl font-medium shrink-0 pl-10",
-            env === AppEnv.Sandbox ? "pt-4" : "pt-6",
+            env === AppEnv.Sandbox ? "pt-4" : "pt-6"
           )}
         >
           Analytics
         </h1>
         <div className="max-h-[400px] min-h-[400px] pb-6">
           <PageSectionHeader
-            title="Events"
+            title="Usage Analytics"
             endContent={<QueryTopbar />}
             className="h-10"
           />
@@ -146,7 +145,7 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 
           <div className="h-full">
             {events && events.data.length > 0 && (
-              <Card className="w-full bg-transparent border-none rounded-none shadow-none">
+              <Card className="h-full p-0 pt-6 w-full bg-transparent border-none rounded-none shadow-none">
                 <CardContent className="px-6 h-full bg-transparent">
                   <EventsBarChart data={events} chartConfig={chartConfig} />
                 </CardContent>
@@ -157,7 +156,9 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
               <div className="flex-1 px-10 pt-6">
                 <p className="text-t3 text-sm">
                   No events found. Please widen your filters.{" "}
-                  {eventNames.length === 0 ? "Try to select some events in the dropdown above." : ""}
+                  {eventNames.length === 0
+                    ? "Try to select some events in the dropdown above."
+                    : ""}
                 </p>
               </div>
             )}
@@ -166,7 +167,7 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 
         <div className="h-full">
           <PageSectionHeader
-            title="Raw Events"
+            title="Event Logs"
             className="h-10"
             endContent={<PaginationPanel />}
           />
