@@ -24,9 +24,7 @@ analyticsRouter.get("/event_names", async (req: any, res: any) =>
       const { interval, event_names, customer_id } = req.body;
 
       const result = await AnalyticsService.getTopEventNames({
-        ch: req.clickhouseClient,
-        orgId: org.id,
-        env,
+        req
       });
 
       // console.log("result", result);
