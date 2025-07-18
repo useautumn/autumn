@@ -1,7 +1,6 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { AppEnv } from "@autumn/shared";
 import { clearOrg, setupOrg } from "tests/utils/setup.js";
 import {
@@ -17,7 +16,7 @@ import {
 } from "./global.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
 
-const ORG_SLUG = "unit-test-org";
+const ORG_SLUG = process.env.TESTS_ORG!;
 const DEFAULT_ENV = AppEnv.Sandbox;
 
 describe("Initialize org for tests", () => {
@@ -25,7 +24,7 @@ describe("Initialize org for tests", () => {
     this.timeout(1000000000);
     this.org = await clearOrg({ orgSlug: ORG_SLUG, env: DEFAULT_ENV });
     this.env = DEFAULT_ENV;
-    this.sb = createSupabaseClient();
+    // this.sb = createSupabaseClient();
     let { db, client } = initDrizzle();
 
     this.db = db;

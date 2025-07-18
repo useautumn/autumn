@@ -95,7 +95,7 @@ export const clearOrg = async ({
     throw new Error(`Org ${orgSlug} not found`);
   }
 
-  if (org.slug !== "unit-test-org") {
+  if (!(org.slug == "unit-test-org" || org.slug == "ci_cd")) {
     console.error("Cannot clear non-unit-test-orgs");
     process.exit(1);
   }
@@ -227,6 +227,7 @@ export const setupOrg = async ({
   for (const feature of Object.values(features)) {
     insertFeatures.push(axiosInstance.post("/v1/internal_features", feature));
   }
+
   await Promise.all(insertFeatures);
 
   await FeatureService.insert({
@@ -234,6 +235,8 @@ export const setupOrg = async ({
     data: Object.values(v2Features),
     logger: console,
   });
+
+  const allFeatures = await FeatureService.list({ db, orgId, env });
 
   let org: Organization | null = null;
   let newFeatures: Feature[] = [];

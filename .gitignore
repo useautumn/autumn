@@ -20,6 +20,7 @@ supabase.sh
 **/.env*
 tests/
 !server/tests
+.secrets
 
 # **/.npmrc
 

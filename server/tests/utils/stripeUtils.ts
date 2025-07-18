@@ -20,59 +20,63 @@ export const completeCheckoutForm = async (
   promoCode?: string
 ) => {
   const browser = await puppeteer.launch({
-    headless: false,
+    headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
-  const page = await browser.newPage();
-  await page.setViewport({ width: 1280, height: 800 }); // Set standard desktop viewport size
+  try {
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1280, height: 800 }); // Set standard desktop viewport size
 
-  await page.goto(url);
+    await page.goto(url);
 
-  // await page.waitForSelector("#payment-method-accordion-item-title-card");
-  // await page.click("#payment-method-accordion-item-title-card");
+    // await page.waitForSelector("#payment-method-accordion-item-title-card");
+    // await page.click("#payment-method-accordion-item-title-card");
 
-  await page.waitForSelector("#cardNumber");
-  await page.type("#cardNumber", "4242424242424242");
+    await page.waitForSelector("#cardNumber");
+    await page.type("#cardNumber", "4242424242424242");
 
-  await page.waitForSelector("#cardExpiry");
-  await page.type("#cardExpiry", "1234");
+    await page.waitForSelector("#cardExpiry");
+    await page.type("#cardExpiry", "1234");
 
-  await page.waitForSelector("#cardCvc");
-  await page.type("#cardCvc", "123");
+    await page.waitForSelector("#cardCvc");
+    await page.type("#cardCvc", "123");
 
-  await page.waitForSelector("#billingName");
-  await page.type("#billingName", "Test Customer");
-  await page.waitForSelector("#billingPostalCode");
-  await page.type("#billingPostalCode", "123456");
+    await page.waitForSelector("#billingName");
+    await page.type("#billingName", "Test Customer");
+    await page.waitForSelector("#billingPostalCode");
+    await page.type("#billingPostalCode", "123456");
 
-  if (overrideQuantity) {
-    // console.log("   - Overriding quantity");
-    const quantityBtn = await page.$(".AdjustableQuantitySelector");
-    await quantityBtn?.evaluate((b: any) => (b as HTMLElement).click());
+    if (overrideQuantity) {
+      // console.log("   - Overriding quantity");
+      const quantityBtn = await page.$(".AdjustableQuantitySelector");
+      await quantityBtn?.evaluate((b: any) => (b as HTMLElement).click());
 
-    await page.waitForSelector("#adjustQuantity");
-    await page.click("#adjustQuantity", { clickCount: 3 }); // Select all text
-    await page.keyboard.press("Backspace"); // Delete selected text
-    await page.type("#adjustQuantity", overrideQuantity.toString());
+      await page.waitForSelector("#adjustQuantity");
+      await page.click("#adjustQuantity", { clickCount: 3 }); // Select all text
+      await page.keyboard.press("Backspace"); // Delete selected text
+      await page.type("#adjustQuantity", overrideQuantity.toString());
 
-    const updateBtn = await page.$(".AdjustQuantityFooter-btn");
-    await updateBtn?.evaluate((b: any) => (b as HTMLElement).click());
-    await timeout(1000);
+      const updateBtn = await page.$(".AdjustQuantityFooter-btn");
+      await updateBtn?.evaluate((b: any) => (b as HTMLElement).click());
+      await timeout(1000);
+    }
+
+    if (promoCode) {
+      await page.waitForSelector("#promotionCode");
+      await page.click("#promotionCode");
+      await page.type("#promotionCode", promoCode);
+      await page.keyboard.press("Enter");
+      await timeout(5000);
+    }
+
+    // const submitButton = await page.$(".SubmitButton-TextContainer");
+    const submitButton = await page.$(".SubmitButton-TextContainer");
+    await submitButton?.evaluate((b: any) => (b as HTMLElement).click());
+    await timeout(7000);
+  } finally {
+    // always close browser
+    await browser.close();
   }
-
-  if (promoCode) {
-    await page.waitForSelector("#promotionCode");
-    await page.click("#promotionCode");
-    await page.type("#promotionCode", promoCode);
-    await page.keyboard.press("Enter");
-    await timeout(5000);
-  }
-
-  // const submitButton = await page.$(".SubmitButton-TextContainer");
-  const submitButton = await page.$(".SubmitButton-TextContainer");
-  await submitButton?.evaluate((b: any) => (b as HTMLElement).click());
-  await timeout(7000);
-  await browser.close();
 };
 
 export const deleteAllStripeProducts = async ({

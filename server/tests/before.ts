@@ -10,7 +10,7 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { after } from "mocha";
 
-const ORG_SLUG = "unit-test-org";
+const ORG_SLUG = process.env.TESTS_ORG!;
 const DEFAULT_ENV = AppEnv.Sandbox;
 
 export const setupBefore = async (instance: any) => {

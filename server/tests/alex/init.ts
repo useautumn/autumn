@@ -418,7 +418,7 @@ export const alexProducts = {
   }),
 };
 
-let orgSlug = "unit-test-org";
+let orgSlug = process.env.TESTS_ORG!;
 before(async function () {
   try {
     this.env = AppEnv.Sandbox;

@@ -110,7 +110,7 @@ export class CachedKeyService {
       });
     } catch (error) {
       console.error(
-        `(warning) failed to clear cache for verify action: ${error}`,
+        `(warning) failed to clear cache for verify action: ${error}`
       );
     }
   }
