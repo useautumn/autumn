@@ -1,12 +1,11 @@
 import {
+  AttachBranch,
   AttachFunction,
   AttachScenario,
   CheckoutResponseSchema,
   FeatureOptions,
-  FreeTrialResponseSchema,
-  ProductItemResponseSchema,
-  ProductResponseSchema,
 } from "@autumn/shared";
+
 import { routeHandler } from "@/utils/routerUtils.js";
 import { getAttachParams } from "../attachUtils/attachParams/getAttachParams.js";
 import { AttachBody, AttachBodySchema } from "@autumn/shared";
@@ -16,7 +15,6 @@ import { getAttachBranch } from "../attachUtils/getAttachBranch.js";
 import { getAttachConfig } from "../attachUtils/getAttachConfig.js";
 import { getAttachFunction } from "../attachUtils/getAttachFunction.js";
 import { handleCreateCheckout } from "../../add-product/handleCreateCheckout.js";
-import { z } from "zod";
 import { checkStripeConnections } from "../attachRouter.js";
 import { attachParamsToPreview } from "../handleAttachPreview/attachParamsToPreview.js";
 import { previewToCheckoutRes } from "./previewToCheckoutRes.js";
@@ -26,6 +24,7 @@ import { attachParamsToProduct } from "../attachUtils/convertAttachParams.js";
 import { isPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { priceToFeature } from "@/internal/products/prices/priceUtils/convertPrice.js";
 import { getPriceOptions } from "@/internal/products/prices/priceUtils.js";
+import { getHasProrations } from "./getHasProrations.js";
 
 const getAttachVars = async ({
   req,
@@ -167,12 +166,20 @@ export const handleCheckout = (req: any, res: any) =>
         preview,
       });
 
+      // Get has prorations
+      const hasProrations = await getHasProrations({
+        req,
+        branch,
+        attachParams,
+      });
+
       res.status(200).json({
         ...checkoutRes,
         options: attachParams.optionsList.map((o) => ({
           quantity: o.quantity,
           feature_id: o.feature_id,
         })),
+        has_prorations: hasProrations,
       });
 
       return;

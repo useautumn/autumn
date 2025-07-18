@@ -2,12 +2,11 @@ import {
   AttachPreview,
   CheckoutLine,
   CheckoutResponseSchema,
+  UsageModel,
 } from "@autumn/shared";
 
 import { AttachParams } from "../../cusProducts/AttachParams.js";
-import { getAttachScenario } from "@/internal/api/entitled/handlers/attachToCheckPreview/getAttachScenario.js";
 import {
-  attachParamsToCurCusProduct,
   attachParamsToProduct,
   attachParamToCusProducts,
 } from "../attachUtils/convertAttachParams.js";
@@ -23,7 +22,9 @@ import {
 } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
 import { toProductItem } from "@/internal/products/product-items/mapToItem.js";
 import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
-import { notNullish } from "@/utils/genUtils.js";
+import { formatUnixToDateTime, notNullish } from "@/utils/genUtils.js";
+import { isPriceItem } from "@/internal/products/product-items/productItemUtils/getItemType.js";
+import { Decimal } from "decimal.js";
 
 export const previewToCheckoutRes = async ({
   req,
@@ -36,7 +37,6 @@ export const previewToCheckoutRes = async ({
 }) => {
   const { logger, features, org } = req;
   const product = attachParamsToProduct({ attachParams });
-  const scenario = await getAttachScenario({ preview, product });
 
   const { curCusProduct } = attachParamToCusProducts({ attachParams });
   let curPrices = curCusProduct
@@ -83,6 +83,7 @@ export const previewToCheckoutRes = async ({
     features,
     currency: org.default_currency,
     options: attachParams.optionsList,
+    fullCus: attachParams.customer,
   });
 
   let curProduct = curCusProduct
@@ -96,17 +97,46 @@ export const previewToCheckoutRes = async ({
 
   const total = lines.reduce((acc, line) => acc + line.amount, 0);
 
+  let nextCycle = undefined;
+
+  if (notNullish(preview.due_next_cycle)) {
+    nextCycle = {
+      starts_at: preview.due_next_cycle.due_at,
+      total: newProduct.items
+        .reduce((acc, item) => {
+          if (item.usage_model == UsageModel.PayPerUse) {
+            return acc;
+          }
+
+          // if (item.interval !== newProduct.properties?.interval_group) {
+          //   return acc;
+          // }
+
+          if (isPriceItem(item)) {
+            return acc.plus(item.price || 0);
+          }
+
+          let prepaidQuantity =
+            attachParams.optionsList.find(
+              (o) => o.feature_id == item.feature_id
+            )?.quantity || 0;
+
+          return acc.plus(prepaidQuantity * (item.price || 0));
+        }, new Decimal(0))
+        .toNumber(),
+    };
+  }
+
   return CheckoutResponseSchema.parse({
     customer_id: attachParams.customer.id,
-    scenario,
     lines,
     product: newProduct,
     current_product: curProduct,
     total,
     currency: org.default_currency || "usd",
-    // next_cycle: nextCycle,
     next_cycle_at: notNullish(preview.due_next_cycle)
       ? preview.due_next_cycle.due_at
       : null,
+    next_cycle: nextCycle,
   });
 };

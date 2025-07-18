@@ -13,7 +13,12 @@ import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/free
 import { getLastInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { getMergeCusProduct } from "../attachFunctions/addProductFlow/getMergeCusProduct.js";
-import { formatUnixToDate, notNullish, nullish } from "@/utils/genUtils.js";
+import {
+  formatUnixToDate,
+  formatUnixToDateTime,
+  notNullish,
+  nullish,
+} from "@/utils/genUtils.js";
 
 export const getNewProductPreview = async ({
   branch,

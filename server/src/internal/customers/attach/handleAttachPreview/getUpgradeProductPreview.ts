@@ -30,7 +30,7 @@ import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/free
 import { Decimal } from "decimal.js";
 import { intervalsAreSame } from "../attachUtils/getAttachConfig.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
-import { notNullish } from "@/utils/genUtils.js";
+import { formatUnixToDateTime, notNullish } from "@/utils/genUtils.js";
 
 const getNextCycleAt = ({
   prices,
@@ -60,17 +60,18 @@ const getNextCycleAt = ({
   }
 
   if (willCycleReset) {
-    const minInterval = getLastInterval({ prices });
+    const firstInterval = getFirstInterval({ prices });
     return {
-      next_cycle_at: addBillingIntervalUnix(now, minInterval),
+      next_cycle_at: addBillingIntervalUnix(now, firstInterval),
     };
   }
 
-  const minInterval = getLastInterval({ prices });
+  const firstInterval = getFirstInterval({ prices });
   const nextCycleAt = getAlignedIntervalUnix({
     alignWithUnix: stripeSubs[0].current_period_end * 1000,
-    interval: minInterval,
+    interval: firstInterval,
     alwaysReturn: true,
+    now,
   });
 
   return {

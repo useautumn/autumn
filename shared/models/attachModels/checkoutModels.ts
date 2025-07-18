@@ -13,14 +13,20 @@ export const CheckoutLineSchema = z.object({
 export const CheckoutResponseSchema = z.object({
   url: z.string().nullish(),
   customer_id: z.string(),
-  scenario: z.nativeEnum(AttachScenario),
   lines: z.array(CheckoutLineSchema),
   product: ProductResponseSchema.nullish(),
   current_product: ProductResponseSchema.nullish(),
   options: z.array(FeatureOptionsSchema).nullish(),
   total: z.number().nullish(),
   currency: z.string().nullish(),
-  next_cycle_at: z.number().nullish(),
+  has_prorations: z.boolean().nullish(),
+  // next_cycle_at: z.number().nullish(),
+  next_cycle: z
+    .object({
+      starts_at: z.number().nullish(),
+      total: z.number().nullish(),
+    })
+    .nullish(),
 });
 
 export type CheckoutLine = z.infer<typeof CheckoutLineSchema>;

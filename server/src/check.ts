@@ -12,7 +12,10 @@ import {
 } from "@autumn/shared";
 import Stripe from "stripe";
 import assert from "assert";
-import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import {
+  cusProductsToCusEnts,
+  cusProductToPrices,
+} from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import {
   findStripeItemForPrice,
   isLicenseItem,
@@ -30,6 +33,7 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
+import { getRelatedCusPrice } from "./internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 
 const { db, client } = initDrizzle({ maxConnections: 5 });
 let orgSlugs = process.env.ORG_SLUGS!.split(",");
@@ -183,12 +187,20 @@ const checkCustomerCorrect = async ({
       }
     }
 
-    // console.log("prices:", prices);
-    // console.log("subItems:", subItems);
     assert(
       prices.length - missingUsageCount === subItems.length,
       `(${cusProduct.product.name}) number of sub items equivalent to number of prices`
     );
+
+    for (const cusEnt of cusProduct.customer_entitlements) {
+      let cusPrice = getRelatedCusPrice(cusEnt, cusProduct.customer_prices);
+
+      if (cusEnt.usage_allowed && !cusPrice) {
+        assert.fail(
+          `Feature ${cusEnt.feature_id} has usage allowed but no related cus price`
+        );
+      }
+    }
   }
 
   // Other checks to perform

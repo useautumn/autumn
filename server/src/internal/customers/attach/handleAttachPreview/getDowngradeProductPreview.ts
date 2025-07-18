@@ -20,10 +20,10 @@ export const getDowngradeProductPreview = async ({
 }) => {
   const newProduct = attachParamsToProduct({ attachParams });
 
-  const { curMainProduct } = attachParamToCusProducts({ attachParams });
+  const { curCusProduct } = attachParamToCusProducts({ attachParams });
   const stripeSubs = await getStripeSubs({
     stripeCli: attachParams.stripeCli,
-    subIds: curMainProduct?.subscription_ids || [],
+    subIds: curCusProduct?.subscription_ids || [],
   });
 
   const anchorToUnix = stripeSubs[0].current_period_end * 1000;
@@ -47,11 +47,15 @@ export const getDowngradeProductPreview = async ({
     // anchorToUnix,
   });
 
+  let nextCycleAt = curCusProduct?.trial_ends_at
+    ? curCusProduct.trial_ends_at
+    : anchorToUnix;
+
   return {
     currency: attachParams.org.default_currency,
     due_next_cycle: {
       line_items: items,
-      due_at: anchorToUnix,
+      due_at: nextCycleAt,
     },
 
     options,
