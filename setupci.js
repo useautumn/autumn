@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import { randomBytes } from 'crypto';
 import { writeFileSync, copyFileSync } from 'fs';
+import inquirer from 'inquirer';
+import { spawnSync } from 'child_process';
 import chalk from 'chalk';
 
 const genUrlSafeBase64 = (bytes) => {
@@ -30,39 +32,21 @@ const genAlphanumericPassword = (length = 24) => {
   return result;
 }
 
-const handleLocalRunSetup = async () => {
-  // Step 10: Stripe webhook URL setup
-    console.log(chalk.magentaBright('\n================ Stripe Webhook Setup ================\n'));
-    const subdomain = genRandomSubdomain(32);
-    const webhookUrl = `https://${subdomain}.loca.lt`;
-    stripeWebhookVars.push(`STRIPE_WEBHOOK_URL=${webhookUrl}`);
-    stripeWebhookVars.push(`LOCALHOST_RUN_SUBDOMAIN=${subdomain}`);
-    console.log(chalk.greenBright(`\nTo start your webhook tunnel, run this in another terminal:\n`));
-    console.log(chalk.yellowBright(`  npx localtunnel --port 8080 --subdomain ${subdomain}\n`));
-    console.log(chalk.greenBright(`\nTest your webhook URL with:\n`));
-    console.log(chalk.yellowBright(`  curl ${webhookUrl}\n`));
-    console.log(chalk.cyan('If you need to restart the tunnel in the future, use the same command.'));
-
-    console.log(chalk.yellow('--------------------------------'));
-
-    return stripeWebhookVars;
-}
-
 async function main() {
   // Step 1: Generate secrets
   console.log(chalk.magentaBright('\n================ Autumn Setup ================\n'));
-  const localtunnelReservedKey = "askjdnaslkjdalkjen";
   const secrets = {
     BETTER_AUTH_SECRET: genUrlSafeBase64(64),
+    ENCRYPTION_IV: process.env.ENCRYPTION_IV,
+    ENCRYPTION_PASSWORD: process.env.ENCRYPTION_PASSWORD,
     BETTER_AUTH_URL: 'http://localhost:8080',
     CLIENT_URL: 'http://localhost:3000',
-    STRIPE_WEBHOOK_URL: `https://${localtunnelReservedKey}.loca.lt`,
+    LOCALTUNNEL_RESERVED_KEY: process.env.LOCALTUNNEL_RESERVED_KEY,
+    STRIPE_WEBHOOK_URL: process.env.STRIPE_WEBHOOK_URL,
   };
 
-  let databaseUrl = "";
+  let databaseUrl = process.env.DATABASE_URL;
   let stripeWebhookVars = [];
-
-//   databaseUrl = await handleDatabaseSetup();
   // stripeWebhookVars = await handleLocalRunSetup();
 
   // Step 11: Write to server/.env
@@ -81,14 +65,21 @@ async function main() {
   // Stripe required section
   envSections.push(
     '# Stripe',
+    `LOCALTUNNEL_RESERVED_KEY=${secrets.LOCALTUNNEL_RESERVED_KEY}`,
+    `ENCRYPTION_IV=${secrets.ENCRYPTION_IV}`,
+    `ENCRYPTION_PASSWORD=${secrets.ENCRYPTION_PASSWORD}`,
     `STRIPE_WEBHOOK_URL=${secrets.STRIPE_WEBHOOK_URL}`,
     ''
   );
 
-  envSections.push(
-    '# Database',
-    ''
-  );
+  // Database section
+  if (databaseUrl) {
+    envSections.push(
+      '# Database',
+      `DATABASE_URL=${databaseUrl}`,
+      ''
+    );
+  }
 
   // Stripe Webhooks section
   if (stripeWebhookVars.length > 0) {
