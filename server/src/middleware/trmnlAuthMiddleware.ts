@@ -1,6 +1,7 @@
 import { ExtendedResponse } from "@/utils/models/Request.js";
 import { AppEnv, ErrCode } from "@autumn/shared";
 import { readFile } from "@/external/supabase/storageUtils.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
 
 export const trmnlExclusions = ["/trmnl/screen"];
 
@@ -31,9 +32,17 @@ export const trmnlAuthMiddleware = async (
     });
   }
 
-  req.org = {};
-  req.org.id = fileJson[trmnlId];
-  req.env = req.headers["env"] || AppEnv.Live;
+  const features = await FeatureService.list({
+    db: req.db,
+    orgId: fileJson[trmnlId],
+    env: req.headers["env"] || AppEnv.Live,
+  });
+
+  req.org = {
+    id: fileJson[trmnlId],
+    env: req.headers["env"] || AppEnv.Live,
+  };
+  req.features = features;
 
   next();
 };
