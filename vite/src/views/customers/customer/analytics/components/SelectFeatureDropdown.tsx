@@ -13,7 +13,7 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, Check, X } from "lucide-react";
+import { ChevronDown, Check, X, Loader2 } from "lucide-react";
 import { useAnalyticsContext } from "../AnalyticsContext";
 import { Feature, FeatureType, FeatureUsageType } from "@autumn/shared";
 import { toast } from "sonner";
@@ -35,7 +35,8 @@ export const SelectFeatureDropdown = ({
     trigger?: string;
   };
 }) => {
-  const { features, hasCleared, setHasCleared } = useAnalyticsContext();
+  const { features, hasCleared, setHasCleared, topEventsLoading, topEvents } =
+    useAnalyticsContext();
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
 
@@ -72,6 +73,13 @@ export const SelectFeatureDropdown = ({
   };
 
   const numSelected = currentFeatureIds.length + currentEventNames.length;
+  const isDefault =
+    currentFeatureIds?.length === 0 && currentEventNames?.length === 0;
+
+  const allTopEventNames = [
+    ...(topEvents?.featureIds || []),
+    ...(topEvents?.eventNames || []),
+  ];
 
   // Create combined options for search
   const featureOptions = features
