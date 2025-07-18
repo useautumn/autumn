@@ -18,6 +18,8 @@ import { analyticsRouter } from "./analytics/internalAnalyticsRouter.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { InvoiceService } from "./invoices/InvoiceService.js";
 import rateLimit from "express-rate-limit";
+import { trmnlRouter } from "./api/trmnl/trmnlRouter.js";
+import { trmnlAuthMiddleware } from "@/middleware/trmnlAuthMiddleware.js";
 
 const mainRouter: Router = Router();
 
@@ -35,6 +37,8 @@ mainRouter.use("/products", withOrgAuth, productRouter);
 mainRouter.use("/dev", devRouter);
 mainRouter.use("/customers", withOrgAuth, cusRouter);
 mainRouter.use("/query", withOrgAuth, analyticsRouter);
+
+mainRouter.use("/trmnl", trmnlAuthMiddleware, trmnlRouter);
 
 const limiter = rateLimit({
   windowMs: 60 * 1000, // 15 minutes
