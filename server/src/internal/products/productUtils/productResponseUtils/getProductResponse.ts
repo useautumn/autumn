@@ -143,8 +143,10 @@ export const getProductProperties = ({
     is_one_off: isOneOff(product.prices) || false,
     interval_group: firstInterval,
     has_trial: hasFreeTrial,
-    has_prepaid: product.prices.some((p: Price) =>
-      isPrepaidPrice({ price: p })
+    updateable: product.prices.some(
+      (p: Price) =>
+        isPrepaidPrice({ price: p }) &&
+        p.config.interval !== BillingInterval.OneOff
     ),
   });
 };
