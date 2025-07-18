@@ -53,7 +53,7 @@ export const fromAPIFeature = ({
   if (isMetered) {
     return constructMeteredFeature({
       featureId: apiFeature.id,
-      name: apiFeature.name,
+      name: apiFeature.name || "",
       usageType: apiFeature.type as unknown as FeatureUsageType,
       orgId,
       env,
@@ -71,7 +71,7 @@ export const fromAPIFeature = ({
 
     return constructCreditSystem({
       featureId: apiFeature.id,
-      name: apiFeature.name,
+      name: apiFeature.name || "",
       orgId,
       env,
       schema: apiFeature.credit_schema!,
@@ -80,7 +80,7 @@ export const fromAPIFeature = ({
 
   return constructBooleanFeature({
     featureId: apiFeature.id,
-    name: apiFeature.name,
+    name: apiFeature.name || "",
     orgId,
     env,
   });
