@@ -1,10 +1,12 @@
+import { useAppContext } from "@/app/AppContext";
 import { useOrg } from "@/hooks/useOrg";
 import { useAxiosSWR, usePostSWR } from "@/services/useAxiosSwr";
 import { useEnv } from "@/utils/envUtils";
 import { navigateTo, nullish } from "@/utils/genUtils";
 import { ErrCode, FullCustomer } from "@autumn/shared";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router";
+import { useTopEventNames } from "./useTopEventNames";
 
 export const useAnalyticsData = ({
   hasCleared = false,
@@ -12,12 +14,15 @@ export const useAnalyticsData = ({
   hasCleared?: boolean;
 }) => {
   const { org } = useOrg();
+
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const customerId = searchParams.get("customer_id");
   const featureIds = searchParams.get("feature_ids")?.split(",");
   const eventNames = searchParams.get("event_names")?.split(",");
   const interval = searchParams.get("interval");
+
+  const { topEvents, isLoading: topEventsLoading } = useTopEventNames();
 
   const { data: featuresData, isLoading: featuresLoading } = useAxiosSWR({
     url: `/features`,
@@ -35,33 +40,59 @@ export const useAnalyticsData = ({
     org?.slug,
   ];
 
-  const {
-    data: eventNamesData,
-    isLoading: eventNamesLoading,
-    error: eventNamesError,
-  } = usePostSWR({
-    method: "get",
-    url: `/query/event_names`,
-    enabled: nullish(eventNames) && nullish(featureIds),
-    queryKey: ["query-event-names", ...queryKey],
-    options: {
-      refreshInterval: 0,
-      onError: (error) => {
-        if (error.code === ErrCode.ClickHouseDisabled) {
-          return error;
-        }
-      },
-    },
-  });
+  // const {
+  //   data: eventNamesData,
+  //   isLoading: eventNamesLoading,
+  //   error: eventNamesError,
+  // } = usePostSWR({
+  //   method: "get",
+  //   url: `/query/event_names`,
+  //   enabled: nullish(eventNames) && nullish(featureIds),
+  //   queryKey: ["query-event-names", ...queryKey],
+  //   options: {
+  //     refreshInterval: 0,
+  //     onError: (error) => {
+  //       if (error.code === ErrCode.ClickHouseDisabled) {
+  //         return error;
+  //       }
+  //     },
+  //   },
+  // });
+
+  // useEffect(() => {
+  //   if (eventNamesData && !hasCleared) {
+  //     searchParams.set("event_names", eventNamesData.eventNames.join(","));
+  //     searchParams.set("feature_ids", eventNamesData.featureIds.join(","));
+
+  //     navigate(`?${searchParams.toString()}`);
+  //   }
+  // }, [eventNamesData, searchParams, hasCleared, navigate]);
+
+  const hasSetTopEvents = useRef(false);
 
   useEffect(() => {
-    if (eventNamesData && !hasCleared) {
-      searchParams.set("event_names", eventNamesData.eventNames.join(","));
-      searchParams.set("feature_ids", eventNamesData.featureIds.join(","));
+    if (
+      topEvents &&
+      !topEventsLoading &&
+      nullish(eventNames) &&
+      nullish(featureIds) &&
+      !hasCleared
+    ) {
+      searchParams.set("event_names", topEvents.eventNames.join(","));
+      searchParams.set("feature_ids", topEvents.featureIds.join(","));
+      hasSetTopEvents.current = true;
 
       navigate(`?${searchParams.toString()}`);
     }
-  }, [eventNamesData, searchParams, hasCleared, navigate]);
+  }, [
+    topEventsLoading,
+    eventNames,
+    featureIds,
+    hasCleared,
+    topEvents,
+    searchParams,
+    navigate,
+  ]);
 
   const {
     data,

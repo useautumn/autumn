@@ -9,8 +9,10 @@ import {
   FullCusProduct,
   FullCustomer,
 } from "@autumn/shared";
-import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
+import { queryWithCache } from "@/external/caching/cacheUtils.js";
+import { CacheType } from "@/external/caching/cacheActions.js";
 
 export const analyticsRouter = Router();
 
@@ -23,11 +25,16 @@ analyticsRouter.get("/event_names", async (req: any, res: any) =>
       const { db, org, env, features } = req;
       const { interval, event_names, customer_id } = req.body;
 
-      const result = await AnalyticsService.getTopEventNames({
-        req
+      const result = await queryWithCache({
+        action: CacheType.TopEvents,
+        key: `${org.id}_${env}`,
+        fn: async () => {
+          return await AnalyticsService.getTopEventNames({
+            req,
+          });
+        },
       });
 
-      // console.log("result", result);
       let featureIds: string[] = [];
       let eventNames: string[] = [];
 
@@ -37,7 +44,7 @@ analyticsRouter.get("/event_names", async (req: any, res: any) =>
           features.some(
             (feature: Feature) =>
               feature.type == FeatureType.Metered &&
-              feature.config.filters?.[0]?.value.includes(result[i]),
+              feature.config.filters?.[0]?.value.includes(result[i])
           )
         ) {
           eventNames.push(result[i]);
@@ -55,7 +62,7 @@ analyticsRouter.get("/event_names", async (req: any, res: any) =>
         eventNames,
       });
     },
-  }),
+  })
 );
 
 analyticsRouter.post("/events", async (req: any, res: any) =>
@@ -125,7 +132,7 @@ analyticsRouter.post("/events", async (req: any, res: any) =>
         bcExclusionFlag,
       });
     },
-  }),
+  })
 );
 
 analyticsRouter.post("/raw", async (req: any, res: any) =>
@@ -176,5 +183,5 @@ analyticsRouter.post("/raw", async (req: any, res: any) =>
         rawEvents: events,
       });
     },
-  }),
+  })
 );

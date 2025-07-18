@@ -4,7 +4,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 import { ApiKeyService, CachedKeyService } from "../ApiKeyService.js";
 import { CacheType } from "@/external/caching/cacheActions.js";
-import { getAPIKeyCache } from "@/external/caching/cacheUtils.js";
+import { queryWithCache } from "@/external/caching/cacheUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
 function generateApiKey(length = 32, prefix = "") {
@@ -77,7 +77,7 @@ export const verifyKey = async ({
 
   const env = key.startsWith("am_sk_test") ? AppEnv.Sandbox : AppEnv.Live;
 
-  const data = await getAPIKeyCache({
+  const data = await queryWithCache({
     action: CacheType.SecretKey,
     key: hashedKey,
     fn: async () =>
