@@ -12,7 +12,7 @@
     "workers": "npx tsx watch src/workers.ts",
     "workers:start": "node --no-deprecation dist/src/workers.js",
     "check": "tsx src/check.ts",
-    "build": "tsc -b tsconfig.build.json",
+    "build": "tsc -b tsconfig.build.json && cp -r src/external/clickhouse/queries dist/src/external/clickhouse/",
     "prod": "tsc -b tsconfig.build.json && tsc-alias && node dist/src/index.js",
     "prod:build": "tsc -b tsconfig.build.json && tsc-alias",
     "prod:start": "node dist/src/index.js",
