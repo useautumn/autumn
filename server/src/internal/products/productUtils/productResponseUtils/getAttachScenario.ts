@@ -1,6 +1,10 @@
 import { cusProductToProduct } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { AttachScenario, FullCustomer, FullProduct } from "@autumn/shared";
-import { isFreeProduct, isProductUpgrade } from "../../productUtils.js";
+import {
+  isFreeProduct,
+  isOneOff,
+  isProductUpgrade,
+} from "../../productUtils.js";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 
 export const getAttachScenario = ({
@@ -18,6 +22,10 @@ export const getAttachScenario = ({
   });
 
   if (!curMainProduct || fullProduct.is_add_on) return AttachScenario.New;
+
+  if (isOneOff(fullProduct.prices)) {
+    return AttachScenario.New;
+  }
 
   // 1. If current product is the same as the product, return active
   if (curMainProduct?.product.id == fullProduct.id) {

@@ -68,7 +68,12 @@ export const mapOptionsList = ({
         newOption.internal_feature_id === option.internal_feature_id
     );
 
-    if (!inNewOptions) {
+    const prepaidPriceExists = findPrepaidPrice({
+      prices,
+      internalFeatureId: option.internal_feature_id!,
+    });
+
+    if (!inNewOptions && prepaidPriceExists) {
       newOptionsList.push(option);
     }
   }
