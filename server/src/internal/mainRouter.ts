@@ -40,7 +40,7 @@ mainRouter.use("/query", withOrgAuth, analyticsRouter);
 
 const trmnlLimiter = rateLimit({
   windowMs: 60 * 1000 * 30,
-  limit: 3,
+  limit: process.env.NODE_ENV === "development" ? 1000 : 10,
   standardHeaders: "draft-8",
   legacyHeaders: false,
 });
