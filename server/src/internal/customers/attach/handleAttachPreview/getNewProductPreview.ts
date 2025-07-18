@@ -13,18 +13,25 @@ import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/free
 import { getLastInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { getMergeCusProduct } from "../attachFunctions/addProductFlow/getMergeCusProduct.js";
-import { formatUnixToDate, notNullish, nullish } from "@/utils/genUtils.js";
+import {
+  formatUnixToDate,
+  formatUnixToDateTime,
+  notNullish,
+  nullish,
+} from "@/utils/genUtils.js";
 
 export const getNewProductPreview = async ({
   branch,
   attachParams,
   logger,
   config,
+  withPrepaid = false,
 }: {
   branch: AttachBranch;
   attachParams: AttachParams;
   logger: any;
   config: AttachConfig;
+  withPrepaid?: boolean;
 }) => {
   const { org } = attachParams;
   const newProduct = attachParamsToProduct({ attachParams });
@@ -52,18 +59,18 @@ export const getNewProductPreview = async ({
     anchorToUnix,
     freeTrial,
     logger,
+    withPrepaid,
   });
 
   let dueNextCycle = null;
-  // let oneOffOrFree =
-  //   isOneOff(newProduct.prices) || isFreeProduct(newProduct.prices);
-  // !oneOffOrFree &&
+
   if (freeTrial || notNullish(anchorToUnix)) {
     let nextCycleItems = await getItemsForNewProduct({
       newProduct,
       attachParams,
       now: attachParams.now,
       logger,
+      withPrepaid,
     });
 
     let minInterval = getLastInterval({
@@ -118,13 +125,13 @@ export const getNewProductPreview = async ({
       dueNextCycle = {
         line_items: items.filter((item) => {
           let price = newProduct.prices.find(
-            (price) => price.id == item.price_id,
+            (price) => price.id == item.price_id
           );
           return price?.config.interval == minInterval;
         }),
         due_at: addBillingIntervalUnix(
           attachParams.now || Date.now(),
-          minInterval,
+          minInterval
         ),
       };
     }

@@ -12,27 +12,27 @@ import {
 import { useCustomersContext } from "./CustomersContext";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { Check, ListFilter, X } from "lucide-react";
-import { useSearchParams } from "react-router";
 import { useSetSearchParams } from "@/utils/setSearchParams";
-import { useEffect } from "react";
+import { useSearchParams } from "react-router";
 
 function FilterButton() {
   const { setFilters } = useCustomersContext();
-  const [searchParams] = useSearchParams();
   const setSearchParams = useSetSearchParams();
-  // useEffect(() => {
-  //   let statusParam = searchParams.get("status");
-  //   let productIdParam = searchParams.get("product_id");
-  //   setFilters({ status: statusParam, product_id: productIdParam });
-  // }, [searchParams]);
+
+  const clearFilters = () => {
+    setFilters({
+      status: [],
+      product_id: [],
+    });
+  };
 
   return (
     <DropdownMenu>
       <RenderFilterTrigger />
-
       <DropdownMenuContent className="w-56" align="start">
         <FilterStatus />
         <ProductStatus />
+        <ProductVersionFilter />
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem
@@ -40,6 +40,7 @@ function FilterButton() {
               setSearchParams({
                 status: "",
                 product_id: "",
+                version: "",
               })
             }
             className="cursor-pointer"
@@ -57,10 +58,21 @@ export default FilterButton;
 
 export const FilterStatus = () => {
   const { filters, setFilters } = useCustomersContext();
-  const statuses = ["canceled", "free_trial"];
 
-  const [searchParams] = useSearchParams();
-  const setSearchParams = useSetSearchParams();
+  const statuses: string[] = ["canceled", "free_trial"];
+
+  const selectedStatuses = filters.status || [];
+
+  const toggleStatus = (status: string) => {
+    const selected = filters.status || [];
+    const isSelected = selected.includes(status);
+
+    const updated = isSelected
+      ? selected.filter((s: string) => s !== status)
+      : [...selected, status];
+
+    setFilters({ ...filters, status: updated });
+  };
 
   return (
     <DropdownMenuGroup>
@@ -68,22 +80,51 @@ export const FilterStatus = () => {
         Status
       </DropdownMenuLabel>
       {statuses.map((status: any) => {
-        const isActive = searchParams.get("status") === status;
+        const isActive = selectedStatuses.includes(status);
         return (
           <DropdownMenuItem
             key={status}
+            onClick={() => toggleStatus(status)}
+            className="flex items-center justify-between cursor-pointer text-sm"
+          >
+            {keyToTitle(status)}
+            {isActive && <Check size={13} className="text-t3" />}
+          </DropdownMenuItem>
+        );
+      })}
+    </DropdownMenuGroup>
+  );
+};
+
+export const ProductVersionFilter = () => {
+  const { versionCounts, products } = useCustomersContext();
+  const [searchParams] = useSearchParams();
+  const setSearchParams = useSetSearchParams();
+  const selectedProductId = searchParams.get("product_id");
+  if (!selectedProductId) return null;
+  const versionCount = versionCounts?.[selectedProductId] || 1;
+  const currentVersion = searchParams.get("version");
+  const versionOptions = Array.from({ length: versionCount }, (_, i) => i + 1);
+  return (
+    <DropdownMenuGroup>
+      <DropdownMenuLabel className="text-t3 !font-regular text-xs">
+        Version
+      </DropdownMenuLabel>
+      {versionOptions.map((version) => {
+        const isActive = String(currentVersion) === String(version);
+        return (
+          <DropdownMenuItem
+            key={version}
             onClick={() => {
               if (isActive) {
-                // setFilters({ ...filters, status: undefined });
-                setSearchParams({ status: "" });
+                setSearchParams({ version: "" });
               } else {
-                // setFilters({ ...filters, status });
-                setSearchParams({ status });
+                setSearchParams({ version: String(version) });
               }
             }}
             className="flex items-center justify-between cursor-pointer text-sm"
           >
-            {keyToTitle(status)}
+            v{version}
             {isActive && <Check size={13} className="text-t3" />}
           </DropdownMenuItem>
         );
@@ -96,21 +137,22 @@ export const ProductStatus = () => {
   const { products } = useCustomersContext();
   const setSearchParams = useSetSearchParams();
   const [searchParams] = useSearchParams();
+  const selectedProductId = searchParams.get("product_id");
   return (
     <DropdownMenuGroup>
       <DropdownMenuLabel className="text-t3 !font-regular text-xs">
         Product
       </DropdownMenuLabel>
       {products.map((product: any) => {
-        const isActive = searchParams.get("product_id") === product.id;
+        const isActive = selectedProductId === product.id;
         return (
           <DropdownMenuItem
             key={product.id}
             onClick={() => {
               if (isActive) {
-                setSearchParams({ product_id: "" });
+                setSearchParams({ product_id: "", version: "" });
               } else {
-                setSearchParams({ product_id: product.id });
+                setSearchParams({ product_id: product.id, version: "" });
               }
             }}
             className="flex items-center justify-between cursor-pointer"

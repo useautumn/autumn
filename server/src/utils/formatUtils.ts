@@ -8,7 +8,7 @@ export const formatAmount = ({
   minFractionDigits = 0,
 }: {
   org?: Organization;
-  currency?: string;
+  currency?: string | null;
   amount: number;
   maxFractionDigits?: number;
   minFractionDigits?: number;

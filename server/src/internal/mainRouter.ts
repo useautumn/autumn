@@ -4,7 +4,7 @@ import { orgRouter } from "./orgs/orgRouter.js";
 import { Router } from "express";
 import { userRouter } from "./users/userRouter.js";
 import { withAuth, withOrgAuth } from "../middleware/authMiddleware.js";
-import { featureRouter } from "./features/featureRouter.js";
+import { internalFeatureRouter } from "./features/internalFeatureRouter.js";
 import { productRouter } from "./products/internalProductRouter.js";
 import { devRouter } from "./dev/devRouter.js";
 import { cusRouter } from "./customers/internalCusRouter.js";
@@ -18,6 +18,8 @@ import { analyticsRouter } from "./analytics/internalAnalyticsRouter.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { InvoiceService } from "./invoices/InvoiceService.js";
 import rateLimit from "express-rate-limit";
+import { trmnlRouter } from "./api/trmnl/trmnlRouter.js";
+import { trmnlAuthMiddleware } from "@/middleware/trmnlAuthMiddleware.js";
 
 const mainRouter: Router = Router();
 
@@ -30,11 +32,20 @@ mainRouter.use("/admin", withAdminAuth, adminRouter);
 mainRouter.use("/users", withAuth, userRouter);
 mainRouter.use("/onboarding", withOrgAuth, onboardingRouter);
 mainRouter.use("/organization", withOrgAuth, orgRouter);
-mainRouter.use("/features", withOrgAuth, featureRouter);
+mainRouter.use("/features", withOrgAuth, internalFeatureRouter);
 mainRouter.use("/products", withOrgAuth, productRouter);
 mainRouter.use("/dev", devRouter);
 mainRouter.use("/customers", withOrgAuth, cusRouter);
 mainRouter.use("/query", withOrgAuth, analyticsRouter);
+
+const trmnlLimiter = rateLimit({
+  windowMs: 60 * 1000 * 30,
+  limit: process.env.NODE_ENV === "development" ? 1000 : 10,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+});
+
+mainRouter.use("/trmnl", trmnlLimiter, trmnlAuthMiddleware, trmnlRouter);
 
 const limiter = rateLimit({
   windowMs: 60 * 1000, // 15 minutes
@@ -71,7 +82,7 @@ mainRouter.use(
       console.error(e);
       return res.status(500).json({ error: "Error retrieving invoice" });
     }
-  },
+  }
 );
 
 // Optional...
@@ -89,7 +100,7 @@ if (process.env.AUTUMN_SECRET_KEY) {
           },
         };
       },
-    }),
+    })
   );
 }
 
@@ -117,7 +128,7 @@ mainRouter.use(
         },
       };
     },
-  }),
+  })
 );
 
 export default mainRouter;

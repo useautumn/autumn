@@ -3,14 +3,19 @@ import { CusService } from "../customers/CusService.js";
 import { AnalyticsService } from "./AnalyticsService.js";
 import { StatusCodes } from "http-status-codes";
 import {
+  AppEnv,
   ErrCode,
   Feature,
   FeatureType,
   FullCusProduct,
   FullCustomer,
+  Organization,
 } from "@autumn/shared";
-import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
+import { queryWithCache } from "@/external/caching/cacheUtils.js";
+import { CacheType } from "@/external/caching/cacheActions.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const analyticsRouter = Router();
 
@@ -23,13 +28,16 @@ analyticsRouter.get("/event_names", async (req: any, res: any) =>
       const { db, org, env, features } = req;
       const { interval, event_names, customer_id } = req.body;
 
-      const result = await AnalyticsService.getTopEventNames({
-        ch: req.clickhouseClient,
-        orgId: org.id,
-        env,
+      const result = await queryWithCache({
+        action: CacheType.TopEvents,
+        key: `${org.id}_${env}`,
+        fn: async () => {
+          return await AnalyticsService.getTopEventNames({
+            req,
+          });
+        },
       });
 
-      // console.log("result", result);
       let featureIds: string[] = [];
       let eventNames: string[] = [];
 
@@ -39,7 +47,7 @@ analyticsRouter.get("/event_names", async (req: any, res: any) =>
           features.some(
             (feature: Feature) =>
               feature.type == FeatureType.Metered &&
-              feature.config.filters?.[0]?.value.includes(result[i]),
+              feature.config.filters?.[0]?.value.includes(result[i])
           )
         ) {
           eventNames.push(result[i]);
@@ -57,9 +65,47 @@ analyticsRouter.get("/event_names", async (req: any, res: any) =>
         eventNames,
       });
     },
-  }),
+  })
 );
 
+const getTopEvents = async ({ req }: { req: ExtendedRequest }) => {
+  const { org, env, features } = req;
+
+  const result = await queryWithCache({
+    action: CacheType.TopEvents,
+    key: `${org.id}_${env}`,
+    fn: async () => {
+      return await AnalyticsService.getTopEventNames({
+        req,
+      });
+    },
+  });
+
+  let featureIds: string[] = [];
+  let eventNames: string[] = [];
+
+  for (let i = 0; i < result.length; i++) {
+    // Is an event name
+    if (
+      features.some(
+        (feature: Feature) =>
+          feature.type == FeatureType.Metered &&
+          feature.config.filters?.[0]?.value.includes(result[i])
+      )
+    ) {
+      eventNames.push(result[i]);
+    } else if (features.some((feature: Feature) => feature.id === result[i])) {
+      featureIds.push(result[i]);
+    }
+
+    if (i >= 2) break;
+  }
+
+  return {
+    featureIds,
+    eventNames,
+  };
+};
 analyticsRouter.post("/events", async (req: any, res: any) =>
   routeHandler({
     req,
@@ -68,6 +114,14 @@ analyticsRouter.post("/events", async (req: any, res: any) =>
     handler: async () => {
       const { db, org, env, features } = req;
       let { interval, event_names, customer_id } = req.body;
+
+      let topEvents:
+        | { featureIds: string[]; eventNames: string[] }
+        | undefined = undefined;
+      if (!event_names || event_names.length === 0) {
+        topEvents = await getTopEvents({ req });
+        event_names = [...topEvents.eventNames, ...topEvents.featureIds];
+      }
 
       let aggregateAll = false;
       let customer: FullCustomer | undefined = undefined;
@@ -124,10 +178,12 @@ analyticsRouter.post("/events", async (req: any, res: any) =>
         customer,
         events,
         features,
+        eventNames: event_names,
+        topEvents,
         bcExclusionFlag,
       });
     },
-  }),
+  })
 );
 
 analyticsRouter.post("/raw", async (req: any, res: any) =>
@@ -178,5 +234,5 @@ analyticsRouter.post("/raw", async (req: any, res: any) =>
         rawEvents: events,
       });
     },
-  }),
+  })
 );

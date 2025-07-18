@@ -22,15 +22,16 @@ import { useSetSearchParams } from "@/utils/setSearchParams";
 
 function CustomersView({ env }: { env: AppEnv }) {
   const pageSize = 50;
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [searchQuery, setSearchQuery] = React.useState(
-    searchParams.get("q") || "",
+    searchParams.get("q") || ""
   );
 
   const [filters, setFilters] = React.useState<any>({
     status: searchParams.get("status"),
     product_id: searchParams.get("product_id"),
+    version: searchParams.get("version"),
   });
 
   const [pagination, setPagination] = React.useState<{
@@ -57,6 +58,7 @@ function CustomersView({ env }: { env: AppEnv }) {
       filters: {
         status: searchParams.get("status"),
         product_id: searchParams.get("product_id"),
+        version: searchParams.get("version"),
       },
 
       page: pagination.page,
@@ -110,6 +112,33 @@ function CustomersView({ env }: { env: AppEnv }) {
       setPaginationLoading(false);
     });
   }, [pagination]);
+
+  useEffect(() => {
+    const urlStatus =
+      searchParams.get("status")?.split(",").filter(Boolean) || [];
+
+    const urlProductIds =
+      searchParams.get("product_id")?.split(",").filter(Boolean) || [];
+
+    setFilters({
+      status: urlStatus,
+      product_id: urlProductIds,
+    });
+  }, []);
+
+  useEffect(() => {
+    const params: Record<string, string> = {};
+
+    if (filters?.status?.length > 0) {
+      params.status = filters.status.join(",");
+    }
+
+    if (filters?.product_id?.length > 0) {
+      params.product_id = filters.product_id.join(",");
+    }
+
+    setSearchParams(params);
+  }, [filters]);
 
   const totalPages = Math.ceil((data?.totalCount || 0) / pageSize);
 

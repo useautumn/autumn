@@ -1,4 +1,4 @@
-import { useSearchParams } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { AppEnv, ErrCode, Feature } from "@autumn/shared";
 import { useEffect, useRef, useState } from "react";
 import { EventsBarChart } from "./AnalyticsGraph";
@@ -18,7 +18,6 @@ import { AgGridReact } from "ag-grid-react";
 
 export const AnalyticsView = ({ env }: { env: AppEnv }) => {
   const [searchParams] = useSearchParams();
-  const [selectedInterval, setSelectedInterval] = useState("30d");
   const [eventNames, setEventNames] = useState<string[]>([]);
   const [featureIds, setFeatureIds] = useState<string[]>([]);
   const [clickHouseDisabled, setClickHouseDisabled] = useState(false);
@@ -29,18 +28,20 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
   const [totalRows, setTotalRows] = useState(0);
   const [visibleRows, setVisibleRows] = useState(0);
   const gridRef = useRef<AgGridReact>(null);
+  const navigate = useNavigate();
 
   const customerId = searchParams.get("customer_id");
 
-  // Get selected features and events from query parameters
-  const currentFeatureIds =
-    searchParams.get("feature_ids")?.split(",").filter(Boolean) || [];
-  const currentEventNames =
-    searchParams.get("event_names")?.split(",").filter(Boolean) || [];
-  const allSelectedItems = [...currentFeatureIds, ...currentEventNames];
-
-  const { customer, features, events, queryLoading, error, bcExclusionFlag } =
-    useAnalyticsData();
+  const {
+    customer,
+    features,
+    events,
+    queryLoading,
+    error,
+    bcExclusionFlag,
+    topEventsLoading,
+    topEvents,
+  } = useAnalyticsData({ hasCleared });
 
   const { rawEvents, queryLoading: rawQueryLoading } = useRawAnalyticsData();
 
@@ -58,15 +59,17 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
           yName:
             features.find((feature: Feature) => {
               const eventName = x.name.replace("_count", "");
+
               if (feature.id === eventName) {
                 return true;
               }
+
               if (feature.config.filters && feature.config.filters.length > 0) {
                 return feature.config.filters.some(
                   (filter: any) =>
                     filter.value &&
                     Array.isArray(filter.value) &&
-                    filter.value.includes(eventName),
+                    filter.value.includes(eventName)
                 );
               }
               return false;
@@ -100,9 +103,14 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
     <AnalyticsContext.Provider
       value={{
         customer,
-        selectedInterval,
-        setSelectedInterval,
         eventNames,
+        selectedInterval: searchParams.get("interval") || "30d",
+        setSelectedInterval: (interval: string) => {
+          const newParams = new URLSearchParams(searchParams);
+          newParams.set("interval", interval);
+          navigate(`${location.pathname}?${newParams.toString()}`);
+        },
+
         setEventNames,
         featureIds,
         setFeatureIds,
@@ -119,24 +127,25 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
         setTotalPages,
         totalRows,
         setTotalRows,
+        topEvents,
       }}
     >
       <div className="flex flex-col gap-4 h-full relative w-full text-sm pb-0 overflow-hidden">
         <h1
           className={cn(
             "text-xl font-medium shrink-0 pl-10",
-            env === AppEnv.Sandbox ? "pt-4" : "pt-6",
+            env === AppEnv.Sandbox ? "pt-4" : "pt-6"
           )}
         >
           Analytics
         </h1>
         <div className="max-h-[400px] min-h-[400px] pb-6">
           <PageSectionHeader
-            title="Events"
+            title="Usage Analytics"
             endContent={<QueryTopbar />}
             className="h-10"
           />
-          {queryLoading && (
+          {(queryLoading || topEventsLoading) && (
             <div className="flex-1 px-10 pt-6">
               <p className="text-t3 text-sm shimmer w-fit">
                 Fetching usage {customerId ? `for ${customerId}` : ""}
@@ -146,18 +155,29 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 
           <div className="h-full">
             {events && events.data.length > 0 && (
-              <Card className="w-full bg-transparent border-none rounded-none shadow-none">
+              <Card className="h-full p-0 pt-6 w-full bg-transparent border-none rounded-none shadow-none">
                 <CardContent className="px-6 h-full bg-transparent">
                   <EventsBarChart data={events} chartConfig={chartConfig} />
                 </CardContent>
               </Card>
+            )}
+
+            {!events && !queryLoading && (
+              <div className="flex-1 px-10 pt-6">
+                <p className="text-t3 text-sm">
+                  No events found. Please widen your filters.{" "}
+                  {eventNames.length === 0
+                    ? "Try to select some events in the dropdown above."
+                    : ""}
+                </p>
+              </div>
             )}
           </div>
         </div>
 
         <div className="h-full">
           <PageSectionHeader
-            title="Raw Events"
+            title="Event Logs"
             className="h-10"
             endContent={<PaginationPanel />}
           />

@@ -13,15 +13,20 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, Check, X } from "lucide-react";
+import { ChevronDown, Check, X, Loader2 } from "lucide-react";
 import { useAnalyticsContext } from "../AnalyticsContext";
 import { Feature, FeatureType, FeatureUsageType } from "@autumn/shared";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useSearchParams, useNavigate, useLocation } from "react-router";
-import { getAllEventNames } from "../utils/getAllEventNames";
+import {
+  eventNameBelongsToFeature,
+  getAllEventNames,
+} from "../utils/getAllEventNames";
 import { useEffect, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
+
+const MAX_NUM_SELECTED = 10;
 
 export const SelectFeatureDropdown = ({
   classNames,
@@ -30,7 +35,8 @@ export const SelectFeatureDropdown = ({
     trigger?: string;
   };
 }) => {
-  const { features, hasCleared, setHasCleared } = useAnalyticsContext();
+  const { features, hasCleared, setHasCleared, topEventsLoading, topEvents } =
+    useAnalyticsContext();
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
 
@@ -46,38 +52,6 @@ export const SelectFeatureDropdown = ({
     searchParams.get("feature_ids")?.split(",").filter(Boolean) || [];
   const currentEventNames =
     searchParams.get("event_names")?.split(",").filter(Boolean) || [];
-
-  // // If no selections are made, default to the first 10 items (features first, then events)
-  // useEffect(() => {
-  //   if (
-  //     features.length > 0 && // Only run when features have actually loaded
-  //     currentFeatureIds.length === 0 &&
-  //     currentEventNames.length === 0 &&
-  //     !hasCleared
-  //   ) {
-  //     let defaultFeatureIds = features
-  //       .filter((feature: Feature) => {
-  //         if (
-  //           feature.type === FeatureType.Metered &&
-  //           feature.config.usage_type == FeatureUsageType.Single
-  //         ) {
-  //           return true;
-  //         }
-  //         return false;
-  //       })
-  //       .map((feature: Feature) => feature.id);
-
-  //     defaultFeatureIds = defaultFeatureIds.slice(0, 10);
-
-  //     let defaultEventNames = [];
-
-  //     if (defaultFeatureIds.length == 0) {
-  //       defaultEventNames = allEventNames.slice(0, 10);
-  //     }
-
-  //     updateQueryParams(defaultFeatureIds, defaultEventNames);
-  //   }
-  // }, [features, allEventNames, hasCleared]);
 
   // Helper function to update query parameters
   const updateQueryParams = (featureIds: string[], eventNames: string[]) => {
@@ -99,34 +73,51 @@ export const SelectFeatureDropdown = ({
   };
 
   const numSelected = currentFeatureIds.length + currentEventNames.length;
+  const isDefault =
+    currentFeatureIds?.length === 0 && currentEventNames?.length === 0;
+
+  const allTopEventNames = [
+    ...(topEvents?.featureIds || []),
+    ...(topEvents?.eventNames || []),
+  ];
 
   // Create combined options for search
-  const featureOptions = features.map((feature: Feature) => ({
-    type: "feature" as const,
-    id: feature.id,
-    name: feature.name,
-    selected: currentFeatureIds.includes(feature.id),
-  }));
+  const featureOptions = features
+    .filter(
+      (feature: Feature) =>
+        feature.type === FeatureType.Metered &&
+        feature.config.usage_type === FeatureUsageType.Single
+    )
+    .map((feature: Feature) => ({
+      type: "feature" as const,
+      id: feature.id,
+      name: feature.name,
+      selected: currentFeatureIds.includes(feature.id),
+    }));
 
-  const eventOptions = allEventNames.map((eventName: string) => ({
-    type: "event" as const,
-    id: eventName,
-    name: eventName,
-    selected: currentEventNames.includes(eventName),
-  }));
+  const eventOptions = allEventNames
+    .filter((eventName: string) =>
+      eventNameBelongsToFeature({ eventName, features })
+    )
+    .map((eventName: string) => ({
+      type: "event" as const,
+      id: eventName,
+      name: eventName,
+      selected: currentEventNames.includes(eventName),
+    }));
 
   const allOptions = [...featureOptions, ...eventOptions];
 
   // Filter options based on search
   const filteredOptions = allOptions.filter((option) =>
-    option.name.toLowerCase().includes(searchValue.toLowerCase()),
+    option.name.toLowerCase().includes(searchValue.toLowerCase())
   );
 
   const filteredFeatures = filteredOptions.filter(
-    (option) => option.type === "feature",
+    (option) => option.type === "feature"
   );
   const filteredEvents = filteredOptions.filter(
-    (option) => option.type === "event",
+    (option) => option.type === "event"
   );
 
   const handleToggleItem = (option: (typeof allOptions)[0]) => {
@@ -134,15 +125,17 @@ export const SelectFeatureDropdown = ({
       if (option.selected) {
         updateQueryParams(
           currentFeatureIds.filter((id: string) => id !== option.id),
-          currentEventNames,
+          currentEventNames
         );
       } else {
-        if (numSelected === 10) {
-          toast.error("You can only select up to 10 events/features");
+        if (numSelected === MAX_NUM_SELECTED) {
+          toast.error(
+            `You can only select up to ${MAX_NUM_SELECTED} events/features`
+          );
         } else {
           updateQueryParams(
             [...currentFeatureIds, option.id],
-            currentEventNames,
+            currentEventNames
           );
         }
       }
@@ -150,11 +143,13 @@ export const SelectFeatureDropdown = ({
       if (option.selected) {
         updateQueryParams(
           currentFeatureIds,
-          currentEventNames.filter((name: string) => name !== option.id),
+          currentEventNames.filter((name: string) => name !== option.id)
         );
       } else {
-        if (numSelected === 10) {
-          toast.error("You can only select up to 10 events/features");
+        if (numSelected === MAX_NUM_SELECTED) {
+          toast.error(
+            `You can only select up to ${MAX_NUM_SELECTED} events/features`
+          );
         } else {
           updateQueryParams(currentFeatureIds, [
             ...currentEventNames,
@@ -179,10 +174,10 @@ export const SelectFeatureDropdown = ({
           aria-expanded={open}
           className={cn(
             "h-8 px-3 text-xs justify-between",
-            classNames?.trigger,
+            classNames?.trigger
           )}
         >
-          {numSelected > 0 ? `${numSelected} Selected` : "All Features"}
+          {numSelected > 0 ? `${numSelected} Selected` : "Default Features"}
           <ChevronDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>

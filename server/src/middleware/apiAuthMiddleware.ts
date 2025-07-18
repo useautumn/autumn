@@ -5,6 +5,9 @@ import { AuthType, ErrCode } from "@autumn/shared";
 import { floatToVersion } from "@/utils/versionUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { dashboardOrigins } from "@/utils/constants.js";
+import { readFile } from "@/external/supabase/storageUtils.js";
+import { ExtendedResponse } from "@/utils/models/Request.js";
+import { trmnlAuthMiddleware, trmnlExclusions } from "./trmnlAuthMiddleware.js";
 
 const verifyApiVersion = (version: string) => {
   let versionFloat = parseFloat(version);
@@ -93,6 +96,14 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
 
 export const apiAuthMiddleware = async (req: any, res: any, next: any) => {
   const logger = req.logtail;
+
+  if (trmnlExclusions.includes(req.path)) {
+    logger.info(
+      `exluding TRMNL from auth middleware for device with ID ${req.headers["x-trmnl-id"] || "unknown"}`
+    );
+    return await trmnlAuthMiddleware(req, res, next);
+  }
+
   try {
     await verifySecretKey(req, res, next);
 

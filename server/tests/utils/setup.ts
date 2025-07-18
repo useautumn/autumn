@@ -225,7 +225,7 @@ export const setupOrg = async ({
 
   let insertFeatures = [];
   for (const feature of Object.values(features)) {
-    insertFeatures.push(await axiosInstance.post("/v1/features", feature));
+    insertFeatures.push(axiosInstance.post("/v1/internal_features", feature));
   }
 
   await Promise.all(insertFeatures);
@@ -259,8 +259,6 @@ export const setupOrg = async ({
   } catch (error) {
     console.error("Error updating org", error);
   }
-
-  await client.end();
 
   for (const feature of newFeatures!) {
     features[feature.id].internal_id = feature.internal_id;
@@ -429,6 +427,8 @@ export const setupOrg = async ({
         rewardRes,
       };
     };
+
+    console.log("Creating reward", reward.id);
     insertCoupons.push(createReward());
   }
 
@@ -437,12 +437,18 @@ export const setupOrg = async ({
 
   // CREATE REWARD TRIGGERS
   let insertRewardTriggers = [];
+  let insertedRewards = await RewardService.list({ db, orgId, env });
   for (const rewardTrigger of Object.values(rewardTriggers)) {
-    const createRewardTrigger = async () => {
-      await autumn.rewardPrograms.create(rewardTrigger);
+    let rt = {
+      ...rewardTrigger,
+      internal_reward_id: insertedRewards.find(
+        (r) => r.id === rewardTrigger.internal_reward_id
+      )?.internal_id!,
     };
-    insertRewardTriggers.push(createRewardTrigger());
+    insertRewardTriggers.push(autumn.rewardPrograms.create(rt));
   }
   await Promise.all(insertRewardTriggers);
   console.log("✅ Inserted reward triggers");
+
+  await client.end();
 };

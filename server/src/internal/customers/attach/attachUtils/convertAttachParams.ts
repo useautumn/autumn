@@ -24,7 +24,9 @@ export const attachParamToCusProducts = ({
       internalEntityId: attachParams.internalEntityId,
     });
 
-  return { curMainProduct, curSameProduct, curScheduledProduct };
+  const curCusProduct = curMainProduct || curSameProduct;
+
+  return { curMainProduct, curSameProduct, curScheduledProduct, curCusProduct };
 };
 
 export const attachParamsToProduct = ({

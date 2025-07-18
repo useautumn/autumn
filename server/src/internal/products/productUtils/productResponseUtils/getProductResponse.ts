@@ -6,18 +6,17 @@ import {
   FreeTrialResponseSchema,
   FullCustomer,
   ProductItem,
-  Organization,
   AttachScenario,
   ProductPropertiesSchema,
   BillingInterval,
   FeatureOptions,
   UsageModel,
+  FreeTrial,
+  FreeTrialResponse,
+  Price,
 } from "@autumn/shared";
 import { sortProductItems } from "../../pricecn/pricecnUtils.js";
-import {
-  getItemType,
-  isPriceItem,
-} from "../../product-items/productItemUtils/getItemType.js";
+import { getItemType } from "../../product-items/productItemUtils/getItemType.js";
 import { mapToProductItems } from "../../productV2Utils.js";
 import { getProductItemDisplay } from "./getProductItemDisplay.js";
 import { getAttachScenario } from "./getAttachScenario.js";
@@ -27,6 +26,8 @@ import { notNullish } from "@/utils/genUtils.js";
 import { isFreeProduct, isOneOff } from "../../productUtils.js";
 import { getFirstInterval } from "../../prices/priceUtils/priceIntervalUtils.js";
 import { itemToPriceOrTiers } from "../../product-items/productItemUtils.js";
+import { toAPIFeature } from "@/internal/features/utils/mapFeatureUtils.js";
+import { isPrepaidPrice } from "../../prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 
 export const getProductItemResponse = ({
   item,
@@ -37,7 +38,7 @@ export const getProductItemResponse = ({
 }: {
   item: ProductItem;
   features: Feature[];
-  currency?: string;
+  currency?: string | null;
   withDisplay?: boolean;
   options?: FeatureOptions[];
 }) => {
@@ -55,6 +56,7 @@ export const getProductItemResponse = ({
 
   let quantity = undefined;
   let upcomingQuantity = undefined;
+
   if (item.usage_model == UsageModel.Prepaid && notNullish(options)) {
     let option = options!.find((o) => o.feature_id == item.feature_id);
     quantity = option?.quantity
@@ -66,9 +68,11 @@ export const getProductItemResponse = ({
       : undefined;
   }
 
+  let feature = features.find((f) => f.id == item.feature_id);
   return ProductItemResponseSchema.parse({
     type,
     ...item,
+    feature: feature ? toAPIFeature({ feature }) : null,
     display: withDisplay ? display : undefined,
     ...priceData,
     quantity,
@@ -119,16 +123,31 @@ export const getFreeTrialResponse = async ({
   return null;
 };
 
-export const getProductProperties = ({ product }: { product: FullProduct }) => {
+export const getProductProperties = ({
+  product,
+  freeTrial,
+}: {
+  product: FullProduct;
+  freeTrial?: FreeTrialResponse | null;
+}) => {
   let firstInterval: any = getFirstInterval({ prices: product.prices });
   if (firstInterval == BillingInterval.OneOff) {
     firstInterval = null;
   }
 
+  let hasFreeTrial =
+    notNullish(freeTrial) && freeTrial?.trial_available !== false;
+
   return ProductPropertiesSchema.parse({
     is_free: isFreeProduct(product.prices) || false,
     is_one_off: isOneOff(product.prices) || false,
     interval_group: firstInterval,
+    has_trial: hasFreeTrial,
+    updateable: product.prices.some(
+      (p: Price) =>
+        isPrepaidPrice({ price: p }) &&
+        p.config.interval !== BillingInterval.OneOff
+    ),
   });
 };
 
@@ -144,17 +163,23 @@ export const getProductResponse = async ({
   product: FullProduct;
   features: Feature[];
   fullCus?: FullCustomer;
-  currency?: string;
+  currency?: string | null;
   db?: DrizzleCli;
   withDisplay?: boolean;
   options?: FeatureOptions[];
 }) => {
   // 1. Get items with display
-  let items = mapToProductItems({
+  let rawItems = mapToProductItems({
     prices: product.prices,
     entitlements: product.entitlements,
     features: features,
-  }).map((item) => {
+  });
+
+  // Sort raw items first
+  let sortedItems = sortProductItems(rawItems, features);
+
+  // Transform sorted items
+  let items = sortedItems.map((item) => {
     return getProductItemResponse({
       item,
       features,
@@ -164,20 +189,18 @@ export const getProductResponse = async ({
     });
   });
 
-  items = sortProductItems(items, features);
-
   // 2. Get product properties
   let attachScenario = getAttachScenario({
     fullCus,
     fullProduct: product,
   });
 
-  let freeTrial = await getFreeTrialResponse({
+  let freeTrial = (await getFreeTrialResponse({
     db: db as DrizzleCli,
     product,
     fullCus,
     attachScenario,
-  });
+  })) as FreeTrialResponse;
 
   return ProductResponseSchema.parse({
     ...product,
@@ -186,6 +209,6 @@ export const getProductResponse = async ({
     items: items,
     free_trial: freeTrial || null,
     scenario: attachScenario,
-    properties: getProductProperties({ product }),
+    properties: getProductProperties({ product, freeTrial }),
   });
 };

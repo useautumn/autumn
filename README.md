@@ -4,7 +4,7 @@
 
 [![Discord](https://img.shields.io/badge/Join%20Community-5865F2?logo=discord&logoColor=white)](https://discord.gg/53emPtY9tA)
 [![Follow](https://img.shields.io/twitter/follow/autumnpricing?style=social)](https://x.com/autumnpricing)
-![Y Combinator](https://img.shields.io/badge/Y%20Combinator-F24-orange)
+[![Y Combinator](https://img.shields.io/badge/Y%20Combinator-F24-orange)](https://www.ycombinator.com/companies/autumn)
 [![Cloud](https://img.shields.io/badge/Cloud-☁️-blue)](https://app.useautumn.com)
 [![Documentation](https://img.shields.io/badge/Documentation-📕-blue)](https://docs.useautumn.com)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/useautumn/autumn)
