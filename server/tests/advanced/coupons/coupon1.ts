@@ -1,18 +1,13 @@
 import chalk from "chalk";
 import Stripe from "stripe";
 import { APIVersion, AppEnv, Customer, Organization } from "@autumn/shared";
-import { createStripeCli } from "@/external/stripe/utils.js";
 import { getOriginalCouponId } from "@/internal/rewards/rewardUtils.js";
-import { getPriceForOverage } from "@/internal/products/prices/priceUtils.js";
 import { expect } from "chai";
 import { addHours, addMonths } from "date-fns";
-import { features, products, rewards } from "tests/global.js";
-import { getFixedPriceAmount, timeout } from "tests/utils/genUtils.js";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { compareMainProduct } from "tests/utils/compare.js";
+import { rewards } from "tests/global.js";
+import { timeout } from "tests/utils/genUtils.js";
 
 import {
-  advanceClockForInvoice,
   advanceTestClock,
   completeCheckoutForm,
   getDiscount,
@@ -87,7 +82,7 @@ const simulateOneCycle = async ({
     testClockId,
     advanceTo: addHours(
       addMonths(curUnix, 1),
-      hoursToFinalizeInvoice,
+      hoursToFinalizeInvoice
     ).getTime(),
     waitForSeconds: 30,
   });
@@ -103,12 +98,12 @@ const simulateOneCycle = async ({
   expect(cusDiscount).to.exist;
 
   expect(getOriginalCouponId(cusDiscount.coupon?.id)).to.equal(
-    rewards.rolloverAll.id,
+    rewards.rolloverAll.id
   );
 
   expect(cusDiscount.coupon?.amount_off).to.equal(
     Math.round(couponAmount * 100),
-    `Expected stripe cus to have coupon amount ${couponAmount * 100}`,
+    `Expected stripe cus to have coupon amount ${couponAmount * 100}`
   );
 
   return {
@@ -119,7 +114,7 @@ const simulateOneCycle = async ({
 
 describe(
   chalk.yellow(
-    `${testCase} - Testing invoice credits reward, apply to all product`,
+    `${testCase} - Testing invoice credits reward, apply to all product`
   ),
   () => {
     let customerId = "coupon1";
@@ -177,7 +172,7 @@ describe(
       await completeCheckoutForm(
         res.checkout_url,
         undefined,
-        rewards.rolloverAll.id,
+        rewards.rolloverAll.id
       );
 
       await timeout(10000);
@@ -196,7 +191,7 @@ describe(
 
       expect(cusDiscount).to.exist;
       expect(getOriginalCouponId(cusDiscount.coupon?.id)).to.equal(
-        rewards.rolloverAll.id,
+        rewards.rolloverAll.id
       );
       expect(cusDiscount.coupon?.amount_off).to.equal(couponAmount * 100);
     });
@@ -232,5 +227,5 @@ describe(
         curUnix,
       });
     });
-  },
+  }
 );
