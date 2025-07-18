@@ -50,7 +50,7 @@ export class AnalyticsService {
     const { clickhouseClient, org, env } = req;
 
     const query = `
-    select count(*), event_name 
+    select count(*) as count, event_name 
     from org_events_view(org_id={org_id:String}, org_slug='', env={env:String}) 
     where timestamp >= NOW() - INTERVAL '1 month'
     group by event_name
@@ -68,7 +68,10 @@ export class AnalyticsService {
 
     const resultJson = await result.json();
 
-    return resultJson.data.map((row: any) => row.event_name);
+    return {
+      eventNames: resultJson.data.map((row: any) => row.event_name),
+      result: resultJson,
+    };
   }
 
   static async getTopUser({ req }: { req: ExtendedRequest }) {
