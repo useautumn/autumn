@@ -9,7 +9,7 @@ export const ProductPropertiesSchema = z.object({
   is_one_off: z.boolean(),
   interval_group: z.string().nullish(),
   has_trial: z.boolean().nullish(),
-  has_prepaid: z.boolean().nullish(),
+  updateable: z.boolean().nullish(),
 });
 
 export const ProductResponseSchema = z.object({
