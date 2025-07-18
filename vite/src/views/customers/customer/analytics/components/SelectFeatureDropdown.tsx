@@ -169,7 +169,7 @@ export const SelectFeatureDropdown = ({
             classNames?.trigger
           )}
         >
-          {numSelected > 0 ? `${numSelected} Selected` : "All Features"}
+          {numSelected > 0 ? `${numSelected} Selected` : "Default Features"}
           <ChevronDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>

@@ -32,14 +32,15 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 
   const customerId = searchParams.get("customer_id");
 
-  // Get selected features and events from query parameters
-  const currentFeatureIds =
-    searchParams.get("feature_ids")?.split(",").filter(Boolean) || [];
-  const currentEventNames =
-    searchParams.get("event_names")?.split(",").filter(Boolean) || [];
-
-  const { customer, features, events, queryLoading, error, bcExclusionFlag } =
-    useAnalyticsData({ hasCleared });
+  const {
+    customer,
+    features,
+    events,
+    queryLoading,
+    error,
+    bcExclusionFlag,
+    topEventsLoading,
+  } = useAnalyticsData({ hasCleared });
 
   const { rawEvents, queryLoading: rawQueryLoading } = useRawAnalyticsData();
 
@@ -57,9 +58,13 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
           yName:
             features.find((feature: Feature) => {
               const eventName = x.name.replace("_count", "");
+
+              console.log("eventName", eventName);
+
               if (feature.id === eventName) {
                 return true;
               }
+
               if (feature.config.filters && feature.config.filters.length > 0) {
                 return feature.config.filters.some(
                   (filter: any) =>
@@ -135,7 +140,7 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
             endContent={<QueryTopbar />}
             className="h-10"
           />
-          {queryLoading && (
+          {(queryLoading || topEventsLoading) && (
             <div className="flex-1 px-10 pt-6">
               <p className="text-t3 text-sm shimmer w-fit">
                 Fetching usage {customerId ? `for ${customerId}` : ""}

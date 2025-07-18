@@ -439,7 +439,6 @@ order by dr.period;
       return {}; // No products, return empty object
     }
 
-    console.log("customerHasSubscriptions", customerHasSubscriptions);
     if (!customerHasSubscriptions) {
       subscriptions = await SubService.getInStripeIds({
         db,
@@ -448,7 +447,6 @@ order by dr.period;
             (product: FullCusProduct) => product.subscription_ids ?? []
           ) ?? [],
       });
-      console.log("subscriptions", subscriptions);
     }
 
     let customerProductsFiltered = customer.customer_products?.filter(
@@ -462,12 +460,8 @@ order by dr.period;
       }
     );
 
-    console.log("customerProductsFiltered", customerProductsFiltered);
-
     if (!customerProductsFiltered || customerProductsFiltered.length === 0)
       return {};
-
-    console.log("customerProductsFiltered", customerProductsFiltered);
 
     let startDates: any[] = [];
     let endDates: any[] = [];
@@ -493,8 +487,6 @@ order by dr.period;
           );
         }
       });
-      console.log("startDates", startDates);
-      console.log("endDates", endDates);
     });
 
     if (startDates.length === 0 || endDates.length === 0) {
@@ -505,11 +497,6 @@ order by dr.period;
     const endDate = new Date(endDates[0]);
     const gap = endDate.getTime() - startDate.getTime();
     const gapDays = Math.floor(gap / (1000 * 60 * 60 * 24));
-
-    console.log("startDates", startDates);
-    console.log("endDates", endDates);
-    console.log("gapDays", gapDays);
-    console.log("gap", gap);
 
     return {
       startDate: startDates[0],

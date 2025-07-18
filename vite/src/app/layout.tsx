@@ -114,7 +114,7 @@ const MainContent = () => {
   const env = useEnv();
   const navigate = useNavigate();
   const { state, setState } = useSidebarContext();
-  useTopEventNames();
+
   return (
     <AppContext.Provider value={{}}>
       <div className="w-full h-screen flex flex-col justify-center overflow-hidden py-3 pr-3 relative">
