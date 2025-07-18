@@ -28,7 +28,6 @@ export const useAnalyticsData = ({
 
   // Create a simple queryKey with the actual values that change
   const queryKey = [
-    "query-events",
     customerId,
     interval,
     ...(eventNames || []).sort(),
@@ -44,7 +43,7 @@ export const useAnalyticsData = ({
     method: "get",
     url: `/query/event_names`,
     enabled: nullish(eventNames) && nullish(featureIds),
-    queryKey,
+    queryKey: ["query-event-names", ...queryKey],
     options: {
       refreshInterval: 0,
       onError: (error) => {
@@ -75,7 +74,7 @@ export const useAnalyticsData = ({
       interval,
       event_names: [...(eventNames || []), ...(featureIds || [])],
     },
-    queryKey,
+    queryKey: ["query-events", ...queryKey],
     options: {
       refreshInterval: 0,
       onError: (error) => {

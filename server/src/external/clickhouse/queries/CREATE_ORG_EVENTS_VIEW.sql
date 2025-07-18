@@ -5,9 +5,9 @@ SELECT
     event_name,
     case
         when isNotNull(JSONExtractString(properties, 'value')) AND JSONExtractString(properties, 'value') != ''
-            then toFloat64OrZero(JSONExtractString(properties, 'value'))
+            then round(toFloat64OrZero(JSONExtractString(properties, 'value')), 6)
         when isNotNull(value)
-            then toFloat64(value)
+            then round(toFloat64(value), 6)
         else 1.0
     end as value,
     properties
