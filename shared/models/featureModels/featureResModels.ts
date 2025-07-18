@@ -8,7 +8,7 @@ export enum APIFeatureType {
 }
 export const APIFeatureSchema = z.object({
   id: z.string(),
-  name: z.string(),
+  name: z.string().nullish(),
   type: z.nativeEnum(APIFeatureType),
   display: z
     .object({

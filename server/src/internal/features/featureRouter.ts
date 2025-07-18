@@ -15,6 +15,8 @@ import RecaseError from "@/utils/errorUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { handleUpdateFeature } from "./handlers/handleUpdateFeature.js";
 import { handleDeleteFeature } from "./handlers/handleDeleteFeature.js";
+import { keyToTitle } from "@/utils/genUtils.js";
+import { validateFeatureId } from "./featureUtils.js";
 
 export const featureRouter: Router = express.Router();
 
@@ -40,6 +42,12 @@ featureRouter.post("", async (req: any, res: any) =>
     action: "Create feature",
     handler: async () => {
       let apiFeature = APIFeatureSchema.parse(req.body);
+      if (!apiFeature.name) {
+        apiFeature.name = keyToTitle(apiFeature.id);
+      }
+
+      validateFeatureId(apiFeature.id);
+
       let feature = fromAPIFeature({
         apiFeature,
         orgId: req.orgId,
