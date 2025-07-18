@@ -19,7 +19,10 @@ import { Feature, FeatureType, FeatureUsageType } from "@autumn/shared";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useSearchParams, useNavigate, useLocation } from "react-router";
-import { eventNameBelongsToFeature, getAllEventNames } from "../utils/getAllEventNames";
+import {
+  eventNameBelongsToFeature,
+  getAllEventNames,
+} from "../utils/getAllEventNames";
 import { useEffect, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -71,32 +74,42 @@ export const SelectFeatureDropdown = ({
   const numSelected = currentFeatureIds.length + currentEventNames.length;
 
   // Create combined options for search
-  const featureOptions = features.filter((feature: Feature) => feature.type === FeatureType.Metered && feature.config.usage_type === FeatureUsageType.Single).map((feature: Feature) => ({
-    type: "feature" as const,
-    id: feature.id,
-    name: feature.name,
-    selected: currentFeatureIds.includes(feature.id),
-  }));
+  const featureOptions = features
+    .filter(
+      (feature: Feature) =>
+        feature.type === FeatureType.Metered &&
+        feature.config.usage_type === FeatureUsageType.Single
+    )
+    .map((feature: Feature) => ({
+      type: "feature" as const,
+      id: feature.id,
+      name: feature.name,
+      selected: currentFeatureIds.includes(feature.id),
+    }));
 
-  const eventOptions = allEventNames.filter((eventName: string) => eventNameBelongsToFeature({ eventName, features })).map((eventName: string) => ({
-    type: "event" as const,
-    id: eventName,
-    name: eventName,
-    selected: currentEventNames.includes(eventName),
-  }));
+  const eventOptions = allEventNames
+    .filter((eventName: string) =>
+      eventNameBelongsToFeature({ eventName, features })
+    )
+    .map((eventName: string) => ({
+      type: "event" as const,
+      id: eventName,
+      name: eventName,
+      selected: currentEventNames.includes(eventName),
+    }));
 
   const allOptions = [...featureOptions, ...eventOptions];
 
   // Filter options based on search
   const filteredOptions = allOptions.filter((option) =>
-    option.name.toLowerCase().includes(searchValue.toLowerCase()),
+    option.name.toLowerCase().includes(searchValue.toLowerCase())
   );
 
   const filteredFeatures = filteredOptions.filter(
-    (option) => option.type === "feature",
+    (option) => option.type === "feature"
   );
   const filteredEvents = filteredOptions.filter(
-    (option) => option.type === "event",
+    (option) => option.type === "event"
   );
 
   const handleToggleItem = (option: (typeof allOptions)[0]) => {
@@ -104,15 +117,17 @@ export const SelectFeatureDropdown = ({
       if (option.selected) {
         updateQueryParams(
           currentFeatureIds.filter((id: string) => id !== option.id),
-          currentEventNames,
+          currentEventNames
         );
       } else {
         if (numSelected === MAX_NUM_SELECTED) {
-          toast.error(`You can only select up to ${MAX_NUM_SELECTED} events/features`);
+          toast.error(
+            `You can only select up to ${MAX_NUM_SELECTED} events/features`
+          );
         } else {
           updateQueryParams(
             [...currentFeatureIds, option.id],
-            currentEventNames,
+            currentEventNames
           );
         }
       }
@@ -120,11 +135,13 @@ export const SelectFeatureDropdown = ({
       if (option.selected) {
         updateQueryParams(
           currentFeatureIds,
-          currentEventNames.filter((name: string) => name !== option.id),
+          currentEventNames.filter((name: string) => name !== option.id)
         );
       } else {
         if (numSelected === MAX_NUM_SELECTED) {
-          toast.error(`You can only select up to ${MAX_NUM_SELECTED} events/features`);
+          toast.error(
+            `You can only select up to ${MAX_NUM_SELECTED} events/features`
+          );
         } else {
           updateQueryParams(currentFeatureIds, [
             ...currentEventNames,
@@ -149,7 +166,7 @@ export const SelectFeatureDropdown = ({
           aria-expanded={open}
           className={cn(
             "h-8 px-3 text-xs justify-between",
-            classNames?.trigger,
+            classNames?.trigger
           )}
         >
           {numSelected > 0 ? `${numSelected} Selected` : "All Features"}

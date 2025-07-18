@@ -29,7 +29,7 @@ rewardRouter.post("", async (req: any, res: any) => {
       reward: rewardData,
       orgId,
       env,
-      internalId: rewardBody.internal_id,
+      // internalId: rewardBody.internal_id,
     });
 
     if (getRewardCat(newReward) === RewardCategory.Discount) {
@@ -69,7 +69,7 @@ rewardRouter.post("", async (req: any, res: any) => {
               logger,
               db,
               product: price.product,
-            }),
+            })
           );
           await Promise.all(batchPriceCreate);
         }

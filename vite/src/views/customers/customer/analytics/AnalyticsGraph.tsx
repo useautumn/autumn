@@ -36,7 +36,7 @@ const timestampFormatter = new Intl.DateTimeFormat(
     hour: "numeric",
     minute: "numeric",
     second: "numeric",
-  },
+  }
 );
 
 export function EventsBarChart({
@@ -98,7 +98,7 @@ export function EventsBarChart({
     });
   }, [chartConfig, data]);
 
-  return <AgCharts options={options} />;
+  return <AgCharts options={options} className="h-full w-full" />;
 }
 
 export function EventsAGGrid({ data }: { data: any }) {

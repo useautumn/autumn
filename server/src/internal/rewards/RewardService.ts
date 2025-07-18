@@ -19,10 +19,10 @@ export class RewardService {
       where: and(
         or(
           eq(rewards.id, idOrInternalId),
-          eq(rewards.internal_id, idOrInternalId),
+          eq(rewards.internal_id, idOrInternalId)
         ),
         eq(rewards.org_id, orgId),
-        eq(rewards.env, env),
+        eq(rewards.env, env)
       ),
     });
 
@@ -53,8 +53,8 @@ export class RewardService {
           sql`EXISTS (
             SELECT 1 FROM unnest("promo_codes") AS elem
             WHERE elem->>'code' = ${idOrCode}
-          )`,
-        ),
+          )`
+        )
       ),
     });
 
@@ -110,8 +110,8 @@ export class RewardService {
         and(
           eq(rewards.internal_id, internalId),
           eq(rewards.env, env),
-          eq(rewards.org_id, orgId),
-        ),
+          eq(rewards.org_id, orgId)
+        )
       );
   }
 
@@ -135,8 +135,8 @@ export class RewardService {
         and(
           eq(rewards.internal_id, internalId),
           eq(rewards.env, env),
-          eq(rewards.org_id, orgId),
-        ),
+          eq(rewards.org_id, orgId)
+        )
       )
       .returning();
 
