@@ -2,6 +2,8 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 import "dotenv/config";
 
 export const checkEnvVars = () => {
+  console.log("Database URL", process.env.DATABASE_URL);
+
   if (!process.env.DATABASE_URL) {
     console.error(`DATABASE_URL is not set`);
     process.exit(1);

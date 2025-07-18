@@ -1,4 +1,5 @@
 services:
+
   valkey:
     image: docker.io/bitnami/valkey:8.0
     environment:
@@ -7,7 +8,7 @@ services:
     volumes:
       - valkey-data:/bitnami/valkey/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-h", "localhost", "-p", "6379", "ping"]
+      test: ['CMD', 'redis-cli', '-h', 'localhost', '-p', '6379', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -64,6 +65,17 @@ services:
     environment:
       - NODE_ENV=development
       - REDIS_URL=redis://valkey:6379
+      - DATABASE_URL=${DATABASE_URL}
+      - ENCRYPTION_IV=${ENCRYPTION_IV}
+      - ENCRYPTION_PASSWORD=${ENCRYPTION_PASSWORD}
+      - TESTS_ORG=${TESTS_ORG}
+      - TESTS_ORG_ID=${TESTS_ORG_ID}
+      - LOCALTUNNEL_RESERVED_KEY=${LOCALTUNNEL_RESERVED_KEY}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      - BETTER_AUTH_URL=http://localhost:8080
+      - STRIPE_WEBHOOK_URL=${STRIPE_WEBHOOK_URL}
+      - BROWSERBASE_API_KEY=${BROWSERBASE_API_KEY}
+      - BROWSERBASE_PROJECT_ID=${BROWSERBASE_PROJECT_ID}
     depends_on:
       - shared
     restart: unless-stopped
@@ -87,6 +99,7 @@ services:
       - shared
     restart: unless-stopped
 
+
   # Run localtunnel
   localtunnel:
     build:
@@ -98,6 +111,7 @@ services:
     depends_on:
       - server
     restart: unless-stopped
+
 
 volumes:
   # Shared package dist output

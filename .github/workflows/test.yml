@@ -1,6 +1,9 @@
 name: Run Autumn Tests
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
 
 env:
   DATABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -11,6 +14,10 @@ env:
   TESTS_ORG: ${{ secrets.TESTS_ORG }}
   TESTS_ORG_ID: ${{ secrets.TESTS_ORG_ID }}
   LOCALTUNNEL_RESERVED_KEY: ${{ secrets.LOCALTUNNEL_RESERVED_KEY }}
+  STRIPE_WEBHOOK_URL: ${{ secrets.STRIPE_WEBHOOK_URL }}
+  BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+  BROWSERBASE_API_KEY: ${{ secrets.BROWSERBASE_API_KEY }}
+  BROWSERBASE_PROJECT_ID: ${{ secrets.BROWSERBASE_PROJECT_ID }}
 
 jobs:
   test:
@@ -31,13 +38,74 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
 
       - name: Setup CI
         run: pnpm run setupci
 
-      - name: Debug
-        run: cat server/.env
+      - name: Install Chrome Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ca-certificates \
+            fonts-liberation \
+            libasound2 \
+            libatk-bridge2.0-0 \
+            libatk1.0-0 \
+            libc6 \
+            libcairo2 \
+            libcups2 \
+            libdbus-1-3 \
+            libexpat1 \
+            libfontconfig1 \
+            libgbm1 \
+            libgcc1 \
+            libgdk-pixbuf2.0-0 \
+            libglib2.0-0 \
+            libgtk-3-0 \
+            libnspr4 \
+            libnss3 \
+            libpango-1.0-0 \
+            libpangocairo-1.0-0 \
+            libstdc++6 \
+            libx11-6 \
+            libx11-xcb1 \
+            libxcb1 \
+            libxcomposite1 \
+            libxcursor1 \
+            libxdamage1 \
+            libxext6 \
+            libxfixes3 \
+            libxi6 \
+            libxrandr2 \
+            libxrender1 \
+            libxss1 \
+            libxtst6 \
+            lsb-release \
+            wget \
+            xdg-utils
+
+      - name: Install Chrome
+        run: |
+          cd server/
+          npx puppeteer browsers install chrome
+          
+      - name: Create .env file
+        run: |
+          echo "Creating .env file..."
+          echo "DATABASE_URL=${{ env.DATABASE_URL }}" >> .env
+          echo "UNIT_TEST_AUTUMN_SECRET_KEY=${{ env.UNIT_TEST_AUTUMN_SECRET_KEY }}" >> .env
+          echo "REDIS_URL=${{ env.REDIS_URL }}" >> .env
+          echo "ENCRYPTION_IV=${{ env.ENCRYPTION_IV }}" >> .env
+          echo "ENCRYPTION_PASSWORD=${{ env.ENCRYPTION_PASSWORD }}" >> .env
+          echo "TESTS_ORG=${{ env.TESTS_ORG }}" >> .env
+          echo "TESTS_ORG_ID=${{ env.TESTS_ORG_ID }}" >> .env
+          echo "LOCALTUNNEL_RESERVED_KEY=${{ env.LOCALTUNNEL_RESERVED_KEY }}" >> .env
+          echo "BETTER_AUTH_SECRET=${{ env.BETTER_AUTH_SECRET }}" >> .env
+          echo "STRIPE_WEBHOOK_URL=${{ env.STRIPE_WEBHOOK_URL }}" >> .env
+          echo "BROWSERBASE_API_KEY=${{ env.BROWSERBASE_API_KEY }}" >> .env
+          echo "BROWSERBASE_PROJECT_ID=${{ env.BROWSERBASE_PROJECT_ID }}" >> .env
+          cat .env
 
       - name: Build shared
         run: |
@@ -45,13 +113,19 @@ jobs:
           pnpm build
 
       - name: Startup server
-        run: sudo docker compose -f docker-compose.unix.yml up --detach
+        run: sudo docker compose -f docker-compose.ci.yml up --detach
 
       - name: Wait for server to be ready
         run: |
           echo "Waiting for server to start..."
-          timeout 60s bash -c 'until curl -s --fail http://localhost:8080; do echo "Waiting..."; sleep 2; done'
+          timeout 120s bash -c 'until curl -s --fail http://localhost:8080; do echo "Waiting..."; sleep 2; done'
           echo "Server is up!"
+
+      - name: Ping Local Tunnel
+        run: |
+          echo "Pinging Local Tunnel..."
+          curl https://askjdnaslkjdalkjen.loca.lt
+          echo "Local Tunnel pinged!"
 
       - name: Run G1 tests
         run: |
