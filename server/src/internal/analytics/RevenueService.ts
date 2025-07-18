@@ -10,22 +10,18 @@ export class RevenueService {
 		const { clickhouseClient, org, env } = req;
 
 		const query = `
-WITH toUnixTimestamp(created_at / 1000) AS timestamp,
-     toMonth(toDateTime(timestamp)) AS month,
-     toYear(toDateTime(timestamp)) AS year
 SELECT
-    SUM(total) AS total_payment_volume,
-    concat(toString(month), '/', toString(year)) AS label
-FROM invoices
-INNER JOIN customers c ON invoices.internal_customer_id = c.internal_id
-WHERE status = 'paid'
-  AND year = toYear(now())
-  AND month = toMonth(now())
-  AND c.org_id = {org_id:String}
-  AND c.env = {env:String}
-GROUP BY month, year
-ORDER BY year DESC, month DESC
-LIMIT 1;`;
+    SUM(total) AS total_payment_volume
+FROM
+    invoices
+INNER JOIN
+    customers c ON invoices.internal_customer_id = c.internal_id
+WHERE
+    status = 'paid'
+    -- Divide by 1000 to convert from milliseconds to seconds, then cast to DateTime
+    AND toDateTime(CAST(created_at AS Float64) / 1000) >= subtractDays(toStartOfDay(now()), 30)
+    AND c.org_id = {org_id:String}
+    AND c.env = {env:String};`;
 
         const result = await clickhouseClient.query({
             query,

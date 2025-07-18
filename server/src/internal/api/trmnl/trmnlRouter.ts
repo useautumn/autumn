@@ -2,6 +2,7 @@ import { AnalyticsService } from "@/internal/analytics/AnalyticsService.js";
 import { RevenueService } from "@/internal/analytics/RevenueService.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
+import { ErrCode, Feature, getFeatureName } from "@autumn/shared";
 import { Router } from "express";
 
 const trmnlRouter = Router();
@@ -21,14 +22,26 @@ trmnlRouter.post("/screen", async (req: any, res: any) =>
         limit: 1,
       });
 
-      if (!topEvent || topEvent.length == 0) {
-        topEvent = ["Unknown"];
-      }
+			if (!topEvent || topEvent.length == 0) {
+				topEvent = ["Unknown"];
+			}
 
-      let totalEvents: number | string = await AnalyticsService.getTotalEvents({
-        req,
-        eventName: topEvent[0],
-      });
+			let feature = req.features.find((feature: Feature) => {
+				return feature.id === topEvent[0] ||
+					(feature.config?.filters?.flatMap((x: { value: string[] }) => [...x.value]) &&
+					 feature.config.filters.flatMap((x: { value: string[] }) => [...x.value]).includes(topEvent[0]));
+			});
+
+			let featureName = getFeatureName({
+				feature,
+        plural: true
+			});
+
+			let totalEvents: number | string =
+				await AnalyticsService.getTotalEvents({
+					req,
+					eventName: topEvent[0],
+				});
 
       if (!totalEvents) {
         totalEvents = "Unknown";
@@ -69,23 +82,23 @@ trmnlRouter.post("/screen", async (req: any, res: any) =>
         };
       }
 
-      // console.log({
-      //   rowData: `[${results.data.map((row: any) => `['${row.period}', ${row[topEvent[0] + "_count"]}]`).join(",")}]`,
-      //   revenue: numberWithCommas(monthlyRevenue.total_payment_volume),
-      //   totalEvent: numberWithCommas(totalEvents),
-      //   totalCustomers: numberWithCommas(totalCustomers),
-      //   topEvent: topEvent[0],
-      // });
-      topEvent[0] = topEvent[0].replace("-", "_");
-      res.status(200).json({
-        rowData: `[${results.data.map((row: any) => `['${row.period}', ${row[topEvent[0] + "_count"]}]`).join(",")}]`,
-        revenue: numberWithCommas(monthlyRevenue.total_payment_volume),
-        totalEvents: numberWithCommas(totalEvents),
-        totalCustomers: numberWithCommas(totalCustomers),
-        topEvent: topEvent[0],
-      });
-    },
-  })
+			// console.log({
+			//   rowData: `[${results.data.map((row: any) => `['${row.period}', ${row[topEvent[0] + "_count"]}]`).join(",")}]`,
+			//   revenue: numberWithCommas(monthlyRevenue.total_payment_volume),
+			//   totalEvent: numberWithCommas(totalEvents),
+			//   totalCustomers: numberWithCommas(totalCustomers),
+			//   topEvent: topEvent[0],
+			// });
+			topEvent[0] = topEvent[0].replace("-", "_");
+			res.status(200).json({
+				rowData: `[${results.data.map((row: any) => `['${row.period}', ${row[topEvent[0] + "_count"]}]`).join(",")}]`,
+				revenue: numberWithCommas(monthlyRevenue.total_payment_volume),
+				totalEvents: numberWithCommas(totalEvents),
+				totalCustomers: numberWithCommas(totalCustomers),
+				topEvent: featureName,
+			});
+		},
+	})
 );
 
 export { trmnlRouter };
