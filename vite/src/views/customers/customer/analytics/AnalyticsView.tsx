@@ -40,6 +40,7 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
     error,
     bcExclusionFlag,
     topEventsLoading,
+    topEvents,
   } = useAnalyticsData({ hasCleared });
 
   const { rawEvents, queryLoading: rawQueryLoading } = useRawAnalyticsData();
@@ -126,6 +127,7 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
         setTotalPages,
         totalRows,
         setTotalRows,
+        topEvents,
       }}
     >
       <div className="flex flex-col gap-4 h-full relative w-full text-sm pb-0 overflow-hidden">

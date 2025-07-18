@@ -34,7 +34,7 @@ export const useAnalyticsData = ({
   // Create a simple queryKey with the actual values that change
   const queryKey = [
     customerId,
-    interval,
+    interval || "30d",
     ...(eventNames || []).sort(),
     ...(featureIds || []).sort(),
     org?.slug,
@@ -48,7 +48,7 @@ export const useAnalyticsData = ({
     url: `/query/events`,
     data: {
       customer_id: customerId || null,
-      interval,
+      interval: interval || "30d",
       event_names: [...(eventNames || []), ...(featureIds || [])],
     },
     queryKey: ["query-events", ...queryKey],
@@ -62,16 +62,13 @@ export const useAnalyticsData = ({
     },
   });
 
-  useEffect(() => {
-    console.log("Data", data?.events);
-  }, [data?.events]);
-
   return {
     customer: data?.customer,
     features: featuresData?.features || [],
     featuresLoading,
     queryLoading,
     events: data?.events,
+    topEvents: data?.topEvents,
     error: error?.code === ErrCode.ClickHouseDisabled ? null : error,
     bcExclusionFlag: data?.bcExclusionFlag ?? false,
     topEventsLoading,

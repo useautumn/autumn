@@ -115,8 +115,11 @@ analyticsRouter.post("/events", async (req: any, res: any) =>
       const { db, org, env, features } = req;
       let { interval, event_names, customer_id } = req.body;
 
+      let topEvents:
+        | { featureIds: string[]; eventNames: string[] }
+        | undefined = undefined;
       if (!event_names || event_names.length === 0) {
-        const topEvents = await getTopEvents({ req });
+        topEvents = await getTopEvents({ req });
         event_names = [...topEvents.eventNames, ...topEvents.featureIds];
       }
 
@@ -176,6 +179,7 @@ analyticsRouter.post("/events", async (req: any, res: any) =>
         events,
         features,
         eventNames: event_names,
+        topEvents,
         bcExclusionFlag,
       });
     },
