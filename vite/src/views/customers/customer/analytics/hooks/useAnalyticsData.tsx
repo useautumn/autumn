@@ -40,68 +40,6 @@ export const useAnalyticsData = ({
     org?.slug,
   ];
 
-  // const {
-  //   data: eventNamesData,
-  //   isLoading: eventNamesLoading,
-  //   error: eventNamesError,
-  // } = usePostSWR({
-  //   method: "get",
-  //   url: `/query/event_names`,
-  //   enabled: nullish(eventNames) && nullish(featureIds),
-  //   queryKey: ["query-event-names", ...queryKey],
-  //   options: {
-  //     refreshInterval: 0,
-  //     onError: (error) => {
-  //       if (error.code === ErrCode.ClickHouseDisabled) {
-  //         return error;
-  //       }
-  //     },
-  //   },
-  // });
-
-  // useEffect(() => {
-  //   if (eventNamesData && !hasCleared) {
-  //     searchParams.set("event_names", eventNamesData.eventNames.join(","));
-  //     searchParams.set("feature_ids", eventNamesData.featureIds.join(","));
-
-  //     navigate(`?${searchParams.toString()}`);
-  //   }
-  // }, [eventNamesData, searchParams, hasCleared, navigate]);
-
-  // const hasSetTopEvents = useRef(false);
-
-  // 1. if no eventNames and no featureIds, use topEventsLoading
-
-  // useEffect(() => {
-  //   if (topEvents && !topEventsLoading) {
-  //     console.log("Setting top events:", topEvents);
-  //   }
-  // }, [topEventsLoading]);
-
-  // useEffect(() => {
-  //   if (
-  //     topEvents &&
-  //     !topEventsLoading &&
-  //     nullish(eventNames) &&
-  //     nullish(featureIds) &&
-  //     !hasCleared
-  //   ) {
-  //     searchParams.set("event_names", topEvents.eventNames.join(","));
-  //     searchParams.set("feature_ids", topEvents.featureIds.join(","));
-  //     // hasSetTopEvents.current = true;
-
-  //     navigate(`?${searchParams.toString()}`);
-  //   }
-  // }, [
-  //   topEventsLoading,
-  //   eventNames,
-  //   featureIds,
-  //   hasCleared,
-  //   topEvents,
-  //   searchParams,
-  //   navigate,
-  // ]);
-
   const {
     data,
     isLoading: queryLoading,
@@ -123,6 +61,10 @@ export const useAnalyticsData = ({
       },
     },
   });
+
+  useEffect(() => {
+    console.log("Data", data?.events);
+  }, [data?.events]);
 
   return {
     customer: data?.customer,
@@ -186,3 +128,65 @@ export const useRawAnalyticsData = () => {
     error: error?.code === ErrCode.ClickHouseDisabled ? null : error,
   };
 };
+
+// const {
+//   data: eventNamesData,
+//   isLoading: eventNamesLoading,
+//   error: eventNamesError,
+// } = usePostSWR({
+//   method: "get",
+//   url: `/query/event_names`,
+//   enabled: nullish(eventNames) && nullish(featureIds),
+//   queryKey: ["query-event-names", ...queryKey],
+//   options: {
+//     refreshInterval: 0,
+//     onError: (error) => {
+//       if (error.code === ErrCode.ClickHouseDisabled) {
+//         return error;
+//       }
+//     },
+//   },
+// });
+
+// useEffect(() => {
+//   if (eventNamesData && !hasCleared) {
+//     searchParams.set("event_names", eventNamesData.eventNames.join(","));
+//     searchParams.set("feature_ids", eventNamesData.featureIds.join(","));
+
+//     navigate(`?${searchParams.toString()}`);
+//   }
+// }, [eventNamesData, searchParams, hasCleared, navigate]);
+
+// const hasSetTopEvents = useRef(false);
+
+// 1. if no eventNames and no featureIds, use topEventsLoading
+
+// useEffect(() => {
+//   if (topEvents && !topEventsLoading) {
+//     console.log("Setting top events:", topEvents);
+//   }
+// }, [topEventsLoading]);
+
+// useEffect(() => {
+//   if (
+//     topEvents &&
+//     !topEventsLoading &&
+//     nullish(eventNames) &&
+//     nullish(featureIds) &&
+//     !hasCleared
+//   ) {
+//     searchParams.set("event_names", topEvents.eventNames.join(","));
+//     searchParams.set("feature_ids", topEvents.featureIds.join(","));
+//     // hasSetTopEvents.current = true;
+
+//     navigate(`?${searchParams.toString()}`);
+//   }
+// }, [
+//   topEventsLoading,
+//   eventNames,
+//   featureIds,
+//   hasCleared,
+//   topEvents,
+//   searchParams,
+//   navigate,
+// ]);

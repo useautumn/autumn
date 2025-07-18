@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { ChevronDown } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 
 import { useAnalyticsContext } from "../AnalyticsContext";
 import { CustomerComboBox } from "./CustomerComboBox";
@@ -36,19 +36,12 @@ export const QueryTopbar = () => {
     useAnalyticsContext();
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
 
   const updateQueryParams = (key: string, value: string) => {
     const params = new URLSearchParams(location.search);
     params.set(key, value);
     navigate(`${location.pathname}?${params.toString()}`);
   };
-
-  useEffect(() => {
-    if(!selectedInterval || !searchParams.get("interval")) {
-      updateQueryParams("interval", "30d");
-    }
-  }, [searchParams]);
 
   return (
     <div className="flex items-center py-0 h-full">
@@ -58,7 +51,7 @@ export const QueryTopbar = () => {
         }}
       />
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
+        <DropdownMenuTrigger asChild value={selectedInterval}>
           <Button
             variant="outline"
             className="px-3 text-xs h-full border-y-0 border-x"
@@ -68,22 +61,28 @@ export const QueryTopbar = () => {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-[160px]">
-          {Object.keys(INTERVALS).filter((interval) => {
-            if(bcExclusionFlag || !customer) {
-              return interval !== "1bc" && interval !== "3bc";
-            }
-            return true;
-          }).map((interval) => (
-            <DropdownMenuItem
-              key={interval}
-              onClick={() => {
-                setSelectedInterval(interval);
-                updateQueryParams("interval", interval);
-              }}
-            >
-              {INTERVALS[interval]}
-            </DropdownMenuItem>
-          ))}
+          {Object.keys(INTERVALS)
+            .filter((interval) => {
+              if (bcExclusionFlag || !customer) {
+                return interval !== "1bc" && interval !== "3bc";
+              }
+              return true;
+            })
+            .map((interval) => (
+              <DropdownMenuItem
+                key={interval}
+                onClick={() => {
+                  setSelectedInterval(interval);
+                  updateQueryParams("interval", interval);
+                }}
+                className="flex items-center justify-between"
+              >
+                {INTERVALS[interval]}
+                {selectedInterval === interval && (
+                  <Check className="ml-2 h-3 w-3 text-t3" />
+                )}
+              </DropdownMenuItem>
+            ))}
         </DropdownMenuContent>
       </DropdownMenu>
       <SelectFeatureDropdown

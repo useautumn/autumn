@@ -1,4 +1,4 @@
-import { useSearchParams } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { AppEnv, ErrCode, Feature } from "@autumn/shared";
 import { useEffect, useRef, useState } from "react";
 import { EventsBarChart } from "./AnalyticsGraph";
@@ -18,7 +18,6 @@ import { AgGridReact } from "ag-grid-react";
 
 export const AnalyticsView = ({ env }: { env: AppEnv }) => {
   const [searchParams] = useSearchParams();
-  const [selectedInterval, setSelectedInterval] = useState("30d");
   const [eventNames, setEventNames] = useState<string[]>([]);
   const [featureIds, setFeatureIds] = useState<string[]>([]);
   const [clickHouseDisabled, setClickHouseDisabled] = useState(false);
@@ -29,6 +28,7 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
   const [totalRows, setTotalRows] = useState(0);
   const [visibleRows, setVisibleRows] = useState(0);
   const gridRef = useRef<AgGridReact>(null);
+  const navigate = useNavigate();
 
   const customerId = searchParams.get("customer_id");
 
@@ -58,8 +58,6 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
           yName:
             features.find((feature: Feature) => {
               const eventName = x.name.replace("_count", "");
-
-              console.log("eventName", eventName);
 
               if (feature.id === eventName) {
                 return true;
@@ -104,9 +102,14 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
     <AnalyticsContext.Provider
       value={{
         customer,
-        selectedInterval,
-        setSelectedInterval,
         eventNames,
+        selectedInterval: searchParams.get("interval") || "30d",
+        setSelectedInterval: (interval: string) => {
+          const newParams = new URLSearchParams(searchParams);
+          newParams.set("interval", interval);
+          navigate(`${location.pathname}?${newParams.toString()}`);
+        },
+
         setEventNames,
         featureIds,
         setFeatureIds,
