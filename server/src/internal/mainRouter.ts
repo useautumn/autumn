@@ -38,7 +38,14 @@ mainRouter.use("/dev", devRouter);
 mainRouter.use("/customers", withOrgAuth, cusRouter);
 mainRouter.use("/query", withOrgAuth, analyticsRouter);
 
-mainRouter.use("/trmnl", trmnlAuthMiddleware, trmnlRouter);
+const trmnlLimiter = rateLimit({
+  windowMs: 60 * 1000 * 30,
+  limit: 3,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+});
+
+mainRouter.use("/trmnl", trmnlLimiter, trmnlAuthMiddleware, trmnlRouter);
 
 const limiter = rateLimit({
   windowMs: 60 * 1000, // 15 minutes
