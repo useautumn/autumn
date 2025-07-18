@@ -39,11 +39,11 @@ export class ClickHouseManager {
     console.log("1. Creating ClickHouse client...");
     this.client = clickhouseClient;
 
-    // console.log("2. Checking SQL files exist...");
-    // await ClickHouseManager.ensureSQLFilesExist();
+    console.log("2. Checking SQL files exist...");
+    await ClickHouseManager.ensureSQLFilesExist();
 
-    // console.log("3. Ensuring queries exist...");
-    // await this.ensureQueriesExist();
+    console.log("3. Ensuring queries exist...");
+    await this.ensureQueriesExist();
 
     console.log("4. ClickHouse Manager initialized.");
     console.groupEnd();
