@@ -36,7 +36,7 @@ const timestampFormatter = new Intl.DateTimeFormat(
     hour: "numeric",
     minute: "numeric",
     second: "numeric",
-  },
+  }
 );
 
 export function EventsBarChart({
@@ -78,6 +78,25 @@ export function EventsBarChart({
     background: {
       fill: "#fafaf9",
     },
+    axes: [
+      {
+        type: "category",
+        position: "bottom",
+        label: {
+          color: "#52525b",
+        },
+        line: {
+          enabled: false,
+        },
+      },
+      {
+        type: "number",
+        position: "left",
+        label: {
+          color: "#52525b",
+        },
+      },
+    ],
     formatter: {
       x: (params: FormatterParams<any, unknown>) => {
         if (params.type !== "category") return;
@@ -85,6 +104,9 @@ export function EventsBarChart({
           ? hourFormatter.format(new Date(params.value as string))
           : dateFormatter.format(new Date(params.value as string));
       },
+    },
+    legend: {
+      enabled: true,
     },
   });
 
@@ -98,7 +120,7 @@ export function EventsBarChart({
     });
   }, [chartConfig, data]);
 
-  return <AgCharts options={options} />;
+  return <AgCharts options={options} className="h-full w-full" />;
 }
 
 export function EventsAGGrid({ data }: { data: any }) {

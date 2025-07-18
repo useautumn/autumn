@@ -1,10 +1,8 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CacheType } from "@/external/caching/cacheActions.js";
-import { getAPIKeyCache } from "@/external/caching/cacheUtils.js";
+import { queryWithCache } from "@/external/caching/cacheUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { AppEnv } from "@autumn/shared";
-
-import { SupabaseClient } from "@supabase/supabase-js";
 
 export const verifyPublicKey = async ({
   db,
@@ -15,7 +13,7 @@ export const verifyPublicKey = async ({
   pkey: string;
   env: AppEnv;
 }) => {
-  let data = await getAPIKeyCache({
+  let data = await queryWithCache({
     action: CacheType.PublicKey,
     key: pkey,
     fn: async () =>

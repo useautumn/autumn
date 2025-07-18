@@ -20,10 +20,12 @@ export const handleCreateCheckout = async ({
   req,
   res,
   attachParams,
+  returnCheckout = false,
 }: {
   req: any;
   res: any;
   attachParams: AttachParams;
+  returnCheckout?: boolean;
 }) => {
   const { db, logtail: logger } = req;
 
@@ -112,6 +114,10 @@ export const handleCreateCheckout = async ({
   });
 
   logger.info(`✅ Successfully created checkout for customer ${customer.id}`);
+
+  if (returnCheckout) {
+    return checkout;
+  }
 
   let apiVersion = attachParams.apiVersion || APIVersion.v1;
   if (apiVersion >= APIVersion.v1_1) {

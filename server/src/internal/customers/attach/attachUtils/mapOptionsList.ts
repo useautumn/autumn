@@ -5,6 +5,7 @@ import { FullCusProduct, Price, UsagePriceConfig } from "@autumn/shared";
 import { Feature } from "@autumn/shared";
 import { FeatureOptions } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 
 export const mapOptionsList = ({
   optionsInput,
@@ -21,7 +22,7 @@ export const mapOptionsList = ({
 
   for (const options of optionsInput || []) {
     const feature = features.find(
-      (feature) => feature.id === options.feature_id,
+      (feature) => feature.id === options.feature_id
     );
 
     if (!feature) {
@@ -57,14 +58,22 @@ export const mapOptionsList = ({
     });
   }
 
+  // If product is one off, return
+  if (isOneOff(prices) || isFreeProduct(prices)) return newOptionsList;
+
   const curOptionsList = curCusProduct?.options || [];
   for (const option of curOptionsList) {
     const inNewOptions = newOptionsList.find(
       (newOption) =>
-        newOption.internal_feature_id === option.internal_feature_id,
+        newOption.internal_feature_id === option.internal_feature_id
     );
 
-    if (!inNewOptions) {
+    const prepaidPriceExists = findPrepaidPrice({
+      prices,
+      internalFeatureId: option.internal_feature_id!,
+    });
+
+    if (!inNewOptions && prepaidPriceExists) {
       newOptionsList.push(option);
     }
   }

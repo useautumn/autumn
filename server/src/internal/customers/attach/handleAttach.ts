@@ -49,13 +49,12 @@ export const handleAttach = async (req: any, res: any) =>
         config,
       });
 
-      await checkStripeConnections({ req, attachParams });
-      await createStripePrices({
+      await checkStripeConnections({
+        req,
         attachParams,
         useCheckout: config.onlyCheckout,
-        req,
-        logger,
       });
+
       await insertCustomItems({
         db: req.db,
         customPrices: customPrices || [],

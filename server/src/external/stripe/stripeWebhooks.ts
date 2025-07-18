@@ -29,7 +29,7 @@ const logStripeWebhook = ({
   event: Stripe.Event;
 }) => {
   req.logtail.info(
-    `${chalk.yellow("STRIPE").padEnd(18)} ${event.type.padEnd(30)} ${req.org.slug} | ${event.id}`,
+    `${chalk.yellow("STRIPE").padEnd(18)} ${event.type.padEnd(30)} ${req.org.slug} | ${event.id}`
   );
 };
 
@@ -68,8 +68,8 @@ stripeWebhookRouter.post(
       return;
     }
 
-    const webhookSecret = getStripeWebhookSecret(org, env);
     try {
+      const webhookSecret = getStripeWebhookSecret(org, env);
       event = stripe.webhooks.constructEvent(request.body, sig, webhookSecret);
     } catch (err: any) {
       response.status(400).send(`Webhook Error: ${err.message}`);
@@ -113,8 +113,8 @@ stripeWebhookRouter.post(
     //   env,
     // });
 
-    const stripeCli = createStripeCli({ org, env });
     try {
+      const stripeCli = createStripeCli({ org, env });
       switch (event.type) {
         case "customer.subscription.created":
           await handleSubCreated({
@@ -228,5 +228,5 @@ stripeWebhookRouter.post(
 
     // DO NOT DELETE -- RESPONSIBLE FOR SENDING SUCCESSFUL RESPONSE TO STRIPE...
     response.status(200).send();
-  },
+  }
 );

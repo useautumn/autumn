@@ -76,7 +76,7 @@ const handleFeatureIdChanged = async ({
         updates: {
           entity_feature_id: newId,
         },
-      }),
+      })
     );
   }
 
@@ -95,7 +95,7 @@ const handleFeatureIdChanged = async ({
             feature_id: newId,
           } as UsagePriceConfig,
         },
-      }),
+      })
     );
   }
 
@@ -122,7 +122,7 @@ const handleFeatureIdChanged = async ({
             schema: newSchema,
           },
         },
-      }),
+      })
     );
   }
 
@@ -139,7 +139,7 @@ const handleFeatureIdChanged = async ({
         updates: {
           feature_id: newId,
         },
-      }),
+      })
     );
   }
 
@@ -196,7 +196,7 @@ const handleFeatureUsageTypeChanged = async ({
 
   if (entitlements.length > 0) {
     console.log(
-      `Feature usage type changed to ${newUsageType}, updating entitlements and prices`,
+      `Feature usage type changed to ${newUsageType}, updating entitlements and prices`
     );
     if (newUsageType == FeatureUsageType.Continuous) {
       let batchEntUpdate = [];
@@ -208,7 +208,7 @@ const handleFeatureUsageTypeChanged = async ({
             updates: {
               interval: EntInterval.Lifetime,
             },
-          }),
+          })
         );
       }
 
@@ -234,7 +234,7 @@ const handleFeatureUsageTypeChanged = async ({
               stripe_price_id: null,
             },
           },
-        }),
+        })
       );
     }
 
@@ -361,6 +361,8 @@ export const handleUpdateFeature = async (req: any, res: any) =>
         });
       }
 
-      res.status(200).json({ success: true, feature_id: featureId });
+      if (res) {
+        res.status(200).json({ success: true, feature_id: featureId });
+      }
     },
   });

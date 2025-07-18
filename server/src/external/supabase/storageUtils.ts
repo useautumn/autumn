@@ -1,6 +1,22 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseClient } from "../supabaseUtils.js";
 
+export const readFile = async ({
+  bucket = "autumn",
+  path,
+}: {
+  bucket: string;
+  path: string;
+}) => {
+  const sb = createSupabaseClient();
+  const { data, error } = await sb.storage.from(bucket).download(path);
+
+  if (error) {
+    throw error;
+  }
+  return data;
+};
+
 export const uploadFile = async ({
   path,
   file,

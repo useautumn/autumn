@@ -41,33 +41,147 @@ export class AnalyticsService {
   }
 
   static async getTopEventNames({
-    ch,
-    orgId,
-    env,
+    req,
+    limit = 3,
   }: {
-    ch: ClickHouseClient;
-    orgId: string;
-    env: string;
+    req: ExtendedRequest;
+    limit?: number;
   }) {
+    const { clickhouseClient, org, env } = req;
+
     const query = `
     select count(*), event_name 
     from org_events_view(org_id={org_id:String}, org_slug='', env={env:String}) 
     where timestamp >= NOW() - INTERVAL '1 month'
     group by event_name
     order by count(*) desc
-    limit 3
+    limit {limit:UInt32}
     `;
-    const result = await ch.query({
+    const result = await clickhouseClient.query({
       query,
       query_params: {
-        org_id: orgId,
+        org_id: org?.id,
         env: env,
+        limit,
       },
     });
 
     const resultJson = await result.json();
 
     return resultJson.data.map((row: any) => row.event_name);
+  }
+
+  static async getTopUser({ req }: { req: ExtendedRequest }) {
+    const { clickhouseClient, org, env, db } = req;
+
+    const query = `
+SELECT 
+  c.name 
+FROM 
+  events e 
+JOIN 
+  customers c ON e.customer_id = c.id 
+WHERE 
+  toDate(e.timestamp) = today() 
+  AND e.org_id = {org_id: String} 
+  AND e.env = {env: String} 
+GROUP BY 
+  c.name 
+ORDER BY 
+  COUNT(*) DESC 
+LIMIT 1 
+ 
+UNION ALL 
+
+SELECT 
+  'None' 
+WHERE 
+  NOT EXISTS ( 
+    SELECT 
+      1 
+    FROM 
+      events e 
+    JOIN 
+      customers c ON e.customer_id = c.id 
+    WHERE 
+      toDate(e.timestamp) = today() 
+      AND e.org_id = {org_id: String} 
+      AND e.env = {env: String} 
+    GROUP BY 
+      c.name 
+    ORDER BY 
+      COUNT(*) DESC 
+    LIMIT 1 
+  )
+		`;
+
+    const result = await clickhouseClient.query({
+      query,
+      query_params: {
+        org_id: org?.id,
+        env: env,
+      },
+    });
+
+    const resultJson = await result.json();
+
+    console.log("resultJson", resultJson);
+
+    return (resultJson.data as { name: string; count: number }[])[0];
+  }
+
+  static async getTotalEvents({
+    req,
+    eventName,
+  }: {
+    req: ExtendedRequest;
+    eventName?: string;
+  }) {
+    const { clickhouseClient, org, env, db } = req;
+
+    const query = `
+SELECT org_id, env, COUNT(*) AS total_events
+FROM events
+WHERE org_id = {org_id: String}
+  AND env = {env: String}
+  ${eventName ? `AND event_name = {eventName: String}` : ""}
+GROUP BY org_id, env
+LIMIT 1;
+		`;
+
+    const result = await clickhouseClient.query({
+      query,
+      query_params: {
+        org_id: org?.id,
+        env: env,
+        eventName: eventName ?? undefined,
+      },
+    });
+
+    const resultJson = await result.json();
+
+    return (resultJson.data as { total_events: number }[])[0].total_events;
+  }
+
+  static async getTotalCustomers({ req }: { req: ExtendedRequest }) {
+    const { clickhouseClient, org, env, db } = req;
+    const query = `SELECT COUNT(DISTINCT id) AS total_customers 
+FROM customers
+WHERE org_id = {org_id:String} 
+  AND env = {env:String};`;
+
+    const result = await clickhouseClient.query({
+      query,
+      query_params: {
+        org_id: org?.id,
+        env: env,
+      },
+    });
+
+    const resultJson = await result.json();
+
+    return (resultJson.data as { total_customers: number }[])[0]
+      .total_customers;
   }
 
   static async getTimeseriesEvents({
@@ -77,7 +191,11 @@ export class AnalyticsService {
     aggregateAll = false,
   }: {
     req: ExtendedRequest;
-    params: any;
+    params: {
+      event_names: string[];
+      interval: "24h" | "7d" | "30d" | "90d" | "1bc" | "3bc";
+      customer_id?: string;
+    };
     customer?: FullCustomer;
     aggregateAll?: boolean;
   }) {
@@ -95,18 +213,33 @@ export class AnalyticsService {
         ? await this.getBillingCycleStartDate(
             customer,
             db,
-            intervalType as "1bc" | "3bc",
+            intervalType as "1bc" | "3bc"
           )
         : null;
 
-    const countExpressions = params.event_names
-      .map(
-        (eventName: string) =>
-          `coalesce(sumIf(e.value, e.event_name = '${eventName}'), 0) as ${eventName.replace(/[^a-zA-Z0-9]/g, "_")}_count`,
-      )
-      .join(",\n  ");
+    const expressionsResult = await clickhouseClient.query({
+      query:
+        "SELECT generateEventCountExpressions({event_names:Array(String)}) as expressions",
+      query_params: {
+        event_names: params.event_names,
+      },
+    });
 
-    const startDate = isBillingCycle ? getBCResults?.startDate : null;
+    const expressionsResultJson = await expressionsResult.json();
+
+    if (expressionsResultJson.data.length === 0) {
+      throw new RecaseError({
+        message: "No expressions found",
+        code: ErrCode.ClickHouseDisabled,
+        statusCode: StatusCodes.SERVICE_UNAVAILABLE,
+      });
+    }
+
+    const countExpressions = (
+      expressionsResultJson.data as {
+        expressions: string;
+      }[]
+    )[0].expressions;
 
     if (this.clickhouseAvailable) {
       const query = `
@@ -219,7 +352,7 @@ order by dr.period;
         ? await this.getBillingCycleStartDate(
             customer,
             db,
-            intervalType as "1bc" | "3bc",
+            intervalType as "1bc" | "3bc"
           )
         : null;
 
@@ -291,7 +424,7 @@ order by dr.period;
   static async getBillingCycleStartDate(
     customer?: FullCustomer,
     db?: DrizzleCli,
-    intervalType?: "1bc" | "3bc",
+    intervalType?: "1bc" | "3bc"
   ) {
     // If no customer provided, return empty object (for aggregateAll case)
     if (!customer || !db || !intervalType) {
@@ -311,21 +444,20 @@ order by dr.period;
         db,
         ids:
           customer.customer_products?.flatMap(
-            (product: FullCusProduct) => product.subscription_ids ?? [],
+            (product: FullCusProduct) => product.subscription_ids ?? []
           ) ?? [],
       });
     }
 
     let customerProductsFiltered = customer.customer_products?.filter(
       (product: FullCusProduct) => {
-        let hasGroup = product.product.group != "";
         let isAddon = product.product.is_add_on;
         let isActive =
           product.status === CusProductStatus.Active ||
           product.status === CusProductStatus.Trialing;
 
-        return !isAddon && !hasGroup && isActive;
-      },
+        return !isAddon && isActive;
+      }
     );
 
     if (!customerProductsFiltered || customerProductsFiltered.length === 0)
@@ -338,20 +470,20 @@ order by dr.period;
       product.subscription_ids?.forEach((subscriptionId: string) => {
         let subscription = subscriptions.find(
           (subscription: Subscription) =>
-            subscription.stripe_id === subscriptionId,
+            subscription.stripe_id === subscriptionId
         );
         if (subscription) {
           startDates.push(
             new Date((subscription.current_period_start ?? 0) * 1000)
               .toISOString()
               .replace("T", " ")
-              .split(".")[0],
+              .split(".")[0]
           );
           endDates.push(
             new Date((subscription.current_period_end ?? 0) * 1000)
               .toISOString()
               .replace("T", " ")
-              .split(".")[0],
+              .split(".")[0]
           );
         }
       });
@@ -373,23 +505,3 @@ order by dr.period;
     };
   }
 }
-
-// const query = `
-//     SELECT timestamp, event_name,
-//     case
-//       when isNotNull(JSONExtractString(properties, 'value')) AND JSONExtractString(properties, 'value') != ''
-//           then toFloat64OrZero(JSONExtractString(properties, 'value'))
-//       when isNotNull(value)
-//           then toFloat64(value)
-//       else 1.0
-//     end as value,
-//     properties, idempotency_key, entity_id, customer_id
-//     FROM events
-//     WHERE org_id = {organizationId:String}
-//     ${aggregateAll ? "" : "AND internal_customer_id = {customerId:String}"}
-//     AND env = {env:String}
-//     AND timestamp >= toDateTime({startDate:String})
-//     AND timestamp < toDateTime({endDate:String})
-//     order by timestamp desc
-//     limit 25000
-//     `;

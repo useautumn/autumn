@@ -16,11 +16,13 @@ export const attachParamsToPreview = async ({
   attachParams,
   attachBody,
   logger,
+  withPrepaid = false,
 }: {
   req: ExtendedRequest;
   attachParams: AttachParams;
   attachBody: AttachBody;
   logger: any;
+  withPrepaid?: boolean;
 }) => {
   // Handle existing product
 
@@ -63,6 +65,7 @@ export const attachParamsToPreview = async ({
       attachParams,
       logger,
       config,
+      withPrepaid,
     });
   }
 
@@ -84,6 +87,7 @@ export const attachParamsToPreview = async ({
       attachParams,
       branch,
       now,
+      withPrepaid,
     });
   }
 

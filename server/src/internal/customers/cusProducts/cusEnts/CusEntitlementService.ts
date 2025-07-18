@@ -52,41 +52,62 @@ export class CusEntService {
   static async getActiveResetPassed({
     db,
     customDateUnix,
+    batchSize = 1000,
   }: {
     db: DrizzleCli;
     customDateUnix?: number;
+    batchSize?: number;
   }) {
-    const data = await db
-      .select()
-      .from(customerEntitlements)
-      .innerJoin(
-        customerProducts,
-        eq(customerEntitlements.customer_product_id, customerProducts.id),
-      )
-      .innerJoin(
-        entitlements,
-        eq(customerEntitlements.entitlement_id, entitlements.id),
-      )
-      .innerJoin(
-        features,
-        eq(entitlements.internal_feature_id, features.internal_id),
-      )
-      .where(
-        and(
-          eq(customerProducts.status, CusProductStatus.Active),
-          lt(customerEntitlements.next_reset_at, customDateUnix ?? Date.now()),
-        ),
-      );
+    const allResults: FullCusEntWithProduct[] = [];
+    let offset = 0;
+    let hasMore = true;
 
-    return data.map((item) => ({
-      ...item.customer_entitlements,
-      entitlement: {
-        ...item.entitlements,
-        feature: item.features,
-      },
-      customer_product: item.customer_products,
-      replaceables: [],
-    })) as FullCusEntWithProduct[];
+    while (hasMore) {
+      const data = await db
+        .select()
+        .from(customerEntitlements)
+        .innerJoin(
+          customerProducts,
+          eq(customerEntitlements.customer_product_id, customerProducts.id)
+        )
+        .innerJoin(
+          entitlements,
+          eq(customerEntitlements.entitlement_id, entitlements.id)
+        )
+        .innerJoin(
+          features,
+          eq(entitlements.internal_feature_id, features.internal_id)
+        )
+        .where(
+          and(
+            eq(customerProducts.status, CusProductStatus.Active),
+            lt(customerEntitlements.next_reset_at, customDateUnix ?? Date.now())
+          )
+        )
+        .limit(batchSize)
+        .offset(offset);
+
+      if (data.length === 0) {
+        hasMore = false;
+      } else {
+        const mappedData = data.map((item) => ({
+          ...item.customer_entitlements,
+          entitlement: {
+            ...item.entitlements,
+            feature: item.features,
+          },
+          customer_product: item.customer_products,
+          replaceables: [],
+        })) as FullCusEntWithProduct[];
+
+        allResults.push(...mappedData);
+        offset += batchSize;
+        hasMore = data.length === batchSize;
+        console.log(`Fetched ${allResults.length} entitlements to reset`);
+      }
+    }
+
+    return allResults;
   }
 
   static async update({

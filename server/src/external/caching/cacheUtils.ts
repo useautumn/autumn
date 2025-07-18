@@ -1,7 +1,7 @@
 import { notNullish } from "@/utils/genUtils.js";
 import { CacheManager } from "./CacheManager.js";
 
-export async function getAPIKeyCache({
+export async function queryWithCache({
   action,
   key,
   fn,
@@ -14,6 +14,8 @@ export async function getAPIKeyCache({
   // Try to get from cache
   try {
     const cachedResult = await CacheManager.getJson(cacheKey);
+    // console.log(`Cache key: ${cacheKey}`);
+    // console.log(`Cached result: ${cachedResult}`);
     if (cachedResult) {
       return cachedResult;
     }
