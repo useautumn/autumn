@@ -3,7 +3,7 @@ import { useOrg } from "@/hooks/useOrg";
 import { useAxiosSWR, usePostSWR } from "@/services/useAxiosSwr";
 import { useEnv } from "@/utils/envUtils";
 import { navigateTo, nullish } from "@/utils/genUtils";
-import { ErrCode, FullCustomer } from "@autumn/shared";
+import { ErrCode, FullCustomer, getFeatureName } from "@autumn/shared";
 import { useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useTopEventNames } from "./useTopEventNames";
@@ -68,31 +68,39 @@ export const useAnalyticsData = ({
   //   }
   // }, [eventNamesData, searchParams, hasCleared, navigate]);
 
-  const hasSetTopEvents = useRef(false);
+  // const hasSetTopEvents = useRef(false);
 
-  useEffect(() => {
-    if (
-      topEvents &&
-      !topEventsLoading &&
-      nullish(eventNames) &&
-      nullish(featureIds) &&
-      !hasCleared
-    ) {
-      searchParams.set("event_names", topEvents.eventNames.join(","));
-      searchParams.set("feature_ids", topEvents.featureIds.join(","));
-      hasSetTopEvents.current = true;
+  // 1. if no eventNames and no featureIds, use topEventsLoading
 
-      navigate(`?${searchParams.toString()}`);
-    }
-  }, [
-    topEventsLoading,
-    eventNames,
-    featureIds,
-    hasCleared,
-    topEvents,
-    searchParams,
-    navigate,
-  ]);
+  // useEffect(() => {
+  //   if (topEvents && !topEventsLoading) {
+  //     console.log("Setting top events:", topEvents);
+  //   }
+  // }, [topEventsLoading]);
+
+  // useEffect(() => {
+  //   if (
+  //     topEvents &&
+  //     !topEventsLoading &&
+  //     nullish(eventNames) &&
+  //     nullish(featureIds) &&
+  //     !hasCleared
+  //   ) {
+  //     searchParams.set("event_names", topEvents.eventNames.join(","));
+  //     searchParams.set("feature_ids", topEvents.featureIds.join(","));
+  //     // hasSetTopEvents.current = true;
+
+  //     navigate(`?${searchParams.toString()}`);
+  //   }
+  // }, [
+  //   topEventsLoading,
+  //   eventNames,
+  //   featureIds,
+  //   hasCleared,
+  //   topEvents,
+  //   searchParams,
+  //   navigate,
+  // ]);
 
   const {
     data,
@@ -124,6 +132,7 @@ export const useAnalyticsData = ({
     events: data?.events,
     error: error?.code === ErrCode.ClickHouseDisabled ? null : error,
     bcExclusionFlag: data?.bcExclusionFlag ?? false,
+    topEventsLoading,
   };
 };
 
@@ -171,6 +180,7 @@ export const useRawAnalyticsData = () => {
     customer: data?.customer,
     features: featuresData?.features || [],
     featuresLoading,
+
     queryLoading,
     rawEvents: data?.rawEvents,
     error: error?.code === ErrCode.ClickHouseDisabled ? null : error,
