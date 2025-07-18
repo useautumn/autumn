@@ -129,11 +129,11 @@ function CustomersView({ env }: { env: AppEnv }) {
   useEffect(() => {
     const params: Record<string, string> = {};
 
-    if (filters.status.length > 0) {
+    if (filters.status?.length > 0) {
       params.status = filters.status.join(",");
     }
 
-    if (filters.product_id.length > 0) {
+    if (filters.product_id?.length > 0) {
       params.product_id = filters.product_id.join(",");
     }
 
