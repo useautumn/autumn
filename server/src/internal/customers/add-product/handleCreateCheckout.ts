@@ -109,6 +109,7 @@ export const handleCreateCheckout = async ({
     saved_payment_method_options: {
       payment_method_save: "enabled",
     },
+    payment_method_types: ['card'],
 
     ...(attachParams.checkoutSessionParams || {}),
   });

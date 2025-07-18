@@ -38,7 +38,7 @@ export const routeHandler = async ({
     let originalUrl = req.originalUrl;
     if (error instanceof Stripe.errors.StripeError) {
       if (
-        originalUrl.includes("/billing_portal") &&
+        originalUrl.includes("/attach") &&
         error.message.includes("Provide a configuration or create your default")
       ) {
         req.logtail.warn(`Billing portal config error, org: ${req.org?.slug}`);
@@ -57,6 +57,15 @@ export const routeHandler = async ({
         req.logtail.warn(
           `Billing portal return_url error, org: ${req.org?.slug}, return_url: ${req.body.return_url}`,
         );
+        return res.status(400).json({
+          message: error.message,
+          code: ErrCode.InvalidRequest,
+        });
+      }
+
+      if (originalUrl.includes("/billing_portal") &&
+          error.message.includes('payment_method_types')) {
+        req.logtail.warn(`Payment methods not configured, org: ${req.org?.slug}`);
         return res.status(400).json({
           message: error.message,
           code: ErrCode.InvalidRequest,

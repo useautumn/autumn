@@ -36,6 +36,7 @@ export const handleSetupPayment = async (req: any, res: any) =>
         mode: "setup",
         success_url: success_url || org.stripe_config?.success_url,
         currency: org.default_currency || "usd",
+        payment_method_types: ["card"],
         ...(checkout_session_params as any),
       });
 
