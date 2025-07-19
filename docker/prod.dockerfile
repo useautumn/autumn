@@ -1,14 +1,14 @@
 # ---- Base dependencies ----
-FROM node:18-alpine AS base
+FROM oven/bun:latest AS base
 WORKDIR /app
-RUN npm install -g pnpm serve typescript tsc tsc-alias tsx
+RUN bun install -g serve typescript tsc tsc-alias tsx
 
-COPY package*.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY package.json bun.lockb ./
 COPY shared/package*.json ./shared/
 COPY server/package*.json ./server/
 COPY vite/package*.json ./vite/
 
-RUN pnpm install
+RUN bun install
 
 FROM base AS localtunnel
 WORKDIR /app
@@ -19,27 +19,26 @@ CMD ["sh", "localtunnel-start.sh"]
 FROM base AS vite-build
 COPY . .
 WORKDIR /app
-RUN pnpm run vite:build
+RUN bun run vite:build:bun
 
 # ---- Build backend (server) ----
 FROM base AS server-build
 COPY . .
 WORKDIR /app
-RUN pnpm run server:build
+RUN bun run server:build:bun
 
 # ---- Production frontend image ----
 FROM vite-build AS vite-prod
 EXPOSE 3000
 WORKDIR /app
-CMD ["pnpm", "run", "vite:start"]
+CMD ["bun", "run", "vite:start:bun"]
 
 FROM server-build AS server-prod
 EXPOSE 8080
-WORKDIR /app
-CMD ["pnpm", "run", "server:start"]
+WORKDIR /app/server
+CMD ["bun", "run", "prod:start:bun"]
 
 FROM server-build AS workers-prod
 EXPOSE 8080
-WORKDIR /app
-CMD ["pnpm", "run", "server:workers"]
-
+WORKDIR /app/server
+CMD ["bun", "run", "workers:start:bun"]

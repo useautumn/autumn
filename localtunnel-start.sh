@@ -15,7 +15,7 @@ fi
 
 echo "Installing localtunnel..."
 echo "Reserved key: ${LOCAL_TUNNEL_RESERVED_KEY}"
-npm install -g localtunnel
+bun install -g localtunnel
 
 
 echo "Server is ready! Starting localtunnel..."
