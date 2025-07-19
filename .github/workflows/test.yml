@@ -22,7 +22,7 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
@@ -44,52 +44,52 @@ jobs:
       - name: Setup CI
         run: pnpm run setupci
 
-      - name: Install Chrome Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            ca-certificates \
-            fonts-liberation \
-            libasound2 \
-            libatk-bridge2.0-0 \
-            libatk1.0-0 \
-            libc6 \
-            libcairo2 \
-            libcups2 \
-            libdbus-1-3 \
-            libexpat1 \
-            libfontconfig1 \
-            libgbm1 \
-            libgcc1 \
-            libgdk-pixbuf2.0-0 \
-            libglib2.0-0 \
-            libgtk-3-0 \
-            libnspr4 \
-            libnss3 \
-            libpango-1.0-0 \
-            libpangocairo-1.0-0 \
-            libstdc++6 \
-            libx11-6 \
-            libx11-xcb1 \
-            libxcb1 \
-            libxcomposite1 \
-            libxcursor1 \
-            libxdamage1 \
-            libxext6 \
-            libxfixes3 \
-            libxi6 \
-            libxrandr2 \
-            libxrender1 \
-            libxss1 \
-            libxtst6 \
-            lsb-release \
-            wget \
-            xdg-utils
+      # - name: Install Chrome Dependencies
+      #   run: |
+      #     sudo apt-get update
+      #     sudo apt-get install -y \
+      #       ca-certificates \
+      #       fonts-liberation \
+      #       libasound2 \
+      #       libatk-bridge2.0-0 \
+      #       libatk1.0-0 \
+      #       libc6 \
+      #       libcairo2 \
+      #       libcups2 \
+      #       libdbus-1-3 \
+      #       libexpat1 \
+      #       libfontconfig1 \
+      #       libgbm1 \
+      #       libgcc1 \
+      #       libgdk-pixbuf2.0-0 \
+      #       libglib2.0-0 \
+      #       libgtk-3-0 \
+      #       libnspr4 \
+      #       libnss3 \
+      #       libpango-1.0-0 \
+      #       libpangocairo-1.0-0 \
+      #       libstdc++6 \
+      #       libx11-6 \
+      #       libx11-xcb1 \
+      #       libxcb1 \
+      #       libxcomposite1 \
+      #       libxcursor1 \
+      #       libxdamage1 \
+      #       libxext6 \
+      #       libxfixes3 \
+      #       libxi6 \
+      #       libxrandr2 \
+      #       libxrender1 \
+      #       libxss1 \
+      #       libxtst6 \
+      #       lsb-release \
+      #       wget \
+      #       xdg-utils
 
-      - name: Install Chrome
-        run: |
-          cd server/
-          npx puppeteer browsers install chrome
+      # - name: Install Chrome
+      #   run: |
+      #     cd server/
+      #     npx puppeteer browsers install chrome
           
       - name: Create .env file
         run: |
@@ -104,8 +104,7 @@ jobs:
           echo "LOCALTUNNEL_RESERVED_KEY=${{ env.LOCALTUNNEL_RESERVED_KEY }}" >> .env
           echo "BETTER_AUTH_SECRET=${{ env.BETTER_AUTH_SECRET }}" >> .env
           echo "STRIPE_WEBHOOK_URL=${{ env.STRIPE_WEBHOOK_URL }}" >> .env
-          echo "BROWSERBASE_API_KEY=${{ env.BROWSERBASE_API_KEY }}" >> .env
-          echo "BROWSERBASE_PROJECT_ID=${{ env.BROWSERBASE_PROJECT_ID }}" >> .env
+          echo "HYPERBROWSER_API_KEY=${{ env.HYPERBROWSER_API_KEY }}" >> .env
           cat .env
 
       - name: Build shared
