@@ -32,9 +32,11 @@ analyticsRouter.get("/event_names", async (req: any, res: any) =>
         action: CacheType.TopEvents,
         key: `${org.id}_${env}`,
         fn: async () => {
-          return await AnalyticsService.getTopEventNames({
+          const res = await AnalyticsService.getTopEventNames({
             req,
           });
+
+          return res?.eventNames;
         },
       });
 
@@ -75,9 +77,11 @@ const getTopEvents = async ({ req }: { req: ExtendedRequest }) => {
     action: CacheType.TopEvents,
     key: `${org.id}_${env}`,
     fn: async () => {
-      return await AnalyticsService.getTopEventNames({
+      const res = await AnalyticsService.getTopEventNames({
         req,
       });
+
+      return res?.eventNames;
     },
   });
 
