@@ -27,9 +27,9 @@
 		"docker:up:ci": "docker compose -f docker-compose.ci.yml up --build",
 		"build:all": "pnpm -F shared build && pnpm -F server prod:build && pnpm -F vite build",
 
-    
-		"vite:build:bun": "bun -F @autumn/shared build && bun -F @autumn/vite build",
-		"vite:start:bun": "bun -F @autumn/shared build && bun -F @autumn/vite start",
+
+		"vite:build:bun": "bun -F @autumn/shared build && bun -F @autumn/vite build:bun",
+		"vite:start:bun": "bun -F @autumn/shared build && bun -F @autumn/vite start:bun",
 		"server:build:bun": "bun -F @autumn/shared build && bun -F @autumn/server prod:build:bun",
 		"server:start:bun": "bun -F @autumn/shared build && bun -F @autumn/server prod:start:bun",
 		"server:cron:bun": "bun -F @autumn/shared build && bun -F @autumn/server cron:start:bun",
