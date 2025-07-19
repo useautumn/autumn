@@ -47,7 +47,6 @@ export const handleCreateCheckout = async ({
     });
   }
 
-  // Handle first item set
   const { items } = itemSets[0];
 
   attachParams.itemSets = itemSets;
@@ -66,7 +65,7 @@ export const handleCreateCheckout = async ({
 
   if (attachParams.billingAnchor) {
     billingCycleAnchorUnixSeconds = Math.floor(
-      attachParams.billingAnchor / 1000
+      attachParams.billingAnchor / 1000,
     );
   }
 
@@ -90,6 +89,7 @@ export const handleCreateCheckout = async ({
   const hasUserSpecifiedPaymentMethods =
     checkoutParams.payment_method_types !== undefined;
 
+  // Prepare checkout session parameters
   const sessionParams = {
     customer: customer.processor.id,
     line_items: items,
@@ -110,9 +110,11 @@ export const handleCreateCheckout = async ({
   let checkout;
 
   try {
+    // let stripe automatically determine payment methods
     checkout = await stripeCli.checkout.sessions.create(sessionParams);
     logger.info(`✅ Successfully created checkout for customer ${customer.id}`);
   } catch (error: any) {
+    // payment method errors
     if (
       error.message &&
       (error.message.includes("payment method") ||
@@ -128,6 +130,7 @@ export const handleCreateCheckout = async ({
       }
 
       try {
+        //  card payment method fallback
         checkout = await stripeCli.checkout.sessions.create({
           ...sessionParams,
           payment_method_types: ["card"],
@@ -153,10 +156,11 @@ export const handleCreateCheckout = async ({
         });
       }
     } else {
+      // Re-throw errors
       throw error;
     }
   }
-
+  
   if (returnCheckout) {
     return checkout;
   }
