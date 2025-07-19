@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --port 3000 --host",
     "build": "tsc -b && vite build",
+    "build:bun": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "serve -s dist"
