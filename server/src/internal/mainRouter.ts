@@ -43,6 +43,7 @@ const trmnlLimiter = rateLimit({
   limit: process.env.NODE_ENV === "development" ? 1000 : 10,
   standardHeaders: "draft-8",
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
 });
 
 mainRouter.use("/trmnl", trmnlLimiter, trmnlAuthMiddleware, trmnlRouter);
