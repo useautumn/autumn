@@ -1,20 +1,11 @@
 name: Run Autumn Tests
 
 on:
-  
+  workflow_dispatch:
   push:
     branches:
       - main
       - test/cicd
-      
-  workflow_dispatch:
-    inputs:
-      tags:
-        description: 'Test scenario tags'
-        required: false
-        type: boolean
-
-
 env:
   DATABASE_URL: ${{ secrets.SUPABASE_URL }}
   UNIT_TEST_AUTUMN_SECRET_KEY: ${{ secrets.AUTUMN_KEY }}
@@ -145,13 +136,10 @@ jobs:
         run:
           echo "We're all setup!"
 
-      - name: Check logs
-        if: always()
-        run: sudo docker compose -f docker-compose.unix.yml logs server
+      # - name: Check logs
+      #   if: always()
+      #   run: sudo docker compose -f docker-compose.unix.yml logs server
 
       - name: Close Docker Containers
         if: always()
         run: sudo docker compose -f docker-compose.unix.yml down
-
-      
-
