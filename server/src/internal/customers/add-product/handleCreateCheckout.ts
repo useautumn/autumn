@@ -13,7 +13,6 @@ import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingInter
 import { APIVersion } from "@autumn/shared";
 import { SuccessCode } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
-import { getEntityInvoiceDescription } from "@/internal/entities/entityUtils/entityInvoiceUtils.js";
 import Stripe from "stripe";
 
 export const handleCreateCheckout = async ({
@@ -67,7 +66,7 @@ export const handleCreateCheckout = async ({
 
   if (attachParams.billingAnchor) {
     billingCycleAnchorUnixSeconds = Math.floor(
-      attachParams.billingAnchor / 1000,
+      attachParams.billingAnchor / 1000
     );
   }
 
@@ -88,7 +87,10 @@ export const handleCreateCheckout = async ({
     ? undefined
     : checkoutParams.allow_promotion_codes || true;
 
-  const checkout = await stripeCli.checkout.sessions.create({
+  const hasUserSpecifiedPaymentMethods =
+    checkoutParams.payment_method_types !== undefined;
+
+  const sessionParams = {
     customer: customer.processor.id,
     line_items: items,
     subscription_data: subscriptionData,
@@ -100,20 +102,60 @@ export const handleCreateCheckout = async ({
       ...(attachParams.metadata ? attachParams.metadata : {}),
     },
     allow_promotion_codes: allowPromotionCodes,
-    invoice_creation: !isRecurring
-      ? {
-          enabled: true,
-        }
-      : undefined,
-
-    saved_payment_method_options: {
-      payment_method_save: "enabled",
-    },
-
+    invoice_creation: !isRecurring ? { enabled: true } : undefined,
+    saved_payment_method_options: { payment_method_save: "enabled" },
     ...(attachParams.checkoutSessionParams || {}),
-  });
+  };
 
-  logger.info(`✅ Successfully created checkout for customer ${customer.id}`);
+  let checkout;
+
+  try {
+    checkout = await stripeCli.checkout.sessions.create(sessionParams);
+    logger.info(`✅ Successfully created checkout for customer ${customer.id}`);
+  } catch (error: any) {
+    if (
+      error.message &&
+      (error.message.includes("payment method") ||
+        error.message.includes("No valid payment"))
+    ) {
+      logger.warn("Stripe checkout session creation failed", {
+        customerId: customer.id || customer.internal_id,
+        error: error.message,
+      });
+
+      if (hasUserSpecifiedPaymentMethods) {
+        throw error;
+      }
+
+      try {
+        checkout = await stripeCli.checkout.sessions.create({
+          ...sessionParams,
+          payment_method_types: ["card"],
+        });
+
+        logger.info(
+          `✅ Created checkout with card payment method for customer ${customer.id}`
+        );
+      } catch (fallbackError: any) {
+        logger.error(
+          "Failed to create checkout session even with card payment method",
+          {
+            customerId: customer.id || customer.internal_id,
+            error: fallbackError.message,
+          }
+        );
+
+        throw new RecaseError({
+          code: ErrCode.InvalidRequest,
+          message:
+            "Unable to create checkout session. Please ensure you have activated card payment method in your Stripe dashboard.",
+          statusCode: 400,
+        });
+      }
+    } else {
+      throw error;
+    }
+  }
 
   if (returnCheckout) {
     return checkout;
@@ -130,7 +172,7 @@ export const handleCreateCheckout = async ({
         }, product(s) ${attachParams.products.map((p) => p.name).join(", ")}`,
         product_ids: attachParams.products.map((p) => p.id),
         customer_id: customer.id || customer.internal_id,
-      }),
+      })
     );
   } else {
     res.status(200).json({
