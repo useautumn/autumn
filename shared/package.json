@@ -16,7 +16,7 @@
     "build": "tsc",
     "build:bun": "bun build ./index.ts --outdir dist --target bun",
     "dev": "npx nodemon --watch . --ext ts --ignore dist --exec 'pnpm run build'",
-    "dev:bun": "bunx nodemon --watch . --ext ts --ignore dist --exec 'bun run build'",
+    "dev:bun": "bunx nodemon --watch . --ext ts --ignore dist --exec 'bun run build:bun'",
     "db:push": "cross-env NODE_OPTIONS=\"--import tsx\" pnpm exec drizzle-kit push --config drizzle.config.ts",
     "db:generate": "cross-env NODE_OPTIONS=\"--import tsx\" pnpm exec drizzle-kit generate --config drizzle.config.ts",
     "db:migrate": "cross-env NODE_OPTIONS=\"--import tsx\" pnpm exec drizzle-kit migrate --config drizzle.config.ts"
