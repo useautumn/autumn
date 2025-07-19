@@ -30,6 +30,7 @@ CMD ["bun", "run", "dev:bun"]
 
 # Stage 3: /vite
 FROM base AS vite
+COPY --from=shared /app/shared/dist ./shared/dist
 WORKDIR /app/vite
 COPY vite/ ./
 EXPOSE 3000
@@ -37,6 +38,7 @@ CMD ["bun", "run", "dev"]
 
 # Stage 4: /server
 FROM base AS server
+COPY --from=shared /app/shared/dist ./shared/dist
 COPY server/ ./server/
 WORKDIR /app/server
 EXPOSE 8080
@@ -44,6 +46,7 @@ CMD ["bun", "run", "dev:bun"]
 
 # Stage 5: Workers
 FROM base AS workers
+COPY --from=shared /app/shared/dist ./shared/dist
 COPY server/ ./server/
 WORKDIR /app/server
 CMD ["bun", "run", "workers:bun"]
