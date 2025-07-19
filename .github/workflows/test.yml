@@ -2,11 +2,11 @@ name: Run Autumn Tests
 
 on:
   
-  # push:
-  #   branches:
-  #     - main
-  #     - test/cicd
-
+  push:
+    branches:
+      - main
+      - test/cicd
+      
   workflow_dispatch:
     inputs:
       tags:
