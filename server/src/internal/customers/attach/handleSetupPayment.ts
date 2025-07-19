@@ -29,11 +29,12 @@ export const handleSetupPayment = async (req: any, res: any) =>
         org,
         env,
         customer,
-        logger,
+        logger: req.logger,
       });
 
       const stripeCli = createStripeCli({ org, env });
 
+      // check if user already specified payment methods in their request
       const hasUserSpecifiedPaymentMethods = 
         checkout_session_params && checkout_session_params.payment_method_types;
 
@@ -46,12 +47,14 @@ export const handleSetupPayment = async (req: any, res: any) =>
       };
 
       try {
+        // let stripe automatically determine payment methods
         const session = await stripeCli.checkout.sessions.create(sessionParams);
         return res.json({
           customer_id: customer.id,
           url: session.url,
         });
       } catch (error: any) {
+        // payment method errors
         if (error.message && 
             (error.message.includes("payment method") || 
              error.message.includes("No valid payment"))) {
@@ -66,6 +69,7 @@ export const handleSetupPayment = async (req: any, res: any) =>
           }
 
           try {
+            // card payment method fallback
             const fallbackSession = await stripeCli.checkout.sessions.create({
               ...sessionParams,
               payment_method_types: ["card"],
@@ -80,6 +84,7 @@ export const handleSetupPayment = async (req: any, res: any) =>
               url: fallbackSession.url,
             });
           } catch (fallbackError: any) {
+            // if fallback failed
             logger.error("Failed to create checkout session even with card payment method", {
               customerId: customer.id,
               error: fallbackError.message,
@@ -93,6 +98,7 @@ export const handleSetupPayment = async (req: any, res: any) =>
           }
         }
         
+        // Re-throw errors
         throw error;
       }
     },
