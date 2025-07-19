@@ -1,10 +1,13 @@
 name: Run Autumn Tests
 
 on:
+  
   push:
     branches:
       - main
       - test/cicd
+      
+  workflow_dispatch:
 
 env:
   DATABASE_URL: ${{ secrets.SUPABASE_URL }}
