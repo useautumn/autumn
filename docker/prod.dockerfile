@@ -15,14 +15,22 @@ WORKDIR /app
 COPY localtunnel-start.sh ./
 CMD ["sh", "localtunnel-start.sh"]
 
-# # ---- Build frontend (vite) ----
+# ---- Build shared package ----
+FROM base AS shared-build
+COPY shared/ ./shared/
+WORKDIR /app/shared
+RUN bun run build:bun
+
+# ---- Build frontend (vite) ----
 FROM base AS vite-build
+COPY --from=shared-build /app/shared/dist ./shared/dist
 COPY . .
 WORKDIR /app
 RUN bun run vite:build:bun
 
 # ---- Build backend (server) ----
 FROM base AS server-build
+COPY --from=shared-build /app/shared/dist ./shared/dist
 COPY . .
 WORKDIR /app
 RUN bun run server:build:bun
