@@ -26,7 +26,7 @@ export const CancelProductDialog = ({
   const [immediateLoading, setImmediateLoading] = useState(false);
   const [endOfCycleLoading, setEndOfCycleLoading] = useState(false);
   const axiosInstance = useAxiosInstance();
-  const { cusMutate, customer } = useCustomerContext();
+  const { cusMutate, customer, entities } = useCustomerContext();
 
   const handleClicked = async (cancelImmediately?: boolean) => {
     if (cancelImmediately) {
@@ -34,10 +34,16 @@ export const CancelProductDialog = ({
     } else {
       setEndOfCycleLoading(true);
     }
+
+    const entity = entities.find(
+      (e: any) => e.internal_id === cusProduct.internal_entity_id
+    );
+
     try {
       await axiosInstance.post(`/v1/cancel`, {
-        customer_id: cusProduct.customer_id,
+        customer_id: cusProduct.customer_id || cusProduct.internal_customer_id,
         product_id: cusProduct.product_id,
+        entity_id: entity?.id || entity?.internal_id,
         cancel_immediately: cancelImmediately,
       });
       await cusMutate();
@@ -61,11 +67,12 @@ export const CancelProductDialog = ({
 
   const currentMain = customer.customer_products.find(
     (cp: any) =>
-      cp.product_id == cusProduct.product_id &&
+      !cp.is_add_on &&
+      cp.product_id !== cusProduct.product_id &&
       cp.product.group == cusProduct.product.group &&
       (cp.status == CusProductStatus.Active ||
         cp.status == CusProductStatus.PastDue) &&
-      cp.internal_entity_id === cusProduct.internal_entity_id
+      cp.internal_entity_id == cusProduct.internal_entity_id
   );
 
   return (
@@ -79,11 +86,10 @@ export const CancelProductDialog = ({
           {isScheduled ? (
             <p className="text-t2">
               This product is scheduled to start on{" "}
-              {formatUnixToDateTime(cusProduct.starts_at).date}. Cancelling it
-              will remove the schedule
-              {currentMain &&
-                ` and renew their current product (${currentMain.product.name})`}
-              .
+              {formatUnixToDateTime(cusProduct.starts_at).date}.
+              {currentMain
+                ? ` Are you sure you want to remove this schedule and renew the current product (${currentMain.product.name})?`
+                : " Are you sure you want to remove this schedule?"}
             </p>
           ) : isDefault ? (
             <p className="text-t2">

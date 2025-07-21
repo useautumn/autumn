@@ -13,7 +13,7 @@ import { useEffect, useState } from "react";
 import ErrorScreen from "@/views/general/ErrorScreen";
 import { InvoicesTable } from "./InvoicesTable";
 
-import { CustomerSidebar } from "./customer-sidebar/customer-sidebar";
+import { CustomerSidebar } from "./customer-sidebar/CustomerSidebar";
 import { CustomerBreadcrumbs } from "./customer-breadcrumbs";
 import { SelectEntity } from "./customer-sidebar/select-entity";
 import { CustomerProductList } from "./customer-product-list/CustomerProductList";

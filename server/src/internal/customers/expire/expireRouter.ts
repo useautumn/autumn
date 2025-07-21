@@ -5,6 +5,7 @@ import { routeHandler } from "@/utils/routerUtils.js";
 import { CusProductStatus, ErrCode, FullCusProduct } from "@autumn/shared";
 import { Router } from "express";
 import { expireCusProduct } from "../handlers/handleCusProductExpired.js";
+import { RELEVANT_STATUSES } from "../cusProducts/CusProductService.js";
 
 const expireRouter: Router = Router();
 
@@ -27,7 +28,7 @@ expireRouter.post("", async (req, res) =>
         env,
         withEntities: true,
         entityId: entity_id,
-        inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+        inStatuses: RELEVANT_STATUSES,
         allowNotFound: false,
       });
 
@@ -39,11 +40,12 @@ expireRouter.post("", async (req, res) =>
       }
 
       let cusProducts = fullCus.customer_products;
+      let entity = fullCus.entity;
 
       let cusProductsToExpire = cusProducts.filter(
         (cusProduct: FullCusProduct) =>
           cusProduct.product.id == product_id &&
-          (entity_id ? cusProduct.entity_id == entity_id : true),
+          (entity ? cusProduct.internal_entity_id == entity.internal_id : true)
       );
 
       if (cusProductsToExpire.length == 0) {
@@ -69,7 +71,7 @@ expireRouter.post("", async (req, res) =>
         product_id: product_id,
       });
     },
-  }),
+  })
 );
 
 export default expireRouter;
