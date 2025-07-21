@@ -63,13 +63,21 @@ export const ProductItemConfig = () => {
           reset_usage_when_enabled: resetUsageWhenEnabled,
         };
 
-        const newConfig = !showProration ? undefined : item.config;
+        // Only manage proration config if this item should show proration
+        if (showProration) {
+          // Preserve existing config and manage proration parts
+          const existingConfig = item.config || {};
+          const newConfig = {
+            ...existingConfig,
+            on_increase: existingConfig.on_increase,
+            on_decrease: existingConfig.on_decrease,
+          };
 
-        if (newConfig) {
-          newItem.config = newConfig;
-        } else {
-          delete newItem.config;
+          if (Object.keys(newConfig).length > 0) {
+            newItem.config = newConfig;
+          }
         }
+        // If showProration is false, don't touch the config at all - preserve whatever is there
 
         setItem(newItem);
       }
