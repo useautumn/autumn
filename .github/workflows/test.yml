@@ -112,7 +112,7 @@ jobs:
           pnpm build
 
       - name: Startup server
-        run: sudo docker compose -f docker-compose.ci.yml up --detach
+        run: sudo docker compose -f docker/docker-compose.ci.yml up --detach
 
       - name: Wait for server to be ready
         run: |
@@ -159,4 +159,4 @@ jobs:
 
       - name: Close Docker Containers
         if: always()
-        run: sudo docker compose -f docker-compose.unix.yml down
+        run: sudo docker compose -f docker/docker-compose.unix.yml down

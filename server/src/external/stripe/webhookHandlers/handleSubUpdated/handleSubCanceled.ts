@@ -56,8 +56,9 @@ export const handleSubCanceled = async ({
 
   let defaultProducts = allDefaultProducts.filter((p) =>
     updatedCusProducts.some(
-      (cp: FullCusProduct) => cp.product.group == p.group,
-    ),
+      (cp: FullCusProduct) =>
+        cp.product.group == p.group && nullish(cp.internal_entity_id)
+    )
   );
 
   if (defaultProducts.length == 0) return;
@@ -66,14 +67,14 @@ export const handleSubCanceled = async ({
     const productNames = defaultProducts.map((p) => p.name).join(", ");
     const periodEnd = formatUnixToDateTime(sub.current_period_end * 1000);
     logger.info(
-      `subscription.updated: canceled -> attempting to schedule default products: ${productNames}, period end: ${periodEnd}`,
+      `subscription.updated: canceled -> attempting to schedule default products: ${productNames}, period end: ${periodEnd}`
     );
   }
 
   let scheduledCusProducts: FullCusProduct[] = [];
   for (let product of defaultProducts) {
     let alreadyScheduled = cusProducts.some(
-      (cp: FullCusProduct) => cp.product.group == product.group,
+      (cp: FullCusProduct) => cp.product.group == product.group
     );
 
     if (alreadyScheduled) {
@@ -112,7 +113,7 @@ export const handleSubCanceled = async ({
         scenario: AttachScenario.Cancel,
         cusProduct: cusProd,
         scheduledCusProduct: scheduledCusProducts.find(
-          (cp) => cp.product.group === cusProd.product.group,
+          (cp) => cp.product.group === cusProd.product.group
         ),
       });
     } catch (error) {}

@@ -6,6 +6,7 @@ import {
   EventInsert,
   FeatureType,
   FeatureUsageType,
+  FullCustomer,
 } from "@autumn/shared";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { generateId, nullish } from "@/utils/genUtils.js";
@@ -45,9 +46,9 @@ const getCusFeatureAndOrg = async ({
     customerId,
     customerData,
     inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
-
     entityId,
     entityData: req.body.entity_data,
+    withEntities: true,
   });
 
   let feature = features.find((f) => f.id == featureId);
@@ -57,7 +58,7 @@ const getCusFeatureAndOrg = async ({
       creditSystemContainsFeature({
         creditSystem: f,
         meteredFeatureId: featureId,
-      }),
+      })
   );
 
   if (!feature) {
@@ -81,7 +82,7 @@ const createAndInsertEvent = async ({
   idempotencyKey,
 }: {
   req: any;
-  customer: Customer;
+  customer: FullCustomer;
   featureId: string;
   value?: number;
   set_usage?: boolean;
@@ -97,6 +98,14 @@ const createAndInsertEvent = async ({
   }
 
   const timestamp = getEventTimestamp(req.body.timestamp);
+
+  const entityId = req.body.entity_id;
+  let internalEntityId = null;
+  if (entityId) {
+    internalEntityId = customer.entities.find(
+      (e) => e.id === entityId
+    )?.internal_id;
+  }
 
   const newEvent: EventInsert = {
     id: generateId("evt"),
@@ -114,6 +123,8 @@ const createAndInsertEvent = async ({
     properties,
     value,
     set_usage: set_usage || false,
+    entity_id: req.body.entity_id,
+    internal_entity_id: internalEntityId,
   };
 
   return await EventService.insert({ db: req.db, event: newEvent });

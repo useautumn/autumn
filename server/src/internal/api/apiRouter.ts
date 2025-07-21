@@ -1,7 +1,7 @@
 import { apiAuthMiddleware } from "@/middleware/apiAuthMiddleware.js";
 import { Router } from "express";
 import { eventsRouter } from "./events/eventRouter.js";
-import { cusRouter } from "./cusRouter.js";
+import { cusRouter } from "../customers/cusRouter.js";
 import { productBetaRouter, productRouter } from "../products/productRouter.js";
 
 import { featureRouter } from "../features/featureRouter.js";
