@@ -1,30 +1,22 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { navigateTo } from "@/utils/genUtils";
 import {
   formatUnixToDateTime,
   formatUnixToDateTimeWithMs,
 } from "@/utils/formatUtils/formatDateUtils";
-import CopyButton from "@/components/general/CopyButton";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useState } from "react";
 import { Row, Item } from "@/components/general/TableGrid";
 import {
-  TooltipProvider,
   Tooltip,
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
-import { ViewUserEvents } from "../analytics/ViewUserEvents";
 import { useNavigate } from "react-router";
 import { AppEnv } from "@autumn/shared";
+import { useCustomerContext } from "./CustomerContext";
+import { cn } from "@/lib/utils";
+import { CusProductEntityItem } from "./components/CusProductEntityItem";
 
 export const CustomerEventsList = ({
   events,
@@ -37,8 +29,7 @@ export const CustomerEventsList = ({
 }) => {
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const navigate = useNavigate();
-
-  console.log(events);
+  const { showEntityView } = useCustomerContext();
 
   return (
     <div>
@@ -81,10 +72,15 @@ export const CustomerEventsList = ({
           </p>
         </div>
       ) : (
-        <Row type="header" className="grid-cols-12 pr-0">
+        <Row
+          type="header"
+          className={cn("grid-cols-12 pr-0", showEntityView && "grid-cols-15")}
+        >
           <Item className="col-span-3">Event Name</Item>
+
           <Item className="col-span-3">Value</Item>
           <Item className="col-span-3">Status</Item>
+          {showEntityView && <Item className="col-span-3"></Item>}
           <Item className="col-span-2">Timestamp</Item>
           <Item className="col-span-1" />
         </Row>
@@ -93,22 +89,21 @@ export const CustomerEventsList = ({
       {events.map((event: any) => (
         <Row
           key={event.id}
-          className="grid-cols-12 pr-0"
+          className={cn("grid-cols-12 pr-0", showEntityView && "grid-cols-15")}
           onClick={() => setSelectedEvent(event)}
         >
           <Item className="col-span-3 font-mono">{event.event_name}</Item>
+
           <Item className="col-span-3 relative">
             <span className="font-mono truncate">
               {event.value || event.properties.value || 1}
             </span>
-            {/* <div className="absolute hidden group-hover:block top-1/2 -translate-y-1/2 right-0 rounded-sm h-5 w-5">
-              <CopyButton text={event.id} className="bg-white h-full w-full" />
-            </div> */}
           </Item>
           <Item className="col-span-3 font-mono">
             <span className="text-t3">POST </span>
             <span className="text-lime-600">200</span>
           </Item>
+          {showEntityView && <Item className="col-span-3"></Item>}
           <Item className="col-span-2 text-t3 text-xs">
             <Tooltip>
               <TooltipTrigger>

@@ -2,14 +2,13 @@
 
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 import LoadingScreen from "@/views/general/LoadingScreen";
-import { AppEnv } from "@autumn/shared";
+import { AppEnv, CusProductStatus } from "@autumn/shared";
 
 import { CustomerContext } from "./CustomerContext";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
-import { CustomerProductList } from "./CustomerProductList";
 import { CustomerEntitlementsList } from "./entitlements/CustomerEntitlementsList";
-import { getRedirectUrl, navigateTo } from "@/utils/genUtils";
-import { CustomerEventsList } from "./product/CustomerEventsList";
+import { getRedirectUrl, notNullish } from "@/utils/genUtils";
+import { CustomerEventsList } from "./CustomerEventsList";
 import { useEffect, useState } from "react";
 import ErrorScreen from "@/views/general/ErrorScreen";
 import { InvoicesTable } from "./InvoicesTable";
@@ -17,13 +16,12 @@ import { InvoicesTable } from "./InvoicesTable";
 import { CustomerSidebar } from "./customer-sidebar/customer-sidebar";
 import { CustomerBreadcrumbs } from "./customer-breadcrumbs";
 import { SelectEntity } from "./customer-sidebar/select-entity";
+import { CustomerProductList } from "./customer-product-list/CustomerProductList";
 
 export default function CustomerView({ env }: { env: AppEnv }) {
   const { customer_id } = useParams();
   const [searchParams] = useSearchParams();
   const entityIdParam = searchParams.get("entity_id");
-
-  const navigate = useNavigate();
 
   const {
     data,
@@ -69,6 +67,12 @@ export default function CustomerView({ env }: { env: AppEnv }) {
   const { customer, products, invoices, coupons, discount, events, entities } =
     data;
 
+  const showEntityView = customer.customer_products.some(
+    (cp: any) =>
+      notNullish(cp.internal_entity_id) &&
+      cp.status !== CusProductStatus.Expired
+  );
+
   return (
     <CustomerContext.Provider
       value={{
@@ -84,6 +88,7 @@ export default function CustomerView({ env }: { env: AppEnv }) {
         referrals,
         entityId,
         setEntityId,
+        showEntityView,
       }}
     >
       <div className="flex w-full overflow-auto h-full ">
@@ -116,7 +121,11 @@ export default function CustomerView({ env }: { env: AppEnv }) {
               </div>
 
               <InvoicesTable />
-              <CustomerEventsList customer={customer} events={events} env={env} />
+              <CustomerEventsList
+                customer={customer}
+                events={events}
+                env={env}
+              />
             </div>
             {/* customer details */}
           </div>
