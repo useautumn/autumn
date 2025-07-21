@@ -11,10 +11,13 @@ import CopyButton from "@/components/general/CopyButton";
 export const CustomerEntities = () => {
   const { entityId, setEntityId, entities, features } = useCustomerContext();
 
-  const entity = entities.find((entity: Entity) => entity.id === entityId);
+  const entity = entities.find(
+    (entity: Entity) =>
+      entity.id === entityId || entity.internal_id === entityId
+  );
 
   const feature = features.find(
-    (feature: Feature) => entity?.internal_feature_id === feature.internal_id,
+    (feature: Feature) => entity?.internal_feature_id === feature.internal_id
   );
 
   const featureName = getFeatureName({
@@ -22,6 +25,7 @@ export const CustomerEntities = () => {
     plural: false,
     capitalize: true,
   });
+
   if (!entity) {
     return null;
   }
@@ -34,9 +38,13 @@ export const CustomerEntities = () => {
           <SidebarLabel>ID</SidebarLabel>
           <div className="col-span-6 justify-end flex">
             <div className="w-full flex justify-end">
-              <CopyButton text={entity?.id} className="">
-                {entity?.id}
-              </CopyButton>
+              {entity.id ? (
+                <CopyButton text={entity?.id} className="">
+                  {entity?.id}
+                </CopyButton>
+              ) : (
+                <span className="px-1 text-t3">N/A</span>
+              )}
             </div>
           </div>
           {entity && (
