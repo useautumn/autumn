@@ -18,7 +18,7 @@ services:
 
   shared:
     build:
-      dockerfile: docker/dev.dockerfile
+      dockerfile: ./dev.dockerfile
       context: .
       target: shared
     volumes:
@@ -33,7 +33,7 @@ services:
   # Vite frontend
   vite:
     build:
-      dockerfile: docker/dev.dockerfile
+      dockerfile: ./dev.dockerfile
       context: .
       target: vite
     ports:
@@ -52,7 +52,7 @@ services:
   # Main Express server
   server:
     build:
-      dockerfile: docker/dev.dockerfile
+      dockerfile: ./dev.dockerfile
       context: .
       target: server
     ports:
@@ -82,7 +82,7 @@ services:
   # BullMQ Workers
   workers:
     build:
-      dockerfile: docker/dev.dockerfile
+      dockerfile: ./dev.dockerfile
       context: .
       target: workers
     volumes:
@@ -102,7 +102,7 @@ services:
   # Run localtunnel
   localtunnel:
     build:
-      dockerfile: docker/dev.dockerfile
+      dockerfile: ./dev.dockerfile
       context: .
       target: localtunnel
     volumes:
