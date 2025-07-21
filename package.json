@@ -35,8 +35,7 @@
 		"server:cron:bun": "bun -F @autumn/shared build && bun -F @autumn/server cron:start:bun",
 		"server:workers:bun": "bun -F @autumn/shared build && bun -F @autumn/server workers:start:bun",
 		"server:check:bun": "NODE_ENV=production bun -F @autumn/shared build && bun -F @autumn/server check",
-		"dev:bun": "concurrently \"cd server && bun run dev:bun\" \"cd vite && bun run dev\" \"redis-server\"",
-		"dev:wsl:bun": "concurrently \"cd server && bun run dev:bun\" \"cd vite && bun run dev\" \"cd shared && bun run dev:bun\"",
+		"dev:bun": "concurrently \"cd server && bun run dev:bun\" \"cd vite && bun run dev:bun\"",
 		"build:all:bun": "bun run -F @autumn/shared build:bun && bun run -F @autumn/server prod:build:bun && bun run -F @autumn/vite build:bun"
 	},
 	"dependencies": {

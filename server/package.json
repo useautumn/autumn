@@ -27,10 +27,9 @@
     "benchmark:verbose": "tsx benchmarks/index.ts --verbose",
     "benchmark:export": "tsx benchmarks/index.ts --export",
 
-
-    "dev:bun": "cross-env NODE_ENV=development bunx nodemon --no-deprecation --exec bun src/index.ts --ignore scripts --ignore tests",
+    "dev:bun": "bun --watch src/index.ts",
     "start:bun": "bun src/index.ts",
-    "workers:bun": "cross-env NODE_ENV=development bunx nodemon --no-deprecation --exec 'bun src/workers.ts' --ignore scripts --ignore tests",
+    "workers:bun": "bun --watch src/workers.ts",
     "workers:start:bun": "bun dist/workers.js",
     "build:bun": "bun build ./src/index.ts ./src/workers.ts ./src/cron.ts --outdir dist --target bun",
     "prod:build:bun": "bun build ./src/index.ts ./src/workers.ts ./src/cron.ts --outdir dist --target bun",
