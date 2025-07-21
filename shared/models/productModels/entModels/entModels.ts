@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { FeatureSchema } from "../../featureModels/featureModels.js";
 import { EntInterval } from "./entEnums.js";
+import { RolloverSchema } from "../../productV2Models/productItemModels/productItemModels.js";
 
 export enum AllowanceType {
   Fixed = "fixed",
@@ -27,6 +28,8 @@ export const EntitlementSchema = z.object({
   org_id: z.string().optional(),
   feature_id: z.string().optional(),
   usage_limit: z.number().nullable().optional().default(null),
+
+  rollover: RolloverSchema.nullish()
 });
 
 export const CreateEntitlementSchema = z.object({
@@ -39,6 +42,7 @@ export const CreateEntitlementSchema = z.object({
   carry_from_previous: z.boolean().default(false),
   entity_feature_id: z.string().nullish(),
   usage_limit: z.number().nullish().default(null),
+  rollover: RolloverSchema.nullish(),
 });
 
 export type CreateEntitlement = z.infer<typeof CreateEntitlementSchema>;
