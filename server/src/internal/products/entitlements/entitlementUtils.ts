@@ -112,6 +112,10 @@ export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
       condition: ent1.usage_limit !== ent2.usage_limit,
       message: `Usage limit different: ${ent1.usage_limit} !== ${ent2.usage_limit}`,
     },
+    rollover: {
+      condition: JSON.stringify(ent1.rollover) !== JSON.stringify(ent2.rollover),
+      message: `Rollover different: ${ent1.rollover} !== ${ent2.rollover}`,
+    },
   };
 
   let entsAreDiff = Object.values(diffs).some((d) => d.condition);
