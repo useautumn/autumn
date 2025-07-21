@@ -6,6 +6,7 @@ import {
   unique,
   text,
   index,
+  jsonb,
 } from "drizzle-orm/pg-core";
 
 import { features } from "../../featureModels/featureTable.js";
@@ -13,6 +14,7 @@ import { products } from "../productTable.js";
 import { createInsertSchema } from "drizzle-zod";
 import { sql } from "drizzle-orm";
 import { collatePgColumn } from "../../../db/utils.js";
+import { Rollover } from "../../../index.js";
 
 export const entitlements = pgTable(
   "entitlements",
@@ -34,8 +36,10 @@ export const entitlements = pgTable(
     org_id: text("org_id"),
     feature_id: text("feature_id"),
     usage_limit: numeric({ mode: "number" }),
+
+    rollover: jsonb().$type<Rollover>(),
   },
-  (table) => [
+  (table) => [  
     foreignKey({
       columns: [table.internal_feature_id],
       foreignColumns: [features.internal_id],
