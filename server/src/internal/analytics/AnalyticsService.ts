@@ -198,6 +198,7 @@ WHERE org_id = {org_id:String}
       event_names: string[];
       interval: "24h" | "7d" | "30d" | "90d" | "1bc" | "3bc";
       customer_id?: string;
+      no_count?: boolean;
     };
     customer?: FullCustomer;
     aggregateAll?: boolean;
@@ -222,7 +223,9 @@ WHERE org_id = {org_id:String}
 
     const expressionsResult = await clickhouseClient.query({
       query:
-        "SELECT generateEventCountExpressions({event_names:Array(String)}) as expressions",
+        params.no_count
+          ? "SELECT generateEventCountExpressionsNoCount({event_names:Array(String)}) as expressions"
+          : "SELECT generateEventCountExpressions({event_names:Array(String)}) as expressions",
       query_params: {
         event_names: params.event_names,
       },
