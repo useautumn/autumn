@@ -9,6 +9,32 @@ import { StatusCodes } from "http-status-codes";
 
 const analyticsRouter = Router();
 
+analyticsRouter.post("/test", (req, res) => routeHandler({
+    req,
+    res,
+    action: "api query analytics data",
+    handler: async (req, res) => {
+        const { org, db, env } = req;
+        const {
+            customer_id,
+            feature_id,
+        }: { customer_id: string; feature_id: string | string[] } =
+            req.body;
+            
+
+        const customer = (await CusService.getFull({
+            db,
+            orgId: org.id,
+            idOrInternalId: customer_id,
+            env,
+        })) as FullCustomer;
+
+        const bcData = await AnalyticsService.getBillingCycleStartDate(env, org.id, customer, db, "1bc");
+
+        res.status(200).json(bcData);
+    }
+}));
+
 analyticsRouter.post("", (req, res) =>
 	routeHandler({
 		req,
@@ -21,7 +47,8 @@ analyticsRouter.post("", (req, res) =>
 				feature_id,
 			}: { customer_id: string; feature_id: string | string[] } =
 				req.body;
-			let interval: "24h" | "7d" | "30d" | "90d" = req.body.interval || "30d";
+			let interval: "24h" | "7d" | "30d" | "90d" | "1bc" | "3bc" =
+				req.body.interval || "30d";
 
 			if (!customer_id || !feature_id) {
 				throw new RecaseError({
@@ -56,24 +83,25 @@ analyticsRouter.post("", (req, res) =>
 				params: {
 					interval,
 					event_names: featureIds,
-                    customer_id: customer_id,
+					customer_id: customer_id,
 					no_count: true,
 				},
 				customer,
 			});
 
+			if (!events) {
+				throw new RecaseError({
+					message: "No events found",
+					code: ErrCode.InternalError,
+					statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+				});
+			}
 
-            if(!events) {
-                throw new RecaseError({
-                    message: "No events found",
-                    code: ErrCode.InternalError,
-                    statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-                });
-            }
-
-            events.data.forEach((event: any) => {
-                event["period"] = parseInt(format(new Date(event["period"]), "T"))
-            })
+			events.data.forEach((event: any) => {
+				event["period"] = parseInt(
+					format(new Date(event["period"]), "T")
+				);
+			});
 
 			res.status(200).json(events.data);
 		},
