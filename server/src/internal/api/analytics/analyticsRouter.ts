@@ -9,31 +9,31 @@ import { StatusCodes } from "http-status-codes";
 
 const analyticsRouter = Router();
 
-analyticsRouter.post("/test", (req, res) => routeHandler({
-    req,
-    res,
-    action: "api query analytics data",
-    handler: async (req, res) => {
-        const { org, db, env } = req;
-        const {
-            customer_id,
-            feature_id,
-        }: { customer_id: string; feature_id: string | string[] } =
-            req.body;
+// analyticsRouter.post("/test", (req, res) => routeHandler({
+//     req,
+//     res,
+//     action: "api query analytics data",
+//     handler: async (req, res) => {
+//         const { org, db, env } = req;
+//         const {
+//             customer_id,
+//             feature_id,
+//         }: { customer_id: string; feature_id: string | string[] } =
+//             req.body;
             
 
-        const customer = (await CusService.getFull({
-            db,
-            orgId: org.id,
-            idOrInternalId: customer_id,
-            env,
-        })) as FullCustomer;
+//         const customer = (await CusService.getFull({
+//             db,
+//             orgId: org.id,
+//             idOrInternalId: customer_id,
+//             env,
+//         })) as FullCustomer;
 
-        const bcData = await AnalyticsService.getBillingCycleStartDate(env, org.id, customer, db, "1bc");
+//         const bcData = await AnalyticsService.getBillingCycleStartDate(env, org.id, customer, db, "1bc");
 
-        res.status(200).json(bcData);
-    }
-}));
+//         res.status(200).json(bcData);
+//     }
+// }));
 
 analyticsRouter.post("", (req, res) =>
 	routeHandler({
@@ -48,7 +48,7 @@ analyticsRouter.post("", (req, res) =>
 			}: { customer_id: string; feature_id: string | string[] } =
 				req.body;
 			let interval: "24h" | "7d" | "30d" | "90d" | "1bc" | "3bc" =
-				req.body.interval || "30d";
+				req.body.interval || "1bc";
 
 			if (!customer_id || !feature_id) {
 				throw new RecaseError({
