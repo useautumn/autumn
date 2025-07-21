@@ -1,4 +1,5 @@
-import puppeteer from "puppeteer";
+import "dotenv/config";
+
 import { timeout } from "./genUtils.js";
 import { Stripe } from "stripe";
 import { BillingInterval, Customer, FullProduct } from "@autumn/shared";
@@ -10,23 +11,36 @@ import {
   addWeeks,
   format,
 } from "date-fns";
+import puppeteer from "puppeteer-core";
+import Browserbase from "@browserbasehq/sdk";
 
 const STRIPE_TEST_CLOCK_TIMING = 20000; // 30s
-// const STRIPE_TEST_CLOCK_TIMING = 40000; // 30s
+import { Hyperbrowser } from "@hyperbrowser/sdk";
+
+const client = new Hyperbrowser({
+  apiKey: process.env.HYPERBROWSER_API_KEY,
+});
 
 export const completeCheckoutForm = async (
   url: string,
   overrideQuantity?: number,
   promoCode?: string
 ) => {
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  const session = await client.sessions.create();
+
+  const browser = await puppeteer.connect({
+    browserWSEndpoint: session!.wsEndpoint,
+    defaultViewport: null,
   });
+
+  // const browser = await puppeteer.launch({
+  //   headless: true,
+  //   args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  // });
+
   try {
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 }); // Set standard desktop viewport size
-
     await page.goto(url);
 
     // await page.waitForSelector("#payment-method-accordion-item-title-card");
