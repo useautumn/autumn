@@ -236,7 +236,7 @@ export const setupOrg = async ({
     logger: console,
   });
 
-  const allFeatures = await FeatureService.list({ db, orgId, env });
+  // const allFeatures = await FeatureService.list({ db, orgId, env });
 
   let org: Organization | null = null;
   let newFeatures: Feature[] = [];
