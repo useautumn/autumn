@@ -12,6 +12,7 @@ import { products } from "../models/productModels/productTable.js";
 import { prices } from "../models/productModels/priceModels/priceTable.js";
 import { entitlements } from "../models/productModels/entModels/entTable.js";
 import { freeTrials } from "../models/productModels/freeTrialModels/freeTrialTable.js";
+import { rollovers } from "../models/productModels/rolloverModels/rolloverTable.js";
 
 // CusProduct Tables
 import { customerProducts } from "../models/cusProductModels/cusProductTable.js";
@@ -106,7 +107,8 @@ export {
   actions,
   events,
   replaceables,
-
+  rollovers,
+  
   // Auth
   user,
   session,
