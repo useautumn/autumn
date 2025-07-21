@@ -81,7 +81,6 @@ export class EntitlementService {
     if (Array.isArray(data) && data.length == 0) return;
 
     const updateColumns = buildConflictUpdateColumns(entitlements, ["id"]);
-
     await db
       .insert(entitlements)
       .values(data as any)
