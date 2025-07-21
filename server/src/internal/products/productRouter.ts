@@ -2,7 +2,7 @@ import { ProductService } from "@/internal/products/ProductService.js";
 
 import { Router } from "express";
 
-import { handleRequestError } from "@/utils/errorUtils.js";
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
 import { checkStripeProductExists } from "@/internal/products/productUtils.js";
@@ -16,6 +16,11 @@ import { handleCopyProduct } from "./handlers/handleCopyProduct.js";
 import { handleCreateProduct } from "./handlers/handleCreateProduct.js";
 import { handleListProducts } from "./handlers/handleListProducts.js";
 import { handleListProductsBeta } from "./handlers/handleListProductsBeta.js";
+import { ErrCode } from "@autumn/shared";
+import { CusProductService } from "../customers/cusProducts/CusProductService.js";
+import { routeHandler } from "@/utils/routerUtils.js";
+import { mapToProductItems } from "./productV2Utils.js";
+import { productsAreSame } from "./productUtils/compareProductUtils.js";
 
 export const productBetaRouter: Router = Router();
 productBetaRouter.get("", handleListProductsBeta);
@@ -49,7 +54,7 @@ productRouter.post("/all/init_stripe", async (req: any, res) => {
 
     console.log(
       "fullProducts",
-      fullProducts.map((p) => p.id),
+      fullProducts.map((p) => p.id)
     );
 
     const stripeCli = createStripeCli({
@@ -67,7 +72,7 @@ productRouter.post("/all/init_stripe", async (req: any, res) => {
           env,
           product,
           logger,
-        }),
+        })
       );
       await Promise.all(batchPromises);
     }
@@ -88,10 +93,10 @@ productRouter.post("/all/init_stripe", async (req: any, res) => {
             price,
             entitlements,
             product: fullProducts.find(
-              (p) => p.internal_id == price.internal_product_id,
+              (p) => p.internal_id == price.internal_product_id
             )!,
             logger,
-          }),
+          })
         );
       }
 
@@ -102,3 +107,58 @@ productRouter.post("/all/init_stripe", async (req: any, res) => {
     handleRequestError({ req, error, res, action: "Init stripe products" });
   }
 });
+
+productRouter.get("/:productId/has_customers", async (req: any, res: any) =>
+  routeHandler({
+    req,
+    res,
+    action: "Get product has customers",
+    handler: async () => {
+      const { productId } = req.params;
+      const { db, features } = req;
+      const { id, items, free_trial } = req.body;
+
+      const product = await ProductService.getFull({
+        db,
+        idOrInternalId: productId,
+        orgId: req.orgId,
+        env: req.env,
+      });
+
+      if (!product) {
+        throw new RecaseError({
+          message: `Product with id ${productId} not found`,
+          code: ErrCode.ProductNotFound,
+          statusCode: 404,
+        });
+      }
+
+      const cusProductsCurVersion =
+        await CusProductService.getByInternalProductId({
+          db,
+          internalProductId: product.internal_id,
+        });
+
+      const { itemsSame, freeTrialsSame } = productsAreSame({
+        newProductV2: req.body,
+        curProductV1: product,
+        features,
+      });
+
+      const productSame = itemsSame && freeTrialsSame;
+
+      console.log(`Product ID: ${product.id}`);
+      console.log(
+        `Items same: ${itemsSame}, Free trials same: ${freeTrialsSame}`
+      );
+      console.log(
+        `Cus products on cur version: ${cusProductsCurVersion.length}`
+      );
+
+      res.status(200).json({
+        current_version: product.version,
+        will_version: !productSame && cusProductsCurVersion.length > 0,
+      });
+    },
+  })
+);

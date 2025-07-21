@@ -86,13 +86,13 @@ export const expireCusProduct = async ({
   logger.info(
     `🔔 Expiring cutomer product (${
       expireImmediately ? "immediately" : "end of cycle"
-    })`,
+    })`
   );
   logger.info(
-    `Customer: ${fullCus.id || fullCus.internal_id} (${env}), Org: ${org.id}`,
+    `Customer: ${fullCus.id || fullCus.internal_id} (${env}), Org: ${org.id}`
   );
   logger.info(
-    `Product: ${cusProduct.product.name}, Status: ${cusProduct.status}`,
+    `Product: ${cusProduct.product.name}, Status: ${cusProduct.status}`
   );
 
   // If current product is scheduled
@@ -143,6 +143,12 @@ export const expireCusProduct = async ({
         db,
         cusProductId: cusProduct.id,
         updates: { status: CusProductStatus.Expired },
+      });
+    } else {
+      await CusProductService.update({
+        db,
+        cusProductId: cusProduct.id,
+        updates: { canceled_at: Date.now() },
       });
     }
 

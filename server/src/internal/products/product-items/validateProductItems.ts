@@ -12,6 +12,7 @@ import {
   AppEnv,
   OnIncrease,
   UsageModel,
+  FeatureUsageType,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { notNullish, nullish } from "@/utils/genUtils.js";
