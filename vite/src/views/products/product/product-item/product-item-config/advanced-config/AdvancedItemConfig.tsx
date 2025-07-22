@@ -8,19 +8,23 @@ import { OnIncreaseSelect } from "./proration-config/OnIncreaseSelect";
 import { shouldShowProrationConfig } from "@/utils/product/productItemUtils";
 import {
 	getFeature,
+	getFeatureCreditSystem,
 	getFeatureUsageType,
 } from "@/utils/product/entitlementUtils";
-import { FeatureUsageType, ProductItemInterval } from "@autumn/shared";
+import { FeatureUsageType, ProductItem, ProductItemInterval } from "@autumn/shared";
 import { Input } from "@/components/ui/input";
 
 export const AdvancedItemConfig = () => {
 	const { features } = useProductContext();
 	const { item, setItem } = useProductItemContext();
-  console.log("item", item);
+	console.log("item", item);
 	const [isOpen, setIsOpen] = useState(item.usage_limit != null);
 
 	const showProrationConfig = shouldShowProrationConfig({ item, features });
 	const usageType = getFeatureUsageType({ item, features });
+	const hasCreditSystem = getFeatureCreditSystem({ item, features });
+	const showRolloverConfig =
+		(hasCreditSystem || usageType === FeatureUsageType.Single) && item.interval !== null;
 
 	return (
 		<div className="w-full h-fit">
@@ -41,7 +45,7 @@ export const AdvancedItemConfig = () => {
 					isOpen ? "max-h-72 opacity-100 mt-2" : "max-h-0 opacity-0"
 				}`}
 			>
-				<div className="flex flex-col gap-4 p-4 bg-stone-100">
+				<div className="flex flex-col gap-4 p-4 bg-stone-100 ">
 					<ToggleButton
 						value={item.reset_usage_when_enabled}
 						setValue={() => {
@@ -57,7 +61,7 @@ export const AdvancedItemConfig = () => {
 						disabled={usageType === FeatureUsageType.Continuous}
 					/>
 
-					<div className="relative flex flex-row items-center gap-3 min-h-[35px]">
+					<div className="relative flex flex-row items-center gap-3">
 						<ToggleButton
 							value={item.usage_limit != null}
 							setValue={() => {
@@ -101,84 +105,102 @@ export const AdvancedItemConfig = () => {
 					{/* <div className="flex flex-col gap-2"></div>
           <div className="flex gap-2"></div> */}
 
-					<div className="relative flex flex-row items-center gap-3 min-h-[35px]">
-						<ToggleButton
-							value={item.config?.rollover != null}
-							setValue={() => {
-								if (item.config?.rollover != null) {
-									setItem({
-										...item,
-										config: {
-											...item.config,
-											rollover: null,
-										},
-									});
-								} else {
-									setItem({
-										...item,
-										config: {
-											...item.config,
-											rollover: {
-												duration: ProductItemInterval.Month,
-											},
-										},
-									});
-								}
-							}}
-							buttonText="Enable rollovers"
-							infoContent="Rollovers allow unused credits to carry forward to the next billing cycle. For example: if a customer uses 80 out of 100 credits, they'll start the next cycle with 120 credits (100 new + 20 unused). You can set a maximum rollover amount to cap how many credits can accumulate, and specify how many billing cycles the rollover continues before resetting to the base amount."
-							className="text-t3 h-fit"
-						/>
-
-						{item.config?.rollover != null && (
-							<div className="flex flex-row items-center gap-3 w-full">
-                <Input
-                  type="number"
-                  value={item.config.rollover.max || ""}
-                  className="ml-5 w-full"
-                  placeholder="Max amount"
-                  onChange={(e) => {
-                    setItem({
-                      ...item,
-                      config: {
-                        ...item.config,
-                        rollover: { 
-                          ...item.config!.rollover!, 
-                          max: parseInt(e.target.value) 
-                        },
-                      },
-                    });
-                  }}
-                />
-
-
-								<Input
-									type="number"
-									value={item.config.rollover.length || ""}
-                  onChange={(e) => {
-                    setItem({
-                      ...item,
-                      config: {
-                        ...item.config,
-                        rollover: { 
-                          ...item.config!.rollover!, 
-                          length: parseInt(e.target.value) 
-                        },
-                      },
-                    });
-                  }}
-									className="ml-0 w-full"
-									endContent={
-										<>
-											<p className="text-sm">month(s)</p>
-										</>
-									}
-								/>
-							</div>
-						)}
-					</div>
+					{showRolloverConfig && <RolloverConfig item={item} setItem={setItem} showRolloverConfig={showRolloverConfig} />}
 				</div>
 			</div>
+		</div>
+	);
+};
+
+export const RolloverConfig = ({
+	item,
+	setItem,
+	showRolloverConfig,
+}: {
+	item: ProductItem;
+	setItem: (item: ProductItem) => void;	
+	showRolloverConfig: boolean;
+}) => {
+
+	return (
+		<div className="relative flex flex-row items-center gap-3">
+			<ToggleButton
+				value={item.config?.rollover != null}
+				setValue={() => {
+					if (item.config?.rollover != null) {
+						setItem({
+							...item,
+							config: {
+								...item.config,
+								rollover: null,
+							},
+						});
+					} else {
+						setItem({
+							...item,
+							config: {
+								...item.config,
+								// @ts-expect-error - TODO: fix this
+								rollover: {
+									duration: ProductItemInterval.Month,
+								},
+							},
+						});
+					}
+				}}
+				buttonText="Enable rollovers"
+				infoContent="Rollovers allow unused credits to carry forward to the next billing cycle. For example: if a customer uses 80 out of 100 credits, they'll start the next cycle with 120 credits (100 new + 20 unused). You can set a maximum rollover amount to cap how many credits can accumulate, and specify how many billing cycles the rollover continues before resetting to the base amount."
+				className="text-t3 h-fit"
+				disabled={!showRolloverConfig}
+			/>
+
+			{item.config?.rollover != null && showRolloverConfig && (
+				<div className="flex flex-row items-center gap-3 w-full">
+					<Input
+						type="number"
+						value={item.config.rollover.max || ""}
+						className="ml-5 w-full"
+						placeholder="Max amount"
+						onChange={(e) => {
+							setItem({
+								...item,
+								// @ts-expect-error - TODO: fix this
+								config: {
+									...item.config,
+									rollover: {
+										...item.config!.rollover!,
+										max: parseInt(e.target.value),
+									},
+								},
+							});
+						}}
+					/>
+
+					<Input
+						type="number"
+						value={item.config.rollover.length || ""}
+						onChange={(e) => {
+							setItem({
+								...item,
+								// @ts-expect-error - TODO: fix this
+								config: {
+									...item.config,
+									rollover: {
+										...item.config!.rollover!,
+										length: parseInt(e.target.value),
+									},
+								},
+							});
+						}}
+						className="ml-0 w-full"
+						endContent={
+							<>
+								<p className="text-sm">month(s)</p>
+							</>
+						}
+					/>
+				</div>
+			)}
 		</div>
 	);
 };
