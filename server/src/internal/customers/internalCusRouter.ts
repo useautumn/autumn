@@ -36,7 +36,6 @@ cusRouter.get("/:customer_id/events", async (req: any, res: any) => {
     const limit = req.query.limit || 10;
     const period = req.query.period || "all";
 
-
     const events = await EventService.getByCustomerId({
       db,
       internalCustomerId: customer_id,
@@ -49,7 +48,7 @@ cusRouter.get("/:customer_id/events", async (req: any, res: any) => {
   } catch (error) {
     handleFrontendReqError({ req, error, res, action: "get customer events" });
   }
-})
+});
 
 cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
   try {
@@ -81,21 +80,6 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
       }),
     ]);
 
-    // for (const cusProduct of customer.customer_products) {
-    //   console.log(
-    //     "Cus ents:",
-    //     cusProduct.customer_entitlements.map((ce) => {
-    //       return `${ce.entitlement.feature.id}, ${ce.balance}, ${ce.replaceables}`;
-    //     }),
-    //   );
-    //   console.log(
-    //     "Cus prices:",
-    //     cusProduct.customer_prices.map((cp) => {
-    //       return `${cp.price.id}`;
-    //     }),
-    //   );
-    // }
-
     if (!customer) {
       throw new RecaseError({
         message: "Customer not found",
@@ -118,22 +102,22 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
     let cusProducts = fullCustomer.customer_products;
     fullCustomer.products = fullCustomer.customer_products;
     fullCustomer.entitlements = cusProducts.flatMap(
-      (product: FullCusProduct) => product.customer_entitlements,
+      (product: FullCusProduct) => product.customer_entitlements
     );
     fullCustomer.prices = cusProducts.flatMap(
-      (product: FullCusProduct) => product.customer_prices,
+      (product: FullCusProduct) => product.customer_prices
     );
 
     for (const product of fullCustomer.products) {
       product.entitlements = product.customer_entitlements.map(
         (cusEnt: FullCustomerEntitlement) => {
           return cusEnt.entitlement;
-        },
+        }
       );
       product.prices = product.customer_prices.map(
         (cusPrice: FullCustomerPrice) => {
           return cusPrice.price;
-        },
+        }
       );
     }
 
@@ -142,7 +126,7 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
       try {
         const stripeCli = createStripeCli({ org, env });
         const stripeCus: any = await stripeCli.customers.retrieve(
-          customer.processor.id,
+          customer.processor.id
         );
 
         if (stripeCus.discount) {
@@ -158,34 +142,34 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
       invoice.internal_product_ids = invoice.internal_product_ids.sort();
     }
 
-    fullCustomer.entitlements = fullCustomer.entitlements.sort(
-      (a: any, b: any) => {
-        const productA = fullCustomer.products.find(
-          (p: any) => p.id === a.customer_product_id,
-        );
-        const productB = fullCustomer.products.find(
-          (p: any) => p.id === b.customer_product_id,
-        );
+    // fullCustomer.entitlements = fullCustomer.entitlements.sort(
+    //   (a: any, b: any) => {
+    //     const productA = fullCustomer.products.find(
+    //       (p: any) => p.id === a.customer_product_id
+    //     );
+    //     const productB = fullCustomer.products.find(
+    //       (p: any) => p.id === b.customer_product_id
+    //     );
 
-        return (
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime() ||
-          b.id.localeCompare(a.id)
-        );
-      },
-    );
+    //     return (
+    //       new Date(b.created_at).getTime() - new Date(a.created_at).getTime() ||
+    //       b.id.localeCompare(a.id)
+    //     );
+    //   }
+    // );
 
-    for (const cusEnt of fullCustomer.entitlements) {
-      // let entitlement = cusEnt.entitlement;
+    // for (const cusEnt of fullCustomer.entitlements) {
+    //   // let entitlement = cusEnt.entitlement;
 
-      // Show used, limit, etc.
-      let { balance, unused } = getCusEntMasterBalance({
-        cusEnt,
-        entities,
-      });
+    //   // Show used, limit, etc.
+    //   let { balance, unused } = getCusEntMasterBalance({
+    //     cusEnt,
+    //     entities,
+    //   });
 
-      cusEnt.balance = balance;
-      cusEnt.unused = unused;
-    }
+    //   cusEnt.balance = balance;
+    //   cusEnt.unused = unused;
+    // }
 
     res.status(200).json({
       customer: fullCustomer,
@@ -242,7 +226,7 @@ cusRouter.get("/:customer_id/referrals", async (req: any, res: any) => {
     ]);
 
     let redeemedCustomerIds = redeemed.map(
-      (redemption: any) => redemption.referral_code.internal_customer_id,
+      (redemption: any) => redemption.referral_code.internal_customer_id
     );
 
     let redeemedCustomers = await CusReadService.getInInternalIds({
@@ -255,7 +239,7 @@ cusRouter.get("/:customer_id/referrals", async (req: any, res: any) => {
         redemption.referral_code.customer = redeemedCustomers.find(
           (customer: any) =>
             customer.internal_id ===
-            redemption.referral_code!.internal_customer_id,
+            redemption.referral_code!.internal_customer_id
         );
       }
     }
@@ -313,7 +297,7 @@ cusRouter.get(
         cusProduct = cusProducts.find(
           (p: any) =>
             p.id === customer_product_id &&
-            (entity ? p.internal_entity_id === entity.internal_id : true),
+            (entity ? p.internal_entity_id === entity.internal_id : true)
         );
       } else if (notNullish(version)) {
         cusProduct = cusProducts.find(
@@ -322,7 +306,7 @@ cusRouter.get(
             (p.status === CusProductStatus.Active ||
               p.status === CusProductStatus.PastDue) &&
             p.product.version === parseInt(version) &&
-            (entity ? p.internal_entity_id === entity.internal_id : true),
+            (entity ? p.internal_entity_id === entity.internal_id : true)
         );
       } else {
         cusProduct = cusProducts.find(
@@ -330,7 +314,7 @@ cusRouter.get(
             p.product.id === product_id &&
             (p.status === CusProductStatus.Active ||
               p.status === CusProductStatus.PastDue) &&
-            (entity ? p.internal_entity_id === entity.internal_id : true),
+            (entity ? p.internal_entity_id === entity.internal_id : true)
         );
       }
 
@@ -382,5 +366,5 @@ cusRouter.get(
         action: "get customer product",
       });
     }
-  },
+  }
 );

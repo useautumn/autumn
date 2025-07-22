@@ -49,7 +49,7 @@ export const handleListProductsBeta = async (req: any, res: any) =>
             currency: org.default_currency || undefined,
             db,
             fullCus: customer ? customer : undefined,
-          }),
+          })
         );
       }
 

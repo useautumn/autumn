@@ -206,7 +206,7 @@ export const ProductItemRow = ({
       key={index}
       className={cn(
         "grid grid-cols-17 gap-4 px-10 text-t2 h-10 items-center hover:bg-primary/3",
-        isOnboarding && "grid-cols-12 px-2",
+        isOnboarding && "grid-cols-12 px-2"
       )}
       onClick={() => onRowClick(item, index)}
     >
@@ -233,7 +233,7 @@ export const ProductItemRow = ({
             "text-xs flex gap-1 items-center opacity-0",
             (itemType === ProductItemType.Feature ||
               itemType === ProductItemType.FeaturePrice) &&
-              "opacity-100",
+              "opacity-100"
           )}
         >
           <Flag size={12} /> Feature
@@ -245,7 +245,7 @@ export const ProductItemRow = ({
             "text-xs flex gap-1 items-center opacity-0",
             (itemType === ProductItemType.Price ||
               itemType === ProductItemType.FeaturePrice) &&
-              "opacity-100",
+              "opacity-100"
           )}
         >
           <DollarSign size={12} /> Price

@@ -29,6 +29,7 @@ export const ProductItemResponseSchema = z.object({
   reset_usage_when_enabled: z.boolean().nullish(),
   quantity: z.number().nullish(),
   next_cycle_quantity: z.number().nullish(),
+  entity_feature_id: z.string().nullish(),
 
   display: z
     .object({
