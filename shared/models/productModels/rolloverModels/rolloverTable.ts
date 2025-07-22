@@ -5,23 +5,25 @@ import {
 	jsonb,
 	text,
 	integer,
+	uuid,
 } from "drizzle-orm/pg-core";
 
-import { entitlements } from "../entModels/entTable.js";
 import { EntityBalance } from "../../cusProductModels/cusEntModels/cusEntModels.js";
+import { customerEntitlements } from "../../cusProductModels/cusEntModels/cusEntTable.js";
 
 export const rollovers = pgTable(
 	"rollovers",
 	{
+		id: uuid("id").primaryKey().defaultRandom(),
 		cus_ent_id: text("cus_ent_id").notNull(),
 		balance: numeric({ mode: "number" }).notNull(),
-		expires_at: integer("timestamp").notNull(),
+		expires_at: numeric({ mode: "number" }).notNull(),
 		entities: jsonb("entities").$type<EntityBalance>(),
 	},
 	(table) => [
 		foreignKey({
 			columns: [table.cus_ent_id],
-			foreignColumns: [entitlements.id],
+			foreignColumns: [customerEntitlements.id],
 			name: "rollover_cus_ent_id_fkey",
 		}),
 	]
