@@ -14,6 +14,7 @@ export const handleListProductsBeta = async (req: any, res: any) =>
     handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
       const { org, features, env, db } = req;
       let customerId = req.query.customer_id;
+      let entityId = req.query.entity_id as string | undefined;
 
       const [products, customer] = await Promise.all([
         ProductService.listFull({ db, orgId: org.id, env }),
@@ -27,6 +28,7 @@ export const handleListProductsBeta = async (req: any, res: any) =>
             env,
             idOrInternalId: customerId as string,
             allowNotFound: true,
+            entityId,
           });
         })(),
       ]);

@@ -141,6 +141,7 @@ analyticsRouter.post("/events", async (req: any, res: any) =>
           idOrInternalId: customer_id,
           orgId: org.id,
           env,
+          withSubs: true,
         });
 
         if (!customer) {
@@ -212,6 +213,7 @@ analyticsRouter.post("/raw", async (req: any, res: any) =>
           idOrInternalId: customer_id,
           orgId: org.id,
           env,
+          withSubs: true,
         });
 
         if (!customer) {

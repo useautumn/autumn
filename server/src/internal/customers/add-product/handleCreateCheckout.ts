@@ -12,8 +12,8 @@ import { ErrCode } from "@/errors/errCodes.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { APIVersion } from "@autumn/shared";
 import { SuccessCode } from "@autumn/shared";
-import { notNullish } from "@/utils/genUtils.js";
-import { getEntityInvoiceDescription } from "@/internal/entities/entityUtils/entityInvoiceUtils.js";
+import { notNullish, nullish } from "@/utils/genUtils.js";
+
 import Stripe from "stripe";
 
 export const handleCreateCheckout = async ({
@@ -29,7 +29,7 @@ export const handleCreateCheckout = async ({
 }) => {
   const { db, logtail: logger } = req;
 
-  const { customer, org, freeTrial, successUrl } = attachParams;
+  const { customer, org, freeTrial, successUrl, reward } = attachParams;
 
   const stripeCli = createStripeCli({
     org,
@@ -67,7 +67,7 @@ export const handleCreateCheckout = async ({
 
   if (attachParams.billingAnchor) {
     billingCycleAnchorUnixSeconds = Math.floor(
-      attachParams.billingAnchor / 1000,
+      attachParams.billingAnchor / 1000
     );
   }
 
@@ -84,9 +84,17 @@ export const handleCreateCheckout = async ({
     : undefined;
 
   let checkoutParams = attachParams.checkoutSessionParams || {};
-  let allowPromotionCodes = notNullish(checkoutParams.discounts)
-    ? undefined
-    : checkoutParams.allow_promotion_codes || true;
+  let allowPromotionCodes =
+    notNullish(checkoutParams.discounts) || notNullish(reward)
+      ? undefined
+      : checkoutParams.allow_promotion_codes || true;
+
+  let rewardData = {};
+  if (reward) {
+    rewardData = {
+      discounts: [{ coupon: reward.id }],
+    };
+  }
 
   const checkout = await stripeCli.checkout.sessions.create({
     customer: customer.processor.id,
@@ -100,6 +108,7 @@ export const handleCreateCheckout = async ({
       ...(attachParams.metadata ? attachParams.metadata : {}),
     },
     allow_promotion_codes: allowPromotionCodes,
+    ...rewardData,
     invoice_creation: !isRecurring
       ? {
           enabled: true,
@@ -130,7 +139,7 @@ export const handleCreateCheckout = async ({
         }, product(s) ${attachParams.products.map((p) => p.name).join(", ")}`,
         product_ids: attachParams.products.map((p) => p.id),
         customer_id: customer.id || customer.internal_id,
-      }),
+      })
     );
   } else {
     res.status(200).json({

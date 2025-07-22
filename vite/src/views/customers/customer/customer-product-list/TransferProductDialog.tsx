@@ -73,7 +73,10 @@ export const TransferProductDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="w-md" onClick={(e) => e.stopPropagation()}>
+      <DialogContent
+        className="w-md flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
         <DialogHeader>
           <DialogTitle>Transfer Product</DialogTitle>
         </DialogHeader>
@@ -87,16 +90,31 @@ export const TransferProductDialog = ({
           onValueChange={(value) => {
             setSelectedEntity(entities.find((e: any) => e.id === value));
           }}
+          disabled={filteredEntities.length == 0}
         >
-          <SelectTrigger>
-            <SelectValue placeholder="Select an entity" />
+          <SelectTrigger className="w-full">
+            <SelectValue
+              placeholder={
+                filteredEntities.length == 0
+                  ? "No other entities to transfer to"
+                  : "Select an entity"
+              }
+            />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="w-full">
             {filteredEntities.length > 0 ? (
               filteredEntities.map((entity: any) => (
-                <SelectItem key={entity.id} value={entity.id}>
-                  {entity.name || entity.internal_id}{" "}
-                  {entity.id && <span className="text-t3">({entity.id})</span>}
+                <SelectItem
+                  key={entity.id}
+                  value={entity.id}
+                  className="w-full"
+                >
+                  <p className="w-full truncate">
+                    {entity.name || entity.internal_id}{" "}
+                    {entity.id && (
+                      <span className="text-t3">({entity.id})</span>
+                    )}
+                  </p>
                 </SelectItem>
               ))
             ) : (
