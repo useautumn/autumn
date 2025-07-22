@@ -79,7 +79,9 @@ analyticsRouter.post("", (req, res) =>
         (event: any) => event.period <= Date.now()
       );
 
-      res.status(200).json(usageList);
+      res.status(200).json({
+        list: usageList,
+      });
     },
   })
 );
