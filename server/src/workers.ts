@@ -7,5 +7,3 @@ const init = async () => {
 };
 
 init();
-
-//

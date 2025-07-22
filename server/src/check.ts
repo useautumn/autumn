@@ -1,4 +1,5 @@
-import "dotenv/config";
+import { config } from "dotenv";
+config();
 
 import { getAllFullCustomers } from "@/utils/scriptUtils/getAll/getAllAutumnCustomers.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
@@ -6,16 +7,12 @@ import {
   AppEnv,
   BillingType,
   CusProductStatus,
-  Customer,
   FullCusProduct,
   FullCustomer,
 } from "@autumn/shared";
 import Stripe from "stripe";
 import assert from "assert";
-import {
-  cusProductsToCusEnts,
-  cusProductToPrices,
-} from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import {
   findStripeItemForPrice,
   isLicenseItem,
@@ -36,10 +33,11 @@ import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { getRelatedCusPrice } from "./internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 
 const { db, client } = initDrizzle({ maxConnections: 5 });
+
 let orgSlugs = process.env.ORG_SLUGS!.split(",");
 const skipEmails = process.env.SKIP_EMAILS!.split(",");
 
-orgSlugs = ["athenahq"];
+// orgSlugs = ["athenahq"];
 
 const getSingleCustomer = async ({
   stripeCli,

@@ -8,12 +8,17 @@
 	],
 	"type": "module",
 	"scripts": {
-		"vite:build": "pnpm -F shared build && pnpm -F vite build",
-		"vite:start": "pnpm -F vite start",
-		"server:build": "pnpm -F shared build && pnpm -F server prod:build",
-		"server:start": "pnpm -F server prod:start",
+		"vite:build": "bun -F @autumn/shared build && bun -F @autumn/vite build:bun",
+		"vite:start": "bun -F @autumn/vite start:bun",
+
+		"shared": "bun -F @autumn/shared build",
+
+		"server": "bun -F @autumn/shared build && bun -F @autumn/server start",
+		"workers": "bun -F @autumn/shared build && bun -F @autumn/server workers",
+		"cron": "bun -F @autumn/shared build && bun -F @autumn/server cron",
+		"check": "bun -F @autumn/shared build && bun -F @autumn/server check",
+
 		"server:cron": "pnpm -F server cron:start",
-		"server:workers": "pnpm -F server workers:start",
 		"server:check": "NODE_ENV=production pnpm -F server check",
 		"dev": "concurrently \"cd server && npm run dev\" \"cd vite && npm run dev\" \"redis-server\"",
 		"dev:wsl": "concurrently \"cd server && npm run dev\" \"cd vite && npm run dev\" \"cd shared && npm run dev\"",
@@ -30,11 +35,8 @@
 
 		"vite:build:bun": "bun -F @autumn/shared build && bun -F @autumn/vite build:bun",
 		"vite:start:bun": "bun -F @autumn/shared build && bun -F @autumn/vite start:bun",
-		"server:build:bun": "bun -F @autumn/shared build && bun -F @autumn/server prod:build:bun",
-		"server:start:bun": "bun -F @autumn/shared build && bun -F @autumn/server prod:start:bun",
-		"server:cron:bun": "bun -F @autumn/shared build && bun -F @autumn/server cron:start:bun",
-		"server:workers:bun": "bun -F @autumn/shared build && bun -F @autumn/server workers:start:bun",
-		"server:check:bun": "NODE_ENV=production bun -F @autumn/shared build && bun -F @autumn/server check",
+
+
 		"dev:bun": "concurrently \"cd server && bun run dev:bun\" \"cd vite && bun run dev:bun\"",
 		"build:all:bun": "bun run -F @autumn/shared build:bun && bun run -F @autumn/server prod:build:bun && bun run -F @autumn/vite build:bun"
 	},
