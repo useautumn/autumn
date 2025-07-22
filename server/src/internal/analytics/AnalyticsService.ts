@@ -1,17 +1,12 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
 import { ClickHouseClient } from "@clickhouse/client";
-import {
-  ErrCode,
-  FullCustomer,
-  FullCusProduct,
-  CusProductStatus,
-  Subscription,
-} from "@autumn/shared";
+import { ErrCode, FullCustomer } from "@autumn/shared";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
-import { notNullish } from "@/utils/genUtils.js";
-import { SubService } from "../subscriptions/SubService.js";
+import {
+  generateEventCountExpressions,
+  getBillingCycleStartDate,
+} from "./analyticsUtils.js";
 
 export class AnalyticsService {
   static clickhouseAvailable =
@@ -20,7 +15,7 @@ export class AnalyticsService {
     process.env.CLICKHOUSE_PASSWORD;
 
   static handleEarlyExit = () => {
-    if (!this.clickhouseAvailable) {
+    if (!AnalyticsService.clickhouseAvailable) {
       throw new RecaseError({
         message: "ClickHouse is disabled, cannot fetch events",
         code: ErrCode.ClickHouseDisabled,
@@ -128,8 +123,6 @@ WHERE
 
     const resultJson = await result.json();
 
-    console.log("resultJson", resultJson);
-
     return (resultJson.data as { name: string; count: number }[])[0];
   }
 
@@ -198,6 +191,7 @@ WHERE org_id = {org_id:String}
       event_names: string[];
       interval: "24h" | "7d" | "30d" | "90d" | "1bc" | "3bc";
       customer_id?: string;
+      no_count?: boolean;
     };
     customer?: FullCustomer;
     aggregateAll?: boolean;
@@ -208,43 +202,26 @@ WHERE org_id = {org_id:String}
       params.interval || "24h";
 
     const isBillingCycle = intervalType === "1bc" || intervalType === "3bc";
-    this.handleEarlyExit();
+    AnalyticsService.handleEarlyExit();
 
     // Skip billing cycle calculation if aggregating all customers
     let getBCResults =
       isBillingCycle && !aggregateAll && customer
-        ? await this.getBillingCycleStartDate(
+        ? ((await getBillingCycleStartDate(
+            env,
+            org?.id,
             customer,
             db,
             intervalType as "1bc" | "3bc"
-          )
+          )) as { startDate: string; endDate: string; gap: number } | null)
         : null;
 
-    const expressionsResult = await clickhouseClient.query({
-      query:
-        "SELECT generateEventCountExpressions({event_names:Array(String)}) as expressions",
-      query_params: {
-        event_names: params.event_names,
-      },
-    });
+    const countExpressions = generateEventCountExpressions(
+      params.event_names,
+      params.no_count
+    );
 
-    const expressionsResultJson = await expressionsResult.json();
-
-    if (expressionsResultJson.data.length === 0) {
-      throw new RecaseError({
-        message: "No expressions found",
-        code: ErrCode.ClickHouseDisabled,
-        statusCode: StatusCodes.SERVICE_UNAVAILABLE,
-      });
-    }
-
-    const countExpressions = (
-      expressionsResultJson.data as {
-        expressions: string;
-      }[]
-    )[0].expressions;
-
-    if (this.clickhouseAvailable) {
+    if (AnalyticsService.clickhouseAvailable) {
       const query = `
 with customer_events as (
     select * 
@@ -343,7 +320,7 @@ order by dr.period;
   }) {
     const { clickhouseClient, org, db, env } = req;
 
-    this.handleEarlyExit();
+    AnalyticsService.handleEarlyExit();
 
     let startDate = new Date();
     const intervalType = params.interval || "day";
@@ -352,11 +329,13 @@ order by dr.period;
     // Skip billing cycle calculation if aggregating all customers
     let getBCResults =
       isBillingCycle && !aggregateAll && customer
-        ? await this.getBillingCycleStartDate(
+        ? ((await getBillingCycleStartDate(
+            env,
+            org?.id,
             customer,
             db,
             intervalType as "1bc" | "3bc"
-          )
+          )) as { startDate: string; endDate: string; gap: number } | null)
         : null;
 
     switch (intervalType) {
@@ -380,11 +359,11 @@ order by dr.period;
     const finalStartDate =
       isBillingCycle && getBCResults?.startDate
         ? getBCResults.startDate
-        : this.formatJsDateToClickHouseDateTime(startDate);
+        : AnalyticsService.formatJsDateToClickHouseDateTime(startDate);
     const finalEndDate =
       isBillingCycle && getBCResults?.endDate
         ? getBCResults.endDate
-        : this.formatJsDateToClickHouseDateTime(new Date());
+        : AnalyticsService.formatJsDateToClickHouseDateTime(new Date());
 
     const query = `
     SELECT *
@@ -424,87 +403,21 @@ order by dr.period;
     return resultJson;
   }
 
-  static async getBillingCycleStartDate(
-    customer?: FullCustomer,
-    db?: DrizzleCli,
-    intervalType?: "1bc" | "3bc"
-  ) {
-    // If no customer provided, return empty object (for aggregateAll case)
-    if (!customer || !db || !intervalType) {
-      return {};
-    }
+  // private static async getSubscriptionsIfNeeded(
+  //   customer: FullCustomer,
+  //   customerHasSubscriptions: boolean,
+  //   db: DrizzleCli
+  // ): Promise<Subscription[]> {
+  //   if (customerHasSubscriptions) {
+  //     return [];
+  //   }
 
-    let subscriptions: Subscription[] = [];
-    let customerHasProducts = notNullish(customer.customer_products);
-    let customerHasSubscriptions = notNullish(customer.subscriptions);
-
-    if (!customerHasProducts) {
-      return {}; // No products, return empty object
-    }
-
-    if (!customerHasSubscriptions) {
-      subscriptions = await SubService.getInStripeIds({
-        db,
-        ids:
-          customer.customer_products?.flatMap(
-            (product: FullCusProduct) => product.subscription_ids ?? []
-          ) ?? [],
-      });
-    }
-
-    let customerProductsFiltered = customer.customer_products?.filter(
-      (product: FullCusProduct) => {
-        let isAddon = product.product.is_add_on;
-        let isActive =
-          product.status === CusProductStatus.Active ||
-          product.status === CusProductStatus.Trialing;
-
-        return !isAddon && isActive;
-      }
-    );
-
-    if (!customerProductsFiltered || customerProductsFiltered.length === 0)
-      return {};
-
-    let startDates: any[] = [];
-    let endDates: any[] = [];
-
-    customerProductsFiltered.forEach((product: FullCusProduct) => {
-      product.subscription_ids?.forEach((subscriptionId: string) => {
-        let subscription = subscriptions.find(
-          (subscription: Subscription) =>
-            subscription.stripe_id === subscriptionId
-        );
-        if (subscription) {
-          startDates.push(
-            new Date((subscription.current_period_start ?? 0) * 1000)
-              .toISOString()
-              .replace("T", " ")
-              .split(".")[0]
-          );
-          endDates.push(
-            new Date((subscription.current_period_end ?? 0) * 1000)
-              .toISOString()
-              .replace("T", " ")
-              .split(".")[0]
-          );
-        }
-      });
-    });
-
-    if (startDates.length === 0 || endDates.length === 0) {
-      return {};
-    }
-
-    const startDate = new Date(startDates[0]);
-    const endDate = new Date(endDates[0]);
-    const gap = endDate.getTime() - startDate.getTime();
-    const gapDays = Math.floor(gap / (1000 * 60 * 60 * 24));
-
-    return {
-      startDate: startDates[0],
-      endDate: endDates[0],
-      gap: gapDays * (intervalType === "1bc" ? 1 : 3),
-    };
-  }
+  //   return await SubService.getInStripeIds({
+  //     db,
+  //     ids:
+  //       customer.customer_products?.flatMap(
+  //         (product: FullCusProduct) => product.subscription_ids ?? []
+  //       ) ?? [],
+  //   });
+  // }
 }
