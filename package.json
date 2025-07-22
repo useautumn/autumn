@@ -1,40 +1,56 @@
 {
-  "name": "autumn",
-  "private": true,
-  "workspaces": [
-    "server",
-    "shared",
-    "vite"
-  ],
-  "type": "module",
-  "scripts": {
-    "vite:build": "pnpm -F shared build && pnpm -F vite build",
-    "vite:start": "pnpm -F vite start",
-    "server:build": "pnpm -F shared build && pnpm -F server prod:build",
-    "server:start": "pnpm -F server prod:start",
-    "server:cron": "pnpm -F server cron:start",
-    "server:workers": "pnpm -F server workers:start",
-    "server:check": "NODE_ENV=production pnpm -F server check",
-    "dev": "concurrently \"cd server && npm run dev\" \"cd vite && npm run dev\" \"redis-server\"",
-    "dev:wsl": "concurrently \"cd server && npm run dev\" \"cd vite && npm run dev\" \"cd shared && npm run dev\"",
-    "setup": "node setup.js",
-    "setupci": "node setupci",
-    "db:push": " pnpm -F shared db:push",
-    "db:generate": "pnpm -F shared db:generate",
-    "db:migrate": " pnpm -F shared db:migrate",
-    "docker:up": "docker compose -f docker-compose.dev.yml up --build"
-  },
-  "dependencies": {
-    "@wooorm/starry-night": "^3.8.0",
-    "ag-charts-react": "^12.0.1",
-    "chalk": "^5.3.0",
-    "drizzle-kit": "^0.31.1",
-    "tailwind-scrollbar-hide": "^4.0.0"
-  },
-  "devDependencies": {
-    "@types/node": "^24.0.3",
-    "dotenv": "^16.5.0",
-    "inquirer": "^12.6.3",
-    "concurrently": "^9.1.2"
-  }
+	"name": "autumn",
+	"private": true,
+	"workspaces": [
+		"server",
+		"shared",
+		"vite"
+	],
+	"type": "module",
+	"scripts": {
+		"vite:build": "bun -F @autumn/shared build && bun -F @autumn/vite build:bun",
+		"vite:start": "bun -F @autumn/vite start:bun",
+
+		"shared": "bun -F @autumn/shared build",
+
+		"server": "bun -F @autumn/shared build && bun -F @autumn/server start",
+		"workers": "bun -F @autumn/shared build && bun -F @autumn/server workers",
+		"cron": "bun -F @autumn/shared build && bun -F @autumn/server cron",
+		"check": "bun -F @autumn/shared build && bun -F @autumn/server check",
+
+		"server:cron": "pnpm -F server cron:start",
+		"server:check": "NODE_ENV=production pnpm -F server check",
+		"dev": "concurrently \"cd server && npm run dev\" \"cd vite && npm run dev\" \"redis-server\"",
+		"dev:wsl": "concurrently \"cd server && npm run dev\" \"cd vite && npm run dev\" \"cd shared && npm run dev\"",
+		"setup": "node setup.js",
+		"setupci": "node setupci",
+		"db:push": " pnpm -F shared db:push",
+		"db:generate": "pnpm -F shared db:generate",
+		"db:migrate": " pnpm -F shared db:migrate",
+		"docker:up": "docker compose -f docker-compose.dev.yml up --build",
+		"docker:up:unix": "docker compose -f docker-compose.unix.yml up --build",
+		"docker:up:ci": "docker compose -f docker-compose.ci.yml up --build",
+		"build:all": "pnpm -F shared build && pnpm -F server prod:build && pnpm -F vite build",
+
+
+		"vite:build:bun": "bun -F @autumn/shared build && bun -F @autumn/vite build:bun",
+		"vite:start:bun": "bun -F @autumn/shared build && bun -F @autumn/vite start:bun",
+
+
+		"dev:bun": "concurrently \"cd server && bun run dev:bun\" \"cd vite && bun run dev:bun\"",
+		"build:all:bun": "bun run -F @autumn/shared build:bun && bun run -F @autumn/server prod:build:bun && bun run -F @autumn/vite build:bun"
+	},
+	"dependencies": {
+		"@wooorm/starry-night": "^3.8.0",
+		"ag-charts-react": "^12.0.1",
+		"chalk": "^5.3.0",
+		"drizzle-kit": "^0.31.1",
+		"tailwind-scrollbar-hide": "^4.0.0"
+	},
+	"devDependencies": {
+		"@types/node": "^24.0.3",
+		"dotenv": "^16.5.0",
+		"inquirer": "^12.6.3",
+		"concurrently": "^9.1.2"
+	}
 }

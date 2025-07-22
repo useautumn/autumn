@@ -95,7 +95,7 @@ services:
 
   # Run localtunnel
   localtunnel:
-    image: node:20-alpine
+    image: oven/bun:latest
     build:
       dockerfile: docker/dev.dockerfile
       context: .
