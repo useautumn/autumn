@@ -1,26 +1,12 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
 import { ClickHouseClient } from "@clickhouse/client";
 import {
   ErrCode,
   FullCustomer,
-  FullCusProduct,
-  CusProductStatus,
-  Subscription,
-  AppEnv,
-  FullProduct,
-  CustomerEntitlement,
-  FullCustomerEntitlement,
-  EntInterval,
 } from "@autumn/shared";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
-import { notNullish } from "@/utils/genUtils.js";
-import { SubService } from "../subscriptions/SubService.js";
-import { ProductService } from "../products/ProductService.js";
-import { isFreeProduct } from "../products/productUtils.js";
-import { ACTIVE_STATUSES } from "../customers/cusProducts/CusProductService.js";
-import { cusProductToProduct } from "../customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { generateEventCountExpressions, getBillingCycleStartDate } from "./analyticsUtils.js";
 
 export class AnalyticsService {
   static clickhouseAvailable =
@@ -223,7 +209,7 @@ WHERE org_id = {org_id:String}
     // Skip billing cycle calculation if aggregating all customers
     let getBCResults =
       isBillingCycle && !aggregateAll && customer
-        ? ((await AnalyticsService.getBillingCycleStartDate(
+        ? ((await getBillingCycleStartDate(
             env,
             org?.id,
             customer,
@@ -232,32 +218,8 @@ WHERE org_id = {org_id:String}
           )) as { startDate: string; endDate: string; gap: number } | null)
         : null;
 
-    const expressionsResult = await clickhouseClient.query({
-      query: params.no_count
-        ? "SELECT generateEventCountExpressionsNoCount({event_names:Array(String)}) as expressions"
-        : "SELECT generateEventCountExpressions({event_names:Array(String)}) as expressions",
-      query_params: {
-        event_names: params.event_names,
-      },
-    });
-
-    const expressionsResultJson = await expressionsResult.json();
-
-    if (expressionsResultJson.data.length === 0) {
-      throw new RecaseError({
-        message: "No expressions found",
-        code: ErrCode.ClickHouseDisabled,
-        statusCode: StatusCodes.SERVICE_UNAVAILABLE,
-      });
-    }
-
-    const countExpressions = (
-      expressionsResultJson.data as {
-        expressions: string;
-      }[]
-    )[0].expressions;
-
-    // console.log("Expressions result:", expressionsResultJson);
+    const countExpressions = generateEventCountExpressions(params.event_names, params.no_count);
+    console.log("countExpressions", countExpressions);
 
     if (AnalyticsService.clickhouseAvailable) {
       const query = `
@@ -367,7 +329,7 @@ order by dr.period;
     // Skip billing cycle calculation if aggregating all customers
     let getBCResults =
       isBillingCycle && !aggregateAll && customer
-        ? ((await AnalyticsService.getBillingCycleStartDate(
+        ? ((await getBillingCycleStartDate(
             env,
             org?.id,
             customer,
@@ -441,64 +403,6 @@ order by dr.period;
     return resultJson;
   }
 
-  static async getBillingCycleStartDate(
-    env: AppEnv,
-    orgId: string,
-    customer?: FullCustomer,
-    db?: DrizzleCli,
-    intervalType?: "1bc" | "3bc"
-  ) {
-    // If no customer provided, return empty object (for aggregateAll case)
-    if (!customer || !db || !intervalType) {
-      return {};
-    }
-
-    // const customerHasProducts = notNullish(customer.customer_products);
-    // // const customerHasSubscriptions = notNullish(customer.subscriptions);
-
-    // // if (!customerHasProducts) {
-    // //   return {}; // No products, return empty object
-    // // }
-
-    // // const subscriptions = await AnalyticsService.getSubscriptionsIfNeeded(
-    // //   customer,
-    // //   customerHasSubscriptions,
-    // //   db
-    // // );
-
-    const subscriptions = customer.subscriptions || [];
-    const cusProducts = customer.customer_products.filter(
-      (product: FullCusProduct) => ACTIVE_STATUSES.includes(product.status)
-    );
-
-    if (cusProducts.length === 0) return {};
-
-    const fullProducts = cusProducts.map((cp: FullCusProduct) =>
-      cusProductToProduct({ cusProduct: cp })
-    );
-
-    const areAllProductsFree =
-      AnalyticsService.checkIfAllProductsAreFree(fullProducts);
-    const { startDates, endDates } = areAllProductsFree
-      ? AnalyticsService.getDateRangesFromEntitlements(
-          customer.customer_products
-        )
-      : AnalyticsService.getDateRangesFromSubscriptions(
-          cusProducts,
-          subscriptions
-        );
-
-    if (startDates.length === 0 || endDates.length === 0) {
-      return {};
-    }
-
-    return AnalyticsService.calculateBillingCycleResult(
-      startDates,
-      endDates,
-      intervalType
-    );
-  }
-
   // private static async getSubscriptionsIfNeeded(
   //   customer: FullCustomer,
   //   customerHasSubscriptions: boolean,
@@ -517,6 +421,7 @@ order by dr.period;
   //   });
   // }
 
+<<<<<<< HEAD
   private static checkIfAllProductsAreFree(
     fullProducts: FullProduct[]
   ): boolean {
@@ -681,4 +586,6 @@ order by dr.period;
       gap: gapDays * (intervalType === "1bc" ? 1 : 3),
     };
   }
+=======
+>>>>>>> fcb86291912d79e59b731833c9d655912609626a
 }
