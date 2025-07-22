@@ -23,6 +23,8 @@ import expireRouter from "../customers/expire/expireRouter.js";
 import { handleSetupPayment } from "../customers/attach/handleSetupPayment.js";
 import { internalFeatureRouter } from "../features/internalFeatureRouter.js";
 import { analyticsRouter } from "../analytics/analyticsRouter.js";
+import { handleConnectStripe } from "../orgs/handlers/handleConnectStripe.js";
+import { handleDeleteStripe } from "../orgs/handlers/handleDeleteStripe.js";
 
 const apiRouter: Router = Router();
 
@@ -59,5 +61,7 @@ apiRouter.post("/setup_payment", handleSetupPayment);
 
 // Analytics
 apiRouter.use("/query", analyticsRouter);
+apiRouter.post("/org/stripe", handleConnectStripe);
+apiRouter.delete("/org/stripe", handleDeleteStripe);
 
 export { apiRouter };
