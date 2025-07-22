@@ -6,7 +6,7 @@ import {
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
-import { getBillingCycleStartDate } from "./analyticsUtils.js";
+import { generateEventCountExpressions, getBillingCycleStartDate } from "./analyticsUtils.js";
 
 export class AnalyticsService {
   static clickhouseAvailable =
@@ -218,32 +218,8 @@ WHERE org_id = {org_id:String}
           )) as { startDate: string; endDate: string; gap: number } | null)
         : null;
 
-    const expressionsResult = await clickhouseClient.query({
-      query: params.no_count
-        ? "SELECT generateEventCountExpressionsNoCount({event_names:Array(String)}) as expressions"
-        : "SELECT generateEventCountExpressions({event_names:Array(String)}) as expressions",
-      query_params: {
-        event_names: params.event_names,
-      },
-    });
-
-    const expressionsResultJson = await expressionsResult.json();
-
-    if (expressionsResultJson.data.length === 0) {
-      throw new RecaseError({
-        message: "No expressions found",
-        code: ErrCode.ClickHouseDisabled,
-        statusCode: StatusCodes.SERVICE_UNAVAILABLE,
-      });
-    }
-
-    const countExpressions = (
-      expressionsResultJson.data as {
-        expressions: string;
-      }[]
-    )[0].expressions;
-
-    // console.log("Expressions result:", expressionsResultJson);
+    const countExpressions = generateEventCountExpressions(params.event_names, params.no_count);
+    console.log("countExpressions", countExpressions);
 
     if (AnalyticsService.clickhouseAvailable) {
       const query = `
