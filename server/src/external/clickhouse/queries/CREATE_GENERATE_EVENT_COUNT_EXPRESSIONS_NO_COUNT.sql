@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION generateEventCountExpressions AS (event_names) ->
+CREATE OR REPLACE FUNCTION generateEventCountExpressionsNoCount AS (event_names) ->
 arrayStringConcat(
   arrayMap(
     event_name -> concat(
@@ -6,9 +6,9 @@ arrayStringConcat(
       replaceAll(event_name, '''', ''''''),
       '''), 0) as `',
       event_name,
-      '_count`'
+      '`'
     ),
     event_names
   ),
-  ',\n    '
+  ',\n'
 );

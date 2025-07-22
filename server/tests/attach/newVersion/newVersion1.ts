@@ -174,6 +174,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach with new version`)}`
       stripeCli,
       testClockId,
       advanceTo: addMonths(curUnix, 1).getTime(),
+      waitForSeconds: 30,
     });
 
     await advanceTestClock({
@@ -187,7 +188,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach with new version`)}`
     const invoice = customer.invoices[0];
     expect(invoice.total).to.equal(
       invoiceTotal,
-      "invoice total after 1 cycle should be correct",
+      "invoice total after 1 cycle should be correct"
     );
   });
 });

@@ -26,7 +26,7 @@ const getProductsForAttach = async ({
 
   if (notNullish(product_ids)) {
     let freeTrialProds = products.filter((prod) => notNullish(prod.free_trial));
-    console.log("freeTrialProds", freeTrialProds);
+
     if (freeTrialProds.length > 1) {
       throw new RecaseError({
         message:
@@ -36,6 +36,8 @@ const getProductsForAttach = async ({
     }
 
     for (const prod of products) {
+      if (prod.is_add_on) continue;
+
       let otherProd = products.find(
         (p) => p.group === prod.group && !p.is_add_on && p.id !== prod.id
       );
