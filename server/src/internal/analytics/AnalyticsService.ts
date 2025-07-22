@@ -1,12 +1,12 @@
 import { ClickHouseClient } from "@clickhouse/client";
-import {
-  ErrCode,
-  FullCustomer,
-} from "@autumn/shared";
+import { ErrCode, FullCustomer } from "@autumn/shared";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
-import { generateEventCountExpressions, getBillingCycleStartDate } from "./analyticsUtils.js";
+import {
+  generateEventCountExpressions,
+  getBillingCycleStartDate,
+} from "./analyticsUtils.js";
 
 export class AnalyticsService {
   static clickhouseAvailable =
@@ -123,8 +123,6 @@ WHERE
 
     const resultJson = await result.json();
 
-    console.log("resultJson", resultJson);
-
     return (resultJson.data as { name: string; count: number }[])[0];
   }
 
@@ -218,8 +216,10 @@ WHERE org_id = {org_id:String}
           )) as { startDate: string; endDate: string; gap: number } | null)
         : null;
 
-    const countExpressions = generateEventCountExpressions(params.event_names, params.no_count);
-    console.log("countExpressions", countExpressions);
+    const countExpressions = generateEventCountExpressions(
+      params.event_names,
+      params.no_count
+    );
 
     if (AnalyticsService.clickhouseAvailable) {
       const query = `
@@ -420,172 +420,4 @@ order by dr.period;
   //       ) ?? [],
   //   });
   // }
-
-<<<<<<< HEAD
-  private static checkIfAllProductsAreFree(
-    fullProducts: FullProduct[]
-  ): boolean {
-    return fullProducts.every((product: FullProduct) => {
-      const isFree = isFreeProduct(product.prices);
-
-      return isFree;
-    });
-  }
-
-  private static getDateRangesFromEntitlements(
-    customerProducts?: FullCusProduct[]
-  ): { startDates: string[]; endDates: string[] } {
-    const startDates: string[] = [];
-    const endDates: string[] = [];
-
-    console.log(
-      "customer_entitlements",
-      JSON.stringify(
-        customerProducts?.map((x) => x.customer_entitlements),
-        null,
-        4
-      )
-    );
-
-    if (!customerProducts || customerProducts.length < 1) {
-      return { startDates, endDates };
-    }
-
-    customerProducts.forEach((product: FullCusProduct) => {
-      if (
-        !product.customer_entitlements ||
-        product.customer_entitlements.length < 1
-      ) {
-        return;
-      }
-
-      product.customer_entitlements?.forEach(
-        (entitlement: FullCustomerEntitlement) => {
-          if (entitlement.next_reset_at) {
-            endDates.push(
-              AnalyticsService.formatDateToString(
-                new Date(entitlement.next_reset_at)
-              )
-            );
-          }
-
-          const startDate = AnalyticsService.calculateStartDateFromInterval(
-            entitlement.entitlement.interval,
-            entitlement.next_reset_at,
-            entitlement.created_at
-          );
-
-          if (startDate) {
-            startDates.push(startDate);
-          }
-        }
-      );
-    });
-
-    return { startDates, endDates };
-  }
-
-  private static calculateStartDateFromInterval(
-    interval: EntInterval | null | undefined,
-    nextResetAt: number | null | undefined,
-    createdAt: number
-  ): string | null {
-    if (!nextResetAt && interval !== EntInterval.Lifetime) {
-      return null;
-    }
-
-    switch (interval) {
-      case EntInterval.Lifetime:
-        return AnalyticsService.formatDateToString(new Date(createdAt));
-      case EntInterval.Minute:
-        return AnalyticsService.formatDateToString(
-          new Date(nextResetAt! - 60 * 1000)
-        );
-      case EntInterval.Hour:
-        return AnalyticsService.formatDateToString(
-          new Date(nextResetAt! - 60 * 60 * 1000)
-        );
-      case EntInterval.Day:
-        return AnalyticsService.formatDateToString(
-          new Date(nextResetAt! - 24 * 60 * 60 * 1000)
-        );
-      case EntInterval.Week:
-        return AnalyticsService.formatDateToString(
-          new Date(nextResetAt! - 7 * 24 * 60 * 60 * 1000)
-        );
-      case EntInterval.Month:
-        const monthResetDate = new Date(nextResetAt!);
-        monthResetDate.setMonth(monthResetDate.getMonth() - 1);
-        return AnalyticsService.formatDateToString(monthResetDate);
-      case EntInterval.Quarter:
-        const quarterResetDate = new Date(nextResetAt!);
-        quarterResetDate.setMonth(quarterResetDate.getMonth() - 3);
-        return AnalyticsService.formatDateToString(quarterResetDate);
-      case EntInterval.SemiAnnual:
-        const semiAnnualResetDate = new Date(nextResetAt!);
-        semiAnnualResetDate.setMonth(semiAnnualResetDate.getMonth() - 6);
-        return AnalyticsService.formatDateToString(semiAnnualResetDate);
-      case EntInterval.Year:
-        const yearResetDate = new Date(nextResetAt!);
-        yearResetDate.setFullYear(yearResetDate.getFullYear() - 1);
-        return AnalyticsService.formatDateToString(yearResetDate);
-      default:
-        return null;
-    }
-  }
-
-  private static getDateRangesFromSubscriptions(
-    customerProductsFiltered: FullCusProduct[],
-    subscriptions: Subscription[]
-  ): { startDates: string[]; endDates: string[] } {
-    const startDates: string[] = [];
-    const endDates: string[] = [];
-
-    customerProductsFiltered.forEach((product: FullCusProduct) => {
-      product.subscription_ids?.forEach((subscriptionId: string) => {
-        const subscription = subscriptions.find(
-          (subscription: Subscription) =>
-            subscription.stripe_id === subscriptionId
-        );
-
-        if (subscription) {
-          startDates.push(
-            AnalyticsService.formatDateToString(
-              new Date((subscription.current_period_start ?? 0) * 1000)
-            )
-          );
-          endDates.push(
-            AnalyticsService.formatDateToString(
-              new Date((subscription.current_period_end ?? 0) * 1000)
-            )
-          );
-        }
-      });
-    });
-
-    return { startDates, endDates };
-  }
-
-  private static formatDateToString(date: Date): string {
-    return date.toISOString().replace("T", " ").split(".")[0];
-  }
-
-  private static calculateBillingCycleResult(
-    startDates: string[],
-    endDates: string[],
-    intervalType: "1bc" | "3bc"
-  ) {
-    const startDate = new Date(startDates[0]);
-    const endDate = new Date(endDates[0]);
-    const gap = endDate.getTime() - startDate.getTime();
-    const gapDays = Math.floor(gap / (1000 * 60 * 60 * 24));
-
-    return {
-      startDate: startDates[0],
-      endDate: endDates[0],
-      gap: gapDays * (intervalType === "1bc" ? 1 : 3),
-    };
-  }
-=======
->>>>>>> fcb86291912d79e59b731833c9d655912609626a
 }
