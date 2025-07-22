@@ -70,7 +70,11 @@ stripeWebhookRouter.post(
 
     try {
       const webhookSecret = getStripeWebhookSecret(org, env);
-      event = stripe.webhooks.constructEvent(request.body, sig, webhookSecret);
+      event = await stripe.webhooks.constructEventAsync(
+        request.body,
+        sig,
+        webhookSecret
+      );
     } catch (err: any) {
       response.status(400).send(`Webhook Error: ${err.message}`);
       return;
