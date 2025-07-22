@@ -157,7 +157,6 @@ export const CustomersTable = ({
       </>
     );
   };
- console.log(customers);
 
   return (
     <>
