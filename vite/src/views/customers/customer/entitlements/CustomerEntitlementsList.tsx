@@ -1,6 +1,7 @@
 import {
   AllowanceType,
   FeatureType,
+  FullCusEntWithFullCusProduct,
   FullCustomerEntitlement,
 } from "@autumn/shared";
 
@@ -16,23 +17,33 @@ import { Item, Row } from "@/components/general/TableGrid";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { CusProductEntityItem } from "../components/CusProductEntityItem";
 
 export const CustomerEntitlementsList = () => {
   const [featureType, setFeatureType] = useState<FeatureType>(
-    FeatureType.Metered,
+    FeatureType.Metered
   );
   const [showExpired, setShowExpired] = useState(false);
 
-  const { products, customer, entities, entityId } = useCustomerContext();
+  const { products, customer, entities, entityId, showEntityView } =
+    useCustomerContext();
+
   const [selectedCusEntitlement, setSelectedCusEntitlement] =
     useState<FullCustomerEntitlement | null>(null);
 
-  const filteredEntitlements = customer.entitlements.filter(
-    (cusEnt: FullCustomerEntitlement) => {
+  const cusEnts: FullCusEntWithFullCusProduct[] =
+    customer.customer_products.flatMap((cp: any) => {
+      return cp.customer_entitlements.map((e: any) => ({
+        ...e,
+        customer_product: cp,
+      }));
+    });
+
+  const filteredEntitlements = cusEnts.filter(
+    (cusEnt: FullCusEntWithFullCusProduct) => {
       const entFeatureType = cusEnt.entitlement.feature.type;
-      const cusProduct = customer.products.find(
-        (p: any) => p.id === cusEnt.customer_product_id,
-      );
+      const cusProduct = cusEnt.customer_product;
+
       const isExpired = cusProduct?.status === "expired";
       const isScheduled = cusProduct?.status === "scheduled";
 
@@ -53,7 +64,7 @@ export const CustomerEntitlementsList = () => {
         entityMatch = false;
 
         const cusProduct = customer.products.find(
-          (p: any) => p.id === cusEnt.customer_product_id,
+          (p: any) => p.id === cusEnt.customer_product_id
         );
 
         // 1. Product match
@@ -73,20 +84,8 @@ export const CustomerEntitlementsList = () => {
         !isScheduled &&
         entityMatch
       );
-    },
+    }
   );
-
-  const getProductName = (cusEnt: FullCustomerEntitlement) => {
-    const cusProduct = customer.products.find(
-      (p: any) => p.id === cusEnt.customer_product_id,
-    );
-
-    const product = products.find((p: any) => p.id === cusProduct?.product_id);
-
-    return product?.name;
-  };
-
-  const sortedEntitlements = filteredEntitlements;
 
   const handleSelectCusEntitlement = (cusEnt: FullCustomerEntitlement) => {
     setSelectedCusEntitlement(cusEnt);
@@ -95,7 +94,7 @@ export const CustomerEntitlementsList = () => {
   const getAdminHoverTexts = (cusEnt: FullCustomerEntitlement) => {
     const entitlement = cusEnt.entitlement;
     const featureEntities = entities.filter(
-      (e: any) => e.feature_id === entitlement.feature.id,
+      (e: any) => e.feature_id === entitlement.feature.id
     );
 
     const hoverTexts = [
@@ -144,7 +143,7 @@ export const CustomerEntitlementsList = () => {
                     variant="ghost"
                     className={cn(
                       "text-t3 text-xs font-normal p-0",
-                      showExpired && "text-t1 hover:text-t1",
+                      showExpired && "text-t1 hover:text-t1"
                     )}
                     size="sm"
                     onClick={() => setShowExpired(!showExpired)}
@@ -177,7 +176,7 @@ export const CustomerEntitlementsList = () => {
         selectedCusEntitlement={selectedCusEntitlement}
         setSelectedCusEntitlement={setSelectedCusEntitlement}
       />
-      {sortedEntitlements.length === 0 ? (
+      {filteredEntitlements.length === 0 ? (
         <div className="flex pl-10 items-center h-10">
           <p className="text-t3">
             Attach a product to grant access to features
@@ -185,8 +184,15 @@ export const CustomerEntitlementsList = () => {
         </div>
       ) : (
         <>
-          <Row type="header" className="grid-cols-12 pr-0">
+          <Row
+            type="header"
+            className={cn(
+              "grid-cols-12 pr-0",
+              showEntityView && "grid-cols-15"
+            )}
+          >
             <Item className="col-span-3">Feature</Item>
+            {showEntityView && <Item className="col-span-3">Entity</Item>}
             <Item className="col-span-3">
               {featureType === FeatureType.Metered && "Balance"}
             </Item>
@@ -199,68 +205,78 @@ export const CustomerEntitlementsList = () => {
         </>
       )}
 
-      {sortedEntitlements.map(
-        (cusEnt: FullCustomerEntitlement & { unused: number }) => {
-          const entitlement = cusEnt.entitlement;
-          const allowanceType = entitlement.allowance_type;
+      {filteredEntitlements.map((cusEnt: FullCusEntWithFullCusProduct) => {
+        const entitlement = cusEnt.entitlement;
+        const allowanceType = entitlement.allowance_type;
 
-          return (
-            <Row
-              key={cusEnt.id}
-              className="grid-cols-12 pr-0"
-              onClick={() =>
-                featureType === FeatureType.Metered &&
-                handleSelectCusEntitlement(cusEnt)
-              }
-            >
-              <Item className="col-span-3">
-                <AdminHover texts={getAdminHoverTexts(cusEnt)}>
-                  {entitlement.feature.name}
-                </AdminHover>
+        return (
+          <Row
+            key={cusEnt.id}
+            className={cn(
+              "grid-cols-12 pr-0",
+              showEntityView && "grid-cols-15"
+            )}
+            onClick={() =>
+              featureType === FeatureType.Metered &&
+              handleSelectCusEntitlement(cusEnt)
+            }
+          >
+            <Item className="col-span-3">
+              <AdminHover texts={getAdminHoverTexts(cusEnt)}>
+                {entitlement.feature.name}
+              </AdminHover>
+            </Item>
+            {showEntityView && (
+              <Item className="col-span-3 -translate-x-1">
+                <CusProductEntityItem
+                  internalEntityId={cusEnt.customer_product.internal_entity_id}
+                />
               </Item>
-              <Item className="col-span-3">
-                <div className="flex items-center font-mono font-medium rounded-md px-1 border-b border-stone-300 border-dashed ">
-                  {entitlement.feature.type == FeatureType.Boolean ? (
-                    <></>
-                  ) : allowanceType == AllowanceType.Unlimited ? (
-                    "Unlimited"
-                  ) : entityId && cusEnt.entities?.[entityId] ? (
-                    <div className="flex items-center gap-2">
-                      {cusEnt.entities?.[entityId]?.balance}{" "}
-                    </div>
-                  ) : (
-                    <>
-                      {cusEnt.balance}{" "}
-                      <span className="text-t3">
-                        {cusEnt.replaceables.length > 0
-                          ? ` (${cusEnt.replaceables.length} free)`
-                          : ""}
-                      </span>
-                    </>
-                  )}
-                </div>
-              </Item>
-              <Item className="col-span-3">
-                <div className="flex items-center gap-2 max-w-[150px] truncate text-t3">
-                  {getProductName(cusEnt)}
-                  {customer.products.find(
-                    (p: any) => p.id === cusEnt.customer_product_id,
-                  )?.status === "expired" && (
-                    <Badge variant="status" className="bg-black">
-                      expired
-                    </Badge>
-                  )}
-                </div>
-              </Item>
-              <Item className="col-span-2 text-xs text-t3">
-                {formatUnixToDateTime(cusEnt.next_reset_at).date}{" "}
-                {formatUnixToDateTime(cusEnt.next_reset_at).time}
-              </Item>
-              <Item className="col-span-1" />
-            </Row>
-          );
-        },
-      )}
+            )}
+            <Item className="col-span-3">
+              <div className="flex items-center font-mono font-medium rounded-md px-1 border-b border-stone-300 border-dashed ">
+                {entitlement.feature.type == FeatureType.Boolean ? (
+                  <></>
+                ) : allowanceType == AllowanceType.Unlimited ? (
+                  "Unlimited"
+                ) : entityId && cusEnt.entities?.[entityId] ? (
+                  <div className="flex items-center gap-2">
+                    {cusEnt.entities?.[entityId]?.balance}{" "}
+                  </div>
+                ) : (
+                  <>
+                    {cusEnt.balance}{" "}
+                    <span className="text-t3">
+                      {cusEnt.replaceables.length > 0
+                        ? ` (${cusEnt.replaceables.length} free)`
+                        : ""}
+                    </span>
+                  </>
+                )}
+              </div>
+            </Item>
+
+            <Item className="col-span-3">
+              <div className="flex items-center gap-2 max-w-[150px] truncate text-t3">
+                {/* {getProductName(cusEnt)} */}
+                {cusEnt.customer_product.product.name}
+                {customer.products.find(
+                  (p: any) => p.id === cusEnt.customer_product_id
+                )?.status === "expired" && (
+                  <Badge variant="status" className="bg-black">
+                    expired
+                  </Badge>
+                )}
+              </div>
+            </Item>
+            <Item className="col-span-2 text-xs text-t3">
+              {formatUnixToDateTime(cusEnt.next_reset_at).date}{" "}
+              {formatUnixToDateTime(cusEnt.next_reset_at).time}
+            </Item>
+            <Item className="col-span-1" />
+          </Row>
+        );
+      })}
     </div>
   );
 };

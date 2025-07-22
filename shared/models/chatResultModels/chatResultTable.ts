@@ -1,6 +1,7 @@
 import { pgTable, text, numeric, jsonb, boolean } from "drizzle-orm/pg-core";
 
-import { ChatResultFeature, ProductV2 } from "@autumn/shared";
+import { ChatResultFeature } from "../chatResultModels/chatResultFeature.js";
+import { ProductV2 } from "../productV2Models/productV2Models.js";
 import { collatePgColumn } from "../../db/utils.js";
 
 export const chatResults = pgTable("chat_results", {

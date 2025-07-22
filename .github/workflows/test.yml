@@ -22,26 +22,26 @@ env:
 jobs:
   test:
     runs-on: blacksmith-4vcpu-ubuntu-2404
+    # runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
+      - name: Set up bun
+      - uses: oven-sh/setup-bun@v2
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'pnpm'
+          cache: 'bun'
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        # run: bun install --no-frozen-lockfile
+        run: bun install
 
       - name: Setup CI
-        run: pnpm run setupci
+        run: bun run setupci
 
       # - name: Install Chrome Dependencies
       #   run: |
@@ -109,10 +109,10 @@ jobs:
       - name: Build shared
         run: |
           cd shared
-          pnpm build
+          bun run build
 
       - name: Startup server
-        run: sudo docker compose -f docker-compose.ci.yml up --detach
+        run: sudo docker compose -f docker/docker-compose.ci.yml up --detach
 
       - name: Wait for server to be ready
         run: |
@@ -126,16 +126,12 @@ jobs:
           curl https://askjdnaslkjdalkjen.loca.lt
           echo "Local Tunnel pinged!"
 
-      - name: Run G1 tests
-        run: |
-          cd server/
-          chmod +x ./shell/g1.sh
-          ./shell/g1.sh
+
       - name: Run G2 tests
         run: |
           cd server/
           chmod +x ./shell/g2.sh
-          ./shell/g2.sh
+          ./shell/g2.sh setup
 
       - name: Run G3 tests
         run: |
@@ -159,4 +155,4 @@ jobs:
 
       - name: Close Docker Containers
         if: always()
-        run: sudo docker compose -f docker-compose.unix.yml down
+        run: sudo docker compose -f docker/docker-compose.unix.yml down

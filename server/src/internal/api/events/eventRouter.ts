@@ -81,6 +81,13 @@ const getEventAndCustomer = async ({
   const parsedEvent = CreateEventSchema.parse(event_data);
   const timestamp = getEventTimestamp(parsedEvent.timestamp);
 
+  let internalEntityId = null;
+  if (event_data.entity_id) {
+    internalEntityId = customer.entities.find(
+      (e) => e.id === event_data.entity_id
+    )?.internal_id;
+  }
+
   const newEvent: EventInsert = {
     ...parsedEvent,
     properties: parsedEvent.properties || {},
@@ -91,6 +98,7 @@ const getEventAndCustomer = async ({
     internal_customer_id: customer.internal_id,
     created_at: timestamp.getTime(),
     timestamp: timestamp,
+    internal_entity_id: internalEntityId,
   };
 
   let event = await EventService.insert({ db, event: newEvent });
@@ -123,7 +131,7 @@ const getAffectedFeatures = async ({
         creditSystemContainsFeature({
           creditSystem: cs,
           meteredFeatureId: f.id,
-        }),
+        })
       )
     );
   });

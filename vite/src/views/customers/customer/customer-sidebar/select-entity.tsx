@@ -28,8 +28,6 @@ export const SelectEntity = ({
   const navigate = useNavigate();
   const location = useLocation();
 
-  console.log(cusContext);
-
   if (!entities || entities.length === 0) {
     // Only show create entity flow if there are continuous use features
     const hasContinuousUseFeatures = cusContext?.features?.some(

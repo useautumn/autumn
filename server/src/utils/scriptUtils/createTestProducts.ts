@@ -5,8 +5,10 @@ import {
 import {
   AppEnv,
   BillingInterval,
+  CreateFreeTrial,
   CreateFreeTrialSchema,
   FeatureUsageType,
+  FreeTrial,
   FreeTrialDuration,
   ProductItem,
   ProductV2,
@@ -81,6 +83,7 @@ export const constructProduct = ({
   excludeBase = false,
   isDefault = true,
   isAddOn = false,
+  freeTrial,
 }: {
   id?: string;
   items: ProductItem[];
@@ -91,6 +94,7 @@ export const constructProduct = ({
   excludeBase?: boolean;
   isDefault?: boolean;
   isAddOn?: boolean;
+  freeTrial?: CreateFreeTrial;
 }) => {
   let price = 0;
   if (type == "pro") {
@@ -110,7 +114,7 @@ export const constructProduct = ({
           : interval
             ? interval
             : BillingInterval.Month,
-      }),
+      })
     );
   }
 
@@ -119,7 +123,7 @@ export const constructProduct = ({
       constructPriceItem({
         price: 10,
         interval: null,
-      }),
+      })
     );
   }
 
@@ -141,13 +145,14 @@ export const constructProduct = ({
     is_default: type == "free" && isDefault,
     version: 1,
     group: "",
-    free_trial: trial
-      ? (CreateFreeTrialSchema.parse({
-          length: 7,
-          duration: FreeTrialDuration.Day,
-          unique_fingerprint: false,
-        }) as any)
-      : null,
+    free_trial:
+      freeTrial || trial
+        ? (CreateFreeTrialSchema.parse({
+            length: 7,
+            duration: FreeTrialDuration.Day,
+            unique_fingerprint: false,
+          }) as any)
+        : null,
     created_at: Date.now(),
   };
 

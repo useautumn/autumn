@@ -17,7 +17,29 @@ import {
   isPriceItem,
 } from "../product-items/productItemUtils/getItemType.js";
 import { StatusCodes } from "http-status-codes";
+import { itemToPriceOrTiers } from "../product-items/productItemUtils.js";
+import { nullish } from "@/utils/genUtils.js";
+import { getResetUsage } from "../product-items/productItemUtils/itemToPriceAndEnt.js";
 
+const sanitizeItems = ({
+  items,
+  features,
+}: {
+  items: ProductItem[];
+  features: Feature[];
+}) => {
+  return items.map((item) => {
+    let priceData = itemToPriceOrTiers({ item });
+    return {
+      ...item,
+      reset_usage_when_enabled: getResetUsage({
+        item,
+        feature: features.find((f) => f.id === item.feature_id),
+      }),
+      ...priceData,
+    };
+  });
+};
 export const productsAreSame = ({
   newProductV1,
   newProductV2,
@@ -61,6 +83,9 @@ export const productsAreSame = ({
       features,
     });
 
+  items1 = sanitizeItems({ items: items1, features });
+  items2 = sanitizeItems({ items: items2, features });
+
   let itemsSame = true;
   let pricesChanged = false;
   const newItems: ProductItem[] = [];
@@ -71,10 +96,9 @@ export const productsAreSame = ({
   }
 
   // Check if any feature's usage limits have changed
-  let usageLimitsChanged = false;
   items1.some((item1) => {
     const matchingItem2 = items2?.find(
-      (item2) => item2.feature_id === item1.feature_id,
+      (item2) => item2.feature_id === item1.feature_id
     );
     if (!matchingItem2) return false;
 
@@ -84,13 +108,13 @@ export const productsAreSame = ({
     return false;
   });
 
-  items2 =
-    curProductV2?.items ||
-    mapToProductItems({
-      prices: curProductV1?.prices || [],
-      entitlements: curProductV1?.entitlements || [],
-      features,
-    });
+  // items2 =
+  //   curProductV2?.items ||
+  //   mapToProductItems({
+  //     prices: curProductV1?.prices || [],
+  //     entitlements: curProductV1?.entitlements || [],
+  //     features,
+  //   });
 
   if (items1.length !== items2.length) {
     itemsSame = false;

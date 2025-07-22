@@ -18,13 +18,19 @@ import {
   UsagePriceConfig,
   OnIncrease,
   OnDecrease,
+  FeatureUsageType,
+  features,
 } from "@autumn/shared";
-import { generateId, notNullish } from "@/utils/genUtils.js";
+import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 import { pricesAreSame } from "@/internal/products/prices/priceInitUtils.js";
 import { entsAreSame } from "../../entitlements/entitlementUtils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { isFeatureItem, isPriceItem } from "./getItemType.js";
+import {
+  isFeatureItem,
+  isFeaturePriceItem,
+  isPriceItem,
+} from "./getItemType.js";
 import {
   itemToBillingInterval,
   itemToEntInterval,
@@ -32,6 +38,25 @@ import {
 import { itemCanBeProrated } from "./classifyItem.js";
 import { shouldProrate } from "../../prices/priceUtils/prorationConfigUtils.js";
 
+export const getResetUsage = ({
+  item,
+  feature,
+}: {
+  item: ProductItem;
+  feature?: Feature;
+}) => {
+  if (!item.feature_id) {
+    return undefined;
+  }
+  if (
+    nullish(item.reset_usage_when_enabled) &&
+    (isFeatureItem(item) || isFeaturePriceItem(item)) &&
+    feature
+  ) {
+    return feature?.config?.usage_type == FeatureUsageType.Single;
+  }
+  return item.reset_usage_when_enabled;
+};
 // ITEM TO PRICE AND ENTITLEMENT
 export const toPrice = ({
   item,
@@ -93,7 +118,7 @@ export const toFeature = ({
   console.log("item toFeature", item);
   let isBoolean = feature?.type == FeatureType.Boolean;
 
-  let resetUsage = item.reset_usage_when_enabled || false;
+  let resetUsage = getResetUsage({ item, feature });
 
   let ent: Entitlement = {
     id: item.entitlement_id || generateId("ent"),
@@ -152,7 +177,10 @@ export const toFeatureAndPrice = ({
   newVersion?: boolean;
   features: Feature[];
 }) => {
-  let resetUsage = item.reset_usage_when_enabled || false;
+  let resetUsage = getResetUsage({
+    item,
+    feature: features.find((f) => f.id == item.feature_id),
+  });
 
   let ent: Entitlement = {
     id: item.entitlement_id || generateId("ent"),

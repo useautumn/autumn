@@ -37,9 +37,10 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     data-slot="dialog-overlay"
+    onClick={(e) => e.stopPropagation()}
     className={cn(
       "fixed inset-0 z-50 bg-white/70 backdrop-blur-sm  data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-      className,
+      className
     )}
     {...props}
   />
@@ -62,7 +63,7 @@ function DialogContent({
           bg-stone-50
           min-w-sm
           `,
-          className,
+          className
         )}
         {...props}
       >
@@ -98,7 +99,7 @@ function DialogFooter({
         "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
         variant == "new" &&
           "bg-stone-100 flex items-center h-10 gap-0 border-t border-zinc-200",
-        className,
+        className
       )}
       {...props}
     />
