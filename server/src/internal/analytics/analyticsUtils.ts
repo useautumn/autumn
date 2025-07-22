@@ -192,13 +192,9 @@ export function calculateStartDateFromInterval(
 		case EntInterval.Lifetime:
 			return formatDateToString(new Date(createdAt));
 		case EntInterval.Minute:
-			return formatDateToString(
-				new Date(nextResetAt! - 60 * 1000)
-			);
+			return formatDateToString(new Date(nextResetAt! - 60 * 1000));
 		case EntInterval.Hour:
-			return formatDateToString(
-				new Date(nextResetAt! - 60 * 60 * 1000)
-			);
+			return formatDateToString(new Date(nextResetAt! - 60 * 60 * 1000));
 		case EntInterval.Day:
 			return formatDateToString(
 				new Date(nextResetAt! - 24 * 60 * 60 * 1000)
@@ -227,3 +223,14 @@ export function calculateStartDateFromInterval(
 			return null;
 	}
 }
+
+export function generateEventCountExpressions(eventNames: string[], noCount: boolean = false): string {
+    const expressions = eventNames.map((eventName) => {
+      // Replicate ClickHouse's replaceAll(eventName, '''', '''''')
+      const escapedEventName = eventName.replace(/'/g, "''");
+      const columnName = noCount ? eventName : `${eventName}_count`;
+      return `coalesce(sumIf(e.value, e.event_name = '${escapedEventName}'), 0) as \`${columnName}\``;
+    });
+  
+    return expressions.join(',\n');
+  }
