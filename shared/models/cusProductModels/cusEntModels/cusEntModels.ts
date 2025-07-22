@@ -9,6 +9,11 @@ export const EntityBalanceSchema = z.object({
   adjustment: z.number(),
 });
 
+export const EntityRolloverBalanceSchema = EntityBalanceSchema.pick({
+  id: true,
+  balance: true,
+});
+
 export const CustomerEntitlementSchema = z.object({
   // Foreign keys
   id: z.string(),
@@ -39,6 +44,7 @@ export const FullCustomerEntitlementSchema = CustomerEntitlementSchema.extend({
 });
 
 export type EntityBalance = z.infer<typeof EntityBalanceSchema>;
+export type EntityRolloverBalance = z.infer<typeof EntityRolloverBalanceSchema>;
 export type CustomerEntitlement = z.infer<typeof CustomerEntitlementSchema>;
 export type FullCustomerEntitlement = z.infer<
   typeof FullCustomerEntitlementSchema
