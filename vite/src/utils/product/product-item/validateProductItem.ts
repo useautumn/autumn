@@ -1,7 +1,8 @@
 import { invalidNumber, notNullish } from "@/utils/genUtils";
-import { Feature, FeatureUsageType, ProductItem } from "@autumn/shared";
+import { Feature, FeatureUsageType, ProductItem, ProductItemInterval } from "@autumn/shared";
 import { toast } from "sonner";
 import { isFeatureItem, isFeaturePriceItem } from "../getItemType";
+import { isOneOffProduct } from "../priceUtils";
 
 export const validateProductItem = ({
   item,
@@ -97,6 +98,47 @@ export const validateProductItem = ({
       item.billing_units = Number(item.billing_units);
     } else {
       item.billing_units = undefined;
+    }
+  }
+
+  if (item.config) {
+    if (item.config.rollover) {
+      if(item.interval === null) {
+        toast.warning("Cannot create rollover config for a one off product - disabling rollovers");
+        item.config.rollover = undefined;
+        return item;
+      }
+
+      
+      if (invalidNumber(item.config.rollover.max)) {
+        toast.error("Please enter a valid maximum rollover amount");
+        item.config.rollover = undefined;
+        return null;
+      }
+
+      if (invalidNumber(item.config.rollover.length)) {
+        toast.error("Please enter a valid rollover duration");
+        item.config.rollover = undefined;
+        return null;
+      }
+
+      if(item.config.rollover.duration != ProductItemInterval.Month) {
+        toast.error("Rollovers currently only support monthly cycles.");
+        item.config.rollover = undefined;
+        return null;
+      }
+
+      if (item.config.rollover.max < 0 || !item.config.rollover.max) {
+        toast.error("Please enter a positive rollover max amount");
+        item.config.rollover = undefined;
+        return null;
+      }
+
+      if (item.config.rollover.length < 0 || !item.config.rollover.length) {
+        toast.error("Please enter a positive rollover length");
+        item.config.rollover = undefined;
+        return null;
+      }
     }
   }
 
