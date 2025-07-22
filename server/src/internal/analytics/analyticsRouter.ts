@@ -6,8 +6,12 @@ import { ErrCode, FullCustomer } from "@autumn/shared";
 import { format } from "date-fns";
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
+import z from "zod";
 
 const analyticsRouter = Router();
+
+const RangeEnum = z.enum(["24h", "7d", "30d", "90d", "last_cycle"]);
+type Range = z.infer<typeof RangeEnum>;
 
 analyticsRouter.post("", (req, res) =>
   routeHandler({
@@ -20,8 +24,6 @@ analyticsRouter.post("", (req, res) =>
         customer_id,
         feature_id,
       }: { customer_id: string; feature_id: string | string[] } = req.body;
-      let interval: "24h" | "7d" | "30d" | "90d" | "1bc" | "3bc" =
-        req.body.interval || "1bc";
 
       if (!customer_id || !feature_id) {
         throw new RecaseError({
@@ -29,6 +31,12 @@ analyticsRouter.post("", (req, res) =>
           code: ErrCode.InvalidInputs,
           statusCode: 400,
         });
+      }
+
+      let range: any = RangeEnum.nullish().parse(req.body.range);
+
+      if (range === "last_cycle" || !range) {
+        range = "1bc";
       }
 
       const customer = (await CusService.getFull({
@@ -55,7 +63,7 @@ analyticsRouter.post("", (req, res) =>
       let events = await AnalyticsService.getTimeseriesEvents({
         req,
         params: {
-          interval,
+          interval: range,
           event_names: featureIds,
           customer_id: customer_id,
           no_count: true,

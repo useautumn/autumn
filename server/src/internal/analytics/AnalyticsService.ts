@@ -522,7 +522,7 @@ order by dr.period;
   ): boolean {
     return fullProducts.every((product: FullProduct) => {
       const isFree = isFreeProduct(product.prices);
-      console.log("isFree", product.name, isFree);
+
       return isFree;
     });
   }
