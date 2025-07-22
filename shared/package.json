@@ -14,7 +14,7 @@
   "license": "Apache-2.0",
   "scripts": {
     "build": "bun build ./index.ts --outdir dist --target bun",
-    "dev": "bunx nodemon --ext ts --ignore dist --exec \"bun run build\"",
+    "dev": "bunx nodemon --ext ts --ignore dist --exec bun run build",
 
     "db:push": "cross-env NODE_OPTIONS=\"--import tsx\" pnpm exec drizzle-kit push --config drizzle.config.ts",
     "db:generate": "cross-env NODE_OPTIONS=\"--import tsx\" pnpm exec drizzle-kit generate --config drizzle.config.ts",
