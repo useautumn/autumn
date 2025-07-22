@@ -103,7 +103,7 @@ export const cancelCusProductSubscriptions = async ({
     } catch (error: any) {
       if (error.code != "resource_missing") {
         console.log(
-          `Error canceling stripe subscription ${error.code}: ${error.message}`,
+          `Error canceling stripe subscription ${error.code}: ${error.message}`
         );
       } // else subscription probably already cancelled
     }
@@ -219,7 +219,7 @@ export const expireAndActivate = async ({
   let product = cusProduct.product;
   const isOneOffOrAddOn = product.is_add_on || isOneOff(prices);
 
-  if (isOneOffOrAddOn) {
+  if (isOneOffOrAddOn || notNullish(cusProduct.internal_entity_id)) {
     return;
   }
 
@@ -263,7 +263,7 @@ export const activateFutureProduct = async ({
 
   if (subIsPrematurelyCanceled(subscription)) {
     console.log(
-      "   🔔 Subscription prematurely canceled, deleting scheduled products",
+      "   🔔 Subscription prematurely canceled, deleting scheduled products"
     );
 
     await deleteScheduledIds({
@@ -392,7 +392,7 @@ export const processFullCusProduct = ({
     org.config.api_version >= BREAK_API_VERSION
   ) {
     let baseSub = subs?.find(
-      (s) => s.id == subIds[0] || (s as Subscription).stripe_id == subIds[0],
+      (s) => s.id == subIds[0] || (s as Subscription).stripe_id == subIds[0]
     );
     stripeSubData = {
       current_period_end: baseSub?.current_period_end
@@ -520,7 +520,7 @@ export const getMainCusProduct = async ({
   });
 
   let mainCusProduct = cusProducts.find(
-    (cusProduct: FullCusProduct) => !cusProduct.product.is_add_on,
+    (cusProduct: FullCusProduct) => !cusProduct.product.is_add_on
   );
 
   return mainCusProduct;
@@ -538,7 +538,7 @@ export const getCusProductsWithStripeSubId = ({
   return cusProducts.filter(
     (cusProduct) =>
       cusProduct.subscription_ids?.includes(stripeSubId) &&
-      cusProduct.id !== curCusProductId,
+      cusProduct.id !== curCusProductId
   );
 };
 
@@ -551,7 +551,7 @@ export const getFeatureQuantity = ({
 }) => {
   const options = cusProduct.options;
   const option = options.find(
-    (o) => o.internal_feature_id == internalFeatureId,
+    (o) => o.internal_feature_id == internalFeatureId
   );
   return nullish(option?.quantity) ? 1 : option?.quantity!;
 };

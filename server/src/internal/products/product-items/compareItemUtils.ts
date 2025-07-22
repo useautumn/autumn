@@ -56,7 +56,7 @@ const tiersAreSame = (tiers1: any, tiers2: any) => {
 
   return tiers1.every(
     (tier: any, index: number) =>
-      tier.amount === tiers2[index].amount && tier.to === tiers2[index].to,
+      tier.amount === tiers2[index].amount && tier.to === tiers2[index].to
   );
 };
 
@@ -89,7 +89,13 @@ export const priceItemsAreSame = ({
   item1: PriceItem;
   item2: PriceItem;
 }) => {
-  return item1.price === item2.price && item1.interval == item2.interval;
+  const same = item1.price === item2.price && item1.interval == item2.interval;
+
+  if (!same) {
+    console.log(`Price items different: ${item1.price}`);
+  }
+
+  return same;
 };
 
 export const featurePriceItemsAreSame = ({
@@ -157,6 +163,17 @@ export const featurePriceItemsAreSame = ({
 
   const pricesChanged = Object.values(pricesSame).some((d) => !d.condition);
 
+  if (!same) {
+    console.log(
+      "Feature price items different:",
+      Object.values(entsSame)
+        .filter((d) => !d.condition)
+        .map((d) => d.message),
+      Object.values(pricesSame)
+        .filter((d) => !d.condition)
+        .map((d) => d.message)
+    );
+  }
 
   return {
     same,

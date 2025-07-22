@@ -19,13 +19,16 @@ export const getFeatureName = ({
   let featureName = feature.name || "";
 
   if (feature.display) {
-    if (!plural) {
-      if (units && units === 1) {
-        plural = false;
-      } else {
-        plural = true;
-      }
+    if (units && units === 1) {
+      plural = false;
     }
+    // if (!plural) {
+    //   if (units && units === 1) {
+    //     plural = false;
+    //   } else {
+    //     plural = true;
+    //   }
+    // }
 
     if (plural) {
       featureName = feature.display.plural || featureName;

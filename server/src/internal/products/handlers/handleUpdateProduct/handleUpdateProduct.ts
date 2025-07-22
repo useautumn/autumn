@@ -15,6 +15,7 @@ import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js
 import { handleUpdateProductDetails } from "./updateProductDetails.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
+import { productsAreSame } from "../../productUtils/compareProductUtils.js";
 
 export const handleUpdateProductV2 = async (req: any, res: any) =>
   routeHandler({
@@ -23,7 +24,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
     action: "Update product",
     handler: async () => {
       const { productId } = req.params;
-      const { orgId, env, logtail: logger, db } = req;
+      const { orgId, env, logger, db } = req;
 
       const [features, org, fullProduct, rewardPrograms] = await Promise.all([
         FeatureService.getFromReq(req),
@@ -70,22 +71,26 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
 
       let itemsExist = notNullish(req.body.items);
 
-      // let itemsDifferent = productsAreDifferent2(
-      //   req.body,
-      //   fullProduct,
-      //   features,
-      // );
-
       if (cusProductExists && itemsExist) {
-        await handleVersionProductV2({
-          req,
-          res,
-          latestProduct: fullProduct,
-          org,
-          env,
-          items: req.body.items,
-          freeTrial: req.body.free_trial,
+        const { itemsSame, freeTrialsSame } = productsAreSame({
+          newProductV2: req.body,
+          curProductV1: fullProduct,
+          features,
         });
+        const productSame = itemsSame && freeTrialsSame;
+        if (!productSame) {
+          await handleVersionProductV2({
+            req,
+            res,
+            latestProduct: fullProduct,
+            org,
+            env,
+            items: req.body.items,
+            freeTrial: req.body.free_trial,
+          });
+          return;
+        }
+        res.status(200).send(fullProduct);
         return;
       }
 

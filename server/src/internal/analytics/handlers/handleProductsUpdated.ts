@@ -121,7 +121,7 @@ export const handleProductsUpdated = async ({
   let product = cusProduct.product;
   let prices = cusProduct.customer_prices.map((cp) => cp.price);
   let entitlements = cusProduct.customer_entitlements.map(
-    (ce) => ce.entitlement,
+    (ce) => ce.entitlement
   );
   let freeTrial = cusProduct.free_trial;
 
@@ -169,6 +169,7 @@ export const handleProductsUpdated = async ({
 
   // 1. Log action to DB
 
+  // console.log(`handling products.updated for customer ${customer.id}`);
   try {
     if (req) {
       let action = constructAction({
@@ -193,14 +194,17 @@ export const handleProductsUpdated = async ({
       await ActionService.insert(db, action);
     } else {
       logger.warn(
-        "products.updated, no req object found, skipping action insert",
+        "products.updated, no req object found, skipping action insert"
       );
     }
   } catch (error: any) {
-    logger.error("Failed to log action to DB", {
-      message: error.message,
-      error: error,
-    });
+    // 23503 is for internal_customer_id not found
+    if (error?.code !== "23503") {
+      logger.error("Failed to log action to DB", {
+        message: error.message,
+        error: error,
+      });
+    }
   }
 
   // 2. Send Svix event

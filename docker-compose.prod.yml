@@ -32,14 +32,12 @@ services:
       context: .
       dockerfile: docker/prod.dockerfile
       target: server-prod
-    volumes:
-      - ./server:/app/server
     ports:
       - "8080:8080"
     restart: always
 
   localtunnel:
-    image: node:20-alpine
+    image: oven/bun:latest
     build:
       dockerfile: docker/prod.dockerfile
       context: .

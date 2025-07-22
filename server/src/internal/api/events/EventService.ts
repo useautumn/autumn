@@ -66,13 +66,12 @@ export class EventService {
         and(
           eq(events.internal_customer_id, internalCustomerId),
           eq(events.org_id, orgId),
-          eq(events.env, env),
-        ),
+          eq(events.env, env)
+        )
       )
       .orderBy(desc(events.created_at))
       .limit(limit);
 
     return results;
   }
-
 }
