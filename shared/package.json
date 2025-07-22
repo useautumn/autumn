@@ -13,8 +13,9 @@
   "author": "Recase Inc.",
   "license": "Apache-2.0",
   "scripts": {
-    "build": "tsc",
-    "dev": "npx nodemon --watch . --ext ts --ignore dist --exec 'pnpm run build'",
+    "build": "bun build ./index.ts --outdir dist --target bun --external zod",
+    "dev": "bunx nodemon --ext ts --ignore dist --exec \"bun run build\"",
+
     "db:push": "cross-env NODE_OPTIONS=\"--import tsx\" pnpm exec drizzle-kit push --config drizzle.config.ts",
     "db:generate": "cross-env NODE_OPTIONS=\"--import tsx\" pnpm exec drizzle-kit generate --config drizzle.config.ts",
     "db:migrate": "cross-env NODE_OPTIONS=\"--import tsx\" pnpm exec drizzle-kit migrate --config drizzle.config.ts"
@@ -25,7 +26,9 @@
     "dotenv": "^16.5.0",
     "drizzle-kit": "^0.31.1",
     "drizzle-orm": "^0.43.1",
-    "drizzle-zod": "^0.8.2",
+    "drizzle-zod": "^0.8.2"
+  },
+  "peerDependencies": {
     "zod": "^3.25.23"
   },
   "devDependencies": {

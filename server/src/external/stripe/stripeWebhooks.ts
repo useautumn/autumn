@@ -70,7 +70,11 @@ stripeWebhookRouter.post(
 
     try {
       const webhookSecret = getStripeWebhookSecret(org, env);
-      event = stripe.webhooks.constructEvent(request.body, sig, webhookSecret);
+      event = await stripe.webhooks.constructEventAsync(
+        request.body,
+        sig,
+        webhookSecret
+      );
     } catch (err: any) {
       response.status(400).send(`Webhook Error: ${err.message}`);
       return;
@@ -217,6 +221,14 @@ stripeWebhookRouter.post(
           break;
       }
     } catch (error) {
+      if (error instanceof Stripe.errors.StripeError) {
+        if (error.message.includes("No such customer")) {
+          logger.warn(`stripe customer missing: ${error.message}`);
+          response.status(200).json({ message: "ok" });
+          return;
+        }
+      }
+
       handleRequestError({
         req: request,
         error,

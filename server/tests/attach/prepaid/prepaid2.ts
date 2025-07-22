@@ -120,7 +120,7 @@ describe(`${chalk.yellowBright(`attach/${testCase}: upgrade quantity, prorate im
       stripeCli,
       testClockId,
       advanceTo: addWeeks(new Date(), 2).getTime(),
-      waitForSeconds: 10,
+      waitForSeconds: 30,
     });
 
     await attachAndExpectCorrect({

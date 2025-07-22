@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 import { randomBytes } from 'crypto';
 import { writeFileSync, copyFileSync } from 'fs';
-import inquirer from 'inquirer';
-import { spawnSync } from 'child_process';
 import chalk from 'chalk';
 
 const genUrlSafeBase64 = (bytes) => {
@@ -11,25 +9,6 @@ const genUrlSafeBase64 = (bytes) => {
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=+$/g, '');
-}
-
-
-const genRandomSubdomain = (length = 10) => {
-  const chars = 'abcdefghijklmnopqrstuvwxyz';
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
-
-const genAlphanumericPassword = (length = 24) => {
-  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
 }
 
 async function main() {

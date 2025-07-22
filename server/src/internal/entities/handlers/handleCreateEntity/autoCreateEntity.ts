@@ -20,10 +20,10 @@ export const autoCreateEntity = async ({
   entityData?: CreateEntity;
 }) => {
   // Validate CreatEntity
+  // Failed to auto-create entity, no `feature_id` provided. Please pass in `feature_id` into the `entity_data` field of the request body",
   if (!entityData || !entityData.feature_id) {
     throw new RecaseError({
-      message:
-        "Failed to auto-create entity, no `feature_id` provided. Please pass in `feature_id` into the `entity_data` field of the request body",
+      message: `Entity with id ${entityData?.id || "unknown"} not found. To automatically create this entity, please pass in 'feature_id' into the 'entity_data' field of the request body.`,
       code: ErrCode.InvalidInputs,
     });
   }

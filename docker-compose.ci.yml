@@ -107,6 +107,8 @@ services:
       target: localtunnel
     volumes:
       - ./server:/app/server
+    environment:
+      - LOCALTUNNEL_RESERVED_KEY=${LOCALTUNNEL_RESERVED_KEY}
     depends_on:
       - server
     restart: unless-stopped

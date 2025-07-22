@@ -26,17 +26,21 @@ export const completeCheckoutForm = async (
   overrideQuantity?: number,
   promoCode?: string
 ) => {
-  const session = await client.sessions.create();
+  let browser;
 
-  const browser = await puppeteer.connect({
-    browserWSEndpoint: session!.wsEndpoint,
-    defaultViewport: null,
-  });
-
-  // const browser = await puppeteer.launch({
-  //   headless: true,
-  //   args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  // });
+  if (process.env.NODE_ENV === "development") {
+    const session = await client.sessions.create();
+    browser = await puppeteer.connect({
+      browserWSEndpoint: session!.wsEndpoint,
+      defaultViewport: null,
+    });
+  } else {
+    browser = await puppeteer.launch({
+      headless: false,
+      executablePath: "/Applications/Chromium.app/Contents/MacOS/Chromium",
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
+  }
 
   try {
     const page = await browser.newPage();

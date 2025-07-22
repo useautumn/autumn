@@ -1,9 +1,5 @@
-import {
-  ProductItemFeatureType,
-  ProductItemSchema,
-  ProductItemInterval,
-  Infinite,
-} from "@autumn/shared";
+import { ProductItemSchema } from "./productItemModels.js";
+import { Infinite } from "../../productModels/productEnums.js";
 import { z } from "zod";
 
 export const FeatureItemSchema = ProductItemSchema.pick({
