@@ -19,12 +19,14 @@ import {
   getResetBalance,
 } from "./internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { getResetBalancesUpdate } from "./internal/customers/cusProducts/cusEnts/groupByUtils.js";
+import { getRolloverUpdates } from "./internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils.js";
 import { CusProductService } from "./internal/customers/cusProducts/CusProductService.js";
 import { createStripeCli } from "./external/stripe/utils.js";
 import { UTCDate } from "@date-fns/utc";
 import { type DrizzleCli, initDrizzle } from "./db/initDrizzle.js";
 
 import { CusPriceService } from "./internal/customers/cusProducts/cusPrices/CusPriceService.js";
+import { RolloverService } from "./internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService.js";
 
 dotenv.config();
 
@@ -171,10 +173,20 @@ const resetCustomerEntitlement = async ({
       cusEnt.entitlement.interval as EntInterval
     );
 
+    let rolloverUpdate = getRolloverUpdates({
+      cusEnt,
+      allowance: resetBalance || undefined,
+      nextResetAt,
+    });
+
     let resetBalanceUpdate = getResetBalancesUpdate({
       cusEnt,
       allowance: resetBalance || undefined,
     });
+
+
+    console.log("Rollover update", rolloverUpdate);
+
 
     try {
       nextResetAt = await checkSubAnchor({
@@ -196,6 +208,16 @@ const resetCustomerEntitlement = async ({
         adjustment: 0,
       },
     });
+
+    let rolloverRows: any[] = [];
+    if (rolloverUpdate?.toInsert && rolloverUpdate.toInsert.length > 0) {
+      rolloverRows = await RolloverService.insert({
+        db,
+        rows: rolloverUpdate.toInsert,
+      });
+    }
+
+    console.log("Rollover rows", rolloverRows);
 
     console.log(
       `Reset ${cusEnt.id} | customer: ${chalk.yellow(
