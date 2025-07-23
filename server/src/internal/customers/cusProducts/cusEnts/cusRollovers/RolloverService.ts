@@ -1,6 +1,5 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { RolloverModel } from "@autumn/shared";
-import { rollovers } from "@shared/db/schema.js";
+import { RolloverModel, rollovers } from "@autumn/shared";
 import { eq, inArray } from "drizzle-orm";
 
 export class RolloverService {
