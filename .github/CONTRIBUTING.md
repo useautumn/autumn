@@ -42,7 +42,7 @@ git push origin your-branch-name
 
 #### Requirements
 - Node.js
-- pnpm
+- bun
 
 ### Quickstart
 
@@ -54,12 +54,12 @@ Use this guide if you want to get Autumn up and running on your device in the fa
 
 #### Step 1: Install Dependencies
 ```bash
-pnpm install
+bun install
 ```
 
 #### Step 2: Run Setup
 ```bash
-pnpm run setup
+bun run setup
 ```
 
 The `setup` script generates required environment variables to run Autumn locally. It performs two main functions:
@@ -92,7 +92,7 @@ Make sure you have the `DATABASE_URL` env variable set up in `server/.env` befor
 
 If you're setting up an Autumn DB for the first time, use the following command to generate the required tables
 ```bash
-pnpm run db:push
+bun run db:push
 ```
 
 #### Handling Migrations
@@ -100,13 +100,13 @@ When you need to create version-controlled migrations (e.g., for new releases):
 
 1. **Generate migration files:**
    ```bash
-   pnpm run db:generate
+   bun run db:generate
    ```
    This creates migration files based on schema changes.
 
 2. **Apply migrations:**
    ```bash
-   pnpm run db:migrate
+   bun run db:migrate
    ```
    This applies pending migrations to your database.
 
