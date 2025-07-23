@@ -26,11 +26,14 @@ import { analyticsRouter } from "../analytics/analyticsRouter.js";
 import { handleConnectStripe } from "../orgs/handlers/handleConnectStripe.js";
 import { handleDeleteStripe } from "../orgs/handlers/handleDeleteStripe.js";
 
+import { refreshCacheMiddleware } from "@/middleware/refreshCacheMiddleware.js";
+
 const apiRouter: Router = Router();
 
 apiRouter.use(apiAuthMiddleware);
 apiRouter.use(pricingMiddleware);
 apiRouter.use(analyticsMiddleware);
+apiRouter.use(refreshCacheMiddleware);
 
 apiRouter.use("/customers", cusRouter);
 apiRouter.use("/invoices", invoiceRouter);

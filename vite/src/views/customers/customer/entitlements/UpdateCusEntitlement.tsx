@@ -34,7 +34,7 @@ function UpdateCusEntitlement({
 
   const [updateLoading, setUpdateLoading] = useState(false);
 
-  let cusEnt = selectedCusEntitlement;
+  const cusEnt = selectedCusEntitlement;
 
   const [updateFields, setUpdateFields] = useState<any>({
     balance:
@@ -78,11 +78,16 @@ function UpdateCusEntitlement({
 
     setUpdateLoading(true);
     try {
-      await CusService.updateCusEntitlement(axiosInstance, cusEnt.id, {
-        balance: balanceInt,
-        next_reset_at: updateFields.next_reset_at,
-        entity_id: entityId,
-      });
+      await CusService.updateCusEntitlement(
+        axiosInstance,
+        customer.id || customer.internal_id,
+        cusEnt.id,
+        {
+          balance: balanceInt,
+          next_reset_at: updateFields.next_reset_at,
+          entity_id: entityId,
+        }
+      );
       toast.success("Entitlement updated successfully");
       await cusMutate();
       setSelectedCusEntitlement(null);

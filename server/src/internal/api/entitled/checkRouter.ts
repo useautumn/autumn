@@ -25,44 +25,6 @@ import { getV2CheckResponse } from "./checkUtils/getV2CheckResponse.js";
 
 export const checkRouter: Router = Router();
 
-const getRequiredAndActualBalance = ({
-  cusEnts,
-  feature,
-  originalFeatureId,
-  required,
-  entityId,
-}: {
-  cusEnts: FullCustomerEntitlement[];
-  feature: Feature;
-  originalFeatureId: string;
-  required: number;
-  entityId: string;
-}) => {
-  let requiredBalance = required;
-  if (
-    feature.type === FeatureType.CreditSystem &&
-    feature.id !== originalFeatureId
-  ) {
-    requiredBalance = featureToCreditSystem({
-      featureId: originalFeatureId,
-      creditSystem: feature,
-      amount: required,
-    });
-  }
-
-  const actualBalance = getFeatureBalance({
-    cusEnts,
-    internalFeatureId: feature.internal_id!,
-    entityId,
-  });
-
-  return {
-    required: requiredBalance,
-    actual: actualBalance,
-    entityId,
-  };
-};
-
 checkRouter.post("", async (req: any, res: any) => {
   try {
     let {
@@ -181,7 +143,7 @@ checkRouter.post("", async (req: any, res: any) => {
 
     const { allowed, balance } = v2Response;
     const featureToUse = allFeatures.find(
-      (f: Feature) => f.id === v2Response.feature_id,
+      (f: Feature) => f.id === v2Response.feature_id
     );
 
     if (allowed && req.isPublic !== true) {
