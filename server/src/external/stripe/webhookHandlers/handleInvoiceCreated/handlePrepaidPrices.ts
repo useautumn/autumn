@@ -1,6 +1,8 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { getResetBalance } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
+import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService.js";
+import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils.js";
 import { getRelatedCusEnt } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
@@ -65,6 +67,22 @@ export const handlePrepaidPrices = async ({
 
   const ent = cusEnt.entitlement;
 
+  let rolloverUpdate = getRolloverUpdates({
+    cusEnt,
+    nextResetAt: usageSub.current_period_end * 1000,
+  });
+  console.log("🔍 rolloverUpdate", rolloverUpdate);
+
+  console.log(
+    "Rollover update received in handlePrepaidPrices:",
+    rolloverUpdate.toInsert.map((rollover) => ({
+      id: rollover.id,
+      balance: rollover.balance,
+      entities: rollover.entities.map((entity) => `${entity.id}: ${entity.balance}`).join(", "),
+      expires_at: rollover.expires_at ? new Date(rollover.expires_at).toISOString() : null,
+    }))
+  );
+
   if (notNullish(options?.upcoming_quantity)) {
     const newOptions = cusProduct.options.map((o) => {
       if (o.feature_id == ent.feature_id) {
@@ -102,6 +120,22 @@ export const handlePrepaidPrices = async ({
 
   logger.info(
     `🔥 Resetting balance for ${ent.feature.id}, customer: ${customer.id} (name: ${customer.name})`,
+  );
+
+  let rolloverRows: any[] = [];
+  if (rolloverUpdate?.toInsert && rolloverUpdate.toInsert.length > 0) {
+    logger.info(
+      `🔥 Rolling over balance for ${ent.feature.id}, customer: ${customer.id} (name: ${customer.name})`,
+    );
+    rolloverRows = await RolloverService.insert({
+      db,
+      rows: rolloverUpdate.toInsert,
+    });
+  }
+
+  console.log(
+    "Rollover rows",
+    Object.values(rolloverRows).map((x) => `${x.id}: ${x.balance} | entities: ${x.entities.map((y: any) => `${y.id}: ${y.balance}`).join(", ")}`)
   );
 
   await CusEntService.update({
