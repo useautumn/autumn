@@ -16,6 +16,8 @@ import { submitUsageToStripe } from "../../stripeMeterUtils.js";
 import { getInvoiceItemForUsage } from "../../stripePriceUtils.js";
 import { getCusPriceUsage } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
 import { findStripeItemForPrice } from "../../stripeSubUtils/stripeSubItemUtils.js";
+import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils.js";
+import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService.js";
 
 export const handleUsagePrices = async ({
   db,
@@ -124,6 +126,22 @@ export const handleUsagePrices = async ({
   }
 
   let ent = relatedCusEnt.entitlement;
+
+  let rolloverUpdate = getRolloverUpdates({
+    cusEnt: relatedCusEnt,
+    nextResetAt: usageSub.current_period_end * 1000,
+  });
+
+  console.log(
+    "Rollover update received in handleUsagePrices:",
+    rolloverUpdate.toInsert.map((rollover) => ({
+      id: rollover.id,
+      balance: rollover.balance,
+      entities: rollover.entities.map((entity) => `${entity.id}: ${entity.balance}`).join(", "),
+      expires_at: rollover.expires_at ? new Date(rollover.expires_at).toISOString() : null,
+    }))
+  );
+
   let resetBalancesUpdate = getResetBalancesUpdate({
     cusEnt: relatedCusEnt,
     allowance: ent.interval == EntInterval.Lifetime ? 0 : ent.allowance!,
@@ -140,6 +158,22 @@ export const handleUsagePrices = async ({
         : null,
     },
   });
+
+  let rolloverRows: any[] = [];
+  if (rolloverUpdate?.toInsert && rolloverUpdate.toInsert.length > 0) {
+    logger.info(
+      `🔥 Rolling over balance for ${ent.feature.id}, customer: ${customer.id} (name: ${customer.name})`,
+    );
+    rolloverRows = await RolloverService.insert({
+      db,
+      rows: rolloverUpdate.toInsert,
+    });
+  }
+
+  console.log(
+    "Rollover rows",
+    Object.values(rolloverRows).map((x) => `${x.id}: ${x.balance} | entities: ${x.entities.map((y: any) => `${y.id}: ${y.balance}`).join(", ")}`)
+  );
 
   logger.info("✅ Successfully reset balance");
 };
