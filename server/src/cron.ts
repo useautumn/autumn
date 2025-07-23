@@ -175,8 +175,7 @@ const resetCustomerEntitlement = async ({
 
     let rolloverUpdate = getRolloverUpdates({
       cusEnt,
-      allowance: resetBalance || undefined,
-      nextResetAt,
+      nextResetAt: cusEnt.next_reset_at! as number,
     });
 
     let resetBalanceUpdate = getResetBalancesUpdate({
@@ -185,7 +184,15 @@ const resetCustomerEntitlement = async ({
     });
 
 
-    console.log("Rollover update", rolloverUpdate);
+    console.log(
+      "Rollover update received in cron.ts/resetCustomerEntitlement:",
+      rolloverUpdate.toInsert.map((rollover) => ({
+        id: rollover.id,
+        balance: rollover.balance,
+        entities: rollover.entities.map((entity) => `${entity.id}: ${entity.balance}`).join(", "),
+        expires_at: rollover.expires_at ? new Date(rollover.expires_at).toISOString() : null,
+      }))
+    );
 
 
     try {
@@ -217,8 +224,11 @@ const resetCustomerEntitlement = async ({
       });
     }
 
-    console.log("Rollover rows", rolloverRows);
-
+    console.log(
+      "Rollover rows",
+      Object.values(rolloverRows).map((x) => `${x.id}: ${x.balance} | entities: ${x.entities.map((y: any) => `${y.id}: ${y.balance}`).join(", ")}`)
+    );
+      
     console.log(
       `Reset ${cusEnt.id} | customer: ${chalk.yellow(
         cusEnt.customer_id
