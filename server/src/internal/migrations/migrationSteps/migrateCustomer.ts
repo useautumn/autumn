@@ -15,6 +15,7 @@ import { ExtendedRequest } from "@/utils/models/Request.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { migrationToAttachParams } from "../migrationUtils/migrationToAttachParams.js";
 import { runMigrationAttach } from "../migrationUtils/runMigrationAttach.js";
+import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 
 export const migrateCustomer = async ({
   db,
@@ -62,7 +63,7 @@ export const migrateCustomer = async ({
 
     const cusProducts = fullCus.customer_products;
     const filteredCusProducts = cusProducts.filter(
-      (cp: FullCusProduct) => cp.product.internal_id == fromProduct.internal_id,
+      (cp: FullCusProduct) => cp.product.internal_id == fromProduct.internal_id
     );
 
     for (const cusProduct of filteredCusProducts) {
@@ -78,12 +79,18 @@ export const migrateCustomer = async ({
         req,
         attachParams,
       });
+
+      await deleteCusCache({
+        customerId,
+        orgId,
+        env,
+      });
     }
 
     return true;
   } catch (error: any) {
     logger.error(
-      `Migration failed for customer ${customerId}, job id: ${migrationJob?.id}`,
+      `Migration failed for customer ${customerId}, job id: ${migrationJob?.id}`
     );
     logger.error(error);
 

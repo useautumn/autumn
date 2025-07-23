@@ -15,7 +15,7 @@ import { timeout } from "@/utils/genUtils.js";
 
 const testCase = "basic5";
 describe(`${chalk.yellowBright(
-  "basic5: Testing cancel through Stripe at period end and now",
+  "basic5: Testing cancel through Stripe at period end and now"
 )}`, () => {
   const customerId = testCase;
   let stripeCli: Stripe;
@@ -45,7 +45,7 @@ describe(`${chalk.yellowBright(
     const cusRes: any = await AutumnCli.getCustomer(customerId);
 
     const proProduct = cusRes.products.find(
-      (p: any) => p.id === products.pro.id,
+      (p: any) => p.id === products.pro.id
     );
 
     for (const subId of proProduct.subscription_ids) {
@@ -64,13 +64,13 @@ describe(`${chalk.yellowBright(
     });
 
     const proProduct = cusRes.products.find(
-      (p: any) => p.id === products.pro.id,
+      (p: any) => p.id === products.pro.id
     );
     expect(proProduct.canceled_at).to.not.equal(null);
     expect(proProduct.status).to.equal(CusProductStatus.Active);
 
     const freeProduct = cusRes.products.find(
-      (p: any) => p.id === products.free.id,
+      (p: any) => p.id === products.free.id
     );
     expect(freeProduct).to.exist;
     expect(freeProduct.status).to.equal(CusProductStatus.Scheduled);
@@ -79,7 +79,7 @@ describe(`${chalk.yellowBright(
   it("should cancel pro product (now)", async function () {
     const cusRes: any = await AutumnCli.getCustomer(customerId);
     const proProduct = cusRes.products.find(
-      (p: any) => p.id === products.pro.id,
+      (p: any) => p.id === products.pro.id
     );
 
     for (const subId of proProduct.subscription_ids) {

@@ -15,7 +15,7 @@ import { AutumnInt } from "@/external/autumn/autumnCli.js";
 
 // UNCOMMENT FROM HERE
 describe(`${chalk.yellowBright(
-  "referrals4: Testing free product referrals with trial",
+  "referrals4: Testing free product referrals with trial"
 )}`, () => {
   let mainCustomerId = "main-referral-4";
   // let redeemers = ["referral4-r1", "referral4-r2"];
@@ -95,12 +95,13 @@ describe(`${chalk.yellowBright(
   it("should be triggered after trial ends", async function () {
     let advanceTo = addHours(
       addDays(new Date(), 7),
-      hoursToFinalizeInvoice,
+      hoursToFinalizeInvoice
     ).getTime();
     await advanceTestClock({
       stripeCli,
       testClockId,
       advanceTo,
+      waitForSeconds: 30,
     });
 
     let redemption = await autumn.redemptions.get(redemptions[0].id);

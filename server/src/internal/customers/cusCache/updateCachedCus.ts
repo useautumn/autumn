@@ -24,20 +24,56 @@ export const refreshCusCache = async ({
     env,
   });
 
-  const list = await upstash.keys(`${baseKey}:*`);
+  const list = await upstash.keys(`${baseKey}*`);
 
   for (const key of list) {
     const keyName = key;
     let params = keyName.split(":");
-    let expand = params ? params[params.length - 1].split(",") : [];
+    let expandParam = params.find((p) => p.startsWith("expand_"));
+    let expand = expandParam
+      ? expandParam.replace("expand_", "").split(",")
+      : [];
+
+    let entityIdParam = params.find((p) => p.startsWith("entity_"));
+    let entityId = entityIdParam
+      ? entityIdParam.replace("entity_", "")
+      : undefined;
 
     await getCusWithCache({
       idOrInternalId: customerId,
       orgId,
       env,
       expand: expand as CusExpand[],
+      entityId,
       skipGet: true,
+      logger: console,
     });
     console.log(`updated cache key: ${keyName}`);
+  }
+};
+
+export const deleteCusCache = async ({
+  customerId,
+  orgId,
+  env,
+}: {
+  customerId: string;
+  orgId: string;
+  env: AppEnv;
+}) => {
+  const upstash = await initUpstash();
+  if (!upstash) return;
+
+  const baseKey = buildBaseCusCacheKey({
+    idOrInternalId: customerId,
+    orgId,
+    env,
+  });
+
+  const list = await upstash.keys(`${baseKey}*`);
+
+  for (const key of list) {
+    console.log("Deleting cache for key:", key);
+    await upstash.del(key);
   }
 };

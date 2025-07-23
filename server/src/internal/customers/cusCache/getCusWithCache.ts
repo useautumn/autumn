@@ -1,9 +1,10 @@
 import { AppEnv, CusExpand, EntityExpand, FullCustomer } from "@autumn/shared";
-import { ACTIVE_STATUSES } from "../cusProducts/CusProductService.js";
+import { RELEVANT_STATUSES } from "../cusProducts/CusProductService.js";
 import { db } from "@/db/initDrizzle.js";
 import { CusService } from "../CusService.js";
 import { buildBaseCusCacheKey } from "./cusCacheUtils.js";
 import { initUpstash } from "./upstashUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 export const getCusWithCache = async ({
   idOrInternalId,
@@ -14,6 +15,7 @@ export const getCusWithCache = async ({
   allowNotFound = true,
   skipCache = false,
   skipGet = false,
+  logger,
 }: {
   idOrInternalId: string;
   orgId: string;
@@ -25,33 +27,38 @@ export const getCusWithCache = async ({
   allowNotFound?: boolean;
   skipCache?: boolean;
   skipGet?: boolean;
+  logger: any;
 }): Promise<FullCustomer> => {
-  const statuses = ACTIVE_STATUSES;
+  const statuses = RELEVANT_STATUSES;
   const withEntities = true;
   const withSubs = true;
 
   const upstash = await initUpstash();
   if (!upstash) skipCache = true;
 
-  const baseKey = buildBaseCusCacheKey({
+  let cacheKey = buildBaseCusCacheKey({
     idOrInternalId,
     orgId,
     env,
     entityId,
   });
 
-  const cacheKey = `${baseKey}:${expand.join(",")}`;
+  if (expand.length > 0) {
+    cacheKey = `${cacheKey}:expand_${expand.join(",")}`;
+  }
+
   if (!skipCache && !skipGet) {
     try {
       const cached = await upstash!.get(cacheKey);
       if (cached) {
-        console.log(`Cache hit: ${cacheKey}`);
+        logger.info(`Cache hit: ${cacheKey}`);
+        logger.info("Cached:", cached);
         return cached as FullCustomer;
       } else {
-        console.log(`Cache miss: ${cacheKey}`);
+        // logger.info(`Cache miss: ${cacheKey}`);
       }
     } catch (error) {
-      console.error(error);
+      logger.error(`Failed to get cache: ${cacheKey}`, { error });
     }
   }
 
@@ -70,12 +77,12 @@ export const getCusWithCache = async ({
 
   if (entityId && !customer.entity) skipCache = true;
 
-  if (!skipCache) {
+  if (!skipCache && notNullish(customer)) {
     try {
       await upstash!.set(cacheKey, customer);
-      await upstash!.expire(cacheKey, 1000); // Expire after 60 seconds
+      await upstash!.expire(cacheKey, 300); // Expire after 5 minutes...
     } catch (error) {
-      console.error(error);
+      logger.error(`Failed to set cache: ${cacheKey}`, { error });
     }
   }
 

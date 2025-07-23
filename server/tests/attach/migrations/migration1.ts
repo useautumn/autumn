@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { AppEnv, Organization, ProductV2 } from "@autumn/shared";
+import { AppEnv, LimitedItem, Organization, ProductV2 } from "@autumn/shared";
 import chalk from "chalk";
 import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
@@ -21,12 +21,12 @@ import { runMigrationTest } from "./runMigrationTest.js";
 let messagesItem = constructFeatureItem({
   featureId: TestFeature.Messages,
   includedUsage: 500,
-});
+}) as LimitedItem;
 
 let wordsItem = constructFeatureItem({
   featureId: TestFeature.Words,
   includedUsage: 100,
-});
+}) as LimitedItem;
 
 export let free = constructProduct({
   items: [messagesItem, wordsItem],
@@ -143,6 +143,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for free product`
       stripeCli,
       testClockId,
       advanceTo: addWeeks(Date.now(), 1).getTime(),
+      waitForSeconds: 30,
     });
 
     let customer = await autumn.customers.get(customerId);

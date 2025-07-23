@@ -42,7 +42,9 @@ export const handleGetCustomer = async (req: any, res: any) =>
         env,
         expand: expandArray,
         allowNotFound: true,
+        logger,
       });
+
       // const customer = await CusService.getFull({
       //   db,
       //   idOrInternalId: customerId,
