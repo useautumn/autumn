@@ -63,7 +63,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
     const { customer, org } = await getCusFeaturesAndOrg(req, cusId);
 
     const featuresToUpdate = features.filter((f: any) =>
-      balances.map((b: any) => b.feature_id).includes(f.id),
+      balances.map((b: any) => b.feature_id).includes(f.id)
     );
 
     if (featuresToUpdate.length === 0) {
@@ -82,13 +82,12 @@ export const handleUpdateBalances = async (req: any, res: any) => {
 
     logger.info("--------------------------------");
     logger.info(
-      `REQUEST: UPDATE BALANCES FOR CUSTOMER ${customer.id}, ORG: ${org.slug}`,
+      `REQUEST: UPDATE BALANCES FOR CUSTOMER ${customer.id}, ORG: ${org.slug}`
     );
     logger.info(
       `Features to update: ${balances.map(
-        (b: any) =>
-          `${b.feature_id} - ${b.unlimited ? "unlimited" : b.balance}`,
-      )}`,
+        (b: any) => `${b.feature_id} - ${b.unlimited ? "unlimited" : b.balance}`
+      )}`
     );
 
     // Get deductions for each feature
@@ -111,7 +110,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
       }
 
       const feature = featuresToUpdate.find(
-        (f: any) => f.id === balance.feature_id,
+        (f: any) => f.id === balance.feature_id
       );
 
       if (balance.unlimited === true) {
@@ -191,18 +190,17 @@ export const handleUpdateBalances = async (req: any, res: any) => {
             ? cusEnts.find(
                 (cusEnt) =>
                   cusEnt.internal_feature_id === feature!.internal_id! &&
-                  cusEnt.entitlement.interval === interval,
+                  cusEnt.entitlement.interval === interval
               )
             : cusEnts.find(
-                (cusEnt) =>
-                  cusEnt.internal_feature_id === feature!.internal_id!,
+                (cusEnt) => cusEnt.internal_feature_id === feature!.internal_id!
               );
 
           if (!cusEnt) {
             logger.warn(
               `No active cus ent to set unlimited balance for feature: ${
                 feature!.id
-              }`,
+              }`
             );
             return;
           }
@@ -265,6 +263,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
       batchDeduct.push(performDeduction());
     }
     await Promise.all(batchDeduct);
+
     logger.info("   ✅ Successfully updated balances");
 
     res.status(200).json({ success: true });

@@ -16,6 +16,8 @@ import {
 
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { autoCreateEntity } from "@/internal/entities/handlers/handleCreateEntity/autoCreateEntity.js";
+import { refreshCusCache } from "../cusCache/updateCachedCus.js";
+import { getCusWithCache } from "../cusCache/getCusWithCache.js";
 
 export const getOrCreateCustomer = async ({
   req,
@@ -33,6 +35,7 @@ export const getOrCreateCustomer = async ({
   // Entity stuff
   entityId,
   entityData,
+  withCache = false,
 }: {
   req: ExtendedRequest;
   customerId: string;
@@ -43,6 +46,7 @@ export const getOrCreateCustomer = async ({
   expand?: CusExpand[];
   entityId?: string;
   entityData?: EntityData;
+  withCache?: boolean;
 }): Promise<FullCustomer> => {
   let customer;
 
@@ -53,18 +57,29 @@ export const getOrCreateCustomer = async ({
   }
 
   if (!skipGet) {
-    customer = await CusService.getFull({
-      db,
-      idOrInternalId: customerId,
-      orgId: org.id,
-      env,
-      inStatuses,
-      withEntities,
-      entityId,
-      expand,
-      allowNotFound: true,
-      withSubs: true,
-    });
+    if (withCache) {
+      customer = await getCusWithCache({
+        idOrInternalId: customerId,
+        orgId: org.id,
+        env,
+        entityId,
+        expand: expand as CusExpand[],
+        logger,
+      });
+    } else {
+      customer = await CusService.getFull({
+        db,
+        idOrInternalId: customerId,
+        orgId: org.id,
+        env,
+        inStatuses,
+        withEntities,
+        entityId,
+        expand,
+        allowNotFound: true,
+        withSubs: true,
+      });
+    }
   }
 
   if (!customer) {
@@ -134,6 +149,12 @@ export const getOrCreateCustomer = async ({
 
     customer.entities = [...(customer.entities || []), newEntity];
     customer.entity = newEntity;
+
+    await refreshCusCache({
+      customerId: customer.id!,
+      orgId: customer.org_id,
+      env: customer.env,
+    });
   }
 
   return customer as FullCustomer;
