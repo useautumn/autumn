@@ -142,15 +142,18 @@ export const runAttachFunction = async ({
     logger.info(`Entity: ${customer.entity.name} (${customer.entity.id})`);
   }
   logger.info(
-    `Branch: ${chalk.yellow(branch)}, Function: ${chalk.yellow(attachFunction)}`,
-    {
-      data: {
-        curMainProduct: curMainProduct?.product.id,
-        curSameProduct: curSameProduct?.product.id,
-        curScheduledProduct: curScheduledProduct?.product.id,
-      },
-    }
+    `Branch: ${chalk.yellow(branch)}, Function: ${chalk.yellow(attachFunction)}`
   );
+  
+  if (curMainProduct) {
+    logger.info(`→ Current Main Product: ${curMainProduct.product.id}`);
+  }
+  if (curSameProduct) {
+    logger.info(`→ Current Same Product: ${curSameProduct.product.id}`);
+  }
+  if (curScheduledProduct) {
+    logger.info(`→ Current Scheduled Product: ${curScheduledProduct.product.id}`);
+  }
 
   // config.proration = ProrationBehavior.None;
   // attachParams.billingAnchor = 1781702400000;
