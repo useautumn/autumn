@@ -7,7 +7,7 @@ export const initUpstash = async () => {
   }
 
   return new Redis({
-    url: "https://divine-sheepdog-46319.upstash.io",
+    url: process.env.UPSTASH_URL,
     token: process.env.UPSTASH_TOKEN,
   });
 };
