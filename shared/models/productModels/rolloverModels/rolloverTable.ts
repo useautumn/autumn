@@ -25,6 +25,8 @@ export const rollovers = pgTable(
 			columns: [table.cus_ent_id],
 			foreignColumns: [customerEntitlements.id],
 			name: "rollover_cus_ent_id_fkey",
-		}),
+		})
+			.onUpdate("cascade")
+			.onDelete("cascade"),
 	]
 ).enableRLS();
