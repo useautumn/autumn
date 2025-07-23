@@ -11,6 +11,7 @@ import { parseCusExpand } from "../cusUtils/cusUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { ExtendedResponse } from "@/utils/models/Request.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
+import { refreshCusCache } from "../cusCache/updateCachedCus.js";
 
 export const handleUpdateCustomer = async (req: any, res: any) =>
   routeHandler({
@@ -97,7 +98,7 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
         const stripeCli = createStripeCli({ org, env: req.env });
         await stripeCli.customers.update(
           originalCustomer.processor.id,
-          stripeUpdate as any,
+          stripeUpdate as any
         );
       }
 
@@ -132,6 +133,12 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
         expand: parseCusExpand(req.query.expand as string),
         features,
         reqApiVersion: req.apiVersion,
+      });
+
+      await refreshCusCache({
+        customerId,
+        orgId,
+        env,
       });
 
       res.status(200).json(customerDetails);

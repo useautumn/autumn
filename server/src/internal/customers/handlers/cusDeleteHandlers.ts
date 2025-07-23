@@ -7,6 +7,7 @@ import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { AppEnv, ErrCode, Organization } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
+import { refreshCusCache } from "../cusCache/updateCachedCus.js";
 
 export const deleteCusById = async ({
   db,
@@ -55,7 +56,7 @@ export const deleteCusById = async ({
         `Couldn't delete ${chalk.yellow("stripe customer")} ${
           customer.processor.id
         }`,
-        error?.message || error,
+        error?.message || error
       );
     }
   }
@@ -88,6 +89,12 @@ export const handleDeleteCustomer = async (req: any, res: any) =>
         env,
         logger,
         deleteInStripe: req.query.delete_in_stripe === "true",
+      });
+
+      await refreshCusCache({
+        customerId: req.params.customer_id,
+        orgId: org.id,
+        env,
       });
 
       res.status(200).json(data);

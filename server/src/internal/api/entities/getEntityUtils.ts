@@ -1,4 +1,5 @@
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { getCusWithCache } from "@/internal/customers/cusCache/getCusWithCache.js";
 import {
   ACTIVE_STATUSES,
   RELEVANT_STATUSES,
@@ -46,25 +47,32 @@ export const getEntityResponse = async ({
   apiVersion: number;
   features: Feature[];
 }) => {
-  let customer = await CusService.getFull({
-    db,
+  // let customer = await CusService.getFull({
+  //   db,
+  //   idOrInternalId: customerId,
+  //   orgId: org.id,
+  //   env,
+  //   withEntities: true,
+  //   withSubs: true,
+  //   expand,
+  //   entityId,
+  // });
+  let customer = await getCusWithCache({
     idOrInternalId: customerId,
     orgId: org.id,
     env,
-    withEntities: true,
-    withSubs: true,
     expand,
     entityId,
   });
 
   let entities = customer.entities.filter((e: Entity) =>
-    entityIds.includes(e.id),
+    entityIds.includes(e.id)
   );
 
   let entityCusProducts = customer.customer_products.filter(
     (p: FullCusProduct) =>
       entities.some((e: Entity) => e.internal_id == p.internal_entity_id) ||
-      nullish(p.internal_entity_id),
+      nullish(p.internal_entity_id)
   );
 
   let subs = customer.subscriptions || [];
@@ -72,7 +80,7 @@ export const getEntityResponse = async ({
   const entityResponses: EntityResponse[] = [];
   for (const entityId of entityIds) {
     let entity = customer.entities.find(
-      (e: Entity) => e.id == entityId || e.internal_id == entityId,
+      (e: Entity) => e.id == entityId || e.internal_id == entityId
     );
     if (!entity) {
       throw new RecaseError({
@@ -84,8 +92,8 @@ export const getEntityResponse = async ({
 
     let entitySubs = subs.filter((s: Subscription) =>
       entityCusProducts.some((p: FullCusProduct) =>
-        p.subscription_ids?.includes(s.stripe_id || ""),
-      ),
+        p.subscription_ids?.includes(s.stripe_id || "")
+      )
     );
 
     let { main, addOns } = await processFullCusProducts({

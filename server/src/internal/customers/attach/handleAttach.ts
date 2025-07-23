@@ -9,6 +9,7 @@ import { handleAttachErrors } from "./attachUtils/handleAttachErrors.js";
 import { checkStripeConnections, createStripePrices } from "./attachRouter.js";
 import { insertCustomItems } from "./attachUtils/insertCustomItems.js";
 import { runAttachFunction } from "./attachUtils/getAttachFunction.js";
+import { refreshCusCache } from "../cusCache/updateCachedCus.js";
 
 export const handleAttach = async (req: any, res: any) =>
   routeHandler({
@@ -19,8 +20,6 @@ export const handleAttach = async (req: any, res: any) =>
       await handleAttachRaceCondition({ req, res });
 
       const attachBody = AttachBodySchema.parse(req.body);
-
-      const logger = req.logtail;
 
       const { attachParams, customPrices, customEnts } = await getAttachParams({
         req,
