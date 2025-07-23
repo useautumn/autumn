@@ -14,15 +14,11 @@ import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts, runAttachTest } from "../utils.js";
-import {
-  constructFeatureItem,
-  constructPrepaidItem,
-} from "@/utils/scriptUtils/constructItem.js";
+import { addPrefixToProducts } from "../utils.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { addDays, addWeeks } from "date-fns";
+import { addDays } from "date-fns";
 import { expect } from "chai";
 import { eq } from "drizzle-orm";
 
