@@ -70,7 +70,7 @@ export const handleCheckoutSessionCompleted = async ({
 
   console.log(
     "Handling checkout.completed: autumn metadata:",
-    checkoutSession.metadata?.autumn_metadata_id,
+    checkoutSession.metadata?.autumn_metadata_id
   );
 
   const checkoutSub =
@@ -139,7 +139,7 @@ export const handleCheckoutSessionCompleted = async ({
         attachParams,
         invoiceId,
         logger,
-      }),
+      })
     );
   }
 

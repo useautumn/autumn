@@ -19,7 +19,6 @@ import {
 } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { notNullish } from "@/utils/genUtils.js";
-import { refreshCusCache } from "../cusCache/updateCachedCus.js";
 
 const getCusFeaturesAndOrg = async (req: any, customerId: string) => {
   // 1. Get customer
@@ -264,12 +263,6 @@ export const handleUpdateBalances = async (req: any, res: any) => {
       batchDeduct.push(performDeduction());
     }
     await Promise.all(batchDeduct);
-
-    await refreshCusCache({
-      customerId: cusId,
-      orgId: org.id,
-      env,
-    });
 
     logger.info("   ✅ Successfully updated balances");
 

@@ -10,7 +10,7 @@ export const buildBaseCusCacheKey = ({
   env: string;
 }) => {
   if (entityId) {
-    return `customer:${idOrInternalId}_${orgId}_${env}:${entityId}`;
+    return `customer:${idOrInternalId}_${orgId}_${env}:entity_${entityId}`;
   } else {
     return `customer:${idOrInternalId}_${orgId}_${env}`;
   }

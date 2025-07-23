@@ -24,6 +24,7 @@ import { notNullish, nullish } from "@/utils/genUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { processInvoice } from "@/internal/invoices/InvoiceService.js";
+import { refreshCusCache } from "../cusCache/updateCachedCus.js";
 
 export const updateCustomerDetails = async ({
   db,
@@ -54,6 +55,12 @@ export const updateCustomerDetails = async ({
       update: updates,
     });
     customer = { ...customer, ...updates };
+
+    await refreshCusCache({
+      customerId: customer.id!,
+      orgId: customer.org_id,
+      env: customer.env,
+    });
   }
 
   return customer;

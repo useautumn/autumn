@@ -35,6 +35,8 @@ export const getEntityResponse = async ({
   withAutumnId = false,
   apiVersion,
   features,
+  logger,
+  skipCache = false,
 }: {
   db: DrizzleCli;
   entityIds: string[];
@@ -46,6 +48,8 @@ export const getEntityResponse = async ({
   withAutumnId?: boolean;
   apiVersion: number;
   features: Feature[];
+  logger: any;
+  skipCache?: boolean;
 }) => {
   // let customer = await CusService.getFull({
   //   db,
@@ -63,6 +67,8 @@ export const getEntityResponse = async ({
     env,
     expand,
     entityId,
+    logger,
+    skipCache,
   });
 
   let entities = customer.entities.filter((e: Entity) =>

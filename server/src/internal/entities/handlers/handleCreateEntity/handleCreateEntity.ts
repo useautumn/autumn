@@ -94,6 +94,8 @@ export const createEntities = async ({
     withAutumnId,
     apiVersion: apiVersion!,
     features,
+    logger,
+    skipCache: true,
   });
 
   return entities;
