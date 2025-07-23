@@ -86,8 +86,8 @@ export * from "./models/cusModels/entityModels/entityTable.js";
 export * from "./models/cusModels/entityModels/entityExpand.js";
 export * from "./models/cusModels/entityModels/entityResModels.js";
 
+export * from "./models/productModels/rolloverModels/rolloverTable.js";
 export * from "./models/productModels/rolloverModels/rolloverModels.js";
-
 
 // 4. Chat Result Models
 export * from "./models/chatResultModels/chatResultTable.js";
