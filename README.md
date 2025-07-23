@@ -27,11 +27,11 @@ All this without having to handle webhooks, upgrades/downgrades, cancellations o
 1. Make sure you have `node.js` and `pnpm` installed
 2. Install the project dependencies
 ```bash
-pnpm install
+bun install
 ```
 3. Run our set up script:
 ```bash
-pnpm run setup
+bun run setup
 ```
 4. Run Autumn:
 
