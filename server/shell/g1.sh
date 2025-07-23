@@ -10,4 +10,6 @@ MOCHA_PARALLEL=true $MOCHA_SETUP \
 'tests/attach/downgrade/*.ts' \
 'tests/attach/free/*.ts'
 
+$MOCHA_CMD 'tests/attach/entities/*.ts'
+
 # 'tests/attach/basic/basic2.ts' \

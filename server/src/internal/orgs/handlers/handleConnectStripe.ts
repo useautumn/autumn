@@ -1,0 +1,112 @@
+import { routeHandler } from "@/utils/routerUtils.js";
+import express, { Router } from "express";
+import Stripe from "stripe";
+
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
+import { encryptData } from "@/utils/encryptUtils.js";
+
+import { ErrCode } from "@/errors/errCodes.js";
+
+import {
+  checkKeyValid,
+  createWebhookEndpoint,
+} from "@/external/stripe/stripeOnboardingUtils.js";
+
+import { OrgService } from "../OrgService.js";
+import { AppEnv } from "@autumn/shared";
+import { nullish } from "@/utils/genUtils.js";
+import { clearOrgCache } from "../orgUtils/clearOrgCache.js";
+
+export const handleConnectStripe = async (req: any, res: any) =>
+  routeHandler({
+    req,
+    res,
+    action: "connect stripe",
+    handler: async (req: any, res: any) => {
+      let { testApiKey, liveApiKey, successUrl, defaultCurrency } = req.body;
+      let { db, orgId, logtail: logger } = req;
+      if (!testApiKey || !liveApiKey || !successUrl) {
+        throw new RecaseError({
+          message: "Missing required fields",
+          code: ErrCode.StripeKeyInvalid,
+          statusCode: 400,
+        });
+      }
+
+      // 1. Check if API keys are valid
+      try {
+        await clearOrgCache({
+          db,
+          orgId,
+          logger,
+        });
+
+        await checkKeyValid(testApiKey);
+        await checkKeyValid(liveApiKey);
+
+        // Get default currency from Stripe
+        let stripe = new Stripe(testApiKey);
+        let account = await stripe.accounts.retrieve();
+        if (nullish(defaultCurrency) && nullish(account.default_currency)) {
+          throw new RecaseError({
+            message: "Default currency not set",
+            code: ErrCode.StripeKeyInvalid,
+            statusCode: 500,
+          });
+        } else if (nullish(defaultCurrency)) {
+          defaultCurrency = account.default_currency;
+        }
+      } catch (error: any) {
+        console.error("Error checking stripe keys", error);
+        throw new RecaseError({
+          message: error.message || "Invalid Stripe API keys",
+          code: ErrCode.StripeKeyInvalid,
+          statusCode: 500,
+          data: error,
+        });
+      }
+      // 2. Create webhook endpoint
+      let testWebhook: Stripe.WebhookEndpoint;
+      let liveWebhook: Stripe.WebhookEndpoint;
+      try {
+        testWebhook = await createWebhookEndpoint(
+          testApiKey,
+          AppEnv.Sandbox,
+          req.orgId
+        );
+        liveWebhook = await createWebhookEndpoint(
+          liveApiKey,
+          AppEnv.Live,
+          req.orgId
+        );
+      } catch (error) {
+        throw new RecaseError({
+          message: "Error creating stripe webhook",
+          code: ErrCode.StripeKeyInvalid,
+          statusCode: 500,
+          data: error,
+        });
+      }
+
+      // 1. Update org in Supabase
+      await OrgService.update({
+        db,
+        orgId: req.orgId,
+        updates: {
+          stripe_connected: true,
+          default_currency: defaultCurrency,
+          stripe_config: {
+            test_api_key: encryptData(testApiKey),
+            live_api_key: encryptData(liveApiKey),
+            test_webhook_secret: encryptData(testWebhook.secret as string),
+            live_webhook_secret: encryptData(liveWebhook.secret as string),
+            success_url: successUrl,
+          },
+        },
+      });
+
+      res.status(200).json({
+        message: "Stripe connected",
+      });
+    },
+  });

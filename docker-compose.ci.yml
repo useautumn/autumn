@@ -18,7 +18,7 @@ services:
 
   shared:
     build:
-      dockerfile: ./dev.dockerfile
+      dockerfile: docker/dev.dockerfile
       context: .
       target: shared
     volumes:
@@ -33,7 +33,7 @@ services:
   # Vite frontend
   vite:
     build:
-      dockerfile: ./dev.dockerfile
+      dockerfile: docker/dev.dockerfile
       context: .
       target: vite
     ports:
@@ -52,7 +52,7 @@ services:
   # Main Express server
   server:
     build:
-      dockerfile: ./dev.dockerfile
+      dockerfile: docker/dev.dockerfile
       context: .
       target: server
     ports:
@@ -82,7 +82,7 @@ services:
   # BullMQ Workers
   workers:
     build:
-      dockerfile: ./dev.dockerfile
+      dockerfile: docker/dev.dockerfile
       context: .
       target: workers
     volumes:
@@ -102,11 +102,13 @@ services:
   # Run localtunnel
   localtunnel:
     build:
-      dockerfile: ./dev.dockerfile
+      dockerfile: docker/dev.dockerfile
       context: .
       target: localtunnel
     volumes:
       - ./server:/app/server
+    environment:
+      - LOCALTUNNEL_RESERVED_KEY=${LOCALTUNNEL_RESERVED_KEY}
     depends_on:
       - server
     restart: unless-stopped

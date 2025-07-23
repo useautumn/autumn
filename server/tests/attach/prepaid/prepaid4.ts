@@ -125,7 +125,7 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Testing prepaid reset`)}`, (
     const customer = await autumn.customers.get(customerId);
     const newBalance = options[0].quantity - usage;
     expect(customer.features[TestFeature.Messages].balance).to.equal(
-      newBalance,
+      newBalance
     );
   });
 
@@ -135,14 +135,14 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Testing prepaid reset`)}`, (
       testClockId,
       advanceTo: addHours(
         addMonths(new Date(), 1),
-        hoursToFinalizeInvoice,
+        hoursToFinalizeInvoice
       ).getTime(),
-      waitForSeconds: 25,
+      waitForSeconds: 30,
     });
 
     const customer = await autumn.customers.get(customerId);
     expect(customer.features[TestFeature.Messages].balance).to.equal(
-      options[0].quantity,
+      options[0].quantity
     );
   });
 });
