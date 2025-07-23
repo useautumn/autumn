@@ -49,10 +49,10 @@ export const getCusWithCache = async ({
 
   if (!skipCache && !skipGet) {
     try {
+      const start = Date.now();
       const cached = await upstash!.get(cacheKey);
+      const end = Date.now();
       if (cached) {
-        logger.info(`Cache hit: ${cacheKey}`);
-        logger.info("Cached:", cached);
         return cached as FullCustomer;
       } else {
         // logger.info(`Cache miss: ${cacheKey}`);
