@@ -20,6 +20,7 @@ import {
 } from "./updateBalanceTask.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { refreshCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 
 // 2. Get deductions for each feature
 const getFeatureDeductions = ({
@@ -42,7 +43,7 @@ const getFeatureDeductions = ({
     let unlimitedExists = cusEnts.some(
       (cusEnt) =>
         cusEnt.entitlement.allowance_type === AllowanceType.Unlimited &&
-        cusEnt.entitlement.internal_feature_id == feature.internal_id,
+        cusEnt.entitlement.internal_feature_id == feature.internal_id
     );
 
     if (unlimitedExists) {
@@ -129,7 +130,7 @@ const logUsageUpdate = ({
       org.slug
     } | Features: ${features.map((f) => f.id).join(", ")} | Set Usage: ${
       setUsage ? "true" : "false"
-    }`,
+    }`
   );
 
   console.log(
@@ -153,7 +154,7 @@ const logUsageUpdate = ({
       })`;
     }),
     "| Deductions:",
-    featureDeductions.map((f: any) => `${f.feature.id}: ${f.deduction}`),
+    featureDeductions.map((f: any) => `${f.feature.id}: ${f.deduction}`)
   );
 };
 
@@ -300,7 +301,7 @@ export const runUpdateUsageTask = async ({
 
     console.log("--------------------------------");
     console.log(
-      `HANDLING USAGE TASK FOR CUSTOMER (${customerId}), ORG: ${org.slug}`,
+      `HANDLING USAGE TASK FOR CUSTOMER (${customerId}), ORG: ${org.slug}`
     );
 
     const cusEnts: any = await updateUsage({
@@ -314,6 +315,13 @@ export const runUpdateUsageTask = async ({
       setUsage: set_usage,
       logger,
       entityId,
+    });
+
+    await refreshCusCache({
+      customerId,
+      entityId,
+      orgId: org.id,
+      env,
     });
 
     if (!cusEnts || cusEnts.length === 0) {

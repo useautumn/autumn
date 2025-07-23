@@ -14,6 +14,7 @@ import { performDeductionOnCusEnt } from "@/trigger/updateBalanceTask.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusProductService } from "../cusProducts/CusProductService.js";
+import { refreshCusCache } from "../cusCache/updateCachedCus.js";
 
 const getCusOrgAndCusPrice = async ({
   db,

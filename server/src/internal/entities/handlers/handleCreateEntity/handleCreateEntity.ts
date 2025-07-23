@@ -56,7 +56,7 @@ export const createEntities = async ({
       internalCustomerId: customer.internal_id,
       orgId: org.id,
       env,
-    }),
+    })
   );
 
   let newEntities: Entity[] = [];
