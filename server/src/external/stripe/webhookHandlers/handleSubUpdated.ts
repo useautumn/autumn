@@ -74,14 +74,7 @@ export const handleSubscriptionUpdated = async ({
 
   if (updatedCusProducts.length > 0) {
     logger.info(
-      `subscription.updated: updated ${updatedCusProducts.length} customer products`,
-      {
-        data: {
-          ids: updatedCusProducts.map((cp) => cp.id),
-          status: updatedCusProducts[0].status,
-          canceled_at: updatedCusProducts[0].canceled_at,
-        },
-      },
+      `✅ Updated ${updatedCusProducts.length} customer product${updatedCusProducts.length === 1 ? '' : 's'} (${updatedCusProducts.map(cp => cp.id).join(', ')}) - Status: ${updatedCusProducts[0].status}${updatedCusProducts[0].canceled_at ? `, Canceled: ${new Date(updatedCusProducts[0].canceled_at).toISOString()}` : ''}`
     );
   }
 
