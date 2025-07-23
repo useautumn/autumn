@@ -29,7 +29,6 @@ describe("Initialize org for tests", () => {
     this.timeout(1000000000);
     this.org = await clearOrg({ orgSlug: ORG_SLUG, env: DEFAULT_ENV });
     this.env = DEFAULT_ENV;
-    // this.sb = createSupabaseClient();
     let { db, client } = initDrizzle();
 
     this.db = db;
