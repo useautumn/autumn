@@ -3,6 +3,7 @@ import {
   CusEntResponse,
   CusEntResponseSchema,
   CusEntResponseV2,
+  CusRollover,
   Feature,
   FeatureType,
   FullCustomerEntitlement,
@@ -66,7 +67,9 @@ export const featuresToObject = ({
       usageLimit = undefined;
     }
 
-    featureObject[featureId] = {
+    // console.log(`Feature ${featureId} list:`, relatedEnts);
+
+    let cusFeature: CusEntResponseV2 = {
       id: featureId,
       name: feature.name,
       type: featureType,
@@ -79,7 +82,6 @@ export const featuresToObject = ({
       next_reset_at: getEarliestNextResetAt(relatedEnts),
       interval: relatedEnts.length == 1 ? relatedEnts[0].interval : "multiple",
       overage_allowed: relatedEnts.some((e) => e.overage_allowed),
-      // rollovers: relatedEnts.flatMap((e) => e.rollovers),
       breakdown:
         !unlimited && relatedEnts.length > 1
           ? relatedEnts.map((e) => ({
@@ -96,7 +98,13 @@ export const featuresToObject = ({
             credit_amount: s.credit_amount,
           }))
         : undefined,
+
+      rollovers: relatedEnts
+        .flatMap((e) => e.rollovers)
+        .filter(notNullish) as CusRollover[],
     };
+
+    featureObject[featureId] = cusFeature;
   }
 
   return featureObject;

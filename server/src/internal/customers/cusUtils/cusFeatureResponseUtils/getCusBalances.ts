@@ -69,6 +69,100 @@ export const getV1EntitlementsRes = ({
   return res;
 };
 
+export const getRolloverFields = ({
+  cusEnt,
+  entityId,
+}: {
+  cusEnt: FullCustomerEntitlement;
+  entityId?: string;
+}) => {
+  let hasRollover = notNullish(cusEnt.entitlement.rollover);
+  if (!hasRollover) {
+    return null;
+  }
+
+  if (cusEnt.entitlement.entity_feature_id) {
+    if (entityId) {
+      return cusEnt.rollovers.reduce(
+        (acc, rollover) => {
+          if (rollover.entities[entityId]) {
+            return {
+              balance: acc.balance + rollover.entities[entityId].balance,
+              usage: acc.usage + rollover.entities[entityId].usage,
+              rollovers: [
+                ...acc.rollovers,
+                {
+                  balance: rollover.entities[entityId].balance,
+                  usage: rollover.entities[entityId].usage,
+                  expires_at: rollover.expires_at,
+                },
+              ],
+            };
+          }
+          return acc;
+        },
+        {
+          balance: 0,
+          usage: 0,
+          rollovers: [] as any[],
+        }
+      );
+    } else {
+      return cusEnt.rollovers.reduce(
+        (acc, rollover) => {
+          let newBalance = 0;
+          let newUsage = 0;
+
+          for (const entityId in rollover.entities) {
+            newBalance += rollover.entities[entityId].balance;
+            newUsage += rollover.entities[entityId].usage;
+          }
+
+          return {
+            balance: acc.balance + newBalance,
+            usage: acc.usage + newUsage,
+            rollovers: [
+              ...acc.rollovers,
+              {
+                balance: newBalance,
+                usage: newUsage,
+                expires_at: rollover.expires_at,
+              },
+            ],
+          };
+        },
+        {
+          balance: 0,
+          usage: 0,
+          rollovers: [] as any[],
+        }
+      );
+    }
+  } else {
+    return cusEnt.rollovers.reduce(
+      (acc, rollover) => {
+        return {
+          balance: acc.balance + rollover.balance,
+          usage: acc.usage + rollover.usage,
+          rollovers: [
+            ...acc.rollovers,
+            {
+              balance: rollover.balance,
+              usage: rollover.usage,
+              expires_at: rollover.expires_at,
+            },
+          ],
+        };
+      },
+      {
+        balance: 0,
+        usage: 0,
+        rollovers: [] as any[],
+      }
+    );
+  }
+};
+
 // IMPORTANT FUNCTION
 export const getCusBalances = async ({
   cusEntsWithCusProduct,
@@ -170,11 +264,6 @@ export const getCusBalances = async ({
     });
 
     data[key].balance += balance || 0;
-    // let totalRolloverBalance = cusEnt.rollovers.reduce((acc, rollover) => {
-    //   return acc + (rollover.balance || 0);
-    // }, 0);
-
-    // data[key].balance += totalRolloverBalance;
     data[key].adjustment += adjustment || 0;
 
     let total =
@@ -187,6 +276,17 @@ export const getCusBalances = async ({
 
     data[key].total += total;
     data[key].unused += unused || 0;
+
+    let rollover = getRolloverFields({
+      cusEnt,
+      entityId: entity?.id,
+    });
+
+    if (rollover) {
+      data[key].balance += rollover.balance;
+      data[key].total += rollover.balance + rollover.usage;
+      data[key].rollovers = rollover.rollovers;
+    }
 
     if (org.config.api_version >= BREAK_API_VERSION) {
       if (
@@ -260,6 +360,10 @@ export const getCusBalances = async ({
       return a.feature_id.localeCompare(b.feature_id);
     });
   }
+
+  // if (org.api_version == APIVersion.v1) {
+
+  // }
 
   return balances as CusFeatureBalance[];
 };
