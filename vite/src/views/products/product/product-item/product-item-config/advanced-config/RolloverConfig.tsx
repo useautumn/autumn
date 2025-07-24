@@ -58,7 +58,14 @@ export const RolloverConfigView = ({
           if (item.config?.rollover != null) {
             setRolloverConfig(null);
           } else {
-            setRolloverConfig(defaultRollover);
+            setItem({
+              ...item,
+              reset_usage_when_enabled: true,
+              config: {
+                ...(item.config || {}),
+                rollover: defaultRollover,
+              },
+            });
           }
         }}
         buttonText="Enable rollovers"

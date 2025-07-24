@@ -5,6 +5,7 @@ import {
   ProductItem,
   ProductItemConfig,
   ProductItemInterval,
+  RolloverConfig,
   UsageModel,
 } from "@autumn/shared";
 
@@ -14,12 +15,14 @@ export const constructFeatureItem = ({
   interval = ProductItemInterval.Month,
   entityFeatureId,
   isBoolean = false,
+  rolloverConfig,
 }: {
   featureId: string;
   includedUsage?: number;
   interval?: ProductItemInterval | null;
   entityFeatureId?: string;
   isBoolean?: boolean;
+  rolloverConfig?: RolloverConfig;
 }) => {
   if (isBoolean) {
     return {
@@ -33,6 +36,12 @@ export const constructFeatureItem = ({
     entity_feature_id: entityFeatureId,
     interval: interval,
   };
+
+  if (rolloverConfig) {
+    item.config = {
+      rollover: rolloverConfig,
+    };
+  }
 
   return item;
 };

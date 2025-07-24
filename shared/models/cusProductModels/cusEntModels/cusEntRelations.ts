@@ -6,6 +6,7 @@ import { features } from "../../featureModels/featureTable.js";
 import { customerEntitlements } from "./cusEntTable.js";
 import { customerProducts } from "../cusProductTable.js";
 import { replaceables } from "./replaceableTable.js";
+import { rollovers } from "./rolloverModels/rolloverTable.js";
 
 export const customerEntitlementsRelations = relations(
   customerEntitlements,
@@ -27,5 +28,6 @@ export const customerEntitlementsRelations = relations(
       references: [features.internal_id],
     }),
     replaceables: many(replaceables),
-  }),
+    rollovers: many(rollovers),
+  })
 );
