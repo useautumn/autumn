@@ -72,7 +72,7 @@ export class CusService {
           withEntities,
           withTrialsUsed,
           withSubs,
-          entityId,
+          entityId
         );
 
         let result = await db.execute(query);
@@ -123,10 +123,10 @@ export class CusService {
       where: and(
         or(
           eq(customers.id, idOrInternalId),
-          eq(customers.internal_id, idOrInternalId),
+          eq(customers.internal_id, idOrInternalId)
         ),
         eq(customers.org_id, orgId),
-        eq(customers.env, env),
+        eq(customers.env, env)
       ),
     });
 
@@ -152,7 +152,7 @@ export class CusService {
       where: and(
         eq(customers.email, email),
         eq(customers.org_id, orgId),
-        eq(customers.env, env),
+        eq(customers.env, env)
       ),
     });
 
@@ -270,8 +270,8 @@ export class CusService {
         and(
           eq(customers.internal_id, internalId),
           eq(customers.org_id, orgId),
-          eq(customers.env, env),
-        ),
+          eq(customers.env, env)
+        )
       )
       .returning();
 

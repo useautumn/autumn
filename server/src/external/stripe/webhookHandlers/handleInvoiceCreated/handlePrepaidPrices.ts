@@ -15,6 +15,7 @@ import {
   FullCusProduct,
   FullCustomerPrice,
   UsagePriceConfig,
+  RolloverConfig,
 } from "@autumn/shared";
 import Stripe from "stripe";
 
@@ -133,16 +134,15 @@ export const handlePrepaidPrices = async ({
   //   `🔥 Resetting balance for ${ent.feature.id}, customer: ${customer.id} (name: ${customer.name})`
   // );
 
-  // let rolloverRows: any[] = [];
-  // if (rolloverUpdate?.toInsert && rolloverUpdate.toInsert.length > 0) {
-  //   logger.info(
-  //     `🔥 Rolling over balance for ${ent.feature.id}, customer: ${customer.id} (name: ${customer.name})`
-  //   );
-  //   rolloverRows = await RolloverService.insert({
-  //     db,
-  //     rows: rolloverUpdate.toInsert,
-  //   });
-  // }
+  if (rolloverUpdate?.toInsert && rolloverUpdate.toInsert.length > 0) {
+    await RolloverService.insert({
+      db,
+      rows: rolloverUpdate.toInsert,
+      rolloverConfig: ent.rollover as RolloverConfig,
+      cusEntID: cusEnt.id,
+      entityMode: notNullish(ent.entity_feature_id),
+    });
+  }
 
   // console.log(
   //   "Rollover rows",

@@ -197,7 +197,7 @@ export const expireOrDeleteCusProduct = async ({
         cp.status === CusProductStatus.Scheduled &&
         (internalEntityId
           ? cp.internal_entity_id === internalEntityId
-          : nullish(cp.internal_entity_id)),
+          : nullish(cp.internal_entity_id))
     );
 
     if (curScheduledProduct) {
@@ -350,7 +350,7 @@ export const createFullCusProduct = async ({
 
   const cusProdId = generateId("cus_prod");
   logger.info(
-    `Inserting cus product ${product.id} for ${customer.name}, cus product ID: ${cusProdId}`,
+    `Inserting cus product ${product.id} for ${customer.name}, cus product ID: ${cusProdId}`
   );
 
   // 1. create customer entitlements
@@ -470,6 +470,7 @@ export const createFullCusProduct = async ({
           ...r,
           delete_next_cycle: r.delete_next_cycle || false,
         })),
+      rollovers: [],
     })),
     customer_prices: cusPrices.map((cp) => ({
       ...cp,

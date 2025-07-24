@@ -1,11 +1,13 @@
 import {
   FullCustomerEntitlement,
   RolloverConfig,
-  RolloverModel,
+  EntityRolloverBalance,
   RolloverDuration,
+  Rollover,
 } from "@autumn/shared";
 import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 import { addMonths } from "date-fns";
+import { Decimal } from "decimal.js";
 
 export const getRolloverUpdates = ({
   cusEnt,
@@ -16,8 +18,8 @@ export const getRolloverUpdates = ({
 }) => {
   let update: {
     toDelete: string[];
-    toInsert: RolloverModel[];
-    toUpdate: RolloverModel[];
+    toInsert: Rollover[];
+    toUpdate: Rollover[];
   } = {
     toDelete: [],
     toInsert: [],
@@ -31,31 +33,32 @@ export const getRolloverUpdates = ({
 
   let nextExpiry = calculateNextExpiry(nextResetAt, ent.rollover!);
 
-  let newEntitlement: RolloverModel = {
+  let newRollover: Rollover = {
     id: generateId("roll"),
-    entities: {},
     cus_ent_id: cusEnt.id,
     balance: 0,
     expires_at: nextExpiry,
+    entities: {},
   };
 
   if (notNullish(ent.entity_feature_id)) {
     for (const entityId in cusEnt.entities) {
       let entRollover = cusEnt.entities[entityId].balance;
+
       if (entRollover > 0) {
-        newEntitlement.entities[entityId] = {
+        newRollover.entities[entityId] = {
           id: entityId,
           balance: entRollover,
-          adjustment: 0,
         };
       }
     }
-    update.toInsert.push(newEntitlement);
+
+    update.toInsert.push(newRollover);
   } else {
     let balance = cusEnt.balance!;
     if (balance > 0) {
-      newEntitlement.balance = balance;
-      update.toInsert.push(newEntitlement);
+      newRollover.balance = balance;
+      update.toInsert.push(newRollover);
     }
   }
 
@@ -75,17 +78,303 @@ export const calculateNextExpiry = (
   return addMonths(nextResetAt, config.length).getTime();
 };
 
-// if (nullish(nextExpiry) || !nextExpiry) {
-//   return update;
-// }
+export async function performMaximumClearing({
+  rows,
+  rolloverConfig,
+  cusEntID,
+  entityMode,
+}: {
+  rows: Rollover[];
+  rolloverConfig: RolloverConfig;
+  cusEntID: string;
+  entityMode: boolean;
+}) {
+  if (!rolloverConfig) {
+    // throw new Error("Rollover config is required");
+    // Throw warning
+    return { toDelete: [], toUpdate: [] };
+  }
 
-// let entitlement = cusEnt.entitlement.allowance ?? 0;
+  if (rolloverConfig.max == null) {
+    return { toDelete: [], toUpdate: [] };
+  }
 
-// if (entitlement < 0) {
-//   return update;
-// }
+  let total = 0;
+  let toDelete: string[] = [];
+  let toUpdate: Rollover[] = [];
 
-// let rollover = cusEnt.balance || 0;
+  // look through each row
+  // if entityMode is true, then look through each entity
+  // otherwise look at balance
+
+  // sort by the oldest first
+  // add the balance of the oldest to the total
+  // if the total is greater than or equal to the max, then:
+  // subtract the max from the total, if theres a difference then instantiate the updated row object and push to toUpdate
+  // if theres no difference, then push to toDelete
+  // move to the next row
+  // if the total is less than the max, then
+  // move to the next row
+
+  rows.sort((a, b) => {
+    if (a.expires_at && b.expires_at) return a.expires_at - b.expires_at;
+    if (a.expires_at && !b.expires_at) return -1;
+    if (!a.expires_at && b.expires_at) return 1;
+    return 0;
+  });
+
+  if (!entityMode) {
+    let totalRolloverBalance = rows.reduce((acc, row) => acc + row.balance, 0);
+    let toDeduct = new Decimal(totalRolloverBalance).sub(rolloverConfig.max);
+
+    if (toDeduct.lt(0)) return { toDelete: [], toUpdate: [] };
+
+    let toUpdate: Rollover[] = [];
+    let toDelete: string[] = [];
+
+    for (const row of rows) {
+      let curBalance = new Decimal(row.balance);
+      let newBalance = curBalance;
+      if (curBalance.gte(toDeduct)) {
+        newBalance = newBalance.sub(toDeduct);
+        toDeduct = new Decimal(0);
+
+        toUpdate.push({ ...row, balance: newBalance.toNumber() });
+      } else {
+        newBalance = new Decimal(0);
+        toDeduct = toDeduct.sub(curBalance);
+
+        toDelete.push(row.id);
+      }
+
+      if (toDeduct.lte(0)) break;
+    }
+
+    return { toDelete, toUpdate };
+  } else {
+    const allEntityIds = new Set<string>();
+    rows.forEach((row) => {
+      if (row.entities && Array.isArray(row.entities)) {
+        row.entities.forEach((entity: any) => {
+          if (entity.id) {
+            allEntityIds.add(entity.id);
+          }
+        });
+      }
+    });
+
+    const entityTotals = new Map<string, number>();
+    allEntityIds.forEach((id) => entityTotals.set(id, 0));
+    let entityIdToTotal: Record<string, number> = {};
+    rows.forEach((row) => {
+      for (const entityId in row.entities) {
+        entityIdToTotal[entityId] =
+          (entityIdToTotal[entityId] || 0) + row.entities[entityId].balance;
+      }
+    });
+
+    let toUpdate: Rollover[] = [];
+    let toDelete: string[] = [];
+
+    // Non entity mode
+    for (const row of rows) {
+      let update = structuredClone(row);
+      let shouldUpdate = false;
+
+      for (const entityId in entityIdToTotal) {
+        let entityTotal = entityIdToTotal[entityId];
+        let toDeduct = new Decimal(entityTotal).sub(rolloverConfig.max);
+
+        if (toDeduct.lte(0) || !row.entities[entityId]) continue;
+
+        let curBalance = new Decimal(row.entities[entityId].balance);
+        let newBalance = curBalance;
+
+        if (curBalance.gte(toDeduct)) {
+          newBalance = newBalance.sub(toDeduct);
+          toDeduct = new Decimal(0);
+          shouldUpdate = true;
+          update.entities[entityId] = {
+            id: entityId,
+            balance: newBalance.toNumber(),
+          };
+        } else {
+          newBalance = new Decimal(0);
+          toDeduct = toDeduct.sub(curBalance);
+          shouldUpdate = true;
+          update.entities[entityId] = {
+            id: entityId,
+            balance: 0,
+          };
+        }
+      }
+
+      // If all keys are 0, then delete the row
+      if (
+        Object.values(update.entities).every(
+          (entity: EntityRolloverBalance) => entity.balance === 0
+        )
+      ) {
+        toDelete.push(row.id);
+      } else if (shouldUpdate) {
+        toUpdate.push(update);
+      }
+    }
+
+    return { toDelete, toUpdate };
+  }
+}
+
+// For each entity ID, perform maximum clearing...
+
 // console.log(
-//   `🔥 Unused balance (rollover): ${rollover} | Entitlement: ${entitlement}`
+//   `🔍 Found ${allEntityIds.size} unique entity IDs: ${Array.from(allEntityIds).join(", ")}`
 // );
+
+// Sort rows by expiry date (oldest first)
+// rows.sort((a, b) => a.expires_at - b.expires_at);
+// console.log(`📅 Sorted rows by expiry date (oldest first)`);
+
+// Track totals per entity ID
+
+//   for (let i = 0; i < rows.length; i++) {
+//     let row = rows[i];
+//     // console.log(`\n🔍 Processing row ${i + 1}/${rows.length}:`);
+//     // console.log(`  - Row ID: ${row.id}`);
+//     // console.log(`  - Expires at: ${new Date(row.expires_at).toISOString()}`);
+
+//     if (!row.entities || !Array.isArray(row.entities)) {
+//       console.log(`  - ⚠️ Row has no entities array, skipping`);
+//       continue;
+//     }
+
+//     let rowNeedsUpdate = false;
+//     let updatedEntities = [...row.entities];
+
+//     // Process each entity in this row
+//     for (let j = 0; j < updatedEntities.length; j++) {
+//       const entity = updatedEntities[j];
+//       if (!entity.id || !entity.balance) {
+//         // console.log(`    - ⚠️ Entity missing id or balance, skipping`);
+//         continue;
+//       }
+
+//       const currentTotal = entityTotals.get(entity.id) || 0;
+//       const newTotal = currentTotal + entity.balance;
+
+//       console.log(
+//         `    - Entity ${entity.id}: balance=${entity.balance}, currentTotal=${currentTotal}, newTotal=${newTotal}`
+//       );
+
+//       if (newTotal > rolloverConfig.max) {
+//         const excess = newTotal - rolloverConfig.max;
+//         const newBalance = entity.balance - excess;
+
+//         console.log(
+//           `      - ⚠️ Total exceeds maximum (${rolloverConfig.max})`
+//         );
+//         console.log(`      - Excess to remove: ${excess}`);
+//         console.log(
+//           `      - Updating entity balance from ${entity.balance} to ${newBalance}`
+//         );
+
+//         if (newBalance > 0) {
+//           updatedEntities[j] = { ...entity, balance: newBalance };
+//           entityTotals.set(entity.id, rolloverConfig.max);
+//           rowNeedsUpdate = true;
+//         } else {
+//           console.log(`      - 🗑️ Removing entity (no remaining balance)`);
+//           updatedEntities.splice(j, 1);
+//           j--; // Adjust index after removal
+//           entityTotals.set(entity.id, rolloverConfig.max);
+//           rowNeedsUpdate = true;
+//         }
+//       } else {
+//         entityTotals.set(entity.id, newTotal);
+//         console.log(`      - ✅ Total still under maximum, continuing`);
+//       }
+//     }
+
+//     // Determine what to do with this row
+//     if (updatedEntities.length === 0) {
+//       console.log(`  - 🗑️ Marking row for deletion (no entities remaining)`);
+//       toDelete.push(row.id);
+//     } else if (rowNeedsUpdate) {
+//       console.log(`  - ✏️ Marking row for update (entities modified)`);
+//       toUpdate.push({
+//         ...row,
+//         entities: updatedEntities,
+//       });
+//     } else {
+//       console.log(`  - ✅ Row unchanged`);
+//     }
+//   }
+
+//   console.log(
+//     `\n📋 Maximum clearing summary for cusEnt ${cusEntID} (entity mode):`
+//   );
+//   console.log(`  - Rows to update: ${toUpdate.length}`);
+//   console.log(`  - Rows to delete: ${toDelete.length}`);
+//   console.log(`  - Final entity totals:`);
+//   entityTotals.forEach((total, entityId) => {
+//     console.log(`    - ${entityId}: ${total}`);
+//   });
+//   if (toUpdate.length > 0) {
+//     console.log(
+//       `  - Updated row IDs: ${toUpdate.map((r) => r.id).join(", ")}`
+//     );
+//   }
+//   if (toDelete.length > 0) {
+//     console.log(`  - Deleted row IDs: ${toDelete.join(", ")}`);
+//   }
+// }
+
+// return the rows that were cleared
+
+// for (let i = 0; i < rows.length; i++) {
+//   let row = rows[i];
+//   // console.log(`\n🔍 Processing row ${i + 1}/${rows.length}:`);
+//   // console.log(`  - Row ID: ${row.id}`);
+//   // console.log(`  - Row balance: ${row.balance}`);
+//   // console.log(`  - Expires at: ${new Date(row.expires_at).toISOString()}`);
+//   // console.log(`  - Total before adding this row: ${total}`);
+
+//   total += row.balance;
+//   // console.log(`  - Total after adding this row: ${total}`);
+
+//   if (total > rolloverConfig.max) {
+//     let diff = total - rolloverConfig.max;
+//     // console.log(`  - ⚠️ Total exceeds maximum (${rolloverConfig.max})`);
+//     // console.log(`  - Difference to remove: ${diff}`);
+
+//     let newBalance = row.balance - diff;
+//     if (newBalance > 0) {
+//       // console.log(
+//       //   `  - ✏️ Updating row balance from ${row.balance} to ${newBalance}`
+//       // );
+//       toUpdate.push({
+//         ...row,
+//         balance: newBalance,
+//       });
+//     } else {
+//       // console.log(`  - 🗑️ Marking row for deletion (no remaining balance)`);
+//       toDelete.push(row.id);
+//     }
+//   } else {
+//     // console.log(`  - ✅ Total still under maximum, continuing to next row`);
+//     continue;
+//   }
+// }
+
+// console.log(`\n📋 Maximum clearing summary for cusEnt ${cusEntID}:`);
+// console.log(`  - Final total: ${total}`);
+// console.log(`  - Rows to update: ${toUpdate.length}`);
+// console.log(`  - Rows to delete: ${toDelete.length}`);
+// if (toUpdate.length > 0) {
+//   console.log(
+//     `  - Updated balances: ${toUpdate.map((r) => `${r.id}: ${r.balance}`).join(", ")}`
+//   );
+// }
+// if (toDelete.length > 0) {
+//   console.log(`  - Deleted row IDs: ${toDelete.join(", ")}`);
+// }

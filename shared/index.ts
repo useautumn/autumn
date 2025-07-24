@@ -67,6 +67,7 @@ export * from "./models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 export * from "./models/cusProductModels/cusEntModels/cusEntTable.js";
 export * from "./models/cusProductModels/cusEntModels/replaceableTable.js";
 export * from "./models/cusProductModels/cusEntModels/replaceableSchema.js";
+export * from "./models/cusProductModels/cusEntModels/rolloverModels/rolloverTable.js";
 
 // 8. Customer Models
 export * from "./models/cusModels/cusModels.js";
@@ -85,9 +86,6 @@ export * from "./models/cusModels/entityModels/entityModels.js";
 export * from "./models/cusModels/entityModels/entityTable.js";
 export * from "./models/cusModels/entityModels/entityExpand.js";
 export * from "./models/cusModels/entityModels/entityResModels.js";
-
-export * from "./models/productModels/rolloverModels/rolloverTable.js";
-export * from "./models/productModels/rolloverModels/rolloverModels.js";
 
 // 4. Chat Result Models
 export * from "./models/chatResultModels/chatResultTable.js";

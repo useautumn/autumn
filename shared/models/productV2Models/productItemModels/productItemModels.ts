@@ -55,15 +55,8 @@ export const RolloverConfigSchema = z.object({
 });
 
 const ProductItemConfigSchema = z.object({
-  on_increase: z
-    .nativeEnum(OnIncrease)
-    .nullish()
-    .default(OnIncrease.BillImmediately),
-  on_decrease: z
-    .nativeEnum(OnDecrease)
-    .nullish()
-    .default(OnDecrease.ProrateImmediately),
-
+  on_increase: z.nativeEnum(OnIncrease).nullish(),
+  on_decrease: z.nativeEnum(OnDecrease).nullish(),
   rollover: RolloverConfigSchema.nullish(),
 });
 

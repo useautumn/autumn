@@ -6,7 +6,10 @@ import {
 } from "@autumn/shared";
 
 import { useCustomerContext } from "../CustomerContext";
-import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
+import {
+  formatUnixToDate,
+  formatUnixToDateTime,
+} from "@/utils/formatUtils/formatDateUtils";
 
 import { useState } from "react";
 
@@ -122,6 +125,23 @@ export const CustomerEntitlementsList = () => {
       hoverTexts.push({
         key: "Entities",
         value: mappedEntities,
+      });
+    }
+
+    if (cusEnt.rollovers.length > 0) {
+      hoverTexts.push({
+        key: "Rollovers",
+        value: cusEnt.rollovers
+          .map((r: any) => {
+            if (Object.values(r.entities).length > 0) {
+              return Object.values(r.entities)
+                .map((e: any) => `${e.balance} (${e.id})`)
+                .join(", ");
+            } else {
+              return `${r.balance} (ex: ${r.expires_at ? formatUnixToDate(r.expires_at) : "N/A"})`;
+            }
+          })
+          .join("\n"),
       });
     }
 
@@ -242,6 +262,13 @@ export const CustomerEntitlementsList = () => {
                 ) : entityId && cusEnt.entities?.[entityId] ? (
                   <div className="flex items-center gap-2">
                     {cusEnt.entities?.[entityId]?.balance}{" "}
+                  </div>
+                ) : cusEnt.entities ? (
+                  <div className="flex items-center gap-2">
+                    {Object.values(cusEnt.entities).reduce(
+                      (sum, entity) => sum + (entity.balance || 0),
+                      0
+                    )}
                   </div>
                 ) : (
                   <>
