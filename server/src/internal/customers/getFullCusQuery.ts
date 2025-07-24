@@ -26,7 +26,7 @@ const buildOptimizedCusProductsCTE = (inStatuses?: CusProductStatus[]) => {
           '[]'::json
         ) AS customer_prices,
         
-        -- Spread customer_entitlements fields + add entitlement and replaceables
+        -- Spread customer_entitlements fields + add entitlement, replaceables, and rollovers
         COALESCE(
           json_agg(DISTINCT (
             to_jsonb(ce.*) || jsonb_build_object(
@@ -46,6 +46,14 @@ const buildOptimizedCusProductsCTE = (inStatuses?: CusProductStatus[]) => {
                 )
                 FROM replaceables r
                 WHERE r.cus_ent_id = ce.id
+              ),
+              'rollover', (
+                SELECT COALESCE(
+                  json_agg(row_to_json(ro)) FILTER (WHERE ro.expires_at > EXTRACT(EPOCH FROM now()) * 1000),
+                  '[]'::json
+                )
+                FROM rollovers ro
+                WHERE ro.cus_ent_id = ce.id
               )
             )
           )) FILTER (WHERE ce.id IS NOT NULL),

@@ -8,7 +8,7 @@ import {
 	uuid,
 } from "drizzle-orm/pg-core";
 
-import { EntityBalance } from "../../cusProductModels/cusEntModels/cusEntModels.js";
+import { EntityBalance, EntityRolloverBalance } from "../../cusProductModels/cusEntModels/cusEntModels.js";
 import { customerEntitlements } from "../../cusProductModels/cusEntModels/cusEntTable.js";
 
 export const rollovers = pgTable(
@@ -18,7 +18,7 @@ export const rollovers = pgTable(
 		cus_ent_id: text("cus_ent_id").notNull(),
 		balance: numeric({ mode: "number" }).notNull(),
 		expires_at: numeric({ mode: "number" }).notNull(),
-		entities: jsonb("entities").$type<EntityBalance>(),
+		entities: jsonb("entities").$type<EntityRolloverBalance[]>(),
 	},
 	(table) => [
 		foreignKey({

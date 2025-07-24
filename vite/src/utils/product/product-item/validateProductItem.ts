@@ -1,5 +1,5 @@
 import { invalidNumber, notNullish } from "@/utils/genUtils";
-import { Feature, FeatureUsageType, ProductItem, ProductItemInterval } from "@autumn/shared";
+import { Feature, FeatureUsageType, ProductItem, ProductItemInterval, UsageModel } from "@autumn/shared";
 import { toast } from "sonner";
 import { isFeatureItem, isFeaturePriceItem } from "../getItemType";
 import { isOneOffProduct } from "../priceUtils";
@@ -109,7 +109,6 @@ export const validateProductItem = ({
         return item;
       }
 
-      
       if (invalidNumber(item.config.rollover.max)) {
         toast.error("Please enter a valid maximum rollover amount");
         item.config.rollover = undefined;
@@ -136,6 +135,12 @@ export const validateProductItem = ({
 
       if (item.config.rollover.length < 0 || !item.config.rollover.length) {
         toast.error("Please enter a positive rollover length");
+        item.config.rollover = undefined;
+        return null;
+      }
+
+      if(item.entity_feature_id && item.usage_model === UsageModel.Prepaid) {
+        toast.error("Prepaid products cannot have entity features");
         item.config.rollover = undefined;
         return null;
       }

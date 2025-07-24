@@ -18,6 +18,7 @@ import { getCusPriceUsage } from "@/internal/customers/cusProducts/cusPrices/cus
 import { findStripeItemForPrice } from "../../stripeSubUtils/stripeSubItemUtils.js";
 import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils.js";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 export const handleUsagePrices = async ({
   db,
@@ -167,6 +168,9 @@ export const handleUsagePrices = async ({
     rolloverRows = await RolloverService.insert({
       db,
       rows: rolloverUpdate.toInsert,
+      rolloverConfig: ent.rollover,
+      cusEntID: ent.id,
+      entityMode: notNullish(ent.entity_feature_id),
     });
   }
 
