@@ -13,6 +13,7 @@
   "author": "Recase Inc.",
   "license": "Apache-2.0",
   "scripts": {
+    "build:tsc": "tsc",
     "build": "bun build ./index.ts --outdir dist --target bun --external zod",
     "dev": "bunx nodemon --ext ts --ignore dist --exec \"bun run build\"",
     "dev:bun": "bun ./index.ts --outdir dist --target bun --external zod --watch",
