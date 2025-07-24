@@ -95,6 +95,8 @@ export const initCustomer = async ({
       env: env,
     })) as Customer;
 
+    // console.log("customer", customer);
+
     const stripeCli = createStripeCli({ org: org, env: env });
     let testClockId = "";
     if (withTestClock) {

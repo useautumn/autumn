@@ -6,6 +6,7 @@ import { Feature } from "@autumn/shared";
 import { FeatureOptions } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
+import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
 
 export const mapOptionsList = ({
   optionsInput,
@@ -43,6 +44,8 @@ export const mapOptionsList = ({
         code: ErrCode.PriceNotFound,
       });
     }
+
+    // const ent = getPriceEntitlement(prepaidPrice, entitlements)
 
     let config = prepaidPrice.config as UsagePriceConfig;
 
