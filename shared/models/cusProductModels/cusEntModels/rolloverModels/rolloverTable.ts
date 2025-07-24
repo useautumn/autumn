@@ -12,12 +12,14 @@ import {
 export const EntityRolloverBalanceSchema = z.object({
   id: z.string(),
   balance: z.number(),
+  usage: z.number(),
 });
 
 export const RolloverSchema = z.object({
   id: z.string(),
   cus_ent_id: z.string(),
   balance: z.number(),
+  usage: z.number(),
   expires_at: z.number().nullable(),
   entities: z.record(z.string(), EntityRolloverBalanceSchema),
 });

@@ -67,7 +67,7 @@ const getFeatureDeductions = ({
   features: Feature[];
 }) => {
   const meteredFeatures = features.filter(
-    (feature) => feature.type === FeatureType.Metered,
+    (feature) => feature.type === FeatureType.Metered
   );
   const featureDeductions = [];
   for (const feature of features) {
@@ -86,7 +86,7 @@ const getFeatureDeductions = ({
     let unlimitedExists = cusEnts.some(
       (cusEnt) =>
         cusEnt.entitlement.allowance_type === AllowanceType.Unlimited &&
-        cusEnt.entitlement.internal_feature_id == feature.internal_id,
+        cusEnt.entitlement.internal_feature_id == feature.internal_id
     );
 
     if (unlimitedExists || !deduction) {
@@ -142,7 +142,7 @@ export const logBalanceUpdate = ({
   console.log(
     `   - Customer: ${customer.id} (${customer.env}) | Org: ${
       org.slug
-    } | Features: ${features.map((f) => f.id).join(", ")}`,
+    } | Features: ${features.map((f) => f.id).join(", ")}`
   );
   console.log("   - Properties:", properties);
   console.log(
@@ -152,7 +152,7 @@ export const logBalanceUpdate = ({
 
       if (notNullish(cusEnt.entitlement.entity_feature_id)) {
         console.log(
-          `   - Entity feature ID found for feature: ${cusEnt.feature_id}`,
+          `   - Entity feature ID found for feature: ${cusEnt.feature_id}`
         );
 
         if (notNullish(entityId)) {
@@ -179,7 +179,7 @@ export const logBalanceUpdate = ({
       })`;
     }),
     "| Deductions:",
-    featureDeductions.map((f: any) => `${f.feature.id}: ${f.deduction}`),
+    featureDeductions.map((f: any) => `${f.feature.id}: ${f.deduction}`)
   );
 };
 
@@ -462,7 +462,7 @@ export const deductFromUsageBasedCusEnt = async ({
 
   if (!usageBasedEnt) {
     console.log(
-      `   - Feature ${feature.id}, To deduct: ${toDeduct} -> no usage-based entitlement found`,
+      `   - Feature ${feature.id}, To deduct: ${toDeduct} -> no usage-based entitlement found`
     );
     return;
   }
@@ -659,7 +659,7 @@ export const runUpdateBalanceTask = async ({
 
     console.log("--------------------------------");
     console.log(
-      `UPDATING BALANCE FOR CUSTOMER (${customerId}), ORG: ${org.slug}`,
+      `UPDATING BALANCE FOR CUSTOMER (${customerId}), ORG: ${org.slug}`
     );
 
     const cusEnts: any = await updateCustomerBalance({
