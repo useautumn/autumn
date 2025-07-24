@@ -1,12 +1,13 @@
 import { AppEnv, CusExpand, EntityExpand, FullCustomer } from "@autumn/shared";
 import { RELEVANT_STATUSES } from "../cusProducts/CusProductService.js";
-import { db } from "@/db/initDrizzle.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusService } from "../CusService.js";
 import { buildBaseCusCacheKey } from "./cusCacheUtils.js";
 import { initUpstash } from "./upstashUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 
 export const getCusWithCache = async ({
+  db,
   idOrInternalId,
   orgId,
   env,
@@ -17,6 +18,7 @@ export const getCusWithCache = async ({
   skipGet = false,
   logger,
 }: {
+  db: DrizzleCli;
   idOrInternalId: string;
   orgId: string;
   env: AppEnv;

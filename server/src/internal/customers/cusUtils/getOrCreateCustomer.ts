@@ -59,6 +59,7 @@ export const getOrCreateCustomer = async ({
   if (!skipGet) {
     if (withCache) {
       customer = await getCusWithCache({
+        db,
         idOrInternalId: customerId,
         orgId: org.id,
         env,
@@ -151,6 +152,7 @@ export const getOrCreateCustomer = async ({
     customer.entity = newEntity;
 
     await refreshCusCache({
+      db,
       customerId: customer.id!,
       orgId: customer.org_id,
       env: customer.env,

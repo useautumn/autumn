@@ -318,6 +318,7 @@ export const runUpdateUsageTask = async ({
     });
 
     await refreshCusCache({
+      db,
       customerId,
       entityId,
       orgId: org.id,

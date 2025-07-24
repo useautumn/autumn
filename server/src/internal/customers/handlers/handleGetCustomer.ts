@@ -37,6 +37,7 @@ export const handleGetCustomer = async (req: any, res: any) =>
       logger.info(`getting customer ${customerId} for org ${org.slug}`);
       const startTime = Date.now();
       const customer = await getCusWithCache({
+        db,
         idOrInternalId: customerId,
         orgId: org.id,
         env,

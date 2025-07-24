@@ -57,6 +57,7 @@ export const updateCustomerDetails = async ({
     customer = { ...customer, ...updates };
 
     await refreshCusCache({
+      db,
       customerId: customer.id!,
       orgId: customer.org_id,
       env: customer.env,

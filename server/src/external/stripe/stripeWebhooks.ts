@@ -314,6 +314,7 @@ export const handleStripeWebhookRefresh = async ({
 
     // logger.info(`Deleting cache for customer ${cus.id}`);
     await deleteCusCache({
+      db,
       customerId: cus.id!,
       orgId: org.id,
       env,
