@@ -130,6 +130,9 @@ export const handlePrepaidPrices = async ({
     rolloverRows = await RolloverService.insert({
       db,
       rows: rolloverUpdate.toInsert,
+      rolloverConfig: ent.rollover,
+      cusEntID: cusEnt.id,
+      entityMode: notNullish(ent.entity_feature_id),
     });
   }
 
