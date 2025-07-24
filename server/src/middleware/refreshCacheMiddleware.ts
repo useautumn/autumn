@@ -83,6 +83,7 @@ const handleRefreshCache = async (req: any, res: any) => {
       `Clearing cache for customer ${customerId}, url: ${req.originalUrl}`
     );
     await deleteCusCache({
+      db: req.db,
       customerId,
       orgId: req.org.id,
       env: req.env,
@@ -98,6 +99,7 @@ const handleRefreshCache = async (req: any, res: any) => {
   if (coreMatch && req.body.customer_id) {
     logger.info(`Clearing cache for core url ${req.originalUrl}`);
     await deleteCusCache({
+      db: req.db,
       customerId: req.body.customer_id,
       orgId: req.org.id,
       env: req.env,

@@ -218,6 +218,7 @@ const resetCustomerEntitlement = async ({
 
     if (customer) {
       await refreshCusCache({
+        db,
         customerId: customer.id!,
         orgId: customer.org_id,
         env: customer.env,

@@ -4,13 +4,16 @@ import { buildBaseCusCacheKey } from "./cusCacheUtils.js";
 import { getCusWithCache } from "./getCusWithCache.js";
 import { initUpstash } from "./upstashUtils.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const refreshCusCache = async ({
+  db,
   customerId,
   entityId,
   orgId,
   env,
 }: {
+  db: DrizzleCli;
   customerId: string;
   entityId?: string;
   orgId: string;
@@ -42,6 +45,7 @@ export const refreshCusCache = async ({
         : undefined;
 
       await getCusWithCache({
+        db,
         idOrInternalId: customerId,
         orgId,
         env,
@@ -58,10 +62,12 @@ export const refreshCusCache = async ({
 };
 
 export const deleteCusCache = async ({
+  db,
   customerId,
   orgId,
   env,
 }: {
+  db: DrizzleCli;
   customerId: string;
   orgId: string;
   env: AppEnv;

@@ -675,6 +675,7 @@ export const runUpdateBalanceTask = async ({
     });
 
     await refreshCusCache({
+      db,
       customerId,
       orgId: org.id,
       env,
