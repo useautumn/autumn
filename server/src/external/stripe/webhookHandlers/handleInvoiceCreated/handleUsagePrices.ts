@@ -10,6 +10,7 @@ import {
   EntInterval,
   Customer,
   APIVersion,
+  RolloverConfig,
 } from "@autumn/shared";
 import { differenceInMinutes, subDays } from "date-fns";
 import { submitUsageToStripe } from "../../stripeMeterUtils.js";
@@ -168,7 +169,7 @@ export const handleUsagePrices = async ({
     rolloverRows = await RolloverService.insert({
       db,
       rows: rolloverUpdate.toInsert,
-      rolloverConfig: ent.rollover,
+      rolloverConfig: ent.rollover as RolloverConfig,
       cusEntID: ent.id,
       entityMode: notNullish(ent.entity_feature_id),
     });

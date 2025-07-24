@@ -13,6 +13,7 @@ import {
   FeatureOptions,
   FullCusProduct,
   FullCustomerPrice,
+  RolloverConfig,
 } from "@autumn/shared";
 import Stripe from "stripe";
 
@@ -130,7 +131,7 @@ export const handlePrepaidPrices = async ({
     rolloverRows = await RolloverService.insert({
       db,
       rows: rolloverUpdate.toInsert,
-      rolloverConfig: ent.rollover,
+      rolloverConfig: ent.rollover as RolloverConfig,
       cusEntID: cusEnt.id,
       entityMode: notNullish(ent.entity_feature_id),
     });

@@ -38,12 +38,14 @@ export default function FeaturePrice() {
   };
 
   const handlePriceRemoved = () => {
-    setItem(
-      FeatureItemSchema.parse({
-        ...item,
-        included_usage: item.included_usage || 0,
-      }),
-    );
+    setItem({
+      feature_id: item.feature_id,
+      included_usage: item.included_usage || 0,
+      interval: item.interval,
+      entity_feature_id: item.entity_feature_id,
+      reset_usage_when_enabled: item.reset_usage_when_enabled,
+      config: item.config,
+    });
   };
   const handleRemoveTier = (index: number) => {
     const newTiers = [...item.tiers];
@@ -88,7 +90,7 @@ export default function FeaturePrice() {
                   <div
                     className={cn(
                       "flex w-full text-sm",
-                      tier.to == -1 && "bg-transparent",
+                      tier.to == -1 && "bg-transparent"
                     )}
                   >
                     <UsageTierInput
@@ -104,7 +106,7 @@ export default function FeaturePrice() {
               <div
                 className={cn(
                   "flex text-sm",
-                  item.tiers?.length == 1 ? "w-full" : "w-32",
+                  item.tiers?.length == 1 ? "w-full" : "w-32"
                 )}
               >
                 <UsageTierInput

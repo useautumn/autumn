@@ -1,6 +1,6 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import {
-	Rollover as RolloverConfig,
+	RolloverConfig,
 	RolloverModel,
 	rollovers,
 } from "@autumn/shared";

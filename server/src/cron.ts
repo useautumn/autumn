@@ -4,6 +4,7 @@ import {
 	EntInterval,
 	FullCusEntWithProduct,
 	Organization,
+  RolloverConfig,
 } from "@autumn/shared";
 import { CusEntService } from "./internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 
@@ -219,7 +220,7 @@ const resetCustomerEntitlement = async ({
 			rolloverRows = await RolloverService.insert({
 				db,
 				rows: rolloverUpdate.toInsert,
-				rolloverConfig: cusEnt.entitlement.rollover,
+				rolloverConfig: cusEnt.entitlement.rollover as RolloverConfig,
 				cusEntID: cusEnt.id,
 				entityMode: notNullish(cusEnt.entitlement.entity_feature_id),
 			});

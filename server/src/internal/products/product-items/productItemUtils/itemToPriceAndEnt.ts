@@ -115,7 +115,6 @@ export const toFeature = ({
   newVersion?: boolean;
   feature?: Feature;
 }) => {
-  console.log("item toFeature", item);
   let isBoolean = feature?.type == FeatureType.Boolean;
 
   let resetUsage = getResetUsage({ item, feature });
