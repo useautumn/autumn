@@ -45,7 +45,7 @@ export const createStripeCusIfNotExists = async ({
         customer.processor.id,
         {
           expand: ["test_clock", "invoice_settings.default_payment_method"],
-        },
+        }
       );
       if (!stripeCus.deleted) {
         return stripeCus as Stripe.Customer;
@@ -111,6 +111,7 @@ export const createStripeCustomer = async ({
 
     return stripeCustomer;
   } catch (error: any) {
+    console.log("error", error);
     throw new RecaseError({
       message: `Error creating customer in Stripe. ${error.message}`,
       code: ErrCode.StripeCreateCustomerFailed,
@@ -166,7 +167,7 @@ export const getCusPaymentMethod = async ({
   }
 
   const stripeCustomer = (await stripeCli.customers.retrieve(
-    stripeId,
+    stripeId
   )) as Stripe.Customer;
 
   let paymentMethodId = stripeCustomer.invoice_settings?.default_payment_method;
@@ -193,7 +194,7 @@ export const getCusPaymentMethod = async ({
     return paymentMethods[0];
   } else {
     const paymentMethod = await stripeCli.paymentMethods.retrieve(
-      paymentMethodId as string,
+      paymentMethodId as string
     );
     return paymentMethod;
   }
@@ -326,7 +327,7 @@ export const deleteAllStripeCustomers = async ({
     let batch = stripeCustomers.data.slice(i, i + batchSize);
     await Promise.all(batch.map((c) => stripeCli.customers.del(c.id)));
     console.log(
-      `Deleted ${i + batch.length}/${stripeCustomers.data.length} customers`,
+      `Deleted ${i + batch.length}/${stripeCustomers.data.length} customers`
     );
   }
 };
