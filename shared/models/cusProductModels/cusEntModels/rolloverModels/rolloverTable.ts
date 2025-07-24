@@ -19,7 +19,7 @@ export const RolloverSchema = z.object({
   id: z.string(),
   cus_ent_id: z.string(),
   balance: z.number(),
-  usage: z.number(),
+  usage: z.number().default(0),
   expires_at: z.number().nullable(),
   entities: z.record(z.string(), EntityRolloverBalanceSchema),
 });
@@ -31,6 +31,7 @@ export const rollovers = pgTable(
     cus_ent_id: text("cus_ent_id").notNull(),
     balance: numeric({ mode: "number" }).notNull(),
     expires_at: numeric({ mode: "number" }),
+    usage: numeric({ mode: "number" }).default(0).notNull(),
     entities: jsonb("entities")
       .$type<Record<string, EntityRolloverBalance>>()
       .notNull()

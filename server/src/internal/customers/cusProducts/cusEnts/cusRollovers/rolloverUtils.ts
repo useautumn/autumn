@@ -37,6 +37,7 @@ export const getRolloverUpdates = ({
     id: generateId("roll"),
     cus_ent_id: cusEnt.id,
     balance: 0,
+    usage: 0,
     expires_at: nextExpiry,
     entities: {},
   };
@@ -49,6 +50,7 @@ export const getRolloverUpdates = ({
         newRollover.entities[entityId] = {
           id: entityId,
           balance: entRollover,
+          usage: 0,
         };
       }
     }
@@ -197,6 +199,7 @@ export async function performMaximumClearing({
           update.entities[entityId] = {
             id: entityId,
             balance: newBalance.toNumber(),
+            usage: 0,
           };
         } else {
           newBalance = new Decimal(0);
@@ -205,6 +208,7 @@ export async function performMaximumClearing({
           update.entities[entityId] = {
             id: entityId,
             balance: 0,
+            usage: 0,
           };
         }
       }
