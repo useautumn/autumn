@@ -33,6 +33,7 @@ import { CusEntService } from "../cusProducts/cusEnts/CusEntitlementService.js";
 import { CusPriceService } from "../cusProducts/cusPrices/CusPriceService.js";
 import { addExistingUsagesToCusEnts } from "../cusProducts/cusEnts/cusEntUtils/getExistingUsage.js";
 import { RepService } from "../cusProducts/cusEnts/RepService.js";
+import { getNewProductRollovers } from "../cusProducts/cusEnts/cusRollovers/getNewProductRollovers.js";
 
 export const initCusPrice = ({
   price,
@@ -401,6 +402,14 @@ export const createFullCusProduct = async ({
     isDowngrade,
     entities: attachParams.entities,
     features: attachParams.features,
+  });
+
+  // 4. Get new rollovers
+  await getNewProductRollovers({
+    curCusProduct: curCusProduct as FullCusProduct,
+    cusEnts,
+    entitlements,
+    logger,
   });
 
   // 4. create customer prices
