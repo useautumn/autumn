@@ -1,10 +1,11 @@
 import {
 	FullCustomerEntitlement,
 	ProductItemInterval,
-	Rollover,
+	RolloverConfig as Rollover,
 	RolloverModel,
 	EntityBalance,
 	EntityRolloverBalance,
+	RolloverDuration,
 } from "@autumn/shared";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import { randomUUID } from "crypto";
@@ -111,7 +112,7 @@ export const calculateNextExpiry = (nextResetAt: number, config: Rollover) => {
 	}
 
 	let nextExpiry = new Date(nextResetAt);
-	if (config!.duration === ProductItemInterval.Month) {
+	if (config!.duration === RolloverDuration.Month) {
 		nextExpiry.setMonth(nextExpiry.getMonth() + config!.length);
 	}
 
@@ -131,6 +132,10 @@ export async function performMaximumClearing({
 }) {
 	if (!rolloverConfig) {
 		throw new Error("Rollover config is required");
+	}
+
+	if(rolloverConfig.max == null) {
+		throw new Error("Rollover config max is required");
 	}
 
 	let total = 0;

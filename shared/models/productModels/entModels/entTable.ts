@@ -14,7 +14,7 @@ import { products } from "../productTable.js";
 import { createInsertSchema } from "drizzle-zod";
 import { sql } from "drizzle-orm";
 import { collatePgColumn } from "../../../db/utils.js";
-import { Rollover } from "../../../index.js";
+import { RolloverConfig } from "../../../index.js";
 
 export const entitlements = pgTable(
   "entitlements",
@@ -37,9 +37,9 @@ export const entitlements = pgTable(
     feature_id: text("feature_id"),
     usage_limit: numeric({ mode: "number" }),
 
-    rollover: jsonb().$type<Rollover>(),
+    rollover: jsonb().$type<RolloverConfig>(),
   },
-  (table) => [  
+  (table) => [
     foreignKey({
       columns: [table.internal_feature_id],
       foreignColumns: [features.internal_id],
@@ -54,7 +54,7 @@ export const entitlements = pgTable(
       .onDelete("cascade"),
     unique("entitlements_id_key").on(table.id),
     index("idx_entitlements_internal_product_id").on(table.internal_product_id),
-  ],
+  ]
 );
 
 export const EntInsertSchema = createInsertSchema(entitlements);
