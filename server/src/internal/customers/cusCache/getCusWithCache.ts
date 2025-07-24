@@ -43,8 +43,6 @@ export const getCusWithCache = async ({
     entityId,
   });
 
-  console.log("cacheKey", cacheKey);
-
   if (expand.length > 0) {
     cacheKey = `${cacheKey}:expand_${expand.join(",")}`;
   }
