@@ -1,5 +1,13 @@
-import { invalidNumber, notNullish } from "@/utils/genUtils";
-import { Feature, FeatureUsageType, ProductItem, ProductItemInterval } from "@autumn/shared";
+import { invalidNumber, notNullish, nullish } from "@/utils/genUtils";
+import {
+  Feature,
+  FeatureUsageType,
+  Infinite,
+  ProductItem,
+  ProductItemInterval,
+  RolloverConfig,
+  RolloverDuration,
+} from "@autumn/shared";
 import { toast } from "sonner";
 import { isFeatureItem, isFeaturePriceItem } from "../getItemType";
 import { isOneOffProduct } from "../priceUtils";
@@ -101,44 +109,55 @@ export const validateProductItem = ({
     }
   }
 
-  if (item.config) {
-    if (item.config.rollover) {
-      if(item.interval === null) {
-        toast.warning("Cannot create rollover config for a one off product - disabling rollovers");
-        item.config.rollover = undefined;
-        return item;
-      }
+  if (item.config?.rollover) {
+    const rollover = item.config?.rollover as RolloverConfig;
 
-      
-      if (invalidNumber(item.config.rollover.max)) {
-        toast.error("Please enter a valid maximum rollover amount");
-        item.config.rollover = undefined;
-        return null;
-      }
+    if (rollover.max && rollover.max !== null) {
+      rollover.max = parseFloat(rollover.max.toString());
+    }
 
-      if (invalidNumber(item.config.rollover.length)) {
-        toast.error("Please enter a valid rollover duration");
-        item.config.rollover = undefined;
-        return null;
-      }
+    if (rollover.duration !== RolloverDuration.Forever) {
+      rollover.length = parseFloat(rollover.length.toString());
+    } else {
+      rollover.length = 0;
+    }
 
-      if(item.config.rollover.duration != ProductItemInterval.Month) {
-        toast.error("Rollovers currently only support monthly cycles.");
-        item.config.rollover = undefined;
-        return null;
-      }
+    if (
+      item.interval === null ||
+      nullish(item.included_usage) ||
+      item.included_usage === 0
+    ) {
+      item.config!.rollover = null;
+      return item;
+    }
 
-      if (item.config.rollover.max < 0 || !item.config.rollover.max) {
-        toast.error("Please enter a positive rollover max amount");
-        item.config.rollover = undefined;
-        return null;
-      }
+    if (rollover.max !== null && invalidNumber(rollover.max)) {
+      toast.error("Please enter a valid maximum rollover amount");
+      return null;
+    }
 
-      if (item.config.rollover.length < 0 || !item.config.rollover.length) {
-        toast.error("Please enter a positive rollover length");
-        item.config.rollover = undefined;
-        return null;
-      }
+    if (invalidNumber(rollover.length)) {
+      toast.error("Please enter a valid rollover duration");
+      item.config.rollover = undefined;
+      return null;
+    }
+
+    // if (rollover.duration != RolloverDuration.Month) {
+    //   toast.error("Rollovers currently only support monthly cycles.");
+    //   item.config.rollover = undefined;
+    //   return null;
+    // }
+
+    if (typeof rollover.max == "number" && rollover.max < 0) {
+      toast.error("Please enter a positive rollover max amount");
+      item.config.rollover = undefined;
+      return null;
+    }
+
+    if (rollover.duration == RolloverDuration.Month && rollover.length < 0) {
+      toast.error("Please enter a positive rollover length");
+      item.config.rollover = undefined;
+      return null;
     }
   }
 
