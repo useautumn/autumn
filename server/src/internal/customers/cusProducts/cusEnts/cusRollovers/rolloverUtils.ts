@@ -1,119 +1,91 @@
 import {
-	FullCustomerEntitlement,
-	ProductItemInterval,
-	Rollover,
-	RolloverModel,
-	EntityBalance,
-	EntityRolloverBalance,
+  FullCustomerEntitlement,
+  RolloverConfig,
+  RolloverModel,
+  RolloverDuration,
 } from "@autumn/shared";
-import { notNullish, nullish } from "@/utils/genUtils.js";
-import { randomUUID } from "crypto";
+import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
+import { addMonths } from "date-fns";
 
 export const getRolloverUpdates = ({
-	cusEnt,
-	nextResetAt
+  cusEnt,
+  nextResetAt,
 }: {
-	cusEnt: FullCustomerEntitlement;
-	nextResetAt: number;
+  cusEnt: FullCustomerEntitlement;
+  nextResetAt: number;
 }) => {
-	let update: {
-		toDelete: string[];
-		toInsert: RolloverModel[];
-		toUpdate: RolloverModel[];
-	} = {
-		toDelete: [],
-		toInsert: [],
-		toUpdate: [],
-	};
-	if (nullish(cusEnt.entitlement.rollover) || !cusEnt.entitlement.rollover) {
-		return update;
-	}
+  let update: {
+    toDelete: string[];
+    toInsert: RolloverModel[];
+    toUpdate: RolloverModel[];
+  } = {
+    toDelete: [],
+    toInsert: [],
+    toUpdate: [],
+  };
+  let ent = cusEnt.entitlement;
+  let shouldRollover =
+    cusEnt.balance && cusEnt.balance > 0 && notNullish(ent.rollover);
 
-	let nextExpiry = calculateNextExpiry(
-		nextResetAt,
-		cusEnt.entitlement.rollover
-	);
+  if (!shouldRollover) return update;
 
-	if (nullish(nextExpiry) || !nextExpiry) {
-		return update;
-	}
+  let nextExpiry = calculateNextExpiry(nextResetAt, ent.rollover!);
 
-	let entitlement = cusEnt.entitlement.allowance ?? 0;
+  let newEntitlement: RolloverModel = {
+    id: generateId("roll"),
+    entities: {},
+    cus_ent_id: cusEnt.id,
+    balance: 0,
+    expires_at: nextExpiry,
+  };
 
-	if (entitlement < 0) {
-		return update;
-	}
+  if (notNullish(ent.entity_feature_id)) {
+    for (const entityId in cusEnt.entities) {
+      let entRollover = cusEnt.entities[entityId].balance;
+      if (entRollover > 0) {
+        newEntitlement.entities[entityId] = {
+          id: entityId,
+          balance: entRollover,
+          adjustment: 0,
+        };
+      }
+    }
+    update.toInsert.push(newEntitlement);
+  } else {
+    let balance = cusEnt.balance!;
+    if (balance > 0) {
+      newEntitlement.balance = balance;
+      update.toInsert.push(newEntitlement);
+    }
+  }
 
-	let rollover = cusEnt.balance || 0;
-	console.log(
-		`🔥 Unused balance (rollover): ${rollover} | Entitlement: ${entitlement}`
-	);
-
-	let newEntitlement = {
-		cus_ent_id: cusEnt.id,
-		balance: 0,
-		expires_at: nextExpiry,
-		entities: [] as EntityRolloverBalance[],
-		id: randomUUID() as string,
-	};
-
-	if (cusEnt.entities != null)
-		console.log(
-			"🏢 entities:",
-			Object.values(cusEnt.entities).map((x: any) => `${x.id}: ${x.balance}`)
-		);
-	else console.log("🏢 entities: none");
-	console.log(
-		"📋 entitlement:",
-		cusEnt.entitlement.feature_id,
-		"| 🆔 entity_feature_id:",
-		cusEnt.entitlement.entity_feature_id,
-		"| allowance:",
-		cusEnt.entitlement.allowance
-	);
-
-	if (notNullish(cusEnt.entitlement.entity_feature_id)) {
-		console.log("🔍 newEntities:", cusEnt.entities);
-		for (const entityId in cusEnt.entities) {
-			let entRollover = cusEnt.entities[entityId].balance;
-			if (entRollover > 0) {
-				newEntitlement.entities.push({
-					id: entityId,
-					balance: entRollover,
-				});
-				console.log("🔍 entityId:", entityId, "entRollover:", entRollover);
-			} else console.log("🔍 no rollover for entityId:", entityId, " | entitlement:", entitlement, " | balance:", cusEnt.entities[entityId].balance);
-		}
-		update.toInsert.push(newEntitlement);
-	} else {
-		if (rollover > 0) {
-			newEntitlement.balance = rollover;
-			update.toInsert.push(newEntitlement);
-		} else console.log("🔍 no rollover for entitlement: ", cusEnt.id, " | rollable balance:", rollover);
-	}
-
-	console.log(
-		"Rollover update sending from rolloverUtils:",
-		update.toInsert.map((rollover) => ({
-			id: rollover.id,
-			balance: rollover.balance,
-			entities: rollover.entities.map((entity) => `${entity.id}: ${entity.balance}`).join(", "),
-			expires_at: rollover.expires_at ? new Date(rollover.expires_at).toISOString() : null,
-		}))
-	);
-
-	return update;
+  return update;
 };
 
-export const calculateNextExpiry = (nextResetAt: number, config: Rollover) => {
-	if (nullish(config)) {
-		return null;
-	}
+export const calculateNextExpiry = (
+  nextResetAt: number,
+  config: RolloverConfig
+) => {
+  if (nullish(config)) {
+    return null;
+  }
 
-	let nextExpiry = new Date(nextResetAt);
-	if (config!.duration === ProductItemInterval.Month) {
-		nextExpiry.setMonth(nextExpiry.getMonth() + config!.length);
-	}
+  if (config.duration == RolloverDuration.Forever) return null;
 
-	return nextExpiry.getTime();
+  return addMonths(nextResetAt, config.length).getTime();
 };
+
+// if (nullish(nextExpiry) || !nextExpiry) {
+//   return update;
+// }
+
+// let entitlement = cusEnt.entitlement.allowance ?? 0;
+
+// if (entitlement < 0) {
+//   return update;
+// }
+
+// let rollover = cusEnt.balance || 0;
+// console.log(
+//   `🔥 Unused balance (rollover): ${rollover} | Entitlement: ${entitlement}`
+// );

@@ -183,17 +183,19 @@ const resetCustomerEntitlement = async ({
       allowance: resetBalance || undefined,
     });
 
-
     console.log(
       "Rollover update received in cron.ts/resetCustomerEntitlement:",
       rolloverUpdate.toInsert.map((rollover) => ({
         id: rollover.id,
         balance: rollover.balance,
-        entities: rollover.entities.map((entity) => `${entity.id}: ${entity.balance}`).join(", "),
-        expires_at: rollover.expires_at ? new Date(rollover.expires_at).toISOString() : null,
+        entities: rollover.entities
+          .map((entity) => `${entity.id}: ${entity.balance}`)
+          .join(", "),
+        expires_at: rollover.expires_at
+          ? new Date(rollover.expires_at).toISOString()
+          : null,
       }))
     );
-
 
     try {
       nextResetAt = await checkSubAnchor({
@@ -216,19 +218,15 @@ const resetCustomerEntitlement = async ({
       },
     });
 
-    let rolloverRows: any[] = [];
+    // let rolloverRows: any[] = [];
     if (rolloverUpdate?.toInsert && rolloverUpdate.toInsert.length > 0) {
-      rolloverRows = await RolloverService.insert({
+      // rolloverRows =
+      await RolloverService.insert({
         db,
         rows: rolloverUpdate.toInsert,
       });
     }
 
-    console.log(
-      "Rollover rows",
-      Object.values(rolloverRows).map((x) => `${x.id}: ${x.balance} | entities: ${x.entities.map((y: any) => `${y.id}: ${y.balance}`).join(", ")}`)
-    );
-      
     console.log(
       `Reset ${cusEnt.id} | customer: ${chalk.yellow(
         cusEnt.customer_id
