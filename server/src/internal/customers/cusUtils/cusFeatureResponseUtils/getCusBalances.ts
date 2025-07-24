@@ -87,7 +87,7 @@ export const getCusBalances = async ({
 }) => {
   const data: Record<string, any> = {};
   const features = cusEntsWithCusProduct.map(
-    (cusEnt) => cusEnt.entitlement.feature,
+    (cusEnt) => cusEnt.entitlement.feature
   );
   const cusEntsFiltered = cusEntsWithCusProduct.filter((cusEnt) => {
     const ent: EntitlementWithFeature = cusEnt.entitlement;
@@ -170,6 +170,11 @@ export const getCusBalances = async ({
     });
 
     data[key].balance += balance || 0;
+    // let totalRolloverBalance = cusEnt.rollovers.reduce((acc, rollover) => {
+    //   return acc + (rollover.balance || 0);
+    // }, 0);
+
+    // data[key].balance += totalRolloverBalance;
     data[key].adjustment += adjustment || 0;
 
     let total =

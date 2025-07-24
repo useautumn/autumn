@@ -16,7 +16,7 @@ import { notNullish } from "@/utils/genUtils.js";
 
 export const sumValues = (
   entList: CusEntResponse[],
-  key: keyof CusEntResponse,
+  key: keyof CusEntResponse
 ) => {
   return entList.reduce((acc, curr) => {
     if (curr[key]) {
@@ -79,6 +79,7 @@ export const featuresToObject = ({
       next_reset_at: getEarliestNextResetAt(relatedEnts),
       interval: relatedEnts.length == 1 ? relatedEnts[0].interval : "multiple",
       overage_allowed: relatedEnts.some((e) => e.overage_allowed),
+      // rollovers: relatedEnts.flatMap((e) => e.rollovers),
       breakdown:
         !unlimited && relatedEnts.length > 1
           ? relatedEnts.map((e) => ({
