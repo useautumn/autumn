@@ -1,40 +1,157 @@
+import { generateId } from "@/utils/genUtils.js";
 import {
-  CustomerEntitlement,
-  EntitlementWithFeature,
-  FullCusProduct,
+	CustomerEntitlement,
+	EntitlementWithFeature,
+	FullCusProduct,
+	Rollover,
+	RolloverConfig,
 } from "@autumn/shared";
+import { RolloverService } from "./RolloverService.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { calculateNextExpiry } from "./rolloverUtils.js";
 
 export const getNewProductRollovers = async ({
-  curCusProduct,
-  cusEnts,
-  entitlements,
-  logger,
+	curCusProduct,
+	cusEnts: newCusEnts,
+	entitlements,
+	db,
+	logger,
 }: {
-  curCusProduct: FullCusProduct;
-  cusEnts: CustomerEntitlement[];
-  entitlements: EntitlementWithFeature[];
-  logger: any;
+	curCusProduct: FullCusProduct;
+	cusEnts: CustomerEntitlement[];
+	entitlements: EntitlementWithFeature[];
+	db: DrizzleCli;
+	logger: any;
 }) => {
-  try {
-    let newRollovers = [];
+	if (!curCusProduct) return [];
+	if (!curCusProduct.id) return [];
+	try {
+		let rolloverOperations: {
+			cusEntId: string;
+			rolloverConfig: RolloverConfig;
+			toInsert: Rollover[];
+			toUpdate: Rollover[];
+			entityMode: boolean;
+		}[] = [];
 
-    for (const cusEnt of cusEnts) {
-      let ent = entitlements.find((e) => e.id === cusEnt.entitlement_id);
-      if (!ent?.rollover) continue;
+		let oldEnts = curCusProduct.customer_entitlements;
 
-      // 1. Get rollovers from current cus product (Look at feature ID)
+		for (const newCusEnt of newCusEnts) {
+			let newEnt = entitlements.find(
+				(e) => e.id === newCusEnt.entitlement_id
+			);
+			let oldCusEnt = oldEnts.find(
+				(e) => e.internal_feature_id === newEnt?.internal_feature_id
+			);
 
-      // 2. Cases
-      // - Bring over current balance (if greater > 0), and any existing rollover
-      // - Perform max clearing according to new entitlement's rollover config (so cusEnt.entitlement.rollover)
-      // - To test: entity mode and non-entity mode, upgrade and downgrade
-      // - Don't need to handle no entity -> entity or entity -> no entity
+			if (!oldCusEnt) {
+				continue;
+			}
+			if (!newEnt?.rollover) {
+				continue;
+			}
 
-      // 3. Perform db operations AFTER insertFullCusProduct later on
-    }
-  } catch (error) {
-    logger.error(`Failed to handle new product rollovers:`, {
-      error,
-    });
-  }
+			// Do not handle case where user is upgrading from non-entity to entity or vice versa
+			if (
+				newEnt?.entity_feature_id &&
+				!oldCusEnt.entitlement.entity_feature_id
+			) {
+				continue;
+			}
+			if (
+				!newEnt?.entity_feature_id &&
+				oldCusEnt.entitlement.entity_feature_id
+			) {
+				continue;
+			}
+
+			let rollover = newEnt.rollover;
+			let entityMode = !!newEnt.entity_feature_id;
+			let toInsert: Rollover[] = [];
+			let toUpdate: Rollover[] = [];
+
+			// Bring over current balance (if greater > 0), and any existing rollover
+			if (
+				oldCusEnt.balance &&
+				oldCusEnt.balance > 0 &&
+				!oldCusEnt.entitlement.entity_feature_id &&
+				rollover
+			) {
+				toInsert.push({
+					id: generateId("roll"),
+					cus_ent_id: newCusEnt.id,
+					balance: oldCusEnt.balance,
+					entities: {},
+					usage: 0,
+					expires_at: calculateNextExpiry(Date.now(), rollover),
+				});
+			} else if (oldCusEnt.entitlement.entity_feature_id) {
+				if (oldCusEnt.entities) {
+					const entityRollovers = Object.keys(
+						oldCusEnt.entities || {}
+					).reduce(
+						(acc, entityId) => {
+							const entityBalance =
+								oldCusEnt.entities?.[entityId];
+							if (entityBalance && entityBalance.balance > 0) {
+								acc[entityId] = {
+									id: entityId,
+									balance: entityBalance.balance || 0,
+									usage: 0,
+								};
+							}
+							return acc;
+						},
+						{} as Record<
+							string,
+							{ id: string; balance: number; usage: number }
+						>
+					);
+
+					toInsert.push({
+						id: generateId("roll"),
+						cus_ent_id: newCusEnt.id,
+						balance: 0,
+						entities: entityRollovers,
+						usage: 0,
+						expires_at: calculateNextExpiry(Date.now(), rollover),
+					});
+				}
+			}
+
+			// Get rollovers from the OLD customer entitlement, not the new one
+			let curRollovers = await RolloverService.getCurrentRollovers({
+				db,
+				cusEntID: oldCusEnt.id,
+			});
+
+			for (const curRollover of curRollovers) {
+				if (
+					curRollover.expires_at &&
+					curRollover.expires_at > Date.now()
+				) {
+					toUpdate.push({
+						...curRollover,
+						cus_ent_id: newCusEnt.id, // Reassign to the new customer entitlement
+					});
+				}
+			}
+
+			// Add this entitlement's rollover operations
+			rolloverOperations.push({
+				cusEntId: newCusEnt.id,
+				rolloverConfig: rollover,
+				toInsert,
+				toUpdate,
+				entityMode,
+			});
+		}
+
+		return rolloverOperations;
+	} catch (error) {
+		logger.error(`Failed to handle new product rollovers:`, {
+			error,
+		});
+		return [];
+	}
 };

@@ -13,6 +13,8 @@ export class RolloverService {
     id: string;
     updates: Partial<Rollover>;
   }) {
+    if(!updates.balance && !updates.entities) return [];
+
     const data = await db
       .update(rollovers)
       .set(updates as any)
@@ -57,6 +59,8 @@ export class RolloverService {
     cusEntID: string;
     entityMode: boolean;
   }) {
+    if(rows.length === 0) return {};
+
     await db
       .insert(rollovers)
       .values(rows as any)
@@ -89,6 +93,7 @@ export class RolloverService {
   }
 
   static async delete({ db, ids }: { db: DrizzleCli; ids: string[] }) {
+    if(ids.length === 0) return;
     const data = await db.delete(rollovers).where(inArray(rollovers.id, ids));
   }
 }
