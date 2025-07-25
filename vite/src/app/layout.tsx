@@ -9,7 +9,7 @@ import { Outlet, useNavigate } from "react-router";
 
 import { usePostHog } from "posthog-js/react";
 import { Button } from "@/components/ui/button";
-import { ArrowUpRightFromSquare, PanelLeft, PanelRight } from "lucide-react";
+import { ArrowUpRightFromSquare } from "lucide-react";
 import { AutumnProvider } from "autumn-js/react";
 import { useSession } from "@/lib/auth-client";
 import { CustomToaster } from "@/components/general/CustomToaster";
@@ -18,7 +18,6 @@ import {
   useSidebarContext,
 } from "@/views/main-sidebar/SidebarContext";
 import { AppContext } from "./AppContext";
-import { useTopEventNames } from "@/views/customers/customer/analytics/hooks/useTopEventNames";
 
 export function MainLayout() {
   const env = useEnv();
@@ -46,44 +45,20 @@ export function MainLayout() {
   // 1. If not loaded, show loading screen
   if (isPending) {
     return (
-      <SidebarContext.Provider
-        value={{ state: sidebarState, setState: setSidebarState }}
-      >
-        <div className="w-screen h-screen flex bg-stone-100">
-          <MainSidebar />
-          <div className="w-full h-screen flex flex-col overflow-hidden py-3 pr-3">
-            <div className="w-full h-full flex flex-col overflow-hidden rounded-lg border">
-              {env === AppEnv.Sandbox && (
-                <div className="w-full min-h-10 h-10 bg-amber-100 text-white text-sm flex items-center justify-center relative px-4">
-                  <p className="font-medium text-amber-500 font-mono">
-                    You&apos;re in sandbox
-                  </p>
-                  <Button
-                    variant="default"
-                    className="h-6 border border-amber-500 bg-transparent text-amber-500 hover:bg-amber-500 hover:text-white font-mono rounded-xs ml-auto absolute right-4"
-                    onClick={() => {
-                      navigateTo("/onboarding", navigate, AppEnv.Sandbox);
-                    }}
-                  >
-                    Onboarding
-                    <ArrowUpRightFromSquare size={12} className="inline ml-1" />
-                  </Button>
-                </div>
-              )}
-              <div className="flex bg-stone-50 flex-col h-full">
-                <LoadingScreen />
-              </div>
-            </div>
-          </div>
-        </div>
-      </SidebarContext.Provider>
+      <div className="w-screen h-screen flex items-center justify-center bg-stone-100">
+        <LoadingScreen />
+      </div>
     );
   }
 
   // 2. If no user, redirect to sign in
   if (!data) {
-    navigate("/sign-in");
-    return;
+    navigate("/sign-in", { replace: true });
+    return (
+      <div className="w-screen h-screen flex items-center justify-center bg-stone-100">
+        <LoadingScreen />
+      </div>
+    );
   }
 
   // if (!pathname.includes("/onboarding")) {
@@ -113,7 +88,6 @@ export function MainLayout() {
 const MainContent = () => {
   const env = useEnv();
   const navigate = useNavigate();
-  const { state, setState } = useSidebarContext();
 
   return (
     <AppContext.Provider value={{}}>
