@@ -85,7 +85,7 @@ const handleRefreshCache = async (req: any, res: any) => {
     await deleteCusCache({
       db: req.db,
       customerId,
-      orgId: req.org.id,
+      org: req.org,
       env: req.env,
     });
   }
@@ -101,7 +101,7 @@ const handleRefreshCache = async (req: any, res: any) => {
     await deleteCusCache({
       db: req.db,
       customerId: req.body.customer_id,
-      orgId: req.org.id,
+      org: req.org,
       env: req.env,
     });
   }

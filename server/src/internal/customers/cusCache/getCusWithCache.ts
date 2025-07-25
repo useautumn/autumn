@@ -1,4 +1,10 @@
-import { AppEnv, CusExpand, EntityExpand, FullCustomer } from "@autumn/shared";
+import {
+  AppEnv,
+  CusExpand,
+  EntityExpand,
+  FullCustomer,
+  Organization,
+} from "@autumn/shared";
 import { RELEVANT_STATUSES } from "../cusProducts/CusProductService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusService } from "../CusService.js";
@@ -9,7 +15,7 @@ import { notNullish } from "@/utils/genUtils.js";
 export const getCusWithCache = async ({
   db,
   idOrInternalId,
-  orgId,
+  org,
   env,
   entityId,
   expand = [],
@@ -20,7 +26,7 @@ export const getCusWithCache = async ({
 }: {
   db: DrizzleCli;
   idOrInternalId: string;
-  orgId: string;
+  org: Organization;
   env: AppEnv;
   entityId?: string;
 
@@ -36,11 +42,11 @@ export const getCusWithCache = async ({
   const withSubs = true;
 
   const upstash = await initUpstash();
-  if (!upstash) skipCache = true;
+  if (!upstash || !org.config.cache_customer) skipCache = true;
 
   let cacheKey = buildBaseCusCacheKey({
     idOrInternalId,
-    orgId,
+    orgId: org.id,
     env,
     entityId,
   });
@@ -67,7 +73,7 @@ export const getCusWithCache = async ({
   const customer = await CusService.getFull({
     db,
     idOrInternalId,
-    orgId,
+    orgId: org.id,
     env,
     inStatuses: statuses,
     withEntities,

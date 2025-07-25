@@ -87,7 +87,7 @@ export const initCustomer = async ({
     await deleteCusCache({
       db,
       customerId: customerId,
-      orgId: org.id,
+      org,
       env: env,
     });
   }

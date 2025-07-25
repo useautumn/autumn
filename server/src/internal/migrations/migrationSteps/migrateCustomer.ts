@@ -83,7 +83,7 @@ export const migrateCustomer = async ({
       await deleteCusCache({
         db,
         customerId,
-        orgId,
+        org,
         env,
       });
     }
