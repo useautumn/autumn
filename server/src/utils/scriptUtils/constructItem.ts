@@ -56,6 +56,7 @@ export const constructPrepaidItem = ({
     on_increase: OnIncrease.ProrateImmediately,
     on_decrease: OnDecrease.ProrateImmediately,
   },
+  rolloverConfig,
   usageLimit,
 }: {
   featureId: string;
@@ -64,6 +65,7 @@ export const constructPrepaidItem = ({
   includedUsage?: number;
   isOneOff?: boolean;
   config?: ProductItemConfig;
+  rolloverConfig?: RolloverConfig;
   usageLimit?: number;
 }) => {
   let item: ProductItem = {
@@ -76,7 +78,10 @@ export const constructPrepaidItem = ({
     interval: isOneOff ? null : ProductItemInterval.Month,
     included_usage: includedUsage,
 
-    config,
+    config: {
+      ...config,
+      ...(rolloverConfig ? { rollover: rolloverConfig } : {}),
+    },
     usage_limit: usageLimit,
   };
 
@@ -128,12 +133,14 @@ export const constructArrearProratedItem = ({
     on_decrease: OnDecrease.None,
   },
   usageLimit,
+  rolloverConfig,
 }: {
   featureId: string;
   pricePerUnit?: number;
   includedUsage?: number;
   config?: ProductItemConfig;
   usageLimit?: number;
+  rolloverConfig?: RolloverConfig;
 }) => {
   let item: ProductItem = {
     feature_id: featureId,
@@ -142,7 +149,10 @@ export const constructArrearProratedItem = ({
     price: pricePerUnit,
     billing_units: 1,
     interval: ProductItemInterval.Month,
-    config,
+    config: {
+      ...config,
+      ...(rolloverConfig ? { rollover: rolloverConfig } : {}),
+    },
     usage_limit: usageLimit,
   };
 

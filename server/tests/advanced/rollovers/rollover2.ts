@@ -26,32 +26,28 @@ import { getMainCusProduct } from "@/internal/customers/cusProducts/cusProductUt
 import { cusProductToCusEnt } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { timeout } from "@/utils/genUtils.js";
 import { resetCustomerEntitlement } from "@/cron/cronUtils.js";
+import { resetAndGetCusEnt } from "./rolloverTestUtils.js";
 
-let rolloverConfig = { max: 100, length: 1, duration: RolloverDuration.Month };
-const messagesItem = constructFeatureItem({
+let rolloverConfig = { max: 500, length: 1, duration: RolloverDuration.Month };
+
+const msgesItem = constructFeatureItem({
   featureId: TestFeature.Messages,
   includedUsage: 400,
   interval: ProductItemInterval.Month,
   rolloverConfig,
+  entityFeatureId: TestFeature.Users,
 }) as LimitedItem;
 
-const perUserItem = constructFeatureItem({
-  featureId: TestFeature.Credits,
-  includedUsage: 400,
-  interval: ProductItemInterval.Month,
-  rolloverConfig,
-  entityFeatureId: TestFeature.Users,
+export let free = constructProduct({
+  items: [msgesItem],
+  type: "free",
+  isDefault: false,
 });
 
-export let pro = constructProduct({
-  items: [messagesItem, perUserItem],
-  type: "pro",
-});
-
-const testCase = "rollover1";
+const testCase = "rollover2";
 // , per entity and regular
 
-describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`)}`, () => {
+describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item (per entity)`)}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
   let testClockId: string;
@@ -71,13 +67,13 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`
     stripeCli = this.stripeCli;
 
     addPrefixToProducts({
-      products: [pro],
+      products: [free],
       prefix: testCase,
     });
 
     await createProducts({
       autumn,
-      products: [pro],
+      products: [free],
       customerId,
       db,
       orgId: org.id,
@@ -97,7 +93,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`
     customer = res.customer;
   });
 
-  const entities = [
+  const entities: any[] = [
     {
       id: "1",
       name: "Entity 1",
@@ -113,117 +109,119 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`
   it("should attach pro product", async function () {
     await autumn.attach({
       customer_id: customerId,
-      product_id: pro.id,
+      product_id: free.id,
     });
 
     await autumn.entities.create(customerId, entities);
   });
 
-  let messageUsage = 250;
+  let entity1Id = entities[0].id;
+  let entity2Id = entities[1].id;
+  let newEntity1Balance = 300;
+  let newEntity2Balance = 200;
+  let includedUsage = msgesItem.included_usage;
+  let usages = [
+    {
+      entityId: entity1Id,
+      usage: includedUsage - newEntity1Balance,
+      rollover: newEntity1Balance,
+    },
+    {
+      entityId: entity2Id,
+      usage: includedUsage - newEntity2Balance,
+      rollover: newEntity2Balance,
+    },
+  ];
 
   it("should create track messages, reset, and have correct rollover", async function () {
-    await autumn.track({
-      customer_id: customerId,
-      feature_id: TestFeature.Messages,
-      value: messageUsage,
-    });
+    for (const usage of usages) {
+      await autumn.track({
+        customer_id: customerId,
+        feature_id: TestFeature.Messages,
+        value: usage.usage,
+        entity_id: usage.entityId,
+      });
+    }
 
     await timeout(3000);
 
     // Run reset cusEnt on ...
-    let mainCusProduct = await getMainCusProduct({
+    await resetAndGetCusEnt({
       db,
-      internalCustomerId: customer.internal_id,
-      productGroup: pro.group,
-    });
-
-    let msgesCusEnt = cusProductToCusEnt({
-      cusProduct: mainCusProduct!,
+      customer,
+      productGroup: free.group,
       featureId: TestFeature.Messages,
     });
 
-    await resetCustomerEntitlement({
-      db,
-      cusEnt: msgesCusEnt!,
-    });
+    for (const usage of usages) {
+      let entity = await autumn.entities.get(customerId, usage.entityId);
+      let msgesFeature = entity.features[TestFeature.Messages];
+      let expectedRollover = Math.min(usage.rollover, rolloverConfig.max);
 
-    mainCusProduct = await getMainCusProduct({
-      db,
-      internalCustomerId: customer.internal_id,
-      productGroup: pro.group,
-    });
-
-    msgesCusEnt = cusProductToCusEnt({
-      cusProduct: mainCusProduct!,
-      featureId: TestFeature.Messages,
-    });
-
-    let rollover = messagesItem.included_usage - messageUsage;
-
-    expect(msgesCusEnt?.rollovers.length).to.equal(1);
-    expect(msgesCusEnt?.rollovers[0].balance).to.equal(
-      Math.min(rollover, rolloverConfig.max)
-    );
+      expect(msgesFeature.rollovers.length).to.equal(1);
+      expect(msgesFeature.balance).to.equal(includedUsage + expectedRollover);
+      expect(msgesFeature.rollovers[0].balance).to.equal(expectedRollover);
+    }
   });
 
-  let perUserUsage = {
-    [entities[0].id]: 350,
-    [entities[1].id]: 200,
-  };
+  it("should reset again and have correct rollovers", async function () {
+    await resetAndGetCusEnt({
+      db,
+      customer,
+      productGroup: free.group,
+      featureId: TestFeature.Messages,
+    });
 
-  it("should track per user credits, reset, and have correct rollover", async function () {
-    for (let entityId in perUserUsage) {
+    let entity1 = await autumn.entities.get(customerId, entity1Id);
+    let entity1Msges = entity1.features[TestFeature.Messages];
+    // 400, 300 -> 400, 100 (max is 500)
+    let rollovers = entity1Msges.rollovers;
+    expect(rollovers[0].balance).to.equal(100);
+    expect(rollovers[1].balance).to.equal(400);
+
+    let entity2 = await autumn.entities.get(customerId, entity2Id);
+    let entity2Msges = entity2.features[TestFeature.Messages];
+    // 400, 200 -> 400, 0 (max is 500)
+    let rollovers2 = entity2Msges.rollovers;
+    expect(rollovers2[0].balance).to.equal(100);
+    expect(rollovers2[1].balance).to.equal(400);
+  });
+
+  it("should track and deduct from oldest rollovers first", async function () {
+    for (const entity of entities) {
       await autumn.track({
         customer_id: customerId,
-        feature_id: TestFeature.Credits,
-        value: perUserUsage[entityId],
-        entity_id: entityId,
+        feature_id: TestFeature.Messages,
+        value: 150,
+        entity_id: entity.id,
       });
+
+      await timeout(2000);
+      let entRes = await autumn.entities.get(customerId, entity.id);
+      let msgesFeature = entRes.features[TestFeature.Messages];
+      let rollovers = msgesFeature.rollovers;
+      expect(rollovers[0].balance).to.equal(0);
+      expect(rollovers[1].balance).to.equal(350);
+      expect(msgesFeature.balance).to.equal(includedUsage + 350);
     }
+  });
 
-    await timeout(2000);
+  it("should track past rollovers and deduct from original balance", async function () {
+    for (const entity of entities) {
+      await autumn.track({
+        customer_id: customerId,
+        feature_id: TestFeature.Messages,
+        value: 400,
+        entity_id: entity.id,
+      });
+      await timeout(2000);
 
-    let mainCusProduct = await getMainCusProduct({
-      db,
-      internalCustomerId: customer.internal_id,
-      productGroup: pro.group,
-    });
-
-    let perUserCusEnt = cusProductToCusEnt({
-      cusProduct: mainCusProduct!,
-      featureId: TestFeature.Credits,
-    });
-
-    await resetCustomerEntitlement({
-      db,
-      cusEnt: perUserCusEnt!,
-    });
-
-    mainCusProduct = await getMainCusProduct({
-      db,
-      internalCustomerId: customer.internal_id,
-      productGroup: pro.group,
-    });
-
-    perUserCusEnt = cusProductToCusEnt({
-      cusProduct: mainCusProduct!,
-      featureId: TestFeature.Credits,
-    });
-
-    let perUserRollover = perUserCusEnt?.rollovers[0];
-    expect(perUserRollover).to.exist;
-    for (let entityId in perUserUsage) {
-      let entityRollover = perUserRollover?.entities[entityId];
-
-      let expectedRollover = Math.min(
-        entityRollover!.balance,
-        rolloverConfig.max
-      );
-
-      expect(entityRollover).to.exist;
-      expect(entityRollover?.balance).to.equal(expectedRollover);
+      let entRes = await autumn.entities.get(customerId, entity.id);
+      let msgesFeature = entRes.features[TestFeature.Messages];
+      let rollovers = msgesFeature.rollovers;
+      expect(rollovers[0].balance).to.equal(0);
+      expect(rollovers[1].balance).to.equal(0);
+      expect(msgesFeature.balance).to.equal(includedUsage - 50);
     }
-
-    await timeout(3000);
   });
 });

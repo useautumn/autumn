@@ -406,7 +406,7 @@ export const createFullCusProduct = async ({
   });
 
   // 4. Get new rollovers
-  let rolloverOperations = await getNewProductRollovers({
+  let rolloverOps = await getNewProductRollovers({
     db,
     curCusProduct: curCusProduct as FullCusProduct,
     cusEnts,
@@ -469,23 +469,19 @@ export const createFullCusProduct = async ({
     replaceables: newReplaceables,
   });
 
-  // Insert rollovers for each entitlement
-  console.log('Inserting rollovers for', rolloverOperations.length, 'entitlements');
-  for (const operation of rolloverOperations) {
-    // Update before insert to ensure performMaximumClearing is called in the right order
-    if(operation.toUpdate.length > 0) await RolloverService.bulkUpdate({
-      db,
-      rows: operation.toUpdate,
-    })
+  let rolloverInserts: any = [];
 
-    if(operation.toInsert.length > 0) await RolloverService.insert({
-      db,
-      rows: operation.toInsert,
-      rolloverConfig: operation.rolloverConfig,
-      cusEntID: operation.cusEntId,
-      entityMode: operation.entityMode,
-    });
+  for (const operation of rolloverOps) {
+    rolloverInserts.push(
+      RolloverService.insert({
+        db,
+        rows: operation.toInsert,
+        fullCusEnt: operation.cusEnt,
+      })
+    );
   }
+
+  let finalRollovers = (await Promise.all(rolloverInserts)).flatMap((r) => r);
 
   // Get rollovers for each entitlement
   const cusEntsWithRollovers = await Promise.all(
@@ -498,10 +494,11 @@ export const createFullCusProduct = async ({
           ...r,
           delete_next_cycle: r.delete_next_cycle || false,
         })),
-      rollovers: await RolloverService.getCurrentRollovers({
-        db,
-        cusEntID: ce.id,
-      }),
+      rollovers: finalRollovers.filter((r) => r.cus_ent_id === ce.id),
+      // await RolloverService.getCurrentRollovers({
+      //   db,
+      //   cusEntID: ce.id,
+      // }),
     }))
   );
 

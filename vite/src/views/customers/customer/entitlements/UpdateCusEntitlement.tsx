@@ -34,7 +34,7 @@ function UpdateCusEntitlement({
 
   const [updateLoading, setUpdateLoading] = useState(false);
 
-  let cusEnt = selectedCusEntitlement;
+  const cusEnt = selectedCusEntitlement;
 
   const [updateFields, setUpdateFields] = useState<any>({
     balance:

@@ -22,10 +22,7 @@ import { TestFeature } from "tests/setup/v2Features.js";
 import { addPrefixToProducts } from "tests/attach/utils.js";
 
 import { expect } from "chai";
-import { getMainCusProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
-import { cusProductToCusEnt } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { timeout } from "@/utils/genUtils.js";
-import { resetCustomerEntitlement } from "@/cron/cronUtils.js";
 import { resetAndGetCusEnt } from "./rolloverTestUtils.js";
 
 let rolloverConfig = { max: 500, length: 1, duration: RolloverDuration.Month };
@@ -36,9 +33,10 @@ const messagesItem = constructFeatureItem({
   rolloverConfig,
 }) as LimitedItem;
 
-export let pro = constructProduct({
+export let free = constructProduct({
   items: [messagesItem],
-  type: "pro",
+  type: "free",
+  isDefault: false,
 });
 
 const testCase = "rollover1";
@@ -64,13 +62,13 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`
     stripeCli = this.stripeCli;
 
     addPrefixToProducts({
-      products: [pro],
+      products: [free],
       prefix: testCase,
     });
 
     await createProducts({
       autumn,
-      products: [pro],
+      products: [free],
       customerId,
       db,
       orgId: org.id,
@@ -90,10 +88,10 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`
     customer = res.customer;
   });
 
-  it("should attach pro product", async function () {
+  it("should attach free product", async function () {
     await autumn.attach({
       customer_id: customerId,
-      product_id: pro.id,
+      product_id: free.id,
     });
   });
 
@@ -109,10 +107,10 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`
 
     await timeout(3000);
 
-    let msgesCusEnt = await resetAndGetCusEnt({
+    await resetAndGetCusEnt({
       db,
       customer,
-      productGroup: pro.group,
+      productGroup: free.group,
       featureId: TestFeature.Messages,
     });
 
@@ -131,39 +129,69 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`
     // @ts-ignore
     expect(msgesFeature?.rollovers[0].balance).to.equal(expectedRollover);
     curBalance = expectedBalance;
-
-    // let rollover = messagesItem.included_usage - messageUsage;
-
-    // expect(msgesCusEnt?.rollovers.length).to.equal(1);
-    // expect(msgesCusEnt?.rollovers[0].balance).to.equal(
-    //   Math.min(rollover, rolloverConfig.max)
-    // );
   });
 
   // let usage2 = 50;
-  it("should track messages, reset again and have correct rollover", async function () {
+  it("should reset again and have correct rollover", async function () {
     await resetAndGetCusEnt({
       db,
       customer,
-      productGroup: pro.group,
+      productGroup: free.group,
       featureId: TestFeature.Messages,
     });
 
-    console.log("Current balance", curBalance);
-    console.log("Max rollover", rolloverConfig.max);
     let expectedRollover = Math.min(curBalance, rolloverConfig.max);
-
-    let expectedBalance = curBalance + expectedRollover;
-    console.log("Expected rollover", expectedRollover);
-    console.log("Expected balance", expectedBalance);
+    let expectedBalance = messagesItem.included_usage + expectedRollover;
 
     let cus = await autumn.customers.get(customerId);
     let msgesFeature = cus.features[TestFeature.Messages];
 
     expect(msgesFeature).to.exist;
     expect(msgesFeature?.balance).to.equal(expectedBalance);
-    // // @ts-ignore
-    // expect(msgesFeature?.rollovers[0].balance).to.equal(expectedRollover);
-    // curBalance = expectedBalance;
+
+    // @ts-ignore (oldest rollover should be 100 (150 - 50))
+    expect(msgesFeature?.rollovers[0].balance).to.equal(100);
+    // @ts-ignore (newest rollover should be 400 (msges.included_usage))
+    expect(msgesFeature?.rollovers[1].balance).to.equal(400);
+  });
+
+  it("should track messages and deduct from rollovers first", async function () {
+    await autumn.track({
+      customer_id: customerId,
+      feature_id: TestFeature.Messages,
+      value: 150,
+    });
+
+    await timeout(3000);
+
+    let cus = await autumn.customers.get(customerId);
+    let msgesFeature = cus.features[TestFeature.Messages];
+
+    // @ts-ignore
+    let rollover1 = msgesFeature?.rollovers[0];
+    // @ts-ignore
+    let rollover2 = msgesFeature?.rollovers[1];
+
+    expect(rollover1.balance).to.equal(0);
+    expect(rollover2.balance).to.equal(350);
+  });
+
+  it("should track and deduct from rollover + original balance", async function () {
+    await autumn.track({
+      customer_id: customerId,
+      feature_id: TestFeature.Messages,
+      value: 400,
+    });
+
+    await timeout(3000);
+
+    let cus = await autumn.customers.get(customerId);
+    let msgesFeature = cus.features[TestFeature.Messages];
+
+    // @ts-ignore
+    let rollovers = msgesFeature.rollovers;
+    expect(rollovers[0].balance).to.equal(0);
+    expect(rollovers[1].balance).to.equal(0);
+    expect(msgesFeature.balance).to.equal(messagesItem.included_usage - 50);
   });
 });
