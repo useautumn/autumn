@@ -23,7 +23,7 @@ const actionHandlers = [
   JobName.HandleCustomerCreated,
 ];
 
-const { db, client } = initDrizzle({ maxConnections: 20 });
+const { db, client } = initDrizzle({ maxConnections: 10 });
 
 const initWorker = ({
   id,
@@ -168,7 +168,7 @@ const initWorker = ({
       },
       drainDelay: 1000,
       maxStalledCount: 0,
-    },
+    }
   );
 
   worker.on("ready", () => {
@@ -207,7 +207,7 @@ export const initWorkers = async () => {
         queue: mainQueue,
         useBackup: false,
         db,
-      }),
+      })
     );
     workers.push(
       initWorker({
@@ -216,7 +216,7 @@ export const initWorkers = async () => {
         useBackup: true,
 
         db,
-      }),
+      })
     );
   }
 
