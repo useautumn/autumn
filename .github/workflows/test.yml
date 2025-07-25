@@ -138,6 +138,18 @@ jobs:
           cd server/
           chmod +x ./shell/g3.sh
           ./shell/g3.sh
+
+      - name: Run G4 tests
+        run: |
+          cd server/
+          chmod +x ./shell/g4.sh
+          ./shell/g4.sh
+
+      - name: Run G5 tests
+        run: |
+          cd server/
+          chmod +x ./shell/g5.sh
+          ./shell/g4.sh
           
       # - name: Run G4 tests
       #   run: |
