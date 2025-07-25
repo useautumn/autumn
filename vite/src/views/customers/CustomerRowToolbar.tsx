@@ -9,7 +9,7 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { Customer } from "@autumn/shared";
+import { AppEnv, Customer } from "@autumn/shared";
 import { useCustomersContext } from "./CustomersContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
@@ -17,6 +17,8 @@ import { ToolbarButton } from "@/components/general/table-components/ToolbarButt
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Trash } from "lucide-react";
 import { CusService } from "@/services/customers/CusService";
+import { DeleteCustomerDialog } from "./customer/components/DeleteCustomer";
+import { useEnv } from "@/utils/envUtils";
 
 export const CustomerRowToolbar = ({
   customer,
@@ -24,11 +26,12 @@ export const CustomerRowToolbar = ({
   className?: string;
   customer: Customer;
 }) => {
-  const { mutate, env } = useCustomersContext();
-  const axiosInstance = useAxiosInstance({ env });
+  const { mutate } = useCustomersContext();
+  const axiosInstance = useAxiosInstance();
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
+  const env = useEnv();
 
   const handleDelete = async () => {
     setDeleteLoading(true);
@@ -40,12 +43,21 @@ export const CustomerRowToolbar = ({
       toast.error(getBackendErr(error, "Failed to delete customer"));
     }
     setDeleteLoading(false);
-    setDeleteOpen(false);
+    setDropdownOpen(false);
   };
 
   return (
-    <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-      <DropdownMenu open={deleteOpen} onOpenChange={setDeleteOpen}>
+    <>
+      <DeleteCustomerDialog
+        customer={customer}
+        open={deleteOpen}
+        setOpen={setDeleteOpen}
+        onDelete={async () => {
+          await mutate();
+        }}
+      />
+
+      <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
         <DropdownMenuTrigger asChild>
           <ToolbarButton />
         </DropdownMenuTrigger>
@@ -55,7 +67,13 @@ export const CustomerRowToolbar = ({
             onClick={async (e) => {
               e.stopPropagation();
               e.preventDefault();
-              await handleDelete();
+
+              if (env == AppEnv.Sandbox) {
+                await handleDelete();
+              } else {
+                setDeleteOpen(true);
+                setDropdownOpen(false);
+              }
             }}
           >
             <div className="flex items-center justify-between w-full gap-2">
@@ -73,6 +91,6 @@ export const CustomerRowToolbar = ({
           )} */}
         </DropdownMenuContent>
       </DropdownMenu>
-    </Dialog>
+    </>
   );
 };
