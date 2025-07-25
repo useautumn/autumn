@@ -12,7 +12,7 @@ import { ErrCode } from "@/errors/errCodes.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { APIVersion } from "@autumn/shared";
 import { SuccessCode } from "@autumn/shared";
-import { notNullish, nullish } from "@/utils/genUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 import Stripe from "stripe";
 
@@ -48,7 +48,6 @@ export const handleCreateCheckout = async ({
     });
   }
 
-  // Handle first item set
   const { items } = itemSets[0];
 
   attachParams.itemSets = itemSets;
@@ -96,7 +95,14 @@ export const handleCreateCheckout = async ({
     };
   }
 
-  const checkout = await stripeCli.checkout.sessions.create({
+  // Prepare checkout session parameters
+  let checkout;
+
+  let paymentMethodSet =
+    notNullish(checkoutParams.payment_method_types) ||
+    notNullish(checkoutParams.payment_method_configuration);
+
+  const sessionParams = {
     customer: customer.processor.id,
     line_items: items,
     subscription_data: subscriptionData,
@@ -108,21 +114,36 @@ export const handleCreateCheckout = async ({
       ...(attachParams.metadata ? attachParams.metadata : {}),
     },
     allow_promotion_codes: allowPromotionCodes,
+    invoice_creation: !isRecurring ? { enabled: true } : undefined,
+    saved_payment_method_options: { payment_method_save: "enabled" },
     ...rewardData,
-    invoice_creation: !isRecurring
-      ? {
-          enabled: true,
-        }
-      : undefined,
-
-    saved_payment_method_options: {
-      payment_method_save: "enabled",
-    },
-
     ...(attachParams.checkoutSessionParams || {}),
-  });
+  };
 
-  logger.info(`✅ Successfully created checkout for customer ${customer.id}`);
+  try {
+    checkout = await stripeCli.checkout.sessions.create(sessionParams);
+    logger.info(
+      `✅ Successfully created checkout for customer ${customer.id || customer.internal_id}`
+    );
+  } catch (error: any) {
+    let msg = error.message;
+    if (
+      msg &&
+      msg.includes("No valid payment method types") &&
+      !paymentMethodSet
+    ) {
+      checkout = await stripeCli.checkout.sessions.create({
+        ...sessionParams,
+        payment_method_types: ["card"],
+      });
+
+      logger.info(
+        `✅ Created fallback checkout session with card payment method for customer ${customer.id || customer.internal_id}`
+      );
+    } else {
+      throw error;
+    }
+  }
 
   if (returnCheckout) {
     return checkout;
