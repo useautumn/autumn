@@ -16,9 +16,9 @@
     "build": "bun build ./index.ts --outdir dist --target bun --external zod",
     "dev": "bunx nodemon --ext ts --ignore dist --exec \"bun run build\"",
 
-    "db:push": "cross-env NODE_OPTIONS=\"--import tsx\" pnpm exec drizzle-kit push --config drizzle.config.ts",
-    "db:generate": "cross-env NODE_OPTIONS=\"--import tsx\" pnpm exec drizzle-kit generate --config drizzle.config.ts",
-    "db:migrate": "cross-env NODE_OPTIONS=\"--import tsx\" pnpm exec drizzle-kit migrate --config drizzle.config.ts"
+    "db:push": "bunx drizzle-kit push --config 'drizzle.config.ts'",
+    "db:generate": "cross-env NODE_OPTIONS=\"--import tsx\" bunx drizzle-kit generate --config drizzle.config.ts",
+    "db:migrate": "cross-env NODE_OPTIONS=\"--import tsx\" bunx drizzle-kit migrate --config drizzle.config.ts"
   },
   "dependencies": {
     "date-fns": "^4.1.0",
