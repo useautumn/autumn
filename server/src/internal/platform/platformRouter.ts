@@ -82,6 +82,14 @@ platformRouter.post("/exchange", (req: any, res: any) =>
         stripe_live_key,
       });
 
+      if (!stripe_test_key && !stripe_live_key) {
+        res.status(400).json({
+          message: "Either stripe_test_key or stripe_live_key is required",
+          code: "invalid_request",
+        });
+        return;
+      }
+
       // 1. Check if user with this email already exists
       let user = await db.query.user.findFirst({
         where: eq(userTable.email, email),
@@ -129,6 +137,7 @@ platformRouter.post("/exchange", (req: any, res: any) =>
             logo: "",
             createdAt: new Date(),
             metadata: "",
+            created_by: req.org.id,
           })
           .returning()) as [Organization];
 
