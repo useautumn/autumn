@@ -50,6 +50,9 @@ const platformAuthMiddleware = async (
     }
     next();
   } catch (error) {
+    req.logger.error(`Failed to check if org is allowed to access platform`, {
+      error,
+    });
     res.status(500).json({
       message: "Failed to check if org is allowed to access platform",
       code: "internal_error",

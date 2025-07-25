@@ -73,6 +73,7 @@ stripeWebhookRouter.post(
 
     try {
       const webhookSecret = getStripeWebhookSecret(org, env);
+
       event = await stripe.webhooks.constructEventAsync(
         request.body,
         sig,

@@ -13,9 +13,11 @@ import { Calendar } from "@/components/ui/calendar";
 export const DateInputUnix = ({
   unixDate,
   setUnixDate,
+  disabled,
 }: {
   unixDate: number | null;
   setUnixDate: (unixDate: number | null) => void;
+  disabled?: boolean;
 }) => {
   const [popoverOpen, setPopoverOpen] = useState(false);
   return (
@@ -30,6 +32,7 @@ export const DateInputUnix = ({
             popoverOpen &&
               "transition-colors duration-100 focus-visible:outline-none focus-visible:ring-0 border-[rgb(139,92,246)] shadow-[0_0_2px_1px_rgba(139,92,246,0.25)]"
           )}
+          disabled={disabled}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
           {unixDate ? (

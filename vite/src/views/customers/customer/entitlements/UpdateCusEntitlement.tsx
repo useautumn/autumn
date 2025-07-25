@@ -20,6 +20,7 @@ import { CusService } from "@/services/customers/CusService";
 import { toast } from "sonner";
 import { getBackendErr, notNullish } from "@/utils/genUtils";
 import CopyButton from "@/components/general/CopyButton";
+import { AlertCircle, Info, InfoIcon } from "lucide-react";
 
 function UpdateCusEntitlement({
   selectedCusEntitlement,
@@ -76,6 +77,11 @@ function UpdateCusEntitlement({
       return;
     }
 
+    if (cusPrice && updateFields.next_reset_at != cusEnt.next_reset_at) {
+      toast.error(`Not allowed to change reset at for paid features`);
+      return;
+    }
+
     setUpdateLoading(true);
     try {
       await CusService.updateCusEntitlement(
@@ -96,6 +102,12 @@ function UpdateCusEntitlement({
     }
     setUpdateLoading(false);
   };
+
+  const cusPrice = cusProduct?.customer_prices.find(
+    (cp: any) => cp.price.entitlement_id === cusEnt?.entitlement.id
+  );
+  console.log("Cus price:", cusPrice);
+  console.log("Cus product:", cusProduct);
 
   return (
     <Dialog
@@ -129,8 +141,20 @@ function UpdateCusEntitlement({
             />
           </div>
           <div>
-            <FieldLabel>Next Reset</FieldLabel>
+            <FieldLabel
+              description={
+                cusPrice && (
+                  <span className="flex items-center gap-1 mt-1">
+                    <AlertCircle size={11} /> Can't update reset at for paid
+                    features
+                  </span>
+                )
+              }
+            >
+              Next Reset
+            </FieldLabel>
             <DateInputUnix
+              disabled={!!cusPrice}
               unixDate={updateFields.next_reset_at}
               setUnixDate={(unixDate) => {
                 setUpdateFields({ ...updateFields, next_reset_at: unixDate });
