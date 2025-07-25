@@ -6,7 +6,10 @@ import {
 } from "@autumn/shared";
 
 import { useCustomerContext } from "../CustomerContext";
-import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
+import {
+  formatUnixToDate,
+  formatUnixToDateTime,
+} from "@/utils/formatUtils/formatDateUtils";
 
 import { useState } from "react";
 
@@ -18,6 +21,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { CusProductEntityItem } from "../components/CusProductEntityItem";
+import { CusEntBalance } from "./CusEntBalance";
 
 export const CustomerEntitlementsList = () => {
   const [featureType, setFeatureType] = useState<FeatureType>(
@@ -122,6 +126,26 @@ export const CustomerEntitlementsList = () => {
       hoverTexts.push({
         key: "Entities",
         value: mappedEntities,
+      });
+    }
+
+    if (cusEnt.rollovers.length > 0) {
+      hoverTexts.push({
+        key: "Rollovers",
+        value: cusEnt.rollovers
+          .map((r: any) => {
+            if (Object.values(r.entities).length > 0) {
+              return (
+                Object.values(r.entities)
+                  .map((e: any) => `${e.balance} (${e.id})`)
+                  .join(", ") +
+                ` (expires: ${r.expires_at ? formatUnixToDate(r.expires_at) : "N/A"})`
+              );
+            } else {
+              return `${r.balance} (ex: ${r.expires_at ? formatUnixToDate(r.expires_at) : "N/A"})`;
+            }
+          })
+          .join("\n"),
       });
     }
 
@@ -234,26 +258,7 @@ export const CustomerEntitlementsList = () => {
               </Item>
             )}
             <Item className="col-span-3">
-              <div className="flex items-center font-mono font-medium rounded-md px-1 border-b border-stone-300 border-dashed ">
-                {entitlement.feature.type == FeatureType.Boolean ? (
-                  <></>
-                ) : allowanceType == AllowanceType.Unlimited ? (
-                  "Unlimited"
-                ) : entityId && cusEnt.entities?.[entityId] ? (
-                  <div className="flex items-center gap-2">
-                    {cusEnt.entities?.[entityId]?.balance}{" "}
-                  </div>
-                ) : (
-                  <>
-                    {cusEnt.balance}{" "}
-                    <span className="text-t3">
-                      {cusEnt.replaceables.length > 0
-                        ? ` (${cusEnt.replaceables.length} free)`
-                        : ""}
-                    </span>
-                  </>
-                )}
-              </div>
+              <CusEntBalance cusEnt={cusEnt} />
             </Item>
 
             <Item className="col-span-3">

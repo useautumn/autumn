@@ -154,7 +154,7 @@ export const handleCheckoutSessionCompleted = async ({
         product,
         org,
         env: attachParams.customer.env,
-        subId: checkoutSession.subscription as string,
+        subId: checkoutSub?.id as string,
       },
     });
   }

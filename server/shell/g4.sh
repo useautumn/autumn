@@ -11,7 +11,8 @@ fi
 $MOCHA_CMD 'tests/advanced/multiFeature/*.ts' \
            'tests/advanced/coupons/*.ts' \
            'tests/attach/updateQuantity/*.ts' \
-           'tests/advanced/referrals/*.ts'
+           'tests/advanced/referrals/*.ts' \
+           'tests/advanced/rollovers/*.ts'
           
 $MOCHA_CMD 'tests/attach/multiProduct/*.ts' \
            'tests/advanced/usageLimit/*.ts' 

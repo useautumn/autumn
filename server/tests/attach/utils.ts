@@ -91,7 +91,7 @@ export const runAttachTest = async ({
 
   expect(
     productCount,
-    `customer should only have 1 product (from this group: ${product.group})`,
+    `customer should only have 1 product (from this group: ${product.group})`
   ).to.equal(1);
 
   expectProductAttached({
@@ -101,7 +101,7 @@ export const runAttachTest = async ({
   });
 
   let intervals = Array.from(
-    new Set(product.items.map((item) => item.interval)),
+    new Set(product.items.map((item) => item.interval))
   ).filter(notNullish);
   const multiInterval = intervals.length > 1;
 
@@ -150,7 +150,7 @@ export const runAttachTest = async ({
   } else {
     expect(stripeSubs.data.length).to.equal(
       1,
-      "should only have 1 subscription",
+      "should only have 1 subscription"
     );
   }
 };
@@ -191,7 +191,7 @@ export const replaceItems = ({
 
   if (interval) {
     index = newItems.findIndex(
-      (item) => item.interval == (interval as any) && nullish(item.feature_id),
+      (item) => item.interval == (interval as any) && nullish(item.feature_id)
     );
   }
 

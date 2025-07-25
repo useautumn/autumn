@@ -41,7 +41,9 @@ export const toFeatureItem = ({ ent }: { ent: EntitlementWithFeature }) => {
     };
   }
 
-  return {
+  const itemConfig = ent.rollover ? { rollover: ent.rollover } : undefined;
+
+  const item = {
     feature_id: ent.feature.id,
     included_usage:
       ent.allowance_type == AllowanceType.Unlimited ? Infinite : ent.allowance,
@@ -50,10 +52,15 @@ export const toFeatureItem = ({ ent }: { ent: EntitlementWithFeature }) => {
     entity_feature_id: ent.entity_feature_id,
     reset_usage_when_enabled: !ent.carry_from_previous,
 
+    // Include rollover config
+    config: itemConfig,
+
     // Stored in backend
     entitlement_id: ent.id,
     created_at: ent.created_at,
   };
+
+  return item;
 };
 
 export const toFeaturePriceItem = ({
@@ -70,6 +77,15 @@ export const toFeaturePriceItem = ({
       to: tier.to == -1 ? TierInfinite : tier.to,
     };
   });
+
+  // Build the item config from both price proration config and entitlement rollover
+  let itemConfig: any = {};
+  if (price.proration_config) {
+    itemConfig = { ...price.proration_config };
+  }
+  if (ent.rollover) {
+    itemConfig.rollover = ent.rollover;
+  }
 
   let item: ProductItem = {
     feature_id: ent.feature.id,
@@ -98,7 +114,7 @@ export const toFeaturePriceItem = ({
     price_id: price.id,
 
     price_config: price.config,
-    config: price.proration_config || undefined,
+    config: Object.keys(itemConfig).length > 0 ? itemConfig : undefined,
     usage_limit: ent.usage_limit,
   };
 

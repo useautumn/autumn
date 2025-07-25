@@ -85,6 +85,7 @@ const getFullCusProdRelations = () => {
           },
         },
         replaceables: true,
+        rollovers: true,
       },
     },
     customer_prices: {
@@ -147,6 +148,7 @@ export class CusProductService {
               },
             },
             replaceables: true,
+            rollovers: true,
           },
         },
         customer_prices: {
@@ -197,7 +199,7 @@ export class CusProductService {
     let cusProducts = await db.query.customerProducts.findMany({
       where: and(
         eq(customerProducts.internal_customer_id, internalCustomerId),
-        inStatuses ? inArray(customerProducts.status, inStatuses) : undefined,
+        inStatuses ? inArray(customerProducts.status, inStatuses) : undefined
       ),
       with: {
         customer: withCustomer ? true : undefined,
@@ -210,6 +212,7 @@ export class CusProductService {
               },
             },
             replaceables: true,
+            rollovers: true,
           },
         },
         customer_prices: {
@@ -259,14 +262,14 @@ export class CusProductService {
       .from(customerProducts)
       .innerJoin(
         products,
-        eq(customerProducts.internal_product_id, products.internal_id),
+        eq(customerProducts.internal_product_id, products.internal_id)
       )
       .where(
         and(
           eq(products.id, productId),
           eq(products.org_id, orgId),
-          eq(products.env, env),
-        ),
+          eq(products.env, env)
+        )
       )
       .limit(1);
 
@@ -294,7 +297,7 @@ export class CusProductService {
       where: (table, { and, or, inArray }) =>
         and(
           or(arrayContains(customerProducts.subscription_ids, [stripeSubId])),
-          inStatuses ? inArray(customerProducts.status, inStatuses) : undefined,
+          inStatuses ? inArray(customerProducts.status, inStatuses) : undefined
         ),
 
       with: {
@@ -308,6 +311,7 @@ export class CusProductService {
               },
             },
             replaceables: true,
+            rollovers: true,
           },
         },
         customer_prices: {
@@ -345,10 +349,10 @@ export class CusProductService {
           or(
             eq(
               sql`${customerProducts.processor}->>'subscription_schedule_id'`,
-              stripeScheduledId,
+              stripeScheduledId
             ),
-            sql`${customerProducts.scheduled_ids} @> ${sql`ARRAY[${stripeScheduledId}]`}`,
-          ),
+            sql`${customerProducts.scheduled_ids} @> ${sql`ARRAY[${stripeScheduledId}]`}`
+          )
         ),
 
       with: {
@@ -362,6 +366,7 @@ export class CusProductService {
               },
             },
             replaceables: true,
+            rollovers: true,
           },
         },
         customer_prices: {
@@ -402,6 +407,7 @@ export class CusProductService {
             },
           },
           replaceables: true,
+          rollovers: true,
         },
       },
       customer_prices: {
@@ -462,9 +468,9 @@ export class CusProductService {
           or(
             eq(customerProducts.status, CusProductStatus.Active),
             eq(customerProducts.status, CusProductStatus.PastDue),
-            eq(customerProducts.status, CusProductStatus.Scheduled),
-          ),
-        ),
+            eq(customerProducts.status, CusProductStatus.Scheduled)
+          )
+        )
       )
       .returning({
         id: customerProducts.id,
@@ -473,7 +479,7 @@ export class CusProductService {
     let fullUpdated = (await db.query.customerProducts.findMany({
       where: inArray(
         customerProducts.id,
-        updated.map((u) => u.id),
+        updated.map((u) => u.id)
       ),
       with: {
         product: true,
@@ -514,21 +520,21 @@ export class CusProductService {
       .from(customerProducts)
       .innerJoin(
         customers,
-        eq(customerProducts.internal_customer_id, customers.internal_id),
+        eq(customerProducts.internal_customer_id, customers.internal_id)
       )
       .innerJoin(
         products,
-        eq(customerProducts.internal_product_id, products.internal_id),
+        eq(customerProducts.internal_product_id, products.internal_id)
       )
       .where(
         and(
           or(
             fingerprint ? eq(customers.fingerprint, fingerprint) : undefined,
-            eq(customers.internal_id, internalCustomerId),
+            eq(customers.internal_id, internalCustomerId)
           ),
           eq(products.id, productId),
-          isNotNull(customerProducts.free_trial_id),
-        ),
+          isNotNull(customerProducts.free_trial_id)
+        )
       );
 
     return data;
@@ -546,7 +552,7 @@ export class CusProductService {
     let data = await db.query.customerProducts.findMany({
       where: and(
         eq(customerProducts.free_trial_id, freeTrialId),
-        eq(customerProducts.internal_customer_id, internalCustomerId),
+        eq(customerProducts.internal_customer_id, internalCustomerId)
       ),
       with: {
         customer: true,

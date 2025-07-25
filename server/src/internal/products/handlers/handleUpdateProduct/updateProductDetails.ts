@@ -14,7 +14,6 @@ import {
 } from "@autumn/shared";
 import { ProductService } from "../../ProductService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { priceToFeature } from "../../prices/priceUtils/convertPrice.js";
 import { usagePriceToProductName } from "../../prices/priceUtils/usagePriceUtils/convertUsagePrice.js";
 import {
   isFeaturePriceItem,

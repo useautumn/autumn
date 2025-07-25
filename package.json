@@ -37,7 +37,7 @@
 		"vite:start:bun": "bun -F @autumn/shared build && bun -F @autumn/vite start:bun",
 
 
-		"dev:bun": "concurrently \"cd server && bun run dev:bun\" \"cd vite && bun run dev:bun\"",
+		"dev:bun": "concurrently \"cd server && bun run dev\" \"cd vite && bun run dev:bun\" \"bun -F @autumn/shared dev:bun\"",
 		"build:all:bun": "bun run -F @autumn/shared build:bun && bun run -F @autumn/server prod:build:bun && bun run -F @autumn/vite build:bun"
 	},
 	"dependencies": {
