@@ -336,7 +336,7 @@ export const runUpdateUsageTask = async ({
       db,
       customerId,
       entityId,
-      orgId: org.id,
+      org,
       env,
     });
 

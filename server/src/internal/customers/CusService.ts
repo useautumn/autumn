@@ -8,6 +8,7 @@ import {
   EntityExpand,
   FullCusProduct,
   FullCustomer,
+  Organization,
 } from "@autumn/shared";
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
@@ -160,13 +161,18 @@ export class CusService {
     db,
     internalId,
     errorIfNotFound = true,
+    withOrg = false,
   }: {
     db: DrizzleCli;
     internalId: string;
     errorIfNotFound?: boolean;
+    withOrg?: boolean;
   }) {
     const customer = await db.query.customers.findFirst({
       where: eq(customers.internal_id, internalId),
+      with: {
+        org: withOrg ? true : undefined,
+      },
     });
 
     if (errorIfNotFound && !customer) {
@@ -179,7 +185,7 @@ export class CusService {
       return null;
     }
 
-    return customer as Customer;
+    return customer as Customer & { org?: Organization };
   }
 
   static async getByStripeId({

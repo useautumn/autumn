@@ -61,7 +61,7 @@ export const getOrCreateCustomer = async ({
       customer = await getCusWithCache({
         db,
         idOrInternalId: customerId,
-        orgId: org.id,
+        org,
         env,
         entityId,
         expand: expand as CusExpand[],
@@ -130,6 +130,7 @@ export const getOrCreateCustomer = async ({
     db,
     customer,
     customerData,
+    org,
     logger,
   });
 
@@ -154,7 +155,7 @@ export const getOrCreateCustomer = async ({
     await refreshCusCache({
       db,
       customerId: customer.id!,
-      orgId: customer.org_id,
+      org,
       env: customer.env,
     });
   }

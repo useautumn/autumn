@@ -64,7 +64,7 @@ export const getEntityResponse = async ({
   let customer = await getCusWithCache({
     db,
     idOrInternalId: customerId,
-    orgId: org.id,
+    org,
     env,
     expand,
     entityId,

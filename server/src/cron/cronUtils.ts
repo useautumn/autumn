@@ -242,13 +242,14 @@ export const resetCustomerEntitlement = async ({
     let customer = await CusService.getByInternalId({
       db,
       internalId: cusEnt.internal_customer_id,
+      withOrg: true,
     });
 
     if (customer) {
       await refreshCusCache({
         db,
         customerId: customer.id!,
-        orgId: customer.org_id,
+        org: customer.org!,
         env: customer.env,
       });
     }
