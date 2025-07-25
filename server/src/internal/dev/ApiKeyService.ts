@@ -60,6 +60,7 @@ export class ApiKeyService {
       org,
       features: (data.org.features || []) as Feature[],
       env,
+      userId: data.user_id,
     };
 
     // console.log("result", result);

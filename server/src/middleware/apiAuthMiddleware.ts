@@ -80,7 +80,7 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
     });
   }
 
-  let { org, features, env } = data;
+  let { org, features, env, userId } = data;
   req.orgId = org.id;
   req.env = env;
   req.minOrg = {
@@ -90,6 +90,7 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
   req.org = org;
   req.features = features;
   req.authType = AuthType.SecretKey;
+  req.userId = userId;
 
   next();
 };

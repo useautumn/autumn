@@ -111,7 +111,6 @@ export const createStripeCustomer = async ({
 
     return stripeCustomer;
   } catch (error: any) {
-    console.log("error", error);
     throw new RecaseError({
       message: `Error creating customer in Stripe. ${error.message}`,
       code: ErrCode.StripeCreateCustomerFailed,

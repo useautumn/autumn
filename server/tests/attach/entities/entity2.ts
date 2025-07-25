@@ -130,8 +130,9 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Testing attach pro annual to
       testClockId,
       advanceTo: addHours(
         addMonths(curUnix, 1),
-        hoursToFinalizeInvoice,
+        hoursToFinalizeInvoice
       ).getTime(),
+      waitForSeconds: 30,
     });
 
     await expectInvoiceAfterUsage({

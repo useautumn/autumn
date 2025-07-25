@@ -5,6 +5,7 @@ import { CusProductStripeLink } from "./CusProductStripeLink";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { notNullish } from "@/utils/genUtils";
+import { differenceInDays, subDays } from "date-fns";
 
 export const CusProductStatusItem = ({
   cusProduct,
@@ -12,12 +13,14 @@ export const CusProductStatusItem = ({
   cusProduct: FullCusProduct;
 }) => {
   const getStatus = () => {
+    if (cusProduct.status == CusProductStatus.Expired) {
+      return CusProductStatus.Expired;
+    }
+
     const trialing =
       cusProduct.trial_ends_at && cusProduct.trial_ends_at > Date.now();
 
-    const canceled =
-      notNullish(cusProduct.canceled_at) &&
-      cusProduct.status !== CusProductStatus.Expired;
+    const canceled = notNullish(cusProduct.canceled_at);
     if (canceled) return "canceled";
 
     if (trialing) {
@@ -27,14 +30,24 @@ export const CusProductStatusItem = ({
     return cusProduct.status;
   };
 
-  const isCanceled = notNullish(cusProduct.canceled_at);
+  const getTitle = () => {
+    const status = getStatus();
+    if (status == CusProductStatus.Trialing) {
+      const daysTillEnd = differenceInDays(
+        new Date(cusProduct.trial_ends_at!),
+        new Date()
+      );
+      return `trial (${daysTillEnd}d)`;
+    }
+    return keyToTitle(getStatus()).toLowerCase();
+  };
 
   const statusToColor: Record<CusProductStatus | "canceled", string> = {
     [CusProductStatus.Active]: "bg-lime-500",
     [CusProductStatus.Expired]: "bg-stone-800",
     [CusProductStatus.PastDue]: "bg-red-500",
     [CusProductStatus.Scheduled]: "bg-blue-500",
-    [CusProductStatus.Trialing]: "bg-yellow-400",
+    [CusProductStatus.Trialing]: "bg-blue-400",
     canceled: "bg-gray-500",
     [CusProductStatus.Unknown]: "bg-gray-500",
   };
@@ -45,7 +58,7 @@ export const CusProductStatusItem = ({
         variant="status"
         className={cn("h-fit", statusToColor[getStatus()])}
       >
-        {keyToTitle(getStatus()).toLowerCase()}
+        {getTitle()}
       </Badge>
       {/* {isCanceled && (
         <Badge variant="status" className="ml-2 bg-gray-500">
