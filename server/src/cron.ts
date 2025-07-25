@@ -60,8 +60,6 @@ const job = new CronJob(
   "UTC" // timezone (adjust as needed)
 );
 
-// job.start();
-
 cronTask();
 
 process.on("SIGTERM", async () => {
