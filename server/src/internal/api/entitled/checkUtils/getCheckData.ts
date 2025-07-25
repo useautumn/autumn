@@ -22,7 +22,7 @@ const getFeatureAndCreditSystems = ({
   const { features } = req;
 
   const feature: Feature | undefined = features.find(
-    (feature: Feature) => feature.id === featureId,
+    (feature: Feature) => feature.id === featureId
   );
 
   const creditSystems = getCreditSystemsFromFeature({
@@ -59,6 +59,7 @@ export const getCheckData = async ({ req }: { req: any }) => {
     inStatuses,
     entityId: entity_id,
     entityData: req.body.entity_data,
+    withCache: true,
   });
 
   const duration = Date.now() - startTime;
@@ -82,7 +83,7 @@ export const getCheckData = async ({ req }: { req: any }) => {
         cusEnt,
         entity: customer.entity!,
         features: allFeatures,
-      }),
+      })
     );
   }
 

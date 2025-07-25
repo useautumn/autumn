@@ -5,13 +5,16 @@ import {
 import {
   AppEnv,
   BillingInterval,
+  CouponDurationType,
   CreateFreeTrial,
   CreateFreeTrialSchema,
+  CreateReward,
   FeatureUsageType,
   FreeTrial,
   FreeTrialDuration,
   ProductItem,
   ProductV2,
+  RewardType,
 } from "@autumn/shared";
 import { keyToTitle } from "../genUtils.js";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
@@ -157,4 +160,33 @@ export const constructProduct = ({
   };
 
   return product;
+};
+
+export const constructCoupon = ({
+  id,
+  promoCode,
+  discountType = RewardType.FixedDiscount,
+  discountValue = 10,
+}: {
+  id: string;
+  promoCode: string;
+  discountType?: RewardType;
+  discountValue?: number;
+}) => {
+  const reward: CreateReward = {
+    id,
+    name: keyToTitle(id),
+    promo_codes: [{ code: promoCode }],
+    type: discountType,
+    discount_config: {
+      discount_value: discountValue,
+      duration_type: CouponDurationType.Forever,
+      duration_value: 1,
+      should_rollover: true,
+      apply_to_all: true,
+      price_ids: [],
+    },
+  };
+
+  return reward;
 };

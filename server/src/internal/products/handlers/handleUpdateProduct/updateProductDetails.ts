@@ -21,6 +21,7 @@ import {
   isPriceItem,
 } from "../../product-items/productItemUtils/getItemType.js";
 import { isFreeProduct } from "../../productUtils.js";
+import { isStripeConnected } from "@/internal/orgs/orgUtils.js";
 
 const productDetailsSame = (prod1: Product, prod2: UpdateProduct) => {
   if (notNullish(prod2.id) && prod1.id != prod2.id) {
@@ -59,7 +60,7 @@ const updateStripeProductNames = async ({
   newName: string;
   logger: any;
 }) => {
-  if (!org.stripe_connected) return;
+  if (!isStripeConnected({ org, env: curProduct.env as AppEnv })) return;
   const stripeCli = createStripeCli({
     org,
     env: curProduct.env as AppEnv,
@@ -81,7 +82,7 @@ const updateStripeProductNames = async ({
         error,
         stripeProdId,
         newName,
-      },
+      }
     );
   }
 
@@ -103,7 +104,7 @@ const updateStripeProductNames = async ({
         });
       } catch (error: any) {
         logger.error(
-          `Error updating price ${price.id} name in Stripe: ${error.message}`,
+          `Error updating price ${price.id} name in Stripe: ${error.message}`
         );
       }
     }
@@ -198,7 +199,7 @@ export const handleUpdateProductDetails = async ({
   // Update product name in Stripe
   if (curProduct.name !== newProduct.name && notNullish(newProduct.name)) {
     logger.info(
-      `Updating product (${curProduct.id}) name in Stripe to ${newProduct.name}`,
+      `Updating product (${curProduct.id}) name in Stripe to ${newProduct.name}`
     );
     await updateStripeProductNames({
       db,

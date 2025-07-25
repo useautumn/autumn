@@ -26,11 +26,15 @@ import { analyticsRouter } from "../analytics/analyticsRouter.js";
 import { handleConnectStripe } from "../orgs/handlers/handleConnectStripe.js";
 import { handleDeleteStripe } from "../orgs/handlers/handleDeleteStripe.js";
 
+import { refreshCacheMiddleware } from "@/middleware/refreshCacheMiddleware.js";
+import { platformRouter } from "../platform/platformRouter.js";
+
 const apiRouter: Router = Router();
 
 apiRouter.use(apiAuthMiddleware);
 apiRouter.use(pricingMiddleware);
 apiRouter.use(analyticsMiddleware);
+apiRouter.use(refreshCacheMiddleware);
 
 apiRouter.use("/customers", cusRouter);
 apiRouter.use("/invoices", invoiceRouter);
@@ -63,5 +67,5 @@ apiRouter.post("/setup_payment", handleSetupPayment);
 apiRouter.use("/query", analyticsRouter);
 apiRouter.post("/org/stripe", handleConnectStripe);
 apiRouter.delete("/org/stripe", handleDeleteStripe);
-
+apiRouter.use("/platform", platformRouter);
 export { apiRouter };

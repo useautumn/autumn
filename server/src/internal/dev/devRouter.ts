@@ -17,6 +17,7 @@ import {
 } from "@/external/stripe/stripeOnboardingUtils.js";
 import { clearOrgCache } from "../orgs/orgUtils/clearOrgCache.js";
 import * as crypto from "crypto";
+import { isStripeConnected } from "../orgs/orgUtils.js";
 
 export const devRouter: Router = Router();
 
@@ -64,6 +65,7 @@ devRouter.post("/api_key", withOrgAuth, async (req: any, res) =>
         env,
         name,
         orgId,
+        userId: req.user?.id,
         prefix,
         meta: {},
       });
@@ -222,6 +224,7 @@ export const handleGetOtp = async (req: any, res: any) =>
           fromCli: true,
           generatedAt: new Date().toISOString(),
         },
+        userId: req.user?.id,
       });
 
       const prodKey = await createKey({
@@ -234,6 +237,7 @@ export const handleGetOtp = async (req: any, res: any) =>
           fromCli: true,
           generatedAt: new Date().toISOString(),
         },
+        userId: req.user?.id,
       });
 
       // console.log("New keys created:");
@@ -245,7 +249,7 @@ export const handleGetOtp = async (req: any, res: any) =>
         orgId: cacheData.orgId,
       });
 
-      let stripeConnected = org.stripe_connected;
+      let stripeConnected = isStripeConnected({ org });
 
       let responseData = {
         ...cacheData,

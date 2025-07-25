@@ -49,7 +49,7 @@ export default class RecaseError extends Error {
 export function formatZodError(error: ZodError): string {
   return error.errors
     .map((err) =>
-      err.path.length ? `${err.path.join(".")}: ${err.message}` : err.message,
+      err.path.length ? `${err.path.join(".")}: ${err.message}` : err.message
     )
     .join(", ");
 }
@@ -112,23 +112,9 @@ export const handleRequestError = ({
         `RECASE WARNING (${req.org?.slug || "unknown"}): ${error.message} [${error.code}]`,
         {
           error: error.data,
-        },
+        }
       );
 
-      // logReqUrl(logger, req, "warn");
-      // logger.warn(
-      //   `Request from ${req.org?.slug || req.orgId || "unknown"} for ${action}`,
-      // );
-      // error.print(logger);
-      // if (req.originalUrl.includes("/webhooks/stripe")) {
-      //   logger.warn("request body", {
-      //     body: getJsonBody(req.body),
-      //   });
-      // } else {
-      //   logRequestBody(logger, req, "warn");
-      // }
-
-      // logger.warn("--------------------------------");
       res.status(error.statusCode).json({
         message: error.message,
         code: error.code,
@@ -136,14 +122,6 @@ export const handleRequestError = ({
       });
       return;
     }
-
-    // logger.error("--------------------------------");
-    // logger.error("ERROR");
-    // // logger.error(`${req.method} ${req.originalUrl}`);
-    // logReqUrl(logger, req, "error");
-    // logger.error(
-    //   `Request from ${req.org?.slug || req.orgId || "unknown"} for ${action}`,
-    // );
 
     if (error instanceof Stripe.errors.StripeError) {
       let curStack;
@@ -161,7 +139,7 @@ export const handleRequestError = ({
             ...rest,
             stack: curStack,
           },
-        },
+        }
       );
 
       res.status(400).json({
@@ -170,7 +148,7 @@ export const handleRequestError = ({
       });
     } else if (error instanceof ZodError) {
       logger.error(
-        `ZOD ERROR (${req.org?.slug || "unknown"}): ${formatZodError(error)}`,
+        `ZOD ERROR (${req.org?.slug || "unknown"}): ${formatZodError(error)}`
       );
 
       res.status(400).json({
@@ -185,7 +163,7 @@ export const handleRequestError = ({
             stack: error.stack,
             message: error.message,
           },
-        },
+        }
       );
 
       res.status(500).json({
@@ -220,7 +198,7 @@ export const handleFrontendReqError = ({
       error.statusCode == StatusCodes.NOT_FOUND
     ) {
       req.logtail.warn(
-        `(frontend) ${req.method} ${req.originalUrl}: not found`,
+        `(frontend) ${req.method} ${req.originalUrl}: not found`
       );
       res.status(404).json({
         message: error.message,

@@ -147,13 +147,13 @@ productRouter.get("/:productId/has_customers", async (req: any, res: any) =>
 
       const productSame = itemsSame && freeTrialsSame;
 
-      console.log(`Product ID: ${product.id}`);
-      console.log(
-        `Items same: ${itemsSame}, Free trials same: ${freeTrialsSame}`
-      );
-      console.log(
-        `Cus products on cur version: ${cusProductsCurVersion.length}`
-      );
+      // console.log(`Product ID: ${product.id}`);
+      // console.log(
+      //   `Items same: ${itemsSame}, Free trials same: ${freeTrialsSame}`
+      // );
+      // console.log(
+      //   `Cus products on cur version: ${cusProductsCurVersion.length}`
+      // );
 
       res.status(200).json({
         current_version: product.version,

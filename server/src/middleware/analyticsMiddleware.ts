@@ -12,7 +12,7 @@ const handleResFinish = (req: any, res: any) => {
         {
           statusCode: res.statusCode,
           res: res.locals.responseBody,
-        },
+        }
       );
     }
   } catch (error) {
@@ -29,7 +29,7 @@ const parseCustomerIdFromUrl = (url: string): string | undefined => {
   const cleanUrl = url.split("?")[0].replace(/^\/+|\/+$/g, "");
   const segments = cleanUrl.split("/");
   const customersIndex = segments.findIndex(
-    (segment) => segment === "customers",
+    (segment) => segment === "customers"
   );
 
   if (customersIndex !== -1 && segments[customersIndex + 1]) {
@@ -48,6 +48,7 @@ export const analyticsMiddleware = async (req: any, res: any, next: any) => {
     body: req.body,
     customer_id:
       req?.body?.customer_id || parseCustomerIdFromUrl(req.originalUrl),
+    user_id: req.userId || null,
   };
 
   if (req.span) {

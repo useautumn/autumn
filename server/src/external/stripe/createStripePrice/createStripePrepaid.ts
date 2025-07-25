@@ -22,14 +22,14 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const prepaidToStripeTiers = (
   price: Price,
-  entitlement: EntitlementWithFeature,
+  entitlement: EntitlementWithFeature
 ) => {
   let usageConfig = structuredClone(price.config) as UsagePriceConfig;
 
   const billingUnits = usageConfig.billing_units;
-  const numFree = entitlement.allowance
-    ? Math.round(entitlement.allowance! / billingUnits!)
-    : 0;
+  // const numFree = entitlement.allowance
+  //   ? Math.round(entitlement.allowance! / billingUnits!)
+  //   : 0;
 
   const tiers: any[] = [];
 
@@ -39,7 +39,7 @@ export const prepaidToStripeTiers = (
     const upTo =
       tier.to == -1 || tier.to == TierInfinite
         ? "inf"
-        : Math.round(tier.to / billingUnits!) + numFree;
+        : Math.round(tier.to / billingUnits!);
 
     tiers.push({
       unit_amount_decimal: amount,
