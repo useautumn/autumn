@@ -95,10 +95,13 @@ export const handleCreateCheckout = async ({
     };
   }
 
-  const hasUserSpecifiedPaymentMethods =
-    checkoutParams.payment_method_types !== undefined;
-
   // Prepare checkout session parameters
+  let checkout;
+
+  let paymentMethodSet =
+    notNullish(checkoutParams.payment_method_types) ||
+    notNullish(checkoutParams.payment_method_configuration);
+
   const sessionParams = {
     customer: customer.processor.id,
     line_items: items,
@@ -114,60 +117,30 @@ export const handleCreateCheckout = async ({
     invoice_creation: !isRecurring ? { enabled: true } : undefined,
     saved_payment_method_options: { payment_method_save: "enabled" },
     ...rewardData,
-
     ...(attachParams.checkoutSessionParams || {}),
   };
 
-  let checkout;
-
   try {
-    // let stripe automatically determine payment methods
     checkout = await stripeCli.checkout.sessions.create(sessionParams);
-    logger.info(`✅ Successfully created checkout for customer ${customer.id}`);
+    logger.info(
+      `✅ Successfully created checkout for customer ${customer.id || customer.internal_id}`
+    );
   } catch (error: any) {
-    // payment method errors
+    let msg = error.message;
     if (
-      error.message &&
-      (error.message.includes("payment method") ||
-        error.message.includes("No valid payment"))
+      msg &&
+      msg.includes("No valid payment method types") &&
+      !paymentMethodSet
     ) {
-      logger.warn("Stripe checkout session creation failed", {
-        customerId: customer.id || customer.internal_id,
-        error: error.message,
+      checkout = await stripeCli.checkout.sessions.create({
+        ...sessionParams,
+        payment_method_types: ["card"],
       });
 
-      if (hasUserSpecifiedPaymentMethods) {
-        throw error;
-      }
-
-      try {
-        //  card payment method fallback
-        checkout = await stripeCli.checkout.sessions.create({
-          ...sessionParams,
-          payment_method_types: ["card"],
-        });
-
-        logger.info(
-          `✅ Created checkout with card payment method for customer ${customer.id}`
-        );
-      } catch (fallbackError: any) {
-        logger.error(
-          "Failed to create checkout session even with card payment method",
-          {
-            customerId: customer.id || customer.internal_id,
-            error: fallbackError.message,
-          }
-        );
-
-        throw new RecaseError({
-          code: ErrCode.InvalidRequest,
-          message:
-            "Unable to create checkout session. Please ensure you have activated card payment method in your Stripe dashboard.",
-          statusCode: 400,
-        });
-      }
+      logger.info(
+        `✅ Created fallback checkout session with card payment method for customer ${customer.id || customer.internal_id}`
+      );
     } else {
-      // Re-throw errors
       throw error;
     }
   }
