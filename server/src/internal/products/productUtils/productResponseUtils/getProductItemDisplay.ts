@@ -180,8 +180,9 @@ export const getFeaturePriceItemDisplay = ({
   }
 
   return {
-    primary_text: priceStr,
-    secondary_text: `per ${priceStr2}${intervalStr}`,
+    primary_text: priceStr + ` per ${priceStr2}${intervalStr}`,
+    // secondary_text: `per ${priceStr2}${intervalStr}`,
+    secondary_text: "",
   };
 };
 

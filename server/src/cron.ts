@@ -9,13 +9,13 @@ import { resetCustomerEntitlement } from "./cron/cronUtils.js";
 
 dotenv.config();
 
+const { db, client } = initDrizzle();
+
 export const cronTask = async () => {
   console.log(
     "\n----------------------------------\nRUNNING RESET CRON:",
     format(new UTCDate(), "yyyy-MM-dd HH:mm:ss")
   );
-
-  const { db, client } = initDrizzle();
 
   try {
     let cusEnts: FullCusEntWithProduct[] =
@@ -47,7 +47,7 @@ export const cronTask = async () => {
     return;
   }
 
-  await client.end();
+  // await client.end();
 };
 
 const job = new CronJob(
@@ -63,3 +63,15 @@ const job = new CronJob(
 // job.start();
 
 cronTask();
+
+process.on("SIGTERM", async () => {
+  console.log("Received SIGTERM signal, closing database connection...");
+  await client.end();
+  process.exit(0);
+});
+
+process.on("SIGINT", async () => {
+  console.log("Received SIGINT signal, closing database connection...");
+  await client.end();
+  process.exit(0);
+});
