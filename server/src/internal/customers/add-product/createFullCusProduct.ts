@@ -34,6 +34,7 @@ import { CusPriceService } from "../cusProducts/cusPrices/CusPriceService.js";
 import { addExistingUsagesToCusEnts } from "../cusProducts/cusEnts/cusEntUtils/getExistingUsage.js";
 import { RepService } from "../cusProducts/cusEnts/RepService.js";
 import { getNewProductRollovers } from "../cusProducts/cusEnts/cusRollovers/getNewProductRollovers.js";
+import { RolloverService } from "../cusProducts/cusEnts/cusRollovers/RolloverService.js";
 
 export const initCusPrice = ({
   price,
@@ -405,7 +406,8 @@ export const createFullCusProduct = async ({
   });
 
   // 4. Get new rollovers
-  await getNewProductRollovers({
+  let rolloverOperations = await getNewProductRollovers({
+    db,
     curCusProduct: curCusProduct as FullCusProduct,
     cusEnts,
     entitlements,
@@ -467,10 +469,27 @@ export const createFullCusProduct = async ({
     replaceables: newReplaceables,
   });
 
-  let fullCusProduct = {
-    ...cusProd,
-    product,
-    customer_entitlements: cusEnts.map((ce) => ({
+  // Insert rollovers for each entitlement
+  console.log('Inserting rollovers for', rolloverOperations.length, 'entitlements');
+  for (const operation of rolloverOperations) {
+    // Update before insert to ensure performMaximumClearing is called in the right order
+    if(operation.toUpdate.length > 0) await RolloverService.bulkUpdate({
+      db,
+      rows: operation.toUpdate,
+    })
+
+    if(operation.toInsert.length > 0) await RolloverService.insert({
+      db,
+      rows: operation.toInsert,
+      rolloverConfig: operation.rolloverConfig,
+      cusEntID: operation.cusEntId,
+      entityMode: operation.entityMode,
+    });
+  }
+
+  // Get rollovers for each entitlement
+  const cusEntsWithRollovers = await Promise.all(
+    cusEnts.map(async (ce) => ({
       ...ce,
       entitlement: entitlements.find((e) => e.id === ce.entitlement_id)!,
       replaceables: newReplaceables
@@ -479,8 +498,17 @@ export const createFullCusProduct = async ({
           ...r,
           delete_next_cycle: r.delete_next_cycle || false,
         })),
-      rollovers: [],
-    })),
+      rollovers: await RolloverService.getCurrentRollovers({
+        db,
+        cusEntID: ce.id,
+      }),
+    }))
+  );
+
+  let fullCusProduct = {
+    ...cusProd,
+    product,
+    customer_entitlements: cusEntsWithRollovers,
     customer_prices: cusPrices.map((cp) => ({
       ...cp,
       price: prices.find((p) => p.id === cp.price_id)!,
