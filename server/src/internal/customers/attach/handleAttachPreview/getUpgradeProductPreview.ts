@@ -5,10 +5,7 @@ import {
 } from "../attachUtils/convertAttachParams.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import {
-  getFirstInterval,
-  getLastInterval,
-} from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
+import { getFirstInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 import { getItemsForNewProduct } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
 import { getItemsForCurProduct } from "@/internal/invoices/previewItemUtils/getItemsForCurProduct.js";
 import { getOptions } from "@/internal/api/entitled/checkUtils.js";
@@ -18,9 +15,11 @@ import {
   AttachBranch,
   BillingInterval,
   FreeTrial,
+  FullCusProduct,
   PreviewLineItem,
   Price,
   UsageModel,
+  AttachConfig,
 } from "@autumn/shared";
 import {
   addBillingIntervalUnix,
@@ -39,6 +38,8 @@ const getNextCycleAt = ({
   interval,
   now,
   freeTrial,
+  branch,
+  curCusProduct,
 }: {
   prices: Price[];
   stripeSubs: Stripe.Subscription[];
@@ -46,8 +47,16 @@ const getNextCycleAt = ({
   interval: BillingInterval;
   now?: number;
   freeTrial?: FreeTrial | null;
+  branch: AttachBranch;
+  curCusProduct?: FullCusProduct;
 }) => {
   now = now || Date.now();
+
+  if (branch == AttachBranch.NewVersion && curCusProduct?.free_trial) {
+    return {
+      next_cycle_at: curCusProduct.trial_ends_at,
+    };
+  }
 
   if (freeTrial) {
     return {
@@ -85,12 +94,14 @@ export const getUpgradeProductPreview = async ({
   branch,
   now,
   withPrepaid = false,
+  config,
 }: {
   req: ExtendedRequest;
   attachParams: AttachParams;
   branch: AttachBranch;
   now: number;
   withPrepaid?: boolean;
+  config?: AttachConfig;
 }) => {
   const { logtail: logger } = req;
 
@@ -123,18 +134,22 @@ export const getUpgradeProductPreview = async ({
       ? stripeSubs[0].current_period_end * 1000
       : undefined;
 
+  let freeTrial = attachParams.freeTrial;
+  if (config?.carryTrial && curCusProduct?.free_trial) {
+    freeTrial = curCusProduct.free_trial;
+  }
+
   const newPreviewItems = await getItemsForNewProduct({
     newProduct,
     attachParams,
     now,
     anchorToUnix,
-    freeTrial: attachParams.freeTrial,
+    freeTrial,
     stripeSubs,
     logger,
     withPrepaid,
   });
 
-  // const lastInterval = getLastInterval({ prices: newProduct.prices });
   const lastInterval = getFirstInterval({ prices: newProduct.prices });
 
   let dueNextCycle = undefined;
@@ -146,6 +161,8 @@ export const getUpgradeProductPreview = async ({
       interval: lastInterval,
       now,
       freeTrial: attachParams.freeTrial,
+      branch,
+      curCusProduct,
     });
 
     let nextCycleItems = await getItemsForNewProduct({

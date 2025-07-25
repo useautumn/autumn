@@ -11,7 +11,7 @@ export const logSubItems = (sub: Stripe.Subscription) => {
     } else {
       let price = item.price.unit_amount! / 100;
       let interval = subItemToAutumnInterval(item);
-      console.log(`${price} / ${interval}`);
+      console.log(`${price} ${item.price.currency} / ${interval}`);
     }
   }
 };

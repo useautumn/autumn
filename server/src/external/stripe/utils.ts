@@ -20,16 +20,18 @@ export const createStripeCli = ({
   org: Organization;
   env: AppEnv;
 }) => {
-  if (!org.stripe_config) {
-    throw new RecaseError({
-      message: "Stripe config not found",
-      code: ErrCode.StripeConfigNotFound,
-    });
-  }
   let encrypted =
     env == AppEnv.Sandbox
-      ? org.stripe_config.test_api_key
-      : org.stripe_config.live_api_key;
+      ? org.stripe_config?.test_api_key
+      : org.stripe_config?.live_api_key;
+
+  if (!encrypted) {
+    throw new RecaseError({
+      message: `Please connect your Stripe ${env == AppEnv.Sandbox ? "test" : "live"} keys. You can find them here: https://dashboard.stripe.com${env == AppEnv.Sandbox ? "/test" : ""}/apikeys`,
+      code: ErrCode.StripeConfigNotFound,
+      statusCode: 400,
+    });
+  }
 
   let decrypted = decryptData(encrypted);
   return new Stripe(decrypted);

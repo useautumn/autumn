@@ -6,7 +6,6 @@ import { compareMainProduct } from "tests/utils/compare.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { setupBefore } from "tests/before.js";
-import { getMainCusProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
 
 const testCase = "downgrade6";
 describe(`${chalk.yellowBright(`${testCase}: testing expire button`)}`, () => {
@@ -25,6 +24,7 @@ describe(`${chalk.yellowBright(`${testCase}: testing expire button`)}`, () => {
         org: this.org,
         env: this.env,
         autumn: this.autumnJs,
+        attachPm: "success",
       });
 
     customer = customer_;
@@ -39,12 +39,17 @@ describe(`${chalk.yellowBright(`${testCase}: testing expire button`)}`, () => {
   });
 
   it("should expire premium", async function () {
-    const cusProduct = await getMainCusProduct({
-      db: this.db,
-      internalCustomerId: customer.internal_id,
-    });
+    // const cusProduct = await getMainCusProduct({
+    //   db: this.db,
+    //   internalCustomerId: customer.internal_id,
+    // });
 
-    await AutumnCli.expire(cusProduct!.id);
+    // await AutumnCli.expire(cusProduct!.id);
+    await autumn.cancel({
+      customer_id: customerId,
+      product_id: products.premium.id,
+      cancel_immediately: true,
+    });
   });
 
   it("should have correct product and entitlements after expiration", async function () {
@@ -55,60 +60,4 @@ describe(`${chalk.yellowBright(`${testCase}: testing expire button`)}`, () => {
       cusRes: res,
     });
   });
-
-  // // 2. Get premium
-  // it("POST /attach -- attaching premium, then attach pro", async function () {
-  //   this.timeout(30000);
-  //   await AutumnCli.attach({
-  //     customerId: customerId,
-  //     productId: products.premium.id,
-  //   });
-
-  //   await AutumnCli.attach({
-  //     customerId: customerId,
-  //     productId: products.pro.id,
-  //   });
-  // });
-
-  // it("Expiring pro product (should re-attach premium)", async function () {
-  //   this.timeout(30000);
-
-  //   // Expire pro product
-  //   const customerProduct = await getCusProduct(
-  //     this.sb,
-  //     customer.internal_id,
-  //     products.pro.id,
-  //   );
-  //   await AutumnCli.expire(customerProduct.id);
-  //   await timeout(5000);
-  // });
-
-  // it("GET /customers/:customer_id -- checking product and ents", async function () {
-  //   this.timeout(30000);
-  //   // Check that free is attached
-  //   const res = await AutumnCli.getCustomer(customerId);
-  //   compareMainProduct({
-  //     sent: products.premium,
-  //     cusRes: res,
-  //   });
-
-  //   // Get stripe subscription (ensure canceled is null)
-  //   const stripeCli = createStripeCli({
-  //     org: this.org,
-  //     env: this.env,
-  //   });
-
-  //   const premiumCusProduct = await getCusProduct(
-  //     this.sb,
-  //     customer.internal_id,
-  //     products.premium.id,
-  //   );
-
-  //   const stripeSub = await stripeCli.subscriptions.retrieve(
-  //     premiumCusProduct.processor.subscription_id,
-  //   );
-
-  //   // Check that canceled is null
-  //   assert.isNull(stripeSub.canceled_at);
-  // });
 });

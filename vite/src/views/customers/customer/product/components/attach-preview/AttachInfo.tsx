@@ -8,6 +8,7 @@ import {
   ProductItem,
   ProductItemFeatureType,
 } from "@autumn/shared";
+import { format } from "date-fns";
 import { InfoIcon } from "lucide-react";
 
 export const AttachInfo = () => {
@@ -44,13 +45,27 @@ export const AttachInfo = () => {
         );
       });
 
-      let text = `The customer is currently on ${currentProduct.name} v${currentProduct.version}. Switching to v${product.version} will update the customer's features immediately, and from ${formatUnixToDate(preview.due_next_cycle.due_at)} onwards they will pay any new prices`;
+      return (
+        <>
+          <span>
+            You are switching this customer to version {product.version} of{" "}
+            {product.name}. Their features will update immediately and from{" "}
+            {format(preview.due_next_cycle.due_at, "d MMM")} onwards, they will
+            pay any new prices
+            {usagePriceExists ? " (including usage from the last cycle)" : ""}.
+          </span>
+        </>
+      );
 
-      if (usagePriceExists) {
-        text += ` (including usage from the last cycle).`;
-      } else {
-        text += `.`;
-      }
+      const text = `You are switching this customer to version ${product.version} of ${product.name}.`;
+
+      // let text = `The customer is currently on ${currentProduct.name} v${currentProduct.version}. Switching to v${product.version} will update the customer's features immediately, and from ${formatUnixToDate(preview.due_next_cycle.due_at)} onwards they will pay any new prices`;
+
+      // if (usagePriceExists) {
+      //   text += ` (including usage from the last cycle).`;
+      // } else {
+      //   text += `.`;
+      // }
 
       return text;
     }

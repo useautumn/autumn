@@ -43,6 +43,7 @@ import {
   getEntOptions,
 } from "@/internal/products/prices/priceUtils.js";
 import { deductFromCusRollovers } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverDeductionUtils.js";
+import { refreshCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 
 // Decimal.set({ precision: 12 }); // 12 DP precision
 
@@ -693,6 +694,14 @@ export const runUpdateBalanceTask = async ({
       org,
       env,
       logger,
+      entityId,
+    });
+
+    await refreshCusCache({
+      db,
+      customerId,
+      orgId: org.id,
+      env,
       entityId,
     });
 

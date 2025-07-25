@@ -97,7 +97,7 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
         const stripeCli = createStripeCli({ org, env: req.env });
         await stripeCli.customers.update(
           originalCustomer.processor.id,
-          stripeUpdate as any,
+          stripeUpdate as any
         );
       }
 
