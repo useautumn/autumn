@@ -21,6 +21,8 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { addDays } from "date-fns";
 import { expect } from "chai";
 import { eq } from "drizzle-orm";
+import { CacheManager } from "@/external/caching/CacheManager.js";
+import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 
 const testCase = "free1";
 
@@ -83,6 +85,12 @@ describe(`${chalk.yellowBright(`${testCase}: Testing free product with trial and
       })
       .where(eq(organizations.id, org.id));
 
+    await clearOrgCache({
+      db,
+      orgId: org.id,
+      env,
+    });
+
     const { testClockId: testClockId1 } = await initCustomer({
       autumn: autumnJs,
       customerId,
@@ -109,7 +117,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing free product with trial and
   });
 
   const approximateDiff = 1000 * 60 * 30; // 30 minutes
-  it("should attach pro product (prepaid single use)", async function () {
+  it("should attach free product with trial", async function () {
     let attachPreview = await autumn.attachPreview({
       customer_id: customerId,
       product_id: free.id,
@@ -191,5 +199,13 @@ describe(`${chalk.yellowBright(`${testCase}: Testing free product with trial and
         },
       })
       .where(eq(organizations.id, org.id));
+
+    await clearOrgCache({
+      db,
+      orgId: org.id,
+      env,
+    });
+
+    await CacheManager.disconnect();
   });
 });
