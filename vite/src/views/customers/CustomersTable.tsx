@@ -24,7 +24,7 @@ import { useEnv } from "@/utils/envUtils";
 import { useCustomersContext } from "./CustomersContext";
 import { Item, Row } from "@/components/general/TableGrid";
 import React from "react";
-import { AdminHover } from "@/components/general/AdminHover";
+
 import CopyButton from "@/components/general/CopyButton";
 import { CustomerRowToolbar } from "./CustomerRowToolbar";
 
@@ -160,7 +160,7 @@ export const CustomersTable = ({
 
   return (
     <>
-      <Row type="header" className="grid-cols-18 -mb-1">
+      <Row type="header" className="grid-cols-17 -mb-1">
         <Item className="col-span-3">Name</Item>
         <Item className="col-span-3">ID</Item>
         <Item className="col-span-3">Email</Item>
@@ -176,7 +176,7 @@ export const CustomersTable = ({
               env
             )}
             key={index}
-            className="grid grid-cols-18 gap-2 items-center px-10 w-full text-sm h-8 cursor-default hover:bg-primary/5 text-t2 whitespace-nowrap"
+            className="grid grid-cols-17 gap-2 items-center px-10 w-full text-sm h-8 cursor-default hover:bg-primary/5 text-t2 whitespace-nowrap"
           >
             <CustomTableCell colSpan={3}>{customer.name}</CustomTableCell>
             <CustomTableCell className="font-mono -translate-x-1" colSpan={3}>
@@ -202,7 +202,10 @@ export const CustomersTable = ({
                 {formatUnixToDateTime(customer.created_at).time}{" "}
               </span>
             </CustomTableCell>
-            <CustomTableCell colSpan={2} className="text-t3 text-xs ">
+            <CustomTableCell
+              colSpan={1}
+              className="text-t3 text-xs flex justify-end"
+            >
               <CustomerRowToolbar customer={customer} />
             </CustomTableCell>
           </Link>
