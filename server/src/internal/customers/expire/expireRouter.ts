@@ -1,8 +1,7 @@
 import { CusService } from "@/internal/customers/CusService.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { CusProductStatus, ErrCode, FullCusProduct } from "@autumn/shared";
+import { ErrCode, FullCusProduct } from "@autumn/shared";
 import { Router } from "express";
 import { expireCusProduct } from "../handlers/handleCusProductExpired.js";
 import { RELEVANT_STATUSES } from "../cusProducts/CusProductService.js";
@@ -54,6 +53,8 @@ expireRouter.post("", async (req, res) =>
           message: `Product ${product_id} not found for customer ${customer_id}`,
         });
       }
+
+      // Handle case if there are two products to expire...
 
       for (const cusProduct of cusProductsToExpire) {
         await expireCusProduct({

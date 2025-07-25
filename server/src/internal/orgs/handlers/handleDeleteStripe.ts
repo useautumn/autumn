@@ -3,22 +3,26 @@ import { OrgService } from "../OrgService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { clearOrgCache } from "../orgUtils/clearOrgCache.js";
 import { AppEnv, Organization } from "@autumn/shared";
+import { isStripeConnected } from "../orgUtils.js";
 
 export const disconnectStripe = async (org: Organization) => {
-  const testStripeCli = createStripeCli({ org, env: AppEnv.Sandbox });
-  const liveStripeCli = createStripeCli({ org, env: AppEnv.Live });
-
-  const testWebhooks = await testStripeCli.webhookEndpoints.list();
-  for (const webhook of testWebhooks.data) {
-    if (webhook.url.includes(org.id)) {
-      await testStripeCli.webhookEndpoints.del(webhook.id);
+  if (isStripeConnected({ org, env: AppEnv.Sandbox })) {
+    const testStripeCli = createStripeCli({ org, env: AppEnv.Sandbox });
+    const testWebhooks = await testStripeCli.webhookEndpoints.list();
+    for (const webhook of testWebhooks.data) {
+      if (webhook.url.includes(org.id)) {
+        await testStripeCli.webhookEndpoints.del(webhook.id);
+      }
     }
   }
 
-  const liveWebhooks = await liveStripeCli.webhookEndpoints.list();
-  for (const webhook of liveWebhooks.data) {
-    if (webhook.url.includes(org.id)) {
-      await liveStripeCli.webhookEndpoints.del(webhook.id);
+  if (isStripeConnected({ org, env: AppEnv.Live })) {
+    const liveStripeCli = createStripeCli({ org, env: AppEnv.Live });
+    const liveWebhooks = await liveStripeCli.webhookEndpoints.list();
+    for (const webhook of liveWebhooks.data) {
+      if (webhook.url.includes(org.id)) {
+        await liveStripeCli.webhookEndpoints.del(webhook.id);
+      }
     }
   }
 };

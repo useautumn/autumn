@@ -40,7 +40,6 @@ const CreateAPIKey = () => {
   }, [copied]);
 
   const handleCreate = async () => {
-    console.log("creating api key", apiKeyName ? apiKeyName : name);
     setLoading(true);
     try {
       const { api_key } = await DevService.createAPIKey(axiosInstance, {

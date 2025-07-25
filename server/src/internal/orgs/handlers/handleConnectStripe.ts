@@ -16,8 +16,57 @@ import { OrgService } from "../OrgService.js";
 import { AppEnv } from "@autumn/shared";
 import { nullish } from "@/utils/genUtils.js";
 import { clearOrgCache } from "../orgUtils/clearOrgCache.js";
+import { disconnectStripe } from "./handleDeleteStripe.js";
 
 export const connectStripe = async ({
+  db,
+  orgId,
+  logger,
+  apiKey,
+  env,
+}: {
+  db: any;
+  orgId: string;
+  logger: any;
+  apiKey: string;
+  env: AppEnv;
+}) => {
+  // 1. Check if key is valid
+  await checkKeyValid(apiKey);
+
+  let stripe = new Stripe(apiKey);
+  let account = await stripe.accounts.retrieve();
+
+  // 2. Disconnect existing webhook endpoints
+  const curWebhooks = await stripe.webhookEndpoints.list();
+  for (const webhook of curWebhooks.data) {
+    if (webhook.url.includes(orgId)) {
+      await stripe.webhookEndpoints.del(webhook.id);
+    }
+  }
+
+  // 3. Create webhook endpoint
+  let webhook = await createWebhookEndpoint(apiKey, env, orgId);
+
+  // 3. Return encrypted
+  if (env === AppEnv.Sandbox) {
+    return {
+      test_api_key: encryptData(apiKey),
+      test_webhook_secret: encryptData(webhook.secret as string),
+      env,
+      defaultCurrency: account.default_currency,
+    };
+  } else {
+    return {
+      live_api_key: encryptData(apiKey),
+      live_webhook_secret: encryptData(webhook.secret as string),
+      env,
+      stripeCurrency: account.default_currency,
+    };
+  }
+};
+
+export const connectAllStripe = async ({
   db,
   orgId,
   logger,
@@ -114,7 +163,7 @@ export const handleConnectStripe = async (req: any, res: any) =>
       }
 
       let { defaultCurrency: finalDefaultCurrency, stripeConfig } =
-        await connectStripe({
+        await connectAllStripe({
           db,
           orgId,
           logger,
