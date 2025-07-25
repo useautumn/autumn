@@ -27,8 +27,6 @@ export default function UpdateProductItem({
   const { product, setProduct, features } = useProductContext();
   const [showCreateFeature, setShowCreateFeature] = useState(false);
 
-
-
   const handleUpdateProductItem = () => {
     console.log("Selected Item: ", selectedItem);
     const validatedItem = validateProductItem({
@@ -85,4 +83,4 @@ export default function UpdateProductItem({
       </Dialog>
     </ProductItemContext.Provider>
   );
-};
+}

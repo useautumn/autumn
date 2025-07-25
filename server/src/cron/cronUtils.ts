@@ -218,9 +218,10 @@ export const resetCustomerEntitlement = async ({
       await RolloverService.insert({
         db,
         rows: rolloverUpdate.toInsert,
-        rolloverConfig: cusEnt.entitlement.rollover as RolloverConfig,
-        cusEntID: cusEnt.id,
-        entityMode: notNullish(cusEnt.entitlement.entity_feature_id),
+        fullCusEnt: cusEnt,
+        // rolloverConfig: cusEnt.entitlement.rollover as RolloverConfig,
+        // cusEntID: cusEnt.id,
+        // entityMode: notNullish(cusEnt.entitlement.entity_feature_id),
       });
     }
 

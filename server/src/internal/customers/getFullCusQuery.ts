@@ -49,7 +49,7 @@ const buildOptimizedCusProductsCTE = (inStatuses?: CusProductStatus[]) => {
               ),
               'rollovers', (
                 SELECT COALESCE(
-                  json_agg(row_to_json(ro)) FILTER (WHERE ro.expires_at > EXTRACT(EPOCH FROM now()) * 1000),
+                  json_agg(row_to_json(ro) ORDER BY ro.expires_at ASC) FILTER (WHERE ro.expires_at > EXTRACT(EPOCH FROM now()) * 1000),
                   '[]'::json
                 )
                 FROM rollovers ro

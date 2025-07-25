@@ -135,9 +135,12 @@ export const CustomerEntitlementsList = () => {
         value: cusEnt.rollovers
           .map((r: any) => {
             if (Object.values(r.entities).length > 0) {
-              return Object.values(r.entities)
-                .map((e: any) => `${e.balance} (${e.id})`)
-                .join(", ");
+              return (
+                Object.values(r.entities)
+                  .map((e: any) => `${e.balance} (${e.id})`)
+                  .join(", ") +
+                ` (expires: ${r.expires_at ? formatUnixToDate(r.expires_at) : "N/A"})`
+              );
             } else {
               return `${r.balance} (ex: ${r.expires_at ? formatUnixToDate(r.expires_at) : "N/A"})`;
             }

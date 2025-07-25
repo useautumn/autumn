@@ -80,20 +80,22 @@ export const calculateNextExpiry = (
   return addMonths(nextResetAt, config.length).getTime();
 };
 
-export async function performMaximumClearing({
+export function performMaximumClearing({
   rows,
-  rolloverConfig,
-  cusEntID,
-  entityMode,
+  // rolloverConfig,
+  cusEnt,
+  // cusEntID,
+  // entityMode,
 }: {
   rows: Rollover[];
-  rolloverConfig: RolloverConfig;
-  cusEntID: string;
-  entityMode: boolean;
+  // rolloverConfig: RolloverConfig;
+  cusEnt: FullCustomerEntitlement;
+  // cusEntID: string;
+  // entityMode: boolean;
 }) {
+  let rolloverConfig = cusEnt.entitlement.rollover;
+
   if (!rolloverConfig) {
-    // throw new Error("Rollover config is required");
-    // Throw warning
     return { toDelete: [], toUpdate: [] };
   }
 
@@ -124,6 +126,9 @@ export async function performMaximumClearing({
     if (!a.expires_at && b.expires_at) return 1;
     return 0;
   });
+
+  let ent = cusEnt.entitlement;
+  let entityMode = !!ent.entity_feature_id;
 
   if (!entityMode) {
     let totalRolloverBalance = rows.reduce((acc, row) => acc + row.balance, 0);
@@ -175,6 +180,8 @@ export async function performMaximumClearing({
       }
     });
 
+    // console.log(`id to total:`, entityIdToTotal);
+
     let toUpdate: Rollover[] = [];
     let toDelete: string[] = [];
 
@@ -188,13 +195,14 @@ export async function performMaximumClearing({
         let toDeduct = new Decimal(entityTotal).sub(rolloverConfig.max);
 
         if (toDeduct.lte(0) || !row.entities[entityId]) continue;
+        // console.log(`Entity ${entityId}, deducting ${toDeduct.toNumber()}`);
 
         let curBalance = new Decimal(row.entities[entityId].balance);
         let newBalance = curBalance;
 
         if (curBalance.gte(toDeduct)) {
           newBalance = newBalance.sub(toDeduct);
-          toDeduct = new Decimal(0);
+          entityIdToTotal[entityId] = 0;
           shouldUpdate = true;
           update.entities[entityId] = {
             id: entityId,
@@ -203,7 +211,7 @@ export async function performMaximumClearing({
           };
         } else {
           newBalance = new Decimal(0);
-          toDeduct = toDeduct.sub(curBalance);
+          entityIdToTotal[entityId] = toDeduct.sub(curBalance).toNumber();
           shouldUpdate = true;
           update.entities[entityId] = {
             id: entityId,
@@ -212,6 +220,8 @@ export async function performMaximumClearing({
           };
         }
       }
+      // console.log(`Max clearing for row ${row.id}`);
+      // console.log(`Update:`, update.entities);
 
       // If all keys are 0, then delete the row
       if (

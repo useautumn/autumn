@@ -70,7 +70,8 @@ export const handlePrepaidPrices = async ({
   let resetQuantity = options?.upcoming_quantity || options?.quantity!;
   let config = cusPrice.price.config as UsagePriceConfig;
   let billingUnits = config.billing_units || 1;
-  let newAllowance = resetQuantity * billingUnits;
+  let newAllowance =
+    resetQuantity * billingUnits + (cusEnt.entitlement.allowance || 0);
 
   const resetUpdate = getResetBalancesUpdate({
     cusEnt,
@@ -138,9 +139,10 @@ export const handlePrepaidPrices = async ({
     await RolloverService.insert({
       db,
       rows: rolloverUpdate.toInsert,
-      rolloverConfig: ent.rollover as RolloverConfig,
-      cusEntID: cusEnt.id,
-      entityMode: notNullish(ent.entity_feature_id),
+      fullCusEnt: cusEnt,
+      // rolloverConfig: ent.rollover as RolloverConfig,
+      // cusEntID: cusEnt.id,
+      // entityMode: notNullish(ent.entity_feature_id),
     });
   }
 

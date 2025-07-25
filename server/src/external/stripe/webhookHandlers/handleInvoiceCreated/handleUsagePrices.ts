@@ -155,9 +155,10 @@ export const handleUsagePrices = async ({
     await RolloverService.insert({
       db,
       rows: rolloverUpdate.toInsert,
-      rolloverConfig: ent.rollover as RolloverConfig,
-      cusEntID: ent.id,
-      entityMode: notNullish(ent.entity_feature_id),
+      fullCusEnt: relatedCusEnt,
+      // rolloverConfig: ent.rollover as RolloverConfig,
+      // cusEntID: ent.id,
+      // entityMode: notNullish(ent.entity_feature_id),
     });
   }
 
