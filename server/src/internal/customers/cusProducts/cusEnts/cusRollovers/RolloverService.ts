@@ -13,7 +13,7 @@ export class RolloverService {
     id: string;
     updates: Partial<Rollover>;
   }) {
-    if(!updates.balance && !updates.entities) return [];
+    if (!updates.balance && !updates.entities) return [];
 
     const data = await db
       .update(rollovers)
@@ -26,7 +26,7 @@ export class RolloverService {
 
   static async bulkUpdate({ db, rows }: { db: DrizzleCli; rows: Rollover[] }) {
     if (rows.length === 0) return [];
-    
+
     const results = [];
     for (const row of rows) {
       const result = await this.update({
@@ -39,11 +39,22 @@ export class RolloverService {
     return results;
   }
 
-  static async getCurrentRollovers({ db, cusEntID }: { db: DrizzleCli; cusEntID: string }) {
+  static async getCurrentRollovers({
+    db,
+    cusEntID,
+  }: {
+    db: DrizzleCli;
+    cusEntID: string;
+  }) {
     return await db
       .select()
       .from(rollovers)
-      .where(and(eq(rollovers.cus_ent_id, cusEntID), gte(rollovers.expires_at, new Date().getTime())));
+      .where(
+        and(
+          eq(rollovers.cus_ent_id, cusEntID),
+          gte(rollovers.expires_at, new Date().getTime())
+        )
+      );
   }
 
   static async insert({
@@ -59,7 +70,9 @@ export class RolloverService {
     cusEntID: string;
     entityMode: boolean;
   }) {
-    if(rows.length === 0) return {};
+    if (rows.length === 0) return {};
+
+    console.log("inserting rollovers", rows);
 
     await db
       .insert(rollovers)
@@ -76,24 +89,24 @@ export class RolloverService {
         )
       );
 
-    let { toDelete, toUpdate } = await performMaximumClearing({
-      rows: currentRolloverRows as Rollover[],
-      rolloverConfig,
-      cusEntID,
-      entityMode,
-    });
+    // let { toDelete, toUpdate } = await performMaximumClearing({
+    //   rows: currentRolloverRows as Rollover[],
+    //   rolloverConfig,
+    //   cusEntID,
+    //   entityMode,
+    // });
 
-    if (toDelete.length > 0) {
-      await RolloverService.delete({ db, ids: toDelete });
-    }
+    // if (toDelete.length > 0) {
+    //   await RolloverService.delete({ db, ids: toDelete });
+    // }
 
-    if (toUpdate.length > 0) {
-      await RolloverService.bulkUpdate({ db, rows: toUpdate });
-    }
+    // if (toUpdate.length > 0) {
+    //   await RolloverService.bulkUpdate({ db, rows: toUpdate });
+    // }
   }
 
   static async delete({ db, ids }: { db: DrizzleCli; ids: string[] }) {
-    if(ids.length === 0) return;
+    if (ids.length === 0) return;
     const data = await db.delete(rollovers).where(inArray(rollovers.id, ids));
   }
 }
