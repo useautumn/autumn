@@ -17,11 +17,11 @@ export type SvixConfig = {
 };
 
 export type StripeConfig = {
-  test_api_key: string;
-  live_api_key: string;
-  test_webhook_secret: string;
-  live_webhook_secret: string;
-  success_url: string;
+  test_api_key?: string;
+  live_api_key?: string;
+  test_webhook_secret?: string;
+  live_webhook_secret?: string;
+  success_url?: string;
 };
 
 //   logo: text("logo"),
@@ -52,11 +52,12 @@ export const organizations = pgTable(
       .default(sql`'{}'::jsonb`),
     created_at: numeric({ mode: "number" }),
     config: jsonb().default({}).notNull().$type<OrgConfig>(),
+    created_by: text("created_by"),
   },
   (table) => [
     unique("organizations_test_pkey_key").on(table.test_pkey),
     unique("organizations_live_pkey_key").on(table.live_pkey),
-  ],
+  ]
 );
 
 export type Organization = typeof organizations.$inferSelect & {

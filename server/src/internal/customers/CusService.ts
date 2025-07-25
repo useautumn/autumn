@@ -17,6 +17,7 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getFullCusQuery } from "./getFullCusQuery.js";
 import { trace } from "@opentelemetry/api";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
+import { RELEVANT_STATUSES } from "./cusProducts/CusProductService.js";
 
 const tracer = trace.getTracer("express");
 
@@ -26,11 +27,7 @@ export class CusService {
     idOrInternalId,
     orgId,
     env,
-    inStatuses = [
-      CusProductStatus.Active,
-      CusProductStatus.PastDue,
-      CusProductStatus.Scheduled,
-    ],
+    inStatuses = RELEVANT_STATUSES,
     withEntities = false,
     entityId,
     expand,

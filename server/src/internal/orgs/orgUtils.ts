@@ -4,7 +4,26 @@ import { AppEnv, ErrCode, FrontendOrg, Organization } from "@autumn/shared";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { OrgService } from "./OrgService.js";
 import { FeatureService } from "../features/FeatureService.js";
-import { createSvixApp } from "@/external/svix/svixHelpers.js";
+import { notNullish } from "@/utils/genUtils.js";
+
+export const isStripeConnected = ({
+  org,
+  env,
+}: {
+  org: Organization;
+  env?: AppEnv;
+}) => {
+  if (env === AppEnv.Sandbox) {
+    return notNullish(org.stripe_config?.test_api_key);
+  } else if (env === AppEnv.Live) {
+    return notNullish(org.stripe_config?.live_api_key);
+  } else {
+    return (
+      notNullish(org.stripe_config?.test_api_key) &&
+      notNullish(org.stripe_config?.live_api_key)
+    );
+  }
+};
 
 export const constructOrg = ({ id, slug }: { id: string; slug: string }) => {
   return {
@@ -49,18 +68,18 @@ export const deleteStripeWebhook = async ({
 };
 
 export const getStripeWebhookSecret = (org: Organization, env: AppEnv) => {
-  if (!org.stripe_config) {
+  const webhookSecret =
+    env === AppEnv.Sandbox
+      ? org.stripe_config?.test_webhook_secret
+      : org.stripe_config?.live_webhook_secret;
+
+  if (!webhookSecret) {
     throw new RecaseError({
       code: ErrCode.StripeConfigNotFound,
-      message: `Stripe config not found for org ${org.id}`,
+      message: `Stripe webhook secret not found for org ${org.id}`,
       statusCode: 400,
     });
   }
-
-  const webhookSecret =
-    env === AppEnv.Sandbox
-      ? org.stripe_config.test_webhook_secret
-      : org.stripe_config!.live_webhook_secret;
 
   return decryptData(webhookSecret);
 };

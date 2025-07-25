@@ -18,7 +18,6 @@ import LoadingScreen from "../general/LoadingScreen";
 import FilterButton from "./FilterButton";
 import SmallSpinner from "@/components/general/SmallSpinner";
 import { useSearchParams } from "react-router";
-import { useSetSearchParams } from "@/utils/setSearchParams";
 
 function CustomersView({ env }: { env: AppEnv }) {
   const pageSize = 50;

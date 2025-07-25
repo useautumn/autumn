@@ -46,6 +46,7 @@
     "@react-email/components": "^0.0.42",
     "@sentry/node": "^9.30.0",
     "@supabase/supabase-js": "^2.46.2",
+    "@upstash/redis": "^1.35.1",
     "ai": "^4.3.10",
     "autumn-js": "^0.0.77",
     "axios": "^1.8.3",

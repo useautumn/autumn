@@ -136,6 +136,8 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing create / delete ent
     });
 
     await autumn.entities.create(customerId, entities);
+    await timeout(3000);
+
     usage += entities.length;
 
     await expectSubQuantityCorrect({

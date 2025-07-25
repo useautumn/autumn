@@ -21,6 +21,7 @@ import {
 import { CusService } from "@/internal/customers/CusService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { deductFromCusRollovers } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverDeductionUtils.js";
+import { refreshCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 
 // 2. Get deductions for each feature
 const getFeatureDeductions = ({
@@ -229,7 +230,6 @@ export const updateUsage = async ({
       if (cusEnt.entitlement.internal_feature_id != feature.internal_id) {
         continue;
       }
-      // console.log(`toDeduct: ${toDeduct}`);
 
       toDeduct = await deductFromCusRollovers({
         toDeduct,
@@ -241,8 +241,6 @@ export const updateUsage = async ({
           entity: customer.entity ? customer.entity : undefined,
         },
       });
-
-      // console.log(`toDeduct after rollovers: ${toDeduct}`);
 
       if (toDeduct == 0) {
         continue;
@@ -332,6 +330,14 @@ export const runUpdateUsageTask = async ({
       setUsage: set_usage,
       logger,
       entityId,
+    });
+
+    await refreshCusCache({
+      db,
+      customerId,
+      entityId,
+      orgId: org.id,
+      env,
     });
 
     if (!cusEnts || cusEnts.length === 0) {

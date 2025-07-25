@@ -58,16 +58,16 @@ cusRouter.post("/:customer_id", handleUpdateCustomer);
 
 // Update customer entitlement directly
 cusRouter.post(
-  "/customer_entitlements/:customer_entitlement_id",
+  "/:customer_id/entitlements/:customer_entitlement_id",
   handleUpdateEntitlement
 );
 
 cusRouter.post("/:customer_id/balances", handleUpdateBalances);
 
-cusRouter.post(
-  "/customer_products/:customer_product_id",
-  handleCusProductExpired
-);
+// cusRouter.post(
+//   "/customer_products/:customer_product_id",
+//   handleCusProductExpired
+// );
 
 cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
   try {

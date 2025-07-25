@@ -35,6 +35,7 @@ export const createKey = async ({
   db,
   env,
   name,
+  userId,
   orgId,
   prefix,
   meta,
@@ -45,6 +46,7 @@ export const createKey = async ({
   orgId: string;
   prefix: string;
   meta: any;
+  userId?: string;
 }) => {
   const apiKey = generateApiKey(42, prefix);
   const hashedKey = hashApiKey(apiKey);
@@ -52,7 +54,7 @@ export const createKey = async ({
   const apiKeyData: ApiKey = {
     id: generateId("key"),
     org_id: orgId,
-    user_id: "",
+    user_id: userId || null,
     name,
     prefix: apiKey.substring(0, 14),
     created_at: Date.now(),

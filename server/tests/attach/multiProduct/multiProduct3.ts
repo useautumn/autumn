@@ -92,7 +92,7 @@ describe(
       expect(premiumGroup1!.scheduled_ids!.length).to.equal(1);
       expect(starterGroup2!.scheduled_ids!.length).to.equal(1);
       expect(premiumGroup1!.scheduled_ids![0]).to.equal(
-        starterGroup2!.scheduled_ids![0],
+        starterGroup2!.scheduled_ids![0]
       );
 
       // 2. Check that there's no starter group 1
@@ -151,5 +151,5 @@ describe(
       expect(sub.cancel_at).to.equal(null);
       expect(sub.status).to.equal("active");
     });
-  },
+  }
 );

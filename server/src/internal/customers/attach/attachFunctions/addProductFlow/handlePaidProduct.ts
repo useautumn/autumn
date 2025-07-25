@@ -63,7 +63,7 @@ export const handlePaidProduct = async ({
   let mergeCusProduct = undefined;
   if (!config.disableMerge && !freeTrial) {
     mergeCusProduct = cusProducts?.find((cp) =>
-      products.some((p) => p.group == cp.product.group),
+      products.some((p) => p.group == cp.product.group)
     );
   }
 
@@ -79,7 +79,7 @@ export const handlePaidProduct = async ({
     }
 
     let mergeWithSub = mergeSubs.find(
-      (sub) => subToAutumnInterval(sub) == itemSet.interval,
+      (sub) => subToAutumnInterval(sub) == itemSet.interval
     );
 
     let subscription;
@@ -150,7 +150,7 @@ export const handlePaidProduct = async ({
         carryExistingUsages: config.carryUsage,
         scenario: AttachScenario.New,
         logger,
-      }),
+      })
     );
   }
   await Promise.all(batchInsert);
@@ -163,7 +163,7 @@ export const handlePaidProduct = async ({
         invoiceId: sub.latest_invoice as string,
         attachParams,
         logger,
-      }),
+      })
     );
   }
   const invoices = await Promise.all(batchInsertInvoice);
@@ -180,7 +180,7 @@ export const handlePaidProduct = async ({
           product_ids: products.map((p) => p.id),
           customer_id: customer.id || customer.internal_id,
           invoice: invoiceOnly ? invoices?.[0] : undefined,
-        }),
+        })
       );
     } else {
       res.status(200).json({
