@@ -7,7 +7,7 @@
   "scripts": {
     "email": "email dev -p 3001",
     "start": "bun src/index.ts",
-    "dev": "NODE_ENV=development bun --watch src/index.ts --ignore scripts --ignore tests",
+    "dev": "NODE_ENV=development bunx --bun nodemon --exec bun src/index.ts --ignore scripts --ignore tests",
     "workers": "bun src/workers.ts",
     "workers:dev": "bun --watch src/workers.ts",
     "cron": "bun src/cron.ts",

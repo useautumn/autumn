@@ -7,7 +7,7 @@ const buildOptimizedCusProductsCTE = (inStatuses?: CusProductStatus[]) => {
     return inStatuses
       ? sql`AND cp.status = ANY(ARRAY[${sql.join(
           inStatuses.map((status) => sql`${status}`),
-          sql`, `,
+          sql`, `
         )}])`
       : sql``;
   };
@@ -26,7 +26,7 @@ const buildOptimizedCusProductsCTE = (inStatuses?: CusProductStatus[]) => {
           '[]'::json
         ) AS customer_prices,
         
-        -- Spread customer_entitlements fields + add entitlement and replaceables
+        -- Spread customer_entitlements fields + add entitlement, replaceables, and rollovers
         COALESCE(
           json_agg(DISTINCT (
             to_jsonb(ce.*) || jsonb_build_object(
@@ -46,6 +46,14 @@ const buildOptimizedCusProductsCTE = (inStatuses?: CusProductStatus[]) => {
                 )
                 FROM replaceables r
                 WHERE r.cus_ent_id = ce.id
+              ),
+              'rollovers', (
+                SELECT COALESCE(
+                  json_agg(row_to_json(ro) ORDER BY ro.expires_at ASC) FILTER (WHERE ro.expires_at > EXTRACT(EPOCH FROM now()) * 1000),
+                  '[]'::json
+                )
+                FROM rollovers ro
+                WHERE ro.cus_ent_id = ce.id
               )
             )
           )) FILTER (WHERE ce.id IS NOT NULL),
@@ -110,7 +118,7 @@ const buildEntityCTE = (entityId?: string) => {
 const buildTrialsUsedCTE = (
   withTrialsUsed: boolean,
   orgId: string,
-  env: AppEnv,
+  env: AppEnv
 ) => {
   if (!withTrialsUsed) {
     return sql``;
@@ -140,7 +148,7 @@ const buildTrialsUsedCTE = (
 
 const buildSubscriptionsCTE = (
   withSubs: boolean,
-  inStatuses?: CusProductStatus[],
+  inStatuses?: CusProductStatus[]
 ) => {
   if (!withSubs) {
     return sql``;
@@ -194,7 +202,7 @@ export const getFullCusQuery = (
   withEntities: boolean,
   withTrialsUsed: boolean,
   withSubs: boolean,
-  entityId?: string,
+  entityId?: string
 ) => {
   const sqlChunks: SQL[] = [];
 

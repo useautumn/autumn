@@ -2,6 +2,11 @@ import { z } from "zod";
 import { EntInterval } from "../../productModels/entModels/entEnums.js";
 import { ProductItemFeatureType } from "../../productV2Models/productItemModels/productItemModels.js";
 
+export const CusRolloverSchema = z.object({
+  balance: z.number(),
+  expires_at: z.number(),
+});
+
 export const CusEntResponseSchema = z.object({
   feature_id: z.string(),
   interval: z.nativeEnum(EntInterval).nullish(),
@@ -12,6 +17,7 @@ export const CusEntResponseSchema = z.object({
   next_reset_at: z.number().nullish(),
   overage_allowed: z.boolean().nullish(),
   usage_limit: z.number().nullish(),
+  rollovers: z.array(CusRolloverSchema).nullish(),
 });
 
 export const CoreCusFeatureResponseSchema = z.object({
@@ -31,7 +37,7 @@ export const CoreCusFeatureResponseSchema = z.object({
         usage: z.number().nullish(),
         included_usage: z.number().nullish(),
         next_reset_at: z.number().nullish(),
-      }),
+      })
     )
     .nullish(),
   credit_schema: z
@@ -39,11 +45,12 @@ export const CoreCusFeatureResponseSchema = z.object({
       z.object({
         feature_id: z.string(),
         credit_amount: z.number(),
-      }),
+      })
     )
     .nullish(),
 
   usage_limit: z.number().nullish(),
+  rollovers: z.array(CusRolloverSchema).nullish(),
 });
 
 export const CusEntResponseV2Schema = z
@@ -68,3 +75,4 @@ export const CheckResponseSchema = z
 export type CusEntResponse = z.infer<typeof CusEntResponseSchema>;
 export type CusEntResponseV2 = z.infer<typeof CusEntResponseV2Schema>;
 export type CheckResponse = z.infer<typeof CheckResponseSchema>;
+export type CusRollover = z.infer<typeof CusRolloverSchema>;

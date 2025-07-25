@@ -33,6 +33,8 @@ import { CusEntService } from "../cusProducts/cusEnts/CusEntitlementService.js";
 import { CusPriceService } from "../cusProducts/cusPrices/CusPriceService.js";
 import { addExistingUsagesToCusEnts } from "../cusProducts/cusEnts/cusEntUtils/getExistingUsage.js";
 import { RepService } from "../cusProducts/cusEnts/RepService.js";
+import { getNewProductRollovers } from "../cusProducts/cusEnts/cusRollovers/getNewProductRollovers.js";
+import { RolloverService } from "../cusProducts/cusEnts/cusRollovers/RolloverService.js";
 
 export const initCusPrice = ({
   price,
@@ -197,7 +199,7 @@ export const expireOrDeleteCusProduct = async ({
         cp.status === CusProductStatus.Scheduled &&
         (internalEntityId
           ? cp.internal_entity_id === internalEntityId
-          : nullish(cp.internal_entity_id)),
+          : nullish(cp.internal_entity_id))
     );
 
     if (curScheduledProduct) {
@@ -350,7 +352,7 @@ export const createFullCusProduct = async ({
 
   const cusProdId = generateId("cus_prod");
   logger.info(
-    `Inserting cus product ${product.id} for ${customer.name}, cus product ID: ${cusProdId}`,
+    `Inserting cus product ${product.id} for ${customer.name}, cus product ID: ${cusProdId}`
   );
 
   // 1. create customer entitlements
@@ -401,6 +403,15 @@ export const createFullCusProduct = async ({
     isDowngrade,
     entities: attachParams.entities,
     features: attachParams.features,
+  });
+
+  // 4. Get new rollovers
+  let rolloverOps = await getNewProductRollovers({
+    db,
+    curCusProduct: curCusProduct as FullCusProduct,
+    cusEnts,
+    entitlements,
+    logger,
   });
 
   // 4. create customer prices
@@ -458,10 +469,23 @@ export const createFullCusProduct = async ({
     replaceables: newReplaceables,
   });
 
-  let fullCusProduct = {
-    ...cusProd,
-    product,
-    customer_entitlements: cusEnts.map((ce) => ({
+  let rolloverInserts: any = [];
+
+  for (const operation of rolloverOps) {
+    rolloverInserts.push(
+      RolloverService.insert({
+        db,
+        rows: operation.toInsert,
+        fullCusEnt: operation.cusEnt,
+      })
+    );
+  }
+
+  let finalRollovers = (await Promise.all(rolloverInserts)).flatMap((r) => r);
+
+  // Get rollovers for each entitlement
+  const cusEntsWithRollovers = await Promise.all(
+    cusEnts.map(async (ce) => ({
       ...ce,
       entitlement: entitlements.find((e) => e.id === ce.entitlement_id)!,
       replaceables: newReplaceables
@@ -470,7 +494,18 @@ export const createFullCusProduct = async ({
           ...r,
           delete_next_cycle: r.delete_next_cycle || false,
         })),
-    })),
+      rollovers: finalRollovers.filter((r) => r.cus_ent_id === ce.id),
+      // await RolloverService.getCurrentRollovers({
+      //   db,
+      //   cusEntID: ce.id,
+      // }),
+    }))
+  );
+
+  let fullCusProduct = {
+    ...cusProd,
+    product,
+    customer_entitlements: cusEntsWithRollovers,
     customer_prices: cusPrices.map((cp) => ({
       ...cp,
       price: prices.find((p) => p.id === cp.price_id)!,

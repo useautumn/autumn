@@ -9,6 +9,7 @@ export const FeatureItemSchema = ProductItemSchema.pick({
   interval: true,
   entity_feature_id: true,
   reset_usage_when_enabled: true,
+  config: true,
 }).extend({
   feature_id: z.string().nonempty(),
   included_usage: z

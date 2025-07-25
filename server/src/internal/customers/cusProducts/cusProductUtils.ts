@@ -20,7 +20,7 @@ import {
   getUsageTier,
 } from "@/internal/products/prices/priceUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { CusProductService } from "./CusProductService.js";
+import { CusProductService, RELEVANT_STATUSES } from "./CusProductService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import Stripe from "stripe";
@@ -514,11 +514,7 @@ export const getMainCusProduct = async ({
   let cusProducts = await CusProductService.list({
     db,
     internalCustomerId,
-    inStatuses: [
-      CusProductStatus.Active,
-      CusProductStatus.PastDue,
-      CusProductStatus.Scheduled,
-    ],
+    inStatuses: RELEVANT_STATUSES,
   });
 
   let mainCusProduct = cusProducts.find(
@@ -527,7 +523,7 @@ export const getMainCusProduct = async ({
       (productGroup ? cusProduct.product.group === productGroup : true)
   );
 
-  return mainCusProduct;
+  return mainCusProduct as FullCusProduct;
 };
 
 export const getCusProductsWithStripeSubId = ({

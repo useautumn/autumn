@@ -27,6 +27,7 @@ export const useProductData = ({ data }: { data: any }) => {
         ...data.product,
         items: sortProductItems(data.product.items),
       };
+
       initialProductRef.current = structuredClone(sortedProduct);
       setEntityFeatureIds(initEntityFeatureIds(sortedProduct));
       setProduct(sortedProduct);

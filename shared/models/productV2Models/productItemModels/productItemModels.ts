@@ -43,15 +43,21 @@ export enum ProductItemFeatureType {
   Static = "static",
 }
 
+export enum RolloverDuration {
+  Month = "month",
+  Forever = "forever",
+}
+
+export const RolloverConfigSchema = z.object({
+  max: z.number().nullable(),
+  duration: z.nativeEnum(RolloverDuration).default(RolloverDuration.Month),
+  length: z.number(),
+});
+
 const ProductItemConfigSchema = z.object({
-  on_increase: z
-    .nativeEnum(OnIncrease)
-    .optional()
-    .default(OnIncrease.BillImmediately),
-  on_decrease: z
-    .nativeEnum(OnDecrease)
-    .optional()
-    .default(OnDecrease.ProrateImmediately),
+  on_increase: z.nativeEnum(OnIncrease).nullish(),
+  on_decrease: z.nativeEnum(OnDecrease).nullish(),
+  rollover: RolloverConfigSchema.nullish(),
 });
 
 export const ProductItemSchema = z.object({
@@ -90,3 +96,4 @@ export type ProductItem = z.infer<typeof ProductItemSchema>;
 export type LimitedItem = z.infer<typeof LimitedItemSchema>;
 export type ProductItemConfig = z.infer<typeof ProductItemConfigSchema>;
 export type PriceTier = z.infer<typeof PriceTierSchema>;
+export type RolloverConfig = z.infer<typeof RolloverConfigSchema>;

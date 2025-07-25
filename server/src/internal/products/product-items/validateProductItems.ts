@@ -12,7 +12,7 @@ import {
   AppEnv,
   OnIncrease,
   UsageModel,
-  FeatureUsageType,
+  RolloverDuration,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { notNullish, nullish } from "@/utils/genUtils.js";
@@ -160,6 +160,14 @@ const validateProductItem = ({
       statusCode: StatusCodes.BAD_REQUEST,
     });
   }
+
+  // Rollover
+  // if (item.config?.rollover) {
+  //   let rollover = item.config.rollover;
+
+  //   if (rollover.duration == RolloverDuration.Month) {
+  //   }
+  // }
 };
 export const validateProductItems = ({
   newItems,

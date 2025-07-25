@@ -3,6 +3,7 @@ import {
   CusEntResponse,
   CusEntResponseSchema,
   CusEntResponseV2,
+  CusRollover,
   Feature,
   FeatureType,
   FullCustomerEntitlement,
@@ -16,7 +17,7 @@ import { notNullish } from "@/utils/genUtils.js";
 
 export const sumValues = (
   entList: CusEntResponse[],
-  key: keyof CusEntResponse,
+  key: keyof CusEntResponse
 ) => {
   return entList.reduce((acc, curr) => {
     if (curr[key]) {
@@ -66,7 +67,9 @@ export const featuresToObject = ({
       usageLimit = undefined;
     }
 
-    featureObject[featureId] = {
+    // console.log(`Feature ${featureId} list:`, relatedEnts);
+
+    let cusFeature: CusEntResponseV2 = {
       id: featureId,
       name: feature.name,
       type: featureType,
@@ -95,7 +98,13 @@ export const featuresToObject = ({
             credit_amount: s.credit_amount,
           }))
         : undefined,
+
+      rollovers: relatedEnts
+        .flatMap((e) => e.rollovers)
+        .filter(notNullish) as CusRollover[],
     };
+
+    featureObject[featureId] = cusFeature;
   }
 
   return featureObject;

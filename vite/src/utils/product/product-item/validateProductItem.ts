@@ -1,7 +1,16 @@
-import { invalidNumber, notNullish } from "@/utils/genUtils";
-import { Feature, FeatureUsageType, ProductItem } from "@autumn/shared";
+import { invalidNumber, notNullish, nullish } from "@/utils/genUtils";
+import {
+  Feature,
+  FeatureUsageType,
+  Infinite,
+  ProductItem,
+  ProductItemInterval,
+  RolloverConfig,
+  RolloverDuration,
+} from "@autumn/shared";
 import { toast } from "sonner";
 import { isFeatureItem, isFeaturePriceItem } from "../getItemType";
+import { isOneOffProduct } from "../priceUtils";
 
 export const validateProductItem = ({
   item,
@@ -97,6 +106,58 @@ export const validateProductItem = ({
       item.billing_units = Number(item.billing_units);
     } else {
       item.billing_units = undefined;
+    }
+  }
+
+  if (item.config?.rollover) {
+    const rollover = item.config?.rollover as RolloverConfig;
+
+    if (rollover.max && rollover.max !== null) {
+      rollover.max = parseFloat(rollover.max.toString());
+    }
+
+    if (rollover.duration !== RolloverDuration.Forever) {
+      rollover.length = parseFloat(rollover.length.toString());
+    } else {
+      rollover.length = 0;
+    }
+
+    if (
+      item.interval === null ||
+      nullish(item.included_usage) ||
+      item.included_usage === 0
+    ) {
+      item.config!.rollover = null;
+      return item;
+    }
+
+    if (rollover.max !== null && invalidNumber(rollover.max)) {
+      toast.error("Please enter a valid maximum rollover amount");
+      return null;
+    }
+
+    if (invalidNumber(rollover.length)) {
+      toast.error("Please enter a valid rollover duration");
+      item.config.rollover = undefined;
+      return null;
+    }
+
+    // if (rollover.duration != RolloverDuration.Month) {
+    //   toast.error("Rollovers currently only support monthly cycles.");
+    //   item.config.rollover = undefined;
+    //   return null;
+    // }
+
+    if (typeof rollover.max == "number" && rollover.max < 0) {
+      toast.error("Please enter a positive rollover max amount");
+      item.config.rollover = undefined;
+      return null;
+    }
+
+    if (rollover.duration == RolloverDuration.Month && rollover.length < 0) {
+      toast.error("Please enter a positive rollover length");
+      item.config.rollover = undefined;
+      return null;
     }
   }
 

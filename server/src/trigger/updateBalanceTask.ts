@@ -42,17 +42,25 @@ import {
   getBillingType,
   getEntOptions,
 } from "@/internal/products/prices/priceUtils.js";
+import { deductFromCusRollovers } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverDeductionUtils.js";
 import { refreshCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 
 // Decimal.set({ precision: 12 }); // 12 DP precision
 
-type DeductParams = {
+export type DeductParams = {
   db: DrizzleCli;
   env: AppEnv;
   org: Organization;
   cusPrices: FullCustomerPrice[];
   customer: Customer;
   properties: any;
+  feature: Feature;
+  entity?: Entity;
+};
+
+export type RolloverDeductParams = {
+  db: DrizzleCli;
+  env: AppEnv;
   feature: Feature;
   entity?: Entity;
 };
@@ -600,6 +608,21 @@ export const updateCustomerBalance = async ({
 
     for (const cusEnt of cusEnts) {
       if (cusEnt.entitlement.internal_feature_id != feature.internal_id) {
+        continue;
+      }
+
+      toDeduct = await deductFromCusRollovers({
+        toDeduct,
+        cusEnt,
+        deductParams: {
+          db,
+          feature,
+          env,
+          entity: customer.entity ? customer.entity : undefined,
+        },
+      });
+
+      if (toDeduct == 0) {
         continue;
       }
 

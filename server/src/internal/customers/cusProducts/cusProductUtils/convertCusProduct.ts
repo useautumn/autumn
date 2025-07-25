@@ -36,7 +36,7 @@ export const cusProductsToCusPrices = ({
     let prices = cusProduct.customer_prices;
     if (billingType) {
       prices = prices.filter(
-        (cp) => getBillingType(cp.price.config) === billingType,
+        (cp) => getBillingType(cp.price.config) === billingType
       );
     }
 
@@ -68,13 +68,13 @@ export const cusProductsToCusEnts = ({
       ...cusProduct.customer_entitlements.map((cusEnt) => ({
         ...cusEnt,
         customer_product: cusProduct,
-      })),
+      }))
     );
   }
 
   if (featureId) {
     cusEnts = cusEnts.filter(
-      (cusEnt) => cusEnt.entitlement.feature_id === featureId,
+      (cusEnt) => cusEnt.entitlement.feature_id === featureId
     );
   }
 
@@ -152,4 +152,27 @@ export const cusProductsToStripeSubs = ({
     stripeCli,
     subIds: cusProducts.flatMap((p: any) => p.subscription_ids || []),
   });
+};
+
+export const cusProductToCusEnt = ({
+  cusProduct,
+  featureId,
+}: {
+  cusProduct: FullCusProduct;
+  featureId: string;
+}) => {
+  let cusEnts = cusProduct.customer_entitlements;
+
+  let fullCusEnt = cusEnts.find(
+    (ce) => ce.entitlement.feature_id === featureId
+  );
+
+  if (fullCusEnt) {
+    return {
+      ...fullCusEnt,
+      customer_product: cusProduct,
+    } as FullCusEntWithFullCusProduct;
+  }
+
+  return undefined;
 };

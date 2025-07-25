@@ -20,6 +20,7 @@ import {
 } from "./updateBalanceTask.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { deductFromCusRollovers } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverDeductionUtils.js";
 import { refreshCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 
 // 2. Get deductions for each feature
@@ -230,6 +231,20 @@ export const updateUsage = async ({
         continue;
       }
 
+      toDeduct = await deductFromCusRollovers({
+        toDeduct,
+        cusEnt,
+        deductParams: {
+          db,
+          feature,
+          env,
+          entity: customer.entity ? customer.entity : undefined,
+        },
+      });
+
+      if (toDeduct == 0) {
+        continue;
+      }
       toDeduct = await deductAllowanceFromCusEnt({
         toDeduct,
         cusEnt,

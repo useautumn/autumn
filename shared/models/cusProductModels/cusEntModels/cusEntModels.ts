@@ -2,6 +2,7 @@ import { z } from "zod";
 import { EntitlementWithFeatureSchema } from "../../productModels/entModels/entModels.js";
 import { Replaceable } from "./replaceableTable.js";
 import { ReplaceableSchema } from "./replaceableSchema.js";
+import { RolloverSchema } from "./rolloverModels/rolloverTable.js";
 
 export const EntityBalanceSchema = z.object({
   id: z.string(),
@@ -36,9 +37,11 @@ export const CustomerEntitlementSchema = z.object({
 export const FullCustomerEntitlementSchema = CustomerEntitlementSchema.extend({
   entitlement: EntitlementWithFeatureSchema,
   replaceables: z.array(ReplaceableSchema),
+  rollovers: z.array(RolloverSchema),
 });
 
 export type EntityBalance = z.infer<typeof EntityBalanceSchema>;
+
 export type CustomerEntitlement = z.infer<typeof CustomerEntitlementSchema>;
 export type FullCustomerEntitlement = z.infer<
   typeof FullCustomerEntitlementSchema
