@@ -22,9 +22,12 @@ import { addPrefixToProducts } from "tests/attach/utils.js";
 
 import { expect } from "chai";
 import { resetAndGetCusEnt } from "./rolloverTestUtils.js";
+import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
+import { addHours, addMonths } from "date-fns";
+import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
 
-let freeRollover = { max: 1000, length: 1, duration: RolloverDuration.Month };
-let proRollover = { max: 600, length: 1, duration: RolloverDuration.Month };
+let freeRollover = { max: 600, length: 1, duration: RolloverDuration.Month };
+let proRollover = { max: 1000, length: 1, duration: RolloverDuration.Month };
 
 const freeMsges = constructFeatureItem({
   featureId: TestFeature.Messages,
@@ -123,15 +126,26 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for upgrade`)}`, 
       product_id: free.id,
     });
 
+    await advanceTestClock({
+      stripeCli,
+      testClockId,
+      advanceTo: addHours(
+        addMonths(curUnix, 1),
+        hoursToFinalizeInvoice
+      ).getTime(),
+      waitForSeconds: 20,
+    });
+
     let cus = await autumn.customers.get(customerId);
     let msgesFeature = cus.features[TestFeature.Messages];
-    let freeRolloverBalance = freeMsges.included_usage * 2;
-    let proRolloverBalance = Math.min(proRollover.max, freeRolloverBalance);
+    let proRolloverBalance = proMsges.included_usage * 2;
+    let freeRolloverBalance = Math.min(freeRollover.max, proRolloverBalance);
 
     expect(msgesFeature).to.exist;
     expect(msgesFeature?.balance).to.equal(
-      proMsges.included_usage + proRolloverBalance
+      freeMsges.included_usage + freeRolloverBalance
     );
+
     // @ts-ignore
     let rollovers = msgesFeature?.rollovers;
     expect(rollovers[0].balance).to.equal(100);

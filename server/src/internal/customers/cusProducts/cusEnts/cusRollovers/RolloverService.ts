@@ -93,34 +93,17 @@ export class RolloverService {
   }) {
     if (rows.length === 0) return {};
 
-    // console.log("inserting rollovers", rows);
-
     await db
       .insert(rollovers)
       .values(rows as any)
       .returning();
 
-    // const currentRolloverRows = await db
-    //   .select()
-    //   .from(rollovers)
-    //   .where(
-    //     and(
-    //       eq(rollovers.cus_ent_id, cusEntID),
-    //       gte(rollovers.expires_at, new Date().getTime())
-    //     )
-    //   );
     let curRollovers = [...fullCusEnt.rollovers, ...rows];
-    console.log(`Cur rollovers:`, curRollovers);
 
     let { toDelete, toUpdate } = performMaximumClearing({
       rows: curRollovers as Rollover[],
-      // rolloverConfig,
       cusEnt: fullCusEnt,
-      // cusEntID,
-      // entityMode,
     });
-    // console.log(`To update:`, toUpdate);
-    // console.log(`To delete:`, toDelete);
 
     if (toDelete.length > 0) {
       await RolloverService.delete({ db, ids: toDelete });

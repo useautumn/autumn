@@ -27,6 +27,8 @@ import { notNullish } from "../utils/genUtils.js";
 
 import { CusPriceService } from "../internal/customers/cusProducts/cusPrices/CusPriceService.js";
 import { RolloverService } from "../internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { refreshCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 
 const checkSubAnchor = async ({
   db,
@@ -236,6 +238,20 @@ export const resetCustomerEntitlement = async ({
         format(new UTCDate(nextResetAt), "dd MMM yyyy HH:mm:ss")
       )}`
     );
+
+    let customer = await CusService.getByInternalId({
+      db,
+      internalId: cusEnt.internal_customer_id,
+    });
+
+    if (customer) {
+      await refreshCusCache({
+        db,
+        customerId: customer.id!,
+        orgId: customer.org_id,
+        env: customer.env,
+      });
+    }
   } catch (error: any) {
     console.log(
       `Failed to reset ${cusEnt.id} | ${cusEnt.customer_id} | ${cusEnt.feature_id}, error: ${error}`
