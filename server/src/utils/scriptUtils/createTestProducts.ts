@@ -5,11 +5,16 @@ import {
 import {
   AppEnv,
   BillingInterval,
+  CouponDurationType,
+  CreateFreeTrial,
   CreateFreeTrialSchema,
+  CreateReward,
   FeatureUsageType,
+  FreeTrial,
   FreeTrialDuration,
   ProductItem,
   ProductV2,
+  RewardType,
 } from "@autumn/shared";
 import { keyToTitle } from "../genUtils.js";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
@@ -81,6 +86,7 @@ export const constructProduct = ({
   excludeBase = false,
   isDefault = true,
   isAddOn = false,
+  freeTrial,
 }: {
   id?: string;
   items: ProductItem[];
@@ -91,6 +97,7 @@ export const constructProduct = ({
   excludeBase?: boolean;
   isDefault?: boolean;
   isAddOn?: boolean;
+  freeTrial?: CreateFreeTrial;
 }) => {
   let price = 0;
   if (type == "pro") {
@@ -110,7 +117,7 @@ export const constructProduct = ({
           : interval
             ? interval
             : BillingInterval.Month,
-      }),
+      })
     );
   }
 
@@ -119,7 +126,7 @@ export const constructProduct = ({
       constructPriceItem({
         price: 10,
         interval: null,
-      }),
+      })
     );
   }
 
@@ -141,15 +148,45 @@ export const constructProduct = ({
     is_default: type == "free" && isDefault,
     version: 1,
     group: "",
-    free_trial: trial
-      ? (CreateFreeTrialSchema.parse({
-          length: 7,
-          duration: FreeTrialDuration.Day,
-          unique_fingerprint: false,
-        }) as any)
-      : null,
+    free_trial:
+      freeTrial || trial
+        ? (CreateFreeTrialSchema.parse({
+            length: 7,
+            duration: FreeTrialDuration.Day,
+            unique_fingerprint: false,
+          }) as any)
+        : null,
     created_at: Date.now(),
   };
 
   return product;
+};
+
+export const constructCoupon = ({
+  id,
+  promoCode,
+  discountType = RewardType.FixedDiscount,
+  discountValue = 10,
+}: {
+  id: string;
+  promoCode: string;
+  discountType?: RewardType;
+  discountValue?: number;
+}) => {
+  const reward: CreateReward = {
+    id,
+    name: keyToTitle(id),
+    promo_codes: [{ code: promoCode }],
+    type: discountType,
+    discount_config: {
+      discount_value: discountValue,
+      duration_type: CouponDurationType.Forever,
+      duration_value: 1,
+      should_rollover: true,
+      apply_to_all: true,
+      price_ids: [],
+    },
+  };
+
+  return reward;
 };

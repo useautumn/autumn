@@ -88,6 +88,7 @@ export const attachParamsToPreview = async ({
       branch,
       now,
       withPrepaid,
+      config,
     });
   }
 

@@ -19,12 +19,16 @@ import { initDrizzle } from "@/db/initDrizzle.js";
 const ORG_SLUG = process.env.TESTS_ORG!;
 const DEFAULT_ENV = AppEnv.Sandbox;
 
+import { Hyperbrowser } from "@hyperbrowser/sdk";
+const hyperbrowser = new Hyperbrowser({
+  apiKey: process.env.HYPERBROWSER_API_KEY,
+});
+
 describe("Initialize org for tests", () => {
   it("should initialize org", async function () {
     this.timeout(1000000000);
     this.org = await clearOrg({ orgSlug: ORG_SLUG, env: DEFAULT_ENV });
     this.env = DEFAULT_ENV;
-    // this.sb = createSupabaseClient();
     let { db, client } = initDrizzle();
 
     this.db = db;

@@ -27,9 +27,13 @@ export const CustomerDetails = ({
           <SidebarLabel>ID</SidebarLabel>
           <div className="col-span-6 justify-end flex">
             <div className="w-full flex justify-end">
-              <CopyButton text={customer.id} className="">
-                {customer.id}
-              </CopyButton>
+              {customer.id ? (
+                <CopyButton text={customer.id} className="">
+                  {customer.id}
+                </CopyButton>
+              ) : (
+                <span className="px-2 text-t3">N/A</span>
+              )}
             </div>
           </div>
 

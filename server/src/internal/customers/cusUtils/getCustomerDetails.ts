@@ -78,18 +78,6 @@ export const getCustomerDetails = async ({
     (cp: FullCusProduct) => cp.subscription_ids || []
   );
 
-  // if (org.config.api_version >= BREAK_API_VERSION && org.stripe_connected) {
-  //   let stripeCli = createStripeCli({
-  //     org,
-  //     env,
-  //   });
-
-  //   subs = await getStripeSubs({
-  //     stripeCli,
-  //     subIds,
-  //     expand: withRewards ? ["discounts"] : undefined,
-  //   });
-  // }
   const subs = customer.subscriptions || [];
   const { main, addOns } = await processFullCusProducts({
     fullCusProducts: cusProducts,

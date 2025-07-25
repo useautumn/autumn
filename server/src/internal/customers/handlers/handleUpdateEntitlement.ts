@@ -9,7 +9,10 @@ import { adjustAllowance } from "@/trigger/adjustAllowance.js";
 import { CusPriceService } from "@/internal/customers/cusProducts/cusPrices/CusPriceService.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { getCusEntBalance } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
+import {
+  getCusEntBalance,
+  getRelatedCusPrice,
+} from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { performDeductionOnCusEnt } from "@/trigger/updateBalanceTask.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";

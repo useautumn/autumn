@@ -37,6 +37,7 @@ export const handleGetEntity = async (req: any, res: any) =>
           entityId,
           apiVersion,
           features,
+          logger,
         });
       // const end = performance.now();
       // logger.info(`getEntityResponse took ${(end - start).toFixed(2)}ms`);
@@ -53,7 +54,7 @@ export const handleGetEntity = async (req: any, res: any) =>
                 logger,
               })
             : undefined,
-        }),
+        })
       );
     },
   });

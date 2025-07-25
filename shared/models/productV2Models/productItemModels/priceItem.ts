@@ -1,4 +1,4 @@
-import { ProductItemSchema } from "@autumn/shared";
+import { ProductItemSchema } from "./productItemModels.js";
 import { z } from "zod";
 
 export const PriceItemSchema = ProductItemSchema.pick({

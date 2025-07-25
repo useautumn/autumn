@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import { ChevronsUpDown, Loader2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -19,9 +19,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useAxiosPostSWR } from "@/services/useAxiosSwr";
-import { AppEnv } from "@autumn/shared";
 import { debounce } from "lodash";
-import { useEffect, useMemo, useCallback } from "react";
+import { useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { navigateTo } from "@/utils/genUtils";
 import { useEnv } from "@/utils/envUtils";
@@ -40,9 +39,8 @@ export function CustomerComboBox({
   const [open, setOpen] = React.useState(false);
   const [value, setValue] = React.useState("");
   const [isSearching, setIsSearching] = React.useState(false);
-  const [cusId, setCusId] = React.useState(customer?.id);
 
-  const { data, isLoading, error, mutate } = useAxiosPostSWR({
+  const { data, mutate } = useAxiosPostSWR({
     url: `/v1/customers/all/search`,
     env,
     data: {
@@ -52,21 +50,29 @@ export function CustomerComboBox({
   });
 
   const debouncedSearch = useCallback(
-    debounce(async (searchValue: string) => {
+    debounce(async () => {
       setIsSearching(true);
-
-      await mutate();
-      setIsSearching(false);
+      try {
+        await mutate();
+      } catch (error) {
+        console.error("Search failed:", error);
+      } finally {
+        setIsSearching(false);
+      }
     }, 300),
-    [mutate],
+    [mutate]
   );
 
   useEffect(() => {
     if (value) {
-      debouncedSearch(value);
+      debouncedSearch();
     } else {
       setIsSearching(false);
     }
+
+    return () => {
+      debouncedSearch.cancel();
+    };
   }, [value, debouncedSearch]);
 
   return (
@@ -78,7 +84,7 @@ export function CustomerComboBox({
           aria-expanded={open}
           className={cn(
             "w-[150px] justify-between text-xs",
-            classNames?.trigger,
+            classNames?.trigger
           )}
           onClick={() => {
             setValue("");
@@ -126,22 +132,24 @@ export function CustomerComboBox({
                 </CommandEmpty>
                 <CommandGroup>
                   {value &&
-                    data?.customers?.map((c: any) => {
+                    data?.customers &&
+                    data?.customers?.map((c: any, idx: number) => {
                       if (c.name === customer?.name) {
                         return null;
                       }
                       return (
                         <CommandItem
-                          key={c.id}
-                          value={c.id}
+                          key={idx}
+                          value={c.id || c.internal_id}
                           onSelect={() => {
                             navigateTo(
                               `/analytics?customer_id=${c.id}`,
                               navigate,
-                              env,
+                              env
                             );
                             setOpen(false);
                           }}
+                          className="w-full"
                         >
                           {c.name || c.email}{" "}
                           <span className="text-xs text-t3">

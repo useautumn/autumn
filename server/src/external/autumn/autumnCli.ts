@@ -398,6 +398,23 @@ export class AutumnInt {
     },
   };
 
+  stripe = {
+    connect: async (params: {
+      testApiKey: string;
+      liveApiKey: string;
+      successUrl: string;
+      defaultCurrency: string;
+    }) => {
+      const data = await this.post(`/org/stripe`, params);
+      return data;
+    },
+
+    delete: async () => {
+      const data = await this.delete(`/org/stripe`);
+      return data;
+    },
+  };
+
   track = async (params: TrackParams) => {
     const data = await this.post(`/track`, params);
     return data;

@@ -1,4 +1,4 @@
-import { usePostSWR } from "@/services/useAxiosSwr";
+import { usePostSWR } from "@/services/useAxiosSwr.js";
 import { ErrCode } from "@autumn/shared";
 
 export const useTopEventNames = () => {

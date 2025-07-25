@@ -174,14 +174,14 @@ describe(`${chalk.yellowBright(`attach/${testCase}: update quantity, no proratio
       testClockId,
       advanceTo: addHours(
         addMonths(new Date(), 1),
-        hoursToFinalizeInvoice,
+        hoursToFinalizeInvoice
       ).getTime(),
-      waitForSeconds: 30,
+      waitForSeconds: 40,
     });
 
     const autumnCus = await autumn.customers.get(customerId);
     expect(autumnCus.features[TestFeature.Messages].balance).to.equal(
-      newQuantity,
+      newQuantity
     );
 
     expect(autumnCus.invoices.length).to.equal(3);
@@ -190,8 +190,9 @@ describe(`${chalk.yellowBright(`attach/${testCase}: update quantity, no proratio
     const cusProduct = await getMainCusProduct({
       db,
       internalCustomerId: customer.internal_id,
+      productGroup: testCase,
     });
-    // console.log(cusProduct);
+
     expect(cusProduct?.options[0].quantity).to.equal(newQuantity / 100);
     expect(cusProduct?.options[0].upcoming_quantity).to.not.exist;
   });

@@ -1,7 +1,7 @@
 import { apiAuthMiddleware } from "@/middleware/apiAuthMiddleware.js";
 import { Router } from "express";
 import { eventsRouter } from "./events/eventRouter.js";
-import { cusRouter } from "./cusRouter.js";
+import { cusRouter } from "../customers/cusRouter.js";
 import { productBetaRouter, productRouter } from "../products/productRouter.js";
 
 import { featureRouter } from "../features/featureRouter.js";
@@ -22,13 +22,19 @@ import rewardRouter from "./rewards/rewardRouter.js";
 import expireRouter from "../customers/expire/expireRouter.js";
 import { handleSetupPayment } from "../customers/attach/handleSetupPayment.js";
 import { internalFeatureRouter } from "../features/internalFeatureRouter.js";
-import { trmnlRouter } from "./trmnl/trmnlRouter.js";
+import { analyticsRouter } from "../analytics/analyticsRouter.js";
+import { handleConnectStripe } from "../orgs/handlers/handleConnectStripe.js";
+import { handleDeleteStripe } from "../orgs/handlers/handleDeleteStripe.js";
+
+import { refreshCacheMiddleware } from "@/middleware/refreshCacheMiddleware.js";
+import { platformRouter } from "../platform/platformRouter.js";
 
 const apiRouter: Router = Router();
 
 apiRouter.use(apiAuthMiddleware);
 apiRouter.use(pricingMiddleware);
 apiRouter.use(analyticsMiddleware);
+apiRouter.use(refreshCacheMiddleware);
 
 apiRouter.use("/customers", cusRouter);
 apiRouter.use("/invoices", invoiceRouter);
@@ -57,4 +63,9 @@ apiRouter.use("/events", eventsRouter);
 apiRouter.use("/track", eventsRouter);
 apiRouter.post("/setup_payment", handleSetupPayment);
 
+// Analytics
+apiRouter.use("/query", analyticsRouter);
+apiRouter.post("/org/stripe", handleConnectStripe);
+apiRouter.delete("/org/stripe", handleDeleteStripe);
+apiRouter.use("/platform", platformRouter);
 export { apiRouter };

@@ -13,6 +13,7 @@ import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingInter
 import { APIVersion } from "@autumn/shared";
 import { SuccessCode } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
+
 import Stripe from "stripe";
 
 export const handleCreateCheckout = async ({
@@ -28,7 +29,7 @@ export const handleCreateCheckout = async ({
 }) => {
   const { db, logtail: logger } = req;
 
-  const { customer, org, freeTrial, successUrl } = attachParams;
+  const { customer, org, freeTrial, successUrl, reward } = attachParams;
 
   const stripeCli = createStripeCli({
     org,
@@ -65,7 +66,7 @@ export const handleCreateCheckout = async ({
 
   if (attachParams.billingAnchor) {
     billingCycleAnchorUnixSeconds = Math.floor(
-      attachParams.billingAnchor / 1000,
+      attachParams.billingAnchor / 1000
     );
   }
 
@@ -82,9 +83,17 @@ export const handleCreateCheckout = async ({
     : undefined;
 
   let checkoutParams = attachParams.checkoutSessionParams || {};
-  let allowPromotionCodes = notNullish(checkoutParams.discounts)
-    ? undefined
-    : checkoutParams.allow_promotion_codes || true;
+  let allowPromotionCodes =
+    notNullish(checkoutParams.discounts) || notNullish(reward)
+      ? undefined
+      : checkoutParams.allow_promotion_codes || true;
+
+  let rewardData = {};
+  if (reward) {
+    rewardData = {
+      discounts: [{ coupon: reward.id }],
+    };
+  }
 
   const hasUserSpecifiedPaymentMethods =
     checkoutParams.payment_method_types !== undefined;
@@ -104,6 +113,8 @@ export const handleCreateCheckout = async ({
     allow_promotion_codes: allowPromotionCodes,
     invoice_creation: !isRecurring ? { enabled: true } : undefined,
     saved_payment_method_options: { payment_method_save: "enabled" },
+    ...rewardData,
+
     ...(attachParams.checkoutSessionParams || {}),
   };
 
@@ -160,7 +171,7 @@ export const handleCreateCheckout = async ({
       throw error;
     }
   }
-  
+
   if (returnCheckout) {
     return checkout;
   }

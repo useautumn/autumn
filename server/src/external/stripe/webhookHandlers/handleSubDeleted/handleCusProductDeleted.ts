@@ -21,6 +21,7 @@ import { getCusPaymentMethod } from "../../stripeCusUtils.js";
 import { webhookToAttachParams } from "../../webhookUtils/webhookUtils.js";
 import { createUsageInvoice } from "@/internal/customers/attach/attachFunctions/upgradeDiffIntFlow/createUsageInvoice.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 export const handleCusProductDeleted = async ({
   req,
@@ -63,7 +64,7 @@ export const handleCusProductDeleted = async ({
 
     if (usagePrices.length > 0) {
       logger.info(
-        `sub.deleted, submitting usage for ${fullCus.id}, ${cusProduct.product.name}`,
+        `sub.deleted, submitting usage for ${fullCus.id}, ${cusProduct.product.name}`
       );
 
       await createUsageInvoice({
@@ -91,14 +92,14 @@ export const handleCusProductDeleted = async ({
   if (scheduled_ids && scheduled_ids.length > 0 && !prematurelyCanceled) {
     // If cusProduct has scheduled_ids, remove sub id from it?
     logger.info(
-      `sub.deleted: removing sub_id from cus product ${cusProduct.id}`,
+      `sub.deleted: removing sub_id from cus product ${cusProduct.id}`
     );
     await CusProductService.update({
       db,
       cusProductId: cusProduct.id,
       updates: {
         subscription_ids: cusProduct.subscription_ids?.filter(
-          (id) => id !== subscription.id,
+          (id) => id !== subscription.id
         ),
       },
     });
@@ -127,7 +128,10 @@ export const handleCusProductDeleted = async ({
     logger,
   });
 
-  if (cusProduct.product.is_add_on) {
+  if (
+    cusProduct.product.is_add_on ||
+    notNullish(cusProduct.internal_entity_id)
+  ) {
     return;
   }
 

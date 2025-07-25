@@ -56,7 +56,7 @@ export const AttachModal = ({
 
     if (entityId) {
       const entity = entities.find(
-        (e: Entity) => e.id === entityId || e.internal_id === entityId,
+        (e: Entity) => e.id === entityId || e.internal_id === entityId
       );
       const entityName = entity?.name || entity?.id || entity?.internal_id;
       return `${cusName} (${entityName})`;
@@ -110,6 +110,7 @@ export const AttachModal = ({
     }
 
     const dueToday = preview?.due_today;
+
     if (dueToday && dueToday.total == 0) {
       return "Confirm";
     }
@@ -169,7 +170,7 @@ export const AttachModal = ({
         navigateTo(
           `/integrations/stripe?redirect=${redirectUrl}`,
           navigation,
-          env,
+          env
         );
       } else {
         toast.error(getBackendErr(error, "Error creating product"));
@@ -228,7 +229,7 @@ export const AttachModal = ({
         <DialogFooter
           className={cn(
             "bg-stone-100 flex items-center h-10 gap-0 border-t border-zinc-200",
-            mainWidth,
+            mainWidth
           )}
         >
           {invoiceAllowed() && (

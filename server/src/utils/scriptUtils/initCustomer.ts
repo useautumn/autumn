@@ -8,6 +8,7 @@ import {
 } from "../../external/stripe/stripeCusUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import Stripe from "stripe";
+import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 
 export const createCusInStripe = async ({
   customer,
@@ -83,6 +84,12 @@ export const initCustomer = async ({
 
   if (customer) {
     await autumn.customers.delete(customerId);
+    await deleteCusCache({
+      db,
+      customerId: customerId,
+      orgId: org.id,
+      env: env,
+    });
   }
 
   try {
@@ -94,6 +101,11 @@ export const initCustomer = async ({
       orgId: org.id,
       env: env,
     })) as Customer;
+
+    // console.log("customer id", customerId);
+    // console.log("org id", org.id);
+    // console.log("env", env);
+    // console.log("customer", customer);
 
     const stripeCli = createStripeCli({ org: org, env: env });
     let testClockId = "";
