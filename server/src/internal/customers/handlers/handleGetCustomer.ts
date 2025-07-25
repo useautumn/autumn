@@ -10,6 +10,7 @@ import { StatusCodes } from "http-status-codes";
 import { getCustomerDetails } from "../cusUtils/getCustomerDetails.js";
 import { parseCusExpand } from "../cusUtils/cusUtils.js";
 import { orgToVersion } from "@/utils/versionUtils.js";
+import { getCusWithCache } from "../cusCache/getCusWithCache.js";
 
 export const handleGetCustomer = async (req: any, res: any) =>
   routeHandler({
@@ -35,21 +36,26 @@ export const handleGetCustomer = async (req: any, res: any) =>
 
       logger.info(`getting customer ${customerId} for org ${org.slug}`);
       const startTime = Date.now();
-      const customer = await CusService.getFull({
+      const customer = await getCusWithCache({
         db,
         idOrInternalId: customerId,
         orgId: org.id,
-        env: env,
-        inStatuses: [
-          CusProductStatus.Active,
-          CusProductStatus.PastDue,
-          CusProductStatus.Scheduled,
-        ],
-        withEntities: true,
+        env,
         expand: expandArray,
         allowNotFound: true,
-        withSubs: true,
+        logger,
       });
+
+      // const customer = await CusService.getFull({
+      //   db,
+      //   idOrInternalId: customerId,
+      //   orgId: org.id,
+      //   env: env,
+      //   withEntities: true,
+      //   expand: expandArray,
+      //   allowNotFound: true,
+      //   withSubs: true,
+      // });
       logger.info(`get customer took ${Date.now() - startTime}ms`);
 
       if (!customer) {

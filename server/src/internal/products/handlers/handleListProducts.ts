@@ -22,7 +22,7 @@ export const handleListProducts = async (req: any, res: any) =>
       ]);
 
       let prods = await Promise.all(
-        products.map((p) => getProductResponse({ product: p, features })),
+        products.map((p) => getProductResponse({ product: p, features }))
       );
 
       if (req.query.v1_schema === "true") {

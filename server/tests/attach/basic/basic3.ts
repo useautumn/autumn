@@ -104,7 +104,7 @@ describe(`${chalk.yellowBright("basic3: Testing attach one time / monthly add on
 
       await completeCheckoutForm(
         res.checkout_url,
-        oneTimeQuantity / oneTimeBillingUnits!,
+        oneTimeQuantity / oneTimeBillingUnits!
       );
       await timeout(15000);
     }
@@ -117,26 +117,26 @@ describe(`${chalk.yellowBright("basic3: Testing attach one time / monthly add on
       (e: any) =>
         e.feature_id === features.metered1.id &&
         e.interval ==
-          products.oneTimeAddOnMetered1.entitlements.metered1.interval,
+          products.oneTimeAddOnMetered1.entitlements.metered1.interval
     );
 
     const expectedAmt = oneTimeQuantity * oneTimePurchaseCount;
 
     expect(addOnBalance!.balance).to.equal(
       expectedAmt,
-      "add on balance should be correct",
+      "add on balance should be correct"
     );
     expect(cusRes.add_ons).to.have.lengthOf(
       1,
-      "should only have one add on product after two purchases (since they combine)",
+      "should only have one add on product after two purchases (since they combine)"
     );
     expect(cusRes.add_ons[0].id).to.equal(
       oneTime.id,
-      "add on product should exist",
+      "add on product should exist"
     );
     expect(cusRes.invoices.length).to.equal(
       1 + oneTimePurchaseCount,
-      "invoices should be correct",
+      "invoices should be correct"
     );
   });
 
@@ -147,12 +147,12 @@ describe(`${chalk.yellowBright("basic3: Testing attach one time / monthly add on
 
     const proMetered1Amt = products.pro.entitlements.metered1.allowance;
     const addOnBalance = res!.balances.find(
-      (b: any) => b.feature_id === features.metered1.id,
+      (b: any) => b.feature_id === features.metered1.id
     );
 
     expect(res!.allowed).to.be.true;
     expect(addOnBalance!.balance).to.equal(
-      proMetered1Amt! + oneTimeQuantity * oneTimePurchaseCount,
+      proMetered1Amt! + oneTimeQuantity * oneTimePurchaseCount
     );
   });
 });

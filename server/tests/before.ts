@@ -13,6 +13,11 @@ import { after } from "mocha";
 const ORG_SLUG = process.env.TESTS_ORG!;
 const DEFAULT_ENV = AppEnv.Sandbox;
 
+import { Hyperbrowser } from "@hyperbrowser/sdk";
+const hyperbrowser = new Hyperbrowser({
+  apiKey: process.env.HYPERBROWSER_API_KEY,
+});
+
 export const setupBefore = async (instance: any) => {
   const { db, client } = initDrizzle();
 
@@ -23,6 +28,11 @@ export const setupBefore = async (instance: any) => {
   const env = DEFAULT_ENV;
   const autumnSecretKey = process.env.UNIT_TEST_AUTUMN_SECRET_KEY!;
   const autumn = new AutumnInt({ apiKey: autumnSecretKey });
+
+  // console.log("instance.browserSession", instance.browserSession);
+  // if (!instance.browserSession) {
+  //   instance.browserSession = await hyperbrowser.sessions.create();
+  // }
 
   const autumnJs = new AutumnJS({
     secretKey: autumnSecretKey,

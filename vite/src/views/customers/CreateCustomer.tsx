@@ -38,7 +38,7 @@ function CreateCustomer() {
         ...fields,
         id: fields.id ? fields.id : null,
         name: fields.name || null,
-        email: fields.email || null,
+        email: fields.email ? fields.email.trim() : null,
         fingerprint: fields.fingerprint ? fields.fingerprint : undefined,
       });
 
@@ -49,7 +49,7 @@ function CreateCustomer() {
             customer.id || customer.autumn_id || customer.internal_id
           }`,
           navigate,
-          env,
+          env
         );
       }
       toast.success("Customer created successfully");

@@ -56,7 +56,7 @@ const tiersAreSame = (tiers1: any, tiers2: any) => {
 
   return tiers1.every(
     (tier: any, index: number) =>
-      tier.amount === tiers2[index].amount && tier.to === tiers2[index].to,
+      tier.amount === tiers2[index].amount && tier.to === tiers2[index].to
   );
 };
 
@@ -67,13 +67,18 @@ export const featureItemsAreSame = ({
   item1: FeatureItem;
   item2: FeatureItem;
 }) => {
-  return (
+  const same =
     item1.feature_id === item2.feature_id &&
     item1.included_usage == item2.included_usage &&
     item1.interval == item2.interval &&
     item1.entity_feature_id == item2.entity_feature_id &&
-    item1.reset_usage_when_enabled == item2.reset_usage_when_enabled
-  );
+    item1.reset_usage_when_enabled == item2.reset_usage_when_enabled;
+
+  if (!same) {
+    console.log(`Feature items different: ${item1.feature_id}`);
+  }
+
+  return same;
 };
 
 export const priceItemsAreSame = ({
@@ -83,7 +88,13 @@ export const priceItemsAreSame = ({
   item1: PriceItem;
   item2: PriceItem;
 }) => {
-  return item1.price === item2.price && item1.interval == item2.interval;
+  const same = item1.price === item2.price && item1.interval == item2.interval;
+
+  if (!same) {
+    console.log(`Price items different: ${item1.price}`);
+  }
+
+  return same;
 };
 
 export const featurePriceItemsAreSame = ({
@@ -155,7 +166,7 @@ export const featurePriceItemsAreSame = ({
         .map((d) => d.message),
       Object.values(pricesSame)
         .filter((d) => !d.condition)
-        .map((d) => d.message),
+        .map((d) => d.message)
     );
   }
 

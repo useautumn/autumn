@@ -45,6 +45,10 @@ pull.sh
 # testing
 /coverage
 
+# temporary files
+**/.tmp/
+.tmp/
+
 # next.js
 /.next/
 /out/
@@ -91,3 +95,4 @@ server/test.sh
 # bun (keep main repo clean betweeen different npm flavours)
 bun.lock
 bun.lockb
+.dev.vars

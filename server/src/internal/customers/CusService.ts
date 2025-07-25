@@ -17,6 +17,7 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getFullCusQuery } from "./getFullCusQuery.js";
 import { trace } from "@opentelemetry/api";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
+import { RELEVANT_STATUSES } from "./cusProducts/CusProductService.js";
 
 const tracer = trace.getTracer("express");
 
@@ -26,11 +27,7 @@ export class CusService {
     idOrInternalId,
     orgId,
     env,
-    inStatuses = [
-      CusProductStatus.Active,
-      CusProductStatus.PastDue,
-      CusProductStatus.Scheduled,
-    ],
+    inStatuses = RELEVANT_STATUSES,
     withEntities = false,
     entityId,
     expand,
@@ -72,7 +69,7 @@ export class CusService {
           withEntities,
           withTrialsUsed,
           withSubs,
-          entityId,
+          entityId
         );
 
         let result = await db.execute(query);
@@ -123,10 +120,10 @@ export class CusService {
       where: and(
         or(
           eq(customers.id, idOrInternalId),
-          eq(customers.internal_id, idOrInternalId),
+          eq(customers.internal_id, idOrInternalId)
         ),
         eq(customers.org_id, orgId),
-        eq(customers.env, env),
+        eq(customers.env, env)
       ),
     });
 
@@ -152,7 +149,7 @@ export class CusService {
       where: and(
         eq(customers.email, email),
         eq(customers.org_id, orgId),
-        eq(customers.env, env),
+        eq(customers.env, env)
       ),
     });
 
@@ -270,8 +267,8 @@ export class CusService {
         and(
           eq(customers.internal_id, internalId),
           eq(customers.org_id, orgId),
-          eq(customers.env, env),
-        ),
+          eq(customers.env, env)
+        )
       )
       .returning();
 

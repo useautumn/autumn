@@ -29,7 +29,7 @@ import CopyButton from "@/components/general/CopyButton";
 
 const CustomerWithProductsSchema = CustomerSchema.extend({
   customer_products: z.array(
-    CusProductSchema.extend({ product: ProductSchema }),
+    CusProductSchema.extend({ product: ProductSchema })
   ),
 });
 type CustomerWithProducts = z.infer<typeof CustomerWithProductsSchema>;
@@ -53,7 +53,7 @@ export const CustomersTable = ({
 
     // Filter out expired products first
     const activeProducts = customer.customer_products.filter(
-      (cusProduct) => cusProduct.status !== CusProductStatus.Expired,
+      (cusProduct) => cusProduct.status !== CusProductStatus.Expired
     );
 
     if (activeProducts.length === 0) {
@@ -172,19 +172,23 @@ export const CustomersTable = ({
           <Link
             to={getRedirectUrl(
               `/customers/${customer.id || customer.internal_id}`,
-              env,
+              env
             )}
             key={index}
             className="grid grid-cols-16 gap-2 items-center px-10 w-full text-sm h-8 cursor-default hover:bg-primary/5 text-t2 whitespace-nowrap"
           >
             <CustomTableCell colSpan={3}>{customer.name}</CustomTableCell>
             <CustomTableCell className="font-mono -translate-x-1" colSpan={3}>
-              <CopyButton
-                text={customer.id || ""}
-                className="bg-transparent text-t3 border-none px-1 shadow-none max-w-full"
-              >
-                <span className="truncate">{customer.id}</span>
-              </CopyButton>
+              {customer.id ? (
+                <CopyButton
+                  text={customer.id || ""}
+                  className="bg-transparent text-t3 border-none px-1 shadow-none max-w-full"
+                >
+                  <span className="truncate">{customer.id}</span>
+                </CopyButton>
+              ) : (
+                <span className="px-1 text-t3">NULL</span>
+              )}
             </CustomTableCell>
             <CustomTableCell colSpan={3}>{customer.email}</CustomTableCell>
             <CustomTableCell colSpan={5}>
@@ -218,7 +222,7 @@ export const CustomTableCell = ({
       className={cn(
         colSpan ? `col-span-${colSpan}` : "col-span-3",
         "overflow-hidden text-ellipsis pr-1",
-        className,
+        className
       )}
     >
       {children}

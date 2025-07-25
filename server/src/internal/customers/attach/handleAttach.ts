@@ -20,8 +20,6 @@ export const handleAttach = async (req: any, res: any) =>
 
       const attachBody = AttachBodySchema.parse(req.body);
 
-      const logger = req.logtail;
-
       const { attachParams, customPrices, customEnts } = await getAttachParams({
         req,
         attachBody,

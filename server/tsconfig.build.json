@@ -24,6 +24,6 @@
       "@emails/*": ["emails/*"]
     }
   },
-  "include": ["src", "emails"],
+  "include": ["src", "emails", "src/external/clickhouse/queries"],
   "exclude": ["node_modules", "dist"]
 }

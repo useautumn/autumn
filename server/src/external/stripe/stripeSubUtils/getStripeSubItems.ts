@@ -17,6 +17,7 @@ import {
   APIVersion,
   InsertReplaceable,
   AttachReplaceable,
+  ErrCode,
 } from "@autumn/shared";
 import { priceToStripeItem } from "../priceToStripeItem/priceToStripeItem.js";
 import { getArrearItems } from "./getStripeSubItems/getArrearItems.js";
@@ -25,6 +26,8 @@ import {
   sortPricesByInterval,
 } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 import { isUsagePrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { logger } from "@/external/logtail/logtailUtils.js";
 
 const getIntervalToPrices = (prices: Price[]) => {
   const intervalToPrices: Record<string, Price[]> = {};
@@ -45,7 +48,7 @@ const getIntervalToPrices = (prices: Price[]) => {
   if (oneOffPrices && Object.keys(intervalToPrices).length > 1) {
     const nextIntervalKey = Object.keys(intervalToPrices)[0];
     intervalToPrices[nextIntervalKey!].push(
-      ...structuredClone(intervalToPrices[BillingInterval.OneOff]),
+      ...structuredClone(intervalToPrices[BillingInterval.OneOff])
     );
     delete intervalToPrices[BillingInterval.OneOff];
   }
@@ -124,6 +127,23 @@ export const getStripeSubItems = async ({
 
       let product = getProductForPrice(price, products)!;
 
+      if (!product) {
+        logger.error(
+          `Couldn't find product for price ${price.internal_product_id}`,
+          {
+            data: {
+              products: attachParams.products,
+              price,
+            },
+          }
+        );
+        throw new RecaseError({
+          code: ErrCode.ProductNotFound,
+          message: `Price internal product ID: ${price.internal_product_id} not found in products`,
+          statusCode: 400,
+        });
+      }
+
       const stripeItem = priceToStripeItem({
         price,
         product,
@@ -151,7 +171,7 @@ export const getStripeSubItems = async ({
           prices,
           org,
           interval: interval as BillingInterval,
-        }),
+        })
       );
     }
 

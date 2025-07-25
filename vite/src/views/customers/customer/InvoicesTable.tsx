@@ -6,19 +6,22 @@ import { toast } from "sonner";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
 import { Row, Item } from "@/components/general/TableGrid";
 import { AdminHover } from "@/components/general/AdminHover";
+import { cn } from "@/lib/utils";
+import { CusProductEntityItem } from "./components/CusProductEntityItem";
 
 export const InvoicesTable = () => {
-  const { env, invoices, products, entityId, entities } = useCustomerContext();
+  const { env, invoices, products, entityId, entities, showEntityView } =
+    useCustomerContext();
   const axiosInstance = useAxiosInstance({ env });
 
   const entity = entities.find(
-    (e: any) => e.id === entityId || e.internal_id === entityId,
+    (e: any) => e.id === entityId || e.internal_id === entityId
   );
 
   const getStripeInvoice = async (stripeInvoiceId: string) => {
     try {
       const { data } = await axiosInstance.get(
-        `/v1/invoices/${stripeInvoiceId}/stripe`,
+        `/v1/invoices/${stripeInvoiceId}/stripe`
       );
       return data;
     } catch (error) {
@@ -54,8 +57,15 @@ export const InvoicesTable = () => {
         </div>
       ) : (
         <>
-          <Row type="header" className="grid-cols-12 pr-0">
+          <Row
+            type="header"
+            className={cn(
+              "grid-cols-12 pr-0",
+              showEntityView && "grid-cols-15"
+            )}
+          >
             <Item className="col-span-3">Products</Item>
+            {showEntityView && <Item className="col-span-3">Entity</Item>}
             <Item className="col-span-3">Total</Item>
             <Item className="col-span-3">Status</Item>
             <Item className="col-span-2">Created At</Item>
@@ -67,7 +77,7 @@ export const InvoicesTable = () => {
       {invoicesFiltered.map((invoice: Invoice) => (
         <Row
           key={invoice.id}
-          className="grid-cols-12 pr-0"
+          className={cn("grid-cols-12 pr-0", showEntityView && "grid-cols-15")}
           onClick={async () => {
             const stripeInvoice = await getStripeInvoice(invoice.stripe_id);
             if (!stripeInvoice.hosted_invoice_url) {
@@ -96,6 +106,13 @@ export const InvoicesTable = () => {
                 .join(", ")}
             </AdminHover>
           </Item>
+          {showEntityView && (
+            <Item className="col-span-3 -translate-x-1">
+              <CusProductEntityItem
+                internalEntityId={invoice.internal_entity_id}
+              />
+            </Item>
+          )}
           <Item className="col-span-3">
             {invoice.total.toFixed(2)} {invoice.currency.toUpperCase()}
             {getTotalDiscountAmount(invoice) > 0 && (

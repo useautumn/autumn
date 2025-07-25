@@ -1,10 +1,10 @@
 name: Run Autumn Tests
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
-
 env:
   DATABASE_URL: ${{ secrets.SUPABASE_URL }}
   UNIT_TEST_AUTUMN_SECRET_KEY: ${{ secrets.AUTUMN_KEY }}
@@ -16,79 +16,78 @@ env:
   LOCALTUNNEL_RESERVED_KEY: ${{ secrets.LOCALTUNNEL_RESERVED_KEY }}
   STRIPE_WEBHOOK_URL: ${{ secrets.STRIPE_WEBHOOK_URL }}
   BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
-  BROWSERBASE_API_KEY: ${{ secrets.BROWSERBASE_API_KEY }}
-  BROWSERBASE_PROJECT_ID: ${{ secrets.BROWSERBASE_PROJECT_ID }}
+  HYPERBROWSER_API_KEY: ${{ secrets.HYPERBROWSER_API_KEY }}
+  STRIPE_TEST_KEY: ${{ secrets.STRIPE_TEST_KEY }}
 
 jobs:
   test:
     runs-on: blacksmith-4vcpu-ubuntu-2404
+    # runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
+      - name: Set up bun
+        uses: oven-sh/setup-bun@v2
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        # run: bun install --no-frozen-lockfile
+        run: bun install
 
       - name: Setup CI
-        run: pnpm run setupci
+        run: bun run setupci
 
-      - name: Install Chrome Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            ca-certificates \
-            fonts-liberation \
-            libasound2 \
-            libatk-bridge2.0-0 \
-            libatk1.0-0 \
-            libc6 \
-            libcairo2 \
-            libcups2 \
-            libdbus-1-3 \
-            libexpat1 \
-            libfontconfig1 \
-            libgbm1 \
-            libgcc1 \
-            libgdk-pixbuf2.0-0 \
-            libglib2.0-0 \
-            libgtk-3-0 \
-            libnspr4 \
-            libnss3 \
-            libpango-1.0-0 \
-            libpangocairo-1.0-0 \
-            libstdc++6 \
-            libx11-6 \
-            libx11-xcb1 \
-            libxcb1 \
-            libxcomposite1 \
-            libxcursor1 \
-            libxdamage1 \
-            libxext6 \
-            libxfixes3 \
-            libxi6 \
-            libxrandr2 \
-            libxrender1 \
-            libxss1 \
-            libxtst6 \
-            lsb-release \
-            wget \
-            xdg-utils
+      # - name: Install Chrome Dependencies
+      #   run: |
+      #     sudo apt-get update
+      #     sudo apt-get install -y \
+      #       ca-certificates \
+      #       fonts-liberation \
+      #       libasound2 \
+      #       libatk-bridge2.0-0 \
+      #       libatk1.0-0 \
+      #       libc6 \
+      #       libcairo2 \
+      #       libcups2 \
+      #       libdbus-1-3 \
+      #       libexpat1 \
+      #       libfontconfig1 \
+      #       libgbm1 \
+      #       libgcc1 \
+      #       libgdk-pixbuf2.0-0 \
+      #       libglib2.0-0 \
+      #       libgtk-3-0 \
+      #       libnspr4 \
+      #       libnss3 \
+      #       libpango-1.0-0 \
+      #       libpangocairo-1.0-0 \
+      #       libstdc++6 \
+      #       libx11-6 \
+      #       libx11-xcb1 \
+      #       libxcb1 \
+      #       libxcomposite1 \
+      #       libxcursor1 \
+      #       libxdamage1 \
+      #       libxext6 \
+      #       libxfixes3 \
+      #       libxi6 \
+      #       libxrandr2 \
+      #       libxrender1 \
+      #       libxss1 \
+      #       libxtst6 \
+      #       lsb-release \
+      #       wget \
+      #       xdg-utils
 
-      - name: Install Chrome
-        run: |
-          cd server/
-          npx puppeteer browsers install chrome
+      # - name: Install Chrome
+      #   run: |
+      #     cd server/
+      #     npx puppeteer browsers install chrome
           
       - name: Create .env file
         run: |
@@ -102,15 +101,15 @@ jobs:
           echo "TESTS_ORG_ID=${{ env.TESTS_ORG_ID }}" >> .env
           echo "LOCALTUNNEL_RESERVED_KEY=${{ env.LOCALTUNNEL_RESERVED_KEY }}" >> .env
           echo "BETTER_AUTH_SECRET=${{ env.BETTER_AUTH_SECRET }}" >> .env
+          echo "HYPERBROWSER_API_KEY=${{ env.HYPERBROWSER_API_KEY }}" >> .env
+          echo "STRIPE_TEST_KEY=${{ env.STRIPE_TEST_KEY }}" >> .env
           echo "STRIPE_WEBHOOK_URL=${{ env.STRIPE_WEBHOOK_URL }}" >> .env
-          echo "BROWSERBASE_API_KEY=${{ env.BROWSERBASE_API_KEY }}" >> .env
-          echo "BROWSERBASE_PROJECT_ID=${{ env.BROWSERBASE_PROJECT_ID }}" >> .env
           cat .env
 
       - name: Build shared
         run: |
           cd shared
-          pnpm build
+          bun run build
 
       - name: Startup server
         run: sudo docker compose -f docker-compose.ci.yml up --detach
@@ -127,23 +126,36 @@ jobs:
           curl https://askjdnaslkjdalkjen.loca.lt
           echo "Local Tunnel pinged!"
 
-      - name: Run G1 tests
+
+      - name: Run G2 tests
         run: |
           cd server/
-          chmod +x ./shell/g1.sh
-          ./shell/g1.sh
+          chmod +x ./shell/g2.sh
+          ./shell/g2.sh setup
 
-      - name: Message
-        run:
-          echo "We're all setup!"
+      - name: Run G3 tests
+        run: |
+          cd server/
+          chmod +x ./shell/g3.sh
+          ./shell/g3.sh
+          
+      # - name: Run G4 tests
+      #   run: |
+      #     cd server/
+      #     chmod +x ./shell/g4.sh
+      #     ./shell/g4.sh
+
+      # - name: Message
+      #   run:
+      #     echo "We're all setup!"
 
       # - name: Check logs
       #   if: always()
-      #   run: sudo docker compose -f docker-compose.unix.yml logs server
+      #   run: sudo docker compose -f docker-compose.ci.yml logs server
+      - name: Check logs
+        if: always()
+        run: sudo docker compose -f docker-compose.ci.yml logs localtunnel
 
       - name: Close Docker Containers
         if: always()
-        run: sudo docker compose -f docker-compose.unix.yml down
-
-      
-
+        run: sudo docker compose -f docker-compose.ci.yml down

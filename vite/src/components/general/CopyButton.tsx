@@ -9,12 +9,14 @@ function CopyButton({
   children,
   copySize,
   variant = "outline",
+  icon,
 }: {
   text: string;
   className?: string;
   children?: React.ReactNode;
   copySize?: number;
   variant?: string;
+  icon?: React.ReactNode;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -30,7 +32,7 @@ function CopyButton({
       size="icon"
       className={cn(
         "h-6 px-2 text-t2 w-fit font-mono rounded-md truncate justify-start",
-        className,
+        className
       )}
       onClick={(e) => {
         e.preventDefault();

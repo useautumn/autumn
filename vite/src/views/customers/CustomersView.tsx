@@ -133,9 +133,17 @@ function CustomersView({ env }: { env: AppEnv }) {
       params.status = filters.status.join(",");
     }
 
-    if (filters?.product_id?.length > 0) {
-      params.product_id = filters.product_id.join(",");
+    if (filters?.product_id) {
+      if (Array.isArray(filters.product_id)) {
+        params.product_id = filters.product_id.join(",");
+      } else {
+        params.product_id = filters.product_id;
+      }
     }
+
+    // if (filters?.product_id?.length > 0) {
+    //   params.product_id = filters.product_id.join(",");
+    // }
 
     setSearchParams(params);
   }, [filters]);

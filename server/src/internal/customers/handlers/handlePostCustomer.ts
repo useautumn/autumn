@@ -49,6 +49,7 @@ export const handlePostCustomerRequest = async (req: any, res: any) => {
 
       entityId: data.entity_id,
       entityData: data.entity_data,
+      withCache: true,
     });
 
     let cusDetails = await getCustomerDetails({

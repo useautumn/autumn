@@ -74,8 +74,7 @@ services:
       - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
       - BETTER_AUTH_URL=http://localhost:8080
       - STRIPE_WEBHOOK_URL=${STRIPE_WEBHOOK_URL}
-      - BROWSERBASE_API_KEY=${BROWSERBASE_API_KEY}
-      - BROWSERBASE_PROJECT_ID=${BROWSERBASE_PROJECT_ID}
+      - HYPERBROWSER_API_KEY=${HYPERBROWSER_API_KEY}
     depends_on:
       - shared
     restart: unless-stopped
@@ -108,6 +107,8 @@ services:
       target: localtunnel
     volumes:
       - ./server:/app/server
+    environment:
+      - LOCALTUNNEL_RESERVED_KEY=${LOCALTUNNEL_RESERVED_KEY}
     depends_on:
       - server
     restart: unless-stopped

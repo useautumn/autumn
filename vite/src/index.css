@@ -5,7 +5,7 @@
 /* 
 ---break--- */
 @plugin "tailwindcss-animate";
-@import 'tailwind-scrollbar-hide/v4';
+@import "tailwind-scrollbar-hide/v4";
 /* 
 ---break--- */
 @custom-variant dark (&:is(.dark *));
@@ -274,6 +274,19 @@ input[type="number"]::-webkit-inner-spin-button {
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Force responsive utilities generation for Bun compatibility */
+@media (min-width: 768px) {
+  .md\:flex {
+    display: flex;
+  }
+  .md\:hidden {
+    display: none !important;
+  }
+  .md\:block {
+    display: block;
   }
 }
 

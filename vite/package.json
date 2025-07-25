@@ -5,10 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 3000 --host",
-    "build": "tsc -b && vite build",
+    "build": "tsc && vite build",
+    "start": "serve -s dist",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "serve -s dist"
+    "dev:bun": "bunx --bun vite --port 3000 --host",
+    "build:bun": "tsc && bunx --bun vite build",
+    "start:bun": "bunx --bun serve -s dist"
   },
   "author": "Recase Inc.",
   "license": "Apache-2.0",

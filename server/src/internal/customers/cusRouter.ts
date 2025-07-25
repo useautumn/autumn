@@ -5,22 +5,23 @@ import { ErrCode } from "@autumn/shared";
 
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
-import { CusService } from "../customers/CusService.js";
+import { CusService } from "./CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { handleDeleteCustomer } from "../customers/handlers/cusDeleteHandlers.js";
-import { handleUpdateBalances } from "../customers/handlers/handleUpdateBalances.js";
-import { handleUpdateEntitlement } from "../customers/handlers/handleUpdateEntitlement.js";
-import { handleCusProductExpired } from "../customers/handlers/handleCusProductExpired.js";
-import { handleAddCouponToCus } from "../customers/handlers/handleAddCouponToCus.js";
-import { handlePostCustomerRequest } from "../customers/handlers/handlePostCustomer.js";
-import { entityRouter } from "./entities/entityRouter.js";
-import { handleUpdateCustomer } from "../customers/handlers/handleUpdateCustomer.js";
-import { handleCreateBillingPortal } from "../customers/handlers/handleCreateBillingPortal.js";
-import { handleGetCustomer } from "../customers/handlers/handleGetCustomer.js";
+import { handleDeleteCustomer } from "./handlers/cusDeleteHandlers.js";
+import { handleUpdateBalances } from "./handlers/handleUpdateBalances.js";
+import { handleUpdateEntitlement } from "./handlers/handleUpdateEntitlement.js";
+import { handleCusProductExpired } from "./handlers/handleCusProductExpired.js";
+import { handleAddCouponToCus } from "./handlers/handleAddCouponToCus.js";
+import { handlePostCustomerRequest } from "./handlers/handlePostCustomer.js";
+import { entityRouter } from "../api/entities/entityRouter.js";
+import { handleUpdateCustomer } from "./handlers/handleUpdateCustomer.js";
+import { handleCreateBillingPortal } from "./handlers/handleCreateBillingPortal.js";
+import { handleGetCustomer } from "./handlers/handleGetCustomer.js";
 import { CusSearchService } from "@/internal/customers/CusSearchService.js";
 import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
+import { handleTransferProduct } from "./handlers/handleTransferProduct.js";
 
 export const cusRouter: Router = Router();
 
@@ -57,16 +58,16 @@ cusRouter.post("/:customer_id", handleUpdateCustomer);
 
 // Update customer entitlement directly
 cusRouter.post(
-  "/customer_entitlements/:customer_entitlement_id",
-  handleUpdateEntitlement,
+  "/:customer_id/entitlements/:customer_entitlement_id",
+  handleUpdateEntitlement
 );
 
 cusRouter.post("/:customer_id/balances", handleUpdateBalances);
 
-cusRouter.post(
-  "/customer_products/:customer_product_id",
-  handleCusProductExpired,
-);
+// cusRouter.post(
+//   "/customer_products/:customer_product_id",
+//   handleCusProductExpired
+// );
 
 cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
   try {
@@ -162,3 +163,5 @@ cusRouter.post("/:customer_id/billing_portal", handleCreateBillingPortal);
 cusRouter.post("/:customer_id/coupons/:coupon_id", handleAddCouponToCus);
 
 cusRouter.use("/:customer_id/entities", entityRouter);
+
+cusRouter.post("/:customer_id/transfer_product", handleTransferProduct);

@@ -3,7 +3,7 @@ import stripe, { Stripe } from "stripe";
 import chalk from "chalk";
 
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { AuthType, LoggerAction, Organization } from "@autumn/shared";
+import { AppEnv, AuthType, LoggerAction, Organization } from "@autumn/shared";
 
 import { handleCheckoutSessionCompleted } from "./webhookHandlers/handleCheckoutCompleted.js";
 import { handleSubscriptionUpdated } from "./webhookHandlers/handleSubUpdated.js";
@@ -18,6 +18,9 @@ import { handleSubscriptionScheduleCanceled } from "./webhookHandlers/handleSubS
 import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDeleted.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { createStripeCli } from "./utils.js";
+import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const stripeWebhookRouter: Router = express.Router();
 
@@ -70,7 +73,12 @@ stripeWebhookRouter.post(
 
     try {
       const webhookSecret = getStripeWebhookSecret(org, env);
-      event = stripe.webhooks.constructEvent(request.body, sig, webhookSecret);
+
+      event = await stripe.webhooks.constructEventAsync(
+        request.body,
+        sig,
+        webhookSecret
+      );
     } catch (err: any) {
       response.status(400).send(`Webhook Error: ${err.message}`);
       return;
@@ -217,6 +225,14 @@ stripeWebhookRouter.post(
           break;
       }
     } catch (error) {
+      if (error instanceof Stripe.errors.StripeError) {
+        if (error.message.includes("No such customer")) {
+          logger.warn(`stripe customer missing: ${error.message}`);
+          response.status(200).json({ message: "ok" });
+          return;
+        }
+      }
+
       handleRequestError({
         req: request,
         error,
@@ -226,7 +242,83 @@ stripeWebhookRouter.post(
       return;
     }
 
+    try {
+      await handleStripeWebhookRefresh({
+        eventType: event.type,
+        data: event.data,
+        db,
+        org,
+        env,
+        logger,
+      });
+    } catch (error) {
+      logger.error(`Stripe webhook, error refreshing cache!`, { error });
+    }
+
     // DO NOT DELETE -- RESPONSIBLE FOR SENDING SUCCESSFUL RESPONSE TO STRIPE...
     response.status(200).send();
   }
 );
+
+const coreEvents = [
+  "customer.subscription.created",
+  "customer.subscription.updated",
+  "customer.subscription.deleted",
+  "invoice.paid",
+  "invoice.created",
+  "invoice.finalized",
+  "subscription_schedule.canceled",
+  "checkout.session.completed",
+];
+
+export const handleStripeWebhookRefresh = async ({
+  eventType,
+  data,
+  db,
+  org,
+  env,
+  logger,
+}: {
+  eventType: string;
+  data: any;
+  db: DrizzleCli;
+  org: Organization;
+  env: AppEnv;
+  logger: any;
+}) => {
+  if (coreEvents.includes(eventType)) {
+    let stripeCusId = data.object.customer;
+    if (!stripeCusId) {
+      logger.warn(
+        `stripe webhook cache refresh, object doesn't contain customer id`,
+        {
+          data: {
+            eventType,
+            object: data.object,
+          },
+        }
+      );
+      return;
+    }
+
+    let cus = await CusService.getByStripeId({
+      db,
+      stripeId: stripeCusId,
+    });
+
+    if (!cus) {
+      logger.warn(
+        `Searched for customer by stripe id, but not found: ${stripeCusId}`
+      );
+      return;
+    }
+
+    // logger.info(`Deleting cache for customer ${cus.id}`);
+    await deleteCusCache({
+      db,
+      customerId: cus.id!,
+      orgId: org.id,
+      env,
+    });
+  }
+};

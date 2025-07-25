@@ -29,6 +29,7 @@ export const events = pgTable(
     value: numeric({ mode: "number" }),
     set_usage: boolean("set_usage").default(false),
     entity_id: text("entity_id"),
+    internal_entity_id: text("internal_entity_id"),
 
     // Optional stuff...
     customer_id: text("customer_id").notNull(),
@@ -45,9 +46,9 @@ export const events = pgTable(
       table.env,
       table.customer_id,
       table.event_name,
-      table.idempotency_key,
+      table.idempotency_key
     ),
-  ],
+  ]
 );
 
 export type Event = typeof events.$inferSelect;
