@@ -26,9 +26,8 @@ import { getMainCusProduct } from "@/internal/customers/cusProducts/cusProductUt
 import { cusProductToCusEnt } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { timeout } from "@/utils/genUtils.js";
 import { resetCustomerEntitlement } from "@/cron/cronUtils.js";
-import { resetAndGetCusEnt } from "./rolloverTestUtils.js";
 
-let rolloverConfig = { max: 500, length: 1, duration: RolloverDuration.Month };
+let rolloverConfig = { max: 100, length: 1, duration: RolloverDuration.Month };
 const messagesItem = constructFeatureItem({
   featureId: TestFeature.Messages,
   includedUsage: 400,
@@ -36,8 +35,16 @@ const messagesItem = constructFeatureItem({
   rolloverConfig,
 }) as LimitedItem;
 
+const perUserItem = constructFeatureItem({
+  featureId: TestFeature.Credits,
+  includedUsage: 400,
+  interval: ProductItemInterval.Month,
+  rolloverConfig,
+  entityFeatureId: TestFeature.Users,
+});
+
 export let pro = constructProduct({
-  items: [messagesItem],
+  items: [messagesItem, perUserItem],
   type: "pro",
 });
 
@@ -90,15 +97,29 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`
     customer = res.customer;
   });
 
+  const entities = [
+    {
+      id: "1",
+      name: "Entity 1",
+      feature_id: TestFeature.Users,
+    },
+    {
+      id: "2",
+      name: "Entity 2",
+      feature_id: TestFeature.Users,
+    },
+  ];
+
   it("should attach pro product", async function () {
     await autumn.attach({
       customer_id: customerId,
       product_id: pro.id,
     });
+
+    await autumn.entities.create(customerId, entities);
   });
 
   let messageUsage = 250;
-  let curBalance = messagesItem.included_usage;
 
   it("should create track messages, reset, and have correct rollover", async function () {
     await autumn.track({
@@ -109,61 +130,100 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`
 
     await timeout(3000);
 
-    let msgesCusEnt = await resetAndGetCusEnt({
+    // Run reset cusEnt on ...
+    let mainCusProduct = await getMainCusProduct({
       db,
-      customer,
+      internalCustomerId: customer.internal_id,
       productGroup: pro.group,
+    });
+
+    let msgesCusEnt = cusProductToCusEnt({
+      cusProduct: mainCusProduct!,
       featureId: TestFeature.Messages,
     });
 
-    let cus = await autumn.customers.get(customerId);
-    let msgesFeature = cus.features[TestFeature.Messages];
+    await resetCustomerEntitlement({
+      db,
+      cusEnt: msgesCusEnt!,
+    });
 
-    let expectedRollover = Math.min(
-      messagesItem.included_usage - messageUsage,
-      rolloverConfig.max
+    mainCusProduct = await getMainCusProduct({
+      db,
+      internalCustomerId: customer.internal_id,
+      productGroup: pro.group,
+    });
+
+    msgesCusEnt = cusProductToCusEnt({
+      cusProduct: mainCusProduct!,
+      featureId: TestFeature.Messages,
+    });
+
+    let rollover = messagesItem.included_usage - messageUsage;
+
+    expect(msgesCusEnt?.rollovers.length).to.equal(1);
+    expect(msgesCusEnt?.rollovers[0].balance).to.equal(
+      Math.min(rollover, rolloverConfig.max)
     );
-
-    let expectedBalance = messagesItem.included_usage + expectedRollover;
-
-    expect(msgesFeature).to.exist;
-    expect(msgesFeature?.balance).to.equal(expectedBalance);
-    // @ts-ignore
-    expect(msgesFeature?.rollovers[0].balance).to.equal(expectedRollover);
-    curBalance = expectedBalance;
-
-    // let rollover = messagesItem.included_usage - messageUsage;
-
-    // expect(msgesCusEnt?.rollovers.length).to.equal(1);
-    // expect(msgesCusEnt?.rollovers[0].balance).to.equal(
-    //   Math.min(rollover, rolloverConfig.max)
-    // );
   });
 
-  // let usage2 = 50;
-  it("should track messages, reset again and have correct rollover", async function () {
-    await resetAndGetCusEnt({
+  let perUserUsage = {
+    [entities[0].id]: 350,
+    [entities[1].id]: 200,
+  };
+
+  it("should track per user credits, reset, and have correct rollover", async function () {
+    for (let entityId in perUserUsage) {
+      await autumn.track({
+        customer_id: customerId,
+        feature_id: TestFeature.Credits,
+        value: perUserUsage[entityId],
+        entity_id: entityId,
+      });
+    }
+
+    await timeout(2000);
+
+    let mainCusProduct = await getMainCusProduct({
       db,
-      customer,
+      internalCustomerId: customer.internal_id,
       productGroup: pro.group,
-      featureId: TestFeature.Messages,
     });
 
-    console.log("Current balance", curBalance);
-    console.log("Max rollover", rolloverConfig.max);
-    let expectedRollover = Math.min(curBalance, rolloverConfig.max);
+    let perUserCusEnt = cusProductToCusEnt({
+      cusProduct: mainCusProduct!,
+      featureId: TestFeature.Credits,
+    });
 
-    let expectedBalance = curBalance + expectedRollover;
-    console.log("Expected rollover", expectedRollover);
-    console.log("Expected balance", expectedBalance);
+    await resetCustomerEntitlement({
+      db,
+      cusEnt: perUserCusEnt!,
+    });
 
-    let cus = await autumn.customers.get(customerId);
-    let msgesFeature = cus.features[TestFeature.Messages];
+    mainCusProduct = await getMainCusProduct({
+      db,
+      internalCustomerId: customer.internal_id,
+      productGroup: pro.group,
+    });
 
-    expect(msgesFeature).to.exist;
-    expect(msgesFeature?.balance).to.equal(expectedBalance);
-    // // @ts-ignore
-    // expect(msgesFeature?.rollovers[0].balance).to.equal(expectedRollover);
-    // curBalance = expectedBalance;
+    perUserCusEnt = cusProductToCusEnt({
+      cusProduct: mainCusProduct!,
+      featureId: TestFeature.Credits,
+    });
+
+    let perUserRollover = perUserCusEnt?.rollovers[0];
+    expect(perUserRollover).to.exist;
+    for (let entityId in perUserUsage) {
+      let entityRollover = perUserRollover?.entities[entityId];
+
+      let expectedRollover = Math.min(
+        entityRollover!.balance,
+        rolloverConfig.max
+      );
+
+      expect(entityRollover).to.exist;
+      expect(entityRollover?.balance).to.equal(expectedRollover);
+    }
+
+    await timeout(3000);
   });
 });
