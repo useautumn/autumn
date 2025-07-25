@@ -505,9 +505,11 @@ export const isTrialing = (cusProduct: FullCusProduct) => {
 export const getMainCusProduct = async ({
   db,
   internalCustomerId,
+  productGroup,
 }: {
   db: DrizzleCli;
   internalCustomerId: string;
+  productGroup?: string;
 }) => {
   let cusProducts = await CusProductService.list({
     db,
@@ -520,7 +522,9 @@ export const getMainCusProduct = async ({
   });
 
   let mainCusProduct = cusProducts.find(
-    (cusProduct: FullCusProduct) => !cusProduct.product.is_add_on
+    (cusProduct: FullCusProduct) =>
+      !cusProduct.product.is_add_on &&
+      (productGroup ? cusProduct.product.group === productGroup : true)
   );
 
   return mainCusProduct;

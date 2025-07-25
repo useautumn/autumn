@@ -18,7 +18,7 @@ import { initCustomer } from "tests/utils/init.js";
 
 // UNCOMMENT FROM HERE
 describe(`${chalk.yellowBright(
-  "referrals2: Testing referrals (immediate redemption)",
+  "referrals2: Testing referrals (immediate redemption)"
 )}`, () => {
   let mainCustomerId = "main-referral-2";
   let redeemers = ["referral2-r1", "referral2-r2", "referral2-r3"];
@@ -53,7 +53,7 @@ describe(`${chalk.yellowBright(
           org: this.org,
           env: this.env,
           attachPm: true,
-        }),
+        })
       );
     }
 
@@ -94,21 +94,9 @@ describe(`${chalk.yellowBright(
       }
     }
 
-    // Try redeem for redeemer1 again
-    // try {
-    //   let redemption1 = await autumn.referrals.redeem({
-    //     customerId: redeemers[0],
-    //     code: referralCode.code,
-    //   });
-    //   assert.fail("Should not be able to redeem again");
-    // } catch (error) {
-    //   assert.instanceOf(error, AutumnError);
-    //   assert.equal(error.code, ErrCode.CustomerAlreadyRedeemedReferralCode);
-    // }
-
     // Check stripe customer
     let stripeCus = (await stripeCli.customers.retrieve(
-      mainCustomer.processor?.id,
+      mainCustomer.processor?.id
     )) as Stripe.Customer;
 
     assert.notEqual(stripeCus.discount, null);
@@ -123,11 +111,12 @@ describe(`${chalk.yellowBright(
 
     await timeout(3000);
 
-    curTime = addDays(addDays(curTime, 7), 1);
+    curTime = addDays(addDays(curTime, 7), 4);
     await advanceTestClock({
       testClockId,
       advanceTo: curTime.getTime(),
       stripeCli,
+      waitForSeconds: 30,
     });
 
     // 1. Get invoice

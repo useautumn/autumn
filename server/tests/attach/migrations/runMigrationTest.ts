@@ -77,7 +77,7 @@ export const runMigrationTest = async ({
     to_version: toProduct.version,
   });
 
-  await timeout(5000);
+  await timeout(10000);
 
   const { subs: subsAfter } = await getSubsFromCusId({
     stripeCli,
@@ -91,6 +91,7 @@ export const runMigrationTest = async ({
   expectSubsSame({ subsBefore, subsAfter });
 
   const cusAfter = await autumn.customers.get(customerId);
+
   expectFeaturesCorrect({
     customer: cusAfter,
     product: toProduct,

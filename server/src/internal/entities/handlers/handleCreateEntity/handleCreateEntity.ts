@@ -56,7 +56,7 @@ export const createEntities = async ({
       internalCustomerId: customer.internal_id,
       orgId: org.id,
       env,
-    }),
+    })
   );
 
   let newEntities: Entity[] = [];
@@ -94,6 +94,8 @@ export const createEntities = async ({
     withAutumnId,
     apiVersion: apiVersion!,
     features,
+    logger,
+    skipCache: true,
   });
 
   return entities;

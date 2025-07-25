@@ -8,12 +8,14 @@ import { setupBefore } from "tests/before.js";
 import { findCusProductById } from "@/internal/customers/cusProducts/cusProductUtils/findCusProduct.js";
 import { expect } from "chai";
 import { getSubsFromCusId } from "tests/utils/expectUtils/expectSubUtils.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 
 const testCase = "downgrade7";
 describe(`${chalk.yellowBright(`${testCase}: testing expire scheduled product`)}`, () => {
   let customerId = testCase;
   let testClockId: string;
   let customer: Customer;
+  let autumn: AutumnInt = new AutumnInt();
 
   before(async function () {
     await setupBefore(this);
@@ -46,14 +48,19 @@ describe(`${chalk.yellowBright(`${testCase}: testing expire scheduled product`)}
   });
 
   it("should expire scheduled product (pro)", async function () {
-    const cusProduct = await findCusProductById({
-      db: this.db,
-      internalCustomerId: customer.internal_id,
-      productId: products.pro.id,
-    });
+    // const cusProduct = await findCusProductById({
+    //   db: this.db,
+    //   internalCustomerId: customer.internal_id,
+    //   productId: products.pro.id,
+    // });
 
-    expect(cusProduct).to.exist;
-    await AutumnCli.expire(cusProduct!.id);
+    // expect(cusProduct).to.exist;
+    await autumn.cancel({
+      customer_id: customerId,
+      product_id: products.pro.id,
+      cancel_immediately: true,
+    });
+    // await AutumnCli.expire(cusProduct!.id);
   });
 
   it("should have correct product and entitlements (premium)", async function () {

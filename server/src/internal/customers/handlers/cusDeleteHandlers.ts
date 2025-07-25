@@ -55,7 +55,7 @@ export const deleteCusById = async ({
         `Couldn't delete ${chalk.yellow("stripe customer")} ${
           customer.processor.id
         }`,
-        error?.message || error,
+        error?.message || error
       );
     }
   }
