@@ -120,7 +120,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for upgrade`)}`, 
     // Attach pro
     await autumn.attach({
       customer_id: customerId,
-      product_id: pro.id,
+      product_id: free.id,
     });
 
     let cus = await autumn.customers.get(customerId);
