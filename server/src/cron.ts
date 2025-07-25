@@ -231,13 +231,13 @@ const resetCustomerEntitlement = async ({
   }
 };
 
+const { db, client } = initDrizzle();
+
 export const cronTask = async () => {
   console.log(
     "\n----------------------------------\nRUNNING RESET CRON:",
     format(new UTCDate(), "yyyy-MM-dd HH:mm:ss")
   );
-
-  const { db, client } = initDrizzle();
 
   try {
     let cusEnts: FullCusEntWithProduct[] =
