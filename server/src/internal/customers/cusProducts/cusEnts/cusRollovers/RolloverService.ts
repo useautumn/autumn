@@ -23,18 +23,25 @@ export class RolloverService {
   }
 
   static async bulkUpdate({ db, rows }: { db: DrizzleCli; rows: Rollover[] }) {
-    return await db.transaction(async (tx) => {
-      const results = [];
-      for (const row of rows) {
-        const result = await tx
-          .update(rollovers)
-          .set(row as any)
-          .where(eq(rollovers.id, row.id))
-          .returning();
-        results.push(...result);
-      }
-      return results;
-    });
+    if (rows.length === 0) return [];
+    
+    const results = [];
+    for (const row of rows) {
+      const result = await this.update({
+        db,
+        id: row.id,
+        updates: row,
+      });
+      results.push(...result);
+    }
+    return results;
+  }
+
+  static async getCurrentRollovers({ db, cusEntID }: { db: DrizzleCli; cusEntID: string }) {
+    return await db
+      .select()
+      .from(rollovers)
+      .where(and(eq(rollovers.cus_ent_id, cusEntID), gte(rollovers.expires_at, new Date().getTime())));
   }
 
   static async insert({
@@ -50,7 +57,6 @@ export class RolloverService {
     cusEntID: string;
     entityMode: boolean;
   }) {
-    console.log("Inserting rollovers:", JSON.stringify(rows, null, 2));
     await db
       .insert(rollovers)
       .values(rows as any)
