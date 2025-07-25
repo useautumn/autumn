@@ -290,27 +290,32 @@ export const CustomerEntitlementsList = () => {
 													?.balance
 											}
 											{(() => {
-												const rolloverAmount = cusEnt.rollovers
-													.filter(
-														(x) =>
-															x.entities &&
-															x.entities[entityId]
-													)
-													.reduce(
-														(sum, rollover) =>
-															sum +
-															(rollover
-																.entities?.[
-																entityId
-															]?.balance || 0),
-														0
-													);
+												const rolloverAmount =
+													cusEnt.rollovers
+														.filter(
+															(x) =>
+																x.entities &&
+																x.entities[
+																	entityId
+																]
+														)
+														.reduce(
+															(sum, rollover) =>
+																sum +
+																(rollover
+																	.entities?.[
+																	entityId
+																]?.balance ||
+																	0),
+															0
+														);
 												return rolloverAmount > 0 ? (
 													<>
 														<span className="text-t3">
 															{" + "}
-															{rolloverAmount}
-															{" "}
+															{
+																rolloverAmount
+															}{" "}
 															(rolled over)
 														</span>
 													</>
@@ -327,31 +332,57 @@ export const CustomerEntitlementsList = () => {
 												0
 											)}
 											{(() => {
-												const rolloverAmount = cusEnt.rollovers.reduce(
-													(x, y) => {
-														return x + y.balance;
-													},
-													0
-												);
+												const rolloverAmount =
+													cusEnt.rollovers.reduce(
+														(sum, rollover) => {
+															// Add global rollover balance
+															let total = sum + (rollover.balance || 0);
+															
+															// Add entity-specific rollover balances
+															if (rollover.entities) {
+																total += Object.values(rollover.entities).reduce(
+																	(entitySum: number, entity: any) => 
+																		entitySum + (entity.balance || 0),
+																	0
+																);
+															}
+															
+															return total;
+														},
+														0
+													);
 												return rolloverAmount > 0 ? (
 													<span className="text-t3">
 														{" + "}
-														{rolloverAmount}
-														{" "}
-														(rolled over)
+														{rolloverAmount} (rolled
+														over)
 													</span>
 												) : null;
 											})()}
 										</div>
 									) : (
-										<>
-											{cusEnt.balance}{" "}
-											<span className="text-t3">
-												{cusEnt.replaceables.length > 0
-													? ` (${cusEnt.replaceables.length} free)`
-													: ""}
-											</span>
-										</>
+										<div className="flex items-center gap-2">
+											{cusEnt.balance}
+											{(() => {
+												const rolloverAmount =
+													cusEnt.rollovers.reduce(
+														(sum, rollover) =>
+															sum + rollover.balance,
+														0
+													);
+												return rolloverAmount > 0 ? (
+													<span className="text-t3">
+														{" + "}
+														{rolloverAmount} (rolled over)
+													</span>
+												) : null;
+											})()}
+											{cusEnt.replaceables.length > 0 && (
+												<span className="text-t3">
+													{` (${cusEnt.replaceables.length} free)`}
+												</span>
+											)}
+										</div>
 									)}
 								</div>
 							</Item>
