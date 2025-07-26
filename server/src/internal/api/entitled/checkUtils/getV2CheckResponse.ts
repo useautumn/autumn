@@ -138,7 +138,7 @@ export const getV2CheckResponse = async ({
     finalRequired = featureToCreditSystem({
       featureId: feature.id,
       creditSystem: featureToUse,
-      amount: requiredBalance!,
+      amount: finalRequired!,
     });
   }
 
