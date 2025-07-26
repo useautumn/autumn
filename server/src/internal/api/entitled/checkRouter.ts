@@ -1,18 +1,10 @@
 import { ErrCode } from "@/errors/errCodes.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
-import {
-  APIVersion,
-  type Feature,
-  FeatureType,
-  type FullCustomerEntitlement,
-} from "@autumn/shared";
-
-import { getFeatureBalance } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
+import { APIVersion, type Feature, FeatureType } from "@autumn/shared";
 
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
 import { handleEventSent } from "../events/eventRouter.js";
-import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 
 import { handleProductCheck } from "./handlers/handleProductCheck.js";
