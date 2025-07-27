@@ -28,7 +28,10 @@ import {
   AttachParams,
   InsertCusProductParams,
 } from "../customers/cusProducts/AttachParams.js";
-import { getEntitlementsForProduct } from "./entitlements/entitlementUtils.js";
+import {
+  getEntitlementsForProduct,
+  getEntsWithFeature,
+} from "./entitlements/entitlementUtils.js";
 import { Decimal } from "decimal.js";
 import { generateId } from "@/utils/genUtils.js";
 import { PriceService } from "./prices/PriceService.js";
@@ -38,6 +41,7 @@ import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice
 import { FreeTrialService } from "./free-trials/FreeTrialService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { compareBillingIntervals } from "./prices/priceUtils/priceIntervalUtils.js";
+import { isStripeConnected } from "../orgs/orgUtils.js";
 
 export const getLatestProducts = (products: FullProduct[]) => {
   const latestProducts = products.reduce((acc: any, product: any) => {
@@ -283,6 +287,8 @@ export const copyProduct = async ({
   toEnv,
   toFeatures,
   fromFeatures,
+  org,
+  logger,
 }: {
   db: DrizzleCli;
   product: FullProduct;
@@ -293,6 +299,8 @@ export const copyProduct = async ({
   toName: string;
   toFeatures: Feature[];
   fromFeatures: Feature[];
+  org: Organization;
+  logger: any;
 }) => {
   const newProduct = {
     ...product,
@@ -424,6 +432,21 @@ export const copyProduct = async ({
       },
     });
   }
+
+  await initProductInStripe({
+    db,
+    org,
+    env: toEnv,
+    logger,
+    product: {
+      ...newProduct,
+      prices: newPrices,
+      entitlements: getEntsWithFeature({
+        ents: newEntitlements,
+        features: toFeatures,
+      }),
+    },
+  });
 };
 
 export const isOneOff = (prices: Price[]) => {
@@ -454,7 +477,8 @@ export const initProductInStripe = async ({
   logger: any;
   product: FullProduct;
 }) => {
-  // 1.
+  if (!isStripeConnected({ org, env })) return;
+
   await checkStripeProductExists({
     db,
     org,
