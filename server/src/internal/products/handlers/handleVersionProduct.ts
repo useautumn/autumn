@@ -1,7 +1,10 @@
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { handleNewFreeTrial } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { constructProduct } from "@/internal/products/productUtils.js";
+import {
+  constructProduct,
+  initProductInStripe,
+} from "@/internal/products/productUtils.js";
 import {
   AppEnv,
   CreateProductSchema,
@@ -43,7 +46,7 @@ export const handleVersionProductV2 = async ({
   let features = await FeatureService.getFromReq(req);
 
   console.log(
-    `Updating product ${latestProduct.id} version from ${curVersion} to ${newVersion}`,
+    `Updating product ${latestProduct.id} version from ${curVersion} to ${newVersion}`
   );
 
   const newProduct = constructProduct({
@@ -115,6 +118,18 @@ export const handleVersionProductV2 = async ({
     payload: {
       curProduct: newProduct,
     },
+  });
+
+  await initProductInStripe({
+    db,
+    product: {
+      ...newProduct,
+      prices: customPrices,
+      entitlements: customEnts,
+    } as FullProduct,
+    org,
+    env,
+    logger: console,
   });
 
   res.status(200).send(newProduct);

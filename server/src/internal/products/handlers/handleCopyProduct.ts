@@ -110,6 +110,8 @@ export const handleCopyProduct = async (req: any, res: any) =>
         toEnv: toEnv,
         toFeatures,
         fromFeatures,
+        org: req.org,
+        logger,
       });
 
       // 2. Get product from sandbox
