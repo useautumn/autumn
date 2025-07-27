@@ -53,9 +53,9 @@ export class ProductService {
           .where(
             and(
               eq(entitlements.internal_product_id, products.internal_id),
-              eq(entitlements.internal_feature_id, internalFeatureId),
-            ),
-          ),
+              eq(entitlements.internal_feature_id, internalFeatureId)
+            )
+          )
       ),
       with: {
         entitlements: {
@@ -88,6 +88,26 @@ export class ProductService {
     })) as Product;
   }
 
+  static async listByInternalIds({
+    db,
+    internalIds,
+  }: {
+    db: DrizzleCli;
+    internalIds: string[];
+  }) {
+    return (await db.query.products.findMany({
+      where: inArray(products.internal_id, internalIds),
+      with: {
+        entitlements: {
+          with: {
+            feature: true,
+          },
+        },
+        prices: { where: eq(prices.is_custom, false) },
+      },
+    })) as FullProduct[];
+  }
+
   static async listDefault({
     db,
     orgId,
@@ -101,7 +121,7 @@ export class ProductService {
       where: and(
         eq(products.org_id, orgId),
         eq(products.env, env),
-        eq(products.is_default, true),
+        eq(products.is_default, true)
       ),
       with: {
         entitlements: {
@@ -154,7 +174,7 @@ export class ProductService {
         eq(products.id, id),
         eq(products.org_id, orgId),
         eq(products.env, env),
-        version ? eq(products.version, version) : undefined,
+        version ? eq(products.version, version) : undefined
       ),
       orderBy: [desc(products.version)],
     });
@@ -188,7 +208,7 @@ export class ProductService {
         eq(products.org_id, orgId),
         eq(products.env, env),
         inIds ? inArray(products.id, inIds) : undefined,
-        version ? eq(products.version, version) : undefined,
+        version ? eq(products.version, version) : undefined
       ),
 
       with: {
@@ -250,11 +270,11 @@ export class ProductService {
       where: and(
         or(
           eq(products.id, idOrInternalId),
-          eq(products.internal_id, idOrInternalId),
+          eq(products.internal_id, idOrInternalId)
         ),
         eq(products.org_id, orgId),
         eq(products.env, env),
-        version ? eq(products.version, version) : undefined,
+        version ? eq(products.version, version) : undefined
       ),
       orderBy: [desc(products.version)],
       with: {
@@ -302,7 +322,7 @@ export class ProductService {
       where: and(
         eq(products.id, productId),
         eq(products.org_id, orgId),
-        eq(products.env, env),
+        eq(products.env, env)
       ),
       orderBy: [desc(products.version)],
     });
@@ -353,8 +373,8 @@ export class ProductService {
         and(
           eq(products.internal_id, internalId),
           eq(products.org_id, orgId),
-          eq(products.env, env),
-        ),
+          eq(products.env, env)
+        )
       );
   }
 
