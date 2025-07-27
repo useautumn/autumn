@@ -1,5 +1,5 @@
 import RecaseError from "@/utils/errorUtils.js";
-import { generateId, nullish } from "@/utils/genUtils.js";
+import { generateId, getUnique, nullish } from "@/utils/genUtils.js";
 import {
   Reward,
   CreateReward,
@@ -7,7 +7,15 @@ import {
   RewardCategory,
   ErrCode,
   DiscountConfigSchema,
+  Price,
+  Organization,
+  AppEnv,
+  Product,
 } from "@autumn/shared";
+import { ProductService } from "../products/ProductService.js";
+
+import { initProductInStripe } from "../products/productUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const constructReward = ({
   internalId,
@@ -104,4 +112,57 @@ export const getOriginalCouponId = (couponId: string) => {
     return couponId.substring(0, index);
   }
   return couponId;
+};
+
+export const initRewardStripePrices = async ({
+  db,
+  prices,
+  org,
+  env,
+  logger,
+}: {
+  db: DrizzleCli;
+  prices: (Price & { product: Product })[];
+  org: Organization;
+  env: AppEnv;
+  logger: any;
+}) => {
+  let pricesToInit = prices.map((p: Price) =>
+    nullish(p.config.stripe_price_id)
+  );
+
+  if (pricesToInit.length === 0) {
+    return;
+  }
+
+  let internalProductIds = getUnique(
+    prices.map((p: Price) => p.internal_product_id)
+  );
+  let products = await ProductService.listByInternalIds({
+    db,
+    internalIds: internalProductIds,
+  });
+
+  const batchInit: Promise<void>[] = [];
+  for (const product of products) {
+    batchInit.push(
+      initProductInStripe({
+        db,
+        product,
+        org,
+        env,
+        logger,
+      })
+    );
+  }
+  await Promise.all(batchInit);
+
+  for (const price of prices) {
+    let product = products.find(
+      (p) => p.internal_id === price.internal_product_id
+    );
+
+    price.product = product as Product;
+  }
+  return;
 };

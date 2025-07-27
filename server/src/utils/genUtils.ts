@@ -96,7 +96,7 @@ export const toSnakeCase = (obj: any): any => {
       Object.entries(obj).map(([key, value]) => [
         stringToSnakeCase(key),
         toSnakeCase(value),
-      ]),
+      ])
     );
   }
   return obj;
@@ -104,10 +104,14 @@ export const toSnakeCase = (obj: any): any => {
 
 export const slugify = (
   text: string,
-  type: "underscore" | "dash" = "underscore",
+  type: "underscore" | "dash" = "underscore"
 ) => {
   return text
     .toLowerCase()
     .replace(/ /g, type == "underscore" ? "_" : "-")
     .replace(/[^\w\s-]/g, "");
+};
+
+export const getUnique = (vals: string[]) => {
+  return Array.from(new Set(vals));
 };
