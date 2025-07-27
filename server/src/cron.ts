@@ -1,11 +1,17 @@
 import dotenv from "dotenv";
-import { FullCusEntWithProduct } from "@autumn/shared";
+import {
+  CustomerEntitlement,
+  FullCusEntWithProduct,
+  ResetCusEnt,
+} from "@autumn/shared";
 import { CusEntService } from "./internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { format } from "date-fns";
 import { CronJob } from "cron";
 import { UTCDate } from "@date-fns/utc";
 import { initDrizzle } from "./db/initDrizzle.js";
 import { resetCustomerEntitlement } from "./cron/cronUtils.js";
+import { OrgService } from "./internal/orgs/OrgService.js";
+import { notNullish } from "./utils/genUtils.js";
 
 dotenv.config();
 
@@ -18,10 +24,14 @@ export const cronTask = async () => {
   );
 
   try {
-    let cusEnts: FullCusEntWithProduct[] =
-      await CusEntService.getActiveResetPassed({ db, batchSize: 500 });
+    const cusEnts: ResetCusEnt[] = await CusEntService.getActiveResetPassed({
+      db,
+      batchSize: 500,
+    });
 
-    const batchSize = 50;
+    const cacheEnabledOrgs = await OrgService.getCacheEnabledOrgs({ db });
+
+    const batchSize = 100;
     for (let i = 0; i < cusEnts.length; i += batchSize) {
       const batch = cusEnts.slice(i, i + batchSize);
       const batchResets = [];
@@ -29,12 +39,19 @@ export const cronTask = async () => {
         batchResets.push(
           resetCustomerEntitlement({
             db,
-            cusEnt: cusEnt as FullCusEntWithProduct,
+            cusEnt: cusEnt,
+            cacheEnabledOrgs,
           })
         );
       }
 
-      await Promise.all(batchResets);
+      let results = await Promise.all(batchResets);
+      let toUpsert = results.filter(notNullish);
+      await CusEntService.upsert({
+        db,
+        data: toUpsert as CustomerEntitlement[],
+      });
+      console.log(`Upserted ${toUpsert.length} short entitlements`);
     }
 
     console.log(

@@ -6,19 +6,46 @@ import {
   CusProductStatus,
   Customer,
   CustomerEntitlement,
+  customerPrices,
+  customers,
   entitlements,
   ErrCode,
   features,
   FullCusEntWithProduct,
   FullCustomerEntitlement,
+  prices,
   Replaceable,
+  ResetCusEnt,
+  Rollover,
 } from "@autumn/shared";
 import { customerEntitlements } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { eq, lt, and, sql } from "drizzle-orm";
 import { customerProducts } from "@autumn/shared";
+import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 
 export class CusEntService {
+  static async upsert({
+    db,
+    data,
+  }: {
+    db: DrizzleCli;
+    data: CustomerEntitlement[];
+  }) {
+    if (Array.isArray(data) && data.length == 0) return;
+
+    const updateColumns = buildConflictUpdateColumns(customerEntitlements, [
+      "id",
+    ]);
+    await db
+      .insert(customerEntitlements)
+      .values(data as any)
+      .onConflictDoUpdate({
+        target: customerEntitlements.id,
+        set: updateColumns,
+      });
+  }
+
   static async getByFeature({
     db,
     internalFeatureId,
@@ -78,6 +105,10 @@ export class CusEntService {
           features,
           eq(entitlements.internal_feature_id, features.internal_id)
         )
+        .innerJoin(
+          customers,
+          eq(customerEntitlements.internal_customer_id, customers.internal_id)
+        )
         .where(
           and(
             eq(customerProducts.status, CusProductStatus.Active),
@@ -97,8 +128,10 @@ export class CusEntService {
             feature: item.features,
           },
           customer_product: item.customer_products,
+          customer: item.customers,
           replaceables: [],
-        })) as FullCusEntWithProduct[];
+          rollovers: [],
+        })) as ResetCusEnt[];
 
         allResults.push(...mappedData);
         offset += batchSize;
@@ -107,7 +140,7 @@ export class CusEntService {
       }
     }
 
-    return allResults;
+    return allResults as ResetCusEnt[];
   }
 
   static async update({
@@ -150,6 +183,7 @@ export class CusEntService {
           },
         },
         replaceables: true,
+        rollovers: true,
         customer_product: withCusProduct || undefined,
         customer: true,
       },
@@ -171,7 +205,7 @@ export class CusEntService {
     return data as FullCustomerEntitlement & {
       customer: Customer;
       customer_product?: CusProduct;
-      replaceables?: Replaceable[];
+      // replaceables?: Replaceable[];
     };
   }
 

@@ -3,8 +3,9 @@ import {
   AppEnv,
   EntInterval,
   FullCusEntWithProduct,
+  FullEntitlement,
   Organization,
-  RolloverConfig,
+  ResetCusEnt,
 } from "@autumn/shared";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 
@@ -22,13 +23,10 @@ import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cus
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { UTCDate } from "@date-fns/utc";
-import { type DrizzleCli, initDrizzle } from "../db/initDrizzle.js";
-import { notNullish } from "../utils/genUtils.js";
-
-import { CusPriceService } from "../internal/customers/cusProducts/cusPrices/CusPriceService.js";
+import { type DrizzleCli } from "../db/initDrizzle.js";
 import { RolloverService } from "../internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { refreshCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
+import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
+import { CusPriceService } from "@/internal/customers/cusProducts/cusPrices/CusPriceService.js";
 
 const checkSubAnchor = async ({
   db,
@@ -92,16 +90,85 @@ const checkSubAnchor = async ({
   }
 };
 
+const handleShortDurationCusEnt = async ({
+  db,
+  cusEnt,
+  cacheEnabledOrgs,
+}: {
+  db: DrizzleCli;
+  cusEnt: ResetCusEnt;
+  cacheEnabledOrgs: any[];
+}) => {
+  let ent = cusEnt.entitlement as FullEntitlement;
+
+  let resetCusEnt = {
+    ...cusEnt,
+    next_reset_at: getNextResetAt(
+      new UTCDate(cusEnt.next_reset_at!),
+      ent.interval as EntInterval
+    ),
+    adjustment: 0,
+    ...getResetBalancesUpdate({
+      cusEnt,
+      allowance: ent.allowance || 0,
+    }),
+  };
+  let newCusEnt = resetCusEnt;
+
+  // let { customer, customer_product, entitlement, ...rest } = resetCusEnt;
+  // let newCusEnt = rest as CustomerEntitlement;
+
+  let rolloverUpdate = getRolloverUpdates({
+    cusEnt,
+    nextResetAt: cusEnt.next_reset_at! as number,
+  });
+
+  if (rolloverUpdate?.toInsert && rolloverUpdate.toInsert.length > 0) {
+    await RolloverService.insert({
+      db,
+      rows: rolloverUpdate.toInsert,
+      fullCusEnt: cusEnt,
+    });
+  }
+
+  console.log(
+    `Reseting short cus ent (${cusEnt.feature_id}) [${ent.interval}], customer: ${cusEnt.customer_id}, org: ${cusEnt.customer.org_id}`
+  );
+
+  if (cacheEnabledOrgs.some((org) => org.id === cusEnt.customer.org_id)) {
+    await deleteCusCache({
+      db,
+      customerId: cusEnt.customer.id!,
+      org: cacheEnabledOrgs.find((org) => org.id === cusEnt.customer.org_id)!,
+      env: cusEnt.customer.env,
+    });
+  }
+
+  return newCusEnt;
+};
+
+const shortDurations = [EntInterval.Minute, EntInterval.Hour, EntInterval.Day];
+
 export const resetCustomerEntitlement = async ({
   db,
   cusEnt,
+  cacheEnabledOrgs,
 }: {
   db: DrizzleCli;
-  cusEnt: FullCusEntWithProduct;
+  cusEnt: ResetCusEnt;
+  cacheEnabledOrgs: any[];
 }) => {
   try {
-    if (cusEnt.usage_allowed) {
-      return;
+    let ent = cusEnt.entitlement as FullEntitlement;
+    if (
+      ent.allowance_type == AllowanceType.Fixed &&
+      shortDurations.includes(ent.interval as EntInterval)
+    ) {
+      return await handleShortDurationCusEnt({
+        db,
+        cusEnt,
+        cacheEnabledOrgs,
+      });
     }
 
     // Fetch related price
@@ -120,13 +187,6 @@ export const resetCustomerEntitlement = async ({
       cusEnt.customer_product.options,
       cusEnt.entitlement
     );
-
-    const resetBalance = getResetBalance({
-      entitlement: cusEnt.entitlement,
-      options: entOptions,
-      relatedPrice: undefined,
-      // relatedPrice: relatedCusPrice,
-    });
 
     // Handle if entitlement changed to unlimited...
     let entitlement = cusEnt.entitlement;
@@ -169,6 +229,14 @@ export const resetCustomerEntitlement = async ({
       return;
     }
 
+    const resetBalance = getResetBalance({
+      entitlement: cusEnt.entitlement,
+      options: entOptions,
+      relatedPrice: undefined,
+    });
+
+    // 1. Check if should reset
+
     let nextResetAt = getNextResetAt(
       new UTCDate(cusEnt.next_reset_at!),
       cusEnt.entitlement.interval as EntInterval
@@ -183,17 +251,6 @@ export const resetCustomerEntitlement = async ({
       cusEnt,
       allowance: resetBalance || undefined,
     });
-
-    try {
-      nextResetAt = await checkSubAnchor({
-        db,
-        cusEnt,
-        nextResetAt,
-      });
-    } catch (error) {
-      console.log("WARNING: Failed to check sub anchor");
-      console.log(error);
-    }
 
     try {
       nextResetAt = await checkSubAnchor({
@@ -221,9 +278,6 @@ export const resetCustomerEntitlement = async ({
         db,
         rows: rolloverUpdate.toInsert,
         fullCusEnt: cusEnt,
-        // rolloverConfig: cusEnt.entitlement.rollover as RolloverConfig,
-        // cusEntID: cusEnt.id,
-        // entityMode: notNullish(cusEnt.entitlement.entity_feature_id),
       });
     }
 
@@ -239,18 +293,16 @@ export const resetCustomerEntitlement = async ({
       )}`
     );
 
-    let customer = await CusService.getByInternalId({
-      db,
-      internalId: cusEnt.internal_customer_id,
-      withOrg: true,
-    });
+    let cacheOrg = cacheEnabledOrgs.find(
+      (org) => org.id === cusEnt.customer.org_id
+    );
 
-    if (customer) {
-      await refreshCusCache({
+    if (cacheOrg) {
+      await deleteCusCache({
         db,
-        customerId: customer.id!,
-        org: customer.org!,
-        env: customer.env,
+        customerId: cusEnt.customer.id!,
+        org: cacheOrg,
+        env: cusEnt.customer.env,
       });
     }
   } catch (error: any) {
