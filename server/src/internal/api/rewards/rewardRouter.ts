@@ -13,6 +13,7 @@ import { EntitlementService } from "@/internal/products/entitlements/Entitlement
 import {
   constructReward,
   getRewardCat,
+  initRewardStripePrices,
 } from "@/internal/rewards/rewardUtils.js";
 
 const rewardRouter: Router = express.Router();
@@ -53,27 +54,37 @@ rewardRouter.post("", async (req: any, res: any) => {
         }),
       ]);
 
-      if (!discountConfig!.apply_to_all) {
-        // Create stripe prices if not exists
+      // Initialize prices
 
-        const batchSize = 5;
+      // if (!discountConfig!.apply_to_all) {
+      //   // Create stripe prices if not exists
 
-        for (let i = 0; i < prices.length; i += batchSize) {
-          const batch = prices.slice(i, i + batchSize);
-          const batchPriceCreate = batch.map((price) =>
-            createStripePriceIFNotExist({
-              stripeCli,
-              price,
-              entitlements,
-              org,
-              logger,
-              db,
-              product: price.product,
-            })
-          );
-          await Promise.all(batchPriceCreate);
-        }
-      }
+      //   const batchSize = 5;
+
+      //   // for (let i = 0; i < prices.length; i += batchSize) {
+      //   //   const batch = prices.slice(i, i + batchSize);
+      //   //   const batchPriceCreate = batch.map((price) =>
+      //   //     createStripePriceIFNotExist({
+      //   //       stripeCli,
+      //   //       price,
+      //   //       entitlements,
+      //   //       org,
+      //   //       logger,
+      //   //       db,
+      //   //       product: price.product,
+      //   //     })
+      //   //   );
+      //   //   await Promise.all(batchPriceCreate);
+      //   // }
+      // }
+
+      await initRewardStripePrices({
+        db,
+        prices,
+        org,
+        env,
+        logger,
+      });
 
       await createStripeCoupon({
         reward: newReward,
