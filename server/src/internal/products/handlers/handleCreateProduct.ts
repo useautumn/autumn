@@ -8,8 +8,10 @@ import RecaseError from "@/utils/errorUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import {
   CreateProductSchema,
+  Entitlement,
   ErrCode,
   FreeTrial,
+  FullProduct,
   Price,
   ProductResponseSchema,
 } from "@autumn/shared";
@@ -21,7 +23,10 @@ import {
 } from "@/utils/genUtils.js";
 
 import { ProductService } from "@/internal/products/ProductService.js";
-import { constructProduct } from "@/internal/products/productUtils.js";
+import {
+  constructProduct,
+  initProductInStripe,
+} from "@/internal/products/productUtils.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { detectBaseVariant } from "../productUtils/detectProductVariant.js";
@@ -112,6 +117,7 @@ export const handleCreateProduct = async (req: Request, res: any) =>
       let product = await ProductService.insert({ db, product: newProduct });
 
       let prices: Price[] = [];
+      let entitlements: Entitlement[] = [];
       if (notNullish(items)) {
         const res = await handleNewProductItems({
           db,
@@ -125,7 +131,20 @@ export const handleCreateProduct = async (req: Request, res: any) =>
           newVersion: false,
         });
         prices = res.prices;
+        entitlements = res.entitlements;
       }
+
+      await initProductInStripe({
+        db,
+        product: {
+          ...product,
+          prices,
+          entitlements,
+        } as FullProduct,
+        org,
+        env,
+        logger,
+      });
 
       if (notNullish(freeTrial)) {
         await handleNewFreeTrial({
@@ -154,7 +173,7 @@ export const handleCreateProduct = async (req: Request, res: any) =>
           autumn_id: product.internal_id,
           items: items || [],
           free_trial: freeTrial,
-        }),
+        })
       );
     },
   });

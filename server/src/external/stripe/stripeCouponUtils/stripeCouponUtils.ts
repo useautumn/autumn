@@ -97,10 +97,12 @@ export const createStripeCoupon = async ({
     }
   });
 
+  console.log("Stripe prod ids", { stripeProdIds });
+
   for (const promoCode of reward.promo_codes) {
     try {
       const stripePromoCode = await stripeCli.promotionCodes.retrieve(
-        promoCode.code,
+        promoCode.code
       );
       throw new RecaseError({
         message: `Promo code ${promoCode.code} already exists in Stripe`,
