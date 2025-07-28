@@ -31,7 +31,7 @@ bun install
 ```
 3. Run our set up script:
 ```bash
-bun run setup
+bun setup
 ```
 4. Run Autumn:
 
