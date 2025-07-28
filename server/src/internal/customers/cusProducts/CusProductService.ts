@@ -561,4 +561,35 @@ export class CusProductService {
 
     return data;
   }
+
+  static async deleteByProduct({
+    db,
+    productId,
+    internalProductId,
+  }: {
+    db: DrizzleCli;
+    productId?: string;
+    internalProductId?: string;
+  }) {
+    if (productId) {
+      let res = await db
+        .select({
+          internal_id: products.internal_id,
+        })
+        .from(products)
+        .where(eq(products.id, productId));
+
+      let internalProductIds = res.map((r) => r.internal_id);
+
+      await db
+        .delete(customerProducts)
+        .where(
+          inArray(customerProducts.internal_product_id, internalProductIds)
+        );
+    } else {
+      await db
+        .delete(customerProducts)
+        .where(eq(customerProducts.internal_product_id, internalProductId!));
+    }
+  }
 }

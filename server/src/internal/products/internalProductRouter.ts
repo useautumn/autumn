@@ -14,7 +14,10 @@ import { RewardProgramService } from "../rewards/RewardProgramService.js";
 import { mapToProductV2 } from "./productV2Utils.js";
 import { isFeaturePriceItem } from "./product-items/productItemUtils/getItemType.js";
 
-import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
+import RecaseError, {
+  handleFrontendReqError,
+  handleRequestError,
+} from "@/utils/errorUtils.js";
 import { createOrgResponse } from "../orgs/orgUtils.js";
 
 export const productRouter: Router = Router({ mergeParams: true });
@@ -69,7 +72,7 @@ productRouter.get("/counts", async (req: any, res) => {
           db,
           internalProductId: product.internal_id,
         });
-      }),
+      })
     );
 
     let result: { [key: string]: any } = {};
@@ -232,6 +235,59 @@ productRouter.post("/product_options", async (req: any, res: any) => {
       req,
       res,
       action: "Get product options",
+    });
+  }
+});
+
+productRouter.get("/:productId/info", async (req: any, res: any) => {
+  try {
+    // 1. Get number of versions
+    const { db, orgId, env } = req;
+    let product = await ProductService.get({
+      db,
+      id: req.params.productId,
+      orgId: req.orgId,
+      env: req.env,
+    });
+
+    // let numVersions = await ProductService.getProductVersionCount({
+    //   db,
+    //   productId: req.params.productId,
+    //   orgId: req.orgId,
+    //   env: req.env,
+    // });
+    if (!product) {
+      throw new RecaseError({
+        message: `Product ${req.params.productId} not found`,
+        code: ErrCode.ProductNotFound,
+        statusCode: StatusCodes.NOT_FOUND,
+      });
+    }
+
+    let [allVersions, latestVersion] = await Promise.all([
+      CusProdReadService.existsForProduct({
+        db,
+        productId: req.params.productId,
+      }),
+      CusProdReadService.existsForProduct({
+        db,
+        internalProductId: product.internal_id,
+      }),
+    ]);
+
+    // 2. Get cus products
+
+    res.status(200).send({
+      numVersion: product.version,
+      hasCusProducts: allVersions,
+      hasCusProductsLatest: latestVersion,
+    });
+  } catch (error) {
+    handleRequestError({
+      error,
+      req,
+      res,
+      action: "Get product info",
     });
   }
 });
