@@ -378,6 +378,42 @@ export class ProductService {
       );
   }
 
+  static async deleteByProductId({
+    db,
+    productId,
+    orgId,
+    env,
+  }: {
+    db: DrizzleCli;
+    productId: string;
+    orgId: string;
+    env: AppEnv;
+  }) {
+    let res = await db
+      .select()
+      .from(products)
+      .where(
+        and(
+          eq(products.id, productId),
+          eq(products.org_id, orgId),
+          eq(products.env, env)
+        )
+      );
+
+    let internalIds = res.map((r) => r.internal_id);
+
+    if (internalIds.length === 0) return;
+    if (internalIds.length > 500) {
+      throw new RecaseError({
+        message: "Cannot delete more than 500 products at once",
+        code: ErrCode.InternalError,
+        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+      });
+    }
+
+    await db.delete(products).where(inArray(products.internal_id, internalIds));
+  }
+
   static async deleteByOrgId({
     db,
     orgId,

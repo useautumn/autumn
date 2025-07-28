@@ -60,6 +60,7 @@ const updateStripeProductNames = async ({
   logger: any;
 }) => {
   if (!isStripeConnected({ org, env: curProduct.env as AppEnv })) return;
+
   const stripeCli = createStripeCli({
     org,
     env: curProduct.env as AppEnv,
