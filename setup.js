@@ -320,19 +320,23 @@ async function main() {
     {
       type: 'confirm',
       name: 'runDbPush',
-      message: chalk.cyan('Would you like to run "pnpm run db:push" to set up your tables now?'),
+      message: chalk.cyan('Would you like to run "bun run db:push" to set up your tables now?'),
       default: true,
     },
   ]);
 
   if (runDbPush) {
-    console.log(chalk.blueBright('\nRunning "pnpm run db:push"...'));
-    const dbPushResult = spawnSync('pnpm', ['run', 'db:push'], { stdio: 'inherit', encoding: 'utf-8', shell: true });
+    console.log(chalk.blueBright('\nRunning "bun run db:push" in shared directory...'));
+    const dbPushResult = spawnSync('bun', ['run', 'db:push'], { stdio: 'inherit', encoding: 'utf-8', shell: true, cwd: 'shared', env: {
+      ...process.env,
+      NODE_OPTIONS: '--import tsx',
+      DATABASE_URL: databaseUrl,
+    } });
     if (dbPushResult.status !== 0) {
-      console.error(chalk.red('❌ Failed to run "pnpm run db:push". Please check the error above.'));
+      console.error(chalk.red('❌ Failed to run "bun run db:push". Please check the error above.'));
       process.exit(1);
     }
-    console.log(chalk.greenBright('✅ Successfully ran "pnpm run db:push".'));
+    console.log(chalk.greenBright('✅ Successfully ran "bun run db:push".'));
   }
 
   console.log(chalk.cyan('\nNext steps:'));
