@@ -18,7 +18,7 @@
     "dev": "bunx nodemon --ext ts --ignore dist --exec \"bun run build\"",
     "dev:bun": "bun ./index.ts --outdir dist --target bun --external zod --watch",
 
-    "db:push": "bunx drizzle-kit push --config 'drizzle.config.ts'",
+    "db:push": "bun db:generate && bun db:migrate",
     "db:generate": "cross-env NODE_OPTIONS=\"--import tsx\" bunx drizzle-kit generate --config drizzle.config.ts",
     "db:migrate": "cross-env NODE_OPTIONS=\"--import tsx\" bunx drizzle-kit migrate --config drizzle.config.ts"
   },
