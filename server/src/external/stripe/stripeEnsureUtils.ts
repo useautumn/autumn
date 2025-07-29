@@ -80,7 +80,7 @@ export async function ensureStripeProductsWithEnv({
 			} else {
 				await initProductInStripe({
 					db,
-					org: updatedOrg, // Use updated org instead of req.org
+					org: updatedOrg,
 					env,
 					logger,
 					product: existingOrgProduct,
