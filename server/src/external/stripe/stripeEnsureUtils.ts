@@ -1,35 +1,29 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { Stripe } from "stripe";
-import { checkKeyValid } from "./stripeOnboardingUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import { AppEnv, products } from "@autumn/shared";
-import { and, eq } from "drizzle-orm";
-import { createStripeProduct } from "./stripeProductUtils.js";
+import { AppEnv, Organization, products } from "@autumn/shared";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { initProductInStripe } from "@/internal/products/productUtils.js";
-import { createDecryptedStripeCli } from "./utils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { createStripeCli } from "./utils.js";
 
 export async function ensureStripeProducts({
   db,
   logger,
   req,
-  apiKeys,
+  org,
 }: {
   db: DrizzleCli;
   logger: any;
   req: ExtendedRequest;
-  apiKeys: {
-    live: string;
-    test: string;
-  };
+  org: Organization;
 }) {
   await ensureStripeProductsWithEnv({
     db,
     logger,
     req,
     env: AppEnv.Sandbox,
-    apiKey: apiKeys.test,
+    org,
   });
 
   await ensureStripeProductsWithEnv({
@@ -37,61 +31,66 @@ export async function ensureStripeProducts({
     logger,
     req,
     env: AppEnv.Live,
-    apiKey: apiKeys.live,
+    org,
   });
 }
 export async function ensureStripeProductsWithEnv({
-	db,
-	logger,
-	req,
-	env,
-  apiKey,
+  db,
+  logger,
+  req,
+  env,
+  org,
 }: {
-	db: DrizzleCli;
-	logger: any;
-	req: ExtendedRequest;
-	env: AppEnv;
-  apiKey: string;
+  db: DrizzleCli;
+  logger: any;
+  req: ExtendedRequest;
+  env: AppEnv;
+  org: Organization;
 }) {
-	let stripe = createDecryptedStripeCli({
-		org: req.org,
-		env,
-    apiKey,
-	});
+  // let stripe = new Stripe(apiKey);
 
-	let existingStripeProducts = await stripe.products.list();
-	let existingOrgProducts = await ProductService.listFull({
-		db,
-		orgId: req.org.id,
-		env,
-	});
+  // let existingStripeProducts = await stripe.products.list();
+  const fullProducts = await ProductService.listFull({
+    db,
+    orgId: req.org.id,
+    env,
+  });
 
-	// Fetch updated org data to ensure we have the latest Stripe configuration
-	const updatedOrg = await OrgService.get({ db, orgId: req.org.id });
+  const stripeCli = createStripeCli({ org, env });
 
-	for (let existingOrgProduct of existingOrgProducts) {
-		try {
-			let matchFound = existingStripeProducts.data.find(
-				(p) => p.id === existingOrgProduct.processor?.id
-			);
+  // Fetch updated org data to ensure we have the latest Stripe configuration
+  const products = await stripeCli.products.list({ limit: 100 });
+  const updatedOrg = await OrgService.get({ db, orgId: req.org.id });
 
-			if (matchFound) {
-				continue;
-			} else {
-				await initProductInStripe({
-					db,
-					org: updatedOrg,
-					env,
-					logger,
-					product: existingOrgProduct,
-				});
+  const batchInit: Promise<void>[] = [];
+  for (let fullProduct of fullProducts) {
+    const initProduct = async () => {
+      let existsInStripe = products.data.find(
+        (p) => p.id === fullProduct.processor?.id
+      );
 
-        logger.info(`ensured product ${existingOrgProduct.id} in Stripe during Stripe connection, env: ${env}`);
-			}
-		} catch (error) {
-			logger.error(
-				`Error ensuring product ${existingOrgProduct.id} in Stripe: ${error}`
-			);
-		}
-	}
+      if (existsInStripe) {
+        return;
+      }
+
+      try {
+        await initProductInStripe({
+          db,
+          org: updatedOrg,
+          env,
+          logger,
+          product: fullProduct,
+        });
+
+        logger.info(
+          `initialized product ${fullProduct.id} in Stripe during Stripe connection, env: ${env}`
+        );
+      } catch (error) {
+        logger.error(`Failed to init product in stripe: ${error}`);
+      }
+    };
+
+    batchInit.push(initProduct());
+  }
+  await Promise.all(batchInit);
 }

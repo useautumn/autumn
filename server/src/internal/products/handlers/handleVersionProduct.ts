@@ -20,6 +20,7 @@ import { EntitlementService } from "@/internal/products/entitlements/Entitlement
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
+import { getEntsWithFeature } from "../entitlements/entitlementUtils.js";
 
 export const handleVersionProductV2 = async ({
   req,
@@ -125,7 +126,7 @@ export const handleVersionProductV2 = async ({
     product: {
       ...newProduct,
       prices: customPrices,
-      entitlements: customEnts,
+      entitlements: getEntsWithFeature({ ents: customEnts, features }),
     } as FullProduct,
     org,
     env,

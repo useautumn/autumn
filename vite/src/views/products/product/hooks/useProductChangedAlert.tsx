@@ -8,7 +8,9 @@ export const useProductChangedAlert = ({
   hasChanges: boolean;
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [resolveConfirm, setResolveConfirm] = useState<((value: boolean) => void) | null>(null);
+  const [resolveConfirm, setResolveConfirm] = useState<
+    ((value: boolean) => void) | null
+  >(null);
 
   const showConfirmModal = useCallback((): Promise<boolean> => {
     return new Promise((resolve) => {

@@ -53,12 +53,19 @@ export const TransferProductDialog = ({
     }
 
     setLoading(true);
+
     try {
+      const fromEntity = entities.find(
+        (e: any) => e.internal_id === cusProduct.internal_entity_id
+      );
       await axiosInstance.post(
-        `/v1/customers/${cusProduct.customer_id}/transfer_product`,
+        `/v1/customers/${cusProduct.customer_id}/transfer`,
         {
-          internal_entity_id: selectedEntity.internal_id,
-          customer_product_id: cusProduct.id,
+          // internal_entity_id: selectedEntity.internal_id,
+          from_entity_id: fromEntity.id,
+          to_entity_id: selectedEntity.id,
+          product_id: cusProduct.product_id,
+          // customer_product_id: cusProduct.id,
         }
       );
       await cusMutate();
