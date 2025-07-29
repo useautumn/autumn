@@ -30,7 +30,11 @@ export const resetAndGetCusEnt = async ({
 
   await resetCustomerEntitlement({
     db,
-    cusEnt: cusEnt!,
+    cusEnt: {
+      ...cusEnt!,
+      customer,
+    },
+    cacheEnabledOrgs: [],
   });
 
   mainCusProduct = await getMainCusProduct({
