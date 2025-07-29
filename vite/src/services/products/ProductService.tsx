@@ -9,9 +9,13 @@ export class ProductService {
   static async updateProduct(
     axiosInstance: AxiosInstance,
     productId: string,
-    data: any
+    data: any,
+    version?: number
   ) {
-    await axiosInstance.post(`/v1/products/${productId}`, data);
+    const url = version 
+      ? `/v1/products/${productId}?version=${version}`
+      : `/v1/products/${productId}`;
+    await axiosInstance.post(url, data);
   }
 
   static async deleteProduct(
