@@ -5,6 +5,7 @@ import {
   pgTable,
   text,
   unique,
+  boolean,
 } from "drizzle-orm/pg-core";
 
 import { relations, sql } from "drizzle-orm";
@@ -33,6 +34,7 @@ export const features = pgTable(
     display: jsonb()
       .default(sql`null`)
       .$type<FeatureDisplay>(),
+    archived: boolean("archived").notNull().default(false),
   },
   (table) => [
     foreignKey({
