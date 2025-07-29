@@ -42,7 +42,8 @@ export const getCusWithCache = async ({
   const withSubs = true;
 
   const upstash = await initUpstash();
-  if (!upstash || !org.config.cache_customer) skipCache = true;
+  // || !org.config.cache_customer
+  if (!upstash) skipCache = true;
 
   let cacheKey = buildBaseCusCacheKey({
     idOrInternalId,
