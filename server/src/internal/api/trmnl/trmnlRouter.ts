@@ -95,7 +95,6 @@ trmnlRouter.post("/screen", async (req: any, res: any) =>
       //   totalCustomers: numberWithCommas(totalCustomers),
       //   topEvent: topEvent[0],
       // });
-      topEvent = topEvent.replace("-", "_");
       res.status(200).json({
         rowData: `[${results.data.map((row: any) => `['${row.period}', ${row[topEvent + "_count"]}]`).join(",")}]`,
         revenue: numberWithCommas(monthlyRevenue.total_payment_volume),
