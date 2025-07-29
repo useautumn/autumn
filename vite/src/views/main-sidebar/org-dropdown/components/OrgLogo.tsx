@@ -4,7 +4,7 @@ import { useSidebarContext } from "../../SidebarContext";
 
 export const OrgLogo = ({ org }: { org: FrontendOrg }) => {
   const { state } = useSidebarContext();
-  const firstLetter = org.name.charAt(0).toUpperCase();
+  const firstLetter = org.name && org.name.charAt(0).toUpperCase() || "A";
   const expanded = state === "expanded";
   return (
     <div
