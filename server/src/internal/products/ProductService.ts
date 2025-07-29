@@ -194,6 +194,7 @@ export class ProductService {
     returnAll = false,
     version,
     excludeEnts = false,
+    showOnlyArchived = false,
   }: {
     db: DrizzleCli;
     orgId: string;
@@ -202,13 +203,15 @@ export class ProductService {
     returnAll?: boolean;
     version?: number;
     excludeEnts?: boolean;
+    showOnlyArchived?: boolean;
   }) {
     let data = (await db.query.products.findMany({
       where: and(
         eq(products.org_id, orgId),
         eq(products.env, env),
         inIds ? inArray(products.id, inIds) : undefined,
-        version ? eq(products.version, version) : undefined
+        version ? eq(products.version, version) : undefined,
+        showOnlyArchived ? eq(products.archived, true) : eq(products.archived, false),
       ),
 
       with: {
