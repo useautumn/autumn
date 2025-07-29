@@ -2,6 +2,7 @@ import {
   APIFeature,
   APIFeatureType,
   AppEnv,
+  CreditSchemaItem,
   Feature,
   FeatureType,
   FeatureUsageType,
@@ -22,6 +23,14 @@ export const toAPIFeature = ({ feature }: { feature: Feature }) => {
     featureType = feature.config.usage_type;
   }
 
+  let creditSchema = undefined;
+  if (feature.type == FeatureType.CreditSystem) {
+    creditSchema = feature.config.schema.map((s: CreditSchemaItem) => ({
+      metered_feature_id: s.metered_feature_id,
+      credit_cost: s.credit_amount,
+    }));
+  }
+
   return APIFeatureSchema.parse({
     id: feature.id,
     name: feature.name,
@@ -30,6 +39,7 @@ export const toAPIFeature = ({ feature }: { feature: Feature }) => {
       singular: feature.display?.singular || feature.name,
       plural: feature.display?.plural || feature.name,
     },
+    credit_schema: creditSchema,
   });
 };
 

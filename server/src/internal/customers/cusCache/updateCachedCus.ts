@@ -29,7 +29,7 @@ export const refreshCusCache = async ({
     const upstash = await initUpstash();
     if (!upstash) return;
 
-    if (!org.config.cache_customer) return;
+    // if (!org.config.cache_customer) return;
 
     const baseKey = buildBaseCusCacheKey({
       idOrInternalId: customerId,
@@ -84,7 +84,7 @@ export const deleteCusCache = async ({
     const upstash = await initUpstash();
     if (!upstash) return;
 
-    if (!org.config.cache_customer) return;
+    // if (!org.config.cache_customer) return;
 
     const baseKey = buildBaseCusCacheKey({
       idOrInternalId: customerId,
@@ -95,7 +95,6 @@ export const deleteCusCache = async ({
     const list = await upstash.keys(`${baseKey}*`);
 
     for (const key of list) {
-      // console.log("Deleting cache for key:", key);
       await upstash.del(key);
     }
   } catch (error) {

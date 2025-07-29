@@ -27,6 +27,7 @@ import { type DrizzleCli } from "../db/initDrizzle.js";
 import { RolloverService } from "../internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService.js";
 import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 import { CusPriceService } from "@/internal/customers/cusProducts/cusPrices/CusPriceService.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
 
 const checkSubAnchor = async ({
   db,
@@ -135,14 +136,24 @@ const handleShortDurationCusEnt = async ({
     `Reseting short cus ent (${cusEnt.feature_id}) [${ent.interval}], customer: ${cusEnt.customer_id}, org: ${cusEnt.customer.org_id}`
   );
 
-  if (cacheEnabledOrgs.some((org) => org.id === cusEnt.customer.org_id)) {
-    await deleteCusCache({
-      db,
-      customerId: cusEnt.customer.id!,
-      org: cacheEnabledOrgs.find((org) => org.id === cusEnt.customer.org_id)!,
-      env: cusEnt.customer.env,
-    });
-  }
+  let org = await OrgService.get({
+    db,
+    orgId: cusEnt.customer.org_id,
+  });
+  await deleteCusCache({
+    db,
+    customerId: cusEnt.customer.id!,
+    org: org,
+    env: cusEnt.customer.env,
+  });
+  // if (cacheEnabledOrgs.some((org) => org.id === cusEnt.customer.org_id)) {
+  //   await deleteCusCache({
+  //     db,
+  //     customerId: cusEnt.customer.id!,
+  //     org: cacheEnabledOrgs.find((org) => org.id === cusEnt.customer.org_id)!,
+  //     env: cusEnt.customer.env,
+  //   });
+  // }
 
   return newCusEnt;
 };
@@ -293,18 +304,28 @@ export const resetCustomerEntitlement = async ({
       )}`
     );
 
-    let cacheOrg = cacheEnabledOrgs.find(
-      (org) => org.id === cusEnt.customer.org_id
-    );
+    // let cacheOrg = cacheEnabledOrgs.find(
+    //   (org) => org.id === cusEnt.customer.org_id
+    // );
 
-    if (cacheOrg) {
-      await deleteCusCache({
-        db,
-        customerId: cusEnt.customer.id!,
-        org: cacheOrg,
-        env: cusEnt.customer.env,
-      });
-    }
+    let org = await OrgService.get({
+      db,
+      orgId: cusEnt.customer.org_id,
+    });
+    await deleteCusCache({
+      db,
+      customerId: cusEnt.customer.id!,
+      org: org,
+      env: cusEnt.customer.env,
+    });
+    // if (cacheOrg) {
+    //   await deleteCusCache({
+    //     db,
+    //     customerId: cusEnt.customer.id!,
+    //     org: cacheOrg,
+    //     env: cusEnt.customer.env,
+    //   });
+    // }
   } catch (error: any) {
     console.log(
       `Failed to reset ${cusEnt.id} | ${cusEnt.customer_id} | ${cusEnt.feature_id}, error: ${error}`
