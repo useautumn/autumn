@@ -144,17 +144,15 @@ orgRouter.post("/stripe", async (req: any, res) => {
 			},
 		});
 
-    await clearOrgCache({
-      db,
-      orgId: req.orgId,
-      logger,
-    });
-
 		// 2. Ensure products are created in Stripe (after org is updated)
 		await ensureStripeProducts({
 			db,
 			logger,
 			req,
+      apiKeys: {
+        live: liveApiKey,
+        test: testApiKey,
+      }
 		});
 
 		res.status(200).json({

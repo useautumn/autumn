@@ -7,22 +7,29 @@ import { and, eq } from "drizzle-orm";
 import { createStripeProduct } from "./stripeProductUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { initProductInStripe } from "@/internal/products/productUtils.js";
-import { createStripeCli } from "./utils.js";
+import { createDecryptedStripeCli } from "./utils.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
 
 export async function ensureStripeProducts({
   db,
   logger,
   req,
+  apiKeys,
 }: {
   db: DrizzleCli;
   logger: any;
   req: ExtendedRequest;
+  apiKeys: {
+    live: string;
+    test: string;
+  };
 }) {
   await ensureStripeProductsWithEnv({
     db,
     logger,
     req,
     env: AppEnv.Sandbox,
+    apiKey: apiKeys.test,
   });
 
   await ensureStripeProductsWithEnv({
@@ -30,6 +37,7 @@ export async function ensureStripeProducts({
     logger,
     req,
     env: AppEnv.Live,
+    apiKey: apiKeys.live,
   });
 }
 export async function ensureStripeProductsWithEnv({
@@ -37,15 +45,18 @@ export async function ensureStripeProductsWithEnv({
 	logger,
 	req,
 	env,
+  apiKey,
 }: {
 	db: DrizzleCli;
 	logger: any;
 	req: ExtendedRequest;
 	env: AppEnv;
+  apiKey: string;
 }) {
-	let stripe = createStripeCli({
+	let stripe = createDecryptedStripeCli({
 		org: req.org,
 		env,
+    apiKey,
 	});
 
 	let existingStripeProducts = await stripe.products.list();
@@ -55,28 +66,27 @@ export async function ensureStripeProductsWithEnv({
 		env,
 	});
 
-  console.log("existingOrgProducts", existingOrgProducts.map((p) => p.id));
-  console.log("existingStripeProducts", existingStripeProducts.data.map((p) => p.id));
+	// Fetch updated org data to ensure we have the latest Stripe configuration
+	const updatedOrg = await OrgService.get({ db, orgId: req.org.id });
 
 	for (let existingOrgProduct of existingOrgProducts) {
 		try {
 			let matchFound = existingStripeProducts.data.find(
 				(p) => p.id === existingOrgProduct.processor?.id
 			);
-      console.log("matchFound", matchFound, existingOrgProduct.processor?.id);
 
 			if (matchFound) {
 				continue;
 			} else {
 				await initProductInStripe({
 					db,
-					org: req.org,
+					org: updatedOrg, // Use updated org instead of req.org
 					env,
 					logger,
 					product: existingOrgProduct,
 				});
 
-        console.log("created product", existingOrgProduct.id);
+        logger.info(`ensured product ${existingOrgProduct.id} in Stripe during Stripe connection, env: ${env}`);
 			}
 		} catch (error) {
 			logger.error(
