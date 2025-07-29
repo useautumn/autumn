@@ -42,6 +42,10 @@ const productDetailsSame = (prod1: Product, prod2: UpdateProduct) => {
   if (notNullish(prod2.is_default) && prod1.is_default != prod2.is_default) {
     return false;
   }
+  console.log("prod1.archived", prod1.archived, prod2.archived, notNullish(prod2.archived), prod1.archived !== prod2.archived);
+  if (notNullish(prod2.archived) && prod1.archived !== prod2.archived) {
+    return false;
+  }
 
   return true;
 };
@@ -164,7 +168,7 @@ export const handleUpdateProductDetails = async ({
     return;
   }
 
-  if (newProduct.id !== curProduct.id) {
+  if (notNullish(newProduct.id) && newProduct.id !== curProduct.id) {
     if (customersOnAllVersions.length > 0) {
       throw new RecaseError({
         message: "Cannot change product ID because it has existing customers",
@@ -193,6 +197,7 @@ export const handleUpdateProductDetails = async ({
       group: newProduct.group,
       is_add_on: newProduct.is_add_on,
       is_default: newProduct.is_default,
+      archived: newProduct.archived,
     },
   });
 
@@ -214,4 +219,5 @@ export const handleUpdateProductDetails = async ({
   curProduct.group = newProduct.group || curProduct.group;
   curProduct.is_add_on = newProduct.is_add_on || curProduct.is_add_on;
   curProduct.is_default = newProduct.is_default || curProduct.is_default;
+  curProduct.archived = newProduct.archived ?? curProduct.archived;
 };
