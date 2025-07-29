@@ -18,6 +18,7 @@ export const FeatureSchema = z.object({
       plural: z.string().optional(),
     })
     .nullish(),
+  archived: z.boolean(),
 });
 
 export const CreateFeatureSchema = FeatureSchema.pick({

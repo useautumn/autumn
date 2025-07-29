@@ -25,6 +25,7 @@ export const ProductSchema = z.object({
     })
     .nullish(),
   base_variant_id: z.string().nullable(),
+  archived: z.boolean().default(false),
 });
 
 export const CreateProductSchema = z.object({
@@ -42,6 +43,7 @@ export const UpdateProductSchema = z.object({
   is_add_on: z.boolean().optional(),
   is_default: z.boolean().optional(),
   group: z.string().optional(),
+  archived: z.boolean().optional(),
 });
 
 export const FrontendProductSchema = ProductSchema.omit({
