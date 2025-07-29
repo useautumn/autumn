@@ -15,279 +15,344 @@ import { mapToProductV2 } from "./productV2Utils.js";
 import { isFeaturePriceItem } from "./product-items/productItemUtils/getItemType.js";
 
 import RecaseError, {
-  handleFrontendReqError,
-  handleRequestError,
+	handleFrontendReqError,
+	handleRequestError,
 } from "@/utils/errorUtils.js";
 import { createOrgResponse } from "../orgs/orgUtils.js";
+import { sortFullProducts } from "./productUtils/sortProductUtils.js";
 
 export const productRouter: Router = Router({ mergeParams: true });
 
 productRouter.get("/data", async (req: any, res) => {
-  try {
-    let { db } = req;
+	try {
+		let { db } = req;
 
-    const [products, features, org, coupons, rewardPrograms] =
-      await Promise.all([
-        ProductService.listFull({
-          db,
-          orgId: req.orgId,
-          env: req.env,
-          returnAll: true,
-        }),
-        FeatureService.getFromReq(req),
-        OrgService.getFromReq(req),
-        RewardService.list({ db, orgId: req.orgId, env: req.env }),
-        RewardProgramService.list({ db, orgId: req.orgId, env: req.env }),
-      ]);
+		const [products, features, org, coupons, rewardPrograms] =
+			await Promise.all([
+				ProductService.listFull({
+					db,
+					orgId: req.orgId,
+					env: req.env,
+					returnAll: true,
+					showOnlyArchived: false,
+				}),
+				FeatureService.getFromReq(req),
+				OrgService.getFromReq(req),
+				RewardService.list({ db, orgId: req.orgId, env: req.env }),
+				RewardProgramService.list({
+					db,
+					orgId: req.orgId,
+					env: req.env,
+				}),
+			]);
 
-    res.status(200).json({
-      products: getLatestProducts(products).map((product) => {
-        return mapToProductV2({ product, features });
-      }),
-      versionCounts: getProductVersionCounts(products),
-      features,
-      org: createOrgResponse(org),
-      rewards: coupons,
-      rewardPrograms,
+		sortFullProducts({
+			products: getLatestProducts(products),
+		});
+
+		res.status(200).json({
+			products: products.map((product) => {
+				return mapToProductV2({ product, features });
+			}),
+			versionCounts: getProductVersionCounts(products),
+			features,
+			org: createOrgResponse(org),
+			rewards: coupons,
+			rewardPrograms,
+		});
+	} catch (error) {
+		console.error("Failed to get products", error);
+		res.status(500).send(error);
+	}
+});
+
+productRouter.post("/data", async (req: any, res) => {
+	try {
+		let { db } = req;
+		let { showArchived } = req.body;
+		console.log("showArchived", showArchived);
+
+		const [products, features, org, coupons, rewardPrograms] =
+			await Promise.all([
+				ProductService.listFull({
+					db,
+					orgId: req.orgId,
+					env: req.env,
+					returnAll: true,
+					showOnlyArchived: showArchived,
+				}),
+				FeatureService.getFromReq(req),
+				OrgService.getFromReq(req),
+				RewardService.list({ db, orgId: req.orgId, env: req.env }),
+				RewardProgramService.list({
+					db,
+					orgId: req.orgId,
+					env: req.env,
+				}),
+			]);
+
+		console.log("Before sort", products.map((x) => x.name));
+
+		console.log("Log result", sortFullProducts({ products: getLatestProducts(products) }).map((x) => x.name));
+
+		console.log("After sort", products.map((x) => x.name));
+
+    let finalSort = sortFullProducts({products}).map((product) => {
+      return mapToProductV2({ product, features });
     });
-  } catch (error) {
-    console.error("Failed to get products", error);
-    res.status(500).send(error);
-  }
+
+    console.log("In place sort", finalSort.map((x) => x.name))
+
+		res.status(200).json({
+			products: finalSort,
+			versionCounts: getProductVersionCounts(products),
+			features,
+			org: createOrgResponse(org),
+			rewards: coupons,
+			rewardPrograms,
+		});
+	} catch (error) {
+		console.error("Failed to get products", error);
+		res.status(500).send(error);
+	}
 });
 
 productRouter.get("/counts", async (req: any, res) => {
-  try {
-    let { db } = req;
-    let products = await ProductService.listFull({
-      db,
-      orgId: req.orgId,
-      env: req.env,
-      returnAll: true,
-    });
+	try {
+		let { db } = req;
+		let products = await ProductService.listFull({
+			db,
+			orgId: req.orgId,
+			env: req.env,
+			returnAll: true,
+		});
 
-    let counts = await Promise.all(
-      products.map(async (product) => {
-        return CusProdReadService.getCounts({
-          db,
-          internalProductId: product.internal_id,
-        });
-      })
-    );
+		let counts = await Promise.all(
+			products.map(async (product) => {
+				return CusProdReadService.getCounts({
+					db,
+					internalProductId: product.internal_id,
+				});
+			})
+		);
 
-    let result: { [key: string]: any } = {};
-    for (let i = 0; i < products.length; i++) {
-      if (!result[products[i].id]) {
-        result[products[i].id] = counts[i];
-      } else {
-        for (let key in counts[i]) {
-          let countVal = counts[i][key as keyof (typeof counts)[number]] || 0;
-          result[products[i].id][key] += countVal;
-        }
-      }
-    }
+		let result: { [key: string]: any } = {};
+		for (let i = 0; i < products.length; i++) {
+			if (!result[products[i].id]) {
+				result[products[i].id] = counts[i];
+			} else {
+				for (let key in counts[i]) {
+					let countVal =
+						counts[i][key as keyof (typeof counts)[number]] || 0;
+					result[products[i].id][key] += countVal;
+				}
+			}
+		}
 
-    res.status(200).send(result);
-  } catch (error) {
-    console.error("Failed to get product counts", error);
-    res.status(500).send(error);
-  }
+		res.status(200).send(result);
+	} catch (error) {
+		console.error("Failed to get product counts", error);
+		res.status(500).send(error);
+	}
 });
 
 productRouter.get("/:productId/data", async (req: any, res) => {
-  try {
-    const { productId } = req.params;
-    const { version } = req.query;
-    const { db, orgId, env } = req;
+	try {
+		const { productId } = req.params;
+		const { version } = req.query;
+		const { db, orgId, env } = req;
 
-    const [product, features, org, numVersions, existingMigrations] =
-      await Promise.all([
-        ProductService.getFull({
-          db,
-          idOrInternalId: productId,
-          orgId,
-          env,
-          version: version ? parseInt(version) : undefined,
-        }),
-        FeatureService.getFromReq(req),
-        OrgService.getFromReq(req),
-        ProductService.getProductVersionCount({
-          db,
-          productId,
-          orgId,
-          env,
-        }),
-        MigrationService.getExistingJobs({
-          db,
-          orgId,
-          env,
-        }),
-      ]);
+		const [product, features, org, numVersions, existingMigrations] =
+			await Promise.all([
+				ProductService.getFull({
+					db,
+					idOrInternalId: productId,
+					orgId,
+					env,
+					version: version ? parseInt(version) : undefined,
+				}),
+				FeatureService.getFromReq(req),
+				OrgService.getFromReq(req),
+				ProductService.getProductVersionCount({
+					db,
+					productId,
+					orgId,
+					env,
+				}),
+				MigrationService.getExistingJobs({
+					db,
+					orgId,
+					env,
+				}),
+			]);
 
-    if (!product) {
-      throw new RecaseError({
-        message: `Product ${productId} ${
-          version ? `(v${version})` : ""
-        } not found`,
-        code: ErrCode.ProductNotFound,
-        statusCode: StatusCodes.NOT_FOUND,
-      });
-    }
-    let entitlements = product.entitlements;
-    let prices = product.prices;
+		if (!product) {
+			throw new RecaseError({
+				message: `Product ${productId} ${
+					version ? `(v${version})` : ""
+				} not found`,
+				code: ErrCode.ProductNotFound,
+				statusCode: StatusCodes.NOT_FOUND,
+			});
+		}
+		let entitlements = product.entitlements;
+		let prices = product.prices;
 
-    entitlements = entitlements.sort((a: any, b: any) => {
-      return b.feature.id.localeCompare(a.feature.id);
-    });
+		entitlements = entitlements.sort((a: any, b: any) => {
+			return b.feature.id.localeCompare(a.feature.id);
+		});
 
-    prices = prices.sort((a: any, b: any) => {
-      return b.id.localeCompare(a.id);
-    });
+		prices = prices.sort((a: any, b: any) => {
+			return b.id.localeCompare(a.id);
+		});
 
-    let productV2 = mapToProductV2({ product, features });
+		let productV2 = mapToProductV2({ product, features });
 
-    res.status(200).send({
-      product: productV2,
-      entitlements,
-      prices,
-      features,
-      org: {
-        id: org.id,
-        name: org.name,
-        test_pkey: org.test_pkey,
-        live_pkey: org.live_pkey,
-        default_currency: org.default_currency,
-      },
-      numVersions,
-      existingMigrations,
-    });
-  } catch (error) {
-    handleFrontendReqError({
-      error,
-      req,
-      res,
-      action: "Get product data (internal)",
-    });
-  }
+		res.status(200).send({
+			product: productV2,
+			entitlements,
+			prices,
+			features,
+			org: {
+				id: org.id,
+				name: org.name,
+				test_pkey: org.test_pkey,
+				live_pkey: org.live_pkey,
+				default_currency: org.default_currency,
+			},
+			numVersions,
+			existingMigrations,
+		});
+	} catch (error) {
+		handleFrontendReqError({
+			error,
+			req,
+			res,
+			action: "Get product data (internal)",
+		});
+	}
 });
 
 productRouter.get("/:productId/count", async (req: any, res) => {
-  try {
-    const { db, orgId, env } = req;
-    const { productId } = req.params;
-    const { version } = req.query;
+	try {
+		const { db, orgId, env } = req;
+		const { productId } = req.params;
+		const { version } = req.query;
 
-    const product = await ProductService.get({
-      db,
-      id: productId,
-      orgId,
-      env,
-      version: version ? parseInt(version) : undefined,
-    });
+		const product = await ProductService.get({
+			db,
+			id: productId,
+			orgId,
+			env,
+			version: version ? parseInt(version) : undefined,
+		});
 
-    if (!product) {
-      throw new RecaseError({
-        message: `Product ${productId} ${
-          version ? `(v${version})` : ""
-        } not found`,
-        code: ErrCode.ProductNotFound,
-        statusCode: StatusCodes.NOT_FOUND,
-      });
-    }
+		if (!product) {
+			throw new RecaseError({
+				message: `Product ${productId} ${
+					version ? `(v${version})` : ""
+				} not found`,
+				code: ErrCode.ProductNotFound,
+				statusCode: StatusCodes.NOT_FOUND,
+			});
+		}
 
-    // Get counts from postgres
-    const counts = await CusProdReadService.getCounts({
-      db,
-      internalProductId: product.internal_id,
-    });
+		// Get counts from postgres
+		const counts = await CusProdReadService.getCounts({
+			db,
+			internalProductId: product.internal_id,
+		});
 
-    res.status(200).send(counts);
-  } catch (error) {
-    handleFrontendReqError({
-      error,
-      req,
-      res,
-      action: "Get product counts (internal)",
-    });
-  }
+		res.status(200).send(counts);
+	} catch (error) {
+		handleFrontendReqError({
+			error,
+			req,
+			res,
+			action: "Get product counts (internal)",
+		});
+	}
 });
 
 productRouter.post("/product_options", async (req: any, res: any) => {
-  try {
-    const { items } = req.body;
+	try {
+		const { items } = req.body;
 
-    const features = await FeatureService.getFromReq(req);
-    const featureToOptions: { [key: string]: FeatureOptions } = {};
+		const features = await FeatureService.getFromReq(req);
+		const featureToOptions: { [key: string]: FeatureOptions } = {};
 
-    for (const item of items) {
-      if (isFeaturePriceItem(item) && item.usage_model == UsageModel.Prepaid) {
-        featureToOptions[item.feature_id] = {
-          feature_id: item.feature_id,
-          quantity: 0,
-        };
-      }
-    }
+		for (const item of items) {
+			if (
+				isFeaturePriceItem(item) &&
+				item.usage_model == UsageModel.Prepaid
+			) {
+				featureToOptions[item.feature_id] = {
+					feature_id: item.feature_id,
+					quantity: 0,
+				};
+			}
+		}
 
-    res.status(200).send({ options: Object.values(featureToOptions) });
-  } catch (error) {
-    handleFrontendReqError({
-      error,
-      req,
-      res,
-      action: "Get product options",
-    });
-  }
+		res.status(200).send({ options: Object.values(featureToOptions) });
+	} catch (error) {
+		handleFrontendReqError({
+			error,
+			req,
+			res,
+			action: "Get product options",
+		});
+	}
 });
 
 productRouter.get("/:productId/info", async (req: any, res: any) => {
-  try {
-    // 1. Get number of versions
-    const { db, orgId, env } = req;
-    let product = await ProductService.get({
-      db,
-      id: req.params.productId,
-      orgId: req.orgId,
-      env: req.env,
-    });
+	try {
+		// 1. Get number of versions
+		const { db, orgId, env } = req;
+		let product = await ProductService.get({
+			db,
+			id: req.params.productId,
+			orgId: req.orgId,
+			env: req.env,
+		});
 
-    // let numVersions = await ProductService.getProductVersionCount({
-    //   db,
-    //   productId: req.params.productId,
-    //   orgId: req.orgId,
-    //   env: req.env,
-    // });
-    if (!product) {
-      throw new RecaseError({
-        message: `Product ${req.params.productId} not found`,
-        code: ErrCode.ProductNotFound,
-        statusCode: StatusCodes.NOT_FOUND,
-      });
-    }
+		// let numVersions = await ProductService.getProductVersionCount({
+		//   db,
+		//   productId: req.params.productId,
+		//   orgId: req.orgId,
+		//   env: req.env,
+		// });
+		if (!product) {
+			throw new RecaseError({
+				message: `Product ${req.params.productId} not found`,
+				code: ErrCode.ProductNotFound,
+				statusCode: StatusCodes.NOT_FOUND,
+			});
+		}
 
-    let [allVersions, latestVersion] = await Promise.all([
-      CusProdReadService.existsForProduct({
-        db,
-        productId: req.params.productId,
-      }),
-      CusProdReadService.existsForProduct({
-        db,
-        internalProductId: product.internal_id,
-      }),
-    ]);
+		let [allVersions, latestVersion] = await Promise.all([
+			CusProdReadService.existsForProduct({
+				db,
+				productId: req.params.productId,
+			}),
+			CusProdReadService.existsForProduct({
+				db,
+				internalProductId: product.internal_id,
+			}),
+		]);
 
-    // 2. Get cus products
+		// 2. Get cus products
 
-    res.status(200).send({
-      numVersion: product.version,
-      hasCusProducts: allVersions,
-      hasCusProductsLatest: latestVersion,
-    });
-  } catch (error) {
-    handleRequestError({
-      error,
-      req,
-      res,
-      action: "Get product info",
-    });
-  }
+		res.status(200).send({
+			numVersion: product.version,
+			hasCusProducts: allVersions,
+			hasCusProductsLatest: latestVersion,
+		});
+	} catch (error) {
+		handleRequestError({
+			error,
+			req,
+			res,
+			action: "Get product info",
+		});
+	}
 });
