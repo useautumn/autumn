@@ -37,6 +37,18 @@ export const createStripeCli = ({
   return new Stripe(decrypted);
 };
 
+export const createDecryptedStripeCli = ({
+  org,
+  env,
+  apiKey,
+}: {
+  org: Organization;
+  env: AppEnv;
+  apiKey: string;
+}) => {
+  return new Stripe(apiKey);
+};
+
 export const calculateMetered1Price = ({
   product,
   numEvents,
