@@ -566,10 +566,14 @@ export class CusProductService {
     db,
     productId,
     internalProductId,
+    orgId,
+    env,
   }: {
     db: DrizzleCli;
     productId?: string;
     internalProductId?: string;
+    orgId: string;
+    env: AppEnv;
   }) {
     if (productId) {
       let res = await db
@@ -577,9 +581,23 @@ export class CusProductService {
           internal_id: products.internal_id,
         })
         .from(products)
-        .where(eq(products.id, productId));
+        .where(
+          and(
+            eq(products.id, productId),
+            eq(products.org_id, orgId),
+            eq(products.env, env)
+          )
+        );
 
       let internalProductIds = res.map((r) => r.internal_id);
+
+      if (internalProductIds.length > 100) {
+        throw new RecaseError({
+          message: "Something went wrong... please try again later.",
+          code: ErrCode.ProductHasCustomers,
+          statusCode: 400,
+        });
+      }
 
       await db
         .delete(customerProducts)

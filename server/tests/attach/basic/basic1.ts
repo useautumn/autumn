@@ -81,11 +81,11 @@ describe(`${chalk.yellowBright("basic1: Testing attach free product")}`, () => {
 
     const entitled = (await AutumnCli.entitled(
       customerId,
-      features.metered1.id,
+      features.metered1.id
     )) as any;
 
     const metered1Balance = entitled.balances.find(
-      (balance: any) => balance.feature_id === features.metered1.id,
+      (balance: any) => balance.feature_id === features.metered1.id
     );
 
     expect(entitled.allowed).to.be.true;
