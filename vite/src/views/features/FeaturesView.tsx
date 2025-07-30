@@ -14,9 +14,13 @@ import CreateCreditSystem from "../credits/CreateCreditSystem";
 import { ToggleDisplayButton } from "@/components/general/ToggleDisplayButton";
 import ErrorScreen from "../general/ErrorScreen";
 import { Banknote, DollarSign } from "lucide-react";
+import { HamburgerMenu, MenuAction } from "@/components/general/table-components/HamburgerMenu";
+import { PageSectionHeader } from "@/components/general/PageSectionHeader";
 
 function FeaturesView({ env }: { env: AppEnv }) {
   const [showCredits, setShowCredits] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   // const [open, setOpen] = useState(false);
   // const [selectedFeature, setSelectedFeature] = useState<any>(null);
 
@@ -24,6 +28,9 @@ function FeaturesView({ env }: { env: AppEnv }) {
     url: `/features`,
     env: env,
     withAuth: true,
+    options: {
+      refreshInterval: 0,
+    },
   });
 
   const creditSystems = data?.features.filter(
@@ -56,27 +63,41 @@ function FeaturesView({ env }: { env: AppEnv }) {
         env,
         mutate,
         creditSystems: creditSystems,
+        showArchived,
+        setShowArchived,
+        dropdownOpen,
+        setDropdownOpen,
       }}
     >
-      <div className="p-6 flex flex-col gap-4 max-w-[1048px]">
-        <div>
-          <h1 className="text-t1 text-xl font-medium">Features</h1>
-          <div className="flex justify-between items-center">
-            <p className="text-sm text-t2">
-              Define the features of your application you want to charge for.
-            </p>
-            <ToggleDisplayButton
-              show={showCredits}
-              disabled={creditSystems.length > 0}
-              onClick={() => setShowCredits(!showCredits)}
-            >
-              <Banknote size={14} />
-              Credit Systems
-            </ToggleDisplayButton>
-          </div>
-        </div>
+      <div className="flex flex-col gap-4 h-fit relative w-full text-sm">
+        <h1 className="text-xl font-medium shrink-0 pt-6 pl-10">Features</h1>
+        <PageSectionHeader
+          title="Features"
+          titleComponent={
+            <span className="text-t2 px-1 rounded-md bg-stone-200">
+              {features?.length || 0}
+            </span>
+          }
+          addButton={
+            <>
+              <CreateFeatureDialog />
+              <HamburgerMenu
+                dropdownOpen={dropdownOpen}
+                setDropdownOpen={setDropdownOpen}
+                actions={[
+                  {
+                    type: "item",
+                    label: showArchived
+                      ? "Show Active Features"
+                      : "Show Archived Features",
+                    onClick: () => setShowArchived(!showArchived),
+                  },
+                ]}
+              />
+            </>
+          }
+        />
         <FeaturesTable />
-        <CreateFeatureDialog />
         {showCredits && (
           <div className="flex flex-col gap-4 h-fit mt-6">
             <div>
