@@ -109,12 +109,14 @@ productRouter.post("/data", async (req: any, res) => {
 
 productRouter.get("/data/deletion_text/:internal_product_id", async (req: any, res) => {
 	try {
-		let { db } = req;
+		let { db, orgId, env } = req;
 		let { internal_product_id } = req.params;
 
 		let deletionText = await ProductService.getDeletionText({
 			db,
 			internal_product_id,
+			orgId,
+			env,
 		});
 
 		console.log("deletionText", deletionText);
