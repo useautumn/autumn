@@ -72,7 +72,6 @@ export const ProductsTable = ({
 									separate products for any free plans, paid
 									plans and any add-on or top up products ☝️
 								</span>
-								)
 							</>
 						)}
 					</div>
