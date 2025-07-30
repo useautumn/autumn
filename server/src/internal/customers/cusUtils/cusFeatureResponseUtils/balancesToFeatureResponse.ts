@@ -69,6 +69,12 @@ export const featuresToObject = ({
 
     // console.log(`Feature ${featureId} list:`, relatedEnts);
 
+    let hasRollovers = relatedEnts.some((e) => notNullish(e.rollovers));
+    let rollovers = hasRollovers
+      ? (relatedEnts
+          .flatMap((e) => e.rollovers)
+          .filter(notNullish) as CusRollover[])
+      : undefined;
     let cusFeature: CusEntResponseV2 = {
       id: featureId,
       name: feature.name,
@@ -99,9 +105,7 @@ export const featuresToObject = ({
           }))
         : undefined,
 
-      rollovers: relatedEnts
-        .flatMap((e) => e.rollovers)
-        .filter(notNullish) as CusRollover[],
+      rollovers,
     };
 
     featureObject[featureId] = cusFeature;

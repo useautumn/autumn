@@ -36,8 +36,17 @@ const { db, client } = initDrizzle({ maxConnections: 5 });
 
 let orgSlugs = process.env.ORG_SLUGS!.split(",");
 const skipEmails = process.env.SKIP_EMAILS!.split(",");
-
-// orgSlugs = ["athenahq"];
+// "athenahq",
+// orgSlugs = ["sweep-ai-1739822644", "zero"];
+orgSlugs = [
+  // "circlemind-zero"
+  // 'zero',
+  // 'sweep-ai-1739822644',
+  // 'alex',
+  // 'supermemory',
+  // 'lingo',
+  // 'lucid',
+];
 
 const getSingleCustomer = async ({
   stripeCli,

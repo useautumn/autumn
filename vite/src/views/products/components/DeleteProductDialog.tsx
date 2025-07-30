@@ -54,7 +54,11 @@ export const DeleteProductDialog = ({
   const handleDelete = async () => {
     setDeleteLoading(true);
     try {
-      await ProductService.deleteProduct(axiosInstance, product.id);
+      await ProductService.deleteProduct(
+        axiosInstance,
+        product.id,
+        deleteAllVersions
+      );
       await mutate();
       setOpen(false);
     } catch (error) {
