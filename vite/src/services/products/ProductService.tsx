@@ -1,3 +1,4 @@
+import { notNullish } from "@/utils/genUtils";
 import axios, { AxiosInstance } from "axios";
 
 export class ProductService {
@@ -12,7 +13,7 @@ export class ProductService {
     data: any,
     version?: number
   ) {
-    const url = version 
+    const url = notNullish(version)
       ? `/v1/products/${productId}?version=${version}`
       : `/v1/products/${productId}`;
     await axiosInstance.post(url, data);
