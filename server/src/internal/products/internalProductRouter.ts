@@ -91,20 +91,10 @@ productRouter.post("/data", async (req: any, res) => {
 				}),
 			]);
 
-		console.log("Before sort", products.map((x) => x.name));
-
-		console.log("Log result", sortFullProducts({ products: getLatestProducts(products) }).map((x) => x.name));
-
-		console.log("After sort", products.map((x) => x.name));
-
-    let finalSort = sortFullProducts({products}).map((product) => {
-      return mapToProductV2({ product, features });
-    });
-
-    console.log("In place sort", finalSort.map((x) => x.name))
-
 		res.status(200).json({
-			products: finalSort,
+			products: sortFullProducts({ products }).map((product) => {
+				return mapToProductV2({ product, features });
+			}),
 			versionCounts: getProductVersionCounts(products),
 			features,
 			org: createOrgResponse(org),
@@ -113,6 +103,28 @@ productRouter.post("/data", async (req: any, res) => {
 		});
 	} catch (error) {
 		console.error("Failed to get products", error);
+		res.status(500).send(error);
+	}
+});
+
+productRouter.get("/data/deletion_text/:internal_product_id", async (req: any, res) => {
+	try {
+		let { db } = req;
+		let { internal_product_id } = req.params;
+
+		let deletionText = await ProductService.getDeletionText({
+			db,
+			internal_product_id,
+		});
+
+		console.log("deletionText", deletionText);
+
+		res.status(200).send({
+			customerName: deletionText[0]?.customerName,
+			totalCount: deletionText[0]?.totalCount,
+		});
+	} catch (error) {
+		console.error("Failed to get deletion text", error);
 		res.status(500).send(error);
 	}
 });
