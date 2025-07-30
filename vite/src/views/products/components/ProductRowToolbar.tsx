@@ -18,7 +18,7 @@ import { ToolbarButton } from "@/components/general/table-components/ToolbarButt
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { UpdateProductDialog } from "../UpdateProduct";
 import { CopyDialog } from "./CopyDialog";
-import { Copy, Delete, Pen } from "lucide-react";
+import { Copy, Delete, Pen, ArchiveRestore } from "lucide-react";
 import { DeleteProductDialog } from "./DeleteProductDialog";
 
 export const ProductRowToolbar = ({
@@ -122,9 +122,11 @@ export const ProductRowToolbar = ({
               }}
             >
               <div className="flex items-center justify-between w-full gap-2">
-                Delete
+                {product.archived ? 'Unarchive' : 'Delete'}
                 {deleteLoading ? (
                   <SmallSpinner />
+                ) : product.archived ? (
+                  <ArchiveRestore size={12} className="text-t3" />
                 ) : (
                   <Delete size={12} className="text-t3" />
                 )}
