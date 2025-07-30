@@ -10,14 +10,20 @@ export class FeatureService {
     db,
     orgId,
     env,
+    showOnlyArchived = false,
   }: {
     db: DrizzleCli;
     orgId: string;
     env: AppEnv;
+    showOnlyArchived?: boolean;
   }) {
     const features = await db.query.features.findMany({
       where: (features, { eq, and }) =>
-        and(eq(features.org_id, orgId), eq(features.env, env)),
+        and(
+          eq(features.org_id, orgId),
+          eq(features.env, env),
+          eq(features.archived, showOnlyArchived)
+        ),
 
       orderBy: (features, { desc }) => [desc(features.internal_id)],
     });
@@ -202,4 +208,5 @@ export class FeatureService {
       .delete(features)
       .where(and(eq(features.org_id, orgId), eq(features.env, env)));
   }
+
 }
