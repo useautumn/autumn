@@ -43,6 +43,8 @@ export const handleDeleteProduct = (req: any, res: any) =>
         CusProdReadService.getCountsForAllVersions({
           db,
           productId: productId,
+          orgId,
+          env,
         }),
       ]);
 

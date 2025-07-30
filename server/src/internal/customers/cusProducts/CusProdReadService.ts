@@ -1,4 +1,4 @@
-import { CusProductStatus, products } from "@autumn/shared";
+import { AppEnv, CusProductStatus, products } from "@autumn/shared";
 import { db, DrizzleCli } from "@/db/initDrizzle.js";
 import { customerProducts } from "@autumn/shared";
 import {
@@ -72,16 +72,26 @@ export class CusProdReadService {
   static async getCountsForAllVersions({
     db,
     productId,
+    orgId,
+    env,
   }: {
     db: DrizzleCli;
     productId: string;
+    orgId: string;
+    env: AppEnv;
   }) {
     let internalProductIds = await db
       .select({
         internal_id: products.internal_id,
       })
       .from(products)
-      .where(eq(products.id, productId));
+      .where(
+        and(
+          eq(products.id, productId),
+          eq(products.org_id, orgId),
+          eq(products.env, env)
+        )
+      );
 
     let internalProductIdsArray = internalProductIds.map(
       (item) => item.internal_id
