@@ -12,7 +12,7 @@ import { Item, Row } from "@/components/general/TableGrid";
 import { AdminHover } from "@/components/general/AdminHover";
 
 export const FeaturesTable = () => {
-  const { env, features, onboarding } = useFeaturesContext();
+  const { env, features, onboarding, showArchived } = useFeaturesContext();
   const navigate = useNavigate();
 
   const [open, setOpen] = useState(false);
@@ -42,7 +42,7 @@ export const FeaturesTable = () => {
         setSelectedFeature={setSelectedFeature}
       />
       {features && features.length > 0 ? (
-        <Row type="header" className="grid-cols-18 -mb-1">
+        <Row type="header" className="grid-cols-18 -mb-1 items-center">
           <Item className="col-span-4">Name</Item>
           <Item className="col-span-4 px-1">ID</Item>
           <Item className="col-span-3">Type</Item>
@@ -52,7 +52,9 @@ export const FeaturesTable = () => {
         </Row>
       ) : (
         <div className="flex justify-start items-center px-10 h-10 text-t3">
-          Define the features of your application you want to charge for.
+          {showArchived 
+            ? "You haven't archived any features yet." 
+            : "Define the features of your application you want to charge for."}
         </div>
       )}
 

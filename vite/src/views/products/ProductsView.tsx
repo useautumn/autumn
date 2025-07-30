@@ -28,6 +28,8 @@ function ProductsView({ env }: { env: AppEnv }) {
 	const [tab, setTab] = useState("products");
 	const [showArchived, setShowArchived] = useState(false);
 	const [dropdownOpen, setDropdownOpen] = useState(false);
+	const [showArchivedFeatures, setShowArchivedFeatures] = useState(false);
+	const [featuresDropdownOpen, setFeaturesDropdownOpen] = useState(false);
 	const [selectedProduct, setSelectedProduct] = useState<Product | null>(
 		null
 	);
@@ -48,9 +50,13 @@ function ProductsView({ env }: { env: AppEnv }) {
 	});
 
 	const { data: featuresData, mutate: mutateFeatures } = useAxiosSWR({
-		url: `/features`,
+		url: `/features?showArchived=${showArchivedFeatures}`,
 		env: env,
 		withAuth: true,
+		// queryKey: ["features", showArchivedFeatures],
+		// options: {
+			// refreshInterval: 0,
+		// },
 	});
 
 	useEffect(() => {
@@ -58,6 +64,12 @@ function ProductsView({ env }: { env: AppEnv }) {
 			setSelectedProduct(data.products[0]);
 		}
 	}, [data]);
+
+	useEffect(() => {
+		// Trigger refetch when showArchivedFeatures changes
+		mutateFeatures();
+		console.log("showArchivedFeatures", showArchivedFeatures, "mutated");
+	}, [showArchivedFeatures]);
 
 	const creditSystems =
 		featuresData?.features?.filter(
@@ -93,6 +105,10 @@ function ProductsView({ env }: { env: AppEnv }) {
 					dbConns: featuresData?.dbConns || [],
 					env,
 					mutate: mutateFeatures,
+					showArchived: showArchivedFeatures,
+					setShowArchived: setShowArchivedFeatures,
+					dropdownOpen: featuresDropdownOpen,
+					setDropdownOpen: setFeaturesDropdownOpen,
 				}}
 			>
 				<div className="flex flex-col gap-4 h-fit relative w-full text-sm">
@@ -172,8 +188,21 @@ function ProductsView({ env }: { env: AppEnv }) {
 										{featuresData?.features?.length || 0}
 									</span>
 								</div>
-								<div className="flex items-center gap-2">
+								<div className="flex items-center">
 									<CreateFeatureDialog />
+									<HamburgerMenu
+										dropdownOpen={featuresDropdownOpen}
+										setDropdownOpen={setFeaturesDropdownOpen}
+										actions={[
+											{
+												type: "item",
+												label: showArchivedFeatures
+													? "Show Active Features"
+													: "Show Archived Features",
+												onClick: () => setShowArchivedFeatures(!showArchivedFeatures),
+											},
+										]}
+									/>
 								</div>
 							</div>
 							<div className="flex flex-col gap-16">
