@@ -101,7 +101,7 @@ export const getUpgradeProductPreview = async ({
   branch: AttachBranch;
   now: number;
   withPrepaid?: boolean;
-  config?: AttachConfig;
+  config: AttachConfig;
 }) => {
   const { logtail: logger } = req;
 
@@ -122,6 +122,8 @@ export const getUpgradeProductPreview = async ({
   const curPreviewItems = await getItemsForCurProduct({
     stripeSubs,
     attachParams,
+    branch,
+    config,
     now,
     logger,
   });
@@ -148,6 +150,8 @@ export const getUpgradeProductPreview = async ({
     stripeSubs,
     logger,
     withPrepaid,
+    branch,
+    config,
   });
 
   const lastInterval = getFirstInterval({ prices: newProduct.prices });
@@ -171,6 +175,8 @@ export const getUpgradeProductPreview = async ({
       interval: attachParams.freeTrial ? undefined : lastInterval,
       logger,
       withPrepaid,
+      branch,
+      config,
     });
 
     dueNextCycle = {
@@ -236,6 +242,11 @@ export const getUpgradeProductPreview = async ({
 
   if (branch == AttachBranch.SameCustomEnts) {
     dueToday = undefined;
+  }
+
+  if (branch == AttachBranch.NewVersion && dueToday) {
+    dueToday.line_items = [];
+    dueToday.total = 0;
   }
 
   return {

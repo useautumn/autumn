@@ -76,7 +76,8 @@ export const RolloverConfigView = ({
 
       {item.config?.rollover && showRolloverConfig && (
         <div className="flex gap-3 w-full">
-          <div className="w-6/12 flex gap-1">
+          <div className="w-6/12 flex gap-1 items-center">
+            <p className="text-t3 w-16">up to</p>
             <Input
               value={rollover.max === null ? "Unlimited" : rollover.max}
               className="w-full"

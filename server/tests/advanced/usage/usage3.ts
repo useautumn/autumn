@@ -1,16 +1,8 @@
 import chalk from "chalk";
-import { advanceProducts, creditSystems } from "../../global.js";
+import { advanceProducts } from "../../global.js";
 import { AutumnCli } from "../../cli/AutumnCli.js";
-import {
-  checkUsageInvoiceAmount,
-  sendGPUEvents,
-} from "../../utils/advancedUsageUtils.js";
-import {
-  advanceClockForInvoice,
-  advanceTestClock,
-} from "../../utils/stripeUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { timeout } from "../../utils/genUtils.js";
+import { sendGPUEvents } from "../../utils/advancedUsageUtils.js";
+import { advanceTestClock } from "../../utils/stripeUtils.js";
 import { assert, expect } from "chai";
 import { Decimal } from "decimal.js";
 import { compareMainProduct } from "../../utils/compare.js";
@@ -26,7 +18,7 @@ const testCase = "usage3";
 const ASSERT_INVOICE_AMOUNT = true;
 
 describe(`${chalk.yellowBright(
-  "usage3: upgrade from GPU starter monthly to GPU pro monthly",
+  "usage3: upgrade from GPU starter monthly to GPU pro monthly"
 )}`, () => {
   const customerId = "usage3";
   let testClockId = "";
