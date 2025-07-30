@@ -269,6 +269,24 @@ export const handleUpdateFeature = async (req: any, res: any) =>
         });
       }
 
+      // If only archiving, skip other checks and just update
+      if (data.archived !== undefined && Object.keys(data).length === 1) {
+        let updatedFeature = await FeatureService.update({
+          db: req.db,
+          id: featureId,
+          orgId: req.orgId,
+          env: req.env,
+          updates: {
+            archived: data.archived,
+          },
+        });
+
+        if (res) {
+          res.status(200).json({ success: true, feature_id: featureId });
+        }
+        return;
+      }
+
       // 1. Check if changing type...
       let isChangingType = feature.type !== data.type;
       let isChangingId = feature.id !== data.id;
@@ -319,7 +337,7 @@ export const handleUpdateFeature = async (req: any, res: any) =>
           });
         }
 
-        if (isChangingUsageType) {
+        if (isChangingUsageType && data.config?.usage_type) {
           await handleFeatureUsageTypeChanged({
             db,
             feature,
@@ -327,7 +345,7 @@ export const handleUpdateFeature = async (req: any, res: any) =>
             entitlements,
             prices,
             creditSystems,
-            newUsageType: data.config?.usage_type,
+            newUsageType: data.config.usage_type,
           });
         }
       }
@@ -341,13 +359,15 @@ export const handleUpdateFeature = async (req: any, res: any) =>
           id: data.id !== undefined ? data.id : feature.id,
           name: data.name !== undefined ? data.name : feature.name,
           type: data.type !== undefined ? data.type : feature.type,
+          archived: data.archived !== undefined ? data.archived : feature.archived,
 
-          config:
-            feature.type == FeatureType.CreditSystem
-              ? validateCreditSystem(data.config)
-              : feature.type == FeatureType.Metered
-                ? validateMeteredConfig(data.config)
-                : data.config,
+          config: data.config !== undefined 
+            ? (feature.type == FeatureType.CreditSystem
+                ? validateCreditSystem(data.config)
+                : feature.type == FeatureType.Metered
+                  ? validateMeteredConfig(data.config)
+                  : data.config)
+            : feature.config,
         },
       });
 
