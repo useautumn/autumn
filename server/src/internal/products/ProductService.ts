@@ -446,9 +446,13 @@ export class ProductService {
 	static async getDeletionText({
 		db,
 		internal_product_id,
+		orgId,
+		env,
 	}: {
 		db: DrizzleCli;
 		internal_product_id: string;
+		orgId: string;
+		env: AppEnv;
 	}) {
 		let res = await db
 			.select({
@@ -461,7 +465,11 @@ export class ProductService {
 				eq(customerProducts.internal_customer_id, customers.internal_id)
 			)
 			.where(
-				eq(customerProducts.internal_product_id, internal_product_id)
+				and(
+					eq(customerProducts.internal_product_id, internal_product_id),
+					eq(customers.env, env),
+					eq(customers.org_id, orgId)
+				)
 			)
 			.limit(1);
 
