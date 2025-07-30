@@ -27,6 +27,8 @@ import {
 } from "@/components/ui/select";
 import { getBackendErr } from "@/utils/genUtils";
 import { toast } from "sonner";
+import { useEffect } from "react";
+
 
 export const DeleteProductDialog = ({
 	product,
@@ -50,6 +52,24 @@ export const DeleteProductDialog = ({
 		},
 	});
 
+	const { data: deletionText, isLoading: isDeletionTextLoading, mutate: mutateDeletionText } =
+		useAxiosSWR({
+			url: `/products/data/deletion_text/${product.internal_id}`,
+			options: {
+				refreshInterval: 0,
+			},
+			// queryKey: [product.internal_id],
+		});
+
+	console.log("deletionText", deletionText);
+	console.log("isDeletionTextLoading", isDeletionTextLoading);
+
+	useEffect(() => {
+		if (open) {
+			mutateDeletionText();
+		}
+	}, [open, product.internal_id]);
+
 	const [deleteAllVersions, setDeleteAllVersions] = useState(false);
 
 	const handleDelete = async () => {
@@ -70,16 +90,20 @@ export const DeleteProductDialog = ({
 	const handleArchive = async () => {
 		setArchiveLoading(true);
 		try {
-			if(!deleteAllVersions) {
+			if (!deleteAllVersions) {
 				await ProductService.updateProduct(axiosInstance, product.id, {
 					archived: true,
 				});
 			} else {
-				for(let i = 0; i < productInfo.numVersion; i++) {
-					await ProductService.updateProduct(axiosInstance, product.id, {
-						archived: true,
-						version: i,
-					});
+				for (let i = 0; i < productInfo.numVersion; i++) {
+					await ProductService.updateProduct(
+						axiosInstance,
+						product.id,
+						{
+							archived: true,
+							version: i,
+						}
+					);
 				}
 			}
 			await mutate();
@@ -104,16 +128,27 @@ export const DeleteProductDialog = ({
 		const isMultipleVersions = productInfo?.numVersion > 1;
 		const versionText = deleteAllVersions ? "product" : "version";
 		const productText = isMultipleVersions ? versionText : "product";
-		
+		let stringBuilder = "";
+
 		if (env == AppEnv.Live) {
 			if (hasCusProducts) {
-				return `There are customers on this ${productText}. Please delete them first before deleting the ${productText}. Would you like to archive the product instead?`;
+				if (deletionText?.customerName && deletionText?.totalCount) {
+					stringBuilder += `${deletionText.customerName} and ${deletionText.totalCount - 1 || 1} other customers are on this ${productText}. Please delete them first before deleting the ${productText}. Would you like to archive the product instead?`;
+				} else {
+					stringBuilder += `There are customers on this ${productText}. Please delete them first before deleting the ${productText}. Would you like to archive the product instead?`;
+				}
+				return stringBuilder;
 			} else {
 				return `Are you sure you want to delete this ${productText}? This action cannot be undone. You can also archive the ${productText} instead.`;
 			}
 		} else {
 			if (hasCusProducts) {
-				return `There are customers on this ${productText}. Deleting this ${productText} will remove it from any customers. Are you sure you want to continue? You can also archive the product instead.`;
+				if (deletionText?.customerName && deletionText?.totalCount) {
+					stringBuilder += `${deletionText.customerName} and ${deletionText.totalCount - 1 || 1} other customers are on this ${productText}. Deleting this ${productText} will remove it from any customers. Are you sure you want to continue? You can also archive the product instead.`;
+				} else {
+					stringBuilder += `There are customers on this ${productText}. Deleting this ${productText} will remove it from any customers. Are you sure you want to continue? You can also archive the product instead.`;
+				}
+				return stringBuilder;
 			} else {
 				return `Are you sure you want to delete this ${productText}? This action cannot be undone.`;
 			}
