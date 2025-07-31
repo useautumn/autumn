@@ -12,7 +12,11 @@ import { Save, PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-export const SaveViewPopover = () => {
+interface SaveViewPopoverProps {
+  onClose?: () => void;
+}
+
+export const SaveViewPopover = ({ onClose }: SaveViewPopoverProps) => {
   const [name, setName] = useState("");
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -45,6 +49,7 @@ export const SaveViewPopover = () => {
       toast.success(`View "${name}" saved successfully`);
       setName("");
       setOpen(false);
+      onClose?.(); // Close the main filter modal
       mutateSavedViews(); // Refresh the views list
     } catch (error) {
       console.error(error);
@@ -92,7 +97,10 @@ export const SaveViewPopover = () => {
             <Button
               variant="ghost"
               className="!h-6.5 !mt-0 text-xs"
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                setOpen(false);
+                onClose?.(); // Close the main filter modal
+              }}
             >
               Cancel
             </Button>
