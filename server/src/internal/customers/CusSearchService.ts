@@ -108,9 +108,6 @@ export class CusSearchService {
         const [productId, version] = selection.split(":");
         return { productId, version: parseInt(version) };
       });
-      console.log("Product version filters:", productVersionFilters);
-      console.log("Raw version filter:", filters.version);
-      console.log("Has product filters:", productVersionFilters.length > 0);
     }
     
     // Legacy support for product_id field (if still used)
@@ -191,13 +188,6 @@ export class CusSearchService {
         : undefined,
     );
     
-    console.log("Where clause parts:", {
-      shouldApplyActiveFilter,
-      hasFiltersDrizzle: !!filtersDrizzle,
-      hasCusFilter: !!cusFilter,
-      hasLastItem: !!(resolvedLastItem && resolvedLastItem.internal_id)
-    });
-
     // Execute query with appropriate pagination
     const hasProductFilters = productVersionFilters.length > 0 || productIds.length > 0;
     
