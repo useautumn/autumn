@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { DialogTrigger } from "@/components/ui/dialog";
-import { AppEnv, Product } from "@autumn/shared";
+import { AppEnv, Product, ProductCounts } from "@autumn/shared";
 import { useProductsContext } from "../ProductsContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAxiosSWR } from "@/services/useAxiosSwr";
@@ -35,10 +35,12 @@ export const DeleteProductDialog = ({
   product,
   open,
   setOpen,
+  productCounts,
 }: {
   product: Product;
   open: boolean;
   setOpen: (open: boolean) => void;
+  productCounts?: ProductCounts;
 }) => {
   const { mutate } = useProductsContext();
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -53,23 +55,22 @@ export const DeleteProductDialog = ({
     },
   });
 
-  const {
-    data: deletionText,
-    isLoading: isDeletionTextLoading,
-    mutate: mutateDeletionText,
-  } = useAxiosSWR({
-    url: `/products/data/deletion_text/${product.internal_id}`,
-    options: {
-      refreshInterval: 0,
-    },
-    // queryKey: [product.internal_id],
-  });
+  // const {
+  //   data: deletionText,
+  //   isLoading: isDeletionTextLoading,
+  //   mutate: mutateDeletionText,
+  // } = useAxiosSWR({
+  //   url: `/products/data/deletion_text/${product.id}`,
+  //   options: {
+  //     refreshInterval: 0,
+  //   },
+  // });
 
-  useEffect(() => {
-    if (open) {
-      mutateDeletionText();
-    }
-  }, [open, product.internal_id]);
+  // useEffect(() => {
+  //   if (open) {
+  //     mutateDeletionText();
+  //   }
+  // }, [open, product.internal_id]);
 
   const [deleteAllVersions, setDeleteAllVersions] = useState(false);
 
@@ -154,73 +155,88 @@ export const DeleteProductDialog = ({
   const hasCusProductsAll = productInfo?.hasCusProducts;
   const hasCusProductsLatest = productInfo?.hasCusProductsLatest;
 
-  const custsPreventingDeletion = deleteAllVersions
+  const hasCusProducts = deleteAllVersions
     ? hasCusProductsAll
     : hasCusProductsLatest;
 
   const getDeleteMessage = () => {
     if (product.archived) {
       return `This product is currently archived and hidden from the UI. Would you like to unarchive it to make it visible again?\n
-			Note: If there are multiple versions, this will unarchive all versions at once. If you only want to unarchive a specific version, please select the product and unarchive the specific version you want.`;
+			Note: If there are multiple versions, this will unarchive all versions at once.`;
     }
 
     const isMultipleVersions = productInfo?.numVersion > 1;
     const versionText = deleteAllVersions ? "product" : "version";
     const productText = isMultipleVersions ? versionText : "product";
-
+    // Deleting this ${productText} will remove it from their accounts. Are you sure you want to continue? You can also archive the product instead.
     const messageTemplates = {
-      live: {
-        withCustomers: {
-          single: (customerName: string, productText: string) =>
-            `${customerName} is on this ${productText}. Please delete them first before deleting the ${productText}. Would you like to archive the product instead?`,
-          multiple: (
-            customerName: string,
-            otherCount: number,
-            productText: string
-          ) =>
-            `${customerName} and ${otherCount} other customer${otherCount > 1 ? "s" : ""} are on this ${productText}. Please delete them first before deleting the ${productText}. Would you like to archive the product instead?`,
-          fallback: (productText: string) =>
-            `There are customers on this ${productText}. Please delete them first before deleting the ${productText}. Would you like to archive the product instead?`,
-        },
-        withoutCustomers: (productText: string) =>
-          `Are you sure you want to delete this ${productText}? This action cannot be undone. You can also archive the ${productText} instead.`,
+      withCustomers: {
+        single: (customerName: string, productText: string) =>
+          `${customerName} is on this ${productText}. Are you sure you want to archive it?`,
+        multiple: (
+          customerName: string,
+          otherCount: number,
+          productText: string
+        ) =>
+          `${customerName} and ${otherCount} other customer${otherCount > 1 ? "s" : ""} are on this ${productText}. Are you sure you want to archive this product? 
+          
+          `,
+        fallback: (productText: string) =>
+          `There are customers on this ${productText}. Deleting this ${productText} will remove it from their accounts. Are you sure you want to continue? You can also archive the product instead.`,
       },
-      sandbox: {
-        withCustomers: {
-          single: (customerName: string, productText: string) =>
-            `${customerName} is on this ${productText}. Deleting this ${productText} will remove it from ${customerName}'s account. Are you sure you want to continue? You can also archive the product instead.`,
-          multiple: (
-            customerName: string,
-            otherCount: number,
-            productText: string
-          ) =>
-            `${customerName} and ${otherCount} other customer${otherCount > 1 ? "s" : ""} are on this ${productText}. Deleting this ${productText} will remove it from their accounts. Are you sure you want to continue? You can also archive the product instead.`,
-          fallback: (productText: string) =>
-            `There are customers on this ${productText}. Deleting this ${productText} will remove it from their accounts. Are you sure you want to continue? You can also archive the product instead.`,
-        },
-        withoutCustomers: (productText: string) =>
-          `Are you sure you want to delete this ${productText}? This action cannot be undone.`,
-      },
+      withoutCustomers: (productText: string) =>
+        `Are you sure you want to delete this ${productText}? This action cannot be undone.`,
+      // live: {
+      //   withCustomers: {
+      //     single: (customerName: string, productText: string) =>
+      //       `${customerName} is on this ${productText}. Please delete them first before deleting the ${productText}. Would you like to archive the product instead?`,
+      //     multiple: (
+      //       customerName: string,
+      //       otherCount: number,
+      //       productText: string
+      //     ) =>
+      //       `${customerName} and ${otherCount} other customer${otherCount > 1 ? "s" : ""} are on this ${productText}. Please delete them first before deleting the ${productText}. Would you like to archive the product instead?`,
+      //     fallback: (productText: string) =>
+      //       `There are customers on this ${productText}. Please delete them first before deleting the ${productText}. Would you like to archive the product instead?`,
+      //   },
+      //   withoutCustomers: (productText: string) =>
+      //     `Are you sure you want to delete this ${productText}? This action cannot be undone. You can also archive the ${productText} instead.`,
+      // },
+      // sandbox: {
+      //   withCustomers: {
+      //     single: (customerName: string, productText: string) =>
+      //       `${customerName} is on this ${productText}. Deleting this ${productText} will remove it from ${customerName}'s account. Are you sure you want to continue? You can also archive the product instead.`,
+      //     multiple: (
+      //       customerName: string,
+      //       otherCount: number,
+      //       productText: string
+      //     ) =>
+      //       `${customerName} and ${otherCount} other customer${otherCount > 1 ? "s" : ""} are on this ${productText}. Deleting this ${productText} will remove it from their accounts. Are you sure you want to continue? You can also archive the product instead.`,
+      //     fallback: (productText: string) =>
+      //       `There are customers on this ${productText}. Deleting this ${productText} will remove it from their accounts. Are you sure you want to continue? You can also archive the product instead.`,
+      //   },
+      //   withoutCustomers: (productText: string) =>
+      //     `Are you sure you want to delete this ${productText}? This action cannot be undone.`,
+      // },
     };
 
-    const envKey = env === AppEnv.Live ? "live" : "sandbox";
-    const templates = messageTemplates[envKey];
+    const templates = messageTemplates;
 
-    if (custsPreventingDeletion) {
-      if (deletionText?.customerName && deletionText?.totalCount) {
-        const totalCount = parseInt(deletionText.totalCount);
+    if (hasCusProducts) {
+      if (productInfo?.customerName && productInfo?.totalCount) {
+        const totalCount = parseInt(productInfo.totalCount);
 
         if (isNaN(totalCount) || totalCount <= 0) {
           return templates.withCustomers.fallback(productText);
         } else if (totalCount === 1) {
           return templates.withCustomers.single(
-            deletionText.customerName,
+            productInfo.customerName,
             productText
           );
         } else {
           const otherCount = totalCount - 1;
           return templates.withCustomers.multiple(
-            deletionText.customerName,
+            productInfo.customerName,
             otherCount,
             productText
           );
@@ -228,6 +244,7 @@ export const DeleteProductDialog = ({
       } else {
         return templates.withCustomers.fallback(productText);
       }
+      return "";
     } else {
       return templates.withoutCustomers(productText);
     }
@@ -256,7 +273,7 @@ export const DeleteProductDialog = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="latest">Delete latest version</SelectItem>
-              <SelectItem value="all">Delete all versions</SelectItem>
+              <SelectItem value="all">Archive product</SelectItem>
             </SelectContent>
           </Select>
         )}
@@ -274,24 +291,34 @@ export const DeleteProductDialog = ({
           </p>
         </div>
         <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={handleArchive}
-            isLoading={archiveLoading}
-          >
-            {product.archived ? "Unarchive" : "Archive"}
-          </Button>
+          {product.archived && (
+            <Button
+              variant="outline"
+              onClick={handleArchive}
+              isLoading={archiveLoading}
+            >
+              Unarchive
+            </Button>
+          )}
+          {hasCusProducts && !product.archived && (
+            <Button
+              variant="outline"
+              onClick={handleArchive}
+              isLoading={archiveLoading}
+            >
+              Archive
+            </Button>
+          )}
 
-          {!product.archived &&
-            (!custsPreventingDeletion || env === AppEnv.Sandbox) && (
-              <Button
-                variant="destructive"
-                onClick={handleDelete}
-                isLoading={deleteLoading}
-              >
-                Delete
-              </Button>
-            )}
+          {!hasCusProducts && !product.archived && (
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              isLoading={deleteLoading}
+            >
+              Delete
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

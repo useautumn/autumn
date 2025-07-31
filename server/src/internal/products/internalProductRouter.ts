@@ -34,7 +34,7 @@ productRouter.get("/data", async (req: any, res) => {
           orgId: req.orgId,
           env: req.env,
           returnAll: true,
-          showOnlyArchived: false,
+          archived: false,
         }),
         FeatureService.getFromReq(req),
         OrgService.getFromReq(req),
@@ -70,7 +70,6 @@ productRouter.post("/data", async (req: any, res) => {
   try {
     let { db } = req;
     let { showArchived } = req.body;
-    console.log("showArchived", showArchived);
 
     const [products, features, org, coupons, rewardPrograms] =
       await Promise.all([
@@ -79,7 +78,7 @@ productRouter.post("/data", async (req: any, res) => {
           orgId: req.orgId,
           env: req.env,
           returnAll: true,
-          showOnlyArchived: showArchived,
+          archived: showArchived,
         }),
         FeatureService.getFromReq(req),
         OrgService.getFromReq(req),
@@ -106,31 +105,6 @@ productRouter.post("/data", async (req: any, res) => {
     res.status(500).send(error);
   }
 });
-
-productRouter.get(
-  "/data/deletion_text/:internal_product_id",
-  async (req: any, res) => {
-    try {
-      let { db, orgId, env } = req;
-      let { internal_product_id } = req.params;
-
-      let deletionText = await ProductService.getDeletionText({
-        db,
-        internal_product_id,
-        orgId,
-        env,
-      });
-
-      res.status(200).send({
-        customerName: deletionText[0]?.customerName,
-        totalCount: deletionText[0]?.totalCount,
-      });
-    } catch (error) {
-      console.error("Failed to get deletion text", error);
-      res.status(500).send(error);
-    }
-  }
-);
 
 productRouter.get("/counts", async (req: any, res) => {
   try {
@@ -323,12 +297,6 @@ productRouter.get("/:productId/info", async (req: any, res: any) => {
       env: req.env,
     });
 
-    // let numVersions = await ProductService.getProductVersionCount({
-    //   db,
-    //   productId: req.params.productId,
-    //   orgId: req.orgId,
-    //   env: req.env,
-    // });
     if (!product) {
       throw new RecaseError({
         message: `Product ${req.params.productId} not found`,
@@ -337,7 +305,7 @@ productRouter.get("/:productId/info", async (req: any, res: any) => {
       });
     }
 
-    let [allVersions, latestVersion] = await Promise.all([
+    let [allVersions, latestVersion, deletionText] = await Promise.all([
       CusProdReadService.existsForProduct({
         db,
         productId: req.params.productId,
@@ -345,6 +313,12 @@ productRouter.get("/:productId/info", async (req: any, res: any) => {
       CusProdReadService.existsForProduct({
         db,
         internalProductId: product.internal_id,
+      }),
+      ProductService.getDeletionText({
+        db,
+        productId: req.params.productId,
+        orgId: req.orgId,
+        env: req.env,
       }),
     ]);
 
@@ -354,6 +328,9 @@ productRouter.get("/:productId/info", async (req: any, res: any) => {
       numVersion: product.version,
       hasCusProducts: allVersions,
       hasCusProductsLatest: latestVersion,
+      customerName:
+        deletionText[0]?.name || deletionText[0]?.email || deletionText[0]?.id,
+      totalCount: deletionText[0]?.totalCount,
     });
   } catch (error) {
     handleRequestError({
