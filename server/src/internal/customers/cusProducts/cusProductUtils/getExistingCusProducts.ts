@@ -5,6 +5,7 @@ import { CusProductStatus } from "@autumn/shared";
 import { FullCusProduct } from "@autumn/shared";
 
 import { Product } from "@autumn/shared";
+import { ACTIVE_STATUSES } from "../CusProductService.js";
 
 export const getExistingCusProducts = ({
   product,
@@ -45,6 +46,8 @@ export const getExistingCusProducts = ({
       ? cp.internal_entity_id === internalEntityId
       : nullish(cp.internal_entity_id);
 
+    const isActive = ACTIVE_STATUSES.includes(cp.status);
+
     return idMatch && entityMatch;
   });
 
@@ -55,7 +58,7 @@ export const getExistingCusProducts = ({
       !cp.product.is_add_on &&
       (internalEntityId
         ? cp.internal_entity_id === internalEntityId
-        : nullish(cp.internal_entity_id)),
+        : nullish(cp.internal_entity_id))
   );
 
   return { curMainProduct, curSameProduct, curScheduledProduct };
