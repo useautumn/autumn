@@ -25,6 +25,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { getRewardCat } from "./rewardUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
+import { deleteCusCache } from "../customers/cusCache/updateCachedCus.js";
 
 export const generateReferralCode = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -58,7 +59,7 @@ export const triggerRedemption = async ({
   redemption: RewardRedemption;
 }) => {
   logger.info(
-    `Triggering redemption ${redemption.id} for referral code ${referralCode.code}`,
+    `Triggering redemption ${redemption.id} for referral code ${referralCode.code}`
   );
 
   let applyToCustomer = await CusService.getByInternalId({
@@ -89,7 +90,7 @@ export const triggerRedemption = async ({
 
   let stripeCusId = applyToCustomer.processor.id;
   let stripeCus = (await stripeCli.customers.retrieve(
-    stripeCusId,
+    stripeCusId
   )) as Stripe.Customer;
 
   let applied = false;
@@ -210,6 +211,13 @@ export const triggerFreeProduct = async ({
       logger,
     });
     logger.info(`✅ Added ${fullProduct.name} to redeemer`);
+
+    await deleteCusCache({
+      db,
+      customerId: fullRedeemer.id!,
+      org,
+      env,
+    });
   }
 
   if (addToReferrer) {
@@ -221,6 +229,12 @@ export const triggerFreeProduct = async ({
         cusProducts: fullReferrer.customer_products,
       },
       logger,
+    });
+    await deleteCusCache({
+      db,
+      customerId: fullReferrer.id!,
+      org,
+      env,
     });
     logger.info(`✅ Added ${fullProduct.name} to referrer`);
   }
