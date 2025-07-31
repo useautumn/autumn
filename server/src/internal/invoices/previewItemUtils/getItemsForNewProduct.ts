@@ -11,6 +11,9 @@ import {
   getFeatureInvoiceDescription,
   UsagePriceConfig,
   UsageModel,
+  AttachConfig,
+  AttachBranch,
+  ProrationBehavior,
 } from "@autumn/shared";
 import { AttachParams } from "../../customers/cusProducts/AttachParams.js";
 import {
@@ -123,6 +126,8 @@ export const getItemsForNewProduct = async ({
   stripeSubs,
   logger,
   withPrepaid = false,
+  branch,
+  config,
 }: {
   newProduct: FullProduct;
   attachParams: AttachParams;
@@ -137,6 +142,8 @@ export const getItemsForNewProduct = async ({
   stripeSubs?: Stripe.Subscription[];
   logger: any;
   withPrepaid?: boolean;
+  branch: AttachBranch;
+  config: AttachConfig;
 }) => {
   const { org, features } = attachParams;
   now = now || Date.now();
@@ -246,7 +253,7 @@ export const getItemsForNewProduct = async ({
     attachParams,
   });
 
-  const { newItems } = await getContUseInvoiceItems({
+  let { newItems } = await getContUseInvoiceItems({
     cusProduct,
     stripeSubs,
     attachParams,
