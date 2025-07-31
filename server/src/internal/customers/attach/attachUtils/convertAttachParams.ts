@@ -1,5 +1,6 @@
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
+import { CusProductStatus } from "@autumn/shared";
 
 export const attachParamsToCurCusProduct = ({
   attachParams,
