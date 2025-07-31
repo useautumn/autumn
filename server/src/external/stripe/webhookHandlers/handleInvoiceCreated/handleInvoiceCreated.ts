@@ -77,7 +77,7 @@ const handleInArrearProrated = async ({
 
   let feature = cusEnt.entitlement.feature;
   logger.info(
-    `Handling invoice.created for in arrear prorated, feature: ${feature.id}`,
+    `Handling invoice.created for in arrear prorated, feature: ${feature.id}`
   );
 
   let deletedEntities = await EntityService.list({
@@ -93,12 +93,12 @@ const handleInArrearProrated = async ({
   }
 
   logger.info(
-    `✨ Handling in arrear prorated, customer ${customer.name}, org: ${org.slug}`,
+    `✨ Handling in arrear prorated, customer ${customer.name}, org: ${org.slug}`
   );
 
   logger.info(
     `Deleting entities, feature ${feature.id}, customer ${customer.id}, org ${org.slug}`,
-    deletedEntities,
+    deletedEntities
   );
 
   // Get linked cus ents
@@ -112,7 +112,7 @@ const handleInArrearProrated = async ({
     }
 
     logger.info(
-      `Linked cus ent: ${linkedCusEnt.feature_id}, isLinked: ${isLinked}`,
+      `Linked cus ent: ${linkedCusEnt.feature_id}, isLinked: ${isLinked}`
     );
 
     // Delete cus ent ids
@@ -136,7 +136,7 @@ const handleInArrearProrated = async ({
     console.log(`Updated ${updated.length} cus ents`);
 
     logger.info(
-      `Feature: ${feature.id}, customer: ${customer.id}, deleted entities from cus ent`,
+      `Feature: ${feature.id}, customer: ${customer.id}, deleted entities from cus ent`
     );
     linkedCusEnt.entities = newEntities;
   }
@@ -150,7 +150,7 @@ const handleInArrearProrated = async ({
   logger.info(
     `Feature: ${feature.id}, Deleted ${
       deletedEntities.length
-    }, entities: ${deletedEntities.map((e) => `${e.id}`).join(", ")}`,
+    }, entities: ${deletedEntities.map((e) => `${e.id}`).join(", ")}`
   );
 
   // Increase balance
@@ -229,7 +229,7 @@ export const sendUsageAndReset = async ({
 
     if (billingType == BillingType.UsageInArrear) {
       logger.info(
-        `✨ Handling usage prices for ${customer.name || customer.id}, org: ${org.slug}`,
+        `✨ Handling usage prices for ${customer.name || customer.id}, org: ${org.slug}`
       );
 
       await handleUsagePrices({
@@ -306,13 +306,13 @@ export const handleInvoiceCreated = async ({
 
     if (activeProducts.length == 0) {
       logger.warn(
-        `Stripe invoice.created -- no active products found (${org.slug})`,
+        `Stripe invoice.created -- no active products found (${org.slug})`
       );
       return;
     }
 
     let internalEntityId = activeProducts.find(
-      (p) => p.internal_entity_id,
+      (p) => p.internal_entity_id
     )?.internal_entity_id;
 
     let features = await FeatureService.list({
@@ -330,7 +330,7 @@ export const handleInvoiceCreated = async ({
         });
 
         let feature = features.find(
-          (f) => f.internal_id == entity?.internal_feature_id,
+          (f) => f.internal_id == entity?.internal_feature_id
         );
 
         let entDetails = "";

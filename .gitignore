@@ -96,3 +96,9 @@ server/test.sh
 bun.lock
 bun.lockb
 .dev.vars
+
+supabase/
+
+# To load supabase
+# 1. Start supabase locally
+# 2. Load files

@@ -13,7 +13,13 @@ import {
   getBillingType,
   getPriceEntitlement,
 } from "@/internal/products/prices/priceUtils.js";
-import { BillingType, PreviewLineItem } from "@autumn/shared";
+import {
+  AttachBranch,
+  AttachConfig,
+  BillingType,
+  PreviewLineItem,
+  ProrationBehavior,
+} from "@autumn/shared";
 import { priceToInvoiceDescription } from "../invoiceFormatUtils.js";
 import { formatUnixToDate } from "@/utils/genUtils.js";
 import { formatAmount } from "@/utils/formatUtils.js";
@@ -26,11 +32,15 @@ import { isTrialing } from "@/internal/customers/cusProducts/cusProductUtils.js"
 export const getItemsForCurProduct = async ({
   stripeSubs,
   attachParams,
+  branch,
+  config,
   now,
   logger,
 }: {
   stripeSubs: Stripe.Subscription[];
   attachParams: AttachParams;
+  branch: AttachBranch;
+  config: AttachConfig;
   now: number;
   logger: any;
 }) => {
