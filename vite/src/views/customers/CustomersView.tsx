@@ -16,7 +16,7 @@ import CreateCustomer from "./CreateCustomer";
 import { SearchBar } from "./SearchBar";
 import LoadingScreen from "../general/LoadingScreen";
 import FilterButton from "./FilterButton";
-import { SavedDashboardsDropdown } from "./SavedDashboardsDropdown";
+import { SavedViewsDropdown } from "./SavedViewsDropdown";
 import SmallSpinner from "@/components/general/SmallSpinner";
 import {
 	useQueryStates,
@@ -51,8 +51,8 @@ function CustomersView({ env }: { env: AppEnv }) {
 		env,
 	});
 
-	const { data: dashboardsData, mutate: mutateDashboards } = useAxiosSWR({
-		url: "/v1/dashboards",
+	const { data: savedViewsData, mutate: mutateSavedViews } = useAxiosSWR({
+		url: "/saved_views",
 		env,
 	});
 
@@ -209,7 +209,7 @@ function CustomersView({ env }: { env: AppEnv }) {
 				products: productsData?.products,
 				versionCounts: productsData?.versionCounts,
 				setQueryStates,
-				mutateDashboards,
+				mutateSavedViews,
 			}}
 		>
 			<div className="flex flex-col gap-4 h-fit relative w-full">
@@ -275,9 +275,11 @@ function CustomersView({ env }: { env: AppEnv }) {
 										{data?.totalCount}
 									</p>
 								</div>
-								<div className="border-r px-4 flex items-center">
-									<SavedDashboardsDropdown />
-								</div>
+								{savedViewsData?.views?.length > 0 && (
+									<div className="border-r pr-4 pl-2 flex items-center">
+										<SavedViewsDropdown />
+									</div>
+								)}
 							</div>
 						</div>
 						<div className="flex gap-4">

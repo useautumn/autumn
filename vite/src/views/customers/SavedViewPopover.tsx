@@ -12,16 +12,16 @@ import { Save, PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-export const SaveDashboardPopover = () => {
+export const SaveViewPopover = () => {
   const [name, setName] = useState("");
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const axiosInstance = useAxiosInstance();
-  const { mutateDashboards } = useCustomersContext();
+  const { mutateSavedViews } = useCustomersContext();
 
   const handleSave = async () => {
     if (!name.trim()) {
-      toast.error("Please enter a dashboard name");
+      toast.error("Please enter a view name");
       return;
     }
 
@@ -37,18 +37,18 @@ export const SaveDashboardPopover = () => {
       const paramsString = currentParams.toString();
       const encodedParams = btoa(paramsString);
 
-      await axiosInstance.post("/v1/dashboards/save", {
+      await axiosInstance.post("/saved_views/save", {
         name: name.trim(),
         filters: encodedParams,
       });
 
-      toast.success(`Dashboard "${name}" saved successfully`);
+      toast.success(`View "${name}" saved successfully`);
       setName("");
       setOpen(false);
-      mutateDashboards(); // Refresh the dashboards list
+      mutateSavedViews(); // Refresh the views list
     } catch (error) {
       console.error(error);
-      toast.error(getBackendErr(error, "Failed to save dashboard"));
+      toast.error(getBackendErr(error, "Failed to save view"));
     } finally {
       setLoading(false);
     }
@@ -65,21 +65,21 @@ export const SaveDashboardPopover = () => {
       <PopoverContent
         align="end"
         className="border border-zinc-200 bg-stone-50 flex flex-col gap-3 pt-3"
-        onOpenAutoFocus={(e) => e.preventDefault()}
-        onCloseAutoFocus={(e) => e.preventDefault()}
+        // onOpenAutoFocus={(e) => e.preventDefault()}
+        // onCloseAutoFocus={(e) => e.preventDefault()}
         onEscapeKeyDown={() => setOpen(false)}
         onPointerDownOutside={() => setOpen(false)}
-        onFocusOutside={(e) => e.preventDefault()}
+        // onFocusOutside={(e) => e.preventDefault()}
       >
         <div className="flex items-center gap-1 text-t3">
           <Save size={12} />
-          <p className="text-t3 text-sm">Save dashboard</p>
+          <p className="text-t3 text-sm">Save view</p>
         </div>
 
         <div className="flex flex-col gap-2">
           <Input
             className="h-7"
-            placeholder="Dashboard name"
+            placeholder="View name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => {

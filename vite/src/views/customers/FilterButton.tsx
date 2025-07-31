@@ -12,11 +12,12 @@ import {
 import { useCustomersContext } from "./CustomersContext";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { Check, ListFilter, X } from "lucide-react";
-import { SaveDashboardPopover } from "./SaveDashboardPopover";
-import { SavedDashboardsDropdown } from "./SavedDashboardsDropdown";
+import { SaveViewPopover } from "./SavedViewPopover";
+import { useState } from "react";
 
 function FilterButton() {
   const { setFilters } = useCustomersContext();
+  const [open, setOpen] = useState(false);
 
   const clearFilters = () => {
     setFilters({
@@ -26,8 +27,12 @@ function FilterButton() {
     });
   };
 
+  const closeFilterModal = () => {
+    setOpen(false);
+  };
+
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <RenderFilterTrigger />
       <DropdownMenuContent className="w-56" align="start">
         <FilterStatus />
@@ -36,10 +41,8 @@ function FilterButton() {
         <div className="flex items-stretch px-0 py-0 gap-2">
           <DropdownMenuItem
             onClick={(e) => {
-              e.preventDefault();
               clearFilters();
             }}
-            onSelect={(e) => e.preventDefault()}
             className="cursor-pointer flex-1 flex items-center justify-center h-full"
           >
             <X size={14} className="mr-2 text-t3" />
@@ -47,7 +50,7 @@ function FilterButton() {
           </DropdownMenuItem>
           <div className="flex-1 flex">
             <div className="w-full">
-              <SaveDashboardPopover />
+              <SaveViewPopover onClose={closeFilterModal} />
             </div>
           </div>
         </div>
