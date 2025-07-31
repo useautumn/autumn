@@ -12,32 +12,32 @@ import { useAxiosSWR } from "@/services/useAxiosSwr";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useCustomersContext } from "./CustomersContext";
 import { getBackendErr } from "@/utils/genUtils";
-import { LayoutDashboard, Trash2 } from "lucide-react";
+import { BookmarkIcon, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
-interface SavedDashboard {
+interface SavedView {
   id: string;
   name: string;
   filters: string; // base64 encoded
   created_at: string;
 }
 
-export const SavedDashboardsDropdown = () => {
+export const SavedViewsDropdown = () => {
   const { env, setFilters, setQueryStates } = useCustomersContext();
   const axiosInstance = useAxiosInstance();
-  
-  const { data: dashboardsData, isLoading: loading, mutate: refetchDashboards } = useAxiosSWR({
-    url: "/v1/dashboards",
+
+  const { data: savedViewsData, isLoading: loading, mutate: refetchSavedViews } = useAxiosSWR({
+    url: "/saved_views",
     env,
   });
 
-  const dashboards = dashboardsData?.dashboards || [];
+  const views = savedViewsData?.views || [];
 
-  const applyDashboard = (dashboard: SavedDashboard) => {
+  const applyView = (view: SavedView) => {
     try {
       // Decode base64 filters
-      const decodedParams = atob(dashboard.filters);
+      const decodedParams = atob(view.filters);
       const params = new URLSearchParams(decodedParams);
       
       // Apply all parameters using setQueryStates (this will reset pagination automatically)
@@ -49,27 +49,27 @@ export const SavedDashboardsDropdown = () => {
         product_id: params.get("product_id") || "",
         version: params.get("version") || "",
       };
-      
+
       setQueryStates(queryParams);
       
-      toast.success(`Applied dashboard: ${dashboard.name}`);
+      toast.success(`Applied view: ${view.name}`);
     } catch (error) {
       console.error(error);
-      toast.error("Failed to apply dashboard");
+      toast.error("Failed to apply view");
     }
   };
 
-  const deleteDashboard = async (dashboardId: string, dashboardName: string, e: React.MouseEvent) => {
+  const deleteView = async (viewId: string, viewName: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     try {
-      await axiosInstance.delete(`/v1/dashboards/${dashboardId}`);
-      toast.success(`Deleted dashboard: ${dashboardName}`);
-      await refetchDashboards(); // Refresh list
+      await axiosInstance.delete(`/saved_views/${viewId}`);
+      toast.success(`Deleted view: ${viewName}`);
+      await refetchSavedViews(); // Refresh list
     } catch (error) {
       console.error(error);
-      toast.error(getBackendErr(error, "Failed to delete dashboard"));
+      toast.error(getBackendErr(error, "Failed to delete view"));
     }
   };
 
@@ -77,30 +77,30 @@ export const SavedDashboardsDropdown = () => {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="text-t3 bg-transparent shadow-none p-0">
-          <LayoutDashboard size={13} className="mr-2 text-t3" />
-          Dashboards
-        </Button>
+          <BookmarkIcon size={13} className="mr-2 text-t3" />
+          Views
+        </Button> 
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="start">
         <DropdownMenuLabel className="text-t3 !font-regular text-xs">
-          Saved Dashboards
+          Saved Views
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {loading ? (
           <DropdownMenuItem disabled>Loading...</DropdownMenuItem>
-        ) : dashboards.length === 0 ? (
-          <DropdownMenuItem disabled>No saved dashboards</DropdownMenuItem>
+          ) : views.length === 0 ? (  
+          <DropdownMenuItem disabled>No saved views</DropdownMenuItem>
         ) : (
           <DropdownMenuGroup>
-            {dashboards.map((dashboard: SavedDashboard) => (
+            {views.map((view: SavedView) => (
               <DropdownMenuItem
-                key={dashboard.id}
-                onClick={() => applyDashboard(dashboard)}
+                key={view.id}
+                onClick={() => applyView(view)}
                 className="flex items-center justify-between cursor-pointer"
               >
-                <span className="truncate flex-1">{dashboard.name}</span>
+                <span className="truncate flex-1">{view.name}</span>
                 <button
-                  onClick={(e) => deleteDashboard(dashboard.id, dashboard.name, e)}
+                  onClick={(e) => deleteView(view.id, view.name, e)}
                   className="ml-2 p-1 hover:bg-red-100 rounded"
                 >
                   <Trash2 size={12} className="text-red-500" />
