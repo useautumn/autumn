@@ -25,7 +25,7 @@ const fetchWithRetry = fetchRetry(fetch, {
       console.warn(
         `Retrying request... Attempt #${attempt + 1} - Status: ${
           response?.status
-        }`,
+        }`
       );
       return true;
     }
@@ -38,12 +38,7 @@ export const createSupabaseClient = () => {
   try {
     return createClient(
       process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_KEY!,
-      {
-        global: {
-          fetch: fetchWithRetry,
-        },
-      },
+      process.env.SUPABASE_SERVICE_KEY!
     );
   } catch (error) {
     console.error("Error creating Supabase client:", error);
