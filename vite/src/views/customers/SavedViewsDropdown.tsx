@@ -24,7 +24,7 @@ interface SavedView {
 }
 
 export const SavedViewsDropdown = () => {
-  const { env, setFilters, setQueryStates } = useCustomersContext();
+  const { env, setFilters, setQueryStates, mutate } = useCustomersContext();
   const axiosInstance = useAxiosInstance();
 
   const { data: savedViewsData, isLoading: loading, mutate: refetchSavedViews } = useAxiosSWR({
@@ -34,7 +34,7 @@ export const SavedViewsDropdown = () => {
 
   const views = savedViewsData?.views || [];
 
-  const applyView = (view: SavedView) => {
+  const applyView = async (view: SavedView) => {
     try {
       // Decode base64 filters
       const decodedParams = atob(view.filters);
@@ -51,6 +51,9 @@ export const SavedViewsDropdown = () => {
       };
 
       setQueryStates(queryParams);
+      
+      // Explicitly trigger a data refetch to ensure the view is applied immediately
+      await mutate();
       
       toast.success(`Applied view: ${view.name}`);
     } catch (error) {
