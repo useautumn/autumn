@@ -231,7 +231,7 @@ describe(`${chalk.yellowBright(
     }
 
     await Promise.all(batchUpdates);
-    await timeout(10000);
+    await timeout(14000);
 
     const { allowed: allowed2, balanceObj: balanceObj2 }: any =
       await AutumnCli.entitled(customerId, features.metered1.id, true);

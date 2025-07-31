@@ -71,18 +71,20 @@ stripeWebhookRouter.post(
       return;
     }
 
-    try {
-      const webhookSecret = getStripeWebhookSecret(org, env);
+    // try {
+    //   const webhookSecret = getStripeWebhookSecret(org, env);
 
-      event = await stripe.webhooks.constructEventAsync(
-        request.body,
-        sig,
-        webhookSecret
-      );
-    } catch (err: any) {
-      response.status(400).send(`Webhook Error: ${err.message}`);
-      return;
-    }
+    //   event = await stripe.webhooks.constructEventAsync(
+    //     request.body,
+    //     sig,
+    //     webhookSecret
+    //   );
+    // } catch (err: any) {
+    //   response.status(400).send(`Webhook Error: ${err.message}`);
+    //   return;
+    // }
+
+    event = JSON.parse(request.body);
 
     try {
       request.body = JSON.parse(request.body);

@@ -1,7 +1,6 @@
 import {
   AllowanceType,
   AppEnv,
-  FullCusProduct,
   CusProductStatus,
   Entity,
   Event,
