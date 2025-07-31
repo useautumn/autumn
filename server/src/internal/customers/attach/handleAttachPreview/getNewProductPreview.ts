@@ -60,6 +60,8 @@ export const getNewProductPreview = async ({
     freeTrial,
     logger,
     withPrepaid,
+    branch,
+    config,
   });
 
   let dueNextCycle = null;
@@ -71,6 +73,8 @@ export const getNewProductPreview = async ({
       now: attachParams.now,
       logger,
       withPrepaid,
+      branch,
+      config,
     });
 
     let minInterval = getLastInterval({

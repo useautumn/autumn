@@ -28,7 +28,7 @@ analyticsRouter.get("/event_names", async (req: any, res: any) =>
       const { db, org, env, features } = req;
       const { interval, event_names, customer_id } = req.body;
 
-      const result = await queryWithCache({
+      let result = await queryWithCache({
         action: CacheType.TopEvents,
         key: `${org.id}_${env}`,
         fn: async () => {
@@ -39,6 +39,12 @@ analyticsRouter.get("/event_names", async (req: any, res: any) =>
           return res?.eventNames;
         },
       });
+
+      // const topEventNamesRes = await AnalyticsService.getTopEventNames({
+      //   req,
+      // });
+
+      // let result = topEventNamesRes?.eventNames;
 
       let featureIds: string[] = [];
       let eventNames: string[] = [];
@@ -73,17 +79,23 @@ analyticsRouter.get("/event_names", async (req: any, res: any) =>
 const getTopEvents = async ({ req }: { req: ExtendedRequest }) => {
   const { org, env, features } = req;
 
-  const result = await queryWithCache({
-    action: CacheType.TopEvents,
-    key: `${org.id}_${env}`,
-    fn: async () => {
-      const res = await AnalyticsService.getTopEventNames({
-        req,
-      });
+  // const result = await queryWithCache({
+  //   action: CacheType.TopEvents,
+  //   key: `${org.id}_${env}`,
+  //   fn: async () => {
+  //     const res = await AnalyticsService.getTopEventNames({
+  //       req,
+  //     });
 
-      return res?.eventNames;
-    },
+  //     return res?.eventNames;
+  //   },
+  // });
+
+  const topEventNamesRes = await AnalyticsService.getTopEventNames({
+    req,
   });
+
+  let result = topEventNamesRes?.eventNames;
 
   let featureIds: string[] = [];
   let eventNames: string[] = [];
@@ -122,6 +134,7 @@ analyticsRouter.post("/events", async (req: any, res: any) =>
       let topEvents:
         | { featureIds: string[]; eventNames: string[] }
         | undefined = undefined;
+
       if (!event_names || event_names.length === 0) {
         topEvents = await getTopEvents({ req });
         event_names = [...topEvents.eventNames, ...topEvents.featureIds];
