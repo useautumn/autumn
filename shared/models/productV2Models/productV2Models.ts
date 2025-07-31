@@ -16,6 +16,7 @@ export const ProductV2Schema = z.object({
   items: z.array(ProductItemSchema),
   created_at: z.number(),
   stripe_id: z.string().nullish(),
+  archived: z.boolean().default(false).nullish(),
 });
 
 export type ProductV2 = z.infer<typeof ProductV2Schema>;

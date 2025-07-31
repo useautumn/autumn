@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAxiosSWR } from "@/services/useAxiosSwr";
+import {
+  useAxiosPostSWR,
+  useAxiosSWR,
+  usePostSWR,
+} from "@/services/useAxiosSwr";
 import LoadingScreen from "../general/LoadingScreen";
 import { Product, Feature } from "@autumn/shared";
 import { ProductsContext } from "./ProductsContext";
@@ -21,14 +25,22 @@ import { CreateFeatureDialog } from "../features/CreateFeature";
 import { CreditSystemsTable } from "../credits/CreditSystemsTable";
 import CreateCreditSystem from "../credits/CreateCreditSystem";
 import { FeaturesContext } from "../features/FeaturesContext";
+import { PageSectionHeader } from "@/components/general/PageSectionHeader";
+import { HamburgerMenu } from "@/components/general/table-components/HamburgerMenu";
+import { Badge } from "@/components/ui/badge";
 
 function ProductsView({ env }: { env: AppEnv }) {
   const [tab, setTab] = useState("products");
+  const [showArchived, setShowArchived] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [showArchivedFeatures, setShowArchivedFeatures] = useState(false);
+  const [featuresDropdownOpen, setFeaturesDropdownOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const { data, isLoading, mutate } = useAxiosSWR({
+
+  const { data, isLoading, mutate } = usePostSWR({
     url: `/products/data`,
-    env: env,
-    withAuth: true,
+    data: { showArchived },
+    queryKey: ["products", showArchived],
   });
 
   const { data: allCounts, mutate: mutateCounts } = useAxiosSWR({
@@ -38,7 +50,7 @@ function ProductsView({ env }: { env: AppEnv }) {
   });
 
   const { data: featuresData, mutate: mutateFeatures } = useAxiosSWR({
-    url: `/features`,
+    url: `/features?showArchived=${showArchivedFeatures}`,
     env: env,
     withAuth: true,
   });
@@ -49,9 +61,13 @@ function ProductsView({ env }: { env: AppEnv }) {
     }
   }, [data]);
 
+  useEffect(() => {
+    mutateFeatures();
+  }, [showArchivedFeatures]);
+
   const creditSystems =
     featuresData?.features?.filter(
-      (f: Feature) => f.type === "credit_system",
+      (f: Feature) => f.type === "credit_system"
     ) || [];
 
   if (isLoading) return <LoadingScreen />;
@@ -66,21 +82,27 @@ function ProductsView({ env }: { env: AppEnv }) {
         mutate,
         allCounts,
         mutateCounts,
+        showArchived,
+        setShowArchived,
       }}
     >
       <FeaturesContext.Provider
         value={{
           features:
             featuresData?.features?.filter(
-              (f: Feature) => f.type !== "credit_system",
+              (f: Feature) => f.type !== "credit_system"
             ) || [],
           creditSystems:
             featuresData?.features?.filter(
-              (f: Feature) => f.type === "credit_system",
+              (f: Feature) => f.type === "credit_system"
             ) || [],
           dbConns: featuresData?.dbConns || [],
           env,
           mutate: mutateFeatures,
+          showArchived: showArchivedFeatures,
+          setShowArchived: setShowArchivedFeatures,
+          dropdownOpen: featuresDropdownOpen,
+          setDropdownOpen: setFeaturesDropdownOpen,
         }}
       >
         <div className="flex flex-col gap-4 h-fit relative w-full text-sm">
@@ -89,6 +111,7 @@ function ProductsView({ env }: { env: AppEnv }) {
           <Tabs
             defaultValue="products"
             className="w-full"
+            value={tab}
             onValueChange={(value) => setTab(value)}
           >
             <TabsList className="text-t2 gap-8 px-8 h-fit">
@@ -104,17 +127,39 @@ function ProductsView({ env }: { env: AppEnv }) {
             </TabsList>
 
             <TabsContent value="products">
-              <div className="sticky top-0 z-10 border-y bg-stone-100 pl-10 pr-7 h-10 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-sm text-t2 font-medium col-span-2 flex">
-                    Products
-                  </h2>
-                  <span className="text-t2 px-1 rounded-md bg-stone-200">
-                    {data?.products?.length}{" "}
-                  </span>
-                </div>
-                <CreateProduct />
-              </div>
+              <PageSectionHeader
+                title="Products"
+                titleComponent={
+                  <>
+                    <span className="text-t2 px-1 rounded-md bg-stone-200 mr-2">
+                      {data?.products?.length}
+                    </span>
+                    {showArchived && (
+                      <Badge className="shadow-none bg-yellow-100 border-yellow-500 text-yellow-500 hover:bg-yellow-100">
+                        Archived
+                      </Badge>
+                    )}
+                  </>
+                }
+                addButton={
+                  <>
+                    <CreateProduct />
+                    <HamburgerMenu
+                      dropdownOpen={dropdownOpen}
+                      setDropdownOpen={setDropdownOpen}
+                      actions={[
+                        {
+                          type: "item",
+                          label: showArchived
+                            ? `Show active products`
+                            : `Show archived products`,
+                          onClick: () => setShowArchived((prev) => !prev),
+                        },
+                      ]}
+                    />
+                  </>
+                }
+              />
               <ProductsTable products={data?.products} />
             </TabsContent>
 
@@ -126,8 +171,22 @@ function ProductsView({ env }: { env: AppEnv }) {
                     {featuresData?.features?.length || 0}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center">
                   <CreateFeatureDialog />
+                  <HamburgerMenu
+                    dropdownOpen={featuresDropdownOpen}
+                    setDropdownOpen={setFeaturesDropdownOpen}
+                    actions={[
+                      {
+                        type: "item",
+                        label: showArchivedFeatures
+                          ? "Show Active Features"
+                          : "Show Archived Features",
+                        onClick: () =>
+                          setShowArchivedFeatures(!showArchivedFeatures),
+                      },
+                    ]}
+                  />
                 </div>
               </div>
               <div className="flex flex-col gap-16">

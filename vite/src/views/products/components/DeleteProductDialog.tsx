@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { DialogTrigger } from "@/components/ui/dialog";
-import { AppEnv, Product } from "@autumn/shared";
+import { AppEnv, Product, ProductCounts } from "@autumn/shared";
 import { useProductsContext } from "../ProductsContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAxiosSWR } from "@/services/useAxiosSwr";
@@ -27,18 +27,24 @@ import {
 } from "@/components/ui/select";
 import { getBackendErr } from "@/utils/genUtils";
 import { toast } from "sonner";
+import { useEffect } from "react";
+import { versions } from "process";
+import { version } from "os";
 
 export const DeleteProductDialog = ({
   product,
   open,
   setOpen,
+  productCounts,
 }: {
   product: Product;
   open: boolean;
   setOpen: (open: boolean) => void;
+  productCounts?: ProductCounts;
 }) => {
   const { mutate } = useProductsContext();
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [archiveLoading, setArchiveLoading] = useState(false);
   const axiosInstance = useAxiosInstance();
   const env = useEnv();
 
@@ -48,6 +54,23 @@ export const DeleteProductDialog = ({
       refreshInterval: 0,
     },
   });
+
+  // const {
+  //   data: deletionText,
+  //   isLoading: isDeletionTextLoading,
+  //   mutate: mutateDeletionText,
+  // } = useAxiosSWR({
+  //   url: `/products/data/deletion_text/${product.id}`,
+  //   options: {
+  //     refreshInterval: 0,
+  //   },
+  // });
+
+  // useEffect(() => {
+  //   if (open) {
+  //     mutateDeletionText();
+  //   }
+  // }, [open, product.internal_id]);
 
   const [deleteAllVersions, setDeleteAllVersions] = useState(false);
 
@@ -69,6 +92,66 @@ export const DeleteProductDialog = ({
     }
   };
 
+  const handleArchive = async () => {
+    setArchiveLoading(true);
+    const newArchivedState = !product.archived;
+    try {
+      if (!deleteAllVersions) {
+        if (newArchivedState == true)
+          await ProductService.updateProduct(axiosInstance, product.id, {
+            archived: newArchivedState,
+          });
+        else {
+          const updatePromises = [];
+          for (let i = 1; i <= productInfo.numVersion; i++) {
+            updatePromises.push(
+              ProductService.updateProduct(
+                axiosInstance,
+                product.id,
+                {
+                  archived: newArchivedState,
+                  version: i,
+                },
+                i
+              )
+            );
+          }
+          await Promise.all(updatePromises);
+        }
+      } else {
+        const updatePromises = [];
+        for (let i = 1; i <= productInfo.numVersion; i++) {
+          updatePromises.push(
+            ProductService.updateProduct(
+              axiosInstance,
+              product.id,
+              {
+                archived: newArchivedState,
+                version: i,
+              },
+              i
+            )
+          );
+        }
+        await Promise.all(updatePromises);
+      }
+      await mutate();
+      toast.success(
+        `Product ${product.name} ${newArchivedState ? "archived" : "unarchived"} successfully`
+      );
+      setOpen(false);
+    } catch (error) {
+      toast.error(
+        getBackendErr(
+          error,
+          `Error ${newArchivedState ? "archiving" : "unarchiving"} product`
+        )
+      );
+    } finally {
+      setArchiveLoading(false);
+    }
+  };
+
   const hasCusProductsAll = productInfo?.hasCusProducts;
   const hasCusProductsLatest = productInfo?.hasCusProductsLatest;
 
@@ -77,24 +160,94 @@ export const DeleteProductDialog = ({
     : hasCusProductsLatest;
 
   const getDeleteMessage = () => {
-    if (env == AppEnv.Live) {
-      if (hasCusProducts) {
-        return "There are customers on this product. Please delete them first before deleting the product.";
-      } else {
-        return "Are you sure you want to delete this product? This action cannot be undone.";
-      }
-    } else {
-      if (hasCusProducts) {
-        return "There are customers on this product. Deleting this product will remove it from any customers. Are you sure you want to continue?";
-      } else {
-        return "Are you sure you want to delete this product? This action cannot be undone.";
-      }
+    if (product.archived) {
+      return `This product is currently archived and hidden from the UI. Would you like to unarchive it to make it visible again?\n
+			Note: If there are multiple versions, this will unarchive all versions at once.`;
     }
-    // let message = "Are you sure you want to delete this product?";
-    // if (hasCusProducts) {
-    //   message += " This product has customers on it (including expired).";
-    // }
-    // return message;
+
+    const isMultipleVersions = productInfo?.numVersion > 1;
+    const versionText = deleteAllVersions ? "product" : "version";
+    const productText = isMultipleVersions ? versionText : "product";
+    // Deleting this ${productText} will remove it from their accounts. Are you sure you want to continue? You can also archive the product instead.
+    const messageTemplates = {
+      withCustomers: {
+        single: (customerName: string, productText: string) =>
+          `${customerName} is on this ${productText}. Are you sure you want to archive it?`,
+        multiple: (
+          customerName: string,
+          otherCount: number,
+          productText: string
+        ) =>
+          `${customerName} and ${otherCount} other customer${otherCount > 1 ? "s" : ""} are on this ${productText}. Are you sure you want to archive this product? 
+          
+          `,
+        fallback: (productText: string) =>
+          `There are customers on this ${productText}. Deleting this ${productText} will remove it from their accounts. Are you sure you want to continue? You can also archive the product instead.`,
+      },
+      withoutCustomers: (productText: string) =>
+        `Are you sure you want to delete this ${productText}? This action cannot be undone.`,
+      // live: {
+      //   withCustomers: {
+      //     single: (customerName: string, productText: string) =>
+      //       `${customerName} is on this ${productText}. Please delete them first before deleting the ${productText}. Would you like to archive the product instead?`,
+      //     multiple: (
+      //       customerName: string,
+      //       otherCount: number,
+      //       productText: string
+      //     ) =>
+      //       `${customerName} and ${otherCount} other customer${otherCount > 1 ? "s" : ""} are on this ${productText}. Please delete them first before deleting the ${productText}. Would you like to archive the product instead?`,
+      //     fallback: (productText: string) =>
+      //       `There are customers on this ${productText}. Please delete them first before deleting the ${productText}. Would you like to archive the product instead?`,
+      //   },
+      //   withoutCustomers: (productText: string) =>
+      //     `Are you sure you want to delete this ${productText}? This action cannot be undone. You can also archive the ${productText} instead.`,
+      // },
+      // sandbox: {
+      //   withCustomers: {
+      //     single: (customerName: string, productText: string) =>
+      //       `${customerName} is on this ${productText}. Deleting this ${productText} will remove it from ${customerName}'s account. Are you sure you want to continue? You can also archive the product instead.`,
+      //     multiple: (
+      //       customerName: string,
+      //       otherCount: number,
+      //       productText: string
+      //     ) =>
+      //       `${customerName} and ${otherCount} other customer${otherCount > 1 ? "s" : ""} are on this ${productText}. Deleting this ${productText} will remove it from their accounts. Are you sure you want to continue? You can also archive the product instead.`,
+      //     fallback: (productText: string) =>
+      //       `There are customers on this ${productText}. Deleting this ${productText} will remove it from their accounts. Are you sure you want to continue? You can also archive the product instead.`,
+      //   },
+      //   withoutCustomers: (productText: string) =>
+      //     `Are you sure you want to delete this ${productText}? This action cannot be undone.`,
+      // },
+    };
+
+    const templates = messageTemplates;
+
+    if (hasCusProducts) {
+      if (productInfo?.customerName && productInfo?.totalCount) {
+        const totalCount = parseInt(productInfo.totalCount);
+
+        if (isNaN(totalCount) || totalCount <= 0) {
+          return templates.withCustomers.fallback(productText);
+        } else if (totalCount === 1) {
+          return templates.withCustomers.single(
+            productInfo.customerName,
+            productText
+          );
+        } else {
+          const otherCount = totalCount - 1;
+          return templates.withCustomers.multiple(
+            productInfo.customerName,
+            otherCount,
+            productText
+          );
+        }
+      } else {
+        return templates.withCustomers.fallback(productText);
+      }
+      return "";
+    } else {
+      return templates.withoutCustomers(productText);
+    }
   };
 
   if (!productInfo) {
@@ -105,10 +258,12 @@ export const DeleteProductDialog = ({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="w-md" onClick={(e) => e.stopPropagation()}>
         <DialogHeader>
-          <DialogTitle>Delete {product.name}</DialogTitle>
+          <DialogTitle>
+            {product.archived ? "Unarchive" : "Delete"} {product.name}
+          </DialogTitle>
         </DialogHeader>
 
-        {productInfo.numVersion > 1 && (
+        {productInfo.numVersion > 1 && !product.archived && (
           <Select
             value={deleteAllVersions ? "all" : "latest"}
             onValueChange={(value) => setDeleteAllVersions(value === "all")}
@@ -118,26 +273,52 @@ export const DeleteProductDialog = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="latest">Delete latest version</SelectItem>
-              <SelectItem value="all">Delete all versions</SelectItem>
+              <SelectItem value="all">Archive product</SelectItem>
             </SelectContent>
           </Select>
         )}
 
         <div className="flex text-t2 text-sm">
           <p>
-            {/* {hasCusProducts &&
-              "This product has customers on it (including expired)."} */}
-            {getDeleteMessage()}
+            {getDeleteMessage()
+              .split("\n")
+              .map((line, index) => (
+                <span key={index}>
+                  {line}
+                  {index < getDeleteMessage().split("\n").length - 1 && <br />}
+                </span>
+              ))}
           </p>
         </div>
         <DialogFooter>
-          <Button
-            variant="destructive"
-            onClick={handleDelete}
-            isLoading={deleteLoading}
-          >
-            Confirm
-          </Button>
+          {product.archived && (
+            <Button
+              variant="outline"
+              onClick={handleArchive}
+              isLoading={archiveLoading}
+            >
+              Unarchive
+            </Button>
+          )}
+          {hasCusProducts && !product.archived && (
+            <Button
+              variant="outline"
+              onClick={handleArchive}
+              isLoading={archiveLoading}
+            >
+              Archive
+            </Button>
+          )}
+
+          {!hasCusProducts && !product.archived && (
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              isLoading={deleteLoading}
+            >
+              Delete
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
