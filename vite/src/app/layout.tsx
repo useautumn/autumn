@@ -18,7 +18,7 @@ import {
   useSidebarContext,
 } from "@/views/main-sidebar/SidebarContext";
 import { AppContext } from "./AppContext";
-import { useTopEventNames } from "@/views/customers/customer/analytics/hooks/useTopEventNames";
+import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 
 export function MainLayout() {
   const env = useEnv();
@@ -100,11 +100,14 @@ export function MainLayout() {
       <SidebarContext.Provider
         value={{ state: sidebarState, setState: setSidebarState }}
       >
-        <main className="w-screen h-screen flex bg-stone-100">
+        <NuqsAdapter>
+          <main className="w-screen h-screen flex bg-stone-100">
           <CustomToaster />
           <MainSidebar />
           <MainContent />
         </main>
+
+      </NuqsAdapter>
       </SidebarContext.Provider>
     </AutumnProvider>
   );
