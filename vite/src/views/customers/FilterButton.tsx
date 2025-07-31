@@ -12,17 +12,17 @@ import {
 import { useCustomersContext } from "./CustomersContext";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { Check, ListFilter, X } from "lucide-react";
-import { useSetSearchParams } from "@/utils/setSearchParams";
-import { useSearchParams } from "react-router";
+import { SaveDashboardPopover } from "./SaveDashboardPopover";
+import { SavedDashboardsDropdown } from "./SavedDashboardsDropdown";
 
 function FilterButton() {
   const { setFilters } = useCustomersContext();
-  const setSearchParams = useSetSearchParams();
 
   const clearFilters = () => {
     setFilters({
       status: [],
       product_id: [],
+      version: "",
     });
   };
 
@@ -32,23 +32,25 @@ function FilterButton() {
       <DropdownMenuContent className="w-56" align="start">
         <FilterStatus />
         <ProductStatus />
-        <ProductVersionFilter />
         <DropdownMenuSeparator />
-        <DropdownMenuGroup>
+        <div className="flex items-stretch px-0 py-0 gap-2">
           <DropdownMenuItem
-            onClick={() =>
-              setSearchParams({
-                status: "",
-                product_id: "",
-                version: "",
-              })
-            }
-            className="cursor-pointer"
+            onClick={(e) => {
+              e.preventDefault();
+              clearFilters();
+            }}
+            onSelect={(e) => e.preventDefault()}
+            className="cursor-pointer flex-1 flex items-center justify-center h-full"
           >
-            <X size={14} className="text-t3" />
+            <X size={14} className="mr-2 text-t3" />
             Clear
           </DropdownMenuItem>
-        </DropdownMenuGroup>
+          <div className="flex-1 flex">
+            <div className="w-full">
+              <SaveDashboardPopover />
+            </div>
+          </div>
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -59,7 +61,7 @@ export default FilterButton;
 export const FilterStatus = () => {
   const { filters, setFilters } = useCustomersContext();
 
-  const statuses: string[] = ["canceled", "free_trial"];
+  const statuses: string[] = ["canceled", "free_trial", "expired"];
 
   const selectedStatuses = filters.status || [];
 
@@ -84,7 +86,11 @@ export const FilterStatus = () => {
         return (
           <DropdownMenuItem
             key={status}
-            onClick={() => toggleStatus(status)}
+            onClick={(e) => {
+              e.preventDefault();
+              toggleStatus(status);
+            }}
+            onSelect={(e) => e.preventDefault()}
             className="flex items-center justify-between cursor-pointer text-sm"
           >
             {keyToTitle(status)}
@@ -96,72 +102,176 @@ export const FilterStatus = () => {
   );
 };
 
-export const ProductVersionFilter = () => {
-  const { versionCounts, products } = useCustomersContext();
-  const [searchParams] = useSearchParams();
-  const setSearchParams = useSetSearchParams();
-  const selectedProductId = searchParams.get("product_id");
-  if (!selectedProductId) return null;
-  const versionCount = versionCounts?.[selectedProductId] || 1;
-  const currentVersion = searchParams.get("version");
-  const versionOptions = Array.from({ length: versionCount }, (_, i) => i + 1);
-  return (
-    <DropdownMenuGroup>
-      <DropdownMenuLabel className="text-t3 !font-regular text-xs">
-        Version
-      </DropdownMenuLabel>
-      {versionOptions.map((version) => {
-        const isActive = String(currentVersion) === String(version);
-        return (
-          <DropdownMenuItem
-            key={version}
-            onClick={() => {
-              if (isActive) {
-                setSearchParams({ version: "" });
-              } else {
-                setSearchParams({ version: String(version) });
-              }
-            }}
-            className="flex items-center justify-between cursor-pointer text-sm"
-          >
-            v{version}
-            {isActive && <Check size={13} className="text-t3" />}
-          </DropdownMenuItem>
-        );
-      })}
-    </DropdownMenuGroup>
-  );
-};
 
 export const ProductStatus = () => {
-  const { products } = useCustomersContext();
-  const setSearchParams = useSetSearchParams();
-  const [searchParams] = useSearchParams();
-  const selectedProductId = searchParams.get("product_id");
+  const { products, versionCounts, filters, setFilters } = useCustomersContext();
+  const selectedVersions = filters.version ? filters.version.split(",").filter(Boolean) : [];
+  
+  // Deduplicate products by ID (since backend may return multiple entries per product, one per version)
+  const uniqueProducts = products?.reduce((acc: any[], product: any) => {
+    if (!acc.find(p => p.id === product.id)) {
+      acc.push(product);
+    }
+    return acc;
+  }, []) || [];
+  
+  // Get all possible product:version combinations
+  const getAllProductVersions = () => {
+    const productVersions: Array<{productId: string, version: string, key: string}> = [];
+    uniqueProducts?.forEach((product: any) => {
+      const versionCount = versionCounts?.[product.id] || 1;
+      for (let v = 1; v <= versionCount; v++) {
+        productVersions.push({
+          productId: product.id,
+          version: v.toString(),
+          key: `${product.id}:${v}`
+        });
+      }
+    });
+    return productVersions;
+  };
+
+  const allProductVersions = getAllProductVersions();
+  const allSelected = allProductVersions.length > 0 && allProductVersions.every(pv => selectedVersions.includes(pv.key));
+  
+  const handleSelectAll = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (allSelected) {
+      // Deselect all
+      setFilters({ 
+        ...filters, 
+        product_id: "",
+        version: ""
+      });
+    } else {
+      // Select all product:version combinations
+      setFilters({ 
+        ...filters, 
+        product_id: "", // Will be handled by version selections
+        version: allProductVersions.map(pv => pv.key).join(",")
+      });
+    }
+  };
+
+  const toggleProduct = (product: any) => {
+    const versionCount = versionCounts?.[product.id] || 1;
+    const productVersionKeys = Array.from({ length: versionCount }, (_, i) => `${product.id}:${i + 1}`);
+    
+    const allProductVersionsSelected = productVersionKeys.every(key => selectedVersions.includes(key));
+    
+    let newSelectedVersions;
+    if (allProductVersionsSelected) {
+      // Deselect all versions of this product
+      newSelectedVersions = selectedVersions.filter((key: string) => !productVersionKeys.includes(key));
+    } else {
+      // Select all versions of this product
+      const toAdd = productVersionKeys.filter(key => !selectedVersions.includes(key));
+      newSelectedVersions = [...selectedVersions, ...toAdd];
+    }
+    
+    setFilters({
+      ...filters,
+      product_id: "",
+      version: newSelectedVersions.join(",")
+    });
+  };
+
+  const toggleVersion = (productId: string, version: string) => {
+    const versionKey = `${productId}:${version}`;
+    const isSelected = selectedVersions.includes(versionKey);
+    
+    let newSelectedVersions;
+    if (isSelected) {
+      newSelectedVersions = selectedVersions.filter((key: string) => key !== versionKey);
+    } else {
+      newSelectedVersions = [...selectedVersions, versionKey];
+    }
+    
+    setFilters({
+      ...filters,
+      product_id: "",
+      version: newSelectedVersions.join(",")
+    });
+  };
+  
   return (
     <DropdownMenuGroup>
-      <DropdownMenuLabel className="text-t3 !font-regular text-xs">
-        Product
-      </DropdownMenuLabel>
-      {products.map((product: any) => {
-        const isActive = selectedProductId === product.id;
+      <div className="flex items-center justify-between px-2 py-1.5">
+        <span className="text-t3 font-regular text-xs">Products</span>
+        <button 
+          onClick={handleSelectAll}
+          className="text-t3 text-xs hover:text-t1 transition-colors cursor-pointer"
+        >
+          {allSelected ? "Deselect all" : "Select all"}
+        </button>
+      </div>
+      <div className="max-h-64 overflow-y-auto">
+        {uniqueProducts?.map((product: any) => {
+        const versionCount = versionCounts?.[product.id] || 1;
+        const productVersionKeys = Array.from({ length: versionCount }, (_, i) => `${product.id}:${i + 1}`);
+        const allProductVersionsSelected = productVersionKeys.every(key => selectedVersions.includes(key));
+        const someProductVersionsSelected = productVersionKeys.some(key => selectedVersions.includes(key));
+        
         return (
-          <DropdownMenuItem
-            key={product.id}
-            onClick={() => {
-              if (isActive) {
-                setSearchParams({ product_id: "", version: "" });
-              } else {
-                setSearchParams({ product_id: product.id, version: "" });
-              }
-            }}
-            className="flex items-center justify-between cursor-pointer"
-          >
-            {product.name}
-            {isActive && <Check size={13} className="text-t3" />}
-          </DropdownMenuItem>
+          <div key={product.id}>
+            {versionCount === 1 ? (
+              // Single version - show just one button for the product
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.preventDefault();
+                  toggleVersion(product.id, "1");
+                }}
+                onSelect={(e) => e.preventDefault()}
+                className="flex items-center justify-between cursor-pointer font-medium"
+              >
+                {product.name}
+                {selectedVersions.includes(`${product.id}:1`) && <Check size={13} className="text-t3" />}
+              </DropdownMenuItem>
+            ) : (
+              // Multiple versions - show product name and version sub-items
+              <>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.preventDefault();
+                    toggleProduct(product);
+                  }}
+                  onSelect={(e) => e.preventDefault()}
+                  className="flex items-center justify-between cursor-pointer font-medium"
+                >
+                  {product.name}
+                  {allProductVersionsSelected && <Check size={13} className="text-t3" />}
+                  {someProductVersionsSelected && !allProductVersionsSelected && (
+                    <div className="w-3 h-3 bg-t3 rounded-sm opacity-50" />
+                  )}
+                </DropdownMenuItem>
+                
+                {/* Versions */}
+                {Array.from({ length: versionCount }, (_, i) => i + 1).map((version) => {
+                  const versionKey = `${product.id}:${version}`;
+                  const isVersionSelected = selectedVersions.includes(versionKey);
+                  
+                  return (
+                    <DropdownMenuItem
+                      key={versionKey}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        toggleVersion(product.id, version.toString());
+                      }}
+                      onSelect={(e) => e.preventDefault()}
+                      className="flex items-center justify-between cursor-pointer ml-4 text-sm text-t2"
+                    >
+                      v{version}
+                      {isVersionSelected && <Check size={13} className="text-t3" />}
+                    </DropdownMenuItem>
+                  );
+                })}
+              </>
+            )}
+          </div>
         );
-      })}
+        })}
+      </div>
     </DropdownMenuGroup>
   );
 };
