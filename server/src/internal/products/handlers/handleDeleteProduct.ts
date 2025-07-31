@@ -43,6 +43,8 @@ export const handleDeleteProduct = (req: any, res: any) =>
         CusProdReadService.getCountsForAllVersions({
           db,
           productId: productId,
+          orgId,
+          env,
         }),
       ]);
 
@@ -69,8 +71,12 @@ export const handleDeleteProduct = (req: any, res: any) =>
 
         await CusProductService.deleteByProduct({
           db,
-          productId: all_versions ? productId : undefined,
-          internalProductId: all_versions ? undefined : product.internal_id,
+          productId: deleteAllVersions ? productId : undefined,
+          internalProductId: deleteAllVersions
+            ? undefined
+            : product.internal_id,
+          orgId,
+          env,
         });
       }
 

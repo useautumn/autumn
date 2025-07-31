@@ -42,15 +42,18 @@ export class AutumnInt {
 
   constructor({
     apiKey,
+    secretKey,
     baseUrl,
     version,
   }: {
     apiKey?: string;
+    secretKey?: string;
     baseUrl?: string;
     version?: string | APIVersion;
   } = {}) {
     // this.apiKey = apiKey || process.env.AUTUMN_API_KEY || "";
-    this.apiKey = apiKey || process.env.UNIT_TEST_AUTUMN_SECRET_KEY || "";
+    this.apiKey =
+      apiKey || secretKey || process.env.UNIT_TEST_AUTUMN_SECRET_KEY || "";
 
     this.headers = {
       Authorization: `Bearer ${this.apiKey}`,
@@ -415,7 +418,7 @@ export class AutumnInt {
     },
   };
 
-  track = async (params: TrackParams) => {
+  track = async (params: TrackParams & { timestamp?: number }) => {
     const data = await this.post(`/track`, params);
     return data;
   };
