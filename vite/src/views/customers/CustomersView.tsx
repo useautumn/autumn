@@ -78,6 +78,7 @@ function CustomersView({ env }: { env: AppEnv }) {
 	const paginationFirstRender = useRef(true);
 	const searchParamsChanged = useRef(false);
 	const hasInitiallyLoaded = useRef(false);
+	const isDirectNavigation = useRef(false);
 
 	const resetPagination = () => {
 		setQueryStates({
@@ -87,22 +88,36 @@ function CustomersView({ env }: { env: AppEnv }) {
 	};
 
 	useEffect(() => {
-		// Skip everything on the very first render
+		// Skip everything on the very first render, but only if we don't have meaningful values (filters OR pagination)
 		if (isFirstRender.current) {
 			isFirstRender.current = false;
+			
+			const hasFilters = queryStates.q || queryStates.status || queryStates.product_id || queryStates.version;
+			const hasDirectNavigation = queryStates.page > 1 || !!queryStates.lastItemId;
+			
+			// Skip only if we have no filters AND no direct navigation (i.e., plain page 1 load)
+			if (!hasFilters && !hasDirectNavigation) {
+				return;
+			}
+			
+			// Mark this as direct navigation to prevent subsequent reset
+			isDirectNavigation.current = hasDirectNavigation;
+			
+			// Fetch data without resetting pagination (whether it's filters or direct nav)
+			setPaginationLoading(true);
+			mutate().finally(() => {
+				setPaginationLoading(false);
+			});
 			return;
 		}
 
-		// Mark that we've had at least one useEffect run after initial render
-		if (!hasInitiallyLoaded.current) {
-			hasInitiallyLoaded.current = true;
-			// If this is a direct navigation to page > 1, don't reset pagination
-			if (queryStates.page > 1) {
-				return;
-			}
+		// Skip subsequent renders if this was a direct navigation (to prevent reset loop)
+		if (isDirectNavigation.current) {
+			isDirectNavigation.current = false; // Reset for future filter changes
+			return;
 		}
 
-		// Only reset pagination for actual user filter changes
+		// For subsequent filter changes (not first render), reset pagination and fetch
 		searchParamsChanged.current = true;
 		resetPagination();
 
@@ -123,12 +138,18 @@ function CustomersView({ env }: { env: AppEnv }) {
 			return;
 		}
 
+		// Reset the searchParamsChanged flag if it's set, but still proceed with pagination
+		// This ensures that when filters change and reset pagination to page 1, 
+		// subsequent pagination still works
 		if (searchParamsChanged.current) {
 			searchParamsChanged.current = false;
-			return;
+			// Only skip if we're on page 1 (which means this was triggered by filter change)
+			if (queryStates.page === 1) {
+				return;
+			}
 		}
 
-		// For direct navigation, we just use whatever lastItemId is provided
+		// For direct navigation or actual pagination, we fetch the data
 
 		setPaginationLoading(true);
 		mutate().finally(() => {
