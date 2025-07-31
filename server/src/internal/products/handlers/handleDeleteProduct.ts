@@ -31,10 +31,6 @@ export const handleDeleteProduct = (req: any, res: any) =>
         });
       }
 
-      // let cusProducts = await CusProductService.getByInternalProductId({
-      //   db,
-      //   internalProductId: product.internal_id,
-      // });
       let [latestCounts, allCounts] = await Promise.all([
         CusProdReadService.getCounts({
           db,
@@ -51,34 +47,34 @@ export const handleDeleteProduct = (req: any, res: any) =>
       let deleteAllVersions = all_versions === "true";
       let cusProdCount = deleteAllVersions ? allCounts.all : latestCounts.all;
 
-      if (cusProdCount > 0 && env == AppEnv.Live) {
+      if (cusProdCount > 0) {
         throw new RecaseError({
-          message: "Cannot delete product with customers in live environment",
+          message: "Cannot delete product with customers",
           code: ErrCode.ProductHasCustomers,
           statusCode: 400,
         });
       }
 
-      if (cusProdCount > 0 && env == AppEnv.Sandbox) {
-        if (cusProdCount > 100) {
-          throw new RecaseError({
-            message:
-              "Cannot delete this product as it has more than 100 customers on it.",
-            code: ErrCode.ProductHasCustomers,
-            statusCode: 400,
-          });
-        }
+      // if (cusProdCount > 0 && env == AppEnv.Sandbox) {
+      //   if (cusProdCount > 100) {
+      //     throw new RecaseError({
+      //       message:
+      //         "Cannot delete this product as it has more than 100 customers on it.",
+      //       code: ErrCode.ProductHasCustomers,
+      //       statusCode: 400,
+      //     });
+      //   }
 
-        await CusProductService.deleteByProduct({
-          db,
-          productId: deleteAllVersions ? productId : undefined,
-          internalProductId: deleteAllVersions
-            ? undefined
-            : product.internal_id,
-          orgId,
-          env,
-        });
-      }
+      //   await CusProductService.deleteByProduct({
+      //     db,
+      //     productId: deleteAllVersions ? productId : undefined,
+      //     internalProductId: deleteAllVersions
+      //       ? undefined
+      //       : product.internal_id,
+      //     orgId,
+      //     env,
+      //   });
+      // }
 
       // 2. Delete prices, entitlements, and product
       if (deleteAllVersions) {

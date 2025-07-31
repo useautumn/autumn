@@ -173,7 +173,7 @@ export const ProductsTable = ({
               >
                 <ProductRowToolbar
                   product={product}
-                  productCounts={allCounts[product.id]}
+                  productCounts={allCounts?.[product.id]}
                 />
               </Item>
             </Row>

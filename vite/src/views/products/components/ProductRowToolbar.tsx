@@ -36,9 +36,14 @@ export const ProductRowToolbar = ({
   const [dialogType, setDialogType] = useState<"update" | "copy">("update");
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  const allCount = productCounts.all;
-  const deleteText = allCount > 0 ? "Archive" : "Delete";
-  const DeleteIcon = allCount > 0 ? Archive : Delete;
+  const allCount = productCounts?.all || 0;
+  let deleteText = allCount > 0 ? "Archive" : "Delete";
+  let DeleteIcon = allCount > 0 ? Archive : Delete;
+
+  if (product.archived) {
+    deleteText = "Unarchive";
+    DeleteIcon = ArchiveRestore;
+  }
 
   return (
     <>
@@ -46,6 +51,7 @@ export const ProductRowToolbar = ({
         product={product}
         open={deleteOpen}
         setOpen={setDeleteOpen}
+        productCounts={productCounts}
       />
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         {dialogType == "update" ? (
@@ -114,8 +120,6 @@ export const ProductRowToolbar = ({
                 {deleteText}
                 {deleteLoading ? (
                   <SmallSpinner />
-                ) : product.archived ? (
-                  <ArchiveRestore size={12} className="text-t3" />
                 ) : (
                   <DeleteIcon size={12} className="text-t3" />
                 )}
