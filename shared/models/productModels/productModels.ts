@@ -25,6 +25,7 @@ export const ProductSchema = z.object({
     })
     .nullish(),
   base_variant_id: z.string().nullable(),
+  archived: z.boolean().default(false),
 });
 
 export const CreateProductSchema = z.object({
@@ -42,6 +43,7 @@ export const UpdateProductSchema = z.object({
   is_add_on: z.boolean().optional(),
   is_default: z.boolean().optional(),
   group: z.string().optional(),
+  archived: z.boolean().optional(),
 });
 
 export const FrontendProductSchema = ProductSchema.omit({
@@ -55,7 +57,7 @@ export const FrontendProductSchema = ProductSchema.omit({
   entitlements: z.array(
     EntitlementSchema.extend({
       feature: FeatureSchema,
-    }),
+    })
   ),
   free_trial: FreeTrialSchema,
   options: z.any(),
@@ -66,12 +68,20 @@ export const FullProductSchema = ProductSchema.extend({
   entitlements: z.array(
     EntitlementSchema.extend({
       feature: FeatureSchema,
-    }),
+    })
   ),
   free_trial: FreeTrialSchema.nullish(),
   free_trials: z.array(FreeTrialSchema).nullish(),
   free_trial_ids: z.array(z.string()).nullish(),
 });
+
+export type ProductCounts = {
+  active: number;
+  canceled: number;
+  custom: number;
+  trialing: number;
+  all: number;
+};
 
 export type Product = z.infer<typeof ProductSchema>;
 export type FrontendProduct = z.infer<typeof FrontendProductSchema>;

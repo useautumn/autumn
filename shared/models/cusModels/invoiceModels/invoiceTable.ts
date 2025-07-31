@@ -28,12 +28,12 @@ export const invoices = pgTable(
       columns: [table.internal_customer_id],
       foreignColumns: [customers.internal_id],
       name: "invoices_internal_customer_id_fkey",
-    }),
+    }).onDelete("cascade"),
     foreignKey({
       columns: [table.internal_entity_id],
       foreignColumns: [entities.internal_id],
       name: "invoices_internal_entity_id_fkey",
-    }),
+    }).onDelete("cascade"),
   ],
 );
 
