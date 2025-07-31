@@ -176,7 +176,7 @@ const getSameProductBranch = async ({
 
   // 2. Same custom?
 
-  if (attachParams.isCustom) {
+  if (attachParams.isCustom && curScheduledProduct?.product.id !== product.id) {
     return await checkSameCustom({ attachParams, curSameProduct });
   }
 
