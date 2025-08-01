@@ -47,26 +47,28 @@ export const deleteCusById = async ({
     success: true,
   }
 
-  if (deleteInStripe || forceDelete) {
-    try {
-      // Only delete stripe customer in sandbox or if forceDelete is true
-      if (customer.processor?.id && (env === AppEnv.Sandbox || forceDelete)) {
+  try {
+    // Delete stripe customer if processor ID exists and conditions are met
+    if (customer.processor?.id) {
+      // In sandbox: delete if deleteInStripe is true
+      // In production: delete if forceDelete is true
+      if ((env === AppEnv.Sandbox && deleteInStripe) || (env === AppEnv.Live && forceDelete)) {
         await deleteStripeCustomer({
           org,
           env: env,
           stripeId: customer.processor.id,
         });
       }
-    } catch (error: any) {
-      console.log(
-        `Couldn't delete ${chalk.yellow("stripe customer")} ${
-          customer.processor.id
-        }`,
-        error?.message || error
-      );
-
-      response.success = false;
     }
+  } catch (error: any) {
+    console.log(
+      `Couldn't delete ${chalk.yellow("stripe customer")} ${
+        customer.processor.id
+      }`,
+      error?.message || error
+    );
+
+    response.success = false;
   }
 
   await CusService.deleteByInternalId({
@@ -86,7 +88,7 @@ export const handleDeleteCustomer = async (req: any, res: any) =>
     action: "delete customer",
     handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
       const { env, logtail: logger, db, org } = req;
-      const { forceDelete } = req.query;
+      const { force_delete, delete_in_stripe} = req.query;
 
       const data = await deleteCusById({
         db,
@@ -94,8 +96,8 @@ export const handleDeleteCustomer = async (req: any, res: any) =>
         customerId: req.params.customer_id,
         env,
         logger,
-        deleteInStripe: req.query.delete_in_stripe === "true",
-        forceDelete: forceDelete === "true",
+        deleteInStripe: delete_in_stripe === "true",
+        forceDelete: force_delete === "true",
       });
 
       res.status(200).json(data);
