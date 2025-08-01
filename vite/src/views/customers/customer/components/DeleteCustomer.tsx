@@ -4,7 +4,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CusProductStatus, Customer, FullCusProduct } from "@autumn/shared";
+import { AppEnv, CusProductStatus, Customer, FullCusProduct } from "@autumn/shared";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -13,6 +13,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useCustomerContext } from "../CustomerContext";
 import { notNullish } from "@/utils/genUtils";
+import { useEnv } from "@/utils/envUtils";
 
 export const DeleteCustomerDialog = ({
   customer,
@@ -31,7 +32,7 @@ export const DeleteCustomerDialog = ({
   });
 
   const axiosInstance = useAxiosInstance();
-
+  const env = useEnv();
   const handleClicked = async ({
     deleteStripe = false,
   }: {
@@ -43,7 +44,7 @@ export const DeleteCustomerDialog = ({
     });
 
     try {
-      await axiosInstance.delete(`/v1/customers/${customer.id}?forceDelete=${deleteStripe}`);
+      await axiosInstance.delete(`/v1/customers/${customer.id}?${env === AppEnv.Sandbox ? "delete_in_stripe" : "force_delete"}=${deleteStripe}`);
       await onDelete();
       setOpen(false);
       toast.success("Customer deleted");
@@ -88,7 +89,7 @@ export const DeleteCustomerDialog = ({
               isLoading={loadingStates.deleteCustomer}
               disabled={loadingStates.deleteStripe}
             >
-              Delete in Autumn only
+              Delete only in Autumn
             </Button>
           </div>
         </DialogFooter>
