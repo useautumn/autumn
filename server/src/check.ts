@@ -39,6 +39,7 @@ const skipEmails = process.env.SKIP_EMAILS!.split(",");
 // "athenahq",
 // orgSlugs = ["sweep-ai-1739822644", "zero"];
 orgSlugs = [
+  "alex",
   // "circlemind-zero"
   // 'zero',
   // 'sweep-ai-1739822644',
@@ -266,7 +267,7 @@ export const check = async () => {
 
     let customerId;
 
-    // customerId = "487bacbf-dd33-465e-a25a-09dd736dc81b";
+    // customerId = "SwZ6cDgOFAY9S29nHigvPaUk4uq2";
 
     let customers: FullCustomer[] = [];
     let stripeSubs: Stripe.Subscription[] = [];
