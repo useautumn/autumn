@@ -39,7 +39,7 @@ export const FeatureRowToolbar = ({
         <DropdownMenuTrigger asChild>
           <ToolbarButton className="!h-5 !w-5" />
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="text-t2">
+        <DropdownMenuContent className="text-t2" align="end">
           <DropdownMenuItem
             className="flex items-center"
             onClick={(e) => {
@@ -50,8 +50,12 @@ export const FeatureRowToolbar = ({
             }}
           >
             <div className="flex items-center justify-between w-full gap-2">
-              {feature.archived ? 'Unarchive' : 'Delete'}
-              {feature.archived ? <ArchiveRestore size={12} /> : <Delete size={12} />}
+              {feature.archived ? "Unarchive" : "Delete"}
+              {feature.archived ? (
+                <ArchiveRestore size={12} />
+              ) : (
+                <Delete size={12} />
+              )}
             </div>
           </DropdownMenuItem>
         </DropdownMenuContent>

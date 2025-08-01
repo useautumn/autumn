@@ -57,7 +57,7 @@ export const FrontendProductSchema = ProductSchema.omit({
   entitlements: z.array(
     EntitlementSchema.extend({
       feature: FeatureSchema,
-    }),
+    })
   ),
   free_trial: FreeTrialSchema,
   options: z.any(),
@@ -68,12 +68,20 @@ export const FullProductSchema = ProductSchema.extend({
   entitlements: z.array(
     EntitlementSchema.extend({
       feature: FeatureSchema,
-    }),
+    })
   ),
   free_trial: FreeTrialSchema.nullish(),
   free_trials: z.array(FreeTrialSchema).nullish(),
   free_trial_ids: z.array(z.string()).nullish(),
 });
+
+export type ProductCounts = {
+  active: number;
+  canceled: number;
+  custom: number;
+  trialing: number;
+  all: number;
+};
 
 export type Product = z.infer<typeof ProductSchema>;
 export type FrontendProduct = z.infer<typeof FrontendProductSchema>;

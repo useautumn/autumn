@@ -9,26 +9,24 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { Product } from "@autumn/shared";
+import { Product, ProductCounts } from "@autumn/shared";
 import { ProductService } from "@/services/products/ProductService";
 import { useProductsContext } from "../ProductsContext";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { getBackendErr } from "@/utils/genUtils";
 import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { UpdateProductDialog } from "../UpdateProduct";
 import { CopyDialog } from "./CopyDialog";
-import { Copy, Delete, Pen, ArchiveRestore } from "lucide-react";
+import { Copy, Delete, Pen, ArchiveRestore, Archive } from "lucide-react";
 import { DeleteProductDialog } from "./DeleteProductDialog";
 
 export const ProductRowToolbar = ({
   product,
+  productCounts,
 }: {
   className?: string;
   product: Product;
+  productCounts: ProductCounts;
 }) => {
-  const { mutate, env } = useProductsContext();
-  const axiosInstance = useAxiosInstance({ env });
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [copyLoading, setCopyLoading] = useState(false);
@@ -38,18 +36,14 @@ export const ProductRowToolbar = ({
   const [dialogType, setDialogType] = useState<"update" | "copy">("update");
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  const handleDelete = async () => {
-    setDeleteLoading(true);
-    try {
-      await ProductService.deleteProduct(axiosInstance, product.id);
-      await mutate();
-    } catch (error) {
-      console.log("Error deleting product", error);
-      toast.error(getBackendErr(error, "Failed to delete product"));
-    }
-    setDeleteLoading(false);
-    setDeleteOpen(false);
-  };
+  const allCount = productCounts?.all || 0;
+  let deleteText = allCount > 0 ? "Archive" : "Delete";
+  let DeleteIcon = allCount > 0 ? Archive : Delete;
+
+  if (product.archived) {
+    deleteText = "Unarchive";
+    DeleteIcon = ArchiveRestore;
+  }
 
   return (
     <>
@@ -57,6 +51,7 @@ export const ProductRowToolbar = ({
         product={product}
         open={deleteOpen}
         setOpen={setDeleteOpen}
+        productCounts={productCounts}
       />
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         {dialogType == "update" ? (
@@ -122,13 +117,11 @@ export const ProductRowToolbar = ({
               }}
             >
               <div className="flex items-center justify-between w-full gap-2">
-                {product.archived ? 'Unarchive' : 'Delete'}
+                {deleteText}
                 {deleteLoading ? (
                   <SmallSpinner />
-                ) : product.archived ? (
-                  <ArchiveRestore size={12} className="text-t3" />
                 ) : (
-                  <Delete size={12} className="text-t3" />
+                  <DeleteIcon size={12} className="text-t3" />
                 )}
               </div>
             </DropdownMenuItem>

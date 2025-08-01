@@ -15,10 +15,9 @@ import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
 import { RewardService } from "../rewards/RewardService.js";
 import { EventService } from "../api/events/EventService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { getCusEntMasterBalance } from "./cusProducts/cusEnts/cusEntUtils.js";
 import { getLatestProducts } from "../products/productUtils.js";
 import { getProductVersionCounts } from "../products/productUtils.js";
-import { notNullish } from "@/utils/genUtils.js";
+import { notNullish, nullish } from "@/utils/genUtils.js";
 import { mapToProductV2 } from "../products/productV2Utils.js";
 import { RewardRedemptionService } from "../rewards/RewardRedemptionService.js";
 import { CusReadService } from "./CusReadService.js";
@@ -314,7 +313,9 @@ cusRouter.get(
             p.product.id === product_id &&
             (p.status === CusProductStatus.Active ||
               p.status === CusProductStatus.PastDue) &&
-            (entity ? p.internal_entity_id === entity.internal_id : true)
+            (entity
+              ? p.internal_entity_id === entity.internal_id
+              : nullish(p.internal_entity_id))
         );
       }
 
