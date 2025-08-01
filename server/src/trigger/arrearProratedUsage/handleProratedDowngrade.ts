@@ -86,7 +86,7 @@ export const createDowngradeProrationInvoice = async ({
   if (invoiceAmount == 0) return;
 
   logger.info(
-    `🚀 Creating invoice item: ${invoiceDescription} - ${invoiceAmount.toFixed(2)}`,
+    `🚀 Creating invoice item: ${invoiceDescription} - ${invoiceAmount.toFixed(2)}`
   );
 
   const invoiceItem = constructStripeInvoiceItem({
@@ -165,10 +165,9 @@ export const handleProratedDowngrade = async ({
 
   let invoice = null;
   let newReplaceables: InsertReplaceable[] = [];
-  console.log("On decrease:", onDecrease);
-  console.log("Should bill now:", shouldBillNow(onDecrease));
 
-  if (shouldProrate(onDecrease)) {
+  if (onDecrease == OnDecrease.NoProrations) {
+  } else if (shouldProrate(onDecrease)) {
     let prevPrice = priceToInvoiceAmount({
       price: cusPrice.price,
       overage: roundUsage({
@@ -217,7 +216,7 @@ export const handleProratedDowngrade = async ({
   }
 
   let numDeletedReplaceables = cusEnt.replaceables.filter(
-    (r) => r.delete_next_cycle,
+    (r) => r.delete_next_cycle
   ).length;
   let newQuantity = newUsage - numDeletedReplaceables;
 

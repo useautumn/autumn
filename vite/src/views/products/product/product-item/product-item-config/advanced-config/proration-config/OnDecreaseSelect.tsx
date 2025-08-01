@@ -19,6 +19,8 @@ const optionToText = ({
       }
 
       return "No proration (usage will be kept till next cycle)";
+    case OnDecrease.NoProrations:
+      return "No proration";
   }
 };
 
@@ -28,6 +30,10 @@ export const OnDecreaseSelect = () => {
   const getOnDecreaseVal = () => {
     if (nullish(item.config?.on_decrease)) {
       return OnDecrease.Prorate;
+    }
+
+    if (item.config?.on_decrease == OnDecrease.NoProrations) {
+      return OnDecrease.NoProrations;
     }
 
     if (

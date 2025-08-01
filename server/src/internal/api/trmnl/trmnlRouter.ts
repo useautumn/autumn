@@ -66,7 +66,9 @@ trmnlRouter.post("/device_id", withOrgAuth, async (req: any, res: any) => {
       // 1. Get upstash data
       upstash = upstash!;
 
-      const trmnlConfig = (await upstash.get(`trmnl:device:${req.body.deviceId}`)) as {
+      const trmnlConfig = (await upstash.get(
+        `trmnl:device:${req.body.deviceId}`
+      )) as {
         orgId: string;
         hideRevenue: boolean;
       };
@@ -87,7 +89,7 @@ trmnlRouter.post("/device_id", withOrgAuth, async (req: any, res: any) => {
         orgId: req.org.id,
         hideRevenue: req.body.hideRevenue,
       });
-      
+
       await upstash.set(`trmnl:org:${req.org.id}`, {
         deviceId: req.body.deviceId,
         hideRevenue: req.body.hideRevenue,
