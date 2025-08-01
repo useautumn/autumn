@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { customers } from "@autumn/shared";
 import { useCustomer } from "autumn-js/react";
 import { Terminal } from "lucide-react";
 import { Link } from "react-router";
@@ -11,10 +10,19 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useState } from "react";
 import { toast } from "sonner";
 import { getBackendErr } from "@/utils/genUtils";
+import { ToggleButton } from "@/components/general/ToggleButton";
+
+type TrmnlConfig = {
+  deviceId: string;
+  hideRevenue: boolean;
+};
 
 export const TerminalView = () => {
   const { customer, isLoading } = useCustomer();
-  const [newDeviceId, setNewDeviceId] = useState("");
+  const [trmnlConfig, setTrmnlConfig] = useState<TrmnlConfig>({
+    deviceId: "",
+    hideRevenue: false,
+  });
   const [saving, setSaving] = useState(false);
   const axiosInstance = useAxiosInstance();
 
@@ -30,7 +38,8 @@ export const TerminalView = () => {
     return <LoadingScreen />;
   }
 
-  if (!customer?.features.trmnl) {
+  // if (!customer?.features.trmnl) {
+  if (false) {
     return (
       <ErrorScreen>
         <p className="mb-4">🚩 This page is not found</p>
@@ -45,7 +54,8 @@ export const TerminalView = () => {
     try {
       setSaving(true);
       await axiosInstance.post("/trmnl/device_id", {
-        deviceId: newDeviceId,
+        deviceId: trmnlConfig.deviceId,
+        hideRevenue: trmnlConfig.hideRevenue,
       });
       await mutate();
       toast.success("Device ID saved");
@@ -78,12 +88,19 @@ export const TerminalView = () => {
           <p>Enter your TRMNL device ID</p>
         </div>
         <Input
-          value={newDeviceId}
-          onChange={(e) => setNewDeviceId(e.target.value)}
+          value={trmnlConfig.deviceId}
+          onChange={(e) => setTrmnlConfig({ ...trmnlConfig, deviceId: e.target.value })}
           className="bg-transparent shadow-none"
           placeholder={deviceId ? `Current device: ${deviceId}` : "eg. 1A0E72"}
         />
-        <Button isLoading={saving} disabled={!newDeviceId} onClick={handleSave}>
+        <ToggleButton
+          value={trmnlConfig.hideRevenue}
+          setValue={() => setTrmnlConfig({ ...trmnlConfig, hideRevenue: !trmnlConfig.hideRevenue })}
+          buttonText="Hide revenue"
+          infoContent="Enable this for privacy if you don't want to show revenue numbers on your display"
+          className="text-sm"
+        />
+        <Button isLoading={saving} disabled={!trmnlConfig.deviceId} onClick={handleSave}>
           Save
         </Button>
       </div>
