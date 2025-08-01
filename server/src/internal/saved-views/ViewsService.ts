@@ -42,7 +42,7 @@ export class ViewsService {
         const listKey = `saved_views_list:${orgId}:${env}`;
         const existingViews = await CacheManager.getJson(listKey) || [];
         existingViews.push(viewId);
-        await CacheManager.setJson(listKey, existingViews); // No TTL
+        await CacheManager.setJson(listKey, existingViews, "forever"); // No TTL
 
         res.status(201).json({
           message: "View saved successfully",
