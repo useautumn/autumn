@@ -15,7 +15,7 @@ export const deleteCusById = async ({
   env,
   logger,
   deleteInStripe = false,
-  forceDeleteInStripe = false,
+  forceDelete = false,
 }: {
   db: DrizzleCli;
   org: Organization;
@@ -23,7 +23,7 @@ export const deleteCusById = async ({
   env: AppEnv;
   logger: any;
   deleteInStripe?: boolean;
-  forceDeleteInStripe?: boolean;
+  forceDelete?: boolean;
 }) => {
   const orgId = org.id;
 
@@ -42,10 +42,10 @@ export const deleteCusById = async ({
     });
   }
 
-  if (deleteInStripe || forceDeleteInStripe) {
+  if (deleteInStripe) {
     try {
-      // Only delete stripe customer in sandbox or if forceDeleteInStripe is true
-      if (customer.processor?.id && (env === AppEnv.Sandbox || forceDeleteInStripe)) {
+      // Only delete stripe customer in sandbox or if forceDelete is true
+      if (customer.processor?.id && (env === AppEnv.Sandbox || forceDelete)) {
         await deleteStripeCustomer({
           org,
           env: env,
@@ -82,7 +82,7 @@ export const handleDeleteCustomer = async (req: any, res: any) =>
     action: "delete customer",
     handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
       const { env, logtail: logger, db, org } = req;
-      const { forceDeleteInStripe } = req.query;
+      const { forceDelete } = req.query;
 
       const data = await deleteCusById({
         db,
@@ -91,7 +91,7 @@ export const handleDeleteCustomer = async (req: any, res: any) =>
         env,
         logger,
         deleteInStripe: req.query.delete_in_stripe === "true",
-        forceDeleteInStripe: forceDeleteInStripe === "true",
+        forceDelete: forceDelete === "true",
       });
 
       res.status(200).json(data);

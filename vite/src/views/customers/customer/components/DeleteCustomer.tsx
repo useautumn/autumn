@@ -43,7 +43,7 @@ export const DeleteCustomerDialog = ({
     });
 
     try {
-      await axiosInstance.delete(`/v1/customers/${customer.id}?forceDeleteInStripe=${deleteStripe}`);
+      await axiosInstance.delete(`/v1/customers/${customer.id}?forceDelete=${deleteStripe}`);
       await onDelete();
       setOpen(false);
       toast.success("Customer deleted");
