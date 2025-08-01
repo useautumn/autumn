@@ -134,7 +134,7 @@ export const ProductList = ({
   );
 };
 
-const EditProductDialog = ({
+export const EditProductDialog = ({
   product,
   features,
   setProduct,

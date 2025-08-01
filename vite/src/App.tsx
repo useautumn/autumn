@@ -19,6 +19,7 @@ import { PasswordSignIn } from "./views/auth/components/PasswordSignIn";
 import { Otp } from "./views/cli/Otp";
 import { AnalyticsView } from "./views/customers/customer/analytics/AnalyticsView";
 import { TerminalView } from "./views/TerminalView";
+import OnboardingView2 from "./views/onboarding2/OnboardingView2";
 
 export default function App() {
   return (
@@ -34,6 +35,8 @@ export default function App() {
 
           <Route path="/onboarding" element={<OnboardingView />} />
           <Route path="/sandbox/onboarding" element={<OnboardingView />} />
+          <Route path="/onboarding2" element={<OnboardingView2 />} />
+          <Route path="/sandbox/onboarding2" element={<OnboardingView2 />} />
           <Route path="/cli-auth" element={<CliAuth />} />
           {/* FEATURES */}
           <Route
