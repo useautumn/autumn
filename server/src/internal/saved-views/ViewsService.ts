@@ -36,7 +36,7 @@ export class ViewsService {
 
         // Save to Redis with key: saved_views:orgId:env:viewId (org+env scoped, no TTL)
         const key = `saved_views:${orgId}:${env}:${viewId}`;
-        await CacheManager.setJson(key, view); // No TTL - store forever
+        await CacheManager.setJson(key, view, "forever"); // No TTL - store forever
 
         // Also save to a list for easy retrieval
         const listKey = `saved_views_list:${orgId}:${env}`;
@@ -108,7 +108,7 @@ export class ViewsService {
         const listKey = `saved_views_list:${orgId}:${env}`;
         const existingViews = await CacheManager.getJson(listKey) || [];
         const updatedViews = existingViews.filter((id: string) => id !== viewId);
-        await CacheManager.setJson(listKey, updatedViews); // No TTL
+        await CacheManager.setJson(listKey, updatedViews, "forever"); // No TTL
 
         res.json({ message: "View deleted successfully" });
       },
