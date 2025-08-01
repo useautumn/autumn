@@ -128,6 +128,55 @@ export const TerminalView = () => {
           Save
         </Button>
       </div>
+      <div className="absolute bottom-20 p-10 bg-zinc-100 text-sm flex flex-col gap-1 text-t2/90">
+        <p className="font-bold">To link Autumn to TRMNL:</p>
+        <p>
+          1. Follow this{" "}
+          <a
+            href="https://help.usetrmnl.com/en/articles/9416306-how-to-set-up-a-new-device"
+            className="underline"
+            target="_blank"
+          >
+            guide
+          </a>{" "}
+          to set up your TRMNL
+        </p>
+        <p>2. Once you've gotten your device ID, enter it above.</p>
+        <p>
+          3. Visit this{" "}
+          <a
+            href="https://usetrmnl.com/recipes/119587/install_read_only?read_only=true"
+            className="underline"
+            target="_blank"
+          >
+            page
+          </a>
+          , enter your device ID in the input and click 'Save'
+        </p>
+        <p>
+          4. You should be done now! Confirm that Autumn has been added to your
+          playlist{" "}
+          <a
+            href="https://usetrmnl.com/playlists"
+            className="underline"
+            target="_blank"
+          >
+            here
+          </a>
+          .
+        </p>
+        <p>
+          5. Read this{" "}
+          <a
+            href="https://help.usetrmnl.com/en/articles/10113695-how-refresh-rates-work"
+            className="underline"
+            target="_blank"
+          >
+            page
+          </a>{" "}
+          to learn more about TRMNL's refresh rates.
+        </p>
+      </div>
     </div>
   );
 };
