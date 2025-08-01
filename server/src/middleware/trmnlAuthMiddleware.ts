@@ -35,13 +35,14 @@ export const trmnlAuthMiddleware = async (
   req.env = req.headers["env"] || AppEnv.Live;
   const features = await FeatureService.list({
     db: req.db,
-    orgId: fileJson[trmnlId],
+    orgId: fileJson[trmnlId].id,
     env: req.env,
   });
 
   req.org = {
-    id: fileJson[trmnlId],
+    id: fileJson[trmnlId].id,
     env: req.env,
+    hideRevenue: fileJson[trmnlId].hideRevenue,
   };
   req.features = features;
 
