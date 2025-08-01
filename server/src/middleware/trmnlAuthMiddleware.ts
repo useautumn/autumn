@@ -22,6 +22,10 @@ export const trmnlAuthMiddleware = async (
     return;
   }
 
+  req.logger.info(
+    `received trmnl request, device id: ${req.headers["x-trmnl-id"]}`
+  );
+
   const deviceId = req.headers["x-trmnl-id"];
   if (!deviceId) {
     res.status(401).json({
@@ -45,6 +49,8 @@ export const trmnlAuthMiddleware = async (
     });
     return;
   }
+
+  req.logger.info(`trmnl config: ${JSON.stringify(trmnlConfig)}`);
 
   req.env = req.headers["env"] || AppEnv.Live;
   const features = await FeatureService.list({
