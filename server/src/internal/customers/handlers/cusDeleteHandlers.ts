@@ -42,7 +42,12 @@ export const deleteCusById = async ({
     });
   }
 
-  if (deleteInStripe) {
+  let response = {
+    customer,
+    success: true,
+  }
+
+  if (deleteInStripe || forceDelete) {
     try {
       // Only delete stripe customer in sandbox or if forceDelete is true
       if (customer.processor?.id && (env === AppEnv.Sandbox || forceDelete)) {
@@ -59,6 +64,8 @@ export const deleteCusById = async ({
         }`,
         error?.message || error
       );
+
+      response.success = false;
     }
   }
 
@@ -69,10 +76,7 @@ export const deleteCusById = async ({
     env: env,
   });
 
-  return {
-    success: true,
-    customer,
-  };
+  return response;
 };
 
 export const handleDeleteCustomer = async (req: any, res: any) =>
