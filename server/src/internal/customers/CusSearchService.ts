@@ -2,8 +2,26 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 
 import { AppEnv, customers, CusProductStatus } from "@autumn/shared";
 
-import { and, desc, eq, ilike, or, lt, isNotNull, gt, sql, gte, isNull, inArray } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  ilike,
+  or,
+  lt,
+  isNotNull,
+  gt,
+  sql,
+  gte,
+  isNull,
+  inArray,
+  notExists,
+} from "drizzle-orm";
 import { customerProducts, products } from "@autumn/shared";
+import { alias } from "drizzle-orm/pg-core";
+
+// Create alias for subquery
+const customerProductsAlias = alias(customerProducts, "cp_alias");
 
 const customerFields = {
   internal_id: customers.internal_id,
@@ -33,6 +51,7 @@ interface SearchFilters {
   product_id?: string;
   status?: string;
   version?: string;
+  none?: string;
 }
 
 export class CusSearchService {
@@ -52,7 +71,11 @@ export class CusSearchService {
     search: string;
     filters: SearchFilters;
     pageSize?: number;
-    lastItem?: { internal_id: string; created_at?: string; name?: string } | null;
+    lastItem?: {
+      internal_id: string;
+      created_at?: string;
+      name?: string;
+    } | null;
     pageNumber: number;
   }) {
     // If we have a lastItem with only internal_id, fetch the full customer data for cursor pagination
@@ -73,7 +96,7 @@ export class CusSearchService {
           )
         )
         .limit(1);
-      
+
       if (customerData.length > 0) {
         resolvedLastItem = {
           internal_id: customerData[0].internal_id,
@@ -85,11 +108,13 @@ export class CusSearchService {
         resolvedLastItem = null;
       }
     }
+
     let statuses: string[] = [];
+
     // 1. Create base query to fetch all customerproducts
     let activeProdFilter = or(
       eq(customerProducts.status, CusProductStatus.Active),
-      eq(customerProducts.status, CusProductStatus.PastDue),
+      eq(customerProducts.status, CusProductStatus.PastDue)
     );
 
     if (filters.status?.includes(",")) {
@@ -99,17 +124,18 @@ export class CusSearchService {
     }
 
     // Handle product:version combinations
-    let productVersionFilters: Array<{productId: string, version: number}> = [];
-    
+    let productVersionFilters: Array<{ productId: string; version: number }> =
+      [];
+
     // Parse version field which now contains "productId:version,productId2:version2"
     if (filters.version) {
       const versionSelections = filters.version.split(",").filter(Boolean);
-      productVersionFilters = versionSelections.map(selection => {
+      productVersionFilters = versionSelections.map((selection) => {
         const [productId, version] = selection.split(":");
         return { productId, version: parseInt(version) };
       });
     }
-    
+
     // Legacy support for product_id field (if still used)
     let productIds: string[] = [];
     if (filters.product_id) {
@@ -123,12 +149,14 @@ export class CusSearchService {
     let filtersDrizzle = and(
       // New product:version filtering
       productVersionFilters.length > 0
-        ? or(...productVersionFilters.map(pv => 
-            and(
-              eq(customerProducts.product_id, pv.productId),
-              eq(products.version, pv.version)
+        ? or(
+            ...productVersionFilters.map((pv) =>
+              and(
+                eq(customerProducts.product_id, pv.productId),
+                eq(products.version, pv.version)
+              )
             )
-          ))
+          )
         : undefined,
       // Legacy product filtering (fallback)
       productIds.length > 0 && productVersionFilters.length === 0
@@ -136,26 +164,57 @@ export class CusSearchService {
         : undefined,
       statuses.length > 0 && !statuses.includes("")
         ? or(
-            ...statuses.map(status => {
+            ...statuses.map((status) => {
               switch (status) {
                 case "canceled":
-                  return isNotNull(customerProducts.canceled_at);
+                  return and(
+                    isNotNull(customerProducts.canceled_at),
+                    activeProdFilter
+                  );
                 case "free_trial":
                   return and(
                     gt(customerProducts.trial_ends_at, Date.now()),
                     isNotNull(customerProducts.free_trial_id),
+                    activeProdFilter
                   );
                 case CusProductStatus.Expired:
                   return and(
                     eq(customerProducts.status, CusProductStatus.Expired),
                     isNull(customerProducts.canceled_at),
+                    notExists(
+                      db
+                        .select()
+                        .from(customerProductsAlias)
+                        .where(
+                          and(
+                            eq(
+                              customerProductsAlias.internal_customer_id,
+                              customerProducts.internal_customer_id
+                            ),
+                            eq(
+                              customerProductsAlias.product_id,
+                              customerProducts.product_id
+                            ),
+                            or(
+                              eq(
+                                customerProductsAlias.status,
+                                CusProductStatus.Active
+                              ),
+                              eq(
+                                customerProductsAlias.status,
+                                CusProductStatus.PastDue
+                              )
+                            )
+                          )
+                        )
+                    )
                   );
                 default:
                   return eq(customerProducts.status, status);
               }
             })
           )
-        : undefined,
+        : undefined
     );
 
     let cusFilter = and(
@@ -166,31 +225,34 @@ export class CusSearchService {
         ? or(
             ilike(customers.id, `%${search}%`),
             ilike(customers.name, `%${search}%`),
-            ilike(customers.email, `%${search}%`),
+            ilike(customers.email, `%${search}%`)
           )
-        : undefined,
+        : undefined
     );
 
     // Build the where clause
     // Apply active filter by default, unless user has selected non-active statuses
     const hasStatusFilters = statuses.length > 0 && !statuses.includes("");
-    const hasNonActiveStatusFilters = hasStatusFilters && statuses.some(status => 
-      status !== "active" && status !== ""
-    );
-    const shouldApplyActiveFilter = !hasStatusFilters || (statuses.includes("active") && !hasNonActiveStatusFilters);
-    
+    const hasNonActiveStatusFilters =
+      hasStatusFilters &&
+      statuses.some((status) => status !== "active" && status !== "");
+    const shouldApplyActiveFilter =
+      !hasStatusFilters ||
+      (statuses.includes("active") && !hasNonActiveStatusFilters);
+
     const whereClause = and(
       shouldApplyActiveFilter ? activeProdFilter : undefined,
       filtersDrizzle,
       cusFilter,
       resolvedLastItem && resolvedLastItem.internal_id
         ? lt(customers.internal_id, resolvedLastItem.internal_id)
-        : undefined,
+        : undefined
     );
-    
+
     // Execute query with appropriate pagination
-    const hasProductFilters = productVersionFilters.length > 0 || productIds.length > 0;
-    
+    const hasProductFilters =
+      productVersionFilters.length > 0 || productIds.length > 0;
+
     // Build the query based on pagination type
     const buildQuery = () => {
       const baseQuery = db
@@ -202,22 +264,22 @@ export class CusSearchService {
         .from(customerProducts)
         .leftJoin(
           customers,
-          eq(customerProducts.internal_customer_id, customers.internal_id),
+          eq(customerProducts.internal_customer_id, customers.internal_id)
         );
-      
+
       if (hasProductFilters) {
         return baseQuery.innerJoin(
           products,
-          eq(customerProducts.internal_product_id, products.internal_id),
+          eq(customerProducts.internal_product_id, products.internal_id)
         );
       } else {
         return baseQuery.leftJoin(
           products,
-          eq(customerProducts.internal_product_id, products.internal_id),
+          eq(customerProducts.internal_product_id, products.internal_id)
         );
       }
     };
-    
+
     let productQueryResult;
     if (!resolvedLastItem && pageNumber > 1) {
       // Use offset-based pagination
@@ -240,35 +302,37 @@ export class CusSearchService {
       const baseCountQuery = db
         .select({
           totalCount: sql<number>`count(distinct ${customers.internal_id})`.as(
-            "total_count",
+            "total_count"
           ),
         })
         .from(customerProducts)
         .leftJoin(
           customers,
-          eq(customerProducts.internal_customer_id, customers.internal_id),
+          eq(customerProducts.internal_customer_id, customers.internal_id)
         );
-      
+
       if (hasProductFilters) {
         return baseCountQuery.innerJoin(
           products,
-          eq(customerProducts.internal_product_id, products.internal_id),
+          eq(customerProducts.internal_product_id, products.internal_id)
         );
       } else {
         return baseCountQuery.leftJoin(
           products,
-          eq(customerProducts.internal_product_id, products.internal_id),
+          eq(customerProducts.internal_product_id, products.internal_id)
         );
       }
     };
 
     const [results, totalCountResult] = await Promise.all([
       productQueryResult,
-      buildCountQuery().where(and(
-        shouldApplyActiveFilter ? activeProdFilter : undefined,
-        filtersDrizzle,
-        cusFilter
-      )),
+      buildCountQuery().where(
+        and(
+          shouldApplyActiveFilter ? activeProdFilter : undefined,
+          filtersDrizzle,
+          cusFilter
+        )
+      ),
     ]);
 
     // Process the results to group customer products by customer
@@ -300,6 +364,108 @@ export class CusSearchService {
     return { data: processedData, count: totalCount };
   }
 
+  static async searchByNone({
+    db,
+    orgId,
+    env,
+    search,
+    filters,
+    pageSize = 50,
+    lastItem,
+    pageNumber,
+  }: {
+    db: DrizzleCli;
+    orgId: string;
+    env: AppEnv;
+    search: string;
+    filters: SearchFilters;
+    pageSize?: number;
+    lastItem?: {
+      internal_id: string;
+      created_at?: string;
+      name?: string;
+    } | null;
+    pageNumber: number;
+  }) {
+    const noneFilter = notExists(
+      db
+        .select()
+        .from(customerProducts)
+        .where(
+          and(
+            eq(customerProducts.internal_customer_id, customers.internal_id),
+            or(
+              eq(customerProducts.status, CusProductStatus.Active),
+              eq(customerProducts.status, CusProductStatus.PastDue),
+              eq(customerProducts.status, CusProductStatus.Scheduled)
+            )
+          )
+        )
+    );
+
+    const baseWhereClause = and(
+      eq(customers.org_id, orgId),
+      eq(customers.env, env),
+      search
+        ? or(
+            ilike(customers.id, `%${search}%`),
+            ilike(customers.name, `%${search}%`),
+            ilike(customers.email, `%${search}%`)
+          )
+        : undefined,
+      noneFilter,
+      lastItem && lastItem.internal_id
+        ? lt(customers.internal_id, lastItem.internal_id)
+        : undefined
+    );
+
+    let baseQuery;
+    if (!lastItem && pageNumber > 1) {
+      // Use offset-based pagination
+      const offset = (pageNumber - 1) * pageSize;
+      baseQuery = db
+        .select(customerFields)
+        .from(customers)
+        .where(baseWhereClause)
+        .orderBy(desc(customers.internal_id))
+        .offset(offset)
+        .limit(pageSize);
+    } else {
+      // Use cursor-based pagination
+      baseQuery = db
+        .select(customerFields)
+        .from(customers)
+        .where(baseWhereClause)
+        .orderBy(desc(customers.internal_id))
+        .limit(pageSize);
+    }
+
+    const [results, totalCountResult] = await Promise.all([
+      baseQuery,
+      db
+        .select({
+          count: sql<number>`count(*)`.as("count"),
+        })
+        .from(customers)
+        .where(
+          and(
+            eq(customers.org_id, orgId),
+            eq(customers.env, env),
+            search
+              ? or(
+                  ilike(customers.id, `%${search}%`),
+                  ilike(customers.name, `%${search}%`),
+                  ilike(customers.email, `%${search}%`)
+                )
+              : undefined,
+            noneFilter
+          )
+        ),
+    ]);
+
+    return { data: results, count: totalCountResult[0]?.count || 0 };
+  }
+
   static async search({
     db,
     orgId,
@@ -314,7 +480,11 @@ export class CusSearchService {
     orgId: string;
     env: AppEnv;
     search: string;
-    lastItem?: { internal_id: string; created_at?: string; name?: string } | null;
+    lastItem?: {
+      internal_id: string;
+      created_at?: string;
+      name?: string;
+    } | null;
     filters?: SearchFilters;
     pageSize?: number;
     pageNumber: number;
@@ -337,7 +507,7 @@ export class CusSearchService {
           )
         )
         .limit(1);
-      
+
       if (customerData.length > 0) {
         resolvedLastItem = {
           internal_id: customerData[0].internal_id,
@@ -349,6 +519,21 @@ export class CusSearchService {
         resolvedLastItem = null;
       }
     }
+    const noneProducts = filters?.none === "true";
+
+    if (noneProducts) {
+      return await this.searchByNone({
+        db,
+        orgId,
+        env,
+        search,
+        filters,
+        pageSize,
+        lastItem: resolvedLastItem,
+        pageNumber,
+      });
+    }
+
     if (filters?.product_id || filters?.status || filters?.version) {
       return await this.searchByProduct({
         db,
@@ -369,9 +554,9 @@ export class CusSearchService {
         ? or(
             ilike(customers.id, `%${search}%`),
             ilike(customers.name, `%${search}%`),
-            ilike(customers.email, `%${search}%`),
+            ilike(customers.email, `%${search}%`)
           )
-        : undefined,
+        : undefined
     );
 
     // Build the where clause for base query
@@ -379,7 +564,7 @@ export class CusSearchService {
       filterClause,
       resolvedLastItem && resolvedLastItem.internal_id
         ? lt(customers.internal_id, resolvedLastItem.internal_id)
-        : undefined,
+        : undefined
     );
 
     // Create the base customer query as a subquery with appropriate pagination
@@ -434,11 +619,11 @@ export class CusSearchService {
         .from(baseQuery)
         .leftJoin(
           customerProducts,
-          eq(baseQuery.internal_id, customerProducts.internal_customer_id),
+          eq(baseQuery.internal_id, customerProducts.internal_customer_id)
         )
         .leftJoin(
           products,
-          eq(customerProducts.internal_product_id, products.internal_id),
+          eq(customerProducts.internal_product_id, products.internal_id)
         )
         .orderBy(desc(baseQuery.internal_id)),
       totalCountQuery,

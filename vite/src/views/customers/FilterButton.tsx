@@ -14,16 +14,29 @@ import {
 
 import { useCustomersContext } from "./CustomersContext";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
-import { Check, ListFilter, X } from "lucide-react";
+import { Check, ListFilter, Pin, X } from "lucide-react";
 import { SaveViewPopover } from "./SavedViewPopover";
 import { useState } from "react";
 import { ProductsSubMenu } from "./filter/ProductsSubMenu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FilterStatusSubMenu } from "./filter/FilterStatusSubMenu";
+import { Separator } from "@/components/ui/separator";
+import { useAxiosSWR } from "@/services/useAxiosSwr";
+import { SavedViews } from "./filter/SavedViews";
 
 function FilterButton() {
   const { setFilters } = useCustomersContext();
   const [open, setOpen] = useState(false);
+
+  const {
+    data: savedViewsData,
+    isLoading: loading,
+    mutate: refetchSavedViews,
+  } = useAxiosSWR({
+    url: "/saved_views",
+  });
+
+  const views = savedViewsData?.views || [];
 
   const clearFilters = () => {
     setFilters({
@@ -49,25 +62,23 @@ function FilterButton() {
           <ProductsSubMenu />
         </DropdownMenuGroup>
         <DropdownMenuSeparator className="m-0" />
-        <div className="flex h-9 items-stretch p-1 gap-2">
+        {views.length > 0 && (
+          <SavedViews
+            views={views}
+            mutateViews={refetchSavedViews}
+            setDropdownOpen={setOpen}
+          />
+        )}
+        <div className="flex h-9 items-stretch">
           <DropdownMenuItem
-            onClick={(e) => {
-              clearFilters();
-            }}
-            className="cursor-pointer flex-1 flex items-center justify-center h-full p-0"
+            onClick={(e) => clearFilters()}
+            className="cursor-pointer justify-center gap-0 w-full"
           >
-            <X size={14} className="mr-2 text-t3" />
-            Clear
+            <X size={12} className="mr-2 text-t3" />
+            <p className="text-t3">Clear</p>
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={(e) => {
-              clearFilters();
-            }}
-            className="cursor-pointer flex-1 flex items-center justify-center h-full p-0"
-          >
-            <X size={14} className="mr-2 text-t3" />
-            Clear
-          </DropdownMenuItem>
+
+          <SaveViewPopover onClose={closeFilterModal} />
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
