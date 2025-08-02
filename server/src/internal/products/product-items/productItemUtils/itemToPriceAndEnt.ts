@@ -243,6 +243,7 @@ export const toFeatureAndPrice = ({
     let onIncrease = item.config?.on_increase || OnIncrease.ProrateImmediately;
     let onDecrease = item.config?.on_decrease || OnDecrease.Prorate;
 
+    // console.log("Item config:", item.config);
     if (shouldProrate(onDecrease) || onDecrease == OnDecrease.Prorate) {
       onDecrease =
         onIncrease == OnIncrease.ProrateImmediately
@@ -254,6 +255,8 @@ export const toFeatureAndPrice = ({
       on_increase: onIncrease,
       on_decrease: onDecrease,
     };
+
+    // console.log("Proration config:", prorationConfig);
   }
 
   let price: Price = {

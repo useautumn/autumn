@@ -9,11 +9,12 @@ export const parseCsv = (path: string) => {
     stream
       .pipe(csv({ separator: "," }))
       .on("data", (data) => {
-        if (headers.length === 0) {
-          headers = Object.keys(data);
-        } else {
-          results.push(data);
-        }
+        results.push(data);
+        // if (headers.length === 0) {
+        //   headers = Object.keys(data);
+        // } else {
+        //   results.push(data);
+        // }
       })
       .on("end", () => resolve(results))
       .on("error", (error) => reject(error));

@@ -10,7 +10,7 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusService } from "../CusService.js";
 import { buildBaseCusCacheKey } from "./cusCacheUtils.js";
 import { initUpstash } from "./upstashUtils.js";
-import { notNullish } from "@/utils/genUtils.js";
+import { notNullish, nullish } from "@/utils/genUtils.js";
 
 export const getCusWithCache = async ({
   db,
@@ -84,7 +84,7 @@ export const getCusWithCache = async ({
     entityId,
   });
 
-  if (entityId && !customer.entity) skipCache = true;
+  if (entityId && nullish(customer?.entity)) skipCache = true;
 
   if (!skipCache && notNullish(customer)) {
     try {
