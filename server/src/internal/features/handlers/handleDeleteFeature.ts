@@ -46,7 +46,7 @@ export const handleDeleteFeature = async (req: any, res: any) =>
 
       if (ent) {
         throw new RecaseError({
-          message: `Feature ${featureId} is used in a product`,
+          message: `Feature ${featureId} is used in a product. You must delete the product first, or archive it instead.`,
           code: ErrCode.InvalidFeature,
           statusCode: 400,
         });

@@ -1,3 +1,4 @@
+import { notNullish } from "@/utils/genUtils";
 import axios, { AxiosInstance } from "axios";
 
 export class ProductService {
@@ -10,12 +11,22 @@ export class ProductService {
     axiosInstance: AxiosInstance,
     productId: string,
     data: any,
+    version?: number
   ) {
-    await axiosInstance.post(`/v1/products/${productId}`, data);
+    const url = notNullish(version)
+      ? `/v1/products/${productId}?version=${version}`
+      : `/v1/products/${productId}`;
+    await axiosInstance.post(url, data);
   }
 
-  static async deleteProduct(axiosInstance: AxiosInstance, productId: string) {
-    await axiosInstance.delete(`/v1/products/${productId}`);
+  static async deleteProduct(
+    axiosInstance: AxiosInstance,
+    productId: string,
+    allVersions?: boolean
+  ) {
+    await axiosInstance.delete(
+      `/v1/products/${productId}?all_versions=${allVersions}`
+    );
   }
 
   static async createEntitlement(axiosInstance: AxiosInstance, data: any) {
@@ -25,7 +36,7 @@ export class ProductService {
   static async createPrice(
     axiosInstance: AxiosInstance,
     productId: string,
-    data: any,
+    data: any
   ) {
     await axiosInstance.post(`/products/${productId}/prices`, data);
   }
@@ -39,7 +50,7 @@ export class ProductService {
   static async copyProduct(
     axiosInstance: AxiosInstance,
     productId: string,
-    data: any,
+    data: any
   ) {
     await axiosInstance.post(`/v1/products/${productId}/copy`, data);
   }

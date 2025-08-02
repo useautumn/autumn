@@ -164,4 +164,4 @@ cusRouter.post("/:customer_id/coupons/:coupon_id", handleAddCouponToCus);
 
 cusRouter.use("/:customer_id/entities", entityRouter);
 
-cusRouter.post("/:customer_id/transfer_product", handleTransferProduct);
+cusRouter.post("/:customer_id/transfer", handleTransferProduct);

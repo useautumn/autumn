@@ -39,7 +39,7 @@ export const handleGetCustomer = async (req: any, res: any) =>
       const customer = await getCusWithCache({
         db,
         idOrInternalId: customerId,
-        orgId: org.id,
+        org,
         env,
         expand: expandArray,
         allowNotFound: true,

@@ -1,5 +1,5 @@
 import RecaseError from "@/utils/errorUtils.js";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import {
   AppEnv,
   ErrCode,
@@ -52,8 +52,8 @@ export class OrgService {
       .where(
         and(
           eq(invitation.organizationId, orgId),
-          eq(invitation.status, "pending"),
-        ),
+          eq(invitation.status, "pending")
+        )
       );
 
     return results;
@@ -225,5 +225,13 @@ export class OrgService {
       console.error(error);
       throw error;
     }
+  }
+
+  static async getCacheEnabledOrgs({ db }: { db: DrizzleCli }) {
+    const result = await db.query.organizations.findMany({
+      where: sql`${organizations.config}->>'cache_customer' = 'true'`,
+    });
+
+    return result;
   }
 }

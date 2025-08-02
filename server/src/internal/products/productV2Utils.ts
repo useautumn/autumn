@@ -104,6 +104,7 @@ export const mapToProductV2 = ({
 
     items: items,
     stripe_id: product.processor?.id || null,
+    archived: product.archived || false,
   };
 
   return productV2;

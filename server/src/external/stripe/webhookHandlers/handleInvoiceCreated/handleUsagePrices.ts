@@ -10,12 +10,16 @@ import {
   EntInterval,
   Customer,
   APIVersion,
+  RolloverConfig,
 } from "@autumn/shared";
 import { differenceInMinutes, subDays } from "date-fns";
 import { submitUsageToStripe } from "../../stripeMeterUtils.js";
 import { getInvoiceItemForUsage } from "../../stripePriceUtils.js";
 import { getCusPriceUsage } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
 import { findStripeItemForPrice } from "../../stripeSubUtils/stripeSubItemUtils.js";
+import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils.js";
+import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 export const handleUsagePrices = async ({
   db,
@@ -42,8 +46,8 @@ export const handleUsagePrices = async ({
     Math.abs(
       differenceInMinutes(
         new Date(activeProduct.created_at),
-        new Date(invoice.created * 1000),
-      ),
+        new Date(invoice.created * 1000)
+      )
     ) < 10;
 
   let invoiceFromUpgrade = invoice.billing_reason == "subscription_update";
@@ -93,7 +97,7 @@ export const handleUsagePrices = async ({
   } else {
     if (!config.stripe_meter_id) {
       logger.warn(
-        `Price ${price.id} has no stripe meter id, skipping invoice.created for usage in arrear`,
+        `Price ${price.id} has no stripe meter id, skipping invoice.created for usage in arrear`
       );
       return;
     }
@@ -105,7 +109,7 @@ export const handleUsagePrices = async ({
     });
 
     const usageTimestamp = Math.round(
-      subDays(new Date(invoice.created * 1000), 1).getTime() / 1000,
+      subDays(new Date(invoice.created * 1000), 1).getTime() / 1000
     );
 
     await submitUsageToStripe({
@@ -124,6 +128,7 @@ export const handleUsagePrices = async ({
   }
 
   let ent = relatedCusEnt.entitlement;
+
   let resetBalancesUpdate = getResetBalancesUpdate({
     cusEnt: relatedCusEnt,
     allowance: ent.interval == EntInterval.Lifetime ? 0 : ent.allowance!,
@@ -140,6 +145,22 @@ export const handleUsagePrices = async ({
         : null,
     },
   });
+
+  let rolloverUpdate = getRolloverUpdates({
+    cusEnt: relatedCusEnt,
+    nextResetAt: usageSub.current_period_end * 1000,
+  });
+
+  if (rolloverUpdate?.toInsert && rolloverUpdate.toInsert.length > 0) {
+    await RolloverService.insert({
+      db,
+      rows: rolloverUpdate.toInsert,
+      fullCusEnt: relatedCusEnt,
+      // rolloverConfig: ent.rollover as RolloverConfig,
+      // cusEntID: ent.id,
+      // entityMode: notNullish(ent.entity_feature_id),
+    });
+  }
 
   logger.info("✅ Successfully reset balance");
 };

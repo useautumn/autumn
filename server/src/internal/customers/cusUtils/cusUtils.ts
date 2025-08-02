@@ -30,11 +30,13 @@ export const updateCustomerDetails = async ({
   db,
   customer,
   customerData,
+  org,
   logger,
 }: {
   db: DrizzleCli;
   customer: any;
   customerData?: CustomerData;
+  org: Organization;
   logger: any;
 }) => {
   let updates: any = {};
@@ -59,7 +61,7 @@ export const updateCustomerDetails = async ({
     await refreshCusCache({
       db,
       customerId: customer.id!,
-      orgId: customer.org_id,
+      org: org,
       env: customer.env,
     });
   }

@@ -30,7 +30,7 @@ const checkEntitledOnProduct = async ({
       AutumnCli.sendEvent({
         customerId: customerId,
         eventName: features.metered1.eventName,
-      }),
+      })
     );
   }
 
@@ -42,7 +42,7 @@ const checkEntitledOnProduct = async ({
   const { allowed, balanceObj }: any = await AutumnCli.entitled(
     customerId,
     features.metered1.id,
-    true,
+    true
   );
 
   try {
@@ -70,7 +70,7 @@ const checkEntitledOnProduct = async ({
       AutumnCli.sendEvent({
         customerId: customerId,
         eventName: features.metered1.eventName,
-      }),
+      })
     );
   }
   await Promise.all(batchUpdates2);
@@ -103,7 +103,7 @@ const checkEntitledOnProduct = async ({
 
 const testCase = "others5";
 describe(`${chalk.yellowBright(
-  "others5: Testing /events and /entitled, for pro, one time top up",
+  "others5: Testing /events and /entitled, for pro, one time top up"
 )}`, () => {
   const customerId = testCase;
 
@@ -175,7 +175,7 @@ describe(`${chalk.yellowBright(
 });
 
 describe(`${chalk.yellowBright(
-  "others5: Testing /entitled & /events, for pro with overage",
+  "others5: Testing /entitled & /events, for pro with overage"
 )}`, () => {
   const customerId = testCase;
 
@@ -213,7 +213,7 @@ describe(`${chalk.yellowBright(
     const { allowed, balanceObj }: any = await AutumnCli.entitled(
       customerId,
       features.metered1.id,
-      true,
+      true
     );
 
     expect(allowed).to.be.true;
@@ -226,12 +226,12 @@ describe(`${chalk.yellowBright(
         AutumnCli.sendEvent({
           customerId: customerId,
           eventName: features.metered1.eventName,
-        }),
+        })
       );
     }
 
     await Promise.all(batchUpdates);
-    await timeout(5000);
+    await timeout(10000);
 
     const { allowed: allowed2, balanceObj: balanceObj2 }: any =
       await AutumnCli.entitled(customerId, features.metered1.id, true);

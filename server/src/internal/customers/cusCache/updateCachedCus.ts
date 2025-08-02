@@ -1,4 +1,8 @@
-import { CusExpand, FullCusEntWithFullCusProduct } from "@autumn/shared";
+import {
+  CusExpand,
+  FullCusEntWithFullCusProduct,
+  Organization,
+} from "@autumn/shared";
 import { AppEnv } from "autumn-js";
 import { buildBaseCusCacheKey } from "./cusCacheUtils.js";
 import { getCusWithCache } from "./getCusWithCache.js";
@@ -10,22 +14,26 @@ export const refreshCusCache = async ({
   db,
   customerId,
   entityId,
-  orgId,
+  // orgId,
+  org,
   env,
 }: {
   db: DrizzleCli;
   customerId: string;
   entityId?: string;
-  orgId: string;
+  // orgId: string;
+  org: Organization;
   env: AppEnv;
 }) => {
   try {
     const upstash = await initUpstash();
     if (!upstash) return;
 
+    // if (!org.config.cache_customer) return;
+
     const baseKey = buildBaseCusCacheKey({
       idOrInternalId: customerId,
-      orgId,
+      orgId: org.id,
       env,
     });
 
@@ -47,7 +55,7 @@ export const refreshCusCache = async ({
       await getCusWithCache({
         db,
         idOrInternalId: customerId,
-        orgId,
+        org,
         env,
         expand: expand as CusExpand[],
         entityId,
@@ -64,28 +72,29 @@ export const refreshCusCache = async ({
 export const deleteCusCache = async ({
   db,
   customerId,
-  orgId,
+  org,
   env,
 }: {
   db: DrizzleCli;
   customerId: string;
-  orgId: string;
+  org: Organization;
   env: AppEnv;
 }) => {
   try {
     const upstash = await initUpstash();
     if (!upstash) return;
 
+    // if (!org.config.cache_customer) return;
+
     const baseKey = buildBaseCusCacheKey({
       idOrInternalId: customerId,
-      orgId,
+      orgId: org.id,
       env,
     });
 
     const list = await upstash.keys(`${baseKey}*`);
 
     for (const key of list) {
-      // console.log("Deleting cache for key:", key);
       await upstash.del(key);
     }
   } catch (error) {

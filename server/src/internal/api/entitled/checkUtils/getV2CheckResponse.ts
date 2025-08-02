@@ -5,6 +5,7 @@ import { balancesToFeatureResponse } from "@/internal/customers/cusUtils/cusFeat
 import {
   CheckResponseSchema,
   Feature,
+  FeatureType,
   FullCusEntWithFullCusProduct,
   FullCusProduct,
   FullCustomer,
@@ -12,6 +13,7 @@ import {
   SuccessCode,
 } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
+import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
 
 export const getFeatureToUse = ({
   creditSystems,
@@ -24,12 +26,12 @@ export const getFeatureToUse = ({
 }) => {
   // 1. If there's a credit system
   let featureCusEnts = cusEnts.filter((cusEnt) =>
-    cusEntMatchesFeature({ cusEnt, feature }),
+    cusEntMatchesFeature({ cusEnt, feature })
   );
 
   if (creditSystems.length > 0) {
     let creditCusEnts = cusEnts.filter((cusEnt) =>
-      cusEntMatchesFeature({ cusEnt, feature: creditSystems[0] }),
+      cusEntMatchesFeature({ cusEnt, feature: creditSystems[0] })
     );
 
     if (creditCusEnts.length > 0) {
@@ -73,7 +75,7 @@ export const getV2CheckResponse = async ({
   });
 
   const featureCusEnts = cusEnts.filter((cusEnt) =>
-    cusEntMatchesFeature({ cusEnt, feature: featureToUse }),
+    cusEntMatchesFeature({ cusEnt, feature: featureToUse })
   );
 
   const { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
@@ -82,7 +84,7 @@ export const getV2CheckResponse = async ({
   });
 
   const cusPrices = cusProducts.flatMap(
-    (cusProduct) => cusProduct.customer_prices,
+    (cusProduct) => cusProduct.customer_prices
   );
   const balances = await getCusBalances({
     cusEntsWithCusProduct: featureCusEnts,
@@ -131,12 +133,21 @@ export const getV2CheckResponse = async ({
   //     allowed = false;
   //   }
   // }
+  let finalRequired = notNullish(requiredBalance) ? requiredBalance : 1;
+  if (featureToUse.type == FeatureType.CreditSystem) {
+    finalRequired = featureToCreditSystem({
+      featureId: feature.id,
+      creditSystem: featureToUse,
+      amount: finalRequired!,
+    });
+  }
 
   return CheckResponseSchema.parse({
     customer_id: fullCus.id,
     feature_id: featureToUse.id,
     entity_id: fullCus.entity?.id,
-    required_balance: notNullish(requiredBalance) ? requiredBalance : 1,
+    // required_balance: notNullish(requiredBalance) ? requiredBalance : 1,
+    required_balance: finalRequired,
     code: SuccessCode.FeatureFound,
     allowed,
     ...cusFeature,

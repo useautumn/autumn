@@ -13,7 +13,7 @@ import {
 
 import { OrgService } from "./OrgService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { AppEnv } from "@autumn/shared";
+import { AppEnv, Organization } from "@autumn/shared";
 import { nullish } from "@/utils/genUtils.js";
 import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
 import { createOrgResponse } from "./orgUtils.js";
@@ -21,6 +21,7 @@ import { handleGetOrgMembers } from "./handlers/handleGetOrgMembers.js";
 import { handleInvite } from "./handlers/handleInvite.js";
 import { handleGetUploadUrl } from "./handlers/handleGetUploadUrl.js";
 import { handleDeleteOrg } from "./handlers/handleDeleteOrg.js";
+import { ensureStripeProducts } from "@/external/stripe/stripeEnsureUtils.js";
 
 export const orgRouter: Router = express.Router();
 orgRouter.get("/members", handleGetOrgMembers);
@@ -106,12 +107,12 @@ orgRouter.post("/stripe", async (req: any, res) => {
       testWebhook = await createWebhookEndpoint(
         testApiKey,
         AppEnv.Sandbox,
-        req.orgId,
+        req.orgId
       );
       liveWebhook = await createWebhookEndpoint(
         liveApiKey,
         AppEnv.Live,
-        req.orgId,
+        req.orgId
       );
     } catch (error) {
       throw new RecaseError({
@@ -122,8 +123,8 @@ orgRouter.post("/stripe", async (req: any, res) => {
       });
     }
 
-    // 1. Update org in Supabase
-    await OrgService.update({
+    // 1. Update org in Supabase first
+    const updatedOrg = await OrgService.update({
       db,
       orgId: req.orgId,
       updates: {
@@ -137,6 +138,14 @@ orgRouter.post("/stripe", async (req: any, res) => {
           success_url: successUrl,
         },
       },
+    });
+
+    // 2. Ensure products are created in Stripe (after org is updated)
+    await ensureStripeProducts({
+      db,
+      logger,
+      req,
+      org: updatedOrg as Organization,
     });
 
     res.status(200).json({

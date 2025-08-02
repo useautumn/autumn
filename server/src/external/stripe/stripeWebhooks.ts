@@ -317,7 +317,7 @@ export const handleStripeWebhookRefresh = async ({
     await deleteCusCache({
       db,
       customerId: cus.id!,
-      orgId: org.id,
+      org,
       env,
     });
   }

@@ -67,16 +67,17 @@ export const featureItemsAreSame = ({
   item1: FeatureItem;
   item2: FeatureItem;
 }) => {
-  const same =
+  // Compare config objects (including rollover)
+  const configsAreSame = JSON.stringify(item1.config) === JSON.stringify(item2.config);
+  
+  const same = (
     item1.feature_id === item2.feature_id &&
     item1.included_usage == item2.included_usage &&
     item1.interval == item2.interval &&
     item1.entity_feature_id == item2.entity_feature_id &&
-    item1.reset_usage_when_enabled == item2.reset_usage_when_enabled;
-
-  if (!same) {
-    console.log(`Feature items different: ${item1.feature_id}`);
-  }
+    item1.reset_usage_when_enabled == item2.reset_usage_when_enabled &&
+    configsAreSame
+  );
 
   return same;
 };
@@ -117,6 +118,10 @@ export const featurePriceItemsAreSame = ({
       condition:
         item1.reset_usage_when_enabled == item2.reset_usage_when_enabled,
       message: `Reset usage when enabled different: ${item1.reset_usage_when_enabled} !== ${item2.reset_usage_when_enabled}`,
+    },
+    config: {
+      condition: JSON.stringify(item1.config) === JSON.stringify(item2.config),
+      message: `Config different: ${JSON.stringify(item1.config)} !== ${JSON.stringify(item2.config)}`,
     },
   };
 
@@ -188,6 +193,8 @@ export const itemsAreSame = ({
   // 1. If feature item
   let same = false;
   let pricesChanged = false;
+
+
 
   if (isFeatureItem(item1)) {
     if (!isFeatureItem(item2)) {

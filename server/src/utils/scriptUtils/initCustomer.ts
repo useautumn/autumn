@@ -87,7 +87,7 @@ export const initCustomer = async ({
     await deleteCusCache({
       db,
       customerId: customerId,
-      orgId: org.id,
+      org,
       env: env,
     });
   }
@@ -95,12 +95,20 @@ export const initCustomer = async ({
   try {
     const response = await autumn.customers.create(customerData);
 
+    // console.log("Created customer:", response);
+
     let customer = (await CusService.get({
       db,
       idOrInternalId: customerId,
       orgId: org.id,
       env: env,
     })) as Customer;
+
+    // console.log("Org ID:", org.id);
+    // console.log("Env:", env);
+    // console.log("Customer ID:", customerId);
+
+    // console.log("Customer:", customer);
 
     // console.log("customer id", customerId);
     // console.log("org id", org.id);

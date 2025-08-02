@@ -1,7 +1,10 @@
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { handleNewFreeTrial } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { constructProduct } from "@/internal/products/productUtils.js";
+import {
+  constructProduct,
+  initProductInStripe,
+} from "@/internal/products/productUtils.js";
 import {
   AppEnv,
   CreateProductSchema,
@@ -17,6 +20,7 @@ import { EntitlementService } from "@/internal/products/entitlements/Entitlement
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
+import { getEntsWithFeature } from "../entitlements/entitlementUtils.js";
 
 export const handleVersionProductV2 = async ({
   req,
@@ -43,7 +47,7 @@ export const handleVersionProductV2 = async ({
   let features = await FeatureService.getFromReq(req);
 
   console.log(
-    `Updating product ${latestProduct.id} version from ${curVersion} to ${newVersion}`,
+    `Updating product ${latestProduct.id} version from ${curVersion} to ${newVersion}`
   );
 
   const newProduct = constructProduct({
@@ -115,6 +119,18 @@ export const handleVersionProductV2 = async ({
     payload: {
       curProduct: newProduct,
     },
+  });
+
+  await initProductInStripe({
+    db,
+    product: {
+      ...newProduct,
+      prices: customPrices,
+      entitlements: getEntsWithFeature({ ents: customEnts, features }),
+    } as FullProduct,
+    org,
+    env,
+    logger: console,
   });
 
   res.status(200).send(newProduct);

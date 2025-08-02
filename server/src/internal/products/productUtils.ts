@@ -28,7 +28,10 @@ import {
   AttachParams,
   InsertCusProductParams,
 } from "../customers/cusProducts/AttachParams.js";
-import { getEntitlementsForProduct } from "./entitlements/entitlementUtils.js";
+import {
+  getEntitlementsForProduct,
+  getEntsWithFeature,
+} from "./entitlements/entitlementUtils.js";
 import { Decimal } from "decimal.js";
 import { generateId } from "@/utils/genUtils.js";
 import { PriceService } from "./prices/PriceService.js";
@@ -38,6 +41,7 @@ import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice
 import { FreeTrialService } from "./free-trials/FreeTrialService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { compareBillingIntervals } from "./prices/priceUtils/priceIntervalUtils.js";
+import { isStripeConnected } from "../orgs/orgUtils.js";
 
 export const getLatestProducts = (products: FullProduct[]) => {
   const latestProducts = products.reduce((acc: any, product: any) => {
@@ -85,6 +89,7 @@ export const constructProduct = ({
     internal_id: generateId("prod"),
     created_at: Date.now(),
     base_variant_id: null,
+    archived: false,
   };
 
   return newProduct;
@@ -109,10 +114,10 @@ export const isProductUpgrade = ({
 
   if (
     prices1.every(
-      (p) => getBillingType(p.config!) === BillingType.UsageInArrear,
+      (p) => getBillingType(p.config!) === BillingType.UsageInArrear
     ) &&
     prices2.every(
-      (p) => getBillingType(p.config!) === BillingType.UsageInArrear,
+      (p) => getBillingType(p.config!) === BillingType.UsageInArrear
     ) &&
     usageAlwaysUpgrade
   ) {
@@ -153,7 +158,7 @@ export const isFreeProduct = (prices: Price[]) => {
     if ("usage_tiers" in price.config!) {
       totalPrice += price.config!.usage_tiers.reduce(
         (acc, tier) => acc + tier.amount,
-        0,
+        0
       );
     } else {
       totalPrice += price.config!.amount;
@@ -173,7 +178,7 @@ export const getOptionsFromPrices = (prices: Price[], features: Feature[]) => {
     // get billing tyoe
     const billingType = getBillingType(price.config!);
     const feature = features.find(
-      (f) => f.internal_id === config.internal_feature_id,
+      (f) => f.internal_id === config.internal_feature_id
     );
 
     if (!feature) {
@@ -220,7 +225,7 @@ export const checkStripeProductExists = async ({
   } else {
     try {
       let stripeProduct = await stripeCli.products.retrieve(
-        product.processor!.id,
+        product.processor!.id
       );
 
       if (!stripeProduct.active) {
@@ -246,7 +251,7 @@ export const checkStripeProductExists = async ({
     });
 
     console.log(
-      `Updated product ${product.name} with stripe product ${stripeProduct.id}`,
+      `Updated product ${product.name} with stripe product ${stripeProduct.id}`
     );
 
     product.processor = {
@@ -262,7 +267,7 @@ export const getPricesForProduct = (product: FullProduct, prices: Price[]) => {
 
 export const attachToInsertParams = (
   attachParams: AttachParams,
-  product: FullProduct,
+  product: FullProduct
 ) => {
   return {
     ...attachParams,
@@ -283,6 +288,8 @@ export const copyProduct = async ({
   toEnv,
   toFeatures,
   fromFeatures,
+  org,
+  logger,
 }: {
   db: DrizzleCli;
   product: FullProduct;
@@ -293,6 +300,8 @@ export const copyProduct = async ({
   toName: string;
   toFeatures: Feature[];
   fromFeatures: Feature[];
+  org: Organization;
+  logger: any;
 }) => {
   const newProduct = {
     ...product,
@@ -311,7 +320,7 @@ export const copyProduct = async ({
   for (const entitlement of product.entitlements) {
     // 1. Get from feature
     let fromFeature = fromFeatures.find(
-      (f) => f.internal_id === entitlement.internal_feature_id,
+      (f) => f.internal_id === entitlement.internal_feature_id
     );
 
     // 2. Get to feature
@@ -334,7 +343,7 @@ export const copyProduct = async ({
         created_at: Date.now(),
         internal_product_id: newProduct.internal_id,
         internal_feature_id: toFeature.internal_id,
-      }),
+      })
     );
 
     newEntIds[entitlement.id!] = newId;
@@ -355,7 +364,7 @@ export const copyProduct = async ({
 
     if (config.type === PriceType.Usage) {
       let fromFeature = fromFeatures.find(
-        (f) => f.internal_id === config.internal_feature_id,
+        (f) => f.internal_id === config.internal_feature_id
       );
 
       let toFeature = toFeatures.find((f) => f.id === fromFeature?.id);
@@ -391,7 +400,7 @@ export const copyProduct = async ({
         org_id: toOrgId,
         internal_product_id: newProduct.internal_id,
         config: config,
-      }),
+      })
     );
   }
 
@@ -424,6 +433,21 @@ export const copyProduct = async ({
       },
     });
   }
+
+  await initProductInStripe({
+    db,
+    org,
+    env: toEnv,
+    logger,
+    product: {
+      ...newProduct,
+      prices: newPrices,
+      entitlements: getEntsWithFeature({
+        ents: newEntitlements,
+        features: toFeatures,
+      }),
+    },
+  });
 };
 
 export const isOneOff = (prices: Price[]) => {
@@ -454,7 +478,8 @@ export const initProductInStripe = async ({
   logger: any;
   product: FullProduct;
 }) => {
-  // 1.
+  if (!isStripeConnected({ org, env })) return;
+
   await checkStripeProductExists({
     db,
     org,
@@ -464,7 +489,7 @@ export const initProductInStripe = async ({
   });
 
   const batchPriceUpdate = [];
-  const stripeCli = await createStripeCli({
+  const stripeCli = createStripeCli({
     org,
     env,
   });
@@ -478,7 +503,7 @@ export const initProductInStripe = async ({
         entitlements: product.entitlements,
         product: product,
         logger,
-      }),
+      })
     );
   }
 

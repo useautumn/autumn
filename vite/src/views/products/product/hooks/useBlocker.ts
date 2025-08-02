@@ -8,6 +8,8 @@ export function useBlocker(
   confirmFn: () => Promise<boolean> | boolean = () => window.confirm(DEFAULT_MESSAGE)
 ) {
   const isNavigatingRef = useRef(false);
+  const originalPushState = useRef<typeof history.pushState | null>(null);
+  const originalReplaceState = useRef<typeof history.replaceState | null>(null);
   
   // Reset navigation flag when shouldBlock changes
   useEffect(() => {
@@ -15,6 +17,71 @@ export function useBlocker(
       isNavigatingRef.current = false;
     }
   }, [shouldBlock]);
+
+  // ✅ Handle beforeunload for tab/window close
+  useEffect(() => {
+    if (!shouldBlock) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Don't show native dialog if we're already navigating
+      if (isNavigatingRef.current) return;
+      
+      e.preventDefault();
+      const message = DEFAULT_MESSAGE;
+      e.returnValue = message; // For older browsers
+      return message;
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [shouldBlock]);
+
+  // ✅ Intercept React Router navigation (history.pushState/replaceState)
+  useEffect(() => {
+    if (!shouldBlock) return;
+
+    // Store original methods
+    originalPushState.current = history.pushState;
+    originalReplaceState.current = history.replaceState;
+
+    // Intercept pushState (used by React Router navigate)
+    history.pushState = async function(state: any, title: string, url?: string | URL | null) {
+      if (!isNavigatingRef.current && url && url.toString() !== window.location.href) {
+        const confirmed = await confirmFn();
+        if (confirmed) {
+          isNavigatingRef.current = true;
+          originalPushState.current!.call(history, state, title, url);
+          setTimeout(() => { isNavigatingRef.current = false; }, 100);
+        }
+      } else {
+        originalPushState.current!.call(history, state, title, url);
+      }
+    };
+
+    // Intercept replaceState
+    history.replaceState = async function(state: any, title: string, url?: string | URL | null) {
+      if (!isNavigatingRef.current && url && url.toString() !== window.location.href) {
+        const confirmed = await confirmFn();
+        if (confirmed) {
+          isNavigatingRef.current = true;
+          originalReplaceState.current!.call(history, state, title, url);
+          setTimeout(() => { isNavigatingRef.current = false; }, 100);
+        }
+      } else {
+        originalReplaceState.current!.call(history, state, title, url);
+      }
+    };
+
+    return () => {
+      // Restore original methods on cleanup
+      if (originalPushState.current) {
+        history.pushState = originalPushState.current;
+      }
+      if (originalReplaceState.current) {
+        history.replaceState = originalReplaceState.current;
+      }
+    };
+  }, [shouldBlock, confirmFn]);
 
   // ✅ Handle anchor <a> clicks inside the app
   useEffect(() => {

@@ -67,6 +67,8 @@ export * from "./models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 export * from "./models/cusProductModels/cusEntModels/cusEntTable.js";
 export * from "./models/cusProductModels/cusEntModels/replaceableTable.js";
 export * from "./models/cusProductModels/cusEntModels/replaceableSchema.js";
+export * from "./models/cusProductModels/cusEntModels/rolloverModels/rolloverTable.js";
+export * from "./models/cusProductModels/cusEntModels/resetCusEnt.js";
 
 // 8. Customer Models
 export * from "./models/cusModels/cusModels.js";

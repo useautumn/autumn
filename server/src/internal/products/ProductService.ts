@@ -1,6 +1,8 @@
 import RecaseError from "@/utils/errorUtils.js";
 import {
   AppEnv,
+  customerProducts,
+  customers,
   entitlements,
   ErrCode,
   freeTrials,
@@ -13,6 +15,7 @@ import { StatusCodes } from "http-status-codes";
 import { getLatestProducts } from "./productUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { and, desc, eq, exists, inArray, or, sql } from "drizzle-orm";
+import { notNullish } from "@/utils/genUtils.js";
 
 const parseFreeTrials = ({
   products,
@@ -53,9 +56,9 @@ export class ProductService {
           .where(
             and(
               eq(entitlements.internal_product_id, products.internal_id),
-              eq(entitlements.internal_feature_id, internalFeatureId),
-            ),
-          ),
+              eq(entitlements.internal_feature_id, internalFeatureId)
+            )
+          )
       ),
       with: {
         entitlements: {
@@ -88,6 +91,26 @@ export class ProductService {
     })) as Product;
   }
 
+  static async listByInternalIds({
+    db,
+    internalIds,
+  }: {
+    db: DrizzleCli;
+    internalIds: string[];
+  }) {
+    return (await db.query.products.findMany({
+      where: inArray(products.internal_id, internalIds),
+      with: {
+        entitlements: {
+          with: {
+            feature: true,
+          },
+        },
+        prices: { where: eq(prices.is_custom, false) },
+      },
+    })) as FullProduct[];
+  }
+
   static async listDefault({
     db,
     orgId,
@@ -101,7 +124,7 @@ export class ProductService {
       where: and(
         eq(products.org_id, orgId),
         eq(products.env, env),
-        eq(products.is_default, true),
+        eq(products.is_default, true)
       ),
       with: {
         entitlements: {
@@ -154,7 +177,7 @@ export class ProductService {
         eq(products.id, id),
         eq(products.org_id, orgId),
         eq(products.env, env),
-        version ? eq(products.version, version) : undefined,
+        version ? eq(products.version, version) : undefined
       ),
       orderBy: [desc(products.version)],
     });
@@ -174,6 +197,7 @@ export class ProductService {
     returnAll = false,
     version,
     excludeEnts = false,
+    archived,
   }: {
     db: DrizzleCli;
     orgId: string;
@@ -182,6 +206,7 @@ export class ProductService {
     returnAll?: boolean;
     version?: number;
     excludeEnts?: boolean;
+    archived?: boolean;
   }) {
     let data = (await db.query.products.findMany({
       where: and(
@@ -189,6 +214,7 @@ export class ProductService {
         eq(products.env, env),
         inIds ? inArray(products.id, inIds) : undefined,
         version ? eq(products.version, version) : undefined,
+        notNullish(archived) ? eq(products.archived, archived!) : undefined
       ),
 
       with: {
@@ -250,11 +276,11 @@ export class ProductService {
       where: and(
         or(
           eq(products.id, idOrInternalId),
-          eq(products.internal_id, idOrInternalId),
+          eq(products.internal_id, idOrInternalId)
         ),
         eq(products.org_id, orgId),
         eq(products.env, env),
-        version ? eq(products.version, version) : undefined,
+        version ? eq(products.version, version) : undefined
       ),
       orderBy: [desc(products.version)],
       with: {
@@ -302,7 +328,7 @@ export class ProductService {
       where: and(
         eq(products.id, productId),
         eq(products.org_id, orgId),
-        eq(products.env, env),
+        eq(products.env, env)
       ),
       orderBy: [desc(products.version)],
     });
@@ -353,9 +379,45 @@ export class ProductService {
         and(
           eq(products.internal_id, internalId),
           eq(products.org_id, orgId),
-          eq(products.env, env),
-        ),
+          eq(products.env, env)
+        )
       );
+  }
+
+  static async deleteByProductId({
+    db,
+    productId,
+    orgId,
+    env,
+  }: {
+    db: DrizzleCli;
+    productId: string;
+    orgId: string;
+    env: AppEnv;
+  }) {
+    let res = await db
+      .select()
+      .from(products)
+      .where(
+        and(
+          eq(products.id, productId),
+          eq(products.org_id, orgId),
+          eq(products.env, env)
+        )
+      );
+
+    let internalIds = res.map((r) => r.internal_id);
+
+    if (internalIds.length === 0) return;
+    if (internalIds.length > 500) {
+      throw new RecaseError({
+        message: "Cannot delete more than 500 products at once",
+        code: ErrCode.InternalError,
+        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+      });
+    }
+
+    await db.delete(products).where(inArray(products.internal_id, internalIds));
   }
 
   static async deleteByOrgId({
@@ -370,5 +432,64 @@ export class ProductService {
     await db
       .delete(products)
       .where(and(eq(products.org_id, orgId), eq(products.env, env)));
+  }
+
+  static async getDeletionText({
+    db,
+    productId,
+    orgId,
+    env,
+  }: {
+    db: DrizzleCli;
+    productId: string;
+    orgId: string;
+    env: AppEnv;
+  }) {
+    let internalProductIds = (
+      await db
+        .select({
+          internal_product_id: products.internal_id,
+        })
+        .from(products)
+        .where(
+          and(
+            eq(products.id, productId),
+            eq(products.org_id, orgId),
+            eq(products.env, env)
+          )
+        )
+    ).map((r) => r.internal_product_id);
+
+    let res = await db
+      .select({
+        internal_customer_id: customerProducts.internal_customer_id,
+        name: customers.name,
+        id: customers.id,
+        email: customers.email,
+        totalCount: sql<number>`COUNT(*) OVER ()`,
+      })
+      .from(customerProducts)
+      .innerJoin(
+        customers,
+        eq(customerProducts.internal_customer_id, customers.internal_id)
+      )
+      .where(
+        and(
+          inArray(customerProducts.internal_product_id, internalProductIds),
+          eq(customers.env, env),
+          eq(customers.org_id, orgId)
+        )
+      )
+      .orderBy(desc(customers.created_at))
+      .groupBy(
+        customerProducts.internal_customer_id,
+        customers.name,
+        customers.created_at,
+        customers.id,
+        customers.email
+      );
+    // .limit(1);
+
+    return res;
   }
 }

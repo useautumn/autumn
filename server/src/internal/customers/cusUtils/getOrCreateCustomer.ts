@@ -16,7 +16,10 @@ import {
 
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { autoCreateEntity } from "@/internal/entities/handlers/handleCreateEntity/autoCreateEntity.js";
-import { refreshCusCache } from "../cusCache/updateCachedCus.js";
+import {
+  deleteCusCache,
+  refreshCusCache,
+} from "../cusCache/updateCachedCus.js";
 import { getCusWithCache } from "../cusCache/getCusWithCache.js";
 
 export const getOrCreateCustomer = async ({
@@ -61,7 +64,7 @@ export const getOrCreateCustomer = async ({
       customer = await getCusWithCache({
         db,
         idOrInternalId: customerId,
-        orgId: org.id,
+        org,
         env,
         entityId,
         expand: expand as CusExpand[],
@@ -107,6 +110,13 @@ export const getOrCreateCustomer = async ({
         expand,
         withSubs: true,
       });
+
+      await deleteCusCache({
+        db,
+        customerId: customer.id!,
+        org,
+        env,
+      });
     } catch (error: any) {
       if (error?.data?.code == "23505") {
         customer = await CusService.getFull({
@@ -130,6 +140,7 @@ export const getOrCreateCustomer = async ({
     db,
     customer,
     customerData,
+    org,
     logger,
   });
 
@@ -154,7 +165,7 @@ export const getOrCreateCustomer = async ({
     await refreshCusCache({
       db,
       customerId: customer.id!,
-      orgId: customer.org_id,
+      org,
       env: customer.env,
     });
   }

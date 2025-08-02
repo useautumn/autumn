@@ -1,5 +1,5 @@
 import RecaseError from "@/utils/errorUtils.js";
-import { ErrCode, UpdateProductSchema } from "@autumn/shared";
+import { ErrCode, FullProduct, UpdateProductSchema } from "@autumn/shared";
 
 import { ProductService } from "../../ProductService.js";
 import { notNullish } from "@/utils/genUtils.js";
@@ -16,6 +16,7 @@ import { handleUpdateProductDetails } from "./updateProductDetails.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { productsAreSame } from "../../productUtils/compareProductUtils.js";
+import { initProductInStripe } from "../../productUtils.js";
 
 export const handleUpdateProductV2 = async (req: any, res: any) =>
   routeHandler({
@@ -24,6 +25,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
     action: "Update product",
     handler: async () => {
       const { productId } = req.params;
+      const { version } = req.query;
       const { orgId, env, logger, db } = req;
 
       const [features, org, fullProduct, rewardPrograms] = await Promise.all([
@@ -34,6 +36,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
           idOrInternalId: productId,
           orgId,
           env,
+          version: version ? parseInt(version) : undefined,
         }),
         RewardProgramService.getByProductId({
           db,
@@ -116,6 +119,18 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
           isCustom: false,
         });
       }
+
+      await initProductInStripe({
+        db,
+        product: {
+          ...fullProduct,
+          prices,
+          entitlements,
+        } as FullProduct,
+        org,
+        env,
+        logger,
+      });
 
       logger.info("Adding task to queue to detect base variant");
       await addTaskToQueue({
