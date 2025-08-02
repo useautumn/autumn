@@ -144,20 +144,22 @@ function ProductsView({ env }: { env: AppEnv }) {
                 addButton={
                   <>
                     <CreateProduct />
-                    <HamburgerMenu
-                      dropdownOpen={dropdownOpen}
-                      setDropdownOpen={setDropdownOpen}
-                      actions={[
-                        {
-                          type: "item",
-                          label: showArchived
-                            ? `Show active products`
-                            : `Show archived products`,
-                          onClick: () => setShowArchived((prev) => !prev),
-                        },
-                      ]}
-                    />
                   </>
+                }
+                menuComponent={
+                  <HamburgerMenu
+                    dropdownOpen={dropdownOpen}
+                    setDropdownOpen={setDropdownOpen}
+                    actions={[
+                      {
+                        type: "item",
+                        label: showArchived
+                          ? `Show active products`
+                          : `Show archived products`,
+                        onClick: () => setShowArchived((prev) => !prev),
+                      },
+                    ]}
+                  />
                 }
               />
               <ProductsTable products={data?.products} />
