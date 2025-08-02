@@ -61,10 +61,10 @@ function CreateCustomer() {
 
   return (
     <Dialog>
-      <DialogTrigger asChild>
+      <DialogTrigger asChild className="h-full">
         <Button
           variant="add"
-          className=""
+          className="h-full"
           // startIcon={<PlusIcon size={15} />}
         >
           Customer
