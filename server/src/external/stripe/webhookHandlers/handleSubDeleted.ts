@@ -1,13 +1,10 @@
 import Stripe from "stripe";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import { AppEnv, Organization } from "@autumn/shared";
 import {
   getFullStripeSub,
   subIsPrematurelyCanceled,
 } from "../stripeSubUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import { createStripeCli } from "../utils.js";
 import { handleCusProductDeleted } from "./handleSubDeleted/handleCusProductDeleted.js";
 
 export const handleSubDeleted = async ({
@@ -38,7 +35,7 @@ export const handleSubDeleted = async ({
   if (activeCusProducts.length === 0) {
     if (subscription.livemode) {
       logger.warn(
-        `subscription.deleted: ${subscription.id} - no customer products found`,
+        `subscription.deleted: ${subscription.id} - no customer products found`
       );
       return;
     }
@@ -46,7 +43,14 @@ export const handleSubDeleted = async ({
 
   if (subscription.cancellation_details?.comment === "autumn_upgrade") {
     logger.info(
-      `sub.deleted: ${subscription.id} from autumn upgrade, skipping`,
+      `sub.deleted: ${subscription.id} from autumn upgrade, skipping`
+    );
+    return;
+  }
+
+  if (subscription.cancellation_details?.comment?.includes("trial_canceled")) {
+    logger.info(
+      `sub.deleted: ${subscription.id} from trial canceled, skipping`
     );
     return;
   }
@@ -65,7 +69,7 @@ export const handleSubDeleted = async ({
         subscription,
         logger,
         prematurelyCanceled,
-      }),
+      })
     );
   }
 
