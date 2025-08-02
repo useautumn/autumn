@@ -17,7 +17,6 @@
     "build": "bun build ./index.ts --outdir dist --target bun --external zod",
     "dev": "bunx nodemon --ext ts --ignore dist --exec \"bun run build\"",
     "dev:bun": "bun ./index.ts --outdir dist --target bun --external zod --watch",
-
     "db:push": "bun db:generate && bun db:migrate",
     "db:generate": "cross-env NODE_OPTIONS=\"--import tsx\" bunx drizzle-kit generate --config drizzle.config.ts",
     "db:migrate": "cross-env NODE_OPTIONS=\"--import tsx\" bunx drizzle-kit migrate --config drizzle.config.ts"
@@ -34,10 +33,13 @@
     "zod": "^3.25.23"
   },
   "devDependencies": {
+    "@types/bun": "latest",
     "@types/node": "^24.0.3",
+    "@typescript/native-preview": "^7.0.0-dev.20250731.1",
     "cross-env": "^7.0.3",
     "nodemon": "^3.1.7",
     "tsx": "^4.19.4",
     "typescript": "^5.7.2"
-  }
+  },
+  "private": true
 }
