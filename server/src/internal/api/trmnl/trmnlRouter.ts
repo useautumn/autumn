@@ -38,9 +38,9 @@ trmnlRouter.get("/device_id", withOrgAuth, async (req: any, res: any) => {
         res.status(500).json({ error: "Failed to connect to upstash" });
 
       const orgId = req.org.id;
-      let deviceId = await upstash?.get(`trmnl:org:${orgId}`);
+      let trmnlConfig = await upstash?.get(`trmnl:org:${orgId}`);
 
-      res.status(200).json({ deviceId });
+      res.status(200).json({ trmnlConfig });
       // let trmnlJson = await getTrmnlJson();
 
       // let deviceId = Object.keys(trmnlJson).find((deviceId: string) => {
@@ -66,19 +66,34 @@ trmnlRouter.post("/device_id", withOrgAuth, async (req: any, res: any) => {
       // 1. Get upstash data
       upstash = upstash!;
 
-      const orgId = await upstash.get(`trmnl:device:${req.body.deviceId}`);
-      if (orgId && orgId !== req.org.id) {
+      const trmnlConfig = (await upstash.get(
+        `trmnl:device:${req.body.deviceId}`
+      )) as {
+        orgId: string;
+        hideRevenue: boolean;
+      };
+      if (trmnlConfig && trmnlConfig.orgId !== req.org.id) {
         return res.status(400).json({ error: "Device ID already taken" });
       }
 
       // Get current device ID:
-      const curDeviceId = await upstash.get(`trmnl:org:${req.org.id}`);
-      if (curDeviceId) {
-        await upstash.del(`trmnl:device:${curDeviceId}`);
+      const curTrmnlConfig = (await upstash.get(`trmnl:org:${req.org.id}`)) as {
+        deviceId: string;
+        hideRevenue: boolean;
+      };
+      if (curTrmnlConfig) {
+        await upstash.del(`trmnl:device:${curTrmnlConfig.deviceId}`);
       }
 
-      await upstash.set(`trmnl:device:${req.body.deviceId}`, req.org.id);
-      await upstash.set(`trmnl:org:${req.org.id}`, req.body.deviceId);
+      await upstash.set(`trmnl:device:${req.body.deviceId}`, {
+        orgId: req.org.id,
+        hideRevenue: req.body.hideRevenue,
+      });
+
+      await upstash.set(`trmnl:org:${req.org.id}`, {
+        deviceId: req.body.deviceId,
+        hideRevenue: req.body.hideRevenue,
+      });
 
       // const trmnlJson = await upstash.get(`trmnl:${req.org.id}`);
 
@@ -210,7 +225,8 @@ trmnlRouter.post(
           revenue: numberWithCommas(monthlyRevenue.total_payment_volume),
           totalEvents: numberWithCommas(totalEvents),
           totalCustomers: numberWithCommas(totalCustomers),
-          topEvent: featureName,
+          topEvent: featureName || "Unknown",
+          hideRevenue: req.org.hideRevenue,
         });
       },
     })

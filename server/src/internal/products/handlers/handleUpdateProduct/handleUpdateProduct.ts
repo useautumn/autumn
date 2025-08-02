@@ -25,6 +25,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
     action: "Update product",
     handler: async () => {
       const { productId } = req.params;
+      const { version } = req.query;
       const { orgId, env, logger, db } = req;
 
       const [features, org, fullProduct, rewardPrograms] = await Promise.all([
@@ -35,6 +36,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
           idOrInternalId: productId,
           orgId,
           env,
+          version: version ? parseInt(version) : undefined,
         }),
         RewardProgramService.getByProductId({
           db,

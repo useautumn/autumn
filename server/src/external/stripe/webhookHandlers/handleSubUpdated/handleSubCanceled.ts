@@ -26,7 +26,7 @@ export const handleSubCanceled = async ({
     nullish(previousAttributes?.canceled_at) && !nullish(sub.canceled_at);
 
   let isAutumnDowngrade =
-    sub.cancellation_details?.comment === "autumn_downgrade";
+    sub.cancellation_details?.comment?.includes("autumn_downgrade");
 
   const canceledFromPortal = isCanceled && !isAutumnDowngrade;
 

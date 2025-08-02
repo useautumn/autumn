@@ -15,6 +15,7 @@ export const deleteCusById = async ({
   env,
   logger,
   deleteInStripe = false,
+  forceDelete = false,
 }: {
   db: DrizzleCli;
   org: Organization;
@@ -22,6 +23,7 @@ export const deleteCusById = async ({
   env: AppEnv;
   logger: any;
   deleteInStripe?: boolean;
+  forceDelete?: boolean;
 }) => {
   const orgId = org.id;
 
@@ -40,24 +42,33 @@ export const deleteCusById = async ({
     });
   }
 
-  if (deleteInStripe) {
-    try {
-      // Only delete stripe customer in sandbox
-      if (customer.processor?.id && env === AppEnv.Sandbox) {
+  let response = {
+    customer,
+    success: true,
+  }
+
+  try {
+    // Delete stripe customer if processor ID exists and conditions are met
+    if (customer.processor?.id) {
+      // In sandbox: delete if deleteInStripe is true
+      // In production: delete if forceDelete is true
+      if ((env === AppEnv.Sandbox && deleteInStripe) || (env === AppEnv.Live && forceDelete)) {
         await deleteStripeCustomer({
           org,
           env: env,
           stripeId: customer.processor.id,
         });
       }
-    } catch (error: any) {
-      console.log(
-        `Couldn't delete ${chalk.yellow("stripe customer")} ${
-          customer.processor.id
-        }`,
-        error?.message || error
-      );
     }
+  } catch (error: any) {
+    console.log(
+      `Couldn't delete ${chalk.yellow("stripe customer")} ${
+        customer.processor.id
+      }`,
+      error?.message || error
+    );
+
+    response.success = false;
   }
 
   await CusService.deleteByInternalId({
@@ -67,10 +78,7 @@ export const deleteCusById = async ({
     env: env,
   });
 
-  return {
-    success: true,
-    customer,
-  };
+  return response;
 };
 
 export const handleDeleteCustomer = async (req: any, res: any) =>
@@ -80,6 +88,7 @@ export const handleDeleteCustomer = async (req: any, res: any) =>
     action: "delete customer",
     handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
       const { env, logtail: logger, db, org } = req;
+      const { force_delete, delete_in_stripe} = req.query;
 
       const data = await deleteCusById({
         db,
@@ -87,7 +96,8 @@ export const handleDeleteCustomer = async (req: any, res: any) =>
         customerId: req.params.customer_id,
         env,
         logger,
-        deleteInStripe: req.query.delete_in_stripe === "true",
+        deleteInStripe: delete_in_stripe === "true",
+        forceDelete: force_delete === "true",
       });
 
       res.status(200).json(data);
