@@ -8,6 +8,7 @@ import {
 import { Check } from "lucide-react";
 import { useCustomersContext } from "../CustomersContext";
 import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 
 export const ProductsSubMenu = () => {
   const { products, versionCounts, filters, setFilters } =
@@ -73,6 +74,7 @@ export const ProductsSubMenu = () => {
         ...filters,
         product_id: "", // Will be handled by version selections
         version: allProductVersions.map((pv) => pv.key).join(","),
+        none: false,
       });
     }
   };
@@ -89,6 +91,7 @@ export const ProductsSubMenu = () => {
     );
 
     let newSelectedVersions;
+    let newNone = filters.none;
     if (allProductVersionsSelected) {
       // Deselect all versions of this product
       newSelectedVersions = selectedVersions.filter(
@@ -100,12 +103,14 @@ export const ProductsSubMenu = () => {
         (key) => !selectedVersions.includes(key)
       );
       newSelectedVersions = [...selectedVersions, ...toAdd];
+      newNone = false;
     }
 
     setFilters({
       ...filters,
       product_id: "",
       version: newSelectedVersions.join(","),
+      none: newNone,
     });
   };
 
@@ -114,18 +119,32 @@ export const ProductsSubMenu = () => {
     const isSelected = selectedVersions.includes(versionKey);
 
     let newSelectedVersions;
+    let newNone = filters.none;
     if (isSelected) {
       newSelectedVersions = selectedVersions.filter(
         (key: string) => key !== versionKey
       );
     } else {
       newSelectedVersions = [...selectedVersions, versionKey];
+      newNone = false;
     }
 
     setFilters({
       ...filters,
       product_id: "",
       version: newSelectedVersions.join(","),
+      none: newNone,
+    });
+  };
+
+  const handleSelectNone = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    setFilters({
+      ...filters,
+      version: "",
+      none: !filters.none,
     });
   };
 
@@ -140,16 +159,28 @@ export const ProductsSubMenu = () => {
         )}
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent className="w-64">
-        <div className="flex items-center justify-between px-2 py-1.5">
-          <span className="text-t3 font-regular text-xs">Select products</span>
+        <div className="flex items-center justify-between px-2 h-6">
+          {/* <span className="text-t3 font-regular text-xs">Select products</span> */}
           <button
             onClick={handleSelectAll}
             className="text-t3 text-xs hover:text-t1 transition-colors cursor-pointer"
           >
             Select all
           </button>
+          <button
+            onClick={handleSelectNone}
+            className={cn(
+              "px-1 h-5 flex items-center gap-1 text-t3 text-xs hover:text-t1 cursor-pointer",
+              filters.none &&
+                "bg-yellow-100 text-yellow-600 hover:text-yellow-500 rounded-md"
+            )}
+          >
+            {/* {filters.none && <Check size={11} />} */}
+            No products
+          </button>
         </div>
         <DropdownMenuSeparator />
+
         <div className="max-h-64 overflow-y-auto">
           {uniqueProducts?.map((product: any) => {
             const versionCount = versionCounts?.[product.id] || 1;

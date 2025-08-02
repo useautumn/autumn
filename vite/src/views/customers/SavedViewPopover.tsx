@@ -8,7 +8,7 @@ import {
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useCustomersContext } from "./CustomersContext";
 import { getBackendErr } from "@/utils/genUtils";
-import { Save, PlusIcon } from "lucide-react";
+import { Save, PlusIcon, Pin } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -31,13 +31,13 @@ export const SaveViewPopover = ({ onClose }: SaveViewPopoverProps) => {
 
     try {
       setLoading(true);
-      
+
       // Get current search params and encode as base64
       const currentParams = new URLSearchParams(window.location.search);
       // Remove page and lastItemId from saved params
       currentParams.delete("page");
       currentParams.delete("lastItemId");
-      
+
       const paramsString = currentParams.toString();
       const encodedParams = btoa(paramsString);
 
@@ -62,26 +62,29 @@ export const SaveViewPopover = ({ onClose }: SaveViewPopoverProps) => {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" className="text-t3 bg-transparent shadow-none w-full h-full flex items-center justify-center p-2">
-          <Save size={13} className="mr-2 text-t3" />
+        <Button
+          variant="ghost"
+          className="text-t3 bg-transparent shadow-none w-full h-full flex items-center justify-center p-2"
+        >
+          <Pin size={12} className="mr-2 text-t3" />
           Save
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        align="end"
-        className="border border-zinc-200 bg-stone-50 flex flex-col gap-3 pt-3"
-        // onOpenAutoFocus={(e) => e.preventDefault()}
-        // onCloseAutoFocus={(e) => e.preventDefault()}
+        sideOffset={2}
+        align="start"
+        className="border border-zinc-200 bg-stone-50 flex flex-col gap-3 pt-3 w-[350px]"
         onEscapeKeyDown={() => setOpen(false)}
         onPointerDownOutside={() => setOpen(false)}
-        // onFocusOutside={(e) => e.preventDefault()}
       >
-        <div className="flex items-center gap-1 text-t3">
-          <Save size={12} />
-          <p className="text-t3 text-sm">Save view</p>
+        <div className="flex flex-col gap-1">
+          <p className="text-t2 text-sm">Save view</p>
+          <span className="text-t3 text-xs">
+            Save your current filters to easily access them later.
+          </span>
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex gap-2">
           <Input
             className="h-7"
             placeholder="View name"
@@ -93,7 +96,15 @@ export const SaveViewPopover = ({ onClose }: SaveViewPopoverProps) => {
               }
             }}
           />
-          <div className="grid grid-cols-2 gap-2">
+          <Button
+            variant="gradientPrimary"
+            className="!h-6.5 !mt-0 text-xs"
+            onClick={handleSave}
+            isLoading={loading}
+          >
+            Save
+          </Button>
+          {/* <div className="grid grid-cols-2 gap-2">
             <Button
               variant="ghost"
               className="!h-6.5 !mt-0 text-xs"
@@ -104,16 +115,8 @@ export const SaveViewPopover = ({ onClose }: SaveViewPopoverProps) => {
             >
               Cancel
             </Button>
-            <Button
-              variant="gradientPrimary"
-              className="!h-6.5 !mt-0 text-xs"
-              startIcon={<PlusIcon size={10} />}
-              onClick={handleSave}
-              isLoading={loading}
-            >
-              Save
-            </Button>
-          </div>
+          
+          </div> */}
         </div>
       </PopoverContent>
     </Popover>

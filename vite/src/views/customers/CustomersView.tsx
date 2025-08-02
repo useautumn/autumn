@@ -35,11 +35,12 @@ function CustomersView({ env }: { env: AppEnv }) {
       status: parseAsString.withDefault(""),
       product_id: parseAsString.withDefault(""),
       version: parseAsString.withDefault(""),
+      none: parseAsString.withDefault(""),
       page: parseAsInteger.withDefault(1),
       lastItemId: parseAsString.withDefault(""),
     },
     {
-      history: "push",
+      history: "replace",
     }
   );
 
@@ -65,6 +66,7 @@ function CustomersView({ env }: { env: AppEnv }) {
         status: queryStates.status,
         product_id: queryStates.product_id,
         version: queryStates.version,
+        none: queryStates.none,
       },
       page: queryStates.page,
       page_size: pageSize,
@@ -88,7 +90,6 @@ function CustomersView({ env }: { env: AppEnv }) {
   };
 
   useEffect(() => {
-    // Skip everything on the very first render, but only if we don't have meaningful values (filters OR pagination)
     if (isFirstRender.current) {
       isFirstRender.current = false;
 
@@ -96,19 +97,17 @@ function CustomersView({ env }: { env: AppEnv }) {
         queryStates.q ||
         queryStates.status ||
         queryStates.product_id ||
-        queryStates.version;
+        queryStates.version ||
+        queryStates.none;
       const hasDirectNavigation =
         queryStates.page > 1 || !!queryStates.lastItemId;
 
-      // Skip only if we have no filters AND no direct navigation (i.e., plain page 1 load)
       if (!hasFilters && !hasDirectNavigation) {
         return;
       }
 
-      // Mark this as direct navigation to prevent subsequent reset
       isDirectNavigation.current = hasDirectNavigation;
 
-      // Fetch data without resetting pagination (whether it's filters or direct nav)
       setPaginationLoading(true);
       mutate().finally(() => {
         setPaginationLoading(false);
@@ -116,13 +115,11 @@ function CustomersView({ env }: { env: AppEnv }) {
       return;
     }
 
-    // Skip subsequent renders if this was a direct navigation (to prevent reset loop)
     if (isDirectNavigation.current) {
-      isDirectNavigation.current = false; // Reset for future filter changes
+      isDirectNavigation.current = false;
       return;
     }
 
-    // For subsequent filter changes (not first render), reset pagination and fetch
     searchParamsChanged.current = true;
     resetPagination();
 
@@ -135,6 +132,7 @@ function CustomersView({ env }: { env: AppEnv }) {
     queryStates.status,
     queryStates.product_id,
     queryStates.version,
+    queryStates.none,
   ]);
 
   useEffect(() => {
@@ -143,12 +141,8 @@ function CustomersView({ env }: { env: AppEnv }) {
       return;
     }
 
-    // Reset the searchParamsChanged flag if it's set, but still proceed with pagination
-    // This ensures that when filters change and reset pagination to page 1,
-    // subsequent pagination still works
     if (searchParamsChanged.current) {
       searchParamsChanged.current = false;
-      // Only skip if we're on page 1 (which means this was triggered by filter change)
       if (queryStates.page === 1) {
         return;
       }
@@ -213,6 +207,13 @@ function CustomersView({ env }: { env: AppEnv }) {
       params.product_id = "";
     }
 
+    // Handle none filter
+    if (newFilters?.none) {
+      params.none = "true";
+    } else {
+      params.none = "";
+    }
+
     setQueryStates(params);
     mutate();
   };
@@ -227,6 +228,7 @@ function CustomersView({ env }: { env: AppEnv }) {
           status: queryStates.status?.split(",").filter(Boolean) || [],
           product_id: queryStates.product_id?.split(",").filter(Boolean) || [],
           version: queryStates.version,
+          none: queryStates.none === "true",
         },
         setFilters: handleFilterChange,
         products: productsData?.products,

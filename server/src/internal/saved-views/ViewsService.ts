@@ -17,9 +17,17 @@ export class ViewsService {
         const orgId = req.org.id;
         const env = req.env;
 
-        if (!name || !filters) {
+        if (!name) {
           throw new RecaseError({
-            message: "Name and filters are required",
+            message: "Name is required",
+            code: ErrCode.InvalidRequest,
+            statusCode: 400,
+          });
+        }
+
+        if (!filters) {
+          throw new RecaseError({
+            message: "Please select some filters first",
             code: ErrCode.InvalidRequest,
             statusCode: 400,
           });
@@ -40,7 +48,7 @@ export class ViewsService {
 
         // Also save to a list for easy retrieval
         const listKey = `saved_views_list:${orgId}:${env}`;
-        const existingViews = await CacheManager.getJson(listKey) || [];
+        const existingViews = (await CacheManager.getJson(listKey)) || [];
         existingViews.push(viewId);
         await CacheManager.setJson(listKey, existingViews, "forever"); // No TTL
 
@@ -66,7 +74,7 @@ export class ViewsService {
         const env = req.env;
 
         const listKey = `saved_views_list:${orgId}:${env}`;
-        const viewIds = await CacheManager.getJson(listKey) || [];
+        const viewIds = (await CacheManager.getJson(listKey)) || [];
 
         const views = [];
         for (const viewId of viewIds) {
@@ -83,7 +91,10 @@ export class ViewsService {
         }
 
         // Sort by creation date (newest first)
-        views.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        views.sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
 
         res.json({ views });
       },
@@ -102,12 +113,17 @@ export class ViewsService {
 
         // Delete from Redis
         const key = `saved_views:${orgId}:${env}:${viewId}`;
-        await CacheManager.invalidate({ action: "", value: key.replace(":", "") });
+        await CacheManager.invalidate({
+          action: "",
+          value: key.replace(":", ""),
+        });
 
         // Remove from list
         const listKey = `saved_views_list:${orgId}:${env}`;
-        const existingViews = await CacheManager.getJson(listKey) || [];
-        const updatedViews = existingViews.filter((id: string) => id !== viewId);
+        const existingViews = (await CacheManager.getJson(listKey)) || [];
+        const updatedViews = existingViews.filter(
+          (id: string) => id !== viewId
+        );
         await CacheManager.setJson(listKey, updatedViews, "forever"); // No TTL
 
         res.json({ message: "View deleted successfully" });
