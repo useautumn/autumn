@@ -170,6 +170,11 @@ function ProductsView({ env }: { env: AppEnv }) {
                   <span className="text-t2 px-1 rounded-md bg-stone-200">
                     {featuresData?.features?.length || 0}
                   </span>
+                  {showArchivedFeatures && (
+                    <Badge className="shadow-none bg-yellow-100 border-yellow-500 text-yellow-500 hover:bg-yellow-100">
+                      Archived
+                    </Badge>
+                  )}
                 </div>
                 <div className="flex items-center">
                   <CreateFeatureDialog />
@@ -180,8 +185,8 @@ function ProductsView({ env }: { env: AppEnv }) {
                       {
                         type: "item",
                         label: showArchivedFeatures
-                          ? "Show Active Features"
-                          : "Show Archived Features",
+                          ? "Show active features"
+                          : "Show archived features",
                         onClick: () =>
                           setShowArchivedFeatures(!showArchivedFeatures),
                       },
