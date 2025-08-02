@@ -67,13 +67,8 @@ export const CustomerRowToolbar = ({
             onClick={async (e) => {
               e.stopPropagation();
               e.preventDefault();
-
-              if (env == AppEnv.Sandbox) {
-                await handleDelete();
-              } else {
-                setDeleteOpen(true);
-                setDropdownOpen(false);
-              }
+              setDeleteOpen(true);
+              setDropdownOpen(false);
             }}
           >
             <div className="flex items-center justify-between w-full gap-2">
