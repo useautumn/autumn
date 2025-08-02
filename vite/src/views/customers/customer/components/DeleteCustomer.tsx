@@ -4,7 +4,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { AppEnv, CusProductStatus, Customer, FullCusProduct } from "@autumn/shared";
+import {
+  AppEnv,
+  CusProductStatus,
+  Customer,
+  FullCusProduct,
+} from "@autumn/shared";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -44,7 +49,9 @@ export const DeleteCustomerDialog = ({
     });
 
     try {
-      await axiosInstance.delete(`/v1/customers/${customer.id}?${env === AppEnv.Sandbox ? "delete_in_stripe" : "force_delete"}=${deleteStripe}`);
+      await axiosInstance.delete(
+        `/v1/customers/${customer.id}?${env === AppEnv.Sandbox ? "delete_in_stripe" : "force_delete"}=${deleteStripe}`
+      );
       await onDelete();
       setOpen(false);
       toast.success("Customer deleted");
@@ -68,28 +75,29 @@ export const DeleteCustomerDialog = ({
 
         <div className="mb-2 text-sm">
           <p className="text-t2">
-            Are you sure you want to delete this customer in Autumn? This action cannot be
-            undone. You can also delete the customer in Stripe aswell.
+            Are you sure you want to delete this customer in Autumn? This action
+            cannot be undone. Select whether to delete this customer in Stripe
+            as well.
           </p>
         </div>
 
         <DialogFooter>
           <div className="flex gap-2">
             <Button
+              variant="outline"
+              onClick={() => handleClicked({ deleteStripe: false })}
+              isLoading={loadingStates.deleteCustomer}
+              disabled={loadingStates.deleteStripe}
+            >
+              Delete in Autumn only
+            </Button>
+            <Button
               variant="destructive"
               onClick={() => handleClicked({ deleteStripe: true })}
               isLoading={loadingStates.deleteStripe}
               disabled={loadingStates.deleteCustomer}
             >
-              Delete in both
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => handleClicked({ deleteStripe: false })}
-              isLoading={loadingStates.deleteCustomer}
-              disabled={loadingStates.deleteStripe}
-            >
-              Delete only in Autumn
+              Delete in Autumn and Stripe
             </Button>
           </div>
         </DialogFooter>
