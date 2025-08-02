@@ -7,9 +7,9 @@ import {
   ProductSchema,
 } from "@autumn/shared";
 
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 
-import { getRedirectUrl } from "@/utils/genUtils";
+import { getRedirectUrl, navigateTo } from "@/utils/genUtils";
 import { Badge } from "@/components/ui/badge";
 import { unixHasPassed } from "@/utils/dateUtils";
 import { z } from "zod";
@@ -41,6 +41,7 @@ export const CustomersTable = ({
   customers: CustomerWithProducts[];
 }) => {
   const env = useEnv();
+  const navigate = useNavigate();
   const { versionCounts } = useCustomersContext();
 
   // console.log("customers", customers);
