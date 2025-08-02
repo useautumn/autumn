@@ -92,6 +92,9 @@ server/env.sh
 server/run.sh
 server/test.sh
 
+# # bun (keep main repo clean betweeen different npm flavours)
+# bun.lock
+# bun.lockb
 .dev.vars
 
 supabase/

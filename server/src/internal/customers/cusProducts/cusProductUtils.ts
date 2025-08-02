@@ -254,7 +254,7 @@ export const activateFutureProduct = async ({
   let { curScheduledProduct: futureProduct } = getExistingCusProducts({
     product: cusProduct.product,
     cusProducts,
-    // internalEntityId: cusProduct.internal_entity_id,
+    internalEntityId: cusProduct.internal_entity_id,
   });
 
   if (!futureProduct) {

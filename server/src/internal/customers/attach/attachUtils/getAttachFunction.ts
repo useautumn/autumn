@@ -144,7 +144,7 @@ export const runAttachFunction = async ({
   logger.info(
     `Branch: ${chalk.yellow(branch)}, Function: ${chalk.yellow(attachFunction)}`
   );
-  
+
   if (curMainProduct) {
     logger.info(`→ Current Main Product: ${curMainProduct.product.id}`);
   }
@@ -152,7 +152,9 @@ export const runAttachFunction = async ({
     logger.info(`→ Current Same Product: ${curSameProduct.product.id}`);
   }
   if (curScheduledProduct) {
-    logger.info(`→ Current Scheduled Product: ${curScheduledProduct.product.id}`);
+    logger.info(
+      `→ Current Scheduled Product: ${curScheduledProduct.product.id}`
+    );
   }
 
   // config.proration = ProrationBehavior.None;
@@ -193,7 +195,7 @@ export const runAttachFunction = async ({
     for (const subId of curMainProduct?.subscription_ids || []) {
       await stripeCli.subscriptions.cancel(subId, {
         cancellation_details: {
-          comment: "autumn_downgrade",
+          comment: "autumn_downgrade,trial_canceled",
         },
       });
     }

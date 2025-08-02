@@ -84,6 +84,8 @@ stripeWebhookRouter.post(
       return;
     }
 
+    // event = JSON.parse(request.body);
+
     try {
       request.body = JSON.parse(request.body);
       request.authType = AuthType.Stripe;

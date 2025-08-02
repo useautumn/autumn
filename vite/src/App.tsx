@@ -18,6 +18,7 @@ import { AdminView } from "./views/admin/AdminView";
 import { PasswordSignIn } from "./views/auth/components/PasswordSignIn";
 import { Otp } from "./views/cli/Otp";
 import { AnalyticsView } from "./views/customers/customer/analytics/AnalyticsView";
+import { TerminalView } from "./views/TerminalView";
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
         <Route element={<MainLayout />}>
           <Route path="*" element={<DefaultView />} />
           <Route path="/admin" element={<AdminView />} />
+          <Route path="/trmnl" element={<TerminalView />} />
 
           <Route path="/onboarding" element={<OnboardingView />} />
           <Route path="/sandbox/onboarding" element={<OnboardingView />} />

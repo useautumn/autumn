@@ -1,6 +1,7 @@
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import {
   BillingType,
+  CusProductStatus,
   FullCusProduct,
   FullCustomerPrice,
   Organization,
@@ -71,7 +72,7 @@ export const handleSubCreated = async ({
       try {
         subUsageFeatures = JSON.parse(subscription.metadata?.usage_features);
         subUsageFeatures = subUsageFeatures.map(
-          (feature: any) => feature.internal_id,
+          (feature: any) => feature.internal_id
         );
       } catch (error) {
         console.log("Error parsing usage features", error);
@@ -95,7 +96,7 @@ export const handleSubCreated = async ({
 
     console.log(
       "Handling subscription.created for scheduled cus products:",
-      cusProds.length,
+      cusProds.length
     );
 
     let batchUpdate = [];
@@ -124,7 +125,7 @@ export const handleSubCreated = async ({
         let invoiceItems = await getInvoiceItems({
           stripeInvoice: invoice,
           prices: cusProd.customer_prices.map(
-            (cpr: FullCustomerPrice) => cpr.price,
+            (cpr: FullCustomerPrice) => cpr.price
           ),
           logger,
         });
@@ -164,7 +165,7 @@ export const handleSubCreated = async ({
       .map((cp) => cp.price)
       .filter(
         (p: Price) =>
-          getBillingType(p.config as any) == BillingType.UsageInArrear,
+          getBillingType(p.config as any) == BillingType.UsageInArrear
       );
 
     if (arrearPrices.length == 0) {
@@ -174,7 +175,7 @@ export const handleSubCreated = async ({
     let itemsToDelete = [];
     for (const arrearPrice of arrearPrices) {
       let subItem = subscription.items.data.find(
-        (i) => i.price.id == arrearPrice.config?.stripe_price_id,
+        (i) => i.price.id == arrearPrice.config?.stripe_price_id
       );
 
       if (!subItem) {
@@ -193,12 +194,12 @@ export const handleSubCreated = async ({
           items: itemsToDelete,
         });
         console.log(
-          `sub.created, cus product with entity: deleted ${itemsToDelete.length} items`,
+          `sub.created, cus product with entity: deleted ${itemsToDelete.length} items`
         );
       } catch (error) {
         logger.error(
           `sub.created, cus product with entity: failed to delete items`,
-          error,
+          error
         );
       }
     }

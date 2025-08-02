@@ -5,6 +5,7 @@ import { getAllFullCustomers } from "@/utils/scriptUtils/getAll/getAllAutumnCust
 import { initDrizzle } from "@/db/initDrizzle.js";
 import {
   AppEnv,
+  BillingInterval,
   BillingType,
   CusProductStatus,
   FullCusProduct,
@@ -31,24 +32,14 @@ import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { getRelatedCusPrice } from "./internal/customers/cusProducts/cusEnts/cusEntUtils.js";
+import { CusProductService } from "./internal/customers/cusProducts/CusProductService.js";
 
 const { db, client } = initDrizzle({ maxConnections: 5 });
 
 let orgSlugs = process.env.ORG_SLUGS!.split(",");
 const skipEmails = process.env.SKIP_EMAILS!.split(",");
-// "athenahq",
-// orgSlugs = ["sweep-ai-1739822644", "zero"];
-orgSlugs = [
-  "alex",
-  // "circlemind-zero"
-  // 'zero',
-  // 'sweep-ai-1739822644',
-  // 'alex',
-  // 'supermemory',
-  // 'lingo',
-  // 'lucid',
-];
 
+orgSlugs = [];
 const getSingleCustomer = async ({
   stripeCli,
   customerId,
@@ -93,8 +84,28 @@ const checkCustomerCorrect = async ({
   // console.log(`Checking ${fullCus.email} (${fullCus.id})`);
   const cusProducts = fullCus.customer_products;
 
+  // If there's only one scheduled produuct
+
   for (const cusProduct of cusProducts) {
     if (!cusProduct.subscription_ids) continue;
+
+    if (cusProduct.status == CusProductStatus.Scheduled) {
+      // Check if there's a main product elsewhere
+      let mainCusProd = cusProducts.find(
+        (cp: FullCusProduct) =>
+          cp.product.group === cusProduct.product.group &&
+          cp.id !== cusProduct.id &&
+          cp.status !== CusProductStatus.Scheduled &&
+          (cusProduct.internal_entity_id
+            ? cusProduct.internal_entity_id == cp.internal_entity_id
+            : true)
+      );
+
+      assert(
+        mainCusProd,
+        `Found scheduled cus product with no main product (${cusProduct.product.name})`
+      );
+    }
 
     if (
       !cusProduct.product.is_add_on &&
@@ -147,7 +158,10 @@ const checkCustomerCorrect = async ({
       });
 
       let billingType = getBillingType(price.config);
-      if (billingType == BillingType.UsageInAdvance) {
+      if (
+        billingType == BillingType.UsageInAdvance &&
+        price.config.interval != BillingInterval.OneOff
+      ) {
         const featureId = (price.config as any).feature_id;
         const options = cusProduct.options.find(
           (o) => o.feature_id == featureId
@@ -160,6 +174,7 @@ const checkCustomerCorrect = async ({
 
         let expectedQuantity = options?.upcoming_quantity || options?.quantity;
 
+        console.log("Sub item: ", subItem);
         assert(
           subItem?.quantity == expectedQuantity,
           `sub item quantity for prepaid price (featureId: ${featureId}) should be ${expectedQuantity}`
