@@ -22,6 +22,10 @@ export const trmnlAuthMiddleware = async (
     return;
   }
 
+  req.logger.info(
+    `received trmnl request, device id: ${req.headers["x-trmnl-id"]}`
+  );
+
   const deviceId = req.headers["x-trmnl-id"];
   if (!deviceId) {
     res.status(401).json({
@@ -32,8 +36,12 @@ export const trmnlAuthMiddleware = async (
     return;
   }
 
-  const orgId = await upstash!.get(`trmnl:device:${deviceId}`);
-  if (!orgId) {
+  const trmnlConfig = (await upstash!.get(`trmnl:device:${deviceId}`)) as {
+    orgId: string;
+    hideRevenue: boolean;
+  };
+
+  if (!trmnlConfig) {
     res.status(401).json({
       message: "Device ID invalid",
       code: ErrCode.InvalidSecretKey,
@@ -42,16 +50,19 @@ export const trmnlAuthMiddleware = async (
     return;
   }
 
+  req.logger.info(`trmnl config: ${JSON.stringify(trmnlConfig)}`);
+
   req.env = req.headers["env"] || AppEnv.Live;
   const features = await FeatureService.list({
     db: req.db,
-    orgId: orgId as string,
+    orgId: trmnlConfig.orgId as string,
     env: req.env,
   });
 
   req.org = {
-    id: orgId,
+    id: trmnlConfig.orgId,
     env: req.env,
+    hideRevenue: trmnlConfig.hideRevenue,
   };
   req.features = features;
 

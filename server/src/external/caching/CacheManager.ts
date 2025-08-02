@@ -79,7 +79,7 @@ export class CacheManager {
     return JSON.parse(res);
   }
 
-  public static async setJson(key: string, value: any, ttl: number = 3600) {
+  public static async setJson(key: string, value: any, ttl: number | string = 3600) {
     let client = await CacheManager.getClient();
     if (!client) {
       throw new Error("Cache client not initialized");
@@ -90,7 +90,11 @@ export class CacheManager {
       return;
     }
 
-    await client.set(key, JSON.stringify(value), "EX", ttl);
+    if(typeof ttl === 'number') {
+      await client.set(key, JSON.stringify(value), "EX", ttl);
+    } else if(typeof ttl === 'string' && ttl.toLowerCase() === 'forever') {
+      await client.set(key, JSON.stringify(value));
+    }
   }
 
   public static async invalidate({

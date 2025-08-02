@@ -42,7 +42,7 @@ export const InvoicesTable = () => {
 
   return (
     <div>
-      <div className="flex items-center grid grid-cols-10 gap-8 justify-between border-y bg-stone-100 pl-10 h-10">
+      <div className="items-center grid grid-cols-10 gap-8 justify-between border-y bg-stone-100 pl-10 h-10">
         <h2 className="text-sm text-t2 font-medium col-span-2 flex">
           Invoices
         </h2>

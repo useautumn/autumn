@@ -89,6 +89,7 @@ export const constructProduct = ({
     internal_id: generateId("prod"),
     created_at: Date.now(),
     base_variant_id: null,
+    archived: false,
   };
 
   return newProduct;

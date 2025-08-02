@@ -20,6 +20,7 @@ import { InvoiceService } from "./invoices/InvoiceService.js";
 import rateLimit from "express-rate-limit";
 import { trmnlRouter } from "./api/trmnl/trmnlRouter.js";
 import { trmnlAuthMiddleware } from "@/middleware/trmnlAuthMiddleware.js";
+import { viewsRouter } from "./saved-views/savedViewsRouter.js";
 
 const mainRouter: Router = Router();
 
@@ -37,6 +38,7 @@ mainRouter.use("/products", withOrgAuth, productRouter);
 mainRouter.use("/dev", devRouter);
 mainRouter.use("/customers", withOrgAuth, cusRouter);
 mainRouter.use("/query", withOrgAuth, analyticsRouter);
+mainRouter.use("/saved_views", withOrgAuth, viewsRouter);
 
 mainRouter.use("/trmnl", trmnlRouter);
 

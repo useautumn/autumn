@@ -6,165 +6,86 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
 import { useCustomersContext } from "./CustomersContext";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
-import { Check, ListFilter, X } from "lucide-react";
-import { useSetSearchParams } from "@/utils/setSearchParams";
-import { useSearchParams } from "react-router";
+import { Check, ListFilter, Pin, X } from "lucide-react";
+import { SaveViewPopover } from "./SavedViewPopover";
+import { useState } from "react";
+import { ProductsSubMenu } from "./filter/ProductsSubMenu";
+import { Checkbox } from "@/components/ui/checkbox";
+import { FilterStatusSubMenu } from "./filter/FilterStatusSubMenu";
+import { Separator } from "@/components/ui/separator";
+import { useAxiosSWR } from "@/services/useAxiosSwr";
+import { SavedViews } from "./filter/SavedViews";
 
 function FilterButton() {
   const { setFilters } = useCustomersContext();
-  const setSearchParams = useSetSearchParams();
+  const [open, setOpen] = useState(false);
+
+  const {
+    data: savedViewsData,
+    isLoading: loading,
+    mutate: refetchSavedViews,
+  } = useAxiosSWR({
+    url: "/saved_views",
+  });
+
+  const views = savedViewsData?.views || [];
 
   const clearFilters = () => {
     setFilters({
       status: [],
       product_id: [],
+      version: "",
     });
   };
 
+  const closeFilterModal = () => {
+    setOpen(false);
+  };
+
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <RenderFilterTrigger />
-      <DropdownMenuContent className="w-56" align="start">
-        <FilterStatus />
-        <ProductStatus />
-        <ProductVersionFilter />
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem
-            onClick={() =>
-              setSearchParams({
-                status: "",
-                product_id: "",
-                version: "",
-              })
-            }
-            className="cursor-pointer"
-          >
-            <X size={14} className="text-t3" />
-            Clear
-          </DropdownMenuItem>
+      <DropdownMenuContent
+        className="w-56 font-regular text-zinc-800 gap-0 p-0"
+        align="start"
+      >
+        <DropdownMenuGroup className="p-1">
+          <FilterStatusSubMenu />
+          <ProductsSubMenu />
         </DropdownMenuGroup>
+        <DropdownMenuSeparator className="m-0" />
+        {views.length > 0 && (
+          <SavedViews
+            views={views}
+            mutateViews={refetchSavedViews}
+            setDropdownOpen={setOpen}
+          />
+        )}
+        <div className="flex h-9 items-stretch">
+          <DropdownMenuItem
+            onClick={(e) => clearFilters()}
+            className="cursor-pointer justify-center gap-0 w-full"
+          >
+            <X size={12} className="mr-2 text-t3" />
+            <p className="text-t3">Clear</p>
+          </DropdownMenuItem>
+
+          <SaveViewPopover onClose={closeFilterModal} />
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
 export default FilterButton;
-
-export const FilterStatus = () => {
-  const { filters, setFilters } = useCustomersContext();
-
-  const statuses: string[] = ["canceled", "free_trial"];
-
-  const selectedStatuses = filters.status || [];
-
-  const toggleStatus = (status: string) => {
-    const selected = filters.status || [];
-    const isSelected = selected.includes(status);
-
-    const updated = isSelected
-      ? selected.filter((s: string) => s !== status)
-      : [...selected, status];
-
-    setFilters({ ...filters, status: updated });
-  };
-
-  return (
-    <DropdownMenuGroup>
-      <DropdownMenuLabel className="text-t3 !font-regular text-xs">
-        Status
-      </DropdownMenuLabel>
-      {statuses.map((status: any) => {
-        const isActive = selectedStatuses.includes(status);
-        return (
-          <DropdownMenuItem
-            key={status}
-            onClick={() => toggleStatus(status)}
-            className="flex items-center justify-between cursor-pointer text-sm"
-          >
-            {keyToTitle(status)}
-            {isActive && <Check size={13} className="text-t3" />}
-          </DropdownMenuItem>
-        );
-      })}
-    </DropdownMenuGroup>
-  );
-};
-
-export const ProductVersionFilter = () => {
-  const { versionCounts, products } = useCustomersContext();
-  const [searchParams] = useSearchParams();
-  const setSearchParams = useSetSearchParams();
-  const selectedProductId = searchParams.get("product_id");
-  if (!selectedProductId) return null;
-  const versionCount = versionCounts?.[selectedProductId] || 1;
-  const currentVersion = searchParams.get("version");
-  const versionOptions = Array.from({ length: versionCount }, (_, i) => i + 1);
-  return (
-    <DropdownMenuGroup>
-      <DropdownMenuLabel className="text-t3 !font-regular text-xs">
-        Version
-      </DropdownMenuLabel>
-      {versionOptions.map((version) => {
-        const isActive = String(currentVersion) === String(version);
-        return (
-          <DropdownMenuItem
-            key={version}
-            onClick={() => {
-              if (isActive) {
-                setSearchParams({ version: "" });
-              } else {
-                setSearchParams({ version: String(version) });
-              }
-            }}
-            className="flex items-center justify-between cursor-pointer text-sm"
-          >
-            v{version}
-            {isActive && <Check size={13} className="text-t3" />}
-          </DropdownMenuItem>
-        );
-      })}
-    </DropdownMenuGroup>
-  );
-};
-
-export const ProductStatus = () => {
-  const { products } = useCustomersContext();
-  const setSearchParams = useSetSearchParams();
-  const [searchParams] = useSearchParams();
-  const selectedProductId = searchParams.get("product_id");
-  return (
-    <DropdownMenuGroup>
-      <DropdownMenuLabel className="text-t3 !font-regular text-xs">
-        Product
-      </DropdownMenuLabel>
-      {products.map((product: any) => {
-        const isActive = selectedProductId === product.id;
-        return (
-          <DropdownMenuItem
-            key={product.id}
-            onClick={() => {
-              if (isActive) {
-                setSearchParams({ product_id: "", version: "" });
-              } else {
-                setSearchParams({ product_id: product.id, version: "" });
-              }
-            }}
-            className="flex items-center justify-between cursor-pointer"
-          >
-            {product.name}
-            {isActive && <Check size={13} className="text-t3" />}
-          </DropdownMenuItem>
-        );
-      })}
-    </DropdownMenuGroup>
-  );
-};
 
 export const RenderFilterTrigger = ({ setOpen }: any) => {
   return (

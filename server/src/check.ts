@@ -5,6 +5,7 @@ import { getAllFullCustomers } from "@/utils/scriptUtils/getAll/getAllAutumnCust
 import { initDrizzle } from "@/db/initDrizzle.js";
 import {
   AppEnv,
+  BillingInterval,
   BillingType,
   CusProductStatus,
   FullCusProduct,
@@ -38,8 +39,7 @@ const { db, client } = initDrizzle({ maxConnections: 5 });
 let orgSlugs = process.env.ORG_SLUGS!.split(",");
 const skipEmails = process.env.SKIP_EMAILS!.split(",");
 
-// orgSlugs = ["athenahq", "lingo"];
-
+orgSlugs = [];
 const getSingleCustomer = async ({
   stripeCli,
   customerId,
@@ -158,7 +158,10 @@ const checkCustomerCorrect = async ({
       });
 
       let billingType = getBillingType(price.config);
-      if (billingType == BillingType.UsageInAdvance) {
+      if (
+        billingType == BillingType.UsageInAdvance &&
+        price.config.interval != BillingInterval.OneOff
+      ) {
         const featureId = (price.config as any).feature_id;
         const options = cusProduct.options.find(
           (o) => o.feature_id == featureId
@@ -171,6 +174,7 @@ const checkCustomerCorrect = async ({
 
         let expectedQuantity = options?.upcoming_quantity || options?.quantity;
 
+        console.log("Sub item: ", subItem);
         assert(
           subItem?.quantity == expectedQuantity,
           `sub item quantity for prepaid price (featureId: ${featureId}) should be ${expectedQuantity}`
@@ -278,7 +282,7 @@ export const check = async () => {
 
     let customerId;
 
-    // customerId = "487bacbf-dd33-465e-a25a-09dd736dc81b";
+    // customerId = "SwZ6cDgOFAY9S29nHigvPaUk4uq2";
 
     let customers: FullCustomer[] = [];
     let stripeSubs: Stripe.Subscription[] = [];

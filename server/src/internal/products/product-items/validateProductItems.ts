@@ -254,7 +254,7 @@ export const validateProductItems = ({
       (item.usage_model && item.usage_model == otherItem?.usage_model)
     ) {
       throw new RecaseError({
-        message: `Can't have two features with same reset interval, unless one is prepaid, and another is pay per use`,
+        message: `You're trying to add the same feature (${item.feature_id}), with the same reset interval. You should either change the reset interval of one of the items, or make one of them a prepaid quantity`,
         code: ErrCode.InvalidInputs,
         statusCode: StatusCodes.BAD_REQUEST,
       });

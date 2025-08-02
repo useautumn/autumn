@@ -18,7 +18,7 @@ export const ProductCountsTooltip = ({
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger>
-          <p className="rounded-full text-t3 px-2 font-mono py-0">
+          <p className="rounded-full text-t3 font-mono py-0">
             {(allCounts && allCounts[product.id]?.active) || 0}
           </p>
         </TooltipTrigger>
