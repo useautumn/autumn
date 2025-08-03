@@ -141,7 +141,7 @@ export const getRolloverFields = ({
       );
     }
   } else {
-    return cusEnt.rollovers.reduce(
+    return rollovers.reduce(
       (acc, rollover) => {
         return {
           balance: acc.balance + rollover.balance,
