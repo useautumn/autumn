@@ -10,6 +10,8 @@ import { useProductContext } from "../ProductContext";
 import { FreeTrialConfig } from "./FreeTrialConfig";
 import { toast } from "sonner";
 import { FreeTrialDuration } from "@autumn/shared";
+import { handleAutoSave } from "@/views/onboarding2/model-pricing/model-pricing-utils/modelPricingUtils";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export const CreateFreeTrial = ({
   open,
@@ -21,7 +23,10 @@ export const CreateFreeTrial = ({
   // const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [price, setPrice] = useState<any>(null);
-  const { env, product, setProduct, prices } = useProductContext();
+  const { env, product, setProduct, prices, autoSave, mutate } =
+    useProductContext();
+
+  const axiosInstance = useAxiosInstance();
 
   const [freeTrial, setFreeTrial] = useState({
     length: 7,
@@ -44,6 +49,15 @@ export const CreateFreeTrial = ({
         duration: freeTrial.duration,
       },
     });
+
+    if (autoSave) {
+      handleAutoSave({
+        axiosInstance,
+        productId: product.id,
+        product: { ...product, free_trial: freeTrial },
+        mutate,
+      });
+    }
     setOpen(false);
   };
 

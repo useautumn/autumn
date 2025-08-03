@@ -11,19 +11,17 @@ import { useState } from "react";
 import { ProductItemConfig } from "./ProductItemConfig";
 import { ProductItemContext } from "./ProductItemContext";
 import { CreateFeature } from "@/views/features/CreateFeature";
+
 import {
   ProductItemInterval,
   ProductItem,
   CreateFeature as CreateFeatureType,
-  UpdateProductSchema,
 } from "@autumn/shared";
 
 import { useProductContext } from "../ProductContext";
 import { validateProductItem } from "@/utils/product/product-item/validateProductItem";
-
 import { DialogContentWrapper } from "@/components/general/modal-components/DialogContentWrapper";
 import { ItemConfigFooter } from "./product-item-config/item-config-footer/ItemConfigFooter";
-import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export const defaultProductItem: ProductItem = {
@@ -173,7 +171,7 @@ export function CreateProductItem() {
           (features.length == 0 && item.price === null) ? (
             <div className="" />
           ) : (
-            <ItemConfigFooter />
+            <ItemConfigFooter setIntroDone={() => {}} />
           )}
         </DialogContent>
       </Dialog>

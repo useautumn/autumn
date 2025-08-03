@@ -147,7 +147,7 @@
         "@clerk/clerk-react": "^5.24.2",
         "@fortawesome/free-brands-svg-icons": "^6.7.2",
         "@fortawesome/react-fontawesome": "^0.2.2",
-        "@radix-ui/react-accordion": "^1.2.3",
+        "@radix-ui/react-accordion": "^1.2.11",
         "@radix-ui/react-checkbox": "^1.1.4",
         "@radix-ui/react-dialog": "^1.1.14",
         "@radix-ui/react-dropdown-menu": "^2.1.15",
@@ -167,7 +167,7 @@
         "ag-charts-community": "^12.0.2",
         "ag-grid-community": "^34.0.2",
         "ag-grid-react": "^34.0.2",
-        "autumn-js": "^0.0.93",
+        "autumn-js": "^0.1.0",
         "axios": "^1.8.3",
         "better-auth": "^1.2.9",
         "class-variance-authority": "^0.7.1",
@@ -2693,7 +2693,7 @@
 
     "@autumn/vite/@types/node": ["@types/node@22.17.0", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-bbAKTCqX5aNVryi7qXVMi+OkB3w/OyblodicMbvE38blyAz7GxXf6XYhklokijuPwwVg9sDLKRxt0ZHXQwZVfQ=="],
 
-    "@autumn/vite/autumn-js": ["autumn-js@0.0.93", "", { "dependencies": { "chalk": "^5.4.1", "rou3": "^0.6.1", "swr": "^2.3.3", "zod": "^3.24.1" }, "peerDependencies": { "better-auth": "^1.2.12", "better-call": "^1.0.12" }, "optionalPeers": ["better-auth", "better-call"] }, "sha512-zGq9cfkhHL6xAHlervcZHO2WQ28mHNoxKKI4vnkvKifW7ETDcQk0T7xdJS9g/a+BJh7CLqe697gEdMblMUDfUA=="],
+    "@autumn/vite/autumn-js": ["autumn-js@0.1.0", "", { "dependencies": { "rou3": "^0.6.1", "swr": "^2.3.3", "zod": "^3.24.1" }, "peerDependencies": { "better-auth": "^1.2.12", "better-call": "^1.0.12" }, "optionalPeers": ["better-auth", "better-call"] }, "sha512-7YLnc33xYUhWEP0yCuEwWliZ+EOqvIz6ZTc4GvVKYNQwC2UIXX5USsWKf9maKfxQF1zSEMRcCmCa3hBLRcNUZg=="],
 
     "@autumn/vite/date-fns": ["date-fns@3.6.0", "", {}, "sha512-fRHTG8g/Gif+kSh50gaGEdToemgfj74aRX3swtiouboip5JDLAyDE9F11nHMIcvOaXeOC6D7SpNhi7uFyB7Uww=="],
 

@@ -19,112 +19,59 @@ import AttachProduct from "./AttachProduct";
 import SmallSpinner from "@/components/general/SmallSpinner";
 import { CustomersTable } from "../customers/CustomersTable";
 import { CustomersContext } from "../customers/CustomersContext";
+import { ModelPricing } from "./model-pricing/ModelPricing";
+import { useListProducts } from "./model-pricing/usePricingTable";
+import { parseAsString, useQueryStates } from "nuqs";
+import IntegrateAutumn from "./integrate/IntegrateAutumn";
 
 export default function OnboardingView2() {
-  const env = useEnv();
-
-  const [apiKey, setApiKey] = useState("");
-  const [showIntegrationSteps, setShowIntegrationSteps] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [entityFeatureIds, setEntityFeatureIds] = useState<string[]>([]);
-  const [product, setProduct] = useState<any>(null);
-  const [features, setFeatures] = useState<any[]>([]);
-  const [open, setOpen] = useState(false);
-  const [originalProduct, setOriginalProduct] = useState<any>(null);
-
-  const { data, mutate, isLoading } = useAxiosSWR({
-    url: `/products/data`,
-    env: env,
-    withAuth: true,
+  const [queryStates, setQueryStates] = useQueryStates({
+    page: parseAsString.withDefault("integrate"),
   });
+
   const {
-    data: customersData,
-    mutate: customersMutate,
-    isLoading: customersIsLoading,
-  } = useAxiosPostSWR({
-    url: `/v1/customers/all/search`,
-    data: { page_size: 10 },
-    env: env,
-    withAuth: true,
-  });
+    products: autumnProducts,
+    isLoading: isAutumnLoading,
+    error,
+    mutate: mutateAutumnProducts,
+  } = useListProducts();
 
-  useEffect(() => {
-    if (data) {
-      setFeatures(data.features);
-    }
-  }, [data]);
+  const { data, mutate, isLoading } = useAxiosSWR({ url: `/products/data` });
+  const { data: productCounts } = useAxiosSWR({ url: `/products/counts` });
 
-  if (isLoading) return <LoadingScreen />;
+  if (isLoading || isAutumnLoading) return <LoadingScreen />;
 
   return (
-    <AutumnProvider backendUrl={`${import.meta.env.VITE_BACKEND_URL}/demo`}>
-      <div className="w-full h-full p-10 flex flex-col">
+    <AutumnProvider
+      backendUrl={`${import.meta.env.VITE_BACKEND_URL}/demo`}
+      includeCredentials={true}
+    >
+      {queryStates.page === "integrate" ? (
+        <IntegrateAutumn />
+      ) : (
+        // <div className="w-full h-full p-10 flex flex-col items-center justify-start">
+        //   <div className="max-w-[800px] w-full">
+        //     <div className="flex flex-col gap-2">
+        //       <p className="text-xl">Integrate Autumn</p>
+        //       <p className="text-t3">
+        //         Let's integrate Autumn and get your first customer onto one of
+        //         your plans
+        //       </p>
+        //     </div>
+        //   </div>
+        // </div>
+        <ModelPricing
+          data={data}
+          mutate={async () => {
+            await mutate();
+            await mutateAutumnProducts();
+          }}
+          autumnProducts={autumnProducts}
+          productCounts={productCounts}
+        />
+      )}
+      {/* <div className="w-full h-full p-10 flex flex-col">
         <div className="flex flex-col max-w-[800px] gap-10  pb-[200px]">
-          <div className="flex flex-col gap-4">
-            <p className="text-xl font-bold">Create your plans</p>
-            <div className="text-t3">
-              <p>
-                Create your free and paid plans (eg. Free, Starter, Growth)
-                {/* products for any free plans, paid plans and any add-on or
-                top up products that your application offers. */}
-              </p>
-            </div>
-            <div className="flex flex-col max-w-[1000px]">
-              <EditProductDialog
-                product={product}
-                setProduct={setProduct}
-                features={features}
-                setFeatures={setFeatures}
-                mutate={mutate}
-                open={open}
-                setOpen={setOpen}
-                originalProduct={originalProduct}
-                entityFeatureIds={entityFeatureIds}
-                setEntityFeatureIds={setEntityFeatureIds}
-              />
-              <ProductsContext.Provider
-                value={{
-                  products: data.products,
-                  env,
-                  onboarding: true,
-                  mutate,
-                  entityFeatureIds,
-                  setEntityFeatureIds,
-                }}
-              >
-                <PageSectionHeader
-                  title="Products"
-                  isOnboarding={true}
-                  addButton={
-                    <>
-                      {/* <Button variant="add">Test Data</Button> */}
-                      <CreateProduct
-                        onSuccess={async (newProduct: ProductV2) => {
-                          await mutate();
-                          // setProduct(newProduct);
-                          // setOpen(true);
-                        }}
-                      />
-                    </>
-                  }
-                  className="pr-0 border-l"
-                />
-                <ProductsTable
-                  products={data.products}
-                  onRowClick={(id) => {
-                    const selectedProduct = data.products.find(
-                      (p: ProductV2) => p.id === id
-                    );
-                    setProduct(selectedProduct);
-                    setOriginalProduct(
-                      JSON.parse(JSON.stringify(selectedProduct))
-                    );
-                    setOpen(true);
-                  }}
-                />
-              </ProductsContext.Provider>
-            </div>
-          </div>
           <div className="flex flex-col gap-6">
             <p className="text-xl font-bold">Integrate Autumn</p>
             <p className="text-t3">
@@ -175,15 +122,9 @@ export default function OnboardingView2() {
                 <CustomersTable customers={customersData?.customers || []} />
               </CustomersContext.Provider>
             </div>
-
-            {/* <AttachProduct
-              products={data.products}
-              apiKey={apiKey}
-              number={5}
-            /> */}
           </div>
         </div>
-      </div>
+      </div> */}
     </AutumnProvider>
   );
 }

@@ -1,34 +1,37 @@
 import React from "react";
-import { useCustomer, usePricingTable } from "autumn-js/react";
+
+import { useCustomer, usePricingTable, ProductDetails } from "autumn-js/react";
 import { createContext, useContext, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Check, Loader2 } from "lucide-react";
-import AttachDialog from "@/components/autumn/attach-dialog";
+import CheckoutDialog from "@/components/autumn/checkout-dialog";
 import { getPricingTableContent } from "@/lib/autumn/pricing-table-content";
-import { Product, ProductItem } from "autumn-js";
+import type { Product, ProductItem } from "autumn-js";
+import { Loader2 } from "lucide-react";
 
 export default function PricingTable({
   productDetails,
+  products,
 }: {
-  productDetails?: any;
+  productDetails?: ProductDetails[];
+  products?: Product[];
 }) {
-  const { attach } = useCustomer();
+  const { checkout } = useCustomer();
   const [isAnnual, setIsAnnual] = useState(false);
-  const { products, isLoading, error } = usePricingTable({ productDetails });
+  const { isLoading, error } = usePricingTable({ productDetails });
 
-  if (isLoading) {
-    return (
-      <div className="w-full h-full flex justify-center items-center min-h-[300px]">
-        <Loader2 className="w-6 h-6 text-zinc-400 animate-spin" />
-      </div>
-    );
-  }
+  // if (isLoading) {
+  //   return (
+  //     <div className="w-full h-full flex justify-center items-center min-h-[300px]">
+  //       <Loader2 className="w-6 h-6 text-zinc-400 animate-spin" />
+  //     </div>
+  //   );
+  // }
 
-  if (error) {
-    return <div> Something went wrong...</div>;
-  }
+  // if (error) {
+  //   return <div> Something went wrong...</div>;
+  // }
 
   const intervals = Array.from(
     new Set(
@@ -38,7 +41,7 @@ export default function PricingTable({
 
   const multiInterval = intervals.length > 1;
 
-  const intervalFilter = (product: any) => {
+  const intervalFilter = (product: Product) => {
     if (!product.properties?.interval_group) {
       return true;
     }
@@ -55,10 +58,10 @@ export default function PricingTable({
   };
 
   return (
-    <div className={cn("root")}>
+    <div className={cn("root w-full")}>
       {products && (
         <PricingTableContainer
-          products={products as any}
+          products={products}
           isAnnualToggle={isAnnual}
           setIsAnnualToggle={setIsAnnual}
           multiInterval={multiInterval}
@@ -67,18 +70,18 @@ export default function PricingTable({
             <PricingCard
               key={index}
               productId={product.id}
+              className="bg-white"
               buttonProps={{
                 disabled:
-                  product.scenario === "active" ||
+                  (product.scenario === "active" &&
+                    !product.properties.updateable) ||
                   product.scenario === "scheduled",
 
                 onClick: async () => {
                   if (product.id) {
-                    await attach({
+                    await checkout({
                       productId: product.id,
-                      dialog: AttachDialog,
-                      openInNewTab: true,
-                      successUrl: window.location.href,
+                      dialog: CheckoutDialog,
                     });
                   } else if (product.display?.button_url) {
                     window.open(product.display?.button_url, "_blank");
@@ -162,7 +165,8 @@ export const PricingTableContainer = ({
         )}
         <div
           className={cn(
-            "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fit,minmax(200px,1fr))] w-full gap-2",
+            "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fit,minmax(200px,1fr))] w-full gap-2 justify-items-center",
+
             className
           )}
         >
@@ -194,9 +198,10 @@ export const PricingCard = ({
     throw new Error(`Product with id ${productId} not found`);
   }
 
-  const { name, display: productDisplay, items } = product;
+  const { name, display: productDisplay } = product;
 
   const { buttonText } = getPricingTableContent(product);
+
   const isRecommended = productDisplay?.recommend_text ? true : false;
   const mainPriceDisplay = product.properties?.is_free
     ? {
@@ -211,7 +216,7 @@ export const PricingCard = ({
   return (
     <div
       className={cn(
-        " w-full h-full py-6 text-foreground border rounded-lg shadow-sm max-w-xl",
+        " w-full h-full py-6 text-foreground border rounded-xs max-w-md",
         isRecommended &&
           "lg:-translate-y-6 lg:shadow-lg dark:shadow-zinc-800/80 lg:h-[calc(100%+48px)] bg-secondary/40",
         className
@@ -229,8 +234,12 @@ export const PricingCard = ({
         <div className="h-full">
           <div className="flex flex-col">
             <div className="pb-4">
-              <h2 className="text-2xl font-semibold px-6 truncate">
-                {productDisplay?.name || name}
+              <h2 className="text-md font-semibold px-6 truncate">
+                {productDisplay?.name || name || (
+                  <span className="text-muted-foreground font-normal">
+                    Name this product
+                  </span>
+                )}
               </h2>
               {productDisplay?.description && (
                 <div className="text-sm text-muted-foreground px-6 h-8">
@@ -239,7 +248,7 @@ export const PricingCard = ({
               )}
             </div>
             <div className="mb-2">
-              <h3 className="font-semibold h-16 flex px-6 items-center border-y mb-4 bg-secondary/40">
+              <h3 className="font-semibold h-12 text-sm flex px-6 items-center border-y mb-4 bg-secondary/40">
                 <div className="line-clamp-2">
                   {mainPriceDisplay?.primary_text}{" "}
                   {mainPriceDisplay?.secondary_text && (
@@ -255,7 +264,6 @@ export const PricingCard = ({
             <div className="flex-grow px-6 mb-6">
               <PricingFeatureList
                 items={featureItems}
-                showIcon={true}
                 everythingFrom={product.display?.everything_from}
               />
             </div>
@@ -266,7 +274,7 @@ export const PricingCard = ({
             recommended={productDisplay?.recommend_text ? true : false}
             {...buttonProps}
           >
-            {buttonText}
+            {productDisplay?.button_text || buttonText}
           </PricingCardButton>
         </div>
       </div>
@@ -277,12 +285,10 @@ export const PricingCard = ({
 // Pricing Feature List
 export const PricingFeatureList = ({
   items,
-  showIcon = true,
   everythingFrom,
   className,
 }: {
   items: ProductItem[];
-  showIcon?: boolean;
   everythingFrom?: string;
   className?: string;
 }) => {
@@ -293,10 +299,7 @@ export const PricingFeatureList = ({
       )}
       <div className="space-y-3">
         {items.map((item, index) => (
-          <div key={index} className="flex items-start gap-2 text-sm">
-            {showIcon && (
-              <Check className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-            )}
+          <div key={index} className="flex items-start gap-1 text-sm text-t2">
             <div className="flex flex-col">
               <span>{item.display?.primary_text}</span>
               {item.display?.secondary_text && (

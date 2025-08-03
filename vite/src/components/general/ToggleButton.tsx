@@ -26,7 +26,11 @@ export const ToggleButton = ({
     <Button
       variant="outline"
       disabled={disabled}
-      onClick={() => setValue(!value)}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setValue(!value);
+      }}
       className={cn(
         `flex justify-start items-center hover:bg-transparent bg-transparent border-none shadow-none gap-2 w-fit p-0`,
         className
@@ -36,7 +40,6 @@ export const ToggleButton = ({
       {infoContent && <InfoTooltip>{infoContent}</InfoTooltip>}
       <Switch
         checked={value}
-        onCheckedChange={setValue}
         className="h-4 w-7 data-[state=checked]:bg-stone-500"
         thumbClassName="h-3 w-3 data-[state=checked]:translate-x-3"
       />

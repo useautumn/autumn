@@ -265,12 +265,14 @@ export class ProductService {
     orgId,
     env,
     version,
+    allowNotFound = false,
   }: {
     db: DrizzleCli;
     idOrInternalId: string;
     orgId: string;
     env: AppEnv;
     version?: number;
+    allowNotFound?: boolean;
   }) {
     let data = (await db.query.products.findFirst({
       where: and(
@@ -298,7 +300,7 @@ export class ProductService {
     parseFreeTrials({ product: data });
 
     if (!data) {
-      // return null;
+      if (allowNotFound) return null;
       throw new RecaseError({
         message: `Product ${idOrInternalId} not found`,
         code: ErrCode.ProductNotFound,

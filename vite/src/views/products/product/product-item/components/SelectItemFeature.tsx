@@ -8,10 +8,11 @@ import {
 import { useProductItemContext } from "../ProductItemContext";
 import { useProductContext } from "../../ProductContext";
 import { FeatureTypeBadge } from "@/views/features/FeatureTypeBadge";
-import { Feature } from "@autumn/shared";
+import { Feature, FeatureType, ProductItemType } from "@autumn/shared";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
+import { getItemType } from "@/utils/product/productItemUtils";
 
 export const SelectItemFeature = ({
   show,
@@ -23,6 +24,8 @@ export const SelectItemFeature = ({
   const { features } = useProductContext();
   const { item, setItem, setShowCreateFeature, isUpdate } =
     useProductItemContext();
+
+  const itemType = getItemType(item);
 
   return (
     <div className="flex items-center gap-2 w-full">
@@ -37,14 +40,21 @@ export const SelectItemFeature = ({
           <SelectValue placeholder="Select a feature" />
         </SelectTrigger>
         <SelectContent>
-          {features.map((feature: Feature) => (
-            <SelectItem key={feature.id} value={feature.id!}>
-              <div className="flex gap-2 items-center max-w-sm">
-                <span className="truncate">{feature.name}</span>
-                <FeatureTypeBadge {...feature} />
-              </div>
-            </SelectItem>
-          ))}
+          {features
+            .filter((feature: Feature) => {
+              if (itemType === ProductItemType.FeaturePrice) {
+                return feature.type !== FeatureType.Boolean;
+              }
+              return true;
+            })
+            .map((feature: Feature) => (
+              <SelectItem key={feature.id} value={feature.id!}>
+                <div className="flex gap-2 items-center max-w-sm">
+                  <span className="truncate">{feature.name}</span>
+                  <FeatureTypeBadge {...feature} />
+                </div>
+              </SelectItem>
+            ))}
           <Button
             className="flex w-full font-medium bg-white shadow-none text-primary hover:bg-stone-200"
             onClick={(e) => {
