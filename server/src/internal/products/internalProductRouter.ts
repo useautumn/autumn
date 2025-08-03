@@ -77,7 +77,7 @@ productRouter.post("/data", async (req: any, res) => {
           db,
           orgId: req.orgId,
           env: req.env,
-          returnAll: true,
+          // returnAll: true,
           archived: showArchived,
         }),
         FeatureService.getFromReq(req),

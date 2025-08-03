@@ -144,7 +144,10 @@ const DropdownProductItem = ({
       }}
     >
       {isLoading && <SmallSpinner />}
-      {product.name}
+      <div className="flex items-center gap-2">
+        <span>{product.name}</span>
+        <span className="text-t3">({product.id})</span>
+      </div>
     </DropdownMenuItem>
   );
 };
