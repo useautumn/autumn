@@ -7,9 +7,8 @@ export const isEmptyItem = (item: ProductItem) => {
 
 export const isFeatureItem = (item: ProductItem) => {
   return (
-    notNullish(item.feature_id) &&
-    (nullish(item.price) || item.price == 0) &&
-    nullish(item.tiers)
+    // notNullish(item.feature_id) &&
+    (nullish(item.price) || item.price == 0) && nullish(item.tiers)
   );
 };
 

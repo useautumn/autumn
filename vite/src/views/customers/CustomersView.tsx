@@ -79,7 +79,6 @@ function CustomersView({ env }: { env: AppEnv }) {
   const isFirstRender = useRef(true);
   const paginationFirstRender = useRef(true);
   const searchParamsChanged = useRef(false);
-  const hasInitiallyLoaded = useRef(false);
   const isDirectNavigation = useRef(false);
 
   const resetPagination = () => {

@@ -42,7 +42,13 @@ const productDetailsSame = (prod1: Product, prod2: UpdateProduct) => {
   if (notNullish(prod2.is_default) && prod1.is_default != prod2.is_default) {
     return false;
   }
-  console.log("prod1.archived", prod1.archived, prod2.archived, notNullish(prod2.archived), prod1.archived !== prod2.archived);
+  console.log(
+    "prod1.archived",
+    prod1.archived,
+    prod2.archived,
+    notNullish(prod2.archived),
+    prod1.archived !== prod2.archived
+  );
   if (notNullish(prod2.archived) && prod1.archived !== prod2.archived) {
     return false;
   }
@@ -71,7 +77,7 @@ const updateStripeProductNames = async ({
   });
   let stripeProdId = curProduct.processor?.id;
 
-  if (!stripeProdId) {
+  if (!stripeProdId || !newName) {
     return;
   }
 

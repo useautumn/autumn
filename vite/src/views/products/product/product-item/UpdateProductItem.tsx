@@ -28,18 +28,19 @@ export default function UpdateProductItem({
   const [showCreateFeature, setShowCreateFeature] = useState(false);
 
   const handleUpdateProductItem = () => {
-    console.log("Selected Item: ", selectedItem);
     const validatedItem = validateProductItem({
       item: selectedItem!,
       features,
     });
 
-    if (!validatedItem) return;
+    if (!validatedItem) return null;
     if (notNullish(selectedIndex)) {
       const newProduct = { ...product };
       newProduct.items[selectedIndex!] = validatedItem;
       setProduct(newProduct);
       setOpen(false);
+
+      return newProduct;
     }
   };
 
@@ -49,6 +50,7 @@ export default function UpdateProductItem({
       newProduct.items.splice(selectedIndex!, 1);
       setProduct(newProduct);
       setOpen(false);
+      return newProduct;
     }
   };
 

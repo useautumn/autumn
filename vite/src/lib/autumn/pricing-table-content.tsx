@@ -1,9 +1,10 @@
-import { type CheckProductPreview } from "autumn-js";
+import { type Product } from "autumn-js";
 
-export const getPricingTableContent = (product: any) => {
-  const { scenario, free_trial } = product;
+export const getPricingTableContent = (product: Product) => {
+  const { scenario, free_trial, properties } = product;
+  const { is_one_off, updateable, has_trial } = properties;
 
-  if (free_trial && free_trial.trial_available) {
+  if (has_trial) {
     return {
       buttonText: <p>Start Free Trial</p>,
     };
@@ -16,20 +17,26 @@ export const getPricingTableContent = (product: any) => {
       };
 
     case "active":
+      if (updateable) {
+        return {
+          buttonText: <p>Update Plan</p>,
+        };
+      }
+
       return {
         buttonText: <p>Current Plan</p>,
       };
 
     case "new":
-      if (product.properties?.is_one_off) {
+      if (is_one_off) {
         return {
           buttonText: <p>Purchase</p>,
         };
-      } else {
-        return {
-          buttonText: <p>Get started</p>,
-        };
       }
+
+      return {
+        buttonText: <p>Get started</p>,
+      };
 
     case "renew":
       return {
