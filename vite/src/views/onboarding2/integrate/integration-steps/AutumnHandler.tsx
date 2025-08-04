@@ -12,22 +12,36 @@ import {
   nextjsSupabaseOrg,
   nextjsSupabaseUser,
 } from "./snippets/nextjsHandler";
-import { rr7BetterAuth, rr7Clerk, rr7Supabase } from "./snippets/rr7Handler";
+import {
+  rr7BetterAuth,
+  rr7Clerk,
+  rr7Other,
+  rr7Supabase,
+} from "./snippets/rr7Handler";
 import {
   honoBetterAuth,
   honoClerk,
   honoSupabase,
+  honoOther,
 } from "./snippets/honoHandler";
 import {
   expressBetterAuth,
   expressClerk,
+  expressOther,
   expressSupabase,
 } from "./snippets/expressHandler";
-import { elysiaBetterAuth } from "./snippets/elysiaHandler";
+import {
+  elysiaBetterAuth,
+  elysiaClerk,
+  elysiaOther,
+} from "./snippets/elysiaHandler";
+import { general } from "./snippets/general";
+import { CodeSpan } from "../components/CodeSpan";
+import { Backend } from "../StackEnums";
 
 const snippet = () => {
   return {
-    nextjs: {
+    [Backend.Nextjs]: {
       ["better_auth"]: {
         user: nextjsBetterAuthUser,
         org: nextjsBetterAuthOrg,
@@ -45,7 +59,7 @@ const snippet = () => {
         org: nextjsOther,
       },
     },
-    ["react_router"]: {
+    [Backend.ReactRouter]: {
       ["better_auth"]: {
         user: rr7BetterAuth("user"),
         org: rr7BetterAuth("org"),
@@ -58,8 +72,12 @@ const snippet = () => {
         user: rr7Clerk("user"),
         org: rr7Clerk("org"),
       },
+      ["other"]: {
+        user: rr7Other("user"),
+        org: rr7Other("org"),
+      },
     },
-    ["hono"]: {
+    [Backend.Hono]: {
       ["clerk"]: {
         user: honoClerk("user"),
         org: honoClerk("org"),
@@ -72,8 +90,12 @@ const snippet = () => {
         user: honoBetterAuth("user"),
         org: honoBetterAuth("org"),
       },
+      ["other"]: {
+        user: honoOther("user"),
+        org: honoOther("org"),
+      },
     },
-    ["express"]: {
+    [Backend.Express]: {
       ["better_auth"]: {
         user: expressBetterAuth("user"),
         org: expressBetterAuth("org"),
@@ -86,11 +108,23 @@ const snippet = () => {
         user: expressSupabase("user"),
         org: expressSupabase("org"),
       },
+      ["other"]: {
+        user: expressOther("user"),
+        org: expressOther("org"),
+      },
     },
-    ["elysia"]: {
+    [Backend.Elysia]: {
       ["better_auth"]: {
         user: elysiaBetterAuth("user"),
         org: elysiaBetterAuth("org"),
+      },
+      ["clerk"]: {
+        user: elysiaClerk("user"),
+        org: elysiaClerk("org"),
+      },
+      ["other"]: {
+        user: elysiaOther("user"),
+        org: elysiaOther("org"),
       },
     },
   } as any;
@@ -106,21 +140,25 @@ export const AutumnHandler = () => {
 
     const templates = snippet();
 
-    console.log("Backend Lang", backendLang);
-    console.log("Auth Provider", authProvider);
+    let template = templates[backendLang]?.[authProvider]?.[customerType] || "";
 
-    const template =
-      templates[backendLang]?.[authProvider]?.[customerType] || "";
+    template = template.trim("\n");
 
-    console.log("Template", template);
+    if (!template) {
+      return general();
+    }
 
-    // Trim \n from the template (only left and right)
-    return template.trim("\n");
+    return template;
   };
 
   return (
-    <div className="flex flex-col gap-2 w-full">
-      <StepHeader number={3} title="Install autumn-js" />
+    <div className="flex flex-col gap-4 w-full">
+      <StepHeader number={3} title="Mount Autumn handler" />
+      <p className="text-t2 text-sm">
+        <CodeSpan>autumnHandler</CodeSpan> mounts routes on the{" "}
+        <CodeSpan>/api/autumn/*</CodeSpan> paths which allows our React hooks
+        and components to interact with the Autumn API directly.
+      </p>
 
       <CodeBlock
         snippets={[
