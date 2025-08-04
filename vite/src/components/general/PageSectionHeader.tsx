@@ -38,8 +38,8 @@ export const PageSectionHeader = ({
         )}
         {titleComponent}
       </div>
-      {endContent}
       <div className="flex items-center">
+        {endContent}
         {addButton && <div className="flex items-center">{addButton}</div>}
         {menuComponent && (
           <div className="flex items-center">{menuComponent}</div>
