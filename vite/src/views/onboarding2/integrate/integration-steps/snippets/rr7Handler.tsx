@@ -71,3 +71,23 @@ const handler = autumnHandler({
 export const loader = handler.loader;
 export const action = handler.action;`;
 };
+export const rr7Other = (customerType: "user" | "org") => {
+  return `// app/routes/api.autumn.tsx
+
+import { autumnHandler } from "autumn-js/react-router";
+
+const handler = autumnHandler({
+  secretKey: process.env.AUTUMN_SECRET_KEY!,
+  identify: async (args) => {
+    const customerId = "your_customer_id"; // Get customer id from your database
+
+    return {
+      customerId,
+      customerData: { name: "", email: "" },
+    };
+  },
+});
+
+export const loader = handler.loader;
+export const action = handler.action;`;
+};

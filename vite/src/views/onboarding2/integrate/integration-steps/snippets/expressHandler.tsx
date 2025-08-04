@@ -46,3 +46,22 @@ app.use(
   })
 );`;
 };
+
+export const expressOther = (customerType: "user" | "org") => {
+  return `import { autumnHandler } from "autumn-js/express";
+
+app.use(express.json()); // need to parse request body before autumnHandler
+app.use(
+  "/api/autumn",
+  autumnHandler({
+    identify: async (req, res) => {
+      const customerId = "your_customer_id"; // Get customer id from your database
+
+      return {
+        customerId,
+        customerData: { name: "", email: "" },
+      };
+    },
+  })
+);`;
+};

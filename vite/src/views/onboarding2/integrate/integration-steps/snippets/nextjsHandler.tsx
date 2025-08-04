@@ -50,8 +50,8 @@ export const { GET, POST } = autumnHandler({
 export const nextjsSupabaseUser = `
 // app/api/autumn/[...all]/route.ts
 
-import { createClient } from "@/utils/supabase/server";
 import { autumnHandler } from "autumn-js/next";
+import { createClient } from "@/utils/supabase/server";
 
 export const { GET, POST } = autumnHandler({
   identify: async () => {
@@ -75,8 +75,8 @@ export const { GET, POST } = autumnHandler({
 export const nextjsSupabaseOrg = `
 // app/api/autumn/[...all]/route.ts
 
-import { createClient } from "@/utils/supabase/server";
 import { autumnHandler } from "autumn-js/next";
+import { createClient } from "@/utils/supabase/server";
 
 export const { GET, POST } = autumnHandler({
   identify: async () => {
@@ -150,13 +150,10 @@ import { autumnHandler } from "autumn-js/next";
 
 export const { GET, POST } = autumnHandler({
   identify: async (request) => {
-    
-    // Authenticate the request and get the customer ID
-    const customerId = "customer_id";
-
+  // Authenticate the request and get the customer ID
+    const customerId = "customer_id"; 
     return {
       customerId,
-      // To store the customer name and email
       customerData: { name: "", email: "" },
     };
   },

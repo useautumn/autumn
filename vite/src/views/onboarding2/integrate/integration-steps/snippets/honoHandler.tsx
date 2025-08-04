@@ -104,3 +104,23 @@ ${betterAuthSnippet(customerType, "c.req.raw.headers", 3)}
   })
 );`;
 };
+export const honoOther = (customerType: "user" | "org") => {
+  return `// index.ts
+
+import { autumnHandler } from "autumn-js/hono";
+import { auth } from "@/lib/auth"
+
+app.use(
+  "/api/autumn/*",
+  autumnHandler({
+    identify: async (c: Context) => {
+      const customerId = "your_customer_id"; // Get customer id from your database
+
+      return {
+        customerId,
+        customerData: { name: "", email: "" },
+      };
+    },
+  })
+);`;
+};
