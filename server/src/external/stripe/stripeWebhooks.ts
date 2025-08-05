@@ -204,6 +204,7 @@ stripeWebhookRouter.post(
             logger,
           });
           break;
+
         case "subscription_schedule.canceled":
           const canceledSchedule = event.data.object;
           await handleSubscriptionScheduleCanceled({

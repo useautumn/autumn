@@ -38,14 +38,6 @@ export const handleListProductsBeta = async (req: any, res: any) =>
             env,
             logger: req.logger,
           });
-          // return await CusService.getFull({
-          //   db,
-          //   orgId: org.id,
-          //   env,
-          //   idOrInternalId: customerId as string,
-          //   allowNotFound: true,
-          //   entityId,
-          // });
         })(),
       ]);
 

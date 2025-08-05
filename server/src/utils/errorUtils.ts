@@ -191,15 +191,13 @@ export const handleFrontendReqError = ({
   action: string;
 }) => {
   try {
-    let logger = req.logtail;
-
+    const logger = req.logger;
     if (
       error instanceof RecaseError &&
       error.statusCode == StatusCodes.NOT_FOUND
     ) {
-      req.logtail.warn(
-        `(frontend) ${req.method} ${req.originalUrl}: not found`
-      );
+      // Temporarily disable logger to prevent thread-stream crashes
+      console.log(`(frontend) ${req.method} ${req.originalUrl}: not found`);
       res.status(404).json({
         message: error.message,
         code: error.code,
@@ -207,21 +205,13 @@ export const handleFrontendReqError = ({
       return;
     }
 
-    logger.warn(`FRONTEND REQUEST WARNING: ${error.message}`, {
-      type: "frontend_request",
-      error: {
-        message: error.message,
-        stack: error.stack,
-        code: error.code,
-        action,
-      },
-    });
+    logger.error(
+      `(frontend) ${req.method} ${req.originalUrl}: ${error.message}`,
+      {
+        error,
+      }
+    );
 
-    // logger.warn(`${req.method} ${req.originalUrl}`, {
-    //   type: "frontend_request",
-    // });
-    // logger.warn(`${action}`);
-    // logger.warn(error);
     res.status(400).json({
       message: error.message || "Unknown error",
       code: error.code || "unknown_error",

@@ -33,7 +33,6 @@ productRouter.get("/data", async (req: any, res) => {
           db,
           orgId: req.orgId,
           env: req.env,
-          returnAll: true,
           archived: false,
         }),
         FeatureService.getFromReq(req),
@@ -116,8 +115,17 @@ productRouter.get("/counts", async (req: any, res) => {
       // returnAll: true,
     });
 
+    const latestVersion = req.query.latest_version === "true";
+
     let counts = await Promise.all(
       products.map(async (product) => {
+        if (latestVersion) {
+          return CusProdReadService.getCounts({
+            db,
+            internalProductId: product.internal_id,
+          });
+        }
+
         return CusProdReadService.getCountsForAllVersions({
           db,
           productId: product.id,

@@ -167,7 +167,7 @@ export function FeatureConfig({
         <div className="w-full">
           <FieldLabel>Name</FieldLabel>
           <Input
-            placeholder="Eg, messages, seats"
+            placeholder="Eg. messages, seats"
             value={fields.name}
             onChange={(e) => {
               const newFields: any = { ...fields, name: e.target.value };

@@ -46,11 +46,11 @@ export const createStripeSubThroughInvoice = async ({
 
   let subItems = items.filter(
     (i: any, index: number) =>
-      prices[index].config!.interval !== BillingInterval.OneOff,
+      prices[index].config!.interval !== BillingInterval.OneOff
   );
   let invoiceItems = items.filter(
     (i: any, index: number) =>
-      prices[index].config!.interval === BillingInterval.OneOff,
+      prices[index].config!.interval === BillingInterval.OneOff
   );
 
   try {

@@ -3,7 +3,13 @@ import { sortProductItems } from "@/utils/productUtils";
 import { AppEnv, Feature, ProductItem, ProductV2 } from "@autumn/shared";
 import { useEffect, useRef, useState } from "react";
 
-export const useProductData = ({ data }: { data: any }) => {
+export const useProductData = ({
+  originalProduct,
+  originalFeatures,
+}: {
+  originalProduct: ProductV2 | null;
+  originalFeatures: Feature[] | null;
+}) => {
   const initialProductRef = useRef<ProductV2 | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [product, setProduct] = useState<ProductV2 | null>(null);
@@ -16,16 +22,16 @@ export const useProductData = ({ data }: { data: any }) => {
       new Set(
         product.items
           .filter((item: ProductItem) => item.entity_feature_id != null)
-          .map((item: ProductItem) => item.entity_feature_id!),
-      ),
+          .map((item: ProductItem) => item.entity_feature_id!)
+      )
     );
   };
 
   useEffect(() => {
-    if (data?.product) {
+    if (originalProduct) {
       const sortedProduct = {
-        ...data.product,
-        items: sortProductItems(data.product.items),
+        ...originalProduct,
+        items: sortProductItems(originalProduct.items),
       };
 
       initialProductRef.current = structuredClone(sortedProduct);
@@ -33,10 +39,10 @@ export const useProductData = ({ data }: { data: any }) => {
       setProduct(sortedProduct);
     }
 
-    if (data?.features) {
-      setFeatures(data.features);
+    if (originalFeatures) {
+      setFeatures(originalFeatures);
     }
-  }, [data]);
+  }, [originalProduct, originalFeatures]);
 
   useEffect(() => {
     if (!product) return;

@@ -17,26 +17,28 @@ import { FeatureTypeBadge } from "@/views/features/FeatureTypeBadge";
 const checkAccessCode = (
   apiKey: string,
   id: string,
-  isProduct: boolean,
+  isProduct: boolean
 ) => `// app/page.tsx
 
 import { useCustomer } from "autumn-js/react";
 
 export default function CheckAccess() {
-  const { customer, allowed } = useCustomer();
+  const { customer, check } = useCustomer();
 
   const handleCheckAccess = () => {
+    const { data } = check({ ${isProduct ? "productId" : "featureId"}: "${id}" });
+    
     ${
       isProduct
         ? `// Check if customer has an active product
-    if (allowed({ productId: "${id}" })) {
+    if (data?.allowed) {
       alert("You have access to ${id}");
     } else {
       alert("You don't have access to ${id}");
     }`
         : `// Check feature balance
-    if (allowed({ featureId: "${id}" });) {
-      alert("You have access to ${id}. Balance: " + feature.balance);
+    if (data?.allowed) {
+      alert("You have access to ${id}. Balance: " + data?.balance);
     } else {
       alert("You don't have access to ${id}");
     }`
@@ -50,7 +52,7 @@ export default function CheckAccess() {
 const checkAccessCodeTypescript = (
   apiKey: string,
   id: string,
-  isProduct: boolean,
+  isProduct: boolean
 ) => `import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_..." });
@@ -68,7 +70,7 @@ if (!data?.allowed) {
 const usageEventCode = (
   apiKey: string,
   id: string,
-  isProduct: boolean,
+  isProduct: boolean
 ) => `import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_..." });
@@ -93,10 +95,10 @@ export default function CheckAccessStep({
 }) {
   const [isProduct, setIsProduct] = useState<boolean>(true);
   const [selectedFeature, setSelectedFeature] = useState<Feature | undefined>(
-    features.length > 0 ? features[0] : undefined,
+    features.length > 0 ? features[0] : undefined
   );
   const [selectedProductId, setSelectedProductId] = useState<string>(
-    products.length > 0 ? products[0].id! : "",
+    products.length > 0 ? products[0].id! : ""
   );
 
   const selectedId = isProduct ? selectedProductId : selectedFeature?.id || "";

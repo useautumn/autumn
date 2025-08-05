@@ -1,30 +1,22 @@
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 
 import { useState } from "react";
-import { ProductItemConfig } from "./ProductItemConfig";
 import { ProductItemContext } from "./ProductItemContext";
-import { CreateFeature } from "@/views/features/CreateFeature";
+
 import {
   ProductItemInterval,
   ProductItem,
   CreateFeature as CreateFeatureType,
-  UpdateProductSchema,
 } from "@autumn/shared";
 
 import { useProductContext } from "../ProductContext";
 import { validateProductItem } from "@/utils/product/product-item/validateProductItem";
-
-import { DialogContentWrapper } from "@/components/general/modal-components/DialogContentWrapper";
-import { ItemConfigFooter } from "./product-item-config/item-config-footer/ItemConfigFooter";
-import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { CreateItemDialogContent } from "./create-product-item/CreateItemDialogContent";
+import { Plus } from "lucide-react";
+import { useSteps } from "./useSteps";
+import { CreateItemStep } from "./utils/CreateItemStep";
 
 export const defaultProductItem: ProductItem = {
   feature_id: null,
@@ -66,13 +58,13 @@ export function CreateProductItem() {
   const { features, product, setProduct, setFeatures, counts, mutate } =
     useProductContext();
 
-  const axiosInstance = useAxiosInstance();
-  const hasCustomers = counts?.all > 0;
+  // const axiosInstance = useAxiosInstance();
+  // const hasCustomers = counts?.all > 0;
 
-  const setSelectedFeature = (feature: CreateFeatureType) => {
-    setFeatures([...features, feature]);
-    setItem({ ...item, feature_id: feature.id! });
-  };
+  // const setSelectedFeature = (feature: CreateFeatureType) => {
+  // setFeatures([...features, feature]);
+  // setItem({ ...item, feature_id: feature.id! });
+  // };
 
   const handleCreateProductItem = async (entityFeatureId?: string) => {
     const validatedItem = validateProductItem({
@@ -96,6 +88,10 @@ export function CreateProductItem() {
     setOpen(false);
   };
 
+  const stepState = useSteps({
+    initialStep: CreateItemStep.SelectItemType,
+  });
+
   return (
     <ProductItemContext.Provider
       value={{
@@ -105,6 +101,7 @@ export function CreateProductItem() {
         setShowCreateFeature,
         isUpdate: false,
         handleCreateProductItem,
+        stepState,
       }}
     >
       <Dialog open={open} onOpenChange={setOpen}>
@@ -112,13 +109,21 @@ export function CreateProductItem() {
           <DialogTrigger asChild>
             <Button
               variant="add"
-              className="w-24"
               onClick={() => setItem(defaultProductItem)}
+              startIcon={<Plus size={14} />}
             >
-              Feature
+              Product Item
             </Button>
           </DialogTrigger>
-          <DialogTrigger asChild>
+        </div>
+        <CreateItemDialogContent open={open} setOpen={setOpen} />
+      </Dialog>
+    </ProductItemContext.Provider>
+  );
+}
+
+{
+  /* <DialogTrigger asChild>
             <Button
               variant="add"
               className="w-24 border-l-0"
@@ -126,9 +131,10 @@ export function CreateProductItem() {
             >
               Price
             </Button>
-          </DialogTrigger>
-        </div>
-        <DialogContent className="translate-y-[0%] top-[20%] flex flex-col gap-0 w-fit p-0">
+          </DialogTrigger> */
+}
+{
+  /* <DialogContent className="translate-y-[0%] top-[20%] flex flex-col gap-0 w-fit p-0">
           <DialogContentWrapper>
             <DialogHeader className="p-0">
               <div className="flex flex-col  ">
@@ -173,10 +179,7 @@ export function CreateProductItem() {
           (features.length == 0 && item.price === null) ? (
             <div className="" />
           ) : (
-            <ItemConfigFooter />
+            <ItemConfigFooter setIntroDone={() => {}} />
           )}
-        </DialogContent>
-      </Dialog>
-    </ProductItemContext.Provider>
-  );
+        </DialogContent> */
 }

@@ -11,7 +11,7 @@ export const ManageProduct = ({
   hideAdminHover?: boolean;
 }) => {
   const env = useEnv();
-  const { isOnboarding, product, entityId, customer } = useProductContext();
+  const { product, entityId, customer } = useProductContext();
 
   return (
     <div className="flex flex-col gap-4">
