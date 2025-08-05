@@ -39,5 +39,5 @@ export const itemToEntInterval = (item: ProductItem) => {
     return EntInterval.Lifetime;
   }
 
-  return item.interval;
+  return item.interval as unknown as EntInterval;
 };

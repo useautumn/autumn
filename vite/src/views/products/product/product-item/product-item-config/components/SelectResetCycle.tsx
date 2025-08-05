@@ -15,6 +15,8 @@ import { cn } from "@/lib/utils";
 import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
 import { getFeatureUsageType } from "@/utils/product/entitlementUtils";
 import { useProductContext } from "../../../ProductContext";
+import { Button } from "@/components/ui/button";
+import { ArrowUp01, PlusIcon } from "lucide-react";
 
 export const SelectResetCycle = () => {
   const { features } = useProductContext();
@@ -34,11 +36,20 @@ export const SelectResetCycle = () => {
     return null;
   }
 
+  const interval = itemToEntInterval(item);
+
+  const getIntervalText = (interval: EntInterval) => {
+    return interval === "semi_annual"
+      ? "per half year"
+      : interval === "lifetime"
+        ? "no reset"
+        : `per ${interval}`;
+  };
   return (
     <div
       className={cn(
         "transition-all duration-300 ease-in-out",
-        isFeaturePrice ? "w-0 overflow-hidden" : "w-40",
+        isFeaturePrice ? "w-0 overflow-hidden" : "w-60"
       )}
     >
       <FieldLabel className="flex items-center gap-2">
@@ -58,18 +69,31 @@ export const SelectResetCycle = () => {
         }}
       >
         <SelectTrigger>
-          <SelectValue placeholder="Select reset" />
+          <SelectValue placeholder="Select reset">
+            {getIntervalText(interval)}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          {Object.values(EntInterval).map((interval) => (
-            <SelectItem key={interval} value={interval}>
-              {interval === "semi_annual"
-                ? "per half year"
-                : interval === "lifetime"
-                  ? "no reset"
-                  : `per ${interval}`}
-            </SelectItem>
-          ))}
+          {Object.values(EntInterval).map((interval) => {
+            return (
+              <SelectItem
+                key={interval}
+                value={interval}
+                className="group flex items-center justify-between w-full bg-blue-100"
+              >
+                <div className="flex items-center gap-2 w-full bg-green-100">
+                  {getIntervalText(interval)}
+                  {/* <Button
+                    variant="ghost"
+                    size="icon"
+                    className="invisible group-hover:visible h-6 border"
+                  >
+                    <ArrowUp01 size={12} />
+                  </Button> */}
+                </div>
+              </SelectItem>
+            );
+          })}
         </SelectContent>
       </Select>
     </div>

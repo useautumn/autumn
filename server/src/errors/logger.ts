@@ -55,7 +55,7 @@ export const initLogger = () => {
       },
     },
     // Use multistream to send logs to multiple destinations
-    pino.multistream(streams),
+    pino.multistream(streams)
   );
 
   return logger;

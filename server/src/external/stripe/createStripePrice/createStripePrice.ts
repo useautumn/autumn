@@ -25,6 +25,7 @@ import {
 } from "./createStripeArrearProrated.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
+import RecaseError from "@/utils/errorUtils.js";
 
 export const checkCurStripePrice = async ({
   price,
@@ -46,10 +47,7 @@ export const checkCurStripePrice = async ({
         expand: ["product"],
       });
 
-      if (
-        !stripePrice.active ||
-        !(stripePrice.product as Stripe.Product).active
-      ) {
+      if (!stripePrice.active) {
         stripePrice = null;
       }
     } catch (error) {
@@ -122,7 +120,12 @@ export const createStripePriceIFNotExist = async ({
     billingType == BillingType.OneOff
   ) {
     if (!stripePrice) {
-      logger.info("Creating stripe fixed price");
+      // logger.info("Creating stripe fixed price: ", {
+      //   data: {
+      //     price,
+      //     stripePrice,
+      //   },
+      // });
       await createStripeFixedPrice({
         db,
         stripeCli,
