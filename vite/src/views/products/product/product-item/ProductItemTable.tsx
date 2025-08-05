@@ -68,46 +68,57 @@ export const ProductItemTable = () => {
           </h2>
 
           <div className="flex w-full h-full items-center justify-end">
-            {!isOnboarding && <CreateProductItem />}
-            <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="add"
-                  disableStartIcon
-                  startIcon={<EllipsisVertical size={16} />}
-                  className={cn(
-                    "w-10 h-10 p-0 text-purple-600 hover:text-purple-700 hover:bg-purple-50",
-                    isOnboarding && "!h-full",
-                    isOnboarding && product.items.length == 0 && "hidden"
-                  )}
-                />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-36 max-w-36">
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger className="flex items-center gap-2">
-                    Add Entity
-                    <InfoTooltip>
-                      <p>
-                        Add an entity to group items by (eg, usage limits per
-                        users, compute instances, etc).
-                      </p>
-                    </InfoTooltip>
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="max-w-52">
-                    <EntitiesDropdownContent />
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-                <DropdownMenuItem
-                  onClick={() => {
-                    setDropdownOpen(false);
-                    setFreeTrialOpen(true);
-                  }}
+            {!isOnboarding && (
+              <>
+                <CreateProductItem />
+                <DropdownMenu
+                  open={dropdownOpen}
+                  onOpenChange={setDropdownOpen}
                 >
-                  Add Free Trial
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <CreateFreeTrial open={freeTrialOpen} setOpen={setFreeTrialOpen} />
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="add"
+                      disableStartIcon
+                      startIcon={<EllipsisVertical size={16} />}
+                      className={cn(
+                        "w-10 h-10 p-0 text-purple-600 hover:text-purple-700 hover:bg-purple-50",
+                        isOnboarding && "!h-full",
+                        isOnboarding && product.items.length == 0 && "hidden"
+                      )}
+                    />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-36 max-w-36">
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger className="flex items-center gap-2">
+                        Add Entity
+                        <InfoTooltip>
+                          <p>
+                            Add an entity to group items by (eg, usage limits
+                            per users, compute instances, etc).
+                          </p>
+                        </InfoTooltip>
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="max-w-52">
+                        <EntitiesDropdownContent />
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setDropdownOpen(false);
+                        setFreeTrialOpen(true);
+                      }}
+                    >
+                      Add Free Trial
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <CreateFreeTrial
+                  open={freeTrialOpen}
+                  setOpen={setFreeTrialOpen}
+                />
+              </>
+            )}
+
             {/* </div> */}
           </div>
         </div>

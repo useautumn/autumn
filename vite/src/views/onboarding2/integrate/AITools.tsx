@@ -17,9 +17,9 @@ import { CodeSpan } from "./components/CodeSpan";
 export const AITools = () => {
   // MCP configuration for Autumn
   const mcpConfig = {
-    name: "autumn-docs",
-    command: "npx",
-    args: ["-y", "mcp-remote", "https://docs.useautumn.com/mcp"],
+    name: "Autumn Docs",
+    url: "https://docs.useautumn.com/mcp",
+    headers: {},
   };
 
   // Base64 encode the configuration for Cursor's install URL
