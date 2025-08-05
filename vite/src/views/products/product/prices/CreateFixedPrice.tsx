@@ -42,7 +42,7 @@ function CreateFixedPrice({
     (item: ProductItem, index: number) => {
       const isSameItem = selectedIndex && selectedIndex == index;
       return !isSameItem && isPriceItem(item) && item.interval;
-    },
+    }
   );
 
   const newVariantMap: Record<ProductItemInterval, string> = {
@@ -123,7 +123,7 @@ function CreateFixedPrice({
               step="any"
               className="h-full !text-lg min-w-36"
             />
-            <span className="text-t2 w-fit px-6 flex justify-center">
+            <span className="text-t2 w-fit px-2 flex justify-center">
               {org?.default_currency?.toUpperCase() || "USD"}
             </span>
           </div>

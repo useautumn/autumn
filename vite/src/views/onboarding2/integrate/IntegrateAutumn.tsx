@@ -14,22 +14,42 @@ import {
 import { AddAutumnProvider } from "./integration-steps/AddAutumnProvider";
 import { CheckoutPricingTable } from "./integration-steps/CheckoutPricingTable";
 import { EnvStep } from "./integration-steps/EnvStep";
+import { ArrowLeftIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { NextSteps } from "./NextSteps";
+import { AutumnProvider } from "autumn-js/react";
 
-export default function IntegrateAutumn() {
-  const [queryStates, setQueryStates] = useQueryStates({
-    reactTypescript: parseAsBoolean.withDefault(true),
-    frontend: parseAsString.withDefault(""),
-    backend: parseAsString.withDefault(""),
-    auth: parseAsString.withDefault(""),
-    customerType: parseAsString.withDefault(""),
-  });
-
-  const stackSelected = Object.values(queryStates).every(notNullish);
+export default function IntegrateAutumn({
+  data,
+  mutate,
+  queryStates,
+  setQueryStates,
+}: {
+  data: any;
+  mutate: any;
+  queryStates: any;
+  setQueryStates: any;
+}) {
+  const stackSelected = queryStates.frontend && queryStates.backend;
 
   return (
-    <IntegrateContext.Provider value={{ queryStates, setQueryStates }}>
+    <IntegrateContext.Provider
+      value={{ queryStates, setQueryStates, data, mutate }}
+    >
       <div className="w-full h-full p-10 flex flex-col items-center justify-start">
         <div className="max-w-[600px] w-full flex flex-col gap-6">
+          <Button
+            variant="dialogBack"
+            className="w-fit pl-0 ml-0"
+            onClick={() => {
+              setQueryStates({
+                page: "pricing",
+              });
+            }}
+          >
+            <ArrowLeftIcon size={14} />
+            Create your pricing plans
+          </Button>
           <div className="flex flex-col gap-2">
             <p className="text-xl">Integrate Autumn</p>
             <p className="text-t3">
@@ -38,8 +58,8 @@ export default function IntegrateAutumn() {
             </p>
           </div>
 
+          <AITools />
           <div className="flex flex-col gap-8 pb-40">
-            <AITools />
             <SelectStack />
             {stackSelected && queryStates.reactTypescript && (
               <>
@@ -48,18 +68,15 @@ export default function IntegrateAutumn() {
                 <AutumnHandler />
                 <AddAutumnProvider />
                 <CheckoutPricingTable />
+                <AutumnProvider
+                  backendUrl={`${import.meta.env.VITE_BACKEND_URL}/demo`}
+                  includeCredentials={true}
+                >
+                  <NextSteps />
+                </AutumnProvider>
               </>
             )}
           </div>
-
-          {/* <div className="flex flex-col gap-4">
-          <StepHeader number={2} title="Add your secret key" />
-          <p className="text-md text-t3">
-            Create a .env file in the root of your project and add the following
-            environment variables:
-          </p>
-          <EnvStep />
-        </div> */}
         </div>
       </div>
     </IntegrateContext.Provider>

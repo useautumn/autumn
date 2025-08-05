@@ -1,21 +1,12 @@
 import PricingTable from "@/components/autumn/pricing-table";
 import { EditProduct } from "./EditProduct";
 import { useEffect, useState } from "react";
-import {
-  getProductItemResponse,
-  ProductProperties,
-  ProductV2,
-  sortProductsV2,
-  UsageModel,
-} from "@autumn/shared";
-import { getBackendErr, notNullish, nullish } from "@/utils/genUtils";
-import { isFreeProduct, isOneOffProduct } from "@/utils/product/priceUtils";
-import { Product } from "autumn-js";
 
+import { getBackendErr, nullish } from "@/utils/genUtils";
+import { Feature, Product } from "autumn-js";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { PlusIcon } from "lucide-react";
-import { Tabs, TabsTrigger, TabsList } from "@/components/ui/tabs";
+import { ArrowRight, PlusIcon } from "lucide-react";
 import {
   ModelPricingContext,
   useModelPricingContext,
@@ -31,10 +22,13 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { toast } from "sonner";
 import { ProductsContext } from "@/views/products/ProductsContext";
 import { SelectEditProduct } from "./SelectEditProduct";
+import { ConnectStripeStep } from "./ConnectStripe";
+import { AutumnProvider } from "autumn-js/react";
+import { useProductData } from "@/views/products/product/hooks/useProductData";
 
 const defaultProduct = {
-  id: "",
-  name: "",
+  id: "free_plan",
+  name: "Free Plan",
   items: [],
   is_default: false,
   is_add_on: false,
@@ -44,22 +38,37 @@ const defaultProduct = {
 export const ModelPricing = ({
   data,
   mutate,
+  mutateAutumnProducts,
   autumnProducts,
   productCounts,
+  mutateCounts,
+  queryStates,
+  setQueryStates,
 }: {
   data: any;
   mutate: any;
+  mutateAutumnProducts: any;
   autumnProducts: Product[];
   productCounts: any;
+  mutateCounts: any;
+  queryStates: any;
+  setQueryStates: any;
 }) => {
-  const curProduct = autumnProducts.length > 0 ? autumnProducts[0] : null;
+  const getCurProduct = () => {
+    if (queryStates.productId) {
+      const prod = data.products.find(
+        (p: Product) => p.id === queryStates.productId
+      );
+      if (prod) {
+        return prod;
+      }
+    } else if (data.products.length > 0) {
+      return data.products[0];
+    }
+    return defaultProduct;
+  };
 
-  const [product, setProduct] = useState<any>(
-    (curProduct &&
-      data.products.find((p: ProductV2) => p.id === autumnProducts[0].id)) ||
-      (defaultProduct as unknown as ProductV2)
-  );
-
+  const curProduct = getCurProduct();
   const [firstItemCreated, setFirstItemCreated] = useState(
     autumnProducts.some((p: Product) => p.items.length > 0)
   );
@@ -68,59 +77,30 @@ export const ModelPricing = ({
     nullish(curProduct)
   );
 
-  // Get latest product
-  const getAutumnProducts = () => {
-    const curProductItems = product.items.map((item: any) =>
-      getProductItemResponse({
-        item,
-        features: data.features,
-        currency: "USD",
-      })
-    );
+  const productDataState = useProductData({
+    originalProduct: curProduct as any,
+    originalFeatures: data.features as any,
+  });
 
-    return autumnProducts;
-    // return [product, ...autumnProducts];
+  const { product } = productDataState;
 
-    // const properties: ProductProperties = {
-    //   has_trial: notNullish(product.free_trial),
-    //   is_free: isFreeProduct(product.items),
-    //   is_one_off: isOneOffProduct(product.items),
-    //   updateable: product.items.some(
-    //     (item: any) => item.usage_model == UsageModel.Prepaid
-    //   ),
-    // };
+  // useEffect(() => {
+  //   if (data) {
+  //     const curProduct = data.products.find(
+  //       (p: Product) => p.id === product.id
+  //     );
 
-    // const latestProduct = {
-    //   ...product,
-    //   items: curProductItems,
-    //   properties,
-    // };
+  //     if (!curProduct) {
+  //       if (data.products.length > 0) {
+  //         setProduct(data.products[0]);
+  //       }
+  //     }
+  //   }
+  // }, [data]);
 
-    // const curProducts = autumnProducts.filter(
-    //   (p: Product) => p.id !== product.id
-    // );
+  if (!product) return null;
 
-    // if (!firstItemCreated) {
-    //   return [];
-    // }
-
-    // const newProducts = [latestProduct, ...curProducts] as any;
-    // return sortProductsV2({ products: newProducts }) as Product[];
-  };
-
-  useEffect(() => {
-    if (data) {
-      const curProduct = data.products.find(
-        (p: Product) => p.id === product.id
-      );
-
-      if (!curProduct) {
-        if (data.products.length > 0) {
-          setProduct(data.products[0]);
-        }
-      }
-    }
-  }, [data]);
+  const stripeConnected = data?.org.stripe_connected;
 
   return (
     <ModelPricingContext.Provider
@@ -129,11 +109,16 @@ export const ModelPricing = ({
         setFirstItemCreated,
         editingNewProduct,
         setEditingNewProduct,
-        product,
-        setProduct,
+        // product,
+        // setProduct,
+        productDataState,
         mutate,
         data,
-        productCounts,
+        productCount: productCounts?.[product?.id ?? ""],
+        queryStates,
+        setQueryStates,
+        mutateAutumnProducts,
+        mutateCounts,
       }}
     >
       <ProductsContext.Provider value={{ productCounts, mutate }}>
@@ -153,8 +138,12 @@ export const ModelPricing = ({
                 <EditProduct
                   data={data}
                   mutate={mutate}
-                  setProduct={setProduct}
-                  product={product}
+                  // setProduct={setProduct}
+                  // features={features}
+                  // setFeatures={setFeatures}
+                  // entityFeatureIds={entityFeatureIds}
+                  // setEntityFeatureIds={setEntityFeatureIds}
+                  // product={product}
                 />
               </div>
             </div>
@@ -164,13 +153,37 @@ export const ModelPricing = ({
             className={cn(
               "w-full px-10 flex flex-col gap-4 items-center transition-all duration-1000 ease-in-out overflow-hidden",
               firstItemCreated
-                ? "py-10 max-h-[500px] opacity-100 translate-y-0 rounded-t-xl shadow-[0_-2px_2px_-2px_rgba(0,0,0,0.05)] bg-stone-100 border-t border-zinc-200"
+                ? `py-10 max-h-[500px] opacity-100 translate-y-0 rounded-t-xl shadow-[0_-2px_2px_-2px_rgba(0,0,0,0.05)] 
+                bg-stone-100 border-t border-zinc-200 pb-6`
                 : "py-0 max-h-0 opacity-0 translate-y-4"
             )}
           >
-            <div className="gap-4 flex justify-center max-w-[800px] w-full">
-              <PricingTable products={getAutumnProducts()} />
-            </div>
+            <AutumnProvider
+              backendUrl={`${import.meta.env.VITE_BACKEND_URL}/demo`}
+              includeCredentials={true}
+            >
+              <div className="gap-8 flex justify-center max-w-[800px] w-full flex-col">
+                {!stripeConnected && (
+                  <ConnectStripeStep mutate={mutate} productData={data} />
+                )}
+                <PricingTable
+                  products={autumnProducts}
+                  stripeConnected={stripeConnected}
+                />
+                <div className="flex justify-end w-full">
+                  <Button
+                    className="w-fit"
+                    onClick={() => {
+                      setQueryStates({
+                        page: "integrate",
+                      });
+                    }}
+                  >
+                    Next: Integrate Autumn <ArrowRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </AutumnProvider>
           </div>
         </div>
       </ProductsContext.Provider>
@@ -180,7 +193,10 @@ export const ModelPricing = ({
 
 const NewProductPopover = () => {
   const [open, setOpen] = useState(false);
-  const { mutate, data, setProduct } = useModelPricingContext();
+  const {
+    mutate,
+    productDataState: { setProduct },
+  } = useModelPricingContext();
 
   const axiosInstance = useAxiosInstance();
   const [details, setDetails] = useState({
@@ -256,4 +272,37 @@ const NewProductPopover = () => {
       </PopoverContent>
     </Popover>
   );
+};
+
+// Get latest product
+const getAutumnProducts = () => {
+  // const curProductItems = product.items.map((item: any) =>
+  //   getProductItemResponse({
+  //     item,
+  //     features: data.features,
+  //     currency: "USD",
+  //   })
+  // );
+  // return [product, ...autumnProducts];
+  // const properties: ProductProperties = {
+  //   has_trial: notNullish(product.free_trial),
+  //   is_free: isFreeProduct(product.items),
+  //   is_one_off: isOneOffProduct(product.items),
+  //   updateable: product.items.some(
+  //     (item: any) => item.usage_model == UsageModel.Prepaid
+  //   ),
+  // };
+  // const latestProduct = {
+  //   ...product,
+  //   items: curProductItems,
+  //   properties,
+  // };
+  // const curProducts = autumnProducts.filter(
+  //   (p: Product) => p.id !== product.id
+  // );
+  // if (!firstItemCreated) {
+  //   return [];
+  // }
+  // const newProducts = [latestProduct, ...curProducts] as any;
+  // return sortProductsV2({ products: newProducts }) as Product[];
 };

@@ -13,6 +13,11 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { toast } from "sonner";
 import { useFeaturesContext } from "../features/FeaturesContext";
 import { validateCreditSystem } from "./CreateCreditSystem";
+import {
+  CustomDialogBody,
+  CustomDialogContent,
+  CustomDialogFooter,
+} from "@/components/general/modal-components/DialogContentWrapper";
 
 function UpdateCreditSystem({
   open,
@@ -43,7 +48,7 @@ function UpdateCreditSystem({
         selectedCreditSystem.id,
         {
           ...selectedCreditSystem,
-        },
+        }
       );
       await mutate();
       setOpen(false);
@@ -55,24 +60,26 @@ function UpdateCreditSystem({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="w-[500px] overflow-y-auto max-h-[500px]">
-        <DialogTitle>Update Credit System</DialogTitle>
+      <CustomDialogContent className="w-[500px]  overflow-y-auto max-h-[500px]">
+        <CustomDialogBody>
+          <DialogTitle>Update Credit System</DialogTitle>
 
-        <CreditSystemConfig
-          creditSystem={selectedCreditSystem}
-          setCreditSystem={setSelectedCreditSystem}
-        />
+          <CreditSystemConfig
+            creditSystem={selectedCreditSystem}
+            setCreditSystem={setSelectedCreditSystem}
+          />
+        </CustomDialogBody>
 
-        <DialogFooter>
+        <CustomDialogFooter>
           <Button
             isLoading={updateLoading}
             onClick={() => handleUpdateCreditSystem()}
-            variant="gradientPrimary"
+            variant="add"
           >
             Update
           </Button>
-        </DialogFooter>
-      </DialogContent>
+        </CustomDialogFooter>
+      </CustomDialogContent>
     </Dialog>
   );
 }

@@ -10,11 +10,14 @@ import {
   AccordionItem,
 } from "@/components/ui/accordion";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import CodeBlock from "@/views/onboarding/components/CodeBlock";
+import { InfoBox } from "./components/InfoBox";
+import { CodeSpan } from "./components/CodeSpan";
 
 export const AITools = () => {
   // MCP configuration for Autumn
   const mcpConfig = {
-    name: "autumn",
+    name: "autumn-docs",
     command: "npx",
     args: ["-y", "mcp-remote", "https://docs.useautumn.com/mcp"],
   };
@@ -45,7 +48,7 @@ export const AITools = () => {
         type="single"
         collapsible
         className="w-full"
-        defaultValue="item-1"
+        // defaultValue="item-1"
       >
         <AccordionItem value="item-1" className="border">
           <AccordionTrigger className="bg-stone-100 p-2">
@@ -54,52 +57,64 @@ export const AITools = () => {
               Add Autumn to your AI tools
             </div>
           </AccordionTrigger>
-          <AccordionContent className="flex flex-col gap-4 text-balance text-t3 p-4 bg-white">
-            <div>
-              <FieldLabel>Cursor</FieldLabel>
-              <Button
-                onClick={handleCursorInstall}
-                variant="outline"
-                className="w-fit border-none bg-zinc-800 hover:bg-zinc-900 text-white rounded-xs hover:text-white"
-                startIcon={
-                  <img
-                    src="/cursor.png"
-                    className="w-4 h-4 mr-1"
-                    alt="Cursor"
-                  />
-                }
-              >
-                Open in Cursor
-              </Button>
+          <AccordionContent className="flex flex-col gap-4 text-t3 p-4 bg-white w-full">
+            <p className="text-sm text-t2 w-full">
+              Install our MCP with Cursor or Claude Code to use AI to integrate
+              Autumn.
+            </p>
+            <div className="flex gap-6">
+              <div>
+                <FieldLabel>Cursor</FieldLabel>
+                <Button
+                  onClick={handleCursorInstall}
+                  variant="outline"
+                  className="w-fit text-t2"
+                  startIcon={
+                    <img
+                      src="/cursor.png"
+                      className="w-4 h-4 mr-1"
+                      alt="Cursor"
+                    />
+                  }
+                >
+                  Open in Cursor
+                </Button>
+              </div>
+              <div>
+                <FieldLabel>Claude Code</FieldLabel>
+                <Button
+                  onClick={() => {
+                    navigator.clipboard.writeText(
+                      "claude mcp add --transport http autumn-docs https://docs.useautumn.com/mcp"
+                    );
+                    toast.success(
+                      "Copied command to clipboard. Paste in your terminal to install."
+                    );
+                  }}
+                  variant="outline"
+                  className="w-fit text-t2"
+                  startIcon={
+                    <img
+                      src="/claude.png"
+                      className="w-4 h-4 mr-1"
+                      alt="Cursor"
+                    />
+                  }
+                >
+                  Copy installation command
+                </Button>
+              </div>
             </div>
+            <InfoBox>
+              When using Cursor or Claude, prompt the model to use the
+              `autumn-docs` MCP to integrate Autumn.
+            </InfoBox>
           </AccordionContent>
         </AccordionItem>
       </Accordion>
-      <p className="text-sm text-t3">
-        If you're using Cursor or Claude Code, you can install our MCP server to
-        use AI to integrate Autumn.
-      </p>
 
       {/* One-click install for Cursor */}
-      <div className="flex gap-2">
-        <Button
-          onClick={() => {
-            navigator.clipboard.writeText(
-              "claude mcp add --transport http autumn-docs https://docs.useautumn.com/mcp"
-            );
-            toast.success(
-              "Copied command to clipboard. Paste in your terminal to install."
-            );
-          }}
-          variant="outline"
-          className="w-fit text-t2"
-          startIcon={
-            <img src="/claude.png" className="w-4 h-4 mr-1" alt="Cursor" />
-          }
-        >
-          Add to Claude Code
-        </Button>
-      </div>
+      <div className="flex gap-2"></div>
     </div>
   );
 };

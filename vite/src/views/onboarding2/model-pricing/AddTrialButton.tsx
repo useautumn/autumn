@@ -7,7 +7,7 @@ import { handleAutoSave } from "./model-pricing-utils/modelPricingUtils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export const AddTrialButton = () => {
-  const { product, setProduct, mutate } = useProductContext();
+  const { product, setProduct, mutate, autoSave } = useProductContext();
   const [open, setOpen] = useState(false);
   const axiosInstance = useAxiosInstance();
 
@@ -21,7 +21,6 @@ export const AddTrialButton = () => {
           e.stopPropagation();
           setOpen(true);
         }}
-        // className={`w-32 flex items-center gap-2`}
         className="justify-start w-fit p-0 hover:bg-transparent text-t2 font-medium hover:text-t1"
       >
         {product?.free_trial ? (
@@ -40,12 +39,15 @@ export const AddTrialButton = () => {
                   ...product,
                   free_trial: null,
                 });
-                handleAutoSave({
-                  axiosInstance,
-                  productId: product.id,
-                  product: { ...product, free_trial: null },
-                  mutate,
-                });
+
+                if (!autoSave) {
+                  handleAutoSave({
+                    axiosInstance,
+                    productId: product.id,
+                    product: { ...product, free_trial: null },
+                    mutate,
+                  });
+                }
               }}
               className="hover:bg-zinc-300 !h-4 !w-4 text-t3 mt-0.5"
             >

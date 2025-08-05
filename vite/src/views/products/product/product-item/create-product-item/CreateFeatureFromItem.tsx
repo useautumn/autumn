@@ -7,22 +7,46 @@ import {
   ProductItem,
   CreateFeature as CreateFeatureType,
 } from "@autumn/shared";
+import { useProductContext } from "../../ProductContext";
+import { DialogContentWrapper } from "@/components/general/modal-components/DialogContentWrapper";
+import { useFeatureDialogState } from "@/views/features/hooks/useFeatureDialogState";
 
 export const CreateFeatureFromItem = () => {
-  const {
-    setShowCreateFeature,
-    setOpen,
-    open,
-    setFeatures,
-    setItem,
-    features,
-    item,
-  } = useProductItemContext();
+  const { setShowCreateFeature, setOpen, open, setItem, item } =
+    useProductItemContext();
+
+  const { features, setFeatures } = useProductContext();
 
   const setSelectedFeature = (feature: CreateFeatureType) => {
     setFeatures([...features, feature]);
     setItem({ ...item, feature_id: feature.id! });
   };
+
+  const {
+    feature,
+    setFeature,
+    eventNameInput,
+    setEventNameInput,
+    eventNameChanged,
+    setEventNameChanged,
+  } = useFeatureDialogState({
+    entityCreate: true,
+  });
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>Create Feature</DialogTitle>
+      </DialogHeader>
+      <CreateFeature
+        isFromEntitlement={true}
+        setShowFeatureCreate={setShowCreateFeature}
+        setSelectedFeature={setSelectedFeature}
+        setOpen={setOpen}
+        open={open}
+      />
+    </>
+  );
 
   return (
     <>

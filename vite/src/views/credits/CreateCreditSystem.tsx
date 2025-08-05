@@ -21,6 +21,11 @@ import {
 import { getBackendErr } from "@/utils/genUtils";
 import CreditSystemConfig from "./CreditSystemConfig";
 import { useFeaturesContext } from "../features/FeaturesContext";
+import {
+  CustomDialogBody,
+  CustomDialogContent,
+  CustomDialogFooter,
+} from "@/components/general/modal-components/DialogContentWrapper";
 const defaultCreditSystem = {
   name: "",
   id: "",
@@ -32,7 +37,7 @@ const defaultCreditSystem = {
 };
 
 export const validateCreditSystem = (
-  creditSystem: CreateFeature,
+  creditSystem: CreateFeature
 ): string | null => {
   if (!creditSystem.id || !creditSystem.name) {
     return "Please fill in all fields";
@@ -99,25 +104,30 @@ function CreateCreditSystem() {
       <DialogTrigger asChild>
         <Button variant="add">Credit System</Button>
       </DialogTrigger>
-      <DialogContent className="w-[500px] overflow-y-auto max-h-[500px]">
-        <DialogHeader>
-          <DialogTitle>Create Credit System</DialogTitle>
-        </DialogHeader>
-        <CreditSystemConfig
-          creditSystem={creditSystem}
-          setCreditSystem={setCreditSystem}
-        />
+      <CustomDialogContent className="w-[500px] overflow-y-auto max-h-[500px]">
+        <CustomDialogBody>
+          <DialogHeader>
+            <DialogTitle>Create Credit System</DialogTitle>
+          </DialogHeader>
+          <CreditSystemConfig
+            creditSystem={creditSystem}
+            setCreditSystem={setCreditSystem}
+          />
+        </CustomDialogBody>
 
-        <DialogFooter>
+        <CustomDialogFooter>
           <Button
             onClick={handleCreateCreditSystem}
             isLoading={isLoading}
-            variant="gradientPrimary"
+            variant="add"
           >
             Create
           </Button>
-        </DialogFooter>
-      </DialogContent>
+        </CustomDialogFooter>
+      </CustomDialogContent>
+      {/* <DialogContent className="w-[500px] overflow-y-auto max-h-[500px]">
+        
+      </DialogContent> */}
     </Dialog>
   );
 }

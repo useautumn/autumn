@@ -1,24 +1,18 @@
-import { DialogContentWrapper } from "@/components/general/modal-components/DialogContentWrapper";
-import { Button } from "@/components/ui/button";
 import {
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  CustomDialogBody,
+  CustomDialogContent,
+} from "@/components/general/modal-components/DialogContentWrapper";
+import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useProductItemContext } from "../ProductItemContext";
-import { CreateFeature } from "@/views/features/CreateFeature";
 import { ProductItemConfig } from "../ProductItemConfig";
 import {
-  ProductItemInterval,
-  ProductItem,
-  CreateFeature as CreateFeatureType,
   ProductItemType,
   Infinite,
   FeatureType,
   BillingInterval,
+  CreateFeature as CreateFeatureType,
 } from "@autumn/shared";
 import { ItemConfigFooter } from "../product-item-config/item-config-footer/ItemConfigFooter";
-import { CreateFeatureFromItem } from "./CreateFeatureFromItem";
 import { useEffect, useState } from "react";
 import { useProductContext } from "../../ProductContext";
 import { CreateItemIntro } from "./CreateItemIntro";
@@ -27,6 +21,10 @@ import { getItemType } from "@/utils/product/productItemUtils";
 import { getFeature } from "@/utils/product/entitlementUtils";
 import { defaultPaidFeatureItem, defaultPriceItem } from "./defaultItemConfigs";
 import { notNullish } from "@/utils/genUtils";
+import { CreateFeature } from "@/views/features/CreateFeature";
+import { CreateItemStep } from "../utils/CreateItemStep";
+import { useSteps } from "../useSteps";
+import { SelectFeatureStep } from "../product-item-config/components/SelectFeature";
 
 export const CreateItemDialogContent = ({
   open,
@@ -35,31 +33,17 @@ export const CreateItemDialogContent = ({
   open: boolean;
   setOpen: (open: boolean) => void;
 }) => {
-  const {
-    showCreateFeature,
-    setShowCreateFeature,
-    features,
-    item,
-    setItem,
-    setFeatures,
-  } = useProductItemContext();
+  const { features, setFeatures } = useProductContext();
+  const { stepState, item, setItem } = useProductItemContext();
 
-  const { product } = useProductContext();
-
-  const [showIntro, setShowIntro] = useState(product.items.length === 0);
-  const [introDone, setIntroDone] = useState(false);
+  const { stepVal, popStep, pushStep, resetSteps, previousStep, replaceStep } =
+    stepState;
 
   useEffect(() => {
     if (open) {
-      setShowIntro(product.items.length === 0);
-      setIntroDone(false);
+      resetSteps();
     }
   }, [open]);
-
-  const showFeatureDialog =
-    showCreateFeature || (features.length == 0 && item.price === null);
-
-  const showIntroDialog = !introDone;
 
   const getTabValue = () => {
     return getItemType(item);
@@ -105,47 +89,78 @@ export const CreateItemDialogContent = ({
     }
   };
 
+  const handleFeatureCreated = async (feature: CreateFeatureType) => {
+    setFeatures([...features, feature]);
+    setItem({ ...item, feature_id: feature.id! });
+
+    // replaceStep(CreateItemStep.CreateItem);
+    if (previousStep === CreateItemStep.CreateItem) {
+      replaceStep(CreateItemStep.CreateItem);
+    } else {
+      pushStep(CreateItemStep.CreateItem);
+    }
+  };
+
   const tabTriggerClass =
     "data-[state=active]:bg-stone-200 data-[state=active]:text-t2 data-[state=active]:font-medium";
+
   return (
-    <DialogContent className="translate-y-[0%] top-[20%] flex flex-col gap-0 w-fit p-0">
-      <DialogContentWrapper>
-        {showIntroDialog ? (
-          <CreateItemIntro setIntroDone={setIntroDone} />
-        ) : showFeatureDialog ? (
-          <CreateFeatureFromItem />
-        ) : (
-          <div className="flex flex-col gap-4">
-            <DialogHeader className="p-0">
-              <DialogTitle>Add Product Item</DialogTitle>
-            </DialogHeader>
+    <CustomDialogContent>
+      {stepVal === CreateItemStep.SelectItemType ? (
+        <CreateItemIntro setStep={pushStep} />
+      ) : stepVal === CreateItemStep.CreateFeature ? (
+        <CreateFeature
+          onSuccess={handleFeatureCreated}
+          setOpen={setOpen}
+          open={open}
+          handleBack={() => popStep()}
+        />
+      ) : stepVal === CreateItemStep.SelectFeature ? (
+        <SelectFeatureStep popStep={popStep} pushStep={pushStep} />
+      ) : (
+        <>
+          <CustomDialogBody>
+            <div className="flex flex-col gap-4">
+              <DialogHeader className="p-0">
+                <DialogTitle>Add Product Item</DialogTitle>
+              </DialogHeader>
 
-            <Tabs value={getTabValue()} onValueChange={handleTabChange}>
-              <TabsList className="gap-2">
-                <TabsTrigger className={tabTriggerClass} value="feature">
-                  Feature
-                </TabsTrigger>
-                <TabsTrigger className={tabTriggerClass} value="priced_feature">
-                  Priced Feature
-                </TabsTrigger>
-                <TabsTrigger className={tabTriggerClass} value="price">
-                  Price
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="config">
+              <Tabs value={getTabValue()} onValueChange={handleTabChange}>
+                <TabsList className="gap-2">
+                  <TabsTrigger className={tabTriggerClass} value="feature">
+                    Feature
+                  </TabsTrigger>
+                  <TabsTrigger
+                    className={tabTriggerClass}
+                    value="priced_feature"
+                  >
+                    Priced Feature
+                  </TabsTrigger>
+                  <TabsTrigger className={tabTriggerClass} value="price">
+                    Price
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="config">
+                  <ProductItemConfig />
+                </TabsContent>
+              </Tabs>
+
+              <div className="flex flex-col gap-4 w-fit !overflow-visible">
                 <ProductItemConfig />
-              </TabsContent>
-            </Tabs>
-
-            <div className="flex flex-col gap-4 w-fit !overflow-visible">
-              <ProductItemConfig />
+              </div>
             </div>
-          </div>
-        )}
-      </DialogContentWrapper>
-      {!showIntroDialog && !showFeatureDialog && (
-        <ItemConfigFooter setIntroDone={setIntroDone} />
+          </CustomDialogBody>
+
+          <ItemConfigFooter handleBack={() => popStep()} />
+        </>
       )}
-    </DialogContent>
+    </CustomDialogContent>
   );
 };
+
+// <DialogContent className="translate-y-[0%] top-[20%] flex flex-col gap-0 w-fit p-0">
+//   <DialogContentWrapper>
+
+//   </DialogContentWrapper>
+
+// </DialogContent>

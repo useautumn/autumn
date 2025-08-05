@@ -9,11 +9,13 @@ import { handleFrontendReqError } from "@/utils/errorUtils.js";
 
 export const handleCreateFeature = async (req: any, res: any) => {
   try {
+    console.log("Trying to create feature");
     const data = req.body;
     let { db, orgId, env, logtail: logger } = req;
     let parsedFeature = validateFeature(data);
 
-    let feature: Feature = {
+    const feature: Feature = {
+      archived: false,
       internal_id: generateId("fe"),
       org_id: orgId,
       created_at: Date.now(),

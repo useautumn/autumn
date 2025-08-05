@@ -26,12 +26,14 @@ import { Button } from "@/components/ui/button";
 export const SelectStack = () => {
   const { queryStates, setQueryStates } = useIntegrateContext();
 
+  console.log("queryStates", queryStates);
+
   const tabClassName = `rounded-xs h-8 data-[state=active]:bg-stone-100 data-[state=active]:text-t2 data-[state=active]:shadow-inner data-[state=active]:border`;
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <StepHeader number={2} title="Select your stack" />
-        <p className="text-sm text-t3">
+        <p className="text-sm text-t2">
           Help us customize the integration guide for your specific tech stack.
           Click{" "}
           <span

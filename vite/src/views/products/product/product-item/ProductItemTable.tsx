@@ -21,8 +21,9 @@ import { CreateFreeTrial } from "../free-trial/CreateFreeTrial";
 import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
 
 export const ProductItemTable = () => {
-  const { product, features, org, entityFeatureIds, isOnboarding } =
+  const { product, features, org, entityFeatureIds, isOnboarding, autoSave } =
     useProductContext();
+
   const [selectedItem, setSelectedItem] = useState<ProductItem | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
@@ -67,7 +68,6 @@ export const ProductItemTable = () => {
           </h2>
 
           <div className="flex w-full h-full items-center justify-end">
-            {/* <div className="flex w-fit h-full items-center"> */}
             {!isOnboarding && <CreateProductItem />}
             <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
               <DropdownMenuTrigger asChild>
@@ -110,14 +110,6 @@ export const ProductItemTable = () => {
             <CreateFreeTrial open={freeTrialOpen} setOpen={setFreeTrialOpen} />
             {/* </div> */}
           </div>
-
-          {/* <Button
-            variant="add"
-            className="w-fit"
-            startIcon={<SaveIcon size={14} className="mr-1" />}
-          >
-            Save Product
-          </Button> */}
         </div>
 
         <div
