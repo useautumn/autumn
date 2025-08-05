@@ -103,7 +103,7 @@ export function CreateProductItem2({
               className={cn("w-full", classNames?.button)}
               startIcon={<PlusIcon size={14} />}
             >
-              Add Product Item
+              Add item to product
             </Button>
           </DialogTrigger>
         </div>
