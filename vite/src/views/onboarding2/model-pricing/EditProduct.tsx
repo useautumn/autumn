@@ -212,8 +212,8 @@ export const EditProduct = ({ mutate }: { mutate: any }) => {
                     setValue={() => handleToggleSettings("is_add_on")}
                   />
                   <div className="text-t3 text-sm" style={{ width: "320px" }}>
-                    A default product is enabled by default for all new users,
-                    typically used for your free plan.
+                    A product that can be added on top of a customer's main
+                    plan. Eg. one time purchases or top ups.
                   </div>
                 </div>
                 <div>
