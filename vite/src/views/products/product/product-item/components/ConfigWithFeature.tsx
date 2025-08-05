@@ -5,6 +5,8 @@ import { useProductContext } from "../../ProductContext";
 import { FeatureType } from "@autumn/shared";
 import { getFeature } from "@/utils/product/entitlementUtils";
 import { FeatureConfig } from "../product-item-config/FeatureItemConfig";
+import { useEffect } from "react";
+import { CreateItemStep } from "../utils/CreateItemStep";
 
 export const ConfigWithFeature = ({
   show,
@@ -16,7 +18,7 @@ export const ConfigWithFeature = ({
   handleAddPrice: () => void;
 }) => {
   const { features } = useProductContext();
-  const { item, setItem } = useProductItemContext();
+  const { item } = useProductItemContext();
 
   const isBooleanFeature =
     getFeature(item.feature_id, features)?.type === FeatureType.Boolean;

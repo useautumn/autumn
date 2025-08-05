@@ -24,6 +24,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
+import { useModelPricingContext } from "@/views/onboarding2/model-pricing/ModelPricingContext";
 
 export interface CheckoutDialogProps {
   open: boolean;
@@ -50,6 +51,8 @@ export default function CheckoutDialog(params: CheckoutDialogProps) {
     CheckoutResult | undefined
   >(params?.checkoutResult);
 
+  const { mutateAutumnProducts } = useModelPricingContext();
+
   useEffect(() => {
     if (params.checkoutResult) {
       setCheckoutResult(params.checkoutResult);
@@ -70,11 +73,9 @@ export default function CheckoutDialog(params: CheckoutDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="p-0 pt-4 gap-0 text-foreground overflow-hidden text-sm">
+      <DialogContent className="p-0 pt-6 gap-0 text-foreground overflow-hidden text-sm max-w-[500px]">
         <DialogTitle className="px-6 mb-1">{title}</DialogTitle>
-        <div className="px-6 mt-1 mb-4 text-muted-foreground">
-          {message}
-        </div>
+        <div className="px-6 mt-1 mb-4 text-muted-foreground">{message}</div>
 
         {isPaid && checkoutResult && (
           <PriceInformation
@@ -83,7 +84,7 @@ export default function CheckoutDialog(params: CheckoutDialogProps) {
           />
         )}
 
-        <DialogFooter className="flex flex-col sm:flex-row justify-between gap-x-4 py-2 pl-6 pr-3 bg-secondary border-t shadow-inner">
+        <DialogFooter className="mt-2 flex flex-col sm:flex-row justify-between gap-x-4 py-2 pl-6 pr-3 bg-secondary border-t shadow-inner">
           <Button
             size="sm"
             onClick={async () => {
@@ -100,19 +101,18 @@ export default function CheckoutDialog(params: CheckoutDialogProps) {
                 productId: checkoutResult.product.id,
                 options,
               });
+              await mutateAutumnProducts();
               setOpen(false);
               setLoading(false);
             }}
             disabled={loading}
-            className="min-w-16 flex items-center gap-2"
+            className="min-w-16 flex items-center gap-2 !bg-zinc-900 hover:!bg-zinc-600"
           >
             {loading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <>
-                <span className="whitespace-nowrap flex gap-1">
-                  Confirm
-                </span>
+                <span className="whitespace-nowrap flex gap-1">Confirm</span>
               </>
             )}
           </Button>
@@ -162,10 +162,10 @@ function DueAmounts({ checkoutResult }: { checkoutResult: CheckoutResult }) {
     <div className="flex flex-col gap-1">
       <div className="flex justify-between">
         <div>
-          <p className="font-medium text-md">Total due today</p>
+          <p className="font-medium text-sm">Total due today</p>
         </div>
 
-        <p className="font-medium text-md">
+        <p className="font-medium text-sm">
           {formatCurrency({
             amount: checkoutResult?.total,
             currency: checkoutResult?.currency,
@@ -175,9 +175,9 @@ function DueAmounts({ checkoutResult }: { checkoutResult: CheckoutResult }) {
       {showNextCycle && (
         <div className="flex justify-between text-muted-foreground">
           <div>
-            <p className="text-md">Due next cycle ({nextCycleAtStr})</p>
+            <p className="text-sm">Due next cycle ({nextCycleAtStr})</p>
           </div>
-          <p className="text-md">
+          <p className="text-sm">
             {formatCurrency({
               amount: next_cycle.total,
               currency: checkoutResult?.currency,
@@ -242,9 +242,7 @@ function CheckoutLines({ checkoutResult }: { checkoutResult: CheckoutResult }) {
       <AccordionItem value="total" className="border-b-0">
         <CustomAccordionTrigger className="justify-between w-full my-0 py-0 border-none">
           <div className="cursor-pointer flex items-center gap-1 w-full justify-end">
-            <p className="font-light text-muted-foreground">
-              View details
-            </p>
+            <p className="font-light text-muted-foreground">View details</p>
             <ChevronDown
               className="text-muted-foreground mt-0.5 rotate-90 transition-transform duration-200 ease-in-out"
               size={14}

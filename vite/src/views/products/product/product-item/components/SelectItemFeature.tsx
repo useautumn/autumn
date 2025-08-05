@@ -13,6 +13,8 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
 import { getItemType } from "@/utils/product/productItemUtils";
+import { CreateItemStep } from "../utils/CreateItemStep";
+import { useEffect, useState } from "react";
 
 export const SelectItemFeature = ({
   show,
@@ -22,14 +24,21 @@ export const SelectItemFeature = ({
   setShow: any;
 }) => {
   const { features } = useProductContext();
-  const { item, setItem, setShowCreateFeature, isUpdate } =
-    useProductItemContext();
-
+  const { item, setItem, isUpdate, stepState } = useProductItemContext();
+  const [open, setOpen] = useState(false);
   const itemType = getItemType(item);
+
+  // useEffect(() => {
+  //   if (stepState.previousStep === CreateItemStep.SelectItemType) {
+  //     setOpen(true);
+  //   }
+  // }, [stepState.previousStep]);
 
   return (
     <div className="flex items-center gap-2 w-full">
       <Select
+        open={open}
+        onOpenChange={setOpen}
         value={item.feature_id || ""}
         onValueChange={(value) => {
           setItem({ ...item, feature_id: value });
@@ -59,7 +68,7 @@ export const SelectItemFeature = ({
             className="flex w-full font-medium bg-white shadow-none text-primary hover:bg-stone-200"
             onClick={(e) => {
               e.preventDefault();
-              setShowCreateFeature(true);
+              stepState.pushStep(CreateItemStep.CreateFeature);
             }}
           >
             <PlusIcon className="w-3 h-3 mr-2" />

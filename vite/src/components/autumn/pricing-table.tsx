@@ -1,6 +1,5 @@
 import React from "react";
 
-import { useCustomer, usePricingTable, ProductDetails } from "autumn-js/react";
 import { createContext, useContext, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
@@ -9,29 +8,20 @@ import CheckoutDialog from "@/components/autumn/checkout-dialog";
 import { getPricingTableContent } from "@/lib/autumn/pricing-table-content";
 import type { Product, ProductItem } from "autumn-js";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { useCustomer } from "autumn-js/react";
+import { useModelPricingContext } from "@/views/onboarding2/model-pricing/ModelPricingContext";
 
 export default function PricingTable({
-  productDetails,
   products,
+  stripeConnected,
 }: {
-  productDetails?: ProductDetails[];
   products?: Product[];
+  stripeConnected: boolean;
 }) {
+  const { mutateAutumnProducts } = useModelPricingContext();
   const { checkout } = useCustomer();
   const [isAnnual, setIsAnnual] = useState(false);
-  const { isLoading, error } = usePricingTable({ productDetails });
-
-  // if (isLoading) {
-  //   return (
-  //     <div className="w-full h-full flex justify-center items-center min-h-[300px]">
-  //       <Loader2 className="w-6 h-6 text-zinc-400 animate-spin" />
-  //     </div>
-  //   );
-  // }
-
-  // if (error) {
-  //   return <div> Something went wrong...</div>;
-  // }
 
   const intervals = Array.from(
     new Set(
@@ -78,10 +68,17 @@ export default function PricingTable({
                   product.scenario === "scheduled",
 
                 onClick: async () => {
+                  if (!stripeConnected) {
+                    toast.error("Please connect your Stripe account first");
+                    return;
+                  }
+
                   if (product.id) {
                     await checkout({
                       productId: product.id,
                       dialog: CheckoutDialog,
+                      openInNewTab: true,
+                      successUrl: `${window.location.origin}`,
                     });
                   } else if (product.display?.button_url) {
                     window.open(product.display?.button_url, "_blank");

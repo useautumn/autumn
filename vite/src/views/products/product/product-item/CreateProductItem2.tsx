@@ -1,16 +1,8 @@
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 
-import { useEffect, useState } from "react";
-import { ProductItemConfig } from "./ProductItemConfig";
+import { useState } from "react";
 import { ProductItemContext } from "./ProductItemContext";
-import { CreateFeature } from "@/views/features/CreateFeature";
 
 import {
   ProductItemInterval,
@@ -20,12 +12,11 @@ import {
 
 import { useProductContext } from "../ProductContext";
 import { validateProductItem } from "@/utils/product/product-item/validateProductItem";
-import { DialogContentWrapper } from "@/components/general/modal-components/DialogContentWrapper";
-import { ItemConfigFooter } from "./product-item-config/item-config-footer/ItemConfigFooter";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { PlusIcon } from "lucide-react";
 import { CreateItemDialogContent } from "./create-product-item/CreateItemDialogContent";
 import { useModelPricingContext } from "@/views/onboarding2/model-pricing/ModelPricingContext";
+import { useSteps } from "./useSteps";
+import { CreateItemStep } from "./utils/CreateItemStep";
 
 const defaultProductItem: ProductItem = {
   feature_id: null,
@@ -48,8 +39,10 @@ export function CreateProductItem2() {
   const [open, setOpen] = useState(false);
   const [showCreateFeature, setShowCreateFeature] = useState(false);
   const [item, setItem] = useState<ProductItem>(defaultProductItem);
-  const { features, product, setProduct, setFeatures } = useProductContext();
-  const { firstItemCreated, setFirstItemCreated } = useModelPricingContext();
+  const { features, product, setProduct } = useProductContext();
+  const { setFirstItemCreated } = useModelPricingContext();
+
+  const stepState = useSteps({ initialStep: CreateItemStep.SelectItemType });
 
   const handleCreateProductItem = async (entityFeatureId?: string) => {
     const validatedItem = validateProductItem({
@@ -88,11 +81,11 @@ export function CreateProductItem2() {
         setShowCreateFeature,
         isUpdate: false,
         handleCreateProductItem,
-        features,
-        setFeatures,
+
         open,
         setOpen,
         autoSave: true,
+        stepState,
       }}
     >
       <Dialog open={open} onOpenChange={setOpen}>

@@ -7,11 +7,12 @@ import { useProductContext } from "../../../ProductContext";
 import { AddToEntityDropdown } from "./AddToEntityDropdown";
 import { handleAutoSave } from "@/views/onboarding2/model-pricing/model-pricing-utils/modelPricingUtils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { CustomDialogFooter } from "@/components/general/modal-components/DialogContentWrapper";
 
 export const ItemConfigFooter = ({
-  setIntroDone,
+  handleBack,
 }: {
-  setIntroDone?: (introDone: boolean) => void;
+  handleBack?: () => void;
 }) => {
   const axiosInstance = useAxiosInstance();
   const { entityFeatureIds, product, mutate, autoSave } = useProductContext();
@@ -32,22 +33,18 @@ export const ItemConfigFooter = ({
   const showIntro = product.items.length === 0;
 
   return (
-    <div
-      className={cn(
-        "bg-stone-100 flex items-center h-10 gap-0 border-t border-zinc-200 justify-between"
-      )}
-    >
-      {showIntro && setIntroDone ? (
+    <CustomDialogFooter className="flex h-full items-center w-full justify-between">
+      {handleBack ? (
         <Button
           variant="ghost"
           className="hover:!bg-zinc-200 p-1 h-6 ml-5 text-t3 rounded-md"
-          onClick={() => setIntroDone?.(false)}
+          onClick={handleBack}
           startIcon={<ArrowLeftIcon size={12} />}
         >
           Back
         </Button>
       ) : (
-        <div />
+        <div></div>
       )}
 
       <div className="flex">
@@ -77,8 +74,6 @@ export const ItemConfigFooter = ({
             variant="add"
             onClick={async () => {
               const newProduct = await handleUpdateProductItem();
-              console.log("New product:", newProduct);
-              console.log("Auto save:", autoSave);
 
               if (autoSave && newProduct) {
                 handleAutoSave({
@@ -117,7 +112,7 @@ export const ItemConfigFooter = ({
           </Button>
         )}
       </div>
-    </div>
+    </CustomDialogFooter>
   );
 };
 

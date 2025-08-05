@@ -108,7 +108,6 @@ export const handleCheckout = (req: any, res: any) =>
     handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
       const { logger, features } = req;
       const attachBody = AttachBodySchema.parse(req.body);
-      // Pre-populate options...
 
       const { attachParams, flags, branch, config, func } = await getAttachVars(
         { req, attachBody }

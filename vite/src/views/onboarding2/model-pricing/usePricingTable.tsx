@@ -1,8 +1,8 @@
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 
-export const useListProducts = () => {
+export const useListProducts = ({ customerId }: { customerId: string }) => {
   const { data, isLoading, error, mutate } = useAxiosSWR({
-    url: "/v1/products",
+    url: `/v1/products?customer_id=${customerId}`,
     options: {
       refreshInterval: 0,
     },

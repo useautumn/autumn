@@ -1,131 +1,106 @@
-import { useAxiosPostSWR, useAxiosSWR } from "@/services/useAxiosSwr";
-import { useEnv } from "@/utils/envUtils";
-import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router";
-import { ProductsContext } from "../products/ProductsContext";
-import { PageSectionHeader } from "@/components/general/PageSectionHeader";
-import CreateProduct from "../products/CreateProduct";
-import { ProductV2 } from "@autumn/shared";
-import { ProductsTable } from "../products/ProductsTable";
+import { useAxiosSWR } from "@/services/useAxiosSwr";
 import LoadingScreen from "../general/LoadingScreen";
-import { EditProductDialog } from "../onboarding/onboarding-steps/ProductList";
 import { AutumnProvider } from "autumn-js/react";
 import PricingTable from "@/components/autumn/pricing-table";
-import Install from "./Install";
-import EnvStep from "./Env";
-import MountHandler from "./MountHandler";
-import AutumnProviderStep from "./AutumnProvider";
-import AttachProduct from "./AttachProduct";
-import SmallSpinner from "@/components/general/SmallSpinner";
-import { CustomersTable } from "../customers/CustomersTable";
-import { CustomersContext } from "../customers/CustomersContext";
 import { ModelPricing } from "./model-pricing/ModelPricing";
 import { useListProducts } from "./model-pricing/usePricingTable";
-import { parseAsString, useQueryStates } from "nuqs";
+import { parseAsBoolean, parseAsString, useQueryStates } from "nuqs";
 import IntegrateAutumn from "./integrate/IntegrateAutumn";
+import { useEffect, useRef, useState } from "react";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useSearchParams } from "react-router";
+import { useEnv } from "@/utils/envUtils";
+import { useSession } from "@/lib/auth-client";
 
 export default function OnboardingView2() {
   const [queryStates, setQueryStates] = useQueryStates({
-    page: parseAsString.withDefault("integrate"),
+    page: parseAsString.withDefault("pricing"),
+    reactTypescript: parseAsBoolean.withDefault(true),
+    frontend: parseAsString.withDefault(""),
+    backend: parseAsString.withDefault(""),
+    auth: parseAsString.withDefault(""),
+    customerType: parseAsString.withDefault("user"),
+    productId: parseAsString.withDefault(""),
   });
+
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get("token");
+  const [loading, setLoading] = useState(true);
+  const axiosInstance = useAxiosInstance();
+  const hasHandledToken = useRef(false);
+  const { data } = useSession();
+  const orgId = data?.session?.activeOrganizationId;
 
   const {
     products: autumnProducts,
     isLoading: isAutumnLoading,
-    error,
     mutate: mutateAutumnProducts,
-  } = useListProducts();
+  } = useListProducts({ customerId: "onboarding_demo_user" });
 
-  const { data, mutate, isLoading } = useAxiosSWR({ url: `/products/data` });
-  const { data: productCounts } = useAxiosSWR({ url: `/products/counts` });
+  const {
+    data: productsData,
+    mutate: productMutate,
+    isLoading,
+  } = useAxiosSWR({ url: `/products/data` });
 
-  if (isLoading || isAutumnLoading) return <LoadingScreen />;
+  const { data: productCounts, mutate: mutateCounts } = useAxiosSWR({
+    url: `/products/counts?latest_version=true`,
+  });
+
+  useEffect(() => {
+    const handleToken = async () => {
+      try {
+        await axiosInstance.post("/onboarding", {
+          token,
+        });
+
+        await productMutate();
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (token && !hasHandledToken.current) {
+      hasHandledToken.current = true;
+      handleToken();
+    }
+  }, [searchParams, token, axiosInstance, productMutate]);
+
+  useEffect(() => {
+    if (orgId && !token) {
+      setLoading(false);
+    }
+  }, [orgId, token]);
+
+  if (isLoading || isAutumnLoading || loading) return <LoadingScreen />;
 
   return (
-    <AutumnProvider
-      backendUrl={`${import.meta.env.VITE_BACKEND_URL}/demo`}
-      includeCredentials={true}
-    >
+    <>
       {queryStates.page === "integrate" ? (
-        <IntegrateAutumn />
+        <IntegrateAutumn
+          data={productsData}
+          mutate={productMutate}
+          queryStates={queryStates}
+          setQueryStates={setQueryStates}
+        />
       ) : (
-        // <div className="w-full h-full p-10 flex flex-col items-center justify-start">
-        //   <div className="max-w-[800px] w-full">
-        //     <div className="flex flex-col gap-2">
-        //       <p className="text-xl">Integrate Autumn</p>
-        //       <p className="text-t3">
-        //         Let's integrate Autumn and get your first customer onto one of
-        //         your plans
-        //       </p>
-        //     </div>
-        //   </div>
-        // </div>
         <ModelPricing
-          data={data}
+          data={productsData}
           mutate={async () => {
-            await mutate();
+            await productMutate();
             await mutateAutumnProducts();
           }}
+          mutateAutumnProducts={mutateAutumnProducts}
           autumnProducts={autumnProducts}
           productCounts={productCounts}
+          mutateCounts={mutateCounts}
+          queryStates={queryStates}
+          setQueryStates={setQueryStates}
         />
       )}
-      {/* <div className="w-full h-full p-10 flex flex-col">
-        <div className="flex flex-col max-w-[800px] gap-10  pb-[200px]">
-          <div className="flex flex-col gap-6">
-            <p className="text-xl font-bold">Integrate Autumn</p>
-            <p className="text-t3">
-              Let's integrate Autumn and get your first customer onto one of
-              your plans
-            </p>
-            <div className="flex flex-col gap-4">
-              <StepHeader number={1} title="Install autumn-js" />
-              <Install />
-            </div>
-            <div className="flex flex-col gap-4">
-              <StepHeader number={2} title="Add your secret key" />
-              <p className="text-md text-t3">
-                Create a .env file in the root of your project and add the
-                following environment variables:
-              </p>
-              <EnvStep />
-            </div>
-
-            <MountHandler number={3} />
-            <AutumnProviderStep number={4} />
-
-            <p>
-              If you've made it to this point, you should see a customer (with
-              the customerId you returned in autumnHandler) here!
-            </p>
-            <div className="flex flex-col gap-4">
-              <PageSectionHeader
-                isOnboarding={true}
-                title="Customers"
-                className="pr-0 border-l"
-                endContent={
-                  <div className="flex items-center gap-2 text-t3 text-sm pr-4">
-                    <SmallSpinner />
-                    <p>Watching for customers...</p>
-                  </div>
-                }
-              />
-              <CustomersContext.Provider
-                value={{
-                  customers: data?.customers,
-                  env,
-                  mutate: customersMutate,
-                  products: data?.products,
-                  versionCounts: data?.versionCounts,
-                }}
-              >
-                <CustomersTable customers={customersData?.customers || []} />
-              </CustomersContext.Provider>
-            </div>
-          </div>
-        </div>
-      </div> */}
-    </AutumnProvider>
+    </>
   );
 }
 
@@ -140,6 +115,6 @@ const StepHeader = ({ number, title }: { number: number; title: string }) => {
   );
 };
 
-const SamplePricingTable = () => {
-  return <PricingTable />;
-};
+// const SamplePricingTable = () => {
+//   return <PricingTable />;
+// };
