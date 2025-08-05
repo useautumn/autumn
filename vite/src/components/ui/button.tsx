@@ -16,9 +16,12 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        // border border-[#8231FF]
         default:
           // "bg-zinc-900 text-zinc-50 shadow hover:bg-zinc-900/90 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-50/90",
-          "bg-primary hover:bg-primary/90 text-zinc-50 shadow dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-50/90",
+          `bg-primary hover:bg-primary/90 text-zinc-50 shadow dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-50/90
+          !rounded-xs
+          `,
         secondary:
           "border border-zinc-200 bg-white shadow-sm hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:hover:text-zinc-50",
         // "bg-zinc-100 text-zinc-900 shadow-sm hover:bg-zinc-100/80 dark:bg-zinc-800 dark:text-zinc-50 dark:hover:bg-zinc-800/80",
@@ -52,7 +55,8 @@ const buttonVariants = cva(
           "bg-gradient-to-b font-semibold border-t border-red-400 outline outline-red-500 rounded-sm from-red-500/85 to-red-500 text-white hover:from-red-500 hover:to-red-500 shadow-red-500/50 transition-[background] duration-300 !h-7.5 mt-0.25",
 
         auth: "!gap-2 hover:bg-stone-100 border border-zinc-250 bg-white text-t1 w-full shadow-sm",
-        dialogBack: "hover:!bg-zinc-200 p-1 !h-6 ml-5 text-t3 rounded-md",
+        dialogBack:
+          "hover:!bg-zinc-200 p-1 !h-7 ml-2 !px-1.5 text-t3 rounded-md",
       },
       size: {
         default: "h-8 px-3 flex items-center gap-1",

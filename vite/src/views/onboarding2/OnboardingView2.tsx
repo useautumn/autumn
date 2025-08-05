@@ -1,7 +1,5 @@
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 import LoadingScreen from "../general/LoadingScreen";
-import { AutumnProvider } from "autumn-js/react";
-import PricingTable from "@/components/autumn/pricing-table";
 import { ModelPricing } from "./model-pricing/ModelPricing";
 import { useListProducts } from "./model-pricing/usePricingTable";
 import { parseAsBoolean, parseAsString, useQueryStates } from "nuqs";
@@ -9,19 +7,23 @@ import IntegrateAutumn from "./integrate/IntegrateAutumn";
 import { useEffect, useRef, useState } from "react";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useSearchParams } from "react-router";
-import { useEnv } from "@/utils/envUtils";
 import { useSession } from "@/lib/auth-client";
 
 export default function OnboardingView2() {
-  const [queryStates, setQueryStates] = useQueryStates({
-    page: parseAsString.withDefault("pricing"),
-    reactTypescript: parseAsBoolean.withDefault(true),
-    frontend: parseAsString.withDefault(""),
-    backend: parseAsString.withDefault(""),
-    auth: parseAsString.withDefault(""),
-    customerType: parseAsString.withDefault("user"),
-    productId: parseAsString.withDefault(""),
-  });
+  const [queryStates, setQueryStates] = useQueryStates(
+    {
+      page: parseAsString.withDefault("pricing"),
+      reactTypescript: parseAsBoolean.withDefault(true),
+      frontend: parseAsString.withDefault(""),
+      backend: parseAsString.withDefault(""),
+      auth: parseAsString.withDefault(""),
+      customerType: parseAsString.withDefault("user"),
+      productId: parseAsString.withDefault(""),
+    },
+    {
+      history: "push",
+    }
+  );
 
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
@@ -103,18 +105,3 @@ export default function OnboardingView2() {
     </>
   );
 }
-
-const StepHeader = ({ number, title }: { number: number; title: string }) => {
-  return (
-    <div className="flex items-center gap-4">
-      <div className="w-6 h-6 border-1 rounded-full bg-gradient-to-b from-stone-100 to-stone-100 text-primary font-bold flex items-center justify-center">
-        {number}
-      </div>
-      <p className="text-md">{title}</p>
-    </div>
-  );
-};
-
-// const SamplePricingTable = () => {
-//   return <PricingTable />;
-// };

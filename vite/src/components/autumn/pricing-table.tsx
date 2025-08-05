@@ -15,9 +15,11 @@ import { useModelPricingContext } from "@/views/onboarding2/model-pricing/ModelP
 export default function PricingTable({
   products,
   stripeConnected,
+  setConnectStripeOpen,
 }: {
   products?: Product[];
   stripeConnected: boolean;
+  setConnectStripeOpen: (open: boolean) => void;
 }) {
   const { mutateAutumnProducts } = useModelPricingContext();
   const { checkout } = useCustomer();
@@ -69,7 +71,7 @@ export default function PricingTable({
 
                 onClick: async () => {
                   if (!stripeConnected) {
-                    toast.error("Please connect your Stripe account first");
+                    setConnectStripeOpen(true);
                     return;
                   }
 
@@ -213,7 +215,7 @@ export const PricingCard = ({
   return (
     <div
       className={cn(
-        " w-full h-full py-6 text-foreground border rounded-xs max-w-md",
+        " w-full h-full py-6 text-foreground border rounded-xs max-w-md shadow-md",
         isRecommended &&
           "lg:-translate-y-6 lg:shadow-lg dark:shadow-zinc-800/80 lg:h-[calc(100%+48px)] bg-secondary/40",
         className

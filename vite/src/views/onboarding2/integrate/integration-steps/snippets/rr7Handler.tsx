@@ -8,7 +8,6 @@ import { autumnHandler } from "autumn-js/react-router";
 import { auth } from "@/lib/auth";
 
 const handler = autumnHandler({
-  secretKey: process.env.AUTUMN_SECRET_KEY!,
   identify: async (args) => {
 ${betterAuthSnippet(customerType, "args.request.headers", 2)}
   },
@@ -24,7 +23,6 @@ import { autumnHandler } from "autumn-js/react-router";
 import { createClient } from "@/utils/supabase/server";
 
 const handler = autumnHandler({
-  secretKey: process.env.AUTUMN_SECRET_KEY!,
   identify: async (args) => {
     ${supabaseAuthSnippet({ customerType })}
   },
@@ -62,7 +60,6 @@ import { autumnHandler } from "autumn-js/react-router";
 import { getAuth } from "@clerk/react-router/ssr.server";
 
 const handler = autumnHandler({
-  secretKey: process.env.AUTUMN_SECRET_KEY!,
   identify: async (args) => {
     ${clerkSnippet(customerType)}
   },
@@ -77,7 +74,6 @@ export const rr7Other = (customerType: "user" | "org") => {
 import { autumnHandler } from "autumn-js/react-router";
 
 const handler = autumnHandler({
-  secretKey: process.env.AUTUMN_SECRET_KEY!,
   identify: async (args) => {
     const customerId = "your_customer_id"; // Get customer id from your database
 
