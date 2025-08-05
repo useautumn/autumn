@@ -1,8 +1,15 @@
 import { subItemToAutumnInterval } from "@/external/stripe/utils.js";
 import Stripe from "stripe";
 
-export const logSubItems = (sub: Stripe.Subscription) => {
-  for (const item of sub.items.data) {
+export const logSubItems = ({
+  sub,
+  subItems,
+}: {
+  sub?: Stripe.Subscription;
+  subItems?: Stripe.SubscriptionItem[];
+}) => {
+  let finalSubItems = subItems || sub!.items.data;
+  for (const item of finalSubItems) {
     let isMetered = item.price.recurring?.usage_type === "metered";
     let isTiered = item.price.billing_scheme === "tiered";
 

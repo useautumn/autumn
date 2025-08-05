@@ -5,8 +5,6 @@ import { useProductContext } from "../../ProductContext";
 import { FeatureType } from "@autumn/shared";
 import { getFeature } from "@/utils/product/entitlementUtils";
 import { FeatureConfig } from "../product-item-config/FeatureItemConfig";
-import { useEffect } from "react";
-import { CreateItemStep } from "../utils/CreateItemStep";
 
 export const ConfigWithFeature = ({
   show,

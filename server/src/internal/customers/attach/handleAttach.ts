@@ -6,7 +6,7 @@ import { getAttachParams } from "./attachUtils/attachParams/getAttachParams.js";
 import { getAttachBranch } from "./attachUtils/getAttachBranch.js";
 import { getAttachConfig } from "./attachUtils/getAttachConfig.js";
 import { handleAttachErrors } from "./attachUtils/handleAttachErrors.js";
-import { checkStripeConnections, createStripePrices } from "./attachRouter.js";
+import { checkStripeConnections } from "./attachRouter.js";
 import { insertCustomItems } from "./attachUtils/insertCustomItems.js";
 import { runAttachFunction } from "./attachUtils/getAttachFunction.js";
 
