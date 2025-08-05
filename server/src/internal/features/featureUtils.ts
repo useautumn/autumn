@@ -77,9 +77,9 @@ export const validateCreditSystem = (config: CreditSystemConfig) => {
 
   // Check if multiple of the same feature
   const meteredFeatureIds = schema.map(
-    (schemaItem) => schemaItem.metered_feature_id,
+    (schemaItem) => schemaItem.metered_feature_id
   );
-  console.log("Metered feature ids:", meteredFeatureIds);
+  // console.log("Metered feature ids:", meteredFeatureIds);
   const uniqueMeteredFeatureIds = Array.from(new Set(meteredFeatureIds));
   if (meteredFeatureIds.length !== uniqueMeteredFeatureIds.length) {
     throw new RecaseError({
@@ -135,14 +135,14 @@ export const getObjectsUsingFeature = async ({
   });
 
   let entitlements = allEnts.filter(
-    (entitlement) => entitlement.internal_feature_id == feature.internal_id,
+    (entitlement) => entitlement.internal_feature_id == feature.internal_id
   );
   let linkedEntitlements = allEnts.filter(
-    (entitlement) => entitlement.entity_feature_id == feature.id,
+    (entitlement) => entitlement.entity_feature_id == feature.id
   );
 
   let prices = allPrices.filter(
-    (price) => (price.config as any).internal_feature_id == feature.internal_id,
+    (price) => (price.config as any).internal_feature_id == feature.internal_id
   );
 
   return { entitlements, prices, creditSystems, linkedEntitlements };
@@ -163,7 +163,7 @@ export const runSaveFeatureDisplayTask = async ({
   try {
     if (!process.env.ANTHROPIC_API_KEY) {
       logger.warn(
-        "ANTHROPIC_API_KEY is not set, skipping feature display generation",
+        "ANTHROPIC_API_KEY is not set, skipping feature display generation"
       );
       return;
     }

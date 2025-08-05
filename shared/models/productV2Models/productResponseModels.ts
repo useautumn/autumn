@@ -31,3 +31,4 @@ export const ProductResponseSchema = z.object({
 });
 
 export type ProductResponse = z.infer<typeof ProductResponseSchema>;
+export type ProductProperties = z.infer<typeof ProductPropertiesSchema>;

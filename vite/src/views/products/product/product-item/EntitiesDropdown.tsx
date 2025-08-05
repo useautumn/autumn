@@ -23,6 +23,7 @@ import { CheckIcon, PlusIcon } from "lucide-react";
 import { CreateFeature } from "@/views/features/CreateFeature";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { CustomDialogContent } from "@/components/general/modal-components/DialogContentWrapper";
 
 export const EntitiesDropdown = ({
   open,
@@ -55,7 +56,7 @@ export const EntitiesDropdownContent = () => {
 
   const continuousUseFeatures = features.filter(
     (feature: Feature) =>
-      feature.config?.usage_type === FeatureUsageType.Continuous,
+      feature.config?.usage_type === FeatureUsageType.Continuous
   );
 
   return (
@@ -71,12 +72,12 @@ export const EntitiesDropdownContent = () => {
                 const itemsUsingEntity =
                   product.items?.filter(
                     (productItem: ProductItem) =>
-                      productItem.entity_feature_id === item.id,
+                      productItem.entity_feature_id === item.id
                   ) || [];
 
                 if (itemsUsingEntity.length > 0) {
                   toast.error(
-                    "Please delete all items under this entity first",
+                    "Please delete all items under this entity first"
                   );
                   return currentIds;
                 }
@@ -110,19 +111,22 @@ export const EntitiesDropdownContent = () => {
             </Button>
           </DropdownMenuItem>
         </DialogTrigger>
-        <DialogContent className="w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Create Entity</DialogTitle>
-          </DialogHeader>
+        <CustomDialogContent>
           <CreateFeature
-            isFromEntitlement={false}
-            setShowFeatureCreate={() => {}}
-            setSelectedFeature={() => {}}
+            // isFromEntitlement={false}
+            // setShowFeatureCreate={() => {}}
+            // setSelectedFeature={() => {}}
             setOpen={setCreateFeatureOpen}
             open={createFeatureOpen}
             entityCreate={true}
           />
-        </DialogContent>
+        </CustomDialogContent>
+        {/* <DialogContent className="w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Create Entity</DialogTitle>
+          </DialogHeader>
+          
+        </DialogContent> */}
       </Dialog>
     </>
   );

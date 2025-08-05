@@ -21,6 +21,7 @@ import { Flag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isFeatureItem, isPriceItem } from "@/utils/product/getItemType";
 import { notNullish } from "@/utils/genUtils";
+import { useProductContext } from "../ProductContext";
 
 interface ProductItemRowProps {
   item: ProductItem;
@@ -29,6 +30,7 @@ interface ProductItemRowProps {
   features: Feature[];
   org: any;
   onRowClick: (item: ProductItem, index: number) => void;
+  className?: string;
 }
 
 export const ProductItemRow = ({
@@ -38,7 +40,9 @@ export const ProductItemRow = ({
   features,
   org,
   onRowClick,
+  className,
 }: ProductItemRowProps) => {
+  const { product } = useProductContext();
   const getName = ({
     featureId,
     units,
@@ -200,13 +204,15 @@ export const ProductItemRow = ({
   };
 
   const itemType = getItemType(item);
+  const isLast = index === product.items.length - 1;
 
   return (
     <div
       key={index}
       className={cn(
         "grid grid-cols-17 gap-4 px-10 text-t2 h-10 items-center hover:bg-primary/3",
-        isOnboarding && "grid-cols-12 px-2"
+        isOnboarding && "grid-cols-12 px-2 h-10 min-h-10",
+        className
       )}
       onClick={() => onRowClick(item, index)}
     >
@@ -226,7 +232,12 @@ export const ProductItemRow = ({
               : getPaidFeatureString(item)}
         </AdminHover>
       </span>
-      <span className="col-span-4 flex gap-1 justify-end w-fit ">
+      <span
+        className={cn(
+          "col-span-4 flex gap-1 justify-end w-fit",
+          isOnboarding && "w-full"
+        )}
+      >
         <Badge
           variant="blue"
           className={cn(

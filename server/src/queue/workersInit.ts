@@ -49,42 +49,50 @@ const initWorker = ({
         },
       });
 
-      if (job.name == JobName.DetectBaseVariant) {
-        await detectBaseVariant({
-          db,
-          curProduct: job.data.curProduct,
-          logger: logtail as Logger,
-        });
-        return;
-      }
+      try {
+        if (job.name == JobName.DetectBaseVariant) {
+          await detectBaseVariant({
+            db,
+            curProduct: job.data.curProduct,
+            logger: logtail as Logger,
+          });
+          return;
+        }
 
-      if (job.name == JobName.GenerateFeatureDisplay) {
-        await runSaveFeatureDisplayTask({
-          db,
-          feature: job.data.feature,
-          logger: logtail,
-        });
-        return;
-      }
+        if (job.name == JobName.GenerateFeatureDisplay) {
+          await runSaveFeatureDisplayTask({
+            db,
+            feature: job.data.feature,
+            logger: logtail,
+          });
+          return;
+        }
 
-      if (job.name == JobName.Migration) {
-        await runMigrationTask({
-          db,
-          payload: job.data,
-          logger: logtail,
-        });
-        return;
-      }
+        if (job.name == JobName.Migration) {
+          await runMigrationTask({
+            db,
+            payload: job.data,
+            logger: logtail,
+          });
+          return;
+        }
 
-      if (actionHandlers.includes(job.name as JobName)) {
-        await runActionHandlerTask({
-          queue,
-          job,
-          logger: logtail,
-          db,
-          useBackup,
+        if (actionHandlers.includes(job.name as JobName)) {
+          await runActionHandlerTask({
+            queue,
+            job,
+            logger: logtail,
+            db,
+            useBackup,
+          });
+          return;
+        }
+      } catch (error) {
+        logtail.error(`Failed to process bullmq job: ${job.name}`, {
+          jobName: job.name,
+          jobData: job.data,
+          error,
         });
-        return;
       }
 
       // TRIGGER CHECKOUT REWARD
@@ -179,8 +187,6 @@ const initWorker = ({
     console.log(`Worker ${id} stalled (${useBackup ? "BACKUP" : "MAIN"})`);
     console.log("JOB ID:", jobId);
   });
-
-  // Check jobs left in queue
 
   worker.on("error", async (error: any) => {
     if (error.code !== "ECONNREFUSED") {

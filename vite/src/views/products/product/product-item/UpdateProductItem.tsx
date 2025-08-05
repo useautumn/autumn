@@ -8,7 +8,11 @@ import { notNullish } from "@/utils/genUtils";
 import { validateProductItem } from "@/utils/product/product-item/validateProductItem";
 import CopyButton from "@/components/general/CopyButton";
 
-import { DialogContentWrapper } from "@/components/general/modal-components/DialogContentWrapper";
+import {
+  CustomDialogContent,
+  CustomDialogBody,
+  CustomDialogFooter,
+} from "@/components/general/modal-components/DialogContentWrapper";
 import { ItemConfigFooter } from "./product-item-config/item-config-footer/ItemConfigFooter";
 
 export default function UpdateProductItem({
@@ -28,18 +32,19 @@ export default function UpdateProductItem({
   const [showCreateFeature, setShowCreateFeature] = useState(false);
 
   const handleUpdateProductItem = () => {
-    console.log("Selected Item: ", selectedItem);
     const validatedItem = validateProductItem({
       item: selectedItem!,
       features,
     });
 
-    if (!validatedItem) return;
+    if (!validatedItem) return null;
     if (notNullish(selectedIndex)) {
       const newProduct = { ...product };
       newProduct.items[selectedIndex!] = validatedItem;
       setProduct(newProduct);
       setOpen(false);
+
+      return newProduct;
     }
   };
 
@@ -49,6 +54,7 @@ export default function UpdateProductItem({
       newProduct.items.splice(selectedIndex!, 1);
       setProduct(newProduct);
       setOpen(false);
+      return newProduct;
     }
   };
 
@@ -66,7 +72,23 @@ export default function UpdateProductItem({
       }}
     >
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="translate-y-[0%] top-[20%] flex flex-col w-fit gap-0 p-0">
+        <CustomDialogContent>
+          <CustomDialogBody>
+            <div className="flex items-center justify-between pr-9.5">
+              <DialogTitle>Update Item</DialogTitle>
+              {selectedItem?.feature_id && (
+                <CopyButton text={selectedItem.feature_id || ""}>
+                  {selectedItem.feature_id || ""}
+                </CopyButton>
+              )}
+            </div>
+            <ProductItemConfig />
+          </CustomDialogBody>
+
+          <ItemConfigFooter />
+        </CustomDialogContent>
+
+        {/* <DialogContent className="translate-y-[0%] top-[20%] flex flex-col w-fit gap-0 p-0">
           <DialogContentWrapper>
             <div className="flex items-center justify-between pr-9.5">
               <DialogTitle>Update Item</DialogTitle>
@@ -79,7 +101,7 @@ export default function UpdateProductItem({
             <ProductItemConfig />
           </DialogContentWrapper>
           <ItemConfigFooter />
-        </DialogContent>
+        </DialogContent> */}
       </Dialog>
     </ProductItemContext.Provider>
   );
