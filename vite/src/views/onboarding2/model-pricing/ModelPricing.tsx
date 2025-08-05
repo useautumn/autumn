@@ -56,7 +56,6 @@ export const ModelPricing = ({
   setQueryStates: any;
 }) => {
   const getCurProduct = () => {
-    console.log("data.products:", data.products);
     if (queryStates.productId) {
       const prod = data.products.find(
         (p: Product) => p.id === queryStates.productId
@@ -67,7 +66,6 @@ export const ModelPricing = ({
     }
 
     if (data.products.length > 0) {
-      console.log("Returning first product:", data.products[0]);
       return data.products[0];
     }
 

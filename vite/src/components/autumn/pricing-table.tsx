@@ -70,18 +70,23 @@ export default function PricingTable({
                   product.scenario === "scheduled",
 
                 onClick: async () => {
+                  console.log("Inside onClick function");
                   if (!stripeConnected) {
                     setConnectStripeOpen(true);
                     return;
                   }
 
+                  console.log("Stripe connected");
+                  console.log("Product ID:", product.id);
+
                   if (product.id) {
-                    await checkout({
+                    const result = await checkout({
                       productId: product.id,
                       dialog: CheckoutDialog,
                       openInNewTab: true,
                       successUrl: `${window.location.origin}`,
                     });
+                    console.log("Result:", result);
                   } else if (product.display?.button_url) {
                     window.open(product.display?.button_url, "_blank");
                   }

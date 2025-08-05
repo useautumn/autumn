@@ -57,6 +57,7 @@ export default function OnboardingView2() {
         });
 
         await productMutate();
+        await mutateAutumnProducts();
       } catch (error) {
         console.error(error);
       } finally {
