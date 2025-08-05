@@ -17,7 +17,7 @@ export const CreateItemIntro = ({
 }: {
   setStep: (step: CreateItemStep) => void;
 }) => {
-  const { features } = useProductContext();
+  const { features, product } = useProductContext();
   const { setItem } = useProductItemContext();
 
   const handleItemClicked = (itemType: string) => {
@@ -43,7 +43,7 @@ export const CreateItemIntro = ({
     <CustomDialogBody>
       <div className="flex flex-col gap-4 w-md">
         <DialogHeader>
-          <DialogTitle>Select item type</DialogTitle>
+          <DialogTitle>Add item to {product.name}</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
@@ -54,22 +54,26 @@ export const CreateItemIntro = ({
             <ItemTypeCard
               itemType="Feature"
               description={
-                <p>
-                  A feature that your customers can access or consume <br />
-                  <span className="fond-medium">
-                    Example: 100 AI messages per month
-                  </span>
+                <p className="">
+                  A feature included with this product.
+                  <br />
+                  <span className="text-t3">
+                    Eg: 100 AI messages per month
+                  </span>{" "}
                 </p>
               }
               onClick={() => handleItemClicked("feature")}
               icon={<FlagIcon className="text-t3" size={14} />}
             />
             <ItemTypeCard
-              itemType="Paid Feature"
+              itemType="Priced Feature"
               description={
                 <p>
-                  Usage-based feature that you will charge your customers for
-                  Example: $0.5 per AI credit, or $10 per seat
+                  A feature that you pay for usage or a quantity of.
+                  <br />
+                  <span className="text-t3">
+                    Eg: $10 per 100 credits, $10 per seat
+                  </span>
                 </p>
               }
               onClick={() => handleItemClicked("paid feature")}
@@ -79,9 +83,9 @@ export const CreateItemIntro = ({
               itemType="Fixed Price"
               description={
                 <p>
-                  The base price of this product
+                  A fixed amount to charge for this product.
                   <br />
-                  <span className="fond-medium">Example: $10 per month</span>
+                  <span className="text-t3">Eg: $10 per month</span>
                 </p>
               }
               onClick={() => handleItemClicked("price")}
@@ -118,7 +122,9 @@ const ItemTypeCard = ({
         <div className="text-t2 text-sm">{description}</div>
       </div>
 
-      <ChevronRight className="text-t3 ml-8" size={14} />
+      <div className="w-12 flex justify-end">
+        <ChevronRight className="text-t3 ml-8" size={14} />
+      </div>
     </div>
   );
 };

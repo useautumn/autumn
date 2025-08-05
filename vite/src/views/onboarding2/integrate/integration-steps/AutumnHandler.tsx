@@ -153,7 +153,14 @@ export const AutumnHandler = () => {
 
   return (
     <div className="flex flex-col gap-4 w-full">
-      <StepHeader number={3} title="Mount Autumn handler" />
+      <StepHeader
+        number={5}
+        title={
+          <p>
+            Mount <CodeSpan>autumnHandler</CodeSpan> to your backend
+          </p>
+        }
+      />
       <p className="text-t2 text-sm">
         <CodeSpan>autumnHandler</CodeSpan> mounts routes on the{" "}
         <CodeSpan>/api/autumn/*</CodeSpan> paths which allows our React hooks

@@ -1,6 +1,3 @@
-import { ArrowUpRightFromSquare } from "lucide-react";
-
-import Step from "@/components/general/OnboardingStep";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,6 +6,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { AppEnv } from "@autumn/shared";
 import { toast } from "sonner";
 import { getBackendErr } from "@/utils/genUtils";
+import { StepHeader } from "./StepHeader";
 
 export const ConnectStripeStep = ({
   mutate,
@@ -45,15 +43,12 @@ export const ConnectStripeStep = ({
   // console.log("productData", productData);
   const stripeConnected = productData?.org.stripe_connected;
   return (
-    <div className="w-full flex flex-col items-center gap-2">
-      <p className="text-t2 text-md">
-        Connect your Stripe account to checkout and attach a product to a
-        customer. Grab your secret key here{" "}
-        <a
-          href="https://dashboard.stripe.com/test/apikeys"
-          target="_blank"
-          className="underline"
-        >
+    <div className="w-full flex flex-col gap-4">
+      <StepHeader number={2} title="Connect Stripe" />
+      <p className="text-t2 text-sm">
+        Stripe is required to checkout and add your products to customers. Grab
+        your API key{" "}
+        <a href="https://dashboard.stripe.com/apikeys" className="underline">
           here
         </a>
         .
@@ -62,13 +57,12 @@ export const ConnectStripeStep = ({
         <Input
           className="w-8/10"
           placeholder="Stripe secret key (sk_test_...)"
-          value={stripeConnected ? "Stripe connected  ✅ " : testApiKey}
+          value={stripeConnected ? "Stripe connected" : testApiKey}
           onChange={(e) => setTestApiKey(e.target.value)}
           disabled={stripeConnected}
         />
 
         <Button
-          variant="gradientPrimary"
           className="min-w-44 w-44 max-w-44"
           onClick={handleConnectStripe}
           isLoading={loading}

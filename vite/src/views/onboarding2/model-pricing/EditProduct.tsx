@@ -23,22 +23,21 @@ import { updateProduct } from "@/views/products/product/utils/updateProduct";
 import { getBackendErr } from "@/utils/genUtils";
 import { EditProductDetails } from "./edit-product/EditProductDetails";
 
-export const EditProduct = ({ data, mutate }: { data: any; mutate: any }) => {
+export const EditProduct = ({ mutate }: { mutate: any }) => {
   const [freeTrialModalOpen, setFreeTrialModalOpen] = useState(false);
-  const { productCount, productDataState, mutateCounts } =
+  const { data, productCount, productDataState, mutateCounts } =
     useModelPricingContext();
 
   const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
+
   const {
     product,
     setProduct,
-    hasChanges,
     features,
     setFeatures,
     entityFeatureIds,
     setEntityFeatureIds,
     actionState,
-    isNewProduct,
   } = productDataState;
 
   const [details, setDetails] = useState({
@@ -51,15 +50,8 @@ export const EditProduct = ({ data, mutate }: { data: any; mutate: any }) => {
 
   const [saveLoading, setSaveLoading] = useState(false);
 
-  // useEffect(() => {
-  //   if (data) {
-  //     setFeatures(data.features);
-  //   }
-  // }, [data]);
-
   const runUpdateProduct = async () => {
     setSaveLoading(true);
-    // await handleCreateProduct(false);
     try {
       await updateProduct({
         axiosInstance,
@@ -85,6 +77,9 @@ export const EditProduct = ({ data, mutate }: { data: any; mutate: any }) => {
   const hasItems = product.items.length > 0;
   const hasCustomers = productCount?.all > 0;
   const showSaveButton = hasCustomers || product.version > 1;
+  const firstProductCreated = data.products.length > 0;
+
+  const autoSave = !showSaveButton && firstProductCreated;
 
   const handleToggleSettings = async (key: string) => {
     if (!product) return;
@@ -138,6 +133,11 @@ export const EditProduct = ({ data, mutate }: { data: any; mutate: any }) => {
               setOpen={setShowNewVersionDialog}
               createProduct={runUpdateProduct}
             />
+            <CreateFreeTrial
+              open={freeTrialModalOpen}
+              setOpen={setFreeTrialModalOpen}
+            />
+
             <div
               className={`flex flex-col gap-4 transition-all duration-500 ease-in-out ${
                 hasItems ? "w-3/5" : "w-full"
@@ -157,22 +157,33 @@ export const EditProduct = ({ data, mutate }: { data: any; mutate: any }) => {
                   </Button>
                 )}
               </div>
-              <CreateFreeTrial
-                open={freeTrialModalOpen}
-                setOpen={setFreeTrialModalOpen}
-              />
-              <div
-                className={`bg-white border border-zinc-200 transition-all duration-500 ease-in-out ${
-                  hasItems ? "w-full" : "w-full"
-                }`}
-              >
-                <ProductItemTable />
-              </div>
-              <CreateProductItem2 />
+
+              {firstProductCreated && (
+                <>
+                  {product.items.length == 0 ? (
+                    <p className="text-t2 text-sm w-md mt-4">
+                      Next, add items to define what customers with this product
+                      get access to, and how much they should be charged for it.
+                    </p>
+                  ) : (
+                    <div
+                      className={`bg-white border border-zinc-200 transition-all duration-500 ease-in-out ${
+                        hasItems ? "w-full" : "w-full"
+                      }`}
+                    >
+                      <ProductItemTable />
+                    </div>
+                  )}
+                  <CreateProductItem2
+                    classNames={{ button: "max-w-md" }}
+                  />{" "}
+                </>
+              )}
             </div>
 
             <div
-              className={`transition-all duration-500 ease-in-out ${
+              // transition-all duration-500 ease-in-out
+              className={` ${
                 hasItems
                   ? "w-2/5 opacity-100 translate-x-0 ml-4"
                   : "w-0 opacity-0 translate-x-8 overflow-hidden"

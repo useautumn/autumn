@@ -17,6 +17,7 @@ import { CreateItemDialogContent } from "./create-product-item/CreateItemDialogC
 import { useModelPricingContext } from "@/views/onboarding2/model-pricing/ModelPricingContext";
 import { useSteps } from "./useSteps";
 import { CreateItemStep } from "./utils/CreateItemStep";
+import { cn } from "@/lib/utils";
 
 const defaultProductItem: ProductItem = {
   feature_id: null,
@@ -35,7 +36,13 @@ const defaultProductItem: ProductItem = {
   reset_usage_when_enabled: true,
 };
 
-export function CreateProductItem2() {
+export function CreateProductItem2({
+  classNames,
+}: {
+  classNames?: {
+    button?: string;
+  };
+}) {
   const [open, setOpen] = useState(false);
   const [showCreateFeature, setShowCreateFeature] = useState(false);
   const [item, setItem] = useState<ProductItem>(defaultProductItem);
@@ -68,7 +75,7 @@ export function CreateProductItem2() {
     }, 400);
 
     setOpen(false);
-    setFirstItemCreated(true);
+    // setFirstItemCreated(true);
     return newProduct;
   };
 
@@ -93,7 +100,7 @@ export function CreateProductItem2() {
           <DialogTrigger asChild>
             <Button
               variant="dashed"
-              className="w-full"
+              className={cn("w-full", classNames?.button)}
               startIcon={<PlusIcon size={14} />}
             >
               Add Product Item

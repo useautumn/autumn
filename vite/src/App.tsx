@@ -33,10 +33,10 @@ export default function App() {
           <Route path="/admin" element={<AdminView />} />
           <Route path="/trmnl" element={<TerminalView />} />
 
-          <Route path="/onboarding" element={<OnboardingView />} />
-          <Route path="/sandbox/onboarding" element={<OnboardingView />} />
-          <Route path="/onboarding2" element={<OnboardingView2 />} />
-          <Route path="/sandbox/onboarding2" element={<OnboardingView2 />} />
+          <Route path="/onboarding" element={<OnboardingView2 />} />
+          <Route path="/sandbox/onboarding" element={<OnboardingView2 />} />
+          {/* <Route path="/onboarding2" element={<OnboardingView2 />} />
+          <Route path="/sandbox/onboarding2" element={<OnboardingView2 />} /> */}
           <Route path="/cli-auth" element={<CliAuth />} />
           {/* FEATURES */}
           <Route

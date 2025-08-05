@@ -22,13 +22,14 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { toast } from "sonner";
 import { ProductsContext } from "@/views/products/ProductsContext";
 import { SelectEditProduct } from "./SelectEditProduct";
-import { ConnectStripeStep } from "./ConnectStripe";
+import { ConnectStripeStep } from "../integrate/ConnectStripeStep";
 import { AutumnProvider } from "autumn-js/react";
 import { useProductData } from "@/views/products/product/hooks/useProductData";
+import ConnectStripeDialog from "../ConnectStripeDialog";
 
 const defaultProduct = {
-  id: "free_plan",
-  name: "Free Plan",
+  id: "",
+  name: "",
   items: [],
   is_default: false,
   is_add_on: false,
@@ -55,6 +56,7 @@ export const ModelPricing = ({
   setQueryStates: any;
 }) => {
   const getCurProduct = () => {
+    console.log("data.products:", data.products);
     if (queryStates.productId) {
       const prod = data.products.find(
         (p: Product) => p.id === queryStates.productId
@@ -62,20 +64,31 @@ export const ModelPricing = ({
       if (prod) {
         return prod;
       }
-    } else if (data.products.length > 0) {
+    }
+
+    if (data.products.length > 0) {
+      console.log("Returning first product:", data.products[0]);
       return data.products[0];
     }
+
     return defaultProduct;
   };
 
   const curProduct = getCurProduct();
-  const [firstItemCreated, setFirstItemCreated] = useState(
-    autumnProducts.some((p: Product) => p.items.length > 0)
+  // // console.log("curProduct:", curProduct);
+  // const [firstItemCreated, setFirstItemCreated] = useState(
+  //   autumnProducts.some((p: Product) => p.items.length > 0)
+  // );
+
+  const firstItemCreated = autumnProducts.some(
+    (p: Product) => p.items.length > 0
   );
 
   const [editingNewProduct, setEditingNewProduct] = useState(
     nullish(curProduct)
   );
+
+  const [connectStripeOpen, setConnectStripeOpen] = useState(false);
 
   const productDataState = useProductData({
     originalProduct: curProduct as any,
@@ -83,20 +96,6 @@ export const ModelPricing = ({
   });
 
   const { product } = productDataState;
-
-  // useEffect(() => {
-  //   if (data) {
-  //     const curProduct = data.products.find(
-  //       (p: Product) => p.id === product.id
-  //     );
-
-  //     if (!curProduct) {
-  //       if (data.products.length > 0) {
-  //         setProduct(data.products[0]);
-  //       }
-  //     }
-  //   }
-  // }, [data]);
 
   if (!product) return null;
 
@@ -106,7 +105,7 @@ export const ModelPricing = ({
     <ModelPricingContext.Provider
       value={{
         firstItemCreated,
-        setFirstItemCreated,
+        // setFirstItemCreated,
         editingNewProduct,
         setEditingNewProduct,
         // product,
@@ -119,71 +118,74 @@ export const ModelPricing = ({
         setQueryStates,
         mutateAutumnProducts,
         mutateCounts,
+        setConnectStripeOpen,
       }}
     >
+      <ConnectStripeDialog
+        open={connectStripeOpen}
+        setOpen={setConnectStripeOpen}
+      />
       <ProductsContext.Provider value={{ productCounts, mutate }}>
-        <div className="flex flex-col w-full h-full items-center justify-between overflow-hidden">
+        <div className="flex flex-col w-full h-full items-center justify-between overflow-y-auto overflow-x-hidden">
           <div className="w-full p-10 flex flex-col gap-4 justify-center items-center">
             <div className="max-w-[800px] w-full">
-              <div className="flex gap-4 items-center justify-between mb-6 h-8">
-                <p className="text-xl font-medium">Create your plans</p>
+              <div className="flex gap-4 items-center justify-between mb-6">
+                <div className="flex flex-col gap-1">
+                  <p className="text-xl font-medium">Create your products</p>
+                  <p className="text-t2 text-sm">
+                    To start, model your app's pricing by creating a product for
+                    your free plans, <br /> paid plans and any add-ons or
+                    top-ups.
+                  </p>
+                </div>
                 {firstItemCreated && (
                   <div className="flex gap-0 items-center">
                     <SelectEditProduct />
-                    <NewProductPopover />
+                    {data.products.length > 0 && <NewProductPopover />}
                   </div>
                 )}
               </div>
               <div className="flex flex-col gap-4 w-full">
-                <EditProduct
-                  data={data}
-                  mutate={mutate}
-                  // setProduct={setProduct}
-                  // features={features}
-                  // setFeatures={setFeatures}
-                  // entityFeatureIds={entityFeatureIds}
-                  // setEntityFeatureIds={setEntityFeatureIds}
-                  // product={product}
-                />
+                <EditProduct mutate={mutate} />
               </div>
             </div>
           </div>
 
-          <div
-            className={cn(
-              "w-full px-10 flex flex-col gap-4 items-center transition-all duration-1000 ease-in-out overflow-hidden",
-              firstItemCreated
-                ? `py-10 max-h-[500px] opacity-100 translate-y-0 rounded-t-xl shadow-[0_-2px_2px_-2px_rgba(0,0,0,0.05)] 
-                bg-stone-100 border-t border-zinc-200 pb-6`
-                : "py-0 max-h-0 opacity-0 translate-y-4"
-            )}
-          >
-            <AutumnProvider
-              backendUrl={`${import.meta.env.VITE_BACKEND_URL}/demo`}
-              includeCredentials={true}
+          <div className="w-full">
+            <div
+              className={cn(
+                "w-full px-10 flex flex-col gap-4 items-center ",
+                "transition-all duration-800 overflow-hidden py-10 pb-4",
+                !firstItemCreated && "hidden"
+                // firstItemCreated ? "max-h-[800px] py-10" : "max-h-0 py-0"
+              )}
             >
-              <div className="gap-8 flex justify-center max-w-[800px] w-full flex-col">
-                {!stripeConnected && (
-                  <ConnectStripeStep mutate={mutate} productData={data} />
-                )}
-                <PricingTable
-                  products={autumnProducts}
-                  stripeConnected={stripeConnected}
-                />
-                <div className="flex justify-end w-full">
-                  <Button
-                    className="w-fit"
-                    onClick={() => {
-                      setQueryStates({
-                        page: "integrate",
-                      });
-                    }}
-                  >
-                    Next: Integrate Autumn <ArrowRight className="w-4 h-4" />
-                  </Button>
+              <AutumnProvider
+                backendUrl={`${import.meta.env.VITE_BACKEND_URL}/demo`}
+                includeCredentials={true}
+              >
+                <div className="gap-8 flex justify-center max-w-[800px] w-full flex-col">
+                  <PricingTable
+                    products={autumnProducts}
+                    stripeConnected={stripeConnected}
+                    setConnectStripeOpen={setConnectStripeOpen}
+                  />
                 </div>
+              </AutumnProvider>
+
+              <div className="w-full flex justify-end translate-x-6">
+                <Button
+                  onClick={() => {
+                    setQueryStates({
+                      page: "integrate",
+                    });
+                  }}
+                  className="bg-zinc-800 w-fit hover:bg-zinc-700"
+                >
+                  Next: Integrate Autumn <ArrowRight className="w-4 h-4" />
+                </Button>
               </div>
-            </AutumnProvider>
+            </div>
           </div>
         </div>
       </ProductsContext.Provider>

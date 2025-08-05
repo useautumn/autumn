@@ -36,8 +36,7 @@ export const ItemConfigFooter = ({
     <CustomDialogFooter className="flex h-full items-center w-full justify-between">
       {handleBack ? (
         <Button
-          variant="ghost"
-          className="hover:!bg-zinc-200 p-1 h-6 ml-5 text-t3 rounded-md"
+          variant="dialogBack"
           onClick={handleBack}
           startIcon={<ArrowLeftIcon size={12} />}
         >

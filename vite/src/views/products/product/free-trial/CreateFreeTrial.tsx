@@ -20,11 +20,8 @@ export const CreateFreeTrial = ({
   open: boolean;
   setOpen: (open: boolean) => void;
 }) => {
-  // const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [price, setPrice] = useState<any>(null);
-  const { env, product, setProduct, prices, autoSave, mutate } =
-    useProductContext();
+  const { product, setProduct, autoSave, mutate } = useProductContext();
 
   const axiosInstance = useAxiosInstance();
 

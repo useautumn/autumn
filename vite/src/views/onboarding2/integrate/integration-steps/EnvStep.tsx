@@ -10,7 +10,7 @@ export const EnvStep = () => {
     <>
       <div className="flex flex-col gap-4 w-full">
         <StepHeader
-          number={2}
+          number={3}
           title={
             <p>
               Add the Autumn secret key to your <CodeSpan>{".env"}</CodeSpan>{" "}

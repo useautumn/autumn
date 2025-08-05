@@ -8,7 +8,7 @@ export const NextSteps = () => {
   return (
     <>
       <div className="flex flex-col gap-4 w-full">
-        <StepHeader number={2} title={<p>Next Steps</p>} />
+        <StepHeader number={8} title={<p>Next Steps</p>} />
         <p className="text-t2 text-sm">
           Congrats on setting up Autumn! The next steps are to learn how to use
           Autumn to check if a user has access to features in your application,
