@@ -29,6 +29,7 @@ export interface ExtendedRequest extends ExpressRequest {
   apiVersion?: number;
 
   timestamp?: number;
+  traceroot: any;
 }
 
 export interface ActionRequest {

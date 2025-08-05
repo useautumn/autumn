@@ -10,6 +10,37 @@ import { checkStripeConnections, createStripePrices } from "./attachRouter.js";
 import { insertCustomItems } from "./attachUtils/insertCustomItems.js";
 import { runAttachFunction } from "./attachUtils/getAttachFunction.js";
 
+import { tracerootInitialized } from "@/external/traceroot/tracerootUtils.js";
+import * as traceroot from "traceroot-sdk-ts";
+// import { get_logger } from "traceroot-sdk-ts";
+const runAttachWithTraceroot = async ({
+  function: functionToTrace,
+  spanName,
+}: {
+  function: any;
+  spanName: string;
+}): Promise<any> => {
+  if (tracerootInitialized) {
+    const tracedFunction = traceroot.traceFunction(functionToTrace, {
+      spanName: spanName,
+    });
+
+    return await tracedFunction();
+  } else {
+    return await functionToTrace();
+  }
+
+  //   try {
+  //     // Use traceFunction for proper span creation
+
+  //   } catch (traceError) {
+  //     console.warn('⚠️ traceFunction failed, falling back to regular function:', traceError);
+  //     return makeTracedCodeRequest(query);
+  //   }
+  // }
+  // return makeTracedCodeRequest(query);
+};
+
 export const handleAttach = async (req: any, res: any) =>
   routeHandler({
     req,
@@ -18,54 +49,62 @@ export const handleAttach = async (req: any, res: any) =>
     handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
       await handleAttachRaceCondition({ req, res });
 
-      const attachBody = AttachBodySchema.parse(req.body);
+      await runAttachWithTraceroot({
+        function: async () => {
+          const attachBody = AttachBodySchema.parse(req.body);
 
-      const { attachParams, customPrices, customEnts } = await getAttachParams({
-        req,
-        attachBody,
-      });
+          // req.traceroot.info("Testing traceroot!");
 
-      // Handle existing product
-      const branch = await getAttachBranch({
-        req,
-        attachBody,
-        attachParams,
-      });
+          const { attachParams, customPrices, customEnts } =
+            await getAttachParams({
+              req,
+              attachBody,
+            });
 
-      const { flags, config } = await getAttachConfig({
-        req,
-        attachParams,
-        attachBody,
-        branch,
-      });
+          // Handle existing product
+          const branch = await getAttachBranch({
+            req,
+            attachBody,
+            attachParams,
+          });
 
-      await handleAttachErrors({
-        attachParams,
-        attachBody,
-        branch,
-        flags,
-        config,
-      });
+          const { flags, config } = await getAttachConfig({
+            req,
+            attachParams,
+            attachBody,
+            branch,
+          });
 
-      await checkStripeConnections({
-        req,
-        attachParams,
-        useCheckout: config.onlyCheckout,
-      });
+          await handleAttachErrors({
+            attachParams,
+            attachBody,
+            branch,
+            flags,
+            config,
+          });
 
-      await insertCustomItems({
-        db: req.db,
-        customPrices: customPrices || [],
-        customEnts: customEnts || [],
-      });
+          await checkStripeConnections({
+            req,
+            attachParams,
+            useCheckout: config.onlyCheckout,
+          });
 
-      await runAttachFunction({
-        req,
-        res,
-        attachParams,
-        branch,
-        attachBody,
-        config,
+          await insertCustomItems({
+            db: req.db,
+            customPrices: customPrices || [],
+            customEnts: customEnts || [],
+          });
+
+          await runAttachFunction({
+            req,
+            res,
+            attachParams,
+            branch,
+            attachBody,
+            config,
+          });
+        },
+        spanName: "handleAttach",
       });
     },
   });

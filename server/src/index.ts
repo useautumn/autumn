@@ -17,7 +17,6 @@ import { apiRouter } from "./internal/api/apiRouter.js";
 import { QueueManager } from "./queue/QueueManager.js";
 import { AppEnv } from "@autumn/shared";
 import { CacheManager } from "./external/caching/CacheManager.js";
-import { logger } from "./external/logtail/logtailUtils.js";
 import { createPosthogCli } from "./external/posthog/createPosthogCli.js";
 import { generateId } from "./utils/genUtils.js";
 import { subscribeToOrgUpdates } from "./external/supabase/subscribeToOrgUpdates.js";
@@ -26,6 +25,9 @@ import { toNodeHandler } from "better-auth/node";
 import { auth } from "./utils/auth.js";
 import { checkEnvVars } from "./utils/initUtils.js";
 import { ClickHouseManager } from "./external/clickhouse/ClickHouseManager.js";
+import { initializeTraceroot } from "./external/traceroot/tracerootUtils.js";
+import * as traceroot from "traceroot-sdk-ts";
+import { createLogger, logger } from "./external/logtail/logtailUtils.js";
 
 const tracer = trace.getTracer("express");
 
@@ -74,6 +76,9 @@ const init = async () => {
 
   app.all("/api/auth/*", toNodeHandler(auth));
 
+  await initializeTraceroot();
+
+  const logger = createLogger();
   const server = http.createServer(app);
   const posthog = createPosthogCli();
 
@@ -119,6 +124,9 @@ const init = async () => {
         req: reqContext,
       },
     });
+
+    // req.traceroot = tracerootLogger;
+
     req.logger = req.logtail;
 
     const endSpan = () => {

@@ -2,12 +2,12 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import { initLogger } from "@/errors/logger.js";
-
 const pinoLogger = initLogger();
 
 const createLogMethod = (pinoMethod: any, logtailMethod?: any) => {
   function rewriteAppPath(str: string) {
     if (typeof str !== "string") return str;
+
     // Replace file:///app/ with ./
     str = str.replace("file:///app/", "./");
     return str.replace(/\/app\//g, "./");
@@ -44,7 +44,7 @@ const createLogMethod = (pinoMethod: any, logtailMethod?: any) => {
       const errorObject = args.find((arg) => arg instanceof Error);
       if (errorObject) {
         message = rewriteAppPath(
-          errorObject.stack || errorObject.message || "Error occurred",
+          errorObject.stack || errorObject.message || "Error occurred"
         );
       }
     }
@@ -72,14 +72,38 @@ const createLogMethod = (pinoMethod: any, logtailMethod?: any) => {
   };
 };
 
+import * as traceroot from "traceroot-sdk-ts";
 export const createLogger = () => {
+  let tracerootLogger: any = null;
+  try {
+    tracerootLogger = traceroot.get_logger();
+  } catch (error) {}
+
   // Helper function to create logger structure recursively
-  const createLoggerStructure = (basePinoLogger: any) => {
+  const createLoggerStructure = ({
+    basePinoLogger,
+    tracerootLogger,
+  }: {
+    basePinoLogger: any;
+    tracerootLogger: any;
+  }) => {
     return {
-      debug: createLogMethod(basePinoLogger.debug.bind(basePinoLogger)),
-      info: createLogMethod(basePinoLogger.info.bind(basePinoLogger)),
-      warn: createLogMethod(basePinoLogger.warn.bind(basePinoLogger)),
-      error: createLogMethod(basePinoLogger.error.bind(basePinoLogger)),
+      debug: createLogMethod(
+        basePinoLogger.debug.bind(basePinoLogger),
+        tracerootLogger ? tracerootLogger.debug.bind(tracerootLogger) : null
+      ),
+      info: createLogMethod(
+        basePinoLogger.info.bind(basePinoLogger),
+        tracerootLogger ? tracerootLogger.info.bind(tracerootLogger) : null
+      ),
+      warn: createLogMethod(
+        basePinoLogger.warn.bind(basePinoLogger),
+        tracerootLogger ? tracerootLogger.warn.bind(tracerootLogger) : null
+      ),
+      error: createLogMethod(
+        basePinoLogger.error.bind(basePinoLogger),
+        tracerootLogger ? tracerootLogger.error.bind(tracerootLogger) : null
+      ),
       child: ({
         context,
         onlyProd = false,
@@ -88,17 +112,26 @@ export const createLogger = () => {
         onlyProd?: boolean;
       }) => {
         if (onlyProd && process.env.NODE_ENV !== "production") {
-          return createLoggerStructure(basePinoLogger);
+          return createLoggerStructure({
+            basePinoLogger,
+            tracerootLogger,
+          });
         }
 
         const childPinoLogger = basePinoLogger.child(context);
-        return createLoggerStructure(childPinoLogger);
+        return createLoggerStructure({
+          basePinoLogger: childPinoLogger,
+          tracerootLogger,
+        });
       },
     };
   };
 
   // Create the root logger using the helper function
-  return createLoggerStructure(pinoLogger);
+  return createLoggerStructure({
+    basePinoLogger: pinoLogger,
+    tracerootLogger,
+  });
 };
 
 // export const createLogtailAll = () => {

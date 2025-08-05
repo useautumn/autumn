@@ -1,0 +1,8 @@
+service_name: server
+github_owner: useautumn
+github_repo_name: autumn
+github_commit_hash: main
+environment: production
+enable_span_console_export: false
+enable_log_console_export: false
+token: "traceroot-6bad7f011f184fd5a1b542ad7b4b1ce5"

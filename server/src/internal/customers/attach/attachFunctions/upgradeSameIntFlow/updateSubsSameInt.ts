@@ -9,6 +9,7 @@ import { updateStripeSub } from "../../attachUtils/updateStripeSub/updateStripeS
 import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
 import Stripe from "stripe";
 import { getContUseInvoiceItems } from "../../attachUtils/getContUseItems/getContUseInvoiceItems.js";
+import RecaseError from "@/utils/errorUtils.js";
 
 export const updateSubsByInt = async ({
   req,
@@ -51,6 +52,7 @@ export const updateSubsByInt = async ({
 
   // const replaceables: Replaceable[] = [];
   for (const sub of stripeSubs) {
+    // req.traceroot.info("Testing traceroot!");
     let interval = subToAutumnInterval(sub);
 
     let itemSet = itemSets.find((itemSet) => itemSet.interval === interval)!;
@@ -85,7 +87,7 @@ export const updateSubsByInt = async ({
         attachParams,
         stripeInvoice: invoice,
         logger,
-      }),
+      })
     );
   }
 
