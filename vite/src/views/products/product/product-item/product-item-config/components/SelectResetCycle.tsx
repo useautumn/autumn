@@ -79,9 +79,9 @@ export const SelectResetCycle = () => {
               <SelectItem
                 key={interval}
                 value={interval}
-                className="group flex items-center justify-between w-full bg-blue-100"
+                className="group flex items-center justify-between w-full"
               >
-                <div className="flex items-center gap-2 w-full bg-green-100">
+                <div className="flex items-center gap-2 w-full">
                   {getIntervalText(interval)}
                   {/* <Button
                     variant="ghost"
