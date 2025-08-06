@@ -76,9 +76,6 @@ export default function PricingTable({
                     return;
                   }
 
-                  console.log("Stripe connected");
-                  console.log("Product ID:", product.id);
-
                   if (product.id) {
                     const result = await checkout({
                       productId: product.id,
@@ -86,6 +83,7 @@ export default function PricingTable({
                       openInNewTab: true,
                       successUrl: `${window.location.origin}`,
                     });
+
                     console.log("Result:", result);
                   } else if (product.display?.button_url) {
                     window.open(product.display?.button_url, "_blank");

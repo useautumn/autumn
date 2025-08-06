@@ -100,6 +100,7 @@ export default function CheckoutDialog(params: CheckoutDialogProps) {
               await attach({
                 productId: checkoutResult.product.id,
                 options,
+                openInNewTab: true,
               });
               await mutateAutumnProducts();
               setOpen(false);
@@ -330,6 +331,8 @@ const PrepaidItem = ({
       const { data, error } = await checkout({
         productId: checkoutResult.product.id,
         options: newOptions,
+        dialog: CheckoutDialog,
+        openInNewTab: true,
       });
 
       if (error) {

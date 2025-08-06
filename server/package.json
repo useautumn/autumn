@@ -48,7 +48,7 @@
     "@supabase/supabase-js": "^2.46.2",
     "@upstash/redis": "^1.35.1",
     "ai": "^4.3.10",
-    "autumn-js": "^0.1.4",
+    "autumn-js": "^0.1.8",
     "axios": "^1.8.3",
     "better-auth": "^1.2.9",
     "body-parser": "^1.20.3",
