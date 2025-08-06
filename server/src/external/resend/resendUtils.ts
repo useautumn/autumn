@@ -11,6 +11,7 @@ export interface ResendEmailProps {
   body: string;
   from: string;
   fromEmail?: string;
+  replyTo?: string;
 }
 
 export const nameToEmail = (name: string) => {
@@ -71,6 +72,7 @@ export const sendHtmlEmail = async ({
   subject,
   body,
   fromEmail,
+  replyTo,
 }: ResendEmailProps) => {
   const resend = createResendCli();
 
@@ -83,5 +85,6 @@ export const sendHtmlEmail = async ({
     to: to,
     subject: subject,
     html: body,
+    replyTo,
   });
 };
