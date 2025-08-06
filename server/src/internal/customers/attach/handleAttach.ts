@@ -59,6 +59,28 @@ export const handleAttach = async (req: any, res: any) =>
         customEnts: customEnts || [],
       });
 
+      try {
+        req.logger.info(`Attach params: `, {
+          data: {
+            products: attachParams.products.map((p) => ({
+              id: p.id,
+              name: p.name,
+              processor: p.processor,
+              version: p.version,
+            })),
+            prices: attachParams.prices.map((p) => ({
+              id: p.id,
+              config: p.config,
+            })),
+            entitlements: attachParams.entitlements.map((e) => ({
+              internal_feature_id: e.internal_feature_id,
+              feature_id: e.feature_id,
+            })),
+            freeTrial: attachParams.freeTrial,
+          },
+        });
+      } catch (error) {}
+
       await runAttachFunction({
         req,
         res,

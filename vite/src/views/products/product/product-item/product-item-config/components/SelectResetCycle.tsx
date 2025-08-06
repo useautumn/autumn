@@ -16,7 +16,16 @@ import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
 import { getFeatureUsageType } from "@/utils/product/entitlementUtils";
 import { useProductContext } from "../../../ProductContext";
 import { Button } from "@/components/ui/button";
-import { ArrowUp01, PlusIcon } from "lucide-react";
+import { ArrowUp01, CheckIcon, PlusIcon } from "lucide-react";
+import { useState } from "react";
+
+const getIntervalText = (interval: EntInterval) => {
+  return interval === "semi_annual"
+    ? "per half year"
+    : interval === "lifetime"
+      ? "no reset"
+      : `per ${interval}`;
+};
 
 export const SelectResetCycle = () => {
   const { features } = useProductContext();
@@ -38,13 +47,6 @@ export const SelectResetCycle = () => {
 
   const interval = itemToEntInterval(item);
 
-  const getIntervalText = (interval: EntInterval) => {
-    return interval === "semi_annual"
-      ? "per half year"
-      : interval === "lifetime"
-        ? "no reset"
-        : `per ${interval}`;
-  };
   return (
     <div
       className={cn(
@@ -74,28 +76,54 @@ export const SelectResetCycle = () => {
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          {Object.values(EntInterval).map((interval) => {
+          {Object.values(EntInterval).map((intervalOption) => {
+            const isSelected = intervalOption === interval;
             return (
-              <SelectItem
-                key={interval}
-                value={interval}
-                className="group flex items-center justify-between w-full bg-blue-100"
-              >
-                <div className="flex items-center gap-2 w-full bg-green-100">
-                  {getIntervalText(interval)}
-                  {/* <Button
-                    variant="ghost"
-                    size="icon"
-                    className="invisible group-hover:visible h-6 border"
-                  >
-                    <ArrowUp01 size={12} />
-                  </Button> */}
-                </div>
-              </SelectItem>
+              <SelectIntervalItem
+                key={intervalOption}
+                interval={intervalOption}
+                isSelected={isSelected}
+              />
             );
           })}
         </SelectContent>
       </Select>
     </div>
+  );
+};
+
+const SelectIntervalItem = ({
+  interval,
+  isSelected,
+}: {
+  interval: EntInterval;
+  isSelected: boolean;
+}) => {
+  const [hover, setHover] = useState(false);
+
+  return (
+    <SelectItem
+      key={interval}
+      value={interval}
+      className="group flex items-center justify-between w-full"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      endComponent={
+        // isSelected &&
+        hover && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="invisible group-hover:visible h-5 !min-w-6 hover:bg-zinc-200 border"
+          >
+            <ArrowUp01 size={12} />
+          </Button>
+        )
+      }
+    >
+      <div className="flex items-center gap-2 w-full">
+        {getIntervalText(interval)}
+      </div>
+    </SelectItem>
   );
 };
