@@ -14,7 +14,7 @@ export interface ResendEmailProps {
 }
 
 export const nameToEmail = (name: string) => {
-  return `${name.toLowerCase().replace(/\s+/g, ".")}@${process.env.RESEND_DOMAIN}`;
+  return `${name.toLowerCase().replace(/\s+/g, ".")}@hey.${process.env.RESEND_DOMAIN}`;
 };
 
 export const sendTextEmail = async ({
