@@ -29,275 +29,275 @@ import {
 import { getUsageBasedSub } from "@/external/stripe/stripeSubUtils.js";
 
 // Add usage to end of cycle
-const addUsageToNextInvoice = async ({
-  db,
-  intervalToInvoiceItems,
-  intervalToSub,
-  customer,
-  org,
-  logger,
-  attachParams,
-}: {
-  db: DrizzleCli;
-  intervalToInvoiceItems: any;
-  intervalToSub: any;
-  customer: any;
-  org: any;
-  logger: any;
-  attachParams: AttachParams;
-}) => {
-  for (const interval in intervalToInvoiceItems) {
-    const itemsToInvoice = intervalToInvoiceItems[interval];
+// const addUsageToNextInvoice = async ({
+//   db,
+//   intervalToInvoiceItems,
+//   intervalToSub,
+//   customer,
+//   org,
+//   logger,
+//   attachParams,
+// }: {
+//   db: DrizzleCli;
+//   intervalToInvoiceItems: any;
+//   intervalToSub: any;
+//   customer: any;
+//   org: any;
+//   logger: any;
+//   attachParams: AttachParams;
+// }) => {
+//   for (const interval in intervalToInvoiceItems) {
+//     const itemsToInvoice = intervalToInvoiceItems[interval];
 
-    if (itemsToInvoice.length === 0) {
-      continue;
-    }
+//     if (itemsToInvoice.length === 0) {
+//       continue;
+//     }
 
-    // Add items to invoice
-    const stripeCli = createStripeCli({
-      org: org,
-      env: customer.env,
-    });
+//     // Add items to invoice
+//     const stripeCli = createStripeCli({
+//       org: org,
+//       env: customer.env,
+//     });
 
-    for (const item of itemsToInvoice) {
-      const { amount, description } = item;
+//     for (const item of itemsToInvoice) {
+//       const { amount, description } = item;
 
-      logger.info(
-        `   feature: ${item.feature.id}, overage: ${item.overage}, amount: ${amount}`,
-      );
+//       logger.info(
+//         `   feature: ${item.feature.id}, overage: ${item.overage}, amount: ${amount}`,
+//       );
 
-      let relatedSub = intervalToSub[interval];
-      if (!relatedSub) {
-        continue;
-      }
+//       let relatedSub = intervalToSub[interval];
+//       if (!relatedSub) {
+//         continue;
+//       }
 
-      // Create invoice item
-      let invoiceItem = {
-        customer: customer.processor.id,
-        currency: org.default_currency,
-        description,
-        price_data: {
-          product: (item.price.config! as UsagePriceConfig).stripe_product_id!,
-          unit_amount: Math.round(amount * 100),
-          currency: org.default_currency,
-        },
-        subscription: relatedSub.id,
-        period: {
-          start: item.periodStart,
-          end: item.periodEnd,
-        },
-      };
+//       // Create invoice item
+//       let invoiceItem = {
+//         customer: customer.processor.id,
+//         currency: org.default_currency,
+//         description,
+//         price_data: {
+//           product: (item.price.config! as UsagePriceConfig).stripe_product_id!,
+//           unit_amount: Math.round(amount * 100),
+//           currency: org.default_currency,
+//         },
+//         subscription: relatedSub.id,
+//         period: {
+//           start: item.periodStart,
+//           end: item.periodEnd,
+//         },
+//       };
 
-      await stripeCli.invoiceItems.create(invoiceItem);
+//       await stripeCli.invoiceItems.create(invoiceItem);
 
-      // Update cus ent to 0
-      await CusEntService.update({
-        db,
-        id: item.relatedCusEnt!.id,
-        updates: getResetBalancesUpdate({
-          cusEnt: item.relatedCusEnt!,
-          allowance: 0,
-        }),
-      });
+//       // Update cus ent to 0
+//       await CusEntService.update({
+//         db,
+//         id: item.relatedCusEnt!.id,
+//         updates: getResetBalancesUpdate({
+//           cusEnt: item.relatedCusEnt!,
+//           allowance: 0,
+//         }),
+//       });
 
-      // Update existing cusEnt in attachParams
-      let cusProducts = attachParams.cusProducts;
-      for (const cusProduct of cusProducts!) {
-        for (let i = 0; i < cusProduct.customer_entitlements.length; i++) {
-          let cusEnt = cusProduct.customer_entitlements[i];
-          if (cusEnt.id === item.relatedCusEnt!.id) {
-            let balancesUpdate = getResetBalancesUpdate({
-              cusEnt,
-              allowance: 0,
-            });
-            cusProduct.customer_entitlements[i] = {
-              ...cusEnt,
-              ...balancesUpdate,
-            };
-          }
-        }
-      }
-    }
-  }
-};
+//       // Update existing cusEnt in attachParams
+//       let cusProducts = attachParams.cusProducts;
+//       for (const cusProduct of cusProducts!) {
+//         for (let i = 0; i < cusProduct.customer_entitlements.length; i++) {
+//           let cusEnt = cusProduct.customer_entitlements[i];
+//           if (cusEnt.id === item.relatedCusEnt!.id) {
+//             let balancesUpdate = getResetBalancesUpdate({
+//               cusEnt,
+//               allowance: 0,
+//             });
+//             cusProduct.customer_entitlements[i] = {
+//               ...cusEnt,
+//               ...balancesUpdate,
+//             };
+//           }
+//         }
+//       }
+//     }
+//   }
+// };
 
-const invoiceForUsageImmediately = async ({
-  db,
-  intervalToInvoiceItems,
-  customer,
-  org,
-  logger,
-  curCusProduct,
-  attachParams,
-  newSubs,
-}: {
-  db: DrizzleCli;
-  intervalToInvoiceItems: any;
-  customer: any;
-  org: any;
-  logger: any;
-  curCusProduct: FullCusProduct;
-  attachParams: AttachParams;
-  newSubs: Stripe.Subscription[];
-}) => {
-  // 1. Create invoice
-  const stripeCli = createStripeCli({
-    org: org,
-    env: customer.env,
-  });
-  const product = curCusProduct.product;
+// const invoiceForUsageImmediately = async ({
+//   db,
+//   intervalToInvoiceItems,
+//   customer,
+//   org,
+//   logger,
+//   curCusProduct,
+//   attachParams,
+//   newSubs,
+// }: {
+//   db: DrizzleCli;
+//   intervalToInvoiceItems: any;
+//   customer: any;
+//   org: any;
+//   logger: any;
+//   curCusProduct: FullCusProduct;
+//   attachParams: AttachParams;
+//   newSubs: Stripe.Subscription[];
+// }) => {
+//   // 1. Create invoice
+//   const stripeCli = createStripeCli({
+//     org: org,
+//     env: customer.env,
+//   });
+//   const product = curCusProduct.product;
 
-  let invoiceItems = Object.values(intervalToInvoiceItems).flat() as any[];
-  if (invoiceItems.length === 0) {
-    return;
-  }
+//   let invoiceItems = Object.values(intervalToInvoiceItems).flat() as any[];
+//   if (invoiceItems.length === 0) {
+//     return;
+//   }
 
-  let invoice: Stripe.Invoice;
-  let newInvoice = false;
+//   let invoice: Stripe.Invoice;
+//   let newInvoice = false;
 
-  if (attachParams.invoiceOnly && newSubs.length > 0) {
-    invoice = await stripeCli.invoices.retrieve(
-      newSubs[0].latest_invoice as string,
-    );
+//   if (attachParams.invoiceOnly && newSubs.length > 0) {
+//     invoice = await stripeCli.invoices.retrieve(
+//       newSubs[0].latest_invoice as string,
+//     );
 
-    if (invoice.status !== "draft") {
-      newInvoice = true;
-      invoice = await stripeCli.invoices.create({
-        customer: customer.processor.id,
-        auto_advance: true,
-      });
-    }
-  } else {
-    newInvoice = true;
+//     if (invoice.status !== "draft") {
+//       newInvoice = true;
+//       invoice = await stripeCli.invoices.create({
+//         customer: customer.processor.id,
+//         auto_advance: true,
+//       });
+//     }
+//   } else {
+//     newInvoice = true;
 
-    invoice = await stripeCli.invoices.create({
-      customer: customer.processor.id,
-      auto_advance: true,
-    });
-  }
+//     invoice = await stripeCli.invoices.create({
+//       customer: customer.processor.id,
+//       auto_advance: true,
+//     });
+//   }
 
-  let autumnInvoiceItems: InvoiceItem[] = [];
+//   let autumnInvoiceItems: InvoiceItem[] = [];
 
-  for (const item of invoiceItems) {
-    // const amount = getPriceForOverage(item.price, item.overage);
-    const { amount, description } = item;
-    let config = item.price.config! as UsagePriceConfig;
-    // let stripePrice = await stripeCli.prices.retrieve(config.stripe_price_id!);
-    let stripeProdId = config.stripe_product_id;
-    if (!stripeProdId) {
-      try {
-        let stripePrice = await stripeCli.prices.retrieve(
-          config.stripe_price_id!,
-        );
-        stripeProdId = stripePrice.product as string;
-      } catch (error) {}
-    }
+//   for (const item of invoiceItems) {
+//     // const amount = getPriceForOverage(item.price, item.overage);
+//     const { amount, description } = item;
+//     let config = item.price.config! as UsagePriceConfig;
+//     // let stripePrice = await stripeCli.prices.retrieve(config.stripe_price_id!);
+//     let stripeProdId = config.stripe_product_id;
+//     if (!stripeProdId) {
+//       try {
+//         let stripePrice = await stripeCli.prices.retrieve(
+//           config.stripe_price_id!,
+//         );
+//         stripeProdId = stripePrice.product as string;
+//       } catch (error) {}
+//     }
 
-    if (!stripeProdId) {
-      stripeProdId = product.processor?.id;
-    }
+//     if (!stripeProdId) {
+//       stripeProdId = product.processor?.id;
+//     }
 
-    logger.info(
-      `🌟🌟🌟 (Bill remaining) created invoice item: ${description} -- ${amount}`,
-    );
+//     logger.info(
+//       `🌟🌟🌟 (Bill remaining) created invoice item: ${description} -- ${amount}`,
+//     );
 
-    let invoiceItem = {
-      customer: customer.processor.id,
-      invoice: invoice.id,
-      currency: org.default_currency,
-      description,
-      price_data: {
-        product: stripeProdId!,
-        unit_amount: Math.round(amount * 100),
-        currency: org.default_currency,
-      },
-      period: {
-        start: item.periodStart,
-        end: item.periodEnd,
-      },
-    };
+//     let invoiceItem = {
+//       customer: customer.processor.id,
+//       invoice: invoice.id,
+//       currency: org.default_currency,
+//       description,
+//       price_data: {
+//         product: stripeProdId!,
+//         unit_amount: Math.round(amount * 100),
+//         currency: org.default_currency,
+//       },
+//       period: {
+//         start: item.periodStart,
+//         end: item.periodEnd,
+//       },
+//     };
 
-    let stripeInvoiceItem = await stripeCli.invoiceItems.create(invoiceItem);
+//     let stripeInvoiceItem = await stripeCli.invoiceItems.create(invoiceItem);
 
-    autumnInvoiceItems.push({
-      price_id: item.price.id!,
-      internal_feature_id: item.feature.internal_id || null,
-      description: description,
-      period_start: item.periodStart * 1000,
-      period_end: item.periodEnd * 1000,
-      stripe_id: stripeInvoiceItem.id,
-    });
+//     autumnInvoiceItems.push({
+//       price_id: item.price.id!,
+//       internal_feature_id: item.feature.internal_id || null,
+//       description: description,
+//       period_start: item.periodStart * 1000,
+//       period_end: item.periodEnd * 1000,
+//       stripe_id: stripeInvoiceItem.id,
+//     });
 
-    await CusEntService.update({
-      db,
-      id: item.relatedCusEnt!.id,
-      updates: {
-        balance: 0,
-      },
-    });
-    let index = curCusProduct.customer_entitlements.findIndex(
-      (ce) => ce.id === item.relatedCusEnt!.id,
-    );
+//     await CusEntService.update({
+//       db,
+//       id: item.relatedCusEnt!.id,
+//       updates: {
+//         balance: 0,
+//       },
+//     });
+//     let index = curCusProduct.customer_entitlements.findIndex(
+//       (ce) => ce.id === item.relatedCusEnt!.id,
+//     );
 
-    curCusProduct.customer_entitlements[index] = {
-      ...curCusProduct.customer_entitlements[index],
-      balance: 0,
-    };
-  }
+//     curCusProduct.customer_entitlements[index] = {
+//       ...curCusProduct.customer_entitlements[index],
+//       balance: 0,
+//     };
+//   }
 
-  if (newInvoice) {
-    await stripeCli.invoices.finalizeInvoice(invoice.id);
+//   if (newInvoice) {
+//     await stripeCli.invoices.finalizeInvoice(invoice.id);
 
-    const { paid, error } = await payForInvoice({
-      stripeCli,
-      paymentMethod: null,
-      invoiceId: invoice.id,
-      logger,
-    });
+//     const { paid, error } = await payForInvoice({
+//       stripeCli,
+//       paymentMethod: null,
+//       invoiceId: invoice.id,
+//       logger,
+//     });
 
-    if (!paid) {
-      logger.warn("Failed to pay invoice for remaining usages", {
-        stripeInvoice: newInvoice,
-        paymentError: error,
-      });
-    }
-  }
+//     if (!paid) {
+//       logger.warn("Failed to pay invoice for remaining usages", {
+//         stripeInvoice: newInvoice,
+//         paymentError: error,
+//       });
+//     }
+//   }
 
-  await insertInvoiceFromAttach({
-    db,
-    attachParams,
-    invoiceId: invoice.id,
-    logger,
-  });
-};
+//   await insertInvoiceFromAttach({
+//     db,
+//     attachParams,
+//     invoiceId: invoice.id,
+//     logger,
+//   });
+// };
 
-const getRemainingUsagesPreview = async ({
-  intervalToInvoiceItems,
-  curCusProduct,
-}: {
-  intervalToInvoiceItems: any;
-  curCusProduct: FullCusProduct;
-}) => {
-  let invoiceItems = Object.values(intervalToInvoiceItems).flat() as any[];
-  if (invoiceItems.length === 0) {
-    return;
-  }
+// const getRemainingUsagesPreview = async ({
+//   intervalToInvoiceItems,
+//   curCusProduct,
+// }: {
+//   intervalToInvoiceItems: any;
+//   curCusProduct: FullCusProduct;
+// }) => {
+//   let invoiceItems = Object.values(intervalToInvoiceItems).flat() as any[];
+//   if (invoiceItems.length === 0) {
+//     return;
+//   }
 
-  let items = [];
-  for (const item of invoiceItems) {
-    const amount = getPriceForOverage(item.price, item.overage);
-    const description = `${curCusProduct.product.name} - ${
-      item.feature.name
-    } x ${Math.round(item.usage)}`;
+//   let items = [];
+//   for (const item of invoiceItems) {
+//     const amount = getPriceForOverage(item.price, item.overage);
+//     const description = `${curCusProduct.product.name} - ${
+//       item.feature.name
+//     } x ${Math.round(item.usage)}`;
 
-    items.push({
-      amount,
-      description,
-    });
-  }
+//     items.push({
+//       amount,
+//       description,
+//     });
+//   }
 
-  return items;
-};
+//   return items;
+// };
 
 // export const billForRemainingUsages = async ({
 //   db,

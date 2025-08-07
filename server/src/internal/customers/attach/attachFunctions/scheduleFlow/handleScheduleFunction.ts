@@ -69,7 +69,9 @@ export const handleScheduleFunction = async ({
   const stripeSchedules: Stripe.SubscriptionSchedule[] = [];
   for (const itemSet of itemSets) {
     let scheduleObj = schedules.find(
-      (schedule) => schedule.interval === itemSet.interval,
+      (schedule) =>
+        schedule.interval === itemSet.interval &&
+        schedule.intervalCount === itemSet.intervalCount
     );
 
     // If schedule exists, update it
@@ -110,7 +112,7 @@ export const handleScheduleFunction = async ({
     cusProductId: curCusProduct.id,
     updates: {
       scheduled_ids: curCusProduct.scheduled_ids?.filter(
-        (id) => !newScheduledIds.includes(id),
+        (id) => !newScheduledIds.includes(id)
       ),
     },
   });
@@ -147,7 +149,7 @@ export const handleScheduleFunction = async ({
         product_ids: [product.id],
         customer_id:
           attachParams.customer.id || attachParams.customer.internal_id,
-      }),
+      })
     );
   } else {
     res.status(200).json({

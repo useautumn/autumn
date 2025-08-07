@@ -10,15 +10,10 @@ import {
   getNextStartOfMonthUnix,
 } from "@/internal/products/prices/billingIntervalUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
-import { getLastInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
-import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
+import { getSmallestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
+import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { getMergeCusProduct } from "../attachFunctions/addProductFlow/getMergeCusProduct.js";
-import {
-  formatUnixToDate,
-  formatUnixToDateTime,
-  notNullish,
-  nullish,
-} from "@/utils/genUtils.js";
+import { notNullish, nullish } from "@/utils/genUtils.js";
 
 export const getNewProductPreview = async ({
   branch,
@@ -38,7 +33,10 @@ export const getNewProductPreview = async ({
 
   let anchorToUnix = undefined;
   if (org.config.anchor_start_of_month) {
-    anchorToUnix = getNextStartOfMonthUnix(BillingInterval.Month);
+    anchorToUnix = getNextStartOfMonthUnix({
+      interval: BillingInterval.Month,
+      intervalCount: 1,
+    });
   }
 
   const { mergeCusProduct, mergeSubs } = await getMergeCusProduct({
@@ -77,12 +75,16 @@ export const getNewProductPreview = async ({
       config,
     });
 
-    let minInterval = getLastInterval({
+    // let minInterval = getLastInterval({
+    //   prices: newProduct.prices,
+    //   ents: newProduct.entitlements,
+    // });
+    let min = getSmallestInterval({
       prices: newProduct.prices,
       ents: newProduct.entitlements,
     });
 
-    let getAligned = notNullish(anchorToUnix) && notNullish(minInterval);
+    let getAligned = notNullish(anchorToUnix) && notNullish(min);
 
     let dueAt = freeTrial
       ? freeTrialToStripeTimestamp({
@@ -92,11 +94,16 @@ export const getNewProductPreview = async ({
       : getAligned
         ? getAlignedIntervalUnix({
             alignWithUnix: anchorToUnix!,
-            interval: minInterval,
+            interval: min!.interval,
+            intervalCount: min!.intervalCount,
             now: attachParams.now,
           })
-        : notNullish(minInterval)
-          ? addBillingIntervalUnix(attachParams.now || Date.now(), minInterval)
+        : notNullish(min)
+          ? addBillingIntervalUnix({
+              unixTimestamp: attachParams.now || Date.now(),
+              interval: min!.interval,
+              intervalCount: min!.intervalCount,
+            })
           : undefined;
 
     dueNextCycle = !nullish(dueAt)
@@ -125,18 +132,25 @@ export const getNewProductPreview = async ({
   // Next cycle at
   if (!dueNextCycle) {
     if (!isFreeProduct(newProduct.prices) && branch != AttachBranch.OneOff) {
-      let minInterval = getLastInterval({ prices: newProduct.prices });
+      let min = getSmallestInterval({
+        prices: newProduct.prices,
+        ents: newProduct.entitlements,
+      });
       dueNextCycle = {
         line_items: items.filter((item) => {
           let price = newProduct.prices.find(
             (price) => price.id == item.price_id
           );
-          return price?.config.interval == minInterval;
+          return (
+            price?.config.interval == min!.interval &&
+            (price?.config.interval_count || 1) == (min!.intervalCount || 1)
+          );
         }),
-        due_at: addBillingIntervalUnix(
-          attachParams.now || Date.now(),
-          minInterval
-        ),
+        due_at: addBillingIntervalUnix({
+          unixTimestamp: attachParams.now || Date.now(),
+          interval: min!.interval,
+          intervalCount: min!.intervalCount,
+        }),
       };
     }
   }

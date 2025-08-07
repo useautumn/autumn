@@ -4,7 +4,11 @@ import { updateScheduledSubWithNewItems } from "@/internal/customers/change-prod
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
 import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
-import { FullCusProduct } from "@autumn/shared";
+import {
+  FullCusProduct,
+  intervalsDifferent,
+  intervalsSame,
+} from "@autumn/shared";
 import Stripe from "stripe";
 import { attachParamToCusProducts } from "../../attachUtils/convertAttachParams.js";
 
@@ -39,7 +43,7 @@ export const updateCurSchedules = async ({
   });
 
   for (const scheduleObj of schedules) {
-    const { interval, schedule } = scheduleObj;
+    const { interval, intervalCount, schedule } = scheduleObj;
 
     // If schedule has passed, skip this step.
     let phase = schedule.phases.length > 0 ? schedule.phases[0] : null;
@@ -51,7 +55,16 @@ export const updateCurSchedules = async ({
     }
 
     // Get corresponding item set
-    const itemSet = itemSets.find((itemSet) => itemSet.interval === interval);
+
+    const itemSet = itemSets.find((itemSet) =>
+      intervalsSame({
+        intervalA: { interval, intervalCount },
+        intervalB: {
+          interval: itemSet.interval,
+          intervalCount: itemSet.intervalCount,
+        },
+      })
+    );
     if (!itemSet) {
       continue;
     }

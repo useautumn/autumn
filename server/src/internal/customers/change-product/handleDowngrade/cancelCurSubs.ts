@@ -1,4 +1,9 @@
 import { getSubItemsForCusProduct } from "@/external/stripe/stripeSubUtils.js";
+import { subToAutumnInterval } from "@/external/stripe/utils.js";
+import {
+  priceToIntervalKey,
+  toIntervalKey,
+} from "@/internal/products/prices/priceUtils/convertPrice.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { FullCusProduct } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -32,8 +37,10 @@ export const cancelCurSubs = async ({
       cusProduct: curCusProduct,
     });
 
-    let interval = sub.items.data[0].price.recurring!.interval;
-    intervalToOtherSubs[interval] = {
+    // let interval = sub.items.data[0].price.recurring!.interval;
+    let subInterval = subToAutumnInterval(sub);
+    let intervalKey = toIntervalKey(subInterval);
+    intervalToOtherSubs[intervalKey] = {
       otherSubItems,
       otherSub: sub,
     };

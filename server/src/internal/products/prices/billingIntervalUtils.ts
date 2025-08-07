@@ -21,24 +21,29 @@ import {
 import { UTCDate } from "@date-fns/utc";
 import { formatUnixToDate, formatUnixToDateTime } from "@/utils/genUtils.js";
 
-export const subtractBillingIntervalUnix = (
-  unixTimestamp: number,
-  interval: BillingInterval,
-) => {
+export const subtractBillingIntervalUnix = ({
+  unixTimestamp,
+  interval,
+  intervalCount,
+}: {
+  unixTimestamp: number;
+  interval: BillingInterval;
+  intervalCount: number;
+}) => {
   const date = new UTCDate(unixTimestamp);
   let subtractedDate = date;
   switch (interval) {
     case BillingInterval.Month:
-      subtractedDate = subMonths(date, 1);
+      subtractedDate = subMonths(date, 1 * intervalCount);
       break;
     case BillingInterval.Quarter:
-      subtractedDate = subMonths(date, 3);
+      subtractedDate = subMonths(date, 3 * intervalCount);
       break;
     case BillingInterval.SemiAnnual:
-      subtractedDate = subMonths(date, 6);
+      subtractedDate = subMonths(date, 6 * intervalCount);
       break;
     case BillingInterval.Year:
-      subtractedDate = subYears(date, 1);
+      subtractedDate = subYears(date, 1 * intervalCount);
       break;
     default:
       throw new Error(`Invalid billing interval: ${interval}`);
@@ -46,24 +51,29 @@ export const subtractBillingIntervalUnix = (
   return subtractedDate.getTime();
 };
 
-export const addBillingIntervalUnix = (
-  unixTimestamp: number,
-  interval: BillingInterval,
-) => {
+export const addBillingIntervalUnix = ({
+  unixTimestamp,
+  interval,
+  intervalCount,
+}: {
+  unixTimestamp: number;
+  interval: BillingInterval;
+  intervalCount: number;
+}) => {
   const date = new UTCDate(unixTimestamp);
   let addedDate = date;
   switch (interval) {
     case BillingInterval.Month:
-      addedDate = addMonths(date, 1);
+      addedDate = addMonths(date, intervalCount);
       break;
     case BillingInterval.Quarter:
-      addedDate = addMonths(date, 3);
+      addedDate = addMonths(date, 3 * intervalCount);
       break;
     case BillingInterval.SemiAnnual:
-      addedDate = addMonths(date, 6);
+      addedDate = addMonths(date, 6 * intervalCount);
       break;
     case BillingInterval.Year:
-      addedDate = addYears(date, 1);
+      addedDate = addYears(date, 1 * intervalCount);
       break;
     default:
       throw new Error(`Invalid billing interval: ${interval}`);
@@ -71,8 +81,18 @@ export const addBillingIntervalUnix = (
   return addedDate.getTime();
 };
 
-export const getNextStartOfMonthUnix = (interval: BillingInterval) => {
-  const nextBillingCycle = addBillingIntervalUnix(Date.now(), interval);
+export const getNextStartOfMonthUnix = ({
+  interval,
+  intervalCount,
+}: {
+  interval: BillingInterval;
+  intervalCount: number;
+}) => {
+  const nextBillingCycle = addBillingIntervalUnix({
+    unixTimestamp: Date.now(),
+    interval,
+    intervalCount,
+  });
 
   // Subtract till it hits first
   const date = new UTCDate(nextBillingCycle);
@@ -85,11 +105,13 @@ export const getNextStartOfMonthUnix = (interval: BillingInterval) => {
 export const getAlignedIntervalUnix = ({
   alignWithUnix,
   interval,
+  intervalCount,
   now,
   alwaysReturn,
 }: {
   alignWithUnix: number;
   interval: BillingInterval;
+  intervalCount: number;
   now?: number;
   alwaysReturn?: boolean;
 }) => {
@@ -99,7 +121,11 @@ export const getAlignedIntervalUnix = ({
 
   now = now || Date.now();
 
-  const naturalBillingDate = addBillingIntervalUnix(now, interval);
+  const naturalBillingDate = addBillingIntervalUnix({
+    unixTimestamp: now,
+    interval,
+    intervalCount,
+  });
 
   // console.log("Now:", formatUnixToDateTime(now));
   // console.log("Anchoring to:", formatUnixToDateTime(alignWithUnix));
@@ -108,10 +134,11 @@ export const getAlignedIntervalUnix = ({
   const maxIterations = 10000;
   let iterations = 0;
   while (true) {
-    const subtractedUnix = subtractBillingIntervalUnix(
-      nextCycleAnchorUnix,
+    const subtractedUnix = subtractBillingIntervalUnix({
+      unixTimestamp: nextCycleAnchorUnix,
       interval,
-    );
+      intervalCount,
+    });
 
     // console.log("Subtracted unix:", formatUnixToDateTime(subtractedUnix));
 
@@ -134,12 +161,12 @@ export const getAlignedIntervalUnix = ({
 
   let anchorAndNaturalDiff = differenceInSeconds(
     naturalBillingDate,
-    nextCycleAnchorUnix,
+    nextCycleAnchorUnix
   );
 
   // For insurance, also means you can't set billing cycle anchor to a minute in the future...
   let anchorAndNowDiff = Math.abs(
-    differenceInSeconds(now, nextCycleAnchorUnix),
+    differenceInSeconds(now, nextCycleAnchorUnix)
   );
 
   if (anchorAndNaturalDiff < 60 || anchorAndNowDiff < 20) {
@@ -182,7 +209,7 @@ export const subtractFromUnixTillAligned = ({
   const lastDayOfMonth = new UTCDate(
     alignedDate.getFullYear(),
     alignedDate.getMonth() + 1,
-    0,
+    0
   ).getDate();
 
   // Apply target day (capped to last day of month) and time components

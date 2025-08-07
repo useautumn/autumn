@@ -7,6 +7,7 @@ import {
   FullCustomerEntitlement,
   FullEntitlement,
   getFeatureInvoiceDescription,
+  intervalsSame,
   PreviewLineItem,
   Price,
 } from "@autumn/shared";
@@ -121,7 +122,7 @@ export const getContUseInvoiceItems = async ({
   const cusEnts = cusProduct ? cusProduct.customer_entitlements : [];
 
   const product = attachParamsToProduct({ attachParams });
-  const intervalsSame = intervalsAreSame({ attachParams });
+  const allIntervalsSame = intervalsAreSame({ attachParams });
   const curItems = stripeSubs
     ? await getCurContUseItems({
         stripeSubs,
@@ -150,7 +151,7 @@ export const getContUseInvoiceItems = async ({
       ? getRelatedCusPrice(prevCusEnt, cusPrices)!
       : undefined;
 
-    if (!intervalsSame || !prevCusEnt || !stripeSubs) {
+    if (!allIntervalsSame || !prevCusEnt || !stripeSubs) {
       const newItem = await getContUseNewItems({
         price,
         ent,
@@ -159,7 +160,7 @@ export const getContUseInvoiceItems = async ({
       });
 
       const prevItem = curItems.find(
-        (item) => item.price_id === prevCusPrice?.price.id,
+        (item) => item.price_id === prevCusPrice?.price.id
       );
 
       newItems.push(newItem);
@@ -172,12 +173,16 @@ export const getContUseInvoiceItems = async ({
     }
 
     const curItem = curItems.find(
-      (item) => item.price_id === prevCusPrice?.price.id,
+      (item) => item.price_id === prevCusPrice?.price.id
     );
 
-    let sub = stripeSubs!.find(
-      (sub) => subToAutumnInterval(sub) === price.config.interval,
-    );
+    let sub = stripeSubs!.find((sub) => {
+      let subInterval = subToAutumnInterval(sub);
+      return intervalsSame({
+        intervalA: price.config,
+        intervalB: subInterval,
+      });
+    });
 
     let {
       oldItem,

@@ -10,6 +10,7 @@ export const CusRolloverSchema = z.object({
 export const CusEntResponseSchema = z.object({
   feature_id: z.string(),
   interval: z.nativeEnum(EntInterval).nullish(),
+  interval_count: z.number().nullish(),
   unlimited: z.boolean().nullish(),
   balance: z.number().nullish(), //
   usage: z.number().nullish(),
@@ -22,6 +23,7 @@ export const CusEntResponseSchema = z.object({
 
 export const CoreCusFeatureResponseSchema = z.object({
   interval: z.nativeEnum(EntInterval).or(z.literal("multiple")).nullish(),
+  interval_count: z.number().nullish(),
   unlimited: z.boolean().nullish(),
   balance: z.number().nullish(),
   usage: z.number().nullish(),
@@ -33,6 +35,7 @@ export const CoreCusFeatureResponseSchema = z.object({
     .array(
       z.object({
         interval: z.nativeEnum(EntInterval),
+        interval_count: z.number().nullish(),
         balance: z.number().nullish(),
         usage: z.number().nullish(),
         included_usage: z.number().nullish(),

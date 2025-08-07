@@ -58,6 +58,7 @@ export const createStripeSub = async ({
     ? getAlignedIntervalUnix({
         alignWithUnix: anchorToUnix,
         interval: itemSet.interval,
+        intervalCount: itemSet.intervalCount,
         now,
       })
     : undefined;

@@ -29,11 +29,13 @@ export const addPrefixToProducts = ({
 export const replaceItems = ({
   featureId,
   interval,
+  intervalCount,
   newItem,
   items,
 }: {
   featureId?: string;
   interval?: BillingInterval;
+  intervalCount?: number;
   newItem: ProductItem;
   items: ProductItem[];
 }) => {
@@ -46,7 +48,10 @@ export const replaceItems = ({
 
   if (interval) {
     index = newItems.findIndex(
-      (item) => item.interval == (interval as any) && nullish(item.feature_id),
+      (item) =>
+        item.interval == (interval as any) &&
+        (intervalCount ? item.interval_count == intervalCount : true) &&
+        nullish(item.feature_id)
     );
   }
 

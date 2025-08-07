@@ -20,6 +20,7 @@ import {
   AttachScenario,
   BillingInterval,
   ErrCode,
+  intervalsDifferent,
   SuccessCode,
 } from "@autumn/shared";
 import Stripe from "stripe";
@@ -78,15 +79,28 @@ export const handlePaidProduct = async ({
       continue;
     }
 
-    let mergeWithSub = mergeSubs.find(
-      (sub) => subToAutumnInterval(sub) == itemSet.interval
-    );
+    let mergeWithSub = mergeSubs.find((sub) => {
+      let subInterval = subToAutumnInterval(sub);
+      return !intervalsDifferent({
+        intervalA: {
+          interval: subInterval.interval,
+          intervalCount: subInterval.intervalCount,
+        },
+        intervalB: {
+          interval: itemSet.interval,
+          intervalCount: itemSet.intervalCount,
+        },
+      });
+    });
 
     let subscription;
     try {
       let billingCycleAnchorUnix;
       if (org.config.anchor_start_of_month) {
-        billingCycleAnchorUnix = getNextStartOfMonthUnix(itemSet.interval);
+        billingCycleAnchorUnix = getNextStartOfMonthUnix({
+          interval: itemSet.interval,
+          intervalCount: itemSet.intervalCount,
+        });
       }
 
       if (attachParams.billingAnchor) {

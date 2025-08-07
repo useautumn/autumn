@@ -5,7 +5,7 @@ import {
 } from "../attachUtils/convertAttachParams.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import { getFirstInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
+import { getLargestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 import { getItemsForNewProduct } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
 import { getItemsForCurProduct } from "@/internal/invoices/previewItemUtils/getItemsForCurProduct.js";
 import { getOptions } from "@/internal/api/entitled/checkUtils.js";
@@ -29,13 +29,12 @@ import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/free
 import { Decimal } from "decimal.js";
 import { intervalsAreSame } from "../attachUtils/getAttachConfig.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
-import { formatUnixToDateTime, notNullish } from "@/utils/genUtils.js";
+import { formatUnixToDateTime, notNullish, nullish } from "@/utils/genUtils.js";
 
 const getNextCycleAt = ({
   prices,
   stripeSubs,
   willCycleReset,
-  interval,
   now,
   freeTrial,
   branch,
@@ -44,7 +43,6 @@ const getNextCycleAt = ({
   prices: Price[];
   stripeSubs: Stripe.Subscription[];
   willCycleReset: boolean;
-  interval: BillingInterval;
   now?: number;
   freeTrial?: FreeTrial | null;
   branch: AttachBranch;
@@ -68,17 +66,28 @@ const getNextCycleAt = ({
     };
   }
 
-  if (willCycleReset) {
-    const firstInterval = getFirstInterval({ prices });
+  const firstInterval = getLargestInterval({ prices });
+
+  if (nullish(firstInterval)) {
     return {
-      next_cycle_at: addBillingIntervalUnix(now, firstInterval),
+      next_cycle_at: now,
     };
   }
 
-  const firstInterval = getFirstInterval({ prices });
+  if (willCycleReset) {
+    return {
+      next_cycle_at: addBillingIntervalUnix({
+        unixTimestamp: now,
+        interval: firstInterval!.interval,
+        intervalCount: firstInterval!.intervalCount,
+      }),
+    };
+  }
+
   const nextCycleAt = getAlignedIntervalUnix({
     alignWithUnix: stripeSubs[0].current_period_end * 1000,
-    interval: firstInterval,
+    interval: firstInterval!.interval,
+    intervalCount: firstInterval!.intervalCount,
     alwaysReturn: true,
     now,
   });
@@ -154,7 +163,7 @@ export const getUpgradeProductPreview = async ({
     config,
   });
 
-  const lastInterval = getFirstInterval({ prices: newProduct.prices });
+  const largestInterval = getLargestInterval({ prices: newProduct.prices });
 
   let dueNextCycle = undefined;
   if (!isFreeProduct(newProduct.prices)) {
@@ -162,7 +171,6 @@ export const getUpgradeProductPreview = async ({
       prices: newProduct.prices,
       stripeSubs,
       willCycleReset: !intervalsSame,
-      interval: lastInterval,
       now,
       freeTrial: attachParams.freeTrial,
       branch,
@@ -172,7 +180,10 @@ export const getUpgradeProductPreview = async ({
     let nextCycleItems = await getItemsForNewProduct({
       newProduct,
       attachParams,
-      interval: attachParams.freeTrial ? undefined : lastInterval,
+      interval: attachParams.freeTrial ? undefined : largestInterval?.interval,
+      intervalCount: attachParams.freeTrial
+        ? undefined
+        : largestInterval?.intervalCount,
       logger,
       withPrepaid,
       branch,

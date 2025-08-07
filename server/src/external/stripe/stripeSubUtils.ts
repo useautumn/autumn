@@ -45,7 +45,7 @@ export const getStripeSubs = async ({
     } catch (error: any) {
       console.log(
         `(warning) getStripeSubs: Failed to get sub ${subId}`,
-        error.message,
+        error.message
       );
       return null;
     }
@@ -133,7 +133,7 @@ export const getUsageBasedSub = async ({
     let autumnSub = autumnSubs?.find((sub) => sub.stripe_id == stripeSub.id);
     if (autumnSub) {
       let containsFeature = autumnSub.usage_features.includes(
-        feature.internal_id!,
+        feature.internal_id!
       );
       if (containsFeature) {
         return stripeSub;
@@ -149,7 +149,7 @@ export const getUsageBasedSub = async ({
     if (
       !usageFeatures ||
       usageFeatures.find(
-        (feat: any) => feat.internal_id == feature.internal_id,
+        (feat: any) => feat.internal_id == feature.internal_id
       ) === undefined
     ) {
       continue;
@@ -179,15 +179,14 @@ export const getSubItemsForCusProduct = async ({
       prices.some(
         (p) =>
           p.config?.stripe_price_id == item.price.id ||
-          (p.config as UsagePriceConfig).stripe_product_id ==
-            item.price.product,
+          (p.config as UsagePriceConfig).stripe_product_id == item.price.product
       )
     ) {
       subItems.push(item);
     }
   }
   let otherSubItems = stripeSub.items.data.filter(
-    (item) => !subItems.some((i) => i.id == item.id),
+    (item) => !subItems.some((i) => i.id == item.id)
   );
 
   return { subItems, otherSubItems };
@@ -216,12 +215,17 @@ export const getStripeSchedules = async ({
       }
       const prices = await Promise.all(batchPricesGet);
       const interval = prices[0].recurring?.interval;
-      const billingInterval = stripeToAutumnInterval({
-        interval: prices[0].recurring?.interval as string,
-        intervalCount: prices[0].recurring?.interval_count || 1,
-      });
+      // const billingInterval = stripeToAutumnInterval({
+      //   interval: prices[0].recurring?.interval as string,
+      //   intervalCount: prices[0].recurring?.interval_count || 1,
+      // });
 
-      return { schedule, interval: billingInterval, prices };
+      return {
+        schedule,
+        interval: interval as BillingInterval,
+        intervalCount: prices[0].recurring?.interval_count || 1,
+        prices,
+      };
     } catch (error: any) {
       console.log("Error getting stripe schedule.", error.message);
       return null;
@@ -237,6 +241,7 @@ export const getStripeSchedules = async ({
   return schedulesAndSubs.filter((schedule) => schedule !== null) as {
     schedule: Stripe.SubscriptionSchedule;
     interval: BillingInterval;
+    intervalCount: number;
     prices: Stripe.Price[];
   }[];
 };

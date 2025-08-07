@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import { BillingInterval, AttachConfig } from "@autumn/shared";
+import { BillingInterval, AttachConfig, intervalsSame } from "@autumn/shared";
 import { ProrationBehavior } from "@autumn/shared";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
@@ -23,7 +23,7 @@ export const getSubAndInvoiceItems = async ({
 
   let subItems = items.filter(
     (i: any, index: number) =>
-      i.deleted || prices[index].config!.interval !== BillingInterval.OneOff,
+      i.deleted || prices[index].config!.interval !== BillingInterval.OneOff
   );
 
   let addInvoiceItems = items.filter((i: any, index: number) => {
@@ -48,6 +48,7 @@ export const updateStripeSub = async ({
   itemSet,
   logger,
   interval,
+  intervalCount,
 }: {
   db: DrizzleCli;
   attachParams: AttachParams;
@@ -58,6 +59,7 @@ export const updateStripeSub = async ({
   shouldPreview?: boolean;
   logger: any;
   interval?: BillingInterval;
+  intervalCount?: number;
 }) => {
   const { curMainProduct } = attachParamToCusProducts({ attachParams });
   const { stripeCli, customer, org, paymentMethod } = attachParams;
@@ -69,7 +71,13 @@ export const updateStripeSub = async ({
 
   const curSub =
     (interval
-      ? stripeSubs.find((s) => subToAutumnInterval(s) === interval)
+      ? stripeSubs.find((s) => {
+          let subInterval = subToAutumnInterval(s);
+          return intervalsSame({
+            intervalA: { interval, intervalCount },
+            intervalB: subInterval,
+          });
+        })
       : stripeSubs[0]) || stripeSubs[0];
 
   // 1. Update subscription
@@ -110,6 +118,7 @@ export const updateStripeSub = async ({
     stripeSubs,
     logger,
     interval: config.sameIntervals ? interval : undefined,
+    intervalCount: config.sameIntervals ? intervalCount : undefined,
   });
 
   // 3. Create prorations for continuous use items
@@ -118,6 +127,7 @@ export const updateStripeSub = async ({
     curMainProduct: curMainProduct!,
     stripeSubs,
     interval,
+    intervalCount,
     logger,
   });
 

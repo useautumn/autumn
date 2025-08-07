@@ -3,6 +3,7 @@ import { Infinite } from "../models/productModels/productEnums.js";
 import {
   ProductItem,
   ProductItemFeatureType,
+  ProductItemInterval,
 } from "../models/productV2Models/productItemModels/productItemModels.js";
 import {
   getFeatureName,
@@ -43,6 +44,20 @@ export const formatTiers = ({
       amount: lastPrice,
     })}`;
   }
+};
+
+export const getIntervalString = ({
+  interval,
+  intervalCount,
+}: {
+  interval: ProductItemInterval;
+  intervalCount?: number | null;
+}) => {
+  if (!interval) return "";
+  if (intervalCount == 1) {
+    return `per ${interval}`;
+  }
+  return `per ${intervalCount} ${interval}s`;
 };
 
 export const getFeatureItemDisplay = ({
@@ -148,18 +163,30 @@ export const getFeaturePriceItemDisplay = ({
     priceStr2 = `${billingFeatureName}`;
   }
 
-  let intervalStr = isMainPrice && item.interval ? ` per ${item.interval}` : "";
+  // let intervalStr = isMainPrice && item.interval ? ` per ${item.interval}` : "";
+  let intervalStr = isMainPrice
+    ? getIntervalString({
+        interval: item.interval!,
+        intervalCount: item.interval_count,
+      })
+    : "";
 
   if (includedUsageStr) {
     return {
       primary_text: includedUsageStr,
-      secondary_text: `then ${priceStr} per ${priceStr2}${intervalStr}`,
+      secondary_text: `then ${priceStr} per ${priceStr2} ${intervalStr}`,
+    };
+  }
+
+  if (isMainPrice) {
+    return {
+      primary_text: priceStr,
+      secondary_text: `per ${priceStr2} ${intervalStr}`,
     };
   }
 
   return {
-    primary_text: priceStr + ` per ${priceStr2}${intervalStr}`,
-    // secondary_text: `per ${priceStr2}${intervalStr}`,
+    primary_text: priceStr + ` per ${priceStr2} ${intervalStr}`,
     secondary_text: "",
   };
 };
