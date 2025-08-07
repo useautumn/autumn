@@ -206,11 +206,11 @@ export const ProductItemTable = () => {
                 isOnboarding && "px-2"
               )}
             >
-              <p className="text-t3">
+              {/* <p className="text-t3">
                 Product items determine what customers get access to and how
                 they're billed. Start by adding one.
-              </p>
-              {/* <p className="text-t3">
+              </p> */}
+              <p className="text-t3">
                 Product items determine what customers get access to and how
                 they're billed{" "}
                 <a
@@ -236,7 +236,7 @@ export const ProductItemTable = () => {
                   <span className="font-medium text-t2">Priced Features:</span>{" "}
                   features that have a price based on usage (eg, $1 per credit)
                 </p>
-              </div> */}
+              </div>
             </div>
           )}
         </div>
