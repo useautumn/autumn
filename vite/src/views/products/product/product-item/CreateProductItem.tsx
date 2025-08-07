@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ProductItemContext } from "./ProductItemContext";
 
 import {
@@ -17,6 +17,7 @@ import { CreateItemDialogContent } from "./create-product-item/CreateItemDialogC
 import { Plus } from "lucide-react";
 import { useSteps } from "./useSteps";
 import { CreateItemStep } from "./utils/CreateItemStep";
+import { isFeatureItem } from "@/utils/product/getItemType";
 
 export const defaultProductItem: ProductItem = {
   feature_id: null,
@@ -89,8 +90,14 @@ export function CreateProductItem() {
   };
 
   const stepState = useSteps({
-    initialStep: CreateItemStep.SelectItemType,
+    initialStep: CreateItemStep.CreateItem,
   });
+
+  useEffect(() => {
+    if (open && isFeatureItem(item) && features.length == 0) {
+      stepState.replaceStep(CreateItemStep.CreateFeature);
+    }
+  }, [open]);
 
   return (
     <ProductItemContext.Provider
@@ -108,11 +115,22 @@ export function CreateProductItem() {
         <div className="flex gap-0">
           <DialogTrigger asChild>
             <Button
+              className="w-24"
               variant="add"
               onClick={() => setItem(defaultProductItem)}
               startIcon={<Plus size={14} />}
             >
-              Product Item
+              Feature
+            </Button>
+          </DialogTrigger>
+          <DialogTrigger asChild>
+            <Button
+              className="w-24"
+              variant="add"
+              onClick={() => setItem(defaultPriceItem)}
+              startIcon={<Plus size={14} />}
+            >
+              Price
             </Button>
           </DialogTrigger>
         </div>

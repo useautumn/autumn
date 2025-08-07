@@ -162,8 +162,10 @@ export const EditProduct = ({ mutate }: { mutate: any }) => {
                 <>
                   {product.items.length == 0 ? (
                     <p className="text-t2 text-sm w-md mt-4">
-                      Next, add items to define what customers with this product
-                      get access to, and how much they should be charged for it.
+                      {/* Next, add items to define what customers with this product
+                      get access to, and how much they should be charged for it. */}
+                      Next, add which features your customers can use on this
+                      product and how much it should cost.
                     </p>
                   ) : (
                     <div

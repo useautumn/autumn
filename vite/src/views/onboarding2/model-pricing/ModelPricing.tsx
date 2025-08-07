@@ -130,10 +130,9 @@ export const ModelPricing = ({
               <div className="flex gap-4 items-center justify-between mb-6">
                 <div className="flex flex-col gap-1">
                   <p className="text-xl font-medium">Create your products</p>
-                  <p className="text-t2 text-sm">
+                  <p className="text-t2 text-sm w-md">
                     To start, model your app's pricing by creating a product for
-                    your free plans, <br /> paid plans and any add-ons or
-                    top-ups.
+                    your free plans, paid plans and any add-ons or top-ups.
                   </p>
                 </div>
                 {firstItemCreated && (
