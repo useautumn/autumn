@@ -4,6 +4,8 @@ import {
   BillingType,
   FullCusProduct,
   FullProduct,
+  intervalsDifferent,
+  intervalsSame,
 } from "@autumn/shared";
 import Stripe from "stripe";
 import { getContUseInvoiceItems } from "./getContUseInvoiceItems.js";
@@ -35,7 +37,7 @@ export const filterContUsageProrations = async ({
     subscription: sub.id,
   });
 
-  const interval = subToAutumnInterval(sub);
+  const intervalSet = subToAutumnInterval(sub);
 
   for (const item of upcomingLines.data) {
     if (!item.proration) continue;
@@ -48,12 +50,12 @@ export const filterContUsageProrations = async ({
 
     if (!price) continue;
     logger.info(
-      `Deleting ii: ${item.description} - ${item.amount / 100} (${interval})`,
+      `Deleting ii: ${item.description} - ${item.amount / 100} (${intervalSet.interval}, ${intervalSet.intervalCount})`
     );
 
     await stripeCli.invoiceItems.del(
       // @ts-ignore -- Stripe types are not correct
-      item.parent.subscription_item_details.invoice_item,
+      item.parent.subscription_item_details.invoice_item
     );
   }
 };
@@ -64,12 +66,14 @@ export const createAndFilterContUseItems = async ({
   stripeSubs,
   logger,
   interval,
+  intervalCount,
 }: {
   attachParams: AttachParams;
   curMainProduct: FullCusProduct;
   stripeSubs: Stripe.Subscription[];
   logger: any;
   interval?: BillingInterval;
+  intervalCount?: number;
 }) => {
   const { stripeCli, customer, org } = attachParams;
   const product = attachParamsToProduct({ attachParams });
@@ -88,8 +92,13 @@ export const createAndFilterContUseItems = async ({
   });
 
   let sub =
-    stripeSubs.find((sub) => subToAutumnInterval(sub) == interval) ||
-    stripeSubs[0];
+    stripeSubs.find((sub) => {
+      return intervalsSame({
+        intervalA: { interval: interval!, intervalCount: intervalCount! },
+        intervalB: subToAutumnInterval(sub),
+      });
+      // subToAutumnInterval(sub) == interval
+    }) || stripeSubs[0];
 
   await filterContUsageProrations({
     sub,
@@ -113,12 +122,20 @@ export const createAndFilterContUseItems = async ({
       product.prices.find((p) => p.id === item.price_id) ||
       curPrices.find((p) => p.id === item.price_id);
 
-    if (interval && price?.config.interval !== interval) {
+    if (
+      interval &&
+      price?.config &&
+      intervalsDifferent({
+        // price?.config.interval !== interval
+        intervalA: price?.config,
+        intervalB: { interval, intervalCount },
+      })
+    ) {
       continue;
     }
 
     logger.info(
-      `Adding invoice item: ${item.description}, ${item.description}, interval: ${interval}`,
+      `Adding invoice item: ${item.description}, ${item.description}, interval: ${interval}`
     );
 
     await stripeCli.invoiceItems.create({

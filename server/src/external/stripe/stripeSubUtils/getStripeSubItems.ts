@@ -194,7 +194,18 @@ export const getStripeSubItems = async ({
     });
   }
 
-  itemSets.sort((a, b) => compareBillingIntervals(a.interval, b.interval));
+  itemSets.sort((a, b) =>
+    compareBillingIntervals({
+      configA: {
+        interval: a.interval,
+        intervalCount: a.intervalCount,
+      },
+      configB: {
+        interval: b.interval,
+        intervalCount: b.intervalCount,
+      },
+    })
+  );
 
   return itemSets;
 };

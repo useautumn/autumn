@@ -4,6 +4,7 @@ import { useProductContext } from "../ProductContext";
 import { SelectCycle } from "../product-item/product-item-config/components/feature-price/SelectBillingCycle";
 import { useProductItemContext } from "../product-item/ProductItemContext";
 import {
+  intervalsDifferent,
   ProductItem,
   ProductItemInterval,
   UpdateProductSchema,
@@ -61,7 +62,18 @@ function CreateFixedPrice({
       return null;
     }
 
-    if (item.interval == curFixedPrice.interval) {
+    const intervalsDiff = intervalsDifferent({
+      intervalA: {
+        interval: item.interval,
+        intervalCount: item.interval_count,
+      },
+      intervalB: {
+        interval: curFixedPrice.interval,
+        intervalCount: curFixedPrice.interval_count,
+      },
+    });
+
+    if (!intervalsDiff) {
       return null;
     }
 
@@ -69,6 +81,10 @@ function CreateFixedPrice({
       item.interval == ProductItemInterval.Year
         ? "an annual"
         : `a ${newVariantMap[item.interval! as ProductItemInterval]}`;
+
+    if (item.interval_count > 1) {
+      return `A fixed price already exists on this product. If you're looking to create a version with a different interval, you should create a new product instead.`;
+    }
 
     return `A fixed price already exists on this product. If you're looking to create ${newIntervalText} version, you should create a new product instead.`;
   };

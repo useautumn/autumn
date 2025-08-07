@@ -118,6 +118,7 @@ export const getOptions = ({
         anchorToUnix,
         proration,
         interval: (i.interval || BillingInterval.OneOff) as BillingInterval,
+        intervalCount: i.interval_count || 1,
         now,
       });
 
@@ -139,7 +140,7 @@ export const getOptions = ({
       }
 
       const currentOptions = cusProduct?.options.find(
-        (o) => o.feature_id == i.feature_id,
+        (o) => o.feature_id == i.feature_id
       );
 
       let currentQuantity = currentOptions?.quantity;

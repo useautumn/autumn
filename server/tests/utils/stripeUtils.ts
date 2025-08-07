@@ -447,8 +447,12 @@ export const stripeToAutumnInterval = ({
 };
 
 export const subItemToAutumnInterval = (item: Stripe.SubscriptionItem) => {
-  return stripeToAutumnInterval({
-    interval: item.price.recurring?.interval!,
-    intervalCount: item.price.recurring?.interval_count!,
-  });
+  return {
+    interval: item.price.recurring?.interval as BillingInterval,
+    intervalCount: item.price.recurring?.interval_count || 1,
+  };
+  // return stripeToAutumnInterval({
+  //   interval: item.price.recurring?.interval!,
+  //   intervalCount: item.price.recurring?.interval_count!,
+  // });
 };

@@ -15,6 +15,7 @@ export const subItemToFixedPrice = ({
 }) => {
   const { price } = subItem;
 
+  const { interval, intervalCount } = subItemToAutumnInterval(subItem);
   return constructPrice({
     internalProductId: product.internal_id,
     isCustom: true,
@@ -22,7 +23,8 @@ export const subItemToFixedPrice = ({
     fixedConfig: {
       type: PriceType.Fixed,
       amount: basePrice || (price.unit_amount || 0) / 100,
-      interval: subItemToAutumnInterval(subItem)!,
+      interval,
+      interval_count: intervalCount,
       stripe_price_id: price.id,
     },
   });

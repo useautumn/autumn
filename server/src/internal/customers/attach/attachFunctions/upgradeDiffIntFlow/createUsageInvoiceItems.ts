@@ -17,6 +17,7 @@ import {
   UsagePriceConfig,
   BillingType,
   BillingInterval,
+  intervalsDifferent,
 } from "@autumn/shared";
 
 import Stripe from "stripe";
@@ -28,6 +29,7 @@ export const getUsageInvoiceItems = async ({
   cusProduct,
   stripeSubs,
   interval,
+  intervalCount,
 }: {
   db: DrizzleCli;
   logger: any;
@@ -35,6 +37,7 @@ export const getUsageInvoiceItems = async ({
   cusProduct: FullCusProduct;
   stripeSubs: Stripe.Subscription[];
   interval?: BillingInterval;
+  intervalCount?: number;
 }) => {
   const { stripeCli, org } = attachParams;
 
@@ -72,7 +75,14 @@ export const getUsageInvoiceItems = async ({
     });
 
     if (!sub) continue;
-    if (interval && interval !== subToAutumnInterval(sub)) continue;
+    if (
+      interval &&
+      intervalsDifferent({
+        intervalA: { interval, intervalCount },
+        intervalB: subToAutumnInterval(sub),
+      })
+    )
+      continue;
 
     cusEntIds.push(cusEnt.id);
 
@@ -106,6 +116,7 @@ export const createUsageInvoiceItems = async ({
   invoiceId,
   logger,
   interval,
+  intervalCount,
 }: {
   db: DrizzleCli;
   attachParams: AttachParams;
@@ -114,6 +125,7 @@ export const createUsageInvoiceItems = async ({
   invoiceId?: string;
   logger: any;
   interval?: BillingInterval;
+  intervalCount?: number;
 }) => {
   const { stripeCli } = attachParams;
 
@@ -123,6 +135,7 @@ export const createUsageInvoiceItems = async ({
     cusProduct,
     stripeSubs,
     interval,
+    intervalCount,
     logger,
   });
 
@@ -131,7 +144,7 @@ export const createUsageInvoiceItems = async ({
     const invoiceItem = invoiceItems[i];
     const createInvoiceItem = async () => {
       logger.info(
-        `🌟 Creating usage invoice item: ${invoiceItem.description}, amount: ${invoiceItem.price_data.unit_amount}`,
+        `🌟 Creating usage invoice item: ${invoiceItem.description}, amount: ${invoiceItem.price_data.unit_amount}`
       );
 
       await stripeCli.invoiceItems.create({
@@ -171,7 +184,7 @@ export const resetUsageBalances = async ({
     });
 
     let index = cusProduct.customer_entitlements.findIndex(
-      (ce) => ce.id === cusEntId,
+      (ce) => ce.id === cusEntId
     );
 
     cusProduct.customer_entitlements[index] = {

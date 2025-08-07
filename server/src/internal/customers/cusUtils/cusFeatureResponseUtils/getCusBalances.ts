@@ -204,7 +204,7 @@ export const getCusBalances = async ({
     const cusProduct = cusEnt.customer_product;
     const feature = cusEnt.entitlement.feature;
     const ent: EntitlementWithFeature = cusEnt.entitlement;
-    let key = `${ent.interval || "no-interval"}-${feature.id}`;
+    let key = `${ent.interval || "no-interval"}-${ent.interval_count || 1}-${feature.id}`;
 
     // 1. Handle boolean
     let isBoolean = feature.type == FeatureType.Boolean;
@@ -239,6 +239,11 @@ export const getCusBalances = async ({
           unlimited: isBoolean ? undefined : unlimited,
           interval:
             isBoolean || unlimited ? undefined : ent.interval || undefined,
+          // interval_count:
+          //   isBoolean || unlimited
+          //     ? undefined
+          //     : ent.interval_count || undefined,
+
           balance: isBoolean ? undefined : unlimited ? null : 0,
           total: isBoolean || unlimited ? undefined : 0,
           adjustment: isBoolean || unlimited ? undefined : 0,

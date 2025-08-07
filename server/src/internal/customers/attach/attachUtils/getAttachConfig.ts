@@ -1,6 +1,6 @@
 import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { AttachFlags } from "../models/AttachFlags.js";
-import { AttachConfig, AttachBranch } from "@autumn/shared";
+import { AttachConfig, AttachBranch, intervalsSame } from "@autumn/shared";
 import { AttachBody } from "@autumn/shared";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { nullish } from "@/utils/genUtils.js";
@@ -27,12 +27,49 @@ export const intervalsAreSame = ({
   let newProduct = attachParamsToProduct({ attachParams });
   let curPrices = cusProductToPrices({ cusProduct: curCusProduct! });
 
-  let curIntervals = new Set(curPrices.map((p) => p.config.interval));
-  let newIntervals = new Set(newProduct.prices.map((p) => p.config.interval));
-  return (
-    curIntervals.size === newIntervals.size &&
-    [...curIntervals].every((interval) => newIntervals.has(interval))
-  );
+  for (const price of curPrices) {
+    let hasSimilarInterval = newProduct.prices.some((p) => {
+      return intervalsSame({
+        intervalA: price.config,
+        intervalB: p.config,
+      });
+    });
+
+    if (!hasSimilarInterval) {
+      return false;
+    }
+  }
+
+  for (const price of newProduct.prices) {
+    let hasSimilarInterval = curPrices.some((p) => {
+      return intervalsSame({
+        intervalA: price.config,
+        intervalB: p.config,
+      });
+    });
+
+    if (!hasSimilarInterval) {
+      return false;
+    }
+  }
+
+  return true;
+  // let curIntervals = new Set(
+  //   curPrices.map((p) => ({
+  //     interval: p.config.interval,
+  //     intervalCount: p.config.interval_count,
+  //   }))
+  // );
+  // let newIntervals = new Set(
+  //   newProduct.prices.map((p) => ({
+  //     interval: p.config.interval,
+  //     intervalCount: p.config.interval_count,
+  //   }))
+  // );
+  // return (
+  //   curIntervals.size === newIntervals.size &&
+  //   [...curIntervals].every((interval) => newIntervals.has(interval))
+  // );
 };
 
 export const getAttachConfig = async ({
