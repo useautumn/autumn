@@ -190,8 +190,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`
 
     // @ts-ignore
     let rollovers = msgesFeature.rollovers;
-    expect(rollovers[0].balance).to.equal(0);
-    expect(rollovers[1].balance).to.equal(0);
+    expect(rollovers![0].balance).to.equal(0);
+    expect(rollovers![1].balance).to.equal(0);
     expect(msgesFeature.balance).to.equal(messagesItem.included_usage - 50);
   });
 });

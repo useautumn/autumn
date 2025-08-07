@@ -1,5 +1,6 @@
 // ProductItemRow.tsx
 import {
+  BillingInterval,
   Feature,
   FeatureType,
   getFeatureName,
@@ -22,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { isFeatureItem, isPriceItem } from "@/utils/product/getItemType";
 import { notNullish } from "@/utils/genUtils";
 import { useProductContext } from "../ProductContext";
+import { formatIntervalText } from "@/utils/formatUtils/formatTextUtils";
 
 interface ProductItemRowProps {
   item: ProductItem;
@@ -85,6 +87,17 @@ export const ProductItemRow = ({
       });
     }
 
+    let intervalStr = "";
+    if (
+      item.interval_count &&
+      item.interval_count > 1 &&
+      notNullish(item.interval)
+    ) {
+      intervalStr = ` ${item.interval_count} ${item.interval}s`;
+    } else if (item.interval) {
+      intervalStr = ` ${item.interval}`;
+    }
+
     return (
       <div className="whitespace-nowrap flex">
         {item.included_usage ?? 0}&nbsp;
@@ -93,7 +106,7 @@ export const ProductItemRow = ({
           <span className="truncate">per {entityFeatureName} &nbsp;</span>
         )}
         {notNullish(item.interval) && (
-          <span className="text-t3">per {item.interval}</span>
+          <span className="text-t3">per {intervalStr}</span>
         )}
       </div>
     );
@@ -132,8 +145,13 @@ export const ProductItemRow = ({
       billUnitsFeatureName
     }`;
 
+    const intervalStr = formatIntervalText({
+      billingInterval: item.interval as unknown as BillingInterval,
+      intervalCount: item.interval_count ?? 1,
+    });
+
     if (!intervalIsNone(item.interval)) {
-      amountStr += ` per ${item.interval}`;
+      amountStr += ` ${intervalStr}`;
     }
 
     if (item.included_usage) {
@@ -155,8 +173,13 @@ export const ProductItemRow = ({
       amount: item.price!,
     });
 
+    const intervalStr = formatIntervalText({
+      billingInterval: item.interval as unknown as BillingInterval,
+      intervalCount: item.interval_count ?? 1,
+    });
+
     if (!intervalIsNone(item.interval)) {
-      return `${formattedAmount} per ${item.interval}`;
+      return `${formattedAmount} ${intervalStr}`;
     }
 
     return `${formattedAmount}`;

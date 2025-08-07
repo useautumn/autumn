@@ -10,9 +10,7 @@ import {
   Organization,
   UsagePriceConfig,
   BillingType,
-  FeatureOptions,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 
 import { createStripeFixedPrice } from "./createStripeFixedPrice.js";
@@ -25,7 +23,6 @@ import {
 } from "./createStripeArrearProrated.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
-import RecaseError from "@/utils/errorUtils.js";
 
 export const checkCurStripePrice = async ({
   price,

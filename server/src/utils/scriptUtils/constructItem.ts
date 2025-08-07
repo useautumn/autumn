@@ -13,6 +13,7 @@ export const constructFeatureItem = ({
   featureId,
   includedUsage = 150,
   interval = ProductItemInterval.Month,
+  intervalCount = 1,
   entityFeatureId,
   isBoolean = false,
   rolloverConfig,
@@ -20,6 +21,7 @@ export const constructFeatureItem = ({
   featureId: string;
   includedUsage?: number;
   interval?: ProductItemInterval | null;
+  intervalCount?: number;
   entityFeatureId?: string;
   isBoolean?: boolean;
   rolloverConfig?: RolloverConfig;
@@ -35,6 +37,7 @@ export const constructFeatureItem = ({
     included_usage: includedUsage,
     entity_feature_id: entityFeatureId,
     interval: interval,
+    interval_count: intervalCount,
   };
 
   if (rolloverConfig) {

@@ -80,7 +80,7 @@ const createDevLogStream = () => {
           "worker",
           "context",
           "req",
-          // "data",
+          "data",
         ];
         const additionalFields = Object.keys(log)
           .filter((key) => !excludeFields.includes(key))
