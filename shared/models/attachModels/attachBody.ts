@@ -43,6 +43,7 @@ export const AttachBodySchema = z
     billing_cycle_anchor: z.number().optional(),
     checkout_session_params: z.any().optional(),
     reward: z.string().optional(),
+    invoice: z.boolean().optional(),
   })
   .refine(
     (data) => {

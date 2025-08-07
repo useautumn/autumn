@@ -23,7 +23,7 @@ export const getSubAndInvoiceItems = async ({
 
   let subItems = items.filter(
     (i: any, index: number) =>
-      i.deleted || prices[index].config!.interval !== BillingInterval.OneOff,
+      i.deleted || prices[index].config!.interval !== BillingInterval.OneOff
   );
 
   let addInvoiceItems = items.filter((i: any, index: number) => {
@@ -102,6 +102,16 @@ export const updateStripeSub = async ({
     };
   }
 
+  // if (invoiceOnly && attachParams.finalizeInvoice) {
+  //   try {
+  //     await stripeCli.invoices.finalizeInvoice(latestInvoice?.id as string);
+  //   } catch (error) {
+  //     logger.error(`Failed to finalize invoice ${latestInvoice?.id}`, {
+  //       error,
+  //     });
+  //   }
+  // }
+
   // 2. Create prorations for single use items
   let { invoiceItems, cusEntIds } = await createUsageInvoiceItems({
     db,
@@ -144,6 +154,19 @@ export const updateStripeSub = async ({
     orgId: org.id,
     env: customer.env,
   });
+
+  if (invoiceOnly && attachParams.finalizeInvoice) {
+    logger.info(`FINALIZING INVOICE ${latestInvoice?.id}`);
+    try {
+      latestInvoice = await stripeCli.invoices.finalizeInvoice(
+        latestInvoice?.id as string
+      );
+    } catch (error) {
+      logger.error(`Failed to finalize invoice ${latestInvoice?.id}`, {
+        error,
+      });
+    }
+  }
 
   return {
     updatedSub,
