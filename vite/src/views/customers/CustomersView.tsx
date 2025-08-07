@@ -25,6 +25,7 @@ import {
   parseAsJson,
   parseAsArrayOf,
 } from "nuqs";
+import { HamburgerMenu } from "@/components/general/table-components/HamburgerMenu";
 
 function CustomersView({ env }: { env: AppEnv }) {
   const pageSize = 50;
@@ -239,7 +240,7 @@ function CustomersView({ env }: { env: AppEnv }) {
       <div className="flex flex-col gap-4 h-fit relative w-full">
         <h1 className="text-xl font-medium shrink-0 pt-6 pl-10">Customers</h1>
         <div>
-          <div className="flex w-full justify-between sticky top-0 z-10 border-y  pl-10 pr-7 items-center bg-stone-100 h-10">
+          <div className="flex w-full justify-between sticky top-0 z-10 border-y pl-10 pr-8 items-center bg-stone-100 h-10">
             <div className="flex items-center">
               <div className="pr-4 flex items-center justify-center gap-2 h-10">
                 <FilterButton />
@@ -310,8 +311,13 @@ function CustomersView({ env }: { env: AppEnv }) {
                 )}
               </div> */}
             </div>
-            <div className="flex gap-4 bg-blue-100">
+            <div className="flex bg-blue-100">
               <CreateCustomer />
+              <HamburgerMenu
+                dropdownOpen={false}
+                setDropdownOpen={() => {}}
+                actions={[]}
+              /> {/* No actions as of now, needed just to maintain consistency in styling  */}
             </div>
           </div>
           {data?.customers?.length > 0 ? (

@@ -161,6 +161,7 @@ function ProductsView({ env }: { env: AppEnv }) {
                     ]}
                   />
                 }
+                className="pr-7"
               />
               <ProductsTable products={data?.products} />
             </TabsContent>
