@@ -85,9 +85,9 @@ export const updateSubsByInt = async ({
         attachParams,
         stripeInvoice: invoice,
         logger,
-      }),
+      })
     );
   }
 
-  return { replaceables };
+  return { replaceables, invoices };
 };

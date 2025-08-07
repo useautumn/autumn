@@ -11,6 +11,7 @@ import { ExtendedRequest } from "@/utils/models/Request.js";
 import { updateSubsByInt } from "./updateSubsSameInt.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { formatUnixToDate } from "@/utils/genUtils.js";
+import { attachToInvoiceResponse } from "@/internal/invoices/invoiceUtils.js";
 
 export const handleUpgradeSameInterval = async ({
   req,
@@ -40,7 +41,7 @@ export const handleUpgradeSameInterval = async ({
   }
 
   logger.info(`1. Updating subs by interval`);
-  const { replaceables } = await updateSubsByInt({
+  const { replaceables, invoices } = await updateSubsByInt({
     req,
     curCusProduct: curCusProduct!,
     attachParams,
@@ -81,9 +82,15 @@ export const handleUpgradeSameInterval = async ({
         AttachResultSchema.parse({
           customer_id: attachParams.customer.id,
           product_ids: attachParams.products.map((p) => p.id),
+          // invoice: attachParams.invoiceOnly
+          //   ? attachToInvoiceResponse({ invoice: invoices?.[0] })
+          //   : undefined,
+          invoice: attachParams.invoiceOnly
+            ? attachToInvoiceResponse({ invoice: invoices?.[0] || undefined })
+            : undefined,
           code: "updated_product_successfully",
           message: `Successfully updated product`,
-        }),
+        })
       );
     } else {
       res.status(200).json({
