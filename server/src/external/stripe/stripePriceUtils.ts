@@ -23,27 +23,34 @@ export const createSubMeta = ({ features }: { features: Feature[] }) => {
   return { usage_features: JSON.stringify(usageFeatures) };
 };
 
-export const billingIntervalToStripe = (interval: BillingInterval) => {
+export const billingIntervalToStripe = ({
+  interval,
+  intervalCount,
+}: {
+  interval: BillingInterval;
+  intervalCount?: number | null;
+}) => {
+  const finalCount = intervalCount ?? 1;
   switch (interval) {
     case BillingInterval.Month:
       return {
         interval: "month",
-        interval_count: 1,
+        interval_count: finalCount,
       };
     case BillingInterval.Quarter:
       return {
         interval: "month",
-        interval_count: 3,
+        interval_count: finalCount * 3,
       };
     case BillingInterval.SemiAnnual:
       return {
         interval: "month",
-        interval_count: 6,
+        interval_count: finalCount * 6,
       };
     case BillingInterval.Year:
       return {
         interval: "year",
-        interval_count: 1,
+        interval_count: finalCount,
       };
     default:
       break;
@@ -104,10 +111,12 @@ export const getPlaceholderItem = ({
   product,
   org,
   interval,
+  intervalCount,
 }: {
   product: FullProduct;
   org: Organization;
   interval: BillingInterval;
+  intervalCount: number;
 }) => {
   return {
     price_data: {
@@ -115,7 +124,10 @@ export const getPlaceholderItem = ({
       unit_amount: 0,
       currency: org.default_currency || "usd",
       recurring: {
-        ...billingIntervalToStripe(interval as BillingInterval),
+        ...billingIntervalToStripe({
+          interval,
+          intervalCount,
+        }),
       },
     },
     quantity: 0,

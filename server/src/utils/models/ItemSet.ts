@@ -5,6 +5,7 @@ export const ItemSetSchema = z.object({
   items: z.array(z.any()),
   prices: z.array(z.any()),
   interval: z.nativeEnum(BillingInterval),
+  intervalCount: z.number(),
   subMeta: z.record(z.string(), z.any()),
   usageFeatures: z.array(z.string()),
 });

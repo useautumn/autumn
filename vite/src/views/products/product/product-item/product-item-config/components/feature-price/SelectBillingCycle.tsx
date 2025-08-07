@@ -10,6 +10,8 @@ import {
 import { BillingInterval, UsageModel } from "@autumn/shared";
 import { useProductItemContext } from "../../../ProductItemContext";
 import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
+import { CustomiseIntervalPopover } from "../CusomiseIntervalPopover";
+import { formatIntervalText } from "@/utils/formatUtils/formatTextUtils";
 
 export const SelectCycle = () => {
   const { item, setItem } = useProductItemContext();
@@ -27,13 +29,13 @@ export const SelectCycle = () => {
     });
   };
 
-  const intervalText = (interval: BillingInterval) => {
-    return interval === BillingInterval.SemiAnnual
-      ? "per half year"
-      : interval === BillingInterval.OneOff
-        ? "one off"
-        : `per ${interval}`;
-  };
+  // const intervalText = (interval: BillingInterval) => {
+  //   return interval === BillingInterval.SemiAnnual
+  //     ? "per half year"
+  //     : interval === BillingInterval.OneOff
+  //       ? "one off"
+  //       : `per ${interval}`;
+  // };
 
   return (
     <div className="w-full">
@@ -45,7 +47,37 @@ export const SelectCycle = () => {
             period.
           </span>
         </InfoTooltip>
-        {/* <Tooltip delayDuration={200}>
+      </FieldLabel>
+      <div className="flex flex-col gap-2">
+        <div className="flex gap-2 items-center">
+          <Select
+            value={item.interval ?? BillingInterval.OneOff}
+            defaultValue={BillingInterval.Month}
+            onValueChange={handleBillingIntervalSelected}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select reset" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.values(BillingInterval).map((interval) => (
+                <SelectItem key={interval} value={interval}>
+                  {formatIntervalText({
+                    billingInterval: interval,
+                    intervalCount: item.interval_count,
+                  })}
+                </SelectItem>
+              ))}
+              <CustomiseIntervalPopover />
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+{
+  /* <Tooltip delayDuration={200}>
           <TooltipTrigger asChild>
             <InfoIcon className="w-3 h-3 text-t3/50" />
           </TooltipTrigger>
@@ -67,28 +99,5 @@ export const SelectCycle = () => {
               </span>
             )}
           </TooltipContent>
-        </Tooltip> */}
-      </FieldLabel>
-      <div className="flex flex-col gap-2">
-        <div className="flex gap-2 items-center">
-          <Select
-            value={item.interval ?? BillingInterval.OneOff}
-            defaultValue={BillingInterval.Month}
-            onValueChange={handleBillingIntervalSelected}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select reset" />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.values(BillingInterval).map((interval) => (
-                <SelectItem key={interval} value={interval}>
-                  {intervalText(interval)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-    </div>
-  );
-};
+        </Tooltip> */
+}

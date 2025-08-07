@@ -4,11 +4,24 @@ import {
   Feature,
   UsageModel,
   UsagePriceConfig,
+  BillingInterval,
 } from "@autumn/shared";
 
 import { Price } from "@autumn/shared";
 import { getBillingType, getPriceEntitlement } from "../priceUtils.js";
 import { isFixedPrice } from "./usagePriceUtils/classifyUsagePrice.js";
+
+export const priceToIntervalKey = (price: Price) => {
+  return `${price.config.interval}-${price.config.interval_count ?? 1}`;
+};
+
+export const intervalKeyToPrice = (intervalKey: string) => {
+  const [interval, intervalCount] = intervalKey.split("-");
+  return {
+    interval: interval as BillingInterval,
+    intervalCount: intervalCount ? parseInt(intervalCount) : 1,
+  };
+};
 
 export const priceToFeature = ({
   price,
@@ -26,7 +39,7 @@ export const priceToFeature = ({
   if (features) {
     return features.find(
       (f) =>
-        f.internal_id == (price.config as UsagePriceConfig).internal_feature_id,
+        f.internal_id == (price.config as UsagePriceConfig).internal_feature_id
     );
   }
 

@@ -338,6 +338,7 @@ export const copyProduct = async ({
     newEntitlements.push(
       EntitlementSchema.parse({
         ...entitlement,
+        interval_count: entitlement.interval_count ?? 1,
         id: newId,
         org_id: toOrgId,
         created_at: Date.now(),

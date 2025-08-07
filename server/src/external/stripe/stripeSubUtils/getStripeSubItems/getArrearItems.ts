@@ -13,9 +13,11 @@ export const getArrearItems = ({
   prices,
   org,
   interval,
+  intervalCount,
 }: {
   prices: Price[];
   interval: BillingInterval;
+  intervalCount: number;
   org: Organization;
 }) => {
   let placeholderItems: any[] = [];
@@ -33,7 +35,10 @@ export const getArrearItems = ({
           unit_amount: 1,
           currency: org.default_currency || "usd",
           recurring: {
-            ...billingIntervalToStripe(interval),
+            ...billingIntervalToStripe({
+              interval,
+              intervalCount,
+            }),
           },
         },
         quantity: 0,

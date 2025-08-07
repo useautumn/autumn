@@ -66,6 +66,7 @@ export const ProductItemSchema = z.object({
   feature_type: z.nativeEnum(ProductItemFeatureType).nullish(),
   included_usage: z.union([z.number(), z.literal(Infinite)]).nullish(),
   interval: z.nativeEnum(ProductItemInterval).nullish(),
+  interval_count: z.number().nullish(),
   entity_feature_id: z.string().nullish(),
 
   // Price config

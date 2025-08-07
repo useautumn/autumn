@@ -39,6 +39,7 @@ const filterUsagePrices = ({
       prices: attachParams.prices,
       interval: itemSet.interval,
       org: attachParams.org,
+      intervalCount: itemSet.intervalCount,
     });
   }
 
@@ -88,17 +89,6 @@ export const handleRemainingSets = async ({
     });
 
     itemSet.items = filteredItems;
-
-    // itemSet.items =
-    //   filteredItems.length == 0
-    //     ? attachParams.products.map((p: FullProduct) =>
-    //         getPlaceholderItem({
-    //           product: p,
-    //           org,
-    //           interval: itemSet.interval,
-    //         }),
-    //       )
-    //     : filteredItems;
 
     const subscription = (await createStripeSub({
       db,
