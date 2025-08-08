@@ -17,8 +17,10 @@ export const logSubItems = ({
       console.log(`Usage price`);
     } else {
       let price = item.price.unit_amount! / 100;
-      let interval = subItemToAutumnInterval(item);
-      console.log(`${price} ${item.price.currency} / ${interval}`);
+      let subInterval = subItemToAutumnInterval(item);
+      console.log(
+        `${price} ${item.price.currency} / ${subInterval?.interval} (${subInterval?.intervalCount})`
+      );
     }
   }
 };

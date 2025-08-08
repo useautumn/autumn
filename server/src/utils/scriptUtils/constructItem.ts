@@ -61,6 +61,7 @@ export const constructPrepaidItem = ({
   },
   rolloverConfig,
   usageLimit,
+  intervalCount = 2,
 }: {
   featureId: string;
   price?: number;
@@ -70,6 +71,7 @@ export const constructPrepaidItem = ({
   config?: ProductItemConfig;
   rolloverConfig?: RolloverConfig;
   usageLimit?: number;
+  intervalCount?: number;
 }) => {
   let item: ProductItem = {
     feature_id: featureId,
@@ -77,8 +79,8 @@ export const constructPrepaidItem = ({
 
     price: price,
     billing_units: billingUnits || 100,
-
     interval: isOneOff ? null : ProductItemInterval.Month,
+    interval_count: intervalCount,
     included_usage: includedUsage,
 
     config: {
@@ -102,6 +104,7 @@ export const constructArrearItem = ({
   },
   entityFeatureId,
   usageLimit,
+  intervalCount = 1,
 }: {
   featureId: string;
   includedUsage?: number;
@@ -110,6 +113,7 @@ export const constructArrearItem = ({
   config?: ProductItemConfig;
   entityFeatureId?: string;
   usageLimit?: number;
+  intervalCount?: number;
 }) => {
   let item: ProductItem = {
     feature_id: featureId,
@@ -118,6 +122,7 @@ export const constructArrearItem = ({
     price: price,
     billing_units: billingUnits,
     interval: ProductItemInterval.Month,
+    interval_count: intervalCount,
     reset_usage_when_enabled: true,
     config,
     entity_feature_id: entityFeatureId,

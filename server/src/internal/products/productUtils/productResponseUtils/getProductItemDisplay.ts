@@ -18,7 +18,7 @@ import {
   isPriceItem,
 } from "../../product-items/productItemUtils/getItemType.js";
 
-const getIntervalString = ({
+export const getIntervalString = ({
   interval,
   intervalCount,
 }: {

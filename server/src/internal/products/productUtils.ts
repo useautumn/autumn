@@ -8,6 +8,7 @@ import {
   ErrCode,
   Feature,
   FixedPriceConfig,
+  intervalsSame,
   Organization,
   Price,
   PriceSchema,
@@ -141,10 +142,20 @@ export const isProductUpgrade = ({
   };
 
   // 3. Compare prices
-  if (billingInterval1 == billingInterval2) {
+  if (
+    intervalsSame({
+      intervalA: billingInterval1,
+      intervalB: billingInterval2,
+    })
+  ) {
     return getTotalPrice(prices1) < getTotalPrice(prices2);
   } else {
-    return compareBillingIntervals(billingInterval1, billingInterval2) > 0;
+    return (
+      compareBillingIntervals({
+        configA: billingInterval1,
+        configB: billingInterval2,
+      }) > 0
+    );
   }
 };
 

@@ -23,22 +23,28 @@ import { addDays } from "date-fns";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { features } from "process";
 
-export const entIntervalToTrialDuration = (interval: EntInterval) => {
+export const entIntervalToTrialDuration = ({
+  interval,
+  intervalCount,
+}: {
+  interval: EntInterval;
+  intervalCount: number;
+}) => {
   switch (interval) {
     case EntInterval.Day:
-      return 1;
+      return intervalCount;
     case EntInterval.Week:
-      return 7;
+      return intervalCount * 7;
     case EntInterval.Month:
-      return 30;
+      return intervalCount * 30;
     case EntInterval.Quarter:
-      return 90;
+      return intervalCount * 90;
     case EntInterval.SemiAnnual:
-      return 180;
+      return intervalCount * 180;
     case EntInterval.Year:
-      return 365;
+      return intervalCount * 365;
     case EntInterval.Lifetime:
-      return 1000;
+      return intervalCount * 1000;
   }
 };
 
@@ -54,7 +60,10 @@ export const applyTrialToEntitlement = (
   if (entitlement.allowance_type === AllowanceType.Unlimited) return false;
 
   const trialDays = freeTrial.length;
-  const entDays = entIntervalToTrialDuration(entitlement.interval!);
+  const entDays = entIntervalToTrialDuration({
+    interval: entitlement.interval!,
+    intervalCount: entitlement.interval_count || 1,
+  });
 
   if (entDays && entDays > trialDays) {
     return true;

@@ -63,6 +63,7 @@ export const getCurContUseItems = async ({
         const finalProration = getProration({
           now,
           interval: price.config.interval!,
+          intervalCount: price.config.interval_count || 1,
           anchorToUnix: sub.current_period_end * 1000,
         })!;
 
