@@ -74,13 +74,16 @@ export const constructRawProduct = ({
     is_default: false,
     version: 1,
     group: "",
+    created_at: Date.now(),
   };
 };
+
 export const constructProduct = ({
   id,
   items,
   type,
   interval,
+  intervalCount,
   isAnnual = false,
   trial = false,
   excludeBase = false,
@@ -92,6 +95,7 @@ export const constructProduct = ({
   items: ProductItem[];
   type: "free" | "pro" | "premium" | "growth" | "one_off";
   interval?: BillingInterval;
+  intervalCount?: number;
   isAnnual?: boolean;
   trial?: boolean;
   excludeBase?: boolean;
@@ -117,6 +121,7 @@ export const constructProduct = ({
           : interval
             ? interval
             : BillingInterval.Month,
+        intervalCount: intervalCount || 1,
       })
     );
   }

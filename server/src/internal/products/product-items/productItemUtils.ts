@@ -124,13 +124,16 @@ export const constructFeatureItem = ({
 export const constructPriceItem = ({
   price,
   interval,
+  intervalCount,
 }: {
   price: number;
   interval: BillingInterval | null;
+  intervalCount?: number;
 }) => {
   let item: ProductItem = {
     price: price,
     interval: interval as any,
+    interval_count: intervalCount || 1,
   };
 
   return item;

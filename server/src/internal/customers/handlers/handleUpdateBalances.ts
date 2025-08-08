@@ -147,9 +147,14 @@ export const handleUpdateBalances = async (req: any, res: any) => {
           continue;
         }
 
+        let intervalCount = cusEnt.entitlement.interval_count || 1;
+        let intervalCountMatch =
+          intervalCount > 1 ? balance.interval_count === intervalCount : true;
+
         if (
           notNullish(balance.interval) &&
-          balance.interval !== cusEnt.entitlement.interval
+          balance.interval !== cusEnt.entitlement.interval &&
+          intervalCountMatch
         ) {
           continue;
         }
@@ -173,6 +178,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
         toDeduct,
         properties,
         interval: balance.interval,
+        intervalCount: balance.interval_count,
       });
     }
 
@@ -186,12 +192,18 @@ export const handleUpdateBalances = async (req: any, res: any) => {
         // Handle unlimited
         if (featureDeduction.unlimited) {
           // Get one active cusEnt and set unlimited to true
+
           const cusEnt = notNullish(interval)
-            ? cusEnts.find(
-                (cusEnt) =>
+            ? cusEnts.find((cusEnt) => {
+                let cusEntIntCount = cusEnt.entitlement.interval_count || 1;
+                let deductionIntCount = featureDeduction.intervalCount || 1;
+
+                return (
                   cusEnt.internal_feature_id === feature!.internal_id! &&
-                  cusEnt.entitlement.interval === interval
-              )
+                  cusEnt.entitlement.interval === interval &&
+                  cusEntIntCount === deductionIntCount
+                );
+              })
             : cusEnts.find(
                 (cusEnt) => cusEnt.internal_feature_id === feature!.internal_id!
               );

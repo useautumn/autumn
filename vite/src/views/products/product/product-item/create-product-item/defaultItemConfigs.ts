@@ -6,6 +6,7 @@ export const defaultFeatureItem: ProductItem = {
   included_usage: null,
 
   interval: ProductItemInterval.Month,
+  interval_count: 1,
 
   // Price config
   price: null,
@@ -21,6 +22,7 @@ export const defaultPaidFeatureItem: ProductItem = {
   feature_id: null,
   included_usage: null,
   interval: ProductItemInterval.Month,
+  interval_count: 1,
 
   // Price config
   price: null,
@@ -42,6 +44,7 @@ export const defaultPriceItem: ProductItem = {
   included_usage: null,
 
   interval: ProductItemInterval.Month,
+  interval_count: 1,
 
   // Price config
   price: 0,

@@ -24,6 +24,7 @@ import {
 } from "../customers/cusProducts/cusPrices/cusPriceUtils.js";
 import { getFeatureQuantity } from "../customers/cusProducts/cusProductUtils.js";
 import { formatAmount } from "@/utils/formatUtils.js";
+import { getIntervalString } from "../products/productUtils/productResponseUtils/getProductItemDisplay.js";
 
 const getSingularAndPlural = (feature: Feature) => {
   const singular = getFeatureName({
@@ -72,6 +73,7 @@ export const formatFixedPrice = ({
   const config = price.config as FixedPriceConfig;
   const amount = formatAmount({ org, amount: config.amount });
 
+  // const intervalStr = getIntervalString({});
   if (config.interval == BillingInterval.OneOff) {
     return `${amount}`;
   } else {

@@ -5,6 +5,8 @@ import {
   CusProductStatus,
   Customer,
   EntInterval,
+  entIntervalsDifferent,
+  entIntervalToValue,
   Entitlement,
   EntitlementWithFeature,
   Entity,
@@ -46,14 +48,14 @@ export const getCusEntMasterBalance = ({
       (acc, curr) => {
         return acc + curr.balance;
       },
-      0,
+      0
     );
 
     let totalAdjustment = Object.values(cusEnt.entities || {}).reduce(
       (acc, curr) => {
         return acc + curr.adjustment;
       },
-      0,
+      0
     );
 
     return {
@@ -69,7 +71,7 @@ export const getCusEntMasterBalance = ({
     entities &&
     entities.filter(
       (entity) =>
-        entity.internal_feature_id == feature.internal_id && entity.deleted,
+        entity.internal_feature_id == feature.internal_id && entity.deleted
     ).length;
 
   return {
@@ -120,7 +122,7 @@ export const sortCusEntsForDeduction = (
   cusEnts: (FullCustomerEntitlement & {
     customer_product?: FullCusProduct;
   })[],
-  reverseOrder: boolean = false,
+  reverseOrder: boolean = false
 ) => {
   let intervalOrder: Record<EntInterval, number> = {
     [EntInterval.Minute]: 0, // 1 minute
@@ -206,11 +208,15 @@ export const sortCusEntsForDeduction = (
     }
 
     // 3. Sort by interval
-    if (aEnt.interval && bEnt.interval && aEnt.interval != bEnt.interval) {
+    let aVal = entIntervalToValue(aEnt.interval, aEnt.interval_count);
+    let bVal = entIntervalToValue(bEnt.interval, bEnt.interval_count);
+    if (aEnt.interval && bEnt.interval && !aVal.eq(bVal)) {
       if (reverseOrder) {
-        return intervalOrder[bEnt.interval] - intervalOrder[aEnt.interval];
+        return bVal.sub(aVal).toNumber();
+        // return intervalOrder[bEnt.interval] - intervalOrder[aEnt.interval];
       } else {
-        return intervalOrder[aEnt.interval] - intervalOrder[bEnt.interval];
+        return aVal.sub(bVal).toNumber();
+        // return intervalOrder[aEnt.interval] - intervalOrder[bEnt.interval];
       }
     }
 
@@ -241,7 +247,7 @@ export const sortCusEntsForDeduction = (
 // Get related cusPrice
 export const getRelatedCusPrice = (
   cusEnt: FullCustomerEntitlement,
-  cusPrices: FullCustomerPrice[],
+  cusPrices: FullCustomerPrice[]
 ) => {
   return cusPrices.find((cusPrice) => {
     let productMatch =
@@ -328,7 +334,7 @@ export const getResetBalance = ({
     return (entitlement.allowance || 0) + quantity! * billingUnits!;
   } catch (error) {
     console.log(
-      "WARNING: Failed to return quantity * billing units, returning allowance...",
+      "WARNING: Failed to return quantity * billing units, returning allowance..."
     );
     return entitlement.allowance || 0;
   }
@@ -347,14 +353,14 @@ export const getUnlimitedAndUsageAllowed = ({
     (cusEnt) =>
       cusEnt.internal_feature_id === internalFeatureId &&
       (cusEnt.entitlement.allowance_type === AllowanceType.Unlimited ||
-        cusEnt.unlimited),
+        cusEnt.unlimited)
   );
 
   const usageAllowed = cusEnts.some(
     (ent) =>
       ent.internal_feature_id === internalFeatureId &&
       ent.usage_allowed &&
-      nullish(ent.entitlement.usage_limit),
+      nullish(ent.entitlement.usage_limit)
   );
 
   return { unlimited, usageAllowed };
@@ -426,7 +432,7 @@ export const cusEntsContainFeature = ({
   feature: Feature;
 }) => {
   return cusEnts.some(
-    (cusEnt) => cusEnt.internal_feature_id === feature.internal_id!,
+    (cusEnt) => cusEnt.internal_feature_id === feature.internal_id!
   );
 };
 
@@ -516,7 +522,7 @@ export const getExistingUsageFromCusProducts = ({
         !cp.product.is_add_on &&
         (internalEntityId
           ? cp.internal_entity_id === internalEntityId
-          : nullish(cp.internal_entity_id)),
+          : nullish(cp.internal_entity_id))
     )
     .flatMap((cp) => cp.customer_entitlements)
     .find((ce) => ce.internal_feature_id === entitlement.internal_feature_id);
@@ -537,15 +543,15 @@ export const getExistingUsageFromCusProducts = ({
 
   // Get options
   let cusProduct = cusProducts?.find(
-    (cp) => cp.id === existingCusEnt.customer_product_id,
+    (cp) => cp.id === existingCusEnt.customer_product_id
   );
   let options = getEntOptions(
     cusProduct?.options || [],
-    existingCusEnt.entitlement,
+    existingCusEnt.entitlement
   );
   let price = getRelatedCusPrice(
     existingCusEnt,
-    cusProduct?.customer_prices || [],
+    cusProduct?.customer_prices || []
   );
   let existingAllowance = getResetBalance({
     entitlement: existingCusEnt.entitlement,

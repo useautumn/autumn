@@ -37,7 +37,7 @@ export const getExistingCusEntAndUsage = async ({
 
   // 1. If there is only one cus ent, return it and usage
   let similarCusEnts = curCusProduct.customer_entitlements.filter(
-    (ce) => ce.internal_feature_id === entitlement.internal_feature_id,
+    (ce) => ce.internal_feature_id === entitlement.internal_feature_id
     // &&
     //   ce.entitlement.interval === entitlement.interval
   );
@@ -47,8 +47,8 @@ export const getExistingCusEntAndUsage = async ({
     "Similar entitlements:",
     similarCusEnts.map(
       (ce) =>
-        `${ce.entitlement.feature_id} (${ce.entitlement.interval}) (${ce.balance})`,
-    ),
+        `${ce.entitlement.feature_id} (${ce.entitlement.interval}) (${ce.balance})`
+    )
   );
 
   if (similarCusEnts.length === 1) {
@@ -79,7 +79,7 @@ export const getExistingUsages = ({
   // Get entityUsage
   for (const entity of entities) {
     let feature = features.find(
-      (f) => f.internal_id === entity.internal_feature_id,
+      (f) => f.internal_id === entity.internal_feature_id
     );
     let key = `${feature?.id}-${EntInterval.Lifetime}`;
 
@@ -96,7 +96,7 @@ export const getExistingUsages = ({
 
   for (const cusEnt of curCusProduct?.customer_entitlements || []) {
     let ent = cusEnt.entitlement;
-    let key = `${ent.feature_id}-${ent.interval}`;
+    let key = `${ent.feature_id}-${ent.interval}-${ent.interval_count || 1}`;
     let feature = ent.feature;
     if (feature.type == FeatureType.Boolean) {
       continue;
@@ -199,8 +199,8 @@ export const addExistingUsagesToCusEnts = ({
       "Sorted cusEnts:",
       fullCusEnts.map(
         (ce) =>
-          `${ce.entitlement.feature_id} (${ce.entitlement.interval}), balance: ${ce.balance}`,
-      ),
+          `${ce.entitlement.feature_id} (${ce.entitlement.interval}), balance: ${ce.balance}`
+      )
     );
   }
 

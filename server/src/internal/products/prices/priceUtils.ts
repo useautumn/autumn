@@ -20,6 +20,7 @@ import {
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { Decimal } from "decimal.js";
+import { compareBillingIntervals } from "./priceUtils/priceIntervalUtils.js";
 
 const BillingIntervalOrder = [
   BillingInterval.Year,
@@ -100,17 +101,30 @@ export const getBillingType = (config: FixedPriceConfig | UsagePriceConfig) => {
 
 export const getBillingInterval = (prices: Price[]) => {
   if (prices.length === 0) {
-    return BillingInterval.OneOff;
+    return {
+      interval: BillingInterval.OneOff,
+      intervalCount: 1,
+    };
   }
 
   const pricesCopy = structuredClone(prices);
 
   try {
     pricesCopy.sort((a, b) => {
-      return (
-        BillingIntervalOrder.indexOf(b.config!.interval!) -
-        BillingIntervalOrder.indexOf(a.config!.interval!)
-      );
+      return compareBillingIntervals({
+        configA: {
+          interval: a.config!.interval as BillingInterval,
+          intervalCount: a.config!.interval_count || 1,
+        },
+        configB: {
+          interval: b.config!.interval as BillingInterval,
+          intervalCount: b.config!.interval_count || 1,
+        },
+      });
+      // return (
+      //   BillingIntervalOrder.indexOf(b.config!.interval!) -
+      //   BillingIntervalOrder.indexOf(a.config!.interval!)
+      // );
     });
   } catch (error) {
     console.log("Error sorting prices:", error);
@@ -125,7 +139,13 @@ export const getBillingInterval = (prices: Price[]) => {
     });
   }
 
-  return pricesCopy[pricesCopy.length - 1].config!.interval as BillingInterval;
+  return {
+    interval: pricesCopy[pricesCopy.length - 1].config!
+      .interval as BillingInterval,
+    intervalCount:
+      pricesCopy[pricesCopy.length - 1].config!.interval_count || 1,
+  };
+  // return pricesCopy[pricesCopy.length - 1].config!.interval as BillingInterval;
 };
 
 export const pricesOnlyOneOff = (prices: Price[]) => {
@@ -154,36 +174,16 @@ export const pricesContainRecurring = (prices: Price[]) => {
   });
 };
 
-export const haveDifferentRecurringIntervals = (prices: Price[]) => {
-  let interval = null;
-
-  for (const price of prices) {
-    const newInterval = price.config?.interval;
-
-    if (newInterval == BillingInterval.OneOff) {
-      continue;
-    }
-
-    if (interval !== null && newInterval !== null && newInterval !== interval) {
-      return true;
-    }
-
-    interval = newInterval;
-  }
-  return false;
-};
-
 // Get price options
 export const getEntOptions = (
   optionsList: FeatureOptions[],
-  entitlement: Entitlement | EntitlementWithFeature,
+  entitlement: Entitlement | EntitlementWithFeature
 ) => {
   if (!entitlement) {
     return null;
   }
   const options = optionsList.find(
-    (options) =>
-      options.internal_feature_id === entitlement.internal_feature_id,
+    (options) => options.internal_feature_id === entitlement.internal_feature_id
   );
   return options;
 };
@@ -191,7 +191,7 @@ export const getEntOptions = (
 export const getPriceEntitlement = (
   price: Price,
   entitlements: EntitlementWithFeature[],
-  allowFeatureMatch = false,
+  allowFeatureMatch = false
 ) => {
   let config = price.config as UsagePriceConfig;
 
@@ -217,12 +217,12 @@ export const getPriceEntitlement = (
 
 export const getPriceOptions = (
   price: Price,
-  optionsList: FeatureOptions[],
+  optionsList: FeatureOptions[]
 ) => {
   let config = price.config as UsagePriceConfig;
 
   const options = optionsList.find(
-    (options) => options.internal_feature_id === config.internal_feature_id,
+    (options) => options.internal_feature_id === config.internal_feature_id
   );
 
   return options;
@@ -307,7 +307,7 @@ export const getPriceForOverage = (price: Price, overage?: number) => {
   let amount = 0;
   let billingUnits = usageConfig.billing_units || 1;
   let remainingUsage = new Decimal(
-    Math.ceil(new Decimal(overage!).div(billingUnits).toNumber()),
+    Math.ceil(new Decimal(overage!).div(billingUnits).toNumber())
   )
     .mul(billingUnits)
     .toNumber();
@@ -353,7 +353,7 @@ export const roundPriceAmounts = (price: Price) => {
     const config = price.config as UsagePriceConfig;
     for (let i = 0; i < config.usage_tiers.length; i++) {
       config.usage_tiers[i].amount = Number(
-        config.usage_tiers[i].amount.toFixed(10),
+        config.usage_tiers[i].amount.toFixed(10)
       );
     }
 
@@ -363,7 +363,7 @@ export const roundPriceAmounts = (price: Price) => {
 
 export const priceIsOneOffAndTiered = (
   price: Price,
-  relatedEnt: EntitlementWithFeature,
+  relatedEnt: EntitlementWithFeature
 ) => {
   let config = price.config as UsagePriceConfig;
   if (config.type == PriceType.Fixed) {
@@ -371,17 +371,13 @@ export const priceIsOneOffAndTiered = (
   }
 
   return (
-    // (config.interval == BillingInterval.OneOff &&
-    //   config.usage_tiers.length > 0 &&
-    //   relatedEnt.allowance &&
-    //   relatedEnt.allowance > 0) ||
     config.interval == BillingInterval.OneOff && config.usage_tiers.length > 1
   );
 };
 
 export const getProductForPrice = (price: Price, products: FullProduct[]) => {
   return products.find(
-    (product) => product.internal_id === price.internal_product_id,
+    (product) => product.internal_id === price.internal_product_id
   );
 };
 
