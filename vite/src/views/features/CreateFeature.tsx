@@ -142,7 +142,9 @@ export const CreateFeatureDialog = () => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="add">Feature</Button>
+        <Button variant="add" className="w-full">
+          Feature
+        </Button>
       </DialogTrigger>
       <CustomDialogContent>
         <CreateFeature setOpen={setOpen} open={open} />

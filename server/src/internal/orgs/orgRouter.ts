@@ -77,12 +77,14 @@ orgRouter.post("/stripe", async (req: any, res) => {
         logger,
       });
 
+      console.log("Connecting Stripe");
       await checkKeyValid(testApiKey);
       await checkKeyValid(liveApiKey);
 
       // Get default currency from Stripe
       let stripe = new Stripe(testApiKey);
       let account = await stripe.accounts.retrieve();
+
       if (nullish(defaultCurrency) && nullish(account.default_currency)) {
         throw new RecaseError({
           message: "Default currency not set",
@@ -93,6 +95,14 @@ orgRouter.post("/stripe", async (req: any, res) => {
         defaultCurrency = account.default_currency;
       }
     } catch (error: any) {
+      // if (error.message.includes("rk_***")) {
+      //   throw new RecaseError({
+      //     message: "Invalid Stripe restricted key. Please add the ",
+      //     code: ErrCode.StripeKeyInvalid,
+      //     statusCode: 500,
+      //   });
+      // }
+
       throw new RecaseError({
         message: error.message || "Invalid Stripe API keys",
         code: ErrCode.StripeKeyInvalid,
