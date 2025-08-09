@@ -2,13 +2,16 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { cancelFutureProductSchedule } from "@/internal/customers/change-product/scheduleUtils.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import {
+  ACTIVE_STATUSES,
+  CusProductService,
+} from "@/internal/customers/cusProducts/CusProductService.js";
 import {
   cancelCusProductSubscriptions,
   expireAndActivate,
   fullCusProductToProduct,
 } from "@/internal/customers/cusProducts/cusProductUtils.js";
-import { isOneOff } from "@/internal/products/productUtils.js";
+import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import {
@@ -21,6 +24,7 @@ import {
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { CusService } from "../CusService.js";
+import { cusProductToPrices } from "../cusProducts/cusProductUtils/convertCusProduct.js";
 
 export const removeScheduledProduct = async ({
   req,
@@ -112,14 +116,29 @@ export const expireCusProduct = async ({
 
   // 1. If main product, can't expire if there's scheduled product
   let isMain = !cusProduct.product.is_add_on;
-  if (isMain) {
-    let { curScheduledProduct: futureProduct } = getExistingCusProducts({
-      product: cusProduct.product,
-      cusProducts: fullCus.customer_products,
-      internalEntityId: cusProduct.internal_entity_id,
-    });
+  let { curScheduledProduct: futureProduct } = getExistingCusProducts({
+    product: cusProduct.product,
+    cusProducts: fullCus.customer_products,
+    internalEntityId: cusProduct.internal_entity_id,
+  });
 
-    if (futureProduct) {
+  if (isMain) {
+    if (
+      cusProduct.canceled_at &&
+      ACTIVE_STATUSES.includes(cusProduct.status) &&
+      !expireImmediately
+    ) {
+      throw new RecaseError({
+        message: `Product ${cusProduct.product.name} is already about to cancel at the end of cycle.`,
+        code: ErrCode.InvalidRequest,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
+
+    if (
+      futureProduct &&
+      !isFreeProduct(cusProductToPrices({ cusProduct: futureProduct }))
+    ) {
       throw new RecaseError({
         message: `Please delete scheduled product ${futureProduct.product.name} first`,
         code: ErrCode.InvalidRequest,
@@ -130,6 +149,7 @@ export const expireCusProduct = async ({
 
   // 2. If expire at cycle end, just cancel subscriptions
   if (!expireImmediately) {
+    // 1. Check if already canceled
     await cancelCusProductSubscriptions({
       cusProduct,
       org,
@@ -173,6 +193,14 @@ export const expireCusProduct = async ({
     });
 
     return;
+  }
+
+  // Remove scheduled products first...
+  if (futureProduct) {
+    await CusProductService.delete({
+      db,
+      cusProductId: futureProduct.id,
+    });
   }
 
   logger.info(`Expiring current product: ${cusProduct.product.name}`);

@@ -51,6 +51,7 @@ export const SelectItemFeature = ({
         <SelectContent>
           {features
             .filter((feature: Feature) => {
+              if (feature.archived) return false;
               if (itemType === ProductItemType.FeaturePrice) {
                 return feature.type !== FeatureType.Boolean;
               }

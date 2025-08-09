@@ -7,6 +7,7 @@ export const checkKeyValid = async (apiKey: string) => {
 
   // Call customers.list
   const customers = await stripe.customers.list();
+
   // const account = await stripe.accounts.retrieve();
   // console.log("Account", account);
   // return account;
@@ -15,7 +16,7 @@ export const checkKeyValid = async (apiKey: string) => {
 export const createWebhookEndpoint = async (
   apiKey: string,
   env: AppEnv,
-  orgId: string,
+  orgId: string
 ) => {
   const stripe = new Stripe(apiKey);
 
