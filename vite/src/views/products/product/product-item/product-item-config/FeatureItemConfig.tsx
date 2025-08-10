@@ -1,5 +1,5 @@
 import { useProductItemContext } from "../ProductItemContext";
-import { BillingInterval, Infinite } from "@autumn/shared";
+import { BillingInterval, FeatureUsageType, Infinite } from "@autumn/shared";
 import { SelectCycle } from "./components/feature-price/SelectBillingCycle";
 import { IncludedUsage } from "./components/IncludedUsage";
 import { SelectResetCycle } from "./components/SelectResetCycle";
@@ -11,8 +11,14 @@ import { PlusIcon } from "lucide-react";
 import { PrepaidToggle } from "./components/feature-price/PrepaidToggle";
 import { AdvancedItemConfig } from "./advanced-config/AdvancedItemConfig";
 import { notNullish } from "@/utils/genUtils";
+import {
+  getFeature,
+  getFeatureUsageType,
+} from "@/utils/product/entitlementUtils";
+import { useProductContext } from "../../ProductContext";
 
 export const FeatureConfig = () => {
+  const { features } = useProductContext();
   const { item, setItem } = useProductItemContext();
 
   if (!item.feature_id) return null;
@@ -40,6 +46,13 @@ export const FeatureConfig = () => {
     });
   };
 
+  const price =
+    getFeatureUsageType({ item, features }) == FeatureUsageType.Continuous
+      ? "10"
+      : "1";
+
+  const feature = getFeature(item?.feature_id, features);
+
   return (
     <>
       <div className="flex items-center gap-2 w-full">
@@ -64,18 +77,24 @@ export const FeatureConfig = () => {
         </React.Fragment>
       )}
 
-      {/* {isFeature && (
-        <div className="flex w-full justify-start transition-all duration-300 ease-in-out overflow-hidden">
-          <Button
-            variant="outline"
-            className="w-full !border-dashed bg-transparent text-t2"
-            startIcon={<PlusIcon size={12} />}
-            onClick={handleAddUsagePrice}
-          >
-            Add Price
-          </Button>
+      {isFeature && (
+        <div>
+          <p className="text-t3 mb-2">
+            If you want to charge for usage of this feature (eg. ${price} per{" "}
+            {feature?.display?.singular ?? feature?.name ?? "feature"})
+          </p>
+          <div className="flex w-full justify-start transition-all duration-300 ease-in-out overflow-hidden">
+            <Button
+              variant="outline"
+              className="w-full !border-dashed bg-transparent text-t2"
+              startIcon={<PlusIcon size={12} />}
+              onClick={handleAddUsagePrice}
+            >
+              Add Price
+            </Button>
+          </div>
         </div>
-      )} */}
+      )}
       <AdvancedItemConfig />
     </>
   );

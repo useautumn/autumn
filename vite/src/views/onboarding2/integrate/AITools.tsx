@@ -24,7 +24,7 @@ export const AITools = () => {
 
   // Base64 encode the configuration for Cursor's install URL
   const encodedConfig = btoa(JSON.stringify(mcpConfig));
-  const cursorInstallUrl = `https://cursor.com/install-mcp?name=autumn&config=${encodedConfig}`;
+  const cursorInstallUrl = `cursor://anysphere.cursor-deeplink/mcp/install?name=Autumn%20Docs&config=${encodedConfig}`;
 
   // Manual JSON configuration for copy-paste
   const manualConfig = JSON.stringify(

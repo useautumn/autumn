@@ -141,11 +141,7 @@ function ProductsView({ env }: { env: AppEnv }) {
                     )}
                   </>
                 }
-                addButton={
-                  <>
-                    <CreateProduct />
-                  </>
-                }
+                addButton={<CreateProduct />}
                 menuComponent={
                   <HamburgerMenu
                     dropdownOpen={dropdownOpen}
@@ -166,20 +162,22 @@ function ProductsView({ env }: { env: AppEnv }) {
             </TabsContent>
 
             <TabsContent value="features">
-              <div className="sticky top-0 z-10 border-y bg-stone-100 pl-10 pr-7 h-10 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-sm text-t2 font-medium">Features</h2>
-                  <span className="text-t2 px-1 rounded-md bg-stone-200">
-                    {featuresData?.features?.length || 0}
-                  </span>
-                  {showArchivedFeatures && (
-                    <Badge className="shadow-none bg-yellow-100 border-yellow-500 text-yellow-500 hover:bg-yellow-100">
-                      Archived
-                    </Badge>
-                  )}
-                </div>
-                <div className="flex items-center">
-                  <CreateFeatureDialog />
+              <PageSectionHeader
+                title="Features"
+                titleComponent={
+                  <>
+                    <span className="text-t2 px-1 rounded-md bg-stone-200 mr-2">
+                      {featuresData?.features?.length}
+                    </span>
+                    {showArchived && (
+                      <Badge className="shadow-none bg-yellow-100 border-yellow-500 text-yellow-500 hover:bg-yellow-100">
+                        Archived
+                      </Badge>
+                    )}
+                  </>
+                }
+                addButton={<CreateFeatureDialog />}
+                menuComponent={
                   <HamburgerMenu
                     dropdownOpen={featuresDropdownOpen}
                     setDropdownOpen={setFeaturesDropdownOpen}
@@ -194,8 +192,9 @@ function ProductsView({ env }: { env: AppEnv }) {
                       },
                     ]}
                   />
-                </div>
-              </div>
+                }
+              />
+
               <div className="flex flex-col gap-16">
                 <FeaturesTable />
 

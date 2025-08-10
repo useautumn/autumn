@@ -104,5 +104,5 @@ export const updateSubsByInt = async ({
     );
   }
 
-  return { replaceables };
+  return { replaceables, invoices };
 };

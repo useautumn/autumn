@@ -1,5 +1,4 @@
 import {
-  AttachBranch,
   AttachFunction,
   AttachScenario,
   CheckoutResponseSchema,
@@ -109,15 +108,17 @@ export const handleCheckout = (req: any, res: any) =>
       const { logger, features } = req;
       const attachBody = AttachBodySchema.parse(req.body);
 
-      const { attachParams, flags, branch, config, func } = await getAttachVars(
-        { req, attachBody }
-      );
+      const { attachParams, branch, func } = await getAttachVars({
+        req,
+        attachBody,
+      });
 
       await getCheckoutOptions({
         req,
         attachParams,
       });
 
+      let checkoutUrl = null;
       if (func == AttachFunction.CreateCheckout) {
         await checkStripeConnections({
           req,
@@ -133,22 +134,24 @@ export const handleCheckout = (req: any, res: any) =>
           returnCheckout: true,
         });
 
-        const customer = attachParams.customer;
-        res.status(200).json(
-          CheckoutResponseSchema.parse({
-            url: checkout?.url,
-            customer_id: customer.id || customer.internal_id,
-            scenario: AttachScenario.New,
-            lines: [],
-            product: await getProductResponse({
-              product: attachParams.products[0],
-              features: features,
-              withDisplay: false,
-              options: attachParams.optionsList,
-            }),
-          })
-        );
-        return;
+        checkoutUrl = checkout?.url;
+
+        // const customer = attachParams.customer;
+        // res.status(200).json(
+        //   CheckoutResponseSchema.parse({
+        //     url: checkout?.url,
+        //     customer_id: customer.id || customer.internal_id,
+        //     scenario: AttachScenario.New,
+        //     lines: [],
+        //     product: await getProductResponse({
+        //       product: attachParams.products[0],
+        //       features: features,
+        //       withDisplay: false,
+        //       options: attachParams.optionsList,
+        //     }),
+        //   })
+        // );
+        // return;
       }
 
       const preview = await attachParamsToPreview({
@@ -174,6 +177,7 @@ export const handleCheckout = (req: any, res: any) =>
 
       res.status(200).json({
         ...checkoutRes,
+        url: checkoutUrl,
         options: attachParams.optionsList.map((o) => ({
           quantity: o.quantity,
           feature_id: o.feature_id,

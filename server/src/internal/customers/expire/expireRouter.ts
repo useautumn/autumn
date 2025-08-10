@@ -65,31 +65,6 @@ expireRouter.post("", async (req, res) =>
         prorate,
       });
 
-      // console.log(
-      //   "CUs products to expire",
-      //   cusProductsToExpire.map((c) => c.product.id)
-      // );
-      // throw new Error("test");
-
-      // if (!cusProductsToExpire) {
-      //   throw new RecaseError({
-      //     code: ErrCode.ProductNotFound,
-      //     message: `Product ${product_id} not found for customer ${customer_id}`,
-      //   });
-      // }
-
-      // // Handle case if there are two products to expire...
-
-      // for (const cusProduct of cusProductsToExpire) {
-      //   await expireCusProduct({
-      //     req,
-      //     cusProduct,
-      //     fullCus,
-      //     expireImmediately,
-      //     prorate,
-      //   });
-      // }
-
       res.status(200).json({
         success: true,
         customer_id: customer_id,

@@ -88,7 +88,7 @@ export const getAttachConfig = async ({
   let flags: AttachFlags = {
     isPublic: req.isPublic,
     forceCheckout: attachBody.force_checkout || false,
-    invoiceOnly: attachBody.invoice_only || false,
+    invoiceOnly: attachParams.invoiceOnly || false,
     isFree: isFreeProduct(prices),
     noPaymentMethod: nullish(paymentMethod) ? true : false,
   };

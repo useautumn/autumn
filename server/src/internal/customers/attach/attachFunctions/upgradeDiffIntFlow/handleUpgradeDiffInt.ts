@@ -18,7 +18,10 @@ import {
 
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
-import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
+import {
+  attachToInvoiceResponse,
+  insertInvoiceFromAttach,
+} from "@/internal/invoices/invoiceUtils.js";
 import { updateSubsDiffInt } from "./updateSubsDiffInt.js";
 
 export const handleUpgradeDiffInterval = async ({
@@ -69,7 +72,7 @@ export const handleUpgradeDiffInterval = async ({
     cusProductId: curCusProduct.id,
     updates: {
       subscription_ids: curCusProduct.subscription_ids!.filter(
-        (subId) => subId !== newSubs[0].id,
+        (subId) => subId !== newSubs[0].id
       ),
       processor: {
         type: ProcessorType.Stripe,
@@ -106,7 +109,7 @@ export const handleUpgradeDiffInterval = async ({
         attachParams,
         invoiceId,
         logger,
-      }),
+      })
     );
   }
 
@@ -124,8 +127,10 @@ export const handleUpgradeDiffInterval = async ({
           product_ids: products.map((p) => p.id),
           code: SuccessCode.UpgradedToNewProduct,
           message: `Successfully upgraded from ${curProductName} to ${product.name}`,
-          invoice: config.invoiceOnly ? invoice : undefined,
-        }),
+          invoice: config.invoiceOnly
+            ? attachToInvoiceResponse({ invoice: invoice || undefined })
+            : undefined,
+        })
       );
     } else {
       res.status(200).json({

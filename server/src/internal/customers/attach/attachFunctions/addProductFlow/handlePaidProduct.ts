@@ -8,7 +8,10 @@ import {
   AttachParams,
   AttachResultSchema,
 } from "@/internal/customers/cusProducts/AttachParams.js";
-import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
+import {
+  attachToInvoiceResponse,
+  insertInvoiceFromAttach,
+} from "@/internal/invoices/invoiceUtils.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
@@ -119,6 +122,7 @@ export const handlePaidProduct = async ({
         freeTrial,
         invoiceOnly,
         itemSet,
+        finalizeInvoice: attachParams.finalizeInvoice,
         anchorToUnix: billingCycleAnchorUnix,
         reward: i == 0 ? reward : undefined,
         now: attachParams.now,
@@ -193,7 +197,9 @@ export const handlePaidProduct = async ({
           code: SuccessCode.NewProductAttached,
           product_ids: products.map((p) => p.id),
           customer_id: customer.id || customer.internal_id,
-          invoice: invoiceOnly ? invoices?.[0] : undefined,
+          invoice: invoiceOnly
+            ? attachToInvoiceResponse({ invoice: invoices?.[0] })
+            : undefined,
         })
       );
     } else {

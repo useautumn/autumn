@@ -27,6 +27,7 @@ export const sendOnboardingEmail = safeResend({
       to: email,
       subject: "Anything I can help with?",
       body: getWelcomeEmailBody(firstName),
+      replyTo: "ayush@useautumn.com",
     });
   },
   action: "send onboarding email",
