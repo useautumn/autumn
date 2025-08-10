@@ -23,6 +23,7 @@ describe(`${chalk.yellowBright("basic2: Testing attach pro")}`, () => {
 
   before(async function () {
     await setupBefore(this);
+
     db = this.db;
     org = this.org;
     env = this.env;

@@ -8,7 +8,7 @@ filename=$1
 
 
 if [[ $filename == *"shell"* ]]; then
-    $filename
+    $filename "${@:2}"
 elif [[ $filename == *"/tests/"* ]]; then
     # Extract everything after "/tests/"
     path_after_tests=$(echo "$filename" | sed 's/.*\/tests\///')
