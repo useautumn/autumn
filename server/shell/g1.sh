@@ -4,9 +4,9 @@
 source "$(dirname "$0")/config.sh"
 
 # If contains setup then run $MOCHA_SETUP
-if [[ "$1" == *"setup"* ]]; then
-  MOCHA_PARALLEL=true $MOCHA_SETUP
-fi
+# MOCHA_PARALLEL=true $MOCHA_SETUP
+# if [[ "$2" == *"setup"* ]]; then
+# fi
 
 $MOCHA_CMD \
 'tests/attach/basic/*.ts' \
