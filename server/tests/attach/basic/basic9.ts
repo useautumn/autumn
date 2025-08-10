@@ -9,7 +9,7 @@ import { compareMainProduct } from "tests/utils/compare.js";
 
 const testCase = "basic9";
 describe(`${chalk.yellowBright(
-  "basic9: attach monthly with one time prepaid, and quantity = 0",
+  "basic9: attach monthly with one time prepaid, and quantity = 0"
 )}`, () => {
   let customerId = testCase;
 
@@ -40,7 +40,7 @@ describe(`${chalk.yellowBright(
     });
 
     await completeCheckoutForm(res.checkout_url);
-    await timeout(10000);
+    await timeout(12000);
   });
 
   it("should have correct main product and entitlements", async function () {

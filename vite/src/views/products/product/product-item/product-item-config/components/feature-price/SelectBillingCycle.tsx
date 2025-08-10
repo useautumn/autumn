@@ -64,6 +64,7 @@ export const SelectCycle = () => {
                   {formatIntervalText({
                     billingInterval: interval,
                     intervalCount: item.interval_count,
+                    isBillingInterval: true,
                   })}
                 </SelectItem>
               ))}
