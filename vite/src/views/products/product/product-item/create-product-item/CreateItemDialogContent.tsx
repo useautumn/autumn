@@ -37,8 +37,15 @@ export const CreateItemDialogContent = ({
   const { features, setFeatures } = useProductContext();
   const { stepState, item, setItem } = useProductItemContext();
 
-  const { stepVal, popStep, pushStep, resetSteps, previousStep, replaceStep } =
-    stepState;
+  const {
+    stepVal,
+    popStep,
+    pushStep,
+    resetSteps,
+    previousStep,
+    replaceStep,
+    stepCount,
+  } = stepState;
 
   useEffect(() => {
     if (open) {
@@ -46,60 +53,17 @@ export const CreateItemDialogContent = ({
     }
   }, [open]);
 
-  const getTabValue = () => {
-    return getItemType(item);
-  };
-
-  const handleTabChange = (value: string) => {
-    if (value === ProductItemType.Feature) {
-      setItem({
-        ...item,
-        feature_id: item.feature_id,
-        price: null,
-        tiers: null,
-      });
-    }
-
-    if (value === ProductItemType.FeaturePrice) {
-      const feature = getFeature(item.feature_id, features);
-      if (!feature || feature?.type === FeatureType.Boolean) {
-        setItem(defaultPaidFeatureItem);
-      } else {
-        const newIncludedUsage =
-          item.included_usage == Infinite ? 0 : item.included_usage;
-
-        let newInterval = item.interval;
-        if (
-          notNullish(item.interval) &&
-          !Object.values(BillingInterval).includes(item.interval)
-        ) {
-          newInterval = BillingInterval.Month;
-        }
-
-        setItem({
-          ...item,
-          included_usage: newIncludedUsage,
-          interval: newInterval,
-          tiers: [{ to: Infinite, amount: 0 }],
-        });
-      }
-    }
-
-    if (value === ProductItemType.Price) {
-      setItem(defaultPriceItem);
-    }
-  };
-
   const handleFeatureCreated = async (feature: CreateFeatureType) => {
     setFeatures([...features, feature]);
     setItem({ ...item, feature_id: feature.id! });
 
-    // replaceStep(CreateItemStep.CreateItem);
-    if (previousStep === CreateItemStep.CreateItem) {
-      replaceStep(CreateItemStep.CreateItem);
-    } else {
-      pushStep(CreateItemStep.CreateItem);
-    }
+    // // replaceStep(CreateItemStep.CreateItem);
+    // if (previousStep === CreateItemStep.CreateItem) {
+    //   replaceStep(CreateItemStep.CreateItem);
+    // } else {
+    //   pushStep(CreateItemStep.CreateItem);
+    // }
+    replaceStep(CreateItemStep.CreateItem);
   };
 
   const tabTriggerClass =
@@ -108,26 +72,26 @@ export const CreateItemDialogContent = ({
   const itemType = getItemType(item);
   return (
     <CustomDialogContent>
-      {stepVal === CreateItemStep.SelectItemType ? (
-        <CreateItemIntro setStep={pushStep} />
-      ) : stepVal === CreateItemStep.CreateFeature ? (
-        <CreateFeature
-          onSuccess={handleFeatureCreated}
-          setOpen={setOpen}
-          open={open}
-          handleBack={() => popStep()}
-        />
-      ) : stepVal === CreateItemStep.SelectFeature ? (
-        <SelectFeatureStep popStep={popStep} pushStep={pushStep} />
-      ) : (
-        <>
-          <CustomDialogBody>
-            <div className="flex flex-col gap-4">
-              <DialogHeader className="p-0">
-                <DialogTitle>Add {keyToTitle(itemType)} Item</DialogTitle>
-              </DialogHeader>
+      {
+        // stepVal === CreateItemStep.SelectItemType ? (
+        //   <CreateItemIntro setStep={pushStep} />
+        // ) :
+        stepVal === CreateItemStep.CreateFeature ? (
+          <CreateFeature
+            onSuccess={handleFeatureCreated}
+            setOpen={setOpen}
+            open={open}
+            handleBack={stepCount > 1 ? popStep : undefined}
+          />
+        ) : (
+          <>
+            <CustomDialogBody>
+              <div className="flex flex-col gap-4">
+                <DialogHeader className="p-0">
+                  <DialogTitle>Add {keyToTitle(itemType)}</DialogTitle>
+                </DialogHeader>
 
-              {/* <Tabs value={getTabValue()} onValueChange={handleTabChange}>
+                {/* <Tabs value={getTabValue()} onValueChange={handleTabChange}>
                 <TabsList className="gap-2">
                   <TabsTrigger className={tabTriggerClass} value="feature">
                     Feature
@@ -147,15 +111,18 @@ export const CreateItemDialogContent = ({
                 </TabsContent>
               </Tabs> */}
 
-              <div className="flex flex-col gap-4 w-fit !overflow-visible">
-                <ProductItemConfig />
+                <div className="flex flex-col gap-4 w-fit !overflow-visible">
+                  <ProductItemConfig />
+                </div>
               </div>
-            </div>
-          </CustomDialogBody>
+            </CustomDialogBody>
 
-          <ItemConfigFooter handleBack={() => popStep()} />
-        </>
-      )}
+            <ItemConfigFooter
+            // handleBack={stepCount > 1 ? popStep : undefined}
+            />
+          </>
+        )
+      }
     </CustomDialogContent>
   );
 };

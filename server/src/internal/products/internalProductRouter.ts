@@ -27,6 +27,8 @@ productRouter.get("/data", async (req: any, res) => {
   try {
     let { db } = req;
 
+    const allVersions = req.query.all_versions === "true";
+
     const [products, features, org, coupons, rewardPrograms] =
       await Promise.all([
         ProductService.listFull({
@@ -34,6 +36,7 @@ productRouter.get("/data", async (req: any, res) => {
           orgId: req.orgId,
           env: req.env,
           archived: false,
+          returnAll: allVersions,
         }),
         FeatureService.getFromReq(req),
         OrgService.getFromReq(req),

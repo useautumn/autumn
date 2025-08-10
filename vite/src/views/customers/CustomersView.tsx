@@ -48,13 +48,11 @@ function CustomersView({ env }: { env: AppEnv }) {
   const [paginationLoading, setPaginationLoading] = React.useState(false);
 
   const { data: productsData, isLoading: productsLoading } = useAxiosSWR({
-    url: `/products/data`,
-    env,
+    url: `/products/data?all_versions=true`,
   });
 
   const { data: savedViewsData, mutate: mutateSavedViews } = useAxiosSWR({
     url: "/saved_views",
-    env,
   });
 
   const { data, isLoading, error, mutate } = useAxiosPostSWR({

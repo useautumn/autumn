@@ -213,7 +213,6 @@ export const handleAttachErrors = async ({
       AttachBranch.NewVersion,
       AttachBranch.SameCustom,
       AttachBranch.UpdatePrepaidQuantity,
-      AttachBranch.Renew,
     ];
     if (updateProductFlows.includes(branch)) {
       handleNonCheckoutErrors({

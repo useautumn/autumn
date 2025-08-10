@@ -4,25 +4,26 @@ import { ErrCode } from "@/errors/errCodes.js";
 import { clearOrgCache } from "../orgs/orgUtils/clearOrgCache.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { and, eq } from "drizzle-orm";
+import { notNullish } from "@/utils/genUtils.js";
 
 export class FeatureService {
   static async list({
     db,
     orgId,
     env,
-    showOnlyArchived = false,
+    archived,
   }: {
     db: DrizzleCli;
     orgId: string;
     env: AppEnv;
-    showOnlyArchived?: boolean;
+    archived?: boolean;
   }) {
     const features = await db.query.features.findMany({
       where: (features, { eq, and }) =>
         and(
           eq(features.org_id, orgId),
           eq(features.env, env),
-          eq(features.archived, showOnlyArchived)
+          notNullish(archived) ? eq(features.archived, archived!) : undefined
         ),
 
       orderBy: (features, { desc }) => [desc(features.internal_id)],
@@ -208,5 +209,4 @@ export class FeatureService {
       .delete(features)
       .where(and(eq(features.org_id, orgId), eq(features.env, env)));
   }
-
 }

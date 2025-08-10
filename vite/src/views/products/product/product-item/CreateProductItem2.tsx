@@ -18,6 +18,7 @@ import { useModelPricingContext } from "@/views/onboarding2/model-pricing/ModelP
 import { useSteps } from "./useSteps";
 import { CreateItemStep } from "./utils/CreateItemStep";
 import { cn } from "@/lib/utils";
+import { defaultPriceItem } from "./create-product-item/defaultItemConfigs";
 
 const defaultProductItem: ProductItem = {
   feature_id: null,
@@ -96,14 +97,25 @@ export function CreateProductItem2({
       }}
     >
       <Dialog open={open} onOpenChange={setOpen}>
-        <div className="flex gap-0">
+        <div className="flex gap-2 max-w-md">
           <DialogTrigger asChild>
             <Button
               variant="dashed"
               className={cn("w-full", classNames?.button)}
               startIcon={<PlusIcon size={14} />}
+              onClick={() => setItem(defaultProductItem)}
             >
-              Add item to product
+              Add Feature
+            </Button>
+          </DialogTrigger>
+          <DialogTrigger asChild>
+            <Button
+              variant="dashed"
+              className={cn("w-full", classNames?.button)}
+              startIcon={<PlusIcon size={14} />}
+              onClick={() => setItem(defaultPriceItem)}
+            >
+              Add Price
             </Button>
           </DialogTrigger>
         </div>

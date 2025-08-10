@@ -70,6 +70,7 @@ export type AttachParams = {
   scenario?: AttachScenario;
 
   fromMigration?: boolean;
+  finalizeInvoice?: boolean;
   req?: any;
 };
 
@@ -104,6 +105,7 @@ export type InsertCusProductParams = {
   internalEntityId?: string;
   fromMigration?: boolean;
   apiVersion?: APIVersion;
+  finalizeInvoice?: boolean;
 };
 
 export const AttachResultSchema = z.object({

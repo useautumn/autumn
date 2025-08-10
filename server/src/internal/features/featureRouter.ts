@@ -27,12 +27,15 @@ featureRouter.get("", async (req: any, res: any) =>
     res,
     action: "list features",
     handler: async () => {
+      const includeArchived = req.query.include_archived === "true";
       let features = await FeatureService.list({
         db: req.db,
         orgId: req.orgId,
         env: req.env,
-        showOnlyArchived: false,
+        archived: includeArchived ? undefined : false,
+        // showOnlyArchived: includeArchived ? undefined : false,
       });
+
       res
         .status(200)
         .json({ list: features.map((feature) => toAPIFeature({ feature })) });

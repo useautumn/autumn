@@ -52,5 +52,6 @@ export const useSteps = ({ initialStep }: { initialStep: CreateItemStep }) => {
     resetSteps,
     replaceStep,
     previousStep: stepStack.length > 1 ? stepStack[stepStack.length - 2] : null,
+    stepCount: stepStack.length,
   };
 };

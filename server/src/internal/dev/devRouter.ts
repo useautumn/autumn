@@ -216,7 +216,7 @@ export const handleGetOtp = async (req: any, res: any) =>
       // Generate API key for the OTP
       const sandboxKey = await createKey({
         db,
-        env: env || AppEnv.Sandbox,
+        env: AppEnv.Sandbox,
         name: `Autumn Key CLI`,
         orgId: cacheData.orgId,
         prefix: "am_sk_test",
@@ -229,7 +229,7 @@ export const handleGetOtp = async (req: any, res: any) =>
 
       const prodKey = await createKey({
         db,
-        env: env || AppEnv.Live,
+        env: AppEnv.Live,
         name: `Autumn Key CLI`,
         orgId: cacheData.orgId,
         prefix: "am_sk_live",
