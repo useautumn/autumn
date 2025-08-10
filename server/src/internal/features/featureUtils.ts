@@ -9,6 +9,8 @@ import {
   Organization,
   ProductItemFeatureType,
   FeatureType,
+  FullCustomer,
+  UsagePriceConfig,
 } from "@autumn/shared";
 import { FeatureService } from "./FeatureService.js";
 import { StatusCodes } from "http-status-codes";
@@ -16,6 +18,11 @@ import { generateFeatureDisplay } from "@/external/llm/llmUtils.js";
 import { ProductService } from "../products/ProductService.js";
 import { getCreditSystemsFromFeature } from "./creditSystemUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import {
+  cusProductsToCusPrices,
+  cusProductToPrices,
+} from "../customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { priceToFeature } from "../products/prices/priceUtils/convertPrice.js";
 
 export const validateFeatureId = (featureId: string) => {
   if (!featureId.match(/^[a-zA-Z0-9_-]+$/)) {
@@ -203,4 +210,30 @@ export const getCusFeatureType = ({ feature }: { feature: Feature }) => {
 
 export const isCreditSystem = ({ feature }: { feature: Feature }) => {
   return feature.type == FeatureType.CreditSystem;
+};
+
+export const isPaidContinuousUse = ({
+  feature,
+  fullCus,
+}: {
+  feature: Feature;
+  fullCus: FullCustomer;
+}) => {
+  let isContinuous = feature.config?.usage_type == FeatureUsageType.Continuous;
+
+  if (!isContinuous) {
+    return false;
+  }
+
+  let cusPrices = cusProductsToCusPrices({
+    cusProducts: fullCus.customer_products,
+  });
+  let hasPaid = cusPrices.some((cp) => {
+    let config = cp.price.config as UsagePriceConfig;
+    if (config.internal_feature_id == feature.internal_id) {
+      return true;
+    }
+  });
+
+  return hasPaid;
 };
