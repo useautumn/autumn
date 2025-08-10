@@ -15,8 +15,8 @@ $MOCHA_CMD 'tests/advanced/multiFeature/*.ts' \
            'tests/advanced/rollovers/*.ts' \
            'tests/advanced/customInterval/*.ts'
           
-# $MOCHA_CMD 'tests/attach/multiProduct/*.ts' \
-#            'tests/advanced/usageLimit/*.ts' 
+$MOCHA_CMD 'tests/attach/multiProduct/*.ts' \
+           'tests/advanced/usageLimit/*.ts' 
 
-# $MOCHA_CMD 'tests/advanced/usage/*.ts'
+$MOCHA_CMD 'tests/advanced/usage/*.ts'
            

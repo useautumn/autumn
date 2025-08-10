@@ -29,7 +29,7 @@ export const handleScheduleFunction = async ({
 }) => {
   const logger = req.logtail;
   const product = attachParams.products[0];
-  const { stripeCli } = attachParams;
+  const { stripeCli, customer: fullCus } = attachParams;
 
   const { curMainProduct, curScheduledProduct } = attachParamToCusProducts({
     attachParams,
@@ -55,7 +55,9 @@ export const handleScheduleFunction = async ({
   // 3. Get schedules for current cus products
   logger.info(`3. Getting schedules for current cus products`);
   let schedules = await cusProductsToSchedules({
-    cusProducts: [curMainProduct, curScheduledProduct],
+    // cusProducts: [curMainProduct, curScheduledProduct],
+    // cusProducts: [curMainProduct, curScheduledProduct],
+    cusProducts: fullCus.customer_products,
     stripeCli,
   });
 
