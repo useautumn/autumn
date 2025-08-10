@@ -143,18 +143,21 @@ export const handleUpdateBalances = async (req: any, res: any) => {
       delete properties.balance;
 
       for (const cusEnt of cusEnts) {
-        if (cusEnt.internal_feature_id !== feature!.internal_id!) {
-          continue;
-        }
+        let cusEntIntCount = cusEnt.entitlement.interval_count || 1;
+        let deductionIntCount = balance.interval_count || 1;
 
-        let intervalCount = cusEnt.entitlement.interval_count || 1;
-        let intervalCountMatch =
-          intervalCount > 1 ? balance.interval_count === intervalCount : true;
+        let intCountMatch = notNullish(balance.interval_count)
+          ? cusEntIntCount === deductionIntCount
+          : true;
+
+        let intMatch = notNullish(balance.interval)
+          ? balance.interval === cusEnt.entitlement.interval
+          : true;
 
         if (
-          notNullish(balance.interval) &&
-          balance.interval !== cusEnt.entitlement.interval &&
-          intervalCountMatch
+          cusEnt.internal_feature_id !== feature!.internal_id! ||
+          !intMatch ||
+          !intCountMatch
         ) {
           continue;
         }
@@ -230,9 +233,22 @@ export const handleUpdateBalances = async (req: any, res: any) => {
         }
 
         for (const cusEnt of cusEnts) {
+          let cusEntIntCount = cusEnt.entitlement.interval_count || 1;
+          let deductionIntCount = featureDeduction.intervalCount || 1;
+
+          let intCountMatch = notNullish(featureDeduction.intervalCount)
+            ? cusEntIntCount === deductionIntCount
+            : true;
+
+          let intMatch = notNullish(featureDeduction.interval)
+            ? featureDeduction.interval === cusEnt.entitlement.interval
+            : true;
+
           if (
             cusEnt.internal_feature_id !==
-            featureDeduction.feature!.internal_id!
+              featureDeduction.feature!.internal_id! ||
+            !intMatch ||
+            !intCountMatch
           ) {
             continue;
           }

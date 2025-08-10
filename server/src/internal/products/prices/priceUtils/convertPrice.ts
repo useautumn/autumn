@@ -33,8 +33,12 @@ export const toIntervalKey = ({
   } else if (interval == BillingInterval.SemiAnnual) {
     let finalCount = (intervalCount ?? 1) * 6;
     return `${BillingInterval.Month}-${finalCount}`;
+  }
+
+  if (interval == BillingInterval.Week) {
+    return `${BillingInterval.Week}-${intervalCount}`;
   } else if (interval == BillingInterval.Year) {
-    return BillingInterval.Year;
+    return `${BillingInterval.Year}-${intervalCount}`;
   }
   return `${interval}-${intervalCount}`;
 };

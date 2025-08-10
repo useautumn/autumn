@@ -3,6 +3,7 @@ import {
   addMinutes,
   addMonths,
   addSeconds,
+  addWeeks,
   addYears,
   differenceInSeconds,
   getDate,
@@ -16,6 +17,7 @@ import {
   setSeconds,
   startOfMonth,
   subMonths,
+  subWeeks,
   subYears,
 } from "date-fns";
 import { UTCDate } from "@date-fns/utc";
@@ -33,6 +35,9 @@ export const subtractBillingIntervalUnix = ({
   const date = new UTCDate(unixTimestamp);
   let subtractedDate = date;
   switch (interval) {
+    case BillingInterval.Week:
+      subtractedDate = subWeeks(date, 1 * intervalCount);
+      break;
     case BillingInterval.Month:
       subtractedDate = subMonths(date, 1 * intervalCount);
       break;
@@ -63,6 +68,9 @@ export const addBillingIntervalUnix = ({
   const date = new UTCDate(unixTimestamp);
   let addedDate = date;
   switch (interval) {
+    case BillingInterval.Week:
+      addedDate = addWeeks(date, 1 * intervalCount);
+      break;
     case BillingInterval.Month:
       addedDate = addMonths(date, intervalCount);
       break;

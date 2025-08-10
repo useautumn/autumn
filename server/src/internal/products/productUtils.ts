@@ -125,8 +125,8 @@ export const isProductUpgrade = ({
     return true;
   }
 
-  let billingInterval1 = getBillingInterval(prices1);
-  let billingInterval2 = getBillingInterval(prices2);
+  let billingInterval1 = getBillingInterval(prices1); // pro quarter
+  let billingInterval2 = getBillingInterval(prices2); // premium
 
   // 2. Get total price for each product
   const getTotalPrice = (prices: Price[]) => {
@@ -142,6 +142,7 @@ export const isProductUpgrade = ({
   };
 
   // 3. Compare prices
+
   if (
     intervalsSame({
       intervalA: billingInterval1,

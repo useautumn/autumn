@@ -36,6 +36,7 @@ const intervalToValue = (
 ) => {
   const intervalToBaseVal: Record<BillingInterval, number> = {
     [BillingInterval.OneOff]: 0,
+    [BillingInterval.Week]: 0.25,
     [BillingInterval.Month]: 1,
     [BillingInterval.Quarter]: 3,
     [BillingInterval.SemiAnnual]: 6,

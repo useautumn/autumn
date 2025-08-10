@@ -273,6 +273,7 @@ const getChangeProductBranch = async ({
   // }
 
   let isUpgrade = isProductUpgrade({ prices1: curPrices, prices2: newPrices });
+
   if (isUpgrade) {
     if (isTrialing(curMainProduct!)) {
       return AttachBranch.MainIsTrial;
