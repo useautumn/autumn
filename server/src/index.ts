@@ -179,7 +179,7 @@ if (process.env.NODE_ENV === "development") {
     console.log(`Master ${process.pid} is running`);
     console.log("Number of CPUs", numCPUs);
 
-    let numWorkers = 10;
+    let numWorkers = 7;
 
     for (let i = 0; i < numWorkers; i++) {
       cluster.fork();
