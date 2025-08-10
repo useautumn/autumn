@@ -253,8 +253,6 @@ export const handleNewProductItems = async ({
     }
   }
 
-  console.log("updatedEnts", updatedEnts);
-
   if (newFeatures.length > 0 && saveToDb) {
     await FeatureService.insert({
       db,
