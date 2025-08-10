@@ -54,6 +54,7 @@ const prepaidWordsItem = constructPrepaidItem({
   price: 10,
   billingUnits: 1,
   includedUsage: 0,
+  intervalCount: 2,
 });
 
 export const addOn = constructRawProduct({
@@ -62,7 +63,7 @@ export const addOn = constructRawProduct({
   isAddOn: true,
 });
 
-describe(`${chalk.yellowBright(`${testCase}: Testing custom interval on arrear prorated price`)}`, () => {
+describe(`${chalk.yellowBright(`${testCase}: Testing custom interval on add on merged product`)}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
   let testClockId: string;
@@ -115,7 +116,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval on arrear p
     });
   });
 
-  it("should upgrade to premium product and have correct invoice next cycle", async function () {
+  it("should upgrade to attached add on and have correct invoice next cycle", async function () {
     const curUnix = await advanceTestClock({
       stripeCli,
       testClockId,
@@ -150,22 +151,21 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval on arrear p
     });
 
     let expectedPrice = wordsBillingUnits * prepaidWordsItem.price!;
-    expect(invoices[0].product_ids).to.include(addOn.id);
-    expect(invoices[0].total).to.approximately(
-      calculateProrationAmount({
-        amount: expectedPrice,
-        periodStart: curUnix!,
-        periodEnd: addMonths(curUnix!, 1).getTime(),
-        now: curUnix!,
-      }),
-      0.1
-    );
+    const proratedPrice = calculateProrationAmount({
+      amount: expectedPrice,
+      periodStart: new Date().getTime(),
+      periodEnd: addMonths(new Date(), 2).getTime(),
+      now: curUnix!,
+    });
 
-    const expectedAddonEnd = addMonths(curUnix, 1);
+    expect(invoices[0].product_ids).to.include(addOn.id);
+    expect(invoices[0].total).to.approximately(proratedPrice, 0.1);
+
+    const expectedAddonEnd = addMonths(new Date(), 2);
     const approximate = 1000 * 60 * 60 * 24; // +- 1 day
     const addOnProduct = customer.products.find((p) => p.id === addOn.id);
 
-    expect(addOnProduct?.current_period_end).to.be.closeTo(
+    expect(addOnProduct?.current_period_end).to.be.approximately(
       expectedAddonEnd.getTime(),
       approximate
     );

@@ -131,6 +131,14 @@ export const getBillingInterval = (prices: Price[]) => {
     throw error;
   }
 
+  // console.log(
+  //   "pricesCopy",
+  //   pricesCopy.map((p) => ({
+  //     interval: p.config!.interval,
+  //     intervalCount: p.config!.interval_count,
+  //   }))
+  // );
+
   if (pricesCopy.length == 0) {
     throw new RecaseError({
       message: "No prices found, can't get billing interval",
@@ -140,10 +148,8 @@ export const getBillingInterval = (prices: Price[]) => {
   }
 
   return {
-    interval: pricesCopy[pricesCopy.length - 1].config!
-      .interval as BillingInterval,
-    intervalCount:
-      pricesCopy[pricesCopy.length - 1].config!.interval_count || 1,
+    interval: pricesCopy[0].config!.interval as BillingInterval,
+    intervalCount: pricesCopy[0].config!.interval_count || 1,
   };
   // return pricesCopy[pricesCopy.length - 1].config!.interval as BillingInterval;
 };

@@ -51,9 +51,7 @@ export const addProductFromSubs = async ({
     (cp) =>
       !cp.product.is_add_on &&
       cp.product_id == autumnProduct.id &&
-      (notNullish(entity)
-        ? cp.internal_entity_id == entity!.internal_id
-        : true),
+      (notNullish(entity) ? cp.internal_entity_id == entity!.internal_id : true)
   );
 
   if (mainCusProduct && !force) {
@@ -66,7 +64,7 @@ export const addProductFromSubs = async ({
           autumnCus.id || autumnCus.email
         } already has non-free free product: ${
           mainCusProduct.product.name
-        }, skipping...`,
+        }, skipping...`
       );
       return mainCusProduct;
     }
@@ -112,7 +110,7 @@ export const addProductFromSubs = async ({
     anchorToUnix: anchorToUnix || stripeSubs[0].current_period_end * 1000,
 
     subscriptionStatus: stripeToAutumnSubStatus(
-      stripeSubs[0].status,
+      stripeSubs[0].status
     ) as CusProductStatus,
 
     canceledAt: stripeSubs[0].canceled_at
@@ -124,7 +122,7 @@ export const addProductFromSubs = async ({
   });
 
   logger.info(
-    `Added product ${autumnProduct.name} to customer ${autumnCus.name}`,
+    `Added product ${autumnProduct.name} to customer ${autumnCus.name}`
   );
 
   // Create sub
@@ -146,7 +144,7 @@ export const addProductFromSubs = async ({
         sub: constructSub({
           stripeId: sub.id,
           usageFeatures:
-            subInterval == BillingInterval.Month ? usageFeatures : [],
+            subInterval.interval == BillingInterval.Month ? usageFeatures : [],
           orgId: org.id,
           env,
           currentPeriodStart: sub.current_period_start,

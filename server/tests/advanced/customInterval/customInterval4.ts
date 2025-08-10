@@ -1,30 +1,31 @@
-import chalk from "chalk";
-import Stripe from "stripe";
-
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import { APIVersion, AppEnv, Organization } from "@autumn/shared";
-
+import chalk from "chalk";
+import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
+
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+
 import { addPrefixToProducts, runAttachTest } from "tests/attach/utils.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { addHours, addMonths } from "date-fns";
+import { addMonths } from "date-fns";
 import { expect } from "chai";
-import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
+import {
+  expectDowngradeCorrect,
+  expectNextCycleCorrect,
+} from "tests/utils/expectUtils/expectScheduleUtils.js";
 import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
 
-const testCase = "customInterval1";
+const testCase = "customInterval4";
 
 export let pro = constructProduct({
   items: [
     constructFeatureItem({
       featureId: TestFeature.Words,
-      intervalCount: 2,
       includedUsage: 500,
     }),
   ],
@@ -33,22 +34,18 @@ export let pro = constructProduct({
 });
 
 export let premium = constructProduct({
+  id: "premium",
   items: [
     constructFeatureItem({
       featureId: TestFeature.Words,
-      intervalCount: 2,
+      includedUsage: 500,
     }),
-    // constructArrearItem({ featureId: TestFeature.Words }),
-    // constructArrearProratedItem({
-    //   featureId: TestFeature.Users,
-    //   pricePerUnit: 30,
-    // }),
   ],
   intervalCount: 2,
   type: "premium",
 });
 
-describe(`${chalk.yellowBright(`${testCase}: Testing custom interval and interval count`)}`, () => {
+describe(`${chalk.yellowBright(`${testCase}: Testing downgrades for custom intervals`)}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
   let testClockId: string;
@@ -89,27 +86,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval and interva
     testClockId = testClockId1!;
   });
 
-  it("should attach pro product", async function () {
-    await runAttachTest({
-      autumn,
-      customerId,
-      product: pro,
-      stripeCli,
-      db,
-      org,
-      env,
-    });
-  });
-
-  let usage = 100012;
-  it("should upgrade to premium product and have correct invoice next cycle", async function () {
-    const curUnix = await advanceTestClock({
-      stripeCli,
-      testClockId,
-      advanceTo: addMonths(new Date(), 1).getTime(),
-      waitForSeconds: 15,
-    });
-
+  it("should attach premium product", async function () {
     await runAttachTest({
       autumn,
       customerId,
@@ -119,28 +96,55 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval and interva
       org,
       env,
     });
+  });
 
-    const customer = await autumn.customers.get(customerId);
-    expect(customer.invoices.length).to.equal(2);
-
-    const nextUnix = await advanceTestClock({
-      stripeCli,
-      testClockId,
-      advanceTo: addHours(
-        addMonths(new Date(curUnix), 1),
-        hoursToFinalizeInvoice
-      ).getTime(),
-      waitForSeconds: 30,
+  it("should have correct next cycle at on checkout", async function () {
+    const checkout = await autumn.checkout({
+      customer_id: customerId,
+      product_id: pro.id,
     });
 
-    const customer2 = await autumn.customers.get(customerId);
-    const invoices = customer2.invoices;
-    expect(invoices.length).to.equal(3);
-    expect(invoices[0].product_ids).to.include(premium.id);
-    expect(invoices[0].total).to.equal(getBasePrice({ product: premium }));
+    let expectedNextCycle = addMonths(new Date(), 2);
+    expect(checkout.next_cycle?.starts_at).to.be.approximately(
+      expectedNextCycle.getTime(),
+      1000 * 60 * 60 * 24
+    );
 
-    const wordsFeature = customer2.features[TestFeature.Words];
-    // @ts-ignore
-    expect(wordsFeature.interval_count).to.equal(2);
+    expect(checkout.total).to.equal(0);
+  });
+
+  let preview: any;
+  it("should downgrade to pro", async function () {
+    const { preview: preview_ } = await expectDowngradeCorrect({
+      autumn,
+      customerId,
+      curProduct: premium,
+      newProduct: pro,
+      stripeCli,
+      db,
+      org,
+      env,
+    });
+
+    preview = preview_;
+  });
+
+  it("should have pro attached on next cycle", async function () {
+    await expectNextCycleCorrect({
+      preview: preview!,
+      autumn,
+      stripeCli,
+      customerId,
+      testClockId,
+      product: pro,
+      db,
+      org,
+      env,
+    });
+
+    const customer = await autumn.customers.get(customerId);
+    const invoices = customer.invoices;
+    expect(invoices.length).to.equal(2);
+    expect(invoices[0].total).to.equal(getBasePrice({ product: pro }));
   });
 });

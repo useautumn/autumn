@@ -32,6 +32,11 @@ export const billingIntervalToStripe = ({
 }) => {
   const finalCount = intervalCount ?? 1;
   switch (interval) {
+    case BillingInterval.Week:
+      return {
+        interval: "week",
+        interval_count: finalCount,
+      };
     case BillingInterval.Month:
       return {
         interval: "month",

@@ -61,7 +61,7 @@ export const constructPrepaidItem = ({
   },
   rolloverConfig,
   usageLimit,
-  intervalCount = 2,
+  intervalCount = 1,
 }: {
   featureId: string;
   price?: number;

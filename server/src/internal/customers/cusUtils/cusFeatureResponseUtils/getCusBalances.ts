@@ -257,6 +257,7 @@ export const getCusBalances = async ({
             isBoolean || unlimited ? undefined : cusEnt.next_reset_at;
           data[key].allowance = isBoolean || unlimited ? undefined : 0;
           data[key].usage_limit = isBoolean || unlimited ? undefined : 0;
+          data[key].interval_count = ent.interval_count || 1;
         }
       }
     }

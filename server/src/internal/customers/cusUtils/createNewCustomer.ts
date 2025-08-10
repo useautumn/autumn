@@ -41,7 +41,7 @@ export const createNewCustomer = async ({
   const { db, org, env, logger } = req;
 
   logger.info(
-    `Creating customer: ${customer.email || customer.id}, org: ${org.slug}`,
+    `Creating customer: ${customer.email || customer.id}, org: ${org.slug}`
   );
 
   const defaultProds = await ProductService.listDefault({
@@ -149,7 +149,10 @@ export const createNewCustomer = async ({
       }),
       nextResetAt,
       anchorToUnix: org.config.anchor_start_of_month
-        ? getNextStartOfMonthUnix(BillingInterval.Month)
+        ? getNextStartOfMonthUnix({
+            interval: BillingInterval.Month,
+            intervalCount: 1,
+          })
         : undefined,
       scenario: AttachScenario.New,
       logger,
