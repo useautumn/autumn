@@ -81,7 +81,7 @@ export const getExistingUsages = ({
     let feature = features.find(
       (f) => f.internal_id === entity.internal_feature_id
     );
-    let key = `${feature?.id}-${EntInterval.Lifetime}`;
+    let key = `${feature?.id}-${EntInterval.Lifetime}-1`;
 
     if (!usages[key]) {
       usages[key] = {
@@ -212,7 +212,7 @@ export const addExistingUsagesToCusEnts = ({
 
     for (const cusEnt of fullCusEnts) {
       let ent = cusEnt.entitlement;
-      let cusEntKey = `${ent.feature_id}-${ent.interval}`;
+      let cusEntKey = `${ent.feature_id}-${ent.interval}-${ent.interval_count || 1}`;
       let fromEntities = existingUsages[key].fromEntities;
 
       if (cusEntKey !== key) {
