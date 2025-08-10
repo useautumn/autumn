@@ -30,6 +30,7 @@ import { ClickHouseManager } from "./external/clickhouse/ClickHouseManager.js";
 const tracer = trace.getTracer("express");
 
 checkEnvVars();
+// subscribeToOrgUpdates({ db });
 
 const init = async () => {
   const app = express();
@@ -83,8 +84,6 @@ const init = async () => {
   await QueueManager.getInstance(); // initialize the queue manager
   await CacheManager.getInstance();
   await ClickHouseManager.getInstance();
-
-  subscribeToOrgUpdates({ db });
 
   app.use(async (req: any, res: any, next: any) => {
     req.env = req.env = req.headers["app_env"] || AppEnv.Sandbox;

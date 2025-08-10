@@ -1,6 +1,11 @@
 import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { AttachFlags } from "../models/AttachFlags.js";
-import { AttachConfig, AttachBranch, intervalsSame } from "@autumn/shared";
+import {
+  AttachConfig,
+  AttachBranch,
+  intervalsSame,
+  intervalToValue,
+} from "@autumn/shared";
 import { AttachBody } from "@autumn/shared";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { nullish } from "@/utils/genUtils.js";
@@ -26,6 +31,23 @@ export const intervalsAreSame = ({
 
   let newProduct = attachParamsToProduct({ attachParams });
   let curPrices = cusProductToPrices({ cusProduct: curCusProduct! });
+
+  const curIntervals = new Set(
+    curPrices.map((p) =>
+      intervalToValue(p.config.interval, p.config.interval_count)
+    )
+  );
+
+  const newIntervals = new Set(
+    newProduct.prices.map((p) =>
+      intervalToValue(p.config.interval, p.config.interval_count)
+    )
+  );
+
+  return (
+    curIntervals.size === newIntervals.size &&
+    [...curIntervals].every((interval) => newIntervals.has(interval))
+  );
 
   for (const price of curPrices) {
     let hasSimilarInterval = newProduct.prices.some((p) => {

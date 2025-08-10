@@ -21,15 +21,17 @@ import {
 export const getIntervalString = ({
   interval,
   intervalCount,
+  prefix = "per ",
 }: {
   interval: ProductItemInterval;
   intervalCount?: number | null;
+  prefix?: string;
 }) => {
   if (!interval) return "";
   if (intervalCount == 1) {
-    return `per ${interval}`;
+    return `${prefix}${interval}`;
   }
-  return `per ${intervalCount} ${interval}s`;
+  return `${prefix}${intervalCount} ${interval}s`;
 };
 
 export const formatTiers = ({
