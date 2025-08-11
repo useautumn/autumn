@@ -1,5 +1,5 @@
 import RecaseError from "@/utils/errorUtils.js";
-import { generateId } from "@/utils/genUtils.js";
+import { generateId, notNullish } from "@/utils/genUtils.js";
 import {
   CreateFreeTrial,
   CreateFreeTrialSchema,
@@ -15,10 +15,12 @@ export const validateAndInitFreeTrial = ({
   freeTrial,
   internalProductId,
   isCustom = false,
+  card_required = false,
 }: {
   freeTrial: CreateFreeTrial;
   internalProductId: string;
   isCustom?: boolean;
+  card_required?: boolean;
 }): FreeTrial => {
   const freeTrialSchema = CreateFreeTrialSchema.parse(freeTrial);
 
@@ -29,6 +31,7 @@ export const validateAndInitFreeTrial = ({
     duration: freeTrial.duration || FreeTrialDuration.Day,
     internal_product_id: internalProductId,
     is_custom: isCustom,
+    card_required,
   };
 };
 
@@ -44,7 +47,8 @@ export const freeTrialsAreSame = ({
   return (
     ft1.length === ft2.length &&
     ft1.unique_fingerprint === ft2.unique_fingerprint &&
-    ft1.duration === ft2.duration
+    ft1.duration === ft2.duration &&
+    ft1.card_required === ft2.card_required
   );
 };
 
@@ -155,6 +159,7 @@ export const handleNewFreeTrial = async ({
     freeTrial: newFreeTrial,
     internalProductId,
     isCustom,
+    card_required: newFreeTrial?.card_required ?? false,
   });
 
   if (isCustom && newFreeTrial) {
