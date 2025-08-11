@@ -13,7 +13,6 @@ import { validateCreditSystem, validateFeatureId } from "./featureUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 import { handleUpdateFeature } from "@/internal/features/handlers/handleUpdateFeature.js";
 import { handleDeleteFeature } from "@/internal/features/handlers/handleDeleteFeature.js";
-import { handleGetRelatedObjects } from "@/internal/features/handlers/handleGetRelatedObjects.js";
 import RecaseError, {
   formatZodError,
   handleFrontendReqError,
