@@ -11,7 +11,7 @@ import {
 import Stripe from "stripe";
 import { getCusPaymentMethod } from "../stripeCusUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
-import { formatUnixToDateTime, generateId } from "@/utils/genUtils.js";
+import { formatUnixToDateTime, generateId, notNullish } from "@/utils/genUtils.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getAlignedIntervalUnix } from "@/internal/products/prices/billingIntervalUtils.js";
@@ -46,7 +46,7 @@ export const createStripeSub = async ({
   let paymentMethod = await getCusPaymentMethod({
     stripeCli,
     stripeId: customer.processor.id,
-    errorIfNone: !invoiceOnly, // throw error if no payment method and invoiceOnly is false
+    errorIfNone: !invoiceOnly && (notNullish(freeTrial) && freeTrial?.card_required), // throw error if no payment method and invoiceOnly is false OR if its a free trial and card is required but no payment method
   });
 
   let paymentMethodData = {};
@@ -92,6 +92,12 @@ export const createStripeSub = async ({
         : undefined,
 
       coupon: reward ? reward.id : undefined,
+
+      trial_settings: freeTrial && !freeTrial.card_required ? {
+        end_behavior: {
+          missing_payment_method: "cancel",
+        },
+      } : undefined,
     });
 
     if (invoiceOnly && finalizeInvoice) {
