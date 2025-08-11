@@ -29,6 +29,7 @@ export const CreateFreeTrial = ({
     length: 7,
     unique_fingerprint: false,
     duration: FreeTrialDuration.Day,
+    card_required: false,
   });
 
   const handleCreateFreeTrial = async () => {
@@ -44,6 +45,7 @@ export const CreateFreeTrial = ({
         length: lengthInt,
         unique_fingerprint: freeTrial.unique_fingerprint,
         duration: freeTrial.duration,
+        card_required: freeTrial.card_required,
       },
     });
 
@@ -51,7 +53,12 @@ export const CreateFreeTrial = ({
       handleAutoSave({
         axiosInstance,
         productId: product.id,
-        product: { ...product, free_trial: freeTrial },
+        product: { ...product, free_trial: {
+          length: lengthInt,
+          unique_fingerprint: freeTrial.unique_fingerprint,
+          duration: freeTrial.duration,
+          card_required: freeTrial.card_required,
+        } },
         mutate,
       });
     }
