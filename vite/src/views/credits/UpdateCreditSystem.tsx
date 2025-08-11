@@ -18,6 +18,7 @@ import {
   CustomDialogContent,
   CustomDialogFooter,
 } from "@/components/general/modal-components/DialogContentWrapper";
+import { getBackendErr } from "@/utils/genUtils";
 
 function UpdateCreditSystem({
   open,
@@ -53,7 +54,7 @@ function UpdateCreditSystem({
       await mutate();
       setOpen(false);
     } catch (error) {
-      toast.error("Failed to update credit system");
+      toast.error(getBackendErr(error, "Failed to update credit system"));
     }
     setUpdateLoading(false);
   };

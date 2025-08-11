@@ -29,7 +29,6 @@ export const EditProductDetails = () => {
   });
 
   useEffect(() => {
-    console.log("product:", product);
     if (product.id) {
       setDetails({
         name: product.name,

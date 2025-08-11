@@ -122,7 +122,7 @@ featureRouter.post("/:feature_id", async (req: any, res: any) =>
       }
 
       if (apiFeature.credit_schema) {
-        newConfig.credit_schema = apiFeature.credit_schema.map((credit) => ({
+        newConfig.schema = apiFeature.credit_schema.map((credit) => ({
           metered_feature_id: credit.metered_feature_id,
           credit_amount: credit.credit_cost,
         }));
