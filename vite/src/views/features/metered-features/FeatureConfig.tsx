@@ -15,6 +15,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { SelectFeatureType } from "./SelectFeatureType";
+import { notNullish } from "@/utils/genUtils";
 
 export function FeatureConfig({
   feature,
@@ -24,6 +26,7 @@ export function FeatureConfig({
   isUpdate = false,
   eventNameChanged,
   setEventNameChanged,
+  open,
 }: {
   feature: any;
   setFeature: any;
@@ -32,6 +35,7 @@ export function FeatureConfig({
   isUpdate?: boolean;
   eventNameChanged: boolean;
   setEventNameChanged: any;
+  open: boolean;
 }) {
   const [fields, setFields] = useState(
     feature.name
@@ -57,35 +61,27 @@ export function FeatureConfig({
             },
           ],
           usage_type: FeatureUsageType.Single,
-          // aggregate: {
-          //   type: "count",
-          //   property: null,
-          // },
         }
   );
 
   const [showEventName, setShowEventName] = useState(
     feature.config && feature.config.filters?.[0]?.value?.length > 0
   );
-
   const [idChanged, setIdChanged] = useState(!!feature.id);
-  const [featureType, setFeatureType] = useState<string>(
-    feature.type ? feature.type : FeatureType.Metered
-  );
 
-  useEffect(() => {
-    setFeature({
-      ...feature,
-      name: fields.name,
-      id: fields.id,
-      type: featureType,
-      config: meteredConfig,
-    });
-  }, [featureType, meteredConfig, fields]);
+  // useEffect(() => {
+  //   setFeature({
+  //     ...feature,
+  //     name: fields.name,
+  //     id: fields.id,
+  //     type: null,
+  //     config: meteredConfig,
+  //   });
+  // }, [meteredConfig, fields]);
 
   return (
     <div className="flex flex-col gap-4 min-w-md max-w-md">
-      <Tabs
+      {/* <Tabs
         defaultValue={feature.type}
         className="w-[400px]"
         value={featureType}
@@ -101,8 +97,10 @@ export function FeatureConfig({
           {featureType == FeatureType.Boolean &&
             "A feature flag that can be either enabled or disabled"}
         </p>
-      </Tabs>
-      {featureType === FeatureType.Metered && (
+      </Tabs> */}
+
+      <SelectFeatureType feature={feature} setFeature={setFeature} />
+      {/* {featureType === FeatureType.Metered && (
         <div className="w-full">
           <div className="flex flex-col gap-2">
             <Tabs
@@ -161,94 +159,97 @@ export function FeatureConfig({
             </Tabs>
           </div>
         </div>
-      )}
-
-      <div className="flex gap-2 w-full">
-        <div className="w-full">
-          <FieldLabel>Name</FieldLabel>
-          <Input
-            placeholder="Eg. messages, seats"
-            value={fields.name}
-            onChange={(e) => {
-              const newFields: any = { ...fields, name: e.target.value };
-              if (!idChanged) {
-                newFields.id = slugify(e.target.value);
-              }
-              setFields(newFields);
-
-              if (!eventNameChanged) {
-                setEventNameInput(slugify(e.target.value));
-              }
-            }}
-          />
-        </div>
-        <div className="w-full">
-          <FieldLabel>ID</FieldLabel>
-          <Input
-            // disabled={isUpdate}
-            placeholder="ID"
-            value={fields.id}
-            onChange={(e) => {
-              setFields({ ...fields, id: e.target.value });
-              setIdChanged(true);
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Filter */}
-      {featureType === FeatureType.Metered && (
+      )} */}
+      {notNullish(feature.type) && (
         <>
-          <div className={showEventName ? "" : "hidden"}>
-            <FieldLabel>Event Name</FieldLabel>
-
-            {/* <div className="flex gap-1 mb-2 text-sm bor">
-              <p className="text-t2 font-mono">event_name</p>
-              <p className="text-sm text-t3">is one of</p>
-            </div> */}
-            <FilterInput
-              config={meteredConfig}
-              setConfig={setMeteredConfig}
-              eventNameInput={eventNameInput}
-              setEventNameInput={setEventNameInput}
-              setEventNameChanged={setEventNameChanged}
-            />
-            <p className="text-sm text-t3 mt-2 px-2">
-              Event names are only required if you want to link one event from
-              your application to multiple feature balances. Read more{" "}
-              <a
-                href="https://docs.useautumn.com/features/tracking-usage#using-event-names"
-                target="_blank"
-                className="text-primary underline"
-              >
-                here.
-              </a>
-            </p>
-          </div>
-          <div>
-            <Tooltip delayDuration={400}>
-              <TooltipTrigger asChild>
-                <Button
-                  className={cn(
-                    "h-7 border rounded-none text-t3 text-xs",
-                    showEventName && "text-red-300"
-                  )}
-                  variant="outline"
-                  startIcon={
-                    showEventName ? <XIcon size={12} /> : <PlusIcon size={12} />
+          <div className="flex gap-2 w-full">
+            <div className="w-full">
+              <FieldLabel>Name</FieldLabel>
+              <Input
+                placeholder="Eg. messages, seats"
+                value={feature.name}
+                onChange={(e) => {
+                  const newFields: any = { ...feature, name: e.target.value };
+                  if (!idChanged) {
+                    newFields.id = slugify(e.target.value);
                   }
-                  onClick={() => {
-                    setShowEventName(!showEventName);
-                  }}
-                >
-                  <span className="font-mono ">event_name</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent sideOffset={5} side="bottom" align="start">
-                <p>Link feature to multiple separate events</p>
-              </TooltipContent>
-            </Tooltip>
+                  setFeature(newFields);
+
+                  if (!eventNameChanged) {
+                    setEventNameInput(slugify(e.target.value));
+                  }
+                }}
+              />
+            </div>
+            <div className="w-full">
+              <FieldLabel>ID</FieldLabel>
+              <Input
+                // disabled={isUpdate}
+                placeholder="ID"
+                value={feature.id}
+                onChange={(e) => {
+                  setFeature({ ...feature, id: e.target.value });
+                  setIdChanged(true);
+                }}
+              />
+            </div>
           </div>
+
+          {/* Filter */}
+          {feature.type === FeatureType.Metered && (
+            <>
+              <div className={showEventName ? "" : "hidden"}>
+                <FieldLabel>Event Name</FieldLabel>
+
+                <FilterInput
+                  config={meteredConfig}
+                  setConfig={setMeteredConfig}
+                  eventNameInput={eventNameInput}
+                  setEventNameInput={setEventNameInput}
+                  setEventNameChanged={setEventNameChanged}
+                />
+                <p className="text-sm text-t3 mt-2 px-2">
+                  Event names are only required if you want to link one event
+                  from your application to multiple feature balances. Read more{" "}
+                  <a
+                    href="https://docs.useautumn.com/features/tracking-usage#using-event-names"
+                    target="_blank"
+                    className="text-primary underline"
+                  >
+                    here.
+                  </a>
+                </p>
+              </div>
+              <div>
+                <Tooltip delayDuration={400}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      className={cn(
+                        "h-7 border rounded-none text-t3 text-xs",
+                        showEventName && "text-red-300"
+                      )}
+                      variant="outline"
+                      startIcon={
+                        showEventName ? (
+                          <XIcon size={12} />
+                        ) : (
+                          <PlusIcon size={12} />
+                        )
+                      }
+                      onClick={() => {
+                        setShowEventName(!showEventName);
+                      }}
+                    >
+                      <span className="font-mono ">event_name</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent sideOffset={5} side="bottom" align="start">
+                    <p>Link feature to multiple separate events</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </>
+          )}
         </>
       )}
     </div>
@@ -350,91 +351,3 @@ export const FilterInput = ({
     </div>
   );
 };
-
-{
-  /* <div>
-            {groupByExists ? (
-              <div>
-                <FieldLabel>Group By</FieldLabel>
-                <Input
-                  placeholder="eg. app_id"
-                  value={meteredConfig.group_by?.property || ""}
-                  onChange={(e) =>
-                    setMeteredConfig({
-                      ...meteredConfig,
-                      group_by: {
-                        ...meteredConfig.group_by,
-                        property: e.target.value,
-                      },
-                    })
-                  }
-                />
-              </div>
-            ) : (
-              <Button
-                className="h-7 border rounded-none text-t3 text-xs"
-                variant="outline"
-                startIcon={<PlusIcon size={12} />}
-                onClick={() => {
-                  setMeteredConfig({
-                    ...meteredConfig,
-                    group_by: {
-                      property: "",
-                    },
-                  });
-                  setGroupByExists(true);
-                }}
-              >
-                Group By
-              </Button>
-            )}
-          </div> */
-}
-
-{
-  /* <div>
-            <FieldLabel>Aggregate</FieldLabel>
-            <Select
-              value={meteredConfig.aggregate.type}
-              onValueChange={(value) => setAggregate("type", value)}
-              defaultValue="count"
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.values(AggregateType).map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type.toUpperCase()}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {meteredConfig.aggregate.type == AggregateType.Sum && (
-            <div>
-              <FieldLabel>Sum Property</FieldLabel>
-              <Input
-                placeholder="eg. value"
-                value={meteredConfig.aggregate.property || ""}
-                onChange={(e) => setAggregate("property", e.target.value)}
-              />
-            </div>
-          )}
-
-          
-
-          {/* <div>
-            <FieldLabel>Group By Property</FieldLabel>
-            <Input
-              placeholder="eg. app_id"
-              value={meteredConfig.group_by || ""}
-              onChange={(e) =>
-                setMeteredConfig({
-                  ...meteredConfig,
-                  group_by: e.target.value,
-                })
-              }
-            />
-          </div> */
-}
