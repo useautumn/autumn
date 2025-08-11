@@ -7,8 +7,8 @@ export enum ClickHouseQuery {
   CREATE_DATE_RANGE_VIEW = "CREATE_DATE_RANGE_VIEW",
   CREATE_DATE_RANGE_BC_VIEW = "CREATE_DATE_RANGE_BC_VIEW",
   CREATE_ORG_EVENTS_VIEW = "CREATE_ORG_EVENTS_VIEW",
-  CREATE_GENERATE_EVENT_COUNT_EXPRESSIONS_FUNCTION = "CREATE_GENERATE_EVENT_COUNTS_EXPRESSIONS",
-  CREATE_GENERATE_EVENT_COUNT_EXPRESSIONS_NO_COUNT_FUNCTION = "CREATE_GENERATE_EVENT_COUNTS_EXPRESSIONS_NO_COUNT",
+  // CREATE_GENERATE_EVENT_COUNT_EXPRESSIONS_FUNCTION = "CREATE_GENERATE_EVENT_COUNTS_EXPRESSIONS",
+  // CREATE_GENERATE_EVENT_COUNT_EXPRESSIONS_NO_COUNT_FUNCTION = "CREATE_GENERATE_EVENT_COUNTS_EXPRESSIONS_NO_COUNT",
   GENERATE_EVENT_COUNT_EXPRESSIONS = "GENERATE_EVENT_COUNT_EXPRESSIONS",
   ENSURE_VIEWS_EXIST = "ENSURE_VIEWS_EXIST",
   ENSURE_FUNCTIONS_EXIST = "ENSURE_FUNCTIONS_EXIST",
@@ -84,8 +84,8 @@ export class ClickHouseManager {
       ClickHouseQuery.CREATE_DATE_RANGE_VIEW,
       ClickHouseQuery.CREATE_DATE_RANGE_BC_VIEW,
       ClickHouseQuery.CREATE_ORG_EVENTS_VIEW,
-      ClickHouseQuery.CREATE_GENERATE_EVENT_COUNT_EXPRESSIONS_FUNCTION,
-      ClickHouseQuery.CREATE_GENERATE_EVENT_COUNT_EXPRESSIONS_NO_COUNT_FUNCTION,
+      // ClickHouseQuery.CREATE_GENERATE_EVENT_COUNT_EXPRESSIONS_FUNCTION,
+      // ClickHouseQuery.CREATE_GENERATE_EVENT_COUNT_EXPRESSIONS_NO_COUNT_FUNCTION,
       ClickHouseQuery.GENERATE_EVENT_COUNT_EXPRESSIONS,
       ClickHouseQuery.ENSURE_VIEWS_EXIST,
       ClickHouseQuery.ENSURE_FUNCTIONS_EXIST,
@@ -144,7 +144,8 @@ export class ClickHouseManager {
       ClickHouseQuery.CREATE_DATE_RANGE_BC_VIEW,
       ClickHouseQuery.CREATE_DATE_RANGE_VIEW,
       ClickHouseQuery.CREATE_ORG_EVENTS_VIEW,
-      ClickHouseQuery.CREATE_GENERATE_EVENT_COUNT_EXPRESSIONS_FUNCTION,
+
+      // ClickHouseQuery.CREATE_GENERATE_EVENT_COUNT_EXPRESSIONS_FUNCTION,
     ];
 
     console.group();
@@ -187,15 +188,15 @@ export class ClickHouseManager {
     }
 
     // For CREATE FUNCTION queries, use command() instead of query() to avoid FORMAT clause
-    if (
-      query === ClickHouseQuery.CREATE_GENERATE_EVENT_COUNT_EXPRESSIONS_FUNCTION
-    ) {
-      const result = await client.command({
-        query: queryContent,
-        ...options,
-      });
-      return result;
-    }
+    // if (
+    //   query === ClickHouseQuery.CREATE_GENERATE_EVENT_COUNT_EXPRESSIONS_FUNCTION
+    // ) {
+    //   const result = await client.command({
+    //     query: queryContent,
+    //     ...options,
+    //   });
+    //   return result;
+    // }
 
     const result = await client.query({
       query: queryContent,
