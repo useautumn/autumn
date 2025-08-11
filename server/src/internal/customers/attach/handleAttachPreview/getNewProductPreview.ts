@@ -64,7 +64,10 @@ export const getNewProductPreview = async ({
 
   let dueNextCycle = null;
 
-  if (freeTrial || notNullish(anchorToUnix)) {
+  if (
+    (freeTrial || notNullish(anchorToUnix)) &&
+    branch != AttachBranch.OneOff
+  ) {
     let nextCycleItems = await getItemsForNewProduct({
       newProduct,
       attachParams,
