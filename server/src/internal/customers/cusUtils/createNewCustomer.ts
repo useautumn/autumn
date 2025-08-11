@@ -7,13 +7,15 @@ import { isFreeProduct } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import {
-  Organization,
-  CreateCustomer,
-  CreateCustomerSchema,
-  ErrCode,
-  BillingInterval,
-  AttachScenario,
-  FullCustomer,
+	Organization,
+	CreateCustomer,
+	CreateCustomerSchema,
+	ErrCode,
+	BillingInterval,
+	AttachScenario,
+	FullCustomer,
+	FullProduct,
+	FreeTrial,
 } from "@autumn/shared";
 import { AppEnv, Customer } from "@autumn/shared";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
@@ -23,141 +25,240 @@ import { initStripeCusAndProducts } from "../handlers/handleCreateCustomer.js";
 import { generateId } from "@/utils/genUtils.js";
 
 import {
-  newCusToAttachParams,
-  newCusToInsertParams,
+	newCusToAttachParams,
+	newCusToAttachParamsWithFreeTrial,
+	newCusToInsertParams,
 } from "../attach/attachUtils/attachParams/convertToParams.js";
+import { FreeTrialService } from "@/internal/products/free-trials/FreeTrialService.js";
 
 export const createNewCustomer = async ({
-  req,
-  customer,
-  nextResetAt,
-  createDefaultProducts = true,
+	req,
+	customer,
+	nextResetAt,
+	createDefaultProducts = true,
 }: {
-  req: ExtendedRequest;
-  customer: CreateCustomer;
-  nextResetAt?: number;
-  createDefaultProducts?: boolean;
+	req: ExtendedRequest;
+	customer: CreateCustomer;
+	nextResetAt?: number;
+	createDefaultProducts?: boolean;
 }) => {
-  const { db, org, env, logger } = req;
+	const { db, org, env, logger } = req;
 
-  logger.info(
-    `Creating customer: ${customer.email || customer.id}, org: ${org.slug}`
-  );
+	logger.info(
+		`Creating customer: ${customer.email || customer.id}, org: ${org.slug}`
+	);
 
-  const defaultProds = await ProductService.listDefault({
-    db,
-    orgId: org.id,
-    env,
-  });
+	let [defaultProds, freeTrialData] = await Promise.all([
+		ProductService.listDefault({
+			db,
+			orgId: org.id,
+			env,
+		}),
+		FreeTrialService.listByOrgId({
+			db,
+			orgId: org.id,
+			env,
+		}),
+	]);
 
-  const nonFreeProds = defaultProds.filter((p) => !isFreeProduct(p.prices));
-  const freeProds = defaultProds.filter((p) => isFreeProduct(p.prices));
+	let resolvedFreeTrialProduct = null;
 
-  const parsedCustomer = CreateCustomerSchema.parse(customer);
+	// Check if we have a default free trial
+	if (freeTrialData?.trial?.is_default_trial) {
+		resolvedFreeTrialProduct = await ProductService.getFull({
+			db,
+			idOrInternalId: freeTrialData.product.internal_id,
+			orgId: org.id,
+			env,
+		});
+	}
+	// Validate and convert the free trial data to match the expected interface
+	const trialData = freeTrialData.trial;
 
-  const customerData: Customer = {
-    ...parsedCustomer,
+	const nonFreeProds = defaultProds.filter((p) => !isFreeProduct(p.prices));
+	const freeProds = defaultProds.filter((p) => isFreeProduct(p.prices));
 
-    name: parsedCustomer.name || "",
-    email:
-      nonFreeProds.length > 0 && !parsedCustomer.email
-        ? `${parsedCustomer.id}@invoices.useautumn.com`
-        : parsedCustomer.email || "",
+	const parsedCustomer = CreateCustomerSchema.parse(customer);
 
-    metadata: parsedCustomer.metadata || {},
-    internal_id: generateId("cus"),
-    org_id: org.id,
-    created_at: Date.now(),
-    env,
-    processor: parsedCustomer.stripe_id
-      ? {
-          id: parsedCustomer.stripe_id,
-          type: "stripe",
-        }
-      : undefined,
-  };
+	console.log(freeTrialData, "freeTrialData");
+	console.log(resolvedFreeTrialProduct, "resolvedFreeTrialProduct");
+	console.log(trialData, "trialData");
 
-  // Check if stripeCli exists
-  if (nonFreeProds.length > 0) {
-    createStripeCli({
-      org,
-      env,
-    });
+	const customerData: Customer = {
+		...parsedCustomer,
 
-    if (!customerData?.email) {
-      throw new RecaseError({
-        code: ErrCode.InvalidRequest,
-        message:
-          "Customer email is required to attach default product with prices",
-      });
-    }
-  }
+		name: parsedCustomer.name || "",
+		email:
+			(nonFreeProds.length > 0 || trialData) && !parsedCustomer.email
+				? `${parsedCustomer.id}-${org.id}@invoices.useautumn.com`
+				: parsedCustomer.email || "",
 
-  const newCustomer = await CusService.insert({
-    db,
-    data: customerData,
-  });
+		metadata: parsedCustomer.metadata || {},
+		internal_id: generateId("cus"),
+		org_id: org.id,
+		created_at: Date.now(),
+		env,
+		processor: parsedCustomer.stripe_id
+			? {
+					id: parsedCustomer.stripe_id,
+					type: "stripe",
+				}
+			: undefined,
+	};
 
-  if (!newCustomer) {
-    throw new RecaseError({
-      code: ErrCode.InternalError,
-      message: "CusService.insert returned null",
-    });
-  }
+	// Check if stripeCli exists
+	if (nonFreeProds.length > 0) {
+		createStripeCli({
+			org,
+			env,
+		});
 
-  if (!createDefaultProducts) {
-    return newCustomer;
-  }
+		if (!customerData?.email) {
+			throw new RecaseError({
+				code: ErrCode.InvalidRequest,
+				message:
+					"Customer email is required to attach default product with prices",
+			});
+		}
+	}
 
-  await addCustomerCreatedTask({
-    req,
-    internalCustomerId: newCustomer.internal_id,
-    org,
-    env,
-  });
+	const newCustomer = await CusService.insert({
+		db,
+		data: customerData,
+	});
 
-  if (nonFreeProds.length > 0) {
-    const stripeCli = createStripeCli({ org, env });
+	if (!newCustomer) {
+		throw new RecaseError({
+			code: ErrCode.InternalError,
+			message: "CusService.insert returned null",
+		});
+	}
 
-    await initStripeCusAndProducts({
-      db,
-      org,
-      env,
-      customer: newCustomer,
-      products: nonFreeProds,
-      logger,
-    });
+	if (!createDefaultProducts) {
+		console.log("Not creating default products");
+		return newCustomer;
+	}
 
-    await handleAddProduct({
-      req,
-      attachParams: newCusToAttachParams({
-        req,
-        newCus: newCustomer as FullCustomer,
-        products: nonFreeProds,
-        stripeCli,
-      }),
-    });
-  }
+	// If there's a default trial, attach it on stripe with proper params and then add it to autumn
+	if (trialData && resolvedFreeTrialProduct && trialData.is_default_trial) {
+		console.log("Running free trial flow");
+		await addCustomerCreatedTask({
+			req,
+			internalCustomerId: newCustomer.internal_id,
+			org,
+			env,
+		});
 
-  for (const product of freeProds) {
-    await createFullCusProduct({
-      db,
-      attachParams: newCusToInsertParams({
-        req,
-        newCus: newCustomer,
-        product,
-      }),
-      nextResetAt,
-      anchorToUnix: org.config.anchor_start_of_month
-        ? getNextStartOfMonthUnix({
-            interval: BillingInterval.Month,
-            intervalCount: 1,
-          })
-        : undefined,
-      scenario: AttachScenario.New,
-      logger,
-    });
-  }
+		const stripeCli = createStripeCli({ org, env });
 
-  return newCustomer;
+		// Initialize stripe customer (needed for free trial attachment)
+		await initStripeCusAndProducts({
+			db,
+			org,
+			env,
+			customer: newCustomer,
+			products: [],
+			logger,
+		});
+
+		// Attach the free trial on Stripe with proper params
+		await handleAddProduct({
+			req,
+			attachParams: newCusToAttachParamsWithFreeTrial({
+				req,
+				newCus: newCustomer as FullCustomer,
+				products: [resolvedFreeTrialProduct],
+				stripeCli,
+				freeTrial: resolvedFreeTrialProduct.free_trial!,
+			}),
+		});
+
+		// Add the free trial product to Autumn with the free trial data
+		await createFullCusProduct({
+			db,
+			attachParams: {
+				...newCusToInsertParams({
+					req,
+					newCus: newCustomer,
+					product: resolvedFreeTrialProduct,
+				}),
+				freeTrial: resolvedFreeTrialProduct.free_trial!, // Pass the actual free trial instead of null
+			},
+			nextResetAt,
+			anchorToUnix: org.config.anchor_start_of_month
+				? getNextStartOfMonthUnix({
+						interval: BillingInterval.Month,
+						intervalCount: 1,
+					})
+				: undefined,
+			scenario: AttachScenario.New,
+			logger,
+		});
+
+		// Also attach any other default non-free products if they exist
+		if (nonFreeProds.length > 0) {
+			await handleAddProduct({
+				req,
+				attachParams: newCusToAttachParams({
+					req,
+					newCus: newCustomer as FullCustomer,
+					products: nonFreeProds,
+					stripeCli,
+				}),
+			});
+		}
+	} else {
+		// Otherwise, do what's already present in the code (attach default products)
+		await addCustomerCreatedTask({
+			req,
+			internalCustomerId: newCustomer.internal_id,
+			org,
+			env,
+		});
+
+		if (nonFreeProds.length > 0) {
+			const stripeCli = createStripeCli({ org, env });
+
+			await initStripeCusAndProducts({
+				db,
+				org,
+				env,
+				customer: newCustomer,
+				products: nonFreeProds,
+				logger,
+			});
+
+			await handleAddProduct({
+				req,
+				attachParams: newCusToAttachParams({
+					req,
+					newCus: newCustomer as FullCustomer,
+					products: nonFreeProds,
+					stripeCli,
+				}),
+			});
+		}
+
+		for (const product of freeProds) {
+			await createFullCusProduct({
+				db,
+				attachParams: newCusToInsertParams({
+					req,
+					newCus: newCustomer,
+					product,
+				}),
+				nextResetAt,
+				anchorToUnix: org.config.anchor_start_of_month
+					? getNextStartOfMonthUnix({
+							interval: BillingInterval.Month,
+							intervalCount: 1,
+						})
+					: undefined,
+				scenario: AttachScenario.New,
+				logger,
+			});
+		}
+	}
+
+	return newCustomer;
 };
