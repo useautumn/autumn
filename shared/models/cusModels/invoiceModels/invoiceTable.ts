@@ -3,6 +3,7 @@ import { collatePgColumn, sqlNow } from "../../../db/utils.js";
 import { InvoiceDiscount, InvoiceItem } from "./invoiceModels.js";
 import { customers } from "../cusTable.js";
 import { entities } from "../entityModels/entityTable.js";
+import { InferSelectModel, InferInsertModel } from "drizzle-orm";
 
 export const invoices = pgTable(
   "invoices",
@@ -38,3 +39,6 @@ export const invoices = pgTable(
 );
 
 collatePgColumn(invoices.id, "C");
+
+export type InvoiceRow = InferSelectModel<typeof invoices>;
+export type InsertInvoiceRow = InferInsertModel<typeof invoices>;
