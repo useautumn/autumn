@@ -71,7 +71,10 @@ export const createStripePrepaid = async ({
 
   let recurringData = undefined;
   if (price.config!.interval != BillingInterval.OneOff) {
-    recurringData = billingIntervalToStripe(price.config!.interval!);
+    recurringData = billingIntervalToStripe({
+      interval: price.config!.interval,
+      intervalCount: price.config!.interval_count,
+    });
   }
 
   const config = price.config as UsagePriceConfig;

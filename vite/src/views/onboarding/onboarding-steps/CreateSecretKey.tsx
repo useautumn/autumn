@@ -21,13 +21,13 @@ export const CreateSecretKey = ({
   setApiKey: (apiKey: string) => void;
   number: number;
 }) => {
-  let env = useEnv();
-  let [apiKeyName, setApiKeyName] = useState("");
-  let [apiCreated, setApiCreated] = useState(false);
+  const env = useEnv();
+  const [apiKeyName, setApiKeyName] = useState("");
+  const [apiCreated, setApiCreated] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
-  let axiosInstance = useAxiosInstance({ env });
+  const axiosInstance = useAxiosInstance({ env });
 
   const handleCreate = async () => {
     console.log("creating api key", apiKeyName ? apiKeyName : name);

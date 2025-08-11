@@ -97,8 +97,9 @@ export const handleCheckoutSub = async ({
       getArrearItems({
         prices: attachParams.prices,
         interval: attachParams.itemSets?.[0]?.interval,
+        intervalCount: attachParams.itemSets?.[0]?.intervalCount,
         org,
-      }),
+      })
     );
   }
 

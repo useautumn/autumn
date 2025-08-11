@@ -9,6 +9,8 @@ import {
   Organization,
   ProductItemFeatureType,
   FeatureType,
+  FullCustomer,
+  UsagePriceConfig,
 } from "@autumn/shared";
 import { FeatureService } from "./FeatureService.js";
 import { StatusCodes } from "http-status-codes";
@@ -16,6 +18,11 @@ import { generateFeatureDisplay } from "@/external/llm/llmUtils.js";
 import { ProductService } from "../products/ProductService.js";
 import { getCreditSystemsFromFeature } from "./creditSystemUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import {
+  cusProductsToCusPrices,
+  cusProductToPrices,
+} from "../customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { priceToFeature } from "../products/prices/priceUtils/convertPrice.js";
 
 export const validateFeatureId = (featureId: string) => {
   if (!featureId.match(/^[a-zA-Z0-9_-]+$/)) {
@@ -77,9 +84,9 @@ export const validateCreditSystem = (config: CreditSystemConfig) => {
 
   // Check if multiple of the same feature
   const meteredFeatureIds = schema.map(
-    (schemaItem) => schemaItem.metered_feature_id,
+    (schemaItem) => schemaItem.metered_feature_id
   );
-  console.log("Metered feature ids:", meteredFeatureIds);
+  // console.log("Metered feature ids:", meteredFeatureIds);
   const uniqueMeteredFeatureIds = Array.from(new Set(meteredFeatureIds));
   if (meteredFeatureIds.length !== uniqueMeteredFeatureIds.length) {
     throw new RecaseError({
@@ -135,14 +142,14 @@ export const getObjectsUsingFeature = async ({
   });
 
   let entitlements = allEnts.filter(
-    (entitlement) => entitlement.internal_feature_id == feature.internal_id,
+    (entitlement) => entitlement.internal_feature_id == feature.internal_id
   );
   let linkedEntitlements = allEnts.filter(
-    (entitlement) => entitlement.entity_feature_id == feature.id,
+    (entitlement) => entitlement.entity_feature_id == feature.id
   );
 
   let prices = allPrices.filter(
-    (price) => (price.config as any).internal_feature_id == feature.internal_id,
+    (price) => (price.config as any).internal_feature_id == feature.internal_id
   );
 
   return { entitlements, prices, creditSystems, linkedEntitlements };
@@ -163,7 +170,7 @@ export const runSaveFeatureDisplayTask = async ({
   try {
     if (!process.env.ANTHROPIC_API_KEY) {
       logger.warn(
-        "ANTHROPIC_API_KEY is not set, skipping feature display generation",
+        "ANTHROPIC_API_KEY is not set, skipping feature display generation"
       );
       return;
     }
@@ -203,4 +210,30 @@ export const getCusFeatureType = ({ feature }: { feature: Feature }) => {
 
 export const isCreditSystem = ({ feature }: { feature: Feature }) => {
   return feature.type == FeatureType.CreditSystem;
+};
+
+export const isPaidContinuousUse = ({
+  feature,
+  fullCus,
+}: {
+  feature: Feature;
+  fullCus: FullCustomer;
+}) => {
+  let isContinuous = feature.config?.usage_type == FeatureUsageType.Continuous;
+
+  if (!isContinuous) {
+    return false;
+  }
+
+  let cusPrices = cusProductsToCusPrices({
+    cusProducts: fullCus.customer_products,
+  });
+  let hasPaid = cusPrices.some((cp) => {
+    let config = cp.price.config as UsagePriceConfig;
+    if (config.internal_feature_id == feature.internal_id) {
+      return true;
+    }
+  });
+
+  return hasPaid;
 };

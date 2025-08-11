@@ -17,6 +17,7 @@ import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { productsAreSame } from "../../productUtils/compareProductUtils.js";
 import { initProductInStripe } from "../../productUtils.js";
+import { handleCreateProduct } from "../handleCreateProduct.js";
 
 export const handleUpdateProductV2 = async (req: any, res: any) =>
   routeHandler({
@@ -25,7 +26,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
     action: "Update product",
     handler: async () => {
       const { productId } = req.params;
-      const { version } = req.query;
+      const { version, upsert, disable_version } = req.query;
       const { orgId, env, logger, db } = req;
 
       const [features, org, fullProduct, rewardPrograms] = await Promise.all([
@@ -37,6 +38,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
           orgId,
           env,
           version: version ? parseInt(version) : undefined,
+          allowNotFound: upsert == "true",
         }),
         RewardProgramService.getByProductId({
           db,
@@ -47,6 +49,12 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
       ]);
 
       if (!fullProduct) {
+        console.log("Upserting:", upsert);
+        if (upsert == "true") {
+          await handleCreateProduct(req, res);
+          return;
+        }
+
         throw new RecaseError({
           message: "Product not found",
           code: ErrCode.ProductNotFound,
@@ -75,6 +83,15 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
       let itemsExist = notNullish(req.body.items);
 
       if (cusProductExists && itemsExist) {
+        if (disable_version == "true") {
+          throw new RecaseError({
+            message: "Cannot auto save product as there are existing customers",
+            code: ErrCode.InvalidRequest,
+            statusCode: 400,
+          });
+          return;
+        }
+
         const { itemsSame, freeTrialsSame } = productsAreSame({
           newProductV2: req.body,
           curProductV1: fullProduct,

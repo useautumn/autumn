@@ -10,9 +10,7 @@ import {
   Organization,
   UsagePriceConfig,
   BillingType,
-  FeatureOptions,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 
 import { createStripeFixedPrice } from "./createStripeFixedPrice.js";
@@ -46,10 +44,7 @@ export const checkCurStripePrice = async ({
         expand: ["product"],
       });
 
-      if (
-        !stripePrice.active ||
-        !(stripePrice.product as Stripe.Product).active
-      ) {
+      if (!stripePrice.active) {
         stripePrice = null;
       }
     } catch (error) {
@@ -122,7 +117,12 @@ export const createStripePriceIFNotExist = async ({
     billingType == BillingType.OneOff
   ) {
     if (!stripePrice) {
-      logger.info("Creating stripe fixed price");
+      // logger.info("Creating stripe fixed price: ", {
+      //   data: {
+      //     price,
+      //     stripePrice,
+      //   },
+      // });
       await createStripeFixedPrice({
         db,
         stripeCli,

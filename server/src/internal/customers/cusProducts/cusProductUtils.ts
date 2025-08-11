@@ -79,7 +79,7 @@ export const cancelCusProductSubscriptions = async ({
       subIds: cusProduct.subscription_ids,
     });
 
-    latestSubEnd = stripeSubs[0].current_period_end;
+    latestSubEnd = stripeSubs?.[0]?.current_period_end;
   }
 
   const cancelStripeSub = async (subId: string) => {

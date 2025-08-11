@@ -1,32 +1,21 @@
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
-import { createSupabaseClient } from "../supabaseUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { safeSb } from "./safeSb.js";
+import { DrizzleCli, client } from "@/db/initDrizzle.js";
 
-export const subscribeToOrgUpdates = safeSb({
-  fn: ({ db }: { db: DrizzleCli }) => {
-    try {
-      const sb = createSupabaseClient();
-      sb.channel("table-db-changes")
-        .on(
-          "postgres_changes",
-          {
-            event: "UPDATE",
-            schema: "public",
-            table: "organizations",
-          },
-          async (payload) => {
-            try {
-              await clearOrgCache({ db, orgId: payload.new.id });
-            } catch (error) {
-              console.warn("Error clearing org cache:", error);
-            }
-          },
-        )
-        .subscribe();
-    } catch (error) {
-      console.warn("Error subscribing to org updates:", error);
-    }
-  },
-  action: "subscribe to org updates",
-});
+export const subscribeToOrgUpdates = async ({ db }: { db: DrizzleCli }) => {
+  try {
+    await client.listen("org_updates", async (payload) => {
+      try {
+        const data = JSON.parse(payload);
+        if (data.table === "organizations" && data.operation === "UPDATE") {
+          await clearOrgCache({ db, orgId: data.new.id });
+        }
+      } catch (error) {
+        console.warn("Error processing org update notification:", error);
+      }
+    });
+    
+    console.log("Successfully subscribed to organization updates via PostgreSQL LISTEN/NOTIFY");
+  } catch (error) {
+    console.warn("Error subscribing to org updates:", error);
+  }
+};

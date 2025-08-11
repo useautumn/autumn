@@ -104,10 +104,11 @@ const handleShortDurationCusEnt = async ({
 
   let resetCusEnt = {
     ...cusEnt,
-    next_reset_at: getNextResetAt(
-      new UTCDate(cusEnt.next_reset_at!),
-      ent.interval as EntInterval
-    ),
+    next_reset_at: getNextResetAt({
+      curReset: new UTCDate(cusEnt.next_reset_at!),
+      interval: ent.interval as EntInterval,
+      intervalCount: ent.interval_count,
+    }),
     adjustment: 0,
     ...getResetBalancesUpdate({
       cusEnt,
@@ -115,9 +116,6 @@ const handleShortDurationCusEnt = async ({
     }),
   };
   let newCusEnt = resetCusEnt;
-
-  // let { customer, customer_product, entitlement, ...rest } = resetCusEnt;
-  // let newCusEnt = rest as CustomerEntitlement;
 
   let rolloverUpdate = getRolloverUpdates({
     cusEnt,
@@ -248,10 +246,11 @@ export const resetCustomerEntitlement = async ({
 
     // 1. Check if should reset
 
-    let nextResetAt = getNextResetAt(
-      new UTCDate(cusEnt.next_reset_at!),
-      cusEnt.entitlement.interval as EntInterval
-    );
+    let nextResetAt = getNextResetAt({
+      curReset: new UTCDate(cusEnt.next_reset_at!),
+      interval: cusEnt.entitlement.interval as EntInterval,
+      intervalCount: cusEnt.entitlement.interval_count,
+    });
 
     let rolloverUpdate = getRolloverUpdates({
       cusEnt,

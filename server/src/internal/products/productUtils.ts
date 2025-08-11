@@ -8,6 +8,7 @@ import {
   ErrCode,
   Feature,
   FixedPriceConfig,
+  intervalsSame,
   Organization,
   Price,
   PriceSchema,
@@ -75,11 +76,13 @@ export const constructProduct = ({
   orgId,
   env,
   processor,
+  baseVariantId,
 }: {
   productData: CreateProduct;
   orgId: string;
   env: AppEnv;
   processor?: any;
+  baseVariantId?: string | null;
 }) => {
   let newProduct: Product = {
     ...productData,
@@ -124,8 +127,8 @@ export const isProductUpgrade = ({
     return true;
   }
 
-  let billingInterval1 = getBillingInterval(prices1);
-  let billingInterval2 = getBillingInterval(prices2);
+  let billingInterval1 = getBillingInterval(prices1); // pro quarter
+  let billingInterval2 = getBillingInterval(prices2); // premium
 
   // 2. Get total price for each product
   const getTotalPrice = (prices: Price[]) => {
@@ -141,10 +144,21 @@ export const isProductUpgrade = ({
   };
 
   // 3. Compare prices
-  if (billingInterval1 == billingInterval2) {
+
+  if (
+    intervalsSame({
+      intervalA: billingInterval1,
+      intervalB: billingInterval2,
+    })
+  ) {
     return getTotalPrice(prices1) < getTotalPrice(prices2);
   } else {
-    return compareBillingIntervals(billingInterval1, billingInterval2) > 0;
+    return (
+      compareBillingIntervals({
+        configA: billingInterval1,
+        configB: billingInterval2,
+      }) > 0
+    );
   }
 };
 
@@ -338,6 +352,7 @@ export const copyProduct = async ({
     newEntitlements.push(
       EntitlementSchema.parse({
         ...entitlement,
+        interval_count: entitlement.interval_count ?? 1,
         id: newId,
         org_id: toOrgId,
         created_at: Date.now(),

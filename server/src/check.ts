@@ -33,13 +33,14 @@ import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { getRelatedCusPrice } from "./internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { CusProductService } from "./internal/customers/cusProducts/CusProductService.js";
+import { logSubItems } from "./utils/scriptUtils/logUtils/logSubItems.js";
 
 const { db, client } = initDrizzle({ maxConnections: 5 });
 
 let orgSlugs = process.env.ORG_SLUGS!.split(",");
 const skipEmails = process.env.SKIP_EMAILS!.split(",");
+orgSlugs = ["athenahq"];
 
-orgSlugs = [];
 const getSingleCustomer = async ({
   stripeCli,
   customerId,
@@ -136,7 +137,7 @@ const checkCustomerCorrect = async ({
       "number of stripe subs should be the same as number of subscription ids"
     );
 
-    const subItems = stripeSubs.flatMap((sub: any) => sub.items.data);
+    let subItems = stripeSubs.flatMap((sub: any) => sub.items.data);
 
     const prices = cusProductToPrices({ cusProduct });
 
@@ -174,7 +175,7 @@ const checkCustomerCorrect = async ({
 
         let expectedQuantity = options?.upcoming_quantity || options?.quantity;
 
-        console.log("Sub item: ", subItem);
+        // console.log("Sub item: ", subItem);
         assert(
           subItem?.quantity == expectedQuantity,
           `sub item quantity for prepaid price (featureId: ${featureId}) should be ${expectedQuantity}`
@@ -282,7 +283,7 @@ export const check = async () => {
 
     let customerId;
 
-    // customerId = "SwZ6cDgOFAY9S29nHigvPaUk4uq2";
+    // customerId = "94fd7303-c8ae-4873-a6cd-0f5241aef232";
 
     let customers: FullCustomer[] = [];
     let stripeSubs: Stripe.Subscription[] = [];

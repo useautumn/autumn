@@ -1,5 +1,6 @@
 import { resetCustomerEntitlement } from "@/cron/cronUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { getMainCusProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
 import { cusProductToCusEnt } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { Customer } from "@autumn/shared";
@@ -28,7 +29,7 @@ export const resetAndGetCusEnt = async ({
     featureId,
   });
 
-  await resetCustomerEntitlement({
+  const updatedCusEnt = await resetCustomerEntitlement({
     db,
     cusEnt: {
       ...cusEnt!,
@@ -36,6 +37,13 @@ export const resetAndGetCusEnt = async ({
     },
     cacheEnabledOrgs: [],
   });
+
+  if (updatedCusEnt) {
+    await CusEntService.upsert({
+      db,
+      data: [updatedCusEnt],
+    });
+  }
 
   mainCusProduct = await getMainCusProduct({
     db,

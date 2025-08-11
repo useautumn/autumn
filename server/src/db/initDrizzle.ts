@@ -8,9 +8,6 @@ import { schemas as schema } from "@autumn/shared";
 export let client = postgres(process.env.DATABASE_URL!);
 export let db = drizzle(client, { schema });
 
-// export const localClient = postgres("postgresql://postgres:postgres@localhost:54322/postgres")
-// export const localDb = drizzle(localClient, { schema });
-
 export const initDrizzle = (params?: { maxConnections?: number }) => {
   let maxConnections = params?.maxConnections || 10;
   const client = postgres(process.env.DATABASE_URL!, {
@@ -19,7 +16,6 @@ export const initDrizzle = (params?: { maxConnections?: number }) => {
 
   const db = drizzle(client, {
     schema,
-    // logger: process.env.NODE_ENV === "development",
   });
 
   return { db, client };

@@ -28,16 +28,21 @@ import {
 import { isUsagePrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
+import {
+  intervalKeyToPrice,
+  priceToIntervalKey,
+} from "@/internal/products/prices/priceUtils/convertPrice.js";
 
 const getIntervalToPrices = (prices: Price[]) => {
   const intervalToPrices: Record<string, Price[]> = {};
 
   for (const price of prices) {
-    const interval = price.config.interval;
-    if (!intervalToPrices[interval]) {
-      intervalToPrices[interval] = [];
+    // const interval = price.config.interval;
+    const key = priceToIntervalKey(price);
+    if (!intervalToPrices[key]) {
+      intervalToPrices[key] = [];
     }
-    intervalToPrices[interval].push(price);
+    intervalToPrices[key].push(price);
   }
 
   let oneOffPrices =
@@ -93,8 +98,8 @@ export const getStripeSubItems = async ({
 
   const intervalToPrices = getIntervalToPrices(prices);
 
-  for (const interval in intervalToPrices) {
-    const prices = intervalToPrices[interval];
+  for (const intervalKey in intervalToPrices) {
+    const prices = intervalToPrices[intervalKey];
 
     let subItems: any[] = [];
 
@@ -165,12 +170,14 @@ export const getStripeSubItems = async ({
       subItems.push(lineItem);
     }
 
+    const { interval, intervalCount } = intervalKeyToPrice(intervalKey);
     if (subItems.length == 0) {
       subItems.push(
         ...getArrearItems({
           prices,
           org,
           interval: interval as BillingInterval,
+          intervalCount,
         })
       );
     }
@@ -178,6 +185,7 @@ export const getStripeSubItems = async ({
     itemSets.push({
       items: subItems,
       interval,
+      intervalCount,
       subMeta: {
         usage_features: JSON.stringify(usage_features),
       },
@@ -186,7 +194,18 @@ export const getStripeSubItems = async ({
     });
   }
 
-  itemSets.sort((a, b) => compareBillingIntervals(a.interval, b.interval));
+  itemSets.sort((a, b) =>
+    compareBillingIntervals({
+      configA: {
+        interval: a.interval,
+        intervalCount: a.intervalCount,
+      },
+      configB: {
+        interval: b.interval,
+        intervalCount: b.intervalCount,
+      },
+    })
+  );
 
   return itemSets;
 };

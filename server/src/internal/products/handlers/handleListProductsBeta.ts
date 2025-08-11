@@ -1,9 +1,7 @@
 import { routeHandler } from "@/utils/routerUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
-import { CusService } from "@/internal/customers/CusService.js";
 import { sortFullProducts } from "../productUtils/sortProductUtils.js";
-import { toPricecnProduct } from "../pricecn/pricecnUtils.js";
 import { getProductResponse } from "../productUtils/productResponseUtils/getProductResponse.js";
 import { getCusWithCache } from "@/internal/customers/cusCache/getCusWithCache.js";
 
@@ -38,14 +36,6 @@ export const handleListProductsBeta = async (req: any, res: any) =>
             env,
             logger: req.logger,
           });
-          // return await CusService.getFull({
-          //   db,
-          //   orgId: org.id,
-          //   env,
-          //   idOrInternalId: customerId as string,
-          //   allowNotFound: true,
-          //   entityId,
-          // });
         })(),
       ]);
 

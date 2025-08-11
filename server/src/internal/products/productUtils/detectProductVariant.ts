@@ -18,9 +18,7 @@ To determine if a product is an interval variant, please follow these guidelines
 1. Look at the name of the product. If it contains a word like "annual", "yearly", etc. and the name resembles another product, it's a variant.
 - Example of this: "Pro (Annual)" is a variant of "Pro".
 
-2. 
-
-
+2. If the product has a similar name to another product, but interval is different, it's probably a variant.
 
 4. If the current product is not a variant of any existing product, return null.
 `;
@@ -34,6 +32,7 @@ export const detectBaseVariant = async ({
   curProduct: FullProduct;
   logger: Logger;
 }) => {
+  logger.info(`Detecting base variant for ${curProduct.id}`);
   if (!process.env.ANTHROPIC_API_KEY) return;
 
   let existingProducts = (await ProductService.listFull({
@@ -50,10 +49,12 @@ export const detectBaseVariant = async ({
   // 1. Return null if add on
   if (curProduct.is_add_on) return null;
 
-  // // 2. Return null if only one off or monthly price
+  // 2. Return null if only one off or monthly price
   const oneOffOrMonthly = [BillingInterval.OneOff, BillingInterval.Month];
-  if (intervals.every((i: BillingInterval) => oneOffOrMonthly.includes(i)))
+  if (intervals.every((i: BillingInterval) => oneOffOrMonthly.includes(i))) {
+    logger.info(`Is one off or monthly, skipping`);
     return null;
+  }
 
   const filteredExistingProducts = existingProducts.filter(
     (p) =>
@@ -62,12 +63,15 @@ export const detectBaseVariant = async ({
       !p.is_add_on &&
       p.prices.length > 0 &&
       p.prices.every(
-        (price) => price.config.interval == BillingInterval.Month,
+        (price) => price.config.interval == BillingInterval.Month
       ) &&
-      p.group == curProduct.group,
+      p.group == curProduct.group
   );
 
-  if (filteredExistingProducts.length == 0) return null;
+  if (filteredExistingProducts.length == 0) {
+    logger.info(`No base product to search for`);
+    return null;
+  }
 
   const variables = `
 <product_to_detect>
@@ -85,7 +89,7 @@ export const detectBaseVariant = async ({
         id: p.id,
         name: p.name,
         prices: p.prices,
-      }),
+      })
     )
     .join("\n")}
 </existing_products>
@@ -100,7 +104,7 @@ export const detectBaseVariant = async ({
   let baseVariantId = object.base_variant_id;
 
   logger.info(
-    `llm response for base variant of ${curProduct.id}: ${baseVariantId}`,
+    `llm response for base variant of ${curProduct.id}: ${baseVariantId}`
   );
 
   if (baseVariantId) {

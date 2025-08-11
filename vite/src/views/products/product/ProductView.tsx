@@ -51,31 +51,13 @@ function ProductView({ env }: { env: AppEnv }) {
     setEntityFeatureIds,
     actionState,
     isNewProduct,
-  } = useProductData({ data });
+  } = useProductData({
+    originalProduct: data?.product as any,
+    originalFeatures: data?.features as any,
+  });
 
-  // Replace the current useBlocker call with a fixed useEffect
   const { modal } = useProductChangedAlert({ hasChanges });
-
   const [buttonLoading, setButtonLoading] = useState(false);
-
-  // const hasCustomers = counts?.all > 0;
-
-  // const handleAutoSave = async () => {
-  //   setButtonLoading(true);
-  //   try {
-  //     console.log("Auto saving");
-  //     await new Promise((resolve) => setTimeout(resolve, 1000));
-  //     await updateProduct();
-  //   } catch (error) {
-  //     toast.error(getBackendErr(error, "Failed to auto save product"));
-  //   }
-  //   setButtonLoading(false);
-  // };
-  // useEffect(() => {
-  //   if (hasChanges && !hasCustomers) {
-  //     handleAutoSave();
-  //   }
-  // }, [hasChanges]);
 
   if (isLoading) return <LoadingScreen />;
 
@@ -153,7 +135,6 @@ function ProductView({ env }: { env: AppEnv }) {
           entityFeatureIds,
           setEntityFeatureIds,
           hasChanges,
-
           buttonLoading,
           setButtonLoading,
         }}

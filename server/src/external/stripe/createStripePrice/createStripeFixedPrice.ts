@@ -28,7 +28,10 @@ export const createStripeFixedPrice = async ({
     unit_amount: amount,
     currency: org.default_currency!,
     recurring: {
-      ...(billingIntervalToStripe(config.interval!) as any),
+      ...(billingIntervalToStripe({
+        interval: config.interval,
+        intervalCount: config.interval_count,
+      }) as any),
     },
 
     nickname: `Autumn Price (Fixed)`,

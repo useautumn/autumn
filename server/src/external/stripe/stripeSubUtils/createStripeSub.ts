@@ -25,6 +25,7 @@ export const createStripeSub = async ({
   org,
   freeTrial,
   invoiceOnly = false,
+  finalizeInvoice = false,
   anchorToUnix,
   itemSet,
   now,
@@ -36,6 +37,7 @@ export const createStripeSub = async ({
   freeTrial: FreeTrial | null;
   org: Organization;
   invoiceOnly?: boolean;
+  finalizeInvoice?: boolean;
   anchorToUnix?: number;
   itemSet: ItemSet;
   now?: number;
@@ -58,6 +60,7 @@ export const createStripeSub = async ({
     ? getAlignedIntervalUnix({
         alignWithUnix: anchorToUnix,
         interval: itemSet.interval,
+        intervalCount: itemSet.intervalCount,
         now,
       })
     : undefined;
@@ -90,6 +93,12 @@ export const createStripeSub = async ({
 
       coupon: reward ? reward.id : undefined,
     });
+
+    if (invoiceOnly && finalizeInvoice) {
+      await stripeCli.invoices.finalizeInvoice(
+        subscription.latest_invoice as string
+      );
+    }
 
     // Store
     await SubService.createSub({

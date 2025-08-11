@@ -21,6 +21,7 @@ import { getEventTimestamp } from "./eventUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { runUpdateUsageTask } from "@/trigger/updateUsageTask.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
+import { isPaidContinuousUse } from "@/internal/features/featureUtils.js";
 
 export const eventsRouter: Router = Router();
 export const usageRouter: Router = Router();
@@ -201,9 +202,8 @@ export const handleUsageEvent = async ({
     entityId: entity_id,
   };
 
-  const featureUsageType = feature.config?.usage_type;
-  // console.log(`Feature Usage Type: ${featureUsageType}`);
-  if (featureUsageType === FeatureUsageType.Continuous) {
+  if (isPaidContinuousUse({ feature, fullCus: customer })) {
+    console.log(`Running update usage task synchronously`);
     await runUpdateUsageTask({
       payload,
       logger: console,

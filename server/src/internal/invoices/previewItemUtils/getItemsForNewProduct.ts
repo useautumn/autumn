@@ -51,6 +51,7 @@ import {
 import { sortPricesByType } from "@/internal/products/prices/priceUtils/sortPriceUtils.js";
 import { getMergeCusProduct } from "@/internal/customers/attach/attachFunctions/addProductFlow/getMergeCusProduct.js";
 import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
+import { intervalsDifferent } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 
 export const getDefaultPriceStr = ({
   org,
@@ -83,6 +84,7 @@ export const getProration = ({
   anchorToUnix,
   now,
   interval,
+  intervalCount,
 }: {
   proration?: {
     start: number;
@@ -90,6 +92,7 @@ export const getProration = ({
   };
   anchorToUnix?: number;
   interval: BillingInterval;
+  intervalCount: number;
   now: number;
 }) => {
   if (!proration && !anchorToUnix) return undefined;
@@ -103,11 +106,16 @@ export const getProration = ({
   let end = getAlignedIntervalUnix({
     alignWithUnix: anchorToUnix!,
     interval,
+    intervalCount,
     now,
     alwaysReturn: true,
   });
 
-  let start = subtractBillingIntervalUnix(end!, interval);
+  let start = subtractBillingIntervalUnix({
+    unixTimestamp: end!,
+    interval,
+    intervalCount,
+  });
 
   return {
     start,
@@ -121,6 +129,7 @@ export const getItemsForNewProduct = async ({
   now,
   proration,
   interval,
+  intervalCount,
   anchorToUnix,
   freeTrial,
   stripeSubs,
@@ -137,6 +146,7 @@ export const getItemsForNewProduct = async ({
     end: number;
   };
   interval?: BillingInterval;
+  intervalCount?: number;
   anchorToUnix?: number;
   freeTrial?: FreeTrial | null;
   stripeSubs?: Stripe.Subscription[];
@@ -156,13 +166,27 @@ export const getItemsForNewProduct = async ({
     const ent = getPriceEntitlement(price, newProduct.entitlements);
     const billingType = getBillingType(price.config);
 
-    if (interval && price.config.interval !== interval) continue;
+    if (
+      interval &&
+      intervalsDifferent({
+        intervalA: {
+          interval: interval,
+          intervalCount: intervalCount,
+        },
+        intervalB: {
+          interval: price.config.interval,
+          intervalCount: price.config.interval_count,
+        },
+      })
+    )
+      continue;
 
     const finalProration = getProration({
       proration,
       anchorToUnix,
       now,
       interval: price.config.interval!,
+      intervalCount: price.config.interval_count!,
     });
 
     if (isFixedPrice({ price })) {

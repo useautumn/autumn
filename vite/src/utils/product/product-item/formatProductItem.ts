@@ -1,4 +1,5 @@
 import {
+  BillingInterval,
   Feature,
   FeatureType,
   Infinite,
@@ -9,6 +10,23 @@ import {
 import { formatAmount, getItemType, intervalIsNone } from "../productItemUtils";
 import { getFeature } from "../entitlementUtils";
 import { notNullish } from "@/utils/genUtils";
+import { ProductItemInterval } from "autumn-js";
+
+const getIntervalString = ({
+  interval,
+  intervalCount = 1,
+}: {
+  interval: ProductItemInterval;
+  intervalCount?: number | null;
+}) => {
+  if (!interval) return "";
+
+  if (intervalCount == 1) {
+    return `per ${interval}`;
+  }
+
+  return `per ${intervalCount} ${interval}s`;
+};
 
 export const getPaidFeatureString = ({
   item,
@@ -48,7 +66,11 @@ export const getPaidFeatureString = ({
   }`;
 
   if (!intervalIsNone(item.interval)) {
-    amountStr += ` per ${item.interval}`;
+    const intervalStr = getIntervalString({
+      interval: item.interval!,
+      intervalCount: item.interval_count,
+    });
+    amountStr += ` ${intervalStr}`;
   }
 
   if (item.included_usage) {
@@ -72,7 +94,11 @@ const getFixedPriceString = ({
   });
 
   if (!intervalIsNone(item.interval)) {
-    return `${formattedAmount} per ${item.interval}`;
+    const intervalStr = getIntervalString({
+      interval: item.interval!,
+      intervalCount: item.interval_count,
+    });
+    return `${formattedAmount} ${intervalStr}`;
   }
 
   return `${formattedAmount}`;
@@ -95,7 +121,12 @@ export const getFeatureString = ({
     return `Unlimited ${feature?.name}`;
   }
 
-  return `${item.included_usage ?? 0} ${feature?.name}${item.entity_feature_id ? ` per ${getFeature(item.entity_feature_id, features)?.name}` : ""}${notNullish(item.interval) ? ` per ${item.interval}` : ""}`;
+  const intervalStr = getIntervalString({
+    interval: item.interval!,
+    intervalCount: item.interval_count,
+  });
+
+  return `${item.included_usage ?? 0} ${feature?.name}${item.entity_feature_id ? ` per ${getFeature(item.entity_feature_id, features)?.name}` : ""}${notNullish(item.interval) ? ` ${intervalStr}` : ""}`;
 };
 
 export const formatProductItemText = ({

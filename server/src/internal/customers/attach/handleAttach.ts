@@ -6,7 +6,7 @@ import { getAttachParams } from "./attachUtils/attachParams/getAttachParams.js";
 import { getAttachBranch } from "./attachUtils/getAttachBranch.js";
 import { getAttachConfig } from "./attachUtils/getAttachConfig.js";
 import { handleAttachErrors } from "./attachUtils/handleAttachErrors.js";
-import { checkStripeConnections, createStripePrices } from "./attachRouter.js";
+import { checkStripeConnections } from "./attachRouter.js";
 import { insertCustomItems } from "./attachUtils/insertCustomItems.js";
 import { runAttachFunction } from "./attachUtils/getAttachFunction.js";
 
@@ -58,6 +58,28 @@ export const handleAttach = async (req: any, res: any) =>
         customPrices: customPrices || [],
         customEnts: customEnts || [],
       });
+
+      try {
+        req.logger.info(`Attach params: `, {
+          data: {
+            products: attachParams.products.map((p) => ({
+              id: p.id,
+              name: p.name,
+              processor: p.processor,
+              version: p.version,
+            })),
+            prices: attachParams.prices.map((p) => ({
+              id: p.id,
+              config: p.config,
+            })),
+            entitlements: attachParams.entitlements.map((e) => ({
+              internal_feature_id: e.internal_feature_id,
+              feature_id: e.feature_id,
+            })),
+            freeTrial: attachParams.freeTrial,
+          },
+        });
+      } catch (error) {}
 
       await runAttachFunction({
         req,

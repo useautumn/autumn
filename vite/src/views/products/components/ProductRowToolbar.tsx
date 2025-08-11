@@ -22,10 +22,12 @@ import { DeleteProductDialog } from "./DeleteProductDialog";
 export const ProductRowToolbar = ({
   product,
   productCounts,
+  isOnboarding = false,
 }: {
   className?: string;
   product: Product;
   productCounts: ProductCounts;
+  isOnboarding?: boolean;
 }) => {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -69,44 +71,48 @@ export const ProductRowToolbar = ({
             <ToolbarButton />
           </DropdownMenuTrigger>
           <DropdownMenuContent className="text-t2" align="end">
-            <DialogTrigger asChild>
-              <DropdownMenuItem
-                className="flex items-center text-xs"
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  setSelectedProduct(product);
-                  setDialogType("copy");
-                  setModalOpen(true);
-                }}
-              >
-                <div className="flex items-center justify-between w-full gap-2">
-                  Copy
-                  {copyLoading ? (
-                    <SmallSpinner />
-                  ) : (
-                    <Copy size={12} className="text-t3" />
-                  )}
-                </div>
-              </DropdownMenuItem>
-            </DialogTrigger>
-            <DialogTrigger asChild>
-              <DropdownMenuItem
-                className="flex items-center text-xs"
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  setSelectedProduct(product);
-                  setDialogType("update");
-                  setModalOpen(true);
-                }}
-              >
-                <div className="flex items-center justify-between w-full gap-2">
-                  Edit
-                  <Pen size={12} className="text-t3" />
-                </div>
-              </DropdownMenuItem>
-            </DialogTrigger>
+            {!isOnboarding && (
+              <DialogTrigger asChild>
+                <DropdownMenuItem
+                  className="flex items-center text-xs"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    setSelectedProduct(product);
+                    setDialogType("copy");
+                    setModalOpen(true);
+                  }}
+                >
+                  <div className="flex items-center justify-between w-full gap-2">
+                    Copy
+                    {copyLoading ? (
+                      <SmallSpinner />
+                    ) : (
+                      <Copy size={12} className="text-t3" />
+                    )}
+                  </div>
+                </DropdownMenuItem>
+              </DialogTrigger>
+            )}
+            {!isOnboarding && (
+              <DialogTrigger asChild>
+                <DropdownMenuItem
+                  className="flex items-center text-xs"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    setSelectedProduct(product);
+                    setDialogType("update");
+                    setModalOpen(true);
+                  }}
+                >
+                  <div className="flex items-center justify-between w-full gap-2">
+                    Edit
+                    <Pen size={12} className="text-t3" />
+                  </div>
+                </DropdownMenuItem>
+              </DialogTrigger>
+            )}
             <DropdownMenuItem
               className="flex items-center text-xs"
               onClick={async (e) => {

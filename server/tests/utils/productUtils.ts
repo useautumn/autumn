@@ -36,7 +36,7 @@ export const createProduct = async ({
           internalId: prod.internal_id,
           orgId,
           env,
-        }),
+        })
       );
     }
 
@@ -82,7 +82,7 @@ export const createProducts = async ({
   const batchCreate = [];
   for (const product of products) {
     batchCreate.push(
-      createProduct({ db, orgId, env, autumn, product, prefix }),
+      createProduct({ db, orgId, env, autumn, product, prefix })
     );
   }
 
@@ -113,12 +113,12 @@ export const createReward = async ({
     idOrInternalId: productId!,
   });
 
-  let usagePrices = fullProduct.prices.filter((price) =>
-    isUsagePrice({ price }),
+  let usagePrices = fullProduct?.prices.filter((price) =>
+    isUsagePrice({ price })
   );
 
   if (onlyUsage) {
-    reward.discount_config!.price_ids = usagePrices.map((price) => price.id);
+    reward.discount_config!.price_ids = usagePrices?.map((price) => price.id);
   }
 
   try {

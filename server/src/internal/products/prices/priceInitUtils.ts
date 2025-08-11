@@ -44,7 +44,7 @@ export const constructPrice = ({
 // GET PRICES
 const validatePrice = (
   price: Price,
-  relatedEnt?: Entitlement | undefined | null,
+  relatedEnt?: Entitlement | undefined | null
 ) => {
   if (!price.config?.type) {
     throw new RecaseError({
@@ -117,7 +117,7 @@ export const tiersAreSame = (tiers1: any[], tiers2: any[]) => {
 export const pricesAreSame = (
   price1: Price,
   price2: Price,
-  logDifferences = false,
+  logDifferences = false
 ) => {
   // if (price1.name !== price2.name) return false;
 
@@ -139,6 +139,10 @@ export const pricesAreSame = (
         condition: fixedConfig1.interval !== fixedConfig2.interval,
         message: `Interval different: ${fixedConfig1.interval} !== ${fixedConfig2.interval}`,
       },
+      interval_count: {
+        condition: fixedConfig1.interval_count !== fixedConfig2.interval_count,
+        message: `Interval count different: ${fixedConfig1.interval_count} !== ${fixedConfig2.interval_count}`,
+      },
     };
 
     let pricesAreDiff = Object.values(diffs).some((d) => d.condition);
@@ -149,7 +153,7 @@ export const pricesAreSame = (
         "Differences:",
         Object.values(diffs)
           .filter((d) => d.condition)
-          .map((d) => d.message),
+          .map((d) => d.message)
       );
     }
 
@@ -175,6 +179,10 @@ export const pricesAreSame = (
         condition: usageConfig1.interval !== usageConfig2.interval,
         message: `Interval different: ${usageConfig1.interval} !== ${usageConfig2.interval}`,
       },
+      interval_count: {
+        condition: usageConfig1.interval_count !== usageConfig2.interval_count,
+        message: `Interval count different: ${usageConfig1.interval_count} !== ${usageConfig2.interval_count}`,
+      },
       internal_feature_id: {
         condition:
           usageConfig1.internal_feature_id !== usageConfig2.internal_feature_id,
@@ -187,10 +195,10 @@ export const pricesAreSame = (
       usage_tiers: {
         condition: !tiersAreSame(
           usageConfig1.usage_tiers,
-          usageConfig2.usage_tiers,
+          usageConfig2.usage_tiers
         ),
         message: `Usage tiers different: ${usageConfig1.usage_tiers.map(
-          (t) => `${t.to} (${t.amount})`,
+          (t) => `${t.to} (${t.amount})`
         )} !== ${usageConfig2.usage_tiers.map((t) => `${t.to} (${t.amount})`)}`,
       },
     };
@@ -224,7 +232,7 @@ export const pricesAreSame = (
           .map((d) => d.message),
         Object.values(prorationConfigDiff)
           .filter((d) => d.condition)
-          .map((d) => d.message),
+          .map((d) => d.message)
       );
     }
 

@@ -48,6 +48,7 @@ export const toFeatureItem = ({ ent }: { ent: EntitlementWithFeature }) => {
     included_usage:
       ent.allowance_type == AllowanceType.Unlimited ? Infinite : ent.allowance,
     interval: entToItemInterval(ent.interval!),
+    interval_count: ent.interval_count ?? 1,
 
     entity_feature_id: ent.entity_feature_id,
     reset_usage_when_enabled: !ent.carry_from_previous,
@@ -95,6 +96,7 @@ export const toFeaturePriceItem = ({
     included_usage: ent.allowance,
 
     interval: billingToItemInterval(config.interval!),
+    interval_count: config.interval_count ?? 1,
 
     price: null,
     tiers,
@@ -127,6 +129,7 @@ export const toPriceItem = ({ price }: { price: Price }) => {
     feature_id: null,
 
     interval: billingToItemInterval(config.interval!),
+    interval_count: config.interval_count ?? 1,
     price: config.amount,
 
     price_id: price.id,

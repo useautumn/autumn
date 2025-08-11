@@ -12,33 +12,9 @@ import { FixedPriceConfig, Price, UsagePriceConfig } from "@autumn/shared";
 import { intervalIsNone } from "./productItemUtils";
 import { isFeatureItem } from "./getItemType";
 
-export const validBillingInterval = (
-  prices: Price[],
-  config: FixedPriceConfig | UsagePriceConfig,
-) => {
-  const interval1 = config.interval;
-  if (!interval1 || interval1 == BillingInterval.OneOff) {
-    return true;
-  }
-
-  for (const price of prices) {
-    const interval2 = price.config?.interval;
-
-    if (!interval2 || interval2 == BillingInterval.OneOff) {
-      continue;
-    }
-
-    if (interval1 != interval2) {
-      return false;
-    }
-  }
-
-  return true;
-};
-
 export const getBillingUnits = (
   config: UsagePriceConfig,
-  entitlements: EntitlementWithFeature[],
+  entitlements: EntitlementWithFeature[]
 ) => {
   if (!entitlements) return "(error)";
 
@@ -51,7 +27,7 @@ export const getBillingUnits = (
   }
 
   const entitlement = entitlements?.find(
-    (e) => e.internal_feature_id == config?.internal_feature_id,
+    (e) => e.internal_feature_id == config?.internal_feature_id
   );
   if (!entitlement) return "n";
 
@@ -67,6 +43,7 @@ export const getDefaultPriceConfig = (type: PriceType) => {
       type: PriceType.Fixed,
       amount: "",
       interval: BillingInterval.Month,
+      interval_count: 1,
     };
   }
 
@@ -76,6 +53,7 @@ export const getDefaultPriceConfig = (type: PriceType) => {
     feature_id: "",
     bill_when: BillWhen.EndOfPeriod,
     interval: BillingInterval.Month,
+    interval_count: 1,
     billing_units: 1,
     usage_tiers: [
       {
@@ -90,7 +68,7 @@ export const getDefaultPriceConfig = (type: PriceType) => {
 
 export const isOneOffProduct = (
   items: ProductItem[],
-  isAddOn: boolean = false,
+  isAddOn: boolean = false
 ) => {
   const prices = items.filter((item) => !isFeatureItem(item));
 

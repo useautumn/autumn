@@ -22,9 +22,7 @@ import { isFeaturePriceItem, isPriceItem } from "@/utils/product/getItemType";
 export const ProductItemConfig = () => {
   // HOOKS
   const { features } = useProductContext();
-
   const { item, setItem } = useProductItemContext();
-
   const [show, setShow] = useState(getShowParams(item));
 
   const handleAddPrice = () => {

@@ -32,6 +32,7 @@ const updateDbPricesAndEnts = async ({
   deletedEnts: Entitlement[];
 }) => {
   // 1. Create new ents
+
   await Promise.all([
     EntitlementService.insert({
       db,
@@ -76,7 +77,7 @@ const updateDbPricesAndEnts = async ({
     let updateOrDelete: any = [];
     for (const ent of deletedEnts) {
       let hasCustomPrice = customPrices.some(
-        (price) => price.entitlement_id == ent.id,
+        (price) => price.entitlement_id == ent.id
       );
 
       if (hasCustomPrice) {
@@ -87,14 +88,14 @@ const updateDbPricesAndEnts = async ({
             updates: {
               is_custom: true,
             },
-          }),
+          })
         );
       } else {
         updateOrDelete.push(
           EntitlementService.deleteInIds({
             db,
             ids: [ent.id!],
-          }),
+          })
         );
       }
     }
@@ -202,7 +203,7 @@ export const handleNewProductItems = async ({
   });
 
   let deletedEnts: Entitlement[] = curEnts.filter(
-    (ent) => !newItems.some((item) => item.entitlement_id == ent.id),
+    (ent) => !newItems.some((item) => item.entitlement_id == ent.id)
   );
 
   let samePrices: Price[] = [];

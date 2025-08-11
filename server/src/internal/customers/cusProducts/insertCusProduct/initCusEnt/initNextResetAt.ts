@@ -62,6 +62,7 @@ export const initNextResetAt = ({
   nextResetAtCalculated = getNextEntitlementReset(
     nextResetAtCalculated || new UTCDate(now),
     resetInterval,
+    entitlement.interval_count || 1
   ).getTime();
 
   // If anchorToUnix, align next reset at to anchorToUnix...

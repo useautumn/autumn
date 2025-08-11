@@ -77,44 +77,55 @@ export const calculateMetered1Price = ({
 export const subToAutumnInterval = (sub: Stripe.Subscription) => {
   let recuringItem = sub.items.data.find((i) => i.price.recurring != null);
   if (!recuringItem) {
-    return BillingInterval.OneOff;
+    return {
+      interval: BillingInterval.OneOff,
+      intervalCount: 1,
+    };
   }
 
-  return stripeToAutumnInterval({
-    interval: recuringItem.price.recurring!.interval,
-    intervalCount: recuringItem.price.recurring!.interval_count,
-  });
+  return {
+    interval: recuringItem.price.recurring!.interval as BillingInterval,
+    intervalCount: recuringItem.price.recurring!.interval_count || 1,
+  };
+  // return stripeToAutumnInterval({
+  //   interval: recuringItem.price.recurring!.interval,
+  //   intervalCount: recuringItem.price.recurring!.interval_count,
+  // });
 };
 
-export const stripeToAutumnInterval = ({
-  interval,
-  intervalCount,
-}: {
-  interval: string;
-  intervalCount: number;
-}) => {
-  if (interval === "month" && intervalCount === 1) {
-    return BillingInterval.Month;
-  }
+// export const stripeToAutumnInterval = ({
+//   interval,
+//   intervalCount,
+// }: {
+//   interval: string;
+//   intervalCount: number;
+// }) => {
+//   if (interval === "month" && intervalCount === 1) {
+//     return BillingInterval.Month;
+//   }
 
-  if (interval === "month" && intervalCount === 3) {
-    return BillingInterval.Quarter;
-  }
+//   // if (interval === "month" && intervalCount === 3) {
+//   //   return BillingInterval.Quarter;
+//   // }
 
-  if (interval === "month" && intervalCount === 6) {
-    return BillingInterval.SemiAnnual;
-  }
+//   // if (interval === "month" && intervalCount === 6) {
+//   //   return BillingInterval.SemiAnnual;
+//   // }
 
-  if (
-    (interval === "month" && intervalCount === 12) ||
-    (interval === "year" && intervalCount === 1)
-  ) {
-    return BillingInterval.Year;
-  }
-};
+//   if (
+//     (interval === "month" && intervalCount === 12) ||
+//     (interval === "year" && intervalCount === 1)
+//   ) {
+//     return BillingInterval.Year;
+//   }
+// };
 export const subItemToAutumnInterval = (item: Stripe.SubscriptionItem) => {
-  return stripeToAutumnInterval({
-    interval: item.price.recurring?.interval!,
-    intervalCount: item.price.recurring?.interval_count!,
-  });
+  return {
+    interval: item.price.recurring?.interval as BillingInterval,
+    intervalCount: item.price.recurring?.interval_count || 1,
+  };
+  // return stripeToAutumnInterval({
+  //   interval: item.price.recurring?.interval!,
+  //   intervalCount: item.price.recurring?.interval_count!,
+  // });
 };

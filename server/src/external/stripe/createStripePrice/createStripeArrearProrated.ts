@@ -94,7 +94,10 @@ export const createStripeMeteredPrice = async ({
     currency: org.default_currency || "usd",
     nickname: `Autumn Price (${feature!.name}) [Placeholder]`,
     recurring: {
-      ...(billingIntervalToStripe(price.config!.interval!) as any),
+      ...(billingIntervalToStripe({
+        interval: price.config!.interval,
+        intervalCount: price.config!.interval_count,
+      }) as any),
       meter: meter!.id,
       usage_type: "metered",
     },
@@ -105,7 +108,7 @@ export const createStripeMeteredPrice = async ({
 
 export const arrearProratedToStripeTiers = (
   price: Price,
-  entitlement: EntitlementWithFeature,
+  entitlement: EntitlementWithFeature
 ) => {
   let usageConfig = structuredClone(price.config) as UsagePriceConfig;
 
@@ -161,7 +164,10 @@ export const createStripeArrearProrated = async ({
 
   let recurringData = undefined;
   if (price.config!.interval != BillingInterval.OneOff) {
-    recurringData = billingIntervalToStripe(price.config!.interval!);
+    recurringData = billingIntervalToStripe({
+      interval: price.config!.interval,
+      intervalCount: price.config!.interval_count,
+    });
   }
 
   const config = price.config as UsagePriceConfig;

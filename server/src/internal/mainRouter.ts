@@ -116,7 +116,7 @@ mainRouter.use(
     },
     identify: async (req: any) => {
       return {
-        customerId: "user_123",
+        customerId: "onboarding_demo_user",
         customerData: {
           name: "Demo User",
           email: "demo@useautumn.com",

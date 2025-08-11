@@ -10,7 +10,7 @@ export const getFilteredScheduleItems = ({
   scheduleObj: ScheduleObj;
   cusProducts: (FullCusProduct | undefined)[];
 }) => {
-  const { schedule, interval, prices } = scheduleObj;
+  const { schedule, prices } = scheduleObj;
   let scheduleItems = schedule.phases[0].items;
 
   let curPrices: any[] = [];
@@ -31,10 +31,10 @@ export const getFilteredScheduleItems = ({
       curPrices.some(
         (price) =>
           price.config?.stripe_price_id === scheduleItem.price ||
-          price.config?.stripe_product_id === stripePrice?.product,
+          price.config?.stripe_product_id === stripePrice?.product
       ) ||
       products.some(
-        (product) => product.processor?.id === stripePrice?.product,
+        (product) => product.processor?.id === stripePrice?.product
       );
 
     return !inCurProduct;

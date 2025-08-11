@@ -12,7 +12,10 @@ import { priceToProduct } from "@/internal/products/prices/priceUtils/findPriceU
 import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import { AttachConfig } from "@autumn/shared";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
-import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
+import {
+  attachToInvoiceResponse,
+  insertInvoiceFromAttach,
+} from "@/internal/invoices/invoiceUtils.js";
 import { Decimal } from "decimal.js";
 import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 
@@ -160,7 +163,7 @@ export const handleOneOffFunction = async ({
         attachParams: attachToInsertParams(attachParams, product),
         lastInvoiceId: stripeInvoice.id,
         logger,
-      }),
+      })
     );
   }
   await Promise.all(batchInsert);
@@ -180,12 +183,14 @@ export const handleOneOffFunction = async ({
       AttachResultSchema.parse({
         success: true,
         message: `Successfully purchased ${productNames} and attached to ${customerName}`,
-        invoice: invoiceOnly ? stripeInvoice : undefined,
+        invoice: invoiceOnly
+          ? attachToInvoiceResponse({ invoice: stripeInvoice })
+          : undefined,
         code: SuccessCode.OneOffProductAttached,
         product_ids: products.map((p) => p.id),
         customer_id: customer.id || customer.internal_id,
         scenario: AttachScenario.New,
-      }),
+      })
     );
   }
 };

@@ -96,18 +96,20 @@ export function MainLayout() {
   // }
 
   return (
-    <AutumnProvider backendUrl={import.meta.env.VITE_BACKEND_URL}>
+    <AutumnProvider
+      backendUrl={import.meta.env.VITE_BACKEND_URL}
+      includeCredentials={true}
+    >
       <SidebarContext.Provider
         value={{ state: sidebarState, setState: setSidebarState }}
       >
         <NuqsAdapter>
           <main className="w-screen h-screen flex bg-stone-100">
-          <CustomToaster />
-          <MainSidebar />
-          <MainContent />
-        </main>
-
-      </NuqsAdapter>
+            <CustomToaster />
+            <MainSidebar />
+            <MainContent />
+          </main>
+        </NuqsAdapter>
       </SidebarContext.Provider>
     </AutumnProvider>
   );

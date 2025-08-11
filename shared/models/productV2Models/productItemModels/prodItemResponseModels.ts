@@ -20,6 +20,7 @@ export const ProductItemResponseSchema = z.object({
 
   included_usage: z.number().or(z.literal(Infinite)).nullish(),
   interval: z.nativeEnum(ProductItemInterval).nullish(),
+  interval_count: z.number().nullish(),
 
   // Price config
   price: z.number().nullish(),

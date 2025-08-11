@@ -46,7 +46,7 @@ export const ConnectStripeStep = ({
   };
 
   // console.log("productData", productData);
-  let stripeConnected = productData?.org.stripe_connected;
+  const stripeConnected = productData?.org.stripe_connected;
   return (
     <Step
       title="Connect your Stripe test account"

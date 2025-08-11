@@ -108,10 +108,6 @@ export const previewToCheckoutRes = async ({
             return acc;
           }
 
-          // if (item.interval !== newProduct.properties?.interval_group) {
-          //   return acc;
-          // }
-
           if (isPriceItem(item)) {
             return acc.plus(item.price || 0);
           }

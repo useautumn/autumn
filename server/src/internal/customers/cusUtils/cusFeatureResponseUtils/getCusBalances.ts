@@ -141,7 +141,7 @@ export const getRolloverFields = ({
       );
     }
   } else {
-    return cusEnt.rollovers.reduce(
+    return rollovers.reduce(
       (acc, rollover) => {
         return {
           balance: acc.balance + rollover.balance,
@@ -204,7 +204,7 @@ export const getCusBalances = async ({
     const cusProduct = cusEnt.customer_product;
     const feature = cusEnt.entitlement.feature;
     const ent: EntitlementWithFeature = cusEnt.entitlement;
-    let key = `${ent.interval || "no-interval"}-${feature.id}`;
+    let key = `${ent.interval || "no-interval"}-${ent.interval_count || 1}-${feature.id}`;
 
     // 1. Handle boolean
     let isBoolean = feature.type == FeatureType.Boolean;
@@ -239,6 +239,11 @@ export const getCusBalances = async ({
           unlimited: isBoolean ? undefined : unlimited,
           interval:
             isBoolean || unlimited ? undefined : ent.interval || undefined,
+          // interval_count:
+          //   isBoolean || unlimited
+          //     ? undefined
+          //     : ent.interval_count || undefined,
+
           balance: isBoolean ? undefined : unlimited ? null : 0,
           total: isBoolean || unlimited ? undefined : 0,
           adjustment: isBoolean || unlimited ? undefined : 0,
@@ -252,6 +257,7 @@ export const getCusBalances = async ({
             isBoolean || unlimited ? undefined : cusEnt.next_reset_at;
           data[key].allowance = isBoolean || unlimited ? undefined : 0;
           data[key].usage_limit = isBoolean || unlimited ? undefined : 0;
+          data[key].interval_count = ent.interval_count || 1;
         }
       }
     }

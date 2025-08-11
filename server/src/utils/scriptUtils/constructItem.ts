@@ -13,6 +13,7 @@ export const constructFeatureItem = ({
   featureId,
   includedUsage = 150,
   interval = ProductItemInterval.Month,
+  intervalCount = 1,
   entityFeatureId,
   isBoolean = false,
   rolloverConfig,
@@ -20,6 +21,7 @@ export const constructFeatureItem = ({
   featureId: string;
   includedUsage?: number;
   interval?: ProductItemInterval | null;
+  intervalCount?: number;
   entityFeatureId?: string;
   isBoolean?: boolean;
   rolloverConfig?: RolloverConfig;
@@ -35,6 +37,7 @@ export const constructFeatureItem = ({
     included_usage: includedUsage,
     entity_feature_id: entityFeatureId,
     interval: interval,
+    interval_count: intervalCount,
   };
 
   if (rolloverConfig) {
@@ -58,6 +61,7 @@ export const constructPrepaidItem = ({
   },
   rolloverConfig,
   usageLimit,
+  intervalCount = 1,
 }: {
   featureId: string;
   price?: number;
@@ -67,6 +71,7 @@ export const constructPrepaidItem = ({
   config?: ProductItemConfig;
   rolloverConfig?: RolloverConfig;
   usageLimit?: number;
+  intervalCount?: number;
 }) => {
   let item: ProductItem = {
     feature_id: featureId,
@@ -74,8 +79,8 @@ export const constructPrepaidItem = ({
 
     price: price,
     billing_units: billingUnits || 100,
-
     interval: isOneOff ? null : ProductItemInterval.Month,
+    interval_count: intervalCount,
     included_usage: includedUsage,
 
     config: {
@@ -99,6 +104,7 @@ export const constructArrearItem = ({
   },
   entityFeatureId,
   usageLimit,
+  intervalCount = 1,
 }: {
   featureId: string;
   includedUsage?: number;
@@ -107,6 +113,7 @@ export const constructArrearItem = ({
   config?: ProductItemConfig;
   entityFeatureId?: string;
   usageLimit?: number;
+  intervalCount?: number;
 }) => {
   let item: ProductItem = {
     feature_id: featureId,
@@ -115,6 +122,7 @@ export const constructArrearItem = ({
     price: price,
     billing_units: billingUnits,
     interval: ProductItemInterval.Month,
+    interval_count: intervalCount,
     reset_usage_when_enabled: true,
     config,
     entity_feature_id: entityFeatureId,

@@ -1,4 +1,9 @@
-import { AppEnv, FullCusProduct, Organization } from "@autumn/shared";
+import {
+  AppEnv,
+  FullCusProduct,
+  intervalsSame,
+  Organization,
+} from "@autumn/shared";
 import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { getStripeSchedules } from "@/external/stripe/stripeSubUtils.js";
 import { getScheduleIdsFromCusProducts } from "../scheduleUtils.js";
@@ -23,7 +28,7 @@ export const getOtherCusProductsOnSub = async ({
     if (
       cusProduct.id === curMainProduct.id ||
       !curMainSubIds?.some((subId) =>
-        cusProduct?.subscription_ids?.includes(subId),
+        cusProduct?.subscription_ids?.includes(subId)
       )
     ) {
       continue;
@@ -72,10 +77,13 @@ export const addCurMainProductToSchedule = async ({
   });
 
   for (const scheduleObj of schedules) {
-    const { schedule, interval } = scheduleObj;
+    const { schedule, interval, intervalCount } = scheduleObj;
 
-    let oldItemSet = oldItemSets.find(
-      (itemSet) => itemSet.interval === interval,
+    let oldItemSet = oldItemSets.find((itemSet) =>
+      intervalsSame({
+        intervalA: { interval, intervalCount },
+        intervalB: itemSet,
+      })
     );
 
     await updateScheduledSubWithNewItems({
@@ -99,7 +107,7 @@ export const addCurMainProductToSchedule = async ({
     });
 
     logger.info(
-      `✅ Added old items for product ${curMainProduct.product.name} to schedule: ${schedule.id}`,
+      `✅ Added old items for product ${curMainProduct.product.name} to schedule: ${schedule.id}`
     );
   }
 };

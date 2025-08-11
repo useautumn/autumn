@@ -12,7 +12,7 @@ import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useCustomerContext } from "../CustomerContext";
-import { notNullish } from "@/utils/genUtils";
+import { getBackendErr, notNullish } from "@/utils/genUtils";
 
 export const CancelProductDialog = ({
   cusProduct,
@@ -50,7 +50,7 @@ export const CancelProductDialog = ({
       setOpen(false);
       toast.success("Product cancelled");
     } catch (error) {
-      toast.error("Failed to cancel product");
+      toast.error(getBackendErr(error, "Failed to cancel product"));
     } finally {
       if (cancelImmediately) {
         setImmediateLoading(false);

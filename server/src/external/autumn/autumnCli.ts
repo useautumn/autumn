@@ -12,6 +12,8 @@ import {
 } from "@autumn/shared";
 import {
   CancelParams,
+  CheckoutParams,
+  CheckoutResult,
   CheckParams,
   CheckResult,
   Customer,
@@ -167,6 +169,16 @@ export class AutumnInt {
     const data = await this.post(`/attach`, params);
 
     return data;
+  }
+  async checkout(params: CheckoutParams) {
+    // const data = await this.post(`/attach`, {
+    //   customer_id: customerId,
+    //   product_id: productId,
+    //   options: toSnakeCase(options),
+    // });
+    const data = await this.post(`/checkout`, params);
+
+    return data as CheckoutResult;
   }
 
   async sendEvent({
