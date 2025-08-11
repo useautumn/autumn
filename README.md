@@ -24,7 +24,7 @@ All this without having to handle webhooks, upgrades/downgrades, cancellations o
 
 **Self Hosted**: If you'd like to self-host Autumn:
 
-1. Make sure you have `node.js` and `bun` installed
+1. Make sure you have `bun` installed
 2. Install the project dependencies
 ```bash
 bun install
