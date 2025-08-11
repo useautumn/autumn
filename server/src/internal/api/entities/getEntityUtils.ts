@@ -72,6 +72,14 @@ export const getEntityResponse = async ({
     skipCache,
   });
 
+  if (!customer) {
+    throw new RecaseError({
+      message: `Customer ${customerId} not found`,
+      code: ErrCode.CustomerNotFound,
+      statusCode: 400,
+    });
+  }
+
   let entities = customer.entities.filter((e: Entity) =>
     entityIds.includes(e.id)
   );

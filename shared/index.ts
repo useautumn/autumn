@@ -140,6 +140,10 @@ export * from "./models/attachModels/attachBody.js";
 export * from "./utils/displayUtils.js";
 export * from "./models/checkModels/checkPreviewModels.js";
 export * from "./models/chatResultModels/chatResultFeature.js";
+export * from "./utils/productDisplayUtils/getProductItemRes.js";
+export * from "./utils/productUtils.js";
+export * from "./utils/productDisplayUtils/sortProductItems.js";
+export * from "./utils/intervalUtils.js";
 
 // ENUMS
 export * from "./enums/SuccessCode.js";

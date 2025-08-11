@@ -72,7 +72,7 @@ const CodeBlock = ({ snippets, className }: CodeBlockProps) => {
         </div>
         <CopyButton content={selected.content} />
       </div>
-      <div className="p-4 bg-code-bg overflow-x-auto">
+      <div className="px-2  bg-code-bg overflow-x-auto">
         <pre
           key={`selected-${selected.language}`}
           className="text-[13px] leading-5 w-fit"

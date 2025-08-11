@@ -16,7 +16,7 @@ export const ConfigWithFeature = ({
   handleAddPrice: () => void;
 }) => {
   const { features } = useProductContext();
-  const { item, setItem } = useProductItemContext();
+  const { item } = useProductItemContext();
 
   const isBooleanFeature =
     getFeature(item.feature_id, features)?.type === FeatureType.Boolean;

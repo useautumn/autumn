@@ -32,6 +32,7 @@ const createLogMethod = (pinoMethod: any, logtailMethod?: any) => {
     const strings = args
       .filter((arg) => typeof arg === "string")
       .map(rewriteAppPath);
+
     const objects = args
       .filter((arg) => typeof arg !== "string" && arg !== null)
       .map((obj) => (obj instanceof Error ? rewriteErrorStack(obj) : obj));
@@ -44,7 +45,7 @@ const createLogMethod = (pinoMethod: any, logtailMethod?: any) => {
       const errorObject = args.find((arg) => arg instanceof Error);
       if (errorObject) {
         message = rewriteAppPath(
-          errorObject.stack || errorObject.message || "Error occurred",
+          errorObject.stack || errorObject.message || "Error occurred"
         );
       }
     }

@@ -33,7 +33,10 @@ export const findSimilarItem = ({
   if (isPriceItem(item)) {
     return items.find((i) => {
       return (
-        isPriceItem(i) && i.price === item.price && i.interval === item.interval
+        isPriceItem(i) &&
+        i.price === item.price &&
+        i.interval === item.interval &&
+        (i.interval_count || 1) == (item.interval_count || 1)
       );
     });
   }
@@ -68,16 +71,17 @@ export const featureItemsAreSame = ({
   item2: FeatureItem;
 }) => {
   // Compare config objects (including rollover)
-  const configsAreSame = JSON.stringify(item1.config) === JSON.stringify(item2.config);
-  
-  const same = (
+  const configsAreSame =
+    JSON.stringify(item1.config) === JSON.stringify(item2.config);
+
+  const same =
     item1.feature_id === item2.feature_id &&
     item1.included_usage == item2.included_usage &&
     item1.interval == item2.interval &&
+    (item1.interval_count || 1) == (item2.interval_count || 1) &&
     item1.entity_feature_id == item2.entity_feature_id &&
     item1.reset_usage_when_enabled == item2.reset_usage_when_enabled &&
-    configsAreSame
-  );
+    configsAreSame;
 
   return same;
 };
@@ -89,7 +93,10 @@ export const priceItemsAreSame = ({
   item1: PriceItem;
   item2: PriceItem;
 }) => {
-  const same = item1.price === item2.price && item1.interval == item2.interval;
+  const same =
+    item1.price === item2.price &&
+    item1.interval == item2.interval &&
+    (item1.interval_count || 1) == (item2.interval_count || 1);
 
   if (!same) {
     console.log(`Price items different: ${item1.price}`);
@@ -133,6 +140,10 @@ export const featurePriceItemsAreSame = ({
     interval: {
       condition: item1.interval == item2.interval,
       message: `Interval different: ${item1.interval} != ${item2.interval}`,
+    },
+    interval_count: {
+      condition: (item1.interval_count || 1) == (item2.interval_count || 1),
+      message: `Interval count different: ${item1.interval_count} != ${item2.interval_count}`,
     },
     usage_model: {
       condition: item1.usage_model === item2.usage_model,
@@ -194,8 +205,6 @@ export const itemsAreSame = ({
   let same = false;
   let pricesChanged = false;
 
-
-
   if (isFeatureItem(item1)) {
     if (!isFeatureItem(item2)) {
       return {
@@ -246,7 +255,9 @@ export const itemsAreSame = ({
       item1: PriceItemSchema.parse(item1),
       item2: PriceItemSchema.parse(item2),
     });
-    pricesChanged = false;
+    if (!same) {
+      pricesChanged = true;
+    }
   }
 
   return {

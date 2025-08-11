@@ -4,11 +4,52 @@ import {
   Feature,
   UsageModel,
   UsagePriceConfig,
+  BillingInterval,
 } from "@autumn/shared";
 
 import { Price } from "@autumn/shared";
 import { getBillingType, getPriceEntitlement } from "../priceUtils.js";
 import { isFixedPrice } from "./usagePriceUtils/classifyUsagePrice.js";
+
+export const priceToIntervalKey = (price: Price) => {
+  return toIntervalKey({
+    interval: price.config?.interval,
+    intervalCount: price.config?.interval_count ?? 1,
+  });
+};
+
+export const toIntervalKey = ({
+  interval,
+  intervalCount,
+}: {
+  interval: BillingInterval;
+  intervalCount: number;
+}) => {
+  if (interval == BillingInterval.OneOff) {
+    return BillingInterval.OneOff;
+  } else if (interval == BillingInterval.Quarter) {
+    let finalCount = (intervalCount ?? 1) * 3;
+    return `${BillingInterval.Month}-${finalCount}`;
+  } else if (interval == BillingInterval.SemiAnnual) {
+    let finalCount = (intervalCount ?? 1) * 6;
+    return `${BillingInterval.Month}-${finalCount}`;
+  }
+
+  if (interval == BillingInterval.Week) {
+    return `${BillingInterval.Week}-${intervalCount}`;
+  } else if (interval == BillingInterval.Year) {
+    return `${BillingInterval.Year}-${intervalCount}`;
+  }
+  return `${interval}-${intervalCount}`;
+};
+
+export const intervalKeyToPrice = (intervalKey: string) => {
+  const [interval, intervalCount] = intervalKey.split("-");
+  return {
+    interval: interval as BillingInterval,
+    intervalCount: intervalCount ? parseInt(intervalCount) : 1,
+  };
+};
 
 export const priceToFeature = ({
   price,
@@ -26,7 +67,7 @@ export const priceToFeature = ({
   if (features) {
     return features.find(
       (f) =>
-        f.internal_id == (price.config as UsagePriceConfig).internal_feature_id,
+        f.internal_id == (price.config as UsagePriceConfig).internal_feature_id
     );
   }
 

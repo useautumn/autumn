@@ -10,12 +10,29 @@ import {
   Organization,
   ProductItem,
   ProductItemFeatureType,
+  ProductItemInterval,
 } from "@autumn/shared";
 import {
   isFeatureItem,
   isFeaturePriceItem,
   isPriceItem,
 } from "../../product-items/productItemUtils/getItemType.js";
+
+export const getIntervalString = ({
+  interval,
+  intervalCount,
+  prefix = "per ",
+}: {
+  interval: ProductItemInterval;
+  intervalCount?: number | null;
+  prefix?: string;
+}) => {
+  if (!interval) return "";
+  if (intervalCount == 1) {
+    return `${prefix}${interval}`;
+  }
+  return `${prefix}${intervalCount} ${interval}s`;
+};
 
 export const formatTiers = ({
   item,
@@ -112,7 +129,12 @@ export const getPriceItemDisplay = ({
     currency,
     amount: item.price as number,
   });
-  let secondaryText = item.interval ? `per ${item.interval}` : undefined;
+  let intervalStr = getIntervalString({
+    interval: item.interval!,
+    intervalCount: item.interval_count,
+  });
+
+  let secondaryText = intervalStr || undefined;
 
   return {
     primary_text: primaryText,
@@ -170,7 +192,16 @@ export const getFeaturePriceItemDisplay = ({
     priceStr2 = `${billingFeatureName}`;
   }
 
-  let intervalStr = isMainPrice && item.interval ? ` per ${item.interval}` : "";
+  // let intervalStr = isMainPrice && item.interval ? ` per ${item.interval}` : "";
+  let intervalStr = isMainPrice
+    ? getIntervalString({
+        interval: item.interval!,
+        intervalCount: item.interval_count,
+      })
+    : "";
+
+  // console.log("isMainPrice", isMainPrice);
+  // console.log("intervalStr", intervalStr);
 
   if (includedUsageStr) {
     return {
@@ -179,8 +210,16 @@ export const getFeaturePriceItemDisplay = ({
     };
   }
 
+  if (isMainPrice) {
+    return {
+      primary_text: priceStr + ` per ${priceStr2}`,
+      secondary_text: `${intervalStr}`,
+    };
+  }
+
+  // ${intervalStr}
   return {
-    primary_text: priceStr + ` per ${priceStr2}${intervalStr}`,
+    primary_text: priceStr + ` per ${priceStr2}`,
     // secondary_text: `per ${priceStr2}${intervalStr}`,
     secondary_text: "",
   };
@@ -190,10 +229,12 @@ export const getProductItemDisplay = ({
   item,
   features,
   currency = "usd",
+  isMainPrice = false,
 }: {
   item: ProductItem;
   features: Feature[];
   currency?: string | null;
+  isMainPrice?: boolean;
 }) => {
   if (isFeatureItem(item)) {
     return getFeatureItemDisplay({
@@ -214,6 +255,7 @@ export const getProductItemDisplay = ({
       item,
       feature: features.find((f) => f.id === item.feature_id),
       currency,
+      isMainPrice,
     });
   }
 

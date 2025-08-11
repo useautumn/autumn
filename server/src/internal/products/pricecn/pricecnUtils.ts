@@ -22,7 +22,7 @@ import { isPriceItem } from "../product-items/productItemUtils/getItemType.js";
 import { isFeaturePriceItem } from "../product-items/productItemUtils/getItemType.js";
 import { cusProductToProduct } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { isProductUpgrade } from "../productUtils.js";
-import { getFirstInterval } from "../prices/priceUtils/priceIntervalUtils.js";
+import { getLargestInterval } from "../prices/priceUtils/priceIntervalUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getFreeTrialAfterFingerprint } from "../free-trials/freeTrialUtils.js";
 
@@ -388,7 +388,7 @@ export const toPricecnProduct = async ({
   let baseVariant = null;
   if (fullProduct.base_variant_id) {
     baseVariant = otherProducts.find(
-      (p) => p.id == fullProduct.base_variant_id,
+      (p) => p.id == fullProduct.base_variant_id
     );
   }
 
@@ -402,7 +402,8 @@ export const toPricecnProduct = async ({
     baseVariant ||
     otherProducts.some((p) => p.base_variant_id == product.id)
   ) {
-    intervalGroup = getFirstInterval({ prices: fullProduct.prices });
+    let intervalSet = getLargestInterval({ prices: fullProduct.prices });
+    intervalGroup = intervalSet?.interval;
   }
 
   let trialAvailable = false;

@@ -80,7 +80,7 @@ export const invoicesToResponse = ({
       invoice: i,
       withItems: false,
       features: [],
-    }),
+    })
   );
 };
 
@@ -119,10 +119,33 @@ export const getInvoiceItems = async ({
   } catch (error) {
     logger.error(
       `Failed to get invoice items for invoice ${stripeInvoice.id}`,
-      error,
+      error
     );
     return [];
   }
 
   return invoiceItems;
+};
+
+export const attachToInvoiceResponse = ({
+  invoice,
+}: {
+  invoice?: Stripe.Invoice;
+}) => {
+  if (!invoice) {
+    return undefined;
+  }
+
+  return {
+    status: invoice.status,
+    stripe_id: invoice.id,
+    hosted_invoice_url: invoice.hosted_invoice_url,
+    total: invoice.total,
+    currency: invoice.currency,
+    // id: invoice.id,
+    // stripe_id: invoice.stripe_id,
+    // status: invoice.status,
+    // created_at: invoice.created_at,
+    // updated_at: invoice.updated_at,
+  };
 };

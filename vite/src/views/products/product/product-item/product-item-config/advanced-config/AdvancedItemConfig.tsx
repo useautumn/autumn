@@ -29,7 +29,6 @@ export const AdvancedItemConfig = () => {
   const showRolloverConfig =
     (hasCreditSystem || usageType === FeatureUsageType.Single) &&
     item.interval !== null &&
-    item.included_usage &&
     item.included_usage > 0;
 
   return (
@@ -69,7 +68,7 @@ export const AdvancedItemConfig = () => {
             }
           />
 
-          <div className="relative flex flex-row items-center gap-3">
+          <div className="h-4.5 relative flex flex-row items-center gap-3">
             <ToggleButton
               value={item.usage_limit != null}
               setValue={() => {

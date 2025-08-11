@@ -6,6 +6,7 @@ import {
   AppEnv,
   AttachScenario,
   FullCusProduct,
+  intervalsSame,
   Organization,
   Product,
 } from "@autumn/shared";
@@ -30,6 +31,7 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { notNullish } from "@/utils/genUtils.js";
+import { subToAutumnInterval } from "@/external/stripe/utils.js";
 
 export const getPricesForCusProduct = ({
   cusProduct,
@@ -134,7 +136,7 @@ export const cancelFutureProductSchedule = async ({
 
   // Case where cur scheduled product is not free
   for (const scheduleObj of schedules) {
-    const { schedule, interval, prices } = scheduleObj;
+    const { schedule, interval, intervalCount, prices } = scheduleObj;
 
     if (inIntervals && !inIntervals.includes(interval!)) {
       continue;
@@ -142,7 +144,7 @@ export const cancelFutureProductSchedule = async ({
 
     // 1. Remove cur scheduled product items from schedule
     const activeCusProducts = cusProducts.filter((cusProduct) =>
-      isActiveStatus(cusProduct?.status),
+      isActiveStatus(cusProduct?.status)
     );
 
     const filteredScheduleItems = getFilteredScheduleItems({
@@ -152,8 +154,11 @@ export const cancelFutureProductSchedule = async ({
 
     // 2. If any items left, update schedule with cur main product!
     if (filteredScheduleItems.length > 0) {
-      let oldItemSet = oldItemSets.find(
-        (itemSet) => itemSet.interval === interval,
+      let oldItemSet = oldItemSets.find((itemSet) =>
+        intervalsSame({
+          intervalA: { interval, intervalCount },
+          intervalB: itemSet,
+        })
       );
 
       await updateScheduledSubWithNewItems({
@@ -186,7 +191,7 @@ export const cancelFutureProductSchedule = async ({
           cusProductId: curMainProduct!.id,
           updates: {
             scheduled_ids: curMainProduct!.scheduled_ids?.filter(
-              (id) => id !== schedule.id,
+              (id) => id !== schedule.id
             ),
           },
         });
@@ -202,15 +207,21 @@ export const cancelFutureProductSchedule = async ({
         await stripeCli.subscriptionSchedules.cancel(schedule.id);
       } catch (error: any) {
         logger.warn(
-          `❌ Error cancelling schedule: ${schedule.id}, ${error.message}`,
+          `❌ Error cancelling schedule: ${schedule.id}, ${error.message}`
         );
       }
 
-      const subWithSameInterval = curSubs.find(
-        (sub) =>
+      const subWithSameInterval = curSubs.find((sub) => {
+        let subInterval = subToAutumnInterval(sub);
+        // sub.items.data[0]?.price?.recurring?.interval === interval
+        return (
           sub.items.data.length > 0 &&
-          sub.items.data[0]?.price?.recurring?.interval === interval,
-      );
+          intervalsSame({
+            intervalA: { interval, intervalCount },
+            intervalB: subInterval,
+          })
+        );
+      });
 
       if (subWithSameInterval && renewCurProduct) {
         await stripeCli.subscriptions.update(subWithSameInterval.id, {
@@ -291,7 +302,7 @@ export const cancelFutureProductSchedule = async ({
           }
         } catch (error) {
           logger.error(
-            `❌ Error sending products updated webhook from cancelFutureProductSchedule: ${error}`,
+            `❌ Error sending products updated webhook from cancelFutureProductSchedule: ${error}`
           );
         }
       }
@@ -310,7 +321,7 @@ export const cancelFutureProductSchedule = async ({
       batchRenew.push(
         stripeCli.subscriptions.update(subId, {
           cancel_at: null,
-        }),
+        })
       );
     }
 

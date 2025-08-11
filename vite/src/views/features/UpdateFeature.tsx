@@ -13,6 +13,12 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { toast } from "sonner";
 import { FeatureType } from "@autumn/shared";
 import { getBackendErr } from "@/utils/genUtils";
+import {
+  CustomDialogBody,
+  CustomDialogContent,
+  CustomDialogFooter,
+} from "@/components/general/modal-components/DialogContentWrapper";
+import { CircleArrowUp, Save } from "lucide-react";
 
 export default function UpdateFeature({
   open,
@@ -79,6 +85,36 @@ export default function UpdateFeature({
     }
     setUpdateLoading(false);
   };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <CustomDialogContent>
+        <CustomDialogBody>
+          <DialogTitle>Update Feature</DialogTitle>
+
+          <FeatureConfig
+            feature={selectedFeature}
+            setFeature={setSelectedFeature}
+            eventNameInput={eventNameInput}
+            setEventNameInput={setEventNameInput}
+            isUpdate={true}
+            eventNameChanged={eventNameChanged}
+            setEventNameChanged={setEventNameChanged}
+          />
+        </CustomDialogBody>
+        <CustomDialogFooter>
+          <Button
+            isLoading={updateLoading}
+            onClick={() => handleUpdateFeature()}
+            variant="add"
+            startIcon={<CircleArrowUp size={14} />}
+          >
+            Update Feature
+          </Button>
+        </CustomDialogFooter>
+      </CustomDialogContent>
+    </Dialog>
+  );
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

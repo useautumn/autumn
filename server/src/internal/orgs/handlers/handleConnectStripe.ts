@@ -32,9 +32,11 @@ export const connectStripe = async ({
   env: AppEnv;
 }) => {
   // 1. Check if key is valid
+
   await checkKeyValid(apiKey);
 
   let stripe = new Stripe(apiKey);
+
   let account = await stripe.accounts.retrieve();
 
   // 2. Disconnect existing webhook endpoints
@@ -47,6 +49,7 @@ export const connectStripe = async ({
 
   // 3. Create webhook endpoint
   let webhook = await createWebhookEndpoint(apiKey, env, orgId);
+  console.log("MADE IT HERE");
 
   // 3. Return encrypted
   if (env === AppEnv.Sandbox) {
@@ -96,7 +99,9 @@ export const connectAllStripe = async ({
 
     // Get default currency from Stripe
     let stripe = new Stripe(testApiKey);
+
     let account = await stripe.accounts.retrieve();
+
     if (nullish(defaultCurrency) && nullish(account.default_currency)) {
       throw new RecaseError({
         message: "Default currency not set",
@@ -107,7 +112,7 @@ export const connectAllStripe = async ({
       defaultCurrency = account.default_currency;
     }
   } catch (error: any) {
-    console.error("Error checking stripe keys", error);
+    // console.error("Error checking stripe keys", error);
     throw new RecaseError({
       message: error.message || "Invalid Stripe API keys",
       code: ErrCode.StripeKeyInvalid,

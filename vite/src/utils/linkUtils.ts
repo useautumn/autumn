@@ -20,5 +20,5 @@ export const getStripeSubScheduleLink = (scheduledId: string, env: AppEnv) => {
 export const getStripeInvoiceLink = (stripeInvoice: any) => {
   return `https://dashboard.stripe.com${
     stripeInvoice.livemode ? "" : "/test"
-  }/invoices/${stripeInvoice.id}`;
+  }/invoices/${stripeInvoice.id || stripeInvoice.stripe_id}`;
 };

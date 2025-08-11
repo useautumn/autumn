@@ -27,7 +27,7 @@ export const IncludedUsage = () => {
       </FieldLabel>
       <div className="flex w-full h-fit gap-2">
         <Input
-          placeholder="eg, 300"
+          placeholder="eg. 300"
           className=""
           disabled={item.included_usage == Infinite}
           value={

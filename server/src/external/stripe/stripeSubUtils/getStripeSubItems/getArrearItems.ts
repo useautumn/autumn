@@ -2,6 +2,7 @@ import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import {
   BillingInterval,
   BillingType,
+  intervalsDifferent,
   Organization,
   UsagePriceConfig,
 } from "@autumn/shared";
@@ -13,15 +14,25 @@ export const getArrearItems = ({
   prices,
   org,
   interval,
+  intervalCount,
 }: {
   prices: Price[];
   interval: BillingInterval;
+  intervalCount: number;
   org: Organization;
 }) => {
   let placeholderItems: any[] = [];
   for (const price of prices) {
     let billingType = getBillingType(price.config!);
-    if (price.config!.interval! != interval) {
+    if (
+      intervalsDifferent({
+        intervalA: {
+          interval: price.config!.interval!,
+          intervalCount: price.config!.interval_count!,
+        },
+        intervalB: { interval, intervalCount },
+      })
+    ) {
       continue;
     }
 
@@ -33,7 +44,10 @@ export const getArrearItems = ({
           unit_amount: 1,
           currency: org.default_currency || "usd",
           recurring: {
-            ...billingIntervalToStripe(interval),
+            ...billingIntervalToStripe({
+              interval,
+              intervalCount,
+            }),
           },
         },
         quantity: 0,

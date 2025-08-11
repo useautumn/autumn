@@ -7,7 +7,8 @@ import { UTCDate } from "@date-fns/utc";
 // 1. Get next entitlement reset
 export const getNextEntitlementReset = (
   prevReset: UTCDate | null,
-  interval: EntInterval
+  interval: EntInterval,
+  intervalCount: number
 ) => {
   if (!prevReset) {
     prevReset = new UTCDate();
@@ -15,32 +16,41 @@ export const getNextEntitlementReset = (
 
   switch (interval) {
     case EntInterval.Minute:
-      return add(prevReset, { minutes: 1 });
+      return add(prevReset, { minutes: intervalCount });
     case EntInterval.Hour:
-      return add(prevReset, { hours: 1 });
+      return add(prevReset, { hours: intervalCount });
     case EntInterval.Day:
-      return add(prevReset, { days: 1 });
+      return add(prevReset, { days: intervalCount });
     case EntInterval.Week:
-      return add(prevReset, { weeks: 1 });
+      return add(prevReset, { weeks: intervalCount });
     case EntInterval.Month:
-      return add(prevReset, { months: 1 });
+      return add(prevReset, { months: intervalCount });
     case EntInterval.Quarter:
-      return add(prevReset, { months: 3 });
+      return add(prevReset, { months: intervalCount * 3 });
     case EntInterval.SemiAnnual:
-      return add(prevReset, { months: 6 });
+      return add(prevReset, { months: intervalCount * 6 });
     case EntInterval.Year:
-      return add(prevReset, { years: 1 });
+      return add(prevReset, { years: intervalCount });
     default:
       throw new Error("Invalid duration");
   }
 };
 
-export const getNextResetAt = (
-  curReset: UTCDate | null,
-  interval: EntInterval
-) => {
+export const getNextResetAt = ({
+  curReset,
+  interval,
+  intervalCount = 1,
+}: {
+  curReset: UTCDate | null;
+  interval: EntInterval;
+  intervalCount?: number;
+}) => {
   while (true) {
-    const nextReset = getNextEntitlementReset(curReset, interval);
+    const nextReset = getNextEntitlementReset(
+      curReset,
+      interval,
+      intervalCount
+    );
     if (nextReset.getTime() > Date.now()) {
       return nextReset.getTime();
     }

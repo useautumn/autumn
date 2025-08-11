@@ -77,7 +77,9 @@ function CreateProduct({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="add">Product</Button>
+        <Button variant="add" className="w-full">
+          Product
+        </Button>
       </DialogTrigger>
       <DialogContent className="w-[500px]">
         <DialogTitle>Create Product</DialogTitle>

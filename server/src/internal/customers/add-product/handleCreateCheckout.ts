@@ -61,7 +61,12 @@ export const handleCreateCheckout = async ({
   });
 
   let billingCycleAnchorUnixSeconds = org.config.anchor_start_of_month
-    ? Math.floor(getNextStartOfMonthUnix(itemSets[0].interval) / 1000)
+    ? Math.floor(
+        getNextStartOfMonthUnix({
+          interval: itemSets[0].interval,
+          intervalCount: itemSets[0].intervalCount,
+        }) / 1000
+      )
     : undefined;
 
   if (attachParams.billingAnchor) {

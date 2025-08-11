@@ -16,3 +16,16 @@ $MOCHA_CMD 'tests/contUse/update/*.ts'
 $MOCHA_CMD 'tests/contUse/track/*.ts'
 
 $MOCHA_CMD 'tests/contUse/roles/*.ts' 
+
+# G4
+$MOCHA_CMD 'tests/advanced/multiFeature/*.ts' \
+           'tests/advanced/coupons/*.ts' \
+           'tests/attach/updateQuantity/*.ts' \
+           'tests/advanced/referrals/*.ts' \
+           'tests/advanced/rollovers/*.ts' \
+           'tests/advanced/customInterval/*.ts'
+          
+$MOCHA_CMD 'tests/attach/multiProduct/*.ts' \
+           'tests/advanced/usageLimit/*.ts' 
+
+$MOCHA_CMD 'tests/advanced/usage/*.ts'

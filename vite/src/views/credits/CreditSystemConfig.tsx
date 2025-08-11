@@ -38,7 +38,7 @@ function CreditSystemConfig({
       : {
           name: "",
           id: "",
-        },
+        }
   );
   const [idChanged, setIdChanged] = useState(creditSystem.name !== "");
   const [creditSystemConfig, setCreditSystemConfig] = useState<any>(
@@ -52,7 +52,7 @@ function CreditSystemConfig({
               credit_amount: 0,
             },
           ],
-        },
+        }
   );
 
   const handleSchemaChange = (index: number, key: string, value: any) => {
@@ -89,8 +89,8 @@ function CreditSystemConfig({
   }, [fields, creditSystemConfig]);
 
   return (
-    <div className="flex flex-col gap-4 overflow-hidden">
-      <div className="flex gap-2 w-full">
+    <div className="flex flex-col gap-4 overflow-visible">
+      <div className="flex gap-2 w-full overflow-visible">
         <div className="w-full">
           <FieldLabel>Name</FieldLabel>
           <Input
@@ -118,26 +118,26 @@ function CreditSystemConfig({
         </div>
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 overflow-visible">
         <div className="flex flex-col w-full">
           <div className="flex w-full gap-2">
             <FieldLabel className="w-full">Metered Feature</FieldLabel>
             <FieldLabel className="w-full">Credit Amount</FieldLabel>
           </div>
 
-          <div className="flex flex-col w-full gap-2 overflow-hidden">
+          <div className="flex flex-col w-full gap-2 overflow-visible">
             {creditSystemConfig.schema.map((item: any, index: number) => (
-              <React.Fragment key={index}>
-                <div className="flex w-full gap-2">
-                  <div className="w-full overflow-hidden">
+              <div key={index} className="flex w-full gap-2">
+                <div className="flex w-full gap-2 ">
+                  <div className="w-1/2">
                     <Select
                       onValueChange={(value) => {
                         handleSchemaChange(index, "metered_feature_id", value);
                       }}
                       value={item.metered_feature_id}
                     >
-                      <SelectTrigger>
-                        <SelectValue />
+                      <SelectTrigger className="w-full">
+                        <SelectValue className="truncate" />
                       </SelectTrigger>
                       <SelectContent>
                         {features
@@ -147,19 +147,23 @@ function CreditSystemConfig({
                               !creditSystemConfig.schema.some(
                                 (schemaItem: CreditSchemaItem) =>
                                   feature.id != item.metered_feature_id &&
-                                  schemaItem.metered_feature_id === feature.id,
-                              ),
+                                  schemaItem.metered_feature_id === feature.id
+                              )
                           )
                           .map((feature: Feature) => (
-                            <SelectItem key={feature.id} value={feature.id!}>
-                              {feature.name}
+                            <SelectItem
+                              key={feature.id}
+                              value={feature.id!}
+                              className="w-full"
+                            >
+                              <span className="truncate">{feature.name}</span>
                             </SelectItem>
                           ))}
                       </SelectContent>
                     </Select>
                   </div>
 
-                  <div className="flex w-full gap-2">
+                  <div className="flex w-1/2 gap-1">
                     <Input
                       className="w-full"
                       type="number"
@@ -168,7 +172,7 @@ function CreditSystemConfig({
                         handleSchemaChange(
                           index,
                           "credit_amount",
-                          e.target.value,
+                          e.target.value
                         )
                       }
                     />
@@ -185,7 +189,7 @@ function CreditSystemConfig({
                     </div>
                   </div>
                 </div>
-              </React.Fragment>
+              </div>
             ))}
           </div>
         </div>
@@ -197,7 +201,7 @@ function CreditSystemConfig({
           disabled={
             creditSystemConfig.schema.length ==
             features.filter(
-              (feature: Feature) => feature.type === FeatureType.Metered,
+              (feature: Feature) => feature.type === FeatureType.Metered
             ).length
           }
         >

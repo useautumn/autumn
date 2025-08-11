@@ -23,28 +23,34 @@ import { addDays } from "date-fns";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { features } from "process";
 
-export const entIntervalToTrialDuration = (interval: EntInterval) => {
+export const entIntervalToTrialDuration = ({
+  interval,
+  intervalCount,
+}: {
+  interval: EntInterval;
+  intervalCount: number;
+}) => {
   switch (interval) {
     case EntInterval.Day:
-      return 1;
+      return intervalCount;
     case EntInterval.Week:
-      return 7;
+      return intervalCount * 7;
     case EntInterval.Month:
-      return 30;
+      return intervalCount * 30;
     case EntInterval.Quarter:
-      return 90;
+      return intervalCount * 90;
     case EntInterval.SemiAnnual:
-      return 180;
+      return intervalCount * 180;
     case EntInterval.Year:
-      return 365;
+      return intervalCount * 365;
     case EntInterval.Lifetime:
-      return 1000;
+      return intervalCount * 1000;
   }
 };
 
 export const applyTrialToEntitlement = (
   entitlement: EntitlementWithFeature,
-  freeTrial: FreeTrial | null,
+  freeTrial: FreeTrial | null
 ) => {
   if (!freeTrial) return false;
 
@@ -54,7 +60,10 @@ export const applyTrialToEntitlement = (
   if (entitlement.allowance_type === AllowanceType.Unlimited) return false;
 
   const trialDays = freeTrial.length;
-  const entDays = entIntervalToTrialDuration(entitlement.interval!);
+  const entDays = entIntervalToTrialDuration({
+    interval: entitlement.interval!,
+    intervalCount: entitlement.interval_count || 1,
+  });
 
   if (entDays && entDays > trialDays) {
     return true;
@@ -65,7 +74,7 @@ export const applyTrialToEntitlement = (
 
 export const addTrialToNextResetAt = (
   nextResetAt: number,
-  freeTrial: FreeTrial | null,
+  freeTrial: FreeTrial | null
 ) => {
   if (!freeTrial) return nextResetAt;
 
@@ -76,7 +85,7 @@ export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
   // 1. Check if they have same internal_feature_id
   if (ent1.internal_feature_id !== ent2.internal_feature_id) {
     console.log(
-      `Internal feature ID different: ${ent1.internal_feature_id} !== ${ent2.internal_feature_id}`,
+      `Internal feature ID different: ${ent1.internal_feature_id} !== ${ent2.internal_feature_id}`
     );
     return false;
   }
@@ -84,7 +93,7 @@ export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
   // 2. Check if they have same allowance type
   if (ent1.allowance_type !== ent2.allowance_type) {
     console.log(
-      `Allowance type different: ${ent1.allowance_type} !== ${ent2.allowance_type}`,
+      `Allowance type different: ${ent1.allowance_type} !== ${ent2.allowance_type}`
     );
     return false;
   }
@@ -93,6 +102,10 @@ export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
     interval: {
       condition: ent1.interval !== ent2.interval,
       message: `Interval different: ${ent1.interval} !== ${ent2.interval}`,
+    },
+    intervalCount: {
+      condition: ent1.interval_count !== ent2.interval_count,
+      message: `Interval count different: ${ent1.interval_count} !== ${ent2.interval_count}`,
     },
     allowance: {
       condition:
@@ -113,7 +126,8 @@ export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
       message: `Usage limit different: ${ent1.usage_limit} !== ${ent2.usage_limit}`,
     },
     rollover: {
-      condition: JSON.stringify(ent1.rollover) !== JSON.stringify(ent2.rollover),
+      condition:
+        JSON.stringify(ent1.rollover) !== JSON.stringify(ent2.rollover),
       message: `Rollover different: ${ent1.rollover} !== ${ent2.rollover}`,
     },
   };
@@ -136,7 +150,7 @@ export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
 export const getEntRelatedPrice = (
   entitlement: Entitlement,
   prices: Price[],
-  allowFeatureMatch = false,
+  allowFeatureMatch = false
 ) => {
   return prices.find((price) => {
     if (price.config?.type === PriceType.Fixed) {
@@ -158,10 +172,10 @@ export const getEntRelatedPrice = (
 
 export const getEntitlementsForProduct = (
   product: FullProduct,
-  entitlements: EntitlementWithFeature[],
+  entitlements: EntitlementWithFeature[]
 ) => {
   return entitlements.filter(
-    (ent) => ent.internal_product_id === product.internal_id,
+    (ent) => ent.internal_product_id === product.internal_id
   );
 };
 
@@ -174,7 +188,7 @@ export const getEntsWithFeature = ({
 }) => {
   return ents.map((ent) => {
     let feature = features.find(
-      (f) => f.internal_id === ent.internal_feature_id,
+      (f) => f.internal_id === ent.internal_feature_id
     );
     if (!feature) {
       throw new RecaseError({

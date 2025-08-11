@@ -1,3 +1,9 @@
+import {
+  BillingInterval,
+  EntInterval,
+  ProductItemInterval,
+} from "@autumn/shared";
+
 export const keyToTitle = (key: string) => {
   return key
     .replace(/[_-]/g, " ")
@@ -13,7 +19,7 @@ export const keyToTitleFirstCaps = (key: string) => {
 
 export const slugify = (
   text: string,
-  type: "underscore" | "dash" = "underscore",
+  type: "underscore" | "dash" = "underscore"
 ) => {
   return text
     .toLowerCase()
@@ -34,4 +40,34 @@ export const formatAmount = ({
     minimumFractionDigits: 0,
     maximumFractionDigits: 10,
   }).format(amount);
+};
+
+export const formatIntervalText = ({
+  interval,
+  intervalCount,
+  billingInterval,
+  isBillingInterval = false,
+}: {
+  interval?: EntInterval;
+  billingInterval?: BillingInterval;
+  intervalCount?: number;
+  isBillingInterval?: boolean;
+}) => {
+  const finalInterval = interval ?? billingInterval;
+  if (finalInterval == null) {
+    return "";
+  }
+
+  if (finalInterval === BillingInterval.OneOff) {
+    return "one off";
+  }
+  if (finalInterval === EntInterval.Lifetime) {
+    return "no reset";
+  }
+  if (intervalCount && intervalCount > 1) {
+    return `per ${intervalCount} ${finalInterval}s`;
+  }
+  return finalInterval === BillingInterval.SemiAnnual
+    ? "per half year"
+    : `per ${finalInterval}`;
 };

@@ -24,7 +24,7 @@ import { getFreeTrialAfterFingerprint } from "../../free-trials/freeTrialUtils.j
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { isFreeProduct, isOneOff } from "../../productUtils.js";
-import { getFirstInterval } from "../../prices/priceUtils/priceIntervalUtils.js";
+import { getLargestInterval } from "../../prices/priceUtils/priceIntervalUtils.js";
 import { itemToPriceOrTiers } from "../../product-items/productItemUtils.js";
 import { toAPIFeature } from "@/internal/features/utils/mapFeatureUtils.js";
 import { isPrepaidPrice } from "../../prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
@@ -35,12 +35,14 @@ export const getProductItemResponse = ({
   currency,
   withDisplay = true,
   options,
+  isMainPrice = false,
 }: {
   item: ProductItem;
   features: Feature[];
   currency?: string | null;
   withDisplay?: boolean;
   options?: FeatureOptions[];
+  isMainPrice?: boolean;
 }) => {
   // 1. Get item type
   let type = getItemType(item);
@@ -50,6 +52,7 @@ export const getProductItemResponse = ({
     item,
     features,
     currency,
+    isMainPrice,
   });
 
   let priceData = itemToPriceOrTiers({ item });
@@ -130,10 +133,10 @@ export const getProductProperties = ({
   product: FullProduct;
   freeTrial?: FreeTrialResponse | null;
 }) => {
-  let firstInterval: any = getFirstInterval({ prices: product.prices });
-  if (firstInterval == BillingInterval.OneOff) {
-    firstInterval = null;
-  }
+  const largestInterval = getLargestInterval({
+    prices: product.prices,
+    excludeOneOff: true,
+  });
 
   let hasFreeTrial =
     notNullish(freeTrial) && freeTrial?.trial_available !== false;
@@ -141,7 +144,7 @@ export const getProductProperties = ({
   return ProductPropertiesSchema.parse({
     is_free: isFreeProduct(product.prices) || false,
     is_one_off: isOneOff(product.prices) || false,
-    interval_group: firstInterval,
+    interval_group: largestInterval?.interval,
     has_trial: hasFreeTrial,
     updateable: product.prices.some(
       (p: Price) =>
@@ -179,13 +182,14 @@ export const getProductResponse = async ({
   let sortedItems = sortProductItems(rawItems, features);
 
   // Transform sorted items
-  let items = sortedItems.map((item) => {
+  let items = sortedItems.map((item, index) => {
     return getProductItemResponse({
       item,
       features,
       currency,
       withDisplay,
       options,
+      isMainPrice: index == 0,
     });
   });
 

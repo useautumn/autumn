@@ -8,6 +8,7 @@ export const PageSectionHeader = ({
   addButton,
   className,
   classNames,
+  menuComponent,
 }: {
   title?: string;
   titleComponent?: React.ReactNode;
@@ -15,16 +16,18 @@ export const PageSectionHeader = ({
   isOnboarding?: boolean;
   addButton?: React.ReactNode;
   className?: string;
-  classNames?: {  
+  classNames?: {
     title?: string;
   };
+  menuComponent?: React.ReactNode;
 }) => {
   return (
     <div
       className={cn(
         "sticky top-0 z-10 border-y bg-stone-100 pl-10 pr-7 h-10 flex justify-between items-center",
         isOnboarding && "px-2",
-        className,
+        menuComponent && "pr-0",
+        className
       )}
     >
       <div className="flex items-center gap-2">
@@ -35,8 +38,15 @@ export const PageSectionHeader = ({
         )}
         {titleComponent}
       </div>
-      {endContent}
-      {addButton && <div className="flex items-center">{addButton}</div>}
+      <div className="flex items-center min-w-38 justify-end h-full">
+        {endContent}
+        {addButton && (
+          <div className="flex items-center w-full">{addButton}</div>
+        )}
+        {menuComponent && (
+          <div className="flex items-center">{menuComponent}</div>
+        )}
+      </div>
     </div>
   );
 };

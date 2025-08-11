@@ -48,13 +48,11 @@ function CustomersView({ env }: { env: AppEnv }) {
   const [paginationLoading, setPaginationLoading] = React.useState(false);
 
   const { data: productsData, isLoading: productsLoading } = useAxiosSWR({
-    url: `/products/data`,
-    env,
+    url: `/products/data?all_versions=true`,
   });
 
   const { data: savedViewsData, mutate: mutateSavedViews } = useAxiosSWR({
     url: "/saved_views",
-    env,
   });
 
   const { data, isLoading, error, mutate } = useAxiosPostSWR({
@@ -79,7 +77,6 @@ function CustomersView({ env }: { env: AppEnv }) {
   const isFirstRender = useRef(true);
   const paginationFirstRender = useRef(true);
   const searchParamsChanged = useRef(false);
-  const hasInitiallyLoaded = useRef(false);
   const isDirectNavigation = useRef(false);
 
   const resetPagination = () => {
@@ -240,7 +237,7 @@ function CustomersView({ env }: { env: AppEnv }) {
       <div className="flex flex-col gap-4 h-fit relative w-full">
         <h1 className="text-xl font-medium shrink-0 pt-6 pl-10">Customers</h1>
         <div>
-          <div className="flex w-full justify-between sticky top-0 z-10 border-y bg-stone-100 pl-10 pr-7 items-center">
+          <div className="flex w-full justify-between sticky top-0 z-10 border-y  pl-10 pr-7 items-center bg-stone-100 h-10">
             <div className="flex items-center">
               <div className="pr-4 flex items-center justify-center gap-2 h-10">
                 <FilterButton />
@@ -311,7 +308,7 @@ function CustomersView({ env }: { env: AppEnv }) {
                 )}
               </div> */}
             </div>
-            <div className="flex gap-4">
+            <div className="flex gap-4 bg-blue-100">
               <CreateCustomer />
             </div>
           </div>

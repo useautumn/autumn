@@ -27,14 +27,16 @@ productRouter.get("/data", async (req: any, res) => {
   try {
     let { db } = req;
 
+    const allVersions = req.query.all_versions === "true";
+
     const [products, features, org, coupons, rewardPrograms] =
       await Promise.all([
         ProductService.listFull({
           db,
           orgId: req.orgId,
           env: req.env,
-          returnAll: true,
           archived: false,
+          returnAll: allVersions,
         }),
         FeatureService.getFromReq(req),
         OrgService.getFromReq(req),
@@ -77,7 +79,7 @@ productRouter.post("/data", async (req: any, res) => {
           db,
           orgId: req.orgId,
           env: req.env,
-          returnAll: true,
+          // returnAll: true,
           archived: showArchived,
         }),
         FeatureService.getFromReq(req),
@@ -116,8 +118,17 @@ productRouter.get("/counts", async (req: any, res) => {
       // returnAll: true,
     });
 
+    const latestVersion = req.query.latest_version === "true";
+
     let counts = await Promise.all(
       products.map(async (product) => {
+        if (latestVersion) {
+          return CusProdReadService.getCounts({
+            db,
+            internalProductId: product.internal_id,
+          });
+        }
+
         return CusProdReadService.getCountsForAllVersions({
           db,
           productId: product.id,

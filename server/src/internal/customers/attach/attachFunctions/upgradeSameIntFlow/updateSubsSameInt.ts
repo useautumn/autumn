@@ -3,7 +3,12 @@ import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSub
 import { subToAutumnInterval } from "@/external/stripe/utils.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import { AttachConfig, FullCusProduct, Replaceable } from "@autumn/shared";
+import {
+  AttachConfig,
+  FullCusProduct,
+  intervalsSame,
+  Replaceable,
+} from "@autumn/shared";
 import { addSubItemsToRemove } from "../attachFuncUtils.js";
 import { updateStripeSub } from "../../attachUtils/updateStripeSub/updateStripeSub.js";
 import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
@@ -51,9 +56,16 @@ export const updateSubsByInt = async ({
 
   // const replaceables: Replaceable[] = [];
   for (const sub of stripeSubs) {
-    let interval = subToAutumnInterval(sub);
+    // let interval = subToAutumnInterval(sub);
 
-    let itemSet = itemSets.find((itemSet) => itemSet.interval === interval)!;
+    let subInterval = subToAutumnInterval(sub);
+    let itemSet = itemSets.find((itemSet) => {
+      return intervalsSame({
+        intervalA: itemSet,
+        intervalB: subInterval,
+      });
+    })!;
+
     await addSubItemsToRemove({
       sub,
       cusProduct: curCusProduct,
@@ -67,14 +79,17 @@ export const updateSubsByInt = async ({
       stripeSubs: [sub],
       itemSet,
       logger,
-      interval,
+      interval: itemSet.interval,
+      intervalCount: itemSet.intervalCount,
     });
 
     if (latestInvoice) {
       invoices.push(latestInvoice);
     }
 
-    logger.info(`Updated sub ${sub.id}, interval ${interval}`);
+    logger.info(
+      `Updated sub ${sub.id}, interval ${itemSet.interval}, intervalCount ${itemSet.intervalCount}`
+    );
   }
 
   const batchInvUpdate = [];
@@ -85,9 +100,9 @@ export const updateSubsByInt = async ({
         attachParams,
         stripeInvoice: invoice,
         logger,
-      }),
+      })
     );
   }
 
-  return { replaceables };
+  return { replaceables, invoices };
 };

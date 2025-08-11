@@ -4,6 +4,7 @@ import { useProductContext } from "../ProductContext";
 import { SelectCycle } from "../product-item/product-item-config/components/feature-price/SelectBillingCycle";
 import { useProductItemContext } from "../product-item/ProductItemContext";
 import {
+  intervalsDifferent,
   ProductItem,
   ProductItemInterval,
   UpdateProductSchema,
@@ -42,7 +43,7 @@ function CreateFixedPrice({
     (item: ProductItem, index: number) => {
       const isSameItem = selectedIndex && selectedIndex == index;
       return !isSameItem && isPriceItem(item) && item.interval;
-    },
+    }
   );
 
   const newVariantMap: Record<ProductItemInterval, string> = {
@@ -61,7 +62,18 @@ function CreateFixedPrice({
       return null;
     }
 
-    if (item.interval == curFixedPrice.interval) {
+    const intervalsDiff = intervalsDifferent({
+      intervalA: {
+        interval: item.interval,
+        intervalCount: item.interval_count,
+      },
+      intervalB: {
+        interval: curFixedPrice.interval,
+        intervalCount: curFixedPrice.interval_count,
+      },
+    });
+
+    if (!intervalsDiff) {
       return null;
     }
 
@@ -69,6 +81,10 @@ function CreateFixedPrice({
       item.interval == ProductItemInterval.Year
         ? "an annual"
         : `a ${newVariantMap[item.interval! as ProductItemInterval]}`;
+
+    if (item.interval_count > 1) {
+      return `A fixed price already exists on this product. If you're looking to create a version with a different interval, you should create a new product instead.`;
+    }
 
     return `A fixed price already exists on this product. If you're looking to create ${newIntervalText} version, you should create a new product instead.`;
   };
@@ -123,7 +139,7 @@ function CreateFixedPrice({
               step="any"
               className="h-full !text-lg min-w-36"
             />
-            <span className="text-t2 w-fit px-6 flex justify-center">
+            <span className="text-t2 w-fit px-2 flex justify-center">
               {org?.default_currency?.toUpperCase() || "USD"}
             </span>
           </div>

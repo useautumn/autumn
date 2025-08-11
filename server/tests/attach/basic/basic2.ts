@@ -23,6 +23,7 @@ describe(`${chalk.yellowBright("basic2: Testing attach pro")}`, () => {
 
   before(async function () {
     await setupBefore(this);
+
     db = this.db;
     org = this.org;
     env = this.env;
@@ -44,7 +45,7 @@ describe(`${chalk.yellowBright("basic2: Testing attach pro")}`, () => {
     });
 
     await completeCheckoutForm(checkout_url);
-    await timeout(10000);
+    await timeout(12000);
   });
 
   it("should have correct product & entitlements", async function () {

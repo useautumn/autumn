@@ -87,11 +87,14 @@ export const featuresToObject = ({
 
       next_reset_at: getEarliestNextResetAt(relatedEnts),
       interval: relatedEnts.length == 1 ? relatedEnts[0].interval : "multiple",
+      interval_count:
+        relatedEnts.length == 1 ? relatedEnts[0].interval_count : null,
       overage_allowed: relatedEnts.some((e) => e.overage_allowed),
       breakdown:
         !unlimited && relatedEnts.length > 1
           ? relatedEnts.map((e) => ({
               interval: e.interval!,
+              interval_count: e.interval_count,
               balance: e.balance,
               usage: e.usage,
               included_usage: e.included_usage,
