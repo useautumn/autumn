@@ -53,7 +53,11 @@ function ProductsView({ env }: { env: AppEnv }) {
     withAuth: true,
   });
 
-  const { data: featuresData, mutate: mutateFeatures } = useAxiosSWR({
+  const {
+    data: featuresData,
+    isLoading: isFeaturesLoading,
+    mutate: mutateFeatures,
+  } = useAxiosSWR({
     url: `/features?showArchived=${showArchivedFeatures}`,
     env: env,
     withAuth: true,
@@ -74,7 +78,7 @@ function ProductsView({ env }: { env: AppEnv }) {
       (f: Feature) => f.type === "credit_system"
     ) || [];
 
-  if (isLoading) return <LoadingScreen />;
+  if (isLoading || isFeaturesLoading) return <LoadingScreen />;
 
   return (
     <ProductsContext.Provider
