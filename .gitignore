@@ -103,3 +103,4 @@ supabase/
 # 1. Start supabase locally
 # 2. Load files
 migration.sh
+stat.sh

@@ -26,7 +26,7 @@ import { formatUnixToDate, formatUnixToDateTime } from "@/utils/genUtils.js";
 export const subtractBillingIntervalUnix = ({
   unixTimestamp,
   interval,
-  intervalCount,
+  intervalCount = 1,
 }: {
   unixTimestamp: number;
   interval: BillingInterval;
@@ -59,7 +59,7 @@ export const subtractBillingIntervalUnix = ({
 export const addBillingIntervalUnix = ({
   unixTimestamp,
   interval,
-  intervalCount,
+  intervalCount = 1,
 }: {
   unixTimestamp: number;
   interval: BillingInterval;
@@ -134,10 +134,6 @@ export const getAlignedIntervalUnix = ({
     interval,
     intervalCount,
   });
-
-  // console.log("Now:", formatUnixToDateTime(now));
-  // console.log("Anchoring to:", formatUnixToDateTime(alignWithUnix));
-  // console.log("Nat billing date:", formatUnixToDateTime(naturalBillingDate));
 
   const maxIterations = 10000;
   let iterations = 0;
