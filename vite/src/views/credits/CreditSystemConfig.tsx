@@ -127,17 +127,17 @@ function CreditSystemConfig({
 
           <div className="flex flex-col w-full gap-2 overflow-visible">
             {creditSystemConfig.schema.map((item: any, index: number) => (
-              <React.Fragment key={index}>
-                <div className="flex w-full gap-2">
-                  <div className="w-full overflow-visible">
+              <div key={index} className="flex w-full gap-2">
+                <div className="flex w-full gap-2 ">
+                  <div className="w-1/2">
                     <Select
                       onValueChange={(value) => {
                         handleSchemaChange(index, "metered_feature_id", value);
                       }}
                       value={item.metered_feature_id}
                     >
-                      <SelectTrigger>
-                        <SelectValue />
+                      <SelectTrigger className="w-full">
+                        <SelectValue className="truncate" />
                       </SelectTrigger>
                       <SelectContent>
                         {features
@@ -151,15 +151,19 @@ function CreditSystemConfig({
                               )
                           )
                           .map((feature: Feature) => (
-                            <SelectItem key={feature.id} value={feature.id!}>
-                              {feature.name}
+                            <SelectItem
+                              key={feature.id}
+                              value={feature.id!}
+                              className="w-full"
+                            >
+                              <span className="truncate">{feature.name}</span>
                             </SelectItem>
                           ))}
                       </SelectContent>
                     </Select>
                   </div>
 
-                  <div className="flex w-full gap-1">
+                  <div className="flex w-1/2 gap-1">
                     <Input
                       className="w-full"
                       type="number"
@@ -185,7 +189,7 @@ function CreditSystemConfig({
                     </div>
                   </div>
                 </div>
-              </React.Fragment>
+              </div>
             ))}
           </div>
         </div>

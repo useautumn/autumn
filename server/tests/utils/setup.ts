@@ -294,67 +294,79 @@ export const setupOrg = async ({
   // 2. Create products
   let insertProducts = [];
 
-  for (let i = 0; i < Object.values(products).length; i++) {
-    const product = Object.values(products)[i];
-    const insertProduct = async () => {
-      await autumn.products.create({
-        id: product.id,
-        name: product.name,
-        group: product.group,
-        is_add_on: product.is_add_on,
-        is_default: product.is_default,
-      });
+  const productValues = Object.values(products);
+  const batchSize = 5;
 
-      const prices = product.prices.map((p: any) => ({
-        ...p,
-        config: {
-          ...p.config,
-          internal_feature_id: newFeatures!.find(
-            (f) => f.id === (p.config as any)?.feature_id
-          )?.internal_id,
-        },
-      }));
+  for (
+    let batchStart = 0;
+    batchStart < productValues.length;
+    batchStart += batchSize
+  ) {
+    const batch = productValues.slice(batchStart, batchStart + batchSize);
+    const batchPromises = [];
 
-      const entitlements = Object.values(product.entitlements).map(
-        (ent: any) => ({
-          ...ent,
-          internal_feature_id: newFeatures!.find((f) => f.id === ent.feature_id)
-            ?.internal_id,
-        })
-      );
-
-      const entWithFeatures = entitlements.map((ent) => ({
-        ...ent,
-        feature: newFeatures!.find((f) => f.id === ent.feature_id),
-      }));
-
-      let items = mapToProductItems({
-        prices,
-        entitlements: entWithFeatures,
-        allowFeatureMatch: true,
-        features: newFeatures!,
-      });
-
-      try {
-        await axiosInstance.post(`/v1/products/${product.id}`, {
-          // prices: prices,
-          // entitlements: entitlements,
-          items,
-          free_trial: product.free_trial,
+    for (const product of batch) {
+      const insertProduct = async () => {
+        await autumn.products.create({
+          id: product.id,
+          name: product.name,
+          group: product.group,
+          is_add_on: product.is_add_on,
+          is_default: product.is_default,
         });
-      } catch (error) {
-        console.log("Product:", product.name);
-        console.error("Error creating product prices / ents");
-        console.log("Items", items);
-      }
-      return;
-    };
 
-    insertProducts.push(insertProduct());
+        const prices = product.prices.map((p: any) => ({
+          ...p,
+          config: {
+            ...p.config,
+            internal_feature_id: newFeatures!.find(
+              (f) => f.id === (p.config as any)?.feature_id
+            )?.internal_id,
+          },
+        }));
 
-    // if (i > 1) {
-    //   break;
-    // }
+        const entitlements = Object.values(product.entitlements).map(
+          (ent: any) => ({
+            ...ent,
+            internal_feature_id: newFeatures!.find(
+              (f) => f.id === ent.feature_id
+            )?.internal_id,
+          })
+        );
+
+        const entWithFeatures = entitlements.map((ent) => ({
+          ...ent,
+          feature: newFeatures!.find((f) => f.id === ent.feature_id),
+        }));
+
+        let items = mapToProductItems({
+          prices,
+          entitlements: entWithFeatures,
+          allowFeatureMatch: true,
+          features: newFeatures!,
+        });
+
+        try {
+          await axiosInstance.post(`/v1/products/${product.id}`, {
+            // prices: prices,
+            // entitlements: entitlements,
+            items,
+            free_trial: product.free_trial,
+          });
+        } catch (error) {
+          console.log("Product:", product.name);
+          console.error("Error creating product prices / ents");
+          console.log("Items", items);
+        }
+        return;
+      };
+
+      batchPromises.push(insertProduct());
+    }
+
+    // Wait for the current batch to complete before proceeding to the next
+    await Promise.all(batchPromises);
+    insertProducts.push(...batchPromises);
   }
 
   await Promise.all(insertProducts);

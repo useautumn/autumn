@@ -46,8 +46,6 @@ const init = async () => {
         "https://staging.useautumn.com",
         "https://*.useautumn.com",
         "https://localhost:8080",
-        "https://app.aidvize.com",
-        "http://staging.aidvize.com",
         "https://www.alphalog.ai",
         "https://*.alphalog.ai",
         process.env.CLIENT_URL || "",

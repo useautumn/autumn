@@ -133,7 +133,10 @@ export const getProductProperties = ({
   product: FullProduct;
   freeTrial?: FreeTrialResponse | null;
 }) => {
-  const largestInterval = getLargestInterval({ prices: product.prices });
+  const largestInterval = getLargestInterval({
+    prices: product.prices,
+    excludeOneOff: true,
+  });
 
   let hasFreeTrial =
     notNullish(freeTrial) && freeTrial?.trial_available !== false;
