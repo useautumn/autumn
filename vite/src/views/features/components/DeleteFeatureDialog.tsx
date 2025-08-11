@@ -15,7 +15,7 @@ import { FeatureService } from "@/services/FeatureService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { toast } from "sonner";
-import { useAxiosSWR } from "@/services/useAxiosSwr";
+import { useAxiosPostSWR, useAxiosSWR } from "@/services/useAxiosSwr";
 
 export const DeleteFeatureDialog = ({
 	feature,
@@ -26,39 +26,72 @@ export const DeleteFeatureDialog = ({
 	open: boolean;
 	setOpen: (open: boolean) => void;
 }) => {
-	const { mutate, env } = useFeaturesContext();
+	const { mutate, env, features } = useFeaturesContext();
 	const [deleteLoading, setDeleteLoading] = useState(false);
 	const [archiveLoading, setArchiveLoading] = useState(false);
 	const axiosInstance = useAxiosInstance({ env });
 
-	const { data: deletionText, isLoading: isDeletionTextLoading, mutate: mutateDeletionText } =
-		useAxiosSWR({
-			url: `/features/data/deletion_text/${feature.id}`,
-			options: {
-				refreshInterval: 0,
-			},
-		});
+	const {
+		data: deletionText,
+		isLoading: isDeletionTextLoading,
+		mutate: mutateDeletionText,
+	} = useAxiosSWR({
+		url: `/features/data/deletion_text/${feature.id}`,
+		options: {
+			refreshInterval: 0,
+		},
+	});
+
+	const {
+		data: relatedObjects,
+		isLoading: isRelatedObjectsLoading,
+		mutate: mutateRelatedObjects,
+		error: relatedObjectsError,
+	} = useAxiosPostSWR({
+		url: `/features/${feature.id}/related_objects`,
+		data: {
+			feature: feature,
+			allFeatures: features,
+		} as any,
+		options: {
+			refreshInterval: 0,
+		},
+	});
 
 	useEffect(() => {
 		if (open) {
 			mutateDeletionText();
+			mutateRelatedObjects();
 		}
 	}, [open, feature.id]);
 
 	const hasProducts = deletionText?.totalCount > 0;
 
 	const getDeleteMessage = () => {
+		if (isRelatedObjectsLoading) {
+			return "Loading...";
+		}
+
+		if (
+			!relatedObjectsError &&
+			relatedObjects &&
+			"preventingCount" in relatedObjects &&
+			relatedObjects.preventingCount == 0
+		) {
+			return "This feature is not used in any products, you can delete it.";
+		}
+
 		if (feature.archived) {
 			return "This feature is currently archived and hidden from the UI. Would you like to unarchive it to make it visible again?";
 		}
-		
+
 		if (hasProducts) {
 			if (deletionText?.productName && deletionText?.totalCount) {
 				if (deletionText.totalCount === 1) {
 					return `${deletionText.productName} is using this feature. You must remove this feature from the product first, or archive it instead.`;
 				} else {
 					const otherCount = deletionText.totalCount - 1;
-					return `${deletionText.productName} and ${otherCount} other product${otherCount > 1 ? 's' : ''} are using this feature. You must remove this feature from the products first, or archive it instead.`;
+					return `${deletionText.productName} and ${otherCount} other product${otherCount > 1 ? "s" : ""} are using this feature. You must remove this feature from the products first, or archive it instead.`;
 				}
 			} else {
 				return "There are products using this feature. You must remove this feature from the products first, or archive it instead.";
@@ -91,11 +124,21 @@ export const DeleteFeatureDialog = ({
 				archived: newArchivedState,
 			});
 			await mutate();
-			toast.success(`Feature ${feature.name} ${newArchivedState ? 'archived' : 'unarchived'} successfully`);
+			toast.success(
+				`Feature ${feature.name} ${newArchivedState ? "archived" : "unarchived"} successfully`
+			);
 			setOpen(false);
 		} catch (error) {
-			console.error(`Error ${newArchivedState ? 'archiving' : 'unarchiving'} feature:`, error);
-			toast.error(getBackendErr(error, `Error ${newArchivedState ? 'archiving' : 'unarchiving'} feature`));
+			console.error(
+				`Error ${newArchivedState ? "archiving" : "unarchiving"} feature:`,
+				error
+			);
+			toast.error(
+				getBackendErr(
+					error,
+					`Error ${newArchivedState ? "archiving" : "unarchiving"} feature`
+				)
+			);
 		} finally {
 			setArchiveLoading(false);
 		}
@@ -108,22 +151,28 @@ export const DeleteFeatureDialog = ({
 				onClick={(e) => e.stopPropagation()}
 			>
 				<DialogHeader>
-					<DialogTitle>{feature.archived ? 'Unarchive' : 'Delete'} {feature.name}</DialogTitle>
+					<DialogTitle>
+						{feature.archived ? "Unarchive" : "Delete"}{" "}
+						{feature.name}
+					</DialogTitle>
 				</DialogHeader>
 
 				<div className="flex text-t2 text-sm">
-					<p>
-						{getDeleteMessage()}
-					</p>
+					<p>{getDeleteMessage()}</p>
 				</div>
 				<DialogFooter>
-					<Button
-						variant="outline"
-						onClick={handleArchive}
-						isLoading={archiveLoading}
-					>
-						{feature.archived ? 'Unarchive' : 'Archive'}
-					</Button>
+					{!relatedObjectsError &&
+						relatedObjects &&
+						"preventingCount" in relatedObjects &&
+						!(relatedObjects.preventingCount == 0) && (
+							<Button
+								variant="outline"
+								onClick={handleArchive}
+								isLoading={archiveLoading}
+							>
+								{feature.archived ? "Unarchive" : "Archive"}
+							</Button>
+						)}
 					{!hasProducts && !feature.archived && (
 						<Button
 							variant="destructive"
