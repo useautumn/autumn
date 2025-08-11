@@ -11,6 +11,7 @@ import { customers } from "../cusModels/cusTable.js";
 import { products } from "../productModels/productTable.js";
 import { collatePgColumn } from "../../db/utils.js";
 import { entities } from "../cusModels/entityModels/entityTable.js";
+import { InferSelectModel, InferInsertModel } from "drizzle-orm";
 
 export type CustomerProductProcessor = {
   type: "stripe";
@@ -76,3 +77,6 @@ export const customerProducts = pgTable(
 );
 
 collatePgColumn(customerProducts.id, "C");
+
+export type CustomerProduct = InferSelectModel<typeof customerProducts>;
+export type InsertCustomerProduct = InferInsertModel<typeof customerProducts>;
