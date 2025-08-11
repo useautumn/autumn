@@ -10,6 +10,7 @@ import { addDays, addMinutes, addMonths, addYears } from "date-fns";
 import { FreeTrialService } from "./FreeTrialService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import { isFreeProduct } from "../productUtils.js";
 
 export const validateAndInitFreeTrial = ({
   freeTrial,
@@ -32,6 +33,7 @@ export const validateAndInitFreeTrial = ({
     internal_product_id: internalProductId,
     is_custom: isCustom,
     card_required,
+    is_default_trial: false,
   };
 };
 
@@ -133,13 +135,49 @@ export const handleNewFreeTrial = async ({
   curFreeTrial,
   internalProductId,
   isCustom = false,
+  product,
 }: {
   db: DrizzleCli;
   newFreeTrial: CreateFreeTrial | null;
   curFreeTrial: FreeTrial | null | undefined;
   internalProductId: string;
   isCustom: boolean;
+  product?: any; // Add product parameter for validation
 }) => {
+  // Backend validation for default trial
+  if (newFreeTrial && (newFreeTrial as any).is_default_trial) {
+    if (!product) {
+      throw new RecaseError({
+        message: "Product context required for default trial validation",
+        code: "missing_product_context",
+        statusCode: 400,
+      });
+    }
+    
+    // Must be paid (not free)
+    if (isFreeProduct(product.prices)) {
+      throw new RecaseError({
+        message: "Default trial must be on a paid product",
+        code: "invalid_default_trial",
+        statusCode: 400,
+      });
+    }
+    
+    // Must not require card
+    if (newFreeTrial.card_required) {
+      throw new RecaseError({
+        message: "Default trial cannot require a card",
+        code: "invalid_default_trial",
+        statusCode: 400,
+      });
+    }
+
+    // TODO: Add validation to ensure only one default trial exists at a time
+    // This should be implemented by the user to query all products and check
+    // for existing default trials, then either prevent this update or 
+    // automatically unset other default trials.
+  }
+
   // If new free trial is null
   if (!newFreeTrial) {
     if (!isCustom && curFreeTrial) {
