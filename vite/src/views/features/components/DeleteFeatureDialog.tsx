@@ -42,45 +42,15 @@ export const DeleteFeatureDialog = ({
 		},
 	});
 
-	const {
-		data: relatedObjects,
-		isLoading: isRelatedObjectsLoading,
-		mutate: mutateRelatedObjects,
-		error: relatedObjectsError,
-	} = useAxiosPostSWR({
-		url: `/features/${feature.id}/related_objects`,
-		data: {
-			feature: feature,
-			allFeatures: features,
-		} as any,
-		options: {
-			refreshInterval: 0,
-		},
-	});
-
 	useEffect(() => {
 		if (open) {
 			mutateDeletionText();
-			mutateRelatedObjects();
 		}
 	}, [open, feature.id]);
 
 	const hasProducts = deletionText?.totalCount > 0;
 
 	const getDeleteMessage = () => {
-		if (isRelatedObjectsLoading) {
-			return "Loading...";
-		}
-
-		if (
-			!relatedObjectsError &&
-			relatedObjects &&
-			"preventingCount" in relatedObjects &&
-			relatedObjects.preventingCount == 0
-		) {
-			return "This feature is not used in any products, you can delete it.";
-		}
-
 		if (feature.archived) {
 			return "This feature is currently archived and hidden from the UI. Would you like to unarchive it to make it visible again?";
 		}
@@ -97,7 +67,7 @@ export const DeleteFeatureDialog = ({
 				return "There are products using this feature. You must remove this feature from the products first, or archive it instead.";
 			}
 		} else {
-			return "Are you sure you want to delete this feature? This action cannot be undone. You can also archive the feature instead to hide it from the UI while preserving data.";
+			return "Are you sure you want to delete this feature? This action cannot be undone.";
 		}
 	};
 
@@ -161,10 +131,7 @@ export const DeleteFeatureDialog = ({
 					<p>{getDeleteMessage()}</p>
 				</div>
 				<DialogFooter>
-					{!relatedObjectsError &&
-						relatedObjects &&
-						"preventingCount" in relatedObjects &&
-						!(relatedObjects.preventingCount == 0) && (
+					{hasProducts && (
 							<Button
 								variant="outline"
 								onClick={handleArchive}

@@ -187,4 +187,3 @@ internalFeatureRouter.get(
 
 internalFeatureRouter.post("/:feature_id", handleUpdateFeature);
 internalFeatureRouter.delete("/:featureId", handleDeleteFeature);
-internalFeatureRouter.post("/:feature_id/related_objects", handleGetRelatedObjects);
