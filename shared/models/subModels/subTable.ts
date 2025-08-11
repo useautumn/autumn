@@ -8,6 +8,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { organizations } from "../orgModels/orgTable.js";
 import { sqlNow } from "../../db/utils.js";
+import { InferSelectModel, InferInsertModel } from "drizzle-orm";
 
 export const subscriptions = pgTable(
   "subscriptions",
@@ -34,3 +35,6 @@ export const subscriptions = pgTable(
     unique("subscriptions_stripe_id_key").on(table.stripe_id),
   ],
 );
+
+export type SubscriptionRow = InferSelectModel<typeof subscriptions>;
+export type InsertSubscriptionRow = InferInsertModel<typeof subscriptions>;

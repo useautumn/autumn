@@ -28,9 +28,13 @@ import { FeaturesContext } from "../features/FeaturesContext";
 import { PageSectionHeader } from "@/components/general/PageSectionHeader";
 import { HamburgerMenu } from "@/components/general/table-components/HamburgerMenu";
 import { Badge } from "@/components/ui/badge";
+import { useQueryState } from "nuqs";
 
 function ProductsView({ env }: { env: AppEnv }) {
-  const [tab, setTab] = useState("products");
+  const [tab, setTab] = useQueryState("tab", {
+    defaultValue: "products",
+    history: "push",
+  });
   const [showArchived, setShowArchived] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showArchivedFeatures, setShowArchivedFeatures] = useState(false);
