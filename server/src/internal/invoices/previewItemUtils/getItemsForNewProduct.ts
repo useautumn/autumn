@@ -186,7 +186,7 @@ export const getItemsForNewProduct = async ({
       anchorToUnix,
       now,
       interval: price.config.interval!,
-      intervalCount: price.config.interval_count!,
+      intervalCount: price.config.interval_count || 1,
     });
 
     if (isFixedPrice({ price })) {

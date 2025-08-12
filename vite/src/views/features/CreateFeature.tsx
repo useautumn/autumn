@@ -1,18 +1,12 @@
 import { DialogFooter, DialogHeader } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   CreateFeature as CreateFeatureType,
   FeatureType,
-  FeatureUsageType,
 } from "@autumn/shared";
 import { useFeaturesContext } from "./FeaturesContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -72,7 +66,7 @@ export const CreateFeature = ({
   };
 
   const handleCreateFeature = async () => {
-    if (!feature.name || !feature.id || !feature.type || !feature.config) {
+    if (!feature.name || !feature.id || !feature.type) {
       toast.error("Please fill out all fields");
       return;
     }
@@ -125,6 +119,7 @@ export const CreateFeature = ({
             setEventNameInput={setEventNameInput}
             eventNameChanged={eventNameChanged}
             setEventNameChanged={setEventNameChanged}
+            open={open}
           />
         </div>
       </CustomDialogBody>

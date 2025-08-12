@@ -19,34 +19,34 @@ const hyperbrowser = new Hyperbrowser({
 });
 
 export const setupBefore = async (instance: any) => {
-  const { db, client } = initDrizzle();
+  try {
+    const { db, client } = initDrizzle();
 
-  const org = await OrgService.getBySlug({ db, slug: ORG_SLUG });
-  if (!org) {
-    throw new Error("Org not found");
+    const org = await OrgService.getBySlug({ db, slug: ORG_SLUG });
+    if (!org) {
+      throw new Error("Org not found");
+    }
+    const env = DEFAULT_ENV;
+    const autumnSecretKey = process.env.UNIT_TEST_AUTUMN_SECRET_KEY!;
+    const autumn = new AutumnInt({ apiKey: autumnSecretKey });
+
+    const autumnJs = new AutumnJS({
+      secretKey: autumnSecretKey,
+      url: "http://localhost:8080/v1",
+    });
+
+    const stripeCli = createStripeCli({ org, env });
+    instance.org = org;
+    instance.env = env;
+    instance.autumn = autumn;
+    instance.stripeCli = stripeCli;
+    instance.autumnJs = autumnJs;
+    instance.db = db;
+    instance.client = client;
+  } catch (error) {
+    console.log("Error setting up before", error);
+    throw error;
   }
-  const env = DEFAULT_ENV;
-  const autumnSecretKey = process.env.UNIT_TEST_AUTUMN_SECRET_KEY!;
-  const autumn = new AutumnInt({ apiKey: autumnSecretKey });
-
-  // console.log("instance.browserSession", instance.browserSession);
-  // if (!instance.browserSession) {
-  //   instance.browserSession = await hyperbrowser.sessions.create();
-  // }
-
-  const autumnJs = new AutumnJS({
-    secretKey: autumnSecretKey,
-    url: "http://localhost:8080/v1",
-  });
-
-  const stripeCli = createStripeCli({ org, env });
-  instance.org = org;
-  instance.env = env;
-  instance.autumn = autumn;
-  instance.stripeCli = stripeCli;
-  instance.autumnJs = autumnJs;
-  instance.db = db;
-  instance.client = client;
 
   // Return a cleanup function
   after(async () => {
