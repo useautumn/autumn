@@ -102,7 +102,6 @@ const validateProductItem = ({
         statusCode: StatusCodes.BAD_REQUEST,
       });
     }
-
     if (item.tiers) {
       item.tiers.forEach((tier) => {
         if (tier.amount.toString().split(".")[1]?.length > 2) {

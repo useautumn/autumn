@@ -12,7 +12,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-export const BillingUnits = ({ disabled }: { disabled: boolean }) => {
+export const BillingUnits = ({
+  className,
+  disabled,
+}: {
+  className?: string;
+  disabled: boolean;
+}) => {
   const { features } = useProductContext();
   const { item, setItem } = useProductItemContext();
   const [popoverOpen, setPopoverOpen] = useState(false);
@@ -35,7 +41,7 @@ export const BillingUnits = ({ disabled }: { disabled: boolean }) => {
   };
 
   return (
-    <div className="flex max-w-28 min-w-28">
+    <div className={cn("flex max-w-28 min-w-28", className)}>
       <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -49,7 +55,7 @@ export const BillingUnits = ({ disabled }: { disabled: boolean }) => {
             <span
               className={cn(
                 "truncate",
-                !disabled && "border-b border-dotted border-t3",
+                !disabled && "border-b border-dotted border-t3"
               )}
             >
               {item.billing_units == 1

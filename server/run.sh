@@ -27,14 +27,3 @@ else
     NODE_ENV=development bun $filename
 fi
 
-
-# # If filename ends with .sh, then run it
-# if [ "${filename##*.}" = "sh" ]; then
-#     ./$filename
-# else if [ "${filename##*.}" = "ts" ]; then
-#     npx tsx $filename
-# else
-#     echo "Invalid file extension"
-# fi
-
-# # npm run test

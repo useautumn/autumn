@@ -12,12 +12,12 @@ import {
 
 import { useProductContext } from "../ProductContext";
 import { validateProductItem } from "@/utils/product/product-item/validateProductItem";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { CreateItemDialogContent } from "./create-product-item/CreateItemDialogContent";
 import { Plus } from "lucide-react";
 import { useSteps } from "./useSteps";
 import { CreateItemStep } from "./utils/CreateItemStep";
 import { isFeatureItem } from "@/utils/product/getItemType";
+import { emptyPriceItem } from "./create-product-item/defaultItemConfigs";
 
 export const defaultProductItem: ProductItem = {
   feature_id: null,
@@ -36,21 +36,21 @@ export const defaultProductItem: ProductItem = {
   reset_usage_when_enabled: true,
 };
 
-const defaultPriceItem: ProductItem = {
-  feature_id: null,
-  included_usage: null,
+// const defaultPriceItem: ProductItem = {
+//   feature_id: null,
+//   included_usage: null,
 
-  interval: ProductItemInterval.Month,
+//   interval: ProductItemInterval.Month,
 
-  // Price config
-  price: 0,
-  tiers: null,
-  billing_units: 1,
+//   // Price config
+//   price: 0,
+//   tiers: null,
+//   billing_units: 1,
 
-  // Others
-  entity_feature_id: null,
-  reset_usage_when_enabled: true,
-};
+//   // Others
+//   entity_feature_id: null,
+//   reset_usage_when_enabled: true,
+// };
 
 export function CreateProductItem() {
   const [open, setOpen] = useState(false);
@@ -59,13 +59,9 @@ export function CreateProductItem() {
   const { features, product, setProduct, setFeatures, counts, mutate } =
     useProductContext();
 
-  // const axiosInstance = useAxiosInstance();
-  // const hasCustomers = counts?.all > 0;
-
-  // const setSelectedFeature = (feature: CreateFeatureType) => {
-  // setFeatures([...features, feature]);
-  // setItem({ ...item, feature_id: feature.id! });
-  // };
+  const [configState, setConfigState] = useState({
+    showPrice: false,
+  });
 
   const handleCreateProductItem = async (entityFeatureId?: string) => {
     const validatedItem = validateProductItem({
@@ -127,7 +123,7 @@ export function CreateProductItem() {
             <Button
               className="w-24"
               variant="add"
-              onClick={() => setItem(defaultPriceItem)}
+              onClick={() => setItem(emptyPriceItem)}
               startIcon={<Plus size={14} />}
             >
               Price

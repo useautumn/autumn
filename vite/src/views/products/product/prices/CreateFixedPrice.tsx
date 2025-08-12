@@ -21,18 +21,8 @@ import { getBackendErr, getRedirectUrl } from "@/utils/genUtils";
 import { useEnv } from "@/utils/envUtils";
 import { useNavigate } from "react-router";
 
-function CreateFixedPrice({
-  config,
-  setConfig,
-  show,
-  setShow,
-}: {
-  config: any;
-  setConfig: (config: any) => void;
-  show: any;
-  setShow: (show: any) => void;
-}) {
-  const { item, selectedIndex } = useProductItemContext();
+function CreateFixedPrice() {
+  const { item, setItem, selectedIndex } = useProductItemContext();
   const { org, product, counts, hasChanges } = useProductContext();
   const [copyLoading, setCopyLoading] = useState(false);
   const axiosInstance = useAxiosInstance();
@@ -125,23 +115,25 @@ function CreateFixedPrice({
   return (
     <div>
       {/* <p className="text-t3 text-md mt-4 mb-2 font-medium">Rates</p> */}
-      <div className="flex flex-col w-full gap-6 animate-in fade-in duration-300 !overflow-visible">
-        <div className="w-full flex flex-col">
+      <div className="flex flex-col w-full gap-6 !overflow-visible">
+        <div className="w-full flex flex-col overflow-visible">
           <FieldLabel>Fixed Price</FieldLabel>
           <div className="flex h-full items-center justify-between gap-2 !overflow-visible">
             <Input
-              value={config.price}
+              value={item.price}
               onChange={(e) => {
-                setConfig({ ...config, price: e.target.value });
+                setItem({ ...item, price: e.target.value });
               }}
               placeholder="30.00"
               type="number"
               step="any"
-              className="h-full !text-lg min-w-36"
+              className="min-w-36"
+              endContent={
+                <span className="text-t2 w-fit px-2 flex justify-center">
+                  {org?.default_currency?.toUpperCase() || "USD"}
+                </span>
+              }
             />
-            <span className="text-t2 w-fit px-2 flex justify-center">
-              {org?.default_currency?.toUpperCase() || "USD"}
-            </span>
           </div>
         </div>
         <div className="w-full">

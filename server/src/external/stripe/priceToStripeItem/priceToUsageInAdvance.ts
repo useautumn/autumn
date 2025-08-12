@@ -1,5 +1,5 @@
 import { getPriceForOverage } from "@/internal/products/prices/priceUtils.js";
-import { nullish } from "@/utils/genUtils.js";
+import { notNullish, nullish } from "@/utils/genUtils.js";
 import { FeatureOptions, Organization, UsagePriceConfig } from "@autumn/shared";
 import { EntitlementWithFeature } from "@autumn/shared";
 import { Price } from "@autumn/shared";
@@ -29,7 +29,7 @@ export const priceToOneOffAndTiered = ({
   const amount = getPriceForOverage(price, overage);
   if (!config.stripe_product_id) {
     console.log(
-      `WARNING: One off & tiered in advance price has no stripe product id: ${price.id}, ${relatedEnt.feature.name}`,
+      `WARNING: One off & tiered in advance price has no stripe product id: ${price.id}, ${relatedEnt.feature.name}`
     );
   }
   return {
@@ -61,7 +61,7 @@ export const priceToUsageInAdvance = ({
   let finalQuantity = optionsQuantity;
 
   // 1. If adjustable quantity is set, use that, else if quantity is undefined, adjustable is true, else false
-  let adjustable = !nullish(options?.adjustable_quantity)
+  let adjustable = notNullish(options?.adjustable_quantity)
     ? options!.adjustable_quantity
     : nullish(optionsQuantity)
       ? true

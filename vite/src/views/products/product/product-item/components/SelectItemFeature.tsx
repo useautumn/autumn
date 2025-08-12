@@ -16,13 +16,7 @@ import { getItemType } from "@/utils/product/productItemUtils";
 import { CreateItemStep } from "../utils/CreateItemStep";
 import { useEffect, useState } from "react";
 
-export const SelectItemFeature = ({
-  show,
-  setShow,
-}: {
-  show: any;
-  setShow: any;
-}) => {
+export const SelectItemFeature = () => {
   const { features } = useProductContext();
   const { item, setItem, isUpdate, stepState } = useProductItemContext();
   const [open, setOpen] = useState(false);
