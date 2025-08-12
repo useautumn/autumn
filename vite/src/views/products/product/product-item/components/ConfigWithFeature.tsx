@@ -6,15 +6,7 @@ import { FeatureType } from "@autumn/shared";
 import { getFeature } from "@/utils/product/entitlementUtils";
 import { FeatureConfig } from "../product-item-config/FeatureItemConfig";
 
-export const ConfigWithFeature = ({
-  show,
-  setShow,
-  handleAddPrice,
-}: {
-  show: any;
-  setShow: (show: any) => void;
-  handleAddPrice: () => void;
-}) => {
+export const ConfigWithFeature = () => {
   const { features } = useProductContext();
   const { item } = useProductItemContext();
 
@@ -25,7 +17,7 @@ export const ConfigWithFeature = ({
     <div className="flex flex-col gap-4 text-sm w-full">
       <div>
         <FieldLabel>Feature</FieldLabel>
-        <SelectItemFeature show={show} setShow={setShow} />
+        <SelectItemFeature />
       </div>
 
       {!isBooleanFeature && <FeatureConfig />}

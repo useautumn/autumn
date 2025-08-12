@@ -32,25 +32,12 @@ export const AdvancedItemConfig = () => {
     item.included_usage > 0;
 
   return (
-    <div className="w-full h-fit">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1 w-fit rounded-md text-t3 hover:text-zinc-800 transition-all duration-150 ease-out mt-1"
-      >
-        <ChevronRight
-          className={`w-4 h-4 transition-transform duration-150 ease-out ${
-            isOpen ? "rotate-90" : "rotate-0"
-          }`}
-        />
-        <span className="text-sm font-medium">Advanced</span>
-      </button>
-
+    <div className="w-full p-6 bg-stone-100 h-full">
+      <p className="text-t2 text-sm font-medium mb-6">Advanced</p>
       <div
-        className={`overflow-hidden transition-all duration-150 ease-out ${
-          isOpen ? "max-h-80 opacity-100 mt-2" : "max-h-0 opacity-0"
-        }`}
+        className={`overflow-hidden transition-all duration-150 ease-out h-full`}
       >
-        <div className="flex flex-col gap-4 p-4 bg-stone-100 ">
+        <div className="flex flex-col gap-4 text-sm">
           <ToggleButton
             value={item.reset_usage_when_enabled}
             setValue={() => {

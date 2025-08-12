@@ -11,10 +11,6 @@ interface InputProps extends React.ComponentProps<"input"> {
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type, startContent, endContent, variant, ...props }, ref) => {
     const hasAdornment = startContent || endContent;
-    const [isFocused, setIsFocused] = React.useState(false);
-
-    const handleFocus = () => setIsFocused(true);
-    const handleBlur = () => setIsFocused(false);
 
     // const gradientBg =
     //   "bg-[linear-gradient(180deg,white,theme(colors.stone.50))]";
@@ -26,15 +22,13 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {hasAdornment ? (
           <div
             className={cn(
-              `flex w-full rounded-md border border-input ${gradientBg} text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50
+              `flex w-full rounded-md border border-input ${gradientBg} text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50
               
               h-8 transition-colors duration-100 shadow-sm overflow-hidden
-              `,
-              isFocused &&
-                `transition-colors duration-100 focus-visible:outline-none focus-visible:ring-0
-               border-focus shadow-focus`,
+              
+              focus-within:outline-none focus-within:ring-0 focus-within:border-focus focus-within:shadow-focus`,
               variant === "destructive" &&
-                `focus-visible:border-red-400 focus-visible:shadow-[0_0_2px_1px_rgba(248,113,113,0.25)]`,
+                `focus-within:border-red-400 focus-within:shadow-[0_0_2px_1px_rgba(248,113,113,0.25)]`
             )}
             data-disabled={props.disabled}
           >
@@ -46,11 +40,9 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
                 
                 p-2
                 `,
-                className,
+                className
               )}
               ref={ref}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
               {...props}
             />
             <div className="flex items-center justify-center pr-2">
@@ -70,7 +62,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
               variant === "destructive"
                 ? `focus-visible:border-red-400 focus-visible:shadow-[0_0_2px_1px_rgba(248,113,113,0.25)]`
                 : `focus-visible:shadow-focus`,
-              className,
+              className
             )}
             ref={ref}
             {...props}
@@ -78,7 +70,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         )}
       </>
     );
-  },
+  }
 );
 Input.displayName = "Input";
 

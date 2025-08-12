@@ -94,8 +94,14 @@ export const LimitedItemSchema = ProductItemSchema.extend({
   included_usage: z.number(),
 });
 
+export const FrontendProductItem = ProductItemSchema.extend({
+  isPrice: z.boolean(),
+  isVariable: z.boolean().nullish(),
+});
+
 export type ProductItem = z.infer<typeof ProductItemSchema>;
 export type LimitedItem = z.infer<typeof LimitedItemSchema>;
 export type ProductItemConfig = z.infer<typeof ProductItemConfigSchema>;
 export type PriceTier = z.infer<typeof PriceTierSchema>;
 export type RolloverConfig = z.infer<typeof RolloverConfigSchema>;
+export type FrontendProductItem = z.infer<typeof FrontendProductItem>;

@@ -1,5 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useProductContext } from "@/views/products/product/ProductContext";
 import { Infinite } from "@autumn/shared";
 
 export const UsageTierInput = ({
@@ -11,6 +12,10 @@ export const UsageTierInput = ({
   onChange: (e: any) => void;
   type: "from" | "to" | "amount";
 }) => {
+  const { org } = useProductContext();
+
+  const defaultCurrency = org?.currency?.toUpperCase() ?? "USD";
+
   if ((type === "to" && value === Infinite) || type === "from") {
     return (
       <Input
@@ -32,8 +37,8 @@ export const UsageTierInput = ({
         step="any"
       />
       {type === "amount" && (
-        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-t3 text-[10px]">
-          USD
+        <span className="absolute right-2 top-[12.5px] text-t3 text-[9px] leading-none">
+          {defaultCurrency}
         </span>
       )}
     </div>

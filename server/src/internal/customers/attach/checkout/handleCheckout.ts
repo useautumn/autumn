@@ -113,11 +113,6 @@ export const handleCheckout = (req: any, res: any) =>
         attachBody,
       });
 
-      await getCheckoutOptions({
-        req,
-        attachParams,
-      });
-
       let checkoutUrl = null;
       if (func == AttachFunction.CreateCheckout) {
         await checkStripeConnections({
@@ -153,6 +148,11 @@ export const handleCheckout = (req: any, res: any) =>
         // );
         // return;
       }
+
+      await getCheckoutOptions({
+        req,
+        attachParams,
+      });
 
       const preview = await attachParamsToPreview({
         req,
