@@ -1,4 +1,8 @@
-import { isFeatureItem, isFeaturePriceItem } from "@/utils/product/getItemType";
+import {
+  isFeatureItem,
+  isFeaturePriceItem,
+  isPriceItem,
+} from "@/utils/product/getItemType";
 import { FrontendProductItem, ProductItem } from "@autumn/shared";
 
 export const getFrontendItemConfig = (item: ProductItem) => {
@@ -27,6 +31,8 @@ export const getFrontendItemConfig = (item: ProductItem) => {
 
     finalItem.included_usage = 0;
     finalItem.isVariable = true;
+  } else if (isPriceItem(item)) {
+    finalItem.isVariable = false;
   }
 
   finalItem.isPrice = true;

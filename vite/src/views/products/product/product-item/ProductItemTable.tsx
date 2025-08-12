@@ -33,7 +33,7 @@ export const ProductItemTable = () => {
 
   const handleRowClick = (item: ProductItem, index: number) => {
     const frontendItem = getFrontendItemConfig(item);
-    console.log("frontendItem", frontendItem);
+
     setSelectedItem(frontendItem);
     setSelectedIndex(index);
     setOpen(true);

@@ -13,14 +13,16 @@ export const ToggleButton = ({
   className,
   disabled,
   infoContent,
+  switchClassName,
 }: {
   value: boolean;
   setValue: (value: boolean) => void;
   tooltipContent?: string;
-  buttonText?: string;
+  buttonText?: string | React.ReactNode;
   className?: string;
   disabled?: boolean;
   infoContent?: string;
+  switchClassName?: string;
 }) => {
   const MainButton = (
     <Button
@@ -37,12 +39,14 @@ export const ToggleButton = ({
       )}
     >
       {buttonText}
-      {infoContent && <InfoTooltip>{infoContent}</InfoTooltip>}
-      <Switch
-        checked={value}
-        className="h-4 w-7 data-[state=checked]:bg-stone-500"
-        thumbClassName="h-3 w-3 data-[state=checked]:translate-x-3"
-      />
+      <div className={cn("flex items-center gap-1", switchClassName)}>
+        {infoContent && <InfoTooltip>{infoContent}</InfoTooltip>}
+        <Switch
+          checked={value}
+          className="h-4 w-7 data-[state=checked]:bg-stone-500"
+          thumbClassName="h-3 w-3 data-[state=checked]:translate-x-3"
+        />
+      </div>
     </Button>
   );
 

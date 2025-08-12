@@ -5,6 +5,7 @@ import {
   FullProduct,
   UsagePriceConfig,
   FullCusProduct,
+  BillingInterval,
 } from "@autumn/shared";
 import Stripe from "stripe";
 import { ExtendedRequest } from "../models/Request.js";
@@ -26,10 +27,14 @@ export const addContUsePricesToSub = async ({
   quantity: number;
   logger: any;
 }) => {
-  const usagePrices = filterByBillingType({
+  let usagePrices = filterByBillingType({
     prices: autumnProduct.prices,
     billingType: BillingType.InArrearProrated,
   });
+
+  usagePrices = usagePrices.filter(
+    (p) => p.config.interval !== BillingInterval.OneOff
+  );
 
   logger.info(`Adding ${usagePrices.length} cont use prices to sub`);
 
@@ -100,12 +105,12 @@ export const addUsagePricesToSub = async ({
 
     logger.info(`Adding ${config.feature_id} to sub ${stripeSub.id}`);
     let stripePrice = await stripeCli.prices.retrieve(
-      price.config.stripe_price_id!,
+      price.config.stripe_price_id!
     );
 
     if (stripePrice.recurring?.usage_type !== "metered") {
       logger.info(
-        `Skipping ${config.feature_id} because it's not a metered price`,
+        `Skipping ${config.feature_id} because it's not a metered price`
       );
       continue;
     }
