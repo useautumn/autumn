@@ -131,7 +131,7 @@ export const DeleteFeatureDialog = ({
 					<p>{getDeleteMessage()}</p>
 				</div>
 				<DialogFooter>
-					{hasProducts && (
+					{hasProducts && !feature.archived && (
 							<Button
 								variant="outline"
 								onClick={handleArchive}
