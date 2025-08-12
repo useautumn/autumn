@@ -42,7 +42,7 @@ export const SelectFeatureType = ({
         <SelectType
           title="Metered"
           description="A usage-based feature that you want to track"
-          icon={<ArrowUp01 className="text-t3" size={12} />}
+          icon={<ArrowUp01 className="text-t3" size={13} />}
           isSelected={featureType === FeatureType.Metered}
           onClick={() => {
             const curConfig = feature.config;
