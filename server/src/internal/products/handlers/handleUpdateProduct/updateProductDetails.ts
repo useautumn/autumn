@@ -22,6 +22,7 @@ import {
 } from "../../product-items/productItemUtils/getItemType.js";
 import { isFreeProduct } from "../../productUtils.js";
 import { isStripeConnected } from "@/internal/orgs/orgUtils.js";
+import { isDefaultTrialFullProduct } from "../../productUtils/classifyProduct.js";
 
 const productDetailsSame = (prod1: Product, prod2: UpdateProduct) => {
 	if (notNullish(prod2.id) && prod1.id != prod2.id) {
@@ -145,7 +146,11 @@ export const handleUpdateProductDetails = async ({
 		productId: curProduct.internal_id,
 	});
 
-	if (newProduct.is_default && !org.config.allow_paid_default) {
+    // Should error if:
+	// - New product is a default product
+	// - Org is not allowed to have paid default products
+	// - Current product is not a default trial
+	if (newProduct.is_default && !org.config.allow_paid_default && !isDefaultTrialFullProduct({ product: curProduct, skipDefault: true })) {
 		// 1. Check if there are items
 		if (items) {
 			if (
