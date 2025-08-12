@@ -85,8 +85,8 @@ export const createStripeSub = async ({
       trial_end: freeTrialToStripeTimestamp({ freeTrial, now }),
       payment_behavior: "error_if_incomplete",
       add_invoice_items: invoiceItems,
-      collection_method: invoiceOnly ? "send_invoice" : "charge_automatically",
-      days_until_due: invoiceOnly ? 30 : undefined,
+      collection_method: freeTrial ? undefined : invoiceOnly ? "send_invoice" : "charge_automatically",
+      days_until_due: freeTrial ? undefined : invoiceOnly ? 30 : undefined,
       billing_cycle_anchor: billingCycleAnchorUnix
         ? Math.floor(billingCycleAnchorUnix / 1000)
         : undefined,
