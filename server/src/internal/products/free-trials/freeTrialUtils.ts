@@ -33,7 +33,6 @@ export const validateAndInitFreeTrial = ({
     internal_product_id: internalProductId,
     is_custom: isCustom,
     card_required,
-    is_default_trial: false,
   };
 };
 
@@ -50,8 +49,7 @@ export const freeTrialsAreSame = ({
     ft1.length === ft2.length &&
     ft1.unique_fingerprint === ft2.unique_fingerprint &&
     ft1.duration === ft2.duration &&
-    ft1.card_required === ft2.card_required &&
-    ft1.is_default_trial === ft2.is_default_trial
+    ft1.card_required === ft2.card_required
   );
 };
 
@@ -145,39 +143,6 @@ export const handleNewFreeTrial = async ({
   isCustom: boolean;
   product?: any; // Add product parameter for validation
 }) => {
-  // Backend validation for default trial
-  if (newFreeTrial && (newFreeTrial as any).is_default_trial) {
-    if (!product) {
-      throw new RecaseError({
-        message: "Product context required for default trial validation",
-        code: "missing_product_context",
-        statusCode: 400,
-      });
-    }
-    
-    // Must be paid (not free)
-    if (isFreeProduct(product.prices)) {
-      throw new RecaseError({
-        message: "Default trial must be on a paid product",
-        code: "invalid_default_trial",
-        statusCode: 400,
-      });
-    }
-    
-    // Must not require card
-    if (newFreeTrial.card_required) {
-      throw new RecaseError({
-        message: "Default trial cannot require a card",
-        code: "invalid_default_trial",
-        statusCode: 400,
-      });
-    }
-
-    // TODO: Add validation to ensure only one default trial exists at a time
-    // This should be implemented by the user to query all products and check
-    // for existing default trials, then either prevent this update or 
-    // automatically unset other default trials.
-  }
 
   // If new free trial is null
   if (!newFreeTrial) {

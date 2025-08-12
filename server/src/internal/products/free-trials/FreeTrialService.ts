@@ -58,23 +58,14 @@ export class FreeTrialService {
 	static async list({
 		db,
 		productIds,
-		isDefaultTrial,
 	}: {
 		db: DrizzleCli;
 		productIds: string[];
-		isDefaultTrial?: boolean;
 	}) {
 		const result = await db
 			.select({ id: freeTrials.internal_product_id })
 			.from(freeTrials)
-			.where(
-				and(
-					inArray(freeTrials.internal_product_id, productIds),
-					isDefaultTrial
-						? eq(freeTrials.is_default_trial, true)
-						: undefined
-				)
-			);
+			.where(inArray(freeTrials.internal_product_id, productIds));
 		return { count: result.length, ids: result.map((r) => r.id) };
 	}
 
@@ -102,33 +93,4 @@ export class FreeTrialService {
 		return result[0];
 	}
 
-	static async orgIdToDefaultTrial({
-		db,
-		orgId,
-		env,
-	}: {
-		db: DrizzleCli;
-		orgId: string;
-		env: AppEnv;
-	}) {
-		const result = await db.select({
-			internalProductId: freeTrials.internal_product_id,
-			product: products,
-			trial: freeTrials,
-			version: products.version,
-		})
-		.from(freeTrials)
-		.innerJoin(products, eq(freeTrials.internal_product_id, products.internal_id))
-		.where(
-			and(
-				eq(freeTrials.is_default_trial, true),
-				eq(products.org_id, orgId),
-				eq(products.env, env)
-			)
-		)
-		.orderBy(desc(products.version))
-		.limit(1);
-
-		return result[0];
-	}
 }
