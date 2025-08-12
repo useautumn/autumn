@@ -91,52 +91,13 @@ export const newCusToAttachParams = ({
 	newCus,
 	products,
 	stripeCli,
+	freeTrial = null,
 }: {
 	req: ExtendedRequest;
 	newCus: FullCustomer;
 	products: FullProduct[];
 	stripeCli: Stripe;
-}) => {
-	if (!newCus.customer_products) {
-		newCus.customer_products = [];
-	}
-
-	if (!newCus.entities) {
-		newCus.entities = [];
-	}
-
-	const attachParams: AttachParams = {
-		stripeCli,
-		paymentMethod: null,
-		req,
-		org: req.org,
-		customer: newCus,
-		products,
-		prices: products.flatMap((p) => p.prices),
-		entitlements: products.flatMap((p) => p.entitlements),
-		freeTrial: null,
-		replaceables: [],
-		optionsList: [],
-		cusProducts: [],
-		entities: [],
-		features: [],
-		invoiceOnly: true,
-	};
-	return attachParams;
-};
-
-export const newCusToAttachParamsWithFreeTrial = ({
-	req,
-	newCus,
-	products,
-	stripeCli,
-	freeTrial,
-}: {
-	req: ExtendedRequest;
-	newCus: FullCustomer;
-	products: FullProduct[];
-	stripeCli: Stripe;
-	freeTrial: FreeTrial;
+	freeTrial?: FreeTrial | null;
 }) => {
 	if (!newCus.customer_products) {
 		newCus.customer_products = [];
@@ -170,10 +131,12 @@ export const newCusToInsertParams = ({
 	req,
 	newCus,
 	product,
+	freeTrial = null,
 }: {
 	req: ExtendedRequest;
 	newCus: Customer;
 	product: FullProduct;
+	freeTrial?: FreeTrial | null;
 }) => {
 	return {
 		req,
@@ -183,10 +146,10 @@ export const newCusToInsertParams = ({
 		prices: product.prices,
 		entitlements: product.entitlements,
 		replaceables: [],
-		freeTrial: null, // TODO: Free trial not supported on default product yet
+		freeTrial,
 		optionsList: [],
 		cusProducts: [],
 		entities: [],
 		features: [],
-	};
+	} satisfies InsertCusProductParams;
 };

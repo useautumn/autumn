@@ -1,13 +1,13 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Product } from "@autumn/shared";
+import { FreeTrial, Product } from "@autumn/shared";
 
 export const ProductTypeBadge = ({ product }: { product: any }) => {
   const badgeType = product.is_default
     ? "default"
     : product.is_add_on
       ? "add-on"
-      : product.free_trial
+      : product.free_trial?.is_default_trial
         ? "default trial"
         : null;
 

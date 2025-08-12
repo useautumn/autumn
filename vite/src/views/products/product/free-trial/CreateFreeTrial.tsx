@@ -46,22 +46,31 @@ export const CreateFreeTrial = ({
         unique_fingerprint: freeTrial.unique_fingerprint,
         duration: freeTrial.duration,
         card_required: freeTrial.card_required,
+        is_default_trial: false,
       },
     });
 
-    if (autoSave) {
-      handleAutoSave({
-        axiosInstance,
-        productId: product.id,
-        product: { ...product, free_trial: {
-          length: lengthInt,
-          unique_fingerprint: freeTrial.unique_fingerprint,
-          duration: freeTrial.duration,
-          card_required: freeTrial.card_required,
-        } },
-        mutate,
-      });
+    try {
+      await mutate();
+      toast.success("Free trial created");
+    } catch (error) {
+      toast.error("Failed to create free trial");
     }
+
+    // if (autoSave) {
+    //   handleAutoSave({
+    //     axiosInstance,
+    //     productId: product.id,
+    //     product: { ...product, free_trial: {
+    //       length: lengthInt,
+    //       unique_fingerprint: freeTrial.unique_fingerprint,
+    //       duration: freeTrial.duration,
+    //       card_required: freeTrial.card_required,
+    //       is_default_trial: false,
+    //     } },
+    //     mutate,
+    //   });
+    // }
     setOpen(false);
   };
 

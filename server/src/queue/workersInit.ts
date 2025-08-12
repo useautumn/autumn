@@ -15,6 +15,7 @@ import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { detectBaseVariant } from "@/internal/products/productUtils/detectProductVariant.js";
 import { Logger } from "pino";
+import { generateId } from "@/utils/genUtils.js";
 
 const NUM_WORKERS = 10;
 
@@ -44,6 +45,7 @@ const initWorker = ({
           worker: {
             task: job.name,
             data: job.data,
+            jobId: generateId("job"),
             workerId: id,
           },
         },
@@ -87,11 +89,13 @@ const initWorker = ({
           });
           return;
         }
-      } catch (error) {
+      } catch (error: any) {
         logtail.error(`Failed to process bullmq job: ${job.name}`, {
           jobName: job.name,
-          jobData: job.data,
-          error,
+          error: {
+            message: error.message,
+            stack: error.stack,
+          },
         });
       }
 

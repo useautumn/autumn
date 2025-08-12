@@ -40,6 +40,7 @@ export enum UsageModel {
 export enum ProductItemFeatureType {
   SingleUse = "single_use",
   ContinuousUse = "continuous_use",
+  Boolean = "boolean",
   Static = "static",
 }
 

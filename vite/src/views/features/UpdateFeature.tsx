@@ -100,6 +100,7 @@ export default function UpdateFeature({
             isUpdate={true}
             eventNameChanged={eventNameChanged}
             setEventNameChanged={setEventNameChanged}
+            open={open}
           />
         </CustomDialogBody>
         <CustomDialogFooter>
@@ -113,34 +114,6 @@ export default function UpdateFeature({
           </Button>
         </CustomDialogFooter>
       </CustomDialogContent>
-    </Dialog>
-  );
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent>
-        <DialogTitle>Update Feature</DialogTitle>
-
-        <FeatureConfig
-          feature={selectedFeature}
-          setFeature={setSelectedFeature}
-          eventNameInput={eventNameInput}
-          setEventNameInput={setEventNameInput}
-          isUpdate={true}
-          eventNameChanged={eventNameChanged}
-          setEventNameChanged={setEventNameChanged}
-        />
-
-        <DialogFooter>
-          <Button
-            isLoading={updateLoading}
-            onClick={() => handleUpdateFeature()}
-            variant="gradientPrimary"
-          >
-            Update Feature
-          </Button>
-        </DialogFooter>
-      </DialogContent>
     </Dialog>
   );
 }

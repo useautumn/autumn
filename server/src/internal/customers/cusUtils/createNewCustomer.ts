@@ -26,7 +26,6 @@ import { generateId } from "@/utils/genUtils.js";
 
 import {
 	newCusToAttachParams,
-	newCusToAttachParamsWithFreeTrial,
 	newCusToInsertParams,
 } from "../attach/attachUtils/attachParams/convertToParams.js";
 import { FreeTrialService } from "@/internal/products/free-trials/FreeTrialService.js";
@@ -74,6 +73,8 @@ export const createNewCustomer = async ({
 	}
 	// Validate and convert the free trial data to match the expected interface
 	const trialData = freeTrialData.trial;
+	console.log(freeTrialData);
+	process.exit(0);
 
 	const nonFreeProds = defaultProds.filter((p) => !isFreeProduct(p.prices));
 	const freeProds = defaultProds.filter((p) => isFreeProduct(p.prices));
@@ -161,10 +162,9 @@ export const createNewCustomer = async ({
 			logger,
 		});
 
-		// Attach the free trial on Stripe with proper params
 		await handleAddProduct({
 			req,
-			attachParams: newCusToAttachParamsWithFreeTrial({
+			attachParams: newCusToAttachParams({
 				req,
 				newCus: newCustomer as FullCustomer,
 				products: [resolvedFreeTrialProduct],
@@ -174,41 +174,25 @@ export const createNewCustomer = async ({
 		});
 
 		// Add the free trial product to Autumn with the free trial data
-		await createFullCusProduct({
-			db,
-			attachParams: {
-				...newCusToInsertParams({
-					req,
-					newCus: newCustomer,
-					product: resolvedFreeTrialProduct,
-				}),
-				freeTrial: resolvedFreeTrialProduct.free_trial!, // Pass the actual free trial instead of null
-			},
-			nextResetAt,
-			anchorToUnix: org.config.anchor_start_of_month
-				? getNextStartOfMonthUnix({
-						interval: BillingInterval.Month,
-						intervalCount: 1,
-					})
-				: undefined,
-			scenario: AttachScenario.New,
-			logger,
-		});
-
-		// Also attach any other default non-free products if they exist
-		if (nonFreeProds.length > 0) {
-			await handleAddProduct({
-				req,
-				attachParams: newCusToAttachParams({
-					req,
-					newCus: newCustomer as FullCustomer,
-					products: nonFreeProds,
-					stripeCli,
-				}),
-			});
-		}
+		// await createFullCusProduct({
+		// 	db,
+		// 	attachParams: newCusToInsertParams({
+		// 		req,
+		// 		newCus: newCustomer,
+		// 		product: resolvedFreeTrialProduct,
+		// 		freeTrial: resolvedFreeTrialProduct.free_trial!,
+		// 	}),
+		// 	nextResetAt,
+		// 	anchorToUnix: org.config.anchor_start_of_month
+		// 		? getNextStartOfMonthUnix({
+		// 				interval: BillingInterval.Month,
+		// 				intervalCount: 1,
+		// 			})
+		// 		: undefined,
+		// 	scenario: AttachScenario.New,
+		// 	logger,
+		// });
 	} else {
-		// Otherwise, do what's already present in the code (attach default products)
 		await addCustomerCreatedTask({
 			req,
 			internalCustomerId: newCustomer.internal_id,

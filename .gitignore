@@ -102,3 +102,6 @@ supabase/
 
 .claude/
 .vscode/
+
+migration.sh
+stat.sh

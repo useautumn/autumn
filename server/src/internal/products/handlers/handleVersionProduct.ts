@@ -59,6 +59,7 @@ export const handleVersionProductV2 = async ({
     orgId: org.id,
     env: latestProduct.env as AppEnv,
     processor: latestProduct.processor,
+    baseVariantId: latestProduct.base_variant_id,
   });
 
   // Validate product items...
@@ -114,12 +115,16 @@ export const handleVersionProductV2 = async ({
     });
   }
 
-  await addTaskToQueue({
-    jobName: JobName.DetectBaseVariant,
-    payload: {
-      curProduct: newProduct,
-    },
-  });
+  // await addTaskToQueue({
+  //   jobName: JobName.DetectBaseVariant,
+  //   payload: {
+  //     curProduct: {
+  //       ...newProduct,
+  //       // prices: customPrices,
+  //       // entitlements: getEntsWithFeature({ ents: customEnts, features }),
+  //     },
+  //   },
+  // });
 
   await initProductInStripe({
     db,

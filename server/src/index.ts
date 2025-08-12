@@ -30,6 +30,7 @@ import { ClickHouseManager } from "./external/clickhouse/ClickHouseManager.js";
 const tracer = trace.getTracer("express");
 
 checkEnvVars();
+// subscribeToOrgUpdates({ db });
 
 const init = async () => {
   const app = express();
@@ -45,8 +46,6 @@ const init = async () => {
         "https://staging.useautumn.com",
         "https://*.useautumn.com",
         "https://localhost:8080",
-        "https://app.aidvize.com",
-        "http://staging.aidvize.com",
         "https://www.alphalog.ai",
         "https://*.alphalog.ai",
         process.env.CLIENT_URL || "",
@@ -83,8 +82,6 @@ const init = async () => {
   await QueueManager.getInstance(); // initialize the queue manager
   await CacheManager.getInstance();
   await ClickHouseManager.getInstance();
-
-  subscribeToOrgUpdates({ db });
 
   app.use(async (req: any, res: any, next: any) => {
     req.env = req.env = req.headers["app_env"] || AppEnv.Sandbox;
@@ -180,7 +177,7 @@ if (process.env.NODE_ENV === "development") {
     console.log(`Master ${process.pid} is running`);
     console.log("Number of CPUs", numCPUs);
 
-    let numWorkers = 10;
+    let numWorkers = 7;
 
     for (let i = 0; i < numWorkers; i++) {
       cluster.fork();

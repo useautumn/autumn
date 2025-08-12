@@ -3,6 +3,7 @@ import { numeric } from "drizzle-orm/pg-core";
 import { pgTable } from "drizzle-orm/pg-core";
 import { organizations } from "../../orgModels/orgTable.js";
 import { DiscountConfig, PromoCode } from "./rewardModels.js";
+import { InferSelectModel, InferInsertModel } from "drizzle-orm";
 
 export const rewards = pgTable(
   "rewards",
@@ -26,3 +27,6 @@ export const rewards = pgTable(
     }).onDelete("cascade"),
   ],
 );
+
+export type RewardRow = InferSelectModel<typeof rewards>;
+export type InsertRewardRow = InferInsertModel<typeof rewards>;
