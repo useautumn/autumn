@@ -8,7 +8,6 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 import { checkStripeProductExists } from "@/internal/products/productUtils.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { handleSetDefaultTrial } from "./handlers/handleSetDefaultTrial.js";
 import { handleUpdateProductV2 } from "./handlers/handleUpdateProduct/handleUpdateProduct.js";
 import { handleDeleteProduct } from "./handlers/handleDeleteProduct.js";
 import { handleGetProduct } from "./handlers/handleGetProduct.js";
@@ -34,8 +33,6 @@ productRouter.post("", handleCreateProduct);
 productRouter.get("/:productId", handleGetProduct);
 
 productRouter.post("/:productId", handleUpdateProductV2);
-
-productRouter.post("/:productId/default_trial", handleSetDefaultTrial);
 
 productRouter.delete("/:productId", handleDeleteProduct);
 

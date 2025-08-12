@@ -17,7 +17,6 @@ export const freeTrials = pgTable(
     length: numeric({ mode: "number" }),
     unique_fingerprint: boolean("unique_fingerprint"),
     is_custom: boolean("is_custom").default(false),
-    is_default_trial: boolean("is_default_trial").default(false),
     card_required: boolean("card_required").default(false),
   },
   (table) => [

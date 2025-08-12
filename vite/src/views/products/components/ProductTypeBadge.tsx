@@ -3,13 +3,13 @@ import { cn } from "@/lib/utils";
 import { FreeTrial, Product } from "@autumn/shared";
 
 export const ProductTypeBadge = ({ product }: { product: any }) => {
-  const badgeType = product.is_default
+  const badgeType = product.is_default && product.free_trial && !product.free_trial.card_required
+  ? "default trial"
+  : product.is_default
     ? "default"
     : product.is_add_on
       ? "add-on"
-      : product.free_trial?.is_default_trial
-        ? "default trial"
-        : null;
+      : null;
 
   if (!badgeType) return null;
 

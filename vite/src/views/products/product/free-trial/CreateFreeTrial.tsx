@@ -46,7 +46,6 @@ export const CreateFreeTrial = ({
         unique_fingerprint: freeTrial.unique_fingerprint,
         duration: freeTrial.duration,
         card_required: freeTrial.card_required,
-        is_default_trial: false,
       },
     });
 
@@ -66,7 +65,6 @@ export const CreateFreeTrial = ({
     //       unique_fingerprint: freeTrial.unique_fingerprint,
     //       duration: freeTrial.duration,
     //       card_required: freeTrial.card_required,
-    //       is_default_trial: false,
     //     } },
     //     mutate,
     //   });
