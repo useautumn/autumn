@@ -17,18 +17,6 @@ export const updateProduct = async ({
   mutateCount: () => void;
 }) => {
   try {
-    // Frontend validation for default trial requirements
-    if (product.free_trial?.is_default_trial) {
-      if (isFreeProduct(product.items || [])) {
-        toast.error("Default trial must be on a paid product");
-        return;
-      }
-      if (product.free_trial.card_required) {
-        toast.error("Default trial cannot require a card");
-        return;
-      }
-    }
-
     await ProductService.updateProduct(axiosInstance, product.id, {
       ...UpdateProductSchema.parse(product),
       items: product.items,

@@ -11,7 +11,6 @@ export const FreeTrialSchema = z.object({
   internal_product_id: z.string(),
   is_custom: z.boolean(),
   card_required: z.boolean(),
-  is_default_trial: z.boolean(),
 });
 
 export const CreateFreeTrialSchema = z.object({
