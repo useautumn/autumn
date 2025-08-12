@@ -33,7 +33,7 @@ export const ItemConfigFooter = ({
   const showIntro = product.items.length === 0;
 
   return (
-    <CustomDialogFooter className="flex items-center w-full h-full justify-between">
+    <CustomDialogFooter className="flex items-center w-full h-10 justify-between">
       {handleBack ? (
         <Button
           variant="dialogBack"

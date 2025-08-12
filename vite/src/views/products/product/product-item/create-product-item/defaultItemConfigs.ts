@@ -23,7 +23,7 @@ export const defaultFeatureItem: ProductItem = {
   reset_usage_when_enabled: true,
 };
 
-export const defaultPriceItem: ProductItem = {
+export const defaultPriceItem: FrontendProductItem = {
   feature_id: null,
   included_usage: null,
 
@@ -38,6 +38,8 @@ export const defaultPriceItem: ProductItem = {
   // Others
   entity_feature_id: null,
   reset_usage_when_enabled: true,
+  isPrice: true,
+  isVariable: false,
 };
 
 export const defaultPaidFeatureItem: FrontendProductItem = {

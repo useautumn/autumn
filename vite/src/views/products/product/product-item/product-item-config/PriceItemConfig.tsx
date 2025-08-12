@@ -1,20 +1,18 @@
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { SelectType } from "@/components/general/SelectType";
-import { CircleGauge, Cog, DollarSignIcon } from "lucide-react";
+import { CircleGauge, Cog } from "lucide-react";
 import { useProductItemContext } from "../ProductItemContext";
-import { isFeaturePriceItem, isPriceItem } from "@/utils/product/getItemType";
 import {
   defaultPaidFeatureItem,
   defaultPriceItem,
 } from "../create-product-item/defaultItemConfigs";
-import { useEffect, useState } from "react";
 import { ConfigWithFeature } from "../components/ConfigWithFeature";
 import CreateFixedPrice from "../../prices/CreateFixedPrice";
 import { UsageModel } from "@autumn/shared";
 import { nullish } from "@/utils/genUtils";
 
 export const PriceItemConfig = () => {
-  const { item, setItem } = useProductItemContext();
+  const { item, setItem, isUpdate } = useProductItemContext();
 
   // useEffect(() => {
   //   console.log("Item:", item);
@@ -27,18 +25,23 @@ export const PriceItemConfig = () => {
         <div className="grid grid-cols-2 gap-2 w-full">
           <SelectType
             title="Fixed"
-            description="A one off or fixed recurring price (eg. $20 / month)"
+            description="Fixed price to charge for this product (eg $10 per month)"
             icon={<Cog size={14} />}
             isSelected={item.isVariable === false}
             onClick={() => {
               if (item.isVariable !== false) {
-                setItem({ ...item, tiers: null, isVariable: false });
+                setItem({
+                  ...defaultPriceItem,
+                  tiers: null,
+                  isVariable: false,
+                });
               }
             }}
+            disabled={item.isVariable === true && isUpdate}
           />
           <SelectType
             title="Variable"
-            description="A usage based price (eg. $0.01 per credit or $10 per seat)"
+            description="Price per use or purchased quantity (eg $1 per credit)"
             icon={<CircleGauge size={13} />}
             isSelected={item.isVariable}
             onClick={() => {
@@ -46,13 +49,15 @@ export const PriceItemConfig = () => {
                 setItem({ ...defaultPaidFeatureItem, isVariable: true });
               }
             }}
+            disabled={item.isVariable === false && isUpdate}
           />
         </div>
       </div>
       {item.isVariable === true && (
         <>
-          <SelectUsageModel />
-          {item.usage_model !== null && <ConfigWithFeature />}
+          {/* {item.usage_model !== null && } */}
+          <ConfigWithFeature />
+          {item.feature_id && <SelectUsageModel />}
         </>
       )}
       {item.isVariable === false && <CreateFixedPrice />}
@@ -65,22 +70,11 @@ const SelectUsageModel = () => {
 
   return (
     <div className="w-full">
-      <FieldLabel>Price Type</FieldLabel>
+      <FieldLabel>Usage Model</FieldLabel>
       <div className="grid grid-cols-2 gap-2 w-full">
         <SelectType
-          title="Upfront Quantity"
-          description="Your user can specify a quantity of this feature before purchasing the product"
-          icon={<Cog size={14} />}
-          isSelected={item.usage_model === UsageModel.Prepaid}
-          onClick={() => {
-            if (item.usage_model !== UsageModel.Prepaid) {
-              setItem({ ...item, usage_model: UsageModel.Prepaid });
-            }
-          }}
-        />
-        <SelectType
           title="Pay Per Use"
-          description="Your user is charged based on number of units used of this feature"
+          description="Charge based on number of units used of this feature"
           icon={<CircleGauge size={13} />}
           isSelected={item.usage_model === UsageModel.PayPerUse}
           onClick={() => {
@@ -89,6 +83,17 @@ const SelectUsageModel = () => {
             }
           }}
           disabled={nullish(item.interval)}
+        />
+        <SelectType
+          title="Upfront Quantity"
+          description="Specify a quantity of this feature during checkout"
+          icon={<Cog size={14} />}
+          isSelected={item.usage_model === UsageModel.Prepaid}
+          onClick={() => {
+            if (item.usage_model !== UsageModel.Prepaid) {
+              setItem({ ...item, usage_model: UsageModel.Prepaid });
+            }
+          }}
         />
       </div>
     </div>

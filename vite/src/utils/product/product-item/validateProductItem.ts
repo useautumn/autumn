@@ -57,6 +57,11 @@ export const validateProductItem = ({
     item.included_usage = Number(item.included_usage);
   }
 
+  if (isFeaturePriceItem(item) && nullish(item.usage_model)) {
+    toast.error("Please select a usage model");
+    return null;
+  }
+
   //if both item.tiers and item.price are set, set item.price to null
   if (item.tiers && item.price) {
     item.price = null;
@@ -94,7 +99,6 @@ export const validateProductItem = ({
         return tier;
       });
     }
-    // console.log("finalTiers", finalTiers);
 
     for (let i = 0; i < finalTiers.length; i++) {
       const tier = finalTiers[i];

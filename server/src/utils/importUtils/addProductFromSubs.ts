@@ -75,6 +75,8 @@ export const addProductFromSubs = async ({
     ? stripeSubs[0].trial_end * 1000
     : null;
 
+  // throw new Error("test");
+
   // 1. Insert custom prices...
   let customPrices = prices?.filter((p) => p.is_custom);
   if (customPrices && customPrices.length > 0) {

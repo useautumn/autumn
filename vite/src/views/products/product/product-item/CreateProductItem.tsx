@@ -8,6 +8,7 @@ import {
   ProductItemInterval,
   ProductItem,
   CreateFeature as CreateFeatureType,
+  FrontendProductItem,
 } from "@autumn/shared";
 
 import { useProductContext } from "../ProductContext";
@@ -66,7 +67,7 @@ export function CreateProductItem() {
   const handleCreateProductItem = async (entityFeatureId?: string) => {
     const validatedItem = validateProductItem({
       item: {
-        ...item,
+        ...(item as FrontendProductItem),
         entity_feature_id: entityFeatureId
           ? entityFeatureId
           : item.entity_feature_id,
@@ -88,12 +89,6 @@ export function CreateProductItem() {
   const stepState = useSteps({
     initialStep: CreateItemStep.CreateItem,
   });
-
-  useEffect(() => {
-    if (open && isFeatureItem(item) && features.length == 0) {
-      stepState.replaceStep(CreateItemStep.CreateFeature);
-    }
-  }, [open]);
 
   return (
     <ProductItemContext.Provider
