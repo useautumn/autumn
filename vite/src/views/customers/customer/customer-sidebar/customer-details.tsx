@@ -32,7 +32,15 @@ export const CustomerDetails = ({
                   {customer.id}
                 </CopyButton>
               ) : (
-                <span className="px-2 text-t3">N/A</span>
+                <Button
+                  variant="sidebarItem"
+                  onClick={() => {
+                    setIsModalOpen(true);
+                    setModalType("customer");
+                  }}
+                >
+                  <span className="truncate text-t3">N/A</span>
+                </Button>
               )}
             </div>
           </div>
