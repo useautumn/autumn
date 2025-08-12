@@ -350,6 +350,17 @@ export const handleUpdateFeature = async (req: any, res: any) =>
         }
       }
 
+      const newConfig =
+        data.config !== undefined
+          ? feature.type == FeatureType.CreditSystem
+            ? validateCreditSystem(data.config)
+            : feature.type == FeatureType.Metered
+              ? validateMeteredConfig(data.config)
+              : data.config
+          : feature.config;
+
+      console.log(`feature: ${feature.id}, new config:`, newConfig);
+
       let updatedFeature = await FeatureService.update({
         db: req.db,
         id: featureId,
@@ -359,15 +370,10 @@ export const handleUpdateFeature = async (req: any, res: any) =>
           id: data.id !== undefined ? data.id : feature.id,
           name: data.name !== undefined ? data.name : feature.name,
           type: data.type !== undefined ? data.type : feature.type,
-          archived: data.archived !== undefined ? data.archived : feature.archived,
+          archived:
+            data.archived !== undefined ? data.archived : feature.archived,
 
-          config: data.config !== undefined 
-            ? (feature.type == FeatureType.CreditSystem
-                ? validateCreditSystem(data.config)
-                : feature.type == FeatureType.Metered
-                  ? validateMeteredConfig(data.config)
-                  : data.config)
-            : feature.config,
+          config: newConfig,
         },
       });
 

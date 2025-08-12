@@ -32,6 +32,7 @@ export const detectBaseVariant = async ({
   curProduct: FullProduct;
   logger: Logger;
 }) => {
+  logger.info(`Detecting base variant for ${curProduct.id}`);
   if (!process.env.ANTHROPIC_API_KEY) return;
 
   let existingProducts = (await ProductService.listFull({
@@ -48,10 +49,12 @@ export const detectBaseVariant = async ({
   // 1. Return null if add on
   if (curProduct.is_add_on) return null;
 
-  // // 2. Return null if only one off or monthly price
+  // 2. Return null if only one off or monthly price
   const oneOffOrMonthly = [BillingInterval.OneOff, BillingInterval.Month];
-  if (intervals.every((i: BillingInterval) => oneOffOrMonthly.includes(i)))
+  if (intervals.every((i: BillingInterval) => oneOffOrMonthly.includes(i))) {
+    logger.info(`Is one off or monthly, skipping`);
     return null;
+  }
 
   const filteredExistingProducts = existingProducts.filter(
     (p) =>
@@ -65,7 +68,10 @@ export const detectBaseVariant = async ({
       p.group == curProduct.group
   );
 
-  if (filteredExistingProducts.length == 0) return null;
+  if (filteredExistingProducts.length == 0) {
+    logger.info(`No base product to search for`);
+    return null;
+  }
 
   const variables = `
 <product_to_detect>
