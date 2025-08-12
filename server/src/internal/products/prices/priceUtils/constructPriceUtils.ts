@@ -1,8 +1,7 @@
 import Stripe from "stripe";
 import { constructPrice } from "../priceUtils.js";
 import { FullProduct, PriceType } from "@autumn/shared";
-import { generateId } from "@/utils/genUtils.js";
-import { subItemToAutumnInterval } from "tests/utils/stripeUtils.js";
+import { subItemToAutumnInterval } from "@/external/stripe/utils.js";
 
 export const subItemToFixedPrice = ({
   subItem,

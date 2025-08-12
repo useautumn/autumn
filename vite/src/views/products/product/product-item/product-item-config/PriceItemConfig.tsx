@@ -21,8 +21,8 @@ export const PriceItemConfig = () => {
   return (
     <div className="flex flex-col gap-4 w-full">
       <div className="w-full">
-        <FieldLabel>Price Type</FieldLabel>
-        <div className="grid grid-cols-2 gap-2 w-full">
+        {/* <FieldLabel>Price Type</FieldLabel> */}
+        <div className="grid grid-cols-2 gap-2 w-full text-t2">
           <SelectType
             title="Fixed"
             description="Fixed price to charge for this product (eg $10 per month)"

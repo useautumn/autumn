@@ -31,7 +31,7 @@ export const SelectType = ({
         {/* <div className="flex w-4 h-full items-center justify-start text-t2">
           {icon}
         </div> */}
-        <span className="w-0 -translate-x-4">{icon}</span>
+        <span className="w-0 -translate-x-4 text-t2">{icon}</span>
         <span className="relative text-t2 text-sm font-medium whitespace-nowrap leading-none">
           {title}
         </span>
