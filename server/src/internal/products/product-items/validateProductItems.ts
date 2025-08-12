@@ -60,40 +60,9 @@ const validateProductItem = ({
     });
   }
 
-  // 3. If tiers are set, final tier must be infinite, and amount must be > 0
-  if (notNullish(item.tiers)) {
-    for (let i = 0; i < item.tiers!.length; i++) {
-      let tier = item.tiers![i];
-      if (tier.amount < 0) {
-        throw new RecaseError({
-          message: `Tier amount must be >= 0`,
-          code: ErrCode.InvalidProductItem,
-          statusCode: StatusCodes.BAD_REQUEST,
-        });
-      }
-
-      if (i > 0 && tier.to <= item.tiers![i - 1].to) {
-        throw new RecaseError({
-          message: `Tier ${i + 1} should have a greater 'to' than tier ${i}`,
-          code: ErrCode.InvalidProductItem,
-          statusCode: StatusCodes.BAD_REQUEST,
-        });
-      }
-
-      if (i == item.tiers!.length - 1 && tier.to != TierInfinite) {
-        throw new RecaseError({
-          message: `Final tier must be infinite${
-            item.feature_id ? ` (feature: ${item.feature_id})` : ""
-          }`,
-          code: ErrCode.InvalidProductItem,
-          statusCode: StatusCodes.BAD_REQUEST,
-        });
-      }
-    }
-  }
-
   // 4. One off prices / fixed prices can have at most 2 decimal places
-  if ((isFeaturePriceItem(item) && !item.interval) || isPriceItem(item)) {
+  // (isFeaturePriceItem(item) && !item.interval && isOneOff) ||
+  if (isPriceItem(item)) {
     // One off price..., can't have more than 2 DP
     if (item.price && item.price.toString().split(".")[1]?.length > 2) {
       throw new RecaseError({
@@ -102,17 +71,18 @@ const validateProductItem = ({
         statusCode: StatusCodes.BAD_REQUEST,
       });
     }
-    if (item.tiers) {
-      item.tiers.forEach((tier) => {
-        if (tier.amount.toString().split(".")[1]?.length > 2) {
-          throw new RecaseError({
-            message: `One off prices can have at most 2 decimal places`,
-            code: ErrCode.InvalidInputs,
-            statusCode: StatusCodes.BAD_REQUEST,
-          });
-        }
-      });
-    }
+
+    // if (item.tiers) {
+    //   item.tiers.forEach((tier) => {
+    //     if (tier.amount.toString().split(".")[1]?.length > 2) {
+    //       throw new RecaseError({
+    //         message: `One off prices can have at most 2 decimal places`,
+    //         code: ErrCode.InvalidInputs,
+    //         statusCode: StatusCodes.BAD_REQUEST,
+    //       });
+    //     }
+    //   });
+    // }
   }
 
   // 4. If it's a feature item, it should have included usage as number or inf
@@ -168,6 +138,7 @@ const validateProductItem = ({
   //   }
   // }
 };
+
 export const validateProductItems = ({
   newItems,
   features,
@@ -187,6 +158,13 @@ export const validateProductItems = ({
   });
 
   features = allFeatures;
+
+  // const isOneOff =
+  //   newItems.every((item) => {
+  //     if (isFeatureItem(item)) return true;
+  //     return nullish(item.interval);
+  //   }) &&
+  //   newItems.some((item) => isFeaturePriceItem(item) || isPriceItem(item));
 
   // 1. Check values
   for (let index = 0; index < newItems.length; index++) {

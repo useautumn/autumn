@@ -47,6 +47,7 @@ export const formatTiers = ({
       return formatAmount({
         currency,
         amount: tiers[0].amount,
+        maxFractionDigits: 10,
       });
     }
 
@@ -56,9 +57,11 @@ export const formatTiers = ({
     return `${formatAmount({
       currency,
       amount: firstPrice,
+      maxFractionDigits: 10,
     })} - ${formatAmount({
       currency,
       amount: lastPrice,
+      maxFractionDigits: 10,
     })}`;
   }
 };
