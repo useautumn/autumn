@@ -76,11 +76,13 @@ export const constructProduct = ({
   orgId,
   env,
   processor,
+  baseVariantId,
 }: {
   productData: CreateProduct;
   orgId: string;
   env: AppEnv;
   processor?: any;
+  baseVariantId?: string | null;
 }) => {
   let newProduct: Product = {
     ...productData,

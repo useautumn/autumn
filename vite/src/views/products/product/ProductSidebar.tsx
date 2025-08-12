@@ -12,9 +12,10 @@ import { AttachButton } from "@/views/customers/customer/product/components/Atta
 import { CustomerProductBadge } from "@/views/customers/customer/product/components/CustomerProductBadge";
 import { EntitiesSidebar } from "./product-item/EntitiesSidebar";
 import { UpdateProductButton } from "./components/UpdateProductButton";
+import { toast } from "sonner";
 
 export default function ProductSidebar() {
-  const { product, org, setProduct, customer, features } = useProductContext();
+  const { product, org, setProduct, customer, features, mutate } = useProductContext();
   const [freeTrialModalOpen, setFreeTrialModalOpen] = useState(false);
   const [entitiesOpen, setEntitiesOpen] = useState(false);
   const [accordionValues, setAccordionValues] = useState([
@@ -29,6 +30,8 @@ export default function ProductSidebar() {
   };
   const handleDeleteFreeTrial = async () => {
     setProduct({ ...product, free_trial: null });
+    mutate();
+    toast.success("Free trial deleted");
   };
 
   const isCustomerProductView = notNullish(customer);

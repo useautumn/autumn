@@ -46,20 +46,22 @@ export const formatIntervalText = ({
   interval,
   intervalCount,
   billingInterval,
+  isBillingInterval = false,
 }: {
   interval?: EntInterval;
-
   billingInterval?: BillingInterval;
   intervalCount?: number;
+  isBillingInterval?: boolean;
 }) => {
   const finalInterval = interval ?? billingInterval;
   if (finalInterval == null) {
     return "";
   }
-  if (
-    finalInterval === EntInterval.Lifetime ||
-    finalInterval === BillingInterval.OneOff
-  ) {
+
+  if (finalInterval === BillingInterval.OneOff) {
+    return "one off";
+  }
+  if (finalInterval === EntInterval.Lifetime) {
     return "no reset";
   }
   if (intervalCount && intervalCount > 1) {

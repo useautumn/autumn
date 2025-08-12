@@ -11,6 +11,7 @@ import {
   getFeatureNameWithCapital,
   Organization,
   Price,
+  ProductItemInterval,
   UsagePriceConfig,
 } from "@autumn/shared";
 import {
@@ -25,6 +26,7 @@ import {
 import { getFeatureQuantity } from "../customers/cusProducts/cusProductUtils.js";
 import { formatAmount } from "@/utils/formatUtils.js";
 import { getIntervalString } from "../products/productUtils/productResponseUtils/getProductItemDisplay.js";
+import { billingToItemInterval } from "../products/product-items/itemIntervalUtils.js";
 
 const getSingularAndPlural = (feature: Feature) => {
   const singular = getFeatureName({
@@ -73,11 +75,16 @@ export const formatFixedPrice = ({
   const config = price.config as FixedPriceConfig;
   const amount = formatAmount({ org, amount: config.amount });
 
-  // const intervalStr = getIntervalString({});
+  const intervalStr = getIntervalString({
+    interval: billingToItemInterval(config.interval) as ProductItemInterval,
+    intervalCount: config.interval_count || 1,
+    prefix: "",
+  });
+
   if (config.interval == BillingInterval.OneOff) {
     return `${amount}`;
   } else {
-    return `${amount} / ${config.interval}`;
+    return `${amount} / ${intervalStr}`;
   }
 };
 

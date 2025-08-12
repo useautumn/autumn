@@ -50,7 +50,8 @@ export const freeTrialsAreSame = ({
     ft1.length === ft2.length &&
     ft1.unique_fingerprint === ft2.unique_fingerprint &&
     ft1.duration === ft2.duration &&
-    ft1.card_required === ft2.card_required
+    ft1.card_required === ft2.card_required &&
+    ft1.is_default_trial === ft2.is_default_trial
   );
 };
 

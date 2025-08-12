@@ -88,16 +88,16 @@ describe(`${chalk.yellowBright("basic4: Testing attach monthly add on")}`, () =>
       (e: any) =>
         e.feature_id === features.metered1.id &&
         e.interval ==
-          products.monthlyAddOnMetered1.entitlements.metered1.interval,
+          products.monthlyAddOnMetered1.entitlements.metered1.interval
     );
 
     expect(monthlyMetered1Balance!.balance).to.equal(
-      proMetered1! + monthlyQuantity,
+      proMetered1! + monthlyQuantity
     );
 
     expect(cusRes.add_ons).to.have.lengthOf(1);
     const monthlyAddOnId = cusRes.add_ons.find(
-      (a: any) => a.id === products.monthlyAddOnMetered1.id,
+      (a: any) => a.id === products.monthlyAddOnMetered1.id
     );
 
     expect(monthlyAddOnId).to.exist;
@@ -108,14 +108,14 @@ describe(`${chalk.yellowBright("basic4: Testing attach monthly add on")}`, () =>
     const res: any = await AutumnCli.entitled(customerId, features.metered1.id);
 
     const metered1Balance = res!.balances.find(
-      (b: any) => b.feature_id === features.metered1.id,
+      (b: any) => b.feature_id === features.metered1.id
     );
 
     const proMetered1Amt = products.pro.entitlements.metered1.allowance;
     const monthlyAddOnMetered1Amt = monthlyQuantity;
 
     expect(metered1Balance!.balance).to.equal(
-      proMetered1Amt! + monthlyAddOnMetered1Amt,
+      proMetered1Amt! + monthlyAddOnMetered1Amt
     );
   });
 });
