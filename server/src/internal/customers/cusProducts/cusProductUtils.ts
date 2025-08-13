@@ -38,7 +38,10 @@ import { getExistingCusProducts } from "./cusProductUtils/getExistingCusProducts
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { cusProductToPrices } from "./cusProductUtils/convertCusProduct.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
-import { isDefaultTrial, isDefaultTrialFullProduct } from "@/internal/products/productUtils/classifyProduct.js";
+import {
+	isDefaultTrial,
+	isDefaultTrialFullProduct,
+} from "@/internal/products/productUtils/classifyProduct.js";
 import { initStripeCusAndProducts } from "../handlers/handleCreateCustomer.js";
 import { handleAddProduct } from "../attach/attachFunctions/addProductFlow/handleAddProduct.js";
 import { newCusToAttachParams } from "../attach/attachUtils/attachParams/convertToParams.js";
@@ -145,13 +148,34 @@ export const activateDefaultProduct = async ({
 	});
 
 	// Look for a paid default trial first, then fall back to free default
-	let defaultProd = defaultProducts.find((p) => p.group === productGroup && isDefaultTrialFullProduct({ product: p }));
-	console.log(defaultProd, "defaultProd");
+	let defaultProd = defaultProducts.find(
+		(p) =>
+			p.group === productGroup &&
+			isDefaultTrialFullProduct({ product: p })
+	);
 
-	// If no paid default trial, look for a free default
-	if (!defaultProd) {
-		defaultProd = defaultProducts.find((p) => p.group === productGroup && isFreeProduct(p.prices));
-		if (!defaultProd) return false;
+	let defaultableProducts = {
+		free: defaultProducts.filter(
+			(p) => p.group === productGroup && isFreeProduct(p.prices)
+		),
+		paid: defaultProducts.filter(
+			(p) =>
+				p.group === productGroup &&
+				isDefaultTrialFullProduct({ product: p })
+		),
+	};
+
+	console.log("Found defaultable products:", {
+		free: defaultableProducts.free.map((p) => p.name),
+		paid: defaultableProducts.paid.map((p) => p.name),
+	});
+
+	if (defaultableProducts.paid.length > 0) {
+		defaultProd = defaultableProducts.paid[0];
+	} else if (defaultableProducts.free.length > 0) {
+		defaultProd = defaultableProducts.free[0];
+	} else {
+		return false;
 	}
 
 	if (curCusProduct?.internal_product_id == defaultProd.internal_id) {
@@ -206,6 +230,20 @@ export const activateDefaultProduct = async ({
 		// });
 
 		// console.log(`   ✅ activated default product: ${defaultProd.group}`);
+		return true;
+	} else if (isDefaultTrial && defaultableProducts.free.length > 0) {
+		defaultProd = defaultableProducts.free[0];
+
+		await handleAddProduct({
+			req,
+			attachParams: newCusToAttachParams({
+				req,
+				newCus: fullCus,
+				products: [defaultProd],
+				stripeCli,
+			}),
+		});
+
 		return true;
 	}
 };
