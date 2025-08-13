@@ -201,6 +201,17 @@ export const activateDefaultProduct = async ({
 	// If the default product is not a paid trial, add it to the customer
 	// This is so you don't get two free trials
 	if (!isDefaultTrial) {
+		// Check if the default product already exists to prevent duplicates
+		const existingDefaultProduct = fullCus.customer_products.find(
+			(cp) => cp.product.internal_id === defaultProd!.internal_id && 
+					(cp.status === CusProductStatus.Active || cp.status === CusProductStatus.PastDue)
+		);
+		
+		if (existingDefaultProduct) {
+			logger.info(`Default product ${defaultProd!.name} already exists for customer`);
+			return false;
+		}
+
 		await handleAddProduct({
 			req,
 			attachParams: newCusToAttachParams({
@@ -234,6 +245,17 @@ export const activateDefaultProduct = async ({
 	} else if (isDefaultTrial && defaultableProducts.free.length > 0) {
 		defaultProd = defaultableProducts.free[0];
 
+		// Check if the free default product already exists to prevent duplicates
+		const existingFreeProduct = fullCus.customer_products.find(
+			(cp) => cp.product.internal_id === defaultProd!.internal_id && 
+					(cp.status === CusProductStatus.Active || cp.status === CusProductStatus.PastDue)
+		);
+		
+		if (existingFreeProduct) {
+			logger.info(`Free default product ${defaultProd!.name} already exists for customer`);
+			return false;
+		}
+
 		await handleAddProduct({
 			req,
 			attachParams: newCusToAttachParams({
@@ -245,7 +267,7 @@ export const activateDefaultProduct = async ({
 		});
 
 		return true;
-	}
+	};
 };
 
 export const expireAndActivate = async ({

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Run current file
 # npx tsx scripts/alex.ts
-filename=$1
+filename="$1"
 
 
 # Check if the file path contains "shell"
