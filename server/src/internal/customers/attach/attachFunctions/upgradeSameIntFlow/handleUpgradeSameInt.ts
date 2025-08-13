@@ -2,7 +2,10 @@ import {
   AttachParams,
   AttachResultSchema,
 } from "@/internal/customers/cusProducts/AttachParams.js";
-import { attachParamToCusProducts } from "../../attachUtils/convertAttachParams.js";
+import {
+  attachParamsToCurCusProduct,
+  attachParamToCusProducts,
+} from "../../attachUtils/convertAttachParams.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
@@ -24,13 +27,11 @@ export const handleUpgradeSameInterval = async ({
   attachParams: AttachParams;
   config: AttachConfig;
 }) => {
-  const { curMainProduct: curCusProduct } = attachParamToCusProducts({
-    attachParams,
-  });
+  const curCusProduct = attachParamsToCurCusProduct({ attachParams });
 
   const stripeSubs = await getStripeSubs({
     stripeCli: attachParams.stripeCli,
-    subIds: curCusProduct!.subscription_ids || [],
+    subIds: curCusProduct?.subscription_ids || [],
     expand: ["items.data.price.tiers"],
   });
 

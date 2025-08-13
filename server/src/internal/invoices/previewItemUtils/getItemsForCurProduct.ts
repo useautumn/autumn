@@ -53,7 +53,7 @@ export const getItemsForCurProduct = async ({
   const curPrices = cusProductToPrices({ cusProduct: curCusProduct });
 
   let items: PreviewLineItem[] = [];
-  let onTrial = isTrialing(curMainProduct!);
+  let onTrial = isTrialing(curCusProduct);
 
   for (const sub of stripeSubs) {
     for (const item of sub.items.data) {
