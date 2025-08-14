@@ -113,20 +113,11 @@ export const EntitiesDropdownContent = () => {
         </DialogTrigger>
         <CustomDialogContent>
           <CreateFeature
-            // isFromEntitlement={false}
-            // setShowFeatureCreate={() => {}}
-            // setSelectedFeature={() => {}}
             setOpen={setCreateFeatureOpen}
             open={createFeatureOpen}
             entityCreate={true}
           />
         </CustomDialogContent>
-        {/* <DialogContent className="w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Create Entity</DialogTitle>
-          </DialogHeader>
-          
-        </DialogContent> */}
       </Dialog>
     </>
   );
