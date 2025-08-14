@@ -97,12 +97,7 @@ export const ProductItemConfig = () => {
         "flex flex-col gap-6 w-sm transition-all ease-in-out duration-300 !overflow-visible" //modal animations
       )}
     >
-      {isPrice ? (
-        // <FixedPriceConfig show={show} setShow={setShow} />
-        <PriceItemConfig />
-      ) : (
-        <ConfigWithFeature />
-      )}
+      {isPrice ? <PriceItemConfig /> : <ConfigWithFeature />}
     </div>
   );
 };
