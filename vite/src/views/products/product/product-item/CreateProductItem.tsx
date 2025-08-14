@@ -100,6 +100,7 @@ export function CreateProductItem() {
         isUpdate: false,
         handleCreateProductItem,
         stepState,
+        setOpen,
       }}
     >
       <Dialog open={open} onOpenChange={setOpen}>
