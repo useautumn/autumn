@@ -102,7 +102,7 @@ export const CreateItemDialogContent = ({
           handleBack={stepCount > 1 ? popStep : undefined}
         />
       ) : (
-        <div className="flex relative overflow-hidden w-full">
+        <div className="flex relative overflow-y-auto overflow-x-hidden w-full">
           {/* Main Dialog Content */}
           <MainDialogBodyWrapper advancedOpen={advancedOpen}>
             <CustomDialogBody className="!pb-0">
