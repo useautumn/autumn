@@ -228,10 +228,23 @@ export const validateProductItems = ({
       continue;
     }
 
-    if (
-      isFeatureItem(otherItem) ||
-      (item.usage_model && item.usage_model == otherItem?.usage_model)
-    ) {
+    if (isFeatureItem(otherItem) && isFeatureItem(item)) {
+      throw new RecaseError({
+        message: `You're trying to create two items for the same feature (${item.feature_id}) with the same interval. Please make them into one item.`,
+        code: ErrCode.InvalidInputs,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
+
+    if (isFeatureItem(otherItem)) {
+      throw new RecaseError({
+        message: `You have a usage-based price for for this feature (${item.feature_id}). If you're looking to create an overage item (eg. 100 free, then $0.5 thereafter), you should add it to the existing item.`,
+        code: ErrCode.InvalidInputs,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
+
+    if (item.usage_model && item.usage_model == otherItem?.usage_model) {
       throw new RecaseError({
         message: `You're trying to add the same feature (${item.feature_id}), with the same reset interval. You should either change the reset interval of one of the items, or make one of them a prepaid quantity`,
         code: ErrCode.InvalidInputs,

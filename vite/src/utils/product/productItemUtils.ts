@@ -100,3 +100,16 @@ export const shouldShowProrationConfig = ({
   }
   return false;
 };
+
+export const itemsHaveSameInterval = ({
+  item1,
+  item2,
+}: {
+  item1: ProductItem;
+  item2: ProductItem;
+}) => {
+  return (
+    item1.interval == item2.interval &&
+    (item1.interval_count || 1) == (item2.interval_count || 1)
+  );
+};
