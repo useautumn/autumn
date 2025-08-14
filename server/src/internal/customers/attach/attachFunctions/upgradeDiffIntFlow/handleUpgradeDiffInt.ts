@@ -23,6 +23,7 @@ import {
   insertInvoiceFromAttach,
 } from "@/internal/invoices/invoiceUtils.js";
 import { updateSubsDiffInt } from "./updateSubsDiffInt.js";
+import { attachParamsToCurCusProduct } from "../../attachUtils/convertAttachParams.js";
 
 export const handleUpgradeDiffInterval = async ({
   req,
@@ -41,12 +42,12 @@ export const handleUpgradeDiffInterval = async ({
 
   const product = products[0];
 
-  let { curMainProduct: curCusProduct } = getExistingCusProducts({
-    product,
-    cusProducts: cusProducts || [],
-    internalEntityId: attachParams.internalEntityId,
-  });
-
+  // let { curMainProduct: curCusProduct } = getExistingCusProducts({
+  //   product,
+  //   cusProducts: cusProducts || [],
+  //   internalEntityId: attachParams.internalEntityId,
+  // });
+  let curCusProduct = attachParamsToCurCusProduct({ attachParams });
   curCusProduct = curCusProduct!;
 
   const stripeSubs = await getStripeSubs({

@@ -21,6 +21,7 @@ import { createStripeCli } from "./utils.js";
 import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { handleInvoiceUpdated } from "./webhookHandlers/handleInvoiceUpdated.js";
 
 export const stripeWebhookRouter: Router = express.Router();
 
@@ -177,6 +178,15 @@ stripeWebhookRouter.post(
             db,
             org,
             invoiceData: invoice,
+            env,
+            event,
+            req: request,
+          });
+          break;
+
+        case "invoice.updated":
+          await handleInvoiceUpdated({
+            stripeCli,
             env,
             event,
             req: request,

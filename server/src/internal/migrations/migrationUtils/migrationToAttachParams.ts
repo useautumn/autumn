@@ -60,13 +60,6 @@ export const migrationToAttachParams = async ({
 
     // Others
     apiVersion,
-    // successUrl: attachBody.success_url,
-    // invoiceOnly: attachBody.invoice_only,
-    // billingAnchor: attachBody.billing_cycle_anchor,
-    // metadata: attachBody.metadata,
-    // disableFreeTrial: attachBody.free_trial === false || false,
-    // checkoutSessionParams: attachBody.checkout_session_params,
-    // isCustom: attachBody.is_custom,
   };
 
   return attachParams;

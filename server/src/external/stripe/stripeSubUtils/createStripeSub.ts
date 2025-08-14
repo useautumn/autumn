@@ -92,11 +92,16 @@ export const createStripeSub = async ({
         : undefined,
 
       coupon: reward ? reward.id : undefined,
+      expand: ["latest_invoice"],
     });
 
-    if (invoiceOnly && finalizeInvoice) {
-      await stripeCli.invoices.finalizeInvoice(
-        subscription.latest_invoice as string
+    if (
+      invoiceOnly &&
+      finalizeInvoice &&
+      (subscription.latest_invoice as Stripe.Invoice).status === "draft"
+    ) {
+      subscription.latest_invoice = await stripeCli.invoices.finalizeInvoice(
+        (subscription.latest_invoice as Stripe.Invoice).id
       );
     }
 

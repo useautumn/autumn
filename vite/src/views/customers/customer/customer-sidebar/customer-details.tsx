@@ -111,7 +111,7 @@ export const CustomerDetails = ({
                     >
                       <FontAwesomeIcon
                         icon={faStripe}
-                        className="!h-6 text-t2"
+                        className="!h-6 !w-6 text-t2"
                       />
                       <ArrowUpRightFromSquare size={12} className="text-t2" />
                     </Button>

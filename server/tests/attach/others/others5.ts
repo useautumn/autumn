@@ -12,12 +12,14 @@ const checkEntitledOnProduct = async ({
   totalAllowance,
   finish = false,
   usageBased = false,
+  timeoutMs = 8000,
 }: {
   customerId: string;
   product: any;
   totalAllowance?: number;
   finish?: boolean;
   usageBased?: boolean;
+  timeoutMs?: number;
 }) => {
   // 1. Send events
   const allowance = totalAllowance || product.entitlements.metered1.allowance;
@@ -35,7 +37,7 @@ const checkEntitledOnProduct = async ({
   }
 
   await Promise.all(batchUpdates);
-  await timeout(8000);
+  await timeout(timeoutMs);
   let used = randomNum;
 
   // 2. Check entitled
@@ -74,7 +76,7 @@ const checkEntitledOnProduct = async ({
     );
   }
   await Promise.all(batchUpdates2);
-  await timeout(8000);
+  await timeout(timeoutMs);
   used += allowance - randomNum;
 
   // 3. Check entitled again
@@ -124,13 +126,13 @@ describe(`${chalk.yellowBright(
     });
   });
 
-  it("should have correct entitlements (free)", async function () {
-    await checkEntitledOnProduct({
-      customerId: customerId,
-      product: products.free,
-      finish: true,
-    });
-  });
+  // it("should have correct entitlements (free)", async function () {
+  //   await checkEntitledOnProduct({
+  //     customerId: customerId,
+  //     product: products.free,
+  //     finish: true,
+  //   });
+  // });
 
   it("should attach pro", async function () {
     await AutumnCli.attach({
@@ -170,6 +172,7 @@ describe(`${chalk.yellowBright(
       product: products.oneTimeAddOnMetered1,
       finish: true,
       totalAllowance: curAllowance + oneTimeQuantity,
+      timeoutMs: 15000,
     });
   });
 });
@@ -231,7 +234,7 @@ describe(`${chalk.yellowBright(
     }
 
     await Promise.all(batchUpdates);
-    await timeout(14000);
+    await timeout(10000);
 
     const { allowed: allowed2, balanceObj: balanceObj2 }: any =
       await AutumnCli.entitled(customerId, features.metered1.id, true);

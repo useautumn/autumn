@@ -696,6 +696,7 @@ export const runUpdateBalanceTask = async ({
       entityId,
     });
 
+    // console.time("refreshCusCache");
     await refreshCusCache({
       db,
       customerId,
@@ -703,6 +704,7 @@ export const runUpdateBalanceTask = async ({
       env,
       entityId,
     });
+    // console.timeEnd("refreshCusCache");
 
     if (!cusEnts || cusEnts.length === 0) {
       return;

@@ -2,9 +2,15 @@ import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { StatusCodes } from "http-status-codes";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
-import { AttachBranch, AttachErrCode, UsagePriceConfig } from "@autumn/shared";
+import {
+  AttachBranch,
+  AttachConfig,
+  AttachErrCode,
+  UsagePriceConfig,
+} from "@autumn/shared";
 import { AttachBody } from "@autumn/shared";
-import { AttachConfig, AttachFlags } from "../models/AttachFlags.js";
+import { AttachFlags } from "../models/AttachFlags.js";
+
 import {
   getEntOptions,
   priceIsOneOffAndTiered,
@@ -25,8 +31,10 @@ import { Decimal } from "decimal.js";
 const handleNonCheckoutErrors = ({
   flags,
   action,
+  config,
 }: {
   flags: AttachFlags;
+  config: AttachConfig;
   action: string;
 }) => {
   const { isPublic, forceCheckout, noPaymentMethod } = flags;
@@ -47,14 +55,22 @@ const handleNonCheckoutErrors = ({
       message: `Not allowed to ${action} because customer has no payment method on file`,
       code: ErrCode.InvalidRequest,
     });
+  } else if (config.invoiceCheckout) {
+    throw new RecaseError({
+      message: `Not allowed to ${action} when using 'invoice': true`,
+      code: ErrCode.InvalidRequest,
+      statusCode: StatusCodes.BAD_REQUEST,
+    });
   }
 };
 
 const handlePrepaidErrors = async ({
   attachParams,
+  config,
   useCheckout = false,
 }: {
   attachParams: AttachParams;
+  config: AttachConfig;
   useCheckout?: boolean;
 }) => {
   const { prices, entitlements, optionsList } = attachParams;
@@ -69,7 +85,10 @@ const handlePrepaidErrors = async ({
       let options = getEntOptions(optionsList, priceEnt);
 
       // 1. If not checkout, quantity should be defined
-      if (!useCheckout && nullOrUndefined(options?.quantity)) {
+
+      const regularCheckout = useCheckout && !config.invoiceCheckout;
+
+      if (!regularCheckout && nullOrUndefined(options?.quantity)) {
         throw new RecaseError({
           message: `Pass in 'quantity' for feature ${priceEnt.feature_id} in options`,
           code: ErrCode.InvalidOptions,
@@ -197,6 +216,8 @@ export const handleAttachErrors = async ({
 }) => {
   const { onlyCheckout } = config;
 
+  // Invoice no payment enabled: onlyCheckout
+
   if (onlyCheckout || flags.isPublic) {
     let upgradeDowngradeFlows = [
       AttachBranch.Upgrade,
@@ -206,6 +227,7 @@ export const handleAttachErrors = async ({
     if (upgradeDowngradeFlows.includes(branch)) {
       handleNonCheckoutErrors({
         flags,
+        config,
         action: "perform upgrade or downgrade",
       });
     }
@@ -218,6 +240,7 @@ export const handleAttachErrors = async ({
       handleNonCheckoutErrors({
         flags,
         action: "update current product",
+        config,
       });
     }
   }
@@ -236,6 +259,7 @@ export const handleAttachErrors = async ({
 
   await handlePrepaidErrors({
     attachParams,
+    config,
     useCheckout: onlyCheckout,
   });
 

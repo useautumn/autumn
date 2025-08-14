@@ -8,10 +8,14 @@ export const addSubItemsToRemove = async ({
   cusProduct,
   itemSet,
 }: {
-  sub: Stripe.Subscription;
+  sub?: Stripe.Subscription | null;
   cusProduct: FullCusProduct;
   itemSet: ItemSet;
 }) => {
+  if (!sub) {
+    return;
+  }
+
   for (const item of sub.items.data) {
     let shouldRemove = subItemInCusProduct({
       cusProduct,

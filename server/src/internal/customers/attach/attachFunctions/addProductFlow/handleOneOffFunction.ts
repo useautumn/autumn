@@ -106,7 +106,7 @@ export const handleOneOffFunction = async ({
 
   // Create invoice
   logger.info("1. Creating invoice");
-  const stripeInvoice = await stripeCli.invoices.create({
+  let stripeInvoice = await stripeCli.invoices.create({
     customer: customer.processor.id!,
     auto_advance: false,
     currency: org.default_currency!,
@@ -117,6 +117,8 @@ export const handleOneOffFunction = async ({
           },
         ]
       : undefined,
+    collection_method: attachParams.invoiceOnly ? "send_invoice" : undefined,
+    days_until_due: attachParams.invoiceOnly ? 30 : undefined,
   });
 
   logger.info("2. Creating invoice items");
@@ -126,6 +128,23 @@ export const handleOneOffFunction = async ({
       customer: customer.processor.id!,
       invoice: stripeInvoice.id,
     } as any);
+  }
+
+  if (config.invoiceCheckout) {
+    if (stripeInvoice.status === "draft") {
+      stripeInvoice = await stripeCli.invoices.finalizeInvoice(
+        stripeInvoice.id
+      );
+    }
+
+    await insertInvoiceFromAttach({
+      db: req.db,
+      attachParams,
+      invoiceId: stripeInvoice.id,
+      logger,
+    });
+
+    return { invoices: [stripeInvoice], subs: [], anchorToUnix: undefined };
   }
 
   // Create invoice items
