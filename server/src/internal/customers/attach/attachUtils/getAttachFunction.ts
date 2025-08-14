@@ -25,6 +25,7 @@ import { deleteCurrentScheduledProduct } from "./deleteCurrentScheduledProduct.j
 import { handleOneOffFunction } from "../attachFunctions/addProductFlow/handleOneOffFunction.js";
 import { handleUpgradeSameInterval } from "../attachFunctions/upgradeSameIntFlow/handleUpgradeSameInt.js";
 import { CusProductService } from "../../cusProducts/CusProductService.js";
+import { handleCreateInvoiceCheckout } from "../../add-product/handleCreateInvoiceCheckout.js";
 
 /* 
 1. If from new version, free trial should just carry over
@@ -217,6 +218,14 @@ export const runAttachFunction = async ({
   }
 
   if (attachFunction == AttachFunction.CreateCheckout) {
+    if (config.invoiceCheckout) {
+      return await handleCreateInvoiceCheckout({
+        req,
+        res,
+        attachParams,
+        config,
+      });
+    }
     return await handleCreateCheckout({
       req,
       res,

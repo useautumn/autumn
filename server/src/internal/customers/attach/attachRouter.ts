@@ -1,6 +1,11 @@
 import { Router } from "express";
 import RecaseError from "@/utils/errorUtils.js";
-import { APIVersion, BillingType, FullCusProduct } from "@autumn/shared";
+import {
+  APIVersion,
+  AttachConfig,
+  BillingType,
+  FullCusProduct,
+} from "@autumn/shared";
 import { ErrCode } from "@/errors/errCodes.js";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 
@@ -22,6 +27,7 @@ import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice
 import {
   notNullish,
   notNullOrUndefined,
+  nullish,
   nullOrUndefined,
 } from "@/utils/genUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -35,14 +41,17 @@ import { handleAttachPreview } from "./handleAttachPreview/handleAttachPreview.j
 import { handleAttach } from "./handleAttach.js";
 import { handleCheckout } from "./checkout/handleCheckout.js";
 import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
+import { attachParamsToCurCusProduct } from "./attachUtils/convertAttachParams.js";
 
 export const attachRouter: Router = Router();
 
 export const handlePrepaidErrors = async ({
   attachParams,
+  config,
   useCheckout = false,
 }: {
   attachParams: AttachParams;
+  config: AttachConfig;
   useCheckout?: boolean;
 }) => {
   const { prices, entitlements, optionsList } = attachParams;
@@ -57,7 +66,8 @@ export const handlePrepaidErrors = async ({
       let options = getEntOptions(optionsList, priceEnt);
 
       // 1. If not checkout, quantity should be defined
-      if (!useCheckout && nullOrUndefined(options?.quantity)) {
+      const regularCheckout = useCheckout && !config.invoiceCheckout;
+      if (!regularCheckout && nullOrUndefined(options?.quantity)) {
         throw new RecaseError({
           message: `Pass in 'quantity' for feature ${priceEnt.feature_id} in options`,
           code: ErrCode.InvalidOptions,
@@ -161,6 +171,7 @@ export const checkStripeConnections = async ({
   }
 
   const batchProductUpdates = [];
+
   if (createCus) {
     batchProductUpdates.push(
       createStripeCusIfNotExists({
@@ -172,6 +183,7 @@ export const checkStripeConnections = async ({
       })
     );
   }
+
   for (const product of products) {
     batchProductUpdates.push(
       checkStripeProductExists({
@@ -207,6 +219,9 @@ export const createStripePrices = async ({
   const { prices, entitlements, products, org, stripeCli } = attachParams;
 
   const batchPriceUpdates = [];
+
+  // const curCusProduct = attachParamsToCurCusProduct({ attachParams });
+
   for (const price of prices) {
     let product = getProductForPrice(price, products);
 

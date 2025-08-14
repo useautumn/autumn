@@ -10,6 +10,7 @@ import {
   cusProductsToCusPrices,
 } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
 import { getCusBalances } from "./getCusBalances.js";
+import { ACTIVE_STATUSES } from "../../cusProducts/CusProductService.js";
 
 export const getCusFeaturesResponse = async ({
   cusProducts,
@@ -26,7 +27,9 @@ export const getCusFeaturesResponse = async ({
 
   const balances = await getCusBalances({
     cusEntsWithCusProduct: cusEnts,
-    cusPrices: cusProductsToCusPrices({ cusProducts }),
+    cusPrices: cusProductsToCusPrices({
+      cusProducts,
+    }),
     org,
     entity,
     apiVersion,

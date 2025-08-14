@@ -66,8 +66,9 @@ export const getAttachParams = async ({
     // Others
     apiVersion,
     successUrl: attachBody.success_url,
-    invoiceOnly: attachBody.invoice_only || attachBody.invoice,
-    finalizeInvoice: attachBody.invoice,
+    invoiceOnly: attachBody.invoice,
+    // || attachBody.invoice_only
+
     billingAnchor: attachBody.billing_cycle_anchor,
     metadata: attachBody.metadata,
     disableFreeTrial: attachBody.free_trial === false || false,

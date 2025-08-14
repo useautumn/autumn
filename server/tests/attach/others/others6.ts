@@ -93,7 +93,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach with customer ID and
       customer_id: internalCustomerId,
       entity_id: internalEntityId,
       product_id: pro.id,
-      invoice_only: true,
+      invoice: true,
+      enable_product_immediately: true,
     });
 
     const customer = await autumn.customers.get(internalCustomerId);

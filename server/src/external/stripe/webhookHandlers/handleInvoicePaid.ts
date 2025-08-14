@@ -22,6 +22,7 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
 import { handleInvoicePaidDiscount } from "./handleInvoicePaidDiscount.js";
+import { handleInvoiceCheckoutPaid } from "@/internal/customers/attach/attachFunctions/invoiceCheckoutPaid/handleInvoiceCheckoutPaid.js";
 
 const handleOneOffInvoicePaid = async ({
   db,
@@ -92,12 +93,12 @@ const convertToChargeAutomatically = async ({
     logger.info(`Converting to charge automatically`);
     // 1. Get payment intent
     const paymentIntent = await stripeCli.paymentIntents.retrieve(
-      invoice.payment_intent as string,
+      invoice.payment_intent as string
     );
 
     // 2. Get payment method
     const paymentMethod = await stripeCli.paymentMethods.retrieve(
-      paymentIntent.payment_method as string,
+      paymentIntent.payment_method as string
     );
 
     await stripeCli.paymentMethods.attach(paymentMethod.id, {
@@ -113,7 +114,7 @@ const convertToChargeAutomatically = async ({
         });
       } catch (error) {
         logger.warn(
-          `Convert to charge automatically: error updating subscription ${sub.id}`,
+          `Convert to charge automatically: error updating subscription ${sub.id}`
         );
         logger.warn(error);
       }
@@ -153,6 +154,17 @@ export const handleInvoicePaid = async ({
     stripeId: invoiceData.id,
   });
 
+  if (invoice.metadata?.autumn_metadata_id) {
+    await handleInvoiceCheckoutPaid({
+      req,
+      org,
+      env,
+      db,
+      stripeCli,
+      invoice,
+    });
+  }
+
   await handleInvoicePaidDiscount({
     db,
     expandedInvoice: invoice,
@@ -174,7 +186,7 @@ export const handleInvoicePaid = async ({
       // TODO: Send alert
       if (invoice.livemode) {
         logger.warn(
-          `invoice.paid: customer product not found for invoice ${invoice.id}`,
+          `invoice.paid: customer product not found for invoice ${invoice.id}`
         );
       }
       return;
@@ -199,7 +211,7 @@ export const handleInvoicePaid = async ({
       let invoiceItems = await getInvoiceItems({
         stripeInvoice: invoice,
         prices: activeCusProducts.flatMap((p) =>
-          p.customer_prices.map((cpr: FullCustomerPrice) => cpr.price),
+          p.customer_prices.map((cpr: FullCustomerPrice) => cpr.price)
         ),
         logger,
       });

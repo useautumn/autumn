@@ -1,24 +1,26 @@
+import chalk from "chalk";
+import Stripe from "stripe";
+
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import { APIVersion, AppEnv, Organization } from "@autumn/shared";
-import chalk from "chalk";
-import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts, replaceItems } from "../utils.js";
+import { addPrefixToProducts } from "../utils.js";
 import {
   constructProduct,
   constructRawProduct,
 } from "@/utils/scriptUtils/createTestProducts.js";
 import {
-  constructArrearProratedItem,
   constructFeatureItem,
+  constructPrepaidItem,
 } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { completeInvoiceCheckout } from "tests/utils/stripeUtils/completeInvoiceCheckout.js";
 import { expect } from "chai";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
+import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
 
 export let pro = constructProduct({
   items: [
@@ -31,25 +33,24 @@ export let pro = constructProduct({
 });
 
 export let addOn = constructRawProduct({
-  id: "add_on_1",
+  id: "addOn",
   items: [
-    constructFeatureItem({
+    constructPrepaidItem({
       featureId: TestFeature.Messages,
-      includedUsage: 200,
+      billingUnits: 100,
+      price: 10,
+      isOneOff: true,
     }),
   ],
-  isAddOn: true,
 });
 
-const testCase = "addOn1";
-
-describe(`${chalk.yellowBright(`${testCase}: Testing free add on, and updating free add on`)}`, () => {
+const testCase = "checkout7";
+describe(`${chalk.yellowBright(`${testCase}: Testing invoice checkout with one off product`)}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_2 });
   let testClockId: string;
   let db: DrizzleCli, org: Organization, env: AppEnv;
   let stripeCli: Stripe;
-
   let curUnix = new Date().getTime();
 
   before(async function () {
@@ -87,72 +88,54 @@ describe(`${chalk.yellowBright(`${testCase}: Testing free add on, and updating f
     testClockId = testClockId1!;
   });
 
-  it("should should attach pro product, then add on product", async function () {
-    await attachAndExpectCorrect({
-      autumn,
-      db,
-      org,
-      env,
-      stripeCli,
-      customerId,
-      product: pro,
-    });
-  });
-
-  it("should should attach add on product", async function () {
-    const preview = await autumn.attachPreview({
-      customer_id: customerId,
-      product_id: addOn.id,
-    });
-
+  it("should attach pro product, then add on product via invoice checkout", async function () {
     await autumn.attach({
       customer_id: customerId,
+      product_id: pro.id,
+    });
+
+    const options = [
+      {
+        quantity: 200,
+        feature_id: TestFeature.Messages,
+      },
+    ];
+
+    const res2 = await autumn.checkout({
+      customer_id: customerId,
       product_id: addOn.id,
+      invoice: true,
+      options,
+    });
+
+    expect(res2.url).to.exist;
+
+    await completeInvoiceCheckout({
+      url: res2.url!,
     });
 
     const customer = await autumn.customers.get(customerId);
 
-    expect(customer.products.length).to.equal(3);
     expectProductAttached({
       customer,
       product: addOn,
     });
-    expectProductAttached({
-      customer,
-      product: pro,
-    });
-  });
 
-  const customItems = replaceItems({
-    items: addOn.items,
-    featureId: TestFeature.Messages,
-    newItem: constructFeatureItem({
-      featureId: TestFeature.Messages,
-      includedUsage: 400,
-    }),
-  });
-
-  it("should update add on product", async function () {
-    const preview = await autumn.attachPreview({
-      customer_id: customerId,
-      product_id: addOn.id,
-      is_custom: true,
-      items: customItems,
-    });
-
-    await autumn.attach({
-      customer_id: customerId,
-      product_id: addOn.id,
-      is_custom: true,
-      items: customItems,
-    });
-
-    const customer = await autumn.customers.get(customerId);
-
-    expect(customer.products.length).to.equal(3);
-    expectProductAttached({
+    expectFeaturesCorrect({
       customer,
       product: addOn,
+      otherProducts: [pro],
+      options,
     });
   });
+
+  // it("should have no URL returned if try to attach add on (with invoice true)", async function () {
+  //   const res = await autumn.checkout({
+  //     customer_id: customerId,
+  //     product_id: addOn.id,
+  //     invoice: true,
+  //   });
+
+  //   expect(res.url).to.not.exist;
+  // });
 });
