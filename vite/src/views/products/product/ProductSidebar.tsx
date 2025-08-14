@@ -30,8 +30,6 @@ export default function ProductSidebar() {
   };
   const handleDeleteFreeTrial = async () => {
     setProduct({ ...product, free_trial: null });
-    mutate();
-    toast.success("Free trial deleted");
   };
 
   const isCustomerProductView = notNullish(customer);

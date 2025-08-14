@@ -48,14 +48,6 @@ export const CreateFreeTrial = ({
         card_required: freeTrial.card_required,
       },
     });
-
-    try {
-      await mutate();
-      toast.success("Free trial created");
-    } catch (error) {
-      toast.error("Failed to create free trial");
-    }
-
     // if (autoSave) {
     //   handleAutoSave({
     //     axiosInstance,
