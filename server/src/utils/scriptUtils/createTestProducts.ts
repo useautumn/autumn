@@ -90,6 +90,7 @@ export const constructProduct = ({
   isDefault = true,
   isAddOn = false,
   freeTrial,
+  forcePaidDefault = false,
 }: {
   id?: string;
   items: ProductItem[];
@@ -102,6 +103,7 @@ export const constructProduct = ({
   isDefault?: boolean;
   isAddOn?: boolean;
   freeTrial?: CreateFreeTrial;
+  forcePaidDefault?: boolean;
 }) => {
   let price = 0;
   if (type == "pro") {
@@ -150,7 +152,7 @@ export const constructProduct = ({
           : keyToTitle(type),
     items,
     is_add_on: isAddOn,
-    is_default: type == "free" && isDefault,
+    is_default: (type == "free" && isDefault) || (forcePaidDefault),
     version: 1,
     group: "",
     free_trial:
