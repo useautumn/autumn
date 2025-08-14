@@ -204,7 +204,7 @@ export const activateDefaultProduct = async ({
 		// Check if the default product already exists to prevent duplicates
 		const existingDefaultProduct = fullCus.customer_products.find(
 			(cp) => cp.product.internal_id === defaultProd!.internal_id && 
-					(cp.status === CusProductStatus.Active || cp.status === CusProductStatus.PastDue)
+					(cp.status === CusProductStatus.Active || cp.status === CusProductStatus.PastDue || cp.status === CusProductStatus.Trialing)
 		);
 		
 		if (existingDefaultProduct) {
