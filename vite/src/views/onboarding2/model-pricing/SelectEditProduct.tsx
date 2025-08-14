@@ -48,7 +48,12 @@ export const SelectEditProduct = () => {
               return (
                 <DropdownMenuItem
                   key={p.id}
-                  onClick={() => setProduct(p)}
+                  onClick={() => {
+                    setProduct(p);
+                    setQueryStates({
+                      productId: p.id,
+                    });
+                  }}
                   className="flex items-center justify-between group"
                 >
                   {p.name}

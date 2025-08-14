@@ -14,7 +14,7 @@ import { toast } from "sonner";
 
 export const ConfigWithFeature = () => {
   const { features, product, setProduct } = useProductContext();
-  const { item, isUpdate, setOpen } = useProductItemContext();
+  const { item, isUpdate, setOpen, warning } = useProductItemContext();
 
   const isBooleanFeature =
     getFeature(item.feature_id, features)?.type === FeatureType.Boolean;
@@ -42,11 +42,6 @@ export const ConfigWithFeature = () => {
     setOpen(false);
   };
 
-  const showWarning = () => {
-    const isFeature = isFeatureItem(item);
-    return isFeature && otherItemIndex !== -1 && !isUpdate;
-  };
-
   return (
     <div className="flex flex-col gap-4 text-sm w-full">
       <div>
@@ -56,16 +51,17 @@ export const ConfigWithFeature = () => {
 
       {!isBooleanFeature && <FeatureConfig />}
 
-      {showWarning() && (
+      {warning && (
         <WarningBox className="py-2">
           <div className="flex flex-col gap-2 relative">
             <div>
-              You already have a usage-based price for this feature. If you're
+              {/* You already have a usage-based price for this feature. If you're
               looking to make it an overage (eg. 100 free, then $0.5
-              thereafter), you should add it to the existing item.
+              thereafter), you should add it to the existing item. */}
+              {warning}
             </div>
 
-            <div className="flex w-full p-0">
+            {/* <div className="flex w-full p-0">
               <Button
                 variant="ghost"
                 size="sm"
@@ -75,7 +71,7 @@ export const ConfigWithFeature = () => {
               >
                 Add to existing item
               </Button>
-            </div>
+            </div> */}
           </div>
         </WarningBox>
       )}
