@@ -24,7 +24,7 @@ All this without having to handle webhooks, upgrades/downgrades, cancellations o
 
 **Self Hosted**: If you'd like to self-host Autumn:
 
-1. Make sure you have `node.js` and `pnpm` installed
+1. Make sure you have `bun` installed
 2. Install the project dependencies
 ```bash
 bun install
@@ -53,7 +53,7 @@ That's it! You should be able to see the Autumn dashboard on `http://localhost:3
 
 ## Troubleshooting
 
-If you encounter a `SyntaxError: Unexpected end of JSON input` error when running `pnpm run setup` again after previously running it, you may need to clear your database tables first. This is a [known issue](https://github.com/drizzle-team/drizzle-orm/issues/4529) that can occur when running database migrations multiple times.
+If you encounter a `SyntaxError: Unexpected end of JSON input` error when running `bun setup` again after previously running it, you may need to clear your database tables first. This is a [known issue](https://github.com/drizzle-team/drizzle-orm/issues/4529) that can occur when running database migrations multiple times.
 
 To resolve this:
 
