@@ -26,35 +26,24 @@ export const handleSubscriptionScheduleCanceled = async ({
     env,
   });
 
-  if (cusProductsOnSchedule.length === 0) {
-    console.log("   - subscription_schedule.canceled: no cus products found");
-    return;
-  }
+  if (cusProductsOnSchedule.length === 0) return;
 
-  console.log("Handling subscription_schedule.canceled");
-  console.log(
-    "   - Found",
-    cusProductsOnSchedule.length,
-    "cus products on schedule",
-  );
   for (const cusProduct of cusProductsOnSchedule) {
-    console.log("   - Cus product", cusProduct.product.name, cusProduct.status);
-
     const stripeCli = createStripeCli({ org, env });
 
     if (cusProduct.status === CusProductStatus.Scheduled) {
-      let otherScheduledIds = cusProduct.scheduled_ids?.filter(
-        (id: string) => id !== schedule.id,
-      );
+      // let otherScheduledIds = cusProduct.scheduled_ids?.filter(
+      //   (id: string) => id !== schedule.id
+      // );
 
-      for (const id of otherScheduledIds || []) {
-        try {
-          await stripeCli.subscriptionSchedules.cancel(id);
-          console.log("   - Cancelled scheduled id", id);
-        } catch (error) {
-          console.error("Failed to cancel subscription schedule:", id, error);
-        }
-      }
+      // for (const id of otherScheduledIds || []) {
+      //   try {
+      //     await stripeCli.subscriptionSchedules.cancel(id);
+      //     console.log("   - Cancelled scheduled id", id);
+      //   } catch (error) {
+      //     console.error("Failed to cancel subscription schedule:", id, error);
+      //   }
+      // }
 
       await CusProductService.delete({
         db,
@@ -67,7 +56,7 @@ export const handleSubscriptionScheduleCanceled = async ({
         cusProductId: cusProduct.id,
         updates: {
           scheduled_ids: cusProduct.scheduled_ids?.filter(
-            (id: string) => id !== schedule.id,
+            (id: string) => id !== schedule.id
           ),
         },
       });
@@ -90,7 +79,7 @@ export const handleSubscriptionScheduleCanceled = async ({
   } catch (error) {
     logger.error(
       `handleSubScheduleCanceled: failed to delete from subscriptions table`,
-      error,
+      error
     );
   }
 };

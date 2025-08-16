@@ -29,7 +29,13 @@ export const getFullStripeInvoice = async ({
   const invoice = await stripeCli.invoices.retrieve(stripeId, {
     expand: ["discounts", "discounts.coupon"],
   });
+
   return invoice;
+};
+
+export const invoiceToSubId = ({ invoice }: { invoice: Stripe.Invoice }) => {
+  const subId = invoice.parent?.subscription_details?.subscription;
+  return subId as string | undefined;
 };
 
 export const payForInvoice = async ({
@@ -88,7 +94,7 @@ export const payForInvoice = async ({
     };
   } catch (error: any) {
     logger.error(
-      `❌ Stripe error: Failed to pay invoice: ${error?.message || error}`,
+      `❌ Stripe error: Failed to pay invoice: ${error?.message || error}`
     );
 
     if (voidIfFailed) {
@@ -143,13 +149,13 @@ export const updateInvoiceIfExists = async ({
   // TODO: Can optimize this function...
   const existingInvoice = await InvoiceService.getByStripeId({
     db,
-    stripeId: invoice.id,
+    stripeId: invoice.id!,
   });
 
   if (existingInvoice) {
     await InvoiceService.updateByStripeId({
       db,
-      stripeId: invoice.id,
+      stripeId: invoice.id!,
       updates: {
         status: invoice.status as InvoiceStatus,
         hosted_invoice_url: invoice.hosted_invoice_url,
@@ -181,7 +187,7 @@ export const getInvoiceDiscounts = ({
     let autumnDiscounts = expandedInvoice.discounts.map((discount: any) => {
       const amountOff = discount.coupon.amount_off;
       const amountUsed = totalDiscountAmounts?.find(
-        (item) => item.discount === discount.id,
+        (item) => item.discount === discount.id
       )?.amount;
 
       let autumnDiscount: InvoiceDiscount = {

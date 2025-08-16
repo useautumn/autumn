@@ -24,11 +24,12 @@ const client = new Hyperbrowser({
 export const completeCheckoutForm = async (
   url: string,
   overrideQuantity?: number,
-  promoCode?: string
+  promoCode?: string,
+  isLocal?: boolean
 ) => {
   let browser;
 
-  if (process.env.NODE_ENV === "development") {
+  if (process.env.NODE_ENV === "development" && !isLocal) {
     const session = await client.sessions.create();
     browser = await puppeteer.connect({
       browserWSEndpoint: session!.wsEndpoint,

@@ -109,12 +109,12 @@ export const getContUseNewItems = async ({
 
 export const getContUseInvoiceItems = async ({
   cusProduct,
-  stripeSubs,
+  sub,
   attachParams,
   logger,
 }: {
   cusProduct?: FullCusProduct;
-  stripeSubs?: Stripe.Subscription[];
+  sub?: Stripe.Subscription;
   attachParams: AttachParams;
   logger: any;
 }) => {
@@ -122,10 +122,10 @@ export const getContUseInvoiceItems = async ({
   const cusEnts = cusProduct ? cusProduct.customer_entitlements : [];
 
   const product = attachParamsToProduct({ attachParams });
-  const allIntervalsSame = intervalsAreSame({ attachParams });
-  const curItems = stripeSubs
+  // const allIntervalsSame = intervalsAreSame({ attachParams });
+  const curItems = sub
     ? await getCurContUseItems({
-        stripeSubs,
+        sub,
         attachParams,
       })
     : [];
@@ -151,7 +151,7 @@ export const getContUseInvoiceItems = async ({
       ? getRelatedCusPrice(prevCusEnt, cusPrices)!
       : undefined;
 
-    if (!allIntervalsSame || !prevCusEnt || !stripeSubs) {
+    if (!prevCusEnt || !sub) {
       const newItem = await getContUseNewItems({
         price,
         ent,
@@ -176,14 +176,6 @@ export const getContUseInvoiceItems = async ({
       (item) => item.price_id === prevCusPrice?.price.id
     );
 
-    let sub = stripeSubs!.find((sub) => {
-      let subInterval = subToAutumnInterval(sub);
-      return intervalsSame({
-        intervalA: price.config,
-        intervalB: subInterval,
-      });
-    });
-
     let {
       oldItem,
       newItems: newItems_,
@@ -205,6 +197,8 @@ export const getContUseInvoiceItems = async ({
     newItems.push(...newItems_.filter((item) => item.amount !== 0));
     replaceables.push(...replaceables_);
   }
+
+  // console.log("Replaceables:", replaceables);
 
   return {
     oldItems,

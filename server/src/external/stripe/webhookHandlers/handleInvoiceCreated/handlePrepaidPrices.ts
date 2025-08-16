@@ -18,6 +18,10 @@ import {
   RolloverConfig,
 } from "@autumn/shared";
 import Stripe from "stripe";
+import {
+  getEarliestPeriodEnd,
+  subToPeriodStartEnd,
+} from "../../stripeSubUtils/convertSubUtils.js";
 
 export const handlePrepaidPrices = async ({
   db,
@@ -38,7 +42,9 @@ export const handlePrepaidPrices = async ({
   invoice: Stripe.Invoice;
   logger: any;
 }) => {
-  const isNewPeriod = invoice.period_start !== usageSub.current_period_start;
+  const { start, end } = subToPeriodStartEnd({ sub: usageSub });
+  const isNewPeriod = invoice.period_start !== start;
+
   if (!isNewPeriod) {
     return;
   }
@@ -80,9 +86,11 @@ export const handlePrepaidPrices = async ({
 
   const ent = cusEnt.entitlement;
 
+  // const end = getEarliestPeriodEnd({ sub: usageSub });
+
   let rolloverUpdate = getRolloverUpdates({
     cusEnt,
-    nextResetAt: usageSub.current_period_end * 1000,
+    nextResetAt: end * 1000,
   });
   // console.log("🔍 rolloverUpdate", rolloverUpdate);
 
@@ -159,7 +167,7 @@ export const handlePrepaidPrices = async ({
     id: cusEnt.id,
     updates: {
       ...resetUpdate,
-      next_reset_at: usageSub.current_period_end * 1000,
+      next_reset_at: end * 1000,
     },
   });
 };

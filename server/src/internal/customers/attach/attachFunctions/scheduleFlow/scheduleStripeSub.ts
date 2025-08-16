@@ -29,12 +29,12 @@ export const scheduleStripeSub = async ({
   let subItems = items.filter(
     (item: any, index: number) =>
       index >= prices.length ||
-      prices[index].config!.interval !== BillingInterval.OneOff,
+      prices[index].config!.interval !== BillingInterval.OneOff
   );
   let oneOffItems = items.filter(
     (item: any, index: number) =>
       index < prices.length &&
-      prices[index].config!.interval === BillingInterval.OneOff,
+      prices[index].config!.interval === BillingInterval.OneOff
   );
 
   const newSubscriptionSchedule = await stripeCli.subscriptionSchedules.create({
@@ -129,7 +129,7 @@ export const handleNewScheduleForItemSet = async ({
     ...otherSubItems.map((sub: any) => ({
       price: sub.price.id,
       quantity: sub.quantity,
-    })),
+    }))
   );
 
   // 3. Create new schedule

@@ -6,12 +6,13 @@ import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts, runAttachTest } from "../utils.js";
+import { addPrefixToProducts } from "../utils.js";
 import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addWeeks } from "date-fns";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
 const testCase = "upgrade5";
 
@@ -89,7 +90,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with prepaid singl
   ];
 
   it("should attach pro product (prepaid single use)", async function () {
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: pro,
@@ -116,7 +117,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with prepaid singl
       waitForSeconds: 20,
     });
 
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: premium,

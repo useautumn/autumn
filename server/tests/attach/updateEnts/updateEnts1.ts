@@ -6,7 +6,7 @@ import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts, replaceItems, runAttachTest } from "../utils.js";
+import { addPrefixToProducts, replaceItems } from "../utils.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -17,6 +17,7 @@ import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
 import runUpdateEntsTest from "./expectUpdateEnts.js";
 import { timeout } from "@/utils/genUtils.js";
 import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
 const testCase = "updateEnts1";
 
@@ -76,7 +77,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing update ents (changing inclu
   });
 
   it("should attach pro product", async function () {
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: pro,
@@ -168,7 +169,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing update ents (changing inclu
     const invoice = customer.invoices![0];
     expect(invoice.total).to.equal(
       invoiceTotal,
-      "invoice total after 1 cycle should be correct",
+      "invoice total after 1 cycle should be correct"
     );
   });
 });

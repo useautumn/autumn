@@ -3,6 +3,7 @@ import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { CusProductService } from "../../cusProducts/CusProductService.js";
 import { cancelFutureProductSchedule } from "../../change-product/scheduleUtils.js";
 import { attachParamToCusProducts } from "./convertAttachParams.js";
+import { cancelScheduledProduct } from "../../cancel/cancelScheduledProduct.js";
 
 export const deleteCurrentScheduledProduct = async ({
   req,
@@ -19,13 +20,13 @@ export const deleteCurrentScheduledProduct = async ({
 }) => {
   const stripeCli = attachParams.stripeCli;
 
-  const { curScheduledProduct } = attachParamToCusProducts({
+  const { curScheduledProduct, curMainProduct } = attachParamToCusProducts({
     attachParams,
   });
 
   if (curScheduledProduct) {
     logger.info(
-      `deleteCurrentScheduledProduct: cancelling scheduled - ${curScheduledProduct.product.name}`,
+      `deleteCurrentScheduledProduct: cancelling scheduled - ${curScheduledProduct.product.name}`
     );
 
     // 2. Delete scheduled product
@@ -35,17 +36,26 @@ export const deleteCurrentScheduledProduct = async ({
     });
   }
 
-  if (attachFunc == AttachFunction.Renew || curScheduledProduct) {
-    await cancelFutureProductSchedule({
+  if (curScheduledProduct || attachFunc == AttachFunction.Renew) {
+    await cancelScheduledProduct({
       req,
-      db: req.db,
-      org,
-      cusProducts: attachParams.cusProducts!,
-      product: attachParams.products[0],
-      stripeCli,
-      logger,
-      env: attachParams.customer.env,
-      internalEntityId: attachParams.internalEntityId || undefined,
+      curScheduledProduct,
+      fullCus: attachParams.customer,
+      curMainProduct,
     });
   }
+
+  // if (attachFunc == AttachFunction.Renew || curScheduledProduct) {
+  //   await cancelFutureProductSchedule({
+  //     req,
+  //     db: req.db,
+  //     org,
+  //     cusProducts: attachParams.cusProducts!,
+  //     product: attachParams.products[0],
+  //     stripeCli,
+  //     logger,
+  //     env: attachParams.customer.env,
+  //     internalEntityId: attachParams.internalEntityId || undefined,
+  //   });
+  // }
 };

@@ -13,6 +13,7 @@ import { nullish } from "@/utils/genUtils.js";
 import {
   getFullStripeInvoice,
   getInvoiceDiscounts,
+  invoiceToSubId,
   updateInvoiceIfExists,
 } from "../stripeInvoiceUtils.js";
 import { getStripeSubs } from "../stripeSubUtils.js";
@@ -151,7 +152,7 @@ export const handleInvoicePaid = async ({
   const stripeCli = createStripeCli({ org, env });
   const invoice = await getFullStripeInvoice({
     stripeCli,
-    stripeId: invoiceData.id,
+    stripeId: invoiceData.id!,
   });
 
   if (invoice.metadata?.autumn_metadata_id) {
@@ -173,11 +174,12 @@ export const handleInvoicePaid = async ({
     logger,
   });
 
-  if (invoice.subscription) {
+  const subId = invoiceToSubId({ invoice });
+  if (subId) {
     // Get customer product
     const activeCusProducts = await CusProductService.getByStripeSubId({
       db,
-      stripeSubId: invoice.subscription as string,
+      stripeSubId: subId,
       orgId: org.id,
       env,
     });

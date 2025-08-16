@@ -20,7 +20,7 @@ import { ExtendedRequest } from "@/utils/models/Request.js";
 import { handleCheckoutSub } from "./handleCheckoutCompleted/handleCheckoutSub.js";
 import { handleRemainingSets } from "./handleCheckoutCompleted/handleRemainingSets.js";
 import { getOptionsFromCheckoutSession } from "./handleCheckoutCompleted/getOptionsFromCheckout.js";
-import { getEntityInvoiceDescription } from "@/internal/entities/entityUtils/entityInvoiceUtils.js";
+import { getEarliestPeriodEnd } from "../stripeSubUtils/convertSubUtils.js";
 
 export const handleCheckoutSessionCompleted = async ({
   req,
@@ -100,7 +100,7 @@ export const handleCheckoutSessionCompleted = async ({
   });
 
   // Create other subscriptions
-  const { subs, invoiceIds } = await handleRemainingSets({
+  const { invoiceIds } = await handleRemainingSets({
     stripeCli,
     db,
     org,
@@ -114,15 +114,12 @@ export const handleCheckoutSessionCompleted = async ({
 
   for (const product of products) {
     const anchorToUnix = checkoutSub
-      ? checkoutSub.current_period_end * 1000
+      ? getEarliestPeriodEnd({ sub: checkoutSub! }) * 1000
       : undefined;
-
-    const subIds = subs.length > 0 ? subs.map((s) => s.id) : undefined;
-
     await createFullCusProduct({
       db,
       attachParams: attachToInsertParams(attachParams, product),
-      subscriptionIds: subIds,
+      subscriptionIds: [checkoutSub?.id!],
       anchorToUnix,
       scenario: AttachScenario.New,
       logger,

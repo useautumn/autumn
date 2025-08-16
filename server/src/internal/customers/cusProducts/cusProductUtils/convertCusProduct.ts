@@ -142,6 +142,60 @@ export const cusProductsToSchedules = ({
   });
 };
 
+export const cusProductToSchedule = async ({
+  cusProduct,
+  stripeCli,
+}: {
+  cusProduct: FullCusProduct;
+  stripeCli: Stripe;
+}) => {
+  const subScheduleIds = cusProduct?.scheduled_ids || [];
+  if (subScheduleIds.length === 0) {
+    return {
+      schedule: null,
+      prices: [],
+    };
+  }
+
+  const schedule = await stripeCli.subscriptionSchedules.retrieve(
+    subScheduleIds[0]
+  );
+
+  if (schedule.status == "canceled") {
+    return {
+      schedule: null,
+      prices: [],
+    };
+  }
+
+  const batchPricesGet = [];
+  for (const item of schedule.phases[0].items) {
+    batchPricesGet.push(stripeCli.prices.retrieve(item.price as string));
+  }
+  const prices = await Promise.all(batchPricesGet);
+
+  return {
+    schedule,
+    prices,
+  };
+};
+
+export const cusProductToSub = async ({
+  cusProduct,
+  stripeCli,
+}: {
+  cusProduct?: FullCusProduct;
+  stripeCli: Stripe;
+}) => {
+  const subId = cusProduct?.subscription_ids?.[0];
+  if (!subId) {
+    return undefined;
+  }
+  const sub = await stripeCli.subscriptions.retrieve(subId);
+
+  return sub;
+};
+
 export const cusProductsToStripeSubs = ({
   cusProducts,
   stripeCli,

@@ -14,6 +14,7 @@ import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductU
 import { attachParamsToProduct } from "../convertAttachParams.js";
 import { subToAutumnInterval } from "@/external/stripe/utils.js";
 import { intervalsAreSame } from "../getAttachConfig.js";
+import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 
 export const filterContUsageProrations = async ({
   sub,
@@ -33,29 +34,37 @@ export const filterContUsageProrations = async ({
   });
   let allPrices = [...curPrices, ...newProduct.prices];
 
-  const upcomingLines = await stripeCli.invoices.listUpcomingLines({
-    subscription: sub.id,
+  // const upcomingLines = await stripeCli.invoices.listUpcomingLines({
+  //   subscription: sub.id,
+  // });
+
+  const pendingItems = await stripeCli.invoiceItems.list({
+    pending: true,
+    customer: sub.customer as string,
   });
 
   const intervalSet = subToAutumnInterval(sub);
 
-  for (const item of upcomingLines.data) {
+  for (const item of pendingItems.data) {
+    // console.log("LINE ITEM:", item);
     if (!item.proration) continue;
 
     let price = findPriceInStripeItems({
       prices: allPrices,
-      subItem: item as any,
+      lineItem: item,
       billingType: BillingType.InArrearProrated,
     });
 
     if (!price) continue;
+
     logger.info(
       `Deleting ii: ${item.description} - ${item.amount / 100} (${intervalSet.interval}, ${intervalSet.intervalCount})`
     );
 
     await stripeCli.invoiceItems.del(
+      item.id
       // @ts-ignore -- Stripe types are not correct
-      item.parent.subscription_item_details.invoice_item
+      // item.parent.subscription_item_details.invoice_item
     );
   }
 };
@@ -63,14 +72,16 @@ export const filterContUsageProrations = async ({
 export const createAndFilterContUseItems = async ({
   attachParams,
   curMainProduct,
-  stripeSubs,
+  // stripeSubs,
+  sub,
   logger,
   interval,
   intervalCount,
 }: {
   attachParams: AttachParams;
   curMainProduct: FullCusProduct;
-  stripeSubs: Stripe.Subscription[];
+  // stripeSubs: Stripe.Subscription[];
+  sub: Stripe.Subscription;
   logger: any;
   interval?: BillingInterval;
   intervalCount?: number;
@@ -87,18 +98,9 @@ export const createAndFilterContUseItems = async ({
   let { newItems, oldItems } = await getContUseInvoiceItems({
     attachParams,
     cusProduct: curMainProduct!,
-    stripeSubs,
+    sub,
     logger,
   });
-
-  let sub =
-    stripeSubs.find((sub) => {
-      return intervalsSame({
-        intervalA: { interval: interval!, intervalCount: intervalCount! },
-        intervalB: subToAutumnInterval(sub),
-      });
-      // subToAutumnInterval(sub) == interval
-    }) || stripeSubs[0];
 
   await filterContUsageProrations({
     sub,
@@ -138,6 +140,7 @@ export const createAndFilterContUseItems = async ({
       `Adding invoice item: ${item.description}, ${item.description}, interval: ${interval}`
     );
 
+    const { start, end } = subToPeriodStartEnd({ sub });
     await stripeCli.invoiceItems.create({
       customer: customer.processor?.id!,
       amount: Math.round(item.amount * 100),
@@ -146,7 +149,7 @@ export const createAndFilterContUseItems = async ({
       subscription: sub.id,
       period: {
         start: Math.floor(now / 1000),
-        end: sub.current_period_end,
+        end: end,
       },
     });
   }

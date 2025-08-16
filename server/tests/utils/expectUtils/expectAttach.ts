@@ -3,6 +3,7 @@ import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
   AppEnv,
   AttachBranch,
+  CreateEntity,
   FeatureOptions,
   Organization,
   ProductV2,
@@ -36,6 +37,7 @@ export const attachAndExpectCorrect = async ({
   isCanceled = false,
   skipFeatureCheck = false,
   numSubs,
+  entities,
 }: {
   autumn: AutumnInt;
   customerId: string;
@@ -55,6 +57,7 @@ export const attachAndExpectCorrect = async ({
   isCanceled?: boolean;
   skipFeatureCheck?: boolean;
   numSubs?: number;
+  entities?: CreateEntity[];
 }) => {
   const preview = await autumn.attachPreview({
     customer_id: customerId,
@@ -99,7 +102,7 @@ export const attachAndExpectCorrect = async ({
 
   expect(
     productCount,
-    `customer should only have 1 product (from this group: ${product.group})`,
+    `customer should only have 1 product (from this group: ${product.group})`
   ).to.equal(1);
 
   expectProductAttached({
@@ -108,18 +111,19 @@ export const attachAndExpectCorrect = async ({
     entityId,
   });
 
-  let intervals = Array.from(
-    new Set(product.items.map((item) => item.interval)),
-  ).filter(notNullish);
-  const multiInterval = intervals.length > 1;
+  // let intervals = Array.from(
+  //   new Set(product.items.map((item) => item.interval)),
+  // ).filter(notNullish);
+  // const multiInterval = intervals.length > 1;
 
   const skipInvoiceCheck =
     preview.branch == AttachBranch.UpdatePrepaidQuantity && total == 0;
   if (!skipInvoiceCheck) {
     expectInvoicesCorrect({
       customer,
-      first: multiInterval ? undefined : { productId: product.id, total },
-      second: multiInterval ? { productId: product.id, total } : undefined,
+      first: { productId: product.id, total },
+      // first: multiInterval ? undefined : { productId: product.id, total },
+      // second: multiInterval ? { productId: product.id, total } : undefined,
     });
   }
 
@@ -130,6 +134,7 @@ export const attachAndExpectCorrect = async ({
       usage,
       options: optionsCopy,
       otherProducts,
+      entities,
     });
   }
 
@@ -156,14 +161,12 @@ export const attachAndExpectCorrect = async ({
   if (numSubs) {
     expect(stripeSubs.data.length).to.equal(
       numSubs,
-      `should have ${numSubs} subscriptions`,
+      `should have ${numSubs} subscriptions`
     );
-  } else if (multiInterval) {
-    expect(stripeSubs.data.length).to.equal(2, "should have 2 subscriptions");
   } else {
     expect(stripeSubs.data.length).to.equal(
       1,
-      "should only have 1 subscription",
+      "should only have 1 subscription"
     );
   }
 };

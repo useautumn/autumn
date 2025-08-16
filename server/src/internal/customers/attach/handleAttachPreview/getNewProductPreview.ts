@@ -1,4 +1,10 @@
-import { AttachBranch, AttachConfig, BillingInterval } from "@autumn/shared";
+import {
+  AttachBranch,
+  AttachConfig,
+  BillingInterval,
+  FullProduct,
+  FreeTrial,
+} from "@autumn/shared";
 import { getOptions } from "@/internal/api/entitled/checkUtils.js";
 import { getItemsForNewProduct } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
@@ -10,10 +16,75 @@ import {
   getNextStartOfMonthUnix,
 } from "@/internal/products/prices/billingIntervalUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
-import { getSmallestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
+import {
+  getLargestInterval,
+  getSmallestInterval,
+} from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { getMergeCusProduct } from "../attachFunctions/addProductFlow/getMergeCusProduct.js";
-import { notNullish, nullish } from "@/utils/genUtils.js";
+import { formatUnixToDateTime, notNullish, nullish } from "@/utils/genUtils.js";
+import {
+  getLatestPeriodEnd,
+  subToPeriodStartEnd,
+} from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+
+const getNextCycleItems = async ({
+  newProduct,
+  attachParams,
+  anchorToUnix,
+  branch,
+  withPrepaid,
+  logger,
+  config,
+}: {
+  newProduct: FullProduct;
+  attachParams: AttachParams;
+  anchorToUnix?: number;
+  branch: AttachBranch;
+  withPrepaid?: boolean;
+  logger: any;
+  config: AttachConfig;
+}) => {
+  // 1. If one off, return null
+  if (branch == AttachBranch.OneOff || isFreeProduct(newProduct.prices))
+    return null;
+
+  // 2. If free trial
+  let nextCycleAt = undefined;
+  if (attachParams.freeTrial) {
+    nextCycleAt =
+      freeTrialToStripeTimestamp({
+        freeTrial: attachParams.freeTrial,
+        now: attachParams.now,
+      })! * 1000;
+  } else if (anchorToUnix) {
+    // Yearly one
+    const largestInterval = getLargestInterval({ prices: newProduct.prices });
+    if (largestInterval) {
+      nextCycleAt = getAlignedIntervalUnix({
+        alignWithUnix: anchorToUnix,
+        interval: largestInterval.interval,
+        intervalCount: largestInterval.intervalCount,
+        now: attachParams.now,
+      });
+    }
+  }
+
+  const items = await getItemsForNewProduct({
+    newProduct,
+    attachParams,
+    now: attachParams.now,
+    logger,
+    withPrepaid,
+    branch,
+    config,
+  });
+
+  return {
+    line_items: items,
+    due_at: nextCycleAt,
+  };
+};
 
 export const getNewProductPreview = async ({
   branch,
@@ -39,87 +110,105 @@ export const getNewProductPreview = async ({
     });
   }
 
-  const { mergeCusProduct, mergeSubs } = await getMergeCusProduct({
+  const { mergeSub } = await getMergeCusProduct({
     attachParams,
     products: [newProduct],
     config,
   });
 
-  if (mergeSubs.length > 0) {
-    anchorToUnix = mergeSubs[0].current_period_end * 1000;
+  if (mergeSub) {
+    const { start } = subToPeriodStartEnd({ sub: mergeSub });
+    // const smallestInterval = getLargestInterval({ prices: newProduct.prices });
+    const smallestInterval = getSmallestInterval({ prices: newProduct.prices });
+    // console.log("New product:", newProduct.prices);
+    // console.log("Smallest interval", smallestInterval);
+
+    if (smallestInterval) {
+      anchorToUnix = addBillingIntervalUnix({
+        unixTimestamp: start * 1000,
+        interval: smallestInterval!.interval,
+        intervalCount: smallestInterval!.intervalCount,
+      });
+    }
   }
 
-  const freeTrial = attachParams.freeTrial;
   const items = await getItemsForNewProduct({
     newProduct,
     attachParams,
     now: attachParams.now,
+    freeTrial: attachParams.freeTrial,
     anchorToUnix,
-    freeTrial,
     logger,
     withPrepaid,
     branch,
     config,
   });
 
-  let dueNextCycle = null;
+  // let dueNextCycle = null;
+  const dueNextCycle = await getNextCycleItems({
+    newProduct,
+    attachParams,
+    anchorToUnix,
+    branch,
+    withPrepaid,
+    logger,
+    config,
+  });
 
-  if (
-    (freeTrial || notNullish(anchorToUnix)) &&
-    branch != AttachBranch.OneOff
-  ) {
-    let nextCycleItems = await getItemsForNewProduct({
-      newProduct,
-      attachParams,
-      now: attachParams.now,
-      logger,
-      withPrepaid,
-      branch,
-      config,
-    });
+  // Show next cycle if free trial or notNullish(anchorToUnix) or branch != one off?
 
-    // let minInterval = getLastInterval({
-    //   prices: newProduct.prices,
-    //   ents: newProduct.entitlements,
-    // });
-    let min = getSmallestInterval({
-      prices: newProduct.prices,
-      ents: newProduct.entitlements,
-    });
+  // if (
+  //   (freeTrial || notNullish(anchorToUnix)) &&
+  //   branch != AttachBranch.OneOff
+  // ) {
+  //   let nextCycleItems = await getItemsForNewProduct({
+  //     newProduct,
+  //     attachParams,
+  //     now: attachParams.now,
+  //     logger,
+  //     withPrepaid,
+  //     branch,
+  //     config,
+  //   });
 
-    let getAligned = notNullish(anchorToUnix) && notNullish(min);
+  //   // let minInterval = getLastInterval({
+  //   //   prices: newProduct.prices,
+  //   //   ents: newProduct.entitlements,
+  //   // });
+  //   let min = getSmallestInterval({
+  //     prices: newProduct.prices,
+  //     ents: newProduct.entitlements,
+  //   });
 
-    let dueAt = freeTrial
-      ? freeTrialToStripeTimestamp({
-          freeTrial,
-          now: attachParams.now,
-        })! * 1000
-      : getAligned
-        ? getAlignedIntervalUnix({
-            alignWithUnix: anchorToUnix!,
-            interval: min!.interval,
-            intervalCount: min!.intervalCount,
-            now: attachParams.now,
-          })
-        : notNullish(min)
-          ? addBillingIntervalUnix({
-              unixTimestamp: attachParams.now || Date.now(),
-              interval: min!.interval,
-              intervalCount: min!.intervalCount,
-            })
-          : undefined;
+  //   let getAligned = notNullish(anchorToUnix) && notNullish(min);
 
-    dueNextCycle = !nullish(dueAt)
-      ? {
-          line_items: nextCycleItems,
-          due_at: dueAt,
-        }
-      : undefined;
-  }
+  //   let dueAt = freeTrial
+  //     ? freeTrialToStripeTimestamp({
+  //         freeTrial,
+  //         now: attachParams.now,
+  //       })! * 1000
+  //     : getAligned
+  //       ? getAlignedIntervalUnix({
+  //           alignWithUnix: anchorToUnix!,
+  //           interval: min!.interval,
+  //           intervalCount: min!.intervalCount,
+  //           now: attachParams.now,
+  //         })
+  //       : notNullish(min)
+  //         ? addBillingIntervalUnix({
+  //             unixTimestamp: attachParams.now || Date.now(),
+  //             interval: min!.interval,
+  //             intervalCount: min!.intervalCount,
+  //           })
+  //         : undefined;
 
-  const dueTodayAmt = items.reduce((acc, item) => {
-    return acc + (item.amount ?? 0);
-  }, 0);
+  //   dueNextCycle = !nullish(dueAt)
+  //     ? {
+  //         line_items: nextCycleItems,
+  //         due_at: dueAt,
+  //       }
+  //     : undefined;
+  // }
 
   let options = getOptions({
     prodItems: mapToProductItems({
@@ -132,31 +221,35 @@ export const getNewProductPreview = async ({
     now: attachParams.now || Date.now(),
   });
 
-  // Next cycle at
-  if (!dueNextCycle) {
-    if (!isFreeProduct(newProduct.prices) && branch != AttachBranch.OneOff) {
-      let min = getSmallestInterval({
-        prices: newProduct.prices,
-        ents: newProduct.entitlements,
-      });
-      dueNextCycle = {
-        line_items: items.filter((item) => {
-          let price = newProduct.prices.find(
-            (price) => price.id == item.price_id
-          );
-          return (
-            price?.config.interval == min!.interval &&
-            (price?.config.interval_count || 1) == (min!.intervalCount || 1)
-          );
-        }),
-        due_at: addBillingIntervalUnix({
-          unixTimestamp: attachParams.now || Date.now(),
-          interval: min!.interval,
-          intervalCount: min!.intervalCount,
-        }),
-      };
-    }
-  }
+  const dueTodayAmt = items.reduce((acc, item) => {
+    return acc + (item.amount ?? 0);
+  }, 0);
+
+  // // Next cycle at
+  // if (!dueNextCycle) {
+  //   if (!isFreeProduct(newProduct.prices) && branch != AttachBranch.OneOff) {
+  //     let min = getSmallestInterval({
+  //       prices: newProduct.prices,
+  //       ents: newProduct.entitlements,
+  //     });
+  //     dueNextCycle = {
+  //       line_items: items.filter((item) => {
+  //         let price = newProduct.prices.find(
+  //           (price) => price.id == item.price_id
+  //         );
+  //         return (
+  //           price?.config.interval == min!.interval &&
+  //           (price?.config.interval_count || 1) == (min!.intervalCount || 1)
+  //         );
+  //       }),
+  //       due_at: addBillingIntervalUnix({
+  //         unixTimestamp: attachParams.now || Date.now(),
+  //         interval: min!.interval,
+  //         intervalCount: min!.intervalCount,
+  //       }),
+  //     };
+  //   }
+  // }
 
   return {
     currency: attachParams.org.default_currency,
@@ -165,7 +258,7 @@ export const getNewProductPreview = async ({
       total: dueTodayAmt,
     },
     due_next_cycle: dueNextCycle,
-    free_trial: freeTrial,
+    free_trial: attachParams.freeTrial,
     options,
   };
 };

@@ -20,7 +20,8 @@ import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts, runAttachTest } from "../../attach/utils.js";
+import { addPrefixToProducts } from "../../attach/utils.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import {
   constructArrearProratedItem,
@@ -106,7 +107,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing per entity features
     await autumn.entities.create(customerId, firstEntities);
     usage += firstEntities.length;
 
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: pro,
@@ -150,7 +151,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing per entity features
     });
 
     expect(res.balance).to.equal(
-      (perEntityItem.included_usage as number) * usage,
+      (perEntityItem.included_usage as number) * usage
     );
 
     // @ts-ignore

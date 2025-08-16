@@ -33,8 +33,13 @@ import { calculateProrationAmount } from "../prorationUtils.js";
 import { getPricecnPrice } from "../../products/pricecn/pricecnUtils.js";
 import { toProductItem } from "../../products/product-items/mapToItem.js";
 import { formatAmount } from "@/utils/formatUtils.js";
-import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
 import {
+  formatUnixToDate,
+  formatUnixToDateTime,
+  notNullish,
+} from "@/utils/genUtils.js";
+import {
+  addBillingIntervalUnix,
   getAlignedIntervalUnix,
   subtractBillingIntervalUnix,
 } from "../../products/prices/billingIntervalUtils.js";
@@ -51,7 +56,6 @@ import {
 import { sortPricesByType } from "@/internal/products/prices/priceUtils/sortPriceUtils.js";
 import { getMergeCusProduct } from "@/internal/customers/attach/attachFunctions/addProductFlow/getMergeCusProduct.js";
 import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
-import { intervalsDifferent } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 
 export const getDefaultPriceStr = ({
   org,
@@ -117,6 +121,11 @@ export const getProration = ({
     intervalCount,
   });
 
+  // console.log(`Anchor to unix: ${formatUnixToDateTime(anchorToUnix)}`);
+  // console.log(`Start: ${formatUnixToDateTime(start)}`);
+  // console.log(`End: ${formatUnixToDateTime(end)}`);
+  // console.log(`--------------------------------`);
+
   return {
     start,
     end: end!,
@@ -128,11 +137,9 @@ export const getItemsForNewProduct = async ({
   attachParams,
   now,
   proration,
-  interval,
-  intervalCount,
   anchorToUnix,
   freeTrial,
-  stripeSubs,
+  sub,
   logger,
   withPrepaid = false,
   branch,
@@ -145,11 +152,10 @@ export const getItemsForNewProduct = async ({
     start: number;
     end: number;
   };
-  interval?: BillingInterval;
-  intervalCount?: number;
+
   anchorToUnix?: number;
   freeTrial?: FreeTrial | null;
-  stripeSubs?: Stripe.Subscription[];
+  sub?: Stripe.Subscription;
   logger: any;
   withPrepaid?: boolean;
   branch: AttachBranch;
@@ -158,6 +164,8 @@ export const getItemsForNewProduct = async ({
   const { org, features } = attachParams;
   now = now || Date.now();
 
+  // console.log("Anchoring to", formatUnixToDateTime(anchorToUnix));
+
   const items: PreviewLineItem[] = [];
 
   sortPricesByType(newProduct.prices);
@@ -165,21 +173,6 @@ export const getItemsForNewProduct = async ({
   for (const price of newProduct.prices) {
     const ent = getPriceEntitlement(price, newProduct.entitlements);
     const billingType = getBillingType(price.config);
-
-    if (
-      interval &&
-      intervalsDifferent({
-        intervalA: {
-          interval: interval,
-          intervalCount: intervalCount,
-        },
-        intervalB: {
-          interval: price.config.interval,
-          intervalCount: price.config.interval_count,
-        },
-      })
-    )
-      continue;
 
     const finalProration = getProration({
       proration,
@@ -279,7 +272,7 @@ export const getItemsForNewProduct = async ({
 
   let { newItems } = await getContUseInvoiceItems({
     cusProduct,
-    stripeSubs,
+    sub,
     attachParams,
     logger,
   });

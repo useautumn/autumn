@@ -1,29 +1,16 @@
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import {
-  APIVersion,
-  AppEnv,
-  AttachBranch,
-  CreateFreeTrialSchema,
-  CusProductStatus,
-  FreeTrialDuration,
-  Organization,
-  organizations,
-} from "@autumn/shared";
+import { APIVersion, AppEnv, AttachBranch, Organization } from "@autumn/shared";
 import chalk from "chalk";
 import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts, runAttachTest } from "../utils.js";
+import { addPrefixToProducts } from "../utils.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { addDays } from "date-fns";
 import { expect } from "chai";
-import { eq } from "drizzle-orm";
-import { CacheManager } from "@/external/caching/CacheManager.js";
-import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
 

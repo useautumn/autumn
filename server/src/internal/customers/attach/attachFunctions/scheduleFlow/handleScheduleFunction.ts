@@ -17,6 +17,7 @@ import { createFullCusProduct } from "@/internal/customers/add-product/createFul
 import { cusProductsToSchedules } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { attachParamToCusProducts } from "../../attachUtils/convertAttachParams.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
+import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 
 export const handleScheduleFunction = async ({
   req,
@@ -42,7 +43,7 @@ export const handleScheduleFunction = async ({
     subIds: curCusProduct.subscription_ids,
   });
 
-  const latestPeriodEnd = curSubs[0].current_period_end;
+  const latestPeriodEnd = getLatestPeriodEnd({ sub: curSubs[0] });
 
   // 2. Cancel current subscriptions and fetch items from other cus products (to be added to new schedule)
   logger.info("2. Cancelling current subscription (at period end)");

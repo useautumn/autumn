@@ -30,9 +30,6 @@ export const handleAttachPreview = (req: any, res: any) =>
         logger,
       });
 
-      console.log("Branch:", attachPreview.branch);
-      console.log("Func:", attachPreview.func);
-
       res.status(200).json(attachPreview);
 
       return;

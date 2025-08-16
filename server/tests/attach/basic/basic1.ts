@@ -10,11 +10,11 @@ import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { features, products } from "tests/global.js";
 import { compareMainProduct } from "tests/utils/compare.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "../utils.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
 import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { APIVersion } from "@autumn/shared";
+import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
 
 const freeProd = constructProduct({
   type: "free",

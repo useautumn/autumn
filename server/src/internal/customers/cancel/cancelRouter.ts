@@ -6,10 +6,11 @@ import { Router } from "express";
 import { expireCusProduct } from "../handlers/handleCusProductExpired.js";
 import { RELEVANT_STATUSES } from "../cusProducts/CusProductService.js";
 import { nullish } from "@/utils/genUtils.js";
+import { handleCancelProduct } from "./handleCancelProduct.js";
 
-const expireRouter: Router = Router();
+const cancelRouter: Router = Router();
 
-expireRouter.post("", async (req, res) =>
+cancelRouter.post("", async (req, res) =>
   routeHandler({
     req,
     res,
@@ -57,7 +58,15 @@ expireRouter.post("", async (req, res) =>
         });
       }
 
-      await expireCusProduct({
+      // await expireCusProduct({
+      //   req,
+      //   cusProduct,
+      //   fullCus,
+      //   expireImmediately,
+      //   prorate,
+      // });
+
+      await handleCancelProduct({
         req,
         cusProduct,
         fullCus,
@@ -74,4 +83,4 @@ expireRouter.post("", async (req, res) =>
   })
 );
 
-export default expireRouter;
+export default cancelRouter;

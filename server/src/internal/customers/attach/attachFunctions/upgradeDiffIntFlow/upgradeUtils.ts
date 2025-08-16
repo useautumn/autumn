@@ -1,6 +1,8 @@
+import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import Stripe from "stripe";
 
 export const getNextCycle = (stripeSubs: Stripe.Subscription[]) => {
-  const nextCycle = stripeSubs[0].current_period_end * 1000;
+  const { end } = subToPeriodStartEnd({ sub: stripeSubs[0] });
+  const nextCycle = end * 1000;
   return nextCycle;
 };

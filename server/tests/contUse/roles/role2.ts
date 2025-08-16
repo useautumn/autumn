@@ -17,7 +17,8 @@ import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts, runAttachTest } from "../../attach/utils.js";
+import { addPrefixToProducts } from "../../attach/utils.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
@@ -103,7 +104,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing overages for per en
   it("should create initial entities, then attach pro", async function () {
     await autumn.entities.create(customerId, firstEntities);
 
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: pro,
@@ -111,13 +112,12 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing overages for per en
       db,
       org,
       env,
-      skipSubCheck: true,
       entities: firstEntities,
     });
 
     let customer = await autumn.customers.get(customerId);
     expect(customer.features[TestFeature.Messages].included_usage).to.equal(
-      userMessages.included_usage * firstEntities.length,
+      userMessages.included_usage * firstEntities.length
     );
   });
 
@@ -165,7 +165,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing overages for per en
       testClockId,
       advanceTo: addHours(
         addMonths(new Date(), 1),
-        hoursToFinalizeInvoice,
+        hoursToFinalizeInvoice
       ).getTime(),
       waitForSeconds: 30,
     });

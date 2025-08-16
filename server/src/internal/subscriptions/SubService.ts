@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { and, eq, inArray } from "drizzle-orm";
+import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 
 export class SubService {
   static async createSub({ db, sub }: { db: DrizzleCli; sub: Subscription }) {
@@ -47,8 +48,8 @@ export class SubService {
           stripeId ? eq(subscriptions.stripe_id, stripeId) : undefined,
           scheduleId
             ? eq(subscriptions.stripe_schedule_id, scheduleId)
-            : undefined,
-        ),
+            : undefined
+        )
       );
 
     if (data.length == 0) {
@@ -97,11 +98,12 @@ export class SubService {
     db: DrizzleCli;
     stripeSub: Stripe.Subscription;
   }) {
+    const { start, end } = subToPeriodStartEnd({ sub: stripeSub });
     let results = await db
       .update(subscriptions)
       .set({
-        current_period_start: stripeSub.current_period_start,
-        current_period_end: stripeSub.current_period_end,
+        current_period_start: start,
+        current_period_end: end,
       })
       .where(eq(subscriptions.stripe_id, stripeSub.id))
       .returning();

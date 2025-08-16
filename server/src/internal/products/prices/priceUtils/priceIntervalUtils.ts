@@ -141,7 +141,7 @@ export const getSmallestInterval = ({
     return compareBillingIntervals({ configA: a, configB: b });
   });
 
-  const smallestInterval = allIntervals?.[0];
+  const smallestInterval = allIntervals?.[allIntervals.length - 1];
 
   return {
     interval: smallestInterval.interval,

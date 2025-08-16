@@ -6,7 +6,7 @@ import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts, runAttachTest } from "../utils.js";
+import { addPrefixToProducts } from "../utils.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
@@ -14,7 +14,7 @@ import { defaultApiVersion } from "tests/constants.js";
 import { runMigrationTest } from "./runMigrationTest.js";
 import { timeout } from "@/utils/genUtils.js";
 import { expect } from "chai";
-
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 let wordsItem = constructArrearItem({
   featureId: TestFeature.Words,
 });
@@ -84,7 +84,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for pro -> pro wi
   });
 
   it("should attach free product", async function () {
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: pro,

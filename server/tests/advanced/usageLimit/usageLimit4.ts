@@ -20,10 +20,11 @@ import {
   constructPrepaidItem,
 } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
-import { addPrefixToProducts, runAttachTest } from "tests/attach/utils.js";
+import { addPrefixToProducts } from "tests/attach/utils.js";
 import { expect } from "chai";
 import { timeout } from "@/utils/genUtils.js";
 import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
 const messageItem = constructArrearProratedItem({
   featureId: TestFeature.Users,
@@ -84,7 +85,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage limits for cont use i
   });
 
   it("should attach pro product with quantity exceeding usage limit and get an error", async function () {
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: pro,

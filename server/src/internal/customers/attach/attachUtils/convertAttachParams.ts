@@ -45,3 +45,62 @@ export const attachParamsToProduct = ({
     free_trial: freeTrial,
   };
 };
+
+export const paramsToCurSub = async ({
+  attachParams,
+}: {
+  attachParams: AttachParams;
+}) => {
+  const { stripeCli } = attachParams;
+  const curCusProduct = attachParamsToCurCusProduct({ attachParams });
+
+  const subIds = curCusProduct?.subscription_ids || [];
+  if (subIds.length === 0) {
+    return undefined;
+  }
+
+  const sub = await stripeCli.subscriptions.retrieve(subIds[0], {
+    expand: ["items.data.price.tiers"],
+  });
+
+  return sub;
+};
+
+export const paramsToCurSubSchedule = async ({
+  attachParams,
+}: {
+  attachParams: AttachParams;
+}) => {
+  const { stripeCli } = attachParams;
+  const curCusProduct = attachParamsToCurCusProduct({ attachParams });
+
+  const subScheduleIds = curCusProduct?.scheduled_ids || [];
+  if (subScheduleIds.length === 0) {
+    return {
+      schedule: null,
+      prices: [],
+    };
+  }
+
+  const schedule = await stripeCli.subscriptionSchedules.retrieve(
+    subScheduleIds[0]
+  );
+
+  if (schedule.status == "canceled") {
+    return {
+      schedule: null,
+      prices: [],
+    };
+  }
+
+  const batchPricesGet = [];
+  for (const item of schedule.phases[0].items) {
+    batchPricesGet.push(stripeCli.prices.retrieve(item.price as string));
+  }
+  const prices = await Promise.all(batchPricesGet);
+
+  return {
+    schedule,
+    prices,
+  };
+};

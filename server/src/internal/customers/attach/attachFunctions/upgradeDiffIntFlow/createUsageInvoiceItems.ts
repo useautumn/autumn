@@ -1,5 +1,5 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { getUsageBasedSub } from "@/external/stripe/stripeSubUtils.js";
+
 import { subToAutumnInterval } from "@/external/stripe/utils.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
@@ -27,7 +27,8 @@ export const getUsageInvoiceItems = async ({
   logger,
   attachParams,
   cusProduct,
-  stripeSubs,
+  // stripeSubs,
+  sub,
   interval,
   intervalCount,
 }: {
@@ -35,7 +36,8 @@ export const getUsageInvoiceItems = async ({
   logger: any;
   attachParams: AttachParams;
   cusProduct: FullCusProduct;
-  stripeSubs: Stripe.Subscription[];
+  // stripeSubs: Stripe.Subscription[];
+  sub: Stripe.Subscription;
   interval?: BillingInterval;
   intervalCount?: number;
 }) => {
@@ -66,15 +68,16 @@ export const getUsageInvoiceItems = async ({
 
     const cusEnt = getRelatedCusEnt({ cusPrice, cusEnts })!;
 
-    const sub = await getUsageBasedSub({
-      db,
-      stripeCli,
-      stripeSubs,
-      subIds: cusProduct.subscription_ids!,
-      feature: cusEnt.entitlement.feature,
-    });
+    // const sub = await getUsageBasedSub({
+    //   db,
+    //   stripeCli,
+    //   // stripeSubs,
+    //   sub,
+    //   subIds: cusProduct.subscription_ids!,
+    //   feature: cusEnt.entitlement.feature,
+    // });
 
-    if (!sub) continue;
+    // if (!sub) continue;
     if (
       interval &&
       intervalsDifferent({
@@ -94,7 +97,7 @@ export const getUsageInvoiceItems = async ({
         currency: org.default_currency || "usd",
       },
       period: {
-        start: sub.current_period_start,
+        start: sub.items.data[0].current_period_start,
         end: Math.floor((attachParams.now || Date.now()) / 1000),
       },
     };
@@ -112,7 +115,8 @@ export const createUsageInvoiceItems = async ({
   db,
   attachParams,
   cusProduct,
-  stripeSubs,
+  // stripeSubs,
+  sub,
   invoiceId,
   logger,
   interval,
@@ -121,7 +125,8 @@ export const createUsageInvoiceItems = async ({
   db: DrizzleCli;
   attachParams: AttachParams;
   cusProduct: FullCusProduct;
-  stripeSubs: Stripe.Subscription[];
+  // stripeSubs: Stripe.Subscription[];
+  sub: Stripe.Subscription;
   invoiceId?: string;
   logger: any;
   interval?: BillingInterval;
@@ -133,7 +138,8 @@ export const createUsageInvoiceItems = async ({
     db,
     attachParams,
     cusProduct,
-    stripeSubs,
+    // stripeSubs,
+    sub,
     interval,
     intervalCount,
     logger,
@@ -150,7 +156,7 @@ export const createUsageInvoiceItems = async ({
       await stripeCli.invoiceItems.create({
         ...invoiceItem,
         invoice: invoiceId ? invoiceId : undefined,
-        subscription: invoiceId ? undefined : stripeSubs[0].id,
+        subscription: invoiceId ? undefined : sub.id,
         customer: attachParams.customer.processor.id,
       });
     };

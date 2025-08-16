@@ -18,6 +18,10 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getFullStripeSub } from "../stripeSubUtils.js";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
+import {
+  getEarliestPeriodEnd,
+  getEarliestPeriodStart,
+} from "../stripeSubUtils/convertSubUtils.js";
 
 export const handleSubCreated = async ({
   db,
@@ -57,14 +61,16 @@ export const handleSubCreated = async ({
       scheduleId: subscription.schedule as string,
     });
 
+    const earliestPeriodStart = getEarliestPeriodStart({ sub: subscription });
+    const earliestPeriodEnd = getEarliestPeriodEnd({ sub: subscription });
     if (autumnSub) {
       await SubService.updateFromScheduleId({
         db,
         scheduleId: subscription.schedule as string,
         updates: {
           stripe_id: subscription.id,
-          current_period_start: subscription.current_period_start,
-          current_period_end: subscription.current_period_end,
+          current_period_start: earliestPeriodStart,
+          current_period_end: earliestPeriodEnd,
         },
       });
     } else {
@@ -88,8 +94,8 @@ export const handleSubCreated = async ({
           usage_features: subUsageFeatures,
           org_id: org.id,
           env: env,
-          current_period_start: subscription.current_period_start,
-          current_period_end: subscription.current_period_end,
+          current_period_start: earliestPeriodStart,
+          current_period_end: earliestPeriodEnd,
         },
       });
     }

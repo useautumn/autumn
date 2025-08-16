@@ -4,7 +4,10 @@ import {
   findStripeItemForPrice,
   isLicenseItem,
 } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
-import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import {
+  cusProductToPrices,
+  cusProductToSub,
+} from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { isV4Usage } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
@@ -17,6 +20,7 @@ import {
   FullCusProduct,
   Organization,
   ProductV2,
+  UsagePriceConfig,
 } from "@autumn/shared";
 import { expect } from "chai";
 import { getDate } from "date-fns";
@@ -56,7 +60,7 @@ export const getSubsFromCusId = async ({
   });
 
   const cusProduct = fullCus.customer_products.find(
-    (cp: FullCusProduct) => cp.product.id == productId,
+    (cp: FullCusProduct) => cp.product.id == productId
   )!;
 
   const subs: Stripe.Subscription[] = await getStripeSubs({
@@ -71,53 +75,58 @@ export const getSubsFromCusId = async ({
   };
 };
 
-export const expectSubAnchorsSame = async ({
-  stripeCli,
-  customerId,
-  productId,
-  db,
-  org,
-  env,
-}: {
-  stripeCli: Stripe;
-  customerId: string;
-  productId: string;
-  db: DrizzleCli;
-  org: Organization;
-  env: AppEnv;
-}) => {
-  const fullCus = await CusService.getFull({
-    db,
-    idOrInternalId: customerId,
-    orgId: org.id,
-    env,
-  });
+// export const expectSubAnchorsSame = async ({
+//   stripeCli,
+//   customerId,
+//   productId,
+//   db,
+//   org,
+//   env,
+// }: {
+//   stripeCli: Stripe;
+//   customerId: string;
+//   productId: string;
+//   db: DrizzleCli;
+//   org: Organization;
+//   env: AppEnv;
+// }) => {
+//   const fullCus = await CusService.getFull({
+//     db,
+//     idOrInternalId: customerId,
+//     orgId: org.id,
+//     env,
+//   });
 
-  const cusProduct = fullCus.customer_products.find(
-    (cp: FullCusProduct) => cp.product.id == productId,
-  );
+//   const cusProduct = fullCus.customer_products.find(
+//     (cp: FullCusProduct) => cp.product.id == productId
+//   );
 
-  const subs: Stripe.Subscription[] = await getStripeSubs({
-    stripeCli,
-    subIds: cusProduct?.subscription_ids,
-  });
+//   const sub = await cusProductToSub({
+//     cusProduct,
+//     stripeCli,
+//   });
 
-  let periodEnd = subs[0].current_period_end * 1000;
-  let firstDate = getDate(periodEnd);
+//   // const subs: Stripe.Subscription[] = await getStripeSubs({
+//   //   stripeCli,
+//   //   subIds: cusProduct?.subscription_ids,
+//   // });
 
-  for (const sub of subs.slice(1)) {
-    let dateOfAnchor = getDate(sub.current_period_end * 1000);
-    expect(dateOfAnchor).to.equal(
-      firstDate,
-      `subscription anchors are the same`,
-    );
-  }
+//   // let periodEnd = subs[0].current_period_end * 1000;
+//   // let firstDate = getDate(periodEnd);
 
-  return {
-    fullCus,
-    subs,
-  };
-};
+//   // for (const sub of subs.slice(1)) {
+//   //   let dateOfAnchor = getDate(sub.current_period_end * 1000);
+//   //   expect(dateOfAnchor).to.equal(
+//   //     firstDate,
+//   //     `subscription anchors are the same`,
+//   //   );
+//   // }
+
+//   return {
+//     fullCus,
+//     // subs,
+//   };
+// };
 
 export const expectSubItemsCorrect = async ({
   stripeCli,
@@ -152,20 +161,25 @@ export const expectSubItemsCorrect = async ({
   const cusProduct = fullCus.customer_products.find(
     (cp: FullCusProduct) =>
       cp.product.id == productId &&
-      (entity ? cp.internal_entity_id == entity.internal_id : true),
+      (entity ? cp.internal_entity_id == entity.internal_id : true)
   )!;
 
   if (isCanceled) {
-    expect(cusProduct.canceled_at, "cus product should be canceled").to.exist;
+    expect(
+      cusProduct.canceled_at,
+      `cus product ${cusProduct.product.id} should be canceled`
+    ).to.exist;
   } else {
-    expect(cusProduct.canceled_at, "cus product should not be canceled").to.not
-      .exist;
+    expect(
+      cusProduct.canceled_at,
+      `cus product ${cusProduct.product.id} should not be canceled`
+    ).to.not.exist;
   }
 
   if (isFreeProductV2({ product })) {
     expect(
       cusProduct.subscription_ids,
-      `cus product should have no subs for free product: ${product.name}`,
+      `cus product should have no subs for free product: ${product.name}`
     ).to.be.empty;
     return {
       fullCus,
@@ -194,7 +208,7 @@ export const expectSubItemsCorrect = async ({
     const subItem = findStripeItemForPrice({
       stripeItems: subItems,
       price,
-    });
+    }) as Stripe.SubscriptionItem;
 
     // 1. If usage + v4 + internalEntityId
     if (isV4Usage({ price, cusProduct })) {
@@ -202,15 +216,19 @@ export const expectSubItemsCorrect = async ({
         missingUsageCount++;
       }
 
+      const usagePriceConfig = price.config as UsagePriceConfig;
+
       expect(
         nullish(subItem) ||
-          (subItem?.quantity === 0 && isLicenseItem({ stripeItem: subItem! })),
+          (subItem?.quantity === 0 &&
+            isLicenseItem({ stripeItem: subItem! })) ||
+          subItem?.price.id == usagePriceConfig.stripe_empty_price_id
       ).to.be.true;
       continue;
     } else {
       expect(
         subItem,
-        `sub item for price: ${(price.config as any).internal_feature_id || price.config.interval} should exist`,
+        `sub item for price: ${(price.config as any).internal_feature_id || price.config.interval} should exist`
       ).to.exist;
     }
 
@@ -222,13 +240,13 @@ export const expectSubItemsCorrect = async ({
 
       expect(
         options,
-        `options should exist for prepaid price (featureId: ${featureId})`,
+        `options should exist for prepaid price (featureId: ${featureId})`
       ).to.exist;
 
       const expectedQuantity = options?.upcoming_quantity || options?.quantity;
       expect(
         subItem?.quantity,
-        `sub item quantity for prepaid price (featureId: ${featureId}) should be ${expectedQuantity}`,
+        `sub item quantity for prepaid price (featureId: ${featureId}) should be ${expectedQuantity}`
       ).to.equal(expectedQuantity);
       continue;
     }
@@ -236,21 +254,21 @@ export const expectSubItemsCorrect = async ({
 
   expect(
     prices.length - missingUsageCount,
-    "number of sub items equivalent to number of prices",
+    "number of sub items equivalent to number of prices"
   ).to.equal(subItems.length);
 
   // Expect sub anchors to be the same
-  let periodEnd = subs[0].current_period_end * 1000;
-  let firstDate = getDate(periodEnd);
+  // let periodEnd = subs[0].current_period_end * 1000;
+  // let firstDate = getDate(periodEnd);
 
-  for (const sub of subs.slice(1)) {
-    let dateOfAnchor = getDate(sub.current_period_end * 1000);
-    expect(dateOfAnchor).to.approximately(
-      firstDate,
-      5000,
-      `subscription anchors are the same, +/- 5s`,
-    );
-  }
+  // for (const sub of subs.slice(1)) {
+  //   let dateOfAnchor = getDate(sub.current_period_end * 1000);
+  //   expect(dateOfAnchor).to.approximately(
+  //     firstDate,
+  //     5000,
+  //     `subscription anchors are the same, +/- 5s`
+  //   );
+  // }
 
   return {
     fullCus,

@@ -66,47 +66,14 @@ export const handleRemainingSets = async ({
   const itemSets = attachParams.itemSets;
   let remainingSets = itemSets ? itemSets.slice(1) : [];
 
-  let subs: Stripe.Subscription[] = [];
+  const remainingItems = remainingSets.flatMap((set) => set.items);
   let invoiceIds: string[] = [checkoutSession.invoice as string];
 
-  if (checkoutSub) {
-    subs.push(checkoutSub);
-  }
-
-  if (!remainingSets || remainingSets.length == 0 || !checkoutSub) {
-    return {
-      subs,
-      invoiceIds,
-    };
-  }
-
-  const firstSetStart = checkoutSub?.current_period_end;
-
-  for (const itemSet of remainingSets) {
-    const filteredItems = filterUsagePrices({
-      itemSet,
-      attachParams,
+  if (remainingItems.length > 0) {
+    await stripeCli.subscriptions.update(checkoutSub!.id, {
+      items: remainingItems,
     });
-
-    itemSet.items = filteredItems;
-
-    const subscription = (await createStripeSub({
-      db,
-      stripeCli,
-      customer: attachParams.customer,
-      org,
-      itemSet,
-      freeTrial: attachParams.freeTrial, // add free trial to subscription...
-      anchorToUnix: firstSetStart * 1000,
-    })) as Stripe.Subscription;
-
-    subs.push(subscription);
-    const latestInvoice = subscription.latest_invoice as Stripe.Invoice;
-    invoiceIds.push(latestInvoice.id);
   }
 
-  return {
-    subs,
-    invoiceIds,
-  };
+  return { invoiceIds };
 };

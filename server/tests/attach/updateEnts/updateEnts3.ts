@@ -8,13 +8,14 @@ import { APIVersion, AppEnv, Organization } from "@autumn/shared";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts, replaceItems, runAttachTest } from "../utils.js";
+import { addPrefixToProducts, replaceItems } from "../utils.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addWeeks } from "date-fns";
 import { constructFeatureItem } from "@/internal/products/product-items/productItemUtils.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
 const testCase = "updateEnts3";
 
@@ -85,7 +86,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing update ents (changing featu
   });
 
   it("should attach pro annual product", async function () {
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: pro,
@@ -177,7 +178,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing update ents (changing featu
 
   it("should attach custom pro product with removed feature item", async function () {
     const customItems2 = customItems.filter(
-      (item) => item.feature_id != TestFeature.Messages,
+      (item) => item.feature_id != TestFeature.Messages
     );
 
     const customProduct = {

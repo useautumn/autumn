@@ -8,7 +8,6 @@ import {
   FullCusProduct,
   FullCustomerEntitlement,
   FullCustomerPrice,
-  LoggerAction,
   Organization,
 } from "@autumn/shared";
 import Stripe from "stripe";
@@ -25,11 +24,16 @@ import { EntityService } from "@/internal/api/entities/EntityService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { getFeatureName } from "@/internal/features/utils/displayUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { getFullStripeInvoice } from "../../stripeInvoiceUtils.js";
+import {
+  getFullStripeInvoice,
+  invoiceToSubId,
+} from "../../stripeInvoiceUtils.js";
 import { handleUsagePrices } from "./handleUsagePrices.js";
 import { handleContUsePrices } from "./handleContUsePrices.js";
 import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { handlePrepaidPrices } from "./handlePrepaidPrices.js";
+import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";
 
 const handleInArrearProrated = async ({
   db,
@@ -69,7 +73,10 @@ const handleInArrearProrated = async ({
   // console.log("Sub period end:\t", formatUnixToDateTime(usageSub.current_period_end * 1000));
 
   // Check if invoice is for new subscription period by comparing billing period
-  const isNewPeriod = invoice.period_start !== usageSub.current_period_start;
+  const { start: periodStart, end: periodEnd } = subToPeriodStartEnd({
+    sub: usageSub,
+  });
+  const isNewPeriod = invoice.period_start !== periodStart;
   if (!isNewPeriod) {
     logger.info("Invoice is not for new subscription period, skipping...");
     return;
@@ -209,20 +216,28 @@ export const sendUsageAndReset = async ({
       continue;
     }
 
-    let usageBasedSub = await getUsageBasedSub({
-      db,
+    // let usageBasedSub = await getUsageBasedSub({
+    //   db,
+    //   stripeCli,
+    //   subIds: activeProduct.subscription_ids || [],
+    //   feature: relatedCusEnt.entitlement.feature,
+    //   stripeSubs,
+    // });
+    const usageBasedSub = await cusProductToSub({
+      cusProduct: activeProduct,
       stripeCli,
-      subIds: activeProduct.subscription_ids || [],
-      feature: relatedCusEnt.entitlement.feature,
-      stripeSubs,
     });
 
-    if (!usageBasedSub || usageBasedSub.id != invoice.subscription) {
+    const subId = invoiceToSubId({ invoice });
+
+    if (!usageBasedSub || usageBasedSub.id != subId) {
       continue;
     }
 
     // If trial just ended, skip
-    if (usageBasedSub.trial_end == usageBasedSub.current_period_start) {
+    const { start, end } = subToPeriodStartEnd({ sub: usageBasedSub });
+
+    if (usageBasedSub.trial_end == start) {
       logger.info(`Trial just ended, skipping usage invoice.created`);
       continue;
     }
@@ -288,13 +303,15 @@ export const handleInvoiceCreated = async ({
   const stripeCli = createStripeCli({ org, env });
   const invoice = await getFullStripeInvoice({
     stripeCli,
-    stripeId: data.id,
+    stripeId: data.id!,
   });
 
-  if (invoice.subscription) {
+  const subId = invoiceToSubId({ invoice });
+
+  if (subId) {
     const activeProducts = await CusProductService.getByStripeSubId({
       db,
-      stripeSubId: invoice.subscription as string,
+      stripeSubId: subId,
       orgId: org.id,
       env,
       inStatuses: [
@@ -343,7 +360,7 @@ export const handleInvoiceCreated = async ({
         }
 
         if (entDetails && feature) {
-          await stripeCli.invoices.update(invoice.id, {
+          await stripeCli.invoices.update(invoice.id!, {
             description: `${getFeatureName({
               feature,
               plural: false,

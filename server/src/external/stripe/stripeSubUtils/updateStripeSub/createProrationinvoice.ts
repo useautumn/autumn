@@ -25,9 +25,9 @@ export const undoSubUpdate = async ({
       (item) =>
         !prevItems.some((prevItem) =>
           curSub.items.data.some(
-            (curItem) => curItem.price.id === item.price.id,
-          ),
-        ),
+            (curItem) => curItem.price.id === item.price.id
+          )
+        )
     )
     .map((item) => {
       return {
@@ -57,18 +57,42 @@ export const createProrationInvoice = async ({
 }) => {
   const { stripeCli, customer, paymentMethod } = attachParams;
 
-  let items = await stripeCli.invoices.listUpcomingLines({
-    subscription: curSub.id,
+  let proratedItems = [];
+  // How to retrieve upcoming invoice items?
+  const items = await stripeCli.invoiceItems.list({
+    customer: customer.processor.id,
+    pending: true,
   });
 
-  let proratedItems = items.data.filter(
-    (item) => item.proration || item.type === "invoiceitem",
-  );
-
-  if (proratedItems.length == 0) {
+  if (items.data.length == 0) {
     logger.info(`No items to prorate, skipping invoice creation`);
     return null;
   }
+
+  // console.log(
+  //   "Upcoming invoice:",
+  //   items.data.map((item) => item.description)
+  // );
+
+  // throw new Error("Not implemented");
+
+  // const proratedItems = items.data.filter(
+  //   (item) => item.proration || item.parent?.type === "invoiceitem"
+  // );
+
+  // console.log("Preview invoice items:", items.lines.data);
+  // let items = await stripeCli.invoices.listUpcomingLines({
+  //   subscription: curSub.id,
+  // });
+
+  // let proratedItems = items.data.filter(
+  //   (item) => item.proration || item.type === "invoiceitem",
+  // );
+
+  // if (proratedItems.length == 0) {
+  //   logger.info(`No items to prorate, skipping invoice creation`);
+  //   return null;
+  // }
 
   let invoice = await stripeCli.invoices.create({
     customer: customer.processor.id,
@@ -78,7 +102,7 @@ export const createProrationInvoice = async ({
 
   if (invoiceOnly) return invoice;
 
-  await stripeCli.invoices.finalizeInvoice(invoice.id, {
+  await stripeCli.invoices.finalizeInvoice(invoice.id!, {
     auto_advance: false,
   });
 
@@ -86,7 +110,7 @@ export const createProrationInvoice = async ({
     const { invoice: subInvoice } = await payForInvoice({
       stripeCli,
       paymentMethod: paymentMethod || null,
-      invoiceId: invoice.id,
+      invoiceId: invoice.id!,
       logger,
       voidIfFailed: true,
     });

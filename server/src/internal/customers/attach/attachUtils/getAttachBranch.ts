@@ -147,6 +147,13 @@ const checkSameCustom = async ({
   //   return AttachBranch.MainIsFree;
   // }
 
+  // if (
+  //   isFreeProduct(attachParams.prices) &&
+  //   isFreeProduct(cusProductToPrices({ cusProduct: curSameProduct }))
+  // ) {
+  //   return AttachBranch.MainIsFree;
+  // }
+
   if (onlyEntsChanged) {
     return AttachBranch.SameCustomEnts;
   }

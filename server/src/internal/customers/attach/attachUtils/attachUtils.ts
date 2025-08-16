@@ -6,6 +6,8 @@ import {
 import { subToAutumnInterval } from "@/external/stripe/utils.js";
 import Stripe from "stripe";
 import { attachParamsToProduct } from "./convertAttachParams.js";
+import { FullCusProduct } from "@autumn/shared";
+import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 
 export const getCycleWillReset = ({
   attachParams,
@@ -21,4 +23,35 @@ export const getCycleWillReset = ({
     intervalA: firstInterval,
     intervalB: prevInterval,
   });
+};
+
+export const removeCurCusProductItems = async ({
+  sub,
+  cusProduct,
+  subItems,
+}: {
+  sub?: Stripe.Subscription | null;
+  cusProduct?: FullCusProduct;
+  subItems: any[];
+}) => {
+  if (!sub || !cusProduct) {
+    return subItems;
+  }
+
+  const newItems: any[] = structuredClone(subItems);
+  for (const item of sub.items.data) {
+    let shouldRemove = subItemInCusProduct({
+      cusProduct,
+      subItem: item,
+    });
+
+    if (shouldRemove) {
+      newItems.push({
+        id: item.id,
+        deleted: true,
+      });
+    }
+  }
+
+  return newItems;
 };

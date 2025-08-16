@@ -99,8 +99,6 @@ export const expireCusProduct = async ({
     `Product: ${cusProduct.product.name}, Status: ${cusProduct.status}`
   );
 
-  // If current product is scheduled
-
   if (cusProduct.status == CusProductStatus.Scheduled) {
     await removeScheduledProduct({
       req,

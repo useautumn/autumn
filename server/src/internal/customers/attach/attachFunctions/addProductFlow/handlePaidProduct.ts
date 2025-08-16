@@ -1,11 +1,5 @@
-import RecaseError from "@/utils/errorUtils.js";
-
-import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
-import { createStripeSub } from "@/external/stripe/stripeSubUtils/createStripeSub.js";
-import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
-import { subToAutumnInterval } from "@/external/stripe/utils.js";
+import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
-import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
 import {
   AttachParams,
   AttachResultSchema,
@@ -14,7 +8,6 @@ import {
   attachToInvoiceResponse,
   insertInvoiceFromAttach,
 } from "@/internal/invoices/invoiceUtils.js";
-import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import {
@@ -22,11 +15,18 @@ import {
   AttachConfig,
   AttachScenario,
   BillingInterval,
-  ErrCode,
-  intervalsDifferent,
   SuccessCode,
 } from "@autumn/shared";
 import Stripe from "stripe";
+import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import {
+  getEarliestPeriodEnd,
+  getLatestPeriodEnd,
+  subToPeriodStartEnd,
+} from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import { createStripeSub2 } from "./createStripeSub2.js";
+import { addBillingIntervalUnix } from "@/internal/products/prices/billingIntervalUtils.js";
+import { getSmallestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 
 export const handlePaidProduct = async ({
   req,
@@ -56,9 +56,14 @@ export const handlePaidProduct = async ({
     freeTrial = null;
   }
 
-  let itemSets = await getStripeSubItems({
+  // let itemSets = await getStripeSubItems({
+  //   attachParams,
+  //   carryExistingUsages: config.carryUsage,
+  // });
+
+  const itemSet = await getStripeSubItems2({
     attachParams,
-    carryExistingUsages: config.carryUsage,
+    config,
   });
 
   let subscriptions: Stripe.Subscription[] = [];
@@ -71,96 +76,42 @@ export const handlePaidProduct = async ({
     );
   }
 
-  let mergeSubs = await getStripeSubs({
+  let mergeSub = await cusProductToSub({
+    cusProduct: mergeCusProduct!,
     stripeCli,
-    subIds: mergeCusProduct?.subscription_ids,
   });
 
-  for (let i = 0; i < itemSets.length; i++) {
-    const itemSet = itemSets[i];
-    if (itemSet.interval === BillingInterval.OneOff) {
-      continue;
-    }
-
-    let mergeWithSub = mergeSubs.find((sub) => {
-      let subInterval = subToAutumnInterval(sub);
-      return !intervalsDifferent({
-        intervalA: {
-          interval: subInterval.interval,
-          intervalCount: subInterval.intervalCount,
-        },
-        intervalB: {
-          interval: itemSet.interval,
-          intervalCount: itemSet.intervalCount,
-        },
-      });
-    });
-
-    let subscription;
-    try {
-      let billingCycleAnchorUnix;
-      if (org.config.anchor_start_of_month) {
-        billingCycleAnchorUnix = getNextStartOfMonthUnix({
-          interval: itemSet.interval,
-          intervalCount: itemSet.intervalCount,
-        });
-      }
-
-      if (attachParams.billingAnchor) {
-        billingCycleAnchorUnix = attachParams.billingAnchor;
-      }
-
-      if (mergeWithSub) {
-        billingCycleAnchorUnix = mergeWithSub.current_period_end * 1000;
-      }
-
-      subscription = await createStripeSub({
-        db: req.db,
-        stripeCli,
-        customer,
-        org,
-        freeTrial,
-        invoiceOnly,
-        itemSet,
-        finalizeInvoice: config.invoiceCheckout,
-        anchorToUnix: billingCycleAnchorUnix,
-        reward: i == 0 ? reward : undefined,
-        now: attachParams.now,
-      });
-
-      let sub = subscription as Stripe.Subscription;
-
-      subscriptions.push(sub);
-    } catch (error: any) {
-      if (
-        error instanceof RecaseError &&
-        !invoiceOnly &&
-        error.code == ErrCode.CreateStripeSubscriptionFailed
-      ) {
-        return await handleCreateCheckout({
-          req,
-          res,
-          attachParams,
-        });
-      }
-
-      throw error;
-    }
+  let billingCycleAnchorUnix = undefined;
+  if (attachParams.billingAnchor) {
+    billingCycleAnchorUnix = attachParams.billingAnchor;
   }
 
-  const anchorToUnix =
-    subscriptions.length > 0
-      ? subscriptions[0].current_period_end * 1000
-      : mergeSubs.length > 0
-        ? mergeSubs[0].current_period_end * 1000
-        : undefined;
+  const earliestInterval = getSmallestInterval({ prices: attachParams.prices });
+
+  if (mergeSub) {
+    const { end } = subToPeriodStartEnd({ sub: mergeSub });
+    billingCycleAnchorUnix = end * 1000;
+  }
+
+  const newSub = await createStripeSub2({
+    db: req.db,
+    stripeCli,
+    attachParams,
+    itemSet,
+    anchorToUnix: billingCycleAnchorUnix,
+    earliestInterval,
+  });
+
+  subscriptions.push(newSub);
+
+  const anchorToUnix = getEarliestPeriodEnd({ sub: newSub }) * 1000;
 
   const batchInsertInvoice: any = [];
   for (const sub of subscriptions) {
+    if (!sub.latest_invoice) continue;
     batchInsertInvoice.push(
       insertInvoiceFromAttach({
         db: req.db,
-        // invoiceId: sub.latest_invoice as string,
         stripeInvoice: sub.latest_invoice as Stripe.Invoice,
         attachParams,
         logger,
@@ -223,3 +174,76 @@ export const handlePaidProduct = async ({
     }
   }
 };
+
+// for (let i = 0; i < itemSets.length; i++) {
+//   const itemSet = itemSets[i];
+//   if (itemSet.interval === BillingInterval.OneOff) {
+//     continue;
+//   }
+
+//   let mergeWithSub = mergeSubs.find((sub) => {
+//     let subInterval = subToAutumnInterval(sub);
+//     return !intervalsDifferent({
+//       intervalA: {
+//         interval: subInterval.interval,
+//         intervalCount: subInterval.intervalCount,
+//       },
+//       intervalB: {
+//         interval: itemSet.interval,
+//         intervalCount: itemSet.intervalCount,
+//       },
+//     });
+//   });
+
+//   let subscription;
+//   try {
+//     let billingCycleAnchorUnix;
+//     if (org.config.anchor_start_of_month) {
+//       billingCycleAnchorUnix = getNextStartOfMonthUnix({
+//         interval: itemSet.interval,
+//         intervalCount: itemSet.intervalCount,
+//       });
+//     }
+
+// if (attachParams.billingAnchor) {
+//   billingCycleAnchorUnix = attachParams.billingAnchor;
+// }
+
+// if (mergeWithSub) {
+//   billingCycleAnchorUnix =
+//     mergeWithSub.items.data[0].current_period_end * 1000;
+// }
+
+//     subscription = await createStripeSub({
+//       db: req.db,
+//       stripeCli,
+//       customer,
+//       org,
+//       freeTrial,
+//       invoiceOnly,
+//       itemSet,
+//       finalizeInvoice: config.invoiceCheckout,
+//       anchorToUnix: billingCycleAnchorUnix,
+//       reward: i == 0 ? reward : undefined,
+//       now: attachParams.now,
+//     });
+
+//     let sub = subscription as Stripe.Subscription;
+
+//     subscriptions.push(sub);
+//   } catch (error: any) {
+//     if (
+//       error instanceof RecaseError &&
+//       !invoiceOnly &&
+//       error.code == ErrCode.CreateStripeSubscriptionFailed
+//     ) {
+//       return await handleCreateCheckout({
+//         req,
+//         res,
+//         attachParams,
+//       });
+//     }
+
+//     throw error;
+//   }
+// }

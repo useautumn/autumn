@@ -8,12 +8,13 @@ import { APIVersion, AppEnv, Organization } from "@autumn/shared";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts, runAttachTest } from "../utils.js";
+import { addPrefixToProducts } from "../utils.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { expectDowngradeCorrect } from "tests/utils/expectUtils/expectScheduleUtils.js";
 import { expectNextCycleCorrect } from "tests/utils/expectUtils/expectScheduleUtils.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
 const testCase = "downgrade1";
 
@@ -72,7 +73,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing downgrade from premium -> p
   });
 
   it("should attach premium product", async function () {
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: premium,

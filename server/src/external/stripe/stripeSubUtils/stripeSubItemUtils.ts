@@ -25,6 +25,7 @@ const autumnStripePricesMatch = ({
   );
 };
 
+// TO FIX
 export const findStripeItemForPrice = ({
   price,
   stripeItems,
@@ -39,7 +40,7 @@ export const findStripeItemForPrice = ({
 }) => {
   return stripeItems.find(
     (
-      si: Stripe.SubscriptionItem | Stripe.InvoiceLineItem | Stripe.LineItem,
+      si: Stripe.SubscriptionItem | Stripe.InvoiceLineItem | Stripe.LineItem
     ) => {
       const config = price.config as UsagePriceConfig;
 
@@ -54,28 +55,37 @@ export const findStripeItemForPrice = ({
           config.stripe_product_id == si.price?.product
         );
       }
-      return (
-        config.stripe_price_id == si.price?.id ||
-        config.stripe_product_id == si.price?.product
-      );
-    },
+    }
   );
 };
 
 export const findPriceInStripeItems = ({
   prices,
   subItem,
+  lineItem,
   billingType,
 }: {
   prices: Price[];
-  subItem: Stripe.SubscriptionItem | Stripe.InvoiceLineItem;
+  subItem?: Stripe.SubscriptionItem;
+  lineItem?: Stripe.InvoiceItem;
   billingType?: BillingType;
 }) => {
   return prices.find((p: Price) => {
     let config = p.config;
-    let itemMatch =
-      config.stripe_price_id == subItem.price?.id ||
-      config.stripe_product_id == subItem.price?.product;
+
+    let itemMatch;
+    if (subItem) {
+      itemMatch =
+        config.stripe_price_id == subItem.price?.id ||
+        config.stripe_product_id == subItem.price?.product;
+    }
+
+    if (lineItem) {
+      const priceDetails = lineItem.pricing?.price_details;
+      itemMatch =
+        config.stripe_price_id == priceDetails?.price ||
+        config.stripe_product_id == priceDetails?.product;
+    }
 
     const priceBillingType = getBillingType(config);
     let billingTypeMatch = billingType ? priceBillingType == billingType : true;
@@ -95,7 +105,7 @@ export const findStripePriceFromPrices = ({
     autumnStripePricesMatch({
       stripePrice: p,
       autumnPrice,
-    }),
+    })
   );
 };
 

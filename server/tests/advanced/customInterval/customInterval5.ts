@@ -11,10 +11,11 @@ import { createProducts } from "tests/utils/productUtils.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { addPrefixToProducts, runAttachTest } from "tests/attach/utils.js";
+import { addPrefixToProducts } from "tests/attach/utils.js";
 import { expect } from "chai";
 import { Customer } from "autumn-js";
 import { timeout } from "@/utils/genUtils.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
 const testCase = "customInterval5";
 
@@ -92,7 +93,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing multi interval features wit
   });
 
   it("should attach pro product", async function () {
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: pro,

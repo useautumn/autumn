@@ -156,6 +156,7 @@ export const handleProratedUpgrade = async ({
       cusPrice,
       stripeCli,
       sub,
+      subItem,
       newPrice,
       prevPrice,
       newRoundedUsage,

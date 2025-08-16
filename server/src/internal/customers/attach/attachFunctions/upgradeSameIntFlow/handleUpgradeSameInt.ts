@@ -15,6 +15,7 @@ import { updateSubsByInt } from "./updateSubsSameInt.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { formatUnixToDate } from "@/utils/genUtils.js";
 import { attachToInvoiceResponse } from "@/internal/invoices/invoiceUtils.js";
+import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 
 export const handleUpgradeSameInterval = async ({
   req,
@@ -62,6 +63,11 @@ export const handleUpgradeSameInterval = async ({
 
   logger.info(`3. Creating new cus product`);
 
+  const end =
+    stripeSubs.length > 0
+      ? getLatestPeriodEnd({ sub: stripeSubs[0] })
+      : undefined;
+
   await createFullCusProduct({
     db: req.db,
     attachParams: attachToInsertParams(attachParams, attachParams.products[0]),
@@ -69,10 +75,7 @@ export const handleUpgradeSameInterval = async ({
     disableFreeTrial: config.disableTrial,
     carryExistingUsages: config.carryUsage,
     carryOverTrial: config.carryTrial,
-    anchorToUnix:
-      stripeSubs.length > 0
-        ? stripeSubs[0].current_period_end * 1000
-        : undefined,
+    anchorToUnix: end,
     logger,
   });
 

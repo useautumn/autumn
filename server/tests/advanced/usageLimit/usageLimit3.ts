@@ -19,10 +19,11 @@ import {
   constructPrepaidItem,
 } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
-import { addPrefixToProducts, runAttachTest } from "tests/attach/utils.js";
+import { addPrefixToProducts } from "tests/attach/utils.js";
 import { expect } from "chai";
 import { timeout } from "@/utils/genUtils.js";
 import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
 const messageItem = constructPrepaidItem({
   featureId: TestFeature.Messages,
@@ -98,7 +99,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage limits for prepaid`)}
     expectAutumnError({
       errCode: ErrCode.InvalidOptions,
       func: async () => {
-        return await runAttachTest({
+        return await attachAndExpectCorrect({
           autumn,
           customerId,
           product: pro,
@@ -131,7 +132,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage limits for prepaid`)}
     expectAutumnError({
       errCode: ErrCode.InvalidOptions,
       func: async () => {
-        return await runAttachTest({
+        return await attachAndExpectCorrect({
           autumn,
           customerId,
           product: pro,

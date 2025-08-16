@@ -23,6 +23,7 @@ import {
 } from "./createStripeArrearProrated.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
+import { billingIntervalToStripe } from "../stripePriceUtils.js";
 
 export const checkCurStripePrice = async ({
   price,
@@ -98,7 +99,6 @@ export const createStripePriceIFNotExist = async ({
 
   const billingType = getBillingType(price.config!);
 
-  // let config = price.config! as UsagePriceConfig;
   let { stripePrice, stripeProd } = await checkCurStripePrice({
     price,
     stripeCli,
@@ -117,12 +117,6 @@ export const createStripePriceIFNotExist = async ({
     billingType == BillingType.OneOff
   ) {
     if (!stripePrice) {
-      // logger.info("Creating stripe fixed price: ", {
-      //   data: {
-      //     price,
-      //     stripePrice,
-      //   },
-      // });
       await createStripeFixedPrice({
         db,
         stripeCli,
@@ -205,5 +199,28 @@ export const createStripePriceIFNotExist = async ({
       internalEntityId,
       useCheckout,
     });
+
+    if (!config.stripe_empty_price_id) {
+      logger.info(`Creating stripe empty price`);
+      const emptyPrice = await stripeCli.prices.create({
+        // product: stripeProd!.id,
+        product: config.stripe_product_id || stripeProd?.id,
+        unit_amount: 0,
+        currency: org.default_currency || "usd",
+        recurring: {
+          ...(billingIntervalToStripe({
+            interval: price.config!.interval!,
+            intervalCount: price.config!.interval_count!,
+          }) as any),
+        },
+      });
+
+      config.stripe_empty_price_id = emptyPrice.id;
+      await PriceService.update({
+        db,
+        id: price.id!,
+        update: { config },
+      });
+    }
   }
 };

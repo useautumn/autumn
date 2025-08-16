@@ -1,14 +1,6 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import {
-  APIVersion,
-  BillingType,
-  CusProductStatus,
-  Organization,
-  UsagePriceConfig,
-} from "@autumn/shared";
+import { APIVersion, BillingType } from "@autumn/shared";
 import Stripe from "stripe";
-import { AppEnv } from "@autumn/shared";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { constructSub } from "@/internal/subscriptions/subUtils.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
@@ -17,6 +9,8 @@ import {
   findPriceFromStripeId,
 } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 import { getArrearItems } from "../../stripeSubUtils/getStripeSubItems/getArrearItems.js";
+import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";
+import { getEmptyPriceItem } from "../../priceToStripeItem/priceToStripeItem.js";
 
 export const handleCheckoutSub = async ({
   stripeCli,
@@ -37,6 +31,8 @@ export const handleCheckoutSub = async ({
     return;
   }
 
+  const { start, end } = subToPeriodStartEnd({ sub: subscription });
+
   await SubService.createSub({
     db,
     sub: constructSub({
@@ -44,8 +40,8 @@ export const handleCheckoutSub = async ({
       usageFeatures: attachParams.itemSets?.[0]?.usageFeatures || [],
       orgId: org.id,
       env: attachParams.customer.env,
-      currentPeriodStart: subscription.current_period_start,
-      currentPeriodEnd: subscription.current_period_end,
+      currentPeriodStart: start,
+      currentPeriodEnd: end,
     }),
   });
 
@@ -88,20 +84,22 @@ export const handleCheckoutSub = async ({
         id: item.id,
         deleted: true,
       });
+
+      itemsUpdate.push(getEmptyPriceItem({ price: arrearPrice, org }) as any);
     }
   }
 
-  let deletedCount = itemsUpdate.filter((item) => item.deleted).length;
-  if (deletedCount === curSubItems.length) {
-    itemsUpdate = itemsUpdate.concat(
-      getArrearItems({
-        prices: attachParams.prices,
-        interval: attachParams.itemSets?.[0]?.interval,
-        intervalCount: attachParams.itemSets?.[0]?.intervalCount,
-        org,
-      })
-    );
-  }
+  // let deletedCount = itemsUpdate.filter((item) => item.deleted).length;
+  // if (deletedCount === curSubItems.length) {
+  //   itemsUpdate = itemsUpdate.concat(
+  //     getArrearItems({
+  //       prices: attachParams.prices,
+  //       interval: attachParams.itemSets?.[0]?.interval,
+  //       intervalCount: attachParams.itemSets?.[0]?.intervalCount,
+  //       org,
+  //     })
+  //   );
+  // }
 
   if (itemsUpdate.length > 0) {
     await stripeCli.subscriptions.update(subscription.id, {
@@ -109,38 +107,11 @@ export const handleCheckoutSub = async ({
     });
   }
 
-  // for (const item of subscription.items.data) {
-  //   let stripePriceId = item.price.id;
-
-  //   let arrearProratedPrice = findPriceFromPlaceholderId({
-  //     prices: attachParams.prices,
-  //     placeholderId: stripePriceId,
-  //   });
-
-  //   if (arrearProratedPrice) {
-  //     let config = arrearProratedPrice.config as UsagePriceConfig;
-  //     await stripeCli.subscriptionItems.update(item.id, {
-  //       price: config.stripe_price_id!,
-  //       quantity: 0,
-  //     });
-  //     continue;
-  //   }
-
-  //   let arrearPrice = findPriceFromStripeId({
-  //     prices: attachParams.prices,
-  //     stripePriceId,
-  //     billingType: BillingType.UsageInArrear,
-  //   });
-
-  //   if (
-  //     arrearPrice &&
-  //     (attachParams.internalEntityId ||
-  //       attachParams.apiVersion == APIVersion.v1_4)
-  //   ) {
-  //     await stripeCli.subscriptionItems.del(item.id);
-  //     continue;
-  //   }
-  // }
+  if (subscription.billing_mode.type !== "flexible") {
+    await stripeCli.subscriptions.migrate(subscription.id, {
+      billing_mode: { type: "flexible" },
+    });
+  }
 
   return subscription;
 };
