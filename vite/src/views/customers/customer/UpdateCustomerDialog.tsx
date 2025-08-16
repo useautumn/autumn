@@ -1,7 +1,5 @@
 import { DialogFooter } from "@/components/ui/dialog";
-
-import { getOriginalCouponId } from "@/utils/product/couponUtils";
-import { getBackendErr } from "@/utils/genUtils";
+import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { Reward, CreateCustomer, Customer } from "@autumn/shared";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -14,6 +12,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { CustomerConfig } from "./CustomerConfig";
 import { CusService } from "@/services/customers/CusService";
+import { useNavigate } from "react-router";
 
 const UpdateCustomerDialog = ({
   selectedCustomer,
@@ -30,6 +29,7 @@ const UpdateCustomerDialog = ({
   const [loading, setLoading] = useState(false);
   const env = useEnv();
   const axiosInstance = useAxiosInstance({ env });
+  const navigate = useNavigate();
 
   useEffect(() => {
     setCustomer(selectedCustomer);
@@ -42,6 +42,7 @@ const UpdateCustomerDialog = ({
         axios: axiosInstance,
         customer_id: selectedCustomer.id || selectedCustomer.internal_id,
         data: {
+          id: customer.id || undefined,
           name: customer.name || null,
           email: customer.email || null,
           fingerprint: customer.fingerprint || null,
@@ -51,6 +52,10 @@ const UpdateCustomerDialog = ({
       toast.success(`Successfully updated customer`);
       setOpen(false);
       await cusMutate();
+
+      if (customer.id != selectedCustomer.id) {
+        navigateTo(`/customers/${customer.id}`, navigate, env);
+      }
     } catch (error) {
       toast.error(getBackendErr(error, "Failed to update customer"));
     } finally {

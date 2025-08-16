@@ -15,8 +15,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { SelectFeatureUsageType } from "./SelectFeatureUsageType";
+import { notNullish, nullish } from "@/utils/genUtils";
 import { SelectFeatureType } from "./SelectFeatureType";
-import { notNullish } from "@/utils/genUtils";
 
 export function FeatureConfig({
   feature,
@@ -69,98 +70,33 @@ export function FeatureConfig({
   );
   const [idChanged, setIdChanged] = useState(!!feature.id);
 
-  // useEffect(() => {
-  //   setFeature({
-  //     ...feature,
-  //     name: fields.name,
-  //     id: fields.id,
-  //     type: null,
-  //     config: meteredConfig,
-  //   });
-  // }, [meteredConfig, fields]);
+  const showNameAndId = () => {
+    if (nullish(feature.type)) {
+      return false;
+    }
+
+    if (
+      feature.type === FeatureType.Metered &&
+      nullish(feature.config?.usage_type)
+    ) {
+      return false;
+    }
+
+    return true;
+  };
 
   return (
     <div className="flex flex-col gap-4 min-w-md max-w-md">
-      {/* <Tabs
-        defaultValue={feature.type}
-        className="w-[400px]"
-        value={featureType}
-        onValueChange={setFeatureType}
-      >
-        <TabsList className="-ml-2">
-          <TabsTrigger value={FeatureType.Metered}>Metered</TabsTrigger>
-          <TabsTrigger value={FeatureType.Boolean}>Boolean</TabsTrigger>
-        </TabsList>
-        <p className="text-t3 text-sm">
-          {featureType == FeatureType.Metered &&
-            "A usage-based feature that you want to track"}
-          {featureType == FeatureType.Boolean &&
-            "A feature flag that can be either enabled or disabled"}
-        </p>
-      </Tabs> */}
-
+      <div className="text-sm text-t2 flex items-center gap-1">
+        Features are the parts of your application that customers get access to
+        when purchasing a product
+      </div>
       <SelectFeatureType feature={feature} setFeature={setFeature} />
-      {/* {featureType === FeatureType.Metered && (
-        <div className="w-full">
-          <div className="flex flex-col gap-2">
-            <Tabs
-              defaultValue={FeatureUsageType.Single}
-              value={meteredConfig.usage_type}
-              onValueChange={(value) => {
-                setMeteredConfig({
-                  ...meteredConfig,
-                  usage_type: value as FeatureUsageType,
-                });
-              }}
-            >
-              <TabsList className="-mx-2">
-                <TabsTrigger
-                  value={FeatureUsageType.Single}
-                  className="flex items-center gap-1"
-                >
-                  <Zap className="h-3 w-3 text-t3" />
-                  <span>Single Use</span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value={FeatureUsageType.Continuous}
-                  className="flex items-center gap-1"
-                >
-                  <Clock className="h-3 w-3 text-t3" />
-                  <span>Continuous Use</span>
-                </TabsTrigger>
-              </TabsList>
-              <p className="text-sm text-t3 flex items-center gap-1">
-                {meteredConfig.usage_type === FeatureUsageType.Continuous
-                  ? "For features used on an ongoing basis, like 'seats' or 'storage'"
-                  : "For features that are consumed and refilled like 'credits' or 'API calls'"}
-                <Tooltip delayDuration={400}>
-                  <TooltipTrigger asChild>
-                    <InfoIcon className="w-3 h-3 text-t3/50" />
-                  </TooltipTrigger>
-                  <TooltipContent
-                    sideOffset={5}
-                    side="top"
-                    align="start"
-                    className="flex flex-col"
-                  >
-                    <p>
-                      Single use features can have a reset period, to refill a
-                      balance every month, day etc. Existing usage is also
-                      typically reset on upgrades.
-                      <br />
-                      <br />
-                      Continuous use features don't have a reset period. They
-                      can be prorated (eg, if a seat is purchased halfway during
-                      the month, it'll cost half the price).
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </p>
-            </Tabs>
-          </div>
-        </div>
-      )} */}
-      {notNullish(feature.type) && (
+      {feature.type == FeatureType.Metered && (
+        <SelectFeatureUsageType feature={feature} setFeature={setFeature} />
+      )}
+
+      {showNameAndId() && (
         <>
           <div className="flex gap-2 w-full">
             <div className="w-full">
@@ -351,3 +287,86 @@ export const FilterInput = ({
     </div>
   );
 };
+
+{
+  /* {featureType === FeatureType.Metered && (
+        <div className="w-full">
+          <div className="flex flex-col gap-2">
+            <Tabs
+              defaultValue={FeatureUsageType.Single}
+              value={meteredConfig.usage_type}
+              onValueChange={(value) => {
+                setMeteredConfig({
+                  ...meteredConfig,
+                  usage_type: value as FeatureUsageType,
+                });
+              }}
+            >
+              <TabsList className="-mx-2">
+                <TabsTrigger
+                  value={FeatureUsageType.Single}
+                  className="flex items-center gap-1"
+                >
+                  <Zap className="h-3 w-3 text-t3" />
+                  <span>Single Use</span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value={FeatureUsageType.Continuous}
+                  className="flex items-center gap-1"
+                >
+                  <Clock className="h-3 w-3 text-t3" />
+                  <span>Continuous Use</span>
+                </TabsTrigger>
+              </TabsList>
+              <p className="text-sm text-t3 flex items-center gap-1">
+                {meteredConfig.usage_type === FeatureUsageType.Continuous
+                  ? "For features used on an ongoing basis, like 'seats' or 'storage'"
+                  : "For features that are consumed and refilled like 'credits' or 'API calls'"}
+                <Tooltip delayDuration={400}>
+                  <TooltipTrigger asChild>
+                    <InfoIcon className="w-3 h-3 text-t3/50" />
+                  </TooltipTrigger>
+                  <TooltipContent
+                    sideOffset={5}
+                    side="top"
+                    align="start"
+                    className="flex flex-col"
+                  >
+                    <p>
+                      Single use features can have a reset period, to refill a
+                      balance every month, day etc. Existing usage is also
+                      typically reset on upgrades.
+                      <br />
+                      <br />
+                      Continuous use features don't have a reset period. They
+                      can be prorated (eg, if a seat is purchased halfway during
+                      the month, it'll cost half the price).
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </p>
+            </Tabs>
+          </div>
+        </div>
+      )} */
+}
+
+{
+  /* <Tabs
+        defaultValue={feature.type}
+        className="w-[400px]"
+        value={featureType}
+        onValueChange={setFeatureType}
+      >
+        <TabsList className="-ml-2">
+          <TabsTrigger value={FeatureType.Metered}>Metered</TabsTrigger>
+          <TabsTrigger value={FeatureType.Boolean}>Boolean</TabsTrigger>
+        </TabsList>
+        <p className="text-t3 text-sm">
+          {featureType == FeatureType.Metered &&
+            "A usage-based feature that you want to track"}
+          {featureType == FeatureType.Boolean &&
+            "A feature flag that can be either enabled or disabled"}
+        </p>
+      </Tabs> */
+}

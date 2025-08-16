@@ -23,6 +23,7 @@ import {
   cusProductToPrices,
 } from "../customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { priceToFeature } from "../products/prices/priceUtils/convertPrice.js";
+import { ACTIVE_STATUSES } from "../customers/cusProducts/CusProductService.js";
 
 export const validateFeatureId = (featureId: string) => {
   if (!featureId.match(/^[a-zA-Z0-9_-]+$/)) {
@@ -227,7 +228,9 @@ export const isPaidContinuousUse = ({
 
   let cusPrices = cusProductsToCusPrices({
     cusProducts: fullCus.customer_products,
+    inStatuses: ACTIVE_STATUSES,
   });
+
   let hasPaid = cusPrices.some((cp) => {
     let config = cp.price.config as UsagePriceConfig;
     if (config.internal_feature_id == feature.internal_id) {

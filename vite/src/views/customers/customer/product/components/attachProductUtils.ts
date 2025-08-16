@@ -13,6 +13,7 @@ export const getAttachBody = ({
   entityId,
   optionsInput,
   useInvoice,
+  enableProductImmediately = true,
   successUrl,
   version,
 }: {
@@ -22,6 +23,7 @@ export const getAttachBody = ({
   entityId: string;
   optionsInput?: FeatureOptions[];
   useInvoice?: boolean;
+  enableProductImmediately?: boolean;
   successUrl?: string;
   version?: number;
 }) => {
@@ -47,7 +49,14 @@ export const getAttachBody = ({
     ...customData,
     free_trial: isCustom ? product.free_trial || undefined : undefined,
 
-    invoice_only: useInvoice,
+    invoice: useInvoice,
+    enable_product_immediately: useInvoice
+      ? enableProductImmediately
+      : undefined,
+
+    force_checkout:
+      useInvoice && enableProductImmediately === false ? true : undefined,
+
     success_url: successUrl,
     version: version ? Number(version) : undefined,
   };

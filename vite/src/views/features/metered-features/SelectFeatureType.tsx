@@ -1,46 +1,14 @@
+import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import { SelectType } from "@/components/general/SelectType";
 import {
   APIFeatureType,
   CreateFeature,
   FeatureType,
   FeatureUsageType,
 } from "@autumn/shared";
-import { Clock, ToggleLeft, Zap } from "lucide-react";
+import { Zap, Clock, ArrowUp01, Flag } from "lucide-react";
 import { defaultMeteredConfig } from "./defaultFeatureConfig";
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
 
-const SelectType = ({
-  title,
-  description,
-  icon,
-  isSelected,
-  onClick,
-}: {
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  isSelected: boolean;
-  onClick: () => void;
-}) => {
-  return (
-    <div
-      key={FeatureUsageType.Single}
-      className={`h-fit flex flex-col gap-2 text-sm p-2 rounded-xs cursor-pointer ${
-        isSelected
-          ? "shadow-inner bg-stone-100 border border-zinc-200"
-          : "border"
-      }`}
-      onClick={onClick}
-    >
-      <div className="flex items-center gap-1">
-        <span className="text-t2 text-sm font-medium whitespace-nowrap">
-          {title}
-        </span>
-        <div className="flex w-4 h-full items-center justify-start">{icon}</div>
-      </div>
-      <p className="text-t2 text-xs">{description}</p>
-    </div>
-  );
-};
 export const SelectFeatureType = ({
   feature,
   setFeature,
@@ -69,35 +37,45 @@ export const SelectFeatureType = ({
   };
   return (
     <div className="flex flex-col">
-      <FieldLabel>Select Feature Type</FieldLabel>
-      <div className="grid grid-cols-3 gap-2">
+      <FieldLabel>Feature Type</FieldLabel>
+      <div className="grid grid-cols-2 gap-2">
         <SelectType
-          title="Single Use"
-          description="Features that are consumed and refilled like 'credits' or 'tokens'"
-          icon={<Zap className="h-3 w-3 text-t3" />}
-          isSelected={
-            featureType === FeatureType.Metered &&
-            usageType === FeatureUsageType.Single
-          }
-          onClick={() => setFeatureType(APIFeatureType.SingleUsage)}
-        />
-        <SelectType
-          title="Continuous Use"
-          description="Features used on an ongoing basis, like 'seats' or 'storage'"
-          icon={<Clock className="h-3 w-3 text-t3" />}
-          isSelected={
-            featureType === FeatureType.Metered &&
-            usageType === FeatureUsageType.Continuous
-          }
-          onClick={() => setFeatureType(APIFeatureType.ContinuousUse)}
+          title="Metered"
+          description="A usage-based feature that you want to track"
+          icon={<ArrowUp01 className="text-t3" size={13} />}
+          isSelected={featureType === FeatureType.Metered}
+          onClick={() => {
+            const curConfig = feature.config;
+            setFeature({
+              ...feature,
+              type: FeatureType.Metered,
+              config: {
+                ...defaultMeteredConfig,
+                usage_type: curConfig?.usage_type ?? null,
+              },
+            });
+          }}
         />
         <SelectType
           title="Boolean"
-          description="Features that are either enabled or disabled, like 'premium models'"
-          icon={<ToggleLeft className="h-3 w-3 text-t3" />}
+          description="A feature flag that can be either enabled or disabled"
+          icon={<Flag className="text-t3" size={12} />}
           isSelected={featureType === FeatureType.Boolean}
-          onClick={() => setFeatureType(APIFeatureType.Boolean)}
+          onClick={() =>
+            setFeature({
+              ...feature,
+              type: FeatureType.Boolean,
+              config: undefined,
+            })
+          }
         />
+        {/* <SelectType
+            title="Boolean"
+            description="Features that are either enabled or disabled, like 'premium models'"
+            icon={<ToggleLeft className="h-3 w-3 text-t3" />}
+            isSelected={featureType === FeatureType.Boolean}
+            onClick={() => setFeatureType(APIFeatureType.Boolean)}
+          /> */}
       </div>
     </div>
   );

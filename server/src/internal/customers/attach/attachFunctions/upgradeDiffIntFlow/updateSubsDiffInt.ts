@@ -39,8 +39,8 @@ export const updateSubsDiffInt = async ({
     carryExistingUsages: config.carryUsage,
   });
 
-  const firstSub = stripeSubs[0];
-  const firstItemSet = itemSets[0];
+  const firstSub = stripeSubs?.[0];
+  const firstItemSet = itemSets?.[0];
 
   await addSubItemsToRemove({
     sub: firstSub,
@@ -127,7 +127,8 @@ export const updateSubsDiffInt = async ({
     });
 
     newSubs.push(newSub);
-    newInvoiceIds.push(newSub.latest_invoice as string);
+    const latestInvoice = newSub.latest_invoice as Stripe.Invoice;
+    newInvoiceIds.push(latestInvoice.id);
   }
 
   return {

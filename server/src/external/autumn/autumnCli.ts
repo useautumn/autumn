@@ -170,7 +170,9 @@ export class AutumnInt {
 
     return data;
   }
-  async checkout(params: CheckoutParams) {
+  async checkout(
+    params: CheckoutParams & { invoice?: boolean; force_checkout?: boolean }
+  ) {
     // const data = await this.post(`/attach`, {
     //   customer_id: customerId,
     //   product_id: productId,

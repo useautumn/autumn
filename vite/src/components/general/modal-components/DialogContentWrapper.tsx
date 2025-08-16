@@ -15,8 +15,9 @@ export const CustomDialogContent = ({
   return (
     <DialogContent
       className={cn(
-        "flex flex-col gap-0 !p-0",
-        fromTop && "translate-y-[0%] top-[20%]",
+        "flex flex-col gap-0 !p-0 overflow-y-auto",
+        fromTop &&
+          "translate-y-[0%] top-[20%] max-h-[70vh] overflow-y-hidden duration-0",
         className
       )}
     >

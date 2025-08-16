@@ -16,23 +16,11 @@ import { getItemType } from "@/utils/product/productItemUtils";
 import { CreateItemStep } from "../utils/CreateItemStep";
 import { useEffect, useState } from "react";
 
-export const SelectItemFeature = ({
-  show,
-  setShow,
-}: {
-  show: any;
-  setShow: any;
-}) => {
+export const SelectItemFeature = () => {
   const { features } = useProductContext();
   const { item, setItem, isUpdate, stepState } = useProductItemContext();
   const [open, setOpen] = useState(false);
   const itemType = getItemType(item);
-
-  // useEffect(() => {
-  //   if (stepState.previousStep === CreateItemStep.SelectItemType) {
-  //     setOpen(true);
-  //   }
-  // }, [stepState.previousStep]);
 
   return (
     <div className="flex items-center gap-2 w-full">
@@ -51,7 +39,8 @@ export const SelectItemFeature = ({
         <SelectContent>
           {features
             .filter((feature: Feature) => {
-              if (feature.archived) return false;
+              if (feature.archived && feature.id !== item.feature_id)
+                return false;
               if (itemType === ProductItemType.FeaturePrice) {
                 return feature.type !== FeatureType.Boolean;
               }

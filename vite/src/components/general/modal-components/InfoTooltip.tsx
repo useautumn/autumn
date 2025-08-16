@@ -8,13 +8,15 @@ import { InfoIcon } from "lucide-react";
 
 export const InfoTooltip = ({
   children,
+  className,
   ...props
 }: {
   children: React.ReactNode;
+  className?: string;
 } & TooltipContentProps) => {
   return (
     <Tooltip>
-      <TooltipTrigger>
+      <TooltipTrigger className={className}>
         <InfoIcon size={12} className="text-t3/50" />
       </TooltipTrigger>
       <TooltipContent sideOffset={10} {...props}>

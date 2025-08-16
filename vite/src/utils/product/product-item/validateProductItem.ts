@@ -2,6 +2,7 @@ import { invalidNumber, notNullish, nullish } from "@/utils/genUtils";
 import {
   Feature,
   FeatureUsageType,
+  FrontendProductItem,
   Infinite,
   ProductItem,
   ProductItemInterval,
@@ -17,7 +18,7 @@ export const validateProductItem = ({
   // show,
   features,
 }: {
-  item: ProductItem;
+  item: FrontendProductItem;
   // show: any;
   features: Feature[];
 }) => {
@@ -31,11 +32,22 @@ export const validateProductItem = ({
     item.interval = null;
   }
 
+  if (item.isPrice && item.isVariable && !item.feature_id) {
+    toast.error("Please select a feature");
+    return null;
+  }
+
   if (notNullish(item.price)) {
     if (invalidNumber(item.price)) {
       toast.error("Please enter a valid price amount");
       return null;
     }
+
+    if (item.price === 0) {
+      toast.error("Price should be greater than 0");
+      return null;
+    }
+
     item.price = parseFloat(item.price!.toString());
   }
 
@@ -45,17 +57,51 @@ export const validateProductItem = ({
     item.included_usage = Number(item.included_usage);
   }
 
+  if (isFeaturePriceItem(item) && nullish(item.usage_model)) {
+    toast.error("Please select a usage model");
+    return null;
+  }
+
   //if both item.tiers and item.price are set, set item.price to null
   if (item.tiers && item.price) {
     item.price = null;
   }
 
   // Usage/Feature item validation (when tiers are set)
+
   if (item.tiers) {
     let previousTo = 0;
 
-    for (let i = 0; i < item.tiers.length; i++) {
-      const tier = item.tiers[i];
+    const allFree = item.tiers.every((tier) => tier.amount == 0);
+
+    if (allFree) {
+      if (item.tiers.length == 1) {
+        toast.error("Price should be greater than 0");
+      } else {
+        toast.error("Should have at least one tier with price greater than 0");
+      }
+      return null;
+    }
+
+    const freeTier =
+      item.tiers.length > 0 && item.tiers[0].amount == 0 ? item.tiers[0] : null;
+
+    // const includedUsage = parseFloat(item.included_usage?.toString() || "0");
+
+    let finalTiers = item.tiers;
+
+    if (freeTier) {
+      finalTiers = finalTiers.slice(1);
+      item.included_usage = parseFloat(freeTier.to.toString() || "0");
+
+      finalTiers = finalTiers.map((tier) => {
+        tier.amount -= freeTier.amount;
+        return tier;
+      });
+    }
+
+    for (let i = 0; i < finalTiers.length; i++) {
+      const tier = finalTiers[i];
 
       // Check if amount is actually a number
       if (typeof tier.amount !== "number") {
@@ -88,14 +134,23 @@ export const validateProductItem = ({
       }
 
       // Ensure tiers are in ascending order
-      if (tier.to <= previousTo) {
+      if (tier.to < previousTo) {
         toast.error("Tiers must be in ascending order");
+        return null;
+      }
+
+      if (tier.to == previousTo) {
+        toast.error(`tier ${i + 1} should have a greater 'to'`);
         return null;
       }
 
       previousTo = tier.to;
     }
+
+    item.tiers = finalTiers;
   }
+
+  console.log("Final tiers:", item.tiers);
 
   // Validate billing units
   if (item.billing_units && invalidNumber(item.billing_units)) {

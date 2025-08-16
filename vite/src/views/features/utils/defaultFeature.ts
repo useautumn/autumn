@@ -6,7 +6,7 @@ export const getDefaultFeature = (entityCreate?: boolean): any => {
     return {
       type: FeatureType.Metered,
       config: {
-        defaultMeteredConfig,
+        ...defaultMeteredConfig,
         usage_type: FeatureUsageType.Continuous,
       },
       name: "",

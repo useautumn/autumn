@@ -39,25 +39,11 @@ export const updateSubsByInt = async ({
 
   attachParams.replaceables = replaceables;
 
-  // logger.info(`Cont use items`);
-  // logger.info(
-  //   `New items: `,
-  //   newItems.map(
-  //     (item) => `${item.description} | Amount: ${item.amount || item.price}`,
-  //   ),
-  // );
-  // logger.info(
-  //   "Replaceables: ",
-  //   replaceables.map((r) => `${r.ent.feature_id}`),
-  // );
-
   const itemSets = await getStripeSubItems({ attachParams });
+
   const invoices: Stripe.Invoice[] = [];
 
-  // const replaceables: Replaceable[] = [];
   for (const sub of stripeSubs) {
-    // let interval = subToAutumnInterval(sub);
-
     let subInterval = subToAutumnInterval(sub);
     let itemSet = itemSets.find((itemSet) => {
       return intervalsSame({

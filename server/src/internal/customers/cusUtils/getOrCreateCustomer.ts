@@ -96,6 +96,7 @@ export const getOrCreateCustomer = async ({
           email: customerData?.email,
           fingerprint: customerData?.fingerprint,
           metadata: customerData?.metadata || {},
+          stripe_id: customerData?.stripe_id,
         },
       });
 

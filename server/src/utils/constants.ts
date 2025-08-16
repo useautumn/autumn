@@ -10,7 +10,11 @@ export const getActiveCusProductStatuses = () => [
 
 export const ADMIN_USER_IDs =
   process.env.ENV == "production" || process.env.NODE_ENV == "production"
-    ? ["user_2tMgAiPsQzX8JTHjZZh9m0VdvUv", "user_2sB3tBXsnVVLlTKliQIqvvM2xfB"]
+    ? [
+        "user_2tMgAiPsQzX8JTHjZZh9m0VdvUv", // a
+        "user_2sB3tBXsnVVLlTKliQIqvvM2xfB", // j
+        "ZsDswIXyOGMP9y1V1At4dAZNaiggClSs", // t
+      ]
     : ["user_2rypooIKyMQx81vMS8FFGx24UHU"];
 
 export const dashboardOrigins = [

@@ -101,7 +101,8 @@ export const handleRemainingSets = async ({
     })) as Stripe.Subscription;
 
     subs.push(subscription);
-    invoiceIds.push(subscription.latest_invoice as string);
+    const latestInvoice = subscription.latest_invoice as Stripe.Invoice;
+    invoiceIds.push(latestInvoice.id);
   }
 
   return {
