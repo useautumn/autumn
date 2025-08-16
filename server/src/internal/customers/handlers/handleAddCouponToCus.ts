@@ -44,7 +44,12 @@ export const handleAddCouponToCus = async (req: any, res: any) => {
       });
     }
 
-    const stripeCli = createStripeCli({ org, env });
+    const stripeCli = createStripeCli({
+      org,
+      env,
+      // apiVersion: "2025-02-24.acacia",
+      legacyVersion: true,
+    });
 
     await createStripeCusIfNotExists({
       db,
@@ -55,9 +60,22 @@ export const handleAddCouponToCus = async (req: any, res: any) => {
     });
 
     // Attach coupon to customer
-    await stripeCli.customers.update(customer.processor.id, {
-      coupon: coupon.id,
-    });
+    //   curl https://api.stripe.com/v1/customers/cus_123456/discounts \
+    // -u sk_test_your_key: \
+    // -d coupon=COUPON_ID
+
+    await stripeCli.rawRequest(
+      "POST",
+      `/v1/customers/${customer.processor.id}`,
+      {
+        coupon: coupon.id,
+      }
+    );
+    // await stripeCli.customers.update(customer.processor.id, {
+    // coupon: coupon.id,
+
+    // discounts: [{ coupon: coupon.id }],
+    // });
 
     res.status(200).json({ customer, coupon });
   } catch (error) {

@@ -340,7 +340,7 @@ export class AutumnInt {
 
   rewards = {
     create: async (reward: any) => {
-      const data = await this.post(`/rewards`, reward);
+      const data = await this.post(`/rewards?legacyStripe=true`, reward);
       return data;
     },
 

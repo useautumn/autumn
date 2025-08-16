@@ -16,9 +16,13 @@ import Stripe from "stripe";
 export const createStripeCli = ({
   org,
   env,
+  // apiVersion,
+  legacyVersion,
 }: {
   org: Organization;
   env: AppEnv;
+  // apiVersion?: string;
+  legacyVersion?: boolean;
 }) => {
   let encrypted =
     env == AppEnv.Sandbox
@@ -34,7 +38,11 @@ export const createStripeCli = ({
   }
 
   let decrypted = decryptData(encrypted);
-  return new Stripe(decrypted);
+  return new Stripe(decrypted, {
+    apiVersion: legacyVersion
+      ? ("2025-02-24.acacia" as any)
+      : "2025-07-30.basil",
+  });
 };
 
 export const calculateMetered1Price = ({

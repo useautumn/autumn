@@ -9,8 +9,10 @@ import {
   Product,
   UsagePriceConfig,
   RewardType,
+  AppEnv,
 } from "@autumn/shared";
 import { Stripe } from "stripe";
+import { createStripeCli } from "../utils.js";
 
 const couponToStripeDuration = (coupon: Reward) => {
   let discountConfig = coupon.discount_config;
@@ -62,18 +64,26 @@ const couponToStripeValue = ({
 
 export const createStripeCoupon = async ({
   reward,
-  stripeCli,
   org,
+  env,
   prices,
   logger,
+  legacyVersion,
 }: {
   reward: Reward;
-  stripeCli: Stripe;
   org: Organization;
+  env: AppEnv;
   prices: (Price & { product: Product })[];
   logger: any;
+  legacyVersion?: boolean;
 }) => {
   let discountConfig = reward.discount_config;
+
+  const stripeCli = createStripeCli({
+    org,
+    env,
+    legacyVersion,
+  });
 
   try {
     await stripeCli.coupons.del(reward.id);

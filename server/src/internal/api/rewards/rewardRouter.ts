@@ -8,7 +8,6 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 import { createStripeCoupon } from "@/external/stripe/stripeCouponUtils/stripeCouponUtils.js";
 import { RewardService } from "@/internal/rewards/RewardService.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
-import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import {
   constructReward,
@@ -54,30 +53,6 @@ rewardRouter.post("", async (req: any, res: any) => {
         }),
       ]);
 
-      // Initialize prices
-
-      // if (!discountConfig!.apply_to_all) {
-      //   // Create stripe prices if not exists
-
-      //   const batchSize = 5;
-
-      //   // for (let i = 0; i < prices.length; i += batchSize) {
-      //   //   const batch = prices.slice(i, i + batchSize);
-      //   //   const batchPriceCreate = batch.map((price) =>
-      //   //     createStripePriceIFNotExist({
-      //   //       stripeCli,
-      //   //       price,
-      //   //       entitlements,
-      //   //       org,
-      //   //       logger,
-      //   //       db,
-      //   //       product: price.product,
-      //   //     })
-      //   //   );
-      //   //   await Promise.all(batchPriceCreate);
-      //   // }
-      // }
-
       await initRewardStripePrices({
         db,
         prices,
@@ -88,10 +63,11 @@ rewardRouter.post("", async (req: any, res: any) => {
 
       await createStripeCoupon({
         reward: newReward,
-        stripeCli,
         org,
+        env,
         prices,
         logger,
+        legacyVersion: req.query.legacyStripe === "true",
       });
     }
 
@@ -206,10 +182,11 @@ rewardRouter.post("/:internalId", async (req: any, res: any) => {
     if (rewardCat == RewardCategory.Discount) {
       await createStripeCoupon({
         reward: rewardBody,
-        stripeCli,
         org,
+        env,
         prices,
         logger,
+        legacyVersion: req.query.legacyStripe === "true",
       });
     }
 
