@@ -134,6 +134,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
           newFreeTrial: free_trial,
           internalProductId: fullProduct.internal_id,
           isCustom: false,
+          product: fullProduct,
         });
       }
 

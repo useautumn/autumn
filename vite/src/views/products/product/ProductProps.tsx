@@ -27,6 +27,7 @@ export const ProductProps = () => {
 	const { product, setProduct, counts, mutate } = useProductContext();
 	const axiosInstance = useAxiosInstance();
 	const [defaultOpen, setDefaultOpen] = React.useState(false);
+	const [defaultTrialOpen, setDefaultTrialOpen] = React.useState(false);
 	const [addOnOpen, setAddOnOpen] = React.useState(false);
 	const [groupModalOpen, setGroupModalOpen] = React.useState(false);
 	const [tempGroup, setTempGroup] = React.useState(product.group || "");

@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Source shared configuration
-source "$(dirname "$0")/config.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/config.sh"
 
 # If contains setup then run $MOCHA_SETUP
 if [[ "$1" == *"setup"* ]]; then

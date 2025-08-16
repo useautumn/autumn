@@ -8,7 +8,6 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 import { checkStripeProductExists } from "@/internal/products/productUtils.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-
 import { handleUpdateProductV2 } from "./handlers/handleUpdateProduct/handleUpdateProduct.js";
 import { handleDeleteProduct } from "./handlers/handleDeleteProduct.js";
 import { handleGetProduct } from "./handlers/handleGetProduct.js";
