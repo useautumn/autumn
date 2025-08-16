@@ -30,6 +30,7 @@ import { Decimal } from "decimal.js";
 import { intervalsAreSame } from "../attachUtils/getAttachConfig.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { formatUnixToDateTime, notNullish, nullish } from "@/utils/genUtils.js";
+import { isTrialing } from "../../cusProducts/cusProductUtils.js";
 
 const getNextCycleAt = ({
   prices,
@@ -50,7 +51,11 @@ const getNextCycleAt = ({
 }) => {
   now = now || Date.now();
 
-  if (branch == AttachBranch.NewVersion && curCusProduct?.free_trial) {
+  if (
+    branch == AttachBranch.NewVersion &&
+    curCusProduct &&
+    isTrialing(curCusProduct)
+  ) {
     return {
       next_cycle_at: curCusProduct.trial_ends_at,
     };
@@ -83,7 +88,6 @@ const getNextCycleAt = ({
       }),
     };
   }
-
   const nextCycleAt = getAlignedIntervalUnix({
     alignWithUnix: stripeSubs[0].current_period_end * 1000,
     interval: firstInterval!.interval,
