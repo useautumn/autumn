@@ -154,7 +154,7 @@ export const checkStripeConnections = async ({
 
   // 2. If invoice only and no email, save email
   if (attachParams.invoiceOnly && !customer.email) {
-    customer.email = `${customer.id}@invoices.useautumn.com`;
+    customer.email = `${customer.id}-${org.id}@invoices.useautumn.com`;
     await Promise.all([
       CusService.update({
         db: req.db,
