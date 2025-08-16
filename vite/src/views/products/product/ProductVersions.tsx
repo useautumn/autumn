@@ -41,13 +41,13 @@ export const ProductVersions = () => {
                     `${customer ? `/customers/${customer.id}` : "/products"}/${
                       product.id
                     }?version=${value}`,
-                    env,
-                  ),
+                    env
+                  )
                 );
               }}
             >
               <SelectTrigger
-                className="h-7 w-fit text-sm pr-1 mr-1 h-6 w-12 "
+                className="text-sm pr-1 mr-1 h-6 w-14 "
                 iconClassName="size-4 p-0"
               >
                 <SelectValue placeholder="Select version" />
@@ -68,8 +68,8 @@ export const ProductVersions = () => {
                                 ? `/customers/${customer.id}`
                                 : "/products"
                             }/${product.id}?version=${version}`,
-                            env,
-                          ),
+                            env
+                          )
                         );
                       }}
                     >

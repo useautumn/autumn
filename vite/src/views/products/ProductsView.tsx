@@ -1,29 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  useAxiosPostSWR,
-  useAxiosSWR,
-  usePostSWR,
-} from "@/services/useAxiosSwr";
 import LoadingScreen from "../general/LoadingScreen";
+import CreateProduct from "./CreateProduct";
+import CreateReward from "./rewards/CreateReward";
+import CreateRewardProgramModal from "./reward-programs/CreateRewardProgram";
+import CreateCreditSystem from "../credits/CreateCreditSystem";
+
+import { useEffect, useState } from "react";
+import { useAxiosSWR, usePostSWR } from "@/services/useAxiosSwr";
 import { Product, Feature } from "@autumn/shared";
 import { ProductsContext } from "./ProductsContext";
 import { AppEnv } from "@autumn/shared";
-import CreateProduct from "./CreateProduct";
 import { ProductsTable } from "./ProductsTable";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-
 import { Package, Gift, Flag } from "lucide-react";
-
 import { RewardsTable } from "./rewards/RewardsTable";
-import CreateReward from "./rewards/CreateReward";
-import CreateRewardProgramModal from "./reward-programs/CreateRewardProgram";
 import { RewardProgramsTable } from "./reward-programs/RewardProgramsTable";
 import { FeaturesTable } from "../features/FeaturesTable";
 import { CreateFeatureDialog } from "../features/CreateFeature";
 import { CreditSystemsTable } from "../credits/CreditSystemsTable";
-import CreateCreditSystem from "../credits/CreateCreditSystem";
 import { FeaturesContext } from "../features/FeaturesContext";
 import { PageSectionHeader } from "@/components/general/PageSectionHeader";
 import { HamburgerMenu } from "@/components/general/table-components/HamburgerMenu";
@@ -84,6 +79,7 @@ function ProductsView({ env }: { env: AppEnv }) {
     <ProductsContext.Provider
       value={{
         ...data,
+        groupToDefault: data?.groupToDefault || {},
         env,
         selectedProduct,
         setSelectedProduct,

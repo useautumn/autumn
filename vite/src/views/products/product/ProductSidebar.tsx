@@ -12,10 +12,9 @@ import { AttachButton } from "@/views/customers/customer/product/components/Atta
 import { CustomerProductBadge } from "@/views/customers/customer/product/components/CustomerProductBadge";
 import { EntitiesSidebar } from "./product-item/EntitiesSidebar";
 import { UpdateProductButton } from "./components/UpdateProductButton";
-import { toast } from "sonner";
 
 export default function ProductSidebar() {
-  const { product, org, setProduct, customer, features, mutate } = useProductContext();
+  const { product, setProduct, customer } = useProductContext();
   const [freeTrialModalOpen, setFreeTrialModalOpen] = useState(false);
   const [entitiesOpen, setEntitiesOpen] = useState(false);
   const [accordionValues, setAccordionValues] = useState([
@@ -36,7 +35,7 @@ export default function ProductSidebar() {
 
   const handleAccordionToggle = (value: string) => {
     setAccordionValues((prev) =>
-      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value],
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
     );
   };
 

@@ -22,6 +22,7 @@ import { Product } from "@autumn/shared";
 import { updateProduct } from "@/views/products/product/utils/updateProduct";
 import { getBackendErr } from "@/utils/genUtils";
 import { EditProductDetails } from "./edit-product/EditProductDetails";
+import { ToggleDefaultProduct } from "@/views/products/product/product-sidebar/ToggleDefaultProduct";
 
 export const EditProduct = ({ mutate }: { mutate: any }) => {
   const [freeTrialModalOpen, setFreeTrialModalOpen] = useState(false);
@@ -116,6 +117,7 @@ export const EditProduct = ({ mutate }: { mutate: any }) => {
         >
           <ProductContext.Provider
             value={{
+              groupDefaults: data.groupToDefaults?.[product?.group || ""],
               product,
               setProduct,
               mutate,
@@ -193,26 +195,34 @@ export const EditProduct = ({ mutate }: { mutate: any }) => {
             >
               <div className="flex flex-col gap-4" style={{ width: "320px" }}>
                 <div>
-                  <ToggleButton
+                  {/* <ToggleButton
                     disabled={product?.is_add_on}
                     buttonText="Default Product"
                     value={product?.is_default}
                     className="text-t2 font-medium h-fit mb-2"
                     setValue={() => handleToggleSettings("is_default")}
-                  />
+                  /> */}
+                  <div className="flex items-center text-sm text-t2 gap-2">
+                    <p className="text-t2 font-medium">Default Product</p>
+                    <ToggleDefaultProduct toggleKey="is_default" />
+                  </div>
                   <div className="text-t3 text-sm" style={{ width: "320px" }}>
                     A default product is enabled by default for all new users,
                     typically used for your free plan.
                   </div>
                 </div>
                 <div className="">
-                  <ToggleButton
+                  {/* <ToggleButton
                     disabled={product?.is_default}
                     buttonText="Add-on Product"
                     className="text-t2 font-medium h-fit mb-2"
                     value={product?.is_add_on}
                     setValue={() => handleToggleSettings("is_add_on")}
-                  />
+                  /> */}
+                  <div className="flex items-center text-sm text-t2 gap-2">
+                    <p className="text-t2 font-medium">Add On Product</p>
+                    <ToggleDefaultProduct toggleKey="is_add_on" />
+                  </div>
                   <div className="text-t3 text-sm" style={{ width: "320px" }}>
                     A product that can be added on top of a customer's main
                     plan. Eg. one time purchases or top ups.
