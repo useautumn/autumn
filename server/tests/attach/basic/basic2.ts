@@ -4,15 +4,10 @@ import { assert, expect } from "chai";
 import chalk from "chalk";
 import { setupBefore } from "tests/before.js";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { features, products } from "tests/global.js";
+import { products } from "tests/global.js";
 import { compareMainProduct } from "tests/utils/compare.js";
 import { completeCheckoutForm } from "tests/utils/stripeUtils.js";
 import { timeout } from "tests/utils/genUtils.js";
-
-const oneTimeQuantity = 2;
-const oneTimePurchaseCount = 2;
-const oneTimeOverrideQuantity = 4;
-const monthlyQuantity = 2;
 
 // UNCOMMENT FROM HERE
 const testCase = "basic2";

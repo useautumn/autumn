@@ -115,16 +115,19 @@ export class ProductService {
     db,
     orgId,
     env,
+    group,
   }: {
     db: DrizzleCli;
     orgId: string;
     env: AppEnv;
+    group?: string;
   }) {
     let prods = (await db.query.products.findMany({
       where: and(
         eq(products.org_id, orgId),
         eq(products.env, env),
-        eq(products.is_default, true)
+        eq(products.is_default, true),
+        group ? eq(products.group, group) : undefined
       ),
       with: {
         entitlements: {

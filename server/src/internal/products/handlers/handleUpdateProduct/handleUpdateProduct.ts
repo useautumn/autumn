@@ -17,7 +17,11 @@ import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { productsAreSame } from "../../productUtils/compareProductUtils.js";
 import { initProductInStripe } from "../../productUtils.js";
-import { handleCreateProduct } from "../handleCreateProduct.js";
+import {
+  disableCurrentDefault,
+  handleCreateProduct,
+} from "../handleCreateProduct.js";
+import { mapToProductItems } from "../../productV2Utils.js";
 
 export const handleUpdateProductV2 = async (req: any, res: any) =>
   routeHandler({
@@ -29,27 +33,32 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
       const { version, upsert, disable_version } = req.query;
       const { orgId, env, logger, db } = req;
 
-      const [features, org, fullProduct, rewardPrograms] = await Promise.all([
-        FeatureService.getFromReq(req),
-        OrgService.getFromReq(req),
-        ProductService.getFull({
-          db,
-          idOrInternalId: productId,
-          orgId,
-          env,
-          version: version ? parseInt(version) : undefined,
-          allowNotFound: upsert == "true",
-        }),
-        RewardProgramService.getByProductId({
-          db,
-          productIds: [productId],
-          orgId,
-          env,
-        }),
-      ]);
+      const [features, org, fullProduct, rewardPrograms, defaultProds] =
+        await Promise.all([
+          FeatureService.getFromReq(req),
+          OrgService.getFromReq(req),
+          ProductService.getFull({
+            db,
+            idOrInternalId: productId,
+            orgId,
+            env,
+            version: version ? parseInt(version) : undefined,
+            allowNotFound: upsert == "true",
+          }),
+          RewardProgramService.getByProductId({
+            db,
+            productIds: [productId],
+            orgId,
+            env,
+          }),
+          ProductService.listDefault({
+            db,
+            orgId,
+            env,
+          }),
+        ]);
 
       if (!fullProduct) {
-        console.log("Upserting:", upsert);
         if (upsert == "true") {
           await handleCreateProduct(req, res);
           return;
@@ -70,10 +79,31 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
 
       let cusProductExists = cusProductsCurVersion.length > 0;
 
+      // console.log("Updating product", {
+      //   id: fullProduct.id,
+      //   body: req.body,
+      // });
+      await disableCurrentDefault({
+        req,
+        newProduct: {
+          ...fullProduct,
+          ...req.body,
+        },
+        items:
+          req.body.items ||
+          mapToProductItems({
+            prices: fullProduct.prices,
+            entitlements: fullProduct.entitlements,
+            features,
+          }),
+        freeTrial: req.body.free_trial || fullProduct.free_trial || null,
+      });
+
       await handleUpdateProductDetails({
         db,
         curProduct: fullProduct,
         newProduct: UpdateProductSchema.parse(req.body),
+        newFreeTrial: req.body.free_trial,
         items: req.body.items,
         org,
         rewardPrograms,
@@ -81,7 +111,6 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
       });
 
       let itemsExist = notNullish(req.body.items);
-
       if (cusProductExists && itemsExist) {
         if (disable_version == "true") {
           throw new RecaseError({

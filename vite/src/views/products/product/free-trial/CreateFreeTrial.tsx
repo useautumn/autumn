@@ -29,7 +29,7 @@ export const CreateFreeTrial = ({
     length: 7,
     unique_fingerprint: false,
     duration: FreeTrialDuration.Day,
-    card_required: false,
+    card_required: true,
   });
 
   const handleCreateFreeTrial = async () => {
