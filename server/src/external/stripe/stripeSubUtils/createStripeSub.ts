@@ -15,6 +15,7 @@ import { formatUnixToDateTime, generateId } from "@/utils/genUtils.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getAlignedIntervalUnix } from "@/internal/products/prices/billingIntervalUtils.js";
+import { getEarliestPeriodEnd } from "./convertSubUtils.js";
 
 // Get payment method
 
@@ -67,31 +68,34 @@ export const createStripeSub = async ({
 
   const { items, prices, usageFeatures } = itemSet;
 
-  let subItems = items.filter(
-    (i: any, index: number) =>
-      prices[index].config!.interval !== BillingInterval.OneOff
-  );
+  // let subItems = items.filter(
+  //   (i: any, index: number) =>
+  //     prices[index].config!.interval !== BillingInterval.OneOff
+  // );
 
-  let invoiceItems = items.filter(
-    (i: any, index: number) =>
-      prices[index].config!.interval === BillingInterval.OneOff
-  );
+  // let invoiceItems = items.filter(
+  //   (i: any, index: number) =>
+  //     prices[index].config!.interval === BillingInterval.OneOff
+  // );
 
   try {
     const subscription = await stripeCli.subscriptions.create({
       ...paymentMethodData,
       customer: customer.processor.id,
-      items: subItems as any,
+      items: items as any,
+      // items: subItems as any,
+      billing_mode: { type: "flexible" },
       trial_end: freeTrialToStripeTimestamp({ freeTrial, now }),
       payment_behavior: "error_if_incomplete",
-      add_invoice_items: invoiceItems,
+      // add_invoice_items: invoiceItems,
       collection_method: invoiceOnly ? "send_invoice" : "charge_automatically",
       days_until_due: invoiceOnly ? 30 : undefined,
       billing_cycle_anchor: billingCycleAnchorUnix
         ? Math.floor(billingCycleAnchorUnix / 1000)
         : undefined,
 
-      coupon: reward ? reward.id : undefined,
+      // coupon: reward ? reward.id : undefined,
+      discounts: reward ? [{ coupon: reward.id }] : undefined,
       expand: ["latest_invoice"],
     });
 
@@ -101,11 +105,13 @@ export const createStripeSub = async ({
       (subscription.latest_invoice as Stripe.Invoice).status === "draft"
     ) {
       subscription.latest_invoice = await stripeCli.invoices.finalizeInvoice(
-        (subscription.latest_invoice as Stripe.Invoice).id
+        (subscription.latest_invoice as Stripe.Invoice).id!
       );
     }
 
     // Store
+    const earliestPeriodEnd = getEarliestPeriodEnd({ sub: subscription });
+
     await SubService.createSub({
       db,
       sub: {
@@ -116,8 +122,8 @@ export const createStripeSub = async ({
         usage_features: usageFeatures,
         org_id: org.id,
         env: customer.env,
-        current_period_start: subscription.current_period_start,
-        current_period_end: subscription.current_period_end,
+        current_period_start: earliestPeriodEnd,
+        current_period_end: earliestPeriodEnd,
       },
     });
 

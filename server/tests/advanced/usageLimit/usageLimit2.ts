@@ -13,9 +13,10 @@ import {
   constructFeatureItem,
 } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
-import { addPrefixToProducts, runAttachTest } from "tests/attach/utils.js";
+import { addPrefixToProducts } from "tests/attach/utils.js";
 import { expect } from "chai";
 import { timeout } from "@/utils/genUtils.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
 const messageItem = constructArrearItem({
   featureId: TestFeature.Messages,
@@ -88,7 +89,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage limits, usage prices`
   });
 
   it("should attach pro product", async function () {
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: pro,
@@ -125,7 +126,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage limits, usage prices`
     expect(check.usage_limit!).to.equal(messageItem.usage_limit!);
     // @ts-ignore
     expect(customer.features[TestFeature.Messages].usage_limit).to.equal(
-      messageItem.usage_limit!,
+      messageItem.usage_limit!
     );
   });
 
@@ -150,11 +151,11 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage limits, usage prices`
 
     // @ts-ignore
     expect(check.usage_limit!).to.equal(
-      messageItem.usage_limit! + addOnMessages.included_usage,
+      messageItem.usage_limit! + addOnMessages.included_usage
     );
     // @ts-ignore
     expect(customer.features[TestFeature.Messages].usage_limit).to.equal(
-      messageItem.usage_limit! + addOnMessages.included_usage,
+      messageItem.usage_limit! + addOnMessages.included_usage
     );
   });
 
@@ -178,11 +179,11 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage limits, usage prices`
     expect(check.allowed).to.equal(false);
     // @ts-ignore
     expect(check.usage_limit!).to.equal(
-      messageItem.usage_limit! + addOnMessages.included_usage,
+      messageItem.usage_limit! + addOnMessages.included_usage
     );
     // @ts-ignore
     expect(customer.features[TestFeature.Messages].usage_limit).to.equal(
-      messageItem.usage_limit! + addOnMessages.included_usage,
+      messageItem.usage_limit! + addOnMessages.included_usage
     );
   });
 });

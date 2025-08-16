@@ -20,6 +20,7 @@ import { findStripeItemForPrice } from "../../stripeSubUtils/stripeSubItemUtils.
 import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils.js";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService.js";
 import { notNullish } from "@/utils/genUtils.js";
+import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";
 
 export const handleUsagePrices = async ({
   db,
@@ -81,7 +82,7 @@ export const handleUsagePrices = async ({
 
   if (isNewUsageMethod) {
     let invoiceItem = getInvoiceItemForUsage({
-      stripeInvoiceId: invoice.id,
+      stripeInvoiceId: invoice.id!,
       price,
       customer,
       currency: invoice.currency,
@@ -134,21 +135,20 @@ export const handleUsagePrices = async ({
     allowance: ent.interval == EntInterval.Lifetime ? 0 : ent.allowance!,
   });
 
+  const { end } = subToPeriodStartEnd({ sub: usageSub });
   await CusEntService.update({
     db,
     id: relatedCusEnt.id,
     updates: {
       ...resetBalancesUpdate,
       adjustment: 0,
-      next_reset_at: relatedCusEnt.next_reset_at
-        ? usageSub.current_period_end * 1000
-        : null,
+      next_reset_at: relatedCusEnt.next_reset_at ? end * 1000 : null,
     },
   });
 
   let rolloverUpdate = getRolloverUpdates({
     cusEnt: relatedCusEnt,
-    nextResetAt: usageSub.current_period_end * 1000,
+    nextResetAt: end * 1000,
   });
 
   if (rolloverUpdate?.toInsert && rolloverUpdate.toInsert.length > 0) {
@@ -156,9 +156,6 @@ export const handleUsagePrices = async ({
       db,
       rows: rolloverUpdate.toInsert,
       fullCusEnt: relatedCusEnt,
-      // rolloverConfig: ent.rollover as RolloverConfig,
-      // cusEntID: ent.id,
-      // entityMode: notNullish(ent.entity_feature_id),
     });
   }
 

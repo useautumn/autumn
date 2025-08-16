@@ -1,18 +1,13 @@
+import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { assert, expect } from "chai";
-import chalk from "chalk";
+import { expect } from "chai";
 import { setupBefore } from "tests/before.js";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { features, products } from "tests/global.js";
+import { products } from "tests/global.js";
 import { compareMainProduct } from "tests/utils/compare.js";
 import { completeCheckoutForm } from "tests/utils/stripeUtils.js";
 import { timeout } from "tests/utils/genUtils.js";
-
-const oneTimeQuantity = 2;
-const oneTimePurchaseCount = 2;
-const oneTimeOverrideQuantity = 4;
-const monthlyQuantity = 2;
 
 // UNCOMMENT FROM HERE
 const testCase = "basic2";
@@ -56,8 +51,6 @@ describe(`${chalk.yellowBright("basic2: Testing attach pro")}`, () => {
     });
     expect(res.invoices.length).to.be.greaterThan(0);
   });
-
-  // return;
 
   it("should have correct result when calling /check", async function () {
     const proEntitlements = products.pro.entitlements;

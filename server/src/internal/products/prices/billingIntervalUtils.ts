@@ -137,6 +137,19 @@ export const getAlignedIntervalUnix = ({
 
   const maxIterations = 10000;
   let iterations = 0;
+
+  const printLogs = false;
+  if (printLogs) {
+    console.log(
+      "Natural billing date:",
+      formatUnixToDateTime(naturalBillingDate)
+    );
+    console.log(
+      "Next cycle anchor unix:",
+      formatUnixToDateTime(nextCycleAnchorUnix)
+    );
+  }
+
   while (true) {
     const subtractedUnix = subtractBillingIntervalUnix({
       unixTimestamp: nextCycleAnchorUnix,
@@ -144,7 +157,9 @@ export const getAlignedIntervalUnix = ({
       intervalCount,
     });
 
-    // console.log("Subtracted unix:", formatUnixToDateTime(subtractedUnix));
+    if (printLogs) {
+      console.log("Subtracted unix:", formatUnixToDateTime(subtractedUnix));
+    }
 
     if (subtractedUnix <= now) {
       break;
@@ -160,8 +175,14 @@ export const getAlignedIntervalUnix = ({
 
   let billingCycleAnchorUnix: number | undefined = nextCycleAnchorUnix;
 
-  // console.log("Next cycle anchor:", formatUnixToDateTime(nextCycleAnchorUnix));
-  // console.log("--------------------------------");
+  if (printLogs) {
+    console.log(
+      "Next cycle anchor:",
+      formatUnixToDateTime(nextCycleAnchorUnix)
+    );
+    console.log("Now:", formatUnixToDateTime(now));
+    console.log("--------------------------------");
+  }
 
   let anchorAndNaturalDiff = differenceInSeconds(
     naturalBillingDate,

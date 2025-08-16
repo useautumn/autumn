@@ -13,18 +13,14 @@ import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts, runAttachTest } from "../utils.js";
+import { addPrefixToProducts } from "../utils.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { replaceItems } from "../utils.js";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
 import runUpdateEntsTest from "../updateEnts/expectUpdateEnts.js";
-import { timeout } from "@/utils/genUtils.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { addHours, addMonths, addWeeks } from "date-fns";
-import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
-import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
 export let pro = constructProduct({
   items: [constructArrearItem({ featureId: TestFeature.Words })],
@@ -79,7 +75,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach new version for tria
   });
 
   it("should attach pro product", async function () {
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: pro,

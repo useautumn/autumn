@@ -7,7 +7,7 @@ import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts, runAttachTest } from "../utils.js";
+import { addPrefixToProducts } from "../utils.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
@@ -17,6 +17,7 @@ import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addWeeks } from "date-fns";
 import { defaultApiVersion } from "tests/constants.js";
 import { runMigrationTest } from "./runMigrationTest.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
 let messagesItem = constructFeatureItem({
   featureId: TestFeature.Messages,
@@ -81,7 +82,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for free product`
   });
 
   it("should attach free product", async function () {
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: free,

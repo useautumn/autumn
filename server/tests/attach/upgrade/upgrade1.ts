@@ -6,14 +6,13 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-
 import { APIVersion, AppEnv, Organization } from "@autumn/shared";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addWeeks } from "date-fns";
-import { runAttachTest } from "../utils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { addPrefixToProducts } from "../utils.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
 
 // UNCOMMENT FROM HERE
 let pro = constructProduct({
@@ -79,8 +78,7 @@ describe(`${chalk.yellowBright("upgrade1: Testing usage upgrades")}`, () => {
   });
 
   it("should attach pro product", async function () {
-    // 1. Run check
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: pro,
@@ -106,7 +104,7 @@ describe(`${chalk.yellowBright("upgrade1: Testing usage upgrades")}`, () => {
       waitForSeconds: 10,
     });
 
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: premium,
@@ -132,7 +130,7 @@ describe(`${chalk.yellowBright("upgrade1: Testing usage upgrades")}`, () => {
       waitForSeconds: 10,
     });
 
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: growth,

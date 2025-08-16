@@ -18,6 +18,7 @@ import {
   InsertReplaceable,
   AttachReplaceable,
   ErrCode,
+  AttachConfig,
 } from "@autumn/shared";
 import { priceToStripeItem } from "../priceToStripeItem/priceToStripeItem.js";
 import { getArrearItems } from "./getStripeSubItems/getArrearItems.js";
@@ -32,6 +33,7 @@ import {
   intervalKeyToPrice,
   priceToIntervalKey,
 } from "@/internal/products/prices/priceUtils/convertPrice.js";
+import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 
 const getIntervalToPrices = (prices: Price[]) => {
   const intervalToPrices: Record<string, Price[]> = {};
@@ -208,4 +210,95 @@ export const getStripeSubItems = async ({
   );
 
   return itemSets;
+};
+
+export const getStripeSubItems2 = async ({
+  attachParams,
+  config,
+}: {
+  attachParams: AttachParams;
+  config: AttachConfig;
+}) => {
+  const {
+    prices,
+    entitlements,
+    optionsList,
+    cusProducts,
+    customer,
+    internalEntityId,
+    apiVersion,
+  } = attachParams;
+
+  const subItems: any[] = [];
+  const invoiceItems: any[] = [];
+  const usageFeatures: any[] = [];
+  for (const price of prices) {
+    const priceEnt = getPriceEntitlement(price, entitlements);
+    const options = getEntOptions(optionsList, priceEnt);
+
+    let existingUsage = getExistingUsageFromCusProducts({
+      entitlement: priceEnt,
+      cusProducts,
+      entities: customer.entities,
+      carryExistingUsages: config.carryUsage,
+      internalEntityId,
+    });
+
+    let replaceables = priceEnt
+      ? attachParams.replaceables.filter((r) => r.ent.id === priceEnt.id)
+      : [];
+
+    existingUsage += replaceables.length;
+
+    let product = getProductForPrice(price, attachParams.products)!;
+
+    if (!product) {
+      logger.error(
+        `Couldn't find product for price ${price.internal_product_id}`,
+        {
+          data: {
+            products: attachParams.products,
+            price,
+          },
+        }
+      );
+      throw new RecaseError({
+        code: ErrCode.ProductNotFound,
+        message: `Price internal product ID: ${price.internal_product_id} not found in products`,
+        statusCode: 400,
+      });
+    }
+
+    const stripeItem = priceToStripeItem({
+      price,
+      product,
+      org: attachParams.org,
+      options,
+      isCheckout: config.onlyCheckout,
+      relatedEnt: priceEnt,
+      existingUsage,
+      withEntity: notNullish(internalEntityId),
+      apiVersion: attachParams.apiVersion,
+    });
+
+    if (isUsagePrice({ price })) {
+      usageFeatures.push(priceEnt.feature.internal_id);
+    }
+
+    if (!stripeItem) {
+      continue;
+    }
+
+    const { lineItem } = stripeItem;
+
+    // subItems.push(lineItem);
+
+    if (price.config.interval === BillingInterval.OneOff) {
+      invoiceItems.push(lineItem);
+    } else {
+      subItems.push(lineItem);
+    }
+  }
+
+  return { subItems, invoiceItems, usageFeatures };
 };

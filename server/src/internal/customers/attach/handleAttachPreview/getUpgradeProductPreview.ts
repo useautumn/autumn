@@ -2,6 +2,7 @@ import { AttachParams } from "../../cusProducts/AttachParams.js";
 import {
   attachParamsToProduct,
   attachParamToCusProducts,
+  paramsToCurSub,
 } from "../attachUtils/convertAttachParams.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
@@ -30,19 +31,21 @@ import { Decimal } from "decimal.js";
 import { intervalsAreSame } from "../attachUtils/getAttachConfig.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { formatUnixToDateTime, notNullish, nullish } from "@/utils/genUtils.js";
+import {
+  getLatestPeriodEnd,
+  subToPeriodStartEnd,
+} from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 
 const getNextCycleAt = ({
   prices,
-  stripeSubs,
-  willCycleReset,
+  sub,
   now,
   freeTrial,
   branch,
   curCusProduct,
 }: {
   prices: Price[];
-  stripeSubs: Stripe.Subscription[];
-  willCycleReset: boolean;
+  sub: Stripe.Subscription;
   now?: number;
   freeTrial?: FreeTrial | null;
   branch: AttachBranch;
@@ -51,50 +54,33 @@ const getNextCycleAt = ({
   now = now || Date.now();
 
   if (branch == AttachBranch.NewVersion && curCusProduct?.free_trial) {
-    return {
-      next_cycle_at: curCusProduct.trial_ends_at,
-    };
+    return curCusProduct.trial_ends_at;
   }
 
   if (freeTrial) {
-    return {
-      next_cycle_at:
-        freeTrialToStripeTimestamp({
-          freeTrial,
-          now,
-        })! * 1000,
-    };
+    return (
+      freeTrialToStripeTimestamp({
+        freeTrial,
+        now,
+      })! * 1000
+    );
   }
 
   const firstInterval = getLargestInterval({ prices });
 
   if (nullish(firstInterval)) {
-    return {
-      next_cycle_at: now,
-    };
-  }
-
-  if (willCycleReset) {
-    return {
-      next_cycle_at: addBillingIntervalUnix({
-        unixTimestamp: now,
-        interval: firstInterval!.interval,
-        intervalCount: firstInterval!.intervalCount,
-      }),
-    };
+    return now;
   }
 
   const nextCycleAt = getAlignedIntervalUnix({
-    alignWithUnix: stripeSubs[0].current_period_end * 1000,
+    alignWithUnix: getLatestPeriodEnd({ sub }) * 1000,
     interval: firstInterval!.interval,
     intervalCount: firstInterval!.intervalCount,
     alwaysReturn: true,
     now,
   });
 
-  return {
-    next_cycle_at: nextCycleAt,
-  };
+  return nextCycleAt;
 };
 
 export const getUpgradeProductPreview = async ({
@@ -114,22 +100,15 @@ export const getUpgradeProductPreview = async ({
 }) => {
   const { logtail: logger } = req;
 
-  const { stripeCli } = attachParams;
-
   const { curMainProduct, curSameProduct } = attachParamToCusProducts({
     attachParams,
   });
 
   const curCusProduct = curSameProduct || curMainProduct!;
-
-  const stripeSubs = await getStripeSubs({
-    stripeCli,
-    subIds: curCusProduct?.subscription_ids || [],
-    expand: ["items.data.price.tiers"],
-  });
+  const sub = await paramsToCurSub({ attachParams });
 
   const curPreviewItems = await getItemsForCurProduct({
-    stripeSubs,
+    sub: sub!,
     attachParams,
     branch,
     config,
@@ -139,11 +118,26 @@ export const getUpgradeProductPreview = async ({
 
   // Get prorated amounts for new product
   const newProduct = attachParamsToProduct({ attachParams });
-  const intervalsSame = intervalsAreSame({ attachParams });
-  const anchorToUnix =
-    intervalsSame && stripeSubs.length > 0
-      ? stripeSubs[0].current_period_end * 1000
-      : undefined;
+  // const anchorToUnix = sub ? getLatestPeriodEnd({ sub }) * 1000 : undefined;
+  let anchorToUnix = undefined;
+  try {
+    if (sub) {
+      const { start, end } = subToPeriodStartEnd({ sub });
+      const largestInterval = getLargestInterval({ prices: newProduct.prices });
+      anchorToUnix = addBillingIntervalUnix({
+        unixTimestamp: start * 1000,
+        interval: largestInterval!.interval,
+        intervalCount: largestInterval!.intervalCount,
+      });
+    }
+  } catch (error: any) {
+    logger.error(
+      `Error getting anchorToUnix for upgrade preview: ${error.message}`,
+      {
+        error,
+      }
+    );
+  }
 
   let freeTrial = attachParams.freeTrial;
   if (config?.carryTrial && curCusProduct?.free_trial) {
@@ -156,21 +150,18 @@ export const getUpgradeProductPreview = async ({
     now,
     anchorToUnix,
     freeTrial,
-    stripeSubs,
+    sub: sub!,
     logger,
     withPrepaid,
     branch,
     config,
   });
 
-  const largestInterval = getLargestInterval({ prices: newProduct.prices });
-
   let dueNextCycle = undefined;
   if (!isFreeProduct(newProduct.prices)) {
     const nextCycleAt = getNextCycleAt({
       prices: newProduct.prices,
-      stripeSubs,
-      willCycleReset: !intervalsSame,
+      sub: sub!,
       now,
       freeTrial: attachParams.freeTrial,
       branch,
@@ -180,10 +171,7 @@ export const getUpgradeProductPreview = async ({
     let nextCycleItems = await getItemsForNewProduct({
       newProduct,
       attachParams,
-      interval: attachParams.freeTrial ? undefined : largestInterval?.interval,
-      intervalCount: attachParams.freeTrial
-        ? undefined
-        : largestInterval?.intervalCount,
+      // sub: sub!,
       logger,
       withPrepaid,
       branch,
@@ -192,7 +180,7 @@ export const getUpgradeProductPreview = async ({
 
     dueNextCycle = {
       line_items: nextCycleItems,
-      due_at: nextCycleAt.next_cycle_at,
+      due_at: nextCycleAt,
     };
   }
 

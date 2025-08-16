@@ -6,7 +6,8 @@ import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts, runAttachTest } from "../utils.js";
+import { addPrefixToProducts } from "../utils.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import {
   constructArrearItem,
   constructArrearProratedItem,
@@ -88,7 +89,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing failed upgrades`)}`, () => 
   });
 
   it("should attach pro product", async function () {
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: pro,
@@ -120,7 +121,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing failed upgrades`)}`, () => 
 
     await expectAutumnError({
       func: async () => {
-        await runAttachTest({
+        await attachAndExpectCorrect({
           autumn,
           customerId,
           product: premium,

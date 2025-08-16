@@ -26,6 +26,8 @@ import { handleOneOffFunction } from "../attachFunctions/addProductFlow/handleOn
 import { handleUpgradeSameInterval } from "../attachFunctions/upgradeSameIntFlow/handleUpgradeSameInt.js";
 import { CusProductService } from "../../cusProducts/CusProductService.js";
 import { handleCreateInvoiceCheckout } from "../../add-product/handleCreateInvoiceCheckout.js";
+import { handleUpgradeFlow } from "../attachFunctions/upgradeFlow/handleUpgradeFlow.js";
+import { handleScheduleFunction2 } from "../attachFunctions/scheduleFlow/handleScheduleFlow2.js";
 
 /* 
 1. If from new version, free trial should just carry over
@@ -158,13 +160,6 @@ export const runAttachFunction = async ({
     );
   }
 
-  // config.proration = ProrationBehavior.None;
-  // attachParams.billingAnchor = 1781702400000;
-
-  // attachParams.billingAnchor = 1749902400000;
-  // config.proration = ProrationBehavior.None;
-  // config.carryUsage = true;
-
   if (attachFunction == AttachFunction.OneOff) {
     return await handleOneOffFunction({
       req,
@@ -230,6 +225,7 @@ export const runAttachFunction = async ({
       req,
       res,
       attachParams,
+      config,
     });
   }
 
@@ -243,15 +239,24 @@ export const runAttachFunction = async ({
   }
 
   if (attachFunction == AttachFunction.ScheduleProduct) {
-    return await handleScheduleFunction({
+    return await handleScheduleFunction2({
       req,
       res,
       attachParams,
+      config,
     });
+    // return await handleScheduleFunction({
+    //   req,
+    //   res,
+    //   attachParams,
+    // });
   }
 
-  if (attachFunction == AttachFunction.UpgradeSameInterval) {
-    return await handleUpgradeSameInterval({
+  if (
+    attachFunction == AttachFunction.UpgradeDiffInterval ||
+    attachFunction == AttachFunction.UpgradeSameInterval
+  ) {
+    return await handleUpgradeFlow({
       req,
       res,
       attachParams,
@@ -259,14 +264,23 @@ export const runAttachFunction = async ({
     });
   }
 
-  if (attachFunction == AttachFunction.UpgradeDiffInterval) {
-    return await handleUpgradeDiffInterval({
-      req,
-      res,
-      attachParams,
-      config,
-    });
-  }
+  // if (attachFunction == AttachFunction.UpgradeSameInterval) {
+  //   return await handleUpgradeSameInterval({
+  //     req,
+  //     res,
+  //     attachParams,
+  //     config,
+  //   });
+  // }
+
+  // if (attachFunction == AttachFunction.UpgradeDiffInterval) {
+  //   return await handleUpgradeDiffInterval({
+  //     req,
+  //     res,
+  //     attachParams,
+  //     config,
+  //   });
+  // }
 
   if (attachFunction == AttachFunction.UpdatePrepaidQuantity) {
     return await handleUpdateQuantityFunction({

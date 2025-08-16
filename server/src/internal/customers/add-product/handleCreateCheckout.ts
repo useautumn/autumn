@@ -7,10 +7,13 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { pricesContainRecurring } from "@/internal/products/prices/priceUtils.js";
 import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
-import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
+import {
+  getStripeSubItems,
+  getStripeSubItems2,
+} from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
-import { APIVersion } from "@autumn/shared";
+import { APIVersion, AttachConfig } from "@autumn/shared";
 import { SuccessCode } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
 
@@ -20,11 +23,13 @@ export const handleCreateCheckout = async ({
   req,
   res,
   attachParams,
+  config,
   returnCheckout = false,
 }: {
   req: any;
   res: any;
   attachParams: AttachParams;
+  config: AttachConfig;
   returnCheckout?: boolean;
 }) => {
   const { db, logtail: logger } = req;

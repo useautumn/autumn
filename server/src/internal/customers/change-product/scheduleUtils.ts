@@ -11,11 +11,11 @@ import {
   Product,
 } from "@autumn/shared";
 import Stripe from "stripe";
+import { fullCusProductToProduct } from "../cusProducts/cusProductUtils.js";
 import {
-  fullCusProductToProduct,
-  isActiveStatus,
-} from "../cusProducts/cusProductUtils.js";
-import { CusProductService } from "../cusProducts/CusProductService.js";
+  ACTIVE_STATUSES,
+  CusProductService,
+} from "../cusProducts/CusProductService.js";
 
 import { getExistingCusProducts } from "../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
@@ -144,7 +144,7 @@ export const cancelFutureProductSchedule = async ({
 
     // 1. Remove cur scheduled product items from schedule
     const activeCusProducts = cusProducts.filter((cusProduct) =>
-      isActiveStatus(cusProduct?.status)
+      ACTIVE_STATUSES.includes(cusProduct?.status)
     );
 
     const filteredScheduleItems = getFilteredScheduleItems({

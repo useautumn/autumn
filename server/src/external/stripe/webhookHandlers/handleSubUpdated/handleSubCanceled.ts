@@ -8,6 +8,10 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { productToInsertParams } from "@/internal/customers/attach/attachUtils/attachParams/convertToParams.js";
+import {
+  getLatestPeriodEnd,
+  subToPeriodStartEnd,
+} from "../../stripeSubUtils/convertSubUtils.js";
 
 export const handleSubCanceled = async ({
   req,
@@ -64,8 +68,9 @@ export const handleSubCanceled = async ({
   if (defaultProducts.length == 0) return;
 
   if (defaultProducts.length > 0) {
+    const { end } = subToPeriodStartEnd({ sub });
     const productNames = defaultProducts.map((p) => p.name).join(", ");
-    const periodEnd = formatUnixToDateTime(sub.current_period_end * 1000);
+    const periodEnd = formatUnixToDateTime(end * 1000);
     logger.info(
       `subscription.updated: canceled -> attempting to schedule default products: ${productNames}, period end: ${periodEnd}`
     );
@@ -88,10 +93,11 @@ export const handleSubCanceled = async ({
       entities,
     });
 
+    const end = getLatestPeriodEnd({ sub });
     let fullCusProduct = await createFullCusProduct({
       db,
       attachParams: insertParams,
-      startsAt: sub.current_period_end * 1000,
+      startsAt: end * 1000,
       sendWebhook: false,
       logger,
     });

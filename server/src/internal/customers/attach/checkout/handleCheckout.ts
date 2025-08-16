@@ -146,6 +146,7 @@ export const handleCheckout = (req: any, res: any) =>
             req,
             res,
             attachParams,
+            config,
             returnCheckout: true,
           });
 

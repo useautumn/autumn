@@ -24,6 +24,7 @@ import {
 } from "@/internal/invoices/invoiceUtils.js";
 import { updateSubsDiffInt } from "./updateSubsDiffInt.js";
 import { attachParamsToCurCusProduct } from "../../attachUtils/convertAttachParams.js";
+import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 
 export const handleUpgradeDiffInterval = async ({
   req,
@@ -85,13 +86,13 @@ export const handleUpgradeDiffInterval = async ({
 
   // Insert new cus product
   logger.info("4. Creating new cus product");
+  const { end } = subToPeriodStartEnd({ sub: newSubs[0] });
   await createFullCusProduct({
     db: req.db,
     attachParams: attachToInsertParams(attachParams, products[0]),
     subscriptionIds: newSubs.map((sub) => sub.id),
 
-    anchorToUnix:
-      newSubs.length > 0 ? newSubs[0].current_period_end * 1000 : undefined,
+    anchorToUnix: newSubs.length > 0 ? end * 1000 : undefined,
 
     disableFreeTrial: disableTrial,
     carryExistingUsages: carryUsage,

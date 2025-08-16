@@ -12,6 +12,7 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
 import {
   getFullStripeInvoice,
   getStripeExpandedInvoice,
+  invoiceToSubId,
   updateInvoiceIfExists,
 } from "../stripeInvoiceUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
@@ -34,19 +35,21 @@ export const handleInvoiceFinalized = async ({
   const stripeCli = createStripeCli({ org, env });
   const invoice = await getFullStripeInvoice({
     stripeCli,
-    stripeId: data.id,
+    stripeId: data.id!,
   });
 
-  if (invoice.subscription) {
+  const subId = invoiceToSubId({ invoice });
+
+  if (subId) {
     const stripeCli = createStripeCli({ org, env });
     const expandedInvoice = await getStripeExpandedInvoice({
       stripeCli,
-      stripeInvoiceId: invoice.id,
+      stripeInvoiceId: invoice.id!,
     });
 
     const activeProducts = await CusProductService.getByStripeSubId({
       db,
-      stripeSubId: invoice.subscription as string,
+      stripeSubId: subId,
       orgId: org.id,
       env,
       inStatuses: [CusProductStatus.Active],
@@ -66,7 +69,7 @@ export const handleInvoiceFinalized = async ({
     }
 
     let prices = activeProducts.flatMap((cp) =>
-      cp.customer_prices.map((cpr: FullCustomerPrice) => cpr.price),
+      cp.customer_prices.map((cpr: FullCustomerPrice) => cpr.price)
     );
 
     let invoiceItems = await getInvoiceItems({

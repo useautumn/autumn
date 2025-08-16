@@ -6,12 +6,13 @@ import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts, runAttachTest } from "../utils.js";
+import { addPrefixToProducts } from "../utils.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import {
   expectDowngradeCorrect,
   expectNextCycleCorrect,
 } from "tests/utils/expectUtils/expectScheduleUtils.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
 const testCase = "others1";
 
@@ -78,7 +79,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing trials: pro with trial -> p
   });
 
   it("should attach pro product (with trial)", async function () {
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       stripeCli,
       customerId,
@@ -90,7 +91,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing trials: pro with trial -> p
   });
 
   it("should attach premium product (with trial)", async function () {
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       stripeCli,
       customerId,

@@ -4,35 +4,45 @@ import { AttachParams } from "../../cusProducts/AttachParams.js";
 import {
   attachParamsToProduct,
   attachParamToCusProducts,
+  paramsToCurSub,
 } from "../attachUtils/convertAttachParams.js";
-import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { getOptions } from "@/internal/api/entitled/checkUtils.js";
-import { UsageModel } from "@autumn/shared";
+import { AttachBranch, AttachConfig, UsageModel } from "@autumn/shared";
+import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 
 export const getDowngradeProductPreview = async ({
   attachParams,
   now,
   logger,
+  branch,
+  config,
 }: {
   attachParams: AttachParams;
   now: number;
   logger: any;
+  branch: AttachBranch;
+  config: AttachConfig;
 }) => {
   const newProduct = attachParamsToProduct({ attachParams });
 
   const { curCusProduct } = attachParamToCusProducts({ attachParams });
-  const stripeSubs = await getStripeSubs({
-    stripeCli: attachParams.stripeCli,
-    subIds: curCusProduct?.subscription_ids || [],
-  });
+  const sub = await paramsToCurSub({ attachParams });
 
-  const anchorToUnix = stripeSubs[0].current_period_end * 1000;
+  // const stripeSubs = await getStripeSubs({
+  //   stripeCli: attachParams.stripeCli,
+  //   subIds: curCusProduct?.subscription_ids || [],
+  // });
+
+  // const anchorToUnix = stripeSubs[0].current_period_end * 1000;
+  const anchorToUnix = sub ? getLatestPeriodEnd({ sub }) * 1000 : undefined;
 
   let items = await getItemsForNewProduct({
     newProduct,
     attachParams,
     now,
     logger,
+    branch,
+    config,
   });
 
   items = items.filter((item) => item.usage_model !== UsageModel.Prepaid);

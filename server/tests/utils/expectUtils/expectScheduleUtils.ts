@@ -52,7 +52,7 @@ export const expectNextCycleCorrect = async ({
       testClockId,
       advanceTo: addHours(
         preview!.due_next_cycle.due_at,
-        hoursToFinalizeInvoice,
+        hoursToFinalizeInvoice
       ).getTime(),
     });
   }
@@ -113,7 +113,7 @@ export const expectDowngradeCorrect = async ({
 
   expect(
     productCount,
-    "customer should only have 2 products (from this group)",
+    "customer should only have 2 products (from this group)"
   ).to.equal(2);
 
   expectProductAttached({
@@ -191,7 +191,7 @@ export const expectSubScheduleCorrect = async ({
   }
 
   const cusProduct = fullCus.customer_products.find(
-    (cp: FullCusProduct) => cp.product.id == productId,
+    (cp: FullCusProduct) => cp.product.id == productId
   )!;
 
   const scheduleSets = await getStripeSchedules({
@@ -200,7 +200,7 @@ export const expectSubScheduleCorrect = async ({
   });
 
   const stripePrices = scheduleSets.flatMap(
-    (schedule) => schedule?.prices || [],
+    (schedule) => schedule?.prices || []
   );
 
   const autumnPrices = cusProductToPrices({ cusProduct });
@@ -223,6 +223,6 @@ export const expectSubScheduleCorrect = async ({
 
   expect(
     stripePrices.length,
-    "number of schedule items equivalent to number of autumn prices",
+    "number of schedule items equivalent to number of autumn prices"
   ).to.equal(autumnPrices.length - missingUsageCount);
 };

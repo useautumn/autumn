@@ -6,9 +6,9 @@ import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts, runAttachTest } from "../utils.js";
-
+import { addPrefixToProducts } from "../utils.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
 const testCase = "upgrade7";
 
@@ -64,7 +64,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrade via cancel + attach
   });
 
   it("should attach pro product", async function () {
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: pro,
@@ -87,15 +87,5 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrade via cancel + attach
       product_id: premium.id,
       force_checkout: true,
     });
-
-    // await runAttachTest({
-    //   autumn,
-    //   customerId,
-    //   product: premium,
-    //   stripeCli,
-    //   db,
-    //   org,
-    //   env,
-    // });
   });
 });

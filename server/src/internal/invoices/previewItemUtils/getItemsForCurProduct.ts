@@ -30,14 +30,16 @@ import { getContUseInvoiceItems } from "@/internal/customers/attach/attachUtils/
 import { isTrialing } from "@/internal/customers/cusProducts/cusProductUtils.js";
 
 export const getItemsForCurProduct = async ({
-  stripeSubs,
+  // stripeSubs,
+  sub,
   attachParams,
   branch,
   config,
   now,
   logger,
 }: {
-  stripeSubs: Stripe.Subscription[];
+  // stripeSubs: Stripe.Subscription[];
+  sub?: Stripe.Subscription;
   attachParams: AttachParams;
   branch: AttachBranch;
   config: AttachConfig;
@@ -53,77 +55,78 @@ export const getItemsForCurProduct = async ({
   const curPrices = cusProductToPrices({ cusProduct: curCusProduct });
 
   let items: PreviewLineItem[] = [];
+  const subItems = sub?.items.data || [];
   let onTrial = isTrialing(curCusProduct);
 
-  for (const sub of stripeSubs) {
-    for (const item of sub.items.data) {
-      const price = findPriceInStripeItems({
-        prices: curPrices,
-        subItem: item,
+  for (const item of subItems) {
+    const price = findPriceInStripeItems({
+      prices: curPrices,
+      subItem: item,
+    });
+
+    if (!price) continue;
+    const billingType = getBillingType(price.config);
+
+    if (
+      billingType == BillingType.UsageInArrear ||
+      billingType == BillingType.InArrearProrated
+    )
+      continue;
+
+    const totalAmountCents = getSubItemAmount({ subItem: item });
+    let totalAmount = new Decimal(totalAmountCents).div(100).toNumber();
+
+    if (onTrial) {
+      totalAmount = 0;
+    }
+
+    // const periodEnd = sub.items.data[0].current_period_end * 1000;
+    const periodEnd = item.current_period_end * 1000;
+
+    const ents = cusProductToEnts({ cusProduct: curCusProduct });
+    const ent = getPriceEntitlement(price, ents);
+    if (now < periodEnd) {
+      const finalProration = getProration({
+        now,
+        interval: price.config.interval!,
+        intervalCount: price.config.interval_count || 1,
+        anchorToUnix: periodEnd,
+      })!;
+
+      const proratedAmount = -calculateProrationAmount({
+        periodEnd: finalProration?.end,
+        periodStart: finalProration?.start,
+        now,
+        amount: totalAmount,
       });
 
-      if (!price) continue;
-      const billingType = getBillingType(price.config);
+      let description = priceToInvoiceDescription({
+        price,
+        org: attachParams.org,
+        cusProduct: curCusProduct,
+        quantity: item.quantity,
+        logger,
+      });
 
-      if (
-        billingType == BillingType.UsageInArrear ||
-        billingType == BillingType.InArrearProrated
-      )
-        continue;
+      description = `Unused ${description} (from ${formatUnixToDate(now)})`;
 
-      const totalAmountCents = getSubItemAmount({ subItem: item });
-      let totalAmount = new Decimal(totalAmountCents).div(100).toNumber();
-
-      if (onTrial) {
-        totalAmount = 0;
-      }
-
-      const periodEnd = sub.current_period_end * 1000;
-
-      const ents = cusProductToEnts({ cusProduct: curCusProduct });
-      const ent = getPriceEntitlement(price, ents);
-      if (now < periodEnd) {
-        const finalProration = getProration({
-          now,
-          interval: price.config.interval!,
-          intervalCount: price.config.interval_count || 1,
-          anchorToUnix: sub.current_period_end * 1000,
-        })!;
-
-        const proratedAmount = -calculateProrationAmount({
-          periodEnd: finalProration?.end,
-          periodStart: finalProration?.start,
-          now,
-          amount: totalAmount,
-        });
-
-        let description = priceToInvoiceDescription({
-          price,
+      items.push({
+        price: formatAmount({
           org: attachParams.org,
-          cusProduct: curCusProduct,
-          quantity: item.quantity,
-          logger,
-        });
-
-        description = `Unused ${description} (from ${formatUnixToDate(now)})`;
-
-        items.push({
-          price: formatAmount({
-            org: attachParams.org,
-            amount: proratedAmount,
-          }),
-          description,
           amount: proratedAmount,
-          usage_model: priceToUsageModel(price),
-          price_id: price.id!,
-          feature_id: ent?.feature.id,
-        });
-      }
+        }),
+        description,
+        amount: proratedAmount,
+        usage_model: priceToUsageModel(price),
+        price_id: price.id!,
+        feature_id: ent?.feature.id,
+      });
     }
   }
+  // }
 
   let { oldItems, newItems } = await getContUseInvoiceItems({
-    stripeSubs,
+    sub,
     attachParams,
     logger,
     cusProduct: curCusProduct,

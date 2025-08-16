@@ -11,7 +11,8 @@ import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 
-import { addPrefixToProducts, runAttachTest } from "tests/attach/utils.js";
+import { addPrefixToProducts } from "tests/attach/utils.js";
+
 import { addMonths } from "date-fns";
 import { expect } from "chai";
 import {
@@ -19,6 +20,7 @@ import {
   expectNextCycleCorrect,
 } from "tests/utils/expectUtils/expectScheduleUtils.js";
 import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
 const testCase = "customInterval4";
 
@@ -87,7 +89,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing downgrades for custom inter
   });
 
   it("should attach premium product", async function () {
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: premium,

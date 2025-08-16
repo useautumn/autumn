@@ -62,7 +62,7 @@ export const updateSubsDiffInt = async ({
     db,
     attachParams,
     cusProduct: curCusProduct,
-    stripeSubs,
+    sub: firstSub,
     logger,
   });
 

@@ -20,6 +20,30 @@ import {
   priceToUsageInAdvance,
 } from "./priceToUsageInAdvance.js";
 import { priceToInArrearProrated } from "./priceToArrearProrated.js";
+import { billingIntervalToStripe } from "../stripePriceUtils.js";
+
+export const getEmptyPriceItem = ({
+  price,
+  org,
+}: {
+  price: Price;
+  org: Organization;
+}) => {
+  return {
+    price_data: {
+      product: price.config!.stripe_product_id!,
+      unit_amount: 0,
+      currency: org.default_currency || "usd",
+      recurring: {
+        ...billingIntervalToStripe({
+          interval: price.config!.interval!,
+          intervalCount: price.config!.interval_count!,
+        }),
+      },
+    },
+    quantity: 1,
+  };
+};
 
 // GET STRIPE LINE / SUB ITEM
 export const priceToStripeItem = ({
@@ -101,11 +125,22 @@ export const priceToStripeItem = ({
     const priceId = config.stripe_price_id;
 
     if (withEntity && !isCheckout) {
-      return null;
+      return {
+        lineItem: {
+          price: config.stripe_empty_price_id,
+          quantity: 1,
+        },
+      };
     }
 
     if (apiVersion === APIVersion.v1_4 && !isCheckout) {
-      return null;
+      return {
+        lineItem: {
+          // lineItem: getEmptyPriceItem({ price, org }),
+          price: config.stripe_empty_price_id,
+          quantity: 1,
+        },
+      };
     }
 
     if (!priceId) {

@@ -74,7 +74,7 @@ export const handleSubscriptionUpdated = async ({
 
   if (updatedCusProducts.length > 0) {
     logger.info(
-      `✅ Updated ${updatedCusProducts.length} customer product${updatedCusProducts.length === 1 ? '' : 's'} (${updatedCusProducts.map(cp => cp.id).join(', ')}) - Status: ${updatedCusProducts[0].status}${updatedCusProducts[0].canceled_at ? `, Canceled: ${new Date(updatedCusProducts[0].canceled_at).toISOString()}` : ''}`
+      `✅ Updated ${updatedCusProducts.length} customer product${updatedCusProducts.length === 1 ? "" : "s"} (${updatedCusProducts.map((cp) => cp.id).join(", ")}) - Status: ${updatedCusProducts[0].status}${updatedCusProducts[0].canceled_at ? `, Canceled: ${new Date(updatedCusProducts[0].canceled_at).toISOString()}` : ""}`
     );
   }
 
@@ -103,7 +103,7 @@ export const handleSubscriptionUpdated = async ({
   } catch (error) {
     logger.warn(
       `Failed to update sub from stripe. Stripe sub ID: ${subscription.id}, org: ${org.slug}, env: ${env}`,
-      error,
+      error
     );
   }
 
@@ -116,11 +116,11 @@ export const handleSubscriptionUpdated = async ({
     });
 
     const latestInvoice = await stripeCli.invoices.retrieve(
-      subscription.latest_invoice,
+      subscription.latest_invoice
     );
 
     logger.info(
-      `Latest invoice billing reason: ${latestInvoice.billing_reason}`,
+      `Latest invoice billing reason: ${latestInvoice.billing_reason}`
     );
     logger.info(`Latest invoice status: ${latestInvoice.status}`);
 
@@ -138,7 +138,7 @@ export const handleSubscriptionUpdated = async ({
             latestInvoiceStatus: latestInvoice.status,
             latestInvoiceBillingReason: latestInvoice.billing_reason,
           },
-        },
+        }
       );
       return;
     }
@@ -154,7 +154,7 @@ export const handleSubscriptionUpdated = async ({
             latestInvoiceStatus: latestInvoice.status,
             latestInvoiceBillingReason: latestInvoice.billing_reason,
           },
-        },
+        }
       );
       await stripeCli.subscriptions.cancel(subscription.id);
       await stripeCli.invoices.voidInvoice(subscription.latest_invoice);
@@ -170,7 +170,7 @@ export const handleSubscriptionUpdated = async ({
             latestInvoiceStatus: latestInvoice.status,
             latestInvoiceBillingReason: latestInvoice.billing_reason,
           },
-        },
+        }
       );
     }
   }

@@ -25,7 +25,7 @@ import {
   constructRawProduct,
 } from "@/utils/scriptUtils/createTestProducts.js";
 
-import { addPrefixToProducts, runAttachTest } from "tests/attach/utils.js";
+import { addPrefixToProducts } from "tests/attach/utils.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addDays, addHours, addMonths } from "date-fns";
 import { expect } from "chai";
@@ -35,6 +35,7 @@ import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUt
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
 import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
 import { getProration } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
 const testCase = "customInterval3";
 
@@ -105,7 +106,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval on add on m
   });
 
   it("should attach pro product", async function () {
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: pro,

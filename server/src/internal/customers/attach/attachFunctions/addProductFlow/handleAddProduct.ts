@@ -12,6 +12,7 @@ import { handlePaidProduct } from "./handlePaidProduct.js";
 import { attachParamsToCurCusProduct } from "../../attachUtils/convertAttachParams.js";
 import { getDefaultAttachConfig } from "../../attachUtils/getAttachConfig.js";
 import { getMergeCusProduct } from "./getMergeCusProduct.js";
+import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 
 export const handleAddProduct = async ({
   req,
@@ -46,7 +47,7 @@ export const handleAddProduct = async ({
 
   const batchInsert = [];
 
-  const { mergeCusProduct, mergeSubs } = await getMergeCusProduct({
+  const { mergeCusProduct, mergeSub } = await getMergeCusProduct({
     attachParams,
     config: config || defaultConfig,
     products,
@@ -63,8 +64,9 @@ export const handleAddProduct = async ({
       anchorToUnix = curCusProduct.created_at;
     }
 
-    if (mergeSubs.length > 0) {
-      anchorToUnix = mergeSubs[0].current_period_end * 1000;
+    if (mergeSub) {
+      const { end } = subToPeriodStartEnd({ sub: mergeSub });
+      anchorToUnix = end * 1000;
     }
 
     batchInsert.push(

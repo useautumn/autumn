@@ -12,7 +12,8 @@ import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts, runAttachTest } from "../../attach/utils.js";
+import { addPrefixToProducts } from "../../attach/utils.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
@@ -106,7 +107,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing replaceables delete
     await autumn.entities.create(customerId, firstEntities);
     usage += firstEntities.length;
 
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: pro,
@@ -158,7 +159,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing replaceables delete
       testClockId,
       advanceTo: addHours(
         addMonths(new Date(), 1),
-        hoursToFinalizeInvoice,
+        hoursToFinalizeInvoice
       ).getTime(),
     });
 

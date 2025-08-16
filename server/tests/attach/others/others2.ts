@@ -6,13 +6,14 @@ import { APIVersion, AppEnv, Organization } from "@autumn/shared";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts, runAttachTest } from "../utils.js";
+import { addPrefixToProducts } from "../utils.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { expect } from "chai";
 import { attachFailedPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
 const testCase = "others2";
 
@@ -80,7 +81,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing one-off`)}`, () => {
   ];
 
   it("should attach one-off product", async function () {
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       stripeCli,
       customerId,
@@ -99,7 +100,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing one-off`)}`, () => {
     },
   ];
   it("should be able to attach again", async function () {
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       stripeCli,
       customerId,

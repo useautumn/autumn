@@ -11,13 +11,14 @@ import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
 
-import { addPrefixToProducts, runAttachTest } from "tests/attach/utils.js";
+import { addPrefixToProducts } from "tests/attach/utils.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addHours, addMonths } from "date-fns";
 import { expect } from "chai";
 import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
 import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
 import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
 const testCase = "customInterval2";
 
@@ -74,7 +75,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval on arrear p
   });
 
   it("should attach pro product", async function () {
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: pro,

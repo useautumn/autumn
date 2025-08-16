@@ -6,7 +6,7 @@ import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts, runAttachTest } from "../utils.js";
+import { addPrefixToProducts } from "../utils.js";
 
 import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
@@ -14,6 +14,7 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addWeeks } from "date-fns";
 import { timeout } from "@/utils/genUtils.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
 const testCase = "upgrade3";
 
@@ -119,7 +120,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with arrear prorat
     ]);
     numUsers = 2;
 
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: pro,
@@ -155,7 +156,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with arrear prorat
 
     await timeout(3000);
 
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: premium,
@@ -179,7 +180,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with arrear prorat
       advanceTo: addWeeks(curUnix, 1).getTime(),
     });
 
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: proAnnual,

@@ -27,10 +27,10 @@ import { getExistingUsageFromCusProducts } from "@/internal/customers/cusProduct
 import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
 
 export const getCurContUseItems = async ({
-  stripeSubs,
+  sub,
   attachParams,
 }: {
-  stripeSubs: Stripe.Subscription[];
+  sub: Stripe.Subscription;
   attachParams: AttachParams;
 }) => {
   const { features } = attachParams;
@@ -44,66 +44,64 @@ export const getCurContUseItems = async ({
   let items: PreviewLineItem[] = [];
   let now = attachParams.now || Date.now();
 
-  for (const sub of stripeSubs) {
-    for (const item of sub.items.data) {
-      const price = findPriceInStripeItems({
-        prices: curPrices,
-        subItem: item,
-        billingType: BillingType.InArrearProrated,
+  for (const item of sub.items.data) {
+    const price = findPriceInStripeItems({
+      prices: curPrices,
+      subItem: item,
+      billingType: BillingType.InArrearProrated,
+    });
+
+    if (!price) continue;
+
+    const periodEnd = item.current_period_end * 1000;
+    const totalAmountCents = getSubItemAmount({ subItem: item });
+    const totalAmount = new Decimal(totalAmountCents).div(100).toNumber();
+    const ent = getPriceEntitlement(price, curEnts);
+
+    if (now < periodEnd) {
+      const finalProration = getProration({
+        now,
+        interval: price.config.interval!,
+        intervalCount: price.config.interval_count || 1,
+        anchorToUnix: periodEnd,
+      })!;
+
+      const proratedAmount = -calculateProrationAmount({
+        periodEnd: finalProration?.end,
+        periodStart: finalProration?.start,
+        now,
+        amount: totalAmount,
       });
 
-      if (!price) continue;
+      const existingUsage = getExistingUsageFromCusProducts({
+        entitlement: ent!,
+        cusProducts: [curCusProduct],
+        entities: attachParams.entities,
+        carryExistingUsages: true,
+        internalEntityId: attachParams.internalEntityId,
+      });
 
-      const totalAmountCents = getSubItemAmount({ subItem: item });
-      const totalAmount = new Decimal(totalAmountCents).div(100).toNumber();
-      const periodEnd = sub.current_period_end * 1000;
-      const ent = getPriceEntitlement(price, curEnts);
+      const feature = priceToFeature({ price, features });
 
-      if (now < periodEnd) {
-        const finalProration = getProration({
-          now,
-          interval: price.config.interval!,
-          intervalCount: price.config.interval_count || 1,
-          anchorToUnix: sub.current_period_end * 1000,
-        })!;
+      let description = getFeatureInvoiceDescription({
+        feature: feature!,
+        usage: existingUsage,
+        billingUnits: (price.config as UsagePriceConfig).billing_units,
+        prodName: curMainProduct?.product.name,
+      });
 
-        const proratedAmount = -calculateProrationAmount({
-          periodEnd: finalProration?.end,
-          periodStart: finalProration?.start,
-          now,
-          amount: totalAmount,
-        });
+      description = `Unused ${description} (from ${formatUnixToDate(now)})`;
 
-        const existingUsage = getExistingUsageFromCusProducts({
-          entitlement: ent!,
-          cusProducts: [curCusProduct],
-          entities: attachParams.entities,
-          carryExistingUsages: true,
-          internalEntityId: attachParams.internalEntityId,
-        });
-
-        const feature = priceToFeature({ price, features });
-
-        let description = getFeatureInvoiceDescription({
-          feature: feature!,
-          usage: existingUsage,
-          billingUnits: (price.config as UsagePriceConfig).billing_units,
-          prodName: curMainProduct?.product.name,
-        });
-
-        description = `Unused ${description} (from ${formatUnixToDate(now)})`;
-
-        items.push({
-          price: formatAmount({
-            org: attachParams.org,
-            amount: proratedAmount,
-          }),
-          description,
+      items.push({
+        price: formatAmount({
+          org: attachParams.org,
           amount: proratedAmount,
-          usage_model: priceToUsageModel(price),
-          price_id: price.id!,
-        });
-      }
+        }),
+        description,
+        amount: proratedAmount,
+        usage_model: priceToUsageModel(price),
+        price_id: price.id!,
+      });
     }
   }
 

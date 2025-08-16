@@ -13,7 +13,7 @@ import {
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 
-import { addPrefixToProducts, runAttachTest } from "../utils.js";
+import { addPrefixToProducts } from "../utils.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -24,7 +24,7 @@ import {
 import { createProducts } from "tests/utils/productUtils.js";
 import { advanceMonths } from "tests/utils/stripeUtils.js";
 import { timeout } from "@/utils/genUtils.js";
-
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 const testCase = "downgrade4";
 
 let proQuarter = constructProduct({
@@ -91,7 +91,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing downgrade: pro-quarter -> p
   });
 
   it("should attach pro quarterly product", async function () {
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: proQuarter,

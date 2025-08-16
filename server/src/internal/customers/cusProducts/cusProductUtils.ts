@@ -42,13 +42,8 @@ import { initStripeCusAndProducts } from "../handlers/handleCreateCustomer.js";
 import { handleAddProduct } from "../attach/attachFunctions/addProductFlow/handleAddProduct.js";
 import { newCusToAttachParams } from "../attach/attachUtils/attachParams/convertToParams.js";
 
-export const isActiveStatus = (status: CusProductStatus) => {
-  return (
-    status === CusProductStatus.Active || status === CusProductStatus.PastDue
-  );
-};
-
 // 1. Cancel cusProductSubscriptions
+// CAN DELETE
 export const cancelCusProductSubscriptions = async ({
   cusProduct,
   org,
@@ -79,7 +74,7 @@ export const cancelCusProductSubscriptions = async ({
       subIds: cusProduct.subscription_ids,
     });
 
-    latestSubEnd = stripeSubs?.[0]?.current_period_end;
+    latestSubEnd = stripeSubs?.[0]?.items.data[0].current_period_end;
   }
 
   const cancelStripeSub = async (subId: string) => {
@@ -308,7 +303,7 @@ export const processFullCusProduct = ({
 }: {
   cusProduct: FullCusProduct;
   org: Organization;
-  subs?: (Stripe.Subscription | Subscription)[];
+  subs?: Subscription[];
   entities?: Entity[];
   apiVersion: number;
 }) => {

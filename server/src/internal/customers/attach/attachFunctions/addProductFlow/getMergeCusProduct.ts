@@ -1,5 +1,6 @@
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { AttachConfig, FullProduct, Product, products } from "@autumn/shared";
 
@@ -17,17 +18,21 @@ export const getMergeCusProduct = async ({
   let mergeCusProduct = undefined;
   if (!config.disableMerge && !freeTrial) {
     mergeCusProduct = cusProducts?.find((cp) =>
-      products.some((p) => p.group == cp.product.group),
+      products.some((p) => p.group == cp.product.group)
     );
   }
 
-  let mergeSubs = await getStripeSubs({
+  const mergeSub = await cusProductToSub({
+    cusProduct: mergeCusProduct,
     stripeCli,
-    subIds: mergeCusProduct?.subscription_ids,
   });
+  // let mergeSubs = await getStripeSubs({
+  //   stripeCli,
+  //   subIds: mergeCusProduct?.subscription_ids,
+  // });
 
   return {
     mergeCusProduct,
-    mergeSubs,
+    mergeSub: mergeSub || undefined,
   };
 };

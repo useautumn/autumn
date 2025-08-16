@@ -10,9 +10,10 @@ import { createProducts } from "tests/utils/productUtils.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
-import { addPrefixToProducts, runAttachTest } from "tests/attach/utils.js";
+import { addPrefixToProducts } from "tests/attach/utils.js";
 import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
 import { expect } from "chai";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
 const userItem = constructArrearProratedItem({
   featureId: TestFeature.Users,
@@ -96,7 +97,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage limits for entities`)
   ];
 
   it("should attach pro product", async function () {
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: pro,
@@ -140,7 +141,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage limits for entities`)
 
     // @ts-ignore
     expect(customer.features[TestFeature.Users].usage_limit).to.equal(
-      userItem.usage_limit,
+      userItem.usage_limit
     );
   });
 });

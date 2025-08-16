@@ -125,7 +125,7 @@ export const updateStripeSub = async ({
     db,
     attachParams,
     cusProduct: curMainProduct!,
-    stripeSubs,
+    sub: curSub,
     logger,
     interval: config.sameIntervals ? interval : undefined,
     intervalCount: config.sameIntervals ? intervalCount : undefined,

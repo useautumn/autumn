@@ -74,6 +74,8 @@ export const attachParamsToPreview = async ({
       attachParams,
       now,
       logger,
+      branch,
+      config,
     });
   }
 

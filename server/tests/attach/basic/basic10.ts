@@ -72,7 +72,7 @@ describe(`${chalk.yellowBright("basic10: Multi attach, all one off")}`, () => {
     const metered2Amount = metered2Tiers[0].amount;
 
     let numBillingUnits = new Decimal(options[0].quantity).div(
-      oneTimeProducts.oneTimeMetered2.prices[0].config.billing_units,
+      oneTimeProducts.oneTimeMetered2.prices[0].config.billing_units
     );
 
     const expectedTotal = new Decimal(metered2Amount)

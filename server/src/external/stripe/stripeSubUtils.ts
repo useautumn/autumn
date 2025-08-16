@@ -11,8 +11,8 @@ import {
 import { differenceInSeconds } from "date-fns";
 // import { ProrationBehavior } from "@/internal/customers/change-product/handleUpgrade.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
-import { stripeToAutumnInterval } from "./utils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { getEarliestPeriodEnd } from "./stripeSubUtils/convertSubUtils.js";
 
 export const getFullStripeSub = async ({
   stripeCli,
@@ -252,10 +252,9 @@ export const subIsPrematurelyCanceled = (sub: Stripe.Subscription) => {
     return false;
   }
 
-  return (
-    differenceInSeconds(sub.current_period_end * 1000, sub.cancel_at! * 1000) >
-    20
-  );
+  const periodEnd = getEarliestPeriodEnd({ sub });
+
+  return differenceInSeconds(periodEnd * 1000, sub.cancel_at! * 1000) > 20;
 };
 
 export const autumnToStripeProrationBehavior = ({

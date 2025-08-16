@@ -13,12 +13,9 @@ import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts, replaceItems, runAttachTest } from "../utils.js";
-import {
-  constructArrearItem,
-  constructArrearProratedItem,
-  constructPrepaidItem,
-} from "@/utils/scriptUtils/constructItem.js";
+import { addPrefixToProducts } from "../utils.js";
+import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { expect } from "chai";
@@ -82,7 +79,7 @@ describe(`${chalk.yellowBright(`${testCase}: Checking price changes don't result
   });
 
   it("should attach pro annual product", async function () {
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: pro,

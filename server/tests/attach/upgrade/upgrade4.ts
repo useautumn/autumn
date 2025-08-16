@@ -6,12 +6,13 @@ import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts, runAttachTest } from "../utils.js";
+import { addPrefixToProducts } from "../utils.js";
 import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addWeeks } from "date-fns";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
 const testCase = "upgrade4";
 
@@ -112,7 +113,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with prepaid conti
   ];
 
   it("should attach pro product (arrear prorated)", async function () {
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: pro,
@@ -137,9 +138,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with prepaid conti
       testClockId,
       advanceTo: addWeeks(curUnix, 1).getTime(),
     });
-    return;
 
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: premium,
@@ -151,7 +151,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with prepaid conti
     });
   });
 
-  return;
   const proAnnualOpts = [
     {
       feature_id: TestFeature.Users,
@@ -165,7 +164,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with prepaid conti
       advanceTo: addWeeks(curUnix, 1).getTime(),
     });
 
-    await runAttachTest({
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: proAnnual,

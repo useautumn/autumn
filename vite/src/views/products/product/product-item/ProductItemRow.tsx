@@ -204,6 +204,14 @@ export const ProductItemRow = ({
         key: "Stripe Price ID",
         value: item.price_config?.stripe_price_id || "N/A",
       },
+      ...(item.price_config?.stripe_empty_price_id
+        ? [
+            {
+              key: "Stripe Empty Price ID",
+              value: item.price_config?.stripe_empty_price_id || "N/A",
+            },
+          ]
+        : []),
     ];
 
     if (!isPriceItem(item)) {

@@ -7,13 +7,19 @@ import {
 } from "@autumn/shared";
 import Stripe from "stripe";
 import { attachParamsToProduct } from "../convertAttachParams.js";
-import { getExistingUsageFromCusProducts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
+import {
+  getExistingUsageFromCusProducts,
+  getRelatedCusPrice,
+} from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { getContUseDowngradeItems } from "./getContUseDowngradeItems.js";
 import { shouldProrate } from "@/internal/products/prices/priceUtils/prorationConfigUtils.js";
 import { getContUseUpgradeItems } from "./getContUseUpgradeItems.js";
 import { priceToInvoiceItem } from "@/internal/products/prices/priceUtils/priceToInvoiceItem.js";
 import { Decimal } from "decimal.js";
 import { notNullish } from "@/utils/genUtils.js";
+import { cusProductsToCusPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { findStripeItemForPrice } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
+import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 
 export const priceToContUseItem = async ({
   price,
@@ -35,10 +41,30 @@ export const priceToContUseItem = async ({
   const { cusProducts, entities, internalEntityId, now } = attachParams;
   const product = attachParamsToProduct({ attachParams });
   const prevEnt = prevCusEnt?.entitlement;
+
+  const prevCusPrice = getRelatedCusPrice(
+    prevCusEnt,
+    cusProductsToCusPrices({ cusProducts })
+  )!;
+
+  let { start, end } = subToPeriodStartEnd({ sub });
+
+  if (prevCusPrice) {
+    const subItem = findStripeItemForPrice({
+      price: prevCusPrice.price,
+      stripeItems: sub?.items.data || [],
+    });
+
+    if (subItem) {
+      start = (subItem as Stripe.SubscriptionItem).current_period_start;
+      end = (subItem as Stripe.SubscriptionItem).current_period_end;
+    }
+  }
+
   const proration = sub
     ? {
-        start: sub.current_period_start * 1000,
-        end: sub.current_period_end * 1000,
+        start: start * 1000,
+        end: end * 1000,
       }
     : undefined;
 
@@ -113,7 +139,7 @@ export const priceToContUseItem = async ({
     return {
       oldItem: null,
       newItems: [res.newUsageItem].filter((item) =>
-        notNullish(item),
+        notNullish(item)
       ) as PreviewLineItem[],
       replaceables: res.replaceables,
     };
@@ -121,7 +147,7 @@ export const priceToContUseItem = async ({
     return {
       oldItem: res.oldItem,
       newItems: [res.newItem, res.newUsageItem].filter((item) =>
-        notNullish(item),
+        notNullish(item)
       ) as PreviewLineItem[],
       replaceables: res.replaceables,
     };

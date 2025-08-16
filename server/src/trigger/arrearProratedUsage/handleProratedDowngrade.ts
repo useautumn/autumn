@@ -1,6 +1,5 @@
 import {
   FullCusEntWithFullCusProduct,
-  FullCusEntWithProduct,
   FullCustomerPrice,
   InsertReplaceable,
   OnDecrease,
@@ -36,6 +35,7 @@ export const createDowngradeProrationInvoice = async ({
   cusPrice,
   stripeCli,
   sub,
+  subItem,
   newPrice,
   prevPrice,
   newRoundedUsage,
@@ -48,6 +48,7 @@ export const createDowngradeProrationInvoice = async ({
   cusPrice: FullCustomerPrice;
   stripeCli: Stripe;
   sub: Stripe.Subscription;
+  subItem: Stripe.SubscriptionItem;
   newPrice: number;
   prevPrice: number;
   newRoundedUsage: number;
@@ -72,15 +73,15 @@ export const createDowngradeProrationInvoice = async ({
   });
 
   invoiceAmount = calculateProrationAmount({
-    periodStart: sub.current_period_start * 1000,
-    periodEnd: sub.current_period_end * 1000,
+    periodStart: subItem.current_period_start * 1000,
+    periodEnd: subItem.current_period_end * 1000,
     now,
     amount: invoiceAmount,
     allowNegative: true,
   });
 
   let start = formatUnixToDate(now);
-  let end = formatUnixToDate(sub.current_period_end * 1000);
+  let end = formatUnixToDate(subItem.current_period_end * 1000);
   invoiceDescription = `${invoiceDescription} (from ${start} to ${end})`;
 
   if (invoiceAmount == 0) return;
@@ -98,7 +99,7 @@ export const createDowngradeProrationInvoice = async ({
     stripeSubId: sub.id,
     stripeCustomerId: sub.customer as string,
     periodStart: Math.floor(now / 1000),
-    periodEnd: Math.floor(sub.current_period_end * 1000),
+    periodEnd: Math.floor(subItem.current_period_end * 1000),
   });
 
   await stripeCli.invoiceItems.create(invoiceItem);
@@ -189,6 +190,7 @@ export const handleProratedDowngrade = async ({
       cusPrice,
       stripeCli,
       sub,
+      subItem,
       newPrice,
       prevPrice,
       newRoundedUsage: roundUsage({

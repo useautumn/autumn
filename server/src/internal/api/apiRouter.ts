@@ -19,7 +19,7 @@ import { componentRouter } from "./components/componentRouter.js";
 import { analyticsMiddleware } from "@/middleware/analyticsMiddleware.js";
 
 import rewardRouter from "./rewards/rewardRouter.js";
-import expireRouter from "../customers/expire/expireRouter.js";
+import cancelRouter from "../customers/cancel/cancelRouter.js";
 import { handleSetupPayment } from "../customers/attach/handleSetupPayment.js";
 import { internalFeatureRouter } from "../features/internalFeatureRouter.js";
 import { analyticsRouter } from "../analytics/analyticsRouter.js";
@@ -56,7 +56,7 @@ apiRouter.use("/redemptions", redemptionRouter);
 
 // Cus Product
 apiRouter.use("", attachRouter);
-apiRouter.use("/cancel", expireRouter);
+apiRouter.use("/cancel", cancelRouter);
 apiRouter.use("/entitled", checkRouter);
 apiRouter.use("/check", checkRouter);
 apiRouter.use("/events", eventsRouter);
