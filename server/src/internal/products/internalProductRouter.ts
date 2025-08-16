@@ -6,7 +6,7 @@ import { ErrCode, UsageModel } from "@autumn/shared";
 import { FeatureOptions } from "@autumn/shared";
 import { OrgService } from "../orgs/OrgService.js";
 import { RewardService } from "../rewards/RewardService.js";
-import { getProductVersionCounts } from "./productUtils.js";
+import { getGroupToDefaults, getProductVersionCounts } from "./productUtils.js";
 import { getLatestProducts } from "./productUtils.js";
 import { CusProdReadService } from "../customers/cusProducts/CusProdReadService.js";
 import { MigrationService } from "../migrations/MigrationService.js";
@@ -20,6 +20,7 @@ import RecaseError, {
 } from "@/utils/errorUtils.js";
 import { createOrgResponse } from "../orgs/orgUtils.js";
 import { sortFullProducts } from "./productUtils/sortProductUtils.js";
+import { getGroupToDefaultProd } from "../customers/cusUtils/createNewCustomer.js";
 
 export const productRouter: Router = Router({ mergeParams: true });
 
@@ -29,7 +30,7 @@ productRouter.get("/data", async (req: any, res) => {
 
     const allVersions = req.query.all_versions === "true";
 
-    const [products, features, org, coupons, rewardPrograms] =
+    const [products, features, org, coupons, rewardPrograms, defaultProds] =
       await Promise.all([
         ProductService.listFull({
           db,
@@ -46,10 +47,19 @@ productRouter.get("/data", async (req: any, res) => {
           orgId: req.orgId,
           env: req.env,
         }),
+        ProductService.listDefault({
+          db,
+          orgId: req.orgId,
+          env: req.env,
+        }),
       ]);
 
     sortFullProducts({
       products: getLatestProducts(products),
+    });
+
+    const groupToDefaultProd = getGroupToDefaults({
+      defaultProds,
     });
 
     res.status(200).json({
@@ -61,6 +71,7 @@ productRouter.get("/data", async (req: any, res) => {
       org: createOrgResponse(org),
       rewards: coupons,
       rewardPrograms,
+      groupToDefaults: groupToDefaultProd,
     });
   } catch (error) {
     console.error("Failed to get products", error);
@@ -73,7 +84,7 @@ productRouter.post("/data", async (req: any, res) => {
     let { db } = req;
     let { showArchived } = req.body;
 
-    const [products, features, org, coupons, rewardPrograms] =
+    const [products, defaultProds, features, org, coupons, rewardPrograms] =
       await Promise.all([
         ProductService.listFull({
           db,
@@ -81,6 +92,11 @@ productRouter.post("/data", async (req: any, res) => {
           env: req.env,
           // returnAll: true,
           archived: showArchived,
+        }),
+        ProductService.listDefault({
+          db,
+          orgId: req.orgId,
+          env: req.env,
         }),
         FeatureService.getFromReq(req),
         OrgService.getFromReq(req),
@@ -92,10 +108,16 @@ productRouter.post("/data", async (req: any, res) => {
         }),
       ]);
 
+    // Group to default product
+    const groupToDefaultProd = getGroupToDefaults({
+      defaultProds,
+    });
+
     res.status(200).json({
       products: sortFullProducts({ products }).map((product) => {
         return mapToProductV2({ product, features });
       }),
+      groupToDefaults: groupToDefaultProd,
       versionCounts: getProductVersionCounts(products),
       features,
       org: createOrgResponse(org),
@@ -191,6 +213,18 @@ productRouter.get("/:productId/data", async (req: any, res) => {
         statusCode: StatusCodes.NOT_FOUND,
       });
     }
+
+    const defaultProds = await ProductService.listDefault({
+      db,
+      orgId: req.orgId,
+      env: req.env,
+      group: product.group,
+    });
+
+    const groupDefaults = getGroupToDefaults({
+      defaultProds,
+    })?.[product.group];
+
     let entitlements = product.entitlements;
     let prices = product.prices;
 
@@ -218,6 +252,7 @@ productRouter.get("/:productId/data", async (req: any, res) => {
       },
       numVersions,
       existingMigrations,
+      groupDefaults: groupDefaults,
     });
   } catch (error) {
     handleFrontendReqError({

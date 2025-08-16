@@ -68,7 +68,7 @@ export const FullProductSchema = ProductSchema.extend({
   entitlements: z.array(
     EntitlementSchema.extend({
       feature: FeatureSchema,
-    })
+    }),
   ),
   free_trial: FreeTrialSchema.nullish(),
   free_trials: z.array(FreeTrialSchema).nullish(),

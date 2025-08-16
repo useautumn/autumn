@@ -4,7 +4,7 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { CreateCustomerSchema, ErrCode } from "@autumn/shared";
+import { CreateCustomerSchema, ErrCode, ProcessorType } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { getCustomerDetails } from "../cusUtils/getCustomerDetails.js";
 import { parseCusExpand } from "../cusUtils/cusUtils.js";
@@ -69,6 +69,20 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
         delete newCusData.id;
       }
 
+      // Try to update stripe ID
+      let stripeId = originalCustomer.processor?.id;
+      let newStripeId = newCusData.stripe_id;
+
+      if (notNullish(newStripeId) && stripeId !== newStripeId) {
+        const stripeCli = createStripeCli({ org, env: req.env });
+        await stripeCli.customers.retrieve(newStripeId);
+
+        stripeId = newCusData.stripe_id;
+        req.logger.info(
+          `Updating customer's Stripe ID from ${originalCustomer.processor?.id} to ${stripeId}`
+        );
+      }
+
       // 2. Check if customer email is being changed
       let oldMetadata = originalCustomer.metadata || {};
       let newMetadata = newCusData.metadata || {};
@@ -90,15 +104,9 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
             : undefined,
       };
 
-      if (
-        Object.keys(stripeUpdate).length > 0 &&
-        originalCustomer.processor?.id
-      ) {
+      if (Object.keys(stripeUpdate).length > 0 && stripeId) {
         const stripeCli = createStripeCli({ org, env: req.env });
-        await stripeCli.customers.update(
-          originalCustomer.processor.id,
-          stripeUpdate as any
-        );
+        await stripeCli.customers.update(stripeId, stripeUpdate as any);
       }
 
       await CusService.update({
@@ -106,6 +114,9 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
         internalCusId: originalCustomer.internal_id,
         update: {
           ...newCusData,
+          processor: newStripeId
+            ? { id: newStripeId, type: ProcessorType.Stripe }
+            : undefined,
           metadata: {
             ...oldMetadata,
             ...newMetadata,

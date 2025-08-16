@@ -16,15 +16,9 @@ import CreateCustomer from "./CreateCustomer";
 import { SearchBar } from "./SearchBar";
 import LoadingScreen from "../general/LoadingScreen";
 import FilterButton from "./FilterButton";
-import { SavedViewsDropdown } from "./SavedViewsDropdown";
+
 import SmallSpinner from "@/components/general/SmallSpinner";
-import {
-  useQueryStates,
-  parseAsString,
-  parseAsInteger,
-  parseAsJson,
-  parseAsArrayOf,
-} from "nuqs";
+import { useQueryStates, parseAsString, parseAsInteger } from "nuqs";
 
 function CustomersView({ env }: { env: AppEnv }) {
   const pageSize = 50;

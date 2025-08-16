@@ -4,8 +4,11 @@ import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import {
   AppEnv,
+  CreateFreeTrial,
   ErrCode,
+  FreeTrial,
   FullProduct,
+  isFreeProductV2,
   Organization,
   Product,
   ProductItem,
@@ -13,6 +16,7 @@ import {
   UpdateProduct,
 } from "@autumn/shared";
 import { ProductService } from "../../ProductService.js";
+import { FreeTrialService } from "../../free-trials/FreeTrialService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { usagePriceToProductName } from "../../prices/priceUtils/usagePriceUtils/convertUsagePrice.js";
 import {
@@ -21,6 +25,7 @@ import {
 } from "../../product-items/productItemUtils/getItemType.js";
 import { isFreeProduct } from "../../productUtils.js";
 import { isStripeConnected } from "@/internal/orgs/orgUtils.js";
+import { isDefaultTrialFullProduct } from "../../productUtils/classifyProduct.js";
 
 const productDetailsSame = (prod1: Product, prod2: UpdateProduct) => {
   if (notNullish(prod2.id) && prod1.id != prod2.id) {
@@ -42,13 +47,7 @@ const productDetailsSame = (prod1: Product, prod2: UpdateProduct) => {
   if (notNullish(prod2.is_default) && prod1.is_default != prod2.is_default) {
     return false;
   }
-  // console.log(
-  //   "prod1.archived",
-  //   prod1.archived,
-  //   prod2.archived,
-  //   notNullish(prod2.archived),
-  //   prod1.archived !== prod2.archived
-  // );
+
   if (notNullish(prod2.archived) && prod1.archived !== prod2.archived) {
     return false;
   }
@@ -121,10 +120,38 @@ const updateStripeProductNames = async ({
   }
 };
 
+const willBeDefaultTrial = ({
+  newProduct,
+  curProduct,
+  newFreeTrial,
+  newItems,
+}: {
+  newProduct: UpdateProduct;
+  curProduct: FullProduct;
+  newFreeTrial: FreeTrial;
+  newItems: ProductItem[];
+}) => {
+  // 1. Get final default
+  const finalDefault = notNullish(newProduct.is_default)
+    ? newProduct.is_default
+    : curProduct.is_default;
+
+  const finalFreeTrial = notNullish(newFreeTrial)
+    ? newFreeTrial
+    : curProduct.free_trial;
+
+  const finalIsFree = notNullish(newItems)
+    ? isFreeProductV2({ items: newItems })
+    : isFreeProduct(curProduct.prices);
+
+  return finalDefault && !finalIsFree && finalFreeTrial;
+};
+
 export const handleUpdateProductDetails = async ({
   db,
   newProduct,
   curProduct,
+  newFreeTrial,
   items,
   org,
   rewardPrograms,
@@ -133,6 +160,7 @@ export const handleUpdateProductDetails = async ({
   db: DrizzleCli;
   curProduct: FullProduct;
   newProduct: UpdateProduct;
+  newFreeTrial: FreeTrial;
   items: ProductItem[];
   org: Organization;
   rewardPrograms: RewardProgram[];
@@ -145,7 +173,35 @@ export const handleUpdateProductDetails = async ({
     env: curProduct.env as AppEnv,
   });
 
-  if (newProduct.is_default && !org.config.allow_paid_default) {
+  const trialConfig = await FreeTrialService.getByProductId({
+    db,
+    productId: curProduct.internal_id,
+  });
+
+  // Should error if:
+  // - New product is a default product
+  // - Org is not allowed to have paid default products
+  // - Current product is not a default trial
+
+  // Final prices are curProduct.prices or newProduct.prices
+
+  if (
+    newProduct.is_default &&
+    !org.config.allow_paid_default &&
+    !willBeDefaultTrial({
+      newProduct,
+      curProduct,
+      newFreeTrial,
+      newItems: items,
+    })
+    // && !isDefaultTrialFullProduct({
+    //   product: {
+    //     ...newProduct,
+    //     free_trial: newFreeTrial || curProduct.free_trial || null,
+    //   },
+    //   skipDefault: true,
+    // })
+  ) {
     // 1. Check if there are items
     if (items) {
       if (items.some((item) => isFeaturePriceItem(item) || isPriceItem(item))) {
@@ -166,8 +222,6 @@ export const handleUpdateProductDetails = async ({
         });
       }
     }
-
-    // 2. Check if current product is default
   }
 
   if (productDetailsSame(curProduct, newProduct)) {
@@ -223,7 +277,7 @@ export const handleUpdateProductDetails = async ({
 
   curProduct.name = newProduct.name || curProduct.name;
   curProduct.group = newProduct.group || curProduct.group;
-  curProduct.is_add_on = newProduct.is_add_on || curProduct.is_add_on;
-  curProduct.is_default = newProduct.is_default || curProduct.is_default;
+  curProduct.is_add_on = newProduct.is_add_on ?? curProduct.is_add_on;
+  curProduct.is_default = newProduct.is_default ?? curProduct.is_default;
   curProduct.archived = newProduct.archived ?? curProduct.archived;
 };

@@ -69,6 +69,7 @@ export const handleSubscriptionUpdated = async ({
         ? subscription.canceled_at * 1000
         : null,
       collection_method: fullSub.collection_method as CollectionMethod,
+      trial_ends_at: (previousAttributes.status === "trialing" && subscription.status === "active") ? null : undefined,
     },
   });
 

@@ -143,8 +143,8 @@ export const handleRequestError = ({
       );
 
       res.status(400).json({
-        message: error.message,
-        code: ErrCode.InvalidInputs,
+        message: `(Stripe Error) ${error.message}`,
+        code: `stripe_error`,
       });
     } else if (error instanceof ZodError) {
       logger.error(
