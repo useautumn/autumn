@@ -23,7 +23,7 @@ export const FreeTrialConfig = ({
     length: freeTrial?.length || 7,
     unique_fingerprint: freeTrial?.unique_fingerprint || false,
     duration: freeTrial?.duration || FreeTrialDuration.Day,
-    card_required: freeTrial?.card_required ?? false,
+    card_required: freeTrial?.card_required ?? true,
   });
 
   useEffect(() => {
@@ -78,7 +78,7 @@ export const FreeTrialConfig = ({
           <span className=" font-mono">fingerprint</span>
         </p>
       </div>
-      
+
       <div className="flex items-center gap-2">
         <Checkbox
           checked={fields.card_required}

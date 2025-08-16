@@ -24,6 +24,7 @@ import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { ProductConfig } from "./ProductConfig";
 import { ProductV2 } from "@autumn/shared";
 import { ToggleButton } from "@/components/general/ToggleButton";
+import { WarningBox } from "@/components/general/modal-components/WarningBox";
 
 export const defaultProduct = {
   name: "",
@@ -38,7 +39,7 @@ function CreateProduct({
 }: {
   onSuccess?: (newProduct: ProductV2) => Promise<void>;
 }) {
-  const { env, mutate } = useProductsContext();
+  const { env, mutate, groupToDefaults } = useProductsContext();
   const [loading, setLoading] = useState(false);
   const [product, setProduct] = useState(defaultProduct);
   const [open, setOpen] = useState(false);
@@ -74,6 +75,8 @@ function CreateProduct({
     }
   }, [open]);
 
+  const groupDefault = groupToDefaults[product.group]?.free;
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -89,8 +92,15 @@ function CreateProduct({
           isUpdate={false}
         />
 
+        {groupDefault && product.is_default && (
+          <WarningBox className="text-sm">
+            Creating this product will disable default on {groupDefault.name}{" "}
+            and enable it on this product.
+          </WarningBox>
+        )}
+
         <DialogFooter>
-          <div className="flex justify-between items-center gap-2 w-full mt-4">
+          <div className="flex justify-between items-center gap-2 w-full mt-2">
             <div className="flex gap-4">
               <ToggleButton
                 disabled={product?.is_add_on}

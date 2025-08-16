@@ -19,5 +19,3 @@ $MOCHA_CMD \
 'tests/attach/checkout/*.ts' \
 'tests/attach/entities/*.ts' \
 'tests/attach/free/*.ts'\
-
-# 'tests/attach/basic/basic2.ts' \

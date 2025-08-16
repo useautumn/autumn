@@ -83,6 +83,7 @@ export const constructProduct = ({
   items,
   type,
   interval,
+  group,
   intervalCount,
   isAnnual = false,
   trial = false,
@@ -96,6 +97,7 @@ export const constructProduct = ({
   items: ProductItem[];
   type: "free" | "pro" | "premium" | "growth" | "one_off";
   interval?: BillingInterval;
+  group?: string;
   intervalCount?: number;
   isAnnual?: boolean;
   trial?: boolean;
@@ -152,9 +154,9 @@ export const constructProduct = ({
           : keyToTitle(type),
     items,
     is_add_on: isAddOn,
-    is_default: (type == "free" && isDefault) || (forcePaidDefault),
+    is_default: (type == "free" && isDefault) || forcePaidDefault,
     version: 1,
-    group: "",
+    group: group || "",
     free_trial:
       freeTrial || trial
         ? (CreateFreeTrialSchema.parse({

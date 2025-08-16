@@ -29,7 +29,7 @@ export const FreeTrialResponseSchema = z.object({
   length: z.number(),
   unique_fingerprint: z.boolean(),
   trial_available: z.boolean().nullish().default(true),
-  card_required: z.boolean(),
+  card_required: z.boolean().nullish(),
 });
 
 export type FreeTrial = z.infer<typeof FreeTrialSchema>;

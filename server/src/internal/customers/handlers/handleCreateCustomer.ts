@@ -185,7 +185,6 @@ export const handleCreateCustomer = async ({
   createDefaultProducts?: boolean;
 }) => {
   const newCus = CreateCustomerSchema.parse(cusData);
-  console.log("newCus", newCus);
 
   // 1. If no ID and email is not NULL
   let createdCustomer;
