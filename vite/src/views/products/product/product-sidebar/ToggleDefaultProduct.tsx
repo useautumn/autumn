@@ -110,6 +110,7 @@ export const ToggleDefaultProduct = ({
 
       const data = {
         [toggleKey]: value,
+        free_trial: toggleKey === "is_default" ? product.free_trial : undefined,
       };
 
       await ProductService.updateProduct(axiosInstance, product.id, data);

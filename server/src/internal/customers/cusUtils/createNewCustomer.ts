@@ -78,7 +78,10 @@ export const createNewCustomer = async ({
     env,
   });
 
-  const nonFreeProds = defaultProds.filter((p) => !isFreeProduct(p.prices));
+  const nonFreeProds = defaultProds.filter(
+    (p) =>
+      !isFreeProduct(p.prices) && !isDefaultTrialFullProduct({ product: p })
+  );
   // const freeProds = defaultProds.filter((p) => isFreeProduct(p.prices));
   // const defaultPaidTrialProd = nonFreeProds.find((p) =>
   //   isDefaultTrialFullProduct({ product: p })
@@ -86,17 +89,18 @@ export const createNewCustomer = async ({
 
   const parsedCustomer = CreateCustomerSchema.parse(customer);
 
+  const internalId = generateId("cus");
   const customerData: Customer = {
     ...parsedCustomer,
 
     name: parsedCustomer.name || "",
     email:
       nonFreeProds.length > 0 && !parsedCustomer.email
-        ? `${parsedCustomer.id}-${org.id}@invoices.useautumn.com`
+        ? `${parsedCustomer.id || internalId}@invoices.useautumn.com`
         : parsedCustomer.email || "",
 
     metadata: parsedCustomer.metadata || {},
-    internal_id: generateId("cus"),
+    internal_id: internalId,
     org_id: org.id,
     created_at: Date.now(),
     env,
