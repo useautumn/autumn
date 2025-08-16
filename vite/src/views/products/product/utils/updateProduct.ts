@@ -3,6 +3,7 @@ import { getBackendErr } from "@/utils/genUtils";
 import { Product, ProductV2, UpdateProductSchema } from "@autumn/shared";
 import { AxiosInstance } from "axios";
 import { toast } from "sonner";
+import { isFreeProduct } from "@/utils/product/priceUtils";
 
 export const updateProduct = async ({
   axiosInstance,
@@ -22,7 +23,7 @@ export const updateProduct = async ({
       free_trial: product.free_trial,
     });
 
-    toast.success("Product created successfully");
+    toast.success("Product updated successfully");
 
     await mutate();
     await mutateCount();

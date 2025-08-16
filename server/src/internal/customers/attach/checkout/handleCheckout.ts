@@ -119,12 +119,6 @@ export const handleCheckout = (req: any, res: any) =>
 
       let checkoutUrl = null;
 
-      await handlePrepaidErrors({
-        attachParams,
-        config,
-        useCheckout: config.onlyCheckout,
-      });
-
       if (func == AttachFunction.CreateCheckout) {
         await checkStripeConnections({
           req,
@@ -134,6 +128,12 @@ export const handleCheckout = (req: any, res: any) =>
         });
 
         if (config.invoiceCheckout) {
+          await handlePrepaidErrors({
+            attachParams,
+            config,
+            useCheckout: config.onlyCheckout,
+          });
+
           const result = await handleCreateInvoiceCheckout({
             req,
             attachParams,

@@ -63,8 +63,15 @@ export const useProductData = ({
       return;
     }
 
-    const hasChanged =
-      JSON.stringify(sortedProduct) !== JSON.stringify(originalProduct);
+    // Remove is_default from the product
+    const { is_default, is_add_on, ...rest } = sortedProduct;
+    const {
+      is_default: originalIsDefault,
+      is_add_on: originalIsAddOn,
+      ...originalRest
+    } = originalProduct;
+
+    const hasChanged = JSON.stringify(rest) !== JSON.stringify(originalRest);
 
     setHasChanges(hasChanged);
   }, [product]);

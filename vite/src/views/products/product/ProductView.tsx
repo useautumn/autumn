@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { ProductService } from "@/services/products/ProductService";
 import { getBackendErr } from "@/utils/genUtils";
 import { UpdateProductButton } from "@/views/products/product/components/UpdateProductButton";
+import { updateProduct as updateProductUtil } from "./utils/updateProduct";
+import { isFreeProduct } from "@/utils/product/priceUtils";
 
 import ErrorScreen from "@/views/general/ErrorScreen";
 import ProductSidebar from "./ProductSidebar";
@@ -109,6 +111,7 @@ function ProductView({ env }: { env: AppEnv }) {
     await updateProduct();
   };
 
+
   return (
     <FeaturesContext.Provider
       value={{
@@ -159,7 +162,7 @@ function ProductView({ env }: { env: AppEnv }) {
               </div>
             </div>
           </div>
-          <div className="flex max-w-md w-1/3 shrink-1 lg:block hidden lg:min-w-xs sticky top-0">
+          <div className="flex max-w-md w-1/3 shrink-1 lg:block lg:min-w-xs sticky top-0">
             <ProductSidebar />
           </div>
         </div>

@@ -33,6 +33,7 @@ export const CustomerDataSchema = z.object({
   email: z.string().nullish(),
   fingerprint: z.string().nullish(),
   metadata: z.record(z.any()).nullish().default({}),
+  stripe_id: z.string().nullish(),
 });
 
 export const CustomerResponseSchema = CustomerSchema.omit({

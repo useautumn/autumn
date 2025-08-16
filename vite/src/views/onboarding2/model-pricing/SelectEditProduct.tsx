@@ -20,13 +20,14 @@ export const SelectEditProduct = () => {
     setQueryStates,
   } = useModelPricingContext();
   const [deleteProductOpen, setDeleteProductOpen] = useState(false);
+  const [deleteProductSelected, setDeleteProductSelected] = useState(product);
 
   const selectedClassName = "!bg-zinc-100 h-7 border";
   if (data.products.length > 3) {
     return (
       <>
         <DeleteProductDialog
-          product={product}
+          product={deleteProductSelected}
           open={deleteProductOpen}
           setOpen={setDeleteProductOpen}
         />
@@ -64,6 +65,7 @@ export const SelectEditProduct = () => {
                     onClick={(e) => {
                       e.stopPropagation();
                       e.preventDefault();
+                      setDeleteProductSelected(p);
                       setDeleteProductOpen(true);
                     }}
                   >

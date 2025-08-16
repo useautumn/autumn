@@ -1,4 +1,3 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { addCustomerCreatedTask } from "@/internal/analytics/handlers/handleCustomerCreated.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
@@ -7,15 +6,15 @@ import { isFreeProduct } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import {
-  Organization,
   CreateCustomer,
   CreateCustomerSchema,
   ErrCode,
   BillingInterval,
   AttachScenario,
   FullCustomer,
+  FullProduct,
 } from "@autumn/shared";
-import { AppEnv, Customer } from "@autumn/shared";
+import { Customer } from "@autumn/shared";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import { handleAddProduct } from "../attach/attachFunctions/addProductFlow/handleAddProduct.js";
 import { CusService } from "../CusService.js";
@@ -26,6 +25,35 @@ import {
   newCusToAttachParams,
   newCusToInsertParams,
 } from "../attach/attachUtils/attachParams/convertToParams.js";
+import { isDefaultTrialFullProduct } from "@/internal/products/productUtils/classifyProduct.js";
+
+export const getGroupToDefaultProd = async ({
+  defaultProds,
+}: {
+  defaultProds: FullProduct[];
+}) => {
+  const groups = new Set(defaultProds.map((p) => p.group));
+  const groupToDefaultProd: Record<string, FullProduct> = {};
+
+  for (const group of groups) {
+    const defaultProdsInGroup = defaultProds.filter((p) => p.group === group);
+
+    if (defaultProdsInGroup.length === 0) continue;
+
+    defaultProdsInGroup.sort((a, b) => {
+      // 1. If a is default trial, go first
+      if (isDefaultTrialFullProduct({ product: a })) return -1;
+
+      if (!isFreeProduct(a.prices)) return -1;
+
+      return 0;
+    });
+
+    groupToDefaultProd[group] = defaultProdsInGroup[0];
+  }
+
+  return groupToDefaultProd;
+};
 
 export const createNewCustomer = async ({
   req,
@@ -50,22 +78,29 @@ export const createNewCustomer = async ({
     env,
   });
 
-  const nonFreeProds = defaultProds.filter((p) => !isFreeProduct(p.prices));
-  const freeProds = defaultProds.filter((p) => isFreeProduct(p.prices));
+  const nonFreeProds = defaultProds.filter(
+    (p) =>
+      !isFreeProduct(p.prices) && !isDefaultTrialFullProduct({ product: p })
+  );
+  // const freeProds = defaultProds.filter((p) => isFreeProduct(p.prices));
+  // const defaultPaidTrialProd = nonFreeProds.find((p) =>
+  //   isDefaultTrialFullProduct({ product: p })
+  // );
 
   const parsedCustomer = CreateCustomerSchema.parse(customer);
 
+  const internalId = generateId("cus");
   const customerData: Customer = {
     ...parsedCustomer,
 
     name: parsedCustomer.name || "",
     email:
       nonFreeProds.length > 0 && !parsedCustomer.email
-        ? `${parsedCustomer.id}@invoices.useautumn.com`
+        ? `${parsedCustomer.id || internalId}@invoices.useautumn.com`
         : parsedCustomer.email || "",
 
     metadata: parsedCustomer.metadata || {},
-    internal_id: generateId("cus"),
+    internal_id: internalId,
     org_id: org.id,
     created_at: Date.now(),
     env,
@@ -79,18 +114,7 @@ export const createNewCustomer = async ({
 
   // Check if stripeCli exists
   if (nonFreeProds.length > 0) {
-    createStripeCli({
-      org,
-      env,
-    });
-
-    if (!customerData?.email) {
-      throw new RecaseError({
-        code: ErrCode.InvalidRequest,
-        message:
-          "Customer email is required to attach default product with prices",
-      });
-    }
+    createStripeCli({ org, env });
   }
 
   const newCustomer = await CusService.insert({
@@ -116,48 +140,102 @@ export const createNewCustomer = async ({
     env,
   });
 
-  if (nonFreeProds.length > 0) {
-    const stripeCli = createStripeCli({ org, env });
+  const groupToDefaultProd = await getGroupToDefaultProd({
+    defaultProds,
+  });
 
-    await initStripeCusAndProducts({
-      db,
-      org,
-      env,
-      customer: newCustomer,
-      products: nonFreeProds,
-      logger,
-    });
+  for (const group in groupToDefaultProd) {
+    const defaultProd = groupToDefaultProd[group];
 
-    await handleAddProduct({
-      req,
-      attachParams: newCusToAttachParams({
-        req,
-        newCus: newCustomer as FullCustomer,
+    if (!isFreeProduct(defaultProd.prices)) {
+      let stripeCli = null;
+
+      stripeCli = createStripeCli({ org, env });
+      await initStripeCusAndProducts({
+        db,
+        org,
+        env,
+        customer: newCustomer,
         products: nonFreeProds,
-        stripeCli,
-      }),
-    });
+        logger,
+      });
+
+      await handleAddProduct({
+        req,
+        attachParams: newCusToAttachParams({
+          req,
+          newCus: newCustomer as FullCustomer,
+          products: [defaultProd],
+          stripeCli,
+          freeTrial: defaultProd.free_trial || null,
+        }),
+      });
+    } else {
+      await createFullCusProduct({
+        db,
+        attachParams: newCusToInsertParams({
+          req,
+          newCus: newCustomer,
+          product: defaultProd,
+        }),
+        nextResetAt,
+        anchorToUnix: org.config.anchor_start_of_month
+          ? getNextStartOfMonthUnix({
+              interval: BillingInterval.Month,
+              intervalCount: 1,
+            })
+          : undefined,
+        scenario: AttachScenario.New,
+        logger,
+      });
+    }
   }
 
-  for (const product of freeProds) {
-    await createFullCusProduct({
-      db,
-      attachParams: newCusToInsertParams({
-        req,
-        newCus: newCustomer,
-        product,
-      }),
-      nextResetAt,
-      anchorToUnix: org.config.anchor_start_of_month
-        ? getNextStartOfMonthUnix({
-            interval: BillingInterval.Month,
-            intervalCount: 1,
-          })
-        : undefined,
-      scenario: AttachScenario.New,
-      logger,
-    });
-  }
+  // if (nonFreeProds.length > 0) {
+  //   const stripeCli = createStripeCli({ org, env });
+
+  // await initStripeCusAndProducts({
+  //   db,
+  //   org,
+  //   env,
+  //   customer: newCustomer,
+  //   products: nonFreeProds,
+  //   logger,
+  // });
+
+  //   await handleAddProduct({
+  //     req,
+  //     attachParams: newCusToAttachParams({
+  //       req,
+  //       newCus: newCustomer as FullCustomer,
+  //       products: nonFreeProds,
+  //       stripeCli,
+  //       freeTrial: defaultPaidTrialProd?.free_trial || null,
+  //     }),
+  //   });
+  // }
+
+  // if (!defaultPaidTrialProd) {
+  //   for (const product of freeProds) {
+  //     await createFullCusProduct({
+  // db,
+  // attachParams: newCusToInsertParams({
+  //   req,
+  //   newCus: newCustomer,
+  //   product,
+  // }),
+  // nextResetAt,
+  // anchorToUnix: org.config.anchor_start_of_month
+  //   ? getNextStartOfMonthUnix({
+  //       interval: BillingInterval.Month,
+  //       intervalCount: 1,
+  //     })
+  //   : undefined,
+  // scenario: AttachScenario.New,
+  // logger,
+  //     });
+  //   }
+  // }
 
   return newCustomer;
 };

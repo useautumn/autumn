@@ -10,6 +10,7 @@ export const FreeTrialSchema = z.object({
   created_at: z.number(),
   internal_product_id: z.string(),
   is_custom: z.boolean(),
+  card_required: z.boolean(),
 });
 
 export const CreateFreeTrialSchema = z.object({
@@ -19,6 +20,7 @@ export const CreateFreeTrialSchema = z.object({
     .transform((val) => Number(val)),
   unique_fingerprint: z.boolean().default(false),
   duration: z.nativeEnum(FreeTrialDuration).default(FreeTrialDuration.Day),
+  card_required: z.boolean().default(false),
 });
 
 export const FreeTrialResponseSchema = z.object({
@@ -27,6 +29,7 @@ export const FreeTrialResponseSchema = z.object({
   length: z.number(),
   unique_fingerprint: z.boolean(),
   trial_available: z.boolean().nullish().default(true),
+  card_required: z.boolean().nullish(),
 });
 
 export type FreeTrial = z.infer<typeof FreeTrialSchema>;

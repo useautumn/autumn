@@ -50,7 +50,7 @@ export const initStripeCusAndProducts = async ({
         env,
         logger,
         product,
-      }),
+      })
     );
   }
 
@@ -90,7 +90,7 @@ const handleIdIsNull = async ({
     for (const existingCustomer of existingCustomers) {
       if (existingCustomer.id === null) {
         logger.info(
-          `Create customer by email: ${newCus.email} already exists, skipping...`,
+          `Create customer by email: ${newCus.email} already exists, skipping...`
         );
         return existingCustomer;
       }
@@ -134,7 +134,7 @@ export const handleCreateCustomerWithId = async ({
 
   if (existingCustomer) {
     logger.info(
-      `Customer already exists, skipping creation: ${existingCustomer.id}`,
+      `Customer already exists, skipping creation: ${existingCustomer.id}`
     );
     return existingCustomer;
   }
@@ -150,7 +150,7 @@ export const handleCreateCustomerWithId = async ({
 
     if (cusWithEmail.length === 1 && cusWithEmail[0].id === null) {
       logger.info(
-        `POST /customers, email ${newCus.email} and ID null found, updating ID to ${newCus.id} (org: ${org.slug})`,
+        `POST /customers, email ${newCus.email} and ID null found, updating ID to ${newCus.id} (org: ${org.slug})`
       );
 
       let updatedCustomer = await CusService.update({

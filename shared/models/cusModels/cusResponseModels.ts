@@ -9,7 +9,7 @@ import { CusReferralResponseSchema } from "./cusResModels/cusReferralsResponse.j
 export const TrialUsedResponseSchema = z.object({
   product_id: z.string(),
   customer_id: z.string(),
-  fingerprint: z.string(),
+  fingerprint: z.string().nullish(),
 });
 
 export const CusResponseSchema = z.object({

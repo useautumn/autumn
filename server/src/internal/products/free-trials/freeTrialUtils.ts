@@ -1,5 +1,5 @@
 import RecaseError from "@/utils/errorUtils.js";
-import { generateId } from "@/utils/genUtils.js";
+import { generateId, notNullish } from "@/utils/genUtils.js";
 import {
   CreateFreeTrial,
   CreateFreeTrialSchema,
@@ -10,15 +10,18 @@ import { addDays, addMinutes, addMonths, addYears } from "date-fns";
 import { FreeTrialService } from "./FreeTrialService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import { isFreeProduct } from "../productUtils.js";
 
 export const validateAndInitFreeTrial = ({
   freeTrial,
   internalProductId,
   isCustom = false,
+  card_required = false,
 }: {
   freeTrial: CreateFreeTrial;
   internalProductId: string;
   isCustom?: boolean;
+  card_required?: boolean;
 }): FreeTrial => {
   const freeTrialSchema = CreateFreeTrialSchema.parse(freeTrial);
 
@@ -29,6 +32,7 @@ export const validateAndInitFreeTrial = ({
     duration: freeTrial.duration || FreeTrialDuration.Day,
     internal_product_id: internalProductId,
     is_custom: isCustom,
+    card_required,
   };
 };
 
@@ -44,7 +48,8 @@ export const freeTrialsAreSame = ({
   return (
     ft1.length === ft2.length &&
     ft1.unique_fingerprint === ft2.unique_fingerprint &&
-    ft1.duration === ft2.duration
+    ft1.duration === ft2.duration &&
+    ft1.card_required === ft2.card_required
   );
 };
 
@@ -129,13 +134,16 @@ export const handleNewFreeTrial = async ({
   curFreeTrial,
   internalProductId,
   isCustom = false,
+  product,
 }: {
   db: DrizzleCli;
   newFreeTrial: CreateFreeTrial | null;
   curFreeTrial: FreeTrial | null | undefined;
   internalProductId: string;
   isCustom: boolean;
+  product?: any; // Add product parameter for validation
 }) => {
+
   // If new free trial is null
   if (!newFreeTrial) {
     if (!isCustom && curFreeTrial) {
@@ -155,6 +163,7 @@ export const handleNewFreeTrial = async ({
     freeTrial: newFreeTrial,
     internalProductId,
     isCustom,
+    card_required: newFreeTrial?.card_required ?? false,
   });
 
   if (isCustom && newFreeTrial) {
