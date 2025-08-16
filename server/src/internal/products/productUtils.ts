@@ -43,6 +43,7 @@ import { FreeTrialService } from "./free-trials/FreeTrialService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { compareBillingIntervals } from "./prices/priceUtils/priceIntervalUtils.js";
 import { isStripeConnected } from "../orgs/orgUtils.js";
+import { isDefaultTrialFullProduct } from "./productUtils/classifyProduct.js";
 
 export const getLatestProducts = (products: FullProduct[]) => {
   const latestProducts = products.reduce((acc: any, product: any) => {
@@ -533,4 +534,28 @@ export const searchProductsByStripeId = async ({
   stripeId: string;
 }) => {
   return products.find((p) => p.processor?.id === stripeId);
+};
+
+export const getGroupToDefaults = ({
+  defaultProds,
+}: {
+  defaultProds: FullProduct[];
+}) => {
+  const groupToDefaults: Record<string, Record<string, FullProduct>> = {};
+
+  for (const product of defaultProds) {
+    if (!groupToDefaults[product.group]) {
+      groupToDefaults[product.group] = {};
+    }
+
+    if (isDefaultTrialFullProduct({ product })) {
+      groupToDefaults[product.group].defaultTrial = product;
+    }
+
+    if (isFreeProduct(product.prices)) {
+      groupToDefaults[product.group].free = product;
+    }
+  }
+
+  return groupToDefaults;
 };

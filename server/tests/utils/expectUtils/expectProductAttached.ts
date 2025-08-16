@@ -28,12 +28,12 @@ export const expectProductAttached = ({
   if (status) {
     expect(productAttached?.status).to.equal(
       status,
-      `product ${product.id} should have status ${status}`,
+      `product ${product.id} should have status ${status}`
     );
   } else {
     expect(
       productAttached?.status,
-      `product ${product.id} is not expired`,
+      `product ${product.id} is not expired`
     ).to.not.equal(CusProductStatus.Expired);
   }
 
@@ -68,12 +68,12 @@ export const expectInvoicesCorrect = ({
       expect(invoices![0].total).to.approximately(
         first.total,
         0.01,
-        `invoice total is correct: ${first.total}`,
+        `invoice total is correct: ${first.total}`
       );
 
       expect(invoices![0].product_ids).to.include(
         first.productId,
-        `invoice includes product ${first.productId}`,
+        `invoice includes product ${first.productId}`
       );
     } catch (error) {
       console.log(`invoice for ${first.productId}, ${first.total} not found`);
@@ -96,15 +96,15 @@ export const expectInvoicesCorrect = ({
       expect(totalAmount).to.approximately(
         second.total,
         0.01,
-        `first & second invoice total should sum to ${second.total}`,
+        `first & second invoice total should sum to ${second.total}`
       );
       expect(
         invoices![0].product_ids.includes(second.productId),
-        `invoice 1 includes product ${second.productId}`,
+        `invoice 1 includes product ${second.productId}`
       ).to.be.true;
       expect(
         invoices![1].product_ids.includes(second.productId),
-        `invoice 2 includes product ${second.productId}`,
+        `invoice 2 includes product ${second.productId}`
       ).to.be.true;
     } catch (error) {
       console.log(`invoice for ${second.productId}, ${second.total} not found`);

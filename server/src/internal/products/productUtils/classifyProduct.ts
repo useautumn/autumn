@@ -35,10 +35,32 @@ export const isFreeProductV2 = ({ product }: { product: ProductV2 }) => {
   return product.items.every((item) => isFeatureItem(item));
 };
 
-export const isDefaultTrial = ({ product, skipDefault = false }: { product: ProductV2, skipDefault?: boolean }) => {
-  return product.free_trial && !product.free_trial?.card_required && (product.is_default || skipDefault) && !isFreeProductV2({ product });
+export const isDefaultTrial = ({
+  product,
+  skipDefault = false,
+}: {
+  product: ProductV2;
+  skipDefault?: boolean;
+}) => {
+  return (
+    product.free_trial &&
+    !product.free_trial?.card_required &&
+    (product.is_default || skipDefault) &&
+    !isFreeProductV2({ product })
+  );
 };
 
-export const isDefaultTrialFullProduct = ({ product, skipDefault = false }: { product: FullProduct, skipDefault?: boolean }) => {
-  return product.free_trial && !product.free_trial?.card_required && (product.is_default || skipDefault) && !isFreeProduct(product.prices);
+export const isDefaultTrialFullProduct = ({
+  product,
+  skipDefault = false,
+}: {
+  product: FullProduct;
+  skipDefault?: boolean;
+}) => {
+  return (
+    product.free_trial &&
+    !product.free_trial?.card_required &&
+    (product.is_default || skipDefault) &&
+    !isFreeProduct(product.prices)
+  );
 };

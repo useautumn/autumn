@@ -13,7 +13,10 @@ import {
   FreeTrial,
   FullProduct,
   Price,
+  Product,
+  ProductItem,
   ProductResponseSchema,
+  ProductV2,
 } from "@autumn/shared";
 import {
   keyToTitle,
@@ -25,13 +28,15 @@ import {
 import { ProductService } from "@/internal/products/ProductService.js";
 import {
   constructProduct,
+  getGroupToDefaults,
   initProductInStripe,
 } from "@/internal/products/productUtils.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import { detectBaseVariant } from "../productUtils/detectProductVariant.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
+import { isDefaultTrial } from "../productUtils/classifyProduct.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 const validateCreateProduct = async ({ req }: { req: ExtendedRequest }) => {
   let { free_trial, items } = req.body;
@@ -95,6 +100,67 @@ const validateCreateProduct = async ({ req }: { req: ExtendedRequest }) => {
   };
 };
 
+export const disableCurrentDefault = async ({
+  req,
+  newProduct,
+  items,
+  freeTrial,
+}: {
+  req: ExtendedRequest;
+  newProduct: Product;
+  items: ProductItem[];
+
+  freeTrial: FreeTrial | null;
+}) => {
+  const { db, org, env, logger } = req;
+  let defaultProds = await ProductService.listDefault({
+    db,
+    orgId: org.id,
+    env,
+  });
+
+  defaultProds = defaultProds.filter((prod) => prod.id !== newProduct.id);
+
+  if (defaultProds.length === 0) return;
+
+  const defaults = getGroupToDefaults({
+    defaultProds,
+  })?.[newProduct.group];
+
+  const willBeDefaultTrial = isDefaultTrial({
+    product: {
+      ...newProduct,
+      free_trial: freeTrial,
+      items: items || [],
+    },
+  });
+
+  if (willBeDefaultTrial) {
+    // Disable current default trial
+    const curDefault = defaults?.defaultTrial;
+    if (curDefault) {
+      logger.info(
+        `Disabling trial on cur default trial product: ${curDefault.id}`
+      );
+      await ProductService.updateByInternalId({
+        db,
+        internalId: curDefault.internal_id,
+        update: { is_default: false },
+      });
+    }
+  } else if (newProduct.is_default) {
+    const curDefault = defaults?.free;
+    if (curDefault) {
+      logger.info(`Disabling trial on cur default product: ${curDefault.id}`);
+      await ProductService.updateByInternalId({
+        db,
+        internalId: curDefault.internal_id,
+        update: { is_default: false },
+      });
+    }
+  }
+};
+
 export const handleCreateProduct = async (req: Request, res: any) =>
   routeHandler({
     req,
@@ -112,6 +178,13 @@ export const handleCreateProduct = async (req: Request, res: any) =>
         productData,
         orgId: org.id,
         env,
+      });
+
+      await disableCurrentDefault({
+        req,
+        newProduct,
+        items,
+        freeTrial: freeTrial || null,
       });
 
       let product = await ProductService.insert({ db, product: newProduct });

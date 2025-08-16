@@ -93,9 +93,7 @@ export const initCustomer = async ({
   }
 
   try {
-    const response = await autumn.customers.create(customerData);
-
-    // console.log("Created customer:", response);
+    const res = await autumn.customers.create(customerData);
 
     let customer = (await CusService.get({
       db,
@@ -103,17 +101,6 @@ export const initCustomer = async ({
       orgId: org.id,
       env: env,
     })) as Customer;
-
-    // console.log("Org ID:", org.id);
-    // console.log("Env:", env);
-    // console.log("Customer ID:", customerId);
-
-    // console.log("Customer:", customer);
-
-    // console.log("customer id", customerId);
-    // console.log("org id", org.id);
-    // console.log("env", env);
-    // console.log("customer", customer);
 
     const stripeCli = createStripeCli({ org: org, env: env });
     let testClockId = "";
@@ -151,4 +138,102 @@ export const initCustomer = async ({
     console.log("Failed to create customer", error);
     throw error;
   }
+};
+
+export const attachPaymentMethod = async ({
+  stripeCli,
+  stripeCusId,
+  type,
+}: {
+  stripeCli: Stripe;
+  stripeCusId: string;
+  type: "success" | "fail";
+}) => {
+  try {
+    let token = type === "fail" ? "tok_chargeCustomerFail" : "tok_visa";
+    const pm = await stripeCli.paymentMethods.create({
+      type: "card",
+      card: {
+        token,
+      },
+    });
+
+    await stripeCli.paymentMethods.attach(pm.id, {
+      customer: stripeCusId,
+    });
+
+    await stripeCli.customers.update(stripeCusId, {
+      invoice_settings: {
+        default_payment_method: pm.id,
+      },
+    });
+  } catch (error) {
+    console.log("failed to attach payment method", error);
+  }
+};
+
+// V2 initializes the customer in Stripe, then creates the customer in Autumn
+export const initCustomerV2 = async ({
+  autumn,
+  customerId,
+  org,
+  env,
+  db,
+  attachPm,
+  withTestClock = true,
+}: {
+  autumn: Autumn;
+  customerId: string;
+  org: Organization;
+  env: AppEnv;
+  db: DrizzleCli;
+  attachPm?: "success" | "fail";
+  withTestClock?: boolean;
+}) => {
+  let name = customerId;
+  let email = `${customerId}@example.com`;
+  let fingerprint_ = "";
+  const stripeCli = createStripeCli({ org, env });
+
+  let testClockId = undefined;
+
+  if (withTestClock) {
+    const testClock = await stripeCli.testHelpers.testClocks.create({
+      frozen_time: Math.floor(Date.now() / 1000),
+    });
+    testClockId = testClock.id;
+  }
+
+  // 1. Create stripe customer
+  const stripeCus = await stripeCli.customers.create({
+    email,
+    name,
+    test_clock: testClockId,
+  });
+
+  // 2. Create customer
+  try {
+    await autumn.customers.delete(customerId);
+  } catch (error) {}
+  await autumn.customers.create({
+    id: customerId,
+    name,
+    email,
+    fingerprint: fingerprint_,
+    // @ts-ignore
+    stripe_id: stripeCus.id,
+  });
+
+  // 3. Attach payment method
+  if (attachPm) {
+    await attachPaymentMethod({
+      stripeCli,
+      stripeCusId: stripeCus.id,
+      type: attachPm,
+    });
+  }
+
+  return {
+    testClockId: testClockId || "",
+  };
 };
