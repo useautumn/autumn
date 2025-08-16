@@ -1,6 +1,4 @@
 import { DialogFooter } from "@/components/ui/dialog";
-
-import { getOriginalCouponId } from "@/utils/product/couponUtils";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { Reward, CreateCustomer, Customer } from "@autumn/shared";
 import { useEffect, useState } from "react";

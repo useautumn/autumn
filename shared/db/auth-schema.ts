@@ -7,6 +7,7 @@ import {
   foreignKey,
 } from "drizzle-orm/pg-core";
 import { organizations } from "./schema.js";
+import { relations } from "drizzle-orm";
 
 export const user = pgTable(
   "user",
