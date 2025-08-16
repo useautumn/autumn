@@ -57,7 +57,7 @@ export const deleteCouponFromCus = async ({
 
   try {
     let stripeCus = (await stripeCli.customers.retrieve(
-      stripeCusId,
+      stripeCusId
     )) as Stripe.Customer;
     if (stripeCus.discount?.id === discountId) {
       await stripeCli.customers.deleteDiscount(stripeCusId, discountId);

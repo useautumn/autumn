@@ -1,6 +1,6 @@
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { APIVersion, AppEnv, Organization } from "@autumn/shared";
+import { AppEnv, Organization } from "@autumn/shared";
 import chalk from "chalk";
 import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
@@ -16,7 +16,6 @@ import { TestFeature } from "tests/setup/v2Features.js";
 import { completeCheckoutForm } from "tests/utils/stripeUtils.js";
 import { timeout } from "@/utils/genUtils.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
 import { expect } from "chai";
 import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
 

@@ -18,6 +18,7 @@ import { Decimal } from "decimal.js";
 import { generateId } from "@/utils/genUtils.js";
 import { addMonths } from "date-fns";
 import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
+import { invoiceToSubId } from "../stripeInvoiceUtils.js";
 
 export const handleInvoicePaidDiscount = async ({
   db,
@@ -39,7 +40,7 @@ export const handleInvoicePaidDiscount = async ({
   }
 
   let stripeCus = await stripeCli.customers.retrieve(
-    expandedInvoice.customer as string,
+    expandedInvoice.customer as string
   );
 
   try {
@@ -86,7 +87,7 @@ export const handleInvoicePaidDiscount = async ({
       const curAmount = discount.coupon.amount_off;
 
       const amountUsed = totalDiscountAmounts?.find(
-        (item) => item.discount === discount.id,
+        (item) => item.discount === discount.id
       )?.amount;
 
       const newAmount = new Decimal(curAmount!).sub(amountUsed!).toNumber();
@@ -103,16 +104,17 @@ export const handleInvoicePaidDiscount = async ({
       });
 
       let expired = curExpiresAt && curExpiresAt < now;
+      const subId = invoiceToSubId({ invoice: expandedInvoice });
 
       if (discountFinished || expired) {
         logger.info(
-          `Coupon ${couponId}, stripeCus: ${stripeCus.id}: credits used up or expired. discountFinished: ${discountFinished}, expired: ${expired}`,
+          `Coupon ${couponId}, stripeCus: ${stripeCus.id}: credits used up or expired. discountFinished: ${discountFinished}, expired: ${expired}`
         );
 
-        if (expandedInvoice.subscription) {
+        if (subId) {
           await deleteCouponFromCus({
             stripeCli,
-            stripeSubId: expandedInvoice.subscription as string,
+            stripeSubId: subId,
             stripeCusId: expandedInvoice.customer as string,
             discountId: discount.id,
             logger,
@@ -123,7 +125,7 @@ export const handleInvoicePaidDiscount = async ({
       }
 
       logger.info(
-        `Coupon ${couponId}, stripeCus: ${stripeCus.id}, updating amount from ${curAmount} to ${newAmount}`,
+        `Coupon ${couponId}, stripeCus: ${stripeCus.id}, updating amount from ${curAmount} to ${newAmount}`
       );
 
       // Set expiry date
@@ -147,18 +149,30 @@ export const handleInvoicePaidDiscount = async ({
         },
       });
 
-      await stripeCli.customers.update(expandedInvoice.customer as string, {
-        coupon: newCoupon.id,
+      const legacyStripeCli = createStripeCli({
+        org,
+        env,
+        legacyVersion: true,
       });
+
+      await legacyStripeCli.rawRequest(
+        "POST",
+        `/v1/customers/${expandedInvoice.customer}/discounts`,
+        {
+          coupon: newCoupon.id,
+        }
+      );
 
       await stripeCli.coupons.del(newCoupon.id);
 
-      await deleteCouponFromSub({
-        stripeCli,
-        stripeSubId: expandedInvoice.subscription as string,
-        discountId: discount.id,
-        logger,
-      });
+      if (subId) {
+        await deleteCouponFromSub({
+          stripeCli,
+          stripeSubId: subId,
+          discountId: discount.id,
+          logger,
+        });
+      }
     }
   } catch (error) {
     logger.error("invoice.paid: error updating coupon");

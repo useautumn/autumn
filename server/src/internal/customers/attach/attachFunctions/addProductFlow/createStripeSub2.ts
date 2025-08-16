@@ -1,24 +1,14 @@
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
-import {
-  Customer,
-  FreeTrial,
-  Organization,
-  ErrCode,
-  BillingInterval,
-  Reward,
-  IntervalConfig,
-} from "@autumn/shared";
+import { ErrCode, Reward, IntervalConfig } from "@autumn/shared";
 import Stripe from "stripe";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
-import { formatUnixToDateTime, generateId } from "@/utils/genUtils.js";
-import { ItemSet } from "@/utils/models/ItemSet.js";
+import { generateId } from "@/utils/genUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getAlignedIntervalUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import { getSmallestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 
 // Get payment method
 
@@ -122,6 +112,15 @@ export const createStripeSub2 = async ({
       // coupon: reward ? reward.id : undefined,
       discounts: reward ? [{ coupon: reward.id }] : undefined,
       expand: ["latest_invoice"],
+
+      trial_settings:
+        freeTrial && !freeTrial.card_required
+          ? {
+              end_behavior: {
+                missing_payment_method: "cancel",
+              },
+            }
+          : undefined,
     });
 
     // console.log("Latest invoice:", subscription.latest_invoice);

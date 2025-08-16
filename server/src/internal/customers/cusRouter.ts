@@ -12,7 +12,6 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { handleDeleteCustomer } from "./handlers/cusDeleteHandlers.js";
 import { handleUpdateBalances } from "./handlers/handleUpdateBalances.js";
 import { handleUpdateEntitlement } from "./handlers/handleUpdateEntitlement.js";
-import { handleCusProductExpired } from "./handlers/handleCusProductExpired.js";
 import { handleAddCouponToCus } from "./handlers/handleAddCouponToCus.js";
 import { handlePostCustomerRequest } from "./handlers/handlePostCustomer.js";
 import { entityRouter } from "../api/entities/entityRouter.js";

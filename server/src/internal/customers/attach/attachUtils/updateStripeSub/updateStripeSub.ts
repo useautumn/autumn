@@ -135,7 +135,7 @@ export const updateStripeSub = async ({
   let { replaceables } = await createAndFilterContUseItems({
     attachParams,
     curMainProduct: curMainProduct!,
-    stripeSubs,
+    sub: curSub,
     interval,
     intervalCount,
     logger,
