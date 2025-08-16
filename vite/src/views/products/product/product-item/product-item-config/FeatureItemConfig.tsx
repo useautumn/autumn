@@ -55,10 +55,12 @@ export const FeatureConfig = () => {
 
   return (
     <>
-      <div className="flex items-center gap-2 w-full">
-        <IncludedUsage />
-        <SelectResetCycle />
-      </div>
+      {isFeature && (
+        <div className="flex items-center gap-2 w-full">
+          <IncludedUsage />
+          <SelectResetCycle />
+        </div>
+      )}
 
       {isFeaturePrice && (
         <React.Fragment>
@@ -70,32 +72,9 @@ export const FeatureConfig = () => {
 
           <div className="flex gap-2">
             <SelectCycle />
-            <PrepaidToggle />
           </div>
-
-          {/* <ProrationConfig /> */}
         </React.Fragment>
       )}
-
-      {isFeature && (
-        <div>
-          <p className="text-t3 mb-2">
-            If you want to charge for usage of this feature (eg. ${price} per{" "}
-            {feature?.display?.singular ?? feature?.name ?? "feature"})
-          </p>
-          <div className="flex w-full justify-start transition-all duration-300 ease-in-out overflow-hidden">
-            <Button
-              variant="outline"
-              className="w-full !border-dashed bg-transparent text-t2"
-              startIcon={<PlusIcon size={12} />}
-              onClick={handleAddUsagePrice}
-            >
-              Add Price
-            </Button>
-          </div>
-        </div>
-      )}
-      <AdvancedItemConfig />
     </>
   );
 };

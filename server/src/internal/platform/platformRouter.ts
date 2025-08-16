@@ -19,6 +19,7 @@ import { z } from "zod";
 import { createKey } from "../dev/api-keys/apiKeyUtils.js";
 import { afterOrgCreated } from "@/utils/authUtils/afterOrgCreated.js";
 import { Autumn } from "autumn-js";
+import { organizationSchema } from "better-auth/plugins";
 
 const platformRouter = Router();
 
@@ -63,6 +64,14 @@ const platformAuthMiddleware = async (
 platformRouter.use(platformAuthMiddleware);
 
 const ExchangeSchema = z.object({
+  // organization_name: z.string().nullish(),
+  // organization_slug: z.string().nullish(),
+  organization: z
+    .object({
+      name: z.string().nonempty(),
+      slug: z.string().nonempty(),
+    })
+    .nullish(),
   email: z.string().regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/),
   stripe_test_key: z.string().nonempty().optional(),
   stripe_live_key: z.string().nonempty().optional(),
@@ -121,9 +130,36 @@ platformRouter.post("/exchange", (req: any, res: any) =>
 
       let org: Organization;
 
-      let membership = await db.query.member.findFirst({
-        where: and(eq(member.userId, user.id!), eq(member.role, "owner")),
-      });
+      // let membership = await db.query.member.findFirst({
+      //   with: {
+      //     organization: true,
+      //   },
+      //   where: and(
+      //     eq(member.userId, user.id!),
+      //     eq(member.role, "owner"),
+      //     organization_slug
+      //       ? eq(organizations.slug, organization_slug)
+      //       : undefined,
+      //     eq(organizations.created_by, req.org.id)
+      //   ),
+      // });
+      const orgSlug = organization?.slug
+        ? `${organization.slug}_${req.org.id}`
+        : undefined;
+      const data = await db
+        .select()
+        .from(member)
+        .innerJoin(organizations, eq(member.organizationId, organizations.id))
+        .where(
+          and(
+            eq(member.userId, user.id!),
+            eq(member.role, "owner"),
+            orgSlug ? eq(organizations.slug, orgSlug) : undefined,
+            eq(organizations.created_by, req.org.id)
+          )
+        );
+
+      let membership = data.length > 0 ? data[0] : null;
 
       if (!membership) {
         logger.info(`Connected to Stripe`);
@@ -135,8 +171,11 @@ platformRouter.post("/exchange", (req: any, res: any) =>
           .insert(organizations)
           .values({
             id: orgId,
-            slug: `platform_org_${Math.floor(10000000 + Math.random() * 90000000)}`,
-            name: `Platform Org`,
+            slug: orgSlug
+              ? orgSlug
+              : `platform_org_${Math.floor(10000000 + Math.random() * 90000000)}`,
+
+            name: organization?.name || `Platform Org (${req.org.id})`,
             logo: "",
             createdAt: new Date(),
             metadata: "",
@@ -154,9 +193,10 @@ platformRouter.post("/exchange", (req: any, res: any) =>
 
         await afterOrgCreated({ org });
       } else {
-        org = (await db.query.organizations.findFirst({
-          where: eq(organizations.id, membership.organizationId),
-        })) as Organization;
+        // org = (await db.query.organizations.findFirst({
+        //   where: eq(organizations.id, membership.organizationId),
+        // })) as Organization;
+        org = membership.organizations as Organization;
       }
 
       let sandboxKey, prodKey;

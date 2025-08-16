@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { EntitiesDropdownContent } from "./EntitiesDropdown";
 import { CreateFreeTrial } from "../free-trial/CreateFreeTrial";
 import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
+import { getFrontendItemConfig } from "./utils/getFrontendItemConfig";
 
 export const ProductItemTable = () => {
   const { product, features, org, entityFeatureIds, isOnboarding, autoSave } =
@@ -31,7 +32,9 @@ export const ProductItemTable = () => {
   const [freeTrialOpen, setFreeTrialOpen] = useState(false);
 
   const handleRowClick = (item: ProductItem, index: number) => {
-    setSelectedItem(item);
+    const frontendItem = getFrontendItemConfig(item);
+
+    setSelectedItem(frontendItem);
     setSelectedIndex(index);
     setOpen(true);
   };

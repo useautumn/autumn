@@ -8,7 +8,7 @@ import {
 } from "@autumn/shared";
 import { and, eq, inArray } from "drizzle-orm";
 
-const clearCustomersInBatches = async ({
+export const clearCustomersInBatches = async ({
   db,
   org,
   batchSize = 450,
@@ -37,6 +37,8 @@ const clearCustomersInBatches = async ({
     const customerIds = customerBatch
       .map((c) => c.internalId)
       .filter((id) => id !== null);
+
+    console.log("Deleting customers:", customerIds);
 
     await db
       .delete(customers)

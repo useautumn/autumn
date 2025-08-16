@@ -10,7 +10,7 @@ export const attachParamsToCurCusProduct = ({
   const { curMainProduct, curSameProduct, curScheduledProduct } =
     attachParamToCusProducts({ attachParams });
 
-  return curMainProduct || curSameProduct;
+  return curSameProduct || curMainProduct;
 };
 
 export const attachParamToCusProducts = ({

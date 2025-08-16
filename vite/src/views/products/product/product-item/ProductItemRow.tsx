@@ -227,7 +227,6 @@ export const ProductItemRow = ({
   };
 
   const itemType = getItemType(item);
-  const isLast = index === product.items.length - 1;
 
   return (
     <div

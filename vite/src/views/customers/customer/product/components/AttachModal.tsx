@@ -31,6 +31,7 @@ import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { AttachInfo } from "./attach-preview/AttachInfo";
 import { getAttachBody } from "./attachProductUtils";
+import { InvoiceCustomerButton } from "./InvoiceCustomerButton";
 
 export const AttachModal = ({
   open,
@@ -118,8 +119,15 @@ export const AttachModal = ({
     return "Charge Customer";
   };
 
-  const handleAttachClicked = async (useInvoice: boolean) => {
-    const setLoading = useInvoice ? setInvoiceLoading : setCheckoutLoading;
+  const handleAttachClicked = async ({
+    useInvoice,
+    enableProductImmediately,
+    setLoading,
+  }: {
+    useInvoice: boolean;
+    enableProductImmediately?: boolean;
+    setLoading: (loading: boolean) => void;
+  }) => {
     const cusId = getCusId();
 
     for (const option of options) {
@@ -145,6 +153,7 @@ export const AttachModal = ({
         optionsInput: options,
         attachState,
         useInvoice,
+        enableProductImmediately,
         successUrl: `${import.meta.env.VITE_FRONTEND_URL}${redirectUrl}`,
         version: version || product.version,
       });
@@ -155,9 +164,8 @@ export const AttachModal = ({
         window.open(data.checkout_url, "_blank");
       } else if (data.invoice) {
         window.open(getStripeInvoiceLink(data.invoice), "_blank");
-      } else {
-        navigateTo(`/customers/${cusId}`, navigation, env);
       }
+      navigateTo(`/customers/${cusId}`, navigation, env);
 
       toast.success(data.message || "Successfully attached product");
       setOpen(false);
@@ -186,7 +194,7 @@ export const AttachModal = ({
   const mainWidth = "w-lg";
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="gap-0 p-0 rounded-xs">
+      <DialogContent className="translate-y-[0%] top-[20%] max-h-[70vh] duration-0 p-0 overflow-y-auto">
         <div className="flex transition-all duration-300 ease-in-out">
           <div
             className={`p-6 pb-2 flex flex-col gap-4 ${mainWidth} rounded-sm`}
@@ -234,19 +242,23 @@ export const AttachModal = ({
           )}
         >
           {invoiceAllowed() && (
-            <Button
-              variant="add"
-              className="!h-full text-t2"
-              endIcon={<ArrowUpRightFromSquare size={12} />}
-              disableStartIcon={true}
-              tabIndex={-1}
-              tooltipContent="This will enable the product for the customer immediately, and redirect you to Stripe to finalize the invoice"
-              isLoading={invoiceLoading}
-              disabled={invoiceLoading || checkoutLoading}
-              onClick={() => handleAttachClicked(true)}
-            >
-              Invoice Customer
-            </Button>
+            <InvoiceCustomerButton
+              preview={preview}
+              handleAttachClicked={handleAttachClicked}
+            />
+            // <Button
+            //   variant="add"
+            //   className="!h-full text-t2"
+            //   endIcon={<ArrowUpRightFromSquare size={12} />}
+            //   disableStartIcon={true}
+            //   tabIndex={-1}
+            //   tooltipContent="This will enable the product for the customer immediately, and redirect you to Stripe to finalize the invoice"
+            //   isLoading={invoiceLoading}
+            //   disabled={invoiceLoading || checkoutLoading}
+            //   onClick={() => handleAttachClicked(true)}
+            // >
+            //   Invoice Customer
+            // </Button>
           )}
           <Button
             variant="add"
@@ -255,7 +267,12 @@ export const AttachModal = ({
             endIcon={<ArrowUpRightFromSquare size={12} />}
             isLoading={checkoutLoading}
             disabled={invoiceLoading || checkoutLoading}
-            onClick={() => handleAttachClicked(false)}
+            onClick={() =>
+              handleAttachClicked({
+                useInvoice: false,
+                setLoading: setCheckoutLoading,
+              })
+            }
           >
             {getButtonText()}
           </Button>

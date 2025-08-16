@@ -17,7 +17,12 @@ import {
 } from "@/utils/product/productItemUtils";
 import { ConfigWithFeature } from "./components/ConfigWithFeature";
 import FixedPriceConfig from "./components/ConfigFixedPrice";
-import { isFeaturePriceItem, isPriceItem } from "@/utils/product/getItemType";
+import {
+  isFeatureItem,
+  isFeaturePriceItem,
+  isPriceItem,
+} from "@/utils/product/getItemType";
+import { PriceItemConfig } from "./product-item-config/PriceItemConfig";
 
 export const ProductItemConfig = () => {
   // HOOKS
@@ -75,33 +80,24 @@ export const ProductItemConfig = () => {
             newItem.config = newConfig;
           }
         }
-        // If showProration is false, don't touch the config at all - preserve whatever is there
 
         setItem(newItem);
       }
     }
   }, [item.feature_id, item.usage_model]);
 
-  const isPrice = isPriceItem(item);
-
+  // const isFeature = isFeatureItem(item);
+  const isPrice = item.isPrice;
+  // isPriceItem(item) && "w-sm",
+  // isFeaturePriceItem(item) && "!w-sm",
+  // isFeaturePriceItem(item) && item.tiers?.length > 1 && "w-sm"
   return (
     <div
       className={cn(
-        "flex flex-col gap-6 w-md transition-all ease-in-out duration-300 !overflow-visible", //modal animations
-        isPriceItem(item) && "w-xs",
-        isFeaturePriceItem(item) && "w-md",
-        isFeaturePriceItem(item) && item.tiers?.length > 1 && "w-md"
+        "flex flex-col gap-6 w-sm transition-all ease-in-out duration-300 !overflow-visible" //modal animations
       )}
     >
-      {isPrice ? (
-        <FixedPriceConfig show={show} setShow={setShow} />
-      ) : (
-        <ConfigWithFeature
-          show={show}
-          setShow={setShow}
-          handleAddPrice={handleAddPrice}
-        />
-      )}
+      {isPrice ? <PriceItemConfig /> : <ConfigWithFeature />}
     </div>
   );
 };

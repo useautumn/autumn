@@ -1,3 +1,5 @@
+import RecaseError from "@/utils/errorUtils.js";
+
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { createStripeSub } from "@/external/stripe/stripeSubUtils/createStripeSub.js";
 import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
@@ -14,8 +16,6 @@ import {
 } from "@/internal/invoices/invoiceUtils.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { formatUnixToDateTime } from "@/utils/genUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import {
   APIVersion,
@@ -122,7 +122,7 @@ export const handlePaidProduct = async ({
         freeTrial,
         invoiceOnly,
         itemSet,
-        finalizeInvoice: attachParams.finalizeInvoice,
+        finalizeInvoice: config.invoiceCheckout,
         anchorToUnix: billingCycleAnchorUnix,
         reward: i == 0 ? reward : undefined,
         now: attachParams.now,
@@ -148,15 +148,38 @@ export const handlePaidProduct = async ({
     }
   }
 
-  // Add product and entitlements to customer
-  const batchInsert = [];
-
   const anchorToUnix =
     subscriptions.length > 0
       ? subscriptions[0].current_period_end * 1000
       : mergeSubs.length > 0
         ? mergeSubs[0].current_period_end * 1000
         : undefined;
+
+  const batchInsertInvoice: any = [];
+  for (const sub of subscriptions) {
+    batchInsertInvoice.push(
+      insertInvoiceFromAttach({
+        db: req.db,
+        // invoiceId: sub.latest_invoice as string,
+        stripeInvoice: sub.latest_invoice as Stripe.Invoice,
+        attachParams,
+        logger,
+      })
+    );
+  }
+  const invoices = await Promise.all(batchInsertInvoice);
+
+  if (config.invoiceCheckout) {
+    return {
+      invoices: subscriptions.map((s) => s.latest_invoice as Stripe.Invoice),
+      subs: subscriptions,
+      anchorToUnix,
+      config,
+    };
+  }
+
+  // Add product and entitlements to customer
+  const batchInsert = [];
 
   for (const product of products) {
     batchInsert.push(
@@ -172,19 +195,6 @@ export const handlePaidProduct = async ({
     );
   }
   await Promise.all(batchInsert);
-
-  const batchInsertInvoice: any = [];
-  for (const sub of subscriptions) {
-    batchInsertInvoice.push(
-      insertInvoiceFromAttach({
-        db: req.db,
-        invoiceId: sub.latest_invoice as string,
-        attachParams,
-        logger,
-      })
-    );
-  }
-  const invoices = await Promise.all(batchInsertInvoice);
 
   if (res) {
     let apiVersion = attachParams.apiVersion || APIVersion.v1;

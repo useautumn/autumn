@@ -23,7 +23,7 @@ export const intervalsAreSame = ({
     attachParams,
   });
 
-  let curCusProduct = curMainProduct || curSameProduct;
+  let curCusProduct = curSameProduct || curMainProduct;
 
   if (!curCusProduct) {
     return false;
@@ -147,8 +147,17 @@ export const getAttachConfig = async ({
     branch == AttachBranch.MainIsTrial ||
     org.config.merge_billing_cycles === false;
 
+  const invoiceAndEnable =
+    attachParams.invoiceOnly && attachBody.enable_product_immediately;
+
+  const invoiceCheckout =
+    attachParams.invoiceOnly === true && !attachBody.enable_product_immediately;
+
   const checkoutFlow =
-    isPublic || forceCheckout || (noPaymentMethod && !invoiceOnly);
+    isPublic ||
+    forceCheckout ||
+    invoiceCheckout ||
+    (noPaymentMethod && !invoiceAndEnable);
 
   const onlyCheckout = !isFree && checkoutFlow && !freeTrialWithoutCardRequired;
 
@@ -159,6 +168,7 @@ export const getAttachConfig = async ({
     proration,
     disableTrial,
     invoiceOnly: flags.invoiceOnly,
+    invoiceCheckout,
     disableMerge,
     sameIntervals,
     carryTrial,
@@ -178,6 +188,7 @@ export const getDefaultAttachConfig = () => {
     disableMerge: false,
     sameIntervals: false,
     carryTrial: false,
+    invoiceCheckout: false,
   };
 
   return config;

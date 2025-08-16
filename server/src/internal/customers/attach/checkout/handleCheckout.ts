@@ -14,7 +14,10 @@ import { getAttachBranch } from "../attachUtils/getAttachBranch.js";
 import { getAttachConfig } from "../attachUtils/getAttachConfig.js";
 import { getAttachFunction } from "../attachUtils/getAttachFunction.js";
 import { handleCreateCheckout } from "../../add-product/handleCreateCheckout.js";
-import { checkStripeConnections } from "../attachRouter.js";
+import {
+  checkStripeConnections,
+  handlePrepaidErrors,
+} from "../attachRouter.js";
 import { attachParamsToPreview } from "../handleAttachPreview/attachParamsToPreview.js";
 import { previewToCheckoutRes } from "./previewToCheckoutRes.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
@@ -24,6 +27,7 @@ import { isPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePrice
 import { priceToFeature } from "@/internal/products/prices/priceUtils/convertPrice.js";
 import { getPriceOptions } from "@/internal/products/prices/priceUtils.js";
 import { getHasProrations } from "./getHasProrations.js";
+import { handleCreateInvoiceCheckout } from "../../add-product/handleCreateInvoiceCheckout.js";
 
 const getAttachVars = async ({
   req,
@@ -108,17 +112,13 @@ export const handleCheckout = (req: any, res: any) =>
       const { logger, features } = req;
       const attachBody = AttachBodySchema.parse(req.body);
 
-      const { attachParams, branch, func } = await getAttachVars({
+      const { attachParams, branch, func, config } = await getAttachVars({
         req,
         attachBody,
       });
 
-      await getCheckoutOptions({
-        req,
-        attachParams,
-      });
-
       let checkoutUrl = null;
+
       if (func == AttachFunction.CreateCheckout) {
         await checkStripeConnections({
           req,
@@ -127,32 +127,36 @@ export const handleCheckout = (req: any, res: any) =>
           useCheckout: true,
         });
 
-        const checkout = await handleCreateCheckout({
-          req,
-          res,
-          attachParams,
-          returnCheckout: true,
-        });
+        if (config.invoiceCheckout) {
+          await handlePrepaidErrors({
+            attachParams,
+            config,
+            useCheckout: config.onlyCheckout,
+          });
 
-        checkoutUrl = checkout?.url;
+          const result = await handleCreateInvoiceCheckout({
+            req,
+            attachParams,
+            config,
+          });
 
-        // const customer = attachParams.customer;
-        // res.status(200).json(
-        //   CheckoutResponseSchema.parse({
-        //     url: checkout?.url,
-        //     customer_id: customer.id || customer.internal_id,
-        //     scenario: AttachScenario.New,
-        //     lines: [],
-        //     product: await getProductResponse({
-        //       product: attachParams.products[0],
-        //       features: features,
-        //       withDisplay: false,
-        //       options: attachParams.optionsList,
-        //     }),
-        //   })
-        // );
-        // return;
+          checkoutUrl = result?.invoices?.[0]?.hosted_invoice_url;
+        } else {
+          const checkout = await handleCreateCheckout({
+            req,
+            res,
+            attachParams,
+            returnCheckout: true,
+          });
+
+          checkoutUrl = checkout?.url;
+        }
       }
+
+      await getCheckoutOptions({
+        req,
+        attachParams,
+      });
 
       const preview = await attachParamsToPreview({
         req,

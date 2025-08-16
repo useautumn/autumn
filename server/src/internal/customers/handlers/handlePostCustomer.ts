@@ -11,6 +11,7 @@ export const handlePostCustomerRequest = async (req: any, res: any) => {
   const logger = req.logtail;
   try {
     const data = req.body;
+
     const expand = parseCusExpand(req.query.expand);
     const { db, org, features } = req;
 

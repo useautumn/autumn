@@ -11,7 +11,11 @@ import {
 import Stripe from "stripe";
 import { getCusPaymentMethod } from "../stripeCusUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
-import { formatUnixToDateTime, generateId, notNullish } from "@/utils/genUtils.js";
+import {
+  formatUnixToDateTime,
+  generateId,
+  notNullish,
+} from "@/utils/genUtils.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getAlignedIntervalUnix } from "@/internal/products/prices/billingIntervalUtils.js";
@@ -46,7 +50,8 @@ export const createStripeSub = async ({
   let paymentMethod = await getCusPaymentMethod({
     stripeCli,
     stripeId: customer.processor.id,
-    errorIfNone: !invoiceOnly && (notNullish(freeTrial) && freeTrial?.card_required), // throw error if no payment method and invoiceOnly is false OR if its a free trial and card is required but no payment method
+    errorIfNone:
+      !invoiceOnly && notNullish(freeTrial) && freeTrial?.card_required, // throw error if no payment method and invoiceOnly is false OR if its a free trial and card is required but no payment method
   });
 
   let paymentMethodData = {};
@@ -85,7 +90,11 @@ export const createStripeSub = async ({
       trial_end: freeTrialToStripeTimestamp({ freeTrial, now }),
       payment_behavior: "error_if_incomplete",
       add_invoice_items: invoiceItems,
-      collection_method: freeTrial ? undefined : invoiceOnly ? "send_invoice" : "charge_automatically",
+      collection_method: freeTrial
+        ? undefined
+        : invoiceOnly
+          ? "send_invoice"
+          : "charge_automatically",
       days_until_due: freeTrial ? undefined : invoiceOnly ? 30 : undefined,
       billing_cycle_anchor: billingCycleAnchorUnix
         ? Math.floor(billingCycleAnchorUnix / 1000)
@@ -93,16 +102,24 @@ export const createStripeSub = async ({
 
       coupon: reward ? reward.id : undefined,
 
-      trial_settings: freeTrial && !freeTrial.card_required ? {
-        end_behavior: {
-          missing_payment_method: "cancel",
-        },
-      } : undefined,
+      trial_settings:
+        freeTrial && !freeTrial.card_required
+          ? {
+              end_behavior: {
+                missing_payment_method: "cancel",
+              },
+            }
+          : undefined,
+      expand: ["latest_invoice"],
     });
 
-    if (invoiceOnly && finalizeInvoice) {
-      await stripeCli.invoices.finalizeInvoice(
-        subscription.latest_invoice as string
+    if (
+      invoiceOnly &&
+      finalizeInvoice &&
+      (subscription.latest_invoice as Stripe.Invoice).status === "draft"
+    ) {
+      subscription.latest_invoice = await stripeCli.invoices.finalizeInvoice(
+        (subscription.latest_invoice as Stripe.Invoice).id
       );
     }
 

@@ -32,7 +32,15 @@ export const CustomerDetails = ({
                   {customer.id}
                 </CopyButton>
               ) : (
-                <span className="px-2 text-t3">N/A</span>
+                <Button
+                  variant="sidebarItem"
+                  onClick={() => {
+                    setIsModalOpen(true);
+                    setModalType("customer");
+                  }}
+                >
+                  <span className="truncate text-t3">N/A</span>
+                </Button>
               )}
             </div>
           </div>
@@ -103,7 +111,7 @@ export const CustomerDetails = ({
                     >
                       <FontAwesomeIcon
                         icon={faStripe}
-                        className="!h-6 text-t2"
+                        className="!h-6 !w-6 text-t2"
                       />
                       <ArrowUpRightFromSquare size={12} className="text-t2" />
                     </Button>

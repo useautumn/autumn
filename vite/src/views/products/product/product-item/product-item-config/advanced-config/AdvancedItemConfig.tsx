@@ -32,25 +32,12 @@ export const AdvancedItemConfig = () => {
     item.included_usage > 0;
 
   return (
-    <div className="w-full h-fit">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1 w-fit rounded-md text-t3 hover:text-zinc-800 transition-all duration-150 ease-out mt-1"
-      >
-        <ChevronRight
-          className={`w-4 h-4 transition-transform duration-150 ease-out ${
-            isOpen ? "rotate-90" : "rotate-0"
-          }`}
-        />
-        <span className="text-sm font-medium">Advanced</span>
-      </button>
-
+    <div className="w-full p-6 h-full">
+      <p className="text-t2 text-sm font-medium mb-6">Advanced</p>
       <div
-        className={`overflow-hidden transition-all duration-150 ease-out ${
-          isOpen ? "max-h-80 opacity-100 mt-2" : "max-h-0 opacity-0"
-        }`}
+        className={`overflow-hidden transition-all duration-150 ease-out h-full`}
       >
-        <div className="flex flex-col gap-4 p-4 bg-stone-100 ">
+        <div className="flex flex-col gap-4 text-sm">
           <ToggleButton
             value={item.reset_usage_when_enabled}
             setValue={() => {
@@ -59,13 +46,18 @@ export const AdvancedItemConfig = () => {
                 reset_usage_when_enabled: !item.reset_usage_when_enabled,
               });
             }}
-            infoContent="A customer has used 20/100 credits on a free plan. Then they upgrade to a Pro plan with 500 credits. If this flag is enabled, they’ll get 500 credits on upgrade. If false, they’ll have 480."
-            buttonText="Reset existing usage when product is enabled"
-            className="text-t3 h-fit"
+            infoContent="A customer has used 20/100 credits on a free plan. Then they upgrade to a Pro plan with 500 credits. If this flag is enabled, they'll get 500 credits on upgrade. If false, they'll have 480."
+            buttonText={
+              <span className="whitespace-normal text-left leading-relaxed">
+                Reset existing usage when product is enabled
+              </span>
+            }
+            className="text-t3 h-fit items-start gap-1"
             disabled={
               usageType === FeatureUsageType.Continuous ||
               notNullish(item.config?.rollover)
             }
+            switchClassName="mt-[3px]"
           />
 
           <div className="h-4.5 relative flex flex-row items-center gap-3">

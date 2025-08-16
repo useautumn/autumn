@@ -16,10 +16,11 @@ import {
 import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
+import { ACTIVE_STATUSES } from "../CusProductService.js";
 
 export const cusProductsToCusPrices = ({
   cusProducts,
-  inStatuses = [CusProductStatus.Active],
+  inStatuses,
   billingType,
 }: {
   cusProducts: FullCusProduct[];
@@ -29,7 +30,7 @@ export const cusProductsToCusPrices = ({
   const cusPrices: FullCustomerPrice[] = [];
 
   for (const cusProduct of cusProducts) {
-    if (!inStatuses.includes(cusProduct.status)) {
+    if (inStatuses && !inStatuses.includes(cusProduct.status)) {
       continue;
     }
 

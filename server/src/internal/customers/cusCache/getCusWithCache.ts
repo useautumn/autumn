@@ -58,9 +58,7 @@ export const getCusWithCache = async ({
 
   if (!skipCache && !skipGet) {
     try {
-      const start = Date.now();
       const cached = await upstash!.get(cacheKey);
-      const end = Date.now();
       if (cached) {
         return cached as FullCustomer;
       } else {
@@ -88,8 +86,9 @@ export const getCusWithCache = async ({
 
   if (!skipCache && notNullish(customer)) {
     try {
-      await upstash!.set(cacheKey, customer);
-      await upstash!.expire(cacheKey, 300); // Expire after 5 minutes...
+      await upstash!.set(cacheKey, customer, {
+        ex: 300,
+      });
     } catch (error) {
       logger.error(`Failed to set cache: ${cacheKey}`, { error });
     }

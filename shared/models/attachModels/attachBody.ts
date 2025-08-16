@@ -44,6 +44,7 @@ export const AttachBodySchema = z
     checkout_session_params: z.any().optional(),
     reward: z.string().optional(),
     invoice: z.boolean().optional(),
+    enable_product_immediately: z.boolean().optional(),
   })
   .refine(
     (data) => {

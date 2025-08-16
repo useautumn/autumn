@@ -79,7 +79,7 @@ import {
   member,
   invitation,
 } from "./auth-schema.js";
-import { userRelations } from "./auth-relations.js";
+import { userRelations, memberRelations } from "./auth-relations.js";
 
 export {
   // Tables
@@ -140,4 +140,5 @@ export {
   rolloverRelations,
   // Auth Relations
   userRelations,
+  memberRelations,
 };

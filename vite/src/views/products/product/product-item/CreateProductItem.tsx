@@ -2,22 +2,30 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 
 import { useEffect, useState } from "react";
-import { ProductItemContext } from "./ProductItemContext";
+import {
+  ProductItemContext,
+  useProductItemContext,
+} from "./ProductItemContext";
 
 import {
   ProductItemInterval,
   ProductItem,
   CreateFeature as CreateFeatureType,
+  FrontendProductItem,
+  Infinite,
 } from "@autumn/shared";
 
 import { useProductContext } from "../ProductContext";
 import { validateProductItem } from "@/utils/product/product-item/validateProductItem";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { CreateItemDialogContent } from "./create-product-item/CreateItemDialogContent";
 import { Plus } from "lucide-react";
 import { useSteps } from "./useSteps";
 import { CreateItemStep } from "./utils/CreateItemStep";
-import { isFeatureItem } from "@/utils/product/getItemType";
+import { isFeatureItem, isFeaturePriceItem } from "@/utils/product/getItemType";
+import { emptyPriceItem } from "./create-product-item/defaultItemConfigs";
+import { itemsHaveSameInterval } from "@/utils/product/productItemUtils";
+import { toast } from "sonner";
+import { getFeature } from "@/utils/product/entitlementUtils";
 
 export const defaultProductItem: ProductItem = {
   feature_id: null,
@@ -36,20 +44,109 @@ export const defaultProductItem: ProductItem = {
   reset_usage_when_enabled: true,
 };
 
-const defaultPriceItem: ProductItem = {
-  feature_id: null,
-  included_usage: null,
+const useMergeFeatureItem = ({
+  item,
+  setOpen,
+}: {
+  item: ProductItem;
+  setOpen: (open: boolean) => void;
+}) => {
+  const { product, setProduct } = useProductContext();
+  const getOtherFeaturePriceItemIndex = () => {
+    return product.items.findIndex(
+      (i: any) =>
+        i.feature_id === item.feature_id &&
+        isFeaturePriceItem(i) &&
+        itemsHaveSameInterval({ item1: i, item2: item })
+    );
+  };
 
-  interval: ProductItemInterval.Month,
+  const shouldMergeFeatureItem = () => {
+    const otherItemIndex = getOtherFeaturePriceItemIndex();
+    const isFeature = isFeatureItem(item);
+    return isFeature && otherItemIndex !== -1;
+  };
 
-  // Price config
-  price: 0,
-  tiers: null,
-  billing_units: 1,
+  const mergeFeatureItem = () => {
+    const otherItemIndex = getOtherFeaturePriceItemIndex();
+    const newItems = [...product.items];
+    const newIncludedUsage = parseFloat(item.included_usage?.toString() || "0");
+    if (isNaN(newIncludedUsage)) {
+      toast.error("You must set an included usage for this item");
+      return;
+    }
 
-  // Others
-  entity_feature_id: null,
-  reset_usage_when_enabled: true,
+    newItems[otherItemIndex] = {
+      ...newItems[otherItemIndex],
+      included_usage: newIncludedUsage,
+    };
+
+    setProduct({ ...product, items: newItems });
+    setOpen(false);
+  };
+
+  return {
+    shouldMergeFeatureItem,
+    mergeFeatureItem,
+  };
+};
+
+const useMergeFeaturePriceItem = ({
+  item,
+  setOpen,
+}: {
+  item: ProductItem;
+  setOpen: (open: boolean) => void;
+}) => {
+  const { product, setProduct, features } = useProductContext();
+
+  const getOtherFeatureItemIndex = () => {
+    return product.items.findIndex(
+      (i: any) =>
+        i.feature_id === item.feature_id &&
+        isFeatureItem(i) &&
+        itemsHaveSameInterval({ item1: i, item2: item })
+    );
+  };
+
+  const shouldMergeFeaturePriceItem = () => {
+    const otherItemIndex = getOtherFeatureItemIndex();
+    const isFeaturePrice = isFeaturePriceItem(item);
+    return isFeaturePrice && otherItemIndex !== -1 && item.feature_id;
+  };
+
+  const mergeFeaturePriceItem = () => {
+    const otherItemIndex = getOtherFeatureItemIndex();
+    const otherItem = product.items[otherItemIndex];
+
+    // 1. If unlimited, don't allow this item
+    if (otherItem.included_usage === Infinite) {
+      toast.error(
+        `Cannot create a priced feature when you have another item for this feature (${otherItem.feature_id}) which is unlimited`
+      );
+      return;
+    }
+
+    const newItems = [...product.items];
+    const newItem = validateProductItem({
+      item: item as FrontendProductItem,
+      features,
+    });
+    if (!newItem) return;
+
+    newItems[otherItemIndex] = {
+      ...newItem,
+      included_usage: otherItem.included_usage,
+    };
+
+    setProduct({ ...product, items: newItems });
+    setOpen(false);
+  };
+
+  return {
+    shouldMergeFeaturePriceItem,
+    mergeFeaturePriceItem,
+  };
 };
 
 export function CreateProductItem() {
@@ -59,25 +156,52 @@ export function CreateProductItem() {
   const { features, product, setProduct, setFeatures, counts, mutate } =
     useProductContext();
 
-  // const axiosInstance = useAxiosInstance();
-  // const hasCustomers = counts?.all > 0;
+  const [configState, setConfigState] = useState({
+    showPrice: false,
+  });
 
-  // const setSelectedFeature = (feature: CreateFeatureType) => {
-  // setFeatures([...features, feature]);
-  // setItem({ ...item, feature_id: feature.id! });
-  // };
+  const { shouldMergeFeatureItem, mergeFeatureItem } = useMergeFeatureItem({
+    item,
+    setOpen,
+  });
+  const { shouldMergeFeaturePriceItem, mergeFeaturePriceItem } =
+    useMergeFeaturePriceItem({
+      item,
+      setOpen,
+    });
+
+  const warning = () => {
+    if (shouldMergeFeatureItem() && item.feature_id) {
+      const feature = getFeature(item.feature_id, features);
+      return `You already have a usage-based price for ${feature?.name}. Adding this feature will merge it with that price, and create an overage price (eg 100 free, then $0.5 thereafter)`;
+    }
+
+    if (shouldMergeFeaturePriceItem() && item.feature_id) {
+      const feature = getFeature(item.feature_id, features);
+      return `You already have a feature item for ${feature?.name}. Adding a variable price will merge it with that item, and create an overage price (eg 100 free, then $0.5 thereafter)`;
+    }
+
+    return null;
+  };
 
   const handleCreateProductItem = async (entityFeatureId?: string) => {
+    if (shouldMergeFeatureItem()) {
+      mergeFeatureItem();
+      return;
+    }
+
+    if (shouldMergeFeaturePriceItem()) {
+      mergeFeaturePriceItem();
+      return;
+    }
+
     const validatedItem = validateProductItem({
       item: {
-        ...item,
+        ...(item as FrontendProductItem),
         entity_feature_id: entityFeatureId
           ? entityFeatureId
           : item.entity_feature_id,
       },
-      // show: {
-      //   price: true,
-      // },
       features,
     });
 
@@ -93,12 +217,6 @@ export function CreateProductItem() {
     initialStep: CreateItemStep.CreateItem,
   });
 
-  useEffect(() => {
-    if (open && isFeatureItem(item) && features.length == 0) {
-      stepState.replaceStep(CreateItemStep.CreateFeature);
-    }
-  }, [open]);
-
   return (
     <ProductItemContext.Provider
       value={{
@@ -109,6 +227,8 @@ export function CreateProductItem() {
         isUpdate: false,
         handleCreateProductItem,
         stepState,
+        setOpen,
+        warning: warning(),
       }}
     >
       <Dialog open={open} onOpenChange={setOpen}>
@@ -127,7 +247,7 @@ export function CreateProductItem() {
             <Button
               className="w-24"
               variant="add"
-              onClick={() => setItem(defaultPriceItem)}
+              onClick={() => setItem(emptyPriceItem)}
               startIcon={<Plus size={14} />}
             >
               Price
@@ -138,66 +258,4 @@ export function CreateProductItem() {
       </Dialog>
     </ProductItemContext.Provider>
   );
-}
-
-{
-  /* <DialogTrigger asChild>
-            <Button
-              variant="add"
-              className="w-24 border-l-0"
-              onClick={() => setItem(defaultPriceItem)}
-            >
-              Price
-            </Button>
-          </DialogTrigger> */
-}
-{
-  /* <DialogContent className="translate-y-[0%] top-[20%] flex flex-col gap-0 w-fit p-0">
-          <DialogContentWrapper>
-            <DialogHeader className="p-0">
-              <div className="flex flex-col  ">
-                {showCreateFeature && (
-                  <Button
-                    variant="ghost"
-                    className="text-xs py-0 px-2 w-fit -ml-5 -mt-5 hover:bg-transparent"
-                    onClick={() => setShowCreateFeature(false)}
-                  >
-                    ← Product
-                  </Button>
-                )}
-
-                <DialogTitle>
-                  {showCreateFeature ||
-                  (features.length == 0 && item.price === null)
-                    ? "Create Feature"
-                    : "Add Product Item"}
-                </DialogTitle>
-              </div>
-            </DialogHeader>
-            <div className="flex !overflow-visible  w-fit">
-              {showCreateFeature ||
-              (features.length == 0 && item.price === null) ? (
-                <div className="w-full -mt-2">
-                  <CreateFeature
-                    isFromEntitlement={true}
-                    setShowFeatureCreate={setShowCreateFeature}
-                    setSelectedFeature={setSelectedFeature}
-                    setOpen={setOpen}
-                    open={open}
-                  />
-                </div>
-              ) : (
-                <div className="flex flex-col gap-4 w-fit !overflow-visible">
-                  <ProductItemConfig />
-                </div>
-              )}
-            </div>
-          </DialogContentWrapper>
-          {showCreateFeature ||
-          (features.length == 0 && item.price === null) ? (
-            <div className="" />
-          ) : (
-            <ItemConfigFooter setIntroDone={() => {}} />
-          )}
-        </DialogContent> */
 }

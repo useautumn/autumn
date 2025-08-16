@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useEffect, useState } from "react";
 import { ProductItemConfig } from "./ProductItemConfig";
-import { ProductItem } from "@autumn/shared";
+import { FrontendProductItem, ProductItem } from "@autumn/shared";
 import { ProductItemContext } from "./ProductItemContext";
 import { useProductContext } from "../ProductContext";
 import { notNullish } from "@/utils/genUtils";
@@ -14,6 +14,12 @@ import {
   CustomDialogFooter,
 } from "@/components/general/modal-components/DialogContentWrapper";
 import { ItemConfigFooter } from "./product-item-config/item-config-footer/ItemConfigFooter";
+import {
+  AdvancedConfigSidebar,
+  MainDialogBodyWrapper,
+  ToggleAdvancedConfigButton,
+} from "./product-item-config/AdvancedConfigSidebar";
+import { isPriceItem } from "@/utils/product/getItemType";
 
 export default function UpdateProductItem({
   selectedItem,
@@ -31,9 +37,20 @@ export default function UpdateProductItem({
   const { product, setProduct, features } = useProductContext();
   const [showCreateFeature, setShowCreateFeature] = useState(false);
 
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setTimeout(() => {
+        setAdvancedOpen(false);
+      }, 300);
+    }
+  }, [open]);
+
   const handleUpdateProductItem = () => {
+    const frontendItem = selectedItem as FrontendProductItem;
     const validatedItem = validateProductItem({
-      item: selectedItem!,
+      item: frontendItem!,
       features,
     });
 
@@ -72,20 +89,31 @@ export default function UpdateProductItem({
       }}
     >
       <Dialog open={open} onOpenChange={setOpen}>
-        <CustomDialogContent>
-          <CustomDialogBody>
-            <div className="flex items-center justify-between pr-9.5">
-              <DialogTitle>Update Item</DialogTitle>
-              {selectedItem?.feature_id && (
-                <CopyButton text={selectedItem.feature_id || ""}>
-                  {selectedItem.feature_id || ""}
-                </CopyButton>
-              )}
-            </div>
-            <ProductItemConfig />
-          </CustomDialogBody>
-
-          <ItemConfigFooter />
+        <CustomDialogContent className="!max-w-none ">
+          <div className="flex relative overflow-hidden w-full h-full overflow-y-auto">
+            <MainDialogBodyWrapper advancedOpen={advancedOpen}>
+              <CustomDialogBody className="!pb-0">
+                <div className="flex items-center justify-between pr-9.5">
+                  <DialogTitle>Update Item</DialogTitle>
+                  {selectedItem?.feature_id && (
+                    <CopyButton text={selectedItem.feature_id || ""}>
+                      {selectedItem.feature_id || ""}
+                    </CopyButton>
+                  )}
+                </div>
+                <ProductItemConfig />
+              </CustomDialogBody>
+              <ToggleAdvancedConfigButton
+                advancedOpen={advancedOpen}
+                setAdvancedOpen={setAdvancedOpen}
+                showAdvancedButton={
+                  selectedItem ? !isPriceItem(selectedItem) : false
+                }
+              />
+              <ItemConfigFooter />
+            </MainDialogBodyWrapper>
+            <AdvancedConfigSidebar advancedOpen={advancedOpen} />
+          </div>
         </CustomDialogContent>
 
         {/* <DialogContent className="translate-y-[0%] top-[20%] flex flex-col w-fit gap-0 p-0">

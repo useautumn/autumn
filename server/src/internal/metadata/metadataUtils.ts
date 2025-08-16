@@ -36,7 +36,7 @@ export const createCheckoutMetadata = async ({
 
 export const getMetadataFromCheckoutSession = async (
   checkoutSession: Stripe.Checkout.Session,
-  db: DrizzleCli,
+  db: DrizzleCli
 ) => {
   const metadataId = checkoutSession.metadata?.autumn_metadata_id;
 
