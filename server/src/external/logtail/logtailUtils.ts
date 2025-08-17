@@ -4,7 +4,7 @@ dotenv.config();
 import { initLogger } from "@/errors/logger.js";
 const pinoLogger = initLogger();
 
-const createLogMethod = (pinoMethod: any, logtailMethod?: any) => {
+const createLogMethod = (pinoMethod: any, tracerootMethod?: any) => {
   function rewriteAppPath(str: string) {
     if (typeof str !== "string") return str;
 
@@ -59,15 +59,16 @@ const createLogMethod = (pinoMethod: any, logtailMethod?: any) => {
       pinoMethod(message);
     }
 
-    if (!logtailMethod) {
+    if (!tracerootMethod) {
       return;
     }
 
     // Logtail format: message first, then object (if exists)
     if (Object.keys(mergedObj).length > 0) {
-      logtailMethod(message, mergedObj);
+      tracerootMethod(message, mergedObj);
+      // tracerootMethod(mergedObj, message);
     } else {
-      logtailMethod(message);
+      tracerootMethod(message);
     }
   };
 };

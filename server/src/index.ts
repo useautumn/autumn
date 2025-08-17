@@ -78,6 +78,9 @@ const init = async () => {
 
   await initializeTraceroot();
 
+  const tracerootLogger = traceroot.get_logger();
+  tracerootLogger.info("Testing traceroot from index.ts!!!");
+
   const logger = createLogger();
   const server = http.createServer(app);
   const posthog = createPosthogCli();
@@ -179,7 +182,15 @@ const init = async () => {
 };
 
 if (process.env.NODE_ENV === "development") {
-  init();
+  init().then(async () => {
+    // console.log("Server initialized");
+    // await traceroot.forceFlush();
+
+    await traceroot.forceFlushTracer();
+    await traceroot.shutdownTracing();
+    await traceroot.forceFlushLogger();
+    await traceroot.shutdownLogger();
+  });
   registerShutdownHandlers();
 } else {
   let numCPUs = os.cpus().length;

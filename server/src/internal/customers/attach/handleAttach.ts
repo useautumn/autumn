@@ -29,16 +29,6 @@ const runAttachWithTraceroot = async ({
   } else {
     return await functionToTrace();
   }
-
-  //   try {
-  //     // Use traceFunction for proper span creation
-
-  //   } catch (traceError) {
-  //     console.warn('⚠️ traceFunction failed, falling back to regular function:', traceError);
-  //     return makeTracedCodeRequest(query);
-  //   }
-  // }
-  // return makeTracedCodeRequest(query);
 };
 
 export const handleAttach = async (req: any, res: any) =>
@@ -47,13 +37,12 @@ export const handleAttach = async (req: any, res: any) =>
     res,
     action: "attach",
     handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
+      const { logger } = req;
       await handleAttachRaceCondition({ req, res });
 
       await runAttachWithTraceroot({
         function: async () => {
           const attachBody = AttachBodySchema.parse(req.body);
-
-          // req.traceroot.info("Testing traceroot!");
 
           const { attachParams, customPrices, customEnts } =
             await getAttachParams({
@@ -61,6 +50,7 @@ export const handleAttach = async (req: any, res: any) =>
               attachBody,
             });
 
+          logger.info("Testing traceroot");
           // Handle existing product
           const branch = await getAttachBranch({
             req,
@@ -108,3 +98,13 @@ export const handleAttach = async (req: any, res: any) =>
       });
     },
   });
+
+//   try {
+//     // Use traceFunction for proper span creation
+
+//   } catch (traceError) {
+//     console.warn('⚠️ traceFunction failed, falling back to regular function:', traceError);
+//     return makeTracedCodeRequest(query);
+//   }
+// }
+// return makeTracedCodeRequest(query);

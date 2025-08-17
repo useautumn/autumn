@@ -66,6 +66,8 @@ export const analyticsMiddleware = async (req: any, res: any, next: any) => {
     },
   });
 
+  req.logger.info({ context: reqContext }, "testing traceroot");
+
   // Store JSON response
   let originalJson = res.json;
 

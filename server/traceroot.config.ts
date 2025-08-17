@@ -1,0 +1,22 @@
+const config = {
+  // Basic service configuration
+  service_name: "server",
+  github_owner: "useautumn",
+  github_repo_name: "autumn",
+  github_commit_hash: "main",
+
+  // Your environment configuration such as development, staging, production
+  environment: "production",
+
+  // Token configuration
+  // This is the token you can generate from the TraceRoot.AI website
+  token: "traceroot-6bad7f011f184fd5a1b542ad7b4b1ce5",
+
+  // Whether to enable console export of spans and logs
+  enable_span_console_export: false,
+  enable_log_console_export: true,
+
+  // Local mode that whether to store all data locally
+  local_mode: false,
+};
+export default config;
