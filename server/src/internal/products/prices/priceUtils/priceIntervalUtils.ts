@@ -111,18 +111,26 @@ export const getLargestInterval = ({
 export const getSmallestInterval = ({
   prices,
   ents,
+  excludeOneOff = false,
 }: {
   prices: Price[];
   ents?: Entitlement[];
+  excludeOneOff?: boolean;
 }) => {
   // let sortedPrices = structuredClone(prices);
   // sortPricesByInterval(sortedPrices);
-  const allPriceIntervals = prices.map((p) => {
+  let allPriceIntervals = prices.map((p) => {
     return {
       interval: p.config.interval,
       intervalCount: p.config.interval_count ?? 1,
     };
   });
+
+  if (excludeOneOff) {
+    allPriceIntervals = allPriceIntervals.filter(
+      (p) => p.interval !== BillingInterval.OneOff
+    );
+  }
 
   const allEntIntervals = ents?.map((e) => {
     return {

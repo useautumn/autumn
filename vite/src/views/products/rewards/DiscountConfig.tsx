@@ -93,6 +93,13 @@ export const DiscountConfig = ({
                 {Object.values(CouponDurationType)
                   .filter((type) => {
                     if (
+                      reward.type == RewardType.FixedDiscount &&
+                      type == CouponDurationType.Forever &&
+                      config.duration_type !== CouponDurationType.Forever
+                    ) {
+                      return false;
+                    }
+                    if (
                       reward.type == RewardType.InvoiceCredits &&
                       type == CouponDurationType.OneOff
                     ) {
@@ -182,35 +189,40 @@ const ProductPriceSelector = ({
             "Select Products"
           ) : (
             <>
-              {config.price_ids?.map((priceId) => (
-                <div
-                  key={priceId}
-                  className="py-1 px-3 text-xs text-t3 border-zinc-300 bg-zinc-100 rounded-full flex items-center gap-2 h-fit max-w-[200px] min-w-0"
-                >
-                  <p className="truncate flex-1 min-w-0">
-                    {formatProductItemText({
-                      item: products
-                        .find((p: any) =>
-                          p.items.find((i: any) => i.price_id === priceId),
-                        )
-                        .items.find((i: any) => i.price_id === priceId),
+              {config.price_ids?.map((priceId) => {
+                const item = products
+                  .find((p: any) =>
+                    p.items.find((i: any) => i.price_id === priceId)
+                  )
+                  ?.items.find((i: any) => i.price_id === priceId);
+
+                const text = item
+                  ? formatProductItemText({
+                      item,
                       org,
                       features,
-                    })}
-                  </p>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handlePriceToggle(priceId);
-                    }}
-                    className="bg-transparent hover:bg-transparent p-0 w-5 h-5"
+                    })
+                  : "Deleted price";
+                return (
+                  <div
+                    key={priceId}
+                    className="py-1 px-3 text-xs text-t3 border-zinc-300 bg-zinc-100 rounded-full flex items-center gap-2 h-fit max-w-[200px] min-w-0"
                   >
-                    <X size={12} className="text-t3" />
-                  </Button>
-                </div>
-              ))}
+                    <p className="truncate flex-1 min-w-0">{text}</p>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePriceToggle(priceId);
+                      }}
+                      className="bg-transparent hover:bg-transparent p-0 w-5 h-5"
+                    >
+                      <X size={12} className="text-t3" />
+                    </Button>
+                  </div>
+                );
+              })}
             </>
           )}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 absolute right-2" />

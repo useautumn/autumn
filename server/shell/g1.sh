@@ -16,7 +16,6 @@ fi
 # 'tests/attach/addOn/*.ts'
 
 $MOCHA_CMD \
-'tests/attach/checkout/*.ts'
-#  \
-# 'tests/attach/entities/*.ts' \
-# 'tests/attach/free/*.ts'\
+'tests/attach/checkout/*.ts' \
+'tests/attach/entities/*.ts' \
+'tests/attach/free/*.ts'\

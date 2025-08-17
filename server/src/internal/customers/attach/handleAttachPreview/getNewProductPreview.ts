@@ -118,11 +118,11 @@ export const getNewProductPreview = async ({
 
   if (mergeSub) {
     const { start } = subToPeriodStartEnd({ sub: mergeSub });
-    // const smallestInterval = getLargestInterval({ prices: newProduct.prices });
-    const smallestInterval = getSmallestInterval({ prices: newProduct.prices });
-    // console.log("New product:", newProduct.prices);
-    // console.log("Smallest interval", smallestInterval);
 
+    const smallestInterval = getSmallestInterval({
+      prices: newProduct.prices,
+      excludeOneOff: true,
+    });
     if (smallestInterval) {
       anchorToUnix = addBillingIntervalUnix({
         unixTimestamp: start * 1000,

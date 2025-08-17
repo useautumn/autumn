@@ -1,6 +1,6 @@
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { AppEnv, Organization } from "@autumn/shared";
+import { AppEnv, DiscountType, Organization, RewardType } from "@autumn/shared";
 import chalk from "chalk";
 import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
@@ -32,6 +32,8 @@ export let pro = constructProduct({
 const reward = constructCoupon({
   id: "checkout4",
   promoCode: "checkout4_code",
+  discountType: RewardType.PercentageDiscount,
+  discountValue: 50,
 });
 
 const testCase = "checkout4";
@@ -106,8 +108,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach coupon`)}`, () => {
 
     expect(customer.invoices.length).to.equal(1);
     let totalPrice = getBasePrice({ product: pro });
-    expect(customer.invoices[0].total).to.equal(
-      totalPrice - reward.discount_config!.discount_value
-    );
+    expect(customer.invoices[0].total).to.equal(totalPrice * 0.5);
   });
 });
