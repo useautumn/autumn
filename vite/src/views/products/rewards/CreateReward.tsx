@@ -7,20 +7,11 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Select } from "@/components/ui/select";
+
 import React, { useEffect, useState } from "react";
-import { Input } from "@/components/ui/input";
-import { FeatureService } from "@/services/FeatureService";
+
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { toast } from "sonner";
-import { PlusIcon } from "lucide-react";
-import {
-  Reward,
-  CouponDurationType,
-  CreateReward as CreateRewardType,
-  DiscountType,
-  RewardType,
-} from "@autumn/shared";
 
 import { getBackendErr } from "@/utils/genUtils";
 import { useProductsContext } from "../ProductsContext";

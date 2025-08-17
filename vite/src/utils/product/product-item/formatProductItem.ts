@@ -138,6 +138,8 @@ export const formatProductItemText = ({
   org: Organization;
   features: Feature[];
 }) => {
+  if (!item) return "";
+
   const itemType = getItemType(item);
 
   if (itemType == ProductItemType.FeaturePrice) {

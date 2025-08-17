@@ -218,6 +218,9 @@ export const expectSubItemsCorrect = async ({
 
       const usagePriceConfig = price.config as UsagePriceConfig;
 
+      console.log("Sub item:", subItem);
+      console.log("Usage price config:", usagePriceConfig);
+
       expect(
         nullish(subItem) ||
           (subItem?.quantity === 0 &&

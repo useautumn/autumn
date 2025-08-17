@@ -1,6 +1,6 @@
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { ErrCode, Reward, IntervalConfig } from "@autumn/shared";
+import { ErrCode, Reward, IntervalConfig, AttachConfig } from "@autumn/shared";
 import Stripe from "stripe";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
@@ -20,7 +20,8 @@ export const createStripeSub2 = async ({
   // freeTrial,
   // invoiceOnly = false,
   attachParams,
-  finalizeInvoice = false,
+  config,
+  // finalizeInvoice = false,
   anchorToUnix,
   itemSet,
   reward,
@@ -33,7 +34,7 @@ export const createStripeSub2 = async ({
   // org: Organization;
   // invoiceOnly?: boolean;
   attachParams: AttachParams;
-  finalizeInvoice?: boolean;
+  config: AttachConfig;
   anchorToUnix?: number;
   itemSet: {
     subItems: Stripe.SubscriptionItem[];
@@ -133,7 +134,7 @@ export const createStripeSub2 = async ({
 
     if (
       invoiceOnly &&
-      finalizeInvoice &&
+      config.invoiceCheckout &&
       latestInvoice &&
       latestInvoice.status === "draft"
     ) {

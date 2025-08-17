@@ -100,6 +100,7 @@ export const handlePaidProduct = async ({
     itemSet,
     anchorToUnix: billingCycleAnchorUnix,
     earliestInterval,
+    config,
   });
 
   subscriptions.push(newSub);
