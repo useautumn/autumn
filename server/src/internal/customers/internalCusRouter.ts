@@ -332,7 +332,7 @@ cusRouter.get(
                 : undefined,
           });
 
-      let productV2 = mapToProductV2({ product, features });
+      let productV2 = mapToProductV2({ product: product!, features });
 
       let numVersions = await ProductService.getProductVersionCount({
         db,

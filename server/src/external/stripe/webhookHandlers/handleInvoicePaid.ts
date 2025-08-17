@@ -38,7 +38,7 @@ const handleOneOffInvoicePaid = async ({
   // Search for invoice
   const invoice = await InvoiceService.getByStripeId({
     db,
-    stripeId: stripeInvoice.id,
+    stripeId: stripeInvoice.id!,
   });
 
   if (!invoice) {
@@ -49,7 +49,7 @@ const handleOneOffInvoicePaid = async ({
   // Update invoice status
   await InvoiceService.updateByStripeId({
     db,
-    stripeId: stripeInvoice.id,
+    stripeId: stripeInvoice.id!,
     updates: {
       status: stripeInvoice.status as InvoiceStatus,
       hosted_invoice_url: stripeInvoice.hosted_invoice_url,
@@ -82,20 +82,25 @@ const convertToChargeAutomatically = async ({
     subIds: activeCusProducts.flatMap((p) => p.subscription_ids || []),
   });
 
+  const payments = invoice.payments;
+  const firstPayment = payments?.data?.[0];
+  const paymentIntentId = firstPayment?.payment?.payment_intent as string;
+
   if (
     subs.every((s) => s.collection_method === "charge_automatically") ||
-    nullish(invoice.payment_intent)
+    nullish(paymentIntentId)
   ) {
     return;
   }
+
+  // Get payment intent...
 
   // Try to attach payment method to subscription
   try {
     logger.info(`Converting to charge automatically`);
     // 1. Get payment intent
-    const paymentIntent = await stripeCli.paymentIntents.retrieve(
-      invoice.payment_intent as string
-    );
+    const paymentIntent =
+      await stripeCli.paymentIntents.retrieve(paymentIntentId);
 
     // 2. Get payment method
     const paymentMethod = await stripeCli.paymentMethods.retrieve(
@@ -153,6 +158,7 @@ export const handleInvoicePaid = async ({
   const invoice = await getFullStripeInvoice({
     stripeCli,
     stripeId: invoiceData.id!,
+    expand: ["payments"],
   });
 
   if (invoice.metadata?.autumn_metadata_id) {

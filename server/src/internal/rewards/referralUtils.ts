@@ -78,6 +78,7 @@ export const triggerRedemption = async ({
   let stripeCli = createStripeCli({
     org,
     env,
+    legacyVersion: true,
   });
 
   await createStripeCusIfNotExists({
@@ -96,6 +97,7 @@ export const triggerRedemption = async ({
   let applied = false;
   if (!stripeCus.discount) {
     await stripeCli.customers.update(stripeCusId, {
+      // @ts-ignore
       coupon: reward.id,
     });
 
@@ -154,6 +156,14 @@ export const triggerFreeProduct = async ({
     orgId: org.id,
     env,
   });
+
+  if (!fullProduct) {
+    throw new RecaseError({
+      message: `Product ${productId} not found`,
+      code: ErrCode.ProductNotFound,
+      statusCode: StatusCodes.NOT_FOUND,
+    });
+  }
 
   let referrer = await CusService.getByInternalId({
     db,

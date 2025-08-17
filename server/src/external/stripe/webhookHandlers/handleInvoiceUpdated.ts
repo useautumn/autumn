@@ -15,14 +15,14 @@ export const handleInvoiceUpdated = async ({
   req: any;
 }) => {
   const invoiceObject = event.data.object as Stripe.Invoice;
-  const invoice = await getFullStripeInvoice({
-    stripeCli,
-    stripeId: invoiceObject.id,
-  });
+  // const invoice = await getFullStripeInvoice({
+  //   stripeCli,
+  //   stripeId: invoiceObject.id!,
+  // });
 
   const prevAttributes = event.data.previous_attributes as any;
   const invoiceVoided =
-    prevAttributes?.status !== "void" && invoice.status === "void";
+    prevAttributes?.status !== "void" && invoiceObject.status === "void";
 
   const { logger } = req;
 
@@ -30,7 +30,7 @@ export const handleInvoiceUpdated = async ({
     logger.info(`Invoice has been voided!`);
     await InvoiceService.updateByStripeId({
       db: req.db,
-      stripeId: invoiceObject.id,
+      stripeId: invoiceObject.id!,
       updates: {
         status: InvoiceStatus.Void,
       },

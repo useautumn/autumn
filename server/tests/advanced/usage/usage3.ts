@@ -13,6 +13,7 @@ import Stripe from "stripe";
 import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
 import { getSubsFromCusId } from "tests/utils/expectUtils/expectSubUtils.js";
+import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 
 const testCase = "usage3";
 const ASSERT_INVOICE_AMOUNT = true;
@@ -110,9 +111,10 @@ describe(`${chalk.yellowBright(
 
     let sub = subs[0];
 
+    const { start, end } = subToPeriodStartEnd({ sub });
     let baseDiff = calculateProrationAmount({
-      periodStart: sub.current_period_start * 1000,
-      periodEnd: sub.current_period_end * 1000,
+      periodStart: start * 1000,
+      periodEnd: end * 1000,
       now: curUnix,
       amount: basePrice2 - basePrice1,
       allowNegative: true,

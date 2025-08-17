@@ -1,8 +1,6 @@
 import { routeHandler } from "@/utils/routerUtils.js";
-import express, { Router } from "express";
 import Stripe from "stripe";
-
-import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
 import { encryptData } from "@/utils/encryptUtils.js";
 
 import { ErrCode } from "@/errors/errCodes.js";
@@ -16,7 +14,6 @@ import { OrgService } from "../OrgService.js";
 import { AppEnv } from "@autumn/shared";
 import { nullish } from "@/utils/genUtils.js";
 import { clearOrgCache } from "../orgUtils/clearOrgCache.js";
-import { disconnectStripe } from "./handleDeleteStripe.js";
 
 export const connectStripe = async ({
   db,

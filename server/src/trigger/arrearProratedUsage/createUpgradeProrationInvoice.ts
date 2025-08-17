@@ -57,6 +57,9 @@ export const getUpgradeProrationInvoiceItem = ({
     prodName: product.name,
   });
 
+  console.log("Invoice amount: ", invoiceAmount);
+  console.log("Invoice description:", invoiceDescription);
+
   if (shouldProrate(onIncrease)) {
     invoiceAmount = calculateProrationAmount({
       periodStart: subItem.current_period_start * 1000,

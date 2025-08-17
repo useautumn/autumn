@@ -56,7 +56,7 @@ describe(`${chalk.yellowBright("usage4: GPU starter annual")}`, () => {
       cusRes: res,
     });
 
-    expect(res!.invoices.length).to.equal(2);
+    expect(res!.invoices.length).to.equal(1);
   });
 
   it("should send 20 events and have correct balance", async function () {
@@ -87,7 +87,7 @@ describe(`${chalk.yellowBright("usage4: GPU starter annual")}`, () => {
     const invoices = res!.invoices;
 
     let invoiceIndex = invoices.findIndex((invoice: any) =>
-      invoice.product_ids.includes(advanceProducts.gpuStarterAnnual.id),
+      invoice.product_ids.includes(advanceProducts.gpuStarterAnnual.id)
     );
 
     await checkUsageInvoiceAmount({

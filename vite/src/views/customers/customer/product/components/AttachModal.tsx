@@ -246,19 +246,6 @@ export const AttachModal = ({
               preview={preview}
               handleAttachClicked={handleAttachClicked}
             />
-            // <Button
-            //   variant="add"
-            //   className="!h-full text-t2"
-            //   endIcon={<ArrowUpRightFromSquare size={12} />}
-            //   disableStartIcon={true}
-            //   tabIndex={-1}
-            //   tooltipContent="This will enable the product for the customer immediately, and redirect you to Stripe to finalize the invoice"
-            //   isLoading={invoiceLoading}
-            //   disabled={invoiceLoading || checkoutLoading}
-            //   onClick={() => handleAttachClicked(true)}
-            // >
-            //   Invoice Customer
-            // </Button>
           )}
           <Button
             variant="add"

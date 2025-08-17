@@ -39,6 +39,7 @@ export const handleCreateCheckout = async ({
   const stripeCli = createStripeCli({
     org,
     env: customer.env,
+    legacyVersion: true,
   });
 
   const itemSets = await getStripeSubItems({
@@ -88,11 +89,14 @@ export const handleCreateCheckout = async ({
           freeTrial && !attachParams.disableFreeTrial
             ? freeTrialToStripeTimestamp({ freeTrial })
             : undefined,
-        trial_settings: freeTrial && !attachParams.disableFreeTrial && freeTrial.card_required ?  {
-          end_behavior: {
-            missing_payment_method: "cancel",
-          }
-        } : undefined,
+        trial_settings:
+          freeTrial && !attachParams.disableFreeTrial && freeTrial.card_required
+            ? {
+                end_behavior: {
+                  missing_payment_method: "cancel",
+                },
+              }
+            : undefined,
         billing_cycle_anchor: billingCycleAnchorUnixSeconds,
       }
     : undefined;
@@ -133,7 +137,12 @@ export const handleCreateCheckout = async ({
     saved_payment_method_options: { payment_method_save: "enabled" },
     ...rewardData,
     ...(attachParams.checkoutSessionParams || {}),
-    payment_method_collection: freeTrial && !attachParams.disableFreeTrial && freeTrial.card_required === false ? "if_required" : undefined,
+    payment_method_collection:
+      freeTrial &&
+      !attachParams.disableFreeTrial &&
+      freeTrial.card_required === false
+        ? "if_required"
+        : undefined,
   } satisfies Stripe.Checkout.SessionCreateParams;
 
   try {

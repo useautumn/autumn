@@ -18,7 +18,7 @@ const STRIPE_TEST_CLOCK_TIMING = 20000; // 30s
 import { Hyperbrowser } from "@hyperbrowser/sdk";
 
 const client = new Hyperbrowser({
-  apiKey: process.env.HYPERBROWSER_API_KEY,
+  apiKey: process.env.HYPERBROWSER_API_KEY || "123",
 });
 
 export const completeCheckoutForm = async (

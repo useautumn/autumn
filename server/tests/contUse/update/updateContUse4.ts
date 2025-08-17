@@ -23,6 +23,7 @@ import { expect } from "chai";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addWeeks } from "date-fns";
 import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
+import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 
 let userItem = constructArrearProratedItem({
   featureId: TestFeature.Users,
@@ -166,10 +167,11 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing update contUse incl
     // Do own calculation too..
     let sub = stripeSubs[0];
     let amount = -userItem.price!;
+    const { start, end } = subToPeriodStartEnd({ sub });
     let proratedAmount = calculateProrationAmount({
       amount,
-      periodStart: sub.current_period_start * 1000,
-      periodEnd: sub.current_period_end * 1000,
+      periodStart: start * 1000,
+      periodEnd: end * 1000,
       now: curUnix,
       allowNegative: true,
     });
@@ -177,7 +179,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing update contUse incl
 
     expect(invoices[0].total).to.equal(
       proratedAmount,
-      "invoice is equal to calculated prorated amount",
+      "invoice is equal to calculated prorated amount"
     );
   });
 
@@ -228,11 +230,11 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing update contUse incl
     // Do own calculation too..
     let sub = stripeSubs[0];
     let amount = Math.min(reducedUsage, usage) * userItem.price!;
-
+    const { start, end } = subToPeriodStartEnd({ sub });
     let proratedAmount = calculateProrationAmount({
       amount,
-      periodStart: sub.current_period_start * 1000,
-      periodEnd: sub.current_period_end * 1000,
+      periodStart: start * 1000,
+      periodEnd: end * 1000,
       now: curUnix,
       allowNegative: true,
     });
@@ -240,7 +242,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing update contUse incl
 
     expect(invoices[0].total).to.equal(
       proratedAmount,
-      "invoice is equal to calculated prorated amount",
+      "invoice is equal to calculated prorated amount"
     );
   });
 });

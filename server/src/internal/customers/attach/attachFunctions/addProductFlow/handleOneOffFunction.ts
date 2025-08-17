@@ -65,7 +65,9 @@ export const handleOneOffFunction = async ({
       quantity = 1;
 
       invoiceItemData = {
-        price: price.config.stripe_price_id,
+        pricing: {
+          price: price.config.stripe_price_id,
+        },
         quantity: 1,
       };
     } else {
@@ -133,7 +135,7 @@ export const handleOneOffFunction = async ({
   if (config.invoiceCheckout) {
     if (stripeInvoice.status === "draft") {
       stripeInvoice = await stripeCli.invoices.finalizeInvoice(
-        stripeInvoice.id
+        stripeInvoice.id!
       );
     }
 
@@ -149,12 +151,12 @@ export const handleOneOffFunction = async ({
 
   // Create invoice items
   if (!invoiceOnly) {
-    await stripeCli.invoices.finalizeInvoice(stripeInvoice.id);
+    await stripeCli.invoices.finalizeInvoice(stripeInvoice.id!);
 
     logger.info("3. Paying invoice");
     const { paid, error } = await payForInvoice({
       stripeCli,
-      invoiceId: stripeInvoice.id,
+      invoiceId: stripeInvoice.id!,
       paymentMethod,
       logger,
       errorOnFail: false,
@@ -167,6 +169,7 @@ export const handleOneOffFunction = async ({
           req,
           res,
           attachParams,
+          config,
         });
       }
       throw error;

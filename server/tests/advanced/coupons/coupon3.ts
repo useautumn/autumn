@@ -54,7 +54,7 @@ const reward: CreateReward = {
   type: RewardType.FixedDiscount,
   discount_config: {
     discount_value: 5,
-    duration_type: CouponDurationType.Forever,
+    duration_type: CouponDurationType.OneOff,
     duration_value: 1,
     should_rollover: true,
     apply_to_all: true,

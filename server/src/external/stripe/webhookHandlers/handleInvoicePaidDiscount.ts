@@ -157,7 +157,7 @@ export const handleInvoicePaidDiscount = async ({
 
       await legacyStripeCli.rawRequest(
         "POST",
-        `/v1/customers/${expandedInvoice.customer}/discounts`,
+        `/v1/customers/${expandedInvoice.customer}`,
         {
           coupon: newCoupon.id,
         }

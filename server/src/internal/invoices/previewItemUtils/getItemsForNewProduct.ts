@@ -24,6 +24,7 @@ import {
 import { getPriceEntitlement } from "../../products/prices/priceUtils.js";
 import {
   isFixedPrice,
+  isOneOffPrice,
   isPrepaidPrice,
   isUsagePrice,
 } from "../../products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
@@ -144,6 +145,7 @@ export const getItemsForNewProduct = async ({
   withPrepaid = false,
   branch,
   config,
+  skipOneOff = false,
 }: {
   newProduct: FullProduct;
   attachParams: AttachParams;
@@ -160,6 +162,7 @@ export const getItemsForNewProduct = async ({
   withPrepaid?: boolean;
   branch: AttachBranch;
   config: AttachConfig;
+  skipOneOff?: boolean;
 }) => {
   const { org, features } = attachParams;
   now = now || Date.now();
@@ -171,6 +174,8 @@ export const getItemsForNewProduct = async ({
   sortPricesByType(newProduct.prices);
 
   for (const price of newProduct.prices) {
+    if (skipOneOff && isOneOffPrice({ price })) continue;
+
     const ent = getPriceEntitlement(price, newProduct.entitlements);
     const billingType = getBillingType(price.config);
 

@@ -12,7 +12,8 @@
     "workers:dev": "bun --watch src/workers.ts",
     "cron": "bun src/cron.ts",
     "check": "bun src/check.ts",
-    "build": "bun build ./src/index.ts ./src/workers.ts ./src/cron.ts --outdir dist --target bun"
+    "build": "bun build ./src/index.ts ./src/workers.ts ./src/cron.ts --outdir dist --target bun",
+    "build:check": "tsc -b tsconfig.build.json"
   },
   "mocha": {
     "node-option": [

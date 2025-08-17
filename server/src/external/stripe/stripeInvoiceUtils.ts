@@ -22,12 +22,14 @@ export const getStripeExpandedInvoice = async ({
 export const getFullStripeInvoice = async ({
   stripeCli,
   stripeId,
+  expand = [],
 }: {
   stripeCli: Stripe;
   stripeId: string;
+  expand?: string[];
 }) => {
   const invoice = await stripeCli.invoices.retrieve(stripeId, {
-    expand: ["discounts", "discounts.coupon"],
+    expand: [...expand, "discounts", "discounts.coupon"],
   });
 
   return invoice;

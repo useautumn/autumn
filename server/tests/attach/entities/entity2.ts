@@ -146,6 +146,7 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Testing attach pro annual to
       db,
       org,
       env,
+      numInvoices: 2,
     });
   });
 });

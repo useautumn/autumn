@@ -131,7 +131,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing create entity payme
 
   it("should try to create entities and fail", async function () {
     await expectAutumnError({
-      errMessage: "Your card was declined.",
+      errMessage: "(Stripe Error) Your card was declined.",
       func: async () => {
         await autumn.entities.create(customerId, [
           {
@@ -162,7 +162,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing create entity payme
 
   it("should track usage for users and fail", async function () {
     await expectAutumnError({
-      errMessage: "Your card was declined.",
+      errMessage: "(Stripe Error) Your card was declined.",
       func: async () => {
         return await autumn.track({
           customer_id: customerId,

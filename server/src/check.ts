@@ -192,7 +192,9 @@ const checkCustomerCorrect = async ({
           assert(
             nullish(subItem) ||
               (subItem?.quantity === 0 &&
-                isLicenseItem({ stripeItem: subItem! })),
+                isLicenseItem({
+                  stripeItem: subItem as Stripe.SubscriptionItem,
+                })),
             `(${cusProduct.product.name}) sub item for price: ${priceName} should exist`
           );
         }

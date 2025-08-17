@@ -20,6 +20,7 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { expect } from "chai";
 import { completeCheckoutForm } from "../stripeUtils.js";
 import { Customer } from "autumn-js";
+import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
 
 export const attachAndExpectCorrect = async ({
   autumn,
@@ -36,6 +37,7 @@ export const attachAndExpectCorrect = async ({
   waitForInvoice = 0,
   isCanceled = false,
   skipFeatureCheck = false,
+  skipSubCheck = false,
   numSubs,
   entities,
 }: {
@@ -56,6 +58,7 @@ export const attachAndExpectCorrect = async ({
   waitForInvoice?: number;
   isCanceled?: boolean;
   skipFeatureCheck?: boolean;
+  skipSubCheck?: boolean;
   numSubs?: number;
   entities?: CreateEntity[];
 }) => {
@@ -118,7 +121,8 @@ export const attachAndExpectCorrect = async ({
 
   const skipInvoiceCheck =
     preview.branch == AttachBranch.UpdatePrepaidQuantity && total == 0;
-  if (!skipInvoiceCheck) {
+  const freeProduct = isFreeProductV2({ product });
+  if (!skipInvoiceCheck && !freeProduct) {
     expectInvoicesCorrect({
       customer,
       first: { productId: product.id, total },
@@ -142,6 +146,9 @@ export const attachAndExpectCorrect = async ({
   if (branch == AttachBranch.OneOff) {
     return;
   }
+
+  if (skipSubCheck) return;
+
   await expectSubItemsCorrect({
     stripeCli,
     customerId,

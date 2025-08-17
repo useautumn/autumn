@@ -88,12 +88,12 @@ export const createAndFilterContUseItems = async ({
 }) => {
   const { stripeCli, customer, org } = attachParams;
   const product = attachParamsToProduct({ attachParams });
-  const sameIntervals = intervalsAreSame({ attachParams });
+  // const sameIntervals = intervalsAreSame({ attachParams });
   const now = attachParams.now || Date.now();
 
-  if (!sameIntervals) {
-    return { newItems: [], oldItems: [], replaceables: [] };
-  }
+  // if (!sameIntervals) {
+  //   return { newItems: [], oldItems: [], replaceables: [] };
+  // }
 
   let { newItems, oldItems } = await getContUseInvoiceItems({
     attachParams,

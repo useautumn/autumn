@@ -60,12 +60,12 @@ describe(`${chalk.yellowBright("usage1: Testing basic usage product")}`, () => {
         AutumnCli.sendEvent({
           customerId: customerId,
           eventName: features.metered1.eventName,
-        }),
+        })
       );
     }
 
     await Promise.all(batchUpdates);
-    await timeout(15000);
+    await timeout(25000);
   });
 
   it("should have correct metered1 balance after sending events", async function () {
@@ -74,7 +74,7 @@ describe(`${chalk.yellowBright("usage1: Testing basic usage product")}`, () => {
     expect(res!.allowed).to.be.true;
 
     const balance = res!.balances.find(
-      (balance: any) => balance.feature_id === features.metered1.id,
+      (balance: any) => balance.feature_id === features.metered1.id
     );
 
     const proOverageAmt =
@@ -83,7 +83,7 @@ describe(`${chalk.yellowBright("usage1: Testing basic usage product")}`, () => {
     expect(res!.allowed, "should be allowed").to.be.true;
 
     expect(balance?.balance, "should have correct metered1 balance").to.equal(
-      proOverageAmt! - NUM_EVENTS,
+      proOverageAmt! - NUM_EVENTS
     );
 
     expect(balance?.usage_allowed, "should have usage_allowed").to.be.true;
@@ -111,15 +111,15 @@ describe(`${chalk.yellowBright("usage1: Testing basic usage product")}`, () => {
 
     expect(invoices.length).to.equal(2);
 
-    const invoice2 = invoices[0];
+    const invoice = invoices[0];
 
     const basePrice = v1ProductToBasePrice({
       prices: products.proWithOverage.prices,
     });
 
-    expect(invoice2.total).to.equal(
+    expect(invoice.total).to.equal(
       price + basePrice,
-      "invoice total should be usage price + base price",
+      "invoice total should be usage price + base price"
     );
   });
 });

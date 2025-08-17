@@ -1,5 +1,6 @@
 import { handleAddProduct } from "@/internal/customers/attach/attachFunctions/addProductFlow/handleAddProduct.js";
 import { handleUpgradeDiffInterval } from "@/internal/customers/attach/attachFunctions/upgradeDiffIntFlow/handleUpgradeDiffInt.js";
+import { handleUpgradeFlow } from "@/internal/customers/attach/attachFunctions/upgradeFlow/handleUpgradeFlow.js";
 import { handleUpgradeSameInterval } from "@/internal/customers/attach/attachFunctions/upgradeSameIntFlow/handleUpgradeSameInt.js";
 import { intervalsAreSame } from "@/internal/customers/attach/attachUtils/getAttachConfig.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
@@ -52,6 +53,7 @@ export const runMigrationAttach = async ({
     disableMerge: false,
     sameIntervals,
     carryTrial: true,
+    invoiceCheckout: false,
   };
 
   let attachFunction = await getAttachFunction({ attachParams });
@@ -59,7 +61,7 @@ export const runMigrationAttach = async ({
   let customer = attachParams.customer;
   logger.info(`--------------------------------`);
   logger.info(
-    `Running migration for ${customer.id}, function: ${attachFunction}`,
+    `Running migration for ${customer.id}, function: ${attachFunction}`
   );
 
   if (attachFunction == AttachFunction.AddProduct) {
@@ -69,16 +71,23 @@ export const runMigrationAttach = async ({
       config,
     });
   } else if (attachFunction == AttachFunction.UpgradeSameInterval) {
-    return await handleUpgradeSameInterval({
-      req,
-      attachParams,
-      config,
-    });
-  } else if (attachFunction == AttachFunction.UpgradeDiffInterval) {
-    return await handleUpgradeDiffInterval({
+    await handleUpgradeFlow({
       req,
       attachParams,
       config,
     });
   }
+
+  //   return await handleUpgradeSameInterval({
+  //     req,
+  //     attachParams,
+  //     config,
+  //   });
+  // } else if (attachFunction == AttachFunction.UpgradeDiffInterval) {
+  //   return await handleUpgradeDiffInterval({
+  //     req,
+  //     attachParams,
+  //     config,
+  //   });
+  // }
 };

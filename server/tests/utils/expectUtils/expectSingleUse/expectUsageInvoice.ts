@@ -26,7 +26,7 @@ export const expectInvoiceAfterUsage = async ({
   db,
   org,
   env,
-  numInvoices = 3,
+  numInvoices = 2,
   expectExpired = false,
 }: {
   autumn: AutumnInt;

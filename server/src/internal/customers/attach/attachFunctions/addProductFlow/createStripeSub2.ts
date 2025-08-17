@@ -24,7 +24,6 @@ export const createStripeSub2 = async ({
   // finalizeInvoice = false,
   anchorToUnix,
   itemSet,
-  reward,
   earliestInterval,
 }: {
   db: DrizzleCli;
@@ -41,10 +40,9 @@ export const createStripeSub2 = async ({
     invoiceItems: any[];
     usageFeatures: string[];
   };
-  reward?: Reward;
   earliestInterval?: IntervalConfig | null;
 }) => {
-  const { customer, invoiceOnly, freeTrial, org, now } = attachParams;
+  const { customer, invoiceOnly, freeTrial, org, now, reward } = attachParams;
 
   let paymentMethod = await getCusPaymentMethod({
     stripeCli,
@@ -59,12 +57,6 @@ export const createStripeSub2 = async ({
     };
   }
 
-  // Get latest interval
-
-  // Get earliest interval
-  // console.log("Earliest interval", earliestInterval);
-  // console.log("Anchor to unix", formatUnixToDateTime(anchorToUnix));
-
   const billingCycleAnchorUnix =
     anchorToUnix && earliestInterval
       ? getAlignedIntervalUnix({
@@ -74,6 +66,10 @@ export const createStripeSub2 = async ({
           now,
         })
       : undefined;
+
+  // if (config.disableTrial) {
+  //   attachParams.freeTrial = null;
+  // }
 
   // console.log(
   //   "Billing cycle anchor unix",
