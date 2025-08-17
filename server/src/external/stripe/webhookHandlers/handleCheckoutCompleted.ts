@@ -119,7 +119,7 @@ export const handleCheckoutSessionCompleted = async ({
     await createFullCusProduct({
       db,
       attachParams: attachToInsertParams(attachParams, product),
-      subscriptionIds: [checkoutSub?.id!],
+      subscriptionIds: checkoutSub ? [checkoutSub?.id!] : undefined,
       anchorToUnix,
       scenario: AttachScenario.New,
       logger,
