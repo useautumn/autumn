@@ -57,12 +57,12 @@ export async function handleCusDiscountDeleted({
   });
 
   let stripeCus = (await stripeCli.customers.retrieve(
-    discount.customer,
+    discount.customer
   )) as Stripe.Customer;
 
   if (stripeCus && notNullish(stripeCus.discount)) {
     logger.info(
-      `discount.deleted: stripe customer ${discount.customer} already has a discount`,
+      `discount.deleted: stripe customer ${discount.customer} already has a discount`
     );
     return;
   }
@@ -76,12 +76,19 @@ export async function handleCusDiscountDeleted({
 
   if (!reward) {
     logger.warn(
-      `discount.deleted: reward ${redemption.reward_program.internal_id} not found`,
+      `discount.deleted: reward ${redemption.reward_program.internal_id} not found`
     );
     return;
   }
 
-  await stripeCli.customers.update(discount.customer, {
+  const legacyStripe = createStripeCli({
+    org,
+    env,
+    legacyVersion: true,
+  });
+
+  await legacyStripe.customers.update(discount.customer, {
+    // @ts-ignore
     coupon: reward.internal_id,
   });
 
@@ -94,7 +101,7 @@ export async function handleCusDiscountDeleted({
   });
 
   logger.info(
-    `discount.deleted: applied reward ${reward.name} on customer ${customer.name} (${customer.id})`,
+    `discount.deleted: applied reward ${reward.name} on customer ${customer.name} (${customer.id})`
   );
   logger.info(`Redemption ID: ${redemption.id}`);
 }

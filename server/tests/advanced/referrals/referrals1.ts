@@ -4,21 +4,37 @@ import chalk from "chalk";
 import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { setupBefore } from "tests/before.js";
 import {
+  AppEnv,
   Customer,
   ErrCode,
+  Organization,
   ReferralCode,
   RewardRedemption,
 } from "@autumn/shared";
 import { timeout } from "tests/utils/genUtils.js";
-import { initCustomerWithTestClock } from "tests/utils/testInitUtils.js";
+
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { addDays, addHours, addMonths } from "date-fns";
+import { addDays } from "date-fns";
 import { Stripe } from "stripe";
-import { initCustomer } from "tests/utils/init.js";
+
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { TestFeature } from "tests/setup/v2Features.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { addPrefixToProducts } from "tests/attach/utils.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+
+let pro = constructProduct({
+  id: "pro",
+  items: [constructFeatureItem({ featureId: TestFeature.Words })],
+  type: "pro",
+  trial: true,
+});
 
 // UNCOMMENT FROM HERE
 describe(`${chalk.yellowBright(
-  "referrals1: Testing referrals (on checkout)",
+  "referrals1: Testing referrals (on checkout)"
 )}`, () => {
   let mainCustomerId = "main-referral-1";
   let alternateCustomerId = "alternate-referral-1";
@@ -29,53 +45,74 @@ describe(`${chalk.yellowBright(
   let referralCode: ReferralCode;
 
   let redemptions: RewardRedemption[] = [];
-  let mainCustomer: Customer;
+  let mainCustomer: any;
+  let db: DrizzleCli;
+  let org: Organization;
+  let env: AppEnv;
 
   before(async function () {
     await setupBefore(this);
     stripeCli = this.stripeCli;
+    db = this.db;
+    org = this.org;
+    env = this.env;
 
-    const { testClockId: testClockId1, customer } =
-      await initCustomerWithTestClock({
-        customerId: mainCustomerId,
-        db: this.db,
-        org: this.org,
-        env: this.env,
-        fingerprint: "main-referral-1",
-      });
-    testClockId = testClockId1;
-    mainCustomer = customer;
+    addPrefixToProducts({
+      products: [pro],
+      prefix: mainCustomerId,
+    });
+
+    await createProducts({
+      autumn: this.autumnJs,
+      products: [pro],
+      db,
+      orgId: org.id,
+      env,
+      customerId: mainCustomerId,
+    });
+
+    const res = await initCustomer({
+      autumn: this.autumnJs,
+      customerId: mainCustomerId,
+      fingerprint: "main-referral-1",
+      db,
+      org,
+      env,
+      attachPm: "success",
+    });
+
+    mainCustomer = res.customer;
+    testClockId = res.testClockId;
 
     await autumn.attach({
       customer_id: mainCustomerId,
-      product_id: products.proWithTrial.id,
+      product_id: pro.id,
     });
 
     let batchCreate = [];
     for (let redeemer of redeemers) {
       batchCreate.push(
         initCustomer({
+          autumn: this.autumnJs,
           customerId: redeemer,
           db: this.db,
           org: this.org,
           env: this.env,
-          attachPm: true,
-        }),
+          attachPm: "success",
+        })
       );
     }
 
     batchCreate.push(
       initCustomer({
-        customer_data: {
-          id: alternateCustomerId,
-          name: "Alternate Referral 1",
-          email: "alternate-referral-1@example.com",
-          fingerprint: "main-referral-1",
-        },
+        autumn: this.autumnJs,
+        customerId: alternateCustomerId,
+        fingerprint: "main-referral-1",
         db: this.db,
         org: this.org,
         env: this.env,
-      }),
+        attachPm: "success",
+      })
     );
     await Promise.all(batchCreate);
   });
@@ -115,7 +152,7 @@ describe(`${chalk.yellowBright(
         code: referralCode.code,
       });
       assert.fail(
-        "Own customer (same fingerprint) should not be able to redeem code",
+        "Own customer (same fingerprint) should not be able to redeem code"
       );
     } catch (error) {
       assert.instanceOf(error, AutumnError);
@@ -131,9 +168,6 @@ describe(`${chalk.yellowBright(
       });
 
       redemptions.push(redemption);
-
-      // assert.equal(redemption.triggered, false);
-      // assert.equal(redemption.applied, false);
     }
 
     // Try redeem for redeemer1 again
@@ -148,6 +182,8 @@ describe(`${chalk.yellowBright(
       assert.equal(error.code, ErrCode.CustomerAlreadyRedeemedReferralCode);
     }
   });
+
+  // return;
 
   it("should be triggered (and applied) when redeemers check out", async function () {
     for (let i = 0; i < redeemers.length; i++) {
@@ -176,7 +212,7 @@ describe(`${chalk.yellowBright(
 
       // Check stripe customer
       let stripeCus = (await stripeCli.customers.retrieve(
-        mainCustomer.processor?.id,
+        mainCustomer.processor?.id
       )) as Stripe.Customer;
 
       assert.notEqual(stripeCus.discount, null);
@@ -194,7 +230,6 @@ describe(`${chalk.yellowBright(
 
     // 1. Get invoice
     let { invoices } = await autumn.customers.get(mainCustomerId);
-
     assert.equal(invoices.length, 2);
     assert.equal(invoices[0].total, 0);
   });
@@ -230,3 +265,31 @@ describe(`${chalk.yellowBright(
   //   assert.equal(invoices2[0].total, 0);
   // });
 });
+
+// const { testClockId: testClockId1, customer } =
+//   await initCustomerWithTestClock({
+//     customerId: mainCustomerId,
+//     db: this.db,
+//     org: this.org,
+//     env: this.env,
+//     fingerprint: "main-referral-1",
+//   });
+// testClockId = testClockId1;
+// mainCustomer = customer;
+
+// await autumn.attach({
+//   customer_id: mainCustomerId,
+//   product_id: products.proWithTrial.id,
+// });
+
+// initCustomer({
+//   customer_data: {
+//     id: alternateCustomerId,
+//     name: "Alternate Referral 1",
+//     email: "alternate-referral-1@example.com",
+//     fingerprint: "main-referral-1",
+//   },
+//   db: this.db,
+//   org: this.org,
+//   env: this.env,
+// })

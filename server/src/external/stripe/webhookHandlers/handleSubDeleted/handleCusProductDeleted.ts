@@ -21,7 +21,6 @@ import { getCusPaymentMethod } from "../../stripeCusUtils.js";
 import { webhookToAttachParams } from "../../webhookUtils/webhookUtils.js";
 import { createUsageInvoice } from "@/internal/customers/attach/attachFunctions/upgradeDiffIntFlow/createUsageInvoice.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { notNullish } from "@/utils/genUtils.js";
 
 export const handleCusProductDeleted = async ({
   req,
@@ -77,7 +76,7 @@ export const handleCusProductDeleted = async ({
           fullCus,
         }),
         cusProduct,
-        stripeSubs: [subscription],
+        sub: subscription,
         logger,
       });
     }

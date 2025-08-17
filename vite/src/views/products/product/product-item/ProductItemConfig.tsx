@@ -94,7 +94,7 @@ export const ProductItemConfig = () => {
   return (
     <div
       className={cn(
-        "flex flex-col gap-6 w-sm transition-all ease-in-out duration-300 !overflow-visible" //modal animations
+        "flex flex-col gap-6 w-md transition-all ease-in-out duration-300 !overflow-visible" //modal animations
       )}
     >
       {isPrice ? <PriceItemConfig /> : <ConfigWithFeature />}

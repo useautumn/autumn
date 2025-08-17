@@ -15,6 +15,7 @@ import {
   AttachConfig,
   AttachScenario,
   BillingInterval,
+  ErrCode,
   SuccessCode,
 } from "@autumn/shared";
 import Stripe from "stripe";
@@ -27,6 +28,8 @@ import {
 import { createStripeSub2 } from "./createStripeSub2.js";
 import { addBillingIntervalUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { getSmallestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
 
 export const handlePaidProduct = async ({
   req,
@@ -52,14 +55,9 @@ export const handlePaidProduct = async ({
     reward,
   } = attachParams;
 
-  if (attachParams.disableFreeTrial) {
-    freeTrial = null;
+  if (config.disableTrial) {
+    attachParams.freeTrial = null;
   }
-
-  // let itemSets = await getStripeSubItems({
-  //   attachParams,
-  //   carryExistingUsages: config.carryUsage,
-  // });
 
   const itemSet = await getStripeSubItems2({
     attachParams,
@@ -93,15 +91,33 @@ export const handlePaidProduct = async ({
     billingCycleAnchorUnix = end * 1000;
   }
 
-  const newSub = await createStripeSub2({
-    db: req.db,
-    stripeCli,
-    attachParams,
-    itemSet,
-    anchorToUnix: billingCycleAnchorUnix,
-    earliestInterval,
-    config,
-  });
+  let newSub;
+  try {
+    newSub = await createStripeSub2({
+      db: req.db,
+      stripeCli,
+      attachParams,
+      itemSet,
+      anchorToUnix: billingCycleAnchorUnix,
+      earliestInterval,
+      config,
+    });
+  } catch (error: any) {
+    if (
+      error instanceof RecaseError &&
+      !invoiceOnly &&
+      error.code == ErrCode.CreateStripeSubscriptionFailed
+    ) {
+      return await handleCreateCheckout({
+        req,
+        res,
+        attachParams,
+        config,
+      });
+    }
+
+    throw error;
+  }
 
   subscriptions.push(newSub);
 
@@ -233,17 +249,17 @@ export const handlePaidProduct = async ({
 
 //     subscriptions.push(sub);
 //   } catch (error: any) {
-//     if (
-//       error instanceof RecaseError &&
-//       !invoiceOnly &&
-//       error.code == ErrCode.CreateStripeSubscriptionFailed
-//     ) {
-//       return await handleCreateCheckout({
-//         req,
-//         res,
-//         attachParams,
-//       });
-//     }
+// if (
+//   error instanceof RecaseError &&
+//   !invoiceOnly &&
+//   error.code == ErrCode.CreateStripeSubscriptionFailed
+// ) {
+//   return await handleCreateCheckout({
+//     req,
+//     res,
+//     attachParams,
+//   });
+// }
 
 //     throw error;
 //   }

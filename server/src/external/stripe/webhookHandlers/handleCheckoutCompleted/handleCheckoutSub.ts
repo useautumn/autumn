@@ -1,5 +1,5 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { APIVersion, BillingType } from "@autumn/shared";
+import { APIVersion, BillingType, UsagePriceConfig } from "@autumn/shared";
 import Stripe from "stripe";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { constructSub } from "@/internal/subscriptions/subUtils.js";
@@ -85,7 +85,17 @@ export const handleCheckoutSub = async ({
         deleted: true,
       });
 
-      itemsUpdate.push(getEmptyPriceItem({ price: arrearPrice, org }) as any);
+      const emptyPrice = (arrearPrice.config as UsagePriceConfig)
+        .stripe_empty_price_id;
+
+      itemsUpdate.push(
+        emptyPrice
+          ? {
+              price: emptyPrice,
+              quantity: 0,
+            }
+          : (getEmptyPriceItem({ price: arrearPrice, org }) as any)
+      );
     }
   }
 

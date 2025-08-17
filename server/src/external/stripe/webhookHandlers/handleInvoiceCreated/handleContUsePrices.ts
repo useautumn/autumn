@@ -7,6 +7,7 @@ import { FullCustomerEntitlement, FullCustomerPrice } from "@autumn/shared";
 import Stripe from "stripe";
 import { findStripeItemForPrice } from "../../stripeSubUtils/stripeSubItemUtils.js";
 import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService.js";
+import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";
 
 export const handleContUsePrices = async ({
   db,
@@ -42,14 +43,17 @@ export const handleContUsePrices = async ({
   }
 
   // If invoice is not for new period (eg. upgrades, etc, skip)
-  const isNewPeriod = invoice.period_start !== usageSub.current_period_start;
+  const { start } = subToPeriodStartEnd({
+    sub: usageSub,
+  });
+  const isNewPeriod = invoice.period_start !== start;
   if (!isNewPeriod) {
     return;
   }
 
   let feature = cusEnt.entitlement.feature;
   logger.info(
-    `Handling invoice.created for in arrear prorated, feature: ${feature.id}`,
+    `Handling invoice.created for in arrear prorated, feature: ${feature.id}`
   );
 
   let replaceables = cusEnt.replaceables.filter((r) => r.delete_next_cycle);
@@ -80,10 +84,10 @@ export const handleContUsePrices = async ({
     });
   }
 
-  let subItem = findStripeItemForPrice({
-    stripeItems: usageSub.items.data,
-    price: cusPrice.price,
-  });
+  // let subItem = findStripeItemForPrice({
+  //   stripeItems: usageSub.items.data,
+  //   price: cusPrice.price,
+  // });
 
   // if (subItem) {
   //   let newQuantity = (subItem.quantity || 0) - replaceables.length;

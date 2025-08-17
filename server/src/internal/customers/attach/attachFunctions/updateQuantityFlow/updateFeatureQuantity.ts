@@ -26,6 +26,7 @@ const onDecreaseToStripeProration: Record<OnDecrease, string> = {
   [OnDecrease.ProrateNextCycle]: "create_prorations",
   [OnDecrease.Prorate]: "create_prorations",
   [OnDecrease.None]: "none",
+  [OnDecrease.NoProrations]: "none",
 };
 
 const handleQuantityDowngrade = async ({
@@ -62,7 +63,7 @@ const handleQuantityDowngrade = async ({
   ] as Stripe.SubscriptionItemUpdateParams.ProrationBehavior;
 
   logger.info(
-    `Handling quantity downgrade for ${newOptions.feature_id}, on decrease: ${onDecrease}, proration: ${stripeProration}`,
+    `Handling quantity downgrade for ${newOptions.feature_id}, on decrease: ${onDecrease}, proration: ${stripeProration}`
   );
 
   await stripeCli.subscriptionItems.update(subItem.id, {

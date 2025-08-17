@@ -33,7 +33,7 @@ export const updateSubsByInt = async ({
   let { replaceables, newItems } = await getContUseInvoiceItems({
     attachParams,
     cusProduct: curCusProduct!,
-    stripeSubs,
+    sub: stripeSubs[0],
     logger,
   });
 

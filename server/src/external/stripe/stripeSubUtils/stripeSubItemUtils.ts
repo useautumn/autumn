@@ -32,16 +32,11 @@ export const findStripeItemForPrice = ({
   stripeProdId,
 }: {
   price: Price;
-  stripeItems:
-    | Stripe.SubscriptionItem[]
-    | Stripe.InvoiceLineItem[]
-    | Stripe.LineItem[];
+  stripeItems?: Stripe.SubscriptionItem[] | Stripe.LineItem[];
   stripeProdId?: string;
 }) => {
-  return stripeItems.find(
-    (
-      si: Stripe.SubscriptionItem | Stripe.InvoiceLineItem | Stripe.LineItem
-    ) => {
+  if (stripeItems) {
+    return stripeItems.find((si: Stripe.SubscriptionItem | Stripe.LineItem) => {
       const config = price.config as UsagePriceConfig;
 
       if (config.type == PriceType.Fixed) {
@@ -55,8 +50,8 @@ export const findStripeItemForPrice = ({
           config.stripe_product_id == si.price?.product
         );
       }
-    }
-  );
+    });
+  }
 };
 
 export const findPriceInStripeItems = ({
@@ -127,10 +122,7 @@ export const subItemInCusProduct = ({
 export const isLicenseItem = ({
   stripeItem,
 }: {
-  stripeItem:
-    | Stripe.SubscriptionItem
-    | Stripe.InvoiceLineItem
-    | Stripe.LineItem;
+  stripeItem: Stripe.SubscriptionItem | Stripe.LineItem;
 }) => {
   return stripeItem.price?.recurring?.usage_type == "licensed";
 };
@@ -138,10 +130,7 @@ export const isLicenseItem = ({
 export const isMeteredItem = ({
   stripeItem,
 }: {
-  stripeItem:
-    | Stripe.SubscriptionItem
-    | Stripe.InvoiceLineItem
-    | Stripe.LineItem;
+  stripeItem: Stripe.SubscriptionItem | Stripe.LineItem;
 }) => {
   return stripeItem.price?.recurring?.usage_type == "metered";
 };

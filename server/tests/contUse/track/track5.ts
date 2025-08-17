@@ -25,6 +25,7 @@ import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js"
 import { getSubsFromCusId } from "tests/utils/expectUtils/expectSubUtils.js";
 import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
 import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
+import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 
 const seatsItem = constructArrearProratedItem({
   featureId: features.seats.id,
@@ -113,9 +114,10 @@ const simulateOneCycle = async ({
 
     let newPrice = (newOverage - prevOverage) * seatsItem.price!;
 
+    const { start, end } = subToPeriodStartEnd({ sub });
     let proratedPrice = calculateProrationAmount({
-      periodStart: sub.current_period_start * 1000,
-      periodEnd: sub.current_period_end * 1000,
+      periodStart: start * 1000,
+      periodEnd: end * 1000,
       now: curUnix,
       amount: newPrice,
       allowNegative: true,
@@ -137,13 +139,11 @@ const simulateOneCycle = async ({
     .toDecimalPlaces(2)
     .toNumber();
 
+  const { start, end } = subToPeriodStartEnd({ sub });
   curUnix = await advanceTestClock({
     stripeCli,
     testClockId,
-    advanceTo: addHours(
-      sub.current_period_end * 1000,
-      hoursToFinalizeInvoice,
-    ).getTime(),
+    advanceTo: addHours(end * 1000, hoursToFinalizeInvoice).getTime(),
     waitForSeconds: 30,
   });
 
@@ -154,7 +154,7 @@ const simulateOneCycle = async ({
   expect(invoice.total).to.approximately(
     totalPrice,
     0.01,
-    `Invoice total should be ${totalPrice} +/- 0.01`,
+    `Invoice total should be ${totalPrice} +/- 0.01`
   );
 
   return {

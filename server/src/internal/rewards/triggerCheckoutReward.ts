@@ -47,13 +47,13 @@ export const runTriggerCheckoutReward = async ({
       logger.info(`--------------------------------`);
       logger.info(`CHECKING FOR CHECKOUT REWARD, ORG: ${org.slug}`);
       logger.info(
-        `Redeemed by: ${customer.name} (${customer.id}) for referral program: ${reward_program.id}`,
+        `Redeemed by: ${customer.name} (${customer.id}) for referral program: ${reward_program.id}`
       );
       logger.info(`Referral code: ${referralCode.code} (${referralCode.id})`);
 
       if (!reward_program.product_ids.includes(product.id)) {
         logger.info(
-          `Product ${product.name} (${product.id}) not included in referral program, skipping`,
+          `Product ${product.name} (${product.id}) not included in referral program, skipping`
         );
         return;
       }
@@ -79,7 +79,7 @@ export const runTriggerCheckoutReward = async ({
 
       if (redemptionCount >= reward_program.max_redemptions) {
         logger.info(
-          `Max redemptions reached, not triggering latest redemption`,
+          `Max redemptions reached, not triggering latest redemption`
         );
         return;
       }

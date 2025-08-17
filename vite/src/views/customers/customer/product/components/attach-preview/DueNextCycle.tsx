@@ -50,26 +50,34 @@ export const DueNextCycle = () => {
         <AdjustableOptions />
       ) : (
         <>
-          {preview.options.map((option: any) => {
-            const quantity = Math.ceil(option.quantity / option.billing_units);
-            const description = getFeatureInvoiceDescription({
-              feature: features.find(
-                (f: Feature) => f.id === option.feature_id,
-              )!,
-              usage: quantity || 0,
-              billingUnits: option.billing_units,
-              isPrepaid: true,
-            });
+          {preview.options
+            .filter((option: any) => {
+              // console.log("Option:", option);
+              if (!option.interval) return false;
+              return true;
+            })
+            .map((option: any) => {
+              const quantity = Math.ceil(
+                option.quantity / option.billing_units
+              );
+              const description = getFeatureInvoiceDescription({
+                feature: features.find(
+                  (f: Feature) => f.id === option.feature_id
+                )!,
+                usage: quantity || 0,
+                billingUnits: option.billing_units,
+                isPrepaid: true,
+              });
 
-            return (
-              <PriceItem key={option.feature_name}>
-                <span>
-                  {product.name} - {description}
-                </span>
-                <span>{getPrepaidPrice({ option })}</span>
-              </PriceItem>
-            );
-          })}
+              return (
+                <PriceItem key={option.feature_name}>
+                  <span>
+                    {product.name} - {description}
+                  </span>
+                  <span>{getPrepaidPrice({ option })}</span>
+                </PriceItem>
+              );
+            })}
         </>
       )}
     </div>

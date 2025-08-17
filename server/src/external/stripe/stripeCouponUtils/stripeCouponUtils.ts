@@ -16,11 +16,14 @@ import { createStripeCli } from "../utils.js";
 
 const couponToStripeDuration = (coupon: Reward) => {
   let discountConfig = coupon.discount_config;
-  // if (coupon.type == RewardType.InvoiceCredits) {
-  //   return {
-  //     duration: "forever",
-  //   };
-  // }
+  if (
+    coupon.type == RewardType.InvoiceCredits &&
+    coupon.discount_config?.duration_type === CouponDurationType.Forever
+  ) {
+    return {
+      duration: "once",
+    };
+  }
 
   switch (discountConfig!.duration_type) {
     case CouponDurationType.Forever:

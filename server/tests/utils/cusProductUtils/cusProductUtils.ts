@@ -7,11 +7,13 @@ export const getMainCusProduct = async ({
   customerId,
   orgId,
   env,
+  productGroup,
 }: {
   db: DrizzleCli;
   customerId: string;
   orgId: string;
   env: AppEnv;
+  productGroup?: string;
 }) => {
   let customer = await CusService.getFull({
     db,
@@ -25,8 +27,10 @@ export const getMainCusProduct = async ({
   let cusProducts = customer.customer_products;
 
   let mainCusProduct = cusProducts.find(
-    (cusProduct: FullCusProduct) => !cusProduct.product.is_add_on,
+    (cusProduct: FullCusProduct) =>
+      !cusProduct.product.is_add_on &&
+      (productGroup ? cusProduct.product.group === productGroup : true)
   );
 
-  return mainCusProduct || null;
+  return mainCusProduct;
 };

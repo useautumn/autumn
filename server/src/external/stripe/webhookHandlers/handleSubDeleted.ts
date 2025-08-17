@@ -20,26 +20,26 @@ export const handleSubDeleted = async ({
 }) => {
   const { db, org, env } = req;
 
-  const subscription = await getFullStripeSub({
-    stripeCli,
-    stripeId: data.id,
-  });
-
   const activeCusProducts = await CusProductService.getByStripeSubId({
     db,
-    stripeSubId: subscription.id,
+    stripeSubId: data.id,
     orgId: org.id,
     env,
   });
 
   if (activeCusProducts.length === 0) {
-    if (subscription.livemode) {
+    if (data.livemode) {
       logger.warn(
-        `subscription.deleted: ${subscription.id} - no customer products found`
+        `subscription.deleted: ${data.id} - no customer products found`
       );
       return;
     }
   }
+
+  const subscription = await getFullStripeSub({
+    stripeCli,
+    stripeId: data.id,
+  });
 
   if (subscription.cancellation_details?.comment === "autumn_upgrade") {
     logger.info(
@@ -58,20 +58,18 @@ export const handleSubDeleted = async ({
   // Prematurely canceled if cancel_at_period_end is false or cancel_at is more than 20 seconds apart from current_period_end
   let prematurelyCanceled = subIsPrematurelyCanceled(subscription);
 
-  const batchUpdate = [];
+  // const batchUpdate = [];
   for (const cusProduct of activeCusProducts) {
-    batchUpdate.push(
-      handleCusProductDeleted({
-        req,
-        db,
-        stripeCli,
-        cusProduct,
-        subscription,
-        logger,
-        prematurelyCanceled,
-      })
-    );
+    await handleCusProductDeleted({
+      req,
+      db,
+      stripeCli,
+      cusProduct,
+      subscription,
+      logger,
+      prematurelyCanceled,
+    });
   }
 
-  await Promise.all(batchUpdate);
+  // await Promise.all(batchUpdate);
 };

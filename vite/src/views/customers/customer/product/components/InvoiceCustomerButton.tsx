@@ -30,8 +30,6 @@ export const InvoiceCustomerButton = ({
 
   // const immediateDisabled = !allowedBranches.includes(preview?.branch);
 
-  console.log("Preview:", preview);
-
   return (
     <Popover>
       <PopoverTrigger asChild>

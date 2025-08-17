@@ -13,6 +13,10 @@ import { notNullish } from "@/utils/genUtils.js";
 import Stripe from "stripe";
 import { Decimal } from "decimal.js";
 
+export const isOneOffPrice = ({ price }: { price: Price }) => {
+  return price.config.interval == BillingInterval.OneOff;
+};
+
 export const isUsagePrice = ({
   price,
   featureId,

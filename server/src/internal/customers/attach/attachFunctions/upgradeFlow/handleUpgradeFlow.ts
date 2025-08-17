@@ -4,19 +4,14 @@ import {
 } from "@/internal/customers/cusProducts/AttachParams.js";
 import {
   attachParamsToCurCusProduct,
-  attachParamToCusProducts,
   paramsToCurSub,
 } from "../../attachUtils/convertAttachParams.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
-import {
-  attachToInsertParams,
-  isFreeProduct,
-} from "@/internal/products/productUtils.js";
+import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { APIVersion, AttachConfig, CusProductStatus } from "@autumn/shared";
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
-import { formatUnixToDate } from "@/utils/genUtils.js";
+
 import {
   attachToInvoiceResponse,
   insertInvoiceFromAttach,

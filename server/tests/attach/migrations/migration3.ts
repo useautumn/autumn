@@ -138,7 +138,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for pro with tria
       advanceTo: addDays(Date.now(), 4).getTime(),
     });
 
-    await timeout(5000);
+    // await timeout(5000);
 
     await runMigrationTest({
       autumn,

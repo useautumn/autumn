@@ -10,7 +10,8 @@ import { expect } from "chai";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { notNullish } from "@/utils/genUtils.js";
+import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
+import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 
 export const expectSubQuantityCorrect = async ({
   stripeCli,
@@ -41,7 +42,7 @@ export const expectSubQuantityCorrect = async ({
   });
 
   let cusProduct = fullCus.customer_products.find(
-    (cp) => cp.product_id === productId,
+    (cp) => cp.product_id === productId
   );
 
   let stripeSubs = await getStripeSubs({
@@ -62,7 +63,7 @@ export const expectSubQuantityCorrect = async ({
   expect(subItem).to.exist;
 
   expect(subItem!.quantity).to.equal(
-    notNullish(itemQuantity) ? itemQuantity : usage,
+    notNullish(itemQuantity) ? itemQuantity : usage
   );
 
   // Check num replaceables correct
@@ -100,17 +101,25 @@ export const expectUpcomingItemsCorrect = async ({
   quantity: number;
 }) => {
   let sub = stripeSubs[0];
-  let upcomingLines = await stripeCli.invoices.listUpcomingLines({
-    subscription: sub.id,
+  // let upcomingLines = await stripeCli.invoices.listUpcomingLines({
+  //   subscription: sub.id,
+  // });
+  // const pendingItems = await stripeCli.invoiceItems.list({
+  //   pending: true,
+  // });
+
+  const lineItems = await stripeCli.invoiceItems.list({
+    customer: sub.customer as string,
   });
 
-  let lines = upcomingLines.data.filter((line) => line.type === "invoiceitem");
+  const { start, end } = subToPeriodStartEnd({ sub });
 
   let amount = quantity * unitPrice!;
+
   let proratedAmount = calculateProrationAmount({
     amount,
-    periodStart: sub.current_period_start * 1000,
-    periodEnd: sub.current_period_end * 1000,
+    periodStart: start * 1000,
+    periodEnd: end * 1000,
     now: curUnix,
     allowNegative: true,
   });
@@ -123,7 +132,8 @@ export const expectUpcomingItemsCorrect = async ({
   // console.groupEnd();
   // console.groupEnd();
 
-  expect(lines[0].amount).to.equal(Math.round(proratedAmount * 100));
+  const firstItem = lineItems.data[0];
+  expect(firstItem.amount).to.equal(Math.round(proratedAmount * 100));
 };
 
 export const calcProrationAndExpectInvoice = async ({
@@ -148,10 +158,11 @@ export const calcProrationAndExpectInvoice = async ({
 
   let sub = stripeSubs[0];
   let amount = quantity * unitPrice;
+  const { start, end } = subToPeriodStartEnd({ sub });
   let proratedAmount = calculateProrationAmount({
     amount,
-    periodStart: sub.current_period_start * 1000,
-    periodEnd: sub.current_period_end * 1000,
+    periodStart: start * 1000,
+    periodEnd: end * 1000,
     now: curUnix,
     allowNegative: true,
   });
@@ -160,10 +171,10 @@ export const calcProrationAndExpectInvoice = async ({
 
   expect(invoices.length).to.equal(
     numInvoices,
-    `Should have ${numInvoices} invoices`,
+    `Should have ${numInvoices} invoices`
   );
   expect(invoices[0].total).to.equal(
     proratedAmount,
-    "Latest invoice should be equals to calculated prorated amount",
+    "Latest invoice should be equals to calculated prorated amount"
   );
 };

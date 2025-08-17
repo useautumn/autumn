@@ -9,6 +9,8 @@ import {
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { createProrationInvoice } from "@/external/stripe/stripeSubUtils/updateStripeSub/createProrationinvoice.js";
 import { createAndFilterContUseItems } from "../../attachUtils/getContUseItems/createContUseInvoiceItems.js";
+import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
+import { getContUseInvoiceItems } from "../../attachUtils/getContUseItems/getContUseInvoiceItems.js";
 
 export const updateStripeSub2 = async ({
   req,
@@ -40,14 +42,22 @@ export const updateStripeSub2 = async ({
     });
   }
 
+  let trialEnd = config.disableTrial
+    ? undefined
+    : freeTrialToStripeTimestamp({
+        freeTrial: attachParams.freeTrial,
+        now: attachParams.now,
+      });
+
   // 1. Update subscription
+
   let updatedSub = await stripeCli.subscriptions.update(curSub.id, {
     items: itemSet.subItems,
     proration_behavior:
       proration == ProrationBehavior.None ? "none" : "create_prorations",
-    // trial_end: trialEnd,
+    trial_end: trialEnd,
     default_payment_method: paymentMethod?.id,
-    add_invoice_items: itemSet.invoiceItems,
+    // add_invoice_items: itemSet.invoiceItems,
     ...((invoiceOnly && {
       collection_method: "send_invoice",
       days_until_due: 30,
@@ -76,7 +86,14 @@ export const updateStripeSub2 = async ({
   });
 
   // // 3. Create prorations for continuous use items
-  let { replaceables } = await createAndFilterContUseItems({
+  let { replaceables, newItems } = await getContUseInvoiceItems({
+    attachParams,
+    cusProduct: curMainProduct!,
+    sub: curSub,
+    logger,
+  });
+
+  await createAndFilterContUseItems({
     attachParams,
     curMainProduct: curMainProduct!,
     sub: curSub,
@@ -84,6 +101,8 @@ export const updateStripeSub2 = async ({
     // intervalCount: config.sameIntervals ? intervalCount : undefined,
     logger,
   });
+
+  console.log("Replaceables: ", replaceables);
 
   if (proration === ProrationBehavior.Immediately) {
     latestInvoice = await createProrationInvoice({
@@ -129,6 +148,6 @@ export const updateStripeSub2 = async ({
     updatedSub,
     latestInvoice: latestInvoice,
     cusEntIds,
-    replaceables: [],
+    replaceables,
   };
 };

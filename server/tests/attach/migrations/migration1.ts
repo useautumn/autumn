@@ -90,6 +90,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for free product`
       db,
       org,
       env,
+      skipSubCheck: true,
     });
   });
 

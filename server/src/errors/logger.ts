@@ -131,7 +131,7 @@ export const initLogger = () => {
     });
   }
 
-  const logger = pino.default(
+  const logger = pino(
     {
       level: process.env.NODE_ENV === "development" ? "debug" : "info",
       formatters: {

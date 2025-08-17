@@ -18,7 +18,7 @@ export const getOptionsFromCheckoutSession = async ({
   const usageInAdvanceExists = attachParams.prices.some(
     (price) =>
       getBillingType(price.config as UsagePriceConfig) ==
-      BillingType.UsageInAdvance,
+      BillingType.UsageInAdvance
   );
 
   if (!usageInAdvanceExists) {
@@ -54,7 +54,7 @@ export const getOptionsFromCheckoutSession = async ({
     }
 
     const index = optionsList.findIndex(
-      (feature) => feature.internal_feature_id == config.internal_feature_id,
+      (feature) => feature.internal_feature_id == config.internal_feature_id
     );
 
     if (index == -1) {

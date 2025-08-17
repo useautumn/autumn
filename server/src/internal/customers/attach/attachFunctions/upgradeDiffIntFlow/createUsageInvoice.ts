@@ -13,13 +13,13 @@ export const createUsageInvoice = async ({
   db,
   attachParams,
   cusProduct,
-  stripeSubs,
+  sub,
   logger,
 }: {
   db: DrizzleCli;
   attachParams: AttachParams;
   cusProduct: FullCusProduct;
-  stripeSubs: Stripe.Subscription[];
+  sub: Stripe.Subscription;
   logger: any;
 }) => {
   const { stripeCli, paymentMethod } = attachParams;
@@ -33,12 +33,12 @@ export const createUsageInvoice = async ({
     db,
     attachParams,
     cusProduct,
-    stripeSubs,
+    sub,
     invoiceId: invoice.id,
     logger,
   });
 
-  await stripeCli.invoices.finalizeInvoice(invoice.id, {
+  await stripeCli.invoices.finalizeInvoice(invoice.id!, {
     auto_advance: false,
   });
 
@@ -49,7 +49,7 @@ export const createUsageInvoice = async ({
   } = await payForInvoice({
     stripeCli,
     paymentMethod,
-    invoiceId: invoice.id,
+    invoiceId: invoice.id!,
     logger,
     errorOnFail: false,
   });
