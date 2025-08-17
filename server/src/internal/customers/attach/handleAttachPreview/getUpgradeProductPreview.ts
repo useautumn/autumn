@@ -35,6 +35,7 @@ import {
   getLatestPeriodEnd,
   subToPeriodStartEnd,
 } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import { isTrialing } from "../../cusProducts/cusProductUtils.js";
 
 const getNextCycleAt = ({
   prices,
@@ -53,8 +54,14 @@ const getNextCycleAt = ({
 }) => {
   now = now || Date.now();
 
-  if (branch == AttachBranch.NewVersion && curCusProduct?.free_trial) {
-    return curCusProduct.trial_ends_at;
+  if (
+    branch == AttachBranch.NewVersion &&
+    curCusProduct &&
+    isTrialing(curCusProduct)
+  ) {
+    return {
+      next_cycle_at: curCusProduct.trial_ends_at,
+    };
   }
 
   if (freeTrial) {
@@ -71,7 +78,6 @@ const getNextCycleAt = ({
   if (nullish(firstInterval)) {
     return now;
   }
-
   const nextCycleAt = getAlignedIntervalUnix({
     alignWithUnix: getLatestPeriodEnd({ sub }) * 1000,
     interval: firstInterval!.interval,
