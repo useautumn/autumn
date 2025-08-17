@@ -128,7 +128,7 @@ export const priceToStripeItem = ({
       return {
         lineItem: {
           price: config.stripe_empty_price_id,
-          quantity: 1,
+          quantity: 0,
         },
       };
     }
@@ -138,7 +138,7 @@ export const priceToStripeItem = ({
         lineItem: {
           // lineItem: getEmptyPriceItem({ price, org }),
           price: config.stripe_empty_price_id,
-          quantity: 1,
+          quantity: 0,
         },
       };
     }
