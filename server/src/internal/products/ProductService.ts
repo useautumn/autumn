@@ -303,7 +303,7 @@ export class ProductService {
     parseFreeTrials({ product: data });
 
     if (!data) {
-      if (allowNotFound) return null;
+      if (allowNotFound) return null as unknown as FullProduct;
       throw new RecaseError({
         message: `Product ${idOrInternalId} not found`,
         code: ErrCode.ProductNotFound,

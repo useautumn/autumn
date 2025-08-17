@@ -62,7 +62,7 @@ export const findPriceInStripeItems = ({
 }: {
   prices: Price[];
   subItem?: Stripe.SubscriptionItem;
-  lineItem?: Stripe.InvoiceItem;
+  lineItem?: Stripe.InvoiceItem | Stripe.InvoiceLineItem;
   billingType?: BillingType;
 }) => {
   return prices.find((p: Price) => {

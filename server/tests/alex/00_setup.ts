@@ -8,8 +8,6 @@ const DEFAULT_ENV = AppEnv.Sandbox;
 
 describe("Initialize org for tests", () => {
   it("should initialize org", async function () {
-    this.timeout(20000);
-
     this.org = await clearOrg({ orgSlug: ORG_SLUG, env: DEFAULT_ENV });
     this.env = DEFAULT_ENV;
     await setupOrg({

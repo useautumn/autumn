@@ -184,7 +184,7 @@ export const runEventsAndCheckBalances = async ({
       );
     }
 
-    let timeoutMilli = Math.max(Math.floor(firstHalf / 2.5), 2) * 1000;
+    let timeoutMilli = Math.max(Math.floor(firstHalf / 2.5), 2) * 2500;
     await timeout(timeoutMilli);
 
     await Promise.all(batchUpdate);

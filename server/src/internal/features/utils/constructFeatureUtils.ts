@@ -32,6 +32,7 @@ export const constructFeature = ({
     type,
     config,
     display,
+    archived: false,
   };
 
   return newFeature;
@@ -58,6 +59,7 @@ export const constructBooleanFeature = ({
     name: name || keyToTitle(featureId),
     type: FeatureType.Boolean,
     config: null,
+    archived: false,
   };
 
   return newFeature;
@@ -99,6 +101,7 @@ export const constructMeteredFeature = ({
       },
       usage_type: usageType,
     },
+    archived: false,
   };
 
   return newFeature;
@@ -139,6 +142,7 @@ export const constructCreditSystem = ({
     name: name || keyToTitle(featureId),
     type: FeatureType.CreditSystem,
     config,
+    archived: false,
   };
 
   return newFeature;

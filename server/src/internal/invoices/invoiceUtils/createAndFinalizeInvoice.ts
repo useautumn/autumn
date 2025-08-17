@@ -30,13 +30,13 @@ export const createAndFinalizeInvoice = async ({
     for (const item of invoiceItems) {
       await stripeCli.invoiceItems.create({
         ...item,
-        invoice: invoice.id,
+        invoice: invoice.id!,
         customer: stripeCusId,
       });
     }
   }
 
-  let finalInvoice = await stripeCli.invoices.finalizeInvoice(invoice.id, {
+  let finalInvoice = await stripeCli.invoices.finalizeInvoice(invoice.id!, {
     auto_advance: false,
   });
 
@@ -47,7 +47,7 @@ export const createAndFinalizeInvoice = async ({
       invoice: paidInvoice,
     } = await payForInvoice({
       stripeCli,
-      invoiceId: finalInvoice.id,
+      invoiceId: finalInvoice.id!,
       paymentMethod,
       logger,
       errorOnFail: errorOnPaymentFail,

@@ -65,14 +65,14 @@ describe(chalk.yellowBright("Top ups"), () => {
     const cusRes = await AutumnCli.getCustomer(customerId);
     // Get product
     const product = cusRes.add_ons.find(
-      (p: any) => p.id === alexProducts.topUpMessages.id,
+      (p: any) => p.id === alexProducts.topUpMessages.id
     );
     expect(product).to.exist;
     expect(product.status).to.equal(CusProductStatus.Active);
 
     // Check quantity is correct
     let cusEnt = cusRes.entitlements.find(
-      (e: any) => e.feature_id === alexFeatures.topUpMessage.id,
+      (e: any) => e.feature_id === alexFeatures.topUpMessage.id
     );
 
     expect(cusEnt).to.exist;
@@ -86,7 +86,7 @@ describe(chalk.yellowBright("Top ups"), () => {
     const { allowed, balanceObj }: any = await AutumnCli.entitled(
       customerId,
       alexFeatures.topUpMessage.id,
-      true,
+      true
     );
     leftoverBalance = balanceObj.balance;
 
@@ -102,18 +102,18 @@ describe(chalk.yellowBright("Top ups"), () => {
     const cusRes = await AutumnCli.getCustomer(customerId);
     // Get product
     const product = cusRes.add_ons.find(
-      (p: any) => p.id === alexProducts.topUpMessages.id,
+      (p: any) => p.id === alexProducts.topUpMessages.id
     );
     expect(product).to.exist;
     expect(product.status).to.equal(CusProductStatus.Active);
 
     // Check quantity is correct
     let cusEnt = cusRes.entitlements.find(
-      (e: any) => e.feature_id === alexFeatures.topUpMessage.id,
+      (e: any) => e.feature_id === alexFeatures.topUpMessage.id
     );
     expect(cusEnt).to.exist;
     expect(cusEnt.balance).to.equal(
-      leftoverBalance + overrideQuantity * billingUnits,
+      leftoverBalance + overrideQuantity * billingUnits
     );
     expect(cusEnt.interval).to.equal(prodEnt.interval);
   });
@@ -166,7 +166,7 @@ describe(chalk.yellowBright("Testing o1 message top up"), () => {
     const cusRes = await AutumnCli.getCustomer(customerId);
     // Get product
     const product = cusRes.add_ons.find(
-      (p: any) => p.id === alexProducts.o1TopUps.id,
+      (p: any) => p.id === alexProducts.o1TopUps.id
     );
 
     expect(product).to.exist;
