@@ -95,7 +95,7 @@ export const createAndFilterContUseItems = async ({
   //   return { newItems: [], oldItems: [], replaceables: [] };
   // }
 
-  let { newItems, oldItems } = await getContUseInvoiceItems({
+  let { newItems, oldItems, replaceables } = await getContUseInvoiceItems({
     attachParams,
     cusProduct: curMainProduct!,
     sub,
@@ -154,5 +154,5 @@ export const createAndFilterContUseItems = async ({
     });
   }
 
-  return { newItems, oldItems };
+  return { newItems, oldItems, replaceables };
 };

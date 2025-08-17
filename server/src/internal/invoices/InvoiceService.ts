@@ -39,7 +39,7 @@ export const processInvoice = ({
     items: withItems
       ? (invoice.items || []).map((i) => {
           let feature = features?.find(
-            (f) => f.internal_id === i.internal_feature_id,
+            (f) => f.internal_id === i.internal_feature_id
           );
 
           return InvoiceItemResponseSchema.parse({
@@ -84,7 +84,7 @@ export class InvoiceService {
         eq(invoices.internal_customer_id, internalCustomerId),
         internalEntityId
           ? eq(invoices.internal_entity_id, internalEntityId)
-          : undefined,
+          : undefined
       ),
       orderBy: [desc(invoices.created_at)],
       limit,
@@ -146,7 +146,7 @@ export class InvoiceService {
       internal_customer_id: internalCustomerId,
       product_ids: uniqueProductIds,
       created_at: stripeInvoice.created * 1000,
-      stripe_id: stripeInvoice.id,
+      stripe_id: stripeInvoice.id!,
       hosted_invoice_url: stripeInvoice.hosted_invoice_url || null,
       status: status || (stripeInvoice.status as InvoiceStatus | null),
       internal_product_ids: uniqueInternalProductIds,

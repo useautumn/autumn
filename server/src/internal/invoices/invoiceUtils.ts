@@ -31,7 +31,7 @@ export const insertInvoiceFromAttach = async ({
     // Create or update
     let invoice = await InvoiceService.getByStripeId({
       db,
-      stripeId: stripeInvoice.id,
+      stripeId: stripeInvoice.id!,
     });
 
     let autumnInvoiceItems = await getInvoiceItems({
@@ -43,7 +43,7 @@ export const insertInvoiceFromAttach = async ({
     if (invoice) {
       await InvoiceService.updateByStripeId({
         db,
-        stripeId: stripeInvoice.id,
+        stripeId: stripeInvoice.id!,
         updates: {
           product_ids: attachParams.products.map((p) => p.id),
           internal_product_ids: attachParams.products.map((p) => p.internal_id),
@@ -99,7 +99,7 @@ export const getInvoiceItems = async ({
     for (const line of stripeInvoice.lines.data) {
       let price = findPriceInStripeItems({
         prices,
-        subItem: line,
+        lineItem: line,
       });
 
       if (!price) {

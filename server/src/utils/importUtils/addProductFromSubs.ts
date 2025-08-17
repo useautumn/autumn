@@ -20,12 +20,13 @@ import { isUsagePrice } from "@/internal/products/prices/priceUtils/usagePriceUt
 import { subToAutumnInterval } from "@/external/stripe/utils.js";
 import { prices as priceTable } from "@autumn/shared";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
+import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 
 export const addProductFromSubs = async ({
   req,
   autumnCus,
   autumnProduct,
-  stripeSubs,
+  sub,
   prices,
   entitlements,
   force = false,
@@ -35,7 +36,7 @@ export const addProductFromSubs = async ({
   req: ExtendedRequest;
   autumnCus: FullCustomer;
   autumnProduct: FullProduct;
-  stripeSubs: Stripe.Subscription[];
+  sub: Stripe.Subscription;
   prices?: Price[];
   entitlements?: EntitlementWithFeature[];
   force?: boolean;
@@ -71,9 +72,7 @@ export const addProductFromSubs = async ({
   }
 
   // Handle if trialing
-  let trialEndsAt = stripeSubs?.[0]?.trial_end
-    ? stripeSubs[0].trial_end * 1000
-    : null;
+  let trialEndsAt = sub?.trial_end ? sub.trial_end * 1000 : null;
 
   // throw new Error("test");
 
@@ -85,6 +84,10 @@ export const addProductFromSubs = async ({
       data: customPrices,
     });
   }
+
+  const { start, end } = subToPeriodStartEnd({
+    sub,
+  });
 
   let newCusProduct = await createFullCusProduct({
     db,
@@ -108,18 +111,16 @@ export const addProductFromSubs = async ({
     },
     logger,
     trialEndsAt: trialEndsAt || undefined,
-    subscriptionIds: stripeSubs.map((s) => s.id),
-    anchorToUnix: anchorToUnix || stripeSubs?.[0]?.current_period_end * 1000,
+    subscriptionIds: sub ? [sub.id] : [],
+    anchorToUnix: anchorToUnix || end,
 
-    subscriptionStatus: stripeSubs?.[0]?.status
-      ? (stripeToAutumnSubStatus(stripeSubs[0].status) as CusProductStatus)
+    subscriptionStatus: sub?.status
+      ? (stripeToAutumnSubStatus(sub?.status) as CusProductStatus)
       : undefined,
 
-    canceledAt: stripeSubs?.[0]?.canceled_at
-      ? stripeSubs[0].canceled_at * 1000
-      : null,
+    canceledAt: sub?.canceled_at ? sub.canceled_at * 1000 : null,
 
-    createdAt: stripeSubs?.[0]?.created ? stripeSubs[0].created * 1000 : null,
+    createdAt: sub?.created ? sub.created * 1000 : null,
     sendWebhook: false,
   });
 
@@ -132,31 +133,29 @@ export const addProductFromSubs = async ({
     .filter((p) => isUsagePrice({ price: p }))
     .map((p) => (p.config as UsagePriceConfig).internal_feature_id);
 
-  for (const sub of stripeSubs) {
-    let subFromDb = await SubService.getInStripeIds({
+  let subFromDb = await SubService.getInStripeIds({
+    db,
+    ids: [sub.id],
+  });
+
+  let subInterval = subToAutumnInterval(sub);
+
+  if (subFromDb.length === 0) {
+    await SubService.createSub({
       db,
-      ids: [sub.id],
+      sub: constructSub({
+        stripeId: sub.id,
+        usageFeatures:
+          subInterval.interval == BillingInterval.Month ? usageFeatures : [],
+        orgId: org.id,
+        env,
+        currentPeriodStart: start,
+        currentPeriodEnd: end,
+      }),
     });
-
-    let subInterval = subToAutumnInterval(sub);
-
-    if (subFromDb.length === 0) {
-      await SubService.createSub({
-        db,
-        sub: constructSub({
-          stripeId: sub.id,
-          usageFeatures:
-            subInterval.interval == BillingInterval.Month ? usageFeatures : [],
-          orgId: org.id,
-          env,
-          currentPeriodStart: sub.current_period_start,
-          currentPeriodEnd: sub.current_period_end,
-        }),
-      });
-      logger.info(`Created sub ${sub.id} in DB`);
-    } else {
-      logger.info(`Sub ${sub.id} already exists in DB`);
-    }
+    logger.info(`Created sub ${sub.id} in DB`);
+  } else {
+    logger.info(`Sub ${sub.id} already exists in DB`);
   }
 
   autumnCus.customer_products = [
