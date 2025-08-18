@@ -1,11 +1,15 @@
 import { notNullish } from "@/utils/genUtils.js";
+import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 import {
   AttachBranch,
   AttachPreview,
   OnIncrease,
   UsageModel,
 } from "@autumn/shared";
+import { addHours, addMonths } from "date-fns";
 import { Decimal } from "decimal.js";
+import Stripe from "stripe";
+import { hoursToFinalizeInvoice } from "../constants.js";
 
 // 1. Calculate total
 export const getAttachTotal = ({
@@ -42,7 +46,7 @@ export const getAttachTotal = ({
   for (const option of options || []) {
     const previewOption = preview?.options.find(
       (o: any) =>
-        o.feature_id === option.feature_id || o.feature_id === option.featureId,
+        o.feature_id === option.feature_id || o.feature_id === option.featureId
     );
 
     const currentQuantity = previewOption.current_quantity || 0;
@@ -72,7 +76,7 @@ export const getAttachTotal = ({
     // Prorated difference
     if (previewOption.proration_amount) {
       dueTodayTotal = dueTodayTotal.plus(
-        new Decimal(previewOption.proration_amount),
+        new Decimal(previewOption.proration_amount)
       );
     }
 
@@ -93,4 +97,22 @@ export const getAttachTotal = ({
   }
 
   return dueTodayTotal.toDecimalPlaces(2).toNumber();
+};
+
+export const advanceToNextInvoice = async ({
+  stripeCli,
+  testClockId,
+}: {
+  stripeCli: Stripe;
+  testClockId: string;
+}) => {
+  await advanceTestClock({
+    stripeCli,
+    testClockId,
+    advanceTo: addHours(
+      addMonths(new Date(), 1),
+      hoursToFinalizeInvoice
+    ).getTime(),
+    waitForSeconds: 30,
+  });
 };

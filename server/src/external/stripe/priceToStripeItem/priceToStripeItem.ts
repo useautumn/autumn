@@ -52,9 +52,9 @@ export const priceToStripeItem = ({
   product,
   org,
   options,
-  isCheckout = false,
   existingUsage,
   withEntity = false,
+  isCheckout = false,
   apiVersion,
 }: {
   price: Price;
@@ -62,9 +62,9 @@ export const priceToStripeItem = ({
   product: FullProduct;
   org: Organization;
   options: FeatureOptions | undefined | null;
-  isCheckout: boolean;
   existingUsage: number;
   withEntity: boolean;
+  isCheckout: boolean;
   apiVersion?: APIVersion;
 }) => {
   // TODO: Implement this
