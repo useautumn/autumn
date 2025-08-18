@@ -34,6 +34,7 @@ import {
   priceToIntervalKey,
 } from "@/internal/products/prices/priceUtils/convertPrice.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { ItemSet } from "@/utils/models/ItemSet.js";
 
 const getIntervalToPrices = (prices: Price[]) => {
   const intervalToPrices: Record<string, Price[]> = {};
@@ -296,9 +297,21 @@ export const getStripeSubItems2 = async ({
     if (price.config.interval === BillingInterval.OneOff) {
       invoiceItems.push(lineItem);
     } else {
-      subItems.push(lineItem);
+      subItems.push({
+        ...lineItem,
+        autumnPrice: price,
+      });
     }
   }
 
-  return { subItems, invoiceItems, usageFeatures };
+  return { subItems, invoiceItems, usageFeatures } as ItemSet;
+};
+
+export const sanitizeSubItems = (subItems: any[]) => {
+  return subItems.map((si) => {
+    const { autumnPrice, ...rest } = si;
+    return {
+      ...rest,
+    };
+  });
 };

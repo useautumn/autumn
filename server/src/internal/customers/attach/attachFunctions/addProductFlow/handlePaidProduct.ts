@@ -30,6 +30,9 @@ import { addBillingIntervalUnix } from "@/internal/products/prices/billingInterv
 import { getSmallestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
+import { getCustomerSub } from "../../attachUtils/convertAttachParams.js";
+import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
+import { updateStripeSub2 } from "../upgradeFlow/updateStripeSub2.js";
 
 export const handlePaidProduct = async ({
   req,
@@ -74,68 +77,95 @@ export const handlePaidProduct = async ({
     );
   }
 
-  let mergeSub = await cusProductToSub({
-    cusProduct: mergeCusProduct!,
-    stripeCli,
-  });
+  // let mergeSub = await cusProductToSub({
+  //   cusProduct: mergeCusProduct!,
+  //   stripeCli,
+  // });
 
-  let billingCycleAnchorUnix = undefined;
-  if (attachParams.billingAnchor) {
-    billingCycleAnchorUnix = attachParams.billingAnchor;
-  }
+  const mergeSub = await getCustomerSub({ attachParams });
+  let sub: Stripe.Subscription | null;
 
-  const earliestInterval = getSmallestInterval({ prices: attachParams.prices });
-
+  // 1. If merge sub
   if (mergeSub) {
-    const { end } = subToPeriodStartEnd({ sub: mergeSub });
-    billingCycleAnchorUnix = end * 1000;
-  }
+    // Update
+    sub = mergeSub;
 
-  let newSub;
-  try {
-    newSub = await createStripeSub2({
-      db: req.db,
-      stripeCli,
+    const newItemSet = await paramsToSubItems({
+      req,
+      sub,
       attachParams,
-      itemSet,
-      anchorToUnix: billingCycleAnchorUnix,
-      earliestInterval,
       config,
     });
-  } catch (error: any) {
-    if (
-      error instanceof RecaseError &&
-      !invoiceOnly &&
-      error.code == ErrCode.CreateStripeSubscriptionFailed
-    ) {
-      return await handleCreateCheckout({
-        req,
-        res,
-        attachParams,
-        config,
-      });
+
+    const { updatedSub } = await updateStripeSub2({
+      req,
+      attachParams,
+      curSub: sub,
+      itemSet: newItemSet,
+      config,
+      fromCreate: true,
+    });
+
+    sub = updatedSub;
+
+    // 1.
+  } else {
+    // 2. If merge sub interval
+    let billingCycleAnchorUnix = undefined;
+    if (attachParams.billingAnchor) {
+      billingCycleAnchorUnix = attachParams.billingAnchor;
     }
 
-    throw error;
-  }
+    const earliestInterval = getSmallestInterval({
+      prices: attachParams.prices,
+    });
 
-  subscriptions.push(newSub);
+    if (mergeSub) {
+      const { end } = subToPeriodStartEnd({ sub: mergeSub });
+      billingCycleAnchorUnix = end * 1000;
+    }
 
-  const anchorToUnix = getEarliestPeriodEnd({ sub: newSub }) * 1000;
-
-  const batchInsertInvoice: any = [];
-  for (const sub of subscriptions) {
-    if (!sub.latest_invoice) continue;
-    batchInsertInvoice.push(
-      insertInvoiceFromAttach({
+    try {
+      sub = await createStripeSub2({
         db: req.db,
-        stripeInvoice: sub.latest_invoice as Stripe.Invoice,
+        stripeCli,
         attachParams,
-        logger,
-      })
-    );
+        itemSet,
+        anchorToUnix: billingCycleAnchorUnix,
+        earliestInterval,
+        config,
+      });
+    } catch (error: any) {
+      if (
+        error instanceof RecaseError &&
+        !invoiceOnly &&
+        error.code == ErrCode.CreateStripeSubscriptionFailed
+      ) {
+        return await handleCreateCheckout({
+          req,
+          res,
+          attachParams,
+          config,
+        });
+      }
+
+      throw error;
+    }
   }
-  const invoices = await Promise.all(batchInsertInvoice);
+
+  subscriptions.push(sub);
+
+  let invoice: Stripe.Invoice | undefined;
+  if (sub?.latest_invoice) {
+    invoice = await insertInvoiceFromAttach({
+      db: req.db,
+      stripeInvoice: sub.latest_invoice as Stripe.Invoice,
+      attachParams,
+      logger,
+    });
+  }
+
+  const anchorToUnix = getEarliestPeriodEnd({ sub }) * 1000;
 
   if (config.invoiceCheckout) {
     return {
@@ -176,7 +206,7 @@ export const handlePaidProduct = async ({
           product_ids: products.map((p) => p.id),
           customer_id: customer.id || customer.internal_id,
           invoice: invoiceOnly
-            ? attachToInvoiceResponse({ invoice: invoices?.[0] })
+            ? attachToInvoiceResponse({ invoice })
             : undefined,
         })
       );
@@ -186,7 +216,7 @@ export const handlePaidProduct = async ({
         message: `Successfully created subscriptions and attached ${products
           .map((p) => p.name)
           .join(", ")} to ${customer.name}`,
-        invoice: invoiceOnly ? invoices?.[0] : undefined,
+        invoice: invoiceOnly ? invoice : undefined,
       });
     }
   }
@@ -264,3 +294,17 @@ export const handlePaidProduct = async ({
 //     throw error;
 //   }
 // }
+
+// const batchInsertInvoice: any = [];
+// for (const sub of subscriptions) {
+//   if (!sub.latest_invoice) continue;
+//   batchInsertInvoice.push(
+//     insertInvoiceFromAttach({
+//       db: req.db,
+//       stripeInvoice: sub.latest_invoice as Stripe.Invoice,
+//       attachParams,
+//       logger,
+//     })
+//   );
+// }
+// const invoices = await Promise.all(batchInsertInvoice);
