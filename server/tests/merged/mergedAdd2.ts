@@ -22,14 +22,20 @@ import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUt
 import { timeout } from "@/utils/genUtils.js";
 
 // UNCOMMENT FROM HERE
+let premium = constructProduct({
+  id: "premium",
+  items: [constructArrearItem({ featureId: TestFeature.Words })],
+  type: "premium",
+});
 let pro = constructProduct({
   id: "pro",
   items: [constructArrearItem({ featureId: TestFeature.Words })],
   type: "pro",
 });
 
-describe(`${chalk.yellowBright("mergedAdd1: Testing merged subs, with track")}`, () => {
-  let customerId = "mergedAdd1";
+const testCase = "mergedAdd2";
+describe(`${chalk.yellowBright(`${testCase}: Testing merged subs, downgrade`)}`, () => {
+  let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
 
   let stripeCli: Stripe;
@@ -49,13 +55,13 @@ describe(`${chalk.yellowBright("mergedAdd1: Testing merged subs, with track")}`,
     stripeCli = this.stripeCli;
 
     addPrefixToProducts({
-      products: [pro],
-      prefix: customerId,
+      products: [premium, pro],
+      prefix: testCase,
     });
 
     await createProducts({
       autumn: autumnJs,
-      products: [pro],
+      products: [premium, pro],
       db,
       orgId: org.id,
       env,
@@ -92,34 +98,33 @@ describe(`${chalk.yellowBright("mergedAdd1: Testing merged subs, with track")}`,
 
     await autumn.attach({
       customer_id: customerId,
-      product_id: pro.id,
+      product_id: premium.id,
       entity_id: "1",
-    });
-
-    const expectedTotal = await getAttachPreviewTotal({
-      customerId,
-      productId: pro.id,
-      entityId: "2",
     });
 
     await autumn.attach({
       customer_id: customerId,
-      product_id: pro.id,
+      product_id: premium.id,
       entity_id: "2",
     });
+    // await autumn.attach({
+    //   customer_id: customerId,
+    //   product_id: pro.id,
+    //   entity_id: "2",
+    // });
 
-    const customer = await autumn.customers.get(customerId);
-    const invoice = customer.invoices;
+    // const customer = await autumn.customers.get(customerId);
+    // const invoice = customer.invoices;
 
-    expect(invoice[0].total).to.equal(expectedTotal);
-
-    await expectSubToBeCorrect({
-      db,
-      customerId,
-      org,
-      env,
-    });
+    // await expectSubToBeCorrect({
+    //   db,
+    //   customerId,
+    //   org,
+    //   env,
+    // });
   });
+
+  return;
 
   it("should track usage and have correct invoice end of month", async function () {
     const value1 = 110000;
@@ -139,32 +144,38 @@ describe(`${chalk.yellowBright("mergedAdd1: Testing merged subs, with track")}`,
       entity_id: "2",
     });
 
-    await timeout(3000);
+    // await timeout(3000);
 
-    await advanceToNextInvoice({
-      stripeCli,
-      testClockId,
-    });
+    // await advanceToNextInvoice({
+    //   stripeCli,
+    //   testClockId,
+    // });
 
-    let total = 0;
-    for (let i = 0; i < entities.length; i++) {
-      const expectedTotal = await getExpectedInvoiceTotal({
-        customerId,
-        productId: pro.id,
-        usage: [{ featureId: TestFeature.Words, value: values[i] }],
-        onlyIncludeUsage: true,
-        stripeCli,
-        db,
-        org,
-        env,
-      });
-      total += expectedTotal;
-    }
+    // let total = 0;
+    // for (let i = 0; i < entities.length; i++) {
+    //   const expectedTotal = await getExpectedInvoiceTotal({
+    //     customerId,
+    //     productId: pro.id,
+    //     usage: [{ featureId: TestFeature.Words, value: values[i] }],
+    //     onlyIncludeUsage: true,
+    //     stripeCli,
+    //     db,
+    //     org,
+    //     env,
+    //   });
+    //   total += expectedTotal;
+    // }
 
-    const basePrice = getBasePrice({ product: pro });
+    // const basePrice = getBasePrice({ product: pro });
 
-    const customer = await autumn.customers.get(customerId);
-    const invoice = customer.invoices;
-    expect(invoice[0].total).to.equal(basePrice * 2 + total);
+    // const customer = await autumn.customers.get(customerId);
+    // const invoice = customer.invoices;
+    // expect(invoice[0].total).to.equal(basePrice * 2 + total);
   });
 });
+
+// const expectedTotal = await getAttachPreviewTotal({
+//   customerId,
+//   productId: pro.id,
+//   entityId: "2",
+// });

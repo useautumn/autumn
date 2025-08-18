@@ -2,21 +2,15 @@ import Stripe from "stripe";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { AttachConfig, FullCusProduct } from "@autumn/shared";
-import { attachParamToCusProducts } from "../attachUtils/convertAttachParams.js";
 import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
-
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { cusProductToPrices } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
-import {
-  isArrearPrice,
-  isUsagePrice,
-} from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import { isArrearPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import {
   findStripeItemForPrice,
   subItemInCusProduct,
 } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { mergeNewSubItems } from "./mergeNewSubItems.js";
-import { formatPrice } from "@/internal/products/prices/priceUtils.js";
 
 const getCusProductsToRemove = ({
   attachParams,
@@ -60,11 +54,13 @@ export const paramsToSubItems = async ({
   sub,
   attachParams,
   config,
+  onlyPriceItems = false,
 }: {
   req: ExtendedRequest;
   sub: Stripe.Subscription;
   attachParams: AttachParams;
   config: AttachConfig;
+  onlyPriceItems?: boolean;
 }) => {
   const { logger } = req;
   const curSubItems = sub.items.data;
@@ -76,17 +72,12 @@ export const paramsToSubItems = async ({
   // 1. Remove items related to cur cus product...
   const cusProductsToRemove = getCusProductsToRemove({ attachParams });
 
-  const newSubItems = mergeNewSubItems({
+  let newSubItems = mergeNewSubItems({
     itemSet,
     curSubItems,
   });
 
   const allCusProducts = attachParams.customer.customer_products;
-
-  console.log(
-    `REMOVING CUS PRODUCTS:`,
-    cusProductsToRemove.map((cp) => `${cp.product.id}`)
-  );
 
   // 3. Remove items related to cus products to remove
   for (const cusProduct of cusProductsToRemove) {
@@ -169,9 +160,30 @@ export const paramsToSubItems = async ({
     }
   }
 
+  if (onlyPriceItems) {
+    newSubItems = newSubItems.map((si) => {
+      if (si.id) {
+        const { id, ...rest } = si;
+        const existingSubItem = curSubItems.find((csi) => csi.id === si.id);
+        if (existingSubItem) {
+          return {
+            price: existingSubItem.price?.id,
+            ...rest,
+          };
+        }
+      }
+      return si;
+    });
+  }
+
   return {
     subItems: newSubItems,
     invoiceItems: itemSet.invoiceItems,
     usageFeatures: itemSet.usageFeatures,
   };
 };
+
+// console.log(
+//     `REMOVING CUS PRODUCTS:`,
+//     cusProductsToRemove.map((cp) => `${cp.product.id}`)
+//   );
