@@ -11,6 +11,8 @@ import { createProrationInvoice } from "@/external/stripe/stripeSubUtils/updateS
 import { createAndFilterContUseItems } from "../../attachUtils/getContUseItems/createContUseInvoiceItems.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { getContUseInvoiceItems } from "../../attachUtils/getContUseItems/getContUseInvoiceItems.js";
+import { ItemSet } from "@/utils/models/ItemSet.js";
+import { sanitizeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 
 export const updateStripeSub2 = async ({
   req,
@@ -18,15 +20,14 @@ export const updateStripeSub2 = async ({
   config,
   curSub,
   itemSet,
+  fromCreate = false,
 }: {
   req: ExtendedRequest;
   attachParams: AttachParams;
   config: AttachConfig;
   curSub: Stripe.Subscription;
-  itemSet: {
-    subItems: Stripe.SubscriptionItem[];
-    invoiceItems: Stripe.InvoiceItem[];
-  };
+  itemSet: ItemSet;
+  fromCreate?: boolean;
 }) => {
   const { db, logger } = req;
   const { curMainProduct } = attachParamToCusProducts({ attachParams });
@@ -52,9 +53,13 @@ export const updateStripeSub2 = async ({
   // 1. Update subscription
 
   let updatedSub = await stripeCli.subscriptions.update(curSub.id, {
-    items: itemSet.subItems,
+    items: sanitizeSubItems(itemSet.subItems),
     proration_behavior:
-      proration == ProrationBehavior.None ? "none" : "create_prorations",
+      proration == ProrationBehavior.None
+        ? "none"
+        : fromCreate
+          ? "always_invoice"
+          : "create_prorations",
     trial_end: trialEnd,
     default_payment_method: paymentMethod?.id,
     // add_invoice_items: itemSet.invoiceItems,
@@ -72,6 +77,13 @@ export const updateStripeSub2 = async ({
     return {
       updatedSub,
       latestInvoice: null,
+    };
+  }
+
+  if (fromCreate) {
+    return {
+      updatedSub,
+      latestInvoice: curSub.latest_invoice as Stripe.Invoice,
     };
   }
 

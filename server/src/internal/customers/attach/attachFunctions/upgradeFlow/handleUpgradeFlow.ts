@@ -23,6 +23,7 @@ import {
   getEarliestPeriodEnd,
   subToPeriodStartEnd,
 } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
 
 export const handleUpgradeFlow = async ({
   req,
@@ -52,14 +53,23 @@ export const handleUpgradeFlow = async ({
     config,
   });
 
-  const newSubItems = await removeCurCusProductItems({
-    sub: curSub,
-    cusProduct: curCusProduct!,
-    subItems: itemSet.subItems,
+  // const newSubItems = await removeCurCusProductItems({
+  //   sub: curSub,
+  //   cusProduct: curCusProduct!,
+  //   subItems: itemSet.subItems,
+  // });
+
+  const newItemSet = await paramsToSubItems({
+    req,
+    sub: curSub!,
+    attachParams,
+    config,
   });
 
-  if (newSubItems.length > 0) {
-    itemSet.subItems = newSubItems;
+  const { subItems } = newItemSet;
+
+  if (subItems.length > 0) {
+    itemSet.subItems = subItems;
 
     logger.info(`1. Updating subs with new items`);
     const res = await updateStripeSub2({

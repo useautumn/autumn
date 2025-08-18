@@ -47,7 +47,8 @@ export const findStripeItemForPrice = ({
       } else {
         return (
           config.stripe_price_id == si.price?.id ||
-          config.stripe_product_id == si.price?.product
+          config.stripe_product_id == si.price?.product ||
+          config.stripe_empty_price_id == si.price?.id
         );
       }
     });

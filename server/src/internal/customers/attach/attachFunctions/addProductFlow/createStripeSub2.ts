@@ -9,6 +9,8 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getAlignedIntervalUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { sanitizeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
+import { ItemSet } from "@/utils/models/ItemSet.js";
 
 // Get payment method
 
@@ -35,11 +37,7 @@ export const createStripeSub2 = async ({
   attachParams: AttachParams;
   config: AttachConfig;
   anchorToUnix?: number;
-  itemSet: {
-    subItems: Stripe.SubscriptionItem[];
-    invoiceItems: any[];
-    usageFeatures: string[];
-  };
+  itemSet: ItemSet;
   earliestInterval?: IntervalConfig | null;
 }) => {
   const { customer, invoiceOnly, freeTrial, org, now, reward } = attachParams;
@@ -94,7 +92,7 @@ export const createStripeSub2 = async ({
     const subscription = await stripeCli.subscriptions.create({
       ...paymentMethodData,
       customer: customer.processor.id,
-      items: subItems as any,
+      items: sanitizeSubItems(subItems),
       // items: subItems as any,
       billing_mode: { type: "flexible" },
       trial_end: freeTrialToStripeTimestamp({ freeTrial, now }),
