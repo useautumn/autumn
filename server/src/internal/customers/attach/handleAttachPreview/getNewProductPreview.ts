@@ -46,8 +46,7 @@ const getNextCycleItems = async ({
   config: AttachConfig;
 }) => {
   // 1. If one off, return null
-  if (branch == AttachBranch.OneOff || isFreeProduct(newProduct.prices))
-    return null;
+  if (branch == AttachBranch.OneOff) return null;
 
   // 2. If free trial
   let nextCycleAt = undefined;
@@ -154,6 +153,8 @@ export const getNewProductPreview = async ({
     logger,
     config,
   });
+
+  // console.log("Due next cycle", dueNextCycle);
 
   // Show next cycle if free trial or notNullish(anchorToUnix) or branch != one off?
 
