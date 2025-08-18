@@ -29,6 +29,7 @@ export const customerProducts = pgTable(
     created_at: numeric({ mode: "number" }),
     status: text(),
     processor: jsonb().$type<CustomerProductProcessor>(),
+    canceled: boolean({ mode }),
     canceled_at: numeric({ mode: "number" }),
     ended_at: numeric({ mode: "number" }),
     starts_at: numeric({ mode: "number" }),
@@ -37,7 +38,7 @@ export const customerProducts = pgTable(
     free_trial_id: text("free_trial_id"),
     trial_ends_at: numeric({ mode: "number" }),
     collection_method: text("collection_method").default(
-      "charge_automatically",
+      "charge_automatically"
     ),
     subscription_ids: text("subscription_ids").array(),
     scheduled_ids: text("scheduled_ids").array(),
@@ -73,7 +74,7 @@ export const customerProducts = pgTable(
       foreignColumns: [entities.internal_id],
       name: "customer_products_internal_entity_id_fkey",
     }).onDelete("set null"),
-  ],
+  ]
 );
 
 collatePgColumn(customerProducts.id, "C");

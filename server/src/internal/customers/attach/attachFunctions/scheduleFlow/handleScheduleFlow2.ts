@@ -76,10 +76,6 @@ export const handleScheduleFunction2 = async ({
         onlyPriceItems: true,
       });
 
-      console.log("New items", newItems);
-
-      // // console.log("New items", newItems);
-      // throw new Error("Stop");
       itemSet.subItems = newItems.subItems;
 
       // Create new schedule
@@ -90,23 +86,23 @@ export const handleScheduleFunction2 = async ({
         endOfBillingPeriod: latestPeriodEnd!,
       });
 
-      // // Update current cus products with new schedule id
-      // await CusProductService.updateByStripeSubId({
-      //   db: req.db,
-      //   stripeSubId: curSub!.id!,
-      //   updates: {
-      //     scheduled_ids: [schedule!.id],
-      //   },
-      // });
+      // Update current cus products with new schedule id
+      await CusProductService.updateByStripeSubId({
+        db: req.db,
+        stripeSubId: curSub!.id!,
+        updates: {
+          scheduled_ids: [schedule!.id],
+        },
+      });
 
-      // await CusProductService.update({
-      //   db: req.db,
-      //   cusProductId: curCusProduct!.id,
-      //   updates: {
-      //     canceled_at: latestPeriodEnd! * 1000,
-      //     scheduled_ids: [],
-      //   },
-      // });
+      await CusProductService.update({
+        db: req.db,
+        cusProductId: curCusProduct!.id,
+        updates: {
+          canceled_at: latestPeriodEnd! * 1000,
+          scheduled_ids: [],
+        },
+      });
     }
   }
 
