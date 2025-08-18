@@ -201,26 +201,33 @@ export const createStripePriceIFNotExist = async ({
     });
 
     if (!config.stripe_empty_price_id) {
-      logger.info(`Creating stripe empty price`);
-      const emptyPrice = await stripeCli.prices.create({
-        // product: stripeProd!.id,
-        product: config.stripe_product_id || stripeProd?.id,
-        unit_amount: 0,
-        currency: org.default_currency || "usd",
-        recurring: {
-          ...(billingIntervalToStripe({
-            interval: price.config!.interval!,
-            intervalCount: price.config!.interval_count!,
-          }) as any),
-        },
-      });
+      try {
+        logger.info(`Creating stripe empty price`);
+        // console.log(`Product: ${config.stripe_product_id || stripeProd?.id}`);
+        const emptyPrice = await stripeCli.prices.create({
+          // product: stripeProd!.id,
+          product: config.stripe_product_id || product.processor?.id,
+          unit_amount: 0,
+          currency: org.default_currency || "usd",
+          recurring: {
+            ...(billingIntervalToStripe({
+              interval: price.config!.interval!,
+              intervalCount: price.config!.interval_count!,
+            }) as any),
+          },
+        });
 
-      config.stripe_empty_price_id = emptyPrice.id;
-      await PriceService.update({
-        db,
-        id: price.id!,
-        update: { config },
-      });
+        config.stripe_empty_price_id = emptyPrice.id;
+        await PriceService.update({
+          db,
+          id: price.id!,
+          update: { config },
+        });
+      } catch (error) {
+        logger.error(`Error creating stripe empty price!`, {
+          error,
+        });
+      }
     }
   }
 };
