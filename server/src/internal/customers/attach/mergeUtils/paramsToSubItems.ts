@@ -11,8 +11,9 @@ import {
   subItemInCusProduct,
 } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { mergeNewSubItems } from "./mergeNewSubItems.js";
+import { formatPrice } from "@/internal/products/prices/priceUtils.js";
 
-const getCusProductsToRemove = ({
+export const getCusProductsToRemove = ({
   attachParams,
 }: {
   attachParams: AttachParams;
@@ -52,18 +53,35 @@ const getCusProductsToRemove = ({
 export const paramsToSubItems = async ({
   req,
   sub,
+  scheduleSet,
   attachParams,
   config,
   onlyPriceItems = false,
 }: {
   req: ExtendedRequest;
-  sub: Stripe.Subscription;
+  sub?: Stripe.Subscription;
+  scheduleSet?: {
+    schedule: Stripe.SubscriptionSchedule;
+    prices: Stripe.Price[];
+  };
   attachParams: AttachParams;
   config: AttachConfig;
   onlyPriceItems?: boolean;
 }) => {
   const { logger } = req;
-  const curSubItems = sub.items.data;
+  let curSubItems = sub?.items.data || [];
+  if (scheduleSet) {
+    const scheduleItems = scheduleSet.schedule.phases[0].items.map((item) => ({
+      id: item.price,
+      price: {
+        id: item.price,
+      },
+      quantity: item.quantity,
+    }));
+
+    curSubItems = scheduleItems as any;
+  }
+
   const itemSet = await getStripeSubItems2({
     attachParams,
     config,
@@ -76,6 +94,14 @@ export const paramsToSubItems = async ({
     itemSet,
     curSubItems,
   });
+
+  console.log(
+    "New sub items",
+    newSubItems
+    // newSubItems.map(
+    //   (si) => `${si.price}, ${formatPrice({ price: si.autumnPrice! })}`
+    // )
+  );
 
   const allCusProducts = attachParams.customer.customer_products;
 
@@ -182,8 +208,3 @@ export const paramsToSubItems = async ({
     usageFeatures: itemSet.usageFeatures,
   };
 };
-
-// console.log(
-//     `REMOVING CUS PRODUCTS:`,
-//     cusProductsToRemove.map((cp) => `${cp.product.id}`)
-//   );

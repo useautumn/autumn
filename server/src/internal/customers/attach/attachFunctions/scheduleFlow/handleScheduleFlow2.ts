@@ -27,6 +27,8 @@ import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubU
 import { createSubSchedule } from "./createSubSchedule.js";
 import { cancelEndOfCycle } from "@/internal/customers/cancel/cancelEndOfCycle.js";
 import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
+import { updateScheduledSubWithNewItems } from "@/internal/customers/change-product/scheduleUtils/updateScheduleWithNewItems.js";
+import { paramsToScheduleItems } from "../../mergeUtils/paramsToScheduleItems.js";
 
 export const handleScheduleFunction2 = async ({
   req,
@@ -54,8 +56,6 @@ export const handleScheduleFunction2 = async ({
     config,
   });
 
-  console.log("Schedule", schedule);
-
   await cancelEndOfCycle({
     req,
     cusProduct: curCusProduct!,
@@ -66,7 +66,20 @@ export const handleScheduleFunction2 = async ({
 
   if (!newProductFree) {
     if (schedule) {
-      // Update current schedule
+      // 1. Update current schedule
+      // console.log("Schedule items", schedule.phases[0].items);
+      const newItems = await paramsToScheduleItems({
+        req,
+        scheduleSet: {
+          schedule,
+          prices,
+        },
+        attachParams,
+        config,
+      });
+      throw new Error("Stop");
+
+      // 2. Update current sub
     } else {
       const newItems = await paramsToSubItems({
         req,
@@ -99,6 +112,7 @@ export const handleScheduleFunction2 = async ({
         db: req.db,
         cusProductId: curCusProduct!.id,
         updates: {
+          canceled: true,
           canceled_at: latestPeriodEnd! * 1000,
           scheduled_ids: [],
         },

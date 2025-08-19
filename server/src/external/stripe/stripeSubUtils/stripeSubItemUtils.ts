@@ -1,5 +1,6 @@
 import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
+import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { notNullish } from "@/utils/genUtils.js";
 import {
   BillingType,
@@ -14,15 +15,59 @@ import Stripe from "stripe";
 const autumnStripePricesMatch = ({
   stripePrice,
   autumnPrice,
+  stripeProdId,
 }: {
   stripePrice: Stripe.Price;
   autumnPrice: Price;
+  stripeProdId?: string;
 }) => {
   const config = autumnPrice.config as UsagePriceConfig;
-  return (
-    config.stripe_price_id == stripePrice.id ||
-    config.stripe_product_id == stripePrice.product
-  );
+
+  if (config.type == PriceType.Fixed) {
+    return (
+      config.stripe_price_id == stripePrice.id ||
+      (stripeProdId && stripePrice.product == stripeProdId)
+    );
+  } else {
+    return (
+      config.stripe_price_id == stripePrice.id ||
+      config.stripe_product_id == stripePrice.product ||
+      config.stripe_empty_price_id == stripePrice.id
+    );
+  }
+};
+
+export const priceToScheduleItem = ({
+  price,
+  scheduleItems,
+  prices,
+  stripeProdId,
+}: {
+  price: Price;
+  scheduleItems: Stripe.SubscriptionSchedule.Phase.Item[];
+  prices: Stripe.Price[];
+  stripeProdId?: string;
+}) => {
+  for (const scheduleItem of scheduleItems) {
+    // 1. If price is fixed
+    const stripePrice = prices.find((p) => p.id === scheduleItem.price);
+
+    if (!stripePrice) {
+      return price.config.stripe_price_id == scheduleItem.price;
+    }
+
+    if (
+      autumnStripePricesMatch({
+        stripePrice,
+        autumnPrice: price,
+        stripeProdId,
+      })
+    ) {
+      return scheduleItem;
+    }
+  }
+
+  return undefined;
 };
 
 // TO FIX
@@ -118,6 +163,34 @@ export const subItemInCusProduct = ({
   let price = findPriceInStripeItems({ prices, subItem });
 
   return stripeProdId == subItem.price.product || notNullish(price);
+};
+
+export const scheduleItemInCusProduct = ({
+  cusProduct,
+  scheduleItem,
+  prices,
+}: {
+  cusProduct: FullCusProduct;
+  scheduleItem: Stripe.SubscriptionSchedule.Phase.Item;
+  prices: Stripe.Price[];
+}) => {
+  let stripeProdId = cusProduct.product.processor?.id;
+
+  let autumnPrices = cusProductToPrices({ cusProduct });
+  let price = autumnPrices.find((p) => {
+    const stripePrice = prices.find((p) => p.id === scheduleItem.price);
+    if (!stripePrice) {
+      return p.config.stripe_price_id == scheduleItem.price;
+    }
+
+    return autumnStripePricesMatch({
+      stripePrice,
+      autumnPrice: p,
+      stripeProdId,
+    });
+  });
+
+  return notNullish(price);
 };
 
 export const isLicenseItem = ({
