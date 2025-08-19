@@ -31,36 +31,36 @@ export const handleSubscriptionScheduleCanceled = async ({
   for (const cusProduct of cusProductsOnSchedule) {
     const stripeCli = createStripeCli({ org, env });
 
-    if (cusProduct.status === CusProductStatus.Scheduled) {
-      // let otherScheduledIds = cusProduct.scheduled_ids?.filter(
-      //   (id: string) => id !== schedule.id
-      // );
+    // if (cusProduct.status === CusProductStatus.Scheduled) {
+    //   // let otherScheduledIds = cusProduct.scheduled_ids?.filter(
+    //   //   (id: string) => id !== schedule.id
+    //   // );
 
-      // for (const id of otherScheduledIds || []) {
-      //   try {
-      //     await stripeCli.subscriptionSchedules.cancel(id);
-      //     console.log("   - Cancelled scheduled id", id);
-      //   } catch (error) {
-      //     console.error("Failed to cancel subscription schedule:", id, error);
-      //   }
-      // }
+    //   // for (const id of otherScheduledIds || []) {
+    //   //   try {
+    //   //     await stripeCli.subscriptionSchedules.cancel(id);
+    //   //     console.log("   - Cancelled scheduled id", id);
+    //   //   } catch (error) {
+    //   //     console.error("Failed to cancel subscription schedule:", id, error);
+    //   //   }
+    //   // }
 
-      await CusProductService.delete({
-        db,
-        cusProductId: cusProduct.id,
-      });
-    } else {
-      // Here -> Should do something different, maybe... reactivate future product?
-      await CusProductService.update({
-        db,
-        cusProductId: cusProduct.id,
-        updates: {
-          scheduled_ids: cusProduct.scheduled_ids?.filter(
-            (id: string) => id !== schedule.id
-          ),
-        },
-      });
-    }
+    //   await CusProductService.delete({
+    //     db,
+    //     cusProductId: cusProduct.id,
+    //   });
+    // } else {
+    //   // Here -> Should do something different, maybe... reactivate future product?
+    //   await CusProductService.update({
+    //     db,
+    //     cusProductId: cusProduct.id,
+    //     updates: {
+    //       scheduled_ids: cusProduct.scheduled_ids?.filter(
+    //         (id: string) => id !== schedule.id
+    //       ),
+    //     },
+    //   });
+    // }
   }
 
   // Delete from subscriptions

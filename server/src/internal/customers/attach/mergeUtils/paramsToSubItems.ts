@@ -53,34 +53,29 @@ export const getCusProductsToRemove = ({
 export const paramsToSubItems = async ({
   req,
   sub,
-  scheduleSet,
   attachParams,
   config,
   onlyPriceItems = false,
 }: {
   req: ExtendedRequest;
   sub?: Stripe.Subscription;
-  scheduleSet?: {
-    schedule: Stripe.SubscriptionSchedule;
-    prices: Stripe.Price[];
-  };
   attachParams: AttachParams;
   config: AttachConfig;
   onlyPriceItems?: boolean;
 }) => {
   const { logger } = req;
   let curSubItems = sub?.items.data || [];
-  if (scheduleSet) {
-    const scheduleItems = scheduleSet.schedule.phases[0].items.map((item) => ({
-      id: item.price,
-      price: {
-        id: item.price,
-      },
-      quantity: item.quantity,
-    }));
+  // if (scheduleSet) {
+  //   const scheduleItems = scheduleSet.schedule.phases[0].items.map((item) => ({
+  //     id: item.price,
+  //     price: {
+  //       id: item.price,
+  //     },
+  //     quantity: item.quantity,
+  //   }));
 
-    curSubItems = scheduleItems as any;
-  }
+  //   curSubItems = scheduleItems as any;
+  // }
 
   const itemSet = await getStripeSubItems2({
     attachParams,
@@ -100,10 +95,7 @@ export const paramsToSubItems = async ({
   // 3. Remove items related to cus products to remove
   for (const cusProduct of cusProductsToRemove) {
     const prices = cusProductToPrices({ cusProduct });
-    // console.log(
-    //   `Prices:`,
-    //   prices.map((p) => formatPrice({ price: p }))
-    // );
+
     for (const price of prices) {
       const existingSubItem = findStripeItemForPrice({
         price,
@@ -161,12 +153,10 @@ export const paramsToSubItems = async ({
       );
 
       if (existingItemIndex !== -1) {
-        // Update existing item in newSubItems
         const currentQuantity = newSubItems[existingItemIndex].quantity || 0;
         const newQuantity = currentQuantity - quantityToRemove;
         updateItemQuantity(newSubItems[existingItemIndex], newQuantity);
       } else {
-        // Add new item to newSubItems
         const currentQuantity = existingSubItem.quantity || 0;
         const newQuantity = currentQuantity - quantityToRemove;
         newSubItems.push({
@@ -178,21 +168,21 @@ export const paramsToSubItems = async ({
     }
   }
 
-  if (onlyPriceItems) {
-    newSubItems = newSubItems.map((si) => {
-      if (si.id) {
-        const { id, ...rest } = si;
-        const existingSubItem = curSubItems.find((csi) => csi.id === si.id);
-        if (existingSubItem) {
-          return {
-            price: existingSubItem.price?.id,
-            ...rest,
-          };
-        }
-      }
-      return si;
-    });
-  }
+  // if (onlyPriceItems) {
+  //   newSubItems = newSubItems.map((si) => {
+  //     if (si.id) {
+  //       const { id, ...rest } = si;
+  //       const existingSubItem = curSubItems.find((csi) => csi.id === si.id);
+  //       if (existingSubItem) {
+  //         return {
+  //           price: existingSubItem.price?.id,
+  //           ...rest,
+  //         };
+  //       }
+  //     }
+  //     return si;
+  //   });
+  // }
 
   return {
     subItems: newSubItems,

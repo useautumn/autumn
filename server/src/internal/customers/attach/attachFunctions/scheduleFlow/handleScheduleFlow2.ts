@@ -23,12 +23,14 @@ import {
   paramsToCurSub,
   paramsToCurSubSchedule,
 } from "../../attachUtils/convertAttachParams.js";
-import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
-import { createSubSchedule } from "./createSubSchedule.js";
+import {
+  getEarliestPeriodEnd,
+  getLatestPeriodEnd,
+} from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { cancelEndOfCycle } from "@/internal/customers/cancel/cancelEndOfCycle.js";
-import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
-import { updateScheduledSubWithNewItems } from "@/internal/customers/change-product/scheduleUtils/updateScheduleWithNewItems.js";
 import { paramsToScheduleItems } from "../../mergeUtils/paramsToScheduleItems.js";
+import { subToNewSchedule } from "../../mergeUtils/subToNewSchedule.js";
+import { updateCurSchedule } from "../../mergeUtils/updateCurSchedule.js";
 
 export const handleScheduleFunction2 = async ({
   req,
@@ -47,7 +49,8 @@ export const handleScheduleFunction2 = async ({
 
   const curCusProduct = attachParamsToCurCusProduct({ attachParams });
   const curSub = await paramsToCurSub({ attachParams });
-  const latestPeriodEnd = getLatestPeriodEnd({ sub: curSub! });
+  // const latestPeriodEnd = getLatestPeriodEnd({ sub: curSub! });
+  const latestPeriodEnd = getEarliestPeriodEnd({ sub: curSub! });
 
   // 1. Cancel current subscription and fetch items from other cus products...?
   let schedule = await paramsToCurSubSchedule({ attachParams });
@@ -57,33 +60,37 @@ export const handleScheduleFunction2 = async ({
     config,
   });
 
-  await cancelEndOfCycle({
-    req,
-    cusProduct: curCusProduct!,
-    fullCus,
-  });
-
   const newProductFree = isFreeProduct(attachParams.prices);
 
-  if (!newProductFree) {
-    if (schedule) {
-      // 1. Update current schedule
-      // console.log("Schedule items", schedule.phases[0].items);
-      const newItems = await paramsToScheduleItems({
-        req,
-        schedule: schedule!,
-        attachParams,
-        config,
-      });
+  // await cancelEndOfCycle({
+  //   req,
+  //   cusProduct: curCusProduct!,
+  //   fullCus,
+  // });
 
-      await stripeCli.subscriptionSchedules.update(schedule.id, {
-        phases: [
-          {
-            items: newItems.items,
-            start_date: schedule.phases[0].start_date,
-          },
-        ],
+  if (schedule) {
+    const newItems = await paramsToScheduleItems({
+      req,
+      schedule: schedule!,
+      attachParams,
+      config,
+    });
+
+    if (newItems.items.length > 0) {
+      await updateCurSchedule({
+        req,
+        attachParams,
+        schedule,
+        newItems: newItems.items,
       });
+      // await stripeCli.subscriptionSchedules.update(schedule.id, {
+      //   phases: [
+      //     {
+      //       items: newItems.items,
+      //       start_date: schedule.phases[0].start_date,
+      //     },
+      //   ],
+      // });
 
       await CusProductService.update({
         db: req.db,
@@ -93,48 +100,37 @@ export const handleScheduleFunction2 = async ({
           canceled: true,
         },
       });
-
-      // 2. Update current sub
     } else {
-      const newItems = await paramsToSubItems({
-        req,
-        sub: curSub!,
-        attachParams,
-        config,
-        onlyPriceItems: true,
-      });
-
-      itemSet.subItems = newItems.subItems;
-
-      // Create new schedule
-      schedule = await createSubSchedule({
-        db: req.db,
-        attachParams,
-        itemSet,
-        endOfBillingPeriod: latestPeriodEnd!,
-      });
-
-      // Update current cus products with new schedule id
-      await CusProductService.updateByStripeSubId({
-        db: req.db,
-        stripeSubId: curSub!.id!,
-        updates: {
-          scheduled_ids: [schedule!.id],
-        },
-      });
+      await stripeCli.subscriptionSchedules.cancel(schedule.id);
+      // Release schedule...?
 
       await CusProductService.update({
         db: req.db,
         cusProductId: curCusProduct!.id,
         updates: {
+          scheduled_ids: [],
           canceled: true,
-          canceled_at: latestPeriodEnd! * 1000,
         },
       });
     }
-  }
+  } else {
+    schedule = await subToNewSchedule({
+      req,
+      sub: curSub!,
+      attachParams,
+      config,
+      endOfBillingPeriod: latestPeriodEnd!,
+    });
 
-  // throw new Error("Stop");
+    await CusProductService.update({
+      db: req.db,
+      cusProductId: curCusProduct!.id,
+      updates: {
+        canceled: true,
+        canceled_at: latestPeriodEnd! * 1000,
+      },
+    });
+  }
 
   await createFullCusProduct({
     db: req.db,

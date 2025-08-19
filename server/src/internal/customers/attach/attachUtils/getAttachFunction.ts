@@ -168,27 +168,22 @@ export const runAttachFunction = async ({
   }
 
   if (attachFunction == AttachFunction.Renew) {
-    console.log("Scheduled IDs:", curCusProduct?.scheduled_ids);
-
-    const scheduledIds = curCusProduct?.scheduled_ids || [];
-    if (scheduledIds.length > 0) {
-      return await handleRenewProduct({
-        req,
-        res,
-        attachParams,
-        config,
-      });
-    }
+    return await handleRenewProduct({
+      req,
+      res,
+      attachParams,
+      config,
+    });
   }
 
-  // 1. Cancel future schedule before creating a new one...
-  await deleteCurrentScheduledProduct({
-    req,
-    org,
-    attachParams,
-    attachFunc: attachFunction,
-    logger,
-  });
+  // // 1. Cancel future schedule before creating a new one...
+  // await deleteCurrentScheduledProduct({
+  //   req,
+  //   org,
+  //   attachParams,
+  //   attachFunc: attachFunction,
+  //   logger,
+  // });
 
   // 2. If main is trial, cancel it...
   if (branch == AttachBranch.MainIsTrial) {
@@ -209,20 +204,20 @@ export const runAttachFunction = async ({
     }
   }
 
-  if (attachFunction == AttachFunction.Renew) {
-    // Renew current subscription
+  // if (attachFunction == AttachFunction.Renew) {
+  //   // Renew current subscription
 
-    res.status(200).json(
-      AttachResultSchema.parse({
-        customer_id:
-          attachParams.customer.id || attachParams.customer.internal_id,
-        product_ids: attachParams.products.map((p) => p.id),
-        code: SuccessCode.RenewedProduct,
-        message: `Successfully renewed product ${attachParams.products[0].id}`,
-      })
-    );
-    return;
-  }
+  //   res.status(200).json(
+  //     AttachResultSchema.parse({
+  //       customer_id:
+  //         attachParams.customer.id || attachParams.customer.internal_id,
+  //       product_ids: attachParams.products.map((p) => p.id),
+  //       code: SuccessCode.RenewedProduct,
+  //       message: `Successfully renewed product ${attachParams.products[0].id}`,
+  //     })
+  //   );
+  //   return;
+  // }
 
   if (attachFunction == AttachFunction.CreateCheckout) {
     if (config.invoiceCheckout) {
@@ -257,11 +252,6 @@ export const runAttachFunction = async ({
       attachParams,
       config,
     });
-    // return await handleScheduleFunction({
-    //   req,
-    //   res,
-    //   attachParams,
-    // });
   }
 
   if (
@@ -275,24 +265,6 @@ export const runAttachFunction = async ({
       config,
     });
   }
-
-  // if (attachFunction == AttachFunction.UpgradeSameInterval) {
-  //   return await handleUpgradeSameInterval({
-  //     req,
-  //     res,
-  //     attachParams,
-  //     config,
-  //   });
-  // }
-
-  // if (attachFunction == AttachFunction.UpgradeDiffInterval) {
-  //   return await handleUpgradeDiffInterval({
-  //     req,
-  //     res,
-  //     attachParams,
-  //     config,
-  //   });
-  // }
 
   if (attachFunction == AttachFunction.UpdatePrepaidQuantity) {
     return await handleUpdateQuantityFunction({
