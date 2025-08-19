@@ -3,18 +3,11 @@ import {
   AttachParams,
   AttachResultSchema,
 } from "../../cusProducts/AttachParams.js";
-import {
-  AttachBranch,
-  AttachFunction,
-  CusProductStatus,
-  ProrationBehavior,
-} from "@autumn/shared";
-import { handleUpgradeDiffInterval } from "../attachFunctions/upgradeDiffIntFlow/handleUpgradeDiffInt.js";
+import { AttachBranch, AttachFunction, CusProductStatus } from "@autumn/shared";
 import { handleCreateCheckout } from "../../add-product/handleCreateCheckout.js";
 import { handleAddProduct } from "../attachFunctions/addProductFlow/handleAddProduct.js";
 import { AttachBody } from "@autumn/shared";
 import { AttachConfig } from "@autumn/shared";
-import { handleScheduleFunction } from "../attachFunctions/scheduleFlow/handleScheduleFunction.js";
 import { handleUpdateQuantityFunction } from "../attachFunctions/updateQuantityFlow/updateQuantityFlow.js";
 import { SuccessCode } from "@autumn/shared";
 import {
@@ -23,11 +16,11 @@ import {
 } from "./convertAttachParams.js";
 import { deleteCurrentScheduledProduct } from "./deleteCurrentScheduledProduct.js";
 import { handleOneOffFunction } from "../attachFunctions/addProductFlow/handleOneOffFunction.js";
-import { handleUpgradeSameInterval } from "../attachFunctions/upgradeSameIntFlow/handleUpgradeSameInt.js";
 import { CusProductService } from "../../cusProducts/CusProductService.js";
 import { handleCreateInvoiceCheckout } from "../../add-product/handleCreateInvoiceCheckout.js";
 import { handleUpgradeFlow } from "../attachFunctions/upgradeFlow/handleUpgradeFlow.js";
 import { handleScheduleFunction2 } from "../attachFunctions/scheduleFlow/handleScheduleFlow2.js";
+import { handleRenewProduct } from "../attachFunctions/handleRenewProduct.js";
 
 /* 
 1. If from new version, free trial should just carry over
@@ -48,6 +41,9 @@ export const getAttachFunction = async ({
   config: AttachConfig;
 }) => {
   const { onlyCheckout } = config;
+  const { curCusProduct } = attachParamToCusProducts({
+    attachParams,
+  });
 
   // 1. Checkout function
   const newScenario = [
@@ -137,6 +133,8 @@ export const runAttachFunction = async ({
       attachParams,
     });
 
+  const curCusProduct = attachParamsToCurCusProduct({ attachParams });
+
   logger.info(`--------------------------------`);
   logger.info(
     `ATTACHING ${productIdsStr} to ${customer.name} (${customer.id || customer.email}), org: ${org.slug}\n`
@@ -167,6 +165,20 @@ export const runAttachFunction = async ({
       attachParams,
       config,
     });
+  }
+
+  if (attachFunction == AttachFunction.Renew) {
+    console.log("Scheduled IDs:", curCusProduct?.scheduled_ids);
+
+    const scheduledIds = curCusProduct?.scheduled_ids || [];
+    if (scheduledIds.length > 0) {
+      return await handleRenewProduct({
+        req,
+        res,
+        attachParams,
+        config,
+      });
+    }
   }
 
   // 1. Cancel future schedule before creating a new one...

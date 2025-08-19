@@ -95,14 +95,6 @@ export const paramsToSubItems = async ({
     curSubItems,
   });
 
-  console.log(
-    "New sub items",
-    newSubItems
-    // newSubItems.map(
-    //   (si) => `${si.price}, ${formatPrice({ price: si.autumnPrice! })}`
-    // )
-  );
-
   const allCusProducts = attachParams.customer.customer_products;
 
   // 3. Remove items related to cus products to remove

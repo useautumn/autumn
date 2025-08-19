@@ -40,25 +40,19 @@ const autumnStripePricesMatch = ({
 export const priceToScheduleItem = ({
   price,
   scheduleItems,
-  prices,
   stripeProdId,
 }: {
   price: Price;
   scheduleItems: Stripe.SubscriptionSchedule.Phase.Item[];
-  prices: Stripe.Price[];
   stripeProdId?: string;
 }) => {
   for (const scheduleItem of scheduleItems) {
     // 1. If price is fixed
-    const stripePrice = prices.find((p) => p.id === scheduleItem.price);
-
-    if (!stripePrice) {
-      return price.config.stripe_price_id == scheduleItem.price;
-    }
+    const schedulePrice = scheduleItem.price as Stripe.Price;
 
     if (
       autumnStripePricesMatch({
-        stripePrice,
+        stripePrice: schedulePrice,
         autumnPrice: price,
         stripeProdId,
       })
@@ -168,20 +162,15 @@ export const subItemInCusProduct = ({
 export const scheduleItemInCusProduct = ({
   cusProduct,
   scheduleItem,
-  prices,
 }: {
   cusProduct: FullCusProduct;
   scheduleItem: Stripe.SubscriptionSchedule.Phase.Item;
-  prices: Stripe.Price[];
 }) => {
   let stripeProdId = cusProduct.product.processor?.id;
 
   let autumnPrices = cusProductToPrices({ cusProduct });
   let price = autumnPrices.find((p) => {
-    const stripePrice = prices.find((p) => p.id === scheduleItem.price);
-    if (!stripePrice) {
-      return p.config.stripe_price_id == scheduleItem.price;
-    }
+    const stripePrice = scheduleItem.price as Stripe.Price;
 
     return autumnStripePricesMatch({
       stripePrice,

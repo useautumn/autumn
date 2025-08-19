@@ -119,6 +119,7 @@ export const handleCheckout = (req: any, res: any) =>
 
       let checkoutUrl = null;
 
+      console.log("Made it here");
       if (func == AttachFunction.CreateCheckout) {
         await checkStripeConnections({
           req,

@@ -49,14 +49,13 @@ export const mergeNewScheduleItems = ({
   itemSet: ItemSet;
   curScheduleItems: Stripe.SubscriptionSchedule.Phase.Item[];
 }) => {
-  let newScheduleItems: Stripe.SubscriptionScheduleUpdateParams.Phase.Item[] =
-    structuredClone(curScheduleItems as any);
+  const originalScheduleItems = structuredClone(curScheduleItems);
+  let newScheduleItems: any[] = structuredClone(curScheduleItems).map((si) => ({
+    price: (si.price as Stripe.Price).id,
+    quantity: si.quantity,
+  }));
 
   for (const newItem of itemSet.subItems) {
-    // const existingItem = curScheduleItems.find(
-    //   (si) => si.price?.id === newItem.price
-    // );
-
     const existingIndex = newScheduleItems.findIndex(
       (si) => si.price === newItem.price
     );
@@ -67,7 +66,7 @@ export const mergeNewScheduleItems = ({
         (newItem.quantity || 0);
     } else {
       newScheduleItems.push({
-        price: newItem.price as string,
+        price: newItem.price,
         quantity: newItem.quantity,
       });
     }
@@ -76,43 +75,8 @@ export const mergeNewScheduleItems = ({
   return newScheduleItems.map((si) => ({
     price: si.price,
     quantity: si.quantity,
+    // scheduleItem: originalScheduleItems.find(
+    //   (osi) => (osi.price as Stripe.Price)?.id === si.price
+    // ),
   }));
-
-  // for (const newItem of itemSet.subItems) {
-  //   const existingItem = curScheduleItems.find(
-  //     (si) => si.price?.id === newItem.price
-  //   );
-  // }
-
-  // 1. Don't need to add arrear prices if they already exist...
-  // let newSubItems = structuredClone(itemSet.subItems);
-  // const newArrearSubItems: any[] = [];
-
-  // newSubItems = newSubItems.filter((newSi) => {
-  //   const existingItem = curSubItems.find((si) => si.price?.id === newSi.price);
-  //   if (isArrearPrice({ price: newSi.autumnPrice }) && existingItem) {
-  //     newArrearSubItems.push(newSi);
-  //     return false;
-  //   }
-  //   return true;
-  // });
-
-  // // 2. Add new subItems
-  // for (let i = 0; i < newSubItems.length; i++) {
-  //   const newItem = newSubItems[i];
-  //   const existingItem = curSubItems.find(
-  //     (si) => si.price?.id === newItem.price
-  //   );
-
-  //   if (!existingItem) continue;
-
-  //   newSubItems[i] = {
-  //     id: existingItem.id,
-  //     quantity: (existingItem.quantity || 0) + (newItem.quantity || 0),
-  //     // price: newItem.price,
-  //     // autumnPrice: newItem.autumnPrice,
-  //   };
-  // }
-
-  // return newSubItems;
 };
