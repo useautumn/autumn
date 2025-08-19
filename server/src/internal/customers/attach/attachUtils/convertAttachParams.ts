@@ -1,6 +1,7 @@
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { CusProductStatus } from "@autumn/shared";
+import Stripe from "stripe";
 
 export const attachParamsToCurCusProduct = ({
   attachParams,
@@ -154,5 +155,5 @@ export const paramsToCurSubSchedule = async ({
   // }
   // const prices = await Promise.all(batchPricesGet);
 
-  return schedule;
+  return schedule as Stripe.SubscriptionSchedule;
 };

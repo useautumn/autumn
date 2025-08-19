@@ -5,6 +5,7 @@ import {
 import {
   attachParamsToCurCusProduct,
   paramsToCurSub,
+  paramsToCurSubSchedule,
 } from "../../attachUtils/convertAttachParams.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
@@ -24,6 +25,7 @@ import {
   subToPeriodStartEnd,
 } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
+import { paramsToScheduleItems } from "../../mergeUtils/paramsToScheduleItems.js";
 
 export const handleUpgradeFlow = async ({
   req,
@@ -36,8 +38,10 @@ export const handleUpgradeFlow = async ({
   attachParams: AttachParams;
   config: AttachConfig;
 }) => {
+  const { stripeCli } = attachParams;
   const curCusProduct = attachParamsToCurCusProduct({ attachParams });
   const curSub = await paramsToCurSub({ attachParams });
+  const schedule = await paramsToCurSubSchedule({ attachParams });
 
   const logger = req.logtail;
 
@@ -52,12 +56,6 @@ export const handleUpgradeFlow = async ({
     attachParams,
     config,
   });
-
-  // const newSubItems = await removeCurCusProductItems({
-  //   sub: curSub,
-  //   cusProduct: curCusProduct!,
-  //   subItems: itemSet.subItems,
-  // });
 
   const newItemSet = await paramsToSubItems({
     req,
@@ -79,6 +77,26 @@ export const handleUpgradeFlow = async ({
       curSub: curSub!,
       itemSet,
     });
+
+    // Add to schedule?
+    if (schedule) {
+      const newItems = await paramsToScheduleItems({
+        req,
+        schedule,
+        attachParams,
+        config,
+        removeCusProducts: [curCusProduct!],
+      });
+
+      await stripeCli.subscriptionSchedules.update(schedule.id, {
+        phases: [
+          {
+            items: newItems.items,
+            start_date: schedule.phases[0].start_date,
+          },
+        ],
+      });
+    }
 
     attachParams.replaceables = res.replaceables || [];
     sub = res.updatedSub;
@@ -142,3 +160,9 @@ export const handleUpgradeFlow = async ({
     }
   }
 };
+
+// const newSubItems = await removeCurCusProductItems({
+//   sub: curSub,
+//   cusProduct: curCusProduct!,
+//   subItems: itemSet.subItems,
+// });

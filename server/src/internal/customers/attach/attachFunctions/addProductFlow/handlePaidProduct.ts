@@ -33,6 +33,10 @@ import { handleCreateCheckout } from "@/internal/customers/add-product/handleCre
 import { getCustomerSub } from "../../attachUtils/convertAttachParams.js";
 import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
 import { updateStripeSub2 } from "../upgradeFlow/updateStripeSub2.js";
+import { paramsToScheduleItems } from "../../mergeUtils/paramsToScheduleItems.js";
+import { createSubSchedule } from "../scheduleFlow/createSubSchedule.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import { subToNewSchedule } from "../../mergeUtils/subToNewSchedule.js";
 
 export const handlePaidProduct = async ({
   req,
@@ -83,16 +87,15 @@ export const handlePaidProduct = async ({
   // });
 
   const mergeSub = await getCustomerSub({ attachParams });
-  let sub: Stripe.Subscription | null;
+  let sub: Stripe.Subscription | null = null;
+  let schedule: Stripe.SubscriptionSchedule | null = null;
 
   // 1. If merge sub
   if (mergeSub) {
-    // Update
-    sub = mergeSub;
-
+    // 1. If merged sub is canceled, also add to current schedule
     const newItemSet = await paramsToSubItems({
       req,
-      sub,
+      sub: mergeSub,
       attachParams,
       config,
     });
@@ -100,13 +103,23 @@ export const handlePaidProduct = async ({
     const { updatedSub } = await updateStripeSub2({
       req,
       attachParams,
-      curSub: sub,
+      curSub: mergeSub,
       itemSet: newItemSet,
       config,
       fromCreate: true,
     });
 
     sub = updatedSub;
+
+    if (mergeSub.cancel_at) {
+      schedule = await subToNewSchedule({
+        req,
+        sub: mergeSub,
+        attachParams,
+        config,
+        endOfBillingPeriod: mergeSub.cancel_at,
+      });
+    }
 
     // 1.
   } else {
@@ -185,6 +198,7 @@ export const handlePaidProduct = async ({
         db: req.db,
         attachParams: attachToInsertParams(attachParams, product),
         subscriptionIds: subscriptions.map((s) => s.id),
+        subscriptionScheduleIds: schedule ? [schedule.id] : undefined,
         anchorToUnix,
         carryExistingUsages: config.carryUsage,
         scenario: AttachScenario.New,
