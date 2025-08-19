@@ -490,6 +490,46 @@ export class CusProductService {
 
     return fullUpdated as FullCusProduct[];
   }
+  static async updateByStripeScheduledId({
+    db,
+    stripeScheduledId,
+    updates,
+  }: {
+    db: DrizzleCli;
+    stripeScheduledId: string;
+    updates: Partial<CusProduct>;
+  }) {
+    let updated = await db
+      .update(customerProducts)
+      .set(updates as any)
+      .where(
+        and(
+          arrayContains(customerProducts.scheduled_ids, [stripeScheduledId]),
+          or(
+            eq(customerProducts.status, CusProductStatus.Active),
+            eq(customerProducts.status, CusProductStatus.PastDue),
+            eq(customerProducts.status, CusProductStatus.Scheduled)
+          )
+        )
+      )
+      .returning({
+        id: customerProducts.id,
+      });
+
+    let fullUpdated = (await db.query.customerProducts.findMany({
+      where: inArray(
+        customerProducts.id,
+        updated.map((u) => u.id)
+      ),
+      with: {
+        product: true,
+        customer: true,
+        ...getFullCusProdRelations(),
+      },
+    })) as FullCusProduct[];
+
+    return fullUpdated as FullCusProduct[];
+  }
 
   static async delete({
     db,

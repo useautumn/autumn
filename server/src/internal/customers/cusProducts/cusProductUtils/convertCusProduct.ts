@@ -151,33 +151,21 @@ export const cusProductToSchedule = async ({
 }) => {
   const subScheduleIds = cusProduct?.scheduled_ids || [];
   if (subScheduleIds.length === 0) {
-    return {
-      schedule: null,
-      prices: [],
-    };
+    return null;
   }
 
   const schedule = await stripeCli.subscriptionSchedules.retrieve(
-    subScheduleIds[0]
+    subScheduleIds[0],
+    {
+      expand: ["phases.items.price"],
+    }
   );
 
   if (schedule.status == "canceled") {
-    return {
-      schedule: null,
-      prices: [],
-    };
+    return null;
   }
 
-  const batchPricesGet = [];
-  for (const item of schedule.phases[0].items) {
-    batchPricesGet.push(stripeCli.prices.retrieve(item.price as string));
-  }
-  const prices = await Promise.all(batchPricesGet);
-
-  return {
-    schedule,
-    prices,
-  };
+  return schedule;
 };
 
 export const cusProductToSub = async ({

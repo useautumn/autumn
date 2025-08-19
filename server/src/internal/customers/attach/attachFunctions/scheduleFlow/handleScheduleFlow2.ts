@@ -50,7 +50,8 @@ export const handleScheduleFunction2 = async ({
   const latestPeriodEnd = getLatestPeriodEnd({ sub: curSub! });
 
   // 1. Cancel current subscription and fetch items from other cus products...?
-  let { schedule, prices } = await paramsToCurSubSchedule({ attachParams });
+  let schedule = await paramsToCurSubSchedule({ attachParams });
+
   const itemSet = await getStripeSubItems2({
     attachParams,
     config,
@@ -70,14 +71,28 @@ export const handleScheduleFunction2 = async ({
       // console.log("Schedule items", schedule.phases[0].items);
       const newItems = await paramsToScheduleItems({
         req,
-        scheduleSet: {
-          schedule,
-          prices,
-        },
+        schedule: schedule!,
         attachParams,
         config,
       });
-      throw new Error("Stop");
+
+      await stripeCli.subscriptionSchedules.update(schedule.id, {
+        phases: [
+          {
+            items: newItems.items,
+            start_date: schedule.phases[0].start_date,
+          },
+        ],
+      });
+
+      await CusProductService.update({
+        db: req.db,
+        cusProductId: curCusProduct!.id,
+        updates: {
+          scheduled_ids: [schedule!.id],
+          canceled: true,
+        },
+      });
 
       // 2. Update current sub
     } else {
@@ -114,7 +129,6 @@ export const handleScheduleFunction2 = async ({
         updates: {
           canceled: true,
           canceled_at: latestPeriodEnd! * 1000,
-          scheduled_ids: [],
         },
       });
     }

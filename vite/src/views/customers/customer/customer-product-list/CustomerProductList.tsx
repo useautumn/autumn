@@ -96,6 +96,14 @@ export const CustomerProductList = ({
             value: id,
           }))
         : []),
+      ...(cusProduct.scheduled_ids
+        ? [
+            {
+              key: "Stripe Scheduled IDs",
+              value: cusProduct.scheduled_ids.join(", "),
+            },
+          ]
+        : []),
       {
         key: "Entity ID",
         value: cusProduct.entity_id || "N/A",
