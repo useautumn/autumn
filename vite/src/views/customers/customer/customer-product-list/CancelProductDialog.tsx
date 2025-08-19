@@ -45,6 +45,7 @@ export const CancelProductDialog = ({
         product_id: cusProduct.product_id,
         entity_id: entity?.id || entity?.internal_id,
         cancel_immediately: cancelImmediately,
+        prorate: false,
       });
       await cusMutate();
       setOpen(false);

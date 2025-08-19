@@ -28,7 +28,10 @@ export const cancelImmediately = async ({
   });
 
   const sub = await cusProductToSub({ cusProduct, stripeCli });
+
   if (sub) {
+    // if sub latest invoice not paid, don't prorate
+
     await stripeCli.subscriptions.cancel(sub.id, { prorate: prorate });
   }
 

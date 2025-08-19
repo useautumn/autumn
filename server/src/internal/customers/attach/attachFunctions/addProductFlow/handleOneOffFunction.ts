@@ -132,7 +132,7 @@ export const handleOneOffFunction = async ({
     } as any);
   }
 
-  if (config.invoiceCheckout) {
+  if (config.invoiceCheckout && config.finalizeInvoice) {
     if (stripeInvoice.status === "draft") {
       stripeInvoice = await stripeCli.invoices.finalizeInvoice(
         stripeInvoice.id!

@@ -78,9 +78,11 @@ export const AttachModal = ({
     if (preview?.branch == AttachBranch.SameCustomEnts || flags.isFree) {
       return false;
     }
+
     if (preview?.branch == AttachBranch.Downgrade) {
       return false;
     }
+
     if (preview?.branch == AttachBranch.Renew) {
       return false;
     }
