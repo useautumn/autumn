@@ -172,6 +172,9 @@ export const getAttachConfig = async ({
     disableMerge,
     sameIntervals,
     carryTrial,
+    finalizeInvoice: notNullish(attachBody.finalize_invoice)
+      ? attachBody.finalize_invoice
+      : true,
   };
 
   return { flags, config };
@@ -189,6 +192,7 @@ export const getDefaultAttachConfig = () => {
     sameIntervals: false,
     carryTrial: false,
     invoiceCheckout: false,
+    finalizeInvoice: true,
   };
 
   return config;
