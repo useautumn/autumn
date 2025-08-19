@@ -127,13 +127,13 @@ export const handleCheckout = (req: any, res: any) =>
           useCheckout: true,
         });
 
-        if (config.invoiceCheckout) {
-          await handlePrepaidErrors({
-            attachParams,
-            config,
-            useCheckout: config.onlyCheckout,
-          });
+        await handlePrepaidErrors({
+          attachParams,
+          config,
+          useCheckout: config.onlyCheckout,
+        });
 
+        if (config.invoiceCheckout) {
           const result = await handleCreateInvoiceCheckout({
             req,
             attachParams,
