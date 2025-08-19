@@ -20,7 +20,11 @@ export const CusProductStatusItem = ({
     const trialing =
       cusProduct.trial_ends_at && cusProduct.trial_ends_at > Date.now();
 
-    const canceled = notNullish(cusProduct.canceled_at);
+    // const canceled = notNullish(cusProduct.canceled_at);
+    const canceled = cusProduct.canceled;
+    console.log(
+      `entity ID: ${cusProduct.entity_id}, canceled: ${canceled}, product: ${cusProduct.product_id}`
+    );
     if (canceled) return "canceled";
 
     if (trialing) {

@@ -107,6 +107,11 @@ describe(`${chalk.yellowBright(`${testCase}: Testing merged subs, downgrade`)}`,
       product_id: premium.id,
       entity_id: "2",
     });
+    await autumn.attach({
+      customer_id: customerId,
+      product_id: pro.id,
+      entity_id: "2",
+    });
     // await autumn.attach({
     //   customer_id: customerId,
     //   product_id: pro.id,
