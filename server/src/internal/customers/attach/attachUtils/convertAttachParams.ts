@@ -47,6 +47,20 @@ export const attachParamsToProduct = ({
   };
 };
 
+export const getSubForAttach = async ({
+  subId,
+  stripeCli,
+}: {
+  subId: string;
+  stripeCli: Stripe;
+}) => {
+  const sub = await stripeCli.subscriptions.retrieve(subId, {
+    expand: ["items.data.price.tiers"],
+  });
+
+  return sub;
+};
+
 export const getCustomerSub = async ({
   attachParams,
 }: {

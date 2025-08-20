@@ -26,47 +26,50 @@ import {
 import {
   getEarliestPeriodEnd,
   getLatestPeriodEnd,
+  subToPeriodStartEnd,
 } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
-import { cancelEndOfCycle } from "@/internal/customers/cancel/cancelEndOfCycle.js";
 import { paramsToScheduleItems } from "../../mergeUtils/paramsToScheduleItems.js";
 import { subToNewSchedule } from "../../mergeUtils/subToNewSchedule.js";
 import { updateCurSchedule } from "../../mergeUtils/updateCurSchedule.js";
+import { getAlignedIntervalUnix } from "@/internal/products/prices/billingIntervalUtils.js";
+import { getLargestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
+import { formatUnixToDateTime } from "@/utils/genUtils.js";
+import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 
 export const handleScheduleFunction2 = async ({
   req,
   res,
   attachParams,
   config,
+  skipInsertCusProduct = false,
 }: {
   req: any;
   res: any;
   attachParams: AttachParams;
   config: AttachConfig;
+  skipInsertCusProduct?: boolean;
 }) => {
   const logger = req.logtail;
   const product = attachParams.products[0];
-  const { stripeCli, customer: fullCus } = attachParams;
+  const { stripeCli, customer: fullCus, prices } = attachParams;
 
   const curCusProduct = attachParamsToCurCusProduct({ attachParams });
   const curSub = await paramsToCurSub({ attachParams });
-  // const latestPeriodEnd = getLatestPeriodEnd({ sub: curSub! });
-  const latestPeriodEnd = getEarliestPeriodEnd({ sub: curSub! });
+  const curPrices = curCusProduct
+    ? cusProductToPrices({ cusProduct: curCusProduct })
+    : [];
+
+  const subItems = curSub?.items.data.filter((item) =>
+    subItemInCusProduct({ cusProduct: curCusProduct!, subItem: item })
+  );
+
+  const expectedEnd = getLatestPeriodEnd({ subItems });
 
   // 1. Cancel current subscription and fetch items from other cus products...?
   let schedule = await paramsToCurSubSchedule({ attachParams });
 
-  const itemSet = await getStripeSubItems2({
-    attachParams,
-    config,
-  });
-
   const newProductFree = isFreeProduct(attachParams.prices);
-
-  // await cancelEndOfCycle({
-  //   req,
-  //   cusProduct: curCusProduct!,
-  //   fullCus,
-  // });
 
   if (schedule) {
     const newItems = await paramsToScheduleItems({
@@ -74,14 +77,19 @@ export const handleScheduleFunction2 = async ({
       schedule: schedule!,
       attachParams,
       config,
+      billingPeriodEnd: expectedEnd!,
     });
 
-    if (newItems.items.length > 0) {
+    // console.log("Phases:", newItems.phases);
+    // throw new Error("stop");
+
+    // If there's a schedule to add...
+    if (true) {
       schedule = await updateCurSchedule({
         req,
         attachParams,
         schedule,
-        newItems: newItems.items,
+        newPhases: newItems.phases || [],
         sub: curSub!,
       });
 
@@ -93,7 +101,9 @@ export const handleScheduleFunction2 = async ({
           canceled: true,
         },
       });
-    } else {
+    }
+    // Eg. all downgrade to free
+    else {
       await stripeCli.subscriptionSchedules.release(schedule.id);
       schedule = undefined;
 
@@ -113,7 +123,7 @@ export const handleScheduleFunction2 = async ({
       sub: curSub!,
       attachParams,
       config,
-      endOfBillingPeriod: latestPeriodEnd!,
+      endOfBillingPeriod: expectedEnd!,
     });
 
     await CusProductService.update({
@@ -121,43 +131,50 @@ export const handleScheduleFunction2 = async ({
       cusProductId: curCusProduct!.id,
       updates: {
         canceled: true,
-        canceled_at: latestPeriodEnd! * 1000,
+        canceled_at: Date.now(),
       },
     });
   }
 
   if (!schedule) {
     await stripeCli.subscriptions.update(curSub!.id, {
-      cancel_at: latestPeriodEnd!,
+      cancel_at: expectedEnd!,
     });
   }
 
-  await createFullCusProduct({
-    db: req.db,
-    attachParams: attachToInsertParams(attachParams, product),
-    startsAt: latestPeriodEnd! * 1000,
-    subscriptionScheduleIds: schedule ? [schedule.id] : [],
-    nextResetAt: latestPeriodEnd! * 1000,
-    disableFreeTrial: true,
-    isDowngrade: true,
-    scenario: newProductFree ? AttachScenario.Cancel : AttachScenario.Downgrade,
-    logger,
-  });
+  if (!skipInsertCusProduct) {
+    await createFullCusProduct({
+      db: req.db,
+      attachParams: attachToInsertParams(attachParams, product),
+      startsAt: expectedEnd! * 1000,
+      subscriptionScheduleIds: schedule ? [schedule.id] : [],
+      nextResetAt: expectedEnd! * 1000,
+      disableFreeTrial: true,
+      isDowngrade: true,
+      scenario: newProductFree
+        ? AttachScenario.Cancel
+        : AttachScenario.Downgrade,
+      logger,
+    });
+  }
 
   let apiVersion = attachParams.apiVersion || APIVersion.v1;
-  if (apiVersion >= APIVersion.v1_1) {
-    res.status(200).json(
-      AttachResultSchema.parse({
-        code: SuccessCode.DowngradeScheduled,
-        message: `Successfully downgraded from ${curCusProduct!.product.name} to ${product.name}`,
-        product_ids: [product.id],
-        customer_id:
-          attachParams.customer.id || attachParams.customer.internal_id,
-      })
-    );
-  } else {
-    res.status(200).json({
-      success: true,
-    });
+
+  if (res) {
+    if (apiVersion >= APIVersion.v1_1) {
+      res.status(200).json(
+        AttachResultSchema.parse({
+          code: SuccessCode.DowngradeScheduled,
+          message: `Successfully downgraded from ${curCusProduct!.product.name} to ${product.name}`,
+          product_ids: [product.id],
+          customer_id:
+            attachParams.customer.id || attachParams.customer.internal_id,
+        })
+      );
+    } else {
+      res.status(200).json({
+        success: true,
+      });
+    }
   }
 };
