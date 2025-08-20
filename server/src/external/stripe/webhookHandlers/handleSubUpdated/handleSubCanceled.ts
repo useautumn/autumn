@@ -13,6 +13,36 @@ import {
   subToPeriodStartEnd,
 } from "../../stripeSubUtils/convertSubUtils.js";
 
+export const isSubCanceled = ({
+  previousAttributes,
+  sub,
+}: {
+  previousAttributes: any;
+  sub: Stripe.Subscription;
+}) => {
+  // console.log("Previous attributes:", previousAttributes);
+  // console.log("Cancel at:", sub.cancel_at);
+  // console.log("Cancel at period end:", sub.cancel_at_period_end);
+  // console.log("Canceled at:", sub.canceled_at);
+
+  if (!sub.cancel_at && !sub.cancel_at_period_end) {
+    return {
+      canceled: false,
+      canceledAt: null,
+    };
+  }
+  const cancelAtPreviousEnd =
+    !previousAttributes.cancel_at_period_end && sub.cancel_at_period_end;
+
+  const cancelAt = nullish(previousAttributes.cancel_at) && sub.cancel_at;
+  const canceledAt = nullish(previousAttributes.canceled_at) && sub.canceled_at;
+
+  return {
+    canceled: cancelAtPreviousEnd || cancelAt || canceledAt,
+    canceledAt: sub.canceled_at ? sub.canceled_at * 1000 : Date.now(),
+  };
+};
+
 export const handleSubCanceled = async ({
   req,
   previousAttributes,
@@ -26,13 +56,17 @@ export const handleSubCanceled = async ({
   updatedCusProducts: FullCusProduct[];
   stripeCli: Stripe;
 }) => {
-  let isCanceled =
-    nullish(previousAttributes?.canceled_at) && !nullish(sub.canceled_at);
+  // let isCanceled =
+  //   nullish(previousAttributes?.canceled_at) && !nullish(sub.canceled_at);
+  const { canceled, canceledAt } = isSubCanceled({
+    previousAttributes,
+    sub,
+  });
 
   let isAutumnDowngrade =
     sub.cancellation_details?.comment?.includes("autumn_downgrade");
 
-  const canceledFromPortal = isCanceled && !isAutumnDowngrade;
+  const canceledFromPortal = canceled && !isAutumnDowngrade;
 
   const { db, org, env, logtail: logger } = req;
 
