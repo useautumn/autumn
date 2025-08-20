@@ -7,7 +7,28 @@ import { AttachScenario, FullCusProduct } from "@autumn/shared";
 import Stripe from "stripe";
 import { createStripeCli } from "../../utils.js";
 import { cancelFutureProductSchedule } from "@/internal/customers/change-product/scheduleUtils.js";
+const isSubRenewed = ({
+  previousAttributes,
+  sub,
+}: {
+  previousAttributes: any;
+  sub: Stripe.Subscription;
+}) => {
+  // 1. If previously canceled
+  const uncanceledAtPreviousEnd =
+    previousAttributes.cancel_at_period_end && !sub.cancel_at_period_end;
 
+  const uncancelAt =
+    notNullish(previousAttributes.cancel_at) && nullish(sub.cancel_at);
+
+  const uncanceledAt =
+    notNullish(previousAttributes.canceled_at) && sub.canceled_at;
+
+  return {
+    renewed: uncanceledAtPreviousEnd || uncancelAt || uncanceledAt,
+    renewedAt: Date.now(),
+  };
+};
 export const handleSubRenewed = async ({
   req,
   prevAttributes,
@@ -19,8 +40,13 @@ export const handleSubRenewed = async ({
   sub: Stripe.Subscription;
   updatedCusProducts: FullCusProduct[];
 }) => {
-  let renewed =
-    notNullish(prevAttributes?.canceled_at) && nullish(sub.canceled_at);
+  // let renewed =
+  //   notNullish(prevAttributes?.canceled_at) && nullish(sub.canceled_at);
+
+  const { renewed, renewedAt } = isSubRenewed({
+    previousAttributes: prevAttributes,
+    sub,
+  });
 
   if (!renewed || updatedCusProducts.length == 0) return;
 
@@ -43,7 +69,7 @@ export const handleSubRenewed = async ({
 
   if (curScheduledProduct) {
     logger.info(
-      `sub.updated: renewed -> removing scheduled: ${curScheduledProduct.product.name}, main product: ${updatedCusProducts[0].product.name}`,
+      `sub.updated: renewed -> removing scheduled: ${curScheduledProduct.product.name}, main product: ${updatedCusProducts[0].product.name}`
     );
 
     let stripeCli = createStripeCli({
@@ -84,7 +110,7 @@ export const handleSubRenewed = async ({
         scenario: AttachScenario.Renew,
         cusProduct: cusProd,
         deletedCusProduct: deletedCusProducts.find(
-          (cp) => cp.product.group === cusProd.product.group,
+          (cp) => cp.product.group === cusProd.product.group
         ),
       });
     }
