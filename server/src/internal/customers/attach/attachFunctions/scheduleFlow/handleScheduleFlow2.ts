@@ -77,20 +77,13 @@ export const handleScheduleFunction2 = async ({
     });
 
     if (newItems.items.length > 0) {
-      await updateCurSchedule({
+      schedule = await updateCurSchedule({
         req,
         attachParams,
         schedule,
         newItems: newItems.items,
+        sub: curSub!,
       });
-      // await stripeCli.subscriptionSchedules.update(schedule.id, {
-      //   phases: [
-      //     {
-      //       items: newItems.items,
-      //       start_date: schedule.phases[0].start_date,
-      //     },
-      //   ],
-      // });
 
       await CusProductService.update({
         db: req.db,
@@ -101,8 +94,8 @@ export const handleScheduleFunction2 = async ({
         },
       });
     } else {
-      await stripeCli.subscriptionSchedules.cancel(schedule.id);
-      // Release schedule...?
+      await stripeCli.subscriptionSchedules.release(schedule.id);
+      schedule = undefined;
 
       await CusProductService.update({
         db: req.db,
@@ -114,6 +107,7 @@ export const handleScheduleFunction2 = async ({
       });
     }
   } else {
+    console.log("DOWNGRADE FLOW, CREATING NEW SCHEDULE");
     schedule = await subToNewSchedule({
       req,
       sub: curSub!,
@@ -129,6 +123,12 @@ export const handleScheduleFunction2 = async ({
         canceled: true,
         canceled_at: latestPeriodEnd! * 1000,
       },
+    });
+  }
+
+  if (!schedule) {
+    await stripeCli.subscriptions.update(curSub!.id, {
+      cancel_at: latestPeriodEnd!,
     });
   }
 

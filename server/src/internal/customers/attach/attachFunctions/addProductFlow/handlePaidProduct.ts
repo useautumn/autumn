@@ -112,12 +112,14 @@ export const handlePaidProduct = async ({
     sub = updatedSub;
 
     if (mergeSub.cancel_at) {
+      logger.info("ADD PRODUCT FLOW,CREATING NEW SCHEDULE");
       schedule = await subToNewSchedule({
         req,
         sub: mergeSub,
         attachParams,
         config,
         endOfBillingPeriod: mergeSub.cancel_at,
+        removeCusProducts: attachParams.cusProducts.filter((cp) => cp.canceled),
       });
     }
 

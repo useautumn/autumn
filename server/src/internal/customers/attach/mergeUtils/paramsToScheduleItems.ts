@@ -141,10 +141,20 @@ export const paramsToScheduleItems = async ({
     curScheduleItems = structuredClone(schedule.phases[1].items || []);
   }
 
+  // console.log(
+  //   "Cur sub items:",
+  //   curScheduleItems.map((item) => ({
+  //     price: (item.price as Stripe.Price).id,
+  //     quantity: item.quantity,
+  //   }))
+  // );
+
   let newScheduleItems: any[] = mergeNewScheduleItems({
     itemSet,
     curScheduleItems,
   });
+
+  // console.log("New schedule items:", newScheduleItems);
 
   let cusProductsToRemove =
     removeCusProducts || getCusProductsToRemove({ attachParams });

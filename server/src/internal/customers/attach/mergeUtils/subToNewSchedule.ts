@@ -2,7 +2,7 @@ import { ExtendedRequest } from "@/utils/models/Request.js";
 import { paramsToScheduleItems } from "./paramsToScheduleItems.js";
 import Stripe from "stripe";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
-import { AttachConfig } from "@autumn/shared";
+import { AttachConfig, FullCusProduct } from "@autumn/shared";
 import { createSubSchedule } from "../attachFunctions/scheduleFlow/createSubSchedule.js";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { CusProductService } from "../../cusProducts/CusProductService.js";
@@ -13,13 +13,16 @@ export const subToNewSchedule = async ({
   attachParams,
   config,
   endOfBillingPeriod,
+  removeCusProducts,
 }: {
   req: ExtendedRequest;
   sub: Stripe.Subscription;
   attachParams: AttachParams;
   config: AttachConfig;
   endOfBillingPeriod: number;
+  removeCusProducts?: FullCusProduct[];
 }) => {
+  const { logger } = req;
   const itemSet = await getStripeSubItems2({
     attachParams,
     config,
@@ -30,11 +33,19 @@ export const subToNewSchedule = async ({
     sub,
     attachParams,
     config,
+    removeCusProducts,
   });
 
+  const { stripeCli } = attachParams;
   let newSchedule: Stripe.SubscriptionSchedule | undefined = undefined;
 
-  const { stripeCli } = attachParams;
+  // if (sub.cancel_at) {
+  //   logger.info(`UNCANCELING SUB ${sub.id}`);
+  //   await stripeCli.subscriptions.update(sub.id, {
+  //     cancel_at: null,
+  //   });
+  // }
+
   if (scheduleItems.items.length > 0) {
     itemSet.subItems = scheduleItems.items;
     const curSubItems = sub.items.data;
