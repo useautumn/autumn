@@ -8,17 +8,26 @@ export const updateCurSchedule = async ({
   req,
   attachParams,
   schedule,
+  sub,
   newItems,
 }: {
   req: ExtendedRequest;
   attachParams: AttachParams;
   schedule: Stripe.SubscriptionSchedule;
+  sub: Stripe.Subscription;
   newItems: any[];
 }) => {
   const { stripeCli } = attachParams;
 
   console.log("UPDATING CURRENT SCHEDULE:", schedule.id);
   console.log("New items:", newItems);
+
+  if (sub.cancel_at) {
+    await stripeCli.subscriptions.update(sub.id, {
+      cancel_at: null,
+    });
+  }
+
   await stripeCli.subscriptionSchedules.update(schedule.id, {
     phases: [
       {
@@ -44,4 +53,6 @@ export const updateCurSchedule = async ({
   //     canceled: true,
   //   },
   // });
+
+  return schedule;
 };

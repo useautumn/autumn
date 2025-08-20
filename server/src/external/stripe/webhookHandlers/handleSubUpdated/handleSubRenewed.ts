@@ -7,6 +7,7 @@ import { AttachScenario, FullCusProduct } from "@autumn/shared";
 import Stripe from "stripe";
 import { createStripeCli } from "../../utils.js";
 import { cancelFutureProductSchedule } from "@/internal/customers/change-product/scheduleUtils.js";
+import { isMultiProductSub } from "@/internal/customers/attach/mergeUtils/mergeUtils.js";
 
 export const handleSubRenewed = async ({
   req,
@@ -19,19 +20,24 @@ export const handleSubRenewed = async ({
   sub: Stripe.Subscription;
   updatedCusProducts: FullCusProduct[];
 }) => {
+  const { db, org, env, logtail: logger } = req;
   let renewed =
     notNullish(prevAttributes?.canceled_at) && nullish(sub.canceled_at);
-
-  if (!renewed || updatedCusProducts.length == 0) return;
-
-  const { db, org, env, logtail: logger } = req;
-
   const customer = updatedCusProducts[0].customer;
 
   let cusProducts = await CusProductService.list({
     db,
     internalCustomerId: customer!.internal_id,
   });
+
+  // Sub renewed... if multi sub flow
+  // console.log(
+  //   `Checking sub renewed: ${sub.id}, Is multi sub: ${isMultiProductSub({ sub, cusProducts })}`
+  // );
+  // console.log("Cus products:", cusProducts.map((cp) => `${cp.product.name}`));
+  if (isMultiProductSub({ sub, cusProducts })) return;
+
+  if (!renewed || updatedCusProducts.length == 0) return;
 
   let { curScheduledProduct } = getExistingCusProducts({
     product: updatedCusProducts[0].product,
@@ -43,7 +49,7 @@ export const handleSubRenewed = async ({
 
   if (curScheduledProduct) {
     logger.info(
-      `sub.updated: renewed -> removing scheduled: ${curScheduledProduct.product.name}, main product: ${updatedCusProducts[0].product.name}`,
+      `sub.updated: renewed -> removing scheduled: ${curScheduledProduct.product.name}, main product: ${updatedCusProducts[0].product.name}`
     );
 
     let stripeCli = createStripeCli({
@@ -84,7 +90,7 @@ export const handleSubRenewed = async ({
         scenario: AttachScenario.Renew,
         cusProduct: cusProd,
         deletedCusProduct: deletedCusProducts.find(
-          (cp) => cp.product.group === cusProd.product.group,
+          (cp) => cp.product.group === cusProd.product.group
         ),
       });
     }

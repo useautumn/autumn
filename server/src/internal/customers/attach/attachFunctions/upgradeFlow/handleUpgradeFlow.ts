@@ -26,6 +26,7 @@ import {
 } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
 import { paramsToScheduleItems } from "../../mergeUtils/paramsToScheduleItems.js";
+import { updateCurSchedule } from "../../mergeUtils/updateCurSchedule.js";
 
 export const handleUpgradeFlow = async ({
   req,
@@ -41,7 +42,6 @@ export const handleUpgradeFlow = async ({
   const { stripeCli } = attachParams;
   const curCusProduct = attachParamsToCurCusProduct({ attachParams });
   const curSub = await paramsToCurSub({ attachParams });
-  const schedule = await paramsToCurSubSchedule({ attachParams });
 
   const logger = req.logtail;
 
@@ -70,6 +70,7 @@ export const handleUpgradeFlow = async ({
     itemSet.subItems = subItems;
 
     logger.info(`1. Updating subs with new items`);
+
     const res = await updateStripeSub2({
       req,
       attachParams,
@@ -77,6 +78,8 @@ export const handleUpgradeFlow = async ({
       curSub: curSub!,
       itemSet,
     });
+
+    const schedule = await paramsToCurSubSchedule({ attachParams });
 
     // Add to schedule?
     if (schedule) {
@@ -88,13 +91,14 @@ export const handleUpgradeFlow = async ({
         removeCusProducts: [curCusProduct!],
       });
 
-      await stripeCli.subscriptionSchedules.update(schedule.id, {
-        phases: [
-          {
-            items: newItems.items,
-            start_date: schedule.phases[0].start_date,
-          },
-        ],
+      console.log("UPGRADE FLOW, NEW SCHEDULE ITEMS:", newItems.items);
+
+      await updateCurSchedule({
+        req,
+        attachParams,
+        schedule,
+        newItems: newItems.items,
+        sub: curSub!,
       });
     }
 
