@@ -159,6 +159,31 @@ export const subItemInCusProduct = ({
   return stripeProdId == subItem.price.product || notNullish(price);
 };
 
+export const scheduleItemToPrice = ({
+  scheduleItem,
+  cusProducts,
+}: {
+  scheduleItem: Stripe.SubscriptionSchedule.Phase.Item;
+  cusProducts: FullCusProduct[];
+}) => {
+  for (const cusProduct of cusProducts) {
+    const prices = cusProductToPrices({ cusProduct });
+    const price = prices.find((p) => {
+      const stripePrice = scheduleItem.price as Stripe.Price;
+      return autumnStripePricesMatch({
+        stripePrice,
+        autumnPrice: p,
+      });
+    });
+
+    if (price) {
+      return price;
+    }
+  }
+
+  return undefined;
+};
+
 export const scheduleItemInCusProduct = ({
   cusProduct,
   scheduleItem,

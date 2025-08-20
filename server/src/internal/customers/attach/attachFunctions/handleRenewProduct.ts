@@ -6,13 +6,21 @@ import {
 import {
   attachParamsToCurCusProduct,
   attachParamToCusProducts,
+  getSubForAttach,
+  paramsToCurSub,
 } from "../attachUtils/convertAttachParams.js";
 
 import {
   paramsToScheduleItems,
   removeCusProductFromScheduleItems,
 } from "../mergeUtils/paramsToScheduleItems.js";
-import { AttachConfig, SuccessCode } from "@autumn/shared";
+import {
+  AttachConfig,
+  FullCusProduct,
+  FullCustomer,
+  FullProduct,
+  SuccessCode,
+} from "@autumn/shared";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import {
@@ -23,6 +31,9 @@ import { mergeNewScheduleItems } from "../mergeUtils/mergeNewSubItems.js";
 import { subToNewSchedule } from "../mergeUtils/subToNewSchedule.js";
 import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { updateCurSchedule } from "../mergeUtils/updateCurSchedule.js";
+import Stripe from "stripe";
+import { z } from "zod";
+import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 
 export const handleRenewProduct = async ({
   req,
@@ -68,6 +79,18 @@ export const handleRenewProduct = async ({
       cp.id !== curCusProduct?.id
   );
 
+  let expectedEnd = undefined;
+  if (curSubId) {
+    const curSub = await getSubForAttach({
+      stripeCli,
+      subId: curSubId,
+    });
+    const subItems = curSub?.items.data.filter((item) =>
+      subItemInCusProduct({ cusProduct: curCusProduct!, subItem: item })
+    );
+    expectedEnd = getLatestPeriodEnd({ subItems });
+  }
+
   if (!otherCanceled) {
     if (schedule) {
       console.log("CANCELING SCHEDULE:", schedule.id);
@@ -101,35 +124,50 @@ export const handleRenewProduct = async ({
     // Case 1: Add current cus product back to schedule and remove scheduled product from schedule
     if (schedule) {
       console.log("ADDING CUR CUS PRODUCT BACK TO SCHEDULE");
+
       const newItems = await paramsToScheduleItems({
         req,
         attachParams,
         config,
         schedule,
-        removeCusProducts: [scheduledProduct!],
+        removeCusProducts: scheduledProduct ? [scheduledProduct] : [],
+        billingPeriodEnd: expectedEnd,
       });
 
-      if (newItems.items.length > 0) {
+      if (newItems.phases.length > 1) {
+        const curSub = await paramsToCurSub({ attachParams });
         await updateCurSchedule({
           req,
           attachParams,
           schedule,
-          newItems: newItems.items,
+          newPhases: newItems.phases,
+          sub: curSub!,
         });
-        // await stripeCli.subscriptionSchedules.update(schedule.id, {
-        //   phases: [
-        //     {
-        //       items: newItems.items,
-        //       start_date: schedule.phases[0].start_date,
-        //     },
-        //   ],
-        // });
 
         await CusProductService.update({
           db: req.db,
           cusProductId: curCusProduct!.id,
           updates: {
             scheduled_ids: [schedule!.id],
+            canceled: false,
+          },
+        });
+      } else {
+        console.log("NO NEW SCHEDULE ITEMS, RELEASING SCHEDULE");
+        await stripeCli.subscriptionSchedules.release(schedule.id);
+
+        await CusProductService.updateByStripeScheduledId({
+          db: req.db,
+          stripeScheduledId: schedule.id,
+          updates: {
+            scheduled_ids: [],
+          },
+        });
+
+        await CusProductService.update({
+          db: req.db,
+          cusProductId: curCusProduct!.id,
+          updates: {
             canceled: false,
           },
         });
@@ -181,30 +219,3 @@ export const handleRenewProduct = async ({
     );
   }
 };
-// else {
-//   console.log("NO NEW SCHEDULE ITEMS, CANCELING SCHEDULE");
-//   await stripeCli.subscriptionSchedules.cancel(schedule.id);
-//   const curSub = curCusProduct?.subscription_ids?.[0];
-
-//   if (curSub) {
-//     await stripeCli.subscriptions.update(curSub, {
-//       cancel_at: null,
-//     });
-//   }
-
-//   await CusProductService.updateByStripeScheduledId({
-//     db: req.db,
-//     stripeScheduledId: schedule.id,
-//     updates: {
-//       scheduled_ids: [],
-//     },
-//   });
-
-//   await CusProductService.update({
-//     db: req.db,
-//     cusProductId: curCusProduct!.id,
-//     updates: {
-//       canceled: false,
-//     },
-//   });
-// }

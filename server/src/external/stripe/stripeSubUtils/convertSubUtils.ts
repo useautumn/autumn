@@ -1,13 +1,22 @@
 import Stripe from "stripe";
 
-export const getLatestPeriodEnd = ({ sub }: { sub: Stripe.Subscription }) => {
-  if (sub.items.data.length == 0) {
+export const getLatestPeriodEnd = ({
+  sub,
+  subItems,
+}: {
+  sub?: Stripe.Subscription;
+  subItems?: Stripe.SubscriptionItem[];
+}) => {
+  if (!subItems) {
+    subItems = sub?.items.data || [];
+  }
+  if (subItems.length == 0) {
     return Date.now();
   }
 
-  return sub.items.data.reduce((acc, item) => {
+  return subItems.reduce((acc, item) => {
     return Math.max(acc, item.current_period_end);
-  }, sub.items.data[0].current_period_end);
+  }, subItems[0].current_period_end);
 };
 
 export const getEarliestPeriodEnd = ({ sub }: { sub: Stripe.Subscription }) => {

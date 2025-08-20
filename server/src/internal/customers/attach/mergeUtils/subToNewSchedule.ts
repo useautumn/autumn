@@ -34,6 +34,7 @@ export const subToNewSchedule = async ({
     attachParams,
     config,
     removeCusProducts,
+    billingPeriodEnd: endOfBillingPeriod,
   });
 
   const { stripeCli } = attachParams;

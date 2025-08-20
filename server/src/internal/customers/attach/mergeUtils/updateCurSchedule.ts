@@ -9,18 +9,18 @@ export const updateCurSchedule = async ({
   attachParams,
   schedule,
   sub,
-  newItems,
+  newPhases,
 }: {
   req: ExtendedRequest;
   attachParams: AttachParams;
   schedule: Stripe.SubscriptionSchedule;
   sub: Stripe.Subscription;
-  newItems: any[];
+  newPhases: Stripe.SubscriptionScheduleUpdateParams.Phase[];
 }) => {
   const { stripeCli } = attachParams;
 
   console.log("UPDATING CURRENT SCHEDULE:", schedule.id);
-  console.log("New items:", newItems);
+  console.log("New phases:", newPhases);
 
   if (sub.cancel_at) {
     await stripeCli.subscriptions.update(sub.id, {
@@ -29,20 +29,21 @@ export const updateCurSchedule = async ({
   }
 
   await stripeCli.subscriptionSchedules.update(schedule.id, {
-    phases: [
-      {
-        items: schedule.phases[0].items.map((item) => ({
-          price: (item.price as Stripe.Price).id,
-          quantity: item.quantity,
-        })),
-        start_date: schedule.phases[0].start_date,
-        end_date: schedule.phases[0].end_date,
-      },
-      {
-        items: newItems,
-        start_date: schedule.phases[0].end_date,
-      },
-    ],
+    phases: newPhases,
+    // phases: [
+    //   {
+    //     items: schedule.phases[0].items.map((item) => ({
+    //       price: (item.price as Stripe.Price).id,
+    //       quantity: item.quantity,
+    //     })),
+    //     start_date: schedule.phases[0].start_date,
+    //     end_date: schedule.phases[0].end_date,
+    //   },
+    //   {
+    //     items: newItems,
+    //     start_date: schedule.phases[0].end_date,
+    //   },
+    // ],
   });
 
   // await CusProductService.update({
