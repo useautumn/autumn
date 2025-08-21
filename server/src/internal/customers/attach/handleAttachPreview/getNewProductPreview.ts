@@ -22,11 +22,7 @@ import {
 } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { getMergeCusProduct } from "../attachFunctions/addProductFlow/getMergeCusProduct.js";
-import { formatUnixToDateTime, notNullish, nullish } from "@/utils/genUtils.js";
-import {
-  getLatestPeriodEnd,
-  subToPeriodStartEnd,
-} from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 
 const getNextCycleItems = async ({
   newProduct,
