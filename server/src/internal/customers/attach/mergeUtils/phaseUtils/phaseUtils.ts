@@ -2,7 +2,7 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { formatPrice } from "@/internal/products/prices/priceUtils.js";
 import { FullCusProduct } from "@autumn/shared";
-import { differenceInDays } from "date-fns";
+import { differenceInDays, subDays } from "date-fns";
 import Stripe from "stripe";
 
 export const cusProductInPhase = ({
@@ -14,13 +14,15 @@ export const cusProductInPhase = ({
   phaseStartMillis?: number;
   cusProduct: FullCusProduct;
 }) => {
-  // Require customer product to start at least one full day before the phase start
-  return (
-    differenceInDays(
-      phaseStartMillis ?? phaseStart! * 1000,
-      cusProduct.starts_at
-    ) >= -1 // give buffer
-  );
+  // Require customer product to start at most one day before the phase start
+  const oneDayBeforeCusProductStartsAt = subDays(
+    cusProduct.starts_at,
+    1
+  ).getTime();
+  const finalPhaseStart = phaseStartMillis ?? phaseStart! * 1000;
+
+  // Phase start should happen at after cus product starts at
+  return finalPhaseStart >= oneDayBeforeCusProductStartsAt;
 };
 
 export const similarUnix = ({

@@ -21,8 +21,9 @@ import { differenceInDays } from "date-fns";
 import { formatUnixToDateTime } from "@/utils/genUtils.js";
 import { mergeAdjacentPhasesWithSameItems } from "./phaseUtils/mergeSimilarPhases.js";
 import { preparePhasesForBillingPeriod } from "./phaseUtils/upsertNewPhase.js";
+import { logPhaseItems } from "./phaseUtils/phaseUtils.js";
 
-export const removeCusProductFromScheduleItems = ({
+export const removeCusProductFromScheduleItems = async ({
   curScheduleItems,
   updateScheduleItems,
   allCusProducts,
@@ -41,15 +42,8 @@ export const removeCusProductFromScheduleItems = ({
   let newScheduleItems = structuredClone(updateScheduleItems);
 
   const removePriceIds: string[] = [];
-  // console.log(
-  //   "Cur schedule items:",
-  //   curScheduleItems.map((i) => ({
-  //     price: (i.price as Stripe.Price).id,
-  //     quantity: i.quantity,
-  //   }))
-  // );
 
-  const printRemoveLogs = true;
+  const printRemoveLogs = false;
   for (const price of prices) {
     const existingScheduleItem = priceToScheduleItem({
       price,
@@ -73,12 +67,6 @@ export const removeCusProductFromScheduleItems = ({
 
     // 1. If arrear price
     if (isArrearPrice({ price })) {
-      // console.log(
-      //   "Removing cus product:",
-      //   cusProduct.product.name,
-      //   cusProduct.id,
-      //   cusProduct.entity_id
-      // );
       if (
         allCusProducts.some((cp) => {
           if (cp.id === cusProduct.id) return false;
@@ -183,7 +171,7 @@ const logScheduleItems = ({
 };
 
 // Helper: merge new items and then remove items from selected customer products
-const computeUpdatedScheduleItems = ({
+const computeUpdatedScheduleItems = async ({
   itemSet,
   baseCurScheduleItems,
   attachParams,
@@ -195,7 +183,7 @@ const computeUpdatedScheduleItems = ({
   attachParams: AttachParams;
   removeCusProducts?: FullCusProduct[];
   phaseStart?: number;
-}): Stripe.SubscriptionScheduleUpdateParams.Phase.Item[] => {
+}): Promise<Stripe.SubscriptionScheduleUpdateParams.Phase.Item[]> => {
   let newScheduleItems: Stripe.SubscriptionScheduleUpdateParams.Phase.Item[] =
     mergeNewScheduleItems({
       itemSet,
@@ -207,10 +195,10 @@ const computeUpdatedScheduleItems = ({
 
   const allCusProducts = attachParams.customer.customer_products;
 
-  console.log("New schedule items:");
-  logScheduleItems({ items: newScheduleItems, cusProducts: allCusProducts });
+  // console.log("New schedule items:");
+  // logScheduleItems({ items: newScheduleItems, cusProducts: allCusProducts });
   for (const cusProduct of cusProductsToRemove) {
-    newScheduleItems = removeCusProductFromScheduleItems({
+    newScheduleItems = await removeCusProductFromScheduleItems({
       curScheduleItems: baseCurScheduleItems,
       updateScheduleItems: newScheduleItems,
       allCusProducts,
@@ -220,8 +208,8 @@ const computeUpdatedScheduleItems = ({
     });
   }
 
-  console.log("New schedule items after removing cus products:");
-  logScheduleItems({ items: newScheduleItems, cusProducts: allCusProducts });
+  // console.log("New schedule items after removing cus products:");
+  // logScheduleItems({ items: newScheduleItems, cusProducts: allCusProducts });
 
   return newScheduleItems;
 };
@@ -284,7 +272,7 @@ export const paramsToScheduleItems = async ({
       curScheduleItems = schedule!.phases[schedule!.phases.length - 1].items;
     }
 
-    const newScheduleItems = computeUpdatedScheduleItems({
+    const newScheduleItems = await computeUpdatedScheduleItems({
       itemSet,
       baseCurScheduleItems: curScheduleItems as any,
       attachParams,
@@ -335,7 +323,7 @@ export const paramsToScheduleItems = async ({
       const baseCurScheduleItems = schedule!.phases[originalIndexFor(i)]
         .items as Stripe.SubscriptionSchedule.Phase.Item[];
 
-      const updatedItems = computeUpdatedScheduleItems({
+      const updatedItems = await computeUpdatedScheduleItems({
         itemSet,
         baseCurScheduleItems,
         attachParams,
@@ -348,28 +336,17 @@ export const paramsToScheduleItems = async ({
 
     const mergedPhases = mergeAdjacentPhasesWithSameItems(newPhases as any);
 
-    console.log(
-      "Merged phases:",
-      JSON.stringify(
-        mergedPhases.map((p) => {
-          const start = typeof p.start_date === "number" ? p.start_date : 0;
-          const end = typeof p.end_date === "number" ? p.end_date : 0;
-          return {
-            items: p.items.map((i) => ({
-              price: i.price,
-              quantity: i.quantity,
-            })),
-            start_date: formatUnixToDateTime(start * 1000),
-            end_date: formatUnixToDateTime(end * 1000),
-          };
-        }),
-        null,
-        2
-      )
-    );
-
+    console.log(`Merged Phases:`);
+    for (const phase of mergedPhases) {
+      console.log(
+        `Phase ${formatUnixToDateTime(Number(phase.start_date || 0) * 1000)}:`
+      );
+      await logPhaseItems({
+        db: req.db,
+        items: phase.items,
+      });
+    }
     console.log("--------------------------------");
-    // throw new Error("stop");
 
     return {
       phases: mergedPhases,

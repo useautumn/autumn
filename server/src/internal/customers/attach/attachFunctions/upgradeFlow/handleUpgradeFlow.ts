@@ -27,6 +27,8 @@ import {
 import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
 import { paramsToScheduleItems } from "../../mergeUtils/paramsToScheduleItems.js";
 import { updateCurSchedule } from "../../mergeUtils/updateCurSchedule.js";
+import { formatUnixToDateTime } from "@/utils/genUtils.js";
+import { logPhaseItems } from "../../mergeUtils/phaseUtils/phaseUtils.js";
 
 export const handleUpgradeFlow = async ({
   req,
@@ -81,6 +83,8 @@ export const handleUpgradeFlow = async ({
 
     const schedule = await paramsToCurSubSchedule({ attachParams });
 
+    console.log("UPGRADE FLOW, SCHEDULE:", schedule?.id);
+
     // Add to schedule?
     if (schedule) {
       const newItems = await paramsToScheduleItems({
@@ -89,15 +93,26 @@ export const handleUpgradeFlow = async ({
         attachParams,
         config,
         removeCusProducts: [curCusProduct!],
+        billingPeriodEnd: schedule?.phases?.[1]?.start_date,
+        // phaseIndex: 1,
       });
 
-      console.log("UPGRADE FLOW, NEW SCHEDULE ITEMS:", newItems.items);
+      // console.log("UPGRADE FLOW, NEW PHASES:");
+      // for (const phase of newItems.phases) {
+      //   console.log(
+      //     `Phase ${formatUnixToDateTime(Number(phase.start_date || 0) * 1000)}:`
+      //   );
+      //   await logPhaseItems({
+      //     db: req.db,
+      //     items: phase.items,
+      //   });
+      // }
 
       await updateCurSchedule({
         req,
         attachParams,
         schedule,
-        newItems: newItems.items,
+        newPhases: newItems.phases,
         sub: curSub!,
       });
     }

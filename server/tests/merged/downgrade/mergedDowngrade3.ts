@@ -45,35 +45,31 @@ let pro = constructProduct({
 const ops = [
   {
     entityId: "1",
-    product: premium,
-    results: [{ product: premium, status: CusProductStatus.Active }],
+    product: pro,
+    results: [{ product: pro, status: CusProductStatus.Active }],
+  },
+  {
+    entityId: "2",
+    product: pro,
+    results: [{ product: pro, status: CusProductStatus.Active }],
   },
   {
     entityId: "1",
     product: free,
     results: [
-      { product: premium, status: CusProductStatus.Active },
+      { product: pro, status: CusProductStatus.Active },
       { product: free, status: CusProductStatus.Scheduled },
     ],
-    shouldBeCanceled: true,
   },
   {
     entityId: "2",
     product: premium,
     results: [{ product: premium, status: CusProductStatus.Active }],
   },
-  {
-    entityId: "2",
-    product: pro,
-    results: [
-      { product: premium, status: CusProductStatus.Active },
-      { product: pro, status: CusProductStatus.Scheduled },
-    ],
-  },
 ];
 
-const testCase = "mergedDowngrade2";
-describe(`${chalk.yellowBright("mergedDowngrade2: Testing merged subs, downgrade free 1, add premium 2")}`, () => {
+const testCase = "mergedDowngrade3";
+describe(`${chalk.yellowBright("mergedDowngrade3: Testing merged subs, pro 1, pro 2, downgrade free pro 1, upgrade pro 2 ")}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
 
@@ -161,7 +157,6 @@ describe(`${chalk.yellowBright("mergedDowngrade2: Testing merged subs, downgrade
           customerId,
           org,
           env,
-          shouldBeCanceled: op.shouldBeCanceled,
         });
       } catch (error) {
         console.log(

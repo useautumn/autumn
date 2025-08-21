@@ -34,7 +34,7 @@ export const getUniqueUpcomingSchedulePairs = ({
     if (cusProduct.status !== CusProductStatus.Scheduled) continue;
     if (typeof cusProduct.starts_at !== "number") continue;
     if (!includePast && cusProduct.starts_at <= currentTime) continue;
-    if (free || oneOff) continue;
+    // if (free || oneOff) continue;
 
     const key = `${cusProduct.starts_at}|${cusProduct.status}`;
     if (uniqueKeys.has(key)) continue;

@@ -12,10 +12,7 @@ import {
   CusProductStatus,
   Organization,
 } from "@autumn/shared";
-import {
-  constructArrearItem,
-  constructFeatureItem,
-} from "@/utils/scriptUtils/constructItem.js";
+import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
 import { expectSubToBeCorrect } from "../mergeUtils/expectSubCorrect.js";
@@ -23,17 +20,17 @@ import { expectProductAttached } from "tests/utils/expectUtils/expectProductAtta
 import { expect } from "chai";
 
 // UNCOMMENT FROM HERE
-let free = constructProduct({
-  id: "free",
-  items: [constructFeatureItem({ featureId: TestFeature.Words })],
-  type: "free",
-  isDefault: false,
-});
-
 let premium = constructProduct({
   id: "premium",
   items: [constructArrearItem({ featureId: TestFeature.Words })],
   type: "premium",
+});
+
+let premiumAnnual = constructProduct({
+  id: "premiumAnnual",
+  items: [constructArrearItem({ featureId: TestFeature.Words })],
+  type: "premium",
+  isAnnual: true,
 });
 
 let pro = constructProduct({
@@ -42,25 +39,29 @@ let pro = constructProduct({
   type: "pro",
 });
 
+// const init = [
+//   { entityId: "1", product: premiumAnnual }, // upgrade to premium
+//   { entityId: "2", product: premium }, // upgrade to premium
+// ];
+
 const ops = [
   {
     entityId: "1",
-    product: premium,
-    results: [{ product: premium, status: CusProductStatus.Active }],
-  },
-  {
-    entityId: "1",
-    product: free,
-    results: [
-      { product: premium, status: CusProductStatus.Active },
-      { product: free, status: CusProductStatus.Scheduled },
-    ],
-    shouldBeCanceled: true,
+    product: premiumAnnual,
+    results: [{ product: premiumAnnual, status: CusProductStatus.Active }],
   },
   {
     entityId: "2",
     product: premium,
     results: [{ product: premium, status: CusProductStatus.Active }],
+  },
+  {
+    entityId: "1",
+    product: pro,
+    results: [
+      { product: premiumAnnual, status: CusProductStatus.Active },
+      { product: pro, status: CusProductStatus.Scheduled },
+    ],
   },
   {
     entityId: "2",
@@ -70,11 +71,20 @@ const ops = [
       { product: pro, status: CusProductStatus.Scheduled },
     ],
   },
+  {
+    entityId: "1",
+    product: premiumAnnual,
+    results: [{ product: premiumAnnual, status: CusProductStatus.Active }],
+  },
+  {
+    entityId: "2",
+    product: premium,
+    results: [{ product: premium, status: CusProductStatus.Active }],
+  },
 ];
 
-const testCase = "mergedDowngrade2";
-describe(`${chalk.yellowBright("mergedDowngrade2: Testing merged subs, downgrade free 1, add premium 2")}`, () => {
-  let customerId = testCase;
+describe(`${chalk.yellowBright("mergedDowngrade2: Testing merged subs, downgrade 2 monthly + annual")}`, () => {
+  let customerId = "mergedDowngrade2";
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
 
   let stripeCli: Stripe;
@@ -94,13 +104,13 @@ describe(`${chalk.yellowBright("mergedDowngrade2: Testing merged subs, downgrade
     stripeCli = this.stripeCli;
 
     addPrefixToProducts({
-      products: [pro, premium, free],
-      prefix: testCase,
+      products: [pro, premium, premiumAnnual],
+      prefix: customerId,
     });
 
     await createProducts({
       autumn: autumnJs,
-      products: [pro, premium, free],
+      products: [pro, premium, premiumAnnual],
       db,
       orgId: org.id,
       env,
@@ -161,7 +171,6 @@ describe(`${chalk.yellowBright("mergedDowngrade2: Testing merged subs, downgrade
           customerId,
           org,
           env,
-          shouldBeCanceled: op.shouldBeCanceled,
         });
       } catch (error) {
         console.log(
