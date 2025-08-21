@@ -1,20 +1,23 @@
-import {
-  APIVersion,
-  BillingInterval,
-  BillingType,
-  BillWhen,
-  FixedPriceConfig,
-  FullCusProduct,
-  OnDecrease,
-  OnIncrease,
-  Price,
-  PriceType,
-  UsagePriceConfig,
-} from "@autumn/shared";
-
 import Stripe from "stripe";
 import { Decimal } from "decimal.js";
 import { notNullish } from "../utils.js";
+import { FixedPriceConfig } from "../../models/productModels/priceModels/priceConfig/fixedPriceConfig.js";
+import {
+  BillWhen,
+  UsagePriceConfig,
+} from "../../models/productModels/priceModels/priceConfig/usagePriceConfig.js";
+import {
+  BillingInterval,
+  BillingType,
+  PriceType,
+} from "../../models/productModels/priceModels/priceEnums.js";
+import { Price } from "../../models/productModels/priceModels/priceModels.js";
+import { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
+import {
+  OnDecrease,
+  OnIncrease,
+} from "../../models/productV2Models/productItemModels/productItemEnums.js";
+import { APIVersion } from "../../enums/APIVersion.js";
 
 export const getBillingType = (config: FixedPriceConfig | UsagePriceConfig) => {
   // 1. Fixed cycle / one off
