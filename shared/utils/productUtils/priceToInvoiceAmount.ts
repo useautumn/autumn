@@ -1,16 +1,17 @@
+import { FixedPriceConfig } from "../../models/productModels/priceModels/priceConfig/fixedPriceConfig.js";
+import { UsagePriceConfig } from "../../models/productModels/priceModels/priceConfig/usagePriceConfig.js";
+import { BillingType } from "../../models/productModels/priceModels/priceEnums.js";
+import { Price } from "../../models/productModels/priceModels/priceModels.js";
+import { Infinite } from "../../models/productModels/productEnums.js";
 import {
-  BillingType,
-  calculateProrationAmount,
-  Feature,
-  FixedPriceConfig,
-  Infinite,
-  Price,
   ProductItem,
-  Proration,
   UsageModel,
-  UsagePriceConfig,
-} from "@autumn/shared";
+} from "../../models/productV2Models/productItemModels/productItemModels.js";
 import { isPriceItem } from "../productDisplayUtils/getItemType.js";
+import {
+  calculateProrationAmount,
+  Proration,
+} from "../productDisplayUtils/getProductItemRes.js";
 import { nullish } from "../utils.js";
 import { getBillingType, isFixedPrice } from "./priceUtils.js";
 import { Decimal } from "decimal.js";
