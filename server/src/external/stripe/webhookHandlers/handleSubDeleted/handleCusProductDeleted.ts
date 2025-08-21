@@ -82,11 +82,6 @@ export const handleCusProductDeleted = async ({
     }
   }
 
-  // if (cusProduct.status === CusProductStatus.Expired) {
-  //   // When attaching eg. main is trial, canceled in attach function, don't handle...
-  //   return;
-  // }
-
   if (scheduled_ids && scheduled_ids.length > 0 && !prematurelyCanceled) {
     logger.info(
       `sub.deleted: removing sub_id from cus product ${cusProduct.id}`
