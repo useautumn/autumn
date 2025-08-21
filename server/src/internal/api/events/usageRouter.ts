@@ -193,6 +193,7 @@ export const handleUsageEvent = async ({
   const payload = {
     customerId: customer.id,
     internalCustomerId: customer.internal_id,
+    eventId: newEvent.id,
     features,
     org,
     env: req.env,

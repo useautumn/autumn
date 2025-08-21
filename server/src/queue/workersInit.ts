@@ -141,7 +141,7 @@ const initWorker = ({
         }))
       ) {
         await queue.add(job.name, job.data, {
-          delay: 50,
+          delay: 200,
         });
         return;
       }
