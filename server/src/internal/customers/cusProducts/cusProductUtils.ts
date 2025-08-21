@@ -301,17 +301,11 @@ export const expireAndActivate = async ({
 export const activateFutureProduct = async ({
   req,
   cusProduct,
-  subscription,
 }: {
   req: ExtendedRequest;
   cusProduct: FullCusProduct;
-  subscription: Stripe.Subscription;
 }) => {
   const { db, org, env, logger } = req;
-  const stripeCli = createStripeCli({
-    org,
-    env,
-  });
 
   let cusProducts = await CusProductService.list({
     db,
@@ -329,40 +323,59 @@ export const activateFutureProduct = async ({
     return false;
   }
 
-  if (subIsPrematurelyCanceled(subscription)) {
-    console.log(
-      "   🔔 Subscription prematurely canceled, deleting scheduled products"
-    );
+  await CusProductService.update({
+    db,
+    cusProductId: futureProduct.id,
+    updates: { status: CusProductStatus.Active },
+  });
 
-    await deleteScheduledIds({
-      stripeCli,
-      scheduledIds: futureProduct.scheduled_ids || [],
-    });
-    await CusProductService.delete({
-      db,
-      cusProductId: futureProduct.id,
-    });
-    return false;
-  } else {
-    await CusProductService.update({
-      db,
-      cusProductId: futureProduct.id,
-      updates: { status: CusProductStatus.Active },
-    });
+  await addProductsUpdatedWebhookTask({
+    req,
+    internalCustomerId: cusProduct.internal_customer_id,
+    org,
+    env,
+    customerId: null,
+    scenario: AttachScenario.New,
+    cusProduct: futureProduct,
+    logger,
+  });
 
-    await addProductsUpdatedWebhookTask({
-      req,
-      internalCustomerId: cusProduct.internal_customer_id,
-      org,
-      env,
-      customerId: null,
-      scenario: AttachScenario.New,
-      cusProduct: futureProduct,
-      logger,
-    });
+  return futureProduct;
 
-    return true;
-  }
+  // if (subIsPrematurelyCanceled(subscription)) {
+  //   console.log(
+  //     "   🔔 Subscription prematurely canceled, deleting scheduled products"
+  //   );
+
+  //   await deleteScheduledIds({
+  //     stripeCli,
+  //     scheduledIds: futureProduct.scheduled_ids || [],
+  //   });
+  //   await CusProductService.delete({
+  //     db,
+  //     cusProductId: futureProduct.id,
+  //   });
+  //   return false;
+  // } else {
+  //   await CusProductService.update({
+  //     db,
+  //     cusProductId: futureProduct.id,
+  //     updates: { status: CusProductStatus.Active },
+  //   });
+
+  //   await addProductsUpdatedWebhookTask({
+  //     req,
+  //     internalCustomerId: cusProduct.internal_customer_id,
+  //     org,
+  //     env,
+  //     customerId: null,
+  //     scenario: AttachScenario.New,
+  //     cusProduct: futureProduct,
+  //     logger,
+  //   });
+
+  //   return true;
+  // }
 };
 
 // GET CUS ENTS FROM CUS PRODUCTS

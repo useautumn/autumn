@@ -23,6 +23,9 @@ export const handleSubRenewed = async ({
   const { db, org, env, logtail: logger } = req;
   let renewed =
     notNullish(prevAttributes?.canceled_at) && nullish(sub.canceled_at);
+
+  if (!renewed || updatedCusProducts.length == 0) return;
+
   const customer = updatedCusProducts[0].customer;
 
   let cusProducts = await CusProductService.list({
@@ -30,14 +33,13 @@ export const handleSubRenewed = async ({
     internalCustomerId: customer!.internal_id,
   });
 
+  if (isMultiProductSub({ sub, cusProducts })) return;
+
   // Sub renewed... if multi sub flow
   // console.log(
   //   `Checking sub renewed: ${sub.id}, Is multi sub: ${isMultiProductSub({ sub, cusProducts })}`
   // );
   // console.log("Cus products:", cusProducts.map((cp) => `${cp.product.name}`));
-  if (isMultiProductSub({ sub, cusProducts })) return;
-
-  if (!renewed || updatedCusProducts.length == 0) return;
 
   let { curScheduledProduct } = getExistingCusProducts({
     product: updatedCusProducts[0].product,

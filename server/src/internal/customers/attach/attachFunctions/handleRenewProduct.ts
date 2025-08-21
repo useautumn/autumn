@@ -2,37 +2,22 @@ import {
   AttachParams,
   AttachResultSchema,
 } from "@/internal/customers/cusProducts/AttachParams.js";
-
 import {
   attachParamsToCurCusProduct,
   attachParamToCusProducts,
   getSubForAttach,
   paramsToCurSub,
 } from "../attachUtils/convertAttachParams.js";
-
-import {
-  paramsToScheduleItems,
-  removeCusProductFromScheduleItems,
-} from "../mergeUtils/paramsToScheduleItems.js";
-import {
-  AttachConfig,
-  FullCusProduct,
-  FullCustomer,
-  FullProduct,
-  SuccessCode,
-} from "@autumn/shared";
+import { paramsToScheduleItems } from "../mergeUtils/paramsToScheduleItems.js";
+import { AttachConfig, SuccessCode } from "@autumn/shared";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import {
   cusProductToSchedule,
   cusProductToSub,
 } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
-import { mergeNewScheduleItems } from "../mergeUtils/mergeNewSubItems.js";
 import { subToNewSchedule } from "../mergeUtils/subToNewSchedule.js";
 import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { updateCurSchedule } from "../mergeUtils/updateCurSchedule.js";
-import Stripe from "stripe";
-import { z } from "zod";
 import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 
 export const handleRenewProduct = async ({

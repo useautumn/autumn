@@ -7,22 +7,22 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
 import { cusProductInPhase } from "@/internal/customers/attach/mergeUtils/phaseUtils/phaseUtils.js";
 import { formatUnixToDateTime, notNullish } from "@/utils/genUtils.js";
 import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
+import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
+import { activateFutureProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
+import { cusProductToProduct } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 
 export const handleSchedulePhaseCompleted = async ({
-  db,
+  req,
   subObject,
   prevAttributes,
-  env,
-  org,
-  logger,
 }: {
-  db: DrizzleCli;
+  req: ExtendedRequest;
   subObject: Stripe.Subscription;
   prevAttributes: any;
-  org: Organization;
-  env: AppEnv;
-  logger: any;
 }) => {
+  const { db, org, env, logger } = req;
   const phasePossiblyChanged =
     notNullish(prevAttributes?.items) && notNullish(subObject.schedule);
 
@@ -43,55 +43,90 @@ export const handleSchedulePhaseCompleted = async ({
     env,
   });
 
-  const curPhase = schedule.phases[0];
   const now = await getStripeNow({
     stripeCli,
     stripeCus: schedule.customer as Stripe.Customer,
   });
-  const currentPhase = schedule.phases.find(
-    (phase) =>
-      phase.start_date <= Math.floor(now / 1000) &&
-      phase.end_date > Math.floor(now / 1000)
-  );
-
-  console.log("Now:", formatUnixToDateTime(now));
-  console.log(
-    "Current phase:",
-    formatUnixToDateTime(currentPhase?.start_date! * 1000)
-  );
 
   for (const cusProduct of cusProducts) {
-    const isScheduled = cusProduct.status === CusProductStatus.Scheduled;
-    const isInPhase = cusProductInPhase({
-      phaseStart: currentPhase?.start_date,
-      cusProduct,
-    });
+    const shouldExpire =
+      cusProduct.canceled && cusProduct.ended_at && now >= cusProduct.ended_at;
 
-    console.log(
-      "Phase start:",
-      formatUnixToDateTime(currentPhase?.start_date! * 1000)
-    );
-    console.log(
-      "Cus product starts at:",
-      formatUnixToDateTime(cusProduct.starts_at)
-    );
-    console.log("Is in phase:", isInPhase);
-    console.log("Is scheduled:", isScheduled);
-
-    if (isScheduled && isInPhase) {
-      console.log(
-        "Transitioning scheduled product to active:",
-        cusProduct.product.name,
-        "entity ID:",
-        cusProduct.entity_id
+    if (shouldExpire) {
+      logger.info(
+        `Expiring cus product: ${cusProduct.product.name} (entity ID: ${cusProduct.entity_id})`
       );
+      await CusProductService.update({
+        db: req.db,
+        cusProductId: cusProduct.id,
+        updates: { status: CusProductStatus.Expired },
+      });
+
+      // ACTIVATING FUTURE PRODUCT
+      const futureCusProduct = await activateFutureProduct({
+        req,
+        cusProduct,
+      });
+
+      if (futureCusProduct) {
+        const fullFutureProduct = cusProductToProduct({
+          cusProduct: futureCusProduct,
+        });
+
+        if (
+          !isFreeProduct(fullFutureProduct.prices) &&
+          !isOneOff(fullFutureProduct.prices)
+        ) {
+          await CusProductService.update({
+            db: req.db,
+            cusProductId: futureCusProduct.id,
+            updates: {
+              subscription_ids: [subObject.id],
+              scheduled_ids: [schedule.id],
+            },
+          });
+        }
+      }
     }
 
-    console.log("--------------------------------");
+    // const isScheduled = cusProduct.status === CusProductStatus.Scheduled;
+    // const isInPhase = cusProductInPhase({
+    //   phaseStart: currentPhase?.start_date,
+    //   cusProduct,
+    // });
 
-    // const stripeCli = createStripeCli({ org, env });
-    // const sub = await stripeCli.subscriptions.retrieve(cusProduct.stripe_sub_id);
-
-    // console.log("SUB:", sub.id);
+    // else if (isScheduled && isInPhase) {
+    //   console.log(
+    //     `Transitioning scheduled product to active: ${cusProduct.product.name} (entity ID: ${cusProduct.entity_id})`
+    //   );
+    //   await CusProductService.update({
+    //     db,
+    //     cusProductId: cusProduct.id,
+    //     updates: { status: CusProductStatus.Active },
+    //   });
+    // }
   }
+
+  const currentPhase = schedule.phases.findIndex(
+    (phase) =>
+      phase.start_date <= Math.floor(now / 1000) &&
+      (phase.end_date ? phase.end_date > Math.floor(now / 1000) : true)
+  );
+
+  if (currentPhase === schedule.phases.length - 1) {
+    // Last phase, cancel schedule
+    await stripeCli.subscriptionSchedules.release(schedule.id);
+    await CusProductService.updateByStripeScheduledId({
+      db: req.db,
+      stripeScheduledId: schedule.id,
+      updates: {
+        scheduled_ids: [],
+      },
+    });
+  }
+  // const currentPhase = schedule.phases.find(
+  //   (phase) =>
+  //     phase.start_date <= Math.floor(now / 1000) &&
+  //     phase.end_date > Math.floor(now / 1000)
+  // );
 };

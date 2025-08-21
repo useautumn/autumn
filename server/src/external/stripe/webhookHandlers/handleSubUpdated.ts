@@ -32,6 +32,13 @@ export const handleSubscriptionUpdated = async ({
   previousAttributes: any;
   logger: any;
 }) => {
+  // handle scheduled updated
+  await handleSchedulePhaseCompleted({
+    req,
+    subObject: subscription,
+    prevAttributes: previousAttributes,
+  });
+
   // Get cus products by stripe sub id
   const cusProducts = await CusProductService.getByStripeSubId({
     db,
@@ -41,19 +48,7 @@ export const handleSubscriptionUpdated = async ({
     inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
   });
 
-  // handle scheduled updated
-  await handleSchedulePhaseCompleted({
-    db,
-    org,
-    env,
-    subObject: subscription,
-    prevAttributes: previousAttributes,
-    logger,
-  });
-
-  if (cusProducts.length === 0) {
-    return;
-  }
+  if (cusProducts.length === 0) return;
 
   // Handle syncing status
   let stripeCli = createStripeCli({
@@ -124,7 +119,6 @@ export const handleSubscriptionUpdated = async ({
   }
 
   // Cancel subscription immediately
-
   if (subscription.status === "past_due" && org.config.cancel_on_past_due) {
     const stripeCli = createStripeCli({
       org,
