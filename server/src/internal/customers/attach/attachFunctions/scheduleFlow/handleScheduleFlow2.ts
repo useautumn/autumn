@@ -80,9 +80,6 @@ export const handleScheduleFunction2 = async ({
       billingPeriodEnd: expectedEnd!,
     });
 
-    // console.log("Phases:", newItems.phases);
-    // throw new Error("stop");
-
     // If there's a schedule to add...
     if (true) {
       schedule = await updateCurSchedule({
@@ -99,6 +96,7 @@ export const handleScheduleFunction2 = async ({
         updates: {
           scheduled_ids: [schedule!.id],
           canceled: true,
+          ended_at: expectedEnd * 1000,
         },
       });
     }
@@ -113,6 +111,7 @@ export const handleScheduleFunction2 = async ({
         updates: {
           scheduled_ids: [],
           canceled: true,
+          ended_at: expectedEnd * 1000,
         },
       });
     }
@@ -132,6 +131,7 @@ export const handleScheduleFunction2 = async ({
       updates: {
         canceled: true,
         canceled_at: Date.now(),
+        ended_at: expectedEnd * 1000,
       },
     });
   }

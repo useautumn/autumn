@@ -21,6 +21,7 @@ import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUti
 import { expectSubToBeCorrect } from "../mergeUtils/expectSubCorrect.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
 import { expect } from "chai";
+import { advanceToNextInvoice } from "tests/utils/testAttachUtils/testAttachUtils.js";
 
 // UNCOMMENT FROM HERE
 let free = constructProduct({
@@ -170,5 +171,39 @@ describe(`${chalk.yellowBright("mergedDowngrade2: Testing merged subs, downgrade
         throw error;
       }
     }
+  });
+  // return;
+
+  it("should advance test clock and have correct products for entity 1 & 2", async function () {
+    await advanceToNextInvoice({
+      stripeCli,
+      testClockId,
+    });
+
+    const results = [
+      { entityId: "1", product: free, status: CusProductStatus.Active },
+      { entityId: "2", product: pro, status: CusProductStatus.Active },
+    ];
+
+    for (const result of results) {
+      const entity = await autumn.entities.get(customerId, result.entityId);
+      expectProductAttached({
+        customer: entity,
+        product: result.product,
+        status: result.status,
+      });
+
+      const products = entity.products.filter(
+        (p: any) => p.group == result.product.group
+      );
+      expect(products.length).to.equal(1);
+    }
+
+    await expectSubToBeCorrect({
+      db,
+      customerId,
+      org,
+      env,
+    });
   });
 });

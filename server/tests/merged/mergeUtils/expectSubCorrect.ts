@@ -181,6 +181,12 @@ export const expectSubToBeCorrect = async ({
     // Add to schedules
     const scheduleIndexes: number[] = [];
 
+    if (isFreeProduct(product.prices)) {
+      expect(cusProduct.subscription_ids, "free product should have no subs").to
+        .be.empty;
+      continue;
+    }
+
     if (printCusProduct) {
       console.log(
         `Cus product: ${cusProduct.product.name}, Status: ${cusProduct.status}, Entity ID: ${cusProduct.entity_id}`
@@ -308,18 +314,18 @@ export const expectSubToBeCorrect = async ({
     db,
   });
 
+  if (shouldBeCanceled) {
+    expect(sub.schedule, "sub should NOT have a schedule").to.be.null;
+    expect(sub.cancel_at, "sub should be canceled").to.exist;
+    return;
+  }
+
   const schedule =
     supposedPhases.length > 0
       ? await stripeCli.subscriptionSchedules.retrieve(sub.schedule as string, {
           expand: ["phases.items.price"],
         })
       : null;
-
-  if (shouldBeCanceled) {
-    expect(sub.schedule, "sub should NOT have a schedule").to.be.null;
-    expect(sub.cancel_at, "sub should be canceled").to.exist;
-    return;
-  }
 
   // console.log("--------------------------------");
   // console.log("Supposed phases:");

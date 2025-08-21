@@ -56,11 +56,6 @@ const ops = [
     product: premium,
     results: [{ product: premium, status: CusProductStatus.Active }],
   },
-  // {
-  //   entityId: "1",
-  //   product: premium,
-  //   results: [{ product: premium, status: CusProductStatus.Active }],
-  // },
   {
     entityId: "2",
     product: pro,
@@ -170,10 +165,34 @@ describe(`${chalk.yellowBright("mergedDowngrade4: Testing advance clock, schedul
     }
   });
 
-  it("should advance test clock and have correct schedule", async function () {
+  it("should advance test clock and have correct premium downgraded for entity 2", async function () {
     await advanceToNextInvoice({
       stripeCli,
       testClockId,
     });
+
+    // 1. Check that only
+    const results = [
+      {
+        entityId: "1",
+        product: premiumAnnual,
+        status: CusProductStatus.Active,
+      },
+      { entityId: "2", product: premium, status: CusProductStatus.Active },
+    ];
+
+    for (const result of results) {
+      const entity = await autumn.entities.get(customerId, result.entityId);
+      expectProductAttached({
+        customer: entity,
+        product: result.product,
+        status: result.status,
+      });
+
+      const products = entity.products.filter(
+        (p: any) => p.group == result.product.group
+      );
+      expect(products.length).to.equal(1);
+    }
   });
 });

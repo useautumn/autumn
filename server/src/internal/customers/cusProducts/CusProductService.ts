@@ -454,10 +454,12 @@ export class CusProductService {
     db,
     stripeSubId,
     updates,
+    inStatuses = RELEVANT_STATUSES,
   }: {
     db: DrizzleCli;
     stripeSubId: string;
     updates: Partial<CusProduct>;
+    inStatuses?: string[];
   }) {
     let updated = await db
       .update(customerProducts)
@@ -465,11 +467,7 @@ export class CusProductService {
       .where(
         and(
           arrayContains(customerProducts.subscription_ids, [stripeSubId]),
-          or(
-            eq(customerProducts.status, CusProductStatus.Active),
-            eq(customerProducts.status, CusProductStatus.PastDue),
-            eq(customerProducts.status, CusProductStatus.Scheduled)
-          )
+          inStatuses ? inArray(customerProducts.status, inStatuses) : undefined
         )
       )
       .returning({
