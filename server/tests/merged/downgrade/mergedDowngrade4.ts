@@ -21,13 +21,16 @@ import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUti
 import { expectSubToBeCorrect } from "../mergeUtils/expectSubCorrect.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
 import { expect } from "chai";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import { addMonths } from "date-fns";
+import { advanceToNextInvoice } from "tests/utils/testAttachUtils/testAttachUtils.js";
 
 // UNCOMMENT FROM HERE
-let free = constructProduct({
-  id: "free",
-  items: [constructFeatureItem({ featureId: TestFeature.Words })],
-  type: "free",
-  isDefault: false,
+let premiumAnnual = constructProduct({
+  id: "premiumAnnual",
+  items: [constructArrearItem({ featureId: TestFeature.Words })],
+  type: "premium",
+  isAnnual: true,
 });
 
 let premium = constructProduct({
@@ -45,23 +48,19 @@ let pro = constructProduct({
 const ops = [
   {
     entityId: "1",
-    product: premium,
-    results: [{ product: premium, status: CusProductStatus.Active }],
-  },
-  {
-    entityId: "1",
-    product: free,
-    results: [
-      { product: premium, status: CusProductStatus.Active },
-      { product: free, status: CusProductStatus.Scheduled },
-    ],
-    shouldBeCanceled: true,
+    product: premiumAnnual,
+    results: [{ product: premiumAnnual, status: CusProductStatus.Active }],
   },
   {
     entityId: "2",
     product: premium,
     results: [{ product: premium, status: CusProductStatus.Active }],
   },
+  // {
+  //   entityId: "1",
+  //   product: premium,
+  //   results: [{ product: premium, status: CusProductStatus.Active }],
+  // },
   {
     entityId: "2",
     product: pro,
@@ -72,8 +71,8 @@ const ops = [
   },
 ];
 
-const testCase = "mergedDowngrade2";
-describe(`${chalk.yellowBright("mergedDowngrade2: Testing merged subs, downgrade free 1, add premium 2")}`, () => {
+const testCase = "mergedDowngrade4";
+describe(`${chalk.yellowBright("mergedDowngrade4: Testing advance clock, schedule activates")}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
 
@@ -94,13 +93,13 @@ describe(`${chalk.yellowBright("mergedDowngrade2: Testing merged subs, downgrade
     stripeCli = this.stripeCli;
 
     addPrefixToProducts({
-      products: [pro, premium, free],
+      products: [pro, premium, premiumAnnual],
       prefix: testCase,
     });
 
     await createProducts({
       autumn: autumnJs,
-      products: [pro, premium, free],
+      products: [pro, premium, premiumAnnual],
       db,
       orgId: org.id,
       env,
@@ -161,7 +160,6 @@ describe(`${chalk.yellowBright("mergedDowngrade2: Testing merged subs, downgrade
           customerId,
           org,
           env,
-          shouldBeCanceled: op.shouldBeCanceled,
         });
       } catch (error) {
         console.log(
@@ -170,5 +168,12 @@ describe(`${chalk.yellowBright("mergedDowngrade2: Testing merged subs, downgrade
         throw error;
       }
     }
+  });
+
+  it("should advance test clock and have correct schedule", async function () {
+    await advanceToNextInvoice({
+      stripeCli,
+      testClockId,
+    });
   });
 });

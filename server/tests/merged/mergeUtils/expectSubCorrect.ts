@@ -41,11 +41,13 @@ const compareActualItems = async ({
   type,
   fullCus,
   db,
+  phaseStartsAt,
 }: {
   actualItems: any[];
   expectedItems: any[];
   type: "sub" | "schedule";
   fullCus: FullCustomer;
+  phaseStartsAt?: number;
   db: DrizzleCli;
 }) => {
   for (const expectedItem of expectedItems) {
@@ -60,9 +62,9 @@ const compareActualItems = async ({
         stripePriceId: expectedItem.price,
       });
       console.log(`(${type}) Missing item:`, expectedItem);
-      if (price) {
-        console.log(`Autumn price:`, `${price.id} - ${formatPrice({ price })}`);
-      }
+      // if (price) {
+      //   console.log(`Autumn price:`, `${price.id} - ${formatPrice({ price })}`);
+      // }
 
       // Actual items
       console.log(`(${type}) Actual items (${actualItems.length}):`);
@@ -70,10 +72,55 @@ const compareActualItems = async ({
         db,
         items: actualItems,
       });
+
+      console.log(`(${type}) Expected items (${expectedItems.length}):`);
+      await logPhaseItems({
+        db,
+        items: expectedItems,
+      });
     }
 
     expect(actualItem).to.exist;
-    expect(actualItem?.quantity).to.equal((expectedItem as any).quantity);
+
+    if (actualItem?.quantity !== (expectedItem as any).quantity) {
+      if (phaseStartsAt) {
+        console.log(`Phase starts at: ${formatUnixToDateTime(phaseStartsAt)}`);
+      }
+
+      console.log("Actual items:");
+      await logPhaseItems({
+        db,
+        items: actualItems,
+      });
+
+      console.log("Expected items:");
+      await logPhaseItems({
+        db,
+        items: expectedItems,
+      });
+
+      console.log(
+        `Item quantity mismatch: ${actualItem?.quantity} !== ${expectedItem.quantity}`
+      );
+
+      const price = await PriceService.getByStripeId({
+        db,
+        stripePriceId: expectedItem.price,
+      });
+      if (price) {
+        console.log(
+          `Autumn price:`,
+          `${price?.product.name} - ${formatPrice({ price })}`
+        );
+      }
+
+      console.log("--------------------------------");
+    }
+
+    expect(actualItem?.quantity).to.equal(
+      (expectedItem as any).quantity,
+      `actual items quantity should be equals to ${expectedItem.quantity}`
+    );
   }
 
   expect(actualItems.length).to.equal(expectedItems.length);
@@ -84,11 +131,13 @@ export const expectSubToBeCorrect = async ({
   customerId,
   org,
   env,
+  shouldBeCanceled = false,
 }: {
   db: DrizzleCli;
   customerId: string;
   org: Organization;
   env: AppEnv;
+  shouldBeCanceled?: boolean;
 }) => {
   const stripeCli = createStripeCli({ org, env });
   const fullCus = await CusService.getFull({
@@ -118,6 +167,12 @@ export const expectSubToBeCorrect = async ({
     };
   });
 
+  // console.log(`\n\nChecking sub correct`);
+  let printCusProduct = false;
+  if (printCusProduct) {
+    console.log(`\n\nChecking sub correct`);
+  }
+
   for (const cusProduct of cusProducts) {
     const prices = cusProductToPrices({ cusProduct });
     const ents = cusProductToEnts({ cusProduct });
@@ -125,19 +180,26 @@ export const expectSubToBeCorrect = async ({
 
     // Add to schedules
     const scheduleIndexes: number[] = [];
-    scheduleUnixes.forEach((unix, index) => {
-      // 1. Schedule
-      console.log(`Unix: `, formatUnixToDateTime(unix));
+
+    if (printCusProduct) {
       console.log(
-        `Cus product: ${cusProduct.product.name}, Status: ${cusProduct.status}`
+        `Cus product: ${cusProduct.product.name}, Status: ${cusProduct.status}, Entity ID: ${cusProduct.entity_id}`
       );
       console.log(`Starts at: ${formatUnixToDateTime(cusProduct.starts_at)}`);
+    }
 
+    scheduleUnixes.forEach((unix, index) => {
       if (
         cusProduct.status === CusProductStatus.Scheduled &&
         cusProductInPhase({ phaseStartMillis: unix, cusProduct })
-      )
+      ) {
+        // console.log(`CUS PRODUCT IN PHASE`);
+        // console.log(`Unix: ${formatUnixToDateTime(unix)}`);
+        // console.log(`Starts at: ${formatUnixToDateTime(cusProduct.starts_at)}`);
         return scheduleIndexes.push(index);
+      }
+
+      if (cusProduct.status === CusProductStatus.Scheduled) return;
 
       // 2. If main product, check that schedule is AFTER this phase
       const curScheduledProduct = cusProducts.find(
@@ -157,12 +219,15 @@ export const expectSubToBeCorrect = async ({
           phaseStartMillis: unix,
           cusProduct: curScheduledProduct,
         })
-      )
+      ) {
         scheduleIndexes.push(index);
+      }
     });
 
-    console.log(`Scheduled indexes:`, scheduleIndexes);
-    console.log("--------------------------------");
+    if (printCusProduct) {
+      console.log(`Schedule indexes:`, scheduleIndexes);
+      console.log("--------------------------------");
+    }
 
     // const hasScheduledProduct =
     cusProduct.status !== CusProductStatus.Scheduled &&
@@ -243,16 +308,6 @@ export const expectSubToBeCorrect = async ({
     db,
   });
 
-  // // Check schedule
-  // const scheduleShouldExist = cusProducts.some((cusProduct) => {
-  //   const product = cusProductToProduct({ cusProduct });
-  //   return (
-  //     cusProduct.status === CusProductStatus.Scheduled &&
-  //     !isOneOff(product.prices) &&
-  //     !isFreeProduct(product.prices)
-  //   );
-  // });
-
   const schedule =
     supposedPhases.length > 0
       ? await stripeCli.subscriptionSchedules.retrieve(sub.schedule as string, {
@@ -260,10 +315,33 @@ export const expectSubToBeCorrect = async ({
         })
       : null;
 
-  // await logPhaseItems({
-  //   db,
-  //   items: supposedPhases[0].items,
-  // });
+  if (shouldBeCanceled) {
+    expect(sub.schedule, "sub should NOT have a schedule").to.be.null;
+    expect(sub.cancel_at, "sub should be canceled").to.exist;
+    return;
+  }
+
+  // console.log("--------------------------------");
+  // console.log("Supposed phases:");
+  // for (const phase of supposedPhases) {
+  //   console.log(`Phase ${formatUnixToDateTime(phase.start_date)}:`);
+  //   await logPhaseItems({
+  //     db,
+  //     items: phase.items,
+  //   });
+  // }
+  // console.log("--------------------------------");
+  // console.log("Actual phases:");
+  // for (const phase of schedule?.phases || []) {
+  //   console.log(`Phase ${formatUnixToDateTime(phase.start_date * 1000)}:`);
+  //   await logPhaseItems({
+  //     db,
+  //     items: phase.items.map((item) => ({
+  //       price: (item.price as Stripe.Price).id,
+  //       quantity: item.quantity,
+  //     })),
+  //   });
+  // }
 
   for (let i = 0; i < supposedPhases.length; i++) {
     const supposedPhase = supposedPhases[i];
@@ -289,32 +367,13 @@ export const expectSubToBeCorrect = async ({
       type: "schedule",
       fullCus,
       db,
+      phaseStartsAt: supposedPhase.start_date,
     });
-    // const scheduleIndex = scheduleUnixes.findIndex((unix) => unix === supposedPhases[i].start_date);
-    // if (scheduleIndex !== -1) {
-    //   supposedPhases[i].schedule_index = scheduleIndex;
-    // }
-    // const scheduleIndex = scheduleUnixes.findIndex((unix) => unix === phase.start_date);
-    // if (scheduleIndex !== -1) {
-    //   phase.schedule_index = scheduleIndex;
-    // }
   }
 
-  // if (!scheduleShouldExist) {
-  //   expect(sub.schedule).to.be.null;
-  //   return;
+  expect(sub.cancel_at, "sub should not be canceled").to.be.null;
+  // if (shouldBeCanceled) {
+  //   expect(sub.cancel_at, "sub should be canceled").to.exist;
+  // } else {
   // }
-
-  // expect(sub.schedule).to.exist;
-
-  // const scheduleItems = schedule.phases?.[1]?.items.map((item) => ({
-  //   price: (item.price as Stripe.Price)?.id,
-  //   quantity: item.quantity,
-  // }));
-  // expect(scheduleItems).to.exist;
-  // compareActualItems({
-  //   actualItems: scheduleItems,
-  //   expectedItems: supposedScheduleItems,
-  //   type: "schedule",
-  // });
 };

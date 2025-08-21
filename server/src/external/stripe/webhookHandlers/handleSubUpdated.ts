@@ -13,6 +13,7 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { handleSubCanceled } from "./handleSubUpdated/handleSubCanceled.js";
 import { handleSubRenewed } from "./handleSubUpdated/handleSubRenewed.js";
+import { handleSchedulePhaseCompleted } from "./handleSubUpdated/handleSchedulePhaseCompleted.js";
 
 export const handleSubscriptionUpdated = async ({
   req,
@@ -38,6 +39,16 @@ export const handleSubscriptionUpdated = async ({
     orgId: org.id,
     env,
     inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+  });
+
+  // handle scheduled updated
+  await handleSchedulePhaseCompleted({
+    db,
+    org,
+    env,
+    subObject: subscription,
+    prevAttributes: previousAttributes,
+    logger,
   });
 
   if (cusProducts.length === 0) {
@@ -69,7 +80,11 @@ export const handleSubscriptionUpdated = async ({
         ? subscription.canceled_at * 1000
         : null,
       collection_method: fullSub.collection_method as CollectionMethod,
-      trial_ends_at: (previousAttributes.status === "trialing" && subscription.status === "active") ? null : undefined,
+      trial_ends_at:
+        previousAttributes.status === "trialing" &&
+        subscription.status === "active"
+          ? null
+          : undefined,
     },
   });
 

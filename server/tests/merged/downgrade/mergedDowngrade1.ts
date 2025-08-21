@@ -17,6 +17,7 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
 import { expect } from "chai";
 import { expectSubToBeCorrect } from "../mergeUtils/expectSubCorrect.js";
+import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
 
 // UNCOMMENT FROM HERE
 let premium = constructProduct({
@@ -25,18 +26,49 @@ let premium = constructProduct({
   type: "premium",
 });
 
-// let proAnnual = constructProduct({
-//   id: "premiumAnnual",
-//   items: [constructArrearItem({ featureId: TestFeature.Words })],
-//   type: "premium",
-//   isAnnual: true,
-// });
-
 let pro = constructProduct({
   id: "pro",
   items: [constructArrearItem({ featureId: TestFeature.Words })],
   type: "pro",
 });
+
+const init = [
+  { entityId: "1", product: premium }, // upgrade to premium
+  { entityId: "2", product: premium }, // upgrade to premium
+];
+
+const ops1 = [
+  {
+    entityId: "1",
+    product: pro,
+    results: [
+      { product: premium, status: CusProductStatus.Active },
+      { product: pro, status: CusProductStatus.Scheduled },
+    ],
+  },
+  {
+    entityId: "2",
+    product: pro,
+    results: [
+      { product: premium, status: CusProductStatus.Active },
+      { product: pro, status: CusProductStatus.Scheduled },
+    ],
+  },
+];
+
+// Renew
+const ops2 = [
+  {
+    entityId: "1",
+    product: premium,
+    results: [{ product: premium, status: CusProductStatus.Active }],
+  },
+  {
+    entityId: "2",
+    product: premium,
+    results: [{ product: premium, status: CusProductStatus.Active }],
+  },
+];
 
 describe(`${chalk.yellowBright("mergedDowngrade1: Testing merged subs, downgrade 2 pros")}`, () => {
   let customerId = "mergedDowngrade1";
@@ -84,7 +116,6 @@ describe(`${chalk.yellowBright("mergedDowngrade1: Testing merged subs, downgrade
     testClockId = testClockId1!;
   });
 
-  const entityIds = ["1", "2"];
   const entities = [
     {
       id: "1",
@@ -98,92 +129,73 @@ describe(`${chalk.yellowBright("mergedDowngrade1: Testing merged subs, downgrade
     },
   ];
 
-  it("should attach pro product", async function () {
+  it("should attach pro product to both entities", async function () {
     await autumn.entities.create(customerId, entities);
 
-    await autumn.attach({
-      customer_id: customerId,
-      product_id: premium.id,
-      entity_id: entityIds[0],
-    });
-
-    await autumn.attach({
-      customer_id: customerId,
-      product_id: premium.id,
-      entity_id: entityIds[1],
-    });
-
-    await autumn.attach({
-      customer_id: customerId,
-      product_id: pro.id,
-      entity_id: entityIds[0],
-    });
-    await autumn.attach({
-      customer_id: customerId,
-      product_id: pro.id,
-      entity_id: entityIds[1],
-    });
-
-    for (let i = 0; i < entityIds.length; i++) {
-      const entityId = entityIds[i];
-      const entity = await autumn.entities.get(customerId, entityId);
-      const proProd = entity.products.find((p: any) => p.id == pro.id);
-      expect(proProd).to.exist;
-      expect(proProd.status).to.equal(CusProductStatus.Scheduled);
+    for (const op of init) {
+      await autumn.attach({
+        customer_id: customerId,
+        product_id: op.product.id,
+        entity_id: op.entityId,
+      });
     }
-
-    await expectSubToBeCorrect({
-      db,
-      customerId,
-      org,
-      env,
-    });
   });
 
-  // it("should track usage and have correct invoice end of month", async function () {
-  //   const value1 = 110000;
-  //   const value2 = 310000;
-  //   const values = [value1, value2];
-  //   await autumn.track({
-  //     customer_id: customerId,
-  //     feature_id: TestFeature.Words,
-  //     value: value1,
-  //     entity_id: "1",
-  //   });
+  it("should downgrade both entities to pro and have correct sub + schedule", async function () {
+    for (const op of ops1) {
+      await autumn.attach({
+        customer_id: customerId,
+        product_id: pro.id,
+        entity_id: op.entityId,
+      });
 
-  //   await autumn.track({
-  //     customer_id: customerId,
-  //     feature_id: TestFeature.Words,
-  //     value: value2,
-  //     entity_id: "2",
-  //   });
+      const entity = await autumn.entities.get(customerId, op.entityId);
+      for (const result of op.results) {
+        expectProductAttached({
+          customer: entity,
+          product: result.product,
+          entityId: op.entityId,
+        });
+      }
+      expect(
+        entity.products.filter((p: any) => p.group == premium.group).length
+      ).to.equal(op.results.length);
 
-  //   await timeout(3000);
+      await expectSubToBeCorrect({
+        db,
+        customerId,
+        org,
+        env,
+      });
+    }
+  });
 
-  //   await advanceToNextInvoice({
-  //     stripeCli,
-  //     testClockId,
-  //   });
+  it("should renew both entities and have correct sub + schedule", async function () {
+    for (const op of ops2) {
+      await autumn.attach({
+        customer_id: customerId,
+        product_id: op.product.id,
+        entity_id: op.entityId,
+      });
 
-  //   let total = 0;
-  //   for (let i = 0; i < entities.length; i++) {
-  //     const expectedTotal = await getExpectedInvoiceTotal({
-  //       customerId,
-  //       productId: pro.id,
-  //       usage: [{ featureId: TestFeature.Words, value: values[i] }],
-  //       onlyIncludeUsage: true,
-  //       stripeCli,
-  //       db,
-  //       org,
-  //       env,
-  //     });
-  //     total += expectedTotal;
-  //   }
+      const entity = await autumn.entities.get(customerId, op.entityId);
+      for (const result of op.results) {
+        expectProductAttached({
+          customer: entity,
+          product: result.product,
+          entityId: op.entityId,
+        });
+      }
+      expect(
+        entity.products.filter((p: any) => p.group == premium.group).length
+      ).to.equal(op.results.length);
 
-  //   const basePrice = getBasePrice({ product: pro });
-
-  //   const customer = await autumn.customers.get(customerId);
-  //   const invoice = customer.invoices;
-  //   expect(invoice[0].total).to.equal(basePrice * 2 + total);
-  // });
+      await expectSubToBeCorrect({
+        db,
+        customerId,
+        org,
+        env,
+      });
+    }
+  });
 });

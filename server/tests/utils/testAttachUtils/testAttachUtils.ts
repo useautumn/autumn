@@ -106,7 +106,7 @@ export const advanceToNextInvoice = async ({
   stripeCli: Stripe;
   testClockId: string;
 }) => {
-  await advanceTestClock({
+  return await advanceTestClock({
     stripeCli,
     testClockId,
     advanceTo: addHours(
