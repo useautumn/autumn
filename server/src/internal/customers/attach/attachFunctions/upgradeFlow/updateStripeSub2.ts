@@ -34,9 +34,6 @@ export const updateStripeSub2 = async ({
   const { stripeCli, customer, org, paymentMethod } = attachParams;
   const { invoiceOnly, proration } = config;
 
-  // const { subItems, addInvoiceItems } = await getSubAndInvoiceItems({
-  //   itemSet,
-  // });
   if (curSub.billing_mode.type !== "flexible") {
     curSub = await stripeCli.subscriptions.migrate(curSub.id, {
       billing_mode: { type: "flexible" },

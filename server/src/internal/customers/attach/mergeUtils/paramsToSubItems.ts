@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
-import { AttachConfig, FullCusProduct } from "@autumn/shared";
+import { AttachConfig, CusProductStatus, FullCusProduct } from "@autumn/shared";
 import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { cusProductToPrices } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
@@ -12,6 +12,7 @@ import {
 } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { mergeNewSubItems } from "./mergeNewSubItems.js";
 import { formatPrice } from "@/internal/products/prices/priceUtils.js";
+import { logPhaseItems } from "./phaseUtils/phaseUtils.js";
 
 export const getCusProductsToRemove = ({
   attachParams,
@@ -90,11 +91,23 @@ export const paramsToSubItems = async ({
     curSubItems,
   });
 
+  // console.log("New sub items:");
+  // await logPhaseItems({
+  //   db: req.db,
+  //   items: newSubItems as any,
+  // });
+  // console.log("--------------------------------");
+
   const allCusProducts = attachParams.customer.customer_products;
 
   // 3. Remove items related to cus products to remove
+  const printRemoveLogs = true;
   for (const cusProduct of cusProductsToRemove) {
     const prices = cusProductToPrices({ cusProduct });
+
+    if (printRemoveLogs) {
+      console.log("Removing cus product:", cusProduct.product.name);
+    }
 
     for (const price of prices) {
       const existingSubItem = findStripeItemForPrice({
@@ -103,6 +116,20 @@ export const paramsToSubItems = async ({
         stripeProdId: cusProduct.product.processor?.id,
       });
 
+      if (printRemoveLogs) {
+        console.log("Price:", formatPrice({ price }));
+        console.log(
+          "Existing sub item:",
+          existingSubItem
+            ? {
+                id: existingSubItem?.id,
+                price: existingSubItem?.price?.id,
+                quantity: existingSubItem?.quantity,
+              }
+            : "N/A"
+        );
+      }
+
       if (!existingSubItem) continue;
 
       // 1. If arrear price
@@ -110,6 +137,8 @@ export const paramsToSubItems = async ({
         if (
           allCusProducts.some((cp) => {
             if (cp.id === cusProduct.id) return false;
+
+            if (cp.status == CusProductStatus.Scheduled) return false;
 
             return subItemInCusProduct({
               cusProduct: cp,
@@ -155,34 +184,21 @@ export const paramsToSubItems = async ({
       if (existingItemIndex !== -1) {
         const currentQuantity = newSubItems[existingItemIndex].quantity || 0;
         const newQuantity = currentQuantity - quantityToRemove;
+
         updateItemQuantity(newSubItems[existingItemIndex], newQuantity);
       } else {
         const currentQuantity = existingSubItem.quantity || 0;
         const newQuantity = currentQuantity - quantityToRemove;
+
         newSubItems.push({
           id: existingSubItem.id,
           quantity: newQuantity,
         });
+
         updateItemQuantity(newSubItems[newSubItems.length - 1], newQuantity);
       }
     }
   }
-
-  // if (onlyPriceItems) {
-  //   newSubItems = newSubItems.map((si) => {
-  //     if (si.id) {
-  //       const { id, ...rest } = si;
-  //       const existingSubItem = curSubItems.find((csi) => csi.id === si.id);
-  //       if (existingSubItem) {
-  //         return {
-  //           price: existingSubItem.price?.id,
-  //           ...rest,
-  //         };
-  //       }
-  //     }
-  //     return si;
-  //   });
-  // }
 
   return {
     subItems: newSubItems,

@@ -148,24 +148,6 @@ export const handleUpdateFeatureQuantity = async ({
     stripeItems: subToUpdate.items.data,
   }) as Stripe.SubscriptionItem;
 
-  // const config = price.config as UsagePriceConfig;
-  // let difference = new Decimal(newOptions.quantity)
-  //   .minus(new Decimal(oldOptions.quantity))
-  //   .mul(config.billing_units || 1);
-
-  // let cusEnt = getRelatedCusEnt({
-  //   cusPrice,
-  //   cusEnts: cusProduct.customer_entitlements,
-  // });
-
-  // if (cusEnt) {
-  //   await CusEntService.increment({
-  //     db,
-  //     id: cusEnt.id,
-  //     amount: difference.toNumber(),
-  //   });
-  // }
-
   if (newOptions.quantity < oldOptions.quantity) {
     return await handleQuantityDowngrade({
       req,

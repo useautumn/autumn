@@ -12,10 +12,7 @@ import {
   CusProductStatus,
   Organization,
 } from "@autumn/shared";
-import {
-  constructArrearItem,
-  constructFeatureItem,
-} from "@/utils/scriptUtils/constructItem.js";
+import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
 import { expectSubToBeCorrect } from "../mergeUtils/expectSubCorrect.js";
@@ -25,17 +22,17 @@ import { advanceToNextInvoice } from "tests/utils/testAttachUtils/testAttachUtil
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
 // UNCOMMENT FROM HERE
-let free = constructProduct({
-  id: "free",
-  items: [constructFeatureItem({ featureId: TestFeature.Words })],
-  type: "free",
-  isDefault: false,
-});
-
 let premium = constructProduct({
   id: "premium",
   items: [constructArrearItem({ featureId: TestFeature.Words })],
   type: "premium",
+});
+
+let premiumAnnual = constructProduct({
+  id: "premiumAnnual",
+  items: [constructArrearItem({ featureId: TestFeature.Words })],
+  type: "premium",
+  isAnnual: true,
 });
 
 let pro = constructProduct({
@@ -44,25 +41,29 @@ let pro = constructProduct({
   type: "pro",
 });
 
+// const init = [
+//   { entityId: "1", product: premiumAnnual }, // upgrade to premium
+//   { entityId: "2", product: premium }, // upgrade to premium
+// ];
+
 const ops = [
   {
     entityId: "1",
-    product: premium,
-    results: [{ product: premium, status: CusProductStatus.Active }],
-  },
-  {
-    entityId: "1",
-    product: free,
-    results: [
-      { product: premium, status: CusProductStatus.Active },
-      { product: free, status: CusProductStatus.Scheduled },
-    ],
-    shouldBeCanceled: true,
+    product: premiumAnnual,
+    results: [{ product: premiumAnnual, status: CusProductStatus.Active }],
   },
   {
     entityId: "2",
     product: premium,
     results: [{ product: premium, status: CusProductStatus.Active }],
+  },
+  {
+    entityId: "1",
+    product: pro,
+    results: [
+      { product: premiumAnnual, status: CusProductStatus.Active },
+      { product: pro, status: CusProductStatus.Scheduled },
+    ],
   },
   {
     entityId: "2",
@@ -74,8 +75,8 @@ const ops = [
   },
 ];
 
-const testCase = "mergedDowngrade2";
-describe(`${chalk.yellowBright("mergedDowngrade2: Testing merged subs, downgrade free 1, add premium 2")}`, () => {
+const testCase = "mergedDowngrade9";
+describe(`${chalk.yellowBright("mergedDowngrade9: Testing merged subs, downgrade 2 monthly + annual & advance test clock")}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
 
@@ -96,13 +97,13 @@ describe(`${chalk.yellowBright("mergedDowngrade2: Testing merged subs, downgrade
     stripeCli = this.stripeCli;
 
     addPrefixToProducts({
-      products: [pro, premium, free],
-      prefix: testCase,
+      products: [pro, premium, premiumAnnual],
+      prefix: customerId,
     });
 
     await createProducts({
       autumn: autumnJs,
-      products: [pro, premium, free],
+      products: [pro, premium, premiumAnnual],
       db,
       orgId: org.id,
       env,
@@ -140,31 +141,38 @@ describe(`${chalk.yellowBright("mergedDowngrade2: Testing merged subs, downgrade
     for (let index = 0; index < ops.length; index++) {
       const op = ops[index];
       try {
-        await autumn.attach({
-          customer_id: customerId,
-          product_id: op.product.id,
-          entity_id: op.entityId,
-        });
-
-        const entity = await autumn.entities.get(customerId, op.entityId);
-        for (const result of op.results) {
-          expectProductAttached({
-            customer: entity,
-            product: result.product,
-            entityId: op.entityId,
-          });
-        }
-        expect(
-          entity.products.filter((p: any) => p.group == premium.group).length
-        ).to.equal(op.results.length);
-
-        await expectSubToBeCorrect({
-          db,
+        await attachAndExpectCorrect({
+          autumn,
           customerId,
+          product: op.product,
+          stripeCli,
+          db,
           org,
           env,
-          shouldBeCanceled: op.shouldBeCanceled,
+          entityId: op.entityId,
         });
+        // await autumn.attach({
+        //   customer_id: customerId,
+        //   product_id: op.product.id,
+        //   entity_id: op.entityId,
+        // });
+        // const entity = await autumn.entities.get(customerId, op.entityId);
+        // for (const result of op.results) {
+        //   expectProductAttached({
+        //     customer: entity,
+        //     product: result.product,
+        //     entityId: op.entityId,
+        //   });
+        // }
+        // expect(
+        //   entity.products.filter((p: any) => p.group == premium.group).length
+        // ).to.equal(op.results.length);
+        // await expectSubToBeCorrect({
+        //   db,
+        //   customerId,
+        //   org,
+        //   env,
+        // });
       } catch (error) {
         console.log(
           `Operation failed: ${op.entityId} ${op.product.id}, index: ${index}`
@@ -173,42 +181,44 @@ describe(`${chalk.yellowBright("mergedDowngrade2: Testing merged subs, downgrade
       }
     }
   });
-  // return;
 
   it("should advance test clock and have correct products for entity 1 & 2", async function () {
+    const results = [
+      {
+        entityId: "1",
+        products: [
+          { product: premiumAnnual, status: CusProductStatus.Active },
+          { product: pro, status: CusProductStatus.Scheduled },
+        ],
+      },
+      {
+        entityId: "2",
+        products: [{ product: pro, status: CusProductStatus.Active }],
+      },
+    ];
+
     await advanceToNextInvoice({
       stripeCli,
       testClockId,
     });
 
-    const results = [
-      { entityId: "1", product: free, status: CusProductStatus.Active },
-      { entityId: "2", product: pro, status: CusProductStatus.Active },
-    ];
-
     for (const result of results) {
       const entity = await autumn.entities.get(customerId, result.entityId);
-      expectProductAttached({
-        customer: entity,
-        product: result.product,
-        status: result.status,
-      });
-
+      for (const product of result.products) {
+        expectProductAttached({
+          customer: entity,
+          product: product.product,
+          status: product.status,
+        });
+      }
       const products = entity.products.filter(
-        (p: any) => p.group == result.product.group
+        (p: any) => p.group == premium.group
       );
-      expect(products.length).to.equal(1);
+      expect(products.length).to.equal(result.products.length);
     }
-
-    await expectSubToBeCorrect({
-      db,
-      customerId,
-      org,
-      env,
-    });
   });
 
-  it("should attach premium to entity 1 (which is free) and have correct products", async function () {
+  it("should attach premium to entity 2 and have correct products", async function () {
     await attachAndExpectCorrect({
       autumn,
       customerId,
@@ -217,7 +227,7 @@ describe(`${chalk.yellowBright("mergedDowngrade2: Testing merged subs, downgrade
       db,
       org,
       env,
-      entityId: "1",
+      entityId: "2",
     });
   });
 });

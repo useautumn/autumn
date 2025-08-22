@@ -132,7 +132,6 @@ export const handleCusProductDeleted = async ({
   const activatedFuture = await activateFutureProduct({
     req,
     cusProduct,
-    subscription,
   });
 
   if (activatedFuture) {

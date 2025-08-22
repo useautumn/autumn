@@ -19,16 +19,17 @@ import {
 } from "@/internal/invoices/invoiceUtils.js";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { updateStripeSub2 } from "./updateStripeSub2.js";
-import { removeCurCusProductItems } from "../../attachUtils/attachUtils.js";
-import {
-  getEarliestPeriodEnd,
-  subToPeriodStartEnd,
-} from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
 import { paramsToScheduleItems } from "../../mergeUtils/paramsToScheduleItems.js";
 import { updateCurSchedule } from "../../mergeUtils/updateCurSchedule.js";
+import {
+  getCurrentPhaseIndex,
+  logPhaseItems,
+} from "../../mergeUtils/phaseUtils/phaseUtils.js";
 import { formatUnixToDateTime } from "@/utils/genUtils.js";
-import { logPhaseItems } from "../../mergeUtils/phaseUtils/phaseUtils.js";
+import Stripe from "stripe";
+import { getUsageInvoiceItems } from "../upgradeDiffIntFlow/createUsageInvoiceItems.js";
 
 export const handleUpgradeFlow = async ({
   req,
@@ -71,7 +72,22 @@ export const handleUpgradeFlow = async ({
   if (subItems.length > 0) {
     itemSet.subItems = subItems;
 
-    logger.info(`1. Updating subs with new items`);
+    // const schedule1 = await paramsToCurSubSchedule({ attachParams });
+    // console.log("BEFORE UPDATING SUBSCRIPTION:");
+    // for (const phase of schedule1?.phases || []) {
+    //   console.log(
+    //     `Phase ${formatUnixToDateTime(Number(phase.start_date || 0) * 1000)}:`
+    //   );
+    //   await logPhaseItems({
+    //     db: req.db,
+    //     items: phase.items.map((item) => ({
+    //       price: (item.price as Stripe.Price).id,
+    //       quantity: item.quantity,
+    //     })),
+    //   });
+    // }
+
+    // console.log("--------------------------------");
 
     const res = await updateStripeSub2({
       req,
@@ -83,38 +99,54 @@ export const handleUpgradeFlow = async ({
 
     const schedule = await paramsToCurSubSchedule({ attachParams });
 
-    console.log("UPGRADE FLOW, SCHEDULE:", schedule?.id);
-
     // Add to schedule?
     if (schedule) {
-      const newItems = await paramsToScheduleItems({
-        req,
-        schedule,
-        attachParams,
-        config,
-        removeCusProducts: [curCusProduct!],
-        billingPeriodEnd: schedule?.phases?.[1]?.start_date,
-        // phaseIndex: 1,
-      });
-
-      // console.log("UPGRADE FLOW, NEW PHASES:");
-      // for (const phase of newItems.phases) {
+      const phases = schedule.phases;
+      // console.log(`NOW: ${formatUnixToDateTime(attachParams.now)}`);
+      // console.log("PHASES (AFTER UPDATING SUBSCRIPTION):");
+      // for (const phase of phases) {
       //   console.log(
       //     `Phase ${formatUnixToDateTime(Number(phase.start_date || 0) * 1000)}:`
       //   );
       //   await logPhaseItems({
       //     db: req.db,
-      //     items: phase.items,
+      //     items: phase.items.map((item) => ({
+      //       price: (item.price as Stripe.Price).id,
+      //       quantity: item.quantity,
+      //     })),
       //   });
       // }
 
-      await updateCurSchedule({
-        req,
-        attachParams,
+      // console.log("--------------------------------");
+
+      const currentPhaseIndex = getCurrentPhaseIndex({
         schedule,
-        newPhases: newItems.phases,
-        sub: curSub!,
+        now: attachParams.now,
       });
+
+      // console.log("CURRENT PHASE INDEX:", currentPhaseIndex);
+
+      const nextPhaseIndex = currentPhaseIndex + 1;
+
+      if (nextPhaseIndex < schedule.phases.length) {
+        const newItems = await paramsToScheduleItems({
+          req,
+          schedule,
+          attachParams,
+          config,
+          removeCusProducts: [curCusProduct!],
+          billingPeriodEnd: schedule?.phases?.[nextPhaseIndex]?.start_date,
+          // phaseIndex: 1,
+        });
+
+        await updateCurSchedule({
+          req,
+          attachParams,
+          schedule,
+          newPhases: newItems.phases,
+          sub: curSub!,
+        });
+      }
     }
 
     attachParams.replaceables = res.replaceables || [];

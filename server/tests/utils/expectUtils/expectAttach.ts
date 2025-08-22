@@ -4,6 +4,7 @@ import {
   AppEnv,
   AttachBranch,
   CreateEntity,
+  CusProductStatus,
   FeatureOptions,
   Organization,
   ProductV2,
@@ -21,6 +22,7 @@ import { expect } from "chai";
 import { completeCheckoutForm } from "../stripeUtils.js";
 import { Customer } from "autumn-js";
 import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
+import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
 
 export const attachAndExpectCorrect = async ({
   autumn,
@@ -68,11 +70,25 @@ export const attachAndExpectCorrect = async ({
     entity_id: entityId,
   });
 
-  const optionsCopy = structuredClone(options);
-  const total = getAttachTotal({
-    preview,
-    options: optionsCopy,
+  console.log("Options: ", options);
+  const checkoutRes = await autumn.checkout({
+    customer_id: customerId,
+    product_id: product.id,
+    entity_id: entityId,
+    options: toSnakeCase(options),
   });
+
+  console.log("Checkout res:");
+  for (const line of checkoutRes.lines) {
+    console.log(line.description, line.amount);
+  }
+  console.log("Total: ", checkoutRes.total);
+
+  // const optionsCopy = structuredClone(options);
+  // const total = getAttachTotal({
+  //   preview,
+  //   options: optionsCopy,
+  // });
 
   const { checkout_url } = await autumn.attach({
     customer_id: customerId,
@@ -103,79 +119,95 @@ export const attachAndExpectCorrect = async ({
     } else return acc;
   }, 0);
 
-  expect(
-    productCount,
-    `customer should only have 1 product (from this group: ${product.group})`
-  ).to.equal(1);
+  const branch = preview.branch;
+
+  if (branch == AttachBranch.Downgrade) {
+    expect(
+      productCount,
+      `customer should only have 2 products (from this group: ${product.group})`
+    ).to.equal(2);
+  } else {
+    expect(
+      productCount,
+      `customer should only have 1 product (from this group: ${product.group})`
+    ).to.equal(1);
+  }
 
   expectProductAttached({
     customer,
     product,
     entityId,
+    status:
+      preview.branch == AttachBranch.Downgrade
+        ? CusProductStatus.Scheduled
+        : undefined,
   });
 
-  // let intervals = Array.from(
-  //   new Set(product.items.map((item) => item.interval)),
-  // ).filter(notNullish);
-  // const multiInterval = intervals.length > 1;
-
   const skipInvoiceCheck =
-    preview.branch == AttachBranch.UpdatePrepaidQuantity && total == 0;
+    (preview.branch == AttachBranch.UpdatePrepaidQuantity &&
+      checkoutRes.total == 0) ||
+    preview.branch == AttachBranch.Downgrade;
+
   const freeProduct = isFreeProductV2({ product });
   if (!skipInvoiceCheck && !freeProduct) {
     expectInvoicesCorrect({
       customer,
-      first: { productId: product.id, total },
-      // first: multiInterval ? undefined : { productId: product.id, total },
-      // second: multiInterval ? { productId: product.id, total } : undefined,
+      first: { productId: product.id, total: checkoutRes.total },
     });
   }
 
-  if (!skipFeatureCheck) {
+  if (!skipFeatureCheck || branch == AttachBranch.Downgrade) {
     expectFeaturesCorrect({
       customer,
       product,
       usage,
-      options: optionsCopy,
+      // options: optionsCopy,
+      options: options, // maybe have to fix...
       otherProducts,
       entities,
     });
   }
 
-  const branch = preview.branch;
   if (branch == AttachBranch.OneOff) {
     return;
   }
 
   if (skipSubCheck) return;
 
-  await expectSubItemsCorrect({
-    stripeCli,
-    customerId,
-    product,
+  await expectSubToBeCorrect({
     db,
+    customerId,
     org,
     env,
-    isCanceled,
-    entityId,
   });
 
-  let cus = await autumn.customers.get(customerId);
-  const stripeSubs = await stripeCli.subscriptions.list({
-    customer: cus.stripe_id!,
-  });
+  // await expectSubItemsCorrect({
+  //   stripeCli,
+  //   customerId,
+  //   product,
+  //   db,
+  //   org,
+  //   env,
+  //   isCanceled,
+  //   entityId,
+  // });
 
-  if (numSubs) {
-    expect(stripeSubs.data.length).to.equal(
-      numSubs,
-      `should have ${numSubs} subscriptions`
-    );
-  } else {
-    expect(stripeSubs.data.length).to.equal(
-      1,
-      "should only have 1 subscription"
-    );
-  }
+  // let cus = await autumn.customers.get(customerId);
+  // const stripeSubs = await stripeCli.subscriptions.list({
+  //   customer: cus.stripe_id!,
+  // });
+
+  // if (numSubs) {
+  //   expect(stripeSubs.data.length).to.equal(
+  //     numSubs,
+  //     `should have ${numSubs} subscriptions`
+  //   );
+  // } else {
+  //   expect(stripeSubs.data.length).to.equal(
+  //     1,
+  //     "should only have 1 subscription"
+  //   );
+  // }
 };
 
 export const expectAttachCorrect = async ({

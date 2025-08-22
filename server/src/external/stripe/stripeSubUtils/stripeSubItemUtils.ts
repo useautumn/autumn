@@ -1,10 +1,15 @@
+import { isTrialing } from "@/internal/customers/cusProducts/cusProductUtils.js";
 import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { priceToInvoiceDescription } from "@/internal/invoices/invoiceFormatUtils.js";
+import { getProration } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
+import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { notNullish } from "@/utils/genUtils.js";
 import {
   BillingType,
   FullCusProduct,
+  Organization,
   Price,
   prices,
   PriceType,
@@ -144,6 +149,23 @@ export const findStripePriceFromPrices = ({
   );
 };
 
+export const lineItemInCusProduct = ({
+  cusProduct,
+  lineItem,
+}: {
+  cusProduct: FullCusProduct;
+  lineItem: Stripe.InvoiceLineItem;
+}) => {
+  let stripeProdId = cusProduct.product.processor?.id;
+
+  let prices = cusProductToPrices({ cusProduct });
+  let price = findPriceInStripeItems({ prices, lineItem });
+
+  const priceDetails = lineItem.pricing?.price_details;
+
+  return stripeProdId == priceDetails?.product || notNullish(price);
+};
+
 export const subItemInCusProduct = ({
   cusProduct,
   subItem,
@@ -222,3 +244,5 @@ export const isMeteredItem = ({
 }) => {
   return stripeItem.price?.recurring?.usage_type == "metered";
 };
+
+// Get sub item from product

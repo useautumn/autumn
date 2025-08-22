@@ -45,6 +45,11 @@ export const isArrearPrice = ({ price }: { price?: Price }) => {
   let billingType = getBillingType(price.config);
   return billingType == BillingType.UsageInArrear;
 };
+export const isContUsePrice = ({ price }: { price?: Price }) => {
+  if (!price) return false;
+  let billingType = getBillingType(price.config);
+  return billingType == BillingType.InArrearProrated;
+};
 
 export const isPrepaidPrice = ({ price }: { price: Price }) => {
   let billingType = getBillingType(price.config);

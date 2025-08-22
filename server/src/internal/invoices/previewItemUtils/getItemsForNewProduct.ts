@@ -17,6 +17,7 @@ import {
 } from "@autumn/shared";
 import { AttachParams } from "../../customers/cusProducts/AttachParams.js";
 import {
+  formatPrice,
   getBillingType,
   getPriceForOverage,
   getPriceOptions,
@@ -173,11 +174,18 @@ export const getItemsForNewProduct = async ({
 
   sortPricesByType(newProduct.prices);
 
+  const printLogs = true;
+
   for (const price of newProduct.prices) {
     if (skipOneOff && isOneOffPrice({ price })) continue;
 
     const ent = getPriceEntitlement(price, newProduct.entitlements);
     const billingType = getBillingType(price.config);
+
+    if (printLogs) {
+      console.log("price", formatPrice({ price }));
+      console.log("now:", formatUnixToDate(now));
+    }
 
     const finalProration = getProration({
       proration,
@@ -186,6 +194,15 @@ export const getItemsForNewProduct = async ({
       interval: price.config.interval!,
       intervalCount: price.config.interval_count || 1,
     });
+
+    if (printLogs) {
+      console.log(
+        "finalProration",
+        finalProration
+          ? `${formatUnixToDate(finalProration.start)} to ${formatUnixToDate(finalProration.end)}`
+          : "undefined"
+      );
+    }
 
     if (isFixedPrice({ price })) {
       let amount = finalProration
