@@ -1,6 +1,5 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-import { getResetBalance } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService.js";
 import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils.js";
 import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils.js";
@@ -15,13 +14,9 @@ import {
   FullCusProduct,
   FullCustomerPrice,
   UsagePriceConfig,
-  RolloverConfig,
 } from "@autumn/shared";
 import Stripe from "stripe";
-import {
-  getEarliestPeriodEnd,
-  subToPeriodStartEnd,
-} from "../../stripeSubUtils/convertSubUtils.js";
+import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";
 
 export const handlePrepaidPrices = async ({
   db,
@@ -84,25 +79,19 @@ export const handlePrepaidPrices = async ({
     allowance: newAllowance,
   });
 
-  const ent = cusEnt.entitlement;
+  // console.log("--------------------------------");
+  // console.log(`Entity ID: ${cusProduct.entity_id}`);
+  // console.log(`Upcoming quantity: ${options?.upcoming_quantity}`);
+  // console.log(`Quantity: ${options?.quantity}`);
+  // console.log(`New allowance: ${newAllowance}`);
+  // console.log(`RESET UPDATE: ${JSON.stringify(resetUpdate)}`);
 
-  // const end = getEarliestPeriodEnd({ sub: usageSub });
+  const ent = cusEnt.entitlement;
 
   let rolloverUpdate = getRolloverUpdates({
     cusEnt,
     nextResetAt: end * 1000,
   });
-  // console.log("🔍 rolloverUpdate", rolloverUpdate);
-
-  // console.log(
-  //   "Rollover update received in handlePrepaidPrices:",
-  //   rolloverUpdate.toInsert.map((rollover) => ({
-  //     id: rollover.id,
-  //     balance: rollover.balance,
-  //     entities: rollover.entities.map((entity) => `${entity.id}: ${entity.balance}`).join(", "),
-  //     expires_at: rollover.expires_at ? new Date(rollover.expires_at).toISOString() : null,
-  //   }))
-  // );
 
   if (notNullish(options?.upcoming_quantity)) {
     const newOptions = cusProduct.options.map((o) => {
@@ -139,28 +128,13 @@ export const handlePrepaidPrices = async ({
     return;
   }
 
-  // logger.info(
-  //   `🔥 Resetting balance for ${ent.feature.id}, customer: ${customer.id} (name: ${customer.name})`
-  // );
-
   if (rolloverUpdate?.toInsert && rolloverUpdate.toInsert.length > 0) {
     await RolloverService.insert({
       db,
       rows: rolloverUpdate.toInsert,
       fullCusEnt: cusEnt,
-      // rolloverConfig: ent.rollover as RolloverConfig,
-      // cusEntID: cusEnt.id,
-      // entityMode: notNullish(ent.entity_feature_id),
     });
   }
-
-  // console.log(
-  //   "Rollover rows",
-  //   Object.values(rolloverRows).map(
-  //     (x) =>
-  //       `${x.id}: ${x.balance} | entities: ${x.entities.map((y: any) => `${y.id}: ${y.balance}`).join(", ")}`
-  //   )
-  // );
 
   await CusEntService.update({
     db,

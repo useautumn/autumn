@@ -69,6 +69,8 @@ export const getItemsForCurProduct = async ({
     items.push(previewLineItem);
   }
 
+  // console.log("items: ", items);
+
   let { oldItems } = await getContUseInvoiceItems({
     sub,
     attachParams,

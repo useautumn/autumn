@@ -7,95 +7,13 @@ import {
   Feature,
   FeatureOptions,
   FullCusProduct,
-  OnDecrease,
-  OnIncrease,
-  UsagePriceConfig,
 } from "@autumn/shared";
 
 import { Stripe } from "stripe";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { featureToCusPrice } from "@/internal/customers/cusProducts/cusPrices/convertCusPriceUtils.js";
-import { shouldProrate } from "@/internal/products/prices/priceUtils/prorationConfigUtils.js";
 import { handleQuantityUpgrade } from "./handleQuantityUpgrade.js";
-import { Decimal } from "decimal.js";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-import { getRelatedCusEnt } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
-
-const onDecreaseToStripeProration: Record<OnDecrease, string> = {
-  [OnDecrease.ProrateImmediately]: "always_invoice",
-  [OnDecrease.ProrateNextCycle]: "create_prorations",
-  [OnDecrease.Prorate]: "create_prorations",
-  [OnDecrease.None]: "none",
-  [OnDecrease.NoProrations]: "none",
-};
-
-const handleQuantityDowngrade = async ({
-  req,
-  attachParams,
-  cusProduct,
-  stripeSubs,
-  oldOptions,
-  newOptions,
-  subItem,
-}: {
-  req: any;
-  attachParams: AttachParams;
-  cusProduct: FullCusProduct;
-  stripeSubs: Stripe.Subscription[];
-  oldOptions: FeatureOptions;
-  newOptions: FeatureOptions;
-  subItem: Stripe.SubscriptionItem;
-}) => {
-  const { db, logger } = req;
-  const { stripeCli } = attachParams;
-
-  const cusPrice = featureToCusPrice({
-    internalFeatureId: newOptions.internal_feature_id!,
-    cusPrices: cusProduct.customer_prices,
-  })!;
-
-  const onDecrease =
-    cusPrice.price.proration_config?.on_decrease ||
-    OnDecrease.ProrateImmediately;
-
-  const stripeProration = onDecreaseToStripeProration[
-    onDecrease
-  ] as Stripe.SubscriptionItemUpdateParams.ProrationBehavior;
-
-  logger.info(
-    `Handling quantity downgrade for ${newOptions.feature_id}, on decrease: ${onDecrease}, proration: ${stripeProration}`
-  );
-
-  await stripeCli.subscriptionItems.update(subItem.id, {
-    quantity: newOptions.quantity,
-    proration_behavior: stripeProration,
-  });
-
-  if (!shouldProrate(onDecrease)) {
-    newOptions.upcoming_quantity = newOptions.quantity;
-    newOptions.quantity = oldOptions.quantity;
-  } else {
-    const cusEnt = getRelatedCusEnt({
-      cusPrice,
-      cusEnts: cusProduct.customer_entitlements,
-    });
-
-    if (cusEnt) {
-      const config = cusPrice.price.config as UsagePriceConfig;
-      const billingUnits = config.billing_units || 1;
-      let decrementBy = new Decimal(oldOptions.quantity)
-        .minus(new Decimal(newOptions.quantity))
-        .mul(billingUnits)
-        .toNumber();
-
-      await CusEntService.decrement({
-        db,
-        id: cusEnt.id,
-        amount: decrementBy,
-      });
-    }
-  }
-};
+import { handleQuantityDowngrade } from "./handleQuantityDowngrade.js";
 
 export const handleUpdateFeatureQuantity = async ({
   req,
@@ -153,7 +71,7 @@ export const handleUpdateFeatureQuantity = async ({
       req,
       attachParams,
       cusProduct,
-      stripeSubs,
+      stripeSub: subToUpdate,
       oldOptions,
       newOptions,
       subItem,

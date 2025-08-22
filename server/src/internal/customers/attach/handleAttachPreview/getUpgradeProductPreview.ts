@@ -21,6 +21,8 @@ import {
   Price,
   UsageModel,
   AttachConfig,
+  UsagePriceConfig,
+  OnDecrease,
 } from "@autumn/shared";
 import {
   addBillingIntervalUnix,
@@ -35,6 +37,8 @@ import {
   subToPeriodStartEnd,
 } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { isTrialing } from "../../cusProducts/cusProductUtils.js";
+import { cusProductToPrices } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import { isPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 
 const getNextCycleAt = ({
   prices,
@@ -86,6 +90,46 @@ const getNextCycleAt = ({
   });
 
   return nextCycleAt;
+};
+
+const filterNoProratePrepaidItems = ({
+  items,
+  attachParams,
+  curSameProduct,
+}: {
+  items: PreviewLineItem[];
+  attachParams: AttachParams;
+  curSameProduct?: FullCusProduct;
+}) => {
+  if (!curSameProduct) {
+    return items;
+  }
+
+  let filteredItems = items;
+  const curPrices = cusProductToPrices({ cusProduct: curSameProduct! });
+  for (const option of attachParams.optionsList) {
+    const { feature_id, internal_feature_id, quantity } = option;
+    const prevQuantity = curSameProduct?.options.find(
+      (o) => o.feature_id == feature_id
+    )?.quantity;
+
+    const curPrice = curPrices.find(
+      (p) =>
+        (p.config as UsagePriceConfig)?.internal_feature_id ==
+          internal_feature_id && isPrepaidPrice({ price: p })
+    );
+
+    const onDecrease = curPrice?.proration_config?.on_decrease;
+    const decreaseIsNone = onDecrease == OnDecrease.None;
+
+    if (decreaseIsNone && prevQuantity && quantity < prevQuantity) {
+      console.log(
+        `Quantity for ${feature_id} decreased from ${prevQuantity} to ${quantity}, Removing price: ${curPrice?.id}`
+      );
+      filteredItems = items.filter((item) => item.price_id !== curPrice?.id);
+    }
+  }
+  return filteredItems;
 };
 
 export const getUpgradeProductPreview = async ({
@@ -232,6 +276,12 @@ export const getUpgradeProductPreview = async ({
     dueNextCycle!.line_items = dueNextCycle!.line_items.filter(
       (item) => item.usage_model == UsageModel.Prepaid
     );
+
+    items = filterNoProratePrepaidItems({
+      items,
+      attachParams,
+      curSameProduct: curSameProduct!,
+    });
   }
 
   let dueToday:

@@ -11,6 +11,50 @@ import { Decimal } from "decimal.js";
 import Stripe from "stripe";
 import { hoursToFinalizeInvoice } from "../constants.js";
 
+export const getCurrentOptions = ({
+  preview,
+  options,
+}: {
+  preview: AttachPreview;
+  options?: any;
+}) => {
+  const currentOptions = structuredClone(options);
+  if (!options) return currentOptions;
+
+  const isUpdatePrepaidQuantity =
+    preview?.branch == AttachBranch.UpdatePrepaidQuantity;
+
+  for (const option of currentOptions || []) {
+    const previewOption = preview?.options.find(
+      (o: any) =>
+        o.feature_id === option.feature_id || o.feature_id === option.featureId
+    );
+
+    const currentQuantity = previewOption.current_quantity || 0;
+    const newQuantity = option.quantity || 0;
+    let difference = newQuantity - currentQuantity;
+    difference = difference / previewOption.billing_units;
+
+    const isDecrease = newQuantity < currentQuantity;
+    const isIncrease = newQuantity > currentQuantity;
+
+    if (isDecrease && previewOption.config.on_decrease == "none") {
+      option.quantity = currentQuantity;
+      continue;
+    }
+
+    if (
+      isUpdatePrepaidQuantity &&
+      isIncrease &&
+      previewOption.config.on_increase == OnIncrease.ProrateNextCycle
+    ) {
+      continue;
+    }
+  }
+
+  return currentOptions;
+};
+
 // 1. Calculate total
 export const getAttachTotal = ({
   preview,

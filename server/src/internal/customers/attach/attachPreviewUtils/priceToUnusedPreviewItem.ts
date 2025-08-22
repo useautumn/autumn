@@ -7,11 +7,12 @@ import {
   FullCusProduct,
   Organization,
   formatAmount,
+  UsagePriceConfig,
 } from "@autumn/shared";
 import { logger } from "better-auth";
 import Stripe from "stripe";
 import { isTrialing } from "../../cusProducts/cusProductUtils.js";
-import { formatUnixToDate } from "@/utils/genUtils.js";
+import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
 import { priceToUsageModel } from "@/internal/products/prices/priceUtils/convertPrice.js";
 import {
   getPriceEntitlement,
@@ -47,8 +48,11 @@ export const priceToUnusedPreviewItem = ({
   const ents = cusProductToEnts({ cusProduct });
   const ent = getPriceEntitlement(price, ents);
   const options = getPriceOptions(price, cusProduct.options);
+  const config = price.config as UsagePriceConfig;
 
-  const quantity = options?.quantity || 1;
+  const quantity = notNullish(options?.quantity)
+    ? options?.quantity! * config.billing_units!
+    : 1;
 
   const finalProration = getProration({
     now,

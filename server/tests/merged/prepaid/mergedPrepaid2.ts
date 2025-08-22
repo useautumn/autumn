@@ -10,12 +10,15 @@ import {
   APIVersion,
   AppEnv,
   CusProductStatus,
+  OnDecrease,
+  OnIncrease,
   Organization,
 } from "@autumn/shared";
 import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { advanceToNextInvoice } from "tests/utils/testAttachUtils/testAttachUtils.js";
 
 const billingUnits = 100;
 const creditItem = constructPrepaidItem({
@@ -23,6 +26,10 @@ const creditItem = constructPrepaidItem({
   includedUsage: 100,
   price: 10,
   billingUnits,
+  config: {
+    on_increase: OnIncrease.ProrateImmediately,
+    on_decrease: OnDecrease.None,
+  },
 });
 
 let premium = constructProduct({
@@ -69,11 +76,10 @@ const ops = [
     options: [
       {
         feature_id: TestFeature.Credits,
-        quantity: billingUnits * 5,
+        quantity: billingUnits * 2,
       },
     ],
   },
-  // Update prepaid quantity (decrease)
   {
     entityId: "2",
     product: pro,
@@ -85,10 +91,22 @@ const ops = [
       },
     ],
   },
+  // // Update prepaid quantity (decrease)
+  // {
+  //   entityId: "2",
+  //   product: pro,
+  //   results: [{ product: pro, status: CusProductStatus.Active }],
+  //   options: [
+  //     {
+  //       feature_id: TestFeature.Credits,
+  //       quantity: billingUnits * 1,
+  //     },
+  //   ],
+  // },
 ];
 
-const testCase = "mergedPrepaid1";
-describe(`${chalk.yellowBright("mergedPrepaid1: Testing merged subs, upgrade 1 & 2 to pro, add premium 2")}`, () => {
+const testCase = "mergedPrepaid2";
+describe(`${chalk.yellowBright("mergedPrepaid2: Testing merged subs, upgrade 1 & 2 to pro, add premium 2")}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
 
@@ -171,5 +189,12 @@ describe(`${chalk.yellowBright("mergedPrepaid1: Testing merged subs, upgrade 1 &
         throw error;
       }
     }
+  });
+
+  it("should have correct balances after update", async function () {
+    await advanceToNextInvoice({
+      stripeCli,
+      testClockId,
+    });
   });
 });
