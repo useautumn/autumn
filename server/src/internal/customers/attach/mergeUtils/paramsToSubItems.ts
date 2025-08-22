@@ -16,8 +16,10 @@ import { logPhaseItems } from "./phaseUtils/phaseUtils.js";
 
 export const getCusProductsToRemove = ({
   attachParams,
+  includeCanceled = false,
 }: {
   attachParams: AttachParams;
+  includeCanceled?: boolean;
 }) => {
   const products = attachParams.products;
   const cusProducts = attachParams.cusProducts;
@@ -40,6 +42,18 @@ export const getCusProductsToRemove = ({
     if (curMainProduct) {
       cusProductsToRemove.push(curMainProduct);
     }
+  }
+
+  if (includeCanceled) {
+    const subId = cusProductsToRemove.find(
+      (cp) => cp.subscription_ids && cp.subscription_ids.length > 0
+    )?.subscription_ids?.[0];
+
+    const canceledCusProducts = cusProducts.filter(
+      (cp) =>
+        cp.canceled && (subId ? cp.subscription_ids?.includes(subId!) : true)
+    );
+    cusProductsToRemove.push(...canceledCusProducts);
   }
 
   // Get unique cus products, by cusProduct.id

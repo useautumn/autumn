@@ -30,17 +30,73 @@ const haveSameItems = (
   return true;
 };
 
+// Check if a phase has no items
+const hasNoItems = (phase: Stripe.SubscriptionScheduleUpdateParams.Phase) => {
+  const items =
+    (phase.items as Stripe.SubscriptionScheduleUpdateParams.Phase.Item[]) || [];
+  return items.length === 0;
+};
+
+// Remove empty phases and adjust dates to maintain timeline continuity
+const removeEmptyPhasesAndAdjustDates = (
+  phases: Stripe.SubscriptionScheduleUpdateParams.Phase[]
+): Stripe.SubscriptionScheduleUpdateParams.Phase[] => {
+  if (!phases || phases.length <= 1) return phases;
+
+  const result: Stripe.SubscriptionScheduleUpdateParams.Phase[] = [];
+
+  for (let i = 0; i < phases.length; i++) {
+    const phase = phases[i];
+
+    if (!hasNoItems(phase)) {
+      const clonedPhase = structuredClone(phase);
+
+      // If this is not the first non-empty phase, we need to check if there were
+      // empty phases before it and extend the previous non-empty phase to cover the gap
+      if (result.length > 0) {
+        const prevPhase = result[result.length - 1];
+
+        // Find if there are empty phases between the previous non-empty phase and current
+        let hasEmptyPhasesBetween = false;
+        for (let j = i - 1; j >= 0; j--) {
+          const checkPhase = phases[j];
+          if (!hasNoItems(checkPhase)) {
+            // Found the previous non-empty phase
+            break;
+          }
+          hasEmptyPhasesBetween = true;
+        }
+
+        // If there were empty phases, extend the previous phase's end_date to current phase's start_date
+        if (hasEmptyPhasesBetween && clonedPhase.start_date) {
+          prevPhase.end_date = clonedPhase.start_date;
+        }
+      }
+
+      result.push(clonedPhase);
+    }
+  }
+
+  return result;
+};
+
 // Merge adjacent phases that have identical items
 export const mergeAdjacentPhasesWithSameItems = (
   phases: Stripe.SubscriptionScheduleUpdateParams.Phase[]
 ): Stripe.SubscriptionScheduleUpdateParams.Phase[] => {
   if (!phases || phases.length <= 1) return phases;
 
-  const merged: Stripe.SubscriptionScheduleUpdateParams.Phase[] = [];
-  let current = structuredClone(phases[0]);
+  // First, remove empty phases and adjust dates to maintain continuity
+  const nonEmptyPhases = removeEmptyPhasesAndAdjustDates(phases);
 
-  for (let i = 1; i < phases.length; i++) {
-    const next = phases[i];
+  if (nonEmptyPhases.length <= 1) return nonEmptyPhases;
+
+  // Then, merge adjacent phases with same items
+  const merged: Stripe.SubscriptionScheduleUpdateParams.Phase[] = [];
+  let current = structuredClone(nonEmptyPhases[0]);
+
+  for (let i = 1; i < nonEmptyPhases.length; i++) {
+    const next = nonEmptyPhases[i];
     const same = haveSameItems(
       (current.items as Stripe.SubscriptionScheduleUpdateParams.Phase.Item[]) ||
         [],
