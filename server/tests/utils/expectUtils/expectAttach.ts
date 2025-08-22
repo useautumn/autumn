@@ -10,7 +10,10 @@ import {
   ProductV2,
 } from "@autumn/shared";
 
-import { getAttachTotal } from "tests/utils/testAttachUtils/testAttachUtils.js";
+import {
+  getAttachTotal,
+  getCurrentOptions,
+} from "tests/utils/testAttachUtils/testAttachUtils.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
 import { expectInvoicesCorrect } from "tests/utils/expectUtils/expectProductAttached.js";
 import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
@@ -70,7 +73,6 @@ export const attachAndExpectCorrect = async ({
     entity_id: entityId,
   });
 
-  console.log("Options: ", options);
   const checkoutRes = await autumn.checkout({
     customer_id: customerId,
     product_id: product.id,
@@ -78,16 +80,24 @@ export const attachAndExpectCorrect = async ({
     options: toSnakeCase(options),
   });
 
-  console.log("Checkout res:");
-  for (const line of checkoutRes.lines) {
-    console.log(line.description, line.amount);
+  const logCheckoutRes = true;
+  if (logCheckoutRes) {
+    console.log("Checkout res:");
+    for (const line of checkoutRes.lines) {
+      console.log(line.description, line.amount);
+    }
+    console.log("Total: ", checkoutRes.total);
+    console.log("--------------------------------");
   }
-  console.log("Total: ", checkoutRes.total);
 
-  // const optionsCopy = structuredClone(options);
+  const optionsCopy = getCurrentOptions({
+    preview,
+    options,
+  });
+
   // const total = getAttachTotal({
   //   preview,
-  //   options: optionsCopy,
+  //   options,
   // });
 
   const { checkout_url } = await autumn.attach({
@@ -161,8 +171,8 @@ export const attachAndExpectCorrect = async ({
       customer,
       product,
       usage,
-      // options: optionsCopy,
-      options: options, // maybe have to fix...
+      options: optionsCopy,
+
       otherProducts,
       entities,
     });

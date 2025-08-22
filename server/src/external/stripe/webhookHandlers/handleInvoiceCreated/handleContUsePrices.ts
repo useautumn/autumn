@@ -1,11 +1,10 @@
+import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { findLinkedCusEnts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
 import { removeReplaceablesFromCusEnt } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/linkedCusEntUtils.js";
 import { getRelatedCusEnt } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
 import { FullCustomerEntitlement, FullCustomerPrice } from "@autumn/shared";
-import Stripe from "stripe";
-import { findStripeItemForPrice } from "../../stripeSubUtils/stripeSubItemUtils.js";
 import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService.js";
 import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";
 
@@ -14,9 +13,6 @@ export const handleContUsePrices = async ({
   cusEnts,
   cusPrice,
   stripeCli,
-  // customer,
-  // org,
-  // env,
   invoice,
   usageSub,
   logger,
@@ -25,9 +21,7 @@ export const handleContUsePrices = async ({
   cusEnts: FullCustomerEntitlement[];
   cusPrice: FullCustomerPrice;
   stripeCli: Stripe;
-  // customer: Customer;
-  // org: Organization;
-  // env: AppEnv;
+
   invoice: Stripe.Invoice;
   usageSub: Stripe.Subscription;
   logger: any;

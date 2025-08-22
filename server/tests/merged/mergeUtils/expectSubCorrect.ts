@@ -262,6 +262,13 @@ export const expectSubToBeCorrect = async ({
         apiVersion: APIVersion.v1_4,
       });
 
+      if (options?.upcoming_quantity && res?.lineItem) {
+        res.lineItem.quantity = options.upcoming_quantity;
+      }
+
+      // console.log(`Price: ${formatPrice({ price })}`);
+      // console.log("Options:", options);
+
       const lineItem: any = res?.lineItem;
       if (lineItem && res?.lineItem) {
         if (addToSub) {

@@ -175,7 +175,7 @@ export const getItemsForNewProduct = async ({
 
   sortPricesByType(newProduct.prices);
 
-  const printLogs = true;
+  const printLogs = false;
 
   for (const price of newProduct.prices) {
     if (skipOneOff && isOneOffPrice({ price })) continue;
@@ -196,12 +196,9 @@ export const getItemsForNewProduct = async ({
       intervalCount: price.config.interval_count || 1,
     });
 
-    if (printLogs) {
+    if (printLogs && finalProration) {
       console.log(
-        "finalProration",
-        finalProration
-          ? `${formatUnixToDate(finalProration.start)} to ${formatUnixToDate(finalProration.end)}`
-          : "undefined"
+        `Proration: ${formatUnixToDate(finalProration.start)} to ${formatUnixToDate(finalProration.end)}`
       );
     }
 
