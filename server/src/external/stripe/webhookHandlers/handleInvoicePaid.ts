@@ -24,6 +24,10 @@ import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
 import { handleInvoicePaidDiscount } from "./handleInvoicePaidDiscount.js";
 import { handleInvoiceCheckoutPaid } from "@/internal/customers/attach/attachFunctions/invoiceCheckoutPaid/handleInvoiceCheckoutPaid.js";
+import {
+  lineItemInCusProduct,
+  subItemInCusProduct,
+} from "../stripeSubUtils/stripeSubItemUtils.js";
 
 const handleOneOffInvoicePaid = async ({
   db,
@@ -210,10 +214,11 @@ export const handleInvoicePaid = async ({
       });
     }
 
-    let updated = await updateInvoiceIfExists({
-      db,
-      invoice,
-    });
+    // let updated = await updateInvoiceIfExists({
+    //   db,
+    //   invoice,
+    // });
+    const updated = false;
 
     if (!updated) {
       let invoiceItems = await getInvoiceItems({
@@ -224,13 +229,45 @@ export const handleInvoicePaid = async ({
         logger,
       });
 
+      const invoiceLines = invoice.lines.data;
+      let cusProducts: FullCusProduct[] = activeCusProducts;
+      try {
+        cusProducts = activeCusProducts.filter((cp) =>
+          invoiceLines.some((l) =>
+            lineItemInCusProduct({ cusProduct: cp, lineItem: l })
+          )
+        );
+
+        console.log(
+          "Invoice paid, filtered cus products:",
+          cusProducts.map((cp) => `${cp.product.name} - ${cp.product.id}`)
+        );
+
+        if (cusProducts.length == 0) {
+          cusProducts = activeCusProducts;
+        }
+      } catch (error) {
+        logger.error("Failed to filter cus products for invoice");
+        logger.error({ error });
+      }
+
+      const internalEntityId = new Set(
+        cusProducts.map((cp) => cp.internal_entity_id)
+      );
+
       await InvoiceService.createInvoiceFromStripe({
         db,
         stripeInvoice: invoice,
         internalCustomerId: activeCusProducts[0].internal_customer_id,
-        internalEntityId: activeCusProducts[0].internal_entity_id,
-        productIds: activeCusProducts.map((p) => p.product_id),
-        internalProductIds: activeCusProducts.map((p) => p.internal_product_id),
+        internalEntityId:
+          internalEntityId.size > 1
+            ? undefined
+            : internalEntityId.values().next().value,
+
+        productIds: [...new Set(cusProducts.map((p) => p.product_id))],
+        internalProductIds: [
+          ...new Set(cusProducts.map((p) => p.internal_product_id)),
+        ],
         org: org,
         items: invoiceItems,
       });

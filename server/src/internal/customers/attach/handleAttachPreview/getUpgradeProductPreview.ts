@@ -4,7 +4,7 @@ import {
   attachParamToCusProducts,
   paramsToCurSub,
 } from "../attachUtils/convertAttachParams.js";
-import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
+
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { getLargestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 import { getItemsForNewProduct } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
@@ -28,9 +28,8 @@ import {
 } from "@/internal/products/prices/billingIntervalUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { Decimal } from "decimal.js";
-import { intervalsAreSame } from "../attachUtils/getAttachConfig.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
-import { formatUnixToDateTime, notNullish, nullish } from "@/utils/genUtils.js";
+import { formatUnixToDate, nullish } from "@/utils/genUtils.js";
 import {
   getLatestPeriodEnd,
   subToPeriodStartEnd,

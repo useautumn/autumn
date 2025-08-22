@@ -14,6 +14,7 @@ export const DueToday = () => {
   const { preview, options, setOptions } = attachState;
 
   const dueToday = preview.due_today;
+
   if (!dueToday || preview.branch == AttachBranch.NewVersion) {
     return null;
   }
@@ -37,8 +38,8 @@ export const DueToday = () => {
         total = new Decimal(total)
           .plus(
             new Decimal(option.price).times(
-              new Decimal(option.quantity).div(option.billing_units),
-            ),
+              new Decimal(option.quantity).div(option.billing_units)
+            )
           )
           .toNumber();
       }

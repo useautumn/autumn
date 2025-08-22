@@ -243,12 +243,9 @@ export const sendUsageAndReset = async ({
     }
 
     if (billingType == BillingType.UsageInArrear) {
-      logger.info(
-        `✨ Handling usage prices for ${customer.name || customer.id}, org: ${org.slug}`
-      );
-
       await handleUsagePrices({
         db,
+        org,
         invoice,
         customer,
         relatedCusEnt,

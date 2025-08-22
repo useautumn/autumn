@@ -1,20 +1,16 @@
 import chalk from "chalk";
-import {
-  AttachParams,
-  AttachResultSchema,
-} from "../../cusProducts/AttachParams.js";
+import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { AttachBranch, AttachFunction, CusProductStatus } from "@autumn/shared";
 import { handleCreateCheckout } from "../../add-product/handleCreateCheckout.js";
 import { handleAddProduct } from "../attachFunctions/addProductFlow/handleAddProduct.js";
 import { AttachBody } from "@autumn/shared";
 import { AttachConfig } from "@autumn/shared";
 import { handleUpdateQuantityFunction } from "../attachFunctions/updateQuantityFlow/updateQuantityFlow.js";
-import { SuccessCode } from "@autumn/shared";
+
 import {
   attachParamsToCurCusProduct,
   attachParamToCusProducts,
 } from "./convertAttachParams.js";
-import { deleteCurrentScheduledProduct } from "./deleteCurrentScheduledProduct.js";
 import { handleOneOffFunction } from "../attachFunctions/addProductFlow/handleOneOffFunction.js";
 import { CusProductService } from "../../cusProducts/CusProductService.js";
 import { handleCreateInvoiceCheckout } from "../../add-product/handleCreateInvoiceCheckout.js";

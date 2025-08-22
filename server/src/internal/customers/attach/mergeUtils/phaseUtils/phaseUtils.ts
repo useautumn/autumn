@@ -1,6 +1,7 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { formatPrice } from "@/internal/products/prices/priceUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 import { FullCusProduct } from "@autumn/shared";
 import { differenceInDays, subDays } from "date-fns";
 import Stripe from "stripe";
@@ -43,7 +44,8 @@ export const logPhaseItems = async ({
   items: Stripe.SubscriptionScheduleUpdateParams.Phase.Item[];
   db: DrizzleCli;
 }) => {
-  const priceIds = items.map((item) => item.price as string);
+  const priceIds = items.map((item) => item.price as string).filter(notNullish);
+
   const autumnPrices = await PriceService.getByStripeIds({
     db,
     stripePriceIds: priceIds,
@@ -57,4 +59,18 @@ export const logPhaseItems = async ({
         : "N/A",
     });
   }
+};
+
+export const getCurrentPhaseIndex = ({
+  schedule,
+  now,
+}: {
+  schedule: Stripe.SubscriptionSchedule;
+  now?: number;
+}) => {
+  return schedule.phases.findIndex(
+    (phase) =>
+      (now || Date.now()) / 1000 >= phase.start_date &&
+      (now || Date.now()) / 1000 < phase.end_date
+  );
 };

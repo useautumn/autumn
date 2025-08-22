@@ -1,3 +1,5 @@
+import RecaseError from "@/utils/errorUtils.js";
+
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import {
@@ -14,28 +16,21 @@ import {
   APIVersion,
   AttachConfig,
   AttachScenario,
-  BillingInterval,
   ErrCode,
   SuccessCode,
 } from "@autumn/shared";
 import Stripe from "stripe";
-import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import {
   getEarliestPeriodEnd,
-  getLatestPeriodEnd,
   subToPeriodStartEnd,
 } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { createStripeSub2 } from "./createStripeSub2.js";
-import { addBillingIntervalUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { getSmallestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
+
 import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
 import { getCustomerSub } from "../../attachUtils/convertAttachParams.js";
 import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
 import { updateStripeSub2 } from "../upgradeFlow/updateStripeSub2.js";
-import { paramsToScheduleItems } from "../../mergeUtils/paramsToScheduleItems.js";
-import { createSubSchedule } from "../scheduleFlow/createSubSchedule.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { subToNewSchedule } from "../../mergeUtils/subToNewSchedule.js";
 
 export const handlePaidProduct = async ({

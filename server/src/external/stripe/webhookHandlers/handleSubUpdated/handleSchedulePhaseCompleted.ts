@@ -88,23 +88,6 @@ export const handleSchedulePhaseCompleted = async ({
         }
       }
     }
-
-    // const isScheduled = cusProduct.status === CusProductStatus.Scheduled;
-    // const isInPhase = cusProductInPhase({
-    //   phaseStart: currentPhase?.start_date,
-    //   cusProduct,
-    // });
-
-    // else if (isScheduled && isInPhase) {
-    //   console.log(
-    //     `Transitioning scheduled product to active: ${cusProduct.product.name} (entity ID: ${cusProduct.entity_id})`
-    //   );
-    //   await CusProductService.update({
-    //     db,
-    //     cusProductId: cusProduct.id,
-    //     updates: { status: CusProductStatus.Active },
-    //   });
-    // }
   }
 
   const currentPhase = schedule.phases.findIndex(
@@ -113,16 +96,26 @@ export const handleSchedulePhaseCompleted = async ({
       (phase.end_date ? phase.end_date > Math.floor(now / 1000) : true)
   );
 
-  if (currentPhase === schedule.phases.length - 1) {
-    // Last phase, cancel schedule
-    await stripeCli.subscriptionSchedules.release(schedule.id);
-    await CusProductService.updateByStripeScheduledId({
-      db: req.db,
-      stripeScheduledId: schedule.id,
-      updates: {
-        scheduled_ids: [],
-      },
-    });
+  if (
+    currentPhase === schedule.phases.length - 1 &&
+    schedule.status !== "released"
+  ) {
+    try {
+      // Last phase, cancel schedule
+      await stripeCli.subscriptionSchedules.release(schedule.id);
+      await CusProductService.updateByStripeScheduledId({
+        db: req.db,
+        stripeScheduledId: schedule.id,
+        updates: {
+          scheduled_ids: [],
+        },
+      });
+    } catch (error) {
+      logger.error(
+        `schedule.phase.completed: failed to cancel schedule ${schedule.id}`
+      );
+      logger.error({ error });
+    }
   }
   // const currentPhase = schedule.phases.find(
   //   (phase) =>

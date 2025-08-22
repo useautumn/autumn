@@ -23,6 +23,8 @@ import { getRelatedCusEnt } from "@/internal/customers/cusProducts/cusPrices/cus
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { Decimal } from "decimal.js";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
+import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
 
 export const handleQuantityUpgrade = async ({
   req,
@@ -114,11 +116,34 @@ export const handleQuantityUpgrade = async ({
         paymentMethod: paymentMethod || null,
         logger,
       });
+
+      try {
+        const invoiceItems = await getInvoiceItems({
+          stripeInvoice: finalInvoice,
+          prices: [cusPrice.price],
+          logger,
+        });
+
+        await InvoiceService.createInvoiceFromStripe({
+          db,
+          stripeInvoice: finalInvoice,
+          internalCustomerId: cusProduct.internal_customer_id!,
+          internalEntityId: cusProduct.internal_entity_id,
+          productIds: [cusProduct.product_id],
+          internalProductIds: [cusProduct.internal_product_id],
+          org,
+          sendRevenueEvent: true,
+          items: invoiceItems,
+        });
+      } catch (error) {
+        logger.error(`Failed to create invoice from stripe: ${error}`);
+      }
     }
   }
 
   await stripeCli.subscriptionItems.update(subItem.id, {
     quantity: newOptions.quantity,
+    // quantity: subItem.quantity + difference,
     proration_behavior: "none",
   });
 

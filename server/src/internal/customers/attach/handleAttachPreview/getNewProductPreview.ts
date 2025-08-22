@@ -8,7 +8,10 @@ import {
 import { getOptions } from "@/internal/api/entitled/checkUtils.js";
 import { getItemsForNewProduct } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
-import { attachParamsToProduct } from "../attachUtils/convertAttachParams.js";
+import {
+  attachParamsToProduct,
+  getCustomerSub,
+} from "../attachUtils/convertAttachParams.js";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import {
   addBillingIntervalUnix,
@@ -110,11 +113,14 @@ export const getNewProductPreview = async ({
     });
   }
 
-  const { mergeSub } = await getMergeCusProduct({
-    attachParams,
-    products: [newProduct],
-    config,
-  });
+  // const { mergeSub } = await getMergeCusProduct({
+  //   attachParams,
+  //   products: [newProduct],
+  //   config,
+  // });
+  const mergeSub = await getCustomerSub({ attachParams });
+
+  // console.log("Merge sub:", mergeSub);
 
   if (mergeSub) {
     const { start } = subToPeriodStartEnd({ sub: mergeSub });

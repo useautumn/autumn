@@ -336,17 +336,17 @@ export const paramsToScheduleItems = async ({
 
     const mergedPhases = mergeAdjacentPhasesWithSameItems(newPhases as any);
 
-    console.log(`Merged Phases:`);
-    for (const phase of mergedPhases) {
-      console.log(
-        `Phase ${formatUnixToDateTime(Number(phase.start_date || 0) * 1000)}:`
-      );
-      await logPhaseItems({
-        db: req.db,
-        items: phase.items,
-      });
-    }
-    console.log("--------------------------------");
+    // console.log(`Merged Phases:`);
+    // for (const phase of mergedPhases) {
+    //   console.log(
+    //     `Phase ${formatUnixToDateTime(Number(phase.start_date || 0) * 1000)}:`
+    //   );
+    //   await logPhaseItems({
+    //     db: req.db,
+    //     items: phase.items,
+    //   });
+    // }
+    // console.log("--------------------------------");
 
     return {
       phases: mergedPhases,
