@@ -177,6 +177,7 @@ export const createNewCustomer = async ({
           req,
           newCus: newCustomer,
           product: defaultProd,
+          freeTrial: defaultProd?.free_trial || null,
         }),
         nextResetAt,
         anchorToUnix: org.config.anchor_start_of_month

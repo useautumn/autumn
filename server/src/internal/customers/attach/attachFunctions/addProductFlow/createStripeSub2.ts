@@ -129,6 +129,7 @@ export const createStripeSub2 = async ({
     if (
       invoiceOnly &&
       config.invoiceCheckout &&
+      config.finalizeInvoice &&
       latestInvoice &&
       latestInvoice.status === "draft"
     ) {

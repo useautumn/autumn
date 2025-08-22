@@ -10,6 +10,7 @@ import {
   Organization,
   FullCusEntWithFullCusProduct,
   BillingType,
+  FeatureUsageType,
 } from "@autumn/shared";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { Customer, FeatureType } from "@autumn/shared";
@@ -461,12 +462,24 @@ export const deductFromUsageBasedCusEnt = async ({
   const { db, feature, env, org, cusPrices, customer, entity } = deductParams;
 
   // Deduct from usage-based price
-  const usageBasedEnt = findCusEnt({
+  let usageBasedEnt = findCusEnt({
     cusEnts,
     feature,
     entity,
     onlyUsageAllowed: true,
   }) as FullCusEntWithFullCusProduct;
+
+  if (
+    !usageBasedEnt &&
+    feature.config?.usage_type == FeatureUsageType.Continuous
+  ) {
+    console.log(`FALLING BACK TO REGULAR CUS ENT, FEATURE: ${feature.id}`);
+    usageBasedEnt = findCusEnt({
+      cusEnts,
+      feature,
+      entity,
+    }) as FullCusEntWithFullCusProduct; // fallback to regular cus ent if allowed...
+  }
 
   if (!usageBasedEnt) {
     console.log(

@@ -450,7 +450,25 @@ export const createFullCusProduct = async ({
     apiVersion: attachParams.apiVersion,
   });
 
-  // Expire previous product if not one off
+  // Expire previous product if not one off and add on...?
+  if (!isOneOff(prices) && product.is_add_on) {
+    const { curSameProduct } = getExistingCusProducts({
+      product,
+      cusProducts: attachParams.cusProducts!,
+      internalEntityId: attachParams.internalEntityId,
+    });
+
+    if (curSameProduct) {
+      await CusProductService.update({
+        db,
+        cusProductId: curSameProduct.id,
+        updates: {
+          status: CusProductStatus.Expired,
+        },
+      });
+    }
+  }
+
   if (!isOneOff(prices) && !product.is_add_on) {
     await expireOrDeleteCusProduct({
       db,

@@ -11,7 +11,10 @@ import { SubService } from "@/internal/subscriptions/SubService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import { handleSubCanceled } from "./handleSubUpdated/handleSubCanceled.js";
+import {
+  handleSubCanceled,
+  isSubCanceled,
+} from "./handleSubUpdated/handleSubCanceled.js";
 import { handleSubRenewed } from "./handleSubUpdated/handleSubRenewed.js";
 import { handleSchedulePhaseCompleted } from "./handleSubUpdated/handleSchedulePhaseCompleted.js";
 
@@ -66,14 +69,17 @@ export const handleSubscriptionUpdated = async ({
   };
 
   // 1. Fetch subscription
+  const { canceled, canceledAt } = isSubCanceled({
+    previousAttributes,
+    sub: fullSub,
+  });
+
   const updatedCusProducts = await CusProductService.updateByStripeSubId({
     db,
     stripeSubId: subscription.id,
     updates: {
       status: subStatusMap[subscription.status] || CusProductStatus.Unknown,
-      canceled_at: subscription.canceled_at
-        ? subscription.canceled_at * 1000
-        : null,
+      canceled_at: canceled ? canceledAt : null,
       collection_method: fullSub.collection_method as CollectionMethod,
       trial_ends_at:
         previousAttributes.status === "trialing" &&

@@ -1,22 +1,14 @@
-import RecaseError from "@/utils/errorUtils.js";
 import {
   AttachParams,
   AttachResultSchema,
 } from "../cusProducts/AttachParams.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
+
 import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
-import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
-import { ErrCode } from "@/errors/errCodes.js";
-import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
+
 import { isOneOff } from "@/internal/products/productUtils.js";
-import { attachParamsToProduct } from "../attach/attachUtils/convertAttachParams.js";
+
 import { handlePaidProduct } from "../attach/attachFunctions/addProductFlow/handlePaidProduct.js";
-import {
-  AttachBranch,
-  AttachConfig,
-  ProrationBehavior,
-  SuccessCode,
-} from "@autumn/shared";
+import { AttachConfig, SuccessCode } from "@autumn/shared";
 import Stripe from "stripe";
 import { handleOneOffFunction } from "../attach/attachFunctions/addProductFlow/handleOneOffFunction.js";
 
@@ -71,16 +63,22 @@ export const handleCreateInvoiceCheckout = async ({
     });
   }
 
-  // AttachResultSchema.parse({
-  //   checkout_url: checkout.url,
-  //   code: SuccessCode.CheckoutCreated,
-  //   message: `Successfully created checkout for customer ${
-  //     customer.id || customer.internal_id
-  //   }, product(s) ${attachParams.products.map((p) => p.name).join(", ")}`,
-  //   product_ids: attachParams.products.map((p) => p.id),
-  //   customer_id: customer.id || customer.internal_id,
-  // });
   if (res) {
+    if (!config.finalizeInvoice) {
+      res.status(200).json(
+        AttachResultSchema.parse({
+          invoice: invoices[0],
+          code: SuccessCode.CheckoutCreated,
+          message: `Successfully created invoice for customer ${
+            attachParams.customer.id || attachParams.customer.internal_id
+          }, product(s) ${attachParams.products.map((p) => p.name).join(", ")}`,
+          product_ids: attachParams.products.map((p) => p.id),
+          customer_id:
+            attachParams.customer.id || attachParams.customer.internal_id,
+        })
+      );
+      return;
+    }
     res.status(200).json(
       AttachResultSchema.parse({
         checkout_url: invoices[0].hosted_invoice_url,

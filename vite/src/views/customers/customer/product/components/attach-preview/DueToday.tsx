@@ -4,7 +4,12 @@ import { useProductContext } from "@/views/products/product/ProductContext";
 import { AttachNewItems } from "./AttachNewItems";
 import { PriceItem } from "@/components/pricing/attach-pricing-dialog";
 import { formatAmount } from "@/utils/product/productItemUtils";
-import { AttachBranch } from "@autumn/shared";
+import {
+  AttachBranch,
+  getAmountForQuantity,
+  Price,
+  UsagePriceConfig,
+} from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { Input } from "@/components/ui/input";
 import { notNullish } from "@/utils/genUtils";
@@ -34,6 +39,22 @@ export const DueToday = () => {
     total = total.toNumber();
 
     options.forEach((option: any) => {
+      // Get invoice amount
+
+      if (option.tiers) {
+        const amount = getAmountForQuantity({
+          price: {
+            config: {
+              usage_tiers: option.tiers,
+              billing_units: option.billing_units,
+            },
+          } as Price,
+          quantity: option.quantity || 0,
+        });
+
+        total = new Decimal(total).plus(amount).toNumber();
+      }
+
       if (option.price && option.quantity) {
         total = new Decimal(total)
           .plus(
@@ -55,6 +76,33 @@ export const DueToday = () => {
     return "Due today";
   };
 
+  const getPrepaidPrice = ({ option }: { option: any }) => {
+    if (option.price) {
+      return `x ${formatAmount({
+        amount: option.price,
+        defaultCurrency: currency,
+        maxFractionDigits: 5,
+      })} per `;
+    }
+
+    if (option.tiers) {
+      const start = option.tiers[0].amount;
+      const end = option.tiers[option.tiers.length - 1].amount;
+      return "x ";
+      // return `${formatAmount({
+      //   amount: start,
+      //   defaultCurrency: currency,
+      //   maxFractionDigits: 5,
+      // })} - ${formatAmount({
+      //   amount: end,
+      //   defaultCurrency: currency,
+      //   maxFractionDigits: 5,
+      // })} `;
+    }
+
+    return "";
+  };
+
   return (
     <div className="flex flex-col">
       <p className="text-t2 font-semibold mb-2">{getTitle()}</p>
@@ -74,7 +122,7 @@ export const DueToday = () => {
           const { feature_name, billing_units, quantity, price } = option;
           return (
             <PriceItem key={feature_name}>
-              <span>
+              <span className="max-w-60 overflow-hidden truncate">
                 {product.name} - {feature_name}
               </span>
               <div className="flex items-center gap-2 ">
@@ -92,13 +140,14 @@ export const DueToday = () => {
                 />
 
                 <span className="text-muted-foreground truncate max-w-40">
-                  ×{" "}
-                  {formatAmount({
+                  {/* ×{" "} */}
+                  {/* {formatAmount({
                     defaultCurrency: currency,
                     amount: price,
                     maxFractionDigits: 2,
-                  })}{" "}
-                  per {billing_units === 1 ? " " : billing_units} {feature_name}
+                  })}{" "} */}
+                  {getPrepaidPrice({ option })}
+                  {billing_units === 1 ? " " : billing_units} {feature_name}
                 </span>
               </div>
             </PriceItem>
