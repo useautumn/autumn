@@ -4,6 +4,7 @@ import { processAttachBody } from "./processAttachBody.js";
 import { orgToVersion } from "@/utils/versionUtils.js";
 import { APIVersion } from "@autumn/shared";
 import { AttachParams } from "../../../cusProducts/AttachParams.js";
+import { nullish } from "@/utils/genUtils.js";
 
 export const getAttachParams = async ({
   req,
@@ -39,6 +40,10 @@ export const getAttachParams = async ({
   const entityId = attachBody.entity_id;
   const internalEntityId = entityId ? customer.entity?.internal_id : undefined;
   const { stripeCli, stripeCus, paymentMethod, now } = stripeVars;
+
+  if (nullish(attachBody.finalize_invoice)) {
+    attachBody.finalize_invoice = true;
+  }
 
   const attachParams: AttachParams = {
     stripeCli,

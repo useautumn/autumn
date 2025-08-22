@@ -5,7 +5,7 @@ import { ErrCode, FullCusProduct } from "@autumn/shared";
 import { Router } from "express";
 import { expireCusProduct } from "../handlers/handleCusProductExpired.js";
 import { RELEVANT_STATUSES } from "../cusProducts/CusProductService.js";
-import { nullish } from "@/utils/genUtils.js";
+import { notNullish, nullish } from "@/utils/genUtils.js";
 import { handleCancelProduct } from "./handleCancelProduct.js";
 
 const cancelRouter: Router = Router();
@@ -17,10 +17,16 @@ cancelRouter.post("", async (req, res) =>
     action: "expire",
     handler: async (req, res) => {
       let { db, orgId, env, logtail: logger } = req;
-      let { customer_id, product_id, entity_id, cancel_immediately } = req.body;
+      let {
+        customer_id,
+        product_id,
+        entity_id,
+        cancel_immediately,
+        prorate: bodyProrate,
+      } = req.body;
 
       let expireImmediately = cancel_immediately || false;
-      let prorate = true;
+      let prorate = notNullish(bodyProrate) ? bodyProrate : true;
 
       let fullCus = await CusService.getFull({
         db,

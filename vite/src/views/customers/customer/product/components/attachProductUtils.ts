@@ -53,6 +53,7 @@ export const getAttachBody = ({
     enable_product_immediately: useInvoice
       ? enableProductImmediately
       : undefined,
+    finalize_invoice: useInvoice ? false : undefined,
 
     force_checkout:
       useInvoice && enableProductImmediately === false ? true : undefined,

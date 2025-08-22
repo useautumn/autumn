@@ -8,7 +8,28 @@ import Stripe from "stripe";
 import { createStripeCli } from "../../utils.js";
 import { cancelFutureProductSchedule } from "@/internal/customers/change-product/scheduleUtils.js";
 import { isMultiProductSub } from "@/internal/customers/attach/mergeUtils/mergeUtils.js";
+const isSubRenewed = ({
+  previousAttributes,
+  sub,
+}: {
+  previousAttributes: any;
+  sub: Stripe.Subscription;
+}) => {
+  // 1. If previously canceled
+  const uncanceledAtPreviousEnd =
+    previousAttributes.cancel_at_period_end && !sub.cancel_at_period_end;
 
+  const uncancelAt =
+    notNullish(previousAttributes.cancel_at) && nullish(sub.cancel_at);
+
+  const uncanceledAt =
+    notNullish(previousAttributes.canceled_at) && sub.canceled_at;
+
+  return {
+    renewed: uncanceledAtPreviousEnd || uncancelAt || uncanceledAt,
+    renewedAt: Date.now(),
+  };
+};
 export const handleSubRenewed = async ({
   req,
   prevAttributes,
@@ -21,8 +42,11 @@ export const handleSubRenewed = async ({
   updatedCusProducts: FullCusProduct[];
 }) => {
   const { db, org, env, logtail: logger } = req;
-  let renewed =
-    notNullish(prevAttributes?.canceled_at) && nullish(sub.canceled_at);
+
+  const { renewed, renewedAt } = isSubRenewed({
+    previousAttributes: prevAttributes,
+    sub,
+  });
 
   if (!renewed || updatedCusProducts.length == 0) return;
 

@@ -25,11 +25,7 @@ import {
 } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { getMergeCusProduct } from "../attachFunctions/addProductFlow/getMergeCusProduct.js";
-import { formatUnixToDateTime, notNullish, nullish } from "@/utils/genUtils.js";
-import {
-  getLatestPeriodEnd,
-  subToPeriodStartEnd,
-} from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 
 const getNextCycleItems = async ({
   newProduct,
@@ -49,8 +45,7 @@ const getNextCycleItems = async ({
   config: AttachConfig;
 }) => {
   // 1. If one off, return null
-  if (branch == AttachBranch.OneOff || isFreeProduct(newProduct.prices))
-    return null;
+  if (branch == AttachBranch.OneOff) return null;
 
   // 2. If free trial
   let nextCycleAt = undefined;
@@ -160,6 +155,8 @@ export const getNewProductPreview = async ({
     logger,
     config,
   });
+
+  // console.log("Due next cycle", dueNextCycle);
 
   // Show next cycle if free trial or notNullish(anchorToUnix) or branch != one off?
 

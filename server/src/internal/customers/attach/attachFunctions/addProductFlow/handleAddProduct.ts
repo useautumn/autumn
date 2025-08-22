@@ -69,6 +69,8 @@ export const handleAddProduct = async ({
       anchorToUnix = end * 1000;
     }
 
+    // Expire previous product
+
     batchInsert.push(
       createFullCusProduct({
         db: req.db,

@@ -39,31 +39,35 @@ export const refreshCusCache = async ({
 
     const list = await upstash.keys(`${baseKey}*`);
 
+    const promises = [];
     for (const key of list) {
-      const keyName = key;
-      let params = keyName.split(":");
-      let expandParam = params.find((p) => p.startsWith("expand_"));
-      let expand = expandParam
-        ? expandParam.replace("expand_", "").split(",")
-        : [];
+      const refresh = async () => {
+        const keyName = key;
+        let params = keyName.split(":");
+        let expandParam = params.find((p) => p.startsWith("expand_"));
+        let expand = expandParam
+          ? expandParam.replace("expand_", "").split(",")
+          : [];
 
-      let entityIdParam = params.find((p) => p.startsWith("entity_"));
-      let entityId = entityIdParam
-        ? entityIdParam.replace("entity_", "")
-        : undefined;
+        let entityIdParam = params.find((p) => p.startsWith("entity_"));
+        let entityId = entityIdParam
+          ? entityIdParam.replace("entity_", "")
+          : undefined;
 
-      await getCusWithCache({
-        db,
-        idOrInternalId: customerId,
-        org,
-        env,
-        expand: expand as CusExpand[],
-        entityId,
-        skipGet: true,
-        logger: console,
-      });
-      // console.log(`updated cache key: ${keyName}`);
+        await getCusWithCache({
+          db,
+          idOrInternalId: customerId,
+          org,
+          env,
+          expand: expand as CusExpand[],
+          entityId,
+          skipGet: true,
+          logger: console,
+        });
+      };
+      promises.push(refresh());
     }
+    await Promise.all(promises);
   } catch (error) {
     logger.error("Failed to update cache:", { error });
   }

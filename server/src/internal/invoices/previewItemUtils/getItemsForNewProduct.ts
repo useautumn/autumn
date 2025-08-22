@@ -58,6 +58,7 @@ import {
 import { sortPricesByType } from "@/internal/products/prices/priceUtils/sortPriceUtils.js";
 import { getMergeCusProduct } from "@/internal/customers/attach/attachFunctions/addProductFlow/getMergeCusProduct.js";
 import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
+import { Decimal } from "decimal.js";
 
 export const getDefaultPriceStr = ({
   org,
@@ -257,12 +258,20 @@ export const getItemsForNewProduct = async ({
     if (withPrepaid && isPrepaidPrice({ price })) {
       let options = getPriceOptions(price, attachParams.optionsList);
       let quantity = notNullish(options?.quantity) ? options?.quantity! : 1;
+
+      const quantityWithBillingUnits = new Decimal(quantity).mul(
+        (price.config as UsagePriceConfig).billing_units || 1
+      );
+
+      // console.log("price", price);
+      // console.log("Quantity", quantity);
       let amount = priceToInvoiceAmount({
         price,
-        quantity,
+        quantity: quantityWithBillingUnits.toNumber(),
         proration: finalProration,
         now,
       });
+      // console.log("Amount", amount);
       let feature = priceToFeature({
         price,
         features,
