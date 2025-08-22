@@ -14,7 +14,7 @@ import {
 import { StatusCodes } from "http-status-codes";
 import { getLatestProducts } from "./productUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { and, desc, eq, exists, inArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, exists, inArray, ne, or, sql } from "drizzle-orm";
 import { notNullish } from "@/utils/genUtils.js";
 
 const parseFreeTrials = ({
@@ -127,6 +127,7 @@ export class ProductService {
         eq(products.org_id, orgId),
         eq(products.env, env),
         eq(products.is_default, true),
+        ne(products.archived, true),
         group ? eq(products.group, group) : undefined
       ),
       with: {
