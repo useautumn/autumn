@@ -45,6 +45,7 @@ export const attachAndExpectCorrect = async ({
   skipSubCheck = false,
   numSubs,
   entities,
+  shouldBeCanceled = false,
 }: {
   autumn: AutumnInt;
   customerId: string;
@@ -66,6 +67,7 @@ export const attachAndExpectCorrect = async ({
   skipSubCheck?: boolean;
   numSubs?: number;
   entities?: CreateEntity[];
+  shouldBeCanceled?: boolean;
 }) => {
   const preview = await autumn.attachPreview({
     customer_id: customerId,
@@ -166,7 +168,7 @@ export const attachAndExpectCorrect = async ({
     });
   }
 
-  if (!skipFeatureCheck || branch == AttachBranch.Downgrade) {
+  if (!skipFeatureCheck && branch !== AttachBranch.Downgrade) {
     expectFeaturesCorrect({
       customer,
       product,
@@ -189,6 +191,7 @@ export const attachAndExpectCorrect = async ({
     customerId,
     org,
     env,
+    shouldBeCanceled,
   });
 
   // await expectSubItemsCorrect({

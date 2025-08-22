@@ -1,7 +1,7 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { formatPrice } from "@/internal/products/prices/priceUtils.js";
-import { notNullish } from "@/utils/genUtils.js";
+import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
 import { FullCusProduct } from "@autumn/shared";
 import { differenceInDays, subDays } from "date-fns";
 import Stripe from "stripe";
@@ -44,18 +44,26 @@ export const logPhaseItems = async ({
   items: Stripe.SubscriptionScheduleUpdateParams.Phase.Item[];
   db: DrizzleCli;
 }) => {
-  const priceIds = items.map((item) => item.price as string).filter(notNullish);
+  const priceIds = items
+    .map((item) => {
+      if (typeof item.price === "string") return item.price;
+
+      return (item.price as unknown as Stripe.Price)?.id;
+    })
+    .filter(notNullish);
 
   const autumnPrices = await PriceService.getByStripeIds({
     db,
     stripePriceIds: priceIds,
   });
   for (const item of items) {
+    const priceId =
+      typeof item.price === "string" ? item.price : (item.price as any)?.id;
     console.log({
-      price: item.price,
+      price: priceId,
       quantity: item.quantity,
-      autumnPrice: autumnPrices[item.price as string]
-        ? `${autumnPrices[item.price as string]?.product.name} - ${formatPrice({ price: autumnPrices[item.price as string] })}`
+      autumnPrice: autumnPrices[priceId]
+        ? `${autumnPrices[priceId]?.product.name} - ${formatPrice({ price: autumnPrices[priceId] })}`
         : "N/A",
     });
   }
@@ -73,4 +81,33 @@ export const getCurrentPhaseIndex = ({
       (now || Date.now()) / 1000 >= phase.start_date &&
       (now || Date.now()) / 1000 < phase.end_date
   );
+};
+
+// Helper function to convert timestamp to milliseconds if needed
+const ensureMilliseconds = (timestamp: number | undefined): number => {
+  if (!timestamp) return 0;
+
+  // If timestamp is less than year 2001 in milliseconds (978307200000),
+  // it's likely in seconds and needs conversion
+  // This threshold works because modern timestamps in seconds are much larger
+  if (timestamp < 978307200000) {
+    return timestamp * 1000;
+  }
+
+  return timestamp;
+};
+
+export const logPhases = async ({
+  phases,
+  db,
+}: {
+  phases: Stripe.SubscriptionScheduleUpdateParams.Phase[];
+  db: DrizzleCli;
+}) => {
+  for (const phase of phases) {
+    // @ts-ignore
+    const timestampInMillis = ensureMilliseconds(phase.start_date);
+    console.log(`Phase ${formatUnixToDate(timestampInMillis)}:`);
+    await logPhaseItems({ items: phase.items, db });
+  }
 };

@@ -6,6 +6,8 @@ import { AttachConfig, FullCusProduct } from "@autumn/shared";
 import { createSubSchedule } from "../attachFunctions/scheduleFlow/createSubSchedule.js";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { CusProductService } from "../../cusProducts/CusProductService.js";
+import { logPhases } from "./phaseUtils/phaseUtils.js";
+import { getCusProductsToRemove } from "./paramsToSubItems.js";
 
 export const subToNewSchedule = async ({
   req,
@@ -28,12 +30,21 @@ export const subToNewSchedule = async ({
     config,
   });
 
-  const scheduleItems = await paramsToScheduleItems({
+  let cusProductsToRemove: FullCusProduct[] = [];
+  cusProductsToRemove = getCusProductsToRemove({
+    attachParams,
+    includeCanceled: true,
+  });
+  console.log(
+    `REMOVING CUS PRODUCTS: ${cusProductsToRemove.map((cp) => `${cp.product.id} (E: ${cp.entity_id})`).join(", ")}`
+  ); // See mergedDowngrade5.test.ts -- if there's no schedule and creating one, might need to include canceled cus products
+
+  const res = await paramsToScheduleItems({
     req,
     sub,
     attachParams,
     config,
-    removeCusProducts,
+    removeCusProducts: removeCusProducts || cusProductsToRemove,
     billingPeriodEnd: endOfBillingPeriod,
   });
 
@@ -47,8 +58,14 @@ export const subToNewSchedule = async ({
   //   });
   // }
 
-  if (scheduleItems.items.length > 0) {
-    itemSet.subItems = scheduleItems.items;
+  // console.log("New phase");
+  // await logPhases({
+  //   phases: res.phases,
+  //   db: req.db,
+  // });
+
+  if (res.phases[0].items.length > 0) {
+    itemSet.subItems = res.phases[0].items;
     const curSubItems = sub.items.data;
 
     // Create schedule from existing subscription
@@ -71,7 +88,7 @@ export const subToNewSchedule = async ({
           end_date: endOfBillingPeriod,
         },
         {
-          items: scheduleItems.items,
+          items: res.phases[0].items,
           start_date: endOfBillingPeriod,
         },
       ],

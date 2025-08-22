@@ -6,22 +6,18 @@ import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { AttachConfig, FullCusProduct } from "@autumn/shared";
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import {
-  cusProductsToCusPrices,
-  cusProductToPrices,
-} from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToPrices } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
 import { isArrearPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import {
   priceToScheduleItem,
   scheduleItemInCusProduct,
-  scheduleItemToPrice,
 } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { formatPrice } from "@/internal/products/prices/priceUtils.js";
 import { differenceInDays } from "date-fns";
 import { formatUnixToDateTime } from "@/utils/genUtils.js";
 import { mergeAdjacentPhasesWithSameItems } from "./phaseUtils/mergeSimilarPhases.js";
 import { preparePhasesForBillingPeriod } from "./phaseUtils/upsertNewPhase.js";
-import { logPhaseItems } from "./phaseUtils/phaseUtils.js";
+import { getQuantityToRemove } from "./mergeUtils.js";
 
 export const removeCusProductFromScheduleItems = async ({
   curScheduleItems,
@@ -106,7 +102,11 @@ export const removeCusProductFromScheduleItems = async ({
     }
 
     // 1. Get quantity to remove
-    const quantityToRemove = 1;
+    // Get quantity from cus product...
+    const quantityToRemove = getQuantityToRemove({
+      cusProduct,
+      price,
+    });
 
     // 2. Check if item already exists in newSubItems
     const existingItemIndex = newScheduleItems.findIndex(
@@ -192,6 +192,11 @@ const computeUpdatedScheduleItems = async ({
 
   const cusProductsToRemove =
     removeCusProducts || getCusProductsToRemove({ attachParams });
+
+  console.log(
+    "REMOVING CUS PRODUCTS:",
+    cusProductsToRemove?.map((cp) => `${cp.product.id} (E: ${cp.entity_id})`)
+  );
 
   const allCusProducts = attachParams.customer.customer_products;
 

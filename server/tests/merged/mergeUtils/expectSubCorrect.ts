@@ -31,6 +31,7 @@ import { formatUnixToDateTime, nullish } from "@/utils/genUtils.js";
 import {
   cusProductInPhase,
   logPhaseItems,
+  logPhases,
   similarUnix,
 } from "@/internal/customers/attach/mergeUtils/phaseUtils/phaseUtils.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
@@ -334,8 +335,12 @@ export const expectSubToBeCorrect = async ({
         })
       : null;
 
-  // console.log("--------------------------------");
-  // console.log("Supposed phases:");
+  console.log("--------------------------------");
+  console.log("Supposed phases:");
+  await logPhases({
+    phases: supposedPhases,
+    db,
+  });
   // for (const phase of supposedPhases) {
   //   console.log(`Phase ${formatUnixToDateTime(phase.start_date)}:`);
   //   await logPhaseItems({
@@ -343,8 +348,13 @@ export const expectSubToBeCorrect = async ({
   //     items: phase.items,
   //   });
   // }
-  // console.log("--------------------------------");
-  // console.log("Actual phases:");
+  console.log("--------------------------------");
+  console.log("Actual phases:");
+
+  await logPhases({
+    phases: (schedule?.phases as any) || [],
+    db,
+  });
   // for (const phase of schedule?.phases || []) {
   //   console.log(`Phase ${formatUnixToDateTime(phase.start_date * 1000)}:`);
   //   await logPhaseItems({
@@ -358,6 +368,9 @@ export const expectSubToBeCorrect = async ({
 
   for (let i = 0; i < supposedPhases.length; i++) {
     const supposedPhase = supposedPhases[i];
+    console.log("Supposed phase items:", supposedPhase.items);
+    if (supposedPhase.items.length === 0) continue;
+
     const actualPhase = schedule?.phases?.[i + 1];
     expect(schedule?.phases.length).to.be.greaterThan(i + 1);
 

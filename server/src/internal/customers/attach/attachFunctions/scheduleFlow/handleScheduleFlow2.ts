@@ -1,6 +1,3 @@
-import Stripe from "stripe";
-import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
-
 import {
   AttachParams,
   AttachResultSchema,
@@ -36,6 +33,12 @@ import { getLargestInterval } from "@/internal/products/prices/priceUtils/priceI
 import { formatUnixToDateTime } from "@/utils/genUtils.js";
 import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
+import {
+  getCurrentPhaseIndex,
+  logPhaseItems,
+  logPhases,
+} from "../../mergeUtils/phaseUtils/phaseUtils.js";
+import { getCusProductsToRemove } from "../../mergeUtils/paramsToSubItems.js";
 
 export const handleScheduleFunction2 = async ({
   req,
@@ -72,6 +75,12 @@ export const handleScheduleFunction2 = async ({
   const newProductFree = isFreeProduct(attachParams.prices);
 
   if (schedule) {
+    console.log("CURRENT SCHEDULE ITEMS:");
+    await logPhases({
+      phases: schedule.phases as any,
+      db: req.db,
+    });
+
     const newItems = await paramsToScheduleItems({
       req,
       schedule: schedule!,
@@ -80,8 +89,30 @@ export const handleScheduleFunction2 = async ({
       billingPeriodEnd: expectedEnd!,
     });
 
-    // If there's a schedule to add...
-    if (true) {
+    console.log("NEW SCHEDULE ITEMS:");
+    await logPhases({
+      phases: newItems.phases as any,
+      db: req.db,
+    });
+
+    // Should release schedule...
+    const currentPhaseIndex = getCurrentPhaseIndex({
+      schedule: { phases: newItems.phases } as any,
+      now: attachParams.now,
+    });
+
+    if (currentPhaseIndex == newItems.phases.length - 1) {
+      console.log(`NO SUBSEQUENT PHASES, RELEASING SCHEDULE`);
+      await stripeCli.subscriptionSchedules.release(schedule!.id);
+      await CusProductService.update({
+        db: req.db,
+        cusProductId: curCusProduct!.id,
+        updates: {
+          scheduled_ids: [],
+        },
+      });
+      schedule = undefined;
+    } else {
       schedule = await updateCurSchedule({
         req,
         attachParams,
@@ -100,23 +131,7 @@ export const handleScheduleFunction2 = async ({
         },
       });
     }
-    // Eg. all downgrade to free
-    else {
-      await stripeCli.subscriptionSchedules.release(schedule.id);
-      schedule = undefined;
-
-      await CusProductService.update({
-        db: req.db,
-        cusProductId: curCusProduct!.id,
-        updates: {
-          scheduled_ids: [],
-          canceled: true,
-          ended_at: expectedEnd * 1000,
-        },
-      });
-    }
   } else {
-    console.log("DOWNGRADE FLOW, CREATING NEW SCHEDULE");
     schedule = await subToNewSchedule({
       req,
       sub: curSub!,

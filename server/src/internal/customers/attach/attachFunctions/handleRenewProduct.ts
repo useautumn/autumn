@@ -159,6 +159,7 @@ export const handleRenewProduct = async ({
       }
     }
     // Case 2: Create new schedule for current cus product
+    // Example scenario: Premium 1, Premium 2, Free 1, Free 2, Premium 1
     else {
       console.log("CREATING NEW SCHEDULE");
       const curSub = await cusProductToSub({
