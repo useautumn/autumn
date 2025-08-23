@@ -26,6 +26,7 @@ export const removeCusProductFromScheduleItems = async ({
   cusProduct,
   itemSet,
   phaseStart,
+  attachParams,
 }: {
   curScheduleItems: Stripe.SubscriptionSchedule.Phase.Item[];
   updateScheduleItems: Stripe.SubscriptionScheduleUpdateParams.Phase.Item[];
@@ -33,6 +34,7 @@ export const removeCusProductFromScheduleItems = async ({
   cusProduct: FullCusProduct;
   itemSet?: ItemSet;
   phaseStart?: number;
+  attachParams: AttachParams;
 }) => {
   const prices = cusProductToPrices({ cusProduct });
   let newScheduleItems = structuredClone(updateScheduleItems);
@@ -106,6 +108,7 @@ export const removeCusProductFromScheduleItems = async ({
     const quantityToRemove = getQuantityToRemove({
       cusProduct,
       price,
+      entities: attachParams.customer.entities,
     });
 
     // 2. Check if item already exists in newSubItems
@@ -191,7 +194,8 @@ const computeUpdatedScheduleItems = async ({
     });
 
   const cusProductsToRemove =
-    removeCusProducts || getCusProductsToRemove({ attachParams });
+    removeCusProducts ||
+    getCusProductsToRemove({ attachParams, includeScheduled: true });
 
   console.log(
     "REMOVING CUS PRODUCTS:",
@@ -210,6 +214,7 @@ const computeUpdatedScheduleItems = async ({
       cusProduct,
       itemSet,
       phaseStart,
+      attachParams,
     });
   }
 

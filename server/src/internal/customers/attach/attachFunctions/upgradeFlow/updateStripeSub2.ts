@@ -47,8 +47,10 @@ export const updateStripeSub2 = async ({
         now: attachParams.now,
       });
 
-  // 1. Update subscription
+  console.log("Sub items:", sanitizeSubItems(itemSet.subItems));
+  console.log("Invoice items:", itemSet.invoiceItems);
 
+  // 1. Update subscription
   let updatedSub = await stripeCli.subscriptions.update(curSub.id, {
     items: sanitizeSubItems(itemSet.subItems),
     proration_behavior:
@@ -59,7 +61,7 @@ export const updateStripeSub2 = async ({
           : "create_prorations",
     trial_end: trialEnd,
     default_payment_method: paymentMethod?.id,
-    // add_invoice_items: itemSet.invoiceItems,
+    add_invoice_items: itemSet.invoiceItems,
     ...((invoiceOnly && {
       collection_method: "send_invoice",
       days_until_due: 30,
@@ -80,7 +82,7 @@ export const updateStripeSub2 = async ({
   if (fromCreate) {
     return {
       updatedSub,
-      latestInvoice: curSub.latest_invoice as Stripe.Invoice,
+      latestInvoice: updatedSub.latest_invoice as Stripe.Invoice,
     };
   }
 
@@ -132,27 +134,6 @@ export const updateStripeSub2 = async ({
     cusProduct: curMainProduct!,
   });
 
-  // await SubService.addUsageFeatures({
-  //   db,
-  //   stripeId: curSub.id,
-  //   usageFeatures: itemSet.usageFeatures,
-  //   orgId: org.id,
-  //   env: customer.env,
-  // });
-
-  // if (invoiceOnly && attachParams.finalizeInvoice) {
-  //   logger.info(`FINALIZING INVOICE ${latestInvoice?.id}`);
-  //   try {
-  //     latestInvoice = await stripeCli.invoices.finalizeInvoice(
-  //       latestInvoice?.id as string
-  //     );
-  //   } catch (error) {
-  //     logger.error(`Failed to finalize invoice ${latestInvoice?.id}`, {
-  //       error,
-  //     });
-  //   }
-  // }
-
   return {
     updatedSub,
     latestInvoice: latestInvoice,
@@ -160,3 +141,23 @@ export const updateStripeSub2 = async ({
     replaceables,
   };
 };
+// await SubService.addUsageFeatures({
+//   db,
+//   stripeId: curSub.id,
+//   usageFeatures: itemSet.usageFeatures,
+//   orgId: org.id,
+//   env: customer.env,
+// });
+
+// if (invoiceOnly && attachParams.finalizeInvoice) {
+//   logger.info(`FINALIZING INVOICE ${latestInvoice?.id}`);
+//   try {
+//     latestInvoice = await stripeCli.invoices.finalizeInvoice(
+//       latestInvoice?.id as string
+//     );
+//   } catch (error) {
+//     logger.error(`Failed to finalize invoice ${latestInvoice?.id}`, {
+//       error,
+//     });
+//   }
+// }

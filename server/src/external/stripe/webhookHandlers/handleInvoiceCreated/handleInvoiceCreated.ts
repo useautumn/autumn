@@ -11,9 +11,9 @@ import {
   Organization,
 } from "@autumn/shared";
 import Stripe from "stripe";
-import { createStripeCli } from "../../utils.js";
 
-import { getStripeSubs, getUsageBasedSub } from "../../stripeSubUtils.js";
+import { createStripeCli } from "../../utils.js";
+import { getStripeSubs } from "../../stripeSubUtils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 
@@ -304,6 +304,8 @@ export const handleInvoiceCreated = async ({
   });
 
   const subId = invoiceToSubId({ invoice });
+
+  console.log("HANDLING INVOICE CREATED", invoice.id);
 
   if (subId) {
     const activeProducts = await CusProductService.getByStripeSubId({

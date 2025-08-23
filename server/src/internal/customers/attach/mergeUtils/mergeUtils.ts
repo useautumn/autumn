@@ -1,7 +1,15 @@
-import { getPriceOptions } from "@/internal/products/prices/priceUtils.js";
-import { isPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
-import { FullCusProduct, Price } from "@autumn/shared";
+import {
+  getPriceEntitlement,
+  getPriceOptions,
+} from "@/internal/products/prices/priceUtils.js";
+import {
+  isContUsePrice,
+  isPrepaidPrice,
+} from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import { Entity, FullCusProduct, Price } from "@autumn/shared";
 import Stripe from "stripe";
+import { getExistingUsageFromCusProducts } from "../../cusProducts/cusEnts/cusEntUtils.js";
+import { cusProductToEnts } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
 
 export const isMultiProductSub = ({
   sub,
@@ -20,9 +28,11 @@ export const isMultiProductSub = ({
 export const getQuantityToRemove = ({
   cusProduct,
   price,
+  entities,
 }: {
   cusProduct: FullCusProduct;
   price: Price;
+  entities: Entity[];
 }) => {
   let finalQuantity = 1;
 
@@ -33,6 +43,20 @@ export const getQuantityToRemove = ({
 
     // Remove quantity
     finalQuantity = options.upcoming_quantity || options.quantity || 1;
+  }
+
+  if (isContUsePrice({ price })) {
+    const ents = cusProductToEnts({ cusProduct });
+    const relatedEnt = getPriceEntitlement(price, ents);
+    let existingUsage = getExistingUsageFromCusProducts({
+      entitlement: relatedEnt,
+      cusProducts: [cusProduct],
+      entities,
+      carryExistingUsages: true,
+      internalEntityId: cusProduct.internal_entity_id || undefined,
+    });
+
+    finalQuantity = existingUsage || 0;
   }
 
   return finalQuantity;

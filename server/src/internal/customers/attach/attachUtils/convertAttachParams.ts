@@ -2,6 +2,7 @@ import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { CusProductStatus } from "@autumn/shared";
 import Stripe from "stripe";
+import { cusProductToProduct } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
 
 export const attachParamsToCurCusProduct = ({
   attachParams,
@@ -19,9 +20,20 @@ export const attachParamToCusProducts = ({
 }: {
   attachParams: AttachParams;
 }) => {
+  if (attachParams.products.length === 0 && !attachParams.cusProduct) {
+    throw new Error(
+      "attachParams.products should have at least one product OR attachParams.cusProduct should exist"
+    );
+  }
+
+  const product =
+    attachParams.products.length > 0
+      ? attachParams.products[0]
+      : cusProductToProduct({ cusProduct: attachParams.cusProduct! });
+
   const { curMainProduct, curSameProduct, curScheduledProduct } =
     getExistingCusProducts({
-      product: attachParams.products[0],
+      product,
       cusProducts: attachParams.cusProducts!,
       internalEntityId: attachParams.internalEntityId,
     });

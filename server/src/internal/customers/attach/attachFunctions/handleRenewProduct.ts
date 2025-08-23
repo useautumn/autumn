@@ -78,7 +78,7 @@ export const handleRenewProduct = async ({
 
   if (!otherCanceled) {
     if (schedule) {
-      console.log("CANCELING SCHEDULE:", schedule.id);
+      console.log("RELEASING SCHEDULE:", schedule.id);
       await stripeCli.subscriptionSchedules.release(schedule.id);
 
       await CusProductService.updateByStripeScheduledId({

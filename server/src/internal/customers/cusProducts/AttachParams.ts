@@ -31,6 +31,7 @@ export type AttachParams = {
   org: Organization;
   // customer: Customer;
   customer: FullCustomer;
+  cusProduct?: FullCusProduct; // cus product to expire or cancel...
   products: FullProduct[];
 
   prices: Price[];

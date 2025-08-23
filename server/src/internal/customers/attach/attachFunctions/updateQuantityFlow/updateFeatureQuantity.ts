@@ -35,16 +35,17 @@ export const handleUpdateFeatureQuantity = async ({
 
   const prorationBehavior = "always_invoice";
 
-  const subToUpdate = await getUsageBasedSub({
-    db,
-    stripeCli: stripeCli,
-    subIds: cusProduct.subscription_ids || [],
-    feature: {
-      internal_id: newOptions.internal_feature_id,
-      id: newOptions.feature_id,
-    } as Feature,
-    stripeSubs: stripeSubs,
-  });
+  const subToUpdate = stripeSubs?.[0];
+  // const subToUpdate = await getUsageBasedSub({
+  //   db,
+  //   stripeCli: stripeCli,
+  //   subIds: cusProduct.subscription_ids || [],
+  //   feature: {
+  //     internal_id: newOptions.internal_feature_id,
+  //     id: newOptions.feature_id,
+  //   } as Feature,
+  //   stripeSubs: stripeSubs,
+  // });
 
   const cusPrice = featureToCusPrice({
     internalFeatureId: newOptions.internal_feature_id!,

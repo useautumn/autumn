@@ -5,6 +5,7 @@ import {
   FullCusProduct,
   FullCustomer,
   APIVersion,
+  ProrationBehavior,
 } from "@autumn/shared";
 import { getExistingCusProducts } from "../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import {
@@ -21,6 +22,7 @@ import { cancelScheduledProduct } from "./cancelScheduledProduct.js";
 import { handleRenewProduct } from "../attach/attachFunctions/handleRenewProduct.js";
 import { getDefaultAttachConfig } from "../attach/attachUtils/getAttachConfig.js";
 import { handleScheduleFunction2 } from "../attach/attachFunctions/scheduleFlow/handleScheduleFlow2.js";
+import { handleUpgradeFlow } from "../attach/attachFunctions/upgradeFlow/handleUpgradeFlow.js";
 
 export const handleCancelProduct = async ({
   req,
@@ -124,12 +126,6 @@ export const handleCancelProduct = async ({
 
   // 2. If expire at cycle end, just cancel subscriptions
   if (!expireImmediately) {
-    // const { curMainProduct } = getExistingCusProducts({
-    //   product: cusProduct.product,
-    //   cusProducts: fullCus.customer_products,
-    //   internalEntityId: cusProduct.internal_entity_id,
-    // });
-
     const product = cusProductToProduct({ cusProduct });
     await handleScheduleFunction2({
       req,
@@ -154,14 +150,38 @@ export const handleCancelProduct = async ({
       skipInsertCusProduct: true,
     });
     return;
-
-    // await cancelEndOfCycle({
-    //   req,
-    //   cusProduct,
-    //   fullCus,
-    // });
-    // return;
   }
+
+  // Cancel product immediately
+  const product = cusProductToProduct({ cusProduct });
+  await handleUpgradeFlow({
+    req,
+    res: null,
+    attachParams: {
+      stripeCli,
+      customer: fullCus,
+      org,
+      cusProduct,
+      cusProducts: fullCus.customer_products,
+      products: [],
+      internalEntityId: cusProduct.internal_entity_id || undefined,
+      paymentMethod: null,
+      prices: [],
+      entitlements: [],
+      freeTrial: null,
+      optionsList: [],
+      replaceables: [],
+      entities: fullCus.entities,
+      features: req.features,
+    },
+    config: {
+      ...getDefaultAttachConfig(),
+      proration: prorate
+        ? ProrationBehavior.Immediately
+        : ProrationBehavior.None,
+    },
+  });
+  return;
 
   // Expire product immediately
   await cancelImmediately({
@@ -186,4 +206,11 @@ export const handleCancelProduct = async ({
 //   });
 // }
 
+// return;
+
+// await cancelEndOfCycle({
+//   req,
+//   cusProduct,
+//   fullCus,
+// });
 // return;

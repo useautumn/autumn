@@ -4,7 +4,10 @@ import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSu
 import { AttachConfig, CusProductStatus, FullCusProduct } from "@autumn/shared";
 import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import { cusProductToPrices } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import {
+  cusProductToPrices,
+  cusProductToProduct,
+} from "../../cusProducts/cusProductUtils/convertCusProduct.js";
 import { isArrearPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import {
   findStripeItemForPrice,
@@ -13,33 +16,52 @@ import {
 import { mergeNewSubItems } from "./mergeNewSubItems.js";
 import { formatPrice } from "@/internal/products/prices/priceUtils.js";
 import { logPhaseItems } from "./phaseUtils/phaseUtils.js";
+import { getQuantityToRemove } from "./mergeUtils.js";
 
 export const getCusProductsToRemove = ({
   attachParams,
   includeCanceled = false,
+  includeScheduled = false,
 }: {
   attachParams: AttachParams;
   includeCanceled?: boolean;
+  includeScheduled?: boolean;
 }) => {
   const products = attachParams.products;
   const cusProducts = attachParams.cusProducts;
 
   const cusProductsToRemove: FullCusProduct[] = [];
-  for (const product of products) {
+  const prods =
+    products.length > 0
+      ? products
+      : [cusProductToProduct({ cusProduct: attachParams.cusProduct! })];
+
+  for (const product of prods) {
     // Get cur main and cur same
-    const { curMainProduct, curSameProduct } = getExistingCusProducts({
-      product,
-      cusProducts: attachParams.cusProducts,
-      internalEntityId: attachParams.internalEntityId,
-    });
+    const { curMainProduct, curSameProduct, curScheduledProduct } =
+      getExistingCusProducts({
+        product,
+        cusProducts: attachParams.cusProducts,
+        internalEntityId: attachParams.internalEntityId,
+      });
+
+    // 1. If curScheduledProduct and curMainProduct, want to remove scheduled, main should already be removed...
+    if (
+      includeScheduled &&
+      !product.is_add_on &&
+      curScheduledProduct &&
+      curMainProduct
+    ) {
+      cusProductsToRemove.push(curScheduledProduct);
+    }
 
     // 1. If product is an add on, and there's current same, add it
-    if (product.is_add_on && curSameProduct) {
+    else if (product.is_add_on && curSameProduct) {
       cusProductsToRemove.push(curSameProduct);
     }
 
     // 2. If product is a main product, add curMain
-    if (curMainProduct) {
+    else if (!product.is_add_on && curMainProduct) {
       cusProductsToRemove.push(curMainProduct);
     }
   }
@@ -188,7 +210,11 @@ export const paramsToSubItems = async ({
       };
 
       // 1. Get quantity to remove
-      const quantityToRemove = 1;
+      const quantityToRemove = getQuantityToRemove({
+        cusProduct,
+        price,
+        entities: attachParams.customer.entities,
+      });
 
       // 2. Check if item already exists in newSubItems
       const existingItemIndex = newSubItems.findIndex(

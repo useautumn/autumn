@@ -12,10 +12,7 @@ import {
   CusProductStatus,
   Organization,
 } from "@autumn/shared";
-import {
-  constructArrearItem,
-  constructFeatureItem,
-} from "@/utils/scriptUtils/constructItem.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
@@ -50,50 +47,31 @@ const growth = constructProduct({
 const ops = [
   {
     entityId: "1",
-    product: growth,
-    results: [{ product: growth, status: CusProductStatus.Active }],
+    product: premium,
+    results: [{ product: premium, status: CusProductStatus.Active }],
   },
   {
     entityId: "2",
-    product: growth,
-    results: [{ product: growth, status: CusProductStatus.Active }],
-  },
-  {
-    entityId: "1",
-    product: free,
-    results: [
-      { product: growth, status: CusProductStatus.Active },
-      { product: free, status: CusProductStatus.Scheduled },
-    ],
+    product: premium,
+    results: [{ product: premium, status: CusProductStatus.Active }],
   },
   {
     entityId: "1",
     product: pro,
     results: [
-      { product: growth, status: CusProductStatus.Active },
+      { product: premium, status: CusProductStatus.Active },
       { product: pro, status: CusProductStatus.Scheduled },
     ],
   },
   {
     entityId: "1",
-    product: premium,
-    results: [
-      { product: growth, status: CusProductStatus.Active },
-      { product: premium, status: CusProductStatus.Scheduled },
-    ],
-  },
-  {
-    entityId: "1",
-    product: free,
-    results: [
-      { product: growth, status: CusProductStatus.Active },
-      { product: free, status: CusProductStatus.Scheduled },
-    ],
+    product: growth,
+    results: [{ product: growth, status: CusProductStatus.Active }],
   },
 ];
 
-const testCase = "mergedDowngrade6";
-describe(`${chalk.yellowBright("mergedDowngrade6: Testing downgrade changes")}`, () => {
+const testCase = "mergedUpgrade2";
+describe(`${chalk.yellowBright("mergedUpgrade2: Upgrading when there's a scheduled downgrade")}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
 

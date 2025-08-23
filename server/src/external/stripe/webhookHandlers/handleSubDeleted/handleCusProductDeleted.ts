@@ -55,7 +55,12 @@ export const handleCusProductDeleted = async ({
   });
 
   const isV4Usage = cusProduct.api_version === APIVersion.v1_4;
-  if (cusProduct.internal_entity_id || isV4Usage) {
+
+  // refer to handleUpgradeFlow.ts, when cancel immediately through API / dashboard, this happens...?
+  const isAutumnCancel =
+    subscription.cancellation_details?.comment === "autumn_cancel";
+
+  if ((cusProduct.internal_entity_id || isV4Usage) && !isAutumnCancel) {
     const usagePrices = cusProductToPrices({
       cusProduct,
       billingType: BillingType.UsageInArrear,
