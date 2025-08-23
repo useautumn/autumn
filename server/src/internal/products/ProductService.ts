@@ -16,6 +16,7 @@ import { getLatestProducts } from "./productUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { and, desc, eq, exists, inArray, or, sql } from "drizzle-orm";
 import { notNullish } from "@/utils/genUtils.js";
+import * as traceroot from "traceroot-sdk-ts";
 
 const parseFreeTrials = ({
   products,
@@ -48,35 +49,39 @@ export class ProductService {
     db: DrizzleCli;
     internalFeatureId: string;
   }) {
-    let fullProducts = (await db.query.products.findMany({
-      where: exists(
-        db
-          .select()
-          .from(entitlements)
-          .where(
-            and(
-              eq(entitlements.internal_product_id, products.internal_id),
-              eq(entitlements.internal_feature_id, internalFeatureId)
+    const tracedFunction = traceroot.traceFunction(async () => {
+      let fullProducts = (await db.query.products.findMany({
+        where: exists(
+          db
+            .select()
+            .from(entitlements)
+            .where(
+              and(
+                eq(entitlements.internal_product_id, products.internal_id),
+                eq(entitlements.internal_feature_id, internalFeatureId)
+              )
             )
-          )
-      ),
-      with: {
-        entitlements: {
-          with: {
-            feature: true,
+        ),
+        with: {
+          entitlements: {
+            with: {
+              feature: true,
+            },
           },
+          prices: { where: eq(prices.is_custom, false) },
+          free_trials: { where: eq(freeTrials.is_custom, false) },
         },
-        prices: { where: eq(prices.is_custom, false) },
-        free_trials: { where: eq(freeTrials.is_custom, false) },
-      },
-      orderBy: [desc(products.version)],
-    })) as FullProduct[];
+        orderBy: [desc(products.version)],
+      })) as FullProduct[];
 
-    parseFreeTrials({ products: fullProducts });
+      parseFreeTrials({ products: fullProducts });
 
-    let latestProducts = getLatestProducts(fullProducts);
+      let latestProducts = getLatestProducts(fullProducts);
 
-    return latestProducts;
+      return latestProducts;
+    }, { spanName: 'ProductService.getByFeature' });
+    
+    return await tracedFunction();
   }
 
   static async getByInternalId({
@@ -208,55 +213,59 @@ export class ProductService {
     excludeEnts?: boolean;
     archived?: boolean;
   }) {
-    let data = (await db.query.products.findMany({
-      where: and(
-        eq(products.org_id, orgId),
-        eq(products.env, env),
-        inIds ? inArray(products.id, inIds) : undefined,
-        version ? eq(products.version, version) : undefined,
-        notNullish(archived) ? eq(products.archived, archived!) : undefined
-      ),
+    const tracedFunction = traceroot.traceFunction(async () => {
+      let data = (await db.query.products.findMany({
+        where: and(
+          eq(products.org_id, orgId),
+          eq(products.env, env),
+          inIds ? inArray(products.id, inIds) : undefined,
+          version ? eq(products.version, version) : undefined,
+          notNullish(archived) ? eq(products.archived, archived!) : undefined
+        ),
 
-      with: {
-        entitlements: excludeEnts
-          ? undefined
-          : {
-              with: {
-                feature: true,
+        with: {
+          entitlements: excludeEnts
+            ? undefined
+            : {
+                with: {
+                  feature: true,
+                },
+                where: eq(entitlements.is_custom, false),
               },
-              where: eq(entitlements.is_custom, false),
-            },
-        prices: { where: eq(prices.is_custom, false) },
-        free_trials: { where: eq(freeTrials.is_custom, false) },
-      },
-      orderBy: [desc(products.internal_id)],
-    })) as FullProduct[];
+          prices: { where: eq(prices.is_custom, false) },
+          free_trials: { where: eq(freeTrials.is_custom, false) },
+        },
+        orderBy: [desc(products.internal_id)],
+      })) as FullProduct[];
 
-    parseFreeTrials({ products: data });
+      parseFreeTrials({ products: data });
 
-    if (returnAll) {
-      return data;
-    }
-
-    const latestProducts: FullProduct[] = getLatestProducts(data);
-
-    if (inIds) {
-      let newProducts: FullProduct[] = [];
-      for (const id of inIds) {
-        const prod = latestProducts.find((prod) => prod.id === id);
-        if (!prod) {
-          throw new RecaseError({
-            message: `Product ${id} not found`,
-            code: ErrCode.ProductNotFound,
-            statusCode: StatusCodes.NOT_FOUND,
-          });
-        }
-        newProducts.push(prod);
+      if (returnAll) {
+        return data;
       }
-      return newProducts;
-    }
 
-    return latestProducts as FullProduct[];
+      const latestProducts: FullProduct[] = getLatestProducts(data);
+
+      if (inIds) {
+        let newProducts: FullProduct[] = [];
+        for (const id of inIds) {
+          const prod = latestProducts.find((prod) => prod.id === id);
+          if (!prod) {
+            throw new RecaseError({
+              message: `Product ${id} not found`,
+              code: ErrCode.ProductNotFound,
+              statusCode: StatusCodes.NOT_FOUND,
+            });
+          }
+          newProducts.push(prod);
+          }
+        return newProducts;
+      }
+
+      return latestProducts as FullProduct[];
+    }, { spanName: 'ProductService.listFull' });
+    
+    return await tracedFunction();
   }
 
   static async getFull({

@@ -7,6 +7,7 @@ import {
   generateEventCountExpressions,
   getBillingCycleStartDate,
 } from "./analyticsUtils.js";
+import * as traceroot from "traceroot-sdk-ts";
 
 export class AnalyticsService {
   static clickhouseAvailable =
@@ -196,6 +197,7 @@ WHERE org_id = {org_id:String}
     customer?: FullCustomer;
     aggregateAll?: boolean;
   }) {
+    const tracedFunction = traceroot.traceFunction(async () => {
     const { clickhouseClient, org, env, db } = req;
 
     const intervalType: "24h" | "7d" | "30d" | "90d" | "1bc" | "3bc" =
@@ -305,6 +307,9 @@ order by dr.period;
 
       return resultJson;
     }
+  }, { spanName: 'AnalyticsService.getTimeseriesEvents' });
+    
+    return await tracedFunction();
   }
 
   static async getRawEvents({

@@ -16,6 +16,7 @@ import { getApiVersion } from "@/utils/versionUtils.js";
 import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
 import { organizations, apiKeys } from "@autumn/shared";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import * as traceroot from "traceroot-sdk-ts";
 
 export class OrgService {
   static async getFromReq(req: any) {
@@ -61,25 +62,27 @@ export class OrgService {
 
   // Drizzle get
   static async get({ db, orgId }: { db: DrizzleCli; orgId: string }) {
-    const result = await db.query.organizations.findFirst({
-      where: eq(organizations.id, orgId),
-    });
-
-    if (!result) {
-      throw new RecaseError({
-        message: "Organization not found",
-        code: ErrCode.OrgNotFound,
-        statusCode: 404,
+    return traceroot.traceFunction(async () => {
+      const result = await db.query.organizations.findFirst({
+        where: eq(organizations.id, orgId),
       });
-    }
 
-    return {
-      ...result,
-      config: OrgConfigSchema.parse(result.config || {}),
-      api_version: getApiVersion({
-        createdAt: result.created_at!,
-      }),
-    };
+      if (!result) {
+        throw new RecaseError({
+          message: "Organization not found",
+          code: ErrCode.OrgNotFound,
+          statusCode: 404,
+        });
+      }
+
+      return {
+        ...result,
+        config: OrgConfigSchema.parse(result.config || {}),
+        api_version: getApiVersion({
+          createdAt: result.created_at!,
+        }),
+      };
+    }, { spanName: "OrgService.get" })();
   }
 
   static async getWithKeys({

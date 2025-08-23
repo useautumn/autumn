@@ -4,36 +4,41 @@ import { StatusCodes } from "http-status-codes";
 import { events } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { and, eq, desc } from "drizzle-orm";
+import * as traceroot from "traceroot-sdk-ts";
 
 export class EventService {
   static async insert({ db, event }: { db: DrizzleCli; event: EventInsert }) {
-    try {
-      const results = await db
-        .insert(events)
-        .values(event as any)
-        .returning();
+    const tracedFunction = traceroot.traceFunction(async () => {
+      try {
+        const results = await db
+          .insert(events)
+          .values(event as any)
+          .returning();
 
-      if (results.length === 0) {
-        throw new RecaseError({
-          message: "Failed to insert event",
-          code: ErrCode.CreateEventFailed,
-          data: results,
-          statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-        });
+        if (results.length === 0) {
+          throw new RecaseError({
+            message: "Failed to insert event",
+            code: ErrCode.CreateEventFailed,
+            data: results,
+            statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+          });
+        }
+
+        return results[0];
+      } catch (error: any) {
+        if (error.code == "23505") {
+          throw new RecaseError({
+            message:
+              "Event (event_name, customer_id, idempotency_key) already exists.",
+            code: ErrCode.DuplicateEvent,
+            // data: error,
+            statusCode: StatusCodes.BAD_REQUEST,
+          });
+        } else throw error;
       }
-
-      return results[0];
-    } catch (error: any) {
-      if (error.code == "23505") {
-        throw new RecaseError({
-          message:
-            "Event (event_name, customer_id, idempotency_key) already exists.",
-          code: ErrCode.DuplicateEvent,
-          // data: error,
-          statusCode: StatusCodes.BAD_REQUEST,
-        });
-      } else throw error;
-    }
+    }, { spanName: 'EventService.insert' });
+    
+    return await tracedFunction();
   }
 
   static async getByCustomerId({
@@ -49,29 +54,33 @@ export class EventService {
     env: string;
     limit?: number;
   }) {
-    let results = await db
-      .select({
-        id: events.id,
-        event_name: events.event_name,
-        value: events.value,
-        created_at: events.created_at,
-        timestamp: events.timestamp,
-        idempotency_key: events.idempotency_key,
-        properties: events.properties,
-        set_usage: events.set_usage,
-        entity_id: events.entity_id,
-      })
-      .from(events)
-      .where(
-        and(
-          eq(events.internal_customer_id, internalCustomerId),
-          eq(events.org_id, orgId),
-          eq(events.env, env)
+    const tracedFunction = traceroot.traceFunction(async () => {
+      let results = await db
+        .select({
+          id: events.id,
+          event_name: events.event_name,
+          value: events.value,
+          created_at: events.created_at,
+          timestamp: events.timestamp,
+          idempotency_key: events.idempotency_key,
+          properties: events.properties,
+          set_usage: events.set_usage,
+          entity_id: events.entity_id,
+        })
+        .from(events)
+        .where(
+          and(
+            eq(events.internal_customer_id, internalCustomerId),
+            eq(events.org_id, orgId),
+            eq(events.env, env)
+          )
         )
-      )
-      .orderBy(desc(events.created_at))
-      .limit(limit);
+        .orderBy(desc(events.created_at))
+        .limit(limit);
 
-    return results;
+      return results;
+    }, { spanName: 'EventService.getByCustomerId' });
+    
+    return await tracedFunction();
   }
 }

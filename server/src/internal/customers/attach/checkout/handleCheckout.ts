@@ -25,6 +25,7 @@ import { isPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePrice
 import { priceToFeature } from "@/internal/products/prices/priceUtils/convertPrice.js";
 import { getPriceOptions } from "@/internal/products/prices/priceUtils.js";
 import { getHasProrations } from "./getHasProrations.js";
+import * as traceroot from "traceroot-sdk-ts";
 
 const getAttachVars = async ({
   req,
@@ -106,81 +107,85 @@ export const handleCheckout = (req: any, res: any) =>
     res,
     action: "attach-preview",
     handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
-      const { logger, features } = req;
-      const attachBody = AttachBodySchema.parse(req.body);
+      const tracedFunction = traceroot.traceFunction(async () => {
+        const { logger, features } = req;
+        const attachBody = AttachBodySchema.parse(req.body);
 
-      const { attachParams, flags, branch, config, func } = await getAttachVars(
-        { req, attachBody }
-      );
-
-      await getCheckoutOptions({
-        req,
-        attachParams,
-      });
-
-      if (func == AttachFunction.CreateCheckout) {
-        await checkStripeConnections({
-          req,
-          attachParams,
-          createCus: true,
-          useCheckout: true,
-        });
-
-        const checkout = await handleCreateCheckout({
-          req,
-          res,
-          attachParams,
-          returnCheckout: true,
-        });
-
-        const customer = attachParams.customer;
-        res.status(200).json(
-          CheckoutResponseSchema.parse({
-            url: checkout?.url,
-            customer_id: customer.id || customer.internal_id,
-            scenario: AttachScenario.New,
-            lines: [],
-            product: await getProductResponse({
-              product: attachParams.products[0],
-              features: features,
-              withDisplay: false,
-              options: attachParams.optionsList,
-            }),
-          })
+        const { attachParams, flags, branch, config, func } = await getAttachVars(
+          { req, attachBody }
         );
+
+        await getCheckoutOptions({
+          req,
+          attachParams,
+        });
+
+        if (func == AttachFunction.CreateCheckout) {
+          await checkStripeConnections({
+            req,
+            attachParams,
+            createCus: true,
+            useCheckout: true,
+          });
+
+          const checkout = await handleCreateCheckout({
+            req,
+            res,
+            attachParams,
+            returnCheckout: true,
+          });
+
+          const customer = attachParams.customer;
+          res.status(200).json(
+            CheckoutResponseSchema.parse({
+              url: checkout?.url,
+              customer_id: customer.id || customer.internal_id,
+              scenario: AttachScenario.New,
+              lines: [],
+              product: await getProductResponse({
+                product: attachParams.products[0],
+                features: features,
+                withDisplay: false,
+                options: attachParams.optionsList,
+              }),
+            })
+          );
+          return;
+        }
+
+        const preview = await attachParamsToPreview({
+          req,
+          attachParams,
+          logger,
+          attachBody,
+          withPrepaid: true,
+        });
+
+        const checkoutRes = await previewToCheckoutRes({
+          req,
+          attachParams,
+          preview,
+        });
+
+        // Get has prorations
+        const hasProrations = await getHasProrations({
+          req,
+          branch,
+          attachParams,
+        });
+
+        res.status(200).json({
+          ...checkoutRes,
+          options: attachParams.optionsList.map((o) => ({
+            quantity: o.quantity,
+            feature_id: o.feature_id,
+          })),
+          has_prorations: hasProrations,
+        });
+
         return;
-      }
-
-      const preview = await attachParamsToPreview({
-        req,
-        attachParams,
-        logger,
-        attachBody,
-        withPrepaid: true,
-      });
-
-      const checkoutRes = await previewToCheckoutRes({
-        req,
-        attachParams,
-        preview,
-      });
-
-      // Get has prorations
-      const hasProrations = await getHasProrations({
-        req,
-        branch,
-        attachParams,
-      });
-
-      res.status(200).json({
-        ...checkoutRes,
-        options: attachParams.optionsList.map((o) => ({
-          quantity: o.quantity,
-          feature_id: o.feature_id,
-        })),
-        has_prorations: hasProrations,
-      });
-
-      return;
+      }, { spanName: 'handleCheckout' });
+      
+      return await tracedFunction();
     },
   });

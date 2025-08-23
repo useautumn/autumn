@@ -40,8 +40,9 @@ export const handleAttach = async (req: any, res: any) =>
       const { logger } = req;
       await handleAttachRaceCondition({ req, res });
 
-      await runAttachWithTraceroot({
-        function: async () => {
+      const tracedFunction = traceroot.traceFunction(async () => {
+        await runAttachWithTraceroot({
+          function: async () => {
           const attachBody = AttachBodySchema.parse(req.body);
 
           const { attachParams, customPrices, customEnts } =
@@ -96,6 +97,9 @@ export const handleAttach = async (req: any, res: any) =>
         },
         spanName: "handleAttach",
       });
+      }, { spanName: 'handleAttach.main' });
+      
+      return await tracedFunction();
     },
   });
 
