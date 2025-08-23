@@ -39,7 +39,7 @@ const { db, client } = initDrizzle({ maxConnections: 5 });
 
 let orgSlugs = process.env.ORG_SLUGS!.split(",");
 const skipEmails = process.env.SKIP_EMAILS!.split(",");
-// orgSlugs = ["athenahq"];
+orgSlugs = ["athenahq"];
 
 const getSingleCustomer = async ({
   stripeCli,

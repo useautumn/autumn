@@ -10,7 +10,12 @@ import {
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
-import { APIVersion, AttachConfig, CusProductStatus } from "@autumn/shared";
+import {
+  APIVersion,
+  AttachConfig,
+  CusProductStatus,
+  ProrationBehavior,
+} from "@autumn/shared";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 
 import {
@@ -25,11 +30,10 @@ import { paramsToScheduleItems } from "../../mergeUtils/paramsToScheduleItems.js
 import { updateCurSchedule } from "../../mergeUtils/updateCurSchedule.js";
 import {
   getCurrentPhaseIndex,
-  logPhaseItems,
+  logPhases,
 } from "../../mergeUtils/phaseUtils/phaseUtils.js";
-import { formatUnixToDateTime } from "@/utils/genUtils.js";
-import Stripe from "stripe";
-import { getUsageInvoiceItems } from "../upgradeDiffIntFlow/createUsageInvoiceItems.js";
+import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
+import { shouldCancelSub } from "./upgradeFlowUtils.js";
 
 export const handleUpgradeFlow = async ({
   req,
@@ -42,7 +46,6 @@ export const handleUpgradeFlow = async ({
   attachParams: AttachParams;
   config: AttachConfig;
 }) => {
-  const { stripeCli } = attachParams;
   const curCusProduct = attachParamsToCurCusProduct({ attachParams });
   const curSub = await paramsToCurSub({ attachParams });
 
@@ -69,25 +72,42 @@ export const handleUpgradeFlow = async ({
 
   const { subItems } = newItemSet;
 
-  if (subItems.length > 0) {
+  // Delete scheduled products if needed
+  for (const product of attachParams.products) {
+    if (product.is_add_on) continue;
+
+    const { curScheduledProduct } = getExistingCusProducts({
+      product,
+      cusProducts: attachParams.cusProducts,
+      internalEntityId: attachParams.internalEntityId,
+    });
+
+    if (curScheduledProduct) {
+      await CusProductService.delete({
+        db: req.db,
+        cusProductId: curScheduledProduct.id,
+      });
+    }
+  }
+
+  // Cancel sub...
+  let canceled = false;
+  if (shouldCancelSub({ sub: curSub!, newSubItems: subItems })) {
+    console.log(
+      `UPGRADE FLOW, CANCELLING SUB ${curSub!.id}, PRORATE: ${config.proration}`
+    );
+    canceled = true;
+    const { stripeCli } = attachParams;
+    await stripeCli.subscriptions.cancel(curSub!.id, {
+      prorate: config.proration == ProrationBehavior.Immediately,
+      invoice_now: config.proration == ProrationBehavior.Immediately,
+      cancellation_details: {
+        comment: "autumn_cancel",
+      },
+    });
+  } else if (subItems.length > 0) {
     itemSet.subItems = subItems;
-
-    // const schedule1 = await paramsToCurSubSchedule({ attachParams });
-    // console.log("BEFORE UPDATING SUBSCRIPTION:");
-    // for (const phase of schedule1?.phases || []) {
-    //   console.log(
-    //     `Phase ${formatUnixToDateTime(Number(phase.start_date || 0) * 1000)}:`
-    //   );
-    //   await logPhaseItems({
-    //     db: req.db,
-    //     items: phase.items.map((item) => ({
-    //       price: (item.price as Stripe.Price).id,
-    //       quantity: item.quantity,
-    //     })),
-    //   });
-    // }
-
-    // console.log("--------------------------------");
+    console.log("New sub items:", subItems);
 
     const res = await updateStripeSub2({
       req,
@@ -95,36 +115,23 @@ export const handleUpgradeFlow = async ({
       config,
       curSub: curSub!,
       itemSet,
+      fromCreate: attachParams.products.length === 0, // just for now, if no products, it comes from cancel product...
     });
 
     const schedule = await paramsToCurSubSchedule({ attachParams });
 
     // Add to schedule?
     if (schedule) {
-      const phases = schedule.phases;
-      // console.log(`NOW: ${formatUnixToDateTime(attachParams.now)}`);
-      // console.log("PHASES (AFTER UPDATING SUBSCRIPTION):");
-      // for (const phase of phases) {
-      //   console.log(
-      //     `Phase ${formatUnixToDateTime(Number(phase.start_date || 0) * 1000)}:`
-      //   );
-      //   await logPhaseItems({
-      //     db: req.db,
-      //     items: phase.items.map((item) => ({
-      //       price: (item.price as Stripe.Price).id,
-      //       quantity: item.quantity,
-      //     })),
-      //   });
-      // }
-
-      // console.log("--------------------------------");
+      console.log("CUR ITEMS:");
+      await logPhases({
+        phases: schedule.phases as any,
+        db: req.db,
+      });
 
       const currentPhaseIndex = getCurrentPhaseIndex({
         schedule,
         now: attachParams.now,
       });
-
-      // console.log("CURRENT PHASE INDEX:", currentPhaseIndex);
 
       const nextPhaseIndex = currentPhaseIndex + 1;
 
@@ -134,9 +141,13 @@ export const handleUpgradeFlow = async ({
           schedule,
           attachParams,
           config,
-          removeCusProducts: [curCusProduct!],
           billingPeriodEnd: schedule?.phases?.[nextPhaseIndex]?.start_date,
-          // phaseIndex: 1,
+        });
+
+        console.log("NEW ITEMS:");
+        await logPhases({
+          phases: newItems.phases,
+          db: req.db,
         });
 
         await updateCurSchedule({
@@ -159,7 +170,7 @@ export const handleUpgradeFlow = async ({
     db: req.db,
     cusProductId: curCusProduct!.id,
     updates: {
-      subscription_ids: [],
+      subscription_ids: canceled ? undefined : [],
       status: CusProductStatus.Expired,
     },
   });
@@ -173,18 +184,23 @@ export const handleUpgradeFlow = async ({
     });
   }
 
-  logger.info(`3. Creating new cus product`);
-  const anchorToUnix = sub ? getEarliestPeriodEnd({ sub }) * 1000 : undefined;
-  await createFullCusProduct({
-    db: req.db,
-    attachParams: attachToInsertParams(attachParams, attachParams.products[0]),
-    subscriptionIds: curCusProduct!.subscription_ids || [],
-    disableFreeTrial: config.disableTrial,
-    carryExistingUsages: config.carryUsage,
-    carryOverTrial: config.carryTrial,
-    anchorToUnix: anchorToUnix,
-    logger,
-  });
+  if (attachParams.products.length > 0) {
+    logger.info(`3. Creating new cus product`);
+    const anchorToUnix = sub ? getEarliestPeriodEnd({ sub }) * 1000 : undefined;
+    await createFullCusProduct({
+      db: req.db,
+      attachParams: attachToInsertParams(
+        attachParams,
+        attachParams.products[0]
+      ),
+      subscriptionIds: curCusProduct!.subscription_ids || [],
+      disableFreeTrial: config.disableTrial,
+      carryExistingUsages: config.carryUsage,
+      carryOverTrial: config.carryTrial,
+      anchorToUnix: anchorToUnix,
+      logger,
+    });
+  }
 
   if (res) {
     let apiVersion = attachParams.org.api_version || APIVersion.v1;

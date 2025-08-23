@@ -5,6 +5,9 @@ import {
   UsageModel,
   UsagePriceConfig,
   BillingInterval,
+  CustomerPrice,
+  FullCustomerEntitlement,
+  FullCustomerPrice,
 } from "@autumn/shared";
 
 import { Price } from "@autumn/shared";
@@ -84,4 +87,16 @@ export const priceToUsageModel = (price: Price) => {
     return UsageModel.Prepaid;
   }
   return UsageModel.PayPerUse;
+};
+
+export const cusPriceToCusEnt = ({
+  cusPrice,
+  cusEnts,
+}: {
+  cusPrice: FullCustomerPrice;
+  cusEnts: FullCustomerEntitlement[];
+}) => {
+  return cusEnts.find(
+    (ce) => ce.entitlement?.id == cusPrice.price.entitlement_id
+  );
 };

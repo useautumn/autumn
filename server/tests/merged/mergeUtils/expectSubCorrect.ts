@@ -35,6 +35,7 @@ import {
   similarUnix,
 } from "@/internal/customers/attach/mergeUtils/phaseUtils/phaseUtils.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
+import { getExistingUsageFromCusProducts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 
 const compareActualItems = async ({
   actualItems,
@@ -146,6 +147,7 @@ export const expectSubToBeCorrect = async ({
     idOrInternalId: customerId,
     orgId: org.id,
     env,
+    withEntities: true,
   });
 
   // 1. Only 1 sub ID available
@@ -169,7 +171,7 @@ export const expectSubToBeCorrect = async ({
   });
 
   // console.log(`\n\nChecking sub correct`);
-  let printCusProduct = false;
+  let printCusProduct = true;
   if (printCusProduct) {
     console.log(`\n\nChecking sub correct`);
   }
@@ -200,13 +202,21 @@ export const expectSubToBeCorrect = async ({
         cusProduct.status === CusProductStatus.Scheduled &&
         cusProductInPhase({ phaseStartMillis: unix, cusProduct })
       ) {
-        // console.log(`CUS PRODUCT IN PHASE`);
-        // console.log(`Unix: ${formatUnixToDateTime(unix)}`);
-        // console.log(`Starts at: ${formatUnixToDateTime(cusProduct.starts_at)}`);
         return scheduleIndexes.push(index);
       }
 
       if (cusProduct.status === CusProductStatus.Scheduled) return;
+
+      if (cusProduct.product.is_add_on) {
+        // 1. If it's canceled
+        if (cusProduct.canceled && (cusProduct.ended_at || 0) > unix) {
+          return scheduleIndexes.push(index);
+        } else if (!cusProduct.canceled) {
+          return scheduleIndexes.push(index);
+        }
+
+        return;
+      }
 
       // 2. If main product, check that schedule is AFTER this phase
       const curScheduledProduct = cusProducts.find(
@@ -250,6 +260,13 @@ export const expectSubToBeCorrect = async ({
     for (const price of prices) {
       const relatedEnt = getPriceEntitlement(price, ents);
       const options = getPriceOptions(price, cusProduct.options);
+      let existingUsage = getExistingUsageFromCusProducts({
+        entitlement: relatedEnt,
+        cusProducts,
+        entities: fullCus.entities,
+        carryExistingUsages: true,
+        internalEntityId: cusProduct.internal_entity_id || undefined,
+      });
 
       const res = priceToStripeItem({
         price,
@@ -257,7 +274,7 @@ export const expectSubToBeCorrect = async ({
         product,
         org,
         options,
-        existingUsage: 0,
+        existingUsage,
         withEntity: true,
         isCheckout: false,
         apiVersion: APIVersion.v1_4,
@@ -266,9 +283,6 @@ export const expectSubToBeCorrect = async ({
       if (options?.upcoming_quantity && res?.lineItem) {
         res.lineItem.quantity = options.upcoming_quantity;
       }
-
-      // console.log(`Price: ${formatPrice({ price })}`);
-      // console.log("Options:", options);
 
       const lineItem: any = res?.lineItem;
       if (lineItem && res?.lineItem) {

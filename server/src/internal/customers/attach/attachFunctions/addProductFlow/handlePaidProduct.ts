@@ -76,11 +76,6 @@ export const handlePaidProduct = async ({
     );
   }
 
-  // let mergeSub = await cusProductToSub({
-  //   cusProduct: mergeCusProduct!,
-  //   stripeCli,
-  // });
-
   const mergeSub = await getCustomerSub({ attachParams });
   let sub: Stripe.Subscription | null = null;
   let schedule: Stripe.SubscriptionSchedule | null = null;

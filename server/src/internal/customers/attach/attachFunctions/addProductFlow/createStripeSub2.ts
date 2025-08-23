@@ -7,7 +7,10 @@ import { SubService } from "@/internal/subscriptions/SubService.js";
 import { generateId } from "@/utils/genUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getAlignedIntervalUnix } from "@/internal/products/prices/billingIntervalUtils.js";
-import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import {
+  getLatestPeriodStart,
+  getEarliestPeriodEnd,
+} from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { sanitizeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
@@ -140,6 +143,7 @@ export const createStripeSub2 = async ({
 
     // Store
     const earliestPeriodEnd = getEarliestPeriodEnd({ sub: subscription });
+    const currentPeriodStart = getLatestPeriodStart({ sub: subscription });
 
     await SubService.createSub({
       db,
@@ -151,7 +155,7 @@ export const createStripeSub2 = async ({
         usage_features: usageFeatures,
         org_id: org.id,
         env: customer.env,
-        current_period_start: earliestPeriodEnd,
+        current_period_start: currentPeriodStart,
         current_period_end: earliestPeriodEnd,
       },
     });
