@@ -81,11 +81,11 @@ export const handleSubscriptionUpdated = async ({
       status: subStatusMap[subscription.status] || CusProductStatus.Unknown,
       canceled_at: canceled ? canceledAt : null,
       collection_method: fullSub.collection_method as CollectionMethod,
-      trial_ends_at:
-        previousAttributes.status === "trialing" &&
-        subscription.status === "active"
-          ? null
-          : undefined,
+      // trial_ends_at:
+      //   previousAttributes.status === "trialing" &&
+      //   subscription.status === "active"
+      //     ? null
+      //     : undefined,
     },
   });
 

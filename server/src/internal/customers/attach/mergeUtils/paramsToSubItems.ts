@@ -102,17 +102,6 @@ export const paramsToSubItems = async ({
 }) => {
   const { logger } = req;
   let curSubItems = sub?.items.data || [];
-  // if (scheduleSet) {
-  //   const scheduleItems = scheduleSet.schedule.phases[0].items.map((item) => ({
-  //     id: item.price,
-  //     price: {
-  //       id: item.price,
-  //     },
-  //     quantity: item.quantity,
-  //   }));
-
-  //   curSubItems = scheduleItems as any;
-  // }
 
   const itemSet = await getStripeSubItems2({
     attachParams,
@@ -126,13 +115,6 @@ export const paramsToSubItems = async ({
     itemSet,
     curSubItems,
   });
-
-  // console.log("New sub items:");
-  // await logPhaseItems({
-  //   db: req.db,
-  //   items: newSubItems as any,
-  // });
-  // console.log("--------------------------------");
 
   const allCusProducts = attachParams.customer.customer_products;
 

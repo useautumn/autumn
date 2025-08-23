@@ -40,15 +40,13 @@ export const updateStripeSub2 = async ({
     });
   }
 
-  let trialEnd = config.disableTrial
-    ? undefined
-    : freeTrialToStripeTimestamp({
-        freeTrial: attachParams.freeTrial,
-        now: attachParams.now,
-      });
-
-  console.log("Sub items:", sanitizeSubItems(itemSet.subItems));
-  console.log("Invoice items:", itemSet.invoiceItems);
+  let trialEnd =
+    config.disableTrial || config.carryTrial
+      ? undefined
+      : freeTrialToStripeTimestamp({
+          freeTrial: attachParams.freeTrial,
+          now: attachParams.now,
+        });
 
   // 1. Update subscription
   let updatedSub = await stripeCli.subscriptions.update(curSub.id, {

@@ -161,8 +161,8 @@ export const cusProductToSchedule = async ({
     }
   );
 
-  if (schedule.status == "canceled") {
-    return null;
+  if (schedule.status == "canceled" || schedule.status == "released") {
+    return undefined;
   }
 
   return schedule;

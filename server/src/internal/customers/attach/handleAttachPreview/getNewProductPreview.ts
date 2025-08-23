@@ -26,6 +26,8 @@ import {
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { getMergeCusProduct } from "../attachFunctions/addProductFlow/getMergeCusProduct.js";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import { formatUnixToDate } from "@/utils/genUtils.js";
+import { isTrialing } from "../../cusProducts/cusProductUtils.js";
 
 const getNextCycleItems = async ({
   newProduct,
@@ -35,6 +37,7 @@ const getNextCycleItems = async ({
   withPrepaid,
   logger,
   config,
+  trialEnds,
 }: {
   newProduct: FullProduct;
   attachParams: AttachParams;
@@ -43,6 +46,7 @@ const getNextCycleItems = async ({
   withPrepaid?: boolean;
   logger: any;
   config: AttachConfig;
+  trialEnds?: number | null;
 }) => {
   // 1. If one off, return null
   if (branch == AttachBranch.OneOff) return null;
@@ -50,11 +54,15 @@ const getNextCycleItems = async ({
   // 2. If free trial
   let nextCycleAt = undefined;
   if (attachParams.freeTrial) {
-    nextCycleAt =
-      freeTrialToStripeTimestamp({
-        freeTrial: attachParams.freeTrial,
-        now: attachParams.now,
-      })! * 1000;
+    if (trialEnds) {
+      nextCycleAt = trialEnds;
+    } else {
+      nextCycleAt =
+        freeTrialToStripeTimestamp({
+          freeTrial: attachParams.freeTrial,
+          now: attachParams.now,
+        })! * 1000;
+    }
   } else if (anchorToUnix) {
     // Yearly one
     const largestInterval = getLargestInterval({ prices: newProduct.prices });
@@ -113,17 +121,35 @@ export const getNewProductPreview = async ({
   //   products: [newProduct],
   //   config,
   // });
-  const mergeSub = await getCustomerSub({ attachParams });
+  const { sub: mergeSub, cusProduct: mergeCusProduct } = await getCustomerSub({
+    attachParams,
+  });
 
-  // console.log("Merge sub:", mergeSub);
+  // console.log("Merge sub:", mergeSub?.id);
+  // console.log("Merge cus product:", mergeCusProduct?.product.id);
+  // console.log(
+  //   "Trial ends at:",
+  //   formatUnixToDate(mergeCusProduct?.trial_ends_at || 0)
+  // );
 
+  let trialEnds = undefined;
   if (mergeSub) {
     const { start } = subToPeriodStartEnd({ sub: mergeSub });
+    if (mergeCusProduct?.free_trial) {
+      // 1. If still on trial
+      if (isTrialing({ cusProduct: mergeCusProduct, now: attachParams.now })) {
+        trialEnds = mergeCusProduct.trial_ends_at;
+        attachParams.freeTrial = mergeCusProduct.free_trial;
+      } else {
+        attachParams.freeTrial = null;
+      }
+    }
 
     const smallestInterval = getSmallestInterval({
       prices: newProduct.prices,
       excludeOneOff: true,
     });
+
     if (smallestInterval) {
       anchorToUnix = addBillingIntervalUnix({
         unixTimestamp: start * 1000,
@@ -154,6 +180,7 @@ export const getNewProductPreview = async ({
     withPrepaid,
     logger,
     config,
+    trialEnds,
   });
 
   // console.log("Due next cycle", dueNextCycle);

@@ -12,26 +12,17 @@ import {
   CusProductStatus,
   Organization,
 } from "@autumn/shared";
-import {
-  constructArrearItem,
-  constructFeatureItem,
-} from "@/utils/scriptUtils/constructItem.js";
+
+import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
-import { expectSubToBeCorrect } from "../mergeUtils/expectSubCorrect.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
 import { expect } from "chai";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
 
-// OPERATIONS:
-// Pro, Pro
-// Free, Premium
-
-let free = constructProduct({
-  id: "free",
-  items: [constructFeatureItem({ featureId: TestFeature.Words })],
-  type: "free",
-  isDefault: false,
-});
+// Premium, Premium
+// Cancel End, Cancel Immediately
+// Results: Canceled sub
 
 let premium = constructProduct({
   id: "premium",
@@ -39,30 +30,11 @@ let premium = constructProduct({
   type: "premium",
 });
 
-let pro = constructProduct({
-  id: "pro",
-  items: [constructArrearItem({ featureId: TestFeature.Words })],
-  type: "pro",
-});
-
 const ops = [
   {
     entityId: "1",
-    product: pro,
-    results: [{ product: pro, status: CusProductStatus.Active }],
-  },
-  {
-    entityId: "2",
-    product: pro,
-    results: [{ product: pro, status: CusProductStatus.Active }],
-  },
-  {
-    entityId: "1",
-    product: free,
-    results: [
-      { product: pro, status: CusProductStatus.Active },
-      { product: free, status: CusProductStatus.Scheduled },
-    ],
+    product: premium,
+    results: [{ product: premium, status: CusProductStatus.Active }],
   },
   {
     entityId: "2",
@@ -71,8 +43,21 @@ const ops = [
   },
 ];
 
-const testCase = "mergedDowngrade3";
-describe(`${chalk.yellowBright("mergedDowngrade3: Testing merged subs, pro 1, pro 2, downgrade free pro 1, upgrade pro 2 ")}`, () => {
+const cancels = [
+  {
+    entityId: "1",
+    product: premium,
+  },
+  {
+    entityId: "2",
+    product: premium,
+    cancelImmediately: true,
+    shouldBeCanceled: true,
+  },
+];
+
+const testCase = "mergedCancel2";
+describe(`${chalk.yellowBright("mergedCancel2: Testing cancel immediately")}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
 
@@ -93,13 +78,13 @@ describe(`${chalk.yellowBright("mergedDowngrade3: Testing merged subs, pro 1, pr
     stripeCli = this.stripeCli;
 
     addPrefixToProducts({
-      products: [pro, premium, free],
+      products: [premium],
       prefix: testCase,
     });
 
     await createProducts({
       autumn: autumnJs,
-      products: [pro, premium, free],
+      products: [premium],
       db,
       orgId: org.id,
       env,
@@ -137,36 +122,39 @@ describe(`${chalk.yellowBright("mergedDowngrade3: Testing merged subs, pro 1, pr
     for (let index = 0; index < ops.length; index++) {
       const op = ops[index];
       try {
-        await autumn.attach({
-          customer_id: customerId,
-          product_id: op.product.id,
-          entity_id: op.entityId,
-        });
-
-        const entity = await autumn.entities.get(customerId, op.entityId);
-        for (const result of op.results) {
-          expectProductAttached({
-            customer: entity,
-            product: result.product,
-            entityId: op.entityId,
-          });
-        }
-        expect(
-          entity.products.filter((p: any) => p.group == premium.group).length
-        ).to.equal(op.results.length);
-
-        await expectSubToBeCorrect({
-          db,
+        await attachAndExpectCorrect({
+          autumn,
           customerId,
+          product: op.product,
+          stripeCli,
+          db,
           org,
           env,
+          entityId: op.entityId,
         });
       } catch (error) {
-        console.log(
-          `Operation failed: ${op.entityId} ${op.product.id}, index: ${index}`
-        );
+        console.log(`Operation failed: ${op.product.id}, index: ${index}`);
         throw error;
       }
+    }
+  });
+
+  it("should track usage cancel, advance test clock and have correct invoice", async function () {
+    for (const cancel of cancels) {
+      await autumn.cancel({
+        customer_id: customerId,
+        product_id: cancel.product.id,
+        entity_id: cancel.entityId,
+        cancel_immediately: cancel.cancelImmediately ?? false,
+      });
+
+      await expectSubToBeCorrect({
+        db,
+        customerId,
+        org,
+        env,
+        shouldBeCanceled: cancel.shouldBeCanceled,
+      });
     }
   });
 });

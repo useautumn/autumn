@@ -104,11 +104,19 @@ export const handleScheduleFunction2 = async ({
     if (currentPhaseIndex == newItems.phases.length - 1) {
       console.log(`NO SUBSEQUENT PHASES, RELEASING SCHEDULE`);
       await stripeCli.subscriptionSchedules.release(schedule!.id);
+      await CusProductService.updateByStripeScheduledId({
+        db: req.db,
+        stripeScheduledId: schedule!.id,
+        updates: { scheduled_ids: [] },
+      });
+
       await CusProductService.update({
         db: req.db,
         cusProductId: curCusProduct!.id,
         updates: {
-          scheduled_ids: [],
+          canceled: true,
+          canceled_at: Date.now(),
+          ended_at: expectedEnd * 1000,
         },
       });
       schedule = undefined;
@@ -126,6 +134,7 @@ export const handleScheduleFunction2 = async ({
         cusProductId: curCusProduct!.id,
         updates: {
           scheduled_ids: [schedule!.id],
+          canceled_at: Date.now(),
           canceled: true,
           ended_at: expectedEnd * 1000,
         },

@@ -60,7 +60,7 @@ const getNextCycleAt = ({
   if (
     branch == AttachBranch.NewVersion &&
     curCusProduct &&
-    isTrialing(curCusProduct)
+    isTrialing({ cusProduct: curCusProduct, now })
   ) {
     return {
       next_cycle_at: curCusProduct.trial_ends_at,

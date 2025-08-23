@@ -24,7 +24,12 @@ import { expect } from "chai";
 import { advanceToNextInvoice } from "tests/utils/testAttachUtils/testAttachUtils.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
-// UNCOMMENT FROM HERE
+// OPERATIONS:
+// Premium
+// Free
+// Free, Premium
+// Free, Pro
+
 let free = constructProduct({
   id: "free",
   items: [constructFeatureItem({ featureId: TestFeature.Words })],

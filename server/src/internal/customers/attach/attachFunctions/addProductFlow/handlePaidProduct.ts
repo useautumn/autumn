@@ -32,6 +32,8 @@ import { getCustomerSub } from "../../attachUtils/convertAttachParams.js";
 import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
 import { updateStripeSub2 } from "../upgradeFlow/updateStripeSub2.js";
 import { subToNewSchedule } from "../../mergeUtils/subToNewSchedule.js";
+import { isTrialing } from "@/internal/customers/cusProducts/cusProductUtils.js";
+import { formatUnixToDate } from "@/utils/genUtils.js";
 
 export const handlePaidProduct = async ({
   req,
@@ -69,19 +71,42 @@ export const handlePaidProduct = async ({
   let subscriptions: Stripe.Subscription[] = [];
 
   // Only merge if no free trials
-  let mergeCusProduct = undefined;
-  if (!config.disableMerge && !freeTrial) {
-    mergeCusProduct = cusProducts?.find((cp) =>
-      products.some((p) => p.group == cp.product.group)
-    );
-  }
 
-  const mergeSub = await getCustomerSub({ attachParams });
+  // if (!config.disableMerge && !freeTrial) {
+  //   mergeCusProduct = cusProducts?.find((cp) =>
+  //     products.some((p) => p.group == cp.product.group)
+  //   );
+  // }
+
+  const { sub: mergeSub, cusProduct: mergeCusProduct } = await getCustomerSub({
+    attachParams,
+  });
+
   let sub: Stripe.Subscription | null = null;
   let schedule: Stripe.SubscriptionSchedule | null = null;
+  let trialEndsAt = undefined;
+
+  console.log("Merge sub:", mergeSub?.id);
+  console.log("Merge cus product:", mergeCusProduct?.product.id);
+  console.log(
+    "Trial ends at:",
+    formatUnixToDate(mergeCusProduct?.trial_ends_at || 0)
+  );
+
+  throw new Error("test");
 
   // 1. If merge sub
   if (mergeSub) {
+    if (mergeCusProduct?.free_trial) {
+      if (isTrialing({ cusProduct: mergeCusProduct, now: attachParams.now })) {
+        attachParams.freeTrial = mergeCusProduct.free_trial;
+        trialEndsAt = mergeCusProduct.trial_ends_at;
+      } else {
+        attachParams.freeTrial = null;
+        trialEndsAt = undefined;
+      }
+    }
+
     // 1. If merged sub is canceled, also add to current schedule
     const newItemSet = await paramsToSubItems({
       req,
@@ -194,6 +219,7 @@ export const handlePaidProduct = async ({
         anchorToUnix,
         carryExistingUsages: config.carryUsage,
         scenario: AttachScenario.New,
+        trialEndsAt: trialEndsAt || undefined,
         logger,
       })
     );

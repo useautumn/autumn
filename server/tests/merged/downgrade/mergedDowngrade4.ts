@@ -25,7 +25,10 @@ import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addMonths } from "date-fns";
 import { advanceToNextInvoice } from "tests/utils/testAttachUtils/testAttachUtils.js";
 
-// UNCOMMENT FROM HERE
+// OPERATIONS:
+// PremiumAnnual, Premium
+// PremiumAnnual, Pro
+
 let premiumAnnual = constructProduct({
   id: "premiumAnnual",
   items: [constructArrearItem({ featureId: TestFeature.Words })],

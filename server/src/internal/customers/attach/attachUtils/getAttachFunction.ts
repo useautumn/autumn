@@ -172,15 +172,6 @@ export const runAttachFunction = async ({
     });
   }
 
-  // // 1. Cancel future schedule before creating a new one...
-  // await deleteCurrentScheduledProduct({
-  //   req,
-  //   org,
-  //   attachParams,
-  //   attachFunc: attachFunction,
-  //   logger,
-  // });
-
   // 2. If main is trial, cancel it...
   if (branch == AttachBranch.MainIsTrial) {
     await CusProductService.update({
@@ -271,3 +262,12 @@ export const runAttachFunction = async ({
     });
   }
 };
+
+// // 1. Cancel future schedule before creating a new one...
+// await deleteCurrentScheduledProduct({
+//   req,
+//   org,
+//   attachParams,
+//   attachFunc: attachFunction,
+//   logger,
+// });
