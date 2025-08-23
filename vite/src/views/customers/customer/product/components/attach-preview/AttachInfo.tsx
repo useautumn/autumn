@@ -20,7 +20,7 @@ export const AttachInfo = () => {
 
   const getAttachDescription = () => {
     if (preview?.branch == AttachBranch.Downgrade) {
-      let text = `The customer is currently on ${currentProduct.name} and will downgrade to ${product.name} on ${formatUnixToDate(preview.due_next_cycle.due_at)}`;
+      let text = `The customer is currently on ${currentProduct.name} and will downgrade to ${product.name} on ${formatUnixToDate(preview.due_next_cycle?.due_at)}`;
       if (scheduledProduct) {
         text += `. The scheduled product ${scheduledProduct.product.name} will also be removed.`;
       }
@@ -28,7 +28,7 @@ export const AttachInfo = () => {
     }
 
     if (preview?.free_trial) {
-      let text = `The free trial for ${product.name} will end on ${formatUnixToDate(preview.due_next_cycle.due_at)}`;
+      let text = `The free trial for ${product.name} will end on ${formatUnixToDate(preview.due_next_cycle?.due_at)}`;
       if (currentProduct && currentProduct.free_trial) {
         text += ` and the customer's current trial to ${currentProduct.name} will be canceled.`;
       } else {
@@ -50,7 +50,7 @@ export const AttachInfo = () => {
           <span>
             You are switching this customer to version {product.version} of{" "}
             {product.name}. Their features will update immediately and from{" "}
-            {format(preview.due_next_cycle.due_at, "d MMM")} onwards, they will
+            {format(preview.due_next_cycle?.due_at, "d MMM")} onwards, they will
             pay any new prices
             {usagePriceExists ? " (including usage from the last cycle)" : ""}.
           </span>
