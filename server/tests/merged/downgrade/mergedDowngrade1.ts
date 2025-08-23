@@ -19,6 +19,11 @@ import { expect } from "chai";
 import { expectSubToBeCorrect } from "../mergeUtils/expectSubCorrect.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
 
+// OPERATIONS:
+// Premium, Premium
+// Pro, Pro
+// Premium, Premium
+
 // UNCOMMENT FROM HERE
 let premium = constructProduct({
   id: "premium",

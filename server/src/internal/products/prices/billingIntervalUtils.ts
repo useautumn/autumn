@@ -21,7 +21,7 @@ import {
   subYears,
 } from "date-fns";
 import { UTCDate } from "@date-fns/utc";
-import { formatUnixToDate, formatUnixToDateTime } from "@/utils/genUtils.js";
+import { formatUnixToDateTime } from "@/utils/genUtils.js";
 
 export const subtractBillingIntervalUnix = ({
   unixTimestamp,

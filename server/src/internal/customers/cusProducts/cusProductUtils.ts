@@ -579,8 +579,16 @@ export const searchCusProducts = ({
   });
 };
 
-export const isTrialing = (cusProduct: FullCusProduct) => {
-  return cusProduct.trial_ends_at && cusProduct.trial_ends_at > Date.now();
+export const isTrialing = ({
+  cusProduct,
+  now,
+}: {
+  cusProduct: FullCusProduct;
+  now?: number;
+}) => {
+  return (
+    cusProduct.trial_ends_at && cusProduct.trial_ends_at > (now || Date.now())
+  );
 };
 
 export const getMainCusProduct = async ({

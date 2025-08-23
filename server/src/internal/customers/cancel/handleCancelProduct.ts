@@ -23,6 +23,7 @@ import { handleRenewProduct } from "../attach/attachFunctions/handleRenewProduct
 import { getDefaultAttachConfig } from "../attach/attachUtils/getAttachConfig.js";
 import { handleScheduleFunction2 } from "../attach/attachFunctions/scheduleFlow/handleScheduleFlow2.js";
 import { handleUpgradeFlow } from "../attach/attachFunctions/upgradeFlow/handleUpgradeFlow.js";
+import { activateDefaultProduct } from "../cusProducts/cusProductUtils.js";
 
 export const handleCancelProduct = async ({
   req,
@@ -180,6 +181,14 @@ export const handleCancelProduct = async ({
         ? ProrationBehavior.Immediately
         : ProrationBehavior.None,
     },
+  });
+
+  // Activate default product
+  await activateDefaultProduct({
+    req,
+    productGroup: cusProduct.product.group,
+    fullCus,
+    curCusProduct: cusProduct,
   });
   return;
 

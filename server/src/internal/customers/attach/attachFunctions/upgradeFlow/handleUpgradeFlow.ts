@@ -26,14 +26,9 @@ import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSu
 import { updateStripeSub2 } from "./updateStripeSub2.js";
 import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
-import { paramsToScheduleItems } from "../../mergeUtils/paramsToScheduleItems.js";
-import { updateCurSchedule } from "../../mergeUtils/updateCurSchedule.js";
-import {
-  getCurrentPhaseIndex,
-  logPhases,
-} from "../../mergeUtils/phaseUtils/phaseUtils.js";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { shouldCancelSub } from "./upgradeFlowUtils.js";
+import { handleUpgradeFlowSchedule } from "./handleUpgradeFlowSchedule.js";
 
 export const handleUpgradeFlow = async ({
   req,
@@ -65,7 +60,7 @@ export const handleUpgradeFlow = async ({
 
   const newItemSet = await paramsToSubItems({
     req,
-    sub: curSub!,
+    sub: curSub,
     attachParams,
     config,
   });
@@ -90,9 +85,12 @@ export const handleUpgradeFlow = async ({
     }
   }
 
-  // Cancel sub...
   let canceled = false;
-  if (shouldCancelSub({ sub: curSub!, newSubItems: subItems })) {
+  // SCENARIO 1, NO SUB:
+  if (!curSub) {
+    console.log("UPGRADE FLOW, NO SUB (FROM CANCEL MAYBE...?)");
+    // Do something about current sub...
+  } else if (shouldCancelSub({ sub: curSub!, newSubItems: subItems })) {
     console.log(
       `UPGRADE FLOW, CANCELLING SUB ${curSub!.id}, PRORATE: ${config.proration}`
     );
@@ -106,8 +104,8 @@ export const handleUpgradeFlow = async ({
       },
     });
   } else if (subItems.length > 0) {
+    console.log(`UPGRADE FLOW, UPDATING SUB ${curSub!.id}`);
     itemSet.subItems = subItems;
-    console.log("New sub items:", subItems);
 
     const res = await updateStripeSub2({
       req,
@@ -119,45 +117,14 @@ export const handleUpgradeFlow = async ({
     });
 
     const schedule = await paramsToCurSubSchedule({ attachParams });
-
-    // Add to schedule?
     if (schedule) {
-      console.log("CUR ITEMS:");
-      await logPhases({
-        phases: schedule.phases as any,
-        db: req.db,
-      });
-
-      const currentPhaseIndex = getCurrentPhaseIndex({
+      await handleUpgradeFlowSchedule({
+        req,
+        attachParams,
+        config,
         schedule,
-        now: attachParams.now,
+        curSub,
       });
-
-      const nextPhaseIndex = currentPhaseIndex + 1;
-
-      if (nextPhaseIndex < schedule.phases.length) {
-        const newItems = await paramsToScheduleItems({
-          req,
-          schedule,
-          attachParams,
-          config,
-          billingPeriodEnd: schedule?.phases?.[nextPhaseIndex]?.start_date,
-        });
-
-        console.log("NEW ITEMS:");
-        await logPhases({
-          phases: newItems.phases,
-          db: req.db,
-        });
-
-        await updateCurSchedule({
-          req,
-          attachParams,
-          schedule,
-          newPhases: newItems.phases,
-          sub: curSub!,
-        });
-      }
     }
 
     attachParams.replaceables = res.replaceables || [];
@@ -227,9 +194,3 @@ export const handleUpgradeFlow = async ({
     }
   }
 };
-
-// const newSubItems = await removeCurCusProductItems({
-//   sub: curSub,
-//   cusProduct: curCusProduct!,
-//   subItems: itemSet.subItems,
-// });

@@ -3,6 +3,7 @@ import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExi
 import { CusProductStatus } from "@autumn/shared";
 import Stripe from "stripe";
 import { cusProductToProduct } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import { isTrialing } from "../../cusProducts/cusProductUtils.js";
 
 export const attachParamsToCurCusProduct = ({
   attachParams,
@@ -118,17 +119,34 @@ export const getCustomerSub = async ({
     return 0;
   });
 
-  const subId = cusProducts.flatMap((cp) => cp.subscription_ids || [])?.[0];
+  // const subId = cusProducts.flatMap((cp) => cp.subscription_ids || [])?.[0];
+  const cusProduct = cusProducts.find(
+    (cp) => cp.subscription_ids && cp.subscription_ids.length > 0
+  );
 
-  if (!subId) {
-    return undefined;
+  if (!cusProduct) return { sub: undefined, cusProduct: undefined };
+  const subId = cusProduct.subscription_ids![0];
+
+  // If there's only one customer product on sub, and it's still trialing, return undefined, because should just replace sub.
+  const curCusProduct = attachParamsToCurCusProduct({ attachParams });
+  const cusProductsOnSub = cusProducts.filter(
+    (cp) =>
+      cp.subscription_ids?.includes(cusProduct.subscription_ids![0]) &&
+      curCusProduct?.id == cp.id
+  );
+
+  if (
+    cusProductsOnSub.length === 1 &&
+    isTrialing({ cusProduct, now: attachParams.now })
+  ) {
+    return { sub: undefined, cusProduct: undefined };
   }
 
   const sub = await stripeCli.subscriptions.retrieve(subId, {
     expand: ["items.data.price.tiers"],
   });
 
-  return sub;
+  return { sub, cusProduct };
 };
 
 export const paramsToCurSub = async ({

@@ -21,7 +21,12 @@ import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUti
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
-// UNCOMMENT FROM HERE
+// OPERATIONS:
+// Growth, Growth
+// Free
+// Pro
+// Premium
+// Free
 
 let pro = constructProduct({
   id: "pro",

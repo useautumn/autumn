@@ -12,19 +12,22 @@ import {
   CusProductStatus,
   Organization,
 } from "@autumn/shared";
-import {
-  constructArrearItem,
-  constructFeatureItem,
-} from "@/utils/scriptUtils/constructItem.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
-import { expectSubToBeCorrect } from "../mergeUtils/expectSubCorrect.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { expect } from "chai";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
 // OPERATIONS:
 // Pro, Pro
-// Free, Premium
+// Free
+// Premium
+
+let pro = constructProduct({
+  id: "pro",
+  items: [constructFeatureItem({ featureId: TestFeature.Words })],
+  type: "pro",
+});
 
 let free = constructProduct({
   id: "free",
@@ -33,16 +36,15 @@ let free = constructProduct({
   isDefault: false,
 });
 
-let premium = constructProduct({
+const premium = constructProduct({
   id: "premium",
-  items: [constructArrearItem({ featureId: TestFeature.Words })],
+  items: [constructFeatureItem({ featureId: TestFeature.Words })],
   type: "premium",
 });
-
-let pro = constructProduct({
-  id: "pro",
-  items: [constructArrearItem({ featureId: TestFeature.Words })],
-  type: "pro",
+const growth = constructProduct({
+  id: "growth",
+  items: [constructFeatureItem({ featureId: TestFeature.Words })],
+  type: "growth",
 });
 
 const ops = [
@@ -65,14 +67,14 @@ const ops = [
     ],
   },
   {
-    entityId: "2",
+    entityId: "1",
     product: premium,
     results: [{ product: premium, status: CusProductStatus.Active }],
   },
 ];
 
-const testCase = "mergedDowngrade3";
-describe(`${chalk.yellowBright("mergedDowngrade3: Testing merged subs, pro 1, pro 2, downgrade free pro 1, upgrade pro 2 ")}`, () => {
+const testCase = "mergedUpgrade4";
+describe(`${chalk.yellowBright("mergedUpgrade4: Upgrading when there's a cancel")}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
 
@@ -93,13 +95,13 @@ describe(`${chalk.yellowBright("mergedDowngrade3: Testing merged subs, pro 1, pr
     stripeCli = this.stripeCli;
 
     addPrefixToProducts({
-      products: [pro, premium, free],
+      products: [pro, free, premium, growth],
       prefix: testCase,
     });
 
     await createProducts({
       autumn: autumnJs,
-      products: [pro, premium, free],
+      products: [pro, free, premium, growth],
       db,
       orgId: org.id,
       env,
@@ -136,36 +138,25 @@ describe(`${chalk.yellowBright("mergedDowngrade3: Testing merged subs, pro 1, pr
 
     for (let index = 0; index < ops.length; index++) {
       const op = ops[index];
-      try {
-        await autumn.attach({
-          customer_id: customerId,
-          product_id: op.product.id,
-          entity_id: op.entityId,
-        });
+      await attachAndExpectCorrect({
+        autumn,
+        customerId,
+        product: op.product,
+        stripeCli,
+        db,
+        org,
+        env,
+        entities,
+        entityId: op.entityId,
+      });
 
+      for (const result of op.results) {
         const entity = await autumn.entities.get(customerId, op.entityId);
-        for (const result of op.results) {
-          expectProductAttached({
-            customer: entity,
-            product: result.product,
-            entityId: op.entityId,
-          });
-        }
-        expect(
-          entity.products.filter((p: any) => p.group == premium.group).length
-        ).to.equal(op.results.length);
-
-        await expectSubToBeCorrect({
-          db,
-          customerId,
-          org,
-          env,
+        expectProductAttached({
+          customer: entity,
+          product: result.product,
+          status: result.status,
         });
-      } catch (error) {
-        console.log(
-          `Operation failed: ${op.entityId} ${op.product.id}, index: ${index}`
-        );
-        throw error;
       }
     }
   });

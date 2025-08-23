@@ -11,68 +11,59 @@ import {
   AppEnv,
   CusProductStatus,
   Organization,
+  priceToInvoiceAmount,
 } from "@autumn/shared";
 import {
   constructArrearItem,
+  constructArrearProratedItem,
   constructFeatureItem,
+  constructPrepaidItem,
 } from "@/utils/scriptUtils/constructItem.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
-import { expectSubToBeCorrect } from "../mergeUtils/expectSubCorrect.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
+import {
+  addPrefixToProducts,
+  getBasePrice,
+} from "tests/utils/testProductUtils/testProductUtils.js";
 import { expect } from "chai";
-
-// OPERATIONS:
-// Pro, Pro
-// Free, Premium
-
-let free = constructProduct({
-  id: "free",
-  items: [constructFeatureItem({ featureId: TestFeature.Words })],
-  type: "free",
-  isDefault: false,
-});
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import { addWeeks } from "date-fns";
+import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
+import { timeout } from "@/utils/genUtils.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { isPrepaidPrice } from "@shared/utils/productUtils/priceUtils.js";
+import { isContUsePrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
+import { Decimal } from "decimal.js";
+import { advanceToNextInvoice } from "tests/utils/testAttachUtils/testAttachUtils.js";
 
 let premium = constructProduct({
   id: "premium",
   items: [constructArrearItem({ featureId: TestFeature.Words })],
   type: "premium",
 });
-
-let pro = constructProduct({
-  id: "pro",
-  items: [constructArrearItem({ featureId: TestFeature.Words })],
-  type: "pro",
+let free = constructProduct({
+  id: "free",
+  items: [
+    constructFeatureItem({
+      featureId: TestFeature.Words,
+    }),
+  ],
+  type: "free",
+  isDefault: false,
 });
 
 const ops = [
   {
-    entityId: "1",
-    product: pro,
-    results: [{ product: pro, status: CusProductStatus.Active }],
-  },
-  {
-    entityId: "2",
-    product: pro,
-    results: [{ product: pro, status: CusProductStatus.Active }],
-  },
-  {
-    entityId: "1",
     product: free,
-    results: [
-      { product: pro, status: CusProductStatus.Active },
-      { product: free, status: CusProductStatus.Scheduled },
-    ],
-  },
-  {
-    entityId: "2",
-    product: premium,
-    results: [{ product: premium, status: CusProductStatus.Active }],
+    results: [{ product: free, status: CusProductStatus.Active }],
+    skipSubCheck: true,
   },
 ];
 
-const testCase = "mergedDowngrade3";
-describe(`${chalk.yellowBright("mergedDowngrade3: Testing merged subs, pro 1, pro 2, downgrade free pro 1, upgrade pro 2 ")}`, () => {
+const testCase = "cancel3";
+describe(`${chalk.yellowBright("cancel3: Cancelling free product")}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
 
@@ -93,13 +84,13 @@ describe(`${chalk.yellowBright("mergedDowngrade3: Testing merged subs, pro 1, pr
     stripeCli = this.stripeCli;
 
     addPrefixToProducts({
-      products: [pro, premium, free],
+      products: [free],
       prefix: testCase,
     });
 
     await createProducts({
       autumn: autumnJs,
-      products: [pro, premium, free],
+      products: [free],
       db,
       orgId: org.id,
       env,
@@ -137,36 +128,34 @@ describe(`${chalk.yellowBright("mergedDowngrade3: Testing merged subs, pro 1, pr
     for (let index = 0; index < ops.length; index++) {
       const op = ops[index];
       try {
-        await autumn.attach({
-          customer_id: customerId,
-          product_id: op.product.id,
-          entity_id: op.entityId,
-        });
-
-        const entity = await autumn.entities.get(customerId, op.entityId);
-        for (const result of op.results) {
-          expectProductAttached({
-            customer: entity,
-            product: result.product,
-            entityId: op.entityId,
-          });
-        }
-        expect(
-          entity.products.filter((p: any) => p.group == premium.group).length
-        ).to.equal(op.results.length);
-
-        await expectSubToBeCorrect({
-          db,
+        await attachAndExpectCorrect({
+          autumn,
           customerId,
+          product: op.product,
+          stripeCli,
+          db,
           org,
           env,
+          skipSubCheck: op.skipSubCheck,
         });
       } catch (error) {
-        console.log(
-          `Operation failed: ${op.entityId} ${op.product.id}, index: ${index}`
-        );
+        console.log(`Operation failed: ${op.product.id}, index: ${index}`);
         throw error;
       }
     }
+  });
+
+  it("should track usage cancel, advance test clock and have correct invoice", async function () {
+    const cus1 = await autumn.customers.get(customerId);
+
+    await autumn.cancel({
+      customer_id: customerId,
+      product_id: free.id,
+      cancel_immediately: true,
+    });
+
+    const cus = await autumn.customers.get(customerId);
+    const prods = cus.products.filter((p) => p.group == free.group);
+    expect(prods.length).to.equal(0);
   });
 });

@@ -24,7 +24,10 @@ import { expect } from "chai";
 import { advanceToNextInvoice } from "tests/utils/testAttachUtils/testAttachUtils.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
-// UNCOMMENT FROM HERE
+// OPERATIONS:
+// Premium, Premium
+// Free, Free
+// Pro, Free
 
 let pro = constructProduct({
   id: "pro",
