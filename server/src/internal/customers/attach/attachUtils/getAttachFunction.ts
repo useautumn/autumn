@@ -178,11 +178,14 @@ export const runAttachFunction = async ({
       db,
       cusProductId: curMainProduct!.id,
       updates: {
+        ended_at: attachParams.now,
+        canceled: true,
         status: CusProductStatus.Expired,
       },
     });
 
-    for (const subId of curMainProduct?.subscription_ids || []) {
+    const subId = curMainProduct?.subscription_ids?.[0];
+    if (subId) {
       await stripeCli.subscriptions.cancel(subId, {
         cancellation_details: {
           comment: "autumn_downgrade,trial_canceled",
@@ -229,6 +232,7 @@ export const runAttachFunction = async ({
       res,
       attachParams,
       config,
+      branch,
     });
   }
 

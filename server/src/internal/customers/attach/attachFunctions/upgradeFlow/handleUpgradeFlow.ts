@@ -117,6 +117,7 @@ export const handleUpgradeFlow = async ({
     });
 
     const schedule = await paramsToCurSubSchedule({ attachParams });
+
     if (schedule) {
       await handleUpgradeFlowSchedule({
         req,

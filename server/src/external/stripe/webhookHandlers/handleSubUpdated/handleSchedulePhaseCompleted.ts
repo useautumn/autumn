@@ -1,5 +1,10 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { AppEnv, CusProductStatus, Organization } from "@autumn/shared";
+import {
+  AppEnv,
+  AttachScenario,
+  CusProductStatus,
+  Organization,
+} from "@autumn/shared";
 import Stripe from "stripe";
 import { createStripeCli } from "../../utils.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
@@ -12,6 +17,7 @@ import { activateFutureProduct } from "@/internal/customers/cusProducts/cusProdu
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { cusProductToProduct } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
+import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 
 export const handleSchedulePhaseCompleted = async ({
   req,
@@ -62,6 +68,17 @@ export const handleSchedulePhaseCompleted = async ({
         updates: { status: CusProductStatus.Expired },
       });
 
+      await addProductsUpdatedWebhookTask({
+        req,
+        internalCustomerId: cusProduct.internal_customer_id,
+        org,
+        env,
+        customerId: null,
+        scenario: AttachScenario.Expired,
+        cusProduct: cusProduct,
+        logger,
+      });
+
       // ACTIVATING FUTURE PRODUCT
       const futureCusProduct = await activateFutureProduct({
         req,
@@ -87,6 +104,8 @@ export const handleSchedulePhaseCompleted = async ({
           });
         }
       }
+
+      // Maybe activate default product?
     }
   }
 

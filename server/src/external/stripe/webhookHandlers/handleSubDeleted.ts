@@ -70,6 +70,4 @@ export const handleSubDeleted = async ({
       prematurelyCanceled,
     });
   }
-
-  // await Promise.all(batchUpdate);
 };

@@ -5,9 +5,14 @@ import {
 } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 import { subToAutumnInterval } from "@/external/stripe/utils.js";
 import Stripe from "stripe";
-import { attachParamsToProduct } from "./convertAttachParams.js";
+import {
+  attachParamsToProduct,
+  attachParamToCusProducts,
+} from "./convertAttachParams.js";
 import { FullCusProduct } from "@autumn/shared";
 import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
+import { isTrialing } from "../../cusProducts/cusProductUtils.js";
+import { ACTIVE_STATUSES } from "../../cusProducts/CusProductService.js";
 
 export const getCycleWillReset = ({
   attachParams,
@@ -54,4 +59,34 @@ export const removeCurCusProductItems = async ({
   }
 
   return newItems;
+};
+
+export const isMainTrialBranch = ({
+  attachParams,
+}: {
+  attachParams: AttachParams;
+}) => {
+  // 1. get cur main product
+  const { curMainProduct } = attachParamToCusProducts({ attachParams });
+  if (!isTrialing({ cusProduct: curMainProduct!, now: attachParams.now }))
+    return false;
+
+  const subId = curMainProduct?.subscription_ids?.[0];
+
+  if (!subId) return true; // probably free product with trial, can just cancel and replace?
+
+  // 2. Check if sub ID is shared by any other cus products
+  const allCusProducts = attachParams.customer.customer_products;
+  const otherCusProductsOnSub = allCusProducts.filter(
+    (cp) =>
+      cp.id !== curMainProduct!.id &&
+      ACTIVE_STATUSES.includes(cp.status) &&
+      cp.subscription_ids?.includes(subId)
+  );
+
+  if (otherCusProductsOnSub.length > 1) {
+    return false;
+  }
+
+  return true;
 };

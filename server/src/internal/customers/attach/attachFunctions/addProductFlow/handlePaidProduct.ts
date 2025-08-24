@@ -14,6 +14,7 @@ import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import {
   APIVersion,
+  AttachBranch,
   AttachConfig,
   AttachScenario,
   ErrCode,
@@ -86,26 +87,27 @@ export const handlePaidProduct = async ({
   let schedule: Stripe.SubscriptionSchedule | null = null;
   let trialEndsAt = undefined;
 
-  console.log("Merge sub:", mergeSub?.id);
-  console.log("Merge cus product:", mergeCusProduct?.product.id);
-  console.log(
-    "Trial ends at:",
-    formatUnixToDate(mergeCusProduct?.trial_ends_at || 0)
-  );
+  // console.log("Merge sub:", mergeSub?.id);
+  // console.log("Merge cus product:", mergeCusProduct?.product.id);
+  // console.log(
+  //   "Trial ends at:",
+  //   formatUnixToDate(mergeCusProduct?.trial_ends_at || 0)
+  // );
 
-  throw new Error("test");
+  // throw new Error("test");
 
   // 1. If merge sub
-  if (mergeSub) {
+  if (mergeSub && !config.disableMerge) {
     if (mergeCusProduct?.free_trial) {
-      if (isTrialing({ cusProduct: mergeCusProduct, now: attachParams.now })) {
-        attachParams.freeTrial = mergeCusProduct.free_trial;
-        trialEndsAt = mergeCusProduct.trial_ends_at;
-      } else {
-        attachParams.freeTrial = null;
-        trialEndsAt = undefined;
-      }
+      trialEndsAt = isTrialing({
+        cusProduct: mergeCusProduct,
+        now: attachParams.now,
+      })
+        ? mergeCusProduct.trial_ends_at
+        : undefined;
     }
+
+    attachParams.freeTrial = null;
 
     // 1. If merged sub is canceled, also add to current schedule
     const newItemSet = await paramsToSubItems({
@@ -150,7 +152,7 @@ export const handlePaidProduct = async ({
       prices: attachParams.prices,
     });
 
-    if (mergeSub) {
+    if (mergeSub && !config.disableMerge) {
       const { end } = subToPeriodStartEnd({ sub: mergeSub });
       billingCycleAnchorUnix = end * 1000;
     }

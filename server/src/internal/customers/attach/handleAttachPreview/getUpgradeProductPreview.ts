@@ -188,8 +188,15 @@ export const getUpgradeProductPreview = async ({
     );
   }
 
+  if (config?.disableTrial) attachParams.freeTrial = null;
   let freeTrial = attachParams.freeTrial;
-  if (config?.carryTrial && curCusProduct?.free_trial) {
+  // console.log("Free trial:", freeTrial);
+
+  if (
+    config?.carryTrial &&
+    curCusProduct?.free_trial &&
+    isTrialing({ cusProduct: curCusProduct, now })
+  ) {
     freeTrial = curCusProduct.free_trial;
   }
 

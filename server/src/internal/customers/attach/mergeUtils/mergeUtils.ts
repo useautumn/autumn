@@ -6,10 +6,12 @@ import {
   isContUsePrice,
   isPrepaidPrice,
 } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
-import { Entity, FullCusProduct, Price } from "@autumn/shared";
+import { AttachBranch, Entity, FullCusProduct, Price } from "@autumn/shared";
 import Stripe from "stripe";
 import { getExistingUsageFromCusProducts } from "../../cusProducts/cusEnts/cusEntUtils.js";
 import { cusProductToEnts } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import { AttachParams } from "../../cusProducts/AttachParams.js";
+import { getCustomerSub } from "../attachUtils/convertAttachParams.js";
 
 export const isMultiProductSub = ({
   sub,
@@ -60,4 +62,22 @@ export const getQuantityToRemove = ({
   }
 
   return finalQuantity;
+};
+
+export const willMergeSub = async ({
+  attachParams,
+  branch,
+}: {
+  attachParams: AttachParams;
+  branch: AttachBranch;
+}) => {
+  const { subId } = await getCustomerSub({ attachParams, onlySubId: true });
+
+  if (branch == AttachBranch.MainIsTrial) {
+    return false;
+  }
+
+  if (subId) return true;
+
+  return false;
 };

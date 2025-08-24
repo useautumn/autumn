@@ -45,6 +45,7 @@ import {
 import { initStripeCusAndProducts } from "../handlers/handleCreateCustomer.js";
 import { handleAddProduct } from "../attach/attachFunctions/addProductFlow/handleAddProduct.js";
 import { newCusToAttachParams } from "../attach/attachUtils/attachParams/convertToParams.js";
+import { getDefaultAttachConfig } from "../attach/attachUtils/getAttachConfig.js";
 
 // 1. Cancel cusProductSubscriptions
 // CAN DELETE
@@ -259,6 +260,7 @@ export const activateDefaultProduct = async ({
         products: [defaultProd],
         stripeCli,
       }),
+      config: getDefaultAttachConfig(),
     });
 
     return true;

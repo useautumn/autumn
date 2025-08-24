@@ -133,7 +133,7 @@ export const getNewProductPreview = async ({
   // );
 
   let trialEnds = undefined;
-  if (mergeSub) {
+  if (mergeSub && branch !== AttachBranch.MainIsTrial) {
     const { start } = subToPeriodStartEnd({ sub: mergeSub });
     if (mergeCusProduct?.free_trial) {
       // 1. If still on trial

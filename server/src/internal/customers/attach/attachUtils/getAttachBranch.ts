@@ -22,6 +22,7 @@ import { isTrialing } from "../../cusProducts/cusProductUtils.js";
 import { hasPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { attachParamToCusProducts } from "./convertAttachParams.js";
 import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
+import { isMainTrialBranch } from "./attachUtils.js";
 
 const handleMultiProductErrors = async ({
   attachParams,
@@ -264,31 +265,13 @@ const getChangeProductBranch = async ({
   }
 
   // 2. If main product is paid, check if upgrade or downgrade
-  // Check if upgrade or downgrade
   let curPrices = cusProductToPrices({ cusProduct: curMainProduct! });
   let newPrices = attachParams.prices;
-
-  // if (isTrialing(curMainProduct!)) {
-  //   if (isFreeProduct(attachParams.prices)) {
-  //     return AttachBranch.Downgrade;
-  //   }
-
-  //   let isUpgrade = isProductUpgrade({
-  //     prices1: curPrices,
-  //     prices2: newPrices,
-  //   });
-
-  //   if (!isUpgrade) {
-  //     return AttachBranch.Downgrade;
-  //   }
-
-  //   return AttachBranch.MainIsTrial;
-  // }
 
   let isUpgrade = isProductUpgrade({ prices1: curPrices, prices2: newPrices });
 
   if (isUpgrade) {
-    if (isTrialing({ cusProduct: curMainProduct!, now: attachParams.now })) {
+    if (isMainTrialBranch({ attachParams })) {
       return AttachBranch.MainIsTrial;
     }
 
