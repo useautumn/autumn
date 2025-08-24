@@ -13,6 +13,7 @@ import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/free
 import { getContUseInvoiceItems } from "../../attachUtils/getContUseItems/getContUseInvoiceItems.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
 import { sanitizeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
+import { SubService } from "@/internal/subscriptions/SubService.js";
 
 export const updateStripeSub2 = async ({
   req,
@@ -58,7 +59,7 @@ export const updateStripeSub2 = async ({
           ? "always_invoice"
           : "create_prorations",
     trial_end: trialEnd,
-    default_payment_method: paymentMethod?.id,
+    // default_payment_method: paymentMethod?.id,
     add_invoice_items: itemSet.invoiceItems,
     ...((invoiceOnly && {
       collection_method: "send_invoice",
@@ -69,6 +70,8 @@ export const updateStripeSub2 = async ({
   });
 
   let latestInvoice = updatedSub.latest_invoice as Stripe.Invoice | null;
+
+  await SubService.updateFromStripe({ db, stripeSub: updatedSub });
 
   if (proration == ProrationBehavior.None) {
     return {
@@ -139,6 +142,7 @@ export const updateStripeSub2 = async ({
     replaceables,
   };
 };
+
 // await SubService.addUsageFeatures({
 //   db,
 //   stripeId: curSub.id,

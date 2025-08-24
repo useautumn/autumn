@@ -125,9 +125,7 @@ export const handleCusProductDeleted = async ({
     logger,
   });
 
-  if (cusProduct.product.is_add_on) {
-    return;
-  }
+  if (cusProduct.product.is_add_on) return;
 
   const activatedFuture = await activateFutureProduct({
     req,
@@ -157,11 +155,11 @@ export const handleCusProductDeleted = async ({
     curCusProduct: curMainProduct || undefined,
   });
 
-  await cancelCusProductSubscriptions({
-    cusProduct,
-    org,
-    env,
-    excludeIds: [subscription.id],
-    logger,
-  });
+  // await cancelCusProductSubscriptions({
+  //   cusProduct,
+  //   org,
+  //   env,
+  //   excludeIds: [subscription.id],
+  //   logger,
+  // });
 };

@@ -23,9 +23,10 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 
 import { expect } from "chai";
 import { completeCheckoutForm } from "../stripeUtils.js";
-import { Customer } from "autumn-js";
+import { AttachParams, Customer } from "autumn-js";
 import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
 import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
+import { Decimal } from "decimal.js";
 
 export const attachAndExpectCorrect = async ({
   autumn,
@@ -46,6 +47,8 @@ export const attachAndExpectCorrect = async ({
   numSubs,
   entities,
   shouldBeCanceled = false,
+  checkNotTrialing = false,
+  attachParams,
 }: {
   autumn: AutumnInt;
   customerId: string;
@@ -68,11 +71,14 @@ export const attachAndExpectCorrect = async ({
   numSubs?: number;
   entities?: CreateEntity[];
   shouldBeCanceled?: boolean;
+  checkNotTrialing?: boolean;
+  attachParams?: AttachParams;
 }) => {
   const preview = await autumn.attachPreview({
     customer_id: customerId,
     product_id: product.id,
     entity_id: entityId,
+    ...attachParams,
   });
 
   const checkoutRes = await autumn.checkout({
@@ -80,6 +86,7 @@ export const attachAndExpectCorrect = async ({
     product_id: product.id,
     entity_id: entityId,
     options: toSnakeCase(options),
+    ...attachParams,
   });
 
   const logCheckoutRes = true;
@@ -107,6 +114,7 @@ export const attachAndExpectCorrect = async ({
     product_id: product.id,
     entity_id: entityId,
     options: toSnakeCase(options),
+    ...attachParams,
   });
 
   if (checkout_url) {
@@ -164,7 +172,10 @@ export const attachAndExpectCorrect = async ({
   if (!skipInvoiceCheck && !freeProduct) {
     expectInvoicesCorrect({
       customer,
-      first: { productId: product.id, total: checkoutRes.total },
+      first: {
+        productId: product.id,
+        total: new Decimal(checkoutRes.total).toDecimalPlaces(2).toNumber(),
+      },
     });
   }
 
@@ -192,6 +203,9 @@ export const attachAndExpectCorrect = async ({
     org,
     env,
     shouldBeCanceled,
+    flags: {
+      checkNotTrialing,
+    },
   });
 
   // await expectSubItemsCorrect({

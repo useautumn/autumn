@@ -69,7 +69,9 @@ export const InvoiceCustomerButton = ({
             </Button>
           </div>
         </div>
-        {preview?.func == AttachFunction.CreateCheckout && (
+        {(preview?.func == AttachFunction.CreateCheckout ||
+          preview?.func == AttachFunction.AddProduct ||
+          preview?.func == AttachFunction.OneOff) && (
           <div className="w-[300px]">
             <div className="p-4 text-sm flex flex-col gap-2">
               <p>Enable Product After Payment</p>

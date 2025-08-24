@@ -12,5 +12,5 @@ export const shouldCancelSub = ({
     if (!isDeleted) return false;
   }
 
-  return true;
+  return sub.items.data.length == newSubItems.length;
 };

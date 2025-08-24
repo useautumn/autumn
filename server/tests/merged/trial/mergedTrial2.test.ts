@@ -19,6 +19,7 @@ import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUti
 import { expect } from "chai";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addDays } from "date-fns";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
 let premium = constructProduct({
   id: "premium",
@@ -115,36 +116,41 @@ describe(`${chalk.yellowBright("mergedTrial2: Testing add second trial product a
       advanceTo: addDays(new Date(), 8).getTime(),
     });
 
-    return;
-
-    const entity1 = await autumn.entities.get(customerId, "1");
-    const premium1 = entity1.products.find((p: any) => p.id == premium.id);
-
-    const checkout = await autumn.checkout({
-      customer_id: customerId,
-      product_id: premium.id,
-      entity_id: "2",
+    await attachAndExpectCorrect({
+      autumn,
+      customerId,
+      product: premium,
+      stripeCli,
+      db,
+      org,
+      env,
+      entityId: "2",
     });
+    // const entity1 = await autumn.entities.get(customerId, "1");
+    // const premium1 = entity1.products.find((p: any) => p.id == premium.id);
 
-    const nextCycle = checkout.next_cycle;
-    expect(nextCycle?.starts_at);
-    expect(nextCycle?.starts_at).to.approximately(
-      premium1?.current_period_end,
-      60000
-    ); // 1 min
+    // const checkout = await autumn.checkout({
+    //   customer_id: customerId,
+    //   product_id: premium.id,
+    //   entity_id: "2",
+    // });
 
-    await autumn.attach({
-      customer_id: customerId,
-      product_id: premium.id,
-      entity_id: "2",
-    });
+    // const nextCycle = checkout.next_cycle;
+    // expect(nextCycle?.starts_at);
+    // expect(nextCycle?.starts_at).to.approximately(
+    //   premium1?.current_period_end,
+    //   60000
+    // ); // 1 min
 
-    const entity2 = await autumn.entities.get(customerId, "2");
-    const premium2 = entity2.products.find((p: any) => p.id == premium.id);
-    expect(premium2?.status).to.equal(CusProductStatus.Trialing);
-    expect(premium2?.current_period_end).to.approximately(
-      premium1?.current_period_end,
-      60000
-    ); // 1 min
+    // await autumn.attach({
+    //   customer_id: customerId,
+    //   product_id: premium.id,
+    //   entity_id: "2",
+    // });
+
+    // const entity2 = await autumn.entities.get(customerId, "2");
+    // const premium2 = entity2.products.find((p: any) => p.id == premium.id);
+    // expect(premium2?.status).to.equal(CusProductStatus.Active);
+    // expect(premium2?.current_period_end).to.equal(premium1?.current_period_end);
   });
 });

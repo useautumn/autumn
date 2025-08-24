@@ -9,6 +9,7 @@ import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
   APIVersion,
   AppEnv,
+  AttachBranch,
   CusProductStatus,
   Organization,
 } from "@autumn/shared";
@@ -21,10 +22,18 @@ import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js"
 import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addDays } from "date-fns";
+import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
 
-// Premium, Premium
-// Cancel End, Cancel Immediately
-// Results: Canceled sub
+// Pro Trial
+// Trial Finishes
+// Premium Trial
+
+let pro = constructProduct({
+  id: "pro",
+  items: [constructArrearItem({ featureId: TestFeature.Words })],
+  type: "pro",
+  trial: true,
+});
 
 let premium = constructProduct({
   id: "premium",
@@ -33,8 +42,20 @@ let premium = constructProduct({
   trial: true,
 });
 
-const testCase = "mergedTrial1";
-describe(`${chalk.yellowBright("mergedTrial1: Testing trial")}`, () => {
+const ops = [
+  {
+    product: pro,
+    results: [{ product: pro, status: CusProductStatus.Trialing }],
+  },
+  // {
+  //   entityId: "2",
+  //   product: premium,
+  //   results: [{ product: premium, status: CusProductStatus.Active }],
+  // },
+];
+
+const testCase = "trial2";
+describe(`${chalk.yellowBright("trial2: Testing main trial branch, upgrade from pro trial -> trial finished -> premium trial")}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
 
@@ -55,13 +76,13 @@ describe(`${chalk.yellowBright("mergedTrial1: Testing trial")}`, () => {
     stripeCli = this.stripeCli;
 
     addPrefixToProducts({
-      products: [premium],
+      products: [pro, premium],
       prefix: testCase,
     });
 
     await createProducts({
       autumn: autumnJs,
-      products: [premium],
+      products: [pro, premium],
       db,
       orgId: org.id,
       env,
@@ -80,62 +101,64 @@ describe(`${chalk.yellowBright("mergedTrial1: Testing trial")}`, () => {
     testClockId = testClockId1!;
   });
 
-  const entities = [
-    {
-      id: "1",
-      name: "Entity 1",
-      feature_id: TestFeature.Users,
-    },
-    {
-      id: "2",
-      name: "Entity 2",
-      feature_id: TestFeature.Users,
-    },
-  ];
-
   it("should attach first trial, and advance clock past trial", async function () {
-    await autumn.entities.create(customerId, entities);
+    for (const op of ops) {
+      await attachAndExpectCorrect({
+        autumn,
+        customerId,
+        product: op.product,
+        stripeCli,
+        db,
+        org,
+        env,
+      });
+    }
 
-    await autumn.attach({
-      customer_id: customerId,
-      product_id: premium.id,
-      entity_id: "1",
+    const customer = await autumn.customers.get(customerId);
+    expectProductAttached({
+      customer,
+      product: pro,
+      status: CusProductStatus.Trialing,
     });
+  });
 
-    await advanceTestClock({
+  it("should advance test clock to before trial ends and attach premium", async function () {
+    curUnix = await advanceTestClock({
       stripeCli,
       testClockId,
-      advanceTo: addDays(new Date(), 2).getTime(),
+      advanceTo: addDays(new Date(), 8).getTime(),
     });
 
-    const entity1 = await autumn.entities.get(customerId, "1");
-    const premium1 = entity1.products.find((p: any) => p.id == premium.id);
-
-    const checkout = await autumn.checkout({
+    const attachPreview = await autumn.attachPreview({
       customer_id: customerId,
       product_id: premium.id,
-      entity_id: "2",
     });
 
-    const nextCycle = checkout.next_cycle;
-    expect(nextCycle?.starts_at);
-    expect(nextCycle?.starts_at).to.approximately(
-      premium1?.current_period_end,
-      60000
-    ); // 1 min
+    expect(attachPreview?.branch).to.equal(AttachBranch.Upgrade);
 
     await autumn.attach({
       customer_id: customerId,
       product_id: premium.id,
-      entity_id: "2",
     });
 
-    const entity2 = await autumn.entities.get(customerId, "2");
-    const premium2 = entity2.products.find((p: any) => p.id == premium.id);
-    expect(premium2?.status).to.equal(CusProductStatus.Trialing);
-    expect(premium2?.current_period_end).to.approximately(
-      premium1?.current_period_end,
-      60000
-    ); // 1 min
+    const customer = await autumn.customers.get(customerId);
+    expectProductAttached({
+      customer,
+      product: premium,
+      status: CusProductStatus.Trialing,
+    });
+    const product = customer.products.find((p) => p.id === premium.id)!;
+    expect(product.current_period_end).to.be.approximately(
+      addDays(curUnix, 7).getTime(),
+      1000 * 60 * 30 // 30 minutes
+    );
+
+    await expectSubToBeCorrect({
+      db,
+      customerId,
+      org,
+      env,
+      shouldBeTrialing: true,
+    });
   });
 });

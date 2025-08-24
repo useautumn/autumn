@@ -9,6 +9,7 @@ import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
   APIVersion,
   AppEnv,
+  AttachBranch,
   CusProductStatus,
   Organization,
 } from "@autumn/shared";
@@ -54,7 +55,7 @@ const ops = [
 ];
 
 const testCase = "trial1";
-describe(`${chalk.yellowBright("trial1: Testing trial")}`, () => {
+describe(`${chalk.yellowBright("trial1: Testing main trial branch, upgrade from pro trial -> premium trial")}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
 
@@ -127,17 +128,37 @@ describe(`${chalk.yellowBright("trial1: Testing trial")}`, () => {
       testClockId,
       advanceTo: addDays(new Date(), 2).getTime(),
     });
+    // return;
 
-    const checkout = await autumn.checkout({
+    const attachPreview = await autumn.attachPreview({
       customer_id: customerId,
       product_id: premium.id,
     });
 
-    expect(checkout.next_cycle?.starts_at).to.be.approximately(
+    expect(attachPreview?.branch).to.equal(AttachBranch.MainIsTrial);
+
+    await autumn.attach({
+      customer_id: customerId,
+      product_id: premium.id,
+    });
+
+    const customer = await autumn.customers.get(customerId);
+    expectProductAttached({
+      customer,
+      product: premium,
+      status: CusProductStatus.Trialing,
+    });
+    const product = customer.products.find((p) => p.id === premium.id)!;
+    expect(product.current_period_end).to.be.approximately(
       addDays(curUnix, 7).getTime(),
-      60000
+      1000 * 60 * 30 // 30 minutes
     );
 
-    expect(checkout.total).to.equal(0);
+    await expectSubToBeCorrect({
+      db,
+      customerId,
+      org,
+      env,
+    });
   });
 });

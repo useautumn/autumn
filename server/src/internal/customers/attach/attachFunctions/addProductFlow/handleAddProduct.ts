@@ -19,11 +19,13 @@ export const handleAddProduct = async ({
   res,
   attachParams,
   config,
+  branch,
 }: {
   req: ExtendedRequest;
   res?: any;
   attachParams: AttachParams;
   config?: AttachConfig;
+  branch?: AttachBranch;
 }) => {
   const logger = req.logtail;
   const { customer, products, prices } = attachParams;

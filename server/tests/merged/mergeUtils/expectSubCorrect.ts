@@ -134,12 +134,20 @@ export const expectSubToBeCorrect = async ({
   org,
   env,
   shouldBeCanceled = false,
+  shouldBeTrialing = false,
+  flags,
+  subId,
 }: {
   db: DrizzleCli;
   customerId: string;
   org: Organization;
   env: AppEnv;
   shouldBeCanceled?: boolean;
+  shouldBeTrialing?: boolean;
+  flags?: {
+    checkNotTrialing?: boolean;
+  };
+  subId?: string;
 }) => {
   const stripeCli = createStripeCli({ org, env });
   const fullCus = await CusService.getFull({
@@ -151,9 +159,16 @@ export const expectSubToBeCorrect = async ({
   });
 
   // 1. Only 1 sub ID available
-  const cusProducts = fullCus.customer_products;
-  const subIds = cusProductToSubIds({ cusProducts });
-  expect(subIds.length, "should only have 1 sub ID available").to.equal(1);
+  let cusProducts = fullCus.customer_products;
+  if (!subId) {
+    const subIds = cusProductToSubIds({ cusProducts });
+    subId = subIds[0];
+    expect(subIds.length, "should only have 1 sub ID available").to.equal(1);
+  } else {
+    cusProducts = cusProducts.filter((cp) =>
+      cp.subscription_ids?.includes(subId!)
+    );
+  }
 
   // Get the items that should be in the sub
   const supposedSubItems = [];
@@ -321,7 +336,7 @@ export const expectSubToBeCorrect = async ({
     }
   }
 
-  const sub = await stripeCli.subscriptions.retrieve(subIds[0]);
+  const sub = await stripeCli.subscriptions.retrieve(subId);
 
   const actualItems = sub.items.data.map((item: any) => ({
     price: item.price.id,
@@ -335,6 +350,14 @@ export const expectSubToBeCorrect = async ({
     fullCus,
     db,
   });
+
+  if (shouldBeTrialing) {
+    expect(sub.status, "sub should be trialing").to.equal("trialing");
+  }
+
+  if (flags?.checkNotTrialing) {
+    expect(sub.status, "sub should not be trialing").to.not.equal("trialing");
+  }
 
   if (shouldBeCanceled) {
     expect(sub.schedule, "sub should NOT have a schedule").to.be.null;

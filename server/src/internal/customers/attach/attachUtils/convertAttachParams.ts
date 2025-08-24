@@ -76,8 +76,10 @@ export const getSubForAttach = async ({
 
 export const getCustomerSub = async ({
   attachParams,
+  onlySubId,
 }: {
   attachParams: AttachParams;
+  onlySubId?: boolean;
 }) => {
   const { stripeCli } = attachParams;
   const fullCus = attachParams.customer;
@@ -127,26 +129,31 @@ export const getCustomerSub = async ({
   if (!cusProduct) return { sub: undefined, cusProduct: undefined };
   const subId = cusProduct.subscription_ids![0];
 
+  if (onlySubId) {
+    return { subId: subId, sub: undefined, cusProduct: undefined };
+  }
+
   // If there's only one customer product on sub, and it's still trialing, return undefined, because should just replace sub.
   const curCusProduct = attachParamsToCurCusProduct({ attachParams });
-  const cusProductsOnSub = cusProducts.filter(
-    (cp) =>
-      cp.subscription_ids?.includes(cusProduct.subscription_ids![0]) &&
-      curCusProduct?.id == cp.id
-  );
 
-  if (
-    cusProductsOnSub.length === 1 &&
-    isTrialing({ cusProduct, now: attachParams.now })
-  ) {
-    return { sub: undefined, cusProduct: undefined };
-  }
+  // const cusProductsOnSub = cusProducts.filter(
+  //   (cp) =>
+  //     cp.subscription_ids?.includes(cusProduct.subscription_ids![0]) &&
+  //     curCusProduct?.id !== cp.id
+  // );
+
+  // if (
+  //   cusProductsOnSub.length === 1 &&
+  //   isTrialing({ cusProduct, now: attachParams.now })
+  // ) {
+  //   return { sub: undefined, cusProduct: undefined };
+  // }
 
   const sub = await stripeCli.subscriptions.retrieve(subId, {
     expand: ["items.data.price.tiers"],
   });
 
-  return { sub, cusProduct };
+  return { subId, sub, cusProduct };
 };
 
 export const paramsToCurSub = async ({
