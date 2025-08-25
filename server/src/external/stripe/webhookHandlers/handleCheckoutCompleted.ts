@@ -110,20 +110,51 @@ export const handleCheckoutSessionCompleted = async ({
     logger,
   });
 
-  const products = attachParams.products;
+  const anchorToUnix = checkoutSub
+    ? getEarliestPeriodEnd({ sub: checkoutSub! }) * 1000
+    : undefined;
+  if (attachParams.productsList) {
+    console.log("Inserting products list");
+    for (const productOptions of attachParams.productsList) {
+      const product = attachParams.products.find(
+        (p) => p.id === productOptions.product_id
+      );
 
-  for (const product of products) {
-    const anchorToUnix = checkoutSub
-      ? getEarliestPeriodEnd({ sub: checkoutSub! }) * 1000
-      : undefined;
-    await createFullCusProduct({
-      db,
-      attachParams: attachToInsertParams(attachParams, product),
-      subscriptionIds: checkoutSub ? [checkoutSub?.id!] : undefined,
-      anchorToUnix,
-      scenario: AttachScenario.New,
-      logger,
-    });
+      if (!product) {
+        logger.error(
+          `checkout.completed: product not found for productOptions: ${JSON.stringify(
+            productOptions
+          )}`
+        );
+        continue;
+      }
+
+      await createFullCusProduct({
+        db,
+        attachParams: attachToInsertParams(
+          attachParams,
+          product,
+          productOptions.entity_id || undefined
+        ),
+        subscriptionIds: checkoutSub ? [checkoutSub?.id!] : undefined,
+        anchorToUnix,
+        scenario: AttachScenario.New,
+        logger,
+        productOptions,
+      });
+    }
+  } else {
+    const products = attachParams.products;
+    for (const product of products) {
+      await createFullCusProduct({
+        db,
+        attachParams: attachToInsertParams(attachParams, product),
+        subscriptionIds: checkoutSub ? [checkoutSub?.id!] : undefined,
+        anchorToUnix,
+        scenario: AttachScenario.New,
+        logger,
+      });
+    }
   }
 
   console.log("✅ checkout.completed: successfully created cus product");

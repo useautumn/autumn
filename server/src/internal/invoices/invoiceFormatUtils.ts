@@ -68,9 +68,11 @@ export const formatPrepaidPrice = ({
 export const formatFixedPrice = ({
   org,
   price,
+  quantity,
 }: {
   org: Organization;
   price: Price;
+  quantity?: number;
 }) => {
   const config = price.config as FixedPriceConfig;
   const amount = formatAmount({ org, amount: config.amount });
@@ -174,7 +176,11 @@ export const priceToInvoiceDescription = ({
     billingType == BillingType.FixedCycle ||
     billingType == BillingType.OneOff
   ) {
-    description = formatFixedPrice({ org: org!, price });
+    description = formatFixedPrice({
+      org: org!,
+      price,
+      quantity: cusProduct.quantity,
+    });
   }
 
   if (billingType == BillingType.InArrearProrated) {

@@ -19,6 +19,7 @@ import {
   AttachReplaceable,
   ErrCode,
   AttachConfig,
+  ProductOptions,
 } from "@autumn/shared";
 import { priceToStripeItem } from "../priceToStripeItem/priceToStripeItem.js";
 import { getArrearItems } from "./getStripeSubItems/getArrearItems.js";
@@ -32,6 +33,7 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 import {
   intervalKeyToPrice,
   priceToIntervalKey,
+  priceToProductOptions,
 } from "@/internal/products/prices/priceUtils/convertPrice.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
@@ -71,6 +73,7 @@ export const getStripeSubItems = async ({
 }: {
   attachParams: {
     products: FullProduct[];
+    productsList?: ProductOptions[];
     prices: Price[];
     entitlements: EntitlementWithFeature[];
     optionsList: FeatureOptions[];
@@ -105,10 +108,15 @@ export const getStripeSubItems = async ({
     const prices = intervalToPrices[intervalKey];
 
     let subItems: any[] = [];
-
     let usage_features: any[] = [];
 
     for (const price of prices) {
+      const prodOptions = priceToProductOptions({
+        price,
+        options: attachParams.productsList,
+        products,
+      });
+
       const priceEnt = getPriceEntitlement(price, entitlements);
       const options = getEntOptions(optionsList, priceEnt);
 
@@ -162,6 +170,7 @@ export const getStripeSubItems = async ({
         existingUsage,
         withEntity: notNullish(attachParams.internalEntityId),
         apiVersion: attachParams.apiVersion,
+        productOptions: prodOptions,
       });
 
       if (!stripeItem) {
@@ -228,6 +237,7 @@ export const getStripeSubItems2 = async ({
     customer,
     internalEntityId,
     apiVersion,
+    products,
   } = attachParams;
 
   const subItems: any[] = [];
@@ -236,6 +246,11 @@ export const getStripeSubItems2 = async ({
   for (const price of prices) {
     const priceEnt = getPriceEntitlement(price, entitlements);
     const options = getEntOptions(optionsList, priceEnt);
+    const prodOptions = priceToProductOptions({
+      price,
+      options: attachParams.productsList,
+      products,
+    });
 
     let existingUsage = getExistingUsageFromCusProducts({
       entitlement: priceEnt,
@@ -280,6 +295,7 @@ export const getStripeSubItems2 = async ({
       existingUsage,
       withEntity: notNullish(internalEntityId),
       apiVersion: attachParams.apiVersion,
+      productOptions: prodOptions,
     });
 
     if (isUsagePrice({ price })) {

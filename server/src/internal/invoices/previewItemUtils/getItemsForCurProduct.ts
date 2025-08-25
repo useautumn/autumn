@@ -17,7 +17,7 @@ import { formatAmount } from "@/utils/formatUtils.js";
 import { getCusPriceUsage } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
 import { priceToUsageModel } from "@/internal/products/prices/priceUtils/convertPrice.js";
 import { getContUseInvoiceItems } from "@/internal/customers/attach/attachUtils/getContUseItems/getContUseInvoiceItems.js";
-import { isTrialing } from "@/internal/customers/cusProducts/cusProductUtils.js";
+
 import {
   isArrearPrice,
   isContUsePrice,

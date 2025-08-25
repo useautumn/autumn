@@ -27,6 +27,7 @@ import {
 import { findPriceForFeature } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 import { getResetBalance } from "../../cusProducts/cusEnts/cusEntUtils.js";
 import { Decimal } from "decimal.js";
+import { handleMultiAttachErrors } from "./handleAttachErrors/handleMultiAttachErrors.js";
 
 const handleNonCheckoutErrors = ({
   flags,
@@ -215,6 +216,14 @@ export const handleAttachErrors = async ({
   config: AttachConfig;
 }) => {
   const { onlyCheckout } = config;
+
+  if (branch === AttachBranch.MultiAttach) {
+    await handleMultiAttachErrors({
+      attachParams,
+      attachBody,
+    });
+    return;
+  }
 
   // Invoice no payment enabled: onlyCheckout
 

@@ -72,6 +72,7 @@ export const getAttachParams = async ({
     apiVersion,
     successUrl: attachBody.success_url,
     invoiceOnly: attachBody.invoice,
+    productsList: attachBody.products || undefined,
     // || attachBody.invoice_only
 
     billingAnchor: attachBody.billing_cycle_anchor,

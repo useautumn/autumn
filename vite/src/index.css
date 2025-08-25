@@ -214,7 +214,7 @@ button:focus-visible {
     lg: ["17px", "24px"],
     xl: ["20px", "28px"],
   }, */
-  --text-xs: 11px;
+  --text-xs: 12px;
   --text-sm: 13px;
   --text-md: 15px;
   --text-lg: 17px;

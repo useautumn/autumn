@@ -1,9 +1,4 @@
-import {
-  AttachFunction,
-  AttachScenario,
-  CheckoutResponseSchema,
-  FeatureOptions,
-} from "@autumn/shared";
+import { AttachFunction, FeatureOptions } from "@autumn/shared";
 
 import { routeHandler } from "@/utils/routerUtils.js";
 import { getAttachParams } from "../attachUtils/attachParams/getAttachParams.js";
@@ -20,7 +15,6 @@ import {
 } from "../attachRouter.js";
 import { attachParamsToPreview } from "../handleAttachPreview/attachParamsToPreview.js";
 import { previewToCheckoutRes } from "./previewToCheckoutRes.js";
-import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { attachParamsToProduct } from "../attachUtils/convertAttachParams.js";
 import { isPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";

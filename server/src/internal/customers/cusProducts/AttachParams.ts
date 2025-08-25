@@ -14,6 +14,7 @@ import {
   FullCustomer,
   AttachReplaceable,
   Reward,
+  ProductOptions,
 } from "@autumn/shared";
 import Stripe from "stripe";
 
@@ -39,6 +40,7 @@ export type AttachParams = {
 
   freeTrial: FreeTrial | null;
   optionsList: FeatureOptions[];
+  productsList?: ProductOptions[];
 
   successUrl?: string | undefined;
   itemSets?: any[];

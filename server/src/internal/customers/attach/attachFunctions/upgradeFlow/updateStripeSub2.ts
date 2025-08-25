@@ -31,7 +31,7 @@ export const updateStripeSub2 = async ({
   fromCreate?: boolean;
 }) => {
   const { db, logger } = req;
-  const { curMainProduct } = attachParamToCusProducts({ attachParams });
+
   const { stripeCli, customer, org, paymentMethod } = attachParams;
   const { invoiceOnly, proration } = config;
 
@@ -86,6 +86,8 @@ export const updateStripeSub2 = async ({
       latestInvoice: updatedSub.latest_invoice as Stripe.Invoice,
     };
   }
+
+  const { curMainProduct } = attachParamToCusProducts({ attachParams });
 
   // 2. Create prorations for single use items
   let { invoiceItems, cusEntIds } = await createUsageInvoiceItems({

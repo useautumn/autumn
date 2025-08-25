@@ -3,30 +3,25 @@ import {
   AttachReplaceable,
   BillingType,
   Customer,
-  EntInterval,
   Entity,
   EntityBalance,
   FeatureType,
   FreeTrial,
   FullCusProduct,
   FullCustomerEntitlement,
-  InsertReplaceable,
   Price,
+  ProductOptions,
 } from "@autumn/shared";
 
 import { FeatureOptions } from "@autumn/shared";
 
 import { EntitlementWithFeature } from "@autumn/shared";
 import { getResetBalance } from "../cusProducts/cusEnts/cusEntUtils.js";
-import { formatUnixToDate, generateId, notNullish } from "@/utils/genUtils.js";
+import { generateId, notNullish } from "@/utils/genUtils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
-import { applyTrialToEntitlement } from "@/internal/products/entitlements/entitlementUtils.js";
-import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
-import { getNextEntitlementReset } from "@/utils/timeUtils.js";
-import { subtractFromUnixTillAligned } from "@/internal/products/prices/billingIntervalUtils.js";
-import { UTCDate } from "@date-fns/utc";
 import { entitlementLinkedToEntity } from "@/internal/api/entities/entityUtils.js";
 import { initNextResetAt } from "../cusProducts/insertCusProduct/initCusEnt/initNextResetAt.js";
+import { Decimal } from "decimal.js";
 
 export const initCusEntEntities = ({
   entitlement,
@@ -40,7 +35,7 @@ export const initCusEntEntities = ({
   resetBalance?: number | null;
 }) => {
   let newEntities: Record<string, EntityBalance> | null = notNullish(
-    entitlement.entity_feature_id,
+    entitlement.entity_feature_id
   )
     ? {}
     : null;
@@ -108,74 +103,6 @@ const initCusEntBalance = ({
   });
 
   return { newBalance: resetBalance, newEntities };
-
-  // // 1. Get existing usage
-  // let { cusEnt, usage } = getExistingCusEntAndUsage({
-  //   entitlement,
-  //   curCusProduct,
-  //   relatedPrice,
-  // });
-
-  // Carry over entities3
-
-  // if (
-  //   !existingCusEnt ||
-  //   (!entitlement.carry_from_previous && !carryExistingUsages)
-  // ) {
-  //   return { newBalance: resetBalance, newEntities };
-  // }
-
-  // let existingAllowanceType = existingCusEnt.entitlement.allowance_type;
-  // if (
-  //   nullish(existingCusEnt.balance) ||
-  //   existingAllowanceType === AllowanceType.Unlimited
-  // ) {
-  //   return { newBalance: resetBalance, newEntities };
-  // }
-
-  // // Calculate existing usage
-
-  // let curOptions = getEntOptions(
-  //   curCusProduct?.options || [],
-  //   existingCusEnt.entitlement
-  // );
-  // let curPrice = getRelatedCusPrice(
-  //   existingCusEnt,
-  //   curCusProduct?.customer_prices || []
-  // );
-
-  // let existingAllowance = getResetBalance({
-  //   entitlement: existingCusEnt.entitlement,
-  //   options: curOptions,
-  //   relatedPrice: curPrice?.price,
-  // });
-
-  // let existingUsage = existingAllowance! - existingCusEnt.balance!;
-  // let newBalance = resetBalance! - existingUsage;
-
-  // if (
-  //   entitlement.entity_feature_id ==
-  //   existingCusEnt.entitlement.entity_feature_id
-  // ) {
-  //   if (!newEntities) {
-  //     newEntities = {};
-  //   }
-
-  //   for (const entityId in existingCusEnt.entities) {
-  //     let existingBalance = existingCusEnt.entities[entityId].balance;
-  //     let existingUsage = existingAllowance! - existingBalance;
-
-  //     let newBalance = resetBalance! - existingUsage;
-
-  //     newEntities[entityId] = {
-  //       id: entityId,
-  //       balance: newBalance,
-  //       adjustment: 0,
-  //     };
-  //   }
-  // }
-
-  // return { newBalance, newEntities };
 };
 
 // MAIN FUNCTION
@@ -196,6 +123,7 @@ export const initCusEntitlement = ({
   curCusProduct,
   replaceables,
   now,
+  productOptions,
 }: {
   entitlement: EntitlementWithFeature;
   customer: Customer;
@@ -213,6 +141,7 @@ export const initCusEntitlement = ({
   curCusProduct?: FullCusProduct;
   replaceables: AttachReplaceable[];
   now?: number;
+  productOptions?: ProductOptions;
 }) => {
   now = now || Date.now();
   let { newBalance, newEntities } = initCusEntBalance({
@@ -249,6 +178,12 @@ export const initCusEntitlement = ({
       getBillingType(relatedPrice.config!) === BillingType.InArrearProrated)
   ) {
     usageAllowed = true;
+  }
+
+  if (notNullish(productOptions?.quantity) && notNullish(newBalance)) {
+    newBalance = new Decimal(newBalance!)
+      .mul(productOptions?.quantity!)
+      .toNumber();
   }
 
   return {

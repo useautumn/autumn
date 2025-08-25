@@ -17,6 +17,7 @@ import { handleCreateInvoiceCheckout } from "../../add-product/handleCreateInvoi
 import { handleUpgradeFlow } from "../attachFunctions/upgradeFlow/handleUpgradeFlow.js";
 import { handleScheduleFunction2 } from "../attachFunctions/scheduleFlow/handleScheduleFlow2.js";
 import { handleRenewProduct } from "../attachFunctions/handleRenewProduct.js";
+import { handleMultiAttachFlow } from "../attachFunctions/multiAttach/handleMultiAttachFlow.js";
 
 /* 
 1. If from new version, free trial should just carry over
@@ -43,6 +44,7 @@ export const getAttachFunction = async ({
 
   // 1. Checkout function
   const newScenario = [
+    AttachBranch.MultiAttach,
     AttachBranch.MultiProduct,
     AttachBranch.OneOff,
     AttachBranch.New,
@@ -55,6 +57,8 @@ export const getAttachFunction = async ({
     return AttachFunction.CreateCheckout;
   } else if (branch == AttachBranch.OneOff) {
     return AttachFunction.OneOff;
+  } else if (branch == AttachBranch.MultiAttach) {
+    return AttachFunction.MultiAttach;
   } else if (newScenario) {
     return AttachFunction.AddProduct;
   }
@@ -123,6 +127,7 @@ export const runAttachFunction = async ({
 
   const customer = attachParams.customer;
   const org = attachParams.org;
+
   const productIdsStr = attachParams.products.map((p) => p.id).join(", ");
   const { curMainProduct, curSameProduct, curScheduledProduct } =
     attachParamToCusProducts({
@@ -194,20 +199,15 @@ export const runAttachFunction = async ({
     }
   }
 
-  // if (attachFunction == AttachFunction.Renew) {
-  //   // Renew current subscription
-
-  //   res.status(200).json(
-  //     AttachResultSchema.parse({
-  //       customer_id:
-  //         attachParams.customer.id || attachParams.customer.internal_id,
-  //       product_ids: attachParams.products.map((p) => p.id),
-  //       code: SuccessCode.RenewedProduct,
-  //       message: `Successfully renewed product ${attachParams.products[0].id}`,
-  //     })
-  //   );
-  //   return;
-  // }
+  if (attachFunction == AttachFunction.MultiAttach) {
+    return await handleMultiAttachFlow({
+      req,
+      res,
+      attachParams,
+      attachBody,
+      config,
+    });
+  }
 
   if (attachFunction == AttachFunction.CreateCheckout) {
     if (config.invoiceCheckout) {
