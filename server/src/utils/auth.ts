@@ -14,6 +14,10 @@ import { afterOrgCreated } from "./authUtils/afterOrgCreated.js";
 import { createLoopsContact } from "@/external/resend/loopsUtils.js";
 
 export const auth = betterAuth({
+  telemetry: {
+    enabled: false,
+  },
+
   database: drizzleAdapter(db, {
     provider: "pg", // or "mysql", "sqlite"
   }),
