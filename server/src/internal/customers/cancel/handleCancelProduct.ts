@@ -9,11 +9,9 @@ import { getExistingCusProducts } from "../cusProducts/cusProductUtils/getExisti
 import {
   cusProductToPrices,
   cusProductToProduct,
-  cusProductToSchedule,
 } from "../cusProducts/cusProductUtils/convertCusProduct.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { CusProductService } from "../cusProducts/CusProductService.js";
-import Stripe from "stripe";
+
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
