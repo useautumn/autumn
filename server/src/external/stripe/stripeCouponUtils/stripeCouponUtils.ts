@@ -110,8 +110,6 @@ export const createStripeCoupon = async ({
     }
   });
 
-  console.log("Stripe prod ids", { stripeProdIds });
-
   for (const promoCode of reward.promo_codes) {
     try {
       const stripePromoCode = await stripeCli.promotionCodes.retrieve(

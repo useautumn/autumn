@@ -46,11 +46,15 @@ export const createStripeSub2 = async ({
   earliestInterval?: IntervalConfig | null;
 }) => {
   const { customer, invoiceOnly, freeTrial, org, now, reward } = attachParams;
+  const isDefaultTrial = freeTrial && !freeTrial.card_required;
+
+  let shouldErrorIfNoPm = !invoiceOnly;
+  if (isDefaultTrial) shouldErrorIfNoPm = false;
 
   let paymentMethod = await getCusPaymentMethod({
     stripeCli,
     stripeId: customer.processor.id,
-    errorIfNone: !invoiceOnly, // throw error if no payment method and invoiceOnly is false
+    errorIfNone: shouldErrorIfNoPm,
   });
 
   let paymentMethodData = {};
@@ -92,6 +96,10 @@ export const createStripeSub2 = async ({
   // );
 
   const { subItems, invoiceItems, usageFeatures } = itemSet;
+
+  console.log("Invoice only: ", invoiceOnly);
+
+  // const isDefaultTrial = freeTrial && !freeTrial.card_required;
 
   try {
     const subscription = await stripeCli.subscriptions.create({

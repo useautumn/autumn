@@ -93,6 +93,7 @@ export const handlePaidProduct = async ({
 
   let newSub;
   try {
+    console.log("Creating customer:");
     newSub = await createStripeSub2({
       db: req.db,
       stripeCli,
