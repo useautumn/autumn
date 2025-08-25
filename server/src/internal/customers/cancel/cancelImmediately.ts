@@ -6,12 +6,16 @@ import {
   FullCusProduct,
   FullCustomer,
 } from "@autumn/shared";
-import { cusProductToSub } from "../cusProducts/cusProductUtils/convertCusProduct.js";
+import {
+  cusProductToProduct,
+  cusProductToSub,
+} from "../cusProducts/cusProductUtils/convertCusProduct.js";
 import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { CusProductService } from "../cusProducts/CusProductService.js";
 import { activateDefaultProduct } from "../cusProducts/cusProductUtils.js";
 import { getExistingCusProducts } from "../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
+import { isOneOff } from "@/internal/products/productUtils.js";
 
 export const cancelImmediately = async ({
   req,
@@ -45,8 +49,9 @@ export const cancelImmediately = async ({
   }
 
   const isMain = !cusProduct.product.is_add_on;
+  const product = cusProductToProduct({ cusProduct });
 
-  if (isMain) {
+  if (isMain && !isOneOff(product.prices)) {
     // So it doesn't duplicate
     if (curScheduledProduct) {
       await CusProductService.delete({

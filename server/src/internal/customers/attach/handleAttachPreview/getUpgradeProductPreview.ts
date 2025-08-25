@@ -59,9 +59,7 @@ const getNextCycleAt = ({
     curCusProduct &&
     isTrialing(curCusProduct)
   ) {
-    return {
-      next_cycle_at: curCusProduct.trial_ends_at,
-    };
+    return curCusProduct.trial_ends_at;
   }
 
   if (freeTrial) {
