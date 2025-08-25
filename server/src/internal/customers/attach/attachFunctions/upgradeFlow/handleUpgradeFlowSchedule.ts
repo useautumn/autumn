@@ -1,5 +1,5 @@
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import { AttachConfig } from "@autumn/shared";
+import { AttachConfig, FullCusProduct } from "@autumn/shared";
 
 import Stripe from "stripe";
 import { paramsToScheduleItems } from "../../mergeUtils/paramsToScheduleItems.js";
@@ -22,12 +22,14 @@ export const handleUpgradeFlowSchedule = async ({
   config,
   schedule,
   curSub,
+  removeCusProducts,
 }: {
   req: ExtendedRequest;
   attachParams: AttachParams;
   config: AttachConfig;
   schedule: Stripe.SubscriptionSchedule;
   curSub: Stripe.Subscription;
+  removeCusProducts?: FullCusProduct[];
 }) => {
   console.log(`UPGRADE FLOW, UPDATING SCHEDULE ${schedule.id}`);
   const { stripeCli, customer, prices } = attachParams;
@@ -55,6 +57,7 @@ export const handleUpgradeFlowSchedule = async ({
     attachParams,
     config,
     billingPeriodEnd: schedule?.phases?.[nextPhaseIndex]?.start_date,
+    removeCusProducts,
   });
 
   // Should release schedule...

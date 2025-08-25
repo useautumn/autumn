@@ -22,6 +22,7 @@ export const handleInvoiceCheckoutPaid = async ({
   stripeCli: Stripe;
   invoice: Stripe.Invoice;
 }) => {
+  const { logger } = req;
   const metadataId = invoice.metadata?.autumn_metadata_id!;
 
   const metadata = await MetadataService.get({
@@ -41,22 +42,54 @@ export const handleInvoiceCheckoutPaid = async ({
 
   if (!reqMatch) return;
 
-  const batchInsert = [];
-  for (const product of attachParams.products) {
-    batchInsert.push(
-      createFullCusProduct({
+  if (attachParams.productsList) {
+    console.log("Inserting products list");
+    for (const productOptions of attachParams.productsList) {
+      const product = attachParams.products.find(
+        (p) => p.id === productOptions.product_id
+      );
+
+      if (!product) {
+        logger.error(
+          `checkout.completed: product not found for productOptions: ${JSON.stringify(
+            productOptions
+          )}`
+        );
+        continue;
+      }
+
+      await createFullCusProduct({
         db,
-        attachParams: attachToInsertParams(attachParams, product),
+        attachParams: attachToInsertParams(
+          attachParams,
+          product,
+          productOptions.entity_id || undefined
+        ),
         subscriptionIds: subIds,
         anchorToUnix,
-        carryExistingUsages: config.carryUsage,
         scenario: AttachScenario.New,
-        logger: req.logger,
-      })
-    );
-  }
+        logger,
+        productOptions,
+      });
+    }
+  } else {
+    const batchInsert = [];
+    for (const product of attachParams.products) {
+      batchInsert.push(
+        createFullCusProduct({
+          db,
+          attachParams: attachToInsertParams(attachParams, product),
+          subscriptionIds: subIds,
+          anchorToUnix,
+          carryExistingUsages: config.carryUsage,
+          scenario: AttachScenario.New,
+          logger: req.logger,
+        })
+      );
+    }
 
-  await Promise.all(batchInsert);
+    await Promise.all(batchInsert);
+  }
 
   req.logger.info(
     `✅ invoice.paid, successfully inserted cus products: ${attachParams.products.map((p) => p.id).join(", ")}`

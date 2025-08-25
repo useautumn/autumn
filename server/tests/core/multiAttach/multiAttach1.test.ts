@@ -45,6 +45,7 @@ let premium = constructProduct({
     constructFeatureItem({ featureId: TestFeature.Words, includedUsage: 200 }),
   ],
   type: "premium",
+  trial: true,
 });
 
 let pro = constructProduct({
@@ -56,6 +57,7 @@ let pro = constructProduct({
     }),
   ],
   type: "pro",
+  trial: true,
 });
 
 const ops = [

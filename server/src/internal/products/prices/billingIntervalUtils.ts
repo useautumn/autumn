@@ -62,9 +62,13 @@ export const addBillingIntervalUnix = ({
   intervalCount = 1,
 }: {
   unixTimestamp: number;
-  interval: BillingInterval;
-  intervalCount: number;
+  interval?: BillingInterval;
+  intervalCount?: number;
 }) => {
+  if (!interval || !intervalCount) {
+    return unixTimestamp;
+  }
+
   const date = new UTCDate(unixTimestamp);
   let addedDate = date;
   switch (interval) {

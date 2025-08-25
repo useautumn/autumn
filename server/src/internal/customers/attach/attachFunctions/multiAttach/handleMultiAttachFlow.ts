@@ -10,9 +10,13 @@ import {
   AttachConfig,
   AttachScenario,
   CusProductStatus,
+  FullCusProduct,
   SuccessCode,
 } from "@autumn/shared";
-import { getCustomerSub } from "../../attachUtils/convertAttachParams.js";
+import {
+  getCustomerSub,
+  paramsToCurSubSchedule,
+} from "../../attachUtils/convertAttachParams.js";
 
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
@@ -21,87 +25,122 @@ import Stripe from "stripe";
 import { createStripeSub2 } from "../addProductFlow/createStripeSub2.js";
 import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { attachToInvoiceResponse } from "@/internal/invoices/invoiceUtils.js";
+import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
+import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
+import { ItemSet } from "@/utils/models/ItemSet.js";
+import { mergeItemSets } from "./mergeItemSets.js";
+import { getAddAndRemoveProducts } from "./getAddAndRemoveProducts.js";
+import { handleUpgradeFlowSchedule } from "../upgradeFlow/handleUpgradeFlowSchedule.js";
+import { isTrialing } from "@/internal/customers/cusProducts/cusProductUtils.js";
 
 export const handleMultiAttachFlow = async ({
   req,
   res,
   attachParams,
-  attachBody,
   config,
 }: {
   req: ExtendedRequest;
   res: ExtendedResponse;
   attachParams: AttachParams;
-  attachBody: AttachBody;
   config: AttachConfig;
 }) => {
-  // 1. Get total sub items for subscription, cancel any schedule...? or what...
-
-  // 2. Change cus product quantities (and customer entitlements...??)
-
   const { db, logger } = req;
   const { stripeCli } = attachParams;
   const productsList = attachParams.productsList!;
 
-  const { sub } = await getCustomerSub({ attachParams });
-  const itemSet = await getStripeSubItems2({
+  let { sub: curSub, cusProduct: mergeCusProduct } = await getCustomerSub({
+    attachParams,
+  });
+  let latestInvoice: Stripe.Invoice | null = null;
+
+  const { removeCusProducts, itemSet, expireCusProducts } =
+    await getAddAndRemoveProducts({
+      attachParams,
+      config,
+    });
+
+  const mergedItemSet = await paramsToSubItems({
+    req,
     attachParams,
     config,
+    removeCusProducts,
+    addItemSet: itemSet,
+    sub: curSub,
   });
 
-  let finalSub: Stripe.Subscription | null = null;
+  itemSet.subItems = mergedItemSet.subItems;
 
-  if (sub) {
-    const deleteCurSubItems = sub.items.data.map((item) => ({
-      id: item.id,
-      deleted: true,
-    }));
+  if (!curSub) {
+    console.log("MULTI ATTACH FLOW, NO SUB, CREATING NEW");
+    const newSub = await createStripeSub2({
+      db,
+      attachParams,
+      config,
+      stripeCli,
+      itemSet,
+    });
 
-    itemSet.subItems.push(...deleteCurSubItems);
+    console.log("Created new sub...");
 
-    const { updatedSub } = await updateStripeSub2({
+    if (config?.invoiceCheckout) {
+      return {
+        invoices: [newSub.latest_invoice as Stripe.Invoice],
+        subs: [newSub],
+        anchorToUnix: getLatestPeriodEnd({ sub: newSub }) * 1000,
+        config,
+      };
+    }
+    curSub = newSub;
+    latestInvoice = newSub.latest_invoice as Stripe.Invoice;
+    // Do something about current sub...
+  } else if (itemSet.subItems.length > 0) {
+    console.log(`MULTI ATTACH FLOW, UPDATING SUB ${curSub!.id}`);
+    config.disableTrial = true;
+
+    const updateResult = await updateStripeSub2({
       req,
       attachParams,
       config,
-      curSub: sub,
+      curSub: curSub!,
       itemSet,
-      fromCreate: true,
+      fromCreate: attachParams.products.length === 0, // just for now, if no products, it comes from cancel product...
     });
 
-    finalSub = updatedSub;
-  } else {
-    if (itemSet.subItems.length > 0) {
-      finalSub = await createStripeSub2({
-        db,
-        stripeCli,
+    // TODO: Add these missing functions or remove if not needed
+    const schedule = await paramsToCurSubSchedule({ attachParams });
+    if (schedule) {
+      await handleUpgradeFlowSchedule({
+        req,
         attachParams,
         config,
-        itemSet,
+        schedule,
+        curSub,
+        removeCusProducts,
+      });
+    }
+
+    attachParams.replaceables = updateResult.replaceables || [];
+    curSub = updateResult.updatedSub;
+    latestInvoice = updateResult.latestInvoice;
+  }
+
+  for (const cusProduct of removeCusProducts) {
+    if (cusProduct.status === CusProductStatus.Scheduled) {
+      await CusProductService.delete({
+        db,
+        cusProductId: cusProduct.id,
       });
     }
   }
 
-  // Expire all current cus products at the customer level
-  const batchExpire: any[] = [];
-  for (const cusProduct of attachParams.customer.customer_products) {
-    if (cusProduct.status == CusProductStatus.Scheduled) {
-      batchExpire.push(
-        CusProductService.delete({
-          db,
-          cusProductId: cusProduct.id,
-        })
-      );
-    } else {
-      batchExpire.push(
-        CusProductService.update({
-          db,
-          cusProductId: cusProduct.id,
-          updates: {
-            status: CusProductStatus.Expired,
-          },
-        })
-      );
-    }
+  for (const cusProduct of expireCusProducts) {
+    await CusProductService.update({
+      db,
+      cusProductId: cusProduct.id,
+      updates: {
+        status: CusProductStatus.Expired,
+      },
+    });
   }
 
   // Expire all existing cus products at the customer level
@@ -111,8 +150,8 @@ export const handleMultiAttachFlow = async ({
       (p) => p.id === productOptions.product_id
     )!;
 
-    const anchorToUnix = finalSub
-      ? getLatestPeriodEnd({ sub: finalSub! }) * 1000
+    const anchorToUnix = curSub
+      ? getLatestPeriodEnd({ sub: curSub! }) * 1000
       : undefined;
 
     batchInsert.push(
@@ -123,18 +162,22 @@ export const handleMultiAttachFlow = async ({
           product,
           productOptions.entity_id || undefined
         ),
-        subscriptionIds: finalSub ? [finalSub?.id!] : undefined,
+        subscriptionIds: curSub ? [curSub?.id!] : undefined,
         anchorToUnix,
         scenario: AttachScenario.New,
         logger,
         productOptions,
+        trialEndsAt:
+          mergeCusProduct && isTrialing({ cusProduct: mergeCusProduct })
+            ? mergeCusProduct?.trial_ends_at!
+            : undefined,
       })
     );
   }
 
   console.log("Running multi attach flow!");
   if (res) {
-    const invoice = finalSub?.latest_invoice as Stripe.Invoice;
+    const invoice = latestInvoice;
     res.status(200).json(
       AttachResultSchema.parse(
         AttachResultSchema.parse({

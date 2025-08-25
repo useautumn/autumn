@@ -119,11 +119,12 @@ export const getAttachConfig = async ({
     isPublic ||
     forceCheckout ||
     invoiceCheckout ||
-    (noPaymentMethod && !invoiceAndEnable);
+    (noPaymentMethod &&
+      !invoiceAndEnable &&
+      branch != AttachBranch.MultiAttachUpdate);
 
   const onlyCheckout = !isFree && checkoutFlow && !freeTrialWithoutCardRequired;
 
-  console.log("ONLY CHECKOUT:", onlyCheckout);
   const disableMerge = branch == AttachBranch.MainIsTrial || onlyCheckout;
 
   let config: AttachConfig = {

@@ -22,9 +22,9 @@ export const CusProductStatusItem = ({
 
     // const canceled = notNullish(cusProduct.canceled_at);
     const canceled = cusProduct.canceled;
-    console.log(
-      `entity ID: ${cusProduct.entity_id}, canceled: ${canceled}, product: ${cusProduct.product_id}`
-    );
+    // console.log(
+    //   `entity ID: ${cusProduct.entity_id}, canceled: ${canceled}, product: ${cusProduct.product_id}`
+    // );
     if (canceled) return "canceled";
 
     if (trialing) {

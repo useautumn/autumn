@@ -17,6 +17,8 @@ import { mergeNewSubItems } from "./mergeNewSubItems.js";
 import { formatPrice } from "@/internal/products/prices/priceUtils.js";
 import { logPhaseItems } from "./phaseUtils/phaseUtils.js";
 import { getQuantityToRemove } from "./mergeUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
+import { ItemSet } from "@/utils/models/ItemSet.js";
 
 export const getCusProductsToRemove = ({
   attachParams,
@@ -92,30 +94,37 @@ export const paramsToSubItems = async ({
   sub,
   attachParams,
   config,
-  onlyPriceItems = false,
+  removeCusProducts,
+  addItemSet,
 }: {
   req: ExtendedRequest;
   sub?: Stripe.Subscription;
   attachParams: AttachParams;
   config: AttachConfig;
-  onlyPriceItems?: boolean;
+  removeCusProducts?: FullCusProduct[];
+  addItemSet?: ItemSet;
 }) => {
   const { logger } = req;
   let curSubItems = sub?.items.data || [];
 
-  const itemSet = await getStripeSubItems2({
-    attachParams,
-    config,
-  });
+  const itemSet = notNullish(addItemSet)
+    ? addItemSet!
+    : await getStripeSubItems2({
+        attachParams,
+        config,
+      });
 
   // 1. Remove items related to cur cus product...
-  const cusProductsToRemove = getCusProductsToRemove({ attachParams });
+  const cusProductsToRemove = notNullish(removeCusProducts)
+    ? removeCusProducts!
+    : getCusProductsToRemove({ attachParams });
 
   let newSubItems = mergeNewSubItems({
     itemSet,
     curSubItems,
   });
 
+  console.log("New sub items:", newSubItems);
   const allCusProducts = attachParams.customer.customer_products;
 
   // 3. Remove items related to cus products to remove

@@ -49,7 +49,7 @@ export const getPricesAndEnts = async ({
 
     let freeTrial = null;
     let freeTrialProduct = products.find((p) => notNullish(p.free_trial));
-    // freeTrial = freeTrialProduct?.free_trial;
+
     if (freeTrialProduct) {
       freeTrial = await getFreeTrialAfterFingerprint({
         db,

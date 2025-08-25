@@ -11,6 +11,7 @@ import { getDowngradeProductPreview } from "./getDowngradeProductPreview.js";
 import { getNewProductPreview } from "./getNewProductPreview.js";
 import { getUpgradeProductPreview } from "./getUpgradeProductPreview.js";
 import { getMultiAttachPreview } from "./getMultiAttachPreview.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 export const attachParamsToPreview = async ({
   req,
@@ -56,7 +57,10 @@ export const attachParamsToPreview = async ({
 
   let preview: any = null;
 
-  if (branch == AttachBranch.MultiAttach) {
+  if (
+    branch == AttachBranch.MultiAttach ||
+    notNullish(attachParams.productsList)
+  ) {
     preview = await getMultiAttachPreview({
       req,
       attachBody,
@@ -64,9 +68,7 @@ export const attachParamsToPreview = async ({
       logger,
       config,
     });
-  }
-
-  if (
+  } else if (
     func == AttachFunction.AddProduct ||
     func == AttachFunction.CreateCheckout ||
     func == AttachFunction.OneOff

@@ -69,6 +69,7 @@ export const priceToUnusedPreviewItem = ({
         price,
         quantity,
         proration: finalProration,
+        productQuantity: cusProduct.quantity,
         now,
       });
 

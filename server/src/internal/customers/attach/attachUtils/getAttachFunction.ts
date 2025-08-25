@@ -57,7 +57,10 @@ export const getAttachFunction = async ({
     return AttachFunction.CreateCheckout;
   } else if (branch == AttachBranch.OneOff) {
     return AttachFunction.OneOff;
-  } else if (branch == AttachBranch.MultiAttach) {
+  } else if (
+    branch == AttachBranch.MultiAttach ||
+    branch == AttachBranch.MultiAttachUpdate
+  ) {
     return AttachFunction.MultiAttach;
   } else if (newScenario) {
     return AttachFunction.AddProduct;
@@ -204,7 +207,6 @@ export const runAttachFunction = async ({
       req,
       res,
       attachParams,
-      attachBody,
       config,
     });
   }

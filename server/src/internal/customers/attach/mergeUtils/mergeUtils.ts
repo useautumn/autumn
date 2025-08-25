@@ -4,6 +4,7 @@ import {
 } from "@/internal/products/prices/priceUtils.js";
 import {
   isContUsePrice,
+  isFixedPrice,
   isPrepaidPrice,
 } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { AttachBranch, Entity, FullCusProduct, Price } from "@autumn/shared";
@@ -37,6 +38,7 @@ export const getQuantityToRemove = ({
   entities: Entity[];
 }) => {
   let finalQuantity = 1;
+  const fixedPriceMultiplier = cusProduct.quantity || 1;
 
   if (isPrepaidPrice({ price })) {
     const options = getPriceOptions(price, cusProduct.options);
@@ -59,6 +61,10 @@ export const getQuantityToRemove = ({
     });
 
     finalQuantity = existingUsage || 0;
+  }
+
+  if (isFixedPrice({ price })) {
+    finalQuantity = fixedPriceMultiplier * (finalQuantity || 1);
   }
 
   return finalQuantity;
