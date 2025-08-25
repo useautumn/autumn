@@ -18,6 +18,7 @@ export const OrgConfigSchema = z.object({
   multiple_trials: z.boolean().default(false),
   allow_paid_default: z.boolean().default(false),
   cache_customer: z.boolean().default(false),
+  invoice_memos: z.boolean().default(false),
 });
 
 export type OrgConfig = z.infer<typeof OrgConfigSchema>;

@@ -9,6 +9,7 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getAlignedIntervalUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { buildInvoiceMemoFromEntitlements } from "@/internal/invoices/invoiceMemoUtils.js";
 
 // Get payment method
 
@@ -127,6 +128,17 @@ export const createStripeSub2 = async ({
     // );
 
     const latestInvoice = subscription.latest_invoice as Stripe.Invoice;
+
+    if(invoiceOnly && org.config.invoice_memos && latestInvoice && latestInvoice.status === "draft") {
+      const desc = await buildInvoiceMemoFromEntitlements({
+        org,
+        entitlements: attachParams.entitlements,
+        features: attachParams.features,
+      });
+      await stripeCli.invoices.update(latestInvoice.id!, {
+        description: desc,
+      });
+    }
 
     if (
       invoiceOnly &&
