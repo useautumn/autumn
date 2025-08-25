@@ -12,6 +12,7 @@ import { AttachButton } from "@/views/customers/customer/product/components/Atta
 import { CustomerProductBadge } from "@/views/customers/customer/product/components/CustomerProductBadge";
 import { EntitiesSidebar } from "./product-item/EntitiesSidebar";
 import { UpdateProductButton } from "./components/UpdateProductButton";
+import { isOneOffProduct } from "@/utils/product/priceUtils";
 
 export default function ProductSidebar() {
   const { product, setProduct, customer } = useProductContext();
@@ -91,6 +92,8 @@ export default function ProductSidebar() {
             buttonIcon={
               product.free_trial ? <Minus size={14} /> : <Plus size={14} />
             }
+
+            disabled={isOneOffProduct(product.items, product.is_add_on)}
           >
             <div>
               {product.free_trial ? (

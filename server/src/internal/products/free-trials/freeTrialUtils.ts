@@ -3,14 +3,32 @@ import { generateId, notNullish } from "@/utils/genUtils.js";
 import {
   CreateFreeTrial,
   CreateFreeTrialSchema,
+  ErrCode,
   FreeTrial,
   FreeTrialDuration,
+  Price,
 } from "@autumn/shared";
 import { addDays, addMinutes, addMonths, addYears } from "date-fns";
 import { FreeTrialService } from "./FreeTrialService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import { isFreeProduct } from "../productUtils.js";
+import { isFreeProduct, isOneOff } from "../productUtils.js";
+
+export const validateOneOffTrial = async ({
+  prices,
+  freeTrial,
+}: {
+  prices: Price[];
+  freeTrial: FreeTrial | null;
+}) => {
+  if(isOneOff(prices) && freeTrial) {
+    throw new RecaseError({
+      message: "One-off products cannot have a free trial",
+      code: ErrCode.InvalidRequest,
+      statusCode: 400,
+    });
+  }
+}
 
 export const validateAndInitFreeTrial = ({
   freeTrial,
