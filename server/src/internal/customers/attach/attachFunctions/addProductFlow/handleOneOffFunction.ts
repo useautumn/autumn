@@ -132,8 +132,8 @@ export const handleOneOffFunction = async ({
     } as any);
   }
 
-  if (config.invoiceCheckout && config.finalizeInvoice) {
-    if (stripeInvoice.status === "draft") {
+  if (config.invoiceCheckout) {
+    if (stripeInvoice.status === "draft" && config.finalizeInvoice) {
       stripeInvoice = await stripeCli.invoices.finalizeInvoice(
         stripeInvoice.id!
       );
@@ -183,7 +183,6 @@ export const handleOneOffFunction = async ({
       createFullCusProduct({
         db: req.db,
         attachParams: attachToInsertParams(attachParams, product),
-        lastInvoiceId: stripeInvoice.id,
         logger,
       })
     );

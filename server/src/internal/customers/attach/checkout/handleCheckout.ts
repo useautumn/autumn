@@ -22,6 +22,7 @@ import { priceToFeature } from "@/internal/products/prices/priceUtils/convertPri
 import { getPriceOptions } from "@/internal/products/prices/priceUtils.js";
 import { getHasProrations } from "./getHasProrations.js";
 import { handleCreateInvoiceCheckout } from "../../add-product/handleCreateInvoiceCheckout.js";
+import { z } from "zod";
 
 const getAttachVars = async ({
   req,
@@ -104,6 +105,7 @@ export const handleCheckout = (req: any, res: any) =>
     action: "attach-preview",
     handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
       const { logger, features } = req;
+
       const attachBody = AttachBodySchema.parse(req.body);
 
       const { attachParams, branch, func, config } = await getAttachVars({
@@ -147,6 +149,8 @@ export const handleCheckout = (req: any, res: any) =>
           checkoutUrl = checkout?.url;
         }
       }
+
+      console.log(`Branch: ${branch}, Func: ${func}`);
 
       await getCheckoutOptions({
         req,

@@ -86,6 +86,13 @@ export const getV2CheckResponse = async ({
   const cusPrices = cusProducts.flatMap(
     (cusProduct) => cusProduct.customer_prices
   );
+
+  console.log(
+    "FeatureCusEnts:",
+    featureCusEnts.map(
+      (f) => `${f.entitlement.usage_limit}, ${f.entitlement.interval}`
+    )
+  );
   const balances = await getCusBalances({
     cusEntsWithCusProduct: featureCusEnts,
     cusPrices,
@@ -93,6 +100,8 @@ export const getV2CheckResponse = async ({
     entity: fullCus.entity,
     apiVersion,
   });
+
+  console.log("Balances:", balances);
 
   let cusFeatures = balancesToFeatureResponse({
     cusEnts: featureCusEnts,

@@ -130,7 +130,7 @@ export const getInvoiceItems = async ({
 export const attachToInvoiceResponse = ({
   invoice,
 }: {
-  invoice?: Stripe.Invoice;
+  invoice?: Stripe.Invoice | null;
 }) => {
   if (!invoice) {
     return undefined;

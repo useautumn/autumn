@@ -12,9 +12,13 @@ import { useState } from "react";
 export const InvoiceCustomerButton = ({
   handleAttachClicked,
   preview,
+  disabled,
+  checkoutAllowed,
 }: {
   handleAttachClicked: any;
   preview?: any;
+  disabled?: boolean;
+  checkoutAllowed?: boolean;
 }) => {
   const [immediateLoading, setImmediateLoading] = useState(false);
   const [afterPaymentLoading, setAfterPaymentLoading] = useState(false);
@@ -40,6 +44,7 @@ export const InvoiceCustomerButton = ({
           disableStartIcon={true}
           tabIndex={-1}
           tooltipContent="This will enable the product for the customer immediately, and redirect you to Stripe to finalize the invoice"
+          disabled={disabled}
         >
           Invoice Customer
         </Button>
@@ -69,7 +74,8 @@ export const InvoiceCustomerButton = ({
             </Button>
           </div>
         </div>
-        {(preview?.func == AttachFunction.CreateCheckout ||
+        {(checkoutAllowed ||
+          preview?.func == AttachFunction.CreateCheckout ||
           preview?.func == AttachFunction.AddProduct ||
           preview?.func == AttachFunction.OneOff) && (
           <div className="w-[300px]">

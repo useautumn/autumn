@@ -18,9 +18,11 @@ import {
 } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
 import { FeatureOptions, FullCusProduct } from "@autumn/shared";
 import { productsAreSame } from "@/internal/products/productUtils/compareProductUtils.js";
-import { isTrialing } from "../../cusProducts/cusProductUtils.js";
 import { hasPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
-import { attachParamToCusProducts } from "./convertAttachParams.js";
+import {
+  attachParamToCusProducts,
+  getCustomerSub,
+} from "./convertAttachParams.js";
 import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 import { isMainTrialBranch } from "./attachUtils.js";
 
@@ -294,6 +296,11 @@ export const getAttachBranch = async ({
 }) => {
   if (notNullish(attachBody.products)) {
     // 1.
+    const subId = await getCustomerSub({ attachParams, onlySubId: true });
+    console.log("Sub ID:", subId);
+    if (subId) {
+      return AttachBranch.MultiAttachUpdate;
+    }
     return AttachBranch.MultiAttach;
   }
 

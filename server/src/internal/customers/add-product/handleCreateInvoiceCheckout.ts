@@ -11,6 +11,7 @@ import { handlePaidProduct } from "../attach/attachFunctions/addProductFlow/hand
 import { AttachBranch, AttachConfig, SuccessCode } from "@autumn/shared";
 import Stripe from "stripe";
 import { handleOneOffFunction } from "../attach/attachFunctions/addProductFlow/handleOneOffFunction.js";
+import { handleMultiAttachFlow } from "../attach/attachFunctions/multiAttach/handleMultiAttachFlow.js";
 
 export const handleCreateInvoiceCheckout = async ({
   req,
@@ -30,7 +31,14 @@ export const handleCreateInvoiceCheckout = async ({
 
   let invoiceResult;
 
-  if (isOneOff(attachParams.prices)) {
+  if (attachParams.productsList) {
+    invoiceResult = await handleMultiAttachFlow({
+      req,
+      res,
+      attachParams,
+      config,
+    });
+  } else if (isOneOff(attachParams.prices)) {
     invoiceResult = await handleOneOffFunction({
       req,
       res,
