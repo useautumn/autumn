@@ -18,10 +18,14 @@ import { toast } from "sonner";
 import { OrgService } from "@/services/OrgService";
 import { CusProductStatus, Entity, Product } from "@autumn/shared";
 import SmallSpinner from "@/components/general/SmallSpinner";
-import { Search } from "lucide-react";
+import { Blend, Search } from "lucide-react";
 import { useOrg } from "@/hooks/useOrg";
 
-function AddProduct() {
+function AddProduct({
+  setMultiAttachOpen,
+}: {
+  setMultiAttachOpen: (open: boolean) => void;
+}) {
   const { products, customer, env, entityId, entities } = useCustomerContext();
   const axiosInstance = useAxiosInstance({ env });
   const [options, setOptions] = useState<any[]>([]);
@@ -73,7 +77,7 @@ function AddProduct() {
         entityId ? `?entity_id=${entityId}` : ""
       }`,
       navigate,
-      env,
+      env
     );
   };
 
@@ -86,7 +90,7 @@ function AddProduct() {
           </DropdownMenuTrigger>
           <DropdownMenuContent
             // className="w-[var(--radix-dropdown-menu-trigger-width)] p-0"
-            className="w-fit max-w-xl whitespace-nowrap truncate "
+            className="w-fit max-w-xl whitespace-nowrap truncate max-h-[400px] overflow-y-auto"
             align="end"
           >
             <div className="flex items-center border-b px-2">
@@ -115,6 +119,15 @@ function AddProduct() {
                 />
               ))
             )}
+            <DropdownMenuItem
+              className="text-t2"
+              onClick={() => setMultiAttachOpen(true)}
+            >
+              <div className="flex items-center gap-2 w-full text-t3 hover:text-t2">
+                <Blend size={12} />
+                <p>Multiple</p>
+              </div>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

@@ -8,7 +8,7 @@ import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
 import { isOneOff } from "@/internal/products/productUtils.js";
 
 import { handlePaidProduct } from "../attach/attachFunctions/addProductFlow/handlePaidProduct.js";
-import { AttachConfig, SuccessCode } from "@autumn/shared";
+import { AttachBranch, AttachConfig, SuccessCode } from "@autumn/shared";
 import Stripe from "stripe";
 import { handleOneOffFunction } from "../attach/attachFunctions/addProductFlow/handleOneOffFunction.js";
 
@@ -17,16 +17,19 @@ export const handleCreateInvoiceCheckout = async ({
   res,
   attachParams,
   config,
+  branch,
 }: {
   req: any;
   res?: any;
   attachParams: AttachParams;
   config: AttachConfig;
+  branch?: AttachBranch;
 }) => {
   // if one off
   const { stripeCli } = attachParams;
 
   let invoiceResult;
+
   if (isOneOff(attachParams.prices)) {
     invoiceResult = await handleOneOffFunction({
       req,

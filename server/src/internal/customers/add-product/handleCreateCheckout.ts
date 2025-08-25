@@ -7,10 +7,7 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { pricesContainRecurring } from "@/internal/products/prices/priceUtils.js";
 import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
-import {
-  getStripeSubItems,
-  getStripeSubItems2,
-} from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
+import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { APIVersion, AttachConfig } from "@autumn/shared";
@@ -46,6 +43,12 @@ export const handleCreateCheckout = async ({
     attachParams,
     isCheckout: true,
   });
+
+  for (const itemSet of itemSets) {
+    for (const item of itemSet.items) {
+      console.log(item);
+    }
+  }
 
   if (itemSets.length === 0) {
     throw new RecaseError({

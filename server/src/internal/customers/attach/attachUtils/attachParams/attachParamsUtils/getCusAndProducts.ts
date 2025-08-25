@@ -14,13 +14,20 @@ const getProductsForAttach = async ({
   req: ExtendedRequest;
   attachBody: AttachBody;
 }) => {
-  const { product_id, product_ids, version } = attachBody;
+  const {
+    product_id,
+    product_ids,
+    version,
+    products: inputProducts,
+  } = attachBody;
 
   let products = await ProductService.listFull({
     db: req.db,
     orgId: req.orgId,
     env: req.env,
-    inIds: product_ids || [product_id!],
+    inIds: inputProducts
+      ? inputProducts.map((p) => p.product_id)
+      : product_ids || [product_id!],
     version,
   });
 

@@ -1,4 +1,5 @@
 export enum AttachBranch {
+  MultiAttach = "multi_attach",
   // Done
   MultiProduct = "multi_product",
   OneOff = "one_off",

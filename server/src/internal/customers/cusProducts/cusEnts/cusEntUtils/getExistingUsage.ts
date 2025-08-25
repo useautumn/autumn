@@ -8,7 +8,6 @@ import {
   FeatureType,
   FullCusEntWithFullCusProduct,
   FullCusProduct,
-  FullCustomerEntitlement,
   Price,
 } from "@autumn/shared";
 
@@ -131,6 +130,7 @@ export const getExistingUsages = ({
       entitlement: ent,
       options,
       relatedPrice: relatedCusPrice?.price,
+      // productQuantity: curCusProduct.quantity,
     });
 
     usages[key].usage += resetBalance! - cusEnt.balance!;

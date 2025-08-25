@@ -292,6 +292,11 @@ export const getAttachBranch = async ({
   attachParams: AttachParams;
   fromPreview?: boolean;
 }) => {
+  if (notNullish(attachBody.products)) {
+    // 1.
+    return AttachBranch.MultiAttach;
+  }
+
   // 1. Multi product
   if (notNullish(attachBody.product_ids)) {
     await handleMultiProductErrors({ attachParams });

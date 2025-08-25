@@ -18,6 +18,14 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { ACTIVE_STATUSES } from "../CusProductService.js";
 
+export const cusProductsToPrices = ({
+  cusProducts,
+}: {
+  cusProducts: FullCusProduct[];
+}) => {
+  return cusProducts.flatMap((cp) => cusProductToPrices({ cusProduct: cp }));
+};
+
 export const cusProductsToCusPrices = ({
   cusProducts,
   inStatuses,
