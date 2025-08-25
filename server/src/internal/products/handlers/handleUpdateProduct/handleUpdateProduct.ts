@@ -1,5 +1,5 @@
 import RecaseError from "@/utils/errorUtils.js";
-import { ErrCode, FullProduct, UpdateProductSchema } from "@autumn/shared";
+import { Entitlement, ErrCode, FullProduct, Price, UpdateProductSchema } from "@autumn/shared";
 
 import { ProductService } from "../../ProductService.js";
 import { notNullish } from "@/utils/genUtils.js";
@@ -22,6 +22,7 @@ import {
   handleCreateProduct,
 } from "../handleCreateProduct.js";
 import { mapToProductItems } from "../../productV2Utils.js";
+import { validateOneOffTrial } from "../../free-trials/freeTrialUtils.js";
 
 export const handleUpdateProductV2 = async (req: any, res: any) =>
   routeHandler({
@@ -145,6 +146,13 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
 
       const { items, free_trial } = req.body;
 
+      if (free_trial !== undefined) {
+        await validateOneOffTrial({
+          prices: fullProduct.prices,
+          freeTrial: free_trial,
+        });
+      }
+      
       const { prices, entitlements } = await handleNewProductItems({
         db,
         curPrices: fullProduct.prices,
@@ -156,7 +164,12 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
         isCustom: false,
       });
 
-      if (free_trial !== undefined) {
+      if(free_trial !== undefined) {
+        await validateOneOffTrial({
+          prices,
+          freeTrial: free_trial,
+        });
+
         await handleNewFreeTrial({
           db,
           curFreeTrial: fullProduct.free_trial,
