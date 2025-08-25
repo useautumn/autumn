@@ -27,6 +27,7 @@ export const handleCreateInvoiceCheckout = async ({
   const { stripeCli } = attachParams;
 
   let invoiceResult;
+  
   if (isOneOff(attachParams.prices)) {
     invoiceResult = await handleOneOffFunction({
       req,
