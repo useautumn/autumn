@@ -86,11 +86,13 @@ const validateCreateProduct = async ({ req }: { req: ExtendedRequest }) => {
   // 3. Validate free trial if exist
   let freeTrial: FreeTrial | null = null;
   if (notNullish(free_trial)) {
+    // console.log("Free trial before:", free_trial);
     freeTrial = validateAndInitFreeTrial({
       freeTrial: free_trial,
       internalProductId: productData.id,
       isCustom: false,
     });
+    // console.log("Free trial after:", freeTrial);
   }
 
   return {
@@ -206,6 +208,8 @@ export const handleCreateProduct = async (req: Request, res: any) =>
         prices = res.prices;
         entitlements = res.entitlements;
       }
+
+      console.log("Free trial:", freeTrial);
 
       await initProductInStripe({
         db,

@@ -28,7 +28,7 @@ export function MultiAtttachLines({
         </CustomAccordionTrigger>
         <AccordionContent className="mt-2 mb-0 pb-2 flex flex-col gap-2">
           {checkoutResult?.lines
-            .filter((line) => line.amount != 0)
+            // .filter((line) => line.amount != 0)
             .map((line, index) => {
               return (
                 <div key={index} className="flex justify-between">

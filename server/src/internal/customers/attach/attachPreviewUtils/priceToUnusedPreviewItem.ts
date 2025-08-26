@@ -34,7 +34,7 @@ export const priceToUnusedPreviewItem = ({
   org?: Organization;
 }) => {
   now = now || Date.now();
-  const onTrial = isTrialing({ cusProduct });
+  const onTrial = isTrialing({ cusProduct, now });
 
   // 1. Get price from stripe items
   const subItem = findStripeItemForPrice({

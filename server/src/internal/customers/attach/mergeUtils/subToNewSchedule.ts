@@ -63,6 +63,7 @@ export const subToNewSchedule = async ({
   //   phases: res.phases,
   //   db: req.db,
   // });
+  // throw new Error("test");
 
   if (res.phases[0].items.length > 0) {
     itemSet.subItems = res.phases[0].items;
@@ -86,6 +87,7 @@ export const subToNewSchedule = async ({
           })),
           start_date: newSchedule.phases[0].start_date,
           end_date: endOfBillingPeriod,
+          trial_end: sub?.trial_end || undefined,
         },
         {
           items: res.phases[0].items,

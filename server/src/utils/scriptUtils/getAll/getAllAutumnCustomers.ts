@@ -5,15 +5,11 @@ import {
 } from "@/internal/customers/cusProducts/CusProductService.js";
 import {
   AppEnv,
-  CusProduct,
   CusProductStatus,
   Customer,
-  customerProducts,
   customers,
   FullCusProduct,
   FullCustomer,
-  Product,
-  products,
 } from "@autumn/shared";
 import { and, desc, eq, gt, lt, sql } from "drizzle-orm";
 
@@ -34,7 +30,7 @@ let cusProductsQuery = ({
     return inStatuses
       ? sql`AND cp.status = ANY(ARRAY[${sql.join(
           inStatuses.map((status) => sql`${status}`),
-          sql`, `,
+          sql`, `
         )}])`
       : sql``;
   };
@@ -121,7 +117,7 @@ export const getAllFullCusProducts = async ({
         inStatuses,
         lastProductId,
         pageSize,
-      }),
+      })
     );
 
     if (data.length === 0) break;
@@ -152,7 +148,7 @@ export const getAllCustomers = async ({
       where: and(
         eq(customers.org_id, orgId),
         eq(customers.env, env),
-        lastCustomerId ? lt(customers.internal_id, lastCustomerId) : undefined,
+        lastCustomerId ? lt(customers.internal_id, lastCustomerId) : undefined
       ),
       orderBy: [desc(customers.internal_id)],
       limit: pageSize,

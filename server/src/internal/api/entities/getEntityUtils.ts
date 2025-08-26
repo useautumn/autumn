@@ -119,6 +119,7 @@ export const getEntityResponse = async ({
       apiVersion,
       features,
     });
+
     let products: CusProductResponse[] = [...main, ...addOns];
 
     let cusFeatures = await getCusFeaturesResponse({

@@ -169,6 +169,7 @@ export const handleCheckout = (req: any, res: any) =>
         req,
         attachParams,
         preview,
+        branch,
       });
 
       // Get has prorations

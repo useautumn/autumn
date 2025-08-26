@@ -20,25 +20,16 @@ import {
   paramsToCurSub,
   paramsToCurSubSchedule,
 } from "../../attachUtils/convertAttachParams.js";
-import {
-  getEarliestPeriodEnd,
-  getLatestPeriodEnd,
-  subToPeriodStartEnd,
-} from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { paramsToScheduleItems } from "../../mergeUtils/paramsToScheduleItems.js";
 import { subToNewSchedule } from "../../mergeUtils/subToNewSchedule.js";
 import { updateCurSchedule } from "../../mergeUtils/updateCurSchedule.js";
-import { getAlignedIntervalUnix } from "@/internal/products/prices/billingIntervalUtils.js";
-import { getLargestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
-import { formatUnixToDateTime } from "@/utils/genUtils.js";
 import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import {
   getCurrentPhaseIndex,
-  logPhaseItems,
   logPhases,
 } from "../../mergeUtils/phaseUtils/phaseUtils.js";
-import { getCusProductsToRemove } from "../../mergeUtils/paramsToSubItems.js";
 
 export const handleScheduleFunction2 = async ({
   req,

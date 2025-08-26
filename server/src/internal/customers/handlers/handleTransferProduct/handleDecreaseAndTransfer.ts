@@ -74,6 +74,8 @@ export const handleDecreaseAndTransfer = async ({
   const newCusProduct = await createFullCusProduct({
     db: req.db,
     logger: req.logger,
+    trialEndsAt: cusProduct.trial_ends_at || undefined,
+    subscriptionIds: cusProduct.subscription_ids || [],
     attachParams: attachToInsertParams(
       {
         req,
@@ -84,10 +86,11 @@ export const handleDecreaseAndTransfer = async ({
         org: req.org,
         stripeCli: stripeCli,
         paymentMethod: null,
-        freeTrial: null,
+        freeTrial: cusProduct.free_trial || null,
         optionsList: cusProduct.options,
         scenario: AttachScenario.New,
         // scenario: AttachScenario.New,
+
         cusProducts: fullCus.customer_products,
         replaceables: [],
         entities: fullCus.entities,
