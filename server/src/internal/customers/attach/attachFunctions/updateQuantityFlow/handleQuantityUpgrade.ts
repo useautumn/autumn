@@ -59,7 +59,7 @@ export const handleQuantityUpgrade = async ({
 
   const prorate = shouldProrate(onIncrease);
 
-  if (prorate) {
+  if (prorate && stripeSub?.status !== "trialing") {
     const { start, end } = subToPeriodStartEnd({ sub: stripeSub });
 
     const amount = priceToInvoiceAmount({
