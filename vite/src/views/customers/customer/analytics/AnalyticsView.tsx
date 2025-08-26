@@ -1,5 +1,5 @@
 import { useNavigate, useSearchParams } from "react-router";
-import { AppEnv, ErrCode, Feature } from "@autumn/shared";
+import { AppEnv, ErrCode, Feature, FeatureType } from "@autumn/shared";
 import { useEffect, useRef, useState } from "react";
 import { EventsBarChart } from "./AnalyticsGraph";
 import { Card, CardContent } from "@/components/ui/card";
@@ -43,6 +43,8 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
     topEvents,
   } = useAnalyticsData({ hasCleared });
 
+  // console.log("Features: ", features);
+
   const { rawEvents, queryLoading: rawQueryLoading } = useRawAnalyticsData();
 
   const chartConfig = events?.meta
@@ -59,6 +61,10 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
           yName:
             features.find((feature: Feature) => {
               const eventName = x.name.replace("_count", "");
+
+              // console.log("Feature: ", feature, eventName);
+
+              if (feature.type == FeatureType.Boolean) return false;
 
               if (feature.id === eventName) {
                 return true;

@@ -49,7 +49,7 @@ export const ManageOrg = ({
                 classNames={{
                   title: "text-t3",
                 }}
-                addButton={<InvitePopover />}
+                endContent={<InvitePopover />}
               />
 
               <TabsContent value="details" className="h-full overflow-y-auto">
