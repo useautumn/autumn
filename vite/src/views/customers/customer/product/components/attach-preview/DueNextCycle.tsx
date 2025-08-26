@@ -52,7 +52,7 @@ export const DueNextCycle = () => {
         <>
           {preview.options
             .filter((option: any) => {
-              // console.log("Option:", option);
+              console.log("Option:", option);
               if (!option.interval) return false;
               return true;
             })

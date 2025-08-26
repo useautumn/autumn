@@ -147,8 +147,6 @@ export const getNewProductPreview = async ({
     config,
   });
 
-  console.log("Due next cycle", dueNextCycle);
-
   // console.log("Due next cycle", dueNextCycle);
 
   // Show next cycle if free trial or notNullish(anchorToUnix) or branch != one off?
@@ -215,6 +213,7 @@ export const getNewProductPreview = async ({
     features: attachParams.features,
     anchorToUnix,
     now: attachParams.now || Date.now(),
+    freeTrial: attachParams.freeTrial,
   });
 
   const dueTodayAmt = items.reduce((acc, item) => {
