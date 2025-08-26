@@ -74,7 +74,7 @@ const ops = [
 ];
 
 const testCase = "multiAttach1";
-describe(`${chalk.yellowBright("multiAttach1: Testing attach multiple products with diff quantities")}`, () => {
+describe(`${chalk.yellowBright("multiAttach1: Testing multi attach for trial products")}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
 
@@ -120,20 +120,7 @@ describe(`${chalk.yellowBright("multiAttach1: Testing attach multiple products w
     testClockId = testClockId1!;
   });
 
-  const entities = [
-    {
-      id: "1",
-      name: "Entity 1",
-      feature_id: TestFeature.Users,
-    },
-    {
-      id: "2",
-      name: "Entity 2",
-      feature_id: TestFeature.Users,
-    },
-  ];
-
-  it("should attach multiple products with diff quantities", async function () {
+  it("should run multi attach and have correct sub", async function () {
     const productsList = [
       {
         product_id: pro.id,
