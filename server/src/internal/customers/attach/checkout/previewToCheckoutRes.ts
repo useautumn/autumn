@@ -99,7 +99,10 @@ export const previewToCheckoutRes = async ({
 
   let nextCycle = undefined;
 
-  if (notNullish(preview.due_next_cycle)) {
+  if (
+    notNullish(preview.due_next_cycle) &&
+    notNullish(preview.due_next_cycle.due_at)
+  ) {
     nextCycle = {
       starts_at: preview.due_next_cycle.due_at,
       total: newProduct.items
