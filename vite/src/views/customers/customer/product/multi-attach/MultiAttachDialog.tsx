@@ -37,6 +37,7 @@ import { CheckoutResult } from "autumn-js";
 import { Separator } from "@/components/ui/separator";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
 import { formatAmount } from "@/utils/product/productItemUtils";
+import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
 
 export const MultiAttachDialog = ({
   open,
@@ -162,6 +163,8 @@ export const MultiAttachDialog = ({
     }
   };
 
+  console.log("Checkout result", checkoutResult);
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <CustomDialogContent className="w-lg">
@@ -282,6 +285,23 @@ export const MultiAttachDialog = ({
                     })}
                   </p>
                 </div>
+                {checkoutResult.next_cycle && (
+                  <div className="flex justify-between text-muted-foreground text-sm">
+                    <div>
+                      <p>
+                        Due next cycle (
+                        {formatUnixToDate(checkoutResult.next_cycle?.starts_at)}
+                        )
+                      </p>
+                    </div>
+                    <p>
+                      {formatAmount({
+                        amount: checkoutResult.next_cycle?.total,
+                        defaultCurrency,
+                      })}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>

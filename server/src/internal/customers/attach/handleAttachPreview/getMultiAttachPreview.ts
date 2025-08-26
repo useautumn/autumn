@@ -2,21 +2,24 @@ import { ExtendedRequest } from "@/utils/models/Request.js";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { AttachBody, PreviewLineItem } from "@autumn/shared";
 import { getCustomerSub } from "../attachUtils/convertAttachParams.js";
-import { isArrearPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
-import {
-  cusProductsToPrices,
-  cusProductToPrices,
-} from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+
+import { cusProductsToPrices } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
 import { priceToUnusedPreviewItem } from "../attachPreviewUtils/priceToUnusedPreviewItem.js";
 import { handleMultiAttachErrors } from "../attachUtils/handleAttachErrors/handleMultiAttachErrors.js";
 import { getAddAndRemoveProducts } from "../attachFunctions/multiAttach/getAddAndRemoveProducts.js";
-import { getNewProductPreview } from "./getNewProductPreview.js";
+
 import { priceToNewPreviewItem } from "../attachPreviewUtils/priceToNewPreviewItem.js";
-import { getLatestPeriodStart } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import {
+  getEarliestPeriodEnd,
+  getLatestPeriodStart,
+} from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { getLargestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 import { addBillingIntervalUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 
 import { Decimal } from "decimal.js";
+import { notNullish } from "@/utils/genUtils.js";
+
+import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 
 export const getMultiAttachPreview = async ({
   req,
@@ -47,7 +50,6 @@ export const getMultiAttachPreview = async ({
   });
 
   const prices = cusProductsToPrices({ cusProducts: expireCusProducts });
-  const onTrial = sub?.status == "trialing";
 
   for (const price of prices) {
     const cusProduct = cusProducts.find(
@@ -67,10 +69,12 @@ export const getMultiAttachPreview = async ({
     items.push(previewLineItem);
   }
 
-  // console.log("old items: ", items);
+  console.log("old items: ", items);
 
   const productList = attachParams.productsList!;
   const newItems: PreviewLineItem[] = [];
+  const itemsWithoutTrial: PreviewLineItem[] = [];
+
   for (const productOptions of productList) {
     const product = attachParams.products.find(
       (p) => p.id === productOptions.product_id
@@ -88,7 +92,8 @@ export const getMultiAttachPreview = async ({
       });
     }
 
-    const onTrial = sub?.status == "trialing";
+    const onTrial =
+      notNullish(attachParams?.freeTrial) || sub?.status == "trialing";
     for (const price of product.prices) {
       const newItem = priceToNewPreviewItem({
         org: attachParams.org,
@@ -101,31 +106,58 @@ export const getMultiAttachPreview = async ({
         product,
         onTrial,
       });
+      const noTrialItem = priceToNewPreviewItem({
+        org: attachParams.org,
+        price,
+        entitlements: product.entitlements,
+        skipOneOff: false,
+        now: attachParams.now!,
+        // anchorToUnix,
+        productQuantity: productOptions.quantity ?? 1,
+        product,
+        onTrial: false,
+      });
 
       if (newItem) {
         newItems.push(newItem);
       }
+      if (noTrialItem) {
+        itemsWithoutTrial.push(noTrialItem);
+      }
     }
   }
 
-  // console.log("new items: ", newItems);
-  const oldItemsTotal = items.reduce(
-    (acc, item) => acc + (item.amount ?? 0),
-    0
-  );
   const totalDueToday = newItems.reduce(
     (acc, item) => acc + (item.amount ?? 0),
     0
   );
 
+  const freeTrial = attachParams.freeTrial;
+  let dueNextCycle = undefined;
+  if (freeTrial || sub?.status == "trialing") {
+    const nextCycleAt = freeTrial
+      ? freeTrialToStripeTimestamp({ freeTrial, now: attachParams.now })! * 1000
+      : sub
+        ? getEarliestPeriodEnd({ sub }) * 1000
+        : undefined;
+
+    if (nextCycleAt) {
+      dueNextCycle = {
+        line_items: itemsWithoutTrial,
+        due_at: nextCycleAt,
+      };
+    }
+  }
+  // console.log("dueNextCycle", dueNextCycle);
+  // console.log("itemsWithoutTrial", itemsWithoutTrial);
+
   return {
-    currency: attachParams.org.default_currency,
+    // items,
     due_today: {
       line_items: [...items, ...newItems],
-      total: new Decimal(totalDueToday).plus(oldItemsTotal).toNumber(),
+      total: new Decimal(totalDueToday).toNumber(),
     },
-    due_next_cycle: null,
-    options: {},
+    due_next_cycle: dueNextCycle,
   };
 
   // for (const cusProduct of cusProducts) {

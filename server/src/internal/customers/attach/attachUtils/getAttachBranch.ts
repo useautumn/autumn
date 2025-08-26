@@ -296,8 +296,8 @@ export const getAttachBranch = async ({
 }) => {
   if (notNullish(attachBody.products)) {
     // 1.
-    const subId = await getCustomerSub({ attachParams, onlySubId: true });
-    console.log("Sub ID:", subId);
+    const { subId } = await getCustomerSub({ attachParams, onlySubId: true });
+
     if (subId) {
       return AttachBranch.MultiAttachUpdate;
     }

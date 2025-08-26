@@ -1,14 +1,11 @@
+import RecaseError from "@/utils/errorUtils.js";
+import { z } from "zod";
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { Request, Response } from "express";
 import { CusService } from "../CusService.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@autumn/shared";
 import { CusProductService } from "../cusProducts/CusProductService.js";
-import { z } from "zod";
 import { nullish } from "@/utils/genUtils.js";
-import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
-import { cusProductToProduct } from "../cusProducts/cusProductUtils/convertCusProduct.js";
 import { handleDecreaseAndTransfer } from "./handleTransferProduct/handleDecreaseAndTransfer.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 const TransferProductSchema = z.object({
