@@ -30,6 +30,7 @@ import {
 } from "tests/utils/stripeUtils.js";
 import { addWeeks } from "date-fns";
 import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
+import { expectMultiAttachCorrect } from "tests/utils/expectUtils/expectMultiAttach.js";
 
 let growth = constructProduct({
   id: "growth",
@@ -125,20 +126,38 @@ describe(`${chalk.yellowBright("multiAttach1: Testing multi attach for trial pro
       {
         product_id: pro.id,
         quantity: 5,
+        product: pro,
+        status: CusProductStatus.Active,
       },
       {
         product_id: premium.id,
         quantity: 3,
+        product: premium,
+        status: CusProductStatus.Active,
+      },
+      {
+        product_id: growth.id,
+        quantity: 2,
+        product: growth,
+        status: CusProductStatus.Active,
       },
     ];
 
-    const { checkout_url } = await autumn.attach({
-      customer_id: customerId,
-      // @ts-ignore
+    await expectMultiAttachCorrect({
+      customerId,
       products: productsList,
-      force_checkout: true,
+      db,
+      org,
+      env,
     });
 
-    await completeCheckoutForm(checkout_url);
+    // const { checkout_url } = await autumn.attach({
+    //   customer_id: customerId,
+    //   // @ts-ignore
+    //   products: productsList,
+    //   force_checkout: true,
+    // });
+
+    // await completeCheckoutForm(checkout_url);
   });
 });
