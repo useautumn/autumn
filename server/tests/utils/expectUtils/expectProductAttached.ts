@@ -7,33 +7,36 @@ import { Decimal } from "decimal.js";
 export const expectProductAttached = ({
   customer,
   product,
+  productId,
   status,
   entityId,
 }: {
   customer: Customer;
-  product: ProductV2;
+  product?: ProductV2;
+  productId?: string;
   status?: CusProductStatus;
   entityId?: string;
 }) => {
   const cusProducts = customer.products;
-  const productAttached = cusProducts.find((p) => p.id === product.id);
+  const finalProductId = productId || product?.id;
+  const productAttached = cusProducts.find((p) => p.id === finalProductId);
 
   if (!productAttached) {
-    console.log(`product ${product.id} not attached`);
+    console.log(`product ${finalProductId} not attached`);
     console.log(cusProducts);
   }
 
-  expect(productAttached, `product ${product.id} is attached`).to.exist;
+  expect(productAttached, `product ${finalProductId} is attached`).to.exist;
 
   if (status) {
     expect(productAttached?.status).to.equal(
       status,
-      `product ${product.id} should have status ${status}`
+      `product ${finalProductId} should have status ${status}`
     );
   } else {
     expect(
       productAttached?.status,
-      `product ${product.id} is not expired`
+      `product ${finalProductId} is not expired`
     ).to.not.equal(CusProductStatus.Expired);
   }
 
