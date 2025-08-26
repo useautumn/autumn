@@ -1,4 +1,4 @@
-import { ErrCode } from "@autumn/shared";
+import { AppEnv, ErrCode, Organization } from "@autumn/shared";
 import RecaseError, {
   formatZodError,
   handleRequestError,
@@ -6,20 +6,58 @@ import RecaseError, {
 import { ZodError } from "zod";
 import { StatusCodes } from "http-status-codes";
 import Stripe from "stripe";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { ExtendedRequest } from "./models/Request.js";
 
-export const routeHandler = async ({
+/**
+ * Type-safe route handler with optional loader function.
+ *
+ * @example
+ * // Without loader (load parameter is undefined)
+ * routeHandler({
+ *   req, res, action: "get user",
+ *   handler: (req, res, load) => {
+ *     // load is undefined
+ *   }
+ * });
+ *
+ * @example
+ * // With loader (load parameter is inferred from loader return type)
+ * routeHandler({
+ *   req, res, action: "get user",
+ *   loader: async (org, env, db) => ({ user: await db.query(...) }),
+ *   handler: (req, res, load) => {
+ *     // load is { user: User } - fully type-safe!
+ *   }
+ * });
+ */
+
+export const routeHandler = async <TLoad = undefined>({
   req,
   res,
   action,
   handler,
+  validator,
+  loader,
 }: {
   req: any;
   res: any;
   action: string;
-  handler: (req: any, res: any) => Promise<void>;
-}) => {
+  handler: (req: any, res: any, load: TLoad) => Promise<void>;
+  validator?: (req: any, res: any) => Promise<void>;
+} & (TLoad extends undefined
+  ? { loader?: never }
+  : { loader: (org: Organization, env: AppEnv, db: DrizzleCli, req: ExtendedRequest) => Promise<TLoad> }
+)) => {
   try {
-    await handler(req, res);
+    let load: TLoad | undefined;
+    if (validator) {
+      await validator(req, res);
+    }
+    if (loader) {
+      load = await loader((req as ExtendedRequest).org, (req as ExtendedRequest).env, (req as ExtendedRequest).db, req);
+    }
+    await handler(req, res, load as TLoad);
   } catch (error) {
     try {
       if (error instanceof RecaseError) {
