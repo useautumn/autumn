@@ -10,6 +10,11 @@ import {
   isFixedPrice,
   isOneOffPrice,
 } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import {
+  formatReward,
+  getAmountAfterReward,
+  getAmountAfterStripeDiscounts,
+} from "@/internal/rewards/rewardUtils.js";
 import { formatUnixToDate, formatUnixToDateTime } from "@/utils/genUtils.js";
 
 import {
@@ -20,7 +25,9 @@ import {
   Organization,
   PreviewLineItem,
   Price,
+  Reward,
 } from "@autumn/shared";
+import Stripe from "stripe";
 
 export const priceToNewPreviewItem = ({
   org,
@@ -32,6 +39,8 @@ export const priceToNewPreviewItem = ({
   productQuantity = 1,
   product,
   onTrial,
+  rewards,
+  subDiscounts,
 }: {
   org: Organization;
   price: Price;
@@ -42,6 +51,8 @@ export const priceToNewPreviewItem = ({
   productQuantity?: number;
   product: FullProduct;
   onTrial?: boolean;
+  rewards?: Reward[];
+  subDiscounts?: Stripe.Discount[];
 }) => {
   if (skipOneOff && isOneOffPrice({ price })) return;
 
@@ -56,12 +67,15 @@ export const priceToNewPreviewItem = ({
     intervalCount: price.config.interval_count || 1,
   });
 
-  // if (finalProration) {
-  //   console.log("Start: ", formatUnixToDateTime(finalProration.start));
-  //   console.log("End: ", formatUnixToDateTime(finalProration.end));
-  // }
-  // console.log("Now: ", formatUnixToDateTime(now));
-  // console.log("--------------------------------");
+  const applyRewards = rewards?.filter(
+    (r) =>
+      r.discount_config?.price_ids?.includes(price.id) ||
+      r.discount_config?.apply_to_all
+  );
+
+  for (const reward of applyRewards ?? []) {
+    console.log("Apply Reward", formatReward({ reward }));
+  }
 
   if (isFixedPrice({ price })) {
     let amount = priceToInvoiceAmount({
@@ -75,6 +89,28 @@ export const priceToNewPreviewItem = ({
     if (onTrial) {
       amount = 0;
     }
+
+    for (const reward of applyRewards ?? []) {
+      amount = getAmountAfterReward({
+        amount,
+        reward,
+        subDiscounts: subDiscounts ?? [],
+      });
+    }
+
+    // console.log(
+    //   "Discounts: ",
+    //   subDiscounts?.map((d) => ({
+    //     id: d.id,
+    //     coupon: d.coupon,
+    //   }))
+    // );
+    amount = getAmountAfterStripeDiscounts({
+      price,
+      amount,
+      product,
+      stripeDiscounts: subDiscounts ?? [],
+    });
 
     let description = newPriceToInvoiceDescription({
       org,

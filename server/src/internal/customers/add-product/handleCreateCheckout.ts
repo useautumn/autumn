@@ -31,7 +31,7 @@ export const handleCreateCheckout = async ({
 }) => {
   const { db, logtail: logger } = req;
 
-  const { customer, org, freeTrial, successUrl, reward } = attachParams;
+  const { customer, org, freeTrial, successUrl, rewards } = attachParams;
 
   const stripeCli = createStripeCli({
     org,
@@ -106,14 +106,14 @@ export const handleCreateCheckout = async ({
 
   let checkoutParams = attachParams.checkoutSessionParams || {};
   let allowPromotionCodes =
-    notNullish(checkoutParams.discounts) || notNullish(reward)
+    notNullish(checkoutParams.discounts) || notNullish(rewards)
       ? undefined
       : checkoutParams.allow_promotion_codes || true;
 
   let rewardData = {};
-  if (reward) {
+  if (rewards) {
     rewardData = {
-      discounts: [{ coupon: reward.id }],
+      discounts: rewards.map((r) => ({ coupon: r.id })),
     };
   }
 

@@ -19,7 +19,10 @@ export const expectProductAttached = ({
 }) => {
   const cusProducts = customer.products;
   const finalProductId = productId || product?.id;
-  const productAttached = cusProducts.find((p) => p.id === finalProductId);
+  const productAttached = cusProducts.find(
+    (p) =>
+      p.id === finalProductId && (entityId ? p.entity_id === entityId : true)
+  );
 
   if (!productAttached) {
     console.log(`product ${finalProductId} not attached`);

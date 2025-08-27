@@ -27,7 +27,7 @@ export type AttachParams = {
   stripeCus?: Stripe.Customer;
   now?: number;
   paymentMethod: Stripe.PaymentMethod | null | undefined;
-  reward?: Reward;
+  rewards?: Reward[];
 
   org: Organization;
   // customer: Customer;

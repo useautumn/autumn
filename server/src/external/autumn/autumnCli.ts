@@ -18,6 +18,7 @@ import {
   CheckResult,
   Customer,
   TrackParams,
+  TransferProductParams,
   UsageParams,
 } from "autumn-js";
 import { AttachBody } from "@autumn/shared";
@@ -179,6 +180,18 @@ export class AutumnInt {
     //   options: toSnakeCase(options),
     // });
     const data = await this.post(`/checkout`, params);
+
+    return data as CheckoutResult;
+  }
+  async transfer(
+    customerId: string,
+    params: {
+      from_entity_id?: string;
+      to_entity_id: string;
+      product_id: string;
+    }
+  ) {
+    const data = await this.post(`/customers/${customerId}/transfer`, params);
 
     return data as CheckoutResult;
   }

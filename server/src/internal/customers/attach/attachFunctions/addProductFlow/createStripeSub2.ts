@@ -43,7 +43,7 @@ export const createStripeSub2 = async ({
   itemSet: ItemSet;
   earliestInterval?: IntervalConfig | null;
 }) => {
-  const { customer, invoiceOnly, freeTrial, org, now, reward } = attachParams;
+  const { customer, invoiceOnly, freeTrial, org, now, rewards } = attachParams;
 
   let paymentMethod = await getCusPaymentMethod({
     stripeCli,
@@ -91,6 +91,11 @@ export const createStripeSub2 = async ({
 
   const { subItems, invoiceItems, usageFeatures } = itemSet;
 
+  const discounts = rewards
+    ? rewards.map((reward) => ({ coupon: reward.id }))
+    : undefined;
+  console.log("CREATING SUB, DISCOUNTS:", discounts);
+
   try {
     const subscription = await stripeCli.subscriptions.create({
       ...paymentMethodData,
@@ -108,7 +113,7 @@ export const createStripeSub2 = async ({
         : undefined,
 
       // coupon: reward ? reward.id : undefined,
-      discounts: reward ? [{ coupon: reward.id }] : undefined,
+      discounts,
       expand: ["latest_invoice"],
 
       trial_settings:

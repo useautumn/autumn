@@ -209,8 +209,6 @@ export const handleCreateProduct = async (req: Request, res: any) =>
         entitlements = res.entitlements;
       }
 
-      console.log("Free trial:", freeTrial);
-
       await initProductInStripe({
         db,
         product: {

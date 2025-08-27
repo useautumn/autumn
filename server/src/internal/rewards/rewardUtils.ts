@@ -16,6 +16,10 @@ import { ProductService } from "../products/ProductService.js";
 
 import { initProductInStripe } from "../products/productUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import Stripe from "stripe";
+import { Decimal } from "decimal.js";
+import { isFixedPrice } from "../products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import { formatPrice } from "../products/prices/priceUtils.js";
 
 export const constructReward = ({
   internalId,
@@ -165,4 +169,132 @@ export const initRewardStripePrices = async ({
     price.product = product as Product;
   }
   return;
+};
+
+export const formatReward = ({ reward }: { reward: Reward }) => {
+  if (!reward) return "";
+  const discountString =
+    reward.type == RewardType.PercentageDiscount
+      ? `${reward.discount_config?.discount_value}%`
+      : `${reward.discount_config?.discount_value} off`;
+
+  if (reward.discount_config?.apply_to_all) {
+    return `${discountString} off all products`;
+  } else if (reward.discount_config?.price_ids) {
+    return `${discountString} off prices: ${reward.discount_config?.price_ids.join(", ")}`;
+  }
+
+  return discountString;
+};
+
+export const getAmountAfterReward = ({
+  amount,
+  reward,
+  subDiscounts,
+}: {
+  amount: number;
+  reward: Reward;
+  subDiscounts: Stripe.Discount[];
+}) => {
+  if (subDiscounts.find((d) => d.coupon?.id === reward.id)) {
+    return amount;
+  }
+
+  if (reward.type === RewardType.PercentageDiscount) {
+    const discountValue = new Decimal(
+      reward.discount_config?.discount_value ?? 0
+    );
+    const discountRatio = new Decimal(1).minus(discountValue.div(100));
+    return new Decimal(amount).mul(discountRatio).toNumber();
+  } else if (reward.type === RewardType.FixedDiscount) {
+    const discountAmount = new Decimal(
+      reward.discount_config?.discount_value ?? 0
+    );
+    return new Decimal(amount).minus(discountAmount).toNumber();
+  }
+  return amount;
+};
+
+export const discountAppliesToPrice = ({
+  discount,
+  product,
+  price,
+}: {
+  discount: Stripe.Discount;
+  product: Product;
+  price: Price;
+}) => {
+  const appliesTo = discount.coupon?.applies_to?.products;
+
+  if (nullish(appliesTo)) return true;
+
+  if (isFixedPrice({ price })) {
+    return appliesTo!.some(
+      (stripeProdId) => stripeProdId === product.processor?.id
+    );
+  }
+
+  return appliesTo!.some(
+    (stripeProdId) => stripeProdId === price.config.stripe_product_id
+  );
+};
+
+export const getUnusedAmountAfterDiscount = ({
+  amount,
+  discountAmounts,
+  ratio,
+}: {
+  amount: number;
+  discountAmounts: any[];
+  ratio: number;
+}) => {
+  let amountAfterDiscount = Math.abs(amount);
+
+  for (const discountAmount of discountAmounts) {
+    const appliedDiscount = new Decimal(discountAmount.amount || 0)
+      .div(100)
+      .mul(ratio);
+
+    amountAfterDiscount = new Decimal(amountAfterDiscount)
+      .minus(appliedDiscount)
+      .toNumber();
+  }
+  return amountAfterDiscount;
+};
+
+export const getAmountAfterStripeDiscounts = ({
+  price,
+  amount,
+  product,
+  stripeDiscounts,
+}: {
+  price: Price;
+  product: Product;
+  amount: number;
+  stripeDiscounts: Stripe.Discount[];
+}) => {
+  let amountAfterDiscount = amount;
+
+  for (const discount of stripeDiscounts) {
+    if (!discountAppliesToPrice({ discount, product, price })) continue;
+
+    console.log(
+      `Coupon: ${discount.coupon?.id} applies to price (${formatPrice({ price, product })})`
+    );
+    const coupon: Stripe.Coupon = discount.coupon;
+    if (coupon.percent_off) {
+      const ratio = new Decimal(1).minus(
+        new Decimal(coupon.percent_off).div(100)
+      );
+      amountAfterDiscount = new Decimal(amountAfterDiscount)
+        .mul(ratio)
+        .toNumber();
+    } else if (coupon.amount_off) {
+      // must do some ratio ting here...
+      amountAfterDiscount = new Decimal(amountAfterDiscount)
+        .minus(new Decimal(coupon.amount_off).div(100))
+        .toNumber();
+    }
+  }
+  return amountAfterDiscount;
 };

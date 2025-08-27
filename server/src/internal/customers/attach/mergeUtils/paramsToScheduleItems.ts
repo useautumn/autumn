@@ -294,6 +294,7 @@ export const paramsToScheduleItems = async ({
       const items = phase.items.map((item) => ({
         price: (item.price as Stripe.Price).id,
         quantity: item.quantity,
+        trial_end: phase.trial_end || undefined,
       }));
       const isLast = index === schedule!.phases.length - 1;
       const end_date = isLast ? billingPeriodEnd : phase.end_date;

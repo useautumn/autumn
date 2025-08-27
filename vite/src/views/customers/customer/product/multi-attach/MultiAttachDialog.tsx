@@ -38,6 +38,8 @@ import { Separator } from "@/components/ui/separator";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
 import { formatAmount } from "@/utils/product/productItemUtils";
 import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
+import { AddRewardButton, MultiAttachRewards } from "./MultiAttachRewards";
+import { useAxiosSWR } from "@/services/useAxiosSwr";
 
 export const MultiAttachDialog = ({
   open,
@@ -50,6 +52,7 @@ export const MultiAttachDialog = ({
 
   const axiosInstance = useAxiosInstance();
 
+  const [attachRewards, setAttachRewards] = useState<any[]>([]);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [productOptions, setProductOptions] = useState<any[]>([]);
   const [checkoutResult, setCheckoutResult] = useState<CheckoutResult | null>(
@@ -57,6 +60,12 @@ export const MultiAttachDialog = ({
   );
 
   const defaultCurrency = org?.default_currency || "usd";
+
+  const { data: subData } = useAxiosSWR({
+    url: `/customers/${customer.id}/sub`,
+  });
+
+  const subDiscounts = subData?.sub.discounts || [];
 
   const getDefaultProductOptions = () => {
     return [{ product_id: null, quantity: 1 }];
@@ -71,7 +80,7 @@ export const MultiAttachDialog = ({
     if (open) {
       handleChange();
     }
-  }, [productOptions]);
+  }, [productOptions, attachRewards]);
 
   const isValidAttach = () => {
     if (productOptions.length === 0) {
@@ -88,6 +97,13 @@ export const MultiAttachDialog = ({
       }
     }
 
+    console.log("attachRewards", attachRewards);
+    for (const reward of attachRewards) {
+      if (!reward.reward_id) {
+        return false;
+      }
+    }
+
     return true;
   };
 
@@ -98,6 +114,7 @@ export const MultiAttachDialog = ({
         const { data } = await axiosInstance.post("/v1/checkout", {
           customer_id: customer.id,
           products: productOptions,
+          reward: attachRewards.map((r) => r.reward_id),
         });
 
         setCheckoutResult(data);
@@ -162,8 +179,6 @@ export const MultiAttachDialog = ({
       setLoading(false);
     }
   };
-
-  console.log("Checkout result", checkoutResult);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -263,6 +278,9 @@ export const MultiAttachDialog = ({
                 >
                   New Product
                 </Button>
+                {attachRewards.length === 0 && subDiscounts.length === 0 && (
+                  <AddRewardButton setAttachRewards={setAttachRewards} />
+                )}
                 {checkoutLoading && (
                   <div className="flex justify-start items-center h-full">
                     <Loader2 className="w-4 h-4 text-t3 animate-spin" />
@@ -270,7 +288,11 @@ export const MultiAttachDialog = ({
                 )}
               </div>
             </div>
-
+            <MultiAttachRewards
+              attachRewards={attachRewards}
+              setAttachRewards={setAttachRewards}
+              sub={subData?.sub}
+            />
             {checkoutResult && (
               <div className="flex flex-col gap-2 text-sm mt-4">
                 <MultiAtttachLines checkoutResult={checkoutResult} />

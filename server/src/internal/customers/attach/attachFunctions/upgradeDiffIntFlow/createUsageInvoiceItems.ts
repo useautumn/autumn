@@ -153,6 +153,7 @@ export const createUsageInvoiceItems = async ({
   });
 
   const batchCreate = [];
+
   for (let i = 0; i < invoiceItems.length; i++) {
     const invoiceItem = invoiceItems[i];
     const createInvoiceItem = async () => {

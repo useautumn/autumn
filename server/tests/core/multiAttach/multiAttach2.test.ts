@@ -12,24 +12,11 @@ import {
   CusProductStatus,
   Organization,
 } from "@autumn/shared";
-import {
-  constructArrearItem,
-  constructFeatureItem,
-} from "@/utils/scriptUtils/constructItem.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import {
-  addPrefixToProducts,
-  getBasePrice,
-} from "tests/utils/testProductUtils/testProductUtils.js";
-import { expect } from "chai";
-import { advanceToNextInvoice } from "tests/utils/testAttachUtils/testAttachUtils.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import {
-  advanceTestClock,
-  completeCheckoutForm,
-} from "tests/utils/stripeUtils.js";
-import { addDays, addWeeks } from "date-fns";
-import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
+import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import { addDays } from "date-fns";
 import { expectMultiAttachCorrect } from "tests/utils/expectUtils/expectMultiAttach.js";
 
 let growth = constructProduct({
@@ -74,8 +61,8 @@ const ops = [
   },
 ];
 
-const testCase = "multiAttach1";
-describe(`${chalk.yellowBright("multiAttach1: Testing multi attach for trial products and update product quantities mid trial")}`, () => {
+const testCase = "multiAttach2";
+describe(`${chalk.yellowBright("multiAttach2: Testing multi attach for trial products and update product quantities mid trial")}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
 
@@ -115,7 +102,7 @@ describe(`${chalk.yellowBright("multiAttach1: Testing multi attach for trial pro
       db,
       org,
       env,
-      // attachPm: "success",
+      attachPm: "success",
     });
 
     testClockId = testClockId1!;

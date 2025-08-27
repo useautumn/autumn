@@ -46,10 +46,15 @@ const ops = [
     product: pro,
     results: [{ product: pro, status: CusProductStatus.Active }],
   },
+  {
+    entityId: "3",
+    product: pro,
+    results: [{ product: pro, status: CusProductStatus.Active }],
+  },
 ];
 
-const testCase = "mergedTrial4";
-describe(`${chalk.yellowBright("mergedTrial4: Testing cancel immediately on merged sub trial")}`, () => {
+const testCase = "mergedTrial5";
+describe(`${chalk.yellowBright("mergedTrial5: Testing cancel at end of cycle and cancel immediately on merged sub trial")}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
 
@@ -106,6 +111,11 @@ describe(`${chalk.yellowBright("mergedTrial4: Testing cancel immediately on merg
       name: "Entity 2",
       feature_id: TestFeature.Users,
     },
+    {
+      id: "3",
+      name: "Entity 3",
+      feature_id: TestFeature.Users,
+    },
   ];
 
   it("should attach pro trial for entity 1 and entity 2", async function () {
@@ -125,11 +135,27 @@ describe(`${chalk.yellowBright("mergedTrial4: Testing cancel immediately on merg
     }
   });
 
-  it("should cancel one of subs immediately and have sub still trialing", async function () {
+  it("should cancel one sub end of cycle", async function () {
     await autumn.cancel({
       customer_id: customerId,
       product_id: pro.id,
       entity_id: "2",
+    });
+
+    await expectSubToBeCorrect({
+      db,
+      customerId,
+      org,
+      env,
+      shouldBeTrialing: true,
+    });
+  });
+
+  it("should cancel one sub immediately", async function () {
+    await autumn.cancel({
+      customer_id: customerId,
+      product_id: pro.id,
+      entity_id: "3",
       cancel_immediately: true,
     });
 
@@ -139,6 +165,23 @@ describe(`${chalk.yellowBright("mergedTrial4: Testing cancel immediately on merg
       org,
       env,
       shouldBeTrialing: true,
+    });
+  });
+
+  it("should cancel last sub at end of cycle", async function () {
+    await autumn.cancel({
+      customer_id: customerId,
+      product_id: pro.id,
+      entity_id: "1",
+    });
+
+    await expectSubToBeCorrect({
+      db,
+      customerId,
+      org,
+      env,
+      shouldBeTrialing: true,
+      shouldBeCanceled: true,
     });
   });
 });

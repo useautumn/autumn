@@ -187,7 +187,9 @@ export const cusProductToSub = async ({
   if (!subId) {
     return undefined;
   }
-  const sub = await stripeCli.subscriptions.retrieve(subId);
+  const sub = await stripeCli.subscriptions.retrieve(subId, {
+    expand: ["items.data.price.tiers", "discounts.coupon.applies_to"],
+  });
 
   return sub;
 };
