@@ -47,7 +47,7 @@ export const routeHandler = async <TLoad = undefined>({
   validator?: (req: any, res: any) => Promise<void>;
 } & (TLoad extends undefined
   ? { loader?: never }
-  : { loader: (org: Organization, env: AppEnv, db: DrizzleCli, req: ExtendedRequest) => Promise<TLoad> }
+  : { loader: (org: Organization, env: AppEnv, db: DrizzleCli, body: any, query: any, req: ExtendedRequest) => Promise<TLoad> }
 )) => {
   try {
     let load: TLoad | undefined;
@@ -55,7 +55,7 @@ export const routeHandler = async <TLoad = undefined>({
       await validator(req, res);
     }
     if (loader) {
-      load = await loader((req as ExtendedRequest).org, (req as ExtendedRequest).env, (req as ExtendedRequest).db, req);
+      load = await loader((req as ExtendedRequest).org, (req as ExtendedRequest).env, (req as ExtendedRequest).db, req.body, req.query, req);
     }
     await handler(req, res, load as TLoad);
   } catch (error) {
