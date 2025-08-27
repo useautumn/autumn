@@ -18,11 +18,7 @@ import { sql } from "drizzle-orm";
 import { ClickHouseManager } from "@/external/clickhouse/ClickHouseManager.js";
 import type { NodeClickHouseClient } from "@clickhouse/client/dist/client.js";
 import {
-	getBulkFullCusQuery,
-	getBulkFullCusQueryClickHouse,
-    getPaginatedCustomersQuery,
-    getFullCusQuery,
-    getNewBatchCustomersQuery,
+    getPaginatedFullCusQuery,
 } from "./getFullCusQuery.js";
 import { getCustomerDetails } from "./cusUtils/getCustomerDetails.js";
 import { orgToVersion } from "@/utils/versionUtils.js";
@@ -52,7 +48,7 @@ export class CusBatchService {
 		org: Organization;
 		env: AppEnv;
 		page: number;
-		pageSize: 10 | 50 | 100 | 500;
+		pageSize: number;
 		features: Feature[];
 		statuses: CusProductStatus[];
 		expand?: CusExpand[];
@@ -65,64 +61,28 @@ export class CusBatchService {
 
 		if (!statuses) statuses = [CusProductStatus.Active];
 
-        // Dynamic boolean flags based on expand parameter
         const includeInvoices = expand.includes(CusExpand.Invoices);
         const withEntities = expand.includes(CusExpand.Entities);
         const withTrialsUsed = expand.includes(CusExpand.TrialsUsed);
-        const withSubs = true; // Always include subs for now
-
-        let query = getNewBatchCustomersQuery(
+        let query = getPaginatedFullCusQuery(
             org.id,
             env,
             statuses,
             includeInvoices,
             withEntities,
             withTrialsUsed,
-            withSubs,
+            true,
             page,
             pageSize,
         );
         let results = await db.execute(query);
-        let errors = 0;
-        let parsingErrors = 0;
-        for (let result of results) {
-            // Check if result has all required FullCustomer properties
-            const requiredProps = ['id', 'internal_id', 'org_id', 'env', 'fingerprint', 'created_at', 'customer_products'];
-            const optionalProps = ['name', 'email', 'metadata', 'processor', 'trials_used', 'invoices', 'subscriptions'];
-            
-            const missingRequired = requiredProps.filter(prop => !(prop in result));
-            const hasOptional = optionalProps.filter(prop => prop in result);
-            
-            if (missingRequired.length > 0) {
-                console.log(`❌ Result missing required FullCustomer properties: ${missingRequired.join(', ')}`);
-                console.log(`Available properties: ${Object.keys(result).join(', ')}`);
-                errors++;
-            }
-            
-            // Check if customer_products is an array
-            if (result.customer_products && !Array.isArray(result.customer_products)) {
-                console.log(`❌ customer_products is not an array: ${typeof result.customer_products}`);
-                errors++;
-            }
-            
-            // Check if entities is an array
-            if (result.entities && !Array.isArray(result.entities)) {
-                console.log(`❌ entities is not an array: ${typeof result.entities}`);
-                errors++;
-            }
-        }
-        console.log(`❌ Found ${errors} errors`);
-
         let finals = [];
         for (let result of results) {
             try {
-
-                // Cast string fields to numbers manually
                 const normalizedCustomer = this.normalizeCustomerData(result);
                 const customer = normalizedCustomer as FullCustomer;
                 const cusProducts = customer.customer_products || [];
-                
-                // Use the full getCustomerDetails to ensure consistency
+
                 const customerDetails = await getCustomerDetails({
                     db,
                     customer,
@@ -139,13 +99,10 @@ export class CusBatchService {
                 finals.push(customerDetails);
             } catch (error) {
                 console.error(`Failed to process customer ${result.id}:`, error);
-                parsingErrors++;
             }
         }
-        console.log(`❌ Found ${parsingErrors} parsing errors`);
 
         return finals
-        // return results
 	}
 
 	/**
@@ -219,10 +176,8 @@ export class CusBatchService {
 			? [CusProductStatus.Active, CusProductStatus.PastDue]
 			: [CusProductStatus.Active];
 
-		// Convert cusProducts to cusEnts - query now includes all required fields
 		const cusEnts = cusProductsToCusEnts({ cusProducts, inStatuses }) as any;
 
-		// Calculate balances for features
 		const balances = await getCusBalances({
 			cusEntsWithCusProduct: cusEnts,
 			cusPrices: cusProductsToCusPrices({ cusProducts, inStatuses }),
@@ -271,13 +226,13 @@ export class CusBatchService {
 					stripe_id: customer.processor?.id,
 					features: entList,
 					products,
-					invoices: undefined, // Not needed for batch
-					trials_used: undefined, // Not expanded in batch
-					rewards: undefined, // Not expanded in batch
+					invoices: undefined,
+					trials_used: undefined,
+					rewards: undefined,
 					metadata: customer.metadata,
-					entities: undefined, // Not expanded in batch
-					referrals: undefined, // Not expanded in batch
-					payment_method: undefined, // Not expanded in batch
+					entities: undefined,
+					referrals: undefined,
+					payment_method: undefined,
 				}),
 			};
 
@@ -288,8 +243,8 @@ export class CusBatchService {
 				customer: CustomerResponseSchema.parse(customer),
 				products: main,
 				add_ons: addOns,
-				entitlements: [], // Simplified - no balance calculations
-				invoices: [], // Not needed for batch
+				entitlements: [],
+				invoices: [],
 				trials_used: undefined,
 			};
 		}

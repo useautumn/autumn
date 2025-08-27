@@ -3,20 +3,25 @@ import { Response } from "express";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { CusBatchService } from "../CusBatchService.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { AppEnv, CusProductStatus, ErrCode, Organization, CusExpand } from "@autumn/shared";
+import {
+	AppEnv,
+	CusProductStatus,
+	ErrCode,
+	Organization,
+	CusExpand,
+} from "@autumn/shared";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import z from "zod";
 
 const schema = z.object({
 	page: z.number().int().min(1, { message: "Page must be greater than 0" }),
-	pageSize: z.union([
-		z.literal(10),
-		z.literal(50),
-		z.literal(100),
-		z.literal(500),
-	]).refine((val) => [10, 50, 100, 500].includes(val), {
-		message: "Page size must be one of: 10, 50, 100, or 500",
-	}),
+	pageSize: z
+		.number()
+		.min(10)
+		.max(100)
+		.refine((val) => 10 <= val && val <= 100, {
+			message: "Page size must be between 10 and 1000",
+		}),
 	statuses: z
 		.array(z.nativeEnum(CusProductStatus))
 		.optional()
@@ -30,21 +35,7 @@ const schema = z.object({
 				message: "Invalid statuses",
 			}
 		),
-	expand: z
-		.array(z.nativeEnum(CusExpand))
-		.optional()
-		.refine(
-			(expandItems) =>
-				!expandItems ||
-				expandItems.every((item) =>
-					Object.values(CusExpand).includes(item)
-				),
-			{
-				message: "Invalid expand options",
-			}
-		),
 });
-
 
 export const handleBatchCustomers = async (req: any, res: any) =>
 	routeHandler({
@@ -60,25 +51,19 @@ export const handleBatchCustomers = async (req: any, res: any) =>
 			_: any,
 			req: ExtendedRequest
 		) => {
-			console.log(`\n🚀 Starting batch customer query: page=${body.page}, pageSize=${body.pageSize}, statuses=[${body.statuses?.join(', ') || 'default'}], expand=[${body.expand?.join(', ') || 'none'}]`);
-			const totalStart = Date.now();
-			
 			const customers = await CusBatchService.getPage({
 				db,
 				ch: req.clickhouseClient,
 				org,
 				env,
 				page: body.page as number,
-				pageSize: body.pageSize as 10 | 50 | 100 | 500,
+				pageSize: body.pageSize,
 				features: req.features,
 				statuses: body.statuses ?? [],
-				expand: body.expand ?? [],
+				expand: [],
 				logger: req.logtail,
 				reqApiVersion: req.apiVersion,
 			});
-			
-			const totalTime = Date.now() - totalStart;
-			console.log(`✅ Batch query completed: ${totalTime}ms\n`);
 
 			return {
 				customers,
