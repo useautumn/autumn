@@ -3,7 +3,7 @@ import { Response } from "express";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { CusBatchService } from "../CusBatchService.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { AppEnv, CusProductStatus, ErrCode, Organization } from "@autumn/shared";
+import { AppEnv, CusProductStatus, ErrCode, Organization, CusExpand } from "@autumn/shared";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import z from "zod";
 
@@ -30,6 +30,19 @@ const schema = z.object({
 				message: "Invalid statuses",
 			}
 		),
+	expand: z
+		.array(z.nativeEnum(CusExpand))
+		.optional()
+		.refine(
+			(expandItems) =>
+				!expandItems ||
+				expandItems.every((item) =>
+					Object.values(CusExpand).includes(item)
+				),
+			{
+				message: "Invalid expand options",
+			}
+		),
 });
 
 
@@ -38,18 +51,7 @@ export const handleBatchCustomers = async (req: any, res: any) =>
 		req,
 		res,
 		action: "batch get customers",
-		validator: async (req: ExtendedRequest, res: Response) => {
-			const parseResult = schema.safeParse(req.body);
-
-			if (!parseResult.success) {
-				const errorMsg =
-					parseResult.error.errors[0]?.message || "Invalid request body";
-				throw new RecaseError({
-					message: errorMsg,
-					code: ErrCode.InvalidRequest,
-				});
-			}
-		},
+		validator: schema,
 		loader: async (
 			org: Organization,
 			env: AppEnv,
@@ -58,6 +60,9 @@ export const handleBatchCustomers = async (req: any, res: any) =>
 			_: any,
 			req: ExtendedRequest
 		) => {
+			console.log(`\n🚀 Starting batch customer query: page=${body.page}, pageSize=${body.pageSize}, statuses=[${body.statuses?.join(', ') || 'default'}], expand=[${body.expand?.join(', ') || 'none'}]`);
+			const totalStart = Date.now();
+			
 			const customers = await CusBatchService.getPage({
 				db,
 				ch: req.clickhouseClient,
@@ -67,7 +72,13 @@ export const handleBatchCustomers = async (req: any, res: any) =>
 				pageSize: body.pageSize as 10 | 50 | 100 | 500,
 				features: req.features,
 				statuses: body.statuses ?? [],
+				expand: body.expand ?? [],
+				logger: req.logtail,
+				reqApiVersion: req.apiVersion,
 			});
+			
+			const totalTime = Date.now() - totalStart;
+			console.log(`✅ Batch query completed: ${totalTime}ms\n`);
 
 			return {
 				customers,
