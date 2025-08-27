@@ -310,11 +310,10 @@ export const getPaginatedFullCusQuery = (
   withEntities: boolean,
   withTrialsUsed: boolean,
   withSubs: boolean,
-  page: number = 1,
-  pageSize: number = 10,
+  limit: number = 10,
+  offset: number = 0,
   entityId?: string
 ) => {
-  const offset = (page - 1) * pageSize;
   
   const withStatusFilter = () => {
     return inStatuses?.length
@@ -332,7 +331,7 @@ export const getPaginatedFullCusQuery = (
       WHERE c.org_id = ${orgId}
         AND c.env = ${env}
       ORDER BY c.created_at DESC
-      LIMIT ${pageSize} OFFSET ${offset}
+      LIMIT ${limit} OFFSET ${offset}
     ),
     
     customer_products_with_prices AS (
