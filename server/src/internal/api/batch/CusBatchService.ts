@@ -35,8 +35,8 @@ export class CusBatchService {
 		ch,
 		org,
 		env,
-		page,
-		pageSize,
+		limit,
+		offset,
 		features,
 		statuses,
 		expand = [],
@@ -47,17 +47,16 @@ export class CusBatchService {
 		ch: NodeClickHouseClient;
 		org: Organization;
 		env: AppEnv;
-		page: number;
-		pageSize: number;
+		limit: number;
+		offset: number;
 		features: Feature[];
 		statuses: CusProductStatus[];
 		expand?: CusExpand[];
 		logger?: any;
 		reqApiVersion?: number;
 	}) {
-		if (!page) page = 1;
-		if (!pageSize) pageSize = 10;
-		const offset = (page - 1) * pageSize;
+		if (!limit) limit = 10;
+		if (!offset) offset = 0;
 
 		if (!statuses) statuses = [CusProductStatus.Active];
 
@@ -72,8 +71,8 @@ export class CusBatchService {
             withEntities,
             withTrialsUsed,
             true,
-            page,
-            pageSize,
+            limit,
+            offset,
         );
         let results = await db.execute(query);
         let finals = [];
@@ -148,105 +147,5 @@ export class CusBatchService {
 		}
 
 		return normalizedCustomer;
-	}
-
-	/**
-	 * Process customer for batch operations without additional DB calls
-	 * This is a simplified version that extracts key parts from getCustomerDetails
-	 */
-	private static async processCustomerForBatch({
-		customer,
-		cusProducts,
-		features,
-		org,
-		reqApiVersion,
-	}: {
-		customer: FullCustomer;
-		cusProducts: FullCusProduct[];
-		features: Feature[];
-		org: Organization;
-		reqApiVersion?: number;
-	}) {
-		const apiVersion = orgToVersion({
-			org,
-			reqApiVersion,
-		});
-
-		const inStatuses = org.config.include_past_due
-			? [CusProductStatus.Active, CusProductStatus.PastDue]
-			: [CusProductStatus.Active];
-
-		const cusEnts = cusProductsToCusEnts({ cusProducts, inStatuses }) as any;
-
-		const balances = await getCusBalances({
-			cusEntsWithCusProduct: cusEnts,
-			cusPrices: cusProductsToCusPrices({ cusProducts, inStatuses }),
-			org,
-			apiVersion,
-		});
-
-		const subs = customer.subscriptions || [];
-		const { main, addOns } = await processFullCusProducts({
-			fullCusProducts: cusProducts,
-			subs,
-			org,
-			apiVersion,
-			entities: customer.entities,
-			features,
-		});
-
-		if (apiVersion >= APIVersion.v1_1) {
-			const products: any = [...main, ...addOns];
-
-			let entList: any = balances.map((b) => {
-				let isBoolean =
-					features.find((f: Feature) => f.id == b.feature_id)?.type ==
-					FeatureType.Boolean;
-				if (b.unlimited || isBoolean) {
-					return b;
-				}
-
-				return CusEntResponseSchema.parse({
-					...b,
-					usage: b.used,
-					included_usage: b.allowance,
-				});
-			});
-
-			if (apiVersion >= APIVersion.v1_2) {
-				entList = featuresToObject({
-					features,
-					entList,
-				});
-			}
-
-			const cusResponse = {
-				...CusResponseSchema.parse({
-					...customer,
-					stripe_id: customer.processor?.id,
-					features: entList,
-					products,
-					invoices: undefined,
-					trials_used: undefined,
-					rewards: undefined,
-					metadata: customer.metadata,
-					entities: undefined,
-					referrals: undefined,
-					payment_method: undefined,
-				}),
-			};
-
-			return cusResponse;
-		} else {
-			// Legacy API version handling
-			return {
-				customer: CustomerResponseSchema.parse(customer),
-				products: main,
-				add_ons: addOns,
-				entitlements: [],
-				invoices: [],
-				trials_used: undefined,
-			};
-		}
 	}
 }

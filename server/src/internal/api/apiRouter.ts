@@ -28,6 +28,7 @@ import { handleDeleteStripe } from "../orgs/handlers/handleDeleteStripe.js";
 
 import { refreshCacheMiddleware } from "@/middleware/refreshCacheMiddleware.js";
 import { platformRouter } from "../platform/platformRouter.js";
+import { batchRouter } from "./batch/batchRouter.js";
 
 const apiRouter: Router = Router();
 
@@ -68,4 +69,8 @@ apiRouter.use("/query", analyticsRouter);
 apiRouter.post("/org/stripe", handleConnectStripe);
 apiRouter.delete("/org/stripe", handleDeleteStripe);
 apiRouter.use("/platform", platformRouter);
+
+// Batch
+apiRouter.use("/batch", batchRouter);
+
 export { apiRouter };

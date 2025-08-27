@@ -13,16 +13,26 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import z from "zod";
 
 const schema = z.object({
-	page: z.number().int().min(1, { message: "Page must be greater than 0" }),
-	pageSize: z
-		.number()
-		.min(10)
-		.max(100)
-		.refine((val) => 10 <= val && val <= 100, {
-			message: "Page size must be between 10 and 1000",
-		}),
+	limit: z.number({ 
+		required_error: "limit is required",
+		invalid_type_error: "limit must be a number" 
+	}).int({ message: "limit must be an integer" })
+	.min(10, { message: "limit must be at least 10" })
+	.max(100, { message: "limit must be at most 100" }),
+	
+	offset: z.number({ 
+		invalid_type_error: "offset must be a number" 
+	}).int({ message: "offset must be an integer" })
+	.min(0, { message: "offset must be at least 0" })
+	.optional()
+	.default(0),
+	
 	statuses: z
-		.array(z.nativeEnum(CusProductStatus))
+		.array(z.nativeEnum(CusProductStatus, {
+			errorMap: () => ({ message: `status must be one of: ${Object.values(CusProductStatus).join(', ')}` })
+		}), { 
+			invalid_type_error: "statuses must be an array of strings" 
+		})
 		.optional()
 		.refine(
 			(statuses) =>
@@ -31,7 +41,7 @@ const schema = z.object({
 					Object.values(CusProductStatus).includes(status)
 				),
 			{
-				message: "Invalid statuses",
+				message: `statuses must contain only valid values: ${Object.values(CusProductStatus).join(', ')}`,
 			}
 		),
 });
@@ -55,8 +65,8 @@ export const handleBatchCustomers = async (req: any, res: any) =>
 				ch: req.clickhouseClient,
 				org,
 				env,
-				page: body.page as number,
-				pageSize: body.pageSize,
+				limit: body.limit,
+				offset: body.offset,
 				features: req.features,
 				statuses: body.statuses ?? [],
 				logger: req.logtail,
