@@ -21,11 +21,8 @@ import { handleGetCustomer } from "./handlers/handleGetCustomer.js";
 import { CusSearchService } from "@/internal/customers/CusSearchService.js";
 import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
 import { handleTransferProduct } from "./handlers/handleTransferProduct.js";
-import { handleBatchCustomers } from "./handlers/handleBatchCustomers.js";
 
 export const cusRouter: Router = Router();
-
-cusRouter.post("/batch", handleBatchCustomers);
 
 cusRouter.post("/all/search", async (req: any, res: any) => {
   try {
