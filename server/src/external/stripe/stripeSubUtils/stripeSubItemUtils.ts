@@ -73,12 +73,20 @@ export const priceToScheduleItem = ({
 export const findStripeItemForPrice = ({
   price,
   stripeItems,
+  invoiceLineItems,
   stripeProdId,
 }: {
   price: Price;
   stripeItems?: Stripe.SubscriptionItem[] | Stripe.LineItem[];
+  invoiceLineItems?: Stripe.InvoiceLineItem[];
   stripeProdId?: string;
 }) => {
+  if (invoiceLineItems) {
+    return invoiceLineItems.find((li) => {
+      return li.pricing?.price_details?.price == price.config.stripe_price_id;
+    });
+  }
+
   if (stripeItems) {
     return stripeItems.find((si: Stripe.SubscriptionItem | Stripe.LineItem) => {
       const config = price.config as UsagePriceConfig;

@@ -14,6 +14,7 @@ import { getContUseInvoiceItems } from "../../attachUtils/getContUseItems/getCon
 import { ItemSet } from "@/utils/models/ItemSet.js";
 import { sanitizeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
 
 export const updateStripeSub2 = async ({
   req,
@@ -50,14 +51,15 @@ export const updateStripeSub2 = async ({
         });
 
   // 1. Update subscription
+
   let updatedSub = await stripeCli.subscriptions.update(curSub.id, {
     items: sanitizeSubItems(itemSet.subItems),
-    proration_behavior:
-      proration == ProrationBehavior.None
-        ? "none"
-        : fromCreate
-          ? "always_invoice"
-          : "create_prorations",
+    // proration_behavior:
+    //   proration == ProrationBehavior.None
+    //     ? "none"
+    //     : fromCreate
+    //       ? "always_invoice"
+    //       : "create_prorations",
     trial_end: trialEnd,
     // default_payment_method: paymentMethod?.id,
     add_invoice_items: itemSet.invoiceItems,
@@ -94,29 +96,24 @@ export const updateStripeSub2 = async ({
     db,
     attachParams,
     cusProduct: curMainProduct!,
-    // stripeSubs: [curSub],
     sub: curSub,
     logger,
   });
 
-  // // 3. Create prorations for continuous use items
-  let { replaceables, newItems } = await getContUseInvoiceItems({
-    attachParams,
-    cusProduct: curMainProduct!,
-    sub: curSub,
-    logger,
-  });
+  // // // 3. Create prorations for continuous use items
+  // let { replaceables, newItems } = await getContUseInvoiceItems({
+  //   attachParams,
+  //   cusProduct: curMainProduct!,
+  //   sub: curSub,
+  //   logger,
+  // });
 
-  await createAndFilterContUseItems({
+  const { replaceables } = await createAndFilterContUseItems({
     attachParams,
     curMainProduct: curMainProduct!,
     sub: curSub,
-    // interval: config.sameIntervals ? interval : undefined,
-    // intervalCount: config.sameIntervals ? intervalCount : undefined,
     logger,
   });
-
-  console.log("Replaceables: ", replaceables);
 
   if (proration === ProrationBehavior.Immediately) {
     latestInvoice = await createProrationInvoice({

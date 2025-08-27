@@ -23,7 +23,7 @@ export const getAttachParams = async ({
     customPrices,
     customEnts,
     stripeVars,
-    reward,
+    rewards,
   } = await processAttachBody({
     req,
     attachBody,
@@ -58,7 +58,7 @@ export const getAttachParams = async ({
     entitlements,
     freeTrial,
     replaceables: [],
-    reward,
+    rewards,
     // From req
     req,
     org: req.org,

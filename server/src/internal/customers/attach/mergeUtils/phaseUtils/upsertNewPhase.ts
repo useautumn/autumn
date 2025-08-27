@@ -38,6 +38,7 @@ export const preparePhasesForBillingPeriod = ({
       })),
       start_date: phase.start_date,
       end_date: phase.end_date,
+      trial_end: phase.trial_end || undefined,
     }));
 
   const shouldInsert = !phaseAndUnixMatch({

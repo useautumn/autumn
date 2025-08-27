@@ -15,33 +15,71 @@ import { isTrialing } from "../../cusProducts/cusProductUtils.js";
 import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
 import { priceToUsageModel } from "@/internal/products/prices/priceUtils/convertPrice.js";
 import {
+  formatPrice,
   getPriceEntitlement,
   getPriceOptions,
 } from "@/internal/products/prices/priceUtils.js";
-import { cusProductToEnts } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import {
+  cusProductToEnts,
+  cusProductToProduct,
+} from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import {
+  getAmountAfterStripeDiscounts,
+  getUnusedAmountAfterDiscount,
+} from "@/internal/rewards/rewardUtils.js";
+import { Decimal } from "decimal.js";
 
+const getDiscountsApplied = ({
+  invoiceItem,
+  subDiscounts,
+}: {
+  invoiceItem?: Stripe.InvoiceLineItem;
+  subDiscounts?: Stripe.Discount[];
+}) => {
+  if (!invoiceItem || !subDiscounts) return [];
+  const discountsApplied: Stripe.Discount[] = [];
+  for (const dAmount of invoiceItem?.discount_amounts || []) {
+    const discount = subDiscounts?.find((d) => d.id == dAmount.discount);
+    if (discount && dAmount.amount > 0) {
+      // console.log("Discount applied: ", discount.id);
+      // console.log("Amount off: ", dAmount.amount);
+      discountsApplied.push(discount);
+    }
+  }
+  return discountsApplied;
+};
 export const priceToUnusedPreviewItem = ({
   price,
   stripeItems,
   cusProduct,
   now,
   org,
+  subDiscounts,
+  latestInvoice,
 }: {
   price: Price;
   stripeItems: Stripe.SubscriptionItem[];
   cusProduct: FullCusProduct;
   now?: number;
   org?: Organization;
+  subDiscounts?: Stripe.Discount[];
+  latestInvoice: Stripe.Invoice;
 }) => {
   now = now || Date.now();
   const onTrial = isTrialing({ cusProduct, now });
 
-  // 1. Get price from stripe items
   const subItem = findStripeItemForPrice({
     price,
     stripeItems,
     stripeProdId: cusProduct?.product.processor?.id,
   }) as Stripe.SubscriptionItem | undefined;
+
+  const invoiceItem = findStripeItemForPrice({
+    price,
+    invoiceLineItems: latestInvoice.lines.data,
+    stripeProdId: cusProduct?.product.processor?.id,
+  }) as Stripe.InvoiceLineItem | undefined;
 
   if (!subItem) return undefined;
 
@@ -50,9 +88,13 @@ export const priceToUnusedPreviewItem = ({
   const options = getPriceOptions(price, cusProduct.options);
   const config = price.config as UsagePriceConfig;
 
-  const quantity = notNullish(options?.quantity)
+  let quantity = notNullish(options?.quantity)
     ? options?.quantity! * config.billing_units!
     : 1;
+
+  if (isFixedPrice({ price })) {
+    quantity = cusProduct.quantity || 1;
+  }
 
   const finalProration = getProration({
     now,
@@ -63,7 +105,7 @@ export const priceToUnusedPreviewItem = ({
       : undefined,
   })!;
 
-  const amount = onTrial
+  let amount = onTrial
     ? 0
     : -priceToInvoiceAmount({
         price,
@@ -72,6 +114,30 @@ export const priceToUnusedPreviewItem = ({
         productQuantity: cusProduct.quantity,
         now,
       });
+
+  console.log("Invoice item qty: ", invoiceItem?.quantity);
+  // console.log(
+  //   "Sub discounts: ",
+  //   subDiscounts?.map((d) => d.id)
+  // );
+
+  // const discountsApplied = getDiscountsApplied({
+  //   invoiceItem,
+  //   subDiscounts,
+  // });
+
+  // console.log("Discounts applied: ", discountsApplied);
+
+  const ratio = new Decimal(quantity)
+    .div(invoiceItem?.quantity || 1)
+    .toNumber();
+  console.log("Ratio: ", ratio);
+  console.log("Discount amounts: ", invoiceItem?.discount_amounts);
+  amount = -getUnusedAmountAfterDiscount({
+    amount,
+    discountAmounts: invoiceItem?.discount_amounts || [],
+    ratio,
+  });
 
   let description = priceToInvoiceDescription({
     price,
@@ -101,17 +167,4 @@ export const priceToUnusedPreviewItem = ({
     price_id: price.id!,
     feature_id: ent?.feature.id,
   };
-
-  // return {
-  //   // quantity: 1,
-  //   amount,
-  //   subItem,
-  // };
-  // const subItem = stripeItems.find((si) => {
-  //   const config = price.config as UsagePriceConfig;
-
-  //   return config.stripe_price_id == si.price?.id;
-  // });
-
-  // return subItem;
 };

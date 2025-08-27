@@ -20,6 +20,7 @@ import { Decimal } from "decimal.js";
 import { notNullish } from "@/utils/genUtils.js";
 
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
+import Stripe from "stripe";
 
 export const getMultiAttachPreview = async ({
   req,
@@ -62,14 +63,14 @@ export const getMultiAttachPreview = async ({
       cusProduct,
       now: attachParams.now!,
       org: attachParams.org,
+      latestInvoice: sub?.latest_invoice as Stripe.Invoice,
+      subDiscounts: (sub?.discounts ?? []) as Stripe.Discount[],
     });
 
     if (!previewLineItem) continue;
 
     items.push(previewLineItem);
   }
-
-  console.log("old items: ", items);
 
   const productList = attachParams.productsList!;
   const newItems: PreviewLineItem[] = [];
@@ -94,6 +95,9 @@ export const getMultiAttachPreview = async ({
 
     const onTrial =
       notNullish(attachParams?.freeTrial) || sub?.status == "trialing";
+
+    // How to tell if sub discount will apply to a certain price...
+
     for (const price of product.prices) {
       const newItem = priceToNewPreviewItem({
         org: attachParams.org,
@@ -105,6 +109,8 @@ export const getMultiAttachPreview = async ({
         productQuantity: productOptions.quantity ?? 1,
         product,
         onTrial,
+        rewards: attachParams.rewards,
+        subDiscounts: (sub?.discounts ?? []) as Stripe.Discount[],
       });
       const noTrialItem = priceToNewPreviewItem({
         org: attachParams.org,
@@ -116,6 +122,8 @@ export const getMultiAttachPreview = async ({
         productQuantity: productOptions.quantity ?? 1,
         product,
         onTrial: false,
+        rewards: attachParams.rewards,
+        subDiscounts: (sub?.discounts ?? []) as Stripe.Discount[],
       });
 
       if (newItem) {
@@ -148,8 +156,6 @@ export const getMultiAttachPreview = async ({
       };
     }
   }
-  // console.log("dueNextCycle", dueNextCycle);
-  // console.log("itemsWithoutTrial", itemsWithoutTrial);
 
   return {
     // items,

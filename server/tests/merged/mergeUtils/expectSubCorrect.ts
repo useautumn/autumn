@@ -137,6 +137,7 @@ export const expectSubToBeCorrect = async ({
   shouldBeTrialing = false,
   flags,
   subId,
+  rewards,
 }: {
   db: DrizzleCli;
   customerId: string;
@@ -148,6 +149,7 @@ export const expectSubToBeCorrect = async ({
     checkNotTrialing?: boolean;
   };
   subId?: string;
+  rewards?: string[];
 }) => {
   const stripeCli = createStripeCli({ org, env });
   const fullCus = await CusService.getFull({
@@ -186,7 +188,7 @@ export const expectSubToBeCorrect = async ({
   });
 
   // console.log(`\n\nChecking sub correct`);
-  let printCusProduct = true;
+  let printCusProduct = false;
   if (printCusProduct) {
     console.log(`\n\nChecking sub correct`);
   }
@@ -293,6 +295,12 @@ export const expectSubToBeCorrect = async ({
         withEntity: true,
         isCheckout: false,
         apiVersion: APIVersion.v1_4,
+        productOptions: cusProduct.quantity
+          ? {
+              product_id: product.id,
+              quantity: cusProduct.quantity,
+            }
+          : undefined,
       });
 
       if (options?.upcoming_quantity && res?.lineItem) {
@@ -336,12 +344,27 @@ export const expectSubToBeCorrect = async ({
     }
   }
 
-  const sub = await stripeCli.subscriptions.retrieve(subId);
+  const sub = await stripeCli.subscriptions.retrieve(subId, {
+    expand: ["discounts.coupon"],
+  });
 
   const actualItems = sub.items.data.map((item: any) => ({
     price: item.price.id,
     quantity: item.quantity || 0,
   }));
+
+  const subCouponIds = sub.discounts?.map(
+    (discount: any) => discount.coupon.id
+  );
+  if (rewards) {
+    for (const reward of rewards) {
+      const corresponding = subCouponIds.find(
+        (subCouponId: any) => subCouponId === reward
+      );
+      expect(corresponding, `reward ${reward} should be in sub`).to.exist;
+    }
+    expect(subCouponIds.length).to.equal(rewards.length);
+  }
 
   await compareActualItems({
     actualItems,

@@ -150,7 +150,11 @@ export const getCustomerSub = async ({
   // }
 
   const sub = await stripeCli.subscriptions.retrieve(subId, {
-    expand: ["items.data.price.tiers"],
+    expand: [
+      "items.data.price.tiers",
+      "discounts.coupon.applies_to",
+      "latest_invoice",
+    ],
   });
 
   return { subId, sub, cusProduct };

@@ -64,6 +64,7 @@ export const createProrationInvoice = async ({
     pending: true,
   });
 
+  console.log("Items:", items.data);
   if (items.data.length == 0) {
     logger.info(`No items to prorate, skipping invoice creation`);
     return null;

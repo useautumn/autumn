@@ -103,7 +103,6 @@ export const previewToCheckoutRes = async ({
   let nextCycle = undefined;
 
   if (notNullish(preview.due_next_cycle)) {
-    console.log("New product items:", newProduct.items);
     let total = newProduct.items
       .reduce((acc, item) => {
         if (item.usage_model == UsageModel.PayPerUse) {

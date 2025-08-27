@@ -12,33 +12,21 @@ import {
   CusProductStatus,
   Organization,
 } from "@autumn/shared";
-import {
-  constructArrearItem,
-  constructFeatureItem,
-} from "@/utils/scriptUtils/constructItem.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import {
   addPrefixToProducts,
   getBasePrice,
 } from "tests/utils/testProductUtils/testProductUtils.js";
-import { expect } from "chai";
-import { advanceToNextInvoice } from "tests/utils/testAttachUtils/testAttachUtils.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import {
-  advanceTestClock,
-  completeCheckoutForm,
-} from "tests/utils/stripeUtils.js";
-import { addDays, addWeeks } from "date-fns";
-import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
-import { expectMultiAttachCorrect } from "tests/utils/expectUtils/expectMultiAttach.js";
-
-let growth = constructProduct({
-  id: "growth",
-  items: [
-    constructFeatureItem({ featureId: TestFeature.Words, includedUsage: 100 }),
-  ],
-  type: "growth",
-});
+  expectMultiAttachCorrect,
+  expectResultsCorrect,
+} from "tests/utils/expectUtils/expectMultiAttach.js";
+import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import { addDays } from "date-fns";
+import { expect } from "chai";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
 let premium = constructProduct({
   id: "premium",
@@ -46,7 +34,6 @@ let premium = constructProduct({
     constructFeatureItem({ featureId: TestFeature.Words, includedUsage: 200 }),
   ],
   type: "premium",
-  trial: true,
 });
 
 let pro = constructProduct({
@@ -58,24 +45,10 @@ let pro = constructProduct({
     }),
   ],
   type: "pro",
-  trial: true,
 });
 
-const ops = [
-  {
-    entityId: "1",
-    product: pro,
-    results: [{ product: pro, status: CusProductStatus.Active }],
-  },
-  {
-    entityId: "2",
-    product: pro,
-    results: [{ product: pro, status: CusProductStatus.Active }],
-  },
-];
-
-const testCase = "multiAttach1";
-describe(`${chalk.yellowBright("multiAttach1: Testing multi attach for trial products and update product quantities mid trial")}`, () => {
+const testCase = "multiUpgrade2";
+describe(`${chalk.yellowBright("multiUpgrade2: Testing multi attach and update quantities downward")}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
 
@@ -96,13 +69,13 @@ describe(`${chalk.yellowBright("multiAttach1: Testing multi attach for trial pro
     stripeCli = this.stripeCli;
 
     addPrefixToProducts({
-      products: [pro, premium, growth],
+      products: [pro, premium],
       prefix: testCase,
     });
 
     await createProducts({
       autumn: autumnJs,
-      products: [pro, premium, growth],
+      products: [pro, premium],
       db,
       orgId: org.id,
       env,
@@ -115,7 +88,7 @@ describe(`${chalk.yellowBright("multiAttach1: Testing multi attach for trial pro
       db,
       org,
       env,
-      // attachPm: "success",
+      attachPm: "success",
     });
 
     testClockId = testClockId1!;
@@ -127,19 +100,13 @@ describe(`${chalk.yellowBright("multiAttach1: Testing multi attach for trial pro
         product_id: pro.id,
         quantity: 5,
         product: pro,
-        status: CusProductStatus.Trialing,
+        status: CusProductStatus.Active,
       },
       {
         product_id: premium.id,
         quantity: 3,
         product: premium,
-        status: CusProductStatus.Trialing,
-      },
-      {
-        product_id: growth.id,
-        quantity: 2,
-        product: growth,
-        status: CusProductStatus.Trialing,
+        status: CusProductStatus.Active,
       },
     ];
 
@@ -153,46 +120,88 @@ describe(`${chalk.yellowBright("multiAttach1: Testing multi attach for trial pro
     });
   });
 
-  it("should advance clock and update premium & growth while trialing", async function () {
-    const newProducts = [
+  const entities = [
+    {
+      id: "1",
+      name: "Entity 1",
+      feature_id: TestFeature.Users,
+    },
+  ];
+
+  const results = [
+    {
+      product: pro,
+      quantity: 4,
+      status: CusProductStatus.Active,
+    },
+    {
+      product: premium,
+      quantity: 3,
+      status: CusProductStatus.Active,
+    },
+    {
+      product: pro,
+      quantity: 1,
+      entityId: "1",
+      status: CusProductStatus.Active,
+    },
+  ];
+
+  it("should transfer to entity and have correct sub", async function () {
+    await autumn.entities.create(customerId, entities);
+
+    await autumn.transfer(customerId, {
+      to_entity_id: "1",
+      product_id: pro.id,
+    });
+
+    await expectResultsCorrect({
+      customerId,
+      results,
+    });
+
+    await expectSubToBeCorrect({
+      db,
+      customerId,
+      org,
+      env,
+    });
+  });
+
+  it("should update premium and pro quantities downward", async function () {
+    const productsList = [
       {
-        product_id: premium.id,
-        quantity: 1,
+        product_id: pro.id,
+        quantity: 3,
       },
       {
-        product_id: growth.id,
-        quantity: 5,
+        product_id: premium.id,
+        quantity: 2,
       },
     ];
 
     const results = [
       {
         product: pro,
-        quantity: 5,
-        status: CusProductStatus.Trialing,
+        quantity: 3,
+        status: CusProductStatus.Active,
       },
       {
         product: premium,
-        quantity: 1,
-        status: CusProductStatus.Trialing,
+        quantity: 2,
+        status: CusProductStatus.Active,
       },
-
       {
-        product: growth,
-        quantity: 5,
-        status: CusProductStatus.Trialing,
+        product: pro,
+        quantity: 1,
+        entityId: "1",
+        status: CusProductStatus.Active,
       },
     ];
 
-    await advanceTestClock({
-      stripeCli,
-      testClockId,
-      advanceTo: addDays(new Date(), 3).getTime(),
-    });
-
     await expectMultiAttachCorrect({
       customerId,
-      products: newProducts,
+      products: productsList,
       results,
       db,
       org,

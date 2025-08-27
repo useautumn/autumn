@@ -24,7 +24,10 @@ import { updateStripeSub2 } from "../upgradeFlow/updateStripeSub2.js";
 import Stripe from "stripe";
 import { createStripeSub2 } from "../addProductFlow/createStripeSub2.js";
 import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
-import { attachToInvoiceResponse } from "@/internal/invoices/invoiceUtils.js";
+import {
+  attachToInvoiceResponse,
+  insertInvoiceFromAttach,
+} from "@/internal/invoices/invoiceUtils.js";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
@@ -103,7 +106,8 @@ export const handleMultiAttachFlow = async ({
       config,
       curSub: curSub!,
       itemSet,
-      fromCreate: attachParams.products.length === 0, // just for now, if no products, it comes from cancel product...
+      // fromCreate: attachParams.products.length === 0, // just for now, if no products, it comes from cancel product...
+      fromCreate: true, // just for now, if no products, it comes from cancel product...
     });
 
     // TODO: Add these missing functions or remove if not needed
@@ -140,6 +144,15 @@ export const handleMultiAttachFlow = async ({
       updates: {
         status: CusProductStatus.Expired,
       },
+    });
+  }
+
+  if (latestInvoice) {
+    await insertInvoiceFromAttach({
+      db,
+      attachParams,
+      stripeInvoice: latestInvoice,
+      logger,
     });
   }
 

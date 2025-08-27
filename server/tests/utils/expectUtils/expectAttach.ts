@@ -134,7 +134,11 @@ export const attachAndExpectCorrect = async ({
   }
 
   const productCount = customer.products.reduce((acc: number, p: any) => {
-    if (product.group == p.group && !p.is_add_on) {
+    if (
+      product.group == p.group &&
+      !p.is_add_on &&
+      (entityId ? p.entity_id == entityId : true)
+    ) {
       return acc + 1;
     } else return acc;
   }, 0);
