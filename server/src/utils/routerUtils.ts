@@ -11,6 +11,61 @@ import { ExtendedRequest } from "./models/Request.js";
 import { withSpan as withSpanTracer } from "@/internal/analytics/tracer/spanUtils.js";
 
 /**
+ * Formats Zod validation errors into user-friendly messages
+ */
+const formatZodValidationError = (error: ZodError): string => {
+  const fieldErrors = error.issues.map(issue => {
+    const path = issue.path.length > 0 ? issue.path.join('.') : 'root';
+    
+    // Handle different types of validation errors with more descriptive messages
+    switch (issue.code) {
+      case 'invalid_type':
+        if (issue.received === 'undefined') {
+          return `${path} is required`;
+        }
+        return `${path} must be a ${issue.expected}, received ${issue.received}`;
+      
+      case 'too_small':
+        if (issue.type === 'number') {
+          return `${path} must be at least ${issue.minimum}`;
+        }
+        if (issue.type === 'string') {
+          return `${path} must be at least ${issue.minimum} characters`;
+        }
+        if (issue.type === 'array') {
+          return `${path} must contain at least ${issue.minimum} items`;
+        }
+        return `${path} is too small`;
+      
+      case 'too_big':
+        if (issue.type === 'number') {
+          return `${path} must be at most ${issue.maximum}`;
+        }
+        if (issue.type === 'string') {
+          return `${path} must be at most ${issue.maximum} characters`;
+        }
+        if (issue.type === 'array') {
+          return `${path} must contain at most ${issue.maximum} items`;
+        }
+        return `${path} is too large`;
+      
+      case 'invalid_enum_value':
+        return `${path} must be one of: ${issue.options?.join(', ') || 'valid options'}`;
+      
+      case 'custom':
+        return issue.message || `${path} is invalid`;
+      
+      default:
+        return issue.message || `${path} is invalid`;
+    }
+  });
+
+  // Remove duplicates and join with semicolons for multiple errors
+  const uniqueErrors = [...new Set(fieldErrors)];
+  return uniqueErrors.join('; ');
+};
+
+/**
  * Type-safe route handler with optional loader function.
  *
  * @example
@@ -58,11 +113,10 @@ export const routeHandler = async <TLoad = undefined>({
     if(!withSpan) {
       if (typeof validator === 'function') {
         await validator(req, res);
-      } else if(validator instanceof ZodAny || validator instanceof ZodObject) {
+              } else if(validator instanceof ZodAny || validator instanceof ZodObject) {
         const parseResult = validator.safeParse(req.body);
         if (!parseResult.success) {
-          const errorMsg =
-            parseResult.error.errors[0]?.message || "Invalid request body";
+          const errorMsg = formatZodValidationError(parseResult.error);
           throw new RecaseError({
             message: errorMsg,
             code: ErrCode.InvalidRequest,
@@ -86,8 +140,7 @@ export const routeHandler = async <TLoad = undefined>({
           } else if(validator instanceof ZodAny || validator instanceof ZodObject) {
             const parseResult = validator.safeParse(req.body);
             if (!parseResult.success) {
-              const errorMsg =
-                parseResult.error.errors[0]?.message || "Invalid request body";
+              const errorMsg = formatZodValidationError(parseResult.error);
               throw new RecaseError({
                 message: errorMsg,
                 code: ErrCode.InvalidRequest,
