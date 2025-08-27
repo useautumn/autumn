@@ -3,7 +3,7 @@ import RecaseError, {
   formatZodError,
   handleRequestError,
 } from "./errorUtils.js";
-import { ZodError } from "zod";
+import { ZodAny, ZodError, ZodObject } from "zod";
 import { StatusCodes } from "http-status-codes";
 import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
@@ -44,15 +44,25 @@ export const routeHandler = async <TLoad = undefined>({
   res: any;
   action: string;
   handler: (req: any, res: any, load: TLoad) => Promise<void>;
-  validator?: (req: any, res: any) => Promise<void>;
+  validator?: ((req: any, res: any) => Promise<void>) | ZodAny | ZodObject<any, any, any, any, any>;
 } & (TLoad extends undefined
   ? { loader?: never }
   : { loader: (org: Organization, env: AppEnv, db: DrizzleCli, body: any, query: any, req: ExtendedRequest) => Promise<TLoad> }
 )) => {
   try {
     let load: TLoad | undefined;
-    if (validator) {
+    if (typeof validator === 'function') {
       await validator(req, res);
+    } else if(validator instanceof ZodAny || validator instanceof ZodObject) {
+      const parseResult = validator.safeParse(req.body);
+      if (!parseResult.success) {
+        const errorMsg =
+          parseResult.error.errors[0]?.message || "Invalid request body";
+        throw new RecaseError({
+          message: errorMsg,
+          code: ErrCode.InvalidRequest,
+        });
+      }
     }
     if (loader) {
       load = await loader((req as ExtendedRequest).org, (req as ExtendedRequest).env, (req as ExtendedRequest).db, req.body, req.query, req);
