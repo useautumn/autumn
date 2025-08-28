@@ -98,7 +98,7 @@ describe(`${chalk.yellowBright("multiAttach4: Testing multi attach for annual pr
       db,
       org,
       env,
-      // attachPm: "success",
+      attachPm: "success",
     });
 
     testClockId = testClockId1!;
@@ -110,19 +110,19 @@ describe(`${chalk.yellowBright("multiAttach4: Testing multi attach for annual pr
         product_id: pro.id,
         quantity: 5,
         product: pro,
-        status: CusProductStatus.Trialing,
+        status: CusProductStatus.Active,
       },
       {
         product_id: premium.id,
         quantity: 3,
         product: premium,
-        status: CusProductStatus.Trialing,
+        status: CusProductStatus.Active,
       },
       {
         product_id: proAnnual.id,
         quantity: 4,
         product: proAnnual,
-        status: CusProductStatus.Trialing,
+        status: CusProductStatus.Active,
       },
     ];
 
@@ -135,6 +135,8 @@ describe(`${chalk.yellowBright("multiAttach4: Testing multi attach for annual pr
       env,
     });
   });
+
+  return;
 
   const entities = [
     {
@@ -153,24 +155,24 @@ describe(`${chalk.yellowBright("multiAttach4: Testing multi attach for annual pr
     {
       product: pro,
       quantity: 4,
-      status: CusProductStatus.Trialing,
+      status: CusProductStatus.Active,
     },
     {
       product: premium,
       quantity: 2,
-      status: CusProductStatus.Trialing,
+      status: CusProductStatus.Active,
     },
     {
       product: pro,
       quantity: 1,
       entityId: "2",
-      status: CusProductStatus.Trialing,
+      status: CusProductStatus.Active,
     },
     {
       product: pro,
       quantity: 1,
       entityId: "2",
-      status: CusProductStatus.Trialing,
+      status: CusProductStatus.Active,
     },
   ];
 

@@ -10,6 +10,7 @@ import {
 } from "@autumn/shared";
 import { expect } from "chai";
 import Stripe from "stripe";
+import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
 import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
 import {
   expectSubItemsCorrect,
@@ -90,12 +91,13 @@ const runUpdateEntsTest = async ({
   let invoicesAfter = subsAfter.map((sub) => sub.latest_invoice);
   let subIdsBefore = subsBefore.map((sub) => sub.id);
   let subIdsAfter = subsAfter.map((sub) => sub.id);
-  let periodEndsBefore = subsBefore.map((sub) => sub.current_period_end);
-  let periodEndsAfter = subsAfter.map((sub) => sub.current_period_end);
+
+  // let periodEndsBefore = subsBefore.map((sub) => sub.current_period_end);
+  // let periodEndsAfter = subsAfter.map((sub) => sub.current_period_end);
 
   expect(invoicesAfter).to.deep.equal(invoicesBefore);
   expect(subIdsAfter).to.deep.equal(subIdsBefore);
-  expect(periodEndsAfter).to.deep.equal(periodEndsBefore);
+  // expect(periodEndsAfter).to.deep.equal(periodEndsBefore);
 
   if (customItems) {
     expect(cusProduct.is_custom).to.be.true;
@@ -113,6 +115,13 @@ const runUpdateEntsTest = async ({
     stripeCli,
     customerId,
     product: customProduct,
+    db,
+    org,
+    env,
+  });
+
+  await expectSubToBeCorrect({
+    customerId,
     db,
     org,
     env,

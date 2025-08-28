@@ -1,7 +1,7 @@
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { cancelCurSubs } from "@/internal/customers/change-product/handleDowngrade/cancelCurSubs.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { cusProductsToStripeSubs } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
-import { removeScheduledProduct } from "@/internal/customers/handlers/handleCusProductExpired.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { CusProductStatus, Entity, FullCusProduct } from "@autumn/shared";
 
@@ -28,15 +28,9 @@ export const cancelSubsForEntity = async ({
       }
 
       if (cusProduct.status == CusProductStatus.Scheduled) {
-        await removeScheduledProduct({
-          req,
+        await CusProductService.delete({
           db,
-          cusProduct,
-          cusProducts,
-          org,
-          env,
-          logger,
-          renewCurProduct: false,
+          cusProductId: cusProduct.id,
         });
       } else {
         await cancelCurSubs({

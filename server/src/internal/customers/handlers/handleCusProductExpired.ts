@@ -1,7 +1,6 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
-import { cancelFutureProductSchedule } from "@/internal/customers/change-product/scheduleUtils.js";
 import {
   ACTIVE_STATUSES,
   CusProductService,
@@ -25,52 +24,6 @@ import {
 import { StatusCodes } from "http-status-codes";
 import { CusService } from "../CusService.js";
 import { cusProductToPrices } from "../cusProducts/cusProductUtils/convertCusProduct.js";
-
-export const removeScheduledProduct = async ({
-  req,
-  db,
-  cusProduct,
-  cusProducts,
-  org,
-  env,
-  logger,
-  renewCurProduct = true,
-}: {
-  req: ExtendedRequest;
-  db: DrizzleCli;
-  cusProduct: FullCusProduct;
-  cusProducts: FullCusProduct[];
-  org: Organization;
-  env: AppEnv;
-  logger: any;
-  renewCurProduct?: boolean;
-}) => {
-  const stripeCli = createStripeCli({ org: org, env: env });
-
-  // Get full product from cus product
-  let fullProduct = fullCusProductToProduct(cusProduct);
-
-  // 1. Cancel future product schedule
-  await cancelFutureProductSchedule({
-    req,
-    db,
-    org,
-    cusProducts,
-    product: fullProduct,
-    stripeCli,
-    logger,
-    env,
-    internalEntityId: cusProduct.internal_entity_id || undefined,
-    renewCurProduct,
-  });
-
-  // 2. Delete scheduled product
-  await CusProductService.delete({
-    db,
-    cusProductId: cusProduct.id,
-  });
-  return;
-};
 
 export const expireCusProduct = async ({
   req,
@@ -99,18 +52,13 @@ export const expireCusProduct = async ({
     `Product: ${cusProduct.product.name}, Status: ${cusProduct.status}`
   );
 
-  if (cusProduct.status == CusProductStatus.Scheduled) {
-    await removeScheduledProduct({
-      req,
-      db,
-      cusProduct,
-      cusProducts: fullCus.customer_products,
-      org,
-      env,
-      logger,
-    });
-    return;
-  }
+  // if (cusProduct.status == CusProductStatus.Scheduled) {
+  //   await CusProductService.delete({
+  //     db,
+  //     cusProductId: cusProduct.id,
+  //   });
+  //   return;
+  // }
 
   // 1. If main product, can't expire if there's scheduled product
   let isMain = !cusProduct.product.is_add_on;

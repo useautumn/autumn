@@ -41,6 +41,7 @@ import { CusProductStatusItem } from "../customer-product-list/CusProductStatus"
 import { CusProductEntityItem } from "../components/CusProductEntityItem";
 import { CusProductToolbar } from "./CusProductToolbar";
 import { MultiAttachDialog } from "../product/multi-attach/MultiAttachDialog";
+import { useCustomer } from "autumn-js/react";
 
 export const CustomerProductList = ({
   customer,
@@ -52,6 +53,7 @@ export const CustomerProductList = ({
   const navigate = useNavigate();
   const { env, versionCounts, entities, entityId, showEntityView } =
     useCustomerContext();
+
   const [showExpired, setShowExpired] = useState(false);
 
   const [multiAttachOpen, setMultiAttachOpen] = useState(false);

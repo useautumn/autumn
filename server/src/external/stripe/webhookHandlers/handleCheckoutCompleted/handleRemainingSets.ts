@@ -1,57 +1,9 @@
 import Stripe from "stripe";
-import { createStripeSub } from "../../stripeSubUtils/createStripeSub.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import { findPriceFromStripeId } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
-import { notNullish } from "@/utils/genUtils.js";
-import { ItemSet } from "@/utils/models/ItemSet.js";
-import {
-  APIVersion,
-  BillingType,
-  Organization,
-  UsagePriceConfig,
-} from "@autumn/shared";
-import { getArrearItems } from "../../stripeSubUtils/getStripeSubItems/getArrearItems.js";
+import { APIVersion, Organization, UsagePriceConfig } from "@autumn/shared";
 import { isUsagePrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { getEmptyPriceItem } from "../../priceToStripeItem/priceToStripeItem.js";
-
-const filterUsagePrices = ({
-  itemSet,
-  attachParams,
-}: {
-  itemSet: ItemSet;
-  attachParams: AttachParams;
-}) => {
-  const { internalEntityId, apiVersion } = attachParams;
-  const filteredItems = itemSet.items.filter((item: any) => {
-    let price = findPriceFromStripeId({
-      prices: attachParams.prices,
-      stripePriceId: item.price,
-      billingType: BillingType.UsageInArrear,
-    });
-
-    if (!price) {
-      return true;
-    }
-
-    if (apiVersion == APIVersion.v1_4 || notNullish(internalEntityId)) {
-      return false;
-    }
-
-    return true;
-  });
-
-  if (filteredItems.length == 0) {
-    return getArrearItems({
-      prices: attachParams.prices,
-      interval: itemSet.interval,
-      org: attachParams.org,
-      intervalCount: itemSet.intervalCount,
-    });
-  }
-
-  return filteredItems;
-};
 
 export const handleRemainingSets = async ({
   stripeCli,

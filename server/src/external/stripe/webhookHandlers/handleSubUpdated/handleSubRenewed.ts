@@ -5,8 +5,6 @@ import { notNullish, nullish } from "@/utils/genUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { AttachScenario, FullCusProduct } from "@autumn/shared";
 import Stripe from "stripe";
-import { createStripeCli } from "../../utils.js";
-import { cancelFutureProductSchedule } from "@/internal/customers/change-product/scheduleUtils.js";
 import { isMultiProductSub } from "@/internal/customers/attach/mergeUtils/mergeUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 const isSubRenewed = ({
@@ -98,24 +96,6 @@ export const handleSubRenewed = async ({
     logger.info(
       `sub.updated: renewed -> removing scheduled: ${curScheduledProduct.product.name}, main product: ${updatedCusProducts[0].product.name}`
     );
-
-    let stripeCli = createStripeCli({
-      org,
-      env,
-    });
-
-    await cancelFutureProductSchedule({
-      req,
-      db,
-      org,
-      stripeCli,
-      cusProducts,
-      product: updatedCusProducts[0].product,
-      internalEntityId: updatedCusProducts[0].internal_entity_id,
-      logger,
-      env,
-      sendWebhook: false,
-    });
 
     await CusProductService.delete({
       db,

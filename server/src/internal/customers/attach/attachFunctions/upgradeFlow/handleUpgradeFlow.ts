@@ -90,12 +90,13 @@ export const handleUpgradeFlow = async ({
 
   let canceled = false;
   // SCENARIO 1, NO SUB:
-  // console.log("Branch:", branch);
-  // throw new Error("test");
 
+  // Don't really need this...
   if (branch == AttachBranch.SameCustomEnts) {
-    logger.info("UPGRADE FLOW: same custom ents, skipping sub update");
-  } else if (!curSub) {
+    config.proration = ProrationBehavior.None;
+  }
+
+  if (!curSub) {
     logger.info("UPGRADE FLOW: no sub (from cancel maybe...?)");
     // Do something about current sub...
   } else if (shouldCancelSub({ sub: curSub!, newSubItems: subItems })) {

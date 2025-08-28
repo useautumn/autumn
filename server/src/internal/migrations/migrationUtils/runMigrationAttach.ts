@@ -101,17 +101,4 @@ export const runMigrationAttach = async ({
           : branch,
     });
   }
-
-  //   return await handleUpgradeSameInterval({
-  //     req,
-  //     attachParams,
-  //     config,
-  //   });
-  // } else if (attachFunction == AttachFunction.UpgradeDiffInterval) {
-  //   return await handleUpgradeDiffInterval({
-  //     req,
-  //     attachParams,
-  //     config,
-  //   });
-  // }
 };

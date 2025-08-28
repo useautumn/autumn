@@ -20,6 +20,7 @@ import { CusProductStatus, Entity, Product } from "@autumn/shared";
 import SmallSpinner from "@/components/general/SmallSpinner";
 import { Blend, Search } from "lucide-react";
 import { useOrg } from "@/hooks/useOrg";
+import { useCustomer } from "autumn-js/react";
 
 function AddProduct({
   setMultiAttachOpen,
@@ -28,6 +29,8 @@ function AddProduct({
 }) {
   const { products, customer, env, entityId, entities } = useCustomerContext();
   const axiosInstance = useAxiosInstance({ env });
+  const { customer: autumnCustomer } = useCustomer();
+
   const [options, setOptions] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -119,15 +122,17 @@ function AddProduct({
                 />
               ))
             )}
-            <DropdownMenuItem
-              className="text-t2"
-              onClick={() => setMultiAttachOpen(true)}
-            >
-              <div className="flex items-center gap-2 w-full text-t3 hover:text-t2">
-                <Blend size={12} />
-                <p>Multiple</p>
-              </div>
-            </DropdownMenuItem>
+            {autumnCustomer?.features.multi_attach && (
+              <DropdownMenuItem
+                className="text-t2"
+                onClick={() => setMultiAttachOpen(true)}
+              >
+                <div className="flex items-center gap-2 w-full text-t3 hover:text-t2">
+                  <Blend size={12} />
+                  <p>Multiple</p>
+                </div>
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
