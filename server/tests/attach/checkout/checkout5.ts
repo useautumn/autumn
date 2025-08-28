@@ -1,20 +1,17 @@
+import chalk from "chalk";
+import Stripe from "stripe";
+
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import { APIVersion, AppEnv, Organization } from "@autumn/shared";
-import chalk from "chalk";
-import Stripe from "stripe";
+
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
-import { createProducts, createReward } from "tests/utils/productUtils.js";
+import { createProducts } from "tests/utils/productUtils.js";
 import { addPrefixToProducts } from "../utils.js";
-import {
-  constructCoupon,
-  constructProduct,
-} from "@/utils/scriptUtils/createTestProducts.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
-import { completeCheckoutForm } from "tests/utils/stripeUtils.js";
-import { timeout } from "@/utils/genUtils.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
 import { expect } from "chai";
 import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";

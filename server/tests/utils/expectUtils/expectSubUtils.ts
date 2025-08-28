@@ -12,7 +12,7 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { isV4Usage } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
-import { nullish } from "@/utils/genUtils.js";
+import { notNullish, nullish } from "@/utils/genUtils.js";
 import {
   AppEnv,
   BillingType,
@@ -128,6 +128,14 @@ export const getSubsFromCusId = async ({
 //   };
 // };
 
+const subIsCanceled = ({ sub }: { sub: Stripe.Subscription }) => {
+  return (
+    notNullish(sub.canceled_at) ||
+    notNullish(sub.cancel_at) ||
+    sub.cancel_at_period_end
+  );
+};
+
 export const expectSubItemsCorrect = async ({
   stripeCli,
   customerId,
@@ -135,6 +143,7 @@ export const expectSubItemsCorrect = async ({
   db,
   org,
   env,
+  subCanceled = false,
   isCanceled = false,
   entityId,
 }: {
@@ -144,6 +153,7 @@ export const expectSubItemsCorrect = async ({
   db: DrizzleCli;
   org: Organization;
   env: AppEnv;
+  subCanceled?: boolean;
   isCanceled?: boolean;
   entityId?: string;
 }) => {
@@ -167,13 +177,21 @@ export const expectSubItemsCorrect = async ({
   if (isCanceled) {
     expect(
       cusProduct.canceled_at,
-      `cus product ${cusProduct.product.id} should be canceled`
+      `cus product ${cusProduct.product.id} have field 'canceled_at' set`
     ).to.exist;
+    expect(
+      cusProduct.canceled,
+      `cus product ${cusProduct.product.id} have field 'canceled' set to true`
+    ).to.be.true;
   } else {
     expect(
       cusProduct.canceled_at,
-      `cus product ${cusProduct.product.id} should not be canceled`
+      `cus product ${cusProduct.product.id} should not have field 'canceled_at' set`
     ).to.not.exist;
+    expect(
+      cusProduct.canceled,
+      `cus product ${cusProduct.product.id} should not have field 'canceled' set`
+    ).to.be.false;
   }
 
   if (isFreeProductV2({ product })) {
@@ -192,10 +210,10 @@ export const expectSubItemsCorrect = async ({
   });
 
   for (const sub of subs) {
-    if (isCanceled) {
-      expect(sub.canceled_at, "sub should be canceled").to.exist;
+    if (subCanceled) {
+      expect(subIsCanceled({ sub }), "sub should be canceled").to.be.true;
     } else {
-      expect(sub.canceled_at, "sub should not be canceled").to.be.null;
+      expect(subIsCanceled({ sub }), "sub should not be canceled").to.be.false;
     }
   }
 
@@ -217,9 +235,6 @@ export const expectSubItemsCorrect = async ({
       }
 
       const usagePriceConfig = price.config as UsagePriceConfig;
-
-      // console.log("Sub item:", subItem);
-      // console.log("Usage price config:", usagePriceConfig);
 
       expect(
         nullish(subItem) ||

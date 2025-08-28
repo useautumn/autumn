@@ -187,6 +187,7 @@ describe(`${chalk.yellowBright("mergedAddOn3: testing add ons between multiple e
     await autumn.cancel({
       customer_id: customerId,
       product_id: addOn.id,
+      entity_id: "1",
       cancel_immediately: true,
     });
 

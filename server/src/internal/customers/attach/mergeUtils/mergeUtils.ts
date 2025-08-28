@@ -12,7 +12,10 @@ import Stripe from "stripe";
 import { getExistingUsageFromCusProducts } from "../../cusProducts/cusEnts/cusEntUtils.js";
 import { cusProductToEnts } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
-import { getCustomerSub } from "../attachUtils/convertAttachParams.js";
+import {
+  attachParamsToCurCusProduct,
+  getCustomerSub,
+} from "../attachUtils/convertAttachParams.js";
 
 export const isMultiProductSub = ({
   sub,
@@ -80,6 +83,21 @@ export const willMergeSub = async ({
   const { subId } = await getCustomerSub({ attachParams, onlySubId: true });
 
   if (branch == AttachBranch.MainIsTrial) {
+    return false;
+  }
+
+  const cusProducts = attachParams.customer.customer_products;
+  const curCusProduct = attachParamsToCurCusProduct({ attachParams });
+
+  // Case where upgrading to free trial...
+  if (
+    subId &&
+    curCusProduct?.subscription_ids?.includes(subId!) &&
+    !cusProducts.some(
+      (cp) => cp.subscription_ids?.includes(subId!) && cp.id != curCusProduct.id
+    ) &&
+    attachParams.freeTrial
+  ) {
     return false;
   }
 

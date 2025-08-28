@@ -24,10 +24,7 @@ import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
 import { handleInvoicePaidDiscount } from "./handleInvoicePaidDiscount.js";
 import { handleInvoiceCheckoutPaid } from "@/internal/customers/attach/attachFunctions/invoiceCheckoutPaid/handleInvoiceCheckoutPaid.js";
-import {
-  lineItemInCusProduct,
-  subItemInCusProduct,
-} from "../stripeSubUtils/stripeSubItemUtils.js";
+import { lineItemInCusProduct } from "../stripeSubUtils/stripeSubItemUtils.js";
 
 const handleOneOffInvoicePaid = async ({
   db,
@@ -214,11 +211,10 @@ export const handleInvoicePaid = async ({
       });
     }
 
-    // let updated = await updateInvoiceIfExists({
-    //   db,
-    //   invoice,
-    // });
-    const updated = false;
+    const updated = await updateInvoiceIfExists({
+      db,
+      invoice,
+    });
 
     if (!updated) {
       let invoiceItems = await getInvoiceItems({

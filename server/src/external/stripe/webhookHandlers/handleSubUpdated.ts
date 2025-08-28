@@ -79,8 +79,8 @@ export const handleSubscriptionUpdated = async ({
     stripeSubId: subscription.id,
     updates: {
       status: subStatusMap[subscription.status] || CusProductStatus.Unknown,
-      canceled_at: canceled ? canceledAt : null,
       collection_method: fullSub.collection_method as CollectionMethod,
+      // canceled_at: canceled ? canceledAt : null,
       // trial_ends_at:
       //   previousAttributes.status === "trialing" &&
       //   subscription.status === "active"
@@ -88,6 +88,8 @@ export const handleSubscriptionUpdated = async ({
       //     : undefined,
     },
   });
+
+  // 2. Update canceled & canceled_at IF sub has no schedule...?
 
   if (updatedCusProducts.length > 0) {
     logger.info(

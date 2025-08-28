@@ -352,6 +352,11 @@ export class AutumnInt {
   };
 
   rewards = {
+    get: async (rewardId: string) => {
+      const data = await this.get(`/rewards/${rewardId}`);
+      return data;
+    },
+
     create: async (reward: any) => {
       const data = await this.post(`/rewards?legacyStripe=true`, reward);
       return data;

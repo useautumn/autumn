@@ -8,6 +8,7 @@ import Stripe from "stripe";
 import { createStripeCli } from "../../utils.js";
 import { cancelFutureProductSchedule } from "@/internal/customers/change-product/scheduleUtils.js";
 import { isMultiProductSub } from "@/internal/customers/attach/mergeUtils/mergeUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 const isSubRenewed = ({
   previousAttributes,
   sub,
@@ -30,6 +31,27 @@ const isSubRenewed = ({
     renewedAt: Date.now(),
   };
 };
+
+const updateCusProductRenewed = async ({
+  db,
+  sub,
+}: {
+  db: DrizzleCli;
+  sub: Stripe.Subscription;
+}) => {
+  if (sub.schedule) {
+    return;
+  }
+
+  await CusProductService.updateByStripeSubId({
+    db,
+    stripeSubId: sub.id,
+    updates: { canceled_at: null, canceled: false },
+  });
+
+  return;
+};
+
 export const handleSubRenewed = async ({
   req,
   prevAttributes,
@@ -43,7 +65,7 @@ export const handleSubRenewed = async ({
 }) => {
   const { db, org, env, logtail: logger } = req;
 
-  const { renewed, renewedAt } = isSubRenewed({
+  const { renewed } = isSubRenewed({
     previousAttributes: prevAttributes,
     sub,
   });
@@ -51,19 +73,18 @@ export const handleSubRenewed = async ({
   if (!renewed || updatedCusProducts.length == 0) return;
 
   const customer = updatedCusProducts[0].customer;
-
   let cusProducts = await CusProductService.list({
     db,
     internalCustomerId: customer!.internal_id,
   });
 
-  if (isMultiProductSub({ sub, cusProducts })) return;
+  if (isMultiProductSub({ sub, cusProducts }) || sub.schedule) return;
 
-  // Sub renewed... if multi sub flow
-  // console.log(
-  //   `Checking sub renewed: ${sub.id}, Is multi sub: ${isMultiProductSub({ sub, cusProducts })}`
-  // );
-  // console.log("Cus products:", cusProducts.map((cp) => `${cp.product.name}`));
+  await CusProductService.updateByStripeSubId({
+    db,
+    stripeSubId: sub.id,
+    updates: { canceled_at: null, canceled: false },
+  });
 
   let { curScheduledProduct } = getExistingCusProducts({
     product: updatedCusProducts[0].product,

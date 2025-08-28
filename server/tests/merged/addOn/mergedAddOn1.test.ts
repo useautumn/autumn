@@ -14,7 +14,6 @@ import {
   AppEnv,
   CusProductStatus,
   Organization,
-  ProductItemInterval,
 } from "@autumn/shared";
 import {
   constructArrearItem,
@@ -223,6 +222,6 @@ describe(`${chalk.yellowBright("mergedAddOn1: Adding an add on")}`, () => {
       status: CusProductStatus.Active,
     });
     const products = customer.products.filter((p) => p.group === addOn.group);
-    expect(products.length).to.equal(0);
+    expect(products.length).to.equal(1);
   });
 });

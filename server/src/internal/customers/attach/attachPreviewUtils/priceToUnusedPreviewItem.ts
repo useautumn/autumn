@@ -64,7 +64,7 @@ export const priceToUnusedPreviewItem = ({
   now?: number;
   org?: Organization;
   subDiscounts?: Stripe.Discount[];
-  latestInvoice: Stripe.Invoice;
+  latestInvoice?: Stripe.Invoice;
 }) => {
   now = now || Date.now();
   const onTrial = isTrialing({ cusProduct, now });
@@ -77,7 +77,7 @@ export const priceToUnusedPreviewItem = ({
 
   const invoiceItem = findStripeItemForPrice({
     price,
-    invoiceLineItems: latestInvoice.lines.data,
+    invoiceLineItems: latestInvoice?.lines.data || [],
     stripeProdId: cusProduct?.product.processor?.id,
   }) as Stripe.InvoiceLineItem | undefined;
 
@@ -115,24 +115,10 @@ export const priceToUnusedPreviewItem = ({
         now,
       });
 
-  console.log("Invoice item qty: ", invoiceItem?.quantity);
-  // console.log(
-  //   "Sub discounts: ",
-  //   subDiscounts?.map((d) => d.id)
-  // );
-
-  // const discountsApplied = getDiscountsApplied({
-  //   invoiceItem,
-  //   subDiscounts,
-  // });
-
-  // console.log("Discounts applied: ", discountsApplied);
-
   const ratio = new Decimal(quantity)
     .div(invoiceItem?.quantity || 1)
     .toNumber();
-  console.log("Ratio: ", ratio);
-  console.log("Discount amounts: ", invoiceItem?.discount_amounts);
+
   amount = -getUnusedAmountAfterDiscount({
     amount,
     discountAmounts: invoiceItem?.discount_amounts || [],

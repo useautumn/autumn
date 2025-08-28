@@ -64,36 +64,10 @@ export const createProrationInvoice = async ({
     pending: true,
   });
 
-  console.log("Items:", items.data);
   if (items.data.length == 0) {
     logger.info(`No items to prorate, skipping invoice creation`);
     return null;
   }
-
-  // console.log(
-  //   "Upcoming invoice:",
-  //   items.data.map((item) => item.description)
-  // );
-
-  // throw new Error("Not implemented");
-
-  // const proratedItems = items.data.filter(
-  //   (item) => item.proration || item.parent?.type === "invoiceitem"
-  // );
-
-  // console.log("Preview invoice items:", items.lines.data);
-  // let items = await stripeCli.invoices.listUpcomingLines({
-  //   subscription: curSub.id,
-  // });
-
-  // let proratedItems = items.data.filter(
-  //   (item) => item.proration || item.type === "invoiceitem",
-  // );
-
-  // if (proratedItems.length == 0) {
-  //   logger.info(`No items to prorate, skipping invoice creation`);
-  //   return null;
-  // }
 
   let invoice = await stripeCli.invoices.create({
     customer: customer.processor.id,

@@ -210,4 +210,27 @@ rewardRouter.post("/:internalId", async (req: any, res: any) => {
   }
 });
 
+rewardRouter.get("/:id", async (req: any, res: any) => {
+  try {
+    const { id } = req.params;
+    const { orgId, env, db } = req;
+
+    const reward = await RewardService.get({
+      db,
+      idOrInternalId: id,
+      orgId,
+      env,
+    });
+
+    res.status(200).json(reward);
+  } catch (error) {
+    handleRequestError({
+      error,
+      res,
+      req,
+      action: "get reward",
+    });
+  }
+});
+
 export default rewardRouter;

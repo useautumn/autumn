@@ -89,7 +89,7 @@ export const attachAndExpectCorrect = async ({
     ...attachParams,
   });
 
-  const logCheckoutRes = true;
+  const logCheckoutRes = false;
   if (logCheckoutRes) {
     console.log("Checkout res:");
     for (const line of checkoutRes.lines) {
@@ -210,6 +210,7 @@ export const attachAndExpectCorrect = async ({
     flags: {
       checkNotTrialing,
     },
+    entityId,
   });
 
   // await expectSubItemsCorrect({

@@ -25,6 +25,7 @@ import { Decimal } from "decimal.js";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 export const handleQuantityUpgrade = async ({
   req,
@@ -53,6 +54,14 @@ export const handleQuantityUpgrade = async ({
 
   const difference = new Decimal(newOptions.quantity)
     .minus(oldOptions.quantity)
+    .toNumber();
+
+  const subItemDifference = new Decimal(newOptions.quantity)
+    .minus(
+      notNullish(oldOptions.upcoming_quantity)
+        ? oldOptions.upcoming_quantity!
+        : oldOptions.quantity
+    )
     .toNumber();
 
   const onIncrease =
@@ -146,7 +155,7 @@ export const handleQuantityUpgrade = async ({
 
   await stripeCli.subscriptionItems.update(subItem.id, {
     // quantity: newOptions.quantity,
-    quantity: (subItem.quantity || 0) + difference,
+    quantity: (subItem.quantity || 0) + subItemDifference,
     proration_behavior: "none",
   });
 

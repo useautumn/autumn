@@ -62,6 +62,8 @@ export const getItemsForCurProduct = async ({
       cusProduct: curCusProduct,
       org: attachParams.org,
       now,
+      latestInvoice: sub?.latest_invoice as Stripe.Invoice,
+      subDiscounts: sub?.discounts as Stripe.Discount[],
     });
 
     if (!previewLineItem) continue;

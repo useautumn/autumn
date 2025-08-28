@@ -12,20 +12,25 @@ import {
   CusProductStatus,
   Organization,
 } from "@autumn/shared";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import {
+  constructArrearItem,
+  constructFeatureItem,
+} from "@/utils/scriptUtils/constructItem.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { addDays } from "date-fns";
+import {
+  addPrefixToProducts,
+  getBasePrice,
+} from "tests/utils/testProductUtils/testProductUtils.js";
+import { expect } from "chai";
+import { advanceToNextInvoice } from "tests/utils/testAttachUtils/testAttachUtils.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import {
+  advanceTestClock,
+  completeCheckoutForm,
+} from "tests/utils/stripeUtils.js";
+import { addDays, addWeeks } from "date-fns";
+import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
 import { expectMultiAttachCorrect } from "tests/utils/expectUtils/expectMultiAttach.js";
-
-let growth = constructProduct({
-  id: "growth",
-  items: [
-    constructFeatureItem({ featureId: TestFeature.Words, includedUsage: 100 }),
-  ],
-  type: "growth",
-});
 
 let premium = constructProduct({
   id: "premium",
@@ -61,8 +66,8 @@ const ops = [
   },
 ];
 
-const testCase = "multiAttach1";
-describe(`${chalk.yellowBright("multiAttach1: Testing multi attach for trial products and update product quantities mid trial")}`, () => {
+const testCase = "multiInvoice1";
+describe(`${chalk.yellowBright("multiInvoice1: Testing multi attach through invoice flow")}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
 
@@ -83,13 +88,13 @@ describe(`${chalk.yellowBright("multiAttach1: Testing multi attach for trial pro
     stripeCli = this.stripeCli;
 
     addPrefixToProducts({
-      products: [pro, premium, growth],
+      products: [pro, premium],
       prefix: testCase,
     });
 
     await createProducts({
       autumn: autumnJs,
-      products: [pro, premium, growth],
+      products: [pro, premium],
       db,
       orgId: org.id,
       env,
@@ -112,7 +117,7 @@ describe(`${chalk.yellowBright("multiAttach1: Testing multi attach for trial pro
     const productsList = [
       {
         product_id: pro.id,
-        quantity: 5,
+        quantity: 3,
         product: pro,
         status: CusProductStatus.Trialing,
       },
@@ -122,60 +127,46 @@ describe(`${chalk.yellowBright("multiAttach1: Testing multi attach for trial pro
         product: premium,
         status: CusProductStatus.Trialing,
       },
-      {
-        product_id: growth.id,
-        quantity: 2,
-        product: growth,
-        status: CusProductStatus.Trialing,
-      },
     ];
 
     await expectMultiAttachCorrect({
       customerId,
       products: productsList,
       results: productsList,
+      attachParams: {
+        invoice: true,
+        enable_product_immediately: true,
+      },
       db,
       org,
       env,
     });
   });
 
-  it("should advance clock and update premium & growth while trialing", async function () {
+  it("should update premium & pro while trialing", async function () {
     const newProducts = [
       {
         product_id: premium.id,
-        quantity: 1,
+        quantity: 2,
       },
       {
-        product_id: growth.id,
-        quantity: 5,
+        product_id: pro.id,
+        quantity: 4,
       },
     ];
 
     const results = [
       {
         product: pro,
-        quantity: 5,
+        quantity: 4,
         status: CusProductStatus.Trialing,
       },
       {
         product: premium,
-        quantity: 1,
-        status: CusProductStatus.Trialing,
-      },
-
-      {
-        product: growth,
-        quantity: 5,
+        quantity: 2,
         status: CusProductStatus.Trialing,
       },
     ];
-
-    await advanceTestClock({
-      stripeCli,
-      testClockId,
-      advanceTo: addDays(new Date(), 3).getTime(),
-    });
 
     await expectMultiAttachCorrect({
       customerId,

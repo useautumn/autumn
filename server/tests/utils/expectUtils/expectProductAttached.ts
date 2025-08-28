@@ -10,12 +10,14 @@ export const expectProductAttached = ({
   productId,
   status,
   entityId,
+  isCanceled = false,
 }: {
   customer: Customer;
   product?: ProductV2;
   productId?: string;
   status?: CusProductStatus;
   entityId?: string;
+  isCanceled?: boolean;
 }) => {
   const cusProducts = customer.products;
   const finalProductId = productId || product?.id;
@@ -46,6 +48,12 @@ export const expectProductAttached = ({
   if (entityId) {
     // @ts-ignore
     expect(productAttached?.entity_id).to.equal(entityId);
+  }
+
+  if (isCanceled) {
+    expect(productAttached?.canceled_at).to.exist;
+    // @ts-ignore
+    expect(productAttached?.canceled).to.be.true;
   }
 };
 

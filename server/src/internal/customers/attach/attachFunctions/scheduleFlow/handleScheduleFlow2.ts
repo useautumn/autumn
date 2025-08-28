@@ -46,14 +46,10 @@ export const handleScheduleFunction2 = async ({
 }) => {
   const logger = req.logtail;
   const product = attachParams.products[0];
-  const { stripeCli, customer: fullCus, prices } = attachParams;
+  const { stripeCli } = attachParams;
 
   const curCusProduct = attachParamsToCurCusProduct({ attachParams });
   const curSub = await paramsToCurSub({ attachParams });
-  const curPrices = curCusProduct
-    ? cusProductToPrices({ cusProduct: curCusProduct })
-    : [];
-
   const subItems = curSub?.items.data.filter((item) =>
     subItemInCusProduct({ cusProduct: curCusProduct!, subItem: item })
   );
@@ -66,12 +62,6 @@ export const handleScheduleFunction2 = async ({
   const newProductFree = isFreeProduct(attachParams.prices);
 
   if (schedule) {
-    console.log("CURRENT SCHEDULE ITEMS:");
-    await logPhases({
-      phases: schedule.phases as any,
-      db: req.db,
-    });
-
     const newItems = await paramsToScheduleItems({
       req,
       schedule: schedule!,
@@ -80,20 +70,15 @@ export const handleScheduleFunction2 = async ({
       billingPeriodEnd: expectedEnd!,
     });
 
-    console.log("NEW SCHEDULE ITEMS:");
-    await logPhases({
-      phases: newItems.phases as any,
-      db: req.db,
-    });
-
-    // Should release schedule...
     const currentPhaseIndex = getCurrentPhaseIndex({
       schedule: { phases: newItems.phases } as any,
       now: attachParams.now,
     });
 
     if (currentPhaseIndex == newItems.phases.length - 1) {
-      console.log(`NO SUBSEQUENT PHASES, RELEASING SCHEDULE`);
+      logger.info(
+        `SCHEDULE FLOW: no subsequent phases, releasing schedule ${schedule?.id}`
+      );
       await stripeCli.subscriptionSchedules.release(schedule!.id);
       await CusProductService.updateByStripeScheduledId({
         db: req.db,
@@ -112,6 +97,7 @@ export const handleScheduleFunction2 = async ({
       });
       schedule = undefined;
     } else {
+      logger.info(`SCHEDULE FLOW: updating schedule ${schedule?.id}`);
       schedule = await updateCurSchedule({
         req,
         attachParams,
@@ -132,6 +118,7 @@ export const handleScheduleFunction2 = async ({
       });
     }
   } else {
+    logger.info(`SCHEDULE FLOW: no schedule, creating new schedule`);
     schedule = await subToNewSchedule({
       req,
       sub: curSub!,
@@ -152,6 +139,7 @@ export const handleScheduleFunction2 = async ({
   }
 
   if (!schedule) {
+    logger.info(`SCHEDULE FLOW: no schedule, canceling sub ${curSub?.id}`);
     await stripeCli.subscriptions.update(curSub!.id, {
       cancel_at: expectedEnd!,
     });

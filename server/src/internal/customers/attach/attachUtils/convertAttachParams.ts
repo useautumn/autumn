@@ -174,7 +174,11 @@ export const paramsToCurSub = async ({
   }
 
   const sub = await stripeCli.subscriptions.retrieve(subIds[0], {
-    expand: ["items.data.price.tiers"],
+    expand: [
+      "items.data.price.tiers",
+      "latest_invoice",
+      "discounts.coupon.applies_to",
+    ],
   });
 
   return sub;

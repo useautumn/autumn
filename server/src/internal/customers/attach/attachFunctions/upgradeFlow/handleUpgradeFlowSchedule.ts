@@ -23,6 +23,7 @@ export const handleUpgradeFlowSchedule = async ({
   schedule,
   curSub,
   removeCusProducts,
+  logger,
 }: {
   req: ExtendedRequest;
   attachParams: AttachParams;
@@ -30,8 +31,9 @@ export const handleUpgradeFlowSchedule = async ({
   schedule: Stripe.SubscriptionSchedule;
   curSub: Stripe.Subscription;
   removeCusProducts?: FullCusProduct[];
+  logger: any;
 }) => {
-  console.log(`UPGRADE FLOW, UPDATING SCHEDULE ${schedule.id}`);
+  logger.info(`UPGRADE FLOW, updating schedule ${schedule?.id}`);
   const { stripeCli, customer, prices } = attachParams;
   const curCusProduct = attachParamsToCurCusProduct({ attachParams });
 
@@ -70,7 +72,9 @@ export const handleUpgradeFlowSchedule = async ({
   // Example: mergedUpgrade4.test.ts, mergedCancel2.test.ts
   // pro, pro -> free, pro -> premium, pro (need to cancel initial schedule)
   if (newCurPhaseIndex == newItems.phases.length - 1) {
-    console.log(`NO SUBSEQUENT PHASES, RELEASING SCHEDULE`);
+    logger.info(
+      `UPGRADE FLOW: no subsequent phases, releasing schedule ${schedule?.id}`
+    );
     await stripeCli.subscriptionSchedules.release(schedule!.id);
     await CusProductService.updateByStripeScheduledId({
       db: req.db,
@@ -91,7 +95,7 @@ export const handleUpgradeFlowSchedule = async ({
         .every((cp) => cp.canceled) && isFreeProduct(prices);
 
     if (shouldCancelSub) {
-      console.log(`UPGRADE FLOW, CANCELING SUB: ${curSub.id}`);
+      logger.info(`UPGRADE FLOW: canceling sub ${curSub?.id}`);
       await stripeCli.subscriptions.update(curSub.id, {
         cancel_at_period_end: true,
       });
@@ -100,10 +104,10 @@ export const handleUpgradeFlowSchedule = async ({
     return;
   }
 
-  await logPhases({
-    phases: newItems.phases,
-    db: req.db,
-  });
+  // await logPhases({
+  //   phases: newItems.phases,
+  //   db: req.db,
+  // });
 
   await updateCurSchedule({
     req,

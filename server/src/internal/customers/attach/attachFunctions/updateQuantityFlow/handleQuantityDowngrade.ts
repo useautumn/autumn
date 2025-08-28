@@ -25,6 +25,7 @@ import { constructStripeInvoiceItem } from "@/internal/invoices/invoiceItemUtils
 import { cusProductToProduct } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { createAndFinalizeInvoice } from "@/internal/invoices/invoiceUtils/createAndFinalizeInvoice.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 const onDecreaseToStripeProration: Record<OnDecrease, string> = {
   [OnDecrease.ProrateImmediately]: "always_invoice",
@@ -67,12 +68,20 @@ export const handleQuantityDowngrade = async ({
     .minus(oldOptions.quantity)
     .toNumber();
 
+  const subItemDifference = new Decimal(newOptions.quantity)
+    .minus(
+      notNullish(oldOptions.upcoming_quantity)
+        ? oldOptions.upcoming_quantity!
+        : oldOptions.quantity
+    )
+    .toNumber();
+
   const diffWithBillingUnits = new Decimal(difference)
     .mul((cusPrice.price.config as UsagePriceConfig).billing_units || 1)
     .toNumber();
 
   const newSubItemQuantity = new Decimal(subItem.quantity || 0)
-    .plus(difference)
+    .plus(subItemDifference)
     .toNumber();
 
   const stripeProration = onDecreaseToStripeProration[
