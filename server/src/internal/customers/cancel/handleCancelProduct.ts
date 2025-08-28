@@ -6,6 +6,7 @@ import {
   FullCustomer,
   APIVersion,
   ProrationBehavior,
+  AttachBranch,
 } from "@autumn/shared";
 import { getExistingCusProducts } from "../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import {
@@ -174,6 +175,7 @@ export const handleCancelProduct = async ({
       replaceables: [],
       entities: fullCus.entities,
       features: req.features,
+      fromCancel: true,
     },
     config: {
       ...getDefaultAttachConfig(),
@@ -181,6 +183,7 @@ export const handleCancelProduct = async ({
         ? ProrationBehavior.Immediately
         : ProrationBehavior.None,
     },
+    branch: AttachBranch.Cancel,
   });
 
   // Activate default product

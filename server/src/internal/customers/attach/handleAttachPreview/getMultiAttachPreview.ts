@@ -1,6 +1,6 @@
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
-import { AttachBody, PreviewLineItem } from "@autumn/shared";
+import { AttachBody, AttachBranch, PreviewLineItem } from "@autumn/shared";
 import { getCustomerSub } from "../attachUtils/convertAttachParams.js";
 
 import { cusProductsToPrices } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
@@ -28,14 +28,16 @@ export const getMultiAttachPreview = async ({
   attachParams,
   logger,
   config,
+  branch,
 }: {
   req: ExtendedRequest;
   attachBody: AttachBody;
   attachParams: AttachParams;
   logger: any;
   config: any;
+  branch: AttachBranch;
 }) => {
-  await handleMultiAttachErrors({ attachParams, attachBody });
+  await handleMultiAttachErrors({ attachParams, attachBody, branch });
 
   const { customer } = attachParams;
   const cusProducts = customer.customer_products;
@@ -91,6 +93,10 @@ export const getMultiAttachPreview = async ({
         interval: largestInterval?.interval,
         intervalCount: largestInterval?.intervalCount,
       });
+    }
+
+    if (config.disableTrial) {
+      attachParams.freeTrial = null;
     }
 
     const onTrial =

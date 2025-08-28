@@ -67,6 +67,7 @@ export const attachParamsToPreview = async ({
       attachParams,
       logger,
       config,
+      branch,
     });
   } else if (
     func == AttachFunction.AddProduct ||

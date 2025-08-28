@@ -12,6 +12,7 @@ import { createFullCusProduct } from "@/internal/customers/add-product/createFul
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import {
   APIVersion,
+  AttachBranch,
   AttachConfig,
   CusProductStatus,
   ProrationBehavior,
@@ -35,11 +36,13 @@ export const handleUpgradeFlow = async ({
   res,
   attachParams,
   config,
+  branch,
 }: {
   req: ExtendedRequest;
   res?: any;
   attachParams: AttachParams;
   config: AttachConfig;
+  branch: AttachBranch;
 }) => {
   const curCusProduct = attachParamsToCurCusProduct({ attachParams });
   const curSub = await paramsToCurSub({ attachParams });
@@ -87,7 +90,12 @@ export const handleUpgradeFlow = async ({
 
   let canceled = false;
   // SCENARIO 1, NO SUB:
-  if (!curSub) {
+  // console.log("Branch:", branch);
+  // throw new Error("test");
+
+  if (branch == AttachBranch.SameCustomEnts) {
+    logger.info("UPGRADE FLOW: same custom ents, skipping sub update");
+  } else if (!curSub) {
     logger.info("UPGRADE FLOW: no sub (from cancel maybe...?)");
     // Do something about current sub...
   } else if (shouldCancelSub({ sub: curSub!, newSubItems: subItems })) {

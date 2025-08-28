@@ -256,6 +256,7 @@ export const runAttachFunction = async ({
       res,
       attachParams,
       config,
+      branch,
     });
   }
 

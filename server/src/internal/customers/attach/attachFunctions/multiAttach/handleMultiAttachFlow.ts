@@ -6,11 +6,9 @@ import {
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 import {
-  AttachBody,
   AttachConfig,
   AttachScenario,
   CusProductStatus,
-  FullCusProduct,
   SuccessCode,
 } from "@autumn/shared";
 import {
@@ -19,7 +17,6 @@ import {
 } from "../../attachUtils/convertAttachParams.js";
 
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { updateStripeSub2 } from "../upgradeFlow/updateStripeSub2.js";
 import Stripe from "stripe";
 import { createStripeSub2 } from "../addProductFlow/createStripeSub2.js";
@@ -28,10 +25,8 @@ import {
   attachToInvoiceResponse,
   insertInvoiceFromAttach,
 } from "@/internal/invoices/invoiceUtils.js";
-import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
+
 import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
-import { ItemSet } from "@/utils/models/ItemSet.js";
-import { mergeItemSets } from "./mergeItemSets.js";
 import { getAddAndRemoveProducts } from "./getAddAndRemoveProducts.js";
 import { handleUpgradeFlowSchedule } from "../upgradeFlow/handleUpgradeFlowSchedule.js";
 import { isTrialing } from "@/internal/customers/cusProducts/cusProductUtils.js";
@@ -83,8 +78,6 @@ export const handleMultiAttachFlow = async ({
       itemSet,
     });
 
-    console.log("Created new sub...");
-
     if (config?.invoiceCheckout) {
       return {
         invoices: [newSub.latest_invoice as Stripe.Invoice],
@@ -120,6 +113,7 @@ export const handleMultiAttachFlow = async ({
         schedule,
         curSub,
         removeCusProducts,
+        logger,
       });
     }
 

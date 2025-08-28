@@ -1,6 +1,6 @@
 import { AppEnv } from "@autumn/shared";
 import Stripe from "stripe";
-import { CusProductStatus, Organization } from "@autumn/shared";
+import { Organization } from "@autumn/shared";
 import { createStripeCli } from "../utils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
@@ -63,23 +63,23 @@ export const handleSubscriptionScheduleCanceled = async ({
     // }
   }
 
-  // Delete from subscriptions
-  try {
-    let autumnSub = await SubService.getFromScheduleId({
-      db,
-      scheduleId: schedule.id,
-    });
+  // // Delete from subscriptions
+  // try {
+  //   let autumnSub = await SubService.getFromScheduleId({
+  //     db,
+  //     scheduleId: schedule.id,
+  //   });
 
-    if (autumnSub && !autumnSub.stripe_id) {
-      await SubService.deleteFromScheduleId({
-        db,
-        scheduleId: schedule.id,
-      });
-    }
-  } catch (error) {
-    logger.error(
-      `handleSubScheduleCanceled: failed to delete from subscriptions table`,
-      error
-    );
-  }
+  //   if (autumnSub && !autumnSub.stripe_id) {
+  //     await SubService.deleteFromScheduleId({
+  //       db,
+  //       scheduleId: schedule.id,
+  //     });
+  //   }
+  // } catch (error) {
+  //   logger.error(
+  //     `handleSubScheduleCanceled: failed to delete from subscriptions table`,
+  //     error
+  //   );
+  // }
 };

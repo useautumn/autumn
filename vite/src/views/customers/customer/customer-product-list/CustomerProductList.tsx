@@ -186,7 +186,7 @@ export const CustomerProductList = ({
           >
             <Item className="col-span-3">
               <AdminHover texts={getCusProductHoverTexts(cusProduct)}>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <p>{cusProduct.product.name}</p>
                   {versionCounts[cusProduct.product.id] > 1 && (
                     <Badge
@@ -200,7 +200,7 @@ export const CustomerProductList = ({
                   {cusProduct.quantity > 1 && (
                     <Badge
                       variant="outline"
-                      className="text-xs bg-stone-50 text-t3 px-2 py-0 ml-2 font-mono"
+                      className="text-xs bg-stone-200 text-t3 px-2 py-0 ml-2 font-mono"
                     >
                       x{cusProduct.quantity}
                     </Badge>

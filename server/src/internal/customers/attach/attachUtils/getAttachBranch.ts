@@ -117,7 +117,7 @@ const getOptionsToUpdate = ({
   return optionsToUpdate;
 };
 
-const checkSameCustom = async ({
+export const checkSameCustom = async ({
   attachParams,
   curSameProduct,
 }: {
