@@ -175,7 +175,6 @@ const init = async () => {
     console.log(`Server running on port ${PORT}`);
   });
 };
-//);
 
 if (process.env.NODE_ENV === "development") {
   init();

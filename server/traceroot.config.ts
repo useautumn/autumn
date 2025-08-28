@@ -10,12 +10,8 @@ const config = {
 
   // Token configuration
   // This is the token you can generate from the TraceRoot.AI website
-  // token: "traceroot-6bad7f011f184fd5a1b542ad7b4b1ce5",
+  token: "traceroot-6bad7f011f184fd5a1b542ad7b4b1ce5",
 
-  // xinwe.he.swe@gmail.com
-  // token: "traceroot-430248637e2043f7a75cde128877687e",
-  // test_v5@gmail.com
-  token: "traceroot-c406732a7aa34b638d98c24e29c7f382",
 
   // Whether to enable console export of spans and logs
   enable_span_console_export: false,
