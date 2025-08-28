@@ -30,6 +30,7 @@ import { AttachParams, Customer } from "autumn-js";
 import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
 import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
 import { Decimal } from "decimal.js";
+import { completeInvoiceCheckout } from "../stripeUtils/completeInvoiceCheckout.js";
 
 export const expectMultiAttachCorrect = async ({
   customerId,
@@ -38,6 +39,7 @@ export const expectMultiAttachCorrect = async ({
   results,
   rewards,
   expectedRewards,
+  attachParams,
   db,
   org,
   env,
@@ -52,6 +54,7 @@ export const expectMultiAttachCorrect = async ({
   }[];
   rewards?: string[];
   expectedRewards?: string[];
+  attachParams?: any;
   db: DrizzleCli;
   org: Organization;
   env: AppEnv;
@@ -63,6 +66,7 @@ export const expectMultiAttachCorrect = async ({
     entity_id: entityId,
     // @ts-ignore
     reward: rewards,
+    ...attachParams,
   });
 
   const attachRes = await autumn.attach({
@@ -71,9 +75,16 @@ export const expectMultiAttachCorrect = async ({
     entity_id: entityId,
     // @ts-ignore
     reward: rewards,
+    ...attachParams,
   });
 
   if (attachRes.checkout_url) {
+    if (attachParams?.invoice) {
+      await completeInvoiceCheckout({
+        url: attachRes.checkout_url,
+        isLocal: true,
+      });
+    }
     await completeCheckoutForm(attachRes.checkout_url);
     await timeout(5000);
   }

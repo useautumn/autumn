@@ -54,12 +54,13 @@ export const updateStripeSub2 = async ({
 
   let updatedSub = await stripeCli.subscriptions.update(curSub.id, {
     items: sanitizeSubItems(itemSet.subItems),
-    // proration_behavior:
-    //   proration == ProrationBehavior.None
-    //     ? "none"
-    //     : fromCreate
-    //       ? "always_invoice"
-    //       : "create_prorations",
+    proration_behavior:
+      proration == ProrationBehavior.None
+        ? "none"
+        : fromCreate
+          ? "always_invoice"
+          : "create_prorations",
+    // proration_behavior: "create_prorations",
     trial_end: trialEnd,
     // default_payment_method: paymentMethod?.id,
     add_invoice_items: itemSet.invoiceItems,

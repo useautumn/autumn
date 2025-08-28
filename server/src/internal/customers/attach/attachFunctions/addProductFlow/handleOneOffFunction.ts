@@ -42,7 +42,7 @@ export const handleOneOffFunction = async ({
     prices,
     entitlements,
     optionsList,
-    reward,
+    rewards,
   } = attachParams;
 
   const { invoiceOnly } = config;
@@ -112,13 +112,7 @@ export const handleOneOffFunction = async ({
     customer: customer.processor.id!,
     auto_advance: false,
     currency: org.default_currency!,
-    discounts: reward
-      ? [
-          {
-            coupon: reward.id,
-          },
-        ]
-      : undefined,
+    discounts: rewards ? rewards.map((r) => ({ coupon: r.id })) : undefined,
     collection_method: attachParams.invoiceOnly ? "send_invoice" : undefined,
     days_until_due: attachParams.invoiceOnly ? 30 : undefined,
   });

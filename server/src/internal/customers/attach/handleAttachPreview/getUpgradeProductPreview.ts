@@ -23,6 +23,7 @@ import {
   AttachConfig,
   UsagePriceConfig,
   OnDecrease,
+  OnIncrease,
 } from "@autumn/shared";
 import {
   addBillingIntervalUnix,
@@ -128,6 +129,18 @@ const filterNoProratePrepaidItems = ({
       );
       filteredItems = items.filter((item) => item.price_id !== curPrice?.id);
     }
+
+    const onIncrease = curPrice?.proration_config?.on_increase;
+    if (
+      onIncrease == OnIncrease.ProrateNextCycle &&
+      prevQuantity &&
+      quantity > prevQuantity
+    ) {
+      console.log(
+        `Quantity for ${feature_id} increased from ${prevQuantity} to ${quantity}, Removing price: ${curPrice?.id}`
+      );
+      filteredItems = items.filter((item) => item.price_id !== curPrice?.id);
+    }
   }
   return filteredItems;
 };
@@ -200,6 +213,8 @@ export const getUpgradeProductPreview = async ({
     freeTrial = curCusProduct.free_trial;
   }
 
+  // console.log("Disable tiral:", config?.disableTrial);
+  // console.log("Free trial:", freeTrial);
   const newPreviewItems = await getItemsForNewProduct({
     newProduct,
     attachParams,

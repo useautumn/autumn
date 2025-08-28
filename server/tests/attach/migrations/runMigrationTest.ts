@@ -14,6 +14,7 @@ import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduc
 import { expectTrialEndsAtCorrect } from "tests/utils/expectUtils/expectAttach/expectTrialEndsAt.js";
 import { timeout } from "@/utils/genUtils.js";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
 
 export const expectSubsSame = ({
   subsBefore,
@@ -110,6 +111,15 @@ export const runMigrationTest = async ({
     org,
     env,
   });
+
+  if (!isFreeProductV2({ product: toProduct })) {
+    await expectSubToBeCorrect({
+      db,
+      customerId,
+      org,
+      env,
+    });
+  }
 
   // if (!isFreeProductV2({ product: toProduct })) {
   //   expect(cusAfter.invoices.length).to.equal(numInvoices);

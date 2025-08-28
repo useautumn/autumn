@@ -197,10 +197,10 @@ const computeUpdatedScheduleItems = async ({
     removeCusProducts ||
     getCusProductsToRemove({ attachParams, includeScheduled: true });
 
-  console.log(
-    "REMOVING CUS PRODUCTS:",
-    cusProductsToRemove?.map((cp) => `${cp.product.id} (E: ${cp.entity_id})`)
-  );
+  // console.log(
+  //   "REMOVING CUS PRODUCTS:",
+  //   cusProductsToRemove?.map((cp) => `${cp.product.id} (E: ${cp.entity_id})`)
+  // );
 
   const allCusProducts = attachParams.customer.customer_products;
 
@@ -347,18 +347,6 @@ export const paramsToScheduleItems = async ({
 
     const mergedPhases = mergeAdjacentPhasesWithSameItems(newPhases as any);
 
-    // console.log(`Merged Phases:`);
-    // for (const phase of mergedPhases) {
-    //   console.log(
-    //     `Phase ${formatUnixToDateTime(Number(phase.start_date || 0) * 1000)}:`
-    //   );
-    //   await logPhaseItems({
-    //     db: req.db,
-    //     items: phase.items,
-    //   });
-    // }
-    // console.log("--------------------------------");
-
     return {
       phases: mergedPhases,
       invoiceItems: itemSet.invoiceItems,
@@ -366,29 +354,3 @@ export const paramsToScheduleItems = async ({
     };
   }
 };
-
-// let newScheduleItems: any[] = mergeNewScheduleItems({
-//   itemSet,
-//   curScheduleItems,
-// });
-
-// let cusProductsToRemove =
-//   removeCusProducts || getCusProductsToRemove({ attachParams });
-
-// const allCusProducts = attachParams.customer.customer_products;
-
-// for (const cusProduct of cusProductsToRemove) {
-//   newScheduleItems = removeCusProductFromScheduleItems({
-//     curScheduleItems,
-//     updateScheduleItems: newScheduleItems,
-//     allCusProducts,
-//     cusProduct,
-//     itemSet,
-//   });
-// }
-
-// return {
-//   items: newScheduleItems,
-//   invoiceItems: itemSet.invoiceItems,
-//   usageFeatures: itemSet.usageFeatures,
-// };

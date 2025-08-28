@@ -41,6 +41,16 @@ export const insertInvoiceFromAttach = async ({
     });
 
     if (invoice) {
+      // console.log("UPDATING INVOICE FROM ATTACH:");
+      // console.log(
+      //   "Product IDs:",
+      //   attachParams.products.map((p) => p.id)
+      // );
+      // console.log(
+      //   "Internal Product IDs:",
+      //   attachParams.products.map((p) => p.internal_id)
+      // );
+
       await InvoiceService.updateByStripeId({
         db,
         stripeId: stripeInvoice.id!,
@@ -50,6 +60,16 @@ export const insertInvoiceFromAttach = async ({
         },
       });
     } else {
+      // console.log("INSERTING INVOICE FROM ATTACH:");
+      // console.log(
+      //   "Product IDs:",
+      //   attachParams.products.map((p) => p.id)
+      // );
+      // console.log(
+      //   "Internal Product IDs:",
+      //   attachParams.products.map((p) => p.internal_id)
+      // );
+
       await InvoiceService.createInvoiceFromStripe({
         db,
         stripeInvoice,

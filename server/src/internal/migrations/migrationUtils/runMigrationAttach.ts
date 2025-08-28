@@ -1,7 +1,5 @@
 import { handleAddProduct } from "@/internal/customers/attach/attachFunctions/addProductFlow/handleAddProduct.js";
-import { handleUpgradeDiffInterval } from "@/internal/customers/attach/attachFunctions/upgradeDiffIntFlow/handleUpgradeDiffInt.js";
 import { handleUpgradeFlow } from "@/internal/customers/attach/attachFunctions/upgradeFlow/handleUpgradeFlow.js";
-import { handleUpgradeSameInterval } from "@/internal/customers/attach/attachFunctions/upgradeSameIntFlow/handleUpgradeSameInt.js";
 import { intervalsAreSame } from "@/internal/customers/attach/attachUtils/getAttachConfig.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
@@ -54,6 +52,7 @@ export const runMigrationAttach = async ({
     sameIntervals,
     carryTrial: true,
     invoiceCheckout: false,
+    finalizeInvoice: true,
   };
 
   let attachFunction = await getAttachFunction({ attachParams });

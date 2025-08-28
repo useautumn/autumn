@@ -36,6 +36,8 @@ import {
 } from "@/internal/customers/attach/mergeUtils/phaseUtils/phaseUtils.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { getExistingUsageFromCusProducts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
+import { subIsCanceled } from "@/external/stripe/stripeSubUtils.js";
+import { defaultApiVersion } from "tests/constants.js";
 
 const compareActualItems = async ({
   actualItems,
@@ -131,6 +133,7 @@ const compareActualItems = async ({
 export const expectSubToBeCorrect = async ({
   db,
   customerId,
+  entityId,
   org,
   env,
   shouldBeCanceled = false,
@@ -141,6 +144,7 @@ export const expectSubToBeCorrect = async ({
 }: {
   db: DrizzleCli;
   customerId: string;
+  entityId?: string;
   org: Organization;
   env: AppEnv;
   shouldBeCanceled?: boolean;
@@ -200,6 +204,7 @@ export const expectSubToBeCorrect = async ({
 
     // Add to schedules
     const scheduleIndexes: number[] = [];
+    const apiVersion = cusProduct.api_version || defaultApiVersion;
 
     if (isFreeProduct(product.prices)) {
       expect(cusProduct.subscription_ids, "free product should have no subs").to
@@ -292,9 +297,9 @@ export const expectSubToBeCorrect = async ({
         org,
         options,
         existingUsage,
-        withEntity: true,
+        withEntity: !!entityId,
         isCheckout: false,
-        apiVersion: APIVersion.v1_4,
+        apiVersion,
         productOptions: cusProduct.quantity
           ? {
               product_id: product.id,
@@ -303,6 +308,12 @@ export const expectSubToBeCorrect = async ({
           : undefined,
       });
 
+      if (res?.lineItem && nullish(res.lineItem.quantity)) {
+        res.lineItem.quantity = 0;
+      }
+
+      // console.log("API VERSION:", apiVersion);
+      // console.log("LINE ITEM:", res?.lineItem);
       if (options?.upcoming_quantity && res?.lineItem) {
         res.lineItem.quantity = options.upcoming_quantity;
       }
@@ -316,7 +327,7 @@ export const expectSubToBeCorrect = async ({
 
           if (existingIndex !== -1) {
             // @ts-ignore
-            supposedSubItems[existingIndex].quantity += lineItem.quantity!;
+            supposedSubItems[existingIndex].quantity += lineItem.quantity;
           } else {
             supposedSubItems.push({
               ...res.lineItem,
@@ -384,7 +395,8 @@ export const expectSubToBeCorrect = async ({
 
   if (shouldBeCanceled) {
     expect(sub.schedule, "sub should NOT have a schedule").to.be.null;
-    expect(sub.cancel_at, "sub should be canceled").to.exist;
+    // expect(sub.cancel_at, "sub should be canceled").to.exist;
+    expect(subIsCanceled({ sub }), "sub should be canceled").to.be.true;
     return;
   }
 
@@ -395,40 +407,24 @@ export const expectSubToBeCorrect = async ({
         })
       : null;
 
-  console.log("--------------------------------");
-  console.log("Supposed phases:");
-  await logPhases({
-    phases: supposedPhases,
-    db,
-  });
-  // for (const phase of supposedPhases) {
-  //   console.log(`Phase ${formatUnixToDateTime(phase.start_date)}:`);
-  //   await logPhaseItems({
-  //     db,
-  //     items: phase.items,
-  //   });
-  // }
-  console.log("--------------------------------");
-  console.log("Actual phases:");
+  // console.log("--------------------------------");
+  // console.log("Supposed phases:");
+  // await logPhases({
+  //   phases: supposedPhases,
+  //   db,
+  // });
 
-  await logPhases({
-    phases: (schedule?.phases as any) || [],
-    db,
-  });
-  // for (const phase of schedule?.phases || []) {
-  //   console.log(`Phase ${formatUnixToDateTime(phase.start_date * 1000)}:`);
-  //   await logPhaseItems({
-  //     db,
-  //     items: phase.items.map((item) => ({
-  //       price: (item.price as Stripe.Price).id,
-  //       quantity: item.quantity,
-  //     })),
-  //   });
-  // }
+  // console.log("--------------------------------");
+  // console.log("Actual phases:");
+
+  // await logPhases({
+  //   phases: (schedule?.phases as any) || [],
+  //   db,
+  // });
 
   for (let i = 0; i < supposedPhases.length; i++) {
     const supposedPhase = supposedPhases[i];
-    console.log("Supposed phase items:", supposedPhase.items);
+
     if (supposedPhase.items.length === 0) continue;
 
     const actualPhase = schedule?.phases?.[i + 1];

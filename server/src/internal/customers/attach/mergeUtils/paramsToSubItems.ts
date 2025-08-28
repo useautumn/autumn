@@ -124,11 +124,10 @@ export const paramsToSubItems = async ({
     curSubItems,
   });
 
-  console.log("New sub items:", newSubItems);
   const allCusProducts = attachParams.customer.customer_products;
 
   // 3. Remove items related to cus products to remove
-  const printRemoveLogs = true;
+  const printRemoveLogs = false;
   for (const cusProduct of cusProductsToRemove) {
     const prices = cusProductToPrices({ cusProduct });
 
@@ -141,7 +140,7 @@ export const paramsToSubItems = async ({
         price,
         stripeItems: curSubItems,
         stripeProdId: cusProduct.product.processor?.id,
-      });
+      }) as Stripe.SubscriptionItem | undefined;
 
       if (printRemoveLogs) {
         console.log("Price:", formatPrice({ price }));

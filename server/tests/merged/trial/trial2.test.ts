@@ -23,6 +23,8 @@ import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.j
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addDays } from "date-fns";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
+import { timeout } from "@/utils/genUtils.js";
+import { Decimal } from "decimal.js";
 
 // Pro Trial
 // Trial Finishes
@@ -101,7 +103,7 @@ describe(`${chalk.yellowBright("trial2: Testing main trial branch, upgrade from 
     testClockId = testClockId1!;
   });
 
-  it("should attach first trial, and advance clock past trial", async function () {
+  it("should attach first trial", async function () {
     for (const op of ops) {
       await attachAndExpectCorrect({
         autumn,
@@ -122,7 +124,7 @@ describe(`${chalk.yellowBright("trial2: Testing main trial branch, upgrade from 
     });
   });
 
-  it("should advance test clock to before trial ends and attach premium", async function () {
+  it("should advance test clock to past trial ends and attach premium", async function () {
     curUnix = await advanceTestClock({
       stripeCli,
       testClockId,
@@ -134,12 +136,19 @@ describe(`${chalk.yellowBright("trial2: Testing main trial branch, upgrade from 
       product_id: premium.id,
     });
 
+    const checkoutRes = await autumn.checkout({
+      customer_id: customerId,
+      product_id: premium.id,
+    });
+
     expect(attachPreview?.branch).to.equal(AttachBranch.Upgrade);
 
     await autumn.attach({
       customer_id: customerId,
       product_id: premium.id,
     });
+
+    await timeout(5000);
 
     const customer = await autumn.customers.get(customerId);
     expectProductAttached({
@@ -151,6 +160,10 @@ describe(`${chalk.yellowBright("trial2: Testing main trial branch, upgrade from 
     expect(product.current_period_end).to.be.approximately(
       addDays(curUnix, 7).getTime(),
       1000 * 60 * 30 // 30 minutes
+    );
+
+    expect(customer.invoices[0].total).to.equal(
+      new Decimal(checkoutRes.total).toDP(2).toNumber()
     );
 
     await expectSubToBeCorrect({

@@ -181,7 +181,7 @@ describe(`${chalk.yellowBright("mergedDowngrade4: Testing advance clock, schedul
         product: premiumAnnual,
         status: CusProductStatus.Active,
       },
-      { entityId: "2", product: premium, status: CusProductStatus.Active },
+      { entityId: "2", product: pro, status: CusProductStatus.Active },
     ];
 
     for (const result of results) {

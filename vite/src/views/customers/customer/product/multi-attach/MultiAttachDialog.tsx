@@ -4,20 +4,11 @@ import {
   CustomDialogFooter,
 } from "@/components/general/modal-components/DialogContentWrapper";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { MainDialogBodyWrapper } from "@/views/products/product/product-item/product-item-config/AdvancedConfigSidebar";
+import { Dialog, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InvoiceCustomerButton } from "../components/InvoiceCustomerButton";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { ArrowUpRightFromSquare, Loader2, Minus, Plus, X } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { ArrowUpRightFromSquare, Loader2, Plus, X } from "lucide-react";
+
 import { useCustomerContext } from "../../CustomerContext";
 import {
   Select,
@@ -58,6 +49,7 @@ export const MultiAttachDialog = ({
   const [checkoutResult, setCheckoutResult] = useState<CheckoutResult | null>(
     null
   );
+  const [attachLoading, setAttachLoading] = useState(false);
 
   const defaultCurrency = org?.default_currency || "usd";
 
@@ -97,7 +89,6 @@ export const MultiAttachDialog = ({
       }
     }
 
-    console.log("attachRewards", attachRewards);
     for (const reward of attachRewards) {
       if (!reward.reward_id) {
         return false;
@@ -333,20 +324,21 @@ export const MultiAttachDialog = ({
           <InvoiceCustomerButton
             handleAttachClicked={handleAttachClicked}
             disabled={checkoutLoading}
-            checkoutAllowed={!!checkoutResult?.url}
+            checkoutAllowed={!!checkoutResult?.url && checkoutResult.total > 0}
           />
 
           <Button
             variant="add"
+            isLoading={attachLoading}
             onClick={() => {
               handleAttachClicked({
                 useInvoice: false,
                 enableProductImmediately: false,
-                setLoading: setCheckoutLoading,
+                setLoading: setAttachLoading,
               });
             }}
             endIcon={<ArrowUpRightFromSquare size={12} />}
-            disabled={checkoutLoading}
+            disabled={checkoutLoading || attachLoading}
             disableStartIcon
           >
             {checkoutResult?.url ? "Checkout Page" : "Attach Products"}

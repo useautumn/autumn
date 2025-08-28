@@ -88,11 +88,11 @@ export const handleUpgradeFlow = async ({
   let canceled = false;
   // SCENARIO 1, NO SUB:
   if (!curSub) {
-    console.log("UPGRADE FLOW, NO SUB (FROM CANCEL MAYBE...?)");
+    logger.info("UPGRADE FLOW: no sub (from cancel maybe...?)");
     // Do something about current sub...
   } else if (shouldCancelSub({ sub: curSub!, newSubItems: subItems })) {
-    console.log(
-      `UPGRADE FLOW, CANCELLING SUB ${curSub!.id}, PRORATE: ${config.proration}`
+    logger.info(
+      `UPGRADE FLOW: canceling sub ${curSub!.id}, proration: ${config.proration}`
     );
     canceled = true;
     const { stripeCli } = attachParams;
@@ -104,7 +104,7 @@ export const handleUpgradeFlow = async ({
       },
     });
   } else if (subItems.length > 0) {
-    console.log(`UPGRADE FLOW, UPDATING SUB ${curSub!.id}`);
+    logger.info(`UPGRADE FLOW, updating sub ${curSub!.id}`);
     itemSet.subItems = subItems;
 
     const res = await updateStripeSub2({
@@ -116,11 +116,22 @@ export const handleUpgradeFlow = async ({
       fromCreate: attachParams.products.length === 0, // just for now, if no products, it comes from cancel product...
     });
 
+    if (res?.latestInvoice) {
+      logger.info(`UPGRADE FLOW: inserting invoice ${res.latestInvoice.id}`);
+      await insertInvoiceFromAttach({
+        db: req.db,
+        attachParams,
+        stripeInvoice: res.latestInvoice,
+        logger,
+      });
+    }
+
     const schedule = await paramsToCurSubSchedule({ attachParams });
 
     if (schedule) {
       await handleUpgradeFlowSchedule({
         req,
+        logger,
         attachParams,
         config,
         schedule,
@@ -133,7 +144,7 @@ export const handleUpgradeFlow = async ({
     latestInvoice = res.latestInvoice;
   }
 
-  logger.info(`2. Expiring previous cus product`);
+  logger.info(`UPGRADE FLOW: expiring previous cus product`);
   await CusProductService.update({
     db: req.db,
     cusProductId: curCusProduct!.id,
@@ -143,17 +154,8 @@ export const handleUpgradeFlow = async ({
     },
   });
 
-  if (latestInvoice) {
-    await insertInvoiceFromAttach({
-      db: req.db,
-      attachParams,
-      stripeInvoice: latestInvoice,
-      logger,
-    });
-  }
-
   if (attachParams.products.length > 0) {
-    logger.info(`3. Creating new cus product`);
+    logger.info(`UPGRADE FLOW: creating new cus product`);
     const anchorToUnix = sub ? getEarliestPeriodEnd({ sub }) * 1000 : undefined;
     await createFullCusProduct({
       db: req.db,

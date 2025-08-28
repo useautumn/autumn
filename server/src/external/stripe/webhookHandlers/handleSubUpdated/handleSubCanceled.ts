@@ -12,6 +12,8 @@ import {
   getLatestPeriodEnd,
   subToPeriodStartEnd,
 } from "../../stripeSubUtils/convertSubUtils.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const isSubCanceled = ({
   previousAttributes,
@@ -41,6 +43,33 @@ export const isSubCanceled = ({
     canceled: cancelAtPreviousEnd || cancelAt || canceledAt,
     canceledAt: sub.canceled_at ? sub.canceled_at * 1000 : Date.now(),
   };
+};
+
+const updateCusProductCanceled = async ({
+  db,
+  sub,
+  canceledAt,
+  logger,
+}: {
+  db: DrizzleCli;
+  sub: Stripe.Subscription;
+  canceledAt?: number | null;
+  logger: any;
+}) => {
+  // 1. Check if sub has schedule
+  if (sub.schedule) {
+    return;
+  }
+
+  logger.info(
+    `Updating cus products for sub ${sub.id} to canceled | canceled_at: ${canceledAt}`
+  );
+
+  await CusProductService.updateByStripeSubId({
+    db,
+    stripeSubId: sub.id,
+    updates: { canceled_at: canceledAt || Date.now(), canceled: true },
+  });
 };
 
 export const handleSubCanceled = async ({
@@ -73,6 +102,24 @@ export const handleSubCanceled = async ({
   if (!canceledFromPortal || updatedCusProducts.length == 0) {
     return;
   }
+
+  await updateCusProductCanceled({
+    db,
+    sub,
+    canceledAt,
+    logger,
+  });
+
+  // 2. Update canceled & canceled_at IF sub has no schedule...?
+
+  // await CusProductService.updateByStripeSubId({
+  //   db,
+  //   stripeSubId: sub.id,
+  //   updates: {
+  //     canceled_at: canceled ? canceledAt : null,
+  //     canceled: true,
+  //   },
+  // });
 
   let allDefaultProducts = await ProductService.listDefault({
     db,

@@ -98,6 +98,12 @@ export const setupMultiRewardBefore = async ({
   ]) {
     // let res = await autumn.products.get(product.id);
 
+    // if (res.code === "product_not_found") {
+    //   try {
+    //     await autumn.products.create(product);
+    //   } catch (error) {}
+    // }
+
     try {
       await autumn.products.delete(product.id);
     } catch (error) {
@@ -128,17 +134,26 @@ export const setupMultiRewardBefore = async ({
   ];
 
   for (const reward of [proReward, premiumReward]) {
+    let rewardRes = null;
+    // try {
+    //   rewardRes = await autumn.rewards.get(reward.id);
+    // } catch (error) {}
+
     try {
       await autumn.rewards.delete(reward.id);
     } catch (error) {}
-    try {
-      await autumn.rewards.create({
-        ...reward,
-        discount_config: {
-          ...reward.discount_config,
-          price_ids: reward.id == proReward.id ? proPriceIds : premiumPriceIds,
-        },
-      });
-    } catch (error) {}
+
+    if (!rewardRes) {
+      try {
+        await autumn.rewards.create({
+          ...reward,
+          discount_config: {
+            ...reward.discount_config,
+            price_ids:
+              reward.id == proReward.id ? proPriceIds : premiumPriceIds,
+          },
+        });
+      } catch (error) {}
+    }
   }
 };
