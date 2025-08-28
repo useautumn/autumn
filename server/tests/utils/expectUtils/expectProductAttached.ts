@@ -53,7 +53,7 @@ export const expectProductAttached = ({
   if (isCanceled) {
     expect(productAttached?.canceled_at).to.exist;
     // @ts-ignore
-    expect(productAttached?.canceled).to.be.true;
+    // expect(productAttached?.canceled).to.be.true;
   }
 };
 

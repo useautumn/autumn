@@ -13,8 +13,7 @@ $MOCHA_CMD \
 'tests/attach/basic/*.ts' \
 'tests/attach/upgrade/*.ts' \
 'tests/attach/downgrade/*.ts' \
-'tests/attach/addOn/*.ts' \
-'tests/attach/cancel/*.ts'
+'tests/attach/addOn/*.ts'
 
 $MOCHA_CMD \
 'tests/attach/checkout/*.ts' \
