@@ -102,13 +102,3 @@ export const handleAttach = async (req: any, res: any) =>
       return await tracedFunction();
     },
   });
-
-//   try {
-//     // Use traceFunction for proper span creation
-
-//   } catch (traceError) {
-//     console.warn('⚠️ traceFunction failed, falling back to regular function:', traceError);
-//     return makeTracedCodeRequest(query);
-//   }
-// }
-// return makeTracedCodeRequest(query);

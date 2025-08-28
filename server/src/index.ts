@@ -25,7 +25,6 @@ import { toNodeHandler } from "better-auth/node";
 import { auth } from "./utils/auth.js";
 import { checkEnvVars } from "./utils/initUtils.js";
 import { ClickHouseManager } from "./external/clickhouse/ClickHouseManager.js";
-// import { initializeTraceroot } from "./external/traceroot/tracerootUtils.js";
 import * as traceroot from "traceroot-sdk-ts";
 import { createLogger, logger } from "./external/logtail/logtailUtils.js";
 
@@ -127,8 +126,11 @@ const init = async () => {
       },
     });
 
-    // req.traceroot = tracerootLogger;
-
+    const tracerootLogtail = tracerootLogger.child({
+      context: {
+        req: reqContext,
+      },
+    });
     req.logger = req.logtail;
 
     const endSpan = () => {

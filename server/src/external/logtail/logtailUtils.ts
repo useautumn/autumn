@@ -120,9 +120,10 @@ export const createLogger = () => {
         }
 
         const childPinoLogger = basePinoLogger.child(context);
+        const childTracerootLogger = tracerootLogger ? tracerootLogger.child(context) : null;
         return createLoggerStructure({
           basePinoLogger: childPinoLogger,
-          tracerootLogger,
+          tracerootLogger: childTracerootLogger,
         });
       },
     };
