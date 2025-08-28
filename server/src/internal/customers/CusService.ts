@@ -19,6 +19,7 @@ import { getFullCusQuery } from "./getFullCusQuery.js";
 import { trace } from "@opentelemetry/api";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
 import { RELEVANT_STATUSES } from "./cusProducts/CusProductService.js";
+import * as traceroot from "traceroot-sdk-ts";
 
 const tracer = trace.getTracer("express");
 
@@ -117,22 +118,26 @@ export class CusService {
     orgId: string;
     env: AppEnv;
   }) {
-    const customer = await db.query.customers.findFirst({
-      where: and(
-        or(
-          eq(customers.id, idOrInternalId),
-          eq(customers.internal_id, idOrInternalId)
+    const tracedFunction = traceroot.traceFunction(async () => {
+      const customer = await db.query.customers.findFirst({
+        where: and(
+          or(
+            eq(customers.id, idOrInternalId),
+            eq(customers.internal_id, idOrInternalId)
+          ),
+          eq(customers.org_id, orgId),
+          eq(customers.env, env)
         ),
-        eq(customers.org_id, orgId),
-        eq(customers.env, env)
-      ),
-    });
+      });
 
-    if (!customer) {
-      return null;
-    }
+      if (!customer) {
+        return null;
+      }
 
-    return customer as Customer;
+      return customer as Customer;
+    }, { spanName: 'CusService.get' });
+    
+    return await tracedFunction();
   }
 
   static async getByEmail({
@@ -146,15 +151,19 @@ export class CusService {
     orgId: string;
     env: AppEnv;
   }) {
-    const customer = await db.query.customers.findMany({
-      where: and(
-        eq(customers.email, email),
-        eq(customers.org_id, orgId),
-        eq(customers.env, env)
-      ),
-    });
+    const tracedFunction = traceroot.traceFunction(async () => {
+      const customer = await db.query.customers.findMany({
+        where: and(
+          eq(customers.email, email),
+          eq(customers.org_id, orgId),
+          eq(customers.env, env)
+        ),
+      });
 
-    return customer as Customer[];
+      return customer as Customer[];
+    }, { spanName: 'CusService.getByEmail' });
+    
+    return await tracedFunction();
   }
 
   static async getByInternalId({

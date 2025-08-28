@@ -25,7 +25,6 @@ import { toNodeHandler } from "better-auth/node";
 import { auth } from "./utils/auth.js";
 import { checkEnvVars } from "./utils/initUtils.js";
 import { ClickHouseManager } from "./external/clickhouse/ClickHouseManager.js";
-import { initializeTraceroot } from "./external/traceroot/tracerootUtils.js";
 import * as traceroot from "traceroot-sdk-ts";
 import { createLogger, logger } from "./external/logtail/logtailUtils.js";
 
@@ -76,8 +75,6 @@ const init = async () => {
 
   app.all("/api/auth/*", toNodeHandler(auth));
 
-  await initializeTraceroot();
-
   const tracerootLogger = traceroot.get_logger();
   tracerootLogger.info("Testing traceroot from index.ts!!!");
 
@@ -127,8 +124,6 @@ const init = async () => {
         req: reqContext,
       },
     });
-
-    // req.traceroot = tracerootLogger;
 
     req.logger = req.logtail;
 
@@ -182,15 +177,7 @@ const init = async () => {
 };
 
 if (process.env.NODE_ENV === "development") {
-  init().then(async () => {
-    // console.log("Server initialized");
-    // await traceroot.forceFlush();
-
-    await traceroot.forceFlushTracer();
-    await traceroot.shutdownTracing();
-    await traceroot.forceFlushLogger();
-    await traceroot.shutdownLogger();
-  });
+  init();
   registerShutdownHandlers();
 } else {
   let numCPUs = os.cpus().length;
@@ -224,11 +211,17 @@ function registerShutdownHandlers() {
 async function gracefulShutdown() {
   console.log("Shutting down worker, closing DB connections...");
   try {
+    await traceroot.forceFlushTracer();
+    await traceroot.shutdownTracing();
+    await traceroot.forceFlushLogger();
+    await traceroot.shutdownLogger();
+    console.log("TraceRoot flush completed.");
+    
     await client.end();
     console.log("DB connection closed. Exiting process.");
     process.exit(0);
   } catch (err) {
-    console.error("Error closing DB connection:", err);
+    console.error("Error during graceful shutdown:", err);
     process.exit(1);
   }
 }

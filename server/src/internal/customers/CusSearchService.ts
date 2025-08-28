@@ -1,6 +1,7 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
 import { AppEnv, customers, CusProductStatus } from "@autumn/shared";
+import * as traceroot from "traceroot-sdk-ts";
 
 import {
   and,
@@ -78,6 +79,7 @@ export class CusSearchService {
     } | null;
     pageNumber: number;
   }) {
+    const tracedFunction = traceroot.traceFunction(async () => {
     // If we have a lastItem with only internal_id, fetch the full customer data for cursor pagination
     let resolvedLastItem = lastItem;
     if (lastItem && lastItem.internal_id && !lastItem.created_at) {
@@ -362,6 +364,9 @@ export class CusSearchService {
     const totalCount = totalCountResult[0]?.totalCount || 0;
 
     return { data: processedData, count: totalCount };
+    }, { spanName: 'CusSearchService.searchByProduct' });
+    
+    return await tracedFunction();
   }
 
   static async searchByNone({
@@ -387,6 +392,7 @@ export class CusSearchService {
     } | null;
     pageNumber: number;
   }) {
+    const tracedFunction = traceroot.traceFunction(async () => {
     const noneFilter = notExists(
       db
         .select()
@@ -464,6 +470,9 @@ export class CusSearchService {
     ]);
 
     return { data: results, count: totalCountResult[0]?.count || 0 };
+    }, { spanName: 'CusSearchService.searchByNone' });
+    
+    return await tracedFunction();
   }
 
   static async search({
@@ -489,6 +498,7 @@ export class CusSearchService {
     pageSize?: number;
     pageNumber: number;
   }) {
+    const tracedFunction = traceroot.traceFunction(async () => {
     // If we have a lastItem with only internal_id, fetch the full customer data for cursor pagination
     let resolvedLastItem = lastItem;
     if (lastItem && lastItem.internal_id && !lastItem.created_at) {
@@ -661,5 +671,8 @@ export class CusSearchService {
     const finalResults = Array.from(customerMap.values());
 
     return { data: finalResults, count: totalCount };
+    }, { spanName: 'CusSearchService.search' });
+    
+    return await tracedFunction();
   }
 }

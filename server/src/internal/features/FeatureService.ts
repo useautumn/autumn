@@ -4,6 +4,7 @@ import { ErrCode } from "@/errors/errCodes.js";
 import { clearOrgCache } from "../orgs/orgUtils/clearOrgCache.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { and, eq } from "drizzle-orm";
+import * as traceroot from "traceroot-sdk-ts";
 
 export class FeatureService {
   static async list({
@@ -17,18 +18,22 @@ export class FeatureService {
     env: AppEnv;
     showOnlyArchived?: boolean;
   }) {
-    const features = await db.query.features.findMany({
-      where: (features, { eq, and }) =>
-        and(
-          eq(features.org_id, orgId),
-          eq(features.env, env),
-          eq(features.archived, showOnlyArchived)
-        ),
+    const tracedFunction = traceroot.traceFunction(async () => {
+      const features = await db.query.features.findMany({
+        where: (features, { eq, and }) =>
+          and(
+            eq(features.org_id, orgId),
+            eq(features.env, env),
+            eq(features.archived, showOnlyArchived)
+          ),
 
-      orderBy: (features, { desc }) => [desc(features.internal_id)],
-    });
+        orderBy: (features, { desc }) => [desc(features.internal_id)],
+      });
 
-    return features as Feature[]; // TODO: DRIZZLE TYPE REFACTOR
+      return features as Feature[]; // TODO: DRIZZLE TYPE REFACTOR
+    }, { spanName: 'FeatureService.list' });
+    
+    return await tracedFunction();
   }
 
   static async getFromReq(req: any) {

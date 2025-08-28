@@ -12,7 +12,6 @@ import { runAttachFunction } from "./attachUtils/getAttachFunction.js";
 
 import { tracerootInitialized } from "@/external/traceroot/tracerootUtils.js";
 import * as traceroot from "traceroot-sdk-ts";
-// import { get_logger } from "traceroot-sdk-ts";
 const runAttachWithTraceroot = async ({
   function: functionToTrace,
   spanName,
@@ -40,8 +39,9 @@ export const handleAttach = async (req: any, res: any) =>
       const { logger } = req;
       await handleAttachRaceCondition({ req, res });
 
-      await runAttachWithTraceroot({
-        function: async () => {
+      const tracedFunction = traceroot.traceFunction(async () => {
+        await runAttachWithTraceroot({
+          function: async () => {
           const attachBody = AttachBodySchema.parse(req.body);
 
           const { attachParams, customPrices, customEnts } =
@@ -50,7 +50,6 @@ export const handleAttach = async (req: any, res: any) =>
               attachBody,
             });
 
-          logger.info("Testing traceroot");
           // Handle existing product
           const branch = await getAttachBranch({
             req,
@@ -96,15 +95,8 @@ export const handleAttach = async (req: any, res: any) =>
         },
         spanName: "handleAttach",
       });
+      }, { spanName: 'handleAttach.main' });
+      
+      return await tracedFunction();
     },
   });
-
-//   try {
-//     // Use traceFunction for proper span creation
-
-//   } catch (traceError) {
-//     console.warn('⚠️ traceFunction failed, falling back to regular function:', traceError);
-//     return makeTracedCodeRequest(query);
-//   }
-// }
-// return makeTracedCodeRequest(query);

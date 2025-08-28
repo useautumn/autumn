@@ -7,6 +7,7 @@ import { ExtendedResponse } from "@/utils/models/Request.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 
 import { attachParamsToPreview } from "./attachParamsToPreview.js";
+import * as traceroot from "traceroot-sdk-ts";
 
 export const handleAttachPreview = (req: any, res: any) =>
   routeHandler({
@@ -14,24 +15,28 @@ export const handleAttachPreview = (req: any, res: any) =>
     res,
     action: "attach-preview",
     handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
-      const { logtail: logger } = req;
-      const attachBody = AttachBodySchema.parse(req.body);
+      const tracedFunction = traceroot.traceFunction(async () => {
+        const { logtail: logger } = req;
+        const attachBody = AttachBodySchema.parse(req.body);
 
-      // console.log("attachBody", attachBody);
-      const { attachParams } = await getAttachParams({
-        req,
-        attachBody,
-      });
+        // console.log("attachBody", attachBody);
+        const { attachParams } = await getAttachParams({
+          req,
+          attachBody,
+        });
 
-      const attachPreview = await attachParamsToPreview({
-        req,
-        attachParams,
-        attachBody,
-        logger,
-      });
+        const attachPreview = await attachParamsToPreview({
+          req,
+          attachParams,
+          attachBody,
+          logger,
+        });
 
-      res.status(200).json(attachPreview);
+        res.status(200).json(attachPreview);
 
-      return;
+        return;
+      }, { spanName: 'handleAttachPreview' });
+      
+      return await tracedFunction();
     },
   });

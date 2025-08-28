@@ -32,6 +32,7 @@ import { ExtendedRequest } from "@/utils/models/Request.js";
 import { detectBaseVariant } from "../productUtils/detectProductVariant.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
+import * as traceroot from "traceroot-sdk-ts";
 
 const validateCreateProduct = async ({ req }: { req: ExtendedRequest }) => {
   let { free_trial, items } = req.body;
@@ -101,79 +102,83 @@ export const handleCreateProduct = async (req: Request, res: any) =>
     res,
     action: "POST /products",
     handler: async (req, res) => {
-      let { items } = req.body;
-      let { logtail: logger, org, features, env, db } = req;
+      const tracedFunction = traceroot.traceFunction(async () => {
+        let { items } = req.body;
+        let { logtail: logger, org, features, env, db } = req;
 
-      let { freeTrial, productData } = await validateCreateProduct({
-        req,
-      });
-
-      let newProduct = constructProduct({
-        productData,
-        orgId: org.id,
-        env,
-      });
-
-      let product = await ProductService.insert({ db, product: newProduct });
-
-      let prices: Price[] = [];
-      let entitlements: Entitlement[] = [];
-      if (notNullish(items)) {
-        const res = await handleNewProductItems({
-          db,
-          product,
-          features,
-          curPrices: [],
-          curEnts: [],
-          newItems: items,
-          logger,
-          isCustom: false,
-          newVersion: false,
+        let { freeTrial, productData } = await validateCreateProduct({
+          req,
         });
-        prices = res.prices;
-        entitlements = res.entitlements;
-      }
 
-      await initProductInStripe({
-        db,
-        product: {
-          ...product,
-          prices,
-          entitlements,
-        } as FullProduct,
-        org,
-        env,
-        logger,
-      });
-
-      if (notNullish(freeTrial)) {
-        await handleNewFreeTrial({
-          db,
-          newFreeTrial: freeTrial,
-          curFreeTrial: null,
-          internalProductId: product.internal_id,
-          isCustom: false,
+        let newProduct = constructProduct({
+          productData,
+          orgId: org.id,
+          env,
         });
-      }
 
-      await addTaskToQueue({
-        jobName: JobName.DetectBaseVariant,
-        payload: {
-          curProduct: {
+        let product = await ProductService.insert({ db, product: newProduct });
+
+        let prices: Price[] = [];
+        let entitlements: Entitlement[] = [];
+        if (notNullish(items)) {
+          const res = await handleNewProductItems({
+            db,
+            product,
+            features,
+            curPrices: [],
+            curEnts: [],
+            newItems: items,
+            logger,
+            isCustom: false,
+            newVersion: false,
+          });
+          prices = res.prices;
+          entitlements = res.entitlements;
+        }
+
+        await initProductInStripe({
+          db,
+          product: {
             ...product,
             prices,
-            entitlements: [],
-          },
-        },
-      });
+            entitlements,
+          } as FullProduct,
+          org,
+          env,
+          logger,
+        });
 
-      res.status(200).json(
-        ProductResponseSchema.parse({
-          ...product,
-          autumn_id: product.internal_id,
-          items: items || [],
-          free_trial: freeTrial,
-        })
-      );
+        if (notNullish(freeTrial)) {
+          await handleNewFreeTrial({
+            db,
+            newFreeTrial: freeTrial,
+            curFreeTrial: null,
+            internalProductId: product.internal_id,
+            isCustom: false,
+          });
+        }
+
+        await addTaskToQueue({
+          jobName: JobName.DetectBaseVariant,
+          payload: {
+            curProduct: {
+              ...product,
+              prices,
+              entitlements: [],
+            },
+          },
+        });
+
+        res.status(200).json(
+          ProductResponseSchema.parse({
+            ...product,
+            autumn_id: product.internal_id,
+            items: items || [],
+            free_trial: freeTrial,
+          })
+        );
+      }, { spanName: 'handleCreateProduct' });
+      
+      return await tracedFunction();
     },
   });
