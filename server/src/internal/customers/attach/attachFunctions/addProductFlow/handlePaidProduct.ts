@@ -53,11 +53,10 @@ export const handlePaidProduct = async ({
     org,
     customer,
     products,
-    freeTrial,
+
     invoiceOnly,
-    cusProducts,
+
     stripeCli,
-    reward,
   } = attachParams;
 
   if (config.disableTrial) {

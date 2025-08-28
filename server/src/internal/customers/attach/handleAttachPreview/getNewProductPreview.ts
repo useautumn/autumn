@@ -48,9 +48,6 @@ const getNextCycleItems = async ({
   config: AttachConfig;
   trialEnds?: number | null;
 }) => {
-  // 1. If one off, return null
-  if (branch == AttachBranch.OneOff) return null;
-
   // 2. If free trial
   let nextCycleAt = undefined;
   if (attachParams.freeTrial) {
@@ -63,7 +60,7 @@ const getNextCycleItems = async ({
           now: attachParams.now,
         })! * 1000;
     }
-  } else if (anchorToUnix) {
+  } else if (branch != AttachBranch.OneOff && anchorToUnix) {
     // Yearly one
     const largestInterval = getLargestInterval({ prices: newProduct.prices });
     if (largestInterval) {
@@ -249,6 +246,7 @@ export const getNewProductPreview = async ({
     features: attachParams.features,
     anchorToUnix,
     now: attachParams.now || Date.now(),
+    freeTrial: attachParams.freeTrial,
   });
 
   const dueTodayAmt = items.reduce((acc, item) => {

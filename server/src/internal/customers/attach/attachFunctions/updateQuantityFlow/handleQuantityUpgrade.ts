@@ -73,7 +73,7 @@ export const handleQuantityUpgrade = async ({
     .mul((cusPrice.price.config as UsagePriceConfig).billing_units || 1)
     .toNumber();
 
-  if (prorate) {
+  if (prorate && stripeSub?.status !== "trialing") {
     const { start, end } = subToPeriodStartEnd({ sub: stripeSub });
 
     const amount = priceToInvoiceAmount({

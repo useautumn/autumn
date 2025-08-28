@@ -23,7 +23,7 @@ export const DueNextCycle = () => {
 
   const branch = attachState.preview?.branch;
 
-  if (!preview.due_next_cycle) return null;
+  if (!preview.due_next_cycle || !preview.due_next_cycle.due_at) return null;
 
   if (
     !preview.due_next_cycle.line_items?.length &&
@@ -52,7 +52,7 @@ export const DueNextCycle = () => {
         <>
           {preview.options
             .filter((option: any) => {
-              // console.log("Option:", option);
+              console.log("Option:", option);
               if (!option.interval) return false;
               return true;
             })
