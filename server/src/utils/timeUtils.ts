@@ -3,6 +3,7 @@ import { Duration, EntInterval } from "@autumn/shared";
 import { Entitlement } from "@autumn/shared";
 import { add } from "date-fns";
 import { UTCDate } from "@date-fns/utc";
+import { formatUnixToDate } from "./genUtils.js";
 
 // 1. Get next entitlement reset
 export const getNextEntitlementReset = (
@@ -49,8 +50,9 @@ export const getNextResetAt = ({
     const nextReset = getNextEntitlementReset(
       curReset,
       interval,
-      intervalCount
+      intervalCount || 1
     );
+
     if (nextReset.getTime() > Date.now()) {
       return nextReset.getTime();
     }

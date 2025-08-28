@@ -28,6 +28,7 @@ import { RolloverService } from "../internal/customers/cusProducts/cusEnts/cusRo
 import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 import { CusPriceService } from "@/internal/customers/cusProducts/cusPrices/CusPriceService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { Decimal } from "decimal.js";
 
 const checkSubAnchor = async ({
   db,
@@ -112,7 +113,9 @@ const handleShortDurationCusEnt = async ({
     adjustment: 0,
     ...getResetBalancesUpdate({
       cusEnt,
-      allowance: ent.allowance || 0,
+      allowance: new Decimal(ent.allowance || 0)
+        .mul(cusEnt.customer_product.quantity)
+        .toNumber(),
     }),
   };
   let newCusEnt = resetCusEnt;
@@ -144,14 +147,6 @@ const handleShortDurationCusEnt = async ({
     org: org,
     env: cusEnt.customer.env,
   });
-  // if (cacheEnabledOrgs.some((org) => org.id === cusEnt.customer.org_id)) {
-  //   await deleteCusCache({
-  //     db,
-  //     customerId: cusEnt.customer.id!,
-  //     org: cacheEnabledOrgs.find((org) => org.id === cusEnt.customer.org_id)!,
-  //     env: cusEnt.customer.env,
-  //   });
-  // }
 
   return newCusEnt;
 };
@@ -169,6 +164,7 @@ export const resetCustomerEntitlement = async ({
 }) => {
   try {
     let ent = cusEnt.entitlement as FullEntitlement;
+
     if (
       ent.allowance_type == AllowanceType.Fixed &&
       shortDurations.includes(ent.interval as EntInterval)
@@ -242,6 +238,7 @@ export const resetCustomerEntitlement = async ({
       entitlement: cusEnt.entitlement,
       options: entOptions,
       relatedPrice: undefined,
+      productQuantity: cusEnt.customer_product.quantity,
     });
 
     // 1. Check if should reset

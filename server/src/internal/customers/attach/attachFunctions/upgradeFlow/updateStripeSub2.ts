@@ -15,6 +15,8 @@ import { ItemSet } from "@/utils/models/ItemSet.js";
 import { sanitizeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
+import { nullish } from "@/utils/genUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
 
 export const updateStripeSub2 = async ({
   req,
@@ -35,6 +37,13 @@ export const updateStripeSub2 = async ({
 
   const { stripeCli, customer, org, paymentMethod } = attachParams;
   const { invoiceOnly, proration } = config;
+
+  if (!invoiceOnly && !attachParams.fromCancel && nullish(paymentMethod)) {
+    throw new RecaseError({
+      message: "Payment method is required",
+      code: "payment_method_required",
+    });
+  }
 
   if (curSub.billing_mode.type !== "flexible") {
     curSub = await stripeCli.subscriptions.migrate(curSub.id, {

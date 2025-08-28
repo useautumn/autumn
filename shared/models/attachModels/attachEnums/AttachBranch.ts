@@ -22,4 +22,7 @@ export enum AttachBranch {
   MainIsFree = "main_is_free",
   Upgrade = "upgrade",
   Downgrade = "downgrade",
+
+  // Branch
+  Cancel = "cancel",
 }

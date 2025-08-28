@@ -89,6 +89,10 @@ export const willMergeSub = async ({
   const cusProducts = attachParams.customer.customer_products;
   const curCusProduct = attachParamsToCurCusProduct({ attachParams });
 
+  if (branch == AttachBranch.MultiAttachUpdate) {
+    return true;
+  }
+
   // Case where upgrading to free trial...
   if (
     subId &&

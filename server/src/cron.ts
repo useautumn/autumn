@@ -46,6 +46,7 @@ export const cronTask = async () => {
       }
 
       let results = await Promise.all(batchResets);
+
       let toUpsert = results.filter(notNullish);
       await CusEntService.upsert({
         db,
