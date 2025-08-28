@@ -17,6 +17,15 @@ import { useNavigate } from "react-router";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { toast } from "sonner";
 import { useEnv } from "@/utils/envUtils";
+import { z } from "zod";
+
+const createCustomerSchema = z.object({
+  name: z.string().optional(),
+  id: z.string(),
+  email: z.string().email({ message: "You must specify a valid email address for the customer" }),
+  fingerprint: z.string().optional(),
+});
+
 function CreateCustomer() {
   const env = useEnv();
   const navigate = useNavigate();
@@ -32,6 +41,19 @@ function CreateCustomer() {
 
   const handleCreate = async () => {
     setIsLoading(true);
+    const validatedFields = createCustomerSchema.safeParse(fields);
+    if (!validatedFields.success) {
+      let errors = validatedFields.error.formErrors.fieldErrors;
+      let errorMessage = "";
+      for (const error of Object.values(errors)) {
+        errorMessage += error.join("\n") + "\n";
+      }
+
+      console.log(errors);
+      toast.error(errorMessage ?? "");
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const { data } = await CusService.createCustomer(axiosInstance, {
@@ -79,6 +101,7 @@ function CreateCustomer() {
             <FieldLabel>Name</FieldLabel>
             <Input
               value={fields.name}
+              placeholder="optional"
               onChange={(e) => setFields({ ...fields, name: e.target.value })}
             />
           </div>
@@ -94,7 +117,7 @@ function CreateCustomer() {
           <FieldLabel>Email</FieldLabel>
           <Input
             value={fields.email}
-            placeholder="optional"
+            type="email"
             onChange={(e) => setFields({ ...fields, email: e.target.value })}
           />
         </div>
