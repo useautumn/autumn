@@ -12,7 +12,6 @@ import { runAttachFunction } from "./attachUtils/getAttachFunction.js";
 
 import { tracerootInitialized } from "@/external/traceroot/tracerootUtils.js";
 import * as traceroot from "traceroot-sdk-ts";
-// import { get_logger } from "traceroot-sdk-ts";
 const runAttachWithTraceroot = async ({
   function: functionToTrace,
   spanName,
@@ -51,7 +50,6 @@ export const handleAttach = async (req: any, res: any) =>
               attachBody,
             });
 
-          logger.info("Testing traceroot");
           // Handle existing product
           const branch = await getAttachBranch({
             req,

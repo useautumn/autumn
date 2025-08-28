@@ -32,7 +32,6 @@ const tracer = trace.getTracer("express");
 
 checkEnvVars();
 
-// const init = traceroot.traceFunction(async () => {
 const init = async () => {
   const app = express();
 
@@ -126,11 +125,6 @@ const init = async () => {
       },
     });
 
-    const tracerootLogtail = tracerootLogger.child({
-      context: {
-        req: reqContext,
-      },
-    });
     req.logger = req.logtail;
 
     const endSpan = () => {
@@ -218,10 +212,10 @@ function registerShutdownHandlers() {
 async function gracefulShutdown() {
   console.log("Shutting down worker, closing DB connections...");
   try {
-    // Flush TraceRoot traces and logs before shutdown
-    console.log("Flushing TraceRoot traces and logs...");
     await traceroot.forceFlushTracer();
+    await traceroot.shutdownTracing();
     await traceroot.forceFlushLogger();
+    await traceroot.shutdownLogger();
     console.log("TraceRoot flush completed.");
     
     await client.end();

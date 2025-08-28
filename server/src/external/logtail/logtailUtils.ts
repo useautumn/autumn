@@ -132,23 +132,8 @@ export const createLogger = () => {
   // Create the root logger using the helper function
   return createLoggerStructure({
     basePinoLogger: pinoLogger,
-    tracerootLogger,
+    tracerootLogger: tracerootLogger,
   });
 };
-
-// export const createLogtailAll = () => {
-//   if (
-//     !process.env.LOGTAIL_ALL_SOURCE_TOKEN ||
-//     !process.env.LOGTAIL_ALL_INGESTING_HOST
-//   ) {
-//     return null;
-//   }
-
-//   const logtail = new Logtail(process.env.LOGTAIL_ALL_SOURCE_TOKEN!, {
-//     endpoint: process.env.LOGTAIL_ALL_INGESTING_HOST!,
-//   });
-
-//   return logtail;
-// };
 
 export const logger = createLogger();
