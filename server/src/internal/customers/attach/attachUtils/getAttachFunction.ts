@@ -269,12 +269,3 @@ export const runAttachFunction = async ({
     });
   }
 };
-
-// // 1. Cancel future schedule before creating a new one...
-// await deleteCurrentScheduledProduct({
-//   req,
-//   org,
-//   attachParams,
-//   attachFunc: attachFunction,
-//   logger,
-// });

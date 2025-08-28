@@ -20,7 +20,7 @@ export const CreateFreeTrialSchema = z.object({
     .transform((val) => Number(val)),
   unique_fingerprint: z.boolean().default(false),
   duration: z.nativeEnum(FreeTrialDuration).default(FreeTrialDuration.Day),
-  card_required: z.boolean(),
+  card_required: z.boolean().default(true),
 });
 
 export const FreeTrialResponseSchema = z.object({

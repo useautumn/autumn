@@ -6,7 +6,7 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { APIVersion, AppEnv, entities, Organization } from "@autumn/shared";
+import { APIVersion, AppEnv, Organization } from "@autumn/shared";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import {

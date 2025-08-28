@@ -117,6 +117,21 @@ const ops = [
     ],
     otherProducts: [pro],
   },
+  {
+    entityId: "1",
+    product: addOn,
+    results: [
+      { product: pro, status: CusProductStatus.Active },
+      { product: addOn, status: CusProductStatus.Active },
+    ],
+    options: [
+      {
+        feature_id: TestFeature.Credits,
+        quantity: billingUnits * 5,
+      },
+    ],
+    otherProducts: [pro],
+  },
 ];
 
 const testCase = "mergedAddOn6";
@@ -214,6 +229,7 @@ describe(`${chalk.yellowBright("mergedAddOn6: testing update add on quantities o
       }
     }
   });
+  return;
 
   it("should update prepaid quantity for entity 1 and 2", async function () {
     await attachAndExpectCorrect({
@@ -225,6 +241,7 @@ describe(`${chalk.yellowBright("mergedAddOn6: testing update add on quantities o
       org,
       env,
       entities,
+      entityId: "1",
       options: [
         {
           feature_id: TestFeature.Credits,

@@ -1,7 +1,6 @@
 import { AttachFunction, Organization } from "@autumn/shared";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { CusProductService } from "../../cusProducts/CusProductService.js";
-import { cancelFutureProductSchedule } from "../../change-product/scheduleUtils.js";
 import { attachParamToCusProducts } from "./convertAttachParams.js";
 import { cancelScheduledProduct } from "../../cancel/cancelScheduledProduct.js";
 

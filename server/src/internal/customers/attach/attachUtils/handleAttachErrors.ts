@@ -221,6 +221,7 @@ export const handleAttachErrors = async ({
     await handleMultiAttachErrors({
       attachParams,
       attachBody,
+      branch,
     });
     return;
   }

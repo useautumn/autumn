@@ -78,7 +78,7 @@ export const handleRenewProduct = async ({
 
   if (!otherCanceled) {
     if (schedule) {
-      console.log("RELEASING SCHEDULE:", schedule.id);
+      logger.info(`RENEW FLOW: releasing schedule ${schedule.id}`);
       await stripeCli.subscriptionSchedules.release(schedule.id);
 
       await CusProductService.updateByStripeScheduledId({
@@ -108,8 +108,9 @@ export const handleRenewProduct = async ({
 
     // Case 1: Add current cus product back to schedule and remove scheduled product from schedule
     if (schedule) {
-      console.log("ADDING CUR CUS PRODUCT BACK TO SCHEDULE");
-
+      logger.info(
+        `RENEW FLOW: adding cur cus product back to schedule ${schedule.id}`
+      );
       const newItems = await paramsToScheduleItems({
         req,
         attachParams,
@@ -138,7 +139,9 @@ export const handleRenewProduct = async ({
           },
         });
       } else {
-        console.log("NO NEW SCHEDULE ITEMS, RELEASING SCHEDULE");
+        logger.info(
+          `RENEW FLOW: no new schedule items, releasing schedule ${schedule.id}`
+        );
         await stripeCli.subscriptionSchedules.release(schedule.id);
 
         await CusProductService.updateByStripeScheduledId({
@@ -161,7 +164,7 @@ export const handleRenewProduct = async ({
     // Case 2: Create new schedule for current cus product
     // Example scenario: Premium 1, Premium 2, Free 1, Free 2, Premium 1
     else {
-      console.log("CREATING NEW SCHEDULE");
+      logger.info(`RENEW FLOW: creating new schedule`);
       const curSub = await cusProductToSub({
         cusProduct: curCusProduct!,
         stripeCli,
