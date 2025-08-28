@@ -10,6 +10,7 @@ import { getAlignedIntervalUnix } from "@/internal/products/prices/billingInterv
 import {
   getLatestPeriodStart,
   getEarliestPeriodEnd,
+  subToPeriodStartEnd,
 } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { sanitizeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
@@ -44,11 +45,15 @@ export const createStripeSub2 = async ({
   earliestInterval?: IntervalConfig | null;
 }) => {
   const { customer, invoiceOnly, freeTrial, org, now, rewards } = attachParams;
+  const isDefaultTrial = freeTrial && !freeTrial.card_required;
+
+  let shouldErrorIfNoPm = !invoiceOnly;
+  if (isDefaultTrial) shouldErrorIfNoPm = false;
 
   let paymentMethod = await getCusPaymentMethod({
     stripeCli,
     stripeId: customer.processor.id,
-    errorIfNone: !invoiceOnly, // throw error if no payment method and invoiceOnly is false
+    errorIfNone: shouldErrorIfNoPm,
   });
 
   let paymentMethodData = {};
@@ -94,7 +99,6 @@ export const createStripeSub2 = async ({
   const discounts = rewards
     ? rewards.map((reward) => ({ coupon: reward.id }))
     : undefined;
-  console.log("CREATING SUB, DISCOUNTS:", discounts);
 
   try {
     const subscription = await stripeCli.subscriptions.create({

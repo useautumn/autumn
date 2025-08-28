@@ -93,7 +93,8 @@ export const handleSubCanceled = async ({
   });
 
   let isAutumnDowngrade =
-    sub.cancellation_details?.comment?.includes("autumn_downgrade");
+    sub.cancellation_details?.comment?.includes("autumn_downgrade") ||
+    sub.cancellation_details?.comment?.includes("autumn_cancel");
 
   const canceledFromPortal = canceled && !isAutumnDowngrade;
 

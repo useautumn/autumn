@@ -21,6 +21,7 @@ import { notNullish } from "@/utils/genUtils.js";
 import { featureToCusPrice } from "@/internal/customers/cusProducts/cusPrices/convertCusPriceUtils.js";
 import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import { Decimal } from "decimal.js";
+import { isOneOffPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 
 export const getBooleanEntitledResult = async ({
   db,
@@ -132,7 +133,7 @@ export const getOptions = ({
         item: i,
       });
 
-      if (freeTrial) {
+      if (freeTrial && notNullish(i.interval)) {
         priceData = {
           price: 0,
           tiers: undefined,
@@ -188,6 +189,7 @@ export const getOptions = ({
           : undefined,
         proration_amount: prorationAmount,
         config: i.config,
+        interval: i.interval,
       };
     });
 };

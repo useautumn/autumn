@@ -131,15 +131,17 @@ export const handleCreateCheckout = async ({
     mode: isRecurring ? "subscription" : "payment",
     currency: org.default_currency,
     success_url: successUrl || org.stripe_config!.success_url,
-    metadata: {
-      autumn_metadata_id: metaId,
-      ...(attachParams.metadata ? attachParams.metadata : {}),
-    },
+
     allow_promotion_codes: allowPromotionCodes,
     invoice_creation: !isRecurring ? { enabled: true } : undefined,
     saved_payment_method_options: { payment_method_save: "enabled" },
     ...rewardData,
     ...(attachParams.checkoutSessionParams || {}),
+    metadata: {
+      ...(attachParams.metadata ? attachParams.metadata : {}),
+      ...(attachParams.checkoutSessionParams?.metadata || {}),
+      autumn_metadata_id: metaId,
+    },
     payment_method_collection:
       freeTrial &&
       !attachParams.disableFreeTrial &&

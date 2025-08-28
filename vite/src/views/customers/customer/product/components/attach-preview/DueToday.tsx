@@ -55,11 +55,11 @@ export const DueToday = () => {
         total = new Decimal(total).plus(amount).toNumber();
       }
 
-      if (option.price && option.quantity) {
+      if (notNullish(option.price)) {
         total = new Decimal(total)
           .plus(
             new Decimal(option.price).times(
-              new Decimal(option.quantity).div(option.billing_units)
+              new Decimal(option.quantity || 0).div(option.billing_units)
             )
           )
           .toNumber();
@@ -77,7 +77,7 @@ export const DueToday = () => {
   };
 
   const getPrepaidPrice = ({ option }: { option: any }) => {
-    if (option.price) {
+    if (notNullish(option.price)) {
       return `x ${formatAmount({
         amount: option.price,
         defaultCurrency: currency,
