@@ -203,8 +203,12 @@ export const getStripeSchedules = async ({
   const batchGet = [];
   const getStripeSchedule = async (scheduleId: string) => {
     try {
-      const schedule =
-        await stripeCli.subscriptionSchedules.retrieve(scheduleId);
+      const schedule = await stripeCli.subscriptionSchedules.retrieve(
+        scheduleId,
+        {
+          expand: ["phases.items.price"],
+        }
+      );
 
       if (schedule.status == "canceled") {
         return null;

@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import { AttachScenario } from "@autumn/shared";
+import { AttachScenario, Organization } from "@autumn/shared";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { CusProductStatus, FullCusProduct } from "@autumn/shared";
 import { formatUnixToDateTime, nullish } from "@/utils/genUtils.js";
@@ -75,6 +75,7 @@ const updateCusProductCanceled = async ({
 export const handleSubCanceled = async ({
   req,
   previousAttributes,
+  org,
   sub,
   updatedCusProducts,
   stripeCli,
@@ -82,6 +83,7 @@ export const handleSubCanceled = async ({
   req: ExtendedRequest;
   previousAttributes: any;
   sub: Stripe.Subscription;
+  org: Organization;
   updatedCusProducts: FullCusProduct[];
   stripeCli: Stripe;
 }) => {
@@ -98,7 +100,7 @@ export const handleSubCanceled = async ({
 
   const canceledFromPortal = canceled && !isAutumnDowngrade;
 
-  const { db, org, env, logtail: logger } = req;
+  const { db, env, logtail: logger } = req;
 
   if (!canceledFromPortal || updatedCusProducts.length == 0) {
     return;
@@ -110,6 +112,8 @@ export const handleSubCanceled = async ({
     canceledAt,
     logger,
   });
+
+  if (!org.config.sync_status) return;
 
   // 2. Update canceled & canceled_at IF sub has no schedule...?
 

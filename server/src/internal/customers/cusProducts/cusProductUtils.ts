@@ -121,6 +121,28 @@ export const cancelCusProductSubscriptions = async ({
   return false;
 };
 
+export const getDefaultProduct = async ({
+  req,
+  productGroup,
+}: {
+  req: ExtendedRequest;
+  productGroup: string;
+}) => {
+  const { db, org, env, logger } = req;
+  const defaultProducts = await ProductService.listDefault({
+    db,
+    orgId: org.id,
+    env,
+  });
+
+  let defaultProd = defaultProducts.find(
+    (p) =>
+      p.group === productGroup && !isDefaultTrialFullProduct({ product: p })
+  );
+
+  return defaultProd;
+};
+
 export const activateDefaultProduct = async ({
   req,
   productGroup,

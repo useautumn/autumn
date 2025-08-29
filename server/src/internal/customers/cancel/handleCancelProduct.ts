@@ -7,6 +7,8 @@ import {
   APIVersion,
   ProrationBehavior,
   AttachBranch,
+  Price,
+  EntitlementWithFeature,
 } from "@autumn/shared";
 import { getExistingCusProducts } from "../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import {
@@ -24,7 +26,10 @@ import { handleRenewProduct } from "../attach/attachFunctions/handleRenewProduct
 import { getDefaultAttachConfig } from "../attach/attachUtils/getAttachConfig.js";
 import { handleScheduleFunction2 } from "../attach/attachFunctions/scheduleFlow/handleScheduleFlow2.js";
 import { handleUpgradeFlow } from "../attach/attachFunctions/upgradeFlow/handleUpgradeFlow.js";
-import { activateDefaultProduct } from "../cusProducts/cusProductUtils.js";
+import {
+  activateDefaultProduct,
+  getDefaultProduct,
+} from "../cusProducts/cusProductUtils.js";
 
 export const handleCancelProduct = async ({
   req,
@@ -129,6 +134,26 @@ export const handleCancelProduct = async ({
   // 2. If expire at cycle end, just cancel subscriptions
   if (!expireImmediately) {
     const product = cusProductToProduct({ cusProduct });
+    const defaultProduct = await getDefaultProduct({
+      req,
+      productGroup: product.group,
+    });
+
+    let products = [product];
+    let prices: Price[] = [];
+    let entitlements: EntitlementWithFeature[] = [];
+    let skipInsertCusProduct = true;
+    if (
+      !isFreeProduct(product.prices) &&
+      !product.is_add_on &&
+      defaultProduct
+    ) {
+      products = [defaultProduct];
+      prices = defaultProduct.prices;
+      entitlements = defaultProduct.entitlements;
+      skipInsertCusProduct = false;
+    }
+
     await handleScheduleFunction2({
       req,
       res: null,
@@ -137,11 +162,11 @@ export const handleCancelProduct = async ({
         customer: fullCus,
         org,
         cusProducts: fullCus.customer_products,
-        products: [product],
+        products,
         internalEntityId: cusProduct.internal_entity_id || undefined,
         paymentMethod: null,
-        prices: [],
-        entitlements: [],
+        prices,
+        entitlements,
         freeTrial: null,
         optionsList: [],
         replaceables: [],
@@ -149,8 +174,11 @@ export const handleCancelProduct = async ({
         features: req.features,
       },
       config: getDefaultAttachConfig(),
-      skipInsertCusProduct: true,
+      skipInsertCusProduct,
     });
+
+    // Schedule default product...
+
     return;
   }
 
