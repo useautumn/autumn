@@ -14,7 +14,6 @@ import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import Stripe from "stripe";
 import {
   AttachBranch,
-  BillingInterval,
   FreeTrial,
   FullCusProduct,
   PreviewLineItem,
