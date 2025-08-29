@@ -85,9 +85,8 @@ export const ProductProps = () => {
               <p className="text-xs text-t3 font-medium text-center">Default</p>
               <InfoTooltip>
                 <p>
-                  Default products are the default product for a group. They are
-                  used to determine the default product for a customer when they
-                  don't have an active subscription.
+                  This product will be enabled by default for all new users,
+                  typically used for your free plan
                 </p>
               </InfoTooltip>
             </div>
@@ -98,9 +97,8 @@ export const ProductProps = () => {
               <p className="text-xs text-t3 font-medium text-center">Add On</p>
               <InfoTooltip>
                 <p>
-                  Add-ons are products that are added to a customer's
-                  subscription. They are used to determine the default product
-                  for a customer when they don't have an active subscription.
+                  This product is an add-on that can be bought together with
+                  your base products (eg, for top ups)
                 </p>
               </InfoTooltip>
             </div>
