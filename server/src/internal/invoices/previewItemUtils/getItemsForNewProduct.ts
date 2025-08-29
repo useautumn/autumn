@@ -44,6 +44,7 @@ import {
   addBillingIntervalUnix,
   getAlignedIntervalUnix,
   subtractBillingIntervalUnix,
+  subtractFromUnixTillAligned,
 } from "../../products/prices/billingIntervalUtils.js";
 import {
   priceToFeature,
@@ -110,13 +111,25 @@ export const getProration = ({
     return proration;
   }
 
-  let end = getAlignedIntervalUnix({
-    alignWithUnix: anchorToUnix!,
+  // Get end...
+  const originalEnd = addBillingIntervalUnix({
+    unixTimestamp: now,
     interval,
     intervalCount,
-    now,
-    alwaysReturn: true,
   });
+
+  let end = subtractFromUnixTillAligned({
+    targetUnix: anchorToUnix!,
+    originalUnix: originalEnd,
+  });
+
+  // let end = getAlignedIntervalUnix({
+  //   alignWithUnix: anchorToUnix!,
+  //   interval,
+  //   intervalCount,
+  //   now,
+  //   alwaysReturn: true,
+  // });
 
   let start = subtractBillingIntervalUnix({
     unixTimestamp: end!,

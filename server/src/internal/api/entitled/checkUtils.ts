@@ -17,7 +17,7 @@ import { getCheckPreview } from "./getCheckPreview.js";
 
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getProration } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
-import { notNullish } from "@/utils/genUtils.js";
+import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
 import { featureToCusPrice } from "@/internal/customers/cusProducts/cusPrices/convertCusPriceUtils.js";
 import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import { Decimal } from "decimal.js";
@@ -112,6 +112,9 @@ export const getOptions = ({
 }) => {
   now = now || Date.now();
 
+  // console.log("Now:", formatUnixToDate(now));
+  // console.log("Anchor to unix:", formatUnixToDate(anchorToUnix));
+
   return prodItems
     .filter((i) => isFeaturePriceItem(i) && i.usage_model == UsageModel.Prepaid)
     .map((i) => {
@@ -122,6 +125,11 @@ export const getOptions = ({
         intervalCount: i.interval_count || 1,
         now,
       });
+
+      // if (finalProration) {
+      //   console.log("Start:", formatUnixToDate(finalProration.start));
+      //   console.log("End:", formatUnixToDate(finalProration.end));
+      // }
 
       let priceData = itemToPriceOrTiers({
         item: i,
