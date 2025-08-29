@@ -84,6 +84,8 @@ export const handleSubRenewed = async ({
     updates: { canceled_at: null, canceled: false },
   });
 
+  if (!org.config.sync_status) return;
+
   let { curScheduledProduct } = getExistingCusProducts({
     product: updatedCusProducts[0].product,
     cusProducts,

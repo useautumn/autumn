@@ -97,22 +97,21 @@ export const handleSubscriptionUpdated = async ({
     );
   }
 
-  if (org.config.sync_status) {
-    await handleSubCanceled({
-      req,
-      previousAttributes,
-      sub: fullSub,
-      updatedCusProducts,
-      stripeCli,
-    });
+  await handleSubCanceled({
+    req,
+    previousAttributes,
+    sub: fullSub,
+    updatedCusProducts,
+    stripeCli,
+    org,
+  });
 
-    await handleSubRenewed({
-      req,
-      prevAttributes: previousAttributes,
-      sub: fullSub,
-      updatedCusProducts,
-    });
-  }
+  await handleSubRenewed({
+    req,
+    prevAttributes: previousAttributes,
+    sub: fullSub,
+    updatedCusProducts,
+  });
 
   try {
     await SubService.updateFromStripe({

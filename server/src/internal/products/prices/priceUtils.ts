@@ -447,6 +447,7 @@ export const formatPrice = ({
     let formatBillingType = {
       [BillingType.UsageInAdvance]: "prepaid",
       [BillingType.UsageInArrear]: "usage",
+      [BillingType.InArrearProrated]: "cont_use",
       [BillingType.FixedCycle]: "cont_use",
     };
 

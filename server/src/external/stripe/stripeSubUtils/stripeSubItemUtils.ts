@@ -88,22 +88,52 @@ export const findStripeItemForPrice = ({
   }
 
   if (stripeItems) {
-    return stripeItems.find((si: Stripe.SubscriptionItem | Stripe.LineItem) => {
-      const config = price.config as UsagePriceConfig;
+    const stripeItem = stripeItems.find(
+      (si: Stripe.SubscriptionItem | Stripe.LineItem) => {
+        const config = price.config as UsagePriceConfig;
 
-      if (config.type == PriceType.Fixed) {
-        return (
-          config.stripe_price_id == si.price?.id ||
-          (stripeProdId && si.price?.product == stripeProdId)
-        );
-      } else {
         return (
           config.stripe_price_id == si.price?.id ||
           config.stripe_product_id == si.price?.product ||
           config.stripe_empty_price_id == si.price?.id
         );
       }
-    });
+    );
+
+    if (stripeItem) return stripeItem;
+
+    // Fallback to fixed price
+    if (isFixedPrice({ price })) {
+      return stripeItems.find(
+        (si: Stripe.SubscriptionItem | Stripe.LineItem) => {
+          const config = price.config as UsagePriceConfig;
+
+          return (
+            config.stripe_price_id == si.price?.id ||
+            (stripeProdId && si.price?.product == stripeProdId)
+          );
+        }
+      );
+    }
+
+    return undefined;
+
+    // return stripeItems.find((si: Stripe.SubscriptionItem | Stripe.LineItem) => {
+    //   const config = price.config as UsagePriceConfig;
+
+    //   if (config.type == PriceType.Fixed) {
+    //     return (
+    //       config.stripe_price_id == si.price?.id ||
+    //       (stripeProdId && si.price?.product == stripeProdId)
+    //     );
+    //   } else {
+    //     return (
+    //       config.stripe_price_id == si.price?.id ||
+    //       config.stripe_product_id == si.price?.product ||
+    //       config.stripe_empty_price_id == si.price?.id
+    //     );
+    //   }
+    // });
   }
 };
 

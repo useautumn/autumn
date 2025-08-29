@@ -8,6 +8,8 @@ import {
   CusProductStatus,
   Customer,
   customers,
+  entities,
+  Entity,
   FullCusProduct,
   FullCustomer,
 } from "@autumn/shared";
@@ -193,4 +195,38 @@ export const getAllFullCustomers = async ({
       customer_products: cusProdMap[customer.internal_id] || [],
     };
   }) as FullCustomer[];
+};
+
+export const getAllEntities = async ({
+  db,
+  orgId,
+  env,
+}: {
+  db: DrizzleCli;
+  orgId: string;
+  env: AppEnv;
+}) => {
+  let lastEntityId = "";
+  let allData: any[] = [];
+  let pageSize = 500;
+
+  while (true) {
+    const data = await db.query.entities.findMany({
+      where: and(
+        eq(entities.org_id, orgId),
+        eq(entities.env, env),
+        lastEntityId ? lt(entities.internal_id, lastEntityId) : undefined
+      ),
+      orderBy: [desc(entities.internal_id)],
+      limit: pageSize,
+    });
+
+    if (data.length === 0) break;
+
+    console.log(`Fetched ${data.length} entities`);
+    allData.push(...data);
+    lastEntityId = data[data.length - 1].internal_id as string;
+  }
+
+  return allData as Entity[];
 };
