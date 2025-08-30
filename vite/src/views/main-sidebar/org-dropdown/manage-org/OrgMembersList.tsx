@@ -8,9 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { InvitePopover } from "./InvitePopover";
 import { useSession } from "@/lib/auth-client";
 import { MemberRowToolbar } from "./MemberRowToolbar";
+import { EditableMemberName } from "./EditableMemberName";
 
 export const OrgMembersList = () => {
-  const { memberships, isLoading: isMembersLoading } = useMemberships();
+  const { memberships, isLoading: isMembersLoading, mutate } = useMemberships();
   const { data } = useSession();
 
   if (isMembersLoading) return null;
@@ -21,6 +22,10 @@ export const OrgMembersList = () => {
 
   const isAdmin =
     membership?.member.role === "admin" || membership?.member.role === "owner";
+
+  const handleMemberUpdate = () => {
+    mutate();
+  };
 
   return (
     <div className="h-full overflow-y-auto">
@@ -51,7 +56,12 @@ export const OrgMembersList = () => {
             className={cn("grid-cols-18 px-6 text-sm text-t2")}
           >
             <Item className="col-span-6">{user.email}</Item>
-            <Item className="col-span-5">{user.name}</Item>
+            <Item className="col-span-5">
+              <EditableMemberName 
+                membership={membership} 
+                onUpdate={handleMemberUpdate}
+              />
+            </Item>
             <Item className="col-span-3">
               <Badge variant="outline">{member.role}</Badge>
             </Item>
