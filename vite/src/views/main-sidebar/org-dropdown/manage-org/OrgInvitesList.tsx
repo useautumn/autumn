@@ -1,11 +1,12 @@
 import { useMemberships } from "../hooks/useMemberships";
-import { Invite, Membership } from "@autumn/shared";
+import { Invite, Membership, OrgRole, ROLE_DISPLAY_NAMES } from "@autumn/shared";
 import { Item, Row } from "@/components/general/TableGrid";
 import { cn } from "@/lib/utils";
 import { formatDateStr } from "@/utils/formatUtils/formatDateUtils";
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "@/lib/auth-client";
 import { MemberRowToolbar } from "./MemberRowToolbar";
+import { Crown, Shield, User } from "lucide-react";
 
 export const OrgInvitesList = () => {
   const {
@@ -21,6 +22,32 @@ export const OrgInvitesList = () => {
   );
   const isAdmin =
     membership?.member.role === "admin" || membership?.member.role === "owner";
+
+  const getRoleIcon = (role: string) => {
+    switch (role) {
+      case OrgRole.Owner:
+        return <Crown size={12} className="text-yellow-600" />;
+      case OrgRole.Admin:
+        return <Shield size={12} className="text-blue-600" />;
+      case OrgRole.Member:
+        return <User size={12} className="text-gray-600" />;
+      default:
+        return <User size={12} />;
+    }
+  };
+
+  const getRoleBadgeVariant = (role: string) => {
+    switch (role) {
+      case OrgRole.Owner:
+        return "default";
+      case OrgRole.Admin:
+        return "secondary";
+      case OrgRole.Member:
+        return "outline";
+      default:
+        return "outline";
+    }
+  };
 
   return (
     <div className="h-full overflow-y-auto">
@@ -41,7 +68,10 @@ export const OrgInvitesList = () => {
             <Item className="col-span-6">{invite.email}</Item>
             <Item className="col-span-3">{invite.status}</Item>
             <Item className="col-span-3">
-              <Badge variant="outline">{invite.role}</Badge>
+              <Badge variant={getRoleBadgeVariant(invite.role || "member")} className="flex items-center gap-1">
+                {getRoleIcon(invite.role || "member")}
+                {ROLE_DISPLAY_NAMES[invite.role as OrgRole] || invite.role || "Member"}
+              </Badge>
             </Item>
             <Item className="col-span-2"></Item>
             <Item className="col-span-3">

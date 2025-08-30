@@ -1,4 +1,4 @@
-import { AppEnv, AuthType, Feature, Organization } from "@autumn/shared";
+import { AppEnv, AuthType, Feature, Organization, OrgRole, RolePermissions } from "@autumn/shared";
 import { Logtail } from "@logtail/node";
 import type {
   Request as ExpressRequest,
@@ -23,6 +23,8 @@ export interface ExtendedRequest extends ExpressRequest {
   userId?: string;
   isPublic?: boolean;
   authType?: AuthType;
+  userRole?: OrgRole;
+  userPermissions?: RolePermissions;
 
   posthog?: PostHog;
   apiVersion?: number;

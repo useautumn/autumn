@@ -21,13 +21,21 @@ import { handleGetOrgMembers } from "./handlers/handleGetOrgMembers.js";
 import { handleInvite } from "./handlers/handleInvite.js";
 import { handleGetUploadUrl } from "./handlers/handleGetUploadUrl.js";
 import { handleDeleteOrg } from "./handlers/handleDeleteOrg.js";
+import { handleUpdateMemberRole } from "./handlers/handleUpdateMemberRole.js";
 import { ensureStripeProducts } from "@/external/stripe/stripeEnsureUtils.js";
+import { requirePermission, requireRole } from "@/middleware/roleMiddleware.js";
+import { OrgRole } from "@autumn/shared";
 
 export const orgRouter: Router = express.Router();
+
+// Public endpoints (no role restrictions)
 orgRouter.get("/members", handleGetOrgMembers);
 orgRouter.get("/upload_url", handleGetUploadUrl);
-orgRouter.post("/invite", handleInvite as any);
-orgRouter.delete("", handleDeleteOrg as any);
+
+// Protected endpoints with role-based access
+orgRouter.post("/invite", requirePermission("canInviteMembers"), handleInvite);
+orgRouter.put("/member/role", requirePermission("canAssignAdmin"), handleUpdateMemberRole);
+orgRouter.delete("", requireRole(OrgRole.Owner), handleDeleteOrg);
 
 orgRouter.delete("/delete-user", async (req: any, res) => {
   res.status(200).json({
