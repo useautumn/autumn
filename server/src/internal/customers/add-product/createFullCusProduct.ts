@@ -117,7 +117,7 @@ export const initCusProduct = ({
     internal_product_id: product.internal_id,
     product_id: product.id,
     created_at: createdAt || Date.now(),
-    canceled: false,
+    canceled: notNullish(canceledAt) ? true : false,
 
     status: subscriptionStatus
       ? subscriptionStatus
