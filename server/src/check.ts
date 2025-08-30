@@ -38,7 +38,7 @@ let orgSlugs = process.env.ORG_SLUGS!.split(",");
 const skipEmails = process.env.SKIP_EMAILS!.split(",");
 const skipIds = ["cus_2tXCCwC6iyiftgA6ndSo1Ubb2dx"];
 
-// orgSlugs = ["lumenary"];
+orgSlugs = ["athenahq"];
 
 const getSingleCustomer = async ({
   stripeCli,
@@ -271,7 +271,7 @@ export const check = async () => {
 
     let customerId;
 
-    // customerId = "user_2brwfPwcb1swinRg8mfUsG0rFc5";
+    customerId = "8e338993-b611-41a4-8fd9-d7f51dfec5d6";
 
     let customers: FullCustomer[] = [];
     let stripeSubs: Stripe.Subscription[] = [];

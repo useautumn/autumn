@@ -36,7 +36,7 @@ export const addProductFromSubs = async ({
   req: ExtendedRequest;
   autumnCus: FullCustomer;
   autumnProduct: FullProduct;
-  sub: Stripe.Subscription;
+  sub?: Stripe.Subscription;
   prices?: Price[];
   entitlements?: EntitlementWithFeature[];
   force?: boolean;
@@ -128,34 +128,36 @@ export const addProductFromSubs = async ({
     `Added product ${autumnProduct.name} to customer ${autumnCus.name}`
   );
 
-  // Create sub
-  let usageFeatures = autumnProduct.prices
-    .filter((p) => isUsagePrice({ price: p }))
-    .map((p) => (p.config as UsagePriceConfig).internal_feature_id);
+  if (sub) {
+    // Create sub
+    let usageFeatures = autumnProduct.prices
+      .filter((p) => isUsagePrice({ price: p }))
+      .map((p) => (p.config as UsagePriceConfig).internal_feature_id);
 
-  let subFromDb = await SubService.getInStripeIds({
-    db,
-    ids: [sub.id],
-  });
-
-  let subInterval = subToAutumnInterval(sub);
-
-  if (subFromDb.length === 0) {
-    await SubService.createSub({
+    let subFromDb = await SubService.getInStripeIds({
       db,
-      sub: constructSub({
-        stripeId: sub.id,
-        usageFeatures:
-          subInterval.interval == BillingInterval.Month ? usageFeatures : [],
-        orgId: org.id,
-        env,
-        currentPeriodStart: start,
-        currentPeriodEnd: end,
-      }),
+      ids: [sub.id],
     });
-    logger.info(`Created sub ${sub.id} in DB`);
-  } else {
-    logger.info(`Sub ${sub.id} already exists in DB`);
+
+    let subInterval = subToAutumnInterval(sub);
+
+    if (subFromDb.length === 0) {
+      await SubService.createSub({
+        db,
+        sub: constructSub({
+          stripeId: sub.id,
+          usageFeatures:
+            subInterval.interval == BillingInterval.Month ? usageFeatures : [],
+          orgId: org.id,
+          env,
+          currentPeriodStart: start,
+          currentPeriodEnd: end,
+        }),
+      });
+      logger.info(`Created sub ${sub.id} in DB`);
+    } else {
+      logger.info(`Sub ${sub.id} already exists in DB`);
+    }
   }
 
   autumnCus.customer_products = [
