@@ -152,3 +152,4 @@ export * from "./enums/ErrCode.js";
 export * from "./enums/LoggerAction.js";
 export * from "./enums/AttachErrCode.js";
 export * from "./enums/APIVersion.js";
+export * from "./enums/OrgRole.js";
