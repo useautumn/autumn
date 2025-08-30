@@ -21,6 +21,8 @@ import { handleCheckoutSub } from "./handleCheckoutCompleted/handleCheckoutSub.j
 import { handleRemainingSets } from "./handleCheckoutCompleted/handleRemainingSets.js";
 import { getOptionsFromCheckoutSession } from "./handleCheckoutCompleted/getOptionsFromCheckout.js";
 import { getEarliestPeriodEnd } from "../stripeSubUtils/convertSubUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
+import { CusService } from "@/internal/customers/CusService.js";
 
 export const handleCheckoutSessionCompleted = async ({
   req,
@@ -186,6 +188,64 @@ export const handleCheckoutSessionCompleted = async ({
       },
     });
   }
+
+  // If the customer in Autumn is missing metadata, and Stripe has atleast one of the fields, update the customer in Autumn
+  // with whatever is present in Stripe.
+  // Skip if both are missing in Stripe.
+
+  const updates = {
+    name:
+      !attachParams.customer.name &&
+      notNullish(checkoutSession.customer_details?.name)
+        ? checkoutSession.customer_details?.name
+        : undefined,
+    email:
+      !attachParams.customer.email &&
+      notNullish(checkoutSession.customer_details?.email)
+        ? checkoutSession.customer_details?.email
+        : undefined,
+  };
+
+  if (updates.name || updates.email) {
+    await CusService.update({
+      db,
+      internalCusId: attachParams.customer.internal_id,
+      update: updates,
+    });
+  }
+
+  // if (
+  //   !attachParams.customer.name &&
+  //   notNullish(checkoutSession.customer_details?.name)
+  // ) {
+  //   updates.push(
+  //     CusService.update({
+  //       db,
+  //       internalCusId: attachParams.customer.internal_id,
+  //       update: {
+  //         name: checkoutSession.customer_details?.name,
+  //       },
+  //     })
+  //   );
+  // }
+
+  // if (
+  //   !attachParams.customer.email &&
+  //   notNullish(checkoutSession.customer_details?.email)
+  // ) {
+  //   updates.push(
+  //     CusService.update({
+  //       db,
+  //       internalCusId: attachParams.customer.internal_id,
+  //       update: {
+  //         email: checkoutSession.customer_details?.email,
+  //       },
+  //     })
+  //   );
+  // }
+
+  // // Let it fail silently if any of the updates fail.
+  // if (updates.length > 0) await Promise.allSettled(updates);
 
   return;
 };
