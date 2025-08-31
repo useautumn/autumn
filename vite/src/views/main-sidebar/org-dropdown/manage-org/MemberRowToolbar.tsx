@@ -6,6 +6,9 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import { useOrg } from "@/hooks/useOrg";
 import { authClient } from "@/lib/auth-client";
@@ -15,7 +18,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useMemberships } from "../hooks/useMemberships";
 import { useSession } from "@/lib/auth-client";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export const MemberRowToolbar = ({
   membership,
@@ -27,12 +29,10 @@ export const MemberRowToolbar = ({
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [roleLoading, setRoleLoading] = useState(false);
   const [open, setOpen] = useState(false);
-  const [roleMenuOpen, setRoleMenuOpen] = useState(false);
   const { org } = useOrg();
   const { mutate } = useMemberships();
   const { data: session } = useSession();
   const { memberships } = useMemberships();
-  const axiosInstance = useAxiosInstance();
 
   // Get current user's role and permissions
   const currentUserMembership = memberships.find(
@@ -132,26 +132,23 @@ export const MemberRowToolbar = ({
     
     setRoleLoading(true);
     try {
-      // Update member role via API
-      const response = await axiosInstance.put(
-        "/organization/member/role",
-        {
-          memberId: membership.member.id,
-          role: newRole,
-        }
-      );
+      // Update member role via auth client
+      const { data, error } = await authClient.organization.updateMemberRole({
+        memberId: membership.member.id,
+        organizationId: org.id,
+        role: newRole,
+      });
 
-      if (response.status === 200) {
+      if (error) {
+        toast.error(error.message);
+      } else {
         await mutate();
         toast.success(`Role updated to ${ROLE_DISPLAY_NAMES[newRole]}`);
-      } else {
-        toast.error("Failed to update role");
       }
     } catch (error) {
       toast.error("Failed to update role");
     }
     setRoleLoading(false);
-    setRoleMenuOpen(false);
   };
 
   const getRoleIcon = (role: OrgRole) => {
@@ -178,15 +175,27 @@ export const MemberRowToolbar = ({
       <DropdownMenuContent>
         {membership && canManage && availableRoles.length > 0 && (
           <>
-            <DropdownMenuItem
-              className="flex justify-between text-t2"
-              onClick={() => setRoleMenuOpen(true)}
-            >
-              <div className="flex justify-between items-center w-full">
-                <span>Change Role</span>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className="flex items-center gap-2 text-t2">
                 <UserCog size={12} />
-              </div>
-            </DropdownMenuItem>
+                <span>Change Role</span>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                {availableRoles.map((role) => (
+                  <DropdownMenuItem
+                    key={role}
+                    className="flex justify-between items-center"
+                    onClick={() => handleRoleChange(role)}
+                    disabled={roleLoading}
+                  >
+                    <div className="flex items-center gap-2">
+                      {getRoleIcon(role)}
+                      <span>{ROLE_DISPLAY_NAMES[role]}</span>
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
             <DropdownMenuSeparator />
           </>
         )}
@@ -208,27 +217,6 @@ export const MemberRowToolbar = ({
           </div>
         </DropdownMenuItem>
       </DropdownMenuContent>
-
-      {/* Role selection submenu */}
-      {roleMenuOpen && (
-        <DropdownMenu open={roleMenuOpen} onOpenChange={setRoleMenuOpen}>
-          <DropdownMenuContent>
-            {availableRoles.map((role) => (
-              <DropdownMenuItem
-                key={role}
-                className="flex justify-between items-center"
-                onClick={() => handleRoleChange(role)}
-                disabled={roleLoading}
-              >
-                <div className="flex items-center gap-2">
-                  {getRoleIcon(role)}
-                  <span>{ROLE_DISPLAY_NAMES[role]}</span>
-                </div>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
     </DropdownMenu>
   );
 };
