@@ -25,13 +25,13 @@ import {
   OnIncrease,
 } from "@autumn/shared";
 import {
-  addBillingIntervalUnix,
+  addIntervalForProration,
   getAlignedIntervalUnix,
 } from "@/internal/products/prices/billingIntervalUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { Decimal } from "decimal.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
-import { formatUnixToDate, nullish } from "@/utils/genUtils.js";
+import { nullish } from "@/utils/genUtils.js";
 import {
   getLatestPeriodEnd,
   subToPeriodStartEnd,
@@ -184,10 +184,9 @@ export const getUpgradeProductPreview = async ({
       const { start, end } = subToPeriodStartEnd({ sub });
       const largestInterval = getLargestInterval({ prices: newProduct.prices });
       if (largestInterval) {
-        anchorToUnix = addBillingIntervalUnix({
+        anchorToUnix = addIntervalForProration({
           unixTimestamp: start * 1000,
-          interval: largestInterval.interval,
-          intervalCount: largestInterval.intervalCount,
+          intervalConfig: largestInterval,
         });
       }
     }
@@ -202,7 +201,6 @@ export const getUpgradeProductPreview = async ({
 
   if (config?.disableTrial) attachParams.freeTrial = null;
   let freeTrial = attachParams.freeTrial;
-  // console.log("Free trial:", freeTrial);
 
   if (
     config?.carryTrial &&

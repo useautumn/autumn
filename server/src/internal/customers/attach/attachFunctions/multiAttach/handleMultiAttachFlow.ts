@@ -76,6 +76,7 @@ export const handleMultiAttachFlow = async ({
       config,
       stripeCli,
       itemSet,
+      logger,
     });
 
     if (config?.invoiceCheckout) {

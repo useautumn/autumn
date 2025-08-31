@@ -7,6 +7,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { Plus, PlusIcon } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 interface SideAccordionProps {
   title: string;
@@ -18,6 +19,7 @@ interface SideAccordionProps {
   isOpen?: boolean;
   onToggle?: (value: string) => void;
   disabled?: boolean;
+  disabledReason?: string;
 }
 
 export function SideAccordion({
@@ -30,6 +32,7 @@ export function SideAccordion({
   isOpen = false,
   onToggle,
   disabled = false,
+  disabledReason,
 }: SideAccordionProps) {
   const handleButtonClick = () => {
     if (!isOpen && onToggle) {
@@ -40,6 +43,18 @@ export function SideAccordion({
       onClick();
     }
   };
+
+  const SideButton = (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={handleButtonClick}
+      className={cn(disabled && "opacity-50")}
+      disabled={!!disabledReason}
+    >
+      {buttonIcon}
+    </Button>
+  );
 
   return (
     <div className="w-full">
@@ -52,23 +67,21 @@ export function SideAccordion({
             <AccordionTrigger
               className={cn(
                 "hover:bg-stone-100 border border-transparent text-t2 p-2",
-                className,
+                className
               )}
             >
               <span>{title}</span>
             </AccordionTrigger>
           </div>
-          {onClick && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleButtonClick}
-              className={cn(disabled && "opacity-50")}
-              disabled={disabled}
-            >
-              {buttonIcon}
-            </Button>
-          )}
+          {onClick &&
+            (disabledReason ? (
+              <Tooltip>
+                <TooltipTrigger>{SideButton}</TooltipTrigger>
+                <TooltipContent>{disabledReason}</TooltipContent>
+              </Tooltip>
+            ) : (
+              SideButton
+            ))}
         </div>
         <AccordionContent className="pb-0">
           <div className="flex flex-col gap-2 animate-in slide-in-from-top-1/2 duration-200 p-2 pr-0 w-full">

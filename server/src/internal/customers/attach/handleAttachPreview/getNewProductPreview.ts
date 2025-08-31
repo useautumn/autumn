@@ -14,7 +14,7 @@ import {
 } from "../attachUtils/convertAttachParams.js";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import {
-  addBillingIntervalUnix,
+  addIntervalForProration,
   getAlignedIntervalUnix,
   getNextStartOfMonthUnix,
 } from "@/internal/products/prices/billingIntervalUtils.js";
@@ -23,10 +23,7 @@ import {
   getLargestInterval,
   getSmallestInterval,
 } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
-import { isFreeProduct } from "@/internal/products/productUtils.js";
-import { getMergeCusProduct } from "../attachFunctions/addProductFlow/getMergeCusProduct.js";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
-import { formatUnixToDate } from "@/utils/genUtils.js";
 import { isTrialing } from "../../cusProducts/cusProductUtils.js";
 
 const getNextCycleItems = async ({
@@ -148,10 +145,9 @@ export const getNewProductPreview = async ({
     });
 
     if (smallestInterval) {
-      anchorToUnix = addBillingIntervalUnix({
+      anchorToUnix = addIntervalForProration({
         unixTimestamp: start * 1000,
-        interval: smallestInterval!.interval,
-        intervalCount: smallestInterval!.intervalCount,
+        intervalConfig: smallestInterval,
       });
     }
   }
