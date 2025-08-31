@@ -4,6 +4,8 @@ import { AuthType, ErrCode } from "@autumn/shared";
 import { verifyToken } from "@clerk/express";
 import { fromNodeHeaders } from "better-auth/node";
 import { NextFunction } from "express";
+import { eq, and } from "drizzle-orm";
+import { member } from "@autumn/shared";
 
 const getTokenData = async (req: any, res: any) => {
   let token;
@@ -51,12 +53,40 @@ export const withOrgAuth = async (req: any, res: any, next: NextFunction) => {
     }
 
     const orgId = session?.session?.activeOrganizationId;
+    const userId = session?.user?.id;
 
     if (!orgId) {
       logger.info(`Unauthorized - no org id found`);
       return res
         .status(401)
         .json({ message: "Unauthorized - no org id found" });
+    }
+
+    if (!userId) {
+      logger.info(`Unauthorized - no user id found`);
+      return res
+        .status(401)
+        .json({ message: "Unauthorized - no user id found" });
+    }
+
+    // Verify user is still a member of the organization
+    const membership = await req.db.query.member.findFirst({
+      where: and(
+        eq(member.organizationId, orgId),
+        eq(member.userId, userId)
+      ),
+    });
+
+    if (!membership) {
+      logger.warn(`User ${userId} removed from org ${orgId} - access denied`);
+      return res
+        .status(403)
+        .json({ 
+          message: "Access denied - user no longer member of organization", 
+          code: "USER_REMOVED_FROM_ORG",
+          userId,
+          orgId
+        });
     }
 
     // let tokenOrg = tokenData!.org as any;
