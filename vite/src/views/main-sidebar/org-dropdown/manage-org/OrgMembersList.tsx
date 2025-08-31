@@ -34,13 +34,13 @@ export const OrgMembersList = () => {
         addButton={<InvitePopover />}
       /> */}
 
-      <Row type="header" className={cn("grid-cols-18 px-6")}>
-        <Item className="col-span-6">Email</Item>
-        <Item className="col-span-5">Name</Item>
-        <Item className="col-span-3">Role</Item>
+      <Row type="header" className="flex px-6">
+        <Item className="flex-[6]">Email</Item>
+        <Item className="flex-[5.1]">Name</Item>
+        <Item className="flex-[2.6]">Role</Item>
         {/* <Item className="col-span-0"></Item> */}
-        <Item className="col-span-3">Created At</Item>
-        <Item className="col-span-1"></Item>
+        <Item className="flex-[3]">Created At</Item>
+        <Item className="flex-[1]"></Item>
       </Row>
       {memberships.map((membership: Membership) => {
         const user = membership.user;
@@ -48,18 +48,18 @@ export const OrgMembersList = () => {
         return (
           <Row
             key={membership.user.id}
-            className={cn("grid-cols-18 px-6 text-sm text-t2")}
+            className="flex px-6 text-sm text-t2"
           >
-            <Item className="col-span-6">{user.email}</Item>
-            <Item className="col-span-5">{user.name}</Item>
-            <Item className="col-span-3">
+            <Item className="flex-[6]">{user.email}</Item>
+            <Item className="flex-[4.7]">{user.name}</Item>
+            <Item className="flex-[3]">
               <Badge variant="outline">{member.role}</Badge>
             </Item>
             {/* <Item className="col-span-0"></Item> */}
-            <Item className="col-span-3">
+            <Item className="flex-[3]">
               {formatDateStr(member.createdAt)}
             </Item>
-            <Item className="col-span-1 flex justify-end">
+            <Item className="flex-[1] flex justify-end">
               {isAdmin && <MemberRowToolbar membership={membership} />}
             </Item>
           </Row>
