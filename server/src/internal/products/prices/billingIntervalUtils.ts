@@ -249,3 +249,84 @@ export const subtractFromUnixTillAligned = ({
 
   return getTime(alignedDate);
 };
+
+// Subtracts an interval from a period end, preserving end-of-month anchoring
+// e.g. 30 Sep -> 31 Aug (not 30 Aug)
+export const subtractIntervalForProration = ({
+  unixTimestamp,
+  interval,
+  intervalCount = 1,
+}: {
+  unixTimestamp: number;
+  interval: BillingInterval;
+  intervalCount?: number;
+}) => {
+  const endDate = new UTCDate(unixTimestamp);
+
+  const isEndOfMonth = () => {
+    const lastDay = new UTCDate(
+      endDate.getFullYear(),
+      endDate.getMonth() + 1,
+      0
+    ).getDate();
+    return getDate(endDate) === lastDay;
+  };
+
+  const preserveTime = (d: UTCDate) => {
+    let preserved = new UTCDate(d.getTime());
+    preserved = new UTCDate(setHours(preserved, getHours(endDate)).getTime());
+    preserved = new UTCDate(
+      setMinutes(preserved, getMinutes(endDate)).getTime()
+    );
+    preserved = new UTCDate(
+      setSeconds(preserved, getSeconds(endDate)).getTime()
+    );
+    return preserved;
+  };
+
+  const setToLastDayOfMonth = (d: UTCDate) => {
+    const last = new UTCDate(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    return new UTCDate(setDate(d, last).getTime());
+  };
+
+  switch (interval) {
+    case BillingInterval.Week: {
+      const sub = new UTCDate(subWeeks(endDate, 1 * intervalCount).getTime());
+      return getTime(sub);
+    }
+    case BillingInterval.Month: {
+      let sub = new UTCDate(subMonths(endDate, 1 * intervalCount).getTime());
+      if (isEndOfMonth()) {
+        sub = setToLastDayOfMonth(sub);
+      }
+      sub = preserveTime(sub);
+      return getTime(sub);
+    }
+    case BillingInterval.Quarter: {
+      let sub = new UTCDate(subMonths(endDate, 3 * intervalCount).getTime());
+      if (isEndOfMonth()) {
+        sub = setToLastDayOfMonth(sub);
+      }
+      sub = preserveTime(sub);
+      return getTime(sub);
+    }
+    case BillingInterval.SemiAnnual: {
+      let sub = new UTCDate(subMonths(endDate, 6 * intervalCount).getTime());
+      if (isEndOfMonth()) {
+        sub = setToLastDayOfMonth(sub);
+      }
+      sub = preserveTime(sub);
+      return getTime(sub);
+    }
+    case BillingInterval.Year: {
+      let sub = new UTCDate(subYears(endDate, 1 * intervalCount).getTime());
+      if (isEndOfMonth()) {
+        sub = setToLastDayOfMonth(sub);
+      }
+      sub = preserveTime(sub);
+      return getTime(sub);
+    }
+    default:
+      throw new Error(`Invalid billing interval: ${interval}`);
+  }
+};

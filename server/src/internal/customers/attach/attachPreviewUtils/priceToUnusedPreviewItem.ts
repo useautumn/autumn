@@ -12,7 +12,11 @@ import {
 import { logger } from "better-auth";
 import Stripe from "stripe";
 import { isTrialing } from "../../cusProducts/cusProductUtils.js";
-import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
+import {
+  formatUnixToDate,
+  formatUnixToDateTime,
+  notNullish,
+} from "@/utils/genUtils.js";
 import { priceToUsageModel } from "@/internal/products/prices/priceUtils/convertPrice.js";
 import {
   formatPrice,
