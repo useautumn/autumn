@@ -17,7 +17,7 @@ import { AppEnv, Organization } from "@autumn/shared";
 import { nullish } from "@/utils/genUtils.js";
 import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
 import { createOrgResponse } from "./orgUtils.js";
-import { handleGetOrgMembers } from "./handlers/handleGetOrgMembers.js";
+import { handleGetOrgMembers, handleRemoveMember } from "./handlers/handleGetOrgMembers.js";
 import { handleInvite } from "./handlers/handleInvite.js";
 import { handleGetUploadUrl } from "./handlers/handleGetUploadUrl.js";
 import { handleDeleteOrg } from "./handlers/handleDeleteOrg.js";
@@ -25,6 +25,7 @@ import { ensureStripeProducts } from "@/external/stripe/stripeEnsureUtils.js";
 
 export const orgRouter: Router = express.Router();
 orgRouter.get("/members", handleGetOrgMembers);
+orgRouter.post("/remove-member", handleRemoveMember);
 orgRouter.get("/upload_url", handleGetUploadUrl);
 orgRouter.post("/invite", handleInvite as any);
 orgRouter.delete("", handleDeleteOrg as any);
