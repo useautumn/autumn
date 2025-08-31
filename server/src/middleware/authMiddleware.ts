@@ -69,28 +69,6 @@ export const withOrgAuth = async (req: any, res: any, next: NextFunction) => {
         .json({ message: "Unauthorized - no user id found" });
     }
 
-    // Verify user is still a member of the organization
-    const membership = await req.db.query.member.findFirst({
-      where: and(
-        eq(member.organizationId, orgId),
-        eq(member.userId, userId)
-      ),
-    });
-
-    if (!membership) {
-      logger.warn(`User ${userId} removed from org ${orgId} - access denied`);
-      return res
-        .status(403)
-        .json({ 
-          message: "Access denied - user no longer member of organization", 
-          code: "USER_REMOVED_FROM_ORG",
-          userId,
-          orgId
-        });
-    }
-
-    // let tokenOrg = tokenData!.org as any;
-
     let data = await OrgService.getWithFeatures({
       db: req.db,
       orgId: orgId,
