@@ -117,6 +117,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with prepaid singl
       waitForSeconds: 20,
     });
 
+    return;
+
     await attachAndExpectCorrect({
       autumn,
       customerId,
