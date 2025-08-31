@@ -17,6 +17,7 @@ interface SideAccordionProps {
   buttonIcon?: React.ReactNode;
   isOpen?: boolean;
   onToggle?: (value: string) => void;
+  disabled?: boolean;
 }
 
 export function SideAccordion({
@@ -28,6 +29,7 @@ export function SideAccordion({
   buttonIcon,
   isOpen = false,
   onToggle,
+  disabled = false,
 }: SideAccordionProps) {
   const handleButtonClick = () => {
     if (!isOpen && onToggle) {
@@ -61,7 +63,8 @@ export function SideAccordion({
               variant="ghost"
               size="sm"
               onClick={handleButtonClick}
-              className=""
+              className={cn(disabled && "opacity-50")}
+              disabled={disabled}
             >
               {buttonIcon}
             </Button>
