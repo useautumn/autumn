@@ -44,12 +44,6 @@ export const handleCreateCheckout = async ({
     isCheckout: true,
   });
 
-  for (const itemSet of itemSets) {
-    for (const item of itemSet.items) {
-      console.log(item);
-    }
-  }
-
   if (itemSets.length === 0) {
     throw new RecaseError({
       code: ErrCode.ProductHasNoPrices,
