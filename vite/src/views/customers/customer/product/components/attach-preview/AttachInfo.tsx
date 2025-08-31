@@ -9,7 +9,7 @@ import {
   ProductItemFeatureType,
 } from "@autumn/shared";
 import { format } from "date-fns";
-import { InfoIcon } from "lucide-react";
+import { InfoIcon, CheckCircle } from "lucide-react";
 
 export const AttachInfo = () => {
   const { attachState, product } = useProductContext();
@@ -86,10 +86,38 @@ export const AttachInfo = () => {
   };
   const description = getAttachDescription();
 
+
+  const hasNoPriceChanges = () => {
+    if (preview?.branch === AttachBranch.SameCustomEnts) {
+      return true;
+    }
+    
+    if (flags.isFree) {
+      return true;
+    }
+
+    if (preview?.due_today?.total === 0) {
+      return true;
+    }
+    
+    return false;
+  };
+
   if (!description) {
     return null;
   }
 
+  if (hasNoPriceChanges()) {
+    return (
+      <div className="flex items-center p-2 bg-green-50 border-1 border-green-200 text-green-700 rounded-xs">
+        <div className="min-w-6 flex">
+          <CheckCircle size={14} />
+        </div>
+        <p className="text-sm font-medium">No changes to prices or subscriptions will be made</p>
+      </div>
+    );
+  }
+  
   return (
     <div className="flex items-center p-2 bg-blue-50 border-1 border-blue-200 text-blue-400 rounded-xs">
       <div className="min-w-6 flex">
