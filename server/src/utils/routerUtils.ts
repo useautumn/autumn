@@ -9,52 +9,92 @@ import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { ExtendedRequest } from "./models/Request.js";
 import { withSpan as withSpanTracer } from "@/internal/analytics/tracer/spanUtils.js";
+import qs from "qs";
+
+/**
+ * Parses query parameters with proper type coercion for validation
+ */
+const parseQueryForValidation = (query: any): any => {
+  // Re-parse the query string with qs to handle arrays and nested objects properly
+  const queryString = new URLSearchParams(query).toString();
+  const parsed = qs.parse(queryString, {
+    comma: true, // Parse comma-separated values as arrays
+    arrayLimit: 100,
+    parseArrays: true,
+  });
+
+  // Type coercion for common cases
+  const coerceValue = (value: any): any => {
+    if (Array.isArray(value)) {
+      return value.map(coerceValue);
+    }
+
+    if (typeof value === "string") {
+      // Try to parse as number
+      if (!isNaN(Number(value)) && value.trim() !== "") {
+        return Number(value);
+      }
+      // Parse booleans
+      if (value === "true") return true;
+      if (value === "false") return false;
+    }
+
+    return value;
+  };
+
+  const result: any = {};
+  for (const [key, value] of Object.entries(parsed)) {
+    result[key] = coerceValue(value);
+  }
+
+  return result;
+};
 
 /**
  * Formats Zod validation errors into user-friendly messages
  */
 const formatZodValidationError = (error: ZodError): string => {
-  const fieldErrors = error.issues.map(issue => {
-    const path = issue.path.length > 0 ? issue.path.join('.') : 'root';
-    
+  const fieldErrors = error.issues.map((issue) => {
+    const path = issue.path.length > 0 ? issue.path.join(".") : "root";
+
     // Handle different types of validation errors with more descriptive messages
     switch (issue.code) {
-      case 'invalid_type':
-        if (issue.received === 'undefined') {
+      case "invalid_type":
+        if (issue.received === "undefined") {
           return `${path} is required`;
         }
         return `${path} must be a ${issue.expected}, received ${issue.received}`;
-      
-      case 'too_small':
-        if (issue.type === 'number') {
+
+      case "too_small":
+        if (issue.type === "number") {
           return `${path} must be at least ${issue.minimum}`;
         }
-        if (issue.type === 'string') {
+        if (issue.type === "string") {
           return `${path} must be at least ${issue.minimum} characters`;
         }
-        if (issue.type === 'array') {
+        if (issue.type === "array") {
           return `${path} must contain at least ${issue.minimum} items`;
         }
         return `${path} is too small`;
-      
-      case 'too_big':
-        if (issue.type === 'number') {
+
+      case "too_big":
+        if (issue.type === "number") {
           return `${path} must be at most ${issue.maximum}`;
         }
-        if (issue.type === 'string') {
+        if (issue.type === "string") {
           return `${path} must be at most ${issue.maximum} characters`;
         }
-        if (issue.type === 'array') {
+        if (issue.type === "array") {
           return `${path} must contain at most ${issue.maximum} items`;
         }
         return `${path} is too large`;
-      
-      case 'invalid_enum_value':
-        return `${path} must be one of: ${issue.options?.join(', ') || 'valid options'}`;
-      
-      case 'custom':
+
+      case "invalid_enum_value":
+        return `${path} must be one of: ${issue.options?.join(", ") || "valid options"}`;
+
+      case "custom":
         return issue.message || `${path} is invalid`;
-      
+
       default:
         return issue.message || `${path} is invalid`;
     }
@@ -62,7 +102,7 @@ const formatZodValidationError = (error: ZodError): string => {
 
   // Remove duplicates and join with semicolons for multiple errors
   const uniqueErrors = [...new Set(fieldErrors)];
-  return uniqueErrors.join('; ');
+  return uniqueErrors.join("; ");
 };
 
 /**
@@ -94,26 +134,46 @@ export const routeHandler = async <TLoad = undefined>({
   action,
   handler,
   validator,
+  queryValidator,
   loader,
   withSpan = false,
 }: {
   req: any;
   res: any;
   action: string;
-  handler: (req: any, res: any, load: TLoad) => Promise<void>;
-  validator?: ((req: any, res: any) => Promise<void>) | ZodAny | ZodObject<any, any, any, any, any>;
+  handler: (req: any, res: any, load: TLoad, query?: any) => Promise<void>;
+  validator?:
+    | ((req: any, res: any) => Promise<void>)
+    | ZodAny
+    | ZodObject<any, any, any, any, any>;
+  queryValidator?:
+    | ((req: any, res: any) => Promise<void>)
+    | ZodAny
+    | ZodObject<any, any, any, any, any>;
   withSpan?: boolean;
 } & (TLoad extends undefined
   ? { loader?: never }
-  : { loader: (org: Organization, env: AppEnv, db: DrizzleCli, body: any, query: any, req: ExtendedRequest) => Promise<TLoad> }
-)) => {
+  : {
+      loader: ({
+        body,
+        query,
+        req,
+      }: {
+        body: any;
+        query: any;
+        req: ExtendedRequest;
+      }) => Promise<TLoad>;
+    })) => {
   try {
     let load: TLoad | undefined;
 
-    if(!withSpan) {
-      if (typeof validator === 'function') {
+    if (!withSpan) {
+      if (typeof validator === "function") {
         await validator(req, res);
-              } else if(validator instanceof ZodAny || validator instanceof ZodObject) {
+      } else if (
+        validator instanceof ZodAny ||
+        validator instanceof ZodObject
+      ) {
         const parseResult = validator.safeParse(req.body);
         if (!parseResult.success) {
           const errorMsg = formatZodValidationError(parseResult.error);
@@ -123,10 +183,33 @@ export const routeHandler = async <TLoad = undefined>({
           });
         }
       }
-      if (loader) {
-        load = await loader((req as ExtendedRequest).org, (req as ExtendedRequest).env, (req as ExtendedRequest).db, req.body, req.query, req);
+
+      if (typeof queryValidator === "function") {
+        await queryValidator(req, res);
+      } else if (
+        queryValidator instanceof ZodAny ||
+        queryValidator instanceof ZodObject
+      ) {
+        const parsedQuery = parseQueryForValidation(req.query);
+        const parseResult = queryValidator.safeParse(parsedQuery);
+        if (!parseResult.success) {
+          const errorMsg = formatZodValidationError(parseResult.error);
+          throw new RecaseError({
+            message: errorMsg,
+            code: ErrCode.InvalidRequest,
+          });
+        }
+        // Update req.query with parsed values for use in loader
+        req.query = parseResult.data;
       }
-      await handler(req, res, load as TLoad);
+      if (loader) {
+        load = await loader({
+          body: req.body,
+          query: req.query,
+          req: req as ExtendedRequest,
+        });
+      }
+      await handler(req, res, load as TLoad, req.query);
     } else {
       await withSpanTracer({
         name: action ?? "unknown",
@@ -135,9 +218,12 @@ export const routeHandler = async <TLoad = undefined>({
           env: req.env,
         },
         fn: async () => {
-          if (typeof validator === 'function') {
+          if (typeof validator === "function") {
             await validator(req, res);
-          } else if(validator instanceof ZodAny || validator instanceof ZodObject) {
+          } else if (
+            validator instanceof ZodAny ||
+            validator instanceof ZodObject
+          ) {
             const parseResult = validator.safeParse(req.body);
             if (!parseResult.success) {
               const errorMsg = formatZodValidationError(parseResult.error);
@@ -147,11 +233,34 @@ export const routeHandler = async <TLoad = undefined>({
               });
             }
           }
-          if (loader) {
-            load = await loader((req as ExtendedRequest).org, (req as ExtendedRequest).env, (req as ExtendedRequest).db, req.body, req.query, req);
+
+          if (typeof queryValidator === "function") {
+            await queryValidator(req, res);
+          } else if (
+            queryValidator instanceof ZodAny ||
+            queryValidator instanceof ZodObject
+          ) {
+            const parsedQuery = parseQueryForValidation(req.query);
+            const parseResult = queryValidator.safeParse(parsedQuery);
+            if (!parseResult.success) {
+              const errorMsg = formatZodValidationError(parseResult.error);
+              throw new RecaseError({
+                message: errorMsg,
+                code: ErrCode.InvalidRequest,
+              });
+            }
+            // Update req.query with parsed values for use in loader
+            req.query = parseResult.data;
           }
-          await handler(req, res, load as TLoad);
-        }
+          if (loader) {
+            load = await loader({
+              body: req.body,
+              query: req.query,
+              req: req as ExtendedRequest,
+            });
+          }
+          await handler(req, res, load as TLoad, req.query);
+        },
       });
     }
   } catch (error) {
@@ -159,7 +268,7 @@ export const routeHandler = async <TLoad = undefined>({
       if (error instanceof RecaseError) {
         if (error.code === ErrCode.EntityNotFound) {
           req.logtail.warn(
-            `${error.message}, org: ${req.org?.slug || req.orgId}`,
+            `${error.message}, org: ${req.org?.slug || req.orgId}`
           );
           return res.status(404).json({
             message: error.message,
@@ -185,11 +294,11 @@ export const routeHandler = async <TLoad = undefined>({
       if (
         originalUrl.includes("/billing_portal") &&
         error.message.includes(
-          "Invalid URL: An explicit scheme (such as https)",
+          "Invalid URL: An explicit scheme (such as https)"
         )
       ) {
         req.logtail.warn(
-          `Billing portal return_url error, org: ${req.org?.slug}, return_url: ${req.body.return_url}`,
+          `Billing portal return_url error, org: ${req.org?.slug}, return_url: ${req.body.return_url}`
         );
         return res.status(400).json({
           message: error.message,
