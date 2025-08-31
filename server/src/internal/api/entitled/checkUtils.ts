@@ -17,7 +17,11 @@ import { getCheckPreview } from "./getCheckPreview.js";
 
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getProration } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
-import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
+import {
+  formatUnixToDate,
+  formatUnixToDateTime,
+  notNullish,
+} from "@/utils/genUtils.js";
 import { featureToCusPrice } from "@/internal/customers/cusProducts/cusPrices/convertCusPriceUtils.js";
 import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import { Decimal } from "decimal.js";
@@ -126,10 +130,8 @@ export const getOptions = ({
         now,
       });
 
-      // if (finalProration) {
-      //   console.log("Start:", formatUnixToDate(finalProration.start));
-      //   console.log("End:", formatUnixToDate(finalProration.end));
-      // }
+      if (finalProration) {
+      }
 
       let priceData = itemToPriceOrTiers({
         item: i,

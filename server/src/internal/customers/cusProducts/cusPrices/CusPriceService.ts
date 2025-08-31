@@ -41,7 +41,11 @@ export class CusPriceService {
       return;
     }
 
-    await db.insert(customerPrices).values(data as any);
+    const inserted = await db
+      .insert(customerPrices)
+      .values(data as any)
+      .returning();
+    return inserted as CustomerPrice[];
   }
 
   static async getByCustomerProductId({

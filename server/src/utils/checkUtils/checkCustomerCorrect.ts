@@ -374,6 +374,7 @@ export const checkCusSubCorrect = async ({
 
       const lineItem: any = res?.lineItem;
       if (lineItem && res?.lineItem) {
+        lineItem.quantity = Math.max(lineItem.quantity, 0);
         if (addToSub) {
           const existingIndex = supposedSubItems.findIndex(
             (si: any) => si.price === lineItem.price
