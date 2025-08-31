@@ -71,7 +71,7 @@ export const formatUnixToDate = (unixDate?: number) => {
   if (!unixDate) {
     return null;
   }
-  return format(new Date(unixDate), "d MMM yyyy");
+  return format(new UTCDate(unixDate), "d MMM yyyy");
 };
 
 export const timeout = (ms: number) => {
