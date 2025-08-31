@@ -183,11 +183,13 @@ export const getUpgradeProductPreview = async ({
     if (sub) {
       const { start, end } = subToPeriodStartEnd({ sub });
       const largestInterval = getLargestInterval({ prices: newProduct.prices });
-      anchorToUnix = addBillingIntervalUnix({
-        unixTimestamp: start * 1000,
-        interval: largestInterval!.interval,
-        intervalCount: largestInterval!.intervalCount,
-      });
+      if (largestInterval) {
+        anchorToUnix = addBillingIntervalUnix({
+          unixTimestamp: start * 1000,
+          interval: largestInterval.interval,
+          intervalCount: largestInterval.intervalCount,
+        });
+      }
     }
   } catch (error: any) {
     logger.error(
