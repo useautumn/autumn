@@ -92,8 +92,11 @@ export default function ProductSidebar() {
             buttonIcon={
               product.free_trial ? <Minus size={14} /> : <Plus size={14} />
             }
-
-            disabled={isOneOffProduct(product.items, product.is_add_on)}
+            disabledReason={
+              isOneOffProduct(product.items, product.is_add_on)
+                ? "Can't add a free trial to an a one time product"
+                : undefined
+            }
           >
             <div>
               {product.free_trial ? (

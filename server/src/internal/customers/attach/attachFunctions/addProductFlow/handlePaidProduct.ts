@@ -165,6 +165,7 @@ export const handlePaidProduct = async ({
         anchorToUnix: billingCycleAnchorUnix,
         earliestInterval,
         config,
+        logger,
       });
     } catch (error: any) {
       if (

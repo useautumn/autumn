@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { payForInvoice } from "../../stripeInvoiceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@autumn/shared";
+import { buildInvoiceMemoFromEntitlements } from "@/internal/invoices/invoiceMemoUtils.js";
 
 export const undoSubUpdate = async ({
   stripeCli,
@@ -69,10 +70,20 @@ export const createProrationInvoice = async ({
     return null;
   }
 
+  // const shouldMemo = attachParams.org.config.invoice_memos && invoiceOnly;
+  // const invoiceMemo = shouldMemo
+  //   ? await buildInvoiceMemoFromEntitlements({
+  //       org: attachParams.org,
+  //       entitlements: attachParams.entitlements,
+  //       features: attachParams.features,
+  //     })
+  //   : undefined;
+
   let invoice = await stripeCli.invoices.create({
     customer: customer.processor.id,
     subscription: curSub.id,
     auto_advance: false,
+    // ...(shouldMemo ? { description: invoiceMemo } : {}),
   });
 
   if (invoiceOnly) return invoice;

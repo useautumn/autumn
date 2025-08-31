@@ -38,10 +38,12 @@ import { formatAmount } from "@/utils/formatUtils.js";
 import {
   formatUnixToDate,
   formatUnixToDateTime,
+  formatUnixToUTCDateTime,
   notNullish,
 } from "@/utils/genUtils.js";
 import {
   addBillingIntervalUnix,
+  addIntervalForProration,
   getAlignedIntervalUnix,
   subtractBillingIntervalUnix,
   subtractFromUnixTillAligned,
@@ -113,10 +115,13 @@ export const getProration = ({
   }
 
   // Get end...
-  const originalEnd = addBillingIntervalUnix({
+
+  const originalEnd = addIntervalForProration({
     unixTimestamp: now,
-    interval,
-    intervalCount,
+    intervalConfig: {
+      interval,
+      intervalCount,
+    },
   });
 
   let end = subtractFromUnixTillAligned({
@@ -124,24 +129,11 @@ export const getProration = ({
     originalUnix: originalEnd,
   });
 
-  // let end = getAlignedIntervalUnix({
-  //   alignWithUnix: anchorToUnix!,
-  //   interval,
-  //   intervalCount,
-  //   now,
-  //   alwaysReturn: true,
-  // });
-
   let start = subtractIntervalForProration({
     unixTimestamp: end!,
     interval,
     intervalCount,
   });
-
-  // console.log(`Anchor to unix: ${formatUnixToDateTime(anchorToUnix)}`);
-  // console.log(`Start: ${formatUnixToDateTime(start)}`);
-  // console.log(`End: ${formatUnixToDateTime(end)}`);
-  // console.log(`--------------------------------`);
 
   return {
     start,
@@ -183,8 +175,6 @@ export const getItemsForNewProduct = async ({
   const { org, features } = attachParams;
   now = now || Date.now();
 
-  // console.log("Anchoring to", formatUnixToDateTime(anchorToUnix));
-
   const items: PreviewLineItem[] = [];
 
   sortPricesByType(newProduct.prices);
@@ -211,9 +201,9 @@ export const getItemsForNewProduct = async ({
     });
 
     if (printLogs && finalProration) {
-      console.log(
-        `Proration: ${formatUnixToDate(finalProration.start)} to ${formatUnixToDate(finalProration.end)}`
-      );
+      // console.log(
+      //   `Proration: ${formatUnixToUTCDateTime(finalProration.start)} to ${formatUnixToUTCDateTime(finalProration.end)}`
+      // );
     }
 
     if (isFixedPrice({ price })) {

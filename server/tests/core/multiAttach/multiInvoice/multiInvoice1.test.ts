@@ -175,6 +175,10 @@ describe(`${chalk.yellowBright("multiInvoice1: Testing multi attach through invo
       db,
       org,
       env,
+      attachParams: {
+        invoice: true,
+        enable_product_immediately: true,
+      },
     });
   });
 });

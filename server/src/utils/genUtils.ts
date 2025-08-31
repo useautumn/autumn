@@ -62,6 +62,19 @@ export const formatUnixToDateTime = (
     return "undefined unix date";
   }
   return format(
+    new Date(unixDate),
+    withTimezone ? "dd MMM yyyy HH:mm:ss z" : "dd MMM yyyy HH:mm:ss"
+  );
+};
+
+export const formatUnixToUTCDateTime = (
+  unixDate?: number | null,
+  withTimezone?: boolean
+) => {
+  if (!unixDate) {
+    return "undefined unix date";
+  }
+  return format(
     new UTCDate(unixDate),
     withTimezone ? "dd MMM yyyy HH:mm:ss z" : "dd MMM yyyy HH:mm:ss"
   );

@@ -14,7 +14,7 @@ import {
   getLatestPeriodStart,
 } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { getLargestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
-import { addBillingIntervalUnix } from "@/internal/products/prices/billingIntervalUtils.js";
+import { addIntervalForProration } from "@/internal/products/prices/billingIntervalUtils.js";
 
 import { Decimal } from "decimal.js";
 import { notNullish } from "@/utils/genUtils.js";
@@ -88,11 +88,12 @@ export const getMultiAttachPreview = async ({
     if (sub) {
       const latestPeriodStart = getLatestPeriodStart({ sub });
       const largestInterval = getLargestInterval({ prices: product.prices });
-      anchorToUnix = addBillingIntervalUnix({
-        unixTimestamp: latestPeriodStart * 1000,
-        interval: largestInterval?.interval,
-        intervalCount: largestInterval?.intervalCount,
-      });
+      if (largestInterval) {
+        anchorToUnix = addIntervalForProration({
+          unixTimestamp: latestPeriodStart * 1000,
+          intervalConfig: largestInterval,
+        });
+      }
     }
 
     if (config.disableTrial) {
