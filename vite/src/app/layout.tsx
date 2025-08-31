@@ -19,6 +19,7 @@ import {
 } from "@/views/main-sidebar/SidebarContext";
 import { AppContext } from "./AppContext";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
+import { useGlobalErrorHandler } from "@/hooks/useGlobalErrorHandler";
 
 export function MainLayout() {
   const env = useEnv();
@@ -26,9 +27,22 @@ export function MainLayout() {
   const [sidebarState, setSidebarState] = useState<"expanded" | "collapsed">(
     "expanded"
   );
+  const { handleApiError } = useGlobalErrorHandler();
 
   const navigate = useNavigate();
   const posthog = usePostHog();
+
+  // Global error handler for API errors
+  useEffect(() => {
+    const handleGlobalError = (event: ErrorEvent) => {
+      if (event.error && event.error.response) {
+        handleApiError(event.error);
+      }
+    };
+
+    window.addEventListener('error', handleGlobalError);
+    return () => window.removeEventListener('error', handleGlobalError);
+  }, [handleApiError]);
 
   useEffect(() => {
     // Identify user
