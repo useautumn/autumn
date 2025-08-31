@@ -36,7 +36,7 @@ import { ExtendedRequest } from "@/utils/models/Request.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { isDefaultTrial } from "../productUtils/classifyProduct.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import { validateOneOffTrial } from "../free-trials/freeTrialUtils.js";
 
 const validateCreateProduct = async ({ req }: { req: ExtendedRequest }) => {
   let { free_trial, items } = req.body;
@@ -206,6 +206,11 @@ export const handleCreateProduct = async (req: Request, res: any) =>
         prices = res.prices;
         entitlements = res.entitlements;
       }
+      
+      await validateOneOffTrial({
+        prices,
+        freeTrial: freeTrial || null,
+      });
 
       await initProductInStripe({
         db,
