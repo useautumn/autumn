@@ -13,6 +13,7 @@ import { TrashIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useMemberships } from "../hooks/useMemberships";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export const MemberRowToolbar = ({
   membership,
@@ -25,28 +26,44 @@ export const MemberRowToolbar = ({
   const [open, setOpen] = useState(false);
   const { org } = useOrg();
   const { mutate } = useMemberships();
+  const axiosInstance = useAxiosInstance();
 
   const handleDeleteMember = async (e: any) => {
     e.preventDefault();
     e.stopPropagation();
 
+    if (!membership) {
+      console.error("No membership data available");
+      toast.error("Cannot remove member: membership data not found");
+      return;
+    }
+
     setDeleteLoading(true);
     try {
-      const { data, error } = await authClient.organization.removeMember({
-        memberIdOrEmail: membership!.member.id,
-        organizationId: org.id,
+      if (!membership.member.id || !membership.user.id) {
+        toast.error("Invalid member data");
+        return;
+      }
+
+      const response = await axiosInstance.post("/organization/remove-member", {
+        memberId: membership.member.id,
+        userId: membership.user.id,
       });
 
-      if (error) {
-        toast.error(error.message);
+      // Refresh the members list
+      await mutate();
+      toast.success("Member removed successfully");
+      setOpen(false); // Close the dropdown
+    } catch (error: any) {
+      console.error("Member removal error:", error);
+      if (error.response?.data?.code === "MEMBER_NOT_FOUND") {
+        toast.error("Member not found in this organization");
       } else {
-        await mutate();
-        toast.success("Member removed");
+        toast.error("Failed to remove member. Please try again.");
       }
-    } catch (error) {
-      toast.error("Failed to remove member");
+    } finally {
+      setDeleteLoading(false);
     }
-    setDeleteLoading(false);
   };
 
   const handleDeleteInvite = async (e: any) => {
