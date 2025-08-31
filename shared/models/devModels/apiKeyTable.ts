@@ -30,6 +30,7 @@ export const apiKeys = pgTable(
       name: "api_keys_org_id_fkey",
     }).onDelete("cascade"),
     unique("api_keys_hashed_key_key").on(table.hashed_key),
+    unique("api_keys_org_env_name_key").on(table.org_id, table.env, table.name),
     // index("api_keys_hashed_key_key").on(table.hashed_key),
   ],
 );

@@ -37,6 +37,7 @@ export const ErrCode = {
   DuplicateCustomerId: "duplicate_customer_id",
   StripeKeyNotFound: "stripe_key_not_found",
   DuplicateCustomerEmail: "duplicate_customer_email",
+  DuplicateApiKeyName: "duplicate_api_key_name",
 
   // Stripe
   StripeError: "stripe_error",

@@ -40,10 +40,17 @@ const CreateAPIKey = () => {
   }, [copied]);
 
   const handleCreate = async () => {
+    const keyName = apiKeyName ? apiKeyName : name;
+    
+    if (!keyName || keyName.trim() === "") {
+      toast.error("Please enter a name for your API key");
+      return;
+    }
+
     setLoading(true);
     try {
       const { api_key } = await DevService.createAPIKey(axiosInstance, {
-        name: apiKeyName ? apiKeyName : name,
+        name: keyName.trim(),
       });
 
       setApiKey(api_key);
@@ -51,9 +58,13 @@ const CreateAPIKey = () => {
         setApiCreated(true);
       }
       await mutate();
-    } catch (error) {
+    } catch (error: any) {
       console.log("Error:", error);
-      toast.error("Failed to create API key");
+      if (error?.response?.data?.code === "duplicate_api_key_name") {
+        toast.error(error.response.data.message || "API key with this name already exists");
+      } else {
+        toast.error("Failed to create API key");
+      }
     }
 
     setLoading(false);

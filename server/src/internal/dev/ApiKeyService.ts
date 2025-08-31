@@ -100,6 +100,27 @@ export class ApiKeyService {
       .where(and(eq(apiKeys.id, id), eq(apiKeys.org_id, orgId)))
       .returning();
   }
+
+  static async checkNameExists({
+    db,
+    orgId,
+    env,
+    name,
+  }: {
+    db: DrizzleCli;
+    orgId: string;
+    env: AppEnv;
+    name: string;
+  }) {
+    const existing = await db.query.apiKeys.findFirst({
+      where: and(
+        eq(apiKeys.org_id, orgId),
+        eq(apiKeys.env, env),
+        eq(apiKeys.name, name)
+      ),
+    });
+    return !!existing;
+  }
 }
 
 export class CachedKeyService {

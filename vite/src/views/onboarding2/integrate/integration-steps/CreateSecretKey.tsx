@@ -35,9 +35,13 @@ export const CreateSecretKey = ({
       });
 
       setApiKey(api_key);
-    } catch (error) {
+    } catch (error: any) {
       console.log("Error:", error);
-      toast.error("Failed to create API key");
+      if (error?.response?.data?.code === "duplicate_api_key_name") {
+        toast.error(error.response.data.message || "API key with this name already exists");
+      } else {
+        toast.error("Failed to create API key");
+      }
     }
 
     setLoading(false);

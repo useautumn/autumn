@@ -1,5 +1,5 @@
 import { withOrgAuth } from "@/middleware/authMiddleware.js";
-import { AppEnv } from "@autumn/shared";
+import { AppEnv, ErrCode } from "@autumn/shared";
 import { Router } from "express";
 import { ApiKeyService } from "./ApiKeyService.js";
 import { OrgService } from "../orgs/OrgService.js";
@@ -18,6 +18,7 @@ import {
 import { clearOrgCache } from "../orgs/orgUtils/clearOrgCache.js";
 import * as crypto from "crypto";
 import { isStripeConnected } from "../orgs/orgUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
 
 export const devRouter: Router = Router();
 
@@ -55,6 +56,33 @@ devRouter.post("/api_key", withOrgAuth, async (req: any, res) =>
       const { db, env, orgId } = req;
       const { name } = req.body;
 
+      // Validate that name is provided and not empty
+      if (!name || typeof name !== "string" || name.trim() === "") {
+        throw new RecaseError({
+          message: "API key name is required and cannot be empty",
+          code: ErrCode.InvalidInputs,
+          statusCode: 400,
+        });
+      }
+
+      const trimmedName = name.trim();
+
+      // Check if API key name already exists for this org and environment
+      const nameExists = await ApiKeyService.checkNameExists({
+        db,
+        orgId,
+        env,
+        name: trimmedName,
+      });
+
+      if (nameExists) {
+        throw new RecaseError({
+          message: `API key with name "${trimmedName}" already exists`,
+          code: ErrCode.DuplicateApiKeyName,
+          statusCode: 400,
+        });
+      }
+
       // 1. Create API key
       let prefix = "am_sk_test";
       if (env === AppEnv.Live) {
@@ -63,7 +91,7 @@ devRouter.post("/api_key", withOrgAuth, async (req: any, res) =>
       const apiKey = await createKey({
         db,
         env,
-        name,
+        name: trimmedName,
         orgId,
         userId: req.user?.id,
         prefix,
