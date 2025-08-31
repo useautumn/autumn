@@ -183,10 +183,10 @@ export const pricesContainRecurring = (prices: Price[]) => {
 
 // Get price options
 export const getEntOptions = (
-  optionsList: FeatureOptions[],
+  optionsList: FeatureOptions[] | null | undefined,
   entitlement: Entitlement | EntitlementWithFeature
 ) => {
-  if (!entitlement) {
+  if (!entitlement || !optionsList || !Array.isArray(optionsList)) {
     return null;
   }
   const options = optionsList.find(
