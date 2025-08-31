@@ -20,28 +20,29 @@ function ErrorScreen({
 }) {
   const env = useEnv();
   const navigate = useNavigate();
-  const { data: session } = useSession();
 
   const handleOrgRemovalError = async () => {
     if (errorCode === "USER_REMOVED_FROM_ORG" && errorData) {
       try {
         // Get user's organizations
         const { data: organizations } = await authClient.organization.list();
-        
+
         if (organizations && organizations.length > 0) {
           // User has other organizations, switch to the first available one
-          const nextOrg = organizations.find(org => org.id !== errorData.orgId);
+          const nextOrg = organizations.find(
+            (org) => org.id !== errorData.orgId
+          );
           if (nextOrg) {
             await authClient.organization.setActive({
               organizationId: nextOrg.id,
             });
             // Redirect to products page of the new organization
-            const envPath = env === AppEnv.Sandbox ? 'sandbox' : 'production';
+            const envPath = env === AppEnv.Sandbox ? "sandbox" : "production";
             navigate(`/${envPath}/products`);
             return;
           }
         }
-        
+
         // User has no organizations left, redirect to sign-in
         navigate("/sign-in");
       } catch (error) {
@@ -64,7 +65,8 @@ function ErrorScreen({
         <div className="text-t2 text-lg max-w-md text-center">
           <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
           <p className="text-t3 mb-4">
-            You no longer have access to this organization. Redirecting you to an available organization...
+            You no longer have access to this organization. Redirecting you to
+            an available organization...
           </p>
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-t3 mx-auto"></div>
         </div>

@@ -28,9 +28,6 @@ export const MemberRowToolbar = ({
   const { mutate } = useMemberships();
   const axiosInstance = useAxiosInstance();
 
-  // Debug logging
-  console.log("MemberRowToolbar props:", { membership, invite, org });
-
   const handleDeleteMember = async (e: any) => {
     e.preventDefault();
     e.stopPropagation();
@@ -43,32 +40,15 @@ export const MemberRowToolbar = ({
 
     setDeleteLoading(true);
     try {
-      console.log("Removing member:", {
-        memberId: membership.member.id,
-        userId: membership.user.id,
-        userEmail: membership.user.email,
-        orgId: org.id,
-        membership: membership
-      });
-
-      // Debug: Check if the IDs are valid
       if (!membership.member.id || !membership.user.id) {
-        console.error("Invalid IDs:", {
-          memberId: membership.member.id,
-          userId: membership.user.id
-        });
         toast.error("Invalid member data");
         return;
       }
 
-      // Use our custom backend endpoint for member removal
-      // This handles both the database cleanup and session invalidation
       const response = await axiosInstance.post("/organization/remove-member", {
         memberId: membership.member.id,
         userId: membership.user.id,
       });
-
-      console.log("Backend member removal successful:", response);
 
       // Refresh the members list
       await mutate();
