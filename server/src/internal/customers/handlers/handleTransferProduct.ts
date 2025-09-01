@@ -8,6 +8,7 @@ import { CusProductService } from "../cusProducts/CusProductService.js";
 import { nullish } from "@/utils/genUtils.js";
 import { handleDecreaseAndTransfer } from "./handleTransferProduct/handleDecreaseAndTransfer.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { deleteCusCache } from "../cusCache/updateCachedCus.js";
 const TransferProductSchema = z.object({
   from_entity_id: z.string().nullish(),
   to_entity_id: z.string(),
@@ -119,6 +120,13 @@ export const handleTransferProduct = async (req: any, res: any) =>
           },
         });
       }
+
+      await deleteCusCache({
+        db: req.db,
+        customerId: customer.id || customer.internal_id,
+        org: req.org,
+        env: req.env,
+      });
 
       res.status(200).json({
         // message: "Product transferred successfully",
