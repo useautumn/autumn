@@ -442,7 +442,8 @@ export const processFullCusProduct = ({
 			} else {
 				// Add allowance to tiers
 				const allowance = ent?.allowance;
-				let tiers: unknown;
+				type Tier = { to: number | null | undefined | typeof TierInfinite; amount: number };
+				let tiers: Tier[];
 
 				if (notNullish(allowance) && allowance! > 0) {
 					tiers = [
