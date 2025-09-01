@@ -38,7 +38,7 @@ export default function DevScreen({ env }: { env: AppEnv }) {
       <div className="flex flex-col gap-4 h-fit relative w-full text-sm">
         <h1 className="text-xl font-medium shrink-0 pt-6 pl-10">Developer</h1>
 
-        {secondaryTab === "api_keys" && (
+        {(secondaryTab === "api_keys" || !secondaryTab) && (
           <div className="flex flex-col gap-16">
             <ApiKeysView apiKeys={apiKeys} />
             {pkey && <PublishableKeySection org={data.org} />}

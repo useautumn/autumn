@@ -32,7 +32,6 @@ export const connectStripe = async ({
   env: AppEnv;
 }) => {
   // 1. Check if key is valid
-
   await checkKeyValid(apiKey);
 
   let stripe = new Stripe(apiKey);
@@ -42,12 +41,12 @@ export const connectStripe = async ({
   // 2. Disconnect existing webhook endpoints
   const curWebhooks = await stripe.webhookEndpoints.list();
   for (const webhook of curWebhooks.data) {
-    if (webhook.url.includes(orgId)) {
+    if (webhook.url.includes(orgId) && webhook.url.includes(env)) {
       await stripe.webhookEndpoints.del(webhook.id);
     }
   }
 
-  // 3. Create webhook endpoint
+  // 3. Create new webhook endpoint
   let webhook = await createWebhookEndpoint(apiKey, env, orgId);
 
   // 3. Return encrypted
@@ -197,6 +196,8 @@ export const handleConnectStripe = async (req: any, res: any) =>
 
       const { logger } = req;
 
+      logger.info(`Connecting stripe for org ${req.org.slug}, ENV: ${req.env}`);
+
       if (!isStripeConnected({ org: req.org, env: req.env }) && !secret_key) {
         throw new RecaseError({
           message: "Please provide your stripe secret key",
@@ -223,19 +224,21 @@ export const handleConnectStripe = async (req: any, res: any) =>
         updates = {
           stripe_config: {
             ...curOrg.stripe_config,
-            test_api_key: isSandbox ? result.test_api_key : undefined,
-            live_api_key: isSandbox ? undefined : result.live_api_key,
-            test_webhook_secret: isSandbox
-              ? result.test_webhook_secret
-              : undefined,
-            live_webhook_secret: isSandbox
-              ? undefined
-              : result.live_webhook_secret,
           },
           default_currency: nullish(curDefaultCurrency)
             ? result.defaultCurrency
             : undefined,
         };
+
+        if (isSandbox) {
+          updates.stripe_config.test_api_key = result.test_api_key;
+          updates.stripe_config.test_webhook_secret =
+            result.test_webhook_secret;
+        } else {
+          updates.stripe_config.live_api_key = result.live_api_key;
+          updates.stripe_config.live_webhook_secret =
+            result.live_webhook_secret;
+        }
       }
 
       // 2. If success url present, add it to the updates
@@ -287,63 +290,5 @@ export const handleConnectStripe = async (req: any, res: any) =>
       res.status(200).json({
         message: "Stripe connected",
       });
-
-      // const orgUpdate = {
-      //   stripe_config: {
-      //     ...req.org.stripe_config,
-      //     ...result,
-      //   },
-      //   default_currency: default_currency,
-      // };
-
-      // // 1. Handle default_currency changed...
-      // const newStripeConfig = structuredClone(req.org.stripe_config);
-
-      // const updates = {
-      //   default_currency: default_currency,
-      //   stripe_config: {
-      //     ...req.org.stripe_config,
-      //   },
-      //   // stripe_config: {
-      //   //   ...req.org.stripe_config,
-      //   //   success_url: success_url,
-      //   // }
-      // };
-
-      // let { testApiKey, liveApiKey, successUrl, defaultCurrency } = req.body;
-      // let { db, orgId, logtail: logger } = req;
-      // if (!testApiKey || !liveApiKey || !successUrl) {
-      //   throw new RecaseError({
-      //     message: "Missing required fields",
-      //     code: ErrCode.StripeKeyInvalid,
-      //     statusCode: 400,
-      //   });
-      // }
-
-      // let { defaultCurrency: finalDefaultCurrency, stripeConfig } =
-      //   await connectAllStripe({
-      //     db,
-      //     orgId,
-      //     logger,
-      //     testApiKey,
-      //     liveApiKey,
-      //     defaultCurrency,
-      //     successUrl,
-      //   });
-
-      // // 1. Update org in Supabase
-      // await OrgService.update({
-      //   db,
-      //   orgId: req.orgId,
-      //   updates: {
-      //     stripe_connected: true,
-      //     default_currency: finalDefaultCurrency,
-      //     stripe_config: stripeConfig,
-      //   },
-      // });
-
-      // res.status(200).json({
-      //   message: "Stripe connected",
-      // });
     },
   });

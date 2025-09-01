@@ -112,8 +112,8 @@ export default function App() {
           />
 
           {/* STRIPE */}
-          <Route path="/integrations/stripe" element={<StripePage />} />
-          <Route path="/sandbox/integrations/stripe" element={<StripePage />} />
+          {/* <Route path="/integrations/stripe" element={<StripePage />} />
+          <Route path="/sandbox/integrations/stripe" element={<StripePage />} /> */}
 
           {/* CLI */}
           <Route path="/dev/cli" element={<Otp />} />

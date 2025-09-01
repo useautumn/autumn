@@ -240,16 +240,12 @@ export const handleGetOtp = async (req: any, res: any) =>
         userId: req.user?.id,
       });
 
-      // console.log("New keys created:");
-      // console.log("Sandbox key:", sandboxKey);
-      // console.log("Prod key:", prodKey);
-
       let org = await OrgService.get({
         db: req.db,
         orgId: cacheData.orgId,
       });
 
-      let stripeConnected = isStripeConnected({ org });
+      let stripeConnected = isStripeConnected({ org, env: AppEnv.Sandbox });
 
       let responseData = {
         ...cacheData,

@@ -134,7 +134,7 @@ function ProductsView({ env }: { env: AppEnv }) {
               </TabsTrigger>
             </TabsList> */}
 
-            {tab === "products" && (
+            {(tab === "products" || !tab) && (
               <>
                 <PageSectionHeader
                   title="Products"
