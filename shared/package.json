@@ -26,7 +26,7 @@
 		"format": "pnpm exec biome format --write",
 		"lint": "pnpm exec biome lint --write",
 		"check": "pnpm exec biome check",
-    "check:fix": "pnpm exec biome check --write"
+		"check:fix": "pnpm exec biome check --write"
 	},
 	"dependencies": {
 		"date-fns": "^4.1.0",
