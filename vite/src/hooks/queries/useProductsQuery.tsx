@@ -1,5 +1,5 @@
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { FullProduct, ProductV2 } from "@autumn/shared";
+import { FullProduct, ProductCounts, ProductV2 } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 
 export const useProductsQuery = () => {
@@ -7,6 +7,11 @@ export const useProductsQuery = () => {
 
   const fetchProducts = async () => {
     const { data } = await axiosInstance.get("/products/products");
+    return data;
+  };
+
+  const fetchProductCounts = async () => {
+    const { data } = await axiosInstance.get("/products/product_counts");
     return data;
   };
 
@@ -18,11 +23,24 @@ export const useProductsQuery = () => {
     queryFn: fetchProducts,
   });
 
+  const {
+    data: countsData,
+    isLoading: isCountsLoading,
+    error: countsError,
+    refetch: countsRefetch,
+  } = useQuery<Record<string, ProductCounts>>({
+    queryKey: ["product_counts"],
+    queryFn: fetchProductCounts,
+  });
+
   return {
     products: data?.products || [],
+    counts: countsData || {},
     groupToDefaults: data?.groupToDefaults || {},
     isLoading,
     error,
-    refetch,
+    mutate: async () => {
+      await Promise.all([countsRefetch(), refetch()]);
+    },
   };
 };

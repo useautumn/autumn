@@ -5,15 +5,11 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
-import { Product } from "@autumn/shared";
+import { ProductCounts, ProductV2 } from "@autumn/shared";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 
-export const ProductCountsTooltip = ({
-  allCounts,
-  product,
-}: {
-  allCounts: any;
-  product: Product;
-}) => {
+export const ProductCountsTooltip = ({ product }: { product: ProductV2 }) => {
+  const { counts: allCounts } = useProductsQuery();
   return (
     <TooltipProvider>
       <Tooltip>
@@ -34,7 +30,8 @@ export const ProductCountsTooltip = ({
                 return null;
               return (
                 <div key={key}>
-                  {keyToTitle(key)}: {allCounts[product.id][key]}
+                  {keyToTitle(key)}:{" "}
+                  {allCounts[product.id][key as keyof ProductCounts]}
                 </div>
               );
             })}

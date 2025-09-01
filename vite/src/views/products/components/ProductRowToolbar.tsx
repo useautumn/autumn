@@ -20,13 +20,9 @@ import { Copy, Delete, Pen, ArchiveRestore, Archive } from "lucide-react";
 import { DeleteProductDialog } from "./DeleteProductDialog";
 
 export const ProductRowToolbar = ({
-  product,
-  productCounts,
   isOnboarding = false,
 }: {
   className?: string;
-  product: Product;
-  productCounts: ProductCounts;
   isOnboarding?: boolean;
 }) => {
   const [deleteLoading, setDeleteLoading] = useState(false);
