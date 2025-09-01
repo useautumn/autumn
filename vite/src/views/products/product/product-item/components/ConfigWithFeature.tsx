@@ -1,67 +1,65 @@
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { SelectItemFeature } from "./SelectItemFeature";
-import { useProductItemContext } from "../ProductItemContext";
-import { useProductContext } from "../../ProductContext";
 import { FeatureType } from "@autumn/shared";
-import { getFeature } from "@/utils/product/entitlementUtils";
-import { FeatureConfig } from "../product-item-config/FeatureItemConfig";
-import { WarningBox } from "@/components/general/modal-components/WarningBox";
-import { ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { isFeatureItem, isFeaturePriceItem } from "@/utils/product/getItemType";
-import { itemsHaveSameInterval } from "@/utils/product/productItemUtils";
 import { toast } from "sonner";
+import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import { WarningBox } from "@/components/general/modal-components/WarningBox";
+import { getFeature } from "@/utils/product/entitlementUtils";
+import { isFeaturePriceItem } from "@/utils/product/getItemType";
+import { itemsHaveSameInterval } from "@/utils/product/productItemUtils";
+import { useProductContext } from "../../ProductContext";
+import { useProductItemContext } from "../ProductItemContext";
+import { FeatureConfig } from "../product-item-config/FeatureItemConfig";
+import { SelectItemFeature } from "./SelectItemFeature";
 
 export const ConfigWithFeature = () => {
-  const { features, product, setProduct } = useProductContext();
-  const { item, isUpdate, setOpen, warning } = useProductItemContext();
+	const { features, product, setProduct } = useProductContext();
+	const { item, isUpdate, setOpen, warning } = useProductItemContext();
 
-  const isBooleanFeature =
-    getFeature(item.feature_id, features)?.type === FeatureType.Boolean;
+	const isBooleanFeature =
+		getFeature(item.feature_id, features)?.type === FeatureType.Boolean;
 
-  const otherItemIndex = product.items.findIndex(
-    (i: any) =>
-      i.feature_id === item.feature_id &&
-      isFeaturePriceItem(i) &&
-      itemsHaveSameInterval({ item1: i, item2: item })
-  );
+	const otherItemIndex = product.items.findIndex(
+		(i: any) =>
+			i.feature_id === item.feature_id &&
+			isFeaturePriceItem(i) &&
+			itemsHaveSameInterval({ item1: i, item2: item }),
+	);
 
-  const handleAddToExistingItem = () => {
-    const newItems = [...product.items];
-    const newIncludedUsage = parseFloat(item.included_usage);
-    if (!item.included_usage || isNaN(newIncludedUsage)) {
-      toast.error("You must set an included usage for this item");
-      return;
-    }
-    newItems[otherItemIndex] = {
-      ...newItems[otherItemIndex],
-      included_usage: newIncludedUsage,
-    };
+	const _handleAddToExistingItem = () => {
+		const newItems = [...product.items];
+		const newIncludedUsage = parseFloat(item.included_usage);
+		if (!item.included_usage || Number.isNaN(newIncludedUsage)) {
+			toast.error("You must set an included usage for this item");
+			return;
+		}
+		newItems[otherItemIndex] = {
+			...newItems[otherItemIndex],
+			included_usage: newIncludedUsage,
+		};
 
-    setProduct({ ...product, items: newItems });
-    setOpen(false);
-  };
+		setProduct({ ...product, items: newItems });
+		setOpen(false);
+	};
 
-  return (
-    <div className="flex flex-col gap-4 text-sm w-full">
-      <div>
-        <FieldLabel>Feature</FieldLabel>
-        <SelectItemFeature />
-      </div>
+	return (
+		<div className="flex flex-col gap-4 text-sm w-full">
+			<div>
+				<FieldLabel>Feature</FieldLabel>
+				<SelectItemFeature />
+			</div>
 
-      {!isBooleanFeature && <FeatureConfig />}
+			{!isBooleanFeature && <FeatureConfig />}
 
-      {warning && (
-        <WarningBox className="py-2">
-          <div className="flex flex-col gap-2 relative">
-            <div>
-              {/* You already have a usage-based price for this feature. If you're
+			{warning && (
+				<WarningBox className="py-2">
+					<div className="flex flex-col gap-2 relative">
+						<div>
+							{/* You already have a usage-based price for this feature. If you're
               looking to make it an overage (eg. 100 free, then $0.5
               thereafter), you should add it to the existing item. */}
-              {warning}
-            </div>
+							{warning}
+						</div>
 
-            {/* <div className="flex w-full p-0">
+						{/* <div className="flex w-full p-0">
               <Button
                 variant="ghost"
                 size="sm"
@@ -72,9 +70,9 @@ export const ConfigWithFeature = () => {
                 Add to existing item
               </Button>
             </div> */}
-          </div>
-        </WarningBox>
-      )}
-    </div>
-  );
+					</div>
+				</WarningBox>
+			)}
+		</div>
+	);
 };

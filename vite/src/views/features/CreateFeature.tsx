@@ -1,151 +1,154 @@
-import { DialogFooter, DialogHeader } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
-
+import {
+	type CreateFeature as CreateFeatureType,
+	FeatureType,
+} from "@autumn/shared";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
-  CreateFeature as CreateFeatureType,
-  FeatureType,
-} from "@autumn/shared";
-import { useFeaturesContext } from "./FeaturesContext";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { FeatureService } from "@/services/FeatureService";
-import { FeatureConfig } from "./metered-features/FeatureConfig";
-import { getBackendErr } from "@/utils/genUtils";
-import { useEnv } from "@/utils/envUtils";
-import { getDefaultFeature } from "./utils/defaultFeature";
-import {
-  CustomDialogBody,
-  CustomDialogContent,
+	CustomDialogBody,
+	CustomDialogContent,
 } from "@/components/general/modal-components/DialogContentWrapper";
+import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "@/components/ui/dialog";
+import { FeatureService } from "@/services/FeatureService";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useEnv } from "@/utils/envUtils";
+import { getBackendErr } from "@/utils/genUtils";
 import { CreateFeatureFooter } from "./components/CreateFeatureFooter";
+import { useFeaturesContext } from "./FeaturesContext";
+import { FeatureConfig } from "./metered-features/FeatureConfig";
+import { getDefaultFeature } from "./utils/defaultFeature";
 
 export const CreateFeature = ({
-  // isFromEntitlement,
-  // setShowFeatureCreate,
-  onSuccess,
-  setOpen,
-  open,
-  entityCreate,
-  handleBack,
+	// isFromEntitlement,
+	// setShowFeatureCreate,
+	onSuccess,
+	setOpen,
+	open,
+	entityCreate,
+	handleBack,
 }: {
-  // isFromEntitlement: boolean;
-  // setShowFeatureCreate: (show: boolean) => void;
-  onSuccess?: (newFeature: CreateFeatureType) => Promise<void>;
-  setOpen: (open: boolean) => void;
-  open: boolean;
-  entityCreate?: boolean;
-  handleBack?: () => void;
+	// isFromEntitlement: boolean;
+	// setShowFeatureCreate: (show: boolean) => void;
+	onSuccess?: (newFeature: CreateFeatureType) => Promise<void>;
+	setOpen: (open: boolean) => void;
+	open: boolean;
+	entityCreate?: boolean;
+	handleBack?: () => void;
 }) => {
-  const env = useEnv();
+	const env = useEnv();
 
-  const axiosInstance = useAxiosInstance({ env });
-  const { mutate, features } = useFeaturesContext();
-  const [feature, setFeature] = useState(getDefaultFeature(entityCreate));
-  const [eventNameInput, setEventNameInput] = useState("");
-  const [eventNameChanged, setEventNameChanged] = useState(true);
+	const axiosInstance = useAxiosInstance({ env });
+	const { mutate, features } = useFeaturesContext();
+	const [feature, setFeature] = useState(getDefaultFeature(entityCreate));
+	const [eventNameInput, setEventNameInput] = useState("");
+	const [eventNameChanged, setEventNameChanged] = useState(true);
 
-  useEffect(() => {
-    if (open) {
-      setFeature(getDefaultFeature(entityCreate));
-    }
-  }, [open]);
+	useEffect(() => {
+		if (open) {
+			setFeature(getDefaultFeature(entityCreate));
+		}
+	}, [open, entityCreate]);
 
-  const updateConfig = () => {
-    const config: any = structuredClone(feature.config);
-    if (
-      feature.type === FeatureType.Metered &&
-      eventNameInput &&
-      config.filters[0].value.length === 0
-    ) {
-      config.filters[0].value.push(eventNameInput);
-    }
+	const updateConfig = () => {
+		const config: any = structuredClone(feature.config);
+		if (
+			feature.type === FeatureType.Metered &&
+			eventNameInput &&
+			config.filters[0].value.length === 0
+		) {
+			config.filters[0].value.push(eventNameInput);
+		}
 
-    return config;
-  };
+		return config;
+	};
 
-  const handleCreateFeature = async () => {
-    if (!feature.name || !feature.id || !feature.type) {
-      toast.error("Please fill out all fields");
-      return;
-    }
+	const handleCreateFeature = async () => {
+		if (!feature.name || !feature.id || !feature.type) {
+			toast.error("Please fill out all fields");
+			return;
+		}
 
-    feature.config = updateConfig();
+		feature.config = updateConfig();
 
-    try {
-      const { data: createdFeature } = await FeatureService.createFeature(
-        axiosInstance,
-        {
-          name: feature.name,
-          id: feature.id,
-          type: feature.type,
-          config: updateConfig(),
-        }
-      );
+		try {
+			const { data: createdFeature } = await FeatureService.createFeature(
+				axiosInstance,
+				{
+					name: feature.name,
+					id: feature.id,
+					type: feature.type,
+					config: updateConfig(),
+				},
+			);
 
-      if (onSuccess) {
-        await onSuccess(createdFeature);
-      } else {
-        await mutate();
-        setOpen(false);
-      }
+			if (onSuccess) {
+				await onSuccess(createdFeature);
+			} else {
+				await mutate();
+				setOpen(false);
+			}
 
-      // if (isFromEntitlement) {
-      //   if (createdFeature) {
-      //     setSelectedFeature(createdFeature);
-      //   }
-      //   setShowFeatureCreate(false);
-      // } else {
-      //   await mutate();
-      //   setOpen(false);
-      // }
-    } catch (error) {
-      toast.error(getBackendErr(error, "Failed to create feature"));
-    }
-  };
+			// if (isFromEntitlement) {
+			//   if (createdFeature) {
+			//     setSelectedFeature(createdFeature);
+			//   }
+			//   setShowFeatureCreate(false);
+			// } else {
+			//   await mutate();
+			//   setOpen(false);
+			// }
+		} catch (error) {
+			toast.error(getBackendErr(error, "Failed to create feature"));
+		}
+	};
 
-  return (
-    <>
-      <CustomDialogBody>
-        <DialogHeader>
-          <DialogTitle>Create Feature</DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-4">
-          <FeatureConfig
-            feature={feature}
-            setFeature={setFeature}
-            eventNameInput={eventNameInput}
-            setEventNameInput={setEventNameInput}
-            eventNameChanged={eventNameChanged}
-            setEventNameChanged={setEventNameChanged}
-            open={open}
-          />
-        </div>
-      </CustomDialogBody>
-      <CreateFeatureFooter
-        handleCreate={handleCreateFeature}
-        handleBack={handleBack}
-      />
-    </>
-  );
+	return (
+		<>
+			<CustomDialogBody>
+				<DialogHeader>
+					<DialogTitle>Create Feature</DialogTitle>
+				</DialogHeader>
+				<div className="flex flex-col gap-4">
+					<FeatureConfig
+						feature={feature}
+						setFeature={setFeature}
+						eventNameInput={eventNameInput}
+						setEventNameInput={setEventNameInput}
+						eventNameChanged={eventNameChanged}
+						setEventNameChanged={setEventNameChanged}
+						open={open}
+					/>
+				</div>
+			</CustomDialogBody>
+			<CreateFeatureFooter
+				handleCreate={handleCreateFeature}
+				handleBack={handleBack}
+			/>
+		</>
+	);
 };
 
 export const CreateFeatureDialog = () => {
-  const [open, setOpen] = useState(false);
+	const [open, setOpen] = useState(false);
 
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="add" className="w-full">
-          Feature
-        </Button>
-      </DialogTrigger>
-      <CustomDialogContent>
-        <CreateFeature setOpen={setOpen} open={open} />
-      </CustomDialogContent>
-    </Dialog>
-  );
+	return (
+		<Dialog open={open} onOpenChange={setOpen}>
+			<DialogTrigger asChild>
+				<Button variant="add" className="w-full">
+					Feature
+				</Button>
+			</DialogTrigger>
+			<CustomDialogContent>
+				<CreateFeature setOpen={setOpen} open={open} />
+			</CustomDialogContent>
+		</Dialog>
+	);
 };
 
 // <DialogContent className="w-[500px]">
@@ -161,7 +164,7 @@ export const CreateFeatureDialog = () => {
 //         /> */}
 //       </DialogContent>
 {
-  /* <DialogFooter>
+	/* <DialogFooter>
         <Button
           onClick={handleCreateFeature}
           isLoading={loading}

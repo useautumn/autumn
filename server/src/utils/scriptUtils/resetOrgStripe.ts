@@ -1,25 +1,25 @@
-import { Organization, AppEnv } from "@autumn/shared";
-import {
-  deactivateStripeMeters,
-  deleteAllStripeProducts,
-} from "@/external/stripe/stripeProductUtils.js";
+import { AppEnv, type Organization } from "@autumn/shared";
 import { deleteAllStripeCustomers } from "@/external/stripe/stripeCusUtils.js";
+import {
+	deactivateStripeMeters,
+	deleteAllStripeProducts,
+} from "@/external/stripe/stripeProductUtils.js";
 
 export const resetOrgStripe = async ({ org }: { org: Organization }) => {
-  const env = AppEnv.Sandbox;
+	const env = AppEnv.Sandbox;
 
-  await deleteAllStripeCustomers({
-    org,
-    env,
-  });
+	await deleteAllStripeCustomers({
+		org,
+		env,
+	});
 
-  await deleteAllStripeProducts({
-    org,
-    env,
-  });
+	await deleteAllStripeProducts({
+		org,
+		env,
+	});
 
-  await deactivateStripeMeters({
-    org,
-    env,
-  });
+	await deactivateStripeMeters({
+		org,
+		env,
+	});
 };

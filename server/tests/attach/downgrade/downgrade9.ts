@@ -1,11 +1,11 @@
 import chalk from "chalk";
+import { setupBefore } from "tests/before.js";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { advanceProducts } from "tests/global.js";
 import {
-  checkProductIsScheduled,
-  compareMainProduct,
+	checkProductIsScheduled,
+	compareMainProduct,
 } from "tests/utils/compare.js";
-import { setupBefore } from "tests/before.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
 // TEST MULTI INTERVAL DOWNGRADE
@@ -26,46 +26,46 @@ CASE 1: Annual pro -> Annual starter
 const testCase = "downgrade9";
 
 describe(`${chalk.yellowBright("downgrade9: Multi interval downgrade -- Annual pro -> Annual starter")}`, () => {
-  let customerId = testCase;
+	const customerId = testCase;
 
-  before(async function () {
-    await setupBefore(this);
-    await initCustomer({
-      customerId,
-      db: this.db,
-      org: this.org,
-      env: this.env,
-      autumn: this.autumnJs,
-      attachPm: "success",
-      withTestClock: false,
-    });
-  });
+	before(async function () {
+		await setupBefore(this);
+		await initCustomer({
+			customerId,
+			db: this.db,
+			org: this.org,
+			env: this.env,
+			autumn: this.autumnJs,
+			attachPm: "success",
+			withTestClock: false,
+		});
+	});
 
-  it("should attach annual pro", async function () {
-    await AutumnCli.attach({
-      customerId: customerId,
-      productId: advanceProducts.gpuProAnnual.id,
-    });
+	it("should attach annual pro", async () => {
+		await AutumnCli.attach({
+			customerId: customerId,
+			productId: advanceProducts.gpuProAnnual.id,
+		});
 
-    let cusRes = await AutumnCli.getCustomer(customerId);
-    compareMainProduct({
-      sent: advanceProducts.gpuProAnnual,
-      cusRes,
-    });
-  });
+		const cusRes = await AutumnCli.getCustomer(customerId);
+		compareMainProduct({
+			sent: advanceProducts.gpuProAnnual,
+			cusRes,
+		});
+	});
 
-  it("should attach downgrade to annual starter", async function () {
-    await AutumnCli.attach({
-      customerId: customerId,
-      productId: advanceProducts.gpuStarterAnnual.id,
-    });
+	it("should attach downgrade to annual starter", async () => {
+		await AutumnCli.attach({
+			customerId: customerId,
+			productId: advanceProducts.gpuStarterAnnual.id,
+		});
 
-    let cusRes = await AutumnCli.getCustomer(customerId);
-    checkProductIsScheduled({
-      cusRes,
-      product: advanceProducts.gpuStarterAnnual,
-    });
-  });
+		const cusRes = await AutumnCli.getCustomer(customerId);
+		checkProductIsScheduled({
+			cusRes,
+			product: advanceProducts.gpuStarterAnnual,
+		});
+	});
 });
 
 // describe(`${chalk.yellowBright("downgrade9: Multi interval downgrade -- Quarterly pro -> Monthly pro")}`, () => {

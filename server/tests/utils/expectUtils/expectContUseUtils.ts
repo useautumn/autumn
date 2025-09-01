@@ -1,180 +1,180 @@
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
-import { findStripeItemForPrice } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
-import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { findContUsePrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
-import { AppEnv, FullCustomer, Organization } from "@autumn/shared";
+import type { AppEnv, FullCustomer, Organization } from "@autumn/shared";
 import { expect } from "chai";
+import type Stripe from "stripe";
 import { TestFeature } from "tests/setup/v2Features.js";
-import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import { findStripeItemForPrice } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
+import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
+import { findContUsePrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 export const expectSubQuantityCorrect = async ({
-  stripeCli,
-  productId,
-  usage,
-  db,
-  org,
-  env,
-  customerId,
-  itemQuantity,
-  numReplaceables = 0,
+	stripeCli,
+	productId,
+	usage,
+	db,
+	org,
+	env,
+	customerId,
+	itemQuantity,
+	numReplaceables = 0,
 }: {
-  stripeCli: Stripe;
-  productId: string;
-  usage: number;
-  db: DrizzleCli;
-  org: Organization;
-  env: AppEnv;
-  customerId: string;
-  itemQuantity?: number;
-  numReplaceables?: number;
+	stripeCli: Stripe;
+	productId: string;
+	usage: number;
+	db: DrizzleCli;
+	org: Organization;
+	env: AppEnv;
+	customerId: string;
+	itemQuantity?: number;
+	numReplaceables?: number;
 }) => {
-  const fullCus = await CusService.getFull({
-    db,
-    orgId: org.id,
-    env,
-    idOrInternalId: customerId,
-  });
+	const fullCus = await CusService.getFull({
+		db,
+		orgId: org.id,
+		env,
+		idOrInternalId: customerId,
+	});
 
-  let cusProduct = fullCus.customer_products.find(
-    (cp) => cp.product_id === productId
-  );
+	const cusProduct = fullCus.customer_products.find(
+		(cp) => cp.product_id === productId,
+	);
 
-  let stripeSubs = await getStripeSubs({
-    stripeCli,
-    subIds: cusProduct?.subscription_ids,
-  });
+	const stripeSubs = await getStripeSubs({
+		stripeCli,
+		subIds: cusProduct?.subscription_ids,
+	});
 
-  let subItems = stripeSubs.flatMap((sub) => sub.items.data);
-  let prices = cusProductToPrices({ cusProduct: cusProduct! });
+	const subItems = stripeSubs.flatMap((sub) => sub.items.data);
+	const prices = cusProductToPrices({ cusProduct: cusProduct! });
 
-  let contPrice = findContUsePrice({ prices });
+	const contPrice = findContUsePrice({ prices });
 
-  let subItem = findStripeItemForPrice({
-    price: contPrice!,
-    stripeItems: subItems,
-  });
+	const subItem = findStripeItemForPrice({
+		price: contPrice!,
+		stripeItems: subItems,
+	});
 
-  expect(subItem).to.exist;
+	expect(subItem).to.exist;
 
-  expect(subItem!.quantity).to.equal(
-    notNullish(itemQuantity) ? itemQuantity : usage
-  );
+	expect(subItem?.quantity).to.equal(
+		notNullish(itemQuantity) ? itemQuantity : usage,
+	);
 
-  // Check num replaceables correct
-  let cusEnts = cusProduct?.customer_entitlements;
-  let cusEnt = cusEnts?.find((ent) => ent.feature_id === TestFeature.Users);
+	// Check num replaceables correct
+	const cusEnts = cusProduct?.customer_entitlements;
+	const cusEnt = cusEnts?.find((ent) => ent.feature_id === TestFeature.Users);
 
-  expect(cusEnt).to.exist;
-  expect(cusEnt?.replaceables.length).to.equal(numReplaceables);
+	expect(cusEnt).to.exist;
+	expect(cusEnt?.replaceables.length).to.equal(numReplaceables);
 
-  let expectedBalance = cusEnt!.entitlement.allowance! - usage;
-  expect(cusEnt!.balance).to.equal(expectedBalance);
+	const expectedBalance = cusEnt?.entitlement.allowance! - usage;
+	expect(cusEnt?.balance).to.equal(expectedBalance);
 
-  return {
-    fullCus,
-    cusProduct,
-    stripeSubs,
-  };
+	return {
+		fullCus,
+		cusProduct,
+		stripeSubs,
+	};
 };
 
 export const expectUpcomingItemsCorrect = async ({
-  stripeCli,
-  fullCus,
-  stripeSubs,
-  curUnix,
-  unitPrice,
-  expectedNumItems = 1,
-  quantity,
+	stripeCli,
+	fullCus,
+	stripeSubs,
+	curUnix,
+	unitPrice,
+	expectedNumItems = 1,
+	quantity,
 }: {
-  stripeCli: Stripe;
-  fullCus: FullCustomer;
-  stripeSubs: Stripe.Subscription[];
-  curUnix: number;
-  unitPrice: number;
-  expectedNumItems: number;
-  quantity: number;
+	stripeCli: Stripe;
+	fullCus: FullCustomer;
+	stripeSubs: Stripe.Subscription[];
+	curUnix: number;
+	unitPrice: number;
+	expectedNumItems: number;
+	quantity: number;
 }) => {
-  let sub = stripeSubs[0];
-  // let upcomingLines = await stripeCli.invoices.listUpcomingLines({
-  //   subscription: sub.id,
-  // });
-  // const pendingItems = await stripeCli.invoiceItems.list({
-  //   pending: true,
-  // });
+	const sub = stripeSubs[0];
+	// let upcomingLines = await stripeCli.invoices.listUpcomingLines({
+	//   subscription: sub.id,
+	// });
+	// const pendingItems = await stripeCli.invoiceItems.list({
+	//   pending: true,
+	// });
 
-  const lineItems = await stripeCli.invoiceItems.list({
-    customer: sub.customer as string,
-  });
+	const lineItems = await stripeCli.invoiceItems.list({
+		customer: sub.customer as string,
+	});
 
-  const { start, end } = subToPeriodStartEnd({ sub });
+	const { start, end } = subToPeriodStartEnd({ sub });
 
-  let amount = quantity * unitPrice!;
+	const amount = quantity * unitPrice!;
 
-  let proratedAmount = calculateProrationAmount({
-    amount,
-    periodStart: start * 1000,
-    periodEnd: end * 1000,
-    now: curUnix,
-    allowNegative: true,
-  });
+	const proratedAmount = calculateProrationAmount({
+		amount,
+		periodStart: start * 1000,
+		periodEnd: end * 1000,
+		now: curUnix,
+		allowNegative: true,
+	});
 
-  // console.group();
-  // console.group("Upcoming lines");
-  // for (const line of lines) {
-  //   console.log(line.description, line.amount / 100);
-  // }
-  // console.groupEnd();
-  // console.groupEnd();
+	// console.group();
+	// console.group("Upcoming lines");
+	// for (const line of lines) {
+	//   console.log(line.description, line.amount / 100);
+	// }
+	// console.groupEnd();
+	// console.groupEnd();
 
-  const firstItem = lineItems.data[0];
-  expect(firstItem.amount).to.equal(Math.round(proratedAmount * 100));
+	const firstItem = lineItems.data[0];
+	expect(firstItem.amount).to.equal(Math.round(proratedAmount * 100));
 };
 
 export const calcProrationAndExpectInvoice = async ({
-  autumn,
-  stripeSubs,
-  customerId,
-  quantity,
-  unitPrice,
-  curUnix,
-  numInvoices,
+	autumn,
+	stripeSubs,
+	customerId,
+	quantity,
+	unitPrice,
+	curUnix,
+	numInvoices,
 }: {
-  autumn: AutumnInt;
-  stripeSubs: Stripe.Subscription[];
-  customerId: string;
-  quantity: number;
-  unitPrice: number;
-  curUnix: number;
-  numInvoices: number;
+	autumn: AutumnInt;
+	stripeSubs: Stripe.Subscription[];
+	customerId: string;
+	quantity: number;
+	unitPrice: number;
+	curUnix: number;
+	numInvoices: number;
 }) => {
-  let customer = await autumn.customers.get(customerId);
-  let invoices = customer.invoices;
+	const customer = await autumn.customers.get(customerId);
+	const invoices = customer.invoices;
 
-  let sub = stripeSubs[0];
-  let amount = quantity * unitPrice;
-  const { start, end } = subToPeriodStartEnd({ sub });
-  let proratedAmount = calculateProrationAmount({
-    amount,
-    periodStart: start * 1000,
-    periodEnd: end * 1000,
-    now: curUnix,
-    allowNegative: true,
-  });
+	const sub = stripeSubs[0];
+	const amount = quantity * unitPrice;
+	const { start, end } = subToPeriodStartEnd({ sub });
+	let proratedAmount = calculateProrationAmount({
+		amount,
+		periodStart: start * 1000,
+		periodEnd: end * 1000,
+		now: curUnix,
+		allowNegative: true,
+	});
 
-  proratedAmount = Number(proratedAmount.toFixed(2));
+	proratedAmount = Number(proratedAmount.toFixed(2));
 
-  expect(invoices.length).to.equal(
-    numInvoices,
-    `Should have ${numInvoices} invoices`
-  );
-  expect(invoices[0].total).to.equal(
-    proratedAmount,
-    "Latest invoice should be equals to calculated prorated amount"
-  );
+	expect(invoices.length).to.equal(
+		numInvoices,
+		`Should have ${numInvoices} invoices`,
+	);
+	expect(invoices[0].total).to.equal(
+		proratedAmount,
+		"Latest invoice should be equals to calculated prorated amount",
+	);
 };

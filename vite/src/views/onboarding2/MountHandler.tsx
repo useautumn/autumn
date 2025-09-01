@@ -1,9 +1,8 @@
-import Step from "./Step";
 import CodeBlock from "../onboarding/components/CodeBlock";
-import { ArrowUpRightFromSquare } from "lucide-react";
+import Step from "./Step";
 
 const nextjs = () => {
-  return `// app/api/autumn/[...all]/route.ts
+	return `// app/api/autumn/[...all]/route.ts
 
 import { autumnHandler } from "autumn-js/next";
 import { auth } from "@/lib/auth";
@@ -23,7 +22,7 @@ export const { GET, POST } = autumnHandler({
 };
 
 const remix = () => {
-  return `// app/routes/api.autumn.$.ts
+	return `// app/routes/api.autumn.$.ts
 
 import { autumnHandler } from "autumn-js/remix";
 import { auth } from "../lib/auth.server";
@@ -43,7 +42,7 @@ export const { loader, action } = autumnHandler({
 };
 
 const Tanstack = () => {
-  return `// routes/api/autumn.$.ts
+	return `// routes/api/autumn.$.ts
 
 import { createAPIFileRoute } from "@tanstack/react-start/api";
 import { auth } from "~/lib/auth";
@@ -66,7 +65,7 @@ export const APIRoute = createAPIFileRoute("/api/autumn/$")(handler);
 };
 
 const hono = () => {
-  return `//index.ts
+	return `//index.ts
 
 import { autumnHandler } from "autumn-js/hono";
 
@@ -88,7 +87,7 @@ app.use(
 };
 
 const express = () => {
-  return `//index.ts
+	return `//index.ts
 
 import { autumnHandler } from "autumn-js/express";
 
@@ -111,7 +110,7 @@ app.use(
 };
 
 const fastify = () => {
-  return `//index.ts
+	return `//index.ts
 
 import { autumnHandler } from "autumn-js/fastify";
 
@@ -134,60 +133,60 @@ fastify.route({
 };
 
 export default function MountHandler({ number }: { number: number }) {
-  return (
-    <Step
-      title="Mount the Autumn handler on your backend"
-      number={number}
-      description={
-        <p>
-          Mounts routes on the /api/autumn/* path which is used by Autumn&apos;s
-          React library. Requires an identify function that returns the
-          customerId for authentication.
-        </p>
-      }
-    >
-      <CodeBlock
-        snippets={[
-          {
-            title: "Next.js",
-            language: "typescript",
-            displayLanguage: "typescript",
-            content: nextjs(),
-          },
+	return (
+		<Step
+			title="Mount the Autumn handler on your backend"
+			number={number}
+			description={
+				<p>
+					Mounts routes on the /api/autumn/* path which is used by Autumn&apos;s
+					React library. Requires an identify function that returns the
+					customerId for authentication.
+				</p>
+			}
+		>
+			<CodeBlock
+				snippets={[
+					{
+						title: "Next.js",
+						language: "typescript",
+						displayLanguage: "typescript",
+						content: nextjs(),
+					},
 
-          {
-            title: "Remix",
-            language: "typescript",
-            displayLanguage: "typescript",
-            content: remix(),
-          },
-          {
-            title: "Tanstack",
-            language: "typescript",
-            displayLanguage: "typescript",
-            content: Tanstack(),
-          },
-          {
-            title: "Hono",
-            language: "typescript",
-            displayLanguage: "typescript",
-            content: hono(),
-          },
-          {
-            title: "Express",
-            language: "typescript",
-            displayLanguage: "typescript",
-            content: express(),
-          },
+					{
+						title: "Remix",
+						language: "typescript",
+						displayLanguage: "typescript",
+						content: remix(),
+					},
+					{
+						title: "Tanstack",
+						language: "typescript",
+						displayLanguage: "typescript",
+						content: Tanstack(),
+					},
+					{
+						title: "Hono",
+						language: "typescript",
+						displayLanguage: "typescript",
+						content: hono(),
+					},
+					{
+						title: "Express",
+						language: "typescript",
+						displayLanguage: "typescript",
+						content: express(),
+					},
 
-          {
-            title: "Fastify",
-            language: "typescript",
-            displayLanguage: "typescript",
-            content: fastify(),
-          },
-        ]}
-      />
-    </Step>
-  );
+					{
+						title: "Fastify",
+						language: "typescript",
+						displayLanguage: "typescript",
+						content: fastify(),
+					},
+				]}
+			/>
+		</Step>
+	);
 }

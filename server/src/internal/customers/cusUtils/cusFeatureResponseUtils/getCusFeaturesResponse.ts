@@ -1,42 +1,41 @@
-import { balancesToFeatureResponse } from "./balancesToFeatureResponse.js";
-import {
-  FullCusProduct,
-  Organization,
-  Entity,
-  APIVersion,
+import type {
+	APIVersion,
+	Entity,
+	FullCusProduct,
+	Organization,
 } from "@autumn/shared";
 import {
-  cusProductsToCusEnts,
-  cusProductsToCusPrices,
+	cusProductsToCusEnts,
+	cusProductsToCusPrices,
 } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import { balancesToFeatureResponse } from "./balancesToFeatureResponse.js";
 import { getCusBalances } from "./getCusBalances.js";
-import { ACTIVE_STATUSES } from "../../cusProducts/CusProductService.js";
 
 export const getCusFeaturesResponse = async ({
-  cusProducts,
-  org,
-  entity,
-  apiVersion,
+	cusProducts,
+	org,
+	entity,
+	apiVersion,
 }: {
-  cusProducts: FullCusProduct[];
-  org: Organization;
-  entity?: Entity;
-  apiVersion: APIVersion;
+	cusProducts: FullCusProduct[];
+	org: Organization;
+	entity?: Entity;
+	apiVersion: APIVersion;
 }) => {
-  let cusEnts = cusProductsToCusEnts({ cusProducts }) as any;
+	const cusEnts = cusProductsToCusEnts({ cusProducts }) as any;
 
-  const balances = await getCusBalances({
-    cusEntsWithCusProduct: cusEnts,
-    cusPrices: cusProductsToCusPrices({
-      cusProducts,
-    }),
-    org,
-    entity,
-    apiVersion,
-  });
+	const balances = await getCusBalances({
+		cusEntsWithCusProduct: cusEnts,
+		cusPrices: cusProductsToCusPrices({
+			cusProducts,
+		}),
+		org,
+		entity,
+		apiVersion,
+	});
 
-  return balancesToFeatureResponse({
-    cusEnts,
-    balances,
-  });
+	return balancesToFeatureResponse({
+		cusEnts,
+		balances,
+	});
 };

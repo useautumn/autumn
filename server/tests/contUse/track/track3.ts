@@ -1,218 +1,220 @@
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-  APIVersion,
-  AppEnv,
-  OnDecrease,
-  OnIncrease,
-  Organization,
+	APIVersion,
+	type AppEnv,
+	OnDecrease,
+	OnIncrease,
+	type Organization,
 } from "@autumn/shared";
-import chalk from "chalk";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
 import { expect } from "chai";
+import chalk from "chalk";
 import { addWeeks } from "date-fns";
-import { timeout } from "@/utils/genUtils.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import type Stripe from "stripe";
 import { addPrefixToProducts } from "tests/attach/utils.js";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { expectUpcomingItemsCorrect } from "tests/utils/expectUtils/expectContUseUtils.js";
-import { expectSubQuantityCorrect } from "tests/utils/expectUtils/expectContUseUtils.js";
+import {
+	expectSubQuantityCorrect,
+	expectUpcomingItemsCorrect,
+} from "tests/utils/expectUtils/expectContUseUtils.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { timeout } from "@/utils/genUtils.js";
+import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
-let userItem = constructArrearProratedItem({
-  featureId: TestFeature.Users,
-  pricePerUnit: 50,
-  includedUsage: 1,
-  config: {
-    on_increase: OnIncrease.ProrateNextCycle,
-    on_decrease: OnDecrease.ProrateNextCycle,
-  },
+const userItem = constructArrearProratedItem({
+	featureId: TestFeature.Users,
+	pricePerUnit: 50,
+	includedUsage: 1,
+	config: {
+		on_increase: OnIncrease.ProrateNextCycle,
+		on_decrease: OnDecrease.ProrateNextCycle,
+	},
 });
 
-export let pro = constructProduct({
-  items: [userItem],
-  type: "pro",
+export const pro = constructProduct({
+	items: [userItem],
+	type: "pro",
 });
 
 const testCase = "track3";
 
 describe(`${chalk.yellowBright(`contUse/${testCase}: Testing track usage for cont use, prorate next cycle`)}`, () => {
-  let customerId = testCase;
-  let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
-  let testClockId: string;
-  let db: DrizzleCli, org: Organization, env: AppEnv;
-  let stripeCli: Stripe;
-  let curUnix = new Date().getTime();
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	let testClockId: string;
+	let db: DrizzleCli, org: Organization, env: AppEnv;
+	let stripeCli: Stripe;
+	let curUnix = Date.now();
 
-  before(async function () {
-    await setupBefore(this);
-    const { autumnJs } = this;
-    db = this.db;
-    org = this.org;
-    env = this.env;
+	before(async function () {
+		await setupBefore(this);
+		const { autumnJs } = this;
+		db = this.db;
+		org = this.org;
+		env = this.env;
 
-    stripeCli = this.stripeCli;
+		stripeCli = this.stripeCli;
 
-    addPrefixToProducts({
-      products: [pro],
-      prefix: testCase,
-    });
+		addPrefixToProducts({
+			products: [pro],
+			prefix: testCase,
+		});
 
-    await createProducts({
-      autumn,
-      products: [pro],
-      customerId,
-      db,
-      orgId: org.id,
-      env,
-    });
+		await createProducts({
+			autumn,
+			products: [pro],
+			customerId,
+			db,
+			orgId: org.id,
+			env,
+		});
 
-    const { testClockId: testClockId1 } = await initCustomer({
-      autumn: autumnJs,
-      customerId,
-      db,
-      org,
-      env,
-      attachPm: "success",
-    });
+		const { testClockId: testClockId1 } = await initCustomer({
+			autumn: autumnJs,
+			customerId,
+			db,
+			org,
+			env,
+			attachPm: "success",
+		});
 
-    testClockId = testClockId1!;
-  });
+		testClockId = testClockId1!;
+	});
 
-  let usage = 0;
-  it("should attach pro", async function () {
-    await attachAndExpectCorrect({
-      autumn,
-      customerId,
-      product: pro,
-      stripeCli,
-      db,
-      org,
-      env,
-    });
-  });
+	let usage = 0;
+	it("should attach pro", async () => {
+		await attachAndExpectCorrect({
+			autumn,
+			customerId,
+			product: pro,
+			stripeCli,
+			db,
+			org,
+			env,
+		});
+	});
 
-  it("should create track +3 usage and have correct invoice", async function () {
-    curUnix = await advanceTestClock({
-      stripeCli,
-      testClockId,
-      advanceTo: addWeeks(new Date(), 2).getTime(),
-      waitForSeconds: 5,
-    });
+	it("should create track +3 usage and have correct invoice", async () => {
+		curUnix = await advanceTestClock({
+			stripeCli,
+			testClockId,
+			advanceTo: addWeeks(new Date(), 2).getTime(),
+			waitForSeconds: 5,
+		});
 
-    await autumn.track({
-      customer_id: customerId,
-      feature_id: TestFeature.Users,
-      value: 3,
-    });
+		await autumn.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Users,
+			value: 3,
+		});
 
-    await timeout(15000);
+		await timeout(15000);
 
-    usage += 3;
+		usage += 3;
 
-    let { stripeSubs, cusProduct, fullCus } = await expectSubQuantityCorrect({
-      stripeCli,
-      productId: pro.id,
-      db,
-      org,
-      env,
-      customerId,
-      usage,
-    });
+		const { stripeSubs, cusProduct, fullCus } = await expectSubQuantityCorrect({
+			stripeCli,
+			productId: pro.id,
+			db,
+			org,
+			env,
+			customerId,
+			usage,
+		});
 
-    await expectUpcomingItemsCorrect({
-      stripeCli,
-      fullCus,
-      stripeSubs,
-      curUnix,
-      expectedNumItems: 1,
-      unitPrice: userItem.price!,
-      quantity: 2,
-    });
+		await expectUpcomingItemsCorrect({
+			stripeCli,
+			fullCus,
+			stripeSubs,
+			curUnix,
+			expectedNumItems: 1,
+			unitPrice: userItem.price!,
+			quantity: 2,
+		});
 
-    let customer = await autumn.customers.get(customerId);
-    let invoices = customer.invoices;
-    expect(invoices.length).to.equal(1);
-  });
+		const customer = await autumn.customers.get(customerId);
+		const invoices = customer.invoices;
+		expect(invoices.length).to.equal(1);
+	});
 
-  it("should track -1 and have no new invoice", async function () {
-    curUnix = await advanceTestClock({
-      stripeCli,
-      testClockId,
-      advanceTo: addWeeks(curUnix, 1).getTime(),
-      waitForSeconds: 5,
-    });
+	it("should track -1 and have no new invoice", async () => {
+		curUnix = await advanceTestClock({
+			stripeCli,
+			testClockId,
+			advanceTo: addWeeks(curUnix, 1).getTime(),
+			waitForSeconds: 5,
+		});
 
-    await autumn.track({
-      customer_id: customerId,
-      feature_id: TestFeature.Users,
-      value: -1,
-    });
+		await autumn.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Users,
+			value: -1,
+		});
 
-    usage -= 1;
+		usage -= 1;
 
-    let { stripeSubs, cusProduct, fullCus } = await expectSubQuantityCorrect({
-      stripeCli,
-      productId: pro.id,
-      db,
-      org,
-      env,
-      customerId,
-      usage,
-    });
+		const { stripeSubs, cusProduct, fullCus } = await expectSubQuantityCorrect({
+			stripeCli,
+			productId: pro.id,
+			db,
+			org,
+			env,
+			customerId,
+			usage,
+		});
 
-    await expectUpcomingItemsCorrect({
-      stripeCli,
-      fullCus,
-      stripeSubs,
-      unitPrice: userItem.price!,
-      curUnix,
-      expectedNumItems: 2,
-      quantity: -1,
-    });
+		await expectUpcomingItemsCorrect({
+			stripeCli,
+			fullCus,
+			stripeSubs,
+			unitPrice: userItem.price!,
+			curUnix,
+			expectedNumItems: 2,
+			quantity: -1,
+		});
 
-    let customer = await autumn.customers.get(customerId);
-    let invoices = customer.invoices;
-    expect(invoices.length).to.equal(1);
-  });
+		const customer = await autumn.customers.get(customerId);
+		const invoices = customer.invoices;
+		expect(invoices.length).to.equal(1);
+	});
 
-  it("should track -1 and have no new invoice", async function () {
-    let quantity = 2;
-    await autumn.track({
-      customer_id: customerId,
-      feature_id: TestFeature.Users,
-      value: quantity,
-    });
+	it("should track -1 and have no new invoice", async () => {
+		const quantity = 2;
+		await autumn.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Users,
+			value: quantity,
+		});
 
-    usage += quantity;
+		usage += quantity;
 
-    let { stripeSubs, cusProduct, fullCus } = await expectSubQuantityCorrect({
-      stripeCli,
-      productId: pro.id,
-      db,
-      org,
-      env,
-      customerId,
-      usage,
-    });
+		const { stripeSubs, cusProduct, fullCus } = await expectSubQuantityCorrect({
+			stripeCli,
+			productId: pro.id,
+			db,
+			org,
+			env,
+			customerId,
+			usage,
+		});
 
-    await expectUpcomingItemsCorrect({
-      stripeCli,
-      fullCus,
-      stripeSubs,
-      unitPrice: userItem.price!,
-      curUnix,
-      expectedNumItems: 3,
-      quantity,
-    });
+		await expectUpcomingItemsCorrect({
+			stripeCli,
+			fullCus,
+			stripeSubs,
+			unitPrice: userItem.price!,
+			curUnix,
+			expectedNumItems: 3,
+			quantity,
+		});
 
-    let customer = await autumn.customers.get(customerId);
-    let invoices = customer.invoices;
-    expect(invoices.length).to.equal(1);
-  });
+		const customer = await autumn.customers.get(customerId);
+		const invoices = customer.invoices;
+		expect(invoices.length).to.equal(1);
+	});
 });

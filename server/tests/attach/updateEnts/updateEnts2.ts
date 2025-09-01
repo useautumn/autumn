@@ -1,35 +1,35 @@
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { APIVersion, AppEnv, Organization } from "@autumn/shared";
-import chalk from "chalk";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts, replaceItems } from "../utils.js";
-import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { addHours, addMonths, addWeeks } from "date-fns";
+import { APIVersion, type AppEnv, type Organization } from "@autumn/shared";
 import { expect } from "chai";
+import chalk from "chalk";
+import { addHours, addMonths, addWeeks } from "date-fns";
+import type Stripe from "stripe";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
-import runUpdateEntsTest from "./expectUpdateEnts.js";
-import { timeout } from "@/utils/genUtils.js";
-import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { timeout } from "@/utils/genUtils.js";
+import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { addPrefixToProducts, replaceItems } from "../utils.js";
+import runUpdateEntsTest from "./expectUpdateEnts.js";
 
 const testCase = "updateEnts2";
 
-export let pro = constructProduct({
-  items: [
-    constructArrearItem({
-      featureId: TestFeature.Words,
-      includedUsage: 10000,
-    }),
-  ],
-  type: "pro",
-  isAnnual: true,
+export const pro = constructProduct({
+	items: [
+		constructArrearItem({
+			featureId: TestFeature.Words,
+			includedUsage: 10000,
+		}),
+	],
+	type: "pro",
+	isAnnual: true,
 });
 
 /**
@@ -45,149 +45,149 @@ export let pro = constructProduct({
  */
 
 describe(`${chalk.yellowBright(`${testCase}: Testing update ents (changing included usage) for annual plan`)}`, () => {
-  let customerId = testCase;
-  let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
-  let testClockId: string;
-  let db: DrizzleCli, org: Organization, env: AppEnv;
-  let stripeCli: Stripe;
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	let testClockId: string;
+	let db: DrizzleCli, org: Organization, env: AppEnv;
+	let stripeCli: Stripe;
 
-  let curUnix = new Date().getTime();
-  let numUsers = 0;
+	const curUnix = Date.now();
+	const _numUsers = 0;
 
-  before(async function () {
-    await setupBefore(this);
-    const { autumnJs } = this;
-    db = this.db;
-    org = this.org;
-    env = this.env;
+	before(async function () {
+		await setupBefore(this);
+		const { autumnJs } = this;
+		db = this.db;
+		org = this.org;
+		env = this.env;
 
-    stripeCli = this.stripeCli;
+		stripeCli = this.stripeCli;
 
-    const { testClockId: testClockId1 } = await initCustomer({
-      autumn: autumnJs,
-      customerId,
-      db,
-      org,
-      env,
-      attachPm: "success",
-    });
+		const { testClockId: testClockId1 } = await initCustomer({
+			autumn: autumnJs,
+			customerId,
+			db,
+			org,
+			env,
+			attachPm: "success",
+		});
 
-    addPrefixToProducts({
-      products: [pro],
-      prefix: testCase,
-    });
+		addPrefixToProducts({
+			products: [pro],
+			prefix: testCase,
+		});
 
-    await createProducts({
-      autumn,
-      products: [pro],
-      db,
-      orgId: org.id,
-      env,
-    });
+		await createProducts({
+			autumn,
+			products: [pro],
+			db,
+			orgId: org.id,
+			env,
+		});
 
-    testClockId = testClockId1!;
-  });
+		testClockId = testClockId1!;
+	});
 
-  it("should attach pro annual product", async function () {
-    await attachAndExpectCorrect({
-      autumn,
-      customerId,
-      product: pro,
-      stripeCli,
-      db,
-      org,
-      env,
-    });
-  });
+	it("should attach pro annual product", async () => {
+		await attachAndExpectCorrect({
+			autumn,
+			customerId,
+			product: pro,
+			stripeCli,
+			db,
+			org,
+			env,
+		});
+	});
 
-  const newItem = constructArrearItem({
-    featureId: TestFeature.Words,
-    includedUsage: 5000,
-  });
+	const newItem = constructArrearItem({
+		featureId: TestFeature.Words,
+		includedUsage: 5000,
+	});
 
-  const customItems = replaceItems({
-    items: pro.items,
-    featureId: TestFeature.Words,
-    newItem,
-  });
+	const customItems = replaceItems({
+		items: pro.items,
+		featureId: TestFeature.Words,
+		newItem,
+	});
 
-  let usage = 1200500;
+	const usage = 1200500;
 
-  it("should attach custom pro product", async function () {
-    await advanceTestClock({
-      stripeCli,
-      testClockId,
-      advanceTo: addWeeks(curUnix, 2).getTime(),
-      waitForSeconds: 30,
-    });
+	it("should attach custom pro product", async () => {
+		await advanceTestClock({
+			stripeCli,
+			testClockId,
+			advanceTo: addWeeks(curUnix, 2).getTime(),
+			waitForSeconds: 30,
+		});
 
-    const customProduct = {
-      ...pro,
-      items: customItems,
-    };
+		const customProduct = {
+			...pro,
+			items: customItems,
+		};
 
-    await autumn.track({
-      customer_id: customerId,
-      value: usage,
-      feature_id: TestFeature.Words,
-    });
+		await autumn.track({
+			customer_id: customerId,
+			value: usage,
+			feature_id: TestFeature.Words,
+		});
 
-    await timeout(5000);
+		await timeout(5000);
 
-    await runUpdateEntsTest({
-      autumn,
-      stripeCli,
-      customerId,
-      customProduct,
-      db,
-      org,
-      env,
-      customItems,
-      usage: [
-        {
-          featureId: TestFeature.Words,
-          value: usage,
-        },
-      ],
-    });
-  });
+		await runUpdateEntsTest({
+			autumn,
+			stripeCli,
+			customerId,
+			customProduct,
+			db,
+			org,
+			env,
+			customItems,
+			usage: [
+				{
+					featureId: TestFeature.Words,
+					value: usage,
+				},
+			],
+		});
+	});
 
-  it("should have correct invoice usage next cycle", async function () {
-    const invoiceTotal = await getExpectedInvoiceTotal({
-      org,
-      env,
-      customerId,
-      productId: pro.id,
-      stripeCli,
-      db,
-      usage: [
-        {
-          featureId: TestFeature.Words,
-          value: usage,
-        },
-      ],
-      onlyIncludeMonthly: true,
-    });
+	it("should have correct invoice usage next cycle", async () => {
+		const invoiceTotal = await getExpectedInvoiceTotal({
+			org,
+			env,
+			customerId,
+			productId: pro.id,
+			stripeCli,
+			db,
+			usage: [
+				{
+					featureId: TestFeature.Words,
+					value: usage,
+				},
+			],
+			onlyIncludeMonthly: true,
+		});
 
-    let curUnix = Date.now();
-    curUnix = await advanceTestClock({
-      stripeCli,
-      testClockId,
-      advanceTo: addMonths(curUnix, 1).getTime(),
-    });
+		let curUnix = Date.now();
+		curUnix = await advanceTestClock({
+			stripeCli,
+			testClockId,
+			advanceTo: addMonths(curUnix, 1).getTime(),
+		});
 
-    await advanceTestClock({
-      stripeCli,
-      testClockId,
-      advanceTo: addHours(curUnix, hoursToFinalizeInvoice).getTime(),
-      waitForSeconds: 10,
-    });
+		await advanceTestClock({
+			stripeCli,
+			testClockId,
+			advanceTo: addHours(curUnix, hoursToFinalizeInvoice).getTime(),
+			waitForSeconds: 10,
+		});
 
-    const customer = await autumn.customers.get(customerId);
-    const invoice = customer.invoices![0];
-    expect(invoice.total).to.equal(
-      invoiceTotal,
-      "invoice total after 1 cycle should be correct"
-    );
-  });
+		const customer = await autumn.customers.get(customerId);
+		const invoice = customer.invoices?.[0];
+		expect(invoice.total).to.equal(
+			invoiceTotal,
+			"invoice total after 1 cycle should be correct",
+		);
+	});
 });

@@ -1,55 +1,54 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type { Job, Queue } from "bullmq";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { JobName } from "@/queue/JobName.js";
 import { getLock, releaseLock } from "@/queue/lockUtils.js";
-import { Queue } from "bullmq";
-import { Job } from "bullmq";
-import { handleProductsUpdated } from "./handlers/handleProductsUpdated.js";
 import { handleCustomerCreated } from "./handlers/handleCustomerCreated.js";
+import { handleProductsUpdated } from "./handlers/handleProductsUpdated.js";
 
 export const runActionHandlerTask = async ({
-  queue,
-  job,
-  logger,
-  db,
-  useBackup,
+	queue,
+	job,
+	logger,
+	db,
+	useBackup,
 }: {
-  queue: Queue;
-  job: Job;
-  logger: any;
-  db: DrizzleCli;
-  useBackup: boolean;
+	queue: Queue;
+	job: Job;
+	logger: any;
+	db: DrizzleCli;
+	useBackup: boolean;
 }) => {
-  let payload = job.data;
-  let internalCustomerId = payload.internalCustomerId;
-  let lockKey = `action:${internalCustomerId}`;
+	const payload = job.data;
+	const internalCustomerId = payload.internalCustomerId;
+	const lockKey = `action:${internalCustomerId}`;
 
-  try {
-    let lock = await getLock({ queue, job, lockKey, useBackup });
-    if (!lock) return;
+	try {
+		const lock = await getLock({ queue, job, lockKey, useBackup });
+		if (!lock) return;
 
-    switch (job.name) {
-      case JobName.HandleProductsUpdated:
-        await handleProductsUpdated({
-          db,
-          logger,
-          data: payload,
-        });
-        break;
-      case JobName.HandleCustomerCreated:
-        await handleCustomerCreated({
-          db,
-          logger,
-          data: payload,
-        });
-        break;
-    }
-  } catch (error) {
-    logger.error("Error processing action handler job:", {
-      jobName: job.name,
-      error,
-      payload,
-    });
-  } finally {
-    await releaseLock({ lockKey, useBackup });
-  }
+		switch (job.name) {
+			case JobName.HandleProductsUpdated:
+				await handleProductsUpdated({
+					db,
+					logger,
+					data: payload,
+				});
+				break;
+			case JobName.HandleCustomerCreated:
+				await handleCustomerCreated({
+					db,
+					logger,
+					data: payload,
+				});
+				break;
+		}
+	} catch (error) {
+		logger.error("Error processing action handler job:", {
+			jobName: job.name,
+			error,
+			payload,
+		});
+	} finally {
+		await releaseLock({ lockKey, useBackup });
+	}
 };

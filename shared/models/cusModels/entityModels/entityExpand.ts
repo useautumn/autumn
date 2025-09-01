@@ -1,3 +1,3 @@
 export enum EntityExpand {
-  Invoices = "invoices",
+	Invoices = "invoices",
 }

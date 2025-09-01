@@ -1,11 +1,11 @@
 export interface FeatureCheckPreviewParams {
-  customerId: string;
-  featureId: string;
-  quantity: number;
+	customerId: string;
+	featureId: string;
+	quantity: number;
 }
 
 export const getFeatureCheckPreview = async ({
-  customerId,
-  featureId,
-  quantity,
+	customerId,
+	featureId,
+	quantity,
 }: FeatureCheckPreviewParams) => {};

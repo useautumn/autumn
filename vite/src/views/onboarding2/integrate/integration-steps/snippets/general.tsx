@@ -1,5 +1,5 @@
 export const general = () => {
-  return `import { autumnHandler } from "autumn-js/backend";
+	return `import { autumnHandler } from "autumn-js/backend";
 
 // 1. autumnHandler takes in request properties and returns a response
 // 2. Simply mount the handler onto the /api/autumn/* path in your backend

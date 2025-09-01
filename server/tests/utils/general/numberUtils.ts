@@ -1,8 +1,8 @@
 export const isValidNumber = (value: any) => {
-  let number = parseFloat(value);
-  return !isNaN(number) && isFinite(number);
+	const number = parseFloat(value);
+	return !Number.isNaN(number) && Number.isFinite(number);
 };
 
 export const numberWithCommas = (x: number) => {
-  return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+	return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 };

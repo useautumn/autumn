@@ -184,7 +184,7 @@
 //       customer_id: customerId,
 //       product_id: premium.id,
 //       cancel_immediately: true,
-//       // @ts-ignore
+//       // @ts-expect-error
 //       prorate: true,
 //     });
 

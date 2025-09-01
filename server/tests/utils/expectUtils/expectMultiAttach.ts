@@ -1,138 +1,120 @@
-import Stripe from "stripe";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
-  APIVersion,
-  AppEnv,
-  AttachBranch,
-  CreateEntity,
-  CreateReward,
-  CusProductStatus,
-  FeatureOptions,
-  Organization,
-  ProductOptions,
-  ProductV2,
+	APIVersion,
+	type AppEnv,
+	type CusProductStatus,
+	type Organization,
+	type ProductOptions,
+	type ProductV2,
 } from "@autumn/shared";
-
-import {
-  getAttachTotal,
-  getCurrentOptions,
-} from "tests/utils/testAttachUtils/testAttachUtils.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { expectInvoicesCorrect } from "tests/utils/expectUtils/expectProductAttached.js";
-import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
-import { notNullish, timeout, toSnakeCase } from "@/utils/genUtils.js";
-import { expectSubItemsCorrect } from "tests/utils/expectUtils/expectSubUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-
+import type { Customer } from "autumn-js";
 import { expect } from "chai";
-import { completeCheckoutForm } from "../stripeUtils.js";
-import { AttachParams, Customer } from "autumn-js";
-import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
 import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
-import { Decimal } from "decimal.js";
+import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { timeout } from "@/utils/genUtils.js";
 import { completeInvoiceCheckout } from "../stripeUtils/completeInvoiceCheckout.js";
+import { completeCheckoutForm } from "../stripeUtils.js";
 
 export const expectMultiAttachCorrect = async ({
-  customerId,
-  entityId,
-  products,
-  results,
-  rewards,
-  expectedRewards,
-  attachParams,
-  db,
-  org,
-  env,
+	customerId,
+	entityId,
+	products,
+	results,
+	rewards,
+	expectedRewards,
+	attachParams,
+	db,
+	org,
+	env,
 }: {
-  customerId: string;
-  entityId?: string;
-  products: ProductOptions[];
-  results: {
-    product: ProductV2;
-    quantity: number;
-    status: CusProductStatus;
-  }[];
-  rewards?: string[];
-  expectedRewards?: string[];
-  attachParams?: any;
-  db: DrizzleCli;
-  org: Organization;
-  env: AppEnv;
+	customerId: string;
+	entityId?: string;
+	products: ProductOptions[];
+	results: {
+		product: ProductV2;
+		quantity: number;
+		status: CusProductStatus;
+	}[];
+	rewards?: string[];
+	expectedRewards?: string[];
+	// biome-ignore lint/suspicious/noExplicitAny: idk what the type is m8
+	attachParams?: any;
+	db: DrizzleCli;
+	org: Organization;
+	env: AppEnv;
 }) => {
-  const autumn = new AutumnInt({ version: APIVersion.v1_2 });
-  const checkoutRes = await autumn.checkout({
-    customer_id: customerId,
-    products: products,
-    entity_id: entityId,
-    // @ts-ignore
-    reward: rewards,
-    ...attachParams,
-  });
+	const autumn = new AutumnInt({ version: APIVersion.v1_2 });
+	const checkoutRes = await autumn.checkout({
+		customer_id: customerId,
+		products: products,
+		entity_id: entityId,
+		reward: rewards,
+		...attachParams,
+	});
 
-  const attachRes = await autumn.attach({
-    customer_id: customerId,
-    products: products,
-    entity_id: entityId,
-    // @ts-ignore
-    reward: rewards,
-    ...attachParams,
-  });
+	const attachRes = await autumn.attach({
+		customer_id: customerId,
+		products: products,
+		entity_id: entityId,
+		reward: rewards,
+		...attachParams,
+	});
 
-  if (attachRes.checkout_url) {
-    if (attachParams?.invoice) {
-      await completeInvoiceCheckout({
-        url: attachRes.checkout_url,
-        isLocal: true,
-      });
-    }
-    await completeCheckoutForm(attachRes.checkout_url);
-    await timeout(5000);
-  }
+	if (attachRes.checkout_url) {
+		if (attachParams?.invoice) {
+			await completeInvoiceCheckout({
+				url: attachRes.checkout_url,
+				isLocal: true,
+			});
+		}
+		await completeCheckoutForm(attachRes.checkout_url);
+		await timeout(5000);
+	}
 
-  for (const result of results) {
-    let customer;
-    customer = await autumn.customers.get(customerId);
+	for (const result of results) {
+		let customer: Customer;
+		customer = await autumn.customers.get(customerId);
 
-    expectProductAttached({
-      customer,
-      product: result.product,
-      status: result.status,
-    });
-  }
+		expectProductAttached({
+			customer,
+			product: result.product,
+			status: result.status,
+		});
+	}
 
-  const customer = await autumn.customers.get(customerId);
-  const latestInvoice = customer.invoices[0];
-  expect(latestInvoice.total).to.equal(checkoutRes.total);
+	const customer = await autumn.customers.get(customerId);
+	const latestInvoice = customer.invoices[0];
+	expect(latestInvoice.total).to.equal(checkoutRes.total);
 
-  await expectSubToBeCorrect({
-    db,
-    customerId,
-    org,
-    env,
-    rewards: expectedRewards,
-  });
+	await expectSubToBeCorrect({
+		db,
+		customerId,
+		org,
+		env,
+		rewards: expectedRewards,
+	});
 
-  return {
-    checkoutRes,
-  };
+	return {
+		checkoutRes,
+	};
 };
 
 export const expectResultsCorrect = async ({
-  customerId,
-  results,
+	customerId,
+	results,
 }: {
-  customerId: string;
-  results: { product: ProductV2; quantity: number; status: CusProductStatus }[];
+	customerId: string;
+	results: { product: ProductV2; quantity: number; status: CusProductStatus }[];
 }) => {
-  const autumn = new AutumnInt({ version: APIVersion.v1_2 });
-  for (const result of results) {
-    let customer;
-    customer = await autumn.customers.get(customerId);
+	const autumn = new AutumnInt({ version: APIVersion.v1_2 });
+	for (const result of results) {
+		const customer: Customer = await autumn.customers.get(customerId);
 
-    expectProductAttached({
-      customer,
-      product: result.product,
-      status: result.status,
-    });
-  }
+		expectProductAttached({
+			customer,
+			product: result.product,
+			status: result.status,
+		});
+	}
 };

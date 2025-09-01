@@ -1,42 +1,41 @@
-import { getPricesForCusProduct } from "../scheduleUtils.js";
-
-import { FullCusProduct } from "@autumn/shared";
-import { ScheduleObj } from "./ScheduleObj.js";
+import type { FullCusProduct } from "@autumn/shared";
 import { fullCusProductToProduct } from "../../cusProducts/cusProductUtils.js";
+import { getPricesForCusProduct } from "../scheduleUtils.js";
+import type { ScheduleObj } from "./ScheduleObj.js";
 export const getFilteredScheduleItems = ({
-  scheduleObj,
-  cusProducts,
+	scheduleObj,
+	cusProducts,
 }: {
-  scheduleObj: ScheduleObj;
-  cusProducts: (FullCusProduct | undefined)[];
+	scheduleObj: ScheduleObj;
+	cusProducts: (FullCusProduct | undefined)[];
 }) => {
-  const { schedule, prices } = scheduleObj;
-  let scheduleItems = schedule.phases[0].items;
+	const { schedule, prices } = scheduleObj;
+	const scheduleItems = schedule.phases[0].items;
 
-  let curPrices: any[] = [];
-  for (const cusProduct of cusProducts) {
-    if (cusProduct) {
-      curPrices = curPrices.concat(getPricesForCusProduct({ cusProduct }));
-    }
-  }
+	let curPrices: any[] = [];
+	for (const cusProduct of cusProducts) {
+		if (cusProduct) {
+			curPrices = curPrices.concat(getPricesForCusProduct({ cusProduct }));
+		}
+	}
 
-  let products = cusProducts
-    .filter((cp): cp is FullCusProduct => !!cp)
-    .map((cp: FullCusProduct) => fullCusProductToProduct(cp));
+	const products = cusProducts
+		.filter((cp): cp is FullCusProduct => !!cp)
+		.map((cp: FullCusProduct) => fullCusProductToProduct(cp));
 
-  return scheduleItems.filter((scheduleItem: any) => {
-    let stripePrice = prices.find((price) => price.id === scheduleItem.price);
+	return scheduleItems.filter((scheduleItem: any) => {
+		const stripePrice = prices.find((price) => price.id === scheduleItem.price);
 
-    let inCurProduct =
-      curPrices.some(
-        (price) =>
-          price.config?.stripe_price_id === scheduleItem.price ||
-          price.config?.stripe_product_id === stripePrice?.product
-      ) ||
-      products.some(
-        (product) => product.processor?.id === stripePrice?.product
-      );
+		const inCurProduct =
+			curPrices.some(
+				(price) =>
+					price.config?.stripe_price_id === scheduleItem.price ||
+					price.config?.stripe_product_id === stripePrice?.product,
+			) ||
+			products.some(
+				(product) => product.processor?.id === stripePrice?.product,
+			);
 
-    return !inCurProduct;
-  });
+		return !inCurProduct;
+	});
 };

@@ -1,113 +1,112 @@
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-  APIVersion,
-  AppEnv,
-  AttachBranch,
-  BillingInterval,
-  Organization,
-  ProductItemInterval,
+	APIVersion,
+	type AppEnv,
+	AttachBranch,
+	BillingInterval,
+	type Organization,
 } from "@autumn/shared";
-import chalk from "chalk";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "../utils.js";
-import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { expect } from "chai";
-import { nullish } from "@/utils/genUtils.js";
+import chalk from "chalk";
+import type Stripe from "stripe";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
+import { nullish } from "@/utils/genUtils.js";
+import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { addPrefixToProducts } from "../utils.js";
 
 const testCase = "updateEnts4";
 
-export let pro = constructProduct({
-  items: [
-    constructArrearItem({
-      featureId: TestFeature.Words,
-      includedUsage: 10000,
-    }),
-  ],
-  type: "pro",
-  isAnnual: true,
+export const pro = constructProduct({
+	items: [
+		constructArrearItem({
+			featureId: TestFeature.Words,
+			includedUsage: 10000,
+		}),
+	],
+	type: "pro",
+	isAnnual: true,
 });
 
 describe(`${chalk.yellowBright(`${testCase}: Checking price changes don't result in update ents func`)}`, () => {
-  let customerId = testCase;
-  let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
-  let testClockId: string;
-  let db: DrizzleCli, org: Organization, env: AppEnv;
-  let stripeCli: Stripe;
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	let _testClockId: string;
+	let db: DrizzleCli, org: Organization, env: AppEnv;
+	let stripeCli: Stripe;
 
-  let curUnix = new Date().getTime();
+	const _curUnix = Date.now();
 
-  before(async function () {
-    await setupBefore(this);
-    const { autumnJs } = this;
-    db = this.db;
-    org = this.org;
-    env = this.env;
+	before(async function () {
+		await setupBefore(this);
+		const { autumnJs } = this;
+		db = this.db;
+		org = this.org;
+		env = this.env;
 
-    stripeCli = this.stripeCli;
+		stripeCli = this.stripeCli;
 
-    const { testClockId: testClockId1 } = await initCustomer({
-      autumn: autumnJs,
-      customerId,
-      db,
-      org,
-      env,
-      attachPm: "success",
-    });
+		const { testClockId: testClockId1 } = await initCustomer({
+			autumn: autumnJs,
+			customerId,
+			db,
+			org,
+			env,
+			attachPm: "success",
+		});
 
-    addPrefixToProducts({
-      products: [pro],
-      prefix: testCase,
-    });
+		addPrefixToProducts({
+			products: [pro],
+			prefix: testCase,
+		});
 
-    await createProducts({
-      autumn,
-      products: [pro],
-      db,
-      orgId: org.id,
-      env,
-    });
+		await createProducts({
+			autumn,
+			products: [pro],
+			db,
+			orgId: org.id,
+			env,
+		});
 
-    testClockId = testClockId1!;
-  });
+		_testClockId = testClockId1!;
+	});
 
-  it("should attach pro annual product", async function () {
-    await attachAndExpectCorrect({
-      autumn,
-      customerId,
-      product: pro,
-      stripeCli,
-      db,
-      org,
-      env,
-    });
-  });
+	it("should attach pro annual product", async () => {
+		await attachAndExpectCorrect({
+			autumn,
+			customerId,
+			product: pro,
+			stripeCli,
+			db,
+			org,
+			env,
+		});
+	});
 
-  it("branch should not be same custom ents if base price updated", async function () {
-    let customItems = pro.items.filter((item) => !nullish(item.feature_id));
+	it("branch should not be same custom ents if base price updated", async () => {
+		let customItems = pro.items.filter((item) => !nullish(item.feature_id));
 
-    customItems = [
-      ...customItems,
-      constructPriceItem({
-        price: 10,
-        interval: BillingInterval.Year,
-      }),
-    ];
+		customItems = [
+			...customItems,
+			constructPriceItem({
+				price: 10,
+				interval: BillingInterval.Year,
+			}),
+		];
 
-    const preview = await autumn.attachPreview({
-      customer_id: customerId,
-      product_id: pro.id,
-      is_custom: true,
-      items: customItems,
-    });
+		const preview = await autumn.attachPreview({
+			customer_id: customerId,
+			product_id: pro.id,
+			is_custom: true,
+			items: customItems,
+		});
 
-    expect(preview.branch).to.equal(AttachBranch.SameCustom);
-  });
+		expect(preview.branch).to.equal(AttachBranch.SameCustom);
+	});
 });

@@ -1,108 +1,107 @@
-import { CusService } from "@/internal/customers/CusService.js";
-import {
-  CusProductStatus,
-  FullCusProduct,
-  UsagePriceConfig,
+import type {
+	CusProductStatus,
+	FullCusProduct,
+	UsagePriceConfig,
 } from "@autumn/shared";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 
 export const timeout = (ms: number) => {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+	return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
 export const batchSendCountEvents = async ({
-  customerId,
-  eventCount,
-  featureId,
+	customerId,
+	eventCount,
+	featureId,
 }: {
-  customerId: string;
-  eventCount: number;
-  featureId: string;
+	customerId: string;
+	eventCount: number;
+	featureId: string;
 }) => {
-  const batchEvents = [];
-  for (let i = 0; i < eventCount; i++) {
-    batchEvents.push(
-      AutumnCli.sendEvent({
-        customerId: customerId,
-        eventName: featureId,
-      }),
-    );
-  }
+	const batchEvents = [];
+	for (let i = 0; i < eventCount; i++) {
+		batchEvents.push(
+			AutumnCli.sendEvent({
+				customerId: customerId,
+				eventName: featureId,
+			}),
+		);
+	}
 
-  await Promise.all(batchEvents);
-  await timeout(10000);
+	await Promise.all(batchEvents);
+	await timeout(10000);
 };
 
 export const searchCusProducts = ({
-  productId,
-  cusProducts,
-  status,
+	productId,
+	cusProducts,
+	status,
 }: {
-  productId: string;
-  cusProducts: FullCusProduct[];
-  status?: CusProductStatus;
+	productId: string;
+	cusProducts: FullCusProduct[];
+	status?: CusProductStatus;
 }) => {
-  if (!cusProducts) {
-    return undefined;
-  }
-  return cusProducts.find(
-    (cusProduct: FullCusProduct) =>
-      cusProduct.product.id === productId &&
-      (status ? cusProduct.status === status : true),
-  );
+	if (!cusProducts) {
+		return undefined;
+	}
+	return cusProducts.find(
+		(cusProduct: FullCusProduct) =>
+			cusProduct.product.id === productId &&
+			(status ? cusProduct.status === status : true),
+	);
 };
 
 export const getFixedPriceAmount = (product: any) => {
-  let amount = 0;
-  for (const price of product.prices) {
-    if (price.config.type === "fixed") {
-      amount += price.config.amount;
-    }
-  }
-  return amount;
+	let amount = 0;
+	for (const price of product.prices) {
+		if (price.config.type === "fixed") {
+			amount += price.config.amount;
+		}
+	}
+	return amount;
 };
 
 export const getUsagePriceTiers = ({
-  product,
-  featureId,
+	product,
+	featureId,
 }: {
-  product: any;
-  featureId: string;
+	product: any;
+	featureId: string;
 }) => {
-  for (const price of product.prices) {
-    if (
-      price.config.type === "usage" &&
-      price.config.feature_id === featureId
-    ) {
-      return price.config.usage_tiers;
-    }
-  }
-  return [];
+	for (const price of product.prices) {
+		if (
+			price.config.type === "usage" &&
+			price.config.feature_id === featureId
+		) {
+			return price.config.usage_tiers;
+		}
+	}
+	return [];
 };
 
 export const getFeaturePrice = ({
-  product,
-  featureId,
-  cusProducts,
-  subId,
+	product,
+	featureId,
+	cusProducts,
+	subId,
 }: {
-  product: any;
-  featureId: string;
-  cusProducts: FullCusProduct[];
-  subId?: string;
+	product: any;
+	featureId: string;
+	cusProducts: FullCusProduct[];
+	subId?: string;
 }) => {
-  if (cusProducts.length == 0) {
-    return null;
-  }
+	if (cusProducts.length === 0) {
+		return null;
+	}
 
-  let mainProduct = cusProducts[0];
+	const mainProduct = cusProducts[0];
 
-  for (const cusPrice of mainProduct.customer_prices) {
-    let price = cusPrice.price;
-    if ((price.config! as UsagePriceConfig).feature_id === featureId) {
-      return price;
-    }
-  }
+	for (const cusPrice of mainProduct.customer_prices) {
+		const price = cusPrice.price;
+		if ((price.config! as UsagePriceConfig).feature_id === featureId) {
+			return price;
+		}
+	}
 
-  return null;
+	return null;
 };

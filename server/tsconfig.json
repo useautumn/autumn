@@ -1,35 +1,35 @@
 {
-  "ts-node": {
-    "esm": true,
-    "experimentalSpecifier": true
-  },
-  "compilerOptions": {
-    "target": "ES2020",
-    "moduleResolution": "NodeNext",
-    "module": "NodeNext",
+	"ts-node": {
+		"esm": true,
+		"experimentalSpecifier": true
+	},
+	"compilerOptions": {
+		"target": "ES2020",
+		"moduleResolution": "NodeNext",
+		"module": "NodeNext",
 
-    // "declaration": true,
-    "jsx": "react-jsx",
-    "rootDir": ".",
-    "baseUrl": ".",
-    "outDir": "./dist",
-    "strict": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "paths": {
-      "@/*": ["src/*"],
-      "@shared/*": ["../shared/*"],
-      "@scripts/*": ["scripts/*"],
-      "@emails/*": ["emails/*"]
-    }
-  },
-  "include": ["src", "tests", "scripts", "emails"],
-  "references": [
-    {
-      "path": "../shared"
-    }
-  ],
-  "exclude": ["node_modules", "dist"]
+		// "declaration": true,
+		"jsx": "react-jsx",
+		"rootDir": ".",
+		"baseUrl": ".",
+		"outDir": "./dist",
+		"strict": true,
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"paths": {
+			"@/*": ["src/*"],
+			"@shared/*": ["../shared/*"],
+			"@scripts/*": ["scripts/*"],
+			"@emails/*": ["emails/*"]
+		}
+	},
+	"include": ["src", "tests", "scripts", "emails"],
+	"references": [
+		{
+			"path": "../shared"
+		}
+	],
+	"exclude": ["node_modules", "dist"]
 }
