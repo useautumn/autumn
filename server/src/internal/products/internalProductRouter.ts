@@ -49,6 +49,47 @@ productRouter.get("/products", async (req: any, res) => {
   }
 });
 
+productRouter.get("/product_counts", async (req: any, res) => {
+  try {
+    let { db } = req;
+    let products = await ProductService.listFull({
+      db,
+      orgId: req.orgId,
+      env: req.env,
+    });
+
+    let counts = await Promise.all(
+      products.map(async (product) => {
+        // if (latestVersion) {
+        //   return CusProdReadService.getCounts({
+        //     db,
+        //     internalProductId: product.internal_id,
+        //   });
+        // }
+
+        return CusProdReadService.getCountsForAllVersions({
+          db,
+          productId: product.id,
+          orgId: req.orgId,
+          env: req.env,
+        });
+      })
+    );
+
+    let result: { [key: string]: any } = {};
+    for (let i = 0; i < products.length; i++) {
+      if (!result[products[i].id]) {
+        result[products[i].id] = counts[i];
+      }
+    }
+
+    res.status(200).send(result);
+  } catch (error) {
+    console.error("Failed to get products", error);
+    res.status(500).send(error);
+  }
+});
+
 productRouter.get("/features", async (req: any, res) => {
   try {
     res.status(200).json({ features: req.features });

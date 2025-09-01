@@ -63,12 +63,6 @@ export const ProductsTable = ({
               <span>You haven't archived any products yet.</span>
             ) : (
               <>
-                {/* <img
-                  src="./product.png"
-                  alt="Products"
-                  className="w-48 h-48 opacity-60 filter grayscale"
-                  // className="w-48 h-48 opacity-80 filter brightness-0 invert" // this is for dark mode
-                /> */}
                 <span>
                   Each product defines features your customers get access to and
                   how much they cost. Create separate products for any free
@@ -158,10 +152,7 @@ export const ProductsTable = ({
               {!onboarding && (
                 <>
                   <Item className="col-span-3">
-                    {/* <ProductCountsTooltip
-                      allCounts={allCounts}
-                      product={product}
-                    /> */}
+                    <ProductCountsTooltip product={product} />
                   </Item>
                   <Item className="col-span-3">
                     <ProductTypeBadge product={product} />
@@ -180,10 +171,7 @@ export const ProductsTable = ({
                   onboarding && "col-span-6"
                 )}
               >
-                {/* <ProductRowToolbar
-                  product={product}
-                  productCounts={allCounts?.[product.id]}
-                /> */}
+                <ProductRowToolbar />
               </Item>
             </Row>
           ))}
