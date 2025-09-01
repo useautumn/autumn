@@ -1,14 +1,12 @@
 {
-	"root": false,
 	"$schema": "https://biomejs.dev/schemas/2.2.2/schema.json",
 	"vcs": {
-		"enabled": true,
+		"enabled": false,
 		"clientKind": "git",
 		"useIgnoreFile": false
 	},
 	"files": {
-		"ignoreUnknown": false,
-		"experimentalScannerIgnores": ["dist", "drizzle", "archives"]
+		"ignoreUnknown": false
 	},
 	"formatter": {
 		"enabled": true,

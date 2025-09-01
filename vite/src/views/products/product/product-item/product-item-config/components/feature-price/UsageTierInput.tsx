@@ -1,46 +1,46 @@
+import { Infinite } from "@autumn/shared";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useProductContext } from "@/views/products/product/ProductContext";
-import { Infinite } from "@autumn/shared";
 
 export const UsageTierInput = ({
-  value,
-  onChange,
-  type,
+	value,
+	onChange,
+	type,
 }: {
-  value: number | string;
-  onChange: (e: any) => void;
-  type: "from" | "to" | "amount";
+	value: number | string;
+	onChange: (e: any) => void;
+	type: "from" | "to" | "amount";
 }) => {
-  const { org } = useProductContext();
+	const { org } = useProductContext();
 
-  const defaultCurrency = org?.currency?.toUpperCase() ?? "USD";
+	const defaultCurrency = org?.currency?.toUpperCase() ?? "USD";
 
-  if ((type === "to" && value === Infinite) || type === "from") {
-    return (
-      <Input
-        className="outline-none bg-transparent shadow-none flex-grow"
-        value={value === Infinite ? "♾️" : value}
-        disabled
-        type="text"
-      />
-    );
-  }
+	if ((type === "to" && value === Infinite) || type === "from") {
+		return (
+			<Input
+				className="outline-none bg-transparent shadow-none flex-grow"
+				value={value === Infinite ? "♾️" : value}
+				disabled
+				type="text"
+			/>
+		);
+	}
 
-  return (
-    <div className="relative w-full flex">
-      <Input
-        className={cn("outline-none flex w-full", type === "amount" && "pr-8")}
-        value={value}
-        onChange={onChange}
-        type="number"
-        step="any"
-      />
-      {type === "amount" && (
-        <span className="absolute right-2 top-[12.5px] text-t3 text-[9px] leading-none">
-          {defaultCurrency}
-        </span>
-      )}
-    </div>
-  );
+	return (
+		<div className="relative w-full flex">
+			<Input
+				className={cn("outline-none flex w-full", type === "amount" && "pr-8")}
+				value={value}
+				onChange={onChange}
+				type="number"
+				step="any"
+			/>
+			{type === "amount" && (
+				<span className="absolute right-2 top-[12.5px] text-t3 text-[9px] leading-none">
+					{defaultCurrency}
+				</span>
+			)}
+		</div>
+	);
 };

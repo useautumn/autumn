@@ -2,7 +2,7 @@ import { betterAuthSnippet } from "./betterAuth";
 import { clerkSnippet, supabaseSnippet } from "./honoHandler";
 
 export const expressBetterAuth = (customerType: "user" | "org") => {
-  return `import { autumnHandler } from "autumn-js/express";
+	return `import { autumnHandler } from "autumn-js/express";
 import { auth } from "@/lib/auth";
 
 app.use(express.json()); // need to parse request body before autumnHandler
@@ -17,7 +17,7 @@ ${betterAuthSnippet(customerType, "req.headers", 3)}
 };
 
 export const expressClerk = (customerType: "user" | "org") => {
-  return `import { autumnHandler } from "autumn-js/express";
+	return `import { autumnHandler } from "autumn-js/express";
 import { clerkMiddleware, getAuth } from "@clerk/express";
 
 app.use(express.json()); // need to parse request body before autumnHandler
@@ -33,7 +33,7 @@ app.use(
 };
 
 export const expressSupabase = (customerType: "user" | "org") => {
-  return `import { autumnHandler } from "autumn-js/express";
+	return `import { autumnHandler } from "autumn-js/express";
 import { createClient } from "./lib/supabase";
 
 app.use(express.json()); // need to parse request body before autumnHandler
@@ -47,8 +47,8 @@ app.use(
 );`;
 };
 
-export const expressOther = (customerType: "user" | "org") => {
-  return `import { autumnHandler } from "autumn-js/express";
+export const expressOther = (_customerType: "user" | "org") => {
+	return `import { autumnHandler } from "autumn-js/express";
 
 app.use(express.json()); // need to parse request body before autumnHandler
 app.use(

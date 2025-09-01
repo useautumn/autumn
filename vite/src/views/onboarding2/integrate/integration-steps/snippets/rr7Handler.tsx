@@ -2,7 +2,7 @@ import { betterAuthSnippet } from "./betterAuth";
 import { supabaseAuthSnippet } from "./supabaseAuth";
 
 export const rr7BetterAuth = (customerType: "user" | "org") => {
-  return `// app/routes/api.autumn.tsx
+	return `// app/routes/api.autumn.tsx
 
 import { autumnHandler } from "autumn-js/react-router";
 import { auth } from "@/lib/auth";
@@ -17,7 +17,7 @@ export const loader = handler.loader;
 export const action = handler.action;`;
 };
 export const rr7Supabase = (customerType: "user" | "org") => {
-  return `// app/routes/api.autumn.tsx
+	return `// app/routes/api.autumn.tsx
 
 import { autumnHandler } from "autumn-js/react-router";
 import { createClient } from "@/utils/supabase/server";
@@ -33,8 +33,8 @@ export const action = handler.action;`;
 };
 
 export const clerkSnippet = (customerType: "user" | "org") => {
-  if (customerType === "user") {
-    return `const { userId } = await getAuth(args);
+	if (customerType === "user") {
+		return `const { userId } = await getAuth(args);
 
     if (!userId) return null;
 
@@ -42,9 +42,9 @@ export const clerkSnippet = (customerType: "user" | "org") => {
       customerId: userId,
       customerData: { name: "", email: "" },
     };`;
-  }
+	}
 
-  return `const { userId, orgId } = await getAuth(args);
+	return `const { userId, orgId } = await getAuth(args);
 
     if (!userId || !orgId) return null;
 
@@ -54,7 +54,7 @@ export const clerkSnippet = (customerType: "user" | "org") => {
     };`;
 };
 export const rr7Clerk = (customerType: "user" | "org") => {
-  return `// app/routes/api.autumn.tsx
+	return `// app/routes/api.autumn.tsx
 
 import { autumnHandler } from "autumn-js/react-router";
 import { getAuth } from "@clerk/react-router/ssr.server";
@@ -68,8 +68,8 @@ const handler = autumnHandler({
 export const loader = handler.loader;
 export const action = handler.action;`;
 };
-export const rr7Other = (customerType: "user" | "org") => {
-  return `// app/routes/api.autumn.tsx
+export const rr7Other = (_customerType: "user" | "org") => {
+	return `// app/routes/api.autumn.tsx
 
 import { autumnHandler } from "autumn-js/react-router";
 

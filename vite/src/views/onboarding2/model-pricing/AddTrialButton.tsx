@@ -1,66 +1,66 @@
-import { Button } from "@/components/ui/button";
-import { CreateFreeTrial } from "@/views/products/product/free-trial/CreateFreeTrial";
+import { PlusIcon, X } from "lucide-react";
 import { useState } from "react";
-import { useProductContext } from "@/views/products/product/ProductContext";
-import { PlusIcon, Trash, X } from "lucide-react";
-import { handleAutoSave } from "./model-pricing-utils/modelPricingUtils";
+import { Button } from "@/components/ui/button";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { CreateFreeTrial } from "@/views/products/product/free-trial/CreateFreeTrial";
+import { useProductContext } from "@/views/products/product/ProductContext";
+import { handleAutoSave } from "./model-pricing-utils/modelPricingUtils";
 
 export const AddTrialButton = () => {
-  const { product, setProduct, mutate, autoSave } = useProductContext();
-  const [open, setOpen] = useState(false);
-  const axiosInstance = useAxiosInstance();
+	const { product, setProduct, mutate, autoSave } = useProductContext();
+	const [open, setOpen] = useState(false);
+	const axiosInstance = useAxiosInstance();
 
-  return (
-    <>
-      <CreateFreeTrial open={open} setOpen={setOpen} />
-      <Button
-        variant="ghost"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setOpen(true);
-        }}
-        className="justify-start w-fit p-0 hover:bg-transparent text-t2 font-medium hover:text-t1"
-      >
-        {product?.free_trial ? (
-          <div className="flex items-center gap-2 justify-between w-full">
-            <p className="text-lime-600">
-              {product?.free_trial?.length} {product.free_trial?.duration} trial
-            </p>
-            <Button
-              variant="ghost"
-              size="icon"
-              isIcon
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setProduct({
-                  ...product,
-                  free_trial: null,
-                });
+	return (
+		<>
+			<CreateFreeTrial open={open} setOpen={setOpen} />
+			<Button
+				variant="ghost"
+				onClick={(e) => {
+					e.preventDefault();
+					e.stopPropagation();
+					setOpen(true);
+				}}
+				className="justify-start w-fit p-0 hover:bg-transparent text-t2 font-medium hover:text-t1"
+			>
+				{product?.free_trial ? (
+					<div className="flex items-center gap-2 justify-between w-full">
+						<p className="text-lime-600">
+							{product?.free_trial?.length} {product.free_trial?.duration} trial
+						</p>
+						<Button
+							variant="ghost"
+							size="icon"
+							isIcon
+							onClick={(e) => {
+								e.preventDefault();
+								e.stopPropagation();
+								setProduct({
+									...product,
+									free_trial: null,
+								});
 
-                if (!autoSave) {
-                  handleAutoSave({
-                    axiosInstance,
-                    productId: product.id,
-                    product: { ...product, free_trial: null },
-                    mutate,
-                  });
-                }
-              }}
-              className="hover:bg-zinc-300 !h-4 !w-4 text-t3 mt-0.5"
-            >
-              <X size={12} />
-            </Button>
-          </div>
-        ) : (
-          <p className="flex items-center gap-2">
-            Add Free Trial
-            <PlusIcon size={16} />
-          </p>
-        )}
-      </Button>
-    </>
-  );
+								if (!autoSave) {
+									handleAutoSave({
+										axiosInstance,
+										productId: product.id,
+										product: { ...product, free_trial: null },
+										mutate,
+									});
+								}
+							}}
+							className="hover:bg-zinc-300 !h-4 !w-4 text-t3 mt-0.5"
+						>
+							<X size={12} />
+						</Button>
+					</div>
+				) : (
+					<p className="flex items-center gap-2">
+						Add Free Trial
+						<PlusIcon size={16} />
+					</p>
+				)}
+			</Button>
+		</>
+	);
 };
