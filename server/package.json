@@ -11,9 +11,13 @@
     "workers": "bun src/workers.ts",
     "workers:dev": "bun --watch src/workers.ts",
     "cron": "bun src/cron.ts",
-    "check": "bun src/check.ts",
+    "old:check": "bun src/check.ts",
     "build": "bun build ./src/index.ts ./src/workers.ts ./src/cron.ts --outdir dist --target bun",
-    "build:check": "tsc -b tsconfig.build.json"
+    "build:check": "tsc -b tsconfig.build.json",
+
+    "format": "pnpm exec biome format --write",
+    "lint": "pnpm exec biome lint --write",
+    "check": "pnpm exec biome check"
   },
   "mocha": {
     "node-option": [
@@ -94,6 +98,7 @@
     "zod": "^3.25.23"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.2.2",
     "@types/chai": "^5.0.1",
     "@types/chai-http": "^3.0.5",
     "@types/cors": "^2.8.19",

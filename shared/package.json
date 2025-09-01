@@ -35,6 +35,7 @@
     "zod": "^3.25.23"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.2.2",
     "@types/bun": "latest",
     "@types/node": "^24.0.3",
     "@typescript/native-preview": "^7.0.0-dev.20250731.1",
