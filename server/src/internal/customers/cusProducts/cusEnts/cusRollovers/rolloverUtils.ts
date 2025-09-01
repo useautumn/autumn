@@ -103,10 +103,6 @@ export function performMaximumClearing({
 		return { toDelete: [], toUpdate: [] };
 	}
 
-	const _total = 0;
-	const _toDelete: string[] = [];
-	const _toUpdate: Rollover[] = [];
-
 	// look through each row
 	// if entityMode is true, then look through each entity
 	// otherwise look at balance
