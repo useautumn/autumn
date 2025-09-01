@@ -20,8 +20,6 @@ import { ExpandedEnvTrigger } from "./env-dropdown/ExpandedEnvTrigger";
 export const EnvDropdown = ({ env }: { env: AppEnv }) => {
   const location = useLocation();
 
-  const { state } = useSidebarContext();
-
   const handleEnvChange = async (env: AppEnv) => {
     const newPath = envToPath(env, location.pathname);
     console.log(newPath);
@@ -33,9 +31,6 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [open, setOpen] = useState(false);
 
-  const envText = env === AppEnv.Sandbox ? "Sandbox" : "Production";
-  const expanded = state == "expanded";
-
   return (
     <div
       className={cn("flex text-t2 text-xs gap-1 px-3")}
@@ -44,10 +39,7 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
     >
       <DropdownMenu open={open} onOpenChange={setOpen}>
         <ExpandedEnvTrigger isHovered={isHovered} />
-        {/* {expanded ? (
-        ) : (
-          <CollapsedEnvTrigger />
-        )} */}
+
         <DropdownMenuContent side="bottom" align="start" className="w-[180px]">
           <DropdownMenuItem
             className="flex justify-between items-center text-t2"

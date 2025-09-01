@@ -22,6 +22,7 @@ import { CusSearchService } from "@/internal/customers/CusSearchService.js";
 import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
 import { handleTransferProduct } from "./handlers/handleTransferProduct.js";
 import { handleBatchCustomers } from "../api/batch/handlers/handleBatchCustomers.js";
+import { toSuccessUrl } from "../orgs/orgUtils/convertOrgUtils.js";
 
 export const cusRouter: Router = Router();
 
@@ -122,7 +123,7 @@ cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
 
         const portal = await stripeCli.billingPortal.sessions.create({
           customer: newCus.id,
-          return_url: returnUrl || org.stripe_config.success_url,
+          return_url: returnUrl || toSuccessUrl({ org, env: req.env }),
         });
 
         if (org.api_version >= APIVersion.v1_1) {
@@ -140,7 +141,7 @@ cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
 
     const portal = await stripeCli.billingPortal.sessions.create({
       customer: customer.processor.id,
-      return_url: returnUrl || org.stripe_config?.success_url,
+      return_url: returnUrl || toSuccessUrl({ org, env: req.env }),
     });
 
     if (org.api_version >= APIVersion.v1_1) {

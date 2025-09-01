@@ -344,7 +344,7 @@ devRouter.post("/cli/stripe", async (req: any, res: any) => {
             live_api_key: encryptData(stripeLiveKey),
             test_webhook_secret: encryptData(testWebhook.secret as string),
             live_webhook_secret: encryptData(liveWebhook.secret as string),
-            success_url: "https://useautumn.com",
+            // success_url: "https://useautumn.com",
           },
         },
       });

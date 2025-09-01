@@ -3,14 +3,14 @@ import { FrontendOrg } from "@autumn/shared";
 import { useSidebarContext } from "../../SidebarContext";
 
 export const OrgLogo = ({ org }: { org: FrontendOrg }) => {
-  const { state } = useSidebarContext();
-  const firstLetter = org.name && org.name.charAt(0).toUpperCase() || "A";
-  const expanded = state === "expanded";
+  const { expanded } = useSidebarContext();
+  const firstLetter = (org.name && org.name.charAt(0).toUpperCase()) || "A";
+
   return (
     <div
       className={cn(
         "rounded-md overflow-hidden flex items-center justify-center scale-100 translate-x-[1px] bg-zinc-200",
-        expanded ? "w-5 h-5" : "min-w-5 min-h-5",
+        expanded ? "w-5 h-5" : "min-w-5 min-h-5"
       )}
     >
       {org.logo ? (

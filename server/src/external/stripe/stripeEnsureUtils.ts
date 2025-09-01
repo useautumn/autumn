@@ -12,25 +12,19 @@ export async function ensureStripeProducts({
   logger,
   req,
   org,
+  env,
 }: {
   db: DrizzleCli;
   logger: any;
   req: ExtendedRequest;
   org: Organization;
+  env: AppEnv;
 }) {
   await ensureStripeProductsWithEnv({
     db,
     logger,
     req,
-    env: AppEnv.Sandbox,
-    org,
-  });
-
-  await ensureStripeProductsWithEnv({
-    db,
-    logger,
-    req,
-    env: AppEnv.Live,
+    env,
     org,
   });
 }
@@ -47,8 +41,6 @@ export async function ensureStripeProductsWithEnv({
   env: AppEnv;
   org: Organization;
 }) {
-  // let stripe = new Stripe(apiKey);
-
   // let existingStripeProducts = await stripe.products.list();
   const fullProducts = await ProductService.listFull({
     db,
