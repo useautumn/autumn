@@ -18,11 +18,45 @@ import RecaseError, {
   handleFrontendReqError,
   handleRequestError,
 } from "@/utils/errorUtils.js";
+
 import { createOrgResponse } from "../orgs/orgUtils.js";
 import { sortFullProducts } from "./productUtils/sortProductUtils.js";
-import { getGroupToDefaultProd } from "../customers/cusUtils/createNewCustomer.js";
 
 export const productRouter: Router = Router({ mergeParams: true });
+
+productRouter.get("/products", async (req: any, res) => {
+  try {
+    const { db } = req;
+    const products = await ProductService.listFull({
+      db,
+      orgId: req.orgId,
+      env: req.env,
+    });
+
+    const groupToDefaults = getGroupToDefaults({
+      defaultProds: products,
+    });
+
+    res.status(200).json({
+      products: products.map((p) =>
+        mapToProductV2({ product: p, features: req.features })
+      ),
+      groupToDefaults,
+    });
+  } catch (error) {
+    console.error("Failed to get products", error);
+    res.status(500).send(error);
+  }
+});
+
+productRouter.get("/features", async (req: any, res) => {
+  try {
+    res.status(200).json({ features: req.features });
+  } catch (error) {
+    console.error("Failed to get features", error);
+    res.status(500).send(error);
+  }
+});
 
 productRouter.get("/data", async (req: any, res) => {
   try {

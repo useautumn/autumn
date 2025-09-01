@@ -13,7 +13,7 @@ import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { BillingUnits } from "./BillingUnits";
 import { UsageTierInput } from "./UsageTierInput";
 import { Input } from "@/components/ui/input";
-import { useOrg } from "@/hooks/useOrg";
+import { useOrg } from "@/hooks/common/useOrg";
 
 export default function FeaturePrice() {
   const { features } = useProductContext();

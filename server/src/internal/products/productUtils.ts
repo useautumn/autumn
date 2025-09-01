@@ -559,6 +559,7 @@ export const getGroupToDefaults = ({
   const groupToDefaults: Record<string, Record<string, FullProduct>> = {};
 
   for (const product of defaultProds) {
+    if (product.archived || !product.is_default) continue;
     if (!groupToDefaults[product.group]) {
       groupToDefaults[product.group] = {};
     }

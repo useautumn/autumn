@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import { useSearchParams } from "react-router";
 
 import { useCustomer, PricingTable } from "autumn-js/react";
-// import PricingTable from "@/components/autumn/pricing-table";
+
 import {
   Check,
   Lock,
@@ -31,7 +31,6 @@ import {
 import { cn } from "@/lib/utils";
 import CodeBlock from "@/views/onboarding/components/CodeBlock";
 import { useListProducts } from "./model-pricing/usePricingTable";
-// import PaywallDialog from "@/components/autumn/paywall-dialog";
 
 export const SampleApp = ({ data }: { data: any }) => {
   const env = useEnv();

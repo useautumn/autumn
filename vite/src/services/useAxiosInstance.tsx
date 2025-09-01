@@ -1,5 +1,5 @@
 import axios from "axios";
-import { endpoint } from "@/utils/constants";
+// import { endpoint } from "@/utils/constants/constants";
 import { AppEnv } from "@autumn/shared";
 import { useEnv } from "@/utils/envUtils";
 import { authClient } from "@/lib/auth-client";
@@ -17,7 +17,7 @@ export function useAxiosInstance(params?: { env?: AppEnv; isAuth?: boolean }) {
   const trueEnv = useEnv();
 
   const axiosInstance = axios.create({
-    baseURL: endpoint,
+    baseURL: import.meta.env.VITE_BACKEND_URL,
     withCredentials: true,
   });
 

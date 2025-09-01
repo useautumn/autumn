@@ -236,11 +236,6 @@ function CustomersView({ env }: { env: AppEnv }) {
               <div className="pr-4 flex items-center justify-center gap-2 h-10">
                 <FilterButton />
               </div>
-              {/* {savedViewsData?.views?.length > 0 && (
-                  <div className="border-r pr-4 pl-2 flex items-center">
-                    <SavedViewsDropdown />
-                  </div>
-                )} */}
 
               <SearchBar
                 query={queryStates.q || ""}
@@ -288,19 +283,6 @@ function CustomersView({ env }: { env: AppEnv }) {
                   {data?.totalCount}
                 </p>
               </div>
-              {/* <div className="h-10 flex items-center gap-2">
-                <div className="border-r pr-4 flex items-center gap-2">
-                  <FilterButton />
-                  <p className="text-t2 px-1 rounded-md bg-stone-200 text-sm">
-                    {data?.totalCount}
-                  </p>
-                </div>
-                {savedViewsData?.views?.length > 0 && (
-                  <div className="border-r pr-4 pl-2 flex items-center">
-                    <SavedViewsDropdown />
-                  </div>
-                )}
-              </div> */}
             </div>
             <div className="flex gap-4 bg-blue-100">
               <CreateCustomer />
@@ -312,37 +294,17 @@ function CustomersView({ env }: { env: AppEnv }) {
             </div>
           ) : (
             <div className="flex flex-col px-10 mt-3 text-t3 text-sm w-full min-h-[60vh] gap-4">
-              {/* <img
-                src="./customer.png"
-                alt="No customers"
-                className="w-48 h-48 opacity-60 filter grayscale"
-                // className="w-48 h-48 opacity-80 filter brightness-0 invert" // this is for dark mode
-              /> */}
               <span>
-                {
-                  // Show loading state during search transitions to prevent flash of incorrect message
-
-                  queryStates.q?.trim()
-                    ? "No matching results found. Try a different search."
-                    : "Create your first customer by interacting with an Autumn function via the API."
-                }
+                {queryStates.q?.trim()
+                  ? "No matching results found. Try a different search."
+                  : "Create your first customer by interacting with an Autumn function via the API."}
               </span>
             </div>
           )}
         </div>
-        {/* <div className="shrink-0 sticky bottom-0">
-          <CreateCustomer />
-        </div> */}
       </div>
     </CustomersContext.Provider>
   );
 }
 
 export default CustomersView;
-
-{
-  /* <p className="text-t3 text-sm whitespace-nowrap items-center flex gap-1">
-              <span className="font-semibold">{data?.totalCount} </span>
-              {data?.totalCount === 1 ? "Customer" : "Customers"}
-            </p> */
-}

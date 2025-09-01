@@ -6,11 +6,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 import { ProductService } from "@/services/products/ProductService";
 import { useNavigate } from "react-router";
@@ -18,15 +13,15 @@ import { useNavigate } from "react-router";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { useProductsContext } from "./ProductsContext";
-import { PlusIcon, Check } from "lucide-react";
+import { useProductsContext } from "../ProductsContext";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
-import { ProductConfig } from "./ProductConfig";
+import { ProductConfig } from "../ProductConfig";
 import { ProductV2 } from "@autumn/shared";
 import { ToggleButton } from "@/components/general/ToggleButton";
 import { WarningBox } from "@/components/general/modal-components/WarningBox";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 
-export const defaultProduct = {
+const defaultProduct = {
   name: "",
   id: "",
   group: "",
@@ -39,12 +34,14 @@ function CreateProduct({
 }: {
   onSuccess?: (newProduct: ProductV2) => Promise<void>;
 }) {
-  const { env, mutate, groupToDefaults } = useProductsContext();
+  // const { env, mutate, groupToDefaults } = useProductsContext();
   const [loading, setLoading] = useState(false);
   const [product, setProduct] = useState(defaultProduct);
   const [open, setOpen] = useState(false);
 
-  const axiosInstance = useAxiosInstance({ env });
+  const { groupToDefaults } = useProductsQuery();
+
+  const axiosInstance = useAxiosInstance();
   const navigate = useNavigate();
 
   const handleCreateClicked = async () => {
@@ -55,14 +52,14 @@ function CreateProduct({
         product
       );
 
-      await mutate();
+      // await mutate();
 
-      if (onSuccess) {
-        await onSuccess(newProduct);
-      } else {
-        navigateTo(`/products/${newProduct.id}`, navigate, env);
-      }
-      setOpen(false);
+      // if (onSuccess) {
+      //   await onSuccess(newProduct);
+      // } else {
+      //   navigateTo(`/products/${newProduct.id}`, navigate, env);
+      // }
+      // setOpen(false);
     } catch (error) {
       toast.error(getBackendErr(error, "Failed to create product"));
     }

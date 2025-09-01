@@ -1,4 +1,3 @@
-import useLocalStorage from "@/hooks/useLocalStorage";
 import { createContext, useContext } from "react";
 
 export const SidebarContext = createContext<any>(null);

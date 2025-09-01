@@ -3,25 +3,26 @@ import App from "./App";
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { PostHogProvider } from "posthog-js/react"
+import { PostHogProvider } from "posthog-js/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+
+const queryClient = new QueryClient();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    {process.env.NODE_ENV === "development" ? (
-      <App />
-    ) : (
-      <PostHogProvider
-        apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
-        options={{
-          // autocapture: false,
-          // capture_pageview: false,
-          // capture_pageleave: false,
-          // session_recording: {}
-          api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
-        }}
-      >
+    <QueryClientProvider client={queryClient}>
+      {process.env.NODE_ENV === "development" ? (
+        <App />
+      ) : (
+        <PostHogProvider
+          apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
+          options={{ api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST }}
+        >
           <App />
-      </PostHogProvider>
-    )}
-  </StrictMode>,
+        </PostHogProvider>
+      )}
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
+  </StrictMode>
 );
