@@ -22,9 +22,11 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 
   const handleEnvChange = async (env: AppEnv) => {
     const newPath = envToPath(env, location.pathname);
-    console.log(newPath);
     if (newPath) {
-      window.location.href = newPath;
+      const params = new URLSearchParams(location.search);
+      const tab = params.get("tab");
+      const url = tab ? `${newPath}?tab=${encodeURIComponent(tab)}` : newPath;
+      window.location.href = url;
     }
   };
 

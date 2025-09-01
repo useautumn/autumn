@@ -125,12 +125,12 @@ export const MainSidebar = () => {
                   webhooks
                     ? [
                         { title: "API Keys", value: "api_keys" },
-                        { title: "Configure Stripe", value: "stripe" },
+                        { title: "Stripe", value: "stripe" },
                         { title: "Webhooks", value: "webhooks" },
                       ]
                     : [
                         { title: "API Keys", value: "api_keys" },
-                        { title: "Configure Stripe", value: "stripe" },
+                        { title: "Stripe", value: "stripe" },
                       ]
                 }
               />

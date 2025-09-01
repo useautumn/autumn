@@ -18,7 +18,7 @@ const deleteSvixWebhooks = async ({
     batch.push(
       deleteSvixApp({
         appId: org.svix_config.sandbox_app_id,
-      }),
+      })
     );
   }
 
@@ -26,7 +26,7 @@ const deleteSvixWebhooks = async ({
     batch.push(
       deleteSvixApp({
         appId: org.svix_config.live_app_id,
-      }),
+      })
     );
   }
 
@@ -57,7 +57,7 @@ const deleteStripeWebhooks = async ({
       });
     } catch (error: any) {
       logger.error(
-        `Failed to delete stripe webhooks for ${org.id}, ${org.slug}. ${error.message})`,
+        `Failed to delete stripe webhooks for ${org.id}, ${org.slug}. ${error.message})`
       );
     }
   }
@@ -69,7 +69,7 @@ export const handleDeleteOrg = async (req: ExtendedRequest, res: Response) => {
 
     // 1. Check if any customers
     let hasCustomers = await db.query.customers.findFirst({
-      where: eq(customers.org_id, org.id),
+      where: and(eq(customers.org_id, org.id), eq(customers.env, AppEnv.Live)),
     });
 
     if (hasCustomers)
@@ -92,7 +92,7 @@ export const handleDeleteOrg = async (req: ExtendedRequest, res: Response) => {
     await db
       .delete(customers)
       .where(
-        and(eq(customers.org_id, org.id), eq(customers.env, AppEnv.Sandbox)),
+        and(eq(customers.org_id, org.id), eq(customers.env, AppEnv.Sandbox))
       );
 
     res.status(200).json({

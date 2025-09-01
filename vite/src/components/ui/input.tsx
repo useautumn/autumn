@@ -37,10 +37,10 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
               className={cn(
                 `flex h-full w-full ${gradientBg} py-2 text-sm file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground shadow-none outline-none border-none focus-visible:outline-none focus-visible:border-none focus-visible:shadow-none
                 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none
-                
                 p-2
                 `,
-                className
+                className,
+                props.disabled && "text-t3"
               )}
               ref={ref}
               {...props}

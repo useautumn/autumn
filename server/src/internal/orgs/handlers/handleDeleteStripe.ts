@@ -12,7 +12,7 @@ export const disconnectStripe = async ({
   org: Organization;
   env: AppEnv;
 }) => {
-  if (isStripeConnected({ org, env: AppEnv.Sandbox })) {
+  if (isStripeConnected({ org, env })) {
     const stripeCli = createStripeCli({ org, env });
     const webhooks = await stripeCli.webhookEndpoints.list();
     for (const webhook of webhooks.data) {
@@ -43,9 +43,9 @@ export const handleDeleteStripe = async (req: any, res: any) =>
       // Update stripe config:
       const newStripeConfig = structuredClone(req.org.stripe_config);
       if (req.env === AppEnv.Sandbox) {
-        newStripeConfig.test_api_key = undefined;
+        newStripeConfig.test_api_key = null;
       } else {
-        newStripeConfig.live_api_key = undefined;
+        newStripeConfig.live_api_key = null;
       }
 
       await OrgService.update({
