@@ -19,7 +19,7 @@ import { OrgService } from "@/services/OrgService";
 import { CusProductStatus, Entity, Product } from "@autumn/shared";
 import SmallSpinner from "@/components/general/SmallSpinner";
 import { Blend, Search } from "lucide-react";
-import { useOrg } from "@/hooks/useOrg";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useCustomer } from "autumn-js/react";
 
 function AddProduct({

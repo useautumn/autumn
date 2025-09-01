@@ -1,28 +1,30 @@
+import CopyButton from "@/components/general/CopyButton";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import { Product } from "@autumn/shared";
 import { useNavigate } from "react-router";
 import { ProductRowToolbar } from "./components/ProductRowToolbar";
 import { navigateTo } from "@/utils/genUtils";
 import { useProductsContext } from "./ProductsContext";
 import { AdminHover } from "@/components/general/AdminHover";
 import { Item, Row } from "@/components/general/TableGrid";
-import CopyButton from "@/components/general/CopyButton";
 import { cn } from "@/lib/utils";
 import { ProductCountsTooltip } from "./components/ProductCountsTooltip";
 import { ProductTypeBadge } from "./components/ProductTypeBadge";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 
 export const ProductsTable = ({
-  products,
   onRowClick,
 }: {
-  products: Product[];
   onRowClick?: (id: string) => void;
 }) => {
   const { env, onboarding, showArchived } = useProductsContext();
-  const navigate = useNavigate();
   const { allCounts } = useProductsContext();
-  // Check if any product has a group
-  const hasAnyGroup = products?.some(product => Boolean(product?.group?.trim()));
+  const { products } = useProductsQuery();
+
+  const navigate = useNavigate();
+
+  const hasAnyGroup = products?.some((product) =>
+    Boolean(product?.group?.trim())
+  );
 
   return (
     <>
@@ -134,7 +136,7 @@ export const ProductsTable = ({
                   texts={[
                     {
                       key: "Internal ID",
-                      value: product.internal_id,
+                      value: product.internal_id || "",
                     },
                     {
                       key: "Version",
@@ -156,18 +158,16 @@ export const ProductsTable = ({
               {!onboarding && (
                 <>
                   <Item className="col-span-3">
-                    <ProductCountsTooltip
+                    {/* <ProductCountsTooltip
                       allCounts={allCounts}
                       product={product}
-                    />
+                    /> */}
                   </Item>
                   <Item className="col-span-3">
                     <ProductTypeBadge product={product} />
                   </Item>
                   {hasAnyGroup && (
-                    <Item className="col-span-3">
-                      {product.group}
-                    </Item>
+                    <Item className="col-span-3">{product.group}</Item>
                   )}
                   <Item className="col-span-2 lg:overflow-visible text-t3 text-xs">
                     {formatUnixToDateTime(product.created_at).date}
@@ -180,10 +180,10 @@ export const ProductsTable = ({
                   onboarding && "col-span-6"
                 )}
               >
-                <ProductRowToolbar
+                {/* <ProductRowToolbar
                   product={product}
                   productCounts={allCounts?.[product.id]}
-                />
+                /> */}
               </Item>
             </Row>
           ))}

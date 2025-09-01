@@ -16,8 +16,8 @@ import { OrgDropdown } from "./components/OrgDropdown";
 import { Button } from "@/components/ui/button";
 
 import { SidebarGroup } from "./SidebarGroup";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { useAutumnFlags } from "@/hooks/useAutumnFlags";
+import { useLocalStorage } from "@/hooks/common/useLocalStorage";
+import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 
 export const MainSidebar = () => {
   const env = useEnv();

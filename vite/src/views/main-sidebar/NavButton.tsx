@@ -1,4 +1,3 @@
-import { useTab } from "@/hooks/useTab";
 import { cn } from "@/lib/utils";
 import { getRedirectUrl, notNullish } from "@/utils/genUtils";
 import { AppEnv } from "@autumn/shared";
@@ -7,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useSidebarContext } from "./SidebarContext";
 import { useEnv } from "@/utils/envUtils";
 import { ChevronRight } from "lucide-react";
+import { useTab } from "@/hooks/common/useTab";
 
 export const NavButton = ({
   value,

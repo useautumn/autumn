@@ -19,7 +19,9 @@ import {
 } from "@/views/main-sidebar/SidebarContext";
 import { AppContext } from "./AppContext";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
-import { useGlobalErrorHandler } from "@/hooks/useGlobalErrorHandler";
+import { useGlobalErrorHandler } from "@/hooks/common/useGlobalErrorHandler";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export function MainLayout() {
   const env = useEnv();
@@ -98,15 +100,6 @@ export function MainLayout() {
     return;
   }
 
-  // if (!pathname.includes("/onboarding")) {
-  //   return (
-  //     <Navigate
-  //       to={getRedirectUrl("/onboarding", AppEnv.Sandbox)}
-  //       replace={true}
-  //     />
-  //   );
-  // }
-
   return (
     <AutumnProvider
       backendUrl={import.meta.env.VITE_BACKEND_URL}
@@ -126,6 +119,9 @@ export function MainLayout() {
 const MainContent = () => {
   const env = useEnv();
   const navigate = useNavigate();
+
+  useProductsQuery();
+  useFeaturesQuery();
 
   return (
     <AppContext.Provider value={{}}>

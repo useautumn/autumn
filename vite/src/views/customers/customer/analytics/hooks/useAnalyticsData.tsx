@@ -1,5 +1,5 @@
 import { useAppContext } from "@/app/AppContext";
-import { useOrg } from "@/hooks/useOrg";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useAxiosSWR, usePostSWR } from "@/services/useAxiosSwr";
 import { useEnv } from "@/utils/envUtils";
 import { navigateTo, nullish } from "@/utils/genUtils";

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { notNullish } from "@/utils/genUtils";
-import useLocalStorage from "@/hooks/useLocalStorage";
 import { useCustomer } from "autumn-js/react";
+import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 
 export const useAutumnFlags = () => {
   const { customer } = useCustomer();

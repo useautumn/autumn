@@ -11,7 +11,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { AppEnv } from "@autumn/shared";
 import { useSearchParams } from "react-router";
 import { getBackendErr } from "@/utils/genUtils";
-import { stripeCurrencyCodes } from "@/data/stripeCurrencyCodes";
+import { stripeCurrencyCodes } from "@/utils/constants/stripeCurrencyCodes";
 import { ChevronsUpDown } from "lucide-react";
 import {
   Command,
@@ -37,7 +37,7 @@ import SmallSpinner from "@/components/general/SmallSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faStripeS } from "@fortawesome/free-brands-svg-icons";
 import { useNavigate } from "react-router";
-import { useOrg } from "@/hooks/useOrg";
+import { useOrg } from "@/hooks/common/useOrg";
 
 function ConnectStripe({
   className,

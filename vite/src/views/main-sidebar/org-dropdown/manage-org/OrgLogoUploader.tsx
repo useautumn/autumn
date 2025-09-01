@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import axios from "axios";
-import { useOrg } from "@/hooks/useOrg";
+import { useOrg } from "@/hooks/common/useOrg";
 import { getOrgLogoUrl } from "@/utils/orgUtils";
 import { getBackendErr } from "@/utils/genUtils";
 
