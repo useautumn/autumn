@@ -30,6 +30,9 @@ export const MainSidebar = () => {
 
   return (
     <div
+      onMouseEnter={() => {
+        if (state === "collapsed") setState("expanded");
+      }}
       className={cn(
         `h-full bg-stone-100 py-4 flex flex-col justify-between transition-all duration-150`,
         state == "expanded"
