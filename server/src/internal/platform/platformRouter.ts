@@ -216,14 +216,15 @@ platformRouter.post("/exchange", (req: any, res: any) =>
 
         if (reconnectStripe) {
           console.log("Reconnecting stripe sandbox");
-          let { test_api_key, test_webhook_secret, stripeCurrency } =
-            await connectStripe({
-              db,
-              orgId: org.id,
-              logger: req.logger,
-              apiKey: stripe_test_key,
-              env: AppEnv.Sandbox,
-            });
+          let {
+            test_api_key,
+            test_webhook_secret,
+            defaultCurrency: newDefaultCurrency,
+          } = await connectStripe({
+            orgId: org.id,
+            apiKey: stripe_test_key,
+            env: AppEnv.Sandbox,
+          });
 
           finalStripeConfig = {
             ...finalStripeConfig,
@@ -232,7 +233,7 @@ platformRouter.post("/exchange", (req: any, res: any) =>
           };
 
           if (!defaultCurrency) {
-            defaultCurrency = stripeCurrency || "usd";
+            defaultCurrency = newDefaultCurrency || "usd";
           }
         }
 
@@ -256,14 +257,15 @@ platformRouter.post("/exchange", (req: any, res: any) =>
 
         if (reconnectStripe) {
           console.log("Reconnecting stripe live");
-          let { live_api_key, live_webhook_secret, stripeCurrency } =
-            await connectStripe({
-              db,
-              orgId: org.id,
-              logger: req.logtail,
-              apiKey: stripe_live_key,
-              env: AppEnv.Live,
-            });
+          let {
+            live_api_key,
+            live_webhook_secret,
+            defaultCurrency: newDefaultCurrency,
+          } = await connectStripe({
+            orgId: org.id,
+            apiKey: stripe_live_key,
+            env: AppEnv.Live,
+          });
 
           finalStripeConfig = {
             ...finalStripeConfig,
@@ -272,7 +274,7 @@ platformRouter.post("/exchange", (req: any, res: any) =>
           };
 
           if (!defaultCurrency) {
-            defaultCurrency = stripeCurrency || "usd";
+            defaultCurrency = newDefaultCurrency || "usd";
           }
         }
 
@@ -286,9 +288,9 @@ platformRouter.post("/exchange", (req: any, res: any) =>
         });
       }
 
-      if (!org.stripe_config?.success_url) {
-        finalStripeConfig.success_url = `https://useautumn.com`;
-      }
+      // if (!org.stripe_config?.success_url) {
+      //   finalStripeConfig.success_url = `https://useautumn.com`;
+      // }
 
       await db
         .update(organizations)

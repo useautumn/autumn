@@ -11,27 +11,26 @@ export const liveStyles = "text-primary bg-purple-100 border-primary w-[120px]";
 
 export const ExpandedEnvTrigger = ({ isHovered }: { isHovered: boolean }) => {
   const env = useEnv();
-  const { state } = useSidebarContext();
+  const { expanded } = useSidebarContext();
 
   const isSandbox = env === AppEnv.Sandbox;
-  const expanded = state == "expanded";
   return (
     <DropdownMenuTrigger
       className={cn(
-        "ring-0 focus:ring-0 text-t2 rounded-sm w-full flex items-center bg-transparent h-6 transition-all duration-300",
+        "ring-0 focus:ring-0 text-t2 rounded-sm w-full flex items-center bg-transparent h-6 transition-all duration-300"
       )}
     >
       <div
         className={cn(
           "flex items-center border gap-2 rounded-xs transition-all duration-300 overflow-hidden",
           isSandbox ? sandboxStyles : liveStyles,
-          expanded ? "h-6 pl-1 pr-4" : "w-7 h-6 p-1",
+          expanded ? "h-6 pl-1 pr-4" : "w-7 h-6 p-1"
         )}
       >
         <div
           className={cn(
             "transition-all duration-200 flex items-center justify-center",
-            isHovered && "-translate-x-[1px]",
+            isHovered && "-translate-x-[1px]"
           )}
         >
           {env === AppEnv.Sandbox ? (
@@ -42,10 +41,10 @@ export const ExpandedEnvTrigger = ({ isHovered }: { isHovered: boolean }) => {
         </div>
         <p
           className={cn(
-            "text-sm transition-all duration-200",
-            expanded
-              ? "opacity-100 translate-x-0"
-              : "opacity-0 -translate-x-2 pointer-events-none w-0 m-0 p-0",
+            "text-sm transition-all duration-200"
+            // expanded
+            //   ? "opacity-100 translate-x-0"
+            //   : "opacity-0 -translate-x-2 pointer-events-none w-0 m-0 p-0"
           )}
         >
           {isSandbox ? "Sandbox" : "Production"}

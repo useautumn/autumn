@@ -40,8 +40,8 @@ export function MainLayout() {
       }
     };
 
-    window.addEventListener('error', handleGlobalError);
-    return () => window.removeEventListener('error', handleGlobalError);
+    window.addEventListener("error", handleGlobalError);
+    return () => window.removeEventListener("error", handleGlobalError);
   }, [handleApiError]);
 
   useEffect(() => {
@@ -60,9 +60,7 @@ export function MainLayout() {
   // 1. If not loaded, show loading screen
   if (isPending) {
     return (
-      <SidebarContext.Provider
-        value={{ state: sidebarState, setState: setSidebarState }}
-      >
+      <AutumnProvider backendUrl={import.meta.env.VITE_BACKEND_URL}>
         <div className="w-screen h-screen flex bg-stone-100">
           <MainSidebar />
           <div className="w-full h-screen flex flex-col overflow-hidden py-3 pr-3">
@@ -90,7 +88,7 @@ export function MainLayout() {
             </div>
           </div>
         </div>
-      </SidebarContext.Provider>
+      </AutumnProvider>
     );
   }
 
@@ -114,17 +112,13 @@ export function MainLayout() {
       backendUrl={import.meta.env.VITE_BACKEND_URL}
       includeCredentials={true}
     >
-      <SidebarContext.Provider
-        value={{ state: sidebarState, setState: setSidebarState }}
-      >
-        <NuqsAdapter>
-          <main className="w-screen h-screen flex bg-stone-100">
-            <CustomToaster />
-            <MainSidebar />
-            <MainContent />
-          </main>
-        </NuqsAdapter>
-      </SidebarContext.Provider>
+      <NuqsAdapter>
+        <main className="w-screen h-screen flex bg-stone-100">
+          <CustomToaster />
+          <MainSidebar />
+          <MainContent />
+        </main>
+      </NuqsAdapter>
     </AutumnProvider>
   );
 }
@@ -132,7 +126,6 @@ export function MainLayout() {
 const MainContent = () => {
   const env = useEnv();
   const navigate = useNavigate();
-  const { state, setState } = useSidebarContext();
 
   return (
     <AppContext.Provider value={{}}>

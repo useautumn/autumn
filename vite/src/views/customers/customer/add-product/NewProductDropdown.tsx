@@ -71,7 +71,7 @@ function AddProduct({
     if (!stripeConnected) {
       toast.error("Connect to Stripe to add products to customers");
       const redirectUrl = getRedirectUrl(`/customers/${customer.id}`, env);
-      navigateTo(`/integrations/stripe?redirect=${redirectUrl}`, navigate, env);
+      navigateTo(`/dev?tab=stripe`, navigate, env);
       return;
     }
 

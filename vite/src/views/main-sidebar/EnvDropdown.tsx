@@ -20,21 +20,18 @@ import { ExpandedEnvTrigger } from "./env-dropdown/ExpandedEnvTrigger";
 export const EnvDropdown = ({ env }: { env: AppEnv }) => {
   const location = useLocation();
 
-  const { state } = useSidebarContext();
-
   const handleEnvChange = async (env: AppEnv) => {
     const newPath = envToPath(env, location.pathname);
-    console.log(newPath);
     if (newPath) {
-      window.location.href = newPath;
+      const params = new URLSearchParams(location.search);
+      const tab = params.get("tab");
+      const url = tab ? `${newPath}?tab=${encodeURIComponent(tab)}` : newPath;
+      window.location.href = url;
     }
   };
 
   const [isHovered, setIsHovered] = useState(false);
   const [open, setOpen] = useState(false);
-
-  const envText = env === AppEnv.Sandbox ? "Sandbox" : "Production";
-  const expanded = state == "expanded";
 
   return (
     <div
@@ -44,10 +41,7 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
     >
       <DropdownMenu open={open} onOpenChange={setOpen}>
         <ExpandedEnvTrigger isHovered={isHovered} />
-        {/* {expanded ? (
-        ) : (
-          <CollapsedEnvTrigger />
-        )} */}
+
         <DropdownMenuContent side="bottom" align="start" className="w-[180px]">
           <DropdownMenuItem
             className="flex justify-between items-center text-t2"

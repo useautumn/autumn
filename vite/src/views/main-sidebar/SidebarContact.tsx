@@ -14,16 +14,12 @@ import { useEnv } from "@/utils/envUtils";
 import { MessageCircle } from "lucide-react";
 import CopyButton from "@/components/general/CopyButton";
 import { Link } from "react-router";
+import { useSidebarContext } from "./SidebarContext";
 
 export function SidebarContact() {
   const email = "hey@useautumn.com";
   const env = useEnv();
-
-  const handleCopy = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(email);
-    toast.success("Email copied to clipboard");
-  };
+  const { expanded } = useSidebarContext();
 
   return (
     <DropdownMenu>
@@ -34,11 +30,11 @@ export function SidebarContact() {
             value="chat"
             icon={<MessageCircle size={14} />}
             title="Need help?"
-            online={true}
+            online={expanded}
           />
         </div>
       </DropdownMenuTrigger>
-      <DropdownMenuContent side="top">
+      <DropdownMenuContent side="top" align="start">
         <span className="text-xs text-t3 p-2">
           👋 We respond within 30 minutes
         </span>
