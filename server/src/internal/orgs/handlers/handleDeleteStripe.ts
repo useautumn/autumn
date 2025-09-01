@@ -5,23 +5,19 @@ import { clearOrgCache } from "../orgUtils/clearOrgCache.js";
 import { AppEnv, Organization } from "@autumn/shared";
 import { isStripeConnected } from "../orgUtils.js";
 
-export const disconnectStripe = async (org: Organization) => {
+export const disconnectStripe = async ({
+  org,
+  env,
+}: {
+  org: Organization;
+  env: AppEnv;
+}) => {
   if (isStripeConnected({ org, env: AppEnv.Sandbox })) {
-    const testStripeCli = createStripeCli({ org, env: AppEnv.Sandbox });
-    const testWebhooks = await testStripeCli.webhookEndpoints.list();
-    for (const webhook of testWebhooks.data) {
-      if (webhook.url.includes(org.id)) {
-        await testStripeCli.webhookEndpoints.del(webhook.id);
-      }
-    }
-  }
-
-  if (isStripeConnected({ org, env: AppEnv.Live })) {
-    const liveStripeCli = createStripeCli({ org, env: AppEnv.Live });
-    const liveWebhooks = await liveStripeCli.webhookEndpoints.list();
-    for (const webhook of liveWebhooks.data) {
-      if (webhook.url.includes(org.id)) {
-        await liveStripeCli.webhookEndpoints.del(webhook.id);
+    const stripeCli = createStripeCli({ org, env });
+    const webhooks = await stripeCli.webhookEndpoints.list();
+    for (const webhook of webhooks.data) {
+      if (webhook.url.includes(org.id) && webhook.url.includes(env)) {
+        await stripeCli.webhookEndpoints.del(webhook.id);
       }
     }
   }
@@ -42,36 +38,21 @@ export const handleDeleteStripe = async (req: any, res: any) =>
         logger,
       });
 
-      // 2. Delete webhook endpoint
-      try {
-        const testStripeCli = createStripeCli({ org, env: AppEnv.Sandbox });
-        const liveStripeCli = createStripeCli({ org, env: AppEnv.Live });
+      await disconnectStripe({ org, env: req.env });
 
-        const testWebhooks = await testStripeCli.webhookEndpoints.list();
-        for (const webhook of testWebhooks.data) {
-          if (webhook.url.includes(org.id)) {
-            await testStripeCli.webhookEndpoints.del(webhook.id);
-          }
-        }
-
-        const liveWebhooks = await liveStripeCli.webhookEndpoints.list();
-        for (const webhook of liveWebhooks.data) {
-          if (webhook.url.includes(org.id)) {
-            await liveStripeCli.webhookEndpoints.del(webhook.id);
-          }
-        }
-      } catch (error: any) {
-        console.error("Error deleting stripe webhook(s)");
-        console.error(error.message);
+      // Update stripe config:
+      const newStripeConfig = structuredClone(req.org.stripe_config);
+      if (req.env === AppEnv.Sandbox) {
+        newStripeConfig.test_api_key = undefined;
+      } else {
+        newStripeConfig.live_api_key = undefined;
       }
 
       await OrgService.update({
         db,
         orgId: req.orgId,
         updates: {
-          stripe_connected: false,
-          stripe_config: null,
-          default_currency: undefined,
+          stripe_config: newStripeConfig,
         },
       });
 

@@ -1,80 +1,129 @@
 import { useTab } from "@/hooks/useTab";
 import { cn } from "@/lib/utils";
-import { getRedirectUrl } from "@/utils/genUtils";
+import { getRedirectUrl, notNullish } from "@/utils/genUtils";
 import { AppEnv } from "@autumn/shared";
-import { Link } from "react-router";
-import { useState } from "react";
+import { Link, useSearchParams } from "react-router";
+import { useEffect, useState } from "react";
 import { useSidebarContext } from "./SidebarContext";
 import { useEnv } from "@/utils/envUtils";
+import { ChevronRight } from "lucide-react";
 
 export const NavButton = ({
   value,
+  subValue,
   icon,
   title,
   env,
   className,
   href,
   online = false,
+  onClick,
+  isOpen,
+  isSubNav = false,
+  isGroup = false,
 }: {
-  value: string;
-  icon: any;
+  value?: string;
+  subValue?: string;
+  icon?: any;
   title: string;
   env?: AppEnv;
   className?: string;
   href?: string;
   online?: boolean;
+  onClick?: () => void;
+  isOpen?: boolean;
+  isSubNav?: boolean;
+  isGroup?: boolean;
 }) => {
   // Get window path
   env = useEnv();
-  const { state } = useSidebarContext();
-
   const tab = useTab();
-  const isActive = tab == value;
+  const { expanded } = useSidebarContext();
+  const [searchParams] = useSearchParams();
+  const subTab = searchParams.get("tab");
+
+  const isActive =
+    tab == value && (subValue ? subTab == subValue : true) && isOpen !== true;
 
   const [isHovered, setIsHovered] = useState(false);
-  const showTooltip = state === "collapsed" && isHovered;
+  const showTooltip = !expanded && isHovered;
 
-  return (
-    <div className="relative">
-      <Link
-        to={href ? href : getRedirectUrl(`/${value}`, env)}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        className={cn(
-          `cursor-pointer font-medium transition-all duration-100 
-           text-sm flex h-9 items-center text-t2 hover:text-primary`,
-          isActive && "font-semibold text-primary hover:text-primary/80",
-          className,
-        )}
-        target={href ? "_blank" : undefined}
-      >
-        <div
-          className={cn(
-            "flex justify-center w-4 h-4 items-center rounded-sm transition-all duration-100",
-            state == "expanded" && "mr-2",
-            isHovered && "translate-x-[-1px]",
+  const TabComponent = () => {
+    return (
+      <>
+        <div className="flex items-center gap-2">
+          {icon && (
+            <div
+              className={cn(
+                "flex justify-center !w-4 !h-4 items-center rounded-sm",
+                expanded
+              )}
+            >
+              {icon}
+            </div>
           )}
-        >
-          {icon}
+          <span
+            className={cn(
+              "whitespace-nowrap",
+              expanded
+                ? "opacity-100 translate-x-0"
+                : "opacity-0 -translate-x-2 pointer-events-none w-0 m-0 p-0"
+            )}
+          >
+            {title}
+          </span>
         </div>
-        <span
-          className={cn(
-            "transition-all duration-200 whitespace-nowrap",
-            state === "expanded"
-              ? "opacity-100 translate-x-0"
-              : "opacity-0 -translate-x-2 pointer-events-none w-0 m-0 p-0",
-          )}
-        >
-          {title}
-        </span>
         {online && (
           <span className="relative flex h-2 w-2 ml-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-lime-500"></span>
           </span>
         )}
-      </Link>
-      
+        {notNullish(isOpen) && (
+          <ChevronRight
+            size={14}
+            className={cn(
+              "ml-1 text-t2 transition-all duration-100 ease-in-out",
+              isOpen ? "rotate-90" : "rotate-0"
+            )}
+          />
+        )}
+      </>
+    );
+  };
+
+  const outerDivClass = cn(
+    `cursor-pointer font-medium 
+           text-sm flex items-center text-t2 px-2 h-7 rounded-md w-full`,
+    "hover:bg-zinc-200/50 hover:text-t1",
+    isActive && "bg-zinc-200/80 !text-t1 hover:bg-zinc-200",
+    isSubNav && "text-t2/90 pl-4 rounded-none rounded-tr-md rounded-br-md",
+    className
+  );
+
+  return (
+    <div className="relative">
+      {!isGroup ? (
+        <Link
+          to={
+            href
+              ? href
+              : getRedirectUrl(
+                  `/${value}${subValue ? `?tab=${subValue}` : ""}`,
+                  env
+                )
+          }
+          className={outerDivClass}
+          target={href ? "_blank" : undefined}
+        >
+          <TabComponent />
+        </Link>
+      ) : (
+        <button className={outerDivClass} onClick={onClick}>
+          <TabComponent />
+        </button>
+      )}
+
       {/* Custom Tooltip */}
       {showTooltip && (
         <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 z-50">

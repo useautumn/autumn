@@ -6,6 +6,7 @@ import { OrgService } from "./OrgService.js";
 import { FeatureService } from "../features/FeatureService.js";
 import { notNullish } from "@/utils/genUtils.js";
 import Stripe from "stripe";
+import { toSuccessUrl } from "./orgUtils/convertOrgUtils.js";
 
 export const shouldReconnectStripe = async ({
   org,
@@ -32,7 +33,6 @@ export const shouldReconnectStripe = async ({
     logger.error("Error checking if stripe should be reconnected", { error });
     return true;
   }
-  return false;
 };
 
 export const isStripeConnected = ({
@@ -125,14 +125,32 @@ export const initDefaultConfig = () => {
   };
 };
 
-export const createOrgResponse = (org: Organization): FrontendOrg => {
+export const createOrgResponse = ({
+  org,
+  env,
+}: {
+  org: Organization;
+  env: AppEnv;
+}): FrontendOrg => {
   return {
     id: org.id,
     name: org.name,
     logo: org.logo,
     slug: org.slug,
-    default_currency: org.default_currency || "USD",
-    stripe_connected: org.stripe_connected || false,
+    // sandbox_config: {
+    //   stripe_connected: isStripeConnected({ org, env: AppEnv.Sandbox }),
+    //   default_currency: org.default_currency || "USD",
+    //   return_url: org.sandbox_config?.return_url || "",
+    // },
+    // production_config: {
+    //   stripe_connected: isStripeConnected({ org, env: AppEnv.Live }),
+    //   default_currency: org.default_currency || "USD",
+    //   return_url: org.production_config?.return_url || "",
+    // },
+
+    success_url: toSuccessUrl({ org, env }) || "",
+    default_currency: org.default_currency || "usd",
+    stripe_connected: isStripeConnected({ org, env }),
     created_at: new Date(org.createdAt).getTime(),
     test_pkey: org.test_pkey,
     live_pkey: org.live_pkey,

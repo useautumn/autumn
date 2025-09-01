@@ -359,7 +359,7 @@ cusRouter.get(
         features,
         numVersions,
         entities: customer.entities,
-        org: createOrgResponse(org),
+        org: createOrgResponse({ org, env }),
       });
     } catch (error) {
       handleFrontendReqError({

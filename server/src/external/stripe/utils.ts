@@ -31,7 +31,7 @@ export const createStripeCli = ({
 
   if (!encrypted) {
     throw new RecaseError({
-      message: `Please connect your Stripe ${env == AppEnv.Sandbox ? "test" : "live"} keys. You can find them here: https://dashboard.stripe.com${env == AppEnv.Sandbox ? "/test" : ""}/apikeys`,
+      message: `Please connect your Stripe ${env == AppEnv.Sandbox ? "test" : "live"} secret key. You can find it here: https://dashboard.stripe.com${env == AppEnv.Sandbox ? "/test" : ""}/apikeys`,
       code: ErrCode.StripeConfigNotFound,
       statusCode: 400,
     });

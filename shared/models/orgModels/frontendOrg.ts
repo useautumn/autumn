@@ -5,6 +5,8 @@ export const FrontendOrgSchema = z.object({
   name: z.string(),
   logo: z.string().nullable(),
   slug: z.string(),
+
+  success_url: z.string(),
   default_currency: z.string(),
   stripe_connected: z.boolean(),
   created_at: z.number(),

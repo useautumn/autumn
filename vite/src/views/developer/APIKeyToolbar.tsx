@@ -43,7 +43,7 @@ export const APIKeyToolbar = ({ apiKey }: { apiKey: ApiKey }) => {
         <DropdownMenuTrigger asChild>
           <ToolbarButton />
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="text-t2">
+        <DropdownMenuContent className="text-t2" align="end">
           <DialogTrigger asChild>
             <DropdownMenuItem
               className="flex items-center"
