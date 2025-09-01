@@ -242,13 +242,8 @@ export const handleConnectStripe = async (req: any, res: any) =>
       }
 
       // 2. If success url present, add it to the updates
-      console.log(
-        "Cur success URL:",
-        toSuccessUrl({ org: curOrg, env: req.env })
-      );
 
-      console.log("New success URL:", success_url);
-      if (success_url !== undefined) {
+      if (success_url !== undefined && success_url !== curOrg.success_url) {
         updates = {
           ...updates,
           stripe_config: {
@@ -262,14 +257,18 @@ export const handleConnectStripe = async (req: any, res: any) =>
         } else {
           updates.stripe_config.success_url = success_url;
         }
+
+        logger.info(`Updated success URL to ${success_url}`);
       }
 
       // 3. Default currency
-      if (default_currency) {
+      if (default_currency && default_currency !== curOrg.default_currency) {
         updates = {
           ...updates,
           default_currency: default_currency,
         };
+
+        logger.info(`Updated default currency to ${default_currency}`);
       }
 
       const newOrg = await OrgService.update({
