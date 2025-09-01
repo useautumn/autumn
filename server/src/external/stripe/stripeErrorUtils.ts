@@ -1,4 +1,4 @@
 export const stripeErrToCusMsg = (error: any) => {
-  let code = error.code;
-  let msg = error.message;
+	const _code = error.code;
+	const _msg = error.message;
 };

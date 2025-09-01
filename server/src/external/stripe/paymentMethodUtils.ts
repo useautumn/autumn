@@ -1,7 +1,7 @@
-import Stripe from "stripe";
+import type Stripe from "stripe";
 
-const classifyStripePaymentMethod = (paymentMethod: Stripe.PaymentMethod) => {
-  let cardPaymentMethods = [];
+const _classifyStripePaymentMethod = (_paymentMethod: Stripe.PaymentMethod) => {
+	const _cardPaymentMethods = [];
 };
 
 // Note: us_bank_account -> ACH

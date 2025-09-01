@@ -6,12 +6,12 @@ import { freeTrials } from "./freeTrialModels/freeTrialTable.js";
 import { organizations } from "../orgModels/orgTable.js";
 
 export const productRelations = relations(products, ({ many, one }) => ({
-  entitlements: many(entitlements),
-  prices: many(prices),
+	entitlements: many(entitlements),
+	prices: many(prices),
 
-  free_trials: many(freeTrials),
-  org: one(organizations, {
-    fields: [products.org_id],
-    references: [organizations.id],
-  }),
+	free_trials: many(freeTrials),
+	org: one(organizations, {
+		fields: [products.org_id],
+		references: [organizations.id],
+	}),
 }));

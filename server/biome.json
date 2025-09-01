@@ -7,7 +7,8 @@
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"experimentalScannerIgnores": ["dist"]
+		"experimentalScannerIgnores": ["dist/**"],
+		"includes": ["src/**/*.ts", "tests/**/*.ts"]
 	},
 	"formatter": {
 		"enabled": true,
@@ -16,7 +17,15 @@
 	"linter": {
 		"enabled": true,
 		"rules": {
-			"recommended": true
+			"recommended": true,
+			"style": {
+				"noNonNullAssertion": "off"
+			},
+			"suspicious": {
+				"noExportsInTest": "off",
+				"noExplicitAny": "off",
+				"noImplicitAnyLet": "off"
+			}
 		}
 	},
 	"javascript": {
@@ -31,5 +40,17 @@
 				"organizeImports": "on"
 			}
 		}
-	}
+	},
+	"overrides": [
+		{
+			"includes": ["tests/**"],
+			"linter": {
+				"rules": {
+					"correctness": {
+						"noUnreachable": "off"
+					}
+				}
+			}
+		}
+	]
 }

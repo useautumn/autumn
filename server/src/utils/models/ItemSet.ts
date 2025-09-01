@@ -1,6 +1,5 @@
-import { BillingInterval, Price } from "@autumn/shared";
-import Stripe from "stripe";
-import { z } from "zod";
+import type { Price } from "@autumn/shared";
+import type Stripe from "stripe";
 
 // export const ItemSetSchema = z.object({
 //   items: z.array(z.any()),
@@ -14,11 +13,11 @@ import { z } from "zod";
 // export type ItemSet = z.infer<typeof ItemSetSchema>;
 
 export type ItemSet = {
-  subItems: (Stripe.SubscriptionUpdateParams.Item & {
-    autumnPrice?: Price;
-  })[];
-  invoiceItems: Stripe.SubscriptionUpdateParams.AddInvoiceItem[];
-  usageFeatures: string[];
+	subItems: (Stripe.SubscriptionUpdateParams.Item & {
+		autumnPrice?: Price;
+	})[];
+	invoiceItems: Stripe.SubscriptionUpdateParams.AddInvoiceItem[];
+	usageFeatures: string[];
 };
 
 // export const ItemSetSchema2 = z.object({

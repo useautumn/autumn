@@ -1,410 +1,414 @@
-import { config } from "dotenv";
-config();
-
+import assert from "node:assert";
 import {
-  getAllEntities,
-  getAllFullCustomers,
-} from "@/utils/scriptUtils/getAll/getAllAutumnCustomers.js";
-import { initDrizzle } from "@/db/initDrizzle.js";
-import {
-  AppEnv,
-  CusProductStatus,
-  FullCusProduct,
-  FullCustomer,
-  Organization,
-  Entity,
+	AppEnv,
+	CusProductStatus,
+	type Entity,
+	type FullCusProduct,
+	type FullCustomer,
+	type Organization,
 } from "@autumn/shared";
-import Stripe from "stripe";
-import assert from "assert";
+import { config } from "dotenv";
+import type Stripe from "stripe";
+import { initDrizzle } from "@/db/initDrizzle.js";
+import { getStripeSchedules } from "@/external/stripe/stripeSubUtils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
+import { createSupabaseClient } from "@/external/supabaseUtils.js";
+import { CusService } from "@/internal/customers/CusService.js";
 import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
+import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import {
-  getAllStripeSchedules,
-  getAllStripeSubscriptions,
+	getAllEntities,
+	getAllFullCustomers,
+} from "@/utils/scriptUtils/getAll/getAllAutumnCustomers.js";
+import {
+	getAllStripeSchedules,
+	getAllStripeSubscriptions,
 } from "@/utils/scriptUtils/getAll/getAllStripeSubs.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { getStripeSchedules } from "@/external/stripe/stripeSubUtils.js";
-import { createSupabaseClient } from "@/external/supabaseUtils.js";
-import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
+import { EntityService } from "./internal/api/entities/EntityService.js";
 import { getRelatedCusPrice } from "./internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { checkCusSubCorrect } from "./utils/checkUtils/checkCustomerCorrect.js";
-import { EntityService } from "./internal/api/entities/EntityService.js";
 
-const { db, client } = initDrizzle({ maxConnections: 5 });
+config();
 
-let orgSlugs = process.env.ORG_SLUGS!.split(",");
-const skipEmails = process.env.SKIP_EMAILS!.split(",");
+const { db } = initDrizzle({ maxConnections: 5 });
+
+let orgSlugs = process.env.ORG_SLUGS?.split(",");
+const skipEmails = process.env.SKIP_EMAILS?.split(",");
 const skipIds = ["cus_2tXCCwC6iyiftgA6ndSo1Ubb2dx"];
 
 orgSlugs = ["alex"];
 
 const getSingleCustomer = async ({
-  stripeCli,
-  customerId,
-  orgId,
-  env,
+	stripeCli,
+	customerId,
+	orgId,
+	env,
 }: {
-  stripeCli: Stripe;
-  customerId: string;
-  orgId: string;
-  env: AppEnv;
+	stripeCli: Stripe;
+	customerId: string;
+	orgId: string;
+	env: AppEnv;
 }) => {
-  const customers = [
-    await CusService.getFull({
-      db,
-      idOrInternalId: customerId,
-      orgId,
-      env,
-    }),
-  ];
+	const customers = [
+		await CusService.getFull({
+			db,
+			idOrInternalId: customerId,
+			orgId,
+			env,
+		}),
+	];
 
-  const stripeCusId = customers[0].processor?.id;
-  const stripeSubs = stripeCusId
-    ? (
-        await stripeCli.subscriptions.list({
-          customer: stripeCusId,
-          expand: ["data.discounts.coupon"],
-        })
-      ).data
-    : [];
+	const stripeCusId = customers[0].processor?.id;
+	const stripeSubs = stripeCusId
+		? (
+				await stripeCli.subscriptions.list({
+					customer: stripeCusId,
+					expand: ["data.discounts.coupon"],
+				})
+			).data
+		: [];
 
-  // const stripeSubs = await getStripeSubs({
-  //   stripeCli,
-  //   subIds: customers[0].customer_products.flatMap(
-  //     (cp) => cp.subscription_ids || []
-  //   ),
-  // });
+	// const stripeSubs = await getStripeSubs({
+	//   stripeCli,
+	//   subIds: customers[0].customer_products.flatMap(
+	//     (cp) => cp.subscription_ids || []
+	//   ),
+	// });
 
-  const stripeSchedules = await getStripeSchedules({
-    stripeCli,
-    scheduleIds: customers[0].customer_products.flatMap(
-      (cp) => cp.scheduled_ids || []
-    ),
-  });
+	const stripeSchedules = await getStripeSchedules({
+		stripeCli,
+		scheduleIds: customers[0].customer_products.flatMap(
+			(cp) => cp.scheduled_ids || [],
+		),
+	});
 
-  const entities = await EntityService.list({
-    db,
-    internalCustomerId: customers[0].internal_id,
-  });
+	const entities = await EntityService.list({
+		db,
+		internalCustomerId: customers[0].internal_id,
+	});
 
-  return { customers, stripeSubs, stripeSchedules, entities };
+	return { customers, stripeSubs, stripeSchedules, entities };
 };
 
 const checkCustomerCorrect = async ({
-  fullCus,
-  subs,
-  schedules,
-  org,
-  entities,
+	fullCus,
+	subs,
+	schedules,
+	org,
+	entities,
 }: {
-  fullCus: FullCustomer;
-  subs: Stripe.Subscription[];
-  schedules: Stripe.SubscriptionSchedule[];
-  org: Organization;
-  entities: Entity[];
+	fullCus: FullCustomer;
+	subs: Stripe.Subscription[];
+	schedules: Stripe.SubscriptionSchedule[];
+	org: Organization;
+	entities: Entity[];
 }) => {
-  if (skipIds.includes(fullCus.internal_id!)) return;
+	if (skipIds.includes(fullCus.internal_id ?? "")) return;
 
-  if (skipEmails.some((skipEmail) => skipEmail === fullCus.email)) {
-    return;
-  }
+	if (skipEmails?.some((skipEmail) => skipEmail === fullCus.email)) {
+		return;
+	}
 
-  fullCus.entities = entities.filter(
-    (entity) => entity.internal_customer_id === fullCus.internal_id
-  );
+	fullCus.entities = entities.filter(
+		(entity) => entity.internal_customer_id === fullCus.internal_id,
+	);
 
-  // console.log(`Checking ${fullCus.email} (${fullCus.id})`);
-  const cusProducts = fullCus.customer_products;
+	// console.log(`Checking ${fullCus.email} (${fullCus.id})`);
+	const cusProducts = fullCus.customer_products;
 
-  // await expectSubToBeCorrect({
-  //   db,
-  //   customerId: fullCus.id!,
-  //   org,
-  //   env: AppEnv.Live,
-  // });
-  await checkCusSubCorrect({
-    db,
-    fullCus,
-    subs,
-    schedules,
-    org,
-    env: AppEnv.Live,
-  });
+	// await expectSubToBeCorrect({
+	//   db,
+	//   customerId: fullCus.id!,
+	//   org,
+	//   env: AppEnv.Live,
+	// });
+	await checkCusSubCorrect({
+		db,
+		fullCus,
+		subs,
+		schedules,
+		org,
+		env: AppEnv.Live,
+	});
 
-  for (const cusProduct of cusProducts) {
-    if (!cusProduct.subscription_ids) continue;
+	for (const cusProduct of cusProducts) {
+		if (!cusProduct.subscription_ids) continue;
 
-    if (cusProduct.status == CusProductStatus.Scheduled) {
-      // Check if there's a main product elsewhere
-      let mainCusProd = cusProducts.find(
-        (cp: FullCusProduct) =>
-          cp.product.group === cusProduct.product.group &&
-          cp.id !== cusProduct.id &&
-          cp.status !== CusProductStatus.Scheduled &&
-          (cusProduct.internal_entity_id
-            ? cusProduct.internal_entity_id == cp.internal_entity_id
-            : true)
-      );
+		if (cusProduct.status === CusProductStatus.Scheduled) {
+			// Check if there's a main product elsewhere
+			const mainCusProd = cusProducts.find(
+				(cp: FullCusProduct) =>
+					cp.product.group === cusProduct.product.group &&
+					cp.id !== cusProduct.id &&
+					cp.status !== CusProductStatus.Scheduled &&
+					(cusProduct.internal_entity_id
+						? cusProduct.internal_entity_id === cp.internal_entity_id
+						: true),
+			);
 
-      assert(
-        mainCusProd,
-        `Found scheduled cus product with no main product (${cusProduct.product.name})`
-      );
-    }
+			assert(
+				mainCusProd,
+				`Found scheduled cus product with no main product (${cusProduct.product.name})`,
+			);
+		}
 
-    if (
-      !cusProduct.product.is_add_on &&
-      cusProduct.status !== CusProductStatus.Scheduled
-    ) {
-      let group = cusProduct.product.group;
-      let otherCusProd = cusProducts.find(
-        (cp: FullCusProduct) =>
-          cp.product.group === group &&
-          cp.id !== cusProduct.id &&
-          !cp.product.is_add_on &&
-          cp.status !== CusProductStatus.Scheduled &&
-          cp.internal_entity_id == cusProduct.internal_entity_id
-      );
+		if (
+			!cusProduct.product.is_add_on &&
+			cusProduct.status !== CusProductStatus.Scheduled
+		) {
+			const group = cusProduct.product.group;
+			const otherCusProd = cusProducts.find(
+				(cp: FullCusProduct) =>
+					cp.product.group === group &&
+					cp.id !== cusProduct.id &&
+					!cp.product.is_add_on &&
+					cp.status !== CusProductStatus.Scheduled &&
+					cp.internal_entity_id === cusProduct.internal_entity_id,
+			);
 
-      assert(
-        !otherCusProd,
-        `found two cus products from the same group: ${otherCusProd?.product.name} and ${cusProduct.product.name}`
-      );
-    }
+			assert(
+				!otherCusProd,
+				`found two cus products from the same group: ${otherCusProd?.product.name} and ${cusProduct.product.name}`,
+			);
+		}
 
-    let stripeSubs = subs.filter((sub: any) =>
-      cusProduct.subscription_ids!.some((id: string) => id === sub.id)
-    );
+		const stripeSubs = subs.filter((sub: Stripe.Subscription) =>
+			cusProduct.subscription_ids?.some((id: string) => id === sub.id),
+		);
 
-    assert(
-      stripeSubs.length === cusProduct.subscription_ids!.length,
-      "number of stripe subs should be the same as number of subscription ids"
-    );
+		assert(
+			stripeSubs.length === cusProduct.subscription_ids?.length,
+			"number of stripe subs should be the same as number of subscription ids",
+		);
 
-    // let subItems = stripeSubs.flatMap((sub: any) => sub.items.data);
+		// let subItems = stripeSubs.flatMap((sub: any) => sub.items.data);
 
-    const prices = cusProductToPrices({ cusProduct });
+		const prices = cusProductToPrices({ cusProduct });
 
-    if (
-      isOneOff(prices) ||
-      isFreeProduct(prices) ||
-      cusProduct.status == CusProductStatus.Scheduled
-    ) {
-      continue;
-    }
+		if (
+			isOneOff(prices) ||
+			isFreeProduct(prices) ||
+			cusProduct.status === CusProductStatus.Scheduled
+		) {
+			continue;
+		}
 
-    for (const cusEnt of cusProduct.customer_entitlements) {
-      let cusPrice = getRelatedCusPrice(cusEnt, cusProduct.customer_prices);
+		for (const cusEnt of cusProduct.customer_entitlements) {
+			const cusPrice = getRelatedCusPrice(cusEnt, cusProduct.customer_prices);
 
-      if (cusEnt.usage_allowed && !cusPrice) {
-        assert.fail(
-          `Feature ${cusEnt.feature_id} has usage allowed but no related cus price`
-        );
-      }
-    }
-  }
+			if (cusEnt.usage_allowed && !cusPrice) {
+				assert.fail(
+					`Feature ${cusEnt.feature_id} has usage allowed but no related cus price`,
+				);
+			}
+		}
+	}
 
-  // Other checks to perform
+	// Other checks to perform
 };
 
 const checkCustomerHandleError = async ({
-  fullCus,
-  subs,
-  org,
-  schedules,
-  entities,
+	fullCus,
+	subs,
+	org,
+	schedules,
+	entities,
 }: {
-  fullCus: FullCustomer;
-  subs: Stripe.Subscription[];
-  org: Organization;
-  schedules: Stripe.SubscriptionSchedule[];
-  entities: Entity[];
+	fullCus: FullCustomer;
+	subs: Stripe.Subscription[];
+	org: Organization;
+	schedules: Stripe.SubscriptionSchedule[];
+	entities: Entity[];
 }) => {
-  try {
-    await checkCustomerCorrect({
-      fullCus,
-      subs,
-      org,
-      schedules,
-      entities,
-    });
+	try {
+		await checkCustomerCorrect({
+			fullCus,
+			subs,
+			org,
+			schedules,
+			entities,
+		});
 
-    return undefined;
-  } catch (error: any) {
-    return {
-      id: fullCus.id,
-      name: fullCus.name,
-      email: fullCus.email,
-      error: error.message,
-    };
-  }
+		return undefined;
+	} catch (error: unknown) {
+		return {
+			id: fullCus.id,
+			name: fullCus.name,
+			email: fullCus.email,
+			error: (
+				error as {
+					message: string;
+				}
+			).message,
+		};
+	}
 };
 
 export const check = async () => {
-  const env = AppEnv.Live;
-  const sb = createSupabaseClient();
+	const env = AppEnv.Live;
+	const sb = createSupabaseClient();
 
-  const today = new Date().toISOString().slice(0, 16);
+	const today = new Date().toISOString().slice(0, 16);
 
-  for (const slug of orgSlugs) {
-    const org = await OrgService.getBySlug({
-      db,
-      slug,
-    });
+	for (const slug of orgSlugs) {
+		const org = await OrgService.getBySlug({
+			db,
+			slug,
+		});
 
-    if (!org) {
-      console.log(`Org ${slug} not found`);
-      continue;
-    }
+		if (!org) {
+			console.log(`Org ${slug} not found`);
+			continue;
+		}
 
-    const fileName = `errors/${today}-${org.slug}.json`;
+		const fileName = `errors/${today}-${org.slug}.json`;
 
-    const stripeCli = createStripeCli({
-      org,
-      env,
-    });
+		const stripeCli = createStripeCli({
+			org,
+			env,
+		});
 
-    console.log("--------------------------------");
-    console.log(`Running error check for ${org.name}`);
+		console.log("--------------------------------");
+		console.log(`Running error check for ${org.name}`);
 
-    let customerId;
+		let customerId: string | undefined;
 
-    // customerId = "1zjjkHRYKJcw6WXlLqxXLc3uMIR2";
+		// customerId = "1zjjkHRYKJcw6WXlLqxXLc3uMIR2";
 
-    let customers: FullCustomer[] = [];
-    let stripeSubs: Stripe.Subscription[] = [];
-    let stripeSchedules: Stripe.SubscriptionSchedule[] = [];
-    let entities: Entity[] = [];
+		let customers: FullCustomer[] = [];
+		let stripeSubs: Stripe.Subscription[] = [];
+		let stripeSchedules: Stripe.SubscriptionSchedule[] = [];
+		let entities: Entity[] = [];
 
-    if (customerId) {
-      const res = await getSingleCustomer({
-        stripeCli,
-        customerId,
-        orgId: org.id,
-        env,
-      });
+		if (customerId) {
+			const res = await getSingleCustomer({
+				stripeCli,
+				customerId,
+				orgId: org.id,
+				env,
+			});
 
-      customers = res.customers;
-      stripeSubs = res.stripeSubs;
-      entities = res.entities;
-    } else {
-      const [customersRes, stripeSubsRes, stripeSchedulesRes, entitiesRes] =
-        await Promise.all([
-          getAllFullCustomers({
-            db,
-            orgId: org.id,
-            env,
-          }),
-          getAllStripeSubscriptions({
-            stripeCli,
-            waitForSeconds: 1,
-          }),
-          getAllStripeSchedules({
-            stripeCli,
-            waitForSeconds: 1,
-          }),
-          getAllEntities({
-            db,
-            orgId: org.id,
-            env,
-          }),
-        ]);
+			customers = res.customers;
+			stripeSubs = res.stripeSubs;
+			entities = res.entities;
+		} else {
+			const [customersRes, stripeSubsRes, stripeSchedulesRes, entitiesRes] =
+				await Promise.all([
+					getAllFullCustomers({
+						db,
+						orgId: org.id,
+						env,
+					}),
+					getAllStripeSubscriptions({
+						stripeCli,
+						waitForSeconds: 1,
+					}),
+					getAllStripeSchedules({
+						stripeCli,
+						waitForSeconds: 1,
+					}),
+					getAllEntities({
+						db,
+						orgId: org.id,
+						env,
+					}),
+				]);
 
-      customers = customersRes;
-      stripeSubs = stripeSubsRes.subscriptions;
-      stripeSchedules = stripeSchedulesRes.schedules;
-      entities = entitiesRes;
-    }
+			customers = customersRes;
+			stripeSubs = stripeSubsRes.subscriptions;
+			stripeSchedules = stripeSchedulesRes.schedules;
+			entities = entitiesRes;
+		}
 
-    const batchSize = 1;
-    const allErrors = [];
-    for (let i = 0; i < customers.length; i += batchSize) {
-      const batch = customers.slice(i, i + batchSize);
+		const batchSize = 1;
+		const allErrors = [];
+		for (let i = 0; i < customers.length; i += batchSize) {
+			const batch = customers.slice(i, i + batchSize);
 
-      const batchCheck: any = [];
-      for (const customer of batch) {
-        batchCheck.push(
-          checkCustomerHandleError({
-            fullCus: customer,
-            subs: stripeSubs,
-            schedules: stripeSchedules,
-            org,
-            entities,
-          })
-        );
-      }
+			const batchCheck = [];
+			for (const customer of batch) {
+				batchCheck.push(
+					checkCustomerHandleError({
+						fullCus: customer,
+						subs: stripeSubs,
+						schedules: stripeSchedules,
+						org,
+						entities,
+					}),
+				);
+			}
 
-      let results = await Promise.all(batchCheck);
-      results = results.filter(notNullish);
-      allErrors.push(...results);
-    }
+			let results = await Promise.all(batchCheck);
+			results = results.filter(notNullish);
+			allErrors.push(...results);
+		}
 
-    console.log(`Found ${allErrors.length} errors`);
+		console.log(`Found ${allErrors.length} errors`);
 
-    if (allErrors.length > 0 && customers.length > 1) {
-      await sb.storage
-        .from("autumn")
-        .upload(fileName, JSON.stringify(allErrors, null, 2));
+		if (allErrors.length > 0 && customers.length > 1) {
+			await sb.storage
+				.from("autumn")
+				.upload(fileName, JSON.stringify(allErrors, null, 2));
 
-      if (allErrors.length > 0) {
-        const slackBody = {
-          text: `Error check for ${org.name}`,
-          blocks: [
-            {
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `*Error check for ${org.name}*: found ${allErrors.length} errors\nSee results at ${process.env.SUPABASE_URL}/storage/v1/object/public/autumn/${fileName}`,
-              },
-            },
-          ],
-        };
+			if (allErrors.length > 0) {
+				const slackBody = {
+					text: `Error check for ${org.name}`,
+					blocks: [
+						{
+							type: "section",
+							text: {
+								type: "mrkdwn",
+								text: `*Error check for ${org.name}*: found ${allErrors.length} errors\nSee results at ${process.env.SUPABASE_URL}/storage/v1/object/public/autumn/${fileName}`,
+							},
+						},
+					],
+				};
 
-        await fetch(process.env.SLACK_WEBHOOK_URL!, {
-          method: "POST",
-          body: JSON.stringify(slackBody),
-        });
-      }
-    } else {
-      console.log(allErrors);
-    }
-  }
+				await fetch(process.env.SLACK_WEBHOOK_URL ?? "", {
+					method: "POST",
+					body: JSON.stringify(slackBody),
+				});
+			}
+		} else {
+			console.log(allErrors);
+		}
+	}
 
-  console.log(
-    `COMPLETED ERROR CHECK FOR ${new Date().toISOString().slice(0, 16)}`
-  );
+	console.log(
+		`COMPLETED ERROR CHECK FOR ${new Date().toISOString().slice(0, 16)}`,
+	);
 
-  if (process.env.NODE_ENV == "production") {
-    const slackBody = {
-      text: `Completed error check for ${new Date().toISOString().slice(0, 16)}`,
-      blocks: [
-        {
-          type: "section",
-          text: {
-            type: "mrkdwn",
-            text: `Error check completed for ${new Date().toISOString().slice(0, 16)}`,
-          },
-        },
-      ],
-    };
+	if (process.env.NODE_ENV === "production") {
+		const slackBody = {
+			text: `Completed error check for ${new Date().toISOString().slice(0, 16)}`,
+			blocks: [
+				{
+					type: "section",
+					text: {
+						type: "mrkdwn",
+						text: `Error check completed for ${new Date().toISOString().slice(0, 16)}`,
+					},
+				},
+			],
+		};
 
-    await fetch(process.env.SLACK_WEBHOOK_URL!, {
-      method: "POST",
-      body: JSON.stringify(slackBody),
-    });
-  }
+		await fetch(process.env.SLACK_WEBHOOK_URL ?? "", {
+			method: "POST",
+			body: JSON.stringify(slackBody),
+		});
+	}
 };
 
 check()
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  })
-  .finally(() => {
-    process.exit(0);
-  });
+	.catch((error) => {
+		console.error(error);
+		process.exit(1);
+	})
+	.finally(() => {
+		process.exit(0);
+	});
 
 // let missingUsageCount = 0;
 

@@ -7,11 +7,15 @@
     "dev": "vite --port 3000 --host",
     "build": "tsc && vite build",
     "start": "serve -s dist",
-    "lint": "eslint .",
     "preview": "vite preview",
     "dev:bun": "bunx --bun vite --port 3000 --host",
     "build:bun": "tsc && bunx --bun vite build",
-    "start:bun": "bunx --bun serve -s dist"
+    "start:bun": "bunx --bun serve -s dist",
+    
+		"format": "pnpm exec biome format --write",
+		"lint": "pnpm exec biome lint --write",
+		"check": "pnpm exec biome check",
+    "check:fix": "pnpm exec biome check --write"
   },
   "author": "Recase Inc.",
   "license": "Apache-2.0",

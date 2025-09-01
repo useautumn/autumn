@@ -1,80 +1,78 @@
 const handleResFinish = (req: any, res: any) => {
-  let skipUrls = ["/v1/customers/all/search"];
+	const skipUrls = ["/v1/customers/all/search"];
 
-  try {
-    if (skipUrls.includes(req.originalUrl)) {
-      return;
-    }
+	try {
+		if (skipUrls.includes(req.originalUrl)) {
+			return;
+		}
 
-    if (process.env.NODE_ENV !== "development") {
-      req.logtail.info(
-        `[${res.statusCode}] ${req.method} ${req.originalUrl} (${req.org?.slug})`,
-        {
-          statusCode: res.statusCode,
-          res: res.locals.responseBody,
-        }
-      );
-    }
-  } catch (error) {
-    console.error("Failed to log response to logtailAll");
-    console.error(error);
-  }
+		if (process.env.NODE_ENV !== "development") {
+			req.logtail.info(
+				`[${res.statusCode}] ${req.method} ${req.originalUrl} (${req.org?.slug})`,
+				{
+					statusCode: res.statusCode,
+					res: res.locals.responseBody,
+				},
+			);
+		}
+	} catch (error) {
+		console.error("Failed to log response to logtailAll");
+		console.error(error);
+	}
 };
 
 const parseCustomerIdFromUrl = (url: string): string | undefined => {
-  if (!url.startsWith("/v1")) {
-    return undefined;
-  }
+	if (!url.startsWith("/v1")) {
+		return undefined;
+	}
 
-  const cleanUrl = url.split("?")[0].replace(/^\/+|\/+$/g, "");
-  const segments = cleanUrl.split("/");
-  const customersIndex = segments.findIndex(
-    (segment) => segment === "customers"
-  );
+	const cleanUrl = url.split("?")[0].replace(/^\/+|\/+$/g, "");
+	const segments = cleanUrl.split("/");
+	const customersIndex = segments.indexOf("customers");
 
-  if (customersIndex !== -1 && segments[customersIndex + 1]) {
-    return segments[customersIndex + 1];
-  }
+	if (customersIndex !== -1 && segments[customersIndex + 1]) {
+		return segments[customersIndex + 1];
+	}
 
-  return undefined;
+	return undefined;
 };
 
 export const analyticsMiddleware = async (req: any, res: any, next: any) => {
-  let reqContext = {
-    org_id: req.org?.id,
-    org_slug: req.org?.slug,
-    env: req.env,
-    authType: req.authType,
-    body: req.body,
-    customer_id:
-      req?.body?.customer_id || parseCustomerIdFromUrl(req.originalUrl),
-    user_id: req.userId || null,
-  };
+	const reqContext = {
+		org_id: req.org?.id,
+		org_slug: req.org?.slug,
+		env: req.env,
+		authType: req.authType,
+		body: req.body,
+		customer_id:
+			req?.body?.customer_id || parseCustomerIdFromUrl(req.originalUrl),
+		user_id: req.userId || null,
+	};
 
-  if (req.span) {
-    req.span.setAttributes({
-      org_id: req.org?.id,
-      org_slug: req.org?.slug,
-      env: req.env,
-      customer_id: reqContext.customer_id,
-    });
-  }
+	if (req.span) {
+		req.span.setAttributes({
+			org_id: req.org?.id,
+			org_slug: req.org?.slug,
+			env: req.env,
+			customer_id: reqContext.customer_id,
+		});
+	}
 
-  req.logtail = req.logtail.child({
-    context: {
-      context: reqContext,
-    },
-  });
+	req.logtail = req.logtail.child({
+		context: {
+			context: reqContext,
+		},
+	});
 
-  // Store JSON response
-  let originalJson = res.json;
+	// Store JSON response
+	const originalJson = res.json;
 
-  res.json = function (body: any) {
-    res.locals.responseBody = body;
-    return originalJson.call(this, body);
-  };
+	res.json = function (body: any) {
+		res.locals.responseBody = body;
+		return originalJson.call(this, body);
+	};
 
-  res.on("finish", () => handleResFinish(req, res));
+	res.on("finish", () => handleResFinish(req, res));
 
-  next();
+	next();
 };

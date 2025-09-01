@@ -7,7 +7,7 @@
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"experimentalScannerIgnores": ["dist", "public"]
+		"experimentalScannerIgnores": ["dist/**", "public/**"]
 	},
 	"formatter": {
 		"enabled": true,

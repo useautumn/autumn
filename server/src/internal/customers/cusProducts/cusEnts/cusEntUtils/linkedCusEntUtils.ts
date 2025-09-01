@@ -1,50 +1,50 @@
-import {
-  FullCustomerEntitlement,
-  InsertReplaceable,
-  Replaceable,
+import type {
+	FullCustomerEntitlement,
+	InsertReplaceable,
+	Replaceable,
 } from "@autumn/shared";
 
 export const replaceEntityInCusEnt = ({
-  cusEnt,
-  entityId,
-  replaceable,
+	cusEnt,
+	entityId,
+	replaceable,
 }: {
-  cusEnt: FullCustomerEntitlement;
-  entityId: string;
-  replaceable: Replaceable | InsertReplaceable;
+	cusEnt: FullCustomerEntitlement;
+	entityId: string;
+	replaceable: Replaceable | InsertReplaceable;
 }) => {
-  let newEntities = structuredClone(cusEnt.entities) || {};
-  newEntities[replaceable.id] = newEntities[entityId];
+	const newEntities = structuredClone(cusEnt.entities) || {};
+	newEntities[replaceable.id] = newEntities[entityId];
 
-  delete newEntities[entityId];
+	delete newEntities[entityId];
 
-  return { newEntities };
+	return { newEntities };
 };
 
 export const deleteEntityFromCusEnt = ({
-  cusEnt,
-  entityId,
+	cusEnt,
+	entityId,
 }: {
-  cusEnt: FullCustomerEntitlement;
-  entityId: string;
+	cusEnt: FullCustomerEntitlement;
+	entityId: string;
 }) => {
-  let newEntities = structuredClone(cusEnt.entities) || {};
-  delete newEntities[entityId];
+	const newEntities = structuredClone(cusEnt.entities) || {};
+	delete newEntities[entityId];
 
-  return { newEntities };
+	return { newEntities };
 };
 
 export const removeReplaceablesFromCusEnt = ({
-  cusEnt,
-  replaceableIds,
+	cusEnt,
+	replaceableIds,
 }: {
-  cusEnt: FullCustomerEntitlement;
-  replaceableIds: string[];
+	cusEnt: FullCustomerEntitlement;
+	replaceableIds: string[];
 }) => {
-  let newEntities = structuredClone(cusEnt.entities) || {};
-  for (const replaceableId of replaceableIds) {
-    delete newEntities[replaceableId];
-  }
+	const newEntities = structuredClone(cusEnt.entities) || {};
+	for (const replaceableId of replaceableIds) {
+		delete newEntities[replaceableId];
+	}
 
-  return { newEntities };
+	return { newEntities };
 };

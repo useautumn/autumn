@@ -1,100 +1,99 @@
-import { notNullish } from "@/utils/genUtils.js";
-import {
-  Entity,
-  EntityWithFeature,
-  Feature,
-  FullCusEntWithFullCusProduct,
-  FullCustomerEntitlement,
+import type {
+	Entity,
+	Feature,
+	FullCusEntWithFullCusProduct,
+	FullCustomerEntitlement,
 } from "@autumn/shared";
+import { notNullish } from "@/utils/genUtils.js";
 
 export const cusEntMatchesEntity = ({
-  cusEnt,
-  entity,
-  features,
+	cusEnt,
+	entity,
+	features,
 }: {
-  cusEnt: FullCusEntWithFullCusProduct;
-  entity?: Entity;
-  features?: Feature[];
+	cusEnt: FullCusEntWithFullCusProduct;
+	entity?: Entity;
+	features?: Feature[];
 }) => {
-  if (!entity) return true;
+	if (!entity) return true;
 
-  let cusProductMatch = true;
+	let cusProductMatch = true;
 
-  if (notNullish(cusEnt.customer_product?.internal_entity_id)) {
-    cusProductMatch =
-      cusEnt.customer_product.internal_entity_id === entity.internal_id;
-  }
+	if (notNullish(cusEnt.customer_product?.internal_entity_id)) {
+		cusProductMatch =
+			cusEnt.customer_product.internal_entity_id === entity.internal_id;
+	}
 
-  let entityFeatureIdMatch = true;
-  // let feature = features?.find(
-  //   (f) => f.id == cusEnt.entitlement.entity_feature_id,
-  // );
+	let entityFeatureIdMatch = true;
+	// let feature = features?.find(
+	//   (f) => f.id == cusEnt.entitlement.entity_feature_id,
+	// );
 
-  if (notNullish(cusEnt.entitlement.entity_feature_id)) {
-    entityFeatureIdMatch =
-      cusEnt.entitlement.entity_feature_id == entity.feature_id;
-  }
+	if (notNullish(cusEnt.entitlement.entity_feature_id)) {
+		entityFeatureIdMatch =
+			cusEnt.entitlement.entity_feature_id === entity.feature_id;
+	}
 
-  return cusProductMatch && entityFeatureIdMatch;
+	return cusProductMatch && entityFeatureIdMatch;
 };
 
 export const cusEntMatchesFeature = ({
-  cusEnt,
-  feature,
+	cusEnt,
+	feature,
 }: {
-  cusEnt: FullCustomerEntitlement;
-  feature: Feature;
+	cusEnt: FullCustomerEntitlement;
+	feature: Feature;
 }) => {
-  return cusEnt.entitlement.feature.internal_id === feature.internal_id;
+	return cusEnt.entitlement.feature.internal_id === feature.internal_id;
 };
 
 export const findMainCusEntForFeature = ({
-  cusEnts,
-  feature,
+	cusEnts,
+	feature,
 }: {
-  cusEnts: FullCustomerEntitlement[];
-  feature: Feature;
+	cusEnts: FullCustomerEntitlement[];
+	feature: Feature;
 }) => {
-  let mainCusEnt = cusEnts.find(
-    (e: any) => e.entitlement.feature.internal_id === feature.internal_id,
-  );
+	const mainCusEnt = cusEnts.find(
+		(e: any) => e.entitlement.feature.internal_id === feature.internal_id,
+	);
 
-  return mainCusEnt;
+	return mainCusEnt;
 };
 
 export const findLinkedCusEnts = ({
-  cusEnts,
-  feature,
+	cusEnts,
+	feature,
 }: {
-  cusEnts: FullCustomerEntitlement[];
-  feature: Feature;
+	cusEnts: FullCustomerEntitlement[];
+	feature: Feature;
 }) => {
-  return cusEnts.filter(
-    (e: any) => e.entitlement.entity_feature_id === feature.id,
-  );
+	return cusEnts.filter(
+		(e: any) => e.entitlement.entity_feature_id === feature.id,
+	);
 };
 
 export const findCusEnt = ({
-  feature,
-  cusEnts,
-  onlyUsageAllowed = false,
-  entity,
-  features,
+	feature,
+	cusEnts,
+	onlyUsageAllowed = false,
+	entity,
+	features,
 }: {
-  feature: Feature;
-  cusEnts: FullCustomerEntitlement[];
-  onlyUsageAllowed?: boolean;
-  entity?: Entity;
-  features?: Feature[];
+	feature: Feature;
+	cusEnts: FullCustomerEntitlement[];
+	onlyUsageAllowed?: boolean;
+	entity?: Entity;
+	features?: Feature[];
 }) => {
-  return cusEnts.find((ce: any) => {
-    let featureMatch =
-      ce.entitlement.feature.internal_id === feature.internal_id;
+	return cusEnts.find((ce: any) => {
+		const featureMatch =
+			ce.entitlement.feature.internal_id === feature.internal_id;
 
-    let entityMatch = cusEntMatchesEntity({ cusEnt: ce, entity, features });
+		const entityMatch = cusEntMatchesEntity({ cusEnt: ce, entity, features });
 
-    let usageMatch = onlyUsageAllowed ? ce.usage_allowed : true;
+		const usageMatch = onlyUsageAllowed ? ce.usage_allowed : true;
 
-    return featureMatch && entityMatch && usageMatch;
-  });
+		return featureMatch && entityMatch && usageMatch;
+	});
 };

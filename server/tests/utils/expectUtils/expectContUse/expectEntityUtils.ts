@@ -1,49 +1,49 @@
-import { Decimal } from "decimal.js";
-import { timeout } from "@/utils/genUtils.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { expect } from "chai";
+import { Decimal } from "decimal.js";
+import type { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { timeout } from "@/utils/genUtils.js";
 
 export const useEntityBalanceAndExpect = async ({
-  autumn,
-  customerId,
-  featureId,
-  entityId,
+	autumn,
+	customerId,
+	featureId,
+	entityId,
 }: {
-  autumn: AutumnInt;
-  customerId: string;
-  featureId: string;
-  entityId: string;
+	autumn: AutumnInt;
+	customerId: string;
+	featureId: string;
+	entityId: string;
 }) => {
-  let deduction = new Decimal(Math.random() * 400)
-    .toDecimalPlaces(5)
-    .toNumber();
+	const deduction = new Decimal(Math.random() * 400)
+		.toDecimalPlaces(5)
+		.toNumber();
 
-  let balanceBefore = await autumn.check({
-    customer_id: customerId,
-    feature_id: featureId,
-    entity_id: entityId,
-  });
+	const balanceBefore = await autumn.check({
+		customer_id: customerId,
+		feature_id: featureId,
+		entity_id: entityId,
+	});
 
-  await autumn.track({
-    customer_id: customerId,
-    feature_id: featureId,
-    value: deduction,
-    entity_id: entityId,
-  });
-  await timeout(3000);
+	await autumn.track({
+		customer_id: customerId,
+		feature_id: featureId,
+		value: deduction,
+		entity_id: entityId,
+	});
+	await timeout(3000);
 
-  let balanceAfter = await autumn.check({
-    customer_id: customerId,
-    feature_id: featureId,
-    entity_id: entityId,
-  });
+	const balanceAfter = await autumn.check({
+		customer_id: customerId,
+		feature_id: featureId,
+		entity_id: entityId,
+	});
 
-  let expectedBalance = new Decimal(balanceBefore.balance!)
-    .sub(deduction)
-    .toNumber();
+	const expectedBalance = new Decimal(balanceBefore.balance!)
+		.sub(deduction)
+		.toNumber();
 
-  expect(balanceAfter.balance).to.equal(
-    expectedBalance,
-    "Entity balance should be correct",
-  );
+	expect(balanceAfter.balance).to.equal(
+		expectedBalance,
+		"Entity balance should be correct",
+	);
 };

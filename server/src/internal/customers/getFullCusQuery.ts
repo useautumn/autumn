@@ -1,13 +1,12 @@
-import { AppEnv } from "@autumn/shared";
-import { CusProductStatus } from "@autumn/shared";
-import { sql, SQL } from "drizzle-orm";
+import type { AppEnv, CusProductStatus } from "@autumn/shared";
+import { type SQL, sql } from "drizzle-orm";
 
 const buildOptimizedCusProductsCTE = (inStatuses?: CusProductStatus[]) => {
 	const withStatusFilter = () => {
 		return inStatuses
 			? sql`AND cp.status = ANY(ARRAY[${sql.join(
 					inStatuses.map((status) => sql`${status}`),
-					sql`, `
+					sql`, `,
 				)}])`
 			: sql``;
 	};
@@ -118,7 +117,7 @@ const buildEntityCTE = (entityId?: string) => {
 const buildTrialsUsedCTE = (
 	withTrialsUsed: boolean,
 	orgId: string,
-	env: AppEnv
+	env: AppEnv,
 ) => {
 	if (!withTrialsUsed) {
 		return sql``;
@@ -148,7 +147,7 @@ const buildTrialsUsedCTE = (
 
 const buildSubscriptionsCTE = (
 	withSubs: boolean,
-	inStatuses?: CusProductStatus[]
+	_inStatuses?: CusProductStatus[],
 ) => {
 	if (!withSubs) {
 		return sql``;
@@ -171,7 +170,7 @@ const buildSubscriptionsCTE = (
 };
 
 const buildInvoicesCTE = (hasEntityCTE: boolean) => {
-	let entityFilter = hasEntityCTE
+	const entityFilter = hasEntityCTE
 		? sql`AND (
       NOT EXISTS (SELECT 1 FROM entity_record) 
       OR i.internal_entity_id = (SELECT internal_id FROM entity_record LIMIT 1)
@@ -202,7 +201,7 @@ export const getFullCusQuery = (
 	withEntities: boolean,
 	withTrialsUsed: boolean,
 	withSubs: boolean,
-	entityId?: string
+	entityId?: string,
 ) => {
 	const sqlChunks: SQL[] = [];
 
@@ -303,28 +302,27 @@ export const getFullCusQuery = (
 };
 
 export const getPaginatedFullCusQuery = (
-  orgId: string,
-  env: AppEnv,
-  inStatuses: CusProductStatus[],
-  includeInvoices: boolean,
-  withEntities: boolean,
-  withTrialsUsed: boolean,
-  withSubs: boolean,
-  limit: number = 10,
-  offset: number = 0,
-  entityId?: string
+	orgId: string,
+	env: AppEnv,
+	inStatuses: CusProductStatus[],
+	includeInvoices: boolean,
+	withEntities: boolean,
+	withTrialsUsed: boolean,
+	withSubs: boolean,
+	limit: number = 10,
+	offset: number = 0,
+	_entityId?: string,
 ) => {
-  
-  const withStatusFilter = () => {
-    return inStatuses?.length
-      ? sql`AND cp.status = ANY(ARRAY[${sql.join(
-          inStatuses.map((status) => sql`${status}`),
-          sql`, `
-        )}])`
-      : sql``;
-  };
+	const withStatusFilter = () => {
+		return inStatuses?.length
+			? sql`AND cp.status = ANY(ARRAY[${sql.join(
+					inStatuses.map((status) => sql`${status}`),
+					sql`, `,
+				)}])`
+			: sql``;
+	};
 
-  return sql`
+	return sql`
     WITH customer_records AS (
       SELECT c.*
       FROM customers c
@@ -406,7 +404,9 @@ export const getPaginatedFullCusQuery = (
       GROUP BY cpwp.internal_customer_id
     )
     
-    ${withSubs ? sql`, customer_subscriptions AS (
+    ${
+			withSubs
+				? sql`, customer_subscriptions AS (
       SELECT 
         cpwp.internal_customer_id,
         COALESCE(
@@ -416,9 +416,13 @@ export const getPaginatedFullCusQuery = (
       FROM customer_products_with_prices cpwp
       JOIN subscriptions s ON s.stripe_id = ANY(cpwp.subscription_ids)
       GROUP BY cpwp.internal_customer_id
-    )` : sql``}
+    )`
+				: sql``
+		}
     
-    ${withEntities ? sql`, customer_entities AS (
+    ${
+			withEntities
+				? sql`, customer_entities AS (
       SELECT 
         e.internal_customer_id,
         COALESCE(
@@ -428,9 +432,13 @@ export const getPaginatedFullCusQuery = (
       FROM entities e
       WHERE e.internal_customer_id IN (SELECT internal_id FROM customer_records)
       GROUP BY e.internal_customer_id
-    )` : sql``}
+    )`
+				: sql``
+		}
     
-    ${includeInvoices ? sql`, customer_invoices AS (
+    ${
+			includeInvoices
+				? sql`, customer_invoices AS (
       SELECT 
         i.internal_customer_id,
         COALESCE(
@@ -440,9 +448,13 @@ export const getPaginatedFullCusQuery = (
       FROM invoices i
       WHERE i.internal_customer_id IN (SELECT internal_id FROM customer_records)
       GROUP BY i.internal_customer_id
-    )` : sql``}
+    )`
+				: sql``
+		}
     
-    ${withTrialsUsed ? sql`, customer_trials_used AS (
+    ${
+			withTrialsUsed
+				? sql`, customer_trials_used AS (
       SELECT 
         cp.internal_customer_id,
         json_agg(json_build_object(
@@ -456,7 +468,9 @@ export const getPaginatedFullCusQuery = (
       WHERE cp.internal_customer_id IN (SELECT internal_id FROM customer_records)
         AND cp.free_trial_id IS NOT NULL
       GROUP BY cp.internal_customer_id
-    )` : sql``}
+    )`
+				: sql``
+		}
     
     SELECT 
       cr.*,

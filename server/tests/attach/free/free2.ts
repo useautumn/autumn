@@ -1,35 +1,34 @@
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-  APIVersion,
-  AppEnv,
-  BillingInterval,
-  Organization,
+	APIVersion,
+	type AppEnv,
+	BillingInterval,
+	type Organization,
 } from "@autumn/shared";
 import chalk from "chalk";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type Stripe from "stripe";
 import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "../utils.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { addPrefixToProducts } from "../utils.js";
 
 export const free = constructProduct({
-  items: [
-    constructFeatureItem({
-      featureId: TestFeature.Messages,
-      includedUsage: 100,
-    }),
-  ],
-  isDefault: false,
-  type: "free",
-  id: "free",
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 100,
+		}),
+	],
+	isDefault: false,
+	type: "free",
+	id: "free",
 });
 // export let addOn = constructProduct({
 //   items: [
@@ -46,83 +45,83 @@ export const free = constructProduct({
 const testCase = "free2";
 
 describe(`${chalk.yellowBright(`${testCase}: Testing free product with trial and attaching add on`)}`, () => {
-  let customerId = testCase;
-  let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
-  let testClockId: string;
-  let db: DrizzleCli, org: Organization, env: AppEnv;
-  let stripeCli: Stripe;
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	let _testClockId: string;
+	let db: DrizzleCli, org: Organization, env: AppEnv;
+	let _stripeCli: Stripe;
 
-  let curUnix = new Date().getTime();
-  let numUsers = 0;
+	const _curUnix = Date.now();
+	const _numUsers = 0;
 
-  before(async function () {
-    await setupBefore(this);
-    const { autumnJs } = this;
-    db = this.db;
-    org = this.org;
-    env = this.env;
+	before(async function () {
+		await setupBefore(this);
+		const { autumnJs } = this;
+		db = this.db;
+		org = this.org;
+		env = this.env;
 
-    stripeCli = this.stripeCli;
+		_stripeCli = this.stripeCli;
 
-    const { testClockId: testClockId1 } = await initCustomer({
-      autumn: autumnJs,
-      customerId,
-      db,
-      org,
-      env,
-      attachPm: "success",
-    });
+		const { testClockId: testClockId1 } = await initCustomer({
+			autumn: autumnJs,
+			customerId,
+			db,
+			org,
+			env,
+			attachPm: "success",
+		});
 
-    addPrefixToProducts({
-      products: [free],
-      prefix: testCase,
-    });
+		addPrefixToProducts({
+			products: [free],
+			prefix: testCase,
+		});
 
-    await createProducts({
-      autumn,
-      products: [free],
-      db,
-      orgId: org.id,
-      env,
-    });
+		await createProducts({
+			autumn,
+			products: [free],
+			db,
+			orgId: org.id,
+			env,
+		});
 
-    testClockId = testClockId1!;
-  });
+		_testClockId = testClockId1!;
+	});
 
-  const approximateDiff = 1000 * 60 * 30; // 30 minutes
-  it("should attach free product", async function () {
-    await autumn.attach({
-      customer_id: customerId,
-      product_id: free.id,
-    });
+	const _approximateDiff = 1000 * 60 * 30; // 30 minutes
+	it("should attach free product", async () => {
+		await autumn.attach({
+			customer_id: customerId,
+			product_id: free.id,
+		});
 
-    const customer = await autumn.customers.get(customerId);
-    expectProductAttached({
-      customer,
-      product: free,
-    });
-  });
+		const customer = await autumn.customers.get(customerId);
+		expectProductAttached({
+			customer,
+			product: free,
+		});
+	});
 
-  const customItems = [
-    ...free.items,
-    constructPriceItem({
-      price: 100,
-      interval: BillingInterval.Month,
-    }),
-  ];
-  it("should update free product with price", async function () {
-    await attachAndExpectCorrect({
-      autumn,
-      customerId,
-      product: free,
-      db,
-      org,
-      env,
-      attachParams: {
-        // @ts-ignore
-        is_custom: true,
-        items: customItems,
-      },
-    });
-  });
+	const customItems = [
+		...free.items,
+		constructPriceItem({
+			price: 100,
+			interval: BillingInterval.Month,
+		}),
+	];
+	it("should update free product with price", async () => {
+		await attachAndExpectCorrect({
+			autumn,
+			customerId,
+			product: free,
+			db,
+			org,
+			env,
+			attachParams: {
+				// @ts-expect-error
+				is_custom: true,
+				items: customItems,
+			},
+		});
+	});
 });

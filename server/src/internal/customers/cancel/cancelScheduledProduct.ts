@@ -1,57 +1,61 @@
+import {
+	CusProductStatus,
+	type FullCusProduct,
+	type FullCustomer,
+} from "@autumn/shared";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { FullCusProduct, FullCustomer, CusProductStatus } from "@autumn/shared";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { CusProductService } from "../cusProducts/CusProductService.js";
 import { cusProductToSchedule } from "../cusProducts/cusProductUtils/convertCusProduct.js";
 
 export const cancelScheduledProduct = async ({
-  req,
-  curScheduledProduct,
-  fullCus,
-  curMainProduct,
+	req,
+	curScheduledProduct,
+	fullCus,
+	curMainProduct,
 }: {
-  req: ExtendedRequest;
-  curScheduledProduct?: FullCusProduct;
-  fullCus: FullCustomer;
-  curMainProduct?: FullCusProduct;
+	req: ExtendedRequest;
+	curScheduledProduct?: FullCusProduct;
+	fullCus: FullCustomer;
+	curMainProduct?: FullCusProduct;
 }) => {
-  const { org, env, db, logger } = req;
-  const stripeCli = createStripeCli({ org, env });
+	const { org, env, db, logger } = req;
+	const stripeCli = createStripeCli({ org, env });
 
-  // 1. Delete subscription schedule if exists
-  if (curScheduledProduct) {
-    const schedule = await cusProductToSchedule({
-      cusProduct: curScheduledProduct,
-      stripeCli,
-    });
+	// 1. Delete subscription schedule if exists
+	if (curScheduledProduct) {
+		const schedule = await cusProductToSchedule({
+			cusProduct: curScheduledProduct,
+			stripeCli,
+		});
 
-    if (schedule) {
-      await stripeCli.subscriptionSchedules.cancel(schedule.id);
-    }
+		if (schedule) {
+			await stripeCli.subscriptionSchedules.cancel(schedule.id);
+		}
 
-    logger.info(`Deleting scheduled prod (${curScheduledProduct.product.id})`);
-    await CusProductService.delete({
-      db,
-      cusProductId: curScheduledProduct.id,
-    });
-  }
+		logger.info(`Deleting scheduled prod (${curScheduledProduct.product.id})`);
+		await CusProductService.delete({
+			db,
+			cusProductId: curScheduledProduct.id,
+		});
+	}
 
-  // 2. Uncancel current main product
-  const subId = curMainProduct?.subscription_ids?.[0];
-  if (subId) {
-    await stripeCli.subscriptions.update(subId, { cancel_at: null });
-  }
+	// 2. Uncancel current main product
+	const subId = curMainProduct?.subscription_ids?.[0];
+	if (subId) {
+		await stripeCli.subscriptions.update(subId, { cancel_at: null });
+	}
 
-  if (curMainProduct) {
-    logger.info(`Updating main prod (${curMainProduct!.product.id}) to active`);
-    logger.info(`Cus product ID: ${curMainProduct!.id}`);
-    await CusProductService.update({
-      db,
-      cusProductId: curMainProduct!.id,
-      updates: {
-        status: CusProductStatus.Active,
-        canceled_at: null,
-      },
-    });
-  }
+	if (curMainProduct) {
+		logger.info(`Updating main prod (${curMainProduct?.product.id}) to active`);
+		logger.info(`Cus product ID: ${curMainProduct?.id}`);
+		await CusProductService.update({
+			db,
+			cusProductId: curMainProduct?.id,
+			updates: {
+				status: CusProductStatus.Active,
+				canceled_at: null,
+			},
+		});
+	}
 };

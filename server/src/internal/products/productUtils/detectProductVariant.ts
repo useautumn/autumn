@@ -1,10 +1,10 @@
-import { BillingInterval, FullProduct } from "@autumn/shared";
-import { generateObject } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
+import { BillingInterval, type FullProduct } from "@autumn/shared";
+import { generateObject } from "ai";
+import type { Logger } from "pino";
 import { z } from "zod";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { nullish } from "@/utils/genUtils.js";
-import { Logger } from "pino";
-import { DrizzleCli } from "@/db/initDrizzle.js";
 import { ProductService } from "../ProductService.js";
 
 const prompt = `Detect whether a given product (called "product_to_detect") is an interval variant of a base product from the list of existing products (called "existing_products").
@@ -24,98 +24,98 @@ To determine if a product is an interval variant, please follow these guidelines
 `;
 
 export const detectBaseVariant = async ({
-  db,
-  curProduct,
-  logger,
+	db,
+	curProduct,
+	logger,
 }: {
-  db: DrizzleCli;
-  curProduct: FullProduct;
-  logger: Logger;
+	db: DrizzleCli;
+	curProduct: FullProduct;
+	logger: Logger;
 }) => {
-  logger.info(`Detecting base variant for ${curProduct.id}`);
-  if (!process.env.ANTHROPIC_API_KEY) return;
+	logger.info(`Detecting base variant for ${curProduct.id}`);
+	if (!process.env.ANTHROPIC_API_KEY) return;
 
-  let existingProducts = (await ProductService.listFull({
-    db,
-    orgId: curProduct.org_id,
-    env: curProduct.env,
-    excludeEnts: true,
-  })) as FullProduct[];
+	const existingProducts = (await ProductService.listFull({
+		db,
+		orgId: curProduct.org_id,
+		env: curProduct.env,
+		excludeEnts: true,
+	})) as FullProduct[];
 
-  // if (product.base_variant_id == baseVariantId) {
-  let curPrices = curProduct.prices;
-  let intervals = curPrices.map((price) => price.config.interval);
+	// if (product.base_variant_id == baseVariantId) {
+	const curPrices = curProduct.prices;
+	const intervals = curPrices.map((price) => price.config.interval);
 
-  // 1. Return null if add on
-  if (curProduct.is_add_on) return null;
+	// 1. Return null if add on
+	if (curProduct.is_add_on) return null;
 
-  // 2. Return null if only one off or monthly price
-  const oneOffOrMonthly = [BillingInterval.OneOff, BillingInterval.Month];
-  if (intervals.every((i: BillingInterval) => oneOffOrMonthly.includes(i))) {
-    logger.info(`Is one off or monthly, skipping`);
-    return null;
-  }
+	// 2. Return null if only one off or monthly price
+	const oneOffOrMonthly = [BillingInterval.OneOff, BillingInterval.Month];
+	if (intervals.every((i: BillingInterval) => oneOffOrMonthly.includes(i))) {
+		logger.info(`Is one off or monthly, skipping`);
+		return null;
+	}
 
-  const filteredExistingProducts = existingProducts.filter(
-    (p) =>
-      p.id != curProduct.id &&
-      nullish(p.base_variant_id) &&
-      !p.is_add_on &&
-      p.prices.length > 0 &&
-      p.prices.every(
-        (price) => price.config.interval == BillingInterval.Month
-      ) &&
-      p.group == curProduct.group
-  );
+	const filteredExistingProducts = existingProducts.filter(
+		(p) =>
+			p.id !== curProduct.id &&
+			nullish(p.base_variant_id) &&
+			!p.is_add_on &&
+			p.prices.length > 0 &&
+			p.prices.every(
+				(price) => price.config.interval === BillingInterval.Month,
+			) &&
+			p.group === curProduct.group,
+	);
 
-  if (filteredExistingProducts.length == 0) {
-    logger.info(`No base product to search for`);
-    return null;
-  }
+	if (filteredExistingProducts.length === 0) {
+		logger.info(`No base product to search for`);
+		return null;
+	}
 
-  const variables = `
+	const variables = `
 <product_to_detect>
   ${JSON.stringify({
-    id: curProduct.id,
-    name: curProduct.name,
-    prices: curPrices,
-  })}
+		id: curProduct.id,
+		name: curProduct.name,
+		prices: curPrices,
+	})}
 </product_to_detect>
 
 <existing_products>
   ${filteredExistingProducts
-    .map((p) =>
-      JSON.stringify({
-        id: p.id,
-        name: p.name,
-        prices: p.prices,
-      })
-    )
-    .join("\n")}
+		.map((p) =>
+			JSON.stringify({
+				id: p.id,
+				name: p.name,
+				prices: p.prices,
+			}),
+		)
+		.join("\n")}
 </existing_products>
 `;
 
-  let { object } = await generateObject({
-    model: anthropic("claude-3-5-haiku-latest"),
-    schema: z.object({ base_variant_id: z.string().nullable() }),
-    prompt: `${prompt}\n\n${variables}`,
-  });
+	const { object } = await generateObject({
+		model: anthropic("claude-3-5-haiku-latest"),
+		schema: z.object({ base_variant_id: z.string().nullable() }),
+		prompt: `${prompt}\n\n${variables}`,
+	});
 
-  let baseVariantId = object.base_variant_id;
+	const baseVariantId = object.base_variant_id;
 
-  logger.info(
-    `llm response for base variant of ${curProduct.id}: ${baseVariantId}`
-  );
+	logger.info(
+		`llm response for base variant of ${curProduct.id}: ${baseVariantId}`,
+	);
 
-  if (baseVariantId) {
-    await ProductService.updateByInternalId({
-      db,
-      internalId: curProduct.internal_id,
-      update: {
-        base_variant_id: baseVariantId,
-      },
-    });
-  }
+	if (baseVariantId) {
+		await ProductService.updateByInternalId({
+			db,
+			internalId: curProduct.internal_id,
+			update: {
+				base_variant_id: baseVariantId,
+			},
+		});
+	}
 
-  return baseVariantId;
+	return baseVariantId;
 };

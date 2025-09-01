@@ -1,29 +1,29 @@
 {
-  "ts-node": {
-    "esm": true,
-    "experimentalSpecifier": true
-  },
-  "compilerOptions": {
-    "target": "ES2020",
-    "moduleResolution": "NodeNext",
-    "module": "NodeNext",
-    "jsx": "react-jsx",
+	"ts-node": {
+		"esm": true,
+		"experimentalSpecifier": true
+	},
+	"compilerOptions": {
+		"target": "ES2020",
+		"moduleResolution": "NodeNext",
+		"module": "NodeNext",
+		"jsx": "react-jsx",
 
-    "rootDir": ".",
-    "baseUrl": ".",
-    "outDir": "./dist",
-    "strict": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "incremental": false,
-    "noEmitOnError": false,
-    "paths": {
-      "@/*": ["src/*"],
-      "@emails/*": ["emails/*"]
-    }
-  },
-  "include": ["src", "emails", "src/external/clickhouse/queries"],
-  "exclude": ["node_modules", "dist"]
+		"rootDir": ".",
+		"baseUrl": ".",
+		"outDir": "./dist",
+		"strict": true,
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"incremental": false,
+		"noEmitOnError": false,
+		"paths": {
+			"@/*": ["src/*"],
+			"@emails/*": ["emails/*"]
+		}
+	},
+	"include": ["src", "emails", "src/external/clickhouse/queries"],
+	"exclude": ["node_modules", "dist"]
 }
