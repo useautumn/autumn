@@ -68,7 +68,7 @@ productRouter.get("/data", async (req: any, res) => {
       }),
       versionCounts: getProductVersionCounts(products),
       features,
-      org: createOrgResponse(org),
+      org: createOrgResponse({ org, env: req.env }),
       rewards: coupons,
       rewardPrograms,
       groupToDefaults: groupToDefaultProd,
@@ -120,7 +120,7 @@ productRouter.post("/data", async (req: any, res) => {
       groupToDefaults: groupToDefaultProd,
       versionCounts: getProductVersionCounts(products),
       features,
-      org: createOrgResponse(org),
+      org: createOrgResponse({ org, env: req.env }),
       rewards: coupons,
       rewardPrograms,
     });

@@ -204,21 +204,25 @@ button:focus-visible {
 
   /* CUSTOM STUFF */
   --color-t1: #27272a;
-  --color-t2: #52525b;
+  --color-t2: #424249;
   --color-t3: #a1a1aa;
 
-  /* fontSize: {
-    xs: ["11px", "16px"],
-    sm: ["13px", "18px"],
-    md: ["15px", "20px"],
-    lg: ["17px", "24px"],
-    xl: ["20px", "28px"],
-  }, */
   --text-xs: 12px;
   --text-sm: 13px;
   --text-md: 15px;
   --text-lg: 17px;
   --text-xl: 20px;
+
+  /* Font weights used by Tailwind font-* utilities */
+  /* --font-thin: 100;
+  --font-extralight: 200;
+  --font-light: 300;
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  --font-extrabold: 800;
+  --font-black: 900; */
 
   /* SHADOW */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);

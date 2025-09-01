@@ -111,7 +111,6 @@ function ProductView({ env }: { env: AppEnv }) {
     await updateProduct();
   };
 
-
   return (
     <FeaturesContext.Provider
       value={{

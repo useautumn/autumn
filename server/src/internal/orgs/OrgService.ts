@@ -281,7 +281,7 @@ export class OrgService {
         orgId,
       });
 
-      return result.length > 0 ? result[0] : null;
+      return result.length > 0 ? (result[0] as Organization) : null;
     } catch (error) {
       console.error(error);
       throw error;

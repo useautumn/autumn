@@ -1,47 +1,22 @@
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import {
-  compareStatus,
-  getBackendErr,
-  navigateTo,
-  notNullish,
-} from "@/utils/genUtils";
+import { compareStatus, navigateTo, notNullish } from "@/utils/genUtils";
 import { CusProduct, CusProductStatus, FullCusProduct } from "@autumn/shared";
 import { useNavigate } from "react-router";
 import { useCustomerContext } from "../CustomerContext";
 
-import {
-  DropdownMenuItem,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
-import { CusService } from "@/services/customers/CusService";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import SmallSpinner from "@/components/general/SmallSpinner";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
-
-import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
 
 import { AdminHover } from "@/components/general/AdminHover";
 import AddProduct from "../add-product/NewProductDropdown";
 import { Item, Row } from "@/components/general/TableGrid";
 import { cn } from "@/lib/utils";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+
 import { CusProductStatusItem } from "../customer-product-list/CusProductStatus";
 import { CusProductEntityItem } from "../components/CusProductEntityItem";
 import { CusProductToolbar } from "./CusProductToolbar";
 import { MultiAttachDialog } from "../product/multi-attach/MultiAttachDialog";
-import { useCustomer } from "autumn-js/react";
 
 export const CustomerProductList = ({
   customer,

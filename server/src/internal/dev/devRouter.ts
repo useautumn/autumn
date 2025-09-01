@@ -240,16 +240,12 @@ export const handleGetOtp = async (req: any, res: any) =>
         userId: req.user?.id,
       });
 
-      // console.log("New keys created:");
-      // console.log("Sandbox key:", sandboxKey);
-      // console.log("Prod key:", prodKey);
-
       let org = await OrgService.get({
         db: req.db,
         orgId: cacheData.orgId,
       });
 
-      let stripeConnected = isStripeConnected({ org });
+      let stripeConnected = isStripeConnected({ org, env: AppEnv.Sandbox });
 
       let responseData = {
         ...cacheData,
@@ -344,7 +340,7 @@ devRouter.post("/cli/stripe", async (req: any, res: any) => {
             live_api_key: encryptData(stripeLiveKey),
             test_webhook_secret: encryptData(testWebhook.secret as string),
             live_webhook_secret: encryptData(liveWebhook.secret as string),
-            success_url: "https://useautumn.com",
+            // success_url: "https://useautumn.com",
           },
         },
       });

@@ -66,11 +66,8 @@ apiRouter.post("/setup_payment", handleSetupPayment);
 
 // Analytics
 apiRouter.use("/query", analyticsRouter);
-apiRouter.post("/org/stripe", handleConnectStripe);
-apiRouter.delete("/org/stripe", handleDeleteStripe);
 apiRouter.use("/platform", platformRouter);
-
-// Batch
-apiRouter.use("/batch", batchRouter);
+apiRouter.post("/organization/stripe", handleConnectStripe);
+// apiRouter.delete("/org/stripe", handleDeleteStripe);
 
 export { apiRouter };

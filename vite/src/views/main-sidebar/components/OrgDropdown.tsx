@@ -52,11 +52,11 @@ import { useSearchParams } from "react-router";
 
 export const OrgDropdown = () => {
   const { org, isLoading, error } = useOrg();
-  const { state, setState } = useSidebarContext();
+  const { expanded, setExpanded } = useSidebarContext();
 
   const { data: orgs, isPending } = useListOrganizations();
   const [dialogType, setDialogType] = useState<"create" | "manage" | null>(
-    null,
+    null
   );
 
   const { data: session } = useSession();
@@ -78,8 +78,6 @@ export const OrgDropdown = () => {
 
   if (!org || error) return null;
 
-  const expanded = state === "expanded";
-
   return (
     <div className={cn("flex px-3")}>
       <ManageOrg open={manageOpen} setOpen={setManageOpen} />
@@ -99,7 +97,7 @@ export const OrgDropdown = () => {
             <Button
               className={cn(
                 "shimmer-hover p-0.5 gap-2 rounded-md hover:bg-stone-200/60 justify-start items-center transition-all duration-200",
-                expanded ? "h-7 min-w-28" : "h-7 w-7 p-0.5",
+                expanded ? "h-7 min-w-28" : "h-7 w-7 p-0.5"
               )}
               variant="ghost"
             >
@@ -109,7 +107,7 @@ export const OrgDropdown = () => {
                   "flex items-center gap-1 transition-all duration-200",
                   expanded
                     ? "opacity-100 translate-x-0"
-                    : "opacity-0 -translate-x-2 pointer-events-none w-0 m-0 p-0",
+                    : "opacity-0 -translate-x-2 pointer-events-none w-0 m-0 p-0"
                 )}
               >
                 <span className="text-t2 max-w-24 truncate">{org?.name}</span>
@@ -155,10 +153,10 @@ export const OrgDropdown = () => {
                 <Plus size={14} />
               </div>
             </DropdownMenuItem>
-            {state === "collapsed" && (
+            {!expanded && (
               <DropdownMenuItem
                 onClick={(e) => {
-                  setState("expanded");
+                  setExpanded(true);
                   setDropdownOpen(false);
                 }}
               >
@@ -205,7 +203,7 @@ const SwitchOrgItem = ({ org, setDropdownOpen }: any) => {
     setLoading(true);
 
     try {
-      setSearchParams(new URLSearchParams())
+      setSearchParams(new URLSearchParams());
 
       await authClient.organization.setActive({
         organizationId: orgId,

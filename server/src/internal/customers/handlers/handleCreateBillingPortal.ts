@@ -2,6 +2,7 @@ import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js"
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { toSuccessUrl } from "@/internal/orgs/orgUtils/convertOrgUtils.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { ErrCode } from "@autumn/shared";
@@ -63,7 +64,7 @@ export const handleCreateBillingPortal = async (req: any, res: any) =>
 
           const portal = await stripeCli.billingPortal.sessions.create({
             customer: newCus.id,
-            return_url: returnUrl || org.stripe_config.success_url,
+            return_url: returnUrl || toSuccessUrl({ org, env: req.env }),
           });
 
           res.status(200).json({
@@ -74,7 +75,7 @@ export const handleCreateBillingPortal = async (req: any, res: any) =>
       } else {
         const portal = await stripeCli.billingPortal.sessions.create({
           customer: customer.processor.id,
-          return_url: returnUrl || org.stripe_config.success_url,
+          return_url: returnUrl || toSuccessUrl({ org, env: req.env }),
         });
 
         res.status(200).json({

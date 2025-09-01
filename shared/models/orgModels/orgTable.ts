@@ -21,7 +21,13 @@ export type StripeConfig = {
   live_api_key?: string;
   test_webhook_secret?: string;
   live_webhook_secret?: string;
+
+  sandbox_success_url?: string;
   success_url?: string;
+};
+
+export type OrgProcessorConfig = {
+  success_url: string;
 };
 
 //   logo: text("logo"),

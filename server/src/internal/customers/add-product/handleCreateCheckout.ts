@@ -15,6 +15,7 @@ import { SuccessCode } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
 
 import Stripe from "stripe";
+import { toSuccessUrl } from "@/internal/orgs/orgUtils/convertOrgUtils.js";
 
 export const handleCreateCheckout = async ({
   req,
@@ -124,7 +125,7 @@ export const handleCreateCheckout = async ({
     subscription_data: subscriptionData,
     mode: isRecurring ? "subscription" : "payment",
     currency: org.default_currency,
-    success_url: successUrl || org.stripe_config!.success_url,
+    success_url: successUrl || toSuccessUrl({ org, env: customer.env }),
 
     allow_promotion_codes: allowPromotionCodes,
     invoice_creation: !isRecurring ? { enabled: true } : undefined,
