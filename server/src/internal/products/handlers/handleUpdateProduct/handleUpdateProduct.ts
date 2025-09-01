@@ -140,12 +140,6 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
             freeTrial: req.body.free_trial,
           });
           return;
-        } else {
-          throw new RecaseError({
-            message: `Can't create a new version product ${fullProduct.id} because items and free trial are the same as the current version`,
-            code: ErrCode.InvalidRequest,
-            statusCode: 400,
-          });
         }
         res.status(200).send(fullProduct);
         return;
