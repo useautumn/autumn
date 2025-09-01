@@ -146,6 +146,14 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
 
       const { items, free_trial } = req.body;
 
+      if (fullProduct.prices?.length > 0 && (!items || items.length === 0)) {
+        throw new RecaseError({
+          message: "Cannot update a paid product to a free product. Please cancel the current product first.",
+          code: ErrCode.InvalidRequest,
+          statusCode: 400,
+        });
+      }
+
       if (free_trial !== undefined) {
         await validateOneOffTrial({
           prices: fullProduct.prices,
