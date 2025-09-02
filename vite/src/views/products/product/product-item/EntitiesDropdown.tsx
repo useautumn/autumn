@@ -20,7 +20,7 @@ import {
 import { useState } from "react";
 import { useProductContext } from "../ProductContext";
 import { CheckIcon, PlusIcon } from "lucide-react";
-import { CreateFeature } from "@/views/features/CreateFeature";
+import { CreateFeature } from "@/views/products/features/components/CreateFeature";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { CustomDialogContent } from "@/components/general/modal-components/DialogContentWrapper";

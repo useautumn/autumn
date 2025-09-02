@@ -1,12 +1,11 @@
 import { Button } from "@/components/ui/button";
 import Step from "@/components/general/OnboardingStep";
-import { FeaturesContext } from "@/views/features/FeaturesContext";
+
 import { PageSectionHeader } from "@/components/general/PageSectionHeader";
 import { useEnv } from "@/utils/envUtils";
 import { ManageProduct } from "@/views/products/product/ManageProduct";
 import { ProductContext } from "@/views/products/product/ProductContext";
 import { ProductsContext } from "@/views/products/ProductsContext";
-import { ProductsTable } from "@/views/products/ProductsTable";
 import { Product, ProductItem, products, ProductV2 } from "@autumn/shared";
 import {
   DialogContent,
@@ -19,7 +18,6 @@ import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { toast } from "sonner";
-import CreateProduct from "@/views/products/CreateProduct";
 import { useSearchParams } from "react-router";
 import { Check } from "lucide-react";
 import { CreateFreeTrial } from "@/views/products/product/free-trial/CreateFreeTrial";
@@ -28,6 +26,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import CreateProduct from "@/views/products/products/components/CreateProduct";
+import { ProductsTable } from "@/views/products/products/components/ProductsTable";
 
 export const ProductList = ({
   data,
@@ -118,7 +118,6 @@ export const ProductList = ({
         />
 
         <ProductsTable
-          products={data.products}
           onRowClick={(id) => {
             const selectedProduct = data.products.find(
               (p: ProductV2) => p.id === id
@@ -212,31 +211,24 @@ export const EditProductDialog = ({
           {/* Edit Product */}
         </DialogTitle>
         <div>
-          <FeaturesContext.Provider
+          <ProductContext.Provider
             value={{
-              env,
+              product,
+              setProduct,
               mutate,
+              env,
+              features,
+              setFeatures,
+              entityFeatureIds,
+              setEntityFeatureIds,
             }}
           >
-            <ProductContext.Provider
-              value={{
-                product,
-                setProduct,
-                mutate,
-                env,
-                features,
-                setFeatures,
-                entityFeatureIds,
-                setEntityFeatureIds,
-              }}
-            >
-              <CreateFreeTrial
-                open={freeTrialModalOpen}
-                setOpen={setFreeTrialModalOpen}
-              />
-              <ManageProduct hideAdminHover={true} />
-            </ProductContext.Provider>
-          </FeaturesContext.Provider>
+            <CreateFreeTrial
+              open={freeTrialModalOpen}
+              setOpen={setFreeTrialModalOpen}
+            />
+            <ManageProduct hideAdminHover={true} />
+          </ProductContext.Provider>
         </div>
         <DialogFooter>
           <div className="flex justify-between items-center gap-2 px-10 w-full mt-6">

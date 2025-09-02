@@ -13,10 +13,10 @@ import { Button } from "@/components/ui/button";
 
 import { toast } from "sonner";
 import { getBackendErr } from "@/utils/genUtils";
-import { useCustomersContext } from "../CustomersContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { Delete } from "lucide-react";
 import { useState } from "react";
+import { useCustomersQueryStates } from "../hooks/useCustomersQueryStates";
 
 interface SavedView {
   id: string;
@@ -34,7 +34,7 @@ export const SavedViews = ({
   mutateViews: any;
   setDropdownOpen: (open: boolean) => void;
 }) => {
-  const { setQueryStates, mutate } = useCustomersContext();
+  const { setQueryStates } = useCustomersQueryStates();
   const axiosInstance = useAxiosInstance();
   const [deletingViewId, setDeletingViewId] = useState<string | null>(null);
 
@@ -45,20 +45,23 @@ export const SavedViews = ({
       const params = new URLSearchParams(decodedParams);
 
       // Apply all parameters using setQueryStates (this will reset pagination automatically)
-      const queryParams: Record<string, string | number> = {
+      const statusParam = params.get("status") || "";
+      const versionParam = params.get("version") || "";
+      const noneParam = params.get("none");
+
+      const queryParams = {
         page: 1,
-        lastItemId: "",
         q: params.get("q") || "",
-        status: params.get("status") || "",
-        product_id: params.get("product_id") || "",
-        version: params.get("version") || "",
-        none: params.get("none") || "",
+        status: statusParam ? statusParam.split(",").filter(Boolean) : [],
+        version: versionParam ? versionParam.split(",").filter(Boolean) : [],
+        none: noneParam === "true",
+        lastItemId: "",
       };
 
       setQueryStates(queryParams);
 
       // Explicitly trigger a data refetch to ensure the view is applied immediately
-      await mutate();
+      // await mutate();
 
       toast.success(`Applied filters from ${view.name} view`);
     } catch (error) {

@@ -12,7 +12,6 @@ import { Link, useParams, useSearchParams } from "react-router";
 import ErrorScreen from "@/views/general/ErrorScreen";
 import { ProductOptions } from "./ProductOptions";
 import { useEnv } from "@/utils/envUtils";
-import { FeaturesContext } from "@/views/features/FeaturesContext";
 import { CustomerProductBreadcrumbs } from "./components/CustomerProductBreadcrumbs";
 import { FrontendProduct, useAttachState } from "./hooks/useAttachState";
 import { sortProductItems } from "@/utils/productUtils";
@@ -98,9 +97,9 @@ export default function CustomerProductView() {
         new Set(
           product.items
             .filter((item: ProductItem) => item.entity_feature_id != null)
-            .map((item: ProductItem) => item.entity_feature_id),
-        ),
-      ),
+            .map((item: ProductItem) => item.entity_feature_id)
+        )
+      )
     );
 
     if (product.options) {
@@ -133,53 +132,45 @@ export default function CustomerProductView() {
   const { customer } = data;
 
   return (
-    <FeaturesContext.Provider
+    <ProductContext.Provider
       value={{
-        env,
+        ...data,
+        features,
+        setFeatures,
         mutate,
+        env,
+        product,
+        setProduct,
+        selectedEntitlementAllowance,
+        setSelectedEntitlementAllowance,
+        customer: customer as Customer,
+        entities: data.entities as Entity[],
+        entityId,
+        setEntityId,
+        attachState,
+        version,
+        entityFeatureIds,
+        setEntityFeatureIds,
       }}
     >
-      <ProductContext.Provider
-        value={{
-          ...data,
-          features,
-          setFeatures,
-          mutate,
-          env,
-          product,
-          setProduct,
-          selectedEntitlementAllowance,
-          setSelectedEntitlementAllowance,
-          customer: customer as Customer,
-          entities: data.entities as Entity[],
-          entityId,
-          setEntityId,
-          attachState,
-          version,
-          entityFeatureIds,
-          setEntityFeatureIds,
-        }}
-      >
-        <CustomToaster />
-
-        <div className="flex w-full">
-          <div className="flex flex-col gap-4 w-full">
-            <CustomerProductBreadcrumbs />
-            <div className="flex">
-              <div className="flex-1 w-full min-w-sm">
-                {product && <ManageProduct />}
-                {options.length > 0 && (
-                  <ProductOptions options={options} setOptions={setOptions} />
-                )}
-              </div>
+      <CustomToaster />
+      <div className="flex w-full">
+        <div className="flex flex-col gap-4 w-full">
+          <CustomerProductBreadcrumbs />
+          <div className="flex">
+            <div className="flex-1 w-full min-w-sm">
+              {product && <ManageProduct />}
+              {options.length > 0 && (
+                <ProductOptions options={options} setOptions={setOptions} />
+              )}
             </div>
           </div>
-          <div className="max-w-[300px] w-1/3 shrink-1 hidden lg:block">
-            <ProductSidebar />
-          </div>
         </div>
-      </ProductContext.Provider>
-    </FeaturesContext.Provider>
+        <div className="max-w-[300px] w-1/3 shrink-1 hidden lg:block">
+          <ProductSidebar />
+        </div>
+      </div>
+    </ProductContext.Provider>
   );
 }
 

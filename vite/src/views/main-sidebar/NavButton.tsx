@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { getRedirectUrl, notNullish } from "@/utils/genUtils";
+import { getRedirectUrl, notNullish, pushPage } from "@/utils/genUtils";
 import { AppEnv } from "@autumn/shared";
 import { Link, useSearchParams } from "react-router";
 import { useEffect, useState } from "react";
@@ -108,10 +108,13 @@ export const NavButton = ({
           to={
             href
               ? href
-              : getRedirectUrl(
-                  `/${value}${subValue ? `?tab=${subValue}` : ""}`,
-                  env
-                )
+              : pushPage({
+                  path: `/${value}`,
+                  queryParams: {
+                    tab: subValue,
+                  },
+                  preserveParams: false,
+                })
           }
           className={outerDivClass}
           target={href ? "_blank" : undefined}

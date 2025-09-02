@@ -28,8 +28,9 @@ export const SidebarGroup = ({
               productGroup ? "opacity-100 my-0.5" : "opacity-0"
             )}
           >
-            {subTabs.map((subTab) => (
+            {subTabs.map((subTab, index) => (
               <NavButton
+                key={index}
                 value={value}
                 subValue={subTab.value}
                 title={keyToTitle(subTab.title)}

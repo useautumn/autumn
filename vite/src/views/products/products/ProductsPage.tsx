@@ -1,18 +1,17 @@
+import CreateProduct from "./components/CreateProduct";
 import { PageSectionHeader } from "@/components/general/PageSectionHeader";
 import { Badge } from "@/components/ui/badge";
-import { parseAsBoolean, useQueryStates } from "nuqs";
-import CreateProduct from "./CreateProduct";
-import { ProductsTable } from "../ProductsTable";
+import { ProductsTable } from "./components/ProductsTable";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { HamburgerMenu } from "@/components/general/table-components/HamburgerMenu";
+import { useState } from "react";
+import { useProductsQueryState } from "../hooks/useProductsQueryState";
 
 export const ProductsPage = () => {
-  const [{ showArchived }] = useQueryStates(
-    {
-      showArchived: parseAsBoolean.withDefault(false),
-    },
-    {
-      history: "push",
-    }
-  );
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const { queryStates, setQueryStates } = useProductsQueryState();
+
+  const { products } = useProductsQuery();
 
   return (
     <div>
@@ -21,9 +20,9 @@ export const ProductsPage = () => {
         titleComponent={
           <>
             <span className="text-t2 px-1 rounded-md bg-stone-200 mr-2">
-              {/* {data?.products?.length} */}
+              {products?.length}
             </span>
-            {showArchived && (
+            {queryStates.showArchivedProducts && (
               <Badge className="shadow-none bg-yellow-100 border-yellow-500 text-yellow-500 hover:bg-yellow-100">
                 Archived
               </Badge>
@@ -31,21 +30,25 @@ export const ProductsPage = () => {
           </>
         }
         addButton={<CreateProduct />}
-        // menuComponent={
-        //   <HamburgerMenu
-        //     dropdownOpen={dropdownOpen}
-        //     setDropdownOpen={setDropdownOpen}
-        //     actions={[
-        //       {
-        //         type: "item",
-        //         label: showArchived
-        //           ? `Show active products`
-        //           : `Show archived products`,
-        //         onClick: () => setShowArchived((prev) => !prev),
-        //       },
-        //     ]}
-        //   />
-        // }
+        menuComponent={
+          <HamburgerMenu
+            dropdownOpen={dropdownOpen}
+            setDropdownOpen={setDropdownOpen}
+            actions={[
+              {
+                type: "item",
+                label: queryStates.showArchivedProducts
+                  ? `Show active products`
+                  : `Show archived products`,
+                onClick: () =>
+                  setQueryStates({
+                    ...queryStates,
+                    showArchivedProducts: !queryStates.showArchivedProducts,
+                  }),
+              },
+            ]}
+          />
+        }
       />
       <ProductsTable />
     </div>

@@ -23,12 +23,9 @@ export const useProductsQuery = () => {
     queryFn: fetchProducts,
   });
 
-  const {
-    data: countsData,
-    isLoading: isCountsLoading,
-    error: countsError,
-    refetch: countsRefetch,
-  } = useQuery<Record<string, ProductCounts>>({
+  const { data: countsData, refetch: countsRefetch } = useQuery<
+    Record<string, ProductCounts>
+  >({
     queryKey: ["product_counts"],
     queryFn: fetchProductCounts,
   });
@@ -39,8 +36,11 @@ export const useProductsQuery = () => {
     groupToDefaults: data?.groupToDefaults || {},
     isLoading,
     error,
-    mutate: async () => {
+    refetch: async () => {
       await Promise.all([countsRefetch(), refetch()]);
     },
+    // mutate: async () => {
+    //   await Promise.all([countsRefetch(), refetch()]);
+    // },
   };
 };

@@ -3,7 +3,6 @@ import CustomerView from "./views/customers/customer/CustomerView";
 import CustomerProductView from "./views/customers/customer/product/CustomerProductView";
 import CustomersView from "./views/customers/CustomersView";
 import DevScreen from "./views/developer/DevView";
-import FeaturesView from "./views/features/FeaturesView";
 import ProductView from "./views/products/product/ProductView";
 import ProductsView from "./views/products/ProductsView";
 import CliAuth from "./views/CliAuth";
@@ -34,14 +33,7 @@ export default function App() {
           <Route path="/onboarding" element={<OnboardingView2 />} />
           <Route path="/sandbox/onboarding" element={<OnboardingView2 />} />
           <Route path="/cli-auth" element={<CliAuth />} />
-          <Route
-            path="/features"
-            element={<FeaturesView env={AppEnv.Live} />}
-          />
-          <Route
-            path="/sandbox/features"
-            element={<FeaturesView env={AppEnv.Sandbox} />}
-          />
+
           <Route
             path="/products"
             element={<ProductsView env={AppEnv.Live} />}

@@ -16,12 +16,8 @@ import { ItemConfigFooter } from "../product-item-config/item-config-footer/Item
 import { useEffect, useState } from "react";
 import { useProductContext } from "../../ProductContext";
 import { CreateItemIntro } from "./CreateItemIntro";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getItemType } from "@/utils/product/productItemUtils";
-import { getFeature } from "@/utils/product/entitlementUtils";
-import { defaultPaidFeatureItem, defaultPriceItem } from "./defaultItemConfigs";
-import { notNullish } from "@/utils/genUtils";
-import { CreateFeature } from "@/views/features/CreateFeature";
+import { CreateFeature } from "@/views/products/features/components/CreateFeature";
 import { CreateItemStep } from "../utils/CreateItemStep";
 import { useSteps } from "../useSteps";
 import { SelectFeatureStep } from "../product-item-config/components/SelectFeature";

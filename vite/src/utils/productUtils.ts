@@ -1,4 +1,4 @@
-import { ProductItemType } from "@autumn/shared";
+import { ProductItemType, ProductV2 } from "@autumn/shared";
 
 import { ProductItem } from "@autumn/shared";
 import { getItemType } from "./product/productItemUtils";
@@ -18,4 +18,11 @@ export const sortProductItems = (items: ProductItem[]) => {
   });
 
   return sortedItems;
+};
+
+export const getVersionCounts = (products: ProductV2[]) => {
+  return products.reduce((acc: any, product: any) => {
+    acc[product.id] = product.version;
+    return acc;
+  }, {});
 };

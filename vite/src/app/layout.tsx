@@ -22,6 +22,8 @@ import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { useGlobalErrorHandler } from "@/hooks/common/useGlobalErrorHandler";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
+import { useCusSearchQuery } from "@/views/customers/hooks/useCusSearchQuery";
 
 export function MainLayout() {
   const env = useEnv();
@@ -122,6 +124,8 @@ const MainContent = () => {
 
   useProductsQuery();
   useFeaturesQuery();
+  useRewardsQuery();
+  useCusSearchQuery();
 
   return (
     <AppContext.Provider value={{}}>

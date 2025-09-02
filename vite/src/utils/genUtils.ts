@@ -49,13 +49,60 @@ export const envToPath = (env: AppEnv, currentPath: string) => {
   return null;
 };
 
-export const navigateTo = (path: string, navigate: any, env: AppEnv) => {
+export const navigateTo = (path: string, navigate: any, env?: AppEnv) => {
+  const curPath = window.location.pathname;
+  const curEnv = getEnvFromPath(curPath);
+
   path = path.replace("@", "%40");
-  if (env === AppEnv.Sandbox) {
+  if (curEnv === AppEnv.Sandbox) {
     navigate(`/sandbox${path}`);
   } else {
     navigate(path);
   }
+};
+
+export const pushPage = ({
+  path,
+  queryParams,
+  navigate,
+  preserveParams = true,
+}: {
+  path: string;
+  queryParams: Record<string, string | undefined>;
+  navigate?: any;
+  preserveParams?: boolean;
+}) => {
+  const curPath = window.location.pathname;
+  const curEnv = getEnvFromPath(curPath);
+
+  const curQueryParams = new URLSearchParams(window.location.search);
+  if (!preserveParams) {
+    curQueryParams.forEach((value, key) => {
+      curQueryParams.delete(key);
+    });
+  }
+
+  if (queryParams) {
+    for (const [key, value] of Object.entries(queryParams)) {
+      if (value) {
+        curQueryParams.set(key, value);
+      }
+    }
+  }
+
+  path = path.replace("@", "%40");
+
+  if (curQueryParams.toString()) {
+    path = `${path}?${curQueryParams.toString()}`;
+  }
+  if (navigate) {
+    if (curEnv === AppEnv.Sandbox) {
+      navigate(`/sandbox${path}`);
+    } else {
+      navigate(path);
+    }
+  }
+  return path;
 };
 
 export const getRedirectUrl = (path: string, env: AppEnv) => {
