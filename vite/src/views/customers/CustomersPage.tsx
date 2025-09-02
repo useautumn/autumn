@@ -1,24 +1,27 @@
 "use client";
 
-import React, { useRef } from "react";
-import { AppEnv } from "@autumn/shared";
+import { useRef } from "react";
 import { CustomersContext } from "./CustomersContext";
 import { CustomersTable } from "./components/CustomersTable";
-import LoadingScreen from "../general/LoadingScreen";
 import { CustomersTopBar } from "./components/customers-top-bar/CustomersTopBar";
 import { useCusSearchQuery } from "./hooks/useCusSearchQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useCustomersQueryStates } from "./hooks/useCustomersQueryStates";
 import { useSavedViewsQuery } from "./hooks/useSavedViewsQuery";
+import LoadingScreen from "../general/LoadingScreen";
+import { useFullCusSearchQuery } from "./hooks/useFullCusSearchQuery";
 
-function CustomersView({ env }: { env: AppEnv }) {
+function CustomersPage() {
   const { customers, totalCount, isLoading, error, refetch } =
     useCusSearchQuery();
 
   const { queryStates, setQueryStates } = useCustomersQueryStates();
 
   const { products, isLoading: productsLoading } = useProductsQuery();
+
   useSavedViewsQuery();
+  useFullCusSearchQuery();
+
   // const { data, isLoading, error, mutate } = useAxiosPostSWR({
   //   url: `/v1/customers/all/search`,
   //   env,
@@ -217,4 +220,4 @@ function CustomersView({ env }: { env: AppEnv }) {
   );
 }
 
-export default CustomersView;
+export default CustomersPage;

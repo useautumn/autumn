@@ -9,37 +9,36 @@ import {
 import { Entity, Feature, FeatureUsageType } from "@autumn/shared";
 import { useLocation, useNavigate } from "react-router";
 
-import { CreateEntity } from "./create-entity/CreateEntity";
+import { CreateEntity } from "../customer-sidebar/create-entity/CreateEntity";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
-import { useCustomerContext } from "../CustomerContext";
+import { useCustomerContext } from "../../CustomerContext";
+import { useCusQuery } from "../../hooks/useCusQuery";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export const SelectEntity = ({
   entityId,
   entities,
 }: {
   entityId?: string;
-
   entities: Entity[];
 }) => {
   const cusContext = useCustomerContext();
+
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { features } = useFeaturesQuery();
 
   if (!entities || entities.length === 0) {
-    // Only show create entity flow if there are continuous use features
-    const hasContinuousUseFeatures = cusContext?.features?.some(
+    const hasContinuousUseFeatures = features?.some(
       (feature: Feature) =>
         feature.config?.usage_type === FeatureUsageType.Continuous
     );
 
-    if (!hasContinuousUseFeatures) {
-      return null;
-    }
+    if (!hasContinuousUseFeatures) return null;
 
-    // Create entity flow
     return (
       <>
         <CreateEntity open={open} setOpen={setOpen} />

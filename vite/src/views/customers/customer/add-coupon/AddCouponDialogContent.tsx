@@ -12,20 +12,25 @@ import { getBackendErr } from "@/utils/genUtils";
 import { toast } from "sonner";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useEnv } from "@/utils/envUtils";
 import { getOriginalCouponId } from "@/utils/product/couponUtils";
 import { WarningBox } from "@/components/general/modal-components/WarningBox";
+import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
+import { useCusQuery } from "../hooks/useCusQuery";
+import { useCusReferralQuery } from "../hooks/useCusReferralQuery";
 
 const AddCouponDialogContent = ({
   setOpen,
 }: {
   setOpen: (open: boolean) => void;
 }) => {
-  const { cusMutate, customer, coupons, discount } = useCustomerContext();
+  const { stripeCus } = useCusReferralQuery();
+  const { customer, refetch } = useCusQuery();
+
   const [couponSelected, setCouponSelected] = useState<Reward | null>(null);
   const [loading, setLoading] = useState(false);
-  const env = useEnv();
-  const axiosInstance = useAxiosInstance({ env });
+  const axiosInstance = useAxiosInstance();
+
+  const { rewards } = useRewardsQuery();
 
   const handleAddClicked = async () => {
     try {
@@ -36,7 +41,7 @@ const AddCouponDialogContent = ({
         coupon_id: couponSelected!.internal_id,
       });
       setOpen(false);
-      await cusMutate();
+      await refetch();
       toast.success("Reward added to customer");
     } catch (error) {
       toast.error(getBackendErr(error, "Failed to create coupon"));
@@ -45,17 +50,19 @@ const AddCouponDialogContent = ({
     }
   };
 
-  const existingDiscount = discount;
+  const existingDiscount = stripeCus?.discount;
 
   const getExistingCoupon = () => {
-    if (discount) {
-      return coupons.find(
-        (c: Reward) => c.id === getOriginalCouponId(discount.coupon.id),
+    if (existingDiscount) {
+      return rewards.find(
+        (c: Reward) => c.id === getOriginalCouponId(existingDiscount.coupon.id)
       );
     } else {
       return null;
     }
   };
+
+  if (!rewards) return null;
 
   return (
     <DialogContent className="min-w-sm max-w-md">
@@ -70,7 +77,7 @@ const AddCouponDialogContent = ({
         <Select
           value={couponSelected?.internal_id}
           onValueChange={(value) => {
-            const coupon = coupons.find((c: Reward) => c.internal_id === value);
+            const coupon = rewards.find((c: Reward) => c.internal_id === value);
             if (coupon) {
               setCouponSelected(coupon);
             }
@@ -82,8 +89,8 @@ const AddCouponDialogContent = ({
           <SelectContent>
             {/* If empty */}
 
-            {coupons && coupons.length > 0 ? (
-              coupons.map((coupon: Reward) => {
+            {rewards && rewards.length > 0 ? (
+              rewards.map((coupon: Reward) => {
                 if (coupon.type == RewardType.FreeProduct) return null;
                 return (
                   <SelectItem

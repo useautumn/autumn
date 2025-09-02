@@ -7,9 +7,10 @@ import { ArrowUpRightFromSquare } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router";
-import { useCustomerContext } from "../CustomerContext";
 import { useEnv } from "@/utils/envUtils";
 import { SidebarLabel } from "@/components/general/sidebar/sidebar-label";
+import { useCusQuery } from "../../hooks/useCusQuery";
+
 export const CustomerDetails = ({
   setIsModalOpen,
   setModalType,
@@ -17,7 +18,7 @@ export const CustomerDetails = ({
   setIsModalOpen: (isModalOpen: boolean) => void;
   setModalType: (modalType: string) => void;
 }) => {
-  const { customer } = useCustomerContext();
+  const { customer } = useCusQuery();
   const env = useEnv();
 
   return (

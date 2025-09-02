@@ -3,7 +3,7 @@ import { useProductContext } from "./ProductContext";
 import { useNavigate } from "react-router";
 import { useEnv } from "@/utils/envUtils";
 import { ProductItemTable } from "./product-item/ProductItemTable";
-import { SelectEntity } from "@/views/customers/customer/customer-sidebar/select-entity";
+import { SelectEntity } from "@/views/customers/customer/components/customer-header/SelectEntity";
 
 export const ManageProduct = ({
   hideAdminHover = false,

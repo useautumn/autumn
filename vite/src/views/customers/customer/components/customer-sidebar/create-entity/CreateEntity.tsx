@@ -7,14 +7,15 @@ import {
   DialogFooter,
   DialogContent,
 } from "@/components/ui/dialog";
-import { useCustomerContext } from "../../CustomerContext";
-import { useState } from "react";
-import { EntityConfig } from "./entity-config";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { toast } from "sonner";
-import { getBackendErr } from "@/utils/genUtils";
-import { useEnv } from "@/utils/envUtils";
+import { useState } from "react";
 import { useNavigate } from "react-router";
+import { EntityConfig } from "./EntityConfig";
+import { getBackendErr } from "@/utils/genUtils";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useCustomerContext } from "../../../CustomerContext";
+import { useCusQuery } from "../../../hooks/useCusQuery";
+
 export const CreateEntity = ({
   open,
   setOpen,
@@ -23,6 +24,7 @@ export const CreateEntity = ({
   setOpen: (open: boolean) => void;
 }) => {
   const cusContext = useCustomerContext();
+  const { customer, refetch } = useCusQuery();
   const navigate = useNavigate();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -31,13 +33,11 @@ export const CreateEntity = ({
     name: "",
   });
 
-  const env = useEnv();
-  const axiosInstance = useAxiosInstance({ env });
+  const axiosInstance = useAxiosInstance();
 
-  if (!cusContext) {
-    return null;
-  }
-  const { customer, cusMutate } = cusContext;
+  if (!cusContext) return null;
+
+  // const { customer, cusMutate } = cusContext;
 
   const handleCreateClicked = async () => {
     setIsLoading(true);
@@ -51,10 +51,10 @@ export const CreateEntity = ({
           name: entity.name || null,
           feature_id: entity.feature_id,
           customer_id: customer.id,
-        },
+        }
       );
 
-      await cusMutate();
+      await refetch();
       setOpen(false);
 
       const params = new URLSearchParams(location.search);

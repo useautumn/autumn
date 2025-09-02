@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import { useCustomersQueryStates } from "../hooks/useCustomersQueryStates";
+import { useCustomersQueryStates } from "../../hooks/useCustomersQueryStates";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { getVersionCounts } from "@/utils/productUtils";
 

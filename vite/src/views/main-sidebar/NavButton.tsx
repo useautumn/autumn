@@ -36,7 +36,7 @@ export const NavButton = ({
   isGroup?: boolean;
 }) => {
   // Get window path
-  env = useEnv();
+  const finalEnv = useEnv();
   const tab = useTab();
   const { expanded } = useSidebarContext();
   const [searchParams] = useSearchParams();

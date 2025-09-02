@@ -1,5 +1,10 @@
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import { compareStatus, navigateTo, notNullish } from "@/utils/genUtils";
+import {
+  compareStatus,
+  navigateTo,
+  notNullish,
+  pushPage,
+} from "@/utils/genUtils";
 import { CusProduct, CusProductStatus, FullCusProduct } from "@autumn/shared";
 import { useNavigate } from "react-router";
 import { useCustomerContext } from "../CustomerContext";
@@ -17,24 +22,28 @@ import { CusProductStatusItem } from "../customer-product-list/CusProductStatus"
 import { CusProductEntityItem } from "../components/CusProductEntityItem";
 import { CusProductToolbar } from "./CusProductToolbar";
 import { MultiAttachDialog } from "../product/multi-attach/MultiAttachDialog";
+import { useCusQuery } from "../hooks/useCusQuery";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { getVersionCounts } from "@/utils/productUtils";
 
-export const CustomerProductList = ({
-  customer,
-  products,
-}: {
-  customer: any;
-  products: any;
-}) => {
+export const CustomerProductList = () => {
   const navigate = useNavigate();
-  const { env, versionCounts, entities, entityId, showEntityView } =
-    useCustomerContext();
+  const { customer } = useCusQuery();
+  const { entityId, showEntityView } = useCustomerContext();
+
+  const { products } = useProductsQuery();
+  const versionCounts = getVersionCounts(products);
+
+  // const { env, versionCounts, entities, entityId, showEntityView } =
+  //   useCustomerContext();
 
   const [showExpired, setShowExpired] = useState(false);
-
   const [multiAttachOpen, setMultiAttachOpen] = useState(false);
 
-  const sortedProducts = customer.products
-    .filter((p: CusProduct & { entitlements: any[] }) => {
+  const entities = customer.entities;
+
+  const sortedProducts = customer.customer_products
+    .filter((cp: FullCusProduct) => {
       if (showExpired) {
         return true;
       }
@@ -42,17 +51,17 @@ export const CustomerProductList = ({
       const entity = entities.find((e: any) => e.id === entityId);
 
       const entityMatches =
-        entity && notNullish(p.internal_entity_id)
-          ? p.internal_entity_id === entity.internal_id ||
-            p.entitlements.some(
-              (cusEnt: any) =>
-                cusEnt.entities &&
-                Object.keys(cusEnt.entities).includes(entity.internal_id)
+        entity && notNullish(cp.internal_entity_id)
+          ? cp.internal_entity_id === entity.internal_id ||
+            cp.customer_entitlements.some(
+              (ce: any) =>
+                ce.entities &&
+                Object.keys(ce.entities).includes(entity.internal_id)
             )
           : true;
 
       return (
-        p.status !== CusProductStatus.Expired &&
+        cp.status !== CusProductStatus.Expired &&
         (entityId ? entityMatches : true)
       );
     })
@@ -93,7 +102,7 @@ export const CustomerProductList = ({
 
   return (
     <div>
-      <div className="flex items-center grid grid-cols-10 gap-8 justify-between border-y bg-stone-100 pl-10 pr-7 h-10">
+      <div className="items-center grid grid-cols-10 gap-8 justify-between border-y bg-stone-100 pl-10 pr-7 h-10">
         <h2 className="text-sm text-t2 font-medium col-span-2 flex">
           Products
         </h2>
@@ -112,11 +121,11 @@ export const CustomerProductList = ({
             </Button>
             {/* <CreateEntitlement buttonType={"feature"} /> */}
             <div className="flex items-center gap-0">
-              <MultiAttachDialog
+              {/* <MultiAttachDialog
                 open={multiAttachOpen}
                 setOpen={setMultiAttachOpen}
               />
-              <AddProduct setMultiAttachOpen={setMultiAttachOpen} />
+              <AddProduct setMultiAttachOpen={setMultiAttachOpen} /> */}
             </div>
           </div>
         </div>
@@ -150,15 +159,26 @@ export const CustomerProductList = ({
               const entity = entities.find(
                 (e: any) => e.internal_id === cusProduct.internal_entity_id
               );
-              navigateTo(
-                `/customers/${customer.id || customer.internal_id}/${
-                  cusProduct.product_id
-                }?id=${cusProduct.id}${
-                  entity ? `&entity_id=${entity.id || entity.internal_id}` : ""
-                }`,
+
+              pushPage({
+                path: `/customers/${customer.id || customer.internal_id}/${cusProduct.product_id}`,
+                queryParams: {
+                  id: cusProduct.id,
+                  entity_id: entity
+                    ? entity.id || entity.internal_id
+                    : undefined,
+                },
                 navigate,
-                env
-              );
+              });
+
+              // navigateTo(
+              //   `/customers/${customer.id || customer.internal_id}/${
+              //     cusProduct.product_id
+              //   }?id=${cusProduct.id}${
+              //     entity ? `&entity_id=${entity.id || entity.internal_id}` : ""
+              //   }`,
+              //   navigate
+              // );
             }}
           >
             <Item className="col-span-3">

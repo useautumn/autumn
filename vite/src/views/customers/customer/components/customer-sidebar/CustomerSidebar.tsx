@@ -2,14 +2,17 @@ import { useState } from "react";
 import { Accordion } from "@/components/ui/accordion";
 import { Dialog } from "@/components/ui/dialog";
 import { CustomerRewards } from "./customer-rewards";
-import { useCustomerContext } from "../CustomerContext";
-import UpdateCustomerDialog from "../UpdateCustomerDialog";
-import { CustomerToolbar } from "../CustomerToolbar";
-import { CustomerDetails } from "./customer-details";
+import { useCustomerContext } from "../../CustomerContext";
+import UpdateCustomerDialog from "../../UpdateCustomerDialog";
+import { CustomerToolbar } from "../../CustomerToolbar";
+import { CustomerDetails } from "./CustomerDetails";
 import { CustomerEntities } from "./CustomerEntities";
+import { useCusQuery } from "../../hooks/useCusQuery";
 
 export const CustomerSidebar = () => {
-  const { customer, entities } = useCustomerContext();
+  const { customer } = useCusQuery();
+  const entities = customer.entities;
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState("coupon");
 

@@ -7,8 +7,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useCustomerContext } from "../../CustomerContext";
+import { useCustomerContext } from "../../../CustomerContext";
 import { Feature, FeatureUsageType } from "@autumn/shared";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export const EntityConfig = ({
   entity,
@@ -17,7 +18,8 @@ export const EntityConfig = ({
   entity: any;
   setEntity: (entity: any) => void;
 }) => {
-  const { features } = useCustomerContext();
+  const { features } = useFeaturesQuery();
+
   return (
     <>
       <div className="flex gap-2">

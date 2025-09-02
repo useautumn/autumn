@@ -68,12 +68,12 @@ export const pushPage = ({
   preserveParams = true,
 }: {
   path: string;
-  queryParams: Record<string, string | undefined>;
+  queryParams?: Record<string, string | undefined>;
   navigate?: any;
   preserveParams?: boolean;
 }) => {
-  const curPath = window.location.pathname;
-  const curEnv = getEnvFromPath(curPath);
+  const pathname = window.location.pathname;
+  const curEnv = getEnvFromPath(pathname);
 
   const curQueryParams = new URLSearchParams(window.location.search);
   if (!preserveParams) {
@@ -95,13 +95,15 @@ export const pushPage = ({
   if (curQueryParams.toString()) {
     path = `${path}?${curQueryParams.toString()}`;
   }
-  if (navigate) {
-    if (curEnv === AppEnv.Sandbox) {
-      navigate(`/sandbox${path}`);
-    } else {
-      navigate(path);
-    }
+
+  if (curEnv === AppEnv.Sandbox) {
+    path = `/sandbox${path}`;
   }
+
+  if (navigate) {
+    navigate(path);
+  }
+
   return path;
 };
 

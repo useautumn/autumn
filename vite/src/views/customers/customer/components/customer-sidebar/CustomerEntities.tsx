@@ -1,15 +1,19 @@
 import { SideAccordion } from "@/components/general/SideAccordion";
 import { SidebarLabel } from "@/components/general/sidebar/sidebar-label";
 
-import { useCustomerContext } from "../CustomerContext";
 import { Entity, Feature } from "@autumn/shared";
 
 import { getFeatureName } from "@autumn/shared";
 
 import CopyButton from "@/components/general/CopyButton";
+import { useCusQuery } from "../../hooks/useCusQuery";
+import { useCustomerContext } from "../../CustomerContext";
 
 export const CustomerEntities = () => {
-  const { entityId, setEntityId, entities, features } = useCustomerContext();
+  const { customer, features } = useCusQuery();
+  const { entityId } = useCustomerContext();
+
+  const entities = customer.entities;
 
   const entity = entities.find(
     (entity: Entity) =>
