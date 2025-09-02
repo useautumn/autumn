@@ -38,7 +38,7 @@ let orgSlugs = process.env.ORG_SLUGS!.split(",");
 const skipEmails = process.env.SKIP_EMAILS!.split(",");
 const skipIds = ["cus_2tXCCwC6iyiftgA6ndSo1Ubb2dx"];
 
-orgSlugs = ["alex"];
+orgSlugs = ["popfly"];
 
 const getSingleCustomer = async ({
   stripeCli,
@@ -271,7 +271,7 @@ export const check = async () => {
 
     let customerId;
 
-    // customerId = "1zjjkHRYKJcw6WXlLqxXLc3uMIR2";
+    customerId = "company_316";
 
     let customers: FullCustomer[] = [];
     let stripeSubs: Stripe.Subscription[] = [];

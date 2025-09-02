@@ -10,6 +10,8 @@ import {
   Code,
   Package,
   PanelLeft,
+  SquareTerminal,
+  ChartColumnBig,
 } from "lucide-react";
 import { EnvDropdown } from "./EnvDropdown";
 import { OrgDropdown } from "./components/OrgDropdown";
@@ -104,14 +106,14 @@ export const MainSidebar = () => {
             />
             <NavButton
               value="analytics"
-              icon={<ChartBar size={14} />}
+              icon={<ChartColumnBig size={14} />}
               title="Analytics"
               env={env}
             />
             <div>
               <NavButton
                 value="dev"
-                icon={<Code size={14} />}
+                icon={<SquareTerminal size={14} />}
                 title="Developer"
                 env={env}
                 onClick={() => setDevGroupOpen((prev) => !prev)}
@@ -153,7 +155,7 @@ export const MainSidebar = () => {
           </div> */}
           </div>
         </div>
-        {/* Sidebar bottom */}
+
         <SidebarBottom />
       </div>
     </SidebarContext.Provider>
