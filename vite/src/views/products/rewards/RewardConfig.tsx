@@ -33,7 +33,7 @@ export const RewardConfig = ({
     if (!idChanged) {
       setReward({
         ...reward,
-        id: slugify(reward.name || ""),
+        id: slugify(reward.id || ""),
       });
     }
   }, [reward.name]);
