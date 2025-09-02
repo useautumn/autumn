@@ -217,6 +217,20 @@ export const handleAttachErrors = async ({
 }) => {
   const { onlyCheckout } = config;
 
+  const isEntityAttach = Boolean(attachParams.entityId || attachParams.internalEntityId);
+  if (isEntityAttach) {
+    const hasPerEntityFeature = attachParams.entitlements?.some(
+      (ent) => !!ent.entity_feature_id
+    );
+    if (hasPerEntityFeature) {
+      throw new RecaseError({
+        message: "Product contains per-entity features and cannot be attached to an entity",
+        code: ErrCode.InvalidRequest,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
+  }
+
   if (branch === AttachBranch.MultiAttach) {
     await handleMultiAttachErrors({
       attachParams,
