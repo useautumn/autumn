@@ -165,6 +165,32 @@ export const SelectFeatureDropdown = ({
     setHasCleared(true);
   };
 
+  const totalFeatureCount = featureOptions.length;
+  const selectedFeatureCount = featureOptions.filter((o) => o.selected).length;
+  const allSelected = selectedFeatureCount > 0 && selectedFeatureCount === totalFeatureCount;
+  const someSelected = selectedFeatureCount > 0 && selectedFeatureCount < totalFeatureCount;
+
+  const handleToggleAll = () => {
+    if (allSelected) {
+      updateQueryParams([], currentEventNames);
+      return;
+    }
+
+    const availableSlots = MAX_NUM_SELECTED - currentEventNames.length;
+    if (availableSlots <= 0) {
+      toast.error(`You can only select up to ${MAX_NUM_SELECTED} events/features`);
+      return;
+    }
+
+    const desiredFeatureIds = featureOptions.map((o) => o.id);
+    const nextFeatureIds = desiredFeatureIds.slice(0, availableSlots);
+    if (desiredFeatureIds.length > availableSlots) {
+      toast.error(`You can only select up to ${MAX_NUM_SELECTED} events/features`);
+    }
+
+    updateQueryParams(nextFeatureIds, currentEventNames);
+  };
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -192,6 +218,22 @@ export const SelectFeatureDropdown = ({
           <div className="max-h-[300px] overflow-y-auto">
             <CommandList>
               <CommandEmpty>No results found.</CommandEmpty>
+
+              <CommandGroup>
+                <CommandItem onSelect={handleToggleAll} className="cursor-pointer">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      checked={allSelected}
+                      ref={(ref: any) => {
+                        if (ref) {
+                          ref.indeterminate = someSelected && !allSelected;
+                        }
+                      }}
+                    />
+                    <span className="text-xs">Select All</span>
+                  </div>
+                </CommandItem>
+              </CommandGroup>
 
               {filteredFeatures.length > 0 && (
                 <CommandGroup heading="Features">
