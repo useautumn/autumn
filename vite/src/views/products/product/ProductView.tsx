@@ -1,28 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import ErrorScreen from "@/views/general/ErrorScreen";
 import LoadingScreen from "@/views/general/LoadingScreen";
+import ProductSidebar from "./ProductSidebar";
+import ProductViewBreadcrumbs from "./components/ProductViewBreadcrumbs";
+import ConfirmNewVersionDialog from "./versioning/ConfirmNewVersionDialog";
 
+import { toast } from "sonner";
+import { useState } from "react";
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 import { ProductContext } from "./ProductContext";
 import { useParams, useSearchParams } from "react-router";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { ManageProduct } from "./ManageProduct";
 import { AppEnv, UpdateProductSchema } from "@autumn/shared";
-import { toast } from "sonner";
 import { ProductService } from "@/services/products/ProductService";
 import { getBackendErr } from "@/utils/genUtils";
 import { UpdateProductButton } from "@/views/products/product/components/UpdateProductButton";
-import { updateProduct as updateProductUtil } from "./utils/updateProduct";
-import { isFreeProduct } from "@/utils/product/priceUtils";
-
-import ErrorScreen from "@/views/general/ErrorScreen";
-import ProductSidebar from "./ProductSidebar";
-import { FeaturesContext } from "@/views/features/FeaturesContext";
-import ProductViewBreadcrumbs from "./components/ProductViewBreadcrumbs";
-import ConfirmNewVersionDialog from "./versioning/ConfirmNewVersionDialog";
-import { useProductData } from "./hooks/useProductData";
 import { useProductChangedAlert } from "./hooks/useProductChangedAlert";
+import { useProductData } from "./hooks/useProductData";
 
 function ProductView({ env }: { env: AppEnv }) {
   const axiosInstance = useAxiosInstance();
@@ -112,62 +108,55 @@ function ProductView({ env }: { env: AppEnv }) {
   };
 
   return (
-    <FeaturesContext.Provider
+    <ProductContext.Provider
       value={{
-        env,
+        ...data,
+        features,
+        setFeatures,
         mutate,
+        env,
+        product,
+        setProduct,
+        selectedEntitlementAllowance,
+        setSelectedEntitlementAllowance,
+        counts,
+        version,
+        mutateCount,
+        actionState,
+        handleCreateProduct: updateProductClicked,
+        entityFeatureIds,
+        setEntityFeatureIds,
+        hasChanges,
+        buttonLoading,
+        setButtonLoading,
       }}
     >
-      <ProductContext.Provider
-        value={{
-          ...data,
-          features,
-          setFeatures,
-          mutate,
-          env,
-          product,
-          setProduct,
-          selectedEntitlementAllowance,
-          setSelectedEntitlementAllowance,
-          counts,
-          version,
-          mutateCount,
-          actionState,
-          handleCreateProduct: updateProductClicked,
-          entityFeatureIds,
-          setEntityFeatureIds,
-          hasChanges,
-          buttonLoading,
-          setButtonLoading,
-        }}
-      >
-        <ConfirmNewVersionDialog
-          open={showNewVersionDialog}
-          setOpen={setShowNewVersionDialog}
-          createProduct={updateProduct}
-        />
-        <div className="flex w-full">
-          <div className="flex flex-col gap-4 w-full">
-            <ProductViewBreadcrumbs />
+      <ConfirmNewVersionDialog
+        open={showNewVersionDialog}
+        setOpen={setShowNewVersionDialog}
+        createProduct={updateProduct}
+      />
+      <div className="flex w-full">
+        <div className="flex flex-col gap-4 w-full">
+          <ProductViewBreadcrumbs />
 
-            <div className="flex">
-              <div className="flex-1 w-full min-w-sm">
-                <ManageProduct />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 p-10 w-full lg:hidden">
-              <div className="w-fit">
-                <UpdateProductButton />
-              </div>
+          <div className="flex">
+            <div className="flex-1 w-full min-w-sm">
+              <ManageProduct />
             </div>
           </div>
-          <div className="flex max-w-md w-1/3 shrink-1 lg:block lg:min-w-xs sticky top-0">
-            <ProductSidebar />
+          <div className="flex justify-end gap-2 p-10 w-full lg:hidden">
+            <div className="w-fit">
+              <UpdateProductButton />
+            </div>
           </div>
         </div>
-        {modal}
-      </ProductContext.Provider>
-    </FeaturesContext.Provider>
+        <div className="flex max-w-md w-1/3 shrink-1 lg:block lg:min-w-xs sticky top-0">
+          <ProductSidebar />
+        </div>
+      </div>
+      {modal}
+    </ProductContext.Provider>
   );
 }
 

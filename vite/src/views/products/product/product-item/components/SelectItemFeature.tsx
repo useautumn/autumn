@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/select";
 import { useProductItemContext } from "../ProductItemContext";
 import { useProductContext } from "../../ProductContext";
-import { FeatureTypeBadge } from "@/views/features/FeatureTypeBadge";
+import { FeatureTypeBadge } from "@/views/products/features/components/FeatureTypeBadge";
 import { Feature, FeatureType, ProductItemType } from "@autumn/shared";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";

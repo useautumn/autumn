@@ -24,9 +24,34 @@ import { CusReadService } from "./CusReadService.js";
 import { StatusCodes } from "http-status-codes";
 import { cusProductToProduct } from "./cusProducts/cusProductUtils/convertCusProduct.js";
 import { createOrgResponse } from "../orgs/orgUtils.js";
-import { getCustomerSub } from "./attach/attachUtils/convertAttachParams.js";
+import { routeHandler } from "@/utils/routerUtils.js";
+import { CusSearchService } from "./CusSearchService.js";
 
 export const cusRouter: Router = Router();
+
+cusRouter.post("/all/search", (req, res) =>
+  routeHandler({
+    req,
+    res,
+    action: "search customers",
+    handler: async (req, res) => {
+      const { search, page_size = 50, page = 1, last_item, filters } = req.body;
+
+      const { data: customers, count } = await CusSearchService.search({
+        db: req.db,
+        orgId: req.orgId,
+        env: req.env,
+        search,
+        filters,
+        lastItem: last_item,
+        pageNumber: page,
+        pageSize: page_size,
+      });
+
+      res.status(200).json({ customers, totalCount: Number(count) });
+    },
+  })
+);
 
 cusRouter.get("/:customer_id/events", async (req: any, res: any) => {
   try {

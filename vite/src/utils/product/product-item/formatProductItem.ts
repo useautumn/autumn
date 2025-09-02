@@ -2,6 +2,7 @@ import {
   BillingInterval,
   Feature,
   FeatureType,
+  FrontendOrg,
   Infinite,
   Organization,
   ProductItem,
@@ -30,31 +31,31 @@ const getIntervalString = ({
 
 export const getPaidFeatureString = ({
   item,
-  org,
+  currency = "USD",
   features,
 }: {
   item: ProductItem;
-  org: Organization;
+  currency?: string;
   features: Feature[];
 }) => {
   let amountStr = "";
 
   if (item.price) {
     amountStr = formatAmount({
-      defaultCurrency: org?.default_currency || "USD",
+      defaultCurrency: currency,
       amount: item.price,
     });
   } else if (item.tiers && item.tiers.length == 1) {
     amountStr = formatAmount({
-      defaultCurrency: org?.default_currency || "USD",
+      defaultCurrency: currency,
       amount: item.tiers![0].amount,
     });
   } else {
     amountStr = `${formatAmount({
-      defaultCurrency: org?.default_currency || "USD",
+      defaultCurrency: currency,
       amount: item.tiers![0].amount,
     })} - ${formatAmount({
-      defaultCurrency: org?.default_currency || "USD",
+      defaultCurrency: currency,
       amount: item.tiers![item.tiers!.length - 1].amount,
     })}`;
   }
@@ -82,12 +83,11 @@ export const getPaidFeatureString = ({
 
 const getFixedPriceString = ({
   item,
-  org,
+  currency = "USD",
 }: {
   item: ProductItem;
-  org: Organization;
+  currency?: string;
 }) => {
-  const currency = org?.default_currency || "USD";
   const formattedAmount = formatAmount({
     defaultCurrency: currency,
     amount: item.price!,
@@ -135,7 +135,7 @@ export const formatProductItemText = ({
   features,
 }: {
   item: ProductItem;
-  org: Organization;
+  org?: FrontendOrg;
   features: Feature[];
 }) => {
   if (!item) return "";
@@ -143,8 +143,12 @@ export const formatProductItemText = ({
   const itemType = getItemType(item);
 
   if (itemType == ProductItemType.FeaturePrice) {
-    return getPaidFeatureString({ item, org, features });
+    return getPaidFeatureString({
+      item,
+      currency: org?.default_currency,
+      features,
+    });
   } else if (itemType == ProductItemType.Price) {
-    return getFixedPriceString({ item, org });
+    return getFixedPriceString({ item, currency: org?.default_currency });
   }
 };

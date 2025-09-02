@@ -3,16 +3,13 @@ import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
-import { FeaturesContext } from "@/views/features/FeaturesContext";
 import { CreateFreeTrial } from "@/views/products/product/free-trial/CreateFreeTrial";
 import { ManageProduct } from "@/views/products/product/ManageProduct";
 import { ProductContext } from "@/views/products/product/ProductContext";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { Check, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Tooltip } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { ToggleButton } from "@/components/general/ToggleButton";
 
@@ -94,31 +91,24 @@ export const EditProductDialog = ({
           {/* Edit Product */}
         </DialogTitle>
         <div>
-          <FeaturesContext.Provider
+          <ProductContext.Provider
             value={{
-              env,
+              product,
+              setProduct,
               mutate,
+              env,
+              features,
+              setFeatures,
+              entityFeatureIds,
+              setEntityFeatureIds,
             }}
           >
-            <ProductContext.Provider
-              value={{
-                product,
-                setProduct,
-                mutate,
-                env,
-                features,
-                setFeatures,
-                entityFeatureIds,
-                setEntityFeatureIds,
-              }}
-            >
-              <CreateFreeTrial
-                open={freeTrialModalOpen}
-                setOpen={setFreeTrialModalOpen}
-              />
-              <ManageProduct hideAdminHover={true} />
-            </ProductContext.Provider>
-          </FeaturesContext.Provider>
+            <CreateFreeTrial
+              open={freeTrialModalOpen}
+              setOpen={setFreeTrialModalOpen}
+            />
+            <ManageProduct hideAdminHover={true} />
+          </ProductContext.Provider>
         </div>
         <DialogFooter>
           <div className="flex justify-between items-center gap-2 px-10 w-full mt-6">

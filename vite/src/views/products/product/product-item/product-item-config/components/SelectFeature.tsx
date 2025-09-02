@@ -7,7 +7,7 @@ import { useProductContext } from "@/views/products/product/ProductContext";
 import { Feature, FeatureType } from "@autumn/shared";
 import { useProductItemContext } from "../../ProductItemContext";
 import { isFeaturePriceItem } from "@/utils/product/getItemType";
-import { FeatureTypeBadge } from "@/views/features/FeatureTypeBadge";
+import { FeatureTypeBadge } from "@/views/products/features/components/FeatureTypeBadge";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus } from "lucide-react";
 import { CreateItemStep } from "../../utils/CreateItemStep";

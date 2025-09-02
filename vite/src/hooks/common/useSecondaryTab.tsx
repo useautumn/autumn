@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { parseAsString, useQueryStates } from "nuqs";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 
 type SecondaryTabType =
@@ -15,13 +16,18 @@ export const useSecondaryTab = ({
   defaultTab?: SecondaryTabType;
 }) => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  // const [searchParams] = useSearchParams();
+  const [queryStates, setQueryStates] = useQueryStates({
+    tab: parseAsString.withDefault(defaultTab || ""),
+  });
+
+  const [stableStates, setStableStates] = useState(queryStates);
 
   useEffect(() => {
-    if (defaultTab && !searchParams.get("tab")) {
-      navigate(`?tab=${defaultTab}`);
-    }
+    // if (defaultTab && !stableStates.tab) {
+    //   navigate(`?tab=${defaultTab}`);
+    // }
   }, [defaultTab]);
 
-  return (searchParams.get("tab") as SecondaryTabType) || "";
+  return (stableStates.tab as SecondaryTabType) || "";
 };

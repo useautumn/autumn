@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { ChevronDownIcon, Trash } from "lucide-react";
-import { DeleteProductDialog } from "@/views/products/components/DeleteProductDialog";
+import { DeleteProductDialog } from "@/views/products/products/product-row-toolbar/DeleteProductDialog";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 

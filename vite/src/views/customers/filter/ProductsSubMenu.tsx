@@ -5,17 +5,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { Check } from "lucide-react";
-import { useCustomersContext } from "../CustomersContext";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { useCustomersQueryStates } from "../hooks/useCustomersQueryStates";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { getVersionCounts } from "@/utils/productUtils";
 
 export const ProductsSubMenu = () => {
-  const { products, versionCounts, filters, setFilters } =
-    useCustomersContext();
-  const selectedVersions = filters.version
-    ? filters.version.split(",").filter(Boolean)
-    : [];
+  const { products } = useProductsQuery();
+  const { queryStates, setQueryStates } = useCustomersQueryStates();
+  const versionCounts = getVersionCounts(products);
+
+  const selectedVersions = queryStates.version;
 
   // Deduplicate products by ID (since backend may return multiple entries per product, one per version)
   const uniqueProducts =
@@ -63,19 +64,19 @@ export const ProductsSubMenu = () => {
       allProductVersions.every((pv) => selectedVersions.includes(pv.key));
     if (allSelected) {
       // Deselect all
-      setFilters({
-        ...filters,
-        product_id: "",
-        version: "",
-      });
+      // setFilters({
+      //   ...filters,
+      //   product_id: "",
+      //   version: "",
+      // });
     } else {
       // Select all product:version combinations
-      setFilters({
-        ...filters,
-        product_id: "", // Will be handled by version selections
-        version: allProductVersions.map((pv) => pv.key).join(","),
-        none: false,
-      });
+      // setFilters({
+      //   ...filters,
+      //   product_id: "", // Will be handled by version selections
+      //   version: allProductVersions.map((pv) => pv.key).join(","),
+      //   none: false,
+      // });
     }
   };
 
@@ -91,7 +92,7 @@ export const ProductsSubMenu = () => {
     );
 
     let newSelectedVersions;
-    let newNone = filters.none;
+    let newNone = queryStates.none;
     if (allProductVersionsSelected) {
       // Deselect all versions of this product
       newSelectedVersions = selectedVersions.filter(
@@ -106,10 +107,9 @@ export const ProductsSubMenu = () => {
       newNone = false;
     }
 
-    setFilters({
-      ...filters,
-      product_id: "",
-      version: newSelectedVersions.join(","),
+    setQueryStates({
+      ...queryStates,
+      version: newSelectedVersions,
       none: newNone,
     });
   };
@@ -119,7 +119,7 @@ export const ProductsSubMenu = () => {
     const isSelected = selectedVersions.includes(versionKey);
 
     let newSelectedVersions;
-    let newNone = filters.none;
+    let newNone = queryStates.none;
     if (isSelected) {
       newSelectedVersions = selectedVersions.filter(
         (key: string) => key !== versionKey
@@ -129,10 +129,9 @@ export const ProductsSubMenu = () => {
       newNone = false;
     }
 
-    setFilters({
-      ...filters,
-      product_id: "",
-      version: newSelectedVersions.join(","),
+    setQueryStates({
+      ...queryStates,
+      version: newSelectedVersions,
       none: newNone,
     });
   };
@@ -141,10 +140,10 @@ export const ProductsSubMenu = () => {
     e.preventDefault();
     e.stopPropagation();
 
-    setFilters({
-      ...filters,
-      version: "",
-      none: !filters.none,
+    setQueryStates({
+      ...queryStates,
+      version: [],
+      none: !queryStates.none,
     });
   };
 
@@ -160,7 +159,6 @@ export const ProductsSubMenu = () => {
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent className="w-64">
         <div className="flex items-center justify-between px-2 h-6">
-          {/* <span className="text-t3 font-regular text-xs">Select products</span> */}
           <button
             onClick={handleSelectAll}
             className="text-t3 text-xs hover:text-t1 transition-colors cursor-pointer"
@@ -171,11 +169,10 @@ export const ProductsSubMenu = () => {
             onClick={handleSelectNone}
             className={cn(
               "px-1 h-5 flex items-center gap-1 text-t3 text-xs hover:text-t1 cursor-pointer",
-              filters.none &&
+              queryStates.none &&
                 "bg-yellow-100 text-yellow-600 hover:text-yellow-500 rounded-md"
             )}
           >
-            {/* {filters.none && <Check size={11} />} */}
             No products
           </button>
         </div>

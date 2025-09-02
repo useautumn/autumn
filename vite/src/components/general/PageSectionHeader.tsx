@@ -9,6 +9,7 @@ export const PageSectionHeader = ({
   className,
   classNames,
   menuComponent,
+  isSecondary = false,
 }: {
   title?: string;
   titleComponent?: React.ReactNode;
@@ -20,6 +21,7 @@ export const PageSectionHeader = ({
     title?: string;
   };
   menuComponent?: React.ReactNode;
+  isSecondary?: boolean;
 }) => {
   return (
     <div
@@ -32,7 +34,13 @@ export const PageSectionHeader = ({
     >
       <div className="flex items-center gap-2">
         {title && (
-          <h2 className={cn("text-sm text-t2 font-medium", classNames?.title)}>
+          <h2
+            className={cn(
+              "text-sm text-t2 font-medium",
+              classNames?.title,
+              isSecondary && "text-sm"
+            )}
+          >
             {title}
           </h2>
         )}

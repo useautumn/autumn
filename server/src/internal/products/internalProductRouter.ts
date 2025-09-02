@@ -99,6 +99,26 @@ productRouter.get("/features", async (req: any, res) => {
   }
 });
 
+productRouter.get("/rewards", async (req: any, res) => {
+  try {
+    const { db, orgId, env } = req;
+    const rewards = await RewardService.list({ db, orgId, env });
+    const rewardPrograms = await RewardProgramService.list({
+      db,
+      orgId,
+      env,
+    });
+    res.status(200).send({ rewards, rewardPrograms });
+  } catch (error) {
+    handleFrontendReqError({
+      error,
+      req,
+      res,
+      action: "Get rewards",
+    });
+  }
+});
+
 productRouter.get("/data", async (req: any, res) => {
   try {
     let { db } = req;

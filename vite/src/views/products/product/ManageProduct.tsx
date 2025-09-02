@@ -10,7 +10,6 @@ export const ManageProduct = ({
 }: {
   hideAdminHover?: boolean;
 }) => {
-  const env = useEnv();
   const { product, entityId, customer } = useProductContext();
 
   return (
