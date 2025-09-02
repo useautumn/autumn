@@ -1,0 +1,144 @@
+import chalk from "chalk";
+import { setupBefore } from "tests/before.js";
+import { Stripe } from "stripe";
+import { createProducts } from "tests/utils/productUtils.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { TestFeature } from "tests/setup/v2Features.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import {
+  APIVersion,
+  AppEnv,
+  CusProductStatus,
+  Organization,
+} from "@autumn/shared";
+
+import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import { addDays } from "date-fns";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { expectSubToBeCorrect } from "../mergeUtils/expectSubCorrect.js";
+
+let premium = constructProduct({
+  id: "premium",
+  items: [constructArrearItem({ featureId: TestFeature.Words })],
+  type: "premium",
+  trial: true,
+});
+
+let pro = constructProduct({
+  id: "pro",
+  items: [constructArrearItem({ featureId: TestFeature.Words })],
+  type: "pro",
+  trial: true,
+});
+
+const ops = [
+  {
+    entityId: "1",
+    product: pro,
+    results: [{ product: pro, status: CusProductStatus.Active }],
+  },
+  {
+    entityId: "2",
+    product: pro,
+    results: [{ product: pro, status: CusProductStatus.Active }],
+  },
+];
+
+const testCase = "mergedTrial4";
+describe(`${chalk.yellowBright("mergedTrial4: Testing cancel immediately on merged sub trial")}`, () => {
+  let customerId = testCase;
+  let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+
+  let stripeCli: Stripe;
+  let testClockId: string;
+  let curUnix: number;
+  let db: DrizzleCli;
+  let org: Organization;
+  let env: AppEnv;
+
+  before(async function () {
+    await setupBefore(this);
+    const { autumnJs } = this;
+    db = this.db;
+    org = this.org;
+    env = this.env;
+
+    stripeCli = this.stripeCli;
+
+    addPrefixToProducts({
+      products: [pro, premium],
+      prefix: testCase,
+    });
+
+    await createProducts({
+      autumn: autumnJs,
+      products: [pro, premium],
+      db,
+      orgId: org.id,
+      env,
+      customerId,
+    });
+
+    const { testClockId: testClockId1 } = await initCustomer({
+      autumn: autumnJs,
+      customerId,
+      db,
+      org,
+      env,
+      attachPm: "success",
+    });
+
+    testClockId = testClockId1!;
+  });
+
+  const entities = [
+    {
+      id: "1",
+      name: "Entity 1",
+      feature_id: TestFeature.Users,
+    },
+    {
+      id: "2",
+      name: "Entity 2",
+      feature_id: TestFeature.Users,
+    },
+  ];
+
+  it("should attach pro trial for entity 1 and entity 2", async function () {
+    await autumn.entities.create(customerId, entities);
+
+    for (const op of ops) {
+      await attachAndExpectCorrect({
+        autumn,
+        customerId,
+        product: op.product,
+        stripeCli,
+        db,
+        org,
+        env,
+        entityId: op.entityId,
+      });
+    }
+  });
+
+  it("should cancel one of subs immediately and have sub still trialing", async function () {
+    await autumn.cancel({
+      customer_id: customerId,
+      product_id: pro.id,
+      entity_id: "2",
+      cancel_immediately: true,
+    });
+
+    await expectSubToBeCorrect({
+      db,
+      customerId,
+      org,
+      env,
+      shouldBeTrialing: true,
+    });
+  });
+});

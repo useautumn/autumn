@@ -118,6 +118,7 @@ export const getFeatureItemDisplay = ({
 
   return {
     primary_text: `${includedUsageTxt}${featureName}`,
+    secondary_text: undefined,
   };
 };
 

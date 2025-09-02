@@ -1,23 +1,15 @@
 import {
+  Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AppEnv,
-  CusProductStatus,
-  Customer,
-  FullCusProduct,
-} from "@autumn/shared";
-import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import { Customer } from "@autumn/shared";
 import { Button } from "@/components/ui/button";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useCustomerContext } from "../CustomerContext";
-import { notNullish } from "@/utils/genUtils";
 import { useEnv } from "@/utils/envUtils";
 
 export const DeleteCustomerDialog = ({
@@ -50,7 +42,7 @@ export const DeleteCustomerDialog = ({
 
     try {
       await axiosInstance.delete(
-        `/v1/customers/${customer.id}?${env === AppEnv.Sandbox ? "delete_in_stripe" : "force_delete"}=${deleteStripe}`
+        `/v1/customers/${customer.id}?delete_in_stripe=${deleteStripe}` 
       );
       await onDelete();
       setOpen(false);

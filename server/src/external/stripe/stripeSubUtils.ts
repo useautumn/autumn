@@ -13,6 +13,7 @@ import { differenceInSeconds } from "date-fns";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getEarliestPeriodEnd } from "./stripeSubUtils/convertSubUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 export const getFullStripeSub = async ({
   stripeCli,
@@ -202,8 +203,12 @@ export const getStripeSchedules = async ({
   const batchGet = [];
   const getStripeSchedule = async (scheduleId: string) => {
     try {
-      const schedule =
-        await stripeCli.subscriptionSchedules.retrieve(scheduleId);
+      const schedule = await stripeCli.subscriptionSchedules.retrieve(
+        scheduleId,
+        {
+          expand: ["phases.items.price"],
+        }
+      );
 
       if (schedule.status == "canceled") {
         return null;
@@ -292,4 +297,12 @@ export const getStripeProrationBehavior = ({
   return org.config.bill_upgrade_immediately
     ? behaviourMap[ProrationBehavior.Immediately]
     : behaviourMap[ProrationBehavior.NextBilling];
+};
+
+export const subIsCanceled = ({ sub }: { sub: Stripe.Subscription }) => {
+  return (
+    notNullish(sub.canceled_at) ||
+    notNullish(sub.cancel_at) ||
+    sub.cancel_at_period_end
+  );
 };

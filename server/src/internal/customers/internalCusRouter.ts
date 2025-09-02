@@ -24,6 +24,7 @@ import { CusReadService } from "./CusReadService.js";
 import { StatusCodes } from "http-status-codes";
 import { cusProductToProduct } from "./cusProducts/cusProductUtils/convertCusProduct.js";
 import { createOrgResponse } from "../orgs/orgUtils.js";
+import { getCustomerSub } from "./attach/attachUtils/convertAttachParams.js";
 
 export const cusRouter: Router = Router();
 
@@ -350,7 +351,8 @@ cusRouter.get(
               options: cusProduct.options,
               isActive: cusProduct.status === CusProductStatus.Active,
               isCustom: cusProduct.is_custom,
-              isCanceled: cusProduct.canceled_at !== null,
+              isCanceled:
+                cusProduct.canceled_at !== null || cusProduct.canceled,
               cusProductId: cusProduct.id,
             }
           : productV2,
@@ -369,3 +371,39 @@ cusRouter.get(
     }
   }
 );
+
+cusRouter.get("/:customer_id/sub", async (req: any, res: any) => {
+  try {
+    const { org, env, db } = req;
+    const { customer_id } = req.params;
+    const orgId = req.orgId;
+
+    const fullCus = await CusService.getFull({
+      db,
+      orgId,
+      env,
+      idOrInternalId: customer_id,
+    });
+
+    const subId = fullCus.customer_products.flatMap(
+      (cp: FullCusProduct) => cp.subscription_ids || []
+    )?.[0];
+
+    if (!subId) {
+      throw new RecaseError({
+        message: "Customer has no active subscription",
+        code: "CUSTOMER_NO_ACTIVE_SUBSCRIPTION",
+        statusCode: StatusCodes.NOT_FOUND,
+      });
+    }
+
+    const stripeCli = createStripeCli({ org, env });
+    const sub = await stripeCli.subscriptions.retrieve(subId, {
+      expand: ["discounts.coupon"],
+    });
+
+    res.status(200).json({ sub });
+  } catch (error) {
+    handleFrontendReqError({ req, error, res, action: "get customer rewards" });
+  }
+});

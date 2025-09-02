@@ -305,6 +305,7 @@ export const runUpdateUsageTask = async ({
     const {
       internalCustomerId,
       customerId,
+      eventId,
       features,
       value,
       set_usage,
@@ -316,7 +317,7 @@ export const runUpdateUsageTask = async ({
 
     console.log("--------------------------------");
     console.log(
-      `HANDLING USAGE TASK FOR CUSTOMER (${customerId}), ORG: ${org.slug}`
+      `HANDLING USAGE TASK FOR CUSTOMER (${customerId}), ORG: ${org.slug}, EVENT ID: ${eventId}`
     );
 
     const cusEnts: any = await updateUsage({

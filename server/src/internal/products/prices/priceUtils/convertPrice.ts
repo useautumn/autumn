@@ -5,6 +5,11 @@ import {
   UsageModel,
   UsagePriceConfig,
   BillingInterval,
+  CustomerPrice,
+  FullCustomerEntitlement,
+  FullCustomerPrice,
+  ProductOptions,
+  FullProduct,
 } from "@autumn/shared";
 
 import { Price } from "@autumn/shared";
@@ -84,4 +89,35 @@ export const priceToUsageModel = (price: Price) => {
     return UsageModel.Prepaid;
   }
   return UsageModel.PayPerUse;
+};
+
+export const cusPriceToCusEnt = ({
+  cusPrice,
+  cusEnts,
+}: {
+  cusPrice: FullCustomerPrice;
+  cusEnts: FullCustomerEntitlement[];
+}) => {
+  return cusEnts.find(
+    (ce) => ce.entitlement?.id == cusPrice.price.entitlement_id
+  );
+};
+
+export const priceToProductOptions = ({
+  price,
+  options,
+  products,
+}: {
+  price: Price;
+  options: ProductOptions[] | undefined;
+  products: FullProduct[];
+}) => {
+  if (!options) return undefined;
+
+  const productId = products.find(
+    (p) => p.internal_id == price.internal_product_id
+  )?.id;
+
+  const productOptions = options.find((o) => o.product_id == productId);
+  return productOptions;
 };

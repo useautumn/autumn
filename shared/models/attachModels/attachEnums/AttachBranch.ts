@@ -1,4 +1,7 @@
 export enum AttachBranch {
+  MultiAttach = "multi_attach",
+  MultiAttachUpdate = "multi_attach_update",
+
   // Done
   MultiProduct = "multi_product",
   OneOff = "one_off",
@@ -19,4 +22,7 @@ export enum AttachBranch {
   MainIsFree = "main_is_free",
   Upgrade = "upgrade",
   Downgrade = "downgrade",
+
+  // Branch
+  Cancel = "cancel",
 }

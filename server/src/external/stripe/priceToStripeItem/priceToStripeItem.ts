@@ -11,6 +11,7 @@ import {
   FixedPriceConfig,
   FullProduct,
   Organization,
+  ProductOptions,
   UsagePriceConfig,
 } from "@autumn/shared";
 import { EntitlementWithFeature, Price, APIVersion } from "@autumn/shared";
@@ -21,6 +22,7 @@ import {
 } from "./priceToUsageInAdvance.js";
 import { priceToInArrearProrated } from "./priceToArrearProrated.js";
 import { billingIntervalToStripe } from "../stripePriceUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 export const getEmptyPriceItem = ({
   price,
@@ -52,24 +54,30 @@ export const priceToStripeItem = ({
   product,
   org,
   options,
-  isCheckout = false,
   existingUsage,
   withEntity = false,
+  isCheckout = false,
   apiVersion,
+  productOptions,
 }: {
   price: Price;
   relatedEnt: EntitlementWithFeature;
   product: FullProduct;
   org: Organization;
   options: FeatureOptions | undefined | null;
-  isCheckout: boolean;
   existingUsage: number;
   withEntity: boolean;
+  isCheckout: boolean;
   apiVersion?: APIVersion;
+  productOptions?: ProductOptions | undefined;
 }) => {
   // TODO: Implement this
   const billingType = getBillingType(price.config!);
   const stripeProductId = product.processor?.id;
+
+  const quantityMultiplier = notNullish(productOptions?.quantity)
+    ? productOptions?.quantity!
+    : 1;
 
   if (!stripeProductId) {
     throw new RecaseError({
@@ -91,7 +99,7 @@ export const priceToStripeItem = ({
 
     lineItem = {
       price: config.stripe_price_id,
-      quantity: 1,
+      quantity: quantityMultiplier,
     };
   }
 

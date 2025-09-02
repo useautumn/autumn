@@ -35,34 +35,32 @@ export class RewardService {
 
   static async getByIdOrCode({
     db,
-    idOrCode,
+    codes,
     orgId,
     env,
   }: {
     db: DrizzleCli;
-    idOrCode: string;
+    codes: string[];
     orgId: string;
     env: AppEnv;
   }) {
-    let reward = await db.query.rewards.findFirst({
+    let reward = await db.query.rewards.findMany({
       where: and(
         eq(rewards.org_id, orgId),
         eq(rewards.env, env),
         or(
-          eq(rewards.id, idOrCode),
-          sql`EXISTS (
+          inArray(rewards.id, codes),
+          ...codes.map(
+            (code) => sql`EXISTS (
             SELECT 1 FROM unnest("promo_codes") AS elem
-            WHERE elem->>'code' = ${idOrCode}
+            WHERE elem->>'code' = ${code}
           )`
+          )
         )
       ),
     });
 
-    if (!reward) {
-      return null;
-    }
-
-    return reward as Reward;
+    return reward as Reward[];
   }
 
   static async insert({

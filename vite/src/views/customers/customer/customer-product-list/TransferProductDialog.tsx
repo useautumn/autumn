@@ -5,8 +5,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogOverlay,
-  DialogPortal,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -16,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FullCusProduct } from "@autumn/shared";
-import { ArrowLeftRight } from "lucide-react";
+
 import { useEffect, useState } from "react";
 import { useCustomerContext } from "../CustomerContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -62,7 +60,7 @@ export const TransferProductDialog = ({
         `/v1/customers/${cusProduct.customer_id}/transfer`,
         {
           // internal_entity_id: selectedEntity.internal_id,
-          from_entity_id: fromEntity.id,
+          from_entity_id: fromEntity?.id,
           to_entity_id: selectedEntity.id,
           product_id: cusProduct.product_id,
           // customer_product_id: cusProduct.id,

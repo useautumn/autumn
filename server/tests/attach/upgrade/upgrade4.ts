@@ -157,6 +157,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with prepaid conti
       quantity: 3,
     },
   ];
+
   it("should upgrade to pro-annual product (arrear prorated)", async function () {
     curUnix = await advanceTestClock({
       stripeCli,

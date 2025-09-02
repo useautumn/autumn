@@ -13,6 +13,7 @@ import { ProrationBehavior } from "@autumn/shared";
 import { attachParamsToProduct } from "./convertAttachParams.js";
 import { attachParamToCusProducts } from "./convertAttachParams.js";
 import { cusProductToPrices } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import { willMergeSub } from "../mergeUtils/mergeUtils.js";
 
 export const intervalsAreSame = ({
   attachParams,
@@ -48,50 +49,6 @@ export const intervalsAreSame = ({
     curIntervals.size === newIntervals.size &&
     [...curIntervals].every((interval) => newIntervals.has(interval))
   );
-
-  for (const price of curPrices) {
-    let hasSimilarInterval = newProduct.prices.some((p) => {
-      return intervalsSame({
-        intervalA: price.config,
-        intervalB: p.config,
-      });
-    });
-
-    if (!hasSimilarInterval) {
-      return false;
-    }
-  }
-
-  for (const price of newProduct.prices) {
-    let hasSimilarInterval = curPrices.some((p) => {
-      return intervalsSame({
-        intervalA: price.config,
-        intervalB: p.config,
-      });
-    });
-
-    if (!hasSimilarInterval) {
-      return false;
-    }
-  }
-
-  return true;
-  // let curIntervals = new Set(
-  //   curPrices.map((p) => ({
-  //     interval: p.config.interval,
-  //     intervalCount: p.config.interval_count,
-  //   }))
-  // );
-  // let newIntervals = new Set(
-  //   newProduct.prices.map((p) => ({
-  //     interval: p.config.interval,
-  //     intervalCount: p.config.interval_count,
-  //   }))
-  // );
-  // return (
-  //   curIntervals.size === newIntervals.size &&
-  //   [...curIntervals].every((interval) => newIntervals.has(interval))
-  // );
 };
 
 export const getAttachConfig = async ({
@@ -130,22 +87,27 @@ export const getAttachConfig = async ({
     branch == AttachBranch.SameCustom ||
     branch == AttachBranch.NewVersion;
 
+  // Disable trial if doing a merge sub or something else...
+  // Is merge sub...
+  const willMerge = await willMergeSub({ attachParams, branch });
+
   let disableTrial =
     branch === AttachBranch.NewVersion ||
     branch == AttachBranch.Downgrade ||
+    willMerge ||
     attachBody.free_trial === false;
 
   let freeTrialWithoutCardRequired =
     notNullish(attachParams.freeTrial) &&
     attachParams.freeTrial?.card_required === false;
 
-  let carryTrial = branch === AttachBranch.NewVersion;
+  let carryTrial = branch === AttachBranch.NewVersion || willMerge;
 
   let sameIntervals = intervalsAreSame({ attachParams });
 
-  let disableMerge =
-    branch == AttachBranch.MainIsTrial ||
-    org.config.merge_billing_cycles === false;
+  // let disableMerge =
+  //   branch == AttachBranch.MainIsTrial ||
+  //   org.config.merge_billing_cycles === false;
 
   const invoiceAndEnable =
     attachParams.invoiceOnly && attachBody.enable_product_immediately;
@@ -157,9 +119,13 @@ export const getAttachConfig = async ({
     isPublic ||
     forceCheckout ||
     invoiceCheckout ||
-    (noPaymentMethod && !invoiceAndEnable);
+    (noPaymentMethod &&
+      !invoiceAndEnable &&
+      branch != AttachBranch.MultiAttachUpdate);
 
   const onlyCheckout = !isFree && checkoutFlow && !freeTrialWithoutCardRequired;
+
+  const disableMerge = branch == AttachBranch.MainIsTrial || onlyCheckout;
 
   let config: AttachConfig = {
     branch,
@@ -173,7 +139,7 @@ export const getAttachConfig = async ({
     sameIntervals,
     carryTrial,
     finalizeInvoice: notNullish(attachBody.finalize_invoice)
-      ? attachBody.finalize_invoice
+      ? attachBody.finalize_invoice!
       : true,
   };
 

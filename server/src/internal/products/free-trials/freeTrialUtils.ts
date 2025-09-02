@@ -3,25 +3,41 @@ import { generateId, notNullish } from "@/utils/genUtils.js";
 import {
   CreateFreeTrial,
   CreateFreeTrialSchema,
+  ErrCode,
   FreeTrial,
   FreeTrialDuration,
+  Price,
 } from "@autumn/shared";
 import { addDays, addMinutes, addMonths, addYears } from "date-fns";
 import { FreeTrialService } from "./FreeTrialService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import { isFreeProduct } from "../productUtils.js";
+import { isFreeProduct, isOneOff } from "../productUtils.js";
+
+export const validateOneOffTrial = async ({
+  prices,
+  freeTrial,
+}: {
+  prices: Price[];
+  freeTrial: FreeTrial | null;
+}) => {
+  if(isOneOff(prices) && freeTrial) {
+    throw new RecaseError({
+      message: "One-off products cannot have a free trial",
+      code: ErrCode.InvalidRequest,
+      statusCode: 400,
+    });
+  }
+}
 
 export const validateAndInitFreeTrial = ({
   freeTrial,
   internalProductId,
   isCustom = false,
-  card_required = false,
 }: {
   freeTrial: CreateFreeTrial;
   internalProductId: string;
   isCustom?: boolean;
-  card_required?: boolean;
 }): FreeTrial => {
   const freeTrialSchema = CreateFreeTrialSchema.parse(freeTrial);
 
@@ -32,7 +48,7 @@ export const validateAndInitFreeTrial = ({
     duration: freeTrial.duration || FreeTrialDuration.Day,
     internal_product_id: internalProductId,
     is_custom: isCustom,
-    card_required,
+    card_required: freeTrial.card_required ?? true,
   };
 };
 
@@ -143,7 +159,6 @@ export const handleNewFreeTrial = async ({
   isCustom: boolean;
   product?: any; // Add product parameter for validation
 }) => {
-
   // If new free trial is null
   if (!newFreeTrial) {
     if (!isCustom && curFreeTrial) {
@@ -163,7 +178,6 @@ export const handleNewFreeTrial = async ({
     freeTrial: newFreeTrial,
     internalProductId,
     isCustom,
-    card_required: newFreeTrial?.card_required ?? false,
   });
 
   if (isCustom && newFreeTrial) {

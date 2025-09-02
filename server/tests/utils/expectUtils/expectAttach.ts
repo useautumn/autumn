@@ -4,12 +4,16 @@ import {
   AppEnv,
   AttachBranch,
   CreateEntity,
+  CusProductStatus,
   FeatureOptions,
   Organization,
   ProductV2,
 } from "@autumn/shared";
 
-import { getAttachTotal } from "tests/utils/testAttachUtils/testAttachUtils.js";
+import {
+  getAttachTotal,
+  getCurrentOptions,
+} from "tests/utils/testAttachUtils/testAttachUtils.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
 import { expectInvoicesCorrect } from "tests/utils/expectUtils/expectProductAttached.js";
 import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
@@ -19,8 +23,10 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 
 import { expect } from "chai";
 import { completeCheckoutForm } from "../stripeUtils.js";
-import { Customer } from "autumn-js";
+import { AttachParams, Customer } from "autumn-js";
 import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
+import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
+import { Decimal } from "decimal.js";
 
 export const attachAndExpectCorrect = async ({
   autumn,
@@ -40,6 +46,9 @@ export const attachAndExpectCorrect = async ({
   skipSubCheck = false,
   numSubs,
   entities,
+  shouldBeCanceled = false,
+  checkNotTrialing = false,
+  attachParams,
 }: {
   autumn: AutumnInt;
   customerId: string;
@@ -61,24 +70,51 @@ export const attachAndExpectCorrect = async ({
   skipSubCheck?: boolean;
   numSubs?: number;
   entities?: CreateEntity[];
+  shouldBeCanceled?: boolean;
+  checkNotTrialing?: boolean;
+  attachParams?: AttachParams;
 }) => {
   const preview = await autumn.attachPreview({
     customer_id: customerId,
     product_id: product.id,
     entity_id: entityId,
+    ...attachParams,
   });
 
-  const optionsCopy = structuredClone(options);
-  const total = getAttachTotal({
-    preview,
-    options: optionsCopy,
+  const checkoutRes = await autumn.checkout({
+    customer_id: customerId,
+    product_id: product.id,
+    entity_id: entityId,
+    options: toSnakeCase(options),
+    ...attachParams,
   });
+
+  const logCheckoutRes = false;
+  if (logCheckoutRes) {
+    console.log("Checkout res:");
+    for (const line of checkoutRes.lines) {
+      console.log(line.description, line.amount);
+    }
+    console.log("Total: ", checkoutRes.total);
+    console.log("--------------------------------");
+  }
+
+  const optionsCopy = getCurrentOptions({
+    preview,
+    options,
+  });
+
+  // const total = getAttachTotal({
+  //   preview,
+  //   options,
+  // });
 
   const { checkout_url } = await autumn.attach({
     customer_id: customerId,
     product_id: product.id,
     entity_id: entityId,
     options: toSnakeCase(options),
+    ...attachParams,
   });
 
   if (checkout_url) {
@@ -98,84 +134,112 @@ export const attachAndExpectCorrect = async ({
   }
 
   const productCount = customer.products.reduce((acc: number, p: any) => {
-    if (product.group == p.group && !p.is_add_on) {
+    if (
+      product.group == p.group &&
+      !p.is_add_on &&
+      (entityId ? p.entity_id == entityId : true)
+    ) {
       return acc + 1;
     } else return acc;
   }, 0);
 
-  expect(
-    productCount,
-    `customer should only have 1 product (from this group: ${product.group})`
-  ).to.equal(1);
+  const branch = preview.branch;
+
+  if (branch == AttachBranch.Downgrade) {
+    expect(
+      productCount,
+      `customer should only have 2 products (from this group: ${product.group})`
+    ).to.equal(2);
+  } else {
+    expect(
+      productCount,
+      `customer should only have 1 product (from this group: ${product.group})`
+    ).to.equal(1);
+  }
 
   expectProductAttached({
     customer,
     product,
     entityId,
+    status:
+      preview.branch == AttachBranch.Downgrade
+        ? CusProductStatus.Scheduled
+        : undefined,
   });
 
-  // let intervals = Array.from(
-  //   new Set(product.items.map((item) => item.interval)),
-  // ).filter(notNullish);
-  // const multiInterval = intervals.length > 1;
-
   const skipInvoiceCheck =
-    preview.branch == AttachBranch.UpdatePrepaidQuantity && total == 0;
+    (preview.branch == AttachBranch.UpdatePrepaidQuantity &&
+      checkoutRes.total == 0) ||
+    preview.branch == AttachBranch.Downgrade;
+
   const freeProduct = isFreeProductV2({ product });
   if (!skipInvoiceCheck && !freeProduct) {
     expectInvoicesCorrect({
       customer,
-      first: { productId: product.id, total },
-      // first: multiInterval ? undefined : { productId: product.id, total },
-      // second: multiInterval ? { productId: product.id, total } : undefined,
+      first: {
+        productId: product.id,
+        total: new Decimal(checkoutRes.total).toDecimalPlaces(2).toNumber(),
+      },
     });
   }
 
-  if (!skipFeatureCheck) {
+  if (!skipFeatureCheck && branch !== AttachBranch.Downgrade) {
     expectFeaturesCorrect({
       customer,
       product,
       usage,
       options: optionsCopy,
+
       otherProducts,
       entities,
     });
   }
 
-  const branch = preview.branch;
   if (branch == AttachBranch.OneOff) {
     return;
   }
 
   if (skipSubCheck) return;
 
-  await expectSubItemsCorrect({
-    stripeCli,
-    customerId,
-    product,
+  await expectSubToBeCorrect({
     db,
+    customerId,
     org,
     env,
-    isCanceled,
+    shouldBeCanceled,
+    flags: {
+      checkNotTrialing,
+    },
     entityId,
   });
 
-  let cus = await autumn.customers.get(customerId);
-  const stripeSubs = await stripeCli.subscriptions.list({
-    customer: cus.stripe_id!,
-  });
+  // await expectSubItemsCorrect({
+  //   stripeCli,
+  //   customerId,
+  //   product,
+  //   db,
+  //   org,
+  //   env,
+  //   isCanceled,
+  //   entityId,
+  // });
 
-  if (numSubs) {
-    expect(stripeSubs.data.length).to.equal(
-      numSubs,
-      `should have ${numSubs} subscriptions`
-    );
-  } else {
-    expect(stripeSubs.data.length).to.equal(
-      1,
-      "should only have 1 subscription"
-    );
-  }
+  // let cus = await autumn.customers.get(customerId);
+  // const stripeSubs = await stripeCli.subscriptions.list({
+  //   customer: cus.stripe_id!,
+  // });
+
+  // if (numSubs) {
+  //   expect(stripeSubs.data.length).to.equal(
+  //     numSubs,
+  //     `should have ${numSubs} subscriptions`
+  //   );
+  // } else {
+  //   expect(stripeSubs.data.length).to.equal(
+  //     1,
+  //     "should only have 1 subscription"
+  //   );
+  // }
 };
 
 export const expectAttachCorrect = async ({

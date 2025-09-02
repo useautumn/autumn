@@ -46,6 +46,7 @@ export const CusProductSchema = z.object({
 
   // Useful for event-driven subscriptions (and usage-based to check limits)
   status: z.nativeEnum(CusProductStatus),
+  canceled: z.boolean().default(false),
 
   starts_at: z.number().default(Date.now()),
   trial_ends_at: z.number().optional().nullable(),

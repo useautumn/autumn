@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import { AttachScenario } from "@autumn/shared";
+import { AttachScenario, Organization } from "@autumn/shared";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { CusProductStatus, FullCusProduct } from "@autumn/shared";
 import { formatUnixToDateTime, nullish } from "@/utils/genUtils.js";
@@ -12,6 +12,8 @@ import {
   getLatestPeriodEnd,
   subToPeriodStartEnd,
 } from "../../stripeSubUtils/convertSubUtils.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const isSubCanceled = ({
   previousAttributes,
@@ -43,9 +45,37 @@ export const isSubCanceled = ({
   };
 };
 
+const updateCusProductCanceled = async ({
+  db,
+  sub,
+  canceledAt,
+  logger,
+}: {
+  db: DrizzleCli;
+  sub: Stripe.Subscription;
+  canceledAt?: number | null;
+  logger: any;
+}) => {
+  // 1. Check if sub has schedule
+  if (sub.schedule) {
+    return;
+  }
+
+  logger.info(
+    `Updating cus products for sub ${sub.id} to canceled | canceled_at: ${canceledAt}`
+  );
+
+  await CusProductService.updateByStripeSubId({
+    db,
+    stripeSubId: sub.id,
+    updates: { canceled_at: canceledAt || Date.now(), canceled: true },
+  });
+};
+
 export const handleSubCanceled = async ({
   req,
   previousAttributes,
+  org,
   sub,
   updatedCusProducts,
   stripeCli,
@@ -53,6 +83,7 @@ export const handleSubCanceled = async ({
   req: ExtendedRequest;
   previousAttributes: any;
   sub: Stripe.Subscription;
+  org: Organization;
   updatedCusProducts: FullCusProduct[];
   stripeCli: Stripe;
 }) => {
@@ -64,15 +95,36 @@ export const handleSubCanceled = async ({
   });
 
   let isAutumnDowngrade =
-    sub.cancellation_details?.comment?.includes("autumn_downgrade");
+    sub.cancellation_details?.comment?.includes("autumn_downgrade") ||
+    sub.cancellation_details?.comment?.includes("autumn_cancel");
 
   const canceledFromPortal = canceled && !isAutumnDowngrade;
 
-  const { db, org, env, logtail: logger } = req;
+  const { db, env, logtail: logger } = req;
 
   if (!canceledFromPortal || updatedCusProducts.length == 0) {
     return;
   }
+
+  await updateCusProductCanceled({
+    db,
+    sub,
+    canceledAt,
+    logger,
+  });
+
+  if (!org.config.sync_status) return;
+
+  // 2. Update canceled & canceled_at IF sub has no schedule...?
+
+  // await CusProductService.updateByStripeSubId({
+  //   db,
+  //   stripeSubId: sub.id,
+  //   updates: {
+  //     canceled_at: canceled ? canceledAt : null,
+  //     canceled: true,
+  //   },
+  // });
 
   let allDefaultProducts = await ProductService.listDefault({
     db,

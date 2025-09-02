@@ -314,10 +314,11 @@ export const getCusBalances = async ({
       data[key].allowance += (resetBalance || 0) * count;
 
       let usageLimit = ent.usage_limit;
+
       if (notNullish(usageLimit)) {
         data[key].usage_limit += usageLimit;
       } else {
-        data[key].usage_limit += ent.allowance || 0;
+        data[key].usage_limit += resetBalance || 0;
       }
     }
   }

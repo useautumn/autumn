@@ -7,10 +7,7 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { pricesContainRecurring } from "@/internal/products/prices/priceUtils.js";
 import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
-import {
-  getStripeSubItems,
-  getStripeSubItems2,
-} from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
+import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { APIVersion, AttachConfig } from "@autumn/shared";
@@ -34,7 +31,7 @@ export const handleCreateCheckout = async ({
 }) => {
   const { db, logtail: logger } = req;
 
-  const { customer, org, freeTrial, successUrl, reward } = attachParams;
+  const { customer, org, freeTrial, successUrl, rewards } = attachParams;
 
   const stripeCli = createStripeCli({
     org,
@@ -46,6 +43,12 @@ export const handleCreateCheckout = async ({
     attachParams,
     isCheckout: true,
   });
+
+  for (const itemSet of itemSets) {
+    for (const item of itemSet.items) {
+      console.log(item);
+    }
+  }
 
   if (itemSets.length === 0) {
     throw new RecaseError({
@@ -103,14 +106,14 @@ export const handleCreateCheckout = async ({
 
   let checkoutParams = attachParams.checkoutSessionParams || {};
   let allowPromotionCodes =
-    notNullish(checkoutParams.discounts) || notNullish(reward)
+    notNullish(checkoutParams.discounts) || notNullish(rewards)
       ? undefined
       : checkoutParams.allow_promotion_codes || true;
 
   let rewardData = {};
-  if (reward) {
+  if (rewards) {
     rewardData = {
-      discounts: [{ coupon: reward.id }],
+      discounts: rewards.map((r) => ({ coupon: r.id })),
     };
   }
 
@@ -128,15 +131,17 @@ export const handleCreateCheckout = async ({
     mode: isRecurring ? "subscription" : "payment",
     currency: org.default_currency,
     success_url: successUrl || org.stripe_config!.success_url,
-    metadata: {
-      autumn_metadata_id: metaId,
-      ...(attachParams.metadata ? attachParams.metadata : {}),
-    },
+
     allow_promotion_codes: allowPromotionCodes,
     invoice_creation: !isRecurring ? { enabled: true } : undefined,
     saved_payment_method_options: { payment_method_save: "enabled" },
     ...rewardData,
     ...(attachParams.checkoutSessionParams || {}),
+    metadata: {
+      ...(attachParams.metadata ? attachParams.metadata : {}),
+      ...(attachParams.checkoutSessionParams?.metadata || {}),
+      autumn_metadata_id: metaId,
+    },
     payment_method_collection:
       freeTrial &&
       !attachParams.disableFreeTrial &&

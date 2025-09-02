@@ -16,6 +16,7 @@ import {
   isSubCanceled,
 } from "./handleSubUpdated/handleSubCanceled.js";
 import { handleSubRenewed } from "./handleSubUpdated/handleSubRenewed.js";
+import { handleSchedulePhaseCompleted } from "./handleSubUpdated/handleSchedulePhaseCompleted.js";
 
 export const handleSubscriptionUpdated = async ({
   req,
@@ -34,6 +35,13 @@ export const handleSubscriptionUpdated = async ({
   previousAttributes: any;
   logger: any;
 }) => {
+  // handle scheduled updated
+  await handleSchedulePhaseCompleted({
+    req,
+    subObject: subscription,
+    prevAttributes: previousAttributes,
+  });
+
   // Get cus products by stripe sub id
   const cusProducts = await CusProductService.getByStripeSubId({
     db,
@@ -43,9 +51,7 @@ export const handleSubscriptionUpdated = async ({
     inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
   });
 
-  if (cusProducts.length === 0) {
-    return;
-  }
+  if (cusProducts.length === 0) return;
 
   // Handle syncing status
   let stripeCli = createStripeCli({
@@ -73,15 +79,17 @@ export const handleSubscriptionUpdated = async ({
     stripeSubId: subscription.id,
     updates: {
       status: subStatusMap[subscription.status] || CusProductStatus.Unknown,
-      canceled_at: canceled ? canceledAt : null,
       collection_method: fullSub.collection_method as CollectionMethod,
-      trial_ends_at:
-        previousAttributes.status === "trialing" &&
-        subscription.status === "active"
-          ? null
-          : undefined,
+      // canceled_at: canceled ? canceledAt : null,
+      // trial_ends_at:
+      //   previousAttributes.status === "trialing" &&
+      //   subscription.status === "active"
+      //     ? null
+      //     : undefined,
     },
   });
+
+  // 2. Update canceled & canceled_at IF sub has no schedule...?
 
   if (updatedCusProducts.length > 0) {
     logger.info(
@@ -89,22 +97,21 @@ export const handleSubscriptionUpdated = async ({
     );
   }
 
-  if (org.config.sync_status) {
-    await handleSubCanceled({
-      req,
-      previousAttributes,
-      sub: fullSub,
-      updatedCusProducts,
-      stripeCli,
-    });
+  await handleSubCanceled({
+    req,
+    previousAttributes,
+    sub: fullSub,
+    updatedCusProducts,
+    stripeCli,
+    org,
+  });
 
-    await handleSubRenewed({
-      req,
-      prevAttributes: previousAttributes,
-      sub: fullSub,
-      updatedCusProducts,
-    });
-  }
+  await handleSubRenewed({
+    req,
+    prevAttributes: previousAttributes,
+    sub: fullSub,
+    updatedCusProducts,
+  });
 
   try {
     await SubService.updateFromStripe({
@@ -119,7 +126,6 @@ export const handleSubscriptionUpdated = async ({
   }
 
   // Cancel subscription immediately
-
   if (subscription.status === "past_due" && org.config.cancel_on_past_due) {
     const stripeCli = createStripeCli({
       org,

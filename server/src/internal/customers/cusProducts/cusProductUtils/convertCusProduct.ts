@@ -18,6 +18,14 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { ACTIVE_STATUSES } from "../CusProductService.js";
 
+export const cusProductsToPrices = ({
+  cusProducts,
+}: {
+  cusProducts: FullCusProduct[];
+}) => {
+  return cusProducts.flatMap((cp) => cusProductToPrices({ cusProduct: cp }));
+};
+
 export const cusProductsToCusPrices = ({
   cusProducts,
   inStatuses,
@@ -151,33 +159,21 @@ export const cusProductToSchedule = async ({
 }) => {
   const subScheduleIds = cusProduct?.scheduled_ids || [];
   if (subScheduleIds.length === 0) {
-    return {
-      schedule: null,
-      prices: [],
-    };
+    return null;
   }
 
   const schedule = await stripeCli.subscriptionSchedules.retrieve(
-    subScheduleIds[0]
+    subScheduleIds[0],
+    {
+      expand: ["phases.items.price"],
+    }
   );
 
-  if (schedule.status == "canceled") {
-    return {
-      schedule: null,
-      prices: [],
-    };
+  if (schedule.status == "canceled" || schedule.status == "released") {
+    return undefined;
   }
 
-  const batchPricesGet = [];
-  for (const item of schedule.phases[0].items) {
-    batchPricesGet.push(stripeCli.prices.retrieve(item.price as string));
-  }
-  const prices = await Promise.all(batchPricesGet);
-
-  return {
-    schedule,
-    prices,
-  };
+  return schedule;
 };
 
 export const cusProductToSub = async ({
@@ -191,7 +187,9 @@ export const cusProductToSub = async ({
   if (!subId) {
     return undefined;
   }
-  const sub = await stripeCli.subscriptions.retrieve(subId);
+  const sub = await stripeCli.subscriptions.retrieve(subId, {
+    expand: ["items.data.price.tiers", "discounts.coupon.applies_to"],
+  });
 
   return sub;
 };

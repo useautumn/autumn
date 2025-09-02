@@ -19,13 +19,15 @@ export const sortProductsByPrice = ({
 
 export const sortFullProducts = ({ products }: { products: FullProduct[] }) => {
   return products.sort((a, b) => {
-    // Secondary sort: by add-on status (non-add-ons first)
+    if (a.group !== b.group) {
+      return a.group < b.group ? -1 : 1;
+    }
+
     if (a.is_add_on !== b.is_add_on) {
       return a.is_add_on ? 1 : -1;
     }
 
-    // Primary sort: by price (using upgrade logic)
-    let isUpgrade = isProductUpgrade({
+    const isUpgrade = isProductUpgrade({
       prices1: a.prices,
       prices2: b.prices,
       usageAlwaysUpgrade: false,

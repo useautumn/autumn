@@ -114,7 +114,7 @@ export const ToggleDefaultProduct = ({
       };
 
       await ProductService.updateProduct(axiosInstance, product.id, data);
-      mutate();
+      // mutate();
       setOpen(false);
       toast.success("Successfully updated product");
     } catch (error) {
@@ -204,8 +204,6 @@ export const ToggleDefaultProduct = ({
         setValue={handleToggle}
         className="text-t2 px-2"
         disabled={isDisabled || notNullish(customer)}
-        // tooltipContent="Default products are the default product for a group. They are used to determine the default product for a customer when they don't have an active subscription."
-        // infoContent="Default products are the default product for a group. They are used to determine the default product for a customer when they don't have an active subscription."
       />
     </>
   );

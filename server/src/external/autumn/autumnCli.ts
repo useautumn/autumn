@@ -18,6 +18,7 @@ import {
   CheckResult,
   Customer,
   TrackParams,
+  TransferProductParams,
   UsageParams,
 } from "autumn-js";
 import { AttachBody } from "@autumn/shared";
@@ -182,6 +183,18 @@ export class AutumnInt {
 
     return data as CheckoutResult;
   }
+  async transfer(
+    customerId: string,
+    params: {
+      from_entity_id?: string;
+      to_entity_id: string;
+      product_id: string;
+    }
+  ) {
+    const data = await this.post(`/customers/${customerId}/transfer`, params);
+
+    return data as CheckoutResult;
+  }
 
   async sendEvent({
     customerId,
@@ -339,6 +352,11 @@ export class AutumnInt {
   };
 
   rewards = {
+    get: async (rewardId: string) => {
+      const data = await this.get(`/rewards/${rewardId}`);
+      return data;
+    },
+
     create: async (reward: any) => {
       const data = await this.post(`/rewards?legacyStripe=true`, reward);
       return data;

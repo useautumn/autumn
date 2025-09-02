@@ -1,3 +1,4 @@
+import { notNullish } from "@/utils/genUtils";
 import { isFeatureItem } from "@/utils/product/getItemType";
 import { isOneOffProduct } from "@/utils/product/priceUtils";
 import { sortProductItems } from "@/utils/productUtils";
@@ -25,7 +26,10 @@ export enum AttachCase {
 }
 
 const productHasPrepaid = (items: ProductItem[]) => {
-  return items.some((item) => item.usage_model == UsageModel.Prepaid);
+  return items.some(
+    (item) =>
+      item.usage_model == UsageModel.Prepaid && notNullish(item.interval)
+  );
 };
 
 const productIsAddOn = (product: FrontendProduct) => {

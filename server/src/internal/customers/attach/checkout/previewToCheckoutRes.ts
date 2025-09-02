@@ -1,4 +1,5 @@
 import {
+  AttachBranch,
   AttachPreview,
   CheckoutLine,
   CheckoutResponseSchema,
@@ -30,9 +31,11 @@ export const previewToCheckoutRes = async ({
   req,
   attachParams,
   preview,
+  branch,
 }: {
   req: ExtendedRequest;
   attachParams: AttachParams;
+  branch: AttachBranch;
   preview: AttachPreview;
 }) => {
   const { logger, features, org } = req;
@@ -99,27 +102,49 @@ export const previewToCheckoutRes = async ({
 
   let nextCycle = undefined;
 
-  if (notNullish(preview.due_next_cycle)) {
+  if (
+    notNullish(preview.due_next_cycle) &&
+    notNullish(preview.due_next_cycle.due_at)
+  ) {
+    let total = newProduct.items
+      .reduce((acc, item) => {
+        if (item.usage_model == UsageModel.PayPerUse) {
+          return acc;
+        }
+
+        if (isPriceItem(item)) {
+          return acc.plus(item.price || 0);
+        }
+
+        let prepaidQuantity =
+          attachParams.optionsList.find((o) => o.feature_id == item.feature_id)
+            ?.quantity || 0;
+
+        return acc.plus(prepaidQuantity * (item.price || 0));
+      }, new Decimal(0))
+      .toNumber();
+
+    try {
+      if (
+        preview.due_next_cycle &&
+        preview.due_next_cycle.line_items &&
+        preview.due_next_cycle.line_items.length > 0
+      ) {
+        total = preview.due_next_cycle.line_items
+          .reduce((acc, item) => {
+            return acc.plus(item.amount || 0);
+          }, new Decimal(0))
+          .toNumber();
+      }
+    } catch (error) {
+      logger.error("Error calculating total for due next cycle", {
+        error,
+      });
+    }
+
     nextCycle = {
       starts_at: preview.due_next_cycle.due_at,
-      total: newProduct.items
-        .reduce((acc, item) => {
-          if (item.usage_model == UsageModel.PayPerUse) {
-            return acc;
-          }
-
-          if (isPriceItem(item)) {
-            return acc.plus(item.price || 0);
-          }
-
-          let prepaidQuantity =
-            attachParams.optionsList.find(
-              (o) => o.feature_id == item.feature_id
-            )?.quantity || 0;
-
-          return acc.plus(prepaidQuantity * (item.price || 0));
-        }, new Decimal(0))
-        .toNumber(),
+      total: total,
     };
   }
 

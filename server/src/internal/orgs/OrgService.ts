@@ -1,5 +1,5 @@
 import RecaseError from "@/utils/errorUtils.js";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, sql, inArray } from "drizzle-orm";
 import {
   AppEnv,
   ErrCode,
@@ -43,18 +43,79 @@ export class OrgService {
       .innerJoin(user, eq(member.userId, user.id));
 
     return results;
+
+    // // Try to get members with user data
+    // let results;
+    // try {
+    //   results = await db.query.member.findMany({
+    //     where: eq(member.organizationId, orgId),
+    //     with: {
+    //       user: true,
+    //     },
+    //   });
+    // } catch (error) {
+    //   // Fallback: get members and users separately
+    //   const members = await db.query.member.findMany({
+    //     where: eq(member.organizationId, orgId),
+    //   });
+
+    //   const userIds = members.map((m) => m.userId);
+    //   const users = await db.query.user.findMany({
+    //     where: inArray(user.id, userIds),
+    //   });
+
+    //   // Combine the data
+    //   results = members.map((member) => ({
+    //     ...member,
+    //     user: users.find((u) => u.id === member.userId),
+    //   }));
+    // }
+
+    // // Transform to the expected format
+    // const transformed = results
+    //   .map((result) => {
+    //     // Check if user data exists
+    //     if (!result.user) {
+    //       console.error("Missing user data for member:", result);
+    //       return null;
+    //     }
+
+    //     return {
+    //       member: {
+    //         id: result.id,
+    //         organizationId: result.organizationId,
+    //         userId: result.userId,
+    //         role: result.role,
+    //         createdAt: result.createdAt,
+    //       },
+    //       user: {
+    //         id: result.user.id,
+    //         name: result.user.name,
+    //         email: result.user.email,
+    //         emailVerified: result.user.emailVerified,
+    //         image: result.user.image,
+    //         createdAt: result.user.createdAt,
+    //         updatedAt: result.user.updatedAt,
+    //         role: result.user.role,
+    //         banned: result.user.banned,
+    //         banReason: result.user.banReason,
+    //         banExpires: result.user.banExpires,
+    //         createdBy: result.user.createdBy,
+    //       },
+    //     };
+    //   })
+    //   .filter(Boolean); // Remove null entries
+
+    // return transformed;
   }
 
   static async getInvites({ db, orgId }: { db: DrizzleCli; orgId: string }) {
-    const results = await db
-      .select()
-      .from(invitation)
-      .where(
-        and(
-          eq(invitation.organizationId, orgId),
-          eq(invitation.status, "pending")
-        )
-      );
+    const results = await db.query.invitation.findMany({
+      where: and(
+        eq(invitation.organizationId, orgId),
+        eq(invitation.status, "pending")
+      ),
+    });
 
     return results;
   }

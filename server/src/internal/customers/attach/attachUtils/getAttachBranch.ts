@@ -18,10 +18,13 @@ import {
 } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
 import { FeatureOptions, FullCusProduct } from "@autumn/shared";
 import { productsAreSame } from "@/internal/products/productUtils/compareProductUtils.js";
-import { isTrialing } from "../../cusProducts/cusProductUtils.js";
 import { hasPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
-import { attachParamToCusProducts } from "./convertAttachParams.js";
+import {
+  attachParamToCusProducts,
+  getCustomerSub,
+} from "./convertAttachParams.js";
 import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
+import { isMainTrialBranch } from "./attachUtils.js";
 
 const handleMultiProductErrors = async ({
   attachParams,
@@ -114,7 +117,7 @@ const getOptionsToUpdate = ({
   return optionsToUpdate;
 };
 
-const checkSameCustom = async ({
+export const checkSameCustom = async ({
   attachParams,
   curSameProduct,
 }: {
@@ -225,7 +228,7 @@ const getSameProductBranch = async ({
     return AttachBranch.Renew;
   }
 
-  if (curSameProduct.canceled_at) {
+  if (curSameProduct.canceled_at || curSameProduct.canceled) {
     return AttachBranch.Renew;
   }
 
@@ -264,31 +267,13 @@ const getChangeProductBranch = async ({
   }
 
   // 2. If main product is paid, check if upgrade or downgrade
-  // Check if upgrade or downgrade
   let curPrices = cusProductToPrices({ cusProduct: curMainProduct! });
   let newPrices = attachParams.prices;
-
-  // if (isTrialing(curMainProduct!)) {
-  //   if (isFreeProduct(attachParams.prices)) {
-  //     return AttachBranch.Downgrade;
-  //   }
-
-  //   let isUpgrade = isProductUpgrade({
-  //     prices1: curPrices,
-  //     prices2: newPrices,
-  //   });
-
-  //   if (!isUpgrade) {
-  //     return AttachBranch.Downgrade;
-  //   }
-
-  //   return AttachBranch.MainIsTrial;
-  // }
 
   let isUpgrade = isProductUpgrade({ prices1: curPrices, prices2: newPrices });
 
   if (isUpgrade) {
-    if (isTrialing(curMainProduct!)) {
+    if (isMainTrialBranch({ attachParams })) {
       return AttachBranch.MainIsTrial;
     }
 
@@ -309,6 +294,16 @@ export const getAttachBranch = async ({
   attachParams: AttachParams;
   fromPreview?: boolean;
 }) => {
+  if (notNullish(attachBody.products)) {
+    // 1.
+    const { subId } = await getCustomerSub({ attachParams, onlySubId: true });
+
+    if (subId) {
+      return AttachBranch.MultiAttachUpdate;
+    }
+    return AttachBranch.MultiAttach;
+  }
+
   // 1. Multi product
   if (notNullish(attachBody.product_ids)) {
     await handleMultiProductErrors({ attachParams });

@@ -5,8 +5,8 @@ import { notNullish, nullish } from "@/utils/genUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { AttachScenario, FullCusProduct } from "@autumn/shared";
 import Stripe from "stripe";
-import { createStripeCli } from "../../utils.js";
-import { cancelFutureProductSchedule } from "@/internal/customers/change-product/scheduleUtils.js";
+import { isMultiProductSub } from "@/internal/customers/attach/mergeUtils/mergeUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 const isSubRenewed = ({
   previousAttributes,
   sub,
@@ -29,6 +29,27 @@ const isSubRenewed = ({
     renewedAt: Date.now(),
   };
 };
+
+const updateCusProductRenewed = async ({
+  db,
+  sub,
+}: {
+  db: DrizzleCli;
+  sub: Stripe.Subscription;
+}) => {
+  if (sub.schedule) {
+    return;
+  }
+
+  await CusProductService.updateByStripeSubId({
+    db,
+    stripeSubId: sub.id,
+    updates: { canceled_at: null, canceled: false },
+  });
+
+  return;
+};
+
 export const handleSubRenewed = async ({
   req,
   prevAttributes,
@@ -40,24 +61,30 @@ export const handleSubRenewed = async ({
   sub: Stripe.Subscription;
   updatedCusProducts: FullCusProduct[];
 }) => {
-  // let renewed =
-  //   notNullish(prevAttributes?.canceled_at) && nullish(sub.canceled_at);
+  const { db, org, env, logtail: logger } = req;
 
-  const { renewed, renewedAt } = isSubRenewed({
+  const { renewed } = isSubRenewed({
     previousAttributes: prevAttributes,
     sub,
   });
 
   if (!renewed || updatedCusProducts.length == 0) return;
 
-  const { db, org, env, logtail: logger } = req;
-
   const customer = updatedCusProducts[0].customer;
-
   let cusProducts = await CusProductService.list({
     db,
     internalCustomerId: customer!.internal_id,
   });
+
+  if (isMultiProductSub({ sub, cusProducts }) || sub.schedule) return;
+
+  await CusProductService.updateByStripeSubId({
+    db,
+    stripeSubId: sub.id,
+    updates: { canceled_at: null, canceled: false },
+  });
+
+  if (!org.config.sync_status) return;
 
   let { curScheduledProduct } = getExistingCusProducts({
     product: updatedCusProducts[0].product,
@@ -71,24 +98,6 @@ export const handleSubRenewed = async ({
     logger.info(
       `sub.updated: renewed -> removing scheduled: ${curScheduledProduct.product.name}, main product: ${updatedCusProducts[0].product.name}`
     );
-
-    let stripeCli = createStripeCli({
-      org,
-      env,
-    });
-
-    await cancelFutureProductSchedule({
-      req,
-      db,
-      org,
-      stripeCli,
-      cusProducts,
-      product: updatedCusProducts[0].product,
-      internalEntityId: updatedCusProducts[0].internal_entity_id,
-      logger,
-      env,
-      sendWebhook: false,
-    });
 
     await CusProductService.delete({
       db,

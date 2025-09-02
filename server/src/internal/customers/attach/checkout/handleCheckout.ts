@@ -1,9 +1,4 @@
-import {
-  AttachFunction,
-  AttachScenario,
-  CheckoutResponseSchema,
-  FeatureOptions,
-} from "@autumn/shared";
+import { AttachFunction, FeatureOptions } from "@autumn/shared";
 
 import { routeHandler } from "@/utils/routerUtils.js";
 import { getAttachParams } from "../attachUtils/attachParams/getAttachParams.js";
@@ -20,7 +15,6 @@ import {
 } from "../attachRouter.js";
 import { attachParamsToPreview } from "../handleAttachPreview/attachParamsToPreview.js";
 import { previewToCheckoutRes } from "./previewToCheckoutRes.js";
-import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { attachParamsToProduct } from "../attachUtils/convertAttachParams.js";
 import { isPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
@@ -28,6 +22,7 @@ import { priceToFeature } from "@/internal/products/prices/priceUtils/convertPri
 import { getPriceOptions } from "@/internal/products/prices/priceUtils.js";
 import { getHasProrations } from "./getHasProrations.js";
 import { handleCreateInvoiceCheckout } from "../../add-product/handleCreateInvoiceCheckout.js";
+import { z } from "zod";
 
 const getAttachVars = async ({
   req,
@@ -110,6 +105,7 @@ export const handleCheckout = (req: any, res: any) =>
     action: "attach-preview",
     handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
       const { logger, features } = req;
+
       const attachBody = AttachBodySchema.parse(req.body);
 
       const { attachParams, branch, func, config } = await getAttachVars({
@@ -154,6 +150,8 @@ export const handleCheckout = (req: any, res: any) =>
         }
       }
 
+      console.log(`Branch: ${branch}, Func: ${func}`);
+
       await getCheckoutOptions({
         req,
         attachParams,
@@ -171,6 +169,7 @@ export const handleCheckout = (req: any, res: any) =>
         req,
         attachParams,
         preview,
+        branch,
       });
 
       // Get has prorations

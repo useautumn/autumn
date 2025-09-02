@@ -86,6 +86,7 @@ export const getV2CheckResponse = async ({
   const cusPrices = cusProducts.flatMap(
     (cusProduct) => cusProduct.customer_prices
   );
+
   const balances = await getCusBalances({
     cusEntsWithCusProduct: featureCusEnts,
     cusPrices,

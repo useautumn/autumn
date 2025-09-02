@@ -19,7 +19,7 @@ export const logSubItems = ({
       let price = item.price.unit_amount! / 100;
       let subInterval = subItemToAutumnInterval(item);
       console.log(
-        `${price} ${item.price.currency} / ${subInterval?.interval} (${subInterval?.intervalCount})`
+        `${price} ${item.price.currency}${item.quantity !== 1 ? ` x ${item.quantity}` : ""} / ${subInterval?.intervalCount} ${subInterval?.interval}`
       );
     }
   }

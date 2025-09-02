@@ -1,9 +1,9 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { sanitizeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { generateId } from "@/utils/genUtils.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
-import { BillingInterval } from "@autumn/shared";
 
 export const createSubSchedule = async ({
   db,
@@ -13,11 +13,7 @@ export const createSubSchedule = async ({
 }: {
   db: DrizzleCli;
   attachParams: AttachParams;
-  itemSet: {
-    subItems: any[];
-    invoiceItems: any[];
-    usageFeatures: string[];
-  };
+  itemSet: ItemSet;
   endOfBillingPeriod: number;
 }) => {
   const { org, customer, paymentMethod } = attachParams;
@@ -42,7 +38,7 @@ export const createSubSchedule = async ({
     billing_mode: { type: "flexible" },
     phases: [
       {
-        items: subItems,
+        items: sanitizeSubItems(subItems),
         default_payment_method: paymentMethod?.id,
         add_invoice_items: invoiceItems,
       },

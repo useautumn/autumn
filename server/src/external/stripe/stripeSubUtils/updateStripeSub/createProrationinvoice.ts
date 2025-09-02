@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { payForInvoice } from "../../stripeInvoiceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@autumn/shared";
+import { buildInvoiceMemoFromEntitlements } from "@/internal/invoices/invoiceMemoUtils.js";
 
 export const undoSubUpdate = async ({
   stripeCli,
@@ -69,35 +70,20 @@ export const createProrationInvoice = async ({
     return null;
   }
 
-  // console.log(
-  //   "Upcoming invoice:",
-  //   items.data.map((item) => item.description)
-  // );
-
-  // throw new Error("Not implemented");
-
-  // const proratedItems = items.data.filter(
-  //   (item) => item.proration || item.parent?.type === "invoiceitem"
-  // );
-
-  // console.log("Preview invoice items:", items.lines.data);
-  // let items = await stripeCli.invoices.listUpcomingLines({
-  //   subscription: curSub.id,
-  // });
-
-  // let proratedItems = items.data.filter(
-  //   (item) => item.proration || item.type === "invoiceitem",
-  // );
-
-  // if (proratedItems.length == 0) {
-  //   logger.info(`No items to prorate, skipping invoice creation`);
-  //   return null;
-  // }
+  // const shouldMemo = attachParams.org.config.invoice_memos && invoiceOnly;
+  // const invoiceMemo = shouldMemo
+  //   ? await buildInvoiceMemoFromEntitlements({
+  //       org: attachParams.org,
+  //       entitlements: attachParams.entitlements,
+  //       features: attachParams.features,
+  //     })
+  //   : undefined;
 
   let invoice = await stripeCli.invoices.create({
     customer: customer.processor.id,
     subscription: curSub.id,
     auto_advance: false,
+    // ...(shouldMemo ? { description: invoiceMemo } : {}),
   });
 
   if (invoiceOnly) return invoice;

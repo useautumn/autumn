@@ -18,7 +18,7 @@ export const CusProductToolbar = ({
 }: {
   cusProduct: FullCusProduct;
 }) => {
-  const { showEntityView } = useCustomerContext();
+  const { showEntityView, customer } = useCustomerContext();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -39,7 +39,7 @@ export const CusProductToolbar = ({
           <ToolbarButton className="!w-4 !h-6 !rounded-md text-t3" />
         </DropdownMenuTrigger>
         <DropdownMenuContent className="text-t2 w-36" align="end">
-          {showEntityView && (
+          {(showEntityView || customer.entities.length > 0) && (
             <DropdownMenuItem
               className="flex items-center justify-between w-full text-t2"
               onClick={(e) => {

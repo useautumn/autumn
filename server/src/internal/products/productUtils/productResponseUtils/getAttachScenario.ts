@@ -6,6 +6,7 @@ import {
   isProductUpgrade,
 } from "../../productUtils.js";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
+import { isCanceled } from "@/internal/customers/cusProducts/cusProductUtils/classifyCusProduct.js";
 
 export const getAttachScenario = ({
   fullCus,
@@ -19,6 +20,7 @@ export const getAttachScenario = ({
   let { curMainProduct, curScheduledProduct } = getExistingCusProducts({
     product: fullProduct,
     cusProducts: fullCus?.customer_products || [],
+    internalEntityId: fullCus?.entity?.internal_id,
   });
 
   if (!curMainProduct || fullProduct.is_add_on) return AttachScenario.New;
@@ -29,7 +31,7 @@ export const getAttachScenario = ({
 
   // 1. If current product is the same as the product, return active
   if (curMainProduct?.product.id == fullProduct.id) {
-    if (curMainProduct.canceled_at != null) {
+    if (isCanceled({ cusProduct: curMainProduct })) {
       return AttachScenario.Renew;
     } else return AttachScenario.Active;
   }

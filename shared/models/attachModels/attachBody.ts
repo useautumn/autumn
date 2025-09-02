@@ -4,6 +4,13 @@ import { ProductItemSchema } from "../productV2Models/productItemModels/productI
 import { CreateFreeTrialSchema } from "../productModels/freeTrialModels/freeTrialModels.js";
 import { notNullish } from "../../utils/utils.js";
 
+export const ProductOptions = z.object({
+  product_id: z.string(),
+  quantity: z.number().nullish(),
+  entity_id: z.string().nullish(),
+  options: z.array(FeatureOptionsSchema).nullish(),
+});
+
 export const AttachBodySchema = z
   .object({
     // Customer Info
@@ -23,9 +30,9 @@ export const AttachBodySchema = z
     // Product Info
     product_id: z.string().nullish(),
     product_ids: z.array(z.string()).min(1).nullish(),
-
-    // Options
     options: z.array(FeatureOptionsSchema).nullish(),
+
+    products: z.array(ProductOptions).nullish(),
 
     // Custom Product
     is_custom: z.boolean().optional(),
@@ -42,14 +49,17 @@ export const AttachBodySchema = z
     metadata: z.any().optional(),
     billing_cycle_anchor: z.number().optional(),
     checkout_session_params: z.any().optional(),
-    reward: z.string().optional(),
+    reward: z.string().or(z.array(z.string())).optional(),
     invoice: z.boolean().optional(),
     enable_product_immediately: z.boolean().optional(),
     finalize_invoice: z.boolean().optional(),
+
+    // Checkout params
+    skip_checkout: z.boolean().optional(),
   })
   .refine(
     (data) => {
-      if (!data.product_id && !data.product_ids) {
+      if (!data.product_id && !data.product_ids && !data.products) {
         return false;
       }
 
@@ -112,3 +122,4 @@ export const AttachBodySchema = z
   );
 
 export type AttachBody = z.infer<typeof AttachBodySchema>;
+export type ProductOptions = z.infer<typeof ProductOptions>;

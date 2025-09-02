@@ -41,14 +41,18 @@ export const handleSubDeleted = async ({
     stripeId: data.id,
   });
 
-  if (subscription.cancellation_details?.comment === "autumn_upgrade") {
+  const cancellationComment = subscription.cancellation_details?.comment;
+  if (
+    cancellationComment === "autumn_upgrade" ||
+    cancellationComment === "autumn_cancel"
+  ) {
     logger.info(
-      `sub.deleted: ${subscription.id} from autumn upgrade, skipping`
+      `sub.deleted: ${subscription.id} from ${cancellationComment}, skipping`
     );
     return;
   }
 
-  if (subscription.cancellation_details?.comment?.includes("trial_canceled")) {
+  if (cancellationComment?.includes("trial_canceled")) {
     logger.info(
       `sub.deleted: ${subscription.id} from trial canceled, skipping`
     );
@@ -70,6 +74,4 @@ export const handleSubDeleted = async ({
       prematurelyCanceled,
     });
   }
-
-  // await Promise.all(batchUpdate);
 };
