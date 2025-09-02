@@ -17,6 +17,7 @@ import {
 } from "@autumn/shared";
 import { AttachParams } from "../../customers/cusProducts/AttachParams.js";
 import {
+  formatPrice,
   getBillingType,
   getPriceForOverage,
   getPriceOptions,
@@ -37,12 +38,16 @@ import { formatAmount } from "@/utils/formatUtils.js";
 import {
   formatUnixToDate,
   formatUnixToDateTime,
+  formatUnixToUTCDateTime,
   notNullish,
 } from "@/utils/genUtils.js";
 import {
   addBillingIntervalUnix,
+  addIntervalForProration,
   getAlignedIntervalUnix,
   subtractBillingIntervalUnix,
+  subtractFromUnixTillAligned,
+  subtractIntervalForProration,
 } from "../../products/prices/billingIntervalUtils.js";
 import {
   priceToFeature,
@@ -109,24 +114,26 @@ export const getProration = ({
     return proration;
   }
 
-  let end = getAlignedIntervalUnix({
-    alignWithUnix: anchorToUnix!,
-    interval,
-    intervalCount,
-    now,
-    alwaysReturn: true,
+  // Get end...
+
+  const originalEnd = addIntervalForProration({
+    unixTimestamp: now,
+    intervalConfig: {
+      interval,
+      intervalCount,
+    },
   });
 
-  let start = subtractBillingIntervalUnix({
+  let end = subtractFromUnixTillAligned({
+    targetUnix: anchorToUnix!,
+    originalUnix: originalEnd,
+  });
+
+  let start = subtractIntervalForProration({
     unixTimestamp: end!,
     interval,
     intervalCount,
   });
-
-  // console.log(`Anchor to unix: ${formatUnixToDateTime(anchorToUnix)}`);
-  // console.log(`Start: ${formatUnixToDateTime(start)}`);
-  // console.log(`End: ${formatUnixToDateTime(end)}`);
-  // console.log(`--------------------------------`);
 
   return {
     start,
@@ -168,17 +175,22 @@ export const getItemsForNewProduct = async ({
   const { org, features } = attachParams;
   now = now || Date.now();
 
-  // console.log("Anchoring to", formatUnixToDateTime(anchorToUnix));
-
   const items: PreviewLineItem[] = [];
 
   sortPricesByType(newProduct.prices);
+
+  const printLogs = false;
 
   for (const price of newProduct.prices) {
     if (skipOneOff && isOneOffPrice({ price })) continue;
 
     const ent = getPriceEntitlement(price, newProduct.entitlements);
     const billingType = getBillingType(price.config);
+
+    if (printLogs) {
+      console.log("price", formatPrice({ price }));
+      console.log("now:", formatUnixToDate(now));
+    }
 
     const finalProration = getProration({
       proration,
@@ -187,6 +199,12 @@ export const getItemsForNewProduct = async ({
       interval: price.config.interval!,
       intervalCount: price.config.interval_count || 1,
     });
+
+    if (printLogs && finalProration) {
+      // console.log(
+      //   `Proration: ${formatUnixToUTCDateTime(finalProration.start)} to ${formatUnixToUTCDateTime(finalProration.end)}`
+      // );
+    }
 
     if (isFixedPrice({ price })) {
       let amount = finalProration

@@ -79,23 +79,23 @@ export const addCurMainProductToSchedule = async ({
   for (const scheduleObj of schedules) {
     const { schedule, interval, intervalCount } = scheduleObj;
 
-    let oldItemSet = oldItemSets.find((itemSet) =>
-      intervalsSame({
-        intervalA: { interval, intervalCount },
-        intervalB: itemSet,
-      })
-    );
+    // let oldItemSet = oldItemSets.find((itemSet) =>
+    //   intervalsSame({
+    //     intervalA: { interval, intervalCount },
+    //     intervalB: itemSet,
+    //   })
+    // );
 
-    await updateScheduledSubWithNewItems({
-      scheduleObj: scheduleObj,
-      newItems: oldItemSet?.items || [],
-      cusProductsForGroup: [],
-      stripeCli: stripeCli,
-      itemSet: null,
-      db,
-      org: org,
-      env: env,
-    });
+    // await updateScheduledSubWithNewItems({
+    //   scheduleObj: scheduleObj,
+    //   newItems: oldItemSet?.items || [],
+    //   cusProductsForGroup: [],
+    //   stripeCli: stripeCli,
+    //   itemSet: null,
+    //   db,
+    //   org: org,
+    //   env: env,
+    // });
 
     // Put back schedule id into curMainProduct
     await CusProductService.update({

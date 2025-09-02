@@ -10,6 +10,7 @@ import {
   FullCusProduct,
   APIVersion,
   InsertReplaceable,
+  ProductOptions,
 } from "@autumn/shared";
 import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 
@@ -78,6 +79,7 @@ export const initCusProduct = ({
   entityId,
   internalEntityId,
   apiVersion,
+  quantity,
 }: {
   customer: Customer;
   product: FullProduct;
@@ -99,6 +101,7 @@ export const initCusProduct = ({
   entityId?: string;
   internalEntityId?: string;
   apiVersion?: APIVersion;
+  quantity?: number;
 }) => {
   let isFuture = startsAt && startsAt > Date.now();
 
@@ -114,6 +117,7 @@ export const initCusProduct = ({
     internal_product_id: product.internal_id,
     product_id: product.id,
     created_at: createdAt || Date.now(),
+    canceled: notNullish(canceledAt) ? true : false,
 
     status: subscriptionStatus
       ? subscriptionStatus
@@ -137,7 +141,7 @@ export const initCusProduct = ({
     subscription_ids: subscriptionIds,
     scheduled_ids: subscriptionScheduleIds,
     is_custom: isCustom || false,
-    quantity: 1,
+    quantity: quantity || 1,
     internal_entity_id: internalEntityId,
     entity_id: entityId,
     api_version: apiVersion,
@@ -269,7 +273,7 @@ export const createFullCusProduct = async ({
   // subscriptionId,
   nextResetAt,
   disableFreeTrial = false,
-  lastInvoiceId = null,
+  productOptions,
   trialEndsAt,
   subscriptionStatus,
   canceledAt = null,
@@ -292,7 +296,7 @@ export const createFullCusProduct = async ({
   nextResetAt?: number;
   billLaterOnly?: boolean;
   disableFreeTrial?: boolean;
-  lastInvoiceId?: string | null;
+  productOptions?: ProductOptions;
   trialEndsAt?: number;
   subscriptionStatus?: CusProductStatus;
   canceledAt?: number | null;
@@ -354,6 +358,7 @@ export const createFullCusProduct = async ({
   logger.info(
     `Inserting cus product ${product.id} for ${customer.name}, cus product ID: ${cusProdId}`
   );
+  logger.info(productOptions);
 
   // 1. create customer entitlements
   const cusEnts: CustomerEntitlement[] = [];
@@ -371,8 +376,6 @@ export const createFullCusProduct = async ({
       nextResetAt,
       freeTrial,
       relatedPrice,
-      // existingCusEnt,
-      // keepResetIntervals,
       trialEndsAt,
       anchorToUnix,
       entities: attachParams.entities || [],
@@ -380,6 +383,7 @@ export const createFullCusProduct = async ({
       curCusProduct: curCusProduct as FullCusProduct,
       replaceables: attachReplaceables,
       now: attachParams.now,
+      productOptions: productOptions || undefined,
     });
 
     cusEnts.push(cusEnt);
@@ -448,6 +452,7 @@ export const createFullCusProduct = async ({
     internalEntityId: attachParams.internalEntityId,
     entityId: attachParams.entityId,
     apiVersion: attachParams.apiVersion,
+    quantity: productOptions?.quantity ?? undefined,
   });
 
   // Expire previous product if not one off and add on...?

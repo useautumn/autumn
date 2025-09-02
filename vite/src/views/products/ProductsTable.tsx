@@ -21,13 +21,19 @@ export const ProductsTable = ({
   const { env, onboarding, showArchived } = useProductsContext();
   const navigate = useNavigate();
   const { allCounts } = useProductsContext();
+  // Check if any product has a group
+  const hasAnyGroup = products?.some(product => Boolean(product?.group?.trim()));
 
   return (
     <>
       {products && products.length > 0 ? (
         <Row
           type="header"
-          className={cn("grid-cols-18 -mb-1", onboarding && "grid-cols-12")}
+          className={cn(
+            hasAnyGroup ? "grid-cols-18" : "grid-cols-15",
+            "-mb-1",
+            onboarding && "grid-cols-12"
+          )}
           isOnboarding={onboarding}
         >
           <Item className="col-span-3">Name</Item>
@@ -36,7 +42,7 @@ export const ProductsTable = ({
             <>
               <Item className="col-span-3">Active</Item>
               <Item className="col-span-3">Type</Item>
-              <Item className="col-span-3">Group</Item>
+              {hasAnyGroup && <Item className="col-span-3">Group</Item>}
               <Item className="col-span-2">Created At</Item>
             </>
           )}
@@ -110,7 +116,8 @@ export const ProductsTable = ({
             <Row
               key={product.id}
               className={cn(
-                "grid-cols-18 gap-2 items-center text-sm cursor-pointer hover:bg-primary/5 text-t2 whitespace-nowrap",
+                hasAnyGroup ? "grid-cols-18" : "grid-cols-15",
+                "gap-2 items-center text-sm cursor-pointer hover:bg-primary/5 text-t2 whitespace-nowrap",
                 onboarding && "grid-cols-12"
               )}
               isOnboarding={onboarding}
@@ -157,9 +164,11 @@ export const ProductsTable = ({
                   <Item className="col-span-3">
                     <ProductTypeBadge product={product} />
                   </Item>
-                  <Item className="col-span-3">
-                    {!onboarding && product.group}
-                  </Item>
+                  {hasAnyGroup && (
+                    <Item className="col-span-3">
+                      {product.group}
+                    </Item>
+                  )}
                   <Item className="col-span-2 lg:overflow-visible text-t3 text-xs">
                     {formatUnixToDateTime(product.created_at).date}
                   </Item>

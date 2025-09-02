@@ -3,7 +3,7 @@ import stripe, { Stripe } from "stripe";
 import chalk from "chalk";
 
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { AppEnv, AuthType, LoggerAction, Organization } from "@autumn/shared";
+import { AppEnv, AuthType, Organization } from "@autumn/shared";
 
 import { handleCheckoutSessionCompleted } from "./webhookHandlers/handleCheckoutCompleted.js";
 import { handleSubscriptionUpdated } from "./webhookHandlers/handleSubUpdated.js";

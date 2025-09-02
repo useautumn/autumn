@@ -15,6 +15,7 @@ import {
   TierInfinite,
   OnIncrease,
   OnDecrease,
+  Product,
 } from "@autumn/shared";
 
 import RecaseError from "@/utils/errorUtils.js";
@@ -182,10 +183,10 @@ export const pricesContainRecurring = (prices: Price[]) => {
 
 // Get price options
 export const getEntOptions = (
-  optionsList: FeatureOptions[],
+  optionsList: FeatureOptions[] | null | undefined,
   entitlement: Entitlement | EntitlementWithFeature
 ) => {
-  if (!entitlement) {
+  if (!entitlement || !optionsList || !Array.isArray(optionsList)) {
     return null;
   }
   const options = optionsList.find(
@@ -426,21 +427,36 @@ export const roundUsage = ({
     .toNumber();
 };
 
-export const formatPrice = ({ price }: { price: Price }) => {
+export const formatPrice = ({
+  price,
+  product,
+}: {
+  price: Price;
+  product?: Product;
+}) => {
   if (price.config.type == PriceType.Fixed) {
     const config = price.config as FixedPriceConfig;
-    return `${config.amount}${config.interval == BillingInterval.OneOff ? "(one off)" : `/ ${config.interval}`}`;
+    const formatted = `${config.amount}${config.interval == BillingInterval.OneOff ? "(one off)" : `/ ${config.interval}`}`;
+    if (product) {
+      return `${product.name} - ${formatted}`;
+    }
+    return formatted;
   } else {
     const config = price.config as UsagePriceConfig;
     let billingType = getBillingType(config);
     let formatBillingType = {
       [BillingType.UsageInAdvance]: "prepaid",
       [BillingType.UsageInArrear]: "usage",
+      [BillingType.InArrearProrated]: "cont_use",
       [BillingType.FixedCycle]: "cont_use",
     };
 
     let featureId = config.feature_id;
 
-    return `${formatBillingType[billingType as keyof typeof formatBillingType]} price for feature ${featureId}: $${config.usage_tiers[0].amount}${config.billing_units ? ` ${config.billing_units}` : ""}`;
+    const formatted = `${formatBillingType[billingType as keyof typeof formatBillingType]} price for feature ${featureId}: $${config.usage_tiers[0].amount}${config.billing_units ? ` ${config.billing_units}` : ""}`;
+    if (product) {
+      return `${product.name} - ${formatted}`;
+    }
+    return formatted;
   }
 };

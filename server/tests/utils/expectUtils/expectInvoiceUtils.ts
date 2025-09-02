@@ -14,7 +14,10 @@ import { AppEnv } from "autumn-js";
 import { Decimal } from "decimal.js";
 import Stripe from "stripe";
 import { getSubsFromCusId } from "./expectSubUtils.js";
-import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import {
+  isArrearPrice,
+  isFixedPrice,
+} from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 
 export const getExpectedInvoiceTotal = async ({
   customerId,
@@ -26,6 +29,7 @@ export const getExpectedInvoiceTotal = async ({
   env,
   onlyIncludeMonthly = false,
   onlyIncludeUsage = false,
+  onlyIncludeArrear = false,
   expectExpired = false,
 }: {
   customerId: string;
@@ -41,6 +45,7 @@ export const getExpectedInvoiceTotal = async ({
   env: AppEnv;
   onlyIncludeMonthly?: boolean;
   onlyIncludeUsage?: boolean;
+  onlyIncludeArrear?: boolean;
   expectExpired?: boolean;
 }) => {
   const { cusProduct } = await getSubsFromCusId({
@@ -64,6 +69,8 @@ export const getExpectedInvoiceTotal = async ({
 
     if (onlyIncludeUsage && isFixedPrice({ price })) continue;
 
+    if (onlyIncludeArrear && !isArrearPrice({ price })) continue;
+
     const config = price.config as UsagePriceConfig;
     const featureId = config.feature_id;
     const ent = getPriceEntitlement(price, ents);
@@ -71,7 +78,7 @@ export const getExpectedInvoiceTotal = async ({
     const usageAmount = usage.find(
       (u) =>
         u.featureId == featureId &&
-        (u.entityFeatureId ? u.entityFeatureId == ent.entity_feature_id : true),
+        (u.entityFeatureId ? u.entityFeatureId == ent.entity_feature_id : true)
     )?.value;
 
     const overage =

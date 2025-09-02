@@ -454,10 +454,12 @@ export class CusProductService {
     db,
     stripeSubId,
     updates,
+    inStatuses = RELEVANT_STATUSES,
   }: {
     db: DrizzleCli;
     stripeSubId: string;
     updates: Partial<CusProduct>;
+    inStatuses?: string[];
   }) {
     let updated = await db
       .update(customerProducts)
@@ -465,6 +467,42 @@ export class CusProductService {
       .where(
         and(
           arrayContains(customerProducts.subscription_ids, [stripeSubId]),
+          inStatuses ? inArray(customerProducts.status, inStatuses) : undefined
+        )
+      )
+      .returning({
+        id: customerProducts.id,
+      });
+
+    let fullUpdated = (await db.query.customerProducts.findMany({
+      where: inArray(
+        customerProducts.id,
+        updated.map((u) => u.id)
+      ),
+      with: {
+        product: true,
+        customer: true,
+        ...getFullCusProdRelations(),
+      },
+    })) as FullCusProduct[];
+
+    return fullUpdated as FullCusProduct[];
+  }
+  static async updateByStripeScheduledId({
+    db,
+    stripeScheduledId,
+    updates,
+  }: {
+    db: DrizzleCli;
+    stripeScheduledId: string;
+    updates: Partial<CusProduct>;
+  }) {
+    let updated = await db
+      .update(customerProducts)
+      .set(updates as any)
+      .where(
+        and(
+          arrayContains(customerProducts.scheduled_ids, [stripeScheduledId]),
           or(
             eq(customerProducts.status, CusProductStatus.Active),
             eq(customerProducts.status, CusProductStatus.PastDue),

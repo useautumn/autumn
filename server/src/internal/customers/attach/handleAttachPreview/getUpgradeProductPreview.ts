@@ -4,7 +4,7 @@ import {
   attachParamToCusProducts,
   paramsToCurSub,
 } from "../attachUtils/convertAttachParams.js";
-import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
+
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { getLargestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 import { getItemsForNewProduct } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
@@ -14,28 +14,31 @@ import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import Stripe from "stripe";
 import {
   AttachBranch,
-  BillingInterval,
   FreeTrial,
   FullCusProduct,
   PreviewLineItem,
   Price,
   UsageModel,
   AttachConfig,
+  UsagePriceConfig,
+  OnDecrease,
+  OnIncrease,
 } from "@autumn/shared";
 import {
-  addBillingIntervalUnix,
+  addIntervalForProration,
   getAlignedIntervalUnix,
 } from "@/internal/products/prices/billingIntervalUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { Decimal } from "decimal.js";
-import { intervalsAreSame } from "../attachUtils/getAttachConfig.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
-import { formatUnixToDateTime, notNullish, nullish } from "@/utils/genUtils.js";
+import { nullish } from "@/utils/genUtils.js";
 import {
   getLatestPeriodEnd,
   subToPeriodStartEnd,
 } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { isTrialing } from "../../cusProducts/cusProductUtils.js";
+import { cusProductToPrices } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import { isPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 
 const getNextCycleAt = ({
   prices,
@@ -57,11 +60,9 @@ const getNextCycleAt = ({
   if (
     branch == AttachBranch.NewVersion &&
     curCusProduct &&
-    isTrialing(curCusProduct)
+    isTrialing({ cusProduct: curCusProduct, now })
   ) {
-    return {
-      next_cycle_at: curCusProduct.trial_ends_at,
-    };
+    return curCusProduct.trial_ends_at;
   }
 
   if (freeTrial) {
@@ -87,6 +88,58 @@ const getNextCycleAt = ({
   });
 
   return nextCycleAt;
+};
+
+const filterNoProratePrepaidItems = ({
+  items,
+  attachParams,
+  curSameProduct,
+}: {
+  items: PreviewLineItem[];
+  attachParams: AttachParams;
+  curSameProduct?: FullCusProduct;
+}) => {
+  if (!curSameProduct) {
+    return items;
+  }
+
+  let filteredItems = items;
+  const curPrices = cusProductToPrices({ cusProduct: curSameProduct! });
+  for (const option of attachParams.optionsList) {
+    const { feature_id, internal_feature_id, quantity } = option;
+    const prevQuantity = curSameProduct?.options.find(
+      (o) => o.feature_id == feature_id
+    )?.quantity;
+
+    const curPrice = curPrices.find(
+      (p) =>
+        (p.config as UsagePriceConfig)?.internal_feature_id ==
+          internal_feature_id && isPrepaidPrice({ price: p })
+    );
+
+    const onDecrease = curPrice?.proration_config?.on_decrease;
+    const decreaseIsNone = onDecrease == OnDecrease.None;
+
+    if (decreaseIsNone && prevQuantity && quantity < prevQuantity) {
+      console.log(
+        `Quantity for ${feature_id} decreased from ${prevQuantity} to ${quantity}, Removing price: ${curPrice?.id}`
+      );
+      filteredItems = items.filter((item) => item.price_id !== curPrice?.id);
+    }
+
+    const onIncrease = curPrice?.proration_config?.on_increase;
+    if (
+      onIncrease == OnIncrease.ProrateNextCycle &&
+      prevQuantity &&
+      quantity > prevQuantity
+    ) {
+      console.log(
+        `Quantity for ${feature_id} increased from ${prevQuantity} to ${quantity}, Removing price: ${curPrice?.id}`
+      );
+      filteredItems = items.filter((item) => item.price_id !== curPrice?.id);
+    }
+  }
+  return filteredItems;
 };
 
 export const getUpgradeProductPreview = async ({
@@ -130,11 +183,12 @@ export const getUpgradeProductPreview = async ({
     if (sub) {
       const { start, end } = subToPeriodStartEnd({ sub });
       const largestInterval = getLargestInterval({ prices: newProduct.prices });
-      anchorToUnix = addBillingIntervalUnix({
-        unixTimestamp: start * 1000,
-        interval: largestInterval!.interval,
-        intervalCount: largestInterval!.intervalCount,
-      });
+      if (largestInterval) {
+        anchorToUnix = addIntervalForProration({
+          unixTimestamp: start * 1000,
+          intervalConfig: largestInterval,
+        });
+      }
     }
   } catch (error: any) {
     logger.error(
@@ -145,11 +199,19 @@ export const getUpgradeProductPreview = async ({
     );
   }
 
+  if (config?.disableTrial) attachParams.freeTrial = null;
   let freeTrial = attachParams.freeTrial;
-  if (config?.carryTrial && curCusProduct?.free_trial) {
+
+  if (
+    config?.carryTrial &&
+    curCusProduct?.free_trial &&
+    isTrialing({ cusProduct: curCusProduct, now })
+  ) {
     freeTrial = curCusProduct.free_trial;
   }
 
+  // console.log("Disable tiral:", config?.disableTrial);
+  // console.log("Free trial:", freeTrial);
   const newPreviewItems = await getItemsForNewProduct({
     newProduct,
     attachParams,
@@ -233,6 +295,12 @@ export const getUpgradeProductPreview = async ({
     dueNextCycle!.line_items = dueNextCycle!.line_items.filter(
       (item) => item.usage_model == UsageModel.Prepaid
     );
+
+    items = filterNoProratePrepaidItems({
+      items,
+      attachParams,
+      curSameProduct: curSameProduct!,
+    });
   }
 
   let dueToday:

@@ -7,47 +7,47 @@ import { SubService } from "@/internal/subscriptions/SubService.js";
 import { generateId } from "@/utils/genUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getAlignedIntervalUnix } from "@/internal/products/prices/billingIntervalUtils.js";
-import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import {
+  getLatestPeriodStart,
+  getEarliestPeriodEnd,
+  subToPeriodStartEnd,
+} from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { sanitizeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
+import { ItemSet } from "@/utils/models/ItemSet.js";
+import { buildInvoiceMemoFromEntitlements } from "@/internal/invoices/invoiceMemoUtils.js";
 
 // Get payment method
 
 export const createStripeSub2 = async ({
   db,
   stripeCli,
-  // customer,
-  // org,
-  // freeTrial,
-  // invoiceOnly = false,
   attachParams,
   config,
-  // finalizeInvoice = false,
   anchorToUnix,
   itemSet,
   earliestInterval,
+  logger,
 }: {
   db: DrizzleCli;
   stripeCli: Stripe;
-  // customer: Customer;
-  // freeTrial: FreeTrial | null;
-  // org: Organization;
-  // invoiceOnly?: boolean;
   attachParams: AttachParams;
   config: AttachConfig;
   anchorToUnix?: number;
-  itemSet: {
-    subItems: Stripe.SubscriptionItem[];
-    invoiceItems: any[];
-    usageFeatures: string[];
-  };
+  itemSet: ItemSet;
   earliestInterval?: IntervalConfig | null;
+  logger: any;
 }) => {
-  const { customer, invoiceOnly, freeTrial, org, now, reward } = attachParams;
+  const { customer, invoiceOnly, freeTrial, org, now, rewards } = attachParams;
+  const isDefaultTrial = freeTrial && !freeTrial.card_required;
+
+  let shouldErrorIfNoPm = !invoiceOnly;
+  if (isDefaultTrial) shouldErrorIfNoPm = false;
 
   let paymentMethod = await getCusPaymentMethod({
     stripeCli,
     stripeId: customer.processor.id,
-    errorIfNone: !invoiceOnly, // throw error if no payment method and invoiceOnly is false
+    errorIfNone: shouldErrorIfNoPm,
   });
 
   let paymentMethodData = {};
@@ -67,34 +67,17 @@ export const createStripeSub2 = async ({
         })
       : undefined;
 
-  // if (config.disableTrial) {
-  //   attachParams.freeTrial = null;
-  // }
-
-  // console.log(
-  //   "Billing cycle anchor unix",
-  //   formatUnixToDateTime(billingCycleAnchorUnix)
-  // );
-
-  // const { items, prices, usageFeatures } = itemSet;
-
-  // let subItems = items.filter(
-  //   (i: any, index: number) =>
-  //     prices[index].config!.interval !== BillingInterval.OneOff
-  // );
-
-  // let invoiceItems = items.filter(
-  //   (i: any, index: number) =>
-  //     prices[index].config!.interval === BillingInterval.OneOff
-  // );
-
   const { subItems, invoiceItems, usageFeatures } = itemSet;
+
+  const discounts = rewards
+    ? rewards.map((reward) => ({ coupon: reward.id }))
+    : undefined;
 
   try {
     const subscription = await stripeCli.subscriptions.create({
       ...paymentMethodData,
       customer: customer.processor.id,
-      items: subItems as any,
+      items: sanitizeSubItems(subItems),
       // items: subItems as any,
       billing_mode: { type: "flexible" },
       trial_end: freeTrialToStripeTimestamp({ freeTrial, now }),
@@ -107,7 +90,7 @@ export const createStripeSub2 = async ({
         : undefined,
 
       // coupon: reward ? reward.id : undefined,
-      discounts: reward ? [{ coupon: reward.id }] : undefined,
+      discounts,
       expand: ["latest_invoice"],
 
       trial_settings:
@@ -120,13 +103,29 @@ export const createStripeSub2 = async ({
           : undefined,
     });
 
-    // console.log("Latest invoice:", subscription.latest_invoice);
-
-    // subscription.latest_invoice = await stripeCli.invoices.retrieve(
-    //   subscription.latest_invoice as string
-    // );
-
     const latestInvoice = subscription.latest_invoice as Stripe.Invoice;
+
+    if (
+      invoiceOnly &&
+      org.config.invoice_memos &&
+      latestInvoice &&
+      latestInvoice.status === "draft"
+    ) {
+      try {
+        const desc = await buildInvoiceMemoFromEntitlements({
+          org,
+          entitlements: attachParams.entitlements,
+          features: attachParams.features,
+          prices: attachParams.prices,
+          logger,
+        });
+        await stripeCli.invoices.update(latestInvoice.id!, {
+          description: desc,
+        });
+      } catch (error) {
+        logger.error("CREATE STRIPE SUB: error adding invoice memo", { error });
+      }
+    }
 
     if (
       invoiceOnly &&
@@ -142,6 +141,7 @@ export const createStripeSub2 = async ({
 
     // Store
     const earliestPeriodEnd = getEarliestPeriodEnd({ sub: subscription });
+    const currentPeriodStart = getLatestPeriodStart({ sub: subscription });
 
     await SubService.createSub({
       db,
@@ -153,7 +153,7 @@ export const createStripeSub2 = async ({
         usage_features: usageFeatures,
         org_id: org.id,
         env: customer.env,
-        current_period_start: earliestPeriodEnd,
+        current_period_start: currentPeriodStart,
         current_period_end: earliestPeriodEnd,
       },
     });

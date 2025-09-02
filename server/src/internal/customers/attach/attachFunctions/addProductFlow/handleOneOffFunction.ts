@@ -18,6 +18,7 @@ import {
 } from "@/internal/invoices/invoiceUtils.js";
 import { Decimal } from "decimal.js";
 import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import { buildInvoiceMemoFromEntitlements } from "@/internal/invoices/invoiceMemoUtils.js";
 
 export const handleOneOffFunction = async ({
   req,
@@ -42,7 +43,7 @@ export const handleOneOffFunction = async ({
     prices,
     entitlements,
     optionsList,
-    reward,
+    rewards,
   } = attachParams;
 
   const { invoiceOnly } = config;
@@ -106,21 +107,35 @@ export const handleOneOffFunction = async ({
     });
   }
 
+  let shouldMemo = false;
+  let invoiceMemo = "";
+  try {
+    shouldMemo = attachParams.org.config.invoice_memos && invoiceOnly;
+    invoiceMemo = shouldMemo
+      ? await buildInvoiceMemoFromEntitlements({
+          org: attachParams.org,
+          entitlements: attachParams.entitlements,
+          features: attachParams.features,
+          prices: attachParams.prices,
+          logger,
+        })
+      : "";
+  } catch (error) {
+    logger.error("ONE OFF FUNCTION: error adding invoice memo", {
+      error,
+    });
+  }
+
   // Create invoice
   logger.info("1. Creating invoice");
   let stripeInvoice = await stripeCli.invoices.create({
     customer: customer.processor.id!,
     auto_advance: false,
     currency: org.default_currency!,
-    discounts: reward
-      ? [
-          {
-            coupon: reward.id,
-          },
-        ]
-      : undefined,
+    discounts: rewards ? rewards.map((r) => ({ coupon: r.id })) : undefined,
     collection_method: attachParams.invoiceOnly ? "send_invoice" : undefined,
     days_until_due: attachParams.invoiceOnly ? 30 : undefined,
+    ...(shouldMemo ? { description: invoiceMemo } : {}),
   });
 
   logger.info("2. Creating invoice items");
@@ -132,8 +147,8 @@ export const handleOneOffFunction = async ({
     } as any);
   }
 
-  if (config.invoiceCheckout && config.finalizeInvoice) {
-    if (stripeInvoice.status === "draft") {
+  if (config.invoiceCheckout) {
+    if (stripeInvoice.status === "draft" && config.finalizeInvoice) {
       stripeInvoice = await stripeCli.invoices.finalizeInvoice(
         stripeInvoice.id!
       );
@@ -183,7 +198,6 @@ export const handleOneOffFunction = async ({
       createFullCusProduct({
         db: req.db,
         attachParams: attachToInsertParams(attachParams, product),
-        lastInvoiceId: stripeInvoice.id,
         logger,
       })
     );

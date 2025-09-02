@@ -150,7 +150,7 @@ describe(`${chalk.yellowBright(`attach/${testCase}: upgrade quantity, prorate ne
       testClockId,
       advanceTo: addHours(
         addMonths(new Date(), 1),
-        hoursToFinalizeInvoice,
+        hoursToFinalizeInvoice
       ).getTime(),
       waitForSeconds: 10,
     });

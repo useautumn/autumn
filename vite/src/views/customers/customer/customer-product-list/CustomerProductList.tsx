@@ -40,6 +40,8 @@ import {
 import { CusProductStatusItem } from "../customer-product-list/CusProductStatus";
 import { CusProductEntityItem } from "../components/CusProductEntityItem";
 import { CusProductToolbar } from "./CusProductToolbar";
+import { MultiAttachDialog } from "../product/multi-attach/MultiAttachDialog";
+import { useCustomer } from "autumn-js/react";
 
 export const CustomerProductList = ({
   customer,
@@ -51,7 +53,10 @@ export const CustomerProductList = ({
   const navigate = useNavigate();
   const { env, versionCounts, entities, entityId, showEntityView } =
     useCustomerContext();
+
   const [showExpired, setShowExpired] = useState(false);
+
+  const [multiAttachOpen, setMultiAttachOpen] = useState(false);
 
   const sortedProducts = customer.products
     .filter((p: CusProduct & { entitlements: any[] }) => {
@@ -96,6 +101,14 @@ export const CustomerProductList = ({
             value: id,
           }))
         : []),
+      ...(cusProduct.scheduled_ids
+        ? [
+            {
+              key: "Stripe Scheduled IDs",
+              value: cusProduct.scheduled_ids.join(", "),
+            },
+          ]
+        : []),
       {
         key: "Entity ID",
         value: cusProduct.entity_id || "N/A",
@@ -123,7 +136,13 @@ export const CustomerProductList = ({
               Show Expired
             </Button>
             {/* <CreateEntitlement buttonType={"feature"} /> */}
-            <AddProduct />
+            <div className="flex items-center gap-0">
+              <MultiAttachDialog
+                open={multiAttachOpen}
+                setOpen={setMultiAttachOpen}
+              />
+              <AddProduct setMultiAttachOpen={setMultiAttachOpen} />
+            </div>
           </div>
         </div>
       </div>
@@ -169,7 +188,7 @@ export const CustomerProductList = ({
           >
             <Item className="col-span-3">
               <AdminHover texts={getCusProductHoverTexts(cusProduct)}>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <p>{cusProduct.product.name}</p>
                   {versionCounts[cusProduct.product.id] > 1 && (
                     <Badge
@@ -177,6 +196,15 @@ export const CustomerProductList = ({
                       className="text-xs bg-stone-50 text-t3 px-2 py-0 ml-2 font-mono"
                     >
                       v{cusProduct.product.version}
+                    </Badge>
+                  )}
+
+                  {cusProduct.quantity > 1 && (
+                    <Badge
+                      variant="outline"
+                      className="text-xs bg-stone-200 text-t3 px-2 py-0 ml-2 font-mono"
+                    >
+                      x{cusProduct.quantity}
                     </Badge>
                   )}
                 </div>

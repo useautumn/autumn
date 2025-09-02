@@ -9,7 +9,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@autumn/shared";
 import Stripe from "stripe";
 
-export const getReward = async ({
+export const getRewards = async ({
   req,
   attachBody,
   stripeCli,
@@ -19,32 +19,47 @@ export const getReward = async ({
   stripeCli: Stripe;
 }) => {
   const { reward: idOrCode } = attachBody;
+
   if (!idOrCode) {
     return undefined;
   }
 
+  const rewardArray = typeof idOrCode === "string" ? [idOrCode] : idOrCode;
+
+  if (rewardArray.length === 0) {
+    return undefined;
+  }
+
   // 1. Get reward by id or promo code
-  const reward = await RewardService.getByIdOrCode({
+  const rewards = await RewardService.getByIdOrCode({
     db: req.db,
-    idOrCode,
+    codes: rewardArray,
     orgId: req.org.id,
     env: req.env,
   });
 
-  if (!reward) {
-    throw new RecaseError({
-      message: `Reward ${idOrCode} not found`,
-      code: ErrCode.RewardNotFound,
-      statusCode: 404,
-    });
+  for (const reward of rewardArray) {
+    const corresponding = rewards.find(
+      (r) => r.id === reward || r.promo_codes.some((c) => c.code === reward)
+    );
+
+    if (!corresponding) {
+      throw new RecaseError({
+        message: `Reward ${reward} not found`,
+        code: ErrCode.RewardNotFound,
+        statusCode: 404,
+      });
+    }
   }
 
-  const stripeCoupon = await stripeCli.coupons.retrieve(reward.id);
+  return rewards;
 
-  return {
-    reward,
-    stripeCoupon,
-  };
+  // const stripeCoupon = await stripeCli.coupons.retrieve(reward.id);
+
+  // return {
+  //   reward,
+  //   stripeCoupon,
+  // };
 };
 
 export const processAttachBody = async ({
@@ -73,7 +88,7 @@ export const processAttachBody = async ({
       customer,
       logger: req.logtail,
     }),
-    getReward({
+    getRewards({
       req,
       attachBody,
       stripeCli,
@@ -99,7 +114,7 @@ export const processAttachBody = async ({
   return {
     customer,
     products,
-    reward: rewardData?.reward,
+    rewards: rewardData,
     optionsList,
     prices,
     entitlements,

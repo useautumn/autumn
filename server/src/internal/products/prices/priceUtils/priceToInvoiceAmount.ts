@@ -85,7 +85,7 @@ export const itemToInvoiceAmount = ({
 
   if (!nullish(quantity) && !nullish(overage)) {
     throw new Error(
-      `itemToInvoiceAmount: quantity or overage is required, autumn item: ${item.feature_id}`,
+      `itemToInvoiceAmount: quantity or overage is required, autumn item: ${item.feature_id}`
     );
   }
 
@@ -114,6 +114,7 @@ export const priceToInvoiceAmount = ({
   price,
   item,
   quantity,
+  productQuantity,
   overage,
   proration,
   now,
@@ -121,6 +122,7 @@ export const priceToInvoiceAmount = ({
   price?: Price;
   item?: ProductItem;
   quantity?: number; // quantity should be multiplied by billing units
+  productQuantity?: number;
   overage?: number;
   proration?: Proration;
   now?: number;
@@ -132,13 +134,16 @@ export const priceToInvoiceAmount = ({
   if (price) {
     if (isFixedPrice({ price })) {
       amount = (price.config as FixedPriceConfig).amount;
+      if (productQuantity) {
+        amount = new Decimal(amount).mul(productQuantity).toNumber();
+      }
     } else {
       const config = price.config as UsagePriceConfig;
       let billingType = getBillingType(config);
 
       if (!nullish(quantity) && !nullish(overage)) {
         throw new Error(
-          `getAmountForPrice: quantity or overage is required, autumn price: ${price.id}`,
+          `getAmountForPrice: quantity or overage is required, autumn price: ${price.id}`
         );
       }
 

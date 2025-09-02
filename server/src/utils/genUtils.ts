@@ -2,6 +2,7 @@ import { format } from "date-fns";
 import KSUID from "ksuid";
 import RecaseError from "./errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
+import { UTCDate } from "@date-fns/utc";
 
 export const generateId = (prefix: string) => {
   if (!prefix) {
@@ -53,18 +54,37 @@ export const notNullish = (value: any) => {
   return !nullish(value);
 };
 
-export const formatUnixToDateTime = (unixDate?: number | null) => {
+export const formatUnixToDateTime = (
+  unixDate?: number | null,
+  withTimezone?: boolean
+) => {
   if (!unixDate) {
     return "undefined unix date";
   }
-  return format(new Date(unixDate), "dd MMM yyyy HH:mm:ss");
+  return format(
+    new Date(unixDate),
+    withTimezone ? "dd MMM yyyy HH:mm:ss z" : "dd MMM yyyy HH:mm:ss"
+  );
+};
+
+export const formatUnixToUTCDateTime = (
+  unixDate?: number | null,
+  withTimezone?: boolean
+) => {
+  if (!unixDate) {
+    return "undefined unix date";
+  }
+  return format(
+    new UTCDate(unixDate),
+    withTimezone ? "dd MMM yyyy HH:mm:ss z" : "dd MMM yyyy HH:mm:ss"
+  );
 };
 
 export const formatUnixToDate = (unixDate?: number) => {
   if (!unixDate) {
     return null;
   }
-  return format(new Date(unixDate), "d MMM yyyy");
+  return format(new UTCDate(unixDate), "d MMM yyyy");
 };
 
 export const timeout = (ms: number) => {

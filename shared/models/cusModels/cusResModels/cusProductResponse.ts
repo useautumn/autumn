@@ -8,6 +8,9 @@ export const CusProductResponseSchema = z.object({
   group: z.string().nullable(),
   status: z.nativeEnum(CusProductStatus),
   // created_at: z.number(),
+  canceled: z.boolean().nullish(),
+  trialing: z.boolean().nullish(),
+
   canceled_at: z.number().nullish(),
   started_at: z.number(),
   is_default: z.boolean(),
@@ -25,7 +28,7 @@ export const CusProductResponseSchema = z.object({
       z.object({
         quantity: z.number(),
         feature_id: z.string(),
-      }),
+      })
     )
     .nullish(),
 });

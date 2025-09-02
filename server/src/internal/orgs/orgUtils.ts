@@ -5,6 +5,35 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { OrgService } from "./OrgService.js";
 import { FeatureService } from "../features/FeatureService.js";
 import { notNullish } from "@/utils/genUtils.js";
+import Stripe from "stripe";
+
+export const shouldReconnectStripe = async ({
+  org,
+  env,
+  logger,
+  stripeKey,
+}: {
+  org: Organization;
+  env: AppEnv;
+  logger: any;
+  stripeKey: string;
+}) => {
+  if (!isStripeConnected({ org, env })) return true;
+
+  try {
+    const stripeCli = createStripeCli({ org, env: env! });
+    const newKey = new Stripe(stripeKey);
+
+    const oldAccount = await stripeCli.accounts.retrieve();
+    const newAccount = await newKey.accounts.retrieve();
+
+    return oldAccount.id !== newAccount.id;
+  } catch (error) {
+    logger.error("Error checking if stripe should be reconnected", { error });
+    return true;
+  }
+  return false;
+};
 
 export const isStripeConnected = ({
   org,

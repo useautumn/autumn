@@ -11,9 +11,9 @@ import {
   Organization,
 } from "@autumn/shared";
 import Stripe from "stripe";
-import { createStripeCli } from "../../utils.js";
 
-import { getStripeSubs, getUsageBasedSub } from "../../stripeSubUtils.js";
+import { createStripeCli } from "../../utils.js";
+import { getStripeSubs } from "../../stripeSubUtils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 
@@ -243,12 +243,9 @@ export const sendUsageAndReset = async ({
     }
 
     if (billingType == BillingType.UsageInArrear) {
-      logger.info(
-        `✨ Handling usage prices for ${customer.name || customer.id}, org: ${org.slug}`
-      );
-
       await handleUsagePrices({
         db,
+        org,
         invoice,
         customer,
         relatedCusEnt,
@@ -308,6 +305,8 @@ export const handleInvoiceCreated = async ({
 
   const subId = invoiceToSubId({ invoice });
 
+  console.log("HANDLING INVOICE CREATED", invoice.id);
+
   if (subId) {
     const activeProducts = await CusProductService.getByStripeSubId({
       db,
@@ -339,42 +338,39 @@ export const handleInvoiceCreated = async ({
     });
 
     if (internalEntityId) {
-      try {
-        let stripeCli = createStripeCli({ org, env });
-        let entity = await EntityService.getByInternalId({
-          db,
-          internalId: internalEntityId,
-        });
-
-        let feature = features.find(
-          (f) => f.internal_id == entity?.internal_feature_id
-        );
-
-        let entDetails = "";
-        if (entity.name) {
-          entDetails = `${entity.name}${
-            entity.id ? ` (ID: ${entity.id})` : ""
-          }`;
-        } else if (entity.id) {
-          entDetails = `${entity.id}`;
-        }
-
-        if (entDetails && feature) {
-          await stripeCli.invoices.update(invoice.id!, {
-            description: `${getFeatureName({
-              feature,
-              plural: false,
-              capitalize: true,
-            })}: ${entDetails}`,
-          });
-        }
-      } catch (error: any) {
-        if (
-          error.message != "Finalized invoices can't be updated in this way"
-        ) {
-          logger.error(`Failed to add entity ID to invoice description`, error);
-        }
-      }
+      // try {
+      //   let stripeCli = createStripeCli({ org, env });
+      //   let entity = await EntityService.getByInternalId({
+      //     db,
+      //     internalId: internalEntityId,
+      //   });
+      //   let feature = features.find(
+      //     (f) => f.internal_id == entity?.internal_feature_id
+      //   );
+      //   let entDetails = "";
+      //   if (entity.name) {
+      //     entDetails = `${entity.name}${
+      //       entity.id ? ` (ID: ${entity.id})` : ""
+      //     }`;
+      //   } else if (entity.id) {
+      //     entDetails = `${entity.id}`;
+      //   }
+      //   if (entDetails && feature) {
+      //     await stripeCli.invoices.update(invoice.id!, {
+      //       description: `${getFeatureName({
+      //         feature,
+      //         plural: false,
+      //         capitalize: true,
+      //       })}: ${entDetails}`,
+      //     });
+      //   }
+      // } catch (error: any) {
+      //   if (
+      //     error.message != "Finalized invoices can't be updated in this way"
+      //   ) {
+      //     logger.error(`Failed to add entity ID to invoice description`, error);
+      //   }
+      // }
     }
 
     const stripeSubs = await getStripeSubs({

@@ -24,7 +24,7 @@ export class CusPriceService {
     });
 
     const matchingCustomerPrice = customerPricesData.find(
-      (cp) => cp.price?.entitlement_id === cusEnt.entitlement.id,
+      (cp) => cp.price?.entitlement_id === cusEnt.entitlement.id
     ) as FullCustomerPrice | undefined;
 
     return matchingCustomerPrice || null;
@@ -41,7 +41,11 @@ export class CusPriceService {
       return;
     }
 
-    await db.insert(customerPrices).values(data as any);
+    const inserted = await db
+      .insert(customerPrices)
+      .values(data as any)
+      .returning();
+    return inserted as CustomerPrice[];
   }
 
   static async getByCustomerProductId({
@@ -67,5 +71,30 @@ export class CusPriceService {
       .where(eq(customerPrices.id, id))
       .returning();
     return deleted;
+  }
+
+  static async update({
+    db,
+    id,
+    updates,
+  }: {
+    db: DrizzleCli;
+    id: string;
+    updates: Partial<CustomerPrice>;
+  }) {
+    const updated = await db
+      .update(customerPrices)
+      .set(updates)
+      .where(eq(customerPrices.id, id))
+      .returning();
+
+    // Ensure exactly one record was updated
+    if (updated.length !== 1) {
+      throw new Error(
+        `Expected to update exactly 1 record, but updated ${updated.length} records`
+      );
+    }
+
+    return updated[0];
   }
 }

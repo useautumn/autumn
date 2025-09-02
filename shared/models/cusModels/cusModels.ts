@@ -22,7 +22,11 @@ export const CreateCustomerSchema = z.object({
     .regex(/^[a-zA-Z0-9_@-]+$/) // Allow alphanumeric characters, underscores, hyphens, and @
     .nullish(), // id is not allowed whitespace characters
   name: z.string().nullish(),
-  email: z.string().nullish(),
+  email: z
+    .string()
+    .email({ message: "not a valid email address" })
+    .or(z.literal(""))
+    .nullish(),
   fingerprint: z.string().nullish(),
   metadata: z.record(z.any()).default({}).nullish(),
   stripe_id: z.string().nullish(),

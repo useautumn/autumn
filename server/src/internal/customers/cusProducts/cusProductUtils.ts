@@ -45,6 +45,7 @@ import {
 import { initStripeCusAndProducts } from "../handlers/handleCreateCustomer.js";
 import { handleAddProduct } from "../attach/attachFunctions/addProductFlow/handleAddProduct.js";
 import { newCusToAttachParams } from "../attach/attachUtils/attachParams/convertToParams.js";
+import { getDefaultAttachConfig } from "../attach/attachUtils/getAttachConfig.js";
 
 // 1. Cancel cusProductSubscriptions
 // CAN DELETE
@@ -118,6 +119,28 @@ export const cancelCusProductSubscriptions = async ({
   }
 
   return false;
+};
+
+export const getDefaultProduct = async ({
+  req,
+  productGroup,
+}: {
+  req: ExtendedRequest;
+  productGroup: string;
+}) => {
+  const { db, org, env, logger } = req;
+  const defaultProducts = await ProductService.listDefault({
+    db,
+    orgId: org.id,
+    env,
+  });
+
+  let defaultProd = defaultProducts.find(
+    (p) =>
+      p.group === productGroup && !isDefaultTrialFullProduct({ product: p })
+  );
+
+  return defaultProd;
 };
 
 export const activateDefaultProduct = async ({
@@ -259,6 +282,7 @@ export const activateDefaultProduct = async ({
         products: [defaultProd],
         stripeCli,
       }),
+      config: getDefaultAttachConfig(),
     });
 
     return true;
@@ -301,17 +325,11 @@ export const expireAndActivate = async ({
 export const activateFutureProduct = async ({
   req,
   cusProduct,
-  subscription,
 }: {
   req: ExtendedRequest;
   cusProduct: FullCusProduct;
-  subscription: Stripe.Subscription;
 }) => {
   const { db, org, env, logger } = req;
-  const stripeCli = createStripeCli({
-    org,
-    env,
-  });
 
   let cusProducts = await CusProductService.list({
     db,
@@ -329,40 +347,59 @@ export const activateFutureProduct = async ({
     return false;
   }
 
-  if (subIsPrematurelyCanceled(subscription)) {
-    console.log(
-      "   🔔 Subscription prematurely canceled, deleting scheduled products"
-    );
+  await CusProductService.update({
+    db,
+    cusProductId: futureProduct.id,
+    updates: { status: CusProductStatus.Active },
+  });
 
-    await deleteScheduledIds({
-      stripeCli,
-      scheduledIds: futureProduct.scheduled_ids || [],
-    });
-    await CusProductService.delete({
-      db,
-      cusProductId: futureProduct.id,
-    });
-    return false;
-  } else {
-    await CusProductService.update({
-      db,
-      cusProductId: futureProduct.id,
-      updates: { status: CusProductStatus.Active },
-    });
+  await addProductsUpdatedWebhookTask({
+    req,
+    internalCustomerId: cusProduct.internal_customer_id,
+    org,
+    env,
+    customerId: null,
+    scenario: AttachScenario.New,
+    cusProduct: futureProduct,
+    logger,
+  });
 
-    await addProductsUpdatedWebhookTask({
-      req,
-      internalCustomerId: cusProduct.internal_customer_id,
-      org,
-      env,
-      customerId: null,
-      scenario: AttachScenario.New,
-      cusProduct: futureProduct,
-      logger,
-    });
+  return futureProduct;
 
-    return true;
-  }
+  // if (subIsPrematurelyCanceled(subscription)) {
+  //   console.log(
+  //     "   🔔 Subscription prematurely canceled, deleting scheduled products"
+  //   );
+
+  //   await deleteScheduledIds({
+  //     stripeCli,
+  //     scheduledIds: futureProduct.scheduled_ids || [],
+  //   });
+  //   await CusProductService.delete({
+  //     db,
+  //     cusProductId: futureProduct.id,
+  //   });
+  //   return false;
+  // } else {
+  //   await CusProductService.update({
+  //     db,
+  //     cusProductId: futureProduct.id,
+  //     updates: { status: CusProductStatus.Active },
+  //   });
+
+  //   await addProductsUpdatedWebhookTask({
+  //     req,
+  //     internalCustomerId: cusProduct.internal_customer_id,
+  //     org,
+  //     env,
+  //     customerId: null,
+  //     scenario: AttachScenario.New,
+  //     cusProduct: futureProduct,
+  //     logger,
+  //   });
+
+  //   return true;
+  // }
 };
 
 // GET CUS ENTS FROM CUS PRODUCTS
@@ -566,8 +603,16 @@ export const searchCusProducts = ({
   });
 };
 
-export const isTrialing = (cusProduct: FullCusProduct) => {
-  return cusProduct.trial_ends_at && cusProduct.trial_ends_at > Date.now();
+export const isTrialing = ({
+  cusProduct,
+  now,
+}: {
+  cusProduct: FullCusProduct;
+  now?: number;
+}) => {
+  return (
+    cusProduct.trial_ends_at && cusProduct.trial_ends_at > (now || Date.now())
+  );
 };
 
 export const getMainCusProduct = async ({

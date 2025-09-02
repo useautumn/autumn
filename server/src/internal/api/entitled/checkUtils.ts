@@ -17,10 +17,15 @@ import { getCheckPreview } from "./getCheckPreview.js";
 
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getProration } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
-import { notNullish } from "@/utils/genUtils.js";
+import {
+  formatUnixToDate,
+  formatUnixToDateTime,
+  notNullish,
+} from "@/utils/genUtils.js";
 import { featureToCusPrice } from "@/internal/customers/cusProducts/cusPrices/convertCusPriceUtils.js";
 import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import { Decimal } from "decimal.js";
+import { isOneOffPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 
 export const getBooleanEntitledResult = async ({
   db,
@@ -111,6 +116,9 @@ export const getOptions = ({
 }) => {
   now = now || Date.now();
 
+  // console.log("Now:", formatUnixToDate(now));
+  // console.log("Anchor to unix:", formatUnixToDate(anchorToUnix));
+
   return prodItems
     .filter((i) => isFeaturePriceItem(i) && i.usage_model == UsageModel.Prepaid)
     .map((i) => {
@@ -122,6 +130,9 @@ export const getOptions = ({
         now,
       });
 
+      if (finalProration) {
+      }
+
       let priceData = itemToPriceOrTiers({
         item: i,
         proration: finalProration,
@@ -132,7 +143,7 @@ export const getOptions = ({
         item: i,
       });
 
-      if (freeTrial) {
+      if (freeTrial && notNullish(i.interval)) {
         priceData = {
           price: 0,
           tiers: undefined,
@@ -188,6 +199,7 @@ export const getOptions = ({
           : undefined,
         proration_amount: prorationAmount,
         config: i.config,
+        interval: i.interval,
       };
     });
 };

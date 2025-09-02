@@ -11,6 +11,7 @@ import {
   Customer,
   APIVersion,
   RolloverConfig,
+  Organization,
 } from "@autumn/shared";
 import { differenceInMinutes, subDays } from "date-fns";
 import { submitUsageToStripe } from "../../stripeMeterUtils.js";
@@ -24,6 +25,7 @@ import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";
 
 export const handleUsagePrices = async ({
   db,
+  org,
   invoice,
   customer,
   relatedCusEnt,
@@ -34,6 +36,7 @@ export const handleUsagePrices = async ({
   activeProduct,
 }: {
   db: DrizzleCli;
+  org: Organization;
   invoice: Stripe.Invoice;
   customer: Customer;
   relatedCusEnt: FullCustomerEntitlement;
@@ -51,7 +54,9 @@ export const handleUsagePrices = async ({
       )
     ) < 10;
 
-  let invoiceFromUpgrade = invoice.billing_reason == "subscription_update";
+  let invoiceFromUpgrade =
+    invoice.billing_reason == "subscription_update" ||
+    invoice.billing_reason == "manual";
 
   if (invoiceCreatedRecently) {
     logger.info("Invoice created recently, skipping");
@@ -62,6 +67,9 @@ export const handleUsagePrices = async ({
     logger.info("Invoice is from upgrade, skipping");
     return;
   }
+
+  logger.info(`✨ Handling usage prices for ${customer.name || customer.id}`);
+  logger.info(`✨ org: ${org.slug}, product: ${activeProduct.product.id}`);
 
   let config = price.config as UsagePriceConfig;
 

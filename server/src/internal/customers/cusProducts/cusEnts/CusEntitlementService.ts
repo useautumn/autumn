@@ -244,4 +244,10 @@ export class CusEntService {
 
     return data;
   }
+
+  static async delete({ db, id }: { db: DrizzleCli; id: string }) {
+    await db
+      .delete(customerEntitlements)
+      .where(eq(customerEntitlements.id, id));
+  }
 }

@@ -387,3 +387,24 @@ productRouter.get("/:productId/info", async (req: any, res: any) => {
     });
   }
 });
+
+productRouter.get("/rewards", async (req: any, res: any) => {
+  try {
+    const { db, orgId, env } = req;
+
+    const rewards = await RewardService.list({
+      db,
+      orgId,
+      env,
+    });
+
+    res.status(200).send({ rewards });
+  } catch (error) {
+    handleFrontendReqError({
+      error,
+      req,
+      res,
+      action: "Get rewards",
+    });
+  }
+});

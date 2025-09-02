@@ -27,8 +27,8 @@ export const InvitePopover = () => {
         "/organization/invite",
         {
           email: email,
-          role: "member",
-        },
+          role: "admin",
+        }
       );
 
       if (status === 202) {

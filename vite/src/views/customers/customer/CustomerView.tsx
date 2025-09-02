@@ -36,6 +36,10 @@ export default function CustomerView({ env }: { env: AppEnv }) {
     url: `/customers/${customer_id}/referrals`,
     env,
   });
+  const { data: rewardsData } = useAxiosSWR({
+    url: `/products/rewards`,
+    env,
+  });
 
   const [setAddCouponOpen] = useState(false);
   const [entityId, setEntityId] = useState(entityIdParam);
@@ -89,6 +93,7 @@ export default function CustomerView({ env }: { env: AppEnv }) {
         entityId,
         setEntityId,
         showEntityView,
+        rewards: rewardsData?.rewards,
       }}
     >
       <div className="flex w-full overflow-auto h-full ">

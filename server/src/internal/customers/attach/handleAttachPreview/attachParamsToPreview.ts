@@ -1,6 +1,6 @@
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
-import { AttachBody } from "@autumn/shared";
+import { AttachBody, AttachBranch } from "@autumn/shared";
 import { getAttachBranch } from "../attachUtils/getAttachBranch.js";
 import { getAttachConfig } from "../attachUtils/getAttachConfig.js";
 import { AttachFunction } from "@autumn/shared";
@@ -10,6 +10,8 @@ import { attachParamToCusProducts } from "../attachUtils/convertAttachParams.js"
 import { getDowngradeProductPreview } from "./getDowngradeProductPreview.js";
 import { getNewProductPreview } from "./getNewProductPreview.js";
 import { getUpgradeProductPreview } from "./getUpgradeProductPreview.js";
+import { getMultiAttachPreview } from "./getMultiAttachPreview.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 export const attachParamsToPreview = async ({
   req,
@@ -56,6 +58,18 @@ export const attachParamsToPreview = async ({
   let preview: any = null;
 
   if (
+    branch == AttachBranch.MultiAttach ||
+    notNullish(attachParams.productsList)
+  ) {
+    preview = await getMultiAttachPreview({
+      req,
+      attachBody,
+      attachParams,
+      logger,
+      config,
+      branch,
+    });
+  } else if (
     func == AttachFunction.AddProduct ||
     func == AttachFunction.CreateCheckout ||
     func == AttachFunction.OneOff

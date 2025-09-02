@@ -8,10 +8,13 @@ import {
 import { getOptions } from "@/internal/api/entitled/checkUtils.js";
 import { getItemsForNewProduct } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
-import { attachParamsToProduct } from "../attachUtils/convertAttachParams.js";
+import {
+  attachParamsToProduct,
+  getCustomerSub,
+} from "../attachUtils/convertAttachParams.js";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import {
-  addBillingIntervalUnix,
+  addIntervalForProration,
   getAlignedIntervalUnix,
   getNextStartOfMonthUnix,
 } from "@/internal/products/prices/billingIntervalUtils.js";
@@ -20,9 +23,8 @@ import {
   getLargestInterval,
   getSmallestInterval,
 } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
-import { isFreeProduct } from "@/internal/products/productUtils.js";
-import { getMergeCusProduct } from "../attachFunctions/addProductFlow/getMergeCusProduct.js";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import { isTrialing } from "../../cusProducts/cusProductUtils.js";
 
 const getNextCycleItems = async ({
   newProduct,
@@ -32,6 +34,7 @@ const getNextCycleItems = async ({
   withPrepaid,
   logger,
   config,
+  trialEnds,
 }: {
   newProduct: FullProduct;
   attachParams: AttachParams;
@@ -40,19 +43,21 @@ const getNextCycleItems = async ({
   withPrepaid?: boolean;
   logger: any;
   config: AttachConfig;
+  trialEnds?: number | null;
 }) => {
-  // 1. If one off, return null
-  if (branch == AttachBranch.OneOff) return null;
-
   // 2. If free trial
   let nextCycleAt = undefined;
   if (attachParams.freeTrial) {
-    nextCycleAt =
-      freeTrialToStripeTimestamp({
-        freeTrial: attachParams.freeTrial,
-        now: attachParams.now,
-      })! * 1000;
-  } else if (anchorToUnix) {
+    if (trialEnds) {
+      nextCycleAt = trialEnds;
+    } else {
+      nextCycleAt =
+        freeTrialToStripeTimestamp({
+          freeTrial: attachParams.freeTrial,
+          now: attachParams.now,
+        })! * 1000;
+    }
+  } else if (branch != AttachBranch.OneOff && anchorToUnix) {
     // Yearly one
     const largestInterval = getLargestInterval({ prices: newProduct.prices });
     if (largestInterval) {
@@ -105,24 +110,44 @@ export const getNewProductPreview = async ({
     });
   }
 
-  const { mergeSub } = await getMergeCusProduct({
+  // const { mergeSub } = await getMergeCusProduct({
+  //   attachParams,
+  //   products: [newProduct],
+  //   config,
+  // });
+  const { sub: mergeSub, cusProduct: mergeCusProduct } = await getCustomerSub({
     attachParams,
-    products: [newProduct],
-    config,
   });
 
-  if (mergeSub) {
+  // console.log("Merge sub:", mergeSub?.id);
+  // console.log("Merge cus product:", mergeCusProduct?.product.id);
+  // console.log(
+  //   "Trial ends at:",
+  //   formatUnixToDate(mergeCusProduct?.trial_ends_at || 0)
+  // );
+
+  let trialEnds = undefined;
+  if (mergeSub && branch !== AttachBranch.MainIsTrial) {
     const { start } = subToPeriodStartEnd({ sub: mergeSub });
+    if (mergeCusProduct?.free_trial) {
+      // 1. If still on trial
+      if (isTrialing({ cusProduct: mergeCusProduct, now: attachParams.now })) {
+        trialEnds = mergeCusProduct.trial_ends_at;
+        attachParams.freeTrial = mergeCusProduct.free_trial;
+      } else {
+        attachParams.freeTrial = null;
+      }
+    }
 
     const smallestInterval = getSmallestInterval({
       prices: newProduct.prices,
       excludeOneOff: true,
     });
+
     if (smallestInterval) {
-      anchorToUnix = addBillingIntervalUnix({
+      anchorToUnix = addIntervalForProration({
         unixTimestamp: start * 1000,
-        interval: smallestInterval!.interval,
-        intervalCount: smallestInterval!.intervalCount,
+        intervalConfig: smallestInterval,
       });
     }
   }
@@ -148,6 +173,7 @@ export const getNewProductPreview = async ({
     withPrepaid,
     logger,
     config,
+    trialEnds,
   });
 
   // console.log("Due next cycle", dueNextCycle);
@@ -216,6 +242,7 @@ export const getNewProductPreview = async ({
     features: attachParams.features,
     anchorToUnix,
     now: attachParams.now || Date.now(),
+    freeTrial: attachParams.freeTrial,
   });
 
   const dueTodayAmt = items.reduce((acc, item) => {
