@@ -7,7 +7,6 @@ import { Select, SelectItem } from "@/components/ui/select";
 import { DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useCustomerContext } from "../CustomerContext";
 import { getBackendErr } from "@/utils/genUtils";
 import { toast } from "sonner";
 import { CusService } from "@/services/customers/CusService";
@@ -15,8 +14,8 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getOriginalCouponId } from "@/utils/product/couponUtils";
 import { WarningBox } from "@/components/general/modal-components/WarningBox";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
-import { useCusQuery } from "../hooks/useCusQuery";
-import { useCusReferralQuery } from "../hooks/useCusReferralQuery";
+import { useCusQuery } from "../../hooks/useCusQuery";
+import { useCusReferralQuery } from "../../hooks/useCusReferralQuery";
 
 const AddCouponDialogContent = ({
   setOpen,

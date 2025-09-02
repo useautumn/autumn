@@ -16,18 +16,21 @@ import { useNavigate } from "react-router";
 import { getRedirectUrl, navigateTo } from "@/utils/genUtils";
 import { toast } from "sonner";
 import { OrgService } from "@/services/OrgService";
-import { CusProductStatus, Entity, Product } from "@autumn/shared";
+import { CusProductStatus, Entity, Product, ProductV2 } from "@autumn/shared";
 import SmallSpinner from "@/components/general/SmallSpinner";
 import { Blend, Search } from "lucide-react";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useCustomer } from "autumn-js/react";
+import { useCusQuery } from "../hooks/useCusQuery";
 
 function AddProduct({
   setMultiAttachOpen,
 }: {
   setMultiAttachOpen: (open: boolean) => void;
 }) {
-  const { products, customer, env, entityId, entities } = useCustomerContext();
+  const { env, entityId } = useCustomerContext();
+  const { products, customer, entities } = useCusQuery();
+
   const axiosInstance = useAxiosInstance({ env });
   const { customer: autumnCustomer } = useCustomer();
 
@@ -36,7 +39,7 @@ function AddProduct({
   const [open, setOpen] = useState(false);
   const { org } = useOrg();
 
-  const filteredProducts = products.filter((product: Product) => {
+  const filteredProducts = products.filter((product: ProductV2) => {
     if (product.is_add_on && !searchQuery) return true;
 
     const entity = entities.find((e: Entity) => e.id === entityId);
@@ -114,7 +117,7 @@ function AddProduct({
                 No new products found
               </div>
             ) : (
-              filteredProducts.map((product: Product) => (
+              filteredProducts.map((product: ProductV2) => (
                 <DropdownProductItem
                   key={product.id}
                   product={product}
@@ -146,7 +149,7 @@ const DropdownProductItem = ({
   product,
   handleAddProduct,
 }: {
-  product: Product;
+  product: ProductV2;
   handleAddProduct: any;
 }) => {
   const [isLoading, setIsLoading] = useState(false);

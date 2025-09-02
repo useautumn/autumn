@@ -119,13 +119,13 @@ export const CustomerProductList = () => {
             >
               Show Expired
             </Button>
-            {/* <CreateEntitlement buttonType={"feature"} /> */}
+
             <div className="flex items-center gap-0">
-              {/* <MultiAttachDialog
+              <MultiAttachDialog
                 open={multiAttachOpen}
                 setOpen={setMultiAttachOpen}
               />
-              <AddProduct setMultiAttachOpen={setMultiAttachOpen} /> */}
+              <AddProduct setMultiAttachOpen={setMultiAttachOpen} />
             </div>
           </div>
         </div>

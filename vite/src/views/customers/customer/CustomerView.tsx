@@ -13,6 +13,8 @@ import { CustomerProductList } from "./customer-product-list/CustomerProductList
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { CustomerEntitlementsList } from "./entitlements/CustomerEntitlementsList";
 import { useCusReferralQuery } from "./hooks/useCusReferralQuery";
+import { InvoicesTable } from "./InvoicesTable";
+import { CustomerEventsList } from "./CustomerEventsList";
 
 export default function CustomerView() {
   // const { customer_id } = useParams();
@@ -96,7 +98,7 @@ export default function CustomerView() {
         // rewards: rewardsData?.rewards,
       }}
     >
-      <div className="flex w-full overflow-auto h-full ">
+      <div className="flex w-full overflow-y-scroll h-full">
         <div className="flex flex-col gap-4 w-full ">
           <CustomerPageHeader />
           <div className="flex w-full !pb-[50px]">
@@ -108,12 +110,8 @@ export default function CustomerView() {
               <CustomerEntitlementsList />
               <div className="flex flex-col gap-2"></div>
 
-              {/* <InvoicesTable />
-              <CustomerEventsList
-                customer={customer}
-                events={events}
-                env={env}
-              /> */}
+              <InvoicesTable />
+              <CustomerEventsList />
             </div>
           </div>
         </div>

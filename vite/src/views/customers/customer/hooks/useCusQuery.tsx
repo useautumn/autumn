@@ -32,7 +32,7 @@ export const useCusQuery = () => {
   const { products, isLoading: productsLoading } = useProductsQuery();
   const { features, isLoading: featuresLoading } = useFeaturesQuery();
 
-  const customer = cachedCustomer || data?.customer;
+  const customer = data?.customer || cachedCustomer;
   const cusWithCacheLoading = cachedCustomer ? false : customerLoading;
 
   return {

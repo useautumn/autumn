@@ -76,100 +76,6 @@ cusRouter.get("/:customer_id", async (req: any, res: any) => {
       ],
     });
 
-    // const [coupons, products, customer] = await Promise.all([
-    //   RewardService.list({
-    //     db,
-    //     orgId: orgId,
-    //     env,
-    //   }),
-
-    //   ProductService.listFull({ db, orgId, env, returnAll: true }),
-
-    // ]);
-
-    // let invoices = customer.invoices;
-    // let entities = customer.entities;
-    // const events = await EventService.getByCustomerId({
-    //   db,
-    //   internalCustomerId: customer.internal_id,
-    //   env,
-    //   orgId: orgId,
-    //   limit: 10,
-    // });
-
-    // let fullCustomer = customer as any;
-    // let cusProducts = fullCustomer.customer_products;
-    // fullCustomer.products = fullCustomer.customer_products;
-    // fullCustomer.entitlements = cusProducts.flatMap(
-    //   (product: FullCusProduct) => product.customer_entitlements
-    // );
-    // fullCustomer.prices = cusProducts.flatMap(
-    //   (product: FullCusProduct) => product.customer_prices
-    // );
-
-    // for (const product of fullCustomer.products) {
-    //   product.entitlements = product.customer_entitlements.map(
-    //     (cusEnt: FullCustomerEntitlement) => {
-    //       return cusEnt.entitlement;
-    //     }
-    //   );
-    //   product.prices = product.customer_prices.map(
-    //     (cusPrice: FullCustomerPrice) => {
-    //       return cusPrice.price;
-    //     }
-    //   );
-    // }
-
-    // let discount = null;
-    // if (org.stripe_config && customer.processor?.id) {
-    //   try {
-    //     const stripeCli = createStripeCli({ org, env });
-    //     const stripeCus: any = await stripeCli.customers.retrieve(
-    //       customer.processor.id
-    //     );
-
-    //     if (stripeCus.discount) {
-    //       discount = stripeCus.discount;
-    //     }
-    //   } catch (error) {
-    //     console.log("error", error);
-    //   }
-    // }
-
-    // for (const invoice of invoices || []) {
-    //   invoice.product_ids = invoice.product_ids.sort();
-    //   invoice.internal_product_ids = invoice.internal_product_ids.sort();
-    // }
-
-    // fullCustomer.entitlements = fullCustomer.entitlements.sort(
-    //   (a: any, b: any) => {
-    //     const productA = fullCustomer.products.find(
-    //       (p: any) => p.id === a.customer_product_id
-    //     );
-    //     const productB = fullCustomer.products.find(
-    //       (p: any) => p.id === b.customer_product_id
-    //     );
-
-    //     return (
-    //       new Date(b.created_at).getTime() - new Date(a.created_at).getTime() ||
-    //       b.id.localeCompare(a.id)
-    //     );
-    //   }
-    // );
-
-    // for (const cusEnt of fullCustomer.entitlements) {
-    //   // let entitlement = cusEnt.entitlement;
-
-    //   // Show used, limit, etc.
-    //   let { balance, unused } = getCusEntMasterBalance({
-    //     cusEnt,
-    //     entities,
-    //   });
-
-    //   cusEnt.balance = balance;
-    //   cusEnt.unused = unused;
-    // }
-
     res.status(200).json({
       customer: fullCus,
       // products: getLatestProducts(products),
@@ -184,6 +90,40 @@ cusRouter.get("/:customer_id", async (req: any, res: any) => {
     });
   } catch (error) {
     handleFrontendReqError({ req, error, res, action: "get customer data" });
+  }
+});
+
+cusRouter.get("/:customer_id/events", async (req: any, res: any) => {
+  try {
+    const { db, org, features, env } = req;
+    const { customer_id } = req.params;
+    const orgId = req.orgId;
+
+    const customer = await CusService.get({
+      db,
+      orgId,
+      env,
+      idOrInternalId: customer_id,
+    });
+
+    if (!customer) {
+      throw new RecaseError({
+        message: "Customer not found",
+        code: ErrCode.CustomerNotFound,
+        statusCode: StatusCodes.NOT_FOUND,
+      });
+    }
+
+    const events = await EventService.getByCustomerId({
+      db,
+      internalCustomerId: customer.internal_id,
+      env,
+      orgId: orgId,
+    });
+
+    res.status(200).json({ events });
+  } catch (error) {
+    handleFrontendReqError({ req, error, res, action: "get customer events" });
   }
 });
 
@@ -220,27 +160,31 @@ cusRouter.get("/:customer_id", async (req: any, res: any) => {
 //   }
 // });
 
-cusRouter.get("/:customer_id/events", async (req: any, res: any) => {
-  try {
-    const { db, org, features, env } = req;
-    const { customer_id } = req.params;
-    const orgId = req.orgId;
-    const limit = req.query.limit || 10;
-    const period = req.query.period || "all";
+// cusRouter.get("/:customer_id/events", async (req: any, res: any) => {
+//   try {
+//     const { db, org, features, env } = req;
+//     const { customer_id } = req.params;
+//     const orgId = req.orgId;
+//     const limit = req.query.limit || 10;
+//     const period = req.query.period || "all";
 
-    const events = await EventService.getByCustomerId({
-      db,
-      internalCustomerId: customer_id,
-      env,
-      orgId: orgId,
-      limit,
-    });
+//     console.log("Fetching events for customer:", customer_id);
 
-    res.status(200).json({ events });
-  } catch (error) {
-    handleFrontendReqError({ req, error, res, action: "get customer events" });
-  }
-});
+//     const events = await EventService.getByCustomerId({
+//       db,
+//       internalCustomerId: customer_id,
+//       env,
+//       orgId: orgId,
+//       limit,
+//     });
+
+//     console.log("Events:", events);
+
+//     res.status(200).json({ events });
+//   } catch (error) {
+//     handleFrontendReqError({ req, error, res, action: "get customer events" });
+//   }
+// });
 
 cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
   try {
@@ -484,8 +428,6 @@ cusRouter.post("/all/full_customers", async (req: any, res: any) =>
         pageNumber: page,
         pageSize: page_size,
       });
-
-      console.log("First customer", customers?.[0]);
 
       const fullCustomers = await CusBatchService.getByInternalIds({
         db,

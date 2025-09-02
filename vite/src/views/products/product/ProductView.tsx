@@ -16,13 +16,12 @@ import { ManageProduct } from "./ManageProduct";
 import { AppEnv, UpdateProductSchema } from "@autumn/shared";
 import { ProductService } from "@/services/products/ProductService";
 import { getBackendErr } from "@/utils/genUtils";
-import { UpdateProductButton } from "@/views/products/product/components/UpdateProductButton";
 import { useProductChangedAlert } from "./hooks/useProductChangedAlert";
 import { useProductData } from "./hooks/useProductData";
+import { UpdateProductButton } from "./components/UpdateProductButton";
 
 function ProductView({ env }: { env: AppEnv }) {
   const axiosInstance = useAxiosInstance();
-
   const { product_id } = useParams();
   const [searchParams] = useSearchParams();
   const version = searchParams.get("version");
