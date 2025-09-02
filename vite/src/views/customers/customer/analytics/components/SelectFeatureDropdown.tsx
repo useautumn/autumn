@@ -165,30 +165,31 @@ export const SelectFeatureDropdown = ({
     setHasCleared(true);
   };
 
-  const totalFeatureCount = featureOptions.length;
-  const selectedFeatureCount = featureOptions.filter((o) => o.selected).length;
-  const allSelected = selectedFeatureCount > 0 && selectedFeatureCount === totalFeatureCount;
-  const someSelected = selectedFeatureCount > 0 && selectedFeatureCount < totalFeatureCount;
+  // Select All / Deselect All
+  const totalSelectable = allOptions.length;
+  const allSelected = numSelected > 0 && numSelected === totalSelectable;
+  const someSelected = numSelected > 0 && numSelected < totalSelectable;
 
   const handleToggleAll = () => {
     if (allSelected) {
-      updateQueryParams([], currentEventNames);
+      updateQueryParams([], []);
       return;
     }
 
-    const availableSlots = MAX_NUM_SELECTED - currentEventNames.length;
-    if (availableSlots <= 0) {
+    // Build the complete selection, respecting MAX_NUM_SELECTED if exceeded
+    let nextFeatureIds = featureOptions.map((o: any) => o.id);
+    let nextEventNames = eventOptions.map((o: any) => o.id);
+
+    const totalCount = nextFeatureIds.length + nextEventNames.length;
+    if (totalCount > MAX_NUM_SELECTED) {
+      const featureTake = Math.min(MAX_NUM_SELECTED, nextFeatureIds.length);
+      const remaining = MAX_NUM_SELECTED - featureTake;
+      nextFeatureIds = nextFeatureIds.slice(0, featureTake);
+      nextEventNames = remaining > 0 ? nextEventNames.slice(0, remaining) : [];
       toast.error(`You can only select up to ${MAX_NUM_SELECTED} events/features`);
-      return;
     }
 
-    const desiredFeatureIds = featureOptions.map((o) => o.id);
-    const nextFeatureIds = desiredFeatureIds.slice(0, availableSlots);
-    if (desiredFeatureIds.length > availableSlots) {
-      toast.error(`You can only select up to ${MAX_NUM_SELECTED} events/features`);
-    }
-
-    updateQueryParams(nextFeatureIds, currentEventNames);
+    updateQueryParams(nextFeatureIds, nextEventNames);
   };
 
   return (
@@ -207,7 +208,7 @@ export const SelectFeatureDropdown = ({
           <ChevronDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[240px] p-0" align="end">
+      <PopoverContent className="w-[300px] p-0" align="end">
         <Command>
           <CommandInput
             placeholder="Search..."
@@ -217,24 +218,21 @@ export const SelectFeatureDropdown = ({
           />
           <div className="max-h-[300px] overflow-y-auto">
             <CommandList>
-              <CommandEmpty>No results found.</CommandEmpty>
-
-              <CommandGroup>
-                <CommandItem onSelect={handleToggleAll} className="cursor-pointer">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      checked={allSelected}
-                      ref={(ref: any) => {
-                        if (ref) {
-                          ref.indeterminate = someSelected && !allSelected;
-                        }
-                      }}
-                      className="h-4 w-4"
-                    />
-                    <span className="text-xs">Select All</span>
-                  </div>
-                </CommandItem>
-              </CommandGroup>
+              <CommandEmpty className="py-2 text-center">
+                <p className="mb-2 text-sm text-muted-foreground">
+                  {searchValue ? "No results found." : "Search for a feature or event"}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mx-auto"
+                  onClick={() => {
+                    handleToggleAll();
+                  }}
+                >
+                  Or select all features
+                </Button>
+              </CommandEmpty>
 
               {filteredFeatures.length > 0 && (
                 <CommandGroup heading="Features">
@@ -281,25 +279,7 @@ export const SelectFeatureDropdown = ({
             </CommandList>
           </div>
 
-          <div className="border-t p-2">
-            <div className="flex items-center justify-between gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleClear}
-                className="h-7 px-3 text-xs"
-              >
-                Clear
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => setOpen(false)}
-                className="h-7 px-3 text-xs"
-              >
-                Close
-              </Button>
-            </div>
-          </div>
+          {null}
         </Command>
       </PopoverContent>
     </Popover>
