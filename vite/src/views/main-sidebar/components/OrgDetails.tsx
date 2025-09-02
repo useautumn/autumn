@@ -55,7 +55,7 @@ export const OrgDetails = () => {
         <div className="w-full flex justify-between items-center">
           <OrgLogoUploader />
         </div>
-        <div className="w-full flex gap-4">
+        <div className="w-full flex flex-col sm:flex-row gap-2 sm:gap-4">
           <OrgDetailInput
             label="Name"
             value={inputs.name}
