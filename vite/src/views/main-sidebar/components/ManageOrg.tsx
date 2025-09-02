@@ -23,7 +23,7 @@ export const ManageOrg = ({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild></DialogTrigger>
-      <DialogContent className="gap-0 p-0 rounded-xs w-[650px] h-[450px] flex flex-col justify-between">
+      <DialogContent className="gap-0 p-0 rounded-xs w-[90%] max-w-[650px] h-[450px] flex flex-col justify-between">
         <div className="flex flex-col gap-6 overflow-hidden h-full">
           <DialogHeader className="px-6 pt-6">
             <DialogTitle>Manage Organization</DialogTitle>
