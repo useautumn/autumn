@@ -1,5 +1,8 @@
+import React from "react";
 import SmallSpinner from "@/components/general/SmallSpinner";
+import AddCouponDialogContent from "./components/add-coupon/AddCouponDialogContent";
 
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -14,23 +17,11 @@ import { Customer } from "@autumn/shared";
 import { useCustomerContext } from "./CustomerContext";
 import { CusService } from "@/services/customers/CusService";
 import { useNavigate } from "react-router";
-
 import { navigateTo } from "@/utils/genUtils";
 
-import React from "react";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
-import AddCouponDialogContent from "./add-coupon/AddCouponDialogContent";
-import { cn } from "@/lib/utils";
-import UpdateCustomerDialog from "./UpdateCustomerDialog";
-import {
-  Delete,
-  Pen,
-  Pencil,
-  Settings,
-  Settings2,
-  Ticket,
-  Trash,
-} from "lucide-react";
+import UpdateCustomerDialog from "./components/UpdateCustomerDialog";
+import { Delete, Settings } from "lucide-react";
 
 export const CustomerToolbar = ({
   className,

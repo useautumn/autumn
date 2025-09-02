@@ -202,6 +202,7 @@ export const getFullCusQuery = (
   withEntities: boolean,
   withTrialsUsed: boolean,
   withSubs: boolean,
+  withEvents: boolean,
   entityId?: string
 ) => {
   const sqlChunks: SQL[] = [];
@@ -255,6 +256,32 @@ export const getFullCusQuery = (
     sqlChunks.push(buildInvoicesCTE(!!entityId));
   }
 
+  // Conditionally add events CTE
+  if (withEvents) {
+    sqlChunks.push(sql`, `);
+    sqlChunks.push(sql`
+      customer_events AS (
+        SELECT 
+          COALESCE(
+            json_agg(
+              json_build_object(
+                'id', e.id,
+                'event_name', e.event_name,
+                'value', e.value,
+                'timestamp', e.timestamp,
+                'properties', e.properties
+              )
+              ORDER BY e.timestamp DESC, e.id DESC
+            ) FILTER (WHERE e.id IS NOT NULL),
+            '[]'::json
+          ) AS events
+        FROM events e
+        WHERE e.internal_customer_id = (SELECT internal_id FROM customer_record)
+          AND e.set_usage = false
+      )
+    `);
+  }
+
   // Build final SELECT
   const selectFieldsChunks: SQL[] = [];
   selectFieldsChunks.push(sql`
@@ -294,6 +321,11 @@ export const getFullCusQuery = (
       (SELECT invoices FROM customer_invoices) AS invoices`);
   }
 
+  if (withEvents) {
+    selectFieldsChunks.push(sql`,
+      (SELECT events FROM customer_events) AS events`);
+  }
+
   sqlChunks.push(sql`
     SELECT ${sql.join(selectFieldsChunks, sql``)}
     FROM customer_record cr
@@ -312,6 +344,7 @@ export const getPaginatedFullCusQuery = ({
   withSubs,
   limit = 10,
   offset = 0,
+  withEvents = false,
   entityId,
   internalCustomerIds,
 }: {
@@ -324,6 +357,7 @@ export const getPaginatedFullCusQuery = ({
   withSubs: boolean;
   limit: number;
   offset: number;
+  withEvents?: boolean;
   entityId?: string;
   internalCustomerIds?: string[];
 }) => {
@@ -342,6 +376,14 @@ export const getPaginatedFullCusQuery = ({
       FROM customers c
       WHERE c.org_id = ${orgId}
         AND c.env = ${env}
+      ${
+        internalCustomerIds
+          ? sql`AND c.internal_id IN (${sql.join(
+              internalCustomerIds.map((id) => sql`${id}`),
+              sql`, `
+            )})`
+          : sql``
+      }
       ORDER BY c.created_at DESC
       LIMIT ${limit} OFFSET ${offset}
     ),
@@ -405,14 +447,7 @@ export const getPaginatedFullCusQuery = ({
       LEFT JOIN customer_prices cpr ON cpr.customer_product_id = cp.id
       LEFT JOIN prices p ON cpr.price_id = p.id
       LEFT JOIN customer_entitlements ce ON ce.customer_product_id = cp.id
-      WHERE cp.internal_customer_id IN (SELECT internal_id FROM customer_records) ${
-        internalCustomerIds
-          ? sql`AND cp.internal_customer_id IN (${sql.join(
-              internalCustomerIds.map((id) => sql`${id}`),
-              sql`, `
-            )})`
-          : sql``
-      }
+      WHERE cp.internal_customer_id IN (SELECT internal_id FROM customer_records) 
       ${withStatusFilter()}
       GROUP BY cp.id, prod.*
     ),
@@ -500,12 +535,14 @@ export const getPaginatedFullCusQuery = ({
       ${withEntities ? sql`, COALESCE(ce.entities, '[]'::json) AS entities` : sql``}
       ${includeInvoices ? sql`, COALESCE(ci.invoices, '[]'::json) AS invoices` : sql``}
       ${withTrialsUsed ? sql`, COALESCE(ctu.trials_used, '[]'::json) AS trials_used` : sql``}
+      ${withEvents ? sql`, COALESCE(cev.events, '[]'::json) AS events` : sql``}
     FROM customer_records cr
     LEFT JOIN customer_products_aggregated cpa ON cpa.internal_customer_id = cr.internal_id
     ${withSubs ? sql`LEFT JOIN customer_subscriptions cs ON cs.internal_customer_id = cr.internal_id` : sql``}
     ${withEntities ? sql`LEFT JOIN customer_entities ce ON ce.internal_customer_id = cr.internal_id` : sql``}
     ${includeInvoices ? sql`LEFT JOIN customer_invoices ci ON ci.internal_customer_id = cr.internal_id` : sql``}
     ${withTrialsUsed ? sql`LEFT JOIN customer_trials_used ctu ON ctu.internal_customer_id = cr.internal_id` : sql``}
+    ${withEvents ? sql`LEFT JOIN customer_events cev ON cev.internal_customer_id = cr.internal_id` : sql``}
     ORDER BY cr.created_at DESC
   `;
 };

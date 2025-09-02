@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useEffect, useState } from "react";
-import { FullProduct } from "@autumn/shared";
+import { FullProduct, ProductV2 } from "@autumn/shared";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -31,6 +31,8 @@ import { formatAmount } from "@/utils/product/productItemUtils";
 import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
 import { AddRewardButton, MultiAttachRewards } from "./MultiAttachRewards";
 import { useAxiosSWR } from "@/services/useAxiosSwr";
+import { useCusQuery } from "../../hooks/useCusQuery";
+import { useOrg } from "@/hooks/common/useOrg";
 
 export const MultiAttachDialog = ({
   open,
@@ -39,7 +41,9 @@ export const MultiAttachDialog = ({
   open: boolean;
   setOpen: (open: boolean) => void;
 }) => {
-  const { customer, cusMutate, products, org } = useCustomerContext();
+  // const { customer, cusMutate, products, org } = useCustomerContext();
+  const { org } = useOrg();
+  const { customer, products, refetch } = useCusQuery();
 
   const axiosInstance = useAxiosInstance();
 
@@ -160,7 +164,7 @@ export const MultiAttachDialog = ({
         window.open(getStripeInvoiceLink(data.invoice), "_blank");
       }
 
-      await cusMutate();
+      await refetch();
       toast.success("Products attached successfully");
       setOpen(false);
     } catch (error) {
@@ -204,12 +208,14 @@ export const MultiAttachDialog = ({
                       <SelectContent className="max-h-[300px] overflow-y-auto">
                         {products
                           .filter(
-                            (p: FullProduct) =>
+                            (p: ProductV2) =>
                               !productOptions
-                                .map((o, i) => (i !== index ? o.product : null))
+                                .map((o, i) =>
+                                  i !== index ? o.product_id : null
+                                )
                                 .includes(p.id)
                           )
-                          .map((product: FullProduct) => (
+                          .map((product: ProductV2) => (
                             <SelectItem key={product.id} value={product.id}>
                               {product.name}
                             </SelectItem>

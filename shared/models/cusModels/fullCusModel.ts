@@ -1,4 +1,5 @@
 import { FullCusProduct } from "../cusProductModels/cusProductModels.js";
+import { Event } from "../eventModels/eventTable.js";
 import { Subscription } from "../subModels/subModels.js";
 import { Customer } from "./cusModels.js";
 import { Entity } from "./entityModels/entityModels.js";
@@ -15,4 +16,5 @@ export type FullCustomer = Customer & {
   }[];
   invoices?: Invoice[];
   subscriptions?: Subscription[];
+  events?: Event[];
 };

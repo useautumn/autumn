@@ -1,9 +1,8 @@
+import UpdateCustomerDialog from "../UpdateCustomerDialog";
 import { useState } from "react";
 import { Accordion } from "@/components/ui/accordion";
 import { Dialog } from "@/components/ui/dialog";
 import { CustomerRewards } from "./customer-rewards";
-import { useCustomerContext } from "../../CustomerContext";
-import UpdateCustomerDialog from "../../UpdateCustomerDialog";
 import { CustomerToolbar } from "../../CustomerToolbar";
 import { CustomerDetails } from "./CustomerDetails";
 import { CustomerEntities } from "./CustomerEntities";

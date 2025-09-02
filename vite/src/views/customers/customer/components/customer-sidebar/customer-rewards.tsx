@@ -1,3 +1,4 @@
+import AddCouponDialogContent from "../../components/add-coupon/AddCouponDialogContent";
 import { SideAccordion } from "@/components/general/SideAccordion";
 import { getRedirectUrl } from "@/utils/genUtils";
 import { Dialog } from "@/components/ui/dialog";
@@ -15,11 +16,9 @@ import { ArrowUpRightFromSquare } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router";
-import { useCusQuery } from "../../hooks/useCusQuery";
 import { useEnv } from "@/utils/envUtils";
 import { useCusReferralQuery } from "../../hooks/useCusReferralQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
-import AddCouponDialogContent from "../../add-coupon/AddCouponDialogContent";
 
 export const CustomerRewards = () => {
   // const { discount, env } = useCustomerContext();

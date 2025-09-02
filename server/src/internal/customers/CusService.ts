@@ -34,6 +34,7 @@ export class CusService {
     expand,
     withSubs = false,
     allowNotFound = false,
+    withEvents = false,
   }: {
     db: DrizzleCli;
     idOrInternalId: string;
@@ -45,6 +46,7 @@ export class CusService {
     expand?: (CusExpand | EntityExpand)[];
     withSubs?: boolean;
     allowNotFound?: boolean;
+    withEvents?: boolean;
   }): Promise<FullCustomer> {
     const includeInvoices = expand?.includes(CusExpand.Invoices) || false;
     const withTrialsUsed = expand?.includes(CusExpand.TrialsUsed) || false;
@@ -70,6 +72,7 @@ export class CusService {
           withEntities,
           withTrialsUsed,
           withSubs,
+          withEvents,
           entityId
         );
 
