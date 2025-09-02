@@ -58,7 +58,7 @@ export const getCusProductsToRemove = ({
     }
 
     // 1. If product is an add on, and there's current same, add it
-    else if (product.is_add_on && curSameProduct) {
+    else if (curSameProduct) {
       cusProductsToRemove.push(curSameProduct);
     }
 
@@ -119,6 +119,8 @@ export const paramsToSubItems = async ({
     ? removeCusProducts!
     : getCusProductsToRemove({ attachParams });
 
+  console.log("CUS PRODUCTS TO REMOVE:", cusProductsToRemove);
+
   let newSubItems = mergeNewSubItems({
     itemSet,
     curSubItems,
@@ -127,7 +129,7 @@ export const paramsToSubItems = async ({
   const allCusProducts = attachParams.customer.customer_products;
 
   // 3. Remove items related to cus products to remove
-  const printRemoveLogs = false;
+  const printRemoveLogs = true;
   for (const cusProduct of cusProductsToRemove) {
     const prices = cusProductToPrices({ cusProduct });
 
