@@ -229,6 +229,7 @@ export const SelectFeatureDropdown = ({
                           ref.indeterminate = someSelected && !allSelected;
                         }
                       }}
+                      className="h-4 w-4"
                     />
                     <span className="text-xs">Select All</span>
                   </div>
