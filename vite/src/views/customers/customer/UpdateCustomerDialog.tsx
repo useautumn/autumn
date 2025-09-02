@@ -13,6 +13,7 @@ import { useEnv } from "@/utils/envUtils";
 import { CustomerConfig } from "./CustomerConfig";
 import { CusService } from "@/services/customers/CusService";
 import { useNavigate } from "react-router";
+import { useCusQuery } from "./hooks/useCusQuery";
 
 const UpdateCustomerDialog = ({
   selectedCustomer,
@@ -23,17 +24,18 @@ const UpdateCustomerDialog = ({
   open: boolean;
   setOpen: (open: boolean) => void;
 }) => {
-  const { cusMutate } = useCustomerContext();
-  const [couponSelected, setCouponSelected] = useState<Reward | null>(null);
-  const [customer, setCustomer] = useState<CreateCustomer>(selectedCustomer);
+  // const { cusMutate } = useCustomerContext();
+  const { customer: curCustomer, refetch } = useCusQuery();
+  const [customer, setCustomer] = useState<CreateCustomer>(curCustomer);
+
   const [loading, setLoading] = useState(false);
   const env = useEnv();
   const axiosInstance = useAxiosInstance({ env });
   const navigate = useNavigate();
 
-  useEffect(() => {
-    setCustomer(selectedCustomer);
-  }, [open]);
+  // useEffect(() => {
+  //   setCustomer(selectedCustomer);
+  // }, [open]);
 
   const handleAddClicked = async () => {
     try {
@@ -51,7 +53,7 @@ const UpdateCustomerDialog = ({
 
       toast.success(`Successfully updated customer`);
       setOpen(false);
-      await cusMutate();
+      await refetch();
 
       if (customer.id != selectedCustomer.id) {
         navigateTo(`/customers/${customer.id}`, navigate, env);

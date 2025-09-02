@@ -14,6 +14,33 @@ import { getCustomerDetails } from "../../customers/cusUtils/getCustomerDetails.
 import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
 
 export class CusBatchService {
+  static async getByInternalIds({
+    db,
+    org,
+    env,
+    internalCustomerIds,
+  }: {
+    db: DrizzleCli;
+    org: Organization;
+    env: AppEnv;
+    internalCustomerIds: string[];
+  }) {
+    let query = getPaginatedFullCusQuery({
+      orgId: org.id,
+      env,
+      includeInvoices: true,
+      withEntities: true,
+      withTrialsUsed: false,
+      withSubs: true,
+      limit: 100,
+      offset: 0,
+      internalCustomerIds,
+    });
+    let results = await db.execute(query);
+
+    return results as unknown as FullCustomer[];
+  }
+
   static async getPage({
     db,
     ch,
@@ -48,17 +75,17 @@ export class CusBatchService {
     const withEntities = expand.includes(CusExpand.Entities);
     const withTrialsUsed = expand.includes(CusExpand.TrialsUsed);
 
-    let query = getPaginatedFullCusQuery(
-      org.id,
+    let query = getPaginatedFullCusQuery({
+      orgId: org.id,
       env,
-      statuses,
+      inStatuses: statuses,
       includeInvoices,
       withEntities,
       withTrialsUsed,
-      true,
+      withSubs: true,
       limit,
-      offset
-    );
+      offset,
+    });
     let results = await db.execute(query);
     let finals = [];
     for (let result of results) {

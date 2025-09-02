@@ -15,11 +15,20 @@ import { ArrowUpRightFromSquare } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router";
-import AddCouponDialogContent from "../add-coupon/AddCouponDialogContent";
-import { useCustomerContext } from "../CustomerContext";
+import { useCusQuery } from "../../hooks/useCusQuery";
+import { useEnv } from "@/utils/envUtils";
+import { useCusReferralQuery } from "../../hooks/useCusReferralQuery";
+import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
+import AddCouponDialogContent from "../../add-coupon/AddCouponDialogContent";
 
 export const CustomerRewards = () => {
-  const { discount, env } = useCustomerContext();
+  // const { discount, env } = useCustomerContext();
+
+  const env = useEnv();
+  // const { customer, rewards } = useCusQuery();
+  const { referred, redeemed, stripeCus } = useCusReferralQuery();
+  useRewardsQuery();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const getDiscountText = (discount: any) => {
@@ -44,9 +53,6 @@ export const CustomerRewards = () => {
     }
     return coupon.name;
   };
-  const { referrals } = useCustomerContext();
-
-  // if (!referrals) return null;
 
   return (
     <div className="flex w-full border-b mt-[2.5px] p-4">
@@ -64,15 +70,15 @@ export const CustomerRewards = () => {
                 variant="sidebarItem"
                 onClick={() => setIsModalOpen(true)}
               >
-                {discount ? (
-                  getDiscountText(discount)
+                {stripeCus?.discount ? (
+                  getDiscountText(stripeCus?.discount)
                 ) : (
                   <span className="text-t3">Add Coupon</span>
                 )}
               </Button>
             </div>
           </>
-          {referrals?.referred.length > 0 && (
+          {referred?.length > 0 && (
             <>
               <span className="text-t3 text-xs font-medium col-span-2">
                 Referrals
@@ -82,7 +88,7 @@ export const CustomerRewards = () => {
                 <div className="col-span-6 justify-end flex">
                   <PopoverTrigger className="">
                     <Button variant="sidebarItem">
-                      {referrals.referred.length} referred
+                      {referred.length} referred
                     </Button>
                   </PopoverTrigger>
                 </div>
@@ -94,11 +100,11 @@ export const CustomerRewards = () => {
                   sideOffset={5}
                 >
                   <div className="flex flex-col gap-1">
-                    {referrals.referred.map((referral: any) => (
+                    {referred.map((referral: any) => (
                       <Link
                         to={getRedirectUrl(
                           `/customers/${referral.customer.id}`,
-                          env,
+                          env
                         )}
                         className="flex justify-between hover:bg-zinc-100 items-center"
                         key={referral.customer.id}
@@ -120,10 +126,7 @@ export const CustomerRewards = () => {
                 <div className="col-span-6 justify-end flex">
                   <PopoverTrigger className="">
                     <Button variant="sidebarItem">
-                      {
-                        referrals.referred.filter((r: any) => r.triggered)
-                          .length
-                      }{" "}
+                      {referred.filter((r: any) => r.triggered).length}{" "}
                       activated
                     </Button>
                   </PopoverTrigger>
@@ -136,13 +139,13 @@ export const CustomerRewards = () => {
                   sideOffset={5}
                 >
                   <div className="flex flex-col gap-1">
-                    {referrals.referred
+                    {referred
                       .filter((r: any) => r.triggered)
                       .map((referral: any) => (
                         <Link
                           to={getRedirectUrl(
                             `/customers/${referral.customer.id}`,
-                            env,
+                            env
                           )}
                           className="flex justify-between hover:bg-zinc-100 items-center"
                           key={referral.customer.id}
@@ -161,7 +164,7 @@ export const CustomerRewards = () => {
               </Popover>
             </>
           )}
-          {referrals?.redeemed.length > 0 && (
+          {redeemed?.length > 0 && (
             <>
               <span className="text-t3 text-xs font-medium col-span-2">
                 Referred by
@@ -171,13 +174,13 @@ export const CustomerRewards = () => {
                   <Button variant="sidebarItem">
                     <Link
                       to={getRedirectUrl(
-                        `/customers/${referrals.redeemed[0].referral_code?.customer.id}`,
-                        env,
+                        `/customers/${redeemed[0].referral_code?.customer.id}`,
+                        env
                       )}
                       className="flex items-center gap-1 truncate w-full"
                     >
                       <span className="truncate">
-                        {referrals.redeemed[0].referral_code?.customer.name}
+                        {redeemed[0].referral_code?.customer.name}
                       </span>
                       <div className="flex items-center justify-center">
                         <ArrowUpRightFromSquare
@@ -195,8 +198,8 @@ export const CustomerRewards = () => {
                   sideOffset={5}
                 >
                   <p>
-                    {referrals.redeemed[0].referral_code?.customer.id}{" "}
-                    {referrals.redeemed[0].referral_code.code}
+                    {redeemed[0].referral_code?.customer.id}{" "}
+                    {redeemed[0].referral_code.code}
                   </p>
                 </TooltipContent>
               </Tooltip>

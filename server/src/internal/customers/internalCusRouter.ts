@@ -23,9 +23,10 @@ import { RewardRedemptionService } from "../rewards/RewardRedemptionService.js";
 import { CusReadService } from "./CusReadService.js";
 import { StatusCodes } from "http-status-codes";
 import { cusProductToProduct } from "./cusProducts/cusProductUtils/convertCusProduct.js";
-import { createOrgResponse } from "../orgs/orgUtils.js";
+import { createOrgResponse, isStripeConnected } from "../orgs/orgUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { CusSearchService } from "./CusSearchService.js";
+import { CusBatchService } from "../api/batch/CusBatchService.js";
 
 export const cusRouter: Router = Router();
 
@@ -52,6 +53,172 @@ cusRouter.post("/all/search", (req, res) =>
     },
   })
 );
+
+// Customer page
+cusRouter.get("/:customer_id", async (req: any, res: any) => {
+  try {
+    const { db, org, features, env } = req;
+    const { customer_id } = req.params;
+    const orgId = req.orgId;
+
+    const fullCus = await CusService.getFull({
+      db,
+      orgId,
+      env,
+      idOrInternalId: customer_id,
+      withEntities: true,
+      expand: [CusExpand.Invoices],
+      inStatuses: [
+        CusProductStatus.Active,
+        CusProductStatus.PastDue,
+        CusProductStatus.Scheduled,
+        CusProductStatus.Expired,
+      ],
+    });
+
+    // const [coupons, products, customer] = await Promise.all([
+    //   RewardService.list({
+    //     db,
+    //     orgId: orgId,
+    //     env,
+    //   }),
+
+    //   ProductService.listFull({ db, orgId, env, returnAll: true }),
+
+    // ]);
+
+    // let invoices = customer.invoices;
+    // let entities = customer.entities;
+    // const events = await EventService.getByCustomerId({
+    //   db,
+    //   internalCustomerId: customer.internal_id,
+    //   env,
+    //   orgId: orgId,
+    //   limit: 10,
+    // });
+
+    // let fullCustomer = customer as any;
+    // let cusProducts = fullCustomer.customer_products;
+    // fullCustomer.products = fullCustomer.customer_products;
+    // fullCustomer.entitlements = cusProducts.flatMap(
+    //   (product: FullCusProduct) => product.customer_entitlements
+    // );
+    // fullCustomer.prices = cusProducts.flatMap(
+    //   (product: FullCusProduct) => product.customer_prices
+    // );
+
+    // for (const product of fullCustomer.products) {
+    //   product.entitlements = product.customer_entitlements.map(
+    //     (cusEnt: FullCustomerEntitlement) => {
+    //       return cusEnt.entitlement;
+    //     }
+    //   );
+    //   product.prices = product.customer_prices.map(
+    //     (cusPrice: FullCustomerPrice) => {
+    //       return cusPrice.price;
+    //     }
+    //   );
+    // }
+
+    // let discount = null;
+    // if (org.stripe_config && customer.processor?.id) {
+    //   try {
+    //     const stripeCli = createStripeCli({ org, env });
+    //     const stripeCus: any = await stripeCli.customers.retrieve(
+    //       customer.processor.id
+    //     );
+
+    //     if (stripeCus.discount) {
+    //       discount = stripeCus.discount;
+    //     }
+    //   } catch (error) {
+    //     console.log("error", error);
+    //   }
+    // }
+
+    // for (const invoice of invoices || []) {
+    //   invoice.product_ids = invoice.product_ids.sort();
+    //   invoice.internal_product_ids = invoice.internal_product_ids.sort();
+    // }
+
+    // fullCustomer.entitlements = fullCustomer.entitlements.sort(
+    //   (a: any, b: any) => {
+    //     const productA = fullCustomer.products.find(
+    //       (p: any) => p.id === a.customer_product_id
+    //     );
+    //     const productB = fullCustomer.products.find(
+    //       (p: any) => p.id === b.customer_product_id
+    //     );
+
+    //     return (
+    //       new Date(b.created_at).getTime() - new Date(a.created_at).getTime() ||
+    //       b.id.localeCompare(a.id)
+    //     );
+    //   }
+    // );
+
+    // for (const cusEnt of fullCustomer.entitlements) {
+    //   // let entitlement = cusEnt.entitlement;
+
+    //   // Show used, limit, etc.
+    //   let { balance, unused } = getCusEntMasterBalance({
+    //     cusEnt,
+    //     entities,
+    //   });
+
+    //   cusEnt.balance = balance;
+    //   cusEnt.unused = unused;
+    // }
+
+    res.status(200).json({
+      customer: fullCus,
+      // products: getLatestProducts(products),
+      // versionCounts: getProductVersionCounts(products),
+      // invoices,
+      // features,
+      // coupons,
+      // events,
+      // discount,
+      // org,
+      // entities,
+    });
+  } catch (error) {
+    handleFrontendReqError({ req, error, res, action: "get customer data" });
+  }
+});
+
+// cusRouter.get("/:customer_id/stripe", async (req: any, res: any) => {
+//   try {
+//     const { db, org, features, env } = req;
+//     const { customer_id } = req.params;
+//     let discount = null;
+
+//     const customer = await CusService.get({
+//       db,
+//       orgId: req.orgId,
+//       env,
+//       idOrInternalId: customer_id,
+//     });
+
+//     if (org.stripe_config && customer.processor?.id) {
+//       try {
+//         const stripeCli = createStripeCli({ org, env });
+//         const stripeCus: any = await stripeCli.customers.retrieve(
+//           customer.processor.id
+//         );
+
+//         if (stripeCus.discount) {
+//           discount = stripeCus.discount;
+//         }
+//       } catch (error) {
+//         console.log("error", error);
+//       }
+//     }
+
+//   } catch (error) {
+//     handleFrontendReqError({ req, error, res, action: "get customer data" });
+//   }
+// });
 
 cusRouter.get("/:customer_id/events", async (req: any, res: any) => {
   try {
@@ -215,16 +382,18 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
 
 cusRouter.get("/:customer_id/referrals", async (req: any, res: any) => {
   try {
-    const { env, db } = req;
+    const { env, db, org } = req;
     const { customer_id } = req.params;
     const orgId = req.orgId;
 
+    console.time("get_customer");
     let internalCustomer = await CusService.get({
       db,
       orgId,
       env,
       idOrInternalId: customer_id,
     });
+    console.timeEnd("get_customer");
 
     if (!internalCustomer) {
       throw new RecaseError({
@@ -235,7 +404,7 @@ cusRouter.get("/:customer_id/referrals", async (req: any, res: any) => {
     }
 
     // Get all redemptions for this customer
-    let [referred, redeemed] = await Promise.all([
+    let [referred, redeemed, stripeCus] = await Promise.all([
       RewardRedemptionService.getByReferrer({
         db,
         internalCustomerId: internalCustomer.internal_id,
@@ -248,6 +417,16 @@ cusRouter.get("/:customer_id/referrals", async (req: any, res: any) => {
         withReferralCode: true,
         limit: 100,
       }),
+      async () => {
+        if (isStripeConnected({ org, env }) && internalCustomer.processor?.id) {
+          const stripeCli = createStripeCli({ org, env });
+          const stripeCus: any = await stripeCli.customers.retrieve(
+            internalCustomer.processor.id
+          );
+          return stripeCus;
+        }
+        return null;
+      },
     ]);
 
     let redeemedCustomerIds = redeemed.map(
@@ -269,9 +448,12 @@ cusRouter.get("/:customer_id/referrals", async (req: any, res: any) => {
       }
     }
 
+    const end = performance.now();
+
     res.status(200).send({
       referred,
       redeemed,
+      stripeCus,
     });
   } catch (error) {
     handleFrontendReqError({
@@ -282,6 +464,42 @@ cusRouter.get("/:customer_id/referrals", async (req: any, res: any) => {
     });
   }
 });
+
+cusRouter.post("/all/full_customers", async (req: any, res: any) =>
+  routeHandler({
+    req,
+    res,
+    action: "get customer full customers",
+    handler: async (req, res) => {
+      const { db, org, env } = req;
+      const { search, page_size = 50, page = 1, last_item, filters } = req.body;
+
+      const { data: customers, count } = await CusSearchService.search({
+        db: req.db,
+        orgId: req.orgId,
+        env: req.env,
+        search,
+        filters,
+        lastItem: last_item,
+        pageNumber: page,
+        pageSize: page_size,
+      });
+
+      console.log("First customer", customers?.[0]);
+
+      const fullCustomers = await CusBatchService.getByInternalIds({
+        db,
+        org,
+        env,
+        internalCustomerIds: customers.map(
+          (customer: any) => customer.internal_id
+        ),
+      });
+
+      res.status(200).json({ fullCustomers });
+    },
+  })
+);
 
 cusRouter.get(
   "/:customer_id/product/:product_id",

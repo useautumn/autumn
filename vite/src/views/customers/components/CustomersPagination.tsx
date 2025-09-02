@@ -10,7 +10,7 @@ import SmallSpinner from "@/components/general/SmallSpinner";
 import { useCusSearchQuery } from "../hooks/useCusSearchQuery";
 
 export const CustomersPagination = () => {
-  const { isLoading, totalCount, isFetchingUncached } = useCusSearchQuery();
+  const { isLoading, totalCount } = useCusSearchQuery();
   const { queryStates, setQueryStates } = useCustomersQueryStates();
 
   const totalPages = Math.ceil((totalCount || 0) / 50);

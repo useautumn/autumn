@@ -1,7 +1,6 @@
 import OnboardingView2 from "./views/onboarding2/OnboardingView2";
 import CustomerView from "./views/customers/customer/CustomerView";
 import CustomerProductView from "./views/customers/customer/product/CustomerProductView";
-import CustomersView from "./views/customers/CustomersView";
 import DevScreen from "./views/developer/DevView";
 import ProductView from "./views/products/product/ProductView";
 import ProductsView from "./views/products/ProductsView";
@@ -18,6 +17,7 @@ import { AnalyticsView } from "./views/customers/customer/analytics/AnalyticsVie
 import { TerminalView } from "./views/TerminalView";
 import { DefaultView } from "./views/DefaultView";
 import { MainLayout } from "./app/layout";
+import CustomersPage from "./views/customers/CustomersPage";
 
 export default function App() {
   return (
@@ -50,14 +50,8 @@ export default function App() {
             path="/sandbox/products/:product_id"
             element={<ProductView env={AppEnv.Sandbox} />}
           />
-          <Route
-            path="/customers"
-            element={<CustomersView env={AppEnv.Sandbox} />}
-          />
-          <Route
-            path="/sandbox/customers"
-            element={<CustomersView env={AppEnv.Sandbox} />}
-          />
+          <Route path="/customers" element={<CustomersPage />} />
+          <Route path="/sandbox/customers" element={<CustomersPage />} />
           <Route
             path="/customers/:customer_id"
             element={<CustomerView env={AppEnv.Live} />}

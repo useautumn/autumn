@@ -4,6 +4,7 @@ import { useCustomersQueryStates } from "./useCustomersQueryStates";
 import {
   CusProductSchema,
   CustomerSchema,
+  FullCustomer,
   ProductSchema,
 } from "@autumn/shared";
 import { z } from "zod";
@@ -56,7 +57,6 @@ export const useCusSearchQuery = () => {
       queryStates.q,
     ],
     queryFn: fetcher,
-
     placeholderData: keepPreviousData,
   });
 

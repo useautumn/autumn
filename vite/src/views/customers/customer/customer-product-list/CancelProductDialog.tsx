@@ -4,15 +4,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
+import { toast } from "sonner";
+import { useState } from "react";
 import { CusProductStatus, FullCusProduct } from "@autumn/shared";
-import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import { useState } from "react";
-import { toast } from "sonner";
-import { useCustomerContext } from "../CustomerContext";
-import { getBackendErr, notNullish } from "@/utils/genUtils";
+import { getBackendErr } from "@/utils/genUtils";
+import { useCusQuery } from "../hooks/useCusQuery";
 
 export const CancelProductDialog = ({
   cusProduct,
@@ -23,10 +24,10 @@ export const CancelProductDialog = ({
   open: boolean;
   setOpen: (open: boolean) => void;
 }) => {
+  const axiosInstance = useAxiosInstance();
+  const { customer, refetch } = useCusQuery();
   const [immediateLoading, setImmediateLoading] = useState(false);
   const [endOfCycleLoading, setEndOfCycleLoading] = useState(false);
-  const axiosInstance = useAxiosInstance();
-  const { cusMutate, customer, entities } = useCustomerContext();
 
   const handleClicked = async (cancelImmediately?: boolean) => {
     if (cancelImmediately) {
@@ -35,7 +36,7 @@ export const CancelProductDialog = ({
       setEndOfCycleLoading(true);
     }
 
-    const entity = entities.find(
+    const entity = customer.entities.find(
       (e: any) => e.internal_id === cusProduct.internal_entity_id
     );
 
@@ -47,7 +48,7 @@ export const CancelProductDialog = ({
         cancel_immediately: cancelImmediately,
         prorate: false,
       });
-      await cusMutate();
+      await refetch();
       setOpen(false);
       toast.success("Product cancelled");
     } catch (error) {

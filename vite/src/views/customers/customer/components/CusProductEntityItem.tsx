@@ -4,15 +4,18 @@ import { FullCusProduct } from "@autumn/shared";
 import { ExternalLinkIcon } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useCustomerContext } from "../CustomerContext";
+import { useCusQuery } from "../hooks/useCusQuery";
 
 export const CusProductEntityItem = ({
   internalEntityId,
 }: {
   internalEntityId?: string | null;
 }) => {
-  const { entities } = useCustomerContext();
-  // console.log("Cus product", cusProduct);
-  const entity = entities.find((e: any) => e.internal_id === internalEntityId);
+  const { customer } = useCusQuery();
+
+  const entity = customer.entities.find(
+    (e: any) => e.internal_id === internalEntityId
+  );
 
   const navigate = useNavigate();
   return internalEntityId ? (
@@ -25,7 +28,6 @@ export const CusProductEntityItem = ({
           },
         });
       }}
-      // icon={<ExternalLinkIcon size={12} />}
     >
       <span className="truncate">
         {entity?.name || entity?.id || "Unknown"}

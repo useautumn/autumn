@@ -16,7 +16,7 @@ import { getBackendErr } from "@/utils/genUtils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { Delete } from "lucide-react";
 import { useState } from "react";
-import { useCustomersQueryStates } from "../hooks/useCustomersQueryStates";
+import { useCustomersQueryStates } from "../../hooks/useCustomersQueryStates";
 
 interface SavedView {
   id: string;

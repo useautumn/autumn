@@ -11,12 +11,11 @@ import {
 import { ListFilter, X } from "lucide-react";
 import { useState } from "react";
 import { FilterStatusSubMenu } from "./FilterStatusSubMenu";
-import { SavedViews } from "../../filter/SavedViews";
+import { SavedViews } from "./SavedViews";
 import { useCustomersQueryStates } from "../../hooks/useCustomersQueryStates";
-import { useGeneralQuery } from "@/hooks/queries/useGeneralQuery";
 import { SaveViewPopover } from "./SavedViewPopover";
-import { ProductsSubMenu } from "../../filter/ProductsSubMenu";
 import { useSavedViewsQuery } from "../../hooks/useSavedViewsQuery";
+import { ProductsSubMenu } from "./ProductsSubMenu";
 
 function CustomersFilterButton() {
   const { setQueryStates } = useCustomersQueryStates();
