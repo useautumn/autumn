@@ -71,6 +71,35 @@ const init = async () => {
     })
   );
 
+  app.use("/api/auth", express.json());
+  app.use("/api/auth", (req: any, _res: any, next: any) => {
+    const toCamel = (str: string) =>
+      str.replace(/_([a-z])/g, (_: string, c: string) => c.toUpperCase());
+
+    const toCamelOnly = (value: any): any => {
+      if (Array.isArray(value)) return value.map(toCamelOnly);
+      if (value && typeof value === "object") {
+        const out: any = {};
+        for (const key of Object.keys(value)) {
+          const v = toCamelOnly(value[key]);
+          const camelKey = toCamel(key);
+          if (out[camelKey] === undefined) {
+            out[camelKey] = v;
+          } else {
+            if (key === camelKey) out[camelKey] = v;
+          }
+        }
+        return out;
+      }
+      return value;
+    };
+
+    if (req.body && typeof req.body === "object") {
+      req.body = toCamelOnly(req.body);
+    }
+    next();
+  });
+
   app.all("/api/auth/*", toNodeHandler(auth));
 
   const server = http.createServer(app);
