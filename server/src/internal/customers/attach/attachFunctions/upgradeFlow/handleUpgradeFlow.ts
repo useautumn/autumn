@@ -30,6 +30,7 @@ import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { shouldCancelSub } from "./upgradeFlowUtils.js";
 import { handleUpgradeFlowSchedule } from "./handleUpgradeFlowSchedule.js";
+import { logPhaseItems } from "../../mergeUtils/phaseUtils/phaseUtils.js";
 
 export const handleUpgradeFlow = async ({
   req,
@@ -69,6 +70,11 @@ export const handleUpgradeFlow = async ({
   });
 
   const { subItems } = newItemSet;
+
+  // for (const item of subItems) {
+  //   const { autumnPrice, ...rest } = item;
+  //   console.log("ITEM:", rest);
+  // }
 
   // Delete scheduled products if needed
   for (const product of attachParams.products) {
@@ -115,6 +121,11 @@ export const handleUpgradeFlow = async ({
   } else if (subItems.length > 0) {
     logger.info(`UPGRADE FLOW, updating sub ${curSub!.id}`);
     itemSet.subItems = subItems;
+
+    // await logPhaseItems({
+    //   db: req.db,
+    //   items: itemSet.subItems,
+    // });
 
     const res = await updateStripeSub2({
       req,

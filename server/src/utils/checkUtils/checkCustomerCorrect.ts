@@ -80,7 +80,9 @@ const compareActualItems = async ({
         db,
         stripePriceId: expectedItem.price,
       });
-      console.log(`(${type}) Missing item:`, expectedItem);
+
+      const { autumnPrice, ...rest } = expectedItem;
+      console.log(`(${type}) Missing item:`, rest);
       // if (price) {
       //   console.log(`Autumn price:`, `${price.id} - ${formatPrice({ price })}`);
       // }
@@ -145,6 +147,20 @@ const compareActualItems = async ({
         `actual items quantity should be equals to ${expectedItem.quantity}`
       );
     }
+  }
+
+  if (actualItems.length !== expectedItems.length) {
+    console.log("Actual items:");
+    await logPhaseItems({
+      db,
+      items: actualItems,
+    });
+
+    console.log("Expected items:");
+    await logPhaseItems({
+      db,
+      items: expectedItems,
+    });
   }
 
   assert(
