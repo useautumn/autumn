@@ -18,10 +18,7 @@ import { generateFeatureDisplay } from "@/external/llm/llmUtils.js";
 import { ProductService } from "../products/ProductService.js";
 import { getCreditSystemsFromFeature } from "./creditSystemUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import {
-  cusProductsToCusPrices,
-  cusProductToPrices,
-} from "../customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductsToCusPrices, cusProductToPrices } from "@autumn/shared";
 import { priceToFeature } from "../products/prices/priceUtils/convertPrice.js";
 import { ACTIVE_STATUSES } from "../customers/cusProducts/CusProductService.js";
 

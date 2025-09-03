@@ -33,8 +33,7 @@ import { getCustomerSub } from "../../attachUtils/convertAttachParams.js";
 import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
 import { updateStripeSub2 } from "../upgradeFlow/updateStripeSub2.js";
 import { subToNewSchedule } from "../../mergeUtils/subToNewSchedule.js";
-import { isTrialing } from "@/internal/customers/cusProducts/cusProductUtils.js";
-import { formatUnixToDate } from "@/utils/genUtils.js";
+import { isTrialing } from "@autumn/shared";
 
 export const handlePaidProduct = async ({
   req,

@@ -1,8 +1,3 @@
-import {
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import {
@@ -11,12 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Feature,
-  features,
-  FeatureUsageType,
-  ProductItem,
-} from "@autumn/shared";
+import { Feature, FeatureUsageType, ProductItem } from "@autumn/shared";
 import { useState } from "react";
 import { useProductContext } from "../ProductContext";
 import { CheckIcon, PlusIcon } from "lucide-react";
@@ -24,6 +14,7 @@ import { CreateFeature } from "@/views/products/features/components/CreateFeatur
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { CustomDialogContent } from "@/components/general/modal-components/DialogContentWrapper";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export const EntitiesDropdown = ({
   open,
@@ -50,8 +41,10 @@ export const EntitiesDropdown = ({
 };
 
 export const EntitiesDropdownContent = () => {
-  const { product, features, entityFeatureIds, setEntityFeatureIds } =
+  const { features } = useFeaturesQuery();
+  const { product, entityFeatureIds, setEntityFeatureIds } =
     useProductContext();
+
   const [createFeatureOpen, setCreateFeatureOpen] = useState(false);
 
   const continuousUseFeatures = features.filter(

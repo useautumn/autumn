@@ -16,7 +16,7 @@ import {
 } from "@autumn/shared";
 import Stripe from "stripe";
 import assert from "assert";
-import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToPrices } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
 import {
   getAllStripeSchedules,

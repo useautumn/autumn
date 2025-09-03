@@ -3,23 +3,17 @@ import {
   Feature,
   FeatureUsageType,
   FrontendProductItem,
-  Infinite,
-  ProductItem,
-  ProductItemInterval,
   RolloverConfig,
   RolloverDuration,
 } from "@autumn/shared";
 import { toast } from "sonner";
 import { isFeatureItem, isFeaturePriceItem } from "../getItemType";
-import { isOneOffProduct } from "../priceUtils";
 
 export const validateProductItem = ({
   item,
-  // show,
   features,
 }: {
   item: FrontendProductItem;
-  // show: any;
   features: Feature[];
 }) => {
   const feature = features.find((f) => f.id == item.feature_id);

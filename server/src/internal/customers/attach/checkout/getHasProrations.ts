@@ -5,7 +5,7 @@ import {
   attachParamsToCurCusProduct,
   attachParamToCusProducts,
 } from "../attachUtils/convertAttachParams.js";
-import { cusProductToPrices } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToPrices } from "@autumn/shared";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 
 export const getHasProrations = async ({

@@ -17,7 +17,7 @@ import { getContUseUpgradeItems } from "./getContUseUpgradeItems.js";
 import { priceToInvoiceItem } from "@/internal/products/prices/priceUtils/priceToInvoiceItem.js";
 import { Decimal } from "decimal.js";
 import { notNullish } from "@/utils/genUtils.js";
-import { cusProductsToCusPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductsToCusPrices } from "@autumn/shared";
 import { findStripeItemForPrice } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 

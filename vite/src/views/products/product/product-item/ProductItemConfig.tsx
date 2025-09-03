@@ -6,43 +6,25 @@ import {
   ProductItemInterval,
   TierInfinite,
 } from "@autumn/shared";
-import { useEffect, useState } from "react";
-import { useProductContext } from "@/views/products/product/ProductContext";
 
-import { cn } from "@/lib/utils";
-import { useProductItemContext } from "./ProductItemContext";
 import {
   getShowParams,
   shouldShowProrationConfig,
 } from "@/utils/product/productItemUtils";
+
+import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
+import { useProductItemContext } from "./ProductItemContext";
+import { useProductContext } from "@/views/products/product/ProductContext";
 import { ConfigWithFeature } from "./components/ConfigWithFeature";
-import FixedPriceConfig from "./components/ConfigFixedPrice";
-import {
-  isFeatureItem,
-  isFeaturePriceItem,
-  isPriceItem,
-} from "@/utils/product/getItemType";
 import { PriceItemConfig } from "./product-item-config/PriceItemConfig";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export const ProductItemConfig = () => {
   // HOOKS
-  const { features } = useProductContext();
-  const { item, setItem } = useProductItemContext();
-  const [show, setShow] = useState(getShowParams(item));
 
-  const handleAddPrice = () => {
-    setItem({
-      ...item,
-      tiers: [
-        {
-          to: TierInfinite,
-          amount: item.price ?? 0,
-        },
-      ],
-      interval: ProductItemInterval.Month,
-    });
-    setShow({ ...show, price: !show.price });
-  };
+  const { features } = useFeaturesQuery();
+  const { item, setItem } = useProductItemContext();
 
   useEffect(() => {
     const feature = features.find((f: Feature) => f.id == item.feature_id);

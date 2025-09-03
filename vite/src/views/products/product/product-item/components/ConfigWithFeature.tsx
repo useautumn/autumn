@@ -11,10 +11,12 @@ import { Button } from "@/components/ui/button";
 import { isFeatureItem, isFeaturePriceItem } from "@/utils/product/getItemType";
 import { itemsHaveSameInterval } from "@/utils/product/productItemUtils";
 import { toast } from "sonner";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export const ConfigWithFeature = () => {
-  const { features, product, setProduct } = useProductContext();
-  const { item, isUpdate, setOpen, warning } = useProductItemContext();
+  const { product, setProduct } = useProductContext();
+  const { item, setOpen, warning } = useProductItemContext();
+  const { features } = useFeaturesQuery();
 
   const isBooleanFeature =
     getFeature(item.feature_id, features)?.type === FeatureType.Boolean;

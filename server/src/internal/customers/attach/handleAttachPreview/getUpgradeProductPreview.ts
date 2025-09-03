@@ -36,8 +36,8 @@ import {
   getLatestPeriodEnd,
   subToPeriodStartEnd,
 } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
-import { isTrialing } from "../../cusProducts/cusProductUtils.js";
-import { cusProductToPrices } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import { isTrialing } from "@autumn/shared";
+import { cusProductToPrices } from "@autumn/shared";
 import { isPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 
 const getNextCycleAt = ({

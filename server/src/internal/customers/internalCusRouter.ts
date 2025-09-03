@@ -9,6 +9,7 @@ import {
   FullCusProduct,
   FullCustomerEntitlement,
   FullCustomerPrice,
+  productToCusProduct,
 } from "@autumn/shared";
 
 import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
@@ -22,11 +23,12 @@ import { mapToProductV2 } from "../products/productV2Utils.js";
 import { RewardRedemptionService } from "../rewards/RewardRedemptionService.js";
 import { CusReadService } from "./CusReadService.js";
 import { StatusCodes } from "http-status-codes";
-import { cusProductToProduct } from "./cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToProduct } from "@autumn/shared";
 import { createOrgResponse, isStripeConnected } from "../orgs/orgUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { CusSearchService } from "./CusSearchService.js";
 import { CusBatchService } from "../api/batch/CusBatchService.js";
+import { ACTIVE_STATUSES } from "./cusProducts/CusProductService.js";
 
 export const cusRouter: Router = Router();
 
@@ -124,203 +126,6 @@ cusRouter.get("/:customer_id/events", async (req: any, res: any) => {
     res.status(200).json({ events });
   } catch (error) {
     handleFrontendReqError({ req, error, res, action: "get customer events" });
-  }
-});
-
-// cusRouter.get("/:customer_id/stripe", async (req: any, res: any) => {
-//   try {
-//     const { db, org, features, env } = req;
-//     const { customer_id } = req.params;
-//     let discount = null;
-
-//     const customer = await CusService.get({
-//       db,
-//       orgId: req.orgId,
-//       env,
-//       idOrInternalId: customer_id,
-//     });
-
-//     if (org.stripe_config && customer.processor?.id) {
-//       try {
-//         const stripeCli = createStripeCli({ org, env });
-//         const stripeCus: any = await stripeCli.customers.retrieve(
-//           customer.processor.id
-//         );
-
-//         if (stripeCus.discount) {
-//           discount = stripeCus.discount;
-//         }
-//       } catch (error) {
-//         console.log("error", error);
-//       }
-//     }
-
-//   } catch (error) {
-//     handleFrontendReqError({ req, error, res, action: "get customer data" });
-//   }
-// });
-
-// cusRouter.get("/:customer_id/events", async (req: any, res: any) => {
-//   try {
-//     const { db, org, features, env } = req;
-//     const { customer_id } = req.params;
-//     const orgId = req.orgId;
-//     const limit = req.query.limit || 10;
-//     const period = req.query.period || "all";
-
-//     console.log("Fetching events for customer:", customer_id);
-
-//     const events = await EventService.getByCustomerId({
-//       db,
-//       internalCustomerId: customer_id,
-//       env,
-//       orgId: orgId,
-//       limit,
-//     });
-
-//     console.log("Events:", events);
-
-//     res.status(200).json({ events });
-//   } catch (error) {
-//     handleFrontendReqError({ req, error, res, action: "get customer events" });
-//   }
-// });
-
-cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
-  try {
-    const { db, org, features, env } = req;
-    const { customer_id } = req.params;
-    const orgId = req.orgId;
-
-    const [coupons, products, customer] = await Promise.all([
-      RewardService.list({
-        db,
-        orgId: orgId,
-        env,
-      }),
-
-      ProductService.listFull({ db, orgId, env, returnAll: true }),
-      CusService.getFull({
-        db,
-        orgId,
-        env,
-        idOrInternalId: customer_id,
-        withEntities: true,
-        expand: [CusExpand.Invoices],
-        inStatuses: [
-          CusProductStatus.Active,
-          CusProductStatus.PastDue,
-          CusProductStatus.Scheduled,
-          CusProductStatus.Expired,
-        ],
-      }),
-    ]);
-
-    if (!customer) {
-      throw new RecaseError({
-        message: "Customer not found",
-        code: ErrCode.CustomerNotFound,
-        statusCode: StatusCodes.NOT_FOUND,
-      });
-    }
-
-    let invoices = customer.invoices;
-    let entities = customer.entities;
-    const events = await EventService.getByCustomerId({
-      db,
-      internalCustomerId: customer.internal_id,
-      env,
-      orgId: orgId,
-      limit: 10,
-    });
-
-    let fullCustomer = customer as any;
-    let cusProducts = fullCustomer.customer_products;
-    fullCustomer.products = fullCustomer.customer_products;
-    fullCustomer.entitlements = cusProducts.flatMap(
-      (product: FullCusProduct) => product.customer_entitlements
-    );
-    fullCustomer.prices = cusProducts.flatMap(
-      (product: FullCusProduct) => product.customer_prices
-    );
-
-    for (const product of fullCustomer.products) {
-      product.entitlements = product.customer_entitlements.map(
-        (cusEnt: FullCustomerEntitlement) => {
-          return cusEnt.entitlement;
-        }
-      );
-      product.prices = product.customer_prices.map(
-        (cusPrice: FullCustomerPrice) => {
-          return cusPrice.price;
-        }
-      );
-    }
-
-    let discount = null;
-    if (org.stripe_config && customer.processor?.id) {
-      try {
-        const stripeCli = createStripeCli({ org, env });
-        const stripeCus: any = await stripeCli.customers.retrieve(
-          customer.processor.id
-        );
-
-        if (stripeCus.discount) {
-          discount = stripeCus.discount;
-        }
-      } catch (error) {
-        console.log("error", error);
-      }
-    }
-
-    for (const invoice of invoices || []) {
-      invoice.product_ids = invoice.product_ids.sort();
-      invoice.internal_product_ids = invoice.internal_product_ids.sort();
-    }
-
-    // fullCustomer.entitlements = fullCustomer.entitlements.sort(
-    //   (a: any, b: any) => {
-    //     const productA = fullCustomer.products.find(
-    //       (p: any) => p.id === a.customer_product_id
-    //     );
-    //     const productB = fullCustomer.products.find(
-    //       (p: any) => p.id === b.customer_product_id
-    //     );
-
-    //     return (
-    //       new Date(b.created_at).getTime() - new Date(a.created_at).getTime() ||
-    //       b.id.localeCompare(a.id)
-    //     );
-    //   }
-    // );
-
-    // for (const cusEnt of fullCustomer.entitlements) {
-    //   // let entitlement = cusEnt.entitlement;
-
-    //   // Show used, limit, etc.
-    //   let { balance, unused } = getCusEntMasterBalance({
-    //     cusEnt,
-    //     entities,
-    //   });
-
-    //   cusEnt.balance = balance;
-    //   cusEnt.unused = unused;
-    // }
-
-    res.status(200).json({
-      customer: fullCustomer,
-      products: getLatestProducts(products),
-      versionCounts: getProductVersionCounts(products),
-      invoices,
-      features,
-      coupons,
-      events,
-      discount,
-      org,
-      entities,
-    });
-  } catch (error) {
-    handleFrontendReqError({ req, error, res, action: "get customer data" });
   }
 });
 
@@ -476,34 +281,15 @@ cusRouter.get(
 
       let cusProducts = customer.customer_products;
       let entity = customer.entity;
-      let cusProduct;
 
-      if (notNullish(customer_product_id)) {
-        cusProduct = cusProducts.find(
-          (p: any) =>
-            p.id === customer_product_id &&
-            (entity ? p.internal_entity_id === entity.internal_id : true)
-        );
-      } else if (notNullish(version)) {
-        cusProduct = cusProducts.find(
-          (p: any) =>
-            p.product.id === product_id &&
-            (p.status === CusProductStatus.Active ||
-              p.status === CusProductStatus.PastDue) &&
-            p.product.version === parseInt(version) &&
-            (entity ? p.internal_entity_id === entity.internal_id : true)
-        );
-      } else {
-        cusProduct = cusProducts.find(
-          (p: any) =>
-            p.product.id === product_id &&
-            (p.status === CusProductStatus.Active ||
-              p.status === CusProductStatus.PastDue) &&
-            (entity
-              ? p.internal_entity_id === entity.internal_id
-              : nullish(p.internal_entity_id))
-        );
-      }
+      let cusProduct = productToCusProduct({
+        cusProducts,
+        productId: product_id,
+        internalEntityId: entity?.internal_id,
+        version: version ? parseInt(version) : undefined,
+        cusProductId: customer_product_id,
+        inStatuses: ACTIVE_STATUSES,
+      });
 
       let product = cusProduct
         ? cusProductToProduct({ cusProduct })
@@ -519,32 +305,32 @@ cusRouter.get(
           });
 
       let productV2 = mapToProductV2({ product: product!, features });
-
-      let numVersions = await ProductService.getProductVersionCount({
-        db,
-        orgId: org.id,
-        env,
-        productId: product_id,
-      });
+      // let numVersions = await ProductService.getProductVersionCount({
+      //   db,
+      //   orgId: org.id,
+      //   env,
+      //   productId: product_id,
+      // });
 
       res.status(200).json({
-        customer,
-        // preview,
-        product: cusProduct
-          ? {
-              ...productV2,
-              options: cusProduct.options,
-              isActive: cusProduct.status === CusProductStatus.Active,
-              isCustom: cusProduct.is_custom,
-              isCanceled:
-                cusProduct.canceled_at !== null || cusProduct.canceled,
-              cusProductId: cusProduct.id,
-            }
-          : productV2,
-        features,
-        numVersions,
-        entities: customer.entities,
-        org: createOrgResponse({ org, env }),
+        cusProduct,
+        product: productV2,
+        // customer,
+        // product: cusProduct
+        //   ? {
+        //       ...productV2,
+        //       options: cusProduct.options,
+        //       isActive: cusProduct.status === CusProductStatus.Active,
+        //       isCustom: cusProduct.is_custom,
+        //       isCanceled:
+        //         cusProduct.canceled_at !== null || cusProduct.canceled,
+        //       cusProductId: cusProduct.id,
+        //     }
+        //   : productV2,
+        // features,
+        // numVersions,
+        // entities: customer.entities,
+        // org: createOrgResponse({ org, env }),
       });
     } catch (error) {
       handleFrontendReqError({

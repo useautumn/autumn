@@ -3,7 +3,13 @@
 import ProductSidebar from "@/views/products/product/ProductSidebar";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { useState, useEffect, useRef } from "react";
-import { Customer, Entity, Feature, ProductItem } from "@autumn/shared";
+import {
+  Customer,
+  Entity,
+  Feature,
+  ProductItem,
+  ProductV2,
+} from "@autumn/shared";
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { ManageProduct } from "@/views/products/product/ManageProduct";
@@ -15,6 +21,11 @@ import { useEnv } from "@/utils/envUtils";
 import { CustomerProductBreadcrumbs } from "./components/CustomerProductBreadcrumbs";
 import { FrontendProduct, useAttachState } from "./hooks/useAttachState";
 import { sortProductItems } from "@/utils/productUtils";
+import { useCusQuery } from "../hooks/useCusQuery";
+import { useOrg } from "@/hooks/common/useOrg";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useCusProductQuery } from "./hooks/useCusProductQuery";
+import { notNullish } from "@/utils/genUtils";
 
 interface OptionValue {
   feature_id: string;
@@ -45,14 +56,45 @@ export default function CustomerProductView() {
   const [searchParams] = useSearchParams();
   const entityIdParam = searchParams.get("entity_id");
 
-  const env = useEnv();
+  const { isLoading: orgLoading } = useOrg();
+  const { isLoading: featuresLoading } = useFeaturesQuery();
 
-  const initialProductRef = useRef<FrontendProduct | null>(null);
-  const [product, setProduct] = useState<FrontendProduct | null>(null);
-  const [features, setFeatures] = useState<Feature[]>([]);
+  const env = useEnv();
+  const initialProductRef = useRef<ProductV2 | null>(null);
+
+  const [product, setProduct] = useState<ProductV2 | null>(null);
+
   const [options, setOptions] = useState<OptionValue[]>([]);
   const [entityId, setEntityId] = useState<string | null>(entityIdParam);
   const [entityFeatureIds, setEntityFeatureIds] = useState<string[]>([]);
+
+  const version = searchParams.get("version");
+  const customer_product_id = searchParams.get("id");
+
+  // const { data, isLoading, error } = useAxiosSWR({
+  //   url: `/customers/${customer_id}/product/${product_id}${getProductUrlParams({
+  //     version,
+  //     customer_product_id,
+  //     entity_id: entityId,
+  //   })}`,
+  //   env,
+  // });
+
+  const {
+    product: originalProduct,
+    cusProduct,
+    isLoading,
+    error,
+  } = useCusProductQuery();
+
+  const { isLoading: cusLoading } = useCusQuery();
+
+  const attachState = useAttachState({
+    product,
+    setProduct,
+    initialProductRef,
+    cusProduct,
+  });
 
   useEffect(() => {
     if (entityIdParam) {
@@ -62,30 +104,11 @@ export default function CustomerProductView() {
     }
   }, [entityIdParam]);
 
-  const version = searchParams.get("version");
-  const customer_product_id = searchParams.get("id");
-  const { data, isLoading, mutate, error } = useAxiosSWR({
-    url: `/customers/${customer_id}/product/${product_id}${getProductUrlParams({
-      version,
-      customer_product_id,
-      entity_id: entityId,
-    })}`,
-    env,
-  });
-
-  const [selectedEntitlementAllowance, setSelectedEntitlementAllowance] =
-    useState<"unlimited" | number>(0);
-
-  const attachState = useAttachState({
-    product,
-    setProduct,
-    initialProductRef,
-  });
-
   useEffect(() => {
-    if (!data?.product || !data?.customer) return;
+    if (!originalProduct) return;
 
-    const product = data.product;
+    const product = originalProduct;
+
     setProduct(product);
     initialProductRef.current = structuredClone({
       ...product,
@@ -96,22 +119,18 @@ export default function CustomerProductView() {
       Array.from(
         new Set(
           product.items
-            .filter((item: ProductItem) => item.entity_feature_id != null)
-            .map((item: ProductItem) => item.entity_feature_id)
+            .filter((item: ProductItem) => notNullish(item.entity_feature_id))
+            .map((item: ProductItem) => item.entity_feature_id!)
         )
       )
     );
 
-    if (product.options) {
-      setOptions(product.options);
+    if (cusProduct?.options) {
+      setOptions(cusProduct.options);
     } else {
       setOptions([]);
     }
-
-    if (data?.features) {
-      setFeatures(data.features);
-    }
-  }, [data]);
+  }, [originalProduct, cusProduct]);
 
   if (error) {
     return (
@@ -123,28 +142,33 @@ export default function CustomerProductView() {
     );
   }
 
-  if (isLoading || !product) return <LoadingScreen />;
+  // console.log("Product:", product);
+  // console.log("Is loading:", isLoading);
+  // console.log("Is org loading:", orgLoading);
+  // console.log("Is cus loading:", cusLoading);
+  // console.log("Is features loading:", featuresLoading);
+
+  if (isLoading || !product || cusLoading || orgLoading || featuresLoading)
+    return <LoadingScreen />;
 
   if (!customer_id || !product_id) {
     return <div>Customer or product not found</div>;
   }
 
-  const { customer } = data;
-
   return (
     <ProductContext.Provider
       value={{
-        ...data,
-        features,
-        setFeatures,
-        mutate,
-        env,
+        // ...data,
+        // features,
+        // setFeatures,
+
+        // mutate,
+        // env,
+
+        isCusProductView: true,
         product,
         setProduct,
-        selectedEntitlementAllowance,
-        setSelectedEntitlementAllowance,
-        customer: customer as Customer,
-        entities: data.entities as Entity[],
+
         entityId,
         setEntityId,
         attachState,
@@ -199,4 +223,18 @@ export const CopyUrl = ({
       </div>
     </div>
   );
+};
+
+export type NewSubscription = {
+  id: "new";
+  code: "checkout_session" | "combine_subscription" | "renew";
+};
+
+export type UpdateSubscription = {
+  id: "update";
+  code: "upgrade" | "downgrade";
+};
+
+export type Product = {
+  scenario: "new:checkout_session" | "new:combine_subscription";
 };

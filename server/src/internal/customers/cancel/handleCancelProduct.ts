@@ -11,10 +11,7 @@ import {
   EntitlementWithFeature,
 } from "@autumn/shared";
 import { getExistingCusProducts } from "../cusProducts/cusProductUtils/getExistingCusProducts.js";
-import {
-  cusProductToPrices,
-  cusProductToProduct,
-} from "../cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToPrices, cusProductToProduct } from "@autumn/shared";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";

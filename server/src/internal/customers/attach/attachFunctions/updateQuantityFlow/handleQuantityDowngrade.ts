@@ -22,7 +22,7 @@ import { getRelatedCusEnt } from "@/internal/customers/cusProducts/cusPrices/cus
 import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import { constructStripeInvoiceItem } from "@/internal/invoices/invoiceItemUtils/invoiceItemUtils.js";
-import { cusProductToProduct } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToProduct } from "@autumn/shared";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { createAndFinalizeInvoice } from "@/internal/invoices/invoiceUtils/createAndFinalizeInvoice.js";
 import { notNullish } from "@/utils/genUtils.js";

@@ -15,11 +15,11 @@ import {
   getRelatedCusPrice,
   getResetBalance,
   getUnlimitedAndUsageAllowed,
-  sortCusEntsForDeduction,
 } from "../cusEntUtils.js";
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import { performDeductionOnCusEnt } from "@/trigger/updateBalanceTask.js";
+import { sortCusEntsForDeduction } from "@autumn/shared";
 
 export const getExistingCusEntAndUsage = async ({
   curCusProduct,

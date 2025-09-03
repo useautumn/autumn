@@ -11,6 +11,7 @@ import { FeatureTypeBadge } from "@/views/products/features/components/FeatureTy
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus } from "lucide-react";
 import { CreateItemStep } from "../../utils/CreateItemStep";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export const SelectFeatureStep = ({
   popStep,
@@ -19,7 +20,7 @@ export const SelectFeatureStep = ({
   popStep: () => void;
   pushStep: (step: CreateItemStep) => void;
 }) => {
-  const { features } = useProductContext();
+  const { features } = useFeaturesQuery();
   const { item } = useProductItemContext();
 
   return (

@@ -6,13 +6,14 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { useEnv } from "@/utils/envUtils";
-import { navigateTo } from "@/utils/genUtils";
+import { navigateTo, pushPage } from "@/utils/genUtils";
 import { useProductContext } from "@/views/products/product/ProductContext";
 import { useNavigate } from "react-router";
+import { useCusQuery } from "../../hooks/useCusQuery";
 
 export const CustomerProductBreadcrumbs = () => {
-  const env = useEnv();
-  const { customer, product, entityId } = useProductContext();
+  const { customer } = useCusQuery();
+  const { product, entityId } = useProductContext();
   const navigation = useNavigate();
 
   return (
@@ -21,7 +22,7 @@ export const CustomerProductBreadcrumbs = () => {
         <BreadcrumbItem>
           <BreadcrumbLink
             className="cursor-pointer"
-            onClick={() => navigateTo("/customers", navigation, env)}
+            onClick={() => navigateTo("/customers", navigation)}
           >
             Customers
           </BreadcrumbLink>
@@ -30,13 +31,13 @@ export const CustomerProductBreadcrumbs = () => {
         <BreadcrumbLink
           className="cursor-pointer truncate max-w-48"
           onClick={() =>
-            navigateTo(
-              `/customers/${customer.id || customer.internal_id}${
-                entityId ? `?entity_id=${entityId}` : ""
-              }`,
-              navigation,
-              env,
-            )
+            pushPage({
+              path: `/customers/${customer.id || customer.internal_id}`,
+              navigate: navigation,
+              queryParams: {
+                entity_id: entityId,
+              },
+            })
           }
         >
           {customer.name

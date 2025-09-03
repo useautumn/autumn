@@ -6,9 +6,14 @@ import { useProductContext } from "@/views/products/product/ProductContext";
 import { getFeatureInvoiceDescription } from "@autumn/shared";
 import { formatAmount } from "@/utils/formatUtils/formatTextUtils";
 import { AdjustableOptions } from "./AdjustQuantity";
+import { useOrg } from "@/hooks/common/useOrg";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export const DueNextCycle = () => {
-  const { attachState, product, features, org } = useProductContext();
+  const { org } = useOrg();
+  const { features } = useFeaturesQuery();
+  const { attachState, product } = useProductContext();
+
   const preview = attachState.preview;
   const currency = org.default_currency || "USD";
 

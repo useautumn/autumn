@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 
 import { attachParamToCusProducts } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
-import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToPrices } from "@autumn/shared";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";

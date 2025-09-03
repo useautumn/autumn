@@ -11,6 +11,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export const BillingUnits = ({
   className,
@@ -19,7 +20,7 @@ export const BillingUnits = ({
   className?: string;
   disabled: boolean;
 }) => {
-  const { features } = useProductContext();
+  const { features } = useFeaturesQuery();
   const { item, setItem } = useProductItemContext();
   const [popoverOpen, setPopoverOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);

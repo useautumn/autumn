@@ -119,6 +119,42 @@ productRouter.get("/rewards", async (req: any, res) => {
   }
 });
 
+productRouter.get("/:productId/data2", async (req: any, res) => {
+  try {
+    const { productId } = req.params;
+    const { version } = req.query;
+    const { db, orgId, env } = req;
+
+    const product = await ProductService.getFull({
+      db,
+      idOrInternalId: productId,
+      orgId,
+      env,
+      version: version ? parseInt(version) : undefined,
+    });
+
+    if (!product) {
+      throw new RecaseError({
+        message: `Product ${productId} ${
+          version ? `(v${version})` : ""
+        } not found`,
+        code: ErrCode.ProductNotFound,
+        statusCode: StatusCodes.NOT_FOUND,
+      });
+    }
+
+    let productV2 = mapToProductV2({
+      product: product,
+      features: req.features,
+    });
+
+    res.status(200).json({ product: productV2 });
+  } catch (error) {
+    console.error("Failed to get product", error);
+    res.status(500).send(error);
+  }
+});
+
 productRouter.get("/data", async (req: any, res) => {
   try {
     let { db } = req;

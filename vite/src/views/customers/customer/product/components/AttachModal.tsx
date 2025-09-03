@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import {
@@ -26,12 +28,11 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
 import { AttachPreviewDetails } from "./AttachPreviewDetails";
-import { ToggleConfigButton } from "./ToggleConfigButton";
-import { cn } from "@/lib/utils";
-import { Separator } from "@/components/ui/separator";
+
 import { AttachInfo } from "./attach-preview/AttachInfo";
 import { getAttachBody } from "./attachProductUtils";
 import { InvoiceCustomerButton } from "./InvoiceCustomerButton";
+import { useCusQuery } from "../../hooks/useCusQuery";
 
 export const AttachModal = ({
   open,
@@ -40,16 +41,16 @@ export const AttachModal = ({
   open: boolean;
   setOpen: (open: boolean) => void;
 }) => {
-  const { product, customer, entities, entityId, attachState, version } =
-    useProductContext();
+  const { customer, entities } = useCusQuery();
+  const { product, entityId, attachState, version } = useProductContext();
 
   const navigation = useNavigate();
   const env = useEnv();
   const axiosInstance = useAxiosInstance();
 
-  const { preview, options, setOptions, flags } = attachState;
+  const { preview, options, flags } = attachState;
   const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const [invoiceLoading] = useState(false);
 
   const getName = () => {
     const cusName =
@@ -191,9 +192,10 @@ export const AttachModal = ({
     }
   };
 
-  const [configOpen, setConfigOpen] = useState(false);
+  const [configOpen] = useState(false);
 
   const mainWidth = "w-lg";
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="translate-y-[0%] top-[20%] max-h-[70vh] duration-0 p-0 overflow-y-auto">
@@ -210,10 +212,12 @@ export const AttachModal = ({
             <div className="text-sm flex flex-col gap-4">
               <div className="flex flex-col">
                 <p className="text-t2 font-semibold mb-2">Details</p>
+
                 <PriceItem>
                   <span>Product</span>
                   <span>{product?.name}</span>
                 </PriceItem>
+
                 <PriceItem>
                   <span>Customer</span>
                   <span>{getName()}</span>
@@ -221,6 +225,7 @@ export const AttachModal = ({
               </div>
 
               {preview && !flags.isFree && <AttachPreviewDetails />}
+
               <AttachInfo />
             </div>
 

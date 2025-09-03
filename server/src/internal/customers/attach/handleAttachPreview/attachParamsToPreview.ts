@@ -5,7 +5,7 @@ import { getAttachBranch } from "../attachUtils/getAttachBranch.js";
 import { getAttachConfig } from "../attachUtils/getAttachConfig.js";
 import { AttachFunction } from "@autumn/shared";
 import { getAttachFunction } from "../attachUtils/getAttachFunction.js";
-import { cusProductToProduct } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToProduct } from "@autumn/shared";
 import { attachParamToCusProducts } from "../attachUtils/convertAttachParams.js";
 import { getDowngradeProductPreview } from "./getDowngradeProductPreview.js";
 import { getNewProductPreview } from "./getNewProductPreview.js";

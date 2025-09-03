@@ -5,12 +5,8 @@ import {
   Entity,
   APIVersion,
 } from "@autumn/shared";
-import {
-  cusProductsToCusEnts,
-  cusProductsToCusPrices,
-} from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductsToCusEnts, cusProductsToCusPrices } from "@autumn/shared";
 import { getCusBalances } from "./getCusBalances.js";
-import { ACTIVE_STATUSES } from "../../cusProducts/CusProductService.js";
 
 export const getCusFeaturesResponse = async ({
   cusProducts,

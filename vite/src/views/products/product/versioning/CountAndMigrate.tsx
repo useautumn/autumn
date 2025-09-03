@@ -27,8 +27,7 @@ export const CountAndMigrate = () => {
     mutateCount,
   } = useProductContext();
 
-  const env = useEnv();
-  const axiosInstance = useAxiosInstance({ env });
+  const axiosInstance = useAxiosInstance();
   const [loading, setLoading] = useState(false);
   const [confirmMigrateOpen, setConfirmMigrateOpen] = useState(false);
 

@@ -12,7 +12,7 @@ import { nullish, notNullish } from "@/utils/genUtils.js";
 import { ProrationBehavior } from "@autumn/shared";
 import { attachParamsToProduct } from "./convertAttachParams.js";
 import { attachParamToCusProducts } from "./convertAttachParams.js";
-import { cusProductToPrices } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToPrices } from "@autumn/shared";
 import { willMergeSub } from "../mergeUtils/mergeUtils.js";
 
 export const intervalsAreSame = ({

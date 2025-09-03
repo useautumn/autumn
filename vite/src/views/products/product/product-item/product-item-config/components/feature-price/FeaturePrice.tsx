@@ -16,10 +16,7 @@ import { Input } from "@/components/ui/input";
 import { useOrg } from "@/hooks/common/useOrg";
 
 export default function FeaturePrice() {
-  const { features } = useProductContext();
   const { item, setItem } = useProductItemContext();
-
-  const feature = features.find((f: Feature) => f.id == item.feature_id);
 
   const setUsageTier = (index: number, key: string, value: string | number) => {
     const newUsageTiers = [...item.tiers];

@@ -15,12 +15,11 @@ import { Input } from "@/components/ui/input";
 
 import { RolloverConfigView } from "./RolloverConfig";
 import { notNullish } from "@/utils/genUtils";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export const AdvancedItemConfig = () => {
-  const { features } = useProductContext();
+  const { features } = useFeaturesQuery();
   const { item, setItem } = useProductItemContext();
-
-  const [isOpen, setIsOpen] = useState(item.usage_limit != null);
 
   const showProrationConfig = shouldShowProrationConfig({ item, features });
 

@@ -15,9 +15,10 @@ import { PlusIcon } from "lucide-react";
 import { getItemType } from "@/utils/product/productItemUtils";
 import { CreateItemStep } from "../utils/CreateItemStep";
 import { useEffect, useState } from "react";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export const SelectItemFeature = () => {
-  const { features } = useProductContext();
+  const { features } = useFeaturesQuery();
   const { item, setItem, isUpdate, stepState } = useProductItemContext();
   const [open, setOpen] = useState(false);
   const itemType = getItemType(item);

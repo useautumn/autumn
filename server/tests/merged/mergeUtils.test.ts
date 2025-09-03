@@ -5,7 +5,7 @@ import {
   cusProductToEnts,
   cusProductToPrices,
   cusProductToProduct,
-} from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+} from "@autumn/shared";
 import { CusService } from "@/internal/customers/CusService.js";
 import {
   getPriceEntitlement,

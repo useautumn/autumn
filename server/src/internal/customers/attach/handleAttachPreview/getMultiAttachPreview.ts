@@ -1,9 +1,10 @@
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { AttachBody, AttachBranch, PreviewLineItem } from "@autumn/shared";
+import { cusProductsToPrices } from "@autumn/shared";
+
 import { getCustomerSub } from "../attachUtils/convertAttachParams.js";
 
-import { cusProductsToPrices } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
 import { priceToUnusedPreviewItem } from "../attachPreviewUtils/priceToUnusedPreviewItem.js";
 import { handleMultiAttachErrors } from "../attachUtils/handleAttachErrors/handleMultiAttachErrors.js";
 import { getAddAndRemoveProducts } from "../attachFunctions/multiAttach/getAddAndRemoveProducts.js";

@@ -4,10 +4,7 @@ import {
   findStripeItemForPrice,
   isLicenseItem,
 } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
-import {
-  cusProductToPrices,
-  cusProductToSub,
-} from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToPrices } from "@autumn/shared";
 import { CusService } from "@/internal/customers/CusService.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { isV4Usage } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";

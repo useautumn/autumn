@@ -29,7 +29,7 @@ import {
 import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
 import { getAddAndRemoveProducts } from "./getAddAndRemoveProducts.js";
 import { handleUpgradeFlowSchedule } from "../upgradeFlow/handleUpgradeFlowSchedule.js";
-import { isTrialing } from "@/internal/customers/cusProducts/cusProductUtils.js";
+import { isTrialing } from "@autumn/shared";
 
 export const handleMultiAttachFlow = async ({
   req,

@@ -8,7 +8,7 @@ import { AttachBranch } from "@autumn/shared";
 import { OptionsInput } from "./attach-preview/OptionsInput";
 
 export const AttachPreviewDetails = () => {
-  const { org, attachState } = useProductContext();
+  const { attachState } = useProductContext();
   const { preview } = attachState;
 
   if (!preview) {
@@ -20,9 +20,6 @@ export const AttachPreviewDetails = () => {
 
   return (
     <React.Fragment>
-      {/* Options  */}
-
-      {/* <OptionsInput /> */}
       <UpdateQuantity />
       {!isUpdatePrepaidQuantity && (
         <>

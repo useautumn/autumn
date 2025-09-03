@@ -1,6 +1,7 @@
 import {
   BillingType,
   CusProductStatus,
+  cusProductToPrices,
   FullCusEntWithFullCusProduct,
   FullCusProduct,
   FullCustomerEntitlement,
@@ -8,128 +9,125 @@ import {
   FullProduct,
   Product,
 } from "@autumn/shared";
-import { sortCusEntsForDeduction } from "../cusEnts/cusEntUtils.js";
+import { sortCusEntsForDeduction } from "@autumn/shared";
 import {
   getStripeSchedules,
   getStripeSubs,
 } from "@/external/stripe/stripeSubUtils.js";
 import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
-import { ACTIVE_STATUSES } from "../CusProductService.js";
 
-export const cusProductsToPrices = ({
-  cusProducts,
-}: {
-  cusProducts: FullCusProduct[];
-}) => {
-  return cusProducts.flatMap((cp) => cusProductToPrices({ cusProduct: cp }));
-};
+// export const cusProductsToPrices = ({
+//   cusProducts,
+// }: {
+//   cusProducts: FullCusProduct[];
+// }) => {
+//   return cusProducts.flatMap((cp) => cusProductToPrices({ cusProduct: cp }));
+// };
 
-export const cusProductsToCusPrices = ({
-  cusProducts,
-  inStatuses,
-  billingType,
-}: {
-  cusProducts: FullCusProduct[];
-  inStatuses?: CusProductStatus[];
-  billingType?: BillingType;
-}) => {
-  const cusPrices: FullCustomerPrice[] = [];
+// export const cusProductsToCusPrices = ({
+//   cusProducts,
+//   inStatuses,
+//   billingType,
+// }: {
+//   cusProducts: FullCusProduct[];
+//   inStatuses?: CusProductStatus[];
+//   billingType?: BillingType;
+// }) => {
+//   const cusPrices: FullCustomerPrice[] = [];
 
-  for (const cusProduct of cusProducts) {
-    if (inStatuses && !inStatuses.includes(cusProduct.status)) {
-      continue;
-    }
+//   for (const cusProduct of cusProducts) {
+//     if (inStatuses && !inStatuses.includes(cusProduct.status)) {
+//       continue;
+//     }
 
-    let prices = cusProduct.customer_prices;
-    if (billingType) {
-      prices = prices.filter(
-        (cp) => getBillingType(cp.price.config) === billingType
-      );
-    }
+//     let prices = cusProduct.customer_prices;
+//     if (billingType) {
+//       prices = prices.filter(
+//         (cp) => getBillingType(cp.price.config) === billingType
+//       );
+//     }
 
-    cusPrices.push(...prices);
-  }
+//     cusPrices.push(...prices);
+//   }
 
-  return cusPrices;
-};
+//   return cusPrices;
+// };
 
-export const cusProductsToCusEnts = ({
-  cusProducts,
-  inStatuses = [CusProductStatus.Active],
-  reverseOrder = false,
-  featureId,
-}: {
-  cusProducts: FullCusProduct[];
-  inStatuses?: CusProductStatus[];
-  reverseOrder?: boolean;
-  featureId?: string;
-}) => {
-  let cusEnts: FullCustomerEntitlement[] = [];
+// export const cusProductsToCusEnts = ({
+//   cusProducts,
+//   inStatuses = [CusProductStatus.Active],
+//   reverseOrder = false,
+//   featureId,
+// }: {
+//   cusProducts: FullCusProduct[];
+//   inStatuses?: CusProductStatus[];
+//   reverseOrder?: boolean;
+//   featureId?: string;
+// }) => {
+//   let cusEnts: FullCustomerEntitlement[] = [];
 
-  for (const cusProduct of cusProducts) {
-    if (!inStatuses.includes(cusProduct.status)) {
-      continue;
-    }
+//   for (const cusProduct of cusProducts) {
+//     if (!inStatuses.includes(cusProduct.status)) {
+//       continue;
+//     }
 
-    cusEnts.push(
-      ...cusProduct.customer_entitlements.map((cusEnt) => ({
-        ...cusEnt,
-        customer_product: cusProduct,
-      }))
-    );
-  }
+//     cusEnts.push(
+//       ...cusProduct.customer_entitlements.map((cusEnt) => ({
+//         ...cusEnt,
+//         customer_product: cusProduct,
+//       }))
+//     );
+//   }
 
-  if (featureId) {
-    cusEnts = cusEnts.filter(
-      (cusEnt) => cusEnt.entitlement.feature_id === featureId
-    );
-  }
+//   if (featureId) {
+//     cusEnts = cusEnts.filter(
+//       (cusEnt) => cusEnt.entitlement.feature_id === featureId
+//     );
+//   }
 
-  sortCusEntsForDeduction(cusEnts, reverseOrder);
+//   sortCusEntsForDeduction(cusEnts, reverseOrder);
 
-  return cusEnts as FullCusEntWithFullCusProduct[];
-};
+//   return cusEnts as FullCusEntWithFullCusProduct[];
+// };
 
-export const cusProductToPrices = ({
-  cusProduct,
-  billingType,
-}: {
-  cusProduct: FullCusProduct;
-  billingType?: BillingType;
-}) => {
-  let prices = cusProduct.customer_prices.map((cp) => cp.price);
+// export const cusProductToPrices = ({
+//   cusProduct,
+//   billingType,
+// }: {
+//   cusProduct: FullCusProduct;
+//   billingType?: BillingType;
+// }) => {
+//   let prices = cusProduct.customer_prices.map((cp) => cp.price);
 
-  if (billingType) {
-    prices = prices.filter((p) => getBillingType(p.config) === billingType);
-  }
+//   if (billingType) {
+//     prices = prices.filter((p) => getBillingType(p.config) === billingType);
+//   }
 
-  return prices;
-};
+//   return prices;
+// };
 
-export const cusProductToEnts = ({
-  cusProduct,
-}: {
-  cusProduct: FullCusProduct;
-}) => {
-  return cusProduct.customer_entitlements.map((ce) => ce.entitlement);
-};
+// export const cusProductToEnts = ({
+//   cusProduct,
+// }: {
+//   cusProduct: FullCusProduct;
+// }) => {
+//   return cusProduct.customer_entitlements.map((ce) => ce.entitlement);
+// };
 
-export const cusProductToProduct = ({
-  cusProduct,
-}: {
-  cusProduct: FullCusProduct;
-}) => {
-  return {
-    ...cusProduct.product,
-    prices: cusProductToPrices({ cusProduct }),
-    entitlements: cusProductToEnts({ cusProduct }),
-    free_trial: cusProduct.free_trial,
-  } as FullProduct;
-};
+// export const cusProductToProduct = ({
+//   cusProduct,
+// }: {
+//   cusProduct: FullCusProduct;
+// }) => {
+//   return {
+//     ...cusProduct.product,
+//     prices: cusProductToPrices({ cusProduct }),
+//     entitlements: cusProductToEnts({ cusProduct }),
+//     free_trial: cusProduct.free_trial,
+//   } as FullProduct;
+// };
 
-// Subs, schedules
 export const cusProductsToSchedules = ({
   cusProducts,
   stripeCli,

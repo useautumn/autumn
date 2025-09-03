@@ -1,9 +1,7 @@
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
-import { CusProductStatus } from "@autumn/shared";
+import { cusProductToProduct } from "@autumn/shared";
 import Stripe from "stripe";
-import { cusProductToProduct } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
-import { isTrialing } from "../../cusProducts/cusProductUtils.js";
 
 export const attachParamsToCurCusProduct = ({
   attachParams,

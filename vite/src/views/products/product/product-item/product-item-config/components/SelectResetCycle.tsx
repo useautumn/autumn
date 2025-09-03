@@ -19,18 +19,9 @@ import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { cn } from "@/lib/utils";
 import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
 import { getFeatureUsageType } from "@/utils/product/entitlementUtils";
-import { useProductContext } from "../../../ProductContext";
-import { Button } from "@/components/ui/button";
-import { ArrowUp01, CheckIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { ToggleDisplayButton } from "@/components/general/ToggleDisplayButton";
-import { Input } from "@/components/ui/input";
 import { CustomiseIntervalPopover } from "./CusomiseIntervalPopover";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 const getIntervalText = ({
   interval,
@@ -57,7 +48,7 @@ const getIntervalText = ({
 };
 
 export const SelectResetCycle = () => {
-  const { features } = useProductContext();
+  const { features } = useFeaturesQuery();
   const { item, setItem } = useProductItemContext();
 
   const handleChange = (value: EntInterval) => {

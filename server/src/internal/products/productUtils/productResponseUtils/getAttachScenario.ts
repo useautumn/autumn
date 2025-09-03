@@ -1,4 +1,4 @@
-import { cusProductToProduct } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToProduct } from "@autumn/shared";
 import { AttachScenario, FullCustomer, FullProduct } from "@autumn/shared";
 import {
   isFreeProduct,
