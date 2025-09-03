@@ -292,15 +292,13 @@ export const getAttachBranch = async ({
     return AttachBranch.MultiAttach;
   }
 
-  // 1. Multi product
+  if (pricesOnlyOneOff(attachParams.prices)) {
+    return AttachBranch.OneOff;
+  }
+
   if (notNullish(attachBody.product_ids)) {
     await handleMultiProductErrors({ attachParams });
     return AttachBranch.MultiProduct;
-  }
-
-  // 2. One off prices
-  if (pricesOnlyOneOff(attachParams.prices)) {
-    return AttachBranch.OneOff;
   }
 
   let { curSameProduct, curMainProduct } = attachParamToCusProducts({
