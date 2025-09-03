@@ -26,6 +26,7 @@ import { metadata } from "../models/otherModels/metadataTable.js";
 import { subscriptions } from "../models/subModels/subTable.js";
 import { invoices } from "../models/cusModels/invoiceModels/invoiceTable.js";
 import { invoiceRelations } from "../models/cusModels/invoiceModels/invoiceRelations.js";
+import { orgJoinRequests } from "../models/orgModels/orgJoinRequestTable.js";
 
 // Reward Tables
 import { rewards } from "../models/rewardModels/rewardModels/rewardTable.js";
@@ -39,6 +40,7 @@ import { migrationErrors } from "../models/migrationModels/migrationErrorTable.j
 
 /* RELATIONS */
 import { organizationsRelations } from "../models/orgModels/orgRelations.js";
+import { orgJoinRequestRelations } from "../models/orgModels/orgJoinRequestRelations.js";
 import { featureRelations } from "../models/featureModels/featureRelations.js";
 
 // Customer Relations
@@ -84,6 +86,7 @@ import { userRelations, memberRelations } from "./auth-relations.js";
 export {
   // Tables
   organizations,
+  orgJoinRequests,
   chatResults,
   freeTrials,
   entitlements,
@@ -120,6 +123,7 @@ export {
 
   // Relations
   organizationsRelations,
+  orgJoinRequestRelations,
   entitlementsRelations,
   featureRelations,
   priceRelations,
