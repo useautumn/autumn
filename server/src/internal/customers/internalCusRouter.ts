@@ -135,14 +135,12 @@ cusRouter.get("/:customer_id/referrals", async (req: any, res: any) => {
     const { customer_id } = req.params;
     const orgId = req.orgId;
 
-    console.time("get_customer");
     let internalCustomer = await CusService.get({
       db,
       orgId,
       env,
       idOrInternalId: customer_id,
     });
-    console.timeEnd("get_customer");
 
     if (!internalCustomer) {
       throw new RecaseError({

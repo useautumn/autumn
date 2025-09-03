@@ -71,15 +71,6 @@ export default function CustomerProductView() {
   const version = searchParams.get("version");
   const customer_product_id = searchParams.get("id");
 
-  // const { data, isLoading, error } = useAxiosSWR({
-  //   url: `/customers/${customer_id}/product/${product_id}${getProductUrlParams({
-  //     version,
-  //     customer_product_id,
-  //     entity_id: entityId,
-  //   })}`,
-  //   env,
-  // });
-
   const {
     product: originalProduct,
     cusProduct,
@@ -141,12 +132,6 @@ export default function CustomerProductView() {
       </ErrorScreen>
     );
   }
-
-  // console.log("Product:", product);
-  // console.log("Is loading:", isLoading);
-  // console.log("Is org loading:", orgLoading);
-  // console.log("Is cus loading:", cusLoading);
-  // console.log("Is features loading:", featuresLoading);
 
   if (isLoading || !product || cusLoading || orgLoading || featuresLoading)
     return <LoadingScreen />;
@@ -223,18 +208,4 @@ export const CopyUrl = ({
       </div>
     </div>
   );
-};
-
-export type NewSubscription = {
-  id: "new";
-  code: "checkout_session" | "combine_subscription" | "renew";
-};
-
-export type UpdateSubscription = {
-  id: "update";
-  code: "upgrade" | "downgrade";
-};
-
-export type Product = {
-  scenario: "new:checkout_session" | "new:combine_subscription";
 };
