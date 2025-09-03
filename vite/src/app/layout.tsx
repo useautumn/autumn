@@ -20,6 +20,7 @@ import {
 import { AppContext } from "./AppContext";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { useGlobalErrorHandler } from "@/hooks/useGlobalErrorHandler";
+import { JoinRequestNotification } from "@/components/notifications/JoinRequestNotification";
 
 export function MainLayout() {
   const env = useEnv();
@@ -120,6 +121,7 @@ export function MainLayout() {
         <NuqsAdapter>
           <main className="w-screen h-screen flex bg-stone-100">
             <CustomToaster />
+            <JoinRequestNotification />
             <MainSidebar />
             <MainContent />
           </main>
