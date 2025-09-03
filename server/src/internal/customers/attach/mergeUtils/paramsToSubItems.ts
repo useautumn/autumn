@@ -15,7 +15,6 @@ import {
 } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { mergeNewSubItems } from "./mergeNewSubItems.js";
 import { formatPrice } from "@/internal/products/prices/priceUtils.js";
-import { logPhaseItems } from "./phaseUtils/phaseUtils.js";
 import { getQuantityToRemove } from "./mergeUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
@@ -119,7 +118,10 @@ export const paramsToSubItems = async ({
     ? removeCusProducts!
     : getCusProductsToRemove({ attachParams });
 
-  console.log("CUS PRODUCTS TO REMOVE:", cusProductsToRemove);
+  console.log(
+    "Cus products to remove:",
+    cusProductsToRemove.map((cp) => cp.product.name)
+  );
 
   let newSubItems = mergeNewSubItems({
     itemSet,
@@ -129,7 +131,7 @@ export const paramsToSubItems = async ({
   const allCusProducts = attachParams.customer.customer_products;
 
   // 3. Remove items related to cus products to remove
-  const printRemoveLogs = true;
+  const printRemoveLogs = false;
   for (const cusProduct of cusProductsToRemove) {
     const prices = cusProductToPrices({ cusProduct });
 
