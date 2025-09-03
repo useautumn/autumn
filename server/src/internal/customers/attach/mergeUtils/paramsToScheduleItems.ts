@@ -6,7 +6,7 @@ import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { AttachConfig, FullCusProduct } from "@autumn/shared";
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import { cusProductToPrices } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToPrices } from "@autumn/shared";
 import { isArrearPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import {
   priceToScheduleItem,

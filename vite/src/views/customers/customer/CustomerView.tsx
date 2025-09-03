@@ -3,9 +3,9 @@
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { CusProductStatus } from "@autumn/shared";
 import { CustomerContext } from "./CustomerContext";
-import { notNullish } from "@/utils/genUtils";
+import { getRedirectUrl, notNullish, pushPage } from "@/utils/genUtils";
 import { useEffect, useState } from "react";
-import { useParams, useSearchParams } from "react-router";
+import { Link, useParams, useSearchParams } from "react-router";
 import { useCusQuery } from "./hooks/useCusQuery";
 import { CustomerSidebar } from "./components/customer-sidebar/CustomerSidebar";
 import { CustomerPageHeader } from "./components/customer-header/CustomerPageHeader";
@@ -15,6 +15,7 @@ import { CustomerEntitlementsList } from "./entitlements/CustomerEntitlementsLis
 import { useCusReferralQuery } from "./hooks/useCusReferralQuery";
 import { InvoicesTable } from "./InvoicesTable";
 import { CustomerEventsList } from "./CustomerEventsList";
+import ErrorScreen from "@/views/general/ErrorScreen";
 
 export default function CustomerView() {
   // const { customer_id } = useParams();
@@ -56,19 +57,19 @@ export default function CustomerView() {
 
   if (cusLoading) return <LoadingScreen />;
 
-  // if (!data) {
-  //   return (
-  //     <ErrorScreen>
-  //       <div className="text-t2 text-sm">Customer not found</div>
-  //       <Link
-  //         className="text-t3 text-xs hover:underline"
-  //         to={getRedirectUrl("/customers", env)}
-  //       >
-  //         Return
-  //       </Link>
-  //     </ErrorScreen>
-  //   );
-  // }
+  if (!customer) {
+    return (
+      <ErrorScreen>
+        <div className="text-t2 text-sm">Customer not found</div>
+        <Link
+          className="text-t3 text-xs hover:underline"
+          to={pushPage({ path: "/customers" })}
+        >
+          Return
+        </Link>
+      </ErrorScreen>
+    );
+  }
 
   // const { customer, products, invoices, coupons, discount, events, entities } =
   //   data;
@@ -106,9 +107,9 @@ export default function CustomerView() {
               <div className="flex flex-col gap-2">
                 <CustomerProductList />
               </div>
-
-              <CustomerEntitlementsList />
-              <div className="flex flex-col gap-2"></div>
+              <div className="flex flex-col gap-2">
+                <CustomerEntitlementsList />
+              </div>
 
               <InvoicesTable />
               <CustomerEventsList />

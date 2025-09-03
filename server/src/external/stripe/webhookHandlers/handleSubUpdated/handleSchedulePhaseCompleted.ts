@@ -1,21 +1,13 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import {
-  AppEnv,
-  AttachScenario,
-  CusProductStatus,
-  Organization,
-} from "@autumn/shared";
 import Stripe from "stripe";
+import { AttachScenario, CusProductStatus } from "@autumn/shared";
 import { createStripeCli } from "../../utils.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 
-import { cusProductInPhase } from "@/internal/customers/attach/mergeUtils/phaseUtils/phaseUtils.js";
-import { formatUnixToDateTime, notNullish } from "@/utils/genUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
-import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { activateFutureProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import { cusProductToProduct } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToProduct } from "@autumn/shared";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 

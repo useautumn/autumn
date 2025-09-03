@@ -20,10 +20,7 @@ import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { BillingType } from "@autumn/shared";
 import { notNullish, nullOrUndefined } from "@/utils/genUtils.js";
 import { attachParamToCusProducts } from "./convertAttachParams.js";
-import {
-  cusProductsToCusEnts,
-  cusProductToPrices,
-} from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductsToCusEnts, cusProductToPrices } from "@autumn/shared";
 import { findPriceForFeature } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 import { getResetBalance } from "../../cusProducts/cusEnts/cusEntUtils.js";
 import { Decimal } from "decimal.js";

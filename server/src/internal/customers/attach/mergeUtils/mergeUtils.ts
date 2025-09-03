@@ -10,7 +10,7 @@ import {
 import { AttachBranch, Entity, FullCusProduct, Price } from "@autumn/shared";
 import Stripe from "stripe";
 import { getExistingUsageFromCusProducts } from "../../cusProducts/cusEnts/cusEntUtils.js";
-import { cusProductToEnts } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToEnts } from "@autumn/shared";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
 import {
   attachParamsToCurCusProduct,

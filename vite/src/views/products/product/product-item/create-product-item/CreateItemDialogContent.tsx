@@ -2,35 +2,25 @@ import {
   CustomDialogBody,
   CustomDialogContent,
 } from "@/components/general/modal-components/DialogContentWrapper";
-import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useProductItemContext } from "../ProductItemContext";
-import { ProductItemConfig } from "../ProductItemConfig";
-import {
-  ProductItemType,
-  Infinite,
-  FeatureType,
-  BillingInterval,
-  CreateFeature as CreateFeatureType,
-} from "@autumn/shared";
-import { ItemConfigFooter } from "../product-item-config/item-config-footer/ItemConfigFooter";
-import { useEffect, useState } from "react";
-import { useProductContext } from "../../ProductContext";
-import { CreateItemIntro } from "./CreateItemIntro";
-import { getItemType } from "@/utils/product/productItemUtils";
-import { CreateFeature } from "@/views/products/features/components/CreateFeature";
-import { CreateItemStep } from "../utils/CreateItemStep";
-import { useSteps } from "../useSteps";
-import { SelectFeatureStep } from "../product-item-config/components/SelectFeature";
-import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
-import { Button } from "@/components/ui/button";
-import { AdvancedItemConfig } from "../product-item-config/advanced-config/AdvancedItemConfig";
-import { ChevronRight, X } from "lucide-react";
-import { isFeatureItem } from "@/utils/product/getItemType";
+
 import {
   AdvancedConfigSidebar,
   MainDialogBodyWrapper,
   ToggleAdvancedConfigButton,
 } from "../product-item-config/AdvancedConfigSidebar";
+
+import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useProductItemContext } from "../ProductItemContext";
+import { ProductItemConfig } from "../ProductItemConfig";
+import { CreateFeature as CreateFeatureType } from "@autumn/shared";
+import { ItemConfigFooter } from "../product-item-config/item-config-footer/ItemConfigFooter";
+import { useEffect, useState } from "react";
+import { useProductContext } from "../../ProductContext";
+import { getItemType } from "@/utils/product/productItemUtils";
+import { CreateFeature } from "@/views/products/features/components/CreateFeature";
+import { CreateItemStep } from "../utils/CreateItemStep";
+import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export const CreateItemDialogContent = ({
   open,
@@ -39,18 +29,11 @@ export const CreateItemDialogContent = ({
   open: boolean;
   setOpen: (open: boolean) => void;
 }) => {
-  const { features, setFeatures } = useProductContext();
+  // const { features, setFeatures } = useProductContext();
+  const { features } = useFeaturesQuery();
   const { stepState, item, setItem } = useProductItemContext();
 
-  const {
-    stepVal,
-    popStep,
-    pushStep,
-    resetSteps,
-    previousStep,
-    replaceStep,
-    stepCount,
-  } = stepState;
+  const { stepVal, popStep, resetSteps, replaceStep, stepCount } = stepState;
 
   useEffect(() => {
     if (open) {
@@ -59,15 +42,8 @@ export const CreateItemDialogContent = ({
   }, [open]);
 
   const handleFeatureCreated = async (feature: CreateFeatureType) => {
-    setFeatures([...features, feature]);
+    // setFeatures([...features, feature]);
     setItem({ ...item, feature_id: feature.id! });
-
-    // // replaceStep(CreateItemStep.CreateItem);
-    // if (previousStep === CreateItemStep.CreateItem) {
-    //   replaceStep(CreateItemStep.CreateItem);
-    // } else {
-    //   pushStep(CreateItemStep.CreateItem);
-    // }
     replaceStep(CreateItemStep.CreateItem);
   };
 

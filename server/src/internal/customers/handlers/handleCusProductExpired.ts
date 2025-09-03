@@ -23,7 +23,7 @@ import {
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { CusService } from "../CusService.js";
-import { cusProductToPrices } from "../cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToPrices } from "@autumn/shared";
 
 export const expireCusProduct = async ({
   req,

@@ -77,10 +77,10 @@ export const CreateFeature = ({
         }
       );
 
+      await refetch();
       if (onSuccess) {
         await onSuccess(createdFeature);
       } else {
-        await refetch();
         setOpen(false);
       }
     } catch (error) {

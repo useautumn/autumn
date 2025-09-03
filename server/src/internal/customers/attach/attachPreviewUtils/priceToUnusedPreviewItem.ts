@@ -11,27 +11,16 @@ import {
 } from "@autumn/shared";
 import { logger } from "better-auth";
 import Stripe from "stripe";
-import { isTrialing } from "../../cusProducts/cusProductUtils.js";
-import {
-  formatUnixToDate,
-  formatUnixToDateTime,
-  notNullish,
-} from "@/utils/genUtils.js";
+import { isTrialing } from "@autumn/shared";
+import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
 import { priceToUsageModel } from "@/internal/products/prices/priceUtils/convertPrice.js";
 import {
-  formatPrice,
   getPriceEntitlement,
   getPriceOptions,
 } from "@/internal/products/prices/priceUtils.js";
-import {
-  cusProductToEnts,
-  cusProductToProduct,
-} from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToEnts } from "@autumn/shared";
 import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
-import {
-  getAmountAfterStripeDiscounts,
-  getUnusedAmountAfterDiscount,
-} from "@/internal/rewards/rewardUtils.js";
+import { getUnusedAmountAfterDiscount } from "@/internal/rewards/rewardUtils.js";
 import { Decimal } from "decimal.js";
 
 const getDiscountsApplied = ({

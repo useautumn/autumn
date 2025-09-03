@@ -16,11 +16,10 @@ import {
   AttachScenario,
   FullProduct,
   FullCustomer,
-  FreeTrialResponseSchema,
 } from "@autumn/shared";
 import { isPriceItem } from "../product-items/productItemUtils/getItemType.js";
 import { isFeaturePriceItem } from "../product-items/productItemUtils/getItemType.js";
-import { cusProductToProduct } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToProduct } from "@autumn/shared";
 import { isProductUpgrade } from "../productUtils.js";
 import { getLargestInterval } from "../prices/priceUtils/priceIntervalUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";

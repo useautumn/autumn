@@ -8,7 +8,7 @@ import {
 } from "@autumn/shared";
 import { createFullCusProduct } from "../../add-product/createFullCusProduct.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
-import { cusProductToProduct } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToProduct } from "@autumn/shared";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import RecaseError from "@/utils/errorUtils.js";

@@ -13,9 +13,11 @@ import {
 import { Decimal } from "decimal.js";
 import { Input } from "@/components/ui/input";
 import { notNullish } from "@/utils/genUtils";
+import { useOrg } from "@/hooks/common/useOrg";
 
 export const DueToday = () => {
-  const { attachState, product, org } = useProductContext();
+  const { org } = useOrg();
+  const { attachState, product } = useProductContext();
   const { preview, options, setOptions } = attachState;
 
   const dueToday = preview.due_today;

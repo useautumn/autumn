@@ -66,14 +66,14 @@ export const ProductItemRow = ({
   const getFreeFeatureString = (item: ProductItem) => {
     const feature = features.find((f: Feature) => f.id == item.feature_id);
 
+    if (feature?.type === FeatureType.Boolean) {
+      return `${feature.name}`;
+    }
+
     const featureName = getName({
       featureId: item.feature_id!,
       units: item.included_usage,
     });
-
-    if (feature?.type === FeatureType.Boolean) {
-      return `${featureName}`;
-    }
 
     if (item.included_usage == Infinite) {
       return `Unlimited ${featureName}`;

@@ -4,10 +4,7 @@ import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSu
 import { AttachConfig, CusProductStatus, FullCusProduct } from "@autumn/shared";
 import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import {
-  cusProductToPrices,
-  cusProductToProduct,
-} from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToPrices, cusProductToProduct } from "@autumn/shared";
 import { isArrearPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import {
   findStripeItemForPrice,

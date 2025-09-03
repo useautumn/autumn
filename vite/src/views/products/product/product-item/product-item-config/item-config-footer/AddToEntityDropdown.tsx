@@ -1,10 +1,3 @@
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useProductContext } from "../../../ProductContext";
 import { useProductItemContext } from "../../ProductItemContext";
 import { Button } from "@/components/ui/button";

@@ -19,10 +19,8 @@ import { getCusInvoices } from "./cusUtils.js";
 
 import { orgToVersion } from "@/utils/versionUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import {
-  cusProductsToCusEnts,
-  cusProductsToCusPrices,
-} from "../cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductsToCusEnts, cusProductsToCusPrices } from "@autumn/shared";
+
 import { invoicesToResponse } from "@/internal/invoices/invoiceUtils.js";
 import { getCusBalances } from "./cusFeatureResponseUtils/getCusBalances.js";
 import { featuresToObject } from "./cusFeatureResponseUtils/balancesToFeatureResponse.js";

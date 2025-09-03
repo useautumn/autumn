@@ -1,6 +1,5 @@
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
@@ -15,8 +14,12 @@ export const useCusQuery = () => {
   const cachedCustomer = useMemo(getCachedCustomer, [getCachedCustomer]);
 
   const fetcher = async () => {
-    const { data } = await axiosInstance.get(`/customers/${customer_id}`);
-    return data;
+    try {
+      const { data } = await axiosInstance.get(`/customers/${customer_id}`);
+      return data;
+    } catch (error) {
+      return null;
+    }
   };
 
   const {

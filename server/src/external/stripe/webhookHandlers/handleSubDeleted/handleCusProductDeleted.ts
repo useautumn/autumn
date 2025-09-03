@@ -6,7 +6,7 @@ import {
   activateDefaultProduct,
   cancelCusProductSubscriptions,
 } from "@/internal/customers/cusProducts/cusProductUtils.js";
-import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToPrices } from "@autumn/shared";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import {

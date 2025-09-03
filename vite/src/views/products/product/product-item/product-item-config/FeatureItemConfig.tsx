@@ -6,19 +6,16 @@ import { SelectResetCycle } from "./components/SelectResetCycle";
 import FeaturePrice from "./components/feature-price/FeaturePrice";
 import { isFeatureItem, isFeaturePriceItem } from "@/utils/product/getItemType";
 import React from "react";
-import { Button } from "@/components/ui/button";
-import { PlusIcon } from "lucide-react";
-import { PrepaidToggle } from "./components/feature-price/PrepaidToggle";
-import { AdvancedItemConfig } from "./advanced-config/AdvancedItemConfig";
+
 import { notNullish } from "@/utils/genUtils";
 import {
   getFeature,
   getFeatureUsageType,
 } from "@/utils/product/entitlementUtils";
-import { useProductContext } from "../../ProductContext";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export const FeatureConfig = () => {
-  const { features } = useProductContext();
+  const { features } = useFeaturesQuery();
   const { item, setItem } = useProductItemContext();
 
   if (!item.feature_id) return null;

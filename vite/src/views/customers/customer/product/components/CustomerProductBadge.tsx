@@ -1,8 +1,10 @@
 import { Badge } from "@/components/ui/badge";
 import { useProductContext } from "@/views/products/product/ProductContext";
+import { useCusQuery } from "../../hooks/useCusQuery";
 
 export const CustomerProductBadge = () => {
-  const { product, customer } = useProductContext();
+  const { customer } = useCusQuery();
+  const { product } = useProductContext();
 
   if (!customer) return null;
 

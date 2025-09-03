@@ -12,10 +12,7 @@ import {
   isFreeProduct,
   isProductUpgrade,
 } from "@/internal/products/productUtils.js";
-import {
-  cusProductToPrices,
-  cusProductToProduct,
-} from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToPrices, cusProductToProduct } from "@autumn/shared";
 import { FeatureOptions, FullCusProduct } from "@autumn/shared";
 import { productsAreSame } from "@/internal/products/productUtils/compareProductUtils.js";
 import { hasPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";

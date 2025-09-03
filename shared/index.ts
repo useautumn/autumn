@@ -145,6 +145,7 @@ export * from "./utils/productUtils.js";
 export * from "./utils/productDisplayUtils/sortProductItems.js";
 export * from "./utils/intervalUtils.js";
 export * from "./utils/productUtils/priceToInvoiceAmount.js";
+export * from "./utils/index.js";
 
 // ENUMS
 export * from "./enums/SuccessCode.js";

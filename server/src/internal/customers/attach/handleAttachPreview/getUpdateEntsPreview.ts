@@ -3,7 +3,7 @@ import {
   attachParamsToProduct,
   attachParamToCusProducts,
 } from "../attachUtils/convertAttachParams.js";
-import { cusProductToProduct } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToProduct } from "@autumn/shared";
 
 export const getUpdateEntsPreview = async ({
   req,

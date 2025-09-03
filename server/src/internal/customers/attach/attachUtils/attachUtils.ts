@@ -11,7 +11,7 @@ import {
 } from "./convertAttachParams.js";
 import { FullCusProduct } from "@autumn/shared";
 import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
-import { isTrialing } from "../../cusProducts/cusProductUtils.js";
+import { isTrialing } from "@autumn/shared";
 import { ACTIVE_STATUSES } from "../../cusProducts/CusProductService.js";
 
 export const getCycleWillReset = ({

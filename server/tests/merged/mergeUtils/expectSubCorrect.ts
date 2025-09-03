@@ -15,7 +15,7 @@ import {
   cusProductToPrices,
   cusProductToEnts,
   cusProductToProduct,
-} from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+} from "@autumn/shared";
 import {
   formatPrice,
   getPriceEntitlement,

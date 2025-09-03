@@ -36,12 +36,9 @@ import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/han
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getExistingCusProducts } from "./cusProductUtils/getExistingCusProducts.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import { cusProductToPrices } from "./cusProductUtils/convertCusProduct.js";
+import { cusProductToPrices } from "@autumn/shared";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
-import {
-  isDefaultTrial,
-  isDefaultTrialFullProduct,
-} from "@/internal/products/productUtils/classifyProduct.js";
+import { isDefaultTrialFullProduct } from "@/internal/products/productUtils/classifyProduct.js";
 import { initStripeCusAndProducts } from "../handlers/handleCreateCustomer.js";
 import { handleAddProduct } from "../attach/attachFunctions/addProductFlow/handleAddProduct.js";
 import { newCusToAttachParams } from "../attach/attachUtils/attachParams/convertToParams.js";
@@ -601,18 +598,6 @@ export const searchCusProducts = ({
     }
     return prodIdMatch && (status ? cusProduct.status === status : true);
   });
-};
-
-export const isTrialing = ({
-  cusProduct,
-  now,
-}: {
-  cusProduct: FullCusProduct;
-  now?: number;
-}) => {
-  return (
-    cusProduct.trial_ends_at && cusProduct.trial_ends_at > (now || Date.now())
-  );
 };
 
 export const getMainCusProduct = async ({

@@ -7,10 +7,7 @@ import {
   getCusPriceUsage,
   getRelatedCusEnt,
 } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
-import {
-  cusProductsToCusEnts,
-  cusProductsToCusPrices,
-} from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductsToCusEnts, cusProductsToCusPrices } from "@autumn/shared";
 import {
   formatPrice,
   getBillingType,

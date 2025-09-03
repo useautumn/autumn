@@ -11,9 +11,9 @@ import { useProductContext } from "../ProductContext";
 import { useEnv } from "@/utils/envUtils";
 
 export default function ProductViewBreadcrumbs() {
-  let { product } = useProductContext();
-  let env = useEnv();
-  let navigate = useNavigate();
+  const { product } = useProductContext();
+  const env = useEnv();
+  const navigate = useNavigate();
 
   return (
     <Breadcrumb className="text-t3 pt-6 pl-10 flex justify-center">

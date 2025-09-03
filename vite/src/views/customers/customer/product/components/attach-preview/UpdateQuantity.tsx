@@ -1,12 +1,14 @@
 import { PriceItem } from "@/components/pricing/attach-pricing-dialog";
 import { Input } from "@/components/ui/input";
+import { useOrg } from "@/hooks/common/useOrg";
 import { notNullish } from "@/utils/genUtils";
 import { formatAmount } from "@/utils/product/productItemUtils";
 import { useProductContext } from "@/views/products/product/ProductContext";
 import { AttachBranch } from "@autumn/shared";
 
 export const UpdateQuantity = () => {
-  const { attachState, product, org } = useProductContext();
+  const { org } = useOrg();
+  const { attachState, product } = useProductContext();
   const { preview, options, setOptions } = attachState;
 
   if (preview.branch !== AttachBranch.UpdatePrepaidQuantity) {

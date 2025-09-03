@@ -1,8 +1,5 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import {
-  cusProductToPrices,
-  cusProductToEnts,
-} from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToPrices, cusProductToEnts } from "@autumn/shared";
 import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
 import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import {

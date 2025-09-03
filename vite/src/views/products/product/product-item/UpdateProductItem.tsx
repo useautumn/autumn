@@ -11,8 +11,8 @@ import CopyButton from "@/components/general/CopyButton";
 import {
   CustomDialogContent,
   CustomDialogBody,
-  CustomDialogFooter,
 } from "@/components/general/modal-components/DialogContentWrapper";
+
 import { ItemConfigFooter } from "./product-item-config/item-config-footer/ItemConfigFooter";
 import {
   AdvancedConfigSidebar,
@@ -20,6 +20,7 @@ import {
   ToggleAdvancedConfigButton,
 } from "./product-item-config/AdvancedConfigSidebar";
 import { isPriceItem } from "@/utils/product/getItemType";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export default function UpdateProductItem({
   selectedItem,
@@ -34,7 +35,8 @@ export default function UpdateProductItem({
   open: boolean;
   setOpen: (open: boolean) => void;
 }) {
-  const { product, setProduct, features } = useProductContext();
+  const { features } = useFeaturesQuery();
+  const { product, setProduct } = useProductContext();
   const [showCreateFeature, setShowCreateFeature] = useState(false);
 
   const [advancedOpen, setAdvancedOpen] = useState(false);

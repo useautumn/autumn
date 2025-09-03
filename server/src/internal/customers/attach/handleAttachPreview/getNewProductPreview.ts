@@ -24,7 +24,7 @@ import {
   getSmallestInterval,
 } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
-import { isTrialing } from "../../cusProducts/cusProductUtils.js";
+import { isTrialing } from "@autumn/shared";
 
 const getNextCycleItems = async ({
   newProduct,

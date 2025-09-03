@@ -23,7 +23,7 @@ import {
   cusProductToPrices,
   cusProductToEnts,
   cusProductToProduct,
-} from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+} from "@autumn/shared";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import {
   getPriceEntitlement,

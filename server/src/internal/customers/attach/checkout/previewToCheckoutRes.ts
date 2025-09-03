@@ -15,7 +15,7 @@ import {
   cusProductToEnts,
   cusProductToPrices,
   cusProductToProduct,
-} from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+} from "@autumn/shared";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import {
   getProductItemResponse,

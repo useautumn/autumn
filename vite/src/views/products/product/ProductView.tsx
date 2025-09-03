@@ -19,6 +19,7 @@ import { getBackendErr } from "@/utils/genUtils";
 import { useProductChangedAlert } from "./hooks/useProductChangedAlert";
 import { useProductData } from "./hooks/useProductData";
 import { UpdateProductButton } from "./components/UpdateProductButton";
+import { useProductQuery } from "./hooks/useProductQuery";
 
 function ProductView({ env }: { env: AppEnv }) {
   const axiosInstance = useAxiosInstance();
@@ -26,115 +27,108 @@ function ProductView({ env }: { env: AppEnv }) {
   const [searchParams] = useSearchParams();
   const version = searchParams.get("version");
 
+  // const url = `/products/${product_id}/data?version=${version}`;
+  // const { data, isLoading, mutate } = useAxiosSWR({ url });
+
+  // const countUrl = `/products/${product_id}/count?version=${version}`;
+  // const { data: counts, mutate: mutateCount } = useAxiosSWR({ url: countUrl });
+
   const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
-
-  const url = `/products/${product_id}/data?version=${version}`;
-  const { data, isLoading, mutate } = useAxiosSWR({ url });
-
-  const countUrl = `/products/${product_id}/count?version=${version}`;
-  const { data: counts, mutate: mutateCount } = useAxiosSWR({ url: countUrl });
-
-  //this is to make sure pricing for unlimited entitlements can't be applied
-  const [selectedEntitlementAllowance, setSelectedEntitlementAllowance] =
-    useState<"unlimited" | number>(0);
+  const { product: originalProduct, isLoading, error } = useProductQuery();
 
   const {
     product,
     setProduct,
     hasChanges,
-    features,
-    setFeatures,
     entityFeatureIds,
     setEntityFeatureIds,
     actionState,
     isNewProduct,
-  } = useProductData({
-    originalProduct: data?.product as any,
-    originalFeatures: data?.features as any,
-  });
+  } = useProductData({ originalProduct });
 
   const { modal } = useProductChangedAlert({ hasChanges });
-  const [buttonLoading, setButtonLoading] = useState(false);
 
   if (isLoading) return <LoadingScreen />;
-
-  if (!product) {
+  if (error) {
     return (
       <ErrorScreen returnUrl="/products">
-        Product {product_id} not found
+        {error ? error.message : `Product ${product_id} not found`}
       </ErrorScreen>
     );
   }
 
-  const updateProduct = async () => {
-    try {
-      await ProductService.updateProduct(axiosInstance, product.id, {
-        ...UpdateProductSchema.parse(product),
-        items: product.items,
-        free_trial: product.free_trial,
-      });
+  if (!product) return <></>;
 
-      if (isNewProduct) {
-        toast.success("Product created successfully");
-      } else {
-        toast.success("Product updated successfully");
-      }
+  // const updateProduct = async () => {
+  //   try {
+  //     await ProductService.updateProduct(axiosInstance, product.id, {
+  //       ...UpdateProductSchema.parse(product),
+  //       items: product.items,
+  //       free_trial: product.free_trial,
+  //     });
 
-      await mutate();
-      await mutateCount();
-    } catch (error) {
-      toast.error(getBackendErr(error, "Failed to update product"));
-    }
-  };
+  //     if (isNewProduct) {
+  //       toast.success("Product created successfully");
+  //     } else {
+  //       toast.success("Product updated successfully");
+  //     }
 
-  const updateProductClicked = async () => {
-    if (!counts) {
-      toast.error("Something went wrong, please try again...");
-      return;
-    }
+  //     await refetch();
+  //     await mutateCount();
+  //   } catch (error) {
+  //     toast.error(getBackendErr(error, "Failed to update product"));
+  //   }
+  // };
 
-    if (version && version < data?.numVersions) {
-      toast.error("You can only update the latest version of a product");
-      return;
-    }
+  // const updateProductClicked = async () => {
+  //   if (!counts) {
+  //     toast.error("Something went wrong, please try again...");
+  //     return;
+  //   }
 
-    if (counts?.all > 0) {
-      setShowNewVersionDialog(true);
-      return;
-    }
+  //   if (version && version < data?.numVersions) {
+  //     toast.error("You can only update the latest version of a product");
+  //     return;
+  //   }
 
-    await updateProduct();
-  };
+  //   if (counts?.all > 0) {
+  //     setShowNewVersionDialog(true);
+  //     return;
+  //   }
+
+  //   await updateProduct();
+  // };
 
   return (
     <ProductContext.Provider
       value={{
-        ...data,
-        features,
-        setFeatures,
-        mutate,
-        env,
+        // ...data,
+        // features,
+        // setFeatures,
+
+        // For versioning?
+        // counts,
+        // version,
+
+        // mutate,
+        // env,
+
         product,
         setProduct,
-        selectedEntitlementAllowance,
-        setSelectedEntitlementAllowance,
-        counts,
-        version,
-        mutateCount,
+
+        // mutateCount,
         actionState,
-        handleCreateProduct: updateProductClicked,
+        // handleCreateProduct: updateProductClicked,
         entityFeatureIds,
         setEntityFeatureIds,
         hasChanges,
-        buttonLoading,
-        setButtonLoading,
       }}
     >
-      <ConfirmNewVersionDialog
+      {/* <ConfirmNewVersionDialog
         open={showNewVersionDialog}
         setOpen={setShowNewVersionDialog}
         createProduct={updateProduct}
-      />
+      /> */}
       <div className="flex w-full">
         <div className="flex flex-col gap-4 w-full">
           <ProductViewBreadcrumbs />

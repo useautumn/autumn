@@ -1,6 +1,6 @@
 import { formatUnixToDateTime } from "@/utils/genUtils.js";
 import { CusProductStatus, FullCusProduct } from "@autumn/shared";
-import { cusProductToPrices } from "./convertCusProduct.js";
+import { cusProductToPrices } from "@autumn/shared";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 
 export type ScheduledStartStatusPair = {

@@ -23,11 +23,7 @@ import { ActionService } from "@/internal/analytics/ActionService.js";
 import { constructAction } from "@/internal/analytics/actionUtils.js";
 import { parseReqForAction } from "@/internal/analytics/actionUtils.js";
 import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
-import {
-  cusProductToEnts,
-  cusProductToPrices,
-  cusProductToProduct,
-} from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToPrices, cusProductToProduct } from "@autumn/shared";
 
 interface ActionDetails {
   request_id: string;

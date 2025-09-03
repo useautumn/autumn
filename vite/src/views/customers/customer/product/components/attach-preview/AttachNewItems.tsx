@@ -1,4 +1,5 @@
 import { PriceItem } from "@/components/pricing/attach-pricing-dialog";
+import { useOrg } from "@/hooks/common/useOrg";
 import { isFeaturePriceItem } from "@/utils/product/getItemType";
 import {
   getFeatureString,
@@ -7,7 +8,8 @@ import {
 import { useProductContext } from "@/views/products/product/ProductContext";
 
 export const AttachNewItems = () => {
-  const { attachState, features, org } = useProductContext();
+  const { org } = useOrg();
+  const { attachState, features } = useProductContext();
   const { preview } = attachState;
 
   if (preview?.new_items) {

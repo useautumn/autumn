@@ -9,12 +9,12 @@ import {
   Invoice,
   InvoiceResponse,
   Organization,
+  sortCusEntsForDeduction,
 } from "@autumn/shared";
 
 import { CusService } from "@/internal/customers/CusService.js";
 
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
-import { sortCusEntsForDeduction } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";

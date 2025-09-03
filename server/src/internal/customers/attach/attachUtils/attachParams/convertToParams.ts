@@ -6,7 +6,7 @@ import {
   cusProductToEnts,
   cusProductToPrices,
   cusProductToProduct,
-} from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+} from "@autumn/shared";
 import { newCusToFullCus } from "@/internal/customers/cusUtils/cusUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import {

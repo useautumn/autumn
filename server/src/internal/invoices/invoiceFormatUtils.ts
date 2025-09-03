@@ -18,11 +18,8 @@ import {
   getBillingType,
   getPriceEntitlement,
 } from "../products/prices/priceUtils.js";
-import { cusProductToEnts } from "../customers/cusProducts/cusProductUtils/convertCusProduct.js";
-import {
-  getCusPriceUsage,
-  getRelatedCusEnt,
-} from "../customers/cusProducts/cusPrices/cusPriceUtils.js";
+import { cusProductToEnts } from "@autumn/shared";
+
 import { getFeatureQuantity } from "../customers/cusProducts/cusProductUtils.js";
 import { formatAmount } from "@/utils/formatUtils.js";
 import { getIntervalString } from "../products/productUtils/productResponseUtils/getProductItemDisplay.js";

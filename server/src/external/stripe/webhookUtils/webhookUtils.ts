@@ -6,7 +6,7 @@ import {
   cusProductToEnts,
   cusProductToPrices,
   cusProductToProduct,
-} from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+} from "@autumn/shared";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { Entity, FullCusProduct, FullCustomer } from "@autumn/shared";
 import Stripe from "stripe";
