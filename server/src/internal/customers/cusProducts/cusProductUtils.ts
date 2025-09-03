@@ -4,7 +4,6 @@ import {
   AttachScenario,
   CusProductResponseSchema,
   CusProductStatus,
-  Customer,
   Entity,
   FixedPriceConfig,
   FullCusProduct,
@@ -22,13 +21,8 @@ import {
 import { ProductService } from "@/internal/products/ProductService.js";
 import { CusProductService, RELEVANT_STATUSES } from "./CusProductService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
-import Stripe from "stripe";
-import {
-  deleteScheduledIds,
-  getStripeSubs,
-  subIsPrematurelyCanceled,
-} from "@/external/stripe/stripeSubUtils.js";
+
+import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { getRelatedCusEnt } from "./cusPrices/cusPriceUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import { BREAK_API_VERSION } from "@/utils/constants.js";
