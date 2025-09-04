@@ -44,7 +44,6 @@ export const ProductItemRow = ({
   onRowClick,
   className,
 }: ProductItemRowProps) => {
-  const { product } = useProductContext();
   const getName = ({
     featureId,
     units,

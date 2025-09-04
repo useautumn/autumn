@@ -3,7 +3,7 @@ import {
   CustomDialogFooter,
 } from "@/components/general/modal-components/DialogContentWrapper";
 import { DialogHeader } from "@/components/ui/dialog";
-import { useProductContext } from "@/views/products/product/ProductContext";
+
 import { Feature, FeatureType } from "@autumn/shared";
 import { useProductItemContext } from "../../ProductItemContext";
 import { isFeaturePriceItem } from "@/utils/product/getItemType";

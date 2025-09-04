@@ -5,7 +5,6 @@ import {
   BreadcrumbLink,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { useEnv } from "@/utils/envUtils";
 import { navigateTo, pushPage } from "@/utils/genUtils";
 import { useProductContext } from "@/views/products/product/ProductContext";
 import { useNavigate } from "react-router";

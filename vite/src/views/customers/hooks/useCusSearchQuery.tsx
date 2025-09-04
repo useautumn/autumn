@@ -4,11 +4,9 @@ import { useCustomersQueryStates } from "./useCustomersQueryStates";
 import {
   CusProductSchema,
   CustomerSchema,
-  FullCustomer,
   ProductSchema,
 } from "@autumn/shared";
 import { z } from "zod";
-import { useState } from "react";
 
 const CustomerWithProductsSchema = CustomerSchema.extend({
   customer_products: z.array(

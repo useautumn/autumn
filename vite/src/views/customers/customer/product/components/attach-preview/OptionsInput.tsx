@@ -4,8 +4,8 @@ import { notNullish } from "@/utils/genUtils";
 import { useProductContext } from "@/views/products/product/ProductContext";
 
 export const OptionsInput = () => {
-  const { attachState, product, org } = useProductContext();
-  const { preview, options, setOptions } = attachState;
+  const { attachState, product } = useProductContext();
+  const { options, setOptions } = attachState;
 
   if (!options || options.length == 0) return null;
 

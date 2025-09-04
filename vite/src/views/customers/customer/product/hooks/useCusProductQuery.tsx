@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useParams } from "react-router";
 import { useCusProductCache } from "./useCusProductCache";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { debounce } from "lodash";
 
 export const useCusProductQuery = () => {
   const axiosInstance = useAxiosInstance();
@@ -15,13 +16,15 @@ export const useCusProductQuery = () => {
     entity_id: parseAsString,
   });
 
+  const [stableStates, setStableStates] = useState(queryStates);
+
   const { getCachedCusProduct } = useCusProductCache({
     customerId: customer_id,
     productId: product_id,
     queryStates: {
-      version: queryStates.version ?? undefined,
-      customerProductId: queryStates.customer_product_id ?? undefined,
-      entityId: queryStates.entity_id ?? undefined,
+      version: stableStates.version ?? undefined,
+      customerProductId: stableStates.customer_product_id ?? undefined,
+      entityId: stableStates.entity_id ?? undefined,
     },
   });
 
@@ -29,14 +32,14 @@ export const useCusProductQuery = () => {
 
   const fetcher = async () => {
     const queryParams = {
-      version: queryStates.version,
-      customer_product_id: queryStates.customer_product_id,
-      entity_id: queryStates.entity_id,
+      version: stableStates.version,
+      customer_product_id: stableStates.customer_product_id,
+      entity_id: stableStates.entity_id,
     };
 
     try {
       console.log(
-        `Fetching customer product ${product_id} with version ${queryStates.version}`
+        `Fetching customer product ${product_id} with version ${stableStates.version}`
       );
       const { data } = await axiosInstance.get(
         `/customers/${customer_id}/product/${product_id}`,
@@ -56,12 +59,19 @@ export const useCusProductQuery = () => {
       "customer_product",
       customer_id,
       product_id,
-      queryStates.version,
-      queryStates.customer_product_id,
-      queryStates.entity_id,
+      stableStates.version,
+      stableStates.customer_product_id,
+      stableStates.entity_id,
     ],
     queryFn: fetcher,
   });
+
+  useEffect(() => {
+    const debouncedSetStableStates = debounce((queryStates: any) => {
+      setStableStates(queryStates);
+    }, 50);
+    debouncedSetStableStates(queryStates);
+  }, [queryStates]);
 
   const finalData = data || cachedCusProduct;
   const isLoadingWithCache = cachedCusProduct ? false : isLoading;

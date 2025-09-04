@@ -1,11 +1,13 @@
 import { PriceItem } from "@/components/pricing/attach-pricing-dialog";
+import { useOrg } from "@/hooks/common/useOrg";
 import { formatAmount } from "@/utils/product/productItemUtils";
 import { useProductContext } from "@/views/products/product/ProductContext";
 import { AttachBranch } from "@autumn/shared";
 
 export const OptionsResult = () => {
-  const { attachState, product, org } = useProductContext();
-  const { preview, options, setOptions } = attachState;
+  const { org } = useOrg();
+  const { attachState, product } = useProductContext();
+  const { preview, options } = attachState;
   const currency = org?.default_currency || "USD";
 
   const dueToday = preview.due_today;

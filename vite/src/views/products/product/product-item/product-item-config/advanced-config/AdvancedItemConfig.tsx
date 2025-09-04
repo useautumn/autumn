@@ -1,7 +1,5 @@
-import { useProductContext } from "@/views/products/product/ProductContext";
 import { useProductItemContext } from "../../ProductItemContext";
-import { useState } from "react";
-import { ChevronRight, PlusIcon } from "lucide-react";
+
 import { ToggleButton } from "@/components/general/ToggleButton";
 import { OnDecreaseSelect } from "./proration-config/OnDecreaseSelect";
 import { OnIncreaseSelect } from "./proration-config/OnIncreaseSelect";

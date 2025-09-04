@@ -1,14 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Plus, X } from "lucide-react";
-import { useProductContext } from "../../../../ProductContext";
+
 import { useProductItemContext } from "../../../ProductItemContext";
-import {
-  Feature,
-  FeatureItemSchema,
-  Infinite,
-  TierInfinite,
-} from "@autumn/shared";
+import { Infinite, TierInfinite } from "@autumn/shared";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { BillingUnits } from "./BillingUnits";
 import { UsageTierInput } from "./UsageTierInput";

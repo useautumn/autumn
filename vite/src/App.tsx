@@ -42,23 +42,18 @@ export default function App() {
             path="/sandbox/products"
             element={<ProductsView env={AppEnv.Sandbox} />}
           />
-          <Route
-            path="/products/:product_id"
-            element={<ProductView env={AppEnv.Live} />}
-          />
+          <Route path="/products/:product_id" element={<ProductView />} />
           <Route
             path="/sandbox/products/:product_id"
-            element={<ProductView env={AppEnv.Sandbox} />}
+            element={<ProductView />}
           />
+
           <Route path="/customers" element={<CustomersPage />} />
           <Route path="/sandbox/customers" element={<CustomersPage />} />
-          <Route
-            path="/customers/:customer_id"
-            element={<CustomerView env={AppEnv.Live} />}
-          />
+          <Route path="/customers/:customer_id" element={<CustomerView />} />
           <Route
             path="/sandbox/customers/:customer_id"
-            element={<CustomerView env={AppEnv.Sandbox} />}
+            element={<CustomerView />}
           />
           <Route
             path="/customers/:customer_id/:product_id"

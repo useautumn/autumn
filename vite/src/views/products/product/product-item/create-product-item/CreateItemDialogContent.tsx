@@ -29,8 +29,6 @@ export const CreateItemDialogContent = ({
   open: boolean;
   setOpen: (open: boolean) => void;
 }) => {
-  // const { features, setFeatures } = useProductContext();
-  const { features } = useFeaturesQuery();
   const { stepState, item, setItem } = useProductItemContext();
 
   const { stepVal, popStep, resetSteps, replaceStep, stepCount } = stepState;

@@ -99,7 +99,8 @@ const useMergeFeaturePriceItem = ({
   item: ProductItem;
   setOpen: (open: boolean) => void;
 }) => {
-  const { product, setProduct, features } = useProductContext();
+  const { features } = useFeaturesQuery();
+  const { product, setProduct } = useProductContext();
 
   const getOtherFeatureItemIndex = () => {
     return product.items.findIndex(

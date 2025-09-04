@@ -24,6 +24,7 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { useCusSearchQuery } from "@/views/customers/hooks/useCusSearchQuery";
+import { useOrg } from "@/hooks/common/useOrg";
 
 export function MainLayout() {
   const env = useEnv();
@@ -126,6 +127,7 @@ const MainContent = () => {
   useFeaturesQuery();
   useRewardsQuery();
   useCusSearchQuery();
+  useOrg();
 
   return (
     <AppContext.Provider value={{}}>

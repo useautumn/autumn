@@ -3,19 +3,14 @@ import {
   FeatureType,
   FeatureUsageType,
   ProductItemFeatureType,
-  ProductItemInterval,
-  TierInfinite,
 } from "@autumn/shared";
 
-import {
-  getShowParams,
-  shouldShowProrationConfig,
-} from "@/utils/product/productItemUtils";
+import { shouldShowProrationConfig } from "@/utils/product/productItemUtils";
 
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { useProductItemContext } from "./ProductItemContext";
-import { useProductContext } from "@/views/products/product/ProductContext";
+
 import { ConfigWithFeature } from "./components/ConfigWithFeature";
 import { PriceItemConfig } from "./product-item-config/PriceItemConfig";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
