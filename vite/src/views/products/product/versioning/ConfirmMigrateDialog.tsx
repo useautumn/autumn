@@ -23,8 +23,8 @@ export default function ConfirmNewVersionDialog({
   startMigration: () => Promise<void>;
 }) {
   const { product, version } = useProductContext();
-  let [confirmText, setConfirmText] = useState("");
-  let [isLoading, setIsLoading] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const onClick = async () => {
     if (confirmText !== product.id) {
@@ -49,7 +49,8 @@ export default function ConfirmNewVersionDialog({
           <DialogDescription className="text-sm flex flex-col gap-4">
             <p>
               Note: This will migrate all customers on {product.name} (version{" "}
-              {version}) to the latest version. Custom plans and cancelled plans will not be migrated.
+              {version}) to the latest version. Custom plans and cancelled plans
+              will not be migrated.
             </p>
             <p>
               Type <code className="font-bold">{product.id}</code> to continue.

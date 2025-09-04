@@ -20,10 +20,15 @@ import { toast } from "sonner";
 import { getBackendErr, getRedirectUrl } from "@/utils/genUtils";
 import { useEnv } from "@/utils/envUtils";
 import { useNavigate } from "react-router";
+import { useOrg } from "@/hooks/common/useOrg";
+import { useProductCountsQuery } from "../hooks/queries/useProductCountsQuery";
 
 function CreateFixedPrice() {
   const { item, setItem, selectedIndex } = useProductItemContext();
-  const { org, product, counts, hasChanges } = useProductContext();
+  const { org } = useOrg();
+  const { product, hasChanges } = useProductContext();
+  const { counts } = useProductCountsQuery();
+
   const [copyLoading, setCopyLoading] = useState(false);
   const axiosInstance = useAxiosInstance();
   const env = useEnv();

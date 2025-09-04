@@ -1,9 +1,8 @@
-import React from "react";
 import { useState, useRef } from "react";
 import { useProductItemContext } from "../../../ProductItemContext";
 import { Input } from "@/components/ui/input";
 import { Feature, getFeatureName } from "@autumn/shared";
-import { useProductContext } from "@/views/products/product/ProductContext";
+
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {

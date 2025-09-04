@@ -2,12 +2,14 @@ import {
   PriceItem,
   QuantityInput,
 } from "@/components/pricing/attach-pricing-dialog";
+import { useOrg } from "@/hooks/common/useOrg";
 import { formatAmount } from "@/utils/product/productItemUtils";
 import { useProductContext } from "@/views/products/product/ProductContext";
 import React from "react";
 
 export const AdjustableOptions = () => {
-  const { attachState, product, org } = useProductContext();
+  const { org } = useOrg();
+  const { attachState, product } = useProductContext();
   const { options, setOptions } = attachState;
   const currency = org.default_currency || "USD";
 

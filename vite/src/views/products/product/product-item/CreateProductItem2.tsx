@@ -44,11 +44,11 @@ export function CreateProductItem2({
     button?: string;
   };
 }) {
+  const { features } = useFeaturesQuery();
   const [open, setOpen] = useState(false);
   const [showCreateFeature, setShowCreateFeature] = useState(false);
   const [item, setItem] = useState<ProductItem>(defaultProductItem);
   const { product, setProduct } = useProductContext();
-  const { features } = useFeaturesQuery();
 
   const stepState = useSteps({ initialStep: CreateItemStep.SelectItemType });
 

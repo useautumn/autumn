@@ -25,7 +25,7 @@ export const useAppQueryStates = ({
   useEffect(() => {
     const debouncedSetStableStates = debounce((queryStates: any) => {
       setStableStates(queryStates);
-    }, 40);
+    }, 50);
     debouncedSetStableStates(queryStates);
   }, [queryStates]);
 

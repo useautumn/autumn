@@ -12,24 +12,13 @@ import {
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { useProductContext } from "../ProductContext";
 import ConfirmMigrateDialog from "./ConfirmMigrateDialog";
 import { useProductQuery } from "../hooks/useProductQuery";
 import { useProductCountsQuery } from "../hooks/queries/useProductCountsQuery";
 import { useMigrationsQuery } from "../hooks/queries/useMigrationsQuery.tsx";
 
 export const CountAndMigrate = () => {
-  // const {
-  //   product,
-  //   counts,
-  //   numVersions,
-  //   version,
-  //   existingMigrations,
-  //   mutate,
-  //   mutateCount,
-  // } = useProductContext();
-
-  const { product, numVersions, refetch } = useProductQuery();
+  const { product, numVersions } = useProductQuery();
   const { counts, refetch: refetchCounts } = useProductCountsQuery();
   const { migrations, refetch: refetchMigrations } = useMigrationsQuery();
 

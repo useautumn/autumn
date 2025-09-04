@@ -21,11 +21,13 @@ import { CreateFreeTrial } from "../free-trial/CreateFreeTrial";
 import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
 import { getFrontendItemConfig } from "./utils/getFrontendItemConfig";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useOrg } from "@/hooks/common/useOrg";
 
 export const ProductItemTable = () => {
   const { features } = useFeaturesQuery();
 
-  const { product, org, entityFeatureIds, isOnboarding } = useProductContext();
+  const { org } = useOrg();
+  const { product, entityFeatureIds, isOnboarding } = useProductContext();
 
   const [selectedItem, setSelectedItem] = useState<ProductItem | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);

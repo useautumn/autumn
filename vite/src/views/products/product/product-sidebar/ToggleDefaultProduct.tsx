@@ -16,6 +16,7 @@ import { DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { isFreeProductV2 } from "@autumn/shared";
+import { useProductCountsQuery } from "../hooks/queries/useProductCountsQuery";
 
 const ToggleProductDialog = ({
   open,
@@ -32,7 +33,7 @@ const ToggleProductDialog = ({
   value: boolean;
   toggleProduct: (value: boolean, optimisticUpdate?: boolean) => Promise<void>;
 }) => {
-  const { product, customer } = useProductContext();
+  const { product } = useProductContext();
   const [loading, setLoading] = useState(false);
   const handleConfirm = async () => {
     setLoading(true);
@@ -85,8 +86,10 @@ export const ToggleDefaultProduct = ({
   toggleKey: "is_default" | "is_add_on";
 }) => {
   const axiosInstance = useAxiosInstance();
-  const { product, setProduct, counts, mutate, customer, groupDefaults } =
+  const { product, setProduct, isCusProductView, groupDefaults } =
     useProductContext();
+
+  const { counts } = useProductCountsQuery();
 
   const activeCount = counts?.active;
   const [open, setOpen] = useState(false);
@@ -203,7 +206,7 @@ export const ToggleDefaultProduct = ({
         value={product[toggleKey]}
         setValue={handleToggle}
         className="text-t2 px-2"
-        disabled={isDisabled || notNullish(customer)}
+        disabled={isDisabled || isCusProductView}
       />
     </>
   );

@@ -1,6 +1,6 @@
 import { Input } from "@/components/ui/input";
+import { useOrg } from "@/hooks/common/useOrg";
 import { cn } from "@/lib/utils";
-import { useProductContext } from "@/views/products/product/ProductContext";
 import { Infinite } from "@autumn/shared";
 
 export const UsageTierInput = ({
@@ -12,9 +12,9 @@ export const UsageTierInput = ({
   onChange: (e: any) => void;
   type: "from" | "to" | "amount";
 }) => {
-  const { org } = useProductContext();
+  const { org } = useOrg();
 
-  const defaultCurrency = org?.currency?.toUpperCase() ?? "USD";
+  const defaultCurrency = org?.default_currency?.toUpperCase() ?? "USD";
 
   if ((type === "to" && value === Infinite) || type === "from") {
     return (
