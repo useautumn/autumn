@@ -435,17 +435,16 @@ export class AutumnInt {
 
   stripe = {
     connect: async (params: {
-      testApiKey: string;
-      liveApiKey: string;
-      successUrl: string;
-      defaultCurrency: string;
+      secret_key: string;
+      success_url: string;
+      default_currency: string;
     }) => {
-      const data = await this.post(`/org/stripe`, params);
+      const data = await this.post(`/organization/stripe`, params);
       return data;
     },
 
     delete: async () => {
-      const data = await this.delete(`/org/stripe`);
+      const data = await this.delete(`/organization/stripe`);
       return data;
     },
   };
