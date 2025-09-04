@@ -359,8 +359,6 @@ export const handleUpdateFeature = async (req: any, res: any) =>
               : data.config
           : feature.config;
 
-      console.log(`feature: ${feature.id}, new config:`, newConfig);
-
       let updatedFeature = await FeatureService.update({
         db: req.db,
         id: featureId,
