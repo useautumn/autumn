@@ -3,14 +3,13 @@
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { CusProductStatus } from "@autumn/shared";
 import { CustomerContext } from "./CustomerContext";
-import { getRedirectUrl, notNullish, pushPage } from "@/utils/genUtils";
+import { notNullish, pushPage } from "@/utils/genUtils";
 import { useEffect, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { useCusQuery } from "./hooks/useCusQuery";
 import { CustomerSidebar } from "./components/customer-sidebar/CustomerSidebar";
 import { CustomerPageHeader } from "./components/customer-header/CustomerPageHeader";
 import { CustomerProductList } from "./customer-product-list/CustomerProductList";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { CustomerEntitlementsList } from "./entitlements/CustomerEntitlementsList";
 import { useCusReferralQuery } from "./hooks/useCusReferralQuery";
 import { InvoicesTable } from "./InvoicesTable";

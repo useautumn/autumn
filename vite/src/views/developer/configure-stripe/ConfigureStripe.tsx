@@ -23,7 +23,6 @@ export const ConfigureStripe = () => {
     secret_key: org?.stripe_connected ? "Stripe connected" : "",
   });
 
-  const [disconnecting, setDisconnecting] = useState(false);
   const [connecting, setConnecting] = useState(false);
 
   useEffect(() => {
@@ -59,22 +58,6 @@ export const ConfigureStripe = () => {
     } finally {
       setConnecting(false);
     }
-  };
-
-  const handleDisconnectStripe = async () => {
-    setDisconnecting(true);
-    try {
-      await OrgService.disconnectStripe(axiosInstance);
-      await mutate();
-      setNewStripeConfig({
-        ...newStripeConfig,
-        secret_key: "",
-      });
-      toast.success("Successfully disconnected from Stripe");
-    } catch (error) {
-      toast.error(getBackendErr(error, "Failed to disconnect Stripe"));
-    }
-    setDisconnecting(false);
   };
 
   if (isLoading) return <LoadingScreen />;

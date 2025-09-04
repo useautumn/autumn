@@ -14,12 +14,11 @@ import { Check, Copy, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { DevService } from "@/services/DevService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useDevContext } from "./DevContext";
+import { useDevQuery } from "@/hooks/queries/useDevQuery";
 
 const CreateAPIKey = () => {
-  const { env, mutate, onboarding, apiKeyName, setApiCreated, apiCreated } =
-    useDevContext();
-  const axiosInstance = useAxiosInstance({ env });
+  const { refetch } = useDevQuery();
+  const axiosInstance = useAxiosInstance();
 
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
@@ -43,14 +42,11 @@ const CreateAPIKey = () => {
     setLoading(true);
     try {
       const { api_key } = await DevService.createAPIKey(axiosInstance, {
-        name: apiKeyName ? apiKeyName : name,
+        name: name,
       });
 
       setApiKey(api_key);
-      if (setApiCreated) {
-        setApiCreated(true);
-      }
-      await mutate();
+      await refetch();
     } catch (error) {
       console.log("Error:", error);
       toast.error("Failed to create API key");
@@ -62,16 +58,7 @@ const CreateAPIKey = () => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          className={`${onboarding ? "w-fit" : ""}`}
-          variant={onboarding ? "gradientPrimary" : "add"}
-          disabled={apiCreated ? true : false}
-          onClick={() => {
-            if (apiKeyName) {
-              handleCreate();
-            }
-          }}
-        >
+        <Button className="w-fit" variant="add" disabled={false}>
           Secret Key
         </Button>
       </DialogTrigger>

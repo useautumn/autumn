@@ -4,7 +4,7 @@ import {
   ProductItem,
   ProductResponse,
   ProductV2,
-} from "@autumn/shared";
+} from "../index.js";
 import { nullish } from "./utils.js";
 import {
   isFeatureItem,

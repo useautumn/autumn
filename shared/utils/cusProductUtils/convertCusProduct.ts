@@ -1,15 +1,12 @@
-import {
-  BillingType,
-  CusProductStatus,
-  FullCusEntWithFullCusProduct,
-  FullCusProduct,
-  FullCustomerEntitlement,
-  FullCustomerPrice,
-  FullProduct,
-} from "@autumn/shared";
-
 import { getBillingType } from "../productUtils/priceUtils.js";
 import { sortCusEntsForDeduction } from "../cusEntUtils/sortCusEntsForDeduction.js";
+import { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
+import { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
+import { BillingType } from "../../models/productModels/priceModels/priceEnums.js";
+import { FullCustomerPrice } from "../../models/cusProductModels/cusPriceModels/cusPriceModels.js";
+import { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
+import { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import { FullProduct } from "../../models/productModels/productModels.js";
 
 export const cusProductsToPrices = ({
   cusProducts,

@@ -25,6 +25,8 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { useCusSearchQuery } from "@/views/customers/hooks/useCusSearchQuery";
 import { useOrg } from "@/hooks/common/useOrg";
+import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
+import { useDevQuery } from "@/hooks/queries/useDevQuery";
 
 export function MainLayout() {
   const env = useEnv();
@@ -123,6 +125,8 @@ const MainContent = () => {
   const env = useEnv();
   const navigate = useNavigate();
 
+  useDevQuery();
+  useAutumnFlags();
   useProductsQuery();
   useFeaturesQuery();
   useRewardsQuery();
@@ -131,10 +135,14 @@ const MainContent = () => {
 
   return (
     <AppContext.Provider value={{}}>
-      <div className="w-full h-screen flex flex-col justify-center overflow-hidden py-3 pr-3 relative">
+      <div
+        className={cn(
+          "w-full h-screen flex flex-col justify-center overflow-hidden py-3 pr-3 relative",
+          // Default font
+          "font-normal"
+        )}
+      >
         <div className="w-full h-full flex flex-col overflow-hidden rounded-lg border">
-          {/* Toggle Button */}
-
           {env === AppEnv.Sandbox && (
             <div className="w-full min-h-10 h-10 bg-amber-100 text-sm flex items-center justify-center relative px-4 text-amber-500 ">
               <p className="font-medium font-mono">You&apos;re in sandbox</p>

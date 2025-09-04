@@ -16,6 +16,7 @@ export const CustomersPagination = () => {
   const totalPages = Math.ceil((totalCount || 0) / 50);
   const currentPage = Number(queryStates.page) || 1;
   const canGoPrev = currentPage > 1;
+  const canGoNext = totalPages > 0 && currentPage < totalPages;
   return (
     <div className="w-[140px] flex justify-center items-center gap-8 text-xs text-t3 rounded-sm shrink-0 h-10  border-r select-none">
       {isLoading ? (
@@ -46,13 +47,14 @@ export const CustomersPagination = () => {
               <PaginationNext
                 onClick={async (e) => {
                   e.preventDefault();
+                  if (!canGoNext) return;
                   await setQueryStates({
                     page: currentPage + 1,
                   });
                 }}
-                isActive={currentPage > totalPages}
-                aria-disabled={currentPage === totalPages}
-                className={`text-xs cursor-pointer p-1 h-6 ${currentPage === totalPages ? "pointer-events-none opacity-50" : ""}`}
+                isActive={canGoNext}
+                aria-disabled={!canGoNext}
+                className={`text-xs cursor-pointer p-1 h-6 ${!canGoNext ? "pointer-events-none opacity-50" : ""}`}
               />
             </PaginationItem>
           </PaginationContent>

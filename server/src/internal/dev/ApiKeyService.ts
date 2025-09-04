@@ -79,6 +79,7 @@ export class ApiKeyService {
     return await db.query.apiKeys.findMany({
       where: and(eq(apiKeys.org_id, orgId), eq(apiKeys.env, env)),
       orderBy: [desc(apiKeys.id)],
+      limit: 200,
     });
   }
 
