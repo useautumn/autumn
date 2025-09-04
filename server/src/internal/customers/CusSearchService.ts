@@ -513,7 +513,7 @@ export class CusSearchService {
       });
     }
 
-    if (filters?.version) {
+    if (filters?.version && filters?.version.length > 0) {
       return await this.searchByProduct({
         db,
         orgId,
