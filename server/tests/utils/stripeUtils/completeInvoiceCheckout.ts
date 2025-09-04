@@ -63,6 +63,32 @@ export const completeInvoiceCheckout = async ({
       throw new Error("Could not access iframe content");
     }
 
+    // Expand the Card accordion inside the Stripe Payment Element if collapsed
+    try {
+      await frame.waitForSelector('[role="button"][data-value="card"]', {
+        timeout: 5000,
+      });
+      const cardAccordionButton = await frame.$(
+        '[role="button"][data-value="card"]'
+      );
+      if (cardAccordionButton) {
+        const isExpanded = await frame.evaluate(
+          (el) => el.getAttribute("aria-expanded"),
+          cardAccordionButton
+        );
+        if (isExpanded === "false") {
+          await cardAccordionButton.click();
+          // wait for the card form fields to render
+          await frame.waitForSelector(
+            'input[name="number"], input[data-elements-stable-field-name="cardNumber"], input[aria-label*="Card number"]',
+            { timeout: 5000 }
+          );
+        }
+      }
+    } catch (error) {
+      console.log("Could not expand card accordion, proceeding:", error);
+    }
+
     // Enter card number - try different possible selectors
     try {
       await frame.waitForSelector(
@@ -134,8 +160,40 @@ export const completeInvoiceCheckout = async ({
     // Wait a bit for all inputs to be processed
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    const submitButton = await page.$(".SubmitButton-IconContainer");
-    await submitButton?.evaluate((b: any) => (b as HTMLElement).click());
+    // Click submit/pay button with robust fallbacks
+    let clicked = false;
+    const submitSelectors = [
+      ".SubmitButton-IconContainer",
+      ".SubmitButton",
+      "button[type=submit]",
+      "[data-testid=hosted-payment-submit-button]",
+    ];
+    for (const sel of submitSelectors) {
+      const btn = await page.$(sel);
+      if (btn) {
+        await btn.evaluate((b: any) => (b as HTMLElement).click());
+        clicked = true;
+        break;
+      }
+    }
+    if (!clicked) {
+      try {
+        const handle: any = await page.evaluateHandle(() => {
+          const candidates = Array.from(document.querySelectorAll("button"));
+          return (
+            candidates.find((b) =>
+              /pay|pay now|submit|complete/i.test(b.textContent || "")
+            ) || null
+          );
+        });
+        if (handle) {
+          await handle.evaluate((b: any) => (b as HTMLElement).click());
+          clicked = true;
+        }
+      } catch (e) {
+        console.log("Could not find submit button by text:", e);
+      }
+    }
     await timeout(20000);
   } finally {
     // always close browser

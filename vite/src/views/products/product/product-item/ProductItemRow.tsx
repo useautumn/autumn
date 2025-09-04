@@ -239,7 +239,7 @@ export const ProductItemRow = ({
     <div
       key={index}
       className={cn(
-        "grid grid-cols-17 gap-4 px-10 text-t2 h-10 items-center hover:bg-primary/3",
+        "grid grid-cols-17 gap-4 px-10 text-t2 h-10 items-center hover:bg-table-hover",
         isOnboarding && "grid-cols-12 px-2 h-10 min-h-10",
         className
       )}

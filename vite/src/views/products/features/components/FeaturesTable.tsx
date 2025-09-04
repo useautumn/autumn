@@ -68,7 +68,7 @@ export const FeaturesTable = () => {
       {filteredFeatures.map((feature: Feature) => (
         <Row
           key={feature.internal_id}
-          className="grid-cols-18 gap-2 items-center px-10 w-full text-sm h-8 cursor-pointer hover:bg-primary/5 text-t2 whitespace-nowrap"
+          // className="grid-cols-18 gap-2 items-center px-10 w-full text-sm h-8 cursor-pointer hover:bg-primary/5 text-t2 whitespace-nowrap"
           onClick={() => handleRowClick(feature.id)}
         >
           <Item className="col-span-4">

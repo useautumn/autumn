@@ -119,7 +119,6 @@ export const ProductsTable = ({
               key={product.id}
               className={cn(
                 hasAnyGroup ? "grid-cols-18" : "grid-cols-15",
-                "gap-2 items-center text-sm cursor-pointer hover:bg-primary/5 text-t2 whitespace-nowrap",
                 onboarding && "grid-cols-12"
               )}
               isOnboarding={onboarding}

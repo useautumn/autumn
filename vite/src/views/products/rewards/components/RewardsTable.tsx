@@ -44,7 +44,7 @@ export const RewardsTable = () => {
       {rewards.map((reward: Reward) => (
         <Row
           key={reward.internal_id}
-          className="grid-cols-18 gap-2 items-center px-10 w-full text-sm h-8 cursor-pointer hover:bg-primary/5 text-t2 whitespace-nowrap"
+          // className="grid-cols-18 gap-2 items-center px-10 w-full text-sm h-8 cursor-pointer hover:bg-primary/5 text-t2 whitespace-nowrap"
           onClick={() => {
             setSelectedReward(reward);
             setOpen(true);

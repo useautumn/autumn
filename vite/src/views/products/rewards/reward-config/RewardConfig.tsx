@@ -5,18 +5,13 @@ import { useEffect, useState } from "react";
 import { Select, SelectContent, SelectItem } from "@/components/ui/select";
 import { SelectTrigger, SelectValue } from "@/components/ui/select";
 import { keyToTitle, slugify } from "@/utils/formatUtils/formatTextUtils";
-import {
-  Reward,
-  RewardType,
-  Product,
-  FullProduct,
-  ProductV2,
-} from "@autumn/shared";
+import { Reward, RewardType, Product, ProductV2 } from "@autumn/shared";
 import { useProductsContext } from "../../ProductsContext";
 import { DiscountConfig } from "./DiscountConfig";
 import { notNullish } from "@/utils/genUtils";
 import { defaultDiscountConfig } from "../utils/defaultRewardModels";
 import { isFreeProduct } from "@/utils/product/priceUtils";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 
 export const RewardConfig = ({
   reward,
@@ -25,9 +20,8 @@ export const RewardConfig = ({
   reward: Reward;
   setReward: (reward: Reward) => void;
 }) => {
-  const { products } = useProductsContext();
-
   const [idChanged, setIdChanged] = useState(false);
+  const { products } = useProductsQuery();
 
   useEffect(() => {
     if (!idChanged) {
@@ -133,7 +127,7 @@ export const RewardConfig = ({
                     />
                   </SelectTrigger>
                   <SelectContent>
-                    {freeAddOns.map((product: Product) => (
+                    {freeAddOns.map((product: ProductV2) => (
                       <SelectItem key={product.id} value={product.id}>
                         {product.name}
                       </SelectItem>

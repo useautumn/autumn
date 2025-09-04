@@ -63,11 +63,8 @@ export default function App() {
             path="/sandbox/customers/:customer_id/:product_id"
             element={<CustomerProductView />}
           />
-          <Route path="/dev" element={<DevScreen env={AppEnv.Live} />} />
-          <Route
-            path="/sandbox/dev"
-            element={<DevScreen env={AppEnv.Sandbox} />}
-          />
+          <Route path="/dev" element={<DevScreen />} />
+          <Route path="/sandbox/dev" element={<DevScreen />} />
           <Route
             path="/analytics"
             element={<AnalyticsView env={AppEnv.Live} />}

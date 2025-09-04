@@ -1,4 +1,5 @@
-import { CusProductStatus, FullCusProduct } from "@autumn/shared";
+import { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
+import { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
 import { nullish } from "../utils.js";
 
 export const productToCusProduct = ({

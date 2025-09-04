@@ -38,7 +38,6 @@ export const RewardProgramsTable = () => {
       {rewardPrograms.map((rewardProgram: RewardProgram) => (
         <Row
           key={rewardProgram.id}
-          className="grid-cols-18 gap-2 items-center px-10 w-full text-sm h-8 cursor-pointer hover:bg-primary/5 text-t2 whitespace-nowrap"
           onClick={() => {
             setSelectedRewardProgram(rewardProgram);
             setOpen(true);

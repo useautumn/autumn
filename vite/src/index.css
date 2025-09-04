@@ -1,6 +1,7 @@
 /* Import inter */
 @import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
-/* @import url("https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"); */
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Ubuntu+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap");
+
 @import "tailwindcss";
 /* 
 ---break--- */
@@ -14,6 +15,7 @@
   /* font-family: system-ui, Avenir, Helvetica, Arial, sans-serif; */
   font-family: "Inter", "Inter Fallback";
   /* font-family: "Geist", "Geist Fallback"; */
+
   line-height: 1.5;
   font-weight: 500;
 
@@ -203,9 +205,15 @@ button:focus-visible {
   --color-sidebar-ring: var(--sidebar-ring);
 
   /* CUSTOM STUFF */
-  --color-t1: #27272a;
-  --color-t2: #424249;
-  --color-t3: #a1a1aa;
+  --color-t1: #17171a;
+  --color-t2: #323239;
+  --color-t3: #81818a;
+
+  /* --font-weight-regular: 450; */
+  --font-weight-normal: 450;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
 
   --text-xs: 12px;
   --text-sm: 13px;
@@ -231,10 +239,6 @@ button:focus-visible {
   --shadow-lg:
     0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 
-  --font-weight-medium: 550;
-  --font-weight-semibold: 600;
-  --font-weight-bold: 700;
-
   --color-yellow-50: #fefce8;
   --color-yellow-100: #fdedd3;
   --color-yellow-200: #fbdba7;
@@ -254,8 +258,7 @@ button:focus-visible {
   --shadow-focus: 0 0 3px 1.5px rgba(139, 92, 246, 0.4);
   --color-focus: rgba(139, 92, 246, 0.95);
 
-  /* --color-input: #fafaf9; */
-  /* --color-input: white; */
+  --color-table-hover: #f3f3f3;
 }
 
 /* Hide number input spinners globally */

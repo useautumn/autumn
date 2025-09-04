@@ -24,12 +24,8 @@ import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubU
 import { paramsToScheduleItems } from "../../mergeUtils/paramsToScheduleItems.js";
 import { subToNewSchedule } from "../../mergeUtils/subToNewSchedule.js";
 import { updateCurSchedule } from "../../mergeUtils/updateCurSchedule.js";
-import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
-import {
-  getCurrentPhaseIndex,
-  logPhases,
-} from "../../mergeUtils/phaseUtils/phaseUtils.js";
+import { getCurrentPhaseIndex } from "../../mergeUtils/phaseUtils/phaseUtils.js";
 
 export const handleScheduleFunction2 = async ({
   req,

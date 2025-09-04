@@ -11,15 +11,14 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useEnv } from "@/utils/envUtils";
+import { useCusSearchQuery } from "../../hooks/useCusSearchQuery";
 
 export const DeleteCustomerDialog = ({
   customer,
-  onDelete,
   open,
   setOpen,
 }: {
   customer: Customer;
-  onDelete: () => Promise<void>;
   open: boolean;
   setOpen: (open: boolean) => void;
 }) => {
@@ -27,9 +26,10 @@ export const DeleteCustomerDialog = ({
     deleteStripe: false,
     deleteCustomer: false,
   });
+  const { refetch } = useCusSearchQuery();
 
   const axiosInstance = useAxiosInstance();
-  const env = useEnv();
+
   const handleClicked = async ({
     deleteStripe = false,
   }: {
@@ -42,9 +42,10 @@ export const DeleteCustomerDialog = ({
 
     try {
       await axiosInstance.delete(
-        `/v1/customers/${customer.id}?delete_in_stripe=${deleteStripe}` 
+        `/v1/customers/${customer.id}?delete_in_stripe=${deleteStripe}`
       );
-      await onDelete();
+
+      await refetch();
       setOpen(false);
       toast.success("Customer deleted");
     } catch (error) {

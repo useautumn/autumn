@@ -53,12 +53,7 @@ export const NavButton = ({
       <>
         <div className="flex items-center gap-2">
           {icon && (
-            <div
-              className={cn(
-                "flex justify-center !w-4 !h-4 items-center rounded-sm",
-                expanded
-              )}
-            >
+            <div className="flex justify-center !w-4 !h-4 items-center rounded-sm !text-t2">
               {icon}
             </div>
           )}
@@ -94,10 +89,11 @@ export const NavButton = ({
 
   const outerDivClass = cn(
     `!cursor-default font-medium 
-           text-sm flex items-center text-t2 px-2 h-7 rounded-md w-full`,
+           text-sm flex items-center text-t1 px-2 h-7 rounded-md w-full`,
     !isGroup && "hover:bg-zinc-200/50 hover:text-t1",
     isActive && "bg-zinc-200/80 !text-t1 hover:bg-zinc-200",
-    isSubNav && "text-t2/90 pl-4 rounded-none rounded-tr-md rounded-br-md",
+    isSubNav &&
+      "text-t2 pl-4 font-normal rounded-none rounded-tr-md rounded-br-md",
     className
   );
 
