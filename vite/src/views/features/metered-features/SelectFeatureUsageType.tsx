@@ -40,7 +40,7 @@ export const SelectFeatureUsageType = ({
       <FieldLabel>Usage Type</FieldLabel>
       <div className="grid grid-cols-2 gap-2">
         <SelectType
-          title="Single"
+          title="Consumed"
           description="Features that are consumed and refilled like 'credits' or 'tokens'"
           icon={<Zap className="text-t3" size={12} />}
           isSelected={
@@ -50,7 +50,7 @@ export const SelectFeatureUsageType = ({
           onClick={() => setFeatureType(APIFeatureType.SingleUsage)}
         />
         <SelectType
-          title="Continuous"
+          title="Allocated"
           description="Features used on an ongoing basis, like 'seats' or 'storage'"
           icon={<Clock className="text-t3" size={12} />}
           isSelected={
