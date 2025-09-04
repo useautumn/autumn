@@ -142,17 +142,10 @@ export const checkSameCustom = async ({
     });
   }
 
-  // const curPrices = cusProductToPrices({ cusProduct: curSameProduct });
-  // if (isFreeProduct(curPrices) && !isFreeProduct(attachParams.prices)) {
-  //   return AttachBranch.MainIsFree;
-  // }
-
-  // if (
-  //   isFreeProduct(attachParams.prices) &&
-  //   isFreeProduct(cusProductToPrices({ cusProduct: curSameProduct }))
-  // ) {
-  //   return AttachBranch.MainIsFree;
-  // }
+  const curPrices = cusProductToPrices({ cusProduct: curSameProduct });
+  if (isFreeProduct(curPrices)) {
+    return AttachBranch.MainIsFree;
+  }
 
   if (onlyEntsChanged) {
     return AttachBranch.SameCustomEnts;
@@ -177,11 +170,6 @@ const getSameProductBranch = async ({
   curSameProduct = curSameProduct!;
 
   // 1. If new version?
-
-  const curPrices = cusProductToPrices({ cusProduct: curSameProduct });
-  if (isFreeProduct(curPrices)) {
-    return AttachBranch.MainIsFree;
-  }
 
   if (curSameProduct.product.version !== product.version) {
     return AttachBranch.NewVersion;
@@ -301,15 +289,13 @@ export const getAttachBranch = async ({
     return AttachBranch.MultiAttach;
   }
 
-  // 1. Multi product
+  if (pricesOnlyOneOff(attachParams.prices)) {
+    return AttachBranch.OneOff;
+  }
+
   if (notNullish(attachBody.product_ids)) {
     await handleMultiProductErrors({ attachParams });
     return AttachBranch.MultiProduct;
-  }
-
-  // 2. One off prices
-  if (pricesOnlyOneOff(attachParams.prices)) {
-    return AttachBranch.OneOff;
   }
 
   let { curSameProduct, curMainProduct } = attachParamToCusProducts({

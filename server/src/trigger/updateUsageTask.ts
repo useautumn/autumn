@@ -11,7 +11,10 @@ import {
 import { getCusEntsInFeatures } from "@/internal/customers/cusUtils/cusUtils.js";
 
 import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
-import { getFeatureBalance } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
+import {
+  getFeatureBalance,
+  getPaidFeatureBalance,
+} from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { Decimal } from "decimal.js";
 
 import {

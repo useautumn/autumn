@@ -93,9 +93,9 @@ export const NavButton = ({
   };
 
   const outerDivClass = cn(
-    `cursor-pointer font-medium 
+    `!cursor-default font-medium 
            text-sm flex items-center text-t2 px-2 h-7 rounded-md w-full`,
-    "hover:bg-zinc-200/50 hover:text-t1",
+    !isGroup && "hover:bg-zinc-200/50 hover:text-t1",
     isActive && "bg-zinc-200/80 !text-t1 hover:bg-zinc-200",
     isSubNav && "text-t2/90 pl-4 rounded-none rounded-tr-md rounded-br-md",
     className

@@ -145,8 +145,6 @@ export const MultiAttachDialog = ({
 
     setLoading(true);
 
-    console.log("useInvoice", useInvoice);
-
     try {
       const { data } = await axiosInstance.post("/v1/attach", {
         customer_id: customer.id,
@@ -156,9 +154,8 @@ export const MultiAttachDialog = ({
           ? enableProductImmediately
           : undefined,
         finalize_invoice: useInvoice ? false : undefined,
+        reward: attachRewards?.map((r) => r.reward_id) || [],
       });
-
-      console.log("data", data);
 
       if (data.invoice) {
         window.open(getStripeInvoiceLink(data.invoice), "_blank");

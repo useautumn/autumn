@@ -12,7 +12,6 @@ import {
 } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { mergeNewSubItems } from "./mergeNewSubItems.js";
 import { formatPrice } from "@/internal/products/prices/priceUtils.js";
-import { logPhaseItems } from "./phaseUtils/phaseUtils.js";
 import { getQuantityToRemove } from "./mergeUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
@@ -55,7 +54,7 @@ export const getCusProductsToRemove = ({
     }
 
     // 1. If product is an add on, and there's current same, add it
-    else if (product.is_add_on && curSameProduct) {
+    else if (curSameProduct) {
       cusProductsToRemove.push(curSameProduct);
     }
 
@@ -115,6 +114,11 @@ export const paramsToSubItems = async ({
   const cusProductsToRemove = notNullish(removeCusProducts)
     ? removeCusProducts!
     : getCusProductsToRemove({ attachParams });
+
+  console.log(
+    "Cus products to remove:",
+    cusProductsToRemove.map((cp) => cp.product.name)
+  );
 
   let newSubItems = mergeNewSubItems({
     itemSet,

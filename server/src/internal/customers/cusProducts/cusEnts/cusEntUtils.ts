@@ -32,6 +32,7 @@ import {
   getSummedEntityBalances,
 } from "./entBalanceUtils.js";
 import { Decimal } from "decimal.js";
+import { logger } from "better-auth";
 
 export const getCusEntMasterBalance = ({
   cusEnt,
@@ -343,9 +344,11 @@ export const getResetBalance = ({
 export const getUnlimitedAndUsageAllowed = ({
   cusEnts,
   internalFeatureId,
+  includeUsageLimit = true,
 }: {
   cusEnts: FullCustomerEntitlement[];
   internalFeatureId: string;
+  includeUsageLimit?: boolean;
 }) => {
   // Unlimited
 
@@ -360,7 +363,7 @@ export const getUnlimitedAndUsageAllowed = ({
     (ent) =>
       ent.internal_feature_id === internalFeatureId &&
       ent.usage_allowed &&
-      nullish(ent.entitlement.usage_limit)
+      (includeUsageLimit ? nullish(ent.entitlement.usage_limit) : true)
   );
 
   return { unlimited, usageAllowed };
@@ -422,6 +425,32 @@ export const getFeatureBalance = ({
   }
 
   return balance;
+};
+
+export const getPaidFeatureBalance = ({
+  cusEnts,
+  internalFeatureId,
+}: {
+  cusEnts: FullCustomerEntitlement[];
+  internalFeatureId: string;
+}) => {
+  let paidAllowance = 0;
+  try {
+    for (const cusEnt of cusEnts) {
+      if (cusEnt.internal_feature_id !== internalFeatureId) continue;
+
+      if (notNullish(cusEnt.entitlement.usage_limit)) {
+        paidAllowance = new Decimal(paidAllowance)
+          .plus(cusEnt.entitlement.usage_limit!)
+          .minus(cusEnt.entitlement.allowance || 0)
+          .toNumber();
+      }
+    }
+  } catch (error) {
+    logger.error(`Failed to get paid feature balance`, { error });
+  }
+
+  return paidAllowance;
 };
 
 export const cusEntsContainFeature = ({

@@ -98,7 +98,7 @@ referralRouter.post("/code", (req, res) =>
         created_at: referralCode.created_at,
       });
     },
-  }),
+  })
 );
 
 referralRouter.post("/redeem", (req, res) =>
@@ -268,9 +268,15 @@ referralRouter.post("/redeem", (req, res) =>
         // triggered: redemption?.applied,
         // applied: redemption?.applied,
         reward_id: reward_program.reward.id,
+        referrer: {
+          id: codeCustomer.id,
+          name: codeCustomer.name,
+          email: codeCustomer.email,
+          created_at: codeCustomer.created_at,
+        },
       });
     },
-  }),
+  })
 );
 
 export const redemptionRouter: Router = express.Router();
@@ -291,5 +297,5 @@ redemptionRouter.get("/:redemptionId", (req, res) =>
 
       res.status(200).json(redemption);
     },
-  }),
+  })
 );

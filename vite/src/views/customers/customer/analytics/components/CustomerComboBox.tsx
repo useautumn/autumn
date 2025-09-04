@@ -21,7 +21,7 @@ import {
 import { useAxiosPostSWR } from "@/services/useAxiosSwr";
 import { debounce } from "lodash";
 import { useEffect, useCallback } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { navigateTo } from "@/utils/genUtils";
 import { useEnv } from "@/utils/envUtils";
 import { useAnalyticsContext } from "../AnalyticsContext";
@@ -35,6 +35,7 @@ export function CustomerComboBox({
 }) {
   const env = useEnv();
   const navigate = useNavigate();
+  const location = useLocation();
   const { customer, setHasCleared } = useAnalyticsContext();
   const [open, setOpen] = React.useState(false);
   const [value, setValue] = React.useState("");
@@ -122,7 +123,13 @@ export function CustomerComboBox({
                     size="sm"
                     className="mx-auto"
                     onClick={() => {
-                      navigateTo("/analytics", navigate, env);
+                      const params = new URLSearchParams(location.search);
+                      params.delete("customer_id");
+                      const queryString = params.toString();
+                      const path = queryString
+                        ? `/analytics?${queryString}`
+                        : "/analytics";
+                      navigateTo(path, navigate, env);
                       setOpen(false);
                       setHasCleared(false);
                     }}
@@ -142,11 +149,10 @@ export function CustomerComboBox({
                           key={idx}
                           value={c.id || c.internal_id}
                           onSelect={() => {
-                            navigateTo(
-                              `/analytics?customer_id=${c.id}`,
-                              navigate,
-                              env
-                            );
+                            const params = new URLSearchParams(location.search);
+                            params.set("customer_id", c.id);
+                            const path = `/analytics?${params.toString()}`;
+                            navigateTo(path, navigate, env);
                             setOpen(false);
                           }}
                           className="w-full"
