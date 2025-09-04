@@ -5,7 +5,13 @@ import {
   isUsagePrice,
 } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { AttachBody, AttachBranch, Price } from "@autumn/shared";
+import {
+  AttachBody,
+  AttachBranch,
+  notNullish,
+  nullish,
+  Price,
+} from "@autumn/shared";
 
 export const handleMultiAttachErrors = async ({
   attachParams,
@@ -16,7 +22,7 @@ export const handleMultiAttachErrors = async ({
   attachBody: AttachBody;
   branch: AttachBranch;
 }) => {
-  const { products, prices } = attachParams;
+  const { products, prices, productsList } = attachParams;
 
   const usagePrice = prices.find((p: Price) => isUsagePrice({ price: p }));
 
@@ -31,12 +37,29 @@ export const handleMultiAttachErrors = async ({
     });
   }
 
-  // 2. What if there are scheduled products...? (just replace?)
-  if (branch == AttachBranch.MultiAttach) {
-    // const scheduledProducts = products.filter(
-    //   (p) => p.status == CusProductStatus.Scheduled
-    // );
-  }
+  // If there are multiple products...
+  const cusProducts = attachParams.customer.customer_products;
+  for (const prodOptions of productsList!) {
+    const newQuantity = prodOptions.quantity || 1;
+    const curCusQuantity =
+      cusProducts.find(
+        (cp) =>
+          cp.product_id === prodOptions.product_id &&
+          nullish(cp.internal_entity_id)
+      )?.quantity || 0;
 
-  // 3.
+    const curEntityQuantity =
+      cusProducts.filter(
+        (cp) =>
+          cp.product_id === prodOptions.product_id &&
+          notNullish(cp.internal_entity_id)
+      )?.length || 0;
+
+    if (newQuantity < curEntityQuantity) {
+      throw new RecaseError({
+        code: "invalid_inputs",
+        message: `Product ${prodOptions.product_id} is assigned to ${curEntityQuantity} entities and therefore can't be decreased to ${newQuantity}.`,
+      });
+    }
+  }
 };

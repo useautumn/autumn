@@ -8,6 +8,8 @@ import {
   Organization,
   formatAmount,
   UsagePriceConfig,
+  getTotalCusProdQuantity,
+  FullCustomer,
 } from "@autumn/shared";
 import { logger } from "better-auth";
 import Stripe from "stripe";
@@ -43,6 +45,7 @@ const getDiscountsApplied = ({
   return discountsApplied;
 };
 export const priceToUnusedPreviewItem = ({
+  customer,
   price,
   stripeItems,
   cusProduct,
@@ -51,6 +54,7 @@ export const priceToUnusedPreviewItem = ({
   subDiscounts,
   latestInvoice,
 }: {
+  customer?: FullCustomer;
   price: Price;
   stripeItems: Stripe.SubscriptionItem[];
   cusProduct: FullCusProduct;
@@ -86,7 +90,12 @@ export const priceToUnusedPreviewItem = ({
     : 1;
 
   if (isFixedPrice({ price })) {
-    quantity = cusProduct.quantity || 1;
+    quantity = customer
+      ? getTotalCusProdQuantity({
+          cusProducts: customer.customer_products,
+          productId: cusProduct.product_id,
+        })
+      : cusProduct.quantity || 1;
   }
 
   const finalProration = getProration({
@@ -104,7 +113,7 @@ export const priceToUnusedPreviewItem = ({
         price,
         quantity,
         proration: finalProration,
-        productQuantity: cusProduct.quantity,
+        productQuantity: quantity,
         now,
       });
 
@@ -127,8 +136,8 @@ export const priceToUnusedPreviewItem = ({
   });
 
   description = `Unused ${description}`;
-  if (cusProduct.quantity && cusProduct.quantity > 1) {
-    description = `${description} x ${cusProduct.quantity}`;
+  if (quantity && quantity > 1) {
+    description = `${description} x ${quantity}`;
   }
 
   if (finalProration) {
