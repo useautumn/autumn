@@ -11,10 +11,15 @@ export const formatTimestamp = (timestamp: number | null | undefined) => {
 
 export const formatUnixToDate = (
   unix: number | null | undefined,
-  excludeYear = false,
+  excludeYear = false
 ) => {
   if (!unix) return "";
-  return format(new Date(unix), excludeYear ? "d MMM" : "d MMM yyyy");
+  try {
+    const date = format(new Date(unix), excludeYear ? "d MMM" : "d MMM yyyy");
+    return date;
+  } catch (error) {
+    return "";
+  }
 };
 
 export const formatUnixToDateTime = (unix: number | null | undefined) => {
