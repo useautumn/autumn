@@ -144,8 +144,6 @@ export const validateProductItem = ({
     item.tiers = finalTiers;
   }
 
-  console.log("Final tiers:", item.tiers);
-
   // Validate billing units
   if (item.billing_units && invalidNumber(item.billing_units)) {
     toast.error("Please enter valid billing units");

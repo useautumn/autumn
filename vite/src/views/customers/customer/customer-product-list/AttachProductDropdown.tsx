@@ -9,7 +9,7 @@ import {
 import React, { useState } from "react";
 import { useCustomerContext } from "../CustomerContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { AddProductContext } from "./CreateCheckoutContext";
+import { AddProductContext } from "../add-product/CreateCheckoutContext";
 import { Input } from "@/components/ui/input";
 
 import { useNavigate } from "react-router";
@@ -23,7 +23,7 @@ import { useOrg } from "@/hooks/common/useOrg";
 import { useCustomer } from "autumn-js/react";
 import { useCusQuery } from "../hooks/useCusQuery";
 
-function AddProduct({
+function AttachProductDropdown({
   setMultiAttachOpen,
 }: {
   setMultiAttachOpen: (open: boolean) => void;
@@ -143,7 +143,7 @@ function AddProduct({
   );
 }
 
-export default AddProduct;
+export default AttachProductDropdown;
 
 const DropdownProductItem = ({
   product,
@@ -159,9 +159,8 @@ const DropdownProductItem = ({
       onClick={async (e) => {
         e.stopPropagation();
         e.preventDefault();
-        setIsLoading(true);
+
         await handleAddProduct(product.id, setIsLoading);
-        // setIsLoading(false);
       }}
     >
       {isLoading && <SmallSpinner />}

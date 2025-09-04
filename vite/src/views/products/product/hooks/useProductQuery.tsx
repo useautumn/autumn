@@ -5,15 +5,18 @@ import { useQueryStates } from "nuqs";
 import { useParams, useSearchParams } from "react-router";
 import { useCachedProduct } from "./getCachedProduct";
 import { useMemo } from "react";
+import { useProductCountsQuery } from "./queries/useProductCountsQuery";
+import { useMigrationsQuery } from "./queries/useMigrationsQuery.tsx";
 
 // Product query state...
 export const useProductQueryState = () => {
   const [queryStates, setQueryStates] = useQueryStates(
     {
       version: parseAsInteger,
+      productId: parseAsString,
     },
     {
-      history: "replace",
+      history: "push",
     }
   );
 
@@ -23,14 +26,16 @@ export const useProductQueryState = () => {
 export const useProductQuery = () => {
   const { product_id } = useParams();
   const { queryStates } = useProductQueryState();
+  const productId = queryStates.productId || product_id;
 
   const axiosInstance = useAxiosInstance();
-  const { getCachedProduct } = useCachedProduct({ productId: product_id });
+  const { getCachedProduct } = useCachedProduct({ productId: productId });
 
   const cachedProduct = useMemo(getCachedProduct, [getCachedProduct]);
 
   const fetcher = async () => {
-    const url = `/products/${product_id}/data2`;
+    if (!productId) return null;
+    const url = `/products/${productId}/data2`;
     const queryParams = {
       version: queryStates.version,
     };
@@ -40,15 +45,24 @@ export const useProductQuery = () => {
   };
 
   const { data, isLoading, refetch, error } = useQuery({
-    queryKey: ["product", product_id, queryStates.version],
+    queryKey: ["product", productId, queryStates.version],
     queryFn: fetcher,
   });
 
+  const { refetch: refetchCounts } = useProductCountsQuery();
+  const { refetch: refetchMigrations } = useMigrationsQuery();
+
   const product = data?.product || cachedProduct;
-  console.log("Cached product:", cachedProduct);
-  console.log("Error:", error);
-  console.log("Is loading:", isLoading);
   const isLoadingWithCache = cachedProduct ? false : isLoading;
 
-  return { product, isLoading: isLoadingWithCache, refetch, error };
+  return {
+    product,
+    numVersions: data?.numVersions || cachedProduct?.version || 1,
+    isLoading: isLoadingWithCache,
+    refetch: async () => {
+      await refetch();
+      await Promise.all([refetchMigrations(), refetchCounts()]);
+    },
+    error,
+  };
 };

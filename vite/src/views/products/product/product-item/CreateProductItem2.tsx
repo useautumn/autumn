@@ -14,7 +14,6 @@ import { useProductContext } from "../ProductContext";
 import { validateProductItem } from "@/utils/product/product-item/validateProductItem";
 import { PlusIcon } from "lucide-react";
 import { CreateItemDialogContent } from "./create-product-item/CreateItemDialogContent";
-import { useModelPricingContext } from "@/views/onboarding2/model-pricing/ModelPricingContext";
 import { useSteps } from "./useSteps";
 import { CreateItemStep } from "./utils/CreateItemStep";
 import { cn } from "@/lib/utils";

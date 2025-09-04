@@ -2,14 +2,14 @@ import { Button } from "@/components/ui/button";
 import { CreateFreeTrial } from "@/views/products/product/free-trial/CreateFreeTrial";
 import { useState } from "react";
 import { useProductContext } from "@/views/products/product/ProductContext";
-import { PlusIcon, Trash, X } from "lucide-react";
+import { PlusIcon, X } from "lucide-react";
 import { handleAutoSave } from "./model-pricing-utils/modelPricingUtils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export const AddTrialButton = () => {
-  const { product, setProduct, mutate, autoSave } = useProductContext();
-  const [open, setOpen] = useState(false);
   const axiosInstance = useAxiosInstance();
+  const { product, setProduct, autoSave, refetch } = useProductContext();
+  const [open, setOpen] = useState(false);
 
   return (
     <>
@@ -40,12 +40,12 @@ export const AddTrialButton = () => {
                   free_trial: null,
                 });
 
-                if (!autoSave) {
+                if (autoSave) {
                   handleAutoSave({
                     axiosInstance,
                     productId: product.id,
                     product: { ...product, free_trial: null },
-                    mutate,
+                    refetch,
                   });
                 }
               }}

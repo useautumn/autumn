@@ -377,7 +377,7 @@ export const getPaginatedFullCusQuery = ({
       WHERE c.org_id = ${orgId}
         AND c.env = ${env}
       ${
-        internalCustomerIds
+        internalCustomerIds && internalCustomerIds.length > 0
           ? sql`AND c.internal_id IN (${sql.join(
               internalCustomerIds.map((id) => sql`${id}`),
               sql`, `

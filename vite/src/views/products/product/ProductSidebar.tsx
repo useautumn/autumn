@@ -55,11 +55,11 @@ export default function ProductSidebar() {
             <ProductProps />
           </SideAccordion>
         </div>
-        {/* <div className="flex w-full border-b p-4">
+        <div className="flex w-full border-b p-4">
           <SideAccordion title="Versions" value="versions">
             <ProductVersions />
           </SideAccordion>
-        </div> */}
+        </div>
         <div className="flex w-full border-b p-4 relative">
           <SideAccordion
             title="Entities"

@@ -1,23 +1,15 @@
 import {
   EntitlementWithFeature,
   Feature,
-  FeatureType,
-  FreeTrial,
-  FreeTrialResponseSchema,
   FullProduct,
   Price,
   ProductItem,
-  ProductItemInterval,
-  ProductItemResponseSchema,
-  ProductResponseSchema,
   ProductV2,
 } from "@autumn/shared";
 import { getEntRelatedPrice } from "./entitlements/entitlementUtils.js";
 import { getPriceEntitlement } from "./prices/priceUtils.js";
-import { toProductItem } from "./product-items/mapToItem.js";
-import { getItemFeatureType } from "./product-items/productItemUtils.js";
-import { sortProductItems } from "./pricecn/pricecnUtils.js";
-import { getItemType } from "./product-items/productItemUtils/getItemType.js";
+import { toProductItem } from "@autumn/shared";
+import { getItemFeatureType } from "@autumn/shared";
 
 export const mapToProductItems = ({
   prices,
@@ -42,7 +34,7 @@ export const mapToProductItems = ({
     let relatedEnt = getPriceEntitlement(
       price,
       entitlements,
-      allowFeatureMatch,
+      allowFeatureMatch
     );
 
     if (!relatedEnt) {

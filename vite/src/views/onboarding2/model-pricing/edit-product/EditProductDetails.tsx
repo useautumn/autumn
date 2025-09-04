@@ -10,15 +10,15 @@ import { useProductContext } from "@/views/products/product/ProductContext";
 import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
 import { getBackendErr } from "@/utils/genUtils";
 import { toast } from "sonner";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 
 export const EditProductDetails = () => {
-  const {
-    productDataState: { product, setProduct },
-    data,
-    mutate,
-  } = useModelPricingContext();
+  const { productDataState } = useModelPricingContext();
+  const { product, setProduct } = productDataState;
 
-  const allowCreate = data.products.length === 0;
+  const { products, refetch } = useProductsQuery();
+
+  const allowCreate = products.length === 0;
   const { autoSave } = useProductContext();
   const [createLoading, setCreateLoading] = useState(false);
 
@@ -44,7 +44,7 @@ export const EditProductDetails = () => {
         name: details.name,
         id: details.id,
       });
-      await mutate();
+      await refetch();
     } catch (error) {
       toast.error(getBackendErr(error, "Failed to create product"));
     } finally {
@@ -67,7 +67,7 @@ export const EditProductDetails = () => {
                   name: details.name,
                   id: details.id,
                 },
-                mutate,
+                refetch,
               });
             }
             setProduct({

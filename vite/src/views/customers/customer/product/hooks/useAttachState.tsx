@@ -52,7 +52,7 @@ export const useAttachState = ({
   product: ProductV2 | null;
   setProduct: (product: ProductV2) => void;
 
-  cusProduct: FullCusProduct | undefined;
+  cusProduct: FullCusProduct | undefined | null;
   initialProductRef: React.RefObject<ProductV2>;
 }) => {
   const [preview, setPreview] = useState<AttachPreview | null>(null);

@@ -26,7 +26,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import CreateProduct from "@/views/products/products/components/CreateProduct";
+import CreateProduct from "@/views/products/products/components/CreateProductDialog";
 import { ProductsTable } from "@/views/products/products/components/ProductsTable";
 
 export const ProductList = ({

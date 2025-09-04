@@ -1,4 +1,4 @@
-import CreateProduct from "./components/CreateProduct";
+import CreateProduct from "./components/CreateProductDialog";
 import { PageSectionHeader } from "@/components/general/PageSectionHeader";
 import { Badge } from "@/components/ui/badge";
 import { ProductsTable } from "./components/ProductsTable";

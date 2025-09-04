@@ -1,9 +1,13 @@
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ACTIVE_STATUSES,
+  cusProductToProduct,
   FullCusProduct,
   FullCustomer,
+  mapToProductV2,
+  notNullish,
   productToCusProduct,
+  ProductV2,
 } from "@autumn/shared";
 
 export const useCusProductCache = ({
@@ -21,7 +25,30 @@ export const useCusProductCache = ({
 }) => {
   const queryClient = useQueryClient();
 
-  const getCachedCusProduct = (): FullCusProduct | null => {
+  const getSortedProductsQueries = () => {
+    const queryCache = queryClient.getQueryCache();
+    const productsQuery = queryCache.findAll({
+      queryKey: ["products"],
+    });
+
+    // Sort by most recently updated first to get the freshest data
+    const sortedQueries = productsQuery.sort((a, b) => {
+      const aTime = a.state.dataUpdatedAt || 0;
+      const bTime = b.state.dataUpdatedAt || 0;
+      return bTime - aTime;
+    });
+
+    return sortedQueries
+      .map((query) => query.state.data)
+      .filter(notNullish) as {
+      products: ProductV2[];
+    }[];
+  };
+
+  const getCachedCusProduct = (): {
+    cusProduct: FullCusProduct | null;
+    product: ProductV2;
+  } | null => {
     if (!customerId || !productId) return null;
 
     // Check all cached full customers queries
@@ -65,26 +92,33 @@ export const useCusProductCache = ({
             // inStatuses: ACTIVE_STATUSES,
           });
 
-          console.log("Cached cus product:", cusProduct);
+          if (cusProduct) {
+            const fullProduct = cusProductToProduct({ cusProduct });
+            const productV2 = mapToProductV2({ product: fullProduct });
+            return {
+              cusProduct,
+              product: productV2,
+            };
+          }
         }
-
-        // if (cachedData?.fullCustomers) {
-        //   const cachedCustomer = cachedData.fullCustomers.find(
-        //     (cusProduct) =>
-        //       cusProduct.id === customerId ||
-        //       cusProduct.internal_customer_id === customerId
-        //   );
-
-        //   if (cachedCustomer) {
-        //     return cachedCustomer;
-        //   }
-        // }
       }
     }
 
-    // const productQueries = queryCache.findAll({
-    //   queryKey: ["products"],
-    // });
+    const sortedProductsQueries = getSortedProductsQueries();
+
+    for (const query of sortedProductsQueries) {
+      const product = query.products.find(
+        (p) =>
+          p.id === productId &&
+          (queryStates.version ? p.version === queryStates.version : true)
+      );
+      if (product) {
+        return {
+          cusProduct: null,
+          product,
+        };
+      }
+    }
 
     return null;
   };

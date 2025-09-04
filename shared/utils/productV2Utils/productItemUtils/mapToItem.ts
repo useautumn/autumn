@@ -1,23 +1,26 @@
+import { FeatureType } from "../../../models/featureModels/featureEnums.js";
 import {
   AllowanceType,
-  BillWhen,
   EntitlementWithFeature,
-  FeatureType,
-  FixedPriceConfig,
-  Infinite,
-  Price,
-  ProductItem,
-  UsageModel,
-  TierInfinite,
+} from "../../../models/productModels/entModels/entModels.js";
+import { FixedPriceConfig } from "../../../models/productModels/priceModels/priceConfig/fixedPriceConfig.js";
+import {
+  BillWhen,
   UsagePriceConfig,
+} from "../../../models/productModels/priceModels/priceConfig/usagePriceConfig.js";
+import { Price } from "../../../models/productModels/priceModels/priceModels.js";
+import { Infinite } from "../../../models/productModels/productEnums.js";
+import {
+  ProductItem,
   ProductItemFeatureType,
-} from "@autumn/shared";
-
-import { nullish } from "@/utils/genUtils.js";
+  TierInfinite,
+  UsageModel,
+} from "../../../models/productV2Models/productItemModels/productItemModels.js";
+import { nullish } from "../../utils.js";
 import {
   billingToItemInterval,
   entToItemInterval,
-} from "./itemIntervalUtils.js";
+} from "./productItemUtils.js";
 
 export const toProductItem = ({
   ent,

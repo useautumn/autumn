@@ -24,6 +24,7 @@ import { sortFullProducts } from "./productUtils/sortProductUtils.js";
 
 export const productRouter: Router = Router({ mergeParams: true });
 
+// Get list of products
 productRouter.get("/products", async (req: any, res) => {
   try {
     const { db } = req;
@@ -49,6 +50,7 @@ productRouter.get("/products", async (req: any, res) => {
   }
 });
 
+// Get counts for all products
 productRouter.get("/product_counts", async (req: any, res) => {
   try {
     let { db } = req;
@@ -90,6 +92,7 @@ productRouter.get("/product_counts", async (req: any, res) => {
   }
 });
 
+// Get list of features
 productRouter.get("/features", async (req: any, res) => {
   try {
     res.status(200).json({ features: req.features });
@@ -99,6 +102,7 @@ productRouter.get("/features", async (req: any, res) => {
   }
 });
 
+// Get list of rewards
 productRouter.get("/rewards", async (req: any, res) => {
   try {
     const { db, orgId, env } = req;
@@ -119,19 +123,28 @@ productRouter.get("/rewards", async (req: any, res) => {
   }
 });
 
+// Get single product data
 productRouter.get("/:productId/data2", async (req: any, res) => {
   try {
     const { productId } = req.params;
     const { version } = req.query;
     const { db, orgId, env } = req;
 
-    const product = await ProductService.getFull({
-      db,
-      idOrInternalId: productId,
-      orgId,
-      env,
-      version: version ? parseInt(version) : undefined,
-    });
+    const [product, latestProduct] = await Promise.all([
+      ProductService.getFull({
+        db,
+        idOrInternalId: productId,
+        orgId,
+        env,
+        version: version ? parseInt(version) : undefined,
+      }),
+      ProductService.getFull({
+        db,
+        idOrInternalId: productId,
+        orgId,
+        env,
+      }),
+    ]);
 
     if (!product) {
       throw new RecaseError({
@@ -148,10 +161,74 @@ productRouter.get("/:productId/data2", async (req: any, res) => {
       features: req.features,
     });
 
-    res.status(200).json({ product: productV2 });
+    res
+      .status(200)
+      .json({ product: productV2, numVersions: latestProduct.version });
   } catch (error) {
     console.error("Failed to get product", error);
     res.status(500).send(error);
+  }
+});
+
+// Get counts for a single product
+productRouter.get("/:productId/count", async (req: any, res) => {
+  try {
+    const { db, orgId, env } = req;
+    const { productId } = req.params;
+    const { version } = req.query;
+
+    const product = await ProductService.get({
+      db,
+      id: productId,
+      orgId,
+      env,
+      version: version ? parseInt(version) : undefined,
+    });
+
+    if (!product) {
+      throw new RecaseError({
+        message: `Product ${productId} ${
+          version ? `(v${version})` : ""
+        } not found`,
+        code: ErrCode.ProductNotFound,
+        statusCode: StatusCodes.NOT_FOUND,
+      });
+    }
+
+    // Get counts from postgres
+    const counts = await CusProdReadService.getCounts({
+      db,
+      internalProductId: product.internal_id,
+    });
+
+    res.status(200).send(counts);
+  } catch (error) {
+    handleFrontendReqError({
+      error,
+      req,
+      res,
+      action: "Get product counts (internal)",
+    });
+  }
+});
+
+// Get list of migrations
+productRouter.get("/migrations", async (req: any, res) => {
+  try {
+    const { db, orgId, env } = req;
+    const migrations = await MigrationService.getExistingJobs({
+      db,
+      orgId,
+      env,
+    });
+    res.status(200).send({ migrations });
+  } catch (error) {
+    handleFrontendReqError({
+      error,
+      req,
+      res,
+      action: "Get migrations",
+    });
   }
 });
 
@@ -391,47 +468,6 @@ productRouter.get("/:productId/data", async (req: any, res) => {
       req,
       res,
       action: "Get product data (internal)",
-    });
-  }
-});
-
-productRouter.get("/:productId/count", async (req: any, res) => {
-  try {
-    const { db, orgId, env } = req;
-    const { productId } = req.params;
-    const { version } = req.query;
-
-    const product = await ProductService.get({
-      db,
-      id: productId,
-      orgId,
-      env,
-      version: version ? parseInt(version) : undefined,
-    });
-
-    if (!product) {
-      throw new RecaseError({
-        message: `Product ${productId} ${
-          version ? `(v${version})` : ""
-        } not found`,
-        code: ErrCode.ProductNotFound,
-        statusCode: StatusCodes.NOT_FOUND,
-      });
-    }
-
-    // Get counts from postgres
-    const counts = await CusProdReadService.getCounts({
-      db,
-      internalProductId: product.internal_id,
-    });
-
-    res.status(200).send(counts);
-  } catch (error) {
-    handleFrontendReqError({
-      error,
-      req,
-      res,
-      action: "Get product counts (internal)",
     });
   }
 });

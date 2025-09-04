@@ -12,6 +12,7 @@ import { PublishableKeySection } from "./publishable-key";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { ConfigureStripe } from "./configure-stripe/ConfigureStripe";
 import { useSecondaryTab } from "@/hooks/common/useSecondaryTab";
+import { useAppQueryStates } from "@/hooks/common/useAppQueryStates";
 
 export default function DevScreen({ env }: { env: AppEnv }) {
   const { data, isLoading, mutate } = useAxiosSWR({
@@ -20,7 +21,9 @@ export default function DevScreen({ env }: { env: AppEnv }) {
     withAuth: true,
   });
 
-  const secondaryTab = useSecondaryTab({ defaultTab: "api_keys" });
+  // const secondaryTab = useSecondaryTab({ defaultTab: "api_keys" });
+  const { queryStates } = useAppQueryStates({ defaultTab: "api_keys" });
+  const tab = queryStates.tab;
   const { pkey, webhooks } = useAutumnFlags();
 
   const apiKeys = data?.api_keys || [];
@@ -32,15 +35,15 @@ export default function DevScreen({ env }: { env: AppEnv }) {
       <div className="flex flex-col gap-4 h-fit relative w-full text-sm">
         <h1 className="text-xl font-medium shrink-0 pt-6 pl-10">Developer</h1>
 
-        {(secondaryTab === "api_keys" || !secondaryTab) && (
+        {(tab === "api_keys" || !tab) && (
           <div className="flex flex-col gap-16">
             <ApiKeysView apiKeys={apiKeys} />
             {pkey && <PublishableKeySection org={data.org} />}
           </div>
         )}
 
-        {secondaryTab === "stripe" && <ConfigureStripe />}
-        {secondaryTab === "webhooks" && webhooks && (
+        {tab === "stripe" && <ConfigureStripe />}
+        {tab === "webhooks" && webhooks && (
           <ConfigureWebhookSection dashboardUrl={data.svix_dashboard_url} />
         )}
       </div>

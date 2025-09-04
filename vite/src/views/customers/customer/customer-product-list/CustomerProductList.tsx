@@ -14,7 +14,6 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 
 import { AdminHover } from "@/components/general/AdminHover";
-import AddProduct from "../add-product/NewProductDropdown";
 import { Item, Row } from "@/components/general/TableGrid";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +24,7 @@ import { MultiAttachDialog } from "../product/multi-attach/MultiAttachDialog";
 import { useCusQuery } from "../hooks/useCusQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { getVersionCounts } from "@/utils/productUtils";
+import AttachProductDropdown from "./AttachProductDropdown";
 
 export const CustomerProductList = () => {
   const navigate = useNavigate();
@@ -125,7 +125,7 @@ export const CustomerProductList = () => {
                 open={multiAttachOpen}
                 setOpen={setMultiAttachOpen}
               />
-              <AddProduct setMultiAttachOpen={setMultiAttachOpen} />
+              <AttachProductDropdown setMultiAttachOpen={setMultiAttachOpen} />
             </div>
           </div>
         </div>

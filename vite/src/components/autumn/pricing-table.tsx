@@ -1,4 +1,5 @@
 import React from "react";
+import { Loader2 } from "lucide-react";
 
 import { createContext, useContext, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -7,21 +8,18 @@ import { Button } from "@/components/ui/button";
 import CheckoutDialog from "@/components/autumn/checkout-dialog";
 import { getPricingTableContent } from "@/lib/autumn/pricing-table-content";
 import type { Product, ProductItem } from "autumn-js";
-import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
+
 import { useCustomer } from "autumn-js/react";
-import { useModelPricingContext } from "@/views/onboarding2/model-pricing/ModelPricingContext";
+import { useOrg } from "@/hooks/common/useOrg";
 
 export default function PricingTable({
   products,
-  stripeConnected,
   setConnectStripeOpen,
 }: {
   products?: Product[];
-  stripeConnected: boolean;
   setConnectStripeOpen: (open: boolean) => void;
 }) {
-  const { mutateAutumnProducts } = useModelPricingContext();
+  const { org } = useOrg();
   const { checkout } = useCustomer();
   const [isAnnual, setIsAnnual] = useState(false);
 
@@ -70,8 +68,7 @@ export default function PricingTable({
                   product.scenario === "scheduled",
 
                 onClick: async () => {
-                  console.log("Inside onClick function");
-                  if (!stripeConnected) {
+                  if (!org.stripe_connected) {
                     setConnectStripeOpen(true);
                     return;
                   }
