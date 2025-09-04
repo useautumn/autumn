@@ -67,7 +67,9 @@ apiRouter.post("/setup_payment", handleSetupPayment);
 // Analytics
 apiRouter.use("/query", analyticsRouter);
 apiRouter.use("/platform", platformRouter);
+
+// Used for tests...
 apiRouter.post("/organization/stripe", handleConnectStripe);
-// apiRouter.delete("/org/stripe", handleDeleteStripe);
+apiRouter.delete("/organization/stripe", handleDeleteStripe);
 
 export { apiRouter };

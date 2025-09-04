@@ -128,6 +128,9 @@ export const runAttachFunction = async ({
     config,
   });
 
+  // console.log("Attach Function:", attachFunction);
+  // throw new Error("Attach Function:");
+
   const customer = attachParams.customer;
   const org = attachParams.org;
 

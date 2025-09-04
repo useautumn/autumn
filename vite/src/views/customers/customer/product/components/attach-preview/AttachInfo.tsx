@@ -45,19 +45,20 @@ export const AttachInfo = () => {
         );
       });
 
+      let text = `You are switching this customer to version ${product.version} of ${product.name}.`;
+      if (preview.due_next_cycle?.due_at) {
+        text += `Their features will update immediately and from ${formatUnixToDate(preview.due_next_cycle?.due_at)} onwards, they will pay any new prices${usagePriceExists ? " (including usage from the last cycle)" : ""}.`;
+      }
+
       return (
         <>
           <span>
-            You are switching this customer to version {product.version} of{" "}
-            {product.name}. Their features will update immediately and from{" "}
-            {format(preview.due_next_cycle?.due_at, "d MMM")} onwards, they will
-            pay any new prices
-            {usagePriceExists ? " (including usage from the last cycle)" : ""}.
+            {/* You are switching this customer to version {product.version} of{" "}
+            {product.name}. */}
+            {text}
           </span>
         </>
       );
-
-      const text = `You are switching this customer to version ${product.version} of ${product.name}.`;
 
       // let text = `The customer is currently on ${currentProduct.name} v${currentProduct.version}. Switching to v${product.version} will update the customer's features immediately, and from ${formatUnixToDate(preview.due_next_cycle.due_at)} onwards they will pay any new prices`;
 

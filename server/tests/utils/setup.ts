@@ -86,10 +86,9 @@ export const clearOrg = async ({
     } catch (error) {}
     try {
       await autumn.stripe.connect({
-        testApiKey: process.env.STRIPE_TEST_KEY!,
-        liveApiKey: process.env.STRIPE_TEST_KEY!,
-        successUrl: "https://useautumn.com",
-        defaultCurrency: "usd",
+        secret_key: process.env.STRIPE_TEST_KEY!,
+        success_url: "https://useautumn.com",
+        default_currency: "usd",
       });
     } catch (error: any) {
       console.error("Error reconnecting stripe", error.message);

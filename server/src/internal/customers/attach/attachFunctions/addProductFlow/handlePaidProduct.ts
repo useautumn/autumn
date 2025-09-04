@@ -69,14 +69,6 @@ export const handlePaidProduct = async ({
 
   let subscriptions: Stripe.Subscription[] = [];
 
-  // Only merge if no free trials
-
-  // if (!config.disableMerge && !freeTrial) {
-  //   mergeCusProduct = cusProducts?.find((cp) =>
-  //     products.some((p) => p.group == cp.product.group)
-  //   );
-  // }
-
   const { sub: mergeSub, cusProduct: mergeCusProduct } = await getCustomerSub({
     attachParams,
   });
@@ -84,15 +76,6 @@ export const handlePaidProduct = async ({
   let sub: Stripe.Subscription | null = null;
   let schedule: Stripe.SubscriptionSchedule | null = null;
   let trialEndsAt = undefined;
-
-  // console.log("Merge sub:", mergeSub?.id);
-  // console.log("Merge cus product:", mergeCusProduct?.product.id);
-  // console.log(
-  //   "Trial ends at:",
-  //   formatUnixToDate(mergeCusProduct?.trial_ends_at || 0)
-  // );
-
-  // throw new Error("test");
 
   // 1. If merge sub
   if (mergeSub && !config.disableMerge) {
