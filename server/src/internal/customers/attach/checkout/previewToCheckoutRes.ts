@@ -21,7 +21,7 @@ import {
   getProductItemResponse,
   getProductResponse,
 } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
-import { toProductItem } from "@/internal/products/product-items/mapToItem.js";
+import { toProductItem } from "@autumn/shared";
 import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
 import { formatUnixToDateTime, notNullish } from "@/utils/genUtils.js";
 import { isPriceItem } from "@/internal/products/product-items/productItemUtils/getItemType.js";

@@ -11,11 +11,12 @@ import {
 } from "@/components/ui/select";
 import { CountAndMigrate } from "./versioning/CountAndMigrate";
 import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
+import { useProductQuery, useProductQueryState } from "./hooks/useProductQuery";
 
 export const ProductVersions = () => {
-  const { product, numVersions, customer, version } = useProductContext();
-  const navigate = useNavigate();
-  const env = useEnv();
+  const { setQueryStates } = useProductQueryState();
+  const { product, isCusProductView } = useProductContext();
+  const { numVersions } = useProductQuery();
 
   return (
     <div className="flex justify-between gap-4 w-full text-xs">
@@ -34,16 +35,20 @@ export const ProductVersions = () => {
           <p className=" text-t3 font-medium text-center">Version History </p>
           {numVersions > 1 ? (
             <Select
-              value={version ? version.toString() : product.version.toString()}
+              value={product.version.toString()}
               onValueChange={async (value) => {
-                navigate(
-                  getRedirectUrl(
-                    `${customer ? `/customers/${customer.id}` : "/products"}/${
-                      product.id
-                    }?version=${value}`,
-                    env
-                  )
-                );
+                setQueryStates({
+                  version: parseInt(value),
+                });
+                // Set query states...
+                // navigate(
+                //   getRedirectUrl(
+                //     `${customer ? `/customers/${customer.id}` : "/products"}/${
+                //       product.id
+                //     }?version=${value}`,
+                //     env
+                //   )
+                // );
               }}
             >
               <SelectTrigger
@@ -61,16 +66,9 @@ export const ProductVersions = () => {
                       value={version.toString()}
                       className="px-3 py-2 hover:bg-gray-100 cursor-pointer w-full"
                       onClick={() => {
-                        navigate(
-                          getRedirectUrl(
-                            `${
-                              customer
-                                ? `/customers/${customer.id}`
-                                : "/products"
-                            }/${product.id}?version=${version}`,
-                            env
-                          )
-                        );
+                        setQueryStates({
+                          version: version,
+                        });
                       }}
                     >
                       v{version}
@@ -82,7 +80,7 @@ export const ProductVersions = () => {
             <p className="text-sm text-t3 pr-2">None</p>
           )}
         </div>
-        {!customer && <CountAndMigrate />}
+        {!isCusProductView && <CountAndMigrate />}
       </div>
     </div>
   );

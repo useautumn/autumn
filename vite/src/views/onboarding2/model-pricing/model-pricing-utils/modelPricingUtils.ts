@@ -7,12 +7,12 @@ export const handleAutoSave = async ({
   axiosInstance,
   productId,
   product,
-  mutate,
+  refetch,
 }: {
   axiosInstance: AxiosInstance;
   productId: string;
   product: ProductV2;
-  mutate: any;
+  refetch?: any;
 }) => {
   if (!productId || !product.id) return;
   try {
@@ -23,7 +23,9 @@ export const handleAutoSave = async ({
         group: notNullish(product.group) ? product.group : undefined,
       }
     );
-    await mutate();
+    if (refetch) {
+      await refetch();
+    }
   } catch (error) {
     console.log(error);
     toast.error(getBackendErr(error, "Failed to auto save product"));

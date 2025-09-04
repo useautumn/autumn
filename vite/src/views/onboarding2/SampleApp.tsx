@@ -1,7 +1,4 @@
 import { Button } from "@/components/ui/button";
-import Step from "@/components/general/OnboardingStep";
-import CheckDialog from "@/components/autumn/paywall-dialog";
-
 import { useEnv } from "@/utils/envUtils";
 
 import {
@@ -10,7 +7,7 @@ import {
   DialogTrigger,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Dialog } from "@/components/ui/dialog";
 
 import { toast } from "sonner";
@@ -30,12 +27,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CodeBlock from "@/views/onboarding/components/CodeBlock";
-import { useListProducts } from "./model-pricing/usePricingTable";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
-export const SampleApp = ({ data }: { data: any }) => {
-  const env = useEnv();
+export const SampleApp = () => {
   const [searchParams] = useSearchParams();
-  const token = searchParams.get("token");
   const [open, setOpen] = useState(false);
   const [checkData, setCheckData] = useState<any>(null);
   const [trackData, setTrackData] = useState<any>(null);
@@ -43,14 +38,17 @@ export const SampleApp = ({ data }: { data: any }) => {
   const [showCheckSnippet, setShowCheckSnippet] = useState(true);
   const [showTrackSnippet, setShowTrackSnippet] = useState(true);
   const [showCustomerSnippet, setShowCustomerSnippet] = useState(true);
+
+  const { features, isLoading } = useFeaturesQuery();
+
   const [lastUsedFeature, setLastUsedFeature] = useState<any>({
-    featureId: data.features?.[0]?.id,
+    featureId: features?.[0]?.id,
     value: 1,
   });
 
   const { customer, openBillingPortal } = useCustomer();
-  const { products } = useListProducts({ customerId: "onboarding_demo_user" });
 
+  if (isLoading) return null;
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -97,10 +95,10 @@ export const SampleApp = ({ data }: { data: any }) => {
                 <h3 className="text-md font-medium">Available Features</h3>
               </div>
               <div className="flex flex-wrap gap-2 items-center">
-                {data.features
+                {features
                   ?.filter((feature: any) => customer?.features?.[feature.id])
                   .concat(
-                    data.features?.filter(
+                    features?.filter(
                       (feature: any) => !customer?.features?.[feature.id]
                     ) || []
                   )
@@ -183,7 +181,7 @@ const { allowed } = useCustomer();
 const handleCheckFeature = async () => {
 if ( !allowed({ featureId: '${
                                     lastUsedFeature?.featureId ||
-                                    data.features?.[0]?.id ||
+                                    features?.[0]?.id ||
                                     "feature-id"
                                   }' }) ) {
     alert('Feature not allowed');
@@ -207,7 +205,7 @@ const autumn = new Autumn({
 const { data } = await autumn.check({
   customerId: 'user_123',
   featureId: '${
-    lastUsedFeature?.featureId || data.features?.[0]?.id || "feature-id"
+    lastUsedFeature?.featureId || features?.[0]?.id || "feature-id"
   }'
 });
 `
@@ -261,7 +259,7 @@ const { track } = useCustomer();
 const handleTrackUsage = async () => {
   await track({ 
     featureId: '${
-      lastUsedFeature?.featureId || data.features?.[0]?.id || "feature-id"
+      lastUsedFeature?.featureId || features?.[0]?.id || "feature-id"
     }',
     value: ${lastUsedFeature?.value || 1}
   });
@@ -283,7 +281,7 @@ const autumn = new Autumn({
 
 const response = await autumn.track({
   featureId: '${
-    lastUsedFeature?.featureId || data.features?.[0]?.id || "feature-id"
+    lastUsedFeature?.featureId || features?.[0]?.id || "feature-id"
   }',
   value: ${lastUsedFeature?.value || 1}
 });
@@ -337,7 +335,7 @@ const { customer, refetch } = useCustomer();
 
 console.log('Customer balance:', customer?.features.${
                               lastUsedFeature?.featureId ||
-                              data.features?.[0]?.id ||
+                              features?.[0]?.id ||
                               "feature-id"
                             }?.balance);
 

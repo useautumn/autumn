@@ -20,8 +20,8 @@ export const CreateFreeTrial = ({
   open: boolean;
   setOpen: (open: boolean) => void;
 }) => {
-  const [loading, setLoading] = useState(false);
-  const { product, setProduct, autoSave, mutate } = useProductContext();
+  const [loading] = useState(false);
+  const { product, setProduct, autoSave, refetch } = useProductContext();
 
   const axiosInstance = useAxiosInstance();
 
@@ -48,19 +48,22 @@ export const CreateFreeTrial = ({
         card_required: freeTrial.card_required,
       },
     });
-    // if (autoSave) {
-    //   handleAutoSave({
-    //     axiosInstance,
-    //     productId: product.id,
-    //     product: { ...product, free_trial: {
-    //       length: lengthInt,
-    //       unique_fingerprint: freeTrial.unique_fingerprint,
-    //       duration: freeTrial.duration,
-    //       card_required: freeTrial.card_required,
-    //     } },
-    //     mutate,
-    //   });
-    // }
+    if (autoSave) {
+      handleAutoSave({
+        axiosInstance,
+        productId: product.id,
+        product: {
+          ...product,
+          free_trial: {
+            length: lengthInt,
+            unique_fingerprint: freeTrial.unique_fingerprint,
+            duration: freeTrial.duration,
+            card_required: freeTrial.card_required,
+          },
+        },
+        refetch,
+      });
+    }
     setOpen(false);
   };
 

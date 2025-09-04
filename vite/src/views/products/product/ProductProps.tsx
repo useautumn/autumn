@@ -26,16 +26,17 @@ import { ToggleButton } from "@/components/general/ToggleButton";
 import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
 import { ToggleDefaultProduct } from "./product-sidebar/ToggleDefaultProduct";
 import { getBackendErr } from "@/utils/genUtils";
+import { useProductCountsQuery } from "./hooks/queries/useProductCountsQuery";
+import { useProductQuery } from "./hooks/useProductQuery";
 
 export const ProductProps = () => {
-  const { product, setProduct, counts, mutate } = useProductContext();
   const axiosInstance = useAxiosInstance();
-  const [defaultOpen, setDefaultOpen] = React.useState(false);
-  const [defaultTrialOpen, setDefaultTrialOpen] = React.useState(false);
-  const [addOnOpen, setAddOnOpen] = React.useState(false);
+  const { product, setProduct } = useProductContext();
+  const { refetch } = useProductQuery();
+  const { counts } = useProductCountsQuery();
+
   const [groupModalOpen, setGroupModalOpen] = React.useState(false);
   const [tempGroup, setTempGroup] = React.useState(product.group || "");
-  const [archivedOpen, setArchivedOpen] = React.useState(false);
 
   return (
     <>
@@ -184,7 +185,7 @@ export const ProductProps = () => {
                       { archived: value },
                       product.version
                     );
-                    await mutate();
+                    await refetch();
                     toast.success(
                       value
                         ? "Product archived successfully"

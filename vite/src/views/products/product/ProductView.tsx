@@ -4,36 +4,22 @@ import ErrorScreen from "@/views/general/ErrorScreen";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import ProductSidebar from "./ProductSidebar";
 import ProductViewBreadcrumbs from "./components/ProductViewBreadcrumbs";
-import ConfirmNewVersionDialog from "./versioning/ConfirmNewVersionDialog";
 
-import { toast } from "sonner";
 import { useState } from "react";
-import { useAxiosSWR } from "@/services/useAxiosSwr";
 import { ProductContext } from "./ProductContext";
 import { useParams, useSearchParams } from "react-router";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { ManageProduct } from "./ManageProduct";
-import { AppEnv, UpdateProductSchema } from "@autumn/shared";
-import { ProductService } from "@/services/products/ProductService";
-import { getBackendErr } from "@/utils/genUtils";
+import { AppEnv } from "@autumn/shared";
 import { useProductChangedAlert } from "./hooks/useProductChangedAlert";
 import { useProductData } from "./hooks/useProductData";
 import { UpdateProductButton } from "./components/UpdateProductButton";
 import { useProductQuery } from "./hooks/useProductQuery";
+import ConfirmNewVersionDialog from "./versioning/ConfirmNewVersionDialog";
 
-function ProductView({ env }: { env: AppEnv }) {
-  const axiosInstance = useAxiosInstance();
+function ProductView() {
   const { product_id } = useParams();
-  const [searchParams] = useSearchParams();
-  const version = searchParams.get("version");
 
-  // const url = `/products/${product_id}/data?version=${version}`;
-  // const { data, isLoading, mutate } = useAxiosSWR({ url });
-
-  // const countUrl = `/products/${product_id}/count?version=${version}`;
-  // const { data: counts, mutate: mutateCount } = useAxiosSWR({ url: countUrl });
-
-  const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
   const { product: originalProduct, isLoading, error } = useProductQuery();
 
   const {
@@ -43,10 +29,10 @@ function ProductView({ env }: { env: AppEnv }) {
     entityFeatureIds,
     setEntityFeatureIds,
     actionState,
-    isNewProduct,
   } = useProductData({ originalProduct });
 
   const { modal } = useProductChangedAlert({ hasChanges });
+  const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
 
   if (isLoading) return <LoadingScreen />;
   if (error) {
@@ -113,6 +99,7 @@ function ProductView({ env }: { env: AppEnv }) {
         // mutate,
         // env,
 
+        setShowNewVersionDialog,
         product,
         setProduct,
 
@@ -124,11 +111,10 @@ function ProductView({ env }: { env: AppEnv }) {
         hasChanges,
       }}
     >
-      {/* <ConfirmNewVersionDialog
+      <ConfirmNewVersionDialog
         open={showNewVersionDialog}
         setOpen={setShowNewVersionDialog}
-        createProduct={updateProduct}
-      /> */}
+      />
       <div className="flex w-full">
         <div className="flex flex-col gap-4 w-full">
           <ProductViewBreadcrumbs />

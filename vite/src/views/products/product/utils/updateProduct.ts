@@ -8,13 +8,15 @@ import { isFreeProduct } from "@/utils/product/priceUtils";
 export const updateProduct = async ({
   axiosInstance,
   product,
-  mutate,
-  mutateCount,
+  onSuccess,
+  // mutate,
+  // mutateCount,
 }: {
   axiosInstance: AxiosInstance;
   product: ProductV2;
-  mutate: () => void;
-  mutateCount: () => void;
+  onSuccess: () => Promise<void>;
+  // mutate: () => void;
+  // mutateCount: () => void;
 }) => {
   try {
     await ProductService.updateProduct(axiosInstance, product.id, {
@@ -25,9 +27,11 @@ export const updateProduct = async ({
 
     toast.success("Product updated successfully");
 
-    await mutate();
-    await mutateCount();
+    await onSuccess();
+    return true;
   } catch (error) {
+    console.error(error);
     toast.error(getBackendErr(error, "Failed to update product"));
+    return false;
   }
 };

@@ -74,27 +74,6 @@ export const itemToPriceOrTiers = ({
     }
   }
 };
-export const getItemFeatureType = ({
-  item,
-  features,
-}: {
-  item: ProductItem;
-  features: Feature[];
-}) => {
-  let feature = features.find((f) => f.id == item.feature_id);
-
-  if (feature) {
-    if (feature.type == FeatureType.Boolean) {
-      return ProductItemFeatureType.Static;
-    } else if (feature.type == FeatureType.CreditSystem) {
-      return ProductItemFeatureType.SingleUse;
-    } else {
-      return feature.config?.usage_type;
-    }
-  }
-
-  return undefined;
-};
 
 // FOR TESTS?
 export const constructFeatureItem = ({

@@ -4,51 +4,42 @@ import { useProductContext } from "@/views/products/product/ProductContext";
 import { Upload } from "lucide-react";
 import { useProductQuery } from "../hooks/useProductQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { UpdateProductSchema } from "@autumn/shared";
 import { toast } from "sonner";
-import { getBackendErr } from "@/utils/genUtils";
+import { useProductCountsQuery } from "../hooks/queries/useProductCountsQuery";
+import { updateProduct } from "../utils/updateProduct";
 
 export const UpdateProductButton = () => {
   const [buttonLoading, setButtonLoading] = useState(false);
   const axiosInstance = useAxiosInstance();
 
-  const { actionState, product } = useProductContext();
+  const { actionState, product, setShowNewVersionDialog } = useProductContext();
+  const { counts, isLoading } = useProductCountsQuery();
 
   const { refetch } = useProductQuery();
 
-  const updateProduct = async () => {
-    try {
-      await axiosInstance.post(`/v1/products/${product.id}`, {
-        ...UpdateProductSchema.parse(product),
-        items: product.items,
-        free_trial: product.free_trial,
-      });
-      // await ProductService.updateProduct(axiosInstance, product.id, {
-      //   ...UpdateProductSchema.parse(product),
-      //   items: product.items,
-      //   free_trial: product.free_trial,
-      // });
+  const handleUpdateClicked = async () => {
+    if (isLoading) toast.error("Product counts are loading");
 
-      toast.success("Product updated successfully");
-      // if (isNewProduct) {
-      //   toast.success("Product created successfully");
-      // } else {
-      // }
-
-      await refetch();
-      // await mutateCount();
-    } catch (error) {
-      toast.error(getBackendErr(error, "Failed to update product"));
+    if (counts?.all > 0) {
+      setShowNewVersionDialog(true);
+      return;
     }
+
+    setButtonLoading(true);
+    const success = await updateProduct({
+      axiosInstance,
+      product,
+      onSuccess: async () => {
+        await refetch();
+      },
+    });
+
+    setButtonLoading(false);
   };
 
   return (
     <Button
-      onClick={async () => {
-        setButtonLoading(true);
-        await updateProduct();
-        setButtonLoading(false);
-      }}
+      onClick={handleUpdateClicked}
       variant="gradientPrimary"
       className="w-full gap-2"
       isLoading={buttonLoading}

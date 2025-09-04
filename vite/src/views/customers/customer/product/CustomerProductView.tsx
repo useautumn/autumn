@@ -62,8 +62,6 @@ export default function CustomerProductView() {
   const env = useEnv();
   const initialProductRef = useRef<ProductV2 | null>(null);
 
-  const [product, setProduct] = useState<ProductV2 | null>(null);
-
   const [options, setOptions] = useState<OptionValue[]>([]);
   const [entityId, setEntityId] = useState<string | null>(entityIdParam);
   const [entityFeatureIds, setEntityFeatureIds] = useState<string[]>([]);
@@ -77,6 +75,9 @@ export default function CustomerProductView() {
     isLoading,
     error,
   } = useCusProductQuery();
+  const [product, setProduct] = useState<ProductV2 | null>(
+    originalProduct ?? null
+  );
 
   const { isLoading: cusLoading } = useCusQuery();
 
@@ -133,7 +134,7 @@ export default function CustomerProductView() {
     );
   }
 
-  if (isLoading || !product || cusLoading || orgLoading || featuresLoading)
+  if (isLoading || cusLoading || orgLoading || featuresLoading || !product)
     return <LoadingScreen />;
 
   if (!customer_id || !product_id) {

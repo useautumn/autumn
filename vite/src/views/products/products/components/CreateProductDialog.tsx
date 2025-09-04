@@ -37,7 +37,7 @@ function CreateProduct({
   const [product, setProduct] = useState(defaultProduct);
   const [open, setOpen] = useState(false);
 
-  const { groupToDefaults, refetch } = useProductsQuery();
+  const { groupToDefaults } = useProductsQuery();
 
   const axiosInstance = useAxiosInstance();
   const navigate = useNavigate();
@@ -49,8 +49,6 @@ function CreateProduct({
         axiosInstance,
         product
       );
-
-      await refetch();
 
       if (onSuccess) {
         await onSuccess(newProduct);

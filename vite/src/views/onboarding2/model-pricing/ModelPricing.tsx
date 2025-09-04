@@ -26,6 +26,11 @@ import { ConnectStripeStep } from "../integrate/ConnectStripeStep";
 import { AutumnProvider } from "autumn-js/react";
 import { useProductData } from "@/views/products/product/hooks/useProductData";
 import ConnectStripeDialog from "../ConnectStripeDialog";
+import { useOnboardingQueryState } from "../hooks/useOnboardingQueryState";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { ProductV2 } from "@autumn/shared";
+import { useOrg } from "@/hooks/common/useOrg";
+import { useProductContext } from "@/views/products/product/ProductContext";
 
 const defaultProduct = {
   id: "",
@@ -37,46 +42,44 @@ const defaultProduct = {
 };
 
 export const ModelPricing = ({
-  data,
-  mutate,
-  mutateAutumnProducts,
+  // data,
+  // mutate,
+  // mutateAutumnProducts,
+  refetchAutumnProducts,
   autumnProducts,
-  productCounts,
-  mutateCounts,
-  queryStates,
-  setQueryStates,
+  // productCounts,
+  // mutateCounts,
+  // queryStates,
+  // setQueryStates,
 }: {
-  data: any;
-  mutate: any;
-  mutateAutumnProducts: any;
+  // data: any;
+  // mutate: any;
+  // mutateAutumnProducts: any;
+  refetchAutumnProducts: any;
   autumnProducts: Product[];
-  productCounts: any;
-  mutateCounts: any;
-  queryStates: any;
-  setQueryStates: any;
+  // productCounts: any;
+  // mutateCounts: any;
+  // queryStates: any;
+  // setQueryStates: any;
 }) => {
+  const { queryStates, setQueryStates } = useOnboardingQueryState();
+  const { products, refetch } = useProductsQuery();
+
   const getCurProduct = () => {
     if (queryStates.productId) {
-      const prod = data.products.find(
-        (p: Product) => p.id === queryStates.productId
+      const prod = products.find(
+        (p: ProductV2) => p.id === queryStates.productId
       );
-      if (prod) {
-        return prod;
-      }
+
+      if (prod) return prod;
     }
 
-    if (data.products.length > 0) {
-      return data.products[0];
-    }
+    if (products.length > 0) return products[0];
 
     return defaultProduct;
   };
 
   const curProduct = getCurProduct();
-  // // console.log("curProduct:", curProduct);
-  // const [firstItemCreated, setFirstItemCreated] = useState(
-  //   autumnProducts.some((p: Product) => p.items.length > 0)
-  // );
 
   const firstItemCreated = autumnProducts.some(
     (p: Product) => p.items.length > 0
@@ -90,14 +93,19 @@ export const ModelPricing = ({
 
   const productDataState = useProductData({
     originalProduct: curProduct as any,
-    originalFeatures: data.features as any,
   });
 
   const { product } = productDataState;
 
-  if (!product) return null;
+  useEffect(() => {
+    if (curProduct && !queryStates.productId) {
+      setQueryStates({
+        productId: curProduct.id,
+      });
+    }
+  }, [curProduct]);
 
-  const stripeConnected = data?.org.stripe_connected;
+  if (!product) return null;
 
   return (
     <ModelPricingContext.Provider
@@ -106,16 +114,24 @@ export const ModelPricing = ({
         // setFirstItemCreated,
         editingNewProduct,
         setEditingNewProduct,
+
+        // For <EditProduct />
+        productDataState,
+
+        // For <CheckoutDialog /> & <NewProductPopover />
+        refetch: async () => {
+          await Promise.all([refetch(), refetchAutumnProducts()]);
+        },
+
         // product,
         // setProduct,
-        productDataState,
-        mutate,
-        data,
-        productCount: productCounts?.[product?.id ?? ""],
-        queryStates,
-        setQueryStates,
-        mutateAutumnProducts,
-        mutateCounts,
+        // mutate,
+        // data,
+        // productCount: productCounts?.[product?.id ?? ""],
+        // queryStates,
+        // setQueryStates,
+        // mutateAutumnProducts,
+        // mutateCounts,
         setConnectStripeOpen,
       }}
     >
@@ -123,77 +139,76 @@ export const ModelPricing = ({
         open={connectStripeOpen}
         setOpen={setConnectStripeOpen}
       />
-      <ProductsContext.Provider value={{ productCounts, mutate }}>
-        <div className="flex flex-col w-full h-full items-center justify-between overflow-y-auto overflow-x-hidden">
-          <div className="w-full p-10 flex flex-col gap-4 justify-center items-center">
-            <div className="max-w-[800px] w-full">
-              <div className="flex gap-4 items-center justify-between mb-6">
-                <div className="flex flex-col gap-1">
-                  <p className="text-xl font-medium">Create your products</p>
-                  <p className="text-t2 text-sm w-md">
-                    To start, model your app's pricing by creating a product for
-                    your free plans, paid plans and any add-ons or top-ups.
-                  </p>
-                </div>
-                {firstItemCreated && (
-                  <div className="flex gap-0 items-center">
-                    <SelectEditProduct />
-                    {data.products.length > 0 && <NewProductPopover />}
-                  </div>
-                )}
-              </div>
-              <div className="flex flex-col gap-4 w-full">
-                <EditProduct mutate={mutate} />
-              </div>
-            </div>
-          </div>
 
-          <div className="w-full">
-            <div
-              className={cn(
-                "w-full px-10 flex flex-col gap-4 items-center ",
-                "transition-all duration-800 overflow-hidden py-10 pb-4",
-                !firstItemCreated && "hidden"
-                // firstItemCreated ? "max-h-[800px] py-10" : "max-h-0 py-0"
+      <div className="flex flex-col w-full h-full items-center justify-between overflow-y-auto overflow-x-hidden">
+        <div className="w-full p-10 flex flex-col gap-4 justify-center items-center">
+          <div className="max-w-[800px] w-full">
+            <div className="flex gap-4 items-center justify-between mb-6">
+              <div className="flex flex-col gap-1">
+                <p className="text-xl font-medium">Create your products</p>
+                <p className="text-t2 text-sm w-md">
+                  To start, model your app's pricing by creating a product for
+                  your free plans, paid plans and any add-ons or top-ups.
+                </p>
+              </div>
+              {firstItemCreated && (
+                <div className="flex gap-0 items-center">
+                  <SelectEditProduct />
+                  {products.length > 0 && <NewProductPopover />}
+                </div>
               )}
-            >
-              <AutumnProvider
-                backendUrl={`${import.meta.env.VITE_BACKEND_URL}/demo`}
-                includeCredentials={true}
-              >
-                <div className="gap-8 flex justify-center max-w-[800px] w-full flex-col">
-                  <PricingTable
-                    products={autumnProducts}
-                    stripeConnected={stripeConnected}
-                    setConnectStripeOpen={setConnectStripeOpen}
-                  />
-                </div>
-              </AutumnProvider>
-
-              <div className="w-full flex justify-end translate-x-6">
-                <Button
-                  onClick={() => {
-                    setQueryStates({
-                      page: "integrate",
-                    });
-                  }}
-                  className="bg-zinc-800 w-fit hover:bg-zinc-700"
-                >
-                  Next: Integrate Autumn <ArrowRight className="w-4 h-4" />
-                </Button>
-              </div>
+            </div>
+            <div className="flex flex-col gap-4 w-full">
+              <EditProduct refetchAutumnProducts={refetchAutumnProducts} />
             </div>
           </div>
         </div>
-      </ProductsContext.Provider>
+
+        <div className="w-full">
+          <div
+            className={cn(
+              "w-full px-10 flex flex-col gap-4 items-center ",
+              "transition-all duration-800 overflow-hidden py-10 pb-4",
+              !firstItemCreated && "hidden"
+              // firstItemCreated ? "max-h-[800px] py-10" : "max-h-0 py-0"
+            )}
+          >
+            <AutumnProvider
+              backendUrl={`${import.meta.env.VITE_BACKEND_URL}/demo`}
+              includeCredentials={true}
+            >
+              <div className="gap-8 flex justify-center max-w-[800px] w-full flex-col">
+                <PricingTable
+                  products={autumnProducts}
+                  setConnectStripeOpen={setConnectStripeOpen}
+                />
+              </div>
+            </AutumnProvider>
+
+            <div className="w-full flex justify-end translate-x-6">
+              <Button
+                onClick={() => {
+                  setQueryStates({
+                    page: "integrate",
+                  });
+                }}
+                className="bg-zinc-800 w-fit hover:bg-zinc-700"
+              >
+                Next: Integrate Autumn <ArrowRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
     </ModelPricingContext.Provider>
   );
 };
 
 const NewProductPopover = () => {
   const [open, setOpen] = useState(false);
+
   const {
-    mutate,
+    refetch,
     productDataState: { setProduct },
   } = useModelPricingContext();
 
@@ -212,7 +227,7 @@ const NewProductPopover = () => {
         name: details.name,
         id: details.id,
       });
-      await mutate();
+      await refetch();
       const newProduct = {
         ...defaultProduct,
         name: details.name,

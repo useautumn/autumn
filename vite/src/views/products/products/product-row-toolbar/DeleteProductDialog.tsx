@@ -20,28 +20,27 @@ import {
 } from "@/components/ui/select";
 import { getBackendErr } from "@/utils/genUtils";
 import { toast } from "sonner";
-import { useProductInfoQuery } from "./hooks/useProductInfoQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useGeneralQuery } from "@/hooks/queries/useGeneralQuery";
+import { useModelPricingContext } from "@/views/onboarding2/model-pricing/ModelPricingContext";
 
 export const DeleteProductDialog = ({
   product,
   dropdownOpen,
   open,
   setOpen,
-  productCounts,
 }: {
   product: ProductV2;
   dropdownOpen: boolean;
   open: boolean;
   setOpen: (open: boolean) => void;
-  productCounts?: ProductCounts;
 }) => {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [archiveLoading, setArchiveLoading] = useState(false);
   const axiosInstance = useAxiosInstance();
 
-  const { refetch } = useProductsQuery();
+  const modelPricingContext = useModelPricingContext();
+  const { refetch: refetchProducts } = useProductsQuery();
 
   const { data: productInfo, isLoading } = useGeneralQuery({
     url: `/products/${product.id}/info`,
@@ -59,7 +58,12 @@ export const DeleteProductDialog = ({
         product.id,
         deleteAllVersions
       );
-      await refetch();
+
+      if (modelPricingContext) {
+        await modelPricingContext.refetch();
+      } else {
+        await refetchProducts();
+      }
       setOpen(false);
     } catch (error) {
       console.error("Error deleting product:", error);
@@ -112,7 +116,7 @@ export const DeleteProductDialog = ({
         }
         await Promise.all(updatePromises);
       }
-      await refetch();
+      await refetchProducts();
       toast.success(
         `Product ${product.name} ${newArchivedState ? "archived" : "unarchived"} successfully`
       );

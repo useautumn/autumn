@@ -33,19 +33,12 @@ import {
 import { newPriceToInvoiceDescription } from "../invoiceFormatUtils.js";
 import { calculateProrationAmount } from "../prorationUtils.js";
 import { getPricecnPrice } from "../../products/pricecn/pricecnUtils.js";
-import { toProductItem } from "../../products/product-items/mapToItem.js";
+import { toProductItem } from "@autumn/shared";
 import { formatAmount } from "@/utils/formatUtils.js";
-import {
-  formatUnixToDate,
-  formatUnixToDateTime,
-  formatUnixToUTCDateTime,
-  notNullish,
-} from "@/utils/genUtils.js";
+import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
 import {
   addBillingIntervalUnix,
   addIntervalForProration,
-  getAlignedIntervalUnix,
-  subtractBillingIntervalUnix,
   subtractFromUnixTillAligned,
   subtractIntervalForProration,
 } from "../../products/prices/billingIntervalUtils.js";

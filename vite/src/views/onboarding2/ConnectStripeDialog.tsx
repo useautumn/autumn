@@ -1,11 +1,6 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useModelPricingContext } from "./model-pricing/ModelPricingContext";
-import { ConnectStripeStep } from "./integrate/ConnectStripeStep";
+
 import {
   CustomDialogBody,
   CustomDialogContent,
@@ -16,6 +11,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { connectStripe } from "./utils/connectStripe";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useOrg } from "@/hooks/common/useOrg";
 
 export default function ConnectStripeDialog({
   open,
@@ -24,15 +20,15 @@ export default function ConnectStripeDialog({
   open: boolean;
   setOpen: (open: boolean) => void;
 }) {
-  const { stripeConnected, mutate, productDataState, data } =
-    useModelPricingContext();
+  const { org, mutate: mutateOrg } = useOrg();
+
   const axiosInstance = useAxiosInstance();
 
   const [testApiKey, setTestApiKey] = useState("");
   const [loading, setLoading] = useState(false);
   const handleConnectStripe = async () => {
     setLoading(true);
-    await connectStripe({ testApiKey, axiosInstance, mutate });
+    await connectStripe({ testApiKey, axiosInstance, mutate: mutateOrg });
     setOpen(false);
     setLoading(false);
   };
@@ -59,9 +55,9 @@ export default function ConnectStripeDialog({
           <Input
             className="w-full"
             placeholder="Stripe secret key (sk_test_...)"
-            value={stripeConnected ? "Stripe connected  ✅ " : testApiKey}
+            value={org?.stripe_connected ? "Stripe connected  ✅ " : testApiKey}
             onChange={(e) => setTestApiKey(e.target.value)}
-            disabled={stripeConnected}
+            disabled={org?.stripe_connected}
           />
         </CustomDialogBody>
         <CustomDialogFooter>

@@ -8,25 +8,29 @@ import { useEffect, useRef, useState } from "react";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useSearchParams } from "react-router";
 import { useSession } from "@/lib/auth-client";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useOnboardingQueryState } from "./hooks/useOnboardingQueryState";
+import { useOrg } from "@/hooks/common/useOrg";
 
 export default function OnboardingView2() {
-  const [queryStates, setQueryStates] = useQueryStates(
-    {
-      page: parseAsString.withDefault("pricing"),
-      reactTypescript: parseAsBoolean.withDefault(true),
-      frontend: parseAsString.withDefault(""),
-      backend: parseAsString.withDefault(""),
-      auth: parseAsString.withDefault(""),
-      customerType: parseAsString.withDefault("user"),
-      productId: parseAsString.withDefault(""),
-    },
-    {
-      history: "push",
-    }
-  );
+  // const [queryStates, setQueryStates] = useQueryStates(
+  //   {
+  //     page: parseAsString.withDefault("pricing"),
+  //     reactTypescript: parseAsBoolean.withDefault(true),
+  //     frontend: parseAsString.withDefault(""),
+  //     backend: parseAsString.withDefault(""),
+  //     auth: parseAsString.withDefault(""),
+  //     customerType: parseAsString.withDefault("user"),
+  //     productId: parseAsString.withDefault(""),
+  //     token: parseAsString.withDefault(""),
+  //   },
+  //   {
+  //     history: "push",
+  //   }
+  // );
 
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get("token");
+  const { queryStates, setQueryStates } = useOnboardingQueryState();
+
   const [loading, setLoading] = useState(true);
   const axiosInstance = useAxiosInstance();
   const hasHandledToken = useRef(false);
@@ -36,28 +40,21 @@ export default function OnboardingView2() {
   const {
     products: autumnProducts,
     isLoading: isAutumnLoading,
-    mutate: mutateAutumnProducts,
+    mutate: refetchAutumnProducts,
   } = useListProducts({ customerId: "onboarding_demo_user" });
 
-  const {
-    data: productsData,
-    mutate: productMutate,
-    isLoading,
-  } = useAxiosSWR({ url: `/products/data` });
-
-  const { data: productCounts, mutate: mutateCounts } = useAxiosSWR({
-    url: `/products/counts?latest_version=true`,
-  });
+  const { isLoading: productsLoading } = useProductsQuery();
+  const { isLoading: orgLoading } = useOrg();
 
   useEffect(() => {
     const handleToken = async () => {
       try {
         await axiosInstance.post("/onboarding", {
-          token,
+          token: queryStates.token,
         });
 
-        await productMutate();
-        await mutateAutumnProducts();
+        // await productMutate();
+        await refetchAutumnProducts();
       } catch (error) {
         console.error(error);
       } finally {
@@ -65,42 +62,44 @@ export default function OnboardingView2() {
       }
     };
 
-    if (token && !hasHandledToken.current) {
+    if (queryStates.token && !hasHandledToken.current) {
       hasHandledToken.current = true;
       handleToken();
     }
-  }, [searchParams, token, axiosInstance, productMutate]);
+  }, [queryStates.token, axiosInstance]);
 
   useEffect(() => {
-    if (orgId && !token) {
+    if (orgId && !queryStates.token) {
       setLoading(false);
     }
-  }, [orgId, token]);
+  }, [orgId, queryStates.token]);
 
-  if (isLoading || isAutumnLoading || loading) return <LoadingScreen />;
+  if (isAutumnLoading || loading || productsLoading || orgLoading)
+    return <LoadingScreen />;
 
   return (
     <>
       {queryStates.page === "integrate" ? (
         <IntegrateAutumn
-          data={productsData}
-          mutate={productMutate}
-          queryStates={queryStates}
-          setQueryStates={setQueryStates}
+        // data={productsData}
+        // mutate={productMutate}
+        // queryStates={queryStates}
+        // setQueryStates={setQueryStates}
         />
       ) : (
         <ModelPricing
-          data={productsData}
-          mutate={async () => {
-            await productMutate();
-            await mutateAutumnProducts();
-          }}
-          mutateAutumnProducts={mutateAutumnProducts}
+          // data={productsData}
+          // mutate={async () => {
+          //   await productMutate();
+          //   await mutateAutumnProducts();
+          // }}
+          // mutateAutumnProducts={mutateAutumnProducts}
           autumnProducts={autumnProducts}
-          productCounts={productCounts}
-          mutateCounts={mutateCounts}
-          queryStates={queryStates}
-          setQueryStates={setQueryStates}
+          refetchAutumnProducts={refetchAutumnProducts}
+          // productCounts={productCounts}
+          // mutateCounts={mutateCounts}
+          // queryStates={queryStates}
+          // setQueryStates={setQueryStates}
         />
       )}
     </>

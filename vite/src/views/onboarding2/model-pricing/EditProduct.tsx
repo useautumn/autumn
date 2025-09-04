@@ -18,19 +18,25 @@ import { updateProduct } from "@/views/products/product/utils/updateProduct";
 import { getBackendErr } from "@/utils/genUtils";
 import { EditProductDetails } from "./edit-product/EditProductDetails";
 import { ToggleDefaultProduct } from "@/views/products/product/product-sidebar/ToggleDefaultProduct";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 
-export const EditProduct = ({ mutate }: { mutate: any }) => {
-  const [freeTrialModalOpen, setFreeTrialModalOpen] = useState(false);
-  const { data, productCount, productDataState, mutateCounts } =
-    useModelPricingContext();
+export const EditProduct = ({
+  refetchAutumnProducts,
+}: {
+  refetchAutumnProducts: () => Promise<void>;
+}) => {
+  const { refetch, counts, products } = useProductsQuery();
+  const { productDataState } = useModelPricingContext();
 
   const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
+  const [freeTrialModalOpen, setFreeTrialModalOpen] = useState(false);
+
+  const productCount = counts?.[productDataState.product?.id];
 
   const {
     product,
     setProduct,
-    features,
-    setFeatures,
     entityFeatureIds,
     setEntityFeatureIds,
     actionState,
@@ -42,24 +48,16 @@ export const EditProduct = ({ mutate }: { mutate: any }) => {
   });
 
   const axiosInstance = useAxiosInstance();
-  const env = useEnv();
-
   const [saveLoading, setSaveLoading] = useState(false);
 
   const runUpdateProduct = async () => {
     setSaveLoading(true);
-    try {
-      await updateProduct({
-        axiosInstance,
-        product,
-        mutate,
-        mutateCount: mutateCounts,
-      });
-    } catch (error) {
-      toast.error(getBackendErr(error, "Failed to update product"));
-    } finally {
-      setSaveLoading(false);
-    }
+    await updateProduct({
+      axiosInstance,
+      product,
+      onSuccess: refetch,
+    });
+    setSaveLoading(false);
   };
 
   const handleSaveClicked = async () => {
@@ -73,9 +71,7 @@ export const EditProduct = ({ mutate }: { mutate: any }) => {
   const hasItems = product.items.length > 0;
   const hasCustomers = productCount?.all > 0;
   const showSaveButton = hasCustomers || product.version > 1;
-  const firstProductCreated = data.products.length > 0;
-
-  const autoSave = !showSaveButton && firstProductCreated;
+  const firstProductCreated = products.length > 0;
 
   const handleToggleSettings = async (key: string) => {
     if (!product) return;
@@ -96,7 +92,7 @@ export const EditProduct = ({ mutate }: { mutate: any }) => {
         axiosInstance,
         productId: product.id ? product.id : details.id,
         product: { ...product, [key]: !curValue },
-        mutate,
+        refetch,
       });
     }
   };
@@ -106,13 +102,13 @@ export const EditProduct = ({ mutate }: { mutate: any }) => {
       <div className="flex gap-4 transition-all duration-500 ease-in-out">
         <ProductContext.Provider
           value={{
-            groupDefaults: data.groupToDefaults?.[product?.group || ""],
+            // groupDefaults: data.groupToDefaults?.[product?.group || ""],
             product,
             setProduct,
-            mutate,
-            env,
-            features,
-            setFeatures,
+            refetch: async () => {
+              console.log("Refetching edit product...");
+              await Promise.all([refetch(), refetchAutumnProducts()]);
+            },
             entityFeatureIds,
             setEntityFeatureIds,
             isOnboarding: true,
@@ -122,7 +118,6 @@ export const EditProduct = ({ mutate }: { mutate: any }) => {
           <ConfirmNewVersionDialog
             open={showNewVersionDialog}
             setOpen={setShowNewVersionDialog}
-            createProduct={runUpdateProduct}
           />
           <CreateFreeTrial
             open={freeTrialModalOpen}
@@ -182,13 +177,6 @@ export const EditProduct = ({ mutate }: { mutate: any }) => {
           >
             <div className="flex flex-col gap-4" style={{ width: "320px" }}>
               <div>
-                {/* <ToggleButton
-                    disabled={product?.is_add_on}
-                    buttonText="Default Product"
-                    value={product?.is_default}
-                    className="text-t2 font-medium h-fit mb-2"
-                    setValue={() => handleToggleSettings("is_default")}
-                  /> */}
                 <div className="flex items-center text-sm text-t2 gap-2">
                   <p className="text-t2 font-medium">Default Product</p>
                   <ToggleDefaultProduct toggleKey="is_default" />
@@ -199,13 +187,6 @@ export const EditProduct = ({ mutate }: { mutate: any }) => {
                 </div>
               </div>
               <div className="">
-                {/* <ToggleButton
-                    disabled={product?.is_default}
-                    buttonText="Add-on Product"
-                    className="text-t2 font-medium h-fit mb-2"
-                    value={product?.is_add_on}
-                    setValue={() => handleToggleSettings("is_add_on")}
-                  /> */}
                 <div className="flex items-center text-sm text-t2 gap-2">
                   <p className="text-t2 font-medium">Add On Product</p>
                   <ToggleDefaultProduct toggleKey="is_add_on" />

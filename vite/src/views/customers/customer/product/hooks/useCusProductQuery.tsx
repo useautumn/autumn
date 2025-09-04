@@ -35,6 +35,9 @@ export const useCusProductQuery = () => {
     };
 
     try {
+      console.log(
+        `Fetching customer product ${product_id} with version ${queryStates.version}`
+      );
       const { data } = await axiosInstance.get(
         `/customers/${customer_id}/product/${product_id}`,
         { params: queryParams }
@@ -49,14 +52,24 @@ export const useCusProductQuery = () => {
     cusProduct: FullCusProduct;
     product: ProductV2;
   }>({
-    queryKey: ["customer_product", customer_id, product_id],
+    queryKey: [
+      "customer_product",
+      customer_id,
+      product_id,
+      queryStates.version,
+      queryStates.customer_product_id,
+      queryStates.entity_id,
+    ],
     queryFn: fetcher,
   });
 
+  const finalData = data || cachedCusProduct;
+  const isLoadingWithCache = cachedCusProduct ? false : isLoading;
+
   return {
-    cusProduct: data?.cusProduct,
-    product: data?.product,
-    isLoading,
+    cusProduct: finalData?.cusProduct,
+    product: finalData?.product,
+    isLoading: isLoadingWithCache,
     error,
     refetch,
   };
