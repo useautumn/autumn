@@ -38,7 +38,13 @@ export const handleDeleteStripe = async (req: any, res: any) =>
         logger,
       });
 
-      await disconnectStripe({ org, env: req.env });
+      try {
+        await disconnectStripe({ org, env: req.env });
+      } catch (error) {
+        logger.error(`Failed to disconnect stripe for ${org.id}, ${org.slug}`, {
+          error,
+        });
+      }
 
       // Update stripe config:
       const newStripeConfig = structuredClone(req.org.stripe_config);
