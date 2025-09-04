@@ -1,3 +1,5 @@
+import Stripe from "stripe";
+
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { AttachBody, AttachBranch, PreviewLineItem } from "@autumn/shared";
@@ -21,7 +23,7 @@ import { Decimal } from "decimal.js";
 import { notNullish } from "@/utils/genUtils.js";
 
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
-import Stripe from "stripe";
+import { formatPrice } from "@/internal/products/prices/priceUtils.js";
 
 export const getMultiAttachPreview = async ({
   req,
@@ -61,6 +63,7 @@ export const getMultiAttachPreview = async ({
     )!;
 
     const previewLineItem = priceToUnusedPreviewItem({
+      customer,
       price,
       stripeItems: subItems,
       cusProduct,

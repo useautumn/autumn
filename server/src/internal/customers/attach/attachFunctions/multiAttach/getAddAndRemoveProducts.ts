@@ -1,9 +1,37 @@
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
-import { AttachConfig, FullCusProduct } from "@autumn/shared";
+import {
+  AttachConfig,
+  FullCusProduct,
+  getCusProductMinQuantity,
+  ProductOptions,
+} from "@autumn/shared";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { mergeItemSets } from "./mergeItemSets.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+
+export const getProdListWithoutEntities = ({
+  attachParams,
+  productsList,
+}: {
+  attachParams: AttachParams;
+  productsList: ProductOptions[];
+}) => {
+  const newProdList = structuredClone(productsList);
+  for (let i = 0; i < newProdList.length; i++) {
+    let productOptions = newProdList[i];
+    newProdList[i] = {
+      ...productOptions,
+      quantity:
+        (productOptions.quantity || 1) -
+        getCusProductMinQuantity({
+          cusProducts: attachParams.customer.customer_products,
+          productId: productOptions.product_id,
+        }),
+    };
+  }
+  return newProdList;
+};
 
 export const getAddAndRemoveProducts = async ({
   attachParams,
@@ -20,6 +48,12 @@ export const getAddAndRemoveProducts = async ({
     usageFeatures: [],
   };
   const expireCusProducts: FullCusProduct[] = [];
+
+  const newProdList = getProdListWithoutEntities({
+    attachParams,
+    productsList,
+  });
+
   for (const productOptions of productsList) {
     const product = attachParams.products.find(
       (p) => p.id === productOptions.product_id
@@ -50,6 +84,7 @@ export const getAddAndRemoveProducts = async ({
         products: [product!],
         prices: product?.prices || [],
         entitlements: product?.entitlements || [],
+        productsList: newProdList,
       },
       config,
     });

@@ -34,6 +34,7 @@ export const CusResponseSchema = z.object({
   entities: z.array(EntityResponseSchema).optional(),
   referrals: z.array(CusReferralResponseSchema).optional(),
   payment_method: z.any().nullish(),
+  quantity: z.number().optional(),
 });
 
 export type CusResponse = z.infer<typeof CusResponseSchema>;

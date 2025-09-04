@@ -26,7 +26,6 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [totalRows, setTotalRows] = useState(0);
-  const [visibleRows, setVisibleRows] = useState(0);
   const gridRef = useRef<AgGridReact>(null);
   const navigate = useNavigate();
 

@@ -33,6 +33,7 @@ import { AddRewardButton, MultiAttachRewards } from "./MultiAttachRewards";
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 import { useCusQuery } from "../../hooks/useCusQuery";
 import { useOrg } from "@/hooks/common/useOrg";
+import { getCusProductMinQuantity } from "../utils/getCusProductMinQuantity";
 
 export const MultiAttachDialog = ({
   open,
@@ -190,9 +191,18 @@ export const MultiAttachDialog = ({
                       onValueChange={(value) => {
                         setProductOptions((prev) => {
                           const newOptions = [...prev];
+
+                          const minQuantity = getCusProductMinQuantity({
+                            customer,
+                            productId: value,
+                          });
+
                           newOptions[index] = {
                             product_id: value,
-                            quantity: newOptions[index].quantity,
+                            quantity: Math.max(
+                              newOptions[index].quantity,
+                              minQuantity
+                            ),
                           };
                           return newOptions;
                         });

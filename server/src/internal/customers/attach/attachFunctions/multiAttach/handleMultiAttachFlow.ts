@@ -6,6 +6,8 @@ import {
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 import {
+  AttachBody,
+  AttachBranch,
   AttachConfig,
   AttachScenario,
   CusProductStatus,
@@ -27,21 +29,30 @@ import {
 } from "@/internal/invoices/invoiceUtils.js";
 
 import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
-import { getAddAndRemoveProducts } from "./getAddAndRemoveProducts.js";
+import {
+  getAddAndRemoveProducts,
+  getProdListWithoutEntities,
+} from "./getAddAndRemoveProducts.js";
 import { handleUpgradeFlowSchedule } from "../upgradeFlow/handleUpgradeFlowSchedule.js";
 import { isTrialing } from "@autumn/shared";
+import { handleMultiAttachErrors } from "../../attachUtils/handleAttachErrors/handleMultiAttachErrors.js";
 
 export const handleMultiAttachFlow = async ({
   req,
   res,
   attachParams,
+  attachBody,
+  branch,
   config,
 }: {
   req: ExtendedRequest;
   res: ExtendedResponse;
   attachParams: AttachParams;
+  attachBody: AttachBody;
+  branch: AttachBranch;
   config: AttachConfig;
 }) => {
+  await handleMultiAttachErrors({ attachParams, attachBody, branch });
   const { db, logger } = req;
   const { stripeCli } = attachParams;
   const productsList = attachParams.productsList!;
@@ -153,7 +164,11 @@ export const handleMultiAttachFlow = async ({
 
   // Expire all existing cus products at the customer level
   const batchInsert: any[] = [];
-  for (const productOptions of productsList) {
+  const newProdList = getProdListWithoutEntities({
+    attachParams,
+    productsList,
+  });
+  for (const productOptions of newProdList) {
     const product = attachParams.products.find(
       (p) => p.id === productOptions.product_id
     )!;
