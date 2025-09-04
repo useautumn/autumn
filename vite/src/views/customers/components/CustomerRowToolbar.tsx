@@ -54,7 +54,11 @@ export const CustomerRowToolbar = ({
         <DropdownMenuTrigger asChild>
           <ToolbarButton />
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="text-t2" align="end">
+        <DropdownMenuContent
+          className="text-t2"
+          align="end"
+          onClick={(e) => e.stopPropagation()}
+        >
           <CustomerRowToolbarItems
             setDeleteOpen={setDeleteOpen}
             isContextMenu={false}
