@@ -54,5 +54,13 @@ export const getAttachScenario = ({
     prices2: fullProduct.prices,
   });
 
+  if (
+    !isUpgrade &&
+    !isFreeProduct(curFullProduct.prices) &&
+    isFreeProduct(fullProduct.prices)
+  ) {
+    return AttachScenario.Cancel;
+  }
+
   return isUpgrade ? AttachScenario.Upgrade : AttachScenario.Downgrade;
 };
