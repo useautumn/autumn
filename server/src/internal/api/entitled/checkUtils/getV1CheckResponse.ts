@@ -89,8 +89,6 @@ export const getV1CheckResponse = ({
       internalFeatureId: feature.internal_id!,
     });
 
-    console.log(`Feature ${feature.id}, Usage allowed: ${usageAllowed}`);
-
     if (unlimited || usageAllowed) {
       balances.push({
         feature_id: feature.id,
