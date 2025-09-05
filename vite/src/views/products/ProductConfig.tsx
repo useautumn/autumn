@@ -49,7 +49,7 @@ export const ProductConfig = ({
             />
             <Pencil
               size={12}
-              className="text-t3 cursor-pointer w-8 h-8 px-2 "
+              className="text-t3 cursor-pointer w-8 h-8 px-2 hover:text-[#8231FF]"
               onClick={() => setIdEdit(true)}
             />
           </div>
