@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { AppEnv } from "../genModels/genEnums.js";
-import { InvoiceResponseSchema } from "./invoiceModels/invoiceResponseModels.js";
 import { RewardResponseSchema } from "../rewardModels/rewardModels/rewardResponseModels.js";
-import { EntityResponseSchema } from "./entityModels/entityResModels.js";
 import { CusProductResponseSchema } from "./cusResModels/cusProductResponse.js";
 import { CusReferralResponseSchema } from "./cusResModels/cusReferralsResponse.js";
+import { EntityResponseSchema } from "./entityModels/entityResModels.js";
+import { InvoiceResponseSchema } from "./invoiceModels/invoiceResponseModels.js";
 
 export const TrialUsedResponseSchema = z.object({
   product_id: z.string(),
@@ -30,11 +30,10 @@ export const CusResponseSchema = z.object({
   invoices: z.array(InvoiceResponseSchema).optional(),
   trials_used: z.array(TrialUsedResponseSchema).optional(),
   rewards: RewardResponseSchema.nullish(),
-  metadata: z.record(z.any()).default({}),
+  metadata: z.record(z.any(), z.any()).default({}),
   entities: z.array(EntityResponseSchema).optional(),
   referrals: z.array(CusReferralResponseSchema).optional(),
   payment_method: z.any().nullish(),
-  quantity: z.number().optional(),
 });
 
 export type CusResponse = z.infer<typeof CusResponseSchema>;
