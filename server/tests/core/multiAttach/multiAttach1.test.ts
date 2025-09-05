@@ -64,7 +64,10 @@ const ops = [
 const testCase = "multiAttach1";
 describe(`${chalk.yellowBright("multiAttach1: Testing multi attach for trial products and update product quantities mid trial")}`, () => {
   let customerId = testCase;
-  let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+  let autumn: AutumnInt = new AutumnInt({
+    version: APIVersion.v1_4,
+    orgConfig: { entity_product: true },
+  });
 
   let stripeCli: Stripe;
   let testClockId: string;

@@ -9,6 +9,7 @@ import {
   EntityExpand,
   ErrCode,
   Invoice,
+  OrgConfig,
 } from "@autumn/shared";
 import {
   CancelParams,
@@ -48,11 +49,13 @@ export class AutumnInt {
     secretKey,
     baseUrl,
     version,
+    orgConfig,
   }: {
     apiKey?: string;
     secretKey?: string;
     baseUrl?: string;
     version?: string | APIVersion;
+    orgConfig?: Partial<OrgConfig>;
   } = {}) {
     // this.apiKey = apiKey || process.env.AUTUMN_API_KEY || "";
     this.apiKey =
@@ -65,6 +68,10 @@ export class AutumnInt {
 
     if (version) {
       this.headers["x-api-version"] = version.toString();
+    }
+
+    if (orgConfig) {
+      this.headers["org-config"] = JSON.stringify(orgConfig);
     }
 
     this.baseUrl = baseUrl || "http://localhost:8080/v1";

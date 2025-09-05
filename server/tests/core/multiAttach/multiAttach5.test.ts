@@ -11,6 +11,7 @@ import {
   AppEnv,
   CusProductStatus,
   Organization,
+  organizations,
 } from "@autumn/shared";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
@@ -26,6 +27,12 @@ import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.j
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addDays } from "date-fns";
 import { expect } from "chai";
+import { OrgService } from "@/internal/orgs/OrgService.js";
+import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
+import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
+import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
+import { eq } from "drizzle-orm";
+import { CacheManager } from "@/external/caching/CacheManager.js";
 
 let premium = constructProduct({
   id: "premium",
@@ -66,6 +73,17 @@ describe(`${chalk.yellowBright("multiAttach5: Testing multi attach and get custo
     env = this.env;
 
     stripeCli = this.stripeCli;
+
+    await OrgService.update({
+      db,
+      orgId: org.id,
+      updates: {
+        config: {
+          ...org.config,
+          entity_product: true,
+        },
+      },
+    });
 
     addPrefixToProducts({
       products: [pro, premium],
@@ -145,90 +163,156 @@ describe(`${chalk.yellowBright("multiAttach5: Testing multi attach and get custo
       product_id: pro.id,
     });
 
-    // await expectResultsCorrect({
-    //   customerId,
-    //   results: [
-    //     {
-    //       product: pro,
-    //       quantity: 1,
-    //       entityId: "1",
-    //       status: CusProductStatus.Active,
-    //     },
-    //   ],
-    // });
+    const results = [
+      {
+        product_id: pro.id,
+        quantity: 4,
+        product: pro,
+        status: CusProductStatus.Active,
+      },
+      {
+        product_id: premium.id,
+        quantity: 3,
+        product: premium,
+        status: CusProductStatus.Active,
+      },
+      {
+        product_id: pro.id,
+        quantity: 1,
+        product: pro,
+        entityId: "1",
+        status: CusProductStatus.Active,
+      },
+      {
+        product_id: pro.id,
+        quantity: 1,
+        product: pro,
+        entityId: "2",
+        status: CusProductStatus.Active,
+      },
+    ];
 
-    // await expectSubToBeCorrect({
-    //   db,
-    //   customerId,
-    //   org,
-    //   env,
-    // });
+    await expectResultsCorrect({
+      customerId,
+      results,
+    });
+
+    await expectSubToBeCorrect({
+      db,
+      customerId,
+      org,
+      env,
+    });
+
+    const entity1 = await autumn.entities.get(customerId, "1");
+    const entity2 = await autumn.entities.get(customerId, "2");
+    expectFeaturesCorrect({
+      customer: entity1,
+      product: pro,
+    });
+    expectFeaturesCorrect({
+      customer: entity2,
+      product: pro,
+    });
   });
+
+  it("should try to reduce quantity of pro to less than number of entities and fail", async function () {
+    await expectAutumnError({
+      func: async () => {
+        await autumn.attach({
+          customer_id: customerId,
+          products: [
+            {
+              product_id: pro.id,
+              quantity: 1,
+            },
+          ],
+        });
+      },
+    });
+  });
+
+  it("should update pro product quantity and have correct amount", async function () {
+    await expectMultiAttachCorrect({
+      customerId,
+      products: [
+        {
+          product_id: pro.id,
+          quantity: 6,
+        },
+      ],
+      results: [
+        {
+          product: pro,
+          quantity: 6,
+          status: CusProductStatus.Active,
+        },
+        {
+          product: pro,
+          quantity: 1,
+          entityId: "1",
+          status: CusProductStatus.Active,
+        },
+        {
+          product: pro,
+          quantity: 1,
+          entityId: "2",
+          status: CusProductStatus.Active,
+        },
+      ],
+      db,
+      org,
+      env,
+    });
+  });
+
+  it("should decrease pro product quantity and have correct amount", async function () {
+    await expectMultiAttachCorrect({
+      customerId,
+      products: [
+        {
+          product_id: pro.id,
+          quantity: 5,
+        },
+      ],
+      results: [
+        {
+          product: pro,
+          quantity: 5,
+          status: CusProductStatus.Active,
+        },
+        {
+          product: pro,
+          quantity: 1,
+          entityId: "1",
+          status: CusProductStatus.Active,
+        },
+        {
+          product: pro,
+          quantity: 1,
+          entityId: "2",
+          status: CusProductStatus.Active,
+        },
+      ],
+      db,
+      org,
+      env,
+    });
+  });
+
+  after(async function () {
+    await OrgService.update({
+      db,
+      orgId: org.id,
+      updates: {
+        config: {
+          ...org.config,
+          entity_product: false,
+        },
+      },
+    });
+    await CacheManager.disconnect();
+  });
+
   return;
-
-  it("should cancel one entity's sub at end of cycle and have correct schedule...", async function () {
-    await autumn.cancel({
-      customer_id: customerId,
-      product_id: pro.id,
-      entity_id: "2",
-    });
-
-    await expectSubToBeCorrect({
-      db,
-      customerId,
-      org,
-      env,
-    });
-  });
-
-  it("should cancel one entity's sub immediately", async function () {
-    await autumn.cancel({
-      customer_id: customerId,
-      product_id: premium.id,
-      entity_id: "1",
-      cancel_immediately: true,
-      // @ts-ignore
-      prorate: false,
-    });
-
-    await expectSubToBeCorrect({
-      db,
-      customerId,
-      org,
-      env,
-    });
-  });
-
-  it("should advance test clock to end of trial and have correct sub", async function () {
-    await advanceTestClock({
-      stripeCli,
-      testClockId,
-      advanceTo: addDays(new Date(), 8).getTime(),
-      waitForSeconds: 30,
-    });
-
-    await expectSubToBeCorrect({
-      db,
-      customerId,
-      org,
-      env,
-    });
-
-    const customer = await autumn.customers.get(customerId);
-    const latestInvoice = customer.invoices[0];
-
-    // Should only have paid for 4 pro and 2 premium...
-    const invoiceTotal =
-      getBasePrice({ product: pro }) * 4 +
-      getBasePrice({ product: premium }) * 2;
-
-    expect(invoiceTotal).to.equal(latestInvoice.total);
-
-    await expectSubToBeCorrect({
-      db,
-      customerId,
-      org,
-      env,
-    });
-  });
 });

@@ -10,22 +10,24 @@ import {
   APIVersion,
   AppEnv,
   CusProductStatus,
+  FullCusProduct,
+  nullish,
   Organization,
 } from "@autumn/shared";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import {
-  addPrefixToProducts,
-  getBasePrice,
-} from "tests/utils/testProductUtils/testProductUtils.js";
+import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
 import {
   expectMultiAttachCorrect,
   expectResultsCorrect,
 } from "tests/utils/expectUtils/expectMultiAttach.js";
 import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { addDays } from "date-fns";
+
 import { expect } from "chai";
+import { OrgService } from "@/internal/orgs/OrgService.js";
+
+import { CacheManager } from "@/external/caching/CacheManager.js";
+import { CusService } from "@/internal/customers/CusService.js";
 
 let premium = constructProduct({
   id: "premium",
@@ -33,7 +35,6 @@ let premium = constructProduct({
     constructFeatureItem({ featureId: TestFeature.Words, includedUsage: 200 }),
   ],
   type: "premium",
-  trial: true,
 });
 
 let pro = constructProduct({
@@ -45,16 +46,12 @@ let pro = constructProduct({
     }),
   ],
   type: "pro",
-  trial: true,
 });
 
-const testCase = "multiAttach3";
-describe(`${chalk.yellowBright("multiAttach3: Testing multi attach for trial products transfer to entity, then cancel products on entities...")}`, () => {
+const testCase = "multiAttach6";
+describe(`${chalk.yellowBright("multiAttach6: Testing multi attach and get customer")}`, () => {
   let customerId = testCase;
-  let autumn: AutumnInt = new AutumnInt({
-    version: APIVersion.v1_4,
-    orgConfig: { entity_product: true },
-  });
+  let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
 
   let stripeCli: Stripe;
   let testClockId: string;
@@ -71,6 +68,17 @@ describe(`${chalk.yellowBright("multiAttach3: Testing multi attach for trial pro
     env = this.env;
 
     stripeCli = this.stripeCli;
+
+    await OrgService.update({
+      db,
+      orgId: org.id,
+      updates: {
+        config: {
+          ...org.config,
+          entity_product: true,
+        },
+      },
+    });
 
     addPrefixToProducts({
       products: [pro, premium],
@@ -102,15 +110,15 @@ describe(`${chalk.yellowBright("multiAttach3: Testing multi attach for trial pro
     const productsList = [
       {
         product_id: pro.id,
-        quantity: 5,
+        quantity: 4,
         product: pro,
-        status: CusProductStatus.Trialing,
+        status: CusProductStatus.Active,
       },
       {
         product_id: premium.id,
         quantity: 3,
         product: premium,
-        status: CusProductStatus.Trialing,
+        status: CusProductStatus.Active,
       },
     ];
 
@@ -137,45 +145,49 @@ describe(`${chalk.yellowBright("multiAttach3: Testing multi attach for trial pro
     },
   ];
 
-  const results = [
-    {
-      product: pro,
-      quantity: 5,
-      status: CusProductStatus.Trialing,
-    },
-    {
-      product: premium,
-      quantity: 3,
-      status: CusProductStatus.Trialing,
-    },
-    {
-      product: pro,
-      quantity: 1,
-      entityId: "2",
-      status: CusProductStatus.Trialing,
-    },
-    {
-      product: pro,
-      quantity: 1,
-      entityId: "2",
-      status: CusProductStatus.Trialing,
-    },
-  ];
-
-  it("should transfer to entity and have correct sub", async function () {
+  it("should transfer to entity 1 and 2", async function () {
     await autumn.entities.create(customerId, entities);
+
+    await autumn.transfer(customerId, {
+      to_entity_id: "1",
+      product_id: pro.id,
+    });
 
     await autumn.transfer(customerId, {
       to_entity_id: "2",
       product_id: pro.id,
     });
-    await autumn.transfer(customerId, {
-      to_entity_id: "1",
-      product_id: premium.id,
-    });
+
+    const results = [
+      {
+        product_id: pro.id,
+        quantity: 4,
+        product: pro,
+        status: CusProductStatus.Active,
+      },
+      {
+        product_id: premium.id,
+        quantity: 3,
+        product: premium,
+        status: CusProductStatus.Active,
+      },
+      {
+        product_id: pro.id,
+        quantity: 1,
+        product: pro,
+        entityId: "1",
+        status: CusProductStatus.Active,
+      },
+      {
+        product_id: pro.id,
+        quantity: 1,
+        product: pro,
+        entityId: "2",
+        status: CusProductStatus.Active,
+      },
+    ];
 
     await expectResultsCorrect({
-      autumn,
       customerId,
       results,
     });
@@ -188,69 +200,81 @@ describe(`${chalk.yellowBright("multiAttach3: Testing multi attach for trial pro
     });
   });
 
-  it("should cancel one entity's sub at end of cycle and have correct schedule...", async function () {
-    await autumn.cancel({
+  it("should try to reduce quantity of pro to 0 and have no top level cus product...", async function () {
+    await autumn.attach({
       customer_id: customerId,
-      product_id: pro.id,
-      entity_id: "2",
+      products: [
+        {
+          product_id: pro.id,
+          quantity: 2,
+        },
+      ],
     });
 
-    await expectSubToBeCorrect({
-      db,
+    const results = [
+      {
+        product: pro,
+        quantity: 1,
+        entityId: "1",
+        status: CusProductStatus.Active,
+      },
+      {
+        product: pro,
+        quantity: 1,
+        entityId: "2",
+        status: CusProductStatus.Active,
+      },
+      {
+        product: pro,
+        quantity: 2,
+        status: CusProductStatus.Active,
+      },
+    ];
+
+    await expectResultsCorrect({
       customerId,
-      org,
-      env,
+      results,
     });
+
+    const fullCus = await CusService.getFull({
+      db,
+      orgId: org.id,
+      env,
+      idOrInternalId: customerId,
+    });
+
+    const proProduct = fullCus.customer_products.find(
+      (p: FullCusProduct) =>
+        p.product_id === pro.id && nullish(p.internal_entity_id)
+    );
+    expect(proProduct).to.be.undefined;
   });
 
-  it("should cancel one entity's sub immediately", async function () {
-    await autumn.cancel({
+  it("should increase pro product quantity and have correct amount", async function () {
+    await autumn.attach({
       customer_id: customerId,
-      product_id: premium.id,
-      entity_id: "1",
-      cancel_immediately: true,
-      // @ts-ignore
-      prorate: false,
-    });
-
-    await expectSubToBeCorrect({
-      db,
-      customerId,
-      org,
-      env,
+      products: [
+        {
+          product_id: pro.id,
+          quantity: 4,
+        },
+      ],
     });
   });
 
-  it("should advance test clock to end of trial and have correct sub", async function () {
-    await advanceTestClock({
-      stripeCli,
-      testClockId,
-      advanceTo: addDays(new Date(), 8).getTime(),
-      waitForSeconds: 30,
-    });
-
-    await expectSubToBeCorrect({
+  after(async function () {
+    await OrgService.update({
       db,
-      customerId,
-      org,
-      env,
+      orgId: org.id,
+      updates: {
+        config: {
+          ...org.config,
+          entity_product: false,
+        },
+      },
     });
-
-    const customer = await autumn.customers.get(customerId);
-    const latestInvoice = customer.invoices[0];
-
-    // Should only have paid for 4 pro and 2 premium...
-    const invoiceTotal =
-      getBasePrice({ product: pro }) * 4 +
-      getBasePrice({ product: premium }) * 2;
-
-    expect(invoiceTotal).to.equal(latestInvoice.total);
-
-    await expectSubToBeCorrect({
-      db,
-      customerId,
-      org,
-      env,
-    });
+    await CacheManager.disconnect();
   });
+
+  return;
 });

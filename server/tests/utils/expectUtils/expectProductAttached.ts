@@ -11,6 +11,7 @@ export const expectProductAttached = ({
   status,
   entityId,
   isCanceled = false,
+  quantity,
 }: {
   customer: Customer;
   product?: ProductV2;
@@ -18,6 +19,7 @@ export const expectProductAttached = ({
   status?: CusProductStatus;
   entityId?: string;
   isCanceled?: boolean;
+  quantity?: number;
 }) => {
   const cusProducts = customer.products;
   const finalProductId = productId || product?.id;
@@ -43,6 +45,11 @@ export const expectProductAttached = ({
       productAttached?.status,
       `product ${finalProductId} is not expired`
     ).to.not.equal(CusProductStatus.Expired);
+  }
+
+  if (quantity) {
+    // @ts-ignore
+    expect(productAttached?.quantity).to.equal(quantity);
   }
 
   if (entityId) {

@@ -14,19 +14,12 @@ import {
 } from "@autumn/shared";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import {
-  addPrefixToProducts,
-  getBasePrice,
-} from "tests/utils/testProductUtils/testProductUtils.js";
+import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
 import {
   expectMultiAttachCorrect,
   expectResultsCorrect,
 } from "tests/utils/expectUtils/expectMultiAttach.js";
 import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { addDays } from "date-fns";
-import { expect } from "chai";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
 let premium = constructProduct({
   id: "premium",
@@ -50,7 +43,10 @@ let pro = constructProduct({
 const testCase = "multiUpgrade2";
 describe(`${chalk.yellowBright("multiUpgrade2: Testing multi attach and update quantities downward")}`, () => {
   let customerId = testCase;
-  let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+  let autumn: AutumnInt = new AutumnInt({
+    version: APIVersion.v1_4,
+    orgConfig: { entity_product: true },
+  });
 
   let stripeCli: Stripe;
   let testClockId: string;
@@ -111,6 +107,7 @@ describe(`${chalk.yellowBright("multiUpgrade2: Testing multi attach and update q
     ];
 
     await expectMultiAttachCorrect({
+      autumn,
       customerId,
       products: productsList,
       results: productsList,
@@ -131,7 +128,7 @@ describe(`${chalk.yellowBright("multiUpgrade2: Testing multi attach and update q
   const results = [
     {
       product: pro,
-      quantity: 4,
+      quantity: 5,
       status: CusProductStatus.Active,
     },
     {
@@ -156,6 +153,7 @@ describe(`${chalk.yellowBright("multiUpgrade2: Testing multi attach and update q
     });
 
     await expectResultsCorrect({
+      autumn,
       customerId,
       results,
     });
@@ -172,23 +170,23 @@ describe(`${chalk.yellowBright("multiUpgrade2: Testing multi attach and update q
     const productsList = [
       {
         product_id: pro.id,
-        quantity: 3,
+        quantity: 6,
       },
       {
         product_id: premium.id,
-        quantity: 2,
+        quantity: 1,
       },
     ];
 
     const results = [
       {
         product: pro,
-        quantity: 3,
+        quantity: 6,
         status: CusProductStatus.Active,
       },
       {
         product: premium,
-        quantity: 2,
+        quantity: 1,
         status: CusProductStatus.Active,
       },
       {
@@ -200,6 +198,7 @@ describe(`${chalk.yellowBright("multiUpgrade2: Testing multi attach and update q
     ];
 
     await expectMultiAttachCorrect({
+      autumn,
       customerId,
       products: productsList,
       results,

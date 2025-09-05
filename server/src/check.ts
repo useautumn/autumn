@@ -32,14 +32,17 @@ import { getRelatedCusPrice } from "./internal/customers/cusProducts/cusEnts/cus
 import { checkCusSubCorrect } from "./utils/checkUtils/checkCustomerCorrect.js";
 import { EntityService } from "./internal/api/entities/EntityService.js";
 
-const { db, client } = initDrizzle({ maxConnections: 5 });
+const { db } = initDrizzle({ maxConnections: 5 });
 
 let orgSlugs = process.env.ORG_SLUGS!.split(",");
 const skipEmails = process.env.SKIP_EMAILS!.split(",");
-const skipIds = ["cus_2tXCCwC6iyiftgA6ndSo1Ubb2dx"];
+const skipIds = [
+  "cus_2tXCCwC6iyiftgA6ndSo1Ubb2dx",
+  "DxG668K7uDd0Vahk54YWjvCGVgf2",
+];
 
-orgSlugs = ["lumenary"];
-const customerId = "305fb694-6cdc-4148-bb9b-c73770629f75";
+orgSlugs = ["supermemory"];
+const customerId = "co1VPgUU59q43d5P2rFt4c";
 
 const getSingleCustomer = async ({
   stripeCli,

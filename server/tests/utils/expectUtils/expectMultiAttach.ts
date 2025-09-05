@@ -33,6 +33,7 @@ import { Decimal } from "decimal.js";
 import { completeInvoiceCheckout } from "../stripeUtils/completeInvoiceCheckout.js";
 
 export const expectMultiAttachCorrect = async ({
+  autumn,
   customerId,
   entityId,
   products,
@@ -44,6 +45,7 @@ export const expectMultiAttachCorrect = async ({
   org,
   env,
 }: {
+  autumn?: AutumnInt;
   customerId: string;
   entityId?: string;
   products: ProductOptions[];
@@ -51,6 +53,7 @@ export const expectMultiAttachCorrect = async ({
     product: ProductV2;
     quantity: number;
     status: CusProductStatus;
+    entityId?: string;
   }[];
   rewards?: string[];
   expectedRewards?: string[];
@@ -59,7 +62,7 @@ export const expectMultiAttachCorrect = async ({
   org: Organization;
   env: AppEnv;
 }) => {
-  const autumn = new AutumnInt({ version: APIVersion.v1_2 });
+  autumn = autumn || new AutumnInt({ version: APIVersion.v1_2 });
   const checkoutRes = await autumn.checkout({
     customer_id: customerId,
     products: products,
@@ -91,12 +94,17 @@ export const expectMultiAttachCorrect = async ({
 
   for (const result of results) {
     let customer;
-    customer = await autumn.customers.get(customerId);
+    if (result.entityId) {
+      customer = await autumn.entities.get(customerId, result.entityId);
+    } else {
+      customer = await autumn.customers.get(customerId);
+    }
 
     expectProductAttached({
       customer,
       product: result.product,
       status: result.status,
+      entityId: result.entityId,
     });
   }
 
@@ -118,21 +126,33 @@ export const expectMultiAttachCorrect = async ({
 };
 
 export const expectResultsCorrect = async ({
+  autumn,
   customerId,
   results,
 }: {
+  autumn?: AutumnInt;
   customerId: string;
-  results: { product: ProductV2; quantity: number; status: CusProductStatus }[];
+  results: {
+    product: ProductV2;
+    quantity: number;
+    status: CusProductStatus;
+    entityId?: string;
+  }[];
 }) => {
-  const autumn = new AutumnInt({ version: APIVersion.v1_2 });
+  autumn = autumn || new AutumnInt({ version: APIVersion.v1_2 });
   for (const result of results) {
     let customer;
-    customer = await autumn.customers.get(customerId);
+    if (result.entityId) {
+      customer = await autumn.entities.get(customerId, result.entityId);
+    } else {
+      customer = await autumn.customers.get(customerId);
+    }
 
     expectProductAttached({
       customer,
       product: result.product,
       status: result.status,
+      quantity: result.quantity,
     });
   }
 };

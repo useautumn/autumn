@@ -1,12 +1,23 @@
 import { decryptData, generatePublishableKey } from "@/utils/encryptUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { AppEnv, ErrCode, FrontendOrg, Organization } from "@autumn/shared";
+import {
+  AppEnv,
+  ErrCode,
+  FrontendOrg,
+  Organization,
+  organizations,
+  OrgConfig,
+} from "@autumn/shared";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { OrgService } from "./OrgService.js";
 import { FeatureService } from "../features/FeatureService.js";
 import { notNullish } from "@/utils/genUtils.js";
 import Stripe from "stripe";
 import { toSuccessUrl } from "./orgUtils/convertOrgUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { CacheManager } from "@/external/caching/CacheManager.js";
+import { eq } from "drizzle-orm";
+import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
 
 export const shouldReconnectStripe = async ({
   org,
@@ -166,4 +177,35 @@ export const getOrgAndFeatures = async ({ req }: { req: any }) => {
   ]);
 
   return { org, features };
+};
+
+export const updateOrgConfig = async ({
+  db,
+  org,
+  config,
+  disconnectCache = true,
+}: {
+  db: DrizzleCli;
+  org: Organization;
+  config: Partial<OrgConfig>;
+  disconnectCache?: boolean;
+}) => {
+  await db
+    .update(organizations)
+    .set({
+      config: {
+        ...org.config,
+        ...config,
+      },
+    })
+    .where(eq(organizations.id, org.id));
+
+  await clearOrgCache({
+    db,
+    orgId: org.id,
+  });
+
+  if (disconnectCache) {
+    await CacheManager.disconnect();
+  }
 };

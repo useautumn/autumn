@@ -21,6 +21,7 @@ export const OrgConfigSchema = z.object({
   allow_paid_default: z.boolean().default(false),
   cache_customer: z.boolean().default(false),
   invoice_memos: z.boolean().default(false),
+  entity_product: z.boolean().default(false),
 });
 
 export type OrgConfig = z.infer<typeof OrgConfigSchema>;
