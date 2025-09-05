@@ -23,25 +23,31 @@ export const InvitePopover = () => {
   const handleInvite = async () => {
     try {
       setLoading(true);
-      const { data, status } = await axiosInstance.post(
-        "/organization/invite",
-        {
-          email: email,
-          role: "admin",
-        }
-      );
+      await authClient.organization.inviteMember({
+        email: email,
+        role: "admin",
+        resend: true,
+      });
+      toast.success(`Successfully sent invitation to ${email}`);
+      // const { data, status } = await axiosInstance.post(
+      //   "/organization/invite",
+      //   {
+      //     email: email,
+      //     role: "admin",
+      //   }
+      // );
 
-      if (status === 202) {
-        await authClient.organization.inviteMember({
-          email: email,
-          role: "admin",
-          resend: true,
-        });
-        toast.success(`Successfully sent invitation to ${email}`);
-      } else {
-        toast.success(data.message);
-      }
-      await mutate();
+      // if (status === 202) {
+      //   await authClient.organization.inviteMember({
+      //     email: email,
+      //     role: "admin",
+      //     resend: true,
+      //   });
+      //   toast.success(`Successfully sent invitation to ${email}`);
+      // } else {
+      //   toast.success(data.message);
+      // }
+      // await mutate();
       setOpen(false);
     } catch (error) {
       console.error(error);
