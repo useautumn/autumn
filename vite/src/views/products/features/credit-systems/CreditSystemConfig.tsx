@@ -127,7 +127,7 @@ function CreditSystemConfig({
         <div className="flex flex-col w-full">
           <div className="flex w-full gap-2">
             <FieldLabel className="w-full">Metered Feature</FieldLabel>
-            <FieldLabel className="w-full">Credit Amount</FieldLabel>
+            <FieldLabel className="w-full">Credit Cost</FieldLabel>
           </div>
 
           <div className="flex flex-col w-full gap-2 overflow-visible">
