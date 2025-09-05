@@ -465,20 +465,20 @@ export const copyProduct = async ({
     });
   }
 
-  await initProductInStripe({
-    db,
-    org,
-    env: toEnv,
-    logger,
-    product: {
-      ...newProduct,
-      prices: newPrices,
-      entitlements: getEntsWithFeature({
-        ents: newEntitlements,
-        features: toFeatures,
-      }),
-    },
-  });
+  // await initProductInStripe({
+  //   db,
+  //   org,
+  //   env: toEnv,
+  //   logger,
+  //   product: {
+  //     ...newProduct,
+  //     prices: newPrices,
+  //     entitlements: getEntsWithFeature({
+  //       ents: newEntitlements,
+  //       features: toFeatures,
+  //     }),
+  //   },
+  // });
 };
 
 export const isOneOff = (prices: Price[]) => {

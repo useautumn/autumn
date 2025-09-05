@@ -210,6 +210,8 @@ export const runAttachFunction = async ({
       req,
       res,
       attachParams,
+      attachBody,
+      branch,
       config,
     });
   }
@@ -220,7 +222,9 @@ export const runAttachFunction = async ({
         req,
         res,
         attachParams,
+        attachBody,
         config,
+        branch,
       });
     }
     return await handleCreateCheckout({

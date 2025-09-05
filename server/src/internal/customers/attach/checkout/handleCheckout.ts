@@ -133,6 +133,8 @@ export const handleCheckout = (req: any, res: any) =>
           const result = await handleCreateInvoiceCheckout({
             req,
             attachParams,
+            attachBody,
+            branch,
             config,
           });
 
