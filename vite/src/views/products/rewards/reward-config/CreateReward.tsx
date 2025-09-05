@@ -18,10 +18,11 @@ import { useProductsContext } from "../../ProductsContext";
 import { RewardService } from "@/services/products/RewardService";
 import { RewardConfig } from "./RewardConfig";
 import { defaultReward } from "../utils/defaultRewardModels";
+import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 
 function CreateReward() {
-  const { mutate, env } = useProductsContext();
-  const axiosInstance = useAxiosInstance({ env: env });
+  const axiosInstance = useAxiosInstance();
+  const { refetch } = useRewardsQuery();
 
   const [isLoading, setIsLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -42,9 +43,10 @@ function CreateReward() {
         data: reward,
       });
 
-      await mutate();
+      await refetch();
       setOpen(false);
     } catch (error) {
+      console.log("Error:", error);
       toast.error(getBackendErr(error, "Failed to create coupon"));
     }
     setIsLoading(false);
