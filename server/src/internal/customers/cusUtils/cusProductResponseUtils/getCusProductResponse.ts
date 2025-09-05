@@ -172,7 +172,7 @@ export const getCusProductResponse = async ({
       name: fullProduct.name,
       group: fullProduct.group || null,
       status: trialing ? CusProductStatus.Trialing : cusProduct.status,
-      canceled_at: cusProduct.canceled_at,
+      canceled_at: cusProduct.canceled_at || null,
 
       // canceled: cusProduct.canceled || false,
       // trialing: trialing ? true : false,
