@@ -9,14 +9,11 @@ import { Outlet, useNavigate } from "react-router";
 
 import { usePostHog } from "posthog-js/react";
 import { Button } from "@/components/ui/button";
-import { ArrowUpRightFromSquare, PanelLeft, PanelRight } from "lucide-react";
+import { ArrowUpRightFromSquare } from "lucide-react";
 import { AutumnProvider } from "autumn-js/react";
 import { useSession } from "@/lib/auth-client";
 import { CustomToaster } from "@/components/general/CustomToaster";
-import {
-  SidebarContext,
-  useSidebarContext,
-} from "@/views/main-sidebar/SidebarContext";
+
 import { AppContext } from "./AppContext";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { useGlobalErrorHandler } from "@/hooks/common/useGlobalErrorHandler";
@@ -27,6 +24,7 @@ import { useCusSearchQuery } from "@/views/customers/hooks/useCusSearchQuery";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
+import { InviteNotifications } from "@/views/general/notifications/InviteNotifications";
 
 export function MainLayout() {
   const env = useEnv();
@@ -114,6 +112,7 @@ export function MainLayout() {
         <main className="w-screen h-screen flex bg-stone-100">
           <CustomToaster />
           <MainSidebar />
+          <InviteNotifications />
           <MainContent />
         </main>
       </NuqsAdapter>

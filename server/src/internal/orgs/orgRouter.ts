@@ -24,7 +24,7 @@ import {
 import { handleInvite } from "./handlers/handleInvite.js";
 import { handleGetUploadUrl } from "./handlers/handleGetUploadUrl.js";
 import { handleDeleteOrg } from "./handlers/handleDeleteOrg.js";
-import { ensureStripeProducts } from "@/external/stripe/stripeEnsureUtils.js";
+import { handleGetInvites } from "./handlers/handleGetInvites.js";
 import { handleConnectStripe } from "./handlers/handleConnectStripe.js";
 import { handleDeleteStripe } from "./handlers/handleDeleteStripe.js";
 
@@ -33,6 +33,7 @@ orgRouter.get("/members", handleGetOrgMembers);
 orgRouter.post("/remove-member", handleRemoveMember);
 orgRouter.get("/upload_url", handleGetUploadUrl);
 orgRouter.post("/invite", handleInvite as any);
+orgRouter.get("/invites", handleGetInvites as any);
 orgRouter.delete("", handleDeleteOrg as any);
 
 orgRouter.delete("/delete-user", async (req: any, res) => {
