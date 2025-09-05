@@ -31,7 +31,9 @@ const mergeCusProductResponses = ({
     record[key] = {
       ...(latest || curr),
       version: Math.max(latest?.version || 1, curr?.version || 1),
-      canceled_at: curr.canceled_at ? curr.canceled_at : latest?.canceled_at,
+      canceled_at: curr.canceled_at
+        ? curr.canceled_at
+        : latest?.canceled_at || null,
       started_at: latest?.started_at
         ? Math.min(latest?.started_at, currStartedAt)
         : currStartedAt,
