@@ -200,7 +200,7 @@ export const CustomersTable = ({
               {formatUnixToDateTime(customer.created_at).date}
               <span className="text-t3">
                 {" "}
-                {formatUnixToDateTime(customer.created_at).time}{" "}
+                {formatUnixToDateTime(customer.created_at,{ ampm: true, case: "lower" }).time}{" "}
               </span>
             </CustomTableCell>
             <CustomTableCell
