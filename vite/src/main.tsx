@@ -28,7 +28,7 @@ createRoot(document.getElementById("root")!).render(
           <App />
         </PostHogProvider>
       )}
-      <ReactQueryDevtools initialIsOpen={false} />
+      {/* <ReactQueryDevtools initialIsOpen={false} /> */}
     </QueryClientProvider>
   </StrictMode>
 );

@@ -13,7 +13,6 @@ import { ArrowUpRightFromSquare } from "lucide-react";
 import { AutumnProvider } from "autumn-js/react";
 import { useSession } from "@/lib/auth-client";
 import { CustomToaster } from "@/components/general/CustomToaster";
-
 import { AppContext } from "./AppContext";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { useGlobalErrorHandler } from "@/hooks/common/useGlobalErrorHandler";
@@ -25,6 +24,7 @@ import { useOrg } from "@/hooks/common/useOrg";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import { InviteNotifications } from "@/views/general/notifications/InviteNotifications";
+import { ChatWidget } from "@/components/general/ChatWidget";
 
 export function MainLayout() {
   const env = useEnv();
@@ -114,6 +114,7 @@ export function MainLayout() {
           <MainSidebar />
           <InviteNotifications />
           <MainContent />
+          <ChatWidget />
         </main>
       </NuqsAdapter>
     </AutumnProvider>
