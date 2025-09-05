@@ -21,6 +21,8 @@ import { handleGetOrgMembers, handleRemoveMember } from "./handlers/handleGetOrg
 import { handleInvite } from "./handlers/handleInvite.js";
 import { handleGetUploadUrl } from "./handlers/handleGetUploadUrl.js";
 import { handleDeleteOrg } from "./handlers/handleDeleteOrg.js";
+import { handleGetJoinRequests } from "./handlers/handleGetJoinRequests.js";
+import { handleRespondToJoinRequest } from "./handlers/handleRespondToJoinRequest.js";
 import { ensureStripeProducts } from "@/external/stripe/stripeEnsureUtils.js";
 
 export const orgRouter: Router = express.Router();
@@ -28,6 +30,8 @@ orgRouter.get("/members", handleGetOrgMembers);
 orgRouter.post("/remove-member", handleRemoveMember);
 orgRouter.get("/upload_url", handleGetUploadUrl);
 orgRouter.post("/invite", handleInvite as any);
+orgRouter.get("/join-requests", handleGetJoinRequests as any);
+orgRouter.post("/join-requests/respond", handleRespondToJoinRequest as any);
 orgRouter.delete("", handleDeleteOrg as any);
 
 orgRouter.delete("/delete-user", async (req: any, res) => {

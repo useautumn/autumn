@@ -85,6 +85,7 @@ export const withOrgAuth = async (req: any, res: any, next: NextFunction) => {
     const { org, features } = data;
 
     req.user = session?.user;
+    req.userId = userId;
     req.orgId = orgId;
     req.org = org;
     req.features = features;
