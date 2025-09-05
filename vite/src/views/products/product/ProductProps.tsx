@@ -1,10 +1,6 @@
 import { useProductContext } from "./ProductContext";
 import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+
 import React from "react";
 import {
   Dialog,
@@ -19,15 +15,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import CopyButton from "@/components/general/CopyButton";
-import { ProductService } from "@/services/products/ProductService";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { toast } from "sonner";
-import { ToggleButton } from "@/components/general/ToggleButton";
 import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
 import { ToggleDefaultProduct } from "./product-sidebar/ToggleDefaultProduct";
 import { getBackendErr } from "@/utils/genUtils";
 import { useProductCountsQuery } from "./hooks/queries/useProductCountsQuery";
 import { useProductQuery } from "./hooks/useProductQuery";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export const ProductProps = () => {
   const axiosInstance = useAxiosInstance();
@@ -171,35 +164,6 @@ export const ProductProps = () => {
               </div>
             </DialogContent>
           </Dialog>
-
-          <div className="flex items-center w-full justify-between h-4">
-            <p className="text-xs text-t3 font-medium text-center">Archived</p>
-            <div className="px-2">
-              <ToggleButton
-                value={product.archived}
-                setValue={async (value) => {
-                  try {
-                    await ProductService.updateProduct(
-                      axiosInstance,
-                      product.id,
-                      { archived: value },
-                      product.version
-                    );
-                    await refetch();
-                    toast.success(
-                      value
-                        ? "Product archived successfully"
-                        : "Product unarchived successfully"
-                    );
-                  } catch (error) {
-                    toast.error(
-                      getBackendErr(error, "Failed to archive product")
-                    );
-                  }
-                }}
-              />
-            </div>
-          </div>
         </div>
       </div>
     </>
