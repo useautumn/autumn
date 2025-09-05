@@ -20,6 +20,7 @@ import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useFeaturesContext } from "../features/FeaturesContext";
 import { X } from "lucide-react";
+import { toast } from "sonner";
 
 function CreditSystemConfig({
   creditSystem,
@@ -74,6 +75,10 @@ function CreditSystemConfig({
 
   const removeSchemaItem = (index: number) => {
     const newSchema = [...creditSystemConfig.schema];
+    if(newSchema.length == 1){
+      toast.error("At Least One Row Should Be There")
+      return
+    }
     newSchema.splice(index, 1);
     setCreditSystemConfig({ ...creditSystemConfig, schema: newSchema });
   };
