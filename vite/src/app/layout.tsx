@@ -13,6 +13,7 @@ import { ArrowUpRightFromSquare, PanelLeft, PanelRight } from "lucide-react";
 import { AutumnProvider } from "autumn-js/react";
 import { useSession } from "@/lib/auth-client";
 import { CustomToaster } from "@/components/general/CustomToaster";
+import { ChatWidget } from "@/components/general/ChatWidget";
 import {
   SidebarContext,
   useSidebarContext,
@@ -124,6 +125,7 @@ export function MainLayout() {
             <JoinRequestNotification />
             <MainSidebar />
             <MainContent />
+            <ChatWidget />
           </main>
         </NuqsAdapter>
       </SidebarContext.Provider>
