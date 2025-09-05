@@ -27,6 +27,7 @@ import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addDays } from "date-fns";
 import { expect } from "chai";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { updateOrgConfig } from "@/internal/orgs/orgUtils.js";
 
 let premium = constructProduct({
   id: "premium",
@@ -50,7 +51,10 @@ let pro = constructProduct({
 const testCase = "multiUpgrade1";
 describe(`${chalk.yellowBright("multiUpgrade1: Testing multi attach and upgrade")}`, () => {
   let customerId = testCase;
-  let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+  let autumn: AutumnInt = new AutumnInt({
+    version: APIVersion.v1_4,
+    orgConfig: { entity_product: true },
+  });
 
   let stripeCli: Stripe;
   let testClockId: string;
@@ -61,6 +65,7 @@ describe(`${chalk.yellowBright("multiUpgrade1: Testing multi attach and upgrade"
 
   before(async function () {
     await setupBefore(this);
+
     const { autumnJs } = this;
     db = this.db;
     org = this.org;
@@ -111,6 +116,7 @@ describe(`${chalk.yellowBright("multiUpgrade1: Testing multi attach and upgrade"
     ];
 
     await expectMultiAttachCorrect({
+      autumn,
       customerId,
       products: productsList,
       results: productsList,
@@ -131,7 +137,7 @@ describe(`${chalk.yellowBright("multiUpgrade1: Testing multi attach and upgrade"
   const results = [
     {
       product: pro,
-      quantity: 4,
+      quantity: 5,
       status: CusProductStatus.Active,
     },
     {
@@ -156,6 +162,7 @@ describe(`${chalk.yellowBright("multiUpgrade1: Testing multi attach and upgrade"
     });
 
     await expectResultsCorrect({
+      autumn,
       customerId,
       results,
     });
@@ -193,7 +200,27 @@ describe(`${chalk.yellowBright("multiUpgrade1: Testing multi attach and upgrade"
       env,
     });
 
+    const results = [
+      {
+        product: pro,
+        quantity: 4,
+        status: CusProductStatus.Active,
+      },
+      {
+        product: premium,
+        quantity: 4,
+        status: CusProductStatus.Active,
+      },
+      {
+        product: premium,
+        quantity: 1,
+        entityId: "1",
+        status: CusProductStatus.Active,
+      },
+    ];
+
     await expectResultsCorrect({
+      autumn,
       customerId,
       results,
     });

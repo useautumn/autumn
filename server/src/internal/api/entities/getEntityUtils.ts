@@ -22,6 +22,7 @@ import {
   type Organization,
   type Subscription,
   CusProductResponse,
+  notNullish,
 } from "@autumn/shared";
 
 export const getEntityResponse = async ({
@@ -85,9 +86,19 @@ export const getEntityResponse = async ({
   );
 
   let entityCusProducts = customer.customer_products.filter(
-    (p: FullCusProduct) =>
-      entities.some((e: Entity) => e.internal_id == p.internal_entity_id) ||
-      nullish(p.internal_entity_id)
+    (p: FullCusProduct) => {
+      if (org.config.entity_product) {
+        return entities.some(
+          (e: Entity) =>
+            e.internal_id == p.internal_entity_id &&
+            notNullish(p.internal_entity_id)
+        );
+      }
+      return (
+        entities.some((e: Entity) => e.internal_id == p.internal_entity_id) ||
+        nullish(p.internal_entity_id)
+      );
+    }
   );
 
   let subs = customer.subscriptions || [];

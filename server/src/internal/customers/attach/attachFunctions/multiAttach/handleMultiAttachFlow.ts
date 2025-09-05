@@ -173,6 +173,8 @@ export const handleMultiAttachFlow = async ({
       (p) => p.id === productOptions.product_id
     )!;
 
+    if (productOptions.quantity === 0) continue;
+
     const anchorToUnix = curSub
       ? getLatestPeriodEnd({ sub: curSub! }) * 1000
       : undefined;

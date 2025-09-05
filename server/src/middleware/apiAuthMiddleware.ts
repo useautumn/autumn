@@ -92,6 +92,18 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
   req.authType = AuthType.SecretKey;
   req.userId = userId;
 
+  const orgConfig = await req.headers["org-config"];
+  if (orgConfig) {
+    console.log("Org config found!: ", orgConfig);
+    let newConfigFields = JSON.parse(orgConfig);
+    try {
+      req.org.config = {
+        ...org.config,
+        ...newConfigFields,
+      };
+    } catch (error) {}
+  }
+
   next();
 };
 
