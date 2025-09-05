@@ -1,11 +1,10 @@
 import { db } from "@/db/initDrizzle.js";
 import { auth } from "@/utils/auth.js";
 import { Session } from "better-auth";
-import { eq } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 import { invitation, user as userTable } from "@autumn/shared";
 import { slugify } from "@/utils/genUtils.js";
 import { Organization } from "better-auth/plugins/organization";
-import { and } from "drizzle-orm";
 
 export const createDefaultOrg = async ({
   session,
@@ -24,10 +23,15 @@ export const createDefaultOrg = async ({
         and(
           eq(invitation.email, user?.email || ""),
           eq(invitation.status, "pending"),
+          gt(invitation.expiresAt, new Date()),
         ),
       );
 
     if (invites.length > 0) {
+      console.log(
+        `Accepting invite for user ${session.userId} to org ${invites[0].organizationId}`,
+      );
+
       await auth.api.addMember({
         body: {
           userId: session.userId,
@@ -36,9 +40,14 @@ export const createDefaultOrg = async ({
         },
       });
 
-      await db.update(invitation).set({
-        status: "accepted",
-      });
+      await db
+        .update(invitation)
+        .set({ status: "accepted" })
+        .where(eq(invitation.id, invites[0].id));
+
+      console.log(
+        `Invite ${invites[0].id} accepted for user ${session.userId}`,
+      );
 
       return invites[0].organizationId as any;
     }
