@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-
+type TimeCase = "upper" | "lower";
 export const formatDateStr = (date: Date | string) => {
   return format(new Date(date), "dd MMM yyyy");
 };
@@ -22,10 +22,17 @@ export const formatUnixToDate = (
   }
 };
 
-export const formatUnixToDateTime = (unix: number | null | undefined) => {
+export const formatUnixToDateTime = (unix: number | null | undefined,
+  options?: { ampm?: boolean; case?: TimeCase }) => {
   if (!unix) return { date: "", time: "" };
   const date = format(new Date(unix), "d MMM");
-  const time = format(new Date(unix), "HH:mm");
+
+  const pattern = options?.ampm ? "HH:mm a" : "HH:mm";
+  let time = format(new Date(unix), pattern);
+
+  if (options?.case === "lower") time = time.toLowerCase();
+  if (options?.case === "upper") time = time.toUpperCase();
+
   return { date, time };
 };
 

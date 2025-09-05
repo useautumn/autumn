@@ -20,6 +20,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { toast } from "sonner";
 
 function CreditSystemConfig({
   creditSystem,
@@ -74,6 +75,10 @@ function CreditSystemConfig({
 
   const removeSchemaItem = (index: number) => {
     const newSchema = [...creditSystemConfig.schema];
+    if (newSchema.length == 1) {
+      toast.error("There must be at least one feature in the credit system");
+      return;
+    }
     newSchema.splice(index, 1);
     setCreditSystemConfig({ ...creditSystemConfig, schema: newSchema });
   };

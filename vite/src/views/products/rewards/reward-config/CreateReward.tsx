@@ -37,7 +37,7 @@ function CreateReward() {
 
   const handleCreate = async () => {
     if (!reward?.id && !reward?.name) {
-      toast.error("Reward ID and Name are required!");
+      toast.error("ID and name are required");
       return;
     }
     setIsLoading(true);
