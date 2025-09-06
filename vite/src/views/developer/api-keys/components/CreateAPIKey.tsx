@@ -62,7 +62,7 @@ const CreateAPIKey = () => {
           Secret Key
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-[520px]">
+      <DialogContent className="!max-w-lg min-w-md">
         <DialogHeader>
           <DialogTitle>Create Secret API Key</DialogTitle>
         </DialogHeader>
