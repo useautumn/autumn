@@ -30,8 +30,8 @@ orgRouter.get("/members", handleGetOrgMembers);
 orgRouter.post("/remove-member", handleRemoveMember);
 orgRouter.get("/upload_url", handleGetUploadUrl);
 orgRouter.post("/invite", handleInvite as any);
-orgRouter.get("/join-requests", handleGetJoinRequests as any);
-orgRouter.post("/join-requests/respond", handleRespondToJoinRequest as any);
+orgRouter.get("/invitations", handleGetJoinRequests as any);
+orgRouter.post("/invitations/respond", handleRespondToJoinRequest as any);
 orgRouter.delete("", handleDeleteOrg as any);
 
 orgRouter.delete("/delete-user", async (req: any, res) => {
