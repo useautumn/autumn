@@ -1,5 +1,5 @@
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
-import { orgJoinRequests, organizations, user } from "@autumn/shared";
+import { invitation, organizations, user } from "@autumn/shared";
 import { eq, and } from "drizzle-orm";
 
 export const handleGetJoinRequests = async (
@@ -7,29 +7,34 @@ export const handleGetJoinRequests = async (
   res: ExtendedResponse,
 ) => {
   try {
-    const { userId, db } = req;
+    const { db, user: sessionUser } = req;
+    const userEmail = sessionUser?.email;
+
+    if (!userEmail) {
+      return res.status(400).json({ message: "User email not found" });
+    }
 
     const joinRequests = await db
       .select({
-        id: orgJoinRequests.id,
-        organizationId: orgJoinRequests.organizationId,
+        id: invitation.id,
+        organizationId: invitation.organizationId,
         organizationName: organizations.name,
-        role: orgJoinRequests.role,
-        status: orgJoinRequests.status,
-        createdAt: orgJoinRequests.createdAt,
+        role: invitation.role,
+        status: invitation.status,
+        createdAt: invitation.expiresAt, // Using expiresAt as createdAt since invitation table doesn't have createdAt
         inviterName: user.name,
         inviterEmail: user.email,
       })
-      .from(orgJoinRequests)
-      .innerJoin(organizations, eq(orgJoinRequests.organizationId, organizations.id))
-      .innerJoin(user, eq(orgJoinRequests.inviterId, user.id))
+      .from(invitation)
+      .innerJoin(organizations, eq(invitation.organizationId, organizations.id))
+      .innerJoin(user, eq(invitation.inviterId, user.id))
       .where(
         and(
-          eq(orgJoinRequests.userId, userId),
-          eq(orgJoinRequests.status, "pending")
+          eq(invitation.email, userEmail),
+          eq(invitation.status, "pending")
         )
       )
-      .orderBy(orgJoinRequests.createdAt);
+      .orderBy(invitation.expiresAt);
 
     res.status(200).json(joinRequests);
   } catch (error) {
