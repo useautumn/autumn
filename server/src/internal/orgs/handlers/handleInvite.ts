@@ -5,7 +5,7 @@ import {
   handleRequestError,
 } from "@/utils/errorUtils.js";
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
-import { user, orgJoinRequests, member } from "@autumn/shared";
+import { user, invitation, member } from "@autumn/shared";
 import { eq, and } from "drizzle-orm";
 import { Request, Response } from "express";
 import { generateId } from "@/utils/genUtils.js";
@@ -37,35 +37,33 @@ export const handleInvite = async (
         });
       }
 
-      // Check if there's already a pending join request
-      const existingRequest = await db.query.orgJoinRequests.findFirst({
+      // Check if there's already a pending invitation
+      const existingInvitation = await db.query.invitation.findFirst({
         where: and(
-          eq(orgJoinRequests.organizationId, org.id),
-          eq(orgJoinRequests.userId, emailUser.id),
-          eq(orgJoinRequests.status, "pending")
+          eq(invitation.organizationId, org.id),
+          eq(invitation.email, email),
+          eq(invitation.status, "pending")
         ),
       });
 
-      if (existingRequest) {
+      if (existingInvitation) {
         return res.status(400).send({
           message: "User already has a pending invitation to this organization",
         });
       }
 
-      // Create a join request instead of auto-adding
-      const joinRequestId = generateId("join_req");
+      // Create an invitation for existing user
+      const invitationId = generateId("invite");
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7); // Expires in 7 days
       
-      await db.insert(orgJoinRequests).values({
-        id: joinRequestId,
+      await db.insert(invitation).values({
+        id: invitationId,
         organizationId: org.id,
-        userId: emailUser.id,
+        email: email,
         inviterId: userId,
         role: role,
         status: "pending",
-        createdAt: new Date(),
-        updatedAt: new Date(),
         expiresAt: expiresAt,
       });
 
