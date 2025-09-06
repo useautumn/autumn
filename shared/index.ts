@@ -11,7 +11,6 @@ export * from "./models/genModels/genEnums.js";
 
 // 1. Org Models
 export * from "./models/orgModels/orgTable.js";
-export * from "./models/orgModels/orgJoinRequestTable.js";
 export * from "./models/orgModels/orgConfig.js";
 export * from "./models/orgModels/frontendOrg.js";
 
