@@ -1,5 +1,5 @@
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
-import { orgJoinRequests } from "@autumn/shared";
+import { invitation } from "@autumn/shared";
 import { eq, and } from "drizzle-orm";
 import { auth } from "@/utils/auth.js";
 
@@ -9,46 +9,50 @@ export const handleRespondToJoinRequest = async (
 ) => {
   try {
     const { requestId, action } = req.body; // action: "accept" or "reject"
-    const { userId, db } = req;
+    const { userId, db, user: sessionUser } = req;
+    const userEmail = sessionUser?.email;
 
-    // Find the join request
-    const joinRequest = await db.query.orgJoinRequests.findFirst({
+    if (!userEmail) {
+      return res.status(400).json({ message: "User email not found" });
+    }
+
+    // Find the invitation
+    const invitationRecord = await db.query.invitation.findFirst({
       where: and(
-        eq(orgJoinRequests.id, requestId),
-        eq(orgJoinRequests.userId, userId),
-        eq(orgJoinRequests.status, "pending")
+        eq(invitation.id, requestId),
+        eq(invitation.email, userEmail),
+        eq(invitation.status, "pending")
       ),
     });
 
-    if (!joinRequest) {
-      return res.status(404).json({ message: "Join request not found" });
+    if (!invitationRecord) {
+      return res.status(404).json({ message: "Invitation not found" });
     }
 
     if (action === "accept") {
       // Add user to organization
       await auth.api.addMember({
         body: {
-          organizationId: joinRequest.organizationId,
-          userId: joinRequest.userId,
-          role: joinRequest.role,
+          organizationId: invitationRecord.organizationId,
+          userId: userId,
+          role: invitationRecord.role,
         },
       });
     }
 
-    // Update the join request status
+    // Update the invitation status
     await db
-      .update(orgJoinRequests)
+      .update(invitation)
       .set({
         status: action === "accept" ? "accepted" : "rejected",
-        updatedAt: new Date(),
       })
-      .where(eq(orgJoinRequests.id, requestId));
+      .where(eq(invitation.id, requestId));
 
     res.status(200).json({
-      message: `Join request ${action}ed successfully`,
+      message: `Invitation ${action}ed successfully`,
     });
   } catch (error) {
-    console.error("Error responding to join request:", error);
+    console.error("Error responding to invitation:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
