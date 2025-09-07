@@ -19,8 +19,33 @@ export const CustomerSchema = z.object({
 export const CreateCustomerSchema = z.object({
   id: z
     .string()
-    .regex(/^[a-zA-Z0-9_@-]+$/) // Allow alphanumeric characters, underscores, hyphens, and @
-    .nullish(), // id is not allowed whitespace characters
+    .refine(
+      (val) => {
+        if (!val) return true; // Allow null/undefined
+        return /^[a-zA-Z0-9_-]+$/.test(val);
+      },
+      (val) => {
+        if (!val) return { message: "ID is required" };
+        
+        // Check for specific invalid characters and provide targeted messages
+        if (val.includes("@")) {
+          return { message: "ID cannot contain @ symbol. Use only letters, numbers, underscores, and hyphens." };
+        }
+        if (val.includes(" ")) {
+          return { message: "ID cannot contain spaces. Use only letters, numbers, underscores, and hyphens." };
+        }
+        if (val.includes(".")) {
+          return { message: "ID cannot contain periods. Use only letters, numbers, underscores, and hyphens." };
+        }
+        if (/[^a-zA-Z0-9_-]/.test(val)) {
+          const invalidChar = val.match(/[^a-zA-Z0-9_-]/)?.[0];
+          return { message: `ID cannot contain '${invalidChar}'. Use only letters, numbers, underscores, and hyphens.` };
+        }
+        
+        return { message: "ID must contain only letters, numbers, underscores, and hyphens." };
+      }
+    )
+    .nullish(),
   name: z.string().nullish(),
   email: z
     .string()
