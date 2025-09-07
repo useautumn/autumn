@@ -28,21 +28,11 @@ export const getDowngradeProductPreview = async ({
   const { curCusProduct } = attachParamToCusProducts({ attachParams });
   const sub = await paramsToCurSub({ attachParams });
 
-  // const stripeSubs = await getStripeSubs({
-  //   stripeCli: attachParams.stripeCli,
-  //   subIds: curCusProduct?.subscription_ids || [],
-  // });
-
-  // const anchorToUnix = stripeSubs[0].current_period_end * 1000;
-  const anchorToUnix = sub ? getLatestPeriodEnd({ sub }) * 1000 : undefined;
-
   let items = await getItemsForNewProduct({
     newProduct,
     attachParams,
     now,
     logger,
-    branch,
-    config,
   });
 
   items = items.filter((item) => item.usage_model !== UsageModel.Prepaid);
@@ -57,9 +47,10 @@ export const getDowngradeProductPreview = async ({
     // anchorToUnix,
   });
 
+  const latestPeriodEnd = sub ? getLatestPeriodEnd({ sub }) * 1000 : undefined;
   let nextCycleAt = curCusProduct?.trial_ends_at
     ? curCusProduct.trial_ends_at
-    : anchorToUnix;
+    : latestPeriodEnd;
 
   return {
     currency: attachParams.org.default_currency,
@@ -67,7 +58,6 @@ export const getDowngradeProductPreview = async ({
       line_items: items,
       due_at: nextCycleAt,
     },
-
     options,
   };
 };

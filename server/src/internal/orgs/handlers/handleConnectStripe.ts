@@ -185,9 +185,12 @@ export const handleConnectStripe = async (req: any, res: any) =>
       }
 
       if (success_url) {
-        if (!success_url.startsWith("https://")) {
+        if (
+          !success_url.startsWith("http://") &&
+          !success_url.startsWith("https://")
+        ) {
           throw new RecaseError({
-            message: "Success URL should start with https://",
+            message: `Success URL should start with http:// or https://, instead got ${success_url}`,
             code: ErrCode.InvalidRequest,
             statusCode: 400,
           });

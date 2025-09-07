@@ -2,7 +2,8 @@ import {
   AttachScenario,
   BillingInterval,
   type Feature,
-  type FeatureOptions, type FreeTrialResponse,
+  type FeatureOptions,
+  type FreeTrialResponse,
   FreeTrialResponseSchema,
   type FullCustomer,
   type FullProduct,
@@ -11,7 +12,7 @@ import {
   ProductItemResponseSchema,
   ProductPropertiesSchema,
   ProductResponseSchema,
-  UsageModel
+  UsageModel,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { toAPIFeature } from "@/internal/features/utils/mapFeatureUtils.js";
@@ -28,190 +29,192 @@ import { getAttachScenario } from "./getAttachScenario.js";
 import { getProductItemDisplay } from "./getProductItemDisplay.js";
 
 export const getProductItemResponse = ({
-	item,
-	features,
-	currency,
-	withDisplay = true,
-	options,
-	isMainPrice = false,
+  item,
+  features,
+  currency,
+  withDisplay = true,
+  options,
+  isMainPrice = false,
 }: {
-	item: ProductItem;
-	features: Feature[];
-	currency?: string | null;
-	withDisplay?: boolean;
-	options?: FeatureOptions[];
-	isMainPrice?: boolean;
+  item: ProductItem;
+  features: Feature[];
+  currency?: string | null;
+  withDisplay?: boolean;
+  options?: FeatureOptions[];
+  isMainPrice?: boolean;
 }) => {
-	// 1. Get item type
-	const type = getItemType(item);
+  // 1. Get item type
+  const type = getItemType(item);
 
-	// 2. Get display
-	const display = getProductItemDisplay({
-		item,
-		features,
-		currency,
-		isMainPrice,
-	});
+  // 2. Get display
+  const display = getProductItemDisplay({
+    item,
+    features,
+    currency,
+    isMainPrice,
+  });
 
-	const priceData = itemToPriceOrTiers({ item });
+  const priceData = itemToPriceOrTiers({ item });
 
-	let quantity: number | undefined;
-	let upcomingQuantity: number | undefined;
+  let quantity: number | undefined;
+  let upcomingQuantity: number | undefined;
 
-	if (item.usage_model === UsageModel.Prepaid && notNullish(options)) {
-		const option = options!.find((o) => o.feature_id === item.feature_id);
-		quantity = option?.quantity
-			? option?.quantity * (item.billing_units ?? 1)
-			: undefined;
+  if (item.usage_model === UsageModel.Prepaid && notNullish(options)) {
+    const option = options!.find((o) => o.feature_id === item.feature_id);
+    quantity = option?.quantity
+      ? option?.quantity * (item.billing_units ?? 1)
+      : undefined;
 
-		upcomingQuantity = option?.upcoming_quantity
-			? option?.upcoming_quantity * (item.billing_units ?? 1)
-			: undefined;
-	}
+    upcomingQuantity = option?.upcoming_quantity
+      ? option?.upcoming_quantity * (item.billing_units ?? 1)
+      : undefined;
+  }
 
-	const feature = features.find((f) => f.id === item.feature_id);
-	return ProductItemResponseSchema.parse({
-		type,
-		...item,
-		feature: feature ? toAPIFeature({ feature }) : null,
-		display: withDisplay ? display : undefined,
-		...priceData,
-		quantity,
-		next_cycle_quantity: upcomingQuantity,
-	});
+  const feature = features.find((f) => f.id === item.feature_id);
+  return ProductItemResponseSchema.parse({
+    type,
+    ...item,
+    feature: feature ? toAPIFeature({ feature }) : null,
+    display: withDisplay ? display : undefined,
+    ...priceData,
+    quantity,
+    next_cycle_quantity: upcomingQuantity,
+  });
 };
 
 export const getFreeTrialResponse = async ({
-	db,
-	product,
-	fullCus,
-	attachScenario,
+  db,
+  product,
+  fullCus,
+  attachScenario,
 }: {
-	db?: DrizzleCli;
-	product: FullProduct;
-	fullCus?: FullCustomer;
-	attachScenario: AttachScenario;
+  db?: DrizzleCli;
+  product: FullProduct;
+  fullCus?: FullCustomer;
+  attachScenario: AttachScenario;
 }) => {
-	if (!db) return product.free_trial;
+  if (!db) return product.free_trial;
 
-	if (product.free_trial && fullCus) {
-		let trial = await getFreeTrialAfterFingerprint({
-			db,
-			freeTrial: product.free_trial,
-			fingerprint: fullCus.fingerprint,
-			internalCustomerId: fullCus.internal_id,
-			multipleAllowed: false,
-			productId: product.id,
-		});
+  if (product.free_trial && fullCus) {
+    let trial = await getFreeTrialAfterFingerprint({
+      db,
+      freeTrial: product.free_trial,
+      fingerprint: fullCus.fingerprint,
+      internalCustomerId: fullCus.internal_id,
+      multipleAllowed: false,
+      productId: product.id,
+    });
 
-		if (attachScenario === AttachScenario.Downgrade) trial = null;
-		return FreeTrialResponseSchema.parse({
-			duration: product.free_trial?.duration,
-			length: product.free_trial?.length,
-			unique_fingerprint: product.free_trial?.unique_fingerprint,
-			trial_available: notNullish(trial) ? true : false,
-		});
-	}
+    if (attachScenario === AttachScenario.Downgrade) trial = null;
+    return FreeTrialResponseSchema.parse({
+      duration: product.free_trial?.duration,
+      length: product.free_trial?.length,
+      unique_fingerprint: product.free_trial?.unique_fingerprint,
+      trial_available: notNullish(trial) ? true : false,
+      card_required: product.free_trial?.card_required,
+    });
+  }
 
-	if (product.free_trial) {
-		return FreeTrialResponseSchema.parse({
-			duration: product.free_trial?.duration,
-			length: product.free_trial?.length,
-			unique_fingerprint: product.free_trial?.unique_fingerprint,
-		});
-	}
+  if (product.free_trial) {
+    return FreeTrialResponseSchema.parse({
+      duration: product.free_trial?.duration,
+      length: product.free_trial?.length,
+      unique_fingerprint: product.free_trial?.unique_fingerprint,
+      card_required: product.free_trial?.card_required,
+    });
+  }
 
-	return null;
+  return null;
 };
 
 export const getProductProperties = ({
-	product,
-	freeTrial,
+  product,
+  freeTrial,
 }: {
-	product: FullProduct;
-	freeTrial?: FreeTrialResponse | null;
+  product: FullProduct;
+  freeTrial?: FreeTrialResponse | null;
 }) => {
-	const largestInterval = getLargestInterval({
-		prices: product.prices,
-		excludeOneOff: true,
-	});
+  const largestInterval = getLargestInterval({
+    prices: product.prices,
+    excludeOneOff: true,
+  });
 
-	const hasFreeTrial =
-		notNullish(freeTrial) && freeTrial?.trial_available !== false;
+  const hasFreeTrial =
+    notNullish(freeTrial) && freeTrial?.trial_available !== false;
 
-	return ProductPropertiesSchema.parse({
-		is_free: isFreeProduct(product.prices) || false,
-		is_one_off: isOneOff(product.prices) || false,
-		interval_group: largestInterval?.interval,
-		has_trial: hasFreeTrial,
-		updateable: product.prices.some(
-			(p: Price) =>
-				isPrepaidPrice({ price: p }) &&
-				p.config.interval !== BillingInterval.OneOff,
-		),
-	});
+  return ProductPropertiesSchema.parse({
+    is_free: isFreeProduct(product.prices) || false,
+    is_one_off: isOneOff(product.prices) || false,
+    interval_group: largestInterval?.interval,
+    has_trial: hasFreeTrial,
+    updateable: product.prices.some(
+      (p: Price) =>
+        isPrepaidPrice({ price: p }) &&
+        p.config.interval !== BillingInterval.OneOff
+    ),
+  });
 };
 
 export const getProductResponse = async ({
-	product,
-	features,
-	fullCus,
-	currency,
-	db,
-	withDisplay = true,
-	options,
+  product,
+  features,
+  fullCus,
+  currency,
+  db,
+  withDisplay = true,
+  options,
 }: {
-	product: FullProduct;
-	features: Feature[];
-	fullCus?: FullCustomer;
-	currency?: string | null;
-	db?: DrizzleCli;
-	withDisplay?: boolean;
-	options?: FeatureOptions[];
+  product: FullProduct;
+  features: Feature[];
+  fullCus?: FullCustomer;
+  currency?: string | null;
+  db?: DrizzleCli;
+  withDisplay?: boolean;
+  options?: FeatureOptions[];
 }) => {
-	// 1. Get items with display
-	const rawItems = mapToProductItems({
-		prices: product.prices,
-		entitlements: product.entitlements,
-		features: features,
-	});
+  // 1. Get items with display
+  const rawItems = mapToProductItems({
+    prices: product.prices,
+    entitlements: product.entitlements,
+    features: features,
+  });
 
-	// Sort raw items first
-	const sortedItems = sortProductItems(rawItems, features);
+  // Sort raw items first
+  const sortedItems = sortProductItems(rawItems, features);
 
-	// Transform sorted items
-	const items = sortedItems.map((item, index) => {
-		return getProductItemResponse({
-			item,
-			features,
-			currency,
-			withDisplay,
-			options,
-			isMainPrice: index === 0,
-		});
-	});
+  // Transform sorted items
+  const items = sortedItems.map((item, index) => {
+    return getProductItemResponse({
+      item,
+      features,
+      currency,
+      withDisplay,
+      options,
+      isMainPrice: index === 0,
+    });
+  });
 
-	// 2. Get product properties
-	const attachScenario = getAttachScenario({
-		fullCus,
-		fullProduct: product,
-	});
+  // 2. Get product properties
+  const attachScenario = getAttachScenario({
+    fullCus,
+    fullProduct: product,
+  });
 
-	const freeTrial = (await getFreeTrialResponse({
-		db: db as DrizzleCli,
-		product,
-		fullCus,
-		attachScenario,
-	})) as FreeTrialResponse;
+  const freeTrial = (await getFreeTrialResponse({
+    db: db as DrizzleCli,
+    product,
+    fullCus,
+    attachScenario,
+  })) as FreeTrialResponse;
 
-	return ProductResponseSchema.parse({
-		...product,
-		name: product.name || null,
-		group: product.group || null,
-		items: items,
-		free_trial: freeTrial || null,
-		scenario: attachScenario,
-		properties: getProductProperties({ product, freeTrial }),
-		archived: product.archived ? true : undefined,
-	});
+  return ProductResponseSchema.parse({
+    ...product,
+    name: product.name || null,
+    group: product.group || null,
+    items: items,
+    free_trial: freeTrial || null,
+    scenario: attachScenario,
+    properties: getProductProperties({ product, freeTrial }),
+    archived: product.archived ? true : undefined,
+  });
 };

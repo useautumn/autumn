@@ -2,6 +2,8 @@ import {
   ErrCode,
   Feature,
   FullProduct,
+  OnDecrease,
+  OnIncrease,
   ProductItem,
   ProductV2,
 } from "@autumn/shared";
@@ -30,7 +32,7 @@ const sanitizeItems = ({
 }) => {
   return items.map((item) => {
     let priceData = itemToPriceOrTiers({ item });
-    return {
+    const newItem = {
       ...item,
       reset_usage_when_enabled: getResetUsage({
         item,
@@ -38,6 +40,15 @@ const sanitizeItems = ({
       }),
       ...priceData,
     };
+
+    if (!newItem.config) {
+      newItem.config = {
+        on_increase: OnIncrease.ProrateImmediately,
+        on_decrease: OnDecrease.ProrateImmediately,
+      };
+    }
+
+    return newItem;
   });
 };
 export const productsAreSame = ({
@@ -108,14 +119,6 @@ export const productsAreSame = ({
     return false;
   });
 
-  // items2 =
-  //   curProductV2?.items ||
-  //   mapToProductItems({
-  //     prices: curProductV1?.prices || [],
-  //     entitlements: curProductV1?.entitlements || [],
-  //     features,
-  //   });
-
   if (items1.length !== items2.length) {
     itemsSame = false;
   }
@@ -177,6 +180,13 @@ export const productsAreSame = ({
     ft1: freeTrial1,
     ft2: freeTrial2,
   });
+
+  if (!freeTrialsSame) {
+    console.log("Free trials different");
+    console.log("Free trial 1:", freeTrial1);
+    console.log("Free trial 2:", freeTrial2);
+    console.log("--------------------------------");
+  }
 
   // Compare name
   return {

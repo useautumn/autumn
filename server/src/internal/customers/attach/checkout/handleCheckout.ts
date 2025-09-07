@@ -23,6 +23,7 @@ import { getPriceOptions } from "@/internal/products/prices/priceUtils.js";
 import { getHasProrations } from "./getHasProrations.js";
 import { handleCreateInvoiceCheckout } from "../../add-product/handleCreateInvoiceCheckout.js";
 import { z } from "zod";
+import { formatUnixToDate } from "@/utils/genUtils.js";
 
 const getAttachVars = async ({
   req,
@@ -180,6 +181,12 @@ export const handleCheckout = (req: any, res: any) =>
         branch,
         attachParams,
       });
+
+      if (checkoutRes.next_cycle) {
+        const nextCycle = checkoutRes.next_cycle;
+        console.log("Due at:", formatUnixToDate(nextCycle.starts_at!));
+        console.log("Total:", nextCycle.total);
+      }
 
       res.status(200).json({
         ...checkoutRes,

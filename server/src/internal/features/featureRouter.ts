@@ -17,6 +17,7 @@ import { handleUpdateFeature } from "./handlers/handleUpdateFeature.js";
 import { handleDeleteFeature } from "./handlers/handleDeleteFeature.js";
 import { keyToTitle } from "@/utils/genUtils.js";
 import { validateFeatureId } from "./featureUtils.js";
+import { handleGetFeatureDeletionInfo } from "./handlers/handleGetFeatureDeletionInfo.js";
 
 export const featureRouter: Router = express.Router();
 
@@ -133,6 +134,7 @@ featureRouter.post("/:feature_id", async (req: any, res: any) =>
         name: req.body.name || undefined,
         type: featureType,
         config: newConfig,
+        archived: req.body.archived || undefined,
       };
 
       req.body = newBody;
@@ -152,3 +154,5 @@ featureRouter.post("/:feature_id", async (req: any, res: any) =>
 );
 
 featureRouter.delete("/:featureId", handleDeleteFeature);
+
+featureRouter.get("/:feature_id/deletion_info", handleGetFeatureDeletionInfo);
