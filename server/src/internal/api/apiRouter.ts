@@ -29,6 +29,7 @@ import { handleDeleteStripe } from "../orgs/handlers/handleDeleteStripe.js";
 import { refreshCacheMiddleware } from "@/middleware/refreshCacheMiddleware.js";
 import { platformRouter } from "../platform/platformRouter.js";
 import { batchRouter } from "./batch/batchRouter.js";
+import { handleGetOrg } from "../orgs/handlers/handleGetOrg.js";
 
 const apiRouter: Router = Router();
 
@@ -71,5 +72,6 @@ apiRouter.use("/platform", platformRouter);
 // Used for tests...
 apiRouter.post("/organization/stripe", handleConnectStripe);
 apiRouter.delete("/organization/stripe", handleDeleteStripe);
+apiRouter.get("/organization", handleGetOrg);
 
 export { apiRouter };

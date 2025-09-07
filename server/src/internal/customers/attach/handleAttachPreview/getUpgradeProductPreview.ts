@@ -24,21 +24,18 @@ import {
   OnDecrease,
   OnIncrease,
 } from "@autumn/shared";
-import {
-  addIntervalForProration,
-  getAlignedIntervalUnix,
-} from "@/internal/products/prices/billingIntervalUtils.js";
+
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { Decimal } from "decimal.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
-import { nullish } from "@/utils/genUtils.js";
-import {
-  getLatestPeriodEnd,
-  subToPeriodStartEnd,
-} from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import { formatUnixToDate, nullish } from "@/utils/genUtils.js";
 import { isTrialing } from "@autumn/shared";
 import { cusProductToPrices } from "@autumn/shared";
 import { isPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import {
+  addIntervalToAnchor,
+  getAlignedUnix,
+} from "@/internal/products/prices/billingIntervalUtils2.js";
 
 const getNextCycleAt = ({
   prices,
@@ -74,16 +71,12 @@ const getNextCycleAt = ({
     );
   }
 
-  const firstInterval = getLargestInterval({ prices });
+  const largestInterval = getLargestInterval({ prices });
+  if (nullish(largestInterval) || !sub.billing_cycle_anchor) return now;
 
-  if (nullish(firstInterval)) {
-    return now;
-  }
-  const nextCycleAt = getAlignedIntervalUnix({
-    alignWithUnix: getLatestPeriodEnd({ sub }) * 1000,
-    interval: firstInterval!.interval,
-    intervalCount: firstInterval!.intervalCount,
-    alwaysReturn: true,
+  const nextCycleAt = getAlignedUnix({
+    anchor: sub.billing_cycle_anchor * 1000,
+    intervalConfig: largestInterval!,
     now,
   });
 
@@ -177,30 +170,10 @@ export const getUpgradeProductPreview = async ({
 
   // Get prorated amounts for new product
   const newProduct = attachParamsToProduct({ attachParams });
-  // const anchorToUnix = sub ? getLatestPeriodEnd({ sub }) * 1000 : undefined;
-  let anchorToUnix = undefined;
-  try {
-    if (sub) {
-      const { start, end } = subToPeriodStartEnd({ sub });
-      const largestInterval = getLargestInterval({ prices: newProduct.prices });
-      if (largestInterval) {
-        anchorToUnix = addIntervalForProration({
-          unixTimestamp: start * 1000,
-          intervalConfig: largestInterval,
-        });
-      }
-    }
-  } catch (error: any) {
-    logger.error(
-      `Error getting anchorToUnix for upgrade preview: ${error.message}`,
-      {
-        error,
-      }
-    );
-  }
 
   if (config?.disableTrial) attachParams.freeTrial = null;
   let freeTrial = attachParams.freeTrial;
+  let anchor = sub ? sub.billing_cycle_anchor * 1000 : undefined;
 
   if (
     config?.carryTrial &&
@@ -210,19 +183,15 @@ export const getUpgradeProductPreview = async ({
     freeTrial = curCusProduct.free_trial;
   }
 
-  // console.log("Disable tiral:", config?.disableTrial);
-  // console.log("Free trial:", freeTrial);
   const newPreviewItems = await getItemsForNewProduct({
     newProduct,
     attachParams,
     now,
-    anchorToUnix,
     freeTrial,
     sub: sub!,
     logger,
     withPrepaid,
-    branch,
-    config,
+    anchor,
   });
 
   let dueNextCycle = undefined;
@@ -239,11 +208,8 @@ export const getUpgradeProductPreview = async ({
     let nextCycleItems = await getItemsForNewProduct({
       newProduct,
       attachParams,
-      // sub: sub!,
       logger,
       withPrepaid,
-      branch,
-      config,
     });
 
     dueNextCycle = {
@@ -282,7 +248,7 @@ export const getUpgradeProductPreview = async ({
       features: attachParams.features,
     }),
     features: attachParams.features,
-    anchorToUnix,
+    anchor,
     now,
     freeTrial: attachParams.freeTrial,
     cusProduct: curCusProduct,

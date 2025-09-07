@@ -25,6 +25,7 @@ import {
   EntitlementWithFeature,
   EntInterval,
   FeatureUsageType,
+  notNullish,
 } from "@autumn/shared";
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 
@@ -269,6 +270,8 @@ export const handleUpdateFeature = async (req: any, res: any) =>
         });
       }
 
+      console.log("Data archived: ", data.archived);
+
       // If only archiving, skip other checks and just update
       if (data.archived !== undefined && Object.keys(data).length === 1) {
         let updatedFeature = await FeatureService.update({
@@ -288,8 +291,10 @@ export const handleUpdateFeature = async (req: any, res: any) =>
       }
 
       // 1. Check if changing type...
-      let isChangingType = feature.type !== data.type;
-      let isChangingId = feature.id !== data.id;
+      let isChangingType = notNullish(data.type) && feature.type !== data.type;
+
+      let isChangingId = notNullish(data.id) && feature.id !== data.id;
+
       let isChangingUsageType =
         feature.type != FeatureType.Boolean &&
         data.type != FeatureType.Boolean &&

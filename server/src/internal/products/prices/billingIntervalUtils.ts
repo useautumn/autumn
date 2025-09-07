@@ -1,4 +1,4 @@
-import { BillingInterval } from "@autumn/shared";
+import { BillingInterval, IntervalConfig } from "@autumn/shared";
 import {
   addMinutes,
   addMonths,
@@ -100,10 +100,12 @@ export const getNextStartOfMonthUnix = ({
   interval: BillingInterval;
   intervalCount: number;
 }) => {
-  const nextBillingCycle = addBillingIntervalUnix({
+  const nextBillingCycle = addIntervalForProration({
     unixTimestamp: Date.now(),
-    interval,
-    intervalCount,
+    intervalConfig: {
+      interval,
+      intervalCount,
+    },
   });
 
   // Subtract till it hits first
@@ -340,13 +342,11 @@ export const addIntervalForProration = ({
   intervalConfig,
 }: {
   unixTimestamp: number;
-  intervalConfig: {
-    interval: BillingInterval;
-    intervalCount: number;
-  };
+  intervalConfig: IntervalConfig;
 }) => {
   if (!intervalConfig) return unixTimestamp;
-  const { interval, intervalCount } = intervalConfig;
+  let { interval, intervalCount } = intervalConfig;
+  intervalCount = intervalCount ?? 1;
   const startDate = new UTCDate(unixTimestamp);
 
   const isEndOfMonth = () => {

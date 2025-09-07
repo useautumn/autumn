@@ -8,6 +8,7 @@ import { AdminHover } from "@/components/general/AdminHover";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import UpdateCreditSystem from "./UpdateCreditSystem";
 import { FeatureRowToolbar } from "../feature-row-toolbar/FeatureRowToolbar";
+import { useProductsQueryState } from "../../hooks/useProductsQueryState";
 
 export const CreditSystemsTable = () => {
   const { features } = useFeaturesQuery();
@@ -15,9 +16,16 @@ export const CreditSystemsTable = () => {
     useState<CreateFeature | null>(null);
   const [open, setOpen] = useState(false);
 
-  const creditSystems = features.filter(
-    (feature) => feature.type === FeatureType.CreditSystem
-  );
+  const { queryStates } = useProductsQueryState();
+
+  const creditSystems = features.filter((feature) => {
+    if (queryStates.showArchivedFeatures)
+      return feature.type === FeatureType.CreditSystem && feature.archived;
+
+    return feature.type === FeatureType.CreditSystem && !feature.archived;
+  });
+
+  console.log("Credit Systems", creditSystems);
 
   const handleRowClick = (id: string) => {
     const creditSystem = creditSystems.find(

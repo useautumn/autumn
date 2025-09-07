@@ -15,15 +15,13 @@ import {
   getAmountAfterReward,
   getAmountAfterStripeDiscounts,
 } from "@/internal/rewards/rewardUtils.js";
-import { formatUnixToDate, formatUnixToDateTime } from "@/utils/genUtils.js";
+import { formatUnixToDate } from "@/utils/genUtils.js";
 
 import {
-  calculateProrationAmount,
   EntitlementWithFeature,
   formatAmount,
   FullProduct,
   Organization,
-  PreviewLineItem,
   Price,
   Reward,
 } from "@autumn/shared";
@@ -35,7 +33,7 @@ export const priceToNewPreviewItem = ({
   entitlements,
   skipOneOff,
   now,
-  anchorToUnix,
+  anchor,
   productQuantity = 1,
   product,
   onTrial,
@@ -47,7 +45,7 @@ export const priceToNewPreviewItem = ({
   entitlements: EntitlementWithFeature[];
   skipOneOff?: boolean;
   now?: number;
-  anchorToUnix?: number;
+  anchor?: number;
   productQuantity?: number;
   product: FullProduct;
   onTrial?: boolean;
@@ -61,10 +59,12 @@ export const priceToNewPreviewItem = ({
   const ent = getPriceEntitlement(price, entitlements);
 
   const finalProration = getProration({
-    anchorToUnix,
+    anchor,
     now,
-    interval: price.config.interval!,
-    intervalCount: price.config.interval_count || 1,
+    intervalConfig: {
+      interval: price.config.interval!,
+      intervalCount: price.config.interval_count || 1,
+    },
   });
 
   const applyRewards = rewards?.filter(
@@ -98,13 +98,6 @@ export const priceToNewPreviewItem = ({
       });
     }
 
-    // console.log(
-    //   "Discounts: ",
-    //   subDiscounts?.map((d) => ({
-    //     id: d.id,
-    //     coupon: d.coupon,
-    //   }))
-    // );
     amount = getAmountAfterStripeDiscounts({
       price,
       amount,
@@ -126,7 +119,6 @@ export const priceToNewPreviewItem = ({
       description = `${description} (from ${formatUnixToDate(now)})`;
     }
 
-    // items.push();
     return {
       price_id: price.id,
       price: formatAmount({ org, amount }),
@@ -136,18 +128,4 @@ export const priceToNewPreviewItem = ({
       feature_id: ent?.feature_id,
     };
   }
-
-  // if (billingType == BillingType.UsageInArrear) {
-  //   items.push({
-  //     price: getDefaultPriceStr({ org, price, ent: ent!, features }),
-  //     description: newPriceToInvoiceDescription({
-  //       org,
-  //       price,
-  //       product: newProduct,
-  //     }),
-  //     usage_model: priceToUsageModel(price),
-  //     price_id: price.id,
-  //     feature_id: ent?.feature_id,
-  //   });
-  // }
 };

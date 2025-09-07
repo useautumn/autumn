@@ -9,6 +9,7 @@ import {
   type FullCusProduct,
   type FullCustomer,
   type FullCustomerEntitlement,
+  isTrialing,
   type ProductItem,
   SuccessCode,
   UsageModel,
@@ -97,7 +98,7 @@ export const getBooleanEntitledResult = async ({
 export const getOptions = ({
   prodItems,
   features,
-  anchorToUnix,
+  anchor,
   proration,
   now,
   freeTrial,
@@ -105,7 +106,7 @@ export const getOptions = ({
 }: {
   prodItems: ProductItem[];
   features: Feature[];
-  anchorToUnix?: number;
+  anchor?: number;
   proration?: {
     start: number;
     end: number;
@@ -116,34 +117,33 @@ export const getOptions = ({
 }) => {
   now = now || Date.now();
 
-  // console.log("Now:", formatUnixToDate(now));
-  // console.log("Anchor to unix:", formatUnixToDate(anchorToUnix));
-
   return prodItems
     .filter((i) => isFeaturePriceItem(i) && i.usage_model == UsageModel.Prepaid)
     .map((i) => {
       const finalProration = getProration({
-        anchorToUnix,
+        anchor,
         proration,
-        interval: (i.interval || BillingInterval.OneOff) as BillingInterval,
-        intervalCount: i.interval_count || 1,
+        intervalConfig: {
+          interval: (i.interval || BillingInterval.OneOff) as BillingInterval,
+          intervalCount: i.interval_count || 1,
+        },
         now,
       });
 
-      if (finalProration) {
-      }
-
       let priceData = itemToPriceOrTiers({
         item: i,
-        proration: finalProration,
         now,
+        proration: finalProration,
       });
 
       let actualPrice = itemToPriceOrTiers({
         item: i,
       });
 
-      if (freeTrial && notNullish(i.interval)) {
+      if (
+        (freeTrial || (cusProduct && isTrialing({ cusProduct, now }))) &&
+        notNullish(i.interval)
+      ) {
         priceData = {
           price: 0,
           tiers: undefined,

@@ -40,6 +40,7 @@ export const toAPIFeature = ({ feature }: { feature: Feature }) => {
       plural: feature.display?.plural || feature.name,
     },
     credit_schema: creditSchema,
+    archived: feature.archived,
   });
 };
 

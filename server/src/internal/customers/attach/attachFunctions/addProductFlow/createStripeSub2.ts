@@ -6,12 +6,12 @@ import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { generateId } from "@/utils/genUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { getAlignedIntervalUnix } from "@/internal/products/prices/billingIntervalUtils.js";
+
 import {
   getLatestPeriodStart,
   getEarliestPeriodEnd,
-  subToPeriodStartEnd,
 } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { sanitizeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
@@ -24,18 +24,16 @@ export const createStripeSub2 = async ({
   stripeCli,
   attachParams,
   config,
-  anchorToUnix,
+  billingCycleAnchorUnix,
   itemSet,
-  earliestInterval,
   logger,
 }: {
   db: DrizzleCli;
   stripeCli: Stripe;
   attachParams: AttachParams;
   config: AttachConfig;
-  anchorToUnix?: number;
+  billingCycleAnchorUnix?: number;
   itemSet: ItemSet;
-  earliestInterval?: IntervalConfig | null;
   logger: any;
 }) => {
   const { customer, invoiceOnly, freeTrial, org, now, rewards } = attachParams;
@@ -57,16 +55,6 @@ export const createStripeSub2 = async ({
     };
   }
 
-  const billingCycleAnchorUnix =
-    anchorToUnix && earliestInterval
-      ? getAlignedIntervalUnix({
-          alignWithUnix: anchorToUnix,
-          interval: earliestInterval.interval,
-          intervalCount: earliestInterval.intervalCount ?? 1,
-          now,
-        })
-      : undefined;
-
   const { subItems, invoiceItems, usageFeatures } = itemSet;
 
   const discounts = rewards
@@ -78,7 +66,7 @@ export const createStripeSub2 = async ({
       ...paymentMethodData,
       customer: customer.processor.id,
       items: sanitizeSubItems(subItems),
-      // items: subItems as any,
+
       billing_mode: { type: "flexible" },
       trial_end: freeTrialToStripeTimestamp({ freeTrial, now }),
       payment_behavior: "error_if_incomplete",
@@ -89,7 +77,6 @@ export const createStripeSub2 = async ({
         ? Math.floor(billingCycleAnchorUnix / 1000)
         : undefined,
 
-      // coupon: reward ? reward.id : undefined,
       discounts,
       expand: ["latest_invoice"],
 

@@ -34,8 +34,8 @@ export const findSimilarItem = ({
     return items.find((i) => {
       return (
         isPriceItem(i) &&
-        i.price === item.price &&
-        i.interval === item.interval &&
+        i.price == item.price &&
+        i.interval == item.interval &&
         (i.interval_count || 1) == (item.interval_count || 1)
       );
     });

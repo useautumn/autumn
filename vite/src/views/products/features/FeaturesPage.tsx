@@ -15,13 +15,17 @@ export const FeaturesPage = () => {
   const { queryStates, setQueryStates } = useProductsQueryState();
   const [featuresDropdownOpen, setFeaturesDropdownOpen] = useState(false);
 
-  const regularFeatures = features.filter(
-    (feature) => feature.type !== FeatureType.CreditSystem
-  );
+  const regularFeatures = features.filter((feature) => {
+    if (queryStates.showArchivedFeatures)
+      return feature.type !== FeatureType.CreditSystem && feature.archived;
+    return feature.type !== FeatureType.CreditSystem && !feature.archived;
+  });
 
-  const creditSystems = features.filter(
-    (feature) => feature.type === FeatureType.CreditSystem
-  );
+  const creditSystems = features.filter((feature) => {
+    if (queryStates.showArchivedFeatures)
+      return feature.type === FeatureType.CreditSystem && feature.archived;
+    return feature.type === FeatureType.CreditSystem && !feature.archived;
+  });
 
   return (
     <div>
@@ -30,7 +34,7 @@ export const FeaturesPage = () => {
         titleComponent={
           <>
             <span className="text-t2 px-1 rounded-md bg-stone-200 mr-2">
-              {features?.length}
+              {regularFeatures?.length}
             </span>
             {queryStates.showArchivedFeatures && (
               <Badge className="shadow-none bg-yellow-100 border-yellow-500 text-yellow-500 hover:bg-yellow-100">

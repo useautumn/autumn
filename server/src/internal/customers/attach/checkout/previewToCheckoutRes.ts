@@ -153,7 +153,7 @@ export const previewToCheckoutRes = async ({
     lines,
     product: newProduct,
     current_product: curProduct,
-    total,
+    total: new Decimal(total).toDecimalPlaces(2).toNumber(),
     currency: org.default_currency || "usd",
     next_cycle_at: notNullish(preview.due_next_cycle)
       ? preview.due_next_cycle.due_at
