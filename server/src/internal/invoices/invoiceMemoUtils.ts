@@ -42,13 +42,11 @@ export const buildInvoiceMemo = async ({
       if (display?.primary_text) itemsToDisplay.push(display.primary_text);
     }
 
-    console.log("Items to display: %s", itemsToDisplay);
     return itemsToDisplay.join("\n");
   } else if (products) {
     const itemsToDisplay = ["Included features:"];
 
     for (const p of products) {
-      console.log("Product: %s", p.name);
       const items = mapToProductItems({
         prices: p.prices,
         entitlements: p.entitlements,
