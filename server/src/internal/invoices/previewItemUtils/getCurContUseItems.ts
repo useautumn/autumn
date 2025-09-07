@@ -58,9 +58,13 @@ export const getCurContUseItems = async ({
     if (now < periodEnd) {
       const finalProration = getProration({
         now,
-        interval: price.config.interval!,
-        intervalCount: price.config.interval_count || 1,
-        anchorToUnix: periodEnd,
+        intervalConfig: {
+          interval: price.config.interval!,
+          intervalCount: price.config.interval_count || 1,
+        },
+        proration: {
+          end: periodEnd,
+        },
       })!;
 
       const proratedAmount = -calculateProrationAmount({

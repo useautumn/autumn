@@ -18,4 +18,6 @@ $MOCHA_CMD \
 'tests/attach/others/*.ts'
 # 'tests/attach/entities/*.ts' \
 
-$MOCHA_CMD 'tests/attach/prepaid/*.ts'
+$MOCHA_CMD 'tests/attach/prepaid/*.ts' \
+'tests/interval/upgrade/*.ts' \
+'tests/interval/multiSub/*.ts'

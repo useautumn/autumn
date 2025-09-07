@@ -1,4 +1,5 @@
 import chalk from "chalk";
+import { addDays } from "date-fns";
 import { setupBefore } from "tests/before.js";
 import { Stripe } from "stripe";
 import { createProducts } from "tests/utils/productUtils.js";
@@ -16,9 +17,7 @@ import {
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
-import { expect } from "chai";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { addDays } from "date-fns";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
 let premium = constructProduct({

@@ -101,6 +101,7 @@ export const handleRenewProduct = async ({
       cusProductId: curCusProduct!.id,
       updates: {
         canceled: false,
+        canceled_at: null,
       },
     });
   } else {
@@ -136,6 +137,7 @@ export const handleRenewProduct = async ({
           updates: {
             scheduled_ids: [schedule!.id],
             canceled: false,
+            canceled_at: null,
           },
         });
       } else {
@@ -157,6 +159,7 @@ export const handleRenewProduct = async ({
           cusProductId: curCusProduct!.id,
           updates: {
             canceled: false,
+            canceled_at: null,
           },
         });
       }
@@ -184,6 +187,7 @@ export const handleRenewProduct = async ({
         cusProductId: curCusProduct!.id,
         updates: {
           canceled: false,
+          canceled_at: null,
         },
       });
     }

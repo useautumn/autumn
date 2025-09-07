@@ -12,6 +12,7 @@ import { handleDeleteOrg } from "./handlers/handleDeleteOrg.js";
 import { handleGetInvites } from "./handlers/handleGetInvites.js";
 import { handleConnectStripe } from "./handlers/handleConnectStripe.js";
 import { handleDeleteStripe } from "./handlers/handleDeleteStripe.js";
+import { handleGetOrg } from "./handlers/handleGetOrg.js";
 
 export const orgRouter: Router = express.Router();
 orgRouter.get("/members", handleGetOrgMembers);
@@ -26,27 +27,7 @@ orgRouter.delete("/delete-user", async (req: any, res) => {
   });
 });
 
-orgRouter.get("", async (req: any, res) => {
-  try {
-    if (!req.orgId) {
-      res.status(400).json({
-        message: "Missing orgId",
-      });
-      return;
-    }
-
-    const org = await OrgService.getFromReq(req);
-
-    res.status(200).json(createOrgResponse({ org, env: req.env }));
-  } catch (error) {
-    handleRequestError({
-      req,
-      error,
-      res,
-      action: "get org",
-    });
-  }
-});
+orgRouter.get("", handleGetOrg);
 
 orgRouter.post("/stripe", handleConnectStripe);
 

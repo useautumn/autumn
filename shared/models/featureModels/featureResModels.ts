@@ -25,9 +25,12 @@ export const APIFeatureSchema = z.object({
       })
     )
     .nullish(),
+  archived: z.boolean().nullish(),
 });
 
-export const UpdateAPIFeatureSchema = APIFeatureSchema.partial();
+export const UpdateAPIFeatureSchema = APIFeatureSchema.extend({
+  archived: z.boolean().optional(),
+}).partial();
 
 export type APIFeature = z.infer<typeof APIFeatureSchema>;
 export type UpdateAPIFeature = z.infer<typeof UpdateAPIFeatureSchema>;

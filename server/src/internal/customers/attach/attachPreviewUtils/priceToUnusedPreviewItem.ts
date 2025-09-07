@@ -100,9 +100,12 @@ export const priceToUnusedPreviewItem = ({
 
   const finalProration = getProration({
     now,
-    interval: price.config.interval!,
-    intervalCount: price.config.interval_count || 1,
-    anchorToUnix: subItem?.current_period_end
+    intervalConfig: {
+      interval: price.config.interval!,
+      intervalCount: price.config.interval_count || 1,
+    },
+
+    anchor: subItem?.current_period_end
       ? subItem.current_period_end * 1000
       : undefined,
   })!;
