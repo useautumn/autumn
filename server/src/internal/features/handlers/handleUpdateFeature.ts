@@ -28,6 +28,7 @@ import {
   notNullish,
 } from "@autumn/shared";
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
+import { toAPIFeature } from "../utils/mapFeatureUtils.js";
 
 const handleFeatureIdChanged = async ({
   db,
@@ -248,7 +249,11 @@ const handleFeatureUsageTypeChanged = async ({
   // }
 };
 
-export const handleUpdateFeature = async (req: any, res: any) =>
+export const handleUpdateFeature = async (
+  req: any,
+  res: any,
+  fromApi: boolean = false
+) =>
   routeHandler({
     req,
     res,
@@ -270,10 +275,9 @@ export const handleUpdateFeature = async (req: any, res: any) =>
         });
       }
 
-      console.log("Data archived: ", data.archived);
-
       // If only archiving, skip other checks and just update
       if (data.archived !== undefined && Object.keys(data).length === 1) {
+        console.log("Updating feature archived to: ", data.archived);
         let updatedFeature = await FeatureService.update({
           db: req.db,
           id: featureId,
@@ -390,8 +394,20 @@ export const handleUpdateFeature = async (req: any, res: any) =>
         });
       }
 
-      if (res) {
+      if (res && fromApi) {
+        let newFeature = await FeatureService.get({
+          db: req.db,
+          id: featureId,
+          orgId: req.orgId,
+          env: req.env,
+        });
+        res.status(200).json(toAPIFeature({ feature: newFeature }));
+      } else {
         res.status(200).json({ success: true, feature_id: featureId });
       }
+
+      // if (res) {
+      //   res.status(200).json({ success: true, feature_id: featureId });
+      // }
     },
   });
