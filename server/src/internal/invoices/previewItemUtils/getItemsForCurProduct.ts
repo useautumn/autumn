@@ -25,7 +25,6 @@ import {
 import { priceToUnusedPreviewItem } from "@/internal/customers/attach/attachPreviewUtils/priceToUnusedPreviewItem.js";
 
 export const getItemsForCurProduct = async ({
-  // stripeSubs,
   sub,
   attachParams,
   branch,
@@ -33,7 +32,6 @@ export const getItemsForCurProduct = async ({
   now,
   logger,
 }: {
-  // stripeSubs: Stripe.Subscription[];
   sub?: Stripe.Subscription;
   attachParams: AttachParams;
   branch: AttachBranch;
@@ -109,72 +107,3 @@ export const getItemsForCurProduct = async ({
 
   return items;
 };
-
-// for (const item of subItems) {
-//   const price = findPriceInStripeItems({
-//     prices: curPrices,
-//     subItem: item,
-//   });
-
-//   // Get quantity of current price...
-
-//   if (!price) continue;
-//   const billingType = getBillingType(price.config);
-
-//   if (
-//     billingType == BillingType.UsageInArrear ||
-//     billingType == BillingType.InArrearProrated
-//   )
-//     continue;
-
-//   const totalAmountCents = getSubItemAmount({ subItem: item });
-//   console.log("Sub item amount:", totalAmountCents);
-//   let totalAmount = new Decimal(totalAmountCents).div(100).toNumber();
-
-//   if (onTrial) {
-//     totalAmount = 0;
-//   }
-
-//   // const periodEnd = sub.items.data[0].current_period_end * 1000;
-//   const periodEnd = item.current_period_end * 1000;
-
-//   const ents = cusProductToEnts({ cusProduct: curCusProduct });
-//   const ent = getPriceEntitlement(price, ents);
-//   if (now < periodEnd) {
-//     const finalProration = getProration({
-//       now,
-//       interval: price.config.interval!,
-//       intervalCount: price.config.interval_count || 1,
-//       anchorToUnix: periodEnd,
-//     })!;
-
-//     const proratedAmount = -calculateProrationAmount({
-//       periodEnd: finalProration?.end,
-//       periodStart: finalProration?.start,
-//       now,
-//       amount: totalAmount,
-//     });
-
-//     let description = priceToInvoiceDescription({
-//       price,
-//       org: attachParams.org,
-//       cusProduct: curCusProduct,
-//       quantity: item.quantity,
-//       logger,
-//     });
-
-//     description = `Unused ${description} (from ${formatUnixToDate(now)})`;
-
-//     items.push({
-//       price: formatAmount({
-//         org: attachParams.org,
-//         amount: proratedAmount,
-//       }),
-//       description,
-//       amount: proratedAmount,
-//       usage_model: priceToUsageModel(price),
-//       price_id: price.id!,
-//       feature_id: ent?.feature.id,
-//     });
-//   }
-// }

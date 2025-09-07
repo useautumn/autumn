@@ -61,7 +61,6 @@ export const subToPeriodStartEnd = ({ sub }: { sub?: Stripe.Subscription }) => {
   }
 
   return {
-    // start: getEarliestPeriodStart({ sub }),
     start: getLatestPeriodStart({ sub }),
     end: getEarliestPeriodEnd({ sub }),
   };

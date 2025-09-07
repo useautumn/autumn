@@ -43,15 +43,15 @@ export const deleteCusById = async ({
   let response = {
     customer,
     success: true,
-  }
+  };
 
   try {
     if (customer.processor?.id && deleteInStripe) {
-        await deleteStripeCustomer({
-          org,
-          env: env,
-          stripeId: customer.processor.id,
-        });
+      await deleteStripeCustomer({
+        org,
+        env: env,
+        stripeId: customer.processor.id,
+      });
     }
   } catch (error: any) {
     console.log(

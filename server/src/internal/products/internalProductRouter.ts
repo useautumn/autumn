@@ -21,6 +21,7 @@ import RecaseError, {
 
 import { createOrgResponse } from "../orgs/orgUtils.js";
 import { sortFullProducts } from "./productUtils/sortProductUtils.js";
+import { handleGetProductDeleteInfo } from "./handlers/handleGetProductDeleteInfo.js";
 
 export const productRouter: Router = Router({ mergeParams: true });
 
@@ -499,61 +500,7 @@ productRouter.post("/product_options", async (req: any, res: any) => {
   }
 });
 
-productRouter.get("/:productId/info", async (req: any, res: any) => {
-  try {
-    // 1. Get number of versions
-    const { db, orgId, env } = req;
-    let product = await ProductService.get({
-      db,
-      id: req.params.productId,
-      orgId: req.orgId,
-      env: req.env,
-    });
-
-    if (!product) {
-      throw new RecaseError({
-        message: `Product ${req.params.productId} not found`,
-        code: ErrCode.ProductNotFound,
-        statusCode: StatusCodes.NOT_FOUND,
-      });
-    }
-
-    let [allVersions, latestVersion, deletionText] = await Promise.all([
-      CusProdReadService.existsForProduct({
-        db,
-        productId: req.params.productId,
-      }),
-      CusProdReadService.existsForProduct({
-        db,
-        internalProductId: product.internal_id,
-      }),
-      ProductService.getDeletionText({
-        db,
-        productId: req.params.productId,
-        orgId: req.orgId,
-        env: req.env,
-      }),
-    ]);
-
-    // 2. Get cus products
-
-    res.status(200).send({
-      numVersion: product.version,
-      hasCusProducts: allVersions,
-      hasCusProductsLatest: latestVersion,
-      customerName:
-        deletionText[0]?.name || deletionText[0]?.email || deletionText[0]?.id,
-      totalCount: deletionText[0]?.totalCount,
-    });
-  } catch (error) {
-    handleRequestError({
-      error,
-      req,
-      res,
-      action: "Get product info",
-    });
-  }
-});
+productRouter.get("/:productId/info", handleGetProductDeleteInfo);
 
 productRouter.get("/rewards", async (req: any, res: any) => {
   try {

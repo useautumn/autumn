@@ -9,7 +9,7 @@ import { CusService } from "./CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { handleDeleteCustomer } from "./handlers/cusDeleteHandlers.js";
+import { handleDeleteCustomer } from "./handlers/handleDeleteCustomer.js";
 import { handleUpdateBalances } from "./handlers/handleUpdateBalances.js";
 import { handleUpdateEntitlement } from "./handlers/handleUpdateEntitlement.js";
 import { handleAddCouponToCus } from "./handlers/handleAddCouponToCus.js";

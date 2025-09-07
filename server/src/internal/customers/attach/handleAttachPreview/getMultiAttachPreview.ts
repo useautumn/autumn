@@ -88,26 +88,13 @@ export const getMultiAttachPreview = async ({
     )!;
 
     // Anchor to unix...
-    let anchorToUnix = undefined;
-    if (sub) {
-      const latestPeriodStart = getLatestPeriodStart({ sub });
-      const largestInterval = getLargestInterval({ prices: product.prices });
-      if (largestInterval) {
-        anchorToUnix = addIntervalForProration({
-          unixTimestamp: latestPeriodStart * 1000,
-          intervalConfig: largestInterval,
-        });
-      }
-    }
-
+    let anchor = sub ? sub.billing_cycle_anchor * 1000 : undefined;
     if (config.disableTrial) {
       attachParams.freeTrial = null;
     }
 
     const onTrial =
       notNullish(attachParams?.freeTrial) || sub?.status == "trialing";
-
-    // How to tell if sub discount will apply to a certain price...
 
     for (const price of product.prices) {
       const newItem = priceToNewPreviewItem({
@@ -116,13 +103,14 @@ export const getMultiAttachPreview = async ({
         entitlements: product.entitlements,
         skipOneOff: false,
         now: attachParams.now!,
-        anchorToUnix,
+        anchor,
         productQuantity: productOptions.quantity ?? 1,
         product,
         onTrial,
         rewards: attachParams.rewards,
         subDiscounts: (sub?.discounts ?? []) as Stripe.Discount[],
       });
+
       const noTrialItem = priceToNewPreviewItem({
         org: attachParams.org,
         price,
@@ -176,20 +164,4 @@ export const getMultiAttachPreview = async ({
     },
     due_next_cycle: dueNextCycle,
   };
-
-  // for (const cusProduct of cusProducts) {
-  //   const prices = cusProductToPrices({ cusProduct });
-
-  //   for (const price of prices) {
-  //     const previewLineItem = priceToUnusedPreviewItem({
-  //       price,
-  //       stripeItems: subItems,
-  //       cusProduct,
-  //     });
-
-  //     if (!previewLineItem) continue;
-
-  //     items.push(previewLineItem);
-  //   }
-  // }
 };

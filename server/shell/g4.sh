@@ -12,12 +12,12 @@ fi
 $MOCHA_CMD 'tests/merged/group/*.ts'
 
 
-# $MOCHA_CMD 'tests/merged/add/*.ts' \
-# 'tests/merged/downgrade/*.ts' \
-# 'tests/merged/prepaid/*.ts' \
-# 'tests/merged/separate/*.ts' \
-# 'tests/merged/upgrade/*.ts' \
-# 'tests/merged/trial/*.ts' 
+$MOCHA_CMD 'tests/merged/add/*.ts' \
+'tests/merged/downgrade/*.ts' \
+'tests/merged/prepaid/*.ts' \
+'tests/merged/separate/*.ts' \
+'tests/merged/upgrade/*.ts' \
+'tests/merged/trial/*.ts' 
 
 
 $MOCHA_CMD 'tests/merged/addOn/*.ts' \

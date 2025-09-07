@@ -1,29 +1,17 @@
 import express, { Router } from "express";
 
 import { FeatureService } from "./FeatureService.js";
-import {
-  ErrCode,
-  Feature,
-  FeatureType,
-  MinFeatureSchema,
-  products,
-  entitlements,
-} from "@autumn/shared";
+import { ErrCode, FeatureType, products, entitlements } from "@autumn/shared";
 import { validateCreditSystem, validateFeatureId } from "./featureUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 import { handleUpdateFeature } from "@/internal/features/handlers/handleUpdateFeature.js";
 import { handleDeleteFeature } from "@/internal/features/handlers/handleDeleteFeature.js";
-import RecaseError, {
-  formatZodError,
-  handleFrontendReqError,
-} from "@/utils/errorUtils.js";
+import RecaseError, { formatZodError } from "@/utils/errorUtils.js";
 import { validateMeteredConfig } from "./featureUtils.js";
 import { CreateFeatureSchema } from "@autumn/shared";
-import { OrgService } from "../orgs/OrgService.js";
-import { addTaskToQueue } from "@/queue/queueUtils.js";
-import { JobName } from "@/queue/JobName.js";
 import { sql, eq, and } from "drizzle-orm";
 import { handleCreateFeature } from "./handlers/handleCreateFeature.js";
+import { handleGetFeatureDeletionInfo } from "./handlers/handleGetFeatureDeletionInfo.js";
 
 export const internalFeatureRouter: Router = express.Router();
 
@@ -97,60 +85,7 @@ internalFeatureRouter.post("", handleCreateFeature);
 
 internalFeatureRouter.get(
   "/data/deletion_text/:feature_id",
-  async (req: any, res) => {
-    try {
-      let { db } = req;
-      let { feature_id } = req.params;
-
-      // Get the feature first
-      let feature = await FeatureService.get({
-        db,
-        id: feature_id,
-        orgId: req.orgId,
-        env: req.env,
-      });
-
-      if (!feature) {
-        return res.status(404).json({ error: "Feature not found" });
-      }
-
-      // Use Drizzle query similar to ProductService.getDeletionText
-      let res_data = await db
-        .select({
-          productName: sql<string>`CASE WHEN ROW_NUMBER() OVER (ORDER BY ${products.created_at}) = 1 THEN ${products.name ?? "Product name not found"} ELSE NULL END`,
-          totalCount: sql<number>`COUNT(*) OVER ()`,
-        })
-        .from(products)
-        .innerJoin(
-          entitlements,
-          eq(products.internal_id, entitlements.internal_product_id)
-        )
-        .where(
-          and(
-            eq(entitlements.internal_feature_id, feature.internal_id!),
-            eq(products.env, req.env),
-            eq(products.org_id, req.orgId)
-          )
-        )
-        .limit(1);
-
-      // If no products found, return explicit zero count
-      if (!res_data || res_data.length === 0) {
-        res.status(200).json({
-          productName: null,
-          totalCount: 0,
-        });
-      } else {
-        res.status(200).json({
-          productName: res_data[0]?.productName || null,
-          totalCount: Number(res_data[0]?.totalCount) || 0,
-        });
-      }
-    } catch (error) {
-      console.error("Failed to get feature deletion text", error);
-      res.status(500).send(error);
-    }
-  }
+  handleGetFeatureDeletionInfo
 );
 
 internalFeatureRouter.post("/:feature_id", handleUpdateFeature);

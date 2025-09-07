@@ -10,66 +10,71 @@ import { sortFullProducts } from "../productUtils/sortProductUtils.js";
 
 // biome-ignore lint/suspicious/noExplicitAny: alright buddy WRAP it up 👉🚪
 export const handleListProductsBeta = async (req: any, res: any) =>
-	routeHandler({
-		req,
-		res,
-		action: "list products v2 (beta)",
-		handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
-			const { org, features, env, db } = req;
-			const customerId = req.query.customer_id;
-			const entityId = req.query.entity_id as string | undefined;
+  routeHandler({
+    req,
+    res,
+    action: "list products v2 (beta)",
+    handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
+      const { org, features, env, db } = req;
+      const customerId = req.query.customer_id;
+      const entityId = req.query.entity_id as string | undefined;
       const includeAll = req.query.include_archived as unknown as boolean;
 
-			const [products, customer] = await Promise.all([
-				ProductService.listFull({
-					db,
-					orgId: org.id,
-					env,
-					archived: includeAll ? undefined : false,
-				}),
-				(async () => {
-					if (!customerId) {
-						return undefined;
-					}
+      const [products, customer] = await Promise.all([
+        ProductService.listFull({
+          db,
+          orgId: org.id,
+          env,
+          archived: includeAll ? undefined : false,
+        }),
+        (async () => {
+          if (!customerId) {
+            return undefined;
+          }
 
-					return await getCusWithCache({
-						db,
-						org,
-						idOrInternalId: customerId as string,
-						allowNotFound: true,
-						entityId: entityId as string,
-						env,
-						logger: req.logger,
-					});
-				})(),
-			]);
+          return await getCusWithCache({
+            db,
+            org,
+            idOrInternalId: customerId as string,
+            allowNotFound: true,
+            entityId: entityId as string,
+            env,
+            logger: req.logger,
+          });
+        })(),
+      ]);
 
-			if (req.query.v1_schema === "true") {
-				res.status(200).json({
-					list: products,
-				});
-				return;
-			}
+      console.log(
+        "Products:",
+        products.map((p) => `${p.internal_id} - ${p.id} - ${p.archived}`)
+      );
 
-			sortFullProducts({ products });
+      if (req.query.v1_schema === "true") {
+        res.status(200).json({
+          list: products,
+        });
+        return;
+      }
 
-			const batchResponse = [];
-			for (const p of products) {
-				batchResponse.push(
-					getProductResponse({
-						product: p,
-						features,
-						currency: org.default_currency || undefined,
-						db,
-						fullCus: customer ? customer : undefined,
-					}),
-				);
-			}
+      sortFullProducts({ products });
 
-			const productResponse = await Promise.all(batchResponse);
+      const batchResponse = [];
+      for (const p of products) {
+        batchResponse.push(
+          getProductResponse({
+            product: p,
+            features,
+            currency: org.default_currency || undefined,
+            db,
+            fullCus: customer ? customer : undefined,
+          })
+        );
+      }
 
-			res.status(200).json({
-				list: productResponse,
-			});
-		},
-	});
+      const productResponse = await Promise.all(batchResponse);
+
+      res.status(200).json({
+        list: productResponse,
+      });
+    },
+  });
