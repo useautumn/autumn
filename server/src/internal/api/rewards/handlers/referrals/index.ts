@@ -1,3 +1,3 @@
-export { default as handleCreateRewardProgram } from "./handleCreateRewardProgram.js";
-export { default as handleCreateTrigger } from "./handleCreateTrigger.js";
-export { default as handleDeleteRewardProgram } from "./handleDeleteRewardProgram.js";
+export { default as handleGetRedemption } from "./handleGetRedemption.js";
+export { default as handleGetReferralCode } from "./handleGetReferralCode.js";
+export { default as handleRedeemReferral } from "./handleRedeemReferral.js";
