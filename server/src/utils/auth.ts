@@ -12,6 +12,9 @@ import { sendOnboardingEmail } from "@/internal/emails/sendOnboardingEmail.js";
 import { ADMIN_USER_IDs } from "./constants.js";
 import { afterOrgCreated } from "./authUtils/afterOrgCreated.js";
 import { createLoopsContact } from "@/external/resend/loopsUtils.js";
+import { invitation } from "@autumn/shared";
+import { eq } from "drizzle-orm";
+import { logger } from "@/external/logtail/logtailUtils.js";
 
 export const auth = betterAuth({
   telemetry: {
@@ -96,6 +99,18 @@ export const auth = betterAuth({
           orgName: data.organization.name,
           inviteLink,
         });
+
+        try {
+          // Update invite to expire in 7 days
+          await db
+            .update(invitation)
+            .set({
+              expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            })
+            .where(eq(invitation.id, data.id));
+        } catch (error) {
+          logger.error("Error updating invite expiration date:", { error });
+        }
       },
       schema: {
         organization: {
