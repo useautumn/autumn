@@ -14,6 +14,7 @@ import {
   APIVersion,
   AttachBranch,
   AttachConfig,
+  AttachScenario,
   CusProductStatus,
   ProrationBehavior,
 } from "@autumn/shared";
@@ -30,7 +31,7 @@ import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { shouldCancelSub } from "./upgradeFlowUtils.js";
 import { handleUpgradeFlowSchedule } from "./handleUpgradeFlowSchedule.js";
-import { logPhaseItems } from "../../mergeUtils/phaseUtils/phaseUtils.js";
+import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 
 export const handleUpgradeFlow = async ({
   req,
@@ -164,15 +165,33 @@ export const handleUpgradeFlow = async ({
     latestInvoice = res.latestInvoice;
   }
 
-  logger.info(`UPGRADE FLOW: expiring previous cus product`);
-  await CusProductService.update({
-    db: req.db,
-    cusProductId: curCusProduct!.id,
-    updates: {
-      subscription_ids: canceled ? undefined : [],
-      status: CusProductStatus.Expired,
-    },
-  });
+  if (curCusProduct) {
+    logger.info(`UPGRADE FLOW: expiring previous cus product`);
+    await CusProductService.update({
+      db: req.db,
+      cusProductId: curCusProduct!.id,
+      updates: {
+        subscription_ids: canceled ? undefined : [],
+        status: CusProductStatus.Expired,
+      },
+    });
+
+    try {
+      await addProductsUpdatedWebhookTask({
+        req,
+        internalCustomerId: curCusProduct.internal_customer_id,
+        org: attachParams.org,
+        env: attachParams.customer.env,
+        customerId:
+          attachParams.customer.id || attachParams.customer.internal_id,
+        scenario: AttachScenario.Expired,
+        cusProduct: curCusProduct,
+        logger,
+      });
+    } catch (error) {
+      logger.error("UPGRADE FLOW: failed to add to webhook queue", { error });
+    }
+  }
 
   if (attachParams.products.length > 0) {
     logger.info(`UPGRADE FLOW: creating new cus product`);
