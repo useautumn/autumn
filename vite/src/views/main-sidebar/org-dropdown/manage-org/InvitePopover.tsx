@@ -16,38 +16,21 @@ import { useMemberships } from "../hooks/useMemberships";
 export const InvitePopover = () => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const axiosInstance = useAxiosInstance();
-  const { mutate } = useMemberships();
   const [open, setOpen] = useState(false);
 
   const handleInvite = async () => {
     try {
       setLoading(true);
-      await authClient.organization.inviteMember({
+      const { data, error } = await authClient.organization.inviteMember({
         email: email,
         role: "admin",
         resend: true,
       });
-      toast.success(`Successfully sent invitation to ${email}`);
-      // const { data, status } = await axiosInstance.post(
-      //   "/organization/invite",
-      //   {
-      //     email: email,
-      //     role: "admin",
-      //   }
-      // );
 
-      // if (status === 202) {
-      //   await authClient.organization.inviteMember({
-      //     email: email,
-      //     role: "admin",
-      //     resend: true,
-      //   });
-      //   toast.success(`Successfully sent invitation to ${email}`);
-      // } else {
-      //   toast.success(data.message);
-      // }
-      // await mutate();
+      if (error) throw error;
+
+      toast.success(`Successfully sent invitation to ${email}`);
+
       setOpen(false);
     } catch (error) {
       console.error(error);
