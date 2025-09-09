@@ -116,7 +116,7 @@ export const handleThresholdReached = async ({
       await sendSvixEvent({
         org: org,
         env: env,
-        eventType: WebhookEventType.CustomerFeaturesThresholdReached,
+        eventType: WebhookEventType.CustomerThresholdReached,
         data: {
           threshold_type: "limit_reached",
           customer: cusDetails,
