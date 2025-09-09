@@ -188,6 +188,7 @@ export const handleCreateCustomer = async ({
 
   // 1. If no ID and email is not NULL
   let createdCustomer;
+
   if (newCus.id === null) {
     createdCustomer = await handleIdIsNull({
       req,

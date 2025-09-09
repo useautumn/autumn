@@ -32,7 +32,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { useContextMenu } from "@/components/general/table-components/ContextMenuWrapper";
-import { DeleteCustomerDialog } from "../../customer/components/DeleteCustomer";
+import { DeleteCustomerDialog } from "../../customer/components/DeleteCustomerDialog";
 import { useCusSearchQuery } from "../../hooks/useCusSearchQuery";
 
 const CustomerWithProductsSchema = CustomerSchema.extend({
