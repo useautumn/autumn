@@ -45,7 +45,16 @@ export const OrgDropdown = () => {
   const { org, isLoading, error } = useOrg();
   const { expanded, setExpanded } = useSidebarContext();
 
-  const { data: orgs, isPending } = useListOrganizations();
+  let { data: orgs, isPending } = useListOrganizations();
+  const { data: activeOrganization } = authClient.useActiveOrganization();
+
+  // Exclude the active organization from the orgs list (this makes it easier for users to understand which org is active)
+  if (activeOrganization && orgs) {
+    orgs = orgs.filter(
+      (o) => o.id !== activeOrganization.id
+    );
+  }
+
   const [dialogType, setDialogType] = useState<"create" | "manage" | null>(
     null
   );
