@@ -31,6 +31,10 @@ function CreateCustomer() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleCreate = async () => {
+    if (!fields.id && !fields.email) {
+      toast.error("ID or email is required");
+      return;
+    }
     setIsLoading(true);
 
     try {
