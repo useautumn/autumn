@@ -26,6 +26,9 @@
 				"noExportsInTest": "off",
 				"noExplicitAny": "off",
 				"noImplicitAnyLet": "off"
+			},
+			"complexity": {
+				"noStaticOnlyClass": "off"
 			}
 		}
 	},
