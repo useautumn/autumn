@@ -119,7 +119,7 @@ export const handleCreateCheckout = async ({
     notNullish(checkoutParams.payment_method_types) ||
     notNullish(checkoutParams.payment_method_configuration);
 
-  const sessionParams = {
+  let sessionParams = {
     customer: customer.processor.id,
     line_items: items,
     subscription_data: subscriptionData,
@@ -144,6 +144,20 @@ export const handleCreateCheckout = async ({
         ? "if_required"
         : undefined,
   } satisfies Stripe.Checkout.SessionCreateParams;
+
+  if (attachParams.setupPayment) {
+    sessionParams = {
+      customer: customer.processor?.id,
+      mode: "setup",
+      success_url: successUrl || toSuccessUrl({ org, env: customer.env }),
+      currency: org.default_currency || "usd",
+      ...(checkoutParams as any),
+      metadata: {
+        ...(attachParams.checkoutSessionParams?.metadata || {}),
+        autumn_metadata_id: metaId,
+      },
+    };
+  }
 
   try {
     checkout = await stripeCli.checkout.sessions.create(sessionParams);

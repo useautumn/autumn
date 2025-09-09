@@ -80,6 +80,7 @@ export const getAttachParams = async ({
     disableFreeTrial: attachBody.free_trial === false || false,
     checkoutSessionParams: attachBody.checkout_session_params,
     isCustom: attachBody.is_custom,
+    setupPayment: attachBody.setup_payment,
   };
 
   return {
