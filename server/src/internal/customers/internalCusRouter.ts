@@ -352,13 +352,7 @@ cusRouter.get("/:customer_id/sub", async (req: any, res: any) => {
       (cp: FullCusProduct) => cp.subscription_ids || []
     )?.[0];
 
-    if (!subId) {
-      throw new RecaseError({
-        message: "Customer has no active subscription",
-        code: "CUSTOMER_NO_ACTIVE_SUBSCRIPTION",
-        statusCode: StatusCodes.NOT_FOUND,
-      });
-    }
+    if (!subId) return res.status(200).json({ sub: undefined });
 
     const stripeCli = createStripeCli({ org, env });
     const sub = await stripeCli.subscriptions.retrieve(subId, {

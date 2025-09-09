@@ -22,16 +22,18 @@ export const InviteNotifications = () => {
       setLoading(true);
 
       if (action === "accept") {
-        await authClient.organization.acceptInvitation({
+        const { data, error } = await authClient.organization.acceptInvitation({
           invitationId: invite.id,
         });
+
+        if (error) throw error;
 
         // Switch to that org
         await authClient.organization.setActive({
           organizationId: invite.organization.id,
         });
 
-        toast.success(`Invitation accepted successfully`);
+        // toast.success(`Invitation accepted successfully`);
         window.location.reload();
       } else {
         await authClient.organization.rejectInvitation({
