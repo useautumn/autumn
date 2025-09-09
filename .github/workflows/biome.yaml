@@ -19,4 +19,4 @@ jobs:
         with:
           version: latest
       - name: Run Biome
-        run: biome ci . --diagnostic-level=error --reporter github
+        run: biome ci . --diagnostic-level=error --reporter summary
