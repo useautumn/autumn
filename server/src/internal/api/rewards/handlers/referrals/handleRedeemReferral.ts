@@ -1,8 +1,8 @@
 import {
-    ErrCode,
-    RewardCategory,
-    type RewardRedemption,
-    RewardTriggerEvent,
+	ErrCode,
+	RewardCategory,
+	type RewardRedemption,
+	RewardTriggerEvent,
 } from "@autumn/shared";
 import { parseReqForAction } from "@/internal/analytics/actionUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -11,8 +11,8 @@ import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js
 import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionService.js";
 import { RewardService } from "@/internal/rewards/RewardService.js";
 import {
-    triggerFreeProduct,
-    triggerRedemption,
+	triggerFreeProduct,
+	triggerRedemption,
 } from "@/internal/rewards/referralUtils.js";
 import { getRewardCat } from "@/internal/rewards/rewardUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
