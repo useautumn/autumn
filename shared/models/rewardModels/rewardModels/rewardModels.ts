@@ -14,6 +14,11 @@ export const DiscountConfigSchema = z.object({
   price_ids: z.array(z.string()).optional(),
 });
 
+export const FreeProductConfigSchema = z.object({
+  duration_type: z.nativeEnum(CouponDurationType),
+  duration_value: z.number(),
+});
+
 const RewardSchema = z.object({
   name: z.string().nullish(),
 
@@ -23,6 +28,7 @@ const RewardSchema = z.object({
 
   free_product_id: z.string().nullish(),
   discount_config: DiscountConfigSchema.nullish(),
+  free_product_config: FreeProductConfigSchema.nullish(),
 
   internal_id: z.string(),
   org_id: z.string(),
@@ -36,6 +42,7 @@ export const CreateRewardSchema = z.object({
   id: z.string(),
   type: z.nativeEnum(RewardType).nullish(),
   discount_config: DiscountConfigSchema.nullish(),
+  free_product_config: FreeProductConfigSchema.nullish(),
   free_product_id: z.string().nullish(),
 });
 
@@ -43,3 +50,4 @@ export type PromoCode = z.infer<typeof PromoCodeSchema>;
 export type CreateReward = z.infer<typeof CreateRewardSchema>;
 export type Reward = z.infer<typeof RewardSchema>;
 export type DiscountConfig = z.infer<typeof DiscountConfigSchema>;
+export type FreeProductConfig = z.infer<typeof FreeProductConfigSchema>;
