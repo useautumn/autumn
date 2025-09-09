@@ -56,7 +56,7 @@ autumnWebhookRouter.post(
             `Type: ${type}, Scenario: ${data?.scenario}, Product: ${data?.updated_product?.id}`
           );
           break;
-        case WebhookEventType.CustomerFeaturesThresholdReached:
+        case WebhookEventType.CustomerThresholdReached:
           console.log(`Type: ${type}`);
           console.log(`Feature: `, data?.feature);
           break;
