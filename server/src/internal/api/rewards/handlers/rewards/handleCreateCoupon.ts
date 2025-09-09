@@ -57,7 +57,7 @@ export default async (req: any, res: any) => routeHandler({
                 legacyVersion: req.query.legacyStripe === "true",
             });
         }
-
+        
         const insertedCoupon = await RewardService.insert({
             db,
             data: newReward,
