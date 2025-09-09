@@ -1,3 +1,4 @@
+import { WebhookEventType } from "@autumn/shared";
 import express, { Router } from "express";
 import { Webhook } from "svix";
 
@@ -48,14 +49,18 @@ autumnWebhookRouter.post(
       const evt = await verifyAutumnWebhook(req, res);
       console.log("Received webhook from autumn");
       const { type, data } = evt;
-      console.log(
-        "Type",
-        type,
-        "Scenario:",
-        data?.scenario,
-        "Product:",
-        data?.updated_product?.id
-      );
+
+      switch (type) {
+        case WebhookEventType.CustomerProductsUpdated:
+          console.log(
+            `Type: ${type}, Scenario: ${data?.scenario}, Product: ${data?.updated_product?.id}`
+          );
+          break;
+        case WebhookEventType.CustomerFeaturesThresholdReached:
+          console.log(`Type: ${type}`);
+          console.log(`Feature: `, data?.feature);
+          break;
+      }
 
       res.status(200).json({
         success: true,
