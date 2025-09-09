@@ -29,9 +29,6 @@ import { ChatWidget } from "@/components/general/ChatWidget";
 export function MainLayout() {
   const env = useEnv();
   const { data, isPending } = useSession();
-  const [sidebarState, setSidebarState] = useState<"expanded" | "collapsed">(
-    "expanded"
-  );
   const { handleApiError } = useGlobalErrorHandler();
 
   const navigate = useNavigate();

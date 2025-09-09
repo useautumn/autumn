@@ -1,10 +1,6 @@
 import { Resend } from "resend";
 import { logger } from "../logtail/logtailUtils.js";
 
-export const createResendCli = () => {
-  return new Resend(process.env.RESEND_API_KEY);
-};
-
 export interface ResendEmailProps {
   to: string;
   subject: string;
@@ -13,6 +9,10 @@ export interface ResendEmailProps {
   fromEmail?: string;
   replyTo?: string;
 }
+
+export const createResendCli = () => {
+  return new Resend(process.env.RESEND_API_KEY);
+};
 
 export const nameToEmail = (name: string) => {
   return `${name.toLowerCase().replace(/\s+/g, ".")}@hey.${process.env.RESEND_DOMAIN}`;
@@ -27,7 +27,7 @@ export const sendTextEmail = async ({
 }: ResendEmailProps) => {
   const resend = createResendCli();
   fromEmail = fromEmail
-    ? `${fromEmail}@${process.env.RESEND_DOMAIN}`
+    ? `${fromEmail}@hey.${process.env.RESEND_DOMAIN}`
     : nameToEmail(from);
 
   try {

@@ -11,10 +11,7 @@ import {
 import { getCusEntsInFeatures } from "@/internal/customers/cusUtils/cusUtils.js";
 
 import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
-import {
-  getFeatureBalance,
-  getPaidFeatureBalance,
-} from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
+import { getFeatureBalance } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { Decimal } from "decimal.js";
 
 import {
@@ -25,6 +22,7 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { deductFromCusRollovers } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverDeductionUtils.js";
 import { refreshCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
+import { handleThresholdReached } from "./handleThresholdReached.js";
 
 // 2. Get deductions for each feature
 const getFeatureDeductions = ({
@@ -174,6 +172,7 @@ export const updateUsage = async ({
   setUsage,
   logger,
   entityId,
+  allFeatures,
 }: {
   db: DrizzleCli;
   customerId: string;
@@ -185,6 +184,7 @@ export const updateUsage = async ({
   setUsage: boolean;
   logger: any;
   entityId?: string;
+  allFeatures: Feature[];
 }) => {
   const customer = await CusService.getFull({
     db,
@@ -193,6 +193,7 @@ export const updateUsage = async ({
     env,
     inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
     entityId,
+    withSubs: true,
   });
 
   const { cusEnts, cusPrices } = await getCusEntsInFeatures({
@@ -226,6 +227,7 @@ export const updateUsage = async ({
     return;
   }
 
+  const originalCusEnts = structuredClone(cusEnts);
   for (const obj of featureDeductions) {
     let { feature, deduction: toDeduct } = obj;
 
@@ -245,9 +247,8 @@ export const updateUsage = async ({
         },
       });
 
-      if (toDeduct == 0) {
-        continue;
-      }
+      if (toDeduct == 0) continue;
+
       toDeduct = await deductAllowanceFromCusEnt({
         toDeduct,
         cusEnt,
@@ -267,24 +268,35 @@ export const updateUsage = async ({
       });
     }
 
-    if (toDeduct == 0) {
-      continue;
+    if (toDeduct !== 0) {
+      await deductFromUsageBasedCusEnt({
+        toDeduct,
+        cusEnts,
+        deductParams: {
+          db,
+          feature,
+          env,
+          org,
+          cusPrices: cusPrices as any[],
+          customer,
+          properties,
+          entity: customer.entity,
+        },
+        setZeroAdjustment: true,
+      });
     }
 
-    await deductFromUsageBasedCusEnt({
-      toDeduct,
-      cusEnts,
-      deductParams: {
-        db,
-        feature,
-        env,
-        org,
-        cusPrices: cusPrices as any[],
-        customer,
-        properties,
-        entity: customer.entity,
-      },
-      setZeroAdjustment: true,
+    handleThresholdReached({
+      org,
+      env,
+      features: allFeatures,
+      db,
+
+      feature,
+      cusEnts: originalCusEnts,
+      newCusEnts: cusEnts,
+      fullCus: customer,
+      logger,
     });
   }
 
@@ -316,6 +328,7 @@ export const runUpdateUsageTask = async ({
       org,
       env,
       entityId,
+      allFeatures,
     } = payload;
 
     console.log("--------------------------------");
@@ -334,6 +347,7 @@ export const runUpdateUsageTask = async ({
       setUsage: set_usage,
       logger,
       entityId,
+      allFeatures,
     });
 
     await refreshCusCache({
