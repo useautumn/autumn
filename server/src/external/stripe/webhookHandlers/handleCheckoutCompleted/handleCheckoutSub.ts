@@ -27,9 +27,7 @@ export const handleCheckoutSub = async ({
 }) => {
   const { org, customer } = attachParams;
 
-  if (!subscription) {
-    return;
-  }
+  if (!subscription) return;
 
   const { start, end } = subToPeriodStartEnd({ sub: subscription });
 
