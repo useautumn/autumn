@@ -1,4 +1,5 @@
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
 import { PageSectionHeader } from "@/components/general/PageSectionHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -121,6 +122,22 @@ export const ConfigureStripe = () => {
             </a>
             .
           </p>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-t3 text-sm">If you want to use a restricted key</span>
+            <InfoTooltip>
+              <div className="max-w-xs">
+                <p className="font-medium mb-2">The following information</p>
+                <p className="text-sm mb-1">Scopes needed:</p>
+                <ul className="text-sm list-disc list-inside space-y-0.5">
+                  <li>Core</li>
+                  <li>Checkout</li>
+                  <li>Billing</li>
+                  <li>All webhook</li>
+                  <li>Accounts</li>
+                </ul>
+              </div>
+            </InfoTooltip>
+          </div>
 
           {org.stripe_connected ? (
             <Input
