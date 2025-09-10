@@ -56,7 +56,7 @@ export const OrgDropdown = () => {
   const inactiveOrgs = useMemo(() => {
     if (!orgs || !org) return [];
     return orgs.filter((orgItem: any) => orgItem.id !== org.id);
-  }, [orgs, org]);
+  }, [org, orgs]);
 
   // To pre-fetch data
   useMemberships();
