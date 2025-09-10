@@ -3,6 +3,7 @@ import { sendTextEmail } from "@/external/resend/resendUtils.js";
 import { MigrationJobStep, Organization } from "@autumn/shared";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { safeResend } from "@/external/resend/safeResend.js";
+import { FROM_AUTUMN } from "./constants.js";
 
 export const sendMigrationEmail = safeResend({
   fn: async ({
@@ -27,8 +28,7 @@ export const sendMigrationEmail = safeResend({
 
     console.log("Sending migration email");
     await sendTextEmail({
-      from: `Autumn`,
-      fromEmail: "hey",
+      from: FROM_AUTUMN,
       to: "johnyeocx@gmail.com",
       subject: `Migration Job Finished -- ${migrationJob.id}`,
       body: `

@@ -258,7 +258,7 @@ export const handleUpdateFeature = async (
     req,
     res,
     action: "Update feature",
-    handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
+    handler: async (req: any, res: any) => {
       let featureId = req.params.feature_id;
       let data = req.body;
       let { db, orgId, env, logtail: logger } = req;
