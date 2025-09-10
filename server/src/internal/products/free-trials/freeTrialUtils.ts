@@ -1,198 +1,214 @@
-import RecaseError from "@/utils/errorUtils.js";
-import { generateId, notNullish } from "@/utils/genUtils.js";
 import {
-  CreateFreeTrial,
+  type CreateFreeTrial,
   CreateFreeTrialSchema,
   ErrCode,
-  FreeTrial,
+  type FreeProductConfig,
+  type FreeTrial,
   FreeTrialDuration,
-  Price,
+  type Price
 } from "@autumn/shared";
 import { addDays, addMinutes, addMonths, addYears } from "date-fns";
-import { FreeTrialService } from "./FreeTrialService.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import { isFreeProduct, isOneOff } from "../productUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { generateId } from "@/utils/genUtils.js";
+import { isOneOff } from "../productUtils.js";
+import { FreeTrialService } from "./FreeTrialService.js";
 
 export const validateOneOffTrial = async ({
-  prices,
-  freeTrial,
+	prices,
+	freeTrial,
 }: {
-  prices: Price[];
-  freeTrial: FreeTrial | null;
+	prices: Price[];
+	freeTrial: FreeTrial | null;
 }) => {
-  if(isOneOff(prices) && freeTrial) {
-    throw new RecaseError({
-      message: "One-off products cannot have a free trial",
-      code: ErrCode.InvalidRequest,
-      statusCode: 400,
-    });
-  }
-}
+	if (isOneOff(prices) && freeTrial) {
+		throw new RecaseError({
+			message: "One-off products cannot have a free trial",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+};
 
 export const validateAndInitFreeTrial = ({
-  freeTrial,
-  internalProductId,
-  isCustom = false,
+	freeTrial,
+	internalProductId,
+	isCustom = false,
 }: {
-  freeTrial: CreateFreeTrial;
-  internalProductId: string;
-  isCustom?: boolean;
+	freeTrial: CreateFreeTrial;
+	internalProductId: string;
+	isCustom?: boolean;
 }): FreeTrial => {
-  const freeTrialSchema = CreateFreeTrialSchema.parse(freeTrial);
+	const freeTrialSchema = CreateFreeTrialSchema.parse(freeTrial);
 
-  return {
-    ...freeTrialSchema,
-    id: generateId("ft"),
-    created_at: Date.now(),
-    duration: freeTrial.duration || FreeTrialDuration.Day,
-    internal_product_id: internalProductId,
-    is_custom: isCustom,
-    card_required: freeTrial.card_required ?? true,
-  };
+	return {
+		...freeTrialSchema,
+		id: generateId("ft"),
+		created_at: Date.now(),
+		duration: freeTrial.duration || FreeTrialDuration.Day,
+		internal_product_id: internalProductId,
+		is_custom: isCustom,
+		card_required: freeTrial.card_required ?? true,
+	};
 };
 
 export const freeTrialsAreSame = ({
-  ft1,
-  ft2,
+	ft1,
+	ft2,
 }: {
-  ft1?: FreeTrial | CreateFreeTrial | null;
-  ft2?: FreeTrial | CreateFreeTrial | null;
+	ft1?: FreeTrial | CreateFreeTrial | null;
+	ft2?: FreeTrial | CreateFreeTrial | null;
 }) => {
-  if (!ft1 && !ft2) return true;
-  if (!ft1 || !ft2) return false;
-  return (
-    ft1.length === ft2.length &&
-    ft1.unique_fingerprint === ft2.unique_fingerprint &&
-    ft1.duration === ft2.duration &&
-    ft1.card_required === ft2.card_required
-  );
+	if (!ft1 && !ft2) return true;
+	if (!ft1 || !ft2) return false;
+	return (
+		ft1.length === ft2.length &&
+		ft1.unique_fingerprint === ft2.unique_fingerprint &&
+		ft1.duration === ft2.duration &&
+		ft1.card_required === ft2.card_required
+	);
 };
 
 export const freeTrialToStripeTimestamp = ({
-  freeTrial,
-  now,
+	freeTrial,
+	now,
 }: {
-  freeTrial: FreeTrial | null | undefined;
-  now?: number | undefined;
+	freeTrial: FreeTrial | null | undefined;
+	now?: number | undefined;
 }) => {
-  now = now || Date.now();
+	now = now || Date.now();
 
-  if (!freeTrial) return undefined;
+	if (!freeTrial) return undefined;
 
-  let duration = freeTrial.duration || FreeTrialDuration.Day;
-  let length = freeTrial.length;
+	const duration = freeTrial.duration || FreeTrialDuration.Day;
+	const length = freeTrial.length;
 
-  let trialEnd: Date;
-  if (duration === FreeTrialDuration.Day) {
-    trialEnd = addDays(new Date(now), length);
-  } else if (duration === FreeTrialDuration.Month) {
-    trialEnd = addMonths(new Date(now), length);
-  } else if (duration === FreeTrialDuration.Year) {
-    trialEnd = addYears(new Date(now), length);
-  } else {
-    throw new RecaseError({
-      message: `Invalid free trial duration: ${duration}`,
-      code: "invalid_free_trial_duration",
-      statusCode: 400,
-    });
-  }
+	let trialEnd: Date;
+	if (duration === FreeTrialDuration.Day) {
+		trialEnd = addDays(new Date(now), length);
+	} else if (duration === FreeTrialDuration.Month) {
+		trialEnd = addMonths(new Date(now), length);
+	} else if (duration === FreeTrialDuration.Year) {
+		trialEnd = addYears(new Date(now), length);
+	} else {
+		throw new RecaseError({
+			message: `Invalid free trial duration: ${duration}`,
+			code: "invalid_free_trial_duration",
+			statusCode: 400,
+		});
+	}
 
-  // trialEnd = addMinutes(trialEnd, 5);
-  trialEnd = addMinutes(trialEnd, 10);
+	// trialEnd = addMinutes(trialEnd, 5);
+	trialEnd = addMinutes(trialEnd, 10);
 
-  return Math.ceil(trialEnd.getTime() / 1000);
+	return Math.ceil(trialEnd.getTime() / 1000);
+};
+
+export const rewardTrialToStripeTimestamp = ({
+	rewardTrial,
+	now,
+}: {
+	rewardTrial: FreeProductConfig | null | undefined;
+	now?: number | undefined;
+}) => {
+	now = now || Date.now();
+	if (!rewardTrial) return undefined;
+	const length = rewardTrial.duration_value;
+	const trialEnd: Date = addMonths(new Date(now), length);
+
+	return Math.ceil(trialEnd.getTime() / 1000);
 };
 
 export const getFreeTrialAfterFingerprint = async ({
-  db,
-  freeTrial,
-  productId,
-  fingerprint,
-  internalCustomerId,
-  multipleAllowed,
+	db,
+	freeTrial,
+	productId,
+	fingerprint,
+	internalCustomerId,
+	multipleAllowed,
 }: {
-  db: DrizzleCli;
-  freeTrial: FreeTrial | null | undefined;
-  productId: string;
-  fingerprint: string | null | undefined;
-  internalCustomerId: string;
-  multipleAllowed: boolean;
+	db: DrizzleCli;
+	freeTrial: FreeTrial | null | undefined;
+	productId: string;
+	fingerprint: string | null | undefined;
+	internalCustomerId: string;
+	multipleAllowed: boolean;
 }): Promise<FreeTrial | null> => {
-  if (!freeTrial) return null;
+	if (!freeTrial) return null;
 
-  if (multipleAllowed) {
-    return freeTrial;
-  }
+	if (multipleAllowed) {
+		return freeTrial;
+	}
 
-  let uniqueFreeTrial: FreeTrial | null = freeTrial;
+	let uniqueFreeTrial: FreeTrial | null = freeTrial;
 
-  const data = await CusProductService.getByFingerprint({
-    db,
-    productId,
-    internalCustomerId,
-    fingerprint: uniqueFreeTrial.unique_fingerprint ? fingerprint! : undefined,
-  });
+	const data = await CusProductService.getByFingerprint({
+		db,
+		productId,
+		internalCustomerId,
+		fingerprint: uniqueFreeTrial.unique_fingerprint ? fingerprint! : undefined,
+	});
 
-  const exists = data && data.length > 0;
+	const exists = data && data.length > 0;
 
-  if (exists) {
-    console.log("Free trial fingerprint exists");
-    uniqueFreeTrial = null;
-  }
+	if (exists) {
+		console.log("Free trial fingerprint exists");
+		uniqueFreeTrial = null;
+	}
 
-  return uniqueFreeTrial;
+	return uniqueFreeTrial;
 };
 
 export const handleNewFreeTrial = async ({
-  db,
-  newFreeTrial,
-  curFreeTrial,
-  internalProductId,
-  isCustom = false,
-  product,
+	db,
+	newFreeTrial,
+	curFreeTrial,
+	internalProductId,
+	isCustom = false,
+	product,
 }: {
-  db: DrizzleCli;
-  newFreeTrial: CreateFreeTrial | null;
-  curFreeTrial: FreeTrial | null | undefined;
-  internalProductId: string;
-  isCustom: boolean;
-  product?: any; // Add product parameter for validation
+	db: DrizzleCli;
+	newFreeTrial: CreateFreeTrial | null;
+	curFreeTrial: FreeTrial | null | undefined;
+	internalProductId: string;
+	isCustom: boolean;
+	product?: any; // Add product parameter for validation
 }) => {
-  // If new free trial is null
-  if (!newFreeTrial) {
-    if (!isCustom && curFreeTrial) {
-      await FreeTrialService.delete({
-        db,
-        id: curFreeTrial.id,
-      });
-    }
-    return null;
-  }
+	// If new free trial is null
+	if (!newFreeTrial) {
+		if (!isCustom && curFreeTrial) {
+			await FreeTrialService.delete({
+				db,
+				id: curFreeTrial.id,
+			});
+		}
+		return null;
+	}
 
-  if (freeTrialsAreSame({ ft1: curFreeTrial, ft2: newFreeTrial })) {
-    return curFreeTrial;
-  }
+	if (freeTrialsAreSame({ ft1: curFreeTrial, ft2: newFreeTrial })) {
+		return curFreeTrial;
+	}
 
-  const createdFreeTrial = validateAndInitFreeTrial({
-    freeTrial: newFreeTrial,
-    internalProductId,
-    isCustom,
-  });
+	const createdFreeTrial = validateAndInitFreeTrial({
+		freeTrial: newFreeTrial,
+		internalProductId,
+		isCustom,
+	});
 
-  if (isCustom && newFreeTrial) {
-    await FreeTrialService.insert({
-      db,
-      data: createdFreeTrial,
-    });
-  } else if (!isCustom) {
-    createdFreeTrial.id = curFreeTrial?.id || createdFreeTrial.id;
+	if (isCustom && newFreeTrial) {
+		await FreeTrialService.insert({
+			db,
+			data: createdFreeTrial,
+		});
+	} else if (!isCustom) {
+		createdFreeTrial.id = curFreeTrial?.id || createdFreeTrial.id;
 
-    await FreeTrialService.upsert({
-      db,
-      data: createdFreeTrial,
-    });
-  }
+		await FreeTrialService.upsert({
+			db,
+			data: createdFreeTrial,
+		});
+	}
 
-  return createdFreeTrial;
+	return createdFreeTrial;
 };
