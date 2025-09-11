@@ -128,7 +128,7 @@ function ProductView() {
             </div>
           </div>
         </div>
-        <div className="hidden lg:flex max-w-md w-1/3 shrink-1 lg:min-w-xs sticky top-0">
+        <div className="hidden max-w-md w-1/3 shrink-1 lg:block lg:min-w-xs sticky top-0">
           <ProductSidebar />
         </div>
       </div>
