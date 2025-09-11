@@ -151,8 +151,8 @@ export const previewToCheckoutRes = async ({
   return CheckoutResponseSchema.parse({
     customer_id: attachParams.customer.id,
     lines,
-    product: notNullish(attachParams.products) ? undefined : newProduct,
-    current_product: notNullish(attachParams.products) ? undefined : curProduct,
+    product: newProduct,
+    current_product: curProduct,
     total: new Decimal(total).toDecimalPlaces(2).toNumber(),
     currency: org.default_currency || "usd",
     next_cycle_at: notNullish(preview.due_next_cycle)
