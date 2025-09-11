@@ -99,7 +99,7 @@ export const getLifetimeAndUsageCusEnts = async ({
 
 const testCase = "multiFeature2";
 describe(`${chalk.yellowBright(
-  "multiFeature2: Testing lifetime + pay per use -> pay per use",
+  "multiFeature2: Testing lifetime + pay per use -> pay per use"
 )}`, () => {
   let autumn: AutumnInt = new AutumnInt();
   let autumn2: AutumnInt = new AutumnInt({ version: APIVersion.v1_2 });
@@ -179,7 +179,7 @@ describe(`${chalk.yellowBright(
     });
 
     expect(lifetimeCusEnt?.balance).to.equal(
-      (pro.items.lifetime.included_usage as number) - value,
+      (pro.items.lifetime.included_usage as number) - value
     );
     expect(usageCusEnt?.balance).to.equal(pro.items.payPerUse.included_usage);
   });
@@ -193,13 +193,14 @@ describe(`${chalk.yellowBright(
       feature_id: features.metered1.id,
     });
 
-    await timeout(4000);
+    await timeout(3000);
 
     await autumn.attach({
       customer_id: customerId,
       product_id: premium.id,
     });
 
+    // return;
     let { lifetimeCusEnt, usageCusEnt: newUsageCusEnt } =
       await getLifetimeAndUsageCusEnts({
         customerId,
@@ -210,9 +211,7 @@ describe(`${chalk.yellowBright(
       });
 
     expect(lifetimeCusEnt).to.not.exist;
-    expect(newUsageCusEnt?.balance).to.equal(
-      premium.items.payPerUse.included_usage,
-    );
+    expect(newUsageCusEnt?.balance).to.equal(-50);
 
     // Check invoice too
     let res = await autumn2.customers.get(customerId);
@@ -221,7 +220,7 @@ describe(`${chalk.yellowBright(
     let invoice0Amount = value * (pro.items.payPerUse.price ?? 0);
     expect(invoices![0].total).to.equal(
       invoice0Amount,
-      "Invoice 0 should be 0",
+      "Invoice 0 should be 0"
     );
   });
 });

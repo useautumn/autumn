@@ -42,7 +42,7 @@ export const DeleteCustomerDialog = ({
 
     try {
       await axiosInstance.delete(
-        `/v1/customers/${customer.id}?delete_in_stripe=${deleteStripe}`
+        `/v1/customers/${customer.id || customer.internal_id}?delete_in_stripe=${deleteStripe}`
       );
 
       await refetch();

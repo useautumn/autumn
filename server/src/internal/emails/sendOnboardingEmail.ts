@@ -1,5 +1,6 @@
 import { sendHtmlEmail } from "@/external/resend/resendUtils.js";
 import { safeResend } from "@/external/resend/safeResend.js";
+import { FROM_AYUSH } from "./constants.js";
 
 const getWelcomeEmailBody = (userFirstName: string) => {
   return `
@@ -23,7 +24,7 @@ export const sendOnboardingEmail = safeResend({
     const firstName = name.split(" ")[0];
 
     await sendHtmlEmail({
-      from: "Ayush",
+      from: FROM_AYUSH,
       to: email,
       subject: "Anything I can help with?",
       body: getWelcomeEmailBody(firstName),

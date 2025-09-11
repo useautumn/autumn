@@ -21,28 +21,43 @@ export const CreateCustomerSchema = z.object({
     .string()
     .refine(
       (val) => {
-        if (!val) return true; // Allow null/undefined
+        if (val === null) return true; // Allow null/undefined
+
         return /^[a-zA-Z0-9_-]+$/.test(val);
       },
       (val) => {
-        if (!val) return { message: "ID is required" };
-        
+        if (val === "") return { message: "can't be an empty string" };
+
         // Check for specific invalid characters and provide targeted messages
         if (val.includes("@")) {
-          return { message: "ID cannot contain @ symbol. Use only letters, numbers, underscores, and hyphens." };
+          return {
+            message:
+              "ID cannot contain @ symbol. Use only letters, numbers, underscores, and hyphens.",
+          };
         }
         if (val.includes(" ")) {
-          return { message: "ID cannot contain spaces. Use only letters, numbers, underscores, and hyphens." };
+          return {
+            message:
+              "ID cannot contain spaces. Use only letters, numbers, underscores, and hyphens.",
+          };
         }
         if (val.includes(".")) {
-          return { message: "ID cannot contain periods. Use only letters, numbers, underscores, and hyphens." };
+          return {
+            message:
+              "ID cannot contain periods. Use only letters, numbers, underscores, and hyphens.",
+          };
         }
         if (/[^a-zA-Z0-9_-]/.test(val)) {
           const invalidChar = val.match(/[^a-zA-Z0-9_-]/)?.[0];
-          return { message: `ID cannot contain '${invalidChar}'. Use only letters, numbers, underscores, and hyphens.` };
+          return {
+            message: `ID cannot contain '${invalidChar}'. Use only letters, numbers, underscores, and hyphens.`,
+          };
         }
-        
-        return { message: "ID must contain only letters, numbers, underscores, and hyphens." };
+
+        return {
+          message:
+            "ID must contain only letters, numbers, underscores, and hyphens.",
+        };
       }
     )
     .nullish(),

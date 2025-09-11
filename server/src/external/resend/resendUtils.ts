@@ -14,26 +14,18 @@ export const createResendCli = () => {
   return new Resend(process.env.RESEND_API_KEY);
 };
 
-export const nameToEmail = (name: string) => {
-  return `${name.toLowerCase().replace(/\s+/g, ".")}@hey.${process.env.RESEND_DOMAIN}`;
-};
-
 export const sendTextEmail = async ({
   from,
-  fromEmail,
   to,
   subject,
   body,
 }: ResendEmailProps) => {
   const resend = createResendCli();
-  fromEmail = fromEmail
-    ? `${fromEmail}@hey.${process.env.RESEND_DOMAIN}`
-    : nameToEmail(from);
 
   try {
     logger.info(`Sending email to ${to} with subject ${subject}`);
     const { data, error } = await resend.emails.send({
-      from: `${from} <${fromEmail}>`,
+      from: from,
       to: to,
       subject: subject,
       text: body,
@@ -44,7 +36,6 @@ export const sendTextEmail = async ({
         error,
         data: {
           from,
-          fromEmail,
           to,
           subject,
           body,
@@ -56,7 +47,6 @@ export const sendTextEmail = async ({
       error,
       data: {
         from,
-        fromEmail,
         to,
         subject,
         body,
@@ -71,17 +61,12 @@ export const sendHtmlEmail = async ({
   to,
   subject,
   body,
-  fromEmail,
   replyTo,
 }: ResendEmailProps) => {
   const resend = createResendCli();
 
-  fromEmail = fromEmail
-    ? `${fromEmail}@${process.env.RESEND_DOMAIN}`
-    : nameToEmail(from);
-
   await resend.emails.send({
-    from: `${from} <${fromEmail}>`,
+    from: from,
     to: to,
     subject: subject,
     html: body,

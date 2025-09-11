@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Reward, RewardType } from "@autumn/shared";
+import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
+import { useOrg } from "@/hooks/common/useOrg";
 
 export const AddRewardButton = ({
   setAttachRewards,
@@ -44,7 +46,8 @@ export const MultiAttachRewards = ({
   setAttachRewards: (rewards: any) => void;
   sub: any;
 }) => {
-  const { rewards, org } = useCustomerContext();
+  const { org } = useOrg();
+  const { rewards } = useRewardsQuery();
   const subDiscounts = sub?.discounts || [];
 
   const noRewards = attachRewards.length === 0 && subDiscounts.length === 0;

@@ -88,5 +88,5 @@ internalFeatureRouter.get(
   handleGetFeatureDeletionInfo
 );
 
-internalFeatureRouter.post("/:feature_id", handleUpdateFeature);
+internalFeatureRouter.post("/:feature_id", handleUpdateFeature as any);
 internalFeatureRouter.delete("/:featureId", handleDeleteFeature);
