@@ -1,7 +1,6 @@
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { Select } from "@/components/ui/select";
-
 import {
+  Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
@@ -28,14 +27,6 @@ export const SelectCycle = () => {
       usage_model: usageModel,
     });
   };
-
-  // const intervalText = (interval: BillingInterval) => {
-  //   return interval === BillingInterval.SemiAnnual
-  //     ? "per half year"
-  //     : interval === BillingInterval.OneOff
-  //       ? "one off"
-  //       : `per ${interval}`;
-  // };
 
   return (
     <div className="w-full">

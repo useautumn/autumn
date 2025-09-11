@@ -7,10 +7,8 @@ import ProductViewBreadcrumbs from "./components/ProductViewBreadcrumbs";
 
 import { useState } from "react";
 import { ProductContext } from "./ProductContext";
-import { useParams, useSearchParams } from "react-router";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useParams } from "react-router";
 import { ManageProduct } from "./ManageProduct";
-import { AppEnv } from "@autumn/shared";
 import { useProductChangedAlert } from "./hooks/useProductChangedAlert";
 import { useProductData } from "./hooks/useProductData";
 import { UpdateProductButton } from "./components/UpdateProductButton";
@@ -130,7 +128,7 @@ function ProductView() {
             </div>
           </div>
         </div>
-        <div className="flex max-w-md w-1/3 shrink-1 lg:block lg:min-w-xs sticky top-0">
+        <div className="hidden lg:flex max-w-md w-1/3 shrink-1 lg:min-w-xs sticky top-0">
           <ProductSidebar />
         </div>
       </div>
