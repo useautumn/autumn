@@ -122,17 +122,19 @@ export const handleAllowanceUsed = async ({
 }) => {
   // Allowance used...
   // Make sure overage allowed is false
-  for (const cusEnt of cusEnts) {
+  const oldCusEnts = structuredClone(cusEnts);
+  for (const cusEnt of oldCusEnts) {
     cusEnt.usage_allowed = false;
   }
 
-  for (const cusEnt of newCusEnts) {
+  const clonedNewCusEnts = structuredClone(newCusEnts);
+  for (const cusEnt of clonedNewCusEnts) {
     cusEnt.usage_allowed = false;
   }
 
   const prevCheckResponse = await getV2CheckResponse({
     fullCus,
-    cusEnts,
+    cusEnts: oldCusEnts,
     creditSystems: [],
     feature,
     org,
@@ -142,7 +144,7 @@ export const handleAllowanceUsed = async ({
 
   const v2CheckResponse = await getV2CheckResponse({
     fullCus,
-    cusEnts: newCusEnts,
+    cusEnts: clonedNewCusEnts,
     creditSystems: [],
     feature,
     org,
