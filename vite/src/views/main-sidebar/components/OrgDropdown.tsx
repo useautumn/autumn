@@ -26,7 +26,7 @@ import {
 import { DropdownMenuGroup } from "@radix-ui/react-dropdown-menu";
 import { ChevronDown, PanelRight, Plus, Settings } from "lucide-react";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { CreateNewOrg } from "./CreateNewOrg";
 import { toast } from "sonner";
 import { LogOutItem } from "./LogOutItem";
@@ -60,6 +60,12 @@ export const OrgDropdown = () => {
   );
 
   const { data: session } = useSession();
+
+  //remove the currect active org from the orgs data
+  const inactiveOrgs = useMemo(() => {
+    if (!orgs || !org) return [];
+    return orgs.filter((orgItem: any) => orgItem.id !== org.id);
+  }, [org, orgs]);
 
   // To pre-fetch data
   useMemberships();
@@ -172,7 +178,7 @@ export const OrgDropdown = () => {
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
                 <DropdownMenuSubContent className="w-48">
-                  {orgs?.map((org) => (
+                  {inactiveOrgs?.map((org) => (
                     <SwitchOrgItem
                       key={org.id}
                       org={org}
