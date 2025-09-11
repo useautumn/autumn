@@ -23,6 +23,7 @@ import { getOptionsFromCheckoutSession } from "./handleCheckoutCompleted/getOpti
 import { getEarliestPeriodEnd } from "../stripeSubUtils/convertSubUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { handleSetupCheckout } from "./handleCheckoutCompleted/handleSetupCheckout.js";
 
 export const handleCheckoutSessionCompleted = async ({
   req,
@@ -74,6 +75,15 @@ export const handleCheckoutSessionCompleted = async ({
     "Handling checkout.completed: autumn metadata:",
     checkoutSession.metadata?.autumn_metadata_id
   );
+
+  if (attachParams.setupPayment) {
+    await handleSetupCheckout({
+      req,
+      db,
+      attachParams,
+    });
+    return;
+  }
 
   const checkoutSub =
     checkoutSession.subscription as Stripe.Subscription | null;

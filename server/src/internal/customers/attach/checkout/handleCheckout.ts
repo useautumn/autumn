@@ -23,7 +23,7 @@ import { getPriceOptions } from "@/internal/products/prices/priceUtils.js";
 import { getHasProrations } from "./getHasProrations.js";
 import { handleCreateInvoiceCheckout } from "../../add-product/handleCreateInvoiceCheckout.js";
 import { z } from "zod";
-import { formatUnixToDate } from "@/utils/genUtils.js";
+import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
 
 const getAttachVars = async ({
   req,

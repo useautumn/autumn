@@ -470,6 +470,14 @@ export const deductFromUsageBasedCusEnt = async ({
     onlyUsageAllowed: true,
   }) as FullCusEntWithFullCusProduct;
 
+  console.log(
+    "Cus ents:",
+    cusEnts.map(
+      (ce) =>
+        `Feature: ${ce.entitlement.feature_id}, Balance: ${ce.balance}, Usage Allowed: ${ce.usage_allowed}`
+    )
+  );
+
   if (
     !usageBasedEnt &&
     feature.config?.usage_type == FeatureUsageType.Continuous

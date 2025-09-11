@@ -67,6 +67,9 @@ export const getExistingUsages = ({
   let usages: Record<
     string,
     {
+      feature_id: string;
+      interval: EntInterval;
+      interval_count: number;
       usage: number;
       entityUsages: Record<string, number> | null;
       fromEntities: boolean;
@@ -84,6 +87,9 @@ export const getExistingUsages = ({
 
     if (!usages[key]) {
       usages[key] = {
+        feature_id: feature?.id || "",
+        interval: EntInterval.Lifetime,
+        interval_count: 1,
         usage: 0,
         entityUsages: null,
         fromEntities: true,
@@ -97,21 +103,20 @@ export const getExistingUsages = ({
     let ent = cusEnt.entitlement;
     let key = `${ent.feature_id}-${ent.interval}-${ent.interval_count || 1}`;
     let feature = ent.feature;
-    if (feature.type == FeatureType.Boolean) {
-      continue;
-    }
+    if (feature.type == FeatureType.Boolean) continue;
 
     let { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
       cusEnts: curCusProduct.customer_entitlements,
       internalFeatureId: ent.internal_feature_id!,
     });
 
-    if (unlimited) {
-      continue;
-    }
+    if (unlimited) continue;
 
     if (!usages[key]) {
       usages[key] = {
+        feature_id: feature.id,
+        interval: ent.interval || EntInterval.Lifetime,
+        interval_count: ent.interval_count || 1,
         usage: 0,
         entityUsages: null,
         fromEntities: false,
@@ -191,7 +196,7 @@ export const addExistingUsagesToCusEnts = ({
   // Sort cusEnts
   sortCusEntsForDeduction(fullCusEnts);
 
-  // printLogs = true;
+  printLogs = false;
   if (printLogs) {
     console.log("DEDUCTING EXISTING USAGE FROM CUS ENTS");
     console.log("Existing usages:", existingUsages);
@@ -204,30 +209,32 @@ export const addExistingUsagesToCusEnts = ({
     );
   }
 
-  // Perform deductions...
-
   for (const key in existingUsages) {
     let usage = existingUsages[key].usage;
     let entityUsages = existingUsages[key].entityUsages;
 
+    const {
+      feature_id = "",
+      interval = "",
+      interval_count = 1,
+    } = existingUsages[key] || {};
+
     for (const cusEnt of fullCusEnts) {
       let ent = cusEnt.entitlement;
-      let cusEntKey = `${ent.feature_id}-${ent.interval}-${ent.interval_count || 1}`;
+      // let cusEntKey = `${ent.feature_id}-${ent.interval}-${ent.interval_count || 1}`;
       let fromEntities = existingUsages[key].fromEntities;
 
-      if (cusEntKey !== key) {
-        continue;
-      }
+      // if (cusEntKey !== key) continue;
+      const isSameFeature = cusEnt.feature_id == feature_id;
+
+      if (!isSameFeature) continue;
 
       let shouldCarry =
         ent.carry_from_previous || carryExistingUsages || fromEntities;
-      if (!shouldCarry) {
-        continue;
-      }
+
+      if (!shouldCarry) continue;
 
       if (notNullish(entityUsages)) {
-        // TODO: Check if this works...
-
         for (const entityId in entityUsages) {
           let { toDeduct, newEntities } = performDeductionOnCusEnt({
             cusEnt,

@@ -1,6 +1,7 @@
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { sendTextEmail } from "@/external/resend/resendUtils.js";
 import { safeResend } from "@/external/resend/safeResend.js";
+import { FROM_AUTUMN } from "./constants.js";
 
 const getInvitationEmailBody = ({ orgName }: { orgName: string }) => {
   return `Hey there! You've been invited to join ${orgName} on Autumn. 
@@ -23,8 +24,7 @@ export const sendInvitationEmail = safeResend({
   }) => {
     logger.info(`Sending invitation email to ${email}`);
     await sendTextEmail({
-      from: `Autumn`,
-      fromEmail: "hey",
+      from: FROM_AUTUMN,
       to: email,
       subject: `Join ${orgName} on Autumn`,
       body: getInvitationEmailBody({ orgName }),

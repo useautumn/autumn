@@ -56,6 +56,7 @@ export const AttachBodySchema = z
 
     // Checkout params
     skip_checkout: z.boolean().optional(),
+    setup_payment: z.boolean().optional(),
   })
   .refine(
     (data) => {

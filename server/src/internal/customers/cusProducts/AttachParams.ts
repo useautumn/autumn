@@ -76,6 +76,7 @@ export type AttachParams = {
   finalizeInvoice?: boolean;
   req?: any;
   fromCancel?: boolean;
+  setupPayment?: boolean;
 };
 
 export type InsertCusProductParams = {

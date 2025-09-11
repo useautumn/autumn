@@ -1,4 +1,5 @@
-import { WebhookEventType } from "@autumn/shared";
+import RecaseError from "@/utils/errorUtils.js";
+import { ErrCode, WebhookEventType } from "@autumn/shared";
 import express, { Router } from "express";
 import { Webhook } from "svix";
 
@@ -15,11 +16,15 @@ const verifyAutumnWebhook = async (req: any, res: any) => {
   const svix_signature = headers["svix-signature"];
 
   if (!svix_id || !svix_timestamp || !svix_signature) {
-    res.status(400).json({
-      success: false,
+    throw new RecaseError({
       message: "Error: Missing svix headers",
+      code: ErrCode.InvalidInputs,
     });
-    return;
+    // res.status(400).json({
+    //   success: false,
+    //   message: "Error: Missing svix headers",
+    // });
+    // return;
   }
 
   let evt: any;
@@ -30,12 +35,16 @@ const verifyAutumnWebhook = async (req: any, res: any) => {
       "svix-signature": svix_signature as string,
     });
   } catch (err) {
-    console.log("Error: Could not verify webhook");
-    res.status(400).json({
-      success: false,
+    throw new RecaseError({
       message: "Error: Could not verify webhook",
+      code: ErrCode.InvalidInputs,
     });
-    return;
+    // console.log("Error: Could not verify webhook");
+    // res.status(400).json({
+    //   success: false,
+    //   message: "Error: Could not verify webhook",
+    // });
+    // return;
   }
 
   return evt;
