@@ -50,9 +50,7 @@ export const OrgDropdown = () => {
 
   // Exclude the active organization from the orgs list (this makes it easier for users to understand which org is active)
   if (activeOrganization && orgs) {
-    orgs = orgs.filter(
-      (o) => o.id !== activeOrganization.id
-    );
+    orgs = orgs.filter((o) => o.id !== activeOrganization.id);
   }
 
   const [dialogType, setDialogType] = useState<"create" | "manage" | null>(
@@ -61,11 +59,11 @@ export const OrgDropdown = () => {
 
   const { data: session } = useSession();
 
-  //remove the currect active org from the orgs data
-  const inactiveOrgs = useMemo(() => {
-    if (!orgs || !org) return [];
-    return orgs.filter((orgItem: any) => orgItem.id !== org.id);
-  }, [org, orgs]);
+  // //remove the currect active org from the orgs data
+  // const inactiveOrgs = useMemo(() => {
+  //   if (!orgs || !org) return [];
+  //   return orgs.filter((orgItem: any) => orgItem.id !== org.id);
+  // }, [org, orgs]);
 
   // To pre-fetch data
   useMemberships();
@@ -170,24 +168,27 @@ export const OrgDropdown = () => {
                 </div>
               </DropdownMenuItem>
             )}
-            <DropdownMenuSeparator />
-
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger className="text-t2">
-                Switch Organization
-              </DropdownMenuSubTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuSubContent className="w-48">
-                  {inactiveOrgs?.map((org) => (
-                    <SwitchOrgItem
-                      key={org.id}
-                      org={org}
-                      setDropdownOpen={setDropdownOpen}
-                    />
-                  ))}
-                </DropdownMenuSubContent>
-              </DropdownMenuPortal>
-            </DropdownMenuSub>
+            {orgs && orgs.length > 0 && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="text-t2">
+                    Switch Organization
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent className="w-48">
+                      {orgs.map((org) => (
+                        <SwitchOrgItem
+                          key={org.id}
+                          org={org}
+                          setDropdownOpen={setDropdownOpen}
+                        />
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
+              </>
+            )}
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <LogOutItem />
@@ -200,8 +201,6 @@ export const OrgDropdown = () => {
 const SwitchOrgItem = ({ org, setDropdownOpen }: any) => {
   const [loading, setLoading] = useState(false);
   const [_, setSearchParams] = useSearchParams();
-
-  const { mutate } = useOrg();
 
   const handleSwitchOrg = async (orgId: string) => {
     setLoading(true);
