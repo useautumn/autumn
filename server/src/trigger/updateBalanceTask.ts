@@ -470,14 +470,6 @@ export const deductFromUsageBasedCusEnt = async ({
     onlyUsageAllowed: true,
   }) as FullCusEntWithFullCusProduct;
 
-  console.log(
-    "Cus ents:",
-    cusEnts.map(
-      (ce) =>
-        `Feature: ${ce.entitlement.feature_id}, Balance: ${ce.balance}, Usage Allowed: ${ce.usage_allowed}`
-    )
-  );
-
   if (
     !usageBasedEnt &&
     feature.config?.usage_type == FeatureUsageType.Continuous
@@ -568,8 +560,6 @@ export const deductFromUsageBasedCusEnt = async ({
     id: usageBasedEnt!.id,
     updates,
   });
-
-  console.log("Usage based cus ent balance", usageBasedEnt.balance);
 };
 
 // Main function to update customer balance
@@ -603,6 +593,7 @@ export const updateCustomerBalance = async ({
     env,
     inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
     entityId,
+    withSubs: true,
   });
 
   const { cusEnts, cusPrices } = await getCusEntsInFeatures({

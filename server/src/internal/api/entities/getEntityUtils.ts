@@ -148,12 +148,19 @@ export const getEntityResponse = async ({
   }
 
   const entityResponses: EntityResponse[] = [];
+
   for (const entityId of entityIds) {
     const entity = fullCus.entities.find(
       (e: Entity) => e.id == entityId || e.internal_id == entityId
     );
 
-    if (!entity) continue;
+    if (!entity) {
+      throw new RecaseError({
+        message: `Entity ${entityId} not found for customer ${fullCus.id}`,
+        code: ErrCode.EntityNotFound,
+        statusCode: 400,
+      });
+    }
 
     let entityResponse = await getSingleEntityResponse({
       entityId,

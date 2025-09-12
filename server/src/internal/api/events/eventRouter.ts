@@ -83,9 +83,7 @@ const getEventAndCustomer = async ({
 
   let internalEntityId = null;
   if (event_data.entity_id) {
-    internalEntityId = customer.entities.find(
-      (e) => e.id === event_data.entity_id
-    )?.internal_id;
+    internalEntityId = customer.entity?.internal_id;
   }
 
   const newEvent: EventInsert = {
