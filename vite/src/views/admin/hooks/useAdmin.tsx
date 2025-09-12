@@ -9,7 +9,7 @@ export const useAdmin = () => {
   useEffect(() => {
     if (
       data?.user?.role === "admin" ||
-      notNullish(data?.session.impersonatedBy)
+      notNullish(data?.session?.impersonatedBy)
     ) {
       setIsAdmin(true);
     }

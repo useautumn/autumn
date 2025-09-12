@@ -92,7 +92,7 @@ export const handleUpgradeFlowSchedule = async ({
             cp.subscription_ids?.includes(curSub.id) &&
             ACTIVE_STATUSES.includes(cp.status)
         )
-        .every((cp) => cp.canceled) && isFreeProduct(prices);
+        .every((cp) => cp.canceled_at) && isFreeProduct(prices);
 
     if (shouldCancelSub) {
       logger.info(`UPGRADE FLOW: canceling sub ${curSub?.id}`);
