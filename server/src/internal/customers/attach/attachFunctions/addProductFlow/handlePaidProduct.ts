@@ -1,10 +1,10 @@
 import {
-  APIVersion,
-  type AttachConfig,
-  AttachScenario,
-  ErrCode,
-  isTrialing,
-  SuccessCode,
+	APIVersion,
+	type AttachConfig,
+	AttachScenario,
+	ErrCode,
+	isTrialing,
+	SuccessCode,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
@@ -12,12 +12,12 @@ import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSu
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
 import {
-  type AttachParams,
-  AttachResultSchema,
+	type AttachParams,
+	AttachResultSchema,
 } from "@/internal/customers/cusProducts/AttachParams.js";
 import {
-  attachToInvoiceResponse,
-  insertInvoiceFromAttach,
+	attachToInvoiceResponse,
+	insertInvoiceFromAttach,
 } from "@/internal/invoices/invoiceUtils.js";
 import { rewardTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
