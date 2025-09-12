@@ -26,6 +26,8 @@ import { toNodeHandler } from "better-auth/node";
 import { auth } from "./utils/auth.js";
 import { checkEnvVars } from "./utils/initUtils.js";
 import { ClickHouseManager } from "./external/clickhouse/ClickHouseManager.js";
+import * as traceroot from "traceroot-sdk-ts";
+import { initializeTraceroot } from "./external/traceroot/tracerootUtils.js";
 
 const tracer = trace.getTracer("express");
 
@@ -202,6 +204,12 @@ function registerShutdownHandlers() {
 async function gracefulShutdown() {
   console.log("Shutting down worker, closing DB connections...");
   try {
+    await traceroot.forceFlushTracer();
+    await traceroot.shutdownTracing();
+    await traceroot.forceFlushLogger();
+    await traceroot.shutdownLogger();
+    console.log("TraceRoot flush completed.");
+
     await client.end();
     console.log("DB connection closed. Exiting process.");
     process.exit(0);
