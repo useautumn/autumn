@@ -80,6 +80,7 @@ export const handlePaidProduct = async ({
   let trialEndsAt = undefined;
 
   // 1. If merge sub
+
   if (mergeSub && !config.disableMerge) {
     if (mergeCusProduct?.free_trial) {
       trialEndsAt = isTrialing({
@@ -152,6 +153,7 @@ export const handlePaidProduct = async ({
       billingCycleAnchorUnix = attachParams.billingAnchor;
     }
 
+    // console.log("Item set: ", itemSet);
     try {
       sub = await createStripeSub2({
         db: req.db,

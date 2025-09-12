@@ -125,6 +125,7 @@ export const handleCheckoutSessionCompleted = async ({
   const anchorToUnix = checkoutSub
     ? getEarliestPeriodEnd({ sub: checkoutSub! }) * 1000
     : undefined;
+
   if (attachParams.productsList) {
     console.log("Inserting products list");
     for (const productOptions of attachParams.productsList) {

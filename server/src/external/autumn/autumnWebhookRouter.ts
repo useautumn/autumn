@@ -61,9 +61,36 @@ autumnWebhookRouter.post(
 
       switch (type) {
         case WebhookEventType.CustomerProductsUpdated:
+          console.log(`--------------------------------`);
+          // console.log(`Received customer.products.updated webhook`);
+          // console.log(JSON.stringify(data, null, 2));
           console.log(
-            `Type: ${type}, Scenario: ${data?.scenario}, Product: ${data?.updated_product?.id}`
+            `Customer:`,
+            data?.customer.id,
+            `Products:`,
+            data?.customer.products.map((p: any) => ({
+              id: p.id,
+              entity_id: p.entity_id,
+              status: p.status,
+              quantity: p.quantity,
+            }))
           );
+
+          if (data?.entity) {
+            console.log(
+              `Entity: ${data.entity.id}, Products:`,
+              data.entity.products.map((p: any) => ({
+                id: p.id,
+                status: p.status,
+                quantity: p.quantity,
+              }))
+            );
+          }
+
+          console.log(
+            `Update product ID: ${data?.updated_product?.id}, Scenario: ${data?.scenario}`
+          );
+          console.log(`--------------------------------`);
           break;
         case WebhookEventType.CustomerThresholdReached:
           console.log(`Type: ${type}`);
