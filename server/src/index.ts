@@ -26,6 +26,7 @@ import { toNodeHandler } from "better-auth/node";
 import { auth } from "./utils/auth.js";
 import { checkEnvVars } from "./utils/initUtils.js";
 import { ClickHouseManager } from "./external/clickhouse/ClickHouseManager.js";
+import * as traceroot from "traceroot-sdk-ts";
 
 const tracer = trace.getTracer("express");
 
@@ -165,6 +166,20 @@ const init = async () => {
   server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
+
+  const TraceRootConfig = {
+    token: 'traceroot-430248637e2043f7a75cde128877687e',
+    service_name: 'server',
+    github_owner: 'useautumn',
+    github_repo_name: 'autumn',
+    github_commit_hash: 'main',
+    environment: 'production',
+  };
+
+  traceroot.init(TraceRootConfig);
+  // await traceroot.init();
+  console.log("Traceroot initialized!!!!!!!!!!!!");
+
 };
 
 if (process.env.NODE_ENV === "development") {
@@ -202,6 +217,11 @@ function registerShutdownHandlers() {
 async function gracefulShutdown() {
   console.log("Shutting down worker, closing DB connections...");
   try {
+    await traceroot.forceFlushTracer();
+    await traceroot.shutdownTracing();
+    await traceroot.forceFlushLogger();
+    await traceroot.shutdownLogger();
+    console.log("TraceRoot flush completed.");
     await client.end();
     console.log("DB connection closed. Exiting process.");
     process.exit(0);

@@ -1,5 +1,9 @@
 # ---- Base dependencies ----
 FROM oven/bun:latest AS base
+
+# Install curl and other useful tools
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 RUN bun install -g serve typescript tsc tsc-alias tsx
 

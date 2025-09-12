@@ -10,6 +10,32 @@ import { checkStripeConnections } from "./attachRouter.js";
 import { insertCustomItems } from "./attachUtils/insertCustomItems.js";
 import { runAttachFunction } from "./attachUtils/getAttachFunction.js";
 
+// import { getConfig} from 'traceroot-sdk-ts';
+
+// try to remove this soon.
+// import { tracerootInitialized } from "@/external/traceroot/tracerootUtils.js";
+import * as traceroot from "traceroot-sdk-ts";
+
+const runAttachWithTraceroot = async ({
+  function: functionToTrace,
+  spanName,
+}: {
+  function: any;
+  spanName: string;
+}): Promise<any> => {
+  // console.log("super debug ! tracerootInitialized", tracerootInitialized);
+  // if (tracerootInitialized) {
+  const tracedFunction = traceroot.traceFunction(functionToTrace, {
+    spanName: spanName,
+  });
+
+  return await tracedFunction();
+  // } else {
+  //   return await functionToTrace();
+  // }
+};
+
+
 export const handleAttach = async (req: any, res: any) =>
   routeHandler({
     req,
@@ -18,76 +44,119 @@ export const handleAttach = async (req: any, res: any) =>
     handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
       await handleAttachRaceCondition({ req, res });
 
-      const attachBody = AttachBodySchema.parse(req.body);
+      const tracedFunction = traceroot.traceFunction(async () => {
+        await runAttachWithTraceroot({
+          function: async () => {
+          const attachBody = AttachBodySchema.parse(req.body);
 
-      const { attachParams, customPrices, customEnts } = await getAttachParams({
-        req,
-        attachBody,
+          const { attachParams, customPrices, customEnts } =
+            await getAttachParams({
+              req,
+              attachBody,
+            });
+
+          // temporary teset
+          const traceRoot = require('traceroot-sdk-ts')
+          // traceRootLogger = traceRoot.getLogger
+          // let new_config = traceRoot.tracer.getConfig()
+          // import { getConfig, getLogger } from 'traceroot-sdk-ts';
+
+          // const new_config = traceroot.getConfig();
+          // // const logger = getLogger();
+        
+          // // if (config) {
+          //   // logger.info('Service Configuration', {
+          // console.log('Service Configuration', {
+          //   service_name: config.service_name,
+          //   environment: config.environment,
+          //   log_level: config.log_level,
+          //   enable_log_console_export: config.enable_log_console_export,
+          //   enable_log_cloud_export: config.enable_log_cloud_export,
+          //   local_mode: config.local_mode
+          // });
+          // }
+
+          console.log('Service Configuration');
+          // console.log(new_config.service_name);
+          // console.log(new_config.environment);
+          // console.log(new_config.log_level);
+          // console.log(new_config.enable_log_console_export);
+          // console.log(new_config.enable_log_cloud_export);
+          // console.log(new_config.local_mode);
+
+
+          const tracerootLogger = traceroot.get_logger();
+          tracerootLogger.info("let me test it first");
+
+          // Handle existing product
+          const branch = await getAttachBranch({
+            req,
+            attachBody,
+            attachParams,
+          });
+
+          const { flags, config } = await getAttachConfig({
+            req,
+            attachParams,
+            attachBody,
+            branch,
+          });
+
+          await handleAttachErrors({
+            attachParams,
+            attachBody,
+            branch,
+            flags,
+            config,
+          });
+
+          await checkStripeConnections({
+            req,
+            attachParams,
+            useCheckout: config.onlyCheckout,
+          });
+
+          await insertCustomItems({
+            db: req.db,
+            customPrices: customPrices || [],
+            customEnts: customEnts || [],
+          });
+
+          try {
+            req.logger.info(`Attach params: `, {
+              data: {
+                products: attachParams.products.map((p) => ({
+                  id: p.id,
+                  name: p.name,
+                  processor: p.processor,
+                  version: p.version,
+                })),
+                prices: attachParams.prices.map((p) => ({
+                  id: p.id,
+                  config: p.config,
+                })),
+                entitlements: attachParams.entitlements.map((e) => ({
+                  internal_feature_id: e.internal_feature_id,
+                  feature_id: e.feature_id,
+                })),
+                freeTrial: attachParams.freeTrial,
+              },
+            });
+          } catch (error) {}
+
+          await runAttachFunction({
+            req,
+            res,
+            attachParams,
+            branch,
+            attachBody,
+            config,
+          });
+        },
+        spanName: "handleAttach",
       });
-
-      // Handle existing product
-      const branch = await getAttachBranch({
-        req,
-        attachBody,
-        attachParams,
-      });
-
-      const { flags, config } = await getAttachConfig({
-        req,
-        attachParams,
-        attachBody,
-        branch,
-      });
-
-      await handleAttachErrors({
-        attachParams,
-        attachBody,
-        branch,
-        flags,
-        config,
-      });
-
-      await checkStripeConnections({
-        req,
-        attachParams,
-        useCheckout: config.onlyCheckout,
-      });
-
-      await insertCustomItems({
-        db: req.db,
-        customPrices: customPrices || [],
-        customEnts: customEnts || [],
-      });
-
-      try {
-        req.logger.info(`Attach params: `, {
-          data: {
-            products: attachParams.products.map((p) => ({
-              id: p.id,
-              name: p.name,
-              processor: p.processor,
-              version: p.version,
-            })),
-            prices: attachParams.prices.map((p) => ({
-              id: p.id,
-              config: p.config,
-            })),
-            entitlements: attachParams.entitlements.map((e) => ({
-              internal_feature_id: e.internal_feature_id,
-              feature_id: e.feature_id,
-            })),
-            freeTrial: attachParams.freeTrial,
-          },
-        });
-      } catch (error) {}
-
-      await runAttachFunction({
-        req,
-        res,
-        attachParams,
-        branch,
-        attachBody,
-        config,
-      });
+      }, { spanName: 'handleAttach.main' });
+      
+      return await tracedFunction();
     },
   });
