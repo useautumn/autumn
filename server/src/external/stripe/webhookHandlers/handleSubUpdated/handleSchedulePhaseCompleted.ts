@@ -48,7 +48,7 @@ export const handleSchedulePhaseCompleted = async ({
 
   for (const cusProduct of cusProducts) {
     const shouldExpire =
-      cusProduct.canceled && cusProduct.ended_at && now >= cusProduct.ended_at;
+      cusProduct.canceled_at && cusProduct.ended_at && now >= cusProduct.ended_at;
 
     if (shouldExpire) {
       logger.info(

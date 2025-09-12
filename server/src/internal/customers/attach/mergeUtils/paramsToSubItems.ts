@@ -71,7 +71,7 @@ export const getCusProductsToRemove = ({
 
     const canceledCusProducts = cusProducts.filter(
       (cp) =>
-        cp.canceled && (subId ? cp.subscription_ids?.includes(subId!) : true)
+        cp.canceled_at && (subId ? cp.subscription_ids?.includes(subId!) : true)
     );
     cusProductsToRemove.push(...canceledCusProducts);
   }

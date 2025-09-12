@@ -1,7 +1,7 @@
 import { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
 
 export const isCanceled = ({ cusProduct }: { cusProduct: FullCusProduct }) => {
-  return cusProduct.canceled;
+  return cusProduct.canceled_at !== null && cusProduct.canceled_at !== undefined;
 };
 
 export const isTrialing = ({

@@ -213,7 +213,7 @@ const getSameProductBranch = async ({
     return AttachBranch.Renew;
   }
 
-  if (curSameProduct.canceled_at || curSameProduct.canceled) {
+  if (curSameProduct.canceled_at) {
     return AttachBranch.Renew;
   }
 

@@ -108,7 +108,7 @@ export const handleCancelProduct = async ({
   const isMain = !cusProduct.product.is_add_on;
 
   if (isMain) {
-    if (cusProduct.canceled && !expireImmediately) {
+    if (cusProduct.canceled_at && !expireImmediately) {
       throw new RecaseError({
         message: `Product ${cusProduct.product.name} is already about to cancel at the end of cycle.`,
         code: ErrCode.InvalidRequest,

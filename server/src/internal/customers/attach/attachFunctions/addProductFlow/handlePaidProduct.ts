@@ -119,7 +119,7 @@ export const handlePaidProduct = async ({
         attachParams,
         config,
         endOfBillingPeriod: mergeSub.cancel_at,
-        removeCusProducts: attachParams.cusProducts.filter((cp) => cp.canceled),
+        removeCusProducts: attachParams.cusProducts.filter((cp) => cp.canceled_at),
       });
     }
 

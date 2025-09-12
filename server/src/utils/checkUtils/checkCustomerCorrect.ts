@@ -299,9 +299,9 @@ export const checkCusSubCorrect = async ({
 
       if (cusProduct.product.is_add_on) {
         // 1. If it's canceled
-        if (cusProduct.canceled && (cusProduct.ended_at || 0) > unix) {
+        if (cusProduct.canceled_at && (cusProduct.ended_at || 0) > unix) {
           return scheduleIndexes.push(index);
-        } else if (!cusProduct.canceled) {
+        } else if (!cusProduct.canceled_at) {
           return scheduleIndexes.push(index);
         }
 
@@ -475,7 +475,7 @@ export const checkCusSubCorrect = async ({
         }
       }
 
-      return cp.canceled;
+      return cp.canceled_at;
     }
 
     return true;

@@ -68,7 +68,7 @@ const updateCusProductCanceled = async ({
   await CusProductService.updateByStripeSubId({
     db,
     stripeSubId: sub.id,
-    updates: { canceled_at: canceledAt || Date.now(), canceled: true },
+    updates: { canceled_at: canceledAt || Date.now() },
   });
 };
 
