@@ -49,7 +49,7 @@ export const OrgDropdown = () => {
   const { data: activeOrganization } = authClient.useActiveOrganization();
 
   // Exclude the active organization from the orgs list (this makes it easier for users to understand which org is active)
-  if (activeOrganization && orgs) {
+  if (activeOrganization && orgs && Array.isArray(orgs)) {
     orgs = orgs.filter((o) => o.id !== activeOrganization.id);
   }
 
@@ -168,7 +168,7 @@ export const OrgDropdown = () => {
                 </div>
               </DropdownMenuItem>
             )}
-            {orgs && orgs.length > 0 && (
+            {orgs && Array.isArray(orgs) && orgs.length > 0 && (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuSub>
