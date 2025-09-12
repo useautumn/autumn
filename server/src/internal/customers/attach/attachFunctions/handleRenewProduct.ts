@@ -9,7 +9,7 @@ import {
   paramsToCurSub,
 } from "../attachUtils/convertAttachParams.js";
 import { paramsToScheduleItems } from "../mergeUtils/paramsToScheduleItems.js";
-import { AttachConfig, SuccessCode } from "@autumn/shared";
+import { AttachConfig, AttachScenario, SuccessCode } from "@autumn/shared";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import {
   cusProductToSchedule,
@@ -19,6 +19,8 @@ import { subToNewSchedule } from "../mergeUtils/subToNewSchedule.js";
 import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { updateCurSchedule } from "../mergeUtils/updateCurSchedule.js";
 import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
+import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
+import { addSubIdToCache } from "../../cusCache/subCacheUtils.js";
 
 export const handleRenewProduct = async ({
   req,
@@ -33,9 +35,9 @@ export const handleRenewProduct = async ({
 }) => {
   const logger = req.logtail;
   const { stripeCli, customer: fullCus } = attachParams;
+  const { curScheduledProduct } = attachParamToCusProducts({ attachParams });
 
   const curCusProduct = attachParamsToCurCusProduct({ attachParams });
-  const { curScheduledProduct } = attachParamToCusProducts({ attachParams });
   const product = attachParams.products[0];
   const cusProducts = attachParams.customer.customer_products;
 
@@ -91,6 +93,11 @@ export const handleRenewProduct = async ({
     }
 
     if (curSubId) {
+      // Add sub id to upstash
+      await addSubIdToCache({
+        subId: curSubId,
+        scenario: AttachScenario.Renew,
+      });
       await stripeCli.subscriptions.update(curSubId, {
         cancel_at: null,
       });
@@ -190,6 +197,24 @@ export const handleRenewProduct = async ({
           canceled_at: null,
         },
       });
+    }
+  }
+
+  if (curCusProduct) {
+    try {
+      await addProductsUpdatedWebhookTask({
+        req,
+        internalCustomerId: curCusProduct.internal_customer_id,
+        org: attachParams.org,
+        env: attachParams.customer.env,
+        customerId:
+          attachParams.customer.id || attachParams.customer.internal_id,
+        scenario: AttachScenario.Renew,
+        cusProduct: curCusProduct,
+        logger,
+      });
+    } catch (error) {
+      logger.error("RENEW FLOW: failed to add to webhook queue", { error });
     }
   }
 

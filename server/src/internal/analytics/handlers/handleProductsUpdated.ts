@@ -2,9 +2,9 @@ import {
   ActionType,
   AppEnv,
   AuthType,
-  CusProductStatus,
   FullCusProduct,
   FullProduct,
+  notNullish,
   Organization,
 } from "@autumn/shared";
 
@@ -23,7 +23,8 @@ import { ActionService } from "@/internal/analytics/ActionService.js";
 import { constructAction } from "@/internal/analytics/actionUtils.js";
 import { parseReqForAction } from "@/internal/analytics/actionUtils.js";
 import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
-import { cusProductToPrices, cusProductToProduct } from "@autumn/shared";
+import { cusProductToProduct } from "@autumn/shared";
+import { getSingleEntityResponse } from "@/internal/api/entities/getEntityUtils.js";
 
 interface ActionDetails {
   request_id: string;
@@ -121,18 +122,7 @@ export const handleProductsUpdated = async ({
 
   // Product:
   let product = cusProduct.product;
-  // const prices = cusProductToPrices({ cusProduct });
-  // const ents = cusProductToEnts({ cusProduct });
-  // let freeTrial = cusProduct.free_trial;
-
   let fullProduct: FullProduct = cusProductToProduct({ cusProduct });
-
-  // {
-  //   ...product,
-  //   prices,
-  //   entitlements: ents,
-  //   free_trial: freeTrial || null,
-  // };
 
   let customer = await CusService.getFull({
     db,
@@ -165,9 +155,6 @@ export const handleProductsUpdated = async ({
     features,
   });
 
-  // 1. Log action to DB
-
-  // console.log(`handling products.updated for customer ${customer.id}`);
   try {
     if (req) {
       let action = constructAction({
@@ -205,6 +192,28 @@ export const handleProductsUpdated = async ({
     }
   }
 
+  let entityRes = null;
+  if (notNullish(customer?.entity)) {
+    entityRes = await getSingleEntityResponse({
+      entityId: customer.entity!.id,
+      org,
+      env,
+      fullCus: customer,
+      entity: customer.entity!,
+      features,
+    });
+  }
+
+  // console.log(`Sending svix event for customer ${customer.id}`);
+  // console.log(
+  //   "Products:",
+  //   cusDetails.products.map((p) => ({
+  //     id: p.id,
+  //     status: p.status,
+  //     quantity: p.quantity,
+  //   }))
+  // );
+
   // 2. Send Svix event
   await sendSvixEvent({
     org,
@@ -213,6 +222,7 @@ export const handleProductsUpdated = async ({
     data: {
       scenario,
       customer: cusDetails,
+      entity: entityRes,
       updated_product: productRes,
     },
   });

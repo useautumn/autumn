@@ -9,6 +9,9 @@ export * from "./cusProductUtils/cusProductConstants.js";
 export * from "./cusProductUtils/cusProductUtils.js";
 export * from "./utils.js";
 
+// Cus ent utils
+export * from "./cusEntUtils/balanceUtils.js";
+
 // Item utils
 export * from "./productV2Utils/productItemUtils/mapToItem.js";
 export * from "./productV2Utils/productItemUtils/productItemUtils.js";
