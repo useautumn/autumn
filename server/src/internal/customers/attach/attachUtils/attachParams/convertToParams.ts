@@ -18,7 +18,7 @@ import type {
 	InsertCusProductParams,
 } from "@/internal/customers/cusProducts/AttachParams.js";
 import { newCusToFullCus } from "@/internal/customers/cusUtils/cusUtils.js";
-import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
+import { isFreeProduct, isOneOff, itemsAreOneOff } from "@/internal/products/productUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const webhookToAttachParams = ({
@@ -174,9 +174,7 @@ export const rewardProgramToAttachParams = ({
 }): AttachParams => {
 	const reward = rewardProgram.reward;
 	const isPaid = !isFreeProduct(product.prices);
-	const isRecurring = !isOneOff(product.prices);
-    console.log("isPaid in convertToParams", isPaid);
-    console.log("isRecurring in convertToParams", isRecurring);
+	const isRecurring = !isOneOff(product.prices) && !itemsAreOneOff(product.entitlements);;
 
 	return {
 		req,
@@ -187,7 +185,7 @@ export const rewardProgramToAttachParams = ({
 		entitlements: product.entitlements,
 		freeTrial: null,
 		rewardTrial:
-			isPaid && isRecurring && reward.free_product_config
+			(isPaid && isRecurring && reward.free_product_config)
 				? reward.free_product_config
 				: null,
 		optionsList: [],

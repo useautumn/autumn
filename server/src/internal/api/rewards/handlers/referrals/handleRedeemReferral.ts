@@ -157,7 +157,7 @@ export default async (req: any, res: any) =>
 
 				const rewardCat = getRewardCat(reward);
 				if (rewardCat === RewardCategory.FreeProduct) {
-					await triggerFreeProduct({
+					const applications = await triggerFreeProduct({
 						req: parseReqForAction(req) as ExtendedRequest,
 						db,
 						referralCode,
@@ -167,6 +167,23 @@ export default async (req: any, res: any) =>
 						env,
 						logger,
 						redemption,
+					});
+
+					res.status(200).json({
+						id: redemption.id,
+						customer_id: customer.id,
+						reward_id: reward_program.reward.id,
+						referrer: {
+							id: codeCustomer.id,
+							name: codeCustomer.name,
+							email: codeCustomer.email,
+							created_at: codeCustomer.created_at,
+							code: applications.referrer.cause,
+						},
+						redeemer: {
+							code: applications.redeemer.cause,
+							...applications.redeemer.meta,
+						},
 					});
 				} else {
 					await triggerRedemption({
@@ -178,20 +195,31 @@ export default async (req: any, res: any) =>
 						reward,
 						redemption,
 					});
-				}
-			}
 
-			// Add coupon to customer?
-			res.status(200).json({
-				id: redemption.id,
-				customer_id: customer.id,
-				reward_id: reward_program.reward.id,
-				referrer: {
-					id: codeCustomer.id,
-					name: codeCustomer.name,
-					email: codeCustomer.email,
-					created_at: codeCustomer.created_at,
-				},
-			});
+					res.status(200).json({
+						id: redemption.id,
+						customer_id: customer.id,
+						reward_id: reward_program.reward.id,
+						referrer: {
+							id: codeCustomer.id,
+							name: codeCustomer.name,
+							email: codeCustomer.email,
+							created_at: codeCustomer.created_at,
+						},
+					});
+				}
+			} else if (referralCode.reward_program.when === RewardTriggerEvent.Checkout) {
+				return res.status(200).json({
+					id: redemption.id,
+					customer_id: customer.id,
+					reward_id: reward_program.reward.id,
+					referrer: {
+						id: codeCustomer.id,
+						name: codeCustomer.name,
+						email: codeCustomer.email,
+						created_at: codeCustomer.created_at,
+					},
+				})
+			}
 		},
 	});
