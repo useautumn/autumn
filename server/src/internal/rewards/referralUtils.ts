@@ -31,6 +31,14 @@ import {
 } from "../products/productUtils.js";
 import { RewardRedemptionService } from "./RewardRedemptionService.js";
 
+export const ReferralResponseCodes = {
+	OwnsProduct: "has_product_already",
+	Success: "success",
+	Unknown: "unknown",
+	NotConfigured: "not_configured",
+	InternalError: "internal_error",
+};
+
 export const generateReferralCode = () => {
 	const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 	const codeLength = 6;
@@ -211,17 +219,17 @@ export const triggerFreeProduct = async ({
 		// Seed in properties that aren't usually present dependent on the trigger type
 		return {
 			...req,
-			db: req?.db ? undefined : db,
-			org: req?.org ? undefined : org,
-			env: req?.env ? undefined : env,
-			logger: req?.logger ? undefined : logger,
-			logtail: req?.logtail ? undefined : logger,
+			db: req?.db ? req.db : db,
+			org: req?.org ? req.org : org,
+			env: req?.env ? req.env : env,
+			logger: req?.logger ? req.logger : logger,
+			logtail: req?.logtail ? req.logtail : logger,
 		} as ExtendedRequest;
 	}
 
 	// Branch 1: Free add-on product or non-recurring product
 	if (!isPaidProduct || !isRecurring) {
-		logger.info(`Branch 1: Free add-on product`);
+		logger.info(`Branch 1: ${isPaidProduct ? "Paid" : "Free"} add-on product`);
 		const attachParams: InsertCusProductParams = {
 			req,
 			org,
@@ -286,11 +294,42 @@ export const triggerFreeProduct = async ({
 				applied: true,
 			},
 		});
+
+		return {
+			redeemer: {
+				applied: addToRedeemer,
+				cause: addToRedeemer
+					? ReferralResponseCodes.Success
+					: ReferralResponseCodes.OwnsProduct,
+				meta: {
+					id: fullRedeemer.id,
+					name: fullRedeemer.name,
+					email: fullRedeemer.email,
+					created_at: fullRedeemer.created_at,
+				},
+			},
+			referrer: {
+				applied: addToReferrer,
+				cause: addToReferrer
+					? ReferralResponseCodes.Success
+					: ReferralResponseCodes.OwnsProduct,
+			},
+		};
 	}
-	// Branch 2: Paid product from Customer Redemption
-	else if (req && isPaidProduct) {
+	// Branch 2: Paid product from Customer Redemption Or Checkout
+	else if (isPaidProduct) {
 		logger.info(`Branch 2: Paid product from Customer Redemption`);
+		if (!req) {
+			req = {
+				db,
+				org,
+				env,
+				logger,
+				logtail: logger,
+			} as ExtendedRequest;
+		}
 		req = seedReq(req);
+
 		const ensureStripeIDs = [
 			!fullRedeemer.processor?.id &&
 				(await createCusInStripe({
@@ -298,7 +337,7 @@ export const triggerFreeProduct = async ({
 					org,
 					env,
 					db,
-					testClockId: req.body.testClockId,
+					testClockId: req?.body?.testClockId || undefined,
 				})),
 			!fullReferrer.processor?.id &&
 				(await createCusInStripe({
@@ -306,32 +345,14 @@ export const triggerFreeProduct = async ({
 					org,
 					env,
 					db,
-					testClockId: req.body.testClockId,
+					testClockId: req?.body?.testClockId || undefined,
 				})),
 		];
 
-		const updatedIDs = await Promise.all(ensureStripeIDs);
-
 		// Update customers with new Stripe IDs if they were created
-		const updatedRedeemer = updatedIDs[0]
-			? {
-					...fullRedeemer,
-					processor: {
-						type: "stripe" as const,
-						id: updatedIDs[0].id,
-					},
-				}
-			: fullRedeemer;
-
-		const updatedReferrer = updatedIDs[1]
-			? {
-					...fullReferrer,
-					processor: {
-						type: "stripe" as const,
-						id: updatedIDs[1].id,
-					},
-				}
-			: fullReferrer;
+		const updatedIDs = await Promise.all(ensureStripeIDs);
+		if (updatedIDs[0]) fullRedeemer.processor.id = updatedIDs[0].id;
+		if (updatedIDs[1]) fullReferrer.processor.id = updatedIDs[1].id;
 
 		const executions = [
 			addToRedeemer &&
@@ -340,7 +361,7 @@ export const triggerFreeProduct = async ({
 					attachParams: rewardProgramToAttachParams({
 						req,
 						rewardProgram: rewardProgram,
-						customer: updatedRedeemer,
+						customer: fullRedeemer,
 						product: fullProduct,
 						org,
 					}),
@@ -352,7 +373,7 @@ export const triggerFreeProduct = async ({
 					attachParams: rewardProgramToAttachParams({
 						req,
 						rewardProgram: rewardProgram,
-						customer: updatedReferrer,
+						customer: fullReferrer,
 						product: fullProduct,
 						org,
 					}),
@@ -360,27 +381,158 @@ export const triggerFreeProduct = async ({
 				})),
 		];
 
-		await Promise.allSettled(executions)
-			.then(async (x) => {
-				if (x.every((y) => y.status === "fulfilled")) {
-					await RewardRedemptionService.update({
-						db,
-						id: redemption.id,
-						updates: {
-							triggered: true,
-							applied: true,
-						},
-					});
-				} else {
-					logger.error(`Error in executions: ${x}`);
-				}
-			})
-			.catch((error) => {
-				logger.error(`Error in executions: ${error}`);
+		const results = await Promise.allSettled(executions);
+		const redeemerCause = !addToRedeemer
+			? ReferralResponseCodes.OwnsProduct
+			: results[0]?.status === "fulfilled"
+				? ReferralResponseCodes.Success
+				: ReferralResponseCodes.InternalError;
+		const referrerCause = !addToReferrer
+			? ReferralResponseCodes.OwnsProduct
+			: results[1]?.status === "fulfilled"
+				? ReferralResponseCodes.Success
+				: ReferralResponseCodes.InternalError;
+		const appliedToRedeemer =
+			addToRedeemer && results[0]?.status === "fulfilled";
+		const appliedToReferrer =
+			addToReferrer && results[1]?.status === "fulfilled";
+
+		if (results.every((result) => result.status === "fulfilled")) {
+			await RewardRedemptionService.update({
+				db,
+				id: redemption.id,
+				updates: {
+					triggered: true,
+					applied: true,
+				},
 			});
+		} else {
+			logger.error(`Error in executions: ${results}`);
+		}
+
+		return {
+			redeemer: {
+				applied: appliedToRedeemer,
+				cause: redeemerCause,
+				meta: {
+					id: fullRedeemer.id,
+					name: fullRedeemer.name,
+					email: fullRedeemer.email,
+					created_at: fullRedeemer.created_at,
+				},
+			},
+			referrer: { applied: appliedToReferrer, cause: referrerCause },
+		};
 	}
 	// Branch 3: Paid product from Checkout
-	else if (!req && isPaidProduct) {
-		logger.info(`Branch 3: Paid product from Checkout`);
+	else {
+		return {
+			redeemer: { applied: false, cause: ReferralResponseCodes.Unknown },
+			referrer: { applied: false, cause: ReferralResponseCodes.Unknown },
+		};
 	}
 };
+
+// else if (!req && isPaidProduct) {
+// 	logger.info(`Branch 3: Paid product from Checkout`);
+// 	logger.info(`Branch 2: Paid product from Customer Redemption`);
+
+// 	const ensureStripeIDs = [
+// 		!fullRedeemer.processor?.id &&
+// 			(await createCusInStripe({
+// 				customer: fullRedeemer,
+// 				org,
+// 				env,
+// 				db,
+// 			})),
+// 		!fullReferrer.processor?.id &&
+// 			(await createCusInStripe({
+// 				customer: fullReferrer,
+// 				org,
+// 				env,
+// 				db,
+// 			})),
+// 	];
+
+// 	// Update customers with new Stripe IDs if they were created
+// 	const updatedIDs = await Promise.all(ensureStripeIDs);
+// 	if (updatedIDs[0]) fullRedeemer.processor.id = updatedIDs[0].id;
+// 	if (updatedIDs[1]) fullReferrer.processor.id = updatedIDs[1].id;
+
+// 	const executions = [
+// 		addToRedeemer &&
+// 			(await handleAddProduct({
+// 				req: {
+// 					db,
+// 					logtail: logger,
+// 					logger,
+// 				} as ExtendedRequest,
+// 				attachParams: rewardProgramToAttachParams({
+// 					req: {
+// 						db,
+// 						logtail: logger,
+// 						logger,
+// 					} as ExtendedRequest,
+// 					rewardProgram: rewardProgram,
+// 					customer: fullRedeemer,
+// 					product: fullProduct,
+// 					org,
+// 				}),
+// 				branch: AttachBranch.New,
+// 			})),
+// 		addToReferrer &&
+// 			(await handleAddProduct({
+// 				req: {
+// 					db,
+// 					logtail: logger,
+// 					logger,
+// 				} as ExtendedRequest,
+// 				attachParams: rewardProgramToAttachParams({
+// 					req: {
+// 						db,
+// 						logtail: logger,
+// 						logger,
+// 					} as ExtendedRequest,
+// 					rewardProgram: rewardProgram,
+// 					customer: fullReferrer,
+// 					product: fullProduct,
+// 					org,
+// 				}),
+// 				branch: AttachBranch.New,
+// 			})),
+// 	];
+
+// 	await Promise.allSettled(executions)
+// 		.then(async (x) => {
+// 			if (x.every((y) => y.status === "fulfilled")) {
+// 				await RewardRedemptionService.update({
+// 					db,
+// 					id: redemption.id,
+// 					updates: {
+// 						triggered: true,
+// 						applied: true,
+// 					},
+// 				});
+// 			} else {
+// 				logger.error(`Error in executions: ${x}`);
+// 			}
+// 		})
+// 		.catch((error) => {
+// 			logger.error(`Error in executions: ${error}`);
+// 			return ``;
+// 		});
+
+// 	return {
+// 		redeemer: {
+// 			applied: addToRedeemer,
+// 			cause: "redeemerCause",
+// 			meta: {
+// 				id: fullRedeemer.id,
+// 				name: fullRedeemer.name,
+// 				email: fullRedeemer.email,
+// 				created_at: fullRedeemer.created_at,
+// 			},
+// 		},
+// 		referrer: { applied: addToReferrer, cause: "referrerCause" },
+// 	};
+// }

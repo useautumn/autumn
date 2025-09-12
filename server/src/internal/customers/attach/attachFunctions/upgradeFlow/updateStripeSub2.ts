@@ -3,7 +3,10 @@ import type Stripe from "stripe";
 import { sanitizeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { createProrationInvoice } from "@/external/stripe/stripeSubUtils/updateStripeSub/createProrationinvoice.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
+import {
+	freeTrialToStripeTimestamp,
+	rewardTrialToStripeTimestamp,
+} from "@/internal/products/free-trials/freeTrialUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { nullish } from "@/utils/genUtils.js";
@@ -12,8 +15,8 @@ import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { attachParamToCusProducts } from "../../attachUtils/convertAttachParams.js";
 import { createAndFilterContUseItems } from "../../attachUtils/getContUseItems/createContUseInvoiceItems.js";
 import {
-  createUsageInvoiceItems,
-  resetUsageBalances,
+	createUsageInvoiceItems,
+	resetUsageBalances,
 } from "../upgradeDiffIntFlow/createUsageInvoiceItems.js";
 
 export const updateStripeSub2 = async ({
@@ -33,10 +36,15 @@ export const updateStripeSub2 = async ({
 }) => {
 	const { db, logger } = req;
 
-	const { stripeCli, customer, org, paymentMethod } = attachParams;
+	const { stripeCli, customer, org, paymentMethod, rewardTrial } = attachParams;
 	const { invoiceOnly, proration } = config;
 
-	if (!invoiceOnly && !attachParams.fromCancel && nullish(paymentMethod)) {
+	if (
+		!invoiceOnly &&
+		!attachParams.fromCancel &&
+		!rewardTrial &&
+		nullish(paymentMethod)
+	) {
 		throw new RecaseError({
 			message: "Payment method is required",
 			code: "payment_method_required",
@@ -52,10 +60,12 @@ export const updateStripeSub2 = async ({
 	const trialEnd =
 		config.disableTrial || config.carryTrial
 			? undefined
-			: freeTrialToStripeTimestamp({
-					freeTrial: attachParams.freeTrial,
-					now: attachParams.now,
-				});
+			: rewardTrial?.duration_value
+				? rewardTrialToStripeTimestamp({ rewardTrial, now: attachParams.now })
+				: freeTrialToStripeTimestamp({
+						freeTrial: attachParams.freeTrial,
+						now: attachParams.now,
+					});
 
 	// 1. Update subscription
 
