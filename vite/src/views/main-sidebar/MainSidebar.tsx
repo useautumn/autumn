@@ -12,6 +12,7 @@ import {
   PanelLeft,
   SquareTerminal,
   ChartColumnBig,
+  PanelRight,
 } from "lucide-react";
 import { EnvDropdown } from "./EnvDropdown";
 import { OrgDropdown } from "./components/OrgDropdown";
@@ -58,21 +59,6 @@ export const MainSidebar = () => {
         )}
       >
         <div className="flex flex-col gap-6 relative">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setExpanded((prev) => !prev);
-            }}
-            className={cn(
-              "absolute top-1 right-4 text-t3 hover:bg-stone-200 w-5 h-5 p-0 border-none border-0 shadow-none bg-transparent",
-              expanded
-                ? "opacity-100 transition-opacity duration-100"
-                : "opacity-0 transition-opacity duration-100"
-            )}
-          >
-            <PanelLeft size={14} />
-          </Button>
           <OrgDropdown />
 
           <EnvDropdown env={env} />
@@ -154,6 +140,29 @@ export const MainSidebar = () => {
             />
           </div> */}
           </div>
+
+          {/* Expand / Collapse toggle */}
+          {expanded ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setExpanded(false)}
+              className="flex px-4.5 items-center gap-2 justify-start text-t3 hover:bg-stone-200 w-full"
+            >
+              <PanelLeft size={14} className="stroke-black" />
+              <span className="text-black">Collapse</span>
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setExpanded(true)}
+              className="mx-auto text-t3 hover:bg-stone-200 w-7 h-7 p-0"
+              title="Expand"
+            >
+              <PanelRight size={14} className="stroke-black" />
+            </Button>
+          )}
         </div>
 
         <SidebarBottom />
