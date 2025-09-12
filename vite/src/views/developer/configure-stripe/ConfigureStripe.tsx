@@ -153,7 +153,7 @@ export const ConfigureStripe = () => {
             />
           ) : (
             <Input
-              placeholder="sk_test_..."
+              placeholder={env == AppEnv.Live ? "sk_live_..." : "sk_test_..."}
               value={newStripeConfig.secret_key}
               onChange={(e) =>
                 setNewStripeConfig({
