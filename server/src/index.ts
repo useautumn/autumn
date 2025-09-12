@@ -165,20 +165,6 @@ const init = async () => {
   server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
-
-  // const TraceRootConfig = {
-  //   token: 'traceroot-430248637e2043f7a75cde128877687e',
-  //   service_name: 'server',
-  //   github_owner: 'useautumn',
-  //   github_repo_name: 'autumn',
-  //   github_commit_hash: 'main',
-  //   environment: 'production',
-  // };
-
-  // traceroot.init(TraceRootConfig);
-  // // await traceroot.init();
-  // console.log("Traceroot initialized!!!!!!!!!!!!");
-
 };
 
 if (process.env.NODE_ENV === "development") {

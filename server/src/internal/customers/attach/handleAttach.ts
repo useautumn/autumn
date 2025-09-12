@@ -56,21 +56,6 @@ export const handleAttach = async (req: any, res: any) =>
 
           let traceRootConfig = tracerModule.getConfig()
 
-          // const new_config = traceroot.getConfig();
-          // // const logger = getLogger();
-        
-          // // if (config) {
-          //   // logger.info('Service Configuration', {
-          // console.log('Service Configuration', {
-          //   service_name: config.service_name,
-          //   environment: config.environment,
-          //   log_level: config.log_level,
-          //   enable_log_console_export: config.enable_log_console_export,
-          //   enable_log_cloud_export: config.enable_log_cloud_export,
-          //   local_mode: config.local_mode
-          // });
-          // }
-
           console.log(traceRootConfig.service_name);
           console.log(traceRootConfig.environment);
           console.log(traceRootConfig.log_level);
@@ -79,6 +64,8 @@ export const handleAttach = async (req: any, res: any) =>
           console.log(traceRootConfig.local_mode);
           const traceRootLogger = traceroot.getLogger("handleAttach");
           traceRootLogger.info("let me test it first");
+
+          traceRootLogger.info(req);
 
           // Handle existing product
           const branch = await getAttachBranch({

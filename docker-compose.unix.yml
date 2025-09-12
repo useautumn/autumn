@@ -27,6 +27,17 @@ services:
       - root-node-modules:/app/node_modules
     environment:
       - NODE_ENV=development
+      - TRACEROOT_TOKEN=traceroot-2482242f32984b318ab19c3ed6cf73bc
+      - TRACEROOT_SERVICE_NAME=autumn-server
+      - TRACEROOT_GITHUB_OWNER=github_owner
+      - TRACEROOT_GITHUB_REPO_NAME=autumn
+      - TRACEROOT_GITHUB_COMMIT_HASH=main
+      - TRACEROOT_ENABLE_SPAN_CLOUD_EXPORT=true
+      - TRACEROOT_ENABLE_LOG_CLOUD_EXPORT=true
+      - TRACEROOT_ENABLE_SPAN_CONSOLE_EXPORT=true
+      - TRACEROOT_ENABLE_LOG_CONSOLE_EXPORT=true
+      - TRACEROOT_ENVIRONMENT=development
+      - TRACEROOT_LOCAL_MODE=false
     restart: unless-stopped
 
   # Vite frontend
@@ -44,6 +55,17 @@ services:
       - root-node-modules:/app/node_modules
     environment:
       - NODE_ENV=development
+      - TRACEROOT_TOKEN=traceroot-2482242f32984b318ab19c3ed6cf73bc
+      - TRACEROOT_SERVICE_NAME=autumn-server
+      - TRACEROOT_GITHUB_OWNER=github_owner
+      - TRACEROOT_GITHUB_REPO_NAME=autumn
+      - TRACEROOT_GITHUB_COMMIT_HASH=main
+      - TRACEROOT_ENABLE_SPAN_CLOUD_EXPORT=true
+      - TRACEROOT_ENABLE_LOG_CLOUD_EXPORT=true
+      - TRACEROOT_ENABLE_SPAN_CONSOLE_EXPORT=true
+      - TRACEROOT_ENABLE_LOG_CONSOLE_EXPORT=true
+      - TRACEROOT_ENVIRONMENT=development
+      - TRACEROOT_LOCAL_MODE=false
     depends_on:
       - shared
     restart: unless-stopped
@@ -64,6 +86,20 @@ services:
     environment:
       - NODE_ENV=development
       - REDIS_URL=redis://valkey:6379
+      - TRACEROOT_TOKEN=traceroot-2482242f32984b318ab19c3ed6cf73bc
+      - TRACEROOT_SERVICE_NAME=autumn-server
+      - TRACEROOT_GITHUB_OWNER=github_owner
+      - TRACEROOT_GITHUB_REPO_NAME=autumn
+      - TRACEROOT_GITHUB_COMMIT_HASH=main
+      - TRACEROOT_ENABLE_SPAN_CLOUD_EXPORT=true
+      - TRACEROOT_ENABLE_LOG_CLOUD_EXPORT=true
+      - TRACEROOT_ENABLE_SPAN_CONSOLE_EXPORT=true
+      - TRACEROOT_ENABLE_LOG_CONSOLE_EXPORT=true
+      - TRACEROOT_ENVIRONMENT=development
+      - TRACEROOT_LOCAL_MODE=false
+      - TRACEROOT_CONFIG_PATH=app/server/traceroot.config.ts
+    env_file:
+      - ./server/.env
     depends_on:
       - shared
     restart: unless-stopped
@@ -83,6 +119,8 @@ services:
     environment:
       - NODE_ENV=development
       - REDIS_URL=redis://valkey:6379
+    env_file:
+      - ./server/.env
     depends_on:
       - shared
     restart: unless-stopped
