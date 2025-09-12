@@ -155,19 +155,6 @@ export const OrgDropdown = () => {
                 <Plus size={14} />
               </div>
             </DropdownMenuItem>
-            {!expanded && (
-              <DropdownMenuItem
-                onClick={(e) => {
-                  setExpanded(true);
-                  setDropdownOpen(false);
-                }}
-              >
-                <div className="flex justify-between w-full items-center gap-2 text-t2">
-                  <span>Open Sidebar</span>
-                  <PanelRight size={14} />
-                </div>
-              </DropdownMenuItem>
-            )}
             {orgs && orgs.length > 0 && (
               <>
                 <DropdownMenuSeparator />
