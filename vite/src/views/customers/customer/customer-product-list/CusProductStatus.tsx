@@ -20,7 +20,7 @@ export const CusProductStatusItem = ({
     const trialing =
       cusProduct.trial_ends_at && cusProduct.trial_ends_at > Date.now();
 
-    const canceled = cusProduct.canceled;
+    const canceled = cusProduct.canceled_at !== null && cusProduct.canceled_at !== undefined;
 
     if (canceled) return "canceled";
 

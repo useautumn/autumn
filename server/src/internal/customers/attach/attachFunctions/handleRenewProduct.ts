@@ -60,7 +60,7 @@ export const handleRenewProduct = async ({
   const otherCanceled = cusProducts.some(
     (cp) =>
       cp.subscription_ids?.includes(curSubId!) &&
-      cp.canceled &&
+      cp.canceled_at &&
       cp.id !== curCusProduct?.id
   );
 

@@ -20,12 +20,12 @@ import { CacheManager } from "./external/caching/CacheManager.js";
 import { logger } from "./external/logtail/logtailUtils.js";
 import { createPosthogCli } from "./external/posthog/createPosthogCli.js";
 import { generateId } from "./utils/genUtils.js";
-import { subscribeToOrgUpdates } from "./external/supabase/subscribeToOrgUpdates.js";
 import { client, db } from "./db/initDrizzle.js";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./utils/auth.js";
 import { checkEnvVars } from "./utils/initUtils.js";
 import { ClickHouseManager } from "./external/clickhouse/ClickHouseManager.js";
+import * as traceroot from "traceroot-sdk-ts";
 
 const tracer = trace.getTracer("express");
 
@@ -202,6 +202,11 @@ function registerShutdownHandlers() {
 async function gracefulShutdown() {
   console.log("Shutting down worker, closing DB connections...");
   try {
+    await traceroot.forceFlushTracer();
+    await traceroot.shutdownTracer();
+    await traceroot.forceFlushLogger();
+    await traceroot.shutdownLogger();
+    console.log("TraceRoot flush completed.");
     await client.end();
     console.log("DB connection closed. Exiting process.");
     process.exit(0);

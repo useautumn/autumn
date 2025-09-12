@@ -68,7 +68,7 @@ export const removeCusProductFromScheduleItems = async ({
       if (
         allCusProducts.some((cp) => {
           if (cp.id === cusProduct.id) return false;
-          if (cp.canceled) return false;
+          if (cp.canceled_at) return false;
 
           if (
             phaseStart &&
