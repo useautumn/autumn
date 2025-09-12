@@ -10,11 +10,10 @@ import { checkStripeConnections } from "./attachRouter.js";
 import { insertCustomItems } from "./attachUtils/insertCustomItems.js";
 import { runAttachFunction } from "./attachUtils/getAttachFunction.js";
 
-// import { getConfig} from 'traceroot-sdk-ts';
 
-// try to remove this soon.
 // import { tracerootInitialized } from "@/external/traceroot/tracerootUtils.js";
 import * as traceroot from "traceroot-sdk-ts";
+const tracerModule = require("traceroot-sdk-ts/dist/tracer");
 
 const runAttachWithTraceroot = async ({
   function: functionToTrace,
@@ -55,11 +54,7 @@ export const handleAttach = async (req: any, res: any) =>
               attachBody,
             });
 
-          // temporary teset
-          const traceRoot = require('traceroot-sdk-ts')
-          // traceRootLogger = traceRoot.getLogger
-          // let new_config = traceRoot.tracer.getConfig()
-          // import { getConfig, getLogger } from 'traceroot-sdk-ts';
+          let traceRootConfig = tracerModule.getConfig()
 
           // const new_config = traceroot.getConfig();
           // // const logger = getLogger();
@@ -76,17 +71,14 @@ export const handleAttach = async (req: any, res: any) =>
           // });
           // }
 
-          console.log('Service Configuration');
-          // console.log(new_config.service_name);
-          // console.log(new_config.environment);
-          // console.log(new_config.log_level);
-          // console.log(new_config.enable_log_console_export);
-          // console.log(new_config.enable_log_cloud_export);
-          // console.log(new_config.local_mode);
-
-
-          const tracerootLogger = traceroot.get_logger();
-          tracerootLogger.info("let me test it first");
+          console.log(traceRootConfig.service_name);
+          console.log(traceRootConfig.environment);
+          console.log(traceRootConfig.log_level);
+          console.log(traceRootConfig.enable_log_console_export);
+          console.log(traceRootConfig.enable_log_cloud_export);
+          console.log(traceRootConfig.local_mode);
+          const traceRootLogger = traceroot.getLogger("handleAttach");
+          traceRootLogger.info("let me test it first");
 
           // Handle existing product
           const branch = await getAttachBranch({

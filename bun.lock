@@ -9,7 +9,7 @@
         "chalk": "^5.3.0",
         "drizzle-kit": "^0.31.1",
         "tailwind-scrollbar-hide": "^4.0.0",
-        "traceroot-sdk-ts": "0.0.1-alpha.33",
+        "traceroot-sdk-ts": "^0.0.1-alpha.34",
       },
       "devDependencies": {
         "@types/node": "^24.0.3",
@@ -88,7 +88,7 @@
         "resend": "^4.1.1",
         "stripe": "^18.4.0",
         "svix": "^1.45.1",
-        "traceroot-sdk-ts": "0.0.1-alpha.33",
+        "traceroot-sdk-ts": "^0.0.1-alpha.34",
         "tsc-alias": "^1.8.16",
         "ws": "^8.18.0",
         "zod": "^3.25.23",
@@ -2727,7 +2727,7 @@
 
     "tr46": ["tr46@0.0.3", "", {}, "sha512-N3WMsuqV66lT30CrXNbEjx4GEwlow3v6rr4mCcv6prnfwhS01rkgyFdjPNBYd9br7LpXV1+Emh01fHnq2Gdgrw=="],
 
-    "traceroot-sdk-ts": ["traceroot-sdk-ts@0.0.1-alpha.33", "", { "dependencies": { "@aws-sdk/client-cloudwatch-logs": "^3.855.0", "@opentelemetry/api": "^1.9.0", "@opentelemetry/auto-instrumentations-node": "^0.53.0", "@opentelemetry/exporter-trace-otlp-http": "^0.53.0", "@opentelemetry/resources": "^1.28.0", "@opentelemetry/sdk-node": "^0.53.0", "@opentelemetry/sdk-trace-base": "^1.28.0", "@opentelemetry/sdk-trace-node": "^1.28.0", "@opentelemetry/semantic-conventions": "^1.36.0", "axios": "^1.6.0", "effect": "^3.17.9", "winston": "^3.11.0", "winston-cloudwatch": "^6.3.0", "yaml": "^2.3.4" } }, "sha512-2Dp9CzpcOxbIFLCQ56N0xGr6LJVDqlTlAYyP4iz7+VxQ4FL3GhfRQvz9NnYA3hHq04P/M5H0E/rxe12BB+NNvw=="],
+    "traceroot-sdk-ts": ["traceroot-sdk-ts@0.0.1-alpha.34", "", { "dependencies": { "@aws-sdk/client-cloudwatch-logs": "^3.855.0", "@opentelemetry/api": "^1.9.0", "@opentelemetry/auto-instrumentations-node": "^0.53.0", "@opentelemetry/exporter-trace-otlp-http": "^0.53.0", "@opentelemetry/resources": "^1.28.0", "@opentelemetry/sdk-node": "^0.53.0", "@opentelemetry/sdk-trace-base": "^1.28.0", "@opentelemetry/sdk-trace-node": "^1.28.0", "@opentelemetry/semantic-conventions": "^1.36.0", "axios": "^1.6.0", "effect": "^3.17.9", "winston": "^3.11.0", "winston-cloudwatch": "^6.3.0", "yaml": "^2.3.4" } }, "sha512-mht0yHOhBdhir30sfZmaNZwcI23QEwM1Nw6rkoFOLUPyoR4VjOMojbXmDfBwdXMuMmCfbECKR8FxwWlZfpyyKA=="],
 
     "tree-kill": ["tree-kill@1.2.2", "", { "bin": { "tree-kill": "cli.js" } }, "sha512-L0Orpi8qGpRG//Nd+H90vFB+3iHnue1zSSGmNOOCh1GLJ7rUKVwV2HvijphGQS2UmhUZewS9VgvxYIdgr+fG1A=="],
 
