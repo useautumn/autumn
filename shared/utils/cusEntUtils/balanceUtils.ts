@@ -54,7 +54,7 @@ export const getCusEntBalance = ({
       }
 
       return {
-        balance: entityBalance,
+        balance: entityBalance || 0,
         adjustment,
         unused: 0,
         count: 1,
