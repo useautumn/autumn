@@ -90,15 +90,18 @@ export const deleteStripeWebhook = async ({
   org: Organization;
   env: AppEnv;
 }) => {
+  if (!isStripeConnected({ org, env })) return;
+
   const stripeCli = createStripeCli({ org, env });
   const webhookEndpoints = await stripeCli.webhookEndpoints.list({
     limit: 100,
   });
 
   for (const webhook of webhookEndpoints.data) {
-    if (webhook.url.includes(org.id)) {
+    if (webhook.url.includes(org.id) && webhook.url.includes(env)) {
       try {
         await stripeCli.webhookEndpoints.del(webhook.id);
+        console.log(`Deleted stripe webhook (${env}) ${webhook.url}`);
       } catch (error: any) {
         console.log(`Failed to delete stripe webhook (${env}) ${webhook.url}`);
         console.log(error.message);
