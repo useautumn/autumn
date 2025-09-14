@@ -70,19 +70,19 @@ function CreateCustomer() {
           Customer
         </Button>
       </DialogTrigger>
-      <DialogContent className="w-[400px]">
+      <DialogContent className="w-[90%]">
         <DialogHeader>
           <DialogTitle>Create Customer</DialogTitle>
         </DialogHeader>
-        <div className="flex gap-2">
-          <div>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="w-full md:w-1/2">
             <FieldLabel>Name</FieldLabel>
             <Input
               value={fields.name}
               onChange={(e) => setFields({ ...fields, name: e.target.value })}
             />
           </div>
-          <div>
+          <div className="w-full md:w-1/2">
             <FieldLabel>ID</FieldLabel>
             <Input
               value={fields.id}
