@@ -20,6 +20,8 @@ import { Button } from "@/components/ui/button";
 import { SidebarGroup } from "./SidebarGroup";
 import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
+import { Link, useSearchParams } from "react-router";
+import { pushPage } from "@/utils/genUtils";
 
 export const MainSidebar = () => {
   const env = useEnv();
@@ -78,24 +80,63 @@ export const MainSidebar = () => {
           <EnvDropdown env={env} />
           <div className="flex flex-col px-2 gap-1">
             <div>
-              <NavButton
-                value="products"
-                onClick={onProductTabClick}
-                icon={<Package size={14} />}
-                title="Products"
-                env={env}
-                isOpen={expanded ? productGroupOpen : undefined}
-                isGroup
-              />
-              <SidebarGroup
-                value="products"
-                productGroup={productGroupOpen}
-                subTabs={[
-                  { title: "Products", value: "products" },
-                  { title: "Features", value: "features" },
-                  { title: "Rewards", value: "rewards" },
-                ]}
-              />
+              {expanded ? (
+                <>
+                  <NavButton
+                    value="products"
+                    onClick={() => setProductGroupOpen((prev) => !prev)}
+                    icon={<Package size={14} />}
+                    title="Products"
+                    env={env}
+                    isOpen={productGroupOpen}
+                    isGroup
+                  />
+                  <SidebarGroup
+                    value="products"
+                    productGroup={productGroupOpen}
+                    subTabs={[
+                      { title: "Products", value: "products" },
+                      { title: "Features", value: "features" },
+                      { title: "Rewards", value: "rewards" },
+                    ]}
+                  />
+                </>
+              ) : (
+                <div className="relative">
+                  <NavButton
+                    value="products"
+                    icon={<Package size={14} />}
+                    title="Products"
+                    env={env}
+                    isGroup
+                    onClick={() => setProductGroupOpen((prev) => !prev)}
+                  />
+
+                  {/* Floating card for collapsed sidebar */}
+                  {!expanded && productGroupOpen && (
+                    <div className="absolute left-full top-0 ml-2 w-48 bg-white shadow-lg border rounded-lg z-[9999] flex flex-col">
+                      {[
+                        { title: "Products", value: "products" },
+                        { title: "Features", value: "features" },
+                        { title: "Rewards", value: "rewards" },
+                      ].map((subTab) => (
+                        <Link
+                          key={subTab.value}
+                          to={pushPage({
+                            path: "/products",
+                            queryParams: { tab: subTab.value },
+                            preserveParams: false,
+                          })}
+                          className="px-3 py-2 text-left hover:bg-gray-100 text-sm"
+                          onClick={() => setProductGroupOpen(false)} // close dropdown after click
+                        >
+                          {subTab.title}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <NavButton
@@ -111,31 +152,76 @@ export const MainSidebar = () => {
               env={env}
             />
             <div>
-              <NavButton
-                value="dev"
-                icon={<SquareTerminal size={14} />}
-                title="Developer"
-                env={env}
-                onClick={() => setDevGroupOpen((prev) => !prev)}
-                isOpen={expanded ? devGroupOpen : undefined}
-                isGroup
-              />
-              <SidebarGroup
-                value="dev"
-                productGroup={devGroupOpen}
-                subTabs={
-                  webhooks
-                    ? [
-                        { title: "API Keys", value: "api_keys" },
-                        { title: "Stripe", value: "stripe" },
-                        { title: "Webhooks", value: "webhooks" },
-                      ]
-                    : [
-                        { title: "API Keys", value: "api_keys" },
-                        { title: "Stripe", value: "stripe" },
-                      ]
-                }
-              />
+              {expanded ? (
+                <>
+                  <NavButton
+                    value="dev"
+                    icon={<SquareTerminal size={14} />}
+                    title="Developer"
+                    env={env}
+                    onClick={() => setDevGroupOpen((prev) => !prev)}
+                    isOpen={devGroupOpen}
+                    isGroup
+                  />
+                  <SidebarGroup
+                    value="dev"
+                    productGroup={devGroupOpen}
+                    subTabs={
+                      webhooks
+                        ? [
+                            { title: "API Keys", value: "api_keys" },
+                            { title: "Stripe", value: "stripe" },
+                            { title: "Webhooks", value: "webhooks" },
+                          ]
+                        : [
+                            { title: "API Keys", value: "api_keys" },
+                            { title: "Stripe", value: "stripe" },
+                          ]
+                    }
+                  />
+                </>
+              ) : (
+                <div className="relative">
+                  <NavButton
+                    value="dev"
+                    icon={<SquareTerminal size={14} />}
+                    title="Developer"
+                    env={env}
+                    isGroup
+                    onClick={() => setDevGroupOpen((prev) => !prev)}
+                  />
+
+                  {/* Floating card for collapsed sidebar */}
+                  {!expanded && devGroupOpen && (
+                    <div className="absolute left-full top-0 ml-2 w-48 bg-white shadow-lg border rounded-lg z-[9999] flex flex-col">
+                      {(webhooks
+                        ? [
+                            { title: "API Keys", value: "api_keys" },
+                            { title: "Stripe", value: "stripe" },
+                            { title: "Webhooks", value: "webhooks" },
+                          ]
+                        : [
+                            { title: "API Keys", value: "api_keys" },
+                            { title: "Stripe", value: "stripe" },
+                          ]
+                      ).map((subTab) => (
+                        <Link
+                          key={subTab.value}
+                          to={pushPage({
+                            path: "/dev",
+                            queryParams: { tab: subTab.value },
+                            preserveParams: false,
+                          })}
+                          className="px-3 py-2 text-left hover:bg-gray-100 text-sm"
+                          onClick={() => setDevGroupOpen(false)} // close after click
+                        >
+                          {subTab.title}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             {/* <div className="flex flex-col my-1 gap-0.5 border-l border-zinc-300 ml-4 -translate-x-[1px] pl-0">
             <NavButton
