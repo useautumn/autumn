@@ -209,10 +209,16 @@ export const triggerFreeProduct = async ({
 		}),
 	]);
 
+	// If they already have the product, don't add to them
 	if (fullReferrer.customer_products.find((cp) => cp.product.id === productId))
 		addToReferrer = false;
-
 	if (fullRedeemer.customer_products.find((cp) => cp.product.id === productId))
+		addToRedeemer = false;
+
+	// If they are on any paid plan that isn't an add-on, don't add to them
+	if(fullReferrer.customer_products.some(x => !x.product.is_add_on && !isFreeProduct(x.customer_prices.map(y => y.price))))
+		addToReferrer = false;
+	if(fullRedeemer.customer_products.some(x => !x.product.is_add_on && !isFreeProduct(x.customer_prices.map(y => y.price))))
 		addToRedeemer = false;
 
 	function seedReq(req: ExtendedRequest) {
