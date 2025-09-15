@@ -22,11 +22,8 @@ export const runTriggerCheckoutReward = async ({
 	logger: any;
 }) => {
 	try {
-		console.log("Triggering checkout reward in worker");
-		console.info("Triggering checkout reward in worker");
 		// Customer redeeming code, product they're buying
 		const { customer, product, org, env, subId } = payload;
-		console.info(`Customer: ${customer.name} (${customer.id})`);
 		const stripeCli = createStripeCli({
 			org,
 			env,
@@ -41,8 +38,6 @@ export const runTriggerCheckoutReward = async ({
 			withReferralCode: true,
 			triggerWhen: RewardTriggerEvent.Checkout,
 		});
-
-		console.info(`Found ${redemptions.length} redemptions`);
 
 		for (const redemption of redemptions) {
 			if (
