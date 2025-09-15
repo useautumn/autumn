@@ -90,7 +90,7 @@ export const CreateFeature = ({
 
   return (
     <>
-      <CustomDialogBody>
+      <CustomDialogBody className="overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create Feature</DialogTitle>
         </DialogHeader>

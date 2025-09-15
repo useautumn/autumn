@@ -52,7 +52,8 @@ export const handleGetProduct = async (req: any, res: any) =>
           await getProductResponse({
             product,
             features,
-          }),
+            currency: req.org.default_currency,
+          })
         );
       }
     },

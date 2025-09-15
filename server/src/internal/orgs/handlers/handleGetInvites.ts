@@ -1,6 +1,6 @@
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 import { invitation, user as userTable } from "@autumn/shared";
-import { and, eq } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 
 export const handleGetInvites = async (
   req: ExtendedRequest,
@@ -16,7 +16,8 @@ export const handleGetInvites = async (
     const invites = await db.query.invitation.findMany({
       where: and(
         eq(invitation.status, "pending"),
-        eq(invitation.email, user?.email ?? "")
+        eq(invitation.email, user?.email ?? ""),
+        gt(invitation.expiresAt, new Date())
       ),
       with: {
         inviter: true,

@@ -9,7 +9,6 @@ import { InvoiceCustomerButton } from "../components/InvoiceCustomerButton";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { ArrowUpRightFromSquare, Loader2, Plus, X } from "lucide-react";
 
-import { useCustomerContext } from "../../CustomerContext";
 import {
   Select,
   SelectContent,
@@ -18,14 +17,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useEffect, useState } from "react";
-import { FullProduct, ProductV2 } from "@autumn/shared";
+import { ProductV2 } from "@autumn/shared";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { getBackendErr, navigateTo } from "@/utils/genUtils";
+import { getBackendErr } from "@/utils/genUtils";
 import { MultiAtttachLines } from "./MultiAttachLines";
 import { CheckoutResult } from "autumn-js";
-import { Separator } from "@/components/ui/separator";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
 import { formatAmount } from "@/utils/product/productItemUtils";
 import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
@@ -62,7 +60,7 @@ export const MultiAttachDialog = ({
     url: `/customers/${customer.id}/sub`,
   });
 
-  const subDiscounts = subData?.sub.discounts || [];
+  const subDiscounts = subData?.sub?.discounts || [];
 
   const getDefaultProductOptions = () => {
     return [{ product_id: null, quantity: 1 }];

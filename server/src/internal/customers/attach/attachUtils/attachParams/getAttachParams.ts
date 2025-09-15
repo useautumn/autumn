@@ -5,7 +5,6 @@ import { orgToVersion } from "@/utils/versionUtils.js";
 import { APIVersion } from "@autumn/shared";
 import { AttachParams } from "../../../cusProducts/AttachParams.js";
 import { nullish } from "@/utils/genUtils.js";
-import { toSuccessUrl } from "@/internal/orgs/orgUtils/convertOrgUtils.js";
 
 export const getAttachParams = async ({
   req,
@@ -81,6 +80,7 @@ export const getAttachParams = async ({
     disableFreeTrial: attachBody.free_trial === false || false,
     checkoutSessionParams: attachBody.checkout_session_params,
     isCustom: attachBody.is_custom,
+    setupPayment: attachBody.setup_payment,
   };
 
   return {
