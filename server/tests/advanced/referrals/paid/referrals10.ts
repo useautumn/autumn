@@ -24,13 +24,13 @@ import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionServ
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import { products, referralPrograms } from "../../../global.js";
 
-export const group = "referrals9";
+export const group = "referrals10";
 
 describe(`${chalk.yellowBright(
-	"referrals9: Testing referrals (checkout, paid, add-on, both)",
+	"referrals10: Testing referrals (checkout, paid, add-on, referrer only)",
 )}`, () => {
-	const mainCustomerId = "main-referral-9";
-	const redeemer = "referral9-r1";
+	const mainCustomerId = "main-referral-10";
+	const redeemer = "referral10-r1";
 	const autumn: AutumnInt = new AutumnInt();
 	let stripeCli: Stripe;
 	const testClockIds: string[] = [];
@@ -84,7 +84,7 @@ describe(`${chalk.yellowBright(
 	it("should create code once", async () => {
 		referralCode = await autumn.referrals.createCode({
 			customerId: mainCustomerId,
-			referralId: referralPrograms.paidAddOnCheckoutAll.id,
+			referralId: referralPrograms.paidAddOnCheckoutReferrer.id,
 		});
 
 		assert.exists(referralCode.code);
@@ -92,7 +92,7 @@ describe(`${chalk.yellowBright(
 		// Get referral code again
 		const referralCode2 = await autumn.referrals.createCode({
 			customerId: mainCustomerId,
-			referralId: referralPrograms.paidAddOnCheckoutAll.id,
+			referralId: referralPrograms.paidAddOnCheckoutReferrer.id,
 		});
 
 		assert.equal(referralCode2.code, referralCode.code);
@@ -122,14 +122,14 @@ describe(`${chalk.yellowBright(
 			customer_id: redeemer,
 			product_id: products.premium.id,
 		});
-        
+
 		await completeCheckoutForm(res.checkout_url);
 		await setTimeout(1000 * 5);
 	});
 
-	it("should have given the paid add-on to both referrer and redeemer", async () => {
+	it("should have given the paid add-on to referrer only, not redeemer", async () => {
 		const redemptionResult = await autumn.redemptions.get(redemption.id);
-		assert.equal(redemptionResult.applied, true, `Redemption ${redemption.id} should be applied`);
+		assert.equal(redemptionResult.applied, true);
 
 		await setTimeout(1000 * 10);
 
@@ -147,11 +147,11 @@ describe(`${chalk.yellowBright(
 		const hasProAddOn = mainAddons.some((p) => p.id === products.proAddOn.id);
 		assert.isTrue(hasProAddOn, "Main customer should have proAddOn product");
 
-		// Redeemer should have both free and proAddOn products (both get reward)
+		// Redeemer should only have Premium product (no proAddOn)
 		const redeemerProds = redeemerCustomerData.products;
 		const redeemerAddons = redeemerCustomerData.add_ons;
 
-		assert.equal(redeemerProds.length + redeemerAddons.length, 2);
+		assert.equal(redeemerProds.length + redeemerAddons.length, 1);
 
 		const redeemerHasProAddOn = redeemerAddons.some(
 			(p) => p.id === products.proAddOn.id,
@@ -159,10 +159,10 @@ describe(`${chalk.yellowBright(
 		const redeemerHasPremium = redeemerProds.some(
 			(p) => p.id === products.premium.id,
 		);
-        
-		assert.isTrue(
+
+		assert.isFalse(
 			redeemerHasProAddOn,
-			"Redeemer should have proAddOn product",
+			"Redeemer should not have proAddOn product",
 		);
 		assert.isTrue(redeemerHasPremium, "Redeemer should have premium product");
 
@@ -175,17 +175,20 @@ describe(`${chalk.yellowBright(
 			status: CusProductStatus.Active,
 		});
 
-		// Verify redeemer also has the add-on
-		expectAddOnAttached({
-			customer: (await autumn.customers.get(redeemer)) as Customer & {
-				add_ons: any[];
-			},
-			productId: products.proAddOn.id,
-			status: CusProductStatus.Active,
-		});
+		// Verify redeemer does not have the add-on
+		const redeemerCustomer = (await autumn.customers.get(
+			redeemer,
+		)) as Customer & { add_ons: any[] };
+		const redeemerAddOn = redeemerCustomer.add_ons.find(
+			(a) => a.id === products.proAddOn.id,
+		);
+		assert.isUndefined(
+			redeemerAddOn,
+			"Redeemer should not have proAddOn product",
+		);
 	});
 
-	it("should advance test clock and have proAddOn attached for both", async () => {
+	it("should advance test clock and have proAddOn attached for referrer only", async () => {
 		await Promise.all(
 			testClockIds.map((x) =>
 				advanceTestClock({
@@ -221,9 +224,8 @@ describe(`${chalk.yellowBright(
 				{ name: "proAddOn", status: CusProductStatus.Active },
 			],
 			[
-				// Redeemer - gets both free and proAddOn products (both get reward)
+				// Redeemer - only has Premium product (no reward)
 				{ name: "Premium", status: CusProductStatus.Active },
-				{ name: "proAddOn", status: CusProductStatus.Active },
 			],
 		];
 

@@ -15,6 +15,7 @@ import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionService.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import { products, referralPrograms } from "../../../global.js";
 
@@ -32,7 +33,6 @@ describe(`${chalk.yellowBright(
 	let referralCode: ReferralCode;
 
 	let redemption: RewardRedemption;
-	let mainCustomer: any;
 	let db: DrizzleCli;
 	let org: Organization;
 	let env: AppEnv;
@@ -44,10 +44,16 @@ describe(`${chalk.yellowBright(
 		org = this.org;
 		env = this.env;
 
-        try {
-            await autumn.customers.delete(mainCustomerId);
-            await autumn.customers.delete(redeemer);
-        } catch {}
+		try {
+			await Promise.all([
+				autumn.customers.delete(mainCustomerId),
+				autumn.customers.delete(redeemer),
+				RewardRedemptionService._resetCustomerRedemptions({
+					db,
+					internalCustomerId: [mainCustomerId, redeemer],
+				}),
+			]);
+		} catch {}
 
 		const res = await initCustomer({
 			autumn: this.autumnJs,
@@ -58,13 +64,7 @@ describe(`${chalk.yellowBright(
 			attachPm: "success",
 		});
 
-		mainCustomer = res.customer;
 		testClockIds.push(res.testClockId);
-
-		// await autumn.attach({
-		// 	customer_id: mainCustomerId,
-		// 	product_id: pro.id,
-		// });
 
 		const redeemerRes = await initCustomer({
 			autumn: this.autumnJs,
@@ -131,7 +131,7 @@ describe(`${chalk.yellowBright(
 		assert.equal(redeemerProds[0].id, products.free.id);
 
 		expectProductV1Attached({
-			customer: await autumn.customers.get(mainCustomer.id),
+			customer: await autumn.customers.get(mainCustomerId),
 			product: products.pro,
 			status: CusProductStatus.Trialing,
 		});
