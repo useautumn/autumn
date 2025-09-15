@@ -55,7 +55,7 @@ function CreateReward() {
       <DialogTrigger asChild>
         <Button variant="add"> Reward</Button>
       </DialogTrigger>
-      <DialogContent className="w-[500px]">
+      <DialogContent className="w-[90%]">
         <DialogHeader>
           <DialogTitle>Create Reward</DialogTitle>
         </DialogHeader>

@@ -107,7 +107,7 @@ export const CreateFeature = ({
 
   return (
     <>
-      <CustomDialogBody>
+      <CustomDialogBody className="w-[90%]">
         <DialogHeader>
           <DialogTitle>Create Feature</DialogTitle>
         </DialogHeader>

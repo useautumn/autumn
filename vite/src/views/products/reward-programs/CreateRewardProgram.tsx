@@ -81,7 +81,7 @@ function CreateRewardProgramModal() {
       <DialogTrigger asChild>
         <Button variant="add">Referral Program</Button>
       </DialogTrigger>
-      <DialogContent className="w-[500px]">
+      <DialogContent className="w-[90%]">
         <DialogHeader>
           <DialogTitle>Create Referral Program</DialogTitle>
         </DialogHeader>

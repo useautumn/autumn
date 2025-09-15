@@ -84,7 +84,7 @@ function CreateProduct({
           Product
         </Button>
       </DialogTrigger>
-      <DialogContent className="w-[500px]">
+      <DialogContent className="w-[90%]">
         <DialogTitle>Create Product</DialogTitle>
         <ProductConfig
           product={product}
@@ -100,7 +100,7 @@ function CreateProduct({
         )}
 
         <DialogFooter>
-          <div className="flex justify-between items-center gap-2 w-full mt-2">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full mt-2">
             <div className="flex gap-4">
               <ToggleButton
                 disabled={product?.is_add_on}

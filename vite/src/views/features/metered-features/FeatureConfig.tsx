@@ -86,7 +86,7 @@ export function FeatureConfig({
   };
 
   return (
-    <div className="flex flex-col gap-4 min-w-md max-w-md">
+    <div className="flex flex-col gap-4 min-w-[200px] max-w-md">
       <div className="text-sm text-t2 flex items-center gap-1">
         Features are the parts of your application that customers get access to
         when purchasing a product

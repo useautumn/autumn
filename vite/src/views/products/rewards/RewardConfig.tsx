@@ -40,15 +40,15 @@ export const RewardConfig = ({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2">
-        <div className="w-6/12">
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="w-full">
           <FieldLabel description="Will be shown on receipt">Name</FieldLabel>
           <Input
             value={reward.name || ""}
             onChange={(e) => setReward({ ...reward, name: e.target.value })}
           />
         </div>
-        <div className="w-6/12">
+        <div className="w-full">
           <FieldLabel description="Used to identify reward in API">
             ID
           </FieldLabel>
@@ -61,7 +61,7 @@ export const RewardConfig = ({
           />
         </div>
       </div>
-      <div className="flex items-center w-full gap-2">
+      <div className="flex flex-col sm:flex-row gap-2">
         <div className="w-full">
           <FieldLabel>Promotional Code</FieldLabel>
           <Input

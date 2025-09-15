@@ -104,7 +104,7 @@ function CreateCreditSystem() {
       <DialogTrigger asChild>
         <Button variant="add">Credit System</Button>
       </DialogTrigger>
-      <CustomDialogContent className="w-[500px] overflow-y-auto max-h-[500px]">
+      <CustomDialogContent className="w-[90%] overflow-y-auto max-h-[500px]">
         <CustomDialogBody>
           <DialogHeader>
             <DialogTitle>Create Credit System</DialogTitle>

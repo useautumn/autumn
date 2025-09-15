@@ -90,7 +90,7 @@ function CreditSystemConfig({
 
   return (
     <div className="flex flex-col gap-4 overflow-visible">
-      <div className="flex gap-2 w-full overflow-visible">
+      <div className="flex flex-col sm:flex-row gap-2 w-full overflow-visible">
         <div className="w-full">
           <FieldLabel>Name</FieldLabel>
           <Input
