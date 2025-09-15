@@ -1,3 +1,4 @@
+import { setTimeout } from "node:timers/promises";
 import {
 	type AppEnv,
 	CusProductStatus,
@@ -13,7 +14,6 @@ import type { Stripe } from "stripe";
 import { setupBefore } from "tests/before.js";
 import { expectAddOnAttached } from "tests/utils/expectUtils/expectProductAttached.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { setTimeout } from "timers/promises";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -35,7 +35,6 @@ describe(`${chalk.yellowBright(
 	let referralCode: ReferralCode;
 
 	let redemption: RewardRedemption;
-	let mainCustomer: any;
 	let db: DrizzleCli;
 	let org: Organization;
 	let env: AppEnv;
@@ -67,13 +66,7 @@ describe(`${chalk.yellowBright(
 			attachPm: "success",
 		});
 
-		mainCustomer = res.customer;
 		testClockIds.push(res.testClockId);
-
-		// await autumn.attach({
-		// 	customer_id: mainCustomerId,
-		// 	product_id: pro.id,
-		// });
 
 		const redeemerRes = await initCustomer({
 			autumn: this.autumnJs,
@@ -138,18 +131,18 @@ describe(`${chalk.yellowBright(
 		// Main customer (referrer) should have the proAddOn product
 		const mainProds = mainCustomerData.products;
 		const mainAddons = mainCustomerData.add_ons;
-		
+
 		assert.equal(mainProds.length + mainAddons.length, 2);
-		
+
 		const hasProAddOn = mainAddons.some((p) => p.id === products.proAddOn.id);
 		assert.isTrue(hasProAddOn, "Main customer should have proAddOn product");
 
 		// Redeemer should only have free product (no proAddOn)
 		const redeemerProds = redeemerCustomerData.products;
 		const redeemerAddons = redeemerCustomerData.add_ons;
-		
+
 		assert.equal(redeemerProds.length + redeemerAddons.length, 1);
-		
+
 		const redeemerHasProAddOn = redeemerAddons.some(
 			(p) => p.id === products.proAddOn.id,
 		);
@@ -157,20 +150,32 @@ describe(`${chalk.yellowBright(
 			(p) => p.id === products.free.id,
 		);
 
-		assert.isFalse(redeemerHasProAddOn, "Redeemer should not have proAddOn product");
+		assert.isFalse(
+			redeemerHasProAddOn,
+			"Redeemer should not have proAddOn product",
+		);
 		assert.isTrue(redeemerHasFree, "Redeemer should have free product");
 
 		// Verify products are properly attached
 		expectAddOnAttached({
-			customer: await autumn.customers.get(mainCustomerId) as Customer & { add_ons: any[] },
+			customer: (await autumn.customers.get(mainCustomerId)) as Customer & {
+				add_ons: any[];
+			},
 			productId: products.proAddOn.id,
 			status: CusProductStatus.Active,
 		});
 
 		// Verify redeemer does not have the add-on
-		const redeemerCustomer = await autumn.customers.get(redeemer) as Customer & { add_ons: any[] };
-		const redeemerAddOn = redeemerCustomer.add_ons.find((a) => a.id === products.proAddOn.id);
-		assert.isUndefined(redeemerAddOn, "Redeemer should not have proAddOn product");
+		const redeemerCustomer = (await autumn.customers.get(
+			redeemer,
+		)) as Customer & { add_ons: any[] };
+		const redeemerAddOn = redeemerCustomer.add_ons.find(
+			(a) => a.id === products.proAddOn.id,
+		);
+		assert.isUndefined(
+			redeemerAddOn,
+			"Redeemer should not have proAddOn product",
+		);
 	});
 
 	it("should advance test clock and have proAddOn attached for referrer only", async () => {

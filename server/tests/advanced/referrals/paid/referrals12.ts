@@ -7,12 +7,11 @@ import {
 	type ReferralCode,
 	type RewardRedemption,
 } from "@autumn/shared";
-import type { Customer } from "autumn-js";
 import { assert } from "chai";
 import chalk from "chalk";
 import type { Stripe } from "stripe";
 import { setupBefore } from "tests/before.js";
-import { expectAddOnAttached } from "tests/utils/expectUtils/expectProductAttached.js";
+import { expectProductV1Attached } from "tests/utils/expectUtils/expectProductAttached.js";
 import {
 	advanceTestClock,
 	completeCheckoutForm,
@@ -24,13 +23,13 @@ import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionServ
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import { products, referralPrograms } from "../../../global.js";
 
-export const group = "referrals9";
+export const group = "referrals12";
 
 describe(`${chalk.yellowBright(
-	"referrals9: Testing referrals (checkout, paid, add-on, both)",
+	"referrals12: Testing referrals (checkout, paid, recurring, referrer only)",
 )}`, () => {
-	const mainCustomerId = "main-referral-9";
-	const redeemer = "referral9-r1";
+	const mainCustomerId = "main-referral-12";
+	const redeemer = "referral12-r1";
 	const autumn: AutumnInt = new AutumnInt();
 	let stripeCli: Stripe;
 	const testClockIds: string[] = [];
@@ -84,7 +83,7 @@ describe(`${chalk.yellowBright(
 	it("should create code once", async () => {
 		referralCode = await autumn.referrals.createCode({
 			customerId: mainCustomerId,
-			referralId: referralPrograms.paidAddOnCheckoutAll.id,
+			referralId: referralPrograms.paidProductCheckoutReferrer.id,
 		});
 
 		assert.exists(referralCode.code);
@@ -92,7 +91,7 @@ describe(`${chalk.yellowBright(
 		// Get referral code again
 		const referralCode2 = await autumn.referrals.createCode({
 			customerId: mainCustomerId,
-			referralId: referralPrograms.paidAddOnCheckoutAll.id,
+			referralId: referralPrograms.paidProductCheckoutReferrer.id,
 		});
 
 		assert.equal(referralCode2.code, referralCode.code);
@@ -117,75 +116,48 @@ describe(`${chalk.yellowBright(
 		}
 	});
 
-	it("should succesfully checkout and trigger the checkout reward", async () => {
+	it("should successfully checkout and trigger the checkout reward", async () => {
 		const res = await autumn.attach({
 			customer_id: redeemer,
 			product_id: products.premium.id,
 		});
-        
+
 		await completeCheckoutForm(res.checkout_url);
 		await setTimeout(1000 * 5);
 	});
 
-	it("should have given the paid add-on to both referrer and redeemer", async () => {
+	it("should have given the paid product to referrer only, not redeemer (referrer-only reward)", async () => {
 		const redemptionResult = await autumn.redemptions.get(redemption.id);
-		assert.equal(redemptionResult.applied, true, `Redemption ${redemption.id} should be applied`);
+		assert.equal(redemptionResult.applied, true);
 
 		await setTimeout(1000 * 10);
 
-		const [mainCustomerData, redeemerCustomerData] = (await Promise.all([
-			autumn.customers.get(mainCustomerId),
-			autumn.customers.get(redeemer),
-		])) as (Customer & { add_ons: any[] })[];
+		const mainProds = (await autumn.customers.get(mainCustomerId)).products;
+		const redeemerProds = (await autumn.customers.get(redeemer)).products;
 
-		// Main customer (referrer) should have the proAddOn product
-		const mainProds = mainCustomerData.products;
-		const mainAddons = mainCustomerData.add_ons;
+		// Main customer (referrer) should have the pro product
+		assert.equal(mainProds.length, 1);
+		assert.equal(mainProds[0].id, products.pro.id);
 
-		assert.equal(mainProds.length + mainAddons.length, 2);
+		// Redeemer should only have the premium product (no pro product given)
+		assert.equal(redeemerProds.length, 1);
+		assert.equal(redeemerProds[0].id, products.premium.id);
 
-		const hasProAddOn = mainAddons.some((p) => p.id === products.proAddOn.id);
-		assert.isTrue(hasProAddOn, "Main customer should have proAddOn product");
-
-		// Redeemer should have both free and proAddOn products (both get reward)
-		const redeemerProds = redeemerCustomerData.products;
-		const redeemerAddons = redeemerCustomerData.add_ons;
-
-		assert.equal(redeemerProds.length + redeemerAddons.length, 2);
-
-		const redeemerHasProAddOn = redeemerAddons.some(
-			(p) => p.id === products.proAddOn.id,
-		);
-		const redeemerHasPremium = redeemerProds.some(
-			(p) => p.id === products.premium.id,
-		);
-        
-		assert.isTrue(
-			redeemerHasProAddOn,
-			"Redeemer should have proAddOn product",
-		);
-		assert.isTrue(redeemerHasPremium, "Redeemer should have premium product");
-
-		// Verify products are properly attached
-		expectAddOnAttached({
-			customer: (await autumn.customers.get(mainCustomerId)) as Customer & {
-				add_ons: any[];
-			},
-			productId: products.proAddOn.id,
-			status: CusProductStatus.Active,
+		expectProductV1Attached({
+			customer: await autumn.customers.get(mainCustomerId),
+			product: products.pro,
+			status: CusProductStatus.Trialing,
 		});
 
-		// Verify redeemer also has the add-on
-		expectAddOnAttached({
-			customer: (await autumn.customers.get(redeemer)) as Customer & {
-				add_ons: any[];
-			},
-			productId: products.proAddOn.id,
-			status: CusProductStatus.Active,
+		// Verify redeemer only has premium product
+		expectProductV1Attached({
+			customer: await autumn.customers.get(redeemer),
+			product: products.premium,
+			status: CusProductStatus.Trialing,
 		});
 	});
 
-	it("should advance test clock and have proAddOn attached for both", async () => {
+	it("should advance test clock and have pro attached for referrer only", async () => {
 		await Promise.all(
 			testClockIds.map((x) =>
 				advanceTestClock({
@@ -216,14 +188,13 @@ describe(`${chalk.yellowBright(
 
 		const expectedProducts = [
 			[
-				// Main referrer - gets the proAddOn product
-				{ name: "Free", status: CusProductStatus.Active },
-				{ name: "proAddOn", status: CusProductStatus.Active },
+				// Main referrer - gets the pro product
+				{ name: "Free", status: CusProductStatus.Expired },
+				{ name: "Pro", status: CusProductStatus.Active },
 			],
 			[
-				// Redeemer - gets both free and proAddOn products (both get reward)
+				// Redeemer - only has premium product (no reward)
 				{ name: "Premium", status: CusProductStatus.Active },
-				{ name: "proAddOn", status: CusProductStatus.Active },
 			],
 		];
 
