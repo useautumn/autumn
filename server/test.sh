@@ -40,6 +40,12 @@ if [ "$1" == "g4" ]; then
     'tests/advanced/coupons/*.ts'
 fi
 
+# Group 5 - Paid referrals
+if [ "$1" == "paid" ]; then
+    $MOCHA_SETUP && $MOCHA_CMD \
+    'tests/advanced/referrals/paid/*.ts'
+fi
+
 # Group 4
 if [ "$1" == "g4" ]; then
     $MOCHA_SETUP && $MOCHA_CMD \
@@ -77,14 +83,6 @@ else
     --ignore 'tests/alex/**/*.ts'
 fi
 
-
-
-
-
-
-
-
-
 # # TEST PARALLEL
 # if [ "$1" == "basic-parallel" ]; then
 #     MOCHA_PARALLEL=true $MOCHA_SETUP \
@@ -116,5 +114,3 @@ fi
 #     && $MOCHA_CMD 'tests/advanced/arrear_prorated/*.ts' 'tests/advanced/coupons/*.ts'\
 #     # && $MOCHA_CMD 'tests/advanced/usage/*.ts' \
 #     # && $MOCHA_CMD 'tests/advanced/coupons/*.ts'\
-
-
