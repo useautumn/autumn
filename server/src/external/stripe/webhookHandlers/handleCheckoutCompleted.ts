@@ -7,7 +7,7 @@ import {
 import type { Stripe } from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
-import { CusService, CusService } from "@/internal/customers/CusService.js";
+import { CusService } from "@/internal/customers/CusService.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
@@ -15,16 +15,14 @@ import { getMetadataFromCheckoutSession } from "@/internal/metadata/metadataUtil
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
-import { notNullish, notNullish } from "@/utils/genUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import {
-	getEarliestPeriodEnd,
-	getEarliestPeriodEnd,
+	getEarliestPeriodEnd
 } from "../stripeSubUtils/convertSubUtils.js";
 import { createStripeCli } from "../utils.js";
 import {
-	getOptionsFromCheckoutSession,
-	getOptionsFromCheckoutSession,
+	getOptionsFromCheckoutSession
 } from "./handleCheckoutCompleted/getOptionsFromCheckout.js";
 import { handleCheckoutSub } from "./handleCheckoutCompleted/handleCheckoutSub.js";
 import { handleRemainingSets } from "./handleCheckoutCompleted/handleRemainingSets.js";
@@ -81,10 +79,6 @@ export const handleCheckoutSessionCompleted = async ({
 		checkoutSession.metadata?.autumn_metadata_id,
 	);
 
-	<<<<<<< HEAD
-	const checkoutSub =
-		checkoutSession.subscription as Stripe.Subscription | null;
-	=======
 	if (attachParams.setupPayment) {
 		await handleSetupCheckout({
 			req,
@@ -96,7 +90,6 @@ export const handleCheckoutSessionCompleted = async ({
 
 	const checkoutSub =
 		checkoutSession.subscription as Stripe.Subscription | null;
-	>>>>>>> staging
 
 	if (checkoutSub) {
 		const activeCusProducts = await CusProductService.getByStripeSubId({
