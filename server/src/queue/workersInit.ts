@@ -110,24 +110,26 @@ const initWorker = ({
 					await queue.add(job.name, job.data, {
 						delay: 1000,
 					});
-          logger.info("Lock not acquired for checkout reward, adding task to queue");
+					logger.info(
+						"Lock not acquired for checkout reward, adding task to queue",
+					);
 					return;
 				}
 
 				try {
-          logger.info("Running checkout reward");
+					logger.info("Running checkout reward");
 					await runTriggerCheckoutReward({
 						db,
 						payload: job.data,
 						logger: logtail,
 					});
-          logger.info("Checkout reward triggered");
+					logger.info("Checkout reward triggered");
 				} catch (error) {
 					logger.error("Error processing job:", error);
 				} finally {
-          logger.info("Releasing lock for checkout reward");
+					logger.info("Releasing lock for checkout reward");
 					await releaseLock({ lockKey, useBackup });
-          logger.info("Lock released for checkout reward");
+					logger.info("Lock released for checkout reward");
 				}
 
 				return;
