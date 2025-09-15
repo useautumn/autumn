@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useProductItemContext } from "../../ProductItemContext";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ export const CustomiseIntervalPopover = () => {
   const [open, setOpen] = useState(false);
   const { item, setItem } = useProductItemContext();
   const [intervalCount, setIntervalCount] = useState(item.interval_count || 1);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const handleSave = () => {
     setItem({
@@ -27,20 +28,22 @@ export const CustomiseIntervalPopover = () => {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
-          // className="h-8 rounded-xs min-w-7.5 max-w-7.5"
           className="w-full justify-start px-2"
           variant="ghost"
           disabled={item.included_usage == Infinite || item.interval == null}
         >
-          {/* <ArrowUp01 size={12} className="text-t2" /> */}
           <p className="text-t3">Customise Interval</p>
         </Button>
       </PopoverTrigger>
       <PopoverContent
+        // side="bottom"
         align="start"
         className="p-2 w-fit"
+        sideOffset={-1}
         onOpenAutoFocus={(e) => e.preventDefault()}
         onCloseAutoFocus={(e) => e.preventDefault()}
+        // avoidCollisions={false}
+        // sticky="always"
       >
         <div>
           <FieldLabel>Interval Count</FieldLabel>

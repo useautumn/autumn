@@ -26,7 +26,9 @@ export const handleRemainingSets = async ({
   let remainingSets = itemSets ? itemSets.slice(1) : [];
 
   const remainingItems = remainingSets.flatMap((set) => set.items);
-  let invoiceIds: string[] = [checkoutSession.invoice as string];
+  let invoiceIds: string[] = checkoutSession.invoice
+    ? [checkoutSession.invoice as string]
+    : [];
 
   // Replace items with empty price if needed...
   for (const price of attachParams.prices) {

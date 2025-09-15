@@ -1,21 +1,21 @@
 import type {
-  APIVersion,
-  AttachReplaceable,
-  AttachScenario,
-  Customer,
-  EntitlementWithFeature,
-  Entity,
-  Feature,
-  FeatureOptions,
-  FreeProductConfig,
-  FreeTrial,
-  FullCusProduct,
-  FullCustomer,
-  FullProduct,
-  Organization,
-  Price,
-  ProductOptions,
-  Reward,
+	APIVersion,
+	AttachReplaceable,
+	AttachScenario,
+	Customer,
+	EntitlementWithFeature,
+	Entity,
+	Feature,
+	FeatureOptions,
+	FreeProductConfig,
+	FreeTrial,
+	FullCusProduct,
+	FullCustomer,
+	FullProduct,
+	Organization,
+	Price,
+	ProductOptions,
+	Reward,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 
@@ -78,6 +78,7 @@ export type AttachParams = {
 	finalizeInvoice?: boolean;
 	req?: any;
 	fromCancel?: boolean;
+	setupPayment?: boolean;
 };
 
 export type InsertCusProductParams = {

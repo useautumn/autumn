@@ -23,19 +23,10 @@ import {
   useListOrganizations,
   useSession,
 } from "@/lib/auth-client";
-import { FrontendOrg, user } from "@autumn/shared";
 import { DropdownMenuGroup } from "@radix-ui/react-dropdown-menu";
-import {
-  ChevronDown,
-  LogOut,
-  PanelRight,
-  Plus,
-  Settings,
-  Shield,
-  Trash,
-} from "lucide-react";
-import React from "react";
-import { useState } from "react";
+import { ChevronDown, PanelRight, Plus, Settings } from "lucide-react";
+
+import { useState, useMemo } from "react";
 import { CreateNewOrg } from "./CreateNewOrg";
 import { toast } from "sonner";
 import { LogOutItem } from "./LogOutItem";
@@ -54,19 +45,30 @@ export const OrgDropdown = () => {
   const { org, isLoading, error } = useOrg();
   const { expanded, setExpanded } = useSidebarContext();
 
-  const { data: orgs, isPending } = useListOrganizations();
+  let { data: orgs, isPending } = useListOrganizations();
+  const { data: activeOrganization } = authClient.useActiveOrganization();
+
+  // Exclude the active organization from the orgs list (this makes it easier for users to understand which org is active)
+  if (activeOrganization && orgs) {
+    orgs = orgs.filter((o) => o.id !== activeOrganization.id);
+  }
+
   const [dialogType, setDialogType] = useState<"create" | "manage" | null>(
     null
   );
 
   const { data: session } = useSession();
 
+  // //remove the currect active org from the orgs data
+  // const inactiveOrgs = useMemo(() => {
+  //   if (!orgs || !org) return [];
+  //   return orgs.filter((orgItem: any) => orgItem.id !== org.id);
+  // }, [org, orgs]);
+
   // To pre-fetch data
   useMemberships();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
-  const [stopImpersonatingLoading, setStopImpersonatingLoading] =
-    useState(false);
 
   if (isLoading)
     return (
@@ -124,7 +126,7 @@ export const OrgDropdown = () => {
           <DropdownMenuItem className="flex justify-between w-full items-center gap-2 text-t2">
             <div className="flex flex-col">
               <span>{session?.user?.name}</span>
-              <span className="text-xs text-zinc-500">
+              <span className="text-xs text-zinc-500 break-all hyphens-auto">
                 {session?.user?.email}
               </span>
             </div>
@@ -166,24 +168,27 @@ export const OrgDropdown = () => {
                 </div>
               </DropdownMenuItem>
             )}
-            <DropdownMenuSeparator />
-
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger className="text-t2">
-                Switch Organization
-              </DropdownMenuSubTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuSubContent className="w-48">
-                  {orgs?.map((org) => (
-                    <SwitchOrgItem
-                      key={org.id}
-                      org={org}
-                      setDropdownOpen={setDropdownOpen}
-                    />
-                  ))}
-                </DropdownMenuSubContent>
-              </DropdownMenuPortal>
-            </DropdownMenuSub>
+            {orgs && orgs.length > 0 && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="text-t2">
+                    Switch Organization
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent className="w-48">
+                      {orgs.map((org) => (
+                        <SwitchOrgItem
+                          key={org.id}
+                          org={org}
+                          setDropdownOpen={setDropdownOpen}
+                        />
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
+              </>
+            )}
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <LogOutItem />
@@ -196,8 +201,6 @@ export const OrgDropdown = () => {
 const SwitchOrgItem = ({ org, setDropdownOpen }: any) => {
   const [loading, setLoading] = useState(false);
   const [_, setSearchParams] = useSearchParams();
-
-  const { mutate } = useOrg();
 
   const handleSwitchOrg = async (orgId: string) => {
     setLoading(true);
