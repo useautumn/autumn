@@ -897,14 +897,14 @@ export const referralPrograms = {
 		internalRewardId: rewards.paidProductWithConfig.id,
 		when: RewardTriggerEvent.Checkout,
 		receivedBy: RewardReceivedBy.All,
-		productIds: [products.pro.id],
+		productIds: [products.premium.id],
 	}),
 	paidProductCheckoutReferrer: initRewardProgram({
 		id: "paidProduct-checkout-referrer",
 		internalRewardId: rewards.paidProductWithConfig.id,
 		when: RewardTriggerEvent.Checkout,
 		receivedBy: RewardReceivedBy.Referrer,
-		productIds: [products.pro.id],
+		productIds: [products.premium.id],
 	}),
 
 	paidAddOnAll: initRewardProgram({
@@ -927,14 +927,14 @@ export const referralPrograms = {
 		internalRewardId: rewards.paidProductAddOn.id,
 		when: RewardTriggerEvent.Checkout,
 		receivedBy: RewardReceivedBy.All,
-		productIds: [products.proAddOn.id],
+		productIds: [products.premium.id],
 	}),
 	paidAddOnCheckoutReferrer: initRewardProgram({
 		id: "paidAddOn-checkout-referrer",
 		internalRewardId: rewards.paidProductAddOn.id,
 		when: RewardTriggerEvent.Checkout,
 		receivedBy: RewardReceivedBy.Referrer,
-		productIds: [products.proAddOn.id],
+		productIds: [products.premium.id],
 	}),
 };
 
