@@ -206,6 +206,12 @@ export default async (req: any, res: any) =>
 							email: codeCustomer.email,
 							created_at: codeCustomer.created_at,
 						},
+						redeemer: {
+							id: customer.id,
+							name: customer.name,
+							email: customer.email,
+							created_at: customer.created_at,
+						}
 					});
 				}
 			} else if (referralCode.reward_program.when === RewardTriggerEvent.Checkout) {
@@ -219,7 +225,13 @@ export default async (req: any, res: any) =>
 						email: codeCustomer.email,
 						created_at: codeCustomer.created_at,
 					},
-				})
+					redeemer: {
+						id: customer.id,
+						name: customer.name,
+						email: customer.email,
+						created_at: customer.created_at,
+					},
+				});
 			}
 		},
 	});
