@@ -9,17 +9,7 @@ import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import { APIVersion, AppEnv, entities, Organization } from "@autumn/shared";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import {
-  addPrefixToProducts,
-  getBasePrice,
-} from "tests/utils/testProductUtils/testProductUtils.js";
-import { expect } from "chai";
-import { expectSubToBeCorrect } from "../mergeUtils.test.js";
-
-import { getAttachPreviewTotal } from "tests/utils/testAttachUtils/getAttachPreviewTotal.js";
-import { advanceToNextInvoice } from "tests/utils/testAttachUtils/testAttachUtils.js";
-import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
-import { timeout } from "@/utils/genUtils.js";
+import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
 
 // UNCOMMENT FROM HERE
 let premium = constructProduct({

@@ -42,7 +42,8 @@ const skipIds = [
 ];
 
 orgSlugs = ["supermemory"];
-const customerId = "co1VPgUU59q43d5P2rFt4c";
+let customerId = null;
+// customerId = "co1VPgUU59q43d5P2rFt4c";
 
 const getSingleCustomer = async ({
   stripeCli,
@@ -81,11 +82,15 @@ const getSingleCustomer = async ({
   //   ),
   // });
 
+  let scheduleIds = customers[0].customer_products.flatMap(
+    (cp) => cp.scheduled_ids || []
+  );
+
+  scheduleIds = Array.from(new Set(scheduleIds));
+
   const stripeSchedules = await getStripeSchedules({
     stripeCli,
-    scheduleIds: customers[0].customer_products.flatMap(
-      (cp) => cp.scheduled_ids || []
-    ),
+    scheduleIds,
   });
 
   const entities = await EntityService.list({
@@ -122,12 +127,6 @@ const checkCustomerCorrect = async ({
   // console.log(`Checking ${fullCus.email} (${fullCus.id})`);
   const cusProducts = fullCus.customer_products;
 
-  // await expectSubToBeCorrect({
-  //   db,
-  //   customerId: fullCus.id!,
-  //   org,
-  //   env: AppEnv.Live,
-  // });
   await checkCusSubCorrect({
     db,
     fullCus,

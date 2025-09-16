@@ -29,13 +29,19 @@ import { createStripeSub2 } from "./createStripeSub2.js";
 import { getSmallestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 
 import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
-import { getCustomerSub } from "../../attachUtils/convertAttachParams.js";
+import {
+  getCustomerSchedule,
+  getCustomerSub,
+  paramsToCurSubSchedule,
+} from "../../attachUtils/convertAttachParams.js";
 import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
 import { updateStripeSub2 } from "../upgradeFlow/updateStripeSub2.js";
 import { subToNewSchedule } from "../../mergeUtils/subToNewSchedule.js";
 import { isTrialing } from "@autumn/shared";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { addIntervalToAnchor } from "@/internal/products/prices/billingIntervalUtils2.js";
+import { handleUpgradeFlowSchedule } from "../upgradeFlow/handleUpgradeFlowSchedule.js";
+import { subIsCanceled } from "@/external/stripe/stripeSubUtils.js";
 
 export const handlePaidProduct = async ({
   req,
@@ -76,7 +82,8 @@ export const handlePaidProduct = async ({
   });
 
   let sub: Stripe.Subscription | null = null;
-  let schedule: Stripe.SubscriptionSchedule | null = null;
+  let schedule: Stripe.SubscriptionSchedule | null | undefined = null;
+  let invoice: Stripe.Invoice | undefined;
   let trialEndsAt = undefined;
 
   // 1. If merge sub
@@ -90,9 +97,7 @@ export const handlePaidProduct = async ({
         ? mergeCusProduct.trial_ends_at
         : undefined;
     }
-
     attachParams.freeTrial = null;
-
     // 1. If merged sub is canceled, also add to current schedule
     const newItemSet = await paramsToSubItems({
       req,
@@ -101,7 +106,7 @@ export const handlePaidProduct = async ({
       config,
     });
 
-    const { updatedSub } = await updateStripeSub2({
+    const { updatedSub, latestInvoice } = await updateStripeSub2({
       req,
       attachParams,
       curSub: mergeSub,
@@ -112,19 +117,45 @@ export const handlePaidProduct = async ({
 
     sub = updatedSub;
 
-    if (mergeSub.cancel_at) {
-      logger.info("ADD PRODUCT FLOW,CREATING NEW SCHEDULE");
+    if (latestInvoice) {
+      invoice = await insertInvoiceFromAttach({
+        db: req.db,
+        stripeInvoice: latestInvoice,
+        attachParams,
+        logger,
+      });
+    }
+    if (subIsCanceled({ sub: mergeSub })) {
+      logger.info("ADD PRODUCT FLOW, CREATING NEW SCHEDULE");
       schedule = await subToNewSchedule({
         req,
         sub: mergeSub,
         attachParams,
         config,
-        endOfBillingPeriod: mergeSub.cancel_at,
+        endOfBillingPeriod: mergeSub.cancel_at!,
         removeCusProducts: attachParams.cusProducts.filter((cp) => cp.canceled),
       });
+    } else {
+      const res = await getCustomerSchedule({
+        attachParams,
+        subId: mergeSub.id,
+        logger,
+      });
+      schedule = res.schedule;
+      logger.info(`ADD PRODUCT FLOW, SCHEDULE ID: ${schedule?.id}`);
+      if (schedule) {
+        await handleUpgradeFlowSchedule({
+          req,
+          logger,
+          attachParams,
+          config,
+          schedule,
+          curSub: mergeSub,
+          removeCusProducts: [],
+          fromAddProduct: true,
+        });
+      }
     }
-
-    // 1.
   } else {
     let billingCycleAnchorUnix = undefined;
     const smallestInterval = getSmallestInterval({
@@ -164,6 +195,15 @@ export const handlePaidProduct = async ({
         config,
         logger,
       });
+
+      if (sub?.latest_invoice) {
+        invoice = await insertInvoiceFromAttach({
+          db: req.db,
+          stripeInvoice: sub.latest_invoice as Stripe.Invoice,
+          attachParams,
+          logger,
+        });
+      }
     } catch (error: any) {
       if (
         error instanceof RecaseError &&
@@ -183,16 +223,6 @@ export const handlePaidProduct = async ({
   }
 
   subscriptions.push(sub);
-
-  let invoice: Stripe.Invoice | undefined;
-  if (sub?.latest_invoice) {
-    invoice = await insertInvoiceFromAttach({
-      db: req.db,
-      stripeInvoice: sub.latest_invoice as Stripe.Invoice,
-      attachParams,
-      logger,
-    });
-  }
 
   const anchorToUnix = getEarliestPeriodEnd({ sub }) * 1000;
 

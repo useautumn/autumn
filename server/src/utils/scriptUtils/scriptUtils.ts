@@ -179,6 +179,7 @@ export const initScript = async ({
     db,
     features,
     logger,
+    logtail: logger,
   } as ExtendedRequest;
 
   return { stripeCli, autumnProducts, req };
