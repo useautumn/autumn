@@ -75,14 +75,18 @@ function CreateCustomer() {
         </DialogHeader>
         <div className="flex gap-2">
           <div>
-            <FieldLabel>Name</FieldLabel>
+            <FieldLabel>
+              Name
+            </FieldLabel>
             <Input
               value={fields.name}
               onChange={(e) => setFields({ ...fields, name: e.target.value })}
             />
           </div>
           <div>
-            <FieldLabel>ID</FieldLabel>
+            <FieldLabel>
+              ID 
+            </FieldLabel>
             <Input
               value={fields.id}
               onChange={(e) => setFields({ ...fields, id: e.target.value })}
@@ -107,12 +111,11 @@ function CreateCustomer() {
           />
         </div> */}
         <DialogFooter>
-          <Button
-            onClick={handleCreate}
-            isLoading={isLoading}
-            variant="gradientPrimary"
-          >
-            Create
+          <Button onClick={handleCreate} 
+            isLoading={isLoading} 
+            variant="gradientPrimary" 
+            disabled={ !fields.name.trim() || (!fields.id.trim() && !fields.email.trim()) } 
+          > Create 
           </Button>
         </DialogFooter>
       </DialogContent>
