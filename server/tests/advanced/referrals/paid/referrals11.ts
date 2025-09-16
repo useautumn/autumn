@@ -181,11 +181,6 @@ describe(`${chalk.yellowBright(
 			(p) => p.id === products.premium.id,
 		);
 
-		console.log(
-			redeemerProds.map((x) => `${x.id} - ${x.name} - ${x.status}`),
-			mainProds.map((x) => `${x.id} - ${x.name} - ${x.status}`),
-		);
-
 		assert.isFalse(
 			redeemerHasProProduct,
 			"Redeemer should not have pro product (already on paid plan)",
@@ -194,16 +189,16 @@ describe(`${chalk.yellowBright(
 
 		// Verify products are properly attached
 		expectProductV1Attached({
-			customer: await autumn.customers.get(mainCustomerId),
+			customer: mainCustomerData,
 			product: products.pro,
 			status: CusProductStatus.Trialing,
 		});
 
 		// Verify redeemer only has premium product
 		expectProductV1Attached({
-			customer: await autumn.customers.get(redeemer),
+			customer: redeemerCustomerData,
 			product: products.premium,
-			status: CusProductStatus.Trialing,
+			status: CusProductStatus.Active,
 		});
 	});
 

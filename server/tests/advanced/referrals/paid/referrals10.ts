@@ -129,7 +129,11 @@ describe(`${chalk.yellowBright(
 
 	it("should have given the paid add-on to referrer only, not redeemer", async () => {
 		const redemptionResult = await autumn.redemptions.get(redemption.id);
-		assert.equal(redemptionResult.applied, true);
+		assert.equal(
+			redemptionResult.applied,
+			true,
+			"Redemption should be applied",
+		);
 
 		await setTimeout(1000 * 10);
 
@@ -141,7 +145,6 @@ describe(`${chalk.yellowBright(
 		// Main customer (referrer) should have the proAddOn product
 		const mainProds = mainCustomerData.products;
 		const mainAddons = mainCustomerData.add_ons;
-
 		assert.equal(mainProds.length + mainAddons.length, 2);
 
 		const hasProAddOn = mainAddons.some((p) => p.id === products.proAddOn.id);
@@ -150,7 +153,6 @@ describe(`${chalk.yellowBright(
 		// Redeemer should only have Premium product (no proAddOn)
 		const redeemerProds = redeemerCustomerData.products;
 		const redeemerAddons = redeemerCustomerData.add_ons;
-
 		assert.equal(redeemerProds.length + redeemerAddons.length, 1);
 
 		const redeemerHasProAddOn = redeemerAddons.some(
