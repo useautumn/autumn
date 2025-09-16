@@ -209,7 +209,7 @@ const ProductPriceSelector = ({
 												org,
 												features,
 											})
-										: "Deleted price";
+										: "Unmigrated price";
 									return (
 										<div
 											key={priceId}
