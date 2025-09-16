@@ -1,13 +1,13 @@
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
 } from "@/components/ui/dialog";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { RewardService } from "@/services/products/RewardService";
@@ -20,7 +20,7 @@ function CreateReward() {
 	const axiosInstance = useAxiosInstance();
 	const { refetch } = useRewardsQuery();
 
-	const [isLoading, startTransition] = useTransition();
+	const [isLoading, setIsLoading] = useState(false);
 	const [open, setOpen] = useState(false);
 
 	const [reward, setReward] = useState(defaultReward);
@@ -31,7 +31,8 @@ function CreateReward() {
 		}
 	}, [open]);
 
-	const handleCreate = () => startTransition(() => {
+	const handleCreate = () => {
+		setIsLoading(true);
 		(async () => {
 			if (!reward?.id && !reward?.name) {
 				toast.error("ID and name are required");
@@ -49,9 +50,11 @@ function CreateReward() {
 			} catch (error) {
 				console.log("Error:", error);
 				toast.error(getBackendErr(error, "Failed to create coupon"));
+			} finally {
+				setIsLoading(false);
 			}
 		})();
-	});
+	};
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>

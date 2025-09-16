@@ -1,6 +1,6 @@
 import type { CreateRewardProgram } from "@autumn/shared";
 import { RewardReceivedBy, RewardTriggerEvent } from "@autumn/shared";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,7 +35,7 @@ function CreateRewardProgramModal() {
 	const { refetch } = useRewardsQuery();
 	const axiosInstance = useAxiosInstance();
 
-	const [isLoading, startTransition] = useTransition();
+	const [isLoading, setIsLoading] = useState(false);
 	const [open, setOpen] = useState(false);
 
 	const [rewardProgram, setRewardProgram] = useState(defaultRewardProgram);
@@ -47,19 +47,19 @@ function CreateRewardProgramModal() {
 	}, [open]);
 
 	const handleCreate = () => {
-		startTransition(() => {
-			(async () => {
-				try {
-					await axiosInstance.post("/v1/reward_programs", rewardProgram);
+		setIsLoading(true);
+		(async () => {
+			try {
+				await axiosInstance.post("/v1/reward_programs", rewardProgram);
 
-					await refetch();
-					setOpen(false);
-				} catch (error) {
-					toast.error(getBackendErr(error, "Failed to create referral program"));
-				} finally {
-				}
-			})();
-		});
+				await refetch();
+				setOpen(false);
+			} catch (error) {
+				toast.error(getBackendErr(error, "Failed to create referral program"));
+			} finally {
+				setIsLoading(false);
+			}
+		})();
 	};
 
 	return (
