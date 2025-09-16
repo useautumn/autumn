@@ -61,7 +61,7 @@ const findMatchingUsagePrice = (
 			if (newConfig.bill_when !== oldConfig.bill_when) return false;
 			if (newConfig.should_prorate !== oldConfig.should_prorate) return false;
 
-			// Optionally match by tier structure (you can disable this if too strict)
+			// Optionally match by tier structure
 			if (!tiersMatch(oldConfig.usage_tiers, newConfig.usage_tiers))
 				return false;
 
@@ -128,12 +128,6 @@ export async function runRewardMigrationTask({
 			],
 		});
 
-		logger.info("--------------------------------");
-		logger.info("REWARDS: ", rewards.length);
-		logger.info("--------------------------------");
-		logger.info(rewards.map((r) => `${r.name} - ${r.id}`));
-		logger.info("--------------------------------");
-
 		const filteredRewards = rewards.filter(
 			(x) =>
 				x.org_id === orgId &&
@@ -144,12 +138,6 @@ export async function runRewardMigrationTask({
 					oldPrices.map((p) => p.id).includes(p),
 				),
 		);
-
-		logger.info("--------------------------------");
-		logger.info("FILTERED REWARDS: ", filteredRewards.length);
-		logger.info("--------------------------------");
-		logger.info(filteredRewards);
-		logger.info("--------------------------------");
 
 		for (const reward of filteredRewards) {
 			const newPriceIds: string[] = [];
@@ -229,7 +217,7 @@ export async function runRewardMigrationTask({
 		).length;
 
 		logger.info("================================");
-		logger.info("REWARD MIGRATION SUMMARY");
+		logger.info("REWARD MIGRATION SUMMARY FOR ORG: ", orgId);
 		logger.info("================================");
 		logger.info(`Total rewards processed: ${totalRewards}`);
 		logger.info(`Rewards with successful matches: ${updatedRewards}`);
