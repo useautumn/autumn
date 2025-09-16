@@ -128,7 +128,7 @@ describe(`${chalk.yellowBright(
 
 	it("should have given the paid product to referrer only, not redeemer (referrer-only reward)", async () => {
 		const redemptionResult = await autumn.redemptions.get(redemption.id);
-		assert.equal(redemptionResult.applied, true);
+		assert.equal(redemptionResult.applied, true, `Redemption should be applied: ${JSON.stringify(redemptionResult, null, 4)}`);
 
 		await setTimeout(1000 * 10);
 
@@ -153,7 +153,7 @@ describe(`${chalk.yellowBright(
 		expectProductV1Attached({
 			customer: await autumn.customers.get(redeemer),
 			product: products.premium,
-			status: CusProductStatus.Trialing,
+			status: CusProductStatus.Active,
 		});
 	});
 

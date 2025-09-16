@@ -142,7 +142,7 @@ describe(`${chalk.yellowBright(
 		const mainProds = mainCustomerData.products;
 		const mainAddons = mainCustomerData.add_ons;
 
-		assert.equal(mainProds.length + mainAddons.length, 2);
+		assert.equal(mainProds.length + mainAddons.length, 2, `Main customer should have 2 products: ${JSON.stringify(mainProds, null, 4)} ${JSON.stringify(mainAddons, null, 4)}`);
 
 		const hasProAddOn = mainAddons.some((p) => p.id === products.proAddOn.id);
 		assert.isTrue(hasProAddOn, "Main customer should have proAddOn product");
@@ -151,7 +151,7 @@ describe(`${chalk.yellowBright(
 		const redeemerProds = redeemerCustomerData.products;
 		const redeemerAddons = redeemerCustomerData.add_ons;
 
-		assert.equal(redeemerProds.length + redeemerAddons.length, 2);
+		assert.equal(redeemerProds.length + redeemerAddons.length, 2, `Redeemer should have 2 products: ${JSON.stringify(redeemerProds, null, 4)} ${JSON.stringify(redeemerAddons, null, 4)}`);
 
 		const redeemerHasProAddOn = redeemerAddons.some(
 			(p) => p.id === products.proAddOn.id,
