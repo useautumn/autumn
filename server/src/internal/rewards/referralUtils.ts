@@ -16,7 +16,6 @@ import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js"
 import { createStripeCli } from "@/external/stripe/utils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
-import { createCusInStripe } from "@/utils/scriptUtils/initCustomer.js";
 import { createFullCusProduct } from "../customers/add-product/createFullCusProduct.js";
 import { handleAddProduct } from "../customers/attach/attachFunctions/addProductFlow/handleAddProduct.js";
 import { rewardProgramToAttachParams } from "../customers/attach/attachUtils/attachParams/convertToParams.js";
@@ -215,10 +214,24 @@ export const triggerFreeProduct = async ({
 	if (fullRedeemer.customer_products.find((cp) => cp.product.id === productId))
 		addToRedeemer = false;
 
-	// If they are on any paid plan that isn't an add-on, don't add to them
-	if(fullReferrer.customer_products.some(x => !x.product.is_add_on && !isFreeProduct(x.customer_prices.map(y => y.price))))
+	// If they are on any paid plan that isn't an add-on, and the reward isn't an, don't add to them
+	if (
+		fullReferrer.customer_products.some(
+			(x) =>
+				!x.product.is_add_on &&
+				!isFreeProduct(x.customer_prices.map((y) => y.price)),
+		) &&
+		!fullProduct.is_add_on
+	)
 		addToReferrer = false;
-	if(fullRedeemer.customer_products.some(x => !x.product.is_add_on && !isFreeProduct(x.customer_prices.map(y => y.price))))
+	if (
+		fullRedeemer.customer_products.some(
+			(x) =>
+				!x.product.is_add_on &&
+				!isFreeProduct(x.customer_prices.map((y) => y.price)),
+		) &&
+		!fullProduct.is_add_on
+	)
 		addToRedeemer = false;
 
 	function seedReq(req: ExtendedRequest) {
@@ -338,20 +351,20 @@ export const triggerFreeProduct = async ({
 
 		const ensureStripeIDs = [
 			!fullRedeemer.processor?.id &&
-				(await createCusInStripe({
+				(await createStripeCusIfNotExists({
+					db,
 					customer: fullRedeemer,
 					org,
 					env,
-					db,
-					testClockId: req?.body?.testClockId || undefined,
+					logger,
 				})),
 			!fullReferrer.processor?.id &&
-				(await createCusInStripe({
+				(await createStripeCusIfNotExists({
+					db,
 					customer: fullReferrer,
 					org,
 					env,
-					db,
-					testClockId: req?.body?.testClockId || undefined,
+					logger,
 				})),
 		];
 
