@@ -59,9 +59,7 @@ mainRouter.use(
       id: invoiceId,
     });
 
-    if (!invoice) {
-      return res.status(404).json({ error: "Invoice not found" });
-    }
+    if (!invoice) return res.status(404).json({ error: "Invoice not found" });
 
     try {
       let org = invoice.customer.org;
@@ -71,6 +69,12 @@ mainRouter.use(
         env,
       });
       let stripeInvoice = await stripeCli.invoices.retrieve(invoice.stripe_id);
+
+      if (stripeInvoice.status == "draft") {
+        return res
+          .status(404)
+          .json({ error: "This invoice is in draft status and has no URL" });
+      }
 
       res.redirect(stripeInvoice.hosted_invoice_url);
     } catch (e) {

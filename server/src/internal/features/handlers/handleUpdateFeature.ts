@@ -289,7 +289,13 @@ export const handleUpdateFeature = async (
         });
 
         if (res) {
-          res.status(200).json({ success: true, feature_id: featureId });
+          res
+            .status(200)
+            .json(
+              updatedFeature
+                ? toAPIFeature({ feature: updatedFeature })
+                : undefined
+            );
         }
         return;
       }
@@ -394,20 +400,10 @@ export const handleUpdateFeature = async (
         });
       }
 
-      if (res && fromApi) {
-        let newFeature = await FeatureService.get({
-          db: req.db,
-          id: featureId,
-          orgId: req.orgId,
-          env: req.env,
-        });
-        res.status(200).json(toAPIFeature({ feature: newFeature }));
-      } else {
-        res.status(200).json({ success: true, feature_id: featureId });
-      }
-
-      // if (res) {
-      //   res.status(200).json({ success: true, feature_id: featureId });
-      // }
+      res
+        .status(200)
+        .json(
+          updatedFeature ? toAPIFeature({ feature: updatedFeature }) : undefined
+        );
     },
   });
