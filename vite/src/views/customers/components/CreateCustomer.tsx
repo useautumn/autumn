@@ -111,11 +111,13 @@ function CreateCustomer() {
           />
         </div> */}
         <DialogFooter>
-          <Button onClick={handleCreate} 
-            isLoading={isLoading} 
-            variant="gradientPrimary" 
-            disabled={ !fields.name.trim() || (!fields.id.trim() && !fields.email.trim()) } 
-          > Create 
+          <Button
+            onClick={handleCreate}
+            isLoading={isLoading}
+            variant="gradientPrimary"
+            disabled={!fields.id.trim() && !fields.email.trim()} // ✅ at least one of id or email
+          >
+            Create
           </Button>
         </DialogFooter>
       </DialogContent>
