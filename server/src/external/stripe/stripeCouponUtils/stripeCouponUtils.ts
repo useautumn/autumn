@@ -157,11 +157,13 @@ export const createStripeCoupon = async ({
       autumn_internal_id: reward.internal_id,
     },
     applies_to:
-      reward.type === RewardType.FreeProduct || !discountConfig!.apply_to_all
-        ? {
-            products: stripeProdIds,
-          }
-        : undefined,
+      reward.type === RewardType.FreeProduct
+        ? undefined
+        : !discountConfig!.apply_to_all
+          ? {
+              products: stripeProdIds,
+            }
+          : undefined,
   });
 
   // Create promo codes

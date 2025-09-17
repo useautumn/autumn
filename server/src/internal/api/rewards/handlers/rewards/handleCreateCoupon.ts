@@ -75,14 +75,6 @@ export default async (req: any, res: any) =>
           env,
         });
 
-        await initProductInStripe({
-          db,
-          product: fullProduct,
-          org,
-          env,
-          logger,
-        });
-
         if (!isFreeProduct(fullProduct.prices)) {
           await createStripeCoupon({
             reward: newReward,
