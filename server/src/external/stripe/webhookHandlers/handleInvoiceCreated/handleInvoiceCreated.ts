@@ -130,9 +130,6 @@ const handleInArrearProrated = async ({
       }
     }
 
-    console.log("New entities: ", newEntities);
-    console.log("Cus ent ID: ", linkedCusEnt.id);
-
     let updated = await CusEntService.update({
       db,
       id: linkedCusEnt.id,

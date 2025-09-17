@@ -100,9 +100,7 @@ const createAndInsertEvent = async ({
   const entityId = req.body.entity_id;
   let internalEntityId = null;
   if (entityId) {
-    internalEntityId = customer.entities.find(
-      (e) => e.id === entityId
-    )?.internal_id;
+    internalEntityId = customer.entity?.internal_id;
   }
 
   const newEvent: EventInsert = {

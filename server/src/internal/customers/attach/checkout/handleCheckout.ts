@@ -184,8 +184,6 @@ export const handleCheckout = (req: any, res: any) =>
 
       if (checkoutRes.next_cycle) {
         const nextCycle = checkoutRes.next_cycle;
-        console.log("Due at:", formatUnixToDate(nextCycle.starts_at!));
-        console.log("Total:", nextCycle.total);
       }
 
       res.status(200).json({

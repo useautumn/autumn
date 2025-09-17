@@ -132,7 +132,7 @@ export const getCusEntsInFeatures = async ({
 
   if (internalFeatureIds) {
     cusEnts = cusEnts.filter((cusEnt) =>
-      internalFeatureIds.includes(cusEnt.internal_feature_id)
+      internalFeatureIds.includes(cusEnt.entitlement.internal_feature_id)
     );
   }
 
@@ -142,7 +142,6 @@ export const getCusEntsInFeatures = async ({
       (cusEnt) =>
         nullish(cusEnt.customer_product.internal_entity_id) ||
         cusEnt.customer_product.internal_entity_id === entity.internal_id
-      // || cusEnt.entities
     );
   }
 

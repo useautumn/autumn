@@ -22,6 +22,7 @@ import { getBackendErr, notNullish } from "@/utils/genUtils";
 import CopyButton from "@/components/general/CopyButton";
 import { AlertCircle, Info, InfoIcon } from "lucide-react";
 import { useCusQuery } from "../hooks/useCusQuery";
+import { getCusEntBalance } from "@autumn/shared";
 
 function UpdateCusEntitlement({
   selectedCusEntitlement,
@@ -32,17 +33,40 @@ function UpdateCusEntitlement({
 }) {
   const { customer, refetch } = useCusQuery();
   const { entityId } = useCustomerContext();
-  // const { customer, env, cusMutate, entityId } = useCustomerContext();
+
   const cusEnt = selectedCusEntitlement;
+
+  console.log(
+    "Balance: ",
+    cusEnt
+      ? getCusEntBalance({
+          cusEnt: cusEnt!,
+          entityId,
+        }).balance
+      : null
+  );
 
   const [updateLoading, setUpdateLoading] = useState(false);
   const axiosInstance = useAxiosInstance();
 
+  console.log(
+    `Cus ent: ${cusEnt?.entitlement.feature_id}, Balances: `,
+    cusEnt
+      ? getCusEntBalance({
+          cusEnt: cusEnt!,
+          entityId,
+        })
+      : null
+  );
+
   const [updateFields, setUpdateFields] = useState<any>({
-    balance:
-      entityId && notNullish(cusEnt?.entities?.[entityId]?.balance)
-        ? cusEnt?.entities?.[entityId]?.balance
-        : cusEnt?.balance,
+    balance: cusEnt
+      ? getCusEntBalance({
+          cusEnt,
+          entityId,
+        }).balance
+      : null,
+
     next_reset_at: cusEnt?.next_reset_at,
   });
 
@@ -55,10 +79,12 @@ function UpdateCusEntitlement({
 
   useEffect(() => {
     setUpdateFields({
-      balance:
-        entityId && notNullish(cusEnt?.entities?.[entityId]?.balance)
-          ? cusEnt?.entities?.[entityId]?.balance
-          : cusEnt?.balance,
+      balance: cusEnt
+        ? getCusEntBalance({
+            cusEnt: cusEnt!,
+            entityId,
+          }).balance
+        : null,
       next_reset_at: cusEnt?.next_reset_at,
     });
   }, [selectedCusEntitlement]);

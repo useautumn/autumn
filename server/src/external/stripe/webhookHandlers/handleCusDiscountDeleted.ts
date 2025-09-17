@@ -42,9 +42,70 @@ export async function handleCusDiscountDeleted({
     internalCustomerId: customer.internal_id,
   });
 
-  logger.info(`discount.deleted: found ${redemptions.length} redemptions`);
+  logger.info(
+    `discount.deleted:, discount ID: ${discount.id}, found ${redemptions.length} redemptions`
+  );
 
-  if (redemptions.length == 0) {
+  if (redemptions.length == 0) return;
+
+  let paidProductRedemption = redemptions.find(
+    (r) =>
+      r.reward_program.reward.id ===
+      (typeof discount.coupon == "string"
+        ? discount.coupon
+        : discount.coupon.id)
+  );
+
+  if (discount.subscription) {
+    logger.info(
+      `Discount is a subscription, paidProductRedemption: ${paidProductRedemption?.id}`
+    );
+
+    if (!paidProductRedemption) return;
+
+    // Re-apply coupon and mark applied / redeemer applied to true
+    let stripeCli = createStripeCli({
+      org,
+      env,
+    });
+
+    // Mark reward redemption as applied / redeemer applied to true
+
+    const sub = await stripeCli.subscriptions.retrieve(discount.subscription);
+
+    // can't really test because it modifies subscription affected by test clock...
+    try {
+      await stripeCli.subscriptions.update(discount.subscription, {
+        discounts: [
+          ...(sub.discounts as string[]).map((d: string) => ({
+            discount: d,
+          })),
+          {
+            coupon: paidProductRedemption.reward_program.reward.id as string,
+          },
+        ],
+      });
+    } catch (error: any) {
+      logger.error(
+        `Failed to update subscription ${discount.subscription} with paid product coupon, error: ${error.message}`
+      );
+      throw error;
+    }
+
+    // Mark reward redemption as applied / redeemer applied to true
+    const isReferrer =
+      paidProductRedemption.referral_code.internal_customer_id ===
+      customer.internal_id;
+
+    await RewardRedemptionService.update({
+      db,
+      id: paidProductRedemption.id,
+      updates: {
+        applied: isReferrer ? true : undefined,
+        redeemer_applied: isReferrer ? undefined : true,
+      },
+    });
+
     return;
   }
 
@@ -89,7 +150,7 @@ export async function handleCusDiscountDeleted({
 
   await legacyStripe.customers.update(discount.customer, {
     // @ts-ignore
-    coupon: reward.internal_id,
+    coupon: reward.id,
   });
 
   await RewardRedemptionService.update({

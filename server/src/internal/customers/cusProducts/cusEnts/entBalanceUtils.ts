@@ -1,7 +1,6 @@
 import RecaseError from "@/utils/errorUtils.js";
 import { nullish } from "@/utils/genUtils.js";
-import { ErrCode, FullCustomerEntitlement } from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
+import { FullCustomerEntitlement } from "@autumn/shared";
 
 export const getEntityBalance = ({
   cusEnt,
@@ -13,14 +12,7 @@ export const getEntityBalance = ({
   let entityBalance = cusEnt.entities?.[entityId!]?.balance;
   let adjustment = cusEnt.entities?.[entityId!]?.adjustment || 0;
 
-  if (nullish(entityBalance)) {
-    return { balance: 0, adjustment: 0 };
-    // throw new RecaseError({
-    //   message: `Entity balance not found for entityId: ${entityId}`,
-    //   code: ErrCode.EntityBalanceNotFound,
-    //   statusCode: StatusCodes.BAD_REQUEST,
-    // });
-  }
+  if (nullish(entityBalance)) return { balance: 0, adjustment: 0 };
 
   return {
     balance: entityBalance,
@@ -45,11 +37,11 @@ export const getSummedEntityBalances = ({
   return {
     balance: Object.values(cusEnt.entities!).reduce(
       (acc, curr) => acc + curr.balance,
-      0,
+      0
     ),
     adjustment: Object.values(cusEnt.entities!).reduce(
       (acc, curr) => acc + curr.adjustment,
-      0,
+      0
     ),
     unused: 0,
     count: Object.values(cusEnt.entities!).length,

@@ -35,6 +35,11 @@ const cusPrefixedUrls = [
     type: "delete",
   },
   {
+    method: "DELETE",
+    url: "/customers/:customer_id/entities/:entity_id",
+    type: "delete",
+  },
+  {
     method: "POST",
     url: "/customers/:customer_id/transfer_product",
     type: "delete",

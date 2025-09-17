@@ -100,6 +100,6 @@ export const handleDecreaseAndTransfer = async ({
       },
       product
     ),
-    sendWebhook: false,
+    scenario: AttachScenario.New,
   });
 };

@@ -20,11 +20,12 @@ export const priceToOneOffAndTiered = ({
 }) => {
   const config = price.config as UsagePriceConfig;
   let quantity = options?.quantity!;
-  let overage = quantity * config.billing_units! - relatedEnt.allowance!;
+  let overage = new Decimal(quantity).mul(config.billing_units!).toNumber();
+  // let overage = quantity * config.billing_units! - relatedEnt.allowance!;
 
-  if (overage <= 0) {
-    return null;
-  }
+  // if (overage <= 0) {
+  //   return null;
+  // }
 
   const amount = getPriceForOverage(price, overage);
   if (!config.stripe_product_id) {

@@ -3,12 +3,13 @@ import { z } from "zod";
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { CusService } from "../CusService.js";
-import { ErrCode } from "@autumn/shared";
+import { AttachScenario, ErrCode } from "@autumn/shared";
 import { CusProductService } from "../cusProducts/CusProductService.js";
 import { nullish } from "@/utils/genUtils.js";
 import { handleDecreaseAndTransfer } from "./handleTransferProduct/handleDecreaseAndTransfer.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { deleteCusCache } from "../cusCache/updateCachedCus.js";
+import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 const TransferProductSchema = z.object({
   from_entity_id: z.string().nullish(),
   to_entity_id: z.string(),
@@ -118,6 +119,21 @@ export const handleTransferProduct = async (req: any, res: any) =>
             entity_id: toEntity.id,
             internal_entity_id: toEntity.internal_id,
           },
+        });
+
+        await addProductsUpdatedWebhookTask({
+          req,
+          internalCustomerId: customer.internal_id,
+          org: req.org,
+          env: req.env,
+          customerId: customer.id || customer.internal_id,
+          scenario: AttachScenario.New,
+          cusProduct: {
+            ...cusProduct,
+            entity_id: toEntity.id,
+            internal_entity_id: toEntity.internal_id,
+          },
+          logger: req.logger,
         });
       }
 

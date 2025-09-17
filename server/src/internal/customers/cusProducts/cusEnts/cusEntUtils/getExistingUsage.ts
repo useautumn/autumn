@@ -221,7 +221,6 @@ export const addExistingUsagesToCusEnts = ({
 
     for (const cusEnt of fullCusEnts) {
       let ent = cusEnt.entitlement;
-      // let cusEntKey = `${ent.feature_id}-${ent.interval}-${ent.interval_count || 1}`;
       let fromEntities = existingUsages[key].fromEntities;
 
       // if (cusEntKey !== key) continue;

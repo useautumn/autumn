@@ -603,6 +603,7 @@ export const updateCustomerBalance = async ({
     env,
     inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
     entityId,
+    withSubs: true,
   });
 
   const { cusEnts, cusPrices } = await getCusEntsInFeatures({

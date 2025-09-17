@@ -18,4 +18,5 @@ export interface AttachConfig {
   sameIntervals: boolean;
   carryTrial: boolean;
   finalizeInvoice: boolean;
+  requirePaymentMethod: boolean;
 }
