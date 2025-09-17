@@ -23,7 +23,7 @@ export const getAttachParams = async ({
     customPrices,
     customEnts,
     stripeVars,
-    reward,
+    rewards,
   } = await processAttachBody({
     req,
     attachBody,
@@ -58,7 +58,7 @@ export const getAttachParams = async ({
     entitlements,
     freeTrial,
     replaceables: [],
-    reward,
+    rewards,
     // From req
     req,
     org: req.org,
@@ -72,6 +72,7 @@ export const getAttachParams = async ({
     apiVersion,
     successUrl: attachBody.success_url,
     invoiceOnly: attachBody.invoice,
+    productsList: attachBody.products || undefined,
     // || attachBody.invoice_only
 
     billingAnchor: attachBody.billing_cycle_anchor,
@@ -79,6 +80,7 @@ export const getAttachParams = async ({
     disableFreeTrial: attachBody.free_trial === false || false,
     checkoutSessionParams: attachBody.checkout_session_params,
     isCustom: attachBody.is_custom,
+    setupPayment: attachBody.setup_payment,
   };
 
   return {

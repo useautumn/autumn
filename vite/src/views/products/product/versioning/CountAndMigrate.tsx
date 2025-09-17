@@ -1,6 +1,5 @@
 import SmallSpinner from "@/components/general/SmallSpinner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
 import { isOneOffProduct } from "@/utils/product/priceUtils";
 import { MigrationJob, MigrationJobStep } from "@autumn/shared";
@@ -13,22 +12,17 @@ import {
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { useProductContext } from "../ProductContext";
 import ConfirmMigrateDialog from "./ConfirmMigrateDialog";
+import { useProductQuery } from "../hooks/useProductQuery";
+import { useProductCountsQuery } from "../hooks/queries/useProductCountsQuery";
+import { useMigrationsQuery } from "../hooks/queries/useMigrationsQuery.tsx";
 
 export const CountAndMigrate = () => {
-  const {
-    product,
-    counts,
-    numVersions,
-    version,
-    existingMigrations,
-    mutate,
-    mutateCount,
-  } = useProductContext();
+  const { product, numVersions } = useProductQuery();
+  const { counts, refetch: refetchCounts } = useProductCountsQuery();
+  const { migrations, refetch: refetchMigrations } = useMigrationsQuery();
 
-  const env = useEnv();
-  const axiosInstance = useAxiosInstance({ env });
+  const axiosInstance = useAxiosInstance();
   const [loading, setLoading] = useState(false);
   const [confirmMigrateOpen, setConfirmMigrateOpen] = useState(false);
 
@@ -37,11 +31,12 @@ export const CountAndMigrate = () => {
     try {
       const { data } = await axiosInstance.post("/v1/migrations", {
         from_product_id: product.id,
-        from_version: version,
+        from_version: product.version,
         to_product_id: product.id,
         to_version: numVersions,
       });
-      await mutate();
+
+      await refetchMigrations();
 
       toast.success(`Migration started. ID: ${data.id}`);
     } catch (error) {
@@ -55,22 +50,22 @@ export const CountAndMigrate = () => {
   };
 
   useEffect(() => {
-    if (existingMigrations.length > 0) {
+    if (migrations.length > 0) {
       // Run poll job on mutate
       const pollInterval = setInterval(() => {
-        mutate();
-        mutateCount();
+        refetchCounts();
+        refetchMigrations();
       }, 5000);
       return () => clearInterval(pollInterval);
     }
-  }, [existingMigrations]);
+  }, [migrations]);
 
   if (!counts) {
     return <></>;
   }
 
   const renderCurrentMigration = () => {
-    const migration: MigrationJob = existingMigrations[0];
+    const migration: MigrationJob = migrations[0];
 
     const getCusDetails = migration.step_details[MigrationJobStep.GetCustomers];
     const migrateDetails =
@@ -86,7 +81,7 @@ export const CountAndMigrate = () => {
             "
             >
               <span className="flex items-center gap-2 justify-between w-full pr-2">
-                <span className="text-sm font-medium text-t3 text-xs">
+                <span className="font-medium text-t3 text-xs">
                   Migration in progress
                 </span>
                 <SmallSpinner size={16} />
@@ -130,8 +125,8 @@ export const CountAndMigrate = () => {
   };
 
   const fromIsOneOff = isOneOffProduct(product.items);
-
   const migrateCount = counts?.active - counts?.canceled - counts?.custom;
+  const version = product.version;
 
   const canMigrate =
     counts &&
@@ -147,7 +142,7 @@ export const CountAndMigrate = () => {
         setOpen={setConfirmMigrateOpen}
         startMigration={migrateCustomers}
       />
-      {!canMigrate ? null : existingMigrations.length > 0 ? (
+      {!canMigrate ? null : migrations.length > 0 ? (
         renderCurrentMigration()
       ) : (
         <Button

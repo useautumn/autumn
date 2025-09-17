@@ -22,6 +22,8 @@ import { ExtendedRequest } from "@/utils/models/Request.js";
 import { ActionService } from "@/internal/analytics/ActionService.js";
 import { constructAction } from "@/internal/analytics/actionUtils.js";
 import { parseReqForAction } from "@/internal/analytics/actionUtils.js";
+import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
+import { cusProductToPrices, cusProductToProduct } from "@autumn/shared";
 
 interface ActionDetails {
   request_id: string;
@@ -119,29 +121,25 @@ export const handleProductsUpdated = async ({
 
   // Product:
   let product = cusProduct.product;
-  let prices = cusProduct.customer_prices.map((cp) => cp.price);
-  let entitlements = cusProduct.customer_entitlements.map(
-    (ce) => ce.entitlement
-  );
-  let freeTrial = cusProduct.free_trial;
+  // const prices = cusProductToPrices({ cusProduct });
+  // const ents = cusProductToEnts({ cusProduct });
+  // let freeTrial = cusProduct.free_trial;
 
-  let fullProduct: FullProduct = {
-    ...product,
-    prices,
-    entitlements,
-    free_trial: freeTrial || null,
-  };
+  let fullProduct: FullProduct = cusProductToProduct({ cusProduct });
+
+  // {
+  //   ...product,
+  //   prices,
+  //   entitlements: ents,
+  //   free_trial: freeTrial || null,
+  // };
 
   let customer = await CusService.getFull({
     db,
     idOrInternalId: data.customerId || data.internalCustomerId,
     orgId: data.org.id,
     env: data.env,
-    inStatuses: [
-      CusProductStatus.Active,
-      CusProductStatus.Scheduled,
-      CusProductStatus.Expired,
-    ],
+    inStatuses: RELEVANT_STATUSES,
     entityId: cusProduct.internal_entity_id || undefined,
   });
 

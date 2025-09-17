@@ -9,6 +9,7 @@ import {
   type FullCusProduct,
   type FullCustomer,
   type FullCustomerEntitlement,
+  isTrialing,
   type ProductItem,
   SuccessCode,
   UsageModel,
@@ -17,10 +18,15 @@ import { getCheckPreview } from "./getCheckPreview.js";
 
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getProration } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
-import { notNullish } from "@/utils/genUtils.js";
+import {
+  formatUnixToDate,
+  formatUnixToDateTime,
+  notNullish,
+} from "@/utils/genUtils.js";
 import { featureToCusPrice } from "@/internal/customers/cusProducts/cusPrices/convertCusPriceUtils.js";
 import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import { Decimal } from "decimal.js";
+import { isOneOffPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 
 export const getBooleanEntitledResult = async ({
   db,
@@ -92,7 +98,7 @@ export const getBooleanEntitledResult = async ({
 export const getOptions = ({
   prodItems,
   features,
-  anchorToUnix,
+  anchor,
   proration,
   now,
   freeTrial,
@@ -100,7 +106,7 @@ export const getOptions = ({
 }: {
   prodItems: ProductItem[];
   features: Feature[];
-  anchorToUnix?: number;
+  anchor?: number;
   proration?: {
     start: number;
     end: number;
@@ -115,24 +121,29 @@ export const getOptions = ({
     .filter((i) => isFeaturePriceItem(i) && i.usage_model == UsageModel.Prepaid)
     .map((i) => {
       const finalProration = getProration({
-        anchorToUnix,
+        anchor,
         proration,
-        interval: (i.interval || BillingInterval.OneOff) as BillingInterval,
-        intervalCount: i.interval_count || 1,
+        intervalConfig: {
+          interval: (i.interval || BillingInterval.OneOff) as BillingInterval,
+          intervalCount: i.interval_count || 1,
+        },
         now,
       });
 
       let priceData = itemToPriceOrTiers({
         item: i,
-        proration: finalProration,
         now,
+        proration: finalProration,
       });
 
       let actualPrice = itemToPriceOrTiers({
         item: i,
       });
 
-      if (freeTrial) {
+      if (
+        (freeTrial || (cusProduct && isTrialing({ cusProduct, now }))) &&
+        notNullish(i.interval)
+      ) {
         priceData = {
           price: 0,
           tiers: undefined,
@@ -188,6 +199,7 @@ export const getOptions = ({
           : undefined,
         proration_amount: prorationAmount,
         config: i.config,
+        interval: i.interval,
       };
     });
 };

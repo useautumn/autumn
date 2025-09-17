@@ -195,6 +195,7 @@ export const handleEventSent = async ({
     customerId: customer.id,
     entityId: event_data.entity_id,
     features: affectedFeatures,
+    allFeatures: req.features,
     event,
     org,
     env,

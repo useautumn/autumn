@@ -1,7 +1,5 @@
-import { useProductContext } from "@/views/products/product/ProductContext";
 import { useProductItemContext } from "../../ProductItemContext";
-import { useState } from "react";
-import { ChevronRight, PlusIcon } from "lucide-react";
+
 import { ToggleButton } from "@/components/general/ToggleButton";
 import { OnDecreaseSelect } from "./proration-config/OnDecreaseSelect";
 import { OnIncreaseSelect } from "./proration-config/OnIncreaseSelect";
@@ -15,12 +13,11 @@ import { Input } from "@/components/ui/input";
 
 import { RolloverConfigView } from "./RolloverConfig";
 import { notNullish } from "@/utils/genUtils";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export const AdvancedItemConfig = () => {
-  const { features } = useProductContext();
+  const { features } = useFeaturesQuery();
   const { item, setItem } = useProductItemContext();
-
-  const [isOpen, setIsOpen] = useState(item.usage_limit != null);
 
   const showProrationConfig = shouldShowProrationConfig({ item, features });
 

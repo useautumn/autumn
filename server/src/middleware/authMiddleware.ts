@@ -4,6 +4,8 @@ import { AuthType, ErrCode } from "@autumn/shared";
 import { verifyToken } from "@clerk/express";
 import { fromNodeHeaders } from "better-auth/node";
 import { NextFunction } from "express";
+import { eq, and } from "drizzle-orm";
+import { member } from "@autumn/shared";
 
 const getTokenData = async (req: any, res: any) => {
   let token;
@@ -51,6 +53,7 @@ export const withOrgAuth = async (req: any, res: any, next: NextFunction) => {
     }
 
     const orgId = session?.session?.activeOrganizationId;
+    const userId = session?.user?.id;
 
     if (!orgId) {
       logger.info(`Unauthorized - no org id found`);
@@ -59,7 +62,12 @@ export const withOrgAuth = async (req: any, res: any, next: NextFunction) => {
         .json({ message: "Unauthorized - no org id found" });
     }
 
-    // let tokenOrg = tokenData!.org as any;
+    if (!userId) {
+      logger.info(`Unauthorized - no user id found`);
+      return res
+        .status(401)
+        .json({ message: "Unauthorized - no user id found" });
+    }
 
     let data = await OrgService.getWithFeatures({
       db: req.db,
@@ -77,6 +85,7 @@ export const withOrgAuth = async (req: any, res: any, next: NextFunction) => {
     const { org, features } = data;
 
     req.user = session?.user;
+    req.userId = userId;
     req.orgId = orgId;
     req.org = org;
     req.features = features;

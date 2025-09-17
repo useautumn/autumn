@@ -6,9 +6,14 @@ import { useProductContext } from "@/views/products/product/ProductContext";
 import { getFeatureInvoiceDescription } from "@autumn/shared";
 import { formatAmount } from "@/utils/formatUtils/formatTextUtils";
 import { AdjustableOptions } from "./AdjustQuantity";
+import { useOrg } from "@/hooks/common/useOrg";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export const DueNextCycle = () => {
-  const { attachState, product, features, org } = useProductContext();
+  const { org } = useOrg();
+  const { features } = useFeaturesQuery();
+  const { attachState, product } = useProductContext();
+
   const preview = attachState.preview;
   const currency = org.default_currency || "USD";
 
@@ -23,7 +28,7 @@ export const DueNextCycle = () => {
 
   const branch = attachState.preview?.branch;
 
-  if (!preview.due_next_cycle) return null;
+  if (!preview.due_next_cycle || !preview.due_next_cycle.due_at) return null;
 
   if (
     !preview.due_next_cycle.line_items?.length &&
@@ -52,7 +57,7 @@ export const DueNextCycle = () => {
         <>
           {preview.options
             .filter((option: any) => {
-              // console.log("Option:", option);
+              console.log("Option:", option);
               if (!option.interval) return false;
               return true;
             })

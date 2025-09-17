@@ -14,6 +14,7 @@ export const expectFeaturesCorrect = ({
   customer,
   product,
   otherProducts,
+  productQuantity,
   options,
   usage,
   entities,
@@ -21,6 +22,7 @@ export const expectFeaturesCorrect = ({
   customer: Customer | Entity;
   product: ProductV2;
   otherProducts?: ProductV2[];
+  productQuantity?: number;
   options?: FeatureOptions[];
   usage?: {
     featureId: string;
@@ -31,7 +33,7 @@ export const expectFeaturesCorrect = ({
   const items = product.items;
 
   const featureIds = Array.from(
-    new Set(product.items.map((i) => i.feature_id)),
+    new Set(product.items.map((i) => i.feature_id))
   ).filter(notNullish);
 
   const otherItems = otherProducts?.flatMap((p) => p.items) || [];
@@ -55,7 +57,8 @@ export const expectFeaturesCorrect = ({
         entities?.filter((e) => e.feature_id === item.entity_feature_id)
           .length || 1;
 
-      includedUsage += (item.included_usage || 0) * numEntities;
+      includedUsage +=
+        (item.included_usage || 0) * numEntities * (productQuantity || 1);
     }
 
     for (const option of options || []) {
@@ -74,7 +77,7 @@ export const expectFeaturesCorrect = ({
     // 1. Check that included usage matches
     expect(
       feature.included_usage,
-      `Feature ${featureId} included usage is correct`,
+      `Feature ${featureId} included usage is correct`
     ).to.equal(includedUsage);
 
     // 2. Check that unlimited is set correctly
@@ -83,7 +86,7 @@ export const expectFeaturesCorrect = ({
     } else {
       expect(
         feature.unlimited == false || nullish(feature.unlimited),
-        `Feature ${featureId} is not unlimited`,
+        `Feature ${featureId} is not unlimited`
       );
     }
 
@@ -97,7 +100,7 @@ export const expectFeaturesCorrect = ({
       }, 0) || 0;
 
     expect(feature.usage, `Feature ${featureId} usage is correct`).to.equal(
-      featureUsage,
+      featureUsage
     );
   }
 };

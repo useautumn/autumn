@@ -5,15 +5,12 @@ import { useEffect, useRef, useState } from "react";
 
 export const useProductData = ({
   originalProduct,
-  originalFeatures,
 }: {
   originalProduct: ProductV2 | null;
-  originalFeatures: Feature[] | null;
 }) => {
   const initialProductRef = useRef<ProductV2 | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [product, setProduct] = useState<ProductV2 | null>(null);
-  const [features, setFeatures] = useState<Feature[]>([]);
   const [entityFeatureIds, setEntityFeatureIds] = useState<string[]>([]);
 
   const initEntityFeatureIds = (product: ProductV2 | null) => {
@@ -38,11 +35,7 @@ export const useProductData = ({
       setEntityFeatureIds(initEntityFeatureIds(sortedProduct));
       setProduct(sortedProduct);
     }
-
-    if (originalFeatures) {
-      setFeatures(originalFeatures);
-    }
-  }, [originalProduct, originalFeatures]);
+  }, [originalProduct]);
 
   useEffect(() => {
     if (!product) return;
@@ -96,8 +89,6 @@ export const useProductData = ({
     product,
     setProduct,
     hasChanges,
-    features,
-    setFeatures,
     entityFeatureIds,
     setEntityFeatureIds,
     actionState,

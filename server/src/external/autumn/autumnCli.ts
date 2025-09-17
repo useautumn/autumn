@@ -9,6 +9,7 @@ import {
   EntityExpand,
   ErrCode,
   Invoice,
+  OrgConfig,
 } from "@autumn/shared";
 import {
   CancelParams,
@@ -18,6 +19,7 @@ import {
   CheckResult,
   Customer,
   TrackParams,
+  TransferProductParams,
   UsageParams,
 } from "autumn-js";
 import { AttachBody } from "@autumn/shared";
@@ -47,11 +49,13 @@ export class AutumnInt {
     secretKey,
     baseUrl,
     version,
+    orgConfig,
   }: {
     apiKey?: string;
     secretKey?: string;
     baseUrl?: string;
     version?: string | APIVersion;
+    orgConfig?: Partial<OrgConfig>;
   } = {}) {
     // this.apiKey = apiKey || process.env.AUTUMN_API_KEY || "";
     this.apiKey =
@@ -64,6 +68,10 @@ export class AutumnInt {
 
     if (version) {
       this.headers["x-api-version"] = version.toString();
+    }
+
+    if (orgConfig) {
+      this.headers["org-config"] = JSON.stringify(orgConfig);
     }
 
     this.baseUrl = baseUrl || "http://localhost:8080/v1";
@@ -179,6 +187,18 @@ export class AutumnInt {
     //   options: toSnakeCase(options),
     // });
     const data = await this.post(`/checkout`, params);
+
+    return data as CheckoutResult;
+  }
+  async transfer(
+    customerId: string,
+    params: {
+      from_entity_id?: string;
+      to_entity_id: string;
+      product_id: string;
+    }
+  ) {
+    const data = await this.post(`/customers/${customerId}/transfer`, params);
 
     return data as CheckoutResult;
   }
@@ -339,6 +359,11 @@ export class AutumnInt {
   };
 
   rewards = {
+    get: async (rewardId: string) => {
+      const data = await this.get(`/rewards/${rewardId}`);
+      return data;
+    },
+
     create: async (reward: any) => {
       const data = await this.post(`/rewards?legacyStripe=true`, reward);
       return data;
@@ -417,17 +442,16 @@ export class AutumnInt {
 
   stripe = {
     connect: async (params: {
-      testApiKey: string;
-      liveApiKey: string;
-      successUrl: string;
-      defaultCurrency: string;
+      secret_key: string;
+      success_url: string;
+      default_currency: string;
     }) => {
-      const data = await this.post(`/org/stripe`, params);
+      const data = await this.post(`/organization/stripe`, params);
       return data;
     },
 
     delete: async () => {
-      const data = await this.delete(`/org/stripe`);
+      const data = await this.delete(`/organization/stripe`);
       return data;
     },
   };

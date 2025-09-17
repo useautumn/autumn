@@ -14,6 +14,7 @@ import {
   FullCustomer,
   AttachReplaceable,
   Reward,
+  ProductOptions,
 } from "@autumn/shared";
 import Stripe from "stripe";
 
@@ -26,11 +27,12 @@ export type AttachParams = {
   stripeCus?: Stripe.Customer;
   now?: number;
   paymentMethod: Stripe.PaymentMethod | null | undefined;
-  reward?: Reward;
+  rewards?: Reward[];
 
   org: Organization;
   // customer: Customer;
   customer: FullCustomer;
+  cusProduct?: FullCusProduct; // cus product to expire or cancel...
   products: FullProduct[];
 
   prices: Price[];
@@ -38,6 +40,7 @@ export type AttachParams = {
 
   freeTrial: FreeTrial | null;
   optionsList: FeatureOptions[];
+  productsList?: ProductOptions[];
 
   successUrl?: string | undefined;
   itemSets?: any[];
@@ -72,6 +75,8 @@ export type AttachParams = {
   fromMigration?: boolean;
   finalizeInvoice?: boolean;
   req?: any;
+  fromCancel?: boolean;
+  setupPayment?: boolean;
 };
 
 export type InsertCusProductParams = {

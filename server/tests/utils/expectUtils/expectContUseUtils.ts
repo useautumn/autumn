@@ -2,7 +2,7 @@ import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { findStripeItemForPrice } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
-import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToPrices } from "@autumn/shared";
 import { CusService } from "@/internal/customers/CusService.js";
 import { findContUsePrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 import { AppEnv, FullCustomer, Organization } from "@autumn/shared";
@@ -10,7 +10,7 @@ import { expect } from "chai";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 
 export const expectSubQuantityCorrect = async ({

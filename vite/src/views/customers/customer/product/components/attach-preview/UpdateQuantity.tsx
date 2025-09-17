@@ -1,12 +1,14 @@
 import { PriceItem } from "@/components/pricing/attach-pricing-dialog";
 import { Input } from "@/components/ui/input";
+import { useOrg } from "@/hooks/common/useOrg";
 import { notNullish } from "@/utils/genUtils";
 import { formatAmount } from "@/utils/product/productItemUtils";
 import { useProductContext } from "@/views/products/product/ProductContext";
 import { AttachBranch } from "@autumn/shared";
 
 export const UpdateQuantity = () => {
-  const { attachState, product, org } = useProductContext();
+  const { org } = useOrg();
+  const { attachState, product } = useProductContext();
   const { preview, options, setOptions } = attachState;
 
   if (preview.branch !== AttachBranch.UpdatePrepaidQuantity) {
@@ -35,6 +37,15 @@ export const UpdateQuantity = () => {
   return (
     <div className="flex flex-col w-full">
       <p className="text-t2 font-semibold mb-2">Update prepaid quantity</p>
+      {/* {preview.due_today &&
+        preview.due_today.line_items.map((item: any) => {
+          return (
+            <PriceItem key={item.description}>
+              <span>{item.description}</span>
+              <span>{item.price}</span>
+            </PriceItem>
+          );
+        })} */}
       {options.length > 0 &&
         options.map((option: any, index: number) => {
           const { feature_name, billing_units, quantity, price } = option;

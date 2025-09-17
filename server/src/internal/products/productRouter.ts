@@ -1,25 +1,22 @@
-import { ProductService } from "@/internal/products/ProductService.js";
+import { ErrCode } from "@autumn/shared";
 
 import { Router } from "express";
-
-import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-
-import { checkStripeProductExists } from "@/internal/products/productUtils.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { handleUpdateProductV2 } from "./handlers/handleUpdateProduct/handleUpdateProduct.js";
-import { handleDeleteProduct } from "./handlers/handleDeleteProduct.js";
-import { handleGetProduct } from "./handlers/handleGetProduct.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
+import { ProductService } from "@/internal/products/ProductService.js";
+import { checkStripeProductExists } from "@/internal/products/productUtils.js";
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
+import { routeHandler } from "@/utils/routerUtils.js";
+import { CusProductService } from "../customers/cusProducts/CusProductService.js";
 import { handleCopyProduct } from "./handlers/handleCopyProduct.js";
 import { handleCreateProduct } from "./handlers/handleCreateProduct.js";
-import { handleListProducts } from "./handlers/handleListProducts.js";
+import { handleDeleteProduct } from "./handlers/handleDeleteProduct.js";
+import { handleGetProduct } from "./handlers/handleGetProduct.js";
 import { handleListProductsBeta } from "./handlers/handleListProductsBeta.js";
-import { ErrCode } from "@autumn/shared";
-import { CusProductService } from "../customers/cusProducts/CusProductService.js";
-import { routeHandler } from "@/utils/routerUtils.js";
-import { mapToProductItems } from "./productV2Utils.js";
+import { handleUpdateProductV2 } from "./handlers/handleUpdateProduct/handleUpdateProduct.js";
 import { productsAreSame } from "./productUtils/compareProductUtils.js";
+import { handleGetProductDeleteInfo } from "./handlers/handleGetProductDeleteInfo.js";
 
 export const productBetaRouter: Router = Router();
 productBetaRouter.get("", handleListProductsBeta);
@@ -92,7 +89,7 @@ productRouter.post("/all/init_stripe", async (req: any, res) => {
             price,
             entitlements,
             product: fullProducts.find(
-              (p) => p.internal_id == price.internal_product_id
+              (p) => p.internal_id === price.internal_product_id
             )!,
             logger,
           })
@@ -146,18 +143,13 @@ productRouter.get("/:productId/has_customers", async (req: any, res: any) =>
 
       const productSame = itemsSame && freeTrialsSame;
 
-      // console.log(`Product ID: ${product.id}`);
-      // console.log(
-      //   `Items same: ${itemsSame}, Free trials same: ${freeTrialsSame}`
-      // );
-      // console.log(
-      //   `Cus products on cur version: ${cusProductsCurVersion.length}`
-      // );
-
       res.status(200).json({
         current_version: product.version,
         will_version: !productSame && cusProductsCurVersion.length > 0,
+        archived: product.archived,
       });
     },
   })
 );
+
+productRouter.get("/:productId/deletion_info", handleGetProductDeleteInfo);

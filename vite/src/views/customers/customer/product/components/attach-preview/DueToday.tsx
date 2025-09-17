@@ -13,12 +13,15 @@ import {
 import { Decimal } from "decimal.js";
 import { Input } from "@/components/ui/input";
 import { notNullish } from "@/utils/genUtils";
+import { useOrg } from "@/hooks/common/useOrg";
 
 export const DueToday = () => {
-  const { attachState, product, org } = useProductContext();
+  const { org } = useOrg();
+  const { attachState, product } = useProductContext();
   const { preview, options, setOptions } = attachState;
 
   const dueToday = preview.due_today;
+
   if (!dueToday || preview.branch == AttachBranch.NewVersion) {
     return null;
   }
@@ -54,11 +57,11 @@ export const DueToday = () => {
         total = new Decimal(total).plus(amount).toNumber();
       }
 
-      if (option.price && option.quantity) {
+      if (notNullish(option.price)) {
         total = new Decimal(total)
           .plus(
             new Decimal(option.price).times(
-              new Decimal(option.quantity).div(option.billing_units)
+              new Decimal(option.quantity || 0).div(option.billing_units)
             )
           )
           .toNumber();
@@ -76,7 +79,7 @@ export const DueToday = () => {
   };
 
   const getPrepaidPrice = ({ option }: { option: any }) => {
-    if (option.price) {
+    if (notNullish(option.price)) {
       return `x ${formatAmount({
         amount: option.price,
         defaultCurrency: currency,

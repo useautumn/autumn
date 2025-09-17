@@ -9,26 +9,42 @@ import { Outlet, useNavigate } from "react-router";
 
 import { usePostHog } from "posthog-js/react";
 import { Button } from "@/components/ui/button";
-import { ArrowUpRightFromSquare, PanelLeft, PanelRight } from "lucide-react";
+import { ArrowUpRightFromSquare } from "lucide-react";
 import { AutumnProvider } from "autumn-js/react";
 import { useSession } from "@/lib/auth-client";
 import { CustomToaster } from "@/components/general/CustomToaster";
-import {
-  SidebarContext,
-  useSidebarContext,
-} from "@/views/main-sidebar/SidebarContext";
 import { AppContext } from "./AppContext";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
+import { useGlobalErrorHandler } from "@/hooks/common/useGlobalErrorHandler";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
+import { useCusSearchQuery } from "@/views/customers/hooks/useCusSearchQuery";
+import { useOrg } from "@/hooks/common/useOrg";
+import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
+import { useDevQuery } from "@/hooks/queries/useDevQuery";
+import { InviteNotifications } from "@/views/general/notifications/InviteNotifications";
+import { ChatWidget } from "@/components/general/ChatWidget";
 
 export function MainLayout() {
   const env = useEnv();
   const { data, isPending } = useSession();
-  const [sidebarState, setSidebarState] = useState<"expanded" | "collapsed">(
-    "expanded"
-  );
+  const { handleApiError } = useGlobalErrorHandler();
 
   const navigate = useNavigate();
   const posthog = usePostHog();
+
+  // Global error handler for API errors
+  useEffect(() => {
+    const handleGlobalError = (event: ErrorEvent) => {
+      if (event.error && event.error.response) {
+        handleApiError(event.error);
+      }
+    };
+
+    window.addEventListener("error", handleGlobalError);
+    return () => window.removeEventListener("error", handleGlobalError);
+  }, [handleApiError]);
 
   useEffect(() => {
     // Identify user
@@ -46,9 +62,7 @@ export function MainLayout() {
   // 1. If not loaded, show loading screen
   if (isPending) {
     return (
-      <SidebarContext.Provider
-        value={{ state: sidebarState, setState: setSidebarState }}
-      >
+      <AutumnProvider backendUrl={import.meta.env.VITE_BACKEND_URL}>
         <div className="w-screen h-screen flex bg-stone-100">
           <MainSidebar />
           <div className="w-full h-screen flex flex-col overflow-hidden py-3 pr-3">
@@ -76,7 +90,7 @@ export function MainLayout() {
             </div>
           </div>
         </div>
-      </SidebarContext.Provider>
+      </AutumnProvider>
     );
   }
 
@@ -86,31 +100,20 @@ export function MainLayout() {
     return;
   }
 
-  // if (!pathname.includes("/onboarding")) {
-  //   return (
-  //     <Navigate
-  //       to={getRedirectUrl("/onboarding", AppEnv.Sandbox)}
-  //       replace={true}
-  //     />
-  //   );
-  // }
-
   return (
     <AutumnProvider
       backendUrl={import.meta.env.VITE_BACKEND_URL}
       includeCredentials={true}
     >
-      <SidebarContext.Provider
-        value={{ state: sidebarState, setState: setSidebarState }}
-      >
-        <NuqsAdapter>
-          <main className="w-screen h-screen flex bg-stone-100">
-            <CustomToaster />
-            <MainSidebar />
-            <MainContent />
-          </main>
-        </NuqsAdapter>
-      </SidebarContext.Provider>
+      <NuqsAdapter>
+        <main className="w-screen h-screen flex bg-stone-100">
+          <CustomToaster />
+          <MainSidebar />
+          <InviteNotifications />
+          <MainContent />
+          <ChatWidget />
+        </main>
+      </NuqsAdapter>
     </AutumnProvider>
   );
 }
@@ -118,14 +121,25 @@ export function MainLayout() {
 const MainContent = () => {
   const env = useEnv();
   const navigate = useNavigate();
-  const { state, setState } = useSidebarContext();
+
+  useDevQuery();
+  useAutumnFlags();
+  useProductsQuery();
+  useFeaturesQuery();
+  useRewardsQuery();
+  useCusSearchQuery();
+  useOrg();
 
   return (
     <AppContext.Provider value={{}}>
-      <div className="w-full h-screen flex flex-col justify-center overflow-hidden py-3 pr-3 relative">
+      <div
+        className={cn(
+          "w-full h-screen flex flex-col justify-center overflow-hidden py-3 pr-3 relative",
+          // Default font
+          "font-normal"
+        )}
+      >
         <div className="w-full h-full flex flex-col overflow-hidden rounded-lg border">
-          {/* Toggle Button */}
-
           {env === AppEnv.Sandbox && (
             <div className="w-full min-h-10 h-10 bg-amber-100 text-sm flex items-center justify-center relative px-4 text-amber-500 ">
               <p className="font-medium font-mono">You&apos;re in sandbox</p>

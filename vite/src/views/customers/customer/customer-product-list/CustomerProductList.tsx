@@ -1,60 +1,49 @@
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import {
   compareStatus,
-  getBackendErr,
   navigateTo,
   notNullish,
+  pushPage,
 } from "@/utils/genUtils";
 import { CusProduct, CusProductStatus, FullCusProduct } from "@autumn/shared";
 import { useNavigate } from "react-router";
 import { useCustomerContext } from "../CustomerContext";
 
-import {
-  DropdownMenuItem,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
-import { CusService } from "@/services/customers/CusService";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import SmallSpinner from "@/components/general/SmallSpinner";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
-
-import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
 
 import { AdminHover } from "@/components/general/AdminHover";
-import AddProduct from "../add-product/NewProductDropdown";
 import { Item, Row } from "@/components/general/TableGrid";
 import { cn } from "@/lib/utils";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+
 import { CusProductStatusItem } from "../customer-product-list/CusProductStatus";
 import { CusProductEntityItem } from "../components/CusProductEntityItem";
 import { CusProductToolbar } from "./CusProductToolbar";
+import { MultiAttachDialog } from "../product/multi-attach/MultiAttachDialog";
+import { useCusQuery } from "../hooks/useCusQuery";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { getVersionCounts } from "@/utils/productUtils";
+import AttachProductDropdown from "./AttachProductDropdown";
 
-export const CustomerProductList = ({
-  customer,
-  products,
-}: {
-  customer: any;
-  products: any;
-}) => {
+export const CustomerProductList = () => {
   const navigate = useNavigate();
-  const { env, versionCounts, entities, entityId, showEntityView } =
-    useCustomerContext();
-  const [showExpired, setShowExpired] = useState(false);
+  const { customer } = useCusQuery();
+  const { entityId, showEntityView } = useCustomerContext();
 
-  const sortedProducts = customer.products
-    .filter((p: CusProduct & { entitlements: any[] }) => {
+  const { products } = useProductsQuery();
+  const versionCounts = getVersionCounts(products);
+
+  // const { env, versionCounts, entities, entityId, showEntityView } =
+  //   useCustomerContext();
+
+  const [showExpired, setShowExpired] = useState(false);
+  const [multiAttachOpen, setMultiAttachOpen] = useState(false);
+
+  const entities = customer.entities;
+
+  const sortedProducts = customer.customer_products
+    .filter((cp: FullCusProduct) => {
       if (showExpired) {
         return true;
       }
@@ -62,17 +51,17 @@ export const CustomerProductList = ({
       const entity = entities.find((e: any) => e.id === entityId);
 
       const entityMatches =
-        entity && notNullish(p.internal_entity_id)
-          ? p.internal_entity_id === entity.internal_id ||
-            p.entitlements.some(
-              (cusEnt: any) =>
-                cusEnt.entities &&
-                Object.keys(cusEnt.entities).includes(entity.internal_id)
+        entity && notNullish(cp.internal_entity_id)
+          ? cp.internal_entity_id === entity.internal_id ||
+            cp.customer_entitlements.some(
+              (ce: any) =>
+                ce.entities &&
+                Object.keys(ce.entities).includes(entity.internal_id)
             )
           : true;
 
       return (
-        p.status !== CusProductStatus.Expired &&
+        cp.status !== CusProductStatus.Expired &&
         (entityId ? entityMatches : true)
       );
     })
@@ -96,6 +85,14 @@ export const CustomerProductList = ({
             value: id,
           }))
         : []),
+      ...(cusProduct.scheduled_ids
+        ? [
+            {
+              key: "Stripe Scheduled IDs",
+              value: cusProduct.scheduled_ids.join(", "),
+            },
+          ]
+        : []),
       {
         key: "Entity ID",
         value: cusProduct.entity_id || "N/A",
@@ -105,7 +102,7 @@ export const CustomerProductList = ({
 
   return (
     <div>
-      <div className="flex items-center grid grid-cols-10 gap-8 justify-between border-y bg-stone-100 pl-10 pr-7 h-10">
+      <div className="items-center grid grid-cols-10 gap-8 justify-between border-y bg-stone-100 pl-10 pr-7 h-10">
         <h2 className="text-sm text-t2 font-medium col-span-2 flex">
           Products
         </h2>
@@ -122,8 +119,14 @@ export const CustomerProductList = ({
             >
               Show Expired
             </Button>
-            {/* <CreateEntitlement buttonType={"feature"} /> */}
-            <AddProduct />
+
+            <div className="flex items-center gap-0">
+              <MultiAttachDialog
+                open={multiAttachOpen}
+                setOpen={setMultiAttachOpen}
+              />
+              <AttachProductDropdown setMultiAttachOpen={setMultiAttachOpen} />
+            </div>
           </div>
         </div>
       </div>
@@ -156,20 +159,31 @@ export const CustomerProductList = ({
               const entity = entities.find(
                 (e: any) => e.internal_id === cusProduct.internal_entity_id
               );
-              navigateTo(
-                `/customers/${customer.id || customer.internal_id}/${
-                  cusProduct.product_id
-                }?id=${cusProduct.id}${
-                  entity ? `&entity_id=${entity.id || entity.internal_id}` : ""
-                }`,
+
+              pushPage({
+                path: `/customers/${customer.id || customer.internal_id}/${cusProduct.product_id}`,
+                queryParams: {
+                  id: cusProduct.id,
+                  entity_id: entity
+                    ? entity.id || entity.internal_id
+                    : undefined,
+                },
                 navigate,
-                env
-              );
+              });
+
+              // navigateTo(
+              //   `/customers/${customer.id || customer.internal_id}/${
+              //     cusProduct.product_id
+              //   }?id=${cusProduct.id}${
+              //     entity ? `&entity_id=${entity.id || entity.internal_id}` : ""
+              //   }`,
+              //   navigate
+              // );
             }}
           >
             <Item className="col-span-3">
               <AdminHover texts={getCusProductHoverTexts(cusProduct)}>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <p>{cusProduct.product.name}</p>
                   {versionCounts[cusProduct.product.id] > 1 && (
                     <Badge
@@ -177,6 +191,15 @@ export const CustomerProductList = ({
                       className="text-xs bg-stone-50 text-t3 px-2 py-0 ml-2 font-mono"
                     >
                       v{cusProduct.product.version}
+                    </Badge>
+                  )}
+
+                  {cusProduct.quantity > 1 && (
+                    <Badge
+                      variant="outline"
+                      className="text-xs bg-stone-200 text-t3 px-2 py-0 ml-2 font-mono"
+                    >
+                      x{cusProduct.quantity}
                     </Badge>
                   )}
                 </div>

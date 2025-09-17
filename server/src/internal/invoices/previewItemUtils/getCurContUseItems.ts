@@ -19,10 +19,7 @@ import {
   priceToUsageModel,
 } from "@/internal/products/prices/priceUtils/convertPrice.js";
 import { attachParamToCusProducts } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
-import {
-  cusProductToEnts,
-  cusProductToPrices,
-} from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToEnts, cusProductToPrices } from "@autumn/shared";
 import { getExistingUsageFromCusProducts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
 
@@ -61,9 +58,13 @@ export const getCurContUseItems = async ({
     if (now < periodEnd) {
       const finalProration = getProration({
         now,
-        interval: price.config.interval!,
-        intervalCount: price.config.interval_count || 1,
-        anchorToUnix: periodEnd,
+        intervalConfig: {
+          interval: price.config.interval!,
+          intervalCount: price.config.interval_count || 1,
+        },
+        proration: {
+          end: periodEnd,
+        },
       })!;
 
       const proratedAmount = -calculateProrationAmount({

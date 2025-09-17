@@ -6,7 +6,7 @@ import {
   activateDefaultProduct,
   cancelCusProductSubscriptions,
 } from "@/internal/customers/cusProducts/cusProductUtils.js";
-import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToPrices } from "@autumn/shared";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import {
@@ -55,7 +55,12 @@ export const handleCusProductDeleted = async ({
   });
 
   const isV4Usage = cusProduct.api_version === APIVersion.v1_4;
-  if (cusProduct.internal_entity_id || isV4Usage) {
+
+  // refer to handleUpgradeFlow.ts, when cancel immediately through API / dashboard, this happens...?
+  const isAutumnCancel =
+    subscription.cancellation_details?.comment === "autumn_cancel";
+
+  if ((cusProduct.internal_entity_id || isV4Usage) && !isAutumnCancel) {
     const usagePrices = cusProductToPrices({
       cusProduct,
       billingType: BillingType.UsageInArrear,
@@ -81,11 +86,6 @@ export const handleCusProductDeleted = async ({
       });
     }
   }
-
-  // if (cusProduct.status === CusProductStatus.Expired) {
-  //   // When attaching eg. main is trial, canceled in attach function, don't handle...
-  //   return;
-  // }
 
   if (scheduled_ids && scheduled_ids.length > 0 && !prematurelyCanceled) {
     logger.info(
@@ -125,14 +125,11 @@ export const handleCusProductDeleted = async ({
     logger,
   });
 
-  if (cusProduct.product.is_add_on) {
-    return;
-  }
+  if (cusProduct.product.is_add_on) return;
 
   const activatedFuture = await activateFutureProduct({
     req,
     cusProduct,
-    subscription,
   });
 
   if (activatedFuture) {
@@ -158,11 +155,11 @@ export const handleCusProductDeleted = async ({
     curCusProduct: curMainProduct || undefined,
   });
 
-  await cancelCusProductSubscriptions({
-    cusProduct,
-    org,
-    env,
-    excludeIds: [subscription.id],
-    logger,
-  });
+  // await cancelCusProductSubscriptions({
+  //   cusProduct,
+  //   org,
+  //   env,
+  //   excludeIds: [subscription.id],
+  //   logger,
+  // });
 };

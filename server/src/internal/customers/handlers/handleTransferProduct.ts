@@ -1,13 +1,16 @@
+import RecaseError from "@/utils/errorUtils.js";
+import { z } from "zod";
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { Request, Response } from "express";
 import { CusService } from "../CusService.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@autumn/shared";
 import { CusProductService } from "../cusProducts/CusProductService.js";
-import { z } from "zod";
+import { nullish } from "@/utils/genUtils.js";
+import { handleDecreaseAndTransfer } from "./handleTransferProduct/handleDecreaseAndTransfer.js";
+import { ProductService } from "@/internal/products/ProductService.js";
+import { deleteCusCache } from "../cusCache/updateCachedCus.js";
 const TransferProductSchema = z.object({
-  from_entity_id: z.string(),
+  from_entity_id: z.string().nullish(),
   to_entity_id: z.string(),
   product_id: z.string(),
 });
@@ -31,6 +34,21 @@ export const handleTransferProduct = async (req: any, res: any) =>
         // entityId: from_entity_id,
       });
 
+      const product = await ProductService.get({
+        id: product_id,
+        orgId: req.orgId,
+        env: req.env,
+        db: req.db,
+      });
+
+      if (!product) {
+        throw new RecaseError({
+          code: ErrCode.ProductNotFound,
+          message: `Product ${product_id} not found`,
+          statusCode: 404,
+        });
+      }
+
       const fromEntity = customer.entities.find(
         (e: any) => e.id === from_entity_id
       );
@@ -39,13 +57,13 @@ export const handleTransferProduct = async (req: any, res: any) =>
         (e: any) => e.id === to_entity_id
       );
 
-      if (!fromEntity) {
-        throw new RecaseError({
-          code: ErrCode.EntityNotFound,
-          message: `Entity ${from_entity_id} not found`,
-          statusCode: 404,
-        });
-      }
+      // if (!fromEntity) {
+      //   throw new RecaseError({
+      //     code: ErrCode.EntityNotFound,
+      //     message: `Entity ${from_entity_id} not found`,
+      //     statusCode: 404,
+      //   });
+      // }
 
       if (!toEntity) {
         throw new RecaseError({
@@ -57,9 +75,24 @@ export const handleTransferProduct = async (req: any, res: any) =>
 
       const cusProduct = customer.customer_products.find(
         (cp: any) =>
-          cp.internal_entity_id === fromEntity.internal_id &&
-          cp.product.id === product_id
+          (fromEntity
+            ? cp.internal_entity_id === fromEntity.internal_id
+            : nullish(cp.internal_entity_id)) && cp.product.id === product_id
       );
+
+      const toCusProduct = customer.customer_products.find(
+        (cp: any) =>
+          cp.internal_entity_id === toEntity.internal_id &&
+          cp.product.group === product.group
+      );
+
+      if (toCusProduct) {
+        throw new RecaseError({
+          code: ErrCode.ProductAlreadyExists,
+          message: `Entity ${toEntity.id} already has product ${toCusProduct.product.name}`,
+          statusCode: 400,
+        });
+      }
 
       if (!cusProduct) {
         throw new RecaseError({
@@ -69,37 +102,30 @@ export const handleTransferProduct = async (req: any, res: any) =>
         });
       }
 
-      // const cusProduct = customer.customer_products.find(
-      //   (cp: any) => cp.id === customer_product_id
-      // );
+      // 1. If cus product has quantity > 1, only transfer 1...
+      if (cusProduct.quantity > 1) {
+        await handleDecreaseAndTransfer({
+          req: req,
+          fullCus: customer,
+          cusProduct: cusProduct,
+          toEntity: toEntity,
+        });
+      } else {
+        await CusProductService.update({
+          db: req.db,
+          cusProductId: cusProduct.id,
+          updates: {
+            entity_id: toEntity.id,
+            internal_entity_id: toEntity.internal_id,
+          },
+        });
+      }
 
-      // if (!cusProduct) {
-      //   throw new RecaseError({
-      //     code: ErrCode.CusProductNotFound,
-      //     message: "Customer product not found",
-      //     statusCode: 404,
-      //   });
-      // }
-
-      // let entity = customer.entities.find(
-      //   (e: any) => e.internal_id === internal_entity_id
-      // );
-
-      // if (!entity) {
-      //   throw new RecaseError({
-      //     code: ErrCode.EntityNotFound,
-      //     message: "Entity not found",
-      //     statusCode: 404,
-      //   });
-      // }
-
-      await CusProductService.update({
+      await deleteCusCache({
         db: req.db,
-        cusProductId: cusProduct.id,
-        updates: {
-          entity_id: toEntity.id,
-          internal_entity_id: toEntity.internal_id,
-        },
+        customerId: customer.id || customer.internal_id,
+        org: req.org,
+        env: req.env,
       });
 
       res.status(200).json({

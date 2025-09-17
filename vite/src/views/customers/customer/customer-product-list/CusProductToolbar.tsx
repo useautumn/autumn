@@ -12,12 +12,14 @@ import { useCustomerContext } from "../CustomerContext";
 import { TransferProductDialog } from "./TransferProductDialog";
 import { ArrowLeftRight, ArrowRightFromLine, Delete } from "lucide-react";
 import { CancelProductDialog } from "./CancelProductDialog";
+import { useCusQuery } from "../hooks/useCusQuery";
 
 export const CusProductToolbar = ({
   cusProduct,
 }: {
   cusProduct: FullCusProduct;
 }) => {
+  const { customer } = useCusQuery();
   const { showEntityView } = useCustomerContext();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
@@ -39,7 +41,7 @@ export const CusProductToolbar = ({
           <ToolbarButton className="!w-4 !h-6 !rounded-md text-t3" />
         </DropdownMenuTrigger>
         <DropdownMenuContent className="text-t2 w-36" align="end">
-          {showEntityView && (
+          {(showEntityView || customer.entities.length > 0) && (
             <DropdownMenuItem
               className="flex items-center justify-between w-full text-t2"
               onClick={(e) => {
@@ -65,8 +67,6 @@ export const CusProductToolbar = ({
           >
             <p>Cancel</p>
             <Delete width={14} className="text-t3" />
-            {/* <ArrowRightFromLine width={14} className="text-t3" /> */}
-            {/* <UpdateStatusDropdownBtn cusProduct={cusProduct} /> */}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

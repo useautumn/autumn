@@ -15,6 +15,7 @@ import {
   PriceType,
   ProcessorType,
   Product,
+  ProductOptions,
   ProductSchema,
   UsagePriceConfig,
 } from "@autumn/shared";
@@ -34,7 +35,7 @@ import {
   getEntsWithFeature,
 } from "./entitlements/entitlementUtils.js";
 import { Decimal } from "decimal.js";
-import { generateId } from "@/utils/genUtils.js";
+import { generateId, notNullish } from "@/utils/genUtils.js";
 import { PriceService } from "./prices/PriceService.js";
 import { EntitlementService } from "./entitlements/EntitlementService.js";
 import RecaseError from "@/utils/errorUtils.js";
@@ -282,13 +283,27 @@ export const getPricesForProduct = (product: FullProduct, prices: Price[]) => {
 
 export const attachToInsertParams = (
   attachParams: AttachParams,
-  product: FullProduct
+  product: FullProduct,
+  entityId?: string
 ) => {
+  // Get entity
+  let { internalEntityId, entityId: attachEntityId } = attachParams;
+  if (notNullish(entityId)) {
+    let entity = attachParams.customer.entities.find((e) => e.id === entityId);
+
+    if (entity) {
+      internalEntityId = entity.internal_id;
+      attachEntityId = entity.id;
+    }
+  }
+
   return {
     ...attachParams,
     product,
     prices: getPricesForProduct(product, attachParams.prices),
     entitlements: getEntitlementsForProduct(product, attachParams.entitlements),
+    entityId: attachEntityId,
+    internalEntityId: internalEntityId,
   } as InsertCusProductParams;
 };
 
@@ -450,20 +465,20 @@ export const copyProduct = async ({
     });
   }
 
-  await initProductInStripe({
-    db,
-    org,
-    env: toEnv,
-    logger,
-    product: {
-      ...newProduct,
-      prices: newPrices,
-      entitlements: getEntsWithFeature({
-        ents: newEntitlements,
-        features: toFeatures,
-      }),
-    },
-  });
+  // await initProductInStripe({
+  //   db,
+  //   org,
+  //   env: toEnv,
+  //   logger,
+  //   product: {
+  //     ...newProduct,
+  //     prices: newPrices,
+  //     entitlements: getEntsWithFeature({
+  //       ents: newEntitlements,
+  //       features: toFeatures,
+  //     }),
+  //   },
+  // });
 };
 
 export const isOneOff = (prices: Price[]) => {
@@ -544,6 +559,7 @@ export const getGroupToDefaults = ({
   const groupToDefaults: Record<string, Record<string, FullProduct>> = {};
 
   for (const product of defaultProds) {
+    if (product.archived || !product.is_default) continue;
     if (!groupToDefaults[product.group]) {
       groupToDefaults[product.group] = {};
     }

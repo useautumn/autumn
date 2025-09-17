@@ -1,10 +1,6 @@
 import { useProductContext } from "./ProductContext";
 import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+
 import React from "react";
 import {
   Dialog,
@@ -19,23 +15,21 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import CopyButton from "@/components/general/CopyButton";
-import { ProductService } from "@/services/products/ProductService";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { toast } from "sonner";
-import { ToggleButton } from "@/components/general/ToggleButton";
 import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
 import { ToggleDefaultProduct } from "./product-sidebar/ToggleDefaultProduct";
 import { getBackendErr } from "@/utils/genUtils";
+import { useProductCountsQuery } from "./hooks/queries/useProductCountsQuery";
+import { useProductQuery } from "./hooks/useProductQuery";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export const ProductProps = () => {
-  const { product, setProduct, counts, mutate } = useProductContext();
   const axiosInstance = useAxiosInstance();
-  const [defaultOpen, setDefaultOpen] = React.useState(false);
-  const [defaultTrialOpen, setDefaultTrialOpen] = React.useState(false);
-  const [addOnOpen, setAddOnOpen] = React.useState(false);
+  const { product, setProduct } = useProductContext();
+  const { refetch } = useProductQuery();
+  const { counts } = useProductCountsQuery();
+
   const [groupModalOpen, setGroupModalOpen] = React.useState(false);
   const [tempGroup, setTempGroup] = React.useState(product.group || "");
-  const [archivedOpen, setArchivedOpen] = React.useState(false);
 
   return (
     <>
@@ -85,9 +79,8 @@ export const ProductProps = () => {
               <p className="text-xs text-t3 font-medium text-center">Default</p>
               <InfoTooltip>
                 <p>
-                  Default products are the default product for a group. They are
-                  used to determine the default product for a customer when they
-                  don't have an active subscription.
+                  This product will be enabled by default for all new users,
+                  typically used for your free plan
                 </p>
               </InfoTooltip>
             </div>
@@ -98,9 +91,8 @@ export const ProductProps = () => {
               <p className="text-xs text-t3 font-medium text-center">Add On</p>
               <InfoTooltip>
                 <p>
-                  Add-ons are products that are added to a customer's
-                  subscription. They are used to determine the default product
-                  for a customer when they don't have an active subscription.
+                  This product is an add-on that can be bought together with
+                  your base products (eg, for top ups)
                 </p>
               </InfoTooltip>
             </div>
@@ -172,35 +164,6 @@ export const ProductProps = () => {
               </div>
             </DialogContent>
           </Dialog>
-
-          <div className="flex items-center w-full justify-between h-4">
-            <p className="text-xs text-t3 font-medium text-center">Archived</p>
-            <div className="px-2">
-              <ToggleButton
-                value={product.archived}
-                setValue={async (value) => {
-                  try {
-                    await ProductService.updateProduct(
-                      axiosInstance,
-                      product.id,
-                      { archived: value },
-                      product.version
-                    );
-                    await mutate();
-                    toast.success(
-                      value
-                        ? "Product archived successfully"
-                        : "Product unarchived successfully"
-                    );
-                  } catch (error) {
-                    toast.error(
-                      getBackendErr(error, "Failed to archive product")
-                    );
-                  }
-                }}
-              />
-            </div>
-          </div>
         </div>
       </div>
     </>

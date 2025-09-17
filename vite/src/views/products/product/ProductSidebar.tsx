@@ -12,9 +12,10 @@ import { AttachButton } from "@/views/customers/customer/product/components/Atta
 import { CustomerProductBadge } from "@/views/customers/customer/product/components/CustomerProductBadge";
 import { EntitiesSidebar } from "./product-item/EntitiesSidebar";
 import { UpdateProductButton } from "./components/UpdateProductButton";
+import { isOneOffProduct } from "@/utils/product/priceUtils";
 
 export default function ProductSidebar() {
-  const { product, setProduct, customer } = useProductContext();
+  const { product, setProduct, isCusProductView } = useProductContext();
   const [freeTrialModalOpen, setFreeTrialModalOpen] = useState(false);
   const [entitiesOpen, setEntitiesOpen] = useState(false);
   const [accordionValues, setAccordionValues] = useState([
@@ -31,8 +32,6 @@ export default function ProductSidebar() {
     setProduct({ ...product, free_trial: null });
   };
 
-  const isCustomerProductView = notNullish(customer);
-
   const handleAccordionToggle = (value: string) => {
     setAccordionValues((prev) =>
       prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
@@ -42,7 +41,7 @@ export default function ProductSidebar() {
   return (
     <div className="flex-col gap-4 h-full border-l py-6">
       <div className="flex items-center gap-2 justify-start px-4">
-        {isCustomerProductView && <CustomerProductBadge />}
+        {isCusProductView && <CustomerProductBadge />}
       </div>
 
       <Accordion
@@ -91,6 +90,11 @@ export default function ProductSidebar() {
             buttonIcon={
               product.free_trial ? <Minus size={14} /> : <Plus size={14} />
             }
+            disabledReason={
+              isOneOffProduct(product.items, product.is_add_on)
+                ? "Can't add a free trial to an a one time product"
+                : undefined
+            }
           >
             <div>
               {product.free_trial ? (
@@ -104,7 +108,7 @@ export default function ProductSidebar() {
           </SideAccordion>
         </div>
         <div className="flex gap-2 px-4 py-6 w-full">
-          {isCustomerProductView ? <AttachButton /> : <UpdateProductButton />}
+          {isCusProductView ? <AttachButton /> : <UpdateProductButton />}
         </div>
       </Accordion>
     </div>

@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/select";
 import { useProductItemContext } from "../ProductItemContext";
 import { useProductContext } from "../../ProductContext";
-import { FeatureTypeBadge } from "@/views/features/FeatureTypeBadge";
+import { FeatureTypeBadge } from "@/views/products/features/components/FeatureTypeBadge";
 import { Feature, FeatureType, ProductItemType } from "@autumn/shared";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,9 +15,10 @@ import { PlusIcon } from "lucide-react";
 import { getItemType } from "@/utils/product/productItemUtils";
 import { CreateItemStep } from "../utils/CreateItemStep";
 import { useEffect, useState } from "react";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export const SelectItemFeature = () => {
-  const { features } = useProductContext();
+  const { features } = useFeaturesQuery();
   const { item, setItem, isUpdate, stepState } = useProductItemContext();
   const [open, setOpen] = useState(false);
   const itemType = getItemType(item);

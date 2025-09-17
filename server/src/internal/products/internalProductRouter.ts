@@ -18,11 +18,220 @@ import RecaseError, {
   handleFrontendReqError,
   handleRequestError,
 } from "@/utils/errorUtils.js";
+
 import { createOrgResponse } from "../orgs/orgUtils.js";
 import { sortFullProducts } from "./productUtils/sortProductUtils.js";
-import { getGroupToDefaultProd } from "../customers/cusUtils/createNewCustomer.js";
+import { handleGetProductDeleteInfo } from "./handlers/handleGetProductDeleteInfo.js";
 
 export const productRouter: Router = Router({ mergeParams: true });
+
+// Get list of products
+productRouter.get("/products", async (req: any, res) => {
+  try {
+    const { db } = req;
+    const products = await ProductService.listFull({
+      db,
+      orgId: req.orgId,
+      env: req.env,
+    });
+
+    const groupToDefaults = getGroupToDefaults({
+      defaultProds: products,
+    });
+
+    res.status(200).json({
+      products: products.map((p) =>
+        mapToProductV2({ product: p, features: req.features })
+      ),
+      groupToDefaults,
+    });
+  } catch (error) {
+    console.error("Failed to get products", error);
+    res.status(500).send(error);
+  }
+});
+
+// Get counts for all products
+productRouter.get("/product_counts", async (req: any, res) => {
+  try {
+    let { db } = req;
+    let products = await ProductService.listFull({
+      db,
+      orgId: req.orgId,
+      env: req.env,
+    });
+
+    let counts = await Promise.all(
+      products.map(async (product) => {
+        // if (latestVersion) {
+        //   return CusProdReadService.getCounts({
+        //     db,
+        //     internalProductId: product.internal_id,
+        //   });
+        // }
+
+        return CusProdReadService.getCountsForAllVersions({
+          db,
+          productId: product.id,
+          orgId: req.orgId,
+          env: req.env,
+        });
+      })
+    );
+
+    let result: { [key: string]: any } = {};
+    for (let i = 0; i < products.length; i++) {
+      if (!result[products[i].id]) {
+        result[products[i].id] = counts[i];
+      }
+    }
+
+    res.status(200).send(result);
+  } catch (error) {
+    console.error("Failed to get products", error);
+    res.status(500).send(error);
+  }
+});
+
+// Get list of features
+productRouter.get("/features", async (req: any, res) => {
+  try {
+    res.status(200).json({ features: req.features });
+  } catch (error) {
+    console.error("Failed to get features", error);
+    res.status(500).send(error);
+  }
+});
+
+// Get list of rewards
+productRouter.get("/rewards", async (req: any, res) => {
+  try {
+    const { db, orgId, env } = req;
+    const rewards = await RewardService.list({ db, orgId, env });
+    const rewardPrograms = await RewardProgramService.list({
+      db,
+      orgId,
+      env,
+    });
+    res.status(200).send({ rewards, rewardPrograms });
+  } catch (error) {
+    handleFrontendReqError({
+      error,
+      req,
+      res,
+      action: "Get rewards",
+    });
+  }
+});
+
+// Get single product data
+productRouter.get("/:productId/data2", async (req: any, res) => {
+  try {
+    const { productId } = req.params;
+    const { version } = req.query;
+    const { db, orgId, env } = req;
+
+    const [product, latestProduct] = await Promise.all([
+      ProductService.getFull({
+        db,
+        idOrInternalId: productId,
+        orgId,
+        env,
+        version: version ? parseInt(version) : undefined,
+      }),
+      ProductService.getFull({
+        db,
+        idOrInternalId: productId,
+        orgId,
+        env,
+      }),
+    ]);
+
+    if (!product) {
+      throw new RecaseError({
+        message: `Product ${productId} ${
+          version ? `(v${version})` : ""
+        } not found`,
+        code: ErrCode.ProductNotFound,
+        statusCode: StatusCodes.NOT_FOUND,
+      });
+    }
+
+    let productV2 = mapToProductV2({
+      product: product,
+      features: req.features,
+    });
+
+    res
+      .status(200)
+      .json({ product: productV2, numVersions: latestProduct.version });
+  } catch (error) {
+    console.error("Failed to get product", error);
+    res.status(500).send(error);
+  }
+});
+
+// Get counts for a single product
+productRouter.get("/:productId/count", async (req: any, res) => {
+  try {
+    const { db, orgId, env } = req;
+    const { productId } = req.params;
+    const { version } = req.query;
+
+    const product = await ProductService.get({
+      db,
+      id: productId,
+      orgId,
+      env,
+      version: version ? parseInt(version) : undefined,
+    });
+
+    if (!product) {
+      throw new RecaseError({
+        message: `Product ${productId} ${
+          version ? `(v${version})` : ""
+        } not found`,
+        code: ErrCode.ProductNotFound,
+        statusCode: StatusCodes.NOT_FOUND,
+      });
+    }
+
+    // Get counts from postgres
+    const counts = await CusProdReadService.getCounts({
+      db,
+      internalProductId: product.internal_id,
+    });
+
+    res.status(200).send(counts);
+  } catch (error) {
+    handleFrontendReqError({
+      error,
+      req,
+      res,
+      action: "Get product counts (internal)",
+    });
+  }
+});
+
+// Get list of migrations
+productRouter.get("/migrations", async (req: any, res) => {
+  try {
+    const { db, orgId, env } = req;
+    const migrations = await MigrationService.getExistingJobs({
+      db,
+      orgId,
+      env,
+    });
+    res.status(200).send({ migrations });
+  } catch (error) {
+    handleFrontendReqError({
+      error,
+      req,
+      res,
+      action: "Get migrations",
+    });
+  }
+});
 
 productRouter.get("/data", async (req: any, res) => {
   try {
@@ -68,7 +277,7 @@ productRouter.get("/data", async (req: any, res) => {
       }),
       versionCounts: getProductVersionCounts(products),
       features,
-      org: createOrgResponse(org),
+      org: createOrgResponse({ org, env: req.env }),
       rewards: coupons,
       rewardPrograms,
       groupToDefaults: groupToDefaultProd,
@@ -120,7 +329,7 @@ productRouter.post("/data", async (req: any, res) => {
       groupToDefaults: groupToDefaultProd,
       versionCounts: getProductVersionCounts(products),
       features,
-      org: createOrgResponse(org),
+      org: createOrgResponse({ org, env: req.env }),
       rewards: coupons,
       rewardPrograms,
     });
@@ -264,47 +473,6 @@ productRouter.get("/:productId/data", async (req: any, res) => {
   }
 });
 
-productRouter.get("/:productId/count", async (req: any, res) => {
-  try {
-    const { db, orgId, env } = req;
-    const { productId } = req.params;
-    const { version } = req.query;
-
-    const product = await ProductService.get({
-      db,
-      id: productId,
-      orgId,
-      env,
-      version: version ? parseInt(version) : undefined,
-    });
-
-    if (!product) {
-      throw new RecaseError({
-        message: `Product ${productId} ${
-          version ? `(v${version})` : ""
-        } not found`,
-        code: ErrCode.ProductNotFound,
-        statusCode: StatusCodes.NOT_FOUND,
-      });
-    }
-
-    // Get counts from postgres
-    const counts = await CusProdReadService.getCounts({
-      db,
-      internalProductId: product.internal_id,
-    });
-
-    res.status(200).send(counts);
-  } catch (error) {
-    handleFrontendReqError({
-      error,
-      req,
-      res,
-      action: "Get product counts (internal)",
-    });
-  }
-});
-
 productRouter.post("/product_options", async (req: any, res: any) => {
   try {
     const { items } = req.body;
@@ -332,58 +500,25 @@ productRouter.post("/product_options", async (req: any, res: any) => {
   }
 });
 
-productRouter.get("/:productId/info", async (req: any, res: any) => {
+productRouter.get("/:productId/info", handleGetProductDeleteInfo);
+
+productRouter.get("/rewards", async (req: any, res: any) => {
   try {
-    // 1. Get number of versions
     const { db, orgId, env } = req;
-    let product = await ProductService.get({
+
+    const rewards = await RewardService.list({
       db,
-      id: req.params.productId,
-      orgId: req.orgId,
-      env: req.env,
+      orgId,
+      env,
     });
 
-    if (!product) {
-      throw new RecaseError({
-        message: `Product ${req.params.productId} not found`,
-        code: ErrCode.ProductNotFound,
-        statusCode: StatusCodes.NOT_FOUND,
-      });
-    }
-
-    let [allVersions, latestVersion, deletionText] = await Promise.all([
-      CusProdReadService.existsForProduct({
-        db,
-        productId: req.params.productId,
-      }),
-      CusProdReadService.existsForProduct({
-        db,
-        internalProductId: product.internal_id,
-      }),
-      ProductService.getDeletionText({
-        db,
-        productId: req.params.productId,
-        orgId: req.orgId,
-        env: req.env,
-      }),
-    ]);
-
-    // 2. Get cus products
-
-    res.status(200).send({
-      numVersion: product.version,
-      hasCusProducts: allVersions,
-      hasCusProductsLatest: latestVersion,
-      customerName:
-        deletionText[0]?.name || deletionText[0]?.email || deletionText[0]?.id,
-      totalCount: deletionText[0]?.totalCount,
-    });
+    res.status(200).send({ rewards });
   } catch (error) {
-    handleRequestError({
+    handleFrontendReqError({
       error,
       req,
       res,
-      action: "Get product info",
+      action: "Get rewards",
     });
   }
 });

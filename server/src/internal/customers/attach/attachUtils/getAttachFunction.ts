@@ -1,33 +1,23 @@
 import chalk from "chalk";
-import {
-  AttachParams,
-  AttachResultSchema,
-} from "../../cusProducts/AttachParams.js";
-import {
-  AttachBranch,
-  AttachFunction,
-  CusProductStatus,
-  ProrationBehavior,
-} from "@autumn/shared";
-import { handleUpgradeDiffInterval } from "../attachFunctions/upgradeDiffIntFlow/handleUpgradeDiffInt.js";
+import { AttachParams } from "../../cusProducts/AttachParams.js";
+import { AttachBranch, AttachFunction, CusProductStatus } from "@autumn/shared";
 import { handleCreateCheckout } from "../../add-product/handleCreateCheckout.js";
 import { handleAddProduct } from "../attachFunctions/addProductFlow/handleAddProduct.js";
 import { AttachBody } from "@autumn/shared";
 import { AttachConfig } from "@autumn/shared";
-import { handleScheduleFunction } from "../attachFunctions/scheduleFlow/handleScheduleFunction.js";
 import { handleUpdateQuantityFunction } from "../attachFunctions/updateQuantityFlow/updateQuantityFlow.js";
-import { SuccessCode } from "@autumn/shared";
+
 import {
   attachParamsToCurCusProduct,
   attachParamToCusProducts,
 } from "./convertAttachParams.js";
-import { deleteCurrentScheduledProduct } from "./deleteCurrentScheduledProduct.js";
 import { handleOneOffFunction } from "../attachFunctions/addProductFlow/handleOneOffFunction.js";
-import { handleUpgradeSameInterval } from "../attachFunctions/upgradeSameIntFlow/handleUpgradeSameInt.js";
 import { CusProductService } from "../../cusProducts/CusProductService.js";
 import { handleCreateInvoiceCheckout } from "../../add-product/handleCreateInvoiceCheckout.js";
 import { handleUpgradeFlow } from "../attachFunctions/upgradeFlow/handleUpgradeFlow.js";
 import { handleScheduleFunction2 } from "../attachFunctions/scheduleFlow/handleScheduleFlow2.js";
+import { handleRenewProduct } from "../attachFunctions/handleRenewProduct.js";
+import { handleMultiAttachFlow } from "../attachFunctions/multiAttach/handleMultiAttachFlow.js";
 
 /* 
 1. If from new version, free trial should just carry over
@@ -48,9 +38,13 @@ export const getAttachFunction = async ({
   config: AttachConfig;
 }) => {
   const { onlyCheckout } = config;
+  const { curCusProduct } = attachParamToCusProducts({
+    attachParams,
+  });
 
   // 1. Checkout function
   const newScenario = [
+    AttachBranch.MultiAttach,
     AttachBranch.MultiProduct,
     AttachBranch.OneOff,
     AttachBranch.New,
@@ -63,6 +57,11 @@ export const getAttachFunction = async ({
     return AttachFunction.CreateCheckout;
   } else if (branch == AttachBranch.OneOff) {
     return AttachFunction.OneOff;
+  } else if (
+    branch == AttachBranch.MultiAttach ||
+    branch == AttachBranch.MultiAttachUpdate
+  ) {
+    return AttachFunction.MultiAttach;
   } else if (newScenario) {
     return AttachFunction.AddProduct;
   }
@@ -129,13 +128,19 @@ export const runAttachFunction = async ({
     config,
   });
 
+  // console.log("Attach Function:", attachFunction);
+  // throw new Error("Attach Function:");
+
   const customer = attachParams.customer;
   const org = attachParams.org;
+
   const productIdsStr = attachParams.products.map((p) => p.id).join(", ");
   const { curMainProduct, curSameProduct, curScheduledProduct } =
     attachParamToCusProducts({
       attachParams,
     });
+
+  const curCusProduct = attachParamsToCurCusProduct({ attachParams });
 
   logger.info(`--------------------------------`);
   logger.info(
@@ -169,14 +174,14 @@ export const runAttachFunction = async ({
     });
   }
 
-  // 1. Cancel future schedule before creating a new one...
-  await deleteCurrentScheduledProduct({
-    req,
-    org,
-    attachParams,
-    attachFunc: attachFunction,
-    logger,
-  });
+  if (attachFunction == AttachFunction.Renew) {
+    return await handleRenewProduct({
+      req,
+      res,
+      attachParams,
+      config,
+    });
+  }
 
   // 2. If main is trial, cancel it...
   if (branch == AttachBranch.MainIsTrial) {
@@ -184,11 +189,14 @@ export const runAttachFunction = async ({
       db,
       cusProductId: curMainProduct!.id,
       updates: {
+        ended_at: attachParams.now,
+        canceled: true,
         status: CusProductStatus.Expired,
       },
     });
 
-    for (const subId of curMainProduct?.subscription_ids || []) {
+    const subId = curMainProduct?.subscription_ids?.[0];
+    if (subId) {
       await stripeCli.subscriptions.cancel(subId, {
         cancellation_details: {
           comment: "autumn_downgrade,trial_canceled",
@@ -197,19 +205,15 @@ export const runAttachFunction = async ({
     }
   }
 
-  if (attachFunction == AttachFunction.Renew) {
-    // Renew current subscription
-
-    res.status(200).json(
-      AttachResultSchema.parse({
-        customer_id:
-          attachParams.customer.id || attachParams.customer.internal_id,
-        product_ids: attachParams.products.map((p) => p.id),
-        code: SuccessCode.RenewedProduct,
-        message: `Successfully renewed product ${attachParams.products[0].id}`,
-      })
-    );
-    return;
+  if (attachFunction == AttachFunction.MultiAttach) {
+    return await handleMultiAttachFlow({
+      req,
+      res,
+      attachParams,
+      attachBody,
+      branch,
+      config,
+    });
   }
 
   if (attachFunction == AttachFunction.CreateCheckout) {
@@ -218,7 +222,9 @@ export const runAttachFunction = async ({
         req,
         res,
         attachParams,
+        attachBody,
         config,
+        branch,
       });
     }
     return await handleCreateCheckout({
@@ -235,6 +241,7 @@ export const runAttachFunction = async ({
       res,
       attachParams,
       config,
+      branch,
     });
   }
 
@@ -245,11 +252,6 @@ export const runAttachFunction = async ({
       attachParams,
       config,
     });
-    // return await handleScheduleFunction({
-    //   req,
-    //   res,
-    //   attachParams,
-    // });
   }
 
   if (
@@ -261,26 +263,9 @@ export const runAttachFunction = async ({
       res,
       attachParams,
       config,
+      branch,
     });
   }
-
-  // if (attachFunction == AttachFunction.UpgradeSameInterval) {
-  //   return await handleUpgradeSameInterval({
-  //     req,
-  //     res,
-  //     attachParams,
-  //     config,
-  //   });
-  // }
-
-  // if (attachFunction == AttachFunction.UpgradeDiffInterval) {
-  //   return await handleUpgradeDiffInterval({
-  //     req,
-  //     res,
-  //     attachParams,
-  //     config,
-  //   });
-  // }
 
   if (attachFunction == AttachFunction.UpdatePrepaidQuantity) {
     return await handleUpdateQuantityFunction({

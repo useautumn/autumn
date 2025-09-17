@@ -11,7 +11,7 @@ import {
   FullCustomerEntitlement,
   EntInterval,
 } from "@autumn/shared";
-import { cusProductToProduct } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToProduct } from "@autumn/shared";
 import { ACTIVE_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
 import { isFreeProduct } from "../products/productUtils.js";
 

@@ -1,11 +1,9 @@
 import { Router } from "express";
 import {
   CusProductStatus,
-  type Customer,
   ErrCode,
   EventInsert,
   FeatureType,
-  FeatureUsageType,
   FullCustomer,
 } from "@autumn/shared";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
@@ -20,7 +18,6 @@ import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { getEventTimestamp } from "./eventUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { runUpdateUsageTask } from "@/trigger/updateUsageTask.js";
-import { logger } from "@/external/logtail/logtailUtils.js";
 import { isPaidContinuousUse } from "@/internal/features/featureUtils.js";
 
 export const eventsRouter: Router = Router();
@@ -193,7 +190,9 @@ export const handleUsageEvent = async ({
   const payload = {
     customerId: customer.id,
     internalCustomerId: customer.internal_id,
+    eventId: newEvent.id,
     features,
+    allFeatures: req.features,
     org,
     env: req.env,
     properties,

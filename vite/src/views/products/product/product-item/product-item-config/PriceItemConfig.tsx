@@ -14,10 +14,6 @@ import { nullish } from "@/utils/genUtils";
 export const PriceItemConfig = () => {
   const { item, setItem, isUpdate } = useProductItemContext();
 
-  // useEffect(() => {
-  //   console.log("Item:", item);
-  // }, [item]);
-
   return (
     <div className="flex flex-col gap-4 w-full">
       <div className="w-full">

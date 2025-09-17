@@ -2,6 +2,7 @@ import {
   getFeatureBalance,
   cusEntsContainFeature,
   getUnlimitedAndUsageAllowed,
+  getPaidFeatureBalance,
 } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
 import {
@@ -103,7 +104,6 @@ export const getV1CheckResponse = ({
             }),
       });
       allowed = true;
-      // continue;
       break;
     }
 
@@ -114,6 +114,11 @@ export const getV1CheckResponse = ({
       originalFeatureId: originalFeature.id,
       required: quantity,
       entityId,
+    });
+
+    let totalPaidAllowance = getPaidFeatureBalance({
+      cusEnts,
+      internalFeatureId: feature.internal_id!,
     });
 
     let newBalance: any = {
@@ -129,7 +134,7 @@ export const getV1CheckResponse = ({
     balances.push(newBalance);
 
     // allowed = allowed && actual! >= required;
-    allowed = actual! >= required;
+    allowed = actual! + (totalPaidAllowance || 0) >= required;
 
     if (allowed) {
       break;

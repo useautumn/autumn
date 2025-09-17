@@ -13,11 +13,15 @@ export const OrgConfigSchema = z.object({
   reverse_deduction_order: z.boolean().default(false),
 
   include_past_due: z.boolean().default(true),
+  // include_check_past_due: z.boolean().default(false),
+
   sync_status: z.boolean().default(true),
   merge_billing_cycles: z.boolean().default(true),
   multiple_trials: z.boolean().default(false),
   allow_paid_default: z.boolean().default(false),
   cache_customer: z.boolean().default(false),
+  invoice_memos: z.boolean().default(false),
+  entity_product: z.boolean().default(false),
 });
 
 export type OrgConfig = z.infer<typeof OrgConfigSchema>;

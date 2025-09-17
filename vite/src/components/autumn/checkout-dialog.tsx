@@ -50,8 +50,7 @@ export default function CheckoutDialog(params: CheckoutDialogProps) {
   const [checkoutResult, setCheckoutResult] = useState<
     CheckoutResult | undefined
   >(params?.checkoutResult);
-
-  const { mutateAutumnProducts } = useModelPricingContext();
+  const { refetch } = useModelPricingContext();
 
   useEffect(() => {
     if (params.checkoutResult) {
@@ -102,7 +101,7 @@ export default function CheckoutDialog(params: CheckoutDialogProps) {
                 options,
                 openInNewTab: true,
               });
-              await mutateAutumnProducts();
+              await refetch();
               setOpen(false);
               setLoading(false);
             }}

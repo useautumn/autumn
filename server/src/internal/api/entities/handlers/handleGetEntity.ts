@@ -39,8 +39,6 @@ export const handleGetEntity = async (req: any, res: any) =>
           features,
           logger,
         });
-      // const end = performance.now();
-      // logger.info(`getEntityResponse took ${(end - start).toFixed(2)}ms`);
 
       let entity = entities[0];
       let withInvoices = expand.includes(EntityExpand.Invoices);

@@ -172,10 +172,15 @@ export const getCusProductResponse = async ({
       name: fullProduct.name,
       group: fullProduct.group || null,
       status: trialing ? CusProductStatus.Trialing : cusProduct.status,
-      canceled_at: cusProduct.canceled_at,
+      canceled_at: cusProduct.canceled_at || null,
+
+      // canceled: cusProduct.canceled || false,
+      // trialing: trialing ? true : false,
+
       is_default: fullProduct.is_default || false,
       is_add_on: fullProduct.is_add_on || false,
       version: fullProduct.version,
+      quantity: cusProduct.quantity,
 
       // stripe_subscription_ids: cusProduct.subscription_ids || [],
       started_at: cusProduct.starts_at,

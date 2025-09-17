@@ -10,6 +10,7 @@ import {
   Organization,
   FullCusEntWithFullCusProduct,
   BillingType,
+  FeatureUsageType,
 } from "@autumn/shared";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { Customer, FeatureType } from "@autumn/shared";
@@ -43,6 +44,7 @@ import {
 } from "@/internal/products/prices/priceUtils.js";
 import { deductFromCusRollovers } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverDeductionUtils.js";
 import { refreshCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
+import { handleThresholdReached } from "./handleThresholdReached.js";
 
 // Decimal.set({ precision: 12 }); // 12 DP precision
 
@@ -347,7 +349,6 @@ export const deductAllowanceFromCusEnt = async ({
   const { db, feature, env, org, cusPrices, customer, entity } = deductParams;
 
   if (toDeduct == 0) {
-    return 0;
   }
 
   if (
@@ -444,6 +445,7 @@ export const deductAllowanceFromCusEnt = async ({
 
   cusEnt.balance = newBalance;
   cusEnt.entities = newEntities;
+
   return newToDeduct;
 };
 
@@ -461,12 +463,32 @@ export const deductFromUsageBasedCusEnt = async ({
   const { db, feature, env, org, cusPrices, customer, entity } = deductParams;
 
   // Deduct from usage-based price
-  const usageBasedEnt = findCusEnt({
+  let usageBasedEnt = findCusEnt({
     cusEnts,
     feature,
     entity,
     onlyUsageAllowed: true,
   }) as FullCusEntWithFullCusProduct;
+
+  console.log(
+    "Cus ents:",
+    cusEnts.map(
+      (ce) =>
+        `Feature: ${ce.entitlement.feature_id}, Balance: ${ce.balance}, Usage Allowed: ${ce.usage_allowed}`
+    )
+  );
+
+  if (
+    !usageBasedEnt &&
+    feature.config?.usage_type == FeatureUsageType.Continuous
+  ) {
+    console.log(`FALLING BACK TO REGULAR CUS ENT, FEATURE: ${feature.id}`);
+    usageBasedEnt = findCusEnt({
+      cusEnts,
+      feature,
+      entity,
+    }) as FullCusEntWithFullCusProduct; // fallback to regular cus ent if allowed...
+  }
 
   if (!usageBasedEnt) {
     console.log(
@@ -503,6 +525,13 @@ export const deductFromUsageBasedCusEnt = async ({
     entities: newEntities!,
   });
 
+  // Update usageBasedEnt in place with the deduction results
+  usageBasedEnt.balance = newBalance;
+  usageBasedEnt.entities = newEntities;
+  if (setZeroAdjustment) {
+    usageBasedEnt.adjustment = 0;
+  }
+
   let updates: any = {
     balance: newBalance,
     entities: newEntities,
@@ -525,9 +554,13 @@ export const deductFromUsageBasedCusEnt = async ({
   });
 
   if (newReplaceables && newReplaceables.length > 0) {
-    updates.balance = newBalance! - newReplaceables.length;
+    const finalBalance = newBalance! - newReplaceables.length;
+    updates.balance = finalBalance;
+    usageBasedEnt.balance = finalBalance;
   } else if (deletedReplaceables && deletedReplaceables.length > 0) {
-    updates.balance = newBalance! + deletedReplaceables.length;
+    const finalBalance = newBalance! + deletedReplaceables.length;
+    updates.balance = finalBalance;
+    usageBasedEnt.balance = finalBalance;
   }
 
   await CusEntService.update({
@@ -535,6 +568,8 @@ export const deductFromUsageBasedCusEnt = async ({
     id: usageBasedEnt!.id,
     updates,
   });
+
+  console.log("Usage based cus ent balance", usageBasedEnt.balance);
 };
 
 // Main function to update customer balance
@@ -547,6 +582,7 @@ export const updateCustomerBalance = async ({
   org,
   env,
   logger,
+  allFeatures,
 }: {
   db: DrizzleCli;
   customerId: string;
@@ -556,6 +592,7 @@ export const updateCustomerBalance = async ({
   org: Organization;
   env: AppEnv;
   logger: any;
+  allFeatures: Feature[];
 }) => {
   const startTime = performance.now();
   console.log("REVERSE DEDUCTION ORDER", org.config.reverse_deduction_order);
@@ -605,6 +642,8 @@ export const updateCustomerBalance = async ({
   for (const obj of featureDeductions) {
     let { feature, deduction: toDeduct } = obj;
 
+    const originalCusEnts = structuredClone(cusEnts);
+
     for (const cusEnt of cusEnts) {
       if (cusEnt.entitlement.internal_feature_id != feature.internal_id) {
         continue;
@@ -621,9 +660,7 @@ export const updateCustomerBalance = async ({
         },
       });
 
-      if (toDeduct == 0) {
-        continue;
-      }
+      if (toDeduct == 0) continue;
 
       toDeduct = await deductAllowanceFromCusEnt({
         toDeduct,
@@ -643,23 +680,33 @@ export const updateCustomerBalance = async ({
       });
     }
 
-    if (toDeduct == 0) {
-      continue;
+    if (toDeduct !== 0) {
+      await deductFromUsageBasedCusEnt({
+        toDeduct,
+        cusEnts,
+        deductParams: {
+          db,
+          feature,
+          env,
+          org,
+          cusPrices: cusPrices as any[],
+          customer,
+          properties: event.properties,
+          entity: customer.entity,
+        },
+      });
     }
 
-    await deductFromUsageBasedCusEnt({
-      toDeduct,
-      cusEnts,
-      deductParams: {
-        db,
-        feature,
-        env,
-        org,
-        cusPrices: cusPrices as any[],
-        customer,
-        properties: event.properties,
-        entity: customer.entity,
-      },
+    handleThresholdReached({
+      org,
+      env,
+      features: allFeatures,
+      db,
+      feature,
+      cusEnts: originalCusEnts,
+      newCusEnts: cusEnts,
+      fullCus: customer,
+      logger,
     });
   }
 
@@ -678,7 +725,8 @@ export const runUpdateBalanceTask = async ({
 }) => {
   try {
     // 1. Update customer balance
-    const { customerId, features, event, org, env, entityId } = payload;
+    const { customerId, features, event, org, env, entityId, allFeatures } =
+      payload;
 
     console.log("--------------------------------");
     console.log(
@@ -694,6 +742,7 @@ export const runUpdateBalanceTask = async ({
       env,
       logger,
       entityId,
+      allFeatures,
     });
 
     // console.time("refreshCusCache");

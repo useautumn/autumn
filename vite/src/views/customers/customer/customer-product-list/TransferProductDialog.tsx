@@ -5,8 +5,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogOverlay,
-  DialogPortal,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -16,12 +14,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FullCusProduct } from "@autumn/shared";
-import { ArrowLeftRight } from "lucide-react";
+
 import { useEffect, useState } from "react";
 import { useCustomerContext } from "../CustomerContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { toast } from "sonner";
 import { getBackendErr } from "@/utils/genUtils";
+import { useCusQuery } from "../hooks/useCusQuery";
 
 export const TransferProductDialog = ({
   cusProduct,
@@ -32,13 +31,13 @@ export const TransferProductDialog = ({
   open: boolean;
   setOpen: (open: boolean) => void;
 }) => {
-  const { entities, cusMutate } = useCustomerContext();
+  const { customer, refetch } = useCusQuery();
   const axiosInstance = useAxiosInstance();
   const [loading, setLoading] = useState(false);
-  const filteredEntities = entities.filter(
+  const [selectedEntity, setSelectedEntity] = useState<any>(null);
+  const filteredEntities = customer.entities.filter(
     (entity: any) => entity.internal_id !== cusProduct.internal_entity_id
   );
-  const [selectedEntity, setSelectedEntity] = useState<any>(null);
 
   useEffect(() => {
     if (open) {
@@ -55,20 +54,20 @@ export const TransferProductDialog = ({
     setLoading(true);
 
     try {
-      const fromEntity = entities.find(
+      const fromEntity = customer.entities.find(
         (e: any) => e.internal_id === cusProduct.internal_entity_id
       );
       await axiosInstance.post(
         `/v1/customers/${cusProduct.customer_id}/transfer`,
         {
           // internal_entity_id: selectedEntity.internal_id,
-          from_entity_id: fromEntity.id,
+          from_entity_id: fromEntity?.id,
           to_entity_id: selectedEntity.id,
           product_id: cusProduct.product_id,
           // customer_product_id: cusProduct.id,
         }
       );
-      await cusMutate();
+      await refetch();
       toast.success("Product transferred successfully");
       setOpen(false);
     } catch (error) {
@@ -95,7 +94,9 @@ export const TransferProductDialog = ({
         <Select
           value={selectedEntity?.id}
           onValueChange={(value) => {
-            setSelectedEntity(entities.find((e: any) => e.id === value));
+            setSelectedEntity(
+              customer.entities.find((e: any) => e.id === value)
+            );
           }}
           disabled={filteredEntities.length == 0}
         >

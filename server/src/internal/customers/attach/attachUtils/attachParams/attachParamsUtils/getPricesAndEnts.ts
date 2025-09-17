@@ -1,7 +1,4 @@
-import {
-  cusProductToPrices,
-  cusProductToEnts,
-} from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToPrices, cusProductToEnts } from "@autumn/shared";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils.js";
 import {
@@ -49,7 +46,7 @@ export const getPricesAndEnts = async ({
 
     let freeTrial = null;
     let freeTrialProduct = products.find((p) => notNullish(p.free_trial));
-    // freeTrial = freeTrialProduct?.free_trial;
+
     if (freeTrialProduct) {
       freeTrial = await getFreeTrialAfterFingerprint({
         db,

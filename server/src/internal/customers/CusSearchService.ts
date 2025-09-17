@@ -48,9 +48,8 @@ const productFields = {
 };
 
 interface SearchFilters {
-  product_id?: string;
-  status?: string;
-  version?: string;
+  status?: string[];
+  version?: string[];
   none?: string;
 }
 
@@ -62,8 +61,8 @@ export class CusSearchService {
     search,
     filters,
     pageSize = 50,
-    lastItem,
     pageNumber,
+    // lastItem,
   }: {
     db: DrizzleCli;
     orgId: string;
@@ -71,43 +70,43 @@ export class CusSearchService {
     search: string;
     filters: SearchFilters;
     pageSize?: number;
-    lastItem?: {
-      internal_id: string;
-      created_at?: string;
-      name?: string;
-    } | null;
     pageNumber: number;
+    // lastItem?: {
+    //   internal_id: string;
+    //   created_at?: string;
+    //   name?: string;
+    // } | null;
   }) {
     // If we have a lastItem with only internal_id, fetch the full customer data for cursor pagination
-    let resolvedLastItem = lastItem;
-    if (lastItem && lastItem.internal_id && !lastItem.created_at) {
-      const customerData = await db
-        .select({
-          internal_id: customers.internal_id,
-          created_at: customers.created_at,
-          name: customers.name,
-        })
-        .from(customers)
-        .where(
-          and(
-            eq(customers.internal_id, lastItem.internal_id),
-            eq(customers.org_id, orgId),
-            eq(customers.env, env)
-          )
-        )
-        .limit(1);
+    // let resolvedLastItem = lastItem;
+    // if (lastItem && lastItem.internal_id && !lastItem.created_at) {
+    //   const customerData = await db
+    //     .select({
+    //       internal_id: customers.internal_id,
+    //       created_at: customers.created_at,
+    //       name: customers.name,
+    //     })
+    //     .from(customers)
+    //     .where(
+    //       and(
+    //         eq(customers.internal_id, lastItem.internal_id),
+    //         eq(customers.org_id, orgId),
+    //         eq(customers.env, env)
+    //       )
+    //     )
+    //     .limit(1);
 
-      if (customerData.length > 0) {
-        resolvedLastItem = {
-          internal_id: customerData[0].internal_id,
-          created_at: customerData[0].created_at as any,
-          name: customerData[0].name || "",
-        };
-      } else {
-        // If customer not found, reset to no lastItem
-        resolvedLastItem = null;
-      }
-    }
+    //   if (customerData.length > 0) {
+    //     resolvedLastItem = {
+    //       internal_id: customerData[0].internal_id,
+    //       created_at: customerData[0].created_at as any,
+    //       name: customerData[0].name || "",
+    //     };
+    //   } else {
+    //     // If customer not found, reset to no lastItem
+    //     resolvedLastItem = null;
+    //   }
+    // }
 
     let statuses: string[] = [];
 
@@ -117,10 +116,10 @@ export class CusSearchService {
       eq(customerProducts.status, CusProductStatus.PastDue)
     );
 
-    if (filters.status?.includes(",")) {
-      statuses = filters.status.split(",");
+    if (filters.status && filters.status.length > 0) {
+      statuses = filters.status;
     } else {
-      statuses = [filters.status || ""];
+      statuses = [];
     }
 
     // Handle product:version combinations
@@ -128,22 +127,12 @@ export class CusSearchService {
       [];
 
     // Parse version field which now contains "productId:version,productId2:version2"
-    if (filters.version) {
-      const versionSelections = filters.version.split(",").filter(Boolean);
+    if (filters.version && filters.version.length > 0) {
+      const versionSelections = filters.version.filter(Boolean);
       productVersionFilters = versionSelections.map((selection) => {
         const [productId, version] = selection.split(":");
         return { productId, version: parseInt(version) };
       });
-    }
-
-    // Legacy support for product_id field (if still used)
-    let productIds: string[] = [];
-    if (filters.product_id) {
-      if (filters.product_id.includes(",")) {
-        productIds = filters.product_id.split(",").filter(Boolean);
-      } else {
-        productIds = [filters.product_id];
-      }
     }
 
     let filtersDrizzle = and(
@@ -159,9 +148,9 @@ export class CusSearchService {
           )
         : undefined,
       // Legacy product filtering (fallback)
-      productIds.length > 0 && productVersionFilters.length === 0
-        ? inArray(customerProducts.product_id, productIds)
-        : undefined,
+      // productIds.length > 0 && productVersionFilters.length === 0
+      //   ? inArray(customerProducts.product_id, productIds)
+      //   : undefined,
       statuses.length > 0 && !statuses.includes("")
         ? or(
             ...statuses.map((status) => {
@@ -243,15 +232,14 @@ export class CusSearchService {
     const whereClause = and(
       shouldApplyActiveFilter ? activeProdFilter : undefined,
       filtersDrizzle,
-      cusFilter,
-      resolvedLastItem && resolvedLastItem.internal_id
-        ? lt(customers.internal_id, resolvedLastItem.internal_id)
-        : undefined
+      cusFilter
+      // resolvedLastItem && resolvedLastItem.internal_id
+      //   ? lt(customers.internal_id, resolvedLastItem.internal_id)
+      //   : undefined
     );
 
     // Execute query with appropriate pagination
-    const hasProductFilters =
-      productVersionFilters.length > 0 || productIds.length > 0;
+    const hasProductFilters = productVersionFilters.length > 0;
 
     // Build the query based on pagination type
     const buildQuery = () => {
@@ -281,7 +269,7 @@ export class CusSearchService {
     };
 
     let productQueryResult;
-    if (!resolvedLastItem && pageNumber > 1) {
+    if (pageNumber > 1) {
       // Use offset-based pagination
       const offset = (pageNumber - 1) * pageSize;
       productQueryResult = buildQuery()
@@ -371,7 +359,6 @@ export class CusSearchService {
     search,
     filters,
     pageSize = 50,
-    lastItem,
     pageNumber,
   }: {
     db: DrizzleCli;
@@ -380,11 +367,6 @@ export class CusSearchService {
     search: string;
     filters: SearchFilters;
     pageSize?: number;
-    lastItem?: {
-      internal_id: string;
-      created_at?: string;
-      name?: string;
-    } | null;
     pageNumber: number;
   }) {
     const noneFilter = notExists(
@@ -413,14 +395,11 @@ export class CusSearchService {
             ilike(customers.email, `%${search}%`)
           )
         : undefined,
-      noneFilter,
-      lastItem && lastItem.internal_id
-        ? lt(customers.internal_id, lastItem.internal_id)
-        : undefined
+      noneFilter
     );
 
     let baseQuery;
-    if (!lastItem && pageNumber > 1) {
+    if (pageNumber > 1) {
       // Use offset-based pagination
       const offset = (pageNumber - 1) * pageSize;
       baseQuery = db
@@ -529,12 +508,12 @@ export class CusSearchService {
         search,
         filters,
         pageSize,
-        lastItem: resolvedLastItem,
+        // lastItem: resolvedLastItem,
         pageNumber,
       });
     }
 
-    if (filters?.product_id || filters?.status || filters?.version) {
+    if (filters?.version && filters?.version.length > 0) {
       return await this.searchByProduct({
         db,
         orgId,
@@ -542,7 +521,7 @@ export class CusSearchService {
         search,
         filters,
         pageSize,
-        lastItem: resolvedLastItem,
+        // lastItem: resolvedLastItem,
         pageNumber,
       });
     }
@@ -663,3 +642,13 @@ export class CusSearchService {
     return { data: finalResults, count: totalCount };
   }
 }
+
+// // Legacy support for product_id field (if still used)
+// let productIds: string[] = [];
+// if (filters.product_id) {
+//   if (filters.product_id.includes(",")) {
+//     productIds = filters.product_id.split(",").filter(Boolean);
+//   } else {
+//     productIds = [filters.product_id];
+//   }
+// }

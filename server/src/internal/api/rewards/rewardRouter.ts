@@ -14,6 +14,7 @@ import {
   getRewardCat,
   initRewardStripePrices,
 } from "@/internal/rewards/rewardUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 const rewardRouter: Router = express.Router();
 
@@ -167,7 +168,9 @@ rewardRouter.post("/:internalId", async (req: any, res: any) => {
 
     const prices = await PriceService.getInIds({
       db,
-      ids: rewardBody.price_ids,
+      ids: notNullish(rewardBody.price_ids)
+        ? rewardBody.price_ids
+        : reward.discount_config?.price_ids,
     });
 
     // 1. Delete old prices from stripe
@@ -206,6 +209,29 @@ rewardRouter.post("/:internalId", async (req: any, res: any) => {
       res,
       req,
       action: "update coupon",
+    });
+  }
+});
+
+rewardRouter.get("/:id", async (req: any, res: any) => {
+  try {
+    const { id } = req.params;
+    const { orgId, env, db } = req;
+
+    const reward = await RewardService.get({
+      db,
+      idOrInternalId: id,
+      orgId,
+      env,
+    });
+
+    res.status(200).json(reward);
+  } catch (error) {
+    handleRequestError({
+      error,
+      res,
+      req,
+      action: "get reward",
     });
   }
 });

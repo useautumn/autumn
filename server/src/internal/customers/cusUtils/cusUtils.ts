@@ -1,24 +1,20 @@
 import { z } from "zod";
 import {
   CusExpand,
-  CusProductSchema,
   Customer,
   CustomerData,
-  CustomerSchema,
-  Entity,
   ErrCode,
   Feature,
   FullCustomer,
   Invoice,
   InvoiceResponse,
   Organization,
-  ProductSchema,
+  sortCusEntsForDeduction,
 } from "@autumn/shared";
 
 import { CusService } from "@/internal/customers/CusService.js";
-import { processFullCusProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
+
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
-import { sortCusEntsForDeduction } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
@@ -44,7 +40,12 @@ export const updateCustomerDetails = async ({
     updates.name = customerData.name;
   }
   if (!customer.email && customerData?.email) {
-    updates.email = customerData.email;
+    // Check that email is valid, if not skip...
+    if (z.string().email().safeParse(customerData.email).error) {
+      logger.info(`Invalid email ${customerData.email}, skipping update`);
+    } else {
+      updates.email = customerData.email;
+    }
   }
 
   if (Object.keys(updates).length > 0) {

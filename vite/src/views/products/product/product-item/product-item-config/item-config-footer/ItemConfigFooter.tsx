@@ -15,7 +15,14 @@ export const ItemConfigFooter = ({
   handleBack?: () => void;
 }) => {
   const axiosInstance = useAxiosInstance();
-  const { entityFeatureIds, product, mutate, autoSave } = useProductContext();
+  const {
+    entityFeatureIds,
+    product,
+    autoSave,
+    // This refetch is used in the onboarding flow
+    refetch,
+  } = useProductContext();
+
   const {
     item,
     handleCreateProductItem,
@@ -29,8 +36,6 @@ export const ItemConfigFooter = ({
     entityFeatureIds.length > 0;
 
   const isEmpty = isEmptyItem(item);
-
-  const showIntro = product.items.length === 0;
 
   return (
     <CustomDialogFooter className="flex items-center w-full h-10 justify-between">
@@ -60,7 +65,7 @@ export const ItemConfigFooter = ({
                   axiosInstance,
                   productId: product.id,
                   product,
-                  mutate,
+                  refetch,
                 });
               }
             }}
@@ -79,7 +84,7 @@ export const ItemConfigFooter = ({
                   axiosInstance,
                   productId: product.id,
                   product,
-                  mutate,
+                  refetch,
                 });
               }
             }}
@@ -101,7 +106,7 @@ export const ItemConfigFooter = ({
                   axiosInstance,
                   productId: product.id,
                   product: newProduct,
-                  mutate,
+                  refetch,
                 });
               }
             }}
@@ -114,12 +119,3 @@ export const ItemConfigFooter = ({
     </CustomDialogFooter>
   );
 };
-
-// {handleCreateProductItem &&
-//   show.feature &&
-//   item.feature_id &&
-//   !entityFeatureIds.includes(item.feature_id) &&
-//   entityFeatureIds.length > 0 ? (
-
-//     </>
-//   )

@@ -78,6 +78,7 @@ export const migrateCustomer = async ({
       await runMigrationAttach({
         req,
         attachParams,
+        fromProduct,
       });
 
       await deleteCusCache({

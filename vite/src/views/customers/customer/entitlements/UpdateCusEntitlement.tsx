@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/dialog";
 import { DialogContent } from "@/components/ui/dialog";
 import { Dialog } from "@/components/ui/dialog";
-import { FullCustomerEntitlement } from "@autumn/shared";
+import { FullCusProduct, FullCustomerEntitlement } from "@autumn/shared";
 import { useEffect, useState } from "react";
 import { useCustomerContext } from "../CustomerContext";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { getBackendErr, notNullish } from "@/utils/genUtils";
 import CopyButton from "@/components/general/CopyButton";
 import { AlertCircle, Info, InfoIcon } from "lucide-react";
+import { useCusQuery } from "../hooks/useCusQuery";
 
 function UpdateCusEntitlement({
   selectedCusEntitlement,
@@ -29,13 +30,13 @@ function UpdateCusEntitlement({
   selectedCusEntitlement: FullCustomerEntitlement | null;
   setSelectedCusEntitlement: (cusEnt: FullCustomerEntitlement | null) => void;
 }) {
-  // Get customer product
-  const { customer, env, cusMutate, entityId } = useCustomerContext();
-  const axiosInstance = useAxiosInstance({ env });
+  const { customer, refetch } = useCusQuery();
+  const { entityId } = useCustomerContext();
+  // const { customer, env, cusMutate, entityId } = useCustomerContext();
+  const cusEnt = selectedCusEntitlement;
 
   const [updateLoading, setUpdateLoading] = useState(false);
-
-  const cusEnt = selectedCusEntitlement;
+  const axiosInstance = useAxiosInstance();
 
   const [updateFields, setUpdateFields] = useState<any>({
     balance:
@@ -46,8 +47,8 @@ function UpdateCusEntitlement({
   });
 
   const getCusProduct = (cusEnt: FullCustomerEntitlement) => {
-    const cusProduct = customer.products.find(
-      (p: any) => p.id === cusEnt.customer_product_id
+    const cusProduct = customer.customer_products.find(
+      (cp: FullCusProduct) => cp.id === cusEnt.customer_product_id
     );
     return cusProduct;
   };
@@ -95,7 +96,7 @@ function UpdateCusEntitlement({
         }
       );
       toast.success("Entitlement updated successfully");
-      await cusMutate();
+      await refetch();
       setSelectedCusEntitlement(null);
     } catch (error) {
       toast.error(getBackendErr(error, "Failed to update entitlement"));
@@ -106,8 +107,6 @@ function UpdateCusEntitlement({
   const cusPrice = cusProduct?.customer_prices.find(
     (cp: any) => cp.price.entitlement_id === cusEnt?.entitlement.id
   );
-  console.log("Cus price:", cusPrice);
-  console.log("Cus product:", cusProduct);
 
   return (
     <Dialog
@@ -177,17 +176,3 @@ function UpdateCusEntitlement({
 }
 
 export default UpdateCusEntitlement;
-
-// const DateInput = ({
-//   value,
-//   onChange,
-// }: {
-//   value: string;
-//   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-// }) => {
-//   const [date, setDate] = React.useState<Date>();
-
-//   return (
-
-//   );
-// };

@@ -1,6 +1,7 @@
 /* Import inter */
 @import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
-/* @import url("https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"); */
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Ubuntu+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap");
+
 @import "tailwindcss";
 /* 
 ---break--- */
@@ -14,6 +15,7 @@
   /* font-family: system-ui, Avenir, Helvetica, Arial, sans-serif; */
   font-family: "Inter", "Inter Fallback";
   /* font-family: "Geist", "Geist Fallback"; */
+
   line-height: 1.5;
   font-weight: 500;
 
@@ -203,22 +205,32 @@ button:focus-visible {
   --color-sidebar-ring: var(--sidebar-ring);
 
   /* CUSTOM STUFF */
-  --color-t1: #27272a;
-  --color-t2: #52525b;
-  --color-t3: #a1a1aa;
+  --color-t1: #17171a;
+  --color-t2: #323239;
+  --color-t3: #81818a;
 
-  /* fontSize: {
-    xs: ["11px", "16px"],
-    sm: ["13px", "18px"],
-    md: ["15px", "20px"],
-    lg: ["17px", "24px"],
-    xl: ["20px", "28px"],
-  }, */
-  --text-xs: 11px;
+  /* --font-weight-regular: 450; */
+  --font-weight-normal: 450;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --text-xs: 12px;
   --text-sm: 13px;
   --text-md: 15px;
   --text-lg: 17px;
   --text-xl: 20px;
+
+  /* Font weights used by Tailwind font-* utilities */
+  /* --font-thin: 100;
+  --font-extralight: 200;
+  --font-light: 300;
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  --font-extrabold: 800;
+  --font-black: 900; */
 
   /* SHADOW */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -226,10 +238,6 @@ button:focus-visible {
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-lg:
     0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-
-  --font-weight-medium: 550;
-  --font-weight-semibold: 600;
-  --font-weight-bold: 700;
 
   --color-yellow-50: #fefce8;
   --color-yellow-100: #fdedd3;
@@ -250,8 +258,7 @@ button:focus-visible {
   --shadow-focus: 0 0 3px 1.5px rgba(139, 92, 246, 0.4);
   --color-focus: rgba(139, 92, 246, 0.95);
 
-  /* --color-input: #fafaf9; */
-  /* --color-input: white; */
+  --color-table-hover: #f3f3f3;
 }
 
 /* Hide number input spinners globally */

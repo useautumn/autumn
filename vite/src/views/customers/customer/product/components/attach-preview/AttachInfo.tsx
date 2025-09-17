@@ -9,7 +9,7 @@ import {
   ProductItemFeatureType,
 } from "@autumn/shared";
 import { format } from "date-fns";
-import { InfoIcon } from "lucide-react";
+import { InfoIcon, CheckCircle } from "lucide-react";
 
 export const AttachInfo = () => {
   const { attachState, product } = useProductContext();
@@ -20,7 +20,7 @@ export const AttachInfo = () => {
 
   const getAttachDescription = () => {
     if (preview?.branch == AttachBranch.Downgrade) {
-      let text = `The customer is currently on ${currentProduct.name} and will downgrade to ${product.name} on ${formatUnixToDate(preview.due_next_cycle.due_at)}`;
+      let text = `The customer is currently on ${currentProduct.name} and will downgrade to ${product.name} on ${formatUnixToDate(preview.due_next_cycle?.due_at)}`;
       if (scheduledProduct) {
         text += `. The scheduled product ${scheduledProduct.product.name} will also be removed.`;
       }
@@ -28,7 +28,7 @@ export const AttachInfo = () => {
     }
 
     if (preview?.free_trial) {
-      let text = `The free trial for ${product.name} will end on ${formatUnixToDate(preview.due_next_cycle.due_at)}`;
+      let text = `The free trial for ${product.name} will end on ${formatUnixToDate(preview.due_next_cycle?.due_at)}`;
       if (currentProduct && currentProduct.free_trial) {
         text += ` and the customer's current trial to ${currentProduct.name} will be canceled.`;
       } else {
@@ -45,19 +45,20 @@ export const AttachInfo = () => {
         );
       });
 
+      let text = `You are switching this customer to version ${product.version} of ${product.name}.`;
+      if (preview.due_next_cycle?.due_at) {
+        text += `Their features will update immediately and from ${formatUnixToDate(preview.due_next_cycle?.due_at)} onwards, they will pay any new prices${usagePriceExists ? " (including usage from the last cycle)" : ""}.`;
+      }
+
       return (
         <>
           <span>
-            You are switching this customer to version {product.version} of{" "}
-            {product.name}. Their features will update immediately and from{" "}
-            {format(preview.due_next_cycle.due_at, "d MMM")} onwards, they will
-            pay any new prices
-            {usagePriceExists ? " (including usage from the last cycle)" : ""}.
+            {/* You are switching this customer to version {product.version} of{" "}
+            {product.name}. */}
+            {text}
           </span>
         </>
       );
-
-      const text = `You are switching this customer to version ${product.version} of ${product.name}.`;
 
       // let text = `The customer is currently on ${currentProduct.name} v${currentProduct.version}. Switching to v${product.version} will update the customer's features immediately, and from ${formatUnixToDate(preview.due_next_cycle.due_at)} onwards they will pay any new prices`;
 
@@ -86,9 +87,36 @@ export const AttachInfo = () => {
   };
   const description = getAttachDescription();
 
+  const hasNoPriceChanges = () => {
+    if (preview?.branch === AttachBranch.SameCustomEnts) {
+      return true;
+    }
+
+    if (flags.isFree) {
+      return true;
+    }
+
+    if (preview?.due_today?.total === 0) {
+      return true;
+    }
+
+    return false;
+  };
+
   if (!description) {
     return null;
   }
+
+  // if (hasNoPriceChanges()) {
+  //   return (
+  //     <div className="flex items-center p-2 bg-green-50 border-1 border-green-200 text-green-700 rounded-xs">
+  //       <div className="min-w-6 flex">
+  //         <CheckCircle size={14} />
+  //       </div>
+  //       <p className="text-sm font-medium">No changes to prices or subscriptions will be made</p>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="flex items-center p-2 bg-blue-50 border-1 border-blue-200 text-blue-400 rounded-xs">

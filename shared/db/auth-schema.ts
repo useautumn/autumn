@@ -8,6 +8,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { organizations } from "./schema.js";
 import { relations } from "drizzle-orm";
+import { Organization } from "../models/orgModels/orgTable.js";
 
 export const user = pgTable(
   "user",
@@ -134,3 +135,8 @@ export const authSchema = {
 export type User = typeof user.$inferSelect;
 export type Member = typeof member.$inferSelect;
 export type Invite = typeof invitation.$inferSelect;
+
+export type FullInvite = Invite & {
+  inviter: User;
+  organization: Organization;
+};

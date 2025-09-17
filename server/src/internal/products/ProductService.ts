@@ -1,21 +1,21 @@
-import RecaseError from "@/utils/errorUtils.js";
 import {
-  AppEnv,
+  type AppEnv,
   customerProducts,
   customers,
-  entitlements,
   ErrCode,
+  entitlements,
+  type FullProduct,
   freeTrials,
-  FullProduct,
+  type Product,
   prices,
-  Product,
   products,
 } from "@autumn/shared";
+import { and, desc, eq, exists, inArray, ne, or, sql } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
-import { getLatestProducts } from "./productUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { and, desc, eq, exists, inArray, or, sql } from "drizzle-orm";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
+import { getLatestProducts } from "./productUtils.js";
 
 const parseFreeTrials = ({
   products,
@@ -40,6 +40,7 @@ const parseFreeTrials = ({
   return product;
 };
 
+// biome-ignore lint/complexity/noStaticOnlyClass: no thanks m8
 export class ProductService {
   static async getByFeature({
     db,
@@ -48,7 +49,7 @@ export class ProductService {
     db: DrizzleCli;
     internalFeatureId: string;
   }) {
-    let fullProducts = (await db.query.products.findMany({
+    const fullProducts = (await db.query.products.findMany({
       where: exists(
         db
           .select()
@@ -74,7 +75,7 @@ export class ProductService {
 
     parseFreeTrials({ products: fullProducts });
 
-    let latestProducts = getLatestProducts(fullProducts);
+    const latestProducts = getLatestProducts(fullProducts);
 
     return latestProducts;
   }
@@ -122,11 +123,12 @@ export class ProductService {
     env: AppEnv;
     group?: string;
   }) {
-    let prods = (await db.query.products.findMany({
+    const prods = (await db.query.products.findMany({
       where: and(
         eq(products.org_id, orgId),
         eq(products.env, env),
         eq(products.is_default, true),
+        ne(products.archived, true),
         group ? eq(products.group, group) : undefined
       ),
       with: {
@@ -143,13 +145,13 @@ export class ProductService {
 
     parseFreeTrials({ products: prods });
 
-    let latestProducts = getLatestProducts(prods);
+    const latestProducts = getLatestProducts(prods);
 
     return latestProducts as FullProduct[];
   }
 
   static async insert({ db, product }: { db: DrizzleCli; product: Product }) {
-    let prod = await db.insert(products).values(product).returning();
+    const prod = await db.insert(products).values(product).returning();
 
     if (!prod || prod.length === 0) {
       throw new RecaseError({
@@ -175,7 +177,7 @@ export class ProductService {
     env: AppEnv;
     version?: number;
   }) {
-    let data = await db.query.products.findMany({
+    const data = await db.query.products.findMany({
       where: and(
         eq(products.id, id),
         eq(products.org_id, orgId),
@@ -201,6 +203,7 @@ export class ProductService {
     version,
     excludeEnts = false,
     archived,
+    includeAll = false,
   }: {
     db: DrizzleCli;
     orgId: string;
@@ -210,14 +213,14 @@ export class ProductService {
     version?: number;
     excludeEnts?: boolean;
     archived?: boolean;
+    includeAll?: boolean;
   }) {
-    let data = (await db.query.products.findMany({
+    const data = (await db.query.products.findMany({
       where: and(
         eq(products.org_id, orgId),
         eq(products.env, env),
         inIds ? inArray(products.id, inIds) : undefined,
-        version ? eq(products.version, version) : undefined,
-        notNullish(archived) ? eq(products.archived, archived!) : undefined
+        version ? eq(products.version, version) : undefined
       ),
 
       with: {
@@ -244,7 +247,7 @@ export class ProductService {
     const latestProducts: FullProduct[] = getLatestProducts(data);
 
     if (inIds) {
-      let newProducts: FullProduct[] = [];
+      const newProducts: FullProduct[] = [];
       for (const id of inIds) {
         const prod = latestProducts.find((prod) => prod.id === id);
         if (!prod) {
@@ -257,6 +260,10 @@ export class ProductService {
         newProducts.push(prod);
       }
       return newProducts;
+    }
+
+    if (notNullish(archived)) {
+      return latestProducts.filter((p) => p.archived === archived);
     }
 
     return latestProducts as FullProduct[];
@@ -277,7 +284,7 @@ export class ProductService {
     version?: number;
     allowNotFound?: boolean;
   }) {
-    let data = (await db.query.products.findFirst({
+    const data = (await db.query.products.findFirst({
       where: and(
         or(
           eq(products.id, idOrInternalId),
@@ -400,7 +407,7 @@ export class ProductService {
     orgId: string;
     env: AppEnv;
   }) {
-    let res = await db
+    const res = await db
       .select()
       .from(products)
       .where(
@@ -411,7 +418,7 @@ export class ProductService {
         )
       );
 
-    let internalIds = res.map((r) => r.internal_id);
+    const internalIds = res.map((r) => r.internal_id);
 
     if (internalIds.length === 0) return;
     if (internalIds.length > 500) {
@@ -450,7 +457,7 @@ export class ProductService {
     orgId: string;
     env: AppEnv;
   }) {
-    let internalProductIds = (
+    const internalProductIds = (
       await db
         .select({
           internal_product_id: products.internal_id,
@@ -465,7 +472,7 @@ export class ProductService {
         )
     ).map((r) => r.internal_product_id);
 
-    let res = await db
+    const res = await db
       .select({
         internal_customer_id: customerProducts.internal_customer_id,
         name: customers.name,

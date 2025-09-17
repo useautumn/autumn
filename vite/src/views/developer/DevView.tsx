@@ -1,58 +1,47 @@
 "use client";
 
-import { useAxiosSWR } from "@/services/useAxiosSwr";
-import LoadingScreen from "../general/LoadingScreen";
-
-import { AppEnv } from "@autumn/shared";
-
-import { DevContext } from "./DevContext";
-
 import "svix-react/style.css";
-import { ApiKeysView } from "./ApiKeys";
-import { useCustomer } from "autumn-js/react";
-import { notNullish } from "@/utils/genUtils";
-
+import LoadingScreen from "../general/LoadingScreen";
+import { ApiKeysView } from "./api-keys/ApiKeys";
 import { AppPortal } from "svix-react";
 import { PageSectionHeader } from "@/components/general/PageSectionHeader";
 import { PublishableKeySection } from "./publishable-key";
+import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
+import { ConfigureStripe } from "./configure-stripe/ConfigureStripe";
+import { useAppQueryStates } from "@/hooks/common/useAppQueryStates";
+import { useDevQuery } from "@/hooks/queries/useDevQuery";
 
-export default function DevScreen({ env }: { env: AppEnv }) {
-  const { data, isLoading, mutate } = useAxiosSWR({
-    url: "/dev/data",
-    env: env,
-    withAuth: true,
-  });
+export default function DevScreen() {
+  const { apiKeys, svixDashboardUrl, isLoading, error } = useDevQuery();
+  const { queryStates } = useAppQueryStates({ defaultTab: "api_keys" });
 
-  const { customer } = useCustomer();
-  const showWebhooks = notNullish(customer?.features.webhooks);
-  const showPkey = notNullish(customer?.features.pkey);
+  const tab = queryStates.tab;
+  const { pkey, webhooks } = useAutumnFlags();
 
   if (isLoading) return <LoadingScreen />;
 
-  const apiKeys = data?.api_keys || [];
-
   return (
-    <DevContext.Provider value={{ env, mutate, ...data }}>
-      <div className="flex flex-col gap-4 h-fit relative w-full text-sm">
-        <h1 className="text-xl font-medium shrink-0 pt-6 pl-10">Developer</h1>
+    <div className="flex flex-col gap-4 h-fit relative w-full text-sm">
+      <h1 className="text-xl font-medium shrink-0 pt-6 pl-10">Developer</h1>
 
+      {(tab === "api_keys" || !tab) && (
         <div className="flex flex-col gap-16">
-          <ApiKeysView apiKeys={apiKeys} />
-
-          {showPkey && <PublishableKeySection org={data.org} />}
-
-          {showWebhooks && (
-            <ConfigureWebhookSection dashboardUrl={data.svix_dashboard_url} />
-          )}
+          <ApiKeysView />
+          {pkey && <PublishableKeySection />}
         </div>
-      </div>
-    </DevContext.Provider>
+      )}
+
+      {tab === "stripe" && <ConfigureStripe />}
+      {tab === "webhooks" && webhooks && svixDashboardUrl && (
+        <ConfigureWebhookSection dashboardUrl={svixDashboardUrl} />
+      )}
+    </div>
   );
 }
 
 const ConfigureWebhookSection = ({ dashboardUrl }: any) => {
   return (
-    <div className="bg-white">
+    <div className="h-full">
       <PageSectionHeader title="Webhooks" />
 
       {dashboardUrl ? (
@@ -61,7 +50,7 @@ const ConfigureWebhookSection = ({ dashboardUrl }: any) => {
           style={{
             height: "100%",
             borderRadius: "none",
-            marginTop: "0.5rem",
+            // marginTop: "0.5rem",
             // paddingLeft: "1rem",
             // paddingRight: "1rem",
           }}

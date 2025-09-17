@@ -44,7 +44,6 @@ export const ProductItemRow = ({
   onRowClick,
   className,
 }: ProductItemRowProps) => {
-  const { product } = useProductContext();
   const getName = ({
     featureId,
     units,
@@ -66,14 +65,14 @@ export const ProductItemRow = ({
   const getFreeFeatureString = (item: ProductItem) => {
     const feature = features.find((f: Feature) => f.id == item.feature_id);
 
+    if (feature?.type === FeatureType.Boolean) {
+      return `${feature.name}`;
+    }
+
     const featureName = getName({
       featureId: item.feature_id!,
       units: item.included_usage,
     });
-
-    if (feature?.type === FeatureType.Boolean) {
-      return `${featureName}`;
-    }
 
     if (item.included_usage == Infinite) {
       return `Unlimited ${featureName}`;
@@ -240,7 +239,7 @@ export const ProductItemRow = ({
     <div
       key={index}
       className={cn(
-        "grid grid-cols-17 gap-4 px-10 text-t2 h-10 items-center hover:bg-primary/3",
+        "grid grid-cols-17 gap-4 px-10 text-t2 h-10 items-center hover:bg-table-hover",
         isOnboarding && "grid-cols-12 px-2 h-10 min-h-10",
         className
       )}

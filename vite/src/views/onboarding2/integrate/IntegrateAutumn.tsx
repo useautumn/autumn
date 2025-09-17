@@ -14,25 +14,15 @@ import { Button } from "@/components/ui/button";
 import { NextSteps } from "./NextSteps";
 import { AutumnProvider } from "autumn-js/react";
 import { ConnectStripeStep } from "./ConnectStripeStep";
+import { useOnboardingQueryState } from "../hooks/useOnboardingQueryState";
 
-export default function IntegrateAutumn({
-  data,
-  mutate,
-  queryStates,
-  setQueryStates,
-}: {
-  data: any;
-  mutate: any;
-  queryStates: any;
-  setQueryStates: any;
-}) {
+export default function IntegrateAutumn() {
+  const { queryStates, setQueryStates } = useOnboardingQueryState();
   const stackSelected =
     queryStates.frontend && queryStates.backend && queryStates.auth;
 
   return (
-    <IntegrateContext.Provider
-      value={{ queryStates, setQueryStates, data, mutate }}
-    >
+    <IntegrateContext.Provider value={{ queryStates, setQueryStates }}>
       <div className="w-full h-full p-10 flex flex-col items-center justify-start overflow-y-scroll">
         <div className="max-w-[600px] w-full flex flex-col gap-6">
           <div className="flex flex-col gap-2">
@@ -60,7 +50,7 @@ export default function IntegrateAutumn({
             <SelectStack />
             {stackSelected && queryStates.reactTypescript && (
               <>
-                <ConnectStripeStep mutate={mutate} productData={data} />
+                <ConnectStripeStep />
                 <EnvStep />
                 <Install />
                 <AutumnHandler />

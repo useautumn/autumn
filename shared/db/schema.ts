@@ -79,7 +79,11 @@ import {
   member,
   invitation,
 } from "./auth-schema.js";
-import { userRelations, memberRelations } from "./auth-relations.js";
+import {
+  userRelations,
+  memberRelations,
+  inviteRelations,
+} from "./auth-relations.js";
 
 export {
   // Tables
@@ -141,4 +145,5 @@ export {
   // Auth Relations
   userRelations,
   memberRelations,
+  inviteRelations,
 };

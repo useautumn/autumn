@@ -3,7 +3,7 @@ import {
   DialogFooter,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Product, UpdateProductSchema } from "@autumn/shared";
+import { ProductV2, UpdateProductSchema } from "@autumn/shared";
 import { useRef, useState } from "react";
 import { ProductConfig } from "./ProductConfig";
 import React from "react";
@@ -13,20 +13,18 @@ import { ProductService } from "@/services/products/ProductService";
 import { useEnv } from "@/utils/envUtils";
 import { toast } from "sonner";
 import { getBackendErr } from "@/utils/genUtils";
-import { useProductsContext } from "./ProductsContext";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 
 export const UpdateProductDialog = ({
   selectedProduct,
-  setSelectedProduct,
   setModalOpen,
   setDropdownOpen,
 }: {
-  selectedProduct: Product;
-  setSelectedProduct: (product: Product) => void;
+  selectedProduct: ProductV2;
   setModalOpen: (open: boolean) => void;
   setDropdownOpen: (open: boolean) => void;
 }) => {
-  const { mutate } = useProductsContext();
+  const { refetch } = useProductsQuery();
   const originalProduct = useRef(selectedProduct);
   const [product, setProduct] = useState(selectedProduct);
   const [saveLoading, setSaveLoading] = useState(false);
@@ -41,7 +39,7 @@ export const UpdateProductDialog = ({
       await ProductService.updateProduct(axiosInstance, originalProductId, {
         ...UpdateProductSchema.parse(product),
       });
-      await mutate();
+      await refetch();
       setModalOpen(false);
 
       toast.success(`Successfully updated product ${product.id}`);

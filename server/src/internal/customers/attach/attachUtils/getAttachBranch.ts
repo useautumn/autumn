@@ -12,16 +12,16 @@ import {
   isFreeProduct,
   isProductUpgrade,
 } from "@/internal/products/productUtils.js";
-import {
-  cusProductToPrices,
-  cusProductToProduct,
-} from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToPrices, cusProductToProduct } from "@autumn/shared";
 import { FeatureOptions, FullCusProduct } from "@autumn/shared";
 import { productsAreSame } from "@/internal/products/productUtils/compareProductUtils.js";
-import { isTrialing } from "../../cusProducts/cusProductUtils.js";
 import { hasPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
-import { attachParamToCusProducts } from "./convertAttachParams.js";
+import {
+  attachParamToCusProducts,
+  getCustomerSub,
+} from "./convertAttachParams.js";
 import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
+import { isMainTrialBranch } from "./attachUtils.js";
 
 const handleMultiProductErrors = async ({
   attachParams,
@@ -114,7 +114,7 @@ const getOptionsToUpdate = ({
   return optionsToUpdate;
 };
 
-const checkSameCustom = async ({
+export const checkSameCustom = async ({
   attachParams,
   curSameProduct,
 }: {
@@ -142,17 +142,10 @@ const checkSameCustom = async ({
     });
   }
 
-  // const curPrices = cusProductToPrices({ cusProduct: curSameProduct });
-  // if (isFreeProduct(curPrices) && !isFreeProduct(attachParams.prices)) {
-  //   return AttachBranch.MainIsFree;
-  // }
-
-  // if (
-  //   isFreeProduct(attachParams.prices) &&
-  //   isFreeProduct(cusProductToPrices({ cusProduct: curSameProduct }))
-  // ) {
-  //   return AttachBranch.MainIsFree;
-  // }
+  const curPrices = cusProductToPrices({ cusProduct: curSameProduct });
+  if (isFreeProduct(curPrices)) {
+    return AttachBranch.MainIsFree;
+  }
 
   if (onlyEntsChanged) {
     return AttachBranch.SameCustomEnts;
@@ -177,11 +170,6 @@ const getSameProductBranch = async ({
   curSameProduct = curSameProduct!;
 
   // 1. If new version?
-
-  const curPrices = cusProductToPrices({ cusProduct: curSameProduct });
-  if (isFreeProduct(curPrices)) {
-    return AttachBranch.MainIsFree;
-  }
 
   if (curSameProduct.product.version !== product.version) {
     return AttachBranch.NewVersion;
@@ -225,7 +213,7 @@ const getSameProductBranch = async ({
     return AttachBranch.Renew;
   }
 
-  if (curSameProduct.canceled_at) {
+  if (curSameProduct.canceled_at || curSameProduct.canceled) {
     return AttachBranch.Renew;
   }
 
@@ -264,31 +252,13 @@ const getChangeProductBranch = async ({
   }
 
   // 2. If main product is paid, check if upgrade or downgrade
-  // Check if upgrade or downgrade
   let curPrices = cusProductToPrices({ cusProduct: curMainProduct! });
   let newPrices = attachParams.prices;
-
-  // if (isTrialing(curMainProduct!)) {
-  //   if (isFreeProduct(attachParams.prices)) {
-  //     return AttachBranch.Downgrade;
-  //   }
-
-  //   let isUpgrade = isProductUpgrade({
-  //     prices1: curPrices,
-  //     prices2: newPrices,
-  //   });
-
-  //   if (!isUpgrade) {
-  //     return AttachBranch.Downgrade;
-  //   }
-
-  //   return AttachBranch.MainIsTrial;
-  // }
 
   let isUpgrade = isProductUpgrade({ prices1: curPrices, prices2: newPrices });
 
   if (isUpgrade) {
-    if (isTrialing(curMainProduct!)) {
+    if (isMainTrialBranch({ attachParams })) {
       return AttachBranch.MainIsTrial;
     }
 
@@ -309,15 +279,23 @@ export const getAttachBranch = async ({
   attachParams: AttachParams;
   fromPreview?: boolean;
 }) => {
-  // 1. Multi product
+  if (notNullish(attachBody.products)) {
+    // 1.
+    const { subId } = await getCustomerSub({ attachParams, onlySubId: true });
+
+    if (subId) {
+      return AttachBranch.MultiAttachUpdate;
+    }
+    return AttachBranch.MultiAttach;
+  }
+
+  if (pricesOnlyOneOff(attachParams.prices)) {
+    return AttachBranch.OneOff;
+  }
+
   if (notNullish(attachBody.product_ids)) {
     await handleMultiProductErrors({ attachParams });
     return AttachBranch.MultiProduct;
-  }
-
-  // 2. One off prices
-  if (pricesOnlyOneOff(attachParams.prices)) {
-    return AttachBranch.OneOff;
   }
 
   let { curSameProduct, curMainProduct } = attachParamToCusProducts({

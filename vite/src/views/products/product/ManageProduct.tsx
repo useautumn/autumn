@@ -3,15 +3,16 @@ import { useProductContext } from "./ProductContext";
 import { useNavigate } from "react-router";
 import { useEnv } from "@/utils/envUtils";
 import { ProductItemTable } from "./product-item/ProductItemTable";
-import { SelectEntity } from "@/views/customers/customer/customer-sidebar/select-entity";
+import { SelectEntity } from "@/views/customers/customer/components/customer-header/SelectEntity";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 
 export const ManageProduct = ({
   hideAdminHover = false,
 }: {
   hideAdminHover?: boolean;
 }) => {
-  const env = useEnv();
-  const { product, entityId, customer } = useProductContext();
+  const { customer } = useCusQuery();
+  const { product, entityId } = useProductContext();
 
   return (
     <div className="flex flex-col gap-4">

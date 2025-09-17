@@ -1,7 +1,7 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
-import { cusProductsToCusEnts } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductsToCusEnts } from "@autumn/shared";
 import { FullCustomer } from "@autumn/shared";
 
 export const updateUsages = async ({

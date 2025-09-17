@@ -20,6 +20,7 @@ import { createKey } from "../dev/api-keys/apiKeyUtils.js";
 import { afterOrgCreated } from "@/utils/authUtils/afterOrgCreated.js";
 import { Autumn } from "autumn-js";
 import { organizationSchema } from "better-auth/plugins";
+import { isStripeConnected, shouldReconnectStripe } from "../orgs/orgUtils.js";
 
 const platformRouter = Router();
 
@@ -204,15 +205,38 @@ platformRouter.post("/exchange", (req: any, res: any) =>
       let finalStripeConfig: any = {};
       let defaultCurrency = org.default_currency || "usd";
 
+      // Connect stripe if not exists...
       if (stripe_test_key) {
-        let { test_api_key, test_webhook_secret, stripeCurrency } =
-          await connectStripe({
-            db,
+        const reconnectStripe = await shouldReconnectStripe({
+          org,
+          env: AppEnv.Sandbox,
+          stripeKey: stripe_test_key,
+          logger: req.logtail,
+        });
+
+        if (reconnectStripe) {
+          console.log("Reconnecting stripe sandbox");
+          let {
+            test_api_key,
+            test_webhook_secret,
+            defaultCurrency: newDefaultCurrency,
+          } = await connectStripe({
             orgId: org.id,
-            logger: req.logtail,
             apiKey: stripe_test_key,
             env: AppEnv.Sandbox,
           });
+
+          finalStripeConfig = {
+            ...finalStripeConfig,
+            test_api_key,
+            test_webhook_secret,
+          };
+
+          if (!defaultCurrency) {
+            defaultCurrency = newDefaultCurrency || "usd";
+          }
+        }
+
         sandboxKey = await createKey({
           db,
           orgId: org.id,
@@ -221,26 +245,38 @@ platformRouter.post("/exchange", (req: any, res: any) =>
           prefix: "am_sk_test",
           meta: {},
         });
-        finalStripeConfig = {
-          ...finalStripeConfig,
-          test_api_key,
-          test_webhook_secret,
-        };
-
-        if (!defaultCurrency) {
-          defaultCurrency = stripeCurrency || "usd";
-        }
       }
 
       if (stripe_live_key) {
-        let { live_api_key, live_webhook_secret, stripeCurrency } =
-          await connectStripe({
-            db,
+        const reconnectStripe = await shouldReconnectStripe({
+          org,
+          env: AppEnv.Live,
+          stripeKey: stripe_live_key,
+          logger: req.logger,
+        });
+
+        if (reconnectStripe) {
+          console.log("Reconnecting stripe live");
+          let {
+            live_api_key,
+            live_webhook_secret,
+            defaultCurrency: newDefaultCurrency,
+          } = await connectStripe({
             orgId: org.id,
-            logger: req.logtail,
             apiKey: stripe_live_key,
             env: AppEnv.Live,
           });
+
+          finalStripeConfig = {
+            ...finalStripeConfig,
+            live_api_key,
+            live_webhook_secret,
+          };
+
+          if (!defaultCurrency) {
+            defaultCurrency = newDefaultCurrency || "usd";
+          }
+        }
 
         prodKey = await createKey({
           db,
@@ -250,21 +286,11 @@ platformRouter.post("/exchange", (req: any, res: any) =>
           prefix: "am_sk_live",
           meta: {},
         });
-
-        finalStripeConfig = {
-          ...finalStripeConfig,
-          live_api_key,
-          live_webhook_secret,
-        };
-
-        if (!defaultCurrency) {
-          defaultCurrency = stripeCurrency || "usd";
-        }
       }
 
-      if (!org.stripe_config?.success_url) {
-        finalStripeConfig.success_url = `https://useautumn.com`;
-      }
+      // if (!org.stripe_config?.success_url) {
+      //   finalStripeConfig.success_url = `https://useautumn.com`;
+      // }
 
       await db
         .update(organizations)

@@ -14,9 +14,11 @@ import {
   AttachConfig,
   AttachBranch,
   ProrationBehavior,
+  IntervalConfig,
 } from "@autumn/shared";
 import { AttachParams } from "../../customers/cusProducts/AttachParams.js";
 import {
+  formatPrice,
   getBillingType,
   getPriceForOverage,
   getPriceOptions,
@@ -32,32 +34,21 @@ import {
 import { newPriceToInvoiceDescription } from "../invoiceFormatUtils.js";
 import { calculateProrationAmount } from "../prorationUtils.js";
 import { getPricecnPrice } from "../../products/pricecn/pricecnUtils.js";
-import { toProductItem } from "../../products/product-items/mapToItem.js";
+import { toProductItem } from "@autumn/shared";
 import { formatAmount } from "@/utils/formatUtils.js";
-import {
-  formatUnixToDate,
-  formatUnixToDateTime,
-  notNullish,
-} from "@/utils/genUtils.js";
-import {
-  addBillingIntervalUnix,
-  getAlignedIntervalUnix,
-  subtractBillingIntervalUnix,
-} from "../../products/prices/billingIntervalUtils.js";
+import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
+import { subtractIntervalForProration } from "../../products/prices/billingIntervalUtils.js";
 import {
   priceToFeature,
   priceToUsageModel,
 } from "@/internal/products/prices/priceUtils/convertPrice.js";
 import { getContUseInvoiceItems } from "@/internal/customers/attach/attachUtils/getContUseItems/getContUseInvoiceItems.js";
 import Stripe from "stripe";
-import {
-  attachParamsToCurCusProduct,
-  attachParamToCusProducts,
-} from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
+import { attachParamsToCurCusProduct } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
 import { sortPricesByType } from "@/internal/products/prices/priceUtils/sortPriceUtils.js";
-import { getMergeCusProduct } from "@/internal/customers/attach/attachFunctions/addProductFlow/getMergeCusProduct.js";
 import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import { Decimal } from "decimal.js";
+import { getAlignedUnix } from "@/internal/products/prices/billingIntervalUtils2.js";
 
 export const getDefaultPriceStr = ({
   org,
@@ -87,50 +78,47 @@ export const getDefaultPriceStr = ({
 
 export const getProration = ({
   proration,
-  anchorToUnix,
+  anchor,
+  intervalConfig,
   now,
-  interval,
-  intervalCount,
 }: {
-  proration?: {
+  proration?: Partial<{
     start: number;
     end: number;
-  };
-  anchorToUnix?: number;
-  interval: BillingInterval;
-  intervalCount: number;
-  now: number;
+  }>;
+  anchor?: number; // used to indicate a future date to anchor the next period end to...
+  intervalConfig: IntervalConfig;
+  now?: number;
 }) => {
-  if (!proration && !anchorToUnix) return undefined;
+  let { interval, intervalCount } = intervalConfig;
+  intervalCount = intervalCount ?? 1;
+  now = now || Date.now();
 
   if (interval == BillingInterval.OneOff) return undefined;
 
-  if (proration) {
-    return proration;
+  let end = proration?.end;
+  if (!end && anchor) {
+    end = getAlignedUnix({
+      anchor: anchor!,
+      intervalConfig,
+      now,
+    });
   }
 
-  let end = getAlignedIntervalUnix({
-    alignWithUnix: anchorToUnix!,
-    interval,
-    intervalCount,
-    now,
-    alwaysReturn: true,
-  });
+  let start = proration?.start;
+  if (!start && end) {
+    start = subtractIntervalForProration({
+      unixTimestamp: end!,
+      interval,
+      intervalCount,
+    });
+  }
 
-  let start = subtractBillingIntervalUnix({
-    unixTimestamp: end!,
-    interval,
-    intervalCount,
-  });
-
-  // console.log(`Anchor to unix: ${formatUnixToDateTime(anchorToUnix)}`);
-  // console.log(`Start: ${formatUnixToDateTime(start)}`);
-  // console.log(`End: ${formatUnixToDateTime(end)}`);
-  // console.log(`--------------------------------`);
+  if (!start || !end) return undefined;
 
   return {
     start,
-    end: end!,
+    end,
   };
 };
 
@@ -139,13 +127,11 @@ export const getItemsForNewProduct = async ({
   attachParams,
   now,
   proration,
-  anchorToUnix,
+  anchor,
   freeTrial,
   sub,
   logger,
   withPrepaid = false,
-  branch,
-  config,
   skipOneOff = false,
 }: {
   newProduct: FullProduct;
@@ -155,24 +141,21 @@ export const getItemsForNewProduct = async ({
     start: number;
     end: number;
   };
-
-  anchorToUnix?: number;
+  anchor?: number;
   freeTrial?: FreeTrial | null;
   sub?: Stripe.Subscription;
   logger: any;
   withPrepaid?: boolean;
-  branch: AttachBranch;
-  config: AttachConfig;
   skipOneOff?: boolean;
 }) => {
   const { org, features } = attachParams;
   now = now || Date.now();
 
-  // console.log("Anchoring to", formatUnixToDateTime(anchorToUnix));
-
   const items: PreviewLineItem[] = [];
 
   sortPricesByType(newProduct.prices);
+
+  const printLogs = false;
 
   for (const price of newProduct.prices) {
     if (skipOneOff && isOneOffPrice({ price })) continue;
@@ -180,13 +163,27 @@ export const getItemsForNewProduct = async ({
     const ent = getPriceEntitlement(price, newProduct.entitlements);
     const billingType = getBillingType(price.config);
 
+    if (printLogs) {
+      console.log("price", formatPrice({ price }));
+      console.log("now:", formatUnixToDate(now));
+    }
+
     const finalProration = getProration({
       proration,
-      anchorToUnix,
+      anchor,
       now,
-      interval: price.config.interval!,
-      intervalCount: price.config.interval_count || 1,
+      intervalConfig: {
+        interval: price.config.interval!,
+        intervalCount: price.config.interval_count || 1,
+      },
     });
+
+    if (printLogs && finalProration) {
+      console.log(
+        `PRORATION: ${formatUnixToDate(finalProration.start)} to ${formatUnixToDate(finalProration.end)}`
+      );
+    }
+    if (printLogs) console.log("--------------------------------");
 
     if (isFixedPrice({ price })) {
       let amount = finalProration

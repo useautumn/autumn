@@ -1,9 +1,4 @@
-import {
-  AttachFunction,
-  AttachScenario,
-  CheckoutResponseSchema,
-  FeatureOptions,
-} from "@autumn/shared";
+import { AttachFunction, FeatureOptions } from "@autumn/shared";
 
 import { routeHandler } from "@/utils/routerUtils.js";
 import { getAttachParams } from "../attachUtils/attachParams/getAttachParams.js";
@@ -20,7 +15,6 @@ import {
 } from "../attachRouter.js";
 import { attachParamsToPreview } from "../handleAttachPreview/attachParamsToPreview.js";
 import { previewToCheckoutRes } from "./previewToCheckoutRes.js";
-import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { attachParamsToProduct } from "../attachUtils/convertAttachParams.js";
 import { isPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
@@ -28,6 +22,8 @@ import { priceToFeature } from "@/internal/products/prices/priceUtils/convertPri
 import { getPriceOptions } from "@/internal/products/prices/priceUtils.js";
 import { getHasProrations } from "./getHasProrations.js";
 import { handleCreateInvoiceCheckout } from "../../add-product/handleCreateInvoiceCheckout.js";
+import { z } from "zod";
+import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
 
 const getAttachVars = async ({
   req,
@@ -110,6 +106,7 @@ export const handleCheckout = (req: any, res: any) =>
     action: "attach-preview",
     handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
       const { logger, features } = req;
+
       const attachBody = AttachBodySchema.parse(req.body);
 
       const { attachParams, branch, func, config } = await getAttachVars({
@@ -137,6 +134,8 @@ export const handleCheckout = (req: any, res: any) =>
           const result = await handleCreateInvoiceCheckout({
             req,
             attachParams,
+            attachBody,
+            branch,
             config,
           });
 
@@ -153,6 +152,8 @@ export const handleCheckout = (req: any, res: any) =>
           checkoutUrl = checkout?.url;
         }
       }
+
+      console.log(`Branch: ${branch}, Func: ${func}`);
 
       await getCheckoutOptions({
         req,
@@ -171,6 +172,7 @@ export const handleCheckout = (req: any, res: any) =>
         req,
         attachParams,
         preview,
+        branch,
       });
 
       // Get has prorations
@@ -179,6 +181,12 @@ export const handleCheckout = (req: any, res: any) =>
         branch,
         attachParams,
       });
+
+      if (checkoutRes.next_cycle) {
+        const nextCycle = checkoutRes.next_cycle;
+        console.log("Due at:", formatUnixToDate(nextCycle.starts_at!));
+        console.log("Total:", nextCycle.total);
+      }
 
       res.status(200).json({
         ...checkoutRes,

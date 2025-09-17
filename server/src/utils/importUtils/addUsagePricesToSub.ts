@@ -9,7 +9,7 @@ import {
 } from "@autumn/shared";
 import Stripe from "stripe";
 import { ExtendedRequest } from "../models/Request.js";
-import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToPrices } from "@autumn/shared";
 import { getUsageBasedSub } from "@/external/stripe/stripeSubUtils.js";
 import { priceToFeature } from "@/internal/products/prices/priceUtils/convertPrice.js";
 import { logger } from "@/external/logtail/logtailUtils.js";

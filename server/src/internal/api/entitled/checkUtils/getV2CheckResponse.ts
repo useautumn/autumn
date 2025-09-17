@@ -86,6 +86,7 @@ export const getV2CheckResponse = async ({
   const cusPrices = cusProducts.flatMap(
     (cusProduct) => cusProduct.customer_prices
   );
+
   const balances = await getCusBalances({
     cusEntsWithCusProduct: featureCusEnts,
     cusPrices,
@@ -120,19 +121,6 @@ export const getV2CheckResponse = async ({
     allowed = true;
   }
 
-  // let totalUsageLimit = 0;
-
-  // for (const ent of featureCusEnts) {
-  //   totalUsageLimit += ent.entitlement.usage_limit || 0;
-  // }
-  // if (totalUsageLimit > 0) {
-  //   if (
-  //     cusFeature.balance - (requiredBalance || 1) <
-  //     -(totalUsageLimit - (cusFeature.included_usage || 0))
-  //   ) {
-  //     allowed = false;
-  //   }
-  // }
   let finalRequired = notNullish(requiredBalance) ? requiredBalance : 1;
   if (featureToUse.type == FeatureType.CreditSystem) {
     finalRequired = featureToCreditSystem({

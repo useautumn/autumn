@@ -28,9 +28,11 @@ import { billingIntervalToStripe } from "../stripePriceUtils.js";
 export const checkCurStripePrice = async ({
   price,
   stripeCli,
+  currency,
 }: {
   price: Price;
   stripeCli: Stripe;
+  currency: string;
 }) => {
   let priceValid = false;
 
@@ -46,6 +48,13 @@ export const checkCurStripePrice = async ({
       });
 
       if (!stripePrice.active) {
+        stripePrice = null;
+      }
+
+      if (
+        stripePrice &&
+        stripePrice.currency.toLowerCase() !== currency.toLowerCase()
+      ) {
         stripePrice = null;
       }
     } catch (error) {
@@ -102,6 +111,7 @@ export const createStripePriceIFNotExist = async ({
   let { stripePrice, stripeProd } = await checkCurStripePrice({
     price,
     stripeCli,
+    currency: org.default_currency || "usd",
   });
 
   let config = price.config! as UsagePriceConfig;

@@ -1,7 +1,7 @@
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useOrg } from "@/hooks/useOrg";
+import { useOrg } from "@/hooks/common/useOrg";
 import { authClient } from "@/lib/auth-client";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -55,7 +55,7 @@ export const OrgDetails = () => {
         <div className="w-full flex justify-between items-center">
           <OrgLogoUploader />
         </div>
-        <div className="w-full flex gap-4">
+        <div className="w-full flex flex-col sm:flex-row gap-2 sm:gap-4">
           <OrgDetailInput
             label="Name"
             value={inputs.name}

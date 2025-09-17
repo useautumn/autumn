@@ -14,11 +14,11 @@ import { useProductContext } from "../ProductContext";
 import { validateProductItem } from "@/utils/product/product-item/validateProductItem";
 import { PlusIcon } from "lucide-react";
 import { CreateItemDialogContent } from "./create-product-item/CreateItemDialogContent";
-import { useModelPricingContext } from "@/views/onboarding2/model-pricing/ModelPricingContext";
 import { useSteps } from "./useSteps";
 import { CreateItemStep } from "./utils/CreateItemStep";
 import { cn } from "@/lib/utils";
 import { defaultPriceItem } from "./create-product-item/defaultItemConfigs";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 const defaultProductItem: ProductItem = {
   feature_id: null,
@@ -44,17 +44,18 @@ export function CreateProductItem2({
     button?: string;
   };
 }) {
+  const { features } = useFeaturesQuery();
   const [open, setOpen] = useState(false);
   const [showCreateFeature, setShowCreateFeature] = useState(false);
   const [item, setItem] = useState<ProductItem>(defaultProductItem);
-  const { features, product, setProduct } = useProductContext();
-  const { setFirstItemCreated } = useModelPricingContext();
+  const { product, setProduct } = useProductContext();
 
   const stepState = useSteps({ initialStep: CreateItemStep.SelectItemType });
 
   const handleCreateProductItem = async (entityFeatureId?: string) => {
     const validatedItem = validateProductItem({
       item: {
+        isPrice: false,
         ...item,
         entity_feature_id: entityFeatureId
           ? entityFeatureId

@@ -15,8 +15,9 @@ import RecaseError from "@/utils/errorUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { handleUpdateFeature } from "./handlers/handleUpdateFeature.js";
 import { handleDeleteFeature } from "./handlers/handleDeleteFeature.js";
-import { keyToTitle } from "@/utils/genUtils.js";
+import { keyToTitle, notNullOrUndefined } from "@/utils/genUtils.js";
 import { validateFeatureId } from "./featureUtils.js";
+import { handleGetFeatureDeletionInfo } from "./handlers/handleGetFeatureDeletionInfo.js";
 
 export const featureRouter: Router = express.Router();
 
@@ -133,22 +134,25 @@ featureRouter.post("/:feature_id", async (req: any, res: any) =>
         name: req.body.name || undefined,
         type: featureType,
         config: newConfig,
+        archived: req.body.archived ?? undefined,
       };
 
       req.body = newBody;
 
-      await handleUpdateFeature(req, null);
+      await handleUpdateFeature(req, res, true);
 
-      let newFeature = await FeatureService.get({
-        db: req.db,
-        id: featureId,
-        orgId: req.orgId,
-        env: req.env,
-      });
+      // let newFeature = await FeatureService.get({
+      //   db: req.db,
+      //   id: featureId,
+      //   orgId: req.orgId,
+      //   env: req.env,
+      // });
 
-      res.status(200).json(toAPIFeature({ feature: newFeature }));
+      // res.status(200).json(toAPIFeature({ feature: newFeature }));
     },
   })
 );
 
 featureRouter.delete("/:featureId", handleDeleteFeature);
+
+featureRouter.get("/:feature_id/deletion_info", handleGetFeatureDeletionInfo);

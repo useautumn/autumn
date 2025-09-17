@@ -16,6 +16,7 @@ import { DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { isFreeProductV2 } from "@autumn/shared";
+import { useProductCountsQuery } from "../hooks/queries/useProductCountsQuery";
 
 const ToggleProductDialog = ({
   open,
@@ -32,7 +33,7 @@ const ToggleProductDialog = ({
   value: boolean;
   toggleProduct: (value: boolean, optimisticUpdate?: boolean) => Promise<void>;
 }) => {
-  const { product, customer } = useProductContext();
+  const { product } = useProductContext();
   const [loading, setLoading] = useState(false);
   const handleConfirm = async () => {
     setLoading(true);
@@ -85,8 +86,10 @@ export const ToggleDefaultProduct = ({
   toggleKey: "is_default" | "is_add_on";
 }) => {
   const axiosInstance = useAxiosInstance();
-  const { product, setProduct, counts, mutate, customer, groupDefaults } =
+  const { product, setProduct, isCusProductView, groupDefaults } =
     useProductContext();
+
+  const { counts } = useProductCountsQuery();
 
   const activeCount = counts?.active;
   const [open, setOpen] = useState(false);
@@ -114,7 +117,7 @@ export const ToggleDefaultProduct = ({
       };
 
       await ProductService.updateProduct(axiosInstance, product.id, data);
-      mutate();
+      // mutate();
       setOpen(false);
       toast.success("Successfully updated product");
     } catch (error) {
@@ -203,9 +206,7 @@ export const ToggleDefaultProduct = ({
         value={product[toggleKey]}
         setValue={handleToggle}
         className="text-t2 px-2"
-        disabled={isDisabled || notNullish(customer)}
-        // tooltipContent="Default products are the default product for a group. They are used to determine the default product for a customer when they don't have an active subscription."
-        // infoContent="Default products are the default product for a group. They are used to determine the default product for a customer when they don't have an active subscription."
+        disabled={isDisabled || isCusProductView}
       />
     </>
   );

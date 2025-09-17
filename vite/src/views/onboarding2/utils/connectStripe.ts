@@ -14,9 +14,7 @@ export const connectStripe = async ({
 }) => {
   try {
     await OrgService.connectStripe(axiosInstance, {
-      testApiKey,
-      liveApiKey: testApiKey,
-      successUrl: `https://useautumn.com`,
+      secret_key: testApiKey,
     });
 
     toast.success("Successfully connected to Stripe");

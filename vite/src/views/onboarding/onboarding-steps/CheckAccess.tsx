@@ -12,7 +12,7 @@ import CodeBlock from "../components/CodeBlock";
 import { ArrowUpRightFromSquare } from "lucide-react";
 import { Feature, Product } from "@autumn/shared";
 import { useState } from "react";
-import { FeatureTypeBadge } from "@/views/features/FeatureTypeBadge";
+import { FeatureTypeBadge } from "@/views/products/features/components/FeatureTypeBadge";
 
 const checkAccessCode = (
   apiKey: string,

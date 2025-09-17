@@ -1,3 +1,5 @@
+import RecaseError from "@/utils/errorUtils.js";
+import { ErrCode, WebhookEventType } from "@autumn/shared";
 import express, { Router } from "express";
 import { Webhook } from "svix";
 
@@ -14,11 +16,15 @@ const verifyAutumnWebhook = async (req: any, res: any) => {
   const svix_signature = headers["svix-signature"];
 
   if (!svix_id || !svix_timestamp || !svix_signature) {
-    res.status(400).json({
-      success: false,
+    throw new RecaseError({
       message: "Error: Missing svix headers",
+      code: ErrCode.InvalidInputs,
     });
-    return;
+    // res.status(400).json({
+    //   success: false,
+    //   message: "Error: Missing svix headers",
+    // });
+    // return;
   }
 
   let evt: any;
@@ -29,12 +35,16 @@ const verifyAutumnWebhook = async (req: any, res: any) => {
       "svix-signature": svix_signature as string,
     });
   } catch (err) {
-    console.log("Error: Could not verify webhook");
-    res.status(400).json({
-      success: false,
+    throw new RecaseError({
       message: "Error: Could not verify webhook",
+      code: ErrCode.InvalidInputs,
     });
-    return;
+    // console.log("Error: Could not verify webhook");
+    // res.status(400).json({
+    //   success: false,
+    //   message: "Error: Could not verify webhook",
+    // });
+    // return;
   }
 
   return evt;
@@ -44,15 +54,33 @@ autumnWebhookRouter.post(
   "",
   express.raw({ type: "application/json" }),
   async (req, res) => {
-    const evt = await verifyAutumnWebhook(req, res);
-    console.log("Received webhook from autumn");
-    const { type, data } = evt;
-    console.log("Type", type, "Scenario:", data?.scenario);
-    // console.log("Data", data);
-    // console.log("JSON", JSON.stringify(evt, null, 2));
-    res.status(200).json({
-      success: true,
-      message: "Webhook received",
-    });
-  },
+    try {
+      const evt = await verifyAutumnWebhook(req, res);
+      console.log("Received webhook from autumn");
+      const { type, data } = evt;
+
+      switch (type) {
+        case WebhookEventType.CustomerProductsUpdated:
+          console.log(
+            `Type: ${type}, Scenario: ${data?.scenario}, Product: ${data?.updated_product?.id}`
+          );
+          break;
+        case WebhookEventType.CustomerThresholdReached:
+          console.log(`Type: ${type}`);
+          console.log(`Feature: `, data?.feature);
+          break;
+      }
+
+      res.status(200).json({
+        success: true,
+        message: "Webhook received",
+      });
+    } catch (error) {
+      res.status(200).json({
+        success: false,
+        message: "Error: Could not verify webhook",
+      });
+      return;
+    }
+  }
 );

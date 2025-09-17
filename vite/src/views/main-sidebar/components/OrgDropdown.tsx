@@ -17,25 +17,16 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useOrg } from "@/hooks/useOrg";
+import { useOrg } from "@/hooks/common/useOrg";
 import {
   authClient,
   useListOrganizations,
   useSession,
 } from "@/lib/auth-client";
-import { FrontendOrg, user } from "@autumn/shared";
 import { DropdownMenuGroup } from "@radix-ui/react-dropdown-menu";
-import {
-  ChevronDown,
-  LogOut,
-  PanelRight,
-  Plus,
-  Settings,
-  Shield,
-  Trash,
-} from "lucide-react";
-import React from "react";
-import { useState } from "react";
+import { ChevronDown, PanelRight, Plus, Settings } from "lucide-react";
+
+import { useState, useMemo } from "react";
 import { CreateNewOrg } from "./CreateNewOrg";
 import { toast } from "sonner";
 import { LogOutItem } from "./LogOutItem";
@@ -52,21 +43,32 @@ import { useSearchParams } from "react-router";
 
 export const OrgDropdown = () => {
   const { org, isLoading, error } = useOrg();
-  const { state, setState } = useSidebarContext();
+  const { expanded, setExpanded } = useSidebarContext();
 
-  const { data: orgs, isPending } = useListOrganizations();
+  let { data: orgs, isPending } = useListOrganizations();
+  const { data: activeOrganization } = authClient.useActiveOrganization();
+
+  // Exclude the active organization from the orgs list (this makes it easier for users to understand which org is active)
+  if (activeOrganization && orgs) {
+    orgs = orgs.filter((o) => o.id !== activeOrganization.id);
+  }
+
   const [dialogType, setDialogType] = useState<"create" | "manage" | null>(
-    null,
+    null
   );
 
   const { data: session } = useSession();
+
+  // //remove the currect active org from the orgs data
+  // const inactiveOrgs = useMemo(() => {
+  //   if (!orgs || !org) return [];
+  //   return orgs.filter((orgItem: any) => orgItem.id !== org.id);
+  // }, [org, orgs]);
 
   // To pre-fetch data
   useMemberships();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
-  const [stopImpersonatingLoading, setStopImpersonatingLoading] =
-    useState(false);
 
   if (isLoading)
     return (
@@ -77,8 +79,6 @@ export const OrgDropdown = () => {
     );
 
   if (!org || error) return null;
-
-  const expanded = state === "expanded";
 
   return (
     <div className={cn("flex px-3")}>
@@ -99,7 +99,7 @@ export const OrgDropdown = () => {
             <Button
               className={cn(
                 "shimmer-hover p-0.5 gap-2 rounded-md hover:bg-stone-200/60 justify-start items-center transition-all duration-200",
-                expanded ? "h-7 min-w-28" : "h-7 w-7 p-0.5",
+                expanded ? "h-7 min-w-28" : "h-7 w-7 p-0.5"
               )}
               variant="ghost"
             >
@@ -109,7 +109,7 @@ export const OrgDropdown = () => {
                   "flex items-center gap-1 transition-all duration-200",
                   expanded
                     ? "opacity-100 translate-x-0"
-                    : "opacity-0 -translate-x-2 pointer-events-none w-0 m-0 p-0",
+                    : "opacity-0 -translate-x-2 pointer-events-none w-0 m-0 p-0"
                 )}
               >
                 <span className="text-t2 max-w-24 truncate">{org?.name}</span>
@@ -126,7 +126,7 @@ export const OrgDropdown = () => {
           <DropdownMenuItem className="flex justify-between w-full items-center gap-2 text-t2">
             <div className="flex flex-col">
               <span>{session?.user?.name}</span>
-              <span className="text-xs text-zinc-500">
+              <span className="text-xs text-zinc-500 break-all hyphens-auto">
                 {session?.user?.email}
               </span>
             </div>
@@ -155,10 +155,10 @@ export const OrgDropdown = () => {
                 <Plus size={14} />
               </div>
             </DropdownMenuItem>
-            {state === "collapsed" && (
+            {!expanded && (
               <DropdownMenuItem
                 onClick={(e) => {
-                  setState("expanded");
+                  setExpanded(true);
                   setDropdownOpen(false);
                 }}
               >
@@ -168,24 +168,27 @@ export const OrgDropdown = () => {
                 </div>
               </DropdownMenuItem>
             )}
-            <DropdownMenuSeparator />
-
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger className="text-t2">
-                Switch Organization
-              </DropdownMenuSubTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuSubContent className="w-48">
-                  {orgs?.map((org) => (
-                    <SwitchOrgItem
-                      key={org.id}
-                      org={org}
-                      setDropdownOpen={setDropdownOpen}
-                    />
-                  ))}
-                </DropdownMenuSubContent>
-              </DropdownMenuPortal>
-            </DropdownMenuSub>
+            {orgs && orgs.length > 0 && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="text-t2">
+                    Switch Organization
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent className="w-48">
+                      {orgs.map((org) => (
+                        <SwitchOrgItem
+                          key={org.id}
+                          org={org}
+                          setDropdownOpen={setDropdownOpen}
+                        />
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
+              </>
+            )}
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <LogOutItem />
@@ -199,13 +202,11 @@ const SwitchOrgItem = ({ org, setDropdownOpen }: any) => {
   const [loading, setLoading] = useState(false);
   const [_, setSearchParams] = useSearchParams();
 
-  const { mutate } = useOrg();
-
   const handleSwitchOrg = async (orgId: string) => {
     setLoading(true);
 
     try {
-      setSearchParams(new URLSearchParams())
+      setSearchParams(new URLSearchParams());
 
       await authClient.organization.setActive({
         organizationId: orgId,

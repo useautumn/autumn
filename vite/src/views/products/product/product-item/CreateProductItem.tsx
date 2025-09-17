@@ -26,6 +26,7 @@ import { emptyPriceItem } from "./create-product-item/defaultItemConfigs";
 import { itemsHaveSameInterval } from "@/utils/product/productItemUtils";
 import { toast } from "sonner";
 import { getFeature } from "@/utils/product/entitlementUtils";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export const defaultProductItem: ProductItem = {
   feature_id: null,
@@ -98,7 +99,8 @@ const useMergeFeaturePriceItem = ({
   item: ProductItem;
   setOpen: (open: boolean) => void;
 }) => {
-  const { product, setProduct, features } = useProductContext();
+  const { features } = useFeaturesQuery();
+  const { product, setProduct } = useProductContext();
 
   const getOtherFeatureItemIndex = () => {
     return product.items.findIndex(
@@ -150,15 +152,12 @@ const useMergeFeaturePriceItem = ({
 };
 
 export function CreateProductItem() {
+  const { features } = useFeaturesQuery();
+  const { product, setProduct } = useProductContext();
+
   const [open, setOpen] = useState(false);
   const [showCreateFeature, setShowCreateFeature] = useState(false);
   const [item, setItem] = useState<ProductItem>(defaultProductItem);
-  const { features, product, setProduct, setFeatures, counts, mutate } =
-    useProductContext();
-
-  const [configState, setConfigState] = useState({
-    showPrice: false,
-  });
 
   const { shouldMergeFeatureItem, mergeFeatureItem } = useMergeFeatureItem({
     item,

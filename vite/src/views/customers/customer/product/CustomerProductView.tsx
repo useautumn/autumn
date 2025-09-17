@@ -3,7 +3,13 @@
 import ProductSidebar from "@/views/products/product/ProductSidebar";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { useState, useEffect, useRef } from "react";
-import { Customer, Entity, Feature, ProductItem } from "@autumn/shared";
+import {
+  Customer,
+  Entity,
+  Feature,
+  ProductItem,
+  ProductV2,
+} from "@autumn/shared";
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { ManageProduct } from "@/views/products/product/ManageProduct";
@@ -12,10 +18,14 @@ import { Link, useParams, useSearchParams } from "react-router";
 import ErrorScreen from "@/views/general/ErrorScreen";
 import { ProductOptions } from "./ProductOptions";
 import { useEnv } from "@/utils/envUtils";
-import { FeaturesContext } from "@/views/features/FeaturesContext";
 import { CustomerProductBreadcrumbs } from "./components/CustomerProductBreadcrumbs";
 import { FrontendProduct, useAttachState } from "./hooks/useAttachState";
 import { sortProductItems } from "@/utils/productUtils";
+import { useCusQuery } from "../hooks/useCusQuery";
+import { useOrg } from "@/hooks/common/useOrg";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useCusProductQuery } from "./hooks/useCusProductQuery";
+import { notNullish } from "@/utils/genUtils";
 
 interface OptionValue {
   feature_id: string;
@@ -46,14 +56,37 @@ export default function CustomerProductView() {
   const [searchParams] = useSearchParams();
   const entityIdParam = searchParams.get("entity_id");
 
-  const env = useEnv();
+  const { isLoading: orgLoading } = useOrg();
+  const { isLoading: featuresLoading } = useFeaturesQuery();
 
-  const initialProductRef = useRef<FrontendProduct | null>(null);
-  const [product, setProduct] = useState<FrontendProduct | null>(null);
-  const [features, setFeatures] = useState<Feature[]>([]);
+  const env = useEnv();
+  const initialProductRef = useRef<ProductV2 | null>(null);
+
   const [options, setOptions] = useState<OptionValue[]>([]);
   const [entityId, setEntityId] = useState<string | null>(entityIdParam);
   const [entityFeatureIds, setEntityFeatureIds] = useState<string[]>([]);
+
+  const version = searchParams.get("version");
+  const customer_product_id = searchParams.get("id");
+
+  const {
+    product: originalProduct,
+    cusProduct,
+    isLoading,
+    error,
+  } = useCusProductQuery();
+  const [product, setProduct] = useState<ProductV2 | null>(
+    originalProduct ?? null
+  );
+
+  const { isLoading: cusLoading } = useCusQuery();
+
+  const attachState = useAttachState({
+    product,
+    setProduct,
+    initialProductRef,
+    cusProduct,
+  });
 
   useEffect(() => {
     if (entityIdParam) {
@@ -63,30 +96,11 @@ export default function CustomerProductView() {
     }
   }, [entityIdParam]);
 
-  const version = searchParams.get("version");
-  const customer_product_id = searchParams.get("id");
-  const { data, isLoading, mutate, error } = useAxiosSWR({
-    url: `/customers/${customer_id}/product/${product_id}${getProductUrlParams({
-      version,
-      customer_product_id,
-      entity_id: entityId,
-    })}`,
-    env,
-  });
-
-  const [selectedEntitlementAllowance, setSelectedEntitlementAllowance] =
-    useState<"unlimited" | number>(0);
-
-  const attachState = useAttachState({
-    product,
-    setProduct,
-    initialProductRef,
-  });
-
   useEffect(() => {
-    if (!data?.product || !data?.customer) return;
+    if (!originalProduct) return;
 
-    const product = data.product;
+    const product = originalProduct;
+
     setProduct(product);
     initialProductRef.current = structuredClone({
       ...product,
@@ -97,22 +111,18 @@ export default function CustomerProductView() {
       Array.from(
         new Set(
           product.items
-            .filter((item: ProductItem) => item.entity_feature_id != null)
-            .map((item: ProductItem) => item.entity_feature_id),
-        ),
-      ),
+            .filter((item: ProductItem) => notNullish(item.entity_feature_id))
+            .map((item: ProductItem) => item.entity_feature_id!)
+        )
+      )
     );
 
-    if (product.options) {
-      setOptions(product.options);
+    if (cusProduct?.options) {
+      setOptions(cusProduct.options);
     } else {
       setOptions([]);
     }
-
-    if (data?.features) {
-      setFeatures(data.features);
-    }
-  }, [data]);
+  }, [originalProduct, cusProduct]);
 
   if (error) {
     return (
@@ -124,62 +134,53 @@ export default function CustomerProductView() {
     );
   }
 
-  if (isLoading || !product) return <LoadingScreen />;
+  if (isLoading || cusLoading || orgLoading || featuresLoading || !product)
+    return <LoadingScreen />;
 
   if (!customer_id || !product_id) {
     return <div>Customer or product not found</div>;
   }
 
-  const { customer } = data;
-
   return (
-    <FeaturesContext.Provider
+    <ProductContext.Provider
       value={{
-        env,
-        mutate,
+        // ...data,
+        // features,
+        // setFeatures,
+
+        // mutate,
+        // env,
+
+        isCusProductView: true,
+        product,
+        setProduct,
+
+        entityId,
+        setEntityId,
+        attachState,
+        version,
+        entityFeatureIds,
+        setEntityFeatureIds,
       }}
     >
-      <ProductContext.Provider
-        value={{
-          ...data,
-          features,
-          setFeatures,
-          mutate,
-          env,
-          product,
-          setProduct,
-          selectedEntitlementAllowance,
-          setSelectedEntitlementAllowance,
-          customer: customer as Customer,
-          entities: data.entities as Entity[],
-          entityId,
-          setEntityId,
-          attachState,
-          version,
-          entityFeatureIds,
-          setEntityFeatureIds,
-        }}
-      >
-        <CustomToaster />
-
-        <div className="flex w-full">
-          <div className="flex flex-col gap-4 w-full">
-            <CustomerProductBreadcrumbs />
-            <div className="flex">
-              <div className="flex-1 w-full min-w-sm">
-                {product && <ManageProduct />}
-                {options.length > 0 && (
-                  <ProductOptions options={options} setOptions={setOptions} />
-                )}
-              </div>
+      <CustomToaster />
+      <div className="flex w-full">
+        <div className="flex flex-col gap-4 w-full">
+          <CustomerProductBreadcrumbs />
+          <div className="flex">
+            <div className="flex-1 w-full min-w-sm">
+              {product && <ManageProduct />}
+              {options.length > 0 && (
+                <ProductOptions options={options} setOptions={setOptions} />
+              )}
             </div>
           </div>
-          <div className="max-w-[300px] w-1/3 shrink-1 hidden lg:block">
-            <ProductSidebar />
-          </div>
         </div>
-      </ProductContext.Provider>
-    </FeaturesContext.Provider>
+        <div className="max-w-[300px] w-1/3 shrink-1 hidden lg:block">
+          <ProductSidebar />
+        </div>
+      </div>
+    </ProductContext.Provider>
   );
 }
 

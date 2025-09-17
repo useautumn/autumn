@@ -1,5 +1,5 @@
 import RecaseError from "@/utils/errorUtils.js";
-import { generateId, notNullOrUndefined } from "@/utils/genUtils.js";
+
 import {
   EntInterval,
   FreeTrial,
@@ -7,21 +7,16 @@ import {
   AllowanceType,
   EntitlementWithFeature,
   FeatureType,
-  CreateEntitlement,
-  CreateEntitlementSchema,
   Feature,
   ErrCode,
   UsagePriceConfig,
   PriceType,
   Price,
   FullProduct,
-  BillingType,
   FullEntitlement,
 } from "@autumn/shared";
 
 import { addDays } from "date-fns";
-import { getBillingType } from "@/internal/products/prices/priceUtils.js";
-import { features } from "process";
 
 export const entIntervalToTrialDuration = ({
   interval,

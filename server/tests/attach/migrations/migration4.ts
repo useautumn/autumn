@@ -83,7 +83,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for pro -> pro wi
     testClockId = testClockId1!;
   });
 
-  it("should attach free product", async function () {
+  it("should attach pro product", async function () {
     await attachAndExpectCorrect({
       autumn,
       customerId,

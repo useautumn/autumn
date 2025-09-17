@@ -1,9 +1,8 @@
-import React from "react";
 import { useState, useRef } from "react";
 import { useProductItemContext } from "../../../ProductItemContext";
 import { Input } from "@/components/ui/input";
 import { Feature, getFeatureName } from "@autumn/shared";
-import { useProductContext } from "@/views/products/product/ProductContext";
+
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -11,6 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export const BillingUnits = ({
   className,
@@ -19,7 +19,7 @@ export const BillingUnits = ({
   className?: string;
   disabled: boolean;
 }) => {
-  const { features } = useProductContext();
+  const { features } = useFeaturesQuery();
   const { item, setItem } = useProductItemContext();
   const [popoverOpen, setPopoverOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);

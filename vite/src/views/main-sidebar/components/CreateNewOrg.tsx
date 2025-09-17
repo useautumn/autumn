@@ -9,7 +9,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useOrg } from "@/hooks/useOrg";
+import { useOrg } from "@/hooks/common/useOrg";
 import { authClient } from "@/lib/auth-client";
 import { slugify } from "@/utils/formatUtils/formatTextUtils";
 import { useState } from "react";

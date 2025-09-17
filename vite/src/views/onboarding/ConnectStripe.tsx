@@ -11,7 +11,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { AppEnv } from "@autumn/shared";
 import { useSearchParams } from "react-router";
 import { getBackendErr } from "@/utils/genUtils";
-import { stripeCurrencyCodes } from "@/data/stripeCurrencyCodes";
+import { stripeCurrencyCodes } from "@/utils/constants/stripeCurrencyCodes";
 import { ChevronsUpDown } from "lucide-react";
 import {
   Command,
@@ -37,7 +37,7 @@ import SmallSpinner from "@/components/general/SmallSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faStripeS } from "@fortawesome/free-brands-svg-icons";
 import { useNavigate } from "react-router";
-import { useOrg } from "@/hooks/useOrg";
+import { useOrg } from "@/hooks/common/useOrg";
 
 function ConnectStripe({
   className,
@@ -116,7 +116,7 @@ function ConnectStripe({
         className={cn(
           "flex flex-col gap-4",
           className,
-          onboarding && "flex-row justify-between items-center",
+          onboarding && "flex-row justify-between items-center"
         )}
       >
         <p className="text-t3 text-sm">Stripe Connected &nbsp; ✅</p>
@@ -210,10 +210,10 @@ export const CurrencySelect = ({
           role="combobox"
           aria-expanded={open}
           className={cn(
-            "w-full justify-between transition-colors duration-100",
-            open &&
-              "border-[rgb(139,92,246)] shadow-[0_0_2px_1px_rgba(139,92,246,0.25)]",
-            className,
+            "w-full justify-between transition-colors duration-100 !rounded-md p-2",
+            open && "border-focus !shadow-focus",
+            // "border-[rgb(139,92,246)] shadow-[0_0_2px_1px_rgba(139,92,246,0.25)]",
+            className
           )}
           disabled={disabled}
         >

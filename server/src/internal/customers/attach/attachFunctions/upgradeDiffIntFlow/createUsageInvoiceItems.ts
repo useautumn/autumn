@@ -7,17 +7,18 @@ import {
   getCusPriceUsage,
   getRelatedCusEnt,
 } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
+import { cusProductsToCusEnts, cusProductsToCusPrices } from "@autumn/shared";
 import {
-  cusProductsToCusEnts,
-  cusProductsToCusPrices,
-} from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
-import { getBillingType } from "@/internal/products/prices/priceUtils.js";
+  formatPrice,
+  getBillingType,
+} from "@/internal/products/prices/priceUtils.js";
 import {
   FullCusProduct,
   UsagePriceConfig,
   BillingType,
   BillingInterval,
   intervalsDifferent,
+  CusProductStatus,
 } from "@autumn/shared";
 
 import Stripe from "stripe";
@@ -47,7 +48,14 @@ export const getUsageInvoiceItems = async ({
     cusProducts: [cusProduct],
   });
   // const ents = cusProductToEnts({ cusProduct });
-  const cusEnts = cusProductsToCusEnts({ cusProducts: [cusProduct] });
+  const cusEnts = cusProductsToCusEnts({
+    cusProducts: [cusProduct],
+    inStatuses: [
+      CusProductStatus.Active,
+      CusProductStatus.Expired,
+      CusProductStatus.PastDue,
+    ],
+  });
 
   const invoiceItems: any[] = [];
   const cusEntIds: string[] = [];
@@ -68,16 +76,12 @@ export const getUsageInvoiceItems = async ({
 
     const cusEnt = getRelatedCusEnt({ cusPrice, cusEnts })!;
 
-    // const sub = await getUsageBasedSub({
-    //   db,
-    //   stripeCli,
-    //   // stripeSubs,
-    //   sub,
-    //   subIds: cusProduct.subscription_ids!,
-    //   feature: cusEnt.entitlement.feature,
-    // });
+    if (!cusEnt) {
+      console.log("Price:", formatPrice({ price: cusPrice.price }));
+      console.log("Cus ents:", cusEnts);
+      console.log("NO CUS ENT FOUND");
+    }
 
-    // if (!sub) continue;
     if (
       interval &&
       intervalsDifferent({
@@ -146,6 +150,7 @@ export const createUsageInvoiceItems = async ({
   });
 
   const batchCreate = [];
+
   for (let i = 0; i < invoiceItems.length; i++) {
     const invoiceItem = invoiceItems[i];
     const createInvoiceItem = async () => {

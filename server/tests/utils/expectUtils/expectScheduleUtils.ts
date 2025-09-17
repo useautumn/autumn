@@ -2,13 +2,14 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { getStripeSchedules } from "@/external/stripe/stripeSubUtils.js";
 import { findStripePriceFromPrices } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
-import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToPrices } from "@autumn/shared";
 import { CusService } from "@/internal/customers/CusService.js";
 import { isV4Usage } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import {
   AppEnv,
   AttachBranch,
   AttachPreview,
+  CusProductStatus,
   FullCusProduct,
   FullCustomer,
   Organization,
@@ -22,6 +23,7 @@ import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduc
 import { advanceTestClock } from "../stripeUtils.js";
 import { hoursToFinalizeInvoice } from "../constants.js";
 import { addHours } from "date-fns";
+import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
 
 export const expectNextCycleCorrect = async ({
   autumn,
@@ -119,42 +121,50 @@ export const expectDowngradeCorrect = async ({
   expectProductAttached({
     customer,
     product: curProduct,
-  });
-
-  const { fullCus } = await expectSubItemsCorrect({
-    stripeCli,
-    customerId,
-    product: curProduct,
-    db,
-    org,
-    env,
     isCanceled: true,
   });
+
+  // const { fullCus } = await expectSubItemsCorrect({
+  //   stripeCli,
+  //   customerId,
+  //   product: curProduct,
+  //   db,
+  //   org,
+  //   env,
+  //   subCanceled: isFreeProductV2({ product: newProduct }),
+  //   isCanceled: true,
+  // });
 
   const newProductIsFree = isFreeProductV2({ product: newProduct });
 
   if (newProductIsFree) {
-    let res = await stripeCli.subscriptionSchedules.list({
-      customer: fullCus.processor?.id,
-    });
-
-    let data = res.data.filter((s) => s.status != "canceled");
-    expect(data.length, "should have no sub schedules").to.equal(0);
-
-    await expectSubScheduleCorrect({
-      stripeCli,
-      customerId,
-      productId: newProduct.id,
-      db,
-      org,
-      env,
-    });
-
-    expectProductAttached({
-      customer,
-      product: newProduct,
-    });
+    // let res = await stripeCli.subscriptionSchedules.list({
+    //   customer: fullCus.processor?.id,
+    // });
+    // let data = res.data.filter((s) => s.status != "canceled");
+    // expect(data.length, "should have no sub schedules").to.equal(0);
+    // await expectSubScheduleCorrect({
+    //   stripeCli,
+    //   customerId,
+    //   productId: newProduct.id,
+    //   db,
+    //   org,
+    //   env,
+    // });
   }
+  expectProductAttached({
+    customer,
+    product: newProduct,
+    status: CusProductStatus.Scheduled,
+  });
+
+  await expectSubToBeCorrect({
+    db,
+    customerId,
+    org,
+    env,
+    shouldBeCanceled: newProductIsFree,
+  });
 
   expect(preview.branch).to.equal(AttachBranch.Downgrade);
 

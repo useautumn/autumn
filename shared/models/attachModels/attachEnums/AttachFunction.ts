@@ -10,6 +10,7 @@ export enum AttachFunction {
 
   UpgradeSameInterval = "upgrade_same_interval",
   UpgradeDiffInterval = "upgrade_diff_interval",
+  MultiAttach = "multi_attach",
 }
 
 /* Handle checkout / public error:

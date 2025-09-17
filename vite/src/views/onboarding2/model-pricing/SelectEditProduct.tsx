@@ -8,26 +8,30 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { ChevronDownIcon, Trash } from "lucide-react";
-import { DeleteProductDialog } from "@/views/products/components/DeleteProductDialog";
+import { DeleteProductDialog } from "@/views/products/products/product-row-toolbar/DeleteProductDialog";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useOnboardingQueryState } from "../hooks/useOnboardingQueryState";
 
 export const SelectEditProduct = () => {
   const {
-    data,
     productDataState: { product, setProduct },
-    queryStates,
-    setQueryStates,
   } = useModelPricingContext();
+
+  const { products } = useProductsQuery();
+  const { setQueryStates } = useOnboardingQueryState();
+
   const [deleteProductOpen, setDeleteProductOpen] = useState(false);
   const [deleteProductSelected, setDeleteProductSelected] = useState(product);
 
   const selectedClassName = "!bg-zinc-100 h-7 border";
-  if (data.products.length > 3) {
+  if (products.length > 3) {
     return (
       <>
         <DeleteProductDialog
           product={deleteProductSelected}
+          dropdownOpen={deleteProductOpen}
           open={deleteProductOpen}
           setOpen={setDeleteProductOpen}
         />
@@ -42,7 +46,7 @@ export const SelectEditProduct = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="max-h-[600px]">
-            {data.products.map((p: any) => {
+            {products.map((p: any) => {
               if (!p.name) {
                 return null;
               }
@@ -67,6 +71,7 @@ export const SelectEditProduct = () => {
                       e.preventDefault();
                       setDeleteProductSelected(p);
                       setDeleteProductOpen(true);
+                      console.log("Delete product selected:", p);
                     }}
                   >
                     <Trash size={12} />
@@ -89,10 +94,11 @@ export const SelectEditProduct = () => {
         product={product}
         open={deleteProductOpen}
         setOpen={setDeleteProductOpen}
-      ></DeleteProductDialog>
+        dropdownOpen={deleteProductOpen}
+      />
       <Tabs className="" value={product.id}>
         <TabsList className="gap-1 mr-1">
-          {data.products.map((p: any) => {
+          {products.map((p: any) => {
             if (!p.name) {
               return null;
             }

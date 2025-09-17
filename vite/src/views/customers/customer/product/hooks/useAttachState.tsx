@@ -1,9 +1,13 @@
+import { notNullish } from "@/utils/genUtils";
 import { isFeatureItem } from "@/utils/product/getItemType";
 import { isOneOffProduct } from "@/utils/product/priceUtils";
 import { sortProductItems } from "@/utils/productUtils";
 import {
   AttachPreview,
+  CusProduct,
   FeatureOptions,
+  FullCusProduct,
+  isCanceled,
   ProductItem,
   ProductV2,
   UsageModel,
@@ -25,25 +29,31 @@ export enum AttachCase {
 }
 
 const productHasPrepaid = (items: ProductItem[]) => {
-  return items.some((item) => item.usage_model == UsageModel.Prepaid);
+  return items.some(
+    (item) =>
+      item.usage_model == UsageModel.Prepaid && notNullish(item.interval)
+  );
 };
 
-const productIsAddOn = (product: FrontendProduct) => {
+const productIsAddOn = (product: ProductV2) => {
   return product.is_add_on;
 };
 
-const productIsFree = (product: FrontendProduct) => {
+const productIsFree = (product: ProductV2) => {
   return product.items.every((item) => isFeatureItem(item));
 };
 
 export const useAttachState = ({
   product,
+  cusProduct,
   setProduct,
   initialProductRef,
 }: {
-  product: FrontendProduct | null;
-  setProduct: (product: FrontendProduct) => void;
-  initialProductRef: React.RefObject<FrontendProduct | null>;
+  product: ProductV2 | null;
+  setProduct: (product: ProductV2) => void;
+
+  cusProduct: FullCusProduct | undefined | null;
+  initialProductRef: React.RefObject<ProductV2>;
 }) => {
   const [preview, setPreview] = useState<AttachPreview | null>(null);
   const [options, setOptions] = useState<
@@ -54,12 +64,13 @@ export const useAttachState = ({
   >([]);
 
   const [itemsChanged, setItemsChanged] = useState(false);
-
   const [flags, setFlags] = useState({
     hasPrepaid: product ? productHasPrepaid(product.items) : false,
     isAddOn: product ? productIsAddOn(product) : false,
     isFree: product ? productIsFree(product) : false,
-    isCanceled: product ? product.isCanceled : false,
+
+    isCanceled: cusProduct ? isCanceled({ cusProduct }) : false,
+
     isOneOff: product
       ? isOneOffProduct(product.items, product.is_add_on)
       : false,
@@ -76,7 +87,7 @@ export const useAttachState = ({
       hasPrepaid: product ? productHasPrepaid(product.items) : false,
       isAddOn: product ? productIsAddOn(product) : false,
       isFree: product ? productIsFree(product) : false,
-      isCanceled: product ? product.isCanceled : false,
+      isCanceled: cusProduct ? isCanceled({ cusProduct }) : false,
       isOneOff: product
         ? isOneOffProduct(product.items, product.is_add_on)
         : false,
@@ -115,7 +126,7 @@ export const useAttachState = ({
   const getButtonDisabled = () => {
     if (flags.isOneOff) return false;
 
-    if (product?.isActive && !itemsChanged && !flags.isCanceled) {
+    if (cusProduct && !itemsChanged && !flags.isCanceled) {
       if (flags.hasPrepaid) {
         return false;
       }
@@ -143,7 +154,7 @@ export const useAttachState = ({
       return AttachCase.OneOff;
     }
 
-    if (product?.isActive && !itemsChanged) {
+    if (cusProduct && !itemsChanged) {
       return AttachCase.Active;
     }
 
@@ -153,7 +164,7 @@ export const useAttachState = ({
   };
 
   const getButtonText = () => {
-    if (product?.isActive && !itemsChanged) {
+    if (cusProduct && !itemsChanged) {
       if (flags.isOneOff) {
         return "Attach Product";
       }

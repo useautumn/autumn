@@ -1,33 +1,32 @@
 import {
-  FullProduct,
-  Feature,
-  ProductItemResponseSchema,
-  ProductResponseSchema,
-  FreeTrialResponseSchema,
-  FullCustomer,
-  ProductItem,
   AttachScenario,
-  ProductPropertiesSchema,
   BillingInterval,
-  FeatureOptions,
+  type Feature,
+  type FeatureOptions,
+  type FreeTrialResponse,
+  FreeTrialResponseSchema,
+  type FullCustomer,
+  type FullProduct,
+  type Price,
+  type ProductItem,
+  ProductItemResponseSchema,
+  ProductPropertiesSchema,
+  ProductResponseSchema,
   UsageModel,
-  FreeTrial,
-  FreeTrialResponse,
-  Price,
 } from "@autumn/shared";
-import { sortProductItems } from "../../pricecn/pricecnUtils.js";
-import { getItemType } from "../../product-items/productItemUtils/getItemType.js";
-import { mapToProductItems } from "../../productV2Utils.js";
-import { getProductItemDisplay } from "./getProductItemDisplay.js";
-import { getAttachScenario } from "./getAttachScenario.js";
-import { getFreeTrialAfterFingerprint } from "../../free-trials/freeTrialUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { notNullish } from "@/utils/genUtils.js";
-import { isFreeProduct, isOneOff } from "../../productUtils.js";
-import { getLargestInterval } from "../../prices/priceUtils/priceIntervalUtils.js";
-import { itemToPriceOrTiers } from "../../product-items/productItemUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { toAPIFeature } from "@/internal/features/utils/mapFeatureUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
+import { getFreeTrialAfterFingerprint } from "../../free-trials/freeTrialUtils.js";
+import { sortProductItems } from "../../pricecn/pricecnUtils.js";
+import { getLargestInterval } from "../../prices/priceUtils/priceIntervalUtils.js";
 import { isPrepaidPrice } from "../../prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import { getItemType } from "../../product-items/productItemUtils/getItemType.js";
+import { itemToPriceOrTiers } from "../../product-items/productItemUtils.js";
+import { isFreeProduct, isOneOff } from "../../productUtils.js";
+import { mapToProductItems } from "../../productV2Utils.js";
+import { getAttachScenario } from "./getAttachScenario.js";
+import { getProductItemDisplay } from "./getProductItemDisplay.js";
 
 export const getProductItemResponse = ({
   item,
@@ -45,23 +44,23 @@ export const getProductItemResponse = ({
   isMainPrice?: boolean;
 }) => {
   // 1. Get item type
-  let type = getItemType(item);
+  const type = getItemType(item);
 
   // 2. Get display
-  let display = getProductItemDisplay({
+  const display = getProductItemDisplay({
     item,
     features,
     currency,
     isMainPrice,
   });
 
-  let priceData = itemToPriceOrTiers({ item });
+  const priceData = itemToPriceOrTiers({ item });
 
-  let quantity = undefined;
-  let upcomingQuantity = undefined;
+  let quantity: number | undefined;
+  let upcomingQuantity: number | undefined;
 
-  if (item.usage_model == UsageModel.Prepaid && notNullish(options)) {
-    let option = options!.find((o) => o.feature_id == item.feature_id);
+  if (item.usage_model === UsageModel.Prepaid && notNullish(options)) {
+    const option = options!.find((o) => o.feature_id === item.feature_id);
     quantity = option?.quantity
       ? option?.quantity * (item.billing_units ?? 1)
       : undefined;
@@ -71,7 +70,7 @@ export const getProductItemResponse = ({
       : undefined;
   }
 
-  let feature = features.find((f) => f.id == item.feature_id);
+  const feature = features.find((f) => f.id === item.feature_id);
   return ProductItemResponseSchema.parse({
     type,
     ...item,
@@ -106,12 +105,13 @@ export const getFreeTrialResponse = async ({
       productId: product.id,
     });
 
-    if (attachScenario == AttachScenario.Downgrade) trial = null;
+    if (attachScenario === AttachScenario.Downgrade) trial = null;
     return FreeTrialResponseSchema.parse({
       duration: product.free_trial?.duration,
       length: product.free_trial?.length,
       unique_fingerprint: product.free_trial?.unique_fingerprint,
       trial_available: notNullish(trial) ? true : false,
+      card_required: product.free_trial?.card_required,
     });
   }
 
@@ -120,6 +120,7 @@ export const getFreeTrialResponse = async ({
       duration: product.free_trial?.duration,
       length: product.free_trial?.length,
       unique_fingerprint: product.free_trial?.unique_fingerprint,
+      card_required: product.free_trial?.card_required,
     });
   }
 
@@ -138,7 +139,7 @@ export const getProductProperties = ({
     excludeOneOff: true,
   });
 
-  let hasFreeTrial =
+  const hasFreeTrial =
     notNullish(freeTrial) && freeTrial?.trial_available !== false;
 
   return ProductPropertiesSchema.parse({
@@ -172,34 +173,34 @@ export const getProductResponse = async ({
   options?: FeatureOptions[];
 }) => {
   // 1. Get items with display
-  let rawItems = mapToProductItems({
+  const rawItems = mapToProductItems({
     prices: product.prices,
     entitlements: product.entitlements,
     features: features,
   });
 
   // Sort raw items first
-  let sortedItems = sortProductItems(rawItems, features);
+  const sortedItems = sortProductItems(rawItems, features);
 
   // Transform sorted items
-  let items = sortedItems.map((item, index) => {
+  const items = sortedItems.map((item, index) => {
     return getProductItemResponse({
       item,
       features,
       currency,
       withDisplay,
       options,
-      isMainPrice: index == 0,
+      isMainPrice: index === 0,
     });
   });
 
   // 2. Get product properties
-  let attachScenario = getAttachScenario({
+  const attachScenario = getAttachScenario({
     fullCus,
     fullProduct: product,
   });
 
-  let freeTrial = (await getFreeTrialResponse({
+  const freeTrial = (await getFreeTrialResponse({
     db: db as DrizzleCli,
     product,
     fullCus,
@@ -214,5 +215,6 @@ export const getProductResponse = async ({
     free_trial: freeTrial || null,
     scenario: attachScenario,
     properties: getProductProperties({ product, freeTrial }),
+    archived: product.archived ? true : undefined,
   });
 };

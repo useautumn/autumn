@@ -1,45 +1,48 @@
 import { config } from "dotenv";
 config();
 
-import { getAllFullCustomers } from "@/utils/scriptUtils/getAll/getAllAutumnCustomers.js";
+import {
+  getAllEntities,
+  getAllFullCustomers,
+} from "@/utils/scriptUtils/getAll/getAllAutumnCustomers.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import {
   AppEnv,
-  BillingInterval,
-  BillingType,
   CusProductStatus,
   FullCusProduct,
   FullCustomer,
+  Organization,
+  Entity,
 } from "@autumn/shared";
 import Stripe from "stripe";
 import assert from "assert";
-import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToPrices } from "@autumn/shared";
+import { notNullish } from "@/utils/genUtils.js";
 import {
-  findStripeItemForPrice,
-  isLicenseItem,
-} from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
-import { isV4Usage } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
-import { notNullish, nullish } from "@/utils/genUtils.js";
-import { getAllStripeSubscriptions } from "@/utils/scriptUtils/getAll/getAllStripeSubs.js";
+  getAllStripeSchedules,
+  getAllStripeSubscriptions,
+} from "@/utils/scriptUtils/getAll/getAllStripeSubs.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import {
-  formatPrice,
-  getBillingType,
-} from "@/internal/products/prices/priceUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
+import { getStripeSchedules } from "@/external/stripe/stripeSubUtils.js";
 import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { getRelatedCusPrice } from "./internal/customers/cusProducts/cusEnts/cusEntUtils.js";
-import { CusProductService } from "./internal/customers/cusProducts/CusProductService.js";
-import { logSubItems } from "./utils/scriptUtils/logUtils/logSubItems.js";
+import { checkCusSubCorrect } from "./utils/checkUtils/checkCustomerCorrect.js";
+import { EntityService } from "./internal/api/entities/EntityService.js";
 
-const { db, client } = initDrizzle({ maxConnections: 5 });
+const { db } = initDrizzle({ maxConnections: 5 });
 
 let orgSlugs = process.env.ORG_SLUGS!.split(",");
 const skipEmails = process.env.SKIP_EMAILS!.split(",");
-// orgSlugs = ["athenahq"];
+const skipIds = [
+  "cus_2tXCCwC6iyiftgA6ndSo1Ubb2dx",
+  "DxG668K7uDd0Vahk54YWjvCGVgf2",
+];
+
+orgSlugs = ["supermemory"];
+const customerId = "co1VPgUU59q43d5P2rFt4c";
 
 const getSingleCustomer = async ({
   stripeCli,
@@ -61,31 +64,78 @@ const getSingleCustomer = async ({
     }),
   ];
 
-  const stripeSubs = await getStripeSubs({
+  const stripeCusId = customers[0].processor?.id;
+  const stripeSubs = stripeCusId
+    ? (
+        await stripeCli.subscriptions.list({
+          customer: stripeCusId,
+          expand: ["data.discounts.coupon"],
+        })
+      ).data
+    : [];
+
+  // const stripeSubs = await getStripeSubs({
+  //   stripeCli,
+  //   subIds: customers[0].customer_products.flatMap(
+  //     (cp) => cp.subscription_ids || []
+  //   ),
+  // });
+
+  const stripeSchedules = await getStripeSchedules({
     stripeCli,
-    subIds: customers[0].customer_products.flatMap(
-      (cp) => cp.subscription_ids || []
+    scheduleIds: customers[0].customer_products.flatMap(
+      (cp) => cp.scheduled_ids || []
     ),
   });
 
-  return { customers, stripeSubs };
+  const entities = await EntityService.list({
+    db,
+    internalCustomerId: customers[0].internal_id,
+  });
+
+  return { customers, stripeSubs, stripeSchedules, entities };
 };
 
 const checkCustomerCorrect = async ({
   fullCus,
   subs,
+  schedules,
+  org,
+  entities,
 }: {
   fullCus: FullCustomer;
   subs: Stripe.Subscription[];
+  schedules: Stripe.SubscriptionSchedule[];
+  org: Organization;
+  entities: Entity[];
 }) => {
+  if (skipIds.includes(fullCus.internal_id!)) return;
+
   if (skipEmails.some((skipEmail) => skipEmail === fullCus.email)) {
     return;
   }
 
+  fullCus.entities = entities.filter(
+    (entity) => entity.internal_customer_id === fullCus.internal_id
+  );
+
   // console.log(`Checking ${fullCus.email} (${fullCus.id})`);
   const cusProducts = fullCus.customer_products;
 
-  // If there's only one scheduled produuct
+  // await expectSubToBeCorrect({
+  //   db,
+  //   customerId: fullCus.id!,
+  //   org,
+  //   env: AppEnv.Live,
+  // });
+  await checkCusSubCorrect({
+    db,
+    fullCus,
+    subs,
+    schedules,
+    org,
+    env: AppEnv.Live,
+  });
 
   for (const cusProduct of cusProducts) {
     if (!cusProduct.subscription_ids) continue;
@@ -137,7 +187,7 @@ const checkCustomerCorrect = async ({
       "number of stripe subs should be the same as number of subscription ids"
     );
 
-    let subItems = stripeSubs.flatMap((sub: any) => sub.items.data);
+    // let subItems = stripeSubs.flatMap((sub: any) => sub.items.data);
 
     const prices = cusProductToPrices({ cusProduct });
 
@@ -148,83 +198,6 @@ const checkCustomerCorrect = async ({
     ) {
       continue;
     }
-
-    let missingUsageCount = 0;
-
-    for (const price of prices) {
-      const subItem = findStripeItemForPrice({
-        stripeItems: subItems,
-        price,
-        stripeProdId: cusProduct.product.processor?.id,
-      });
-
-      let billingType = getBillingType(price.config);
-      if (
-        billingType == BillingType.UsageInAdvance &&
-        price.config.interval == BillingInterval.OneOff
-      ) {
-        missingUsageCount++;
-        continue;
-      }
-
-      if (
-        billingType == BillingType.UsageInAdvance &&
-        price.config.interval != BillingInterval.OneOff
-      ) {
-        const featureId = (price.config as any).feature_id;
-        const options = cusProduct.options.find(
-          (o) => o.feature_id == featureId
-        );
-
-        assert(
-          notNullish(options),
-          `options should exist for prepaid price (featureId: ${featureId})`
-        );
-
-        let expectedQuantity = options?.upcoming_quantity || options?.quantity;
-
-        // console.log("Sub item: ", subItem);
-        assert(
-          subItem?.quantity == expectedQuantity,
-          `sub item quantity for prepaid price (featureId: ${featureId}) should be ${expectedQuantity}`
-        );
-        continue;
-      }
-
-      if (isV4Usage({ price, cusProduct })) {
-        if (nullish(subItem)) {
-          missingUsageCount++;
-        } else {
-          const priceName =
-            (price.config as any).feature_id || price.config.interval;
-          assert(
-            nullish(subItem) ||
-              (subItem?.quantity === 0 &&
-                isLicenseItem({
-                  stripeItem: subItem as Stripe.SubscriptionItem,
-                })),
-            `(${cusProduct.product.name}) sub item for price: ${priceName} should exist`
-          );
-        }
-
-        continue;
-      } else {
-        let priceName =
-          (price.config as any).feature_id || price.config.interval;
-
-        // console.log("Stripe price ID:", price.config.stripe_price_id);
-        // console.log("Sub items:", subItems);
-        assert(
-          subItem,
-          `(${cusProduct.product.name}) sub item for price: ${priceName} should exist`
-        );
-      }
-    }
-
-    assert(
-      prices.length - missingUsageCount === subItems.length,
-      `(${cusProduct.product.name}) number of sub items equivalent to number of prices`
-    );
 
     for (const cusEnt of cusProduct.customer_entitlements) {
       let cusPrice = getRelatedCusPrice(cusEnt, cusProduct.customer_prices);
@@ -243,14 +216,23 @@ const checkCustomerCorrect = async ({
 const checkCustomerHandleError = async ({
   fullCus,
   subs,
+  org,
+  schedules,
+  entities,
 }: {
   fullCus: FullCustomer;
   subs: Stripe.Subscription[];
+  org: Organization;
+  schedules: Stripe.SubscriptionSchedule[];
+  entities: Entity[];
 }) => {
   try {
     await checkCustomerCorrect({
       fullCus,
       subs,
+      org,
+      schedules,
+      entities,
     });
 
     return undefined;
@@ -291,12 +273,10 @@ export const check = async () => {
     console.log("--------------------------------");
     console.log(`Running error check for ${org.name}`);
 
-    let customerId;
-
-    // customerId = "94fd7303-c8ae-4873-a6cd-0f5241aef232";
-
     let customers: FullCustomer[] = [];
     let stripeSubs: Stripe.Subscription[] = [];
+    let stripeSchedules: Stripe.SubscriptionSchedule[] = [];
+    let entities: Entity[] = [];
 
     if (customerId) {
       const res = await getSingleCustomer({
@@ -308,21 +288,34 @@ export const check = async () => {
 
       customers = res.customers;
       stripeSubs = res.stripeSubs;
+      entities = res.entities;
     } else {
-      const [customersRes, stripeSubsRes] = await Promise.all([
-        getAllFullCustomers({
-          db,
-          orgId: org.id,
-          env,
-        }),
-        getAllStripeSubscriptions({
-          stripeCli,
-          waitForSeconds: 1,
-        }),
-      ]);
+      const [customersRes, stripeSubsRes, stripeSchedulesRes, entitiesRes] =
+        await Promise.all([
+          getAllFullCustomers({
+            db,
+            orgId: org.id,
+            env,
+          }),
+          getAllStripeSubscriptions({
+            stripeCli,
+            waitForSeconds: 1,
+          }),
+          getAllStripeSchedules({
+            stripeCli,
+            waitForSeconds: 1,
+          }),
+          getAllEntities({
+            db,
+            orgId: org.id,
+            env,
+          }),
+        ]);
 
       customers = customersRes;
       stripeSubs = stripeSubsRes.subscriptions;
+      stripeSchedules = stripeSchedulesRes.schedules;
+      entities = entitiesRes;
     }
 
     const batchSize = 1;
@@ -336,6 +329,9 @@ export const check = async () => {
           checkCustomerHandleError({
             fullCus: customer,
             subs: stripeSubs,
+            schedules: stripeSchedules,
+            org,
+            entities,
           })
         );
       }
@@ -401,6 +397,88 @@ export const check = async () => {
   }
 };
 
-check().finally(() => {
-  process.exit(0);
-});
+check()
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  })
+  .finally(() => {
+    process.exit(0);
+  });
+
+// let missingUsageCount = 0;
+
+// for (const price of prices) {
+//   const subItem = findStripeItemForPrice({
+//     stripeItems: subItems,
+//     price,
+//     stripeProdId: cusProduct.product.processor?.id,
+//   });
+
+//   let billingType = getBillingType(price.config);
+//   if (
+//     billingType == BillingType.UsageInAdvance &&
+//     price.config.interval == BillingInterval.OneOff
+//   ) {
+//     missingUsageCount++;
+//     continue;
+//   }
+
+//   if (
+//     billingType == BillingType.UsageInAdvance &&
+//     price.config.interval != BillingInterval.OneOff
+//   ) {
+//     const featureId = (price.config as any).feature_id;
+//     const options = cusProduct.options.find(
+//       (o) => o.feature_id == featureId
+//     );
+
+//     assert(
+//       notNullish(options),
+//       `options should exist for prepaid price (featureId: ${featureId})`
+//     );
+
+//     let expectedQuantity = options?.upcoming_quantity || options?.quantity;
+
+//     // console.log("Sub item: ", subItem);
+//     assert(
+//       subItem?.quantity == expectedQuantity,
+//       `sub item quantity for prepaid price (featureId: ${featureId}) should be ${expectedQuantity}`
+//     );
+//     continue;
+//   }
+
+//   if (isV4Usage({ price, cusProduct })) {
+//     if (nullish(subItem)) {
+//       missingUsageCount++;
+//     } else {
+//       const priceName =
+//         (price.config as any).feature_id || price.config.interval;
+//       assert(
+//         nullish(subItem) ||
+//           (subItem?.quantity === 0 &&
+//             isLicenseItem({
+//               stripeItem: subItem as Stripe.SubscriptionItem,
+//             })),
+//         `(${cusProduct.product.name}) sub item for price: ${priceName} should exist`
+//       );
+//     }
+
+//     continue;
+//   } else {
+//     let priceName =
+//       (price.config as any).feature_id || price.config.interval;
+
+//     // console.log("Stripe price ID:", price.config.stripe_price_id);
+//     // console.log("Sub items:", subItems);
+//     assert(
+//       subItem,
+//       `(${cusProduct.product.name}) sub item for price: ${priceName} should exist`
+//     );
+//   }
+// }
+
+// assert(
+//   prices.length - missingUsageCount === subItems.length,
+//   `(${cusProduct.product.name}) number of sub items equivalent to number of prices`
+// );

@@ -12,19 +12,23 @@ import { Input } from "@/components/ui/input";
 import { useProductContext } from "../ProductContext";
 import { toast } from "sonner";
 import { useState } from "react";
+import { updateProduct } from "../utils/updateProduct";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useProductQuery } from "../hooks/useProductQuery";
 
 export default function ConfirmNewVersionDialog({
   open,
   setOpen,
-  createProduct,
 }: {
   open: boolean;
   setOpen: (open: boolean) => void;
-  createProduct: () => Promise<void>;
 }) {
-  const { product, version } = useProductContext();
-  let [confirmText, setConfirmText] = useState("");
-  let [isLoading, setIsLoading] = useState(false);
+  const axiosInstance = useAxiosInstance();
+  const { product } = useProductContext();
+  const { refetch } = useProductQuery();
+
+  const [confirmText, setConfirmText] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const onClick = async () => {
     if (confirmText !== product.id) {
@@ -33,16 +37,21 @@ export default function ConfirmNewVersionDialog({
     }
 
     setIsLoading(true);
-    await createProduct();
+    await updateProduct({
+      axiosInstance,
+      product,
+      onSuccess: async () => {
+        await refetch();
+      },
+    });
     setIsLoading(false);
     setOpen(false);
+    // toast.success("New version created successfully");
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {/* <Button>Confirm New Version</Button> */}
-      </DialogTrigger>
+      <DialogTrigger asChild></DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Create new version?</DialogTitle>

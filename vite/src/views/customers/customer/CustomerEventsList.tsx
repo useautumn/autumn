@@ -12,24 +12,18 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router";
-import { AppEnv } from "@autumn/shared";
+import { useNavigate, useParams } from "react-router";
 import { useCustomerContext } from "./CustomerContext";
 import { cn } from "@/lib/utils";
-import { CusProductEntityItem } from "./components/CusProductEntityItem";
+import { useCusQuery } from "./hooks/useCusQuery";
+import { useCusEventsQuery } from "./hooks/useCusEventsQuery";
 
-export const CustomerEventsList = ({
-  events,
-  customer,
-  env,
-}: {
-  events: any;
-  customer: any;
-  env: AppEnv;
-}) => {
-  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+export const CustomerEventsList = () => {
   const navigate = useNavigate();
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const { customer_id } = useParams();
   const { showEntityView } = useCustomerContext();
+  const { events, isLoading, error } = useCusEventsQuery();
 
   return (
     <div>
@@ -45,18 +39,14 @@ export const CustomerEventsList = ({
         </DialogContent>
       </Dialog>
 
-      <div className="flex items-center grid grid-cols-10 gap-8 justify-between border-y bg-stone-100 pl-10 pr-7 h-10">
+      <div className="items-center grid grid-cols-10 gap-8 justify-between border-y bg-stone-100 pl-10 pr-7 h-10">
         <h2 className="text-sm text-t2 font-medium col-span-2 flex">Events</h2>
         <div className="flex w-full h-full items-center col-span-8 justify-end">
           <div className="flex w-fit h-full items-center gap-4">
             <Button
               variant="analyse"
               onClick={() =>
-                navigateTo(
-                  `/analytics?customer_id=${customer.id}`,
-                  navigate,
-                  env
-                )
+                navigateTo(`/analytics?customer_id=${customer_id}`, navigate)
               }
             >
               Analyse Events
@@ -65,7 +55,13 @@ export const CustomerEventsList = ({
         </div>
       </div>
 
-      {events.length === 0 ? (
+      {isLoading ? (
+        <div className="flex pl-10 items-center h-10">
+          <p className="text-t3 text-sm shimmer">
+            Loading events for this customer...
+          </p>
+        </div>
+      ) : events && events.length === 0 ? (
         <div className="flex pl-10 items-center h-10">
           <p className="text-t3 text-sm">
             No events received for this customer
@@ -86,38 +82,42 @@ export const CustomerEventsList = ({
         </Row>
       )}
 
-      {events.map((event: any) => (
-        <Row
-          key={event.id}
-          className={cn("grid-cols-12 pr-0", showEntityView && "grid-cols-15")}
-          onClick={() => setSelectedEvent(event)}
-        >
-          <Item className="col-span-3 font-mono">{event.event_name}</Item>
+      {events &&
+        events.map((event: any) => (
+          <Row
+            key={event.id}
+            className={cn(
+              "grid-cols-12 pr-0",
+              showEntityView && "grid-cols-15"
+            )}
+            onClick={() => setSelectedEvent(event)}
+          >
+            <Item className="col-span-3 font-mono">{event.event_name}</Item>
 
-          <Item className="col-span-3 relative">
-            <span className="font-mono truncate">
-              {event.value || event.properties.value || 1}
-            </span>
-          </Item>
-          <Item className="col-span-3 font-mono">
-            <span className="text-t3">POST </span>
-            <span className="text-lime-600">200</span>
-          </Item>
-          {showEntityView && <Item className="col-span-3"></Item>}
-          <Item className="col-span-2 text-t3 text-xs">
-            <Tooltip>
-              <TooltipTrigger>
-                {formatUnixToDateTime(event.timestamp).date}{" "}
-                {formatUnixToDateTime(event.timestamp).time}{" "}
-              </TooltipTrigger>
-              <TooltipContent>
-                {formatUnixToDateTimeWithMs(event.timestamp)}
-              </TooltipContent>
-            </Tooltip>
-          </Item>
-          <Item className="col-span-1" />
-        </Row>
-      ))}
+            <Item className="col-span-3 relative">
+              <span className="font-mono truncate">
+                {event.value || event.properties.value || 1}
+              </span>
+            </Item>
+            <Item className="col-span-3 font-mono">
+              <span className="text-t3">POST </span>
+              <span className="text-lime-600">200</span>
+            </Item>
+            {showEntityView && <Item className="col-span-3"></Item>}
+            <Item className="col-span-2 text-t3 text-xs">
+              <Tooltip>
+                <TooltipTrigger>
+                  {formatUnixToDateTime(event.timestamp).date}{" "}
+                  {formatUnixToDateTime(event.timestamp).time}{" "}
+                </TooltipTrigger>
+                <TooltipContent>
+                  {formatUnixToDateTimeWithMs(event.timestamp)}
+                </TooltipContent>
+              </Tooltip>
+            </Item>
+            <Item className="col-span-1" />
+          </Row>
+        ))}
 
       <p className="text-t3 text-xs w-full text-center mt-2">
         Showing last 10 events

@@ -18,11 +18,8 @@ import {
   getBillingType,
   getPriceEntitlement,
 } from "../products/prices/priceUtils.js";
-import { cusProductToEnts } from "../customers/cusProducts/cusProductUtils/convertCusProduct.js";
-import {
-  getCusPriceUsage,
-  getRelatedCusEnt,
-} from "../customers/cusProducts/cusPrices/cusPriceUtils.js";
+import { cusProductToEnts } from "@autumn/shared";
+
 import { getFeatureQuantity } from "../customers/cusProducts/cusProductUtils.js";
 import { formatAmount } from "@/utils/formatUtils.js";
 import { getIntervalString } from "../products/productUtils/productResponseUtils/getProductItemDisplay.js";
@@ -68,9 +65,11 @@ export const formatPrepaidPrice = ({
 export const formatFixedPrice = ({
   org,
   price,
+  quantity,
 }: {
   org: Organization;
   price: Price;
+  quantity?: number;
 }) => {
   const config = price.config as FixedPriceConfig;
   const amount = formatAmount({ org, amount: config.amount });
@@ -174,7 +173,11 @@ export const priceToInvoiceDescription = ({
     billingType == BillingType.FixedCycle ||
     billingType == BillingType.OneOff
   ) {
-    description = formatFixedPrice({ org: org!, price });
+    description = formatFixedPrice({
+      org: org!,
+      price,
+      quantity: cusProduct.quantity,
+    });
   }
 
   if (billingType == BillingType.InArrearProrated) {

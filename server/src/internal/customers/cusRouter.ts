@@ -9,7 +9,7 @@ import { CusService } from "./CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { handleDeleteCustomer } from "./handlers/cusDeleteHandlers.js";
+import { handleDeleteCustomer } from "./handlers/handleDeleteCustomer.js";
 import { handleUpdateBalances } from "./handlers/handleUpdateBalances.js";
 import { handleUpdateEntitlement } from "./handlers/handleUpdateEntitlement.js";
 import { handleAddCouponToCus } from "./handlers/handleAddCouponToCus.js";
@@ -21,8 +21,12 @@ import { handleGetCustomer } from "./handlers/handleGetCustomer.js";
 import { CusSearchService } from "@/internal/customers/CusSearchService.js";
 import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
 import { handleTransferProduct } from "./handlers/handleTransferProduct.js";
+import { handleBatchCustomers } from "../api/batch/handlers/handleBatchCustomers.js";
+import { toSuccessUrl } from "../orgs/orgUtils/convertOrgUtils.js";
 
 export const cusRouter: Router = Router();
+
+cusRouter.get("", handleBatchCustomers);
 
 cusRouter.post("/all/search", async (req: any, res: any) => {
   try {
@@ -46,8 +50,6 @@ cusRouter.post("/all/search", async (req: any, res: any) => {
 });
 
 cusRouter.post("", handlePostCustomerRequest);
-
-// BY CUSTOMER ID
 
 cusRouter.get("/:customer_id", handleGetCustomer);
 
@@ -121,7 +123,7 @@ cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
 
         const portal = await stripeCli.billingPortal.sessions.create({
           customer: newCus.id,
-          return_url: returnUrl || org.stripe_config.success_url,
+          return_url: returnUrl || toSuccessUrl({ org, env: req.env }),
         });
 
         if (org.api_version >= APIVersion.v1_1) {
@@ -139,7 +141,7 @@ cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
 
     const portal = await stripeCli.billingPortal.sessions.create({
       customer: customer.processor.id,
-      return_url: returnUrl || org.stripe_config?.success_url,
+      return_url: returnUrl || toSuccessUrl({ org, env: req.env }),
     });
 
     if (org.api_version >= APIVersion.v1_1) {

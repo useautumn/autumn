@@ -163,6 +163,7 @@ export const constructProduct = ({
             length: 7,
             duration: FreeTrialDuration.Day,
             unique_fingerprint: false,
+            card_required: true,
           }) as any)
         : null,
     created_at: Date.now(),

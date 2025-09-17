@@ -10,7 +10,7 @@ import {
 import Stripe from "stripe";
 import { getContUseInvoiceItems } from "./getContUseInvoiceItems.js";
 import { findPriceInStripeItems } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
-import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductToPrices } from "@autumn/shared";
 import { attachParamsToProduct } from "../convertAttachParams.js";
 import { subToAutumnInterval } from "@/external/stripe/utils.js";
 import { intervalsAreSame } from "../getAttachConfig.js";

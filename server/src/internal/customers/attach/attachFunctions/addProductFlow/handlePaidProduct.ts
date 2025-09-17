@@ -1,3 +1,5 @@
+import RecaseError from "@/utils/errorUtils.js";
+
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import {
@@ -12,24 +14,28 @@ import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import {
   APIVersion,
+  AttachBranch,
   AttachConfig,
   AttachScenario,
-  BillingInterval,
   ErrCode,
   SuccessCode,
 } from "@autumn/shared";
 import Stripe from "stripe";
-import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import {
   getEarliestPeriodEnd,
-  getLatestPeriodEnd,
   subToPeriodStartEnd,
 } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { createStripeSub2 } from "./createStripeSub2.js";
-import { addBillingIntervalUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { getSmallestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
+
 import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
+import { getCustomerSub } from "../../attachUtils/convertAttachParams.js";
+import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
+import { updateStripeSub2 } from "../upgradeFlow/updateStripeSub2.js";
+import { subToNewSchedule } from "../../mergeUtils/subToNewSchedule.js";
+import { isTrialing } from "@autumn/shared";
+import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
+import { addIntervalToAnchor } from "@/internal/products/prices/billingIntervalUtils2.js";
 
 export const handlePaidProduct = async ({
   req,
@@ -48,11 +54,10 @@ export const handlePaidProduct = async ({
     org,
     customer,
     products,
-    freeTrial,
+
     invoiceOnly,
-    cusProducts,
+
     stripeCli,
-    reward,
   } = attachParams;
 
   if (config.disableTrial) {
@@ -66,76 +71,128 @@ export const handlePaidProduct = async ({
 
   let subscriptions: Stripe.Subscription[] = [];
 
-  // Only merge if no free trials
-  let mergeCusProduct = undefined;
-  if (!config.disableMerge && !freeTrial) {
-    mergeCusProduct = cusProducts?.find((cp) =>
-      products.some((p) => p.group == cp.product.group)
-    );
-  }
-
-  let mergeSub = await cusProductToSub({
-    cusProduct: mergeCusProduct!,
-    stripeCli,
+  const { sub: mergeSub, cusProduct: mergeCusProduct } = await getCustomerSub({
+    attachParams,
   });
 
-  let billingCycleAnchorUnix = undefined;
-  if (attachParams.billingAnchor) {
-    billingCycleAnchorUnix = attachParams.billingAnchor;
-  }
+  let sub: Stripe.Subscription | null = null;
+  let schedule: Stripe.SubscriptionSchedule | null = null;
+  let trialEndsAt = undefined;
 
-  const earliestInterval = getSmallestInterval({ prices: attachParams.prices });
+  // 1. If merge sub
+  if (mergeSub && !config.disableMerge) {
+    if (mergeCusProduct?.free_trial) {
+      trialEndsAt = isTrialing({
+        cusProduct: mergeCusProduct,
+        now: attachParams.now,
+      })
+        ? mergeCusProduct.trial_ends_at
+        : undefined;
+    }
 
-  if (mergeSub) {
-    const { end } = subToPeriodStartEnd({ sub: mergeSub });
-    billingCycleAnchorUnix = end * 1000;
-  }
+    attachParams.freeTrial = null;
 
-  let newSub;
-  try {
-    newSub = await createStripeSub2({
-      db: req.db,
-      stripeCli,
+    // 1. If merged sub is canceled, also add to current schedule
+    const newItemSet = await paramsToSubItems({
+      req,
+      sub: mergeSub,
       attachParams,
-      itemSet,
-      anchorToUnix: billingCycleAnchorUnix,
-      earliestInterval,
       config,
     });
-  } catch (error: any) {
-    if (
-      error instanceof RecaseError &&
-      !invoiceOnly &&
-      error.code == ErrCode.CreateStripeSubscriptionFailed
-    ) {
-      return await handleCreateCheckout({
+
+    const { updatedSub } = await updateStripeSub2({
+      req,
+      attachParams,
+      curSub: mergeSub,
+      itemSet: newItemSet,
+      config,
+      fromCreate: true,
+    });
+
+    sub = updatedSub;
+
+    if (mergeSub.cancel_at) {
+      logger.info("ADD PRODUCT FLOW,CREATING NEW SCHEDULE");
+      schedule = await subToNewSchedule({
         req,
-        res,
+        sub: mergeSub,
         attachParams,
         config,
+        endOfBillingPeriod: mergeSub.cancel_at,
+        removeCusProducts: attachParams.cusProducts.filter((cp) => cp.canceled),
       });
     }
 
-    throw error;
-  }
+    // 1.
+  } else {
+    let billingCycleAnchorUnix = undefined;
+    const smallestInterval = getSmallestInterval({
+      prices: attachParams.prices,
+    });
 
-  subscriptions.push(newSub);
+    // 1. If anchor to start of month, get next month anchor
+    if (org.config.anchor_start_of_month) {
+      billingCycleAnchorUnix = getNextStartOfMonthUnix({
+        interval: smallestInterval!.interval,
+        intervalCount: smallestInterval!.intervalCount,
+      });
+    }
 
-  const anchorToUnix = getEarliestPeriodEnd({ sub: newSub }) * 1000;
+    // 2. If merge sub anchor, use it
+    if (mergeSub && !config.disableMerge) {
+      billingCycleAnchorUnix = addIntervalToAnchor({
+        anchorUnix: mergeSub.billing_cycle_anchor * 1000,
+        intervalConfig: smallestInterval!,
+        now: attachParams.now,
+      });
+    }
 
-  const batchInsertInvoice: any = [];
-  for (const sub of subscriptions) {
-    if (!sub.latest_invoice) continue;
-    batchInsertInvoice.push(
-      insertInvoiceFromAttach({
+    // 3. If billing cycle anchor, just use it
+    if (attachParams.billingAnchor) {
+      billingCycleAnchorUnix = attachParams.billingAnchor;
+    }
+
+    try {
+      sub = await createStripeSub2({
         db: req.db,
-        stripeInvoice: sub.latest_invoice as Stripe.Invoice,
+        stripeCli,
         attachParams,
+        itemSet,
+        billingCycleAnchorUnix,
+        config,
         logger,
-      })
-    );
+      });
+    } catch (error: any) {
+      if (
+        error instanceof RecaseError &&
+        !invoiceOnly &&
+        error.code == ErrCode.CreateStripeSubscriptionFailed
+      ) {
+        return await handleCreateCheckout({
+          req,
+          res,
+          attachParams,
+          config,
+        });
+      }
+
+      throw error;
+    }
   }
-  const invoices = await Promise.all(batchInsertInvoice);
+
+  subscriptions.push(sub);
+
+  let invoice: Stripe.Invoice | undefined;
+  if (sub?.latest_invoice) {
+    invoice = await insertInvoiceFromAttach({
+      db: req.db,
+      stripeInvoice: sub.latest_invoice as Stripe.Invoice,
+      attachParams,
+      logger,
+    });
+  }
+
+  const anchorToUnix = getEarliestPeriodEnd({ sub }) * 1000;
 
   if (config.invoiceCheckout) {
     return {
@@ -155,9 +212,11 @@ export const handlePaidProduct = async ({
         db: req.db,
         attachParams: attachToInsertParams(attachParams, product),
         subscriptionIds: subscriptions.map((s) => s.id),
+        subscriptionScheduleIds: schedule ? [schedule.id] : undefined,
         anchorToUnix,
         carryExistingUsages: config.carryUsage,
         scenario: AttachScenario.New,
+        trialEndsAt: trialEndsAt || undefined,
         logger,
       })
     );
@@ -176,7 +235,7 @@ export const handlePaidProduct = async ({
           product_ids: products.map((p) => p.id),
           customer_id: customer.id || customer.internal_id,
           invoice: invoiceOnly
-            ? attachToInvoiceResponse({ invoice: invoices?.[0] })
+            ? attachToInvoiceResponse({ invoice })
             : undefined,
         })
       );
@@ -186,81 +245,8 @@ export const handlePaidProduct = async ({
         message: `Successfully created subscriptions and attached ${products
           .map((p) => p.name)
           .join(", ")} to ${customer.name}`,
-        invoice: invoiceOnly ? invoices?.[0] : undefined,
+        invoice: invoiceOnly ? invoice : undefined,
       });
     }
   }
 };
-
-// for (let i = 0; i < itemSets.length; i++) {
-//   const itemSet = itemSets[i];
-//   if (itemSet.interval === BillingInterval.OneOff) {
-//     continue;
-//   }
-
-//   let mergeWithSub = mergeSubs.find((sub) => {
-//     let subInterval = subToAutumnInterval(sub);
-//     return !intervalsDifferent({
-//       intervalA: {
-//         interval: subInterval.interval,
-//         intervalCount: subInterval.intervalCount,
-//       },
-//       intervalB: {
-//         interval: itemSet.interval,
-//         intervalCount: itemSet.intervalCount,
-//       },
-//     });
-//   });
-
-//   let subscription;
-//   try {
-//     let billingCycleAnchorUnix;
-//     if (org.config.anchor_start_of_month) {
-//       billingCycleAnchorUnix = getNextStartOfMonthUnix({
-//         interval: itemSet.interval,
-//         intervalCount: itemSet.intervalCount,
-//       });
-//     }
-
-// if (attachParams.billingAnchor) {
-//   billingCycleAnchorUnix = attachParams.billingAnchor;
-// }
-
-// if (mergeWithSub) {
-//   billingCycleAnchorUnix =
-//     mergeWithSub.items.data[0].current_period_end * 1000;
-// }
-
-//     subscription = await createStripeSub({
-//       db: req.db,
-//       stripeCli,
-//       customer,
-//       org,
-//       freeTrial,
-//       invoiceOnly,
-//       itemSet,
-//       finalizeInvoice: config.invoiceCheckout,
-//       anchorToUnix: billingCycleAnchorUnix,
-//       reward: i == 0 ? reward : undefined,
-//       now: attachParams.now,
-//     });
-
-//     let sub = subscription as Stripe.Subscription;
-
-//     subscriptions.push(sub);
-//   } catch (error: any) {
-// if (
-//   error instanceof RecaseError &&
-//   !invoiceOnly &&
-//   error.code == ErrCode.CreateStripeSubscriptionFailed
-// ) {
-//   return await handleCreateCheckout({
-//     req,
-//     res,
-//     attachParams,
-//   });
-// }
-
-//     throw error;
-//   }
-// }

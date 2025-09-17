@@ -20,7 +20,8 @@ export const CusProductStatusItem = ({
     const trialing =
       cusProduct.trial_ends_at && cusProduct.trial_ends_at > Date.now();
 
-    const canceled = notNullish(cusProduct.canceled_at);
+    const canceled = cusProduct.canceled;
+
     if (canceled) return "canceled";
 
     if (trialing) {
@@ -60,15 +61,6 @@ export const CusProductStatusItem = ({
       >
         {getTitle()}
       </Badge>
-      {/* {isCanceled && (
-        <Badge variant="status" className="ml-2 bg-gray-500">
-          canceled
-        </Badge>
-      )} */}
-
-      {/* <span className="text-t3">
-        ends {formatUnixToDateTime(cusProduct.trial_ends_at).date}
-      </span> */}
 
       <CusProductStripeLink cusProduct={cusProduct} />
     </div>

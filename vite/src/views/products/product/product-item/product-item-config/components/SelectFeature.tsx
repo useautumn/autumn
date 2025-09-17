@@ -3,14 +3,15 @@ import {
   CustomDialogFooter,
 } from "@/components/general/modal-components/DialogContentWrapper";
 import { DialogHeader } from "@/components/ui/dialog";
-import { useProductContext } from "@/views/products/product/ProductContext";
+
 import { Feature, FeatureType } from "@autumn/shared";
 import { useProductItemContext } from "../../ProductItemContext";
 import { isFeaturePriceItem } from "@/utils/product/getItemType";
-import { FeatureTypeBadge } from "@/views/features/FeatureTypeBadge";
+import { FeatureTypeBadge } from "@/views/products/features/components/FeatureTypeBadge";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus } from "lucide-react";
 import { CreateItemStep } from "../../utils/CreateItemStep";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export const SelectFeatureStep = ({
   popStep,
@@ -19,7 +20,7 @@ export const SelectFeatureStep = ({
   popStep: () => void;
   pushStep: (step: CreateItemStep) => void;
 }) => {
-  const { features } = useProductContext();
+  const { features } = useFeaturesQuery();
   const { item } = useProductItemContext();
 
   return (

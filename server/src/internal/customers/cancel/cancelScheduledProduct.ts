@@ -20,7 +20,7 @@ export const cancelScheduledProduct = async ({
 
   // 1. Delete subscription schedule if exists
   if (curScheduledProduct) {
-    const { schedule, prices } = await cusProductToSchedule({
+    const schedule = await cusProductToSchedule({
       cusProduct: curScheduledProduct,
       stripeCli,
     });

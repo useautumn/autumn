@@ -37,10 +37,10 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
               className={cn(
                 `flex h-full w-full ${gradientBg} py-2 text-sm file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground shadow-none outline-none border-none focus-visible:outline-none focus-visible:border-none focus-visible:shadow-none
                 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none
-                
                 p-2
                 `,
-                className
+                className,
+                props.disabled && "text-t3"
               )}
               ref={ref}
               {...props}
@@ -53,7 +53,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           <input
             type={type}
             className={cn(
-              `flex w-full rounded-md border border-zinc-200 ${gradientBg} px-3 py-1 text-base transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-zinc-950 placeholder:text-zinc-500 disabled:cursor-not-allowed disabled:opacity-50
+              `flex w-full rounded-md border border-zinc-200 ${gradientBg} px-3 py-1 text-sm md:text-base transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-zinc-950 placeholder:text-zinc-500 disabled:cursor-not-allowed disabled:opacity-50
             md:text-sm dark:border-zinc-800 dark:file:text-zinc-50 dark:placeholder:text-zinc-400
             
             p-2 h-8 shadow-sm 

@@ -2,6 +2,7 @@ import {
   AllowanceType,
   FeatureType,
   FullCusEntWithFullCusProduct,
+  FullCusProduct,
   FullCustomerEntitlement,
 } from "@autumn/shared";
 
@@ -22,6 +23,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { CusProductEntityItem } from "../components/CusProductEntityItem";
 import { CusEntBalance } from "./CusEntBalance";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useCusQuery } from "../hooks/useCusQuery";
 
 export const CustomerEntitlementsList = () => {
   const [featureType, setFeatureType] = useState<FeatureType>(
@@ -29,8 +32,8 @@ export const CustomerEntitlementsList = () => {
   );
   const [showExpired, setShowExpired] = useState(false);
 
-  const { products, customer, entities, entityId, showEntityView } =
-    useCustomerContext();
+  const { entityId, showEntityView } = useCustomerContext();
+  const { customer, products, features, entities } = useCusQuery();
 
   const [selectedCusEntitlement, setSelectedCusEntitlement] =
     useState<FullCustomerEntitlement | null>(null);
@@ -67,11 +70,10 @@ export const CustomerEntitlementsList = () => {
       if (entityId) {
         entityMatch = false;
 
-        const cusProduct = customer.products.find(
+        const cusProduct = customer.customer_products.find(
           (p: any) => p.id === cusEnt.customer_product_id
         );
 
-        // 1. Product match
         const productAttachedToEntity =
           cusProduct?.internal_entity_id === entity?.internal_id;
 
@@ -154,7 +156,7 @@ export const CustomerEntitlementsList = () => {
 
   return (
     <div>
-      <div className="flex items-center grid grid-cols-10 gap-8 justify-between border-y bg-stone-100 px-10 h-10">
+      <div className="items-center grid grid-cols-10 gap-8 justify-between border-y bg-stone-100 px-10 h-10">
         <h2 className="text-sm text-t2 font-medium col-span-2 flex whitespace-nowrap">
           Available Features
         </h2>
@@ -231,7 +233,6 @@ export const CustomerEntitlementsList = () => {
 
       {filteredEntitlements.map((cusEnt: FullCusEntWithFullCusProduct) => {
         const entitlement = cusEnt.entitlement;
-        const allowanceType = entitlement.allowance_type;
 
         return (
           <Row
@@ -265,8 +266,8 @@ export const CustomerEntitlementsList = () => {
               <div className="flex items-center gap-2 max-w-[150px] truncate text-t3">
                 {/* {getProductName(cusEnt)} */}
                 {cusEnt.customer_product.product.name}
-                {customer.products.find(
-                  (p: any) => p.id === cusEnt.customer_product_id
+                {customer.customer_products.find(
+                  (cp: FullCusProduct) => cp.id === cusEnt.customer_product_id
                 )?.status === "expired" && (
                   <Badge variant="status" className="bg-black">
                     expired

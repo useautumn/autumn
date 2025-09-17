@@ -1,12 +1,10 @@
-import { AppEnv } from "@autumn/shared";
+import { AppEnv, FrontendOrg } from "@autumn/shared";
 import CopyButton from "@/components/general/CopyButton";
 import { useEnv } from "@/utils/envUtils";
+import { useOrg } from "@/hooks/common/useOrg";
 
-export const PublishableKeySection = ({
-  org,
-}: {
-  org: { test_pkey: string; live_pkey: string };
-}) => {
+export const PublishableKeySection = () => {
+  const { org } = useOrg();
   const env = useEnv();
   return (
     <div>
@@ -21,9 +19,12 @@ export const PublishableKeySection = ({
         </p>
         <div className="flex flex-col gap-2 w-fit rounded-sm ">
           {env === AppEnv.Sandbox ? (
-            <CopyPublishableKey type="Sandbox" value={org?.test_pkey} />
+            <CopyPublishableKey type="Sandbox" value={org?.test_pkey || ""} />
           ) : (
-            <CopyPublishableKey type="Production" value={org?.live_pkey} />
+            <CopyPublishableKey
+              type="Production"
+              value={org?.live_pkey || ""}
+            />
           )}
         </div>
       </div>

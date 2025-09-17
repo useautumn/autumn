@@ -8,11 +8,15 @@ import { Row, Item } from "@/components/general/TableGrid";
 import { AdminHover } from "@/components/general/AdminHover";
 import { cn } from "@/lib/utils";
 import { CusProductEntityItem } from "./components/CusProductEntityItem";
+import { useCusQuery } from "./hooks/useCusQuery";
 
 export const InvoicesTable = () => {
-  const { env, invoices, products, entityId, entities, showEntityView } =
-    useCustomerContext();
-  const axiosInstance = useAxiosInstance({ env });
+  // const { env, invoices, products, entityId, entities, showEntityView } =
+  //   useCustomerContext();
+  const { entityId, showEntityView } = useCustomerContext();
+  const { customer, products, entities } = useCusQuery();
+  const axiosInstance = useAxiosInstance();
+  const invoices = customer.invoices;
 
   const entity = entities.find(
     (e: any) => e.id === entityId || e.internal_id === entityId
@@ -100,7 +104,7 @@ export const InvoicesTable = () => {
             >
               {invoice.product_ids
                 .map((p: string) => {
-                  return products.find((product: Product) => product.id === p)
+                  return products.find((product: any) => product.id === p)
                     ?.name;
                 })
                 .join(", ")}
