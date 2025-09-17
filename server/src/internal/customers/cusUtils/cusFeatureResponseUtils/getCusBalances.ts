@@ -15,11 +15,11 @@ import { notNullish, notNullOrUndefined } from "@/utils/genUtils.js";
 
 import { BREAK_API_VERSION } from "@/utils/constants.js";
 import {
-  getCusEntBalance,
   getRelatedCusPrice,
   getResetBalance,
   getUnlimitedAndUsageAllowed,
 } from "../../cusProducts/cusEnts/cusEntUtils.js";
+import { getCusEntBalance } from "@autumn/shared";
 
 export interface CusFeatureBalance {
   feature_id: string;

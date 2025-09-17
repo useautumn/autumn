@@ -70,16 +70,12 @@ export const sendSvixThresholdReachedEvent = async ({
   });
 
   if (fullCus.entity) {
-    const entities = await EntityService.list({
-      db,
-      internalCustomerId: fullCus.internal_id,
-    });
-    fullCus.entities = entities;
     await getSingleEntityResponse({
       org,
       env,
       features,
       fullCus,
+      entity: fullCus.entity,
       entityId: fullCus.entity.id,
     });
   }
@@ -240,15 +236,11 @@ export const handleThresholdReached = async ({
       });
 
       if (fullCus.entity) {
-        const entities = await EntityService.list({
-          db,
-          internalCustomerId: fullCus.internal_id,
-        });
-        fullCus.entities = entities;
         await getSingleEntityResponse({
           org,
           env,
           features,
+          entity: fullCus.entity,
           fullCus,
           entityId: fullCus.entity.id,
         });

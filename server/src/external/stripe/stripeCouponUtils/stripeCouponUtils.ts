@@ -10,11 +10,20 @@ import {
   UsagePriceConfig,
   RewardType,
   AppEnv,
+  FullProduct,
+  FixedPriceConfig,
 } from "@autumn/shared";
 import { Stripe } from "stripe";
 import { createStripeCli } from "../utils.js";
 
 const couponToStripeDuration = (coupon: Reward) => {
+  if (coupon.type === RewardType.FreeProduct) {
+    return {
+      duration: "repeating",
+      duration_in_months: coupon.free_product_config?.duration_value,
+    };
+  }
+
   let discountConfig = coupon.discount_config;
   if (
     coupon.type == RewardType.InvoiceCredits &&
@@ -45,10 +54,26 @@ const couponToStripeDuration = (coupon: Reward) => {
 const couponToStripeValue = ({
   reward,
   org,
+  prices,
 }: {
   reward: Reward;
   org: Organization;
+  prices?: (Price & { product: Product })[];
 }) => {
+  if (reward.type === RewardType.FreeProduct) {
+    const amountOff = Math.round(
+      prices?.reduce(
+        (acc, price) => acc + (price.config as FixedPriceConfig).amount,
+        0
+      ) || 0
+    );
+
+    return {
+      amount_off: Math.round(amountOff * 100),
+      currency: org.default_currency || "usd",
+    };
+  }
+
   let discountConfig = reward.discount_config;
   if (reward.type === RewardType.PercentageDiscount) {
     return {
@@ -126,16 +151,17 @@ export const createStripeCoupon = async ({
     // id: reward.internal_id,
     id: reward.id,
     ...(couponToStripeDuration(reward) as any),
-    ...(couponToStripeValue({ reward, org }) as any),
+    ...(couponToStripeValue({ reward, org, prices }) as any),
     name: reward.name,
     metadata: {
       autumn_internal_id: reward.internal_id,
     },
-    applies_to: !discountConfig!.apply_to_all
-      ? {
-          products: stripeProdIds,
-        }
-      : undefined,
+    applies_to:
+      reward.type === RewardType.FreeProduct || !discountConfig!.apply_to_all
+        ? {
+            products: stripeProdIds,
+          }
+        : undefined,
   });
 
   // Create promo codes

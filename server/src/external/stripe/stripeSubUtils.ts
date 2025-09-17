@@ -216,7 +216,9 @@ export const getStripeSchedules = async ({
 
       const batchPricesGet = [];
       for (const item of schedule.phases[0].items) {
-        batchPricesGet.push(stripeCli.prices.retrieve(item.price as string));
+        batchPricesGet.push(
+          stripeCli.prices.retrieve((item.price as Stripe.Price).id as string)
+        );
       }
       const prices = await Promise.all(batchPricesGet);
       const interval = prices[0].recurring?.interval;

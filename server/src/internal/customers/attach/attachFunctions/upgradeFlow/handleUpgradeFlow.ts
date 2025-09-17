@@ -207,6 +207,7 @@ export const handleUpgradeFlow = async ({
       carryExistingUsages: config.carryUsage,
       carryOverTrial: config.carryTrial,
       anchorToUnix: anchorToUnix,
+      scenario: AttachScenario.Upgrade,
       logger,
     });
   }

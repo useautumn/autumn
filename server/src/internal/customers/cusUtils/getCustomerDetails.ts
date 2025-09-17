@@ -82,7 +82,6 @@ export const getCustomerDetails = async ({
     subs,
     org,
     apiVersion,
-    entities: customer.entities,
     features,
   });
 

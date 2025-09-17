@@ -1,6 +1,6 @@
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
-import { cusProductToProduct } from "@autumn/shared";
+import { CusProductStatus, cusProductToProduct } from "@autumn/shared";
 import Stripe from "stripe";
 
 export const attachParamsToCurCusProduct = ({
@@ -134,19 +134,6 @@ export const getCustomerSub = async ({
   // If there's only one customer product on sub, and it's still trialing, return undefined, because should just replace sub.
   const curCusProduct = attachParamsToCurCusProduct({ attachParams });
 
-  // const cusProductsOnSub = cusProducts.filter(
-  //   (cp) =>
-  //     cp.subscription_ids?.includes(cusProduct.subscription_ids![0]) &&
-  //     curCusProduct?.id !== cp.id
-  // );
-
-  // if (
-  //   cusProductsOnSub.length === 1 &&
-  //   isTrialing({ cusProduct, now: attachParams.now })
-  // ) {
-  //   return { sub: undefined, cusProduct: undefined };
-  // }
-
   const sub = await stripeCli.subscriptions.retrieve(subId, {
     expand: [
       "items.data.price.tiers",
@@ -156,6 +143,80 @@ export const getCustomerSub = async ({
   });
 
   return { subId, sub, cusProduct };
+};
+
+export const getCustomerSchedule = async ({
+  attachParams,
+  subId,
+  logger,
+}: {
+  attachParams: AttachParams;
+  subId?: string;
+  logger: any;
+}) => {
+  const { stripeCli } = attachParams;
+  const fullCus = attachParams.customer;
+  let cusProducts = fullCus.customer_products;
+
+  const targetGroup = attachParams.products[0].group;
+  const targetEntityId = attachParams.internalEntityId || null;
+  const targetProductId = attachParams.products[0].id;
+
+  cusProducts.sort((a, b) => {
+    // 1. Check same group
+    const aGroupMatches = a.product.group === targetGroup;
+    const bGroupMatches = b.product.group === targetGroup;
+
+    if (aGroupMatches && !bGroupMatches) return -1;
+    if (!aGroupMatches && bGroupMatches) return 1;
+
+    // 2. Check main product
+    const aMain = !a.product.is_add_on;
+    const bMain = !b.product.is_add_on;
+
+    if (aMain && !bMain) return -1;
+    if (!aMain && bMain) return 1;
+
+    // 3. Check same product
+    const aProductIdMatches = a.product.id === targetProductId;
+    const bProductIdMatches = b.product.id === targetProductId;
+
+    if (aProductIdMatches && !bProductIdMatches) return -1;
+    if (!aProductIdMatches && bProductIdMatches) return 1;
+
+    // 4. Check same entity
+    const aEntityIdMatches = (a.internal_entity_id || null) === targetEntityId;
+    const bEntityIdMatches = (b.internal_entity_id || null) === targetEntityId;
+
+    if (aEntityIdMatches && !bEntityIdMatches) return -1;
+    if (!aEntityIdMatches && bEntityIdMatches) return 1;
+
+    return 0;
+  });
+
+  // const subId = cusProducts.flatMap((cp) => cp.subscription_ids || [])?.[0];
+  const scheduleIds = cusProducts.flatMap((cp) => cp.scheduled_ids || []);
+  if (scheduleIds.length === 0) return { schedule: undefined };
+
+  try {
+    const schedules = await stripeCli.subscriptionSchedules.list({
+      customer: fullCus.processor.id!,
+      expand: ["data.phases.items.price"],
+    });
+
+    const schedule = schedules.data.find(
+      (schedule) =>
+        scheduleIds.includes(schedule.id) &&
+        (subId ? schedule.subscription === subId : true)
+    );
+
+    return { schedule };
+  } catch (error: any) {
+    logger.error(`Error getting schedule, ids: ${scheduleIds}`, {
+      message: error.message,
+    });
+    return { schedule: undefined };
+  }
 };
 
 export const paramsToCurSub = async ({
@@ -205,12 +266,6 @@ export const paramsToCurSubSchedule = async ({
   if (schedule.status == "canceled") {
     return undefined;
   }
-
-  // const batchPricesGet = [];
-  // for (const item of schedule.phases[0].items) {
-  //   batchPricesGet.push(stripeCli.prices.retrieve(item.price as string));
-  // }
-  // const prices = await Promise.all(batchPricesGet);
 
   return schedule as Stripe.SubscriptionSchedule;
 };
