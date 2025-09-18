@@ -21,17 +21,16 @@ export const FreeDurationSelect = ({
 		<div className="w-full">
 			<FieldLabel>Duration</FieldLabel>
 			<div className="flex items-center gap-2">
-				{reward.free_product_config?.duration_type ===
-					CouponDurationType.Months && (
+				{
 					<Input
 						className="no-spinner"
 						value={Number(reward.free_product_config?.duration_value) || ""}
 						onChange={(e) => {
-                            setReward({
+							setReward({
 								...reward,
-                                // @ts-expect-error
+								// @ts-expect-error
 								free_product_config: {
-                                    ...(reward.free_product_config ?? {}),
+									...(reward.free_product_config ?? {}),
 									duration_value: Number(e.target.value),
 								},
 							});
@@ -40,13 +39,13 @@ export const FreeDurationSelect = ({
 						min={1}
 						max={12}
 					/>
-				)}
+				}
 				<Select
-					value={reward.free_product_config?.duration_type}
+					value={reward.free_product_config?.duration_type || CouponDurationType.Months}
 					onValueChange={(value) =>
 						setReward({
 							...reward,
-                            // @ts-expect-error
+							// @ts-expect-error
 							free_product_config: {
 								...(reward.free_product_config ?? {}),
 								duration_type: value as CouponDurationType,
