@@ -32,6 +32,7 @@ const RewardRedemptionSchema = z.object({
 
 	// Whether the (coupon) was applied
 	applied: z.boolean(),
+	redeemer_applied: z.boolean(),
 });
 
 export type ReferralCode = z.infer<typeof ReferralCodeSchema>;
