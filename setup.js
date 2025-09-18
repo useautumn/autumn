@@ -103,13 +103,27 @@ const getOrCreateSupabaseOrg = async () => {
 };
 
 const generateSupabaseDatabaseUrl = async () => {
-  // Step 3: Run supabase login
+  // Step 3: Check if already logged in, otherwise run supabase login
   console.log(
     chalk.magentaBright("\n================ Supabase Setup ================\n")
   );
 
-  console.log(chalk.blueBright("\nLaunching Supabase login..."));
-  spawnSync("npx", ["supabase", "login"], { stdio: "inherit", shell: true });
+  // Check if user is already logged in by trying to list orgs
+  console.log(chalk.blueBright("\nChecking Supabase authentication..."));
+  const authCheckResult = spawnSync("npx", ["supabase", "orgs", "list"], {
+    encoding: "utf-8",
+    shell: true,
+    stdio: "pipe", // Capture output instead of showing it
+  });
+
+  if (authCheckResult.status !== 0) {
+    // User is not logged in
+    console.log(chalk.yellowBright("Not logged in to Supabase."));
+    console.log(chalk.blueBright("Launching Supabase login..."));
+    spawnSync("npx", ["supabase", "login"], { stdio: "inherit", shell: true });
+  } else {
+    console.log(chalk.greenBright("✅ Already logged in to Supabase."));
+  }
 
   // Step 3.5: Ensure org exists and select one
   await getOrCreateSupabaseOrg();
@@ -222,76 +236,6 @@ const handleDatabaseSetup = async () => {
   return databaseUrl;
 };
 
-const handleLocalRunSetup = async () => {
-  // Step 10: Stripe webhook URL setup
-  console.log(
-    chalk.magentaBright(
-      "\n================ Stripe Webhook Setup ================\n"
-    )
-  );
-  const { webhookOption } = await inquirer.prompt([
-    {
-      type: "list",
-      name: "webhookOption",
-      message: chalk.cyan(
-        "Stripe requires a public URL to send webhook events to your app.\nThis is read from the STRIPE_WEBHOOK_URL environment variable.\n\nWould you like to:"
-      ),
-      choices: [
-        {
-          name: "1. Generate a localtunnel URL (recommended for local development)",
-          value: "localtunnel",
-        },
-        {
-          name: "2. Skip for now and paste in your own URL later",
-          value: "skip",
-        },
-      ],
-      default: "localtunnel",
-    },
-  ]);
-
-  let stripeWebhookVars = [];
-
-  if (webhookOption === "localtunnel") {
-    const subdomain = genRandomSubdomain(32);
-    const webhookUrl = `https://${subdomain}.loca.lt`;
-    stripeWebhookVars.push(`STRIPE_WEBHOOK_URL=${webhookUrl}`);
-    stripeWebhookVars.push(`LOCALHOST_RUN_SUBDOMAIN=${subdomain}`);
-    console.log(
-      chalk.greenBright(
-        `\nTo start your webhook tunnel, run this in another terminal:\n`
-      )
-    );
-    console.log(
-      chalk.yellowBright(
-        `  npx localtunnel --port 8080 --subdomain ${subdomain}\n`
-      )
-    );
-    console.log(chalk.greenBright(`\nTest your webhook URL with:\n`));
-    console.log(chalk.yellowBright(`  curl ${webhookUrl}\n`));
-    console.log(
-      chalk.cyan(
-        "If you need to restart the tunnel in the future, use the same command."
-      )
-    );
-  } else if (webhookOption === "paste") {
-    const { stripeWebhookUrl } = await inquirer.prompt([
-      {
-        type: "input",
-        name: "stripeWebhookUrl",
-        message: chalk.cyan("Paste in your STRIPE_WEBHOOK_URL:"),
-        validate: (input) => input && input.length > 5,
-      },
-    ]);
-    stripeWebhookVars.push(`STRIPE_WEBHOOK_URL=${stripeWebhookUrl}`);
-  } else {
-    // skip
-  }
-
-  console.log(chalk.yellow("--------------------------------"));
-
-  return stripeWebhookVars;
-};
 
 async function main() {
   // Step 1: Generate secrets
@@ -365,52 +309,11 @@ async function main() {
   console.log(chalk.greenBright("🎉 Setup complete! 🎉"));
   console.log(chalk.cyan("You can find your env variables in server/.env"));
 
-  // Prompt to run pnpm run db:push at the end
-  const { runDbPush } = await inquirer.prompt([
-    {
-      type: "confirm",
-      name: "runDbPush",
-      message: chalk.cyan(
-        'Would you like to run "bun run db:push" to set up your tables now?'
-      ),
-      default: true,
-    },
-  ]);
-
-  if (runDbPush) {
-    console.log(
-      chalk.blueBright('\nRunning "bun run db:push" in shared directory...')
-    );
-    const dbPushResult = spawnSync("bun", ["run", "db:push"], {
-      stdio: "inherit",
-      encoding: "utf-8",
-      shell: true,
-      cwd: "shared",
-      env: {
-        ...process.env,
-        NODE_OPTIONS: "--import tsx",
-        DATABASE_URL: databaseUrl,
-      },
-    });
-    if (dbPushResult.status !== 0) {
-      console.error(
-        chalk.red(
-          '❌ Failed to run "bun run db:push". Please check the error above.'
-        )
-      );
-      console.error(
-        chalk.yellow(
-          "⚠️  Tip: Ensure that the DATABASE_URL in your server env is using the Supabase pooler URL (transaction/session pooler)."
-        )
-      );
-      process.exit(1);
-    }
-    console.log(chalk.greenBright('✅ Successfully ran "bun run db:push".'));
-  }
-
-  console.log(chalk.cyan("\nNext steps:"));
-  console.log(chalk.cyan("Run the following command to start Autumn:"));
-  console.log(chalk.cyan("  docker compose -f docker-compose.dev.yml up"));
+  console.log(chalk.cyan("\nNext steps:\n"));
+  console.log(chalk.cyan("1. Set up your database tables:\n"));
+  console.log(chalk.whiteBright("   bun db:generate && bun db:migrate\n"));
+  console.log(chalk.cyan("2. Start Autumn:\n"));
+  console.log(chalk.whiteBright("   docker compose -f docker-compose.dev.yml up\n"));
 }
 
 main();
