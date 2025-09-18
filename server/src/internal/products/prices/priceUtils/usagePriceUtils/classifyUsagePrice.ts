@@ -8,7 +8,7 @@ import {
   Price,
   UsagePriceConfig,
 } from "@autumn/shared";
-import { getBillingType } from "../../priceUtils.js";
+import { formatPrice, getBillingType } from "../../priceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import Stripe from "stripe";
 import { Decimal } from "decimal.js";
@@ -82,6 +82,7 @@ export const hasPrepaidPrice = ({
   return prices.some((price) => {
     let isUsage = getBillingType(price.config) == BillingType.UsageInAdvance;
     let isOneOff = price.config.interval == BillingInterval.OneOff;
+
     return isUsage && (excludeOneOff ? !isOneOff : true);
   });
 };
