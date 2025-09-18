@@ -27,8 +27,10 @@ export const getAttachBody = ({
   successUrl?: string;
   version?: number;
 }) => {
-  const isCustom = attachState.itemsChanged;
-  const customData = attachState.itemsChanged
+  const isCustom =
+    attachState.itemsChanged || attachState.cusProduct?.is_custom;
+
+  const customData = isCustom
     ? {
         items: product.items,
         free_trial: product.free_trial,

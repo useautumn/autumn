@@ -115,7 +115,7 @@ export const getV2CheckResponse = async ({
   if (
     (cusFeature && unlimited) ||
     usageAllowed ||
-    // cusFeature.balance >= (requiredBalance || 1)
+    (requiredBalance && requiredBalance < 0) ||
     cusFeature.balance + totalPaidUsageAllowance >= (requiredBalance || 1)
   ) {
     allowed = true;
