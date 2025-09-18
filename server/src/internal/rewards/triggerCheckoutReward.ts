@@ -10,7 +10,8 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { RewardProgramService } from "../rewards/RewardProgramService.js";
 import { RewardRedemptionService } from "./RewardRedemptionService.js";
-import { triggerFreeProduct, triggerRedemption } from "./referralUtils.js";
+import { triggerFreeProduct } from "./referralUtils/triggerFreeProduct.js";
+import { triggerRedemption } from "./referralUtils.js";
 import { getRewardCat } from "./rewardUtils.js";
 export const runTriggerCheckoutReward = async ({
 	db,
@@ -107,6 +108,7 @@ export const runTriggerCheckoutReward = async ({
 			const rewardCat = getRewardCat(reward);
 			if (rewardCat === RewardCategory.FreeProduct) {
 				await triggerFreeProduct({
+					req: undefined,
 					db,
 					referralCode,
 					redeemer: customer,
