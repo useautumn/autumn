@@ -175,6 +175,7 @@ const buildInvoicesCTE = (hasEntityCTE: boolean) => {
     ? sql`AND (
       NOT EXISTS (SELECT 1 FROM entity_record) 
       OR i.internal_entity_id = (SELECT internal_id FROM entity_record LIMIT 1)
+      OR i.internal_entity_id IS NULL
     )`
     : sql``;
 

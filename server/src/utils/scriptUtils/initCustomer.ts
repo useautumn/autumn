@@ -9,6 +9,7 @@ import {
 import { CusService } from "@/internal/customers/CusService.js";
 import Stripe from "stripe";
 import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 
 export const createCusInStripe = async ({
   customer,
@@ -59,7 +60,7 @@ export const initCustomer = async ({
   attachPm,
   withTestClock = true,
 }: {
-  autumn: Autumn;
+  autumn: Autumn | AutumnInt;
   customerId: string;
   fingerprint?: string;
   org: Organization;

@@ -121,11 +121,10 @@ export const handleSchedulePhaseCompleted = async ({
           scheduled_ids: [],
         },
       });
-    } catch (error) {
+    } catch (error: any) {
       logger.error(
-        `schedule.phase.completed: failed to cancel schedule ${schedule.id}`
+        `schedule.phase.completed: failed to cancel schedule ${schedule.id}, error: ${error.message}`
       );
-      logger.error({ error });
     }
   }
   // const currentPhase = schedule.phases.find(

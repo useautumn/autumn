@@ -41,16 +41,16 @@ export const getCusProductResponse = async ({
   cusProduct,
   subs,
   org,
-  entities = [],
   apiVersion,
   features,
+  entity,
 }: {
   cusProduct: FullCusProduct;
   org: Organization;
   subs?: Subscription[];
-  entities?: Entity[];
   apiVersion: number;
   features: Feature[];
+  entity?: Entity;
 }) => {
   // Process prices
 
@@ -184,11 +184,12 @@ export const getCusProductResponse = async ({
 
       // stripe_subscription_ids: cusProduct.subscription_ids || [],
       started_at: cusProduct.starts_at,
-      entity_id: cusProduct.internal_entity_id
-        ? entities?.find(
-            (e: Entity) => e.internal_id == cusProduct.internal_entity_id
-          )?.id
-        : cusProduct.entity_id || undefined,
+      entity_id: entity?.id || cusProduct.entity_id || undefined,
+      // entity_id: cusProduct.internal_entity_id
+      //   ? entities?.find(
+      //       (e: Entity) => e.internal_id == cusProduct.internal_entity_id
+      //     )?.id
+      //   : cusProduct.entity_id || undefined,
 
       ...stripeSubData,
       items: v2Product.items,

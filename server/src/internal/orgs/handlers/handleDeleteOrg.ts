@@ -44,22 +44,20 @@ const deleteStripeWebhooks = async ({
   org: Organization;
   logger: any;
 }) => {
-  if (org.stripe_config) {
-    try {
-      await deleteStripeWebhook({
-        org: org,
-        env: AppEnv.Sandbox,
-      });
+  try {
+    await deleteStripeWebhook({
+      org: org,
+      env: AppEnv.Sandbox,
+    });
 
-      await deleteStripeWebhook({
-        org: org,
-        env: AppEnv.Live,
-      });
-    } catch (error: any) {
-      logger.error(
-        `Failed to delete stripe webhooks for ${org.id}, ${org.slug}. ${error.message})`
-      );
-    }
+    await deleteStripeWebhook({
+      org: org,
+      env: AppEnv.Live,
+    });
+  } catch (error: any) {
+    logger.error(
+      `Failed to delete stripe webhooks for ${org.id}, ${org.slug}. ${error.message})`
+    );
   }
 };
 
