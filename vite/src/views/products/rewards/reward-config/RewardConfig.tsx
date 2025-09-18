@@ -214,13 +214,7 @@ export const RewardConfig = ({
 							);
 						}
 
-						return (
-							<div className="mt-3">
-								<WarningBox>
-									Users will simply receive this product for free.
-								</WarningBox>
-							</div>
-						);
+						return;
 					})()}
 				</div>
 			) : notNullish(reward.type) ? (
