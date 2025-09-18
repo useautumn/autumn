@@ -90,7 +90,7 @@ export const CreateFeature = ({
 
   return (
     <>
-      <CustomDialogBody className="overflow-y-auto w-[90%]">
+      <CustomDialogBody className="overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create Feature</DialogTitle>
         </DialogHeader>
@@ -124,7 +124,7 @@ export const CreateFeatureDialog = () => {
           Feature
         </Button>
       </DialogTrigger>
-      <CustomDialogContent>
+      <CustomDialogContent className="w-[90%]">
         <CreateFeature setOpen={setOpen} open={open} />
       </CustomDialogContent>
     </Dialog>
