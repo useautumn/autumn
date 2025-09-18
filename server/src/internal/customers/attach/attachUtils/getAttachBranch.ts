@@ -99,9 +99,7 @@ const getOptionsToUpdate = ({
       internalFeatureId: internalFeatureId!,
     });
 
-    if (price?.config.interval == BillingInterval.OneOff) {
-      continue;
-    }
+    if (price?.config.interval == BillingInterval.OneOff) continue;
 
     if (existingOptions && existingOptions.quantity !== newOptions.quantity) {
       optionsToUpdate.push({
@@ -117,9 +115,13 @@ const getOptionsToUpdate = ({
 export const checkSameCustom = async ({
   attachParams,
   curSameProduct,
+  fromPreview,
+  optionsToUpdate,
 }: {
   attachParams: AttachParams;
   curSameProduct: FullCusProduct;
+  fromPreview?: boolean;
+  optionsToUpdate: { new: FeatureOptions; old: FeatureOptions }[];
 }) => {
   let product = attachParams.products[0];
 
@@ -136,6 +138,19 @@ export const checkSameCustom = async ({
   });
 
   if (itemsSame && freeTrialsSame) {
+    if (
+      fromPreview &&
+      hasPrepaidPrice({ prices: attachParams.prices, excludeOneOff: true })
+    ) {
+      return AttachBranch.UpdatePrepaidQuantity;
+    }
+
+    // 1. If prepaid quantity changed
+    if (optionsToUpdate.length > 0) {
+      attachParams.optionsToUpdate = optionsToUpdate;
+      return AttachBranch.UpdatePrepaidQuantity;
+    }
+
     throw new RecaseError({
       message: `Items specified for ${product.name} are the same as the existing product, can't attach again`,
       code: ErrCode.InvalidRequest,
@@ -175,29 +190,25 @@ const getSameProductBranch = async ({
     return AttachBranch.NewVersion;
   }
 
-  // 2. Same custom?
-
-  if (attachParams.isCustom && curScheduledProduct?.product.id !== product.id) {
-    return await checkSameCustom({ attachParams, curSameProduct });
-  }
-
   let optionsToUpdate = getOptionsToUpdate({
     oldOptionsList: curSameProduct.options,
     newOptionsList: attachParams.optionsList,
     curSameProduct,
   });
 
+  // 2. Same custom?
+  if (attachParams.isCustom && curScheduledProduct?.product.id !== product.id) {
+    return await checkSameCustom({
+      attachParams,
+      curSameProduct,
+      fromPreview,
+      optionsToUpdate,
+    });
+  }
+
   // 1. If prepaid quantity changed
   if (optionsToUpdate.length > 0) {
     attachParams.optionsToUpdate = optionsToUpdate;
-    if (attachParams.isCustom) {
-      throw new RecaseError({
-        message: `Not allowed to update prepaid quantity for current product if is_custom is true`,
-        code: ErrCode.InternalError,
-        statusCode: 500,
-      });
-    }
-
     return AttachBranch.UpdatePrepaidQuantity;
   }
 

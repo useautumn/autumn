@@ -134,7 +134,9 @@ export const getV1CheckResponse = ({
     balances.push(newBalance);
 
     // allowed = allowed && actual! >= required;
-    allowed = actual! + (totalPaidAllowance || 0) >= required;
+    allowed =
+      (required && required < 0) ||
+      actual! + (totalPaidAllowance || 0) >= required;
 
     if (allowed) {
       break;
