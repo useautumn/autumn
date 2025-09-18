@@ -4,7 +4,8 @@ import { useOrg } from "@/hooks/common/useOrg";
 import { notNullish } from "@/utils/genUtils";
 import { formatAmount } from "@/utils/product/productItemUtils";
 import { useProductContext } from "@/views/products/product/ProductContext";
-import { AttachBranch } from "@autumn/shared";
+import { AttachBranch, getAmountForQuantity, Price } from "@autumn/shared";
+import { Decimal } from "decimal.js";
 
 export const UpdateQuantity = () => {
   const { org } = useOrg();
@@ -17,12 +18,38 @@ export const UpdateQuantity = () => {
 
   const currency = org?.default_currency || "USD";
 
+  const getPrepaidPrice = ({ option }: { option: any }) => {
+    if (notNullish(option.price)) {
+      return `x ${formatAmount({
+        amount: option.price,
+        defaultCurrency: currency,
+        maxFractionDigits: 5,
+      })} per `;
+    }
+
+    if (option.tiers) {
+      const start = option.tiers[0].amount;
+      const end = option.tiers[option.tiers.length - 1].amount;
+      return "x ";
+      // return `${formatAmount({
+      //   amount: start,
+      //   defaultCurrency: currency,
+      //   maxFractionDigits: 5,
+      // })} - ${formatAmount({
+      //   amount: end,
+      //   defaultCurrency: currency,
+      //   maxFractionDigits: 5,
+      // })} `;
+    }
+
+    return "";
+  };
+
   const getTotalPrice = () => {
     return options.reduce((acc: number, option: any) => {
       const currentQuantity = option.current_quantity || 0;
       const newQuantity = option.quantity || 0;
-      let difference = newQuantity - currentQuantity;
-      difference = difference / option.billing_units;
+      const difference = newQuantity - currentQuantity;
 
       const isDecrease = newQuantity < currentQuantity;
 
@@ -30,7 +57,42 @@ export const UpdateQuantity = () => {
         return acc;
       }
 
-      return acc + option.price * difference;
+      let priceForDifference = 0;
+
+      // Handle tiered pricing
+      if (option.tiers) {
+        // Calculate amount for new quantity
+        const newAmount = getAmountForQuantity({
+          price: {
+            config: {
+              usage_tiers: option.tiers,
+              billing_units: option.billing_units,
+            },
+          } as Price,
+          quantity: newQuantity,
+        });
+
+        // Calculate amount for current quantity
+        const currentAmount = getAmountForQuantity({
+          price: {
+            config: {
+              usage_tiers: option.tiers,
+              billing_units: option.billing_units,
+            },
+          } as Price,
+          quantity: currentQuantity,
+        });
+
+        priceForDifference = new Decimal(newAmount)
+          .minus(currentAmount)
+          .toNumber();
+      } else {
+        // Handle fixed pricing
+        const differenceInUnits = difference / option.billing_units;
+        priceForDifference = option.price * differenceInUnits;
+      }
+
+      return acc + priceForDifference;
     }, 0);
   };
 
@@ -69,13 +131,14 @@ export const UpdateQuantity = () => {
                 />
 
                 <span className="text-muted-foreground truncate max-w-40">
-                  ×{" "}
-                  {formatAmount({
+                  {/* ×{" "} */}
+                  {/* {formatAmount({
                     defaultCurrency: currency,
                     amount: price,
                     maxFractionDigits: 2,
-                  })}{" "}
-                  per {billing_units === 1 ? " " : billing_units} {feature_name}
+                  })}{" "} */}
+                  {getPrepaidPrice({ option })}
+                  {billing_units === 1 ? " " : billing_units} {feature_name}
                 </span>
               </div>
             </PriceItem>
