@@ -8,6 +8,7 @@ import { Item, Row } from "@/components/general/TableGrid";
 import { AdminHover } from "@/components/general/AdminHover";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { RewardProgramRowToolbar } from "./RewardProgramRowToolbar";
+import UpdateRewardProgram from "./UpdateRewardPrograms";
 
 export const RewardProgramsTable = () => {
   const { rewardPrograms } = useRewardsQuery();
@@ -17,6 +18,12 @@ export const RewardProgramsTable = () => {
 
   return (
     <>
+      <UpdateRewardProgram
+        open={open}
+        setOpen={setOpen}
+        selectedReward={selectedRewardProgram}
+        setSelectedReward={setSelectedRewardProgram}
+      />
       {/* <UpdateRewardProgram component here /> */}
 
       {rewardPrograms && rewardPrograms.length > 0 ? (
