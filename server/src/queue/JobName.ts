@@ -3,6 +3,7 @@ export enum JobName {
   UpdateUsage = "update-usage",
 
   Migration = "migration",
+  RewardMigration = "reward-migration",
 
   TriggerCheckoutReward = "trigger-checkout-reward",
   GenerateFeatureDisplay = "generate-feature-display",

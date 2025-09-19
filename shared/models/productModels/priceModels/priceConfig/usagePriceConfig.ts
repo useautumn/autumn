@@ -13,6 +13,8 @@ export const UsageTierSchema = z.object({
   amount: z.number(),
 });
 
+export type UsageTier = z.infer<typeof UsageTierSchema>;
+
 export const UsagePriceConfigSchema = z.object({
   type: z.string(),
   bill_when: z.nativeEnum(BillWhen),
