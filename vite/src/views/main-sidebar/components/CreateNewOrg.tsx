@@ -65,13 +65,13 @@ export const CreateNewOrg = ({
       }}
     >
       <DialogTrigger asChild></DialogTrigger>
-      <DialogContent className="gap-0 p-0 rounded-xs min-w-[400px]">
+      <DialogContent className="gap-0 p-0 rounded-xs w-[90%]">
         <div className="p-6 flex flex-col gap-4">
           <DialogHeader>
             <DialogTitle>Create New Organization</DialogTitle>
           </DialogHeader>
-          <div className="flex gap-4">
-            <div>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="w-full">
               <FieldLabel>Name</FieldLabel>
               <Input
                 value={name}
@@ -83,7 +83,7 @@ export const CreateNewOrg = ({
                 }}
               />
             </div>
-            <div>
+            <div className="w-full">
               <FieldLabel>Slug</FieldLabel>
               <Input
                 value={slug}

@@ -38,7 +38,7 @@ export const SelectFeatureType = ({
   return (
     <div className="flex flex-col">
       <FieldLabel>Feature Type</FieldLabel>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <SelectType
           title="Metered"
           description="A usage-based feature that you want to track"

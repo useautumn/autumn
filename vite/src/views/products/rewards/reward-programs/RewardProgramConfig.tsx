@@ -46,8 +46,8 @@ export const RewardProgramConfig = ({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2">
-        <div className="w-6/12">
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="w-full">
           <FieldLabel>Program ID</FieldLabel>
           <Input
             value={rewardProgram.id || ""}
@@ -56,7 +56,7 @@ export const RewardProgramConfig = ({
             }
           />
         </div>
-        <div className="w-6/12">
+        <div className="w-full">
           <FieldLabel>Reward</FieldLabel>
           <Select
             value={rewardProgram.internal_reward_id}
@@ -77,8 +77,8 @@ export const RewardProgramConfig = ({
           </Select>
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        <div className="w-6/12">
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="w-full">
           <FieldLabel>Redeem On</FieldLabel>
           <Select
             defaultValue={RewardTriggerEvent.CustomerCreation}
@@ -102,7 +102,7 @@ export const RewardProgramConfig = ({
             </SelectContent>
           </Select>
         </div>
-        <div className="w-6/12">
+        <div className="w-full">
           <FieldLabel>Max Redemptions</FieldLabel>
           <Input
             type="number"

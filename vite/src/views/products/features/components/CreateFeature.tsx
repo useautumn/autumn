@@ -124,7 +124,7 @@ export const CreateFeatureDialog = () => {
           Feature
         </Button>
       </DialogTrigger>
-      <CustomDialogContent>
+      <CustomDialogContent className="w-[90%]">
         <CreateFeature setOpen={setOpen} open={open} />
       </CustomDialogContent>
     </Dialog>

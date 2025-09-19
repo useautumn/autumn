@@ -19,8 +19,8 @@ export const ProductConfig = ({
 
   return (
     <>
-      <div className="flex w-full gap-2">
-        <div className="w-full">
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="w-full md:w-1/2">
           <FieldLabel>Name</FieldLabel>
           <Input
             placeholder="eg. Starter Product"
@@ -34,7 +34,7 @@ export const ProductConfig = ({
             }}
           />
         </div>
-        <div className="w-full">
+        <div className="w-full md:w-1/2">
           <FieldLabel>ID</FieldLabel>
           <div className="flex items-center gap-2">
             <Input
