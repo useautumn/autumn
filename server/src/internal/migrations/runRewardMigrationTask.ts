@@ -182,7 +182,9 @@ export async function runRewardMigrationTask({
 								duration_value: reward.discount_config!.duration_value,
 								should_rollover: reward.discount_config!.should_rollover,
 								apply_to_all: reward.discount_config!.apply_to_all,
-								price_ids: [...unmatchedPrices, ...newPriceIds],
+								// Note: I used to include unmatchedPrices as a safety precaution, but it seems unecessary 
+								// price_ids: [...unmatchedPrices, ...newPriceIds],
+								price_ids: newPriceIds,
 							},
 						},
 					});
