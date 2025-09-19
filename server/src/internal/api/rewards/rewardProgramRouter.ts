@@ -40,7 +40,7 @@ rewardProgramRouter.post("", (req, res) =>
 
       let existingProgram = await RewardProgramService.get({
         db,
-        id: body.id,
+        idOrInternalId: body.id,
         orgId,
         env,
       });
@@ -86,7 +86,7 @@ rewardProgramRouter.post("", (req, res) =>
 
       return res.status(200).json(createdRewardProgram);
     },
-  }),
+  })
 );
 
 rewardProgramRouter.delete("/:id", (req, res) =>
@@ -100,12 +100,84 @@ rewardProgramRouter.delete("/:id", (req, res) =>
 
       let rewardProgram = await RewardProgramService.delete({
         db,
-        id,
+        idOrInternalId: id,
         orgId,
         env,
       });
 
       return res.status(200).json(rewardProgram);
     },
-  }),
+  })
+);
+
+rewardProgramRouter.put("/:id", (req, res) =>
+  routeHandler({
+    req,
+    res,
+    action: "update reward program",
+    handler: async (req: any, res: any) => {
+      const { orgId, env, db } = req;
+      const { id } = req.params;
+      const body = req.body;
+
+      if (!body.internal_reward_id) {
+        throw new RecaseError({
+          message: "Please select a reward to link this program to",
+          code: ErrCode.InvalidRequest,
+          statusCode: 400,
+        });
+      }
+
+      // Ensure program exists
+      let existingProgram = await RewardProgramService.get({
+        db,
+        idOrInternalId: id,
+        orgId,
+        env,
+      });
+
+      console.log("Existing program:", existingProgram);
+
+      if (!existingProgram) {
+        throw new RecaseError({
+          message: `Program with ID ${id} does not exist`,
+          code: ErrCode.InvalidRequest,
+          statusCode: 404,
+        });
+      }
+
+      const rewardProgram = constructRewardProgram({
+        rewardProgramData: CreateRewardProgram.parse({
+          ...body,
+          id: existingProgram.id, // ID cannot be changed
+        }),
+        orgId,
+        env,
+      });
+
+      console.log("Updating program to:", rewardProgram);
+
+      if (
+        rewardProgram.when == RewardTriggerEvent.Checkout &&
+        (nullish(rewardProgram.product_ids) ||
+          rewardProgram.product_ids!.length == 0)
+      ) {
+        throw new RecaseError({
+          message: "If redeem on checkout, must specify at least one product",
+          code: ErrCode.InvalidRequest,
+          statusCode: 400,
+        });
+      }
+
+      let updatedRewardProgram = await RewardProgramService.update({
+        db,
+        idOrInternalId: id,
+        orgId,
+        env,
+        data: rewardProgram,
+      });
+
+      return res.status(200).json(updatedRewardProgram);
+    },
+  })
 );
