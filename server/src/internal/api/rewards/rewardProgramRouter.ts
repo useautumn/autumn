@@ -117,7 +117,7 @@ rewardProgramRouter.put("/:id", (req, res) =>
     action: "update reward program",
     handler: async (req: any, res: any) => {
       const { orgId, env, db } = req;
-      const { idOrInternalId } = req.params;
+      const { id } = req.params;
       const body = req.body;
 
       if (!body.internal_reward_id) {
@@ -131,14 +131,16 @@ rewardProgramRouter.put("/:id", (req, res) =>
       // Ensure program exists
       let existingProgram = await RewardProgramService.get({
         db,
-        idOrInternalId,
+        idOrInternalId: id,
         orgId,
         env,
       });
 
+      console.log("Existing program:", existingProgram);
+
       if (!existingProgram) {
         throw new RecaseError({
-          message: `Program with ID ${idOrInternalId} does not exist`,
+          message: `Program with ID ${id} does not exist`,
           code: ErrCode.InvalidRequest,
           statusCode: 404,
         });
@@ -147,11 +149,13 @@ rewardProgramRouter.put("/:id", (req, res) =>
       const rewardProgram = constructRewardProgram({
         rewardProgramData: CreateRewardProgram.parse({
           ...body,
-          idOrInternalId, // enforce consistency with URL param
+          id: existingProgram.id, // ID cannot be changed
         }),
         orgId,
         env,
       });
+
+      console.log("Updating program to:", rewardProgram);
 
       if (
         rewardProgram.when == RewardTriggerEvent.Checkout &&
@@ -167,7 +171,7 @@ rewardProgramRouter.put("/:id", (req, res) =>
 
       let updatedRewardProgram = await RewardProgramService.update({
         db,
-        idOrInternalId,
+        idOrInternalId: id,
         orgId,
         env,
         data: rewardProgram,
