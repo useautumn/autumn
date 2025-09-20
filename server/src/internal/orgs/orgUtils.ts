@@ -212,3 +212,30 @@ export const updateOrgConfig = async ({
     await CacheManager.disconnect();
   }
 };
+
+export const unsetOrgStripeKeys = async ({
+  org,
+  env,
+  db,
+}: {
+  org: Organization;
+  env: AppEnv;
+  db: DrizzleCli;
+}) => {
+  const newStripeConfig: any = structuredClone(org.stripe_config) || {};
+  if (env === AppEnv.Sandbox) {
+    newStripeConfig.test_api_key = null;
+    newStripeConfig.test_webhook_secret = null;
+  } else {
+    newStripeConfig.live_api_key = null;
+    newStripeConfig.live_webhook_secret = null;
+  }
+
+  await OrgService.update({
+    db,
+    orgId: org.id,
+    updates: {
+      stripe_config: newStripeConfig,
+    },
+  });
+};

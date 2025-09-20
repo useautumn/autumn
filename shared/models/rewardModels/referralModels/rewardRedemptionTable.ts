@@ -19,6 +19,7 @@ export const rewardRedemptions = pgTable(
     triggered: boolean(),
     internal_reward_program_id: text("internal_reward_program_id"),
     applied: boolean().default(false),
+    redeemer_applied: boolean().default(false),
     referral_code_id: text("referral_code_id"),
   },
   (table) => [
@@ -37,5 +38,5 @@ export const rewardRedemptions = pgTable(
       foreignColumns: [referralCodes.id],
       name: "reward_redemptions_referral_code_id_fkey",
     }).onDelete("cascade"),
-  ],
+  ]
 );
