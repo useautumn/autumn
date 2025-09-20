@@ -12,15 +12,15 @@ import {
 
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { slugify } from "@/utils/genUtils.js";
+
 import { and, eq } from "drizzle-orm";
 import { connectStripe } from "../orgs/handlers/handleConnectStripe.js";
 import { z } from "zod";
 import { createKey } from "../dev/api-keys/apiKeyUtils.js";
 import { afterOrgCreated } from "@/utils/authUtils/afterOrgCreated.js";
 import { Autumn } from "autumn-js";
-import { organizationSchema } from "better-auth/plugins";
-import { isStripeConnected, shouldReconnectStripe } from "../orgs/orgUtils.js";
+
+import { shouldReconnectStripe } from "../orgs/orgUtils.js";
 
 const platformRouter = Router();
 
@@ -215,7 +215,6 @@ platformRouter.post("/exchange", (req: any, res: any) =>
         });
 
         if (reconnectStripe) {
-          console.log("Reconnecting stripe sandbox");
           let {
             test_api_key,
             test_webhook_secret,
