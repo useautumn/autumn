@@ -34,8 +34,6 @@ export const checkCurStripePrice = async ({
   stripeCli: Stripe;
   currency: string;
 }) => {
-  let priceValid = false;
-
   let config = price.config! as UsagePriceConfig;
 
   let stripePrice: Stripe.Price | null = null;
@@ -48,7 +46,9 @@ export const checkCurStripePrice = async ({
       });
 
       if (!stripePrice.active) {
-        stripePrice = null;
+        stripePrice = await stripeCli.prices.update(config.stripe_price_id!, {
+          active: true,
+        });
       }
 
       if (

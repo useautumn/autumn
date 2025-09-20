@@ -4,7 +4,6 @@ import {
   ErrCode,
   FullCusProduct,
   FullCustomer,
-  APIVersion,
   ProrationBehavior,
   AttachBranch,
   Price,
@@ -16,9 +15,9 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
-import { cancelEndOfCycle } from "./cancelEndOfCycle.js";
+
 import { cancelImmediately } from "./cancelImmediately.js";
-import { cancelScheduledProduct } from "./cancelScheduledProduct.js";
+
 import { handleRenewProduct } from "../attach/attachFunctions/handleRenewProduct.js";
 import { getDefaultAttachConfig } from "../attach/attachUtils/getAttachConfig.js";
 import { handleScheduleFunction2 } from "../attach/attachFunctions/scheduleFlow/handleScheduleFlow2.js";
