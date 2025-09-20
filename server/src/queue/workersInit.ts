@@ -50,7 +50,7 @@ const initWorker = ({
 			});
 
 			try {
-				if (job.name == JobName.DetectBaseVariant) {
+				if (job.name === JobName.DetectBaseVariant) {
 					await detectBaseVariant({
 						db,
 						curProduct: job.data.curProduct,
@@ -59,7 +59,7 @@ const initWorker = ({
 					return;
 				}
 
-				if (job.name == JobName.GenerateFeatureDisplay) {
+				if (job.name === JobName.GenerateFeatureDisplay) {
 					await runSaveFeatureDisplayTask({
 						db,
 						feature: job.data.feature,
@@ -68,7 +68,7 @@ const initWorker = ({
 					return;
 				}
 
-				if (job.name == JobName.Migration) {
+				if (job.name === JobName.Migration) {
 					await runMigrationTask({
 						db,
 						payload: job.data,

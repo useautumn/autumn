@@ -842,11 +842,6 @@ export const rewards = {
 		durationType: CouponDurationType.Months,
 		durationValue: 1,
 	}),
-	paidProduct: initReward({
-		id: "paidProduct",
-		type: RewardType.FreeProduct,
-		freeProductId: products.pro.id,
-	}),
 	paidProductWithConfig: initReward({
 		id: "paidProductWithConfig",
 		type: RewardType.FreeProduct,
