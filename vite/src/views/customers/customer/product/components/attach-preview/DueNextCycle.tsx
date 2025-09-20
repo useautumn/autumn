@@ -1,4 +1,10 @@
-import { AttachBranch, Feature, features } from "@autumn/shared";
+import {
+  AttachBranch,
+  Feature,
+  features,
+  getAmountForQuantity,
+  Price,
+} from "@autumn/shared";
 
 import { PriceItem } from "@/components/pricing/attach-pricing-dialog";
 import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
@@ -20,9 +26,30 @@ export const DueNextCycle = () => {
   const getPrepaidPrice = ({ option }: { option: any }) => {
     const quantity = (option.quantity || 0) / option.billing_units;
 
+    // Handle tiered pricing
+    if (option.tiers) {
+      const amount = getAmountForQuantity({
+        price: {
+          config: {
+            usage_tiers: option.full_tiers,
+            billing_units: option.billing_units,
+          },
+        } as Price,
+        quantity: option.quantity || 0,
+      });
+
+      return formatAmount({
+        amount,
+        currency,
+        maxFractionDigits: 2,
+      });
+    }
+
+    // Handle fixed pricing
     return formatAmount({
       amount: option.full_price * quantity,
       currency,
+      maxFractionDigits: 2,
     });
   };
 

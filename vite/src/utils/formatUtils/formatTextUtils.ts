@@ -32,15 +32,17 @@ export const slugify = (
 export const formatAmount = ({
   amount,
   currency,
+  maxFractionDigits = 10,
 }: {
   amount: number;
   currency: string;
+  maxFractionDigits?: number;
 }) => {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: currency,
     minimumFractionDigits: 0,
-    maximumFractionDigits: 10,
+    maximumFractionDigits: maxFractionDigits,
   }).format(amount);
 };
 

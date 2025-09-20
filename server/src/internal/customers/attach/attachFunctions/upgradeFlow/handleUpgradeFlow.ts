@@ -4,6 +4,7 @@ import {
 } from "@/internal/customers/cusProducts/AttachParams.js";
 import {
   attachParamsToCurCusProduct,
+  attachParamsToProduct,
   paramsToCurSub,
   paramsToCurSubSchedule,
 } from "../../attachUtils/convertAttachParams.js";
@@ -16,6 +17,8 @@ import {
   AttachConfig,
   AttachScenario,
   CusProductStatus,
+  cusProductToProduct,
+  logCusProducts,
   ProrationBehavior,
 } from "@autumn/shared";
 import { ExtendedRequest } from "@/utils/models/Request.js";
@@ -72,13 +75,11 @@ export const handleUpgradeFlow = async ({
 
   const { subItems } = newItemSet;
 
-  // for (const item of subItems) {
-  //   const { autumnPrice, ...rest } = item;
-  //   console.log("ITEM:", rest);
-  // }
+  const products = attachParams.fromCancel
+    ? [cusProductToProduct({ cusProduct: attachParams.cusProduct! })]
+    : attachParams.products;
 
-  // Delete scheduled products if needed
-  for (const product of attachParams.products) {
+  for (const product of products) {
     if (product.is_add_on) continue;
 
     const { curScheduledProduct } = getExistingCusProducts({
