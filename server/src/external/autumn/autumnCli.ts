@@ -3,22 +3,25 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import {
-  type APIVersion,
-  type AttachBody,
-  type CreateEntity,
-  type CreateRewardProgram,
-  CusExpand,
-  EntityExpand,
-  ErrCode, type OrgConfig
+	type APIVersion,
+	type AttachBody,
+	type CreateEntity,
+	type CreateRewardProgram,
+	CusExpand,
+	EntityExpand,
+	ErrCode,
+	type OrgConfig,
+	type RewardRedemption,
 } from "@autumn/shared";
-import {
-  type CancelParams,
-  type CheckoutParams,
-  type CheckoutResult,
-  type CheckParams,
-  type CheckResult,
-  type Customer,
-  type TrackParams, type UsageParams
+import type {
+	CancelParams,
+	CheckoutParams,
+	CheckoutResult,
+	CheckParams,
+	CheckResult,
+	Customer,
+	TrackParams,
+	UsageParams,
 } from "autumn-js";
 
 export default class AutumnError extends Error {
@@ -411,7 +414,7 @@ export class AutumnInt {
 	redemptions = {
 		get: async (redemptionId: string) => {
 			const data = await this.get(`/redemptions/${redemptionId}`);
-			return data;
+			return data as RewardRedemption;
 		},
 	};
 

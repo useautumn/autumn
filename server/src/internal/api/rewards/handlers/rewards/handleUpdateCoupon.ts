@@ -1,7 +1,8 @@
-import { ErrCode, notNullish, RewardCategory } from "@autumn/shared";
+import { ErrCode, PriceType, RewardCategory } from "@autumn/shared";
 import { createStripeCoupon } from "@/external/stripe/stripeCouponUtils/stripeCouponUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { ProductService } from "@/internal/products/ProductService.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { RewardService } from "@/internal/rewards/RewardService.js";
 import { getRewardCat } from "@/internal/rewards/rewardUtils.js";
@@ -38,12 +39,40 @@ export default async (req: any, res: any) =>
 				});
 			}
 
-			const prices = await PriceService.getInIds({
-				db,
-				ids: notNullish(rewardBody.price_ids)
-					? rewardBody.price_ids
-					: reward.discount_config?.price_ids,
-			});
+			// Determine prices depending on reward category
+			const rewardCat = getRewardCat(rewardBody);
+
+			let prices: any[] = [];
+			if (rewardCat === RewardCategory.Discount) {
+				const stripePriceIds =
+					rewardBody.discount_config?.price_ids ??
+					reward.discount_config?.price_ids ??
+					[];
+				const byStripeId = await PriceService.getByStripeIds({
+					db,
+					stripePriceIds,
+				});
+				prices = stripePriceIds
+					.map((id: string) => byStripeId[id])
+					.filter(Boolean);
+			} else if (rewardCat === RewardCategory.FreeProduct) {
+				const freeProductId =
+					rewardBody.free_product_id ?? reward.free_product_id;
+				if (freeProductId) {
+					const fullProduct = await ProductService.getFull({
+						db,
+						idOrInternalId: freeProductId,
+						orgId: org.id,
+						env,
+					});
+					prices = fullProduct.prices
+						.map((price) => ({
+							...price,
+							product: fullProduct,
+						}))
+						.filter((x) => x.config?.type === PriceType.Fixed);
+				}
+			}
 
 			// 1. Delete old prices from stripe
 			try {
@@ -53,8 +82,10 @@ export default async (req: any, res: any) =>
 				// console.log(`Failed to delete coupon from stripe: ${error.message}`);
 			}
 
-			const rewardCat = getRewardCat(rewardBody);
-			if (rewardCat === RewardCategory.Discount) {
+			if (
+				rewardCat === RewardCategory.Discount ||
+				(rewardCat === RewardCategory.FreeProduct && prices.length > 0)
+			) {
 				await createStripeCoupon({
 					reward: rewardBody,
 					org,

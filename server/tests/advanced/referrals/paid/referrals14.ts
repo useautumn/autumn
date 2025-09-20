@@ -1,10 +1,11 @@
 import {
-	type AppEnv,
-	CusProductStatus,
-	ErrCode,
-	type Organization,
-	type ReferralCode,
-	type RewardRedemption,
+    type AppEnv,
+    CusExpand,
+    CusProductStatus,
+    ErrCode,
+    type Organization,
+    type ReferralCode,
+    type RewardRedemption,
 } from "@autumn/shared";
 import { assert } from "chai";
 import chalk from "chalk";
@@ -19,13 +20,13 @@ import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionServ
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import { products, referralPrograms } from "../../../global.js";
 
-export const group = "referrals6";
+export const group = "referrals14";
 
 describe(`${chalk.yellowBright(
-	"referrals6: Testing referrals (immediate, paid, recurring, referrer only)",
+	"referrals14: Testing referrals - referrer on Premium (higher tier), gets pro_amount discount - coupon-based",
 )}`, () => {
-	const mainCustomerId = "main-referral-6";
-	const redeemer = "referral6-r1";
+	const mainCustomerId = "main-referral-14";
+	const redeemer = "referral14-r1";
 	const redeemerPM = "success";
 	const autumn: AutumnInt = new AutumnInt();
 	let stripeCli: Stripe;
@@ -46,8 +47,8 @@ describe(`${chalk.yellowBright(
 
 		try {
 			await Promise.all([
-				autumn.customers.delete(mainCustomerId),
-				autumn.customers.delete(redeemer),
+				autumn.customers.delete(mainCustomerId, { deleteInStripe: true }),
+				autumn.customers.delete(redeemer, { deleteInStripe: true }),
 				RewardRedemptionService._resetCustomerRedemptions({
 					db,
 					internalCustomerId: [mainCustomerId, redeemer],
@@ -55,6 +56,7 @@ describe(`${chalk.yellowBright(
 			]);
 		} catch {}
 
+		// Initialize main customer with Premium product already attached
 		const res = await initCustomer({
 			autumn: this.autumnJs,
 			customerId: mainCustomerId,
@@ -65,6 +67,12 @@ describe(`${chalk.yellowBright(
 		});
 
 		testClockIds.push(res.testClockId);
+
+		// Attach Premium product to main customer first (higher tier than Pro)
+		await autumn.attach({
+			customer_id: mainCustomerId,
+			product_id: products.premium.id,
+		});
 
 		const redeemerRes = await initCustomer({
 			autumn: this.autumnJs,
@@ -77,6 +85,18 @@ describe(`${chalk.yellowBright(
 		});
 
 		testClockIds.push(redeemerRes.testClockId);
+
+		// Advance 10 days after Premium is attached, then redeem the code
+		await Promise.all(
+			testClockIds.map((x) =>
+				advanceTestClock({
+					testClockId: x,
+					numberOfDays: 10,
+					waitForSeconds: 5,
+					stripeCli,
+				}),
+			),
+		);
 	});
 
 	it("should create code once", async () => {
@@ -115,46 +135,96 @@ describe(`${chalk.yellowBright(
 		}
 	});
 
-	it("should have given the paid product to referrer only, not redeemer", async () => {
+	it("should have referrer already on Premium, and redeemer gets free product", async () => {
 		const redemptionResult = await autumn.redemptions.get(redemption.id);
-		assert.equal(redemptionResult.applied, true);
+		assert.equal(redemptionResult.redeemer_applied, true);
 
-		const mainProds = (await autumn.customers.get(mainCustomerId)).products;
-		const redeemerProds = (await autumn.customers.get(redeemer)).products;
+		const mainCus = await autumn.customers.get(mainCustomerId);
+		const redeemerCus = await autumn.customers.get(redeemer);
+		const mainProds = mainCus.products;
+		const redeemerProds = redeemerCus.products;
 
-		// Main customer (referrer) should have the pro product
+		// Main customer (referrer) should have the premium product (already attached)
 		assert.equal(mainProds.length, 1);
-		assert.equal(mainProds[0].id, products.pro.id);
+		assert.equal(mainProds[0].id, products.premium.id);
 
-		// Redeemer should only have the free product (no pro product given)
+		// Redeemer should only have the free product (no pro product given in referrer-only program)
 		assert.equal(redeemerProds.length, 1);
 		assert.equal(redeemerProds[0].id, products.free.id);
 
 		expectProductV1Attached({
-			customer: await autumn.customers.get(mainCustomerId),
-			product: products.pro,
-			status: CusProductStatus.Trialing,
+			customer: mainCus,
+			product: products.premium,
+			status: CusProductStatus.Active,
 		});
 
 		// Verify redeemer only has free product
 		expectProductV1Attached({
-			customer: await autumn.customers.get(redeemer),
+			customer: redeemerCus,
 			product: products.free,
 			status: CusProductStatus.Active,
 		});
 	});
 
-	it("should advance test clock and have pro attached for referrer only", async () => {
+	it("should advance test clock and verify referrer gets pro_amount discount on Premium cycle", async () => {
+		// Advance 21 more days (total 31 days from start) to trigger next billing cycle
+		// Coupon was applied on day 10, lasts 30 days, so should still be active on day 31
 		await Promise.all(
 			testClockIds.map((x) =>
 				advanceTestClock({
 					testClockId: x,
-					numberOfDays: 35,
-					waitForSeconds: 15,
+					numberOfDays: 31,
+					waitForSeconds: 25,
 					stripeCli,
 				}),
 			),
 		);
+
+		// Test that main customer's Premium invoice has pro_amount discount applied
+		const mainCustomerWithInvoices = await autumn.customers.get(
+			mainCustomerId,
+			{
+				expand: [CusExpand.Invoices],
+			},
+		);
+
+		console.log(
+			"Invoices:\n",
+			mainCustomerWithInvoices.invoices
+				.map(
+					(x) =>
+						`${x.product_ids.join(", ")}: ${x.total} | ${new Date(x.created_at).toLocaleDateString()}`,
+				)
+				.join("\n"),
+		);
+
+		const premiumInvoice = mainCustomerWithInvoices.invoices.find((x) =>
+			x.product_ids.includes(products.premium.id),
+		);
+		if (premiumInvoice) {
+			// Premium costs $50, Pro costs $10 - so referrer should get $10 discount on Premium
+			// Expected: Premium ($50) - Pro amount ($10) = $40
+			console.log(products.premium.prices);
+			const premiumPrice = products.premium.prices[0].config.amount; // $50
+			const proAmount = products.pro.prices[0].config.amount; // $10 (pro_amount discount)
+			const expectedTotal = premiumPrice - proAmount; // $40
+			console.log("Expected total:", expectedTotal);
+			console.log("Premium invoice total:", premiumInvoice.total);
+
+			// The invoice total should be exactly Premium price minus pro_amount
+			assert.equal(
+				premiumInvoice.total,
+				expectedTotal,
+				`Premium invoice should be $40 (Premium $50 - Pro amount $10 discount). Got $${premiumInvoice.total}`,
+			);
+
+			// Verify that the discount was applied (total is less than full Premium price)
+			assert.isBelow(
+				premiumInvoice.total,
+				premiumPrice,
+				"Referrer on Premium should get pro_amount discount, making it less than full Premium price",
+			);
+		}
 
 		const dbCustomers = await Promise.all(
 			[mainCustomerId, redeemer].map((x) =>
@@ -166,7 +236,6 @@ describe(`${chalk.yellowBright(
 					inStatuses: [
 						CusProductStatus.Active,
 						CusProductStatus.PastDue,
-						CusProductStatus.Trialing,
 						CusProductStatus.Expired,
 					],
 				}),
@@ -175,29 +244,31 @@ describe(`${chalk.yellowBright(
 
 		const expectedProducts = [
 			[
-				// Main referrer - gets the pro product
+				// Main referrer - keeps Premium with pro_amount discount applied
 				{ name: "Free", status: CusProductStatus.Expired },
-				{ name: "Pro", status: CusProductStatus.Active },
+				{ name: "Premium", status: CusProductStatus.Active },
 			],
 			[
-				// Redeemer - only has free product (no reward)
+				// Redeemer - only has free product (no reward in referrer-only program)
 				{ name: "Free", status: CusProductStatus.Active },
 			],
 		];
 
 		dbCustomers.forEach((customer, index) => {
 			const expectedProductsForCustomer = expectedProducts[index];
-
 			expectedProductsForCustomer.forEach((expectedProduct) => {
 				const matchingProduct = customer.customer_products.find(
 					(cp) =>
 						cp.product.name === expectedProduct.name &&
 						cp.status === expectedProduct.status,
 				);
+				const unMatchedProduct = customer.customer_products.find(
+					(cp) => cp.product.name === expectedProduct.name,
+				);
 
-				assert.isNotNull(
+				assert.exists(
 					matchingProduct,
-					`Customer ${customer.name} should have ${expectedProduct.name} product with status ${expectedProduct.status}`,
+					`Customer ${customer.name} should have ${expectedProduct.name} product with status ${expectedProduct.status}. ${unMatchedProduct ? `However ${unMatchedProduct.product.name} with status ${unMatchedProduct.status} was found instead` : ""}`,
 				);
 			});
 		});
