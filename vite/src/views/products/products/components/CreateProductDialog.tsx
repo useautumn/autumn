@@ -43,6 +43,17 @@ function CreateProduct({
   const navigate = useNavigate();
 
   const handleCreateClicked = async () => {
+    const productName = product.name?.trim() || "";
+
+    if (!/^[a-zA-Z0-9 _-]+$/.test(productName)) {
+      toast.error(
+        !productName
+          ? "Product name is required"
+          : "Product name can only contain alphanumeric characters, dashes (-), and underscores (_)"
+      );
+      return;
+    }
+
     setLoading(true);
     try {
       const newProduct = await ProductService.createProduct(
