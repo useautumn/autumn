@@ -245,7 +245,9 @@ export const checkStripeProductExists = async ({
       );
 
       if (!stripeProduct.active) {
-        createNew = true;
+        await stripeCli.products.update(product.processor!.id, {
+          active: true,
+        });
       }
     } catch (error) {
       createNew = true;
