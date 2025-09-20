@@ -1,23 +1,29 @@
 import {
-  AttachParams,
-  InsertCusProductParams,
-} from "@/internal/customers/cusProducts/AttachParams.js";
-import {
+  type Customer,
   cusProductToEnts,
   cusProductToPrices,
   cusProductToProduct,
+  type Entity,
+  type FreeTrial,
+  type FullCusProduct,
+  type FullCustomer,
+  type FullProduct,
+  type FullRewardProgram,
+  type Organization,
 } from "@autumn/shared";
+import type Stripe from "stripe";
+import { createStripeCli } from "@/external/stripe/utils.js";
+import type {
+  AttachParams,
+  InsertCusProductParams,
+} from "@/internal/customers/cusProducts/AttachParams.js";
 import { newCusToFullCus } from "@/internal/customers/cusUtils/cusUtils.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
 import {
-  Customer,
-  Entity,
-  FullCusProduct,
-  FullCustomer,
-  FullProduct,
-  FreeTrial,
-} from "@autumn/shared";
-import Stripe from "stripe";
+  isFreeProduct,
+  isOneOff,
+  itemsAreOneOff,
+} from "@/internal/products/productUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const webhookToAttachParams = ({
   req,
@@ -155,4 +161,45 @@ export const newCusToInsertParams = ({
     entities: [],
     features: [],
   } satisfies InsertCusProductParams;
+};
+
+export const rewardProgramToAttachParams = ({
+  req,
+  rewardProgram,
+  customer,
+  product,
+  org,
+}: {
+  req: ExtendedRequest;
+  rewardProgram: FullRewardProgram;
+  customer: FullCustomer;
+  product: FullProduct;
+  org?: Organization;
+}): AttachParams => {
+  const reward = rewardProgram.reward;
+  const isPaid = !isFreeProduct(product.prices);
+  const isRecurring =
+    !isOneOff(product.prices) && !itemsAreOneOff(product.entitlements);
+
+  return {
+    req,
+    org: org || req.org,
+    customer,
+    products: [product],
+    prices: product.prices,
+    entitlements: product.entitlements,
+    freeTrial: null,
+    // rewardTrial:
+    // 	(isPaid && isRecurring && reward.free_product_config)
+    // 		? reward.free_product_config
+    // 		: null,
+    rewards: [reward],
+    optionsList: [],
+    cusProducts: customer.customer_products,
+    entities: [],
+    features: req.features,
+    stripeCli: createStripeCli({ org: org || req.org, env: req.env }),
+    paymentMethod: null,
+    replaceables: [],
+  } satisfies AttachParams;
 };

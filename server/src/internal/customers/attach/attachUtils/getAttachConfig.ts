@@ -124,8 +124,20 @@ export const getAttachConfig = async ({
       branch != AttachBranch.MultiAttachUpdate);
 
   const onlyCheckout = !isFree && checkoutFlow && !freeTrialWithoutCardRequired;
-
   const disableMerge = branch == AttachBranch.MainIsTrial || onlyCheckout;
+
+  // Require payment method...
+  let paymentMethodRequired = true;
+  if (
+    !disableTrial &&
+    attachParams.freeTrial &&
+    attachParams.freeTrial.card_required === false
+  ) {
+    paymentMethodRequired = false;
+  }
+  if (attachParams.invoiceOnly) {
+    paymentMethodRequired = false;
+  }
 
   let config: AttachConfig = {
     branch,
@@ -141,6 +153,7 @@ export const getAttachConfig = async ({
     finalizeInvoice: notNullish(attachBody.finalize_invoice)
       ? attachBody.finalize_invoice!
       : true,
+    requirePaymentMethod: paymentMethodRequired,
   };
 
   return { flags, config };
@@ -159,6 +172,7 @@ export const getDefaultAttachConfig = () => {
     carryTrial: false,
     invoiceCheckout: false,
     finalizeInvoice: true,
+    requirePaymentMethod: true,
   };
 
   return config;

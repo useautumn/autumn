@@ -1,22 +1,23 @@
-import {
+import type {
+  APIVersion,
+  AttachReplaceable,
+  AttachScenario,
   Customer,
   EntitlementWithFeature,
   Entity,
-  FeatureOptions,
   Feature,
+  FeatureOptions,
+  FreeProductConfig,
   FreeTrial,
   FullCusProduct,
+  FullCustomer,
   FullProduct,
   Organization,
   Price,
-  AttachScenario,
-  APIVersion,
-  FullCustomer,
-  AttachReplaceable,
-  Reward,
   ProductOptions,
+  Reward,
 } from "@autumn/shared";
-import Stripe from "stripe";
+import type Stripe from "stripe";
 
 import { z } from "zod";
 
@@ -39,6 +40,7 @@ export type AttachParams = {
   entitlements: EntitlementWithFeature[];
 
   freeTrial: FreeTrial | null;
+  rewardTrial?: FreeProductConfig | null;
   optionsList: FeatureOptions[];
   productsList?: ProductOptions[];
 

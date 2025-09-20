@@ -1,21 +1,22 @@
-import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { ErrCode, Reward, IntervalConfig, AttachConfig } from "@autumn/shared";
-import Stripe from "stripe";
+import { type AttachConfig, ErrCode } from "@autumn/shared";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
-import { SubService } from "@/internal/subscriptions/SubService.js";
-import { generateId } from "@/utils/genUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-
 import {
-  getLatestPeriodStart,
   getEarliestPeriodEnd,
+  getLatestPeriodStart,
 } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
-
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { sanitizeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
-import { ItemSet } from "@/utils/models/ItemSet.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { buildInvoiceMemoFromEntitlements } from "@/internal/invoices/invoiceMemoUtils.js";
+import {
+  freeTrialToStripeTimestamp,
+  rewardTrialToStripeTimestamp,
+} from "@/internal/products/free-trials/freeTrialUtils.js";
+import { SubService } from "@/internal/subscriptions/SubService.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { generateId } from "@/utils/genUtils.js";
+import type { ItemSet } from "@/utils/models/ItemSet.js";
 
 // Get payment method
 
@@ -36,16 +37,17 @@ export const createStripeSub2 = async ({
   itemSet: ItemSet;
   logger: any;
 }) => {
-  const { customer, invoiceOnly, freeTrial, org, now, rewards } = attachParams;
-  const isDefaultTrial = freeTrial && !freeTrial.card_required;
+  const { customer, invoiceOnly, freeTrial, org, now, rewards, rewardTrial } =
+    attachParams;
+  // const isDefaultTrial = freeTrial && !freeTrial.card_required;
+  // let shouldErrorIfNoPm = !invoiceOnly;
+  // if (isDefaultTrial) shouldErrorIfNoPm = false;
+  // 	if (rewardTrial) shouldErrorIfNoPm = false;
 
-  let shouldErrorIfNoPm = !invoiceOnly;
-  if (isDefaultTrial) shouldErrorIfNoPm = false;
-
-  let paymentMethod = await getCusPaymentMethod({
+  const paymentMethod = await getCusPaymentMethod({
     stripeCli,
     stripeId: customer.processor.id,
-    errorIfNone: shouldErrorIfNoPm,
+    errorIfNone: config.requirePaymentMethod,
   });
 
   let paymentMethodData = {};
@@ -68,7 +70,6 @@ export const createStripeSub2 = async ({
       items: sanitizeSubItems(subItems),
 
       billing_mode: { type: "flexible" },
-      trial_end: freeTrialToStripeTimestamp({ freeTrial, now }),
       payment_behavior: "error_if_incomplete",
       add_invoice_items: invoiceItems,
       collection_method: invoiceOnly ? "send_invoice" : "charge_automatically",
@@ -80,14 +81,30 @@ export const createStripeSub2 = async ({
       discounts,
       expand: ["latest_invoice"],
 
-      trial_settings:
-        freeTrial && !freeTrial.card_required
-          ? {
-              end_behavior: {
-                missing_payment_method: "cancel",
-              },
-            }
-          : undefined,
+      ...{
+        trial_settings:
+          freeTrial && !freeTrial.card_required
+            ? {
+                end_behavior: {
+                  missing_payment_method: "cancel",
+                },
+              }
+            : undefined,
+
+        trial_end: freeTrialToStripeTimestamp({ freeTrial, now }),
+      },
+
+      // ...{
+      //   trial_settings: rewardTrial
+      //     ? {
+      //         end_behavior: {
+      //           missing_payment_method: "cancel",
+      //         },
+      //       }
+      //     : undefined,
+
+      //   trial_end: rewardTrialToStripeTimestamp({ rewardTrial, now }),
+      // },
     });
 
     const latestInvoice = subscription.latest_invoice as Stripe.Invoice;
