@@ -1,4 +1,5 @@
 import {
+  calculateProrationAmount,
   Feature,
   FeatureOptions,
   FullCusProduct,
@@ -76,9 +77,12 @@ export const handleQuantityDowngrade = async ({
     )
     .toNumber();
 
-  const diffWithBillingUnits = new Decimal(difference)
-    .mul((cusPrice.price.config as UsagePriceConfig).billing_units || 1)
-    .toNumber();
+  const billingUnits =
+    (cusPrice.price.config as UsagePriceConfig).billing_units || 1;
+
+  // const diffWithBillingUnits = new Decimal(difference)
+  //   .mul((cusPrice.price.config as UsagePriceConfig).billing_units || 1)
+  //   .toNumber();
 
   const newSubItemQuantity = new Decimal(subItem.quantity || 0)
     .plus(subItemDifference)
@@ -91,14 +95,24 @@ export const handleQuantityDowngrade = async ({
   const createDowngradeInvoice = async () => {
     const { start, end } = subToPeriodStartEnd({ sub: stripeSub });
 
-    const amount = priceToInvoiceAmount({
+    const prevAmount = priceToInvoiceAmount({
       price: cusPrice.price,
-      quantity: diffWithBillingUnits,
-      proration: {
-        start: start * 1000,
-        end: end * 1000,
-      },
-      now: attachParams.now,
+      quantity: new Decimal(oldOptions.quantity).mul(billingUnits!).toNumber(),
+    });
+
+    const newAmount = priceToInvoiceAmount({
+      price: cusPrice.price,
+      quantity: new Decimal(newOptions.quantity).mul(billingUnits!).toNumber(),
+    });
+
+    let amount = new Decimal(newAmount).minus(prevAmount).toNumber();
+
+    amount = calculateProrationAmount({
+      periodEnd: end * 1000,
+      periodStart: start * 1000,
+      now: attachParams.now || Date.now(),
+      amount,
+      allowNegative: true,
     });
 
     const product = cusProductToProduct({ cusProduct });
@@ -186,7 +200,6 @@ export const handleQuantityDowngrade = async ({
 
   if (cusEnt) {
     const config = cusPrice.price.config as UsagePriceConfig;
-    const billingUnits = config.billing_units || 1;
     let decrementBy = new Decimal(oldOptions.quantity)
       .minus(new Decimal(newOptions.quantity))
       .mul(billingUnits)

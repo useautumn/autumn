@@ -194,5 +194,7 @@ export const useAttachState = ({
 
     flags,
     setFlags,
+
+    cusProduct,
   };
 };
