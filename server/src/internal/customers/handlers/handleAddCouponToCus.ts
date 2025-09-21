@@ -82,3 +82,38 @@ export const handleAddCouponToCus = async (req: any, res: any) => {
     handleRequestError({ req, error, res, action: "add coupon to customer" });
   }
 };
+
+export const handleGetCustomerCoupon = async (req: any, res: any) => {
+  try {
+    const { customer_id } = req.params;
+    const { db, orgId, env } = req;
+
+    const customer = await CusService.get({
+      db,
+      idOrInternalId: customer_id,
+      orgId,
+      env,
+    });
+
+    if (!customer?.processor?.id) {
+      return res.status(404).json({ error: "Customer not found in Stripe" });
+    }
+
+    const stripeCli = createStripeCli({ org: req.org, env });
+    const stripeCustomer = await stripeCli.customers.retrieve(
+      customer.processor.id,
+      { expand: ["discount.coupon"] }
+    );
+
+    res.json({
+      coupon: stripeCustomer,
+    });
+  } catch (error) {
+    handleRequestError({
+      req,
+      res,
+      error,
+      action: "get customer coupon",
+    });
+  }
+};
