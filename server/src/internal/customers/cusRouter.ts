@@ -12,7 +12,10 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { handleDeleteCustomer } from "./handlers/handleDeleteCustomer.js";
 import { handleUpdateBalances } from "./handlers/handleUpdateBalances.js";
 import { handleUpdateEntitlement } from "./handlers/handleUpdateEntitlement.js";
-import { handleAddCouponToCus } from "./handlers/handleAddCouponToCus.js";
+import {
+  handleAddCouponToCus,
+  handleGetCustomerCoupon,
+} from "./handlers/handleAddCouponToCus.js";
 import { handlePostCustomerRequest } from "./handlers/handlePostCustomer.js";
 import { entityRouter } from "../api/entities/entityRouter.js";
 import { handleUpdateCustomer } from "./handlers/handleUpdateCustomer.js";
@@ -160,6 +163,8 @@ cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
 });
 
 cusRouter.post("/:customer_id/billing_portal", handleCreateBillingPortal);
+
+cusRouter.get("/:customer_id/coupon", handleGetCustomerCoupon);
 
 cusRouter.post("/:customer_id/coupons/:coupon_id", handleAddCouponToCus);
 
