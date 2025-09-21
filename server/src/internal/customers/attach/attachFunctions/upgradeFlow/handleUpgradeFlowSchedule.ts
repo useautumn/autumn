@@ -24,6 +24,7 @@ export const handleUpgradeFlowSchedule = async ({
   curSub,
   removeCusProducts,
   logger,
+  fromAddProduct = false,
 }: {
   req: ExtendedRequest;
   attachParams: AttachParams;
@@ -32,16 +33,16 @@ export const handleUpgradeFlowSchedule = async ({
   curSub: Stripe.Subscription;
   removeCusProducts?: FullCusProduct[];
   logger: any;
+  fromAddProduct?: boolean;
 }) => {
-  logger.info(`UPGRADE FLOW, updating schedule ${schedule?.id}`);
+  if (fromAddProduct) {
+    logger.info(`ADD PRODUCT FLOW, updating schedule ${schedule?.id}`);
+  } else {
+    logger.info(`UPGRADE FLOW, updating schedule ${schedule?.id}`);
+  }
+
   const { stripeCli, customer, prices } = attachParams;
   const curCusProduct = attachParamsToCurCusProduct({ attachParams });
-
-  // console.log("CUR ITEMS:");
-  // await logPhases({
-  //   phases: schedule.phases as any,
-  //   db: req.db,
-  // });
 
   const currentPhaseIndex = getCurrentPhaseIndex({
     schedule,

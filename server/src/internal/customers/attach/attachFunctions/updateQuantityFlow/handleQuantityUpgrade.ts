@@ -1,8 +1,10 @@
 import {
+  calculateProrationAmount,
   Feature,
   FeatureOptions,
   FullCusProduct,
   FullCustomerPrice,
+  getAmountForQuantity,
   getFeatureInvoiceDescription,
   OnIncrease,
   UsagePriceConfig,
@@ -69,6 +71,9 @@ export const handleQuantityUpgrade = async ({
     OnIncrease.ProrateImmediately;
 
   const prorate = shouldProrate(onIncrease);
+  const config = cusPrice.price.config as UsagePriceConfig;
+  const billingUnits = config.billing_units || 1;
+
   const diffWithBillingUnits = new Decimal(difference)
     .mul((cusPrice.price.config as UsagePriceConfig).billing_units || 1)
     .toNumber();
@@ -76,20 +81,38 @@ export const handleQuantityUpgrade = async ({
   if (prorate && stripeSub?.status !== "trialing") {
     const { start, end } = subToPeriodStartEnd({ sub: stripeSub });
 
-    const amount = priceToInvoiceAmount({
+    const prevAmount = priceToInvoiceAmount({
       price: cusPrice.price,
-      quantity: diffWithBillingUnits,
-      proration: prorate
-        ? {
-            start: start * 1000,
-            end: end * 1000,
-          }
-        : undefined,
-      now,
+      quantity: new Decimal(oldOptions.quantity).mul(billingUnits!).toNumber(),
     });
 
-    const config = cusPrice.price.config as UsagePriceConfig;
-    const billingUnits = config.billing_units;
+    const newAmount = priceToInvoiceAmount({
+      price: cusPrice.price,
+      quantity: new Decimal(newOptions.quantity).mul(billingUnits!).toNumber(),
+    });
+
+    let amount = new Decimal(newAmount).minus(prevAmount).toNumber();
+    if (prorate) {
+      amount = calculateProrationAmount({
+        periodEnd: end * 1000,
+        periodStart: start * 1000,
+        now: now || Date.now(),
+        amount,
+      });
+    }
+
+    // const amount = priceToInvoiceAmount({
+    //   price: cusPrice.price,
+    //   quantity: diffWithBillingUnits,
+    //   proration: prorate
+    //     ? {
+    //         start: start * 1000,
+    //         end: end * 1000,
+    //       }
+    //     : undefined,
+    //   now,
+    // });
+
     const feature = features.find(
       (f: Feature) => f.internal_id == newOptions.internal_feature_id
     )!;
@@ -160,8 +183,7 @@ export const handleQuantityUpgrade = async ({
   });
 
   // Update cus ent
-  const config = cusPrice.price.config as UsagePriceConfig;
-  const billingUnits = config.billing_units || 1;
+
   let cusEnt = getRelatedCusEnt({
     cusPrice,
     cusEnts: cusProduct.customer_entitlements,

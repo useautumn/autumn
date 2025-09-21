@@ -1,29 +1,32 @@
-import { Stripe } from "stripe";
-import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import { getMetadataFromCheckoutSession } from "@/internal/metadata/metadataUtils.js";
 import {
-  AppEnv,
+  type AppEnv,
   AttachScenario,
   CusProductStatus,
-  Organization,
+  notNullish,
+  type Organization,
 } from "@autumn/shared";
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import { createStripeCli } from "../utils.js";
-
+import type { Stripe } from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
+import { getMetadataFromCheckoutSession } from "@/internal/metadata/metadataUtils.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
-import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
+
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+
+import { createStripeCli } from "../utils.js";
+
 import { handleCheckoutSub } from "./handleCheckoutCompleted/handleCheckoutSub.js";
 import { handleRemainingSets } from "./handleCheckoutCompleted/handleRemainingSets.js";
+
+import { handleSetupCheckout } from "./handleCheckoutCompleted/handleSetupCheckout.js";
 import { getOptionsFromCheckoutSession } from "./handleCheckoutCompleted/getOptionsFromCheckout.js";
 import { getEarliestPeriodEnd } from "../stripeSubUtils/convertSubUtils.js";
-import { notNullish } from "@/utils/genUtils.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { handleSetupCheckout } from "./handleCheckoutCompleted/handleSetupCheckout.js";
 
 export const handleCheckoutSessionCompleted = async ({
   req,
@@ -187,6 +190,8 @@ export const handleCheckoutSessionCompleted = async ({
   console.log("✅ checkout.completed: successfully inserted invoices");
 
   for (const product of attachParams.products) {
+    console.log("Adding task to queue for trigger checkout reward");
+    console.log("Adding task to queue for trigger checkout reward");
     await addTaskToQueue({
       jobName: JobName.TriggerCheckoutReward,
       payload: {
@@ -224,72 +229,5 @@ export const handleCheckoutSessionCompleted = async ({
     });
   }
 
-  // if (
-  //   !attachParams.customer.name &&
-  //   notNullish(checkoutSession.customer_details?.name)
-  // ) {
-  //   updates.push(
-  //     CusService.update({
-  //       db,
-  //       internalCusId: attachParams.customer.internal_id,
-  //       update: {
-  //         name: checkoutSession.customer_details?.name,
-  //       },
-  //     })
-  //   );
-  // }
-
-  // if (
-  //   !attachParams.customer.email &&
-  //   notNullish(checkoutSession.customer_details?.email)
-  // ) {
-  //   updates.push(
-  //     CusService.update({
-  //       db,
-  //       internalCusId: attachParams.customer.internal_id,
-  //       update: {
-  //         email: checkoutSession.customer_details?.email,
-  //       },
-  //     })
-  //   );
-  // }
-
-  // // Let it fail silently if any of the updates fail.
-  // if (updates.length > 0) await Promise.allSettled(updates);
-
   return;
 };
-
-// for (const invoiceId of invoiceIds) {
-//   try {
-//     const invoice = await getStripeExpandedInvoice({
-//       stripeCli,
-//       stripeInvoiceId: invoiceId,
-//     });
-
-//     let invoiceItems = await getInvoiceItems({
-//       stripeInvoice: invoice,
-//       prices: attachParams.prices,
-//       logger,
-//     });
-
-//     await InvoiceService.createInvoiceFromStripe({
-//       db,
-//       org,
-//       stripeInvoice: invoice,
-//       internalCustomerId: attachParams.customer.internal_id,
-//       productIds: products.map((p) => p.id),
-//       internalProductIds: products.map((p) => p.internal_id),
-//       internalEntityId: attachParams.internalEntityId,
-//       items: invoiceItems,
-//     });
-
-//     console.log("   ✅ checkout.completed: successfully created invoice");
-//   } catch (error) {
-//     console.error("checkout.completed: error creating invoice", error);
-//   }
-// }
-
-// subscriptionId: !isOneOff
-//         ? (checkoutSession.subscription as string)
-//         : undefined,

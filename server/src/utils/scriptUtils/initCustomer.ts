@@ -1,14 +1,20 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { AppEnv, Customer, Organization, ProcessorType } from "@autumn/shared";
-import { createStripeCli } from "../../external/stripe/utils.js";
-import { Autumn } from "autumn-js";
+import {
+  type AppEnv,
+  type Customer,
+  type Organization,
+  ProcessorType,
+} from "@autumn/shared";
+import type { Autumn } from "autumn-js";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 import {
   attachPmToCus,
   createStripeCustomer,
 } from "../../external/stripe/stripeCusUtils.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import Stripe from "stripe";
-import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
+import { createStripeCli } from "../../external/stripe/utils.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 
 export const createCusInStripe = async ({
   customer,
@@ -59,7 +65,7 @@ export const initCustomer = async ({
   attachPm,
   withTestClock = true,
 }: {
-  autumn: Autumn;
+  autumn: Autumn | AutumnInt;
   customerId: string;
   fingerprint?: string;
   org: Organization;
@@ -68,14 +74,14 @@ export const initCustomer = async ({
   attachPm?: "success" | "fail";
   withTestClock?: boolean;
 }) => {
-  let customerData = {
+  const customerData = {
     id: customerId,
     name: customerId,
     email: `${customerId}@example.com`,
     fingerprint,
   };
 
-  let customer = await CusService.get({
+  const customer = await CusService.get({
     db,
     idOrInternalId: customerId,
     orgId: org.id,
@@ -95,7 +101,7 @@ export const initCustomer = async ({
   try {
     const res = await autumn.customers.create(customerData);
 
-    let customer = (await CusService.get({
+    const customer = (await CusService.get({
       db,
       idOrInternalId: customerId,
       orgId: org.id,
@@ -150,7 +156,7 @@ export const attachPaymentMethod = async ({
   type: "success" | "fail";
 }) => {
   try {
-    let token = type === "fail" ? "tok_chargeCustomerFail" : "tok_visa";
+    const token = type === "fail" ? "tok_chargeCustomerFail" : "tok_visa";
     const pm = await stripeCli.paymentMethods.create({
       type: "card",
       card: {
@@ -190,12 +196,12 @@ export const initCustomerV2 = async ({
   attachPm?: "success" | "fail";
   withTestClock?: boolean;
 }) => {
-  let name = customerId;
-  let email = `${customerId}@example.com`;
-  let fingerprint_ = "";
+  const name = customerId;
+  const email = `${customerId}@example.com`;
+  const fingerprint_ = "";
   const stripeCli = createStripeCli({ org, env });
 
-  let testClockId = undefined;
+  let testClockId;
 
   if (withTestClock) {
     const testClock = await stripeCli.testHelpers.testClocks.create({
@@ -220,7 +226,7 @@ export const initCustomerV2 = async ({
     name,
     email,
     fingerprint: fingerprint_,
-    // @ts-ignore
+    // @ts-expect-error
     stripe_id: stripeCus.id,
   });
 

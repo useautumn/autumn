@@ -43,11 +43,11 @@ export const runActionHandlerTask = async ({
         });
         break;
     }
-  } catch (error) {
+  } catch (error: any) {
     logger.error("Error processing action handler job:", {
-      jobName: job.name,
-      error,
-      payload,
+      // jobName: job.name,
+      // payload,
+      message: error.message,
     });
   } finally {
     await releaseLock({ lockKey, useBackup });

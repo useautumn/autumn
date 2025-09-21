@@ -44,6 +44,29 @@ featureRouter.get("", async (req: any, res: any) =>
   })
 );
 
+featureRouter.get("/:featureId", async (req: any, res: any) =>
+  routeHandler({
+    req,
+    res,
+    action: "Get feature",
+    handler: async () => {
+      const feature = req.features.find(
+        (f: Feature) => f.id == req.params.featureId
+      );
+
+      if (!feature) {
+        throw new RecaseError({
+          message: `Feature with id ${req.params.featureId} not found`,
+          code: ErrCode.FeatureNotFound,
+          statusCode: 404,
+        });
+      }
+
+      res.status(200).json(toAPIFeature({ feature }));
+    },
+  })
+);
+
 featureRouter.post("", async (req: any, res: any) =>
   routeHandler({
     req,

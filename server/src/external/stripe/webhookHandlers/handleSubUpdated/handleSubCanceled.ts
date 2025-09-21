@@ -102,9 +102,7 @@ export const handleSubCanceled = async ({
 
   const { db, env, logtail: logger } = req;
 
-  if (!canceledFromPortal || updatedCusProducts.length == 0) {
-    return;
-  }
+  if (!canceledFromPortal || updatedCusProducts.length == 0) return;
 
   await updateCusProductCanceled({
     db,
@@ -194,6 +192,8 @@ export const handleSubCanceled = async ({
   }
 
   for (let cusProd of updatedCusProducts) {
+    console.log("Sending webhook for canceled product: ", cusProd.product.id);
+
     try {
       await addProductsUpdatedWebhookTask({
         req,

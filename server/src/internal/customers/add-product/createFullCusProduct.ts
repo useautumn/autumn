@@ -1,41 +1,39 @@
 import {
-  CusProductStatus,
-  Price,
-  ProcessorType,
-  CustomerEntitlement,
-  CusProduct,
-  FeatureOptions,
-  FreeTrial,
+  type APIVersion,
   CollectionMethod,
-  FullCusProduct,
-  APIVersion,
-  InsertReplaceable,
-  ProductOptions,
+  type CusProduct,
+  CusProductStatus,
+  type Customer,
+  type CustomerEntitlement,
+  type CustomerPrice,
+  type FeatureOptions,
+  type FreeTrial,
+  type FullCusProduct,
+  type FullProduct,
+  type InsertReplaceable,
+  type Price,
+  ProcessorType,
+  type ProductOptions,
 } from "@autumn/shared";
-import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
-
-import { Customer } from "@autumn/shared";
-import { FullProduct } from "@autumn/shared";
-import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
-import { CustomerPrice } from "@autumn/shared";
-import { CusProductService } from "../cusProducts/CusProductService.js";
-import { InsertCusProductParams } from "../cusProducts/AttachParams.js";
-import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
-import { getEntRelatedPrice } from "@/internal/products/entitlements/entitlementUtils.js";
-
-import { getExistingCusProducts } from "../cusProducts/cusProductUtils/getExistingCusProducts.js";
-import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
-import { searchCusProducts } from "@/internal/customers/cusProducts/cusProductUtils.js";
-import { updateOneTimeCusProduct } from "./createOneTimeCusProduct.js";
-import { initCusEntitlement } from "./initCusEnt.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import { searchCusProducts } from "@/internal/customers/cusProducts/cusProductUtils.js";
+import { getEntRelatedPrice } from "@/internal/products/entitlements/entitlementUtils.js";
+import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
+import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
+import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
+import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
+import type { InsertCusProductParams } from "../cusProducts/AttachParams.js";
+import { CusProductService } from "../cusProducts/CusProductService.js";
 import { CusEntService } from "../cusProducts/cusEnts/CusEntitlementService.js";
-import { CusPriceService } from "../cusProducts/cusPrices/CusPriceService.js";
 import { addExistingUsagesToCusEnts } from "../cusProducts/cusEnts/cusEntUtils/getExistingUsage.js";
-import { RepService } from "../cusProducts/cusEnts/RepService.js";
 import { getNewProductRollovers } from "../cusProducts/cusEnts/cusRollovers/getNewProductRollovers.js";
 import { RolloverService } from "../cusProducts/cusEnts/cusRollovers/RolloverService.js";
+import { RepService } from "../cusProducts/cusEnts/RepService.js";
+import { CusPriceService } from "../cusProducts/cusPrices/CusPriceService.js";
+import { getExistingCusProducts } from "../cusProducts/cusProductUtils/getExistingCusProducts.js";
+import { updateOneTimeCusProduct } from "./createOneTimeCusProduct.js";
+import { initCusEntitlement } from "./initCusEnt.js";
 
 export const initCusPrice = ({
   price,
@@ -103,7 +101,7 @@ export const initCusProduct = ({
   apiVersion?: APIVersion;
   quantity?: number;
 }) => {
-  let isFuture = startsAt && startsAt > Date.now();
+  const isFuture = startsAt && startsAt > Date.now();
 
   let trialEnds = trialEndsAt;
   if (!trialEndsAt && freeTrial) {
@@ -197,7 +195,7 @@ export const expireOrDeleteCusProduct = async ({
 }) => {
   // 1. If startsAt
   if (startsAt && startsAt > Date.now()) {
-    let curScheduledProduct = cusProducts?.find(
+    const curScheduledProduct = cusProducts?.find(
       (cp) =>
         cp.product.group === product.group &&
         cp.status === CusProductStatus.Scheduled &&
@@ -213,7 +211,7 @@ export const expireOrDeleteCusProduct = async ({
       });
     }
   } else {
-    let { curMainProduct } = getExistingCusProducts({
+    const { curMainProduct } = getExistingCusProducts({
       product,
       cusProducts: cusProducts as FullCusProduct[],
       internalEntityId,
@@ -318,7 +316,7 @@ export const createFullCusProduct = async ({
     attachParams;
 
   // Try to get current cus product or set to null...
-  let curCusProduct = await getExistingCusProduct({
+  const curCusProduct = await getExistingCusProduct({
     db,
     cusProducts: attachParams.cusProducts,
     product,
@@ -333,7 +331,7 @@ export const createFullCusProduct = async ({
     trialEndsAt = curCusProduct.trial_ends_at || undefined;
   }
 
-  let attachReplaceables = attachParams.replaceables || [];
+  const attachReplaceables = attachParams.replaceables || [];
 
   const existingCusProduct = searchCusProducts({
     internalProductId: product.internal_id,
@@ -388,7 +386,7 @@ export const createFullCusProduct = async ({
 
     cusEnts.push(cusEnt);
 
-    let newReplaceables_ = attachReplaceables
+    const newReplaceables_ = attachReplaceables
       .filter((r) => r.ent.id === entitlement.id)
       .map((r) => ({
         ...r,
@@ -399,6 +397,7 @@ export const createFullCusProduct = async ({
   }
 
   // 3. Deduct existing usages
+
   let deductedCusEnts = addExistingUsagesToCusEnts({
     cusEnts: cusEnts,
     entitlements: entitlements,
@@ -410,7 +409,7 @@ export const createFullCusProduct = async ({
   });
 
   // 4. Get new rollovers
-  let rolloverOps = await getNewProductRollovers({
+  const rolloverOps = await getNewProductRollovers({
     db,
     curCusProduct: curCusProduct as FullCusProduct,
     cusEnts,
@@ -492,7 +491,7 @@ export const createFullCusProduct = async ({
     replaceables: newReplaceables,
   });
 
-  let rolloverInserts: any = [];
+  const rolloverInserts: any = [];
 
   for (const operation of rolloverOps) {
     rolloverInserts.push(
@@ -504,7 +503,7 @@ export const createFullCusProduct = async ({
     );
   }
 
-  let finalRollovers = (await Promise.all(rolloverInserts)).flatMap((r) => r);
+  const finalRollovers = (await Promise.all(rolloverInserts)).flatMap((r) => r);
 
   // Get rollovers for each entitlement
   const cusEntsWithRollovers = await Promise.all(
@@ -525,7 +524,7 @@ export const createFullCusProduct = async ({
     }))
   );
 
-  let fullCusProduct = {
+  const fullCusProduct = {
     ...cusProd,
     product,
     customer_entitlements: cusEntsWithRollovers,
