@@ -70,4 +70,15 @@ export class CusService {
       `/v1/customers/${customer_id}/coupons/${coupon_id}`
     );
   }
+
+  static async getCustomerCoupon({
+    axiosInstance,
+    customer_id,
+  }: {
+    axiosInstance: AxiosInstance;
+    customer_id: string;
+  }) {
+    const res = await axiosInstance.get(`/v1/customers/${customer_id}/coupon`);
+    return res.data;
+  }
 }

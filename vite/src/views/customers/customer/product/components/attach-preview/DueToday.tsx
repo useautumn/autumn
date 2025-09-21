@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { QuantityInput } from "@/components/pricing/attach-pricing-dialog";
 
 import { useProductContext } from "@/views/products/product/ProductContext";
@@ -14,17 +15,64 @@ import { Decimal } from "decimal.js";
 import { Input } from "@/components/ui/input";
 import { notNullish } from "@/utils/genUtils";
 import { useOrg } from "@/hooks/common/useOrg";
+import { useCusQuery } from "../../../hooks/useCusQuery";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useEnv } from "@/utils/envUtils";
+import { CusService } from "@/services/customers/CusService";
 
 export const DueToday = () => {
   const { org } = useOrg();
   const { attachState, product } = useProductContext();
+  const { customer, entities } = useCusQuery();
+  const [discount, setDiscount] = useState<any>(null);
+
+  console.log("DueToday render - customer:", customer);
+
   const { preview, options, setOptions } = attachState;
+
+  const env = useEnv();
+  const axiosInstance = useAxiosInstance({ env });
+
+  useEffect(() => {
+    if (!customer?.internal_id) return;
+
+    const fetchCoupon = async () => {
+      try {
+        const data = await CusService.getCustomerCoupon({
+          axiosInstance,
+          customer_id: customer.internal_id,
+        });
+        console.log("Coupon for customer:", customer.internal_id, data);
+
+        // Save discount in state if available
+        setDiscount(data?.coupon?.discount?.coupon || null);
+      } catch (err) {
+        console.error("Error fetching coupon:", err);
+      }
+    };
+
+    fetchCoupon();
+  }, []);
 
   const dueToday = preview.due_today;
 
   if (!dueToday || preview.branch == AttachBranch.NewVersion) {
     return null;
   }
+
+  const calculateDiscount = (total: number) => {
+    if (!discount) return 0;
+
+    if (discount.percent_off) {
+      return (total * discount.percent_off) / 100;
+    }
+
+    if (discount.amount_off) {
+      return discount.amount_off; // already in cents/minor units
+    }
+
+    return 0;
+  };
 
   const dueTodayItems = dueToday.line_items;
   const currency = org?.default_currency || "USD";
@@ -41,8 +89,6 @@ export const DueToday = () => {
     total = total.toNumber();
 
     options.forEach((option: any) => {
-      // Get invoice amount
-
       if (option.tiers) {
         const amount = getAmountForQuantity({
           price: {
@@ -74,7 +120,6 @@ export const DueToday = () => {
     if (branch == AttachBranch.UpdatePrepaidQuantity) {
       return "Update quantity";
     }
-
     return "Due today";
   };
 
@@ -88,22 +133,15 @@ export const DueToday = () => {
     }
 
     if (option.tiers) {
-      const start = option.tiers[0].amount;
-      const end = option.tiers[option.tiers.length - 1].amount;
       return "x ";
-      // return `${formatAmount({
-      //   amount: start,
-      //   defaultCurrency: currency,
-      //   maxFractionDigits: 5,
-      // })} - ${formatAmount({
-      //   amount: end,
-      //   defaultCurrency: currency,
-      //   maxFractionDigits: 5,
-      // })} `;
     }
 
     return "";
   };
+
+  const totalBeforeDiscount = getTotalPrice();
+  const discountAmount = calculateDiscount(totalBeforeDiscount);
+  const finalTotal = totalBeforeDiscount - discountAmount;
 
   return (
     <div className="flex flex-col">
@@ -118,7 +156,6 @@ export const DueToday = () => {
             </PriceItem>
           );
         })}
-      {/* <AttachNewItems /> */}
       {options.length > 0 &&
         options.map((option: any, index: number) => {
           const { feature_name, billing_units, quantity, price } = option;
@@ -142,12 +179,6 @@ export const DueToday = () => {
                 />
 
                 <span className="text-muted-foreground truncate max-w-40">
-                  {/* ×{" "} */}
-                  {/* {formatAmount({
-                    defaultCurrency: currency,
-                    amount: price,
-                    maxFractionDigits: 2,
-                  })}{" "} */}
                   {getPrepaidPrice({ option })}
                   {billing_units === 1 ? " " : billing_units} {feature_name}
                 </span>
@@ -156,16 +187,38 @@ export const DueToday = () => {
           );
         })}
       {preview.due_today && (
-        <PriceItem className="font-bold mt-2">
-          <span>Total:</span>
-          <span>
-            {formatAmount({
-              amount: getTotalPrice(),
-              defaultCurrency: currency,
-              maxFractionDigits: 2,
-            })}
-          </span>
-        </PriceItem>
+        <>
+          {discount && (
+            <PriceItem className="text-green-600">
+              <span>Discount ({discount.name}):</span>
+              <span>
+                -{" "}
+                {discount.percent_off
+                  ? `${discount.percent_off}% (${formatAmount({
+                      amount: discountAmount,
+                      defaultCurrency: currency,
+                      maxFractionDigits: 2,
+                    })})`
+                  : formatAmount({
+                      amount: discountAmount,
+                      defaultCurrency: currency,
+                      maxFractionDigits: 2,
+                    })}
+              </span>
+            </PriceItem>
+          )}
+
+          <PriceItem className="font-bold mt-2">
+            <span>Final Total:</span>
+            <span>
+              {formatAmount({
+                amount: finalTotal,
+                defaultCurrency: currency,
+                maxFractionDigits: 2,
+              })}
+            </span>
+          </PriceItem>
+        </>
       )}
     </div>
   );
