@@ -33,7 +33,13 @@ bun install
 ```bash
 bun setup
 ```
-4. Run Autumn:
+
+4. Generate the relevant tables in your postgres DB
+```bash
+bun db:generate && bun db:migrate
+```
+
+5. Run Autumn:
 
 For Windows
 ```bash

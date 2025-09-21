@@ -7,6 +7,7 @@ import { AttachScenario, FullCusProduct } from "@autumn/shared";
 import Stripe from "stripe";
 import { isMultiProductSub } from "@/internal/customers/attach/mergeUtils/mergeUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { getSubScenarioFromCache } from "@/internal/customers/cusCache/subCacheUtils.js";
 const isSubRenewed = ({
   previousAttributes,
   sub,
@@ -70,11 +71,17 @@ export const handleSubRenewed = async ({
 
   if (!renewed || updatedCusProducts.length == 0) return;
 
+  const subScenario = await getSubScenarioFromCache({ subId: sub.id });
+  console.log(`Renewed: ${renewed}, subScenario: ${subScenario}`);
+  if (subScenario === AttachScenario.Renew) return;
+
   const customer = updatedCusProducts[0].customer;
   let cusProducts = await CusProductService.list({
     db,
     internalCustomerId: customer!.internal_id,
   });
+
+  console.log(`handling sub.renewed!`);
 
   if (isMultiProductSub({ sub, cusProducts }) || sub.schedule) return;
 

@@ -281,6 +281,18 @@ export const routeHandler = async <TLoad = undefined>({
     let originalUrl = req.originalUrl;
     if (error instanceof Stripe.errors.StripeError) {
       if (
+        originalUrl.includes("/exchange") &&
+        error.message.includes("Invalid API Key provided")
+      ) {
+        req.logtail.warn(`Exchange router, invalid API Key provided`);
+
+        return res.status(400).json({
+          message: error.message,
+          code: ErrCode.InvalidRequest,
+        });
+      }
+
+      if (
         originalUrl.includes("/billing_portal") &&
         error.message.includes("Provide a configuration or create your default")
       ) {

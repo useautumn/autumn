@@ -1,10 +1,12 @@
 import {
   BillingInterval,
-  EntInterval,
-  ProductItemInterval,
+  EntInterval
 } from "@autumn/shared";
 
-export const keyToTitle = (key: string) => {
+export const keyToTitle = (key: string, options?: { exclusionMap?: Record<string, string> }) => {
+  if(options?.exclusionMap?.[key]) {
+    return options.exclusionMap[key];
+  }
   return key
     .replace(/[_-]/g, " ")
     .replace(/\b\w/g, (char) => char.toUpperCase());
@@ -23,22 +25,24 @@ export const slugify = (
 ) => {
   return text
     .toLowerCase()
-    .replace(/ /g, type == "underscore" ? "_" : "-")
+    .replace(/ /g, type === "underscore" ? "_" : "-")
     .replace(/[^\w\s-]/g, "");
 };
 
 export const formatAmount = ({
   amount,
   currency,
+  maxFractionDigits = 10,
 }: {
   amount: number;
   currency: string;
+  maxFractionDigits?: number;
 }) => {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: currency,
     minimumFractionDigits: 0,
-    maximumFractionDigits: 10,
+    maximumFractionDigits: maxFractionDigits,
   }).format(amount);
 };
 

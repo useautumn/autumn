@@ -48,14 +48,14 @@ export const processFullCusProducts = async ({
   fullCusProducts,
   subs,
   org,
-  entities = [],
+  entity,
   apiVersion,
   features,
 }: {
   fullCusProducts: any;
   subs: any;
   org: Organization;
-  entities?: Entity[];
+  entity?: Entity;
   apiVersion: number;
   features: Feature[];
 }) => {
@@ -67,7 +67,7 @@ export const processFullCusProducts = async ({
       cusProduct,
       subs,
       org,
-      entities,
+      entity,
       apiVersion,
       features,
     });

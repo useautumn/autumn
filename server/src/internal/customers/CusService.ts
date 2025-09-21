@@ -13,7 +13,7 @@ import {
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { StatusCodes } from "http-status-codes";
-import { and, eq, or, sql } from "drizzle-orm";
+import { and, eq, ilike, or, sql } from "drizzle-orm";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getFullCusQuery } from "./getFullCusQuery.js";
 import { trace } from "@opentelemetry/api";
@@ -151,7 +151,7 @@ export class CusService {
   }) {
     const customer = await db.query.customers.findMany({
       where: and(
-        eq(customers.email, email),
+        ilike(customers.email, email),
         eq(customers.org_id, orgId),
         eq(customers.env, env)
       ),

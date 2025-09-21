@@ -90,15 +90,18 @@ export const deleteStripeWebhook = async ({
   org: Organization;
   env: AppEnv;
 }) => {
+  if (!isStripeConnected({ org, env })) return;
+
   const stripeCli = createStripeCli({ org, env });
   const webhookEndpoints = await stripeCli.webhookEndpoints.list({
     limit: 100,
   });
 
   for (const webhook of webhookEndpoints.data) {
-    if (webhook.url.includes(org.id)) {
+    if (webhook.url.includes(org.id) && webhook.url.includes(env)) {
       try {
         await stripeCli.webhookEndpoints.del(webhook.id);
+        console.log(`Deleted stripe webhook (${env}) ${webhook.url}`);
       } catch (error: any) {
         console.log(`Failed to delete stripe webhook (${env}) ${webhook.url}`);
         console.log(error.message);
@@ -208,4 +211,31 @@ export const updateOrgConfig = async ({
   if (disconnectCache) {
     await CacheManager.disconnect();
   }
+};
+
+export const unsetOrgStripeKeys = async ({
+  org,
+  env,
+  db,
+}: {
+  org: Organization;
+  env: AppEnv;
+  db: DrizzleCli;
+}) => {
+  const newStripeConfig: any = structuredClone(org.stripe_config) || {};
+  if (env === AppEnv.Sandbox) {
+    newStripeConfig.test_api_key = null;
+    newStripeConfig.test_webhook_secret = null;
+  } else {
+    newStripeConfig.live_api_key = null;
+    newStripeConfig.live_webhook_secret = null;
+  }
+
+  await OrgService.update({
+    db,
+    orgId: org.id,
+    updates: {
+      stripe_config: newStripeConfig,
+    },
+  });
 };

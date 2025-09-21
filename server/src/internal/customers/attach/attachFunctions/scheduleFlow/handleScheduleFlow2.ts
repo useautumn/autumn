@@ -26,6 +26,7 @@ import { subToNewSchedule } from "../../mergeUtils/subToNewSchedule.js";
 import { updateCurSchedule } from "../../mergeUtils/updateCurSchedule.js";
 import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { getCurrentPhaseIndex } from "../../mergeUtils/phaseUtils/phaseUtils.js";
+import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 
 export const handleScheduleFunction2 = async ({
   req,
@@ -138,6 +139,9 @@ export const handleScheduleFunction2 = async ({
     logger.info(`SCHEDULE FLOW: no schedule, canceling sub ${curSub?.id}`);
     await stripeCli.subscriptions.update(curSub!.id, {
       cancel_at: expectedEnd!,
+      cancellation_details: {
+        comment: "autumn_downgrade",
+      },
     });
   }
 
@@ -150,11 +154,34 @@ export const handleScheduleFunction2 = async ({
       nextResetAt: expectedEnd! * 1000,
       disableFreeTrial: true,
       isDowngrade: true,
-      scenario: newProductFree
-        ? AttachScenario.Cancel
-        : AttachScenario.Downgrade,
+      sendWebhook: false,
+      // scenario: newProductFree
+      //   ? AttachScenario.Cancel
+      //   : AttachScenario.Downgrade,
       logger,
     });
+  }
+
+  if (curCusProduct) {
+    try {
+      await addProductsUpdatedWebhookTask({
+        req,
+        internalCustomerId: curCusProduct.internal_customer_id,
+        org: attachParams.org,
+        env: attachParams.customer.env,
+        customerId:
+          attachParams.customer.id || attachParams.customer.internal_id,
+
+        scenario: isFreeProduct(attachParams.prices)
+          ? AttachScenario.Cancel
+          : AttachScenario.Downgrade,
+
+        cusProduct: curCusProduct,
+        logger,
+      });
+    } catch (error) {
+      logger.error("SCHEDULE FLOW: failed to add to webhook queue", { error });
+    }
   }
 
   let apiVersion = attachParams.apiVersion || APIVersion.v1;

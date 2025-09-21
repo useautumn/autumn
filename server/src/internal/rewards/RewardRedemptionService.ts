@@ -1,17 +1,16 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { notNullish } from "@/utils/genUtils.js";
 import {
   customers,
   ErrCode,
+  type RewardRedemption,
+  type RewardTriggerEvent,
   referralCodes,
   rewardPrograms,
-  RewardRedemption,
   rewardRedemptions,
   rewards,
-  RewardTriggerEvent,
 } from "@autumn/shared";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import RecaseError from "@/utils/errorUtils.js";
 
 export class RewardRedemptionService {
   static async getById({ db, id }: { db: DrizzleCli; id: string }) {
@@ -55,10 +54,10 @@ export class RewardRedemptionService {
         internalRewardProgramId
           ? eq(
               rewardRedemptions.internal_reward_program_id,
-              internalRewardProgramId,
+              internalRewardProgramId
             )
           : undefined,
-        triggered ? eq(rewardRedemptions.triggered, triggered) : undefined,
+        triggered ? eq(rewardRedemptions.triggered, triggered) : undefined
       ),
       with: {
         reward_program: {
@@ -92,11 +91,11 @@ export class RewardRedemptionService {
       .from(rewardRedemptions)
       .innerJoin(
         referralCodes,
-        eq(rewardRedemptions.referral_code_id, referralCodes.id),
+        eq(rewardRedemptions.referral_code_id, referralCodes.id)
       )
       .innerJoin(
         customers,
-        eq(rewardRedemptions.internal_customer_id, customers.internal_id),
+        eq(rewardRedemptions.internal_customer_id, customers.internal_id)
       );
 
     if (withRewardProgram) {
@@ -104,15 +103,15 @@ export class RewardRedemptionService {
         rewardPrograms,
         eq(
           rewardRedemptions.internal_reward_program_id,
-          rewardPrograms.internal_id,
-        ),
+          rewardPrograms.internal_id
+        )
       );
     }
     const data = await query
       .where(eq(referralCodes.internal_customer_id, internalCustomerId))
       .limit(limit);
 
-    let processed = data.map((d) => ({
+    const processed = data.map((d) => ({
       ...d.reward_redemptions,
       referral_code: d.referral_codes,
       customer: d.customers,
@@ -184,34 +183,65 @@ export class RewardRedemptionService {
       .from(rewardRedemptions)
       .innerJoin(
         referralCodes,
-        eq(rewardRedemptions.referral_code_id, referralCodes.id),
+        eq(rewardRedemptions.referral_code_id, referralCodes.id)
+      )
+      .innerJoin(
+        customers,
+        eq(rewardRedemptions.internal_customer_id, customers.internal_id)
       )
       .innerJoin(
         rewardPrograms,
         eq(
           rewardRedemptions.internal_reward_program_id,
-          rewardPrograms.internal_id,
-        ),
+          rewardPrograms.internal_id
+        )
+      )
+      .innerJoin(
+        rewards,
+        eq(rewardPrograms.internal_reward_id, rewards.internal_id)
       )
       .where(
-        and(
-          eq(referralCodes.internal_customer_id, internalCustomerId),
-          eq(rewardRedemptions.triggered, true),
-          eq(rewardRedemptions.applied, false),
-        ),
+        or(
+          and(
+            eq(referralCodes.internal_customer_id, internalCustomerId),
+            eq(rewardRedemptions.triggered, true),
+            eq(rewardRedemptions.applied, false)
+          ),
+          and(
+            eq(rewardRedemptions.internal_customer_id, internalCustomerId),
+            eq(rewardRedemptions.triggered, true),
+            eq(rewardRedemptions.redeemer_applied, false)
+          )
+        )
       );
 
-    if (data.length == 0) return [];
+    if (data.length === 0) return [];
 
-    let processed = data.map((d) => ({
+    const processed = data.map((d) => ({
       ...d.reward_redemptions,
       referral_code: d.referral_codes,
       reward_program: {
         ...d.reward_programs,
-        // reward: d.rewards,
+        reward: d.rewards,
       },
     }));
 
     return processed;
+  }
+
+  static async _resetCustomerRedemptions({
+    db,
+    internalCustomerId,
+  }: {
+    db: DrizzleCli;
+    internalCustomerId: string | string[];
+  }) {
+    if (!Array.isArray(internalCustomerId))
+      internalCustomerId = [internalCustomerId];
+    return await db
+      .delete(rewardRedemptions)
+      .where(
+        inArray(rewardRedemptions.internal_customer_id, internalCustomerId)
+      );
   }
 }

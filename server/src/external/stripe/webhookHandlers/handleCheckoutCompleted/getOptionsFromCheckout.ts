@@ -1,5 +1,6 @@
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import {
+  formatPrice,
   getBillingType,
   getPriceEntitlement,
   priceIsOneOffAndTiered,
@@ -32,9 +33,7 @@ export const getOptionsFromCheckoutSession = async ({
   for (const price of prices) {
     let config = price.config as UsagePriceConfig;
 
-    if (getBillingType(config) != BillingType.UsageInAdvance) {
-      continue;
-    }
+    if (getBillingType(config) != BillingType.UsageInAdvance) continue;
 
     const lineItem = findStripeItemForPrice({
       price,
@@ -47,7 +46,8 @@ export const getOptionsFromCheckoutSession = async ({
       let relatedEnt = getPriceEntitlement(price, ents);
 
       if (priceIsOneOffAndTiered(price, relatedEnt)) {
-        quantity = (lineItem.quantity || 0) + (relatedEnt.allowance || 0);
+        // quantity = lineItem.quantity || 0;
+        continue;
       } else {
         quantity = lineItem.quantity || 0;
       }

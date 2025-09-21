@@ -1,10 +1,5 @@
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getCusWithCache } from "@/internal/customers/cusCache/getCusWithCache.js";
-import {
-  ACTIVE_STATUSES,
-  RELEVANT_STATUSES,
-} from "@/internal/customers/cusProducts/CusProductService.js";
-import { CusService } from "@/internal/customers/CusService.js";
 import { getCusFeaturesResponse } from "@/internal/customers/cusUtils/cusFeatureResponseUtils/getCusFeaturesResponse.js";
 import { processFullCusProducts } from "@/internal/customers/cusUtils/cusProductResponseUtils/processFullCusProducts.js";
 
@@ -13,7 +8,6 @@ import { nullish } from "@/utils/genUtils.js";
 import {
   type AppEnv,
   Feature,
-  CusProductStatus,
   type Entity,
   EntityExpand,
   type EntityResponse,
@@ -32,6 +26,7 @@ export const getSingleEntityResponse = async ({
   org,
   env,
   fullCus,
+  entity,
   features,
   withAutumnId = false,
 }: {
@@ -39,13 +34,10 @@ export const getSingleEntityResponse = async ({
   org: Organization;
   env: AppEnv;
   fullCus: FullCustomer;
+  entity: Entity;
   features: Feature[];
   withAutumnId?: boolean;
 }) => {
-  let entity = fullCus.entities.find(
-    (e: Entity) => e.id == entityId || e.internal_id == entityId
-  );
-
   const apiVersion = APIVersion.v1_2;
 
   if (!entity) {
@@ -80,7 +72,7 @@ export const getSingleEntityResponse = async ({
 
   let { main, addOns } = await processFullCusProducts({
     fullCusProducts: entityCusProducts,
-    entities: fullCus.entities,
+    entity,
     subs: entitySubs,
     org,
     apiVersion: APIVersion.v1_2,
@@ -136,7 +128,7 @@ export const getEntityResponse = async ({
   logger: any;
   skipCache?: boolean;
 }) => {
-  let customer = await getCusWithCache({
+  let fullCus = await getCusWithCache({
     db,
     idOrInternalId: customerId,
     org,
@@ -147,7 +139,7 @@ export const getEntityResponse = async ({
     skipCache,
   });
 
-  if (!customer) {
+  if (!fullCus) {
     throw new RecaseError({
       message: `Customer ${customerId} not found`,
       code: ErrCode.CustomerNotFound,
@@ -156,12 +148,26 @@ export const getEntityResponse = async ({
   }
 
   const entityResponses: EntityResponse[] = [];
+
   for (const entityId of entityIds) {
+    const entity = fullCus.entities.find(
+      (e: Entity) => e.id == entityId || e.internal_id == entityId
+    );
+
+    if (!entity) {
+      throw new RecaseError({
+        message: `Entity ${entityId} not found for customer ${fullCus.id}`,
+        code: ErrCode.EntityNotFound,
+        statusCode: 400,
+      });
+    }
+
     let entityResponse = await getSingleEntityResponse({
       entityId,
       org,
       env,
-      fullCus: customer,
+      fullCus,
+      entity,
       features,
       withAutumnId,
     });
@@ -171,8 +177,8 @@ export const getEntityResponse = async ({
 
   return {
     entities: entityResponses,
-    customer,
-    fullEntities: customer.entities,
-    invoices: customer.invoices,
+    customer: fullCus,
+    fullEntities: fullCus.entities,
+    invoices: fullCus.invoices,
   };
 };
