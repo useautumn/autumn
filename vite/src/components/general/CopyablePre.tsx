@@ -14,19 +14,33 @@ export function CopyablePre({ text }: { text: string }) {
 }
 
 // A compact, inline version for use in places like badges or small UI elements.
-export function CopyableSpan({ text, className = "" }: { text: string; className?: string }) {
+export function CopyableSpan({
+	text,
+	className = "",
+	copySize = 20,
+	copyProps = {}
+}: {
+	text: string;
+	className?: string;
+	copySize?: number;
+	copyProps?: React.ComponentProps<typeof import("lucide-react").Copy>;
+}) {
 	return (
 		<span
 			className={
-				`inline-flex items-center rounded-xl bg-muted/50 px-4 py-1 text-md font-mono text-muted-foreground relative font-normal gap-1` +
+				`inline-flex items-center rounded-xl bg-muted/50 pl-3 py-1 text-md font-mono text-muted-foreground relative font-normal gap-1` +
 				(className ? ` ${className}` : "")
 			}
 		>
 			<span className="pr-2">{text}</span>
 			<CopyButton
 				text={text}
-				className="ml-1 p-0.5 rounded transition hover:bg-muted/80 w-6 h-6 z-[1] static"
-				copySize={20}
+				className="ml-1 p-0.5 rounded transition bg-transparent size-6 z-[1] static bg-none shadow-none border-none"
+        copyProps={{
+          className: "text-muted-foreground",
+          ...copyProps
+        }}
+				copySize={copySize}
 			/>
 		</span>
 	);
