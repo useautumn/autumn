@@ -1,7 +1,7 @@
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useProductContext } from "@/views/products/product/ProductContext";
 import EditorTopSection from "./EditorTopSection";
-import PlanCard from "./PlanCard";
+import PlanCard from "./PlanCard/PlanCard";
 
 export const ManagePlan = ({
 	hideAdminHover = false,
@@ -12,7 +12,7 @@ export const ManagePlan = ({
 	const { product, entityId } = useProductContext();
 
 	return (
-		<div className="flex flex-col gap-4 ">
+		<div className="flex flex-col gap-4 h-full overflow-hidden">
 			<EditorTopSection
 				product={product}
 				hideAdminHover={hideAdminHover}
@@ -20,7 +20,7 @@ export const ManagePlan = ({
 				entityId={entityId}
 			/>
 
-			<div className="flex flex-col gap-10 h-full bg-[#EEEEEE] min-h-screen items-center justify-center">
+			<div className="flex flex-col gap-10 flex-1 min-h-0 bg-[#EEEEEE] items-center justify-center overflow-hidden">
 				<PlanCard product={product} />
 			</div>
 		</div>

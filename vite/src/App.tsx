@@ -1,4 +1,6 @@
 import { AppEnv } from "@autumn/shared";
+import { init } from "@squircle/core";
+import * as React from "react";
 import { BrowserRouter, Route, Routes } from "react-router";
 import { MainLayout } from "./app/layout";
 import { AdminView } from "./views/admin/AdminView";
@@ -17,6 +19,11 @@ import OnboardingView2 from "./views/onboarding2/OnboardingView2";
 import ProductsView from "./views/products/ProductsView";
 import PlanEditorView from "./views/products/plan/PlanEditorView";
 import { TerminalView } from "./views/TerminalView";
+
+export function SquircleProvider({ children }: { children: React.ReactNode }) {
+	React.useEffect(() => void init(), []);
+	return children;
+}
 
 export default function App() {
 	return (
@@ -41,10 +48,21 @@ export default function App() {
 						path="/sandbox/products"
 						element={<ProductsView env={AppEnv.Sandbox} />}
 					/>
-					<Route path="/products/:product_id" element={<PlanEditorView />} />
+					<Route
+						path="/products/:product_id"
+						element={
+							<SquircleProvider>
+								<PlanEditorView />
+							</SquircleProvider>
+						}
+					/>
 					<Route
 						path="/sandbox/products/:product_id"
-						element={<PlanEditorView />}
+						element={
+							<SquircleProvider>
+								<PlanEditorView />
+							</SquircleProvider>
+						}
 					/>
 
 					<Route path="/customers" element={<CustomersPage />} />

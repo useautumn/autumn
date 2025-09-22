@@ -108,6 +108,8 @@ export * from "./models/productV2Models/productItemModels/productItemModels.js";
 export * from "./models/productV2Models/productResponseModels.js";
 // 6. Product V2 Models
 export * from "./models/productV2Models/productV2Models.js";
+// 7. Product V3 Models
+export * from "./models/productV3Models/productV3Response.js";
 export * from "./models/rewardModels/referralModels/referralCodeTable.js";
 export * from "./models/rewardModels/referralModels/referralModels.js";
 export * from "./models/rewardModels/referralModels/rewardRedemptionTable.js";
@@ -127,6 +129,8 @@ export * from "./utils/index.js";
 export * from "./utils/intervalUtils.js";
 export * from "./utils/productDisplayUtils/getProductItemRes.js";
 export * from "./utils/productDisplayUtils/sortProductItems.js";
+export * from "./utils/productDisplayUtils.js";
 export * from "./utils/productUtils/priceToInvoiceAmount.js";
 export * from "./utils/productUtils.js";
+export * from "./utils/productV3Utils/index.js";
 export * from "./utils/rewardUtils/rewardMigrationUtils.js";
