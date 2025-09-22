@@ -46,6 +46,7 @@ export default function PlanCard({ product }: { product: ProductV2 }) {
 						<span className="text-[#666666] text-sm">No price set</span>
 					)}
 				</div>
+				
 				<PlanFeatureList />
 			</CardHeader>
 		</Card>
