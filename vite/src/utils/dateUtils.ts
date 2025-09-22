@@ -1,3 +1,3 @@
 export const unixHasPassed = (unix: number) => {
-  return unix < Date.now();
+	return unix < Date.now();
 };

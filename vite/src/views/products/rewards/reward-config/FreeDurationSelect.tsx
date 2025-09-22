@@ -41,7 +41,10 @@ export const FreeDurationSelect = ({
 					/>
 				}
 				<Select
-					value={reward.free_product_config?.duration_type || CouponDurationType.Months}
+					value={
+						reward.free_product_config?.duration_type ||
+						CouponDurationType.Months
+					}
 					onValueChange={(value) =>
 						setReward({
 							...reward,

@@ -1,6 +1,4 @@
-import {
-	FullCustomerEntitlement,
-} from "@autumn/shared";
+import { FullCustomerEntitlement } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
 
 export const getResetBalancesUpdate = ({

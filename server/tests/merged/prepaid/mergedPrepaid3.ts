@@ -8,12 +8,12 @@ import { TestFeature } from "tests/setup/v2Features.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-  APIVersion,
-  AppEnv,
-  CusProductStatus,
-  OnDecrease,
-  OnIncrease,
-  Organization,
+	APIVersion,
+	AppEnv,
+	CusProductStatus,
+	OnDecrease,
+	OnIncrease,
+	Organization,
 } from "@autumn/shared";
 import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
@@ -25,170 +25,170 @@ import { expectSubToBeCorrect } from "../mergeUtils/expectSubCorrect.js";
 
 const billingUnits = 100;
 const creditItem = constructPrepaidItem({
-  featureId: TestFeature.Credits,
-  includedUsage: 100,
-  price: 10,
-  billingUnits,
-  config: {
-    on_increase: OnIncrease.ProrateImmediately,
-    on_decrease: OnDecrease.ProrateImmediately,
-  },
+	featureId: TestFeature.Credits,
+	includedUsage: 100,
+	price: 10,
+	billingUnits,
+	config: {
+		on_increase: OnIncrease.ProrateImmediately,
+		on_decrease: OnDecrease.ProrateImmediately,
+	},
 });
 
 let premium = constructProduct({
-  id: "premium",
-  items: [creditItem],
-  type: "premium",
+	id: "premium",
+	items: [creditItem],
+	type: "premium",
 });
 
 let pro = constructProduct({
-  id: "pro",
-  items: [creditItem],
-  type: "pro",
+	id: "pro",
+	items: [creditItem],
+	type: "pro",
 });
 
 const ops = [
-  {
-    entityId: "1",
-    product: premium,
-    results: [{ product: premium, status: CusProductStatus.Active }],
-    options: [
-      {
-        feature_id: TestFeature.Credits,
-        quantity: billingUnits * 4,
-      },
-    ],
-  },
-  {
-    entityId: "2",
-    product: premium,
-    results: [{ product: premium, status: CusProductStatus.Active }],
-    options: [
-      {
-        feature_id: TestFeature.Credits,
-        quantity: billingUnits * 3,
-      },
-    ],
-  },
+	{
+		entityId: "1",
+		product: premium,
+		results: [{ product: premium, status: CusProductStatus.Active }],
+		options: [
+			{
+				feature_id: TestFeature.Credits,
+				quantity: billingUnits * 4,
+			},
+		],
+	},
+	{
+		entityId: "2",
+		product: premium,
+		results: [{ product: premium, status: CusProductStatus.Active }],
+		options: [
+			{
+				feature_id: TestFeature.Credits,
+				quantity: billingUnits * 3,
+			},
+		],
+	},
 
-  // Update prepaid quantity (increase)
-  {
-    entityId: "1",
-    product: pro,
-    results: [{ product: pro, status: CusProductStatus.Active }],
-    options: [
-      {
-        feature_id: TestFeature.Credits,
-        quantity: billingUnits * 2,
-      },
-    ],
-  },
+	// Update prepaid quantity (increase)
+	{
+		entityId: "1",
+		product: pro,
+		results: [{ product: pro, status: CusProductStatus.Active }],
+		options: [
+			{
+				feature_id: TestFeature.Credits,
+				quantity: billingUnits * 2,
+			},
+		],
+	},
 ];
 
 const testCase = "mergedPrepaid3";
 describe(`${chalk.yellowBright("mergedPrepaid3: Testing merged subs, upgrade 1 & 2 to premium, downgrade 1 to pro")}`, () => {
-  let customerId = testCase;
-  let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	let customerId = testCase;
+	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
 
-  let stripeCli: Stripe;
-  let testClockId: string;
-  let curUnix: number;
-  let db: DrizzleCli;
-  let org: Organization;
-  let env: AppEnv;
+	let stripeCli: Stripe;
+	let testClockId: string;
+	let curUnix: number;
+	let db: DrizzleCli;
+	let org: Organization;
+	let env: AppEnv;
 
-  before(async function () {
-    await setupBefore(this);
-    const { autumnJs } = this;
-    db = this.db;
-    org = this.org;
-    env = this.env;
+	before(async function () {
+		await setupBefore(this);
+		const { autumnJs } = this;
+		db = this.db;
+		org = this.org;
+		env = this.env;
 
-    stripeCli = this.stripeCli;
+		stripeCli = this.stripeCli;
 
-    addPrefixToProducts({
-      products: [pro, premium],
-      prefix: testCase,
-    });
+		addPrefixToProducts({
+			products: [pro, premium],
+			prefix: testCase,
+		});
 
-    await createProducts({
-      autumn: autumnJs,
-      products: [pro, premium],
-      db,
-      orgId: org.id,
-      env,
-      customerId,
-    });
+		await createProducts({
+			autumn: autumnJs,
+			products: [pro, premium],
+			db,
+			orgId: org.id,
+			env,
+			customerId,
+		});
 
-    const { testClockId: testClockId1 } = await initCustomer({
-      autumn: autumnJs,
-      customerId,
-      db,
-      org,
-      env,
-      attachPm: "success",
-    });
+		const { testClockId: testClockId1 } = await initCustomer({
+			autumn: autumnJs,
+			customerId,
+			db,
+			org,
+			env,
+			attachPm: "success",
+		});
 
-    testClockId = testClockId1!;
-  });
+		testClockId = testClockId1!;
+	});
 
-  const entities = [
-    {
-      id: "1",
-      name: "Entity 1",
-      feature_id: TestFeature.Users,
-    },
-    {
-      id: "2",
-      name: "Entity 2",
-      feature_id: TestFeature.Users,
-    },
-  ];
+	const entities = [
+		{
+			id: "1",
+			name: "Entity 1",
+			feature_id: TestFeature.Users,
+		},
+		{
+			id: "2",
+			name: "Entity 2",
+			feature_id: TestFeature.Users,
+		},
+	];
 
-  it("should run operations", async function () {
-    await autumn.entities.create(customerId, entities);
+	it("should run operations", async function () {
+		await autumn.entities.create(customerId, entities);
 
-    for (let index = 0; index < ops.length; index++) {
-      const op = ops[index];
-      try {
-        await attachAndExpectCorrect({
-          autumn,
-          customerId,
-          product: op.product,
-          stripeCli,
-          db,
-          org,
-          env,
-          entityId: op.entityId,
-          options: op.options,
-        });
-      } catch (error) {
-        console.log(
-          `Operation failed: ${op.entityId} ${op.product.id}, index: ${index}`
-        );
-        throw error;
-      }
-    }
-  });
+		for (let index = 0; index < ops.length; index++) {
+			const op = ops[index];
+			try {
+				await attachAndExpectCorrect({
+					autumn,
+					customerId,
+					product: op.product,
+					stripeCli,
+					db,
+					org,
+					env,
+					entityId: op.entityId,
+					options: op.options,
+				});
+			} catch (error) {
+				console.log(
+					`Operation failed: ${op.entityId} ${op.product.id}, index: ${index}`,
+				);
+				throw error;
+			}
+		}
+	});
 
-  it("should have correct products after update", async function () {
-    await advanceToNextInvoice({
-      stripeCli,
-      testClockId,
-    });
+	it("should have correct products after update", async function () {
+		await advanceToNextInvoice({
+			stripeCli,
+			testClockId,
+		});
 
-    const entity1 = await autumn.entities.get(customerId, "1");
-    expectProductAttached({
-      customer: entity1,
-      product: pro,
-      entityId: "1",
-    });
+		const entity1 = await autumn.entities.get(customerId, "1");
+		expectProductAttached({
+			customer: entity1,
+			product: pro,
+			entityId: "1",
+		});
 
-    await expectSubToBeCorrect({
-      db,
-      customerId,
-      org,
-      env,
-    });
-  });
+		await expectSubToBeCorrect({
+			db,
+			customerId,
+			org,
+			env,
+		});
+	});
 });

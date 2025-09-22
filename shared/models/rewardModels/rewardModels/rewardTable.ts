@@ -2,9 +2,9 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import { foreignKey, jsonb, numeric, pgTable, text } from "drizzle-orm/pg-core";
 import { organizations } from "../../orgModels/orgTable.js";
 import type {
-  DiscountConfig,
-  FreeProductConfig,
-  PromoCode,
+	DiscountConfig,
+	FreeProductConfig,
+	PromoCode,
 } from "./rewardModels.js";
 
 export const rewards = pgTable(

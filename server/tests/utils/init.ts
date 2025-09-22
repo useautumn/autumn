@@ -10,13 +10,14 @@ import {
 	type Entitlement,
 	type Feature,
 	FeatureType,
-	FeatureUsageType, FreeTrialDuration,
+	FeatureUsageType,
+	FreeTrialDuration,
 	type Organization,
 	PriceType,
 	type ProductItem,
 	RewardReceivedBy,
 	RewardTriggerEvent,
-	RewardType
+	RewardType,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { attachPmToCus } from "@/external/stripe/stripeCusUtils.js";

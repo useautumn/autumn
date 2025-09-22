@@ -1,12 +1,12 @@
 import { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
 
 export const logCusProducts = ({
-  cusProducts,
+	cusProducts,
 }: {
-  cusProducts: FullCusProduct[];
+	cusProducts: FullCusProduct[];
 }) => {
-  console.log(`CUS PRODUCTS:`);
-  for (const cusProduct of cusProducts) {
-    console.log(`${cusProduct.product.id} - ${cusProduct.status}`);
-  }
+	console.log(`CUS PRODUCTS:`);
+	for (const cusProduct of cusProducts) {
+		console.log(`${cusProduct.product.id} - ${cusProduct.status}`);
+	}
 };

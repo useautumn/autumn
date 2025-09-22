@@ -9,324 +9,324 @@ import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import RecaseError from "@/utils/errorUtils.js";
 import {
-  isFreeProduct,
-  isProductUpgrade,
+	isFreeProduct,
+	isProductUpgrade,
 } from "@/internal/products/productUtils.js";
 import { cusProductToPrices, cusProductToProduct } from "@autumn/shared";
 import { FeatureOptions, FullCusProduct } from "@autumn/shared";
 import { productsAreSame } from "@/internal/products/productUtils/compareProductUtils.js";
 import { hasPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import {
-  attachParamToCusProducts,
-  getCustomerSub,
+	attachParamToCusProducts,
+	getCustomerSub,
 } from "./convertAttachParams.js";
 import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 import { isMainTrialBranch } from "./attachUtils.js";
 
 const handleMultiProductErrors = async ({
-  attachParams,
+	attachParams,
 }: {
-  attachParams: AttachParams;
+	attachParams: AttachParams;
 }) => {
-  let { products } = attachParams;
+	let { products } = attachParams;
 
-  if (pricesOnlyOneOff(attachParams.prices)) {
-    return true;
-  }
+	if (pricesOnlyOneOff(attachParams.prices)) {
+		return true;
+	}
 
-  for (const product of products) {
-    let { curMainProduct, curSameProduct, curScheduledProduct } =
-      getExistingCusProducts({
-        product,
-        cusProducts: attachParams.cusProducts!,
-        internalEntityId: attachParams.internalEntityId,
-      });
+	for (const product of products) {
+		let { curMainProduct, curSameProduct, curScheduledProduct } =
+			getExistingCusProducts({
+				product,
+				cusProducts: attachParams.cusProducts!,
+				internalEntityId: attachParams.internalEntityId,
+			});
 
-    // 1. If product is add on, allow attach
-    if (product.is_add_on) {
-      continue;
-    }
+		// 1. If product is add on, allow attach
+		if (product.is_add_on) {
+			continue;
+		}
 
-    // 1. If same product exists, not allowed
-    if (curSameProduct) {
-      throw new RecaseError({
-        message: `Product ${product.name} is already attached, can't attach again`,
-        code: ErrCode.InvalidRequest,
-      });
-    }
+		// 1. If same product exists, not allowed
+		if (curSameProduct) {
+			throw new RecaseError({
+				message: `Product ${product.name} is already attached, can't attach again`,
+				code: ErrCode.InvalidRequest,
+			});
+		}
 
-    let curPaidProduct =
-      curMainProduct &&
-      !isFreeProduct(cusProductToPrices({ cusProduct: curMainProduct }));
+		let curPaidProduct =
+			curMainProduct &&
+			!isFreeProduct(cusProductToPrices({ cusProduct: curMainProduct }));
 
-    // 2. If existing paid product, not allowed
-    if (curPaidProduct) {
-      throw new RecaseError({
-        message: `Upgrade / downgrade to ${product.name} not allowed with multiple products`,
-        code: ErrCode.InvalidRequest,
-      });
-    }
+		// 2. If existing paid product, not allowed
+		if (curPaidProduct) {
+			throw new RecaseError({
+				message: `Upgrade / downgrade to ${product.name} not allowed with multiple products`,
+				code: ErrCode.InvalidRequest,
+			});
+		}
 
-    if (curScheduledProduct) {
-      throw new RecaseError({
-        message: `Can't attach multiple products at once when scheduled product exists`,
-        code: ErrCode.InvalidRequest,
-      });
-    }
-  }
+		if (curScheduledProduct) {
+			throw new RecaseError({
+				message: `Can't attach multiple products at once when scheduled product exists`,
+				code: ErrCode.InvalidRequest,
+			});
+		}
+	}
 };
 
 const getOptionsToUpdate = ({
-  oldOptionsList,
-  newOptionsList,
-  curSameProduct,
+	oldOptionsList,
+	newOptionsList,
+	curSameProduct,
 }: {
-  oldOptionsList: FeatureOptions[];
-  newOptionsList: FeatureOptions[];
-  curSameProduct: FullCusProduct;
+	oldOptionsList: FeatureOptions[];
+	newOptionsList: FeatureOptions[];
+	curSameProduct: FullCusProduct;
 }) => {
-  let optionsToUpdate: { new: FeatureOptions; old: FeatureOptions }[] = [];
-  const prices = cusProductToPrices({ cusProduct: curSameProduct });
+	let optionsToUpdate: { new: FeatureOptions; old: FeatureOptions }[] = [];
+	const prices = cusProductToPrices({ cusProduct: curSameProduct });
 
-  for (const newOptions of newOptionsList) {
-    let internalFeatureId = newOptions.internal_feature_id;
-    let existingOptions = oldOptionsList.find(
-      (o) => o.internal_feature_id === internalFeatureId
-    );
+	for (const newOptions of newOptionsList) {
+		let internalFeatureId = newOptions.internal_feature_id;
+		let existingOptions = oldOptionsList.find(
+			(o) => o.internal_feature_id === internalFeatureId,
+		);
 
-    let price = findPrepaidPrice({
-      prices,
-      internalFeatureId: internalFeatureId!,
-    });
+		let price = findPrepaidPrice({
+			prices,
+			internalFeatureId: internalFeatureId!,
+		});
 
-    if (price?.config.interval == BillingInterval.OneOff) continue;
+		if (price?.config.interval == BillingInterval.OneOff) continue;
 
-    if (existingOptions && existingOptions.quantity !== newOptions.quantity) {
-      optionsToUpdate.push({
-        new: newOptions,
-        old: existingOptions,
-      });
-    }
-  }
+		if (existingOptions && existingOptions.quantity !== newOptions.quantity) {
+			optionsToUpdate.push({
+				new: newOptions,
+				old: existingOptions,
+			});
+		}
+	}
 
-  return optionsToUpdate;
+	return optionsToUpdate;
 };
 
 export const checkSameCustom = async ({
-  attachParams,
-  curSameProduct,
-  fromPreview,
-  optionsToUpdate,
+	attachParams,
+	curSameProduct,
+	fromPreview,
+	optionsToUpdate,
 }: {
-  attachParams: AttachParams;
-  curSameProduct: FullCusProduct;
-  fromPreview?: boolean;
-  optionsToUpdate: { new: FeatureOptions; old: FeatureOptions }[];
+	attachParams: AttachParams;
+	curSameProduct: FullCusProduct;
+	fromPreview?: boolean;
+	optionsToUpdate: { new: FeatureOptions; old: FeatureOptions }[];
 }) => {
-  let product = attachParams.products[0];
+	let product = attachParams.products[0];
 
-  let { itemsSame, freeTrialsSame, onlyEntsChanged } = productsAreSame({
-    newProductV1: {
-      ...product,
-      prices: attachParams.prices,
-      entitlements: attachParams.entitlements,
-      free_trial: attachParams.freeTrial,
-    },
-    curProductV1: cusProductToProduct({ cusProduct: curSameProduct }),
+	let { itemsSame, freeTrialsSame, onlyEntsChanged } = productsAreSame({
+		newProductV1: {
+			...product,
+			prices: attachParams.prices,
+			entitlements: attachParams.entitlements,
+			free_trial: attachParams.freeTrial,
+		},
+		curProductV1: cusProductToProduct({ cusProduct: curSameProduct }),
 
-    features: attachParams.features,
-  });
+		features: attachParams.features,
+	});
 
-  if (itemsSame && freeTrialsSame) {
-    if (
-      fromPreview &&
-      hasPrepaidPrice({ prices: attachParams.prices, excludeOneOff: true })
-    ) {
-      return AttachBranch.UpdatePrepaidQuantity;
-    }
+	if (itemsSame && freeTrialsSame) {
+		if (
+			fromPreview &&
+			hasPrepaidPrice({ prices: attachParams.prices, excludeOneOff: true })
+		) {
+			return AttachBranch.UpdatePrepaidQuantity;
+		}
 
-    // 1. If prepaid quantity changed
-    if (optionsToUpdate.length > 0) {
-      attachParams.optionsToUpdate = optionsToUpdate;
-      return AttachBranch.UpdatePrepaidQuantity;
-    }
+		// 1. If prepaid quantity changed
+		if (optionsToUpdate.length > 0) {
+			attachParams.optionsToUpdate = optionsToUpdate;
+			return AttachBranch.UpdatePrepaidQuantity;
+		}
 
-    throw new RecaseError({
-      message: `Items specified for ${product.name} are the same as the existing product, can't attach again`,
-      code: ErrCode.InvalidRequest,
-    });
-  }
+		throw new RecaseError({
+			message: `Items specified for ${product.name} are the same as the existing product, can't attach again`,
+			code: ErrCode.InvalidRequest,
+		});
+	}
 
-  const curPrices = cusProductToPrices({ cusProduct: curSameProduct });
-  if (isFreeProduct(curPrices)) {
-    return AttachBranch.MainIsFree;
-  }
+	const curPrices = cusProductToPrices({ cusProduct: curSameProduct });
+	if (isFreeProduct(curPrices)) {
+		return AttachBranch.MainIsFree;
+	}
 
-  if (onlyEntsChanged) {
-    return AttachBranch.SameCustomEnts;
-  }
+	if (onlyEntsChanged) {
+		return AttachBranch.SameCustomEnts;
+	}
 
-  return AttachBranch.SameCustom;
+	return AttachBranch.SameCustom;
 };
 
 const getSameProductBranch = async ({
-  attachParams,
-  fromPreview,
+	attachParams,
+	fromPreview,
 }: {
-  attachParams: AttachParams;
-  fromPreview?: boolean;
+	attachParams: AttachParams;
+	fromPreview?: boolean;
 }) => {
-  let product = attachParams.products[0];
+	let product = attachParams.products[0];
 
-  let { curSameProduct, curScheduledProduct } = attachParamToCusProducts({
-    attachParams,
-  });
+	let { curSameProduct, curScheduledProduct } = attachParamToCusProducts({
+		attachParams,
+	});
 
-  curSameProduct = curSameProduct!;
+	curSameProduct = curSameProduct!;
 
-  // 1. If new version?
+	// 1. If new version?
 
-  if (curSameProduct.product.version !== product.version) {
-    return AttachBranch.NewVersion;
-  }
+	if (curSameProduct.product.version !== product.version) {
+		return AttachBranch.NewVersion;
+	}
 
-  let optionsToUpdate = getOptionsToUpdate({
-    oldOptionsList: curSameProduct.options,
-    newOptionsList: attachParams.optionsList,
-    curSameProduct,
-  });
+	let optionsToUpdate = getOptionsToUpdate({
+		oldOptionsList: curSameProduct.options,
+		newOptionsList: attachParams.optionsList,
+		curSameProduct,
+	});
 
-  // 2. Same custom?
-  if (attachParams.isCustom && curScheduledProduct?.product.id !== product.id) {
-    return await checkSameCustom({
-      attachParams,
-      curSameProduct,
-      fromPreview,
-      optionsToUpdate,
-    });
-  }
+	// 2. Same custom?
+	if (attachParams.isCustom && curScheduledProduct?.product.id !== product.id) {
+		return await checkSameCustom({
+			attachParams,
+			curSameProduct,
+			fromPreview,
+			optionsToUpdate,
+		});
+	}
 
-  // 1. If prepaid quantity changed
-  if (optionsToUpdate.length > 0) {
-    attachParams.optionsToUpdate = optionsToUpdate;
-    return AttachBranch.UpdatePrepaidQuantity;
-  }
+	// 1. If prepaid quantity changed
+	if (optionsToUpdate.length > 0) {
+		attachParams.optionsToUpdate = optionsToUpdate;
+		return AttachBranch.UpdatePrepaidQuantity;
+	}
 
-  // 3. If main product
-  if (curScheduledProduct && !product.is_add_on) {
-    if (curScheduledProduct.product.id == product.id) {
-      throw new RecaseError({
-        message: `Product ${product.name} is already scheduled, can't attach again`,
-        code: ErrCode.InvalidRequest,
-      });
-    }
+	// 3. If main product
+	if (curScheduledProduct && !product.is_add_on) {
+		if (curScheduledProduct.product.id == product.id) {
+			throw new RecaseError({
+				message: `Product ${product.name} is already scheduled, can't attach again`,
+				code: ErrCode.InvalidRequest,
+			});
+		}
 
-    return AttachBranch.Renew;
-  }
+		return AttachBranch.Renew;
+	}
 
-  if (curSameProduct.canceled_at || curSameProduct.canceled) {
-    return AttachBranch.Renew;
-  }
+	if (curSameProduct.canceled_at || curSameProduct.canceled) {
+		return AttachBranch.Renew;
+	}
 
-  if (fromPreview) {
-    if (hasPrepaidPrice({ prices: attachParams.prices, excludeOneOff: true })) {
-      return AttachBranch.UpdatePrepaidQuantity;
-    }
-  }
+	if (fromPreview) {
+		if (hasPrepaidPrice({ prices: attachParams.prices, excludeOneOff: true })) {
+			return AttachBranch.UpdatePrepaidQuantity;
+		}
+	}
 
-  // 2. If add on product
-  if (product.is_add_on) {
-    return AttachBranch.AddOn;
-  }
+	// 2. If add on product
+	if (product.is_add_on) {
+		return AttachBranch.AddOn;
+	}
 
-  // Invalid, can't attach same product
-  throw new RecaseError({
-    message: `Product ${product.name} is already attached, can't attach again`,
-    code: AttachErrCode.ProductAlreadyAttached,
-  });
+	// Invalid, can't attach same product
+	throw new RecaseError({
+		message: `Product ${product.name} is already attached, can't attach again`,
+		code: AttachErrCode.ProductAlreadyAttached,
+	});
 };
 
 const getChangeProductBranch = async ({
-  attachParams,
+	attachParams,
 }: {
-  attachParams: AttachParams;
+	attachParams: AttachParams;
 }) => {
-  const { curMainProduct, curScheduledProduct } = attachParamToCusProducts({
-    attachParams,
-  });
+	const { curMainProduct, curScheduledProduct } = attachParamToCusProducts({
+		attachParams,
+	});
 
-  // 1. If main product is free, it's the same as adding a new product
+	// 1. If main product is free, it's the same as adding a new product
 
-  let mainProduct = cusProductToProduct({ cusProduct: curMainProduct! });
-  if (isFreeProduct(mainProduct.prices)) {
-    return AttachBranch.MainIsFree;
-  }
+	let mainProduct = cusProductToProduct({ cusProduct: curMainProduct! });
+	if (isFreeProduct(mainProduct.prices)) {
+		return AttachBranch.MainIsFree;
+	}
 
-  // 2. If main product is paid, check if upgrade or downgrade
-  let curPrices = cusProductToPrices({ cusProduct: curMainProduct! });
-  let newPrices = attachParams.prices;
+	// 2. If main product is paid, check if upgrade or downgrade
+	let curPrices = cusProductToPrices({ cusProduct: curMainProduct! });
+	let newPrices = attachParams.prices;
 
-  let isUpgrade = isProductUpgrade({ prices1: curPrices, prices2: newPrices });
+	let isUpgrade = isProductUpgrade({ prices1: curPrices, prices2: newPrices });
 
-  if (isUpgrade) {
-    if (isMainTrialBranch({ attachParams })) {
-      return AttachBranch.MainIsTrial;
-    }
+	if (isUpgrade) {
+		if (isMainTrialBranch({ attachParams })) {
+			return AttachBranch.MainIsTrial;
+		}
 
-    return AttachBranch.Upgrade;
-  }
+		return AttachBranch.Upgrade;
+	}
 
-  return AttachBranch.Downgrade;
+	return AttachBranch.Downgrade;
 };
 
 export const getAttachBranch = async ({
-  req,
-  attachBody,
-  attachParams,
-  fromPreview,
+	req,
+	attachBody,
+	attachParams,
+	fromPreview,
 }: {
-  req: ExtendedRequest;
-  attachBody: AttachBody;
-  attachParams: AttachParams;
-  fromPreview?: boolean;
+	req: ExtendedRequest;
+	attachBody: AttachBody;
+	attachParams: AttachParams;
+	fromPreview?: boolean;
 }) => {
-  if (notNullish(attachBody.products)) {
-    // 1.
-    const { subId } = await getCustomerSub({ attachParams, onlySubId: true });
+	if (notNullish(attachBody.products)) {
+		// 1.
+		const { subId } = await getCustomerSub({ attachParams, onlySubId: true });
 
-    if (subId) {
-      return AttachBranch.MultiAttachUpdate;
-    }
-    return AttachBranch.MultiAttach;
-  }
+		if (subId) {
+			return AttachBranch.MultiAttachUpdate;
+		}
+		return AttachBranch.MultiAttach;
+	}
 
-  if (pricesOnlyOneOff(attachParams.prices)) {
-    return AttachBranch.OneOff;
-  }
+	if (pricesOnlyOneOff(attachParams.prices)) {
+		return AttachBranch.OneOff;
+	}
 
-  if (notNullish(attachBody.product_ids)) {
-    await handleMultiProductErrors({ attachParams });
-    return AttachBranch.MultiProduct;
-  }
+	if (notNullish(attachBody.product_ids)) {
+		await handleMultiProductErrors({ attachParams });
+		return AttachBranch.MultiProduct;
+	}
 
-  let { curSameProduct, curMainProduct } = attachParamToCusProducts({
-    attachParams,
-  });
+	let { curSameProduct, curMainProduct } = attachParamToCusProducts({
+		attachParams,
+	});
 
-  // 3. Same product
-  if (curSameProduct) {
-    return await getSameProductBranch({ attachParams, fromPreview });
-  }
+	// 3. Same product
+	if (curSameProduct) {
+		return await getSameProductBranch({ attachParams, fromPreview });
+	}
 
-  let product = attachParams.products[0];
-  if (product.is_add_on) {
-    return AttachBranch.AddOn;
-  }
+	let product = attachParams.products[0];
+	if (product.is_add_on) {
+		return AttachBranch.AddOn;
+	}
 
-  // 4. Main product exists
-  if (curMainProduct) {
-    return getChangeProductBranch({ attachParams });
-  }
+	// 4. Main product exists
+	if (curMainProduct) {
+		return getChangeProductBranch({ attachParams });
+	}
 
-  return AttachBranch.New;
+	return AttachBranch.New;
 };

@@ -16,64 +16,64 @@ import { expect } from "chai";
 
 // });
 export const expectInvoiceAfterUsage = async ({
-  autumn,
-  customerId,
-  entityId,
-  featureId,
-  product,
-  usage,
-  stripeCli,
-  db,
-  org,
-  env,
-  numInvoices = 2,
-  expectExpired = false,
+	autumn,
+	customerId,
+	entityId,
+	featureId,
+	product,
+	usage,
+	stripeCli,
+	db,
+	org,
+	env,
+	numInvoices = 2,
+	expectExpired = false,
 }: {
-  autumn: AutumnInt;
-  customerId: string;
-  entityId: string;
-  featureId: string;
-  product: ProductV2;
-  usage: number;
-  stripeCli: Stripe;
-  db: DrizzleCli;
-  org: Organization;
-  env: AppEnv;
-  numInvoices?: number;
-  expectExpired?: boolean;
+	autumn: AutumnInt;
+	customerId: string;
+	entityId: string;
+	featureId: string;
+	product: ProductV2;
+	usage: number;
+	stripeCli: Stripe;
+	db: DrizzleCli;
+	org: Organization;
+	env: AppEnv;
+	numInvoices?: number;
+	expectExpired?: boolean;
 }) => {
-  let entity = await autumn.entities.get(customerId, entityId);
+	let entity = await autumn.entities.get(customerId, entityId);
 
-  if (expectExpired) {
-    let matchingProduct = entity.products.find((p: any) => p.id === product.id);
-    expect(matchingProduct).to.not.exist;
-  } else {
-    expectFeaturesCorrect({
-      customer: entity,
-      product,
-    });
-  }
+	if (expectExpired) {
+		let matchingProduct = entity.products.find((p: any) => p.id === product.id);
+		expect(matchingProduct).to.not.exist;
+	} else {
+		expectFeaturesCorrect({
+			customer: entity,
+			product,
+		});
+	}
 
-  const invoiceTotal = await getExpectedInvoiceTotal({
-    org,
-    env,
-    customerId,
-    productId: product.id,
-    stripeCli,
-    db,
-    usage: [
-      {
-        featureId,
-        value: usage,
-      },
-    ],
-    onlyIncludeMonthly: true,
-    onlyIncludeUsage: true,
-    expectExpired,
-  });
+	const invoiceTotal = await getExpectedInvoiceTotal({
+		org,
+		env,
+		customerId,
+		productId: product.id,
+		stripeCli,
+		db,
+		usage: [
+			{
+				featureId,
+				value: usage,
+			},
+		],
+		onlyIncludeMonthly: true,
+		onlyIncludeUsage: true,
+		expectExpired,
+	});
 
-  let invoices = entity.invoices;
+	let invoices = entity.invoices;
 
-  expect(invoices.length).to.equal(numInvoices);
-  expect(invoices[0].total).to.equal(invoiceTotal);
+	expect(invoices.length).to.equal(numInvoices);
+	expect(invoices[0].total).to.equal(invoiceTotal);
 };

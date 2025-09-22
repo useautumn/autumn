@@ -10,27 +10,27 @@ export const entityRouter: Router = Router({ mergeParams: true });
 
 // List entityes
 entityRouter.get("", (req: any, res: any) =>
-  routeHandler({
-    req,
-    res,
-    action: "listEntities",
-    handler: async (req, res) => {
-      const customerId = String(req.params.customer_id);
-      let { orgId, env } = req;
+	routeHandler({
+		req,
+		res,
+		action: "listEntities",
+		handler: async (req, res) => {
+			const customerId = String(req.params.customer_id);
+			let { orgId, env } = req;
 
-      let customer = await CusService.getFull({
-        db: req.db,
-        idOrInternalId: customerId,
-        orgId,
-        env,
-        withEntities: true,
-      });
+			let customer = await CusService.getFull({
+				db: req.db,
+				idOrInternalId: customerId,
+				orgId,
+				env,
+				withEntities: true,
+			});
 
-      res.status(200).json({
-        data: customer.entities,
-      });
-    },
-  }),
+			res.status(200).json({
+				data: customer.entities,
+			});
+		},
+	}),
 );
 
 // 1. Create entity

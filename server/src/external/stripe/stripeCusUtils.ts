@@ -1,9 +1,9 @@
 import {
-  type AppEnv,
-  type Customer,
-  ErrCode,
-  type Organization,
-  ProcessorType,
+	type AppEnv,
+	type Customer,
+	ErrCode,
+	type Organization,
+	ProcessorType,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type { Stripe } from "stripe";

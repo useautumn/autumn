@@ -9,81 +9,81 @@ import { Button } from "@/components/ui/button";
 import { CheckIcon, CopyIcon, PlusIcon } from "lucide-react";
 
 export const CreateSecretKey = ({
-  apiKey,
-  setApiKey,
+	apiKey,
+	setApiKey,
 }: {
-  apiKey: string;
-  setApiKey: (apiKey: string) => void;
+	apiKey: string;
+	setApiKey: (apiKey: string) => void;
 }) => {
-  const env = useEnv();
-  // const [apiKeyName, setApiKeyName] = useState("");
-  const [apiCreated, setApiCreated] = useState(false);
+	const env = useEnv();
+	// const [apiKeyName, setApiKeyName] = useState("");
+	const [apiCreated, setApiCreated] = useState(false);
 
-  const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const axiosInstance = useAxiosInstance({ env });
+	const [loading, setLoading] = useState(false);
+	const [copied, setCopied] = useState(false);
+	const axiosInstance = useAxiosInstance({ env });
 
-  const handleCreate = async () => {
-    setLoading(true);
-    try {
-      const { api_key } = await DevService.createAPIKey(axiosInstance, {
-        name: "Autumn Onboarding",
-      });
+	const handleCreate = async () => {
+		setLoading(true);
+		try {
+			const { api_key } = await DevService.createAPIKey(axiosInstance, {
+				name: "Autumn Onboarding",
+			});
 
-      setApiKey(api_key);
-    } catch (error) {
-      console.log("Error:", error);
-      toast.error("Failed to create API key");
-    }
+			setApiKey(api_key);
+		} catch (error) {
+			console.log("Error:", error);
+			toast.error("Failed to create API key");
+		}
 
-    setLoading(false);
-  };
+		setLoading(false);
+	};
 
-  return (
-    <div className="flex flex-col gap-2 w-full">
-      {apiKey ? (
-        <div className="flex gap-2">
-          <Input value={apiKey} disabled className="w-[600px]" />
-          <Button
-            variant="secondary"
-            className="text-xs text-t3 flex gap-2 rounded-md shadow-none"
-            endIcon={copied ? <CheckIcon size={12} /> : <CopyIcon size={12} />}
-            onClick={() => {
-              navigator.clipboard.writeText(apiKey);
-              setCopied(true);
-              setTimeout(() => {
-                setCopied(false);
-              }, 1000);
-            }}
-          >
-            Copy
-          </Button>
-        </div>
-      ) : (
-        <div className="flex gap-2">
-          {/* <Input
+	return (
+		<div className="flex flex-col gap-2 w-full">
+			{apiKey ? (
+				<div className="flex gap-2">
+					<Input value={apiKey} disabled className="w-[600px]" />
+					<Button
+						variant="secondary"
+						className="text-xs text-t3 flex gap-2 rounded-md shadow-none"
+						endIcon={copied ? <CheckIcon size={12} /> : <CopyIcon size={12} />}
+						onClick={() => {
+							navigator.clipboard.writeText(apiKey);
+							setCopied(true);
+							setTimeout(() => {
+								setCopied(false);
+							}, 1000);
+						}}
+					>
+						Copy
+					</Button>
+				</div>
+			) : (
+				<div className="flex gap-2">
+					{/* <Input
               placeholder="Secret API Key Name"
               className="w-full"
               value={apiKeyName}
               disabled={apiCreated}
               onChange={(e) => setApiKeyName(e.target.value)}
             /> */}
-          <Button
-            onClick={handleCreate}
-            isLoading={loading}
-            variant="outline"
-            startIcon={<PlusIcon size={14} />}
-          >
-            Create Secret Key
-          </Button>
-        </div>
-      )}
-    </div>
-  );
+					<Button
+						onClick={handleCreate}
+						isLoading={loading}
+						variant="outline"
+						startIcon={<PlusIcon size={14} />}
+					>
+						Create Secret Key
+					</Button>
+				</div>
+			)}
+		</div>
+	);
 };
 
 {
-  /* <div className="border rounded-sm px-2 py-1">
+	/* <div className="border rounded-sm px-2 py-1">
                 {env === AppEnv.Sandbox ? (
                   <CopyPublishableKey
                     type="Sandbox"

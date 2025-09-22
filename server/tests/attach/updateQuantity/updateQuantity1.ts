@@ -1,10 +1,10 @@
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 
 import {
-  APIVersion,
-  AppEnv,
-  AttachErrCode,
-  Organization,
+	APIVersion,
+	AppEnv,
+	AttachErrCode,
+	Organization,
 } from "@autumn/shared";
 import chalk from "chalk";
 import Stripe from "stripe";
@@ -25,131 +25,131 @@ import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js"
 const testCase = "updateQuantity1";
 
 export let pro = constructProduct({
-  items: [
-    constructPrepaidItem({
-      featureId: TestFeature.Users,
-      price: 12,
-      billingUnits: 1,
-    }),
-  ],
-  type: "pro",
+	items: [
+		constructPrepaidItem({
+			featureId: TestFeature.Users,
+			price: 12,
+			billingUnits: 1,
+		}),
+	],
+	type: "pro",
 });
 
 describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with prepaid single use`)}`, () => {
-  let customerId = testCase;
-  let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
-  let testClockId: string;
-  let db: DrizzleCli, org: Organization, env: AppEnv;
-  let stripeCli: Stripe;
+	let customerId = testCase;
+	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	let testClockId: string;
+	let db: DrizzleCli, org: Organization, env: AppEnv;
+	let stripeCli: Stripe;
 
-  let curUnix = new Date().getTime();
-  let numUsers = 0;
+	let curUnix = new Date().getTime();
+	let numUsers = 0;
 
-  before(async function () {
-    await setupBefore(this);
-    const { autumnJs } = this;
-    db = this.db;
-    org = this.org;
-    env = this.env;
+	before(async function () {
+		await setupBefore(this);
+		const { autumnJs } = this;
+		db = this.db;
+		org = this.org;
+		env = this.env;
 
-    stripeCli = this.stripeCli;
+		stripeCli = this.stripeCli;
 
-    const { testClockId: testClockId1 } = await initCustomer({
-      autumn: autumnJs,
-      customerId,
-      db,
-      org,
-      env,
-      attachPm: "success",
-    });
+		const { testClockId: testClockId1 } = await initCustomer({
+			autumn: autumnJs,
+			customerId,
+			db,
+			org,
+			env,
+			attachPm: "success",
+		});
 
-    addPrefixToProducts({
-      products: [pro],
-      prefix: testCase,
-    });
+		addPrefixToProducts({
+			products: [pro],
+			prefix: testCase,
+		});
 
-    await createProducts({
-      autumn,
-      products: [pro],
-      db,
-      orgId: org.id,
-      env,
-    });
+		await createProducts({
+			autumn,
+			products: [pro],
+			db,
+			orgId: org.id,
+			env,
+		});
 
-    testClockId = testClockId1!;
-  });
+		testClockId = testClockId1!;
+	});
 
-  const proOpts = [
-    {
-      feature_id: TestFeature.Users,
-      quantity: 2,
-    },
-  ];
+	const proOpts = [
+		{
+			feature_id: TestFeature.Users,
+			quantity: 2,
+		},
+	];
 
-  it("should attach pro product (arrear prorated)", async function () {
-    await attachAndExpectCorrect({
-      autumn,
-      customerId,
-      product: pro,
-      stripeCli,
-      db,
-      org,
-      env,
-      options: proOpts,
-    });
-  });
+	it("should attach pro product (arrear prorated)", async function () {
+		await attachAndExpectCorrect({
+			autumn,
+			customerId,
+			product: pro,
+			stripeCli,
+			db,
+			org,
+			env,
+			options: proOpts,
+		});
+	});
 
-  it("should throw error if try to attach same options", async function () {
-    await expectAutumnError({
-      errCode: AttachErrCode.ProductAlreadyAttached,
-      func: async () => {
-        await autumn.attach({
-          customer_id: customerId,
-          product_id: pro.id,
-          options: proOpts,
-        });
-      },
-    });
-  });
+	it("should throw error if try to attach same options", async function () {
+		await expectAutumnError({
+			errCode: AttachErrCode.ProductAlreadyAttached,
+			func: async () => {
+				await autumn.attach({
+					customer_id: customerId,
+					product_id: pro.id,
+					options: proOpts,
+				});
+			},
+		});
+	});
 
-  const updatedOpts = [
-    {
-      feature_id: TestFeature.Users,
-      quantity: 4,
-    },
-  ];
+	const updatedOpts = [
+		{
+			feature_id: TestFeature.Users,
+			quantity: 4,
+		},
+	];
 
-  it("should update quantity to 4 users and have usage stay the same", async function () {
-    await autumn.track({
-      customer_id: customerId,
-      feature_id: TestFeature.Users,
-      value: 2,
-    });
-    await timeout(3000);
+	it("should update quantity to 4 users and have usage stay the same", async function () {
+		await autumn.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Users,
+			value: 2,
+		});
+		await timeout(3000);
 
-    curUnix = await advanceTestClock({
-      stripeCli,
-      testClockId,
-      advanceTo: addWeeks(curUnix, 1).getTime(),
-      waitForSeconds: 30,
-    });
+		curUnix = await advanceTestClock({
+			stripeCli,
+			testClockId,
+			advanceTo: addWeeks(curUnix, 1).getTime(),
+			waitForSeconds: 30,
+		});
 
-    await attachAndExpectCorrect({
-      autumn,
-      customerId,
-      product: pro,
-      stripeCli,
-      db,
-      org,
-      env,
-      options: updatedOpts,
-      usage: [
-        {
-          featureId: TestFeature.Users,
-          value: 2,
-        },
-      ],
-      waitForInvoice: 15000,
-    });
-  });
+		await attachAndExpectCorrect({
+			autumn,
+			customerId,
+			product: pro,
+			stripeCli,
+			db,
+			org,
+			env,
+			options: updatedOpts,
+			usage: [
+				{
+					featureId: TestFeature.Users,
+					value: 2,
+				},
+			],
+			waitForInvoice: 15000,
+		});
+	});
 });

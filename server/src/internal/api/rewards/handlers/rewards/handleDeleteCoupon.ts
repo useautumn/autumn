@@ -37,7 +37,9 @@ export default async (req: any, res: any) =>
 			try {
 				await stripeCli.coupons.del(reward.id);
 			} catch (error) {
-				console.log(`Failed to delete coupon from stripe: ${(error as { message: string }).message}`);
+				console.log(
+					`Failed to delete coupon from stripe: ${(error as { message: string }).message}`,
+				);
 			}
 
 			await RewardService.delete({

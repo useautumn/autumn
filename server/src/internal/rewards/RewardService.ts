@@ -1,4 +1,10 @@
-import { type AppEnv, ErrCode, type Reward, rewards } from "@autumn/shared";
+import {
+	type AppEnv,
+	ErrCode,
+	type Reward,
+	rewards,
+	RewardType,
+} from "@autumn/shared";
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import RecaseError from "@/utils/errorUtils.js";
@@ -78,13 +84,19 @@ export class RewardService {
 		db,
 		orgId,
 		env,
+		inTypes,
 	}: {
 		db: DrizzleCli;
 		orgId: string;
 		env: AppEnv;
+		inTypes?: RewardType[];
 	}) {
 		const results = await db.query.rewards.findMany({
-			where: and(eq(rewards.org_id, orgId), eq(rewards.env, env)),
+			where: and(
+				eq(rewards.org_id, orgId),
+				eq(rewards.env, env),
+				inTypes ? inArray(rewards.type, inTypes) : undefined,
+			),
 			orderBy: [desc(rewards.internal_id)],
 		});
 

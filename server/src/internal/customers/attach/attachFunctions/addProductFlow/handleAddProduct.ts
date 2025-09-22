@@ -1,16 +1,16 @@
 import {
-  APIVersion,
-  AttachBranch,
-  type AttachConfig,
-  SuccessCode,
+	APIVersion,
+	AttachBranch,
+	type AttachConfig,
+	SuccessCode,
 } from "@autumn/shared";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { createFullCusProduct } from "../../../add-product/createFullCusProduct.js";
 import {
-  type AttachParams,
-  AttachResultSchema,
+	type AttachParams,
+	AttachResultSchema,
 } from "../../../cusProducts/AttachParams.js";
 import { attachParamsToCurCusProduct } from "../../attachUtils/convertAttachParams.js";
 import { getDefaultAttachConfig } from "../../attachUtils/getAttachConfig.js";

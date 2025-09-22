@@ -1,12 +1,12 @@
 export const supabaseAuthSnippet = ({
-  backendLang,
-  customerType,
+	backendLang,
+	customerType,
 }: {
-  backendLang?: string;
-  customerType: "user" | "org";
+	backendLang?: string;
+	customerType: "user" | "org";
 }) => {
-  if (customerType === "user") {
-    return `const supabase = await createClient(request);
+	if (customerType === "user") {
+		return `const supabase = await createClient(request);
     const { data, error } = await supabase.auth.getUser();
 
     if (error || !data?.user) return null;
@@ -18,9 +18,9 @@ export const supabaseAuthSnippet = ({
         email: data.user.email,
       },
     };`;
-  }
+	}
 
-  return `const supabase = await createClient(request);
+	return `const supabase = await createClient(request);
     const { data, error } = await supabase.auth.getUser();
 
     if (error || !data?.user) return null;

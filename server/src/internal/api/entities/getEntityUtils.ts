@@ -6,179 +6,179 @@ import { processFullCusProducts } from "@/internal/customers/cusUtils/cusProduct
 import RecaseError from "@/utils/errorUtils.js";
 import { nullish } from "@/utils/genUtils.js";
 import {
-  type AppEnv,
-  Feature,
-  type Entity,
-  EntityExpand,
-  type EntityResponse,
-  ErrCode,
-  type FullCusProduct,
-  type Organization,
-  type Subscription,
-  CusProductResponse,
-  notNullish,
-  FullCustomer,
-  APIVersion,
+	type AppEnv,
+	Feature,
+	type Entity,
+	EntityExpand,
+	type EntityResponse,
+	ErrCode,
+	type FullCusProduct,
+	type Organization,
+	type Subscription,
+	CusProductResponse,
+	notNullish,
+	FullCustomer,
+	APIVersion,
 } from "@autumn/shared";
 
 export const getSingleEntityResponse = async ({
-  entityId,
-  org,
-  env,
-  fullCus,
-  entity,
-  features,
-  withAutumnId = false,
+	entityId,
+	org,
+	env,
+	fullCus,
+	entity,
+	features,
+	withAutumnId = false,
 }: {
-  entityId: string;
-  org: Organization;
-  env: AppEnv;
-  fullCus: FullCustomer;
-  entity: Entity;
-  features: Feature[];
-  withAutumnId?: boolean;
+	entityId: string;
+	org: Organization;
+	env: AppEnv;
+	fullCus: FullCustomer;
+	entity: Entity;
+	features: Feature[];
+	withAutumnId?: boolean;
 }) => {
-  const apiVersion = APIVersion.v1_2;
+	const apiVersion = APIVersion.v1_2;
 
-  if (!entity) {
-    throw new RecaseError({
-      message: `Entity ${entityId} not found for customer ${fullCus.id}`,
-      code: ErrCode.EntityNotFound,
-      statusCode: 400,
-    });
-  }
+	if (!entity) {
+		throw new RecaseError({
+			message: `Entity ${entityId} not found for customer ${fullCus.id}`,
+			code: ErrCode.EntityNotFound,
+			statusCode: 400,
+		});
+	}
 
-  const entityCusProducts = fullCus.customer_products.filter(
-    (p: FullCusProduct) => {
-      if (org.config.entity_product) {
-        return (
-          notNullish(p.internal_entity_id) &&
-          p.internal_entity_id == entity.internal_id
-        );
-      }
+	const entityCusProducts = fullCus.customer_products.filter(
+		(p: FullCusProduct) => {
+			if (org.config.entity_product) {
+				return (
+					notNullish(p.internal_entity_id) &&
+					p.internal_entity_id == entity.internal_id
+				);
+			}
 
-      return (
-        p.internal_entity_id == entity.internal_id ||
-        nullish(p.internal_entity_id)
-      );
-    }
-  );
+			return (
+				p.internal_entity_id == entity.internal_id ||
+				nullish(p.internal_entity_id)
+			);
+		},
+	);
 
-  let entitySubs = (fullCus.subscriptions || []).filter((s: Subscription) =>
-    entityCusProducts.some((p: FullCusProduct) =>
-      p.subscription_ids?.includes(s.stripe_id || "")
-    )
-  );
+	let entitySubs = (fullCus.subscriptions || []).filter((s: Subscription) =>
+		entityCusProducts.some((p: FullCusProduct) =>
+			p.subscription_ids?.includes(s.stripe_id || ""),
+		),
+	);
 
-  let { main, addOns } = await processFullCusProducts({
-    fullCusProducts: entityCusProducts,
-    entity,
-    subs: entitySubs,
-    org,
-    apiVersion: APIVersion.v1_2,
-    features,
-  });
+	let { main, addOns } = await processFullCusProducts({
+		fullCusProducts: entityCusProducts,
+		entity,
+		subs: entitySubs,
+		org,
+		apiVersion: APIVersion.v1_2,
+		features,
+	});
 
-  let products: CusProductResponse[] = [...main, ...addOns];
+	let products: CusProductResponse[] = [...main, ...addOns];
 
-  let cusFeatures = await getCusFeaturesResponse({
-    cusProducts: entityCusProducts,
-    org,
-    entity,
-    apiVersion,
-  });
+	let cusFeatures = await getCusFeaturesResponse({
+		cusProducts: entityCusProducts,
+		org,
+		entity,
+		apiVersion,
+	});
 
-  return {
-    ...(withAutumnId ? { autumn_id: entity.internal_id } : {}),
-    id: entity.id,
-    name: entity.name,
-    created_at: entity.created_at,
-    // feature_id: entity.feature_id,
-    customer_id: fullCus.id || fullCus.internal_id,
-    env,
-    products,
-    features: cusFeatures,
-  };
+	return {
+		...(withAutumnId ? { autumn_id: entity.internal_id } : {}),
+		id: entity.id,
+		name: entity.name,
+		created_at: entity.created_at,
+		// feature_id: entity.feature_id,
+		customer_id: fullCus.id || fullCus.internal_id,
+		env,
+		products,
+		features: cusFeatures,
+	};
 };
 
 export const getEntityResponse = async ({
-  db,
-  entityIds,
-  org,
-  env,
-  customerId,
-  expand,
-  entityId,
-  withAutumnId = false,
-  apiVersion,
-  features,
-  logger,
-  skipCache = false,
+	db,
+	entityIds,
+	org,
+	env,
+	customerId,
+	expand,
+	entityId,
+	withAutumnId = false,
+	apiVersion,
+	features,
+	logger,
+	skipCache = false,
 }: {
-  db: DrizzleCli;
-  entityIds: string[];
-  org: Organization;
-  env: AppEnv;
-  customerId: string;
-  expand?: EntityExpand[];
-  entityId?: string;
-  withAutumnId?: boolean;
-  apiVersion: number;
-  features: Feature[];
-  logger: any;
-  skipCache?: boolean;
+	db: DrizzleCli;
+	entityIds: string[];
+	org: Organization;
+	env: AppEnv;
+	customerId: string;
+	expand?: EntityExpand[];
+	entityId?: string;
+	withAutumnId?: boolean;
+	apiVersion: number;
+	features: Feature[];
+	logger: any;
+	skipCache?: boolean;
 }) => {
-  let fullCus = await getCusWithCache({
-    db,
-    idOrInternalId: customerId,
-    org,
-    env,
-    expand,
-    entityId,
-    logger,
-    skipCache,
-  });
+	let fullCus = await getCusWithCache({
+		db,
+		idOrInternalId: customerId,
+		org,
+		env,
+		expand,
+		entityId,
+		logger,
+		skipCache,
+	});
 
-  if (!fullCus) {
-    throw new RecaseError({
-      message: `Customer ${customerId} not found`,
-      code: ErrCode.CustomerNotFound,
-      statusCode: 400,
-    });
-  }
+	if (!fullCus) {
+		throw new RecaseError({
+			message: `Customer ${customerId} not found`,
+			code: ErrCode.CustomerNotFound,
+			statusCode: 400,
+		});
+	}
 
-  const entityResponses: EntityResponse[] = [];
+	const entityResponses: EntityResponse[] = [];
 
-  for (const entityId of entityIds) {
-    const entity = fullCus.entities.find(
-      (e: Entity) => e.id == entityId || e.internal_id == entityId
-    );
+	for (const entityId of entityIds) {
+		const entity = fullCus.entities.find(
+			(e: Entity) => e.id == entityId || e.internal_id == entityId,
+		);
 
-    if (!entity) {
-      throw new RecaseError({
-        message: `Entity ${entityId} not found for customer ${fullCus.id}`,
-        code: ErrCode.EntityNotFound,
-        statusCode: 400,
-      });
-    }
+		if (!entity) {
+			throw new RecaseError({
+				message: `Entity ${entityId} not found for customer ${fullCus.id}`,
+				code: ErrCode.EntityNotFound,
+				statusCode: 400,
+			});
+		}
 
-    let entityResponse = await getSingleEntityResponse({
-      entityId,
-      org,
-      env,
-      fullCus,
-      entity,
-      features,
-      withAutumnId,
-    });
+		let entityResponse = await getSingleEntityResponse({
+			entityId,
+			org,
+			env,
+			fullCus,
+			entity,
+			features,
+			withAutumnId,
+		});
 
-    entityResponses.push(entityResponse);
-  }
+		entityResponses.push(entityResponse);
+	}
 
-  return {
-    entities: entityResponses,
-    customer: fullCus,
-    fullEntities: fullCus.entities,
-    invoices: fullCus.invoices,
-  };
+	return {
+		entities: entityResponses,
+		customer: fullCus,
+		fullEntities: fullCus.entities,
+		invoices: fullCus.invoices,
+	};
 };

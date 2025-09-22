@@ -14,113 +14,113 @@ import { getMultiAttachPreview } from "./getMultiAttachPreview.js";
 import { notNullish } from "@/utils/genUtils.js";
 
 export const attachParamsToPreview = async ({
-  req,
-  attachParams,
-  attachBody,
-  logger,
-  withPrepaid = false,
+	req,
+	attachParams,
+	attachBody,
+	logger,
+	withPrepaid = false,
 }: {
-  req: ExtendedRequest;
-  attachParams: AttachParams;
-  attachBody: AttachBody;
-  logger: any;
-  withPrepaid?: boolean;
+	req: ExtendedRequest;
+	attachParams: AttachParams;
+	attachBody: AttachBody;
+	logger: any;
+	withPrepaid?: boolean;
 }) => {
-  // Handle existing product
+	// Handle existing product
 
-  const branch = await getAttachBranch({
-    req,
-    attachBody,
-    attachParams,
-    fromPreview: true,
-  });
+	const branch = await getAttachBranch({
+		req,
+		attachBody,
+		attachParams,
+		fromPreview: true,
+	});
 
-  const { flags, config } = await getAttachConfig({
-    req,
-    attachParams,
-    attachBody,
-    branch,
-  });
+	const { flags, config } = await getAttachConfig({
+		req,
+		attachParams,
+		attachBody,
+		branch,
+	});
 
-  const func = await getAttachFunction({
-    branch,
-    attachParams,
-    attachBody,
-    config,
-  });
+	const func = await getAttachFunction({
+		branch,
+		attachParams,
+		attachBody,
+		config,
+	});
 
-  logger.info("--------------------------------");
-  logger.info(`ATTACH PREVIEW (org: ${attachParams.org.id})`);
-  logger.info(`Branch: ${branch}, Function: ${func}`);
+	logger.info("--------------------------------");
+	logger.info(`ATTACH PREVIEW (org: ${attachParams.org.id})`);
+	logger.info(`Branch: ${branch}, Function: ${func}`);
 
-  let now = attachParams.now || Date.now();
+	let now = attachParams.now || Date.now();
 
-  let preview: any = null;
+	let preview: any = null;
 
-  if (
-    branch == AttachBranch.MultiAttach ||
-    notNullish(attachParams.productsList)
-  ) {
-    preview = await getMultiAttachPreview({
-      req,
-      attachBody,
-      attachParams,
-      logger,
-      config,
-      branch,
-    });
-  } else if (
-    func == AttachFunction.AddProduct ||
-    func == AttachFunction.CreateCheckout ||
-    func == AttachFunction.OneOff
-  ) {
-    preview = await getNewProductPreview({
-      branch,
-      attachParams,
-      logger,
-      config,
-      withPrepaid,
-    });
-  }
+	if (
+		branch == AttachBranch.MultiAttach ||
+		notNullish(attachParams.productsList)
+	) {
+		preview = await getMultiAttachPreview({
+			req,
+			attachBody,
+			attachParams,
+			logger,
+			config,
+			branch,
+		});
+	} else if (
+		func == AttachFunction.AddProduct ||
+		func == AttachFunction.CreateCheckout ||
+		func == AttachFunction.OneOff
+	) {
+		preview = await getNewProductPreview({
+			branch,
+			attachParams,
+			logger,
+			config,
+			withPrepaid,
+		});
+	}
 
-  if (func == AttachFunction.ScheduleProduct) {
-    preview = await getDowngradeProductPreview({
-      attachParams,
-      now,
-      logger,
-      branch,
-      config,
-    });
-  }
+	if (func == AttachFunction.ScheduleProduct) {
+		preview = await getDowngradeProductPreview({
+			attachParams,
+			now,
+			logger,
+			branch,
+			config,
+		});
+	}
 
-  if (
-    func == AttachFunction.UpgradeDiffInterval ||
-    func == AttachFunction.UpgradeSameInterval ||
-    func == AttachFunction.UpdatePrepaidQuantity
-  ) {
-    preview = await getUpgradeProductPreview({
-      req,
-      attachParams,
-      branch,
-      now,
-      withPrepaid,
-      config,
-    });
-  }
+	if (
+		func == AttachFunction.UpgradeDiffInterval ||
+		func == AttachFunction.UpgradeSameInterval ||
+		func == AttachFunction.UpdatePrepaidQuantity
+	) {
+		preview = await getUpgradeProductPreview({
+			req,
+			attachParams,
+			branch,
+			now,
+			withPrepaid,
+			config,
+		});
+	}
 
-  const { curMainProduct, curScheduledProduct } = attachParamToCusProducts({
-    attachParams,
-  });
+	const { curMainProduct, curScheduledProduct } = attachParamToCusProducts({
+		attachParams,
+	});
 
-  return {
-    branch,
-    func,
-    ...preview,
-    current_product: curMainProduct
-      ? cusProductToProduct({
-          cusProduct: curMainProduct,
-        })
-      : null,
-    scheduled_product: curScheduledProduct,
-  };
+	return {
+		branch,
+		func,
+		...preview,
+		current_product: curMainProduct
+			? cusProductToProduct({
+					cusProduct: curMainProduct,
+				})
+			: null,
+		scheduled_product: curScheduledProduct,
+	};
 };

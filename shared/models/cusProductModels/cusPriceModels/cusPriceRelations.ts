@@ -6,19 +6,19 @@ import { customerPrices } from "./cusPriceTable.js";
 import { customerProducts } from "../cusProductTable.js";
 
 export const customerPricesRelations = relations(
-  customerPrices,
-  ({ one, many }) => ({
-    customerProduct: one(customerProducts, {
-      fields: [customerPrices.customer_product_id],
-      references: [customerProducts.id],
-    }),
-    customer: one(customers, {
-      fields: [customerPrices.internal_customer_id],
-      references: [customers.internal_id],
-    }),
-    price: one(prices, {
-      fields: [customerPrices.price_id],
-      references: [prices.id],
-    }),
-  }),
+	customerPrices,
+	({ one, many }) => ({
+		customerProduct: one(customerProducts, {
+			fields: [customerPrices.customer_product_id],
+			references: [customerProducts.id],
+		}),
+		customer: one(customers, {
+			fields: [customerPrices.internal_customer_id],
+			references: [customers.internal_id],
+		}),
+		price: one(prices, {
+			fields: [customerPrices.price_id],
+			references: [prices.id],
+		}),
+	}),
 );

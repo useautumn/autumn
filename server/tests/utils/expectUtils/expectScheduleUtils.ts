@@ -6,14 +6,14 @@ import { cusProductToPrices } from "@autumn/shared";
 import { CusService } from "@/internal/customers/CusService.js";
 import { isV4Usage } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import {
-  AppEnv,
-  AttachBranch,
-  AttachPreview,
-  CusProductStatus,
-  FullCusProduct,
-  FullCustomer,
-  Organization,
-  ProductV2,
+	AppEnv,
+	AttachBranch,
+	AttachPreview,
+	CusProductStatus,
+	FullCusProduct,
+	FullCustomer,
+	Organization,
+	ProductV2,
 } from "@autumn/shared";
 import { expect } from "chai";
 import Stripe from "stripe";
@@ -26,213 +26,213 @@ import { addHours } from "date-fns";
 import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
 
 export const expectNextCycleCorrect = async ({
-  autumn,
-  preview,
-  stripeCli,
-  customerId,
-  testClockId,
-  product,
-  db,
-  org,
-  env,
-  advanceClock = true,
+	autumn,
+	preview,
+	stripeCli,
+	customerId,
+	testClockId,
+	product,
+	db,
+	org,
+	env,
+	advanceClock = true,
 }: {
-  autumn: AutumnInt;
-  preview: AttachPreview;
-  stripeCli: Stripe;
-  customerId: string;
-  testClockId: string;
-  product: ProductV2;
-  db: DrizzleCli;
-  org: Organization;
-  env: AppEnv;
-  advanceClock?: boolean;
+	autumn: AutumnInt;
+	preview: AttachPreview;
+	stripeCli: Stripe;
+	customerId: string;
+	testClockId: string;
+	product: ProductV2;
+	db: DrizzleCli;
+	org: Organization;
+	env: AppEnv;
+	advanceClock?: boolean;
 }) => {
-  if (advanceClock) {
-    await advanceTestClock({
-      stripeCli,
-      testClockId,
-      advanceTo: addHours(
-        preview!.due_next_cycle.due_at,
-        hoursToFinalizeInvoice
-      ).getTime(),
-    });
-  }
+	if (advanceClock) {
+		await advanceTestClock({
+			stripeCli,
+			testClockId,
+			advanceTo: addHours(
+				preview!.due_next_cycle.due_at,
+				hoursToFinalizeInvoice,
+			).getTime(),
+		});
+	}
 
-  const customer = await autumn.customers.get(customerId);
+	const customer = await autumn.customers.get(customerId);
 
-  expectProductAttached({
-    customer,
-    product,
-  });
+	expectProductAttached({
+		customer,
+		product,
+	});
 
-  await expectSubItemsCorrect({
-    stripeCli,
-    customerId,
-    product,
-    db,
-    org,
-    env,
-  });
+	await expectSubItemsCorrect({
+		stripeCli,
+		customerId,
+		product,
+		db,
+		org,
+		env,
+	});
 };
 
 export const expectDowngradeCorrect = async ({
-  customerId,
-  curProduct,
-  newProduct,
-  autumn,
-  stripeCli,
-  db,
-  org,
-  env,
+	customerId,
+	curProduct,
+	newProduct,
+	autumn,
+	stripeCli,
+	db,
+	org,
+	env,
 }: {
-  customerId: string;
-  curProduct: ProductV2;
-  newProduct: ProductV2;
-  autumn: AutumnInt;
-  stripeCli: Stripe;
-  db: DrizzleCli;
-  org: Organization;
-  env: AppEnv;
+	customerId: string;
+	curProduct: ProductV2;
+	newProduct: ProductV2;
+	autumn: AutumnInt;
+	stripeCli: Stripe;
+	db: DrizzleCli;
+	org: Organization;
+	env: AppEnv;
 }) => {
-  const preview = await autumn.attachPreview({
-    customer_id: customerId,
-    product_id: newProduct.id,
-  });
+	const preview = await autumn.attachPreview({
+		customer_id: customerId,
+		product_id: newProduct.id,
+	});
 
-  await autumn.attach({
-    customer_id: customerId,
-    product_id: newProduct.id,
-  });
+	await autumn.attach({
+		customer_id: customerId,
+		product_id: newProduct.id,
+	});
 
-  const customer = await autumn.customers.get(customerId);
+	const customer = await autumn.customers.get(customerId);
 
-  const productCount = customer.products.reduce((acc: number, product: any) => {
-    if (product.group == curProduct.group) {
-      return acc + 1;
-    } else return acc;
-  }, 0);
+	const productCount = customer.products.reduce((acc: number, product: any) => {
+		if (product.group == curProduct.group) {
+			return acc + 1;
+		} else return acc;
+	}, 0);
 
-  expect(
-    productCount,
-    "customer should only have 2 products (from this group)"
-  ).to.equal(2);
+	expect(
+		productCount,
+		"customer should only have 2 products (from this group)",
+	).to.equal(2);
 
-  expectProductAttached({
-    customer,
-    product: curProduct,
-    isCanceled: true,
-  });
+	expectProductAttached({
+		customer,
+		product: curProduct,
+		isCanceled: true,
+	});
 
-  // const { fullCus } = await expectSubItemsCorrect({
-  //   stripeCli,
-  //   customerId,
-  //   product: curProduct,
-  //   db,
-  //   org,
-  //   env,
-  //   subCanceled: isFreeProductV2({ product: newProduct }),
-  //   isCanceled: true,
-  // });
+	// const { fullCus } = await expectSubItemsCorrect({
+	//   stripeCli,
+	//   customerId,
+	//   product: curProduct,
+	//   db,
+	//   org,
+	//   env,
+	//   subCanceled: isFreeProductV2({ product: newProduct }),
+	//   isCanceled: true,
+	// });
 
-  const newProductIsFree = isFreeProductV2({ product: newProduct });
+	const newProductIsFree = isFreeProductV2({ product: newProduct });
 
-  if (newProductIsFree) {
-    // let res = await stripeCli.subscriptionSchedules.list({
-    //   customer: fullCus.processor?.id,
-    // });
-    // let data = res.data.filter((s) => s.status != "canceled");
-    // expect(data.length, "should have no sub schedules").to.equal(0);
-    // await expectSubScheduleCorrect({
-    //   stripeCli,
-    //   customerId,
-    //   productId: newProduct.id,
-    //   db,
-    //   org,
-    //   env,
-    // });
-  }
-  expectProductAttached({
-    customer,
-    product: newProduct,
-    status: CusProductStatus.Scheduled,
-  });
+	if (newProductIsFree) {
+		// let res = await stripeCli.subscriptionSchedules.list({
+		//   customer: fullCus.processor?.id,
+		// });
+		// let data = res.data.filter((s) => s.status != "canceled");
+		// expect(data.length, "should have no sub schedules").to.equal(0);
+		// await expectSubScheduleCorrect({
+		//   stripeCli,
+		//   customerId,
+		//   productId: newProduct.id,
+		//   db,
+		//   org,
+		//   env,
+		// });
+	}
+	expectProductAttached({
+		customer,
+		product: newProduct,
+		status: CusProductStatus.Scheduled,
+	});
 
-  await expectSubToBeCorrect({
-    db,
-    customerId,
-    org,
-    env,
-    shouldBeCanceled: newProductIsFree,
-  });
+	await expectSubToBeCorrect({
+		db,
+		customerId,
+		org,
+		env,
+		shouldBeCanceled: newProductIsFree,
+	});
 
-  expect(preview.branch).to.equal(AttachBranch.Downgrade);
+	expect(preview.branch).to.equal(AttachBranch.Downgrade);
 
-  return {
-    preview,
-  };
+	return {
+		preview,
+	};
 };
 
 export const expectSubScheduleCorrect = async ({
-  stripeCli,
-  customerId,
-  productId,
-  db,
-  org,
-  env,
-  fullCus,
+	stripeCli,
+	customerId,
+	productId,
+	db,
+	org,
+	env,
+	fullCus,
 }: {
-  stripeCli: Stripe;
-  customerId: string;
-  productId: string;
-  db: DrizzleCli;
-  org: Organization;
-  env: AppEnv;
-  fullCus?: FullCustomer;
+	stripeCli: Stripe;
+	customerId: string;
+	productId: string;
+	db: DrizzleCli;
+	org: Organization;
+	env: AppEnv;
+	fullCus?: FullCustomer;
 }) => {
-  // 1. Check schedule
-  if (!fullCus) {
-    fullCus = await CusService.getFull({
-      db,
-      idOrInternalId: customerId,
-      orgId: org.id,
-      env,
-    });
-  }
+	// 1. Check schedule
+	if (!fullCus) {
+		fullCus = await CusService.getFull({
+			db,
+			idOrInternalId: customerId,
+			orgId: org.id,
+			env,
+		});
+	}
 
-  const cusProduct = fullCus.customer_products.find(
-    (cp: FullCusProduct) => cp.product.id == productId
-  )!;
+	const cusProduct = fullCus.customer_products.find(
+		(cp: FullCusProduct) => cp.product.id == productId,
+	)!;
 
-  const scheduleSets = await getStripeSchedules({
-    stripeCli,
-    scheduleIds: cusProduct?.scheduled_ids || [],
-  });
+	const scheduleSets = await getStripeSchedules({
+		stripeCli,
+		scheduleIds: cusProduct?.scheduled_ids || [],
+	});
 
-  const stripePrices = scheduleSets.flatMap(
-    (schedule) => schedule?.prices || []
-  );
+	const stripePrices = scheduleSets.flatMap(
+		(schedule) => schedule?.prices || [],
+	);
 
-  const autumnPrices = cusProductToPrices({ cusProduct });
+	const autumnPrices = cusProductToPrices({ cusProduct });
 
-  let missingUsageCount = 0;
+	let missingUsageCount = 0;
 
-  for (const autumnPrice of autumnPrices) {
-    const stripePrice = findStripePriceFromPrices({
-      stripePrices,
-      autumnPrice,
-    });
+	for (const autumnPrice of autumnPrices) {
+		const stripePrice = findStripePriceFromPrices({
+			stripePrices,
+			autumnPrice,
+		});
 
-    if (isV4Usage({ price: autumnPrice!, cusProduct })) {
-      missingUsageCount++;
-      continue;
-    } else {
-      expect(stripePrice).to.exist;
-    }
-  }
+		if (isV4Usage({ price: autumnPrice!, cusProduct })) {
+			missingUsageCount++;
+			continue;
+		} else {
+			expect(stripePrice).to.exist;
+		}
+	}
 
-  expect(
-    stripePrices.length,
-    "number of schedule items equivalent to number of autumn prices"
-  ).to.equal(autumnPrices.length - missingUsageCount);
+	expect(
+		stripePrices.length,
+		"number of schedule items equivalent to number of autumn prices",
+	).to.equal(autumnPrices.length - missingUsageCount);
 };

@@ -1,9 +1,9 @@
 import {
-  CouponDurationType,
-  type CreateReward,
-  type DiscountConfig,
-  type FreeProductConfig,
-  RewardType,
+	CouponDurationType,
+	type CreateReward,
+	type DiscountConfig,
+	type FreeProductConfig,
+	RewardType,
 } from "@autumn/shared";
 
 export const defaultDiscountConfig: DiscountConfig = {

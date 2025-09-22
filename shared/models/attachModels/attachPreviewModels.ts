@@ -6,27 +6,27 @@ import { AttachBranch } from "./attachEnums/AttachBranch.js";
 import { AttachFunction } from "./attachEnums/AttachFunction.js";
 
 export interface PreviewLineItem {
-  amount?: number | undefined;
-  description: string;
-  price: string;
-  price_id: string;
-  usage_model?: UsageModel;
-  feature_id?: string;
+	amount?: number | undefined;
+	description: string;
+	price: string;
+	price_id: string;
+	usage_model?: UsageModel;
+	feature_id?: string;
 }
 
 export interface AttachPreview {
-  func: AttachFunction;
-  branch: AttachBranch;
-  options: any;
-  new_items: any;
-  due_today: {
-    line_items: PreviewLineItem[];
-    total: number;
-  };
-  due_next_cycle: {
-    line_items: PreviewLineItem[];
-    due_at: number;
-  };
-  free_trial?: FreeTrial | null;
-  current_product?: FullProduct;
+	func: AttachFunction;
+	branch: AttachBranch;
+	options: any;
+	new_items: any;
+	due_today: {
+		line_items: PreviewLineItem[];
+		total: number;
+	};
+	due_next_cycle: {
+		line_items: PreviewLineItem[];
+		due_at: number;
+	};
+	free_trial?: FreeTrial | null;
+	current_product?: FullProduct;
 }

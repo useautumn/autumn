@@ -16,7 +16,6 @@ import DevScreen from "./views/developer/DevView";
 import OnboardingView2 from "./views/onboarding2/OnboardingView2";
 import ProductsView from "./views/products/ProductsView";
 import PlanEditorView from "./views/products/plan/PlanEditorView";
-import ProductView from "./views/products/product/ProductView";
 import { TerminalView } from "./views/TerminalView";
 
 export default function App() {
@@ -45,7 +44,7 @@ export default function App() {
 					<Route path="/products/:product_id" element={<PlanEditorView />} />
 					<Route
 						path="/sandbox/products/:product_id"
-						element={<ProductView />}
+						element={<PlanEditorView />}
 					/>
 
 					<Route path="/customers" element={<CustomersPage />} />

@@ -1,11 +1,11 @@
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-  APIVersion,
-  AppEnv,
-  OnDecrease,
-  OnIncrease,
-  Organization,
+	APIVersion,
+	AppEnv,
+	OnDecrease,
+	OnIncrease,
+	Organization,
 } from "@autumn/shared";
 import chalk from "chalk";
 import Stripe from "stripe";
@@ -21,118 +21,118 @@ import { expectSubQuantityCorrect } from "tests/utils/expectUtils/expectContUseU
 import { attachNewContUseAndExpectCorrect } from "tests/utils/expectUtils/expectContUse/expectUpdateContUse.js";
 
 let userItem = constructArrearProratedItem({
-  featureId: TestFeature.Users,
-  pricePerUnit: 50,
-  includedUsage: 1,
-  config: {
-    on_increase: OnIncrease.BillImmediately,
-    on_decrease: OnDecrease.None,
-  },
+	featureId: TestFeature.Users,
+	pricePerUnit: 50,
+	includedUsage: 1,
+	config: {
+		on_increase: OnIncrease.BillImmediately,
+		on_decrease: OnDecrease.None,
+	},
 });
 
 export let pro = constructProduct({
-  items: [userItem],
-  type: "pro",
+	items: [userItem],
+	type: "pro",
 });
 
 const testCase = "updateContUse3";
 
 describe(`${chalk.yellowBright(`contUse/${testCase}: Testing update contUse included usage when no entities created`)}`, () => {
-  let customerId = testCase;
-  let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
-  let testClockId: string;
-  let db: DrizzleCli, org: Organization, env: AppEnv;
-  let stripeCli: Stripe;
-  let curUnix = new Date().getTime();
+	let customerId = testCase;
+	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	let testClockId: string;
+	let db: DrizzleCli, org: Organization, env: AppEnv;
+	let stripeCli: Stripe;
+	let curUnix = new Date().getTime();
 
-  before(async function () {
-    await setupBefore(this);
-    const { autumnJs } = this;
-    db = this.db;
-    org = this.org;
-    env = this.env;
+	before(async function () {
+		await setupBefore(this);
+		const { autumnJs } = this;
+		db = this.db;
+		org = this.org;
+		env = this.env;
 
-    stripeCli = this.stripeCli;
+		stripeCli = this.stripeCli;
 
-    addPrefixToProducts({
-      products: [pro],
-      prefix: testCase,
-    });
+		addPrefixToProducts({
+			products: [pro],
+			prefix: testCase,
+		});
 
-    await createProducts({
-      autumn,
-      products: [pro],
-      customerId,
-      db,
-      orgId: org.id,
-      env,
-    });
+		await createProducts({
+			autumn,
+			products: [pro],
+			customerId,
+			db,
+			orgId: org.id,
+			env,
+		});
 
-    const { testClockId: testClockId1 } = await initCustomer({
-      autumn: autumnJs,
-      customerId,
-      db,
-      org,
-      env,
-      attachPm: "success",
-    });
+		const { testClockId: testClockId1 } = await initCustomer({
+			autumn: autumnJs,
+			customerId,
+			db,
+			org,
+			env,
+			attachPm: "success",
+		});
 
-    testClockId = testClockId1!;
-  });
+		testClockId = testClockId1!;
+	});
 
-  it("should attach pro", async function () {
-    await attachAndExpectCorrect({
-      autumn,
-      customerId,
-      product: pro,
-      stripeCli,
-      db,
-      org,
-      env,
-    });
-  });
+	it("should attach pro", async function () {
+		await attachAndExpectCorrect({
+			autumn,
+			customerId,
+			product: pro,
+			stripeCli,
+			db,
+			org,
+			env,
+		});
+	});
 
-  let extraUsage = 2;
-  let newItem = constructArrearProratedItem({
-    featureId: TestFeature.Users,
-    pricePerUnit: 50,
-    includedUsage: (userItem.included_usage as number) + extraUsage,
-    config: {
-      on_increase: OnIncrease.BillImmediately,
-      on_decrease: OnDecrease.None,
-    },
-  });
+	let extraUsage = 2;
+	let newItem = constructArrearProratedItem({
+		featureId: TestFeature.Users,
+		pricePerUnit: 50,
+		includedUsage: (userItem.included_usage as number) + extraUsage,
+		config: {
+			on_increase: OnIncrease.BillImmediately,
+			on_decrease: OnDecrease.None,
+		},
+	});
 
-  it("should update product with extra included usage", async function () {
-    await autumn.track({
-      customer_id: customerId,
-      feature_id: TestFeature.Users,
-      value: 1,
-    });
+	it("should update product with extra included usage", async function () {
+		await autumn.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Users,
+			value: 1,
+		});
 
-    let customItems = replaceItems({
-      featureId: TestFeature.Users,
-      items: pro.items,
-      newItem,
-    });
+		let customItems = replaceItems({
+			featureId: TestFeature.Users,
+			items: pro.items,
+			newItem,
+		});
 
-    await attachNewContUseAndExpectCorrect({
-      autumn,
-      customerId,
-      product: pro,
-      customItems,
-      numInvoices: 2,
-    });
+		await attachNewContUseAndExpectCorrect({
+			autumn,
+			customerId,
+			product: pro,
+			customItems,
+			numInvoices: 2,
+		});
 
-    await expectSubQuantityCorrect({
-      stripeCli,
-      productId: pro.id,
-      db,
-      org,
-      env,
-      customerId,
-      usage: 1,
-      numReplaceables: 0,
-    });
-  });
+		await expectSubQuantityCorrect({
+			stripeCli,
+			productId: pro.id,
+			db,
+			org,
+			env,
+			customerId,
+			usage: 1,
+			numReplaceables: 0,
+		});
+	});
 });

@@ -18,94 +18,94 @@ import { timeout } from "@/utils/genUtils.js";
 
 // UNCOMMENT FROM HERE
 let pro = constructProduct({
-  id: "pro",
-  items: [constructFeatureItem({ featureId: TestFeature.Words })],
-  type: "pro",
+	id: "pro",
+	items: [constructFeatureItem({ featureId: TestFeature.Words })],
+	type: "pro",
 });
 
 describe(`${chalk.yellowBright("advancedOthers1: Testing convert collection method from send_invoice")}`, () => {
-  let customerId = "advancedOthers1";
-  let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	let customerId = "advancedOthers1";
+	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
 
-  let stripeCli: Stripe;
-  let testClockId: string;
-  let curUnix: number;
-  let db: DrizzleCli;
-  let org: Organization;
-  let env: AppEnv;
+	let stripeCli: Stripe;
+	let testClockId: string;
+	let curUnix: number;
+	let db: DrizzleCli;
+	let org: Organization;
+	let env: AppEnv;
 
-  before(async function () {
-    await setupBefore(this);
-    const { autumnJs } = this;
-    db = this.db;
-    org = this.org;
-    env = this.env;
+	before(async function () {
+		await setupBefore(this);
+		const { autumnJs } = this;
+		db = this.db;
+		org = this.org;
+		env = this.env;
 
-    stripeCli = this.stripeCli;
+		stripeCli = this.stripeCli;
 
-    addPrefixToProducts({
-      products: [pro],
-      prefix: customerId,
-    });
+		addPrefixToProducts({
+			products: [pro],
+			prefix: customerId,
+		});
 
-    await createProducts({
-      autumn: autumnJs,
-      products: [pro],
-      db,
-      orgId: org.id,
-      env,
-      customerId,
-    });
+		await createProducts({
+			autumn: autumnJs,
+			products: [pro],
+			db,
+			orgId: org.id,
+			env,
+			customerId,
+		});
 
-    const { testClockId: testClockId1 } = await initCustomer({
-      autumn: autumnJs,
-      customerId,
-      db,
-      org,
-      env,
-      attachPm: "success",
-    });
+		const { testClockId: testClockId1 } = await initCustomer({
+			autumn: autumnJs,
+			customerId,
+			db,
+			org,
+			env,
+			attachPm: "success",
+		});
 
-    testClockId = testClockId1!;
-  });
+		testClockId = testClockId1!;
+	});
 
-  it("should attach pro product and pay for it", async function () {
-    const res = await autumn.attach({
-      customer_id: customerId,
-      product_id: pro.id,
-      invoice: true,
-      enable_product_immediately: true,
-    });
+	it("should attach pro product and pay for it", async function () {
+		const res = await autumn.attach({
+			customer_id: customerId,
+			product_id: pro.id,
+			invoice: true,
+			enable_product_immediately: true,
+		});
 
-    expect(res.invoice).to.exist;
-    const customer = await autumn.customers.get(customerId);
-    expectProductAttached({
-      customer,
-      product: pro,
-    });
+		expect(res.invoice).to.exist;
+		const customer = await autumn.customers.get(customerId);
+		expectProductAttached({
+			customer,
+			product: pro,
+		});
 
-    const invoiceStripeId = res.invoice.stripe_id;
-    const invoice = await stripeCli.invoices.finalizeInvoice(invoiceStripeId);
+		const invoiceStripeId = res.invoice.stripe_id;
+		const invoice = await stripeCli.invoices.finalizeInvoice(invoiceStripeId);
 
-    await stripeCli.invoices.pay(invoiceStripeId);
-  });
+		await stripeCli.invoices.pay(invoiceStripeId);
+	});
 
-  it("should have collection method charge automatically", async function () {
-    await timeout(5000);
+	it("should have collection method charge automatically", async function () {
+		await timeout(5000);
 
-    const cusProduct = await getMainCusProduct({
-      db,
-      customerId,
-      orgId: org.id,
-      env,
-      productGroup: pro.group,
-    });
+		const cusProduct = await getMainCusProduct({
+			db,
+			customerId,
+			orgId: org.id,
+			env,
+			productGroup: pro.group,
+		});
 
-    const sub = await cusProductToSub({
-      cusProduct,
-      stripeCli,
-    });
+		const sub = await cusProductToSub({
+			cusProduct,
+			stripeCli,
+		});
 
-    expect(sub?.collection_method).to.equal("charge_automatically");
-  });
+		expect(sub?.collection_method).to.equal("charge_automatically");
+	});
 });

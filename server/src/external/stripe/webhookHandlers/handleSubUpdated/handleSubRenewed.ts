@@ -9,126 +9,126 @@ import { isMultiProductSub } from "@/internal/customers/attach/mergeUtils/mergeU
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getSubScenarioFromCache } from "@/internal/customers/cusCache/subCacheUtils.js";
 const isSubRenewed = ({
-  previousAttributes,
-  sub,
+	previousAttributes,
+	sub,
 }: {
-  previousAttributes: any;
-  sub: Stripe.Subscription;
+	previousAttributes: any;
+	sub: Stripe.Subscription;
 }) => {
-  // 1. If previously canceled
-  const uncanceledAtPreviousEnd =
-    previousAttributes.cancel_at_period_end && !sub.cancel_at_period_end;
+	// 1. If previously canceled
+	const uncanceledAtPreviousEnd =
+		previousAttributes.cancel_at_period_end && !sub.cancel_at_period_end;
 
-  const uncancelAt =
-    notNullish(previousAttributes.cancel_at) && nullish(sub.cancel_at);
+	const uncancelAt =
+		notNullish(previousAttributes.cancel_at) && nullish(sub.cancel_at);
 
-  const uncanceledAt =
-    notNullish(previousAttributes.canceled_at) && sub.canceled_at;
+	const uncanceledAt =
+		notNullish(previousAttributes.canceled_at) && sub.canceled_at;
 
-  return {
-    renewed: uncanceledAtPreviousEnd || uncancelAt || uncanceledAt,
-    renewedAt: Date.now(),
-  };
+	return {
+		renewed: uncanceledAtPreviousEnd || uncancelAt || uncanceledAt,
+		renewedAt: Date.now(),
+	};
 };
 
 const updateCusProductRenewed = async ({
-  db,
-  sub,
+	db,
+	sub,
 }: {
-  db: DrizzleCli;
-  sub: Stripe.Subscription;
+	db: DrizzleCli;
+	sub: Stripe.Subscription;
 }) => {
-  if (sub.schedule) {
-    return;
-  }
+	if (sub.schedule) {
+		return;
+	}
 
-  await CusProductService.updateByStripeSubId({
-    db,
-    stripeSubId: sub.id,
-    updates: { canceled_at: null, canceled: false },
-  });
+	await CusProductService.updateByStripeSubId({
+		db,
+		stripeSubId: sub.id,
+		updates: { canceled_at: null, canceled: false },
+	});
 
-  return;
+	return;
 };
 
 export const handleSubRenewed = async ({
-  req,
-  prevAttributes,
-  sub,
-  updatedCusProducts,
+	req,
+	prevAttributes,
+	sub,
+	updatedCusProducts,
 }: {
-  req: ExtendedRequest;
-  prevAttributes: any;
-  sub: Stripe.Subscription;
-  updatedCusProducts: FullCusProduct[];
+	req: ExtendedRequest;
+	prevAttributes: any;
+	sub: Stripe.Subscription;
+	updatedCusProducts: FullCusProduct[];
 }) => {
-  const { db, org, env, logtail: logger } = req;
+	const { db, org, env, logtail: logger } = req;
 
-  const { renewed } = isSubRenewed({
-    previousAttributes: prevAttributes,
-    sub,
-  });
+	const { renewed } = isSubRenewed({
+		previousAttributes: prevAttributes,
+		sub,
+	});
 
-  if (!renewed || updatedCusProducts.length == 0) return;
+	if (!renewed || updatedCusProducts.length == 0) return;
 
-  const subScenario = await getSubScenarioFromCache({ subId: sub.id });
-  console.log(`Renewed: ${renewed}, subScenario: ${subScenario}`);
-  if (subScenario === AttachScenario.Renew) return;
+	const subScenario = await getSubScenarioFromCache({ subId: sub.id });
+	console.log(`Renewed: ${renewed}, subScenario: ${subScenario}`);
+	if (subScenario === AttachScenario.Renew) return;
 
-  const customer = updatedCusProducts[0].customer;
-  let cusProducts = await CusProductService.list({
-    db,
-    internalCustomerId: customer!.internal_id,
-  });
+	const customer = updatedCusProducts[0].customer;
+	let cusProducts = await CusProductService.list({
+		db,
+		internalCustomerId: customer!.internal_id,
+	});
 
-  console.log(`handling sub.renewed!`);
+	console.log(`handling sub.renewed!`);
 
-  if (isMultiProductSub({ sub, cusProducts }) || sub.schedule) return;
+	if (isMultiProductSub({ sub, cusProducts }) || sub.schedule) return;
 
-  await CusProductService.updateByStripeSubId({
-    db,
-    stripeSubId: sub.id,
-    updates: { canceled_at: null, canceled: false },
-  });
+	await CusProductService.updateByStripeSubId({
+		db,
+		stripeSubId: sub.id,
+		updates: { canceled_at: null, canceled: false },
+	});
 
-  if (!org.config.sync_status) return;
+	if (!org.config.sync_status) return;
 
-  let { curScheduledProduct } = getExistingCusProducts({
-    product: updatedCusProducts[0].product,
-    cusProducts,
-    internalEntityId: updatedCusProducts[0].internal_entity_id,
-  });
+	let { curScheduledProduct } = getExistingCusProducts({
+		product: updatedCusProducts[0].product,
+		cusProducts,
+		internalEntityId: updatedCusProducts[0].internal_entity_id,
+	});
 
-  let deletedCusProducts: FullCusProduct[] = [];
+	let deletedCusProducts: FullCusProduct[] = [];
 
-  if (curScheduledProduct) {
-    logger.info(
-      `sub.updated: renewed -> removing scheduled: ${curScheduledProduct.product.name}, main product: ${updatedCusProducts[0].product.name}`
-    );
+	if (curScheduledProduct) {
+		logger.info(
+			`sub.updated: renewed -> removing scheduled: ${curScheduledProduct.product.name}, main product: ${updatedCusProducts[0].product.name}`,
+		);
 
-    await CusProductService.delete({
-      db,
-      cusProductId: curScheduledProduct.id,
-    });
+		await CusProductService.delete({
+			db,
+			cusProductId: curScheduledProduct.id,
+		});
 
-    deletedCusProducts.push(curScheduledProduct);
-  }
+		deletedCusProducts.push(curScheduledProduct);
+	}
 
-  try {
-    for (let cusProd of updatedCusProducts) {
-      await addProductsUpdatedWebhookTask({
-        req,
-        internalCustomerId: cusProd.internal_customer_id,
-        org,
-        env,
-        customerId: null,
-        logger,
-        scenario: AttachScenario.Renew,
-        cusProduct: cusProd,
-        deletedCusProduct: deletedCusProducts.find(
-          (cp) => cp.product.group === cusProd.product.group
-        ),
-      });
-    }
-  } catch (error) {}
+	try {
+		for (let cusProd of updatedCusProducts) {
+			await addProductsUpdatedWebhookTask({
+				req,
+				internalCustomerId: cusProd.internal_customer_id,
+				org,
+				env,
+				customerId: null,
+				logger,
+				scenario: AttachScenario.Renew,
+				cusProduct: cusProd,
+				deletedCusProduct: deletedCusProducts.find(
+					(cp) => cp.product.group === cusProd.product.group,
+				),
+			});
+		}
+	} catch (error) {}
 };

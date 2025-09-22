@@ -4,11 +4,11 @@ import { generateObject } from "ai";
 import { z } from "zod";
 
 const anthropic = createAnthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+	apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
 export const generateFeatureDisplay = async (feature: Feature) => {
-  const prompt = `I'm building an entitlement system and my users can create features on my platform. I also help with displaying components (like pricing table) so I need to get the feature name in singular and plural form. 
+	const prompt = `I'm building an entitlement system and my users can create features on my platform. I also help with displaying components (like pricing table) so I need to get the feature name in singular and plural form. 
   
   Based on the feature name passed in, please generate a singular and plural form, in lowercase.
   
@@ -20,14 +20,14 @@ export const generateFeatureDisplay = async (feature: Feature) => {
   </feature>
   `;
 
-  let { object } = await generateObject({
-    model: anthropic("claude-3-5-sonnet-latest"),
-    schema: z.object({
-      singular: z.string(),
-      plural: z.string(),
-    }),
-    prompt,
-  });
+	let { object } = await generateObject({
+		model: anthropic("claude-3-5-sonnet-latest"),
+		schema: z.object({
+			singular: z.string(),
+			plural: z.string(),
+		}),
+		prompt,
+	});
 
-  return object;
+	return object;
 };

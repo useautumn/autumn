@@ -19,29 +19,29 @@ import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { useAppQueryStates } from "@/hooks/common/useAppQueryStates";
 
 function ProductsView({ env }: { env: AppEnv }) {
-  const { queryStates, setQueryStates } = useAppQueryStates({
-    defaultTab: "products",
-  });
+	const { queryStates, setQueryStates } = useAppQueryStates({
+		defaultTab: "products",
+	});
 
-  const { isLoading: isProductsLoading } = useProductsQuery();
-  const { isLoading: isFeaturesLoading } = useFeaturesQuery();
-  const { isLoading: isRewardsLoading } = useRewardsQuery();
+	const { isLoading: isProductsLoading } = useProductsQuery();
+	const { isLoading: isFeaturesLoading } = useFeaturesQuery();
+	const { isLoading: isRewardsLoading } = useRewardsQuery();
 
-  if (isProductsLoading || isFeaturesLoading || isRewardsLoading)
-    return <LoadingScreen />;
+	if (isProductsLoading || isFeaturesLoading || isRewardsLoading)
+		return <LoadingScreen />;
 
-  const tab = queryStates.tab;
-  return (
-    <ProductsContext.Provider value={{}}>
-      <div className="flex flex-col gap-4 h-fit relative w-full text-sm">
-        <h1 className="text-xl font-medium shrink-0 pt-6 pl-10">Products</h1>
+	const tab = queryStates.tab;
+	return (
+		<ProductsContext.Provider value={{}}>
+			<div className="flex flex-col gap-4 h-fit relative w-full text-sm">
+				<h1 className="text-xl font-medium shrink-0 pt-6 pl-10">Products</h1>
 
-        {tab === "products" && <ProductsPage />}
-        {tab === "features" && <FeaturesPage />}
-        {tab === "rewards" && <RewardsPage />}
-      </div>
-    </ProductsContext.Provider>
-  );
+				{tab === "products" && <ProductsPage />}
+				{tab === "features" && <FeaturesPage />}
+				{tab === "rewards" && <RewardsPage />}
+			</div>
+		</ProductsContext.Provider>
+	);
 }
 
 export default ProductsView;
