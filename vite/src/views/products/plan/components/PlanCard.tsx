@@ -15,9 +15,9 @@ export default function PlanCard({ product }: { product: ProductV2 }) {
 						<CopyableSpan text={product.id} />
 					</div>
 					<div className="flex flex-row items-center gap-2">
-                    <PencilIcon />
-                    <Trash2/>
-                    </div>
+						<PencilIcon />
+						<Trash2 />
+					</div>
 				</div>
 			</CardHeader>
 		</Card>

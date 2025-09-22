@@ -3,14 +3,13 @@ import { useParams } from "react-router";
 import V2Breadcrumb from "@/components/v2/breadcrumb";
 import ErrorScreen from "@/views/general/ErrorScreen";
 import LoadingScreen from "@/views/general/LoadingScreen";
-import { UpdateProductButton } from "../product/components/UpdateProductButton";
 import { useProductChangedAlert } from "../product/hooks/useProductChangedAlert";
 import { useProductData } from "../product/hooks/useProductData";
 import { useProductQuery } from "../product/hooks/useProductQuery";
 import { ProductContext } from "../product/ProductContext";
-import ProductSidebar from "../product/ProductSidebar";
 import ConfirmNewVersionDialog from "../product/versioning/ConfirmNewVersionDialog";
 import { ManagePlan } from "./components/Editor";
+import { EditPlanSheet } from "./components/EditPlanSheet";
 
 export default function PlanEditorView() {
 	const { plan_id } = useParams();
@@ -76,15 +75,14 @@ export default function PlanEditorView() {
 							<ManagePlan />
 						</div>
 					</div>
-					<div className="flex justify-end gap-2 p-10 w-full lg:hidden">
+					{/* <div className="flex justify-end gap-2 p-10 w-full lg:hidden">
 						<div className="w-fit">
 							<UpdateProductButton />
 						</div>
-					</div>
+					</div> */}
 				</div>
-				<div className="hidden max-w-md w-1/3 shrink-1 lg:block lg:min-w-xs sticky top-0">
-					<ProductSidebar />
-				</div>
+
+				<EditPlanSheet />
 			</div>
 			{modal}
 		</ProductContext.Provider>

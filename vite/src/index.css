@@ -13,7 +13,7 @@
 
 :root {
 	/* font-family: system-ui, Avenir, Helvetica, Arial, sans-serif; */
-	font-family: "Inter", "Inter Fallback";
+	font-family: "Inter", "Inter Fallback", sans-serif;
 	/* font-family: "Geist", "Geist Fallback"; */
 
 	line-height: 1.5;
@@ -21,17 +21,27 @@
 
 	color-scheme: light dark;
 	color: rgba(255, 255, 255, 0.87);
-	/* background-color: #242424; */
+
+	/* Editted */
 	background-color: #fafaf9;
+	--foreground: #121212;
+	--muted-foreground: #444;
+	--t1: #121212;
+	--t2: #444;
+	--t3: #666;
+	--t4: #707070;
+	--t5: #767676;
+	--t6: #aaa;
 
 	font-synthesis: none;
 	text-rendering: optimizeLegibility;
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
 	--background: oklch(1 0 0);
-	--foreground: oklch(0.141 0.005 285.823);
-	--card: oklch(1 0 0);
+
+	--card: #fafaf9;
 	--card-foreground: oklch(0.141 0.005 285.823);
+
 	--popover: oklch(1 0 0);
 	--popover-foreground: oklch(0.141 0.005 285.823);
 	--primary: #9048ff;
@@ -39,12 +49,15 @@
 	--secondary: oklch(0.967 0.001 286.375);
 	--secondary-foreground: oklch(0.21 0.006 285.885);
 	--muted: oklch(0.967 0.001 286.375);
-	--muted-foreground: oklch(0.552 0.016 285.938);
+
 	--accent: oklch(0.967 0.001 286.375);
 	--accent-foreground: oklch(0.21 0.006 285.885);
 	--destructive: oklch(0.577 0.245 27.325);
 	--destructive-foreground: oklch(0.577 0.245 27.325);
-	--border: oklch(0.92 0.004 286.32);
+
+	/* --border: oklch(0.92 0.004 286.32); */
+	--border: #eaeae9;
+
 	--input: oklch(0.92 0.004 286.32);
 	--ring: oklch(0.705 0.015 286.067);
 
@@ -69,64 +82,6 @@
 	--sidebar-border: oklch(0.92 0.004 286.32);
 	--sidebar-ring: oklch(0.705 0.015 286.067);
 }
-
-/* 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-} */
-
-/* 
----break--- */
 
 .dark {
 	--background: oklch(0.141 0.005 285.823);
@@ -205,9 +160,18 @@ button:focus-visible {
 	--color-sidebar-ring: var(--sidebar-ring);
 
 	/* CUSTOM STUFF */
-	--color-t1: #17171a;
+
+	--color-t1: var(--t1);
+	--color-t2: var(--t2);
+	--color-t3: var(--t3);
+	--color-t4: var(--t4);
+	--color-t5: var(--t5);
+	--color-t6: var(--t6);
+
+	/* Old Colors */
+	/* --color-t1: #17171a;
 	--color-t2: #323239;
-	--color-t3: #81818a;
+	--color-t3: #81818a; */
 
 	/* --font-weight-regular: 450; */
 	--font-weight-normal: 450;
