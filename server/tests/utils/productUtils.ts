@@ -5,125 +5,125 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { isUsagePrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 
 export const createProduct = async ({
-  db,
-  orgId,
-  env,
-  autumn,
-  product,
-  prefix,
+	db,
+	orgId,
+	env,
+	autumn,
+	product,
+	prefix,
 }: {
-  db: DrizzleCli;
-  orgId: string;
-  env: AppEnv;
-  autumn: AutumnInt;
-  product: any;
-  prefix?: string;
+	db: DrizzleCli;
+	orgId: string;
+	env: AppEnv;
+	autumn: AutumnInt;
+	product: any;
+	prefix?: string;
 }) => {
-  try {
-    const products = await ProductService.listFull({
-      db,
-      orgId,
-      env,
-      returnAll: true,
-      inIds: [product.id],
-    });
+	try {
+		const products = await ProductService.listFull({
+			db,
+			orgId,
+			env,
+			returnAll: true,
+			inIds: [product.id],
+		});
 
-    const batchDelete = [];
-    for (const prod of products) {
-      batchDelete.push(
-        ProductService.deleteByInternalId({
-          db,
-          internalId: prod.internal_id,
-          orgId,
-          env,
-        })
-      );
-    }
+		const batchDelete = [];
+		for (const prod of products) {
+			batchDelete.push(
+				ProductService.deleteByInternalId({
+					db,
+					internalId: prod.internal_id,
+					orgId,
+					env,
+				}),
+			);
+		}
 
-    await Promise.all(batchDelete);
-  } catch (error) {}
+		await Promise.all(batchDelete);
+	} catch (error) {}
 
-  let clone = structuredClone(product);
-  if (typeof clone.items === "object") {
-    clone.items = Object.values(clone.items);
-  }
+	let clone = structuredClone(product);
+	if (typeof clone.items === "object") {
+		clone.items = Object.values(clone.items);
+	}
 
-  if (prefix) {
-    clone.id = `${prefix}_${clone.id}`;
-    clone.name = `${prefix} ${clone.name}`;
-  }
+	if (prefix) {
+		clone.id = `${prefix}_${clone.id}`;
+		clone.name = `${prefix} ${clone.name}`;
+	}
 
-  await autumn.products.create(clone);
+	await autumn.products.create(clone);
 };
 
 export const createProducts = async ({
-  db,
-  orgId,
-  env,
-  autumn,
-  products,
-  prefix,
-  customerId,
+	db,
+	orgId,
+	env,
+	autumn,
+	products,
+	prefix,
+	customerId,
 }: {
-  db: DrizzleCli;
-  orgId: string;
-  env: AppEnv;
-  autumn: AutumnInt;
-  products: any[];
-  prefix?: string;
-  customerId?: string;
+	db: DrizzleCli;
+	orgId: string;
+	env: AppEnv;
+	autumn: AutumnInt;
+	products: any[];
+	prefix?: string;
+	customerId?: string;
 }) => {
-  if (customerId) {
-    try {
-      await autumn.customers.delete(customerId);
-    } catch (error) {}
-  }
+	if (customerId) {
+		try {
+			await autumn.customers.delete(customerId);
+		} catch (error) {}
+	}
 
-  const batchCreate = [];
-  for (const product of products) {
-    batchCreate.push(
-      createProduct({ db, orgId, env, autumn, product, prefix })
-    );
-  }
+	const batchCreate = [];
+	for (const product of products) {
+		batchCreate.push(
+			createProduct({ db, orgId, env, autumn, product, prefix }),
+		);
+	}
 
-  await Promise.all(batchCreate);
+	await Promise.all(batchCreate);
 };
 
 export const createReward = async ({
-  db,
-  orgId,
-  env,
-  autumn,
-  reward,
-  productId,
-  onlyUsage = false,
+	db,
+	orgId,
+	env,
+	autumn,
+	reward,
+	productId,
+	onlyUsage = false,
 }: {
-  db: DrizzleCli;
-  orgId: string;
-  env: AppEnv;
-  autumn: AutumnInt;
-  reward: CreateReward;
-  productId: string;
-  onlyUsage?: boolean;
+	db: DrizzleCli;
+	orgId: string;
+	env: AppEnv;
+	autumn: AutumnInt;
+	reward: CreateReward;
+	productId: string;
+	onlyUsage?: boolean;
 }) => {
-  let fullProduct = await ProductService.getFull({
-    db,
-    orgId,
-    env,
-    idOrInternalId: productId!,
-  });
+	let fullProduct = await ProductService.getFull({
+		db,
+		orgId,
+		env,
+		idOrInternalId: productId!,
+	});
 
-  let usagePrices = fullProduct?.prices.filter((price) =>
-    isUsagePrice({ price })
-  );
+	let usagePrices = fullProduct?.prices.filter((price) =>
+		isUsagePrice({ price }),
+	);
 
-  if (onlyUsage) {
-    reward.discount_config!.price_ids = usagePrices?.map((price) => price.id);
-  }
+	if (onlyUsage) {
+		reward.discount_config!.price_ids = usagePrices?.map((price) => price.id);
+	}
 
-  try {
-    await autumn.rewards.delete(reward.id);
-  } catch (error) {}
+	try {
+		await autumn.rewards.delete(reward.id);
+	} catch (error) {}
 
-  await autumn.rewards.create(reward);
+	await autumn.rewards.create(reward);
 };

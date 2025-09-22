@@ -16,97 +16,97 @@ import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 export const onboardingRouter: Router = Router();
 
 onboardingRouter.post("", async (req: Request, res: any) =>
-  routeHandler({
-    req,
-    res,
-    action: "onboarding",
-    handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
-      const { db, logtail: logger, org } = req;
-      const { token } = req.body;
+	routeHandler({
+		req,
+		res,
+		action: "onboarding",
+		handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
+			const { db, logtail: logger, org } = req;
+			const { token } = req.body;
 
-      if (!token) {
-        throw new RecaseError({
-          message: "No token provided",
-          code: "no_token_provided",
-          statusCode: 400,
-        });
-      }
+			if (!token) {
+				throw new RecaseError({
+					message: "No token provided",
+					code: "no_token_provided",
+					statusCode: 400,
+				});
+			}
 
-      let chatResult = await db.query.chatResults.findFirst({
-        where: eq(chatResults.id, token),
-      });
+			let chatResult = await db.query.chatResults.findFirst({
+				where: eq(chatResults.id, token),
+			});
 
-      if (!chatResult) {
-        throw new RecaseError({
-          message: `Chat result from token ${token} not found`,
-          code: "chat_result_not_found",
-          statusCode: 404,
-        });
-      }
+			if (!chatResult) {
+				throw new RecaseError({
+					message: `Chat result from token ${token} not found`,
+					code: "chat_result_not_found",
+					statusCode: 404,
+				});
+			}
 
-      let curProducts = await ProductService.listFull({
-        db,
-        orgId: org.id,
-        env: AppEnv.Sandbox,
-      });
+			let curProducts = await ProductService.listFull({
+				db,
+				orgId: org.id,
+				env: AppEnv.Sandbox,
+			});
 
-      let curFeatures = await FeatureService.list({
-        db,
-        orgId: org.id,
-        env: AppEnv.Sandbox,
-      });
+			let curFeatures = await FeatureService.list({
+				db,
+				orgId: org.id,
+				env: AppEnv.Sandbox,
+			});
 
-      let newProducts = chatResult.data.products.filter((product) => {
-        return !curProducts.some((p) => p.id === product.id);
-      });
+			let newProducts = chatResult.data.products.filter((product) => {
+				return !curProducts.some((p) => p.id === product.id);
+			});
 
-      let newFeatures = chatResult.data.features.filter((feature) => {
-        return !curFeatures.some((f) => f.id === feature.id);
-      });
+			let newFeatures = chatResult.data.features.filter((feature) => {
+				return !curFeatures.some((f) => f.id === feature.id);
+			});
 
-      if (newFeatures.length > 0 || newProducts.length > 0) {
-        let backendFeatures = parseChatResultFeatures({
-          features: newFeatures,
-          orgId: org.id,
-        });
+			if (newFeatures.length > 0 || newProducts.length > 0) {
+				let backendFeatures = parseChatResultFeatures({
+					features: newFeatures,
+					orgId: org.id,
+				});
 
-        let { products, prices, ents } = await parseChatProducts({
-          db,
-          logger,
-          orgId: org.id,
-          features: [...curFeatures, ...backendFeatures],
-          chatProducts: newProducts,
-        });
+				let { products, prices, ents } = await parseChatProducts({
+					db,
+					logger,
+					orgId: org.id,
+					features: [...curFeatures, ...backendFeatures],
+					chatProducts: newProducts,
+				});
 
-        await Promise.all([
-          FeatureService.insert({
-            db,
-            data: backendFeatures,
-            logger,
-          }),
-          (async () => {
-            for (const product of products) {
-              await ProductService.insert({ db, product });
-            }
-          })(),
-        ]);
+				await Promise.all([
+					FeatureService.insert({
+						db,
+						data: backendFeatures,
+						logger,
+					}),
+					(async () => {
+						for (const product of products) {
+							await ProductService.insert({ db, product });
+						}
+					})(),
+				]);
 
-        await EntitlementService.insert({
-          db,
-          data: ents,
-        });
+				await EntitlementService.insert({
+					db,
+					data: ents,
+				});
 
-        await PriceService.insert({
-          db,
-          data: prices,
-        });
-      }
+				await PriceService.insert({
+					db,
+					data: prices,
+				});
+			}
 
-      res.status(200).json({
-        org_id: org.id,
-        feature_ids: chatResult.data.features.map((f) => f.id),
-        product_ids: chatResult.data.products.map((p) => p.id),
-      });
-    },
-  }),
+			res.status(200).json({
+				org_id: org.id,
+				feature_ids: chatResult.data.features.map((f) => f.id),
+				product_ids: chatResult.data.products.map((p) => p.id),
+			});
+		},
+	}),
 );

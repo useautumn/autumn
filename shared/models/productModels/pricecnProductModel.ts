@@ -1,18 +1,18 @@
 export interface PricecnProduct {
-  name: string;
-  description?: string;
+	name: string;
+	description?: string;
 
-  price: {
-    primaryText: string;
-    secondaryText?: string;
-  };
+	price: {
+		primaryText: string;
+		secondaryText?: string;
+	};
 
-  everythingFrom?: string;
-  buttonText?: string;
-  recommendText?: string;
+	everythingFrom?: string;
+	buttonText?: string;
+	recommendText?: string;
 
-  items: {
-    primaryText: string;
-    secondaryText?: string;
-  }[];
+	items: {
+		primaryText: string;
+		secondaryText?: string;
+	}[];
 }

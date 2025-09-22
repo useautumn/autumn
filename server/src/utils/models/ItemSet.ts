@@ -14,11 +14,11 @@ import { z } from "zod";
 // export type ItemSet = z.infer<typeof ItemSetSchema>;
 
 export type ItemSet = {
-  subItems: (Stripe.SubscriptionUpdateParams.Item & {
-    autumnPrice?: Price;
-  })[];
-  invoiceItems: Stripe.SubscriptionUpdateParams.AddInvoiceItem[];
-  usageFeatures: string[];
+	subItems: (Stripe.SubscriptionUpdateParams.Item & {
+		autumnPrice?: Price;
+	})[];
+	invoiceItems: Stripe.SubscriptionUpdateParams.AddInvoiceItem[];
+	usageFeatures: string[];
 };
 
 // export const ItemSetSchema2 = z.object({

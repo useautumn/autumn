@@ -4,33 +4,33 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 
 type SecondaryTabType =
-  | "api_keys"
-  | "stripe"
-  | "products"
-  | "rewards"
-  | "features"
-  | "webhooks";
+	| "api_keys"
+	| "stripe"
+	| "products"
+	| "rewards"
+	| "features"
+	| "webhooks";
 
 export const useAppQueryStates = ({
-  defaultTab,
+	defaultTab,
 }: {
-  defaultTab?: SecondaryTabType;
+	defaultTab?: SecondaryTabType;
 }) => {
-  const [queryStates, setQueryStates] = useQueryStates({
-    tab: parseAsString.withDefault(defaultTab || ""),
-  });
+	const [queryStates, setQueryStates] = useQueryStates({
+		tab: parseAsString.withDefault(defaultTab || ""),
+	});
 
-  const [stableStates, setStableStates] = useState(queryStates);
+	const [stableStates, setStableStates] = useState(queryStates);
 
-  useEffect(() => {
-    const debouncedSetStableStates = debounce((queryStates: any) => {
-      setStableStates(queryStates);
-    }, 50);
-    debouncedSetStableStates(queryStates);
-  }, [queryStates]);
+	useEffect(() => {
+		const debouncedSetStableStates = debounce((queryStates: any) => {
+			setStableStates(queryStates);
+		}, 50);
+		debouncedSetStableStates(queryStates);
+	}, [queryStates]);
 
-  return {
-    queryStates: stableStates,
-    setQueryStates,
-  };
+	return {
+		queryStates: stableStates,
+		setQueryStates,
+	};
 };

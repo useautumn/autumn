@@ -5,10 +5,10 @@ import { toast } from "sonner";
 import { WarningBox } from "@/components/general/modal-components/WarningBox";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogTitle,
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogTitle,
 } from "@/components/ui/dialog";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";

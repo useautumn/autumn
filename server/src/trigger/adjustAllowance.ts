@@ -1,18 +1,18 @@
 import {
-  Entitlement,
-  ErrCode,
-  FullCusEntWithFullCusProduct,
-  FullCusEntWithProduct,
-  Price,
+	Entitlement,
+	ErrCode,
+	FullCusEntWithFullCusProduct,
+	FullCusEntWithProduct,
+	Price,
 } from "@autumn/shared";
 import {
-  AppEnv,
-  BillingType,
-  Customer,
-  Feature,
-  FullCustomerPrice,
-  Organization,
-  UsagePriceConfig,
+	AppEnv,
+	BillingType,
+	Customer,
+	Feature,
+	FullCustomerPrice,
+	Organization,
+	UsagePriceConfig,
 } from "@autumn/shared";
 
 import { getRelatedCusPrice } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
@@ -29,145 +29,145 @@ import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
 
 export const getUsageFromBalance = ({
-  ent,
-  price,
-  balance,
+	ent,
+	price,
+	balance,
 }: {
-  ent: Entitlement;
-  price: Price;
-  balance: number;
+	ent: Entitlement;
+	price: Price;
+	balance: number;
 }) => {
-  let config = price.config as UsagePriceConfig;
-  let billingUnits = config.billing_units || 1;
+	let config = price.config as UsagePriceConfig;
+	let billingUnits = config.billing_units || 1;
 
-  // Should get overage...
-  let overage = -Math.min(0, balance);
-  let roundedOverage = new Decimal(overage)
-    .div(billingUnits)
-    .ceil()
-    .mul(billingUnits)
-    .toNumber();
+	// Should get overage...
+	let overage = -Math.min(0, balance);
+	let roundedOverage = new Decimal(overage)
+		.div(billingUnits)
+		.ceil()
+		.mul(billingUnits)
+		.toNumber();
 
-  let usage = new Decimal(ent.allowance!).sub(balance).toNumber();
+	let usage = new Decimal(ent.allowance!).sub(balance).toNumber();
 
-  let roundedUsage = usage;
-  if (overage > 0) {
-    roundedUsage = new Decimal(usage)
-      .div(billingUnits)
-      .ceil()
-      .mul(billingUnits)
-      .toNumber();
-  }
+	let roundedUsage = usage;
+	if (overage > 0) {
+		roundedUsage = new Decimal(usage)
+			.div(billingUnits)
+			.ceil()
+			.mul(billingUnits)
+			.toNumber();
+	}
 
-  return { usage, roundedUsage, overage, roundedOverage };
+	return { usage, roundedUsage, overage, roundedOverage };
 };
 
 export const adjustAllowance = async ({
-  db,
-  env,
-  org,
-  affectedFeature,
-  cusEnt,
-  cusPrices,
-  customer,
-  originalBalance,
-  newBalance,
-  logger,
-  errorIfIncomplete = false,
-  // deduction,
-  // product,
-  // fromEntities = false,
+	db,
+	env,
+	org,
+	affectedFeature,
+	cusEnt,
+	cusPrices,
+	customer,
+	originalBalance,
+	newBalance,
+	logger,
+	errorIfIncomplete = false,
+	// deduction,
+	// product,
+	// fromEntities = false,
 }: {
-  db: DrizzleCli;
-  env: AppEnv;
-  affectedFeature: Feature;
-  org: Organization;
-  cusEnt: FullCusEntWithFullCusProduct;
-  cusPrices: FullCustomerPrice[];
-  customer: Customer;
-  originalBalance: number;
-  newBalance: number;
-  logger: any;
-  errorIfIncomplete?: boolean;
+	db: DrizzleCli;
+	env: AppEnv;
+	affectedFeature: Feature;
+	org: Organization;
+	cusEnt: FullCusEntWithFullCusProduct;
+	cusPrices: FullCustomerPrice[];
+	customer: Customer;
+	originalBalance: number;
+	newBalance: number;
+	logger: any;
+	errorIfIncomplete?: boolean;
 }) => {
-  let cusPrice = getRelatedCusPrice(cusEnt, cusPrices);
-  let billingType = cusPrice ? getBillingType(cusPrice.price.config!) : null;
-  let cusProduct = cusEnt.customer_product;
+	let cusPrice = getRelatedCusPrice(cusEnt, cusPrices);
+	let billingType = cusPrice ? getBillingType(cusPrice.price.config!) : null;
+	let cusProduct = cusEnt.customer_product;
 
-  // TODO: TRACK
+	// TODO: TRACK
 
-  if (
-    !cusProduct ||
-    !cusPrice ||
-    billingType !== BillingType.InArrearProrated ||
-    originalBalance == newBalance
-  ) {
-    return { newReplaceables: [], invoice: null, deletedReplaceables: null };
-  }
+	if (
+		!cusProduct ||
+		!cusPrice ||
+		billingType !== BillingType.InArrearProrated ||
+		originalBalance == newBalance
+	) {
+		return { newReplaceables: [], invoice: null, deletedReplaceables: null };
+	}
 
-  let ent = cusEnt.entitlement;
-  if (ent.usage_limit && newBalance < ent.allowance! - (ent.usage_limit || 0)) {
-    throw new RecaseError({
-      message: `Balance exceeds usage limit of ${cusEnt.entitlement.usage_limit}`,
-      code: ErrCode.InvalidInputs,
-      statusCode: StatusCodes.BAD_REQUEST,
-    });
-  }
+	let ent = cusEnt.entitlement;
+	if (ent.usage_limit && newBalance < ent.allowance! - (ent.usage_limit || 0)) {
+		throw new RecaseError({
+			message: `Balance exceeds usage limit of ${cusEnt.entitlement.usage_limit}`,
+			code: ErrCode.InvalidInputs,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
 
-  logger.info(`--------------------------------`);
-  logger.info(`Updating arrear prorated usage: ${affectedFeature.name}`);
-  logger.info(`Customer: ${customer.name}, Org: ${org.slug}`);
+	logger.info(`--------------------------------`);
+	logger.info(`Updating arrear prorated usage: ${affectedFeature.name}`);
+	logger.info(`Customer: ${customer.name}, Org: ${org.slug}`);
 
-  let stripeCli = createStripeCli({ org, env });
-  let sub = await getUsageBasedSub({
-    db,
-    stripeCli,
-    subIds: cusProduct.subscription_ids!,
-    feature: affectedFeature,
-  });
+	let stripeCli = createStripeCli({ org, env });
+	let sub = await getUsageBasedSub({
+		db,
+		stripeCli,
+		subIds: cusProduct.subscription_ids!,
+		feature: affectedFeature,
+	});
 
-  if (!sub) {
-    logger.error("adjustAllowance: no usage-based sub found");
-    return { newReplaceables: null, invoice: null, deletedReplaceables: null };
-  }
+	if (!sub) {
+		logger.error("adjustAllowance: no usage-based sub found");
+		return { newReplaceables: null, invoice: null, deletedReplaceables: null };
+	}
 
-  let subItem = findStripeItemForPrice({
-    price: cusPrice.price,
-    stripeItems: sub.items.data,
-  });
+	let subItem = findStripeItemForPrice({
+		price: cusPrice.price,
+		stripeItems: sub.items.data,
+	});
 
-  if (!subItem) {
-    logger.error("adjustAllowance: no sub item found");
-    return { newReplaceables: null, invoice: null, deletedReplaceables: null };
-  }
+	if (!subItem) {
+		logger.error("adjustAllowance: no sub item found");
+		return { newReplaceables: null, invoice: null, deletedReplaceables: null };
+	}
 
-  let isUpgrade = newBalance < originalBalance;
+	let isUpgrade = newBalance < originalBalance;
 
-  if (isUpgrade) {
-    return await handleProratedUpgrade({
-      db,
-      stripeCli,
-      cusEnt,
-      cusPrice,
-      sub,
-      subItem: subItem as Stripe.SubscriptionItem,
-      newBalance,
-      prevBalance: originalBalance,
-      org,
-      logger,
-    });
-  } else {
-    return await handleProratedDowngrade({
-      db,
-      org,
-      stripeCli,
-      cusEnt,
-      cusPrice,
-      sub,
-      subItem: subItem as Stripe.SubscriptionItem,
-      newBalance,
-      prevBalance: originalBalance,
-      logger,
-    });
-  }
+	if (isUpgrade) {
+		return await handleProratedUpgrade({
+			db,
+			stripeCli,
+			cusEnt,
+			cusPrice,
+			sub,
+			subItem: subItem as Stripe.SubscriptionItem,
+			newBalance,
+			prevBalance: originalBalance,
+			org,
+			logger,
+		});
+	} else {
+		return await handleProratedDowngrade({
+			db,
+			org,
+			stripeCli,
+			cusEnt,
+			cusPrice,
+			sub,
+			subItem: subItem as Stripe.SubscriptionItem,
+			newBalance,
+			prevBalance: originalBalance,
+			logger,
+		});
+	}
 };

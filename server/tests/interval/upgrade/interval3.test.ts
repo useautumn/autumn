@@ -18,112 +18,112 @@ import { toMilliseconds } from "@/utils/timeUtils.js";
 import { getCusSub } from "@/utils/scriptUtils/testUtils/cusTestUtils.js";
 
 let pro = constructProduct({
-  id: "pro",
-  items: [constructFeatureItem({ featureId: TestFeature.Words })],
-  type: "pro",
-  trial: true,
+	id: "pro",
+	items: [constructFeatureItem({ featureId: TestFeature.Words })],
+	type: "pro",
+	trial: true,
 });
 
 let premium = constructProduct({
-  id: "premium",
-  items: [constructFeatureItem({ featureId: TestFeature.Words })],
-  type: "premium",
-  trial: true,
+	id: "premium",
+	items: [constructFeatureItem({ featureId: TestFeature.Words })],
+	type: "premium",
+	trial: true,
 });
 
 const testCase = "interval3";
 describe(`${chalk.yellowBright("interval3: Should upgrade from pro trial to premium trial and have correct next cycle at")}`, () => {
-  let customerId = testCase;
-  let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	let customerId = testCase;
+	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
 
-  let stripeCli: Stripe;
-  let testClockId: string;
-  let curUnix: number;
-  let db: DrizzleCli;
-  let org: Organization;
-  let env: AppEnv;
+	let stripeCli: Stripe;
+	let testClockId: string;
+	let curUnix: number;
+	let db: DrizzleCli;
+	let org: Organization;
+	let env: AppEnv;
 
-  before(async function () {
-    await setupBefore(this);
-    const { autumnJs } = this;
-    db = this.db;
-    org = this.org;
-    env = this.env;
+	before(async function () {
+		await setupBefore(this);
+		const { autumnJs } = this;
+		db = this.db;
+		org = this.org;
+		env = this.env;
 
-    stripeCli = this.stripeCli;
+		stripeCli = this.stripeCli;
 
-    addPrefixToProducts({
-      products: [pro, premium],
-      prefix: testCase,
-    });
+		addPrefixToProducts({
+			products: [pro, premium],
+			prefix: testCase,
+		});
 
-    await createProducts({
-      autumn: autumnJs,
-      products: [pro, premium],
-      db,
-      orgId: org.id,
-      env,
-      customerId,
-    });
+		await createProducts({
+			autumn: autumnJs,
+			products: [pro, premium],
+			db,
+			orgId: org.id,
+			env,
+			customerId,
+		});
 
-    const { testClockId: testClockId1 } = await initCustomer({
-      autumn: autumnJs,
-      customerId,
-      db,
-      org,
-      env,
-      attachPm: "success",
-    });
+		const { testClockId: testClockId1 } = await initCustomer({
+			autumn: autumnJs,
+			customerId,
+			db,
+			org,
+			env,
+			attachPm: "success",
+		});
 
-    testClockId = testClockId1!;
-  });
+		testClockId = testClockId1!;
+	});
 
-  it("should attach pro and advance test clock", async function () {
-    await attachAndExpectCorrect({
-      autumn,
-      customerId,
-      product: pro,
-      stripeCli,
-      db,
-      org,
-      env,
-    });
+	it("should attach pro and advance test clock", async function () {
+		await attachAndExpectCorrect({
+			autumn,
+			customerId,
+			product: pro,
+			stripeCli,
+			db,
+			org,
+			env,
+		});
 
-    curUnix = await advanceTestClock({
-      stripeCli,
-      testClockId,
-      advanceTo: addDays(new Date(), 3).getTime(),
-    });
-  });
+		curUnix = await advanceTestClock({
+			stripeCli,
+			testClockId,
+			advanceTo: addDays(new Date(), 3).getTime(),
+		});
+	});
 
-  it("should upgrade to premium and have correct next cycle at", async function () {
-    const checkoutRes = await autumn.checkout({
-      customer_id: customerId,
-      product_id: premium.id,
-    });
+	it("should upgrade to premium and have correct next cycle at", async function () {
+		const checkoutRes = await autumn.checkout({
+			customer_id: customerId,
+			product_id: premium.id,
+		});
 
-    expect(checkoutRes.next_cycle).to.exist;
-    expect(checkoutRes.next_cycle?.starts_at).to.approximately(
-      addDays(curUnix, 7).getTime(),
-      toMilliseconds.days(1) // +- 1 day
-    );
+		expect(checkoutRes.next_cycle).to.exist;
+		expect(checkoutRes.next_cycle?.starts_at).to.approximately(
+			addDays(curUnix, 7).getTime(),
+			toMilliseconds.days(1), // +- 1 day
+		);
 
-    await autumn.attach({
-      customer_id: customerId,
-      product_id: premium.id,
-    });
+		await autumn.attach({
+			customer_id: customerId,
+			product_id: premium.id,
+		});
 
-    const sub = await getCusSub({
-      db,
-      org,
-      customerId,
-      productId: premium.id,
-    });
+		const sub = await getCusSub({
+			db,
+			org,
+			customerId,
+			productId: premium.id,
+		});
 
-    const subItem = sub!.items.data[0];
-    expect(subItem.current_period_end * 1000).to.approximately(
-      checkoutRes.next_cycle?.starts_at!,
-      toMilliseconds.days(1) // +- 1 day
-    );
-  });
+		const subItem = sub!.items.data[0];
+		expect(subItem.current_period_end * 1000).to.approximately(
+			checkoutRes.next_cycle?.starts_at!,
+			toMilliseconds.days(1), // +- 1 day
+		);
+	});
 });

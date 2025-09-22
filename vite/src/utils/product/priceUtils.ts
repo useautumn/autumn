@@ -1,11 +1,11 @@
 import {
-  AllowanceType,
-  BillingInterval,
-  BillWhen,
-  EntitlementWithFeature,
-  PriceType,
-  ProductItem,
-  ProductItemInterval,
+	AllowanceType,
+	BillingInterval,
+	BillWhen,
+	EntitlementWithFeature,
+	PriceType,
+	ProductItem,
+	ProductItemInterval,
 } from "@autumn/shared";
 
 import { FixedPriceConfig, Price, UsagePriceConfig } from "@autumn/shared";
@@ -13,73 +13,73 @@ import { intervalIsNone } from "./productItemUtils";
 import { isFeatureItem } from "./getItemType";
 
 export const getBillingUnits = (
-  config: UsagePriceConfig,
-  entitlements: EntitlementWithFeature[]
+	config: UsagePriceConfig,
+	entitlements: EntitlementWithFeature[],
 ) => {
-  if (!entitlements) return "(error)";
+	if (!entitlements) return "(error)";
 
-  if (
-    config.bill_when == BillWhen.EndOfPeriod ||
-    config.bill_when == BillWhen.StartOfPeriod ||
-    config.bill_when == BillWhen.InAdvance
-  ) {
-    return `${config.billing_units} `;
-  }
+	if (
+		config.bill_when == BillWhen.EndOfPeriod ||
+		config.bill_when == BillWhen.StartOfPeriod ||
+		config.bill_when == BillWhen.InAdvance
+	) {
+		return `${config.billing_units} `;
+	}
 
-  const entitlement = entitlements?.find(
-    (e) => e.internal_feature_id == config?.internal_feature_id
-  );
-  if (!entitlement) return "n";
+	const entitlement = entitlements?.find(
+		(e) => e.internal_feature_id == config?.internal_feature_id,
+	);
+	if (!entitlement) return "n";
 
-  if (entitlement.allowance_type == AllowanceType.Unlimited) return "∞";
-  if (entitlement.allowance_type == AllowanceType.None) return "n";
+	if (entitlement.allowance_type == AllowanceType.Unlimited) return "∞";
+	if (entitlement.allowance_type == AllowanceType.None) return "n";
 
-  return `${entitlement.allowance} `;
+	return `${entitlement.allowance} `;
 };
 
 export const getDefaultPriceConfig = (type: PriceType) => {
-  if (type === PriceType.Fixed) {
-    return {
-      type: PriceType.Fixed,
-      amount: "",
-      interval: BillingInterval.Month,
-      interval_count: 1,
-    };
-  }
+	if (type === PriceType.Fixed) {
+		return {
+			type: PriceType.Fixed,
+			amount: "",
+			interval: BillingInterval.Month,
+			interval_count: 1,
+		};
+	}
 
-  return {
-    type: PriceType.Usage,
-    internal_feature_id: "",
-    feature_id: "",
-    bill_when: BillWhen.EndOfPeriod,
-    interval: BillingInterval.Month,
-    interval_count: 1,
-    billing_units: 1,
-    usage_tiers: [
-      {
-        from: 0,
-        to: "",
-        amount: 0.0,
-      },
-    ],
-    should_prorate: false,
-  };
+	return {
+		type: PriceType.Usage,
+		internal_feature_id: "",
+		feature_id: "",
+		bill_when: BillWhen.EndOfPeriod,
+		interval: BillingInterval.Month,
+		interval_count: 1,
+		billing_units: 1,
+		usage_tiers: [
+			{
+				from: 0,
+				to: "",
+				amount: 0.0,
+			},
+		],
+		should_prorate: false,
+	};
 };
 
 export const isOneOffProduct = (
-  items: ProductItem[],
-  isAddOn: boolean = false
+	items: ProductItem[],
+	isAddOn: boolean = false,
 ) => {
-  const prices = items.filter((item) => !isFeatureItem(item));
+	const prices = items.filter((item) => !isFeatureItem(item));
 
-  if (prices.length == 0 && isAddOn) return true;
-  if (prices.length == 0) return false;
+	if (prices.length == 0 && isAddOn) return true;
+	if (prices.length == 0) return false;
 
-  return prices.every((price) => {
-    return intervalIsNone(price.interval);
-  });
+	return prices.every((price) => {
+		return intervalIsNone(price.interval);
+	});
 };
 
 export const isFreeProduct = (items: ProductItem[]) => {
-  return items.every((item) => isFeatureItem(item));
+	return items.every((item) => isFeatureItem(item));
 };

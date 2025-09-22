@@ -1,14 +1,14 @@
 import {
-  AppEnv,
-  type CreateReward,
-  type Feature,
-  FeatureType,
-  type FullProduct,
-  type Organization,
-  type Price,
-  PriceType,
-  type RewardProgram,
-  RewardType,
+	AppEnv,
+	type CreateReward,
+	type Feature,
+	FeatureType,
+	type FullProduct,
+	type Organization,
+	type Price,
+	PriceType,
+	type RewardProgram,
+	RewardType,
 } from "@autumn/shared";
 import axios from "axios";
 import type Stripe from "stripe";
@@ -449,7 +449,11 @@ export const setupOrg = async ({
 				type: reward.type,
 				discount_config: rewardData.discount_config,
 				free_product_id: rewardData.free_product_id,
-				free_product_config: rewardData.free_product_config?.duration_type && rewardData.free_product_config?.duration_value ? rewardData.free_product_config : undefined,
+				free_product_config:
+					rewardData.free_product_config?.duration_type &&
+					rewardData.free_product_config?.duration_value
+						? rewardData.free_product_config
+						: undefined,
 			};
 
 			const rewardRes = await autumn.rewards.create(newReward);

@@ -4,30 +4,30 @@ import { ExtendedRequest } from "@/utils/models/Request.js";
 import { AppEnv, CusExpand, FullCustomer, Organization } from "@autumn/shared";
 
 export const getCusPaymentMethodRes = async ({
-  org,
-  env,
-  fullCus,
-  expand,
+	org,
+	env,
+	fullCus,
+	expand,
 }: {
-  org: Organization;
-  env: AppEnv;
-  fullCus: FullCustomer;
-  expand: CusExpand[];
+	org: Organization;
+	env: AppEnv;
+	fullCus: FullCustomer;
+	expand: CusExpand[];
 }) => {
-  if (!expand?.includes(CusExpand.PaymentMethod)) {
-    return undefined;
-  }
+	if (!expand?.includes(CusExpand.PaymentMethod)) {
+		return undefined;
+	}
 
-  let stripeCli = createStripeCli({
-    org,
-    env,
-  });
+	let stripeCli = createStripeCli({
+		org,
+		env,
+	});
 
-  let paymentMethod = await getCusPaymentMethod({
-    stripeCli,
-    stripeId: fullCus.processor?.id,
-    errorIfNone: false,
-  });
+	let paymentMethod = await getCusPaymentMethod({
+		stripeCli,
+		stripeId: fullCus.processor?.id,
+		errorIfNone: false,
+	});
 
-  return paymentMethod;
+	return paymentMethod;
 };

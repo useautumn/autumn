@@ -1,12 +1,12 @@
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-  APIVersion,
-  AppEnv,
-  BillingInterval,
-  LimitedItem,
-  Organization,
-  Product,
+	APIVersion,
+	AppEnv,
+	BillingInterval,
+	LimitedItem,
+	Organization,
+	Product,
 } from "@autumn/shared";
 import chalk from "chalk";
 import Stripe from "stripe";
@@ -15,14 +15,14 @@ import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
 
 import {
-  constructArrearItem,
-  constructFeatureItem,
-  constructPrepaidItem,
+	constructArrearItem,
+	constructFeatureItem,
+	constructPrepaidItem,
 } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import {
-  constructProduct,
-  constructRawProduct,
+	constructProduct,
+	constructRawProduct,
 } from "@/utils/scriptUtils/createTestProducts.js";
 
 import { addPrefixToProducts } from "tests/attach/utils.js";
@@ -40,135 +40,135 @@ import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js"
 const testCase = "customInterval3";
 
 export let pro = constructProduct({
-  type: "pro",
-  items: [
-    constructFeatureItem({
-      featureId: TestFeature.Words,
-      intervalCount: 2,
-    }),
-  ],
-  intervalCount: 2,
+	type: "pro",
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Words,
+			intervalCount: 2,
+		}),
+	],
+	intervalCount: 2,
 });
 
 const prepaidWordsItem = constructPrepaidItem({
-  featureId: TestFeature.Words,
-  price: 10,
-  billingUnits: 1,
-  includedUsage: 0,
-  intervalCount: 2,
+	featureId: TestFeature.Words,
+	price: 10,
+	billingUnits: 1,
+	includedUsage: 0,
+	intervalCount: 2,
 });
 
 export const addOn = constructRawProduct({
-  id: "addOn",
-  items: [prepaidWordsItem],
-  isAddOn: true,
+	id: "addOn",
+	items: [prepaidWordsItem],
+	isAddOn: true,
 });
 
 describe(`${chalk.yellowBright(`${testCase}: Testing custom interval on add on merged product`)}`, () => {
-  let customerId = testCase;
-  let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
-  let testClockId: string;
-  let db: DrizzleCli, org: Organization, env: AppEnv;
-  let stripeCli: Stripe;
+	let customerId = testCase;
+	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	let testClockId: string;
+	let db: DrizzleCli, org: Organization, env: AppEnv;
+	let stripeCli: Stripe;
 
-  before(async function () {
-    await setupBefore(this);
-    const { autumnJs } = this;
-    db = this.db;
-    org = this.org;
-    env = this.env;
+	before(async function () {
+		await setupBefore(this);
+		const { autumnJs } = this;
+		db = this.db;
+		org = this.org;
+		env = this.env;
 
-    stripeCli = this.stripeCli;
+		stripeCli = this.stripeCli;
 
-    const { testClockId: testClockId1 } = await initCustomer({
-      autumn: autumnJs,
-      customerId,
-      db,
-      org,
-      env,
-      attachPm: "success",
-    });
+		const { testClockId: testClockId1 } = await initCustomer({
+			autumn: autumnJs,
+			customerId,
+			db,
+			org,
+			env,
+			attachPm: "success",
+		});
 
-    addPrefixToProducts({
-      products: [pro, addOn],
-      prefix: testCase,
-    });
+		addPrefixToProducts({
+			products: [pro, addOn],
+			prefix: testCase,
+		});
 
-    await createProducts({
-      autumn,
-      products: [pro, addOn],
-      db,
-      orgId: org.id,
-      env,
-    });
+		await createProducts({
+			autumn,
+			products: [pro, addOn],
+			db,
+			orgId: org.id,
+			env,
+		});
 
-    testClockId = testClockId1!;
-  });
+		testClockId = testClockId1!;
+	});
 
-  it("should attach pro product", async function () {
-    await attachAndExpectCorrect({
-      autumn,
-      customerId,
-      product: pro,
-      stripeCli,
-      db,
-      org,
-      env,
-    });
-  });
+	it("should attach pro product", async function () {
+		await attachAndExpectCorrect({
+			autumn,
+			customerId,
+			product: pro,
+			stripeCli,
+			db,
+			org,
+			env,
+		});
+	});
 
-  it("should upgrade to attached add on and have correct invoice next cycle", async function () {
-    const curUnix = await advanceTestClock({
-      stripeCli,
-      testClockId,
-      advanceTo: addDays(new Date(), 20).getTime(),
-      waitForSeconds: 15,
-    });
+	it("should upgrade to attached add on and have correct invoice next cycle", async function () {
+		const curUnix = await advanceTestClock({
+			stripeCli,
+			testClockId,
+			advanceTo: addDays(new Date(), 20).getTime(),
+			waitForSeconds: 15,
+		});
 
-    const wordBillingSets = 2;
-    const wordsBillingUnits = prepaidWordsItem.billing_units! * wordBillingSets;
-    await autumn.attach({
-      customer_id: customerId,
-      product_id: addOn.id,
-      options: [
-        {
-          feature_id: TestFeature.Words,
-          quantity: wordsBillingUnits,
-        },
-      ],
-    });
+		const wordBillingSets = 2;
+		const wordsBillingUnits = prepaidWordsItem.billing_units! * wordBillingSets;
+		await autumn.attach({
+			customer_id: customerId,
+			product_id: addOn.id,
+			options: [
+				{
+					feature_id: TestFeature.Words,
+					quantity: wordsBillingUnits,
+				},
+			],
+		});
 
-    const customer = await autumn.customers.get(customerId);
-    const proProduct = customer.products.find((p) => p.id === pro.id);
-    const invoices = customer.invoices;
-    expectProductAttached({
-      customer,
-      product: pro,
-    });
+		const customer = await autumn.customers.get(customerId);
+		const proProduct = customer.products.find((p) => p.id === pro.id);
+		const invoices = customer.invoices;
+		expectProductAttached({
+			customer,
+			product: pro,
+		});
 
-    expectProductAttached({
-      customer,
-      product: addOn,
-    });
+		expectProductAttached({
+			customer,
+			product: addOn,
+		});
 
-    let expectedPrice = wordsBillingUnits * prepaidWordsItem.price!;
-    const proratedPrice = calculateProrationAmount({
-      amount: expectedPrice,
-      periodStart: new Date().getTime(),
-      periodEnd: addMonths(new Date(), 2).getTime(),
-      now: curUnix!,
-    });
+		let expectedPrice = wordsBillingUnits * prepaidWordsItem.price!;
+		const proratedPrice = calculateProrationAmount({
+			amount: expectedPrice,
+			periodStart: new Date().getTime(),
+			periodEnd: addMonths(new Date(), 2).getTime(),
+			now: curUnix!,
+		});
 
-    expect(invoices[0].product_ids).to.include(addOn.id);
-    expect(invoices[0].total).to.approximately(proratedPrice, 0.1);
+		expect(invoices[0].product_ids).to.include(addOn.id);
+		expect(invoices[0].total).to.approximately(proratedPrice, 0.1);
 
-    const expectedAddonEnd = addMonths(new Date(), 2);
-    const approximate = 1000 * 60 * 60 * 24; // +- 1 day
-    const addOnProduct = customer.products.find((p) => p.id === addOn.id);
+		const expectedAddonEnd = addMonths(new Date(), 2);
+		const approximate = 1000 * 60 * 60 * 24; // +- 1 day
+		const addOnProduct = customer.products.find((p) => p.id === addOn.id);
 
-    expect(addOnProduct?.current_period_end).to.be.approximately(
-      expectedAddonEnd.getTime(),
-      approximate
-    );
-  });
+		expect(addOnProduct?.current_period_end).to.be.approximately(
+			expectedAddonEnd.getTime(),
+			approximate,
+		);
+	});
 });

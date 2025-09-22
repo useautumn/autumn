@@ -8,26 +8,26 @@ import { AttachBranch } from "@autumn/shared";
 import { OptionsInput } from "./attach-preview/OptionsInput";
 
 export const AttachPreviewDetails = () => {
-  const { attachState } = useProductContext();
-  const { preview } = attachState;
+	const { attachState } = useProductContext();
+	const { preview } = attachState;
 
-  if (!preview) {
-    return null;
-  }
+	if (!preview) {
+		return null;
+	}
 
-  const branch = preview.branch;
-  const isUpdatePrepaidQuantity = branch == AttachBranch.UpdatePrepaidQuantity;
+	const branch = preview.branch;
+	const isUpdatePrepaidQuantity = branch == AttachBranch.UpdatePrepaidQuantity;
 
-  return (
-    <React.Fragment>
-      <UpdateQuantity />
-      {!isUpdatePrepaidQuantity && (
-        <>
-          <DueToday />
-          <AttachNewItems />
-        </>
-      )}
-      <DueNextCycle />
-    </React.Fragment>
-  );
+	return (
+		<React.Fragment>
+			<UpdateQuantity />
+			{!isUpdatePrepaidQuantity && (
+				<>
+					<DueToday />
+					<AttachNewItems />
+				</>
+			)}
+			<DueNextCycle />
+		</React.Fragment>
+	);
 };

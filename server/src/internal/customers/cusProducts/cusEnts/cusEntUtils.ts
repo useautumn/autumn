@@ -1,476 +1,476 @@
 import {
-  AllowanceType,
-  AppEnv,
-  BillingType,
-  CusProductStatus,
-  Customer,
-  EntInterval,
-  entIntervalsDifferent,
-  entIntervalToValue,
-  Entitlement,
-  EntitlementWithFeature,
-  Entity,
-  Feature,
-  FeatureOptions,
-  FeatureType,
-  FullCusProduct,
-  FullCustomerEntitlement,
-  FullCustomerPrice,
-  Organization,
-  Price,
-  UsagePriceConfig,
+	AllowanceType,
+	AppEnv,
+	BillingType,
+	CusProductStatus,
+	Customer,
+	EntInterval,
+	entIntervalsDifferent,
+	entIntervalToValue,
+	Entitlement,
+	EntitlementWithFeature,
+	Entity,
+	Feature,
+	FeatureOptions,
+	FeatureType,
+	FullCusProduct,
+	FullCustomerEntitlement,
+	FullCustomerPrice,
+	Organization,
+	Price,
+	UsagePriceConfig,
 } from "@autumn/shared";
 import {
-  getBillingType,
-  getEntOptions,
+	getBillingType,
+	getEntOptions,
 } from "@/internal/products/prices/priceUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 
 import {
-  getEntityBalance,
-  getSummedEntityBalances,
+	getEntityBalance,
+	getSummedEntityBalances,
 } from "./entBalanceUtils.js";
 import { Decimal } from "decimal.js";
 import { logger } from "better-auth";
 
 export const getCusEntMasterBalance = ({
-  cusEnt,
-  entities,
+	cusEnt,
+	entities,
 }: {
-  cusEnt: FullCustomerEntitlement;
-  entities: Entity[];
+	cusEnt: FullCustomerEntitlement;
+	entities: Entity[];
 }) => {
-  let ent = cusEnt.entitlement;
-  let feature = ent.feature;
+	let ent = cusEnt.entitlement;
+	let feature = ent.feature;
 
-  if (notNullish(ent.entity_feature_id)) {
-    let totalBalance = Object.values(cusEnt.entities || {}).reduce(
-      (acc, curr) => {
-        return acc + curr.balance;
-      },
-      0
-    );
+	if (notNullish(ent.entity_feature_id)) {
+		let totalBalance = Object.values(cusEnt.entities || {}).reduce(
+			(acc, curr) => {
+				return acc + curr.balance;
+			},
+			0,
+		);
 
-    let totalAdjustment = Object.values(cusEnt.entities || {}).reduce(
-      (acc, curr) => {
-        return acc + curr.adjustment;
-      },
-      0
-    );
+		let totalAdjustment = Object.values(cusEnt.entities || {}).reduce(
+			(acc, curr) => {
+				return acc + curr.adjustment;
+			},
+			0,
+		);
 
-    return {
-      balance: totalBalance,
-      adjustment: totalAdjustment,
-      count: Object.values(cusEnt.entities || {}).length,
-    };
-  }
+		return {
+			balance: totalBalance,
+			adjustment: totalAdjustment,
+			count: Object.values(cusEnt.entities || {}).length,
+		};
+	}
 
-  // Get unused count
+	// Get unused count
 
-  let unusedCount =
-    entities &&
-    entities.filter(
-      (entity) =>
-        entity.internal_feature_id == feature.internal_id && entity.deleted
-    ).length;
+	let unusedCount =
+		entities &&
+		entities.filter(
+			(entity) =>
+				entity.internal_feature_id == feature.internal_id && entity.deleted,
+		).length;
 
-  return {
-    balance: cusEnt.balance,
-    adjustment: cusEnt.adjustment,
-    count: 1,
-    unused: unusedCount,
-  };
+	return {
+		balance: cusEnt.balance,
+		adjustment: cusEnt.adjustment,
+		count: 1,
+		unused: unusedCount,
+	};
 };
 
 export const getCusEntBalance = ({
-  cusEnt,
-  entityId,
+	cusEnt,
+	entityId,
 }: {
-  cusEnt: FullCustomerEntitlement;
-  entityId?: string | null;
+	cusEnt: FullCustomerEntitlement;
+	entityId?: string | null;
 }) => {
-  let entitlement = cusEnt.entitlement;
-  let ent = cusEnt.entitlement;
-  let feature = ent.feature;
+	let entitlement = cusEnt.entitlement;
+	let ent = cusEnt.entitlement;
+	let feature = ent.feature;
 
-  if (notNullish(entitlement.entity_feature_id)) {
-    if (nullish(entityId)) {
-      return getSummedEntityBalances({
-        cusEnt,
-      });
-    }
+	if (notNullish(entitlement.entity_feature_id)) {
+		if (nullish(entityId)) {
+			return getSummedEntityBalances({
+				cusEnt,
+			});
+		}
 
-    return {
-      ...getEntityBalance({
-        cusEnt,
-        entityId: entityId!,
-      }),
-      unused: 0,
-      count: 1,
-    };
-  }
+		return {
+			...getEntityBalance({
+				cusEnt,
+				entityId: entityId!,
+			}),
+			unused: 0,
+			count: 1,
+		};
+	}
 
-  return {
-    balance: cusEnt.balance,
-    adjustment: cusEnt.adjustment,
-    unused: cusEnt.replaceables?.length || 0,
-    count: 1,
-  };
+	return {
+		balance: cusEnt.balance,
+		adjustment: cusEnt.adjustment,
+		unused: cusEnt.replaceables?.length || 0,
+		count: 1,
+	};
 };
 
 // Get related cusPrice
 export const getRelatedCusPrice = (
-  cusEnt: FullCustomerEntitlement,
-  cusPrices: FullCustomerPrice[]
+	cusEnt: FullCustomerEntitlement,
+	cusPrices: FullCustomerPrice[],
 ) => {
-  return cusPrices.find((cusPrice) => {
-    let productMatch =
-      cusPrice.customer_product_id == cusEnt.customer_product_id;
+	return cusPrices.find((cusPrice) => {
+		let productMatch =
+			cusPrice.customer_product_id == cusEnt.customer_product_id;
 
-    let entMatch = cusPrice.price.entitlement_id == cusEnt.entitlement.id;
+		let entMatch = cusPrice.price.entitlement_id == cusEnt.entitlement.id;
 
-    return productMatch && entMatch;
-  });
+		return productMatch && entMatch;
+	});
 };
 
 // 3. Perform deductions and update customer balance
 export const updateCusEntInStripe = async ({
-  cusEnt,
-  cusPrices,
-  org,
-  env,
-  customer,
-  amountUsed,
-  eventId,
+	cusEnt,
+	cusPrices,
+	org,
+	env,
+	customer,
+	amountUsed,
+	eventId,
 }: {
-  cusEnt: FullCustomerEntitlement;
-  cusPrices: FullCustomerPrice[];
-  org: Organization;
-  env: AppEnv;
-  customer: Customer;
-  amountUsed: number;
-  eventId: string;
+	cusEnt: FullCustomerEntitlement;
+	cusPrices: FullCustomerPrice[];
+	org: Organization;
+	env: AppEnv;
+	customer: Customer;
+	amountUsed: number;
+	eventId: string;
 }) => {
-  const relatedCusPrice = getRelatedCusPrice(cusEnt, cusPrices);
+	const relatedCusPrice = getRelatedCusPrice(cusEnt, cusPrices);
 
-  if (!relatedCusPrice) {
-    return;
-  }
+	if (!relatedCusPrice) {
+		return;
+	}
 
-  // Send event to Stripe
-  const stripeCli = createStripeCli({
-    org,
-    env,
-  });
+	// Send event to Stripe
+	const stripeCli = createStripeCli({
+		org,
+		env,
+	});
 
-  await stripeCli.billing.meterEvents.create({
-    event_name: relatedCusPrice.price.id!,
-    payload: {
-      stripe_customer_id: customer.processor.id,
-      value: amountUsed.toString(),
-    },
-    identifier: eventId,
-  });
-  console.log(`   ✅ Stripe event sent, amount: (${amountUsed})`);
+	await stripeCli.billing.meterEvents.create({
+		event_name: relatedCusPrice.price.id!,
+		payload: {
+			stripe_customer_id: customer.processor.id,
+			value: amountUsed.toString(),
+		},
+		identifier: eventId,
+	});
+	console.log(`   ✅ Stripe event sent, amount: (${amountUsed})`);
 };
 
 // Get balance
 export const getResetBalance = ({
-  entitlement,
-  options,
-  relatedPrice,
-  productQuantity,
+	entitlement,
+	options,
+	relatedPrice,
+	productQuantity,
 }: {
-  entitlement: Entitlement;
-  options: FeatureOptions | undefined | null;
-  relatedPrice?: Price | null;
-  productQuantity?: number;
+	entitlement: Entitlement;
+	options: FeatureOptions | undefined | null;
+	relatedPrice?: Price | null;
+	productQuantity?: number;
 }) => {
-  // 1. No related price
-  if (!relatedPrice) {
-    return (entitlement.allowance || 0) * (productQuantity || 1);
-  }
+	// 1. No related price
+	if (!relatedPrice) {
+		return (entitlement.allowance || 0) * (productQuantity || 1);
+	}
 
-  let config = relatedPrice.config as UsagePriceConfig;
+	let config = relatedPrice.config as UsagePriceConfig;
 
-  let billingType = getBillingType(config);
-  if (billingType != BillingType.UsageInAdvance) {
-    return entitlement.allowance || 0;
-  }
+	let billingType = getBillingType(config);
+	if (billingType != BillingType.UsageInAdvance) {
+		return entitlement.allowance || 0;
+	}
 
-  let quantity = options?.quantity;
-  let billingUnits = (relatedPrice.config as UsagePriceConfig).billing_units;
-  if (nullish(quantity) || nullish(billingUnits)) {
-    return entitlement.allowance || 0;
-  }
+	let quantity = options?.quantity;
+	let billingUnits = (relatedPrice.config as UsagePriceConfig).billing_units;
+	if (nullish(quantity) || nullish(billingUnits)) {
+		return entitlement.allowance || 0;
+	}
 
-  try {
-    return (entitlement.allowance || 0) + quantity! * billingUnits!;
-  } catch (error) {
-    console.log(
-      "WARNING: Failed to return quantity * billing units, returning allowance..."
-    );
-    return entitlement.allowance || 0;
-  }
+	try {
+		return (entitlement.allowance || 0) + quantity! * billingUnits!;
+	} catch (error) {
+		console.log(
+			"WARNING: Failed to return quantity * billing units, returning allowance...",
+		);
+		return entitlement.allowance || 0;
+	}
 };
 
 export const getUnlimitedAndUsageAllowed = ({
-  cusEnts,
-  internalFeatureId,
-  includeUsageLimit = true,
+	cusEnts,
+	internalFeatureId,
+	includeUsageLimit = true,
 }: {
-  cusEnts: FullCustomerEntitlement[];
-  internalFeatureId: string;
-  includeUsageLimit?: boolean;
+	cusEnts: FullCustomerEntitlement[];
+	internalFeatureId: string;
+	includeUsageLimit?: boolean;
 }) => {
-  // Unlimited
+	// Unlimited
 
-  const unlimited = cusEnts.some(
-    (cusEnt) =>
-      cusEnt.internal_feature_id === internalFeatureId &&
-      (cusEnt.entitlement.allowance_type === AllowanceType.Unlimited ||
-        cusEnt.unlimited)
-  );
+	const unlimited = cusEnts.some(
+		(cusEnt) =>
+			cusEnt.internal_feature_id === internalFeatureId &&
+			(cusEnt.entitlement.allowance_type === AllowanceType.Unlimited ||
+				cusEnt.unlimited),
+	);
 
-  const usageAllowed = cusEnts.some(
-    (ent) =>
-      ent.internal_feature_id === internalFeatureId &&
-      ent.usage_allowed &&
-      (includeUsageLimit ? nullish(ent.entitlement.usage_limit) : true)
-  );
+	const usageAllowed = cusEnts.some(
+		(ent) =>
+			ent.internal_feature_id === internalFeatureId &&
+			ent.usage_allowed &&
+			(includeUsageLimit ? nullish(ent.entitlement.usage_limit) : true),
+	);
 
-  return { unlimited, usageAllowed };
+	return { unlimited, usageAllowed };
 };
 
 export const getFeatureBalance = ({
-  cusEnts,
-  internalFeatureId,
-  entityId,
+	cusEnts,
+	internalFeatureId,
+	entityId,
 }: {
-  cusEnts: FullCustomerEntitlement[];
-  internalFeatureId: string;
-  entityId?: string;
+	cusEnts: FullCustomerEntitlement[];
+	internalFeatureId: string;
+	entityId?: string;
 }) => {
-  let balance = 0;
+	let balance = 0;
 
-  const { unlimited } = getUnlimitedAndUsageAllowed({
-    cusEnts,
-    internalFeatureId,
-  });
+	const { unlimited } = getUnlimitedAndUsageAllowed({
+		cusEnts,
+		internalFeatureId,
+	});
 
-  if (unlimited) {
-    return null;
-  }
+	if (unlimited) {
+		return null;
+	}
 
-  for (const cusEnt of cusEnts) {
-    if (cusEnt.internal_feature_id !== internalFeatureId) {
-      continue;
-    }
+	for (const cusEnt of cusEnts) {
+		if (cusEnt.internal_feature_id !== internalFeatureId) {
+			continue;
+		}
 
-    if (cusEnt.entitlement.allowance_type === AllowanceType.Unlimited) {
-      return null;
-    }
+		if (cusEnt.entitlement.allowance_type === AllowanceType.Unlimited) {
+			return null;
+		}
 
-    // 1. If feature entity exists...
-    let cusEntBalance = cusEnt.balance!;
+		// 1. If feature entity exists...
+		let cusEntBalance = cusEnt.balance!;
 
-    // If entity feature id exists, then it is grouped...
-    let entityFeatureId = cusEnt.entitlement.entity_feature_id;
+		// If entity feature id exists, then it is grouped...
+		let entityFeatureId = cusEnt.entitlement.entity_feature_id;
 
-    if (notNullish(entityFeatureId)) {
-      if (notNullish(entityId)) {
-        let { balance: entityBalance } = getEntityBalance({
-          cusEnt,
-          entityId: entityId!,
-        });
-        cusEntBalance = entityBalance!;
-      } else {
-        let summed = getSummedEntityBalances({
-          cusEnt,
-        });
-        cusEntBalance = summed.balance;
-      }
-    }
+		if (notNullish(entityFeatureId)) {
+			if (notNullish(entityId)) {
+				let { balance: entityBalance } = getEntityBalance({
+					cusEnt,
+					entityId: entityId!,
+				});
+				cusEntBalance = entityBalance!;
+			} else {
+				let summed = getSummedEntityBalances({
+					cusEnt,
+				});
+				cusEntBalance = summed.balance;
+			}
+		}
 
-    balance += cusEntBalance;
+		balance += cusEntBalance;
 
-    // 2. If no entityId provided, use main balance
-  }
+		// 2. If no entityId provided, use main balance
+	}
 
-  return balance;
+	return balance;
 };
 
 export const getPaidFeatureBalance = ({
-  cusEnts,
-  internalFeatureId,
+	cusEnts,
+	internalFeatureId,
 }: {
-  cusEnts: FullCustomerEntitlement[];
-  internalFeatureId: string;
+	cusEnts: FullCustomerEntitlement[];
+	internalFeatureId: string;
 }) => {
-  let paidAllowance = 0;
-  try {
-    for (const cusEnt of cusEnts) {
-      if (cusEnt.internal_feature_id !== internalFeatureId) continue;
+	let paidAllowance = 0;
+	try {
+		for (const cusEnt of cusEnts) {
+			if (cusEnt.internal_feature_id !== internalFeatureId) continue;
 
-      if (notNullish(cusEnt.entitlement.usage_limit)) {
-        paidAllowance = new Decimal(paidAllowance)
-          .plus(cusEnt.entitlement.usage_limit!)
-          .minus(cusEnt.entitlement.allowance || 0)
-          .toNumber();
-      }
-    }
-  } catch (error) {
-    logger.error(`Failed to get paid feature balance`, { error });
-  }
+			if (notNullish(cusEnt.entitlement.usage_limit)) {
+				paidAllowance = new Decimal(paidAllowance)
+					.plus(cusEnt.entitlement.usage_limit!)
+					.minus(cusEnt.entitlement.allowance || 0)
+					.toNumber();
+			}
+		}
+	} catch (error) {
+		logger.error(`Failed to get paid feature balance`, { error });
+	}
 
-  return paidAllowance;
+	return paidAllowance;
 };
 
 export const cusEntsContainFeature = ({
-  cusEnts,
-  feature,
+	cusEnts,
+	feature,
 }: {
-  cusEnts: FullCustomerEntitlement[];
-  feature: Feature;
+	cusEnts: FullCustomerEntitlement[];
+	feature: Feature;
 }) => {
-  return cusEnts.some(
-    (cusEnt) => cusEnt.internal_feature_id === feature.internal_id!
-  );
+	return cusEnts.some(
+		(cusEnt) => cusEnt.internal_feature_id === feature.internal_id!,
+	);
 };
 
 export const getTotalNegativeBalance = ({
-  cusEnt,
-  balance,
-  entities,
-  billingUnits,
+	cusEnt,
+	balance,
+	entities,
+	billingUnits,
 }: {
-  cusEnt: FullCustomerEntitlement;
-  balance: number;
-  entities: Record<string, { balance: number; adjustment: number }>;
-  billingUnits?: number;
+	cusEnt: FullCustomerEntitlement;
+	balance: number;
+	entities: Record<string, { balance: number; adjustment: number }>;
+	billingUnits?: number;
 }) => {
-  let entityFeatureId = cusEnt.entitlement.entity_feature_id;
+	let entityFeatureId = cusEnt.entitlement.entity_feature_id;
 
-  if (nullish(entityFeatureId)) {
-    return balance;
-  }
+	if (nullish(entityFeatureId)) {
+		return balance;
+	}
 
-  let totalNegative = 0;
-  for (const group in entities) {
-    if (entities[group].balance < 0) {
-      let balance = entities[group].balance;
-      if (billingUnits) {
-        balance = new Decimal(balance)
-          .div(billingUnits)
-          .round()
-          .mul(billingUnits)
-          .toNumber();
-      }
-      totalNegative += balance;
-    }
-  }
+	let totalNegative = 0;
+	for (const group in entities) {
+		if (entities[group].balance < 0) {
+			let balance = entities[group].balance;
+			if (billingUnits) {
+				balance = new Decimal(balance)
+					.div(billingUnits)
+					.round()
+					.mul(billingUnits)
+					.toNumber();
+			}
+			totalNegative += balance;
+		}
+	}
 
-  if (totalNegative == 0) {
-    if (Object.values(entities).length > 0) {
-      let entityBalances = Object.values(entities).map((e) => e.balance || 0);
-      return Math.min(...entityBalances);
-    } else {
-      return cusEnt.entitlement.allowance || 0;
-    }
-  }
+	if (totalNegative == 0) {
+		if (Object.values(entities).length > 0) {
+			let entityBalances = Object.values(entities).map((e) => e.balance || 0);
+			return Math.min(...entityBalances);
+		} else {
+			return cusEnt.entitlement.allowance || 0;
+		}
+	}
 
-  return totalNegative;
+	return totalNegative;
 };
 
 // GET EXISTING USAGE
 export const getExistingUsageFromCusProducts = ({
-  entitlement,
-  cusProducts,
-  entities,
-  carryExistingUsages = false,
-  internalEntityId,
+	entitlement,
+	cusProducts,
+	entities,
+	carryExistingUsages = false,
+	internalEntityId,
 }: {
-  entitlement: EntitlementWithFeature;
-  cusProducts?: FullCusProduct[];
-  entities: Entity[];
-  carryExistingUsages?: boolean;
-  internalEntityId?: string;
+	entitlement: EntitlementWithFeature;
+	cusProducts?: FullCusProduct[];
+	entities: Entity[];
+	carryExistingUsages?: boolean;
+	internalEntityId?: string;
 }) => {
-  if (!entitlement || entitlement.feature.type === FeatureType.Boolean) {
-    return 0;
-  }
+	if (!entitlement || entitlement.feature.type === FeatureType.Boolean) {
+		return 0;
+	}
 
-  // Existing usage should also include entities
-  let entityUsage = entities.reduce((acc, entity) => {
-    if (entity.internal_feature_id !== entitlement.internal_feature_id) {
-      return acc;
-    }
+	// Existing usage should also include entities
+	let entityUsage = entities.reduce((acc, entity) => {
+		if (entity.internal_feature_id !== entitlement.internal_feature_id) {
+			return acc;
+		}
 
-    return acc + 1;
-  }, 0);
+		return acc + 1;
+	}, 0);
 
-  if (entityUsage > 0) {
-    return entityUsage;
-  }
+	if (entityUsage > 0) {
+		return entityUsage;
+	}
 
-  let existingUsage = 0;
+	let existingUsage = 0;
 
-  // NOTE: Assuming that feature entitlements are unique to each main product...
-  let existingCusEnt = cusProducts
-    ?.filter(
-      (cp) =>
-        (cp.status === CusProductStatus.Active ||
-          cp.status === CusProductStatus.PastDue) &&
-        !cp.product.is_add_on &&
-        (internalEntityId
-          ? cp.internal_entity_id === internalEntityId
-          : nullish(cp.internal_entity_id))
-    )
-    .flatMap((cp) => cp.customer_entitlements)
-    .find((ce) => ce.internal_feature_id === entitlement.internal_feature_id);
+	// NOTE: Assuming that feature entitlements are unique to each main product...
+	let existingCusEnt = cusProducts
+		?.filter(
+			(cp) =>
+				(cp.status === CusProductStatus.Active ||
+					cp.status === CusProductStatus.PastDue) &&
+				!cp.product.is_add_on &&
+				(internalEntityId
+					? cp.internal_entity_id === internalEntityId
+					: nullish(cp.internal_entity_id)),
+		)
+		.flatMap((cp) => cp.customer_entitlements)
+		.find((ce) => ce.internal_feature_id === entitlement.internal_feature_id);
 
-  if (
-    !existingCusEnt ||
-    (!entitlement.carry_from_previous && !carryExistingUsages)
-  ) {
-    return existingUsage;
-  }
+	if (
+		!existingCusEnt ||
+		(!entitlement.carry_from_previous && !carryExistingUsages)
+	) {
+		return existingUsage;
+	}
 
-  if (
-    nullish(existingCusEnt.balance) ||
-    existingCusEnt.entitlement.allowance_type === AllowanceType.Unlimited
-  ) {
-    return existingUsage;
-  }
+	if (
+		nullish(existingCusEnt.balance) ||
+		existingCusEnt.entitlement.allowance_type === AllowanceType.Unlimited
+	) {
+		return existingUsage;
+	}
 
-  // Get options
-  let cusProduct = cusProducts?.find(
-    (cp) => cp.id === existingCusEnt.customer_product_id
-  );
-  let options = getEntOptions(
-    cusProduct?.options || [],
-    existingCusEnt.entitlement
-  );
-  let price = getRelatedCusPrice(
-    existingCusEnt,
-    cusProduct?.customer_prices || []
-  );
-  let existingAllowance = getResetBalance({
-    entitlement: existingCusEnt.entitlement,
-    options: options,
-    relatedPrice: price?.price,
-  });
+	// Get options
+	let cusProduct = cusProducts?.find(
+		(cp) => cp.id === existingCusEnt.customer_product_id,
+	);
+	let options = getEntOptions(
+		cusProduct?.options || [],
+		existingCusEnt.entitlement,
+	);
+	let price = getRelatedCusPrice(
+		existingCusEnt,
+		cusProduct?.customer_prices || [],
+	);
+	let existingAllowance = getResetBalance({
+		entitlement: existingCusEnt.entitlement,
+		options: options,
+		relatedPrice: price?.price,
+	});
 
-  let { balance, adjustment, count, unused } = getCusEntMasterBalance({
-    cusEnt: existingCusEnt as any,
-    entities: entities,
-  });
+	let { balance, adjustment, count, unused } = getCusEntMasterBalance({
+		cusEnt: existingCusEnt as any,
+		entities: entities,
+	});
 
-  existingUsage = existingAllowance! - balance!;
-  if (unused && unused > 0) {
-    existingUsage -= unused;
-  }
+	existingUsage = existingAllowance! - balance!;
+	if (unused && unused > 0) {
+		existingUsage -= unused;
+	}
 
-  return existingUsage;
+	return existingUsage;
 };

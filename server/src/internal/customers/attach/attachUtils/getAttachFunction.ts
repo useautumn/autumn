@@ -1,9 +1,9 @@
 import {
-  type AttachBody,
-  AttachBranch,
-  type AttachConfig,
-  AttachFunction,
-  CusProductStatus,
+	type AttachBody,
+	AttachBranch,
+	type AttachConfig,
+	AttachFunction,
+	CusProductStatus,
 } from "@autumn/shared";
 import chalk from "chalk";
 import { handleCreateCheckout } from "../../add-product/handleCreateCheckout.js";
@@ -18,8 +18,8 @@ import { handleScheduleFunction2 } from "../attachFunctions/scheduleFlow/handleS
 import { handleUpdateQuantityFunction } from "../attachFunctions/updateQuantityFlow/updateQuantityFlow.js";
 import { handleUpgradeFlow } from "../attachFunctions/upgradeFlow/handleUpgradeFlow.js";
 import {
-  attachParamsToCurCusProduct,
-  attachParamToCusProducts,
+	attachParamsToCurCusProduct,
+	attachParamToCusProducts,
 } from "./convertAttachParams.js";
 
 /* 

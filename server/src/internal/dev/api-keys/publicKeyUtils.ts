@@ -5,34 +5,34 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 import { AppEnv } from "@autumn/shared";
 
 export const verifyPublicKey = async ({
-  db,
-  pkey,
-  env,
+	db,
+	pkey,
+	env,
 }: {
-  db: DrizzleCli;
-  pkey: string;
-  env: AppEnv;
+	db: DrizzleCli;
+	pkey: string;
+	env: AppEnv;
 }) => {
-  let data = await queryWithCache({
-    action: CacheType.PublicKey,
-    key: pkey,
-    fn: async () =>
-      await OrgService.getFromPkeyWithFeatures({
-        db,
-        pkey,
-        env,
-      }),
-  });
+	let data = await queryWithCache({
+		action: CacheType.PublicKey,
+		key: pkey,
+		fn: async () =>
+			await OrgService.getFromPkeyWithFeatures({
+				db,
+				pkey,
+				env,
+			}),
+	});
 
-  if (!data) {
-    return null;
-  }
+	if (!data) {
+		return null;
+	}
 
-  let org = structuredClone(data);
+	let org = structuredClone(data);
 
-  delete org.features;
-  return {
-    org,
-    features: data.features,
-  };
+	delete org.features;
+	return {
+		org,
+		features: data.features,
+	};
 };

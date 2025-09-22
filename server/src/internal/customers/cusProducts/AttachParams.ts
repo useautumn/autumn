@@ -1,21 +1,21 @@
 import type {
-  APIVersion,
-  AttachReplaceable,
-  AttachScenario,
-  Customer,
-  EntitlementWithFeature,
-  Entity,
-  Feature,
-  FeatureOptions,
-  FreeProductConfig,
-  FreeTrial,
-  FullCusProduct,
-  FullCustomer,
-  FullProduct,
-  Organization,
-  Price,
-  ProductOptions,
-  Reward,
+	APIVersion,
+	AttachReplaceable,
+	AttachScenario,
+	Customer,
+	EntitlementWithFeature,
+	Entity,
+	Feature,
+	FeatureOptions,
+	FreeProductConfig,
+	FreeTrial,
+	FullCusProduct,
+	FullCustomer,
+	FullProduct,
+	Organization,
+	Price,
+	ProductOptions,
+	Reward,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 
@@ -24,105 +24,105 @@ import { z } from "zod";
 // Get misc
 
 export type AttachParams = {
-  stripeCli: Stripe;
-  stripeCus?: Stripe.Customer;
-  now?: number;
-  paymentMethod: Stripe.PaymentMethod | null | undefined;
-  rewards?: Reward[];
+	stripeCli: Stripe;
+	stripeCus?: Stripe.Customer;
+	now?: number;
+	paymentMethod: Stripe.PaymentMethod | null | undefined;
+	rewards?: Reward[];
 
-  org: Organization;
-  // customer: Customer;
-  customer: FullCustomer;
-  cusProduct?: FullCusProduct; // cus product to expire or cancel...
-  products: FullProduct[];
+	org: Organization;
+	// customer: Customer;
+	customer: FullCustomer;
+	cusProduct?: FullCusProduct; // cus product to expire or cancel...
+	products: FullProduct[];
 
-  prices: Price[];
-  entitlements: EntitlementWithFeature[];
+	prices: Price[];
+	entitlements: EntitlementWithFeature[];
 
-  freeTrial: FreeTrial | null;
-  rewardTrial?: FreeProductConfig | null;
-  optionsList: FeatureOptions[];
-  productsList?: ProductOptions[];
+	freeTrial: FreeTrial | null;
+	rewardTrial?: FreeProductConfig | null;
+	optionsList: FeatureOptions[];
+	productsList?: ProductOptions[];
 
-  successUrl?: string | undefined;
-  itemSets?: any[];
-  cusProducts: FullCusProduct[];
+	successUrl?: string | undefined;
+	itemSets?: any[];
+	cusProducts: FullCusProduct[];
 
-  // Options to update
-  optionsToUpdate?: {
-    old: FeatureOptions;
-    new: FeatureOptions;
-  }[];
+	// Options to update
+	optionsToUpdate?: {
+		old: FeatureOptions;
+		new: FeatureOptions;
+	}[];
 
-  replaceables: AttachReplaceable[];
+	replaceables: AttachReplaceable[];
 
-  // CONFIGS
-  invoiceOnly?: boolean | undefined;
-  billingAnchor?: number | undefined;
-  metadata?: Record<string, string> | undefined;
+	// CONFIGS
+	invoiceOnly?: boolean | undefined;
+	billingAnchor?: number | undefined;
+	metadata?: Record<string, string> | undefined;
 
-  entities: Entity[];
+	entities: Entity[];
 
-  isCustom?: boolean;
-  disableFreeTrial?: boolean;
-  features: Feature[];
+	isCustom?: boolean;
+	disableFreeTrial?: boolean;
+	features: Feature[];
 
-  entityId?: string;
-  internalEntityId?: string;
+	entityId?: string;
+	internalEntityId?: string;
 
-  checkoutSessionParams?: any;
-  apiVersion?: number;
-  scenario?: AttachScenario;
+	checkoutSessionParams?: any;
+	apiVersion?: number;
+	scenario?: AttachScenario;
 
-  fromMigration?: boolean;
-  finalizeInvoice?: boolean;
-  req?: any;
-  fromCancel?: boolean;
-  setupPayment?: boolean;
+	fromMigration?: boolean;
+	finalizeInvoice?: boolean;
+	req?: any;
+	fromCancel?: boolean;
+	setupPayment?: boolean;
 };
 
 export type InsertCusProductParams = {
-  req?: any;
-  now?: number;
+	req?: any;
+	now?: number;
 
-  customer: Customer;
-  org: Organization;
-  product: FullProduct;
-  prices: Price[];
-  entitlements: EntitlementWithFeature[];
+	customer: Customer;
+	org: Organization;
+	product: FullProduct;
+	prices: Price[];
+	entitlements: EntitlementWithFeature[];
 
-  freeTrial: FreeTrial | null;
-  optionsList: FeatureOptions[];
+	freeTrial: FreeTrial | null;
+	optionsList: FeatureOptions[];
 
-  successUrl?: string | undefined;
-  itemSets?: any[];
+	successUrl?: string | undefined;
+	itemSets?: any[];
 
-  curCusProduct?: FullCusProduct | undefined;
-  cusProducts?: FullCusProduct[];
-  replaceables: AttachReplaceable[];
+	curCusProduct?: FullCusProduct | undefined;
+	cusProducts?: FullCusProduct[];
+	replaceables: AttachReplaceable[];
 
-  // CONFIGS
-  invoiceOnly?: boolean | undefined;
-  entities: Entity[];
-  isCustom?: boolean;
-  disableFreeTrial?: boolean;
-  features: Feature[];
+	// CONFIGS
+	invoiceOnly?: boolean | undefined;
+	entities: Entity[];
+	isCustom?: boolean;
+	disableFreeTrial?: boolean;
+	features: Feature[];
 
-  entityId?: string;
-  internalEntityId?: string;
-  fromMigration?: boolean;
-  apiVersion?: APIVersion;
-  finalizeInvoice?: boolean;
+	entityId?: string;
+	internalEntityId?: string;
+	fromMigration?: boolean;
+	apiVersion?: APIVersion;
+	finalizeInvoice?: boolean;
 };
 
 export const AttachResultSchema = z.object({
-  customer_id: z.string(),
-  product_ids: z.array(z.string()),
-  code: z.string(),
-  message: z.string(),
+	customer_id: z.string(),
+	product_ids: z.array(z.string()),
+	code: z.string(),
+	message: z.string(),
 
-  checkout_url: z.string().nullish(),
-  invoice: z.any().nullish(),
+	checkout_url: z.string().nullish(),
+	invoice: z.any().nullish(),
 });
 
 export type AttachResult = z.infer<typeof AttachResultSchema>;

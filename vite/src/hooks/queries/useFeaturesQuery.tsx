@@ -17,5 +17,10 @@ export const useFeaturesQuery = () => {
 		queryFn: fetchFeatures,
 	});
 
-	return { features: (data?.features || []) as Feature[], isLoading, error, refetch };
+	return {
+		features: (data?.features || []) as Feature[],
+		isLoading,
+		error,
+		refetch,
+	};
 };

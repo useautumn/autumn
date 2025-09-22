@@ -4,36 +4,36 @@ import { z } from "zod";
 import { OrgConfigSchema } from "../models/orgModels/orgConfig.js";
 
 export const StripeConfigSchema = z.object({
-  test_api_key: z.string(),
-  live_api_key: z.string(),
-  test_webhook_secret: z.string(),
-  live_webhook_secret: z.string(),
-  success_url: z.string(),
+	test_api_key: z.string(),
+	live_api_key: z.string(),
+	test_webhook_secret: z.string(),
+	live_webhook_secret: z.string(),
+	success_url: z.string(),
 });
 
 export const SvixConfigSchema = z.object({
-  sandbox_app_id: z.string(),
-  live_app_id: z.string(),
+	sandbox_app_id: z.string(),
+	live_app_id: z.string(),
 });
 
 export const OrganizationSchema = z.object({
-  id: z.string(),
-  slug: z.string(),
-  default_currency: z.string().default("usd"),
-  stripe_connected: z.boolean().default(false),
-  stripe_config: StripeConfigSchema.optional().nullable(),
+	id: z.string(),
+	slug: z.string(),
+	default_currency: z.string().default("usd"),
+	stripe_connected: z.boolean().default(false),
+	stripe_config: StripeConfigSchema.optional().nullable(),
 
-  test_pkey: z.string(),
-  live_pkey: z.string(),
-  created_at: z.number(),
+	test_pkey: z.string(),
+	live_pkey: z.string(),
+	created_at: z.number(),
 
-  svix_config: z.object({
-    sandbox_app_id: z.string(),
-    live_app_id: z.string(),
-  }),
+	svix_config: z.object({
+		sandbox_app_id: z.string(),
+		live_app_id: z.string(),
+	}),
 
-  config: OrgConfigSchema,
-  api_version: z.number().nullish(),
+	config: OrgConfigSchema,
+	api_version: z.number().nullish(),
 });
 
 export type Organization = z.infer<typeof OrganizationSchema>;

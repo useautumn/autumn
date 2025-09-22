@@ -1,14 +1,14 @@
 export enum JobName {
-  UpdateBalance = "update-balance",
-  UpdateUsage = "update-usage",
+	UpdateBalance = "update-balance",
+	UpdateUsage = "update-usage",
 
-  Migration = "migration",
-  RewardMigration = "reward-migration",
+	Migration = "migration",
+	RewardMigration = "reward-migration",
 
-  TriggerCheckoutReward = "trigger-checkout-reward",
-  GenerateFeatureDisplay = "generate-feature-display",
-  DetectBaseVariant = "detect-base-variant",
+	TriggerCheckoutReward = "trigger-checkout-reward",
+	GenerateFeatureDisplay = "generate-feature-display",
+	DetectBaseVariant = "detect-base-variant",
 
-  HandleProductsUpdated = "handle-products-updated",
-  HandleCustomerCreated = "handle-customer-created",
+	HandleProductsUpdated = "handle-products-updated",
+	HandleCustomerCreated = "handle-customer-created",
 }

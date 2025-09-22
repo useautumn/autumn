@@ -1,43 +1,43 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import {
-  ACTIVE_STATUSES,
-  RELEVANT_STATUSES,
+	ACTIVE_STATUSES,
+	RELEVANT_STATUSES,
 } from "@/internal/customers/cusProducts/CusProductService.js";
 import {
-  AppEnv,
-  CusProductStatus,
-  Customer,
-  customers,
-  entities,
-  Entity,
-  FullCusProduct,
-  FullCustomer,
+	AppEnv,
+	CusProductStatus,
+	Customer,
+	customers,
+	entities,
+	Entity,
+	FullCusProduct,
+	FullCustomer,
 } from "@autumn/shared";
 import { and, desc, eq, gt, lt, sql } from "drizzle-orm";
 
 let cusProductsQuery = ({
-  orgId,
-  env,
-  inStatuses = RELEVANT_STATUSES,
-  lastProductId,
-  pageSize = 250,
+	orgId,
+	env,
+	inStatuses = RELEVANT_STATUSES,
+	lastProductId,
+	pageSize = 250,
 }: {
-  orgId: string;
-  env: AppEnv;
-  inStatuses?: CusProductStatus[];
-  lastProductId?: string;
-  pageSize?: number;
+	orgId: string;
+	env: AppEnv;
+	inStatuses?: CusProductStatus[];
+	lastProductId?: string;
+	pageSize?: number;
 }) => {
-  const withStatusFilter = () => {
-    return inStatuses
-      ? sql`AND cp.status = ANY(ARRAY[${sql.join(
-          inStatuses.map((status) => sql`${status}`),
-          sql`, `
-        )}])`
-      : sql``;
-  };
+	const withStatusFilter = () => {
+		return inStatuses
+			? sql`AND cp.status = ANY(ARRAY[${sql.join(
+					inStatuses.map((status) => sql`${status}`),
+					sql`, `,
+				)}])`
+			: sql``;
+	};
 
-  return sql`
+	return sql`
     SELECT 
         cp.*,
         row_to_json(prod) AS product,
@@ -97,136 +97,136 @@ let cusProductsQuery = ({
   `;
 };
 export const getAllFullCusProducts = async ({
-  db,
-  orgId,
-  env,
-  inStatuses = RELEVANT_STATUSES,
+	db,
+	orgId,
+	env,
+	inStatuses = RELEVANT_STATUSES,
 }: {
-  db: DrizzleCli;
-  orgId: string;
-  env: AppEnv;
-  inStatuses?: CusProductStatus[];
+	db: DrizzleCli;
+	orgId: string;
+	env: AppEnv;
+	inStatuses?: CusProductStatus[];
 }) => {
-  let lastProductId = "";
-  let allData: any[] = [];
-  let pageSize = 500;
+	let lastProductId = "";
+	let allData: any[] = [];
+	let pageSize = 500;
 
-  while (true) {
-    const data = await db.execute(
-      cusProductsQuery({
-        orgId,
-        env,
-        inStatuses,
-        lastProductId,
-        pageSize,
-      })
-    );
+	while (true) {
+		const data = await db.execute(
+			cusProductsQuery({
+				orgId,
+				env,
+				inStatuses,
+				lastProductId,
+				pageSize,
+			}),
+		);
 
-    if (data.length === 0) break;
+		if (data.length === 0) break;
 
-    console.log(`Fetched ${data.length} customer products`);
-    allData.push(...data);
-    lastProductId = data[data.length - 1].id as string;
-  }
+		console.log(`Fetched ${data.length} customer products`);
+		allData.push(...data);
+		lastProductId = data[data.length - 1].id as string;
+	}
 
-  return allData as FullCusProduct[];
+	return allData as FullCusProduct[];
 };
 
 export const getAllCustomers = async ({
-  db,
-  orgId,
-  env,
+	db,
+	orgId,
+	env,
 }: {
-  db: DrizzleCli;
-  orgId: string;
-  env: AppEnv;
+	db: DrizzleCli;
+	orgId: string;
+	env: AppEnv;
 }) => {
-  let lastCustomerId = "";
-  let allData: any[] = [];
-  let pageSize = 500;
+	let lastCustomerId = "";
+	let allData: any[] = [];
+	let pageSize = 500;
 
-  while (true) {
-    const data = await db.query.customers.findMany({
-      where: and(
-        eq(customers.org_id, orgId),
-        eq(customers.env, env),
-        lastCustomerId ? lt(customers.internal_id, lastCustomerId) : undefined
-      ),
-      orderBy: [desc(customers.internal_id)],
-      limit: pageSize,
-    });
+	while (true) {
+		const data = await db.query.customers.findMany({
+			where: and(
+				eq(customers.org_id, orgId),
+				eq(customers.env, env),
+				lastCustomerId ? lt(customers.internal_id, lastCustomerId) : undefined,
+			),
+			orderBy: [desc(customers.internal_id)],
+			limit: pageSize,
+		});
 
-    if (data.length === 0) break;
+		if (data.length === 0) break;
 
-    console.log(`Fetched ${data.length} customers`);
-    allData.push(...data);
-    lastCustomerId = data[data.length - 1].internal_id as string;
-  }
+		console.log(`Fetched ${data.length} customers`);
+		allData.push(...data);
+		lastCustomerId = data[data.length - 1].internal_id as string;
+	}
 
-  return allData as Customer[];
+	return allData as Customer[];
 };
 
 export const getAllFullCustomers = async ({
-  db,
-  orgId,
-  env,
+	db,
+	orgId,
+	env,
 }: {
-  db: DrizzleCli;
-  orgId: string;
-  env: AppEnv;
+	db: DrizzleCli;
+	orgId: string;
+	env: AppEnv;
 }) => {
-  let [customers, fullCusProducts] = await Promise.all([
-    getAllCustomers({ db, orgId, env }),
-    getAllFullCusProducts({ db, orgId, env }),
-  ]);
+	let [customers, fullCusProducts] = await Promise.all([
+		getAllCustomers({ db, orgId, env }),
+		getAllFullCusProducts({ db, orgId, env }),
+	]);
 
-  let cusProdMap: Record<string, FullCusProduct[]> = {};
-  for (const cp of fullCusProducts) {
-    let internalCusId = cp.internal_customer_id;
-    if (!cusProdMap[internalCusId]) {
-      cusProdMap[internalCusId] = [];
-    }
-    cusProdMap[internalCusId].push(cp);
-  }
+	let cusProdMap: Record<string, FullCusProduct[]> = {};
+	for (const cp of fullCusProducts) {
+		let internalCusId = cp.internal_customer_id;
+		if (!cusProdMap[internalCusId]) {
+			cusProdMap[internalCusId] = [];
+		}
+		cusProdMap[internalCusId].push(cp);
+	}
 
-  return customers.map((customer) => {
-    return {
-      ...customer,
-      customer_products: cusProdMap[customer.internal_id] || [],
-    };
-  }) as FullCustomer[];
+	return customers.map((customer) => {
+		return {
+			...customer,
+			customer_products: cusProdMap[customer.internal_id] || [],
+		};
+	}) as FullCustomer[];
 };
 
 export const getAllEntities = async ({
-  db,
-  orgId,
-  env,
+	db,
+	orgId,
+	env,
 }: {
-  db: DrizzleCli;
-  orgId: string;
-  env: AppEnv;
+	db: DrizzleCli;
+	orgId: string;
+	env: AppEnv;
 }) => {
-  let lastEntityId = "";
-  let allData: any[] = [];
-  let pageSize = 500;
+	let lastEntityId = "";
+	let allData: any[] = [];
+	let pageSize = 500;
 
-  while (true) {
-    const data = await db.query.entities.findMany({
-      where: and(
-        eq(entities.org_id, orgId),
-        eq(entities.env, env),
-        lastEntityId ? lt(entities.internal_id, lastEntityId) : undefined
-      ),
-      orderBy: [desc(entities.internal_id)],
-      limit: pageSize,
-    });
+	while (true) {
+		const data = await db.query.entities.findMany({
+			where: and(
+				eq(entities.org_id, orgId),
+				eq(entities.env, env),
+				lastEntityId ? lt(entities.internal_id, lastEntityId) : undefined,
+			),
+			orderBy: [desc(entities.internal_id)],
+			limit: pageSize,
+		});
 
-    if (data.length === 0) break;
+		if (data.length === 0) break;
 
-    console.log(`Fetched ${data.length} entities`);
-    allData.push(...data);
-    lastEntityId = data[data.length - 1].internal_id as string;
-  }
+		console.log(`Fetched ${data.length} entities`);
+		allData.push(...data);
+		lastEntityId = data[data.length - 1].internal_id as string;
+	}
 
-  return allData as Entity[];
+	return allData as Entity[];
 };

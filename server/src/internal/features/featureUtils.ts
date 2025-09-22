@@ -1,16 +1,16 @@
 import RecaseError from "@/utils/errorUtils.js";
 import {
-  MeteredConfig,
-  ErrCode,
-  AggregateType,
-  CreditSystemConfig,
-  Feature,
-  FeatureUsageType,
-  Organization,
-  ProductItemFeatureType,
-  FeatureType,
-  FullCustomer,
-  UsagePriceConfig,
+	MeteredConfig,
+	ErrCode,
+	AggregateType,
+	CreditSystemConfig,
+	Feature,
+	FeatureUsageType,
+	Organization,
+	ProductItemFeatureType,
+	FeatureType,
+	FullCustomer,
+	UsagePriceConfig,
 } from "@autumn/shared";
 import { FeatureService } from "./FeatureService.js";
 import { StatusCodes } from "http-status-codes";
@@ -23,217 +23,217 @@ import { priceToFeature } from "../products/prices/priceUtils/convertPrice.js";
 import { ACTIVE_STATUSES } from "../customers/cusProducts/CusProductService.js";
 
 export const validateFeatureId = (featureId: string) => {
-  if (!featureId.match(/^[a-zA-Z0-9_-]+$/)) {
-    throw new RecaseError({
-      message:
-        "Feature ID can only contain alphanumeric characters, underscores, and hyphens",
-      code: ErrCode.InvalidFeature,
-      statusCode: 400,
-    });
-  }
-  return;
+	if (!featureId.match(/^[a-zA-Z0-9_-]+$/)) {
+		throw new RecaseError({
+			message:
+				"Feature ID can only contain alphanumeric characters, underscores, and hyphens",
+			code: ErrCode.InvalidFeature,
+			statusCode: 400,
+		});
+	}
+	return;
 };
 
 export const validateMeteredConfig = (config: MeteredConfig) => {
-  let newConfig = { ...config };
+	let newConfig = { ...config };
 
-  if (!config.usage_type) {
-    throw new RecaseError({
-      message: `Usage type (single or continuous) is required for metered feature`,
-      code: ErrCode.InvalidFeature,
-      statusCode: StatusCodes.BAD_REQUEST,
-    });
-  }
+	if (!config.usage_type) {
+		throw new RecaseError({
+			message: `Usage type (single or continuous) is required for metered feature`,
+			code: ErrCode.InvalidFeature,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
 
-  if (config.aggregate?.type == AggregateType.Count) {
-    newConfig.aggregate = {
-      type: AggregateType.Count,
-      property: null,
-    }; // to continue testing support for count...
-  } else {
-    newConfig.aggregate = {
-      type: AggregateType.Sum,
-      property: "value",
-    };
-  }
+	if (config.aggregate?.type == AggregateType.Count) {
+		newConfig.aggregate = {
+			type: AggregateType.Count,
+			property: null,
+		}; // to continue testing support for count...
+	} else {
+		newConfig.aggregate = {
+			type: AggregateType.Sum,
+			property: "value",
+		};
+	}
 
-  if (newConfig.filters.length == 0) {
-    newConfig.filters = [
-      {
-        property: "",
-        operator: "",
-        value: [],
-      },
-    ];
-  }
+	if (newConfig.filters.length == 0) {
+		newConfig.filters = [
+			{
+				property: "",
+				operator: "",
+				value: [],
+			},
+		];
+	}
 
-  return newConfig as MeteredConfig;
+	return newConfig as MeteredConfig;
 };
 
 export const validateCreditSystem = (config: CreditSystemConfig) => {
-  let schema = config.schema;
-  if (!schema || schema.length == 0) {
-    throw new RecaseError({
-      message: `At least one metered feature is required for credit system`,
-      code: ErrCode.InvalidFeature,
-      statusCode: 400,
-    });
-  }
+	let schema = config.schema;
+	if (!schema || schema.length == 0) {
+		throw new RecaseError({
+			message: `At least one metered feature is required for credit system`,
+			code: ErrCode.InvalidFeature,
+			statusCode: 400,
+		});
+	}
 
-  // Check if multiple of the same feature
-  const meteredFeatureIds = schema.map(
-    (schemaItem) => schemaItem.metered_feature_id
-  );
-  // console.log("Metered feature ids:", meteredFeatureIds);
-  const uniqueMeteredFeatureIds = Array.from(new Set(meteredFeatureIds));
-  if (meteredFeatureIds.length !== uniqueMeteredFeatureIds.length) {
-    throw new RecaseError({
-      message: `Credit system contains multiple of the same metered_feature_id`,
-      code: ErrCode.InvalidFeature,
-      statusCode: 400,
-    });
-  }
+	// Check if multiple of the same feature
+	const meteredFeatureIds = schema.map(
+		(schemaItem) => schemaItem.metered_feature_id,
+	);
+	// console.log("Metered feature ids:", meteredFeatureIds);
+	const uniqueMeteredFeatureIds = Array.from(new Set(meteredFeatureIds));
+	if (meteredFeatureIds.length !== uniqueMeteredFeatureIds.length) {
+		throw new RecaseError({
+			message: `Credit system contains multiple of the same metered_feature_id`,
+			code: ErrCode.InvalidFeature,
+			statusCode: 400,
+		});
+	}
 
-  let newConfig = { ...config, usage_type: FeatureUsageType.Single };
-  for (let i = 0; i < newConfig.schema.length; i++) {
-    newConfig.schema[i].feature_amount = 1;
+	let newConfig = { ...config, usage_type: FeatureUsageType.Single };
+	for (let i = 0; i < newConfig.schema.length; i++) {
+		newConfig.schema[i].feature_amount = 1;
 
-    let creditAmount = parseFloat(newConfig.schema[i].credit_amount.toString());
-    if (isNaN(creditAmount)) {
-      throw new RecaseError({
-        message: `Credit amount should be a number`,
-        code: ErrCode.InvalidFeature,
-        statusCode: 400,
-      });
-    }
+		let creditAmount = parseFloat(newConfig.schema[i].credit_amount.toString());
+		if (isNaN(creditAmount)) {
+			throw new RecaseError({
+				message: `Credit amount should be a number`,
+				code: ErrCode.InvalidFeature,
+				statusCode: 400,
+			});
+		}
 
-    newConfig.schema[i].credit_amount = creditAmount;
-  }
+		newConfig.schema[i].credit_amount = creditAmount;
+	}
 
-  return newConfig;
+	return newConfig;
 };
 
 export const getObjectsUsingFeature = async ({
-  db,
-  orgId,
-  env,
-  allFeatures,
-  feature,
+	db,
+	orgId,
+	env,
+	allFeatures,
+	feature,
 }: {
-  db: DrizzleCli;
-  orgId: string;
-  env: any;
-  allFeatures: Feature[];
-  feature: Feature;
+	db: DrizzleCli;
+	orgId: string;
+	env: any;
+	allFeatures: Feature[];
+	feature: Feature;
 }) => {
-  let products = await ProductService.listFull({
-    db,
-    orgId,
-    env,
-  });
+	let products = await ProductService.listFull({
+		db,
+		orgId,
+		env,
+	});
 
-  let allPrices = products.flatMap((p) => p.prices);
-  let allEnts = products.flatMap((p) => p.entitlements);
-  let creditSystems = getCreditSystemsFromFeature({
-    featureId: feature.id,
-    features: allFeatures,
-  });
+	let allPrices = products.flatMap((p) => p.prices);
+	let allEnts = products.flatMap((p) => p.entitlements);
+	let creditSystems = getCreditSystemsFromFeature({
+		featureId: feature.id,
+		features: allFeatures,
+	});
 
-  let entitlements = allEnts.filter(
-    (entitlement) => entitlement.internal_feature_id == feature.internal_id
-  );
-  let linkedEntitlements = allEnts.filter(
-    (entitlement) => entitlement.entity_feature_id == feature.id
-  );
+	let entitlements = allEnts.filter(
+		(entitlement) => entitlement.internal_feature_id == feature.internal_id,
+	);
+	let linkedEntitlements = allEnts.filter(
+		(entitlement) => entitlement.entity_feature_id == feature.id,
+	);
 
-  let prices = allPrices.filter(
-    (price) => (price.config as any).internal_feature_id == feature.internal_id
-  );
+	let prices = allPrices.filter(
+		(price) => (price.config as any).internal_feature_id == feature.internal_id,
+	);
 
-  return { entitlements, prices, creditSystems, linkedEntitlements };
+	return { entitlements, prices, creditSystems, linkedEntitlements };
 };
 
 export const runSaveFeatureDisplayTask = async ({
-  db,
-  feature,
+	db,
+	feature,
 
-  logger,
+	logger,
 }: {
-  db: DrizzleCli;
-  feature: Feature;
+	db: DrizzleCli;
+	feature: Feature;
 
-  logger: any;
+	logger: any;
 }) => {
-  let display;
-  try {
-    if (!process.env.ANTHROPIC_API_KEY) {
-      logger.warn(
-        "ANTHROPIC_API_KEY is not set, skipping feature display generation"
-      );
-      return;
-    }
+	let display;
+	try {
+		if (!process.env.ANTHROPIC_API_KEY) {
+			logger.warn(
+				"ANTHROPIC_API_KEY is not set, skipping feature display generation",
+			);
+			return;
+		}
 
-    logger.info(`Generating feature display for ${feature.id}`);
-    display = await generateFeatureDisplay(feature);
-    logger.info(`Result: ${JSON.stringify(display)}`);
+		logger.info(`Generating feature display for ${feature.id}`);
+		display = await generateFeatureDisplay(feature);
+		logger.info(`Result: ${JSON.stringify(display)}`);
 
-    await FeatureService.update({
-      db,
-      internalId: feature.internal_id!,
-      updates: {
-        display,
-      },
-    });
-  } catch (error) {
-    logger.error("failed to generate feature display", {
-      error,
-      feature,
-    });
-  }
+		await FeatureService.update({
+			db,
+			internalId: feature.internal_id!,
+			updates: {
+				display,
+			},
+		});
+	} catch (error) {
+		logger.error("failed to generate feature display", {
+			error,
+			feature,
+		});
+	}
 };
 
 export const getCusFeatureType = ({ feature }: { feature: Feature }) => {
-  if (feature.type == FeatureType.Boolean) {
-    return ProductItemFeatureType.Static;
-  } else if (feature.type == FeatureType.Metered) {
-    if (feature.config.usage_type == FeatureUsageType.Single) {
-      return ProductItemFeatureType.SingleUse;
-    } else {
-      return ProductItemFeatureType.ContinuousUse;
-    }
-  } else {
-    return ProductItemFeatureType.SingleUse;
-  }
+	if (feature.type == FeatureType.Boolean) {
+		return ProductItemFeatureType.Static;
+	} else if (feature.type == FeatureType.Metered) {
+		if (feature.config.usage_type == FeatureUsageType.Single) {
+			return ProductItemFeatureType.SingleUse;
+		} else {
+			return ProductItemFeatureType.ContinuousUse;
+		}
+	} else {
+		return ProductItemFeatureType.SingleUse;
+	}
 };
 
 export const isCreditSystem = ({ feature }: { feature: Feature }) => {
-  return feature.type == FeatureType.CreditSystem;
+	return feature.type == FeatureType.CreditSystem;
 };
 
 export const isPaidContinuousUse = ({
-  feature,
-  fullCus,
+	feature,
+	fullCus,
 }: {
-  feature: Feature;
-  fullCus: FullCustomer;
+	feature: Feature;
+	fullCus: FullCustomer;
 }) => {
-  let isContinuous = feature.config?.usage_type == FeatureUsageType.Continuous;
+	let isContinuous = feature.config?.usage_type == FeatureUsageType.Continuous;
 
-  if (!isContinuous) {
-    return false;
-  }
+	if (!isContinuous) {
+		return false;
+	}
 
-  let cusPrices = cusProductsToCusPrices({
-    cusProducts: fullCus.customer_products,
-    inStatuses: ACTIVE_STATUSES,
-  });
+	let cusPrices = cusProductsToCusPrices({
+		cusProducts: fullCus.customer_products,
+		inStatuses: ACTIVE_STATUSES,
+	});
 
-  let hasPaid = cusPrices.some((cp) => {
-    let config = cp.price.config as UsagePriceConfig;
-    if (config.internal_feature_id == feature.internal_id) {
-      return true;
-    }
-  });
+	let hasPaid = cusPrices.some((cp) => {
+		let config = cp.price.config as UsagePriceConfig;
+		if (config.internal_feature_id == feature.internal_id) {
+			return true;
+		}
+	});
 
-  return hasPaid;
+	return hasPaid;
 };

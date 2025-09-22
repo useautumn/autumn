@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { EllipsisVertical } from "lucide-react";
 
 export interface MenuAction {
-	type: 'item' | 'sub';
+	type: "item" | "sub";
 	label: string;
 	onClick?: () => void;
 	tooltip?: string;
@@ -35,7 +35,7 @@ export const HamburgerMenu = ({
 	contentAlign?: "start" | "center" | "end";
 }) => {
 	const renderMenuAction = (action: MenuAction) => {
-		if (action.type === 'sub') {
+		if (action.type === "sub") {
 			return (
 				<DropdownMenuSub key={action.label}>
 					<DropdownMenuSubTrigger className="flex items-center gap-2">
@@ -60,7 +60,7 @@ export const HamburgerMenu = ({
 					action.onClick?.();
 					setDropdownOpen(false);
 				}}
-                className="cursor-pointer"
+				className="cursor-pointer"
 			>
 				{action.label}
 			</DropdownMenuItem>
@@ -77,7 +77,10 @@ export const HamburgerMenu = ({
 					className={`w-10 h-10 p-0 text-purple-600 hover:text-purple-700 hover:bg-purple-50 ${triggerClassName || ""}`}
 				/>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align={contentAlign} className={`min-w-36 ${contentClassName || ""}`}>
+			<DropdownMenuContent
+				align={contentAlign}
+				className={`min-w-36 ${contentClassName || ""}`}
+			>
 				{actions.map(renderMenuAction)}
 			</DropdownMenuContent>
 		</DropdownMenu>

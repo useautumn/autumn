@@ -1,184 +1,184 @@
 import {
-  getBillingType,
-  priceIsOneOffAndTiered,
+	getBillingType,
+	priceIsOneOffAndTiered,
 } from "@/internal/products/prices/priceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 
 import {
-  BillingType,
-  ErrCode,
-  FeatureOptions,
-  FixedPriceConfig,
-  FullProduct,
-  Organization,
-  ProductOptions,
-  UsagePriceConfig,
+	BillingType,
+	ErrCode,
+	FeatureOptions,
+	FixedPriceConfig,
+	FullProduct,
+	Organization,
+	ProductOptions,
+	UsagePriceConfig,
 } from "@autumn/shared";
 import { EntitlementWithFeature, Price, APIVersion } from "@autumn/shared";
 
 import {
-  priceToOneOffAndTiered,
-  priceToUsageInAdvance,
+	priceToOneOffAndTiered,
+	priceToUsageInAdvance,
 } from "./priceToUsageInAdvance.js";
 import { priceToInArrearProrated } from "./priceToArrearProrated.js";
 import { billingIntervalToStripe } from "../stripePriceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 
 export const getEmptyPriceItem = ({
-  price,
-  org,
+	price,
+	org,
 }: {
-  price: Price;
-  org: Organization;
+	price: Price;
+	org: Organization;
 }) => {
-  return {
-    price_data: {
-      product: price.config!.stripe_product_id!,
-      unit_amount: 0,
-      currency: org.default_currency || "usd",
-      recurring: {
-        ...billingIntervalToStripe({
-          interval: price.config!.interval!,
-          intervalCount: price.config!.interval_count!,
-        }),
-      },
-    },
-    quantity: 1,
-  };
+	return {
+		price_data: {
+			product: price.config!.stripe_product_id!,
+			unit_amount: 0,
+			currency: org.default_currency || "usd",
+			recurring: {
+				...billingIntervalToStripe({
+					interval: price.config!.interval!,
+					intervalCount: price.config!.interval_count!,
+				}),
+			},
+		},
+		quantity: 1,
+	};
 };
 
 // GET STRIPE LINE / SUB ITEM
 export const priceToStripeItem = ({
-  price,
-  relatedEnt,
-  product,
-  org,
-  options,
-  existingUsage,
-  withEntity = false,
-  isCheckout = false,
-  apiVersion,
-  productOptions,
+	price,
+	relatedEnt,
+	product,
+	org,
+	options,
+	existingUsage,
+	withEntity = false,
+	isCheckout = false,
+	apiVersion,
+	productOptions,
 }: {
-  price: Price;
-  relatedEnt: EntitlementWithFeature;
-  product: FullProduct;
-  org: Organization;
-  options: FeatureOptions | undefined | null;
-  existingUsage: number;
-  withEntity: boolean;
-  isCheckout: boolean;
-  apiVersion?: APIVersion;
-  productOptions?: ProductOptions | undefined;
+	price: Price;
+	relatedEnt: EntitlementWithFeature;
+	product: FullProduct;
+	org: Organization;
+	options: FeatureOptions | undefined | null;
+	existingUsage: number;
+	withEntity: boolean;
+	isCheckout: boolean;
+	apiVersion?: APIVersion;
+	productOptions?: ProductOptions | undefined;
 }) => {
-  // TODO: Implement this
-  const billingType = getBillingType(price.config!);
-  const stripeProductId = product.processor?.id;
+	// TODO: Implement this
+	const billingType = getBillingType(price.config!);
+	const stripeProductId = product.processor?.id;
 
-  const quantityMultiplier = notNullish(productOptions?.quantity)
-    ? productOptions?.quantity!
-    : 1;
+	const quantityMultiplier = notNullish(productOptions?.quantity)
+		? productOptions?.quantity!
+		: 1;
 
-  if (!stripeProductId) {
-    throw new RecaseError({
-      code: ErrCode.ProductNotFound,
-      message: "Product not created in Stripe",
-      statusCode: 400,
-    });
-  }
+	if (!stripeProductId) {
+		throw new RecaseError({
+			code: ErrCode.ProductNotFound,
+			message: "Product not created in Stripe",
+			statusCode: 400,
+		});
+	}
 
-  let lineItemMeta = null;
-  let lineItem = null;
+	let lineItemMeta = null;
+	let lineItem = null;
 
-  // 1. FIXED PRICE
-  if (
-    billingType == BillingType.FixedCycle ||
-    billingType == BillingType.OneOff
-  ) {
-    const config = price.config as FixedPriceConfig;
+	// 1. FIXED PRICE
+	if (
+		billingType == BillingType.FixedCycle ||
+		billingType == BillingType.OneOff
+	) {
+		const config = price.config as FixedPriceConfig;
 
-    lineItem = {
-      price: config.stripe_price_id,
-      quantity: quantityMultiplier,
-    };
-  }
+		lineItem = {
+			price: config.stripe_price_id,
+			quantity: quantityMultiplier,
+		};
+	}
 
-  // 2. PREPAID, TIERED, ONE OFF
-  else if (
-    billingType == BillingType.UsageInAdvance &&
-    priceIsOneOffAndTiered(price, relatedEnt)
-  ) {
-    lineItem = priceToOneOffAndTiered({
-      price,
-      options,
-      relatedEnt,
-      org,
-      stripeProductId,
-    });
-  }
+	// 2. PREPAID, TIERED, ONE OFF
+	else if (
+		billingType == BillingType.UsageInAdvance &&
+		priceIsOneOffAndTiered(price, relatedEnt)
+	) {
+		lineItem = priceToOneOffAndTiered({
+			price,
+			options,
+			relatedEnt,
+			org,
+			stripeProductId,
+		});
+	}
 
-  // 3. PREPAID
-  else if (billingType == BillingType.UsageInAdvance) {
-    lineItem = priceToUsageInAdvance({
-      price,
-      options,
-      isCheckout,
-      relatedEnt,
-    });
-  }
+	// 3. PREPAID
+	else if (billingType == BillingType.UsageInAdvance) {
+		lineItem = priceToUsageInAdvance({
+			price,
+			options,
+			isCheckout,
+			relatedEnt,
+		});
+	}
 
-  // 4. USAGE IN ARREAR
-  else if (billingType == BillingType.UsageInArrear) {
-    const config = price.config as UsagePriceConfig;
-    const priceId = config.stripe_price_id;
+	// 4. USAGE IN ARREAR
+	else if (billingType == BillingType.UsageInArrear) {
+		const config = price.config as UsagePriceConfig;
+		const priceId = config.stripe_price_id;
 
-    if (withEntity && !isCheckout) {
-      return {
-        lineItem: {
-          price: config.stripe_empty_price_id,
-          quantity: 0,
-        },
-      };
-    }
+		if (withEntity && !isCheckout) {
+			return {
+				lineItem: {
+					price: config.stripe_empty_price_id,
+					quantity: 0,
+				},
+			};
+		}
 
-    if (apiVersion === APIVersion.v1_4 && !isCheckout) {
-      return {
-        lineItem: {
-          // lineItem: getEmptyPriceItem({ price, org }),
-          price: config.stripe_empty_price_id,
-          quantity: 0,
-        },
-      };
-    }
+		if (apiVersion === APIVersion.v1_4 && !isCheckout) {
+			return {
+				lineItem: {
+					// lineItem: getEmptyPriceItem({ price, org }),
+					price: config.stripe_empty_price_id,
+					quantity: 0,
+				},
+			};
+		}
 
-    if (!priceId) {
-      throw new RecaseError({
-        code: ErrCode.PriceNotFound,
-        message: `Couldn't find Autumn price: ${price.id} in Stripe`,
-        statusCode: 400,
-      });
-    }
+		if (!priceId) {
+			throw new RecaseError({
+				code: ErrCode.PriceNotFound,
+				message: `Couldn't find Autumn price: ${price.id} in Stripe`,
+				statusCode: 400,
+			});
+		}
 
-    lineItem = {
-      price: priceId,
-    };
-  }
+		lineItem = {
+			price: priceId,
+		};
+	}
 
-  // 5. USAGE ARREAR PRORATED
-  else if (billingType == BillingType.InArrearProrated) {
-    lineItem = priceToInArrearProrated({
-      price,
-      isCheckout,
-      existingUsage,
-    });
-  }
+	// 5. USAGE ARREAR PRORATED
+	else if (billingType == BillingType.InArrearProrated) {
+		lineItem = priceToInArrearProrated({
+			price,
+			isCheckout,
+			existingUsage,
+		});
+	}
 
-  if (!lineItem) {
-    return null;
-  }
+	if (!lineItem) {
+		return null;
+	}
 
-  return {
-    lineItem,
-    lineItemMeta,
-  };
+	return {
+		lineItem,
+		lineItemMeta,
+	};
 };
