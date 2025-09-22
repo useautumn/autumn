@@ -85,7 +85,7 @@ export default function UpdateFeature({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <CustomDialogContent>
-        <CustomDialogBody>
+        <CustomDialogBody className="overflow-y-auto">
           <DialogTitle>Update Feature</DialogTitle>
 
           <FeatureConfig
