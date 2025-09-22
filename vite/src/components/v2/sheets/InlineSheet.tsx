@@ -24,9 +24,10 @@ interface SheetSectionProps {
 
 export function SheetSection({ title, children }: SheetSectionProps) {
 	return (
-		<div className="p-6">
+		<div className="p-6 pb-0">
 			<h3 className="text-sub mb-2">{title}</h3>
 			{children}
+			<Separator className="mt-6" />
 		</div>
 	);
 }
