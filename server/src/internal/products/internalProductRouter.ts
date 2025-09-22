@@ -14,13 +14,13 @@ import { RewardProgramService } from "../rewards/RewardProgramService.js";
 import { mapToProductV2 } from "./productV2Utils.js";
 import { isFeaturePriceItem } from "./product-items/productItemUtils/getItemType.js";
 
-import RecaseError, {
-  handleFrontendReqError,
-  handleRequestError,
-} from "@/utils/errorUtils.js";
+import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
 
 import { createOrgResponse } from "../orgs/orgUtils.js";
-import { sortFullProducts } from "./productUtils/sortProductUtils.js";
+import {
+  sortFullProducts,
+  sortProductsByPrice,
+} from "./productUtils/sortProductUtils.js";
 import { handleGetProductDeleteInfo } from "./handlers/handleGetProductDeleteInfo.js";
 
 export const productRouter: Router = Router({ mergeParams: true });
@@ -34,6 +34,8 @@ productRouter.get("/products", async (req: any, res) => {
       orgId: req.orgId,
       env: req.env,
     });
+
+    sortFullProducts({ products });
 
     const groupToDefaults = getGroupToDefaults({
       defaultProds: products,
