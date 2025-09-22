@@ -1,4 +1,8 @@
+import { useId } from "react";
+import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
+import { Checkbox } from "../checkboxes/checkbox";
 
 interface SheetHeaderProps {
 	title: string;
@@ -19,15 +23,50 @@ export function SheetHeader({ title, description }: SheetHeaderProps) {
 
 interface SheetSectionProps {
 	title: string;
+	description?: string;
+	checked?: boolean;
+	setChecked?: (checked: boolean) => void;
+	infoContent?: string;
 	children: React.ReactNode;
+	withSeparator?: boolean;
 }
 
-export function SheetSection({ title, children }: SheetSectionProps) {
+export function SheetSection({
+	title,
+	description,
+	checked = false,
+	setChecked,
+	infoContent,
+	children,
+	withSeparator = true,
+}: SheetSectionProps) {
+	const id = useId();
+
+	const withTogle = setChecked !== undefined;
 	return (
-		<div className="p-6 pb-0">
-			<h3 className="text-sub mb-2">{title}</h3>
-			{children}
-			<Separator className="mt-6" />
-		</div>
+		<>
+			<div className="p-6">
+				<label htmlFor={id} className="flex items-center gap-2 mb-2 w-fit">
+					{withTogle && (
+						<div className="flex items-center gap-2">
+							<Checkbox
+								id={id}
+								checked={checked}
+								onCheckedChange={setChecked}
+							/>
+						</div>
+					)}
+					<div className="flex items-center gap-2">
+						<h3 className={cn("text-sub select-none")}>{title}</h3>
+						{infoContent && <InfoTooltip>{infoContent}</InfoTooltip>}
+					</div>
+				</label>
+				{description && <p className="text-form-text">{description}</p>}
+				{children}
+			</div>
+			<div className="px-6">
+				<Separator />
+			</div>
+		</>
 	);
 }

@@ -1,10 +1,10 @@
+import type { TooltipContentProps } from "@radix-ui/react-tooltip";
+import { InfoIcon } from "lucide-react";
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { TooltipContentProps } from "@radix-ui/react-tooltip";
-import { InfoIcon } from "lucide-react";
 
 export const InfoTooltip = ({
 	children,
