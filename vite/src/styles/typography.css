@@ -1,0 +1,72 @@
+/* Typography Classes */
+.text-giga {
+	font-size: 23px;
+	font-weight: var(--font-weight-semibold);
+	color: var(--color-t1);
+}
+
+.text-main {
+	font-size: 17px;
+	font-weight: var(--font-weight-semibold);
+	color: var(--color-t1);
+}
+
+.text-sub {
+	font-size: 15px;
+	font-weight: var(--font-weight-semibold);
+	color: var(--color-t2);
+}
+
+.text-body {
+	font-size: 13px;
+	font-weight: var(--font-weight-medium);
+	color: var(--color-t2);
+}
+
+.text-body-secondary {
+	font-size: 13px;
+	font-weight: var(--font-weight-normal);
+	color: var(--color-t4);
+}
+
+.text-tiny {
+	font-size: 11px;
+	font-weight: var(--font-weight-normal);
+	color: var(--color-t4);
+}
+
+.text-checkbox-label {
+	font-size: 13px;
+	font-weight: var(--font-weight-semibold);
+	color: var(--color-t2);
+}
+
+.text-checkbox-descr {
+	font-size: 13px;
+	font-weight: var(--font-weight-semibold);
+	color: var(--color-t3);
+}
+
+.text-checkbox-disabled {
+	font-size: 13px;
+	font-weight: var(--font-weight-semibold);
+	color: var(--color-t6);
+}
+
+.text-form-text {
+	font-size: 13px;
+	font-weight: var(--font-weight-medium);
+	color: var(--color-t2);
+}
+
+.text-form-label {
+	font-size: 13px;
+	font-weight: var(--font-weight-medium);
+	color: var(--color-t5);
+}
+
+.text-form-placeholder {
+	font-size: 13px;
+	font-weight: var(--font-weight-medium);
+	color: var(--color-t6);
+}
