@@ -32,17 +32,6 @@ export class RewardProgramService {
     internalId: string;
     data: RewardProgram;
   }) {
-    try {
-      const res = await axiosInstance.put(
-        `/v1/reward_programs/${internalId}`,
-        data
-      );
-      return res.data;
-    } catch (err: any) {
-      // maybe rethrow as your RecaseError or wrap
-      throw new Error(
-        err.response?.data?.message || "Failed to update reward program"
-      );
-    }
+    await axiosInstance.put(`/v1/reward_programs/${internalId}`, data);
   }
 }
