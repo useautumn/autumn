@@ -55,8 +55,8 @@ export default function PlanEditorView() {
 				open={showNewVersionDialog}
 				setOpen={setShowNewVersionDialog}
 			/>
-			<div className="flex w-full">
-				<div className="flex flex-col gap-4 w-full">
+			<div className="flex w-full h-full overflow-hidden">
+				<div className="flex flex-col w-full min-h-0">
 					<V2Breadcrumb
 						items={[
 							{
@@ -70,8 +70,8 @@ export default function PlanEditorView() {
 						]}
 					/>
 
-					<div className="flex">
-						<div className="flex-1 w-full min-w-sm">
+					<div className="flex flex-1 min-h-0 pt-4 overflow-hidden">
+						<div className="flex-1 min-h-0 w-full min-w-sm overflow-hidden">
 							<ManagePlan />
 						</div>
 					</div>
