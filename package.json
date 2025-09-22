@@ -21,11 +21,9 @@
     "dev:wsl": "concurrently \"cd server && npm run dev\" \"cd vite && npm run dev\" \"cd shared && npm run dev\"",
     "setup": "node setup.js",
     "setupci": "node setupci",
-
     "db:push": " bun -F @autumn/shared db:push",
     "db:generate": "bun -F @autumn/shared db:generate",
     "db:migrate": " bun -F @autumn/shared db:migrate",
-
     "docker:up": "docker compose -f docker-compose.dev.yml up --build",
     "docker:up:unix": "docker compose -f docker-compose.unix.yml up --build",
     "docker:up:ci": "docker compose -f docker-compose.ci.yml up --build",
@@ -43,6 +41,7 @@
     "tailwind-scrollbar-hide": "^4.0.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.2.4",
     "@types/node": "^24.0.3",
     "concurrently": "^9.1.2",
     "dotenv": "^16.5.0",
