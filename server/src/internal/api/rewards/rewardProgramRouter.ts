@@ -46,8 +46,6 @@ rewardProgramRouter.put("/:id", (req, res) =>
         env,
       });
 
-      // console.log("Existing program:", existingProgram);
-
       if (!existingProgram) {
         throw new RecaseError({
           message: `Program with ID ${id} does not exist`,
@@ -65,7 +63,7 @@ rewardProgramRouter.put("/:id", (req, res) =>
         env,
       });
 
-      // console.log("Updating program to:", rewardProgram);
+      // Update on existing redemptions? (should be none unless affecting stacked rewards...)
 
       if (
         rewardProgram.when == RewardTriggerEvent.Checkout &&
