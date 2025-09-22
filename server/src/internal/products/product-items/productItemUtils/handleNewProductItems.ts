@@ -13,6 +13,7 @@ import { validateProductItems } from "../validateProductItems.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { isFeatureItem } from "./getItemType.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { formatPrice } from "../../prices/priceUtils.js";
 
 const updateDbPricesAndEnts = async ({
   db,
