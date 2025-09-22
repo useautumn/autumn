@@ -162,10 +162,10 @@ const MainContent = () => {
               "w-full h-full overflow-auto flex justify-center bg-stone-50"
             )}
           >
-            <div className="hidden md:flex w-full h-full justify-center">
+            <div className="w-full h-full justify-center">
               <Outlet />
             </div>
-            <div className="md:hidden w-full h-full flex items-center justify-center">
+            {/* <div className="md:hidden w-full h-full flex items-center justify-center">
               <div className="bg-white p-6 rounded-lg shadow-sm text-center">
                 <h2 className="text-xl font-semibold mb-2">
                   Autumn is coming to mobile soon
@@ -175,7 +175,7 @@ const MainContent = () => {
                   your desktop?
                 </p>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

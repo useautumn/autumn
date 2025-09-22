@@ -126,6 +126,7 @@ describe(`${chalk.yellowBright("basic3: Testing attach one time / monthly add on
       expectedAmt,
       "add on balance should be correct"
     );
+
     expect(cusRes.add_ons).to.have.lengthOf(
       1,
       "should only have one add on product after two purchases (since they combine)"

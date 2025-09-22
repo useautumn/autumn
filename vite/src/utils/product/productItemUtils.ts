@@ -1,9 +1,9 @@
 import {
   BillingInterval,
   EntInterval,
-  Feature,
+  type Feature,
   Infinite,
-  ProductItem,
+  type ProductItem,
   ProductItemFeatureType,
   ProductItemType,
   UsageModel,
@@ -13,103 +13,105 @@ import { isFeatureItem, isFeaturePriceItem, isPriceItem } from "./getItemType";
 import { itemToUsageType } from "./productItemUtils/convertItem";
 
 export const itemIsUnlimited = (item: ProductItem) => {
-  return item.included_usage == Infinite;
+	return item.included_usage === Infinite;
 };
 
 export const formatAmount = ({
-  defaultCurrency,
-  amount,
-  maxFractionDigits = 6,
+	defaultCurrency,
+	amount,
+	maxFractionDigits = 6,
 }: {
-  defaultCurrency: string;
-  amount: number;
-  maxFractionDigits?: number;
+	defaultCurrency: string;
+	amount: number;
+	maxFractionDigits?: number;
 }) => {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: defaultCurrency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: maxFractionDigits || 6,
-  }).format(amount);
+	return new Intl.NumberFormat("en-US", {
+		style: "currency",
+		currency: defaultCurrency,
+		minimumFractionDigits: 0,
+		maximumFractionDigits: maxFractionDigits || 6,
+	}).format(amount);
 };
 
 export const getItemType = (item: ProductItem) => {
-  if (isPriceItem(item)) {
-    return ProductItemType.Price;
-  } else if (isFeatureItem(item)) {
-    return ProductItemType.Feature;
-  }
+	if (isPriceItem(item)) {
+		return ProductItemType.Price;
+	} else if (isFeatureItem(item)) {
+		return ProductItemType.Feature;
+	}
 
-  return ProductItemType.FeaturePrice;
+	return ProductItemType.FeaturePrice;
 };
 
-export const intervalIsNone = (interval: any) => {
-  return (
-    nullish(interval) ||
-    interval == EntInterval.Lifetime ||
-    interval == BillingInterval.OneOff
-  );
+export const intervalIsNone = (
+	interval: EntInterval | BillingInterval | null | undefined,
+) => {
+	return (
+		nullish(interval) ||
+		interval === EntInterval.Lifetime ||
+		interval === BillingInterval.OneOff
+	);
 };
 
 export const getShowParams = (item: ProductItem | null) => {
-  if (!item) {
-    return {
-      price: false,
-      feature: false,
-      allowance: false,
-      perEntity: false,
-      cycle: false,
-    };
-  }
+	if (!item) {
+		return {
+			price: false,
+			feature: false,
+			allowance: false,
+			perEntity: false,
+			cycle: false,
+		};
+	}
 
-  return {
-    price: notNullish(item.price) || notNullish(item.tiers),
-    feature: !isPriceItem(item),
-    allowance: true,
-    perEntity: notNullish(item.entity_feature_id),
-    cycle: true,
-  };
+	return {
+		price: notNullish(item.price) || notNullish(item.tiers),
+		feature: !isPriceItem(item),
+		allowance: true,
+		perEntity: notNullish(item.entity_feature_id),
+		cycle: true,
+	};
 };
 
 export const shouldShowProrationConfig = ({
-  item,
-  features,
+	item,
+	features,
 }: {
-  item: ProductItem;
-  features: Feature[];
+	item: ProductItem;
+	features: Feature[];
 }) => {
-  if (!isFeaturePriceItem(item)) return false;
+	if (!isFeaturePriceItem(item)) return false;
 
-  // If pay per use single use
-  const usageType = itemToUsageType({ item, features });
+	// If pay per use single use
+	const usageType = itemToUsageType({ item, features });
 
-  if (item.usage_model == UsageModel.Prepaid) return true;
+	if (item.usage_model === UsageModel.Prepaid) return true;
 
-  // if (
-  //   usageType == ProductItemFeatureType.SingleUse &&
-  //   item.usage_model == UsageModel.Prepaid
-  // ) {
-  //   return true;
-  // } else
+	// if (
+	//   usageType == ProductItemFeatureType.SingleUse &&
+	//   item.usage_model == UsageModel.Prepaid
+	// ) {
+	//   return true;
+	// } else
 
-  if (
-    usageType == ProductItemFeatureType.ContinuousUse
-    // &&item.usage_model !== UsageModel.Prepaid
-  ) {
-    return true;
-  }
-  return false;
+	if (
+		usageType === ProductItemFeatureType.ContinuousUse
+		// &&item.usage_model !== UsageModel.Prepaid
+	) {
+		return true;
+	}
+	return false;
 };
 
 export const itemsHaveSameInterval = ({
-  item1,
-  item2,
+	item1,
+	item2,
 }: {
-  item1: ProductItem;
-  item2: ProductItem;
+	item1: ProductItem;
+	item2: ProductItem;
 }) => {
-  return (
-    item1.interval == item2.interval &&
-    (item1.interval_count || 1) == (item2.interval_count || 1)
-  );
+	return (
+		item1.interval === item2.interval &&
+		(item1.interval_count || 1) === (item2.interval_count || 1)
+	);
 };

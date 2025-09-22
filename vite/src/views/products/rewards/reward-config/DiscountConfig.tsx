@@ -1,20 +1,13 @@
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { Input } from "@/components/ui/input";
-import { useState } from "react";
-import { Select, SelectContent, SelectItem } from "@/components/ui/select";
-import { SelectTrigger, SelectValue } from "@/components/ui/select";
-import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import {
-  Reward,
   CouponDurationType,
+  type ProductItem,
+  type Reward,
   RewardType,
-  ProductItem,
 } from "@autumn/shared";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Check, ChevronsUpDown, X } from "lucide-react";
+import { useState } from "react";
+import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -23,15 +16,26 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Check, ChevronsUpDown, Trash2, X } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useOrg } from "@/hooks/common/useOrg";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { isFeatureItem } from "@/utils/product/getItemType";
 import { formatProductItemText } from "@/utils/product/product-item/formatProductItem";
-import { useOrg } from "@/hooks/common/useOrg";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export const DiscountConfig = ({
   reward,
@@ -95,15 +99,15 @@ export const DiscountConfig = ({
                 {Object.values(CouponDurationType)
                   .filter((type) => {
                     if (
-                      reward.type == RewardType.FixedDiscount &&
-                      type == CouponDurationType.Forever &&
+                      reward.type === RewardType.FixedDiscount &&
+                      type === CouponDurationType.Forever &&
                       config.duration_type !== CouponDurationType.Forever
                     ) {
                       return false;
                     }
                     if (
-                      reward.type == RewardType.InvoiceCredits &&
-                      type == CouponDurationType.OneOff
+                      reward.type === RewardType.InvoiceCredits &&
+                      type === CouponDurationType.OneOff
                     ) {
                       return false;
                     }
@@ -188,48 +192,44 @@ const ProductPriceSelector = ({
           aria-expanded={open}
           className="w-full min-h-9 flex flex-wrap h-fit py-2 justify-start items-center gap-2 relative hover:bg-zinc-50"
         >
-          {config.apply_to_all ? (
-            "All Products"
-          ) : config.price_ids?.length == 0 ? (
-            "Select Products"
-          ) : (
-            <>
-              {config.price_ids?.map((priceId) => {
-                const item = products
-                  .find((p: any) =>
-                    p.items.find((i: any) => i.price_id === priceId)
-                  )
-                  ?.items.find((i: any) => i.price_id === priceId);
+          {config.apply_to_all
+            ? "All Products"
+            : config.price_ids?.length === 0
+              ? "Select Products"
+              : config.price_ids?.map((priceId) => {
+                  const item = products
+                    .find((p: any) =>
+                      p.items.find((i: any) => i.price_id === priceId)
+                    )
+                    ?.items.find((i: any) => i.price_id === priceId);
 
-                const text = item
-                  ? formatProductItemText({
-                      item,
-                      org,
-                      features,
-                    })
-                  : "Deleted price";
-                return (
-                  <div
-                    key={priceId}
-                    className="py-1 px-3 text-xs text-t3 border-zinc-300 bg-zinc-100 rounded-full flex items-center gap-2 h-fit max-w-[200px] min-w-0"
-                  >
-                    <p className="truncate flex-1 min-w-0">{text}</p>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handlePriceToggle(priceId);
-                      }}
-                      className="bg-transparent hover:bg-transparent p-0 w-5 h-5"
+                  const text = item
+                    ? formatProductItemText({
+                        item,
+                        org,
+                        features,
+                      })
+                    : "Unknown Price";
+                  return (
+                    <div
+                      key={priceId}
+                      className="py-1 px-3 text-xs text-t3 border-zinc-300 bg-zinc-100 rounded-full flex items-center gap-2 h-fit max-w-[200px] min-w-0"
                     >
-                      <X size={12} className="text-t3" />
-                    </Button>
-                  </div>
-                );
-              })}
-            </>
-          )}
+                      <p className="truncate flex-1 min-w-0">{text}</p>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePriceToggle(priceId);
+                        }}
+                        className="bg-transparent hover:bg-transparent p-0 w-5 h-5"
+                      >
+                        <X size={12} className="text-t3" />
+                      </Button>
+                    </div>
+                  );
+                })}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 absolute right-2" />
         </Button>
       </PopoverTrigger>

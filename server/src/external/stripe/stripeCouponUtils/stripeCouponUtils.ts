@@ -1,25 +1,57 @@
-import RecaseError from "@/utils/errorUtils.js";
 import {
-  Reward,
+  type AppEnv,
   CouponDurationType,
   ErrCode,
-  Organization,
-  Price,
+  type FixedPriceConfig,
+  type Organization,
+  type Price,
   PriceType,
-  Product,
-  UsagePriceConfig,
+  type Product,
+  type Reward,
   RewardType,
-  AppEnv,
+  type UsagePriceConfig,
 } from "@autumn/shared";
-import { Stripe } from "stripe";
+import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
 import { createStripeCli } from "../utils.js";
 
-const couponToStripeDuration = (coupon: Reward) => {
-  let discountConfig = coupon.discount_config;
+const couponToStripeDuration = ({
+  coupon,
+  isOneOffProduct = false,
+}: {
+  coupon: Reward;
+  isOneOffProduct: boolean;
+}) => {
+  if (coupon.type === RewardType.FreeProduct) {
+    // For one-off products, the coupon should apply once, not repeat
+    if (isOneOffProduct) {
+      return {
+        duration: "once",
+      };
+    }
+    console.log("--------------------------------");
+    console.log("rewardName", coupon.name);
+    console.log("coupon.free_product_config", coupon.free_product_config);
+    console.log("isOneOffProduct", isOneOffProduct);
+    console.log("--------------------------------");
+    return {
+      duration: "repeating",
+      duration_in_months: coupon.free_product_config?.duration_value,
+    };
+  }
+
+  const discountConfig = coupon.discount_config;
   if (
-    coupon.type == RewardType.InvoiceCredits &&
+    coupon.type === RewardType.InvoiceCredits &&
     coupon.discount_config?.duration_type === CouponDurationType.Forever
   ) {
+    return {
+      duration: "once",
+    };
+  }
+
+  // For one-off products, always use "once" duration regardless of config
+  if (isOneOffProduct) {
     return {
       duration: "once",
     };
@@ -45,11 +77,28 @@ const couponToStripeDuration = (coupon: Reward) => {
 const couponToStripeValue = ({
   reward,
   org,
+  prices,
 }: {
   reward: Reward;
   org: Organization;
+  prices?: (Price & { product: Product })[];
 }) => {
-  let discountConfig = reward.discount_config;
+  if (reward.type === RewardType.FreeProduct) {
+    const amountOff = Math.round(
+      prices?.reduce(
+        (acc, price) => acc + (price.config as FixedPriceConfig).amount,
+        0
+      ) || 0
+    );
+
+    console.log("amountOff in couponToStripeValue", amountOff);
+    return {
+      amount_off: Math.round(amountOff * 100),
+      currency: org.default_currency || "usd",
+    };
+  }
+
+  const discountConfig = reward.discount_config;
   if (reward.type === RewardType.PercentageDiscount) {
     return {
       percent_off: discountConfig!.discount_value,
@@ -80,7 +129,7 @@ export const createStripeCoupon = async ({
   logger: any;
   legacyVersion?: boolean;
 }) => {
-  let discountConfig = reward.discount_config;
+  const discountConfig = reward.discount_config;
 
   const stripeCli = createStripeCli({
     org,
@@ -90,9 +139,9 @@ export const createStripeCoupon = async ({
 
   try {
     await stripeCli.coupons.del(reward.id);
-  } catch (error) {}
+  } catch (_) {}
 
-  let stripeProdIds = prices.map((price) => {
+  const stripeProdIds = prices.map((price) => {
     if (price.config!.type === PriceType.Fixed) {
       return price.product.processor?.id;
     } else {
@@ -116,26 +165,32 @@ export const createStripeCoupon = async ({
         promoCode.code
       );
       throw new RecaseError({
-        message: `Promo code ${promoCode.code} already exists in Stripe`,
+        message: `Promo code ${promoCode.code} (${stripePromoCode.id}) already exists in Stripe`,
         code: ErrCode.PromoCodeAlreadyExistsInStripe,
       });
-    } catch (error) {}
+    } catch (_) {}
   }
 
   const stripeCoupon = await stripeCli.coupons.create({
     // id: reward.internal_id,
     id: reward.id,
-    ...(couponToStripeDuration(reward) as any),
-    ...(couponToStripeValue({ reward, org }) as any),
+    ...(couponToStripeDuration({
+      coupon: reward,
+      isOneOffProduct: pricesOnlyOneOff(prices),
+    }) as any),
+    ...(couponToStripeValue({ reward, org, prices }) as any),
     name: reward.name,
     metadata: {
       autumn_internal_id: reward.internal_id,
     },
-    applies_to: !discountConfig!.apply_to_all
-      ? {
-          products: stripeProdIds,
-        }
-      : undefined,
+    applies_to:
+      reward.type === RewardType.FreeProduct
+        ? undefined
+        : !discountConfig!.apply_to_all
+          ? {
+              products: stripeProdIds,
+            }
+          : undefined,
   });
 
   // Create promo codes

@@ -78,7 +78,6 @@ const handleIdIsNull = async ({
   }
 
   // 2. Check if email already exists
-
   let existingCustomers = await CusService.getByEmail({
     db,
     email: newCus.email,

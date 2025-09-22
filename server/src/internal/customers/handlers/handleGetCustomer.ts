@@ -1,11 +1,5 @@
-import { CusService } from "@/internal/customers/CusService.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import {
-  APIVersion,
-  CusExpand,
-  CusProductStatus,
-  ErrCode,
-} from "@autumn/shared";
+import { APIVersion, CusExpand, ErrCode } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { getCustomerDetails } from "../cusUtils/getCustomerDetails.js";
 import { parseCusExpand } from "../cusUtils/cusUtils.js";
@@ -30,9 +24,7 @@ export const handleGetCustomer = async (req: any, res: any) =>
       });
 
       let getInvoices = apiVersion < APIVersion.v1_1;
-      if (getInvoices) {
-        expandArray.push(CusExpand.Invoices);
-      }
+      if (getInvoices) expandArray.push(CusExpand.Invoices);
 
       logger.info(`getting customer ${customerId} for org ${org.slug}`);
       const startTime = Date.now();
@@ -46,16 +38,6 @@ export const handleGetCustomer = async (req: any, res: any) =>
         logger,
       });
 
-      // const customer = await CusService.getFull({
-      //   db,
-      //   idOrInternalId: customerId,
-      //   orgId: org.id,
-      //   env: env,
-      //   withEntities: true,
-      //   expand: expandArray,
-      //   allowNotFound: true,
-      //   withSubs: true,
-      // });
       logger.info(`get customer took ${Date.now() - startTime}ms`);
 
       if (!customer) {

@@ -1,9 +1,18 @@
-import RecaseError from "@/utils/errorUtils.js";
-
+import {
+  APIVersion,
+  type AttachConfig,
+  AttachScenario,
+  ErrCode,
+  isTrialing,
+  SuccessCode,
+} from "@autumn/shared";
+import type Stripe from "stripe";
+import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
+import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
 import {
-  AttachParams,
+  type AttachParams,
   AttachResultSchema,
 } from "@/internal/customers/cusProducts/AttachParams.js";
 import {
@@ -12,23 +21,9 @@ import {
 } from "@/internal/invoices/invoiceUtils.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import {
-  APIVersion,
-  AttachBranch,
-  AttachConfig,
-  AttachScenario,
-  ErrCode,
-  SuccessCode,
-} from "@autumn/shared";
-import Stripe from "stripe";
-import {
-  getEarliestPeriodEnd,
-  subToPeriodStartEnd,
-} from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { createStripeSub2 } from "./createStripeSub2.js";
 import { getSmallestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 
-import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
 import {
   getCustomerSchedule,
   getCustomerSub,
@@ -37,11 +32,12 @@ import {
 import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
 import { updateStripeSub2 } from "../upgradeFlow/updateStripeSub2.js";
 import { subToNewSchedule } from "../../mergeUtils/subToNewSchedule.js";
-import { isTrialing } from "@autumn/shared";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { addIntervalToAnchor } from "@/internal/products/prices/billingIntervalUtils2.js";
 import { handleUpgradeFlowSchedule } from "../upgradeFlow/handleUpgradeFlowSchedule.js";
 import { subIsCanceled } from "@/external/stripe/stripeSubUtils.js";
+import { rewardTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
 
 export const handlePaidProduct = async ({
   req,
@@ -56,7 +52,7 @@ export const handlePaidProduct = async ({
 }) => {
   const logger = req.logtail;
 
-  let {
+  const {
     org,
     customer,
     products,
@@ -75,7 +71,7 @@ export const handlePaidProduct = async ({
     config,
   });
 
-  let subscriptions: Stripe.Subscription[] = [];
+  const subscriptions: Stripe.Subscription[] = [];
 
   const { sub: mergeSub, cusProduct: mergeCusProduct } = await getCustomerSub({
     attachParams,
@@ -248,7 +244,14 @@ export const handlePaidProduct = async ({
         anchorToUnix,
         carryExistingUsages: config.carryUsage,
         scenario: AttachScenario.New,
-        trialEndsAt: trialEndsAt || undefined,
+        trialEndsAt:
+          trialEndsAt ||
+          (attachParams.rewardTrial
+            ? (rewardTrialToStripeTimestamp({
+                rewardTrial: attachParams.rewardTrial,
+                now: attachParams.now,
+              }) || 0) * 1000
+            : undefined),
         logger,
       })
     );
@@ -256,7 +259,7 @@ export const handlePaidProduct = async ({
   await Promise.all(batchInsert);
 
   if (res) {
-    let apiVersion = attachParams.apiVersion || APIVersion.v1;
+    const apiVersion = attachParams.apiVersion || APIVersion.v1;
     const productNames = products.map((p) => p.name).join(", ");
     const customerName = customer.name || customer.email || customer.id;
     if (apiVersion >= APIVersion.v1_1) {

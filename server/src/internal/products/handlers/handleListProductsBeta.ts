@@ -44,11 +44,6 @@ export const handleListProductsBeta = async (req: any, res: any) =>
         })(),
       ]);
 
-      console.log(
-        "Products:",
-        products.map((p) => `${p.internal_id} - ${p.id} - ${p.archived}`)
-      );
-
       if (req.query.v1_schema === "true") {
         res.status(200).json({
           list: products,

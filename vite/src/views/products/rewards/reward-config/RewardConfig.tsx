@@ -1,17 +1,33 @@
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
-
-import { Input } from "@/components/ui/input";
+import {
+  type ProductV2,
+  type Reward,
+  RewardType,
+  UsageModel,
+} from "@autumn/shared";
 import { useEffect, useState } from "react";
-import { Select, SelectContent, SelectItem } from "@/components/ui/select";
-import { SelectTrigger, SelectValue } from "@/components/ui/select";
-import { keyToTitle, slugify } from "@/utils/formatUtils/formatTextUtils";
-import { Reward, RewardType, Product, ProductV2 } from "@autumn/shared";
-import { useProductsContext } from "../../ProductsContext";
-import { DiscountConfig } from "./DiscountConfig";
-import { notNullish } from "@/utils/genUtils";
-import { defaultDiscountConfig } from "../utils/defaultRewardModels";
-import { isFreeProduct } from "@/utils/product/priceUtils";
+import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import { WarningBox } from "@/components/general/modal-components/WarningBox";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import {
+  formatAmount as formatCurrency,
+  keyToTitle,
+  slugify,
+} from "@/utils/formatUtils/formatTextUtils";
+import { notNullish } from "@/utils/genUtils";
+import { isFeaturePriceItem, isPriceItem } from "@/utils/product/getItemType";
+import { isFreeProduct, isOneOffProduct } from "@/utils/product/priceUtils";
+import { defaultDiscountConfig } from "../utils/defaultRewardModels";
+import { DiscountConfig } from "./DiscountConfig";
+import { FreeDurationSelect } from "./FreeDurationSelect";
 
 export const RewardConfig = ({
   reward,
@@ -30,7 +46,7 @@ export const RewardConfig = ({
         id: slugify(reward.name || ""),
       });
     }
-  }, [reward.name]);
+  }, [idChanged, reward, setReward]);
 
   return (
     <div className="flex flex-col gap-4">

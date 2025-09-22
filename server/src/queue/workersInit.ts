@@ -1,21 +1,20 @@
-import { Job, Queue, Worker } from "bullmq";
-import { runUpdateBalanceTask } from "@/trigger/updateBalanceTask.js";
-import { QueueManager } from "./QueueManager.js";
-
-import { runUpdateUsageTask } from "@/trigger/updateUsageTask.js";
-import { JobName } from "./JobName.js";
-
-import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
-import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutReward.js";
-import { runSaveFeatureDisplayTask } from "@/internal/features/featureUtils.js";
-import { CacheManager } from "@/external/caching/CacheManager.js";
+import { type Job, type Queue, Worker } from "bullmq";
+import type { Logger } from "pino";
 import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
-import { acquireLock, getRedisConnection, releaseLock } from "./lockUtils.js";
-import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
+import { CacheManager } from "@/external/caching/CacheManager.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
+import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
+import { runSaveFeatureDisplayTask } from "@/internal/features/featureUtils.js";
+import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
 import { detectBaseVariant } from "@/internal/products/productUtils/detectProductVariant.js";
-import { Logger } from "pino";
+import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutReward.js";
+import { runUpdateBalanceTask } from "@/trigger/updateBalanceTask.js";
+import { runUpdateUsageTask } from "@/trigger/updateUsageTask.js";
 import { generateId } from "@/utils/genUtils.js";
+import { JobName } from "./JobName.js";
+import { acquireLock, getRedisConnection, releaseLock } from "./lockUtils.js";
+import { QueueManager } from "./QueueManager.js";
+import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigrationTask.js";
 
 const NUM_WORKERS = 10;
 
@@ -24,7 +23,7 @@ const actionHandlers = [
   JobName.HandleCustomerCreated,
 ];
 
-const { db, client } = initDrizzle({ maxConnections: 10 });
+const { db } = initDrizzle({ maxConnections: 10 });
 
 const initWorker = ({
   id,
@@ -37,7 +36,7 @@ const initWorker = ({
   useBackup: boolean;
   db: DrizzleCli;
 }) => {
-  let worker = new Worker(
+  const worker = new Worker(
     "autumn",
     async (job: Job) => {
       const logtail = logger.child({
@@ -52,7 +51,7 @@ const initWorker = ({
       });
 
       try {
-        if (job.name == JobName.DetectBaseVariant) {
+        if (job.name === JobName.DetectBaseVariant) {
           await detectBaseVariant({
             db,
             curProduct: job.data.curProduct,
@@ -61,7 +60,7 @@ const initWorker = ({
           return;
         }
 
-        if (job.name == JobName.GenerateFeatureDisplay) {
+        if (job.name === JobName.GenerateFeatureDisplay) {
           await runSaveFeatureDisplayTask({
             db,
             feature: job.data.feature,
@@ -70,7 +69,7 @@ const initWorker = ({
           return;
         }
 
-        if (job.name == JobName.Migration) {
+        if (job.name === JobName.Migration) {
           await runMigrationTask({
             db,
             payload: job.data,
@@ -89,6 +88,14 @@ const initWorker = ({
           });
           return;
         }
+
+        if (job.name === JobName.RewardMigration) {
+          await runRewardMigrationTask({
+            db,
+            payload: job.data,
+            logger: logtail,
+          });
+        }
       } catch (error: any) {
         logtail.error(`Failed to process bullmq job: ${job.name}`, {
           jobName: job.name,
@@ -100,8 +107,8 @@ const initWorker = ({
       }
 
       // TRIGGER CHECKOUT REWARD
-      if (job.name == JobName.TriggerCheckoutReward) {
-        let lockKey = `reward_trigger:${job.data.customer?.internal_id}`;
+      if (job.name === JobName.TriggerCheckoutReward) {
+        const lockKey = `reward_trigger:${job.data.customer?.internal_id}`;
         if (
           !(await acquireLock({
             lockKey,
@@ -198,7 +205,7 @@ const initWorker = ({
     }
   });
 
-  worker.on("failed", (job, error) => {
+  worker.on("failed", (_, error) => {
     console.log("WORKER FAILED:", error.message);
   });
 };

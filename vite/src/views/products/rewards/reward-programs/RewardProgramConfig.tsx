@@ -1,26 +1,13 @@
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Reward,
-  RewardProgram,
-  RewardTriggerEvent,
+  type Reward,
+  type RewardProgram,
   RewardReceivedBy,
+  RewardTriggerEvent,
 } from "@autumn/shared";
-import { useProductsContext } from "../../ProductsContext";
-import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
+import { Check, ChevronsUpDown, X } from "lucide-react";
 import { useState } from "react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -29,11 +16,23 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
-import { Check, ChevronsUpDown, X } from "lucide-react";
-import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
+import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 
 export const RewardProgramConfig = ({
   rewardProgram,
@@ -65,7 +64,6 @@ export const RewardProgramConfig = ({
             onValueChange={(value) =>
               setRewardProgram({ ...rewardProgram, internal_reward_id: value })
             }
-            // disabled={isUpdate}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select a reward" />
@@ -99,7 +97,12 @@ export const RewardProgramConfig = ({
             <SelectContent>
               {Object.values(RewardTriggerEvent).map((event) => (
                 <SelectItem key={event} value={event}>
-                  {keyToTitle(event)}
+                  {keyToTitle(event, {
+                    exclusionMap: {
+                      [RewardTriggerEvent.CustomerCreation]:
+                        "Customer Redemption",
+                    },
+                  })}
                 </SelectItem>
               ))}
             </SelectContent>

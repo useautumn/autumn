@@ -7,16 +7,13 @@ source "$(dirname "$0")/config.sh"
 if [[ "$1" == *"setup"* ]]; then
   MOCHA_PARALLEL=true $MOCHA_SETUP
 fi
-# $MOCHA_CMD 'tests/advanced/multiFeature/*.ts'
+# $MOCHA_CMD 'tests/advanced/referrals/*.ts' 'tests/advanced/coupons/*.ts'
 
 $MOCHA_CMD 'tests/advanced/multiFeature/*.ts' \
            'tests/advanced/coupons/*.ts' \
            'tests/attach/updateQuantity/*.ts' \
            'tests/advanced/referrals/*.ts' \
-           'tests/advanced/rollovers/*.ts' \
-           'tests/advanced/customInterval/*.ts'
-
-$MOCHA_CMD 'tests/advanced/referrals/*.ts' \
+           'tests/advanced/referrals/paid/*.ts' \
            'tests/advanced/rollovers/*.ts' \
            'tests/advanced/customInterval/*.ts'
           

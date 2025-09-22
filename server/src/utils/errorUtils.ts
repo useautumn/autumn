@@ -111,7 +111,7 @@ export const handleRequestError = ({
       logger.warn(
         `RECASE WARNING (${req.org?.slug || "unknown"}): ${error.message} [${error.code}]`,
         {
-          error: error.data,
+          error: error.data ?? error,
         }
       );
 
