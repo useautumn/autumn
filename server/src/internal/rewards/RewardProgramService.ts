@@ -1,4 +1,4 @@
-import { and, arrayContains, count, eq, inArray } from "drizzle-orm";
+import { and, arrayContains, count, eq, inArray, or } from "drizzle-orm";
 import RecaseError from "@/utils/errorUtils.js";
 import {
   ErrCode,
@@ -14,22 +14,25 @@ import { referralCodes, rewardRedemptions } from "@autumn/shared";
 export class RewardProgramService {
   static async get({
     db,
-    id,
+    idOrInternalId,
     orgId,
     env,
     errorIfNotFound = false,
   }: {
     db: DrizzleCli;
-    id: string;
+    idOrInternalId: string;
     orgId: string;
     env: string;
     errorIfNotFound?: boolean;
   }) {
     let result = await db.query.rewardPrograms.findFirst({
       where: and(
-        eq(rewardPrograms.id, id),
+        or(
+          eq(rewardPrograms.id, idOrInternalId),
+          eq(rewardPrograms.internal_id, idOrInternalId)
+        ),
         eq(rewardPrograms.org_id, orgId),
-        eq(rewardPrograms.env, env),
+        eq(rewardPrograms.env, env)
       ),
     });
 
@@ -79,7 +82,7 @@ export class RewardProgramService {
         eq(rewardPrograms.org_id, orgId),
         eq(rewardPrograms.env, env),
         eq(rewardPrograms.when, RewardTriggerEvent.Checkout),
-        arrayContains(rewardPrograms.product_ids, productIds),
+        arrayContains(rewardPrograms.product_ids, productIds)
       ),
     });
 
@@ -104,7 +107,7 @@ export class RewardProgramService {
         eq(referralCodes.internal_customer_id, internalCustomerId),
         eq(referralCodes.internal_reward_program_id, internalRewardProgramId),
         eq(referralCodes.org_id, orgId),
-        eq(referralCodes.env, env),
+        eq(referralCodes.env, env)
       ),
     });
 
@@ -139,12 +142,12 @@ export class RewardProgramService {
 
   static async delete({
     db,
-    id,
+    idOrInternalId,
     orgId,
     env,
   }: {
     db: DrizzleCli;
-    id: string;
+    idOrInternalId: string;
     orgId: string;
     env: string;
   }) {
@@ -152,10 +155,13 @@ export class RewardProgramService {
       .delete(rewardPrograms)
       .where(
         and(
-          eq(rewardPrograms.id, id),
+          or(
+            eq(rewardPrograms.id, idOrInternalId),
+            eq(rewardPrograms.internal_id, idOrInternalId)
+          ),
           eq(rewardPrograms.org_id, orgId),
-          eq(rewardPrograms.env, env),
-        ),
+          eq(rewardPrograms.env, env)
+        )
       )
       .returning();
 
@@ -187,7 +193,7 @@ export class RewardProgramService {
       where: and(
         eq(referralCodes.code, code),
         eq(referralCodes.org_id, orgId),
-        eq(referralCodes.env, env),
+        eq(referralCodes.env, env)
       ),
       with: withRewardProgram
         ? {
@@ -247,10 +253,48 @@ export class RewardProgramService {
       .where(
         and(
           eq(rewardRedemptions.referral_code_id, referralCodeId),
-          eq(rewardRedemptions.triggered, true),
-        ),
+          eq(rewardRedemptions.triggered, true)
+        )
       );
 
     return result[0].count;
+  }
+
+  static async update({
+    db,
+    idOrInternalId,
+    orgId,
+    env,
+    data,
+  }: {
+    db: DrizzleCli;
+    idOrInternalId: string;
+    orgId: string;
+    env: string;
+    data: RewardProgram;
+  }) {
+    let result = await db
+      .update(rewardPrograms)
+      .set(data as any)
+      .where(
+        and(
+          or(
+            eq(rewardPrograms.id, idOrInternalId),
+            eq(rewardPrograms.internal_id, idOrInternalId)
+          ),
+          eq(rewardPrograms.org_id, orgId),
+          eq(rewardPrograms.env, env)
+        )
+      )
+      .returning();
+
+    if (result.length === 0) {
+      throw new RecaseError({
+        message: "Reward program not found",
+        code: ErrCode.RewardNotFound,
+      });
+    }
+
+    return result[0] as RewardProgram;
   }
 }
