@@ -17,102 +17,102 @@ import { expectProductAttached } from "tests/utils/expectUtils/expectProductAtta
 const testCase = "renew1";
 
 export let free = constructProduct({
-  items: [
-    constructFeatureItem({
-      featureId: TestFeature.Messages,
-      includedUsage: 100,
-    }),
-  ],
-  isDefault: false,
-  type: "free",
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 100,
+		}),
+	],
+	isDefault: false,
+	type: "free",
 });
 
 export let pro = constructProduct({
-  items: [
-    constructFeatureItem({
-      featureId: TestFeature.Credits,
-      includedUsage: 1000,
-    }),
-  ],
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Credits,
+			includedUsage: 1000,
+		}),
+	],
 
-  type: "pro",
+	type: "pro",
 });
 
 describe(`${chalk.yellowBright(`${testCase}: Testing renew pro, force checkout`)}`, () => {
-  let customerId = testCase;
-  let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
-  let db: DrizzleCli, org: Organization, env: AppEnv;
-  let stripeCli: Stripe;
+	let customerId = testCase;
+	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	let db: DrizzleCli, org: Organization, env: AppEnv;
+	let stripeCli: Stripe;
 
-  before(async function () {
-    await setupBefore(this);
-    const { autumnJs } = this;
-    db = this.db;
-    org = this.org;
-    env = this.env;
+	before(async function () {
+		await setupBefore(this);
+		const { autumnJs } = this;
+		db = this.db;
+		org = this.org;
+		env = this.env;
 
-    stripeCli = this.stripeCli;
+		stripeCli = this.stripeCli;
 
-    const { testClockId } = await initCustomer({
-      autumn: autumnJs,
-      customerId,
-      db,
-      org,
-      env,
-      attachPm: "success",
-    });
+		const { testClockId } = await initCustomer({
+			autumn: autumnJs,
+			customerId,
+			db,
+			org,
+			env,
+			attachPm: "success",
+		});
 
-    addPrefixToProducts({
-      products: [free, pro],
-      prefix: testCase,
-    });
+		addPrefixToProducts({
+			products: [free, pro],
+			prefix: testCase,
+		});
 
-    await createProducts({
-      autumn,
-      products: [free, pro],
-      db,
-      orgId: org.id,
-      env,
-    });
-  });
+		await createProducts({
+			autumn,
+			products: [free, pro],
+			db,
+			orgId: org.id,
+			env,
+		});
+	});
 
-  it("should attach pro product", async function () {
-    await attachAndExpectCorrect({
-      autumn,
-      customerId,
-      product: pro,
-      stripeCli,
-      db,
-      org,
-      env,
-    });
-  });
+	it("should attach pro product", async function () {
+		await attachAndExpectCorrect({
+			autumn,
+			customerId,
+			product: pro,
+			stripeCli,
+			db,
+			org,
+			env,
+		});
+	});
 
-  it("should attach free, then pro with force checkout and renew", async function () {
-    await autumn.attach({
-      customer_id: customerId,
-      product_id: free.id,
-    });
+	it("should attach free, then pro with force checkout and renew", async function () {
+		await autumn.attach({
+			customer_id: customerId,
+			product_id: free.id,
+		});
 
-    // 1. Get attach preview
-    let attachPreview = await autumn.attachPreview({
-      customer_id: customerId,
-      product_id: pro.id,
-    });
+		// 1. Get attach preview
+		let attachPreview = await autumn.attachPreview({
+			customer_id: customerId,
+			product_id: pro.id,
+		});
 
-    expect(attachPreview.branch).to.equal(AttachBranch.Renew);
+		expect(attachPreview.branch).to.equal(AttachBranch.Renew);
 
-    await autumn.attach({
-      customer_id: customerId,
-      product_id: pro.id,
-      force_checkout: true,
-    });
+		await autumn.attach({
+			customer_id: customerId,
+			product_id: pro.id,
+			force_checkout: true,
+		});
 
-    let customer = await autumn.customers.get(customerId);
+		let customer = await autumn.customers.get(customerId);
 
-    expectProductAttached({
-      customer,
-      product: pro,
-    });
-  });
+		expectProductAttached({
+			customer,
+			product: pro,
+		});
+	});
 });

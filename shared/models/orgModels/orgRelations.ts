@@ -6,7 +6,7 @@ import { user } from "../../db/auth-schema.js";
 import { member } from "../../db/auth-schema.js";
 
 export const organizationsRelations = relations(organizations, ({ many }) => ({
-  api_keys: many(apiKeys),
-  features: many(features),
-  members: many(member),
+	api_keys: many(apiKeys),
+	features: many(features),
+	members: many(member),
 }));

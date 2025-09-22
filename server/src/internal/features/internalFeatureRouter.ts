@@ -16,76 +16,76 @@ import { handleGetFeatureDeletionInfo } from "./handlers/handleGetFeatureDeletio
 export const internalFeatureRouter: Router = express.Router();
 
 internalFeatureRouter.get("", async (req: any, res: any) => {
-  try {
-    let { showArchived } = req.query;
+	try {
+		let { showArchived } = req.query;
 
-    if (showArchived !== undefined) {
-      // If showArchived is specified, use FeatureService.list with the parameter
-      let features = await FeatureService.list({
-        db: req.db,
-        orgId: req.orgId,
-        env: req.env,
-        archived: showArchived === "true" ? true : false,
-      });
-      res.status(200).json({ features });
-    } else {
-      // If no showArchived parameter, use the original getFromReq method
-      let features = await FeatureService.getFromReq(req);
-      res.status(200).json({ features });
-    }
-  } catch (error: any) {
-    console.log("Error fetching features:", error);
-    res.status(500).json({ error: error.message });
-  }
+		if (showArchived !== undefined) {
+			// If showArchived is specified, use FeatureService.list with the parameter
+			let features = await FeatureService.list({
+				db: req.db,
+				orgId: req.orgId,
+				env: req.env,
+				archived: showArchived === "true" ? true : false,
+			});
+			res.status(200).json({ features });
+		} else {
+			// If no showArchived parameter, use the original getFromReq method
+			let features = await FeatureService.getFromReq(req);
+			res.status(200).json({ features });
+		}
+	} catch (error: any) {
+		console.log("Error fetching features:", error);
+		res.status(500).json({ error: error.message });
+	}
 });
 
 export const validateFeature = (data: any) => {
-  let featureType = data.type;
+	let featureType = data.type;
 
-  validateFeatureId(data.id);
+	validateFeatureId(data.id);
 
-  let config = data.config;
-  if (featureType == FeatureType.Metered) {
-    config = validateMeteredConfig(config);
-  } else if (featureType == FeatureType.CreditSystem) {
-    config = validateCreditSystem(config);
-  }
+	let config = data.config;
+	if (featureType == FeatureType.Metered) {
+		config = validateMeteredConfig(config);
+	} else if (featureType == FeatureType.CreditSystem) {
+		config = validateCreditSystem(config);
+	}
 
-  try {
-    const parsedFeature = CreateFeatureSchema.parse({ ...data, config });
-    return parsedFeature;
-  } catch (error: any) {
-    throw new RecaseError({
-      message: `Invalid feature: ${formatZodError(error)}`,
-      code: ErrCode.InvalidFeature,
-      statusCode: 400,
-    });
-  }
+	try {
+		const parsedFeature = CreateFeatureSchema.parse({ ...data, config });
+		return parsedFeature;
+	} catch (error: any) {
+		throw new RecaseError({
+			message: `Invalid feature: ${formatZodError(error)}`,
+			code: ErrCode.InvalidFeature,
+			statusCode: 400,
+		});
+	}
 };
 
 export const initNewFeature = ({
-  data,
-  orgId,
-  env,
+	data,
+	orgId,
+	env,
 }: {
-  data: any;
-  orgId: string;
-  env: any;
+	data: any;
+	orgId: string;
+	env: any;
 }) => {
-  return {
-    ...data,
-    org_id: orgId,
-    env,
-    created_at: Date.now(),
-    internal_id: generateId("fe"),
-  };
+	return {
+		...data,
+		org_id: orgId,
+		env,
+		created_at: Date.now(),
+		internal_id: generateId("fe"),
+	};
 };
 
 internalFeatureRouter.post("", handleCreateFeature);
 
 internalFeatureRouter.get(
-  "/data/deletion_text/:feature_id",
-  handleGetFeatureDeletionInfo
+	"/data/deletion_text/:feature_id",
+	handleGetFeatureDeletionInfo,
 );
 
 internalFeatureRouter.post("/:feature_id", handleUpdateFeature as any);

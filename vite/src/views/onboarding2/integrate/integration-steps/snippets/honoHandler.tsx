@@ -1,11 +1,11 @@
 import { betterAuthSnippet } from "./betterAuth";
 
 export const clerkSnippet = (
-  customerType: "user" | "org",
-  reqParam: string = "c"
+	customerType: "user" | "org",
+	reqParam: string = "c",
 ) => {
-  if (customerType === "user") {
-    return `const auth = getAuth(${reqParam});
+	if (customerType === "user") {
+		return `const auth = getAuth(${reqParam});
 
       if (!auth?.userId) return null;
 
@@ -14,9 +14,9 @@ export const clerkSnippet = (
         customerData: { name: "", email: "" },
       };
       `;
-  }
+	}
 
-  return `const auth = getAuth(${reqParam});
+	return `const auth = getAuth(${reqParam});
 
       if (!auth?.userId || !auth?.orgId) return null;
 
@@ -28,7 +28,7 @@ export const clerkSnippet = (
 };
 
 export const honoClerk = (customerType: "user" | "org") => {
-  return `import { autumnHandler } from "autumn-js/hono";
+	return `import { autumnHandler } from "autumn-js/hono";
 import { clerkMiddleware, getAuth } from "@hono/clerk-auth";
 
 app.use("*", clerkMiddleware());
@@ -43,11 +43,11 @@ app.use(
 };
 
 export const supabaseSnippet = (
-  customerType: "user" | "org",
-  supabaseInit: string = "getSupabase(c)"
+	customerType: "user" | "org",
+	supabaseInit: string = "getSupabase(c)",
 ) => {
-  if (customerType === "user") {
-    return `const supabase = ${supabaseInit};
+	if (customerType === "user") {
+		return `const supabase = ${supabaseInit};
 
       const { data, error } = await supabase.auth.getUser();
 
@@ -57,9 +57,9 @@ export const supabaseSnippet = (
         customerId: data.user.id,
         customerData: { name: "", email: "" },
       };`;
-  }
+	}
 
-  return `const supabase = ${supabaseInit};
+	return `const supabase = ${supabaseInit};
 
       const { data, error } = await supabase.auth.getUser();
 
@@ -74,7 +74,7 @@ export const supabaseSnippet = (
 };
 
 export const honoSupabase = (customerType: "user" | "org") => {
-  return `// index.ts
+	return `// index.ts
   
 import { autumnHandler } from "autumn-js/hono";
 import { getSupabase, supabaseMiddleware } from "./middleware/auth.middleware.js";
@@ -90,7 +90,7 @@ app.use(
 );`;
 };
 export const honoBetterAuth = (customerType: "user" | "org") => {
-  return `// index.ts
+	return `// index.ts
 
 import { autumnHandler } from "autumn-js/hono";
 import { auth } from "@/lib/auth"
@@ -105,7 +105,7 @@ ${betterAuthSnippet(customerType, "c.req.raw.headers", 3)}
 );`;
 };
 export const honoOther = (customerType: "user" | "org") => {
-  return `// index.ts
+	return `// index.ts
 
 import { autumnHandler } from "autumn-js/hono";
 import { auth } from "@/lib/auth"

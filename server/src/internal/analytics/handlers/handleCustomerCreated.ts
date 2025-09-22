@@ -8,55 +8,55 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { ActionService } from "../ActionService.js";
 
 export const addCustomerCreatedTask = async ({
-  req,
-  internalCustomerId,
-  org,
-  env,
+	req,
+	internalCustomerId,
+	org,
+	env,
 }: {
-  req: ExtendedRequest;
-  internalCustomerId: string;
-  org: Organization;
-  env: AppEnv;
+	req: ExtendedRequest;
+	internalCustomerId: string;
+	org: Organization;
+	env: AppEnv;
 }) => {
-  await addTaskToQueue({
-    jobName: JobName.HandleCustomerCreated,
-    payload: {
-      req: req ? parseReqForAction(req) : undefined,
-      internalCustomerId,
-      org,
-      env,
-    },
-  });
+	await addTaskToQueue({
+		jobName: JobName.HandleCustomerCreated,
+		payload: {
+			req: req ? parseReqForAction(req) : undefined,
+			internalCustomerId,
+			org,
+			env,
+		},
+	});
 };
 
 export const handleCustomerCreated = async ({
-  db,
-  logger,
-  data,
+	db,
+	logger,
+	data,
 }: {
-  db: DrizzleCli;
-  logger: any;
-  data: any;
+	db: DrizzleCli;
+	logger: any;
+	data: any;
 }) => {
-  const { req, internalCustomerId, org, env } = data;
+	const { req, internalCustomerId, org, env } = data;
 
-  let customer = await CusService.getFull({
-    db,
-    idOrInternalId: internalCustomerId,
-    orgId: org.id,
-    env,
-  });
+	let customer = await CusService.getFull({
+		db,
+		idOrInternalId: internalCustomerId,
+		orgId: org.id,
+		env,
+	});
 
-  let action = constructAction({
-    org,
-    env,
-    customer,
-    type: ActionType.CustomerCreated,
-    req,
-    properties: {
-      body: data.req.body,
-    },
-  });
+	let action = constructAction({
+		org,
+		env,
+		customer,
+		type: ActionType.CustomerCreated,
+		req,
+		properties: {
+			body: data.req.body,
+		},
+	});
 
-  await ActionService.insert(db, action);
+	await ActionService.insert(db, action);
 };

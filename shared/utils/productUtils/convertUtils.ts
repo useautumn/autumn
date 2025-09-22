@@ -25,29 +25,29 @@ import { Price } from "../../models/productModels/priceModels/priceModels.js";
 // };
 
 export const entToPrice = ({
-  ent,
-  prices,
+	ent,
+	prices,
 }: {
-  ent: Entitlement;
-  prices: Price[];
+	ent: Entitlement;
+	prices: Price[];
 }) => {
-  return prices.find(
-    (price) =>
-      price.entitlement_id === ent.id &&
-      price.internal_product_id === ent.internal_product_id
-  );
+	return prices.find(
+		(price) =>
+			price.entitlement_id === ent.id &&
+			price.internal_product_id === ent.internal_product_id,
+	);
 };
 
 export const priceToEnt = ({
-  price,
-  entitlements,
+	price,
+	entitlements,
 }: {
-  price: Price;
-  entitlements: Entitlement[];
+	price: Price;
+	entitlements: Entitlement[];
 }) => {
-  return entitlements.find(
-    (ent) =>
-      ent.id === price.entitlement_id &&
-      ent.internal_product_id === price.internal_product_id
-  );
+	return entitlements.find(
+		(ent) =>
+			ent.id === price.entitlement_id &&
+			ent.internal_product_id === price.internal_product_id,
+	);
 };

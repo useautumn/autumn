@@ -9,47 +9,47 @@ import { compareMainProduct } from "tests/utils/compare.js";
 
 const testCase = "basic9";
 describe(`${chalk.yellowBright(
-  "basic9: attach monthly with one time prepaid, and quantity = 0"
+	"basic9: attach monthly with one time prepaid, and quantity = 0",
 )}`, () => {
-  let customerId = testCase;
+	let customerId = testCase;
 
-  let options = [
-    {
-      feature_id: features.metered1.id,
-      quantity: 0,
-    },
-    {
-      feature_id: features.metered2.id,
-      quantity: 4,
-    },
-  ];
-  before(async function () {
-    await initCustomer({
-      customerId,
-      db: this.db,
-      org: this.org,
-      env: this.env,
-    });
-  });
+	let options = [
+		{
+			feature_id: features.metered1.id,
+			quantity: 0,
+		},
+		{
+			feature_id: features.metered2.id,
+			quantity: 4,
+		},
+	];
+	before(async function () {
+		await initCustomer({
+			customerId,
+			db: this.db,
+			org: this.org,
+			env: this.env,
+		});
+	});
 
-  it("should attach monthly with one time", async function () {
-    const res = await AutumnCli.attach({
-      customerId,
-      productId: products.monthlyWithOneTime.id,
-      options,
-    });
+	it("should attach monthly with one time", async function () {
+		const res = await AutumnCli.attach({
+			customerId,
+			productId: products.monthlyWithOneTime.id,
+			options,
+		});
 
-    await completeCheckoutForm(res.checkout_url);
-    await timeout(12000);
-  });
+		await completeCheckoutForm(res.checkout_url);
+		await timeout(12000);
+	});
 
-  it("should have correct main product and entitlements", async function () {
-    const cusRes = await AutumnCli.getCustomer(customerId);
+	it("should have correct main product and entitlements", async function () {
+		const cusRes = await AutumnCli.getCustomer(customerId);
 
-    compareMainProduct({
-      sent: products.monthlyWithOneTime,
-      cusRes,
-      optionsList: options,
-    });
-  });
+		compareMainProduct({
+			sent: products.monthlyWithOneTime,
+			cusRes,
+			optionsList: options,
+		});
+	});
 });

@@ -4,99 +4,99 @@ import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCu
 import { getCreditSystemsFromFeature } from "@/internal/features/creditSystemUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import {
-  CusProductStatus,
-  ErrCode,
-  Feature,
-  FeatureType,
+	CusProductStatus,
+	ErrCode,
+	Feature,
+	FeatureType,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 
 // Main functions
 const getFeatureAndCreditSystems = ({
-  req,
-  featureId,
+	req,
+	featureId,
 }: {
-  req: any;
-  featureId: string;
+	req: any;
+	featureId: string;
 }) => {
-  const { features } = req;
+	const { features } = req;
 
-  const feature: Feature | undefined = features.find(
-    (feature: Feature) => feature.id === featureId
-  );
+	const feature: Feature | undefined = features.find(
+		(feature: Feature) => feature.id === featureId,
+	);
 
-  const creditSystems = getCreditSystemsFromFeature({
-    featureId,
-    features,
-  });
+	const creditSystems = getCreditSystemsFromFeature({
+		featureId,
+		features,
+	});
 
-  return { feature, creditSystems, allFeatures: features };
+	return { feature, creditSystems, allFeatures: features };
 };
 
 export const getCheckData = async ({ req }: { req: any }) => {
-  let { customer_id, feature_id, customer_data, entity_id } = req.body;
+	let { customer_id, feature_id, customer_data, entity_id } = req.body;
 
-  const { org, logger } = req;
+	const { org, logger } = req;
 
-  const { feature, creditSystems, allFeatures } = getFeatureAndCreditSystems({
-    req,
-    featureId: feature_id,
-  });
+	const { feature, creditSystems, allFeatures } = getFeatureAndCreditSystems({
+		req,
+		featureId: feature_id,
+	});
 
-  // 1. Get org and features
-  const startTime = Date.now();
+	// 1. Get org and features
+	const startTime = Date.now();
 
-  logger.info(`running /check for org: ${org.slug}, feature: ${feature_id}`);
+	logger.info(`running /check for org: ${org.slug}, feature: ${feature_id}`);
 
-  let inStatuses = org.config.include_past_due
-    ? [CusProductStatus.Active, CusProductStatus.PastDue]
-    : [CusProductStatus.Active];
+	let inStatuses = org.config.include_past_due
+		? [CusProductStatus.Active, CusProductStatus.PastDue]
+		: [CusProductStatus.Active];
 
-  const customer = await getOrCreateCustomer({
-    req,
-    customerId: customer_id,
-    customerData: customer_data,
-    inStatuses,
-    entityId: entity_id,
-    entityData: req.body.entity_data,
-    withCache: true,
-  });
+	const customer = await getOrCreateCustomer({
+		req,
+		customerId: customer_id,
+		customerData: customer_data,
+		inStatuses,
+		entityId: entity_id,
+		entityData: req.body.entity_data,
+		withCache: true,
+	});
 
-  const duration = Date.now() - startTime;
-  logger.info(`/check: fetched org, features & customer in ${duration}ms`);
+	const duration = Date.now() - startTime;
+	logger.info(`/check: fetched org, features & customer in ${duration}ms`);
 
-  if (!feature) {
-    throw new RecaseError({
-      message: `feature with id ${feature_id} not found`,
-      code: ErrCode.FeatureNotFound,
-      statusCode: StatusCodes.NOT_FOUND,
-    });
-  }
+	if (!feature) {
+		throw new RecaseError({
+			message: `feature with id ${feature_id} not found`,
+			code: ErrCode.FeatureNotFound,
+			statusCode: StatusCodes.NOT_FOUND,
+		});
+	}
 
-  let cusProducts = customer.customer_products;
+	let cusProducts = customer.customer_products;
 
-  let cusEnts = cusProductsToCusEnts({ cusProducts });
+	let cusEnts = cusProductsToCusEnts({ cusProducts });
 
-  if (customer.entity) {
-    cusEnts = cusEnts.filter((cusEnt) =>
-      cusEntMatchesEntity({
-        cusEnt,
-        entity: customer.entity!,
-        features: allFeatures,
-      })
-    );
-  }
+	if (customer.entity) {
+		cusEnts = cusEnts.filter((cusEnt) =>
+			cusEntMatchesEntity({
+				cusEnt,
+				entity: customer.entity!,
+				features: allFeatures,
+			}),
+		);
+	}
 
-  return {
-    fullCus: customer,
-    cusEnts,
-    feature,
-    creditSystems,
-    org,
-    cusProducts,
-    allFeatures,
-    entity: customer.entity,
-  };
+	return {
+		fullCus: customer,
+		cusEnts,
+		feature,
+		creditSystems,
+		org,
+		cusProducts,
+		allFeatures,
+		entity: customer.entity,
+	};
 };
 
 // const creditSystems: Feature[] = features.filter((feature: Feature) => {

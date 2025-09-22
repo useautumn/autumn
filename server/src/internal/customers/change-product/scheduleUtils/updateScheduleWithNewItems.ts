@@ -7,64 +7,64 @@ import { getFilteredScheduleItems } from "./getFilteredScheduleItems.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const updateScheduledSubWithNewItems = async ({
-  db,
-  scheduleObj,
-  newItems,
-  cusProductsForGroup,
-  stripeCli,
-  itemSet,
-  org,
-  env,
+	db,
+	scheduleObj,
+	newItems,
+	cusProductsForGroup,
+	stripeCli,
+	itemSet,
+	org,
+	env,
 }: {
-  db: DrizzleCli;
-  scheduleObj: any;
-  newItems: any[];
-  cusProductsForGroup: (FullCusProduct | undefined)[];
-  stripeCli: Stripe;
-  itemSet: ItemSet | null;
-  org: Organization;
-  env: AppEnv;
+	db: DrizzleCli;
+	scheduleObj: any;
+	newItems: any[];
+	cusProductsForGroup: (FullCusProduct | undefined)[];
+	stripeCli: Stripe;
+	itemSet: ItemSet | null;
+	org: Organization;
+	env: AppEnv;
 }) => {
-  const { schedule } = scheduleObj;
+	const { schedule } = scheduleObj;
 
-  let filteredScheduleItems = getFilteredScheduleItems({
-    scheduleObj,
-    cusProducts: cusProductsForGroup,
-  });
+	let filteredScheduleItems = getFilteredScheduleItems({
+		scheduleObj,
+		cusProducts: cusProductsForGroup,
+	});
 
-  // 2. Add new schedule items
-  let newScheduleItems = filteredScheduleItems
-    .map((item: any) => ({
-      price: item.price,
-    }))
-    .concat(
-      ...newItems.map((item: any) => ({
-        price: item.price,
-      })),
-    );
+	// 2. Add new schedule items
+	let newScheduleItems = filteredScheduleItems
+		.map((item: any) => ({
+			price: item.price,
+		}))
+		.concat(
+			...newItems.map((item: any) => ({
+				price: item.price,
+			})),
+		);
 
-  const stripeSchedule = await stripeCli.subscriptionSchedules.update(
-    schedule.id,
-    {
-      phases: [
-        {
-          items: newScheduleItems,
-          start_date: schedule.phases[0].start_date,
-        },
-      ],
-    },
-  );
+	const stripeSchedule = await stripeCli.subscriptionSchedules.update(
+		schedule.id,
+		{
+			phases: [
+				{
+					items: newScheduleItems,
+					start_date: schedule.phases[0].start_date,
+				},
+			],
+		},
+	);
 
-  // Update sub schedule ID
-  if (itemSet) {
-    await SubService.addUsageFeatures({
-      db,
-      scheduleId: scheduleObj.schedule.id,
-      usageFeatures: itemSet.usageFeatures,
-      orgId: org.id,
-      env: env,
-    });
-  }
+	// Update sub schedule ID
+	if (itemSet) {
+		await SubService.addUsageFeatures({
+			db,
+			scheduleId: scheduleObj.schedule.id,
+			usageFeatures: itemSet.usageFeatures,
+			orgId: org.id,
+			env: env,
+		});
+	}
 
-  return stripeSchedule;
+	return stripeSchedule;
 };

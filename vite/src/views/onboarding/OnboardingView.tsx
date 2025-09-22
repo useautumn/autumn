@@ -24,142 +24,142 @@ import { useSession } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 function OnboardingView() {
-  const env = useEnv();
+	const env = useEnv();
 
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get("token");
-  const [apiKey, setApiKey] = useState("");
-  const [showIntegrationSteps, setShowIntegrationSteps] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const { data } = useSession();
+	const [searchParams] = useSearchParams();
+	const token = searchParams.get("token");
+	const [apiKey, setApiKey] = useState("");
+	const [showIntegrationSteps, setShowIntegrationSteps] = useState(false);
+	const [loading, setLoading] = useState(true);
+	const { data } = useSession();
 
-  const axiosInstance = useAxiosInstance();
-  const hasHandledToken = useRef(false);
+	const axiosInstance = useAxiosInstance();
+	const hasHandledToken = useRef(false);
 
-  const orgId = data?.session?.activeOrganizationId;
+	const orgId = data?.session?.activeOrganizationId;
 
-  const {
-    data: productData,
-    mutate: productMutate,
-    isLoading: productLoading,
-  } = useAxiosSWR({
-    url: `/products/data`,
-    env: env,
-    withAuth: true,
-  });
+	const {
+		data: productData,
+		mutate: productMutate,
+		isLoading: productLoading,
+	} = useAxiosSWR({
+		url: `/products/data`,
+		env: env,
+		withAuth: true,
+	});
 
-  useEffect(() => {
-    const handleToken = async () => {
-      try {
-        await axiosInstance.post("/onboarding", {
-          token,
-        });
+	useEffect(() => {
+		const handleToken = async () => {
+			try {
+				await axiosInstance.post("/onboarding", {
+					token,
+				});
 
-        await productMutate();
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    };
+				await productMutate();
+			} catch (error) {
+				console.error(error);
+			} finally {
+				setLoading(false);
+			}
+		};
 
-    if (token && !hasHandledToken.current) {
-      hasHandledToken.current = true;
-      handleToken();
-    }
-  }, [searchParams, token, axiosInstance, productMutate]);
+		if (token && !hasHandledToken.current) {
+			hasHandledToken.current = true;
+			handleToken();
+		}
+	}, [searchParams, token, axiosInstance, productMutate]);
 
-  useEffect(() => {
-    if (orgId && !token) {
-      setLoading(false);
-    }
-  }, [orgId, token]);
+	useEffect(() => {
+		if (orgId && !token) {
+			setLoading(false);
+		}
+	}, [orgId, token]);
 
-  if (loading || productLoading) {
-    return <LoadingScreen />;
-  }
+	if (loading || productLoading) {
+		return <LoadingScreen />;
+	}
 
-  return (
-    <div className="text-sm w-full flex justify-start">
-      <div className="flex flex-col p-8 px-14">
-        {productData && (
-          <>
-            <ProductList data={productData} mutate={productMutate} />
-            <ConnectStripeStep
-              mutate={productMutate}
-              productData={productData}
-              number={2}
-            />
-            <AutumnProvider
-              backendUrl={`${import.meta.env.VITE_BACKEND_URL}/demo`}
-            >
-              <SampleApp data={productData} mutate={productMutate} number={3} />
-            </AutumnProvider>
-            <IntegrationGuideStep
-              number={4}
-              showIntegrationSteps={showIntegrationSteps}
-              setShowIntegrationSteps={setShowIntegrationSteps}
-            />
+	return (
+		<div className="text-sm w-full flex justify-start">
+			<div className="flex flex-col p-8 px-14">
+				{productData && (
+					<>
+						<ProductList data={productData} mutate={productMutate} />
+						<ConnectStripeStep
+							mutate={productMutate}
+							productData={productData}
+							number={2}
+						/>
+						<AutumnProvider
+							backendUrl={`${import.meta.env.VITE_BACKEND_URL}/demo`}
+						>
+							<SampleApp data={productData} mutate={productMutate} number={3} />
+						</AutumnProvider>
+						<IntegrationGuideStep
+							number={4}
+							showIntegrationSteps={showIntegrationSteps}
+							setShowIntegrationSteps={setShowIntegrationSteps}
+						/>
 
-            {showIntegrationSteps && (
-              <div className="flex flex-col animate-in fade-in-0 duration-500">
-                <CreateSecretKey
-                  apiKey={apiKey}
-                  setApiKey={setApiKey}
-                  number={5}
-                />
-                <Install number={6} />
+						{showIntegrationSteps && (
+							<div className="flex flex-col animate-in fade-in-0 duration-500">
+								<CreateSecretKey
+									apiKey={apiKey}
+									setApiKey={setApiKey}
+									number={5}
+								/>
+								<Install number={6} />
 
-                <EnvStep number={7} />
+								<EnvStep number={7} />
 
-                <MountHandler number={8} />
+								<MountHandler number={8} />
 
-                <AutumnProviderStep number={9} />
+								<AutumnProviderStep number={9} />
 
-                <AttachProduct
-                  products={productData.products}
-                  apiKey={apiKey}
-                  number={10}
-                />
+								<AttachProduct
+									products={productData.products}
+									apiKey={apiKey}
+									number={10}
+								/>
 
-                <CheckAccessStep
-                  apiKey={apiKey}
-                  features={productData.features}
-                  products={productData.products}
-                  number={11}
-                />
+								<CheckAccessStep
+									apiKey={apiKey}
+									features={productData.features}
+									products={productData.products}
+									number={11}
+								/>
 
-                <Step
-                  title="Done!"
-                  number={12}
-                  description={
-                    <p>
-                      You&apos;re all set! Autumn is tracking your customers'
-                      usage, what they have access to and how much they should
-                      be billed. <br /> <br /> Go to the Customers tab to manage
-                      your users, and read our{" "}
-                      <a
-                        className="text-primary underline font-semibold break-none"
-                        href="https://docs.useautumn.com"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Documentation
-                        <Book size={12} className="inline ml-1" />
-                      </a>{" "}
-                      to learn more about what you can do with Autumn.
-                    </p>
-                  }
-                >
-                  <div></div>
-                </Step>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  );
+								<Step
+									title="Done!"
+									number={12}
+									description={
+										<p>
+											You&apos;re all set! Autumn is tracking your customers'
+											usage, what they have access to and how much they should
+											be billed. <br /> <br /> Go to the Customers tab to manage
+											your users, and read our{" "}
+											<a
+												className="text-primary underline font-semibold break-none"
+												href="https://docs.useautumn.com"
+												target="_blank"
+												rel="noopener noreferrer"
+											>
+												Documentation
+												<Book size={12} className="inline ml-1" />
+											</a>{" "}
+											to learn more about what you can do with Autumn.
+										</p>
+									}
+								>
+									<div></div>
+								</Step>
+							</div>
+						)}
+					</>
+				)}
+			</div>
+		</div>
+	);
 }
 
 export default OnboardingView;

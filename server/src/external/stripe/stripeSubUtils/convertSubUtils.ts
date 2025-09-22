@@ -1,67 +1,67 @@
 import Stripe from "stripe";
 
 export const getLatestPeriodEnd = ({
-  sub,
-  subItems,
+	sub,
+	subItems,
 }: {
-  sub?: Stripe.Subscription;
-  subItems?: Stripe.SubscriptionItem[];
+	sub?: Stripe.Subscription;
+	subItems?: Stripe.SubscriptionItem[];
 }) => {
-  if (!subItems) {
-    subItems = sub?.items.data || [];
-  }
-  if (subItems.length == 0) {
-    return Date.now();
-  }
+	if (!subItems) {
+		subItems = sub?.items.data || [];
+	}
+	if (subItems.length == 0) {
+		return Date.now();
+	}
 
-  return subItems.reduce((acc, item) => {
-    return Math.max(acc, item.current_period_end);
-  }, subItems[0].current_period_end);
+	return subItems.reduce((acc, item) => {
+		return Math.max(acc, item.current_period_end);
+	}, subItems[0].current_period_end);
 };
 
 export const getEarliestPeriodEnd = ({ sub }: { sub: Stripe.Subscription }) => {
-  if (sub.items.data.length == 0) {
-    return Date.now();
-  }
+	if (sub.items.data.length == 0) {
+		return Date.now();
+	}
 
-  return sub.items.data.reduce((acc, item) => {
-    return Math.min(acc, item.current_period_end);
-  }, sub.items.data[0].current_period_end);
+	return sub.items.data.reduce((acc, item) => {
+		return Math.min(acc, item.current_period_end);
+	}, sub.items.data[0].current_period_end);
 };
 
 export const getEarliestPeriodStart = ({
-  sub,
+	sub,
 }: {
-  sub: Stripe.Subscription;
+	sub: Stripe.Subscription;
 }) => {
-  if (sub.items.data.length == 0) {
-    return Date.now();
-  }
+	if (sub.items.data.length == 0) {
+		return Date.now();
+	}
 
-  return sub.items.data.reduce((acc, item) => {
-    return Math.min(acc, item.current_period_start);
-  }, sub.items.data[0].current_period_start);
+	return sub.items.data.reduce((acc, item) => {
+		return Math.min(acc, item.current_period_start);
+	}, sub.items.data[0].current_period_start);
 };
 export const getLatestPeriodStart = ({ sub }: { sub: Stripe.Subscription }) => {
-  if (sub.items.data.length == 0) {
-    return Date.now();
-  }
+	if (sub.items.data.length == 0) {
+		return Date.now();
+	}
 
-  return sub.items.data.reduce((acc, item) => {
-    return Math.max(acc, item.current_period_start);
-  }, sub.items.data[0].current_period_start);
+	return sub.items.data.reduce((acc, item) => {
+		return Math.max(acc, item.current_period_start);
+	}, sub.items.data[0].current_period_start);
 };
 
 export const subToPeriodStartEnd = ({ sub }: { sub?: Stripe.Subscription }) => {
-  if (!sub || sub.items.data.length == 0) {
-    return {
-      start: Date.now(),
-      end: Date.now(),
-    };
-  }
+	if (!sub || sub.items.data.length == 0) {
+		return {
+			start: Date.now(),
+			end: Date.now(),
+		};
+	}
 
-  return {
-    start: getLatestPeriodStart({ sub }),
-    end: getEarliestPeriodEnd({ sub }),
-  };
+	return {
+		start: getLatestPeriodStart({ sub }),
+		end: getEarliestPeriodEnd({ sub }),
+	};
 };

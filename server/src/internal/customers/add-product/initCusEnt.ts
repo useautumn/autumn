@@ -1,16 +1,16 @@
 import {
-  AllowanceType,
-  AttachReplaceable,
-  BillingType,
-  Customer,
-  Entity,
-  EntityBalance,
-  FeatureType,
-  FreeTrial,
-  FullCusProduct,
-  FullCustomerEntitlement,
-  Price,
-  ProductOptions,
+	AllowanceType,
+	AttachReplaceable,
+	BillingType,
+	Customer,
+	Entity,
+	EntityBalance,
+	FeatureType,
+	FreeTrial,
+	FullCusProduct,
+	FullCustomerEntitlement,
+	Price,
+	ProductOptions,
 } from "@autumn/shared";
 
 import { FeatureOptions } from "@autumn/shared";
@@ -24,187 +24,187 @@ import { initNextResetAt } from "../cusProducts/insertCusProduct/initCusEnt/init
 import { Decimal } from "decimal.js";
 
 export const initCusEntEntities = ({
-  entitlement,
-  entities,
-  existingCusEnt,
-  resetBalance,
+	entitlement,
+	entities,
+	existingCusEnt,
+	resetBalance,
 }: {
-  entitlement: EntitlementWithFeature;
-  entities: Entity[];
-  existingCusEnt?: FullCustomerEntitlement;
-  resetBalance?: number | null;
+	entitlement: EntitlementWithFeature;
+	entities: Entity[];
+	existingCusEnt?: FullCustomerEntitlement;
+	resetBalance?: number | null;
 }) => {
-  let newEntities: Record<string, EntityBalance> | null = notNullish(
-    entitlement.entity_feature_id
-  )
-    ? {}
-    : null;
+	let newEntities: Record<string, EntityBalance> | null = notNullish(
+		entitlement.entity_feature_id,
+	)
+		? {}
+		: null;
 
-  for (const entity of entities) {
-    if (!entitlementLinkedToEntity({ entitlement, entity })) {
-      continue;
-    }
+	for (const entity of entities) {
+		if (!entitlementLinkedToEntity({ entitlement, entity })) {
+			continue;
+		}
 
-    if (
-      existingCusEnt &&
-      existingCusEnt.entities &&
-      existingCusEnt.entities[entity.id]
-    ) {
-      continue;
-    }
+		if (
+			existingCusEnt &&
+			existingCusEnt.entities &&
+			existingCusEnt.entities[entity.id]
+		) {
+			continue;
+		}
 
-    if (!newEntities) {
-      newEntities = {};
-    }
+		if (!newEntities) {
+			newEntities = {};
+		}
 
-    newEntities[entity.id] = {
-      id: entity.id,
-      balance: resetBalance || 0,
-      adjustment: 0,
-    };
-  }
+		newEntities[entity.id] = {
+			id: entity.id,
+			balance: resetBalance || 0,
+			adjustment: 0,
+		};
+	}
 
-  return newEntities;
+	return newEntities;
 };
 
 const initCusEntBalance = ({
-  entitlement,
-  curCusProduct,
+	entitlement,
+	curCusProduct,
 
-  options,
-  relatedPrice,
-  // existingCusEnt,
-  entities,
-  carryExistingUsages = false,
+	options,
+	relatedPrice,
+	// existingCusEnt,
+	entities,
+	carryExistingUsages = false,
 }: {
-  entitlement: EntitlementWithFeature;
-  curCusProduct?: FullCusProduct;
+	entitlement: EntitlementWithFeature;
+	curCusProduct?: FullCusProduct;
 
-  options?: FeatureOptions;
-  relatedPrice?: Price;
-  // existingCusEnt?: FullCustomerEntitlement;
-  entities: Entity[];
-  carryExistingUsages?: boolean;
+	options?: FeatureOptions;
+	relatedPrice?: Price;
+	// existingCusEnt?: FullCustomerEntitlement;
+	entities: Entity[];
+	carryExistingUsages?: boolean;
 }) => {
-  if (entitlement.feature.type === FeatureType.Boolean) {
-    return { newBalance: null, newEntities: null };
-  }
+	if (entitlement.feature.type === FeatureType.Boolean) {
+		return { newBalance: null, newEntities: null };
+	}
 
-  const resetBalance = getResetBalance({
-    entitlement,
-    options,
-    relatedPrice,
-  });
+	const resetBalance = getResetBalance({
+		entitlement,
+		options,
+		relatedPrice,
+	});
 
-  let newEntities: Record<string, EntityBalance> | null = initCusEntEntities({
-    entitlement,
-    entities,
-    resetBalance,
-  });
+	let newEntities: Record<string, EntityBalance> | null = initCusEntEntities({
+		entitlement,
+		entities,
+		resetBalance,
+	});
 
-  return { newBalance: resetBalance, newEntities };
+	return { newBalance: resetBalance, newEntities };
 };
 
 // MAIN FUNCTION
 export const initCusEntitlement = ({
-  entitlement,
-  customer,
-  cusProductId,
-  freeTrial,
-  options,
-  nextResetAt,
-  relatedPrice,
-  // existingCusEnt,
-  // keepResetIntervals = false,
-  trialEndsAt,
-  anchorToUnix,
-  entities,
-  carryExistingUsages = false,
-  curCusProduct,
-  replaceables,
-  now,
-  productOptions,
+	entitlement,
+	customer,
+	cusProductId,
+	freeTrial,
+	options,
+	nextResetAt,
+	relatedPrice,
+	// existingCusEnt,
+	// keepResetIntervals = false,
+	trialEndsAt,
+	anchorToUnix,
+	entities,
+	carryExistingUsages = false,
+	curCusProduct,
+	replaceables,
+	now,
+	productOptions,
 }: {
-  entitlement: EntitlementWithFeature;
-  customer: Customer;
-  cusProductId: string;
-  freeTrial: FreeTrial | null;
-  options?: FeatureOptions;
-  nextResetAt?: number;
-  relatedPrice?: Price;
-  // existingCusEnt?: FullCustomerEntitlement;
-  // keepResetIntervals?: boolean;
-  trialEndsAt?: number;
-  anchorToUnix?: number;
-  entities: Entity[];
-  carryExistingUsages?: boolean;
-  curCusProduct?: FullCusProduct;
-  replaceables: AttachReplaceable[];
-  now?: number;
-  productOptions?: ProductOptions;
+	entitlement: EntitlementWithFeature;
+	customer: Customer;
+	cusProductId: string;
+	freeTrial: FreeTrial | null;
+	options?: FeatureOptions;
+	nextResetAt?: number;
+	relatedPrice?: Price;
+	// existingCusEnt?: FullCustomerEntitlement;
+	// keepResetIntervals?: boolean;
+	trialEndsAt?: number;
+	anchorToUnix?: number;
+	entities: Entity[];
+	carryExistingUsages?: boolean;
+	curCusProduct?: FullCusProduct;
+	replaceables: AttachReplaceable[];
+	now?: number;
+	productOptions?: ProductOptions;
 }) => {
-  now = now || Date.now();
-  let { newBalance, newEntities } = initCusEntBalance({
-    entitlement,
-    options,
-    relatedPrice,
-    entities,
-    carryExistingUsages,
-    curCusProduct,
-  });
+	now = now || Date.now();
+	let { newBalance, newEntities } = initCusEntBalance({
+		entitlement,
+		options,
+		relatedPrice,
+		entities,
+		carryExistingUsages,
+		curCusProduct,
+	});
 
-  newBalance =
-    (newBalance || 0) -
-    replaceables.filter((r) => r.ent.id === entitlement.id).length;
+	newBalance =
+		(newBalance || 0) -
+		replaceables.filter((r) => r.ent.id === entitlement.id).length;
 
-  let nextResetAtValue = initNextResetAt({
-    entitlement,
-    nextResetAt,
-    // keepResetIntervals,
-    // existingCusEnt,
-    trialEndsAt,
-    freeTrial,
-    anchorToUnix,
-    now,
-  });
+	let nextResetAtValue = initNextResetAt({
+		entitlement,
+		nextResetAt,
+		// keepResetIntervals,
+		// existingCusEnt,
+		trialEndsAt,
+		freeTrial,
+		anchorToUnix,
+		now,
+	});
 
-  // 3. Define expires at (TODO next time...)
-  let isBooleanFeature = entitlement.feature.type === FeatureType.Boolean;
-  let usageAllowed = false;
+	// 3. Define expires at (TODO next time...)
+	let isBooleanFeature = entitlement.feature.type === FeatureType.Boolean;
+	let usageAllowed = false;
 
-  if (
-    relatedPrice &&
-    (getBillingType(relatedPrice.config!) === BillingType.UsageInArrear ||
-      getBillingType(relatedPrice.config!) === BillingType.InArrearProrated)
-  ) {
-    usageAllowed = true;
-  }
+	if (
+		relatedPrice &&
+		(getBillingType(relatedPrice.config!) === BillingType.UsageInArrear ||
+			getBillingType(relatedPrice.config!) === BillingType.InArrearProrated)
+	) {
+		usageAllowed = true;
+	}
 
-  if (notNullish(productOptions?.quantity) && notNullish(newBalance)) {
-    newBalance = new Decimal(newBalance!)
-      .mul(productOptions?.quantity!)
-      .toNumber();
-  }
+	if (notNullish(productOptions?.quantity) && notNullish(newBalance)) {
+		newBalance = new Decimal(newBalance!)
+			.mul(productOptions?.quantity!)
+			.toNumber();
+	}
 
-  return {
-    id: generateId("cus_ent"),
-    internal_customer_id: customer.internal_id,
-    internal_feature_id: entitlement.internal_feature_id,
-    feature_id: entitlement.feature_id,
-    customer_id: customer.id,
+	return {
+		id: generateId("cus_ent"),
+		internal_customer_id: customer.internal_id,
+		internal_feature_id: entitlement.internal_feature_id,
+		feature_id: entitlement.feature_id,
+		customer_id: customer.id,
 
-    // Foreign keys
-    entitlement_id: entitlement.id,
-    customer_product_id: cusProductId,
-    created_at: Date.now(),
+		// Foreign keys
+		entitlement_id: entitlement.id,
+		customer_product_id: cusProductId,
+		created_at: Date.now(),
 
-    // Entitlement fields
-    unlimited: isBooleanFeature
-      ? null
-      : entitlement.allowance_type === AllowanceType.Unlimited,
-    balance: newBalance || 0,
-    entities: newEntities,
-    usage_allowed: usageAllowed,
-    next_reset_at: nextResetAtValue,
-  };
+		// Entitlement fields
+		unlimited: isBooleanFeature
+			? null
+			: entitlement.allowance_type === AllowanceType.Unlimited,
+		balance: newBalance || 0,
+		entities: newEntities,
+		usage_allowed: usageAllowed,
+		next_reset_at: nextResetAtValue,
+	};
 };

@@ -1,16 +1,16 @@
 import {
-  FullCusEntWithFullCusProduct,
-  FullCustomerPrice,
-  InsertReplaceable,
-  OnDecrease,
+	FullCusEntWithFullCusProduct,
+	FullCustomerPrice,
+	InsertReplaceable,
+	OnDecrease,
 } from "@autumn/shared";
 import Stripe from "stripe";
 
 import {
-  Feature,
-  Organization,
-  Product,
-  UsagePriceConfig,
+	Feature,
+	Organization,
+	Product,
+	UsagePriceConfig,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { getFeatureInvoiceDescription } from "@autumn/shared";
@@ -26,210 +26,210 @@ import { roundUsage } from "@/internal/products/prices/priceUtils/usagePriceUtil
 import { getReplaceables } from "@/internal/products/prices/priceUtils/arrearProratedUtils/getContUsageDowngradeItem.js";
 import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService.js";
 import {
-  shouldBillNow,
-  shouldProrate,
+	shouldBillNow,
+	shouldProrate,
 } from "@/internal/products/prices/priceUtils/prorationConfigUtils.js";
 
 export const createDowngradeProrationInvoice = async ({
-  org,
-  cusPrice,
-  stripeCli,
-  sub,
-  subItem,
-  newPrice,
-  prevPrice,
-  newRoundedUsage,
-  feature,
-  product,
-  onDecrease,
-  logger,
+	org,
+	cusPrice,
+	stripeCli,
+	sub,
+	subItem,
+	newPrice,
+	prevPrice,
+	newRoundedUsage,
+	feature,
+	product,
+	onDecrease,
+	logger,
 }: {
-  org: Organization;
-  cusPrice: FullCustomerPrice;
-  stripeCli: Stripe;
-  sub: Stripe.Subscription;
-  subItem: Stripe.SubscriptionItem;
-  newPrice: number;
-  prevPrice: number;
-  newRoundedUsage: number;
-  feature: Feature;
-  product: Product;
-  onDecrease: OnDecrease;
-  logger: any;
+	org: Organization;
+	cusPrice: FullCustomerPrice;
+	stripeCli: Stripe;
+	sub: Stripe.Subscription;
+	subItem: Stripe.SubscriptionItem;
+	newPrice: number;
+	prevPrice: number;
+	newRoundedUsage: number;
+	feature: Feature;
+	product: Product;
+	onDecrease: OnDecrease;
+	logger: any;
 }) => {
-  const config = cusPrice.price.config as UsagePriceConfig;
+	const config = cusPrice.price.config as UsagePriceConfig;
 
-  let now = await getStripeNow({ stripeCli, stripeSub: sub });
-  let invoiceAmount = new Decimal(newPrice).minus(prevPrice).toNumber();
+	let now = await getStripeNow({ stripeCli, stripeSub: sub });
+	let invoiceAmount = new Decimal(newPrice).minus(prevPrice).toNumber();
 
-  logger.info(`Prev price: ${prevPrice}, New price: ${newPrice}`);
-  logger.info(`Invoice amount: ${invoiceAmount}`);
+	logger.info(`Prev price: ${prevPrice}, New price: ${newPrice}`);
+	logger.info(`Invoice amount: ${invoiceAmount}`);
 
-  let invoiceDescription = getFeatureInvoiceDescription({
-    feature,
-    usage: newRoundedUsage,
-    billingUnits: config.billing_units,
-    prodName: product.name,
-  });
+	let invoiceDescription = getFeatureInvoiceDescription({
+		feature,
+		usage: newRoundedUsage,
+		billingUnits: config.billing_units,
+		prodName: product.name,
+	});
 
-  invoiceAmount = calculateProrationAmount({
-    periodStart: subItem.current_period_start * 1000,
-    periodEnd: subItem.current_period_end * 1000,
-    now,
-    amount: invoiceAmount,
-    allowNegative: true,
-  });
+	invoiceAmount = calculateProrationAmount({
+		periodStart: subItem.current_period_start * 1000,
+		periodEnd: subItem.current_period_end * 1000,
+		now,
+		amount: invoiceAmount,
+		allowNegative: true,
+	});
 
-  let start = formatUnixToDate(now);
-  let end = formatUnixToDate(subItem.current_period_end * 1000);
-  invoiceDescription = `${invoiceDescription} (from ${start} to ${end})`;
+	let start = formatUnixToDate(now);
+	let end = formatUnixToDate(subItem.current_period_end * 1000);
+	invoiceDescription = `${invoiceDescription} (from ${start} to ${end})`;
 
-  if (invoiceAmount == 0) return;
+	if (invoiceAmount == 0) return;
 
-  logger.info(
-    `🚀 Creating invoice item: ${invoiceDescription} - ${invoiceAmount.toFixed(2)}`
-  );
+	logger.info(
+		`🚀 Creating invoice item: ${invoiceDescription} - ${invoiceAmount.toFixed(2)}`,
+	);
 
-  const invoiceItem = constructStripeInvoiceItem({
-    product,
-    amount: invoiceAmount,
-    org,
-    price: cusPrice.price,
-    description: invoiceDescription,
-    stripeSubId: sub.id,
-    stripeCustomerId: sub.customer as string,
-    periodStart: Math.floor(now / 1000),
-    periodEnd: Math.floor(subItem.current_period_end * 1000),
-  });
+	const invoiceItem = constructStripeInvoiceItem({
+		product,
+		amount: invoiceAmount,
+		org,
+		price: cusPrice.price,
+		description: invoiceDescription,
+		stripeSubId: sub.id,
+		stripeCustomerId: sub.customer as string,
+		periodStart: Math.floor(now / 1000),
+		periodEnd: Math.floor(subItem.current_period_end * 1000),
+	});
 
-  await stripeCli.invoiceItems.create(invoiceItem);
-  let invoice = null;
+	await stripeCli.invoiceItems.create(invoiceItem);
+	let invoice = null;
 
-  if (shouldBillNow(onDecrease)) {
-    const { invoice: finalInvoice } = await createAndFinalizeInvoice({
-      stripeCli,
-      paymentMethod: null,
-      stripeCusId: sub.customer as string,
-      stripeSubId: sub.id,
-      logger,
-    });
+	if (shouldBillNow(onDecrease)) {
+		const { invoice: finalInvoice } = await createAndFinalizeInvoice({
+			stripeCli,
+			paymentMethod: null,
+			stripeCusId: sub.customer as string,
+			stripeSubId: sub.id,
+			logger,
+		});
 
-    invoice = finalInvoice;
-  }
+		invoice = finalInvoice;
+	}
 
-  return invoice;
+	return invoice;
 };
 
 export const handleProratedDowngrade = async ({
-  db,
-  org,
-  stripeCli,
-  cusEnt,
-  cusPrice,
-  sub,
-  subItem,
-  newBalance,
-  prevBalance,
-  logger,
+	db,
+	org,
+	stripeCli,
+	cusEnt,
+	cusPrice,
+	sub,
+	subItem,
+	newBalance,
+	prevBalance,
+	logger,
 }: {
-  db: DrizzleCli;
-  org: Organization;
-  stripeCli: Stripe;
-  cusEnt: FullCusEntWithFullCusProduct;
-  cusPrice: FullCustomerPrice;
-  sub: Stripe.Subscription;
-  subItem: Stripe.SubscriptionItem;
-  newBalance: number;
-  prevBalance: number;
-  logger: any;
+	db: DrizzleCli;
+	org: Organization;
+	stripeCli: Stripe;
+	cusEnt: FullCusEntWithFullCusProduct;
+	cusPrice: FullCustomerPrice;
+	sub: Stripe.Subscription;
+	subItem: Stripe.SubscriptionItem;
+	newBalance: number;
+	prevBalance: number;
+	logger: any;
 }) => {
-  logger.info(`Handling quantity decrease`);
+	logger.info(`Handling quantity decrease`);
 
-  const { overage: prevOverage, usage: prevUsage } = getUsageFromBalance({
-    ent: cusEnt.entitlement,
-    price: cusPrice.price,
-    balance: prevBalance,
-  });
+	const { overage: prevOverage, usage: prevUsage } = getUsageFromBalance({
+		ent: cusEnt.entitlement,
+		price: cusPrice.price,
+		balance: prevBalance,
+	});
 
-  const { overage: newOverage, usage: newUsage } = getUsageFromBalance({
-    ent: cusEnt.entitlement,
-    price: cusPrice.price,
-    balance: newBalance,
-  });
+	const { overage: newOverage, usage: newUsage } = getUsageFromBalance({
+		ent: cusEnt.entitlement,
+		price: cusPrice.price,
+		balance: newBalance,
+	});
 
-  let onDecrease =
-    cusPrice.price.proration_config?.on_decrease ||
-    OnDecrease.ProrateImmediately;
+	let onDecrease =
+		cusPrice.price.proration_config?.on_decrease ||
+		OnDecrease.ProrateImmediately;
 
-  const feature = cusEnt.entitlement.feature;
-  const product = cusEnt.customer_product.product;
+	const feature = cusEnt.entitlement.feature;
+	const product = cusEnt.customer_product.product;
 
-  let invoice = null;
-  let newReplaceables: InsertReplaceable[] = [];
+	let invoice = null;
+	let newReplaceables: InsertReplaceable[] = [];
 
-  if (onDecrease == OnDecrease.NoProrations) {
-  } else if (shouldProrate(onDecrease)) {
-    let prevPrice = priceToInvoiceAmount({
-      price: cusPrice.price,
-      overage: roundUsage({
-        usage: prevOverage,
-        price: cusPrice.price,
-      }),
-    });
+	if (onDecrease == OnDecrease.NoProrations) {
+	} else if (shouldProrate(onDecrease)) {
+		let prevPrice = priceToInvoiceAmount({
+			price: cusPrice.price,
+			overage: roundUsage({
+				usage: prevOverage,
+				price: cusPrice.price,
+			}),
+		});
 
-    let newPrice = priceToInvoiceAmount({
-      price: cusPrice.price,
-      overage: roundUsage({
-        usage: newOverage,
-        price: cusPrice.price,
-      }),
-    });
+		let newPrice = priceToInvoiceAmount({
+			price: cusPrice.price,
+			overage: roundUsage({
+				usage: newOverage,
+				price: cusPrice.price,
+			}),
+		});
 
-    invoice = await createDowngradeProrationInvoice({
-      org,
-      cusPrice,
-      stripeCli,
-      sub,
-      subItem,
-      newPrice,
-      prevPrice,
-      newRoundedUsage: roundUsage({
-        usage: newUsage,
-        price: cusPrice.price,
-      }),
-      feature,
-      product,
-      onDecrease,
-      logger,
-    });
-  } else {
-    if (prevOverage > 0) {
-      newReplaceables = getReplaceables({
-        cusEnt,
-        prevOverage: prevUsage,
-        newOverage: newUsage,
-      });
+		invoice = await createDowngradeProrationInvoice({
+			org,
+			cusPrice,
+			stripeCli,
+			sub,
+			subItem,
+			newPrice,
+			prevPrice,
+			newRoundedUsage: roundUsage({
+				usage: newUsage,
+				price: cusPrice.price,
+			}),
+			feature,
+			product,
+			onDecrease,
+			logger,
+		});
+	} else {
+		if (prevOverage > 0) {
+			newReplaceables = getReplaceables({
+				cusEnt,
+				prevOverage: prevUsage,
+				newOverage: newUsage,
+			});
 
-      await RepService.insert({
-        db,
-        data: newReplaceables,
-      });
-    }
-  }
+			await RepService.insert({
+				db,
+				data: newReplaceables,
+			});
+		}
+	}
 
-  let numDeletedReplaceables = cusEnt.replaceables.filter(
-    (r) => r.delete_next_cycle
-  ).length;
-  let newQuantity = newUsage - numDeletedReplaceables;
+	let numDeletedReplaceables = cusEnt.replaceables.filter(
+		(r) => r.delete_next_cycle,
+	).length;
+	let newQuantity = newUsage - numDeletedReplaceables;
 
-  await stripeCli.subscriptionItems.update(subItem.id, {
-    quantity: roundUsage({
-      usage: newQuantity,
-      price: cusPrice.price,
-    }),
-    proration_behavior: "none",
-  });
-  logger.info(`Updated sub item quantity to ${newUsage}`);
+	await stripeCli.subscriptionItems.update(subItem.id, {
+		quantity: roundUsage({
+			usage: newQuantity,
+			price: cusPrice.price,
+		}),
+		proration_behavior: "none",
+	});
+	logger.info(`Updated sub item quantity to ${newUsage}`);
 
-  return { invoice, newReplaceables, deletedReplaceables: null };
+	return { invoice, newReplaceables, deletedReplaceables: null };
 };

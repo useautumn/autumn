@@ -17,117 +17,117 @@ import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js"
 const testCase = "upgrade5";
 
 export let pro = constructProduct({
-  items: [
-    constructPrepaidItem({
-      featureId: TestFeature.Messages,
-      price: 12,
-      billingUnits: 100,
-    }),
-  ],
-  type: "pro",
+	items: [
+		constructPrepaidItem({
+			featureId: TestFeature.Messages,
+			price: 12,
+			billingUnits: 100,
+		}),
+	],
+	type: "pro",
 });
 
 export let premium = constructProduct({
-  items: [
-    constructPrepaidItem({
-      featureId: TestFeature.Messages,
-      price: 8,
-      billingUnits: 100,
-    }),
-  ],
-  type: "premium",
+	items: [
+		constructPrepaidItem({
+			featureId: TestFeature.Messages,
+			price: 8,
+			billingUnits: 100,
+		}),
+	],
+	type: "premium",
 });
 
 describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with prepaid single use`)}`, () => {
-  let customerId = testCase;
-  let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
-  let testClockId: string;
-  let db: DrizzleCli, org: Organization, env: AppEnv;
-  let stripeCli: Stripe;
+	let customerId = testCase;
+	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	let testClockId: string;
+	let db: DrizzleCli, org: Organization, env: AppEnv;
+	let stripeCli: Stripe;
 
-  let curUnix = new Date().getTime();
-  let numUsers = 0;
+	let curUnix = new Date().getTime();
+	let numUsers = 0;
 
-  before(async function () {
-    await setupBefore(this);
-    const { autumnJs } = this;
-    db = this.db;
-    org = this.org;
-    env = this.env;
+	before(async function () {
+		await setupBefore(this);
+		const { autumnJs } = this;
+		db = this.db;
+		org = this.org;
+		env = this.env;
 
-    stripeCli = this.stripeCli;
+		stripeCli = this.stripeCli;
 
-    const { testClockId: testClockId1 } = await initCustomer({
-      autumn: autumnJs,
-      customerId,
-      db,
-      org,
-      env,
-      attachPm: "success",
-    });
+		const { testClockId: testClockId1 } = await initCustomer({
+			autumn: autumnJs,
+			customerId,
+			db,
+			org,
+			env,
+			attachPm: "success",
+		});
 
-    addPrefixToProducts({
-      products: [pro, premium],
-      prefix: testCase,
-    });
+		addPrefixToProducts({
+			products: [pro, premium],
+			prefix: testCase,
+		});
 
-    await createProducts({
-      autumn,
-      products: [pro, premium],
-      db,
-      orgId: org.id,
-      env,
-    });
+		await createProducts({
+			autumn,
+			products: [pro, premium],
+			db,
+			orgId: org.id,
+			env,
+		});
 
-    testClockId = testClockId1!;
-  });
+		testClockId = testClockId1!;
+	});
 
-  const proOpts = [
-    {
-      feature_id: TestFeature.Messages,
-      quantity: 300,
-    },
-  ];
+	const proOpts = [
+		{
+			feature_id: TestFeature.Messages,
+			quantity: 300,
+		},
+	];
 
-  it("should attach pro product (prepaid single use)", async function () {
-    await attachAndExpectCorrect({
-      autumn,
-      customerId,
-      product: pro,
-      stripeCli,
-      db,
-      org,
-      env,
-      options: proOpts,
-    });
-  });
+	it("should attach pro product (prepaid single use)", async function () {
+		await attachAndExpectCorrect({
+			autumn,
+			customerId,
+			product: pro,
+			stripeCli,
+			db,
+			org,
+			env,
+			options: proOpts,
+		});
+	});
 
-  const premiumOpts = [
-    {
-      feature_id: TestFeature.Messages,
-      quantity: 600,
-    },
-  ];
+	const premiumOpts = [
+		{
+			feature_id: TestFeature.Messages,
+			quantity: 600,
+		},
+	];
 
-  it("should upgrade to premium product (prepaid single use)", async function () {
-    curUnix = await advanceTestClock({
-      stripeCli,
-      testClockId,
-      advanceTo: addWeeks(curUnix, 1).getTime(),
-      waitForSeconds: 20,
-    });
+	it("should upgrade to premium product (prepaid single use)", async function () {
+		curUnix = await advanceTestClock({
+			stripeCli,
+			testClockId,
+			advanceTo: addWeeks(curUnix, 1).getTime(),
+			waitForSeconds: 20,
+		});
 
-    return;
+		return;
 
-    await attachAndExpectCorrect({
-      autumn,
-      customerId,
-      product: premium,
-      stripeCli,
-      db,
-      org,
-      env,
-      options: premiumOpts,
-    });
-  });
+		await attachAndExpectCorrect({
+			autumn,
+			customerId,
+			product: premium,
+			stripeCli,
+			db,
+			org,
+			env,
+			options: premiumOpts,
+		});
+	});
 });

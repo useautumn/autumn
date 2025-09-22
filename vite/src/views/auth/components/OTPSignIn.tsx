@@ -1,9 +1,9 @@
 import { Button } from "@/components/ui/button";
 import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSeparator,
-  InputOTPSlot,
+	InputOTP,
+	InputOTPGroup,
+	InputOTPSeparator,
+	InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
@@ -13,123 +13,123 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
 export const OTPSignIn = ({
-  email,
-  newPath,
-  callbackPath,
+	email,
+	newPath,
+	callbackPath,
 }: {
-  email: string;
-  newPath: string;
-  callbackPath: string;
+	email: string;
+	newPath: string;
+	callbackPath: string;
 }) => {
-  const [otp, setOtp] = useState("");
-  const [resending, setResending] = useState(false);
-  const [resendCountdown, setResendCountdown] = useState(0);
-  const [verifying, setVerifying] = useState(false);
-  const navigate = useNavigate();
+	const [otp, setOtp] = useState("");
+	const [resending, setResending] = useState(false);
+	const [resendCountdown, setResendCountdown] = useState(0);
+	const [verifying, setVerifying] = useState(false);
+	const navigate = useNavigate();
 
-  useEffect(() => {
-    if (resendCountdown > 0) {
-      setTimeout(() => setResendCountdown(resendCountdown - 1), 1000);
-    }
-  }, [resendCountdown]);
+	useEffect(() => {
+		if (resendCountdown > 0) {
+			setTimeout(() => setResendCountdown(resendCountdown - 1), 1000);
+		}
+	}, [resendCountdown]);
 
-  const handleSubmit = async (otp: string) => {
-    setVerifying(true);
-    try {
-      const { data, error } = await authClient.signIn.emailOtp({
-        email: email,
-        otp: otp,
-      });
+	const handleSubmit = async (otp: string) => {
+		setVerifying(true);
+		try {
+			const { data, error } = await authClient.signIn.emailOtp({
+				email: email,
+				otp: otp,
+			});
 
-      console.log("Data", data);
-      console.log("Error", error);
+			console.log("Data", data);
+			console.log("Error", error);
 
-      if (error) {
-        toast.error(error.message || "Failed to verify code");
-        setVerifying(false);
-        return;
-      }
+			if (error) {
+				toast.error(error.message || "Failed to verify code");
+				setVerifying(false);
+				return;
+			}
 
-      const user = data.user;
+			const user = data.user;
 
-      const createdRecently =
-        differenceInSeconds(new Date(), new Date(user.createdAt)) < 20;
+			const createdRecently =
+				differenceInSeconds(new Date(), new Date(user.createdAt)) < 20;
 
-      if (createdRecently) {
-        window.location.href = newPath;
-      } else {
-        window.location.href = callbackPath;
-      }
-    } catch (error) {
-      toast.error("Failed to verify code");
-    }
-    setVerifying(false);
-  };
+			if (createdRecently) {
+				window.location.href = newPath;
+			} else {
+				window.location.href = callbackPath;
+			}
+		} catch (error) {
+			toast.error("Failed to verify code");
+		}
+		setVerifying(false);
+	};
 
-  const handleResend = async () => {
-    setResending(true);
-    try {
-      const { data, error } = await authClient.emailOtp.sendVerificationOtp({
-        email: email,
-        type: "sign-in",
-      });
+	const handleResend = async () => {
+		setResending(true);
+		try {
+			const { data, error } = await authClient.emailOtp.sendVerificationOtp({
+				email: email,
+				type: "sign-in",
+			});
 
-      console.log(data);
-      console.log(error);
+			console.log(data);
+			console.log(error);
 
-      if (error) {
-        toast.error(error.message);
-        return;
-      }
+			if (error) {
+				toast.error(error.message);
+				return;
+			}
 
-      setResendCountdown(30);
-    } catch (error) {
-      toast.error("Failed to resend code");
-      return;
-    }
+			setResendCountdown(30);
+		} catch (error) {
+			toast.error("Failed to resend code");
+			return;
+		}
 
-    setResending(false);
-  };
+		setResending(false);
+	};
 
-  return (
-    <div className="text-center flex flex-col items-center justify-center gap-6">
-      <p className="text-sm text-muted-foreground">
-        Check your email for the 6 digit code
-      </p>
-      <div className={cn(verifying && "shimmer")}>
-        <InputOTP
-          maxLength={6}
-          value={otp}
-          onChange={setOtp}
-          onComplete={handleSubmit}
-          disabled={verifying}
-        >
-          <InputOTPGroup>
-            <InputOTPSlot index={0} />
-            <InputOTPSlot index={1} />
-            <InputOTPSlot index={2} />
-          </InputOTPGroup>
-          <InputOTPSeparator />
-          <InputOTPGroup>
-            <InputOTPSlot index={3} />
-            <InputOTPSlot index={4} />
-            <InputOTPSlot index={5} />
-          </InputOTPGroup>
-        </InputOTP>
-      </div>
+	return (
+		<div className="text-center flex flex-col items-center justify-center gap-6">
+			<p className="text-sm text-muted-foreground">
+				Check your email for the 6 digit code
+			</p>
+			<div className={cn(verifying && "shimmer")}>
+				<InputOTP
+					maxLength={6}
+					value={otp}
+					onChange={setOtp}
+					onComplete={handleSubmit}
+					disabled={verifying}
+				>
+					<InputOTPGroup>
+						<InputOTPSlot index={0} />
+						<InputOTPSlot index={1} />
+						<InputOTPSlot index={2} />
+					</InputOTPGroup>
+					<InputOTPSeparator />
+					<InputOTPGroup>
+						<InputOTPSlot index={3} />
+						<InputOTPSlot index={4} />
+						<InputOTPSlot index={5} />
+					</InputOTPGroup>
+				</InputOTP>
+			</div>
 
-      <div className="flex flex-col items-center justify-center gap-2">
-        <Button
-          variant="link"
-          className="text-sm hover:underline text-primary"
-          onClick={handleResend}
-          shimmer={resending}
-          disabled={resending || resendCountdown > 0}
-        >
-          Didn't receive the code? Resend{" "}
-          {resendCountdown > 0 && `(${resendCountdown})`}
-        </Button>
-      </div>
-    </div>
-  );
+			<div className="flex flex-col items-center justify-center gap-2">
+				<Button
+					variant="link"
+					className="text-sm hover:underline text-primary"
+					onClick={handleResend}
+					shimmer={resending}
+					disabled={resending || resendCountdown > 0}
+				>
+					Didn't receive the code? Resend{" "}
+					{resendCountdown > 0 && `(${resendCountdown})`}
+				</Button>
+			</div>
+		</div>
+	);
 };

@@ -1,7 +1,7 @@
 import { betterAuthSnippet } from "./betterAuth";
 
 export const elysiaBetterAuth = (customerType: "user" | "org") => {
-  return `import { autumnHandler } from "autumn-js/elysia";
+	return `import { autumnHandler } from "autumn-js/elysia";
 import { auth } from "./auth";
 
 const app = new Elysia()
@@ -20,7 +20,7 @@ ${betterAuthSnippet(customerType, "context.headers", 4)}
 };
 
 export const elysiaClerk = (customerType: "user" | "org") => {
-  return `import { clerkPlugin } from "elysia-clerk";
+	return `import { clerkPlugin } from "elysia-clerk";
 import { autumnHandler } from "autumn-js/backend";
 
 const app = new Elysia()
@@ -54,7 +54,7 @@ const app = new Elysia()
 };
 
 export const elysiaOther = (customerType: "user" | "org") => {
-  return `import { autumnHandler } from "autumn-js/elysia";
+	return `import { autumnHandler } from "autumn-js/elysia";
 import { auth } from "./auth";
 
 const app = new Elysia()

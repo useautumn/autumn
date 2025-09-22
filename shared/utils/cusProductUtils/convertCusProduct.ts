@@ -9,112 +9,112 @@ import { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusE
 import { FullProduct } from "../../models/productModels/productModels.js";
 
 export const cusProductsToPrices = ({
-  cusProducts,
+	cusProducts,
 }: {
-  cusProducts: FullCusProduct[];
+	cusProducts: FullCusProduct[];
 }) => {
-  return cusProducts.flatMap((cp) => cusProductToPrices({ cusProduct: cp }));
+	return cusProducts.flatMap((cp) => cusProductToPrices({ cusProduct: cp }));
 };
 
 export const cusProductsToCusPrices = ({
-  cusProducts,
-  inStatuses,
-  billingType,
+	cusProducts,
+	inStatuses,
+	billingType,
 }: {
-  cusProducts: FullCusProduct[];
-  inStatuses?: CusProductStatus[];
-  billingType?: BillingType;
+	cusProducts: FullCusProduct[];
+	inStatuses?: CusProductStatus[];
+	billingType?: BillingType;
 }) => {
-  const cusPrices: FullCustomerPrice[] = [];
+	const cusPrices: FullCustomerPrice[] = [];
 
-  for (const cusProduct of cusProducts) {
-    if (inStatuses && !inStatuses.includes(cusProduct.status)) {
-      continue;
-    }
+	for (const cusProduct of cusProducts) {
+		if (inStatuses && !inStatuses.includes(cusProduct.status)) {
+			continue;
+		}
 
-    let prices = cusProduct.customer_prices;
-    if (billingType) {
-      prices = prices.filter(
-        (cp) => getBillingType(cp.price.config) === billingType
-      );
-    }
+		let prices = cusProduct.customer_prices;
+		if (billingType) {
+			prices = prices.filter(
+				(cp) => getBillingType(cp.price.config) === billingType,
+			);
+		}
 
-    cusPrices.push(...prices);
-  }
+		cusPrices.push(...prices);
+	}
 
-  return cusPrices;
+	return cusPrices;
 };
 
 export const cusProductsToCusEnts = ({
-  cusProducts,
-  inStatuses = [CusProductStatus.Active],
-  reverseOrder = false,
-  featureId,
+	cusProducts,
+	inStatuses = [CusProductStatus.Active],
+	reverseOrder = false,
+	featureId,
 }: {
-  cusProducts: FullCusProduct[];
-  inStatuses?: CusProductStatus[];
-  reverseOrder?: boolean;
-  featureId?: string;
+	cusProducts: FullCusProduct[];
+	inStatuses?: CusProductStatus[];
+	reverseOrder?: boolean;
+	featureId?: string;
 }) => {
-  let cusEnts: FullCustomerEntitlement[] = [];
+	let cusEnts: FullCustomerEntitlement[] = [];
 
-  for (const cusProduct of cusProducts) {
-    if (!inStatuses.includes(cusProduct.status)) {
-      continue;
-    }
+	for (const cusProduct of cusProducts) {
+		if (!inStatuses.includes(cusProduct.status)) {
+			continue;
+		}
 
-    cusEnts.push(
-      ...cusProduct.customer_entitlements.map((cusEnt) => ({
-        ...cusEnt,
-        customer_product: cusProduct,
-      }))
-    );
-  }
+		cusEnts.push(
+			...cusProduct.customer_entitlements.map((cusEnt) => ({
+				...cusEnt,
+				customer_product: cusProduct,
+			})),
+		);
+	}
 
-  if (featureId) {
-    cusEnts = cusEnts.filter(
-      (cusEnt) => cusEnt.entitlement.feature_id === featureId
-    );
-  }
+	if (featureId) {
+		cusEnts = cusEnts.filter(
+			(cusEnt) => cusEnt.entitlement.feature_id === featureId,
+		);
+	}
 
-  sortCusEntsForDeduction(cusEnts, reverseOrder);
+	sortCusEntsForDeduction(cusEnts, reverseOrder);
 
-  return cusEnts as FullCusEntWithFullCusProduct[];
+	return cusEnts as FullCusEntWithFullCusProduct[];
 };
 
 export const cusProductToPrices = ({
-  cusProduct,
-  billingType,
+	cusProduct,
+	billingType,
 }: {
-  cusProduct: FullCusProduct;
-  billingType?: BillingType;
+	cusProduct: FullCusProduct;
+	billingType?: BillingType;
 }) => {
-  let prices = cusProduct.customer_prices.map((cp) => cp.price);
+	let prices = cusProduct.customer_prices.map((cp) => cp.price);
 
-  if (billingType) {
-    prices = prices.filter((p) => getBillingType(p.config) === billingType);
-  }
+	if (billingType) {
+		prices = prices.filter((p) => getBillingType(p.config) === billingType);
+	}
 
-  return prices;
+	return prices;
 };
 
 export const cusProductToEnts = ({
-  cusProduct,
+	cusProduct,
 }: {
-  cusProduct: FullCusProduct;
+	cusProduct: FullCusProduct;
 }) => {
-  return cusProduct.customer_entitlements.map((ce) => ce.entitlement);
+	return cusProduct.customer_entitlements.map((ce) => ce.entitlement);
 };
 
 export const cusProductToProduct = ({
-  cusProduct,
+	cusProduct,
 }: {
-  cusProduct: FullCusProduct;
+	cusProduct: FullCusProduct;
 }) => {
-  return {
-    ...cusProduct.product,
-    prices: cusProductToPrices({ cusProduct }),
-    entitlements: cusProductToEnts({ cusProduct }),
-    free_trial: cusProduct.free_trial,
-  } as FullProduct;
+	return {
+		...cusProduct.product,
+		prices: cusProductToPrices({ cusProduct }),
+		entitlements: cusProductToEnts({ cusProduct }),
+		free_trial: cusProduct.free_trial,
+	} as FullProduct;
 };

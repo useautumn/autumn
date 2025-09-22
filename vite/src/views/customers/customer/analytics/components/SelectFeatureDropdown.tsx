@@ -1,16 +1,16 @@
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
+	Command,
+	CommandEmpty,
+	CommandGroup,
+	CommandInput,
+	CommandItem,
+	CommandList,
+	CommandSeparator,
 } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, Check, X, Loader2 } from "lucide-react";
@@ -20,8 +20,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useSearchParams, useNavigate, useLocation } from "react-router";
 import {
-  eventNameBelongsToFeature,
-  getAllEventNames,
+	eventNameBelongsToFeature,
+	getAllEventNames,
 } from "../utils/getAllEventNames";
 import { useEffect, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -29,236 +29,236 @@ import { Checkbox } from "@/components/ui/checkbox";
 const MAX_NUM_SELECTED = 10;
 
 export const SelectFeatureDropdown = ({
-  classNames,
+	classNames,
 }: {
-  classNames?: {
-    trigger?: string;
-  };
+	classNames?: {
+		trigger?: string;
+	};
 }) => {
-  const { features, hasCleared, setHasCleared, topEventsLoading, topEvents } =
-    useAnalyticsContext();
-  const [open, setOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
+	const { features, hasCleared, setHasCleared, topEventsLoading, topEvents } =
+		useAnalyticsContext();
+	const [open, setOpen] = useState(false);
+	const [searchValue, setSearchValue] = useState("");
 
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const location = useLocation();
+	const [searchParams] = useSearchParams();
+	const navigate = useNavigate();
+	const location = useLocation();
 
-  // Get all event names
-  const allEventNames = getAllEventNames({ features });
+	// Get all event names
+	const allEventNames = getAllEventNames({ features });
 
-  // Read current values from query parameters
-  const currentFeatureIds =
-    searchParams.get("feature_ids")?.split(",").filter(Boolean) || [];
-  const currentEventNames =
-    searchParams.get("event_names")?.split(",").filter(Boolean) || [];
+	// Read current values from query parameters
+	const currentFeatureIds =
+		searchParams.get("feature_ids")?.split(",").filter(Boolean) || [];
+	const currentEventNames =
+		searchParams.get("event_names")?.split(",").filter(Boolean) || [];
 
-  // Helper function to update query parameters
-  const updateQueryParams = (featureIds: string[], eventNames: string[]) => {
-    const params = new URLSearchParams(location.search);
+	// Helper function to update query parameters
+	const updateQueryParams = (featureIds: string[], eventNames: string[]) => {
+		const params = new URLSearchParams(location.search);
 
-    if (featureIds.length > 0) {
-      params.set("feature_ids", featureIds.join(","));
-    } else {
-      params.delete("feature_ids");
-    }
+		if (featureIds.length > 0) {
+			params.set("feature_ids", featureIds.join(","));
+		} else {
+			params.delete("feature_ids");
+		}
 
-    if (eventNames.length > 0) {
-      params.set("event_names", eventNames.join(","));
-    } else {
-      params.delete("event_names");
-    }
+		if (eventNames.length > 0) {
+			params.set("event_names", eventNames.join(","));
+		} else {
+			params.delete("event_names");
+		}
 
-    navigate(`${location.pathname}?${params.toString()}`);
-  };
+		navigate(`${location.pathname}?${params.toString()}`);
+	};
 
-  const numSelected = currentFeatureIds.length + currentEventNames.length;
-  const isDefault =
-    currentFeatureIds?.length === 0 && currentEventNames?.length === 0;
+	const numSelected = currentFeatureIds.length + currentEventNames.length;
+	const isDefault =
+		currentFeatureIds?.length === 0 && currentEventNames?.length === 0;
 
-  const allTopEventNames = [
-    ...(topEvents?.featureIds || []),
-    ...(topEvents?.eventNames || []),
-  ];
+	const allTopEventNames = [
+		...(topEvents?.featureIds || []),
+		...(topEvents?.eventNames || []),
+	];
 
-  // Create combined options for search
-  const featureOptions = features
-    .filter(
-      (feature: Feature) =>
-        feature.type === FeatureType.Metered &&
-        feature.config.usage_type === FeatureUsageType.Single
-    )
-    .map((feature: Feature) => ({
-      type: "feature" as const,
-      id: feature.id,
-      name: feature.name,
-      selected: currentFeatureIds.includes(feature.id),
-    }));
+	// Create combined options for search
+	const featureOptions = features
+		.filter(
+			(feature: Feature) =>
+				feature.type === FeatureType.Metered &&
+				feature.config.usage_type === FeatureUsageType.Single,
+		)
+		.map((feature: Feature) => ({
+			type: "feature" as const,
+			id: feature.id,
+			name: feature.name,
+			selected: currentFeatureIds.includes(feature.id),
+		}));
 
-  const eventOptions = allEventNames
-    .filter((eventName: string) =>
-      eventNameBelongsToFeature({ eventName, features })
-    )
-    .map((eventName: string) => ({
-      type: "event" as const,
-      id: eventName,
-      name: eventName,
-      selected: currentEventNames.includes(eventName),
-    }));
+	const eventOptions = allEventNames
+		.filter((eventName: string) =>
+			eventNameBelongsToFeature({ eventName, features }),
+		)
+		.map((eventName: string) => ({
+			type: "event" as const,
+			id: eventName,
+			name: eventName,
+			selected: currentEventNames.includes(eventName),
+		}));
 
-  const allOptions = [...featureOptions, ...eventOptions];
+	const allOptions = [...featureOptions, ...eventOptions];
 
-  // Filter options based on search
-  const filteredOptions = allOptions.filter((option) =>
-    option.name.toLowerCase().includes(searchValue.toLowerCase())
-  );
+	// Filter options based on search
+	const filteredOptions = allOptions.filter((option) =>
+		option.name.toLowerCase().includes(searchValue.toLowerCase()),
+	);
 
-  const filteredFeatures = filteredOptions.filter(
-    (option) => option.type === "feature"
-  );
-  const filteredEvents = filteredOptions.filter(
-    (option) => option.type === "event"
-  );
+	const filteredFeatures = filteredOptions.filter(
+		(option) => option.type === "feature",
+	);
+	const filteredEvents = filteredOptions.filter(
+		(option) => option.type === "event",
+	);
 
-  const handleToggleItem = (option: (typeof allOptions)[0]) => {
-    if (option.type === "feature") {
-      if (option.selected) {
-        updateQueryParams(
-          currentFeatureIds.filter((id: string) => id !== option.id),
-          currentEventNames
-        );
-      } else {
-        if (numSelected === MAX_NUM_SELECTED) {
-          toast.error(
-            `You can only select up to ${MAX_NUM_SELECTED} events/features`
-          );
-        } else {
-          updateQueryParams(
-            [...currentFeatureIds, option.id],
-            currentEventNames
-          );
-        }
-      }
-    } else {
-      if (option.selected) {
-        updateQueryParams(
-          currentFeatureIds,
-          currentEventNames.filter((name: string) => name !== option.id)
-        );
-      } else {
-        if (numSelected === MAX_NUM_SELECTED) {
-          toast.error(
-            `You can only select up to ${MAX_NUM_SELECTED} events/features`
-          );
-        } else {
-          updateQueryParams(currentFeatureIds, [
-            ...currentEventNames,
-            option.id,
-          ]);
-        }
-      }
-    }
-  };
+	const handleToggleItem = (option: (typeof allOptions)[0]) => {
+		if (option.type === "feature") {
+			if (option.selected) {
+				updateQueryParams(
+					currentFeatureIds.filter((id: string) => id !== option.id),
+					currentEventNames,
+				);
+			} else {
+				if (numSelected === MAX_NUM_SELECTED) {
+					toast.error(
+						`You can only select up to ${MAX_NUM_SELECTED} events/features`,
+					);
+				} else {
+					updateQueryParams(
+						[...currentFeatureIds, option.id],
+						currentEventNames,
+					);
+				}
+			}
+		} else {
+			if (option.selected) {
+				updateQueryParams(
+					currentFeatureIds,
+					currentEventNames.filter((name: string) => name !== option.id),
+				);
+			} else {
+				if (numSelected === MAX_NUM_SELECTED) {
+					toast.error(
+						`You can only select up to ${MAX_NUM_SELECTED} events/features`,
+					);
+				} else {
+					updateQueryParams(currentFeatureIds, [
+						...currentEventNames,
+						option.id,
+					]);
+				}
+			}
+		}
+	};
 
-  const handleClear = () => {
-    updateQueryParams([], []);
-    setHasCleared(true);
-  };
+	const handleClear = () => {
+		updateQueryParams([], []);
+		setHasCleared(true);
+	};
 
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className={cn(
-            "h-8 px-3 text-xs justify-between",
-            classNames?.trigger
-          )}
-        >
-          {numSelected > 0 ? `${numSelected} Selected` : "Default Features"}
-          <ChevronDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[240px] p-0" align="end">
-        <Command>
-          <CommandInput
-            placeholder="Search..."
-            value={searchValue}
-            onValueChange={setSearchValue}
-            className="h-9"
-          />
-          <div className="max-h-[300px] overflow-y-auto">
-            <CommandList>
-              <CommandEmpty>No results found.</CommandEmpty>
+	return (
+		<Popover open={open} onOpenChange={setOpen}>
+			<PopoverTrigger asChild>
+				<Button
+					variant="outline"
+					role="combobox"
+					aria-expanded={open}
+					className={cn(
+						"h-8 px-3 text-xs justify-between",
+						classNames?.trigger,
+					)}
+				>
+					{numSelected > 0 ? `${numSelected} Selected` : "Default Features"}
+					<ChevronDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+				</Button>
+			</PopoverTrigger>
+			<PopoverContent className="w-[240px] p-0" align="end">
+				<Command>
+					<CommandInput
+						placeholder="Search..."
+						value={searchValue}
+						onValueChange={setSearchValue}
+						className="h-9"
+					/>
+					<div className="max-h-[300px] overflow-y-auto">
+						<CommandList>
+							<CommandEmpty>No results found.</CommandEmpty>
 
-              {filteredFeatures.length > 0 && (
-                <CommandGroup heading="Features">
-                  {filteredFeatures.map((option) => (
-                    <CommandItem
-                      key={`feature-${option.id}`}
-                      onSelect={() => handleToggleItem(option)}
-                      className="cursor-pointer"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          checked={option.selected}
-                          className="h-4 w-4"
-                        />
-                        <span className="text-xs">{option.name}</span>
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
+							{filteredFeatures.length > 0 && (
+								<CommandGroup heading="Features">
+									{filteredFeatures.map((option) => (
+										<CommandItem
+											key={`feature-${option.id}`}
+											onSelect={() => handleToggleItem(option)}
+											className="cursor-pointer"
+										>
+											<div className="flex items-center space-x-2">
+												<Checkbox
+													checked={option.selected}
+													className="h-4 w-4"
+												/>
+												<span className="text-xs">{option.name}</span>
+											</div>
+										</CommandItem>
+									))}
+								</CommandGroup>
+							)}
 
-              {filteredEvents.length > 0 && (
-                <>
-                  {filteredFeatures.length > 0 && <CommandSeparator />}
-                  <CommandGroup heading="Events">
-                    {filteredEvents.map((option, index) => (
-                      <CommandItem
-                        key={`${index + filteredFeatures.length}`}
-                        onSelect={() => handleToggleItem(option)}
-                        className="cursor-pointer"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            checked={option.selected}
-                            className="h-4 w-4"
-                          />
-                          <span className="text-xs">{option.name}</span>
-                        </div>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </>
-              )}
-            </CommandList>
-          </div>
+							{filteredEvents.length > 0 && (
+								<>
+									{filteredFeatures.length > 0 && <CommandSeparator />}
+									<CommandGroup heading="Events">
+										{filteredEvents.map((option, index) => (
+											<CommandItem
+												key={`${index + filteredFeatures.length}`}
+												onSelect={() => handleToggleItem(option)}
+												className="cursor-pointer"
+											>
+												<div className="flex items-center space-x-2">
+													<Checkbox
+														checked={option.selected}
+														className="h-4 w-4"
+													/>
+													<span className="text-xs">{option.name}</span>
+												</div>
+											</CommandItem>
+										))}
+									</CommandGroup>
+								</>
+							)}
+						</CommandList>
+					</div>
 
-          <div className="border-t p-2">
-            <div className="flex items-center justify-between gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleClear}
-                className="h-7 px-3 text-xs"
-              >
-                Clear
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => setOpen(false)}
-                className="h-7 px-3 text-xs"
-              >
-                Close
-              </Button>
-            </div>
-          </div>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  );
+					<div className="border-t p-2">
+						<div className="flex items-center justify-between gap-2">
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={handleClear}
+								className="h-7 px-3 text-xs"
+							>
+								Clear
+							</Button>
+							<Button
+								size="sm"
+								onClick={() => setOpen(false)}
+								className="h-7 px-3 text-xs"
+							>
+								Close
+							</Button>
+						</div>
+					</div>
+				</Command>
+			</PopoverContent>
+		</Popover>
+	);
 };

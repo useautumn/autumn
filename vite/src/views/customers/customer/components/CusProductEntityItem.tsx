@@ -7,33 +7,33 @@ import { useCustomerContext } from "../CustomerContext";
 import { useCusQuery } from "../hooks/useCusQuery";
 
 export const CusProductEntityItem = ({
-  internalEntityId,
+	internalEntityId,
 }: {
-  internalEntityId?: string | null;
+	internalEntityId?: string | null;
 }) => {
-  const { customer } = useCusQuery();
+	const { customer } = useCusQuery();
 
-  const entity = customer.entities.find(
-    (e: any) => e.internal_id === internalEntityId
-  );
+	const entity = customer.entities.find(
+		(e: any) => e.internal_id === internalEntityId,
+	);
 
-  const navigate = useNavigate();
-  return internalEntityId ? (
-    <TableButton
-      onClick={() => {
-        updateSearchParams({
-          navigate,
-          params: {
-            entity_id: entity?.id || entity?.internal_id,
-          },
-        });
-      }}
-    >
-      <span className="truncate">
-        {entity?.name || entity?.id || "Unknown"}
-      </span>
-    </TableButton>
-  ) : (
-    <span></span>
-  );
+	const navigate = useNavigate();
+	return internalEntityId ? (
+		<TableButton
+			onClick={() => {
+				updateSearchParams({
+					navigate,
+					params: {
+						entity_id: entity?.id || entity?.internal_id,
+					},
+				});
+			}}
+		>
+			<span className="truncate">
+				{entity?.name || entity?.id || "Unknown"}
+			</span>
+		</TableButton>
+	) : (
+		<span></span>
+	);
 };

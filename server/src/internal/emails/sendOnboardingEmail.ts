@@ -3,7 +3,7 @@ import { safeResend } from "@/external/resend/safeResend.js";
 import { FROM_AYUSH } from "./constants.js";
 
 const getWelcomeEmailBody = (userFirstName: string) => {
-  return `
+	return `
 <p>Hey ${userFirstName} :)</p>
 
 <p>Just wanted to say thank you for signing up to Autumn!</p>
@@ -20,16 +20,16 @@ Co-founder, Autumn</p>
 };
 
 export const sendOnboardingEmail = safeResend({
-  fn: async ({ name, email }: { name: string; email: string }) => {
-    const firstName = name.split(" ")[0];
+	fn: async ({ name, email }: { name: string; email: string }) => {
+		const firstName = name.split(" ")[0];
 
-    await sendHtmlEmail({
-      from: FROM_AYUSH,
-      to: email,
-      subject: "Anything I can help with?",
-      body: getWelcomeEmailBody(firstName),
-      replyTo: "ayush@useautumn.com",
-    });
-  },
-  action: "send onboarding email",
+		await sendHtmlEmail({
+			from: FROM_AYUSH,
+			to: email,
+			subject: "Anything I can help with?",
+			body: getWelcomeEmailBody(firstName),
+			replyTo: "ayush@useautumn.com",
+		});
+	},
+	action: "send onboarding email",
 });

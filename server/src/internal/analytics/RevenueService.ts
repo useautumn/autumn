@@ -23,16 +23,18 @@ WHERE
     AND c.org_id = {org_id:String}
     AND c.env = {env:String};`;
 
-        const result = await clickhouseClient.query({
-            query,
-            query_params: {
-                org_id: org?.id,
-                env: env,
-            },
-        });
+		const result = await clickhouseClient.query({
+			query,
+			query_params: {
+				org_id: org?.id,
+				env: env,
+			},
+		});
 
-        const resultJson = await result.json();
+		const resultJson = await result.json();
 
-        return (resultJson.data as { total_payment_volume: number, label: string }[])[0];
+		return (
+			resultJson.data as { total_payment_volume: number; label: string }[]
+		)[0];
 	}
 }

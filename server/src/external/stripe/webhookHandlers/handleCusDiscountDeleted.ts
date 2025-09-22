@@ -72,7 +72,6 @@ export async function handleCusDiscountDeleted({
 		});
 
 		// Mark reward redemption as applied / redeemer applied to true
-
 		const sub = await stripeCli.subscriptions.retrieve(discount.subscription);
 
 		// can't really test because it modifies subscription affected by test clock...

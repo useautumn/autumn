@@ -6,32 +6,32 @@ import { toast } from "sonner";
 import { isFreeProduct } from "@/utils/product/priceUtils";
 
 export const updateProduct = async ({
-  axiosInstance,
-  product,
-  onSuccess,
-  // mutate,
-  // mutateCount,
+	axiosInstance,
+	product,
+	onSuccess,
+	// mutate,
+	// mutateCount,
 }: {
-  axiosInstance: AxiosInstance;
-  product: ProductV2;
-  onSuccess: () => Promise<void>;
-  // mutate: () => void;
-  // mutateCount: () => void;
+	axiosInstance: AxiosInstance;
+	product: ProductV2;
+	onSuccess: () => Promise<void>;
+	// mutate: () => void;
+	// mutateCount: () => void;
 }) => {
-  try {
-    await ProductService.updateProduct(axiosInstance, product.id, {
-      ...UpdateProductSchema.parse(product),
-      items: product.items,
-      free_trial: product.free_trial,
-    });
+	try {
+		await ProductService.updateProduct(axiosInstance, product.id, {
+			...UpdateProductSchema.parse(product),
+			items: product.items,
+			free_trial: product.free_trial,
+		});
 
-    toast.success("Product updated successfully");
+		toast.success("Product updated successfully");
 
-    await onSuccess();
-    return true;
-  } catch (error) {
-    console.error(error);
-    toast.error(getBackendErr(error, "Failed to update product"));
-    return false;
-  }
+		await onSuccess();
+		return true;
+	} catch (error) {
+		console.error(error);
+		toast.error(getBackendErr(error, "Failed to update product"));
+		return false;
+	}
 };

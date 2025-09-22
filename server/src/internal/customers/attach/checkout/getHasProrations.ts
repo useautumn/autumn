@@ -2,35 +2,35 @@ import { ExtendedRequest } from "@/utils/models/Request.js";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { AttachBranch } from "@autumn/shared";
 import {
-  attachParamsToCurCusProduct,
-  attachParamToCusProducts,
+	attachParamsToCurCusProduct,
+	attachParamToCusProducts,
 } from "../attachUtils/convertAttachParams.js";
 import { cusProductToPrices } from "@autumn/shared";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 
 export const getHasProrations = async ({
-  req,
-  branch,
-  attachParams,
+	req,
+	branch,
+	attachParams,
 }: {
-  req: ExtendedRequest;
-  branch: AttachBranch;
-  attachParams: AttachParams;
+	req: ExtendedRequest;
+	branch: AttachBranch;
+	attachParams: AttachParams;
 }) => {
-  let hasProrations = false;
+	let hasProrations = false;
 
-  let { curMainProduct } = attachParamToCusProducts({ attachParams });
-  if (branch == AttachBranch.Upgrade) {
-    let curPrices = cusProductToPrices({ cusProduct: curMainProduct! });
+	let { curMainProduct } = attachParamToCusProducts({ attachParams });
+	if (branch == AttachBranch.Upgrade) {
+		let curPrices = cusProductToPrices({ cusProduct: curMainProduct! });
 
-    if (!isFreeProduct(curPrices)) {
-      return true;
-    }
-  }
+		if (!isFreeProduct(curPrices)) {
+			return true;
+		}
+	}
 
-  if (branch == AttachBranch.UpdatePrepaidQuantity) {
-    return true;
-  }
+	if (branch == AttachBranch.UpdatePrepaidQuantity) {
+		return true;
+	}
 
-  return false;
+	return false;
 };

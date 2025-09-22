@@ -1,12 +1,12 @@
 import {
-  BillingInterval,
-  EntInterval,
-  type Feature,
-  Infinite,
-  type ProductItem,
-  ProductItemFeatureType,
-  ProductItemType,
-  UsageModel,
+	BillingInterval,
+	EntInterval,
+	type Feature,
+	Infinite,
+	type ProductItem,
+	ProductItemFeatureType,
+	ProductItemType,
+	UsageModel,
 } from "@autumn/shared";
 import { notNullish, nullish } from "../genUtils";
 import { isFeatureItem, isFeaturePriceItem, isPriceItem } from "./getItemType";

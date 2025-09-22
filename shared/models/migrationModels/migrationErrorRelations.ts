@@ -3,11 +3,11 @@ import { migrationErrors } from "./migrationErrorTable.js";
 import { customers } from "../cusModels/cusTable.js";
 
 export const migrationErrorRelations = relations(
-  migrationErrors,
-  ({ one }) => ({
-    customer: one(customers, {
-      fields: [migrationErrors.internal_customer_id],
-      references: [customers.internal_id],
-    }),
-  }),
+	migrationErrors,
+	({ one }) => ({
+		customer: one(customers, {
+			fields: [migrationErrors.internal_customer_id],
+			references: [customers.internal_id],
+		}),
+	}),
 );

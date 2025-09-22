@@ -2,10 +2,10 @@ import { Feature, FeatureType, ProductItem } from "@autumn/shared";
 
 export const getFeature = (
 	featureId: string | undefined,
-	features: Feature[]
+	features: Feature[],
 ) => {
 	const foundFeature = features?.find(
-		(feature: Feature) => feature.id === featureId
+		(feature: Feature) => feature.id === featureId,
 	);
 	return foundFeature || null;
 };
@@ -24,8 +24,8 @@ export const getFeatureUsageType = ({
 };
 
 export const getFeatureCreditSystem = ({
-  item,
-  features
+	item,
+	features,
 }: {
 	item: ProductItem;
 	features: Feature[];

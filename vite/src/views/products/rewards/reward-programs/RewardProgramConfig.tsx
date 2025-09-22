@@ -37,9 +37,11 @@ import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 export const RewardProgramConfig = ({
 	rewardProgram,
 	setRewardProgram,
+	isUpdate,
 }: {
 	rewardProgram: RewardProgram;
 	setRewardProgram: (rewardProgram: RewardProgram) => void;
+	isUpdate?: boolean;
 }) => {
 	const { rewards } = useRewardsQuery();
 
@@ -95,7 +97,12 @@ export const RewardProgramConfig = ({
 						<SelectContent>
 							{Object.values(RewardTriggerEvent).map((event) => (
 								<SelectItem key={event} value={event}>
-									{keyToTitle(event, { exclusionMap: { [RewardTriggerEvent.CustomerCreation]: "Customer Redemption" } })}
+									{keyToTitle(event, {
+										exclusionMap: {
+											[RewardTriggerEvent.CustomerCreation]:
+												"Customer Redemption",
+										},
+									})}
 								</SelectItem>
 							))}
 						</SelectContent>

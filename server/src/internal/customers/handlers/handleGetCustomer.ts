@@ -7,62 +7,62 @@ import { orgToVersion } from "@/utils/versionUtils.js";
 import { getCusWithCache } from "../cusCache/getCusWithCache.js";
 
 export const handleGetCustomer = async (req: any, res: any) =>
-  routeHandler({
-    req,
-    res,
-    action: "get customer",
-    handler: async () => {
-      let customerId = req.params.customer_id;
-      let { env, db, logtail: logger, org, features } = req;
-      let { expand } = req.query;
+	routeHandler({
+		req,
+		res,
+		action: "get customer",
+		handler: async () => {
+			let customerId = req.params.customer_id;
+			let { env, db, logtail: logger, org, features } = req;
+			let { expand } = req.query;
 
-      let expandArray = parseCusExpand(expand);
+			let expandArray = parseCusExpand(expand);
 
-      let apiVersion = orgToVersion({
-        org,
-        reqApiVersion: req.apiVersion,
-      });
+			let apiVersion = orgToVersion({
+				org,
+				reqApiVersion: req.apiVersion,
+			});
 
-      let getInvoices = apiVersion < APIVersion.v1_1;
-      if (getInvoices) expandArray.push(CusExpand.Invoices);
+			let getInvoices = apiVersion < APIVersion.v1_1;
+			if (getInvoices) expandArray.push(CusExpand.Invoices);
 
-      logger.info(`getting customer ${customerId} for org ${org.slug}`);
-      const startTime = Date.now();
-      const customer = await getCusWithCache({
-        db,
-        idOrInternalId: customerId,
-        org,
-        env,
-        expand: expandArray,
-        allowNotFound: true,
-        logger,
-      });
+			logger.info(`getting customer ${customerId} for org ${org.slug}`);
+			const startTime = Date.now();
+			const customer = await getCusWithCache({
+				db,
+				idOrInternalId: customerId,
+				org,
+				env,
+				expand: expandArray,
+				allowNotFound: true,
+				logger,
+			});
 
-      logger.info(`get customer took ${Date.now() - startTime}ms`);
+			logger.info(`get customer took ${Date.now() - startTime}ms`);
 
-      if (!customer) {
-        req.logtail.warn(
-          `GET /customers/${customerId}: not found | Org: ${org.slug}`
-        );
-        res.status(StatusCodes.NOT_FOUND).json({
-          message: `Customer ${customerId} not found`,
-          code: ErrCode.CustomerNotFound,
-        });
-        return;
-      }
+			if (!customer) {
+				req.logtail.warn(
+					`GET /customers/${customerId}: not found | Org: ${org.slug}`,
+				);
+				res.status(StatusCodes.NOT_FOUND).json({
+					message: `Customer ${customerId} not found`,
+					code: ErrCode.CustomerNotFound,
+				});
+				return;
+			}
 
-      let cusData = await getCustomerDetails({
-        db,
-        customer,
-        org,
-        env: req.env,
-        logger: req.logtail,
-        cusProducts: customer.customer_products,
-        expand: expandArray,
-        features,
-        reqApiVersion: req.apiVersion,
-      });
+			let cusData = await getCustomerDetails({
+				db,
+				customer,
+				org,
+				env: req.env,
+				logger: req.logtail,
+				cusProducts: customer.customer_products,
+				expand: expandArray,
+				features,
+				reqApiVersion: req.apiVersion,
+			});
 
-      res.status(200).json(cusData);
-    },
-  });
+			res.status(200).json(cusData);
+		},
+	});

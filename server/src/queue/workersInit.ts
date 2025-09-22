@@ -14,6 +14,7 @@ import { generateId } from "@/utils/genUtils.js";
 import { JobName } from "./JobName.js";
 import { acquireLock, getRedisConnection, releaseLock } from "./lockUtils.js";
 import { QueueManager } from "./QueueManager.js";
+import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigrationTask.js";
 
 const NUM_WORKERS = 10;
 
@@ -22,7 +23,7 @@ const actionHandlers = [
 	JobName.HandleCustomerCreated,
 ];
 
-const { db, client } = initDrizzle({ maxConnections: 10 });
+const { db } = initDrizzle({ maxConnections: 10 });
 
 const initWorker = ({
 	id,
@@ -87,6 +88,14 @@ const initWorker = ({
 					});
 					return;
 				}
+
+				if (job.name === JobName.RewardMigration) {
+					await runRewardMigrationTask({
+						db,
+						payload: job.data,
+						logger: logtail,
+					});
+				}
 			} catch (error: any) {
 				logtail.error(`Failed to process bullmq job: ${job.name}`, {
 					jobName: job.name,
@@ -110,26 +119,19 @@ const initWorker = ({
 					await queue.add(job.name, job.data, {
 						delay: 1000,
 					});
-					logger.info(
-						"Lock not acquired for checkout reward, adding task to queue",
-					);
 					return;
 				}
 
 				try {
-					logger.info("Running checkout reward");
 					await runTriggerCheckoutReward({
 						db,
 						payload: job.data,
 						logger: logtail,
 					});
-					logger.info("Checkout reward triggered");
 				} catch (error) {
-					logger.error("Error processing job:", error);
+					console.error("Error processing job:", error);
 				} finally {
-					logger.info("Releasing lock for checkout reward");
 					await releaseLock({ lockKey, useBackup });
-					logger.info("Lock released for checkout reward");
 				}
 
 				return;
@@ -203,7 +205,7 @@ const initWorker = ({
 		}
 	});
 
-	worker.on("failed", (job, error) => {
+	worker.on("failed", (_, error) => {
 		console.log("WORKER FAILED:", error.message);
 	});
 };

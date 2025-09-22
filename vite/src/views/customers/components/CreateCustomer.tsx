@@ -1,12 +1,12 @@
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogHeader,
-  DialogTrigger,
-  DialogFooter,
+	Dialog,
+	DialogTitle,
+	DialogContent,
+	DialogHeader,
+	DialogTrigger,
+	DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { CusService } from "@/services/customers/CusService";
@@ -19,85 +19,85 @@ import { toast } from "sonner";
 import { useEnv } from "@/utils/envUtils";
 
 function CreateCustomer() {
-  const navigate = useNavigate();
-  const axiosInstance = useAxiosInstance();
-  const [fields, setFields] = useState<{ [key: string]: string }>({
-    name: "",
-    id: "",
-    email: "",
-    fingerprint: "",
-  });
+	const navigate = useNavigate();
+	const axiosInstance = useAxiosInstance();
+	const [fields, setFields] = useState<{ [key: string]: string }>({
+		name: "",
+		id: "",
+		email: "",
+		fingerprint: "",
+	});
 
-  const [isLoading, setIsLoading] = useState(false);
+	const [isLoading, setIsLoading] = useState(false);
 
-  const handleCreate = async () => {
-    setIsLoading(true);
+	const handleCreate = async () => {
+		setIsLoading(true);
 
-    try {
-      const { data } = await CusService.createCustomer(axiosInstance, {
-        ...fields,
-        id: fields.id ? fields.id : null,
-        name: fields.name || null,
-        email: fields.email ? fields.email.trim() : null,
-        fingerprint: fields.fingerprint ? fields.fingerprint : undefined,
-      });
+		try {
+			const { data } = await CusService.createCustomer(axiosInstance, {
+				...fields,
+				id: fields.id ? fields.id : null,
+				name: fields.name || null,
+				email: fields.email ? fields.email.trim() : null,
+				fingerprint: fields.fingerprint ? fields.fingerprint : undefined,
+			});
 
-      const customer = data.customer || data;
-      if (customer) {
-        navigateTo(
-          `/customers/${
-            customer.id || customer.autumn_id || customer.internal_id
-          }`,
-          navigate
-        );
-      }
-      toast.success("Customer created successfully");
-    } catch (error) {
-      toast.error(getBackendErr(error, "Failed to create customer"));
-    }
-    setIsLoading(false);
-  };
+			const customer = data.customer || data;
+			if (customer) {
+				navigateTo(
+					`/customers/${
+						customer.id || customer.autumn_id || customer.internal_id
+					}`,
+					navigate,
+				);
+			}
+			toast.success("Customer created successfully");
+		} catch (error) {
+			toast.error(getBackendErr(error, "Failed to create customer"));
+		}
+		setIsLoading(false);
+	};
 
-  return (
-    <Dialog>
-      <DialogTrigger asChild className="h-full">
-        <Button
-          variant="add"
-          className="h-full"
-          // startIcon={<PlusIcon size={15} />}
-        >
-          Customer
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="w-[400px]">
-        <DialogHeader>
-          <DialogTitle>Create Customer</DialogTitle>
-        </DialogHeader>
-        <div className="flex gap-2">
-          <div>
-            <FieldLabel>Name</FieldLabel>
-            <Input
-              value={fields.name}
-              onChange={(e) => setFields({ ...fields, name: e.target.value })}
-            />
-          </div>
-          <div>
-            <FieldLabel>ID</FieldLabel>
-            <Input
-              value={fields.id}
-              onChange={(e) => setFields({ ...fields, id: e.target.value })}
-            />
-          </div>
-        </div>
-        <div>
-          <FieldLabel>Email</FieldLabel>
-          <Input
-            value={fields.email}
-            placeholder="optional"
-            onChange={(e) => setFields({ ...fields, email: e.target.value })}
-          />
-        </div>
-        {/* <div>
+	return (
+		<Dialog>
+			<DialogTrigger asChild className="h-full">
+				<Button
+					variant="add"
+					className="h-full"
+					// startIcon={<PlusIcon size={15} />}
+				>
+					Customer
+				</Button>
+			</DialogTrigger>
+			<DialogContent className="w-[400px]">
+				<DialogHeader>
+					<DialogTitle>Create Customer</DialogTitle>
+				</DialogHeader>
+				<div className="flex gap-2">
+					<div>
+						<FieldLabel>Name</FieldLabel>
+						<Input
+							value={fields.name}
+							onChange={(e) => setFields({ ...fields, name: e.target.value })}
+						/>
+					</div>
+					<div>
+						<FieldLabel>ID</FieldLabel>
+						<Input
+							value={fields.id}
+							onChange={(e) => setFields({ ...fields, id: e.target.value })}
+						/>
+					</div>
+				</div>
+				<div>
+					<FieldLabel>Email</FieldLabel>
+					<Input
+						value={fields.email}
+						placeholder="optional"
+						onChange={(e) => setFields({ ...fields, email: e.target.value })}
+					/>
+				</div>
+				{/* <div>
           <FieldLabel>Fingerprint</FieldLabel>
           <Input
             value={fields.fingerprint}
@@ -106,18 +106,19 @@ function CreateCustomer() {
             }
           />
         </div> */}
-        <DialogFooter>
-          <Button
-            onClick={handleCreate}
-            isLoading={isLoading}
-            variant="gradientPrimary"
-          >
-            Create
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+				<DialogFooter>
+					<Button
+						onClick={handleCreate}
+						isLoading={isLoading}
+						variant="gradientPrimary"
+						disabled={!fields.id.trim() && !fields.email.trim()} // ✅ at least one of id or email
+					>
+						Create
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	);
 }
 
 export default CreateCustomer;

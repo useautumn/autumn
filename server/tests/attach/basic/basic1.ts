@@ -17,105 +17,105 @@ import { APIVersion } from "@autumn/shared";
 import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
 
 const freeProd = constructProduct({
-  type: "free",
-  isDefault: false,
-  items: [
-    constructFeatureItem({
-      featureId: TestFeature.Messages,
-      includedUsage: 1000,
-    }),
-    // constructFixedPrice({
-    //   price: 0,
-    // }),
-  ],
+	type: "free",
+	isDefault: false,
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 1000,
+		}),
+		// constructFixedPrice({
+		//   price: 0,
+		// }),
+	],
 });
 
 // UNCOMMENT FROM HERE
 const testCase = "basic1";
 describe(`${chalk.yellowBright("basic1: Testing attach free product")}`, () => {
-  let customerId = testCase;
-  let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_2 });
-  let db, org, env;
+	let customerId = testCase;
+	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_2 });
+	let db, org, env;
 
-  before(async function () {
-    await setupBefore(this);
-    db = this.db;
-    org = this.org;
-    env = this.env;
+	before(async function () {
+		await setupBefore(this);
+		db = this.db;
+		org = this.org;
+		env = this.env;
 
-    await initCustomer({
-      autumn: this.autumnJs,
-      customerId,
-      db,
-      org,
-      env,
-      fingerprint: "test",
-      withTestClock: false,
-    });
+		await initCustomer({
+			autumn: this.autumnJs,
+			customerId,
+			db,
+			org,
+			env,
+			fingerprint: "test",
+			withTestClock: false,
+		});
 
-    addPrefixToProducts({
-      products: [freeProd],
-      prefix: testCase,
-    });
+		addPrefixToProducts({
+			products: [freeProd],
+			prefix: testCase,
+		});
 
-    await createProducts({
-      db,
-      orgId: org.id,
-      env,
-      autumn,
-      products: [freeProd],
-    });
-  });
+		await createProducts({
+			db,
+			orgId: org.id,
+			env,
+			autumn,
+			products: [freeProd],
+		});
+	});
 
-  it("should create customer and have default free active", async function () {
-    const data = await AutumnCli.getCustomer(customerId);
+	it("should create customer and have default free active", async function () {
+		const data = await AutumnCli.getCustomer(customerId);
 
-    compareMainProduct({
-      sent: products.free,
-      cusRes: data,
-    });
-  });
+		compareMainProduct({
+			sent: products.free,
+			cusRes: data,
+		});
+	});
 
-  it("should have correct entitlements", async function () {
-    const expectedEntitlement = products.free.entitlements.metered1;
+	it("should have correct entitlements", async function () {
+		const expectedEntitlement = products.free.entitlements.metered1;
 
-    const entitled = (await AutumnCli.entitled(
-      customerId,
-      features.metered1.id
-    )) as any;
+		const entitled = (await AutumnCli.entitled(
+			customerId,
+			features.metered1.id,
+		)) as any;
 
-    const metered1Balance = entitled.balances.find(
-      (balance: any) => balance.feature_id === features.metered1.id
-    );
+		const metered1Balance = entitled.balances.find(
+			(balance: any) => balance.feature_id === features.metered1.id,
+		);
 
-    expect(entitled.allowed).to.be.true;
-    expect(metered1Balance).to.exist;
-    expect(metered1Balance.balance).to.equal(expectedEntitlement.allowance);
-    expect(metered1Balance.unlimited).to.not.exist;
-  });
+		expect(entitled.allowed).to.be.true;
+		expect(metered1Balance).to.exist;
+		expect(metered1Balance.balance).to.equal(expectedEntitlement.allowance);
+		expect(metered1Balance.unlimited).to.not.exist;
+	});
 
-  it("should have correct boolean1 entitlement", async function () {
-    const entitled = await AutumnCli.entitled(customerId, features.boolean1.id);
-    expect(entitled!.allowed).to.be.false;
-  });
+	it("should have correct boolean1 entitlement", async function () {
+		const entitled = await AutumnCli.entitled(customerId, features.boolean1.id);
+		expect(entitled!.allowed).to.be.false;
+	});
 
-  it("should attach free (with $0 price) and force checkout and succeed", async function () {
-    await autumn.attach({
-      customer_id: customerId,
-      product_id: freeProd.id,
-      force_checkout: true,
-    });
+	it("should attach free (with $0 price) and force checkout and succeed", async function () {
+		await autumn.attach({
+			customer_id: customerId,
+			product_id: freeProd.id,
+			force_checkout: true,
+		});
 
-    const customer = await autumn.customers.get(customerId);
+		const customer = await autumn.customers.get(customerId);
 
-    expectProductAttached({
-      customer,
-      product: freeProd,
-    });
+		expectProductAttached({
+			customer,
+			product: freeProd,
+		});
 
-    expectFeaturesCorrect({
-      customer,
-      product: freeProd,
-    });
-  });
+		expectFeaturesCorrect({
+			customer,
+			product: freeProd,
+		});
+	});
 });

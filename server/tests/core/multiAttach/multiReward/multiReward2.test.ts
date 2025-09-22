@@ -5,20 +5,20 @@ import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
 import {
-  APIVersion,
-  AppEnv,
-  CusProductStatus,
-  Organization,
+	APIVersion,
+	AppEnv,
+	CusProductStatus,
+	Organization,
 } from "@autumn/shared";
 
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { expectMultiAttachCorrect } from "tests/utils/expectUtils/expectMultiAttach.js";
 import {
-  multiRewardPremium,
-  multiRewardPro,
-  premiumReward,
-  proReward,
-  setupMultiRewardBefore,
+	multiRewardPremium,
+	multiRewardPro,
+	premiumReward,
+	proReward,
+	setupMultiRewardBefore,
 } from "./multiRewardUtils.test.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
@@ -26,164 +26,164 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 
 const testCase = "multiReward2";
 describe(`${chalk.yellowBright("multiReward2: Testing multi attach with rewards -- delete reward and prorate")}`, () => {
-  let customerId = testCase;
-  let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	let customerId = testCase;
+	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
 
-  let stripeCli: Stripe;
-  let testClockId: string;
-  let curUnix: number;
-  let db: DrizzleCli;
-  let org: Organization;
-  let env: AppEnv;
+	let stripeCli: Stripe;
+	let testClockId: string;
+	let curUnix: number;
+	let db: DrizzleCli;
+	let org: Organization;
+	let env: AppEnv;
 
-  before(async function () {
-    await setupBefore(this);
-    const { autumnJs } = this;
-    db = this.db;
-    org = this.org;
-    env = this.env;
+	before(async function () {
+		await setupBefore(this);
+		const { autumnJs } = this;
+		db = this.db;
+		org = this.org;
+		env = this.env;
 
-    stripeCli = this.stripeCli;
+		stripeCli = this.stripeCli;
 
-    const { testClockId: testClockId1 } = await initCustomer({
-      autumn: autumnJs,
-      customerId,
-      db,
-      org,
-      env,
-      attachPm: "success",
-    });
+		const { testClockId: testClockId1 } = await initCustomer({
+			autumn: autumnJs,
+			customerId,
+			db,
+			org,
+			env,
+			attachPm: "success",
+		});
 
-    await setupMultiRewardBefore({
-      orgId: org.id,
-      db,
-      env,
-    });
+		await setupMultiRewardBefore({
+			orgId: org.id,
+			db,
+			env,
+		});
 
-    testClockId = testClockId1!;
-  });
+		testClockId = testClockId1!;
+	});
 
-  it("should run multi attach through checkout and have correct sub", async function () {
-    const productsList = [
-      {
-        product_id: multiRewardPro.id,
-        quantity: 3,
-        product: multiRewardPro,
-        status: CusProductStatus.Active,
-      },
-      {
-        product_id: multiRewardPremium.id,
-        quantity: 3,
-        product: multiRewardPremium,
-        status: CusProductStatus.Active,
-      },
-    ];
-    await expectMultiAttachCorrect({
-      customerId,
-      products: productsList,
-      results: productsList,
-      db,
-      org,
-      env,
-      rewards: [proReward.id, premiumReward.id],
-      expectedRewards: [proReward.id, premiumReward.id],
-    });
-  });
+	it("should run multi attach through checkout and have correct sub", async function () {
+		const productsList = [
+			{
+				product_id: multiRewardPro.id,
+				quantity: 3,
+				product: multiRewardPro,
+				status: CusProductStatus.Active,
+			},
+			{
+				product_id: multiRewardPremium.id,
+				quantity: 3,
+				product: multiRewardPremium,
+				status: CusProductStatus.Active,
+			},
+		];
+		await expectMultiAttachCorrect({
+			customerId,
+			products: productsList,
+			results: productsList,
+			db,
+			org,
+			env,
+			rewards: [proReward.id, premiumReward.id],
+			expectedRewards: [proReward.id, premiumReward.id],
+		});
+	});
 
-  it("should delete discounts from subscription and prorate correctly", async function () {
-    const fullCus = await CusService.getFull({
-      db,
-      orgId: org.id,
-      env,
-      idOrInternalId: customerId,
-    });
+	it("should delete discounts from subscription and prorate correctly", async function () {
+		const fullCus = await CusService.getFull({
+			db,
+			orgId: org.id,
+			env,
+			idOrInternalId: customerId,
+		});
 
-    const cusProduct = fullCus.customer_products.find(
-      (cp) => cp.product.id === multiRewardPro.id
-    );
-    const sub = await cusProductToSub({ cusProduct, stripeCli });
+		const cusProduct = fullCus.customer_products.find(
+			(cp) => cp.product.id === multiRewardPro.id,
+		);
+		const sub = await cusProductToSub({ cusProduct, stripeCli });
 
-    await stripeCli.subscriptions.update(sub!.id, {
-      discounts: null,
-    });
-  });
+		await stripeCli.subscriptions.update(sub!.id, {
+			discounts: null,
+		});
+	});
 
-  it("should update pro quantity and have correct checkout amount", async function () {
-    const productsList = [
-      {
-        product_id: multiRewardPro.id,
-        quantity: 5,
-      },
-    ];
+	it("should update pro quantity and have correct checkout amount", async function () {
+		const productsList = [
+			{
+				product_id: multiRewardPro.id,
+				quantity: 5,
+			},
+		];
 
-    const results = [
-      {
-        product: multiRewardPro,
-        quantity: 5,
-        status: CusProductStatus.Active,
-      },
-      {
-        product: multiRewardPremium,
-        quantity: 3,
-        status: CusProductStatus.Active,
-      },
-    ];
-    await expectMultiAttachCorrect({
-      customerId,
-      products: productsList,
-      results,
-      db,
-      org,
-      env,
-      expectedRewards: [],
-    });
-  });
-  return;
+		const results = [
+			{
+				product: multiRewardPro,
+				quantity: 5,
+				status: CusProductStatus.Active,
+			},
+			{
+				product: multiRewardPremium,
+				quantity: 3,
+				status: CusProductStatus.Active,
+			},
+		];
+		await expectMultiAttachCorrect({
+			customerId,
+			products: productsList,
+			results,
+			db,
+			org,
+			env,
+			expectedRewards: [],
+		});
+	});
+	return;
 
-  // it("should advance clock and update premium & growth while trialing", async function () {
-  //   const newProducts = [
-  //     {
-  //       product_id: premium.id,
-  //       quantity: 1,
-  //     },
-  //     {
-  //       product_id: growth.id,
-  //       quantity: 5,
-  //     },
-  //   ];
+	// it("should advance clock and update premium & growth while trialing", async function () {
+	//   const newProducts = [
+	//     {
+	//       product_id: premium.id,
+	//       quantity: 1,
+	//     },
+	//     {
+	//       product_id: growth.id,
+	//       quantity: 5,
+	//     },
+	//   ];
 
-  //   const results = [
-  //     {
-  //       product: pro,
-  //       quantity: 5,
-  //       status: CusProductStatus.Trialing,
-  //     },
-  //     {
-  //       product: premium,
-  //       quantity: 1,
-  //       status: CusProductStatus.Trialing,
-  //     },
+	//   const results = [
+	//     {
+	//       product: pro,
+	//       quantity: 5,
+	//       status: CusProductStatus.Trialing,
+	//     },
+	//     {
+	//       product: premium,
+	//       quantity: 1,
+	//       status: CusProductStatus.Trialing,
+	//     },
 
-  //     {
-  //       product: growth,
-  //       quantity: 5,
-  //       status: CusProductStatus.Trialing,
-  //     },
-  //   ];
+	//     {
+	//       product: growth,
+	//       quantity: 5,
+	//       status: CusProductStatus.Trialing,
+	//     },
+	//   ];
 
-  //   await advanceTestClock({
-  //     stripeCli,
-  //     testClockId,
-  //     advanceTo: addDays(new Date(), 3).getTime(),
-  //   });
+	//   await advanceTestClock({
+	//     stripeCli,
+	//     testClockId,
+	//     advanceTo: addDays(new Date(), 3).getTime(),
+	//   });
 
-  //   await expectMultiAttachCorrect({
-  //     customerId,
-  //     products: newProducts,
-  //     results,
-  //     db,
-  //     org,
-  //     env,
-  //   });
-  // });
+	//   await expectMultiAttachCorrect({
+	//     customerId,
+	//     products: newProducts,
+	//     results,
+	//     db,
+	//     org,
+	//     env,
+	//   });
+	// });
 });

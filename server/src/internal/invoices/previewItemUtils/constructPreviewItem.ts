@@ -3,32 +3,32 @@ import { formatAmount } from "@/utils/formatUtils.js";
 import { Organization, Price } from "@autumn/shared";
 
 export const constructPreviewItem = ({
-  price,
-  description,
-  priceStr,
-  org,
-  amount,
+	price,
+	description,
+	priceStr,
+	org,
+	amount,
 }: {
-  price: Price;
-  description: string;
-  priceStr?: string;
-  org?: Organization;
-  amount?: number;
+	price: Price;
+	description: string;
+	priceStr?: string;
+	org?: Organization;
+	amount?: number;
 }) => {
-  if (amount) {
-    priceStr = formatAmount({
-      org,
-      amount,
-    });
-  } else {
-    priceStr = priceStr;
-  }
+	if (amount) {
+		priceStr = formatAmount({
+			org,
+			amount,
+		});
+	} else {
+		priceStr = priceStr;
+	}
 
-  return {
-    price: priceStr!,
-    description,
-    amount,
-    usage_model: priceToUsageModel(price),
-    price_id: price.id!,
-  };
+	return {
+		price: priceStr!,
+		description,
+		amount,
+		usage_model: priceToUsageModel(price),
+		price_id: price.id!,
+	};
 };
