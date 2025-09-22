@@ -1,155 +1,163 @@
-import Stripe from "stripe";
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import { AttachConfig, ProrationBehavior } from "@autumn/shared";
-import { attachParamToCusProducts } from "../../attachUtils/convertAttachParams.js";
-import {
-  createUsageInvoiceItems,
-  resetUsageBalances,
-} from "../upgradeDiffIntFlow/createUsageInvoiceItems.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { createProrationInvoice } from "@/external/stripe/stripeSubUtils/updateStripeSub/createProrationinvoice.js";
-import { createAndFilterContUseItems } from "../../attachUtils/getContUseItems/createContUseInvoiceItems.js";
-import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
-import { getContUseInvoiceItems } from "../../attachUtils/getContUseItems/getContUseInvoiceItems.js";
-import { ItemSet } from "@/utils/models/ItemSet.js";
+import { type AttachConfig, ProrationBehavior } from "@autumn/shared";
+import type Stripe from "stripe";
 import { sanitizeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
+import { createProrationInvoice } from "@/external/stripe/stripeSubUtils/updateStripeSub/createProrationinvoice.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import {
+	freeTrialToStripeTimestamp,
+	rewardTrialToStripeTimestamp,
+} from "@/internal/products/free-trials/freeTrialUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { nullish } from "@/utils/genUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { nullish } from "@/utils/genUtils.js";
+import type { ItemSet } from "@/utils/models/ItemSet.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+import { attachParamToCusProducts } from "../../attachUtils/convertAttachParams.js";
+import { createAndFilterContUseItems } from "../../attachUtils/getContUseItems/createContUseInvoiceItems.js";
+import {
+	createUsageInvoiceItems,
+	resetUsageBalances,
+} from "../upgradeDiffIntFlow/createUsageInvoiceItems.js";
 
 export const updateStripeSub2 = async ({
-  req,
-  attachParams,
-  config,
-  curSub,
-  itemSet,
-  fromCreate = false,
+	req,
+	attachParams,
+	config,
+	curSub,
+	itemSet,
+	fromCreate = false,
 }: {
-  req: ExtendedRequest;
-  attachParams: AttachParams;
-  config: AttachConfig;
-  curSub: Stripe.Subscription;
-  itemSet: ItemSet;
-  fromCreate?: boolean;
+	req: ExtendedRequest;
+	attachParams: AttachParams;
+	config: AttachConfig;
+	curSub: Stripe.Subscription;
+	itemSet: ItemSet;
+	fromCreate?: boolean;
 }) => {
-  const { db, logger } = req;
+	const { db, logger } = req;
 
-  const { stripeCli, customer, org, paymentMethod } = attachParams;
-  const { invoiceOnly, proration } = config;
+	const { stripeCli, customer, org, paymentMethod, rewardTrial } = attachParams;
+	const { invoiceOnly, proration } = config;
 
-  if (!invoiceOnly && !attachParams.fromCancel && nullish(paymentMethod)) {
-    throw new RecaseError({
-      message: "Payment method is required",
-      code: "payment_method_required",
-    });
-  }
+	if (
+		!invoiceOnly &&
+		!attachParams.fromCancel &&
+		!rewardTrial &&
+		nullish(paymentMethod)
+	) {
+		throw new RecaseError({
+			message: "Payment method is required",
+			code: "payment_method_required",
+		});
+	}
 
-  if (curSub.billing_mode.type !== "flexible") {
-    curSub = await stripeCli.subscriptions.migrate(curSub.id, {
-      billing_mode: { type: "flexible" },
-    });
-  }
+	if (curSub.billing_mode.type !== "flexible") {
+		curSub = await stripeCli.subscriptions.migrate(curSub.id, {
+			billing_mode: { type: "flexible" },
+		});
+	}
 
-  let trialEnd =
-    config.disableTrial || config.carryTrial
-      ? undefined
-      : freeTrialToStripeTimestamp({
-          freeTrial: attachParams.freeTrial,
-          now: attachParams.now,
-        });
+	const trialEnd =
+		config.disableTrial || config.carryTrial
+			? undefined
+			: rewardTrial?.duration_value
+				? rewardTrialToStripeTimestamp({ rewardTrial, now: attachParams.now })
+				: freeTrialToStripeTimestamp({
+						freeTrial: attachParams.freeTrial,
+						now: attachParams.now,
+					});
 
-  // 1. Update subscription
+	// 1. Update subscription
 
-  let updatedSub = await stripeCli.subscriptions.update(curSub.id, {
-    items: sanitizeSubItems(itemSet.subItems),
-    proration_behavior:
-      proration == ProrationBehavior.None
-        ? "none"
-        : fromCreate
-          ? "always_invoice"
-          : "create_prorations",
-    // proration_behavior: "create_prorations",
-    trial_end: trialEnd,
-    // default_payment_method: paymentMethod?.id,
-    add_invoice_items: itemSet.invoiceItems,
-    ...((invoiceOnly && {
-      collection_method: "send_invoice",
-      days_until_due: 30,
-    }) as any),
-    payment_behavior: "error_if_incomplete",
-    expand: ["latest_invoice"],
-  });
+	const updatedSub = await stripeCli.subscriptions.update(curSub.id, {
+		items: sanitizeSubItems(itemSet.subItems),
+		proration_behavior:
+			proration === ProrationBehavior.None
+				? "none"
+				: fromCreate
+					? "always_invoice"
+					: "create_prorations",
+		// proration_behavior: "create_prorations",
+		trial_end: trialEnd,
+		// default_payment_method: paymentMethod?.id,
+		add_invoice_items: itemSet.invoiceItems,
+		...((invoiceOnly && {
+			collection_method: "send_invoice",
+			days_until_due: 30,
+		}) as any),
+		payment_behavior: "error_if_incomplete",
+		expand: ["latest_invoice"],
+	});
 
-  let latestInvoice = updatedSub.latest_invoice as Stripe.Invoice | null;
+	let latestInvoice = updatedSub.latest_invoice as Stripe.Invoice | null;
 
-  await SubService.updateFromStripe({ db, stripeSub: updatedSub });
+	await SubService.updateFromStripe({ db, stripeSub: updatedSub });
 
-  if (proration == ProrationBehavior.None) {
-    return {
-      updatedSub,
-      latestInvoice: null,
-    };
-  }
+	if (proration === ProrationBehavior.None) {
+		return {
+			updatedSub,
+			latestInvoice: null,
+		};
+	}
 
-  if (fromCreate) {
-    return {
-      updatedSub,
-      latestInvoice: updatedSub.latest_invoice as Stripe.Invoice,
-    };
-  }
+	if (fromCreate) {
+		return {
+			updatedSub,
+			latestInvoice: updatedSub.latest_invoice as Stripe.Invoice,
+		};
+	}
 
-  const { curMainProduct } = attachParamToCusProducts({ attachParams });
+	const { curMainProduct } = attachParamToCusProducts({ attachParams });
 
-  // 2. Create prorations for single use items
-  let { invoiceItems, cusEntIds } = await createUsageInvoiceItems({
-    db,
-    attachParams,
-    cusProduct: curMainProduct!,
-    sub: curSub,
-    logger,
-  });
+	// 2. Create prorations for single use items
+	const { invoiceItems, cusEntIds } = await createUsageInvoiceItems({
+		db,
+		attachParams,
+		cusProduct: curMainProduct!,
+		sub: curSub,
+		logger,
+	});
 
-  // // // 3. Create prorations for continuous use items
-  // let { replaceables, newItems } = await getContUseInvoiceItems({
-  //   attachParams,
-  //   cusProduct: curMainProduct!,
-  //   sub: curSub,
-  //   logger,
-  // });
+	// // // 3. Create prorations for continuous use items
+	// let { replaceables, newItems } = await getContUseInvoiceItems({
+	//   attachParams,
+	//   cusProduct: curMainProduct!,
+	//   sub: curSub,
+	//   logger,
+	// });
 
-  const { replaceables } = await createAndFilterContUseItems({
-    attachParams,
-    curMainProduct: curMainProduct!,
-    sub: curSub,
-    logger,
-  });
+	const { replaceables } = await createAndFilterContUseItems({
+		attachParams,
+		curMainProduct: curMainProduct!,
+		sub: curSub,
+		logger,
+	});
 
-  if (proration === ProrationBehavior.Immediately) {
-    latestInvoice = await createProrationInvoice({
-      attachParams,
-      invoiceOnly,
-      curSub,
-      updatedSub,
-      logger,
-    });
+	if (proration === ProrationBehavior.Immediately) {
+		latestInvoice = await createProrationInvoice({
+			attachParams,
+			invoiceOnly,
+			curSub,
+			updatedSub,
+			logger,
+		});
 
-    console.log(`FINALIZED INVOICE ${latestInvoice?.id}`);
-    console.log(latestInvoice?.lines.data.map((line) => line.description));
-  }
+		console.log(`FINALIZED INVOICE ${latestInvoice?.id}`);
+		console.log(latestInvoice?.lines.data.map((line) => line.description));
+	}
 
-  await resetUsageBalances({
-    db,
-    cusEntIds,
-    cusProduct: curMainProduct!,
-  });
+	await resetUsageBalances({
+		db,
+		cusEntIds,
+		cusProduct: curMainProduct!,
+	});
 
-  return {
-    updatedSub,
-    latestInvoice: latestInvoice,
-    cusEntIds,
-    replaceables,
-  };
+	return {
+		updatedSub,
+		latestInvoice: latestInvoice,
+		cusEntIds,
+		replaceables,
+	};
 };
 
 // await SubService.addUsageFeatures({

@@ -1,49 +1,46 @@
 import {
-  AppEnv,
+  type AppEnv,
   BillingInterval,
   BillingType,
-  CreateProduct,
-  Entitlement,
+  type CreateProduct,
+  EntInterval,
+  type Entitlement,
   EntitlementSchema,
   ErrCode,
-  Feature,
-  FixedPriceConfig,
+  type Feature,
+  type FixedPriceConfig,
+  type FullProduct,
   intervalsSame,
-  Organization,
-  Price,
+  type Organization,
+  type Price,
   PriceSchema,
   PriceType,
   ProcessorType,
-  Product,
-  ProductOptions,
+  type Product,
   ProductSchema,
-  UsagePriceConfig,
+  type UsagePriceConfig,
 } from "@autumn/shared";
-import { FullProduct } from "@autumn/shared";
+import { Decimal } from "decimal.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
 import {
   getBillingInterval,
   getBillingType,
 } from "@/internal/products/prices/priceUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { ProductService } from "./ProductService.js";
-import {
+import RecaseError from "@/utils/errorUtils.js";
+import { generateId, notNullish } from "@/utils/genUtils.js";
+import type {
   AttachParams,
   InsertCusProductParams,
 } from "../customers/cusProducts/AttachParams.js";
-import {
-  getEntitlementsForProduct,
-  getEntsWithFeature,
-} from "./entitlements/entitlementUtils.js";
-import { Decimal } from "decimal.js";
-import { generateId, notNullish } from "@/utils/genUtils.js";
-import { PriceService } from "./prices/PriceService.js";
-import { EntitlementService } from "./entitlements/EntitlementService.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
-import { FreeTrialService } from "./free-trials/FreeTrialService.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { compareBillingIntervals } from "./prices/priceUtils/priceIntervalUtils.js";
 import { isStripeConnected } from "../orgs/orgUtils.js";
+import { EntitlementService } from "./entitlements/EntitlementService.js";
+import { getEntitlementsForProduct } from "./entitlements/entitlementUtils.js";
+import { FreeTrialService } from "./free-trials/FreeTrialService.js";
+import { ProductService } from "./ProductService.js";
+import { PriceService } from "./prices/PriceService.js";
+import { compareBillingIntervals } from "./prices/priceUtils/priceIntervalUtils.js";
 import { isDefaultTrialFullProduct } from "./productUtils/classifyProduct.js";
 
 export const getLatestProducts = (products: FullProduct[]) => {
@@ -86,7 +83,7 @@ export const constructProduct = ({
   processor?: any;
   baseVariantId?: string | null;
 }) => {
-  let newProduct: Product = {
+  const newProduct: Product = {
     ...productData,
     org_id: orgId,
     env,
@@ -129,8 +126,8 @@ export const isProductUpgrade = ({
     return true;
   }
 
-  let billingInterval1 = getBillingInterval(prices1); // pro quarter
-  let billingInterval2 = getBillingInterval(prices2); // premium
+  const billingInterval1 = getBillingInterval(prices1); // pro quarter
+  const billingInterval2 = getBillingInterval(prices2); // premium
 
   // 2. Get total price for each product
   const getTotalPrice = (prices: Price[]) => {
@@ -186,7 +183,7 @@ export const isFreeProduct = (prices: Price[]) => {
 export const getOptionsFromPrices = (prices: Price[], features: Feature[]) => {
   const featureToOptions: { [key: string]: any } = {};
   for (const price of prices) {
-    if (price.config!.type == PriceType.Fixed) {
+    if (price.config!.type === PriceType.Fixed) {
       continue;
     }
 
@@ -231,7 +228,7 @@ export const checkStripeProductExists = async ({
   logger: any;
 }) => {
   let createNew = false;
-  let stripeCli = createStripeCli({
+  const stripeCli = createStripeCli({
     org,
     env,
   });
@@ -240,7 +237,7 @@ export const checkStripeProductExists = async ({
     createNew = true;
   } else {
     try {
-      let stripeProduct = await stripeCli.products.retrieve(
+      const stripeProduct = await stripeCli.products.retrieve(
         product.processor!.id
       );
 
@@ -291,7 +288,9 @@ export const attachToInsertParams = (
   // Get entity
   let { internalEntityId, entityId: attachEntityId } = attachParams;
   if (notNullish(entityId)) {
-    let entity = attachParams.customer.entities.find((e) => e.id === entityId);
+    const entity = attachParams.customer.entities.find(
+      (e) => e.id === entityId
+    );
 
     if (entity) {
       internalEntityId = entity.internal_id;
@@ -343,7 +342,7 @@ export const copyProduct = async ({
     org_id: toOrgId,
     env: toEnv,
     processor: null,
-    base_variant_id: fromEnv == toEnv ? null : product.base_variant_id,
+    base_variant_id: fromEnv === toEnv ? null : product.base_variant_id,
   };
 
   const newEntitlements: Entitlement[] = [];
@@ -351,12 +350,12 @@ export const copyProduct = async ({
 
   for (const entitlement of product.entitlements) {
     // 1. Get from feature
-    let fromFeature = fromFeatures.find(
+    const fromFeature = fromFeatures.find(
       (f) => f.internal_id === entitlement.internal_feature_id
     );
 
     // 2. Get to feature
-    let toFeature = toFeatures.find((f) => f.id === fromFeature?.id);
+    const toFeature = toFeatures.find((f) => f.id === fromFeature?.id);
 
     if (!toFeature) {
       throw new RecaseError({
@@ -366,7 +365,7 @@ export const copyProduct = async ({
       });
     }
 
-    let newId = generateId("ent");
+    const newId = generateId("ent");
     newEntitlements.push(
       EntitlementSchema.parse({
         ...entitlement,
@@ -382,12 +381,12 @@ export const copyProduct = async ({
     newEntIds[entitlement.id!] = newId;
   }
 
-  let newPrices: Price[] = [];
+  const newPrices: Price[] = [];
   for (const price of product.prices) {
     // 1. Copy price
-    let newPrice = structuredClone(price);
+    const newPrice = structuredClone(price);
 
-    let config = newPrice.config as UsagePriceConfig;
+    const config = newPrice.config as UsagePriceConfig;
 
     // Clear Stripe IDs
     config.stripe_meter_id = undefined;
@@ -396,11 +395,11 @@ export const copyProduct = async ({
     config.stripe_price_id = undefined;
 
     if (config.type === PriceType.Usage) {
-      let fromFeature = fromFeatures.find(
+      const fromFeature = fromFeatures.find(
         (f) => f.internal_id === config.internal_feature_id
       );
 
-      let toFeature = toFeatures.find((f) => f.id === fromFeature?.id);
+      const toFeature = toFeatures.find((f) => f.id === fromFeature?.id);
 
       if (!toFeature) {
         throw new RecaseError({
@@ -414,7 +413,7 @@ export const copyProduct = async ({
       config.feature_id = toFeature.id;
 
       // Update entitlement id
-      let entitlementId = newEntIds[price.entitlement_id!];
+      const entitlementId = newEntIds[price.entitlement_id!];
       if (!entitlementId) {
         throw new RecaseError({
           message: `Failed to swap entitlement id for price ${price.id}`,
@@ -488,13 +487,22 @@ export const isOneOff = (prices: Price[]) => {
     prices.every((p) => p.config?.interval === BillingInterval.OneOff) &&
     prices.some((p) => {
       if (p.config?.type === PriceType.Usage) {
-        let config = p.config as UsagePriceConfig;
+        const config = p.config as UsagePriceConfig;
         return config.usage_tiers.some((t) => t.amount > 0);
       } else {
-        let config = p.config as FixedPriceConfig;
+        const config = p.config as FixedPriceConfig;
         return config.amount > 0;
       }
     })
+  );
+};
+
+export const itemsAreOneOff = (items: Entitlement[]) => {
+  return items.every(
+    (item) =>
+      item.interval === null ||
+      item.interval === undefined ||
+      item.interval === EntInterval.Lifetime
   );
 };
 

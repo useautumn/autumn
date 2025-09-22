@@ -40,6 +40,12 @@ if [ "$1" == "g4" ]; then
     'tests/advanced/coupons/*.ts'
 fi
 
+# Group 5 - Paid referrals
+if [ "$1" == "paid-referrals" ]; then
+    $MOCHA_SETUP && $MOCHA_CMD \
+    'tests/advanced/referrals/paid/*.ts'
+fi
+
 # Group 4
 if [ "$1" == "g4" ]; then
     $MOCHA_SETUP && $MOCHA_CMD \
@@ -68,22 +74,17 @@ elif [ "$1" == "custom" ]; then
     ARG3="$3"
     if [ "$ARG3" == "setup" ]; then
         npx mocha --bail --timeout 10000000 'tests/00_setup.ts'
+    elif [ "$ARG3" == "parallel" ]; then
+        npx mocha --parallel --bail --timeout 10000000 "tests/$FILE_TO_TEST.ts"
+    else
+        npx mocha --bail --timeout 10000000 "tests/$FILE_TO_TEST.ts"
     fi
-    npx mocha --bail --timeout 10000000 "tests/$FILE_TO_TEST.ts"
 else
     npx mocha --timeout 10000000 'tests/00_setup.ts' && npx mocha --timeout 10000000  \
     'tests/**/*.ts' \
     --ignore 'tests/00_setup.ts' \
     --ignore 'tests/alex/**/*.ts'
 fi
-
-
-
-
-
-
-
-
 
 # # TEST PARALLEL
 # if [ "$1" == "basic-parallel" ]; then
@@ -116,5 +117,3 @@ fi
 #     && $MOCHA_CMD 'tests/advanced/arrear_prorated/*.ts' 'tests/advanced/coupons/*.ts'\
 #     # && $MOCHA_CMD 'tests/advanced/usage/*.ts' \
 #     # && $MOCHA_CMD 'tests/advanced/coupons/*.ts'\
-
-

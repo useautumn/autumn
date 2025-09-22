@@ -1,5 +1,7 @@
 import dotenv from "dotenv";
+
 dotenv.config();
+
 import {
   AggregateType,
   AllowanceType,
@@ -7,26 +9,25 @@ import {
   BillingInterval,
   CouponDurationType,
   EntInterval,
-  Feature,
+  type Feature,
+  FeatureType,
   FeatureUsageType,
   RewardReceivedBy,
   RewardTriggerEvent,
   RewardType,
 } from "@autumn/shared";
-import { FeatureType } from "@autumn/shared";
+import { initDrizzle } from "@/db/initDrizzle.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
 import {
-  initReward,
   initEntitlement,
   initFeature,
   initFreeTrial,
   initPrice,
   initProduct,
+  initReward,
   initRewardProgram,
 } from "./utils/init.js";
-import { createSupabaseClient } from "@/external/supabaseUtils.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-import { initDrizzle } from "@/db/initDrizzle.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
 
 export const features: Record<string, Feature & { eventName: string }> = {
   boolean1: initFeature({
@@ -322,6 +323,26 @@ export const products = {
       }),
     },
     prices: [],
+    freeTrial: null,
+    isAddOn: true,
+  }),
+
+  proAddOn: initProduct({
+    id: "proAddOn",
+    entitlements: {
+      metered1: initEntitlement({
+        feature: features.metered1,
+        allowance: 100,
+        interval: EntInterval.Lifetime,
+      }),
+    },
+    prices: [
+      initPrice({
+        type: "fixed_cycle",
+        billingInterval: BillingInterval.OneOff,
+        amount: 100,
+      }),
+    ],
     freeTrial: null,
     isAddOn: true,
   }),
@@ -821,6 +842,20 @@ export const rewards = {
     durationType: CouponDurationType.Months,
     durationValue: 1,
   }),
+  paidProductWithConfig: initReward({
+    id: "paidProductWithConfig",
+    type: RewardType.FreeProduct,
+    freeProductId: products.pro.id,
+    freeProductConfig: {
+      durationType: CouponDurationType.Months,
+      durationValue: 1,
+    },
+  }),
+  paidProductAddOn: initReward({
+    id: "paidProductAddOn",
+    type: RewardType.FreeProduct,
+    freeProductId: products.proAddOn.id,
+  }),
   freeProduct: initReward({
     id: "freeProduct",
     type: RewardType.FreeProduct,
@@ -829,6 +864,13 @@ export const rewards = {
 };
 
 export const referralPrograms = {
+  freeProduct: initRewardProgram({
+    id: "freeProduct",
+    internalRewardId: rewards.freeProduct.id,
+    when: RewardTriggerEvent.Checkout,
+    receivedBy: RewardReceivedBy.All,
+    productIds: [products.pro.id, products.proWithTrial.id],
+  }),
   onCheckout: initRewardProgram({
     id: "onCheckout",
     internalRewardId: rewards.monthOff.id,
@@ -840,12 +882,66 @@ export const referralPrograms = {
     internalRewardId: rewards.monthOff.id,
     when: RewardTriggerEvent.CustomerCreation,
   }),
-  freeProduct: initRewardProgram({
-    id: "freeProduct",
-    internalRewardId: rewards.freeProduct.id,
+  paidProductImmediateAll: initRewardProgram({
+    id: "paidProduct-immediate-all",
+    internalRewardId: rewards.paidProductWithConfig.id,
+    when: RewardTriggerEvent.CustomerCreation,
+    receivedBy: RewardReceivedBy.All,
+    productIds: [products.pro.id],
+    maxRedemptions: 100,
+  }),
+  paidProductImmediateReferrer: initRewardProgram({
+    id: "paidProduct-immediate-referrer",
+    internalRewardId: rewards.paidProductWithConfig.id,
+    when: RewardTriggerEvent.CustomerCreation,
+    receivedBy: RewardReceivedBy.Referrer,
+    productIds: [products.pro.id],
+    maxRedemptions: 100,
+  }),
+
+  paidProductCheckoutAll: initRewardProgram({
+    id: "paidProduct-checkout-all",
+    internalRewardId: rewards.paidProductWithConfig.id,
     when: RewardTriggerEvent.Checkout,
     receivedBy: RewardReceivedBy.All,
-    productIds: [products.pro.id, products.proWithTrial.id],
+    productIds: [products.premium.id],
+  }),
+  paidProductCheckoutReferrer: initRewardProgram({
+    id: "paidProduct-checkout-referrer",
+    internalRewardId: rewards.paidProductWithConfig.id,
+    when: RewardTriggerEvent.Checkout,
+    receivedBy: RewardReceivedBy.Referrer,
+    productIds: [products.premium.id],
+  }),
+
+  paidAddOnAll: initRewardProgram({
+    id: "paidAddOn-all",
+    internalRewardId: rewards.paidProductAddOn.id,
+    when: RewardTriggerEvent.CustomerCreation,
+    receivedBy: RewardReceivedBy.All,
+    productIds: [products.proAddOn.id],
+  }),
+  paidAddOnReferrer: initRewardProgram({
+    id: "paidAddOn-referrer",
+    internalRewardId: rewards.paidProductAddOn.id,
+    when: RewardTriggerEvent.CustomerCreation,
+    receivedBy: RewardReceivedBy.Referrer,
+    productIds: [products.proAddOn.id],
+  }),
+
+  paidAddOnCheckoutAll: initRewardProgram({
+    id: "paidAddOn-checkout-all",
+    internalRewardId: rewards.paidProductAddOn.id,
+    when: RewardTriggerEvent.Checkout,
+    receivedBy: RewardReceivedBy.All,
+    productIds: [products.premium.id],
+  }),
+  paidAddOnCheckoutReferrer: initRewardProgram({
+    id: "paidAddOn-checkout-referrer",
+    internalRewardId: rewards.paidProductAddOn.id,
+    when: RewardTriggerEvent.Checkout,
+    receivedBy: RewardReceivedBy.Referrer,
+    productIds: [products.premium.id],
   }),
 };
 
@@ -854,7 +950,7 @@ const ORG_SLUG = process.env.TESTS_ORG!;
 before(async function () {
   try {
     this.env = AppEnv.Sandbox;
-    let { db, client } = initDrizzle();
+    const { db, client } = initDrizzle();
     this.db = db;
     this.client = client;
 
@@ -871,8 +967,8 @@ before(async function () {
 
     const cleanFeatures = (features: Record<string, Feature>) => {
       for (const featureId in features) {
-        let feature = features[featureId as keyof typeof features];
-        let dbFeature = dbFeatures.find((f: any) => f.id === feature.id);
+        const feature = features[featureId as keyof typeof features];
+        const dbFeature = dbFeatures.find((f: any) => f.id === feature.id);
         if (!dbFeature) {
           // throw new Error(`Feature ${feature.id} not found`);
           continue;
@@ -881,7 +977,7 @@ before(async function () {
           dbFeature.internal_id;
         if (feature.type === FeatureType.Metered) {
           // Ignore this for now
-          // @ts-ignore eventName is manually set
+          // @ts-expect-error eventName is manually set
           features[featureId as keyof typeof features].eventName =
             dbFeature.config?.filters[0].value[0];
         }
