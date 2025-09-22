@@ -38,9 +38,11 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 export const RewardProgramConfig = ({
   rewardProgram,
   setRewardProgram,
+  isUpdate,
 }: {
   rewardProgram: RewardProgram;
   setRewardProgram: (rewardProgram: RewardProgram) => void;
+  isUpdate?: boolean;
 }) => {
   const { rewards } = useRewardsQuery();
 
@@ -63,6 +65,7 @@ export const RewardProgramConfig = ({
             onValueChange={(value) =>
               setRewardProgram({ ...rewardProgram, internal_reward_id: value })
             }
+            // disabled={isUpdate}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select a reward" />

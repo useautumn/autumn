@@ -136,7 +136,7 @@ rewardProgramRouter.put("/:id", (req, res) =>
         env,
       });
 
-      console.log("Existing program:", existingProgram);
+      // console.log("Existing program:", existingProgram);
 
       if (!existingProgram) {
         throw new RecaseError({
@@ -155,7 +155,7 @@ rewardProgramRouter.put("/:id", (req, res) =>
         env,
       });
 
-      console.log("Updating program to:", rewardProgram);
+      // console.log("Updating program to:", rewardProgram);
 
       if (
         rewardProgram.when == RewardTriggerEvent.Checkout &&
@@ -163,7 +163,8 @@ rewardProgramRouter.put("/:id", (req, res) =>
           rewardProgram.product_ids!.length == 0)
       ) {
         throw new RecaseError({
-          message: "If redeem on checkout, must specify at least one product",
+          message:
+            "When `Redeem On` is set to `Checkout`, must specify at least one product",
           code: ErrCode.InvalidRequest,
           statusCode: 400,
         });

@@ -8,9 +8,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { toast } from "sonner";
-import { Reward } from "@autumn/shared";
+import { RewardProgram } from "@autumn/shared";
 import { useEnv } from "@/utils/envUtils";
-import { RewardService } from "@/services/products/RewardService";
 import { getBackendErr } from "@/utils/genUtils";
 import { WarningBox } from "@/components/general/modal-components/WarningBox";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
@@ -20,13 +19,13 @@ import { RewardProgramService } from "@/services/products/RewardProgramService";
 function UpdateRewardProgram({
   open,
   setOpen,
-  selectedReward,
-  setSelectedReward,
+  selectedRewardProgram,
+  setSelectedRewardProgram,
 }: {
   open: boolean;
   setOpen: (open: boolean) => void;
-  selectedReward: Reward | null;
-  setSelectedReward: (reward: Reward) => void;
+  selectedRewardProgram: RewardProgram | null;
+  setSelectedRewardProgram: (reward: RewardProgram) => void;
 }) {
   const [updateLoading, setUpdateLoading] = useState(false);
   const { refetch } = useRewardsQuery();
@@ -39,14 +38,14 @@ function UpdateRewardProgram({
     try {
       await RewardProgramService.updateReward({
         axiosInstance,
-        internalId: selectedReward!.internal_id,
-        data: selectedReward!,
+        internalId: selectedRewardProgram!.internal_id,
+        data: selectedRewardProgram!,
       });
       toast.success("Reward updated successfully");
       await refetch();
       setOpen(false);
     } catch (error) {
-      toast.error(getBackendErr(error, "Failed to update coupon"));
+      toast.error(getBackendErr(error, "Failed to update reward program"));
     }
     setUpdateLoading(false);
   };
@@ -54,15 +53,16 @@ function UpdateRewardProgram({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="w-[500px]">
-        <DialogTitle>Update Reward Programs</DialogTitle>
-        <WarningBox>
-          Existing customers with this coupon will not be affected
-        </WarningBox>
+        <DialogTitle>Update Reward Program</DialogTitle>
+        {/* <WarningBox>
+          Existing customers with this reward program will not be affected
+        </WarningBox> */}
 
-        {selectedReward && (
+        {selectedRewardProgram && (
           <RewardProgramConfig
-            rewardProgram={selectedReward}
-            setRewardProgram={setSelectedReward}
+            rewardProgram={selectedRewardProgram}
+            setRewardProgram={setSelectedRewardProgram}
+            isUpdate={true}
           />
         )}
 

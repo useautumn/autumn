@@ -21,8 +21,8 @@ export const RewardProgramsTable = () => {
       <UpdateRewardProgram
         open={open}
         setOpen={setOpen}
-        selectedReward={selectedRewardProgram}
-        setSelectedReward={setSelectedRewardProgram}
+        selectedRewardProgram={selectedRewardProgram}
+        setSelectedRewardProgram={setSelectedRewardProgram}
       />
       {/* <UpdateRewardProgram component here /> */}
 
