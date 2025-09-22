@@ -13,6 +13,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { billingIntervalToStripe } from "../stripePriceUtils.js";
 import {
+  formatPrice,
   getBillingType,
   getPriceEntitlement,
 } from "@/internal/products/prices/priceUtils.js";

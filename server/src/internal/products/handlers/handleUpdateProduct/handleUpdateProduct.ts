@@ -1,28 +1,28 @@
-import RecaseError from "@/utils/errorUtils.js";
-import { ErrCode, FullProduct, UpdateProductSchema } from "@autumn/shared";
-
-import { ProductService } from "../../ProductService.js";
-import { notNullish } from "@/utils/genUtils.js";
+import { ErrCode, type FullProduct, UpdateProductSchema } from "@autumn/shared";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-
 import { handleNewFreeTrial } from "@/internal/products/free-trials/freeTrialUtils.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import { handleVersionProductV2 } from "../handleVersionProduct.js";
-import { routeHandler } from "@/utils/routerUtils.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
 import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
-import { handleUpdateProductDetails } from "./updateProductDetails.js";
-import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
+import { addTaskToQueue } from "@/queue/queueUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
+import { routeHandler } from "@/utils/routerUtils.js";
+import { getEntsWithFeature } from "../../entitlements/entitlementUtils.js";
+import { validateOneOffTrial } from "../../free-trials/freeTrialUtils.js";
+import { ProductService } from "../../ProductService.js";
 import { productsAreSame } from "../../productUtils/compareProductUtils.js";
 import { initProductInStripe } from "../../productUtils.js";
+import { mapToProductItems } from "../../productV2Utils.js";
 import {
   disableCurrentDefault,
   handleCreateProduct,
 } from "../handleCreateProduct.js";
-import { mapToProductItems } from "../../productV2Utils.js";
-import { validateOneOffTrial } from "../../free-trials/freeTrialUtils.js";
+import { handleVersionProductV2 } from "../handleVersionProduct.js";
+import { handleUpdateProductDetails } from "./updateProductDetails.js";
+import { formatPrice } from "../../prices/priceUtils.js";
 
 export const handleUpdateProductV2 = async (req: any, res: any) =>
   routeHandler({
@@ -34,7 +34,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
       const { version, upsert, disable_version } = req.query;
       const { orgId, env, logger, db } = req;
 
-      const [features, org, fullProduct, rewardPrograms, defaultProds] =
+      const [features, org, fullProduct, rewardPrograms, _defaultProds] =
         await Promise.all([
           FeatureService.getFromReq(req),
           OrgService.getFromReq(req),
@@ -44,7 +44,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
             orgId,
             env,
             version: version ? parseInt(version) : undefined,
-            allowNotFound: upsert == "true",
+            allowNotFound: upsert === "true",
           }),
           RewardProgramService.getByProductId({
             db,
@@ -60,7 +60,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
         ]);
 
       if (!fullProduct) {
-        if (upsert == "true") {
+        if (upsert === "true") {
           await handleCreateProduct(req, res);
           return;
         }
@@ -78,7 +78,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
           internalProductId: fullProduct.internal_id,
         });
 
-      let cusProductExists = cusProductsCurVersion.length > 0;
+      const cusProductExists = cusProductsCurVersion.length > 0;
 
       // console.log("Updating product", {
       //   id: fullProduct.id,
@@ -111,15 +111,14 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
         logger,
       });
 
-      let itemsExist = notNullish(req.body.items);
+      const itemsExist = notNullish(req.body.items);
       if (cusProductExists && itemsExist) {
-        if (disable_version == "true") {
+        if (disable_version === "true") {
           throw new RecaseError({
             message: "Cannot auto save product as there are existing customers",
             code: ErrCode.InvalidRequest,
             statusCode: 400,
           });
-          return;
         }
 
         const { itemsSame, freeTrialsSame } = productsAreSame({
@@ -154,7 +153,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
         });
       }
 
-      const { prices, entitlements } = await handleNewProductItems({
+      await handleNewProductItems({
         db,
         curPrices: fullProduct.prices,
         curEnts: fullProduct.entitlements,
@@ -165,9 +164,17 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
         isCustom: false,
       });
 
+      // New full product
+      const newFullProduct = await ProductService.getFull({
+        db,
+        idOrInternalId: fullProduct.id,
+        orgId,
+        env,
+      });
+
       if (free_trial !== undefined) {
         await validateOneOffTrial({
-          prices,
+          prices: newFullProduct.prices,
           freeTrial: free_trial,
         });
 
@@ -181,13 +188,10 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
         });
       }
 
+      // New full product
       await initProductInStripe({
         db,
-        product: {
-          ...fullProduct,
-          prices,
-          entitlements,
-        } as FullProduct,
+        product: newFullProduct,
         org,
         env,
         logger,
@@ -197,14 +201,19 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
       await addTaskToQueue({
         jobName: JobName.DetectBaseVariant,
         payload: {
-          curProduct: {
-            ...fullProduct,
-            prices: prices.length > 0 ? prices : fullProduct.prices,
-            entitlements,
-          },
+          curProduct: newFullProduct,
         },
       });
 
+      await addTaskToQueue({
+        jobName: JobName.RewardMigration,
+        payload: {
+          oldPrices: fullProduct.prices,
+          productId: fullProduct.id,
+          orgId: org.id,
+          env,
+        },
+      });
       res.status(200).send({ message: "Product updated" });
       return;
     },
