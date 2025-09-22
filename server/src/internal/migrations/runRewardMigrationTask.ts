@@ -22,6 +22,7 @@ import { createStripeCoupon } from "@/external/stripe/stripeCouponUtils/stripeCo
 import { PriceService } from "../products/prices/PriceService.js";
 import { OrgService } from "../orgs/OrgService.js";
 import { formatPrice } from "../products/prices/priceUtils.js";
+import { ProductService } from "../products/ProductService.js";
 
 // Helper function to check if tier structures match
 const tiersMatch = (oldTiers: any[], newTiers: any[]): boolean => {
@@ -83,6 +84,8 @@ const findBestMatch = (oldPrice: Price, newPrices: Price[]): Price | null => {
   // First, filter by basic characteristics
 
   const candidates = newPrices.filter((newPrice) => {
+    if (newPrice.id === oldPrice.id) return true;
+
     const oldConfig = oldPrice.config as UsagePriceConfig;
     const newConfig = newPrice.config as UsagePriceConfig;
 
@@ -95,12 +98,6 @@ const findBestMatch = (oldPrice: Price, newPrices: Price[]): Price | null => {
         : true)
     );
   });
-
-  console.log(
-    "Candidates: ",
-    candidates.map((p) => formatPrice({ price: p }))
-  );
-  console.log("--------------------------------");
 
   if (candidates.length === 0) return null;
   if (candidates.length === 1) return candidates[0];
@@ -128,16 +125,26 @@ export async function runRewardMigrationTask({
   try {
     const {
       oldPrices,
-      newPrices,
+      productId,
+      // newPrices,
       orgId,
       env,
     }: {
       oldPrices: Price[];
-      newPrices: Price[];
-      product: FullProduct;
+      // newPrices: Price[];
+      productId: string;
       orgId: string;
       env: AppEnv;
     } = payload;
+
+    const fullProduct = await ProductService.getFull({
+      db,
+      idOrInternalId: productId,
+      orgId,
+      env,
+    });
+
+    const newPrices = fullProduct.prices;
 
     // Get organization for Stripe operations
     const org = await OrgService.get({
@@ -167,10 +174,8 @@ export async function runRewardMigrationTask({
         )
     );
 
-    // console.log(
-    //   "New price IDs: ",
-    //   newPrices.map((p) => formatPrice({ price: p }))
-    // );
+    let shouldUpdateReward = false;
+
     for (const reward of filteredRewards) {
       const newPriceIds: string[] = [];
       const unmatchedPrices: string[] = [];
@@ -178,8 +183,10 @@ export async function runRewardMigrationTask({
       if (reward.discount_config?.price_ids) {
         for (const priceId of reward.discount_config.price_ids) {
           const oldPrice = oldPrices.find((p) => p.id === priceId);
+
+          // From other product
           if (!oldPrice) {
-            logger.warn(`Old price ${priceId} not found in oldPrices array`);
+            newPriceIds.push(priceId);
             continue;
           }
 
@@ -187,23 +194,28 @@ export async function runRewardMigrationTask({
 
           if (matchingNewPrice) {
             newPriceIds.push(matchingNewPrice.id);
+            const shouldUpdate =
+              matchingNewPrice.config.stripe_price_id !==
+                oldPrice.config.stripe_price_id ||
+              matchingNewPrice.config.stripe_product_id !==
+                oldPrice.config.stripe_product_id;
+
+            if (shouldUpdate) {
+              shouldUpdateReward = true;
+            }
           } else {
             unmatchedPrices.push(oldPrice.id);
           }
         }
       }
 
-      console.log("New price IDs: ", newPriceIds);
-      throw new Error("test");
-
       // Update the reward with new price IDs
-      if (newPriceIds.length > 0) {
+      if (shouldUpdateReward) {
         try {
-          // Check if price IDs have actually changed
-          const originalPriceIds = reward.discount_config?.price_ids || [];
-          const priceIdsChanged =
-            originalPriceIds.length !== newPriceIds.length ||
-            !originalPriceIds.every((id) => newPriceIds.includes(id));
+          // Update Stripe coupon and reward if price IDs have changed
+          console.log(
+            `Updating ${reward.id}, updating reward and Stripe coupon...`
+          );
 
           // Update the reward in the database
           const updatedReward = await RewardService.update({
@@ -219,74 +231,38 @@ export async function runRewardMigrationTask({
             },
           });
 
-          // Update Stripe coupon if price IDs have changed
-          if (priceIdsChanged && org) {
-            try {
-              logger.info(
-                `Price IDs changed for reward ${reward.id}, updating Stripe coupon...`
-              );
+          // Get the price objects for the new price IDs
+          const prices = await PriceService.getInIds({
+            db,
+            ids: newPriceIds,
+          });
 
-              // Get the price objects for the new price IDs
-              const prices = await PriceService.getInIds({
-                db,
-                ids: newPriceIds,
-              });
+          // Recreate the Stripe coupon with new product restrictions
+          await createStripeCoupon({
+            reward: updatedReward,
+            org,
+            env,
+            prices,
+            logger,
+          });
 
-              // Recreate the Stripe coupon with new product restrictions
-              await createStripeCoupon({
-                reward: updatedReward,
-                org,
-                env,
-                prices,
-                logger,
-              });
-
-              logger.info(
-                `Successfully updated Stripe coupon for reward ${reward.id} with new product restrictions`
-              );
-            } catch (stripeError) {
-              logger.error(
-                `Failed to update Stripe coupon for reward ${reward.id}:`,
-                stripeError
-              );
-              // Don't throw here - we want to continue with other rewards
-            }
-          }
-          logger.info(
-            `Updated reward "${reward.name}" (${reward.id}) with ${newPriceIds.length} prices`
+          console.log(
+            `Successfully updated Stripe coupon for reward ${reward.id} with new product restrictions`
           );
         } catch (error) {
-          logger.error(`Failed to update reward ${reward.id}:`, error);
+          console.error(`Failed to update reward ${reward.id}:`, error);
         }
       }
 
       if (unmatchedPrices.length > 0) {
-        logger.warn(
+        console.warn(
           `Unmatched prices for reward ${reward.id}:`,
           unmatchedPrices
         );
       }
     }
-
-    // Migration summary
-    const totalRewards = filteredRewards.length;
-    const updatedRewards = filteredRewards.filter((r) =>
-      r.discount_config?.price_ids?.some(
-        (priceId) =>
-          oldPrices.find((p) => p.id === priceId) &&
-          findBestMatch(oldPrices.find((p) => p.id === priceId)!, newPrices)
-      )
-    ).length;
-
-    logger.info("================================");
-    logger.info("REWARD MIGRATION SUMMARY FOR ORG: ", orgId);
-    logger.info("================================");
-    logger.info(`Total rewards processed: ${totalRewards}`);
-    logger.info(`Rewards with successful matches: ${updatedRewards}`);
-    logger.info(`Rewards with no matches: ${totalRewards - updatedRewards}`);
-    logger.info("================================");
   } catch (error) {
-    logger.error("Error running reward migration task", { error });
+    console.error("Error running reward migration task", { error });
     throw error;
   }
 }
