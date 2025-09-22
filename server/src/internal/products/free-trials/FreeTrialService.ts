@@ -86,11 +86,10 @@ export class FreeTrialService {
 			.from(freeTrials)
 			.innerJoin(
 				products,
-				eq(freeTrials.internal_product_id, products.internal_id)
+				eq(freeTrials.internal_product_id, products.internal_id),
 			)
 			.where(and(eq(products.org_id, orgId), eq(products.env, env)));
 
 		return result[0];
 	}
-
 }

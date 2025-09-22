@@ -3,26 +3,24 @@ import { AppEnv, FullCusProduct } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 
 let cusProductsQuery = ({
-  lastProductId,
-  internalProductId,
-  pageSize = 250,
+	lastProductId,
+	internalProductId,
+	pageSize = 250,
 }: {
-  lastProductId?: string;
-  internalProductId?: string;
-  pageSize?: number;
+	lastProductId?: string;
+	internalProductId?: string;
+	pageSize?: number;
 }) => {
-  // const withStatusFilter = () => {
-  //   return inStatuses
-  //     ? sql`AND cp.status = ANY(ARRAY[${sql.join(
-  //         inStatuses.map((status) => sql`${status}`),
-  //         sql`, `,
-  //       )}])`
-  //     : sql``;
-  // };
+	// const withStatusFilter = () => {
+	//   return inStatuses
+	//     ? sql`AND cp.status = ANY(ARRAY[${sql.join(
+	//         inStatuses.map((status) => sql`${status}`),
+	//         sql`, `,
+	//       )}])`
+	//     : sql``;
+	// };
 
-  
-
-  return sql`
+	return sql`
     SELECT 
         cp.*,
         row_to_json(prod) AS product,
@@ -82,31 +80,31 @@ let cusProductsQuery = ({
 };
 
 export const getAllFullCusProducts = async ({
-  db,
-  internalProductId,
+	db,
+	internalProductId,
 }: {
-  db: DrizzleCli;
-  internalProductId: string;
+	db: DrizzleCli;
+	internalProductId: string;
 }) => {
-  let lastProductId = "";
-  let allData: any[] = [];
-  let pageSize = 500;
+	let lastProductId = "";
+	let allData: any[] = [];
+	let pageSize = 500;
 
-  while (true) {
-    const data = await db.execute(
-      cusProductsQuery({
-        lastProductId,
-        pageSize,
-        internalProductId,
-      }),
-    );
+	while (true) {
+		const data = await db.execute(
+			cusProductsQuery({
+				lastProductId,
+				pageSize,
+				internalProductId,
+			}),
+		);
 
-    if (data.length === 0) break;
+		if (data.length === 0) break;
 
-    console.log(`Fetched ${data.length} customer products`);
-    allData.push(...data);
-    lastProductId = data[data.length - 1].id as string;
-  }
+		console.log(`Fetched ${data.length} customer products`);
+		allData.push(...data);
+		lastProductId = data[data.length - 1].id as string;
+	}
 
-  return allData as FullCusProduct[];
+	return allData as FullCusProduct[];
 };

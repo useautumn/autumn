@@ -1,9 +1,9 @@
 import type {
-    FixedPriceConfig,
-    Price,
-    Reward,
-    RewardType,
-    UsagePriceConfig,
+	FixedPriceConfig,
+	Price,
+	Reward,
+	RewardType,
+	UsagePriceConfig,
 } from "../../index.js";
 import type { UsageTier } from "../../models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import { isFixedPrice, isUsagePrice } from "../productUtils/priceUtils.js";

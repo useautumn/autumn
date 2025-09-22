@@ -7,101 +7,101 @@ import { Response } from "express";
 import { deleteStripeWebhook } from "../orgUtils.js";
 
 const deleteSvixWebhooks = async ({
-  org,
-  logger,
+	org,
+	logger,
 }: {
-  org: Organization;
-  logger: any;
+	org: Organization;
+	logger: any;
 }) => {
-  const batch = [];
-  if (org.svix_config?.sandbox_app_id) {
-    batch.push(
-      deleteSvixApp({
-        appId: org.svix_config.sandbox_app_id,
-      })
-    );
-  }
+	const batch = [];
+	if (org.svix_config?.sandbox_app_id) {
+		batch.push(
+			deleteSvixApp({
+				appId: org.svix_config.sandbox_app_id,
+			}),
+		);
+	}
 
-  if (org.svix_config?.live_app_id) {
-    batch.push(
-      deleteSvixApp({
-        appId: org.svix_config.live_app_id,
-      })
-    );
-  }
+	if (org.svix_config?.live_app_id) {
+		batch.push(
+			deleteSvixApp({
+				appId: org.svix_config.live_app_id,
+			}),
+		);
+	}
 
-  try {
-    await Promise.all(batch);
-  } catch (error) {
-    logger.error(`Failed to delete svix webhooks for ${org.id}, ${org.slug}`);
-  }
+	try {
+		await Promise.all(batch);
+	} catch (error) {
+		logger.error(`Failed to delete svix webhooks for ${org.id}, ${org.slug}`);
+	}
 };
 
 const deleteStripeWebhooks = async ({
-  org,
-  logger,
+	org,
+	logger,
 }: {
-  org: Organization;
-  logger: any;
+	org: Organization;
+	logger: any;
 }) => {
-  try {
-    await deleteStripeWebhook({
-      org: org,
-      env: AppEnv.Sandbox,
-    });
+	try {
+		await deleteStripeWebhook({
+			org: org,
+			env: AppEnv.Sandbox,
+		});
 
-    await deleteStripeWebhook({
-      org: org,
-      env: AppEnv.Live,
-    });
-  } catch (error: any) {
-    logger.error(
-      `Failed to delete stripe webhooks for ${org.id}, ${org.slug}. ${error.message})`
-    );
-  }
+		await deleteStripeWebhook({
+			org: org,
+			env: AppEnv.Live,
+		});
+	} catch (error: any) {
+		logger.error(
+			`Failed to delete stripe webhooks for ${org.id}, ${org.slug}. ${error.message})`,
+		);
+	}
 };
 
 export const handleDeleteOrg = async (req: ExtendedRequest, res: Response) => {
-  try {
-    const { org, db, logtail: logger } = req;
+	try {
+		const { org, db, logtail: logger } = req;
 
-    // 1. Check if any customers
-    let hasCustomers = await db.query.customers.findFirst({
-      where: and(eq(customers.org_id, org.id), eq(customers.env, AppEnv.Live)),
-    });
+		// 1. Check if any customers
+		let hasCustomers = await db.query.customers.findFirst({
+			where: and(eq(customers.org_id, org.id), eq(customers.env, AppEnv.Live)),
+		});
 
-    if (hasCustomers)
-      throw new RecaseError({
-        message: "Cannot delete org with production mode customers",
-        code: ErrCode.OrgHasCustomers,
-        statusCode: 400,
-      });
+		if (hasCustomers)
+			throw new RecaseError({
+				message: "Cannot delete org with production mode customers",
+				code: ErrCode.OrgHasCustomers,
+				statusCode: 400,
+			});
 
-    // 2. Delete svix webhooks
-    logger.info("1. Deleting svix webhooks");
-    await deleteSvixWebhooks({ org, logger });
+		// 2. Delete svix webhooks
+		logger.info("1. Deleting svix webhooks");
+		await deleteSvixWebhooks({ org, logger });
 
-    // 3. Delete stripe webhooks
-    logger.info("2. Deleting stripe webhooks");
-    await deleteStripeWebhooks({ org, logger });
+		// 3. Delete stripe webhooks
+		logger.info("2. Deleting stripe webhooks");
+		await deleteStripeWebhooks({ org, logger });
 
-    // 4. Delete all sandbox customers
-    logger.info("3. Deleting sandbox customers");
-    await db
-      .delete(customers)
-      .where(
-        and(eq(customers.org_id, org.id), eq(customers.env, AppEnv.Sandbox))
-      );
+		// 4. Delete all sandbox customers
+		logger.info("3. Deleting sandbox customers");
+		await db
+			.delete(customers)
+			.where(
+				and(eq(customers.org_id, org.id), eq(customers.env, AppEnv.Sandbox)),
+			);
 
-    res.status(200).json({
-      message: "Org deleted",
-    });
-  } catch (error) {
-    handleFrontendReqError({
-      res,
-      error,
-      req,
-      action: "delete-org",
-    });
-  }
+		res.status(200).json({
+			message: "Org deleted",
+		});
+	} catch (error) {
+		handleFrontendReqError({
+			res,
+			error,
+			req,
+			action: "delete-org",
+		});
+	}
 };

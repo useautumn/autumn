@@ -1,11 +1,11 @@
 import {
-  type CreateFreeTrial,
-  CreateFreeTrialSchema,
-  ErrCode,
-  type FreeProductConfig,
-  type FreeTrial,
-  FreeTrialDuration,
-  type Price
+	type CreateFreeTrial,
+	CreateFreeTrialSchema,
+	ErrCode,
+	type FreeProductConfig,
+	type FreeTrial,
+	FreeTrialDuration,
+	type Price,
 } from "@autumn/shared";
 import { addDays, addMinutes, addMonths, addYears } from "date-fns";
 import type { DrizzleCli } from "@/db/initDrizzle.js";

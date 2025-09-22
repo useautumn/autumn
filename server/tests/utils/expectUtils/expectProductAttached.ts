@@ -109,10 +109,12 @@ export const expectAddOnAttached = ({
 	productId,
 	status,
 }: {
-	customer: Customer & { add_ons: {
-		id: string;
-		status: CusProductStatus;
-	}[] };
+	customer: Customer & {
+		add_ons: {
+			id: string;
+			status: CusProductStatus;
+		}[];
+	};
 	productId: string;
 	status?: CusProductStatus;
 }) => {
@@ -120,9 +122,12 @@ export const expectAddOnAttached = ({
 	expect(addOn, `add on ${productId} is attached`).to.exist;
 
 	if (status) {
-		expect(addOn?.status).to.equal(status, `add on ${productId} should have status ${status}`);
+		expect(addOn?.status).to.equal(
+			status,
+			`add on ${productId} should have status ${status}`,
+		);
 	}
-}
+};
 
 export const expectInvoicesCorrect = ({
 	customer,

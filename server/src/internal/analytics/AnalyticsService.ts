@@ -6,8 +6,8 @@ import { StatusCodes } from "http-status-codes";
 import RecaseError from "@/utils/errorUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import {
-  generateEventCountExpressions,
-  getBillingCycleStartDate,
+	generateEventCountExpressions,
+	getBillingCycleStartDate,
 } from "./analyticsUtils.js";
 
 export class AnalyticsService {

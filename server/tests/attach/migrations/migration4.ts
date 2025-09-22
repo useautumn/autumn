@@ -16,121 +16,121 @@ import { timeout } from "@/utils/genUtils.js";
 import { expect } from "chai";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 let wordsItem = constructArrearItem({
-  featureId: TestFeature.Words,
+	featureId: TestFeature.Words,
 });
 
 export let pro = constructProduct({
-  items: [wordsItem],
-  type: "pro",
-  isDefault: false,
+	items: [wordsItem],
+	type: "pro",
+	isDefault: false,
 });
 
 let newWordsItem = constructArrearItem({
-  featureId: TestFeature.Words,
-  includedUsage: 120100,
+	featureId: TestFeature.Words,
+	includedUsage: 120100,
 });
 
 let proWithTrial = constructProduct({
-  items: [newWordsItem],
-  type: "pro",
-  isDefault: false,
-  trial: true,
+	items: [newWordsItem],
+	type: "pro",
+	isDefault: false,
+	trial: true,
 });
 
 const testCase = "migrations4";
 
 describe(`${chalk.yellowBright(`${testCase}: Testing migration for pro -> pro with trial (should not start trial)`)}`, () => {
-  let customerId = testCase;
-  let autumn: AutumnInt = new AutumnInt({ version: defaultApiVersion });
-  let testClockId: string;
-  let db: DrizzleCli, org: Organization, env: AppEnv;
-  let stripeCli: Stripe;
+	let customerId = testCase;
+	let autumn: AutumnInt = new AutumnInt({ version: defaultApiVersion });
+	let testClockId: string;
+	let db: DrizzleCli, org: Organization, env: AppEnv;
+	let stripeCli: Stripe;
 
-  let curUnix = new Date().getTime();
+	let curUnix = new Date().getTime();
 
-  before(async function () {
-    await setupBefore(this);
-    const { autumnJs } = this;
-    db = this.db;
-    org = this.org;
-    env = this.env;
+	before(async function () {
+		await setupBefore(this);
+		const { autumnJs } = this;
+		db = this.db;
+		org = this.org;
+		env = this.env;
 
-    stripeCli = this.stripeCli;
+		stripeCli = this.stripeCli;
 
-    addPrefixToProducts({
-      products: [pro, proWithTrial],
-      prefix: testCase,
-    });
+		addPrefixToProducts({
+			products: [pro, proWithTrial],
+			prefix: testCase,
+		});
 
-    await createProducts({
-      db,
-      orgId: org.id,
-      env,
-      autumn,
-      products: [pro],
-      customerId,
-    });
+		await createProducts({
+			db,
+			orgId: org.id,
+			env,
+			autumn,
+			products: [pro],
+			customerId,
+		});
 
-    const { testClockId: testClockId1 } = await initCustomer({
-      autumn: autumnJs,
-      customerId,
-      db,
-      org,
-      env,
-      attachPm: "success",
-    });
+		const { testClockId: testClockId1 } = await initCustomer({
+			autumn: autumnJs,
+			customerId,
+			db,
+			org,
+			env,
+			attachPm: "success",
+		});
 
-    testClockId = testClockId1!;
-  });
+		testClockId = testClockId1!;
+	});
 
-  it("should attach pro product", async function () {
-    await attachAndExpectCorrect({
-      autumn,
-      customerId,
-      product: pro,
-      stripeCli,
-      db,
-      org,
-      env,
-    });
-  });
+	it("should attach pro product", async function () {
+		await attachAndExpectCorrect({
+			autumn,
+			customerId,
+			product: pro,
+			stripeCli,
+			db,
+			org,
+			env,
+		});
+	});
 
-  it("should update product to new version", async function () {
-    proWithTrial.version = 2;
-    await autumn.products.update(pro.id, {
-      items: proWithTrial.items,
-      free_trial: proWithTrial.free_trial,
-    });
-  });
+	it("should update product to new version", async function () {
+		proWithTrial.version = 2;
+		await autumn.products.update(pro.id, {
+			items: proWithTrial.items,
+			free_trial: proWithTrial.free_trial,
+		});
+	});
 
-  it("should attach track usage and get correct balance", async function () {
-    let wordsUsage = 120000;
-    await autumn.track({
-      customer_id: customerId,
-      value: wordsUsage,
-      feature_id: TestFeature.Words,
-    });
+	it("should attach track usage and get correct balance", async function () {
+		let wordsUsage = 120000;
+		await autumn.track({
+			customer_id: customerId,
+			value: wordsUsage,
+			feature_id: TestFeature.Words,
+		});
 
-    await timeout(4000);
+		await timeout(4000);
 
-    const { stripeSubs, cusProduct } = await runMigrationTest({
-      autumn,
-      stripeCli,
-      customerId,
-      fromProduct: pro,
-      toProduct: proWithTrial,
-      db,
-      org,
-      env,
-      usage: [
-        {
-          featureId: TestFeature.Words,
-          value: wordsUsage,
-        },
-      ],
-    });
+		const { stripeSubs, cusProduct } = await runMigrationTest({
+			autumn,
+			stripeCli,
+			customerId,
+			fromProduct: pro,
+			toProduct: proWithTrial,
+			db,
+			org,
+			env,
+			usage: [
+				{
+					featureId: TestFeature.Words,
+					value: wordsUsage,
+				},
+			],
+		});
 
-    expect(stripeSubs[0].trial_end).to.equal(null);
-    expect(cusProduct?.free_trial).to.equal(null);
-  });
+		expect(stripeSubs[0].trial_end).to.equal(null);
+		expect(cusProduct?.free_trial).to.equal(null);
+	});
 });

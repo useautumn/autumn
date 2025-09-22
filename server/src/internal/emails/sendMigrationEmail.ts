@@ -6,32 +6,32 @@ import { safeResend } from "@/external/resend/safeResend.js";
 import { FROM_AUTUMN } from "./constants.js";
 
 export const sendMigrationEmail = safeResend({
-  fn: async ({
-    db,
-    migrationJobId,
-    org,
-  }: {
-    db: DrizzleCli;
-    migrationJobId: string;
-    org: Organization;
-  }) => {
-    let migrationJob = await MigrationService.getJob({
-      db,
-      id: migrationJobId,
-    });
+	fn: async ({
+		db,
+		migrationJobId,
+		org,
+	}: {
+		db: DrizzleCli;
+		migrationJobId: string;
+		org: Organization;
+	}) => {
+		let migrationJob = await MigrationService.getJob({
+			db,
+			id: migrationJobId,
+		});
 
-    // Send email
-    let getCustomersStep =
-      migrationJob.step_details[MigrationJobStep.GetCustomers];
-    let migrateStep =
-      migrationJob.step_details[MigrationJobStep.MigrateCustomers];
+		// Send email
+		let getCustomersStep =
+			migrationJob.step_details[MigrationJobStep.GetCustomers];
+		let migrateStep =
+			migrationJob.step_details[MigrationJobStep.MigrateCustomers];
 
-    console.log("Sending migration email");
-    await sendTextEmail({
-      from: FROM_AUTUMN,
-      to: "johnyeocx@gmail.com",
-      subject: `Migration Job Finished -- ${migrationJob.id}`,
-      body: `
+		console.log("Sending migration email");
+		await sendTextEmail({
+			from: FROM_AUTUMN,
+			to: "johnyeocx@gmail.com",
+			subject: `Migration Job Finished -- ${migrationJob.id}`,
+			body: `
   
   ORG: ${org.id}, ${org.slug}
   Step: Get migration customers
@@ -45,7 +45,7 @@ export const sendMigrationEmail = safeResend({
   2. Failed customers: 
   ${migrateStep?.failed_customers}
   `,
-    });
-  },
-  action: "send migration email",
+		});
+	},
+	action: "send migration email",
 });

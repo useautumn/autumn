@@ -9,6 +9,6 @@ import { count } from "drizzle-orm";
 // 3. Churned count
 
 export const getUserCount = async ({ db }: { db: DrizzleCli }) => {
-  const userCount = await db.select({ count: count() }).from(user);
-  return userCount[0].count;
+	const userCount = await db.select({ count: count() }).from(user);
+	return userCount[0].count;
 };

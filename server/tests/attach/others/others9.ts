@@ -14,14 +14,14 @@ import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js"
 import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
 
 export let free = constructProduct({
-  items: [
-    constructFeatureItem({
-      featureId: TestFeature.Words,
-    }),
-  ],
-  isAnnual: false,
-  type: "free",
-  isDefault: false,
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Words,
+		}),
+	],
+	isAnnual: false,
+	type: "free",
+	isDefault: false,
 });
 
 // Pro trial
@@ -31,62 +31,62 @@ export let free = constructProduct({
 const testCase = "others9";
 
 describe(`${chalk.yellowBright(`${testCase}: Testing attach free product again`)}`, () => {
-  let customerId = testCase;
-  let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
-  let db: DrizzleCli, org: Organization, env: AppEnv;
-  let stripeCli: Stripe;
+	let customerId = testCase;
+	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	let db: DrizzleCli, org: Organization, env: AppEnv;
+	let stripeCli: Stripe;
 
-  before(async function () {
-    await setupBefore(this);
-    db = this.db;
-    org = this.org;
-    env = this.env;
+	before(async function () {
+		await setupBefore(this);
+		db = this.db;
+		org = this.org;
+		env = this.env;
 
-    stripeCli = this.stripeCli;
+		stripeCli = this.stripeCli;
 
-    await initCustomer({
-      db,
-      org,
-      env,
-      autumn: this.autumnJs,
-      customerId,
-      fingerprint: "test",
-      attachPm: "success",
-    });
+		await initCustomer({
+			db,
+			org,
+			env,
+			autumn: this.autumnJs,
+			customerId,
+			fingerprint: "test",
+			attachPm: "success",
+		});
 
-    addPrefixToProducts({
-      products: [free],
-      prefix: testCase,
-    });
+		addPrefixToProducts({
+			products: [free],
+			prefix: testCase,
+		});
 
-    await createProducts({
-      db,
-      orgId: org.id,
-      env,
-      autumn,
-      products: [free],
-    });
-  });
+		await createProducts({
+			db,
+			orgId: org.id,
+			env,
+			autumn,
+			products: [free],
+		});
+	});
 
-  it("should attach free product, then try again and hit error", async function () {
-    await attachAndExpectCorrect({
-      autumn,
-      customerId,
-      product: free,
-      stripeCli,
-      db,
-      org,
-      env,
-      skipSubCheck: true,
-    });
+	it("should attach free product, then try again and hit error", async function () {
+		await attachAndExpectCorrect({
+			autumn,
+			customerId,
+			product: free,
+			stripeCli,
+			db,
+			org,
+			env,
+			skipSubCheck: true,
+		});
 
-    await expectAutumnError({
-      func: async () => {
-        await autumn.attach({
-          customer_id: customerId,
-          product_id: free.id,
-        });
-      },
-    });
-  });
+		await expectAutumnError({
+			func: async () => {
+				await autumn.attach({
+					customer_id: customerId,
+					product_id: free.id,
+				});
+			},
+		});
+	});
 });

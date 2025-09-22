@@ -1,10 +1,10 @@
 import {
-  type AppEnv,
-  CreateProductSchema,
-  type FreeTrial,
-  type FullProduct,
-  type Organization,
-  type ProductItem,
+	type AppEnv,
+	CreateProductSchema,
+	type FreeTrial,
+	type FullProduct,
+	type Organization,
+	type ProductItem,
 } from "@autumn/shared";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
@@ -14,8 +14,8 @@ import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
 import { validateProductItems } from "@/internal/products/product-items/validateProductItems.js";
 import {
-  constructProduct,
-  initProductInStripe,
+	constructProduct,
+	initProductInStripe,
 } from "@/internal/products/productUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";

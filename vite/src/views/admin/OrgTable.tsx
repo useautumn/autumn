@@ -1,3 +1,3 @@
 export const OrgTable = () => {
-  return <div>OrgTable</div>;
+	return <div>OrgTable</div>;
 };

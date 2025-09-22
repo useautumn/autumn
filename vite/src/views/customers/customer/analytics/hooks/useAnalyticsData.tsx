@@ -9,121 +9,121 @@ import { useNavigate, useSearchParams } from "react-router";
 import { useTopEventNames } from "./useTopEventNames";
 
 export const useAnalyticsData = ({
-  hasCleared = false,
+	hasCleared = false,
 }: {
-  hasCleared?: boolean;
+	hasCleared?: boolean;
 }) => {
-  const { org } = useOrg();
+	const { org } = useOrg();
 
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const customerId = searchParams.get("customer_id");
-  const featureIds = searchParams.get("feature_ids")?.split(",");
-  const eventNames = searchParams.get("event_names")?.split(",");
-  const interval = searchParams.get("interval");
+	const navigate = useNavigate();
+	const [searchParams] = useSearchParams();
+	const customerId = searchParams.get("customer_id");
+	const featureIds = searchParams.get("feature_ids")?.split(",");
+	const eventNames = searchParams.get("event_names")?.split(",");
+	const interval = searchParams.get("interval");
 
-  const { topEvents, isLoading: topEventsLoading } = useTopEventNames();
+	const { topEvents, isLoading: topEventsLoading } = useTopEventNames();
 
-  const { data: featuresData, isLoading: featuresLoading } = useAxiosSWR({
-    url: `/features`,
-    options: {
-      refreshInterval: 0,
-    },
-  });
+	const { data: featuresData, isLoading: featuresLoading } = useAxiosSWR({
+		url: `/features`,
+		options: {
+			refreshInterval: 0,
+		},
+	});
 
-  // Create a simple queryKey with the actual values that change
-  const queryKey = [
-    customerId,
-    interval || "30d",
-    ...(eventNames || []).sort(),
-    ...(featureIds || []).sort(),
-    org?.slug,
-  ];
+	// Create a simple queryKey with the actual values that change
+	const queryKey = [
+		customerId,
+		interval || "30d",
+		...(eventNames || []).sort(),
+		...(featureIds || []).sort(),
+		org?.slug,
+	];
 
-  const {
-    data,
-    isLoading: queryLoading,
-    error,
-  } = usePostSWR({
-    url: `/query/events`,
-    data: {
-      customer_id: customerId || null,
-      interval: interval || "30d",
-      event_names: [...(eventNames || []), ...(featureIds || [])],
-    },
-    queryKey: ["query-events", ...queryKey],
-    options: {
-      refreshInterval: 0,
-      onError: (error) => {
-        if (error.code === ErrCode.ClickHouseDisabled) {
-          return error;
-        }
-      },
-    },
-  });
+	const {
+		data,
+		isLoading: queryLoading,
+		error,
+	} = usePostSWR({
+		url: `/query/events`,
+		data: {
+			customer_id: customerId || null,
+			interval: interval || "30d",
+			event_names: [...(eventNames || []), ...(featureIds || [])],
+		},
+		queryKey: ["query-events", ...queryKey],
+		options: {
+			refreshInterval: 0,
+			onError: (error) => {
+				if (error.code === ErrCode.ClickHouseDisabled) {
+					return error;
+				}
+			},
+		},
+	});
 
-  return {
-    customer: data?.customer,
-    features: featuresData?.features || [],
-    featuresLoading,
-    queryLoading,
-    events: data?.events,
-    topEvents: data?.topEvents,
-    error: error?.code === ErrCode.ClickHouseDisabled ? null : error,
-    bcExclusionFlag: data?.bcExclusionFlag ?? false,
-    topEventsLoading,
-  };
+	return {
+		customer: data?.customer,
+		features: featuresData?.features || [],
+		featuresLoading,
+		queryLoading,
+		events: data?.events,
+		topEvents: data?.topEvents,
+		error: error?.code === ErrCode.ClickHouseDisabled ? null : error,
+		bcExclusionFlag: data?.bcExclusionFlag ?? false,
+		topEventsLoading,
+	};
 };
 
 export const useRawAnalyticsData = () => {
-  const { org } = useOrg();
-  const env = useEnv();
+	const { org } = useOrg();
+	const env = useEnv();
 
-  const [searchParams] = useSearchParams();
-  const customerId = searchParams.get("customer_id");
-  const interval = searchParams.get("interval");
+	const [searchParams] = useSearchParams();
+	const customerId = searchParams.get("customer_id");
+	const interval = searchParams.get("interval");
 
-  const { data: featuresData, isLoading: featuresLoading } = useAxiosSWR({
-    url: `/features`,
-    queryKey: [org?.slug, env],
-    options: {
-      refreshInterval: 0,
-    },
-  });
+	const { data: featuresData, isLoading: featuresLoading } = useAxiosSWR({
+		url: `/features`,
+		queryKey: [org?.slug, env],
+		options: {
+			refreshInterval: 0,
+		},
+	});
 
-  // Create a simple queryKey with the actual values that change
-  const queryKey = ["query-raw-events", customerId, interval, org?.slug, env];
+	// Create a simple queryKey with the actual values that change
+	const queryKey = ["query-raw-events", customerId, interval, org?.slug, env];
 
-  const {
-    data,
-    isLoading: queryLoading,
-    error,
-  } = usePostSWR({
-    url: `/query/raw`,
-    data: {
-      customer_id: customerId || null,
-      interval,
-    },
-    queryKey,
-    options: {
-      refreshInterval: 0,
-      onError: (error) => {
-        if (error.code === ErrCode.ClickHouseDisabled) {
-          return error;
-        }
-      },
-    },
-  });
+	const {
+		data,
+		isLoading: queryLoading,
+		error,
+	} = usePostSWR({
+		url: `/query/raw`,
+		data: {
+			customer_id: customerId || null,
+			interval,
+		},
+		queryKey,
+		options: {
+			refreshInterval: 0,
+			onError: (error) => {
+				if (error.code === ErrCode.ClickHouseDisabled) {
+					return error;
+				}
+			},
+		},
+	});
 
-  return {
-    customer: data?.customer,
-    features: featuresData?.features || [],
-    featuresLoading,
+	return {
+		customer: data?.customer,
+		features: featuresData?.features || [],
+		featuresLoading,
 
-    queryLoading,
-    rawEvents: data?.rawEvents,
-    error: error?.code === ErrCode.ClickHouseDisabled ? null : error,
-  };
+		queryLoading,
+		rawEvents: data?.rawEvents,
+		error: error?.code === ErrCode.ClickHouseDisabled ? null : error,
+	};
 };
 
 // const {

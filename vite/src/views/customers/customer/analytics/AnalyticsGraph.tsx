@@ -1,13 +1,13 @@
 import type { AgChartOptions, FormatterParams } from "ag-charts-community";
 import { AgCharts } from "ag-charts-react";
 import {
-  AllCommunityModule,
-  type ColDef,
-  ModuleRegistry,
-  type PaginationChangedEvent,
-  type RowDataUpdatedEvent,
-  ValidationModule,
-  type ValueFormatterParams,
+	AllCommunityModule,
+	type ColDef,
+	ModuleRegistry,
+	type PaginationChangedEvent,
+	type RowDataUpdatedEvent,
+	ValidationModule,
+	type ValueFormatterParams,
 } from "ag-grid-community";
 
 // Register all Community features
@@ -16,10 +16,10 @@ import { AgGridReact } from "ag-grid-react";
 import { useEffect, useState } from "react";
 import { useAnalyticsContext } from "./AnalyticsContext";
 import {
-  autumnTheme,
-  type IRow,
-  paginationOptions,
-  type Row,
+	autumnTheme,
+	type IRow,
+	paginationOptions,
+	type Row,
 } from "./components/AGGrid";
 import { RowClickDialog } from "./components/RowClickDialog";
 
@@ -28,9 +28,13 @@ const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 // Helper function to parse UTC timestamps from the backend
 const parseUTCTimestamp = (timestamp: string): Date => {
 	// If the timestamp doesn't end with 'Z' or have timezone info, assume it's UTC
-	if (!timestamp.includes('Z') && !timestamp.includes('+') && !timestamp.includes('-', 10)) {
+	if (
+		!timestamp.includes("Z") &&
+		!timestamp.includes("+") &&
+		!timestamp.includes("-", 10)
+	) {
 		// Add 'Z' to indicate UTC if it's missing
-		return new Date(timestamp + (timestamp.includes('T') ? 'Z' : ' UTC'));
+		return new Date(timestamp + (timestamp.includes("T") ? "Z" : " UTC"));
 	}
 	return new Date(timestamp);
 };
@@ -150,7 +154,9 @@ export function EventsAGGrid({ data }: { data: any }) {
 			field: "timestamp",
 			flex: 1,
 			valueFormatter: (params: ValueFormatterParams<any, unknown>) => {
-				return timestampFormatter.format(parseUTCTimestamp(params.value as string));
+				return timestampFormatter.format(
+					parseUTCTimestamp(params.value as string),
+				);
 			},
 			cellStyle: {
 				paddingLeft: "2.5rem",

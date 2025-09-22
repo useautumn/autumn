@@ -1,5 +1,10 @@
 import express, { type Router } from "express";
-import { handleCreateCoupon, handleDeleteCoupon, handleGetCoupon, handleUpdateCoupon } from "./handlers/rewards/index.js";
+import {
+	handleCreateCoupon,
+	handleDeleteCoupon,
+	handleGetCoupon,
+	handleUpdateCoupon,
+} from "./handlers/rewards/index.js";
 
 const rewardRouter: Router = express.Router();
 

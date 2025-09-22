@@ -1,34 +1,34 @@
 import {
-  EntitlementWithFeature,
-  FullProduct,
-  Organization,
-  Price,
-  Feature,
-  BillingInterval,
-  FreeTrial,
-  PreviewLineItem,
-  BillingType,
-  getFeatureInvoiceDescription,
-  UsagePriceConfig,
-  UsageModel,
-  AttachConfig,
-  AttachBranch,
-  ProrationBehavior,
-  IntervalConfig,
+	EntitlementWithFeature,
+	FullProduct,
+	Organization,
+	Price,
+	Feature,
+	BillingInterval,
+	FreeTrial,
+	PreviewLineItem,
+	BillingType,
+	getFeatureInvoiceDescription,
+	UsagePriceConfig,
+	UsageModel,
+	AttachConfig,
+	AttachBranch,
+	ProrationBehavior,
+	IntervalConfig,
 } from "@autumn/shared";
 import { AttachParams } from "../../customers/cusProducts/AttachParams.js";
 import {
-  formatPrice,
-  getBillingType,
-  getPriceForOverage,
-  getPriceOptions,
+	formatPrice,
+	getBillingType,
+	getPriceForOverage,
+	getPriceOptions,
 } from "../../products/prices/priceUtils.js";
 import { getPriceEntitlement } from "../../products/prices/priceUtils.js";
 import {
-  isFixedPrice,
-  isOneOffPrice,
-  isPrepaidPrice,
-  isUsagePrice,
+	isFixedPrice,
+	isOneOffPrice,
+	isPrepaidPrice,
+	isUsagePrice,
 } from "../../products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 
 import { newPriceToInvoiceDescription } from "../invoiceFormatUtils.js";
@@ -39,8 +39,8 @@ import { formatAmount } from "@/utils/formatUtils.js";
 import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
 import { subtractIntervalForProration } from "../../products/prices/billingIntervalUtils.js";
 import {
-  priceToFeature,
-  priceToUsageModel,
+	priceToFeature,
+	priceToUsageModel,
 } from "@/internal/products/prices/priceUtils/convertPrice.js";
 import { getContUseInvoiceItems } from "@/internal/customers/attach/attachUtils/getContUseItems/getContUseInvoiceItems.js";
 import Stripe from "stripe";
@@ -51,256 +51,256 @@ import { Decimal } from "decimal.js";
 import { getAlignedUnix } from "@/internal/products/prices/billingIntervalUtils2.js";
 
 export const getDefaultPriceStr = ({
-  org,
-  price,
-  ent,
-  features,
+	org,
+	price,
+	ent,
+	features,
 }: {
-  org: Organization;
-  price: Price;
-  ent: EntitlementWithFeature;
-  features: Feature[];
+	org: Organization;
+	price: Price;
+	ent: EntitlementWithFeature;
+	features: Feature[];
 }) => {
-  const item = toProductItem({
-    ent: ent!,
-    price,
-  });
+	const item = toProductItem({
+		ent: ent!,
+		price,
+	});
 
-  const priceText = getPricecnPrice({
-    org,
-    items: [item],
-    features,
-    isMainPrice: true,
-  });
+	const priceText = getPricecnPrice({
+		org,
+		items: [item],
+		features,
+		isMainPrice: true,
+	});
 
-  return `${priceText.primaryText} ${priceText.secondaryText}`;
+	return `${priceText.primaryText} ${priceText.secondaryText}`;
 };
 
 export const getProration = ({
-  proration,
-  anchor,
-  intervalConfig,
-  now,
+	proration,
+	anchor,
+	intervalConfig,
+	now,
 }: {
-  proration?: Partial<{
-    start: number;
-    end: number;
-  }>;
-  anchor?: number; // used to indicate a future date to anchor the next period end to...
-  intervalConfig: IntervalConfig;
-  now?: number;
+	proration?: Partial<{
+		start: number;
+		end: number;
+	}>;
+	anchor?: number; // used to indicate a future date to anchor the next period end to...
+	intervalConfig: IntervalConfig;
+	now?: number;
 }) => {
-  let { interval, intervalCount } = intervalConfig;
-  intervalCount = intervalCount ?? 1;
-  now = now || Date.now();
+	let { interval, intervalCount } = intervalConfig;
+	intervalCount = intervalCount ?? 1;
+	now = now || Date.now();
 
-  if (interval == BillingInterval.OneOff) return undefined;
+	if (interval == BillingInterval.OneOff) return undefined;
 
-  let end = proration?.end;
-  if (!end && anchor) {
-    end = getAlignedUnix({
-      anchor: anchor!,
-      intervalConfig,
-      now,
-    });
-  }
+	let end = proration?.end;
+	if (!end && anchor) {
+		end = getAlignedUnix({
+			anchor: anchor!,
+			intervalConfig,
+			now,
+		});
+	}
 
-  let start = proration?.start;
-  if (!start && end) {
-    start = subtractIntervalForProration({
-      unixTimestamp: end!,
-      interval,
-      intervalCount,
-    });
-  }
+	let start = proration?.start;
+	if (!start && end) {
+		start = subtractIntervalForProration({
+			unixTimestamp: end!,
+			interval,
+			intervalCount,
+		});
+	}
 
-  if (!start || !end) return undefined;
+	if (!start || !end) return undefined;
 
-  return {
-    start,
-    end,
-  };
+	return {
+		start,
+		end,
+	};
 };
 
 export const getItemsForNewProduct = async ({
-  newProduct,
-  attachParams,
-  now,
-  proration,
-  anchor,
-  freeTrial,
-  sub,
-  logger,
-  withPrepaid = false,
-  skipOneOff = false,
+	newProduct,
+	attachParams,
+	now,
+	proration,
+	anchor,
+	freeTrial,
+	sub,
+	logger,
+	withPrepaid = false,
+	skipOneOff = false,
 }: {
-  newProduct: FullProduct;
-  attachParams: AttachParams;
-  now?: number;
-  proration?: {
-    start: number;
-    end: number;
-  };
-  anchor?: number;
-  freeTrial?: FreeTrial | null;
-  sub?: Stripe.Subscription;
-  logger: any;
-  withPrepaid?: boolean;
-  skipOneOff?: boolean;
+	newProduct: FullProduct;
+	attachParams: AttachParams;
+	now?: number;
+	proration?: {
+		start: number;
+		end: number;
+	};
+	anchor?: number;
+	freeTrial?: FreeTrial | null;
+	sub?: Stripe.Subscription;
+	logger: any;
+	withPrepaid?: boolean;
+	skipOneOff?: boolean;
 }) => {
-  const { org, features } = attachParams;
-  now = now || Date.now();
+	const { org, features } = attachParams;
+	now = now || Date.now();
 
-  const items: PreviewLineItem[] = [];
+	const items: PreviewLineItem[] = [];
 
-  sortPricesByType(newProduct.prices);
+	sortPricesByType(newProduct.prices);
 
-  const printLogs = false;
+	const printLogs = false;
 
-  for (const price of newProduct.prices) {
-    if (skipOneOff && isOneOffPrice({ price })) continue;
+	for (const price of newProduct.prices) {
+		if (skipOneOff && isOneOffPrice({ price })) continue;
 
-    const ent = getPriceEntitlement(price, newProduct.entitlements);
-    const billingType = getBillingType(price.config);
+		const ent = getPriceEntitlement(price, newProduct.entitlements);
+		const billingType = getBillingType(price.config);
 
-    if (printLogs) {
-      console.log("price", formatPrice({ price }));
-      console.log("now:", formatUnixToDate(now));
-    }
+		if (printLogs) {
+			console.log("price", formatPrice({ price }));
+			console.log("now:", formatUnixToDate(now));
+		}
 
-    const finalProration = getProration({
-      proration,
-      anchor,
-      now,
-      intervalConfig: {
-        interval: price.config.interval!,
-        intervalCount: price.config.interval_count || 1,
-      },
-    });
+		const finalProration = getProration({
+			proration,
+			anchor,
+			now,
+			intervalConfig: {
+				interval: price.config.interval!,
+				intervalCount: price.config.interval_count || 1,
+			},
+		});
 
-    if (printLogs && finalProration) {
-      console.log(
-        `PRORATION: ${formatUnixToDate(finalProration.start)} to ${formatUnixToDate(finalProration.end)}`
-      );
-    }
-    if (printLogs) console.log("--------------------------------");
+		if (printLogs && finalProration) {
+			console.log(
+				`PRORATION: ${formatUnixToDate(finalProration.start)} to ${formatUnixToDate(finalProration.end)}`,
+			);
+		}
+		if (printLogs) console.log("--------------------------------");
 
-    if (isFixedPrice({ price })) {
-      let amount = finalProration
-        ? calculateProrationAmount({
-            periodEnd: finalProration.end,
-            periodStart: finalProration.start,
-            now,
-            amount: getPriceForOverage(price),
-          })
-        : getPriceForOverage(price, 0);
+		if (isFixedPrice({ price })) {
+			let amount = finalProration
+				? calculateProrationAmount({
+						periodEnd: finalProration.end,
+						periodStart: finalProration.start,
+						now,
+						amount: getPriceForOverage(price),
+					})
+				: getPriceForOverage(price, 0);
 
-      if (freeTrial) {
-        amount = 0;
-      }
+			if (freeTrial) {
+				amount = 0;
+			}
 
-      let description = newPriceToInvoiceDescription({
-        org,
-        price,
-        product: newProduct,
-      });
+			let description = newPriceToInvoiceDescription({
+				org,
+				price,
+				product: newProduct,
+			});
 
-      if (finalProration) {
-        description = `${description} (from ${formatUnixToDate(now)})`;
-      }
+			if (finalProration) {
+				description = `${description} (from ${formatUnixToDate(now)})`;
+			}
 
-      items.push({
-        price_id: price.id,
-        price: formatAmount({ org, amount }),
-        description,
-        amount,
-        usage_model: priceToUsageModel(price),
-        feature_id: ent?.feature_id,
-      });
-      continue;
-    }
+			items.push({
+				price_id: price.id,
+				price: formatAmount({ org, amount }),
+				description,
+				amount,
+				usage_model: priceToUsageModel(price),
+				feature_id: ent?.feature_id,
+			});
+			continue;
+		}
 
-    if (billingType == BillingType.UsageInArrear) {
-      items.push({
-        price: getDefaultPriceStr({ org, price, ent: ent!, features }),
-        description: newPriceToInvoiceDescription({
-          org,
-          price,
-          product: newProduct,
-        }),
-        usage_model: priceToUsageModel(price),
-        price_id: price.id,
-        feature_id: ent?.feature_id,
-      });
-      continue;
-    }
+		if (billingType == BillingType.UsageInArrear) {
+			items.push({
+				price: getDefaultPriceStr({ org, price, ent: ent!, features }),
+				description: newPriceToInvoiceDescription({
+					org,
+					price,
+					product: newProduct,
+				}),
+				usage_model: priceToUsageModel(price),
+				price_id: price.id,
+				feature_id: ent?.feature_id,
+			});
+			continue;
+		}
 
-    if (withPrepaid && isPrepaidPrice({ price })) {
-      let options = getPriceOptions(price, attachParams.optionsList);
-      let quantity = notNullish(options?.quantity) ? options?.quantity! : 1;
+		if (withPrepaid && isPrepaidPrice({ price })) {
+			let options = getPriceOptions(price, attachParams.optionsList);
+			let quantity = notNullish(options?.quantity) ? options?.quantity! : 1;
 
-      const quantityWithBillingUnits = new Decimal(quantity).mul(
-        (price.config as UsagePriceConfig).billing_units || 1
-      );
+			const quantityWithBillingUnits = new Decimal(quantity).mul(
+				(price.config as UsagePriceConfig).billing_units || 1,
+			);
 
-      // console.log("price", price);
-      // console.log("Quantity", quantity);
-      let amount = priceToInvoiceAmount({
-        price,
-        quantity: quantityWithBillingUnits.toNumber(),
-        proration: finalProration,
-        now,
-      });
-      // console.log("Amount", amount);
-      let feature = priceToFeature({
-        price,
-        features,
-      })!;
+			// console.log("price", price);
+			// console.log("Quantity", quantity);
+			let amount = priceToInvoiceAmount({
+				price,
+				quantity: quantityWithBillingUnits.toNumber(),
+				proration: finalProration,
+				now,
+			});
+			// console.log("Amount", amount);
+			let feature = priceToFeature({
+				price,
+				features,
+			})!;
 
-      items.push({
-        price_id: price.id,
-        price: formatAmount({ org, amount: 0 }),
-        description: getFeatureInvoiceDescription({
-          feature,
-          usage: quantity,
-          billingUnits: (price.config as UsagePriceConfig).billing_units,
-          prodName: newProduct.name,
-          isPrepaid: true,
-          fromUnix: now,
-        }),
-        amount,
-        usage_model: UsageModel.Prepaid,
-        feature_id: ent?.feature_id,
-      });
-    }
+			items.push({
+				price_id: price.id,
+				price: formatAmount({ org, amount: 0 }),
+				description: getFeatureInvoiceDescription({
+					feature,
+					usage: quantity,
+					billingUnits: (price.config as UsagePriceConfig).billing_units,
+					prodName: newProduct.name,
+					isPrepaid: true,
+					fromUnix: now,
+				}),
+				amount,
+				usage_model: UsageModel.Prepaid,
+				feature_id: ent?.feature_id,
+			});
+		}
 
-    if (isUsagePrice({ price })) continue;
-  }
+		if (isUsagePrice({ price })) continue;
+	}
 
-  const cusProduct = attachParamsToCurCusProduct({
-    attachParams,
-  });
+	const cusProduct = attachParamsToCurCusProduct({
+		attachParams,
+	});
 
-  let { newItems } = await getContUseInvoiceItems({
-    cusProduct,
-    sub,
-    attachParams,
-    logger,
-  });
+	let { newItems } = await getContUseInvoiceItems({
+		cusProduct,
+		sub,
+		attachParams,
+		logger,
+	});
 
-  items.push(...newItems);
+	items.push(...newItems);
 
-  for (const item of items) {
-    if (item.amount && freeTrial) {
-      item.amount = 0;
-    }
-    if (item.amount && item.amount < 0) {
-      item.amount = 0;
-    }
-    if (notNullish(item.amount)) {
-      item.price = formatAmount({ org, amount: item.amount! });
-    }
-  }
+	for (const item of items) {
+		if (item.amount && freeTrial) {
+			item.amount = 0;
+		}
+		if (item.amount && item.amount < 0) {
+			item.amount = 0;
+		}
+		if (notNullish(item.amount)) {
+			item.price = formatAmount({ org, amount: item.amount! });
+		}
+	}
 
-  return items;
+	return items;
 };

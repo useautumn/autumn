@@ -7,41 +7,41 @@ import { Decimal } from "decimal.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const createStripeFixedPrice = async ({
-  db,
-  stripeCli,
-  price,
-  product,
-  org,
+	db,
+	stripeCli,
+	price,
+	product,
+	org,
 }: {
-  db: DrizzleCli;
-  stripeCli: Stripe;
-  price: Price;
-  product: Product;
-  org: Organization;
+	db: DrizzleCli;
+	stripeCli: Stripe;
+	price: Price;
+	product: Product;
+	org: Organization;
 }) => {
-  const config = price.config as FixedPriceConfig;
+	const config = price.config as FixedPriceConfig;
 
-  let amount = new Decimal(config.amount).mul(100).toNumber();
+	let amount = new Decimal(config.amount).mul(100).toNumber();
 
-  const stripePrice = await stripeCli.prices.create({
-    product: product.processor!.id,
-    unit_amount: amount,
-    currency: org.default_currency!,
-    recurring: {
-      ...(billingIntervalToStripe({
-        interval: config.interval,
-        intervalCount: config.interval_count,
-      }) as any),
-    },
+	const stripePrice = await stripeCli.prices.create({
+		product: product.processor!.id,
+		unit_amount: amount,
+		currency: org.default_currency!,
+		recurring: {
+			...(billingIntervalToStripe({
+				interval: config.interval,
+				intervalCount: config.interval_count,
+			}) as any),
+		},
 
-    nickname: `Autumn Price (Fixed)`,
-  });
+		nickname: `Autumn Price (Fixed)`,
+	});
 
-  config.stripe_price_id = stripePrice.id;
+	config.stripe_price_id = stripePrice.id;
 
-  await PriceService.update({
-    db,
-    id: price.id!,
-    update: { config },
-  });
+	await PriceService.update({
+		db,
+		id: price.id!,
+		update: { config },
+	});
 };

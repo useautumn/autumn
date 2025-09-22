@@ -19,140 +19,140 @@ import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
 import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
 
 export let pro = constructProduct({
-  items: [
-    constructFeatureItem({
-      featureId: TestFeature.Messages,
-      includedUsage: 100,
-    }),
-  ],
-  type: "pro",
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 100,
+		}),
+	],
+	type: "pro",
 });
 
 export let premium = constructProduct({
-  items: [
-    constructFeatureItem({
-      featureId: TestFeature.Messages,
-      includedUsage: 250,
-    }),
-  ],
-  type: "premium",
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 250,
+		}),
+	],
+	type: "premium",
 });
 
 const testCase = "checkout6";
 describe(`${chalk.yellowBright(`${testCase}: Testing invoice checkout via checkout endpoint`)}`, () => {
-  let customerId = testCase;
-  let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_2 });
-  let testClockId: string;
-  let db: DrizzleCli, org: Organization, env: AppEnv;
-  let stripeCli: Stripe;
-  let curUnix = new Date().getTime();
+	let customerId = testCase;
+	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_2 });
+	let testClockId: string;
+	let db: DrizzleCli, org: Organization, env: AppEnv;
+	let stripeCli: Stripe;
+	let curUnix = new Date().getTime();
 
-  before(async function () {
-    await setupBefore(this);
-    const { autumnJs } = this;
-    db = this.db;
-    org = this.org;
-    env = this.env;
+	before(async function () {
+		await setupBefore(this);
+		const { autumnJs } = this;
+		db = this.db;
+		org = this.org;
+		env = this.env;
 
-    stripeCli = this.stripeCli;
+		stripeCli = this.stripeCli;
 
-    addPrefixToProducts({
-      products: [pro, premium],
-      prefix: testCase,
-    });
+		addPrefixToProducts({
+			products: [pro, premium],
+			prefix: testCase,
+		});
 
-    await createProducts({
-      autumn,
-      products: [pro, premium],
-      customerId,
-      db,
-      orgId: org.id,
-      env,
-    });
+		await createProducts({
+			autumn,
+			products: [pro, premium],
+			customerId,
+			db,
+			orgId: org.id,
+			env,
+		});
 
-    const { testClockId: testClockId1 } = await initCustomer({
-      autumn: autumnJs,
-      customerId,
-      db,
-      org,
-      env,
-      attachPm: "success",
-    });
+		const { testClockId: testClockId1 } = await initCustomer({
+			autumn: autumnJs,
+			customerId,
+			db,
+			org,
+			env,
+			attachPm: "success",
+		});
 
-    testClockId = testClockId1!;
-  });
+		testClockId = testClockId1!;
+	});
 
-  it("should attach pro product via invoice checkout", async function () {
-    const res = await autumn.checkout({
-      customer_id: customerId,
-      product_id: pro.id,
-      invoice: true,
-    });
+	it("should attach pro product via invoice checkout", async function () {
+		const res = await autumn.checkout({
+			customer_id: customerId,
+			product_id: pro.id,
+			invoice: true,
+		});
 
-    expect(res.url).to.exist;
+		expect(res.url).to.exist;
 
-    await completeInvoiceCheckout({
-      url: res.url!,
-    });
+		await completeInvoiceCheckout({
+			url: res.url!,
+		});
 
-    const customer = await autumn.customers.get(customerId);
+		const customer = await autumn.customers.get(customerId);
 
-    expectProductAttached({
-      customer,
-      product: pro,
-    });
+		expectProductAttached({
+			customer,
+			product: pro,
+		});
 
-    expectFeaturesCorrect({
-      customer,
-      product: pro,
-    });
-  });
+		expectFeaturesCorrect({
+			customer,
+			product: pro,
+		});
+	});
 
-  it("should have no URL returned if try to attach premium (with invoice true)", async function () {
-    await expectAutumnError({
-      func: async () => {
-        await autumn.attach({
-          customer_id: customerId,
-          product_id: premium.id,
-          invoice: true,
-        });
-      },
-    });
+	it("should have no URL returned if try to attach premium (with invoice true)", async function () {
+		await expectAutumnError({
+			func: async () => {
+				await autumn.attach({
+					customer_id: customerId,
+					product_id: premium.id,
+					invoice: true,
+				});
+			},
+		});
 
-    const res = await autumn.checkout({
-      customer_id: customerId,
-      product_id: premium.id,
-      invoice: true,
-    });
+		const res = await autumn.checkout({
+			customer_id: customerId,
+			product_id: premium.id,
+			invoice: true,
+		});
 
-    expect(res.url).to.not.exist;
-  });
+		expect(res.url).to.not.exist;
+	});
 
-  it("should attach premium product via invoice enable immediately", async function () {
-    const res = await autumn.attach({
-      customer_id: customerId,
-      product_id: premium.id,
-      invoice: true,
-      enable_product_immediately: true,
-    });
+	it("should attach premium product via invoice enable immediately", async function () {
+		const res = await autumn.attach({
+			customer_id: customerId,
+			product_id: premium.id,
+			invoice: true,
+			enable_product_immediately: true,
+		});
 
-    const customer = await autumn.customers.get(customerId);
+		const customer = await autumn.customers.get(customerId);
 
-    expectProductAttached({
-      customer,
-      product: premium,
-    });
+		expectProductAttached({
+			customer,
+			product: premium,
+		});
 
-    expectFeaturesCorrect({
-      customer,
-      product: premium,
-    });
+		expectFeaturesCorrect({
+			customer,
+			product: premium,
+		});
 
-    const invoices = customer.invoices;
-    expect(invoices.length).to.equal(2);
-    expect(invoices[0].status).to.equal("draft");
-    expect(invoices[0].total).to.equal(
-      getBasePrice({ product: premium }) - getBasePrice({ product: pro })
-    ); // proration...
-  });
+		const invoices = customer.invoices;
+		expect(invoices.length).to.equal(2);
+		expect(invoices[0].status).to.equal("draft");
+		expect(invoices[0].total).to.equal(
+			getBasePrice({ product: premium }) - getBasePrice({ product: pro }),
+		); // proration...
+	});
 });

@@ -7,49 +7,49 @@ import { useCachedCustomer } from "./useCachedCustomer";
 import { useMemo } from "react";
 
 export const useCusQuery = () => {
-  const { customer_id } = useParams();
-  const axiosInstance = useAxiosInstance();
-  const { getCachedCustomer } = useCachedCustomer(customer_id);
+	const { customer_id } = useParams();
+	const axiosInstance = useAxiosInstance();
+	const { getCachedCustomer } = useCachedCustomer(customer_id);
 
-  const cachedCustomer = useMemo(getCachedCustomer, [getCachedCustomer]);
+	const cachedCustomer = useMemo(getCachedCustomer, [getCachedCustomer]);
 
-  const fetcher = async () => {
-    try {
-      const { data } = await axiosInstance.get(`/customers/${customer_id}`);
-      return data;
-    } catch (error) {
-      return null;
-    }
-  };
+	const fetcher = async () => {
+		try {
+			const { data } = await axiosInstance.get(`/customers/${customer_id}`);
+			return data;
+		} catch (error) {
+			return null;
+		}
+	};
 
-  const {
-    data,
-    isLoading: customerLoading,
-    error,
-    refetch,
-  } = useQuery({
-    queryKey: ["customer", customer_id],
-    queryFn: fetcher,
-  });
+	const {
+		data,
+		isLoading: customerLoading,
+		error,
+		refetch,
+	} = useQuery({
+		queryKey: ["customer", customer_id],
+		queryFn: fetcher,
+	});
 
-  const { products, isLoading: productsLoading } = useProductsQuery();
-  const { features, isLoading: featuresLoading } = useFeaturesQuery();
+	const { products, isLoading: productsLoading } = useProductsQuery();
+	const { features, isLoading: featuresLoading } = useFeaturesQuery();
 
-  const customer = data?.customer || cachedCustomer;
-  const cusWithCacheLoading = cachedCustomer ? false : customerLoading;
+	const customer = data?.customer || cachedCustomer;
+	const cusWithCacheLoading = cachedCustomer ? false : customerLoading;
 
-  return {
-    customer: customer,
-    entities: customer?.entities,
-    products,
-    features,
-    isLoading: cusWithCacheLoading || productsLoading || featuresLoading,
-    error,
-    refetch,
-  };
+	return {
+		customer: customer,
+		entities: customer?.entities,
+		products,
+		features,
+		isLoading: cusWithCacheLoading || productsLoading || featuresLoading,
+		error,
+		refetch,
+	};
 
-  // const { data, isLoading, error } = useQuery({
-  //   queryKey: ["customer", customerId],
-  //   queryFn: fetcher,
-  // });
+	// const { data, isLoading, error } = useQuery({
+	//   queryKey: ["customer", customerId],
+	//   queryFn: fetcher,
+	// });
 };

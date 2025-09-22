@@ -8,27 +8,27 @@ import Stripe from "stripe";
 import { createStripeCli } from "../../utils.js";
 
 export const handleSetupCheckout = async ({
-  req,
-  db,
-  attachParams,
+	req,
+	db,
+	attachParams,
 }: {
-  req: ExtendedRequest;
-  db: DrizzleCli;
-  attachParams: AttachParams;
+	req: ExtendedRequest;
+	db: DrizzleCli;
+	attachParams: AttachParams;
 }) => {
-  const logger = req.logger;
-  const { org, customer } = attachParams;
+	const logger = req.logger;
+	const { org, customer } = attachParams;
 
-  logger.info(`HANDLING SETUP CHECKOUT COMPLETED`);
+	logger.info(`HANDLING SETUP CHECKOUT COMPLETED`);
 
-  // 1. Check attach prices...
-  await handleAddProduct({
-    req,
-    attachParams: {
-      ...attachParams,
-      stripeCli: createStripeCli({ org, env: customer.env }),
-    },
-    branch: AttachBranch.New,
-    config: getDefaultAttachConfig(),
-  });
+	// 1. Check attach prices...
+	await handleAddProduct({
+		req,
+		attachParams: {
+			...attachParams,
+			stripeCli: createStripeCli({ org, env: customer.env }),
+		},
+		branch: AttachBranch.New,
+		config: getDefaultAttachConfig(),
+	});
 };

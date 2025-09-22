@@ -8,108 +8,108 @@ import { toast } from "sonner";
 import { FeatureType } from "@autumn/shared";
 import { getBackendErr } from "@/utils/genUtils";
 import {
-  CustomDialogBody,
-  CustomDialogContent,
-  CustomDialogFooter,
+	CustomDialogBody,
+	CustomDialogContent,
+	CustomDialogFooter,
 } from "@/components/general/modal-components/DialogContentWrapper";
 import { CircleArrowUp, Save } from "lucide-react";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { FeatureConfig } from "@/views/products/features/components/FeatureConfig";
 
 export default function UpdateFeature({
-  open,
-  setOpen,
-  selectedFeature,
-  setSelectedFeature,
+	open,
+	setOpen,
+	selectedFeature,
+	setSelectedFeature,
 }: {
-  open: boolean;
-  setOpen: (open: boolean) => void;
-  selectedFeature: any;
-  setSelectedFeature: (feature: any) => void;
+	open: boolean;
+	setOpen: (open: boolean) => void;
+	selectedFeature: any;
+	setSelectedFeature: (feature: any) => void;
 }) {
-  const { refetch } = useFeaturesQuery();
-  const axiosInstance = useAxiosInstance();
-  const [updateLoading, setUpdateLoading] = useState(false);
-  const [eventNameInput, setEventNameInput] = useState("");
-  const [eventNameChanged, setEventNameChanged] = useState(true);
+	const { refetch } = useFeaturesQuery();
+	const axiosInstance = useAxiosInstance();
+	const [updateLoading, setUpdateLoading] = useState(false);
+	const [eventNameInput, setEventNameInput] = useState("");
+	const [eventNameChanged, setEventNameChanged] = useState(true);
 
-  const originalFeature = useRef(selectedFeature);
+	const originalFeature = useRef(selectedFeature);
 
-  useEffect(() => {
-    if (open) {
-      originalFeature.current = selectedFeature;
-    }
-  }, [open]);
+	useEffect(() => {
+		if (open) {
+			originalFeature.current = selectedFeature;
+		}
+	}, [open]);
 
-  useEffect(() => {
-    if (open) {
-      setEventNameInput("");
-      setEventNameChanged(true);
-    }
-  }, [open, selectedFeature]);
+	useEffect(() => {
+		if (open) {
+			setEventNameInput("");
+			setEventNameChanged(true);
+		}
+	}, [open, selectedFeature]);
 
-  const updateConfig = () => {
-    const config: any = structuredClone(selectedFeature.config);
-    if (
-      selectedFeature.type === FeatureType.Metered &&
-      eventNameInput &&
-      config.filters[0].value.length === 0
-    ) {
-      config.filters[0].value.push(eventNameInput);
-    }
-    return config;
-  };
+	const updateConfig = () => {
+		const config: any = structuredClone(selectedFeature.config);
+		if (
+			selectedFeature.type === FeatureType.Metered &&
+			eventNameInput &&
+			config.filters[0].value.length === 0
+		) {
+			config.filters[0].value.push(eventNameInput);
+		}
+		return config;
+	};
 
-  const handleUpdateFeature = async () => {
-    setUpdateLoading(true);
-    const originalId = originalFeature.current.id;
+	const handleUpdateFeature = async () => {
+		setUpdateLoading(true);
+		const originalId = originalFeature.current.id;
 
-    try {
-      await FeatureService.updateFeature(axiosInstance, originalId, {
-        ...selectedFeature,
-        id: selectedFeature.id,
-        type: selectedFeature.type,
-        name: selectedFeature.name,
-        config: updateConfig(),
-      });
+		try {
+			await FeatureService.updateFeature(axiosInstance, originalId, {
+				...selectedFeature,
+				id: selectedFeature.id,
+				type: selectedFeature.type,
+				name: selectedFeature.name,
+				config: updateConfig(),
+			});
 
-      await refetch();
-      setOpen(false);
-    } catch (error) {
-      console.log(error);
-      toast.error(getBackendErr(error, "Failed to update feature"));
-    }
-    setUpdateLoading(false);
-  };
+			await refetch();
+			setOpen(false);
+		} catch (error) {
+			console.log(error);
+			toast.error(getBackendErr(error, "Failed to update feature"));
+		}
+		setUpdateLoading(false);
+	};
 
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <CustomDialogContent>
-        <CustomDialogBody className="overflow-y-auto">
-          <DialogTitle>Update Feature</DialogTitle>
+	return (
+		<Dialog open={open} onOpenChange={setOpen}>
+			<CustomDialogContent>
+				<CustomDialogBody className="overflow-y-auto">
+					<DialogTitle>Update Feature</DialogTitle>
 
-          <FeatureConfig
-            feature={selectedFeature}
-            setFeature={setSelectedFeature}
-            eventNameInput={eventNameInput}
-            setEventNameInput={setEventNameInput}
-            isUpdate={true}
-            eventNameChanged={eventNameChanged}
-            setEventNameChanged={setEventNameChanged}
-            open={open}
-          />
-        </CustomDialogBody>
-        <CustomDialogFooter>
-          <Button
-            isLoading={updateLoading}
-            onClick={() => handleUpdateFeature()}
-            variant="add"
-            startIcon={<CircleArrowUp size={14} />}
-          >
-            Update Feature
-          </Button>
-        </CustomDialogFooter>
-      </CustomDialogContent>
-    </Dialog>
-  );
+					<FeatureConfig
+						feature={selectedFeature}
+						setFeature={setSelectedFeature}
+						eventNameInput={eventNameInput}
+						setEventNameInput={setEventNameInput}
+						isUpdate={true}
+						eventNameChanged={eventNameChanged}
+						setEventNameChanged={setEventNameChanged}
+						open={open}
+					/>
+				</CustomDialogBody>
+				<CustomDialogFooter>
+					<Button
+						isLoading={updateLoading}
+						onClick={() => handleUpdateFeature()}
+						variant="add"
+						startIcon={<CircleArrowUp size={14} />}
+					>
+						Update Feature
+					</Button>
+				</CustomDialogFooter>
+			</CustomDialogContent>
+		</Dialog>
+	);
 }

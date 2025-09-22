@@ -2,8 +2,8 @@ import { FeatureOptions } from "../../models/cusProductModels/cusProductModels.j
 import { Feature } from "../../models/featureModels/featureModels.js";
 import { ProductItemResponseSchema } from "../../models/productV2Models/productItemModels/prodItemResponseModels.js";
 import {
-  ProductItem,
-  UsageModel,
+	ProductItem,
+	UsageModel,
 } from "../../models/productV2Models/productItemModels/productItemModels.js";
 import { toAPIFeature } from "../featureUtils.js";
 import { getProductItemDisplay } from "../productDisplayUtils.js";
@@ -12,136 +12,136 @@ import { getItemType } from "./getItemType.js";
 import { Decimal } from "decimal.js";
 
 export const calculateProrationAmount = ({
-  periodEnd,
-  periodStart,
-  now,
-  amount,
-  allowNegative = false,
+	periodEnd,
+	periodStart,
+	now,
+	amount,
+	allowNegative = false,
 }: {
-  periodEnd: number;
-  periodStart: number;
-  now: number;
-  amount: number;
-  allowNegative?: boolean;
+	periodEnd: number;
+	periodStart: number;
+	now: number;
+	amount: number;
+	allowNegative?: boolean;
 }) => {
-  const num = new Decimal(periodEnd).minus(now);
-  const denom = new Decimal(periodEnd).minus(periodStart);
+	const num = new Decimal(periodEnd).minus(now);
+	const denom = new Decimal(periodEnd).minus(periodStart);
 
-  const proratedAmount = num.div(denom).mul(amount);
+	const proratedAmount = num.div(denom).mul(amount);
 
-  if (proratedAmount.lte(0) && !allowNegative) {
-    return 0;
-  }
+	if (proratedAmount.lte(0) && !allowNegative) {
+		return 0;
+	}
 
-  return proratedAmount.toNumber();
+	return proratedAmount.toNumber();
 };
 
 export type Proration = {
-  start: number;
-  end: number;
+	start: number;
+	end: number;
 };
 
 export const itemToPriceOrTiers = ({
-  item,
-  proration,
-  now,
+	item,
+	proration,
+	now,
 }: {
-  item: ProductItem;
-  proration?: Proration;
-  now?: number;
+	item: ProductItem;
+	proration?: Proration;
+	now?: number;
 }) => {
-  now = now || Date.now();
-  if (item.price) {
-    return {
-      price: proration
-        ? calculateProrationAmount({
-            periodEnd: proration.end,
-            periodStart: proration.start,
-            now,
-            amount: item.price,
-          })
-        : item.price,
-      tiers: undefined,
-    };
-  } else if (item.tiers) {
-    if (item.tiers.length > 1) {
-      return {
-        price: undefined,
-        tiers: item.tiers.map((tier) => ({
-          ...tier,
-          amount: proration
-            ? calculateProrationAmount({
-                periodEnd: proration.end,
-                periodStart: proration.start,
-                now,
-                amount: tier.amount,
-              })
-            : tier.amount,
-        })),
-      };
-    } else {
-      return {
-        price: proration
-          ? calculateProrationAmount({
-              periodEnd: proration.end,
-              periodStart: proration.start,
-              now,
-              amount: item.tiers[0].amount,
-            })
-          : item.tiers[0].amount,
-        tiers: undefined,
-      };
-    }
-  }
+	now = now || Date.now();
+	if (item.price) {
+		return {
+			price: proration
+				? calculateProrationAmount({
+						periodEnd: proration.end,
+						periodStart: proration.start,
+						now,
+						amount: item.price,
+					})
+				: item.price,
+			tiers: undefined,
+		};
+	} else if (item.tiers) {
+		if (item.tiers.length > 1) {
+			return {
+				price: undefined,
+				tiers: item.tiers.map((tier) => ({
+					...tier,
+					amount: proration
+						? calculateProrationAmount({
+								periodEnd: proration.end,
+								periodStart: proration.start,
+								now,
+								amount: tier.amount,
+							})
+						: tier.amount,
+				})),
+			};
+		} else {
+			return {
+				price: proration
+					? calculateProrationAmount({
+							periodEnd: proration.end,
+							periodStart: proration.start,
+							now,
+							amount: item.tiers[0].amount,
+						})
+					: item.tiers[0].amount,
+				tiers: undefined,
+			};
+		}
+	}
 };
 
 export const getProductItemResponse = ({
-  item,
-  features,
-  currency,
-  withDisplay = true,
-  options,
+	item,
+	features,
+	currency,
+	withDisplay = true,
+	options,
 }: {
-  item: ProductItem;
-  features: Feature[];
-  currency?: string | null;
-  withDisplay?: boolean;
-  options?: FeatureOptions[];
+	item: ProductItem;
+	features: Feature[];
+	currency?: string | null;
+	withDisplay?: boolean;
+	options?: FeatureOptions[];
 }) => {
-  // 1. Get item type
-  let type = getItemType(item);
+	// 1. Get item type
+	let type = getItemType(item);
 
-  // 2. Get display
-  let display = getProductItemDisplay({
-    item,
-    features,
-    currency,
-  });
+	// 2. Get display
+	let display = getProductItemDisplay({
+		item,
+		features,
+		currency,
+	});
 
-  let priceData = itemToPriceOrTiers({ item });
+	let priceData = itemToPriceOrTiers({ item });
 
-  let quantity = undefined;
-  let upcomingQuantity = undefined;
+	let quantity = undefined;
+	let upcomingQuantity = undefined;
 
-  if (item.usage_model == UsageModel.Prepaid && notNullish(options)) {
-    let option = options!.find((o) => o.feature_id == item.feature_id);
-    quantity = option?.quantity
-      ? option?.quantity * (item.billing_units ?? 1)
-      : undefined;
+	if (item.usage_model == UsageModel.Prepaid && notNullish(options)) {
+		let option = options!.find((o) => o.feature_id == item.feature_id);
+		quantity = option?.quantity
+			? option?.quantity * (item.billing_units ?? 1)
+			: undefined;
 
-    upcomingQuantity = option?.upcoming_quantity
-      ? option?.upcoming_quantity * (item.billing_units ?? 1)
-      : undefined;
-  }
+		upcomingQuantity = option?.upcoming_quantity
+			? option?.upcoming_quantity * (item.billing_units ?? 1)
+			: undefined;
+	}
 
-  let feature = features.find((f) => f.id == item.feature_id);
-  return ProductItemResponseSchema.parse({
-    type,
-    ...item,
-    feature: feature ? toAPIFeature({ feature }) : null,
-    display: withDisplay ? display : undefined,
-    ...priceData,
-    quantity,
-    next_cycle_quantity: upcomingQuantity,
-  });
+	let feature = features.find((f) => f.id == item.feature_id);
+	return ProductItemResponseSchema.parse({
+		type,
+		...item,
+		feature: feature ? toAPIFeature({ feature }) : null,
+		display: withDisplay ? display : undefined,
+		...priceData,
+		quantity,
+		next_cycle_quantity: upcomingQuantity,
+	});
 };

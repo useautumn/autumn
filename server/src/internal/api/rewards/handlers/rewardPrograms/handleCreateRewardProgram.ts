@@ -1,7 +1,7 @@
 import {
-    CreateRewardProgram,
-    ErrCode,
-    RewardTriggerEvent,
+	CreateRewardProgram,
+	ErrCode,
+	RewardTriggerEvent,
 } from "@autumn/shared";
 import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
 import { constructRewardProgram } from "@/internal/rewards/rewardTriggerUtils.js";

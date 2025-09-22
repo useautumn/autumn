@@ -1,7 +1,7 @@
 import express, { Router } from "express";
 import {
-  handleGetOrgMembers,
-  handleRemoveMember,
+	handleGetOrgMembers,
+	handleRemoveMember,
 } from "./handlers/handleGetOrgMembers.js";
 
 import { OrgService } from "./OrgService.js";
@@ -22,9 +22,9 @@ orgRouter.get("/invites", handleGetInvites as any);
 orgRouter.delete("", handleDeleteOrg as any);
 
 orgRouter.delete("/delete-user", async (req: any, res) => {
-  res.status(200).json({
-    message: "User deleted",
-  });
+	res.status(200).json({
+		message: "User deleted",
+	});
 });
 
 orgRouter.get("", handleGetOrg);

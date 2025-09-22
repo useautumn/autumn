@@ -25,7 +25,7 @@ import { viewsRouter } from "./saved-views/savedViewsRouter.js";
 const mainRouter: Router = Router();
 
 mainRouter.get("", async (req: any, res) => {
-  res.status(200).json({ message: "Hello World" });
+	res.status(200).json({ message: "Hello World" });
 });
 
 mainRouter.post("/organization", withAuth, handlePostOrg);
@@ -43,91 +43,91 @@ mainRouter.use("/saved_views", withOrgAuth, viewsRouter);
 mainRouter.use("/trmnl", trmnlRouter);
 
 const limiter = rateLimit({
-  windowMs: 60 * 1000, // 15 minutes
-  limit: 10, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
-  standardHeaders: "draft-8", // draft-6: `RateLimit-*` headers; draft-7 & draft-8: combined `RateLimit` header
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
+	windowMs: 60 * 1000, // 15 minutes
+	limit: 10, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
+	standardHeaders: "draft-8", // draft-6: `RateLimit-*` headers; draft-7 & draft-8: combined `RateLimit` header
+	legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
 });
 
 mainRouter.use(
-  "/invoices/hosted_invoice_url/:invoiceId",
-  limiter,
-  async (req: any, res: any) => {
-    let invoiceId = req.params.invoiceId;
-    let invoice = await InvoiceService.get({
-      db: req.db,
-      id: invoiceId,
-    });
+	"/invoices/hosted_invoice_url/:invoiceId",
+	limiter,
+	async (req: any, res: any) => {
+		let invoiceId = req.params.invoiceId;
+		let invoice = await InvoiceService.get({
+			db: req.db,
+			id: invoiceId,
+		});
 
-    if (!invoice) return res.status(404).json({ error: "Invoice not found" });
+		if (!invoice) return res.status(404).json({ error: "Invoice not found" });
 
-    try {
-      let org = invoice.customer.org;
-      let env = invoice.customer.env;
-      let stripeCli = createStripeCli({
-        org,
-        env,
-      });
-      let stripeInvoice = await stripeCli.invoices.retrieve(invoice.stripe_id);
+		try {
+			let org = invoice.customer.org;
+			let env = invoice.customer.env;
+			let stripeCli = createStripeCli({
+				org,
+				env,
+			});
+			let stripeInvoice = await stripeCli.invoices.retrieve(invoice.stripe_id);
 
-      if (stripeInvoice.status == "draft") {
-        return res
-          .status(404)
-          .json({ error: "This invoice is in draft status and has no URL" });
-      }
+			if (stripeInvoice.status == "draft") {
+				return res
+					.status(404)
+					.json({ error: "This invoice is in draft status and has no URL" });
+			}
 
-      res.redirect(stripeInvoice.hosted_invoice_url);
-    } catch (e) {
-      console.error(e);
-      return res.status(500).json({ error: "Error retrieving invoice" });
-    }
-  }
+			res.redirect(stripeInvoice.hosted_invoice_url);
+		} catch (e) {
+			console.error(e);
+			return res.status(500).json({ error: "Error retrieving invoice" });
+		}
+	},
 );
 
 // Optional...
 if (process.env.AUTUMN_SECRET_KEY) {
-  mainRouter.use(
-    "/api/autumn",
-    withOrgAuth,
-    autumnHandler({
-      identify: async (req: any) => {
-        return {
-          customerId: req.org?.id,
-          customerData: {
-            name: req.org?.slug,
-            email: req.user?.email,
-          },
-        };
-      },
-    })
-  );
+	mainRouter.use(
+		"/api/autumn",
+		withOrgAuth,
+		autumnHandler({
+			identify: async (req: any) => {
+				return {
+					customerId: req.org?.id,
+					customerData: {
+						name: req.org?.slug,
+						email: req.user?.email,
+					},
+				};
+			},
+		}),
+	);
 }
 
 mainRouter.use(
-  "/demo/api/autumn",
-  withOrgAuth,
-  autumnHandler({
-    autumn: (req: any) => {
-      let client = new Autumn({
-        url: "http://localhost:8080/v1",
-        headers: {
-          cookie: req.headers.cookie,
-          "Content-Type": "application/json",
-          origin: req.get("origin"),
-        },
-      });
-      return client as any;
-    },
-    identify: async (req: any) => {
-      return {
-        customerId: "onboarding_demo_user",
-        customerData: {
-          name: "Demo User",
-          email: "demo@useautumn.com",
-        },
-      };
-    },
-  })
+	"/demo/api/autumn",
+	withOrgAuth,
+	autumnHandler({
+		autumn: (req: any) => {
+			let client = new Autumn({
+				url: "http://localhost:8080/v1",
+				headers: {
+					cookie: req.headers.cookie,
+					"Content-Type": "application/json",
+					origin: req.get("origin"),
+				},
+			});
+			return client as any;
+		},
+		identify: async (req: any) => {
+			return {
+				customerId: "onboarding_demo_user",
+				customerData: {
+					name: "Demo User",
+					email: "demo@useautumn.com",
+				},
+			};
+		},
+	}),
 );
 
 export default mainRouter;
