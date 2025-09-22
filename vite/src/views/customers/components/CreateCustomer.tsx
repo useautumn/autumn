@@ -75,14 +75,18 @@ function CreateCustomer() {
         </DialogHeader>
         <div className="flex gap-2">
           <div>
-            <FieldLabel>Name</FieldLabel>
+            <FieldLabel>
+              Name
+            </FieldLabel>
             <Input
               value={fields.name}
               onChange={(e) => setFields({ ...fields, name: e.target.value })}
             />
           </div>
           <div>
-            <FieldLabel>ID</FieldLabel>
+            <FieldLabel>
+              ID 
+            </FieldLabel>
             <Input
               value={fields.id}
               onChange={(e) => setFields({ ...fields, id: e.target.value })}
@@ -111,6 +115,7 @@ function CreateCustomer() {
             onClick={handleCreate}
             isLoading={isLoading}
             variant="gradientPrimary"
+            disabled={!fields.id.trim() && !fields.email.trim()} // ✅ at least one of id or email
           >
             Create
           </Button>
