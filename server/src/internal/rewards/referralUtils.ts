@@ -26,6 +26,7 @@ import { StatusCodes } from "http-status-codes";
 import { getRewardCat } from "./rewardUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { deleteCusCache } from "../customers/cusCache/updateCachedCus.js";
+import { RewardProgramService } from "./RewardProgramService.js";
 
 export const generateReferralCode = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -62,61 +63,83 @@ export const triggerRedemption = async ({
     `Triggering redemption ${redemption.id} for referral code ${referralCode.code}`
   );
 
-  let applyToCustomer = await CusService.getByInternalId({
+  const referrer = await CusService.getByInternalId({
     db,
     internalId: referralCode.internal_customer_id,
   });
 
-  if (!applyToCustomer) {
+  const redeemer = await CusService.getByInternalId({
+    db,
+    internalId: redemption.internal_customer_id,
+  });
+
+  const rewardProgram = await RewardProgramService.get({
+    db,
+    orgId: org.id,
+    env,
+    id: referralCode.internal_reward_program_id!,
+  });
+
+  if (!rewardProgram) {
     throw new RecaseError({
-      message: `Customer ${referralCode.internal_customer_id} not found`,
-      code: ErrCode.CustomerNotFound,
+      message: `Reward program ${referralCode.internal_reward_program_id} not found`,
+      code: ErrCode.RewardProgramNotFound,
       statusCode: StatusCodes.NOT_FOUND,
     });
   }
 
-  let stripeCli = createStripeCli({
-    org,
-    env,
-    legacyVersion: true,
-  });
+  for (let i = 0; i < 2; i++) {
+    let customer = i === 0 ? referrer : redeemer;
 
-  await createStripeCusIfNotExists({
-    db,
-    customer: applyToCustomer,
-    org,
-    env,
-    logger,
-  });
-
-  let stripeCusId = applyToCustomer.processor.id;
-  let stripeCus = (await stripeCli.customers.retrieve(
-    stripeCusId
-  )) as Stripe.Customer;
-
-  let applied = false;
-  if (!stripeCus.discount) {
-    await stripeCli.customers.update(stripeCusId, {
-      // @ts-ignore
-      coupon: reward.id,
+    let stripeCli = createStripeCli({
+      org,
+      env,
+      legacyVersion: true,
     });
 
-    applied = true;
-    logger.info(`Applied coupon to customer in Stripe`);
+    await createStripeCusIfNotExists({
+      db,
+      customer: applyToCustomer,
+      org,
+      env,
+      logger,
+    });
+
+    let stripeCusId = applyToCustomer.processor.id;
+    let stripeCus = (await stripeCli.customers.retrieve(
+      stripeCusId
+    )) as Stripe.Customer;
+
+    let applied = false;
+
+    if (!stripeCus.discount) {
+      await stripeCli.customers.update(stripeCusId, {
+        // @ts-ignore
+        coupon: reward.id,
+      });
+
+      applied = true;
+      logger.info(`Applied coupon to customer in Stripe`);
+    }
+
+    let updatedRedemption = await RewardRedemptionService.update({
+      db,
+      id: redemption.id,
+      updates: {
+        applied,
+        triggered: true,
+      },
+    });
+
+    logger.info(`Successfully triggered redemption, applied: ${applied}`);
+
+    return updatedRedemption;
   }
 
-  let updatedRedemption = await RewardRedemptionService.update({
-    db,
-    id: redemption.id,
-    updates: {
-      applied,
-      triggered: true,
-    },
-  });
-
-  logger.info(`Successfully triggered redemption, applied: ${applied}`);
-
-  return updatedRedemption;
+  // let applyToCustomer = await CusService.getByInternalId({
+  //   db,
+  //   internalId: referralCode.internal_customer_id,
+  // });
 };
 
 export const triggerFreeProduct = async ({
