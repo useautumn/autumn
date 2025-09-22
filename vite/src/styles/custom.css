@@ -1,0 +1,59 @@
+.form-input {
+	padding: 0.25rem 0.5rem; /* py-1 px-2 in Tailwind */
+	border-color: #d1d1d1;
+	border-radius: var(--radius); /* rounded-lg in Tailwind */
+
+	font-size: 13px;
+	font-weight: var(--font-weight-medium);
+	color: var(--color-t2);
+}
+
+.form-input::placeholder {
+	color: var(--color-t6);
+}
+
+.form-input[data-placeholder] {
+	color: var(--color-t6);
+}
+
+.form-input:hover {
+	border-color: var(--primary);
+}
+
+.form-input:focus,
+.form-input[data-state="open"] {
+	border-color: var(--primary);
+	box-shadow:
+		0 0 0 0.5px rgb(144, 72, 255),
+		0 0 8px rgba(144, 72, 255, 0.25);
+}
+
+.form-focus-border {
+	border-color: var(--primary);
+	box-shadow:
+		0 0 0 0.5px rgb(144, 72, 255),
+		0 0 8px rgba(144, 72, 255, 0.25);
+}
+
+/* SELECT */
+.form-select {
+	&:hover {
+		background-color: #fcfaff;
+	}
+
+	&:focus,
+	&[data-state="open"] {
+		background-color: #f6f0ff;
+	}
+}
+
+.form-checkbox {
+	&:hover {
+		background-color: #fcfaff;
+	}
+
+	&:focus,
+	&[data-state="checked"] {
+		background-color: #f6f0ff;
+	}
+}
