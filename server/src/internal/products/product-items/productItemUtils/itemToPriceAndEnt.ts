@@ -1,3 +1,4 @@
+import RecaseError from "@/utils/errorUtils.js";
 import {
   AllowanceType,
   BillingInterval,
@@ -19,13 +20,12 @@ import {
   OnIncrease,
   OnDecrease,
   FeatureUsageType,
-  features,
 } from "@autumn/shared";
 import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 import { pricesAreSame } from "@/internal/products/prices/priceInitUtils.js";
 import { entsAreSame } from "../../entitlements/entitlementUtils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
+
 import {
   isFeatureItem,
   isFeaturePriceItem,
