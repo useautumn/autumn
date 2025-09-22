@@ -1,5 +1,6 @@
 import "./index.css";
 import "./styles/typography.css";
+import "./styles/custom.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PostHogProvider } from "posthog-js/react";
 import { StrictMode } from "react";
