@@ -14,6 +14,8 @@ import {
   Price,
   FullProduct,
   FullEntitlement,
+  Rollover,
+  RolloverConfig,
 } from "@autumn/shared";
 
 import { addDays } from "date-fns";
@@ -76,6 +78,24 @@ export const addTrialToNextResetAt = (
   return addDays(new Date(nextResetAt), freeTrial.length).getTime();
 };
 
+export const rolloversAreSame = ({
+  rollover1,
+  rollover2,
+}: {
+  rollover1?: RolloverConfig | null;
+  rollover2?: RolloverConfig | null;
+}) => {
+  if (!rollover1 && !rollover2) return true;
+  if (!rollover1 && rollover2) return false;
+  if (rollover1 && !rollover2) return false;
+
+  return (
+    rollover1!.max == rollover2!.max &&
+    rollover1!.duration == rollover2!.duration &&
+    rollover1!.length == rollover2!.length
+  );
+};
+
 export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
   // 1. Check if they have same internal_feature_id
   if (ent1.internal_feature_id !== ent2.internal_feature_id) {
@@ -121,23 +141,25 @@ export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
       message: `Usage limit different: ${ent1.usage_limit} !== ${ent2.usage_limit}`,
     },
     rollover: {
-      condition:
-        JSON.stringify(ent1.rollover) !== JSON.stringify(ent2.rollover),
+      condition: !rolloversAreSame({
+        rollover1: ent1.rollover,
+        rollover2: ent2.rollover,
+      }),
       message: `Rollover different: ${ent1.rollover} !== ${ent2.rollover}`,
     },
   };
 
   let entsAreDiff = Object.values(diffs).some((d) => d.condition);
 
-  // if (entsAreDiff) {
-  //   console.log("Entitlements different");
-  //   console.log(
-  //     "Differences:",
-  //     Object.values(diffs)
-  //       .filter((d) => d.condition)
-  //       .map((d) => d.message),
-  //   );
-  // }
+  if (entsAreDiff) {
+    console.log("Entitlements different");
+    console.log(
+      "Differences:",
+      Object.values(diffs)
+        .filter((d) => d.condition)
+        .map((d) => d.message)
+    );
+  }
   return !entsAreDiff;
 };
 

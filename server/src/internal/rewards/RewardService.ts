@@ -1,7 +1,13 @@
-import { AppEnv, ErrCode, Reward, rewards } from "@autumn/shared";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import {
+  type AppEnv,
+  ErrCode,
+  type Reward,
+  rewards,
+  RewardType,
+} from "@autumn/shared";
+import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { and, arrayContains, desc, eq, inArray, or, sql } from "drizzle-orm";
 
 export class RewardService {
   static async get({
@@ -15,7 +21,7 @@ export class RewardService {
     orgId: string;
     env: AppEnv;
   }) {
-    let result = await db.query.rewards.findFirst({
+    const result = await db.query.rewards.findFirst({
       where: and(
         or(
           eq(rewards.id, idOrInternalId),
@@ -44,7 +50,7 @@ export class RewardService {
     orgId: string;
     env: AppEnv;
   }) {
-    let reward = await db.query.rewards.findMany({
+    const reward = await db.query.rewards.findMany({
       where: and(
         eq(rewards.org_id, orgId),
         eq(rewards.env, env),
@@ -70,7 +76,7 @@ export class RewardService {
     db: DrizzleCli;
     data: Reward | Reward[];
   }) {
-    let results = await db.insert(rewards).values(data as Reward);
+    const results = await db.insert(rewards).values(data as Reward);
     return results as Reward[];
   }
 
@@ -78,13 +84,19 @@ export class RewardService {
     db,
     orgId,
     env,
+    inTypes,
   }: {
     db: DrizzleCli;
     orgId: string;
     env: AppEnv;
+    inTypes?: RewardType[];
   }) {
-    let results = await db.query.rewards.findMany({
-      where: and(eq(rewards.org_id, orgId), eq(rewards.env, env)),
+    const results = await db.query.rewards.findMany({
+      where: and(
+        eq(rewards.org_id, orgId),
+        eq(rewards.env, env),
+        inTypes ? inArray(rewards.type, inTypes) : undefined
+      ),
       orderBy: [desc(rewards.internal_id)],
     });
 
@@ -126,7 +138,7 @@ export class RewardService {
     orgId: string;
     update: Partial<Reward>;
   }) {
-    let result = await db
+    const result = await db
       .update(rewards)
       .set(update)
       .where(

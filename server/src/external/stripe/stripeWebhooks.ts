@@ -9,7 +9,11 @@ import { handleCheckoutSessionCompleted } from "./webhookHandlers/handleCheckout
 import { handleSubscriptionUpdated } from "./webhookHandlers/handleSubUpdated.js";
 import { handleSubDeleted } from "./webhookHandlers/handleSubDeleted.js";
 import { handleSubCreated } from "./webhookHandlers/handleSubCreated.js";
-import { getStripeWebhookSecret } from "@/internal/orgs/orgUtils.js";
+import {
+  getStripeWebhookSecret,
+  isStripeConnected,
+  unsetOrgStripeKeys,
+} from "@/internal/orgs/orgUtils.js";
 import { handleInvoicePaid } from "./webhookHandlers/handleInvoicePaid.js";
 import { handleRequestError } from "@/utils/errorUtils.js";
 import { handleInvoiceCreated } from "./webhookHandlers/handleInvoiceCreated/handleInvoiceCreated.js";
@@ -22,6 +26,7 @@ import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js
 import { CusService } from "@/internal/customers/CusService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { handleInvoiceUpdated } from "./webhookHandlers/handleInvoiceUpdated.js";
+import { disconnectStripe } from "@/internal/orgs/handlers/handleDeleteStripe.js";
 
 export const stripeWebhookRouter: Router = express.Router();
 
@@ -66,9 +71,11 @@ stripeWebhookRouter.post(
     request.env = env;
     org = data.org;
 
-    if (!org.stripe_config) {
-      console.log(`Org ${orgId} does not have a stripe config`);
-      response.status(200).send(`Org ${orgId} does not have a stripe config`);
+    if (!isStripeConnected({ org, env })) {
+      console.log(`Org ${orgId} and env ${env} is not connected to stripe`);
+      response
+        .status(200)
+        .send(`Org ${orgId} and env ${env} is not connected to stripe`);
       return;
     }
 
@@ -114,15 +121,6 @@ stripeWebhookRouter.post(
 
     let logger = request.logtail;
     logStripeWebhook({ req: request, event });
-
-    // const logger = createLogtailWithContext({
-    //   action: LoggerAction.StripeWebhook,
-    //   event_type: event.type,
-    //   data: event.data,
-    //   org_id: orgId,
-    //   org_slug: org.slug,
-    //   env,
-    // });
 
     try {
       const stripeCli = createStripeCli({ org, env });
@@ -241,6 +239,18 @@ stripeWebhookRouter.post(
       if (error instanceof Stripe.errors.StripeError) {
         if (error.message.includes("No such customer")) {
           logger.warn(`stripe customer missing: ${error.message}`);
+          response.status(200).json({ message: "ok" });
+          return;
+        }
+
+        if (error.message.includes("Expired API Key provided")) {
+          // Disconnect Stripe
+          await unsetOrgStripeKeys({
+            db,
+            org,
+            env,
+          });
+
           response.status(200).json({ message: "ok" });
           return;
         }

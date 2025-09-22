@@ -14,9 +14,9 @@
   "license": "Apache-2.0",
   "scripts": {
     "build:tsc": "tsc",
-    "build": "bun build ./index.ts --outdir dist --target bun --external zod",
+    "build": "bun build ./index.ts --outdir dist --format esm --target bun --external zod",
     "dev": "bunx nodemon --ext ts --ignore dist --exec \"bun run build && bun run dev:dts\"",
-    "dev:dts": "tsc --emitDeclarationOnly --outDir dist --project tsconfig.json --declaration --declarationMap false --emitDeclarationOnly true --outFile dist/index.d.ts",
+    "dev:dts": "tsc --emitDeclarationOnly --outDir dist --project tsconfig.json",
     "dev:bun": "bun ./index.ts --outdir dist --target bun --external zod --watch",
     "db:push": "bun db:generate && bun db:migrate",
     "db:generate": "cross-env NODE_OPTIONS=\"--import tsx\" bunx drizzle-kit generate --config drizzle.config.ts",
