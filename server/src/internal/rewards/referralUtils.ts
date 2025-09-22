@@ -6,6 +6,7 @@ import {
   type FullRewardProgram,
   type ReferralCode,
   type Reward,
+  RewardProgram,
   RewardReceivedBy,
   type RewardRedemption,
 } from "@autumn/shared";
@@ -21,6 +22,7 @@ import { handleAddProduct } from "../customers/attach/attachFunctions/addProduct
 import { rewardProgramToAttachParams } from "../customers/attach/attachUtils/attachParams/convertToParams.js";
 import { CusService } from "../customers/CusService.js";
 import { deleteCusCache } from "../customers/cusCache/updateCachedCus.js";
+import { RewardProgramService } from "./RewardProgramService.js";
 import type { InsertCusProductParams } from "../customers/cusProducts/AttachParams.js";
 import { ProductService } from "../products/ProductService.js";
 import {
@@ -29,7 +31,11 @@ import {
   itemsAreOneOff,
 } from "../products/productUtils.js";
 import { RewardRedemptionService } from "./RewardRedemptionService.js";
-import { triggerFreePaidProduct } from "./referralUtils/triggerFreePaidProduct.js";
+import {
+  receivedByRedeemer,
+  receivedByReferrer,
+  triggerFreePaidProduct,
+} from "./referralUtils/triggerFreePaidProduct.js";
 
 export const ReferralResponseCodes = {
   OwnsProduct: "has_product_already",
@@ -66,7 +72,7 @@ export const triggerRedemption = async ({
   org: any;
   env: AppEnv;
   logger: any;
-  referralCode: ReferralCode;
+  referralCode: ReferralCode & { reward_program: RewardProgram };
   reward: Reward;
   redemption: RewardRedemption;
 }) => {
@@ -74,54 +80,86 @@ export const triggerRedemption = async ({
     `Triggering redemption ${redemption.id} for referral code ${referralCode.code}`
   );
 
-  const applyToCustomer = await CusService.getByInternalId({
+  const referrer = await CusService.getByInternalId({
     db,
     internalId: referralCode.internal_customer_id,
   });
 
-  if (!applyToCustomer) {
+  const redeemer = await CusService.getByInternalId({
+    db,
+    internalId: redemption.internal_customer_id,
+  });
+
+  const rewardProgram = referralCode.reward_program;
+
+  if (!rewardProgram) {
     throw new RecaseError({
-      message: `Customer ${referralCode.internal_customer_id} not found`,
-      code: ErrCode.CustomerNotFound,
+      message: `Reward program ${referralCode.internal_reward_program_id} not found`,
+      code: ErrCode.RewardProgramNotFound,
       statusCode: StatusCodes.NOT_FOUND,
     });
   }
 
-  const stripeCli = createStripeCli({
-    org,
-    env,
-    legacyVersion: true,
-  });
-
-  await createStripeCusIfNotExists({
-    db,
-    customer: applyToCustomer,
-    org,
-    env,
-    logger,
-  });
-
-  const stripeCusId = applyToCustomer.processor.id;
-  const stripeCus = (await stripeCli.customers.retrieve(
-    stripeCusId
-  )) as Stripe.Customer;
-
   let applied = false;
-  if (!stripeCus.discount) {
-    await stripeCli.customers.update(stripeCusId, {
-      // @ts-expect-error
-      coupon: reward.id,
+  let redeemerApplied = false;
+  for (let i = 0; i < 2; i++) {
+    let customer = i === 0 ? referrer : redeemer;
+
+    if (i === 0 && !receivedByReferrer(rewardProgram.received_by)) {
+      continue;
+    } else if (i === 1 && !receivedByRedeemer(rewardProgram.received_by)) {
+      continue;
+    }
+
+    if (!customer) {
+      throw new RecaseError({
+        message: `Customer ${i === 0 ? "referrer" : "redeemer"} not found`,
+        code: ErrCode.CustomerNotFound,
+        statusCode: StatusCodes.NOT_FOUND,
+      });
+    }
+
+    let stripeCli = createStripeCli({
+      org,
+      env,
+      legacyVersion: true,
     });
 
-    applied = true;
-    logger.info(`Applied coupon to customer in Stripe`);
+    await createStripeCusIfNotExists({
+      db,
+      customer: customer,
+      org,
+      env,
+      logger,
+    });
+
+    let stripeCusId = customer.processor.id;
+    let stripeCus = (await stripeCli.customers.retrieve(
+      stripeCusId
+    )) as Stripe.Customer;
+
+    if (!stripeCus.discount) {
+      await stripeCli.customers.update(stripeCusId, {
+        // @ts-ignore
+        coupon: reward.id,
+      });
+
+      if (i === 0) {
+        applied = true;
+      } else {
+        redeemerApplied = true;
+      }
+
+      logger.info(`Applied coupon to customer in Stripe`);
+    }
   }
 
-  const updatedRedemption = await RewardRedemptionService.update({
+  let updatedRedemption = await RewardRedemptionService.update({
     db,
     id: redemption.id,
     updates: {
       applied,
+      redeemer_applied: redeemerApplied,
       triggered: true,
     },
   });
