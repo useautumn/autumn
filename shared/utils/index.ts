@@ -20,3 +20,4 @@ export * from "./productV2Utils/mapToProductV2.js";
 
 // Product utils
 export * from "./productUtils/convertUtils.js";
+export * from "./productUtils/priceUtils.js";
