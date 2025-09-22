@@ -8,6 +8,7 @@
 ---break--- */
 @plugin "tailwindcss-animate";
 @import "tailwind-scrollbar-hide/v4";
+@import '@squircle/tailwindcss';
 /* 
 ---break--- */
 @custom-variant dark (&:is(.dark *));
