@@ -125,6 +125,7 @@ export default async (req: any, res: any) =>
           RewardTriggerEvent.CustomerCreation,
         applied: false,
         updated_at: Date.now(),
+        redeemer_applied: false,
       };
 
       redemption = await RewardRedemptionService.insert({
