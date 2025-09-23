@@ -1,7 +1,7 @@
-import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode, WebhookEventType } from "@autumn/shared";
-import express, { Router } from "express";
+import express, { type Router } from "express";
 import { Webhook } from "svix";
+import RecaseError from "@/utils/errorUtils.js";
 
 export const autumnWebhookRouter: Router = express.Router();
 
@@ -34,17 +34,11 @@ const verifyAutumnWebhook = async (req: any, res: any) => {
 			"svix-timestamp": svix_timestamp as string,
 			"svix-signature": svix_signature as string,
 		});
-	} catch (err) {
+	} catch (_err) {
 		throw new RecaseError({
 			message: "Error: Could not verify webhook",
 			code: ErrCode.InvalidInputs,
 		});
-		// console.log("Error: Could not verify webhook");
-		// res.status(400).json({
-		//   success: false,
-		//   message: "Error: Could not verify webhook",
-		// });
-		// return;
 	}
 
 	return evt;
@@ -75,7 +69,7 @@ autumnWebhookRouter.post(
 				success: true,
 				message: "Webhook received",
 			});
-		} catch (error) {
+		} catch (_error) {
 			res.status(200).json({
 				success: false,
 				message: "Error: Could not verify webhook",
