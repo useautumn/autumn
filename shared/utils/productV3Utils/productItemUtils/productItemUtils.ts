@@ -1,22 +1,16 @@
 import { ProductItemInterval } from "../../../models/productV2Models/productItemModels/productItemModels.js";
 import type { ProductV2 } from "../../../models/productV2Models/productV2Models.js";
+import { isPriceItem } from "../../productDisplayUtils/getItemType.js";
 
-export function extractTopLevelPrice(
-	product: ProductV2,
-): { amount: number; interval: ProductItemInterval } | null {
+export function productV2ToBasePrice({
+	product,
+}: {
+	product: ProductV2;
+}): { amount: number; interval: ProductItemInterval } | null {
 	try {
-		// First try to find an item with price_config
-		let item = product.items.find(
-			(x) =>
-				x.price_config?.type === "fixed" && x.price_config?.amount !== null,
+		const item = product.items.find(
+			(x) => isPriceItem(x)
 		);
-
-		// If no price_config, try to find an item with direct price
-		if (!item) {
-			item = product.items.find(
-				(x) => x.price !== null && x.price !== undefined,
-			);
-		}
         
 		if(item) {
 			// Prefer price_config if available, otherwise use direct price
