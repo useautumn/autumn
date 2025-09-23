@@ -5,6 +5,7 @@ import {
 	BreadcrumbList,
 	BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { navigateTo } from "@/utils/genUtils";
 
@@ -15,14 +16,18 @@ interface BreadcrumbItemType {
 
 export default function V2Breadcrumb({
 	items,
+	className,
 }: {
 	items: BreadcrumbItemType[];
+	className?: string;
 }) {
 	const env = useEnv();
 	const navigate = useNavigate();
 
 	return (
-		<Breadcrumb className="text-t3 pt-6 pl-4 flex justify-center">
+		<Breadcrumb
+			className={cn("text-t3 pt-6 pl-4 flex justify-center", className)}
+		>
 			<BreadcrumbList className="text-t3 text-xs w-full">
 				{items.map((item, index) => (
 					<>

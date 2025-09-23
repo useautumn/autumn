@@ -8,6 +8,7 @@ export const useProductData = ({
 	originalProduct: ProductV2 | null;
 }) => {
 	const initialProductRef = useRef<ProductV2 | null>(null);
+
 	const [hasChanges, setHasChanges] = useState(false);
 	const [product, setProduct] = useState<ProductV2 | null>(null);
 	const [entityFeatureIds, setEntityFeatureIds] = useState<string[]>([]);

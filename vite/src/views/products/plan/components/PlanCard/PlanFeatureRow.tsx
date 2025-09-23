@@ -1,25 +1,25 @@
-import type { ProductItem, Feature } from "@autumn/shared";
-import { ProductItemType, getProductItemDisplay } from "@autumn/shared";
+import type { ProductItem } from "@autumn/shared";
+import { getProductItemDisplay, ProductItemType } from "@autumn/shared";
 import { CurrencyDollar, DotsSixVertical, Trash } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useOrg } from "@/hooks/common/useOrg";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { getItemType } from "@/utils/product/productItemUtils";
 import { PlanFeatureIcon } from "./PlanFeatureIcon";
 
 interface PlanFeatureRowProps {
 	item: ProductItem;
-	features: Feature[];
 	onRowClick?: (item: ProductItem) => void;
 	onDelete?: (item: ProductItem) => void;
 }
 
 export const PlanFeatureRow = ({
 	item,
-	features,
 	onRowClick,
 	onDelete,
 }: PlanFeatureRowProps) => {
 	const { org } = useOrg();
+	const { features } = useFeaturesQuery();
 
 	const getDisplayText = (item: ProductItem) => {
 		const displayData = getProductItemDisplay({
@@ -29,7 +29,7 @@ export const PlanFeatureRow = ({
 		});
 
 		// Combine primary and secondary text
-		if (displayData.secondary_text) {
+		if ("secondary_text" in displayData && displayData.secondary_text) {
 			return `${displayData.primary_text} ${displayData.secondary_text}`;
 		}
 		return displayData.primary_text;
@@ -40,8 +40,9 @@ export const PlanFeatureRow = ({
 		itemType === ProductItemType.Price ||
 		itemType === ProductItemType.FeaturePrice;
 
+	// h-[30px] w-full px-[7px] py-[6px] shadow-[0px_4px_4px_rgba(0,0,0,0.02),_inset_0px_-3px_4px_rgba(0,0,0,0.04)]
 	return (
-		<div className="flex flex-row items-center bg-white border border-[#D1D1D1] rounded-md h-[30px] w-full px-[7px] py-[6px] gap-1 squircle squircle-t-lg squircle-b-lg squircle-l-lg squircle-smooth-sm squircle-r-lg shadow-[0px_4px_4px_rgba(0,0,0,0.02),_inset_0px_-3px_4px_rgba(0,0,0,0.04)]">
+		<div className="flex flex-row items-center bg-white border border-[#D1D1D1] form-input gap-1">
 			{/* Left side - Icons and text */}
 			<div className="flex flex-row items-center flex-1 gap-2 min-w-0">
 				{/* Icon container */}

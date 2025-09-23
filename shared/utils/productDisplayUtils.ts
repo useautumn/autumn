@@ -1,20 +1,20 @@
-import { Feature } from "../models/featureModels/featureModels.js";
+import type { Feature } from "../models/featureModels/featureModels.js";
 import { Infinite } from "../models/productModels/productEnums.js";
 import {
-	ProductItem,
+	type ProductItem,
 	ProductItemFeatureType,
-	ProductItemInterval,
+	type ProductItemInterval,
 } from "../models/productV2Models/productItemModels/productItemModels.js";
 import {
+	formatAmount,
 	getFeatureName,
 	numberWithCommas,
-	formatAmount,
 } from "./displayUtils.js";
 import {
 	isFeatureItem,
 	isFeaturePriceItem,
 	isPriceItem,
-} from "./productDisplayUtils/getItemType.js";
+} from "./productV2Utils/productItemUtils/getItemType.js";
 import { notNullish, nullish } from "./utils.js";
 
 export const formatTiers = ({
@@ -24,17 +24,17 @@ export const formatTiers = ({
 	item: ProductItem;
 	currency?: string | null;
 }) => {
-	let tiers = item.tiers;
+	const tiers = item.tiers;
 	if (tiers) {
-		if (tiers.length == 1) {
+		if (tiers.length === 1) {
 			return formatAmount({
 				currency,
 				amount: tiers[0].amount,
 			});
 		}
 
-		let firstPrice = tiers[0].amount;
-		let lastPrice = tiers[tiers.length - 1].amount;
+		const firstPrice = tiers[0].amount;
+		const lastPrice = tiers[tiers.length - 1].amount;
 
 		return `${formatAmount({
 			currency,
@@ -54,7 +54,7 @@ export const getIntervalString = ({
 	intervalCount?: number | null;
 }) => {
 	if (!interval) return "";
-	if (intervalCount == 1) {
+	if (intervalCount === 1) {
 		return `per ${interval}`;
 	}
 	return `per ${intervalCount} ${interval}s`;
@@ -71,7 +71,7 @@ export const getFeatureItemDisplay = ({
 		throw new Error(`Feature ${item.feature_id} not found`);
 	}
 	// 1. If feature
-	if (item.feature_type == ProductItemFeatureType.Static) {
+	if (item.feature_type === ProductItemFeatureType.Static) {
 		return {
 			primary_text: getFeatureName({
 				feature,
@@ -81,13 +81,13 @@ export const getFeatureItemDisplay = ({
 		};
 	}
 
-	let featureName = getFeatureName({
+	const featureName = getFeatureName({
 		feature,
 		units: item.included_usage,
 	});
 
-	let includedUsageTxt =
-		item.included_usage == Infinite
+	const includedUsageTxt =
+		item.included_usage === Infinite
 			? "Unlimited "
 			: nullish(item.included_usage) || item.included_usage == 0
 				? ""
@@ -105,7 +105,7 @@ export const getPriceItemDisplay = ({
 	item: ProductItem;
 	currency?: string | null;
 }) => {
-	let primaryText = formatAmount({
+	const primaryText = formatAmount({
 		currency,
 		amount: item.price as number,
 	});
@@ -115,7 +115,7 @@ export const getPriceItemDisplay = ({
 		intervalCount: item.interval_count,
 	});
 
-	let secondaryText = intervalStr || undefined;
+	const secondaryText = intervalStr || undefined;
 
 	return {
 		primary_text: primaryText,
@@ -141,12 +141,12 @@ export const getFeaturePriceItemDisplay = ({
 	}
 
 	// 1. Get included usage
-	let includedFeatureName = getFeatureName({
+	const includedFeatureName = getFeatureName({
 		feature,
 		units: item.included_usage,
 	});
 
-	let includedUsage = item.included_usage as number | null;
+	const includedUsage = item.included_usage as number | null;
 	let includedUsageStr = "";
 	if (notNullish(includedUsage) && includedUsage! > 0) {
 		if (minifyIncluded) {
@@ -156,8 +156,8 @@ export const getFeaturePriceItemDisplay = ({
 		}
 	}
 
-	let priceStr = formatTiers({ item, currency });
-	let billingFeatureName = getFeatureName({
+	const priceStr = formatTiers({ item, currency });
+	const billingFeatureName = getFeatureName({
 		feature,
 		units: item.billing_units,
 	});
@@ -170,7 +170,7 @@ export const getFeaturePriceItemDisplay = ({
 	}
 
 	// let intervalStr = isMainPrice && item.interval ? ` per ${item.interval}` : "";
-	let intervalStr = isMainPrice
+	const intervalStr = isMainPrice
 		? getIntervalString({
 				interval: item.interval!,
 				intervalCount: item.interval_count,

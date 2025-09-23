@@ -1,17 +1,10 @@
+import { Decimal } from "decimal.js";
+import { type ProductItem, type ProductV2 } from "../index.js";
 import {
-	BillingType,
-	Price,
-	ProductItem,
-	ProductResponse,
-	ProductV2,
-} from "../index.js";
-import { nullish } from "./utils.js";
-import {
-	isFeatureItem,
 	isFeaturePriceItem,
 	isPriceItem,
-} from "./productDisplayUtils/getItemType.js";
-import { Decimal } from "decimal.js";
+} from "./productV2Utils/productItemUtils/getItemType.js";
+import { nullish } from "./utils.js";
 
 export const isFreeProductV2 = ({ items }: { items: ProductItem[] }) => {
 	return items.every((item) => nullish(item.price) && nullish(item.tiers));
@@ -44,7 +37,7 @@ export const isProductUpgradeV2 = ({
 		for (const item of items) {
 			if (item.price) totalPrice = totalPrice.plus(item.price);
 			if (item.tiers) {
-				let tierTotal = item.tiers.reduce(
+				const tierTotal = item.tiers.reduce(
 					(acc, tier) => acc.plus(tier.amount),
 					new Decimal(0),
 				);
@@ -75,7 +68,7 @@ export const sortProductsV2 = ({ products }: { products: ProductV2[] }) => {
 		}
 
 		// Primary sort: by price (using upgrade logic)
-		let isUpgrade = isProductUpgradeV2({
+		const isUpgrade = isProductUpgradeV2({
 			items1: a.items,
 			items2: b.items,
 		});

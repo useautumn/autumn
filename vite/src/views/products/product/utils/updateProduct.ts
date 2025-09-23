@@ -1,9 +1,8 @@
+import { type ProductV2, UpdateProductSchema } from "@autumn/shared";
+import type { AxiosInstance } from "axios";
+import { toast } from "sonner";
 import { ProductService } from "@/services/products/ProductService";
 import { getBackendErr } from "@/utils/genUtils";
-import { Product, ProductV2, UpdateProductSchema } from "@autumn/shared";
-import { AxiosInstance } from "axios";
-import { toast } from "sonner";
-import { isFreeProduct } from "@/utils/product/priceUtils";
 
 export const updateProduct = async ({
 	axiosInstance,

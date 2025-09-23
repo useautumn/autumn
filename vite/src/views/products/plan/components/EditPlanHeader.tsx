@@ -1,0 +1,58 @@
+import { AdminHover } from "@/components/general/AdminHover";
+import { Badge } from "@/components/v2/badge";
+import V2Breadcrumb from "@/components/v2/breadcrumb";
+import { PlanTypeBadge } from "../../components/PlanTypeBadge";
+import { useProductQuery } from "../../product/hooks/useProductQuery";
+
+export const EditPlanHeader = () => {
+	const { product } = useProductQuery();
+
+	const getProductAdminHover = () => {
+		return [
+			{
+				key: "internal_product_id",
+				value: product.internal_id,
+			},
+			{
+				key: "stripe_id",
+				value: product.stripe_id || "N/A",
+			},
+			{
+				key: "customer_product_id",
+				value: product.cusProductId || "N/A",
+			},
+		];
+	};
+
+	return (
+		<div className="flex flex-col gap-2 p-4 w-full bg-card">
+			<V2Breadcrumb
+				className="p-0"
+				items={[
+					{
+						name: "Plans",
+						href: "/products",
+					},
+					{
+						name: "Plan Editor",
+						href: `/products`,
+					},
+				]}
+			/>
+			<div className="col-span-2 flex">
+				<div className="flex flex-row items-baseline justify-start gap-2 w-full whitespace-nowrap">
+					<AdminHover texts={getProductAdminHover()}>
+						<span className="text-lg font-medium w-fit whitespace-nowrap">
+							{product.name}
+						</span>
+					</AdminHover>
+					<span className="text-sm text-t3">v{product.version}</span>
+				</div>
+			</div>
+			<div className="flex flex-row gap-2">
+				<Badge variant="secondary">Add-on</Badge>
+				<PlanTypeBadge product={product} />
+			</div>
+		</div>
+	);
+};

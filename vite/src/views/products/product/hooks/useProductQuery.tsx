@@ -1,12 +1,11 @@
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useQuery } from "@tanstack/react-query";
-import { parseAsInteger, parseAsString } from "nuqs";
-import { useQueryStates } from "nuqs";
-import { useParams, useSearchParams } from "react-router";
-import { useCachedProduct } from "./getCachedProduct";
+import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useMemo } from "react";
-import { useProductCountsQuery } from "./queries/useProductCountsQuery";
+import { useParams } from "react-router";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useCachedProduct } from "./getCachedProduct";
 import { useMigrationsQuery } from "./queries/useMigrationsQuery.tsx";
+import { useProductCountsQuery } from "./queries/useProductCountsQuery";
 
 // Product query state...
 export const useProductQueryState = () => {
@@ -31,10 +30,11 @@ export const useProductQuery = () => {
 	const axiosInstance = useAxiosInstance();
 	const { getCachedProduct } = useCachedProduct({ productId: productId });
 
-	const cachedProduct = useMemo(getCachedProduct, [getCachedProduct]);
+	const cachedProduct = useMemo(getCachedProduct, []);
 
 	const fetcher = async () => {
 		if (!productId) return null;
+
 		const url = `/products/${productId}/data2`;
 		const queryParams = {
 			version: queryStates.version,

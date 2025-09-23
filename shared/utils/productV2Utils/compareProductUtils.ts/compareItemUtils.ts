@@ -1,21 +1,22 @@
+/** biome-ignore-all lint/suspicious/noDoubleEquals: need to compare null / undefined for different fields */
 import {
-	Feature,
-	FeatureItem,
+	type Feature,
+	type FeatureItem,
 	FeatureItemSchema,
-	FeaturePriceItem,
+	type FeaturePriceItem,
 	FeaturePriceItemSchema,
 	FeatureUsageType,
-	PriceItem,
+	type PriceItem,
 	PriceItemSchema,
-	ProductItem,
+	type ProductItem,
+	type UsageTier,
 } from "@autumn/shared";
+import { itemToFeature } from "../productItemUtils/convertItemUtils.js";
 import {
 	isFeatureItem,
 	isFeaturePriceItem,
 	isPriceItem,
-} from "./productItemUtils/getItemType.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { itemToFeature } from "./productItemUtils/convertItem.js";
+} from "../productItemUtils/getItemType.js";
 
 export const findSimilarItem = ({
 	item,
@@ -44,7 +45,10 @@ export const findSimilarItem = ({
 	return null;
 };
 
-const tiersAreSame = (tiers1: any, tiers2: any) => {
+const tiersAreSame = (
+	tiers1: UsageTier[] | null,
+	tiers2: UsageTier[] | null,
+) => {
 	if (!tiers1 && !tiers2) {
 		return true;
 	}
@@ -58,7 +62,7 @@ const tiersAreSame = (tiers1: any, tiers2: any) => {
 	}
 
 	return tiers1.every(
-		(tier: any, index: number) =>
+		(tier: UsageTier, index: number) =>
 			tier.amount === tiers2[index].amount && tier.to === tiers2[index].to,
 	);
 };
@@ -154,7 +158,7 @@ export const featurePriceItemsAreSame = ({
 			message: `Price different: ${item1.price} != ${item2.price}`,
 		},
 		tiers: {
-			condition: tiersAreSame(item1.tiers, item2.tiers),
+			condition: tiersAreSame(item1.tiers || null, item2.tiers || null),
 			message: `Tiers different`,
 		},
 		billing_units: {
@@ -237,7 +241,7 @@ export const itemsAreSame = ({
 
 		same = same_;
 
-		let feature = itemToFeature({
+		const feature = itemToFeature({
 			item: item1,
 			features: features || [],
 		});
