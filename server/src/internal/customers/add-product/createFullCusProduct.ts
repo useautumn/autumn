@@ -337,6 +337,7 @@ export const createFullCusProduct = async ({
 		internalProductId: product.internal_id,
 		cusProducts: attachParams.cusProducts!,
 		status: CusProductStatus.Active,
+		internalEntityId: attachParams.internalEntityId,
 	});
 
 	if (
