@@ -1,3 +1,4 @@
+import type { FrontendProduct } from "@autumn/shared";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/v2/buttons/Button";
@@ -9,12 +10,13 @@ import { useProductContext } from "../../product/ProductContext";
 import { updateProduct } from "../../product/utils/updateProduct";
 
 export const SaveChangesBar = () => {
-	const { hasChanges } = useProductContext();
 	const axiosInstance = useAxiosInstance();
+	const { hasChanges, setProduct } = useProductContext();
 	const [saving, setSaving] = useState(false);
 	const { product, setShowNewVersionDialog } = useProductContext();
 	const { counts, isLoading } = useProductCountsQuery();
 	const { refetch } = useProductQuery();
+	const { product: orgiinalProduct } = useProductQuery();
 
 	const handleSaveClicked = async () => {
 		if (isLoading) toast.error("Product counts are loading");
@@ -37,7 +39,7 @@ export const SaveChangesBar = () => {
 	};
 
 	const handleDiscardClicked = () => {
-		// TODO: Implement discard functionality
+		setProduct(orgiinalProduct as FrontendProduct);
 	};
 
 	if (!hasChanges) return null;

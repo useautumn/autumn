@@ -9,17 +9,9 @@ import {
 } from "@autumn/shared";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/v2/selects/Select";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
-import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
-import { itemToBillingInterval } from "@/utils/product/itemIntervalUtils";
 import { useProductContext } from "@/views/products/product/ProductContext";
+import { SelectBillingCycle } from "./SelectBillingCycle";
 
 export const BasePriceSection = () => {
 	const { product, setProduct } = useProductContext();
@@ -33,12 +25,30 @@ export const BasePriceSection = () => {
 		});
 	};
 
+	const getBasePriceIndex = () => {
+		return product.items.findIndex(
+			(item: ProductItem) =>
+				item.price === basePrice?.amount && isPriceItem(item),
+		);
+	};
+
+	const setItem = (item: ProductItem) => {
+		const newItems = [...product.items];
+		newItems[getBasePriceIndex()] = item;
+		setProduct({
+			...product,
+			items: newItems,
+		});
+	};
+
 	const handleUpdateBasePrice = ({
 		amount,
 		interval,
+		intervalCount,
 	}: {
 		amount?: string;
 		interval?: BillingInterval;
+		intervalCount?: number;
 	}) => {
 		const newItems = [...product.items];
 		const basePriceIndex = newItems.findIndex(
@@ -59,7 +69,7 @@ export const BasePriceSection = () => {
 				interval: interval
 					? billingToItemInterval(interval)
 					: basePrice?.interval,
-
+				interval_count: interval ? intervalCount : basePrice?.intervalCount,
 				isBasePrice: true,
 			};
 		}
@@ -111,8 +121,12 @@ export const BasePriceSection = () => {
 						/>
 					</div>
 					<div>
-						<FormLabel disabled={disabled}>Interval</FormLabel>
-						<Select
+						<SelectBillingCycle
+							item={basePrice?.item}
+							setItem={setItem}
+							disabled={disabled}
+						/>
+						{/* <Select
 							disabled={disabled}
 							value={
 								itemToBillingInterval({
@@ -135,7 +149,7 @@ export const BasePriceSection = () => {
 									</SelectItem>
 								))}
 							</SelectContent>
-						</Select>
+						</Select> */}
 					</div>
 				</div>
 			</div>
