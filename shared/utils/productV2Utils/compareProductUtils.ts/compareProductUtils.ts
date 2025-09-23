@@ -85,9 +85,6 @@ export const productsAreSame = ({
 	items1 = sanitizeItems({ items: items1, features });
 	items2 = sanitizeItems({ items: items2, features });
 
-	console.log("Items 1:", items1);
-	console.log("Items 2:", items2);
-
 	let itemsSame = true;
 	let pricesChanged = false;
 	const newItems: ProductItem[] = [];
@@ -113,14 +110,14 @@ export const productsAreSame = ({
 	if (items1.length !== items2.length) itemsSame = false;
 
 	for (const item of items1) {
-		console.log("Item:", item);
+		// console.log("Item:", item);
 
 		const similarItem = findSimilarItem({
 			item,
 			items: items2,
 		});
 
-		console.log("Similar item:", similarItem);
+		// console.log("Similar item:", similarItem);
 
 		if (!similarItem) {
 			if (isFeaturePriceItem(item) || isPriceItem(item)) {

@@ -2,6 +2,7 @@ import {
 	BillingInterval,
 	billingToItemInterval,
 	isPriceItem,
+	notNullish,
 	nullish,
 	type ProductItem,
 	productV2ToBasePrice,
@@ -36,7 +37,7 @@ export const BasePriceSection = () => {
 		amount,
 		interval,
 	}: {
-		amount?: number;
+		amount?: string;
 		interval?: BillingInterval;
 	}) => {
 		const newItems = [...product.items];
@@ -45,14 +46,24 @@ export const BasePriceSection = () => {
 		);
 
 		if (basePriceIndex !== -1) {
+			const newAmount =
+				amount === ""
+					? amount
+					: notNullish(amount)
+						? Number.parseFloat(amount ?? "")
+						: basePrice?.amount;
+
 			newItems[basePriceIndex] = {
 				...newItems[basePriceIndex],
-				price: amount ?? basePrice?.amount,
+				price: newAmount,
 				interval: interval
 					? billingToItemInterval(interval)
 					: basePrice?.interval,
+
+				isBasePrice: true,
 			};
 		}
+
 		setProduct({
 			...product,
 			items: newItems,
@@ -94,7 +105,7 @@ export const BasePriceSection = () => {
 							value={basePrice?.amount ?? ""}
 							onChange={(e) => {
 								handleUpdateBasePrice({
-									amount: e.target.value as unknown as number,
+									amount: e.target.value,
 								});
 							}}
 						/>

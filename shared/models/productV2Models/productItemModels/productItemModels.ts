@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { Infinite } from "../../productModels/productEnums.js";
-import { OnIncrease } from "./productItemEnums.js";
-import { OnDecrease } from "./productItemEnums.js";
+import { OnDecrease, OnIncrease } from "./productItemEnums.js";
 
 export const TierInfinite = "inf";
 
@@ -95,8 +94,10 @@ export const LimitedItemSchema = ProductItemSchema.extend({
 });
 
 export const FrontendProductItem = ProductItemSchema.extend({
+	price: z.union([z.number(), z.string()]).nullish(),
 	isPrice: z.boolean(),
 	isVariable: z.boolean().nullish(),
+	isBasePrice: z.boolean().nullish(),
 });
 
 export type ProductItem = z.infer<typeof ProductItemSchema>;

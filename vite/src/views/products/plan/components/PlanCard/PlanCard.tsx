@@ -20,7 +20,7 @@ export default function PlanCard({ product }: { product: ProductV2 }) {
 		editingState.type === "plan" && editingState.id === product.id;
 
 	return (
-		<Card className="min-w-[70%] max-w-[90%] bg-card">
+		<Card className="min-w-sm max-w-xl mx-auto bg-card">
 			<CardHeader>
 				<div className="flex flex-row items-center justify-between gap-2 w-full whitespace-nowrap">
 					<div className="flex flex-row items-baseline gap-2">
