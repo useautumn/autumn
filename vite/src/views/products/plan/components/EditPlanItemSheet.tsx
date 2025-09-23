@@ -1,9 +1,8 @@
 import { EntInterval, type PriceTier, TierInfinite } from "@autumn/shared";
-import { ArrowsCounterClockwise, Coins } from "@phosphor-icons/react";
+import { ArrowsCounterClockwiseIcon, Coins } from "@phosphor-icons/react";
 import { useState } from "react";
 import { PanelButton } from "@/components/v2/buttons/PanelButton";
-import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
-
+import { LongCheckbox } from "@/components/v2/checkboxes/LongCheckbox";
 import {
 	IncludedUsageIcon,
 	UsageBasedIcon,
@@ -17,14 +16,13 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/v2/selects/Select";
-
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { EmptyTierState } from "@/components/v2/states/EmptyTierState";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { TierInputRow } from "./TierInputRow";
 
-export function EditPlanItemSheet() {
+export function EditPlanFeatureSheet() {
 	const { item } = useProductItemContext();
 	const [featureBehaviour, setFeatureBehaviour] = useState<
 		"consumable" | "persistent"
@@ -79,32 +77,30 @@ export function EditPlanItemSheet() {
 			/>
 			<SheetSection title="Feature Behaviour">
 				<div className="space-y-4 feature-behaviour-section">
-					<div className="grid grid-cols-2 gap-3 items-stretch">
+					<div className="grid grid-cols-2 gap-4 items-center">
 						<PanelButton
 							isSelected={featureBehaviour === "consumable"}
 							onClick={() => setFeatureBehaviour("consumable")}
 							icon={<UsageBasedIcon />}
 						/>
-						<div>
-							<div className="text-checkbox-label mb-1">Consumable</div>
-							<div className="text-body-secondary">
-								Set limit for included usage and reset interval (e.g. 100
-								credits/month)
+						<div className="max-w-[12rem]">
+							<div className="text-sub mb-1">Consumable</div>
+							<div className="text-body-secondary leading-tight">
+								Set usage limits with reset intervals (e.g. 100 credits/month)
 							</div>
 						</div>
 					</div>
 
-					<div className="grid grid-cols-2 gap-3 items-stretch">
+					<div className="grid grid-cols-2 gap-4 items-center">
 						<PanelButton
 							isSelected={featureBehaviour === "persistent"}
 							onClick={() => setFeatureBehaviour("persistent")}
-							icon={<ArrowsCounterClockwise size={20} />}
+							icon={<ArrowsCounterClockwiseIcon size={20} />}
 						/>
-						<div>
-							<div className="text-checkbox-label mb-1">Persistent</div>
-							<div className="text-body-secondary">
-								Set limits for usage and overage pricing (e.g. 100
-								credits/month, $1 per extra)
+						<div className="max-w-[12rem]">
+							<div className="text-sub mb-1">Persistent</div>
+							<div className="text-body-secondary leading-tight">
+								Set usage and overage pricing (e.g. 100 credits/month, $1 extra)
 							</div>
 						</div>
 					</div>
@@ -112,32 +108,30 @@ export function EditPlanItemSheet() {
 			</SheetSection>
 			<SheetSection title="Billing Type">
 				<div className="space-y-4 billing-type-section">
-					<div className="grid grid-cols-2 gap-3 items-stretch">
+					<div className="grid grid-cols-2 gap-4 items-center">
 						<PanelButton
 							isSelected={billingType === "included"}
 							onClick={() => setBillingType("included")}
 							icon={<IncludedUsageIcon />}
 						/>
-						<div>
-							<div className="text-checkbox-label mb-1">Included</div>
-							<div className="text-body-secondary">
-								Set limit for included usage and reset interval (e.g. 100
-								credits/month)
+						<div className="max-w-[12rem]">
+							<div className="text-sub mb-1">Included</div>
+							<div className="text-body-secondary leading-tight">
+								Set included usage limits with reset intervals (e.g. 100 credits/month)
 							</div>
 						</div>
 					</div>
 
-					<div className="grid grid-cols-2 gap-3 items-stretch">
+					<div className="grid grid-cols-2 gap-4 items-center">
 						<PanelButton
 							isSelected={billingType === "priced"}
 							onClick={() => setBillingType("priced")}
 							icon={<Coins size={20} />}
 						/>
-						<div>
-							<div className="text-checkbox-label mb-1">Priced</div>
-							<div className="text-body-secondary">
-								Set limits for usage and overage pricing (e.g. 100
-								credits/month, $1 per extra)
+						<div className="max-w-[12rem]">
+							<div className="text-sub mb-1">Priced</div>
+							<div className="text-body-secondary leading-tight">
+								Set usage and overage pricing (e.g. 100 credits/month, $1 extra)
 							</div>
 						</div>
 					</div>
@@ -217,7 +211,7 @@ export function EditPlanItemSheet() {
 							</Select>
 						</div>
 
-						<div className="flex items-start gap-2">
+						{/* <div className="flex items-start gap-2">
 							<Checkbox
 								checked={prepaid}
 								onCheckedChange={(checked) =>
@@ -232,7 +226,13 @@ export function EditPlanItemSheet() {
 									Quantity will be chosen during checkout.
 								</div>
 							</div>
-						</div>
+						</div> */}
+						<LongCheckbox
+							title="Prepaid"
+							subtitle="Quantity will be chosen during checkout."
+							checked={prepaid}
+							onCheckedChange={setPrepaid}
+						/>
 					</div>
 				</div>
 			</SheetSection>
