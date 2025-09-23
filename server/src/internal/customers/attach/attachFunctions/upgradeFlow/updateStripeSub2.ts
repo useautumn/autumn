@@ -3,10 +3,7 @@ import type Stripe from "stripe";
 import { sanitizeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { createProrationInvoice } from "@/external/stripe/stripeSubUtils/updateStripeSub/createProrationinvoice.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import {
-	freeTrialToStripeTimestamp,
-	rewardTrialToStripeTimestamp,
-} from "@/internal/products/free-trials/freeTrialUtils.js";
+import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { nullish } from "@/utils/genUtils.js";
@@ -36,15 +33,10 @@ export const updateStripeSub2 = async ({
 }) => {
 	const { db, logger } = req;
 
-	const { stripeCli, customer, org, paymentMethod, rewardTrial } = attachParams;
+	const { stripeCli, paymentMethod } = attachParams;
 	const { invoiceOnly, proration } = config;
 
-	if (
-		!invoiceOnly &&
-		!attachParams.fromCancel &&
-		!rewardTrial &&
-		nullish(paymentMethod)
-	) {
+	if (config.requirePaymentMethod !== false && nullish(paymentMethod)) {
 		throw new RecaseError({
 			message: "Payment method is required",
 			code: "payment_method_required",
@@ -60,12 +52,12 @@ export const updateStripeSub2 = async ({
 	const trialEnd =
 		config.disableTrial || config.carryTrial
 			? undefined
-			: rewardTrial?.duration_value
-				? rewardTrialToStripeTimestamp({ rewardTrial, now: attachParams.now })
-				: freeTrialToStripeTimestamp({
+			: attachParams.freeTrial
+				? freeTrialToStripeTimestamp({
 						freeTrial: attachParams.freeTrial,
 						now: attachParams.now,
-					});
+					})
+				: undefined;
 
 	// 1. Update subscription
 
