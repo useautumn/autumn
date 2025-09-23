@@ -27,11 +27,11 @@ function LongCheckbox({
 		<label
 			htmlFor={id}
 			className={cn(
-				"flex items-start gap-2 px-2 rounded-lg border",
+				"flex items-start gap-2 px-2 rounded-lg border bg-white",
 				"!py-2",
 				!disabled && "form-select form-input",
 				checked && "form-focus-border !bg-active-primary",
-				disabled && "opacity-90 cursor-not-allowed",
+				disabled && "opacity-80 cursor-not-allowed",
 				className,
 			)}
 		>

@@ -2,7 +2,6 @@ import { BillingInterval, FreeTrialDuration } from "@autumn/shared";
 import { useId, useState } from "react";
 import { LongCheckbox } from "@/components/v2/checkboxes/LongCheckbox";
 import { Input } from "@/components/v2/inputs/input";
-import { LongInput } from "@/components/v2/inputs/LongInput";
 import {
 	Select,
 	SelectContent,
@@ -27,7 +26,7 @@ export function EditPlanSheet() {
 	const nameId = useId();
 
 	return (
-		<div className="min-w-md max-w-md bg-card z-50 border-l shadow-sm flex flex-col">
+		<div className="min-w-md max-w-md bg-card z-50 border-l shadow-sm flex flex-col overflow-y-auto pb-20">
 			<SheetHeader
 				title="New Plan"
 				description="Configure how this feature is used in your app"
@@ -46,7 +45,7 @@ export function EditPlanSheet() {
 					</div>
 					<div>
 						<div className="text-form-label block mb-1">Description</div>
-						<LongInput placeholder="eg. Pro Plan" />
+						<Input placeholder="eg. This plan includes 100 credits" />
 					</div>
 				</div>
 			</SheetSection>
