@@ -8,13 +8,14 @@ export function productV2ToBasePrice({
 	product: ProductV2;
 }): { amount: number; interval: ProductItemInterval } | null {
 	try {
-		const item = product.items.find(
-			(x) => isPriceItem(x)
-		);
-        
-		if(item) {
+		const item = product.items.find((x) => isPriceItem(x));
+
+		if (item) {
 			// Prefer price_config if available, otherwise use direct price
-			if (item.price_config?.type === "fixed" && item.price_config?.amount !== null) {
+			if (
+				item.price_config?.type === "fixed" &&
+				item.price_config?.amount !== null
+			) {
 				return {
 					amount: item.price_config.amount,
 					interval: item.price_config.interval,
@@ -25,7 +26,7 @@ export function productV2ToBasePrice({
 					interval: ProductItemInterval.Month, // Default interval if not specified
 				};
 			}
-        }
+		}
 	} catch (error: unknown) {
 		console.error("Error extracting price:", error);
 		return null;
