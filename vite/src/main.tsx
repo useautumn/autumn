@@ -1,4 +1,5 @@
 import "./index.css";
+import "./styles/button.css";
 import "./styles/typography.css";
 import "./styles/custom.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

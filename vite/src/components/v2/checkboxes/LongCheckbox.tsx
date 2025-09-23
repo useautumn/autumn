@@ -2,7 +2,7 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
-import { Checkbox } from "./checkbox";
+import { Checkbox } from "./Checkbox";
 
 interface LongCheckboxProps {
 	className?: string;
@@ -26,12 +26,12 @@ function LongCheckbox({
 	return (
 		<label
 			htmlFor={id}
+			data-disabled={disabled}
+			data-state={checked ? "open" : "closed"}
 			className={cn(
 				"flex items-start gap-2 px-2 rounded-lg border bg-white",
-				"!py-2",
-				!disabled && "form-select form-input",
-				checked && "form-focus-border !bg-active-primary",
-				disabled && "opacity-80 cursor-not-allowed",
+				"!py-2 input-base input-shadow select-bg",
+				disabled && "opacity-50 cursor-not-allowed",
 				className,
 			)}
 		>

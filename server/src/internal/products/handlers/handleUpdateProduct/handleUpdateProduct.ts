@@ -1,4 +1,9 @@
-import { ErrCode, type FullProduct, UpdateProductSchema } from "@autumn/shared";
+import {
+	ErrCode,
+	mapToProductItems,
+	productsAreSame,
+	UpdateProductSchema,
+} from "@autumn/shared";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
@@ -10,19 +15,15 @@ import { addTaskToQueue } from "@/queue/queueUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { getEntsWithFeature } from "../../entitlements/entitlementUtils.js";
 import { validateOneOffTrial } from "../../free-trials/freeTrialUtils.js";
 import { ProductService } from "../../ProductService.js";
-import { productsAreSame } from "../../productUtils/compareProductUtils.js";
 import { initProductInStripe } from "../../productUtils.js";
-import { mapToProductItems } from "../../productV2Utils.js";
 import {
 	disableCurrentDefault,
 	handleCreateProduct,
 } from "../handleCreateProduct.js";
 import { handleVersionProductV2 } from "../handleVersionProduct.js";
 import { handleUpdateProductDetails } from "./updateProductDetails.js";
-import { formatPrice } from "../../prices/priceUtils.js";
 
 export const handleUpdateProductV2 = async (req: any, res: any) =>
 	routeHandler({

@@ -1,20 +1,11 @@
-import type { FullCustomer } from "@autumn/shared";
 import { AdminHover } from "@/components/general/AdminHover";
 import { Badge } from "@/components/ui/badge";
-import { SelectEntity } from "@/views/customers/customer/components/customer-header/SelectEntity";
 import { PlanTypeBadge } from "../../components/PlanTypeBadge";
+import { useProductContext } from "../../product/ProductContext";
 
-export default function EditorTopSection({
-	product,
-	hideAdminHover,
-	customer,
-	entityId,
-}: {
-	product: any;
-	hideAdminHover: boolean;
-	customer: FullCustomer;
-	entityId: string;
-}) {
+export default function EditorTopSection() {
+	const { product } = useProductContext();
+
 	return (
 		<div className="flex pl-4 pr-10 flex-col gap-2">
 			<div className="col-span-2 flex">
@@ -34,7 +25,6 @@ export default function EditorTopSection({
 								value: product.cusProductId || "N/A",
 							},
 						]}
-						hide={hideAdminHover}
 					>
 						<span className="text-lg font-medium w-fit whitespace-nowrap">
 							{product.name}
@@ -47,9 +37,9 @@ export default function EditorTopSection({
 				<Badge variant="secondary">Add-on</Badge>
 				<PlanTypeBadge product={product} />
 			</div>
-			{customer && (
+			{/* {customer && (
 				<SelectEntity entityId={entityId} entities={customer?.entities} />
-			)}
+			)} */}
 		</div>
 	);
 }

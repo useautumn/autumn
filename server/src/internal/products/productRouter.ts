@@ -1,4 +1,4 @@
-import { ErrCode } from "@autumn/shared";
+import { ErrCode, productsAreSame } from "@autumn/shared";
 
 import { Router } from "express";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
@@ -13,10 +13,9 @@ import { handleCopyProduct } from "./handlers/handleCopyProduct.js";
 import { handleCreateProduct } from "./handlers/handleCreateProduct.js";
 import { handleDeleteProduct } from "./handlers/handleDeleteProduct.js";
 import { handleGetProduct } from "./handlers/handleGetProduct.js";
+import { handleGetProductDeleteInfo } from "./handlers/handleGetProductDeleteInfo.js";
 import { handleListProductsBeta } from "./handlers/handleListProductsBeta.js";
 import { handleUpdateProductV2 } from "./handlers/handleUpdateProduct/handleUpdateProduct.js";
-import { productsAreSame } from "./productUtils/compareProductUtils.js";
-import { handleGetProductDeleteInfo } from "./handlers/handleGetProductDeleteInfo.js";
 
 export const productBetaRouter: Router = Router();
 productBetaRouter.get("", handleListProductsBeta);

@@ -1,0 +1,40 @@
+/* PRIMARY */
+/** biome-ignore-all lint/complexity/noImportantStyles: important needed. */
+.btn-primary-shadow {
+	box-shadow:
+		0 -3px 4px 0 rgba(0, 0, 0, 0.12) inset,
+		0 4px 4px 0 rgba(0, 0, 0, 0.02);
+}
+
+.btn-primary-shadow:hover {
+	box-shadow:
+		0 -3px 4px 0 rgba(0, 0, 0, 0.12) inset,
+		0 4px 4px 0 rgba(0, 0, 0, 0.06);
+}
+
+.btn-primary-shadow:focus {
+	box-shadow:
+		0 0 0 0.2px var(--color-primary-btn-border),
+		0 -3px 4px 0 rgba(0, 0, 0, 0.04) inset,
+		0 4px 4px 0 rgba(0, 0, 0, 0.04);
+}
+
+/* SECONDARY */
+.btn-secondary-shadow {
+	box-shadow:
+		0 -3px 4px 0 rgba(0, 0, 0, 0.04) inset,
+		0 4px 4px 0 rgba(0, 0, 0, 0.02);
+}
+
+.btn-secondary-shadow:hover {
+	box-shadow:
+		0 -3px 4px 0 rgba(0, 0, 0, 0.04) inset,
+		0 4px 4px 0 rgba(0, 0, 0, 0.06);
+}
+
+.btn-secondary-shadow:focus {
+	box-shadow:
+		0 0 0 0.2px var(--primary),
+		0 -3px 4px 0 rgba(0, 0, 0, 0.04) inset,
+		0 4px 4px 0 rgba(0, 0, 0, 0.04);
+}

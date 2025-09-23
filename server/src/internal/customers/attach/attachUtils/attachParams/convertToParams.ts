@@ -131,7 +131,7 @@ export const newCusToAttachParams = ({
 		cusProducts: [],
 		entities: [],
 		features: [],
-		invoiceOnly: isDefaultTrial,
+		invoiceOnly: isDefaultTrial || undefined,
 	};
 	return attachParams;
 };

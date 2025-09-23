@@ -1,41 +1,47 @@
-import { ExtendedRequest } from "@/utils/models/Request.js";
-
-import { AttachBody } from "@autumn/shared";
-import { AttachParams } from "../../cusProducts/AttachParams.js";
-import { notNullish } from "@/utils/genUtils.js";
-import { AttachBranch, AttachErrCode, BillingInterval } from "@autumn/shared";
-import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
-import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
+import {
+	type AttachBody,
+	AttachBranch,
+	AttachErrCode,
+	BillingInterval,
+	cusProductToPrices,
+	cusProductToProduct,
+	type FeatureOptions,
+	type FullCusProduct,
+	productsAreSame,
+} from "@autumn/shared";
 import { ErrCode } from "@/errors/errCodes.js";
-import RecaseError from "@/utils/errorUtils.js";
+import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
+import { hasPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
+
 import {
 	isFreeProduct,
 	isProductUpgrade,
 } from "@/internal/products/productUtils.js";
-import { cusProductToPrices, cusProductToProduct } from "@autumn/shared";
-import { FeatureOptions, FullCusProduct } from "@autumn/shared";
-import { productsAreSame } from "@/internal/products/productUtils/compareProductUtils.js";
-import { hasPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AttachParams } from "../../cusProducts/AttachParams.js";
+import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
+import { isMainTrialBranch } from "./attachUtils.js";
 import {
 	attachParamToCusProducts,
 	getCustomerSub,
 } from "./convertAttachParams.js";
-import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
-import { isMainTrialBranch } from "./attachUtils.js";
 
 const handleMultiProductErrors = async ({
 	attachParams,
 }: {
 	attachParams: AttachParams;
 }) => {
-	let { products } = attachParams;
+	const { products } = attachParams;
 
 	if (pricesOnlyOneOff(attachParams.prices)) {
 		return true;
 	}
 
 	for (const product of products) {
-		let { curMainProduct, curSameProduct, curScheduledProduct } =
+		const { curMainProduct, curSameProduct, curScheduledProduct } =
 			getExistingCusProducts({
 				product,
 				cusProducts: attachParams.cusProducts!,
@@ -55,7 +61,7 @@ const handleMultiProductErrors = async ({
 			});
 		}
 
-		let curPaidProduct =
+		const curPaidProduct =
 			curMainProduct &&
 			!isFreeProduct(cusProductToPrices({ cusProduct: curMainProduct }));
 
@@ -85,16 +91,16 @@ const getOptionsToUpdate = ({
 	newOptionsList: FeatureOptions[];
 	curSameProduct: FullCusProduct;
 }) => {
-	let optionsToUpdate: { new: FeatureOptions; old: FeatureOptions }[] = [];
+	const optionsToUpdate: { new: FeatureOptions; old: FeatureOptions }[] = [];
 	const prices = cusProductToPrices({ cusProduct: curSameProduct });
 
 	for (const newOptions of newOptionsList) {
-		let internalFeatureId = newOptions.internal_feature_id;
-		let existingOptions = oldOptionsList.find(
+		const internalFeatureId = newOptions.internal_feature_id;
+		const existingOptions = oldOptionsList.find(
 			(o) => o.internal_feature_id === internalFeatureId,
 		);
 
-		let price = findPrepaidPrice({
+		const price = findPrepaidPrice({
 			prices,
 			internalFeatureId: internalFeatureId!,
 		});
@@ -123,9 +129,9 @@ export const checkSameCustom = async ({
 	fromPreview?: boolean;
 	optionsToUpdate: { new: FeatureOptions; old: FeatureOptions }[];
 }) => {
-	let product = attachParams.products[0];
+	const product = attachParams.products[0];
 
-	let { itemsSame, freeTrialsSame, onlyEntsChanged } = productsAreSame({
+	const { itemsSame, freeTrialsSame, onlyEntsChanged } = productsAreSame({
 		newProductV1: {
 			...product,
 			prices: attachParams.prices,
@@ -176,7 +182,7 @@ const getSameProductBranch = async ({
 	attachParams: AttachParams;
 	fromPreview?: boolean;
 }) => {
-	let product = attachParams.products[0];
+	const product = attachParams.products[0];
 
 	let { curSameProduct, curScheduledProduct } = attachParamToCusProducts({
 		attachParams,
@@ -190,7 +196,7 @@ const getSameProductBranch = async ({
 		return AttachBranch.NewVersion;
 	}
 
-	let optionsToUpdate = getOptionsToUpdate({
+	const optionsToUpdate = getOptionsToUpdate({
 		oldOptionsList: curSameProduct.options,
 		newOptionsList: attachParams.optionsList,
 		curSameProduct,
@@ -257,16 +263,19 @@ const getChangeProductBranch = async ({
 
 	// 1. If main product is free, it's the same as adding a new product
 
-	let mainProduct = cusProductToProduct({ cusProduct: curMainProduct! });
+	const mainProduct = cusProductToProduct({ cusProduct: curMainProduct! });
 	if (isFreeProduct(mainProduct.prices)) {
 		return AttachBranch.MainIsFree;
 	}
 
 	// 2. If main product is paid, check if upgrade or downgrade
-	let curPrices = cusProductToPrices({ cusProduct: curMainProduct! });
-	let newPrices = attachParams.prices;
+	const curPrices = cusProductToPrices({ cusProduct: curMainProduct! });
+	const newPrices = attachParams.prices;
 
-	let isUpgrade = isProductUpgrade({ prices1: curPrices, prices2: newPrices });
+	const isUpgrade = isProductUpgrade({
+		prices1: curPrices,
+		prices2: newPrices,
+	});
 
 	if (isUpgrade) {
 		if (isMainTrialBranch({ attachParams })) {
@@ -309,7 +318,7 @@ export const getAttachBranch = async ({
 		return AttachBranch.MultiProduct;
 	}
 
-	let { curSameProduct, curMainProduct } = attachParamToCusProducts({
+	const { curSameProduct, curMainProduct } = attachParamToCusProducts({
 		attachParams,
 	});
 
@@ -318,7 +327,7 @@ export const getAttachBranch = async ({
 		return await getSameProductBranch({ attachParams, fromPreview });
 	}
 
-	let product = attachParams.products[0];
+	const product = attachParams.products[0];
 	if (product.is_add_on) {
 		return AttachBranch.AddOn;
 	}

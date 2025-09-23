@@ -1,15 +1,14 @@
 import type { ProductItem } from "@autumn/shared";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { isPriceItem } from "@/utils/product/getItemType";
 import { useProductContext } from "@/views/products/product/ProductContext";
 import { PlanFeatureRow } from "./PlanFeatureRow";
-import { isPriceItem } from "@/utils/product/getItemType";
 
 export const PlanFeatureList = () => {
 	const { product } = useProductContext();
-	const { features } = useFeaturesQuery();
 
 	// Filter out standalone price items - only show features and priced features
-	const filteredItems = product?.items?.filter(item => !isPriceItem(item)) || [];
+	const filteredItems =
+		product?.items?.filter((item: ProductItem) => !isPriceItem(item)) || [];
 
 	if (filteredItems.length === 0) {
 		return (
@@ -31,12 +30,11 @@ export const PlanFeatureList = () => {
 	return (
 		<div className="space-y-1">
 			<h4 className="text-sm font-medium text-foreground mb-2">Features</h4>
-			<div className="space-y-1">
-				{filteredItems.map((item, index) => (
+			<div className="space-y-2">
+				{filteredItems.map((item: ProductItem, index: number) => (
 					<PlanFeatureRow
 						key={item.entitlement_id || item.price_id || index}
 						item={item}
-						features={features}
 						onRowClick={handleFeatureClick}
 						onDelete={handleDelete}
 					/>

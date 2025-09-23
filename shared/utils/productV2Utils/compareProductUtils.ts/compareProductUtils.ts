@@ -1,27 +1,20 @@
 import {
-	ErrCode,
-	Feature,
-	FullProduct,
+	type Feature,
+	type FullProduct,
 	OnDecrease,
 	OnIncrease,
-	ProductItem,
-	ProductV2,
+	type ProductItem,
+	type ProductV2,
 } from "@autumn/shared";
-import { mapToProductItems } from "../productV2Utils.js";
-import {
-	findSimilarItem,
-	itemsAreSame,
-} from "../product-items/compareItemUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { freeTrialsAreSame } from "../free-trials/freeTrialUtils.js";
+import { freeTrialsAreSame } from "../../productUtils/freeTrialUtils.js";
+import { mapToProductItems } from "../mapToProductV2.js";
 import {
 	isFeaturePriceItem,
 	isPriceItem,
-} from "../product-items/productItemUtils/getItemType.js";
-import { StatusCodes } from "http-status-codes";
-import { itemToPriceOrTiers } from "../product-items/productItemUtils.js";
-import { nullish } from "@/utils/genUtils.js";
-import { getResetUsage } from "../product-items/productItemUtils/itemToPriceAndEnt.js";
+} from "../productItemUtils/getItemType.js";
+import { itemToPriceOrTiers } from "../productItemUtils/getProductItemRes.js";
+import { getResetUsage } from "../productItemUtils/productItemUtils.js";
+import { findSimilarItem, itemsAreSame } from "./compareItemUtils.js";
 
 const sanitizeItems = ({
 	items,
@@ -31,7 +24,7 @@ const sanitizeItems = ({
 	features: Feature[];
 }) => {
 	return items.map((item) => {
-		let priceData = itemToPriceOrTiers({ item });
+		const priceData = itemToPriceOrTiers({ item });
 		const newItem = {
 			...item,
 			reset_usage_when_enabled: getResetUsage({
@@ -51,6 +44,7 @@ const sanitizeItems = ({
 		return newItem;
 	});
 };
+
 export const productsAreSame = ({
 	newProductV1,
 	newProductV2,
@@ -65,17 +59,11 @@ export const productsAreSame = ({
 	features: Feature[];
 }) => {
 	if (!newProductV1 && !newProductV2) {
-		throw new RecaseError({
-			message: "productsAreSame error: product1 not provided",
-			code: ErrCode.InvalidRequest,
-		});
+		throw new Error("productsAreSame error: product1 not provided");
 	}
 
 	if (!curProductV1 && !curProductV2) {
-		throw new RecaseError({
-			message: "productsAreSame error: product2 not provided",
-			code: ErrCode.InvalidRequest,
-		});
+		throw new Error("productsAreSame error: product2 not provided");
 	}
 
 	let items1 =
@@ -97,6 +85,9 @@ export const productsAreSame = ({
 	items1 = sanitizeItems({ items: items1, features });
 	items2 = sanitizeItems({ items: items2, features });
 
+	console.log("Items 1:", items1);
+	console.log("Items 2:", items2);
+
 	let itemsSame = true;
 	let pricesChanged = false;
 	const newItems: ProductItem[] = [];
@@ -106,28 +97,30 @@ export const productsAreSame = ({
 		itemsSame = false;
 	}
 
-	// Check if any feature's usage limits have changed
-	items1.some((item1) => {
-		const matchingItem2 = items2?.find(
-			(item2) => item2.feature_id === item1.feature_id,
-		);
-		if (!matchingItem2) return false;
+	// // Check if any feature's usage limits have changed
+	// items1.some((item1: ProductItem) => {
+	// 	const matchingItem2 = items2?.find(
+	// 		(item2: ProductItem) => item2.feature_id === item1.feature_id,
+	// 	);
+	// 	if (!matchingItem2) return false;
 
-		const feature = features.find((f) => f.id === item1.feature_id);
-		if (!feature) return false;
+	// 	const feature = features.find((f) => f.id === item1.feature_id);
+	// 	if (!feature) return false;
 
-		return false;
-	});
+	// 	return false;
+	// });
 
-	if (items1.length !== items2.length) {
-		itemsSame = false;
-	}
+	if (items1.length !== items2.length) itemsSame = false;
 
 	for (const item of items1) {
-		let similarItem = findSimilarItem({
+		console.log("Item:", item);
+
+		const similarItem = findSimilarItem({
 			item,
 			items: items2,
 		});
+
+		console.log("Similar item:", similarItem);
 
 		if (!similarItem) {
 			if (isFeaturePriceItem(item) || isPriceItem(item)) {
@@ -142,7 +135,7 @@ export const productsAreSame = ({
 
 		const { same, pricesChanged: pricesChanged_ } = itemsAreSame({
 			item1: item,
-			item2: similarItem!,
+			item2: similarItem,
 			features,
 		});
 
@@ -157,7 +150,7 @@ export const productsAreSame = ({
 	}
 
 	for (const item of items2) {
-		let similarItem = findSimilarItem({
+		const similarItem = findSimilarItem({
 			item,
 			items: items1,
 		});
@@ -173,10 +166,10 @@ export const productsAreSame = ({
 	}
 
 	// Compare free trial
-	let freeTrial1 = curProductV1?.free_trial || curProductV2?.free_trial;
-	let freeTrial2 = newProductV1?.free_trial || newProductV2?.free_trial;
+	const freeTrial1 = curProductV1?.free_trial || curProductV2?.free_trial;
+	const freeTrial2 = newProductV1?.free_trial || newProductV2?.free_trial;
 
-	let freeTrialsSame = freeTrialsAreSame({
+	const freeTrialsSame = freeTrialsAreSame({
 		ft1: freeTrial1,
 		ft2: freeTrial2,
 	});
