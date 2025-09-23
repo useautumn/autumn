@@ -6,7 +6,7 @@ import {
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "./select";
+} from "./Select";
 
 type Option = {
 	value: string;
