@@ -9,7 +9,7 @@ import { ProductItemContext } from "../product/product-item/ProductItemContext";
 import ConfirmNewVersionDialog from "../product/versioning/ConfirmNewVersionDialog";
 import { ManagePlan } from "./components/Editor";
 import { EditPlanHeader } from "./components/EditPlanHeader";
-import { EditPlanItemSheet } from "./components/EditPlanItemSheet";
+import { EditPlanFeatureSheet } from "./components/EditPlanItemSheet";
 import { EditPlanSheet } from "./components/EditPlanSheet";
 import { SaveChangesBar } from "./components/SaveChanges";
 import { usePlanData } from "./hooks/usePlanData";
@@ -108,11 +108,11 @@ export const PlanSheets = ({ sheet }: { sheet: Sheets }) => {
 							handleUpdateProductItem: async () => null,
 						}}
 					>
-						<EditPlanItemSheet />
+						<EditPlanFeatureSheet />
 					</ProductItemContext.Provider>
 				);
 			default:
-				return null;
+				return <EditPlanSheet />;
 		}
 	};
 
