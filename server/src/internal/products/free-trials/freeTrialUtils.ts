@@ -2,7 +2,6 @@ import {
 	type CreateFreeTrial,
 	CreateFreeTrialSchema,
 	ErrCode,
-	type FreeProductConfig,
 	type FreeTrial,
 	FreeTrialDuration,
 	type Price,
@@ -101,21 +100,6 @@ export const freeTrialToStripeTimestamp = ({
 
 	// trialEnd = addMinutes(trialEnd, 5);
 	trialEnd = addMinutes(trialEnd, 10);
-
-	return Math.ceil(trialEnd.getTime() / 1000);
-};
-
-export const rewardTrialToStripeTimestamp = ({
-	rewardTrial,
-	now,
-}: {
-	rewardTrial: FreeProductConfig | null | undefined;
-	now?: number | undefined;
-}) => {
-	now = now || Date.now();
-	if (!rewardTrial) return undefined;
-	const length = rewardTrial.duration_value;
-	const trialEnd: Date = addMonths(new Date(now), length);
 
 	return Math.ceil(trialEnd.getTime() / 1000);
 };

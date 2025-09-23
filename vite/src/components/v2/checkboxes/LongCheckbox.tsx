@@ -27,11 +27,11 @@ function LongCheckbox({
 		<label
 			htmlFor={id}
 			className={cn(
-				"flex items-start gap-3 px-2 rounded-lg border",
+				"flex items-start gap-2 px-2 rounded-lg border bg-white",
 				"!py-2",
 				!disabled && "form-select form-input",
-				checked && "form-focus-border !bg-[#fcfaff]",
-				disabled && "opacity-90 cursor-not-allowed",
+				checked && "form-focus-border !bg-active-primary",
+				disabled && "opacity-80 cursor-not-allowed",
 				className,
 			)}
 		>
@@ -40,12 +40,13 @@ function LongCheckbox({
 				checked={checked}
 				onCheckedChange={onCheckedChange}
 				disabled={disabled}
-				className="shrink-2 mt-1"
+				className="hover:border-default hover:bg-default mt-1"
+				size="sm"
 			/>
 			<div className="flex flex-col gap-0.5 flex-1">
 				<div className="text-form-text">{title}</div>
 				{subtitle && (
-					<div className="text-xs text-muted-foreground">{subtitle}</div>
+					<div className="text-xs text-body-secondary">{subtitle}</div>
 				)}
 			</div>
 		</label>

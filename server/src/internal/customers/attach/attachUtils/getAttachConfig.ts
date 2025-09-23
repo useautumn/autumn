@@ -1,37 +1,38 @@
-import { AttachParams } from "../../cusProducts/AttachParams.js";
-import { AttachFlags } from "../models/AttachFlags.js";
 import {
-	AttachConfig,
+	type AttachBody,
 	AttachBranch,
-	intervalsSame,
+	type AttachConfig,
+	cusProductToPrices,
 	intervalToValue,
+	ProrationBehavior,
 } from "@autumn/shared";
-import { AttachBody } from "@autumn/shared";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
-import { nullish, notNullish } from "@/utils/genUtils.js";
-import { ProrationBehavior } from "@autumn/shared";
-import { attachParamsToProduct } from "./convertAttachParams.js";
-import { attachParamToCusProducts } from "./convertAttachParams.js";
-import { cusProductToPrices } from "@autumn/shared";
+import { notNullish, nullish } from "@/utils/genUtils.js";
+import type { AttachParams } from "../../cusProducts/AttachParams.js";
 import { willMergeSub } from "../mergeUtils/mergeUtils.js";
+import type { AttachFlags } from "../models/AttachFlags.js";
+import {
+	attachParamsToProduct,
+	attachParamToCusProducts,
+} from "./convertAttachParams.js";
 
 export const intervalsAreSame = ({
 	attachParams,
 }: {
 	attachParams: AttachParams;
 }) => {
-	let { curMainProduct, curSameProduct } = attachParamToCusProducts({
+	const { curMainProduct, curSameProduct } = attachParamToCusProducts({
 		attachParams,
 	});
 
-	let curCusProduct = curSameProduct || curMainProduct;
+	const curCusProduct = curSameProduct || curMainProduct;
 
 	if (!curCusProduct) {
 		return false;
 	}
 
-	let newProduct = attachParamsToProduct({ attachParams });
-	let curPrices = cusProductToPrices({ cusProduct: curCusProduct! });
+	const newProduct = attachParamsToProduct({ attachParams });
+	const curPrices = cusProductToPrices({ cusProduct: curCusProduct! });
 
 	const curIntervals = new Set(
 		curPrices.map((p) =>
@@ -64,46 +65,45 @@ export const getAttachConfig = async ({
 }) => {
 	const { org, prices, paymentMethod } = attachParams;
 
-	let flags: AttachFlags = {
+	const flags: AttachFlags = {
 		isPublic: req.isPublic,
 		forceCheckout: attachBody.force_checkout || false,
 		invoiceOnly: attachParams.invoiceOnly || false,
 		isFree: isFreeProduct(prices),
-		noPaymentMethod: nullish(paymentMethod) ? true : false,
+		noPaymentMethod: nullish(paymentMethod),
 	};
 
-	const { isPublic, forceCheckout, invoiceOnly, isFree, noPaymentMethod } =
-		flags;
+	const { isPublic, forceCheckout, isFree, noPaymentMethod } = flags;
 
-	let proration =
-		branch == AttachBranch.SameCustomEnts || branch == AttachBranch.NewVersion
+	const proration =
+		branch === AttachBranch.SameCustomEnts || branch === AttachBranch.NewVersion
 			? ProrationBehavior.None
 			: org.config.bill_upgrade_immediately
 				? ProrationBehavior.Immediately
 				: ProrationBehavior.NextBilling;
 
-	let carryUsage =
-		branch == AttachBranch.SameCustomEnts ||
-		branch == AttachBranch.SameCustom ||
-		branch == AttachBranch.NewVersion;
+	const carryUsage =
+		branch === AttachBranch.SameCustomEnts ||
+		branch === AttachBranch.SameCustom ||
+		branch === AttachBranch.NewVersion;
 
 	// Disable trial if doing a merge sub or something else...
 	// Is merge sub...
 	const willMerge = await willMergeSub({ attachParams, branch });
 
-	let disableTrial =
+	const disableTrial =
 		branch === AttachBranch.NewVersion ||
-		branch == AttachBranch.Downgrade ||
+		branch === AttachBranch.Downgrade ||
 		willMerge ||
 		attachBody.free_trial === false;
 
-	let freeTrialWithoutCardRequired =
+	const freeTrialWithoutCardRequired =
 		notNullish(attachParams.freeTrial) &&
 		attachParams.freeTrial?.card_required === false;
 
-	let carryTrial = branch === AttachBranch.NewVersion || willMerge;
+	const carryTrial = branch === AttachBranch.NewVersion || willMerge;
 
-	let sameIntervals = intervalsAreSame({ attachParams });
+	const sameIntervals = intervalsAreSame({ attachParams });
 
 	// let disableMerge =
 	//   branch == AttachBranch.MainIsTrial ||
@@ -121,10 +121,10 @@ export const getAttachConfig = async ({
 		invoiceCheckout ||
 		(noPaymentMethod &&
 			!invoiceAndEnable &&
-			branch != AttachBranch.MultiAttachUpdate);
+			branch !== AttachBranch.MultiAttachUpdate);
 
 	const onlyCheckout = !isFree && checkoutFlow && !freeTrialWithoutCardRequired;
-	const disableMerge = branch == AttachBranch.MainIsTrial || onlyCheckout;
+	const disableMerge = branch === AttachBranch.MainIsTrial || onlyCheckout;
 
 	// Require payment method...
 	let paymentMethodRequired = true;
@@ -135,11 +135,10 @@ export const getAttachConfig = async ({
 	) {
 		paymentMethodRequired = false;
 	}
-	if (attachParams.invoiceOnly) {
-		paymentMethodRequired = false;
-	}
 
-	let config: AttachConfig = {
+	if (flags.invoiceOnly) paymentMethodRequired = false;
+
+	const config: AttachConfig = {
 		branch,
 		onlyCheckout,
 		carryUsage,

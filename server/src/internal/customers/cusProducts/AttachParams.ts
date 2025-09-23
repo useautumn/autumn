@@ -7,7 +7,6 @@ import type {
 	Entity,
 	Feature,
 	FeatureOptions,
-	FreeProductConfig,
 	FreeTrial,
 	FullCusProduct,
 	FullCustomer,
@@ -40,7 +39,6 @@ export type AttachParams = {
 	entitlements: EntitlementWithFeature[];
 
 	freeTrial: FreeTrial | null;
-	rewardTrial?: FreeProductConfig | null;
 	optionsList: FeatureOptions[];
 	productsList?: ProductOptions[];
 
