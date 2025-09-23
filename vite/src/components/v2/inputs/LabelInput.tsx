@@ -1,6 +1,6 @@
 import type React from "react";
 import { useId } from "react";
-import { Input } from "./input";
+import { Input } from "./Input";
 
 export const LabelInput = ({
 	label,
