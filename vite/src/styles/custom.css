@@ -37,24 +37,147 @@
 }
 
 /* SELECT */
-.form-select {
-	&:hover:not(:disabled) {
-		background-color: var(--color-hover-primary);
-	}
-
-	&:focus,
-	&[data-state="open"] {
-		background-color: var(--color-active-primary);
-	}
+.form-select:hover:not(:disabled) {
+	background-color: var(--color-hover-primary);
 }
 
-.form-checkbox {
-	&:hover:not(:disabled) {
-		background-color: var(--color-hover-primary);
-	}
+.form-select:focus,
+.form-select[data-state="open"] {
+	background-color: var(--color-active-primary);
+}
 
-	&:focus,
-	&[data-state="checked"] {
-		background-color: var(--color-active-primary);
-	}
+.form-checkbox:hover:not(:disabled) {
+	background-color: var(--color-hover-primary);
+}
+
+.form-checkbox:focus,
+.form-checkbox[data-state="checked"] {
+	background-color: var(--color-active-primary);
+}
+
+/* Panel Components */
+.panel {
+	box-shadow: 0 2px 4px rgba(136, 56, 255, 0.25), 0 8px 18px rgba(136, 56, 255, 0.05), inset 0 -8px 11px rgba(0, 0, 0, 0.04);
+}
+
+.panel-button {
+	position: relative;
+	border-width: 4px;
+	border-radius: 0.5rem;
+	padding: 0.75rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: fit-content;
+	overflow: hidden;
+	transition: all 0.15s;
+	cursor: pointer;
+}
+
+.panel-button-selected {
+	background-color: rgb(245 243 255);
+	border-color: rgb(167 139 250);
+	box-shadow: 0 2px 4px rgba(136, 56, 255, 0.25), 0 8px 18px rgba(136, 56, 255, 0.05), inset 0 -8px 11px rgba(0, 0, 0, 0.04);
+}
+
+.panel-button-unselected {
+	background-color: white;
+	border-color: rgb(229 231 235);
+}
+
+.panel-button-unselected:hover {
+	border-color: rgb(209 213 219);
+}
+
+.panel-seam {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 1px;
+	background-color: rgb(209 213 219);
+	opacity: 0.3;
+	z-index: 0;
+}
+
+.panel-screw {
+	position: absolute;
+	width: 0.5rem;
+	height: 0.5rem;
+	border-radius: 50%;
+	z-index: 10;
+}
+
+.panel-screw-selected {
+	background-color: rgb(221 214 254);
+}
+
+.panel-screw-unselected {
+	background-color: rgb(229 231 235);
+}
+
+.panel-icon-container {
+	width: 2.5rem;
+	height: 2.5rem;
+	border-radius: 0.5rem;
+	border-width: 2px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 20;
+	position: relative;
+}
+
+.panel-icon-container-selected {
+	background-color: rgb(237 233 254);
+	border-color: rgb(196 181 253);
+}
+
+.panel-icon-container-unselected {
+	background-color: rgb(249 250 251);
+	border-color: rgb(209 213 219);
+}
+
+.panel-icon-selected {
+	color: rgb(124 58 237);
+}
+
+.panel-icon-unselected {
+	color: rgb(75 85 99);
+}
+
+/* View Transition Names for Components */
+.sheet-content {
+	view-transition-name: sheet-content;
+}
+
+.panel-button {
+	view-transition-name: panel-button;
+}
+
+.panel-button-selected {
+	view-transition-name: panel-button-selected;
+}
+
+.tier-input-row {
+	view-transition-name: tier-input-row;
+}
+
+.inline-input {
+	view-transition-name: inline-input;
+}
+
+.empty-tier-state {
+	view-transition-name: empty-tier-state;
+}
+
+.feature-behaviour-section {
+	view-transition-name: feature-behaviour-section;
+}
+
+.billing-type-section {
+	view-transition-name: billing-type-section;
+}
+
+.pricing-tiers-section {
+	view-transition-name: pricing-tiers-section;
 }
