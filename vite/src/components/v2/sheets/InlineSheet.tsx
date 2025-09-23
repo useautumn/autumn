@@ -22,7 +22,7 @@ export function SheetHeader({ title, description }: SheetHeaderProps) {
 }
 
 interface SheetSectionProps {
-	title: string;
+	title: string | React.ReactNode;
 	description?: string;
 	checked?: boolean;
 	setChecked?: (checked: boolean) => void;
@@ -56,8 +56,14 @@ export function SheetSection({
 							/>
 						</div>
 					)}
-					<div className="flex items-center gap-2">
-						<h3 className={cn("text-sub select-none")}>{title}</h3>
+					<div className="flex items-start gap-2 min-h-fit">
+						{typeof title === "string" ? (
+							<h3 className={cn("text-sub select-none")}>{title}</h3>
+						) : (
+							<div className={cn("text-sub select-none flex-1 min-w-0")}>
+								{title}
+							</div>
+						)}
 						{infoContent && <InfoTooltip>{infoContent}</InfoTooltip>}
 					</div>
 				</label>

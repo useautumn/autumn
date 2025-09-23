@@ -330,3 +330,36 @@ button {
 		opacity: 1;
 	}
 }
+
+/* View Transitions */
+@view-transition {
+	navigation: auto;
+}
+
+/* Target only the sheet content transitions */
+::view-transition-old(sheet-content),
+::view-transition-new(sheet-content) {
+	animation-duration: 0.25s;
+}
+
+::view-transition-old(sheet-content) {
+	animation-name: slide-out-to-left;
+}
+
+::view-transition-new(sheet-content) {
+	animation-name: slide-in-from-right;
+}
+
+@keyframes slide-out-to-left {
+	to {
+		transform: translateX(-30px);
+		opacity: 0;
+	}
+}
+
+@keyframes slide-in-from-right {
+	from {
+		transform: translateX(30px);
+		opacity: 0;
+	}
+}
