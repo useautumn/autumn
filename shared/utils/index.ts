@@ -26,5 +26,5 @@ export * from "./productV2Utils/productItemUtils/productItemUtils.js";
 
 // Product V3 utils
 export * from "./productV3Utils/mapToProductV3.js";
-export * from "./productV3Utils/productItemUtils/productItemUtils.js";
+export * from "./productV3Utils/productItemUtils/productV3ItemUtils.js";
 export * from "./utils.js";

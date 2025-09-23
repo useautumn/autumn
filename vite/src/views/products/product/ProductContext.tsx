@@ -1,11 +1,31 @@
 import { createContext, useContext } from "react";
 
-export const ProductContext = createContext<any>(null);
+type Sheets = "edit-plan" | "edit-feature";
 
-export const useProductContext = () => {
+interface EditingState {
+	type: "plan" | "feature" | null;
+	id: string | null;
+}
+
+interface ProductContextType {
+	setShowNewVersionDialog: (show: boolean) => void;
+	product: any;
+	setProduct: (product: any) => void;
+	actionState: any;
+	entityFeatureIds: any;
+	setEntityFeatureIds: (ids: any) => void;
+	hasChanges: boolean;
+	setSheet: (sheet: Sheets) => void;
+	editingState: EditingState;
+	setEditingState: (state: EditingState) => void;
+}
+
+export const ProductContext = createContext<any | null>(null);
+
+export const useProductContext = (): any => {
 	const context = useContext(ProductContext);
 
-	if (context === undefined) {
+	if (context === null || context === undefined) {
 		throw new Error(
 			"useProductContext must be used within a ProductContextProvider",
 		);

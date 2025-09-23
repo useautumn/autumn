@@ -21,7 +21,7 @@ export function SheetHeader({ title, description }: SheetHeaderProps) {
 }
 
 interface SheetSectionProps {
-	title: string;
+	title: string | React.ReactNode;
 	description?: string;
 	checked?: boolean;
 	setChecked?: (checked: boolean) => void;
