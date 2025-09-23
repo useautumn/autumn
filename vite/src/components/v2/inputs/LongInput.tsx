@@ -11,7 +11,7 @@ function LongInput({ className, ...props }: React.ComponentProps<"textarea">) {
 				"aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
 
 				// Custom classes
-				"placeholder:text-form-placeholder text-form-text rounded-lg px-2 py-1 border-[#D1D1D1] hover:border-primary focus:border-primary focus:shadow-[0_0_0_0.5px_rgb(144,72,255),0_0_8px_rgba(144,72,255,0.25)] transition-none",
+				"form-input",
 				className,
 			)}
 			{...props}
