@@ -23,6 +23,9 @@
 			},
 			"suspicious": {
 				"noArrayIndexKey": "off"
+			},
+			"correctness": {
+				"useParseIntRadix": "off"
 			}
 		}
 	},
