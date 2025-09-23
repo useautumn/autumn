@@ -1,26 +1,26 @@
 import {
-  type ProductV2,
-  type Reward,
-  RewardType,
-  UsageModel,
+	type ProductV2,
+	type Reward,
+	RewardType,
+	UsageModel,
 } from "@autumn/shared";
 import { useEffect, useState } from "react";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { WarningBox } from "@/components/general/modal-components/WarningBox";
 import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
 } from "@/components/ui/select";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
-  formatAmount as formatCurrency,
-  keyToTitle,
-  slugify,
+	formatAmount as formatCurrency,
+	keyToTitle,
+	slugify,
 } from "@/utils/formatUtils/formatTextUtils";
 import { notNullish } from "@/utils/genUtils";
 import { isFeaturePriceItem, isPriceItem } from "@/utils/product/getItemType";
@@ -201,11 +201,9 @@ export const RewardConfig = ({
 							return (
 								<div className="mt-3">
 									<WarningBox>
-										Users will receive a coupon equal to this product's fixed
-										price amount.{" "}
-										{fixedAmountStr
-											? `If they're on a different tier, they will receive ${fixedAmountStr} off.`
-											: "If they're on a different tier, they will receive the fixed amount off."}{" "}
+										If the receiver is already on a product, they will receive a
+										coupon equal to this product's fixed price amount (
+										{fixedAmountStr}).{" "}
 										{hasUsagePrices
 											? "Charges due to usage prices will not be included in the coupon."
 											: ""}
