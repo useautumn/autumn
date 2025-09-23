@@ -11,7 +11,7 @@ import { ManagePlan } from "./components/Editor";
 import { EditPlanHeader } from "./components/EditPlanHeader";
 import { EditPlanItemSheet } from "./components/EditPlanItemSheet";
 import { EditPlanSheet } from "./components/EditPlanSheet";
-import { SaveChangesBar } from "./components/SaveChanges";
+import { SaveChangesBar } from "./components/SaveChangesBar";
 import { usePlanData } from "./hooks/usePlanData";
 
 type Sheets = "edit-plan" | "edit-feature" | null;
@@ -62,7 +62,7 @@ export default function PlanEditorView() {
 				setOpen={setShowNewVersionDialog}
 			/>
 			<div className="flex w-full h-full overflow-y-auto bg-[#eee]">
-				<div className="flex flex-col justify-between h-full flex-1">
+				<div className="flex flex-col justify-between h-full flex-1 min-w-0">
 					{/* <div className="flex-1"> */}
 					<EditPlanHeader />
 					<ManagePlan />
@@ -117,10 +117,7 @@ export const PlanSheets = ({ sheet }: { sheet: Sheets }) => {
 	};
 
 	return (
-		<div
-			className="gap-4 sheet-content min-w-md max-w-md bg-card z-50 border-l shadow-sm flex flex-col overflow-y-auto pb-20 h-full
-		"
-		>
+		<div className="w-full max-w-md bg-card z-50 border-l shadow-sm flex flex-col overflow-y-auto h-full">
 			{renderSheet()}
 		</div>
 	);

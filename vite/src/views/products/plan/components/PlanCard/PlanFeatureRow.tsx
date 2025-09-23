@@ -40,7 +40,10 @@ export const PlanFeatureRow = ({
 	};
 
 	return (
-		<div className="group flex flex-row items-center bg-white border border-border rounded-lg h-[30px] w-full px-[7px] py-[6px] gap-1 shadow-[0px_4px_4px_rgba(0,0,0,0.02),_inset_0px_-3px_4px_rgba(0,0,0,0.04)] form-input">
+		<div
+			className="group flex flex-row items-center bg-white border border-border rounded-lg h-[30px] w-full 
+		input-base input-shadow duration-none"
+		>
 			{/* Left side - Icons and text */}
 			<div className="flex flex-row items-center flex-1 gap-2 min-w-0">
 				{/* Icon container */}

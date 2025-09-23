@@ -1,22 +1,31 @@
-import { type ProductV2, UpdateProductSchema } from "@autumn/shared";
-import type { AxiosInstance } from "axios";
+import {
+	type FrontendProductItem,
+	type ProductV2,
+	UpdateProductSchema,
+} from "@autumn/shared";
+import type { AxiosError, AxiosInstance } from "axios";
 import { toast } from "sonner";
 import { ProductService } from "@/services/products/ProductService";
 import { getBackendErr } from "@/utils/genUtils";
+import { validateItemsBeforeSave } from "../../plan/utils/validateItemsBeforeSave";
 
 export const updateProduct = async ({
 	axiosInstance,
 	product,
 	onSuccess,
-	// mutate,
-	// mutateCount,
 }: {
 	axiosInstance: AxiosInstance;
 	product: ProductV2;
 	onSuccess: () => Promise<void>;
-	// mutate: () => void;
-	// mutateCount: () => void;
 }) => {
+	const validated = validateItemsBeforeSave(
+		product.items as FrontendProductItem[],
+	);
+
+	console.log("validated", validated);
+	if (!validated) {
+		return false;
+	}
 	try {
 		await ProductService.updateProduct(axiosInstance, product.id, {
 			...UpdateProductSchema.parse(product),
@@ -30,7 +39,7 @@ export const updateProduct = async ({
 		return true;
 	} catch (error) {
 		console.error(error);
-		toast.error(getBackendErr(error, "Failed to update product"));
+		toast.error(getBackendErr(error as AxiosError, "Failed to update product"));
 		return false;
 	}
 };

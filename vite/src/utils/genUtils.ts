@@ -1,17 +1,19 @@
 import { AppEnv } from "@autumn/shared";
+import type { AxiosError } from "axios";
+import type { NavigateFunction } from "react-router-dom";
 
 export const compareStatus = (statusA: string, statusB: string) => {
 	const statusOrder = ["scheduled", "active", "past_due", "expired"];
 	return statusOrder.indexOf(statusA) - statusOrder.indexOf(statusB);
 };
 
-export const invalidNumber = (value: any) => {
-	return isNaN(parseFloat(value));
+export const invalidNumber = (value: unknown) => {
+	return Number.isNaN(parseFloat(value as string));
 };
 
-export const getBackendErr = (error: any, defaultText: string) => {
-	if (error.response && error.response.data) {
-		const data = error.response.data;
+export const getBackendErr = (error: AxiosError, defaultText: string) => {
+	if (error.response?.data) {
+		const data = error.response.data as { message: string; code: string };
 		if (data.message && data.code) {
 			return data.message;
 		} else {
@@ -22,9 +24,9 @@ export const getBackendErr = (error: any, defaultText: string) => {
 	}
 };
 
-export const getBackendErrObj = (error: any) => {
-	if (error.response && error.response.data) {
-		const data = error.response.data;
+export const getBackendErrObj = (error: AxiosError) => {
+	if (error.response?.data) {
+		const data = error.response.data as { code: string; message: string };
 		if (data.code) {
 			return { code: data.code, message: data.message };
 		}
@@ -49,7 +51,11 @@ export const envToPath = (env: AppEnv, currentPath: string) => {
 	return null;
 };
 
-export const navigateTo = (path: string, navigate: any, env?: AppEnv) => {
+export const navigateTo = (
+	path: string,
+	navigate: NavigateFunction,
+	env?: AppEnv,
+) => {
 	const curPath = window.location.pathname;
 	const curEnv = getEnvFromPath(curPath);
 
@@ -69,7 +75,7 @@ export const pushPage = ({
 }: {
 	path: string;
 	queryParams?: Record<string, string | undefined>;
-	navigate?: any;
+	navigate?: NavigateFunction;
 	preserveParams?: boolean;
 }) => {
 	const pathname = window.location.pathname;
@@ -117,10 +123,23 @@ export const getRedirectUrl = (path: string, env: AppEnv) => {
 	}
 };
 
-export const notNullish = (value: any) => {
+export const notNullish = (value: unknown) => {
 	return value !== null && value !== undefined;
 };
 
-export const nullish = (value: any) => {
+export const nullish = (value: unknown) => {
 	return value === null || value === undefined;
+};
+
+export const parseNumberInput = ({
+	value,
+	fallback = 0,
+}: {
+	value?: string;
+	fallback?: number;
+}): number | null => {
+	if (value === undefined) return fallback;
+
+	const numValue = Number.parseFloat(value);
+	return Number.isNaN(numValue) ? fallback : numValue;
 };

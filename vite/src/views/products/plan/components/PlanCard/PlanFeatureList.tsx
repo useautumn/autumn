@@ -13,7 +13,6 @@ export const PlanFeatureList = () => {
 	};
 
 	const handleEdit = (item: ProductItem) => {
-		console.log("Edit feature:", item);
 		const itemId =
 			item.entitlement_id ||
 			item.price_id ||
@@ -23,12 +22,10 @@ export const PlanFeatureList = () => {
 	};
 
 	const handleDelete = (item: ProductItem) => {
-		console.log("Delete feature:", item);
 		// Add your delete logic here
 	};
 
 	const handleAddFeature = () => {
-		console.log("Add new feature");
 		setEditingState({ type: "feature", id: "new" });
 		setSheet("edit-feature");
 	};
