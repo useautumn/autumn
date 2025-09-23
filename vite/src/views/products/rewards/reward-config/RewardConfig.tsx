@@ -27,7 +27,6 @@ import { isFeaturePriceItem, isPriceItem } from "@/utils/product/getItemType";
 import { isFreeProduct, isOneOffProduct } from "@/utils/product/priceUtils";
 import { defaultDiscountConfig } from "../utils/defaultRewardModels";
 import { DiscountConfig } from "./DiscountConfig";
-import { FreeDurationSelect } from "./FreeDurationSelect";
 
 export const RewardConfig = ({
 	reward,
@@ -38,6 +37,7 @@ export const RewardConfig = ({
 }) => {
 	const [idChanged, setIdChanged] = useState(false);
 	const { products } = useProductsQuery();
+	const { org } = useOrg();
 
 	useEffect(() => {
 		if (!idChanged) {
@@ -153,6 +153,46 @@ export const RewardConfig = ({
 							);
 						})()}
 					</Select>
+
+					{(() => {
+						const selectedProduct = products.find(
+							(p: ProductV2) => p.id === reward.free_product_id,
+						);
+
+						if (!selectedProduct) return null;
+
+						const isPaidSelected = !isFreeProduct(selectedProduct.items);
+						if (!isPaidSelected) return null;
+
+						const isRecurringSelected = !isOneOffProduct(selectedProduct.items);
+						const hasUsagePrices = selectedProduct.items.some(
+							(x) =>
+								isFeaturePriceItem(x) && x.usage_model === UsageModel.PayPerUse,
+						);
+
+						const priceItem = selectedProduct.items.find((x) => isPriceItem(x));
+						const currency = org?.default_currency || "USD";
+						const fixedAmountStr = priceItem?.price
+							? formatCurrency({ amount: priceItem.price, currency })
+							: undefined;
+
+						if (isRecurringSelected) {
+							return (
+								<div className="mt-3">
+									<WarningBox>
+										If the receiver is already on a product, they will receive a
+										coupon equal to this product's fixed price amount (
+										{fixedAmountStr}).{" "}
+										{hasUsagePrices
+											? "Charges due to usage prices will not be included in the coupon."
+											: ""}
+									</WarningBox>
+								</div>
+							);
+						}
+
+						return;
+					})()}
 				</div>
 			) : notNullish(reward.type) ? (
 				<DiscountConfig reward={reward} setReward={setReward} />

@@ -18,7 +18,7 @@ export function CopyableSpan({
 	text,
 	className = "",
 	copySize = 20,
-	copyProps = {}
+	copyProps = {},
 }: {
 	text: string;
 	className?: string;
@@ -36,10 +36,10 @@ export function CopyableSpan({
 			<CopyButton
 				text={text}
 				className="ml-1 p-0.5 rounded transition bg-transparent size-6 z-[1] static bg-none shadow-none border-none"
-        copyProps={{
-          className: "text-muted-foreground",
-          ...copyProps
-        }}
+				copyProps={{
+					className: "text-muted-foreground",
+					...copyProps,
+				}}
 				copySize={copySize}
 			/>
 		</span>

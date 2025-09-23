@@ -131,7 +131,7 @@ export const newCusToAttachParams = ({
 		cusProducts: [],
 		entities: [],
 		features: [],
-		invoiceOnly: isDefaultTrial ? false : true,
+		invoiceOnly: isDefaultTrial,
 	};
 	return attachParams;
 };
@@ -189,16 +189,15 @@ export const rewardProgramToAttachParams = ({
 		prices: product.prices,
 		entitlements: product.entitlements,
 		freeTrial: null,
-		// rewardTrial:
-		// 	(isPaid && isRecurring && reward.free_product_config)
-		// 		? reward.free_product_config
-		// 		: null,
 		rewards: [reward],
 		optionsList: [],
 		cusProducts: customer.customer_products,
 		entities: [],
 		features: req.features,
-		stripeCli: createStripeCli({ org: org || req.org, env: req.env }),
+		stripeCli: createStripeCli({
+			org: org || req.org,
+			env: req.env,
+		}),
 		paymentMethod: null,
 		replaceables: [],
 	} satisfies AttachParams;
