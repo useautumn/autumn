@@ -9,7 +9,7 @@ export function EditPlanSheet() {
 	const [defaultPlan, setDefaultPlan] = useState(false);
 
 	return (
-		<div className="min-w-sm max-w-md w-3/10 bg-card z-50 border-l shadow-sm flex flex-col overflow-y-auto">
+		<>
 			<SheetHeader
 				title="New Plan"
 				description="Configure how this feature is used in your app"
@@ -35,6 +35,6 @@ export function EditPlanSheet() {
 				</div>
 			</SheetSection>
 			<FreeTrialSection />
-		</div>
+		</>
 	);
 }

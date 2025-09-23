@@ -2,7 +2,7 @@ import type { z } from "zod";
 import type { AppEnv } from "../../models/genModels/genEnums.js";
 import type { ProductV2 } from "../../models/productV2Models/productV2Models.js";
 import type { PlanResponseSchema } from "../../models/productV3Models/productV3Response.js";
-import { productV2ToBasePrice } from "./productItemUtils/productItemUtils.js";
+import { productV2ToBasePrice } from "./productItemUtils/productV3ItemUtils.js";
 
 export function mapToProductV3({
 	product,
@@ -27,4 +27,4 @@ export function mapToProductV3({
 	return productV3;
 }
 
-export * from "./productItemUtils/productItemUtils.js";
+export * from "./productItemUtils/productV3ItemUtils.js";
