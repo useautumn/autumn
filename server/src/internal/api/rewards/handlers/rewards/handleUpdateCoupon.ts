@@ -44,17 +44,15 @@ export default async (req: any, res: any) =>
 
 			let prices: any[] = [];
 			if (rewardCat === RewardCategory.Discount) {
-				const stripePriceIds =
+				const priceIds =
 					rewardBody.discount_config?.price_ids ??
 					reward.discount_config?.price_ids ??
 					[];
-				const byStripeId = await PriceService.getByStripeIds({
+
+				prices = await PriceService.getInIds({
 					db,
-					stripePriceIds,
+					ids: priceIds,
 				});
-				prices = stripePriceIds
-					.map((id: string) => byStripeId[id])
-					.filter(Boolean);
 			} else if (rewardCat === RewardCategory.FreeProduct) {
 				const freeProductId =
 					rewardBody.free_product_id ?? reward.free_product_id;
@@ -78,9 +76,7 @@ export default async (req: any, res: any) =>
 			try {
 				await stripeCli.coupons.del(reward.id);
 				await stripeCli.coupons.del(reward.internal_id);
-			} catch (_) {
-				// console.log(`Failed to delete coupon from stripe: ${error.message}`);
-			}
+			} catch (_) {}
 
 			if (
 				rewardCat === RewardCategory.Discount ||
