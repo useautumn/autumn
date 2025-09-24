@@ -1,21 +1,19 @@
+import {
+	ErrCode,
+	type Feature,
+	FeatureType,
+	type FullCusProduct,
+	type FullCustomer,
+} from "@autumn/shared";
 import { Router } from "express";
+import { StatusCodes } from "http-status-codes";
+import { CacheType } from "@/external/caching/cacheActions.js";
+import { queryWithCache } from "@/external/caching/cacheUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+import { routeHandler } from "@/utils/routerUtils.js";
 import { CusService } from "../customers/CusService.js";
 import { AnalyticsService } from "./AnalyticsService.js";
-import { StatusCodes } from "http-status-codes";
-import {
-	AppEnv,
-	ErrCode,
-	Feature,
-	FeatureType,
-	FullCusProduct,
-	FullCustomer,
-	Organization,
-} from "@autumn/shared";
-import RecaseError from "@/utils/errorUtils.js";
-import { routeHandler } from "@/utils/routerUtils.js";
-import { queryWithCache } from "@/external/caching/cacheUtils.js";
-import { CacheType } from "@/external/caching/cacheActions.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const analyticsRouter = Router();
 
@@ -28,7 +26,7 @@ analyticsRouter.get("/event_names", async (req: any, res: any) =>
 			const { db, org, env, features } = req;
 			const { interval, event_names, customer_id } = req.body;
 
-			let result = await queryWithCache({
+			const result = await queryWithCache({
 				action: CacheType.TopEvents,
 				key: `${org.id}_${env}`,
 				fn: async () => {
@@ -46,15 +44,15 @@ analyticsRouter.get("/event_names", async (req: any, res: any) =>
 
 			// let result = topEventNamesRes?.eventNames;
 
-			let featureIds: string[] = [];
-			let eventNames: string[] = [];
+			const featureIds: string[] = [];
+			const eventNames: string[] = [];
 
 			for (let i = 0; i < result.length; i++) {
 				// Is an event name
 				if (
 					features.some(
 						(feature: Feature) =>
-							feature.type == FeatureType.Metered &&
+							feature.type === FeatureType.Metered &&
 							feature.config.filters?.[0]?.value.includes(result[i]),
 					)
 				) {
@@ -95,17 +93,17 @@ const getTopEvents = async ({ req }: { req: ExtendedRequest }) => {
 		req,
 	});
 
-	let result = topEventNamesRes?.eventNames;
+	const result = topEventNamesRes?.eventNames;
 
-	let featureIds: string[] = [];
-	let eventNames: string[] = [];
+	const featureIds: string[] = [];
+	const eventNames: string[] = [];
 
 	for (let i = 0; i < result.length; i++) {
 		// Is an event name
 		if (
 			features.some(
 				(feature: Feature) =>
-					feature.type == FeatureType.Metered &&
+					feature.type === FeatureType.Metered &&
 					feature.config.filters?.[0]?.value.includes(result[i]),
 			)
 		) {
@@ -131,9 +129,7 @@ analyticsRouter.post("/events", async (req: any, res: any) =>
 			const { db, org, env, features } = req;
 			let { interval, event_names, customer_id } = req.body;
 
-			let topEvents:
-				| { featureIds: string[]; eventNames: string[] }
-				| undefined = undefined;
+			let topEvents: { featureIds: string[]; eventNames: string[] } | undefined;
 
 			if (!event_names || event_names.length === 0) {
 				topEvents = await getTopEvents({ req });
@@ -141,7 +137,7 @@ analyticsRouter.post("/events", async (req: any, res: any) =>
 			}
 
 			let aggregateAll = false;
-			let customer: FullCustomer | undefined = undefined;
+			let customer: FullCustomer | undefined;
 			let bcExclusionFlag = false;
 
 			if (!customer_id) {
@@ -190,8 +186,6 @@ analyticsRouter.post("/events", async (req: any, res: any) =>
 				aggregateAll,
 			});
 
-			// console.log("events", events);
-
 			res.status(200).json({
 				customer,
 				events,
@@ -214,7 +208,7 @@ analyticsRouter.post("/raw", async (req: any, res: any) =>
 			const { interval, customer_id } = req.body;
 
 			let aggregateAll = false;
-			let customer: FullCustomer | undefined = undefined;
+			let customer: FullCustomer | undefined;
 
 			if (!customer_id) {
 				// No customer ID provided, set aggregateAll to true
