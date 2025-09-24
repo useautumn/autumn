@@ -121,7 +121,11 @@ export const getAttachConfig = async ({
 		invoiceCheckout ||
 		(noPaymentMethod &&
 			!invoiceAndEnable &&
-			branch !== AttachBranch.MultiAttachUpdate);
+			![
+				AttachBranch.MultiAttachUpdate,
+				AttachBranch.NewVersion,
+				AttachBranch.SameCustomEnts,
+			].includes(branch));
 
 	const onlyCheckout = !isFree && checkoutFlow && !freeTrialWithoutCardRequired;
 	const disableMerge = branch === AttachBranch.MainIsTrial || onlyCheckout;
@@ -136,7 +140,12 @@ export const getAttachConfig = async ({
 		paymentMethodRequired = false;
 	}
 
-	if (flags.invoiceOnly) paymentMethodRequired = false;
+	if (
+		flags.invoiceOnly ||
+		branch === AttachBranch.NewVersion ||
+		branch === AttachBranch.SameCustomEnts
+	)
+		paymentMethodRequired = false;
 
 	const config: AttachConfig = {
 		branch,

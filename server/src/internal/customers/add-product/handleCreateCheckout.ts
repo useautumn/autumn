@@ -1,21 +1,19 @@
+import { APIVersion, type AttachConfig, SuccessCode } from "@autumn/shared";
+import type Stripe from "stripe";
+import { ErrCode } from "@/errors/errCodes.js";
+import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
+import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
+import { toSuccessUrl } from "@/internal/orgs/orgUtils/convertOrgUtils.js";
+import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
+import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
+import { pricesContainRecurring } from "@/internal/products/prices/priceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 import {
-	AttachParams,
+	type AttachParams,
 	AttachResultSchema,
 } from "../cusProducts/AttachParams.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { pricesContainRecurring } from "@/internal/products/prices/priceUtils.js";
-import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
-import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
-import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
-import { ErrCode } from "@/errors/errCodes.js";
-import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
-import { APIVersion, AttachConfig } from "@autumn/shared";
-import { SuccessCode } from "@autumn/shared";
-import { notNullish } from "@/utils/genUtils.js";
-
-import Stripe from "stripe";
-import { toSuccessUrl } from "@/internal/orgs/orgUtils/convertOrgUtils.js";
 
 export const handleCreateCheckout = async ({
 	req,
@@ -99,8 +97,8 @@ export const handleCreateCheckout = async ({
 			}
 		: undefined;
 
-	let checkoutParams = attachParams.checkoutSessionParams || {};
-	let allowPromotionCodes =
+	const checkoutParams = attachParams.checkoutSessionParams || {};
+	const allowPromotionCodes =
 		notNullish(checkoutParams.discounts) || notNullish(rewards)
 			? undefined
 			: checkoutParams.allow_promotion_codes || true;
@@ -113,9 +111,9 @@ export const handleCreateCheckout = async ({
 	}
 
 	// Prepare checkout session parameters
-	let checkout;
+	let checkout: Stripe.Checkout.Session;
 
-	let paymentMethodSet =
+	const paymentMethodSet =
 		notNullish(checkoutParams.payment_method_types) ||
 		notNullish(checkoutParams.payment_method_configuration);
 
@@ -165,7 +163,7 @@ export const handleCreateCheckout = async ({
 			`✅ Successfully created checkout for customer ${customer.id || customer.internal_id}`,
 		);
 	} catch (error: any) {
-		let msg = error.message;
+		const msg = error.message;
 		if (
 			msg &&
 			msg.includes("No valid payment method types") &&
@@ -188,7 +186,7 @@ export const handleCreateCheckout = async ({
 		return checkout;
 	}
 
-	let apiVersion = attachParams.apiVersion || APIVersion.v1;
+	const apiVersion = attachParams.apiVersion || APIVersion.v1;
 	if (apiVersion >= APIVersion.v1_1) {
 		res.status(200).json(
 			AttachResultSchema.parse({

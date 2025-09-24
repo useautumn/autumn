@@ -1,10 +1,9 @@
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { AttachBody } from "@autumn/shared";
-import { processAttachBody } from "./processAttachBody.js";
-import { orgToVersion } from "@/utils/versionUtils.js";
-import { APIVersion } from "@autumn/shared";
-import { AttachParams } from "../../../cusProducts/AttachParams.js";
+import { APIVersion, type AttachBody } from "@autumn/shared";
 import { nullish } from "@/utils/genUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+import { orgToVersion } from "@/utils/versionUtils.js";
+import type { AttachParams } from "../../../cusProducts/AttachParams.js";
+import { processAttachBody } from "./processAttachBody.js";
 
 export const getAttachParams = async ({
 	req,
