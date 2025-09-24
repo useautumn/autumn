@@ -1,14 +1,17 @@
-import { handleAttachRaceCondition } from "@/external/redis/redisUtils.js";
-import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
-import { routeHandler } from "@/utils/routerUtils.js";
 import { AttachBodySchema } from "@autumn/shared";
+import { handleAttachRaceCondition } from "@/external/redis/redisUtils.js";
+import type {
+	ExtendedRequest,
+	ExtendedResponse,
+} from "@/utils/models/Request.js";
+import { routeHandler } from "@/utils/routerUtils.js";
+import { checkStripeConnections } from "./attachRouter.js";
 import { getAttachParams } from "./attachUtils/attachParams/getAttachParams.js";
 import { getAttachBranch } from "./attachUtils/getAttachBranch.js";
 import { getAttachConfig } from "./attachUtils/getAttachConfig.js";
-import { handleAttachErrors } from "./attachUtils/handleAttachErrors.js";
-import { checkStripeConnections } from "./attachRouter.js";
-import { insertCustomItems } from "./attachUtils/insertCustomItems.js";
 import { runAttachFunction } from "./attachUtils/getAttachFunction.js";
+import { handleAttachErrors } from "./attachUtils/handleAttachErrors.js";
+import { insertCustomItems } from "./attachUtils/insertCustomItems.js";
 
 export const handleAttach = async (req: any, res: any) =>
 	routeHandler({

@@ -58,9 +58,6 @@ export const handleAddProduct = async ({
 		products,
 	});
 
-	// console.log("Free trial:", attachParams.freeTrial);
-	// throw new Error("test");
-
 	for (const product of products) {
 		const curCusProduct = attachParamsToCurCusProduct({ attachParams });
 		let anchorToUnix;

@@ -531,10 +531,6 @@ export const createFullCusProduct = async ({
 
 	try {
 		if (sendWebhook && !attachParams.fromMigration) {
-			// Maybe send two for downgrade? (one for scheduled, one for active)
-			console.log(
-				`Sending webhook for full cus product ${fullCusProduct.product.id}`,
-			);
 			await addProductsUpdatedWebhookTask({
 				req: attachParams.req,
 				internalCustomerId: customer.internal_id,
