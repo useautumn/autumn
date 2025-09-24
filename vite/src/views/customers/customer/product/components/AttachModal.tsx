@@ -1,19 +1,26 @@
-import { cn } from "@/lib/utils";
-
-import { Button } from "@/components/ui/button";
+import {
+	AttachBranch,
+	AttachFunction,
+	type Entity,
+	ErrCode,
+} from "@autumn/shared";
+import { ArrowUpRightFromSquare } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
+import { PriceItem } from "@/components/pricing/attach-pricing-dialog";
+import { Button } from "@/components/ui/button";
 import {
 	Dialog,
+	DialogContent,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { DialogContent } from "@/components/ui/dialog";
-import { useProductContext } from "@/views/products/product/ProductContext";
-import { AttachBranch, AttachFunction, Entity, ErrCode } from "@autumn/shared";
-
-import { ArrowUpRightFromSquare } from "lucide-react";
-import { PriceItem } from "@/components/pricing/attach-pricing-dialog";
+import { cn } from "@/lib/utils";
+import { CusService } from "@/services/customers/CusService";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useEnv } from "@/utils/envUtils";
 import {
 	getBackendErr,
 	getBackendErrObj,
@@ -21,18 +28,13 @@ import {
 	navigateTo,
 	nullish,
 } from "@/utils/genUtils";
-import { toast } from "sonner";
-import { CusService } from "@/services/customers/CusService";
-import { useNavigate } from "react-router";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useEnv } from "@/utils/envUtils";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
+import { useProductContext } from "@/views/products/product/ProductContext";
+import { useCusQuery } from "../../hooks/useCusQuery";
 import { AttachPreviewDetails } from "./AttachPreviewDetails";
-
 import { AttachInfo } from "./attach-preview/AttachInfo";
 import { getAttachBody } from "./attachProductUtils";
 import { InvoiceCustomerButton } from "./InvoiceCustomerButton";
-import { useCusQuery } from "../../hooks/useCusQuery";
 
 export const AttachModal = ({
 	open,
@@ -76,15 +78,15 @@ export const AttachModal = ({
 	};
 
 	const invoiceAllowed = () => {
-		if (preview?.branch == AttachBranch.SameCustomEnts || flags.isFree) {
+		if (preview?.branch === AttachBranch.SameCustomEnts || flags.isFree) {
 			return false;
 		}
 
-		if (preview?.branch == AttachBranch.Downgrade) {
+		if (preview?.branch === AttachBranch.Downgrade) {
 			return false;
 		}
 
-		if (preview?.branch == AttachBranch.Renew) {
+		if (preview?.branch === AttachBranch.Renew) {
 			return false;
 		}
 
@@ -97,11 +99,11 @@ export const AttachModal = ({
 	};
 
 	const getButtonText = () => {
-		if (preview?.branch == AttachBranch.Downgrade) {
+		if (preview?.branch === AttachBranch.Downgrade) {
 			return "Confirm Downgrade";
 		}
 
-		if (preview?.branch == AttachBranch.SameCustomEnts || flags.isFree) {
+		if (preview?.branch === AttachBranch.SameCustomEnts || flags.isFree) {
 			return "Confirm";
 		}
 
@@ -109,13 +111,13 @@ export const AttachModal = ({
 			return "Renew Product";
 		}
 
-		if (preview?.func == AttachFunction.CreateCheckout) {
+		if (preview?.func === AttachFunction.CreateCheckout) {
 			return "Checkout Page";
 		}
 
 		const dueToday = preview?.due_today;
 
-		if (dueToday && dueToday.total == 0) {
+		if (dueToday && dueToday.total === 0) {
 			return "Confirm";
 		}
 
@@ -136,8 +138,8 @@ export const AttachModal = ({
 		for (const option of options) {
 			if (
 				nullish(option.quantity) &&
-				preview?.branch != AttachBranch.SameCustomEnts &&
-				preview?.branch != AttachBranch.NewVersion
+				preview?.branch !== AttachBranch.SameCustomEnts &&
+				preview?.branch !== AttachBranch.NewVersion
 			) {
 				toast.error(`Quantity for ${option.feature_name} is required`);
 				return;
@@ -149,6 +151,9 @@ export const AttachModal = ({
 
 			const redirectUrl = getRedirectUrl(`/customers/${cusId}`, env);
 
+			// console.log("Version", version);
+			// console.log("Product version", product.version);
+
 			const attachBody = getAttachBody({
 				customerId: customer.id || customer.internal_id,
 				entityId,
@@ -158,7 +163,7 @@ export const AttachModal = ({
 				useInvoice,
 				enableProductImmediately,
 				successUrl: `${import.meta.env.VITE_FRONTEND_URL}${redirectUrl}`,
-				version: version || product.version,
+				version: product.version,
 			});
 
 			const { data } = await CusService.attach(axiosInstance, attachBody);
