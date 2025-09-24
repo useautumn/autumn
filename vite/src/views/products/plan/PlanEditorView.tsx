@@ -8,7 +8,7 @@ import { ProductContext, useProductContext } from "../product/ProductContext";
 import { ProductItemContext } from "../product/product-item/ProductItemContext";
 import ConfirmNewVersionDialog from "../product/versioning/ConfirmNewVersionDialog";
 import { ManagePlan } from "./components/Editor";
-import { EditPlanFeatureSheet } from "./components/EditPlanFeatureSheet";
+import { EditPlanFeatureSheet } from "./components/EditPlanFeatureSheet/EditPlanFeatureSheet";
 import { EditPlanHeader } from "./components/EditPlanHeader";
 import { EditPlanSheet } from "./components/EditPlanSheet";
 import { SaveChangesBar } from "./components/SaveChangesBar";
@@ -78,7 +78,7 @@ export default function PlanEditorView() {
 }
 
 export const PlanSheets = ({ sheet }: { sheet: Sheets }) => {
-	const { product, editingState } = useProductContext();
+	const { product, setProduct, editingState } = useProductContext();
 
 	// Find the item being edited
 	const currentItem =
@@ -86,6 +86,23 @@ export const PlanSheets = ({ sheet }: { sheet: Sheets }) => {
 			const itemId = item.entitlement_id || item.price_id || `item-${index}`;
 			return editingState.id === itemId;
 		}) || null;
+
+	// Create a proper setItem function that updates the product
+	const setCurrentItem = (updatedItem: ProductItem) => {
+		if (!product || !product.items) return;
+
+		const updatedItems = product.items.map(
+			(item: ProductItem, index: number) => {
+				const itemId = item.entitlement_id || item.price_id || `item-${index}`;
+				return editingState.id === itemId ? updatedItem : item;
+			},
+		);
+
+		setProduct({
+			...product,
+			items: updatedItems,
+		});
+	};
 
 	// Don't render on small screens
 	const renderSheet = () => {
@@ -97,7 +114,7 @@ export const PlanSheets = ({ sheet }: { sheet: Sheets }) => {
 					<ProductItemContext.Provider
 						value={{
 							item: currentItem,
-							setItem: () => {}, // Read-only for now
+							setItem: setCurrentItem, // Now actually works!
 							selectedIndex: 0,
 							showCreateFeature: false,
 							setShowCreateFeature: () => {},

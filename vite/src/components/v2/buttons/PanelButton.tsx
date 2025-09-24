@@ -20,9 +20,8 @@ export function PanelButton({
 			onClick={onClick}
 			data-state={isSelected ? "open" : "closed"}
 			className={cn(
-				// Base styles
-				"w-full min-h-[4rem] relative flex items-center justify-center overflow-hidden cursor-pointer",
-				"aspect-[135/60]",
+				// Fixed dimensions
+				"w-[125px] h-[64px] relative flex items-center justify-center overflow-hidden cursor-pointer flex-shrink-0",
 				// Design system classes (following Select pattern)
 				"input-base input-shadow select-bg",
 				// Thicker border for panel effect
