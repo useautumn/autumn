@@ -1,22 +1,20 @@
 import {
-	AppEnv,
-	CollectionMethod,
+	type AppEnv,
+	type CollectionMethod,
 	CusProductStatus,
-	Organization,
+	type Organization,
 } from "@autumn/shared";
-
-import { createStripeCli } from "../utils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-
-import { ExtendedRequest } from "@/utils/models/Request.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+import { createStripeCli } from "../utils.js";
+import { handleSchedulePhaseCompleted } from "./handleSubUpdated/handleSchedulePhaseCompleted.js";
 import {
 	handleSubCanceled,
 	isSubCanceled,
 } from "./handleSubUpdated/handleSubCanceled.js";
 import { handleSubRenewed } from "./handleSubUpdated/handleSubRenewed.js";
-import { handleSchedulePhaseCompleted } from "./handleSubUpdated/handleSchedulePhaseCompleted.js";
 
 export const handleSubscriptionUpdated = async ({
 	req,
@@ -54,13 +52,13 @@ export const handleSubscriptionUpdated = async ({
 	if (cusProducts.length === 0) return;
 
 	// Handle syncing status
-	let stripeCli = createStripeCli({
+	const stripeCli = createStripeCli({
 		org,
 		env,
 	});
-	let fullSub = await stripeCli.subscriptions.retrieve(subscription.id);
+	const fullSub = await stripeCli.subscriptions.retrieve(subscription.id);
 
-	let subStatusMap: {
+	const subStatusMap: {
 		[key: string]: CusProductStatus;
 	} = {
 		trialing: CusProductStatus.Active,
@@ -102,7 +100,6 @@ export const handleSubscriptionUpdated = async ({
 		previousAttributes,
 		sub: fullSub,
 		updatedCusProducts,
-		stripeCli,
 		org,
 	});
 

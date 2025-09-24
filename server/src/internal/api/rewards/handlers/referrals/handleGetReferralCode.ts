@@ -18,7 +18,7 @@ export default async (req: any, res: any) =>
 			const [rewardProgram, customer] = await Promise.all([
 				RewardProgramService.get({
 					db,
-					id: rewardProgramId,
+					idOrInternalId: rewardProgramId,
 					orgId,
 					env,
 					errorIfNotFound: true,
