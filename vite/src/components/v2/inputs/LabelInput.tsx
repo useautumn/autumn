@@ -5,6 +5,7 @@ import { Input } from "./Input";
 export const LabelInput = ({
 	label,
 	placeholder,
+	className,
 	...props
 }: {
 	label: string | React.ReactElement<typeof HTMLSpanElement>;
@@ -13,7 +14,7 @@ export const LabelInput = ({
 	const inputId = useId();
 
 	return (
-		<div>
+		<div className={className}>
 			<div className="text-form-label block mb-1">{label}</div>
 			<Input id={inputId} placeholder={placeholder} {...props} />
 		</div>
