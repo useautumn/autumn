@@ -22,7 +22,21 @@ export const PlanFeatureList = () => {
 	};
 
 	const handleDelete = (item: ProductItem) => {
-		// Add your delete logic here
+		console.log("Delete feature:", item);
+		if (!product?.items) return;
+		
+		// Remove the item from the product
+		const newItems = product.items.filter((i: ProductItem) => i !== item);
+		const updatedProduct = { ...product, items: newItems };
+		setProduct(updatedProduct);
+		
+		// Close editing sidebar if this item was being edited
+		const itemIndex = product.items.findIndex((i: ProductItem) => i === item);
+		const itemId = item.entitlement_id || item.price_id || `item-${itemIndex}`;
+		if (editingState.id === itemId) {
+			setEditingState({ type: null, id: null });
+			setSheet(null);
+		}
 	};
 
 	const handleAddFeature = () => {

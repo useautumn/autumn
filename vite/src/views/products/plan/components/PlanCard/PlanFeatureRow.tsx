@@ -40,9 +40,9 @@ export const PlanFeatureRow = ({
 	};
 
 	return (
-		<div
-			className="group flex flex-row items-center bg-white border border-border rounded-lg h-[30px] w-full 
-		input-base input-shadow duration-none"
+		<div 
+			className="group flex flex-row items-center bg-white border border-border rounded-lg h-[30px] w-full px-[7px] py-[6px] gap-1 shadow-[0px_4px_4px_rgba(0,0,0,0.02),_inset_0px_-3px_4px_rgba(0,0,0,0.04)] form-input cursor-pointer hover:bg-muted/30 transition-colors"
+			onClick={() => onEdit?.(item)}
 		>
 			{/* Left side - Icons and text */}
 			<div className="flex flex-row items-center flex-1 gap-2 min-w-0">
@@ -68,7 +68,10 @@ export const PlanFeatureRow = ({
 				{/* Edit button */}
 				<HoverClickableIcon
 					icon={<PencilSimpleIcon size={16} weight="regular" />}
-					onClick={() => onEdit?.(item)}
+					onClick={(e) => {
+						e.stopPropagation();
+						onEdit?.(item);
+					}}
 					disabled={editDisabled}
 					aria-label="Edit feature"
 				/>
@@ -76,12 +79,18 @@ export const PlanFeatureRow = ({
 				{/* Delete button */}
 				<HoverClickableIcon
 					icon={<TrashIcon size={16} weight="regular" />}
-					onClick={() => onDelete?.(item)}
+					onClick={(e) => {
+						e.stopPropagation();
+						onDelete?.(item);
+					}}
 					aria-label="Delete feature"
 				/>
 
 				{/* 6-dot drag handle */}
-				<div className="group/btn cursor-grab active:cursor-grabbing flex items-center justify-center p-1 w-6 h-6">
+				<div 
+					className="group/btn cursor-grab active:cursor-grabbing flex items-center justify-center p-1 w-6 h-6"
+					onClick={(e) => e.stopPropagation()}
+				>
 					<div className="text-t3 group-hover/btn:text-primary transition-colors">
 						<DotsSixVerticalIcon size={16} weight="bold" />
 					</div>
