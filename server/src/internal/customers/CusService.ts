@@ -1,24 +1,23 @@
-import { SupabaseClient } from "@supabase/supabase-js";
 import {
-	AppEnv,
+	type AppEnv,
 	CusExpand,
-	CusProductStatus,
-	Customer,
+	type CusProductStatus,
+	type Customer,
 	customers,
-	EntityExpand,
-	FullCusProduct,
-	FullCustomer,
-	Organization,
+	type EntityExpand,
+	type FullCusProduct,
+	type FullCustomer,
+	type Organization,
 } from "@autumn/shared";
-import RecaseError from "@/utils/errorUtils.js";
-import { ErrCode } from "@/errors/errCodes.js";
-import { StatusCodes } from "http-status-codes";
-import { and, eq, ilike, or, sql } from "drizzle-orm";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { getFullCusQuery } from "./getFullCusQuery.js";
 import { trace } from "@opentelemetry/api";
+import { and, eq, ilike, or, sql } from "drizzle-orm";
+import { StatusCodes } from "http-status-codes";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { ErrCode } from "@/errors/errCodes.js";
+import RecaseError from "@/utils/errorUtils.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
 import { RELEVANT_STATUSES } from "./cusProducts/CusProductService.js";
+import { getFullCusQuery } from "./getFullCusQuery.js";
 
 const tracer = trace.getTracer("express");
 
@@ -76,11 +75,11 @@ export class CusService {
 					entityId,
 				);
 
-				let result = await db.execute(query);
+				const result = await db.execute(query);
 
 				if (!result || result.length == 0) {
 					if (allowNotFound) {
-						// @ts-ignore
+						// @ts-expect-error
 						return null as FullCustomer;
 					}
 
@@ -91,7 +90,7 @@ export class CusService {
 					});
 				}
 
-				let data = result[0];
+				const data = result[0];
 				data.created_at = Number(data.created_at);
 
 				for (const product of data.customer_products as FullCusProduct[]) {
@@ -131,9 +130,7 @@ export class CusService {
 			),
 		});
 
-		if (!customer) {
-			return null;
-		}
+		if (!customer) return null;
 
 		return customer as Customer;
 	}

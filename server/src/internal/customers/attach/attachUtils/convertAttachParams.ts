@@ -1,7 +1,7 @@
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { cusProductToProduct } from "@autumn/shared";
+import type Stripe from "stripe";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
-import { CusProductStatus, cusProductToProduct } from "@autumn/shared";
-import Stripe from "stripe";
 
 export const attachParamsToCurCusProduct = ({
 	attachParams,
@@ -81,7 +81,7 @@ export const getCustomerSub = async ({
 }) => {
 	const { stripeCli } = attachParams;
 	const fullCus = attachParams.customer;
-	let cusProducts = fullCus.customer_products;
+	const cusProducts = fullCus.customer_products;
 
 	const targetGroup = attachParams.products[0].group;
 	const targetEntityId = attachParams.internalEntityId || null;
@@ -156,7 +156,7 @@ export const getCustomerSchedule = async ({
 }) => {
 	const { stripeCli } = attachParams;
 	const fullCus = attachParams.customer;
-	let cusProducts = fullCus.customer_products;
+	const cusProducts = fullCus.customer_products;
 
 	const targetGroup = attachParams.products[0].group;
 	const targetEntityId = attachParams.internalEntityId || null;
@@ -226,8 +226,11 @@ export const paramsToCurSub = async ({
 }) => {
 	const { stripeCli } = attachParams;
 	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
+	console.log("Cur cus product:", curCusProduct);
+	console.log("Sub IDs:", curCusProduct?.subscription_ids);
 
 	const subIds = curCusProduct?.subscription_ids || [];
+
 	if (subIds.length === 0) {
 		return undefined;
 	}
@@ -263,7 +266,7 @@ export const paramsToCurSubSchedule = async ({
 		},
 	);
 
-	if (schedule.status == "canceled") {
+	if (schedule.status === "canceled") {
 		return undefined;
 	}
 
