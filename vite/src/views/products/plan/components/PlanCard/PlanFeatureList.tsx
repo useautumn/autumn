@@ -5,7 +5,7 @@ import { AddFeatureRow } from "./AddFeatureRow";
 import { PlanFeatureRow } from "./PlanFeatureRow";
 
 export const PlanFeatureList = () => {
-	const { product, setSheet, editingState, setEditingState } =
+	const { product, setProduct, setSheet, editingState, setEditingState } =
 		useProductContext();
 
 	const handleFeatureClick = (item: ProductItem) => {
@@ -13,10 +13,10 @@ export const PlanFeatureList = () => {
 	};
 
 	const handleEdit = (item: ProductItem) => {
-		console.log("Edit feature:", item);
 		// Use array index as stable ID - won't change during editing
 		const itemIndex = product?.items?.findIndex((i) => i === item) || 0;
 		const itemId = item.entitlement_id || item.price_id || `item-${itemIndex}`;
+
 		setEditingState({ type: "feature", id: itemId });
 		setSheet("edit-feature");
 	};
@@ -24,12 +24,12 @@ export const PlanFeatureList = () => {
 	const handleDelete = (item: ProductItem) => {
 		console.log("Delete feature:", item);
 		if (!product?.items) return;
-		
+
 		// Remove the item from the product
 		const newItems = product.items.filter((i: ProductItem) => i !== item);
 		const updatedProduct = { ...product, items: newItems };
 		setProduct(updatedProduct);
-		
+
 		// Close editing sidebar if this item was being edited
 		const itemIndex = product.items.findIndex((i: ProductItem) => i === item);
 		const itemId = item.entitlement_id || item.price_id || `item-${itemIndex}`;

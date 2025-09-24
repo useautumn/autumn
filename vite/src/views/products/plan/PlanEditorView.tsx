@@ -25,6 +25,7 @@ export default function PlanEditorView() {
 
 	const { modal } = useProductChangedAlert({ hasChanges });
 	const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
+
 	const [sheet, setSheet] = useState<Sheets>(null);
 	const [editingState, setEditingState] = useState<{
 		type: "plan" | "feature" | null;

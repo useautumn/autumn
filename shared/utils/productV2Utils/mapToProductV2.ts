@@ -88,6 +88,7 @@ export const mapToProductV2 = ({
 		group: product.group,
 		free_trial: product.free_trial,
 		created_at: product.created_at,
+		env: product.env,
 
 		items: items,
 		stripe_id: product.processor?.id || null,
