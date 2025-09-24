@@ -1,4 +1,13 @@
-import { cusProductToPrices, cusProductToEnts } from "@autumn/shared";
+import {
+	type AttachBody,
+	type CreateFreeTrial,
+	cusProductToEnts,
+	cusProductToPrices,
+	type Entitlement,
+	type FullCustomer,
+	type FullProduct,
+	type Price,
+} from "@autumn/shared";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils.js";
 import {
@@ -6,17 +15,8 @@ import {
 	handleNewFreeTrial,
 } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
-import { isMainProduct } from "@/internal/products/productUtils/classifyProduct.js";
 import { notNullish } from "@/utils/genUtils.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import {
-	FullCustomer,
-	FullProduct,
-	Price,
-	Entitlement,
-	CreateFreeTrial,
-} from "@autumn/shared";
-import { AttachBody } from "@autumn/shared";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { mapOptionsList } from "../../mapOptionsList.js";
 
 export const getPricesAndEnts = async ({
@@ -41,11 +41,11 @@ export const getPricesAndEnts = async ({
 
 	// Not custom
 	if (!is_custom) {
-		let prices = products.flatMap((p: FullProduct) => p.prices);
-		let entitlements = products.flatMap((p: FullProduct) => p.entitlements);
+		const prices = products.flatMap((p: FullProduct) => p.prices);
+		const entitlements = products.flatMap((p: FullProduct) => p.entitlements);
 
 		let freeTrial = null;
-		let freeTrialProduct = products.find((p) => notNullish(p.free_trial));
+		const freeTrialProduct = products.find((p) => notNullish(p.free_trial));
 
 		if (freeTrialProduct) {
 			freeTrial = await getFreeTrialAfterFingerprint({
@@ -82,7 +82,7 @@ export const getPricesAndEnts = async ({
 		curEnts = cusProductToEnts({ cusProduct: curMainProduct });
 	}
 
-	let {
+	const {
 		prices,
 		entitlements: ents,
 		customPrices,
