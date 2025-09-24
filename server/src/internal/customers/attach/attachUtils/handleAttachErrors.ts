@@ -125,10 +125,10 @@ const handlePrepaidErrors = async ({
 				});
 			}
 
-			const config = price.config as UsagePriceConfig;
+			const priceConfig = price.config as UsagePriceConfig;
 			const usageLimit = priceEnt.usage_limit;
 			const totalQuantity =
-				(options?.quantity || 0) * (config.billing_units || 1);
+				(options?.quantity || 0) * (priceConfig.billing_units || 1);
 
 			if (
 				usageLimit &&
