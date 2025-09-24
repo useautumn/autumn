@@ -1,26 +1,24 @@
+import type { Entity, ProductV2 } from "@autumn/shared";
+import { useCustomer } from "autumn-js/react";
+import { Blend, Search } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
+import SmallSpinner from "@/components/general/SmallSpinner";
 import { Button } from "@/components/ui/button";
-
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import React, { useState } from "react";
-import { useCustomerContext } from "../CustomerContext";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { AddProductContext } from "../add-product/CreateCheckoutContext";
 import { Input } from "@/components/ui/input";
-
-import { useNavigate } from "react-router";
-import { getRedirectUrl, navigateTo } from "@/utils/genUtils";
-import { toast } from "sonner";
-import { OrgService } from "@/services/OrgService";
-import { CusProductStatus, Entity, Product, ProductV2 } from "@autumn/shared";
-import SmallSpinner from "@/components/general/SmallSpinner";
-import { Blend, Search } from "lucide-react";
 import { useOrg } from "@/hooks/common/useOrg";
-import { useCustomer } from "autumn-js/react";
+import { OrgService } from "@/services/OrgService";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { getRedirectUrl, navigateTo } from "@/utils/genUtils";
+import { AddProductContext } from "../add-product/CreateCheckoutContext";
+import { useCustomerContext } from "../CustomerContext";
 import { useCusQuery } from "../hooks/useCusQuery";
 
 function AttachProductDropdown({
@@ -40,25 +38,23 @@ function AttachProductDropdown({
 	const { org } = useOrg();
 
 	const filteredProducts = products.filter((product: ProductV2) => {
+		if (product.archived) return false;
 		if (product.is_add_on && !searchQuery) return true;
 
 		const entity = entities.find((e: Entity) => e.id === entityId);
 
-		const customerHasProduct = customer.products?.some((cp: any) => {
-			const idMatch = cp.product_id === product.id;
-			const entityIdMatch = entity
-				? cp.internal_entity_id === entity?.internal_id
-				: true;
-			const isAddOn = product.is_add_on;
-			const isActive = cp.status === CusProductStatus.Active;
+		// const customerHasProduct = customer.customer_products?.some((cp: any) => {
+		// 	const idMatch = cp.product_id === product.id;
+		// 	const entityIdMatch = entity
+		// 		? cp.internal_entity_id === entity?.internal_id
+		// 		: true;
+		// 	const isAddOn = product.is_add_on;
+		// 	const isActive = cp.status === CusProductStatus.Active;
 
-			return idMatch && entityIdMatch && isAddOn && isActive;
-		});
+		// 	return idMatch && entityIdMatch && isAddOn && isActive;
+		// });
 
-		return (
-			!customerHasProduct &&
-			product.name.toLowerCase().includes(searchQuery.toLowerCase())
-		);
+		return product.name.toLowerCase().includes(searchQuery.toLowerCase());
 	});
 
 	const navigate = useNavigate();

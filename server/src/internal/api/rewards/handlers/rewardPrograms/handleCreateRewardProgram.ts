@@ -36,7 +36,7 @@ export default async (req: any, res: any) =>
 
 			const existingProgram = await RewardProgramService.get({
 				db,
-				id: body.id,
+				idOrInternalId: body.id,
 				orgId,
 				env,
 			});

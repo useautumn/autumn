@@ -12,7 +12,7 @@ export default async (req: any, res: any) =>
 
 			const rewardProgram = await RewardProgramService.delete({
 				db,
-				id,
+				idOrInternalId: id,
 				orgId,
 				env,
 			});

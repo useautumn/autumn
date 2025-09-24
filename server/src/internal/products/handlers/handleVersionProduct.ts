@@ -141,12 +141,13 @@ export const handleVersionProductV2 = async ({
 		jobName: JobName.RewardMigration,
 		payload: {
 			oldPrices: latestProduct.prices,
-			newPrices: customPrices,
-			product: {
-				...newProduct,
-				prices: customPrices,
-				entitlements: getEntsWithFeature({ ents: customEnts, features }),
-			},
+			productId: latestProduct.id,
+			// newPrices: customPrices,
+			// product: {
+			// 	...newProduct,
+			// 	prices: customPrices,
+			// 	entitlements: getEntsWithFeature({ ents: customEnts, features }),
+			// },
 			orgId: org.id,
 			env,
 		},
