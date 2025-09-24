@@ -3,7 +3,11 @@ import type {
 	ProductItemInterval,
 } from "../../../models/productV2Models/productItemModels/productItemModels.js";
 import type { ProductV2 } from "../../../models/productV2Models/productV2Models.js";
-import { isPriceItem } from "../../productV2Utils/productItemUtils/getItemType.js";
+import {
+	isFeatureItem,
+	isFeaturePriceItem,
+	isPriceItem,
+} from "../../productV2Utils/productItemUtils/getItemType.js";
 
 export function productV2ToBasePrice({ product }: { product: ProductV2 }): {
 	amount: number;
@@ -24,3 +28,13 @@ export function productV2ToBasePrice({ product }: { product: ProductV2 }): {
 
 	return null;
 }
+
+export const productV2ToFeatureItems = ({
+	items,
+}: {
+	items: ProductItem[];
+}) => {
+	return items.filter(
+		(item) => isFeatureItem(item) || isFeaturePriceItem(item),
+	);
+};

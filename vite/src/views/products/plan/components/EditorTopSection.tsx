@@ -7,7 +7,7 @@ export default function EditorTopSection() {
 	const { product } = useProductContext();
 
 	return (
-		<div className="flex pl-4 pr-10 flex-col gap-2">
+		<div className="flex pl-4 pt-6 pr-10 flex-col gap-2">
 			<div className="col-span-2 flex">
 				<div className="flex flex-row items-baseline justify-start gap-2 w-full whitespace-nowrap">
 					<AdminHover

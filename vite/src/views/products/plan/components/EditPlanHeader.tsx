@@ -1,11 +1,15 @@
+import { UserIcon } from "@phosphor-icons/react";
 import { AdminHover } from "@/components/general/AdminHover";
-import { Badge } from "@/components/v2/badge";
+import { Badge } from "@/components/v2/badges/Badge";
+import { IconBadge } from "@/components/v2/badges/IconBadge";
 import V2Breadcrumb from "@/components/v2/breadcrumb";
 import { PlanTypeBadge } from "../../components/PlanTypeBadge";
+import { useProductCountsQuery } from "../../product/hooks/queries/useProductCountsQuery";
 import { useProductQuery } from "../../product/hooks/useProductQuery";
 
 export const EditPlanHeader = () => {
 	const { product } = useProductQuery();
+	const { counts } = useProductCountsQuery();
 
 	const getProductAdminHover = () => {
 		return [
@@ -25,7 +29,7 @@ export const EditPlanHeader = () => {
 	};
 
 	return (
-		<div className="flex flex-col gap-2 p-4 w-full bg-card">
+		<div className="flex flex-col gap-2 p-4 pb-3 w-full bg-card">
 			<V2Breadcrumb
 				className="p-0"
 				items={[
@@ -50,7 +54,10 @@ export const EditPlanHeader = () => {
 				</div>
 			</div>
 			<div className="flex flex-row gap-2">
-				<Badge variant="secondary">Add-on</Badge>
+				<Badge variant="muted">Add-on</Badge>
+				<IconBadge variant="muted" icon={<UserIcon />}>
+					{counts?.active || 0}
+				</IconBadge>
 				<PlanTypeBadge product={product} />
 			</div>
 		</div>

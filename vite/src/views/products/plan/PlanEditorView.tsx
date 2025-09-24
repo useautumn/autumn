@@ -114,7 +114,7 @@ export const PlanSheets = ({ sheet }: { sheet: Sheets }) => {
 	};
 
 	return (
-		<div className="w-full max-w-md bg-card z-50 border-l shadow-sm flex flex-col overflow-y-auto h-full">
+		<div className="w-full min-w-xs max-w-md bg-card z-50 border-l shadow-sm flex flex-col overflow-y-auto h-full">
 			{renderSheet()}
 		</div>
 	);

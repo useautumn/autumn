@@ -1,4 +1,8 @@
-import { type Feature, ProductItemInterval } from "@autumn/shared";
+import {
+	type Feature,
+	ProductItemInterval,
+	productV2ToFeatureItems,
+} from "@autumn/shared";
 import { PlusIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { CustomDialogContent } from "@/components/general/modal-components/DialogContentWrapper";
@@ -10,6 +14,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/v2/buttons/Button";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { getItemId } from "@/utils/product/productItemUtils";
 import { CreateFeature } from "@/views/products/features/components/CreateFeature";
 import { FeatureTypeBadge } from "@/views/products/features/components/FeatureTypeBadge";
 import { useProductContext } from "@/views/products/product/ProductContext";
@@ -52,9 +57,10 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 		setPopoverOpen(false);
 
 		// Open edit sidebar for the new item
-		const itemIndex = newItems.length;
-		const itemId =
-			newItem.entity_feature_id || newItem.feature_id || `item-${itemIndex}`;
+		const featureItems = productV2ToFeatureItems({ items: newItems });
+		const itemIndex = featureItems.length - 1;
+		const itemId = getItemId({ item: newItem, itemIndex });
+
 		setEditingState({ type: "feature", id: itemId });
 		setSheet("edit-feature");
 	};
@@ -71,7 +77,8 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 							disabled={disabled}
 							aria-label="Add new feature"
 						>
-							<PlusIcon size={16} weight="regular" />
+							<PlusIcon className="size-3" weight="bold" />
+							Add feature
 						</Button>
 					</PopoverTrigger>
 					<PopoverContent className="w-80 p-0" align="start">

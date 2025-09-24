@@ -16,15 +16,6 @@ export const PlanTypeBadge = ({ product }: { product: any }) => {
 	if (!badgeType) return null;
 
 	return (
-		// <>
-		//   {product.is_default ? (
-		//     <Badge variant="outline">Default</Badge>
-		//   ) : product.is_add_on ? (
-		//     <Badge variant="outline">Add-On</Badge>
-		//   ) : (
-		//     <></>
-		//   )}
-		// </>
 		<Badge
 			className={cn(
 				"bg-transparent border border-t1 text-t1 rounded-md px-2 pointer-events-none",

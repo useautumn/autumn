@@ -1,5 +1,4 @@
-import type { ProductItem } from "@autumn/shared";
-import { isPriceItem } from "@/utils/product/getItemType";
+import { type ProductItem, productV2ToFeatureItems } from "@autumn/shared";
 import { useProductContext } from "@/views/products/product/ProductContext";
 import { AddFeatureRow } from "./AddFeatureRow";
 import { PlanFeatureRow } from "./PlanFeatureRow";
@@ -7,6 +6,8 @@ import { PlanFeatureRow } from "./PlanFeatureRow";
 export const PlanFeatureList = () => {
 	const { product, setProduct, setSheet, editingState, setEditingState } =
 		useProductContext();
+
+	const filteredItems = productV2ToFeatureItems({ items: product?.items });
 
 	const handleFeatureClick = (item: ProductItem) => {
 		console.log("Feature clicked:", item);
@@ -44,10 +45,6 @@ export const PlanFeatureList = () => {
 		setEditingState({ type: "feature", id: "new" });
 		setSheet("edit-feature");
 	};
-
-	// Filter out standalone price items - only show features and priced features
-	const filteredItems =
-		product?.items?.filter((item: ProductItem) => !isPriceItem(item)) || [];
 
 	if (filteredItems.length === 0) {
 		return (
