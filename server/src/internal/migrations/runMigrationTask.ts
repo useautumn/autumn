@@ -1,11 +1,11 @@
-import { MigrationService } from "./MigrationService.js";
+/** biome-ignore-all lint/suspicious/noExplicitAny: ok */
+import { MigrationJobStep } from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { FeatureService } from "../features/FeatureService.js";
 import { ProductService } from "../products/ProductService.js";
-
+import { MigrationService } from "./MigrationService.js";
 import { getMigrationCustomers } from "./migrationSteps/getMigrationCustomers.js";
 import { migrateCustomers } from "./migrationSteps/migrateCustomers.js";
-import { MigrationJobStep } from "@autumn/shared";
-import { FeatureService } from "../features/FeatureService.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const runMigrationTask = async ({
 	db,
@@ -26,10 +26,10 @@ export const runMigrationTask = async ({
 			id: migrationJobId,
 		});
 
-		let { org_id: orgId, env } = migrationJob;
+		const { org_id: orgId, env } = migrationJob;
 
 		// Get from and to products
-		let [fromProduct, toProduct] = await Promise.all([
+		const [fromProduct, toProduct] = await Promise.all([
 			ProductService.getFull({
 				db,
 				idOrInternalId: migrationJob.from_internal_product_id,
@@ -45,14 +45,13 @@ export const runMigrationTask = async ({
 		]);
 
 		// STEP 1: GET ALL CUSTOMERS AND INSERT INTO MIGRATIONS...
-		let customers = await getMigrationCustomers({
+		const customers = await getMigrationCustomers({
 			db,
 			migrationJobId,
 			fromProduct,
-			logger,
 		});
 
-		let features = await FeatureService.list({
+		const features = await FeatureService.list({
 			db,
 			orgId,
 			env,

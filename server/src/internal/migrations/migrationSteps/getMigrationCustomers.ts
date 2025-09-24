@@ -1,14 +1,14 @@
 import {
 	CusProductStatus,
+	customerProducts,
 	ErrCode,
 	MigrationJobStep,
-	Product,
+	type Product,
 } from "@autumn/shared";
-import { MigrationService } from "../MigrationService.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { customerProducts } from "@autumn/shared";
 import { and, asc, eq, gt, inArray } from "drizzle-orm";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { MigrationService } from "../MigrationService.js";
 
 const getAllCustomersOnProduct = async ({
 	db,
@@ -22,7 +22,7 @@ const getAllCustomersOnProduct = async ({
 	let lastId: string | null = null;
 
 	while (true) {
-		let data;
+		let data: any[] = [];
 		try {
 			data = await db.query.customerProducts.findMany({
 				where: and(
@@ -49,7 +49,7 @@ const getAllCustomersOnProduct = async ({
 
 		if (!data || data.length === 0) break;
 
-		let filtered = data.reduce((acc: any[], curr: any) => {
+		const filtered = data.reduce((acc: any[], curr: any) => {
 			const existingIndex = acc.findIndex(
 				(item) => item.customer.id === curr.customer.id,
 			);
@@ -76,12 +76,10 @@ export const getMigrationCustomers = async ({
 	db,
 	migrationJobId,
 	fromProduct,
-	logger,
 }: {
 	db: DrizzleCli;
 	migrationJobId: string;
 	fromProduct: Product;
-	logger: any;
 }) => {
 	await MigrationService.updateJob({
 		db,
@@ -91,23 +89,19 @@ export const getMigrationCustomers = async ({
 		},
 	});
 
-	let { cusProducts } = await getAllCustomersOnProduct({
+	const { cusProducts } = await getAllCustomersOnProduct({
 		db,
 		internalProductId: fromProduct.internal_id,
 	});
 
-	let totalCount = cusProducts.length;
-	let canceledCount = cusProducts.filter(
+	const totalCount = cusProducts.length;
+	const canceledCount = cusProducts.filter(
 		(cusProd) => cusProd.canceled_at !== null,
 	).length;
 
-	let customCount = cusProducts.filter((cusProd) => cusProd.is_custom).length;
-
-	let filteredCusProducts = cusProducts.filter(
-		(cusProd) => cusProd.canceled_at === null && !cusProd.is_custom,
-	);
-
-	let customers = filteredCusProducts.map((cusProd) => cusProd.customer);
+	const customCount = cusProducts.filter((cusProd) => cusProd.is_custom).length;
+	const filteredCusProducts = cusProducts.filter((cp) => !cp.is_custom);
+	const customers = filteredCusProducts.map((cusProd) => cusProd.customer);
 
 	await MigrationService.updateJob({
 		db,

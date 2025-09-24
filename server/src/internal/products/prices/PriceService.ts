@@ -1,7 +1,7 @@
-import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { Price, prices, Product } from "@autumn/shared";
+import { type Price, type Product, prices } from "@autumn/shared";
 import { and, eq, inArray, or, sql } from "drizzle-orm";
+import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export class PriceService {
 	static async get({ db, id }: { db: DrizzleCli; id: string }) {
@@ -59,7 +59,7 @@ export class PriceService {
 	}
 
 	static async upsert({ db, data }: { db: DrizzleCli; data: Price | Price[] }) {
-		if (Array.isArray(data) && data.length == 0) return;
+		if (Array.isArray(data) && data.length === 0) return;
 
 		const updateColumns = buildConflictUpdateColumns(prices, ["id"]);
 
@@ -104,20 +104,18 @@ export class PriceService {
 		if (!stripePriceIds || stripePriceIds.length === 0)
 			return {} as Record<string, Price & { product: Product }>;
 
-		const perIdExprs = stripePriceIds.map((id) =>
-			or(
-				sql`${prices.config} ->> 'stripe_price_id' = ${id}`,
-				sql`${prices.config} ->> 'stripe_empty_price_id' = ${id}`,
-			),
-		);
-
-		let whereExpr = perIdExprs[0];
-		for (let i = 1; i < perIdExprs.length; i++) {
-			whereExpr = or(whereExpr, perIdExprs[i]);
-		}
-
+		// Build a more efficient query using SQL with proper JSON path operations
 		const rows = (await db.query.prices.findMany({
-			where: whereExpr,
+			where: sql`(
+				${prices.config} ->> 'stripe_price_id' = ANY(ARRAY[${sql.join(
+					stripePriceIds.map((id) => sql`${id}`),
+					sql`, `,
+				)}])
+				OR ${prices.config} ->> 'stripe_empty_price_id' = ANY(ARRAY[${sql.join(
+					stripePriceIds.map((id) => sql`${id}`),
+					sql`, `,
+				)}])
+			)`,
 			with: { product: true },
 		})) as (Price & { product: Product })[];
 
