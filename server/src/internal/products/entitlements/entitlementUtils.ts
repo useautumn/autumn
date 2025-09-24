@@ -1,24 +1,23 @@
-import RecaseError from "@/utils/errorUtils.js";
+/** biome-ignore-all lint/suspicious/noDoubleEquals: != allowed for comparison... */
 
 import {
-	EntInterval,
-	FreeTrial,
-	Entitlement,
 	AllowanceType,
-	EntitlementWithFeature,
-	FeatureType,
-	Feature,
+	EntInterval,
+	type Entitlement,
+	type EntitlementWithFeature,
 	ErrCode,
-	UsagePriceConfig,
+	type Feature,
+	FeatureType,
+	type FreeTrial,
+	type FullEntitlement,
+	type FullProduct,
+	type Price,
 	PriceType,
-	Price,
-	FullProduct,
-	FullEntitlement,
-	Rollover,
-	RolloverConfig,
+	type RolloverConfig,
+	type UsagePriceConfig,
 } from "@autumn/shared";
-
 import { addDays } from "date-fns";
+import RecaseError from "@/utils/errorUtils.js";
 
 export const entIntervalToTrialDuration = ({
 	interval,
@@ -113,23 +112,23 @@ export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
 		return false;
 	}
 	// 3. Check if they have same interval
-	let diffs = {
+	const diffs = {
 		interval: {
-			condition: ent1.interval !== ent2.interval,
+			condition: ent1.interval != ent2.interval,
 			message: `Interval different: ${ent1.interval} !== ${ent2.interval}`,
 		},
 		intervalCount: {
-			condition: ent1.interval_count !== ent2.interval_count,
+			condition: ent1.interval_count != ent2.interval_count,
 			message: `Interval count different: ${ent1.interval_count} !== ${ent2.interval_count}`,
 		},
 		allowance: {
 			condition:
 				ent1.allowance_type !== AllowanceType.Unlimited &&
-				ent1.allowance !== ent2.allowance,
+				ent1.allowance != ent2.allowance,
 			message: `Allowance different: ${ent1.allowance} !== ${ent2.allowance}`,
 		},
 		carryFromPrevious: {
-			condition: ent1.carry_from_previous !== ent2.carry_from_previous,
+			condition: ent1.carry_from_previous != ent2.carry_from_previous,
 			message: `Carry from previous different: ${ent1.carry_from_previous} !== ${ent2.carry_from_previous}`,
 		},
 		entityFeatureId: {
@@ -137,9 +136,10 @@ export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
 			message: `Entity feature ID different: ${ent1.entity_feature_id} !== ${ent2.entity_feature_id}`,
 		},
 		usageLimit: {
-			condition: ent1.usage_limit !== ent2.usage_limit,
+			condition: ent1.usage_limit != ent2.usage_limit,
 			message: `Usage limit different: ${ent1.usage_limit} !== ${ent2.usage_limit}`,
 		},
+
 		rollover: {
 			condition: !rolloversAreSame({
 				rollover1: ent1.rollover,
@@ -149,7 +149,7 @@ export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
 		},
 	};
 
-	let entsAreDiff = Object.values(diffs).some((d) => d.condition);
+	const entsAreDiff = Object.values(diffs).some((d) => d.condition);
 
 	if (entsAreDiff) {
 		console.log("Entitlements different");
@@ -174,14 +174,14 @@ export const getEntRelatedPrice = (
 			return false;
 		}
 
-		let config = price.config as UsagePriceConfig;
+		const config = price.config as UsagePriceConfig;
 
 		if (allowFeatureMatch) {
 			return entitlement.internal_feature_id == config.internal_feature_id;
 		}
 
-		let entIdMatch = entitlement.id == price.entitlement_id;
-		let productIdMatch =
+		const entIdMatch = entitlement.id == price.entitlement_id;
+		const productIdMatch =
 			entitlement.internal_product_id == price.internal_product_id;
 		return entIdMatch && productIdMatch;
 	});
@@ -204,7 +204,7 @@ export const getEntsWithFeature = ({
 	features: Feature[];
 }) => {
 	return ents.map((ent) => {
-		let feature = features.find(
+		const feature = features.find(
 			(f) => f.internal_id === ent.internal_feature_id,
 		);
 		if (!feature) {

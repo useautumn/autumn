@@ -9,7 +9,8 @@
 	"files": {
 		"ignoreUnknown": false,
 		"experimentalScannerIgnores": ["dist/**"],
-		"includes": ["src/**/*.ts", "tests/**/*.ts"]
+		"includes": ["src/**/*.ts", "tests/**/*.ts"],
+		"ignore": ["dist/**"]
 	},
 	"formatter": {
 		"enabled": true,

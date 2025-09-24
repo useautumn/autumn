@@ -1,40 +1,39 @@
 import {
-	AttachParams,
-	AttachResultSchema,
-} from "@/internal/customers/cusProducts/AttachParams.js";
-import {
-	attachParamsToCurCusProduct,
-	attachParamsToProduct,
-	paramsToCurSub,
-	paramsToCurSubSchedule,
-} from "../../attachUtils/convertAttachParams.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
-import { attachToInsertParams } from "@/internal/products/productUtils.js";
-import {
 	APIVersion,
 	AttachBranch,
-	AttachConfig,
+	type AttachConfig,
 	AttachScenario,
 	CusProductStatus,
 	cusProductToProduct,
-	logCusProducts,
 	ProrationBehavior,
 } from "@autumn/shared";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-
+import type Stripe from "stripe";
+import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
+import { subIsCanceled } from "@/external/stripe/stripeSubUtils.js";
+import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
+import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
+import {
+	type AttachParams,
+	AttachResultSchema,
+} from "@/internal/customers/cusProducts/AttachParams.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import {
 	attachToInvoiceResponse,
 	insertInvoiceFromAttach,
 } from "@/internal/invoices/invoiceUtils.js";
-import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
-import { updateStripeSub2 } from "./updateStripeSub2.js";
-import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import { attachToInsertParams } from "@/internal/products/productUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+import {
+	attachParamsToCurCusProduct,
+	paramsToCurSub,
+	paramsToCurSubSchedule,
+} from "../../attachUtils/convertAttachParams.js";
 import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
-import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
-import { shouldCancelSub } from "./upgradeFlowUtils.js";
 import { handleUpgradeFlowSchedule } from "./handleUpgradeFlowSchedule.js";
-import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
+import { updateStripeSub2 } from "./updateStripeSub2.js";
+import { shouldCancelSub } from "./upgradeFlowUtils.js";
 
 export const handleUpgradeFlow = async ({
 	req,
@@ -59,7 +58,7 @@ export const handleUpgradeFlow = async ({
 	}
 
 	let sub = curSub;
-	let latestInvoice = undefined;
+	let latestInvoice: Stripe.Invoice | undefined;
 
 	const itemSet = await getStripeSubItems2({
 		attachParams,
@@ -75,12 +74,18 @@ export const handleUpgradeFlow = async ({
 
 	const { subItems } = newItemSet;
 
-	const products = attachParams.fromCancel
-		? [cusProductToProduct({ cusProduct: attachParams.cusProduct! })]
-		: attachParams.products;
+	const products =
+		attachParams.fromCancel && attachParams.cusProduct
+			? [cusProductToProduct({ cusProduct: attachParams.cusProduct })]
+			: attachParams.products;
 
 	for (const product of products) {
-		if (product.is_add_on) continue;
+		if (
+			product.is_add_on ||
+			branch === AttachBranch.NewVersion ||
+			branch === AttachBranch.SameCustomEnts
+		)
+			continue;
 
 		const { curScheduledProduct } = getExistingCusProducts({
 			product,
@@ -97,31 +102,29 @@ export const handleUpgradeFlow = async ({
 	}
 
 	let canceled = false;
-	// SCENARIO 1, NO SUB:
 
-	// Don't really need this...
-	if (branch == AttachBranch.SameCustomEnts) {
+	if (branch === AttachBranch.SameCustomEnts) {
 		config.proration = ProrationBehavior.None;
 	}
 
 	if (!curSub) {
 		logger.info("UPGRADE FLOW: no sub (from cancel maybe...?)");
 		// Do something about current sub...
-	} else if (shouldCancelSub({ sub: curSub!, newSubItems: subItems })) {
+	} else if (shouldCancelSub({ sub: curSub, newSubItems: subItems })) {
 		logger.info(
-			`UPGRADE FLOW: canceling sub ${curSub!.id}, proration: ${config.proration}`,
+			`UPGRADE FLOW: canceling sub ${curSub.id}, proration: ${config.proration}`,
 		);
 		canceled = true;
 		const { stripeCli } = attachParams;
-		await stripeCli.subscriptions.cancel(curSub!.id, {
-			prorate: config.proration == ProrationBehavior.Immediately,
-			invoice_now: config.proration == ProrationBehavior.Immediately,
+		await stripeCli.subscriptions.cancel(curSub.id, {
+			prorate: config.proration === ProrationBehavior.Immediately,
+			invoice_now: config.proration === ProrationBehavior.Immediately,
 			cancellation_details: {
 				comment: "autumn_cancel",
 			},
 		});
 	} else if (subItems.length > 0) {
-		logger.info(`UPGRADE FLOW, updating sub ${curSub!.id}`);
+		logger.info(`UPGRADE FLOW, updating sub ${curSub.id}`);
 		itemSet.subItems = subItems;
 
 		// await logPhaseItems({
@@ -133,7 +136,7 @@ export const handleUpgradeFlow = async ({
 			req,
 			attachParams,
 			config,
-			curSub: curSub!,
+			curSub: curSub,
 			itemSet,
 			fromCreate: attachParams.products.length === 0, // just for now, if no products, it comes from cancel product...
 		});
@@ -163,14 +166,14 @@ export const handleUpgradeFlow = async ({
 
 		attachParams.replaceables = res.replaceables || [];
 		sub = res.updatedSub;
-		latestInvoice = res.latestInvoice;
+		latestInvoice = res.latestInvoice || undefined;
 	}
 
 	if (curCusProduct) {
 		logger.info(`UPGRADE FLOW: expiring previous cus product`);
 		await CusProductService.update({
 			db: req.db,
-			cusProductId: curCusProduct!.id,
+			cusProductId: curCusProduct.id,
 			updates: {
 				subscription_ids: canceled ? undefined : [],
 				status: CusProductStatus.Expired,
@@ -197,24 +200,36 @@ export const handleUpgradeFlow = async ({
 	if (attachParams.products.length > 0) {
 		logger.info(`UPGRADE FLOW: creating new cus product`);
 		const anchorToUnix = sub ? getEarliestPeriodEnd({ sub }) * 1000 : undefined;
+		console.log("Sub status:", sub?.status);
+
+		let canceledAt: number | undefined;
+		if (sub && subIsCanceled({ sub })) {
+			canceledAt = sub.canceled_at
+				? sub.canceled_at * 1000
+				: curCusProduct?.canceled_at || undefined;
+		}
+
 		await createFullCusProduct({
 			db: req.db,
 			attachParams: attachToInsertParams(
 				attachParams,
 				attachParams.products[0],
 			),
-			subscriptionIds: curCusProduct!.subscription_ids || [],
+			subscriptionIds: curCusProduct?.subscription_ids || [],
 			disableFreeTrial: config.disableTrial,
 			carryExistingUsages: config.carryUsage,
 			carryOverTrial: config.carryTrial,
 			anchorToUnix: anchorToUnix,
 			scenario: AttachScenario.Upgrade,
+			canceledAt: canceledAt,
+			subscriptionStatus:
+				sub?.status === "past_due" ? CusProductStatus.PastDue : undefined,
 			logger,
 		});
 	}
 
 	if (res) {
-		let apiVersion = attachParams.org.api_version || APIVersion.v1;
+		const apiVersion = attachParams.org.api_version || APIVersion.v1;
 		if (apiVersion >= APIVersion.v1_1) {
 			res.status(200).json(
 				AttachResultSchema.parse({

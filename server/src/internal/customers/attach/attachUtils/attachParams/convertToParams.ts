@@ -115,7 +115,6 @@ export const newCusToAttachParams = ({
 
 	// isDefaultTrial
 	const isDefaultTrial = freeTrial && !freeTrial.card_required;
-
 	const attachParams: AttachParams = {
 		stripeCli,
 		paymentMethod: null,
@@ -131,7 +130,7 @@ export const newCusToAttachParams = ({
 		cusProducts: [],
 		entities: [],
 		features: [],
-		invoiceOnly: isDefaultTrial || undefined,
+		invoiceOnly: !isDefaultTrial,
 	};
 	return attachParams;
 };

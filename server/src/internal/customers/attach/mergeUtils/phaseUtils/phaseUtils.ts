@@ -1,10 +1,10 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type { FullCusProduct } from "@autumn/shared";
+import { differenceInDays, subDays } from "date-fns";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { formatPrice } from "@/internal/products/prices/priceUtils.js";
 import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
-import { FullCusProduct } from "@autumn/shared";
-import { differenceInDays, subDays } from "date-fns";
-import Stripe from "stripe";
 
 export const cusProductInPhase = ({
 	phaseStart,
@@ -105,7 +105,7 @@ export const logPhases = async ({
 	db: DrizzleCli;
 }) => {
 	for (const phase of phases) {
-		// @ts-ignore
+		// @ts-expect-error
 		const timestampInMillis = ensureMilliseconds(phase.start_date);
 		console.log(`Phase ${formatUnixToDate(timestampInMillis)}:`);
 		await logPhaseItems({ items: phase.items, db });
