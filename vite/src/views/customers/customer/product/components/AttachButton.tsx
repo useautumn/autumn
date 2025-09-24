@@ -1,15 +1,14 @@
-import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import { useProductContext } from "@/views/products/product/ProductContext";
-
 import { Upload } from "lucide-react";
-import { AttachModal } from "./AttachModal";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
-import { toast } from "sonner";
-import { getAttachBody } from "./attachProductUtils";
-import { useCusQuery } from "../../hooks/useCusQuery";
 import { useProductQueryState } from "@/views/products/product/hooks/useProductQuery";
+import { useProductContext } from "@/views/products/product/ProductContext";
+import { useCusQuery } from "../../hooks/useCusQuery";
+import { AttachModal } from "./AttachModal";
+import { getAttachBody } from "./attachProductUtils";
 
 export const AttachButton = () => {
 	const axios = useAxiosInstance();
