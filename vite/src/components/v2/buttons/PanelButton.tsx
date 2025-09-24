@@ -26,12 +26,13 @@ export function PanelButton({
 				// Design system classes (following Select pattern)
 				"input-base input-shadow select-bg",
 				// Thicker border for panel effect
-				"!rounded-xl !border-2",
+				"!rounded-xl !border-1",
 				// Custom panel shadows
 				"shadow-[inset_0px_-8px_22px_0px_rgba(0,0,0,0.04)]",
 				// Selected state shadows
-				isSelected && "shadow-[0px_8px_18px_20px_rgba(136,56,255,0.05)] shadow-[0px_2px_8px_0px_rgba(136,56,255,0.25)]",
-				className
+				isSelected &&
+					"shadow-[0px_8px_18px_20px_rgba(136,56,255,0.05)] shadow-[0px_2px_8px_0px_rgba(136,56,255,0.25)]",
+				className,
 			)}
 		>
 			{/* Screws in corners */}
@@ -63,7 +64,7 @@ export function PanelButton({
 
 			{/* Centered icon */}
 			<div
-				className={`w-8 h-8 rounded-lg flex items-center justify-center relative ${
+				className={`size-10 rounded-lg flex items-center justify-center relative ${
 					isSelected ? "bg-violet-100" : "bg-zinc-100"
 				}`}
 			>

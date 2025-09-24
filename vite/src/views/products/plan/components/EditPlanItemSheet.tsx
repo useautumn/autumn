@@ -1,12 +1,9 @@
 import { EntInterval, type PriceTier, TierInfinite } from "@autumn/shared";
-import { ArrowsCounterClockwiseIcon, Coins } from "@phosphor-icons/react";
+import { CoinsIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { PanelButton } from "@/components/v2/buttons/PanelButton";
 import { LongCheckbox } from "@/components/v2/checkboxes/LongCheckbox";
-import {
-	IncludedUsageIcon,
-	UsageBasedIcon,
-} from "@/components/v2/icons/AutumnIcons";
+import { IncludedUsageIcon } from "@/components/v2/icons/AutumnIcons";
 import { InlineInput } from "@/components/v2/inputs/InlineInput";
 import { LabelInput } from "@/components/v2/inputs/LabelInput";
 import {
@@ -24,32 +21,46 @@ import { TierInputRow } from "./TierInputRow";
 
 export function EditPlanFeatureSheet() {
 	const { item } = useProductItemContext();
-	
+
 	// Initialize state from item data
-	const [featureBehaviour, setFeatureBehaviour] = useState<
-		"consumable" | "persistent"
-	>(item?.tiers && item.tiers.length > 0 ? "persistent" : "consumable");
-	
 	const [billingType, setBillingType] = useState<"included" | "priced">(
-		item?.price !== null || (item?.tiers && item.tiers.length > 0) ? "priced" : "included",
+		item?.price !== null || (item?.tiers && item.tiers.length > 0)
+			? "priced"
+			: "included",
 	);
-	
+
+	const [includedUsage, setIncludedUsage] = useState<string>(
+		item?.included_usage?.toString() || "",
+	);
+
 	const [usageReset, setUsageReset] = useState<EntInterval>(
-		item?.interval ? (item.interval as EntInterval) : EntInterval.Month
+		item?.interval ? (item.interval as EntInterval) : EntInterval.Month,
 	);
-	
+
 	const [unitsPerTier, setUnitsPerTier] = useState(item?.billing_units || 1);
 	const [prepaid, setPrepaid] = useState(false);
 
 	// Update state when item changes
 	useEffect(() => {
 		if (item) {
-			setFeatureBehaviour(item.tiers && item.tiers.length > 0 ? "persistent" : "consumable");
-			setBillingType(item.price !== null || (item.tiers && item.tiers.length > 0) ? "priced" : "included");
-			setUsageReset(item.interval ? (item.interval as EntInterval) : EntInterval.Month);
+			setBillingType(
+				item.price !== null || (item.tiers && item.tiers.length > 0)
+					? "priced"
+					: "included",
+			);
+			setIncludedUsage(item.included_usage?.toString() || "");
+			setUsageReset(
+				item.interval ? (item.interval as EntInterval) : EntInterval.Month,
+			);
 			setUnitsPerTier(item.billing_units || 1);
 		}
 	}, [item]);
+
+	// Check if this is a priced feature (has tiers or price)
+	const isPricedFeature =
+		billingType === "priced" ||
+		(item?.tiers && item.tiers.length > 0) ||
+		item?.price !== null;
 
 	// Convert actual tiers to display format for read-only display
 	const displayTiers =
@@ -92,37 +103,6 @@ export function EditPlanFeatureSheet() {
 				title="Edit Feature"
 				description="Configure how this feature is used in your app"
 			/>
-			<SheetSection title="Feature Behaviour">
-				<div className="space-y-4 feature-behaviour-section">
-					<div className="grid grid-cols-2 gap-4 items-center">
-						<PanelButton
-							isSelected={featureBehaviour === "consumable"}
-							onClick={() => setFeatureBehaviour("consumable")}
-							icon={<UsageBasedIcon />}
-						/>
-						<div className="max-w-[12rem]">
-							<div className="text-sub mb-1">Consumable</div>
-							<div className="text-body-secondary leading-tight">
-								Set usage limits with reset intervals (e.g. 100 credits/month)
-							</div>
-						</div>
-					</div>
-
-					<div className="grid grid-cols-2 gap-4 items-center">
-						<PanelButton
-							isSelected={featureBehaviour === "persistent"}
-							onClick={() => setFeatureBehaviour("persistent")}
-							icon={<ArrowsCounterClockwiseIcon size={20} />}
-						/>
-						<div className="max-w-[12rem]">
-							<div className="text-sub mb-1">Persistent</div>
-							<div className="text-body-secondary leading-tight">
-								Set usage and overage pricing (e.g. 100 credits/month, $1 extra)
-							</div>
-						</div>
-					</div>
-				</div>
-			</SheetSection>
 			<SheetSection title="Billing Type">
 				<div className="space-y-4 billing-type-section">
 					<div className="grid grid-cols-2 gap-4 items-center">
@@ -134,7 +114,8 @@ export function EditPlanFeatureSheet() {
 						<div className="max-w-[12rem]">
 							<div className="text-sub mb-1">Included</div>
 							<div className="text-body-secondary leading-tight">
-								Set included usage limits with reset intervals (e.g. 100 credits/month)
+								Set included usage limits with reset intervals (e.g. 100
+								credits/month)
 							</div>
 						</div>
 					</div>
@@ -143,7 +124,7 @@ export function EditPlanFeatureSheet() {
 						<PanelButton
 							isSelected={billingType === "priced"}
 							onClick={() => setBillingType("priced")}
-							icon={<Coins size={20} />}
+							icon={<CoinsIcon size={20} />}
 						/>
 						<div className="max-w-[12rem]">
 							<div className="text-sub mb-1">Priced</div>
@@ -159,86 +140,92 @@ export function EditPlanFeatureSheet() {
 					<LabelInput
 						label="Included usage before payment"
 						placeholder="eg. 100 credits"
-						value={item?.included_usage?.toString() || ""}
-						readOnly
+						value={includedUsage}
+						onChange={(e) => setIncludedUsage(e.target.value)}
 					/>
 				</div>
 			</SheetSection>
 
-			<SheetSection
-				title={
-					<div className="flex flex-wrap items-baseline gap-1 leading-relaxed min-h-[1.5rem] break-words">
-						<span className="flex-shrink-0">Price per</span>
-						<InlineInput
-							type="number"
-							value={unitsPerTier}
-							onChange={(value) => setUnitsPerTier(value as number)}
-							variant="violet"
-							autoWidth={true}
-							minWidth="2rem"
-							maxWidth="6rem"
-							min={1}
-							max={999999}
-							className="flex-shrink-0"
-						/>
-						<span className="flex-shrink-0">units (after included usage)</span>
-					</div>
-				}
-			>
-				<div className="space-y-3 pricing-tiers-section">
-					{displayTiers.length > 0 ? (
-						// biome-ignore lint/suspicious/noExplicitAny: idk what the type is
-						displayTiers.map((tier: any, index: number) => (
-							<TierInputRow
-								key={index}
-								label={tier.label}
-								to={tier.to}
-								units={unitsPerTier}
-								amount={tier.amount}
-								currency="USD"
-								onAddTier={addTier}
-								onRemoveTier={() => removeTier(index)}
-								onUpdateTier={(field, value) => updateTier(index, field, value)}
-								canAdd={true}
-								canRemove={displayTiers.length > 1}
-								isReadOnly={true}
+			{isPricedFeature && (
+				<SheetSection
+					title={
+						<div className="flex flex-wrap items-baseline gap-1 leading-relaxed min-h-[1.5rem] break-words">
+							<span className="flex-shrink-0">Price per</span>
+							<InlineInput
+								type="number"
+								value={unitsPerTier}
+								onChange={(value) => setUnitsPerTier(value as number)}
+								variant="violet"
+								autoWidth={true}
+								minWidth="2rem"
+								maxWidth="6rem"
+								min={1}
+								max={999999}
+								className="flex-shrink-0"
 							/>
-						))
-					) : (
-						<EmptyTierState onAddTier={addTier} isDisabled={true} />
-					)}
-
-					<div className="mt-6 space-y-4">
-						<div>
-							<div className="text-form-label block mb-2">
-								Usage Reset & Billing Interval
-							</div>
-							<Select
-								value={usageReset}
-								onValueChange={(value) => setUsageReset(value as EntInterval)}
-							>
-								<SelectTrigger className="w-full">
-									<SelectValue placeholder="Select interval" />
-								</SelectTrigger>
-								<SelectContent>
-									{Object.values(EntInterval).map((interval) => (
-										<SelectItem key={interval} value={interval}>
-											{keyToTitle(interval)}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
+							<span className="flex-shrink-0">
+								units (after included usage)
+							</span>
 						</div>
+					}
+				>
+					<div className="space-y-3 pricing-tiers-section">
+						{displayTiers.length > 0 ? (
+							// biome-ignore lint/suspicious/noExplicitAny: idk what the type is
+							displayTiers.map((tier: any, index: number) => (
+								<TierInputRow
+									key={index}
+									label={tier.label}
+									to={tier.to}
+									units={unitsPerTier}
+									amount={tier.amount}
+									currency="USD"
+									onAddTier={addTier}
+									onRemoveTier={() => removeTier(index)}
+									onUpdateTier={(field, value) =>
+										updateTier(index, field, value)
+									}
+									canAdd={true}
+									canRemove={displayTiers.length > 1}
+									isReadOnly={true}
+								/>
+							))
+						) : (
+							<EmptyTierState onAddTier={addTier} isDisabled={true} />
+						)}
 
-						<LongCheckbox
-							title="Prepaid"
-							subtitle="Quantity will be chosen during checkout."
-							checked={prepaid}
-							onCheckedChange={setPrepaid}
-						/>
+						<div className="mt-6 space-y-4">
+							<div>
+								<div className="text-form-label block mb-2">
+									Usage Reset & Billing Interval
+								</div>
+								<Select
+									value={usageReset}
+									onValueChange={(value) => setUsageReset(value as EntInterval)}
+								>
+									<SelectTrigger className="w-full">
+										<SelectValue placeholder="Select interval" />
+									</SelectTrigger>
+									<SelectContent>
+										{Object.values(EntInterval).map((interval) => (
+											<SelectItem key={interval} value={interval}>
+												{keyToTitle(interval)}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+
+							<LongCheckbox
+								title="Prepaid"
+								subtitle="Quantity will be chosen during checkout."
+								checked={prepaid}
+								onCheckedChange={setPrepaid}
+							/>
+						</div>
 					</div>
-				</div>
-			</SheetSection>
+				</SheetSection>
+			)}
 		</>
 	);
 }
