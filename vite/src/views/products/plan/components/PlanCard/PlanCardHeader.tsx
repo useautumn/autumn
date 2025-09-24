@@ -12,8 +12,7 @@ export const PlanCardHeader = () => {
 		useProductContext();
 
 	const productV3 = mapToProductV3({ product });
-	const isPlanBeingEdited =
-		editingState.type === "plan" && editingState.id === product.id;
+	const isPlanBeingEdited = editingState.type === "plan";
 
 	return (
 		<CardHeader>

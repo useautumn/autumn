@@ -1,6 +1,8 @@
 import { TrashIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
+import { cn } from "@/lib/utils";
+import { useProductContext } from "@/views/products/product/ProductContext";
 
 interface PlanCardToolbarProps {
 	onEdit?: () => void;
@@ -13,6 +15,9 @@ export const PlanCardToolbar = ({
 	onDelete,
 	editDisabled,
 }: PlanCardToolbarProps) => {
+	const { editingState } = useProductContext();
+	const isEditingPlan = editingState.type === "plan";
+
 	return (
 		<div className="flex flex-row items-center gap-1">
 			{/* Edit button */}
@@ -33,8 +38,9 @@ export const PlanCardToolbar = ({
 				variant="muted"
 				disabled={editDisabled}
 				size="sm"
+				className={cn(isEditingPlan && "btn-secondary-active !opacity-100 ")}
 			>
-				Edit
+				{isEditingPlan ? "Editing" : "Edit"}
 			</Button>
 			<IconButton
 				icon={<TrashIcon />}
