@@ -1,24 +1,27 @@
-import { DialogHeader } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
-
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import {
-	CreateFeature as CreateFeatureType,
+	type CreateFeature as CreateFeatureType,
 	FeatureType,
 } from "@autumn/shared";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { FeatureService } from "@/services/FeatureService";
-import { FeatureConfig } from "./FeatureConfig";
-import { getBackendErr } from "@/utils/genUtils";
-import { getDefaultFeature } from "../utils/defaultFeature";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
 	CustomDialogBody,
 	CustomDialogContent,
 } from "@/components/general/modal-components/DialogContentWrapper";
-import { CreateFeatureFooter } from "./CreateFeatureFooter";
+import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "@/components/ui/dialog";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { FeatureService } from "@/services/FeatureService";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { getBackendErr } from "@/utils/genUtils";
+import { getDefaultFeature } from "../utils/defaultFeature";
+import { CreateFeatureFooter } from "./CreateFeatureFooter";
+import { FeatureConfig } from "./FeatureConfig";
 
 export const CreateFeature = ({
 	onSuccess,
@@ -43,10 +46,14 @@ export const CreateFeature = ({
 		if (open) {
 			setFeature(getDefaultFeature(entityCreate));
 		}
-	}, [open]);
+	}, [open, entityCreate]);
 
 	const updateConfig = () => {
-		const config: any = structuredClone(feature.config);
+		const config: {
+			filters: {
+				value: string[];
+			}[];
+		} = structuredClone(feature.config);
 		if (
 			feature.type === FeatureType.Metered &&
 			eventNameInput &&

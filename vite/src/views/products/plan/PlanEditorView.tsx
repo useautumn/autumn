@@ -17,10 +17,11 @@ import { usePlanData } from "./hooks/usePlanData";
 type Sheets = "edit-plan" | "edit-feature" | null;
 
 export default function PlanEditorView() {
-	const { product: originalProduct, isLoading, error } = useProductQuery();
+	const { product: originalProduct } = useProductQuery();
 	const { isLoading: featuresLoading } = useFeaturesQuery();
 
 	const { product, setProduct, hasChanges } = usePlanData({ originalProduct });
+	const [entityFeatureIds, setEntityFeatureIds] = useState<string[]>([]);
 
 	const { modal } = useProductChangedAlert({ hasChanges });
 	const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
@@ -49,8 +50,8 @@ export default function PlanEditorView() {
 				setShowNewVersionDialog,
 				product,
 				setProduct,
-				// entityFeatureIds,
-				// setEntityFeatureIds,
+				entityFeatureIds,
+				setEntityFeatureIds,
 				hasChanges,
 				setSheet: setSheetWithTransition,
 				editingState,
@@ -62,11 +63,9 @@ export default function PlanEditorView() {
 				setOpen={setShowNewVersionDialog}
 			/>
 			<div className="flex w-full h-full overflow-y-auto bg-[#eee]">
-				<div className="flex flex-col justify-between h-full flex-1 min-w-0">
-					{/* <div className="flex-1"> */}
+				<div className="flex flex-col justify-between h-full flex-1">
 					<EditPlanHeader />
 					<ManagePlan />
-					{/* </div> */}
 					<SaveChangesBar />
 				</div>
 
@@ -82,11 +81,8 @@ export const PlanSheets = ({ sheet }: { sheet: Sheets }) => {
 
 	// Find the item being edited
 	const currentItem =
-		product?.items?.find((item: ProductItem) => {
-			const itemId =
-				item.entitlement_id ||
-				item.price_id ||
-				`${item.feature_id}-${item.usage_model}`;
+		product?.items?.find((item: ProductItem, index: number) => {
+			const itemId = item.entitlement_id || item.price_id || `item-${index}`;
 			return editingState.id === itemId;
 		}) || null;
 
