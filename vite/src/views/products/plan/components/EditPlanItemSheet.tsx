@@ -1,6 +1,6 @@
 import { EntInterval, type PriceTier, TierInfinite } from "@autumn/shared";
 import { ArrowsCounterClockwiseIcon, Coins } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PanelButton } from "@/components/v2/buttons/PanelButton";
 import { LongCheckbox } from "@/components/v2/checkboxes/LongCheckbox";
 import {
@@ -24,15 +24,32 @@ import { TierInputRow } from "./TierInputRow";
 
 export function EditPlanFeatureSheet() {
 	const { item } = useProductItemContext();
+	
+	// Initialize state from item data
 	const [featureBehaviour, setFeatureBehaviour] = useState<
 		"consumable" | "persistent"
-	>("consumable");
+	>(item?.tiers && item.tiers.length > 0 ? "persistent" : "consumable");
+	
 	const [billingType, setBillingType] = useState<"included" | "priced">(
-		"included",
+		item?.price !== null || (item?.tiers && item.tiers.length > 0) ? "priced" : "included",
 	);
-	const [usageReset, setUsageReset] = useState<EntInterval>(EntInterval.Month);
-	const [unitsPerTier, setUnitsPerTier] = useState(1);
+	
+	const [usageReset, setUsageReset] = useState<EntInterval>(
+		item?.interval ? (item.interval as EntInterval) : EntInterval.Month
+	);
+	
+	const [unitsPerTier, setUnitsPerTier] = useState(item?.billing_units || 1);
 	const [prepaid, setPrepaid] = useState(false);
+
+	// Update state when item changes
+	useEffect(() => {
+		if (item) {
+			setFeatureBehaviour(item.tiers && item.tiers.length > 0 ? "persistent" : "consumable");
+			setBillingType(item.price !== null || (item.tiers && item.tiers.length > 0) ? "priced" : "included");
+			setUsageReset(item.interval ? (item.interval as EntInterval) : EntInterval.Month);
+			setUnitsPerTier(item.billing_units || 1);
+		}
+	}, [item]);
 
 	// Convert actual tiers to display format for read-only display
 	const displayTiers =
@@ -142,6 +159,8 @@ export function EditPlanFeatureSheet() {
 					<LabelInput
 						label="Included usage before payment"
 						placeholder="eg. 100 credits"
+						value={item?.included_usage?.toString() || ""}
+						readOnly
 					/>
 				</div>
 			</SheetSection>
@@ -211,22 +230,6 @@ export function EditPlanFeatureSheet() {
 							</Select>
 						</div>
 
-						{/* <div className="flex items-start gap-2">
-							<Checkbox
-								checked={prepaid}
-								onCheckedChange={(checked) =>
-									setPrepaid(checked === "indeterminate" ? false : checked)
-								}
-								className="mt-0.5"
-								size="sm"
-							/>
-							<div className="flex flex-col gap-0.5">
-								<div className="text-checkbox-label">Prepaid</div>
-								<div className="text-body-secondary">
-									Quantity will be chosen during checkout.
-								</div>
-							</div>
-						</div> */}
 						<LongCheckbox
 							title="Prepaid"
 							subtitle="Quantity will be chosen during checkout."

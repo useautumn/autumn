@@ -14,10 +14,9 @@ export const PlanFeatureList = () => {
 
 	const handleEdit = (item: ProductItem) => {
 		console.log("Edit feature:", item);
-		const itemId =
-			item.entitlement_id ||
-			item.price_id ||
-			`${item.feature_id}-${item.usage_model}`;
+		// Use array index as stable ID - won't change during editing
+		const itemIndex = product?.items?.findIndex((i) => i === item) || 0;
+		const itemId = item.entitlement_id || item.price_id || `item-${itemIndex}`;
 		setEditingState({ type: "feature", id: itemId });
 		setSheet("edit-feature");
 	};
@@ -58,10 +57,7 @@ export const PlanFeatureList = () => {
 			<h4 className="text-sm font-medium text-foreground mb-2">Features</h4>
 			<div className="space-y-1">
 				{filteredItems.map((item: ProductItem, index: number) => {
-					const itemId =
-						item.entitlement_id ||
-						item.price_id ||
-						`${item.feature_id}-${item.usage_model}`;
+					const itemId = item.entitlement_id || item.price_id || `item-${index}`;
 					const isBeingEdited =
 						editingState.type === "feature" && editingState.id === itemId;
 
