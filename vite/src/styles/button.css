@@ -12,7 +12,8 @@
 		0 4px 4px 0 rgba(0, 0, 0, 0.06);
 }
 
-.btn-primary-shadow:focus {
+.btn-primary-shadow:focus-visible,
+.btn-primary-shadow:active {
 	box-shadow:
 		0 0 0 0.2px var(--color-primary-btn-border),
 		0 -3px 4px 0 rgba(0, 0, 0, 0.04) inset,
@@ -32,7 +33,8 @@
 		0 4px 4px 0 rgba(0, 0, 0, 0.06);
 }
 
-.btn-secondary-shadow:focus {
+.btn-secondary-shadow:focus-visible,
+.btn-secondary-shadow:active {
 	box-shadow:
 		0 0 0 0.2px var(--primary),
 		0 -3px 4px 0 rgba(0, 0, 0, 0.04) inset,

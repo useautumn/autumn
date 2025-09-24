@@ -1,15 +1,21 @@
+/** biome-ignore-all lint/a11y/noStaticElementInteractions: <explanation> */
+/** biome-ignore-all lint/a11y/useSemanticElements: <explanation> */
 import type { ProductItem } from "@autumn/shared";
 import { getProductItemDisplay } from "@autumn/shared";
-import {
-	DotsSixVerticalIcon,
-	PencilSimpleIcon,
-	TrashIcon,
-} from "@phosphor-icons/react";
-import { HoverClickableIcon } from "@/components/v2/buttons/HoverClickableIcon";
-import { FeatureArrowIcon } from "@/components/v2/icons/AutumnIcons";
+import { TrashIcon } from "@phosphor-icons/react";
+import { CopyButton } from "@/components/v2/buttons/CopyButton";
+import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { cn } from "@/lib/utils";
+import { getItemId } from "@/utils/product/productItemUtils";
+import { useProductContext } from "@/views/products/product/ProductContext";
 import { PlanFeatureIcon } from "./PlanFeatureIcon";
+
+// Custom dot component with bigger height but smaller width
+const CustomDotIcon = () => {
+	return <div className="w-[2px] h-[2px] mx-0.5 bg-current rounded-full" />;
+};
 
 interface PlanFeatureRowProps {
 	item: ProductItem;
@@ -17,17 +23,18 @@ interface PlanFeatureRowProps {
 	onEdit?: (item: ProductItem) => void;
 	onDelete?: (item: ProductItem) => void;
 	editDisabled?: boolean;
+	index?: number;
 }
 
 export const PlanFeatureRow = ({
 	item,
-	onRowClick,
 	onEdit,
 	onDelete,
-	editDisabled,
+	index,
 }: PlanFeatureRowProps) => {
 	const { org } = useOrg();
 	const { features } = useFeaturesQuery();
+	const { editingState } = useProductContext();
 
 	const getDisplayText = (item: ProductItem) => {
 		const displayData = getProductItemDisplay({
@@ -39,62 +46,68 @@ export const PlanFeatureRow = ({
 		return displayData.primary_text;
 	};
 
+	const isSelected = getItemId({ item, itemIndex: index }) === editingState.id;
+
 	return (
-		<div 
-			className="group flex flex-row items-center bg-white border border-border rounded-lg h-[30px] w-full px-[7px] py-[6px] gap-1 shadow-[0px_4px_4px_rgba(0,0,0,0.02),_inset_0px_-3px_4px_rgba(0,0,0,0.04)] form-input cursor-pointer hover:bg-muted/30 transition-colors"
+		<div
+			role="button"
+			tabIndex={0}
+			className={cn(
+				"flex w-full group !h-9 group/row input-base btn-secondary-shadow",
+				!isSelected &&
+					"hover:!bg-hover-primary focus-visible:!bg-hover-primary focus-visible:!border-primary",
+				isSelected &&
+					"!bg-active-primary !border-primary !shadow-[0px_0px_0px_0.2px_var(--color-primary)]",
+			)}
 			onClick={() => onEdit?.(item)}
+			onKeyDown={(e) => {
+				if (e.key === "Enter" || e.key === " ") {
+					e.preventDefault();
+					onEdit?.(item);
+				}
+			}}
 		>
 			{/* Left side - Icons and text */}
-			<div className="flex flex-row items-center flex-1 gap-2 min-w-0">
-				{/* Icon container */}
+			<div className="flex flex-row items-center flex-1 gap-4 min-w-0">
 				<div className="flex flex-row items-center gap-1 flex-shrink-0">
-					{/* First icon */}
 					<PlanFeatureIcon item={item} position="left" />
-					<FeatureArrowIcon />
-					{/* Second icon */}
+					<CustomDotIcon />
 					<PlanFeatureIcon item={item} position="right" />
 				</div>
 
-				{/* Feature text */}
 				<div className="flex items-center gap-2 flex-1 min-w-0">
 					<span className="text-t2 font-medium whitespace-nowrap font-inter text-[13px] leading-4 tracking-[-0.003em]">
 						{getDisplayText(item)}
 					</span>
+					<CopyButton
+						text={item.feature_id || ""}
+						disableActive={true}
+						size="sm"
+						variant="skeleton"
+						className="opacity-0 group-hover:opacity-100 transition-opacity duration-50"
+					/>
 				</div>
 			</div>
 
-			{/* Right side - Edit, Delete and drag handle */}
-			<div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-				{/* Edit button */}
-				<HoverClickableIcon
-					icon={<PencilSimpleIcon size={16} weight="regular" />}
-					onClick={(e) => {
-						e.stopPropagation();
-						onEdit?.(item);
-					}}
-					disabled={editDisabled}
-					aria-label="Edit feature"
-				/>
-
-				{/* Delete button */}
-				<HoverClickableIcon
+			<div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-50">
+				<IconButton
 					icon={<TrashIcon size={16} weight="regular" />}
+					iconOrientation="center"
 					onClick={(e) => {
 						e.stopPropagation();
+						e.preventDefault();
 						onDelete?.(item);
 					}}
 					aria-label="Delete feature"
+					variant="skeleton"
+					disableActive={true}
 				/>
 
-				{/* 6-dot drag handle */}
-				<div 
-					className="group/btn cursor-grab active:cursor-grabbing flex items-center justify-center p-1 w-6 h-6"
-					onClick={(e) => e.stopPropagation()}
-				>
+				{/* <div className="group/btn cursor-grab active:cursor-grabbing flex items-center justify-center p-1 w-6 h-6">
 					<div className="text-t3 group-hover/btn:text-primary transition-colors">
 						<DotsSixVerticalIcon size={16} weight="bold" />
 					</div>
-				</div>
+				</div> */}
 			</div>
 		</div>
 	);

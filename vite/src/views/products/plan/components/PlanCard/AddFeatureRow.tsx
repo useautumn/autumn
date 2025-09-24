@@ -8,6 +8,7 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
+import { Button } from "@/components/v2/buttons/Button";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { CreateFeature } from "@/views/products/features/components/CreateFeature";
 import { FeatureTypeBadge } from "@/views/products/features/components/FeatureTypeBadge";
@@ -15,6 +16,7 @@ import { useProductContext } from "@/views/products/product/ProductContext";
 
 interface AddFeatureRowProps {
 	disabled?: boolean;
+	onClick?: () => void;
 }
 
 export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
@@ -50,7 +52,7 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 		setPopoverOpen(false);
 
 		// Open edit sidebar for the new item
-		const itemIndex = (product.items || []).length;
+		const itemIndex = newItems.length;
 		const itemId =
 			newItem.entity_feature_id || newItem.feature_id || `item-${itemIndex}`;
 		setEditingState({ type: "feature", id: itemId });
@@ -63,23 +65,14 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 				// Show popover with feature dropdown when features exist
 				<Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
 					<PopoverTrigger asChild>
-						<button
-							type="button"
-							className="group/btn flex items-center justify-center bg-white border border-border rounded-lg h-[30px] w-full shadow-[0px_4px_4px_rgba(0,0,0,0.02),_inset_0px_-3px_4px_rgba(0,0,0,0.04)] cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed form-input"
-							tabIndex={0}
+						<Button
+							variant="secondary"
+							className="w-full !h-8"
 							disabled={disabled}
 							aria-label="Add new feature"
 						>
-							<div
-								className={
-									disabled
-										? "text-t6"
-										: "text-t3 group-hover/btn:text-primary transition-colors"
-								}
-							>
-								<PlusIcon size={16} weight="regular" />
-							</div>
-						</button>
+							<PlusIcon size={16} weight="regular" />
+						</Button>
 					</PopoverTrigger>
 					<PopoverContent className="w-80 p-0" align="start">
 						<div className="max-h-60 overflow-y-auto">

@@ -1,7 +1,7 @@
 import { mapToProductV3 } from "@autumn/shared";
-import { CurrencyDollarIcon } from "@phosphor-icons/react";
-import { CopyableSpan } from "@/components/general/CopyablePre";
-import { IconBadge } from "@/components/v2/badges/IconBadge";
+import { CrosshairSimpleIcon } from "@phosphor-icons/react";
+import { CopyButton } from "@/components/v2/buttons/CopyButton";
+import { IconButton } from "@/components/v2/buttons/IconButton";
 import { CardHeader } from "@/components/v2/cards/Card";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { useProductContext } from "@/views/products/product/ProductContext";
@@ -17,16 +17,15 @@ export const PlanCardHeader = () => {
 
 	return (
 		<CardHeader>
-			<div className="flex flex-row items-center justify-between gap-4 w-full whitespace-nowrap">
-				<div className="flex flex-row items-baseline gap-2">
-					<span className="text-main font-medium w-fit whitespace-nowrap">
+			<div className="flex flex-row items-center justify-between w-full">
+				<div className="flex flex-row items-center gap-2">
+					<span className="text-main-sec w-fit whitespace-nowrap">
 						{product.name}
 					</span>
-					<CopyableSpan text={product.id} className="text-xs" copySize={12} />
+					<CopyButton text={product.id} className="text-xs" size="sm" />
 				</div>
 				<PlanCardToolbar
 					onEdit={() => {
-						console.log("Edit plan:", product.id);
 						setEditingState({ type: "plan", id: product.id });
 						setSheet("edit-plan");
 					}}
@@ -35,14 +34,20 @@ export const PlanCardHeader = () => {
 				/>
 			</div>
 
-			<span className="text-sm text-t3">
+			<span className="text-sm text-t3 max-w-[80%] line-clamp-2">
 				Unlock advanced AI chat features with unlimited messages, priority
 				support, and custom model fine-tuning capabilities.
 			</span>
 
-			<IconBadge
-				icon={<CurrencyDollarIcon size={14} weight="regular" />}
-				className="mt-1"
+			<IconButton
+				variant="secondary"
+				icon={<CrosshairSimpleIcon />}
+				onClick={() => {
+					setEditingState({ type: "plan", id: product.id });
+					setSheet("edit-plan");
+				}}
+				disabled={isPlanBeingEdited}
+				className="mt-2 !opacity-100"
 			>
 				{productV3.price?.amount ? (
 					<span className="text-sm font-medium text-t2">
@@ -54,7 +59,7 @@ export const PlanCardHeader = () => {
 				) : (
 					<span className="text-t4 text-sm">No price set</span>
 				)}
-			</IconBadge>
+			</IconButton>
 		</CardHeader>
 	);
 };

@@ -14,7 +14,8 @@ export const PlanFeatureList = () => {
 
 	const handleEdit = (item: ProductItem) => {
 		// Use array index as stable ID - won't change during editing
-		const itemIndex = product?.items?.findIndex((i) => i === item) || 0;
+		const itemIndex =
+			product?.items?.findIndex((i: ProductItem) => i === item) || 0;
 		const itemId = item.entitlement_id || item.price_id || `item-${itemIndex}`;
 
 		setEditingState({ type: "feature", id: itemId });
@@ -65,33 +66,29 @@ export const PlanFeatureList = () => {
 	}
 
 	return (
-		<div className="space-y-1">
+		<div className="space-y-2">
 			<h4 className="text-sm font-medium text-foreground mb-2">Features</h4>
-			<div className="space-y-1">
-				{filteredItems.map((item: ProductItem, index: number) => {
-					const itemId =
-						item.entitlement_id || item.price_id || `item-${index}`;
-					const isBeingEdited =
-						editingState.type === "feature" && editingState.id === itemId;
+			{filteredItems.map((item: ProductItem, index: number) => {
+				const itemId = item.entitlement_id || item.price_id || `item-${index}`;
+				const isBeingEdited =
+					editingState.type === "feature" && editingState.id === itemId;
 
-					return (
-						<PlanFeatureRow
-							key={item.entitlement_id || item.price_id || index}
-							item={item}
-							onRowClick={handleFeatureClick}
-							onEdit={handleEdit}
-							onDelete={handleDelete}
-							editDisabled={isBeingEdited}
-						/>
-					);
-				})}
-				<AddFeatureRow
-					onClick={handleAddFeature}
-					disabled={
-						editingState.type === "feature" && editingState.id === "new"
-					}
-				/>
-			</div>
+				return (
+					<PlanFeatureRow
+						key={item.entitlement_id || item.price_id || index}
+						item={item}
+						index={index}
+						onRowClick={handleFeatureClick}
+						onEdit={handleEdit}
+						onDelete={handleDelete}
+						editDisabled={isBeingEdited}
+					/>
+				);
+			})}
+			<AddFeatureRow
+				onClick={handleAddFeature}
+				disabled={editingState.type === "feature" && editingState.id === "new"}
+			/>
 		</div>
 	);
 };

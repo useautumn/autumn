@@ -104,9 +104,12 @@ export const PlanFeatureIcon = ({ item, position }: PlanFeatureIconProps) => {
 	return (
 		<div className={iconData.color}>
 			{isPhosphorIcon ? (
-				<Icon size={16} weight={position === "left" ? "bold" : "regular"} />
+				<Icon
+					className="!size-3"
+					weight={position === "left" ? "bold" : "regular"}
+				/>
 			) : (
-				<Icon />
+				<Icon className="!size-3" />
 			)}
 		</div>
 	);

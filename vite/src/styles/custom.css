@@ -1,3 +1,15 @@
+/* INPUT HEIGHT */
+.h-input {
+	height: 1.75rem; /* 28px, h-7 */
+}
+
+.active-input-shadow {
+	box-shadow:
+		0 0 0 0.5px var(--primary),
+		0 0 8px 1px rgba(136, 56, 255, 0.25),
+		0 4px 4px 0 rgba(0, 0, 0, 0.04);
+}
+
 /* 1. Input Shadow */
 .input-shadow {
 	box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.02);
