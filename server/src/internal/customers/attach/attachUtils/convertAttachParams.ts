@@ -226,8 +226,8 @@ export const paramsToCurSub = async ({
 }) => {
 	const { stripeCli } = attachParams;
 	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
-	console.log("Cur cus product:", curCusProduct);
-	console.log("Sub IDs:", curCusProduct?.subscription_ids);
+	// console.log("Cur cus product:", curCusProduct);
+	// console.log("Sub IDs:", curCusProduct?.subscription_ids);
 
 	const subIds = curCusProduct?.subscription_ids || [];
 
