@@ -1,9 +1,9 @@
 /* eslint-disable react-refresh/only-export-components */
-import { Slot } from "@radix-ui/react-slot";
+
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { buttonVariants } from "./Button";
+import { Button, type ButtonProps } from "./Button";
 
 const iconButtonVariants = cva(
 	"", // Empty base - we'll use buttonVariants as base
@@ -14,47 +14,23 @@ const iconButtonVariants = cva(
 				center: "flex-row justify-center",
 				right: "flex-row-reverse",
 			},
-			responsive: {
-				true: "",
-				false: "",
-			},
 		},
 		compoundVariants: [
 			{
-				responsive: true,
-				className: "gap-1 sm:gap-1.5 md:gap-2",
+				className: "gap-1",
 			},
 		],
 		defaultVariants: {
 			iconOrientation: "left",
-			responsive: false,
-		},
-	},
-);
-
-const iconVariants = cva(
-	`shrink-0 overflow-clip relative`,
-	{
-		variants: {
-			size: {
-				default: "size-[14px]", // Match Figma design
-			},
-		},
-		defaultVariants: {
-			size: "default",
 		},
 	},
 );
 
 export interface IconButtonProps
-	extends React.ComponentProps<"button">,
-		VariantProps<typeof buttonVariants>,
+	extends ButtonProps,
 		VariantProps<typeof iconButtonVariants> {
-	asChild?: boolean;
 	icon?: React.ReactNode;
 	rightIcon?: React.ReactNode;
-	children?: React.ReactNode;
-	responsive?: boolean;
 }
 
 const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
@@ -64,7 +40,6 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
 			variant,
 			size,
 			iconOrientation = "left",
-			responsive = false,
 			asChild = false,
 			icon,
 			rightIcon,
@@ -73,16 +48,36 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
 		},
 		ref,
 	) => {
-		const Comp = asChild ? Slot : "button";
+		const getIconColor = () => {
+			switch (variant) {
+				case "secondary":
+				case "muted":
+				case "skeleton":
+					return "text-t3";
+				case "primary":
+					return "text-[#f3f3f3]";
+				case "destructive":
+					return "text-[#FEE1E1]";
+				default:
+					return "text-t3"; // Default fallback
+			}
+		};
 
-		const renderIcon = (iconNode: React.ReactNode) => {
-			if (!iconNode) return null;
-			
-			return (
-				<span className={cn(iconVariants())}>
-					{iconNode}
-				</span>
-			);
+		const renderIcon = (icon: React.ReactNode) => {
+			if (!icon) return null;
+
+			// Clone the icon and add default size and color classes
+			if (React.isValidElement(icon)) {
+				return React.cloneElement(icon, {
+					className: cn(
+						size === "sm" ? "size-3" : "size-3.5",
+						getIconColor(),
+						icon.props.className,
+					),
+				} as React.HTMLAttributes<HTMLElement>);
+			}
+
+			return icon;
 		};
 
 		const renderContent = () => {
@@ -91,57 +86,60 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
 					return (
 						<>
 							{renderIcon(icon)}
-							{children && (
-								<span className="text-nowrap">{children}</span>
-							)}
+							{children}
 							{renderIcon(rightIcon)}
 						</>
 					);
 				case "right":
 					return (
 						<>
-							{renderIcon(rightIcon)}
-							{children && (
-								<span className="text-nowrap">{children}</span>
-							)}
 							{renderIcon(icon)}
+							{children}
+							{renderIcon(rightIcon)}
 						</>
 					);
 				case "center":
 					return (
 						<>
 							{renderIcon(icon || rightIcon)}
-							{children && (
-								<span className="text-nowrap">{children}</span>
-							)}
+							{children}
 						</>
 					);
 				default:
 					return (
 						<>
 							{renderIcon(icon)}
-							{children && (
-								<span className="text-nowrap">{children}</span>
-							)}
+							{children}
 							{renderIcon(rightIcon)}
 						</>
 					);
 			}
 		};
 
+		const iconToMainClass = () => {
+			switch (iconOrientation) {
+				case "center":
+					return "!h-6 w-6"; // by default is size small
+				default:
+					return "";
+			}
+		};
+
 		return (
-			<Comp
+			<Button
 				ref={ref}
+				variant={variant}
+				size={size}
+				asChild={asChild}
 				className={cn(
-					buttonVariants({ variant, size }),
-					iconButtonVariants({ iconOrientation, responsive }),
-					responsive && "gap-1 sm:gap-1.5 md:gap-2", // Override button gap for responsive
-					className
+					iconButtonVariants({ iconOrientation }),
+					iconToMainClass(),
+					className,
 				)}
 				{...props}
 			>
 				{renderContent()}
-			</Comp>
+			</Button>
 		);
 	},
 );

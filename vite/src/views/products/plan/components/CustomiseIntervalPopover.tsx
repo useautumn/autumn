@@ -34,7 +34,7 @@ export const CustomiseIntervalPopover = ({
 			<PopoverTrigger asChild>
 				<Button
 					className="w-full justify-start px-2"
-					variant="ghost"
+					variant="skeleton"
 					disabled={item.included_usage === Infinite || item.interval == null}
 				>
 					<p className="text-t3">Customise Interval</p>

@@ -3,16 +3,13 @@ import { useId } from "react";
 export const FeatureArrowIcon = () => {
 	return (
 		<svg
-			width="8"
-			height="12"
-			viewBox="0 0 4 6"
+			width="4"
+			height="4"
+			viewBox="0 0 4 4"
 			fill="none"
 			xmlns="http://www.w3.org/2000/svg"
 		>
-			<path
-				d="M3.5 2.99984L0.875 5.02056L0.875 0.979111L3.5 2.99984Z"
-				fill="#C3C3C3"
-			/>
+			<path d="M2.33 2L0.58 3.35L0.58 0.65L2.33 2Z" fill="#C3C3C3" />
 			<title>Arrow</title>
 		</svg>
 	);

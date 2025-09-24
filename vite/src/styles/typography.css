@@ -11,6 +11,12 @@
 	color: var(--color-t1);
 }
 
+.text-main-sec {
+	font-size: 17px;
+	font-weight: var(--font-weight-medium);
+	color: var(--color-t1);
+}
+
 .text-sub {
 	font-size: 15px;
 	font-weight: var(--font-weight-semibold);
@@ -69,4 +75,25 @@
 	font-size: 13px;
 	font-weight: var(--font-weight-medium);
 	color: var(--color-t6);
+}
+
+.text-tiny {
+	color: var(--color-t4);
+	/* leading-trim: both;
+text-edge: cap;
+font-family: Inter; */
+	font-size: 11px;
+	font-weight: var(--font-weight-medium);
+}
+
+.text-tiny-id {
+	color: var(--color-t3);
+
+	/* Tiny ID */
+	font-family: "JetBrains Mono", "JetBrains Mono Fallback", monospace;
+	font-size: 11px;
+	font-style: normal;
+	font-weight: 500;
+	line-height: normal;
+	letter-spacing: -0.033px;
 }
