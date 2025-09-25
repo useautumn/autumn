@@ -19,12 +19,12 @@ const buttonVariants = cva(
 		variants: {
 			variant: {
 				// Custom
-				primary: `btn-primary-shadow !text-white bg-primary border border-transparent hover:bg-primary-btn-hover 
+				primary: `btn-primary-shadow !text-primary-foreground bg-primary border border-transparent hover:bg-primary-btn-hover 
         active:bg-primary-btn-active active:border-primary-btn-border
 				focus-visible:bg-primary-btn-active focus-visible:border-primary-btn-border
 				`,
 
-				secondary: `bg-white border border-[var(--color-input)] hover:border-primary hover:bg-hover-primary btn-secondary-shadow
+				secondary: `bg-input-background border border-[var(--color-input)] hover:border-primary hover:bg-hover-primary btn-secondary-shadow
 				focus-visible:bg-active-primary focus-visible:border-primary 
 				active:bg-active-primary active:border-primary
 				`,
@@ -39,8 +39,11 @@ const buttonVariants = cva(
 				active:bg-muted-active active:border-primary
 				`,
 
-				destructive:
-					"bg-destructive text-destructive-foreground hover:bg-destructive/90",
+				destructive: `bg-destructive !text-destructive-foreground border-[1.2px] border-transparent
+					hover:bg-destructive-hover btn-destructive-shadow
+					focus-visible:border-destructive-border
+					active:border-destructive-border
+					`,
 			},
 			size: {
 				default: "py-1 !px-[7px] text-body h-input",
@@ -116,14 +119,19 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 			switch (variant) {
 				case "primary":
 					return "active:!bg-primary active:!border-transparent focus-visible:!bg-primary focus-visible:!border-transparent";
+
 				case "secondary":
-					return "active:!bg-white active:!border-[var(--color-input)] focus-visible:!bg-white focus-visible:!border-[var(--color-input)]";
+					return "active:!bg-input-background active:!border-[var(--color-input)] focus-visible:!bg-input-background focus-visible:!border-[var(--color-input)]";
+
 				case "skeleton":
 					return "active:!bg-transparent active:!border-transparent focus-visible:!bg-transparent focus-visible:!border-transparent";
+
 				case "muted":
 					return "active:!bg-muted active:!border-transparent focus-visible:!bg-muted focus-visible:!border-transparent";
+
 				case "destructive":
 					return "active:!bg-destructive active:!border-transparent focus-visible:!bg-destructive focus-visible:!border-transparent";
+
 				default:
 					return "";
 			}

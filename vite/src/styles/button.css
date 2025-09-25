@@ -46,3 +46,22 @@
 	background-color: var(--color-active-primary);
 	box-shadow: 0 0 0 0.2px var(--primary);
 }
+
+.btn-destructive-shadow {
+	box-shadow:
+		0 -3px 4px 0 rgba(0, 0, 0, 0.12) inset,
+		0 4px 4px 0 rgba(0, 0, 0, 0.04);
+
+	&:hover {
+		box-shadow:
+			0 -3px 4px 0 rgba(0, 0, 0, 0.08) inset,
+			0 4px 4px 0 rgba(0, 0, 0, 0.06);
+	}
+
+	&:focus-visible,
+	&:active {
+		box-shadow:
+			0 -3px 4px 0 rgba(0, 0, 0, 0.08) inset,
+			0 4px 4px 0 rgba(0, 0, 0, 0.02);
+	}
+}
