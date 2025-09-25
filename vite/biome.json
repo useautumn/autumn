@@ -22,7 +22,8 @@
 				"noStaticOnlyClass": "off"
 			},
 			"suspicious": {
-				"noArrayIndexKey": "off"
+				"noArrayIndexKey": "off",
+				"noUnknownAtRules": "off"
 			},
 			"correctness": {
 				"useParseIntRadix": "off"
