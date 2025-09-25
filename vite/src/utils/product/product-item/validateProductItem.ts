@@ -49,6 +49,12 @@ export const validateProductItem = ({
 		item.included_usage = null;
 	} else if (!invalidNumber(item.included_usage)) {
 		item.included_usage = Number(item.included_usage);
+		
+		// Check for negative included usage
+		if (item.included_usage < 0) {
+			toast.error("Included usage cannot be negative");
+			return null;
+		}
 	}
 
 	if (isFeaturePriceItem(item) && nullish(item.usage_model)) {
