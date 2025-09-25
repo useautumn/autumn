@@ -1,6 +1,6 @@
-import path from "path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import path from "path";
 import { defineConfig } from "vite";
 
 // https://vite.dev/config/
@@ -9,6 +9,21 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			"@": path.resolve(__dirname, "./src"),
+
+			// Hide Radix UI imports with cleaner aliases
+			"@radix/accordion": "@radix-ui/react-accordion",
+			"@radix/checkbox": "@radix-ui/react-checkbox",
+			"@radix/context-menu": "@radix-ui/react-context-menu",
+			"@radix/dialog": "@radix-ui/react-dialog",
+			"@radix/dropdown-menu": "@radix-ui/react-dropdown-menu",
+			"@radix/popover": "@radix-ui/react-popover",
+			"@radix/scroll-area": "@radix-ui/react-scroll-area",
+			"@radix/select": "@radix-ui/react-select",
+			"@radix/separator": "@radix-ui/react-separator",
+			"@radix/slot": "@radix-ui/react-slot",
+			"@radix/switch": "@radix-ui/react-switch",
+			"@radix/tabs": "@radix-ui/react-tabs",
+			"@radix/tooltip": "@radix-ui/react-tooltip",
 		},
 	},
 	server: {

@@ -7,11 +7,11 @@
 @import "tailwindcss";
 @import "tailwind-scrollbar-hide/v4";
 @import "@squircle/tailwindcss";
-/* 
----break--- */
+
+/* ---break--- */
 @plugin "tailwindcss-animate";
-/* 
----break--- */
+
+/* ---break--- */
 @custom-variant dark (&:is(.dark *));
 
 :root {
@@ -40,7 +40,9 @@
 	--primary: #8838ff;
 
 	--border: #eaeae9;
-	--input: #d1d1d1;
+
+	--input: #dddddd;
+
 	--icon1: #888;
 	--muted: #f2f2f2;
 
@@ -235,6 +237,7 @@
 
 /* Hide number input spinners globally */
 input[type="number"] {
+	appearance: textfield; /* Standard property */
 	-moz-appearance: textfield; /* Firefox */
 }
 
@@ -262,6 +265,7 @@ input[type="number"]::-webkit-inner-spin-button {
 		display: flex;
 	}
 	.md\:hidden {
+		/* biome-ignore lint/complexity/noImportantStyles: required */
 		display: none !important;
 	}
 	.md\:block {

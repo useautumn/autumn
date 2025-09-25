@@ -23,13 +23,13 @@
 /* SECONDARY */
 .btn-secondary-shadow {
 	box-shadow:
-		0 -3px 4px 0 rgba(0, 0, 0, 0.04) inset,
+		0 -3px 4px 0 rgba(100, 100, 100, 0.03) inset,
 		0 4px 4px 0 rgba(0, 0, 0, 0.02);
 }
 
 .btn-secondary-shadow:hover {
 	box-shadow:
-		0 -3px 4px 0 rgba(0, 0, 0, 0.04) inset,
+		0 -3px 4px 0 rgba(100, 100, 100, 0.03) inset,
 		0 4px 4px 0 rgba(0, 0, 0, 0.06);
 }
 
@@ -37,7 +37,7 @@
 .btn-secondary-shadow:active {
 	box-shadow:
 		0 0 0 0.2px var(--primary),
-		0 -3px 4px 0 rgba(0, 0, 0, 0.04) inset,
+		0 -3px 4px 0 rgba(100, 100, 100, 0.03) inset,
 		0 4px 4px 0 rgba(0, 0, 0, 0.04);
 }
 
