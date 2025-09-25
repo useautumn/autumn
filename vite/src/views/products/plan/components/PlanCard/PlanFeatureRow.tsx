@@ -1,5 +1,5 @@
-/** biome-ignore-all lint/a11y/noStaticElementInteractions: <explanation> */
-/** biome-ignore-all lint/a11y/useSemanticElements: <explanation> */
+/** biome-ignore-all lint/a11y/noStaticElementInteractions: needed */
+/** biome-ignore-all lint/a11y/useSemanticElements: needed */
 import type { ProductItem } from "@autumn/shared";
 import { getProductItemDisplay } from "@autumn/shared";
 import { TrashIcon } from "@phosphor-icons/react";
