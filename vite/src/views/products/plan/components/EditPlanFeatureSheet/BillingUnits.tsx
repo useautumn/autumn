@@ -16,6 +16,8 @@ export function BillingUnits() {
 	const { item, setItem } = useProductItemContext();
 	const triggerRef = useRef<HTMLButtonElement>(null);
 
+	if (!item) return null;
+
 	const handleEnterClick = () => {
 		setItem({ ...item, billing_units: Number(item.billing_units) });
 		setPopoverOpen(false);
