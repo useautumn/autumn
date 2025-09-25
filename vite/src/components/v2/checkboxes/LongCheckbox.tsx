@@ -29,7 +29,7 @@ function LongCheckbox({
 			data-disabled={disabled}
 			data-state={checked ? "open" : "closed"}
 			className={cn(
-				"flex items-start gap-2 px-2 rounded-lg border bg-white",
+				"flex items-start gap-2 px-2 rounded-lg border bg-white select-none",
 				"!py-2 input-base input-shadow select-bg",
 				disabled && "opacity-50 cursor-not-allowed",
 				className,
