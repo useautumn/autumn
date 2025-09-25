@@ -53,7 +53,8 @@ export function IncludedUsage() {
 	};
 
 	// Determine billing type
-	const billingType = item.tiers && item.tiers.length > 0 ? "priced" : "included";
+	const billingType =
+		item.tiers && item.tiers.length > 0 ? "priced" : "included";
 
 	return (
 		<div className="space-y-4">
@@ -101,9 +102,7 @@ export function IncludedUsage() {
 			{/* Only show Usage Reset dropdown for included billing type */}
 			{billingType === "included" && (
 				<div>
-					<div className="text-form-label block mb-2">
-						Usage Reset
-					</div>
+					<div className="text-form-label block mb-2">Usage Reset</div>
 					<Select
 						value={item.interval ?? EntInterval.Lifetime}
 						onValueChange={handleBillingIntervalSelected}
@@ -179,7 +178,9 @@ export function IncludedUsage() {
 										<Button
 											variant="secondary"
 											className="px-4 h-7"
-											onClick={() => handleSaveCustomInterval(intervalCount as number)}
+											onClick={() =>
+												handleSaveCustomInterval(intervalCount as number)
+											}
 										>
 											Save
 										</Button>

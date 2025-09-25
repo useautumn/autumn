@@ -182,9 +182,19 @@ export function AdvancedSettings() {
 									<div className="flex items-center gap-2">
 										<Input
 											type="number"
-											value={rollover?.max === null ? "" : rollover?.max}
+											value={
+												rollover?.max === null
+													? ""
+													: rollover?.max === 0
+														? ""
+														: rollover?.max
+											}
 											className="w-32"
-											placeholder="Unlimited"
+											placeholder={
+												rollover?.max === null
+													? "Unlimited"
+													: "e.g. 100 credits"
+											}
 											disabled={rollover?.max === null}
 											onChange={(e) => {
 												const value = e.target.value;
@@ -212,15 +222,17 @@ export function AdvancedSettings() {
 										{rollover?.duration === RolloverDuration.Month && (
 											<Input
 												type="number"
-												value={rollover?.length || ""}
+												value={
+													rollover?.length === 0 ? "" : rollover?.length || ""
+												}
 												onChange={(e) => {
 													const value = e.target.value;
 													const numValue =
-														value === "" ? 1 : parseInt(value) || 1;
+														value === "" ? 0 : parseInt(value) || 0;
 													setRolloverConfigKey("length", numValue);
 												}}
-												className="w-20"
-												placeholder="1"
+												className="w-32"
+												placeholder="e.g. 1 month"
 												onClick={(e) => e.stopPropagation()}
 											/>
 										)}

@@ -8,7 +8,7 @@ export function PricedFeatureSettings() {
 	if (!item) return null;
 
 	const prepaid = item.usage_model === UsageModel.Prepaid;
-	
+
 	return (
 		<div className="mt-6">
 			<LongCheckbox
