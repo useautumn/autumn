@@ -138,6 +138,14 @@ const validateProductItem = ({
 			});
 		}
 
+		if (item.included_usage === Infinite) {
+			throw new RecaseError({
+				message: `Included usage can't be '${Infinite}' for tiered prices`,
+				code: ErrCode.InvalidInputs,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
+
 		if (item.billing_units && item.billing_units <= 0) {
 			throw new RecaseError({
 				message: `Billing units must be greater than 0`,
