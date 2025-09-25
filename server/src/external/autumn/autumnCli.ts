@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: AutumnInt is used for internal testing & scripts */
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -91,13 +92,13 @@ export class AutumnInt {
 			body: JSON.stringify(body),
 		});
 
-		if (response.status != 200) {
+		if (response.status !== 200) {
 			let error: any;
 			try {
 				error = await response.json();
 			} catch (error) {
 				throw new AutumnError({
-					message: "Failed to parse Autumn API error response",
+					message: `AutumnInt post request failed, error: ${error}`,
 					code: ErrCode.InternalError,
 				});
 			}
@@ -127,13 +128,13 @@ export class AutumnInt {
 			},
 		);
 
-		if (response.status != 200) {
+		if (response.status !== 200) {
 			let error: any;
 			try {
 				error = await response.json();
 			} catch (error) {
 				throw new AutumnError({
-					message: "Failed to parse Autumn API error response",
+					message: `AutumnInt delete request failed, error: ${error}`,
 					code: ErrCode.InternalError,
 				});
 			}
@@ -181,11 +182,6 @@ export class AutumnInt {
 	async checkout(
 		params: CheckoutParams & { invoice?: boolean; force_checkout?: boolean },
 	) {
-		// const data = await this.post(`/attach`, {
-		//   customer_id: customerId,
-		//   product_id: productId,
-		//   options: toSnakeCase(options),
-		// });
 		const data = await this.post(`/checkout`, params);
 
 		return data as CheckoutResult;
@@ -249,6 +245,13 @@ export class AutumnInt {
 	}
 
 	customers = {
+		list: async (params?: { limit?: number; offset?: number }) => {
+			const data = await this.get(
+				`/customers?${new URLSearchParams(params as Record<string, string>).toString()}`,
+			);
+			return data;
+		},
+
 		get: async (
 			customerId: string,
 			params?: {
