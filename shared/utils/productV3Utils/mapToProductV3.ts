@@ -16,8 +16,7 @@ export function mapToProductV3({
 		is_add_on: product.is_add_on,
 		is_default: product.is_default,
 		version: product.version,
-		description:
-			"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+		description: "",
 		created_at: product.created_at,
 		price: productV2ToBasePrice({ product }) || null,
 	};
