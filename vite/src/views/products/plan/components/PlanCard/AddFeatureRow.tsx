@@ -147,6 +147,36 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 					<CreateFeature
 						setOpen={setCreateFeatureOpen}
 						open={createFeatureOpen}
+						onSuccess={async (newFeature) => {
+							// Automatically create a new PlanFeatureRow item with the new feature
+							if (!product || !newFeature.id) return;
+
+							// Create a new item with the created feature
+							const newItem = {
+								feature_id: newFeature.id,
+								included_usage: null,
+								interval: ProductItemInterval.Month,
+								price: null,
+								tiers: null,
+								billing_units: 1,
+								entity_feature_id: null,
+								reset_usage_when_enabled: true,
+							};
+
+							// Add the new item to the product
+							const newItems = [...(product.items || []), newItem];
+							const updatedProduct = { ...product, items: newItems };
+							setProduct(updatedProduct);
+
+							// Close the create dialog
+							setCreateFeatureOpen(false);
+
+							// Open edit sidebar for the new item
+							const itemIndex = newItems.length - 1; // New item is at the last index
+							const itemId = getItemId({ item: newItem, itemIndex });
+							setEditingState({ type: "feature", id: itemId });
+							setSheet("edit-feature");
+						}}
 					/>
 				</CustomDialogContent>
 			</Dialog>
