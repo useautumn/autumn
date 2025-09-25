@@ -1,16 +1,14 @@
-import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
 import {
-	AppEnv,
+	type AppEnv,
 	CouponDurationType,
 	CusExpand,
-	FullCustomer,
-	Organization,
+	type FullCustomer,
+	type Organization,
 	RewardType,
-	Subscription,
 } from "@autumn/shared";
-import Stripe from "stripe";
+import type Stripe from "stripe";
+import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
 
 export const getCusRewards = async ({
 	org,
@@ -33,14 +31,14 @@ export const getCusRewards = async ({
 		return undefined;
 	}
 
-	let stripeCli = createStripeCli({
+	const stripeCli = createStripeCli({
 		org,
 		env,
 	});
 
 	const [stripeCus, stripeSubs] = await Promise.all([
 		stripeCli.customers.retrieve(
-			fullCus.processor?.id!,
+			fullCus.processor?.id,
 		) as Promise<Stripe.Customer>,
 		getStripeSubs({
 			stripeCli,
@@ -49,7 +47,7 @@ export const getCusRewards = async ({
 		}),
 	]);
 
-	let stripeDiscounts: Stripe.Discount[] = stripeSubs?.flatMap(
+	const stripeDiscounts: Stripe.Discount[] = stripeSubs?.flatMap(
 		(s) => s.discounts,
 	) as Stripe.Discount[];
 
@@ -57,7 +55,7 @@ export const getCusRewards = async ({
 		stripeDiscounts.push(stripeCus.discount);
 	}
 
-	let rewards = {
+	const rewards = {
 		discounts: stripeDiscounts.map((d) => {
 			let duration_type: CouponDurationType;
 			let duration_value = 0;
