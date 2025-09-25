@@ -1,33 +1,30 @@
-import RecaseError from "@/utils/errorUtils.js";
 import {
-	ProductItem,
+	type AppEnv,
 	EntInterval,
 	ErrCode,
-	TierInfinite,
-	ProductItemSchema,
-	Infinite,
-	ProductItemInterval,
-	Feature,
+	type Feature,
 	FeatureType,
-	AppEnv,
+	Infinite,
 	OnIncrease,
+	type ProductItem,
+	ProductItemInterval,
+	ProductItemSchema,
 	UsageModel,
-	RolloverDuration,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
+import RecaseError from "@/utils/errorUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
+import { createFeaturesFromItems } from "./createFeaturesFromItems.js";
+import { itemToEntInterval } from "./itemIntervalUtils.js";
 import {
 	isBooleanFeatureItem,
 	isFeatureItem,
 	isFeaturePriceItem,
 	isPriceItem,
 } from "./productItemUtils/getItemType.js";
-import { itemToEntInterval } from "./itemIntervalUtils.js";
-import { createFeaturesFromItems } from "./createFeaturesFromItems.js";
 
 const validateProductItem = ({
 	item,
-	features,
 }: {
 	item: ProductItem;
 	features: Feature[];
@@ -52,7 +49,7 @@ const validateProductItem = ({
 	}
 
 	// 2. If amount is set, it must be greater than 0
-	if (notNullish(item.price) && item.price! <= 0) {
+	if (notNullish(item.price) && item.price <= 0) {
 		throw new RecaseError({
 			message: `Price must be greater than 0`,
 			code: ErrCode.InvalidProductItem,
@@ -88,9 +85,10 @@ const validateProductItem = ({
 	// 4. If it's a feature item, it should have included usage as number or inf
 	if (isFeaturePriceItem(item) || isFeatureItem(item)) {
 		if (
-			typeof item.included_usage !== "number" &&
-			item.included_usage !== Infinite &&
-			notNullish(item.included_usage)
+			(typeof item.included_usage !== "number" &&
+				item.included_usage !== Infinite &&
+				notNullish(item.included_usage)) ||
+			item.included_usage === 0
 		) {
 			throw new RecaseError({
 				message: `Included usage must be a number or '${Infinite}'`,
@@ -107,9 +105,9 @@ const validateProductItem = ({
 	// 5. If it's a price, can't have day, minute or hour interval
 	if (isFeaturePriceItem(item) || isPriceItem(item)) {
 		if (
-			item.interval == ProductItemInterval.Day ||
-			item.interval == ProductItemInterval.Minute ||
-			item.interval == ProductItemInterval.Hour
+			item.interval === ProductItemInterval.Day ||
+			item.interval === ProductItemInterval.Minute ||
+			item.interval === ProductItemInterval.Hour
 		) {
 			throw new RecaseError({
 				message: `Price can't have day, minute or hour interval`,
@@ -119,9 +117,39 @@ const validateProductItem = ({
 		}
 	}
 
+	if ((isPriceItem(item) || isFeaturePriceItem(item)) && item.price === 0) {
+		throw new RecaseError({
+			message: `Price must be 0 or greater`,
+			code: ErrCode.InvalidInputs,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+
+	if (isFeaturePriceItem(item) && item.tiers) {
+		if (
+			item.tiers.some((x) => {
+				return x.amount <= 0;
+			})
+		) {
+			throw new RecaseError({
+				message: `Tiered prices must be greater than 0`,
+				code: ErrCode.InvalidInputs,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
+
+		if (item.billing_units && item.billing_units <= 0) {
+			throw new RecaseError({
+				message: `Billing units must be greater than 0`,
+				code: ErrCode.InvalidInputs,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
+	}
+
 	if (
-		item.usage_model == UsageModel.Prepaid &&
-		item.config?.on_increase == OnIncrease.BillImmediately
+		item.usage_model === UsageModel.Prepaid &&
+		item.config?.on_increase === OnIncrease.BillImmediately
 	) {
 		throw new RecaseError({
 			message: `Bill immediately is not supported for prepaid just yet, contact us at hey@useautumn.com if you're interested!`,
@@ -150,7 +178,7 @@ export const validateProductItems = ({
 	orgId: string;
 	env: AppEnv;
 }) => {
-	let { allFeatures, newFeatures } = createFeaturesFromItems({
+	const { allFeatures, newFeatures } = createFeaturesFromItems({
 		items: newItems,
 		curFeatures: features,
 		orgId,
@@ -169,21 +197,21 @@ export const validateProductItems = ({
 	// 1. Check values
 	for (let index = 0; index < newItems.length; index++) {
 		validateProductItem({ item: newItems[index], features });
-		let feature = features.find((f) => f.id == newItems[index].feature_id);
+		const feature = features.find((f) => f.id === newItems[index].feature_id);
 
-		if (feature && feature.type == FeatureType.Metered) {
+		if (feature && feature.type === FeatureType.Metered) {
 			newItems[index].feature_type = feature.config?.usage_type;
 		}
 	}
 
 	for (let index = 0; index < newItems.length; index++) {
-		let item = newItems[index];
-		let entInterval = itemToEntInterval(item);
+		const item = newItems[index];
+		const entInterval = itemToEntInterval(item);
 		const intervalCount = item.interval_count || 1;
 
-		if (isFeaturePriceItem(item) && entInterval == EntInterval.Lifetime) {
-			let otherItem = newItems.find((i: any, index2: any) => {
-				return i.feature_id == item.feature_id && index2 != index;
+		if (isFeaturePriceItem(item) && entInterval === EntInterval.Lifetime) {
+			const otherItem = newItems.find((i: ProductItem, index2: number) => {
+				return i.feature_id === item.feature_id && index2 !== index;
 			});
 
 			if (otherItem && isFeaturePriceItem(otherItem)) {
@@ -197,11 +225,11 @@ export const validateProductItems = ({
 
 		// Boolean duplicate
 		if (isBooleanFeatureItem(item)) {
-			let otherItem = newItems.find((i: any, index2: any) => {
+			const otherItem = newItems.find((i: ProductItem, index2: number) => {
 				return (
-					i.feature_id == item.feature_id &&
-					index2 != index &&
-					item.entity_feature_id == i.entity_feature_id
+					i.feature_id === item.feature_id &&
+					index2 !== index &&
+					item.entity_feature_id === i.entity_feature_id
 				);
 			});
 
@@ -214,13 +242,13 @@ export const validateProductItems = ({
 			}
 		}
 
-		let otherItem = newItems.find((i: any, index2: any) => {
+		const otherItem = newItems.find((i: ProductItem, index2: number) => {
 			return (
-				i.feature_id == item.feature_id &&
-				index2 != index &&
-				itemToEntInterval(i) == entInterval &&
-				(i.interval_count || 1) == intervalCount &&
-				i.entity_feature_id == item.entity_feature_id
+				i.feature_id === item.feature_id &&
+				index2 !== index &&
+				itemToEntInterval(i) === entInterval &&
+				(i.interval_count || 1) === intervalCount &&
+				i.entity_feature_id === item.entity_feature_id
 			);
 		});
 
@@ -244,7 +272,7 @@ export const validateProductItems = ({
 			});
 		}
 
-		if (item.usage_model && item.usage_model == otherItem?.usage_model) {
+		if (item.usage_model && item.usage_model === otherItem?.usage_model) {
 			throw new RecaseError({
 				message: `You're trying to add the same feature (${item.feature_id}), with the same reset interval. You should either change the reset interval of one of the items, or make one of them a prepaid quantity`,
 				code: ErrCode.InvalidInputs,
@@ -253,8 +281,8 @@ export const validateProductItems = ({
 		}
 
 		if (isPriceItem(item)) {
-			let otherItem = newItems.find((i: any, index2: any) => {
-				return i.interval === item.interval && index2 != index;
+			const otherItem = newItems.find((i: ProductItem, index2: number) => {
+				return i.interval === item.interval && index2 !== index;
 			});
 
 			if (otherItem) {
