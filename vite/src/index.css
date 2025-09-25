@@ -254,6 +254,14 @@ input[type="number"]::-webkit-inner-spin-button {
 	body {
 		@apply bg-background text-foreground;
 	}
+	::selection {
+		background: var(--primary);
+		color: white;
+	}
+	::-moz-selection {
+		background: var(--primary);
+		color: white;
+	}
 }
 
 /* Force responsive utilities generation for Bun compatibility */
