@@ -57,9 +57,9 @@ export function PanelButton({
 			/>
 
 			{/* Vertical seams - touch inner border edge */}
-			<div className="absolute left-1/4 top-0.5 bottom-0.5 w-px bg-zinc-300/30" />
-			<div className="absolute left-1/2 top-0.5 bottom-0.5 w-px bg-zinc-300/30" />
-			<div className="absolute left-3/4 top-0.5 bottom-0.5 w-px bg-zinc-300/30" />
+			<div className="absolute left-1/4 top-0 bottom-0 w-px bg-zinc-300/30" />
+			<div className="absolute left-1/2 top-0 bottom-0 w-px bg-zinc-300/30" />
+			<div className="absolute left-3/4 top-0 bottom-0 w-px bg-zinc-300/30" />
 
 			{/* Centered icon */}
 			<div
