@@ -1,7 +1,9 @@
+import { Button } from "@/components/v2/buttons/Button";
 import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/v2/dialogs/Dialog";
@@ -17,14 +19,22 @@ export const DeletePlanDialog = ({
 	const { product } = useProductContext();
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogContent>
+			<DialogContent className="max-w-sm">
 				<DialogHeader>
-					<DialogTitle>Are you absolutely sure?</DialogTitle>
+					<DialogTitle>Delete {product.name}</DialogTitle>
 					<DialogDescription>
-						This action cannot be undone. This will permanently delete your
-						account and remove your data from our servers.
+						Are you sure you want to delete this plan? This action cannot be
+						undone.
 					</DialogDescription>
 				</DialogHeader>
+				<DialogFooter>
+					<Button variant="secondary" onClick={() => setOpen(false)}>
+						Cancel
+					</Button>
+					<Button variant="destructive" onClick={() => setOpen(false)}>
+						Delete
+					</Button>
+				</DialogFooter>
 
 				{/* <div className="flex items-center gap-2">
 					<LabelInput

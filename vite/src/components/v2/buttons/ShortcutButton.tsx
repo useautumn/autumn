@@ -34,7 +34,7 @@ export const ShortcutButton = ({
 			{children}
 			{metaShortcut && (
 				<span className="flex items-center gap-0.5">
-					{keystrokeContainer(getMetaKey())} +{" "}
+					{keystrokeContainer(getMetaKey())}
 					{keystrokeContainer(metaShortcut.toUpperCase())}
 				</span>
 			)}
