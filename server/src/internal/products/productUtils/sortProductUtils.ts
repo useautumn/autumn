@@ -1,4 +1,4 @@
-import { FullProduct, Product, ProductV2 } from "@autumn/shared";
+import type { FullProduct } from "@autumn/shared";
 import { isProductUpgrade } from "../productUtils.js";
 
 export const sortProductsByPrice = ({
@@ -7,7 +7,7 @@ export const sortProductsByPrice = ({
 	products: FullProduct[];
 }) => {
 	products.sort((a, b) => {
-		let isUpgradeA = isProductUpgrade({
+		const isUpgradeA = isProductUpgrade({
 			prices1: a.prices,
 			prices2: b.prices,
 			usageAlwaysUpgrade: false,

@@ -51,12 +51,14 @@ export class AutumnInt {
 		baseUrl,
 		version,
 		orgConfig,
+		liveUrl = false,
 	}: {
 		apiKey?: string;
 		secretKey?: string;
 		baseUrl?: string;
 		version?: string | APIVersion;
 		orgConfig?: Partial<OrgConfig>;
+		liveUrl?: boolean;
 	} = {}) {
 		// this.apiKey = apiKey || process.env.AUTUMN_API_KEY || "";
 		this.apiKey =
@@ -75,7 +77,9 @@ export class AutumnInt {
 			this.headers["org-config"] = JSON.stringify(orgConfig);
 		}
 
-		this.baseUrl = baseUrl || "http://localhost:8080/v1";
+		this.baseUrl =
+			baseUrl ||
+			(liveUrl ? "https://api.useautumn.com/v1" : "http://localhost:8080/v1");
 	}
 
 	async get(path: string) {
