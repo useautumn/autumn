@@ -9,6 +9,8 @@ import {
 	type ProductItem,
 	ProductItemInterval,
 	ProductItemSchema,
+	type RolloverConfig,
+	RolloverDuration,
 	UsageModel,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
@@ -166,13 +168,50 @@ const validateProductItem = ({
 		});
 	}
 
-	// Rollover
-	// if (item.config?.rollover) {
-	//   let rollover = item.config.rollover;
+	// Rollover validation
+	if (item.config?.rollover) {
+		const rollover = item.config.rollover as RolloverConfig;
 
-	//   if (rollover.duration == RolloverDuration.Month) {
-	//   }
-	// }
+		// Ensure rollover is only allowed for items with intervals and included usage
+		if (
+			item.interval === null ||
+			nullish(item.included_usage) ||
+			item.included_usage === 0
+		) {
+			throw new RecaseError({
+				message: "Rollover is only allowed for items with intervals and included usage",
+				code: ErrCode.InvalidInputs,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
+
+		// Validate rollover max amount
+		if (rollover.max !== null && typeof rollover.max === "number") {
+			if (rollover.max < 0) {
+				throw new RecaseError({
+					message: "Rollover maximum amount must be positive",
+					code: ErrCode.InvalidInputs,
+					statusCode: StatusCodes.BAD_REQUEST,
+				});
+			}
+		}
+
+		// Validate rollover length for monthly durations
+		if (rollover.duration === RolloverDuration.Month) {
+			if (typeof rollover.length !== "number" || rollover.length < 0) {
+				throw new RecaseError({
+					message: "Rollover length must be a positive number for monthly durations",
+					code: ErrCode.InvalidInputs,
+					statusCode: StatusCodes.BAD_REQUEST,
+				});
+			}
+		}
+
+		// Set length to 0 for forever duration
+		if (rollover.duration === RolloverDuration.Forever) {
+			rollover.length = 0;
+		}
+	}
 };
 
 export const validateProductItems = ({
