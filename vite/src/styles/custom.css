@@ -34,7 +34,7 @@
 
 	border: 1px solid var(--color-input);
 	border-radius: var(--radius);
-	background-color: white;
+	background-color: var(--color-input-background);
 	color: var(--color-t2);
 
 	&:hover:not([data-disabled="true"]):not(:disabled) {
@@ -53,7 +53,9 @@
 
 /* Hover + Active BG for select */
 .select-bg {
-	&:hover:not(:disabled):not([data-state="open"]):not([data-state="checked"]):not(:active) {
+	&:hover:not(:disabled):not([data-state="open"]):not(
+			[data-state="checked"]
+		):not(:active) {
 		background-color: var(--color-hover-primary);
 	}
 
