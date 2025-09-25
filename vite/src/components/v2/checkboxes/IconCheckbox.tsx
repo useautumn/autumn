@@ -38,6 +38,8 @@ const IconCheckbox = React.forwardRef<HTMLButtonElement, IconCheckboxProps>(
 		const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
 			onCheckedChange?.(!checked);
 			onClick?.(event);
+			// Remove focus after click to prevent stuck active state
+			event.currentTarget.blur();
 		};
 
 		const getIconColor = () => {
@@ -137,11 +139,11 @@ const IconCheckbox = React.forwardRef<HTMLButtonElement, IconCheckboxProps>(
 				className={cn(
 					iconButtonVariants({ iconOrientation }),
 					iconToMainClass(),
-					checked && "bg-zinc-200 text-t2 hover:bg-zinc-200",
+					"input-base input-shadow select-bg",
 					className,
 				)}
 				onClick={handleClick}
-				data-state={checked ? "checked" : "unchecked"}
+				data-state={checked ? "open" : "closed"}
 				aria-pressed={checked}
 				{...props}
 			>
