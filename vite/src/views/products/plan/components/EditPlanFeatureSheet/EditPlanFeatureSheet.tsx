@@ -1,4 +1,4 @@
-import type { ProductItem } from "@autumn/shared";
+import { type ProductItem, ProductItemFeatureType } from "@autumn/shared";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { getFeature } from "@/utils/product/entitlementUtils";
@@ -33,19 +33,23 @@ export function EditPlanFeatureSheet() {
 				description="Configure how this feature is used in your app"
 			/>
 
-			<SheetSection title="Billing Type">
-				<BillingType />
-			</SheetSection>
+			{item.feature_type !== ProductItemFeatureType.Static && (
+				<>
+					<SheetSection title="Billing Type">
+						<BillingType />
+					</SheetSection>
 
-			<SheetSection title="Included usage (optional)">
-				<IncludedUsage />
-			</SheetSection>
+					<SheetSection title="Included usage (optional)">
+						<IncludedUsage />
+					</SheetSection>
 
-			{isPricedFeature && (
-				<SheetSection title="Price">
-					<PriceTiers />
-					<ExtraSettings />
-				</SheetSection>
+					{isPricedFeature && (
+						<SheetSection title="Price">
+							<PriceTiers />
+							<ExtraSettings />
+						</SheetSection>
+					)}
+				</>
 			)}
 		</>
 	);

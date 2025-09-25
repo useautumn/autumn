@@ -33,10 +33,11 @@ export const PlanCardHeader = () => {
 				/>
 			</div>
 
-			<span className="text-sm text-t3 max-w-[80%] line-clamp-2">
-				Unlock advanced AI chat features with unlimited messages, priority
-				support, and custom model fine-tuning capabilities.
-			</span>
+			{productV3.description && (
+				<span className="text-sm text-t3 max-w-[80%] line-clamp-2">
+					{productV3.description}
+				</span>
+			)}
 
 			<IconButton
 				variant="secondary"
