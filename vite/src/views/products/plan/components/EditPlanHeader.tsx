@@ -10,6 +10,16 @@ import { useProductQuery } from "../../product/hooks/useProductQuery";
 export const EditPlanHeader = () => {
 	const { product } = useProductQuery();
 	const { counts } = useProductCountsQuery();
+	const badgeType =
+		product.is_default &&
+		product.free_trial &&
+		!product.free_trial.card_required
+			? "Default Trial"
+			: product.is_default
+				? "Default"
+				: product.is_add_on
+					? "Add-on"
+					: "";
 
 	const getProductAdminHover = () => {
 		return [
@@ -54,7 +64,7 @@ export const EditPlanHeader = () => {
 				</div>
 			</div>
 			<div className="flex flex-row gap-2">
-				<Badge variant="muted">Add-on</Badge>
+				{badgeType && <Badge variant="muted">{badgeType}</Badge>}
 				<IconBadge variant="muted" icon={<UserIcon />}>
 					{counts?.active || 0}
 				</IconBadge>
