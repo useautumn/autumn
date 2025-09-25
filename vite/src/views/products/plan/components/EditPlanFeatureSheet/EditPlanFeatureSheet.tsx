@@ -1,19 +1,17 @@
-import type { ProductItem } from "@autumn/shared";
+import { ProductItemFeatureType } from "@autumn/shared";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { getFeature } from "@/utils/product/entitlementUtils";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
+import { AdvancedSettings } from "./AdvancedSettings";
 import { BillingType } from "./BillingType";
-import { ExtraSettings } from "./ExtraSettings";
 import { IncludedUsage } from "./IncludedUsage";
+import { PricedFeatureSettings } from "./PricedFeatureSettings";
 import { PriceTiers } from "./PriceTiers";
+import { UsageReset } from "./UsageReset";
 
 export function EditPlanFeatureSheet() {
-	const {
-		item,
-	}: {
-		item: ProductItem;
-	} = useProductItemContext();
+	const { item } = useProductItemContext();
 	const { features } = useFeaturesQuery();
 
 	// Early return if no item
@@ -33,19 +31,26 @@ export function EditPlanFeatureSheet() {
 				description="Configure how this feature is used in your app"
 			/>
 
-			<SheetSection title="Billing Type">
-				<BillingType />
-			</SheetSection>
+			{item.feature_type !== ProductItemFeatureType.Static && (
+				<>
+					<SheetSection title="Billing type">
+						<BillingType />
+					</SheetSection>
 
-			<SheetSection title="Included usage (optional)">
-				<IncludedUsage />
-			</SheetSection>
+					<SheetSection title="Included usage (optional)">
+						<IncludedUsage />
+					</SheetSection>
 
-			{isPricedFeature && (
-				<SheetSection title="Price">
-					<PriceTiers />
-					<ExtraSettings />
-				</SheetSection>
+					{isPricedFeature && (
+						<SheetSection title="Price">
+							<PriceTiers />
+							<UsageReset showBillingLabel={true} />
+							<PricedFeatureSettings />
+						</SheetSection>
+					)}
+
+					<AdvancedSettings />
+				</>
 			)}
 		</>
 	);

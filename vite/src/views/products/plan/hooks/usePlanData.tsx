@@ -38,7 +38,11 @@ export function usePlanData({ originalProduct }: UsePlanDataProps) {
 
 		// console.log("Comparison:", comparison);
 
-		return !comparison.itemsSame || !comparison.freeTrialsSame;
+		return (
+			!comparison.itemsSame ||
+			!comparison.freeTrialsSame ||
+			!comparison.detailsSame
+		);
 	}, [product, features]);
 
 	return {

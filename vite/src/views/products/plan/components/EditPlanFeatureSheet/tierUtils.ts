@@ -30,7 +30,7 @@ export const addTier = ({
 		// Set previous last tier to a default value if it was infinite
 		if (lastTier.to === Infinite) {
 			const prevTierTo = newTiers[newTiers.length - 2]?.to;
-			lastTier.to = (typeof prevTierTo === 'number' ? prevTierTo : 0) + 100;
+			lastTier.to = (typeof prevTierTo === "number" ? prevTierTo : 0) + 100;
 		}
 
 		// Add new infinite tier
