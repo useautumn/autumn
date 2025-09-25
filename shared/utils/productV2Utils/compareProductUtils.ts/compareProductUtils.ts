@@ -45,6 +45,38 @@ const sanitizeItems = ({
 	});
 };
 
+export const compareDetails = ({
+	newProductV2,
+	curProductV2,
+}: {
+	newProductV2?: ProductV2;
+	curProductV2?: ProductV2;
+}) => {
+	let detailsSame = true;
+
+	if (newProductV2?.is_add_on !== curProductV2?.is_add_on) {
+		detailsSame = false;
+	}
+
+	if (newProductV2?.is_default !== curProductV2?.is_default) {
+		detailsSame = false;
+	}
+
+	if (newProductV2?.archived !== curProductV2?.archived) {
+		detailsSame = false;
+	}
+
+	if (newProductV2?.group !== curProductV2?.group) {
+		detailsSame = false;
+	}
+
+	if (newProductV2?.name !== curProductV2?.name) {
+		detailsSame = false;
+	}
+
+	return detailsSame;
+};
+
 export const productsAreSame = ({
 	newProductV1,
 	newProductV2,
@@ -89,6 +121,12 @@ export const productsAreSame = ({
 	let pricesChanged = false;
 	const newItems: ProductItem[] = [];
 	const removedItems: ProductItem[] = [];
+	let detailsSame = true;
+
+	detailsSame = compareDetails({
+		newProductV2,
+		curProductV2,
+	});
 
 	if (items1.length !== items2.length) {
 		itemsSame = false;
@@ -185,5 +223,6 @@ export const productsAreSame = ({
 		onlyEntsChanged: !pricesChanged,
 		newItems,
 		removedItems,
+		detailsSame,
 	};
 };

@@ -2,12 +2,9 @@
 import {
 	type Feature,
 	type FeatureItem,
-	FeatureItemSchema,
 	type FeaturePriceItem,
-	FeaturePriceItemSchema,
 	FeatureUsageType,
 	type PriceItem,
-	PriceItemSchema,
 	type ProductItem,
 	type UsageTier,
 } from "@autumn/shared";
@@ -218,7 +215,7 @@ export const itemsAreSame = ({
 		}
 
 		same = featureItemsAreSame({
-			item1: FeatureItemSchema.parse(item1),
+			item1: item1 as FeatureItem,
 			item2: item2 as FeatureItem,
 		});
 
@@ -235,8 +232,8 @@ export const itemsAreSame = ({
 
 		const { same: same_, pricesChanged: pricesChanged_ } =
 			featurePriceItemsAreSame({
-				item1: FeaturePriceItemSchema.parse(item1),
-				item2: FeaturePriceItemSchema.parse(item2),
+				item1: item1 as FeaturePriceItem,
+				item2: item2 as FeaturePriceItem,
 			});
 
 		same = same_;
@@ -256,8 +253,8 @@ export const itemsAreSame = ({
 	// 2. If price item
 	if (isPriceItem(item1)) {
 		same = priceItemsAreSame({
-			item1: PriceItemSchema.parse(item1),
-			item2: PriceItemSchema.parse(item2),
+			item1: item1 as PriceItem,
+			item2: item2 as PriceItem,
 		});
 		if (!same) {
 			pricesChanged = true;

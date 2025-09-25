@@ -14,11 +14,6 @@ export function PriceTiers() {
 
 	const tiers = item.tiers || [];
 	const includedUsage = item.included_usage || 0;
-	const unitsPerTier = item.billing_units || 1;
-
-	const handleUnitsChange = (units: number) => {
-		setItem({ ...item, billing_units: units });
-	};
 
 	// Only show pricing UI if billing type is "priced" (has tiers)
 	if (!tiers || tiers.length === 0) {
@@ -30,38 +25,40 @@ export function PriceTiers() {
 		const firstTier = tiers[0];
 
 		return (
-			<div className="flex gap-2 w-full items-center">
-				<div className="w-32">
-					<Input
-						value={firstTier.amount === 0 ? "" : firstTier.amount.toString()}
-						onChange={(e) =>
-							updateTier({
-								item,
-								setItem,
-								index: 0,
-								field: "amount",
-								value: e.target.value,
-							})
-						}
-						inputMode="numeric"
-						placeholder="0.00"
-					/>
-				</div>
+			<div className="space-y-2">
+				<div className="text-form-label">Pricing Tiers</div>
+				<div className="flex gap-2 w-full items-center">
+					<div className="w-32">
+						<Input
+							value={firstTier.amount === 0 ? "" : firstTier.amount.toString()}
+							onChange={(e) =>
+								updateTier({
+									item,
+									setItem,
+									index: 0,
+									field: "amount",
+									value: e.target.value,
+								})
+							}
+							inputMode="numeric"
+							placeholder="0.00"
+						/>
+					</div>
 
-				<BillingUnits
-					unitsPerTier={unitsPerTier}
-					onUnitsChange={handleUnitsChange}
-					disabled={false}
-				/>
+					<BillingUnits />
 
-				<div className="flex items-center ml-auto gap-1 pl-2">
-					<IconButton
-						variant="muted"
-						size="sm"
-						onClick={() => addTier({ item, setItem })}
-						icon={<Plus size={12} />}
-						className="p-1"
-					/>
+					<div className="flex items-center ml-auto gap-1 pl-2">
+						<IconButton
+							variant="muted"
+							size="sm"
+							onClick={() => addTier({ item, setItem })}
+							icon={<Plus size={12} />}
+							iconOrientation="left"
+							className="p-1"
+						>
+							Add Tiers
+						</IconButton>
+					</div>
 				</div>
 			</div>
 		);
@@ -70,6 +67,7 @@ export function PriceTiers() {
 	// Multi-tier UI - full tier management
 	return (
 		<div className="space-y-2">
+			<div className="text-form-label">Pricing Tiers</div>
 			{tiers.map((tier: PriceTier, index: number) => {
 				const isInfinite = tier.to === Infinite;
 				const _isLastTier = index === tiers.length - 1;
@@ -134,11 +132,7 @@ export function PriceTiers() {
 							</div>
 
 							{/* Interactive units display */}
-							<BillingUnits
-								unitsPerTier={unitsPerTier}
-								onUnitsChange={handleUnitsChange}
-								disabled={false}
-							/>
+							<BillingUnits />
 						</div>
 
 						{/* Action buttons */}

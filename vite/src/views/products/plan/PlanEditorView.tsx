@@ -7,10 +7,10 @@ import { useProductQuery } from "../product/hooks/useProductQuery";
 import { ProductContext, useProductContext } from "../product/ProductContext";
 import { ProductItemContext } from "../product/product-item/ProductItemContext";
 import ConfirmNewVersionDialog from "../product/versioning/ConfirmNewVersionDialog";
-import { ManagePlan } from "./components/Editor";
 import { EditPlanFeatureSheet } from "./components/EditPlanFeatureSheet/EditPlanFeatureSheet";
 import { EditPlanHeader } from "./components/EditPlanHeader";
 import { EditPlanSheet } from "./components/EditPlanSheet";
+import { ManagePlan } from "./components/ManagePlan";
 import { SaveChangesBar } from "./components/SaveChangesBar";
 import { usePlanData } from "./hooks/usePlanData";
 
@@ -114,7 +114,7 @@ export const PlanSheets = ({ sheet }: { sheet: Sheets }) => {
 					<ProductItemContext.Provider
 						value={{
 							item: currentItem,
-							setItem: setCurrentItem, // Now actually works!
+							setItem: setCurrentItem,
 							selectedIndex: 0,
 							showCreateFeature: false,
 							setShowCreateFeature: () => {},

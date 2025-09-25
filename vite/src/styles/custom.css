@@ -53,14 +53,17 @@
 
 /* Hover + Active BG for select */
 .select-bg {
-	&:hover:not(:disabled):not(:focus):not([data-state="open"]) {
+	&:hover:not(:disabled):not([data-state="open"]):not([data-state="checked"]):not(:active) {
 		background-color: var(--color-hover-primary);
 	}
 
-	&:focus,
+	&:active:not(:disabled) {
+		background-color: var(--color-active-primary) !important;
+	}
+
 	&[data-state="open"],
 	&[data-state="checked"] {
-		background-color: var(--color-active-primary);
+		background-color: var(--color-hover-primary);
 	}
 }
 

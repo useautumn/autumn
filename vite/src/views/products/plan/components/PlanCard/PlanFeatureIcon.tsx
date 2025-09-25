@@ -11,6 +11,7 @@ import {
 	PrepaidUsageIcon,
 	UsageBasedIcon,
 } from "@/components/v2/icons/AutumnIcons";
+import { cn } from "@/lib/utils";
 
 interface PlanFeatureIconProps {
 	item: ProductItem;
@@ -51,7 +52,7 @@ const getBillingType = (
 // Helper function to get the left icon (feature type)
 const getLeftIcon = (
 	item: ProductItem,
-): { icon: React.ComponentType; color: string } => {
+): { icon: React.ComponentType; color: string; size?: number } => {
 	const featureType = getFeatureType(item);
 
 	switch (featureType) {
@@ -62,7 +63,7 @@ const getLeftIcon = (
 		case ProductItemFeatureType.ContinuousUse:
 			return { icon: ArrowsCounterClockwiseIcon, color: "text-primary" }; // Persistent Usage - pink
 		case ProductItemFeatureType.Static:
-			return { icon: UsageBasedIcon, color: "text-primary" }; // Static - pink
+			return { icon: PowerIcon, color: "text-primary", size: 5 }; // Static - pink
 		default:
 			console.warn(`Unknown feature type: ${featureType}`);
 			return { icon: UsageBasedIcon, color: "text-primary" }; // Default - pink
@@ -72,7 +73,11 @@ const getLeftIcon = (
 // Helper function to get the right icon (billing type)
 const getRightIcon = (
 	item: ProductItem,
-): { icon: React.ComponentType | typeof CoinsIcon; color: string } => {
+): {
+	icon: React.ComponentType | typeof CoinsIcon;
+	color: string;
+	size?: number;
+} => {
 	const billingType = getBillingType(item);
 
 	switch (billingType) {
@@ -99,13 +104,18 @@ export const PlanFeatureIcon = ({ item, position }: PlanFeatureIconProps) => {
 	}
 
 	// Check if it's a Phosphor icon (has size prop)
-	const isPhosphorIcon = Icon === CoinsIcon;
+	const isPhosphorIcon =
+		typeof Icon === typeof CoinsIcon || typeof Icon === typeof PowerIcon;
 
 	return (
 		<div className={iconData.color}>
 			{isPhosphorIcon ? (
 				<Icon
-					className="!size-3"
+					className={cn(
+						"!size-3",
+						iconData.size ? `!size-${iconData.size}` : "",
+						iconData.color,
+					)}
 					weight={position === "left" ? "bold" : "regular"}
 				/>
 			) : (

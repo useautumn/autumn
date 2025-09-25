@@ -15,10 +15,10 @@ export function BillingType() {
 	const setBillingType = (type: "included" | "priced") => {
 		if (type === "included") {
 			// Remove tiers to switch to included
-			setItem({ ...item, tiers: null });
+			setItem({ ...item, tiers: null, billing_units: undefined });
 		} else {
 			// Add initial tier to switch to priced
-			setItem({ ...item, tiers: [{ to: 0, amount: 0 }] });
+			setItem({ ...item, tiers: [{ to: 0, amount: 0 }], billing_units: 1 });
 		}
 	};
 
