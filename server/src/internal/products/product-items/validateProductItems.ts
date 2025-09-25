@@ -102,6 +102,15 @@ const validateProductItem = ({
 		if (nullish(item.included_usage)) {
 			item.included_usage = 0;
 		}
+
+		// Check for negative included usage
+		if (typeof item.included_usage === "number" && item.included_usage < 0) {
+			throw new RecaseError({
+				message: `Included usage cannot be negative`,
+				code: ErrCode.InvalidInputs,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
 	}
 
 	// 5. If it's a price, can't have day, minute or hour interval
