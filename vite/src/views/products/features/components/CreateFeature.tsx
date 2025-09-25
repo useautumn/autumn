@@ -2,6 +2,7 @@ import {
 	type CreateFeature as CreateFeatureType,
 	FeatureType,
 } from "@autumn/shared";
+import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -90,8 +91,10 @@ export const CreateFeature = ({
 			} else {
 				setOpen(false);
 			}
-		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to create feature"));
+		} catch (error: unknown) {
+			toast.error(
+				getBackendErr(error as AxiosError, "Failed to create feature"),
+			);
 		}
 	};
 
