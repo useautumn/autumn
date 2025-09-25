@@ -1,4 +1,4 @@
-import { EntInterval, UsageModel } from "@autumn/shared";
+import { ProductItemInterval, UsageModel } from "@autumn/shared";
 import { LongCheckbox } from "@/components/v2/checkboxes/LongCheckbox";
 import {
 	Select,
@@ -17,8 +17,8 @@ export function ExtraSettings() {
 
 	// Derive values from item - no props needed
 	const usageReset = item.interval
-		? (item.interval as EntInterval)
-		: EntInterval.Month;
+		? (item.interval as ProductItemInterval)
+		: ProductItemInterval.Month;
 	const prepaid = item.usage_model === UsageModel.Prepaid;
 	return (
 		<div className="mt-6 space-y-4">
@@ -29,7 +29,7 @@ export function ExtraSettings() {
 				<Select
 					value={usageReset}
 					onValueChange={(value) => {
-						const interval = value as EntInterval;
+						const interval = value as ProductItemInterval;
 						setItem({ ...item, interval });
 					}}
 				>
@@ -37,7 +37,7 @@ export function ExtraSettings() {
 						<SelectValue placeholder="Select interval" />
 					</SelectTrigger>
 					<SelectContent>
-						{Object.values(EntInterval).map((interval) => (
+						{Object.values(ProductItemInterval).map((interval) => (
 							<SelectItem key={interval} value={interval}>
 								{keyToTitle(interval)}
 							</SelectItem>

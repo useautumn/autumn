@@ -14,11 +14,6 @@ export function PriceTiers() {
 
 	const tiers = item.tiers || [];
 	const includedUsage = item.included_usage || 0;
-	const unitsPerTier = item.billing_units || 1;
-
-	const handleUnitsChange = (units: number) => {
-		setItem({ ...item, billing_units: units });
-	};
 
 	// Only show pricing UI if billing type is "priced" (has tiers)
 	if (!tiers || tiers.length === 0) {
@@ -48,11 +43,7 @@ export function PriceTiers() {
 					/>
 				</div>
 
-				<BillingUnits
-					unitsPerTier={unitsPerTier}
-					onUnitsChange={handleUnitsChange}
-					disabled={false}
-				/>
+				<BillingUnits />
 
 				<div className="flex items-center ml-auto gap-1 pl-2">
 					<IconButton
@@ -60,8 +51,11 @@ export function PriceTiers() {
 						size="sm"
 						onClick={() => addTier({ item, setItem })}
 						icon={<Plus size={12} />}
+						iconOrientation="left"
 						className="p-1"
-					/>
+					>
+						Add Tiers
+					</IconButton>
 				</div>
 			</div>
 		);
@@ -134,11 +128,7 @@ export function PriceTiers() {
 							</div>
 
 							{/* Interactive units display */}
-							<BillingUnits
-								unitsPerTier={unitsPerTier}
-								onUnitsChange={handleUnitsChange}
-								disabled={false}
-							/>
+							<BillingUnits />
 						</div>
 
 						{/* Action buttons */}
