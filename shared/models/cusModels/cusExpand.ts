@@ -5,4 +5,5 @@ export enum CusExpand {
 	Entities = "entities",
 	Referrals = "referrals",
 	PaymentMethod = "payment_method",
+	UpcomingInvoice = "upcoming_invoice",
 }

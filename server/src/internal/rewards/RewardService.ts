@@ -2,8 +2,8 @@ import {
 	type AppEnv,
 	ErrCode,
 	type Reward,
+	type RewardType,
 	rewards,
-	RewardType,
 } from "@autumn/shared";
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -37,6 +37,26 @@ export class RewardService {
 		}
 
 		return result as Reward;
+	}
+
+	static async getInIds({
+		db,
+		ids,
+		orgId,
+		env,
+	}: {
+		db: DrizzleCli;
+		ids: string[];
+		orgId: string;
+		env: AppEnv;
+	}) {
+		return (await db.query.rewards.findMany({
+			where: and(
+				inArray(rewards.id, ids),
+				eq(rewards.org_id, orgId),
+				eq(rewards.env, env),
+			),
+		})) as Reward[];
 	}
 
 	static async getByIdOrCode({

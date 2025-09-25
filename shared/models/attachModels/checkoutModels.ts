@@ -1,8 +1,7 @@
 import { z } from "zod";
-import { AttachScenario } from "../checkModels/checkPreviewModels.js";
+import { FeatureOptionsSchema } from "../cusProductModels/cusProductModels.js";
 import { ProductItemResponseSchema } from "../productV2Models/productItemModels/prodItemResponseModels.js";
 import { ProductResponseSchema } from "../productV2Models/productResponseModels.js";
-import { FeatureOptionsSchema } from "../cusProductModels/cusProductModels.js";
 
 export const CheckoutLineSchema = z.object({
 	description: z.string(),

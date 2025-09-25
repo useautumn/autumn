@@ -3,6 +3,7 @@ import { AppEnv } from "../genModels/genEnums.js";
 import { RewardResponseSchema } from "../rewardModels/rewardModels/rewardResponseModels.js";
 import { CusProductResponseSchema } from "./cusResModels/cusProductResponse.js";
 import { CusReferralResponseSchema } from "./cusResModels/cusReferralsResponse.js";
+import { UpcomingInvoiceResponseSchema } from "./cusResModels/upcomingInvoiceResponse.js";
 import { EntityResponseSchema } from "./entityModels/entityResModels.js";
 import { InvoiceResponseSchema } from "./invoiceModels/invoiceResponseModels.js";
 
@@ -34,6 +35,7 @@ export const CusResponseSchema = z.object({
 	entities: z.array(EntityResponseSchema).optional(),
 	referrals: z.array(CusReferralResponseSchema).optional(),
 	payment_method: z.any().nullish(),
+	upcoming_invoice: UpcomingInvoiceResponseSchema.nullish(),
 });
 
 export type CusResponse = z.infer<typeof CusResponseSchema>;
