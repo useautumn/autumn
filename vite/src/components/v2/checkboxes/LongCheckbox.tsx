@@ -31,7 +31,7 @@ function LongCheckbox({
 			className={cn(
 				"flex items-start gap-2 px-2 rounded-lg border bg-white select-none",
 				"!py-2 input-base input-shadow select-bg",
-				disabled && "opacity-50 cursor-not-allowed",
+				disabled && "opacity-50 cursor-not-allowed pointer-events-none",
 				className,
 			)}
 		>
