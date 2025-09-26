@@ -36,9 +36,12 @@ export const useProductQuery = () => {
 		if (!productId) return null;
 
 		const url = `/products/${productId}/data2`;
-		const queryParams = {
-			version: queryStates.version,
-		};
+		const queryParams: { version?: number } = {};
+		
+		// Only include version if it's explicitly set, otherwise fetch latest
+		if (queryStates.version) {
+			queryParams.version = queryStates.version;
+		}
 
 		const { data } = await axiosInstance.get(url, { params: queryParams });
 		return data;
