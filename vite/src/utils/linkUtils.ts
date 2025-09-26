@@ -1,24 +1,36 @@
 import { AppEnv } from "@autumn/shared";
 
-export const getStripeCusLink = (customerId: string, env: AppEnv) => {
-	return `https://dashboard.stripe.com${
-		env == AppEnv.Live ? "" : "/test"
-	}/customers/${customerId}`;
+export const getStripeCusLink = (
+  customerId: string,
+  env: AppEnv,
+  accountId?: string
+) => {
+  return `https://dashboard.stripe.com${
+    env == AppEnv.Live ? "" : "/test"
+  }/${accountId}/customers/${customerId}`;
 };
 
-export const getStripeSubLink = (subscriptionId: string, env: AppEnv) => {
-	return `https://dashboard.stripe.com${
-		env == AppEnv.Live ? "" : "/test"
-	}/subscriptions/${subscriptionId}`;
+export const getStripeSubLink = (
+  subscriptionId: string,
+  env: AppEnv,
+  accountId?: string
+) => {
+  return `https://dashboard.stripe.com${
+    env == AppEnv.Live ? "" : "/test"
+  }/${accountId}/subscriptions/${subscriptionId}`;
 };
-export const getStripeSubScheduleLink = (scheduledId: string, env: AppEnv) => {
-	return `https://dashboard.stripe.com${
-		env == AppEnv.Live ? "" : "/test"
-	}/subscription_schedules/${scheduledId}`;
+export const getStripeSubScheduleLink = (
+  scheduledId: string,
+  env: AppEnv,
+  accountId?: string
+) => {
+  return `https://dashboard.stripe.com${
+    env == AppEnv.Live ? "" : "/test"
+  }/${accountId}/subscription_schedules/${scheduledId}`;
 };
 
 export const getStripeInvoiceLink = (stripeInvoice: any) => {
-	return `https://dashboard.stripe.com${
-		stripeInvoice.livemode ? "" : "/test"
-	}/invoices/${stripeInvoice.id || stripeInvoice.stripe_id}`;
+  return `https://dashboard.stripe.com${
+    stripeInvoice.livemode ? "" : "/test"
+  }/invoices/${stripeInvoice.id || stripeInvoice.stripe_id}`;
 };
