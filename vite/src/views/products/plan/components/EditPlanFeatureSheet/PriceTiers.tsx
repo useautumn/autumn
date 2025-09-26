@@ -54,7 +54,6 @@ export function PriceTiers() {
 							onClick={() => addTier({ item, setItem })}
 							icon={<Plus size={12} />}
 							iconOrientation="left"
-							className="p-1"
 						>
 							Add Tiers
 						</IconButton>

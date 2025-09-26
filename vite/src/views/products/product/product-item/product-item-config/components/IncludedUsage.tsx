@@ -1,13 +1,19 @@
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { Input } from "@/components/ui/input";
-import { 
-	Infinite, 
+import {
 	BillingInterval,
 	EntInterval,
-	ProductItemInterval,
+	Infinite,
 	UsageModel,
 } from "@autumn/shared";
 import { useState } from "react";
+import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
+import { ToggleDisplayButton } from "@/components/general/ToggleDisplayButton";
+import { Input } from "@/components/ui/input";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
 import {
 	Select,
 	SelectContent,
@@ -15,18 +21,11 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
 import { Button } from "@/components/v2/buttons/Button";
-import { useProductItemContext } from "../../ProductItemContext";
-import { ToggleDisplayButton } from "@/components/general/ToggleDisplayButton";
-import { itemIsUnlimited } from "@/utils/product/productItemUtils";
-import { isFeaturePriceItem } from "@/utils/product/getItemType";
-import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
 import { formatIntervalText } from "@/utils/formatUtils/formatTextUtils";
+import { isFeaturePriceItem } from "@/utils/product/getItemType";
+import { itemIsUnlimited } from "@/utils/product/productItemUtils";
+import { useProductItemContext } from "../../ProductItemContext";
 
 export const IncludedUsage = () => {
 	const { item, setItem } = useProductItemContext();
@@ -36,7 +35,9 @@ export const IncludedUsage = () => {
 		item.interval_count || 1,
 	);
 
-	const handleBillingIntervalSelected = (value: BillingInterval | EntInterval) => {
+	const handleBillingIntervalSelected = (
+		value: BillingInterval | EntInterval,
+	) => {
 		let usageModel = item.usage_model;
 		if (value === BillingInterval.OneOff) {
 			usageModel = UsageModel.Prepaid;
@@ -44,7 +45,10 @@ export const IncludedUsage = () => {
 
 		setItem({
 			...item,
-			interval: value === BillingInterval.OneOff || value === EntInterval.Lifetime ? null : value,
+			interval:
+				value === BillingInterval.OneOff || value === EntInterval.Lifetime
+					? null
+					: value,
 			usage_model: usageModel,
 		});
 	};
@@ -162,7 +166,9 @@ export const IncludedUsage = () => {
 									<Button
 										className="w-full justify-start px-2"
 										variant="skeleton"
-										disabled={item.included_usage === Infinite || item.interval == null}
+										disabled={
+											item.included_usage === Infinite || item.interval == null
+										}
 									>
 										<p className="text-t3">Customise Interval</p>
 									</Button>
@@ -191,7 +197,11 @@ export const IncludedUsage = () => {
 												}
 											}}
 										/>
-										<Button variant="secondary" className="px-4 h-7" onClick={handleSaveCustomInterval}>
+										<Button
+											variant="secondary"
+											className="px-4 h-7"
+											onClick={handleSaveCustomInterval}
+										>
 											Save
 										</Button>
 									</div>

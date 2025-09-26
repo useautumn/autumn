@@ -17,9 +17,9 @@ export * from "./productUtils/priceUtils.js";
 export * from "./productV2Utils/compareProductUtils.ts/compareItemUtils.js";
 export * from "./productV2Utils/compareProductUtils.ts/compareProductUtils.js";
 export * from "./productV2Utils/mapToProductV2.js";
+export * from "./productV2Utils/productItemUtils/classifyItemUtils.js";
 export * from "./productV2Utils/productItemUtils/convertItemUtils.js";
 export * from "./productV2Utils/productItemUtils/getItemType.js";
-
 // Item utils
 export * from "./productV2Utils/productItemUtils/mapToItem.js";
 export * from "./productV2Utils/productItemUtils/productItemUtils.js";

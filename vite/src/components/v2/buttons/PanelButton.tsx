@@ -21,16 +21,16 @@ export function PanelButton({
 			data-state={isSelected ? "open" : "closed"}
 			className={cn(
 				// Fixed dimensions
-				"w-[125px] h-[64px] relative flex items-center justify-center overflow-hidden cursor-pointer flex-shrink-0",
+				"w-[144px] h-[72px] relative flex items-center justify-center overflow-hidden cursor-pointer flex-shrink-0",
 				// Design system classes (following Select pattern)
 				"input-base input-shadow select-bg",
 				// Thicker border for panel effect
-				"!rounded-xl !border-1",
+				"!rounded-[0.5rem] !border-[0.09375rem]",
 				// Custom panel shadows
 				"shadow-[inset_0px_-8px_22px_0px_rgba(0,0,0,0.04)]",
 				// Selected state shadows
-				isSelected &&
-					"shadow-[0px_8px_18px_20px_rgba(136,56,255,0.05)] shadow-[0px_2px_8px_0px_rgba(136,56,255,0.25)]",
+				// isSelected &&
+				// 	"shadow-[0px_8px_18px_20px_rgba(136,56,255,0.05)] shadow-[0px_2px_8px_0px_rgba(136,56,255,0.25)]",
 				className,
 			)}
 		>
@@ -63,11 +63,14 @@ export function PanelButton({
 
 			{/* Centered icon */}
 			<div
-				className={`size-10 rounded-lg flex items-center justify-center relative ${
-					isSelected ? "bg-violet-100" : "bg-zinc-100"
-				}`}
+				className={cn(
+					"size-9 rounded-xl flex items-center justify-center relative",
+					isSelected
+						? "bg-[var(--color-panel-icon-background)]"
+						: "bg-zinc-100",
+				)}
 			>
-				<div className={isSelected ? "text-violet-600" : "text-stone-500"}>
+				<div className={isSelected ? "text-primary" : "text-stone-500"}>
 					{icon}
 				</div>
 			</div>

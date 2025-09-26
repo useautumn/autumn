@@ -1,7 +1,7 @@
 "use client";
 
 import { Slot } from "@radix-ui/react-slot";
-import { cva, type VariantProps } from "class-variance-authority";
+import type { VariantProps } from "class-variance-authority";
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Button, type ButtonProps } from "../buttons/Button";
@@ -22,6 +22,7 @@ const IconCheckbox = React.forwardRef<HTMLButtonElement, IconCheckboxProps>(
 			className,
 			variant = "secondary",
 			size = "sm",
+			hide = false,
 			iconOrientation = "center",
 			asChild = false,
 			checked = false,
@@ -124,11 +125,17 @@ const IconCheckbox = React.forwardRef<HTMLButtonElement, IconCheckboxProps>(
 		const iconToMainClass = () => {
 			switch (iconOrientation) {
 				case "center":
-					return "!h-6 w-6";
+					if (size === "sm") {
+						return "!h-6 w-6";
+					} else {
+						return "!h-7 w-7";
+					}
 				default:
 					return "";
 			}
 		};
+
+		if (hide) return null;
 
 		return (
 			<Comp
@@ -139,7 +146,7 @@ const IconCheckbox = React.forwardRef<HTMLButtonElement, IconCheckboxProps>(
 				className={cn(
 					iconButtonVariants({ iconOrientation }),
 					iconToMainClass(),
-					"input-base input-shadow select-bg",
+					"input-base input-shadow-tiny select-bg",
 					className,
 				)}
 				onClick={handleClick}

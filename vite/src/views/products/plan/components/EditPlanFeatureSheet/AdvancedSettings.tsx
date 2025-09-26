@@ -1,21 +1,6 @@
 /** biome-ignore-all lint/a11y/noStaticElementInteractions: shush */
-import {
-	FeatureUsageType,
-	type RolloverConfig,
-	RolloverDuration,
-} from "@autumn/shared";
-import { InfinityIcon } from "@phosphor-icons/react";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { FeatureUsageType } from "@autumn/shared";
 import { AreaCheckbox } from "@/components/v2/checkboxes/AreaCheckbox";
-import { IconCheckbox } from "@/components/v2/checkboxes/IconCheckbox";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
 import {
 	SheetAccordion,
 	SheetAccordionItem,
@@ -27,6 +12,8 @@ import {
 	getFeatureUsageType,
 } from "@/utils/product/entitlementUtils";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
+import { RolloverConfig } from "./advanced-settings/RolloverConfig";
+import { UsageLimit } from "./advanced-settings/UsageLimit";
 
 export function AdvancedSettings() {
 	const { features } = useFeaturesQuery();
@@ -37,9 +24,6 @@ export function AdvancedSettings() {
 	const usageType = getFeatureUsageType({ item, features });
 	const hasCreditSystem = getFeatureCreditSystem({ item, features });
 
-	// Usage Limits logic
-	const hasUsageLimit = item.usage_limit != null;
-
 	// Rollover logic
 	const showRolloverConfig =
 		(hasCreditSystem || usageType === FeatureUsageType.Single) &&
@@ -47,43 +31,43 @@ export function AdvancedSettings() {
 		item.included_usage &&
 		Number(item.included_usage) > 0;
 
-	const defaultRollover: RolloverConfig = {
-		duration: RolloverDuration.Month,
-		length: 1 as number,
-		max: null,
-	};
+	// const defaultRollover: RolloverConfig = {
+	// 	duration: RolloverDuration.Month,
+	// 	length: 1 as number,
+	// 	max: null,
+	// };
 
-	const setRolloverConfigKey = (
-		key: keyof RolloverConfig,
-		value: null | number | RolloverDuration,
-	) => {
-		setItem({
-			...item,
-			config: {
-				...(item.config || {}),
-				rollover: {
-					...(item.config?.rollover || defaultRollover),
-					[key]: value,
-				},
-			},
-		});
-	};
+	// const setRolloverConfigKey = (
+	// 	key: keyof RolloverConfig,
+	// 	value: null | number | RolloverDuration,
+	// ) => {
+	// 	setItem({
+	// 		...item,
+	// 		config: {
+	// 			...(item.config || {}),
+	// 			rollover: {
+	// 				...(item.config?.rollover || defaultRollover),
+	// 				[key]: value,
+	// 			},
+	// 		},
+	// 	});
+	// };
 
-	const setRolloverConfig = (rollover: RolloverConfig | null) => {
-		const newConfig = { ...(item.config || {}) };
-		if (rollover === null) {
-			delete newConfig.rollover;
-		} else {
-			newConfig.rollover = rollover;
-		}
-		setItem({
-			...item,
-			config: newConfig,
-		});
-	};
+	// const setRolloverConfig = (rollover: RolloverConfig | null) => {
+	// 	const newConfig = { ...(item.config || {}) };
+	// 	if (rollover === null) {
+	// 		delete newConfig.rollover;
+	// 	} else {
+	// 		newConfig.rollover = rollover;
+	// 	}
+	// 	setItem({
+	// 		...item,
+	// 		config: newConfig,
+	// 	});
+	// };
 
-	const rollover = item.config?.rollover as RolloverConfig;
-	const hasRollover = item.config?.rollover != null;
+	// const rollover = item.config?.rollover as RolloverConfig;
+	// const hasRollover = item.config?.rollover != null;
 
 	return (
 		<SheetAccordion type="single" withSeparator={false} collapsible={true}>
@@ -92,11 +76,13 @@ export function AdvancedSettings() {
 				title="Advanced settings"
 				description="Additional configuration options for this feature"
 			>
-				<div className="space-y-6 pt-2">
+				<div className="space-y-6 pt-2 pb-10">
+					{/* Reset existing usage when product is enabled */}
 					<AreaCheckbox
 						title="Reset existing usage when product is enabled"
-						tooltip="A customer has used 20/100 credits on a free plan. Then they upgrade to a Pro plan with 500 credits. If this flag is enabled, they'll get 500 credits on upgrade. If false, they'll have 480."
+						description="When coming from another plan, this will reset the customer's feature usage to 0."
 						checked={!!item.reset_usage_when_enabled}
+						// hide={usageType === FeatureUsageType.Continuous}
 						disabled={
 							usageType === FeatureUsageType.Continuous ||
 							notNullish(item.config?.rollover)
@@ -110,49 +96,11 @@ export function AdvancedSettings() {
 					/>
 
 					{/* Usage Limits */}
-					<AreaCheckbox
-						title="Usage limits"
-						tooltip="Set maximum usage limits for this feature to prevent overages"
-						checked={hasUsageLimit}
-						onCheckedChange={(checked) => {
-							let usage_limit: number | null;
-							if (checked) {
-								usage_limit = 100; // Default value
-							} else {
-								usage_limit = null;
-							}
-							setItem({
-								...item,
-								usage_limit: usage_limit,
-							});
-						}}
-					>
-						<div
-							className="space-y-2"
-							onClick={(e) => e.stopPropagation()}
-							onKeyDown={(e) => e.stopPropagation()}
-						>
-							<Input
-								type="number"
-								value={item.usage_limit || ""}
-								className="w-32"
-								onChange={(e) => {
-									const value = e.target.value;
-									const numValue =
-										value === "" ? null : parseInt(value) || null;
-									setItem({
-										...item,
-										usage_limit: numValue,
-									});
-								}}
-								placeholder="e.g. 100"
-								onClick={(e) => e.stopPropagation()}
-							/>
-						</div>
-					</AreaCheckbox>
+					<UsageLimit />
 
 					{/* Rollover */}
-					{showRolloverConfig && (
+					<RolloverConfig />
+					{/* {showRolloverConfig && (
 						<AreaCheckbox
 							title="Rollovers"
 							tooltip="Rollovers carry unused credits to the next billing cycle. Set a maximum rollover amount and specify how many cycles before resetting."
@@ -263,7 +211,7 @@ export function AdvancedSettings() {
 								</div>
 							</div>
 						</AreaCheckbox>
-					)}
+					)} */}
 				</div>
 			</SheetAccordionItem>
 		</SheetAccordion>

@@ -3,6 +3,7 @@
 import type { ProductItem } from "@autumn/shared";
 import { getProductItemDisplay } from "@autumn/shared";
 import { TrashIcon } from "@phosphor-icons/react";
+import { useState } from "react";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useOrg } from "@/hooks/common/useOrg";
@@ -35,16 +36,15 @@ export const PlanFeatureRow = ({
 	const { org } = useOrg();
 	const { features } = useFeaturesQuery();
 	const { editingState } = useProductContext();
+	const [isPressed, setIsPressed] = useState(false);
 
-	const getDisplayText = (item: ProductItem) => {
-		const displayData = getProductItemDisplay({
-			item,
-			features,
-			currency: org?.default_currency || "USD",
-		});
-
-		return displayData.primary_text;
-	};
+	const display = getProductItemDisplay({
+		item,
+		features,
+		currency: org?.default_currency || "USD",
+		fullDisplay: true,
+		amountFormatOptions: { currencyDisplay: "narrowSymbol" },
+	});
 
 	const isSelected = getItemId({ item, itemIndex: index }) === editingState.id;
 
@@ -52,13 +52,28 @@ export const PlanFeatureRow = ({
 		<div
 			role="button"
 			tabIndex={0}
+			data-state={isSelected ? "open" : "closed"}
+			data-pressed={isPressed}
 			className={cn(
-				"flex w-full group !h-9 group/row input-base btn-secondary-shadow",
+				"flex w-full group !h-9 group/row input-base input-shadow-tiny select-bg",
+
+				// To prevent flickering when clicking inner buttons
 				!isSelected &&
 					"hover:!bg-hover-primary focus-visible:!bg-hover-primary focus-visible:!border-primary",
-				isSelected &&
-					"!bg-active-primary !border-primary !shadow-[0px_0px_0px_0.2px_var(--color-primary)]",
+
+				isSelected && "!bg-hover-primary !border-primary",
+
+				// Custom pressed state that we can control
+				"data-[pressed=true]:!bg-active-primary data-[pressed=true]:border-primary",
 			)}
+			onMouseDown={(e) => {
+				// Only set pressed if we're not clicking on a button
+				if (!(e.target as Element).closest("button")) {
+					setIsPressed(true);
+				}
+			}}
+			onMouseUp={() => setIsPressed(false)}
+			onMouseLeave={() => setIsPressed(false)}
 			onClick={() => onEdit?.(item)}
 			onKeyDown={(e) => {
 				if (e.key === "Enter" || e.key === " ") {
@@ -68,25 +83,30 @@ export const PlanFeatureRow = ({
 			}}
 		>
 			{/* Left side - Icons and text */}
-			<div className="flex flex-row items-center flex-1 gap-4 min-w-0">
+			<div className="flex flex-row items-center flex-1 gap-4 min-w-0 relative">
 				<div className="flex flex-row items-center gap-1 flex-shrink-0">
 					<PlanFeatureIcon item={item} position="left" />
 					<CustomDotIcon />
 					<PlanFeatureIcon item={item} position="right" />
 				</div>
 
-				<div className="flex items-center gap-2 flex-1 min-w-0">
-					<span className="text-t2 font-medium whitespace-nowrap font-inter text-[13px] leading-4 tracking-[-0.003em]">
-						{getDisplayText(item)}
-					</span>
-					<CopyButton
-						text={item.feature_id || ""}
-						disableActive={true}
-						size="sm"
-						variant="skeleton"
-						className="opacity-0 group-hover:opacity-100 transition-opacity duration-50"
-					/>
+				<div className="flex items-center gap-2 flex-1 max-w-[85%]">
+					<p className="whitespace-nowrap truncate">
+						<span className="text-body">{display.primary_text}</span>
+						<span className="text-body-secondary">
+							{" "}
+							{display.secondary_text}
+						</span>
+					</p>
 				</div>
+				<CopyButton
+					// hide={true}
+					text={item.feature_id || ""}
+					disableActive={true}
+					size="sm"
+					variant="skeleton"
+					className="absolute right-0 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-50 bg-hover-primary"
+				/>
 			</div>
 
 			<div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-50">

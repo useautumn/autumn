@@ -1,3 +1,4 @@
+import { isFeaturePriceItem } from "@autumn/shared";
 import { CoinsIcon } from "@phosphor-icons/react";
 import { PanelButton } from "@/components/v2/buttons/PanelButton";
 import { IncludedUsageIcon } from "@/components/v2/icons/AutumnIcons";
@@ -9,8 +10,7 @@ export function BillingType() {
 	if (!item) return null;
 
 	// Derive billing type from item state
-	const billingType =
-		item.tiers && item.tiers.length > 0 ? "priced" : "included";
+	const isFeaturePrice = isFeaturePriceItem(item);
 
 	const setBillingType = (type: "included" | "priced") => {
 		if (type === "included") {
@@ -23,15 +23,15 @@ export function BillingType() {
 	};
 
 	return (
-		<div className="space-y-4 billing-type-section">
+		<div className="mt-3 space-y-4 billing-type-section">
 			<div className="flex w-full items-center gap-4">
 				<PanelButton
-					isSelected={billingType === "included"}
+					isSelected={!isFeaturePrice}
 					onClick={() => setBillingType("included")}
-					icon={<IncludedUsageIcon size={24} />}
+					icon={<IncludedUsageIcon size={18} />}
 				/>
 				<div className="flex-1">
-					<div className="text-sub mb-1">Included</div>
+					<div className="text-body-highlight mb-1">Included</div>
 					<div className="text-body-secondary leading-tight">
 						Set included usage limits with reset intervals (e.g. 100
 						credits/month)
@@ -41,12 +41,12 @@ export function BillingType() {
 
 			<div className="flex w-full items-center gap-4">
 				<PanelButton
-					isSelected={billingType === "priced"}
+					isSelected={isFeaturePrice}
 					onClick={() => setBillingType("priced")}
-					icon={<CoinsIcon size={24} />}
+					icon={<CoinsIcon size={20} />}
 				/>
 				<div className="flex-1">
-					<div className="text-sub mb-1">Priced</div>
+					<div className="text-body-highlight mb-1">Priced</div>
 					<div className="text-body-secondary leading-tight">
 						Set usage and overage pricing (e.g. 100 credits/month, $1 extra)
 					</div>

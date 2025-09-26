@@ -64,6 +64,7 @@ export interface ButtonProps
 	isLoading?: boolean;
 	transition?: boolean;
 	disableActive?: boolean;
+	hide?: boolean;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -76,6 +77,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 			isLoading = false,
 			transition = false,
 			disableActive = false,
+			hide = false,
 			children,
 			...props
 		},
@@ -136,6 +138,8 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 					return "";
 			}
 		};
+
+		if (hide) return null;
 
 		return (
 			<Comp

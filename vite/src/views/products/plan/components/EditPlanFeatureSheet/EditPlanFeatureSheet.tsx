@@ -2,6 +2,7 @@ import { ProductItemFeatureType } from "@autumn/shared";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { getFeature } from "@/utils/product/entitlementUtils";
+import { isFeaturePriceItem } from "@/utils/product/getItemType";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { AdvancedSettings } from "./AdvancedSettings";
 import { BillingType } from "./BillingType";
@@ -15,14 +16,12 @@ export function EditPlanFeatureSheet() {
 	const { features } = useFeaturesQuery();
 
 	// Early return if no item
-	if (!item) {
-		return null;
-	}
+	if (!item) return null;
 
 	const feature = getFeature(item?.feature_id ?? "", features);
 
 	// Derive billing type from item state - no local state needed
-	const isPricedFeature = !!(item.tiers && item.tiers.length > 0);
+	const isFeaturePrice = isFeaturePriceItem(item);
 
 	return (
 		<>
@@ -33,7 +32,7 @@ export function EditPlanFeatureSheet() {
 
 			{item.feature_type !== ProductItemFeatureType.Static && (
 				<>
-					<SheetSection title="Billing type">
+					<SheetSection title="Billing Type">
 						<BillingType />
 					</SheetSection>
 
@@ -41,7 +40,7 @@ export function EditPlanFeatureSheet() {
 						<IncludedUsage />
 					</SheetSection>
 
-					{isPricedFeature && (
+					{isFeaturePrice && (
 						<SheetSection title="Price">
 							<PriceTiers />
 							<UsageReset showBillingLabel={true} />
