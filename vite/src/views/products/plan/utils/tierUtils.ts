@@ -97,7 +97,7 @@ export const updateTier = ({
 		if (value === "" || value === "∞") {
 			numValue = value === "" ? 0 : Infinite;
 		} else {
-			const parsed = parseInt(value);
+			const parsed = parseFloat(value);
 			numValue = Number.isNaN(parsed) ? 0 : parsed;
 		}
 		newTiers[index] = { ...newTiers[index], to: numValue };

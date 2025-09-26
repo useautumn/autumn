@@ -35,17 +35,6 @@ export default function PlanEditorView() {
 		id: string | null;
 	}>({ type: null, id: null });
 
-	const setSheetWithTransition = (newSheet: Sheets) => {
-		if (!document.startViewTransition) {
-			setSheet(newSheet);
-			return;
-		}
-
-		document.startViewTransition(() => {
-			setSheet(newSheet);
-		});
-	};
-
 	if (!product || featuresLoading) return <LoadingScreen />;
 
 	return (
@@ -58,7 +47,7 @@ export default function PlanEditorView() {
 				setEntityFeatureIds,
 				hasChanges,
 				willVersion,
-				setSheet: setSheetWithTransition,
+				setSheet,
 				editingState,
 				setEditingState,
 			}}
