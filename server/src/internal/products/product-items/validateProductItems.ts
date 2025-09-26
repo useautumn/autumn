@@ -212,6 +212,14 @@ const validateProductItem = ({
 		if (rollover.duration === RolloverDuration.Forever) {
 			rollover.length = 0;
 		}
+
+		if (notNullish(item.usage_limit) && item.usage_limit <= 0) {
+			throw new RecaseError({
+				message: `Usage limit must be greater than 0`,
+				code: ErrCode.InvalidInputs,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
 	}
 };
 

@@ -4,9 +4,11 @@ import {
 	isFeaturePriceItem,
 	ProductItemInterval,
 } from "@autumn/shared";
-import { CoinsIcon } from "@phosphor-icons/react";
 import { PanelButton } from "@/components/v2/buttons/PanelButton";
-import { IncludedUsageIcon } from "@/components/v2/icons/AutumnIcons";
+import {
+	CoinsIcon,
+	IncludedUsageIcon,
+} from "@/components/v2/icons/AutumnIcons";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
 export function BillingType() {
@@ -35,7 +37,7 @@ export function BillingType() {
 				...item,
 				tiers: null,
 				billing_units: undefined,
-				// interval: ,
+				usage_model: undefined,
 			});
 		} else {
 			// Add initial tier to switch to priced
@@ -56,7 +58,7 @@ export function BillingType() {
 				<PanelButton
 					isSelected={!isFeaturePrice}
 					onClick={() => setBillingType("included")}
-					icon={<IncludedUsageIcon size={18} />}
+					icon={<IncludedUsageIcon size={18} color="none" />}
 				/>
 				<div className="flex-1">
 					<div className="text-body-highlight mb-1">Included</div>
@@ -71,7 +73,7 @@ export function BillingType() {
 				<PanelButton
 					isSelected={isFeaturePrice}
 					onClick={() => setBillingType("priced")}
-					icon={<CoinsIcon size={20} />}
+					icon={<CoinsIcon size={20} color="currentColor" />}
 				/>
 				<div className="flex-1">
 					<div className="text-body-highlight mb-1">Priced</div>

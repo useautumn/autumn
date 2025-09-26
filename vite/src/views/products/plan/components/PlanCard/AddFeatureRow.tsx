@@ -1,8 +1,4 @@
-import {
-	type Feature,
-	ProductItemInterval,
-	productV2ToFeatureItems,
-} from "@autumn/shared";
+import { type Feature, ProductItemInterval } from "@autumn/shared";
 import { PlusIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { CustomDialogContent } from "@/components/general/modal-components/DialogContentWrapper";
@@ -57,8 +53,7 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 		setPopoverOpen(false);
 
 		// Open edit sidebar for the new item
-		const featureItems = productV2ToFeatureItems({ items: newItems });
-		const itemIndex = featureItems.length - 1;
+		const itemIndex = newItems.length - 1;
 		const itemId = getItemId({ item: newItem, itemIndex });
 
 		setEditingState({ type: "feature", id: itemId });
@@ -92,7 +87,7 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 									<button
 										key={feature.id}
 										type="button"
-										className="w-full px-3 py-2 text-left hover:bg-muted/50 transition-colors focus:bg-muted/50 focus:outline-none"
+										className="w-full px-3 py-2 text-left hover:bg-muted/50 transition-colors focus:outline-none"
 										onClick={() => handleFeatureSelect(feature)}
 									>
 										<div className="flex items-center justify-between gap-2">
@@ -104,7 +99,7 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 							<div className="border-t p-1">
 								<button
 									type="button"
-									className="w-full px-3 py-2 text-left text-primary hover:bg-muted/50 transition-colors focus:bg-muted/50 focus:outline-none text-sm font-medium"
+									className="w-full px-3 py-2 text-left text-primary hover:bg-muted/50 transition-colors focus:outline-none text-sm font-medium"
 									onClick={() => {
 										setPopoverOpen(false);
 										setCreateFeatureOpen(true);
@@ -172,7 +167,7 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 							setCreateFeatureOpen(false);
 
 							// Open edit sidebar for the new item
-							const itemIndex = newItems.length - 1; // New item is at the last index
+							const itemIndex = newItems.length - 1;
 							const itemId = getItemId({ item: newItem, itemIndex });
 							setEditingState({ type: "feature", id: itemId });
 							setSheet("edit-feature");
