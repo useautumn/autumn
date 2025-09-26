@@ -1,6 +1,7 @@
 import {
 	BillingInterval,
 	EntInterval,
+	Infinite,
 	type ProductItemInterval,
 } from "@autumn/shared";
 import { useState } from "react";
@@ -97,7 +98,9 @@ export function UsageReset({ showBillingLabel = false }: UsageResetProps) {
 							<Button
 								className="w-full justify-start px-2"
 								variant="skeleton"
-								disabled={item.included_usage === "∞" || item.interval == null}
+								disabled={
+									item.included_usage === Infinite || item.interval == null
+								}
 							>
 								<p className="text-t3">Customise Interval</p>
 							</Button>
