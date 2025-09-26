@@ -3,7 +3,7 @@
 import type { ProductItem } from "@autumn/shared";
 import { getProductItemDisplay } from "@autumn/shared";
 import { TrashIcon } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useOrg } from "@/hooks/common/useOrg";
@@ -46,7 +46,27 @@ export const PlanFeatureRow = ({
 		amountFormatOptions: { currencyDisplay: "narrowSymbol" },
 	});
 
-	const isSelected = getItemId({ item, itemIndex: index }) === editingState.id;
+	const itemId = getItemId({ item, itemIndex: index });
+	const isSelected = itemId === editingState.id;
+	
+	// Debug logging
+	console.log(`Row ${itemId}: isPressed=${isPressed}, isSelected=${isSelected}, editingState.id=${editingState.id}`);
+
+	// Clear pressed state when this item is no longer selected
+	useEffect(() => {
+		if (!isSelected) {
+			console.log(`Row ${itemId}: Effect 1 - clearing pressed (not selected)`);
+			setIsPressed(false);
+		}
+	}, [isSelected, itemId]);
+
+	// Also clear pressed state whenever editing state changes (catches hotkey navigation)
+	useEffect(() => {
+		if (editingState.id !== itemId) {
+			console.log(`Row ${itemId}: Effect 2 - clearing pressed (editing state changed to ${editingState.id})`);
+			setIsPressed(false);
+		}
+	}, [editingState.id, itemId]);
 
 	return (
 		<div
@@ -64,16 +84,23 @@ export const PlanFeatureRow = ({
 				isSelected && "!bg-hover-primary !border-primary",
 
 				// Custom pressed state that we can control
-				"data-[pressed=true]:!bg-active-primary data-[pressed=true]:border-primary",
+				"data-[pressed=true]:!bg-active-primary data-[pressed=true]:border-primary focus:outline-none active:!bg-transparent active:!border-transparent",
 			)}
 			onMouseDown={(e) => {
 				// Only set pressed if we're not clicking on a button
 				if (!(e.target as Element).closest("button")) {
+					console.log(`Row ${itemId}: onMouseDown - setting pressed to true`);
 					setIsPressed(true);
 				}
 			}}
-			onMouseUp={() => setIsPressed(false)}
-			onMouseLeave={() => setIsPressed(false)}
+			onMouseUp={() => {
+				console.log(`Row ${itemId}: onMouseUp - setting pressed to false`);
+				setIsPressed(false);
+			}}
+			onMouseLeave={() => {
+				console.log(`Row ${itemId}: onMouseLeave - setting pressed to false`);
+				setIsPressed(false);
+			}}
 			onClick={() => onEdit?.(item)}
 			onKeyDown={(e) => {
 				if (e.key === "Enter" || e.key === " ") {
@@ -92,8 +119,10 @@ export const PlanFeatureRow = ({
 
 				<div className="flex items-center gap-2 flex-1 max-w-[85%]">
 					<p className="whitespace-nowrap truncate">
-						<span className="text-body">{display.primary_text}</span>
-						<span className="text-body-secondary">
+						<span className="text-body select-none">
+							{display.primary_text}
+						</span>
+						<span className="text-body-secondary select-none">
 							{" "}
 							{display.secondary_text}
 						</span>

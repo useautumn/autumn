@@ -1,17 +1,14 @@
 import type { ProductItem } from "@autumn/shared";
 import { ProductItemFeatureType, UsageModel } from "@autumn/shared";
-import {
-	ArrowsCounterClockwiseIcon,
-	CoinsIcon,
-	PowerIcon,
-} from "@phosphor-icons/react";
 import React from "react";
 import {
+	BooleanIcon,
+	CoinsIcon,
+	ContinuousUseIcon,
 	IncludedUsageIcon,
 	PrepaidUsageIcon,
 	UsageBasedIcon,
 } from "@/components/v2/icons/AutumnIcons";
-import { cn } from "@/lib/utils";
 
 interface PlanFeatureIconProps {
 	item: ProductItem;
@@ -41,7 +38,8 @@ const getBillingType = (
 	if (
 		item.usage_model === UsageModel.PayPerUse ||
 		item.price ||
-		item.price_config
+		item.price_config ||
+		(item.tiers?.length || 0) > 0
 	) {
 		return "paid";
 	}
@@ -57,13 +55,13 @@ const getLeftIcon = (
 
 	switch (featureType) {
 		case ProductItemFeatureType.Boolean:
-			return { icon: PowerIcon, color: "text-primary" }; // On/Off - pink
+			return { icon: BooleanIcon, color: "text-primary" }; // On/Off - pink
 		case ProductItemFeatureType.SingleUse:
 			return { icon: UsageBasedIcon, color: "text-primary" }; // Usage-based - pink
 		case ProductItemFeatureType.ContinuousUse:
-			return { icon: ArrowsCounterClockwiseIcon, color: "text-primary" }; // Persistent Usage - pink
+			return { icon: ContinuousUseIcon, color: "text-primary" }; // Persistent Usage - pink
 		case ProductItemFeatureType.Static:
-			return { icon: PowerIcon, color: "text-primary", size: 5 }; // Static - pink
+			return { icon: BooleanIcon, color: "text-primary", size: 2 }; // Static - pink
 		default:
 			console.warn(`Unknown feature type: ${featureType}`);
 			return { icon: UsageBasedIcon, color: "text-primary" }; // Default - pink
@@ -74,7 +72,7 @@ const getLeftIcon = (
 const getRightIcon = (
 	item: ProductItem,
 ): {
-	icon: React.ComponentType | typeof CoinsIcon;
+	icon: React.ComponentType;
 	color: string;
 	size?: number;
 } => {
@@ -103,24 +101,9 @@ export const PlanFeatureIcon = ({ item, position }: PlanFeatureIconProps) => {
 		return null;
 	}
 
-	// Check if it's a Phosphor icon (has size prop)
-	const isPhosphorIcon =
-		typeof Icon === typeof CoinsIcon || typeof Icon === typeof PowerIcon;
-
 	return (
 		<div className={iconData.color}>
-			{isPhosphorIcon ? (
-				<Icon
-					className={cn(
-						"!size-3",
-						iconData.size ? `!size-${iconData.size}` : "",
-						iconData.color,
-					)}
-					weight={position === "left" ? "bold" : "regular"}
-				/>
-			) : (
-				<Icon className="!size-3" />
-			)}
+			<Icon />
 		</div>
 	);
 };
