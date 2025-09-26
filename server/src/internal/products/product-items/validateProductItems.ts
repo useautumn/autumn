@@ -90,7 +90,7 @@ const validateProductItem = ({
 			(typeof item.included_usage !== "number" &&
 				item.included_usage !== Infinite &&
 				notNullish(item.included_usage)) ||
-			item.included_usage === 0
+			(item.included_usage === 0 && !isFeaturePriceItem(item))
 		) {
 			throw new RecaseError({
 				message: `Included usage must be a number or '${Infinite}'`,
@@ -179,7 +179,8 @@ const validateProductItem = ({
 			item.included_usage === 0
 		) {
 			throw new RecaseError({
-				message: "Rollover is only allowed for items with intervals and included usage",
+				message:
+					"Rollover is only allowed for items with intervals and included usage",
 				code: ErrCode.InvalidInputs,
 				statusCode: StatusCodes.BAD_REQUEST,
 			});
@@ -200,7 +201,8 @@ const validateProductItem = ({
 		if (rollover.duration === RolloverDuration.Month) {
 			if (typeof rollover.length !== "number" || rollover.length < 0) {
 				throw new RecaseError({
-					message: "Rollover length must be a positive number for monthly durations",
+					message:
+						"Rollover length must be a positive number for monthly durations",
 					code: ErrCode.InvalidInputs,
 					statusCode: StatusCodes.BAD_REQUEST,
 				});
