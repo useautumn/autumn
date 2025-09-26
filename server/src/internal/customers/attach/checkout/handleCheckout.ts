@@ -190,10 +190,6 @@ export const handleCheckout = (req: any, res: any) =>
 			res.status(200).json({
 				...checkoutRes,
 				url: checkoutUrl,
-				options: attachParams.optionsList.map((o) => ({
-					quantity: o.quantity,
-					feature_id: o.feature_id,
-				})),
 				has_prorations: hasProrations,
 			});
 

@@ -5,7 +5,6 @@ import {
 	type FullCusProduct,
 	type Organization,
 	ProrationBehavior,
-	type UsagePriceConfig,
 } from "@autumn/shared";
 import { differenceInSeconds } from "date-fns";
 import type Stripe from "stripe";
@@ -183,23 +182,22 @@ export const getSubItemsForCusProduct = async ({
 	const prices = cusProduct.customer_prices.map((cp) => cp.price);
 	const product = cusProduct.product;
 
-	const subItems = [];
+	const subItems: Stripe.SubscriptionItem[] = [];
 	for (const item of stripeSub.items.data) {
-		if (item.price.product == product.processor?.id) {
+		if (item.price.product === product.processor?.id) {
 			subItems.push(item);
 		} else if (
 			prices.some(
 				(p) =>
-					p.config?.stripe_price_id == item.price.id ||
-					(p.config as UsagePriceConfig).stripe_product_id ==
-						item.price.product,
+					p.config.stripe_price_id === item.price.id ||
+					p.config.stripe_product_id === item.price.product,
 			)
 		) {
 			subItems.push(item);
 		}
 	}
 	const otherSubItems = stripeSub.items.data.filter(
-		(item) => !subItems.some((i) => i.id == item.id),
+		(item) => !subItems.some((i) => i.id === item.id),
 	);
 
 	return { subItems, otherSubItems };
