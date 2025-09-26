@@ -6,13 +6,13 @@ import { useProductChangedAlert } from "../product/hooks/useProductChangedAlert"
 import { useProductQuery } from "../product/hooks/useProductQuery";
 import { ProductContext, useProductContext } from "../product/ProductContext";
 import { ProductItemContext } from "../product/product-item/ProductItemContext";
-import ConfirmNewVersionDialog from "../product/versioning/ConfirmNewVersionDialog";
 import { EditPlanFeatureSheet } from "./components/EditPlanFeatureSheet/EditPlanFeatureSheet";
 import { EditPlanHeader } from "./components/EditPlanHeader";
 import { EditPlanSheet } from "./components/EditPlanSheet";
 import { ManagePlan } from "./components/ManagePlan";
 import { SaveChangesBar } from "./components/SaveChangesBar";
 import { usePlanData } from "./hooks/usePlanData";
+import ConfirmNewVersionDialog from "./versioning/ConfirmNewVersionDialog";
 
 type Sheets = "edit-plan" | "edit-feature" | null;
 
@@ -26,7 +26,7 @@ export default function PlanEditorView() {
 	const { modal } = useProductChangedAlert({ hasChanges });
 	const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
 
-	const [sheet, setSheet] = useState<Sheets>(null);
+	const [sheet, setSheet] = useState<Sheets>("edit-plan");
 	const [editingState, setEditingState] = useState<{
 		type: "plan" | "feature" | null;
 		id: string | null;
@@ -62,6 +62,11 @@ export default function PlanEditorView() {
 			<ConfirmNewVersionDialog
 				open={showNewVersionDialog}
 				setOpen={setShowNewVersionDialog}
+				onVersionCreated={() => {
+					// Reset editing state when new version is created
+					setEditingState({ type: null, id: null });
+					setSheet("edit-plan");
+				}}
 			/>
 			<div className="flex w-full h-full overflow-y-auto bg-[#eee]">
 				<div className="flex flex-col justify-between h-full flex-1">
