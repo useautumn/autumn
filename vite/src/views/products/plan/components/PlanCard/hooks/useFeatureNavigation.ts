@@ -95,6 +95,11 @@ export const useFeatureNavigation = () => {
 		}
 	}, []);
 
+	const editCurrentItem = useCallback(() => {
+		// Use the existing editPlan function to open plan editing
+		editPlan();
+	}, [editPlan]);
+
 	// Register hotkeys
 	useHotkeys("up", navigateUp, {
 		preventDefault: true,
@@ -126,6 +131,12 @@ export const useFeatureNavigation = () => {
 	useHotkeys("n", addNewFeature, {
 		preventDefault: true,
 		enabled: true,
+	});
+
+	// e key to edit plan
+	useHotkeys("e", editCurrentItem, {
+		preventDefault: true,
+		enabled: !!product,
 	});
 
 	// Number key navigation (1-9) - using individual hooks to avoid loop issues
@@ -176,6 +187,7 @@ export const useFeatureNavigation = () => {
 		selectLast,
 		editPlan,
 		addNewFeature,
+		editCurrentItem,
 		hasItems: filteredItems.length > 0,
 	};
 };
