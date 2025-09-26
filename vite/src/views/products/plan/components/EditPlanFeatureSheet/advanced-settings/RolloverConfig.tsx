@@ -164,7 +164,7 @@ export function RolloverConfig() {
 									}}
 								>
 									<SelectTrigger
-										className="w-32"
+										className="w-40"
 										onClick={(e) => e.stopPropagation()}
 									>
 										<SelectValue placeholder="Select duration" />
