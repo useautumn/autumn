@@ -77,6 +77,19 @@ export const compareDetails = ({
 	return detailsSame;
 };
 
+export const prodOptionsAreSame = ({
+	curProduct,
+	newProduct,
+}: {
+	curProduct: ProductV2 | FullProduct;
+	newProduct: ProductV2 | FullProduct;
+}) => {
+	return (
+		curProduct.is_default === newProduct.is_default &&
+		curProduct.is_add_on === newProduct.is_add_on
+	);
+};
+
 export const productsAreSame = ({
 	newProductV1,
 	newProductV2,
@@ -117,14 +130,11 @@ export const productsAreSame = ({
 	items1 = sanitizeItems({ items: items1, features });
 	items2 = sanitizeItems({ items: items2, features });
 
-	// console.log("Items 1:", items1);
-	// console.log("Items 2:", items2);
-
 	let itemsSame = true;
 	let pricesChanged = false;
+	let detailsSame = true;
 	const newItems: ProductItem[] = [];
 	const removedItems: ProductItem[] = [];
-	let detailsSame = true;
 
 	detailsSame = compareDetails({
 		newProductV2,
@@ -135,30 +145,17 @@ export const productsAreSame = ({
 		itemsSame = false;
 	}
 
-	// // Check if any feature's usage limits have changed
-	// items1.some((item1: ProductItem) => {
-	// 	const matchingItem2 = items2?.find(
-	// 		(item2: ProductItem) => item2.feature_id === item1.feature_id,
-	// 	);
-	// 	if (!matchingItem2) return false;
-
-	// 	const feature = features.find((f) => f.id === item1.feature_id);
-	// 	if (!feature) return false;
-
-	// 	return false;
-	// });
-
 	if (items1.length !== items2.length) itemsSame = false;
 
 	for (const item of items1) {
-		// console.log("Item:", item);
+		// console.log(`Base ${formatItem({ item, features })}`);
 
 		const similarItem = findSimilarItem({
 			item,
 			items: items2,
 		});
 
-		// console.log("Similar item:", similarItem);
+		// console.log(`Similar ${formatItem({ item, features })}`);
 
 		if (!similarItem) {
 			if (isFeaturePriceItem(item) || isPriceItem(item)) {
@@ -212,12 +209,12 @@ export const productsAreSame = ({
 		ft2: freeTrial2,
 	});
 
-	if (!freeTrialsSame) {
-		console.log("Free trials different");
-		console.log("Free trial 1:", freeTrial1);
-		console.log("Free trial 2:", freeTrial2);
-		console.log("--------------------------------");
-	}
+	const optionsSame = prodOptionsAreSame({
+		// biome-ignore lint/style/noNonNullAssertion: either one is provided
+		curProduct: curProductV2 || curProductV1!,
+		// biome-ignore lint/style/noNonNullAssertion: either one is provided
+		newProduct: newProductV2 || newProductV1!,
+	});
 
 	// Compare name
 	return {
@@ -227,5 +224,6 @@ export const productsAreSame = ({
 		newItems,
 		removedItems,
 		detailsSame,
+		optionsSame,
 	};
 };

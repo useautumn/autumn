@@ -1,12 +1,12 @@
-import { invalidNumber, notNullish, nullish } from "@/utils/genUtils";
 import {
-	Feature,
+	type Feature,
 	FeatureUsageType,
-	FrontendProductItem,
-	RolloverConfig,
+	type FrontendProductItem,
+	type RolloverConfig,
 	RolloverDuration,
 } from "@autumn/shared";
 import { toast } from "sonner";
+import { invalidNumber, notNullish, nullish } from "@/utils/genUtils";
 import { isFeatureItem, isFeaturePriceItem } from "../getItemType";
 
 export const validateProductItem = ({
@@ -16,11 +16,12 @@ export const validateProductItem = ({
 	item: FrontendProductItem;
 	features: Feature[];
 }) => {
-	const feature = features.find((f) => f.id == item.feature_id);
+	const feature = features.find((f) => f.id === item.feature_id);
 
+	// Sanitize product item
 	if (
 		feature &&
-		feature.config?.usage_type == FeatureUsageType.Continuous &&
+		feature.config?.usage_type === FeatureUsageType.Continuous &&
 		isFeatureItem(item)
 	) {
 		item.interval = null;
@@ -42,12 +43,10 @@ export const validateProductItem = ({
 			return null;
 		}
 
-		item.price = parseFloat(item.price!.toString());
+		item.price = parseFloat(item.price.toString());
 	}
 
-	if ((item.included_usage as any) === "") {
-		item.included_usage = null;
-	} else if (!invalidNumber(item.included_usage)) {
+	if (!invalidNumber(item.included_usage)) {
 		item.included_usage = Number(item.included_usage);
 	}
 
@@ -56,20 +55,15 @@ export const validateProductItem = ({
 		return null;
 	}
 
-	//if both item.tiers and item.price are set, set item.price to null
-	if (item.tiers && item.price) {
-		item.price = null;
-	}
-
-	// Usage/Feature item validation (when tiers are set)
+	if (item.tiers && item.price) item.price = null;
 
 	if (item.tiers) {
 		let previousTo = 0;
 
-		const allFree = item.tiers.every((tier) => tier.amount == 0);
+		const allFree = item.tiers.every((tier) => tier.amount === 0);
 
 		if (allFree) {
-			if (item.tiers.length == 1) {
+			if (item.tiers.length === 1) {
 				toast.error("Price should be greater than 0");
 			} else {
 				toast.error("Should have at least one tier with price greater than 0");
@@ -78,7 +72,9 @@ export const validateProductItem = ({
 		}
 
 		const freeTier =
-			item.tiers.length > 0 && item.tiers[0].amount == 0 ? item.tiers[0] : null;
+			item.tiers.length > 0 && item.tiers[0].amount === 0
+				? item.tiers[0]
+				: null;
 
 		// const includedUsage = parseFloat(item.included_usage?.toString() || "0");
 

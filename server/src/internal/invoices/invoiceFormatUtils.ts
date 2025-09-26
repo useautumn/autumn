@@ -1,29 +1,27 @@
 import {
 	BillingInterval,
 	BillingType,
-	EntitlementWithFeature,
-	Feature,
-	FixedPriceConfig,
-	FullCusProduct,
-	FullCustomerPrice,
-	FullProduct,
+	billingToItemInterval,
+	cusProductToEnts,
+	type EntitlementWithFeature,
+	type Feature,
+	type FixedPriceConfig,
+	type FullCusProduct,
+	type FullProduct,
 	getFeatureName,
 	getFeatureNameWithCapital,
-	Organization,
-	Price,
-	ProductItemInterval,
-	UsagePriceConfig,
+	type Organization,
+	type Price,
+	type ProductItemInterval,
+	type UsagePriceConfig,
 } from "@autumn/shared";
+import { formatAmount } from "@/utils/formatUtils.js";
+import { getFeatureQuantity } from "../customers/cusProducts/cusProductUtils.js";
 import {
 	getBillingType,
 	getPriceEntitlement,
 } from "../products/prices/priceUtils.js";
-import { cusProductToEnts } from "@autumn/shared";
-
-import { getFeatureQuantity } from "../customers/cusProducts/cusProductUtils.js";
-import { formatAmount } from "@/utils/formatUtils.js";
 import { getIntervalString } from "../products/productUtils/productResponseUtils/getProductItemDisplay.js";
-import { billingToItemInterval } from "../products/product-items/itemIntervalUtils.js";
 
 const getSingularAndPlural = (feature: Feature) => {
 	const singular = getFeatureName({
@@ -53,8 +51,8 @@ export const formatPrepaidPrice = ({
 	const config = price.config as UsagePriceConfig;
 	const billingUnits = config.billing_units || 1;
 
-	if (billingUnits == 1) {
-		if (quantity == 1)
+	if (billingUnits === 1) {
+		if (quantity === 1)
 			return `${quantity} ${singular}`; // eg. 1 credit
 		else return `${quantity} ${plural}`; // eg. 4 credits
 	} else {
@@ -75,51 +73,19 @@ export const formatFixedPrice = ({
 	const amount = formatAmount({ org, amount: config.amount });
 
 	const intervalStr = getIntervalString({
-		interval: billingToItemInterval(config.interval) as ProductItemInterval,
+		interval: billingToItemInterval({
+			billingInterval: config.interval,
+		}) as ProductItemInterval,
 		intervalCount: config.interval_count || 1,
 		prefix: "",
 	});
 
-	if (config.interval == BillingInterval.OneOff) {
+	if (config.interval === BillingInterval.OneOff) {
 		return `${amount}`;
 	} else {
 		return `${amount} / ${intervalStr}`;
 	}
 };
-
-// export const formatUsageInArrear = ({
-//   price,
-//   cusProduct,
-//   logger,
-// }: {
-//   price: Price;
-//   feature: Feature;
-//   cusProduct: FullCusProduct;
-//   logger: any;
-// }) => {
-//   // const cusPrice = cusProduct.customer_prices.find(
-//   //   (cp) => cp.price.id == price.id,
-//   // );
-
-//   // const { usage, overage, roundedUsage } = getCusPriceUsage({
-//   //   cusPrice: cusPrice!,
-//   //   cusProduct,
-//   //   logger,
-//   // });
-
-//   // const cusEnt = getRelatedCusEnt({
-//   //   cusPrice: cusPrice!,
-//   //   cusEnts: cusProduct.customer_entitlements,
-//   // })!;
-
-//   const { singular, plural } = getSingularAndPlural(cusEnt.entitlement.feature);
-
-//   if (usage == 1) {
-//     return `${usage} x ${singular}`;
-//   } else {
-//     return `${usage} x ${plural}`;
-//   }
-// };
 
 export const formatInArrearProrated = ({
 	price,
@@ -134,7 +100,7 @@ export const formatInArrearProrated = ({
 
 	const { singular, plural } = getSingularAndPlural(ent.feature);
 
-	if (quantity == 1) {
+	if (quantity === 1) {
 		return `${quantity} x ${singular}`;
 	} else {
 		return `${quantity} x ${plural}`;
@@ -154,12 +120,12 @@ export const priceToInvoiceDescription = ({
 	quantity?: number;
 	logger: any;
 }) => {
-	let billingType = getBillingType(price.config);
-	let productName = cusProduct.product.name;
+	const billingType = getBillingType(price.config);
+	const productName = cusProduct.product.name;
 	const ents = cusProductToEnts({ cusProduct });
 
 	let description = "";
-	if (billingType == BillingType.UsageInAdvance) {
+	if (billingType === BillingType.UsageInAdvance) {
 		const ent = getPriceEntitlement(price, ents);
 		const quantity = getFeatureQuantity({
 			cusProduct,
@@ -170,8 +136,8 @@ export const priceToInvoiceDescription = ({
 	}
 
 	if (
-		billingType == BillingType.FixedCycle ||
-		billingType == BillingType.OneOff
+		billingType === BillingType.FixedCycle ||
+		billingType === BillingType.OneOff
 	) {
 		description = formatFixedPrice({
 			org: org!,
@@ -180,7 +146,7 @@ export const priceToInvoiceDescription = ({
 		});
 	}
 
-	if (billingType == BillingType.InArrearProrated) {
+	if (billingType === BillingType.InArrearProrated) {
 		description = formatInArrearProrated({ price, ents, quantity });
 	}
 
@@ -210,22 +176,22 @@ export const newPriceToInvoiceDescription = ({
 
 	let description = "";
 	if (
-		billingType == BillingType.FixedCycle ||
-		billingType == BillingType.OneOff
+		billingType === BillingType.FixedCycle ||
+		billingType === BillingType.OneOff
 	) {
 		description = formatFixedPrice({ org, price });
 	}
 
-	if (billingType == BillingType.InArrearProrated) {
+	if (billingType === BillingType.InArrearProrated) {
 		description = formatInArrearProrated({ price, ents, quantity });
 	}
 
-	if (billingType == BillingType.UsageInArrear) {
+	if (billingType === BillingType.UsageInArrear) {
 		const ent = getPriceEntitlement(price, ents);
 		description = getFeatureNameWithCapital({ feature: ent.feature });
 	}
 
-	if (billingType == BillingType.UsageInAdvance) {
+	if (billingType === BillingType.UsageInAdvance) {
 		description = formatPrepaidPrice({ price, ents, quantity: quantity! });
 	}
 

@@ -1,4 +1,5 @@
 import { type ProductItem, productV2ToFeatureItems } from "@autumn/shared";
+import { getItemId } from "@/utils/product/productItemUtils";
 import { useProductContext } from "@/views/products/product/ProductContext";
 import { AddFeatureRow } from "./AddFeatureRow";
 import { PlanFeatureRow } from "./PlanFeatureRow";
@@ -9,22 +10,23 @@ export const PlanFeatureList = () => {
 
 	const filteredItems = productV2ToFeatureItems({ items: product?.items });
 
-	const handleFeatureClick = (item: ProductItem) => {
-		console.log("Feature clicked:", item);
-	};
+	// const handleFeatureClick = (item: ProductItem) => {
+	// 	console.log("Feature clicked:", item);
+	// };
 
-	const handleEdit = (item: ProductItem) => {
-		// Use array index as stable ID - won't change during editing
-		const itemIndex =
-			product?.items?.findIndex((i: ProductItem) => i === item) || 0;
-		const itemId = item.entitlement_id || item.price_id || `item-${itemIndex}`;
+	// const handleEdit = (item: ProductItem) => {
+	// 	// Use array index as stable ID - won't change during editing
+	// 	const itemIndex =
+	// 		product?.items?.findIndex((i: ProductItem) => i === item) || 0;
+	// 	const itemId = item.entitlement_id || item.price_id || `item-${itemIndex}`;
 
-		setEditingState({ type: "feature", id: itemId });
-		setSheet("edit-feature");
-	};
+	// 	console.log(`Clicking on index ${itemIndex} with id ${itemId}`);
+
+	// 	setEditingState({ type: "feature", id: itemId });
+	// 	setSheet("edit-feature");
+	// };
 
 	const handleDelete = (item: ProductItem) => {
-		console.log("Delete feature:", item);
 		if (!product?.items) return;
 
 		// Remove the item from the product
@@ -34,7 +36,7 @@ export const PlanFeatureList = () => {
 
 		// Close editing sidebar if this item was being edited
 		const itemIndex = product.items.findIndex((i: ProductItem) => i === item);
-		const itemId = item.entitlement_id || item.price_id || `item-${itemIndex}`;
+		const itemId = getItemId({ item, itemIndex });
 		if (editingState.id === itemId) {
 			setEditingState({ type: null, id: null });
 			setSheet(null);
@@ -66,19 +68,12 @@ export const PlanFeatureList = () => {
 		<div className="space-y-2">
 			<h4 className="text-sm font-medium text-foreground mb-2">Features</h4>
 			{filteredItems.map((item: ProductItem, index: number) => {
-				const itemId = item.entitlement_id || item.price_id || `item-${index}`;
-				const isBeingEdited =
-					editingState.type === "feature" && editingState.id === itemId;
-
 				return (
 					<PlanFeatureRow
 						key={item.entitlement_id || item.price_id || index}
 						item={item}
 						index={index}
-						onRowClick={handleFeatureClick}
-						onEdit={handleEdit}
 						onDelete={handleDelete}
-						editDisabled={isBeingEdited}
 					/>
 				);
 			})}

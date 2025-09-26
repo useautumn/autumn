@@ -19,19 +19,6 @@ export const SelectBillingCycle = ({
 	setItem: (item: ProductItem) => void;
 	disabled: boolean;
 }) => {
-	// const handleBillingIntervalSelected = (value: BillingInterval) => {
-	// 	let usageModel = item.usage_model;
-	// 	if (value == BillingInterval.OneOff) {
-	// 		usageModel = UsageModel.Prepaid;
-	// 	}
-
-	// 	setItem({
-	// 		...item,
-	// 		interval: value == BillingInterval.OneOff ? null : value,
-	// 		usage_model: usageModel,
-	// 	});
-	// };s
-
 	return (
 		<div className="w-full">
 			<FormLabel>Billing Interval</FormLabel>

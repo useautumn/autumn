@@ -67,7 +67,7 @@ export const BasePriceSection = () => {
 				...newItems[basePriceIndex],
 				price: newAmount,
 				interval: interval
-					? billingToItemInterval(interval)
+					? billingToItemInterval({ billingInterval: interval })
 					: basePrice?.interval,
 				interval_count: interval ? intervalCount : basePrice?.intervalCount,
 				isBasePrice: true,

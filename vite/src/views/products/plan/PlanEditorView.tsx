@@ -1,6 +1,7 @@
-import type { ProductItem } from "@autumn/shared";
+import { type ProductItem, productV2ToFeatureItems } from "@autumn/shared";
 import { useState } from "react";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { getItemId } from "@/utils/product/productItemUtils";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { useProductChangedAlert } from "../product/hooks/useProductChangedAlert";
 import { useProductQuery } from "../product/hooks/useProductQuery";
@@ -20,7 +21,9 @@ export default function PlanEditorView() {
 	const { product: originalProduct } = useProductQuery();
 	const { isLoading: featuresLoading } = useFeaturesQuery();
 
-	const { product, setProduct, hasChanges } = usePlanData({ originalProduct });
+	const { product, setProduct, hasChanges, willVersion } = usePlanData({
+		originalProduct,
+	});
 	const [entityFeatureIds, setEntityFeatureIds] = useState<string[]>([]);
 
 	const { modal } = useProductChangedAlert({ hasChanges });
@@ -54,6 +57,7 @@ export default function PlanEditorView() {
 				entityFeatureIds,
 				setEntityFeatureIds,
 				hasChanges,
+				willVersion,
 				setSheet: setSheetWithTransition,
 				editingState,
 				setEditingState,
@@ -69,7 +73,7 @@ export default function PlanEditorView() {
 				}}
 			/>
 			<div className="flex w-full h-full overflow-y-auto bg-[#eee]">
-				<div className="flex flex-col justify-between h-full flex-1">
+				<div className="flex flex-col justify-between h-full w-full overflow-x-hidden relative">
 					<EditPlanHeader />
 					<ManagePlan />
 					<SaveChangesBar />
@@ -85,28 +89,30 @@ export default function PlanEditorView() {
 export const PlanSheets = ({ sheet }: { sheet: Sheets }) => {
 	const { product, setProduct, editingState } = useProductContext();
 
-	// Find the item being edited
-	const currentItem =
-		product?.items?.find((item: ProductItem, index: number) => {
-			const itemId = item.entitlement_id || item.price_id || `item-${index}`;
-			return editingState.id === itemId;
-		}) || null;
+	const featureItems = productV2ToFeatureItems({ items: product?.items });
 
-	// Create a proper setItem function that updates the product
+	const isCurrentItem = (item: ProductItem, index: number) => {
+		const itemId = getItemId({ item, itemIndex: index });
+		return editingState.id === itemId;
+	};
+
+	const currentItem = featureItems.find(isCurrentItem);
+
 	const setCurrentItem = (updatedItem: ProductItem) => {
 		if (!product || !product.items) return;
 
-		const updatedItems = product.items.map(
-			(item: ProductItem, index: number) => {
-				const itemId = item.entitlement_id || item.price_id || `item-${index}`;
-				return editingState.id === itemId ? updatedItem : item;
-			},
-		);
-
-		setProduct({
-			...product,
-			items: updatedItems,
+		const filteredItems = productV2ToFeatureItems({
+			items: product.items,
+			withBasePrice: true,
 		});
+
+		const currentItemIndex = filteredItems.findIndex(isCurrentItem);
+
+		if (currentItemIndex === -1) return;
+
+		const updatedItems = [...filteredItems];
+		updatedItems[currentItemIndex] = updatedItem;
+		setProduct({ ...product, items: updatedItems });
 	};
 
 	// Don't render on small screens
@@ -118,7 +124,7 @@ export const PlanSheets = ({ sheet }: { sheet: Sheets }) => {
 				return (
 					<ProductItemContext.Provider
 						value={{
-							item: currentItem,
+							item: currentItem ?? null,
 							setItem: setCurrentItem,
 							selectedIndex: 0,
 							showCreateFeature: false,

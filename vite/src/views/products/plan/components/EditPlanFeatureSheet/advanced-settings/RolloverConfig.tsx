@@ -78,7 +78,7 @@ export function RolloverConfig() {
 
 	return (
 		<>
-			{showRolloverConfig && (
+			{showRolloverConfig ? (
 				<AreaCheckbox
 					title="Rollovers"
 					tooltip="Rollovers carry unused credits to the next billing cycle. Set a maximum rollover amount and specify how many cycles before resetting."
@@ -181,7 +181,7 @@ export function RolloverConfig() {
 						</div>
 					</div>
 				</AreaCheckbox>
-			)}
+			) : null}
 		</>
 	);
 }

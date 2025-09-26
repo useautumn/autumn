@@ -1,9 +1,13 @@
 /** biome-ignore-all lint/suspicious/noDoubleEquals: need to compare null / undefined for different fields */
 import {
+	entIntervalsSame,
 	type Feature,
 	type FeatureItem,
 	type FeaturePriceItem,
 	FeatureUsageType,
+	intervalsSame,
+	itemToBillingInterval,
+	itemToEntInterval,
 	type PriceItem,
 	type ProductItem,
 	type UsageTier,
@@ -22,9 +26,39 @@ export const findSimilarItem = ({
 	item: ProductItem;
 	items: ProductItem[];
 }) => {
-	// 1. If feature item
-	if (isFeatureItem(item) || isFeaturePriceItem(item)) {
-		return items.find((i) => i.feature_id === item.feature_id);
+	if (isFeatureItem(item)) {
+		return items.find(
+			(i) =>
+				i.feature_id === item.feature_id &&
+				entIntervalsSame({
+					intervalA: {
+						interval: itemToEntInterval({ item: i }),
+						intervalCount: i.interval_count,
+					},
+					intervalB: {
+						interval: itemToEntInterval({ item }),
+						intervalCount: item.interval_count,
+					},
+				}),
+		);
+	}
+
+	if (isFeaturePriceItem(item)) {
+		return items.find(
+			(i) =>
+				i.feature_id === item.feature_id &&
+				intervalsSame({
+					intervalA: {
+						interval: itemToBillingInterval({ item: i }),
+						intervalCount: i.interval_count,
+					},
+					intervalB: {
+						interval: itemToBillingInterval({ item }),
+						intervalCount: item.interval_count,
+					},
+				}) &&
+				item.usage_model == i.usage_model,
+		);
 	}
 
 	// 2. If price item

@@ -1,4 +1,4 @@
-import { ProductItemFeatureType } from "@autumn/shared";
+import { FeatureType } from "@autumn/shared";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { getFeature } from "@/utils/product/entitlementUtils";
@@ -15,12 +15,10 @@ export function EditPlanFeatureSheet() {
 	const { item } = useProductItemContext();
 	const { features } = useFeaturesQuery();
 
-	// Early return if no item
+	// console.log("Item", item);
 	if (!item) return null;
 
 	const feature = getFeature(item?.feature_id ?? "", features);
-
-	// Derive billing type from item state - no local state needed
 	const isFeaturePrice = isFeaturePriceItem(item);
 
 	return (
@@ -30,7 +28,7 @@ export function EditPlanFeatureSheet() {
 				description="Configure how this feature is used in your app"
 			/>
 
-			{item.feature_type !== ProductItemFeatureType.Static && (
+			{feature?.type !== FeatureType.Boolean && (
 				<>
 					<SheetSection title="Billing Type">
 						<BillingType />

@@ -94,7 +94,6 @@ export const LimitedItemSchema = ProductItemSchema.extend({
 });
 
 export const FrontendProductItem = ProductItemSchema.extend({
-	price: z.union([z.number(), z.string()]).nullish(),
 	isPrice: z.boolean(),
 	isVariable: z.boolean().nullish(),
 	isBasePrice: z.boolean().nullish(),

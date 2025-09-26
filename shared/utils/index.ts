@@ -20,6 +20,7 @@ export * from "./productV2Utils/mapToProductV2.js";
 export * from "./productV2Utils/productItemUtils/classifyItemUtils.js";
 export * from "./productV2Utils/productItemUtils/convertItemUtils.js";
 export * from "./productV2Utils/productItemUtils/getItemType.js";
+export * from "./productV2Utils/productItemUtils/itemIntervalUtils.js";
 // Item utils
 export * from "./productV2Utils/productItemUtils/mapToItem.js";
 export * from "./productV2Utils/productItemUtils/productItemUtils.js";

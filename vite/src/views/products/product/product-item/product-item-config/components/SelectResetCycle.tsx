@@ -1,27 +1,26 @@
 import {
+	BillingInterval,
+	EntInterval,
+	FeatureUsageType,
+	Infinite,
+	itemToEntInterval,
+} from "@autumn/shared";
+import { useState } from "react";
+import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
+import {
+	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-
-import { Select } from "@/components/ui/select";
-import { useProductItemContext } from "../../ProductItemContext";
-import { isFeaturePriceItem } from "@/utils/product/getItemType";
-import {
-	BillingInterval,
-	EntInterval,
-	FeatureUsageType,
-	Infinite,
-} from "@autumn/shared";
-import { itemToEntInterval } from "@/utils/product/itemIntervalUtils";
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { cn } from "@/lib/utils";
-import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
-import { getFeatureUsageType } from "@/utils/product/entitlementUtils";
-import { useState } from "react";
-import { CustomiseIntervalPopover } from "./CusomiseIntervalPopover";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { cn } from "@/lib/utils";
+import { getFeatureUsageType } from "@/utils/product/entitlementUtils";
+import { isFeaturePriceItem } from "@/utils/product/getItemType";
+import { useProductItemContext } from "../../ProductItemContext";
+import { CustomiseIntervalPopover } from "./CusomiseIntervalPopover";
 
 const getIntervalText = ({
 	interval,
@@ -54,18 +53,18 @@ export const SelectResetCycle = () => {
 	const handleChange = (value: EntInterval) => {
 		setItem({
 			...item,
-			interval: value == EntInterval.Lifetime ? null : (value as EntInterval),
+			interval: value === EntInterval.Lifetime ? null : (value as EntInterval),
 		});
 	};
 
-	const isFeaturePrice = isFeaturePriceItem(item);
-	const usageType = getFeatureUsageType({ item, features });
+	const isFeaturePrice = isFeaturePriceItem(item!);
+	const usageType = getFeatureUsageType({ item: item!, features });
 
 	if (usageType === FeatureUsageType.Continuous) {
 		return null;
 	}
 
-	const interval = itemToEntInterval(item);
+	const interval = itemToEntInterval({ item: item! });
 
 	return (
 		<div
@@ -85,8 +84,8 @@ export const SelectResetCycle = () => {
 			</FieldLabel>
 			<div className="flex items-center gap-2">
 				<Select
-					disabled={item.included_usage == Infinite}
-					value={itemToEntInterval(item) as string}
+					disabled={item!.included_usage === Infinite}
+					value={itemToEntInterval({ item }) as string}
 					onValueChange={(value) => {
 						handleChange(value as EntInterval);
 					}}
@@ -96,7 +95,7 @@ export const SelectResetCycle = () => {
 							<span className="block truncate overflow-hidden text-ellipsis max-w-full">
 								{getIntervalText({
 									interval,
-									intervalCount: item.interval_count,
+									intervalCount: item!.interval_count,
 								})}
 							</span>
 						</SelectValue>
@@ -198,7 +197,7 @@ const SelectIntervalItem = ({
 		>
 			<div className="flex items-center gap-2 w-full whitespace-nowrap truncate overflow-hidden">
 				<span className="truncate">
-					{getIntervalText({ interval, intervalCount: item?.interval_count })}
+					{getIntervalText({ interval, intervalCount: item!.interval_count })}
 				</span>
 			</div>
 		</SelectItem>

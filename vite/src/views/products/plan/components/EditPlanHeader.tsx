@@ -3,23 +3,12 @@ import { AdminHover } from "@/components/general/AdminHover";
 import { Badge } from "@/components/v2/badges/Badge";
 import { IconBadge } from "@/components/v2/badges/IconBadge";
 import V2Breadcrumb from "@/components/v2/breadcrumb";
-import { PlanTypeBadge } from "../../components/PlanTypeBadge";
 import { useProductCountsQuery } from "../../product/hooks/queries/useProductCountsQuery";
 import { useProductQuery } from "../../product/hooks/useProductQuery";
 
 export const EditPlanHeader = () => {
 	const { product } = useProductQuery();
 	const { counts } = useProductCountsQuery();
-	const badgeType =
-		product.is_default &&
-		product.free_trial &&
-		!product.free_trial.card_required
-			? "Default Trial"
-			: product.is_default
-				? "Default"
-				: product.is_add_on
-					? "Add-on"
-					: "";
 
 	const getProductAdminHover = () => {
 		return [
@@ -64,11 +53,12 @@ export const EditPlanHeader = () => {
 				</div>
 			</div>
 			<div className="flex flex-row gap-2">
-				{badgeType && <Badge variant="muted">{badgeType}</Badge>}
+				{product.is_default && <Badge variant="muted">Default</Badge>}
+				{product.is_add_on && <Badge variant="muted">Add-on</Badge>}
 				<IconBadge variant="muted" icon={<UserIcon />}>
 					{counts?.active || 0}
 				</IconBadge>
-				<PlanTypeBadge product={product} />
+				{/* <PlanTypeBadge product={product} /> */}
 			</div>
 		</div>
 	);

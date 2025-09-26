@@ -1,42 +1,39 @@
-import RecaseError from "@/utils/errorUtils.js";
 import {
 	AllowanceType,
 	BillingInterval,
 	BillingType,
 	BillWhen,
 	EntInterval,
-	Entitlement,
+	type Entitlement,
 	ErrCode,
-	Feature,
+	type Feature,
 	FeatureType,
-	FixedPriceConfig,
-	Infinite,
-	Price,
-	PriceType,
-	ProductItem,
-	UsageModel,
-	TierInfinite,
-	UsagePriceConfig,
-	OnIncrease,
-	OnDecrease,
 	FeatureUsageType,
+	type FixedPriceConfig,
+	Infinite,
+	itemToBillingInterval,
+	itemToEntInterval,
+	OnDecrease,
+	OnIncrease,
+	type Price,
+	PriceType,
+	type ProductItem,
+	TierInfinite,
+	UsageModel,
+	type UsagePriceConfig,
 } from "@autumn/shared";
-import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 import { pricesAreSame } from "@/internal/products/prices/priceInitUtils.js";
-import { entsAreSame } from "../../entitlements/entitlementUtils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
-
+import RecaseError from "@/utils/errorUtils.js";
+import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
+import { entsAreSame } from "../../entitlements/entitlementUtils.js";
+import { shouldProrate } from "../../prices/priceUtils/prorationConfigUtils.js";
+import { itemCanBeProrated } from "./classifyItem.js";
 import {
 	isFeatureItem,
 	isFeaturePriceItem,
 	isPriceItem,
 } from "./getItemType.js";
-import {
-	itemToBillingInterval,
-	itemToEntInterval,
-} from "../itemIntervalUtils.js";
-import { itemCanBeProrated } from "./classifyItem.js";
-import { shouldProrate } from "../../prices/priceUtils/prorationConfigUtils.js";
 
 export const getResetUsage = ({
 	item,
@@ -53,7 +50,7 @@ export const getResetUsage = ({
 		(isFeatureItem(item) || isFeaturePriceItem(item)) &&
 		feature
 	) {
-		return feature?.config?.usage_type == FeatureUsageType.Single;
+		return feature?.config?.usage_type === FeatureUsageType.Single;
 	}
 	return item.reset_usage_when_enabled;
 };
@@ -71,10 +68,10 @@ export const toPrice = ({
 	isCustom: boolean;
 	newVersion?: boolean;
 }) => {
-	let config: FixedPriceConfig = {
+	const config: FixedPriceConfig = {
 		type: PriceType.Fixed,
-		amount: notNullish(item.price) ? item.price! : item.tiers![0].amount!,
-		interval: itemToBillingInterval(item) as BillingInterval,
+		amount: notNullish(item.price) ? item.price : item.tiers![0].amount,
+		interval: itemToBillingInterval({ item }) as BillingInterval,
 		interval_count: item.interval_count || 1,
 	};
 
@@ -116,9 +113,9 @@ export const toFeature = ({
 	newVersion?: boolean;
 	feature?: Feature;
 }) => {
-	let isBoolean = feature?.type == FeatureType.Boolean;
+	const isBoolean = feature?.type == FeatureType.Boolean;
 
-	let resetUsage = getResetUsage({ item, feature });
+	const resetUsage = getResetUsage({ item, feature });
 
 	let ent: Entitlement = {
 		id: item.entitlement_id || generateId("ent"),
@@ -137,7 +134,7 @@ export const toFeature = ({
 				? AllowanceType.Unlimited
 				: AllowanceType.Fixed,
 
-		interval: isBoolean ? null : (itemToEntInterval(item) as EntInterval),
+		interval: isBoolean ? null : (itemToEntInterval({ item }) as EntInterval),
 		interval_count: item.interval_count || 1,
 
 		carry_from_previous: !resetUsage,
@@ -178,7 +175,7 @@ export const toFeatureAndPrice = ({
 	newVersion?: boolean;
 	features: Feature[];
 }) => {
-	let resetUsage = getResetUsage({
+	const resetUsage = getResetUsage({
 		item,
 		feature: features.find((f) => f.id == item.feature_id),
 	});
@@ -195,7 +192,7 @@ export const toFeatureAndPrice = ({
 
 		allowance: (item.included_usage as number) || 0,
 		allowance_type: AllowanceType.Fixed,
-		interval: itemToEntInterval(item) as EntInterval,
+		interval: itemToEntInterval({ item }) as EntInterval,
 		interval_count: item.interval_count || 1,
 
 		carry_from_previous: !resetUsage,
@@ -206,7 +203,7 @@ export const toFeatureAndPrice = ({
 	};
 
 	// Will only create new ent id if
-	let newEnt = !curEnt || (isCustom && !entsAreSame(curEnt, ent));
+	const newEnt = !curEnt || (isCustom && !entsAreSame(curEnt, ent));
 	if (newEnt || newVersion) {
 		ent = {
 			...ent,
@@ -215,9 +212,9 @@ export const toFeatureAndPrice = ({
 		};
 	}
 
-	let entInterval = itemToEntInterval(item);
+	const entInterval = itemToEntInterval({ item });
 
-	let config: UsagePriceConfig = {
+	const config: UsagePriceConfig = {
 		type: PriceType.Usage,
 
 		bill_when:
@@ -238,13 +235,14 @@ export const toFeatureAndPrice = ({
 					},
 				]
 			: (item.tiers as any),
-		interval: itemToBillingInterval(item) as BillingInterval,
+		interval: itemToBillingInterval({ item }) as BillingInterval,
 		interval_count: item.interval_count || 1,
 	};
 
 	let prorationConfig = null;
 	if (itemCanBeProrated({ item, features })) {
-		let onIncrease = item.config?.on_increase || OnIncrease.ProrateImmediately;
+		const onIncrease =
+			item.config?.on_increase || OnIncrease.ProrateImmediately;
 		let onDecrease = item.config?.on_decrease || OnDecrease.Prorate;
 
 		// console.log("Item config:", item.config);
@@ -274,7 +272,7 @@ export const toFeatureAndPrice = ({
 		proration_config: prorationConfig,
 	};
 
-	let billingType = getBillingType(price.config!);
+	const billingType = getBillingType(price.config!);
 	if (
 		(billingType == BillingType.UsageInArrear ||
 			billingType == BillingType.InArrearProrated) &&
@@ -287,13 +285,13 @@ export const toFeatureAndPrice = ({
 		});
 	}
 
-	let priceOrEntDifferent =
+	const priceOrEntDifferent =
 		(curPrice && !pricesAreSame(curPrice, price, true)) ||
 		(curEnt && !entsAreSame(curEnt, ent));
 
 	if (curPrice && (priceOrEntDifferent || newVersion)) {
-		let newConfig = price.config as UsagePriceConfig;
-		let curConfig = curPrice.config as UsagePriceConfig;
+		const newConfig = price.config as UsagePriceConfig;
+		const curConfig = curPrice.config as UsagePriceConfig;
 		newConfig.stripe_meter_id = curConfig.stripe_meter_id;
 		newConfig.stripe_product_id = curConfig.stripe_product_id;
 		price.config = newConfig;
@@ -341,7 +339,7 @@ export const itemToPriceAndEnt = ({
 	let sameEnt: Entitlement | null = null;
 
 	if (isPriceItem(item)) {
-		let { price } = toPrice({
+		const { price } = toPrice({
 			item,
 			orgId,
 			internalProductId,
@@ -363,9 +361,9 @@ export const itemToPriceAndEnt = ({
 				code: ErrCode.InvalidRequest,
 			});
 		}
-		let isBoolean = feature?.type == FeatureType.Boolean;
+		const isBoolean = feature?.type == FeatureType.Boolean;
 
-		let { ent } = toFeature({
+		const { ent } = toFeature({
 			item,
 			orgId,
 			internalFeatureId: feature!.internal_id!,
@@ -393,7 +391,7 @@ export const itemToPriceAndEnt = ({
 			});
 		}
 
-		let { price, ent } = toFeatureAndPrice({
+		const { price, ent } = toFeatureAndPrice({
 			item,
 			orgId,
 			internalFeatureId: feature!.internal_id!,
@@ -405,7 +403,7 @@ export const itemToPriceAndEnt = ({
 			features,
 		});
 
-		let entSame = curEnt && entsAreSame(curEnt, ent);
+		const entSame = curEnt && entsAreSame(curEnt, ent);
 
 		// 1. If no curPrice, price is new
 		if (!curPrice || newVersion) {
