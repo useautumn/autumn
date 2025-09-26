@@ -51,6 +51,7 @@ export const RewardProgramConfig = ({
 				<div className="w-6/12">
 					<FieldLabel>Program ID</FieldLabel>
 					<Input
+						disabled={isUpdate}
 						value={rewardProgram.id || ""}
 						onChange={(e) =>
 							setRewardProgram({ ...rewardProgram, id: e.target.value })

@@ -1,19 +1,23 @@
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { fullCusProductToProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
-import { ProductService } from "@/internal/products/ProductService.js";
-import {
-	isOneOff,
-	isProductUpgrade,
-} from "@/internal/products/productUtils.js";
-import { sortProductsByPrice } from "@/internal/products/productUtils/sortProductUtils.js";
-import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
-import { notNullish } from "@/utils/genUtils.js";
 import {
 	type Feature,
 	FeaturePreviewScenario,
 	type FullCusProduct,
+	type FullEntitlement,
 	type FullProduct,
 } from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { fullCusProductToProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
+import { ProductService } from "@/internal/products/ProductService.js";
+import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
+import {
+	sortFullProducts,
+	sortProductsByPrice,
+} from "@/internal/products/productUtils/sortProductUtils.js";
+import {
+	isOneOff,
+	isProductUpgrade,
+} from "@/internal/products/productUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 export const getCheckPreview = async ({
 	db,
@@ -34,30 +38,34 @@ export const getCheckPreview = async ({
 		return null;
 	}
 
-	let mainCusProds = cusProducts.filter(
+	const mainCusProds = cusProducts.filter(
 		(cp: FullCusProduct) => !cp.product.is_add_on,
 	);
 
-	let cusOwnedProducts = mainCusProds.map((cp: FullCusProduct) =>
+	const cusOwnedProducts = mainCusProds.map((cp: FullCusProduct) =>
 		fullCusProductToProduct(cp),
 	);
+
 	sortProductsByPrice({ products: cusOwnedProducts });
-	let highestTierProd =
+
+	const highestTierProd =
 		cusOwnedProducts.length > 0 ? cusOwnedProducts[0] : null;
 
-	let products: FullProduct[] = await ProductService.getByFeature({
+	const products: FullProduct[] = await ProductService.getByFeature({
 		db,
-		internalFeatureId: feature.internal_id!,
+		internalFeatureId: feature.internal_id,
 	});
 
+	sortFullProducts({ products });
+
 	// 1. Get add ons
-	let addOns = [];
-	for (let addOn of products) {
+	const addOns = [];
+	for (const addOn of products) {
 		if (addOn.is_add_on) {
 			if (isOneOff(addOn.prices)) {
 				addOns.push(addOn);
 			} else if (
-				!cusProducts.some((cp: FullCusProduct) => cp.product.id == addOn.id)
+				!cusProducts.some((cp: FullCusProduct) => cp.product.id === addOn.id)
 			) {
 				addOns.push(addOn);
 			}
@@ -68,12 +76,13 @@ export const getCheckPreview = async ({
 	if (!highestTierProd) {
 		mainProds = products.filter((product: FullProduct) => !product.is_add_on);
 	} else {
-		for (let prod of products) {
+		for (const prod of products) {
 			if (prod.is_add_on) {
 				continue;
 			}
-			if (mainCusProds.some((cp: FullCusProduct) => cp.product.id == prod.id)) {
-				continue;
+			if (
+				mainCusProds.some((cp: FullCusProduct) => cp.product.id === prod.id)
+			) {
 			} else if (
 				isProductUpgrade({
 					prices1: highestTierProd.prices,
@@ -86,21 +95,21 @@ export const getCheckPreview = async ({
 		}
 	}
 
-	let rawProducts = [...mainProds, ...addOns];
-	for (let p of rawProducts) {
+	const rawProducts = [...mainProds, ...addOns];
+	for (const p of rawProducts) {
 		p.entitlements = p.entitlements.map((e) => ({
 			...e,
-			feature: allFeatures.find((f) => f.id == e.feature_id)!,
-		}));
+			feature: allFeatures.find((f) => f.id === e.feature_id),
+		})) as FullEntitlement[];
 	}
 
-	let v2Prods = await Promise.all(
+	const v2Prods = await Promise.all(
 		rawProducts.map((p) =>
 			getProductResponse({ product: p, features: allFeatures }),
 		),
 	);
 
-	let scenario = notNullish(balance)
+	const scenario = notNullish(balance)
 		? FeaturePreviewScenario.UsageLimit
 		: FeaturePreviewScenario.FeatureFlag;
 
@@ -111,7 +120,7 @@ export const getCheckPreview = async ({
 			feature_id: feature.id,
 			feature_name: feature.name,
 			message:
-				scenario == FeaturePreviewScenario.UsageLimit
+				scenario === FeaturePreviewScenario.UsageLimit
 					? `You have reached the usage limit for ${feature.name}. Please contact us to increase your limit.`
 					: `${feature.name} is not available for your account. Please contact us to enable it.`,
 
@@ -120,9 +129,9 @@ export const getCheckPreview = async ({
 		};
 	}
 
-	let nextProd = mainProds.length > 0 ? mainProds[0] : addOns[0];
+	const nextProd = mainProds.length > 0 ? mainProds[0] : addOns[0];
 
-	let title = nextProd.free_trial
+	const title = nextProd.free_trial
 		? `Start trial for ${nextProd.name}`
 		: !nextProd.is_add_on
 			? `Upgrade to ${nextProd.name}`
@@ -140,7 +149,7 @@ export const getCheckPreview = async ({
 			}
 			msg = `${msg} ${prodString}`;
 		} else if (addOns.length > 0) {
-			let prodString = `Please purchase the ${addOns[0].name} add on to continue using this feature.`;
+			const prodString = `Please purchase the ${addOns[0].name} add on to continue using this feature.`;
 			msg = `${msg} ${prodString}`;
 		}
 	}
@@ -155,12 +164,12 @@ export const getCheckPreview = async ({
 			}
 			msg = `${msg} ${prodString}`;
 		} else if (addOns.length > 0) {
-			let prodString = `Please purchase the ${addOns[0].name} add on to use this feature.`;
+			const prodString = `Please purchase the ${addOns[0].name} add on to use this feature.`;
 			msg = `${msg} ${prodString}`;
 		}
 	}
 
-	let nextTier =
+	const nextTier =
 		mainProds.length > 0 ? mainProds[0] : addOns.length > 0 ? addOns[0] : null;
 
 	return {

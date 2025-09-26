@@ -1,25 +1,24 @@
 import {
 	AttachBranch,
-	AttachConfig,
+	type AttachConfig,
 	BillingInterval,
-	FullProduct,
-	FreeTrial,
+	type FullProduct,
+	isTrialing,
 } from "@autumn/shared";
 import { getOptions } from "@/internal/api/entitled/checkUtils.js";
 import { getItemsForNewProduct } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
-import { AttachParams } from "../../cusProducts/AttachParams.js";
+import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
+import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
+import { getAlignedUnix } from "@/internal/products/prices/billingIntervalUtils2.js";
+import { getLargestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
+import { mapToProductItems } from "@/internal/products/productV2Utils.js";
+import type { AttachParams } from "../../cusProducts/AttachParams.js";
 import {
 	attachParamsToProduct,
 	getCustomerSub,
 } from "../attachUtils/convertAttachParams.js";
-import { mapToProductItems } from "@/internal/products/productV2Utils.js";
-import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
-import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
-import { getLargestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
-import { isTrialing } from "@autumn/shared";
-import { getAlignedUnix } from "@/internal/products/prices/billingIntervalUtils2.js";
-import { formatUnixToDate } from "@/utils/genUtils.js";
 
+// Just for new product...?
 const getNextCycleItems = async ({
 	newProduct,
 	attachParams,
@@ -40,7 +39,8 @@ const getNextCycleItems = async ({
 	trialEnds?: number | null;
 }) => {
 	// 2. If free trial
-	let nextCycleAt = undefined;
+	let nextCycleAt: number | undefined;
+
 	if (attachParams.freeTrial) {
 		if (trialEnds) {
 			nextCycleAt = trialEnds;
@@ -51,7 +51,7 @@ const getNextCycleItems = async ({
 					now: attachParams.now,
 				})! * 1000;
 		}
-	} else if (branch != AttachBranch.OneOff && anchor) {
+	} else if (branch !== AttachBranch.OneOff && anchor) {
 		// Yearly one
 		const largestInterval = getLargestInterval({ prices: newProduct.prices });
 		if (largestInterval) {
@@ -69,7 +69,7 @@ const getNextCycleItems = async ({
 		now: attachParams.now,
 		logger,
 		withPrepaid,
-		anchor,
+		// anchor,
 	});
 
 	return {
@@ -98,14 +98,14 @@ export const getNewProductPreview = async ({
 		attachParams,
 	});
 
-	let trialEnds = undefined;
+	let trialEnds: number | undefined;
 
 	// Scenario where we update a current sub with new product (so no create sub)
-	let anchor = undefined;
+	let anchor: number | undefined;
 	if (mergeSub && !config.disableMerge) {
 		if (mergeCusProduct?.free_trial) {
 			if (isTrialing({ cusProduct: mergeCusProduct, now: attachParams.now })) {
-				trialEnds = mergeCusProduct.trial_ends_at;
+				trialEnds = mergeCusProduct.trial_ends_at || undefined;
 				attachParams.freeTrial = mergeCusProduct.free_trial;
 			} else {
 				attachParams.freeTrial = null;
@@ -141,7 +141,7 @@ export const getNewProductPreview = async ({
 		trialEnds,
 	});
 
-	let options = getOptions({
+	const options = getOptions({
 		prodItems: mapToProductItems({
 			prices: newProduct.prices,
 			entitlements: newProduct.entitlements,

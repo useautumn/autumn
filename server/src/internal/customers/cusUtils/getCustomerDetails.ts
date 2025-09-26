@@ -1,33 +1,33 @@
-import { BREAK_API_VERSION } from "@/utils/constants.js";
 import {
-	AppEnv,
-	CusProductStatus,
-	FullCusProduct,
 	APIVersion,
+	type AppEnv,
+	CusEntResponseSchema,
+	CusExpand,
+	CusProductStatus,
 	CusResponseSchema,
 	CustomerResponseSchema,
-	CusEntResponseSchema,
-	FeatureType,
-	Feature,
-	Organization,
-	FullCustomer,
-	CusExpand,
-	RewardResponse,
+	cusProductsToCusEnts,
+	cusProductsToCusPrices,
 	EntityResponseSchema,
+	type Feature,
+	FeatureType,
+	type FullCusProduct,
+	type FullCustomer,
+	type Organization,
+	type RewardResponse,
 } from "@autumn/shared";
-import { getCusInvoices } from "./cusUtils.js";
-
-import { orgToVersion } from "@/utils/versionUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { cusProductsToCusEnts, cusProductsToCusPrices } from "@autumn/shared";
-
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { invoicesToResponse } from "@/internal/invoices/invoiceUtils.js";
-import { getCusBalances } from "./cusFeatureResponseUtils/getCusBalances.js";
+import { BREAK_API_VERSION } from "@/utils/constants.js";
+import { orgToVersion } from "@/utils/versionUtils.js";
 import { featuresToObject } from "./cusFeatureResponseUtils/balancesToFeatureResponse.js";
+import { getCusBalances } from "./cusFeatureResponseUtils/getCusBalances.js";
 import { processFullCusProducts } from "./cusProductResponseUtils/processFullCusProducts.js";
+import { getCusPaymentMethodRes } from "./cusResponseUtils/getCusPaymentMethodRes.js";
 import { getCusReferrals } from "./cusResponseUtils/getCusReferrals.js";
 import { getCusRewards } from "./cusResponseUtils/getCusRewards.js";
-import { getCusPaymentMethodRes } from "./cusResponseUtils/getCusPaymentMethodRes.js";
+import { getCusUpcomingInvoice } from "./cusResponseUtils/getCusUpcomingInvoice.js";
+import { getCusInvoices } from "./cusUtils.js";
 
 export const getCustomerDetails = async ({
 	db,
@@ -52,18 +52,18 @@ export const getCustomerDetails = async ({
 	expand: CusExpand[];
 	reqApiVersion?: number;
 }) => {
-	let apiVersion = orgToVersion({
+	const apiVersion = orgToVersion({
 		org,
 		reqApiVersion,
 	});
 
-	let withRewards = expand.includes(CusExpand.Rewards);
+	const withRewards = expand.includes(CusExpand.Rewards);
 
-	let inStatuses = org.config.include_past_due
+	const inStatuses = org.config.include_past_due
 		? [CusProductStatus.Active, CusProductStatus.PastDue]
 		: [CusProductStatus.Active];
 
-	let cusEnts = cusProductsToCusEnts({ cusProducts, inStatuses }) as any;
+	const cusEnts = cusProductsToCusEnts({ cusProducts, inStatuses }) as any;
 
 	const balances = await getCusBalances({
 		cusEntsWithCusProduct: cusEnts,
@@ -72,7 +72,7 @@ export const getCustomerDetails = async ({
 		apiVersion,
 	});
 
-	let subIds = cusProducts.flatMap(
+	const subIds = cusProducts.flatMap(
 		(cp: FullCusProduct) => cp.subscription_ids || [],
 	);
 
@@ -87,8 +87,8 @@ export const getCustomerDetails = async ({
 
 	if (apiVersion >= APIVersion.v1_1) {
 		let entList: any = balances.map((b) => {
-			let isBoolean =
-				features.find((f: Feature) => f.id == b.feature_id)?.type ==
+			const isBoolean =
+				features.find((f: Feature) => f.id === b.feature_id)?.type ===
 				FeatureType.Boolean;
 			if (b.unlimited || isBoolean) {
 				return b;
@@ -101,7 +101,7 @@ export const getCustomerDetails = async ({
 			});
 		});
 
-		let products: any = [...main, ...addOns];
+		const products: any = [...main, ...addOns];
 
 		if (apiVersion >= APIVersion.v1_2) {
 			entList = featuresToObject({
@@ -110,9 +110,9 @@ export const getCustomerDetails = async ({
 			});
 		}
 
-		let withInvoices = expand.includes(CusExpand.Invoices);
+		const withInvoices = expand.includes(CusExpand.Invoices);
 
-		let rewards: RewardResponse | undefined = await getCusRewards({
+		const rewards: RewardResponse | undefined = await getCusRewards({
 			org,
 			env,
 			fullCus: customer,
@@ -120,26 +120,35 @@ export const getCustomerDetails = async ({
 			expand,
 		});
 
-		let referrals = await getCusReferrals({
+		const upcomingInvoice = await getCusUpcomingInvoice({
 			db,
-			fullCus: customer,
-			expand,
-		});
-
-		let paymentMethod = await getCusPaymentMethodRes({
 			org,
 			env,
 			fullCus: customer,
 			expand,
 		});
 
-		let cusResponse = {
+		const referrals = await getCusReferrals({
+			db,
+			fullCus: customer,
+			expand,
+		});
+
+		const paymentMethod = await getCusPaymentMethodRes({
+			org,
+			env,
+			fullCus: customer,
+			expand,
+		});
+
+		const cusResponse = {
 			...CusResponseSchema.parse({
 				...customer,
 				stripe_id: customer.processor?.id,
 				features: entList,
 				products,
 				// invoices: withInvoices ? invoices : undefined,
+
 				invoices: withInvoices
 					? invoicesToResponse({
 							invoices: customer.invoices || [],
@@ -165,6 +174,7 @@ export const getCustomerDetails = async ({
 					: undefined,
 				referrals,
 				payment_method: paymentMethod,
+				upcoming_invoice: upcomingInvoice,
 			}),
 		};
 
@@ -177,7 +187,7 @@ export const getCustomerDetails = async ({
 			return cusResponse;
 		}
 	} else {
-		let withItems = org.config.api_version >= BREAK_API_VERSION;
+		const withItems = org.config.api_version >= BREAK_API_VERSION;
 
 		const processedInvoices = await getCusInvoices({
 			db,

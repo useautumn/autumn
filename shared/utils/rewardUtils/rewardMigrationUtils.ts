@@ -4,9 +4,13 @@ import type {
 	Reward,
 	RewardType,
 	UsagePriceConfig,
+	UsageTier,
 } from "../../index.js";
-import type { UsageTier } from "../../models/productModels/priceModels/priceConfig/usagePriceConfig.js";
-import { isFixedPrice, isUsagePrice } from "../productUtils/priceUtils.js";
+import {
+	getBillingType,
+	isFixedPrice,
+	isUsagePrice,
+} from "../productUtils/priceUtils.js";
 
 // Helper function to check if tier structures match
 const tiersMatch = (oldTiers: UsageTier[], newTiers: UsageTier[]): boolean => {
@@ -42,6 +46,8 @@ const findMatchingUsagePrice = (
 
 	return (
 		candidates.find((candidate) => {
+			if (!isUsagePrice({ price: candidate })) return false;
+
 			const newConfig = candidate.config as UsagePriceConfig;
 
 			// Match by feature
@@ -50,8 +56,9 @@ const findMatchingUsagePrice = (
 				return false;
 
 			// Match by billing behavior
-			if (newConfig.bill_when !== oldConfig.bill_when) return false;
-			if (newConfig.should_prorate !== oldConfig.should_prorate) return false;
+			const newBilingType = getBillingType(newConfig);
+			const oldBilingType = getBillingType(oldConfig);
+			if (newBilingType !== oldBilingType) return false;
 
 			// Optionally match by tier structure
 			if (!tiersMatch(oldConfig.usage_tiers, newConfig.usage_tiers))
