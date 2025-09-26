@@ -19,18 +19,14 @@ export const SelectBillingCycle = ({
 	setItem: (item: ProductItem) => void;
 	disabled: boolean;
 }) => {
-	// const handleBillingIntervalSelected = (value: BillingInterval) => {
-	// 	let usageModel = item.usage_model;
-	// 	if (value == BillingInterval.OneOff) {
-	// 		usageModel = UsageModel.Prepaid;
-	// 	}
-
-	// 	setItem({
-	// 		...item,
-	// 		interval: value == BillingInterval.OneOff ? null : value,
-	// 		usage_model: usageModel,
-	// 	});
-	// };s
+	const handleBillingIntervalSelected = (value: BillingInterval) => {
+		if (!item) return;
+		
+		setItem({
+			...item,
+			interval: value === BillingInterval.OneOff ? null : value,
+		});
+	};
 
 	return (
 		<div className="w-full">
@@ -39,6 +35,7 @@ export const SelectBillingCycle = ({
 				disabled={disabled}
 				value={item?.interval ?? BillingInterval.OneOff}
 				defaultValue={BillingInterval.Month}
+				onValueChange={handleBillingIntervalSelected}
 			>
 				<SelectTrigger className="w-full">
 					<SelectValue placeholder="Select interval" />
