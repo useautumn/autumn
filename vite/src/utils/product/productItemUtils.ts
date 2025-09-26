@@ -121,7 +121,8 @@ export const getItemId = ({
 	itemIndex,
 }: {
 	item: ProductItem;
-	itemIndex?: number;
+	itemIndex: number;
 }) => {
-	return item.entitlement_id || item.price_id || `item-${itemIndex}`;
+	// || item.entitlement_id || item.price_id;
+	return `item-${itemIndex}`;
 };

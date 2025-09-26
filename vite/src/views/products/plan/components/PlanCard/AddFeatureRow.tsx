@@ -1,4 +1,8 @@
-import { type Feature, ProductItemInterval } from "@autumn/shared";
+import {
+	type Feature,
+	ProductItemInterval,
+	productV2ToFeatureItems,
+} from "@autumn/shared";
 import { PlusIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { CustomDialogContent } from "@/components/general/modal-components/DialogContentWrapper";
@@ -45,7 +49,7 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 		};
 
 		// Add the new item to the product
-		const newItems = [...(product.items || []), newItem];
+		const newItems = [...product.items, newItem];
 		const updatedProduct = { ...product, items: newItems };
 		setProduct(updatedProduct);
 
@@ -53,8 +57,12 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 		setPopoverOpen(false);
 
 		// Open edit sidebar for the new item
-		const itemIndex = newItems.length - 1;
+		const featureItems = productV2ToFeatureItems({ items: newItems });
+		const itemIndex = featureItems.length - 1;
+
+		console.log("itemIndex", itemIndex);
 		const itemId = getItemId({ item: newItem, itemIndex });
+		console.log("itemId", itemId);
 
 		setEditingState({ type: "feature", id: itemId });
 		setSheet("edit-feature");

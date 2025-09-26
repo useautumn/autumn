@@ -1,5 +1,4 @@
 import { UserIcon } from "@phosphor-icons/react";
-import { useNavigate, useSearchParams } from "react-router-dom";
 import { AdminHover } from "@/components/general/AdminHover";
 import { Badge } from "@/components/v2/badges/Badge";
 import { IconBadge } from "@/components/v2/badges/IconBadge";
@@ -13,46 +12,35 @@ import {
 } from "@/components/v2/selects/Select";
 import { PlanTypeBadge } from "../../components/PlanTypeBadge";
 import { useProductCountsQuery } from "../../product/hooks/queries/useProductCountsQuery";
-import { useProductQuery } from "../../product/hooks/useProductQuery";
+import {
+	useProductQuery,
+	useProductQueryState,
+} from "../../product/hooks/useProductQuery";
 
 export const EditPlanHeader = () => {
 	const { product, numVersions } = useProductQuery();
 	const { counts } = useProductCountsQuery();
-	const navigate = useNavigate();
-	const [searchParams] = useSearchParams();
+	const { queryStates, setQueryStates } = useProductQueryState();
 
 	// Early return if product is not loaded yet
 	if (!product || !numVersions) {
 		return null;
 	}
 
-	const badgeType =
-		product.is_default &&
-		product.free_trial &&
-		!product.free_trial.card_required
-			? "Default Trial"
-			: product.is_default
-				? "Default"
-				: product.is_add_on
-					? "Add-on"
-					: "";
-
 	const versionOptions = Array.from(
 		{ length: numVersions },
 		(_, i) => numVersions - i,
 	);
-	const versionParam = searchParams.get("version");
-	const currentVersion =
-		versionParam !== null ? parseInt(versionParam, 10) : product.version;
+	const currentVersion = queryStates.version || product.version;
 
 	const handleVersionChange = (version: string) => {
-		const newSearchParams = new URLSearchParams(searchParams);
-		if (version === numVersions.toString()) {
-			newSearchParams.delete("version");
+		const versionNumber = parseInt(version, 10);
+		if (versionNumber === numVersions) {
+			// Remove version param for latest version
+			setQueryStates({ version: null });
 		} else {
-			newSearchParams.set("version", version);
+			setQueryStates({ version: versionNumber });
 		}
-		navigate({ search: newSearchParams.toString() });
 	};
 
 	const getProductAdminHover = () => {

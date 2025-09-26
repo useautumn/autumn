@@ -1,6 +1,7 @@
 import {
 	BillingInterval,
 	Infinite,
+	isContUseItem,
 	isFeaturePriceItem,
 	ProductItemInterval,
 } from "@autumn/shared";
@@ -9,9 +10,11 @@ import {
 	CoinsIcon,
 	IncludedUsageIcon,
 } from "@/components/v2/icons/AutumnIcons";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
 export function BillingType() {
+	const { features } = useFeaturesQuery();
 	const { item, setItem } = useProductItemContext();
 
 	if (!item) return null;
@@ -38,6 +41,7 @@ export function BillingType() {
 				tiers: null,
 				billing_units: undefined,
 				usage_model: undefined,
+				interval: isContUseItem({ item, features }) ? null : item.interval,
 			});
 		} else {
 			// Add initial tier to switch to priced

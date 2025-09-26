@@ -1,3 +1,4 @@
+import React from "react";
 import { useNavigate } from "react-router";
 import {
 	Breadcrumb,
@@ -30,7 +31,7 @@ export default function V2Breadcrumb({
 		>
 			<BreadcrumbList className="text-t3 text-xs w-full">
 				{items.map((item, index) => (
-					<>
+					<React.Fragment key={index}>
 						<BreadcrumbItem
 							key={item.name}
 							onClick={() => navigateTo(item.href, navigate, env)}
@@ -39,7 +40,7 @@ export default function V2Breadcrumb({
 							{item.name}
 						</BreadcrumbItem>
 						{index < items.length - 1 && <BreadcrumbSeparator />}
-					</>
+					</React.Fragment>
 				))}
 			</BreadcrumbList>
 		</Breadcrumb>

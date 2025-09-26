@@ -18,7 +18,8 @@ import ConfirmNewVersionDialog from "./versioning/ConfirmNewVersionDialog";
 type Sheets = "edit-plan" | "edit-feature" | null;
 
 export default function PlanEditorView() {
-	const { product: originalProduct } = useProductQuery();
+	const { product: originalProduct, isLoading: productLoading } =
+		useProductQuery();
 	const { isLoading: featuresLoading } = useFeaturesQuery();
 
 	const { product, setProduct, hasChanges, willVersion } = usePlanData({
@@ -33,9 +34,9 @@ export default function PlanEditorView() {
 	const [editingState, setEditingState] = useState<{
 		type: "plan" | "feature" | null;
 		id: string | null;
-	}>({ type: null, id: null });
+	}>({ type: "plan", id: null });
 
-	if (!product || featuresLoading) return <LoadingScreen />;
+	if (!product || featuresLoading || productLoading) return <LoadingScreen />;
 
 	return (
 		<ProductContext.Provider

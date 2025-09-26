@@ -1,7 +1,7 @@
 /** biome-ignore-all lint/a11y/noStaticElementInteractions: needed */
 /** biome-ignore-all lint/a11y/useSemanticElements: needed */
 import type { ProductItem } from "@autumn/shared";
-import { getProductItemDisplay } from "@autumn/shared";
+import { getProductItemDisplay, productV2ToFeatureItems } from "@autumn/shared";
 import { TrashIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
@@ -22,7 +22,7 @@ const CustomDotIcon = () => {
 interface PlanFeatureRowProps {
 	item: ProductItem;
 	onDelete?: (item: ProductItem) => void;
-	index?: number;
+	index: number;
 }
 
 export const PlanFeatureRow = ({
@@ -33,7 +33,8 @@ export const PlanFeatureRow = ({
 	const { org } = useOrg();
 	const { features } = useFeaturesQuery();
 	const { setItem } = useProductItemContext();
-	const { editingState, setEditingState, setSheet } = useProductContext();
+	const { product, setProduct, editingState, setEditingState, setSheet } =
+		useProductContext();
 
 	const [isPressed, setIsPressed] = useState(false);
 
@@ -48,38 +49,38 @@ export const PlanFeatureRow = ({
 	const itemId = getItemId({ item, itemIndex: index });
 	const isSelected = itemId === editingState.id;
 
-	// Debug logging
-	console.log(
-		`Row ${itemId}: isPressed=${isPressed}, isSelected=${isSelected}, editingState.id=${editingState.id}`,
-	);
-
 	// Clear pressed state when this item is no longer selected
 	useEffect(() => {
-		if (!isSelected) {
-			console.log(`Row ${itemId}: Effect 1 - clearing pressed (not selected)`);
-			setIsPressed(false);
-		}
-	}, [isSelected, itemId]);
+		if (!isSelected) setIsPressed(false);
+	}, [isSelected]);
 
 	// Also clear pressed state whenever editing state changes (catches hotkey navigation)
 	useEffect(() => {
-		if (editingState.id !== itemId) {
-			console.log(
-				`Row ${itemId}: Effect 2 - clearing pressed (editing state changed to ${editingState.id})`,
-			);
-			setIsPressed(false);
-		}
+		if (editingState.id !== itemId) setIsPressed(false);
 	}, [editingState.id, itemId]);
-
-	// useEffect(() => {
-	// 	console.log("isSelected", isSelected);
-	// }, [isSelected]);
 
 	const handleRowClicked = () => {
 		const itemId = getItemId({ item, itemIndex: index });
 		setItem(item);
 		setEditingState({ type: "feature", id: itemId });
 		setSheet("edit-feature");
+	};
+
+	const handleDeleteRow = () => {
+		const curItems = productV2ToFeatureItems({
+			items: product.items,
+			withBasePrice: true,
+		});
+		const newItems = curItems.filter(
+			(_i: ProductItem, idx: number) => idx !== index,
+		);
+
+		setProduct({ ...product, items: newItems });
+
+		if (isSelected) {
+			setEditingState({ type: "plan", id: null });
+			setSheet("edit-plan");
+		}
 	};
 
 	return (
@@ -93,17 +94,16 @@ export const PlanFeatureRow = ({
 
 				// To prevent flickering when clicking inner buttons
 				!isSelected &&
-					"hover:!bg-hover-primary focus-visible:!bg-hover-primary focus-visible:!border-primary",
+					"hover:!bg-hover-primary focus-visible:!bg-hover-primary focus-visible:!border-primary active:!bg-active-primary",
 
 				isSelected && "!bg-hover-primary !border-primary",
 
-				// Custom pressed state that we can control
-				"data-[pressed=true]:!bg-active-primary data-[pressed=true]:border-primary focus:outline-none active:!bg-transparent active:!border-transparent",
+				// // Custom pressed state that we can control
+				// "data-[pressed=true]:!bg-active-primary data-[pressed=true]:border-primary focus:outline-none active:!bg-transparent active:!border-transparent",
 			)}
 			onMouseDown={(e) => {
 				// Only set pressed if we're not clicking on a button
 				if (!(e.target as Element).closest("button")) {
-					console.log(`Row ${itemId}: onMouseDown - setting pressed to true`);
 					setIsPressed(true);
 				}
 			}}
@@ -151,7 +151,7 @@ export const PlanFeatureRow = ({
 					onClick={(e) => {
 						e.stopPropagation();
 						e.preventDefault();
-						onDelete?.(item);
+						handleDeleteRow();
 					}}
 					aria-label="Delete feature"
 					variant="skeleton"
