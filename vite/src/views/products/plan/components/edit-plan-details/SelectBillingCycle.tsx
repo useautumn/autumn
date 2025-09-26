@@ -1,4 +1,8 @@
-import { BillingInterval, type ProductItem } from "@autumn/shared";
+import {
+	BillingInterval,
+	type ProductItem,
+	type ProductItemInterval,
+} from "@autumn/shared";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import {
 	Select,
@@ -19,6 +23,18 @@ export const SelectBillingCycle = ({
 	setItem: (item: ProductItem) => void;
 	disabled: boolean;
 }) => {
+	const handleBillingIntervalSelected = (value: BillingInterval) => {
+		if (!item) return;
+
+		setItem({
+			...item,
+			interval:
+				value === BillingInterval.OneOff
+					? null
+					: (value as unknown as ProductItemInterval),
+		});
+	};
+
 	return (
 		<div className="w-full">
 			<FormLabel>Billing Interval</FormLabel>
@@ -26,6 +42,7 @@ export const SelectBillingCycle = ({
 				disabled={disabled}
 				value={item?.interval ?? BillingInterval.OneOff}
 				defaultValue={BillingInterval.Month}
+				onValueChange={handleBillingIntervalSelected}
 			>
 				<SelectTrigger className="w-full">
 					<SelectValue placeholder="Select interval" />
