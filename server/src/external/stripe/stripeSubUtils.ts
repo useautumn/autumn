@@ -1,19 +1,21 @@
-import Stripe from "stripe";
 import {
-	BillingInterval,
+	type BillingInterval,
 	CusProductStatus,
-	Feature,
-	FullCusProduct,
-	Organization,
+	type Feature,
+	type FullCusProduct,
+	type Organization,
 	ProrationBehavior,
-	UsagePriceConfig,
 } from "@autumn/shared";
 import { differenceInSeconds } from "date-fns";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 // import { ProrationBehavior } from "@/internal/customers/change-product/handleUpgrade.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { getEarliestPeriodEnd } from "./stripeSubUtils/convertSubUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
+import {
+	getEarliestPeriodEnd,
+	getLatestPeriodEnd,
+} from "./stripeSubUtils/convertSubUtils.js";
 
 export const getFullStripeSub = async ({
 	stripeCli,
@@ -52,15 +54,23 @@ export const getStripeSubs = async ({
 		}
 	};
 
-	for (const subId of subIds) {
+	const uniqueSubIds = Array.from(new Set(subIds));
+	for (const subId of uniqueSubIds) {
 		batchGet.push(getStripeSub(subId));
 	}
+
 	let subs = await Promise.all(batchGet);
 	subs = subs.filter((sub) => sub !== null);
 
 	// Sort by current_period_end (latest first)
-	subs.sort((a: any, b: any) => {
-		return b.current_period_end - a.current_period_end;
+	subs.sort((a, b) => {
+		if (!a || !b) {
+			return 0;
+		}
+
+		const aLatestPeriodEnd = getLatestPeriodEnd({ sub: a });
+		const bLatestPeriodEnd = getLatestPeriodEnd({ sub: b });
+		return bLatestPeriodEnd - aLatestPeriodEnd;
 	});
 
 	return subs as Stripe.Subscription[];
@@ -120,9 +130,9 @@ export const getUsageBasedSub = async ({
 		});
 	}
 
-	let finalSubIds = subs.map((sub) => sub.id);
+	const finalSubIds = subs.map((sub) => sub.id);
 
-	let autumnSubs = await SubService.getInStripeIds({
+	const autumnSubs = await SubService.getInStripeIds({
 		db,
 		ids: finalSubIds,
 	});
@@ -131,9 +141,9 @@ export const getUsageBasedSub = async ({
 		let usageFeatures: string[] | null = null;
 
 		// 1. Check if there's autumn sub
-		let autumnSub = autumnSubs?.find((sub) => sub.stripe_id == stripeSub.id);
+		const autumnSub = autumnSubs?.find((sub) => sub.stripe_id == stripeSub.id);
 		if (autumnSub) {
-			let containsFeature = autumnSub.usage_features.includes(
+			const containsFeature = autumnSub.usage_features.includes(
 				feature.internal_id!,
 			);
 			if (containsFeature) {
@@ -169,26 +179,25 @@ export const getSubItemsForCusProduct = async ({
 	stripeSub: Stripe.Subscription;
 	cusProduct: FullCusProduct;
 }) => {
-	let prices = cusProduct.customer_prices.map((cp) => cp.price);
-	let product = cusProduct.product;
+	const prices = cusProduct.customer_prices.map((cp) => cp.price);
+	const product = cusProduct.product;
 
-	let subItems = [];
+	const subItems: Stripe.SubscriptionItem[] = [];
 	for (const item of stripeSub.items.data) {
-		if (item.price.product == product.processor?.id) {
+		if (item.price.product === product.processor?.id) {
 			subItems.push(item);
 		} else if (
 			prices.some(
 				(p) =>
-					p.config?.stripe_price_id == item.price.id ||
-					(p.config as UsagePriceConfig).stripe_product_id ==
-						item.price.product,
+					p.config.stripe_price_id === item.price.id ||
+					p.config.stripe_product_id === item.price.product,
 			)
 		) {
 			subItems.push(item);
 		}
 	}
-	let otherSubItems = stripeSub.items.data.filter(
-		(item) => !subItems.some((i) => i.id == item.id),
+	const otherSubItems = stripeSub.items.data.filter(
+		(item) => !subItems.some((i) => i.id === item.id),
 	);
 
 	return { subItems, otherSubItems };
@@ -244,7 +253,7 @@ export const getStripeSchedules = async ({
 		batchGet.push(getStripeSchedule(scheduleId));
 	}
 
-	let schedulesAndSubs = await Promise.all(batchGet);
+	const schedulesAndSubs = await Promise.all(batchGet);
 
 	return schedulesAndSubs.filter((schedule) => schedule !== null) as {
 		schedule: Stripe.SubscriptionSchedule;
@@ -287,7 +296,7 @@ export const getStripeProrationBehavior = ({
 	org: Organization;
 	prorationBehavior?: ProrationBehavior;
 }) => {
-	let behaviourMap = {
+	const behaviourMap = {
 		[ProrationBehavior.Immediately]: "always_invoice",
 		[ProrationBehavior.NextBilling]: "create_prorations",
 		[ProrationBehavior.None]: "none",

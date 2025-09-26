@@ -1,10 +1,10 @@
-import { routeHandler } from "@/utils/routerUtils.js";
 import { APIVersion, CusExpand, ErrCode } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import { getCustomerDetails } from "../cusUtils/getCustomerDetails.js";
-import { parseCusExpand } from "../cusUtils/cusUtils.js";
+import { routeHandler } from "@/utils/routerUtils.js";
 import { orgToVersion } from "@/utils/versionUtils.js";
 import { getCusWithCache } from "../cusCache/getCusWithCache.js";
+import { parseCusExpand } from "../cusUtils/cusUtils.js";
+import { getCustomerDetails } from "../cusUtils/getCustomerDetails.js";
 
 export const handleGetCustomer = async (req: any, res: any) =>
 	routeHandler({
@@ -12,18 +12,18 @@ export const handleGetCustomer = async (req: any, res: any) =>
 		res,
 		action: "get customer",
 		handler: async () => {
-			let customerId = req.params.customer_id;
-			let { env, db, logtail: logger, org, features } = req;
-			let { expand } = req.query;
+			const customerId = req.params.customer_id;
+			const { env, db, logtail: logger, org, features } = req;
+			const { expand } = req.query;
 
-			let expandArray = parseCusExpand(expand);
+			const expandArray = parseCusExpand(expand);
 
-			let apiVersion = orgToVersion({
+			const apiVersion = orgToVersion({
 				org,
 				reqApiVersion: req.apiVersion,
 			});
 
-			let getInvoices = apiVersion < APIVersion.v1_1;
+			const getInvoices = apiVersion < APIVersion.v1_1;
 			if (getInvoices) expandArray.push(CusExpand.Invoices);
 
 			logger.info(`getting customer ${customerId} for org ${org.slug}`);
@@ -51,7 +51,7 @@ export const handleGetCustomer = async (req: any, res: any) =>
 				return;
 			}
 
-			let cusData = await getCustomerDetails({
+			const cusData = await getCustomerDetails({
 				db,
 				customer,
 				org,

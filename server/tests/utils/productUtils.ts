@@ -1,8 +1,7 @@
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { type AppEnv, type CreateReward, isUsagePrice } from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { AppEnv, CreateReward, Product, ProductV2 } from "@autumn/shared";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { isUsagePrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 
 export const createProduct = async ({
 	db,
@@ -43,7 +42,7 @@ export const createProduct = async ({
 		await Promise.all(batchDelete);
 	} catch (error) {}
 
-	let clone = structuredClone(product);
+	const clone = structuredClone(product);
 	if (typeof clone.items === "object") {
 		clone.items = Object.values(clone.items);
 	}
@@ -106,14 +105,14 @@ export const createReward = async ({
 	productId: string;
 	onlyUsage?: boolean;
 }) => {
-	let fullProduct = await ProductService.getFull({
+	const fullProduct = await ProductService.getFull({
 		db,
 		orgId,
 		env,
 		idOrInternalId: productId!,
 	});
 
-	let usagePrices = fullProduct?.prices.filter((price) =>
+	const usagePrices = fullProduct?.prices.filter((price) =>
 		isUsagePrice({ price }),
 	);
 
