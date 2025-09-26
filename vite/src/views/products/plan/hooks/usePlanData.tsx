@@ -24,6 +24,8 @@ export function usePlanData({ originalProduct }: UsePlanDataProps) {
 		if (originalProduct) {
 			originalProductRef.current = originalProduct;
 			setProduct(originalProduct);
+		} else {
+			setProduct(undefined);
 		}
 	}, [originalProduct]);
 

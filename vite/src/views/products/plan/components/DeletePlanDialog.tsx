@@ -5,6 +5,7 @@ import { Button } from "@/components/v2/buttons/Button";
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
@@ -194,6 +195,16 @@ export const DeletePlanDialog = ({
 					<DialogTitle>
 						{product.archived ? "Unarchive" : "Delete"} {product.name}
 					</DialogTitle>
+					<DialogDescription>
+						{getDeleteMessage()
+							.split("\n")
+							.map((line, index) => (
+								<span key={index}>
+									{line}
+									{index < getDeleteMessage().split("\n").length - 1 && <br />}
+								</span>
+							))}
+					</DialogDescription>
 				</DialogHeader>
 
 				{productInfo.numVersion > 1 && !product.archived && (
@@ -211,20 +222,10 @@ export const DeletePlanDialog = ({
 					</Select>
 				)}
 
-				<div className="flex text-t2 text-sm">
-					<p>
-						{getDeleteMessage()
-							.split("\n")
-							.map((line, index) => (
-								<span key={index}>
-									{line}
-									{index < getDeleteMessage().split("\n").length - 1 && <br />}
-								</span>
-							))}
-					</p>
-				</div>
-
 				<DialogFooter>
+					<Button variant="secondary" onClick={() => setOpen(false)}>
+						Cancel
+					</Button>
 					{product.archived && (
 						<Button
 							variant="secondary"
@@ -253,9 +254,6 @@ export const DeletePlanDialog = ({
 							Delete
 						</Button>
 					)}
-					<Button variant="secondary" onClick={() => setOpen(false)}>
-						Cancel
-					</Button>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>
