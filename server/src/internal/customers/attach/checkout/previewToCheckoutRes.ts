@@ -6,6 +6,7 @@ import {
 	cusProductToEnts,
 	cusProductToPrices,
 	cusProductToProduct,
+	isUsagePrice,
 	type PreviewLineItem,
 	toProductItem,
 	UsageModel,
@@ -150,6 +151,28 @@ export const previewToCheckoutRes = async ({
 		};
 	}
 
+	// Options
+	const options = attachParams.optionsList
+		.map((o) => {
+			const price = allPrices.find((p) => {
+				if (isUsagePrice({ price: p })) {
+					return (
+						p.config.internal_feature_id === o.internal_feature_id ||
+						p.config.feature_id === o.feature_id
+					);
+				}
+				return false;
+			});
+
+			if (!price) return undefined;
+
+			return {
+				feature_id: o.feature_id,
+				quantity: o.quantity * (price.config.billing_units || 1),
+			};
+		})
+		.filter(notNullish);
+
 	return CheckoutResponseSchema.parse({
 		customer_id: attachParams.customer.id,
 		lines,
@@ -161,5 +184,6 @@ export const previewToCheckoutRes = async ({
 			? preview.due_next_cycle.due_at
 			: null,
 		next_cycle: nextCycle,
+		options,
 	});
 };

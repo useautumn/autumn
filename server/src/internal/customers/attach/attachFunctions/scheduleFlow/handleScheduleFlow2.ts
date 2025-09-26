@@ -22,8 +22,8 @@ import {
 import RecaseError from "@/utils/errorUtils.js";
 import {
 	attachParamsToCurCusProduct,
+	getCustomerSchedule,
 	getCustomerSub,
-	paramsToCurSubSchedule,
 } from "../../attachUtils/convertAttachParams.js";
 import { paramsToScheduleItems } from "../../mergeUtils/paramsToScheduleItems.js";
 import { getCurrentPhaseIndex } from "../../mergeUtils/phaseUtils/phaseUtils.js";
@@ -54,7 +54,12 @@ export const handleScheduleFunction2 = async ({
 	const { sub: curSub } = await getCustomerSub({ attachParams });
 
 	// 1. Cancel current subscription and fetch items from other cus products...?
-	let schedule = await paramsToCurSubSchedule({ attachParams });
+	let { schedule } = await getCustomerSchedule({
+		attachParams,
+		subId: curSub?.id,
+		logger,
+	});
+
 	if (!curSub) {
 		throw new RecaseError({
 			message: `SCHEDULE FLOW, curSub is undefined`,

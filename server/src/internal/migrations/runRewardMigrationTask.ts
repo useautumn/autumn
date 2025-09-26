@@ -1,28 +1,26 @@
 import {
 	type AppEnv,
+	type DiscountConfig,
 	type FixedPriceConfig,
-	type FullProduct,
-	type Price,
-	type UsagePriceConfig,
-	DiscountConfig,
-	PriceType,
-	RewardType,
 	getBillingType,
 	isFixedPrice,
 	isUsagePrice,
+	type Price,
+	PriceType,
+	RewardType,
+	type UsagePriceConfig,
 } from "@autumn/shared";
 
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { logger as loggerType } from "@/external/logtail/logtailUtils.js";
+import { createStripeCoupon } from "@/external/stripe/stripeCouponUtils/stripeCouponUtils.js";
 import type { JobName } from "@/queue/JobName.js";
 import type { Payloads } from "@/queue/queueUtils.js";
-import { RewardService } from "../rewards/RewardService.js";
-import { tiersAreSame } from "../products/prices/priceInitUtils.js";
-import { createStripeCoupon } from "@/external/stripe/stripeCouponUtils/stripeCouponUtils.js";
-import { PriceService } from "../products/prices/PriceService.js";
 import { OrgService } from "../orgs/OrgService.js";
-import { formatPrice } from "../products/prices/priceUtils.js";
 import { ProductService } from "../products/ProductService.js";
+import { PriceService } from "../products/prices/PriceService.js";
+import { tiersAreSame } from "../products/prices/priceInitUtils.js";
+import { RewardService } from "../rewards/RewardService.js";
 
 // Helper function to check if tier structures match
 const tiersMatch = (oldTiers: any[], newTiers: any[]): boolean => {
@@ -65,8 +63,8 @@ const findMatchingUsagePrice = (
 				return false;
 
 			// Match by billing behavior
-			let newBillingType = getBillingType(newConfig);
-			let oldBillingType = getBillingType(oldConfig);
+			const newBillingType = getBillingType(newConfig);
+			const oldBillingType = getBillingType(oldConfig);
 			if (newBillingType !== oldBillingType) return false;
 
 			// Optionally match by tier structure
@@ -93,7 +91,7 @@ const findBestMatch = (oldPrice: Price, newPrices: Price[]): Price | null => {
 			getBillingType(newPrice.config) === getBillingType(oldPrice.config) &&
 			newPrice.config.interval === oldPrice.config.interval &&
 			newPrice.config.interval_count === oldPrice.config.interval_count &&
-			(oldConfig.type == PriceType.Usage
+			(oldConfig.type === PriceType.Usage
 				? oldConfig.internal_feature_id === newConfig.internal_feature_id
 				: true)
 		);
