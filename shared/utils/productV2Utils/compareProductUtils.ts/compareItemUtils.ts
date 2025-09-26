@@ -1,23 +1,23 @@
 /** biome-ignore-all lint/suspicious/noDoubleEquals: need to compare null / undefined for different fields */
-import {
-	entIntervalsSame,
-	type Feature,
-	type FeatureItem,
-	type FeaturePriceItem,
-	FeatureUsageType,
-	intervalsSame,
-	itemToBillingInterval,
-	itemToEntInterval,
-	type PriceItem,
-	type ProductItem,
-	type UsageTier,
-} from "@autumn/shared";
+
+import { FeatureUsageType } from "../../../models/featureModels/featureEnums.js";
+import type { Feature } from "../../../models/featureModels/featureModels.js";
+import type { UsageTier } from "../../../models/productModels/priceModels/priceConfig/usagePriceConfig.js";
+import type { FeatureItem } from "../../../models/productV2Models/productItemModels/featureItem.js";
+import type { FeaturePriceItem } from "../../../models/productV2Models/productItemModels/featurePriceItem.js";
+import type { PriceItem } from "../../../models/productV2Models/productItemModels/priceItem.js";
+import type { ProductItem } from "../../../models/productV2Models/productItemModels/productItemModels.js";
+import { entIntervalsSame, intervalsSame } from "../../intervalUtils.js";
 import { itemToFeature } from "../productItemUtils/convertItemUtils.js";
 import {
 	isFeatureItem,
 	isFeaturePriceItem,
 	isPriceItem,
 } from "../productItemUtils/getItemType.js";
+import {
+	itemToBillingInterval,
+	itemToEntInterval,
+} from "../productItemUtils/itemIntervalUtils.js";
 
 export const findSimilarItem = ({
 	item,

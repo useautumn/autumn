@@ -1,11 +1,11 @@
+import type { Feature } from "../../../models/featureModels/featureModels.js";
+import type { FullProduct } from "../../../models/productModels/productModels.js";
 import {
-	type Feature,
-	type FullProduct,
 	OnDecrease,
 	OnIncrease,
-	type ProductItem,
-	type ProductV2,
-} from "@autumn/shared";
+} from "../../../models/productV2Models/productItemModels/productItemEnums.js";
+import type { ProductItem } from "../../../models/productV2Models/productItemModels/productItemModels.js";
+import type { ProductV2 } from "../../../models/productV2Models/productV2Models.js";
 import { freeTrialsAreSame } from "../../productUtils/freeTrialUtils.js";
 import { mapToProductItems } from "../mapToProductV2.js";
 import {

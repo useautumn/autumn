@@ -1,13 +1,12 @@
+import { EntInterval } from "../../../models/productModels/entModels/entEnums.js";
+import { BillingInterval } from "../../../models/productModels/priceModels/priceEnums.js";
 import {
-	BillingInterval,
-	EntInterval,
-	isFeatureItem,
 	type ProductItem,
 	ProductItemFeatureType,
 	type ProductItemInterval,
-} from "@autumn/shared";
-
+} from "../../../models/productV2Models/productItemModels/productItemModels.js";
 import { nullish } from "../../utils.js";
+import { isFeatureItem } from "./getItemType.js";
 
 export const billingToItemInterval = ({
 	billingInterval,
