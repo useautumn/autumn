@@ -1,4 +1,5 @@
 import { type ProductItem, productV2ToFeatureItems } from "@autumn/shared";
+import { getItemId } from "@/utils/product/productItemUtils";
 import { useProductContext } from "@/views/products/product/ProductContext";
 import { AddFeatureRow } from "./AddFeatureRow";
 import { PlanFeatureRow } from "./PlanFeatureRow";
@@ -66,7 +67,9 @@ export const PlanFeatureList = () => {
 		<div className="space-y-2">
 			<h4 className="text-sm font-medium text-foreground mb-2">Features</h4>
 			{filteredItems.map((item: ProductItem, index: number) => {
-				const itemId = item.entitlement_id || item.price_id || `item-${index}`;
+				// Find the actual index in the product items array (not filtered items)
+				const actualIndex = product?.items?.findIndex((i: ProductItem) => i === item) ?? index;
+				const itemId = getItemId({ item, itemIndex: actualIndex });
 				const isBeingEdited =
 					editingState.type === "feature" && editingState.id === itemId;
 
@@ -74,7 +77,7 @@ export const PlanFeatureList = () => {
 					<PlanFeatureRow
 						key={item.entitlement_id || item.price_id || index}
 						item={item}
-						index={index}
+						index={actualIndex}
 						onRowClick={handleFeatureClick}
 						onEdit={handleEdit}
 						onDelete={handleDelete}

@@ -19,8 +19,10 @@ export const useFeatureNavigation = () => {
 	useEffect(() => {
 		if (editingState.id && filteredItems.length > 0) {
 			const currentIndex = filteredItems.findIndex(
-				(item: ProductItem, index: number) => {
-					const itemId = getItemId({ item, itemIndex: index });
+				(item: ProductItem) => {
+					// Find the actual index in the product items array
+					const actualIndex = product?.items?.findIndex((i: ProductItem) => i === item) ?? 0;
+					const itemId = getItemId({ item, itemIndex: actualIndex });
 					return itemId === editingState.id;
 				},
 			);
@@ -31,7 +33,7 @@ export const useFeatureNavigation = () => {
 			// Reset selection when no items
 			setSelectedIndex(0);
 		}
-	}, [editingState.id, filteredItems]);
+	}, [editingState.id, filteredItems, product?.items]);
 
 	// Handle when selected index becomes out of bounds (e.g., item deleted)
 	useEffect(() => {
@@ -53,12 +55,14 @@ export const useFeatureNavigation = () => {
 
 			const item = filteredItems[clampedIndex];
 			if (item) {
-				const itemId = getItemId({ item, itemIndex: clampedIndex });
+				// Find the actual index in the product items array
+				const actualIndex = product?.items?.findIndex((i: ProductItem) => i === item) ?? clampedIndex;
+				const itemId = getItemId({ item, itemIndex: actualIndex });
 				setEditingState({ type: "feature", id: itemId });
 				setSheet("edit-feature");
 			}
 		},
-		[filteredItems, setEditingState, setSheet],
+		[filteredItems, setEditingState, setSheet, product?.items],
 	);
 
 	const navigateUp = useCallback(() => {
@@ -82,6 +86,14 @@ export const useFeatureNavigation = () => {
 		setEditingState({ type: "plan", id: product.id });
 		setSheet("edit-plan");
 	}, [product, setEditingState, setSheet]);
+
+	const addNewFeature = useCallback(() => {
+		// Trigger the add feature popover by clicking the button
+		const addFeatureButton = document.querySelector('[aria-label="Add new feature"]');
+		if (addFeatureButton) {
+			(addFeatureButton as HTMLElement).click();
+		}
+	}, []);
 
 	// Register hotkeys
 	useHotkeys("up", navigateUp, {
@@ -108,6 +120,12 @@ export const useFeatureNavigation = () => {
 	useHotkeys("0", editPlan, {
 		preventDefault: true,
 		enabled: !!product,
+	});
+
+	// n key to add new feature
+	useHotkeys("n", addNewFeature, {
+		preventDefault: true,
+		enabled: true,
 	});
 
 	// Number key navigation (1-9) - using individual hooks to avoid loop issues
@@ -157,6 +175,7 @@ export const useFeatureNavigation = () => {
 		selectFirst,
 		selectLast,
 		editPlan,
+		addNewFeature,
 		hasItems: filteredItems.length > 0,
 	};
 };
