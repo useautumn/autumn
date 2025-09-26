@@ -1,8 +1,4 @@
-import {
-	type Feature,
-	ProductItemInterval,
-	productV2ToFeatureItems,
-} from "@autumn/shared";
+import { type Feature, ProductItemInterval } from "@autumn/shared";
 import { PlusIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { CustomDialogContent } from "@/components/general/modal-components/DialogContentWrapper";
