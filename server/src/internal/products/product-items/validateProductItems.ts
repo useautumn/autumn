@@ -5,6 +5,7 @@ import {
 	type Feature,
 	FeatureType,
 	Infinite,
+	itemToEntInterval,
 	OnIncrease,
 	type ProductItem,
 	ProductItemInterval,
@@ -17,7 +18,6 @@ import { StatusCodes } from "http-status-codes";
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import { createFeaturesFromItems } from "./createFeaturesFromItems.js";
-import { itemToEntInterval } from "./itemIntervalUtils.js";
 import {
 	isBooleanFeatureItem,
 	isFeatureItem,
@@ -27,11 +27,13 @@ import {
 
 const validateProductItem = ({
 	item,
+	features,
 }: {
 	item: ProductItem;
 	features: Feature[];
 }) => {
 	item = ProductItemSchema.parse(item);
+	const feature = features.find((f) => f.id === item.feature_id);
 
 	if (nullish(item.feature_id) && nullish(item.price) && nullish(item.tiers)) {
 		throw new RecaseError({
@@ -70,30 +72,17 @@ const validateProductItem = ({
 				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
-
-		// if (item.tiers) {
-		//   item.tiers.forEach((tier) => {
-		//     if (tier.amount.toString().split(".")[1]?.length > 2) {
-		//       throw new RecaseError({
-		//         message: `One off prices can have at most 2 decimal places`,
-		//         code: ErrCode.InvalidInputs,
-		//         statusCode: StatusCodes.BAD_REQUEST,
-		//       });
-		//     }
-		//   });
-		// }
 	}
 
 	// 4. If it's a feature item, it should have included usage as number or inf
 	if (isFeaturePriceItem(item) || isFeatureItem(item)) {
 		if (
-			(typeof item.included_usage !== "number" &&
-				item.included_usage !== Infinite &&
-				notNullish(item.included_usage)) ||
-			item.included_usage === 0
+			typeof item.included_usage !== "number" &&
+			item.included_usage !== Infinite &&
+			notNullish(item.included_usage)
 		) {
 			throw new RecaseError({
-				message: `Included usage must be a number or '${Infinite}'`,
+				message: `Included usage for feature ${item.feature_id} must be a number or '${Infinite}'`,
 				code: ErrCode.InvalidInputs,
 				statusCode: StatusCodes.BAD_REQUEST,
 			});
@@ -101,6 +90,16 @@ const validateProductItem = ({
 
 		if (nullish(item.included_usage)) {
 			item.included_usage = 0;
+		}
+	}
+
+	if (isFeatureItem(item)) {
+		if (item.included_usage === 0 && feature?.type !== FeatureType.Boolean) {
+			throw new RecaseError({
+				message: `Included usage for feature ${item.feature_id} must be greater than 0`,
+				code: ErrCode.InvalidInputs,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
 		}
 	}
 
@@ -134,7 +133,7 @@ const validateProductItem = ({
 			})
 		) {
 			throw new RecaseError({
-				message: `Tiered prices must be greater than 0`,
+				message: `Price must be a number and greater than 0 for feature ${item.feature_id}`,
 				code: ErrCode.InvalidInputs,
 				statusCode: StatusCodes.BAD_REQUEST,
 			});
@@ -179,7 +178,8 @@ const validateProductItem = ({
 			item.included_usage === 0
 		) {
 			throw new RecaseError({
-				message: "Rollover is only allowed for items with intervals and included usage",
+				message:
+					"Rollover is only allowed for items with intervals and included usage",
 				code: ErrCode.InvalidInputs,
 				statusCode: StatusCodes.BAD_REQUEST,
 			});
@@ -200,7 +200,8 @@ const validateProductItem = ({
 		if (rollover.duration === RolloverDuration.Month) {
 			if (typeof rollover.length !== "number" || rollover.length < 0) {
 				throw new RecaseError({
-					message: "Rollover length must be a positive number for monthly durations",
+					message:
+						"Rollover length must be a positive number for monthly durations",
 					code: ErrCode.InvalidInputs,
 					statusCode: StatusCodes.BAD_REQUEST,
 				});
@@ -253,7 +254,7 @@ export const validateProductItems = ({
 
 	for (let index = 0; index < newItems.length; index++) {
 		const item = newItems[index];
-		const entInterval = itemToEntInterval(item);
+		const entInterval = itemToEntInterval({ item });
 		const intervalCount = item.interval_count || 1;
 
 		if (isFeaturePriceItem(item) && entInterval === EntInterval.Lifetime) {
@@ -293,7 +294,7 @@ export const validateProductItems = ({
 			return (
 				i.feature_id === item.feature_id &&
 				index2 !== index &&
-				itemToEntInterval(i) === entInterval &&
+				itemToEntInterval({ item: i }) === entInterval &&
 				(i.interval_count || 1) === intervalCount &&
 				i.entity_feature_id === item.entity_feature_id
 			);

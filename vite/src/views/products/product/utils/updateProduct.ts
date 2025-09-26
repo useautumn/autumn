@@ -22,7 +22,6 @@ export const updateProduct = async ({
 		product.items as FrontendProductItem[],
 	);
 
-	console.log("validated", validated);
 	if (!validated) {
 		return false;
 	}

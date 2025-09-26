@@ -11,10 +11,10 @@ interface ProductContextType {
 	setShowNewVersionDialog: (show: boolean) => void;
 	product: any;
 	setProduct: (product: any) => void;
-	actionState: any;
-	entityFeatureIds: any;
-	setEntityFeatureIds: (ids: any) => void;
+	entityFeatureIds: string[];
+	setEntityFeatureIds: (ids: string[]) => void;
 	hasChanges: boolean;
+	willVersion: boolean;
 	setSheet: (sheet: Sheets) => void;
 	editingState: EditingState;
 	setEditingState: (state: EditingState) => void;

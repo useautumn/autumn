@@ -14,9 +14,9 @@ export default function PlanCard() {
 	});
 
 	return (
-		<Card className="min-w-sm w-[70%] max-w-xl mx-4 bg-card">
+		<Card className={`min-w-sm max-w-xl mx-4 bg-card w-[80%]`}>
 			<PlanCardHeader />
-			<CardContent>
+			<CardContent className="max-w-full">
 				<PlanFeatureList />
 			</CardContent>
 		</Card>

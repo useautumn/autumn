@@ -1,4 +1,5 @@
 import {
+	CreateFreeTrialSchema,
 	ErrCode,
 	mapToProductItems,
 	productsAreSame,
@@ -73,6 +74,11 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
 				});
 			}
 
+			if (req.body.free_trial) {
+				req.body.free_trial = CreateFreeTrialSchema.parse(req.body.free_trial);
+				console.log("Free trial after parsing", req.body.free_trial);
+			}
+
 			const cusProductsCurVersion =
 				await CusProductService.getByInternalProductId({
 					db,
@@ -81,10 +87,6 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
 
 			const cusProductExists = cusProductsCurVersion.length > 0;
 
-			// console.log("Updating product", {
-			//   id: fullProduct.id,
-			//   body: req.body,
-			// });
 			await disableCurrentDefault({
 				req,
 				newProduct: {
@@ -122,12 +124,13 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
 					});
 				}
 
-				const { itemsSame, freeTrialsSame } = productsAreSame({
+				const { itemsSame, freeTrialsSame, optionsSame } = productsAreSame({
 					newProductV2: req.body,
 					curProductV1: fullProduct,
 					features,
 				});
-				const productSame = itemsSame && freeTrialsSame;
+
+				const productSame = itemsSame && freeTrialsSame && optionsSame;
 
 				if (!productSame) {
 					await handleVersionProductV2({

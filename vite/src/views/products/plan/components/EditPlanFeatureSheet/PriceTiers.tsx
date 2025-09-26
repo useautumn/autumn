@@ -4,8 +4,8 @@ import { Plus } from "lucide-react";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { Input } from "@/components/v2/inputs/Input";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
+import { addTier, removeTier, updateTier } from "../../utils/tierUtils";
 import { BillingUnits } from "./BillingUnits";
-import { addTier, removeTier, updateTier } from "./tierUtils";
 
 export function PriceTiers() {
 	const { item, setItem } = useProductItemContext();

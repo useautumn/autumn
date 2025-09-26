@@ -26,7 +26,6 @@ export const FreeTrialSection = () => {
 				if (checked) {
 					setProduct({ ...product, free_trial: getDefaultFreeTrial() });
 				} else {
-					console.log("setting free trial to null");
 					setProduct({ ...product, free_trial: null });
 				}
 			}}
@@ -41,11 +40,12 @@ export const FreeTrialSection = () => {
 							value={product.free_trial?.length || ""}
 							disabled={!product.free_trial}
 							onChange={(e) => {
+								const val = e.target.value;
 								setProduct({
 									...product,
 									free_trial: {
 										...product.free_trial,
-										length: e.target.value as unknown as number,
+										length: val === "" ? 0 : parseInt(val),
 									},
 								});
 							}}

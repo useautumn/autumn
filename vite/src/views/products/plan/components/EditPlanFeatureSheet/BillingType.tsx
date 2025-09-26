@@ -1,4 +1,9 @@
-import { isFeaturePriceItem } from "@autumn/shared";
+import {
+	BillingInterval,
+	Infinite,
+	isFeaturePriceItem,
+	ProductItemInterval,
+} from "@autumn/shared";
 import { CoinsIcon } from "@phosphor-icons/react";
 import { PanelButton } from "@/components/v2/buttons/PanelButton";
 import { IncludedUsageIcon } from "@/components/v2/icons/AutumnIcons";
@@ -13,12 +18,35 @@ export function BillingType() {
 	const isFeaturePrice = isFeaturePriceItem(item);
 
 	const setBillingType = (type: "included" | "priced") => {
+		const getPricedInterval = () => {
+			if (
+				!Object.values(BillingInterval).includes(
+					item.interval as unknown as BillingInterval,
+				)
+			) {
+				return ProductItemInterval.Month;
+			}
+			return item.interval;
+		};
+
 		if (type === "included") {
 			// Remove tiers to switch to included
-			setItem({ ...item, tiers: null, billing_units: undefined });
+			setItem({
+				...item,
+				tiers: null,
+				billing_units: undefined,
+				// interval: ,
+			});
 		} else {
 			// Add initial tier to switch to priced
-			setItem({ ...item, tiers: [{ to: 0, amount: 0 }], billing_units: 1 });
+			setItem({
+				...item,
+				tiers: [{ to: Infinite, amount: 0 }],
+				billing_units: 1,
+				included_usage:
+					item.included_usage === Infinite ? 0 : item.included_usage || 0,
+				interval: getPricedInterval(),
+			});
 		}
 	};
 

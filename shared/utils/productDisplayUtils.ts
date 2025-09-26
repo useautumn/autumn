@@ -1,9 +1,9 @@
+import { FeatureType } from "../models/featureModels/featureEnums.js";
 import type { Feature } from "../models/featureModels/featureModels.js";
 import { Infinite } from "../models/productModels/productEnums.js";
-import {
-	type ProductItem,
-	ProductItemFeatureType,
-	type ProductItemInterval,
+import type {
+	ProductItem,
+	ProductItemInterval,
 } from "../models/productV2Models/productItemModels/productItemModels.js";
 import {
 	formatAmount,
@@ -76,7 +76,7 @@ export const getFeatureItemDisplay = ({
 }) => {
 	if (!feature) throw new Error(`Feature ${item.feature_id} not found`);
 
-	if (item.feature_type === ProductItemFeatureType.Static) {
+	if (feature.type === FeatureType.Boolean) {
 		return { primary_text: feature.name };
 	}
 
@@ -96,10 +96,6 @@ export const getFeatureItemDisplay = ({
 		interval: item.interval,
 		intervalCount: item.interval_count,
 	});
-
-	console.log(
-		`feature ${feature.id}, interval ${item.interval}, interval count ${item.interval_count}, interval string ${intervalStr}`,
-	);
 
 	return {
 		primary_text: `${includedUsageTxt}${featureName}`,
@@ -166,6 +162,7 @@ export const getFeaturePriceItemDisplay = ({
 	}
 
 	const priceStr = formatTiers({ item, currency, amountFormatOptions });
+
 	const billingFeatureName = getFeatureName({
 		feature,
 		units: item.billing_units,

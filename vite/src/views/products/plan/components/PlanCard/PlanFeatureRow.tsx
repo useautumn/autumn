@@ -11,6 +11,7 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { cn } from "@/lib/utils";
 import { getItemId } from "@/utils/product/productItemUtils";
 import { useProductContext } from "@/views/products/product/ProductContext";
+import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { PlanFeatureIcon } from "./PlanFeatureIcon";
 
 // Custom dot component with bigger height but smaller width
@@ -20,22 +21,20 @@ const CustomDotIcon = () => {
 
 interface PlanFeatureRowProps {
 	item: ProductItem;
-	onRowClick?: (item: ProductItem) => void;
-	onEdit?: (item: ProductItem) => void;
 	onDelete?: (item: ProductItem) => void;
-	editDisabled?: boolean;
 	index?: number;
 }
 
 export const PlanFeatureRow = ({
 	item,
-	onEdit,
 	onDelete,
 	index,
 }: PlanFeatureRowProps) => {
 	const { org } = useOrg();
 	const { features } = useFeaturesQuery();
-	const { editingState } = useProductContext();
+	const { setItem } = useProductItemContext();
+	const { editingState, setEditingState, setSheet } = useProductContext();
+
 	const [isPressed, setIsPressed] = useState(false);
 
 	const display = getProductItemDisplay({
@@ -48,6 +47,17 @@ export const PlanFeatureRow = ({
 
 	const isSelected = getItemId({ item, itemIndex: index }) === editingState.id;
 
+	// useEffect(() => {
+	// 	console.log("isSelected", isSelected);
+	// }, [isSelected]);
+
+	const handleRowClicked = () => {
+		const itemId = getItemId({ item, itemIndex: index });
+		setItem(item);
+		setEditingState({ type: "feature", id: itemId });
+		setSheet("edit-feature");
+	};
+
 	return (
 		<div
 			role="button"
@@ -55,7 +65,7 @@ export const PlanFeatureRow = ({
 			data-state={isSelected ? "open" : "closed"}
 			data-pressed={isPressed}
 			className={cn(
-				"flex w-full group !h-9 group/row input-base input-shadow-tiny select-bg",
+				"flex w-full group !h-9 group/row input-base input-shadow-tiny select-bg select-none",
 
 				// To prevent flickering when clicking inner buttons
 				!isSelected &&
@@ -74,11 +84,11 @@ export const PlanFeatureRow = ({
 			}}
 			onMouseUp={() => setIsPressed(false)}
 			onMouseLeave={() => setIsPressed(false)}
-			onClick={() => onEdit?.(item)}
+			onClick={handleRowClicked}
 			onKeyDown={(e) => {
 				if (e.key === "Enter" || e.key === " ") {
 					e.preventDefault();
-					onEdit?.(item);
+					handleRowClicked();
 				}
 			}}
 		>
@@ -90,8 +100,8 @@ export const PlanFeatureRow = ({
 					<PlanFeatureIcon item={item} position="right" />
 				</div>
 
-				<div className="flex items-center gap-2 flex-1 max-w-[85%]">
-					<p className="whitespace-nowrap truncate">
+				<div className="flex items-center gap-2 flex-1 min-w-0 max-w-[90%] ">
+					<p className="whitespace-nowrap truncate max-w-full">
 						<span className="text-body">{display.primary_text}</span>
 						<span className="text-body-secondary">
 							{" "}

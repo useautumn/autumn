@@ -11,7 +11,7 @@ import { updateProduct } from "../../product/utils/updateProduct";
 
 export const SaveChangesBar = () => {
 	const axiosInstance = useAxiosInstance();
-	const { hasChanges, setProduct } = useProductContext();
+	const { hasChanges, willVersion, setProduct } = useProductContext();
 	const [saving, setSaving] = useState(false);
 	const { product, setShowNewVersionDialog } = useProductContext();
 	const { counts, isLoading } = useProductCountsQuery();
@@ -21,7 +21,7 @@ export const SaveChangesBar = () => {
 	const handleSaveClicked = async () => {
 		if (isLoading) toast.error("Product counts are loading");
 
-		if (counts?.all > 0) {
+		if (counts?.all > 0 && willVersion) {
 			setShowNewVersionDialog(true);
 			return;
 		}

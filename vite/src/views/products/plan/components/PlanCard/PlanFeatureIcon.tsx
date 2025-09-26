@@ -64,6 +64,9 @@ const getLeftIcon = (
 			return { icon: ArrowsCounterClockwiseIcon, color: "text-primary" }; // Persistent Usage - pink
 		case ProductItemFeatureType.Static:
 			return { icon: PowerIcon, color: "text-primary", size: 5 }; // Static - pink
+		case null:
+		case undefined:
+			return { icon: UsageBasedIcon, color: "text-primary" }; // Default for null/undefined - pink
 		default:
 			console.warn(`Unknown feature type: ${featureType}`);
 			return { icon: UsageBasedIcon, color: "text-primary" }; // Default - pink

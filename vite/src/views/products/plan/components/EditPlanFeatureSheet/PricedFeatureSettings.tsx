@@ -1,4 +1,4 @@
-import { UsageModel } from "@autumn/shared";
+import { nullish, ProductItemInterval, UsageModel } from "@autumn/shared";
 import { AreaCheckbox } from "@/components/v2/checkboxes/AreaCheckbox";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
@@ -19,7 +19,14 @@ export function PricedFeatureSettings() {
 					const newUsageModel = checked
 						? UsageModel.Prepaid
 						: UsageModel.PayPerUse;
-					setItem({ ...item, usage_model: newUsageModel });
+					setItem({
+						...item,
+						usage_model: newUsageModel,
+						interval:
+							!checked && nullish(item.interval)
+								? ProductItemInterval.Month
+								: item.interval,
+					});
 				}}
 			/>
 		</div>

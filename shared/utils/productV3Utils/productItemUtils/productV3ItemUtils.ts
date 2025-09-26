@@ -31,10 +31,19 @@ export function productV2ToBasePrice({ product }: { product: ProductV2 }): {
 
 export const productV2ToFeatureItems = ({
 	items,
+	withBasePrice = false,
 }: {
 	items: ProductItem[];
+	withBasePrice?: boolean;
 }) => {
-	return items.filter(
+	const filteredItems = items.filter(
 		(item) => isFeatureItem(item) || isFeaturePriceItem(item),
 	);
+
+	const priceItem = items.find((item) => isPriceItem(item));
+	if (withBasePrice && priceItem) {
+		return [...filteredItems, priceItem];
+	}
+
+	return filteredItems;
 };

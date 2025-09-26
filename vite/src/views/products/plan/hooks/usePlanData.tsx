@@ -27,8 +27,12 @@ export function usePlanData({ originalProduct }: UsePlanDataProps) {
 		}
 	}, [originalProduct]);
 
-	const hasChanges = useMemo(() => {
-		if (!originalProductRef.current || !product) return false;
+	const diff = useMemo(() => {
+		if (!originalProductRef.current || !product)
+			return {
+				hasChanges: false,
+				willVersion: false,
+			};
 
 		const comparison = productsAreSame({
 			newProductV2: product as unknown as ProductV2,
@@ -38,17 +42,23 @@ export function usePlanData({ originalProduct }: UsePlanDataProps) {
 
 		// console.log("Comparison:", comparison);
 
-		return (
-			!comparison.itemsSame ||
-			!comparison.freeTrialsSame ||
-			!comparison.detailsSame
-		);
+		return {
+			hasChanges:
+				!comparison.itemsSame ||
+				!comparison.detailsSame ||
+				!comparison.freeTrialsSame,
+			willVersion:
+				!comparison.optionsSame ||
+				!comparison.itemsSame ||
+				!comparison.freeTrialsSame,
+		};
 	}, [product, features]);
 
 	return {
 		product,
 		setProduct,
-		hasChanges,
+		hasChanges: diff.hasChanges,
+		willVersion: diff.willVersion,
 		originalProduct: originalProductRef.current,
 	};
 }

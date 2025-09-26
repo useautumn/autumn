@@ -15,6 +15,7 @@ export const AdditionalOptions = () => {
 					description="This product will be enabled by default for all new users,
                         typically used for your free plan"
 					checked={product.is_default}
+					disabled={product.is_add_on}
 					onCheckedChange={(checked) =>
 						setProduct({ ...product, is_default: checked })
 					}
@@ -24,6 +25,7 @@ export const AdditionalOptions = () => {
 					description="This product is an add-on that can be bought together with your
                         base products (eg, top ups)"
 					checked={product.is_add_on}
+					disabled={product.is_default}
 					onCheckedChange={(checked) =>
 						setProduct({ ...product, is_add_on: checked })
 					}

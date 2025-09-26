@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { BillingInterval } from "../priceEnums.js";
+import { UsageTierSchema } from "./usagePriceConfig.js";
 
 export const FixedPriceConfigSchema = z.object({
 	type: z.string(),
@@ -9,6 +10,7 @@ export const FixedPriceConfigSchema = z.object({
 
 	// Usage price fields
 	billing_units: z.number().nullish(),
+	usage_tiers: z.array(UsageTierSchema).nullish(),
 	stripe_price_id: z.string().nullish(),
 	stripe_empty_price_id: z.string().nullish(),
 	stripe_product_id: z.null().or(z.undefined()),
