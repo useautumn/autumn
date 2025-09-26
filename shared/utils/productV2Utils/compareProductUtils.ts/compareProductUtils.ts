@@ -117,6 +117,9 @@ export const productsAreSame = ({
 	items1 = sanitizeItems({ items: items1, features });
 	items2 = sanitizeItems({ items: items2, features });
 
+	// console.log("Items 1:", items1);
+	// console.log("Items 2:", items2);
+
 	let itemsSame = true;
 	let pricesChanged = false;
 	const newItems: ProductItem[] = [];

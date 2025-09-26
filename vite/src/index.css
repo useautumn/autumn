@@ -149,6 +149,7 @@
 
 	--color-hover-primary: #fcfaff;
 	--color-active-primary: #f6f0ff;
+	--color-panel-icon-background: #ede1ff;
 
 	--color-primary: var(--primary);
 	--color-primary-foreground: var(--primary-foreground);
@@ -269,11 +270,14 @@ input[type="number"]::-webkit-inner-spin-button {
 	}
 	body {
 		@apply bg-background text-foreground;
+		letter-spacing: -0.033px;
 	}
+
 	::selection {
 		background: var(--primary);
 		color: white;
 	}
+
 	::-moz-selection {
 		background: var(--primary);
 		color: white;

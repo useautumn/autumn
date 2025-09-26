@@ -19,6 +19,8 @@ interface AreaCheckboxProps {
 	title: string;
 	tooltip?: string;
 	disabled?: boolean;
+	hide?: boolean;
+	description?: string;
 	children?: React.ReactNode;
 }
 
@@ -29,37 +31,45 @@ function AreaCheckbox({
 	title,
 	tooltip,
 	disabled = false,
+	hide = false,
+	description,
 	children,
 }: AreaCheckboxProps) {
 	const id = React.useId();
 
-	const handleToggle = () => {
-		if (!disabled && onCheckedChange) {
-			onCheckedChange(!checked);
-		}
-	};
-
+	if (hide) return null;
 	return (
-		<div className={cn("space-y-3", className)}>
+		<div className={cn("space-y-2", className)}>
 			{/* Header row with checkbox, title, and tooltip */}
-			<div
-				className="flex items-center gap-2 cursor-pointer"
-				onClick={handleToggle}
-				onKeyDown={(e) => {
-					if (e.key === "Enter" || e.key === " ") {
-						e.preventDefault();
-						handleToggle();
-					}
-				}}
+			<label
+				htmlFor={id}
+				className={cn(
+					"flex items-center gap-2 cursor-pointer",
+					disabled && "cursor-not-allowed",
+				)}
 			>
 				<Checkbox
 					id={id}
 					checked={checked}
-					onCheckedChange={onCheckedChange}
+					onCheckedChange={(checked) => {
+						if (!disabled && onCheckedChange) {
+							onCheckedChange(checked as boolean);
+						}
+					}}
 					disabled={disabled}
 					size="sm"
 				/>
-				<span className="text-form-label font-medium select-none">{title}</span>
+
+				<span
+					className={cn(
+						"text-checkbox-label font-medium select-none ",
+						!disabled && "hover:!text-t1",
+						!checked && "opacity-50",
+					)}
+				>
+					{title}
+				</span>
+
 				{tooltip && (
 					<TooltipProvider>
 						<Tooltip>
@@ -72,16 +82,21 @@ function AreaCheckbox({
 						</Tooltip>
 					</TooltipProvider>
 				)}
-			</div>
+			</label>
 
 			{/* Expanded content */}
-			{children && (
+			{(children || description) && (
 				<div
 					className={cn(
-						"ml-6 space-y-4",
+						"space-y-2",
 						!checked && "opacity-50 pointer-events-none",
 					)}
 				>
+					{description && (
+						<p className="text-sm text-body-secondary max-w-[100%]">
+							{description}
+						</p>
+					)}
 					{children}
 				</div>
 			)}

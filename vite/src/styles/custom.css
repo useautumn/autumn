@@ -27,6 +27,21 @@
 	}
 }
 
+.input-shadow-tiny {
+	box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.02);
+
+	&:hover:not([data-disabled="true"]):not(:focus):not([data-state="open"]) {
+		box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.06);
+	}
+
+	&:focus,
+	&[data-state="open"] {
+		box-shadow:
+			0 0 0 0.2px var(--primary),
+			0 4px 4px 0 rgba(0, 0, 0, 0.04);
+	}
+}
+
 .input-base {
 	padding: 0.25rem 0.5rem;
 	font-size: 13px;
@@ -63,6 +78,7 @@
 		background-color: var(--color-active-primary) !important;
 	}
 
+	&:focus,
 	&[data-state="open"],
 	&[data-state="checked"] {
 		background-color: var(--color-hover-primary);

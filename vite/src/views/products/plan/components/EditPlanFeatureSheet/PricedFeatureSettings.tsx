@@ -1,5 +1,5 @@
 import { UsageModel } from "@autumn/shared";
-import { LongCheckbox } from "@/components/v2/checkboxes/LongCheckbox";
+import { AreaCheckbox } from "@/components/v2/checkboxes/AreaCheckbox";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
 export function PricedFeatureSettings() {
@@ -11,9 +11,9 @@ export function PricedFeatureSettings() {
 
 	return (
 		<div className="mt-6">
-			<LongCheckbox
+			<AreaCheckbox
 				title="Prepaid"
-				subtitle="Quantity will be chosen during checkout."
+				description="Quantity will be chosen during checkout."
 				checked={prepaid}
 				onCheckedChange={(checked) => {
 					const newUsageModel = checked

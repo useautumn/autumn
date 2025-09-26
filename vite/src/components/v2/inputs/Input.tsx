@@ -14,7 +14,7 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
 
 				// Custom classes
 				// "placeholder:text-form-placeholder text-form-text rounded-lg px-2 py-1 input-border transition-none",
-				"placeholder:text-t6 placeholder:select-none input-base input-shadow shadow-sm",
+				"placeholder:text-t6 placeholder:select-none input-base input-shadow shadow-sm h-input",
 				className,
 			)}
 			{...props}

@@ -2,6 +2,7 @@ import {
 	BillingInterval,
 	EntInterval,
 	Infinite,
+	isContUseItem,
 	type ProductItemInterval,
 } from "@autumn/shared";
 import { InfinityIcon } from "@phosphor-icons/react";
@@ -22,10 +23,13 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/v2/selects/Select";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { formatIntervalText } from "@/utils/formatUtils/formatTextUtils";
+import { isFeaturePriceItem } from "@/utils/product/getItemType";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
 export function IncludedUsage() {
+	const { features } = useFeaturesQuery();
 	const { item, setItem } = useProductItemContext();
 	const [open, setOpen] = useState(false);
 
@@ -52,9 +56,7 @@ export function IncludedUsage() {
 		setOpen(false);
 	};
 
-	// Determine billing type
-	const billingType =
-		item.tiers && item.tiers.length > 0 ? "priced" : "included";
+	const isFeaturePrice = isFeaturePriceItem(item);
 
 	return (
 		<div className="space-y-4">
@@ -81,6 +83,7 @@ export function IncludedUsage() {
 							disabled={includedUsage === Infinite}
 						/>
 						<IconCheckbox
+							hide={isFeaturePrice}
 							icon={<InfinityIcon />}
 							iconOrientation="center"
 							variant="muted"
@@ -100,7 +103,7 @@ export function IncludedUsage() {
 			</div>
 
 			{/* Only show Usage Reset dropdown for included billing type */}
-			{billingType === "included" && (
+			{!isFeaturePrice && !isContUseItem({ item, features }) && (
 				<div>
 					<div className="text-form-label block mb-2">Usage Reset</div>
 					<Select

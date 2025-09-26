@@ -29,6 +29,13 @@
 	color: var(--color-t2);
 }
 
+.text-body-highlight {
+	color: var(--color-t2);
+	font-size: 13px;
+	font-weight: var(--font-weight-semibold);
+	letter-spacing: -0.039px;
+}
+
 .text-body-secondary {
 	font-size: 13px;
 	font-weight: var(--font-weight-normal);
@@ -39,6 +46,18 @@
 	font-size: 11px;
 	font-weight: var(--font-weight-normal);
 	color: var(--color-t4);
+}
+
+.text-tiny-id {
+	color: var(--color-t3);
+
+	/* Tiny ID */
+	font-family: "JetBrains Mono", "JetBrains Mono Fallback", monospace;
+	font-size: 11px;
+	font-style: normal;
+	font-weight: 500;
+	line-height: normal;
+	letter-spacing: -0.033px;
 }
 
 .text-checkbox-label {
@@ -75,25 +94,4 @@
 	font-size: 13px;
 	font-weight: var(--font-weight-medium);
 	color: var(--color-t6);
-}
-
-.text-tiny {
-	color: var(--color-t4);
-	/* leading-trim: both;
-text-edge: cap;
-font-family: Inter; */
-	font-size: 11px;
-	font-weight: var(--font-weight-medium);
-}
-
-.text-tiny-id {
-	color: var(--color-t3);
-
-	/* Tiny ID */
-	font-family: "JetBrains Mono", "JetBrains Mono Fallback", monospace;
-	font-size: 11px;
-	font-style: normal;
-	font-weight: 500;
-	line-height: normal;
-	letter-spacing: -0.033px;
 }
