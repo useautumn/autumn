@@ -76,7 +76,6 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
 
 			if (req.body.free_trial) {
 				req.body.free_trial = CreateFreeTrialSchema.parse(req.body.free_trial);
-				console.log("Free trial after parsing", req.body.free_trial);
 			}
 
 			const cusProductsCurVersion =

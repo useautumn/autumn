@@ -1,6 +1,7 @@
 import { AppEnv } from "@autumn/shared";
-import type { AxiosError } from "axios";
+import { AxiosError } from "axios";
 import type { NavigateFunction } from "react-router-dom";
+import { ZodError } from "zod/v3";
 
 export const compareStatus = (statusA: string, statusB: string) => {
 	const statusOrder = ["scheduled", "active", "past_due", "expired"];
@@ -11,8 +12,14 @@ export const invalidNumber = (value: unknown) => {
 	return Number.isNaN(parseFloat(value as string));
 };
 
-export const getBackendErr = (error: AxiosError, defaultText: string) => {
-	if (error.response?.data) {
+export const getBackendErr = (
+	error: AxiosError | ZodError | unknown,
+	defaultText: string,
+) => {
+	if (error instanceof ZodError) {
+		return error.errors.map((err) => err.message).join(", ");
+	}
+	if (error instanceof AxiosError && error.response?.data) {
 		const data = error.response.data as { message: string; code: string };
 		if (data.message && data.code) {
 			return data.message;

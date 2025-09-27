@@ -22,11 +22,6 @@ export const EditPlanHeader = () => {
 	const { counts } = useProductCountsQuery();
 	const { queryStates, setQueryStates } = useProductQueryState();
 
-	// Early return if product is not loaded yet
-	if (!product || !numVersions) {
-		return null;
-	}
-
 	const versionOptions = Array.from(
 		{ length: numVersions },
 		(_, i) => numVersions - i,
@@ -67,11 +62,11 @@ export const EditPlanHeader = () => {
 				items={[
 					{
 						name: "Plans",
-						href: "/products",
+						href: "/products?tab=products",
 					},
 					{
-						name: "Plan Editor",
-						href: `/products`,
+						name: `${product.name}`,
+						href: `/products/${product.id}`,
 					},
 				]}
 			/>
@@ -96,21 +91,23 @@ export const EditPlanHeader = () => {
 					<PlanTypeBadge product={product} />
 				</div>
 
-				<Select
-					value={currentVersion.toString()}
-					onValueChange={handleVersionChange}
-				>
-					<SelectTrigger className="w-20">
-						<SelectValue placeholder="Version" />
-					</SelectTrigger>
-					<SelectContent>
-						{versionOptions.map((version) => (
-							<SelectItem key={version} value={version.toString()}>
-								v{version}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
+				{numVersions && numVersions > 1 && (
+					<Select
+						value={currentVersion.toString()}
+						onValueChange={handleVersionChange}
+					>
+						<SelectTrigger className="w-fit min-w-28">
+							<SelectValue placeholder="Version" />
+						</SelectTrigger>
+						<SelectContent>
+							{versionOptions.map((version) => (
+								<SelectItem key={version} value={version.toString()}>
+									Version {version}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				)}
 			</div>
 		</div>
 	);

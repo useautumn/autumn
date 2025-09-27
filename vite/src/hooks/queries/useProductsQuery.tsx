@@ -39,8 +39,5 @@ export const useProductsQuery = () => {
 		refetch: async () => {
 			await Promise.all([countsRefetch(), refetch()]);
 		},
-		// mutate: async () => {
-		//   await Promise.all([countsRefetch(), refetch()]);
-		// },
 	};
 };

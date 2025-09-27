@@ -22,12 +22,12 @@ export default function PlanEditorView() {
 		useProductQuery();
 	const { isLoading: featuresLoading } = useFeaturesQuery();
 
-	const { product, setProduct, hasChanges, willVersion } = usePlanData({
+	const { product, setProduct, diff } = usePlanData({
 		originalProduct,
 	});
 	const [entityFeatureIds, setEntityFeatureIds] = useState<string[]>([]);
 
-	const { modal } = useProductChangedAlert({ hasChanges });
+	const { modal } = useProductChangedAlert({ hasChanges: diff.hasChanges });
 	const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
 
 	const [sheet, setSheet] = useState<Sheets>("edit-plan");
@@ -44,10 +44,7 @@ export default function PlanEditorView() {
 				setShowNewVersionDialog,
 				product,
 				setProduct,
-				entityFeatureIds,
-				setEntityFeatureIds,
-				hasChanges,
-				willVersion,
+				diff,
 				setSheet,
 				editingState,
 				setEditingState,

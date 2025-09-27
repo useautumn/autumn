@@ -1,8 +1,9 @@
 import { TrashIcon } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { cn } from "@/lib/utils";
+import { useProductQuery } from "@/views/products/product/hooks/useProductQuery";
 import { useProductContext } from "@/views/products/product/ProductContext";
 import { DeletePlanDialog } from "../DeletePlanDialog";
 
@@ -17,9 +18,14 @@ export const PlanCardToolbar = ({
 	onDelete,
 	editDisabled,
 }: PlanCardToolbarProps) => {
+	const { product } = useProductQuery();
 	const { editingState } = useProductContext();
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const isEditingPlan = editingState.type === "plan";
+
+	useEffect(() => {
+		console.log("Product archived:", product.archived);
+	}, [product]);
 
 	return (
 		<>
@@ -36,13 +42,19 @@ export const PlanCardToolbar = ({
 					{isEditingPlan ? "Editing" : "Edit"}
 				</Button>
 
-				<IconButton
-					icon={<TrashIcon />}
-					onClick={() => setDeleteOpen(true)}
-					aria-label="Delete plan"
-					variant="muted"
-					iconOrientation="center"
-				/>
+				{product.archived ? (
+					<Button variant="muted" onClick={() => setDeleteOpen(true)} size="sm">
+						Archived
+					</Button>
+				) : (
+					<IconButton
+						icon={<TrashIcon />}
+						onClick={() => setDeleteOpen(true)}
+						aria-label="Delete plan"
+						variant="muted"
+						iconOrientation="center"
+					/>
+				)}
 			</div>
 		</>
 	);

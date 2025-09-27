@@ -11,17 +11,17 @@ import { updateProduct } from "../../product/utils/updateProduct";
 
 export const SaveChangesBar = () => {
 	const axiosInstance = useAxiosInstance();
-	const { hasChanges, willVersion, setProduct } = useProductContext();
+	const { diff, setProduct } = useProductContext();
 	const [saving, setSaving] = useState(false);
 	const { product, setShowNewVersionDialog } = useProductContext();
 	const { counts, isLoading } = useProductCountsQuery();
 	const { refetch } = useProductQuery();
-	const { product: orgiinalProduct } = useProductQuery();
+	const { product: originalProduct } = useProductQuery();
 
 	const handleSaveClicked = async () => {
 		if (isLoading) toast.error("Product counts are loading");
 
-		if (counts?.all > 0 && willVersion) {
+		if (counts?.all > 0 && diff.willVersion) {
 			setShowNewVersionDialog(true);
 			return;
 		}
@@ -39,15 +39,17 @@ export const SaveChangesBar = () => {
 	};
 
 	const handleDiscardClicked = () => {
-		setProduct(orgiinalProduct as FrontendProduct);
+		setProduct(originalProduct as FrontendProduct);
 	};
 
-	if (!hasChanges) return null;
+	if (!diff.hasChanges) return null;
 
 	return (
 		<div className="w-full flex justify-center items-center h-20 mb-10">
 			<div className="flex items-center gap-2 p-2 pl-3 rounded-xl border border-input bg-white">
-				<p className="text-body">You have unsaved changes</p>
+				<p className="text-body whitespace-nowrap truncate">
+					You have unsaved changes
+				</p>
 				<Button variant="secondary" onClick={handleDiscardClicked}>
 					Discard
 				</Button>

@@ -1,15 +1,15 @@
+import { faGoogle } from "@fortawesome/free-brands-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { Mail } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router";
+import { toast } from "sonner";
+import { CustomToaster } from "@/components/general/CustomToaster";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Link, useNavigate, useSearchParams } from "react-router";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGoogle, faStripe } from "@fortawesome/free-brands-svg-icons";
 import { authClient, signIn, useSession } from "@/lib/auth-client";
-import { OTPSignIn } from "./components/OTPSignIn";
-import { Mail } from "lucide-react";
-import { CustomToaster } from "@/components/general/CustomToaster";
-import { toast } from "sonner";
 import { getBackendErr } from "@/utils/genUtils";
+import { OTPSignIn } from "./components/OTPSignIn";
 
 export const SignIn = () => {
 	const [email, setEmail] = useState("");
