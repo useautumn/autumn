@@ -13,6 +13,7 @@
 /* 1. Input Shadow */
 .input-shadow {
 	box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.02);
+	transition: box-shadow 0.15s ease;
 
 	&:hover:not([data-disabled="true"]):not(:focus):not([data-state="open"]) {
 		box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.06);
@@ -23,6 +24,11 @@
 			0 0 0 0.5px var(--primary),
 			0 0 8px 1px rgba(136, 56, 255, 0.25),
 			0 4px 4px 0 rgba(0, 0, 0, 0.04);
+	}
+
+	/* Override transition for select elements */
+	&.select-bg {
+		transition: none;
 	}
 }
 
@@ -67,20 +73,31 @@
 
 /* Hover + Active BG for select */
 .select-bg {
-	&:hover:not(:disabled):not([data-state="open"]):not(
-			[data-state="checked"]
-		):not(:active) {
+	&:hover:not(:disabled):not(:focus):not([data-state="open"]) {
 		background-color: var(--color-hover-primary);
 	}
 
-	&:active:not(:disabled) {
-		background-color: var(--color-active-primary) !important;
+	&:focus,
+	&[data-state="open"] {
+		background-color: var(--color-active-primary);
+	}
+}
+
+/* Dedicated select shadow without conflicts */
+.select-shadow {
+	box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.02);
+	transition: none;
+
+	&:hover:not([data-disabled="true"]):not(:focus):not([data-state="open"]) {
+		box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.06);
 	}
 
-	/* &:focus, */
-	&[data-state="open"],
-	&[data-state="checked"] {
-		background-color: var(--color-hover-primary);
+	&:focus,
+	&[data-state="open"] {
+		box-shadow:
+			0 0 0 0.5px var(--primary),
+			0 0 8px 1px rgba(136, 56, 255, 0.25),
+			0 4px 4px 0 rgba(0, 0, 0, 0.04);
 	}
 }
 
