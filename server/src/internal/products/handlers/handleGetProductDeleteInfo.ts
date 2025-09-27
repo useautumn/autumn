@@ -1,10 +1,10 @@
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { routeHandler } from "@/utils/routerUtils.js";
-import { ProductService } from "../ProductService.js";
-import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
-import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
 import { ErrCode } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
+import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+import { routeHandler } from "@/utils/routerUtils.js";
+import { ProductService } from "../ProductService.js";
 
 export const handleGetProductDeleteInfo = async (req: any, res: any) =>
 	routeHandler({
@@ -14,8 +14,8 @@ export const handleGetProductDeleteInfo = async (req: any, res: any) =>
 		handler: async (req: ExtendedRequest, res: any) => {
 			try {
 				// 1. Get number of versions
-				const { db, orgId, env } = req;
-				let product = await ProductService.get({
+				const { db } = req;
+				const product = await ProductService.get({
 					db,
 					id: req.params.productId,
 					orgId: req.orgId,
@@ -30,7 +30,7 @@ export const handleGetProductDeleteInfo = async (req: any, res: any) =>
 					});
 				}
 
-				let [allVersions, latestVersion, deletionText] = await Promise.all([
+				const [allVersions, latestVersion, deletionText] = await Promise.all([
 					CusProdReadService.existsForProduct({
 						db,
 						productId: req.params.productId,
@@ -46,6 +46,11 @@ export const handleGetProductDeleteInfo = async (req: any, res: any) =>
 						env: req.env,
 					}),
 				]);
+
+				console.log("Getting product info for", req.params.productId);
+				console.log("All versions:", allVersions);
+				console.log("Latest version:", latestVersion);
+				console.log("Deletion text:", deletionText);
 
 				// 2. Get cus products
 

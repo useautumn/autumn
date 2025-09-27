@@ -22,6 +22,7 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
+import { useProductQuery } from "../../product/hooks/useProductQuery";
 import { useProductContext } from "../../product/ProductContext";
 
 export const DeletePlanDialog = ({
@@ -31,12 +32,12 @@ export const DeletePlanDialog = ({
 	open: boolean;
 	setOpen: (open: boolean) => void;
 }) => {
-	const { product } = useProductContext();
-	const [deleteLoading, setDeleteLoading] = useState(false);
-	const [archiveLoading, setArchiveLoading] = useState(false);
-	const [deleteAllVersions, setDeleteAllVersions] = useState(false);
 	const axiosInstance = useAxiosInstance();
+	const { product } = useProductContext();
+	const [loading, setLoading] = useState(false);
+	const [deleteAllVersions, setDeleteAllVersions] = useState(false);
 	const { refetch: refetchProducts } = useProductsQuery();
+	const { refetch: refetchProduct } = useProductQuery();
 
 	const { data: productInfo, isLoading } = useGeneralQuery({
 		url: `/products/${product.id}/info`,
@@ -45,7 +46,7 @@ export const DeletePlanDialog = ({
 	});
 
 	const handleDelete = async () => {
-		setDeleteLoading(true);
+		setLoading(true);
 		try {
 			await ProductService.deleteProduct(
 				axiosInstance,
@@ -57,70 +58,41 @@ export const DeletePlanDialog = ({
 			setOpen(false);
 			toast.success("Plan deleted successfully");
 		} catch (error: unknown) {
-			console.error("Error deleting plan:", error);
 			toast.error(getBackendErr(error as AxiosError, "Error deleting plan"));
 		} finally {
-			setDeleteLoading(false);
+			setLoading(false);
 		}
 	};
 
 	const handleArchive = async () => {
-		setArchiveLoading(true);
-		const newArchivedState = !product.archived;
+		setLoading(true);
 		try {
-			if (!deleteAllVersions) {
-				if (newArchivedState === true) {
-					await ProductService.updateProduct(axiosInstance, product.id, {
-						archived: newArchivedState,
-					});
-				} else {
-					const updatePromises = [];
-					for (let i = 1; i <= productInfo.numVersion; i++) {
-						updatePromises.push(
-							ProductService.updateProduct(
-								axiosInstance,
-								product.id,
-								{
-									archived: newArchivedState,
-									version: i,
-								},
-								i,
-							),
-						);
-					}
-					await Promise.all(updatePromises);
-				}
-			} else {
-				const updatePromises = [];
-				for (let i = 1; i <= productInfo.numVersion; i++) {
-					updatePromises.push(
-						ProductService.updateProduct(
-							axiosInstance,
-							product.id,
-							{
-								archived: newArchivedState,
-								version: i,
-							},
-							i,
-						),
-					);
-				}
-				await Promise.all(updatePromises);
-			}
-			await refetchProducts();
-			toast.success(
-				`Plan ${product.name} ${newArchivedState ? "archived" : "unarchived"} successfully`,
-			);
+			await ProductService.updateProduct(axiosInstance, product.id, {
+				archived: true,
+			});
+			toast.success(`${product.name} archived successfully`);
 			setOpen(false);
-		} catch (error: unknown) {
-			toast.error(
-				getBackendErr(
-					error as AxiosError,
-					`Error ${newArchivedState ? "archiving" : "unarchiving"} plan`,
-				),
-			);
+			Promise.all([refetchProducts(), refetchProduct()]);
+		} catch (error) {
+			toast.error(getBackendErr(error, "Error archiving plan"));
 		} finally {
-			setArchiveLoading(false);
+			setLoading(false);
+		}
+	};
+
+	const handleUnarchive = async () => {
+		setLoading(true);
+		try {
+			await ProductService.updateProduct(axiosInstance, product.id, {
+				archived: false,
+			});
+			await refetchProduct();
+			toast.success(`${product.name} unarchived successfully`);
+			setOpen(false);
+		} catch (error) {
+			toast.error(getBackendErr(error, "Error unarchiving plan"));
+		} finally {
+			setLoading(false);
 		}
 	};
 
@@ -133,8 +105,10 @@ export const DeletePlanDialog = ({
 
 	const getDeleteMessage = () => {
 		if (product.archived) {
-			return `This plan is currently archived and hidden from the UI. Would you like to unarchive it to make it visible again?\n\nNote: If there are multiple versions, this will unarchive all versions at once.`;
+			return `Are you sure you want to unarchive ${product.name}? This will make it visible in your list of products.`;
 		}
+
+		// \n\nNote: If there are multiple versions, this will unarchive all versions at once.
 
 		const isMultipleVersions = productInfo?.numVersion > 1;
 		const versionText = deleteAllVersions ? "plan" : "version";
@@ -184,16 +158,19 @@ export const DeletePlanDialog = ({
 		}
 	};
 
-	if (!productInfo || isLoading) {
-		return <></>;
-	}
+	if (!productInfo || isLoading) return;
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogContent className="w-md" onClick={(e) => e.stopPropagation()}>
+			<DialogContent onClick={(e) => e.stopPropagation()}>
 				<DialogHeader>
 					<DialogTitle>
-						{product.archived ? "Unarchive" : "Delete"} {product.name}
+						{product.archived
+							? "Unarchive"
+							: hasCusProducts
+								? "Archive"
+								: "Delete"}{" "}
+						{product.name}
 					</DialogTitle>
 					<DialogDescription>
 						{getDeleteMessage()
@@ -207,20 +184,22 @@ export const DeletePlanDialog = ({
 					</DialogDescription>
 				</DialogHeader>
 
-				{productInfo.numVersion > 1 && !product.archived && (
-					<Select
-						value={deleteAllVersions ? "all" : "latest"}
-						onValueChange={(value) => setDeleteAllVersions(value === "all")}
-					>
-						<SelectTrigger className="w-6/12">
-							<SelectValue placeholder="Select a version" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="latest">Delete latest version</SelectItem>
-							<SelectItem value="all">Archive plan</SelectItem>
-						</SelectContent>
-					</Select>
-				)}
+				{productInfo.numVersion > 1 &&
+					!product.archived &&
+					!productInfo.hasCusProductsLatest && (
+						<Select
+							value={deleteAllVersions ? "all" : "latest"}
+							onValueChange={(value) => setDeleteAllVersions(value === "all")}
+						>
+							<SelectTrigger className="w-6/12">
+								<SelectValue placeholder="Select a version" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="latest">Delete latest version</SelectItem>
+								<SelectItem value="all">Archive plan</SelectItem>
+							</SelectContent>
+						</Select>
+					)}
 
 				<DialogFooter>
 					<Button variant="secondary" onClick={() => setOpen(false)}>
@@ -228,18 +207,18 @@ export const DeletePlanDialog = ({
 					</Button>
 					{product.archived && (
 						<Button
-							variant="secondary"
-							onClick={handleArchive}
-							disabled={archiveLoading}
+							variant="primary"
+							onClick={handleUnarchive}
+							isLoading={loading}
 						>
 							Unarchive
 						</Button>
 					)}
 					{hasCusProducts && !product.archived && (
 						<Button
-							variant="secondary"
+							variant="primary"
 							onClick={handleArchive}
-							disabled={archiveLoading}
+							isLoading={loading}
 						>
 							Archive
 						</Button>
@@ -249,7 +228,7 @@ export const DeletePlanDialog = ({
 						<Button
 							variant="destructive"
 							onClick={handleDelete}
-							disabled={deleteLoading}
+							isLoading={loading}
 						>
 							Delete
 						</Button>

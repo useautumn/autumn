@@ -136,7 +136,7 @@ productRouter.get("/:productId/data2", async (req: any, res) => {
 				idOrInternalId: productId,
 				orgId,
 				env,
-				version: version ? parseInt(version) : undefined,
+				version: version ? parseInt(version, 10) : undefined,
 			}),
 			ProductService.getFull({
 				db,
@@ -161,9 +161,13 @@ productRouter.get("/:productId/data2", async (req: any, res) => {
 			features: req.features,
 		});
 
-		res
-			.status(200)
-			.json({ product: productV2, numVersions: latestProduct.version });
+		res.status(200).json({
+			product: {
+				...productV2,
+				archived: latestProduct.archived,
+			},
+			numVersions: latestProduct.version,
+		});
 	} catch (error) {
 		console.error("Failed to get product", error);
 		res.status(500).send(error);

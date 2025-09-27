@@ -5,6 +5,7 @@ import {
 } from "@autumn/shared";
 import type { AxiosError, AxiosInstance } from "axios";
 import { toast } from "sonner";
+import type { ZodError } from "zod";
 import { ProductService } from "@/services/products/ProductService";
 import { getBackendErr } from "@/utils/genUtils";
 import { validateItemsBeforeSave } from "../../plan/utils/validateItemsBeforeSave";
@@ -38,7 +39,9 @@ export const updateProduct = async ({
 		return true;
 	} catch (error) {
 		console.error(error);
-		toast.error(getBackendErr(error as AxiosError, "Failed to update product"));
+		toast.error(
+			getBackendErr(error as AxiosError | ZodError, "Failed to update product"),
+		);
 		return false;
 	}
 };

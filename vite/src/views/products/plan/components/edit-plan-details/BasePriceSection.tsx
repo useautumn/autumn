@@ -126,30 +126,6 @@ export const BasePriceSection = () => {
 							setItem={setItem}
 							disabled={disabled}
 						/>
-						{/* <Select
-							disabled={disabled}
-							value={
-								itemToBillingInterval({
-									interval: basePrice?.interval,
-								}) as string
-							}
-							onValueChange={(value) => {
-								handleUpdateBasePrice({
-									interval: value as BillingInterval,
-								});
-							}}
-						>
-							<SelectTrigger className="w-full">
-								<SelectValue placeholder="Select interval" />
-							</SelectTrigger>
-							<SelectContent>
-								{Object.values(BillingInterval).map((interval) => (
-									<SelectItem key={interval} value={interval}>
-										{keyToTitle(interval)}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select> */}
 					</div>
 				</div>
 			</div>

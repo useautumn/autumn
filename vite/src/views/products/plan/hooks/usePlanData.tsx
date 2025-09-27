@@ -59,8 +59,7 @@ export function usePlanData({ originalProduct }: UsePlanDataProps) {
 	return {
 		product,
 		setProduct,
-		hasChanges: diff.hasChanges,
-		willVersion: diff.willVersion,
+		diff,
 		originalProduct: originalProductRef.current,
 	};
 }
