@@ -1,26 +1,24 @@
-import RecaseError from "@/utils/errorUtils.js";
 import {
-	MeteredConfig,
-	ErrCode,
 	AggregateType,
-	CreditSystemConfig,
-	Feature,
-	FeatureUsageType,
-	Organization,
-	ProductItemFeatureType,
+	type CreditSystemConfig,
+	cusProductsToCusPrices,
+	ErrCode,
+	type Feature,
 	FeatureType,
-	FullCustomer,
-	UsagePriceConfig,
+	FeatureUsageType,
+	type FullCustomer,
+	type MeteredConfig,
+	ProductItemFeatureType,
+	type UsagePriceConfig,
 } from "@autumn/shared";
-import { FeatureService } from "./FeatureService.js";
 import { StatusCodes } from "http-status-codes";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateFeatureDisplay } from "@/external/llm/llmUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { ACTIVE_STATUSES } from "../customers/cusProducts/CusProductService.js";
 import { ProductService } from "../products/ProductService.js";
 import { getCreditSystemsFromFeature } from "./creditSystemUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { cusProductsToCusPrices, cusProductToPrices } from "@autumn/shared";
-import { priceToFeature } from "../products/prices/priceUtils/convertPrice.js";
-import { ACTIVE_STATUSES } from "../customers/cusProducts/CusProductService.js";
+import { FeatureService } from "./FeatureService.js";
 
 export const validateFeatureId = (featureId: string) => {
 	if (!featureId.match(/^[a-zA-Z0-9_-]+$/)) {
@@ -35,7 +33,7 @@ export const validateFeatureId = (featureId: string) => {
 };
 
 export const validateMeteredConfig = (config: MeteredConfig) => {
-	let newConfig = { ...config };
+	const newConfig = { ...config };
 
 	if (!config.usage_type) {
 		throw new RecaseError({
@@ -57,7 +55,7 @@ export const validateMeteredConfig = (config: MeteredConfig) => {
 		};
 	}
 
-	if (newConfig.filters.length == 0) {
+	if (newConfig.filters?.length === 0 || !newConfig.filters) {
 		newConfig.filters = [
 			{
 				property: "",
@@ -71,7 +69,7 @@ export const validateMeteredConfig = (config: MeteredConfig) => {
 };
 
 export const validateCreditSystem = (config: CreditSystemConfig) => {
-	let schema = config.schema;
+	const schema = config.schema;
 	if (!schema || schema.length == 0) {
 		throw new RecaseError({
 			message: `At least one metered feature is required for credit system`,
@@ -94,11 +92,13 @@ export const validateCreditSystem = (config: CreditSystemConfig) => {
 		});
 	}
 
-	let newConfig = { ...config, usage_type: FeatureUsageType.Single };
+	const newConfig = { ...config, usage_type: FeatureUsageType.Single };
 	for (let i = 0; i < newConfig.schema.length; i++) {
 		newConfig.schema[i].feature_amount = 1;
 
-		let creditAmount = parseFloat(newConfig.schema[i].credit_amount.toString());
+		const creditAmount = parseFloat(
+			newConfig.schema[i].credit_amount.toString(),
+		);
 		if (isNaN(creditAmount)) {
 			throw new RecaseError({
 				message: `Credit amount should be a number`,
@@ -126,27 +126,27 @@ export const getObjectsUsingFeature = async ({
 	allFeatures: Feature[];
 	feature: Feature;
 }) => {
-	let products = await ProductService.listFull({
+	const products = await ProductService.listFull({
 		db,
 		orgId,
 		env,
 	});
 
-	let allPrices = products.flatMap((p) => p.prices);
-	let allEnts = products.flatMap((p) => p.entitlements);
-	let creditSystems = getCreditSystemsFromFeature({
+	const allPrices = products.flatMap((p) => p.prices);
+	const allEnts = products.flatMap((p) => p.entitlements);
+	const creditSystems = getCreditSystemsFromFeature({
 		featureId: feature.id,
 		features: allFeatures,
 	});
 
-	let entitlements = allEnts.filter(
+	const entitlements = allEnts.filter(
 		(entitlement) => entitlement.internal_feature_id == feature.internal_id,
 	);
-	let linkedEntitlements = allEnts.filter(
+	const linkedEntitlements = allEnts.filter(
 		(entitlement) => entitlement.entity_feature_id == feature.id,
 	);
 
-	let prices = allPrices.filter(
+	const prices = allPrices.filter(
 		(price) => (price.config as any).internal_feature_id == feature.internal_id,
 	);
 
@@ -217,19 +217,20 @@ export const isPaidContinuousUse = ({
 	feature: Feature;
 	fullCus: FullCustomer;
 }) => {
-	let isContinuous = feature.config?.usage_type == FeatureUsageType.Continuous;
+	const isContinuous =
+		feature.config?.usage_type == FeatureUsageType.Continuous;
 
 	if (!isContinuous) {
 		return false;
 	}
 
-	let cusPrices = cusProductsToCusPrices({
+	const cusPrices = cusProductsToCusPrices({
 		cusProducts: fullCus.customer_products,
 		inStatuses: ACTIVE_STATUSES,
 	});
 
-	let hasPaid = cusPrices.some((cp) => {
-		let config = cp.price.config as UsagePriceConfig;
+	const hasPaid = cusPrices.some((cp) => {
+		const config = cp.price.config as UsagePriceConfig;
 		if (config.internal_feature_id == feature.internal_id) {
 			return true;
 		}
