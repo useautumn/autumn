@@ -1,8 +1,8 @@
-import { z } from "zod";
-import { FeatureOptionsSchema } from "../cusProductModels/cusProductModels.js";
-import { ProductItemSchema } from "../productV2Models/productItemModels/productItemModels.js";
-import { CreateFreeTrialSchema } from "../productModels/freeTrialModels/freeTrialModels.js";
+import { z } from "zod/v4";
 import { notNullish } from "../../utils/utils.js";
+import { FeatureOptionsSchema } from "../cusProductModels/cusProductModels.js";
+import { CreateFreeTrialSchema } from "../productModels/freeTrialModels/freeTrialModels.js";
+import { ProductItemSchema } from "../productV2Models/productItemModels/productItemModels.js";
 
 export const ProductOptions = z.object({
 	product_id: z.string(),

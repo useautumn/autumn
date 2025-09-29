@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 import { DiscountResponseSchema } from "../../rewardModels/rewardModels/rewardResponseModels.js";
 
 export const UpcomingInvoiceResponseSchema = z.object({

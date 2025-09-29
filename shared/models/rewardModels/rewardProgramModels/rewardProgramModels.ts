@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 import type { Reward } from "../rewardModels/rewardModels.js";
 import { RewardReceivedBy, RewardTriggerEvent } from "./rewardProgramEnums.js";
 

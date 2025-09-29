@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 
 export const OrgConfigSchema = z.object({
 	bill_upgrade_immediately: z.boolean().default(true),

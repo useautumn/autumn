@@ -13,7 +13,7 @@
 	"author": "Recase Inc.",
 	"license": "Apache-2.0",
 	"scripts": {
-		"build:tsc": "tsc",
+		"build:tsc": "tsc && bun api/customer.ts",
 		"build": "bun build ./index.ts --outdir dist --format esm --target bun --external zod",
 		"dev": "bunx nodemon --ext ts --ignore dist --exec \"bun run build && bun run dev:dts\"",
 		"dev:dts": "tsc --emitDeclarationOnly --outDir dist --project tsconfig.json",
@@ -29,7 +29,8 @@
 		"dotenv": "^16.5.0",
 		"drizzle-kit": "^0.31.1",
 		"drizzle-orm": "^0.43.1",
-		"drizzle-zod": "^0.8.2"
+		"drizzle-zod": "^0.8.2",
+		"zod-openapi": "^5.4.1"
 	},
 	"peerDependencies": {
 		"zod": "^3.25.23"

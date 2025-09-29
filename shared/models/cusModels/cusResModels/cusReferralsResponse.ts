@@ -1,4 +1,4 @@
-import z from "zod";
+import { z } from "zod/v4";
 
 export const CusReferralResponseSchema = z.object({
 	program_id: z.string(),

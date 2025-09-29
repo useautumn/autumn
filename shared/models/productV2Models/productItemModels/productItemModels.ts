@@ -1,7 +1,6 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 import { Infinite } from "../../productModels/productEnums.js";
-import { OnIncrease } from "./productItemEnums.js";
-import { OnDecrease } from "./productItemEnums.js";
+import { OnDecrease, OnIncrease } from "./productItemEnums.js";
 
 export const TierInfinite = "inf";
 
