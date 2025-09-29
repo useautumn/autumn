@@ -1,4 +1,4 @@
-import { TrashIcon } from "@phosphor-icons/react";
+import { TrashIcon, PencilSimple } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
@@ -31,16 +31,15 @@ export const PlanCardToolbar = ({
 		<>
 			<DeletePlanDialog open={deleteOpen} setOpen={setDeleteOpen} />
 			<div className="flex flex-row items-center gap-1">
-				<Button
+				<IconButton
+					icon={<PencilSimple />}
 					onClick={onEdit}
 					aria-label="Edit plan"
 					variant="muted"
 					disabled={editDisabled}
-					size="sm"
+					iconOrientation="center"
 					className={cn(isEditingPlan && "btn-secondary-active !opacity-100 ")}
-				>
-					{isEditingPlan ? "Editing" : "Edit"}
-				</Button>
+				/>
 
 				{product.archived ? (
 					<Button variant="muted" onClick={() => setDeleteOpen(true)} size="sm">
