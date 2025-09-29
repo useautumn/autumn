@@ -1,21 +1,11 @@
-import { z } from "zod";
-import { ProcessorType } from "../genModels/genEnums.js";
-import { ProductSchema } from "../productModels/productModels.js";
-import { PriceSchema } from "../productModels/priceModels/priceModels.js";
-import {
-	CustomerEntitlementSchema,
-	FullCustomerEntitlementSchema,
-} from "./cusEntModels/cusEntModels.js";
-import { EntitlementSchema } from "../productModels/entModels/entModels.js";
-import { FeatureSchema } from "../featureModels/featureModels.js";
+import { z } from "zod/v4";
 import { CustomerSchema } from "../cusModels/cusModels.js";
+import { ProcessorType } from "../genModels/genEnums.js";
 import { FreeTrialSchema } from "../productModels/freeTrialModels/freeTrialModels.js";
-import {
-	CustomerPriceSchema,
-	FullCustomerPriceSchema,
-} from "./cusPriceModels/cusPriceModels.js";
-import { CollectionMethod } from "./cusProductEnums.js";
-import { CusProductStatus } from "./cusProductEnums.js";
+import { ProductSchema } from "../productModels/productModels.js";
+import { FullCustomerEntitlementSchema } from "./cusEntModels/cusEntModels.js";
+import { FullCustomerPriceSchema } from "./cusPriceModels/cusPriceModels.js";
+import { CollectionMethod, CusProductStatus } from "./cusProductEnums.js";
 
 export const FeatureOptionsSchema = z.object({
 	feature_id: z.string(),

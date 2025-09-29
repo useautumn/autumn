@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 import { AttachScenario } from "../checkModels/checkPreviewModels.js";
 import { AppEnv } from "../genModels/genEnums.js";
 import { FreeTrialResponseSchema } from "../productModels/freeTrialModels/freeTrialModels.js";

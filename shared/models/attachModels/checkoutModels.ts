@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 import { FeatureOptionsSchema } from "../cusProductModels/cusProductModels.js";
 import { ProductItemResponseSchema } from "../productV2Models/productItemModels/prodItemResponseModels.js";
 import { ProductResponseSchema } from "../productV2Models/productResponseModels.js";

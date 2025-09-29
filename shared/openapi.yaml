@@ -1,0 +1,1445 @@
+openapi: 3.1.0
+info:
+  title: My API
+  version: 1.0.0
+security:
+  - secretKey: []
+paths:
+  /customers/{customerId}:
+    get:
+      parameters:
+        - in: path
+          name: customerId
+          schema:
+            $ref: "#/components/schemas/customerId"
+          required: true
+          description: Your internal ID for the customer
+      responses:
+        "200":
+          description: 200 OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+  /customers/{customerId}/features/{featureId}:
+    patch:
+      tags:
+        - customers.features
+      x-speakeasy-name-override: update
+      parameters:
+        - in: path
+          name: customerId
+          schema:
+            $ref: "#/components/schemas/customerId"
+          required: true
+          description: Your internal ID for the customer
+        - in: path
+          name: featureId
+          schema:
+            $ref: "#/components/schemas/featureId"
+          required: true
+          description: Feature ID as defined in the dashboard (eg. 'messages')
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                usage:
+                  type: number
+              required:
+                - usage
+      responses:
+        "200":
+          description: 200 OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  usage:
+                    type: number
+                required:
+                  - usage
+                additionalProperties: false
+  /core/attach:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  description: ID of the customer to attach the product to
+                  type: string
+                customer_data:
+                  description: Customer data if using attach to auto create customer
+                  anyOf:
+                    - {}
+                    - type: "null"
+                entity_id:
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                entity_data:
+                  anyOf:
+                    - {}
+                    - type: "null"
+                product_id:
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                product_ids:
+                  anyOf:
+                    - minItems: 1
+                      type: array
+                      items:
+                        type: string
+                    - type: "null"
+                options:
+                  anyOf:
+                    - type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                          quantity:
+                            type: number
+                          upcoming_quantity:
+                            anyOf:
+                              - type: number
+                              - type: "null"
+                          adjustable_quantity:
+                            anyOf:
+                              - type: boolean
+                              - type: "null"
+                          internal_feature_id:
+                            anyOf:
+                              - type: string
+                              - type: "null"
+                        required:
+                          - feature_id
+                          - quantity
+                    - type: "null"
+                products:
+                  anyOf:
+                    - type: array
+                      items:
+                        type: object
+                        properties:
+                          product_id:
+                            type: string
+                          quantity:
+                            anyOf:
+                              - type: number
+                              - type: "null"
+                          entity_id:
+                            anyOf:
+                              - type: string
+                              - type: "null"
+                          options:
+                            anyOf:
+                              - type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    feature_id:
+                                      type: string
+                                    quantity:
+                                      type: number
+                                    upcoming_quantity:
+                                      anyOf:
+                                        - type: number
+                                        - type: "null"
+                                    adjustable_quantity:
+                                      anyOf:
+                                        - type: boolean
+                                        - type: "null"
+                                    internal_feature_id:
+                                      anyOf:
+                                        - type: string
+                                        - type: "null"
+                                  required:
+                                    - feature_id
+                                    - quantity
+                              - type: "null"
+                        required:
+                          - product_id
+                    - type: "null"
+                is_custom:
+                  type: boolean
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      feature_id:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                      feature_type:
+                        anyOf:
+                          - type: string
+                            enum:
+                              - single_use
+                              - continuous_use
+                              - boolean
+                              - static
+                          - type: "null"
+                      included_usage:
+                        anyOf:
+                          - anyOf:
+                              - type: number
+                              - type: string
+                                const: inf
+                          - type: "null"
+                      interval:
+                        anyOf:
+                          - type: string
+                            enum:
+                              - minute
+                              - hour
+                              - day
+                              - week
+                              - month
+                              - quarter
+                              - semi_annual
+                              - year
+                          - type: "null"
+                      interval_count:
+                        anyOf:
+                          - type: number
+                          - type: "null"
+                      entity_feature_id:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                      usage_model:
+                        anyOf:
+                          - type: string
+                            enum:
+                              - prepaid
+                              - pay_per_use
+                          - type: "null"
+                      price:
+                        anyOf:
+                          - type: number
+                          - type: "null"
+                      tiers:
+                        anyOf:
+                          - type: array
+                            items:
+                              type: object
+                              properties:
+                                to:
+                                  anyOf:
+                                    - type: number
+                                    - type: string
+                                      const: inf
+                                amount:
+                                  type: number
+                              required:
+                                - to
+                                - amount
+                          - type: "null"
+                      billing_units:
+                        anyOf:
+                          - type: number
+                          - type: "null"
+                      usage_limit:
+                        anyOf:
+                          - type: number
+                          - type: "null"
+                      reset_usage_when_enabled:
+                        anyOf:
+                          - type: boolean
+                          - type: "null"
+                      config:
+                        anyOf:
+                          - type: object
+                            properties:
+                              on_increase:
+                                anyOf:
+                                  - type: string
+                                    enum:
+                                      - bill_immediately
+                                      - prorate_immediately
+                                      - prorate_next_cycle
+                                      - bill_next_cycle
+                                  - type: "null"
+                              on_decrease:
+                                anyOf:
+                                  - type: string
+                                    enum:
+                                      - prorate
+                                      - prorate_immediately
+                                      - prorate_next_cycle
+                                      - none
+                                      - no_prorations
+                                  - type: "null"
+                              rollover:
+                                anyOf:
+                                  - type: object
+                                    properties:
+                                      max:
+                                        anyOf:
+                                          - type: number
+                                          - type: "null"
+                                      duration:
+                                        default: month
+                                        type: string
+                                        enum:
+                                          - month
+                                          - forever
+                                      length:
+                                        type: number
+                                    required:
+                                      - max
+                                      - length
+                                  - type: "null"
+                          - type: "null"
+                      created_at:
+                        anyOf:
+                          - type: number
+                          - type: "null"
+                      entitlement_id:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                      price_id:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                      price_config:
+                        anyOf:
+                          - {}
+                          - type: "null"
+                free_trial:
+                  anyOf:
+                    - type: object
+                      properties:
+                        length:
+                          anyOf:
+                            - type: string
+                            - type: number
+                        unique_fingerprint:
+                          default: false
+                          type: boolean
+                        duration:
+                          default: day
+                          type: string
+                          enum:
+                            - day
+                            - month
+                            - year
+                        card_required:
+                          default: true
+                          type: boolean
+                      required:
+                        - length
+                    - type: boolean
+                version:
+                  type: number
+                success_url:
+                  type: string
+                force_checkout:
+                  type: boolean
+                invoice_only:
+                  type: boolean
+                metadata: {}
+                billing_cycle_anchor:
+                  type: number
+                checkout_session_params: {}
+                reward:
+                  anyOf:
+                    - type: string
+                    - type: array
+                      items:
+                        type: string
+                invoice:
+                  type: boolean
+                enable_product_immediately:
+                  type: boolean
+                finalize_invoice:
+                  type: boolean
+                skip_checkout:
+                  type: boolean
+                setup_payment:
+                  type: boolean
+              required:
+                - customer_id
+      responses:
+        "200":
+          description: 200 OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttachResult"
+components:
+  schemas:
+    customerId:
+      description: Your internal ID for the customer
+      example: cus_123
+      type: string
+    featureId:
+      description: Feature ID as defined in the dashboard (eg. 'messages')
+      example: messages
+      type: string
+    Customer:
+      type: object
+      properties:
+        autumn_id:
+          anyOf:
+            - type: string
+            - type: "null"
+        id:
+          description: Your internal ID for the customer
+          example: cus_123
+          anyOf:
+            - type: string
+            - type: "null"
+        created_at:
+          description: The date and time the customer was created in milliseconds since
+            epoch
+          example: 1717000000
+          type: number
+        name:
+          anyOf:
+            - type: string
+            - type: "null"
+        email:
+          anyOf:
+            - type: string
+            - type: "null"
+        fingerprint:
+          anyOf:
+            - type: string
+            - type: "null"
+        stripe_id:
+          default: null
+          anyOf:
+            - type: string
+            - type: "null"
+        env:
+          type: string
+          enum:
+            - sandbox
+            - live
+        products:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                anyOf:
+                  - type: string
+                  - type: "null"
+              group:
+                anyOf:
+                  - type: string
+                  - type: "null"
+              status:
+                type: string
+                enum:
+                  - scheduled
+                  - active
+                  - past_due
+                  - expired
+                  - unknown
+                  - trialing
+              canceled:
+                anyOf:
+                  - type: boolean
+                  - type: "null"
+              trialing:
+                anyOf:
+                  - type: boolean
+                  - type: "null"
+              canceled_at:
+                anyOf:
+                  - type: number
+                  - type: "null"
+              started_at:
+                type: number
+              is_default:
+                type: boolean
+              is_add_on:
+                type: boolean
+              version:
+                anyOf:
+                  - type: number
+                  - type: "null"
+              stripe_subscription_ids:
+                anyOf:
+                  - type: array
+                    items:
+                      type: string
+                  - type: "null"
+              current_period_start:
+                anyOf:
+                  - type: number
+                  - type: "null"
+              current_period_end:
+                anyOf:
+                  - type: number
+                  - type: "null"
+              entity_id:
+                anyOf:
+                  - type: string
+                  - type: "null"
+              items:
+                anyOf:
+                  - type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          anyOf:
+                            - type: string
+                              enum:
+                                - feature
+                                - priced_feature
+                                - price
+                            - type: "null"
+                        feature_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        feature_type:
+                          anyOf:
+                            - type: string
+                              enum:
+                                - single_use
+                                - continuous_use
+                                - boolean
+                                - static
+                            - type: "null"
+                        feature:
+                          anyOf:
+                            - type: object
+                              properties:
+                                id:
+                                  type: string
+                                name:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                type:
+                                  type: string
+                                  enum:
+                                    - boolean
+                                    - single_use
+                                    - continuous_use
+                                    - credit_system
+                                display:
+                                  anyOf:
+                                    - type: object
+                                      properties:
+                                        singular:
+                                          type: string
+                                        plural:
+                                          type: string
+                                      required:
+                                        - singular
+                                        - plural
+                                      additionalProperties: false
+                                    - type: "null"
+                                credit_schema:
+                                  anyOf:
+                                    - type: array
+                                      items:
+                                        type: object
+                                        properties:
+                                          metered_feature_id:
+                                            type: string
+                                          credit_cost:
+                                            type: number
+                                        required:
+                                          - metered_feature_id
+                                          - credit_cost
+                                        additionalProperties: false
+                                    - type: "null"
+                                archived:
+                                  anyOf:
+                                    - type: boolean
+                                    - type: "null"
+                              required:
+                                - id
+                                - type
+                              additionalProperties: false
+                            - type: "null"
+                        included_usage:
+                          anyOf:
+                            - anyOf:
+                                - type: number
+                                - type: string
+                                  const: inf
+                            - type: "null"
+                        interval:
+                          anyOf:
+                            - type: string
+                              enum:
+                                - minute
+                                - hour
+                                - day
+                                - week
+                                - month
+                                - quarter
+                                - semi_annual
+                                - year
+                            - type: "null"
+                        interval_count:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                        price:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                        tiers:
+                          anyOf:
+                            - type: array
+                              items:
+                                type: object
+                                properties:
+                                  to:
+                                    anyOf:
+                                      - type: number
+                                      - type: string
+                                        const: inf
+                                  amount:
+                                    type: number
+                                required:
+                                  - to
+                                  - amount
+                                additionalProperties: false
+                            - type: "null"
+                        usage_model:
+                          anyOf:
+                            - type: string
+                              enum:
+                                - prepaid
+                                - pay_per_use
+                            - type: "null"
+                        billing_units:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                        reset_usage_when_enabled:
+                          anyOf:
+                            - type: boolean
+                            - type: "null"
+                        quantity:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                        next_cycle_quantity:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                        entity_feature_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        display:
+                          anyOf:
+                            - type: object
+                              properties:
+                                primary_text:
+                                  type: string
+                                secondary_text:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                              required:
+                                - primary_text
+                              additionalProperties: false
+                            - type: "null"
+                      additionalProperties: false
+                  - type: "null"
+              quantity:
+                type: number
+              prepaid_quantities:
+                anyOf:
+                  - type: array
+                    items:
+                      type: object
+                      properties:
+                        quantity:
+                          type: number
+                        feature_id:
+                          type: string
+                      required:
+                        - quantity
+                        - feature_id
+                      additionalProperties: false
+                  - type: "null"
+            required:
+              - id
+              - name
+              - group
+              - status
+              - started_at
+              - is_default
+              - is_add_on
+            additionalProperties: false
+        features: {}
+        invoices:
+          type: array
+          items:
+            type: object
+            properties:
+              product_ids:
+                type: array
+                items:
+                  type: string
+              stripe_id:
+                type: string
+              status:
+                type: string
+              total:
+                type: number
+              currency:
+                type: string
+              created_at:
+                type: number
+              hosted_invoice_url:
+                anyOf:
+                  - type: string
+                  - type: "null"
+            required:
+              - product_ids
+              - stripe_id
+              - status
+              - total
+              - currency
+              - created_at
+            additionalProperties: false
+        trials_used:
+          type: array
+          items:
+            type: object
+            properties:
+              product_id:
+                type: string
+              customer_id:
+                type: string
+              fingerprint:
+                anyOf:
+                  - type: string
+                  - type: "null"
+            required:
+              - product_id
+              - customer_id
+            additionalProperties: false
+        rewards:
+          anyOf:
+            - type: object
+              properties:
+                discounts:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      type:
+                        type: string
+                        enum:
+                          - percentage_discount
+                          - fixed_discount
+                          - free_product
+                          - invoice_credits
+                      discount_value:
+                        type: number
+                      duration_type:
+                        type: string
+                        enum:
+                          - one_off
+                          - months
+                          - forever
+                      duration_value:
+                        anyOf:
+                          - type: number
+                          - type: "null"
+                      currency:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                      start:
+                        anyOf:
+                          - type: number
+                          - type: "null"
+                      end:
+                        anyOf:
+                          - type: number
+                          - type: "null"
+                      subscription_id:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                      total_discount_amount:
+                        anyOf:
+                          - type: number
+                          - type: "null"
+                    required:
+                      - id
+                      - name
+                      - type
+                      - discount_value
+                      - duration_type
+                    additionalProperties: false
+              required:
+                - discounts
+              additionalProperties: false
+            - type: "null"
+        metadata:
+          default: {}
+          type: object
+          propertyNames: {}
+          additionalProperties: {}
+        entities:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                anyOf:
+                  - type: string
+                  - type: "null"
+              name:
+                anyOf:
+                  - type: string
+                  - type: "null"
+              customer_id:
+                type: string
+              feature_id:
+                anyOf:
+                  - type: string
+                  - type: "null"
+              created_at:
+                type: number
+              env:
+                type: string
+                enum:
+                  - sandbox
+                  - live
+              products:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      anyOf:
+                        - type: string
+                        - type: "null"
+                    group:
+                      anyOf:
+                        - type: string
+                        - type: "null"
+                    status:
+                      type: string
+                      enum:
+                        - scheduled
+                        - active
+                        - past_due
+                        - expired
+                        - unknown
+                        - trialing
+                    canceled:
+                      anyOf:
+                        - type: boolean
+                        - type: "null"
+                    trialing:
+                      anyOf:
+                        - type: boolean
+                        - type: "null"
+                    canceled_at:
+                      anyOf:
+                        - type: number
+                        - type: "null"
+                    started_at:
+                      type: number
+                    is_default:
+                      type: boolean
+                    is_add_on:
+                      type: boolean
+                    version:
+                      anyOf:
+                        - type: number
+                        - type: "null"
+                    stripe_subscription_ids:
+                      anyOf:
+                        - type: array
+                          items:
+                            type: string
+                        - type: "null"
+                    current_period_start:
+                      anyOf:
+                        - type: number
+                        - type: "null"
+                    current_period_end:
+                      anyOf:
+                        - type: number
+                        - type: "null"
+                    entity_id:
+                      anyOf:
+                        - type: string
+                        - type: "null"
+                    items:
+                      anyOf:
+                        - type: array
+                          items:
+                            type: object
+                            properties:
+                              type:
+                                anyOf:
+                                  - type: string
+                                    enum:
+                                      - feature
+                                      - priced_feature
+                                      - price
+                                  - type: "null"
+                              feature_id:
+                                anyOf:
+                                  - type: string
+                                  - type: "null"
+                              feature_type:
+                                anyOf:
+                                  - type: string
+                                    enum:
+                                      - single_use
+                                      - continuous_use
+                                      - boolean
+                                      - static
+                                  - type: "null"
+                              feature:
+                                anyOf:
+                                  - type: object
+                                    properties:
+                                      id:
+                                        type: string
+                                      name:
+                                        anyOf:
+                                          - type: string
+                                          - type: "null"
+                                      type:
+                                        type: string
+                                        enum:
+                                          - boolean
+                                          - single_use
+                                          - continuous_use
+                                          - credit_system
+                                      display:
+                                        anyOf:
+                                          - type: object
+                                            properties:
+                                              singular:
+                                                type: string
+                                              plural:
+                                                type: string
+                                            required:
+                                              - singular
+                                              - plural
+                                            additionalProperties: false
+                                          - type: "null"
+                                      credit_schema:
+                                        anyOf:
+                                          - type: array
+                                            items:
+                                              type: object
+                                              properties:
+                                                metered_feature_id:
+                                                  type: string
+                                                credit_cost:
+                                                  type: number
+                                              required:
+                                                - metered_feature_id
+                                                - credit_cost
+                                              additionalProperties: false
+                                          - type: "null"
+                                      archived:
+                                        anyOf:
+                                          - type: boolean
+                                          - type: "null"
+                                    required:
+                                      - id
+                                      - type
+                                    additionalProperties: false
+                                  - type: "null"
+                              included_usage:
+                                anyOf:
+                                  - anyOf:
+                                      - type: number
+                                      - type: string
+                                        const: inf
+                                  - type: "null"
+                              interval:
+                                anyOf:
+                                  - type: string
+                                    enum:
+                                      - minute
+                                      - hour
+                                      - day
+                                      - week
+                                      - month
+                                      - quarter
+                                      - semi_annual
+                                      - year
+                                  - type: "null"
+                              interval_count:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                              price:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                              tiers:
+                                anyOf:
+                                  - type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        to:
+                                          anyOf:
+                                            - type: number
+                                            - type: string
+                                              const: inf
+                                        amount:
+                                          type: number
+                                      required:
+                                        - to
+                                        - amount
+                                      additionalProperties: false
+                                  - type: "null"
+                              usage_model:
+                                anyOf:
+                                  - type: string
+                                    enum:
+                                      - prepaid
+                                      - pay_per_use
+                                  - type: "null"
+                              billing_units:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                              reset_usage_when_enabled:
+                                anyOf:
+                                  - type: boolean
+                                  - type: "null"
+                              quantity:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                              next_cycle_quantity:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                              entity_feature_id:
+                                anyOf:
+                                  - type: string
+                                  - type: "null"
+                              display:
+                                anyOf:
+                                  - type: object
+                                    properties:
+                                      primary_text:
+                                        type: string
+                                      secondary_text:
+                                        anyOf:
+                                          - type: string
+                                          - type: "null"
+                                    required:
+                                      - primary_text
+                                    additionalProperties: false
+                                  - type: "null"
+                            additionalProperties: false
+                        - type: "null"
+                    quantity:
+                      type: number
+                    prepaid_quantities:
+                      anyOf:
+                        - type: array
+                          items:
+                            type: object
+                            properties:
+                              quantity:
+                                type: number
+                              feature_id:
+                                type: string
+                            required:
+                              - quantity
+                              - feature_id
+                            additionalProperties: false
+                        - type: "null"
+                  required:
+                    - id
+                    - name
+                    - group
+                    - status
+                    - started_at
+                    - is_default
+                    - is_add_on
+                  additionalProperties: false
+              features:
+                type: object
+                propertyNames:
+                  type: string
+                additionalProperties:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    type:
+                      type: string
+                      enum:
+                        - single_use
+                        - continuous_use
+                        - boolean
+                        - static
+                    name:
+                      anyOf:
+                        - type: string
+                        - type: "null"
+                    interval:
+                      anyOf:
+                        - anyOf:
+                            - type: string
+                              enum:
+                                - lifetime
+                                - minute
+                                - hour
+                                - day
+                                - week
+                                - month
+                                - quarter
+                                - semi_annual
+                                - year
+                            - type: string
+                              const: multiple
+                        - type: "null"
+                    interval_count:
+                      anyOf:
+                        - type: number
+                        - type: "null"
+                    unlimited:
+                      anyOf:
+                        - type: boolean
+                        - type: "null"
+                    balance:
+                      anyOf:
+                        - type: number
+                        - type: "null"
+                    usage:
+                      anyOf:
+                        - type: number
+                        - type: "null"
+                    included_usage:
+                      anyOf:
+                        - type: number
+                        - type: "null"
+                    next_reset_at:
+                      anyOf:
+                        - type: number
+                        - type: "null"
+                    overage_allowed:
+                      anyOf:
+                        - type: boolean
+                        - type: "null"
+                    breakdown:
+                      anyOf:
+                        - type: array
+                          items:
+                            type: object
+                            properties:
+                              interval:
+                                type: string
+                                enum:
+                                  - lifetime
+                                  - minute
+                                  - hour
+                                  - day
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                              interval_count:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                              balance:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                              usage:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                              included_usage:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                              next_reset_at:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                            required:
+                              - interval
+                            additionalProperties: false
+                        - type: "null"
+                    credit_schema:
+                      anyOf:
+                        - type: array
+                          items:
+                            type: object
+                            properties:
+                              feature_id:
+                                type: string
+                              credit_amount:
+                                type: number
+                            required:
+                              - feature_id
+                              - credit_amount
+                            additionalProperties: false
+                        - type: "null"
+                    usage_limit:
+                      anyOf:
+                        - type: number
+                        - type: "null"
+                    rollovers:
+                      anyOf:
+                        - type: array
+                          items:
+                            type: object
+                            properties:
+                              balance:
+                                type: number
+                              expires_at:
+                                type: number
+                            required:
+                              - balance
+                              - expires_at
+                            additionalProperties: false
+                        - type: "null"
+                  required:
+                    - id
+                    - type
+                  additionalProperties: false
+              invoices:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    product_ids:
+                      type: array
+                      items:
+                        type: string
+                    stripe_id:
+                      type: string
+                    status:
+                      type: string
+                    total:
+                      type: number
+                    currency:
+                      type: string
+                    created_at:
+                      type: number
+                    hosted_invoice_url:
+                      anyOf:
+                        - type: string
+                        - type: "null"
+                  required:
+                    - product_ids
+                    - stripe_id
+                    - status
+                    - total
+                    - currency
+                    - created_at
+                  additionalProperties: false
+            required:
+              - id
+              - name
+              - customer_id
+              - created_at
+              - env
+            additionalProperties: false
+        referrals:
+          type: array
+          items:
+            type: object
+            properties:
+              program_id:
+                type: string
+              customer:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                  email:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                required:
+                  - id
+                additionalProperties: false
+              reward_applied:
+                type: boolean
+              created_at:
+                type: number
+            required:
+              - program_id
+              - customer
+              - reward_applied
+              - created_at
+            additionalProperties: false
+        payment_method:
+          anyOf:
+            - {}
+            - type: "null"
+        upcoming_invoice:
+          anyOf:
+            - type: object
+              properties:
+                lines:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      product_id:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                      description:
+                        type: string
+                      amount:
+                        type: number
+                    required:
+                      - description
+                      - amount
+                    additionalProperties: false
+                discounts:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      type:
+                        type: string
+                        enum:
+                          - percentage_discount
+                          - fixed_discount
+                          - free_product
+                          - invoice_credits
+                      discount_value:
+                        type: number
+                      duration_type:
+                        type: string
+                        enum:
+                          - one_off
+                          - months
+                          - forever
+                      duration_value:
+                        anyOf:
+                          - type: number
+                          - type: "null"
+                      currency:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                      start:
+                        anyOf:
+                          - type: number
+                          - type: "null"
+                      end:
+                        anyOf:
+                          - type: number
+                          - type: "null"
+                      subscription_id:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                      total_discount_amount:
+                        anyOf:
+                          - type: number
+                          - type: "null"
+                    required:
+                      - id
+                      - name
+                      - type
+                      - discount_value
+                      - duration_type
+                    additionalProperties: false
+                subtotal:
+                  type: number
+                total:
+                  type: number
+                currency:
+                  type: string
+              required:
+                - lines
+                - discounts
+                - subtotal
+                - total
+                - currency
+              additionalProperties: false
+            - type: "null"
+      required:
+        - id
+        - created_at
+        - name
+        - email
+        - fingerprint
+        - stripe_id
+        - env
+        - products
+        - features
+        - metadata
+      additionalProperties: false
+    AttachResult:
+      type: object
+      properties:
+        message:
+          $ref: "#/components/schemas/message"
+        product_ids:
+          $ref: "#/components/schemas/productIds"
+        customer_id:
+          $ref: "#/components/schemas/customerId"
+      required:
+        - message
+        - product_ids
+        - customer_id
+      additionalProperties: false
+    message:
+      description: A short description on the result of the operation
+      example: Successfully downgraded from Product A to Product B
+      type: string
+    productIds:
+      description: The IDs of the products that were attached
+      example:
+        - pro
+        - one_off
+      type: array
+      items:
+        type: string
+  securitySchemes:
+    secretKey:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

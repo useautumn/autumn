@@ -1,4 +1,5 @@
-import { z } from "zod";
+import { z } from "zod/v4";
+
 import { AppEnv } from "../genModels/genEnums.js";
 import { RewardResponseSchema } from "../rewardModels/rewardModels/rewardResponseModels.js";
 import { CusProductResponseSchema } from "./cusResModels/cusProductResponse.js";
@@ -17,8 +18,17 @@ export const CusResponseSchema = z.object({
 	// Internal fields
 	autumn_id: z.string().nullish(),
 
-	id: z.string().nullable(),
-	created_at: z.number(),
+	id: z.string().nullable().meta({
+		description: "Your internal ID for the customer",
+		example: "cus_123",
+	}),
+
+	created_at: z.number().meta({
+		description:
+			"The date and time the customer was created in milliseconds since epoch",
+		example: 1717000000,
+	}),
+
 	name: z.string().nullable(),
 	email: z.string().nullable(),
 	fingerprint: z.string().nullable(),

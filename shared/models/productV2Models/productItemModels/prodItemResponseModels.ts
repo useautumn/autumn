@@ -1,4 +1,6 @@
-import { z } from "zod";
+import { z } from "zod/v4";
+import { APIFeatureSchema } from "../../featureModels/featureResModels.js";
+import { Infinite } from "../../productModels/productEnums.js";
 import {
 	PriceTierSchema,
 	ProductItemFeatureType,
@@ -6,8 +8,6 @@ import {
 	ProductItemType,
 	UsageModel,
 } from "./productItemModels.js";
-import { Infinite } from "../../productModels/productEnums.js";
-import { APIFeatureSchema } from "../../featureModels/featureResModels.js";
 
 export const ProductItemResponseSchema = z.object({
 	// Feature stuff

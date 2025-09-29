@@ -1,31 +1,28 @@
 import { config } from "dotenv";
+
 config();
 
 import "./instrumentation.js";
-import { trace, context } from "@opentelemetry/api";
-
-import http from "http";
-import cluster from "cluster";
-import os from "os";
-import mainRouter from "./internal/mainRouter.js";
-import express from "express";
-import cors from "cors";
-
-import webhooksRouter from "./external/webhooks/webhooksRouter.js";
-
-import { apiRouter } from "./internal/api/apiRouter.js";
-import { QueueManager } from "./queue/QueueManager.js";
 import { AppEnv } from "@autumn/shared";
+import { context, trace } from "@opentelemetry/api";
+import { toNodeHandler } from "better-auth/node";
+import cluster from "cluster";
+import cors from "cors";
+import express from "express";
+import http from "http";
+import os from "os";
+import { client, db } from "./db/initDrizzle.js";
 import { CacheManager } from "./external/caching/CacheManager.js";
+import { ClickHouseManager } from "./external/clickhouse/ClickHouseManager.js";
 import { logger } from "./external/logtail/logtailUtils.js";
 import { createPosthogCli } from "./external/posthog/createPosthogCli.js";
-import { generateId } from "./utils/genUtils.js";
-import { subscribeToOrgUpdates } from "./external/supabase/subscribeToOrgUpdates.js";
-import { client, db } from "./db/initDrizzle.js";
-import { toNodeHandler } from "better-auth/node";
+import webhooksRouter from "./external/webhooks/webhooksRouter.js";
+import { apiRouter } from "./internal/api/apiRouter.js";
+import mainRouter from "./internal/mainRouter.js";
+import { QueueManager } from "./queue/QueueManager.js";
 import { auth } from "./utils/auth.js";
+import { generateId } from "./utils/genUtils.js";
 import { checkEnvVars } from "./utils/initUtils.js";
-import { ClickHouseManager } from "./external/clickhouse/ClickHouseManager.js";
 
 const tracer = trace.getTracer("express");
 
@@ -171,13 +168,13 @@ if (process.env.NODE_ENV === "development") {
 	init();
 	registerShutdownHandlers();
 } else {
-	let numCPUs = os.cpus().length;
+	const numCPUs = os.cpus().length;
 
 	if (cluster.isPrimary) {
 		console.log(`Master ${process.pid} is running`);
 		console.log("Number of CPUs", numCPUs);
 
-		let numWorkers = 7;
+		const numWorkers = 7;
 
 		for (let i = 0; i < numWorkers; i++) {
 			cluster.fork();
