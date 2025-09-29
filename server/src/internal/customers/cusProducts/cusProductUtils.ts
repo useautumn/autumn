@@ -1,4 +1,5 @@
 import {
+	ACTIVE_STATUSES,
 	APIVersion,
 	type AppEnv,
 	AttachScenario,
@@ -9,6 +10,7 @@ import {
 	type FixedPriceConfig,
 	type FullCusProduct,
 	type FullCustomer,
+	type FullProduct,
 	type Organization,
 	PriceType,
 	type Subscription,
@@ -31,7 +33,6 @@ import { notNullish, nullish } from "@/utils/genUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { handleAddProduct } from "../attach/attachFunctions/addProductFlow/handleAddProduct.js";
 import { newCusToAttachParams } from "../attach/attachUtils/attachParams/convertToParams.js";
-import { getDefaultAttachConfig } from "../attach/attachUtils/getAttachConfig.js";
 import { initStripeCusAndProducts } from "../handlers/handleCreateCustomer.js";
 import { CusProductService, RELEVANT_STATUSES } from "./CusProductService.js";
 import { getRelatedCusEnt } from "./cusPrices/cusPriceUtils.js";
@@ -133,6 +134,7 @@ export const getDefaultProduct = async ({
 	return defaultProd;
 };
 
+// This function is only used in cancellation flows
 export const activateDefaultProduct = async ({
 	req,
 	productGroup,
@@ -153,44 +155,38 @@ export const activateDefaultProduct = async ({
 	});
 
 	// Look for a paid default trial first, then fall back to free default
-	let defaultProd = defaultProducts.find(
+	const defaultProd: FullProduct | undefined = defaultProducts.find(
 		(p) =>
-			p.group === productGroup && isDefaultTrialFullProduct({ product: p }),
+			p.group === productGroup && !isDefaultTrialFullProduct({ product: p }),
 	);
 
-	const defaultableProducts = {
-		free: defaultProducts.filter(
-			(p) => p.group === productGroup && isFreeProduct(p.prices),
-		),
-		paid: defaultProducts.filter(
-			(p) =>
-				p.group === productGroup && isDefaultTrialFullProduct({ product: p }),
-		),
-	};
+	// const defaultableProducts = {
+	// 	free: defaultProducts.filter(
+	// 		(p) => p.group === productGroup && isFreeProduct(p.prices),
+	// 	),
+	// 	paid: defaultProducts.filter(
+	// 		(p) =>
+	// 			p.group === productGroup && isDefaultTrialFullProduct({ product: p }),
+	// 	),
+	// };
 
-	// console.log("Found defaultable products:", {
-	// 	free: defaultableProducts.free.map((p) => p.name),
-	// 	paid: defaultableProducts.paid.map((p) => p.name),
-	// });
+	// if (defaultableProducts.paid.length > 0) {
+	// 	defaultProd = defaultableProducts.paid[0];
+	// } else if (defaultableProducts.free.length > 0) {
+	// 	defaultProd = defaultableProducts.free[0];
+	// }
 
-	if (defaultableProducts.paid.length > 0) {
-		defaultProd = defaultableProducts.paid[0];
-	} else if (defaultableProducts.free.length > 0) {
-		defaultProd = defaultableProducts.free[0];
-	} else {
-		return false;
-	}
+	if (!defaultProd) return false;
 
-	if (curCusProduct?.internal_product_id == defaultProd.internal_id) {
+	if (curCusProduct?.internal_product_id === defaultProd.internal_id) {
 		return false;
 	}
 
 	const stripeCli = createStripeCli({ org, env });
 	const defaultIsFree = isFreeProduct(defaultProd.prices);
-	const isDefaultTrial = isDefaultTrialFullProduct({ product: defaultProd });
 
 	// Initialize Stripe customer and products if needed (for paid non-trial products)
-	if (!defaultIsFree && !isDefaultTrial) {
+	if (!defaultIsFree) {
 		await initStripeCusAndProducts({
 			db,
 			org,
@@ -201,83 +197,87 @@ export const activateDefaultProduct = async ({
 		});
 	}
 
-	if (!isDefaultTrial) {
-		const existingDefaultProduct = fullCus.customer_products.find(
-			(cp) =>
-				cp.product.internal_id === defaultProd!.internal_id &&
-				(cp.status === CusProductStatus.Active ||
-					cp.status === CusProductStatus.PastDue ||
-					cp.status === CusProductStatus.Trialing),
+	// If default is already active, skip
+	const existingDefaultProduct = fullCus.customer_products.find(
+		(cp) =>
+			cp.product.id === defaultProd?.id && ACTIVE_STATUSES.includes(cp.status),
+	);
+
+	if (existingDefaultProduct) {
+		logger.info(
+			`Default product ${defaultProd?.name} already exists for customer`,
 		);
-
-		if (existingDefaultProduct) {
-			logger.info(
-				`Default product ${defaultProd!.name} already exists for customer`,
-			);
-			return false;
-		}
-
-		await handleAddProduct({
-			req,
-			attachParams: newCusToAttachParams({
-				req,
-				newCus: fullCus,
-				products: [defaultProd],
-				stripeCli,
-			}),
-		});
-
-		// await createFullCusProduct({
-		//   db,
-		//   attachParams: {
-		//     org,
-		//     customer,
-		//     product: defaultProd,
-		//     prices: defaultProd.prices,
-		//     entitlements: defaultProd.entitlements,
-		//     freeTrial: defaultProd.free_trial || null,
-		//     optionsList: [],
-		//     entities: [],
-		//     features: [],
-		//     replaceables: [],
-		//   },
-		//   scenario: AttachScenario.New,
-		//   logger,
-		// });
-
-		// console.log(`   ✅ activated default product: ${defaultProd.group}`);
-		return true;
-	} else if (isDefaultTrial && defaultableProducts.free.length > 0) {
-		defaultProd = defaultableProducts.free[0];
-
-		// Check if the free default product already exists to prevent duplicates
-		const existingFreeProduct = fullCus.customer_products.find(
-			(cp) =>
-				cp.product.internal_id === defaultProd!.internal_id &&
-				(cp.status === CusProductStatus.Active ||
-					cp.status === CusProductStatus.PastDue),
-		);
-
-		if (existingFreeProduct) {
-			logger.info(
-				`Free default product ${defaultProd!.name} already exists for customer`,
-			);
-			return false;
-		}
-
-		await handleAddProduct({
-			req,
-			attachParams: newCusToAttachParams({
-				req,
-				newCus: fullCus,
-				products: [defaultProd],
-				stripeCli,
-			}),
-			config: getDefaultAttachConfig(),
-		});
-
-		return true;
+		return false;
 	}
+
+	await handleAddProduct({
+		req,
+		attachParams: newCusToAttachParams({
+			req,
+			newCus: fullCus,
+			products: [defaultProd],
+			stripeCli,
+		}),
+	});
+
+	return true;
+
+	// if (!isDefaultTrial) {
+	// 	const existingDefaultProduct = fullCus.customer_products.find(
+	// 		(cp) =>
+	// 			cp.product.internal_id === defaultProd?.internal_id &&
+	// 			ACTIVE_STATUSES.includes(cp.status),
+	// 	);
+
+	// 	if (existingDefaultProduct) {
+	// 		logger.info(
+	// 			`Default product ${defaultProd?.name} already exists for customer`,
+	// 		);
+	// 		return false;
+	// 	}
+
+	// 	await handleAddProduct({
+	// 		req,
+	// 		attachParams: newCusToAttachParams({
+	// 			req,
+	// 			newCus: fullCus,
+	// 			products: [defaultProd],
+	// 			stripeCli,
+	// 		}),
+	// 	});
+
+	// 	return true;
+	// } else if (isDefaultTrial && defaultableProducts.free.length > 0) {
+	// 	defaultProd = defaultableProducts.free[0];
+
+	// 	// Check if the free default product already exists to prevent duplicates
+	// 	const existingFreeProduct = fullCus.customer_products.find(
+	// 		(cp) =>
+	// 			cp.product.internal_id === defaultProd!.internal_id &&
+	// 			(cp.status === CusProductStatus.Active ||
+	// 				cp.status === CusProductStatus.PastDue),
+	// 	);
+
+	// 	if (existingFreeProduct) {
+	// 		logger.info(
+	// 			`Free default product ${defaultProd?.name} already exists for customer`,
+	// 		);
+	// 		return false;
+	// 	}
+
+	// 	await handleAddProduct({
+	// 		req,
+	// 		attachParams: newCusToAttachParams({
+	// 			req,
+	// 			newCus: fullCus,
+	// 			products: [defaultProd],
+	// 			stripeCli,
+	// 		}),
+	// 		config: getDefaultAttachConfig(),
+	// 	});
+
+	// 	return true;
+	// }
 };
 
 export const expireAndActivate = async ({
