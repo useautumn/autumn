@@ -5,8 +5,6 @@ import {
 } from "@autumn/shared";
 import { PlusIcon } from "@phosphor-icons/react";
 import { useState } from "react";
-import { CustomDialogContent } from "@/components/general/modal-components/DialogContentWrapper";
-import { Dialog } from "@/components/ui/dialog";
 import {
 	Popover,
 	PopoverContent,
@@ -15,7 +13,6 @@ import {
 import { Button } from "@/components/v2/buttons/Button";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { getItemId } from "@/utils/product/productItemUtils";
-import { CreateFeature } from "@/views/products/features/components/CreateFeature";
 import { FeatureTypeBadge } from "@/views/products/features/components/FeatureTypeBadge";
 import { useProductContext } from "@/views/products/product/ProductContext";
 
@@ -29,9 +26,8 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 	const { product, setProduct, setSheet, setEditingState } =
 		useProductContext();
 
-	// State for popover and create feature dialog
+	// State for popover
 	const [popoverOpen, setPopoverOpen] = useState(false);
-	const [createFeatureOpen, setCreateFeatureOpen] = useState(false);
 
 	const handleFeatureSelect = (feature: Feature) => {
 		if (!product || !feature.id) return;
@@ -109,8 +105,6 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 									type="button"
 									className="w-full px-3 py-2 text-left text-primary hover:bg-muted/50 transition-colors focus:outline-none text-sm font-medium"
 									onClick={() => {
-										// setPopoverOpen(false);
-										// setCreateFeatureOpen(true);
 										setSheet("new-feature");
 										setPopoverOpen(false);
 									}}
@@ -125,11 +119,10 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 					</PopoverContent>
 				</Popover>
 			) : (
-				// Show create feature dialog when no features exist
 				<button
 					type="button"
 					className="group/btn flex items-center justify-center bg-white border border-border rounded-lg h-[30px] w-full shadow-[0px_4px_4px_rgba(0,0,0,0.02),_inset_0px_-3px_4px_rgba(0,0,0,0.04)] cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed form-input"
-					onClick={() => setCreateFeatureOpen(true)}
+					onClick={() => setSheet("new-feature")}
 					tabIndex={0}
 					disabled={disabled}
 					aria-label="Add new feature"
@@ -145,46 +138,6 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 					</div>
 				</button>
 			)}
-
-			{/* Create Feature Dialog */}
-			<Dialog open={createFeatureOpen} onOpenChange={setCreateFeatureOpen}>
-				<CustomDialogContent>
-					<CreateFeature
-						setOpen={setCreateFeatureOpen}
-						open={createFeatureOpen}
-						onSuccess={async (newFeature) => {
-							// Automatically create a new PlanFeatureRow item with the new feature
-							if (!product || !newFeature.id) return;
-
-							// Create a new item with the created feature
-							const newItem = {
-								feature_id: newFeature.id,
-								included_usage: null,
-								interval: ProductItemInterval.Month,
-								price: null,
-								tiers: null,
-								billing_units: 1,
-								entity_feature_id: null,
-								reset_usage_when_enabled: true,
-							};
-
-							// Add the new item to the product
-							const newItems = [...(product.items || []), newItem];
-							const updatedProduct = { ...product, items: newItems };
-							setProduct(updatedProduct);
-
-							// Close the create dialog
-							setCreateFeatureOpen(false);
-
-							// Open edit sidebar for the new item
-							const itemIndex = newItems.length - 1;
-							const itemId = getItemId({ item: newItem, itemIndex });
-							setEditingState({ type: "feature", id: itemId });
-							setSheet("edit-feature");
-						}}
-					/>
-				</CustomDialogContent>
-			</Dialog>
 		</div>
 	);
 };
