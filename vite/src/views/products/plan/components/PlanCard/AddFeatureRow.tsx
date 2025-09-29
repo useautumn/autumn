@@ -109,8 +109,10 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 									type="button"
 									className="w-full px-3 py-2 text-left text-primary hover:bg-muted/50 transition-colors focus:outline-none text-sm font-medium"
 									onClick={() => {
+										// setPopoverOpen(false);
+										// setCreateFeatureOpen(true);
+										setSheet("new-feature");
 										setPopoverOpen(false);
-										setCreateFeatureOpen(true);
 									}}
 								>
 									<div className="flex items-center gap-2">

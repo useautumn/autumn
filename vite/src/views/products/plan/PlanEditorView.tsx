@@ -11,11 +11,12 @@ import { EditPlanFeatureSheet } from "./components/EditPlanFeatureSheet/EditPlan
 import { EditPlanHeader } from "./components/EditPlanHeader";
 import { EditPlanSheet } from "./components/EditPlanSheet";
 import { ManagePlan } from "./components/ManagePlan";
+import { NewFeatureSheet } from "./components/new-feature/NewFeatureSheet";
 import { SaveChangesBar } from "./components/SaveChangesBar";
 import { usePlanData } from "./hooks/usePlanData";
 import ConfirmNewVersionDialog from "./versioning/ConfirmNewVersionDialog";
 
-type Sheets = "edit-plan" | "edit-feature" | null;
+type Sheets = "edit-plan" | "edit-feature" | "new-feature";
 
 export default function PlanEditorView() {
 	const { product: originalProduct, isLoading: productLoading } =
@@ -25,7 +26,6 @@ export default function PlanEditorView() {
 	const { product, setProduct, diff } = usePlanData({
 		originalProduct,
 	});
-	const [entityFeatureIds, setEntityFeatureIds] = useState<string[]>([]);
 
 	const { modal } = useProductChangedAlert({ hasChanges: diff.hasChanges });
 	const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
@@ -123,6 +123,8 @@ export const PlanSheets = ({ sheet }: { sheet: Sheets }) => {
 						<EditPlanFeatureSheet />
 					</ProductItemContext.Provider>
 				);
+			case "new-feature":
+				return <NewFeatureSheet />;
 			default:
 				return <EditPlanSheet />;
 		}
