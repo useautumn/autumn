@@ -14,6 +14,10 @@
 /* ---break--- */
 @custom-variant dark (&:is(.dark *));
 
+html {
+	overscroll-behavior: none;
+}
+
 :root {
 	/* font-family: system-ui, Avenir, Helvetica, Arial, sans-serif; */
 	font-family: "Inter", "Inter Fallback", sans-serif;
@@ -364,4 +368,3 @@ button {
 		opacity: 1;
 	}
 }
-
