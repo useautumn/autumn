@@ -66,10 +66,7 @@ export const cronTask = async () => {
 };
 
 const main = async () => {
-	await Promise.all([
-		// cronTask(),
-		runProductCron(),
-	]);
+	await Promise.all([cronTask(), runProductCron()]);
 };
 
 new CronJob(
