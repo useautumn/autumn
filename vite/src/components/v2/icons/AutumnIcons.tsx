@@ -142,7 +142,7 @@ export const PrepaidUsageIcon = () => {
 	);
 };
 
-export const UsageBasedIcon = () => {
+export const UsageBasedIcon = ({ color = "#DE1779" }: { color?: string }) => {
 	return (
 		<svg
 			width="16"
@@ -154,28 +154,28 @@ export const UsageBasedIcon = () => {
 			<title>Usage Based</title>
 			<path
 				d="M13.46 3.84009H2.54C1.96562 3.84009 1.5 4.30571 1.5 4.88009V11.1201C1.5 11.6945 1.96562 12.1601 2.54 12.1601H13.46C14.0344 12.1601 14.5 11.6945 14.5 11.1201V4.88009C14.5 4.30571 14.0344 3.84009 13.46 3.84009Z"
-				stroke="#DE1779"
+				stroke={color}
 				strokeWidth="1.1"
 				strokeLinecap="round"
 				strokeLinejoin="round"
 			/>
 			<path
 				d="M9.30078 5.91992V10.0799"
-				stroke="#DE1779"
+				stroke={color}
 				strokeWidth="1.1"
 				strokeLinecap="round"
 				strokeLinejoin="round"
 			/>
 			<path
 				d="M6.69922 5.91992V10.0799"
-				stroke="#DE1779"
+				stroke={color}
 				strokeWidth="1.1"
 				strokeLinecap="round"
 				strokeLinejoin="round"
 			/>
 			<path
 				d="M4.09961 5.91992V10.0799"
-				stroke="#DE1779"
+				stroke={color}
 				strokeWidth="1.1"
 				strokeLinecap="round"
 				strokeLinejoin="round"
