@@ -8,13 +8,13 @@ import { CusResponseSchema } from "../models/cusModels/cusResponseModels.js";
 const customerId = z.string().meta({
 	description: "Your internal ID for the customer",
 	example: "cus_123",
-	id: "customerId",
+	id: "customer_id",
 });
 
 const featureId = z.string().meta({
 	description: "Feature ID as defined in the dashboard (eg. 'messages')",
 	example: "messages",
-	id: "featureId",
+	id: "feature_id",
 });
 
 const AttachResult = z
@@ -27,14 +27,16 @@ const AttachResult = z
 		product_ids: z.array(z.string()).meta({
 			description: "The IDs of the products that were attached",
 			example: ["pro", "one_off"],
-			id: "productIds",
+			id: "product_ids",
 		}),
 		customer_id: customerId,
 	})
 	.meta({ id: "AttachResult" });
 
 const attachDefinition = {
-	// requestParams: { path: z.object({ customerId }) },
+	summary: "Attach Product",
+	tags: ["core"],
+	"x-speakeasy-name-override": "attach",
 	requestBody: {
 		content: {
 			"application/json": { schema: AttachBodySchema },
@@ -59,6 +61,12 @@ const document = createDocument({
 		title: "My API",
 		version: "1.0.0",
 	},
+	servers: [
+		{
+			url: "https://api.useautumn.com",
+			description: "Production server",
+		},
+	],
 	security: [
 		{
 			secretKey: [],
@@ -73,10 +81,17 @@ const document = createDocument({
 			},
 		},
 	},
+
 	paths: {
-		"/customers/{customerId}": {
+		"/core/attach": {
+			post: attachDefinition,
+		},
+		"/customers/{customer_id}": {
 			get: {
-				requestParams: { path: z.object({ customerId }) },
+				summary: "Get customer",
+				"x-speakeasy-name-override": "get",
+				tags: ["customers"],
+				requestParams: { path: z.object({ customer_id: customerId }) },
 				responses: {
 					"200": {
 						description: "200 OK",
@@ -87,11 +102,14 @@ const document = createDocument({
 				},
 			},
 		},
-		"/customers/{customerId}/features/{featureId}": {
+		"/customers/{customer_id}/features/{feature_id}": {
 			patch: {
-				tags: ["customers.features"],
-				requestParams: { path: z.object({ customerId, featureId }) },
+				summary: "Update customer feature",
+				tags: ["customer.features"],
 				"x-speakeasy-name-override": "update",
+				requestParams: {
+					path: z.object({ customer_id: customerId, feature_id: featureId }),
+				},
 				requestBody: {
 					content: {
 						"application/json": {
@@ -115,7 +133,6 @@ const document = createDocument({
 				},
 			},
 		},
-		"/core/attach": { post: attachDefinition },
 	},
 });
 

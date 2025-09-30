@@ -2,68 +2,18 @@ openapi: 3.1.0
 info:
   title: My API
   version: 1.0.0
+servers:
+  - url: https://api.useautumn.com
+    description: Production server
 security:
   - secretKey: []
 paths:
-  /customers/{customerId}:
-    get:
-      parameters:
-        - in: path
-          name: customerId
-          schema:
-            $ref: "#/components/schemas/customerId"
-          required: true
-          description: Your internal ID for the customer
-      responses:
-        "200":
-          description: 200 OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Customer"
-  /customers/{customerId}/features/{featureId}:
-    patch:
-      tags:
-        - customers.features
-      x-speakeasy-name-override: update
-      parameters:
-        - in: path
-          name: customerId
-          schema:
-            $ref: "#/components/schemas/customerId"
-          required: true
-          description: Your internal ID for the customer
-        - in: path
-          name: featureId
-          schema:
-            $ref: "#/components/schemas/featureId"
-          required: true
-          description: Feature ID as defined in the dashboard (eg. 'messages')
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                usage:
-                  type: number
-              required:
-                - usage
-      responses:
-        "200":
-          description: 200 OK
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  usage:
-                    type: number
-                required:
-                  - usage
-                additionalProperties: false
   /core/attach:
     post:
+      summary: Attach Product
+      tags:
+        - core
+      x-speakeasy-name-override: attach
       requestBody:
         content:
           application/json:
@@ -377,16 +327,104 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AttachResult"
+  /customers/{customer_id}:
+    get:
+      summary: Get customer
+      x-speakeasy-name-override: get
+      tags:
+        - customers
+      parameters:
+        - in: path
+          name: customer_id
+          schema:
+            $ref: "#/components/schemas/customer_id"
+          required: true
+          description: Your internal ID for the customer
+      responses:
+        "200":
+          description: 200 OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+  /customers/{customer_id}/features/{feature_id}:
+    patch:
+      summary: Update customer feature
+      tags:
+        - customer.features
+      x-speakeasy-name-override: update
+      parameters:
+        - in: path
+          name: customer_id
+          schema:
+            $ref: "#/components/schemas/customer_id"
+          required: true
+          description: Your internal ID for the customer
+        - in: path
+          name: feature_id
+          schema:
+            $ref: "#/components/schemas/feature_id"
+          required: true
+          description: Feature ID as defined in the dashboard (eg. 'messages')
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                usage:
+                  type: number
+              required:
+                - usage
+      responses:
+        "200":
+          description: 200 OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  usage:
+                    type: number
+                required:
+                  - usage
+                additionalProperties: false
 components:
   schemas:
-    customerId:
+    customer_id:
       description: Your internal ID for the customer
       example: cus_123
       type: string
-    featureId:
+    feature_id:
       description: Feature ID as defined in the dashboard (eg. 'messages')
       example: messages
       type: string
+    AttachResult:
+      type: object
+      properties:
+        message:
+          $ref: "#/components/schemas/message"
+        product_ids:
+          $ref: "#/components/schemas/product_ids"
+        customer_id:
+          $ref: "#/components/schemas/customer_id"
+      required:
+        - message
+        - product_ids
+        - customer_id
+      additionalProperties: false
+    message:
+      description: A short description on the result of the operation
+      example: Successfully downgraded from Product A to Product B
+      type: string
+    product_ids:
+      description: The IDs of the products that were attached
+      example:
+        - pro
+        - one_off
+      type: array
+      items:
+        type: string
     Customer:
       type: object
       properties:
@@ -1412,32 +1450,6 @@ components:
         - features
         - metadata
       additionalProperties: false
-    AttachResult:
-      type: object
-      properties:
-        message:
-          $ref: "#/components/schemas/message"
-        product_ids:
-          $ref: "#/components/schemas/productIds"
-        customer_id:
-          $ref: "#/components/schemas/customerId"
-      required:
-        - message
-        - product_ids
-        - customer_id
-      additionalProperties: false
-    message:
-      description: A short description on the result of the operation
-      example: Successfully downgraded from Product A to Product B
-      type: string
-    productIds:
-      description: The IDs of the products that were attached
-      example:
-        - pro
-        - one_off
-      type: array
-      items:
-        type: string
   securitySchemes:
     secretKey:
       type: http
