@@ -196,51 +196,5 @@ export const createNewCustomer = async ({
 		}
 	}
 
-	// if (nonFreeProds.length > 0) {
-	//   const stripeCli = createStripeCli({ org, env });
-
-	// await initStripeCusAndProducts({
-	//   db,
-	//   org,
-	//   env,
-	//   customer: newCustomer,
-	//   products: nonFreeProds,
-	//   logger,
-	// });
-
-	//   await handleAddProduct({
-	//     req,
-	//     attachParams: newCusToAttachParams({
-	//       req,
-	//       newCus: newCustomer as FullCustomer,
-	//       products: nonFreeProds,
-	//       stripeCli,
-	//       freeTrial: defaultPaidTrialProd?.free_trial || null,
-	//     }),
-	//   });
-	// }
-
-	// if (!defaultPaidTrialProd) {
-	//   for (const product of freeProds) {
-	//     await createFullCusProduct({
-	// db,
-	// attachParams: newCusToInsertParams({
-	//   req,
-	//   newCus: newCustomer,
-	//   product,
-	// }),
-	// nextResetAt,
-	// anchorToUnix: org.config.anchor_start_of_month
-	//   ? getNextStartOfMonthUnix({
-	//       interval: BillingInterval.Month,
-	//       intervalCount: 1,
-	//     })
-	//   : undefined,
-	// scenario: AttachScenario.New,
-	// logger,
-	//     });
-	//   }
-	// }
-
 	return newCustomer;
 };
