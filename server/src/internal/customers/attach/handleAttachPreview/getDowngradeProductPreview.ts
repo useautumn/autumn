@@ -1,14 +1,18 @@
-import { mapToProductItems } from "@/internal/products/productV2Utils.js";
+import {
+	type AttachBranch,
+	type AttachConfig,
+	UsageModel,
+} from "@autumn/shared";
+import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import { getOptions } from "@/internal/api/entitled/checkUtils.js";
 import { getItemsForNewProduct } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
-import { AttachParams } from "../../cusProducts/AttachParams.js";
+import { mapToProductItems } from "@/internal/products/productV2Utils.js";
+import type { AttachParams } from "../../cusProducts/AttachParams.js";
 import {
 	attachParamsToProduct,
 	attachParamToCusProducts,
 	paramsToCurSub,
 } from "../attachUtils/convertAttachParams.js";
-import { getOptions } from "@/internal/api/entitled/checkUtils.js";
-import { AttachBranch, AttachConfig, UsageModel } from "@autumn/shared";
-import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 
 export const getDowngradeProductPreview = async ({
 	attachParams,
@@ -31,13 +35,12 @@ export const getDowngradeProductPreview = async ({
 	let items = await getItemsForNewProduct({
 		newProduct,
 		attachParams,
-		now,
 		logger,
 	});
 
 	items = items.filter((item) => item.usage_model !== UsageModel.Prepaid);
 
-	let options = getOptions({
+	const options = getOptions({
 		prodItems: mapToProductItems({
 			prices: newProduct.prices,
 			entitlements: newProduct.entitlements,
@@ -48,7 +51,7 @@ export const getDowngradeProductPreview = async ({
 	});
 
 	const latestPeriodEnd = sub ? getLatestPeriodEnd({ sub }) * 1000 : undefined;
-	let nextCycleAt = curCusProduct?.trial_ends_at
+	const nextCycleAt = curCusProduct?.trial_ends_at
 		? curCusProduct.trial_ends_at
 		: latestPeriodEnd;
 
