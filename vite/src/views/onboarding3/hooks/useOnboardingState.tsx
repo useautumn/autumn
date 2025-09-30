@@ -20,8 +20,6 @@ export const useOnboardingState = () => {
 
 	// Feature creation state
 	const [feature, setFeature] = useState(() => getDefaultFeature());
-	const [createdFeatureItem, setCreatedFeatureItem] =
-		useState<ProductItem | null>(null);
 
 	return {
 		// Base product state (for usePlanData)
@@ -31,7 +29,5 @@ export const useOnboardingState = () => {
 		// Feature state
 		feature,
 		setFeature,
-		createdFeatureItem,
-		setCreatedFeatureItem,
 	};
 };
