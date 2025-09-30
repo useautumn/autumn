@@ -1,4 +1,4 @@
-import type { ProductItem } from "@autumn/shared";
+import type { CreateFeature, ProductItem } from "@autumn/shared";
 import { productV2ToFeatureItems } from "@autumn/shared";
 import { getItemId } from "@/utils/product/productItemUtils";
 import { useProductContext } from "@/views/products/product/ProductContext";
@@ -6,17 +6,17 @@ import { ProductItemContext } from "@/views/products/product/product-item/Produc
 import { EditPlanFeatureSheet } from "../../products/plan/components/EditPlanFeatureSheet/EditPlanFeatureSheet";
 import { EditPlanSheet } from "../../products/plan/components/EditPlanSheet";
 import { NewFeatureSheet } from "../../products/plan/components/new-feature/NewFeatureSheet";
-import { CompletionStep } from "../steps/CompletionStep";
-import { FeatureConfigurationStep } from "../steps/FeatureConfigurationStep";
-import { FeatureCreationStep } from "../steps/FeatureCreationStep";
-import { PlanDetailsStep } from "../steps/PlanDetailsStep";
-import { PlaygroundStep } from "../steps/PlaygroundStep";
 import { OnboardingStep } from "../utils/OnboardingStep";
+import { CompletionStep } from "./CompletionStep";
+import { FeatureConfigurationStep } from "./FeatureConfigurationStep";
+import { FeatureCreationStep } from "./FeatureCreationStep";
+import { PlanDetailsStep } from "./PlanDetailsStep";
+import { PlaygroundStep } from "./PlaygroundStep";
 
 interface OnboardingStepRendererProps {
 	step: OnboardingStep;
-	feature: any;
-	setFeature: (feature: any) => void;
+	feature: CreateFeature;
+	setFeature: (feature: CreateFeature) => void;
 	createdFeatureItem: ProductItem | null;
 	setCreatedFeatureItem: (item: ProductItem) => void;
 	onProductCreated: () => void;
@@ -26,7 +26,6 @@ export const OnboardingStepRenderer = ({
 	step,
 	feature,
 	setFeature,
-	createdFeatureItem: _createdFeatureItem,
 	setCreatedFeatureItem,
 	onProductCreated,
 }: OnboardingStepRendererProps) => {
