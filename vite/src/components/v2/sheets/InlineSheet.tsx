@@ -6,16 +6,26 @@ import { Checkbox } from "../checkboxes/Checkbox";
 interface SheetHeaderProps {
 	title: string;
 	description: string;
+	children?: React.ReactNode;
+	noSeparator?: boolean;
+	className?: string;
 }
 
-export function SheetHeader({ title, description }: SheetHeaderProps) {
+export function SheetHeader({
+	title,
+	description,
+	children,
+	noSeparator = false,
+	className,
+}: SheetHeaderProps) {
 	return (
-		<div className="p-4 pb-0">
+		<div className={cn("p-4 pb-0", className)}>
 			<h2 className="text-main">{title}</h2>
 
 			{/* check typography */}
 			<p className="text-form-text">{description}</p>
-			<Separator className="mt-6" />
+			{children}
+			{!noSeparator && <Separator className="mt-6" />}
 		</div>
 	);
 }
