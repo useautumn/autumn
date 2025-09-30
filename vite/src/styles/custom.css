@@ -13,11 +13,11 @@
 /* 1. Input Shadow */
 .input-shadow {
 	box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.02);
-	transition: box-shadow 0.15s ease;
 
 	&:hover:not([data-disabled="true"]):not(:focus):not([data-state="open"]) {
 		box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.06);
 	}
+
 
 	&[data-state="open"] {
 		box-shadow:
@@ -28,7 +28,7 @@
 
 	/* Override transition for select elements */
 	&.select-bg {
-		transition: none;
+		transition: box-shadow 0.15s ease;
 	}
 }
 
