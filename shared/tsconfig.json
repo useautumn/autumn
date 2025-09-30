@@ -10,7 +10,11 @@
 		"moduleResolution": "NodeNext",
 		"target": "ES2020",
 		"outDir": "./dist",
-		"rootDir": "."
+		"rootDir": ".",
+		"paths": {
+			"@api/*": ["./api/*"],
+			"@models/*": ["./models/*"]
+		}
 	},
 	"include": ["./**/*"],
 	"types": ["node"],

@@ -1,6 +1,6 @@
-import { UsageModel } from "../productV2Models/productItemModels/productItemModels.js";
-import { Infinite } from "../productModels/productEnums.js";
-import { ProductResponse } from "../productV2Models/productResponseModels.js";
+import type { Infinite } from "../productModels/productEnums.js";
+import type { UsageModel } from "../productV2Models/productItemModels/productItemModels.js";
+import type { ProductResponse } from "../productV2Models/productResponseModels.js";
 
 export enum AttachScenario {
 	Scheduled = "scheduled",
