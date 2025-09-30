@@ -4,6 +4,7 @@ export { schemas };
 
 // API MODELS
 export * from "./api/models.js";
+export * from "./api/operations.js";
 
 // Auth Models
 export * from "./db/auth-schema.js";
@@ -38,9 +39,9 @@ export * from "./models/cusModels/cusExpand.js";
 
 // 8. Customer Models
 export * from "./models/cusModels/cusModels.js";
+export * from "./models/cusModels/cusResModels/cusFeatureResponse.js";
 export * from "./models/cusModels/cusResModels/cusProductResponse.js";
 export * from "./models/cusModels/cusResModels/cusReferralsResponse.js";
-
 // Cus response
 export * from "./models/cusModels/cusResponseModels.js";
 export * from "./models/cusModels/cusTable.js";
@@ -115,10 +116,10 @@ export * from "./models/productModels/productTable.js";
 export * from "./models/productV2Models/productItemModels/featureItem.js";
 export * from "./models/productV2Models/productItemModels/featurePriceItem.js";
 export * from "./models/productV2Models/productItemModels/priceItem.js";
-export * from "./models/productV2Models/productItemModels/prodItemResponseModels.js";
+
 export * from "./models/productV2Models/productItemModels/productItemEnums.js";
 export * from "./models/productV2Models/productItemModels/productItemModels.js";
-export * from "./models/productV2Models/productResponseModels.js";
+
 // 6. Product V2 Models
 export * from "./models/productV2Models/productV2Models.js";
 export * from "./models/rewardModels/referralModels/referralCodeTable.js";

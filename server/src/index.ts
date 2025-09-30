@@ -3,14 +3,14 @@ import { config } from "dotenv";
 config();
 
 import "./instrumentation.js";
+import cluster from "node:cluster";
+import http from "node:http";
+import os from "node:os";
 import { AppEnv } from "@autumn/shared";
 import { context, trace } from "@opentelemetry/api";
 import { toNodeHandler } from "better-auth/node";
-import cluster from "cluster";
 import cors from "cors";
 import express from "express";
-import http from "http";
-import os from "os";
 import { client, db } from "./db/initDrizzle.js";
 import { CacheManager } from "./external/caching/CacheManager.js";
 import { ClickHouseManager } from "./external/clickhouse/ClickHouseManager.js";

@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
 
-export enum FeatureResType {
+export enum APIFeatureType {
 	Boolean = "boolean",
 	SingleUsage = "single_use",
 	ContinuousUse = "continuous_use",
@@ -10,7 +10,7 @@ export enum FeatureResType {
 export const APIFeatureSchema = z.object({
 	id: z.string(),
 	name: z.string().nullish(),
-	type: z.enum(FeatureResType),
+	type: z.enum(APIFeatureType),
 	display: z
 		.object({
 			singular: z.string(),

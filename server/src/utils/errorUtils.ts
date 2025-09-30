@@ -2,7 +2,7 @@ import { ErrCode } from "@autumn/shared";
 import chalk from "chalk";
 import { StatusCodes } from "http-status-codes";
 import Stripe from "stripe";
-import { ZodError } from "zod";
+import { ZodError, type ZodIssue } from "zod/v4";
 
 export const isPaymentDeclined = (error: any) => {
 	return (
@@ -47,52 +47,49 @@ export default class RecaseError extends Error {
 }
 
 export function formatZodError(error: ZodError): string {
-	return error.errors
-		.map((err) =>
-			err.path.length ? `${err.path.join(".")}: ${err.message}` : err.message,
-		)
-		.join(", ");
-}
+	const formatMessage = (issue: ZodIssue): string => {
+		const path = issue.path.length ? issue.path.join(".") : "input";
 
-const getJsonBody = (body: any) => {
-	if (Buffer.isBuffer(body)) {
-		try {
-			return JSON.parse(body.toString());
-		} catch (e) {
-			return `[Invalid JSON] Raw body: ${body.toString()}`;
+		// Clean up common Zod error messages
+		let message = issue.message;
+
+		// Handle common patterns and make them more user-friendly
+		if (
+			message.includes("Too small") &&
+			message.includes("expected string to have >=1 characters")
+		) {
+			message = "cannot be empty";
+		} else if (message.includes("Invalid string: must match pattern")) {
+			// Extract the pattern and make it more readable
+			if (message.includes("/^[a-zA-Z0-9_-]+$/")) {
+				message =
+					"must contain only letters, numbers, underscores, and hyphens";
+			} else {
+				message = "has invalid format";
+			}
+		} else if (message.includes("Invalid input: expected string, received")) {
+			const receivedType = message.split("received ")[1];
+			message = `must be a string (received ${receivedType})`;
+		} else if (message.includes("Invalid input: expected number, received")) {
+			const receivedType = message.split("received ")[1];
+			message = `must be a number (received ${receivedType})`;
+		} else if (message.includes("Invalid input: expected boolean, received")) {
+			const receivedType = message.split("received ")[1];
+			message = `must be a boolean (received ${receivedType})`;
 		}
-	}
-	return body;
-};
 
-const logRequestBody = (logger: any, req: any, level: "warn" | "error") => {
-	if (
-		req.body &&
-		typeof req.body === "object" &&
-		Object.keys(req.body).length > 0
-	) {
-		logger[level]("Request body:");
-		logger[level](getJsonBody(req.body));
-	}
-};
+		return `${path}: ${message}`;
+	};
 
-const logReqUrl = (logger: any, req: any, level: "warn" | "error") => {
-	if (req.originalUrl.includes("/webhooks/stripe")) {
-		logger[level](`Stripe webhook: ${req.originalUrl}`);
-		let body = req.body;
-		try {
-			body = Buffer.isBuffer(req.body)
-				? JSON.parse(req.body.toString())
-				: req.body;
+	const formattedIssues = error.issues.map(formatMessage);
 
-			logger[level](`Event type: ${body.type}, ID: ${body.id}`);
-		} catch (error) {
-			logger[level](`Invalid JSON body`);
-		}
+	// If there are multiple issues, format them nicely
+	if (formattedIssues.length === 1) {
+		return formattedIssues[0];
 	} else {
-		logger[level](`${req.method} ${req.originalUrl}`);
+		return `[Validation Errors] ${formattedIssues.join("; ")}`;
 	}
-};
+}
 
 export const handleRequestError = ({
 	error,
@@ -194,7 +191,7 @@ export const handleFrontendReqError = ({
 		const logger = req.logger;
 		if (
 			error instanceof RecaseError &&
-			error.statusCode == StatusCodes.NOT_FOUND
+			error.statusCode === StatusCodes.NOT_FOUND
 		) {
 			// Temporarily disable logger to prevent thread-stream crashes
 			console.log(`(frontend) ${req.method} ${req.originalUrl}: not found`);

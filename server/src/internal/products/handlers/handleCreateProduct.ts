@@ -1,48 +1,45 @@
-import { validateProductItems } from "@/internal/products/product-items/validateProductItems.js";
+import {
+	APIProductSchema,
+	CreateProductSchema,
+	type Entitlement,
+	ErrCode,
+	type FreeTrial,
+	type FullProduct,
+	type Price,
+	type Product,
+	type ProductItem,
+} from "@autumn/shared";
 import {
 	handleNewFreeTrial,
 	validateAndInitFreeTrial,
 } from "@/internal/products/free-trials/freeTrialUtils.js";
-
-import RecaseError from "@/utils/errorUtils.js";
-import { routeHandler } from "@/utils/routerUtils.js";
+import { ProductService } from "@/internal/products/ProductService.js";
+import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
+import { validateProductItems } from "@/internal/products/product-items/validateProductItems.js";
 import {
-	CreateProductSchema,
-	Entitlement,
-	ErrCode,
-	FreeTrial,
-	FullProduct,
-	Price,
-	Product,
-	ProductItem,
-	ProductResponseSchema,
-	ProductV2,
-} from "@autumn/shared";
+	constructProduct,
+	getGroupToDefaults,
+	initProductInStripe,
+} from "@/internal/products/productUtils.js";
+import { JobName } from "@/queue/JobName.js";
+import { addTaskToQueue } from "@/queue/queueUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
 import {
 	keyToTitle,
 	notNullish,
 	nullish,
 	validateId,
 } from "@/utils/genUtils.js";
-
-import { ProductService } from "@/internal/products/ProductService.js";
-import {
-	constructProduct,
-	getGroupToDefaults,
-	initProductInStripe,
-} from "@/internal/products/productUtils.js";
-import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { addTaskToQueue } from "@/queue/queueUtils.js";
-import { JobName } from "@/queue/JobName.js";
-import { isDefaultTrial } from "../productUtils/classifyProduct.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+import { routeHandler } from "@/utils/routerUtils.js";
 import { validateOneOffTrial } from "../free-trials/freeTrialUtils.js";
+import { isDefaultTrial } from "../productUtils/classifyProduct.js";
 
 const validateCreateProduct = async ({ req }: { req: ExtendedRequest }) => {
-	let { free_trial, items } = req.body;
-	let { orgId, env, db, features } = req;
+	const { free_trial, items } = req.body;
+	const { orgId, env, db, features } = req;
 
-	let productData = CreateProductSchema.parse(req.body);
+	const productData = CreateProductSchema.parse(req.body);
 
 	validateId("Product", productData.id);
 
@@ -169,14 +166,15 @@ export const handleCreateProduct = async (req: Request, res: any) =>
 		res,
 		action: "POST /products",
 		handler: async (req, res) => {
-			let { items } = req.body;
-			let { logtail: logger, org, features, env, db } = req;
+			const { items } = req.body;
 
-			let { freeTrial, productData } = await validateCreateProduct({
+			const { logtail: logger, org, features, env, db } = req;
+
+			const { freeTrial, productData } = await validateCreateProduct({
 				req,
 			});
 
-			let newProduct = constructProduct({
+			const newProduct = constructProduct({
 				productData,
 				orgId: org.id,
 				env,
@@ -189,7 +187,7 @@ export const handleCreateProduct = async (req: Request, res: any) =>
 				freeTrial: freeTrial || null,
 			});
 
-			let product = await ProductService.insert({ db, product: newProduct });
+			const product = await ProductService.insert({ db, product: newProduct });
 
 			let prices: Price[] = [];
 			let entitlements: Entitlement[] = [];
@@ -248,7 +246,7 @@ export const handleCreateProduct = async (req: Request, res: any) =>
 			});
 
 			res.status(200).json(
-				ProductResponseSchema.parse({
+				APIProductSchema.parse({
 					...product,
 					autumn_id: product.internal_id,
 					items: items || [],

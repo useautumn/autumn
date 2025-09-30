@@ -1,6 +1,6 @@
+import type { APIProduct } from "@api/products/apiProduct.js";
 import type { Infinite } from "../productModels/productEnums.js";
 import type { UsageModel } from "../productV2Models/productItemModels/productItemModels.js";
-import type { ProductResponse } from "../productV2Models/productResponseModels.js";
 
 export enum AttachScenario {
 	Scheduled = "scheduled",
@@ -59,7 +59,7 @@ export interface CheckProductPreview {
 		currency: string;
 	};
 
-	product?: ProductResponse;
+	product?: APIProduct;
 	payment_method?: any;
 }
 
@@ -76,5 +76,5 @@ export interface CheckFeaturePreview {
 	feature_id: string;
 	feature_name: string;
 
-	products: ProductResponse[];
+	products: APIProduct[];
 }
