@@ -27,11 +27,13 @@ export const updateProduct = async ({
 		return false;
 	}
 	try {
-		await ProductService.updateProduct(axiosInstance, product.id, {
+		const updateData = {
 			...UpdateProductSchema.parse(product),
 			items: product.items,
 			free_trial: product.free_trial,
-		});
+		};
+
+		await ProductService.updateProduct(axiosInstance, product.id, updateData);
 
 		toast.success("Product updated successfully");
 

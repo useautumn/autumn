@@ -37,7 +37,7 @@ export const useProductQuery = () => {
 
 		const url = `/products/${productId}/data2`;
 		const queryParams: { version?: number } = {};
-		
+
 		// Only include version if it's explicitly set, otherwise fetch latest
 		if (queryStates.version) {
 			queryParams.version = queryStates.version;
