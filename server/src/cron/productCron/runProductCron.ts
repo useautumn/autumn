@@ -1,5 +1,10 @@
-import { customerPrices, customerProducts, customers } from "@autumn/shared";
-import { and, eq, gt, isNotNull, notExists, sql } from "drizzle-orm";
+import {
+	ACTIVE_STATUSES,
+	CusProductStatus,
+	customerPrices,
+	customerProducts,
+} from "@autumn/shared";
+import { and, eq, inArray, isNotNull, lt, notExists, sql } from "drizzle-orm";
 import { db } from "@/db/initDrizzle.js";
 
 export const runProductCron = async () => {
@@ -8,10 +13,7 @@ export const runProductCron = async () => {
 	const results = await db
 		.select()
 		.from(customerProducts)
-		.innerJoin(
-			customers,
-			eq(customerProducts.internal_customer_id, customers.internal_id),
-		)
+
 		.where(
 			and(
 				// No customer_prices exist for this customer_product
@@ -21,10 +23,14 @@ export const runProductCron = async () => {
 						.from(customerPrices)
 						.where(eq(customerPrices.customer_product_id, customerProducts.id)),
 				),
+				// status is not expired
+				inArray(customerProducts.status, ACTIVE_STATUSES),
+
 				// trial_ends_at is not null
 				isNotNull(customerProducts.trial_ends_at),
-				// trial_ends_at > now (comparing epoch timestamps in milliseconds)
-				gt(
+
+				// is already expired
+				lt(
 					customerProducts.trial_ends_at,
 					sql`(EXTRACT(EPOCH FROM NOW()) * 1000)::bigint`,
 				),
@@ -35,33 +41,45 @@ export const runProductCron = async () => {
 		`Found ${results.length} customer products with no prices and active trials`,
 	);
 
-	const uniqueOrgIds = [...new Set(results.map((r) => r.customers.org_id))];
-	console.log("Unique org IDs:", uniqueOrgIds);
+	// fs.writeFileSync(
+	// 	`${process.cwd()}/scripts/expired_free_trials.json`,
+	// 	JSON.stringify(results, null, 2),
+	// );
+	// return;
 
 	// for (const result of results) {
 	// 	console.log(
-	// 		`Customer ${result.customers.id}, Org: ${result.customers.org_id}, product: ${result.customer_products.product_id}`,
+	// 		`Customer ${result.customers.id} product: ${result.customer_products.product_id}`,
 	// 	);
 	// }
-	// const expireCusProduct = async (customerProduct: CustomerProduct) => {
-	// 	await CusProductService.update({
-	// 		db,
-	// 		cusProductId: customerProduct.id,
-	// 		updates: {
-	// 			status: CusProductStatus.Expired,
-	// 		},
-	// 	});
-	// };
 
-	// const batchSize = 50;
-	// for (let i = 0; i < results.length; i += batchSize) {
-	// 	const batch = results.slice(i, i + batchSize);
-	// 	const batchExpires = batch.map((cusProduct) =>
-	// 		expireCusProduct(cusProduct),
+	// const uniqueOrgIds = [...new Set(results.map((r) => r.customers.org_id))];
+	// console.log("Unique org IDs:", uniqueOrgIds);
+
+	// for (const result of results) {
+	// 	console.log(
+	// 		`Customer ${result.customers.id} product: ${result.customer_products.product_id}`,
 	// 	);
-	// 	await Promise.all(batchExpires);
-	// 	console.log(`Expired batch of ${batch.length} customer products`);
 	// }
+	const expireCusProducts = async (ids: string[]) => {
+		// console.log("Expiring:", ids);
+		// Save the ids to scripts/json
+		await db
+			.update(customerProducts)
+			.set({
+				status: CusProductStatus.Expired,
+			})
+			.where(inArray(customerProducts.id, ids));
+	};
+
+	const batchSize = 250;
+	for (let i = 0; i < results.length; i += batchSize) {
+		const batch = results.slice(i, i + batchSize);
+		await expireCusProducts(batch.map((r) => r.id));
+		console.log(
+			`Expired batch of ${i + batch.length}/${results.length} customer products`,
+		);
+	}
 
 	return results;
 };
