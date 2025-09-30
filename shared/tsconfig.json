@@ -13,7 +13,8 @@
 		"rootDir": ".",
 		"paths": {
 			"@api/*": ["./api/*"],
-			"@models/*": ["./models/*"]
+			"@models/*": ["./models/*"],
+			"@utils/*": ["./utils/*"]
 		}
 	},
 	"include": ["./**/*"],

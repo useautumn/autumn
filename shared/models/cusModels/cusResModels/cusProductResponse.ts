@@ -1,6 +1,6 @@
+import { APIProductItemSchema } from "@api/models.js";
 import { z } from "zod/v4";
 import { CusProductStatus } from "../../cusProductModels/cusProductEnums.js";
-import { ProductItemResponseSchema } from "../../productV2Models/productItemModels/prodItemResponseModels.js";
 
 export const CusProductResponseSchema = z.object({
 	id: z.string(),
@@ -22,7 +22,7 @@ export const CusProductResponseSchema = z.object({
 	current_period_start: z.number().nullish(),
 	current_period_end: z.number().nullish(),
 	entity_id: z.string().nullish(),
-	items: z.array(ProductItemResponseSchema).nullish(),
+	items: z.array(APIProductItemSchema).nullish(),
 	quantity: z.number().optional(),
 	prepaid_quantities: z
 		.array(
