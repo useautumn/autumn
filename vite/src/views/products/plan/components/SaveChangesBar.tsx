@@ -9,29 +9,50 @@ import { useProductQuery } from "../../product/hooks/useProductQuery";
 import { useProductContext } from "../../product/ProductContext";
 import { updateProduct } from "../../product/utils/updateProduct";
 
-export const SaveChangesBar = () => {
+interface SaveChangesBarProps {
+	isOnboarding?: boolean;
+	originalProduct?: FrontendProduct;
+	setOriginalProduct?: (product: FrontendProduct) => void;
+}
+
+export const SaveChangesBar = ({
+	isOnboarding = false,
+	originalProduct: onboardingOriginalProduct,
+	setOriginalProduct: setOnboardingOriginalProduct,
+}: SaveChangesBarProps) => {
 	const axiosInstance = useAxiosInstance();
 	const { diff, setProduct } = useProductContext();
 	const [saving, setSaving] = useState(false);
 	const { product, setShowNewVersionDialog } = useProductContext();
+
 	const { counts, isLoading } = useProductCountsQuery();
-	const { refetch } = useProductQuery();
-	const { product: originalProduct } = useProductQuery();
+	const { refetch, product: queryOriginalProduct } = useProductQuery();
+
+	const originalProduct = isOnboarding
+		? onboardingOriginalProduct
+		: queryOriginalProduct;
 
 	const handleSaveClicked = async () => {
-		if (isLoading) toast.error("Product counts are loading");
+		if (!isOnboarding && isLoading) {
+			toast.error("Product counts are loading");
+			return;
+		}
 
-		if (counts?.all > 0 && diff.willVersion) {
+		if (!isOnboarding && counts?.all > 0 && diff.willVersion) {
 			setShowNewVersionDialog(true);
 			return;
 		}
 
 		setSaving(true);
-		await updateProduct({
+		const result = await updateProduct({
 			axiosInstance,
 			product,
 			onSuccess: async () => {
-				await refetch();
+				if (isOnboarding && setOnboardingOriginalProduct && product) {
+					setOnboardingOriginalProduct(product as FrontendProduct);
+				} else {
+					await refetch();
+				}
 			},
 		});
 
@@ -46,7 +67,11 @@ export const SaveChangesBar = () => {
 
 	return (
 		<div className="w-full flex justify-center items-center h-20 mb-10">
-			<div className="flex items-center gap-2 p-2 pl-3 rounded-xl border border-input bg-white">
+			<div
+				className={`flex items-center gap-2 p-2 pl-3 rounded-xl border border-input bg-white ${
+					isOnboarding ? "shadow-lg" : ""
+				}`}
+			>
 				<p className="text-body whitespace-nowrap truncate">
 					You have unsaved changes
 				</p>

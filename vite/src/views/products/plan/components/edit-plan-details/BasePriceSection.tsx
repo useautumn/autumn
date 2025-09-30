@@ -16,6 +16,8 @@ import { SelectBillingCycle } from "./SelectBillingCycle";
 export const BasePriceSection = () => {
 	const { product, setProduct } = useProductContext();
 
+	if (!product) return null;
+
 	const basePrice = productV2ToBasePrice({ product });
 
 	const handleDeleteBasePrice = () => {
