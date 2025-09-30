@@ -179,10 +179,10 @@ export const getUpgradeProductPreview = async ({
 		freeTrial = curCusProduct.free_trial;
 	}
 
+	// console.log("Anchor")
 	const newPreviewItems = await getItemsForNewProduct({
 		newProduct,
 		attachParams,
-		now,
 		freeTrial,
 		sub: sub!,
 		logger,

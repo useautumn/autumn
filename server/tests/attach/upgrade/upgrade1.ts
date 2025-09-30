@@ -1,39 +1,39 @@
+import { APIVersion, type AppEnv, type Organization } from "@autumn/shared";
 import chalk from "chalk";
-import { setupBefore } from "tests/before.js";
-import { Stripe } from "stripe";
-import { createProducts } from "tests/utils/productUtils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { APIVersion, AppEnv, Organization } from "@autumn/shared";
-import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addWeeks } from "date-fns";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type { Stripe } from "stripe";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
 // UNCOMMENT FROM HERE
-let pro = constructProduct({
+const pro = constructProduct({
 	id: "pro",
 	items: [constructArrearItem({ featureId: TestFeature.Words })],
 	type: "pro",
 });
-let premium = constructProduct({
+const premium = constructProduct({
 	id: "premium",
 	items: [constructArrearItem({ featureId: TestFeature.Words })],
 	type: "premium",
 });
-let growth = constructProduct({
+const growth = constructProduct({
 	id: "growth",
 	items: [constructArrearItem({ featureId: TestFeature.Words })],
 	type: "growth",
 });
 
 describe(`${chalk.yellowBright("upgrade1: Testing usage upgrades")}`, () => {
-	let customerId = "upgrade1";
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = "upgrade1";
+	const autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
 
 	let stripeCli: Stripe;
 	let testClockId: string;
@@ -77,7 +77,7 @@ describe(`${chalk.yellowBright("upgrade1: Testing usage upgrades")}`, () => {
 		testClockId = testClockId1!;
 	});
 
-	it("should attach pro product", async function () {
+	it("should attach pro product", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,
@@ -89,7 +89,7 @@ describe(`${chalk.yellowBright("upgrade1: Testing usage upgrades")}`, () => {
 		});
 	});
 
-	it("should attach premium product", async function () {
+	it("should attach premium product", async () => {
 		const wordsUsage = 100000;
 		await autumn.track({
 			customer_id: customerId,
@@ -115,7 +115,7 @@ describe(`${chalk.yellowBright("upgrade1: Testing usage upgrades")}`, () => {
 		});
 	});
 
-	it("should attach growth product", async function () {
+	it("should attach growth product", async () => {
 		const wordsUsage = 200000;
 		await autumn.track({
 			customer_id: customerId,

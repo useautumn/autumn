@@ -1,15 +1,18 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import {
-	AppEnv,
-	CusProductStatus,
-	FullCustomer,
-	Organization,
-} from "@autumn/shared";
-
-import Stripe from "stripe";
-import { cusProductToSubIds } from "tests/merged/mergeUtils.test.js";
 import { expect } from "bun:test";
-import { getUniqueUpcomingSchedulePairs } from "@/internal/customers/cusProducts/cusProductUtils/getUpcomingSchedules.js";
+import {
+	type AppEnv,
+	CusProductStatus,
+	cusProductToEnts,
+	cusProductToPrices,
+	cusProductToProduct,
+	type FullCustomer,
+	type Organization,
+} from "@autumn/shared";
+import assert from "assert";
+import type Stripe from "stripe";
+import { defaultApiVersion } from "tests/constants.js";
+import { cusProductToSubIds } from "tests/merged/mergeUtils.test.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { priceToStripeItem } from "@/external/stripe/priceToStripeItem/priceToStripeItem.js";
 import { subIsCanceled } from "@/external/stripe/stripeSubUtils.js";
 import {
@@ -17,28 +20,22 @@ import {
 	logPhaseItems,
 	similarUnix,
 } from "@/internal/customers/attach/mergeUtils/phaseUtils/phaseUtils.js";
-import { getExistingUsageFromCusProducts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { ACTIVE_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
-import {
-	cusProductToPrices,
-	cusProductToEnts,
-	cusProductToProduct,
-} from "@autumn/shared";
+import { getExistingUsageFromCusProducts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
-import {
-	getPriceEntitlement,
-	getPriceOptions,
-	formatPrice,
-} from "@/internal/products/prices/priceUtils.js";
-import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
-import { defaultApiVersion } from "tests/constants.js";
-import { formatUnixToDateTime, nullish } from "../genUtils.js";
+import { getUniqueUpcomingSchedulePairs } from "@/internal/customers/cusProducts/cusProductUtils/getUpcomingSchedules.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
-import assert from "assert";
 import {
 	isFixedPrice,
 	isOneOffPrice,
 } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import {
+	formatPrice,
+	getPriceEntitlement,
+	getPriceOptions,
+} from "@/internal/products/prices/priceUtils.js";
+import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
+import { formatUnixToDateTime, nullish } from "../genUtils.js";
 
 const compareActualItems = async ({
 	actualItems,
@@ -258,7 +255,7 @@ export const checkCusSubCorrect = async ({
 	});
 
 	// console.log(`\n\nChecking sub correct`);
-	let printCusProduct = false;
+	const printCusProduct = false;
 	if (printCusProduct) {
 		console.log(`\n\nChecking sub correct`);
 	}
@@ -352,7 +349,7 @@ export const checkCusSubCorrect = async ({
 
 			const relatedEnt = getPriceEntitlement(price, ents);
 			const options = getPriceOptions(price, cusProduct.options);
-			let existingUsage = getExistingUsageFromCusProducts({
+			const existingUsage = getExistingUsageFromCusProducts({
 				entitlement: relatedEnt,
 				cusProducts,
 				entities: fullCus.entities,
@@ -397,7 +394,7 @@ export const checkCusSubCorrect = async ({
 					);
 
 					if (existingIndex !== -1) {
-						// @ts-ignore
+						// @ts-expect-error
 						supposedSubItems[existingIndex].quantity += lineItem.quantity;
 					} else {
 						supposedSubItems.push({
@@ -457,19 +454,24 @@ export const checkCusSubCorrect = async ({
 	});
 
 	// Should be canceled
+
 	const cusSubShouldBeCanceled = cusProducts.every((cp) => {
 		if (cp.subscription_ids?.includes(subId!)) {
 			// 1. Get scheduled product
+
 			const { curScheduledProduct } = getExistingCusProducts({
-				cusProducts,
+				cusProducts: fullCus.customer_products,
 				product: cp.product,
 				internalEntityId: cp.internal_entity_id,
 			});
+
+			console.log("Cur scheduled product:", curScheduledProduct?.id);
 
 			if (curScheduledProduct) {
 				const scheduledProduct = cusProductToProduct({
 					cusProduct: curScheduledProduct,
 				});
+
 				if (!isFreeProduct(scheduledProduct.prices)) {
 					return false;
 				}
