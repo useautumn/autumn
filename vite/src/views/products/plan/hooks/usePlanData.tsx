@@ -7,16 +7,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 interface UsePlanDataProps {
-	originalProduct?: FrontendProduct;
+	originalProduct?: FrontendProduct | ProductV2;
 }
 
 export function usePlanData({ originalProduct }: UsePlanDataProps) {
-	const originalProductRef = useRef<FrontendProduct | undefined>(
+	const originalProductRef = useRef<FrontendProduct | ProductV2 | undefined>(
 		originalProduct,
 	);
-	const [product, setProduct] = useState<FrontendProduct | undefined>(
-		originalProduct,
-	);
+	const [product, setProduct] = useState<
+		FrontendProduct | ProductV2 | undefined
+	>(originalProduct);
 
 	const { features = [] } = useFeaturesQuery();
 

@@ -15,15 +15,14 @@ interface OnboardingPreviewProps {
 export const OnboardingPreview = ({ currentStep }: OnboardingPreviewProps) => {
 	const { product, setSheet, setEditingState } = useProductContext();
 	const showBasicInfo = currentStep >= 1;
-	const showPricing = currentStep >= 1; // Show pricing from step 1 now
-	const showFeatures = currentStep >= 3; // Show features after they're configured
-	const showToolbar = currentStep >= 4; // Show edit/delete in playground step
-	const allowAddFeature = currentStep >= 4; // Only allow adding features in playground step
+	const showPricing = currentStep >= 1;
+	const showFeatures = currentStep >= 3;
+	const showToolbar = currentStep >= 4;
+	const allowAddFeature = currentStep >= 4;
 
 	// Get the base price from the product (only if product exists and has proper structure)
 	const basePrice = product?.items ? productV2ToBasePrice({ product }) : null;
 
-	// Early return if product is not properly initialized
 	if (!product) {
 		return (
 			<Card className="min-w-sm max-w-xl mx-4 bg-card w-[80%] opacity-90">
@@ -53,9 +52,6 @@ export const OnboardingPreview = ({ currentStep }: OnboardingPreviewProps) => {
 					</div>
 					<div className="flex flex-row items-center gap-1">
 						{showToolbar && <PlanCardToolbar onEdit={handleEdit} />}
-						{!showToolbar && (
-							<span className="text-xs text-gray-400">Preview</span>
-						)}
 					</div>
 				</div>
 

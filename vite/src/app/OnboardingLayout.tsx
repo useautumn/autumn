@@ -6,7 +6,6 @@ import { CustomToaster } from "@/components/general/CustomToaster";
 import { useGlobalErrorHandler } from "@/hooks/common/useGlobalErrorHandler";
 import { useSession } from "@/lib/auth-client";
 import LoadingScreen from "@/views/general/LoadingScreen";
-import { InviteNotifications } from "@/views/general/notifications/InviteNotifications";
 
 export function OnboardingLayout() {
 	const { data, isPending } = useSession();
@@ -50,7 +49,6 @@ export function OnboardingLayout() {
 			<NuqsAdapter>
 				<main className="w-screen h-screen bg-stone-100">
 					<CustomToaster />
-					<InviteNotifications />
 					<Outlet />
 				</main>
 			</NuqsAdapter>

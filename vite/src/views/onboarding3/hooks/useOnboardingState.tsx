@@ -3,8 +3,8 @@ import { useState } from "react";
 import { getDefaultFeature } from "@/views/products/features/utils/defaultFeature";
 
 export const useOnboardingState = () => {
-	// Product state
-	const [product, setProduct] = useState<ProductV2>({
+	// Base product state (managed by usePlanData in OnboardingContent)
+	const [baseProduct, setBaseProduct] = useState<ProductV2>({
 		id: "",
 		name: "",
 		items: [] as ProductItem[],
@@ -18,21 +18,15 @@ export const useOnboardingState = () => {
 		internal_id: "",
 	});
 
-	const [originalProduct, setOriginalProduct] = useState<ProductV2 | undefined>(
-		undefined,
-	);
-
 	// Feature creation state
 	const [feature, setFeature] = useState(() => getDefaultFeature());
 	const [createdFeatureItem, setCreatedFeatureItem] =
 		useState<ProductItem | null>(null);
 
 	return {
-		// Product state
-		product,
-		setProduct,
-		originalProduct,
-		setOriginalProduct,
+		// Base product state (for usePlanData)
+		baseProduct,
+		setBaseProduct,
 
 		// Feature state
 		feature,

@@ -36,7 +36,7 @@ export function MainLayout() {
 	// Global error handler for API errors
 	useEffect(() => {
 		const handleGlobalError = (event: ErrorEvent) => {
-			if (event.error && event.error.response) {
+			if (event.error?.response) {
 				handleApiError(event.error);
 			}
 		};
