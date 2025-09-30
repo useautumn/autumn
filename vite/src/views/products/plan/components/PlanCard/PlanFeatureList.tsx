@@ -1,46 +1,35 @@
 import { type ProductItem, productV2ToFeatureItems } from "@autumn/shared";
+import { getItemId } from "@/utils/product/productItemUtils";
 import { useProductContext } from "@/views/products/product/ProductContext";
 import { AddFeatureRow } from "./AddFeatureRow";
 import { PlanFeatureRow } from "./PlanFeatureRow";
 
-export const PlanFeatureList = () => {
+export const PlanFeatureList = ({
+	allowAddFeature = true,
+}: {
+	allowAddFeature?: boolean;
+}) => {
 	const { product, setProduct, setSheet, editingState, setEditingState } =
 		useProductContext();
 
 	const filteredItems = productV2ToFeatureItems({ items: product?.items });
 
-	// const handleFeatureClick = (item: ProductItem) => {
-	// 	console.log("Feature clicked:", item);
-	// };
+	const handleDelete = (item: ProductItem) => {
+		if (!product?.items) return;
 
-	// const handleEdit = (item: ProductItem) => {
-	// 	// Use array index as stable ID - won't change during editing
-	// 	const itemIndex =
-	// 		product?.items?.findIndex((i: ProductItem) => i === item) || 0;
-	// 	const itemId = item.entitlement_id || item.price_id || `item-${itemIndex}`;
+		// Remove the item from the product
+		const newItems = product.items.filter((i: ProductItem) => i !== item);
+		const updatedProduct = { ...product, items: newItems };
+		setProduct(updatedProduct);
 
-	// 	console.log(`Clicking on index ${itemIndex} with id ${itemId}`);
-
-	// 	setEditingState({ type: "feature", id: itemId });
-	// 	setSheet("edit-feature");
-	// };
-
-	// const handleDelete = (item: ProductItem) => {
-	// 	if (!product?.items) return;
-
-	// 	// Remove the item from the product
-	// 	const newItems = product.items.filter((i: ProductItem) => i !== item);
-	// 	const updatedProduct = { ...product, items: newItems };
-	// 	setProduct(updatedProduct);
-
-	// 	// Close editing sidebar if this item was being edited
-	// 	const itemIndex = product.items.findIndex((i: ProductItem) => i === item);
-	// 	const itemId = getItemId({ item, itemIndex });
-	// 	if (editingState.id === itemId) {
-	// 		setEditingState({ type: "edit-plan", id: null });
-	// 		setSheet(null);
-	// 	}
-	// };
+		// Close editing sidebar if this item was being edited
+		const itemIndex = product.items.findIndex((i: ProductItem) => i === item);
+		const itemId = getItemId({ item, itemIndex });
+		if (editingState.id === itemId) {
+			setEditingState({ type: "edit-plan", id: null });
+			setSheet("edit-plan");
+		}
+	};
 
 	const handleAddFeature = () => {
 		setEditingState({ type: "feature", id: "new" });
@@ -72,14 +61,19 @@ export const PlanFeatureList = () => {
 						key={item.entitlement_id || item.price_id || index}
 						item={item}
 						index={index}
-						// onDelete={handleDelete}
+						onDelete={handleDelete}
 					/>
 				);
 			})}
-			<AddFeatureRow
-				onClick={handleAddFeature}
-				disabled={editingState.type === "feature" && editingState.id === "new"}
-			/>
+
+			{allowAddFeature && (
+				<AddFeatureRow
+					onClick={handleAddFeature}
+					disabled={
+						editingState.type === "feature" && editingState.id === "new"
+					}
+				/>
+			)}
 		</div>
 	);
 };

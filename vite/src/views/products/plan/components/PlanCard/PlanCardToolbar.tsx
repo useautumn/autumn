@@ -24,7 +24,7 @@ export const PlanCardToolbar = ({
 	const isEditingPlan = editingState.type === "plan";
 
 	useEffect(() => {
-		console.log("Product archived:", product.archived);
+		console.log("Product archived:", product?.archived);
 	}, [product]);
 
 	return (
@@ -41,7 +41,7 @@ export const PlanCardToolbar = ({
 					className={cn(isEditingPlan && "btn-secondary-active !opacity-100 ")}
 				/>
 
-				{product.archived ? (
+				{product?.archived ? (
 					<Button variant="muted" onClick={() => setDeleteOpen(true)} size="sm">
 						Archived
 					</Button>
