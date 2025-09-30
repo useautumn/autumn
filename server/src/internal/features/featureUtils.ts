@@ -55,7 +55,7 @@ export const validateMeteredConfig = (config: MeteredConfig) => {
 		};
 	}
 
-	if (newConfig.filters?.length === 0 || !newConfig.filters) {
+	if (newConfig?.filters?.length === 0 || !newConfig?.filters) {
 		newConfig.filters = [
 			{
 				property: "",
