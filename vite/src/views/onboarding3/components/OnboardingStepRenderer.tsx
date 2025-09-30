@@ -17,17 +17,12 @@ interface OnboardingStepRendererProps {
 	step: OnboardingStep;
 	feature: CreateFeature;
 	setFeature: (feature: CreateFeature) => void;
-	createdFeatureItem: ProductItem | null;
-	setCreatedFeatureItem: (item: ProductItem) => void;
-	onProductCreated: () => void;
 }
 
 export const OnboardingStepRenderer = ({
 	step,
 	feature,
 	setFeature,
-	setCreatedFeatureItem,
-	onProductCreated,
 }: OnboardingStepRendererProps) => {
 	const { product, setProduct, editingState, sheet } = useProductContext();
 
@@ -116,9 +111,6 @@ export const OnboardingStepRenderer = ({
 				updatedItems[itemIndex] = updatedItem;
 
 				setProduct({ ...product, items: updatedItems });
-
-				// Also update the createdFeatureItem for consistency
-				setCreatedFeatureItem(updatedItem);
 			};
 
 			return (
@@ -139,7 +131,7 @@ export const OnboardingStepRenderer = ({
 		}
 
 		case OnboardingStep.Playground:
-			return <PlaygroundStep onProductCreated={onProductCreated} />;
+			return <PlaygroundStep />;
 
 		case OnboardingStep.Completion:
 			return <CompletionStep />;

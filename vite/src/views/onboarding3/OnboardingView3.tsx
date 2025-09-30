@@ -39,14 +39,8 @@ export default function OnboardingContent() {
 	const { products, refetch: refetchProducts } = useProductsQuery();
 
 	// Custom hooks for clean separation of concerns
-	const {
-		baseProduct,
-		setBaseProduct,
-		feature,
-		setFeature,
-		createdFeatureItem,
-		setCreatedFeatureItem,
-	} = useOnboardingState();
+	const { baseProduct, setBaseProduct, feature, setFeature } =
+		useOnboardingState();
 
 	// Use usePlanData for product management and diffing
 	const { product, setProduct, diff } = usePlanData({
@@ -93,7 +87,7 @@ export default function OnboardingContent() {
 
 			// Create ProductItem and add to product immediately for live editing
 			const newItem = createProductItem(createdFeature);
-			setCreatedFeatureItem(newItem);
+			setFeature(createdFeature);
 
 			// Add item to product so user can see it live in step 3
 			if (product && "items" in product) {
@@ -303,9 +297,6 @@ export default function OnboardingContent() {
 								step={step}
 								feature={feature}
 								setFeature={setFeature}
-								createdFeatureItem={createdFeatureItem}
-								setCreatedFeatureItem={setCreatedFeatureItem}
-								onProductCreated={() => {}}
 							/>
 						</div>
 					</div>
