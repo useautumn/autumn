@@ -10,7 +10,10 @@ import { createOrgResponse } from "./orgUtils.js";
 import { handleGetUploadUrl } from "./handlers/handleGetUploadUrl.js";
 import { handleDeleteOrg } from "./handlers/handleDeleteOrg.js";
 import { handleGetInvites } from "./handlers/handleGetInvites.js";
-import { handleConnectStripe } from "./handlers/handleConnectStripe.js";
+import {
+  handleConnectStripe,
+  handleGetStripe,
+} from "./handlers/handleConnectStripe.js";
 import { handleDeleteStripe } from "./handlers/handleDeleteStripe.js";
 import { handleGetOrg } from "./handlers/handleGetOrg.js";
 
@@ -28,6 +31,8 @@ orgRouter.delete("/delete-user", async (req: any, res) => {
 });
 
 orgRouter.get("", handleGetOrg);
+
+orgRouter.get("/stripe", handleGetStripe);
 
 orgRouter.post("/stripe", handleConnectStripe);
 
