@@ -1,33 +1,27 @@
-import { Button } from "@/components/ui/button";
-import { useEnv } from "@/utils/envUtils";
-
+import { PaywallDialog, PricingTable, useCustomer } from "autumn-js/react";
 import {
-	DialogHeader,
-	DialogContent,
-	DialogTrigger,
-	DialogTitle,
-} from "@/components/ui/dialog";
-import { useState } from "react";
-import { Dialog } from "@/components/ui/dialog";
-
-import { toast } from "sonner";
-
-import { useSearchParams } from "react-router";
-
-import { useCustomer, PricingTable } from "autumn-js/react";
-
-import {
+	ArrowUpRightFromSquare,
 	Check,
-	Lock,
-	Send,
 	ChevronDown,
 	ChevronRight,
 	Code,
-	ArrowUpRightFromSquare,
+	Lock,
+	Send,
 } from "lucide-react";
+import { useCallback, useState } from "react";
+import { useSearchParams } from "react-router";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "@/components/ui/dialog";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { cn } from "@/lib/utils";
 import CodeBlock from "@/views/onboarding/components/CodeBlock";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export const SampleApp = () => {
 	const [searchParams] = useSearchParams();
@@ -57,7 +51,7 @@ export const SampleApp = () => {
 					Show example app
 				</Button>
 			</DialogTrigger>
-			<DialogContent className="max-w-[90vw] max-h-[90vh] overflow-x-hidden overflow-y-auto w-full h-full flex flex-col">
+			<DialogContent className="!max-w-[90vw] max-h-[90vh] overflow-x-hidden overflow-y-auto w-full h-full flex flex-col">
 				<div>
 					<DialogHeader className="flex flex-row items-center justify-between h-12">
 						<DialogTitle>Sample App</DialogTitle>
@@ -380,6 +374,35 @@ const { customer } = await autumn.customers.get('user_123');`,
 	);
 };
 
+// Wrapper component to handle PaywallDialog independently
+const PaywallWrapper = ({
+	featureId,
+	onClose,
+}: {
+	featureId: string;
+	onClose: () => void;
+}) => {
+	const [paywallOpen, setPaywallOpen] = useState(true);
+
+	const handlePaywallClose = useCallback(
+		(open: boolean) => {
+			setPaywallOpen(open);
+			if (!open) {
+				onClose();
+			}
+		},
+		[onClose],
+	);
+
+	return (
+		<PaywallDialog
+			open={paywallOpen}
+			setOpen={handlePaywallClose}
+			featureId={featureId}
+		/>
+	);
+};
+
 const FeatureUsageItem = ({
 	feature,
 	customerFeature,
@@ -395,6 +418,7 @@ const FeatureUsageItem = ({
 }) => {
 	const { check, track, refetch } = useCustomer();
 	const [trackValue, setTrackValue] = useState<number | string>(1);
+	const [showPaywall, setShowPaywall] = useState(false);
 
 	if (feature.type === "boolean") {
 		return (
@@ -443,14 +467,20 @@ const FeatureUsageItem = ({
 						variant="secondary"
 						disabled={!customerFeature}
 						className="h-6 px-2"
-						onClick={async () => {
+						onClick={async (e) => {
+							// Prevent event bubbling to parent dialog
+							e.stopPropagation();
+
 							onFeatureUsed({
 								featureId: customerFeature.id,
 								value: Number(trackValue),
 							});
-							const { data: checkResponse } = await check({
+
+							// Check without dialog first
+							const { data: checkResponse } = check({
 								featureId: customerFeature.id,
 							});
+
 							onCheckData(checkResponse);
 
 							if (checkResponse?.allowed) {
@@ -461,6 +491,9 @@ const FeatureUsageItem = ({
 								});
 								onTrackData(trackResponse);
 								await refetch();
+							} else {
+								// Show custom paywall if not allowed
+								setShowPaywall(true);
 							}
 						}}
 					>
@@ -479,6 +512,12 @@ const FeatureUsageItem = ({
 					</span>
 				)}
 			</div>
+			{showPaywall && (
+				<PaywallWrapper
+					featureId={customerFeature.id}
+					onClose={() => setShowPaywall(false)}
+				/>
+			)}
 		</div>
 	);
 };
