@@ -171,10 +171,6 @@ export const createStripeCoupon = async ({
 		} catch (_) {}
 	}
 
-	console.log("Reward type:", reward.type);
-	console.log("stripeProdIds", stripeProdIds);
-	console.log("Apply to all", discountConfig!.apply_to_all);
-
 	const stripeCoupon = await stripeCli.coupons.create({
 		// id: reward.internal_id,
 		id: reward.id,

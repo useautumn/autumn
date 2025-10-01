@@ -1,24 +1,21 @@
-import chalk from "chalk";
-import Stripe from "stripe";
-
 import { CusProductStatus } from "@autumn/shared";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { expect } from "chai";
+import chalk from "chalk";
+import { addHours, addMonths } from "date-fns";
+import type Stripe from "stripe";
+import { setupBefore } from "tests/before.js";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { products } from "tests/global.js";
-import { expect } from "chai";
-
 import { compareMainProduct } from "tests/utils/compare.js";
-import { addHours, addMonths } from "date-fns";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-
-import { setupBefore } from "tests/before.js";
-import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 
 const testCase = "downgrade5";
 describe(`${chalk.yellowBright(`${testCase}: testing basic downgrade (paid to paid)`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt();
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt();
 	let testClockId: string;
 	let stripeCli: Stripe;
 
@@ -40,21 +37,21 @@ describe(`${chalk.yellowBright(`${testCase}: testing basic downgrade (paid to pa
 		testClockId = testClockId_;
 	});
 
-	it("should attach premium", async function () {
+	it("should attach premium", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
 			productId: products.premium.id,
 		});
 	});
 
-	it("should attach pro", async function () {
+	it("should attach pro", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
 			productId: products.pro.id,
 		});
 	});
 
-	it("should have correct product and entitlements for scheduled pro", async function () {
+	it("should have correct product and entitlements for scheduled pro", async () => {
 		const res = await AutumnCli.getCustomer(customerId);
 
 		compareMainProduct({
@@ -72,7 +69,7 @@ describe(`${chalk.yellowBright(`${testCase}: testing basic downgrade (paid to pa
 		expect(resPro).to.exist;
 	});
 
-	it("should attach premium and remove scheduled pro", async function () {
+	it("should attach premium and remove scheduled pro", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
 			productId: products.premium.id,
@@ -93,7 +90,7 @@ describe(`${chalk.yellowBright(`${testCase}: testing basic downgrade (paid to pa
 	});
 
 	// Advance time 1 month
-	it("should attach pro, advance stripe clock and have pro is attached", async function () {
+	it("should attach pro, advance stripe clock and have pro is attached", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
 			productId: products.pro.id,

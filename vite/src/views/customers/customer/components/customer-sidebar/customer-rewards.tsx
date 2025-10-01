@@ -1,24 +1,25 @@
-import AddCouponDialogContent from "../../components/add-coupon/AddCouponDialogContent";
+import { stripeToAtmnAmount } from "@autumn/shared";
+import { ArrowUpRightFromSquare } from "lucide-react";
+import { useState } from "react";
+import { Link } from "react-router";
 import { SideAccordion } from "@/components/general/SideAccordion";
-import { getRedirectUrl } from "@/utils/genUtils";
+import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import {
 	Popover,
-	PopoverTrigger,
 	PopoverContent,
+	PopoverTrigger,
 } from "@/components/ui/popover";
 import {
 	Tooltip,
-	TooltipTrigger,
 	TooltipContent,
+	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ArrowUpRightFromSquare } from "lucide-react";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Link } from "react-router";
-import { useEnv } from "@/utils/envUtils";
-import { useCusReferralQuery } from "../../hooks/useCusReferralQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
+import { useEnv } from "@/utils/envUtils";
+import { getRedirectUrl } from "@/utils/genUtils";
+import AddCouponDialogContent from "../../components/add-coupon/AddCouponDialogContent";
+import { useCusReferralQuery } from "../../hooks/useCusReferralQuery";
 
 export const CustomerRewards = () => {
 	// const { discount, env } = useCustomerContext();
@@ -32,12 +33,16 @@ export const CustomerRewards = () => {
 
 	const getDiscountText = (discount: any) => {
 		const coupon = discount.coupon;
+		const atmnAmountOff = stripeToAtmnAmount({
+			amount: coupon.amount_off,
+			currency: coupon.currency,
+		});
 		if (coupon.amount_off) {
 			return (
 				<p>
 					{`${coupon.name} `}
 					<span className="text-t3">
-						(${coupon.amount_off / 100} {coupon.currency.toUpperCase()})
+						(${atmnAmountOff} {coupon.currency.toUpperCase()})
 					</span>
 				</p>
 			);

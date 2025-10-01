@@ -1,22 +1,21 @@
 import {
-	Customer,
-	Feature,
-	Invoice,
-	InvoiceItem,
+	type Customer,
+	type Feature,
+	type Invoice,
+	type InvoiceItem,
 	InvoiceItemResponseSchema,
-	InvoiceResponse,
-	InvoiceStatus,
-	LoggerAction,
-	Organization,
+	type InvoiceResponse,
+	type InvoiceStatus,
+	invoices,
+	type Organization,
+	stripeToAtmnAmount,
 } from "@autumn/shared";
-import Stripe from "stripe";
-import { generateId } from "@/utils/genUtils.js";
-
-import { getInvoiceDiscounts } from "@/external/stripe/stripeInvoiceUtils.js";
 import { Autumn } from "autumn-js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { invoices } from "@autumn/shared";
 import { and, desc, eq } from "drizzle-orm";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { getInvoiceDiscounts } from "@/external/stripe/stripeInvoiceUtils.js";
+import { generateId } from "@/utils/genUtils.js";
 
 export const processInvoice = ({
 	invoice,
@@ -38,7 +37,7 @@ export const processInvoice = ({
 		hosted_invoice_url: `${process.env.BETTER_AUTH_URL}/invoices/hosted_invoice_url/${invoice.id}`,
 		items: withItems
 			? (invoice.items || []).map((i) => {
-					let feature = features?.find(
+					const feature = features?.find(
 						(f) => f.internal_id === i.internal_feature_id,
 					);
 
@@ -135,11 +134,11 @@ export class InvoiceService {
 		// Convert product ids to unique product ids
 		const uniqueProductIds = [...new Set(productIds)];
 		const uniqueInternalProductIds = [...new Set(internalProductIds)];
-		let total = stripeInvoice.total / 100;
 
-		if (stripeInvoice.currency.toLowerCase() == "clp") {
-			total = stripeInvoice.total;
-		}
+		const atmnTotal = stripeToAtmnAmount({
+			amount: stripeInvoice.total,
+			currency: stripeInvoice.currency,
+		});
 
 		const invoice: Invoice = {
 			id: generateId("inv"),
@@ -153,7 +152,7 @@ export class InvoiceService {
 			internal_entity_id: internalEntityId || null,
 
 			// Stripe stuff
-			total,
+			total: atmnTotal,
 			currency: stripeInvoice.currency,
 			discounts: getInvoiceDiscounts({
 				expandedInvoice: stripeInvoice,
@@ -165,7 +164,7 @@ export class InvoiceService {
 		try {
 			await db.insert(invoices).values(invoice as any);
 		} catch (error: any) {
-			if (error.code == "23505") {
+			if (error.code === "23505") {
 				console.log("   🧐 Invoice already exists");
 				return;
 			} else {
@@ -184,7 +183,7 @@ export class InvoiceService {
 			await autumn.track({
 				customer_id: org.id,
 				event_name: "revenue",
-				value: Math.round(stripeInvoice.total / 100),
+				value: atmnTotal,
 				customer_data: {
 					name: org.slug,
 				},

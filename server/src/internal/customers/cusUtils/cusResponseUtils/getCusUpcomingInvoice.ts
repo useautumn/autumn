@@ -3,8 +3,8 @@ import {
 	CusExpand,
 	type FullCustomer,
 	type Organization,
+	stripeToAtmnAmount,
 } from "@autumn/shared";
-import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
@@ -58,10 +58,16 @@ export const getCusUpcomingInvoice = async ({
 		const cusProd = fullCus.customer_products.find((cp) =>
 			lineItemInCusProduct({ cusProduct: cp, lineItem: line }),
 		);
+
+		const atmnLineAmount = stripeToAtmnAmount({
+			amount: line.amount,
+			currency: line.currency,
+		});
+
 		lines.push({
 			product_id: cusProd?.product.id || null,
 			description: line.description,
-			amount: new Decimal(line.amount).div(100).toDecimalPlaces(2).toNumber(),
+			amount: atmnLineAmount,
 		});
 	}
 
@@ -79,14 +85,21 @@ export const getCusUpcomingInvoice = async ({
 		}),
 	);
 
-	// console.log("lines: ", lines);
-	// console.log("discounts: ", discounts);
+	const atmnSubtotal = stripeToAtmnAmount({
+		amount: upcomingInvoice.subtotal,
+		currency: upcomingInvoice.currency,
+	});
+
+	const atmnTotal = stripeToAtmnAmount({
+		amount: upcomingInvoice.total,
+		currency: upcomingInvoice.currency,
+	});
 
 	const res = {
 		lines,
 		discounts,
-		subtotal: upcomingInvoice.subtotal / 100,
-		total: upcomingInvoice.total / 100,
+		subtotal: atmnSubtotal,
+		total: atmnTotal,
 		currency: upcomingInvoice.currency,
 	};
 
