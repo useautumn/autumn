@@ -7,7 +7,7 @@
 
 - You can access the biome linter by running `npx biome check <folder or file path>`. Always specify a folder path, as the codebase is quite large and you will get out of scope errors that you are not burdened to correct. If you would like to let biome automatically fix as much as it can, use  `npx biome check --write <folder or file path>`
 
-- Note, biome does not perform typechecking. In which case you need to, you may run `tsc --noEmit <folder or file path>`
+- Note, biome does not perform typechecking. In which case you need to, you may run `tsc --noEmit --skipLibCheck <folder or file path>`
 
 - This codebase uses Bun as its preferred package manager and Node runtime.
 
@@ -79,4 +79,4 @@ const buttonVariants = cva(
 );
 ```
 
-- Refrain yourself from using "ghost" in favour of skeleton. If ever unsure, read "vite/src/components/v2/buttons/Button.tsx" for reference.
+- Refrain yourself from using "ghost", be in favour of "skeleton" instead. If ever unsure, read "vite/src/components/v2/buttons/Button.tsx" for reference.
