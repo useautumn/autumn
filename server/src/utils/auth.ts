@@ -1,20 +1,19 @@
 import "dotenv/config";
 
-import { db } from "@/db/initDrizzle.js";
-import sendOTPEmail from "@/internal/emails/sendOTPEmail.js";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { sendInvitationEmail } from "@/internal/emails/sendInvitationEmail.js";
-import { beforeSessionCreated } from "./authUtils/beforeSessionCreated.js";
-import { betterAuth } from "better-auth";
-import { emailOTP, admin, organization } from "better-auth/plugins";
-
-import { sendOnboardingEmail } from "@/internal/emails/sendOnboardingEmail.js";
-import { ADMIN_USER_IDs } from "./constants.js";
-import { afterOrgCreated } from "./authUtils/afterOrgCreated.js";
-import { createLoopsContact } from "@/external/resend/loopsUtils.js";
 import { invitation } from "@autumn/shared";
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { admin, emailOTP, organization } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
+import { db } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
+import { createLoopsContact } from "@/external/resend/loopsUtils.js";
+import { sendInvitationEmail } from "@/internal/emails/sendInvitationEmail.js";
+import { sendOnboardingEmail } from "@/internal/emails/sendOnboardingEmail.js";
+import sendOTPEmail from "@/internal/emails/sendOTPEmail.js";
+import { afterOrgCreated } from "./authUtils/afterOrgCreated.js";
+import { beforeSessionCreated } from "./authUtils/beforeSessionCreated.js";
+import { ADMIN_USER_IDs } from "./constants.js";
 
 export const auth = betterAuth({
 	telemetry: {
@@ -72,7 +71,8 @@ export const auth = betterAuth({
 	socialProviders: {
 		google: {
 			clientId: process.env.GOOGLE_CLIENT_ID!,
-			clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+			clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+			redirectURI: process.env.SERVER_URL,
 		},
 	},
 	plugins: [
