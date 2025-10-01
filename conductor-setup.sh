@@ -66,15 +66,6 @@ fi
 echo "🔨 Building shared workspace..."
 bun -F @autumn/shared build
 
-# Run database migrations if DATABASE_URL exists
-if grep -q "DATABASE_URL=" server/.env 2>/dev/null; then
-    echo "🗄️  Running database migrations..."
-    bun db:migrate
-    echo "✅ Database migrations complete"
-else
-    echo "⚠️  Skipping database migrations (no DATABASE_URL found)"
-fi
-
 echo "🎉 Workspace setup complete!"
 echo ""
 echo "Next: Click the 'Run' button to start the development server"
