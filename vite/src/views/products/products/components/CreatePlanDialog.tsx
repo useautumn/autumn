@@ -1,5 +1,5 @@
 import type { ProductV2 } from "@autumn/shared";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/v2/buttons/Button";
@@ -13,6 +13,7 @@ import {
 import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
+import { slugify } from "@/utils/formatUtils/formatTextUtils";
 import { ProductConfig } from "../../ProductConfig";
 
 const defaultProduct = {
@@ -31,6 +32,7 @@ function CreatePlanDialog({
 	const [loading, setLoading] = useState(false);
 	const [product, setProduct] = useState(defaultProduct);
 	const [open, setOpen] = useState(false);
+	const idManuallyChangedRef = useRef(false);
 
 	const axiosInstance = useAxiosInstance();
 	const navigate = useNavigate();
@@ -69,6 +71,7 @@ function CreatePlanDialog({
 	useEffect(() => {
 		if (open) {
 			setProduct(defaultProduct);
+			idManuallyChangedRef.current = false;
 		}
 	}, [open]);
 

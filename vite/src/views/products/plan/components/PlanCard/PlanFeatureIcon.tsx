@@ -62,7 +62,7 @@ const getLeftIcon = (
 			return { icon: ContinuousUseIcon, color: "text-primary" }; // Persistent Usage - pink
 		case ProductItemFeatureType.Static:
 			return { icon: BooleanIcon, color: "text-primary", size: 2 }; // Static - pink
-		case "metered" as any: // Handle metered features from FeatureType enum
+		case "metered" as unknown: // Handle metered features from FeatureType enum
 			return { icon: UsageBasedIcon, color: "text-primary" }; // Metered - pink
 		default:
 			console.warn(`Unknown feature type: ${featureType}`);

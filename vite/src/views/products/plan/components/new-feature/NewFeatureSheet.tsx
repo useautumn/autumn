@@ -1,4 +1,8 @@
-import { CreateFeatureSchema, ProductItemInterval, productV2ToFeatureItems } from "@autumn/shared";
+import {
+	CreateFeatureSchema,
+	ProductItemInterval,
+	productV2ToFeatureItems,
+} from "@autumn/shared";
 import type { AxiosError } from "axios";
 import { useState } from "react";
 import { toast } from "sonner";

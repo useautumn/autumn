@@ -1,5 +1,5 @@
 import { AppEnv, type ProductItem, type ProductV2 } from "@autumn/shared";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { getDefaultFeature } from "@/views/products/features/utils/defaultFeature";
 
 export const useOnboardingState = () => {
@@ -21,6 +21,22 @@ export const useOnboardingState = () => {
 	// Feature creation state
 	const [feature, setFeature] = useState(() => getDefaultFeature());
 
+	// Track whether product/feature have been created and their latest IDs
+	const productCreatedRef = useRef<{
+		created: boolean;
+		latestId: string | null;
+	}>({
+		created: false,
+		latestId: null,
+	});
+	const featureCreatedRef = useRef<{
+		created: boolean;
+		latestId: string | null;
+	}>({
+		created: false,
+		latestId: null,
+	});
+
 	return {
 		// Base product state (for usePlanData)
 		baseProduct,
@@ -29,5 +45,9 @@ export const useOnboardingState = () => {
 		// Feature state
 		feature,
 		setFeature,
+
+		// Creation tracking refs
+		productCreatedRef,
+		featureCreatedRef,
 	};
 };

@@ -26,21 +26,14 @@ export const OnboardingStepRenderer = ({
 }: OnboardingStepRendererProps) => {
 	const { product, setProduct, editingState, sheet } = useProductContext();
 
-	// Handle sheet overrides (mirror PlanEditorView logic)
 	if (editingState?.type === "plan") {
-		console.log(
-			"[OnboardingStepRenderer] Showing EditPlanSheet for plan editing",
-		);
 		return <EditPlanSheet />;
 	}
 
 	if (editingState?.type === "feature") {
-		console.log(
-			"[OnboardingStepRenderer] Showing EditPlanFeatureSheet for feature editing",
-		);
-
-		// Find the current item being edited (same logic as PlanEditorView)
-		const featureItems = productV2ToFeatureItems({ items: product?.items });
+		const featureItems = productV2ToFeatureItems({
+			items: product?.items || [],
+		});
 		const isCurrentItem = (item: ProductItem, index: number) => {
 			const itemId = getItemId({ item, itemIndex: index });
 			return editingState.id === itemId;
@@ -83,9 +76,6 @@ export const OnboardingStepRenderer = ({
 
 	// Handle new-feature sheet
 	if (sheet === "new-feature") {
-		console.log(
-			"[OnboardingStepRenderer] Showing NewFeatureSheet for creating new feature",
-		);
 		return <NewFeatureSheet />;
 	}
 	switch (step) {
@@ -96,7 +86,6 @@ export const OnboardingStepRenderer = ({
 			return <FeatureCreationStep feature={feature} setFeature={setFeature} />;
 
 		case OnboardingStep.FeatureConfiguration: {
-			// Find the last added item (the one we just created) in the product
 			const featureItems = productV2ToFeatureItems({
 				items: product?.items || [],
 			});

@@ -18,6 +18,7 @@ interface ProductContextType {
 	setSheet: (sheet: Sheets) => void;
 	editingState: EditingState;
 	setEditingState: (state: EditingState) => void;
+	refetch?: () => Promise<void>;
 }
 
 export const ProductContext = createContext<any | null>(null);

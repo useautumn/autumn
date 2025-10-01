@@ -21,18 +21,31 @@ export const SaveChangesBar = ({
 	setOriginalProduct: setOnboardingOriginalProduct,
 }: SaveChangesBarProps) => {
 	const axiosInstance = useAxiosInstance();
-	const { diff, setProduct } = useProductContext();
+	const {
+		diff,
+		setProduct,
+		product,
+		setShowNewVersionDialog,
+		refetch: contextRefetch,
+	} = useProductContext();
 	const [saving, setSaving] = useState(false);
-	const { product, setShowNewVersionDialog } = useProductContext();
 
 	const { counts, isLoading } = useProductCountsQuery();
-	const { refetch, product: queryOriginalProduct } = useProductQuery();
+	const { refetch: queryRefetch, product: queryOriginalProduct } =
+		useProductQuery();
 
 	const originalProduct = isOnboarding
 		? onboardingOriginalProduct
 		: queryOriginalProduct;
 
 	const handleSaveClicked = async () => {
+		console.log("[SaveChangesBar] Save clicked", {
+			isOnboarding,
+			hasOriginalProductSetter: !!setOnboardingOriginalProduct,
+			productId: product?.id,
+			productItems: product?.items?.length || 0,
+		});
+
 		if (!isOnboarding && isLoading) {
 			toast.error("Product counts are loading");
 			return;
@@ -48,10 +61,25 @@ export const SaveChangesBar = ({
 			axiosInstance,
 			product,
 			onSuccess: async () => {
-				if (isOnboarding && setOnboardingOriginalProduct && product) {
-					setOnboardingOriginalProduct(product as FrontendProduct);
+				console.log("[SaveChangesBar] Save success, updating base product");
+				if (isOnboarding) {
+					// Use the unified refetch from context (hybrid approach)
+					if (contextRefetch) {
+						console.log(
+							"[SaveChangesBar] Using context refetch (hybrid approach)",
+						);
+						await contextRefetch();
+					} else if (setOnboardingOriginalProduct && product) {
+						// Fallback: manual product update (should not be needed with hybrid approach)
+						console.log("[SaveChangesBar] Fallback: manual product update");
+						const response = await axiosInstance.get(
+							`/products/${product.id}/data2`,
+						);
+						setOnboardingOriginalProduct(response.data.product);
+					}
 				} else {
-					await refetch();
+					// Normal PEV refetch
+					await queryRefetch();
 				}
 			},
 		});

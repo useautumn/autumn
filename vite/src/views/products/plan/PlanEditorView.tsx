@@ -19,8 +19,11 @@ import ConfirmNewVersionDialog from "./versioning/ConfirmNewVersionDialog";
 type Sheets = "edit-plan" | "edit-feature" | "new-feature";
 
 export default function PlanEditorView() {
-	const { product: originalProduct, isLoading: productLoading } =
-		useProductQuery();
+	const {
+		product: originalProduct,
+		isLoading: productLoading,
+		refetch,
+	} = useProductQuery();
 	const { isLoading: featuresLoading } = useFeaturesQuery();
 
 	const { product, setProduct, diff } = usePlanData({
@@ -48,6 +51,7 @@ export default function PlanEditorView() {
 				setSheet,
 				editingState,
 				setEditingState,
+				refetch,
 			}}
 		>
 			<ConfirmNewVersionDialog

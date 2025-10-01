@@ -1,4 +1,4 @@
-import { TrashIcon, PencilSimple } from "@phosphor-icons/react";
+import { PencilSimple, TrashIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
