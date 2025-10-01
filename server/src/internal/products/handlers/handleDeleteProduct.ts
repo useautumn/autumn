@@ -1,4 +1,4 @@
-import { AutumnError, ProductNotFoundError } from "@autumn/shared";
+import { ProductNotFoundError, RecaseError } from "@autumn/shared";
 import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { routeHandler } from "@/utils/routerUtils.js";
@@ -41,9 +41,8 @@ export const handleDeleteProduct = (req: any, res: any) =>
 			const cusProdCount = deleteAllVersions ? allCounts.all : latestCounts.all;
 
 			if (cusProdCount > 0) {
-				throw new AutumnError({
+				throw new RecaseError({
 					message: `Product ${productId} has ${cusProdCount} customers (expired or active) on it and therefore cannot be deleted`,
-					statusCode: 400,
 				});
 			}
 

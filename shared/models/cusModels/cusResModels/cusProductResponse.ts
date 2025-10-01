@@ -1,4 +1,4 @@
-import { APIProductItemSchema } from "@api/models.js";
+import { APIProductItemSchema } from "@api/products/apiProductItem.js";
 import { z } from "zod/v4";
 import { CusProductStatus } from "../../cusProductModels/cusProductEnums.js";
 

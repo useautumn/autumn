@@ -1,99 +1,80 @@
 import {
-	APIProductSchema,
-	CreateProductSchema,
-	type Entitlement,
-	ErrCode,
+	type CreateProductParams,
+	CreateProductParamsSchema,
 	type FreeTrial,
-	type FullProduct,
-	type Price,
 	type Product,
 	ProductAlreadyExistsError,
 	type ProductItem,
 } from "@autumn/shared";
-import {
-	handleNewFreeTrial,
-	validateAndInitFreeTrial,
-} from "@/internal/products/free-trials/freeTrialUtils.js";
-import { ProductService } from "@/internal/products/ProductService.js";
-import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
-import { validateProductItems } from "@/internal/products/product-items/validateProductItems.js";
-import {
-	constructProduct,
-	getGroupToDefaults,
-	initProductInStripe,
-} from "@/internal/products/productUtils.js";
-import { JobName } from "@/queue/JobName.js";
-import { addTaskToQueue } from "@/queue/queueUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
-import {
-	keyToTitle,
-	notNullish,
-	nullish,
-	validateId,
-} from "@/utils/genUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
-import { routeHandler } from "@/utils/routerUtils.js";
-import { validateOneOffTrial } from "../free-trials/freeTrialUtils.js";
+
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { ProductService } from "../ProductService.js";
 import { isDefaultTrial } from "../productUtils/classifyProduct.js";
+import { getGroupToDefaults } from "../productUtils.js";
 
-const validateCreateProduct = async ({ req }: { req: ExtendedRequest }) => {
-	const { free_trial, items } = req.body;
-	const { orgId, env, db, features } = req;
+const validateCreateProduct = async ({
+	ctx,
+	body,
+}: {
+	ctx: AutumnContext;
+	body: CreateProductParams;
+}) => {
+	// const { free_trial, items } = body;
+	const { org, env, db, features } = ctx;
 
-	const productData = CreateProductSchema.parse(req.body);
+	// const productData = CreateProductSchema.parse(req.body);
 
-	validateId("Product", productData.id);
+	// validateId("Product", productData.id);
 
-	if (nullish(req.body.name)) {
-		productData.name = keyToTitle(productData.id);
-	}
+	// if (nullish(req.body.name)) {
+	// 	productData.name = keyToTitle(productData.id);
+	// }
 
 	const existing = await ProductService.get({
 		db,
-		orgId,
+		orgId: org.id,
 		env,
-		id: productData.id,
+		id: body.id,
 	});
 
 	// 1. If existing product, throw error
 	if (existing) {
-		throw new ProductAlreadyExistsError({
-			productId: productData.id,
-		});
+		throw new ProductAlreadyExistsError({ productId: body.id });
 	}
 
 	// 2. Validate items if exist
 
-	if (items && !Array.isArray(items)) {
-		throw new RecaseError({
-			message: "Items must be an array",
-			code: ErrCode.InvalidRequest,
-		});
-	} else if (items) {
-		validateProductItems({
-			newItems: items,
-			features,
-			orgId: req.orgId,
-			env: req.env,
-		});
-	}
+	// if (items && !Array.isArray(items)) {
+	// 	throw new RecaseError({
+	// 		message: "Items must be an array",
+	// 		code: ErrCode.InvalidRequest,
+	// 	});
+	// } else if (items) {
+	// 	validateProductItems({
+	// 		newItems: items,
+	// 		features,
+	// 		orgId: req.orgId,
+	// 		env: req.env,
+	// 	});
+	// }
 
 	// 3. Validate free trial if exist
-	let freeTrial: FreeTrial | null = null;
-	if (notNullish(free_trial)) {
-		// console.log("Free trial before:", free_trial);
-		freeTrial = validateAndInitFreeTrial({
-			freeTrial: free_trial,
-			internalProductId: productData.id,
-			isCustom: false,
-		});
-		// console.log("Free trial after:", freeTrial);
-	}
+	// let freeTrial: FreeTrial | null = null;
+	// if (notNullish(free_trial)) {
+	// 	// console.log("Free trial before:", free_trial);
+	// 	freeTrial = validateAndInitFreeTrial({
+	// 		freeTrial: free_trial,
+	// 		internalProductId: productData.id,
+	// 		isCustom: false,
+	// 	});
+	// 	// console.log("Free trial after:", freeTrial);
+	// }
 
 	return {
 		features,
-		freeTrial,
-		productData,
+		// freeTrial,
+		// productData,
 	};
 };
 
@@ -103,11 +84,10 @@ export const disableCurrentDefault = async ({
 	items,
 	freeTrial,
 }: {
-	req: ExtendedRequest;
+	req: AutumnContext;
 	newProduct: Product;
 	items: ProductItem[];
-
-	freeTrial: FreeTrial | null;
+	freeTrial: FreeTrial;
 }) => {
 	const { db, org, env, logger } = req;
 	let defaultProds = await ProductService.listDefault({
@@ -158,98 +138,104 @@ export const disableCurrentDefault = async ({
 	}
 };
 
-export const handleCreateProduct = async (req: Request, res: any) =>
-	routeHandler({
-		req,
-		res,
-		action: "POST /products",
-		handler: async (req, res) => {
-			const { items } = req.body;
+/**
+ * Route: POST /products - Create a product
+ */
+export const createProduct = createRoute({
+	body: CreateProductParamsSchema,
+	handler: async (c) => {
+		const body = c.req.valid("json");
+		const query = c.req.valid("query");
+		const ctx = c.get("ctx");
 
-			const { logtail: logger, org, features, env, db } = req;
+		const { logger, org, features, env, db } = ctx;
+		const { items } = body;
 
-			const { freeTrial, productData } = await validateCreateProduct({
-				req,
-			});
+		// const { features, freeTrial, productData } = await validateCreateProduct({
+		// 	ctx,
+		// 	body,
+		// });
 
-			const newProduct = constructProduct({
-				productData,
-				orgId: org.id,
-				env,
-			});
+		// const newProduct = constructProduct({
+		// 	productData,
+		// 	orgId: org.id,
+		// 	env,
+		// });
 
-			await disableCurrentDefault({
-				req,
-				newProduct,
-				items,
-				freeTrial: freeTrial || null,
-			});
+		return c.json({});
 
-			const product = await ProductService.insert({ db, product: newProduct });
+		// await disableCurrentDefault({
+		// 	req,
+		// 	newProduct,
+		// 	items,
+		// 	freeTrial: freeTrial || null,
+		// });
 
-			let prices: Price[] = [];
-			let entitlements: Entitlement[] = [];
-			if (notNullish(items)) {
-				const res = await handleNewProductItems({
-					db,
-					product,
-					features,
-					curPrices: [],
-					curEnts: [],
-					newItems: items,
-					logger,
-					isCustom: false,
-					newVersion: false,
-				});
-				prices = res.prices;
-				entitlements = res.entitlements;
-			}
+		// const product = await ProductService.insert({ db, product: newProduct });
 
-			await validateOneOffTrial({
-				prices,
-				freeTrial: freeTrial || null,
-			});
+		// let prices: Price[] = [];
+		// let entitlements: Entitlement[] = [];
+		// if (notNullish(items)) {
+		// 	const res = await handleNewProductItems({
+		// 		db,
+		// 		product,
+		// 		features,
+		// 		curPrices: [],
+		// 		curEnts: [],
+		// 		newItems: items,
+		// 		logger,
+		// 		isCustom: false,
+		// 		newVersion: false,
+		// 	});
+		// 	prices = res.prices;
+		// 	entitlements = res.entitlements;
+		// }
 
-			await initProductInStripe({
-				db,
-				product: {
-					...product,
-					prices,
-					entitlements,
-				} as FullProduct,
-				org,
-				env,
-				logger,
-			});
+		// await validateOneOffTrial({
+		// 	prices,
+		// 	freeTrial: freeTrial || null,
+		// });
 
-			if (notNullish(freeTrial)) {
-				await handleNewFreeTrial({
-					db,
-					newFreeTrial: freeTrial,
-					curFreeTrial: null,
-					internalProductId: product.internal_id,
-					isCustom: false,
-				});
-			}
+		// await initProductInStripe({
+		// 	db,
+		// 	product: {
+		// 		...product,
+		// 		prices,
+		// 		entitlements,
+		// 	} as FullProduct,
+		// 	org,
+		// 	env,
+		// 	logger,
+		// });
 
-			await addTaskToQueue({
-				jobName: JobName.DetectBaseVariant,
-				payload: {
-					curProduct: {
-						...product,
-						prices,
-						entitlements: [],
-					},
-				},
-			});
+		// if (notNullish(freeTrial)) {
+		// 	await handleNewFreeTrial({
+		// 		db,
+		// 		newFreeTrial: freeTrial,
+		// 		curFreeTrial: null,
+		// 		internalProductId: product.internal_id,
+		// 		isCustom: false,
+		// 	});
+		// }
 
-			res.status(200).json(
-				APIProductSchema.parse({
-					...product,
-					autumn_id: product.internal_id,
-					items: items || [],
-					free_trial: freeTrial,
-				}),
-			);
-		},
-	});
+		// await addTaskToQueue({
+		// 	jobName: JobName.DetectBaseVariant,
+		// 	payload: {
+		// 		curProduct: {
+		// 			...product,
+		// 			prices,
+		// 			entitlements: [],
+		// 		},
+		// 	},
+		// });
+
+		// res.status(200).json(
+		// 	APIProductSchema.parse({
+		// 		...product,
+		// 		autumn_id: product.internal_id,
+		// 		items: items || [],
+		// 		free_trial: freeTrial,
+		// 	}),
+		// );
+	},
+});

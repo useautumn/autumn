@@ -1,8 +1,9 @@
-import { AttachScenario, ErrCode } from "@autumn/shared";
 import {
+	AttachScenario,
 	CusProductAlreadyExistsError,
 	CusProductNotFoundError,
-} from "@shared/api/errors/classes/cusProductErrClasses.js";
+	ErrCode,
+} from "@autumn/shared";
 import { z } from "zod";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { ProductService } from "@/internal/products/ProductService.js";

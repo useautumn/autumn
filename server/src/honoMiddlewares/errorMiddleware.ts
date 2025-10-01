@@ -1,4 +1,4 @@
-import { AutumnError, ErrCode } from "@autumn/shared";
+import { ErrCode, RecaseError as SharedRecaseError } from "@autumn/shared";
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import Stripe from "stripe";
@@ -127,7 +127,7 @@ export const errorMiddleware = (err: Error, c: Context<HonoEnv>) => {
 	if (specialCaseResponse) return specialCaseResponse;
 
 	// 1. Handle RecaseError (our custom errors)
-	if (err instanceof RecaseError || err instanceof AutumnError) {
+	if (err instanceof RecaseError || err instanceof SharedRecaseError) {
 		logger.warn(
 			`RECASE WARNING (${ctx.org?.slug || "unknown"}): ${err.message} [${err.code}]`,
 			{

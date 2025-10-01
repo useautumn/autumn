@@ -318,7 +318,7 @@ export const routeHandler = async <TLoad = undefined>({
 
 		if (error instanceof ZodError && req.originalUrl.includes("/attach")) {
 			error = new RecaseError({
-				message: formatZodError(error),
+				message: formatZodError(error as any),
 				code: ErrCode.InvalidInputs,
 				statusCode: StatusCodes.BAD_REQUEST,
 			});

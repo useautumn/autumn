@@ -21,11 +21,9 @@
 		"dev:wsl": "concurrently \"cd server && npm run dev\" \"cd vite && npm run dev\" \"cd shared && npm run dev\"",
 		"setup": "node setup.js",
 		"setupci": "node setupci",
-
 		"db:push": " bun -F @autumn/shared db:push",
 		"db:generate": "bun -F @autumn/shared db:generate",
 		"db:migrate": " bun -F @autumn/shared db:migrate",
-
 		"docker:up": "docker compose -f docker-compose.dev.yml up --build",
 		"docker:up:unix": "docker compose -f docker-compose.unix.yml up --build",
 		"docker:up:ci": "docker compose -f docker-compose.ci.yml up --build",

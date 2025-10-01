@@ -70,7 +70,7 @@ checkRouter.post("", async (req: any, res: any) => {
 		if (notNullish(requiredBalance)) {
 			const floatQuantity = parseFloat(requiredBalance);
 
-			if (isNaN(floatQuantity)) {
+			if (Number.isNaN(floatQuantity)) {
 				throw new RecaseError({
 					message: "Invalid required_balance",
 					code: ErrCode.InvalidRequest,

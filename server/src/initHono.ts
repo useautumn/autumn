@@ -1,42 +1,15 @@
-import type { AppEnv, AuthType, Feature, Organization } from "@autumn/shared";
-import type { ClickHouseClient } from "@clickhouse/client";
 import { getRequestListener } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import type { DrizzleCli } from "./db/initDrizzle.js";
-import type { Logger } from "./external/logtail/logtailUtils.js";
 import { apiVersionMiddleware } from "./honoMiddlewares/apiVersionMiddleware.js";
 import { baseMiddleware } from "./honoMiddlewares/baseMiddleware.js";
 import { errorMiddleware } from "./honoMiddlewares/errorMiddleware.js";
 import { orgConfigMiddleware } from "./honoMiddlewares/orgConfigMiddleware.js";
 import { secretKeyMiddleware } from "./honoMiddlewares/secretKeyMiddleware.js";
 import { traceMiddleware } from "./honoMiddlewares/traceMiddleware.js";
-import { handleCreateProduct } from "./internal/products/honoProductRouter.js";
+import type { HonoEnv } from "./honoUtils/HonoEnv.js";
+import { honoProductRouter } from "./internal/products/honoProductRouter.js";
 import { auth } from "./utils/auth.js";
-
-type RequestContext = {
-	// Variables
-	org: Organization;
-	env: AppEnv;
-	features: Feature[];
-	userId?: string;
-
-	// Objects
-	db: DrizzleCli;
-	logger: Logger;
-	clickhouseClient: ClickHouseClient;
-
-	// Info
-	id: string;
-	isPublic: boolean;
-	authType: AuthType;
-	apiVersion: string;
-	timestamp: number;
-};
-
-export type HonoEnv = {
-	Variables: { ctx: RequestContext };
-};
 
 const ALLOWED_ORIGINS = [
 	"http://localhost:3000",
@@ -103,8 +76,7 @@ export const createHonoApp = () => {
 	app.use("/v1/*", orgConfigMiddleware);
 
 	// Step 6: Add pricing middleware, analytics middleware, etc.
-
-	app.post("/v1/products", handleCreateProduct);
+	app.route("v1/products", honoProductRouter);
 
 	// Error handler - must be defined after all routes and middleware
 	app.onError(errorMiddleware);

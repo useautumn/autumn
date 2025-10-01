@@ -65,13 +65,6 @@ productRouter.get("/product_counts", async (req: any, res) => {
 
 		const counts = await Promise.all(
 			products.map(async (product) => {
-				// if (latestVersion) {
-				//   return CusProdReadService.getCounts({
-				//     db,
-				//     internalProductId: product.internal_id,
-				//   });
-				// }
-
 				return CusProdReadService.getCountsForAllVersions({
 					db,
 					productId: product.id,
@@ -461,11 +454,10 @@ productRouter.post("/product_options", async (req: any, res: any) => {
 	try {
 		const { items } = req.body;
 
-		const features = await FeatureService.getFromReq(req);
 		const featureToOptions: { [key: string]: FeatureOptions } = {};
 
 		for (const item of items) {
-			if (isFeaturePriceItem(item) && item.usage_model == UsageModel.Prepaid) {
+			if (isFeaturePriceItem(item) && item.usage_model === UsageModel.Prepaid) {
 				featureToOptions[item.feature_id] = {
 					feature_id: item.feature_id,
 					quantity: 0,
