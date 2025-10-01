@@ -131,6 +131,8 @@ export * from "./utils/productDisplayUtils/sortProductItems.js";
 export * from "./utils/productDisplayUtils.js";
 export * from "./utils/productUtils/priceToInvoiceAmount.js";
 export * from "./utils/productUtils.js";
+export * from "./utils/productV2Utils/compareProductUtils.ts/compareProductUtils.js";
 export * from "./utils/productV2Utils/productItemUtils/getProductItemRes.js";
+export * from "./utils/productV2Utils/productItemUtils/itemIntervalUtils.js";
 export * from "./utils/productV3Utils/mapToProductV3.js";
 export * from "./utils/rewardUtils/rewardMigrationUtils.js";
