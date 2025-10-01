@@ -21,10 +21,6 @@ export function usePlanData({ originalProduct }: UsePlanDataProps) {
 	const { features = [] } = useFeaturesQuery();
 
 	useEffect(() => {
-		console.log("[usePlanData] originalProduct changed:", {
-			id: originalProduct?.id,
-			items: originalProduct?.items?.length || 0,
-		});
 		if (originalProduct) {
 			originalProductRef.current = originalProduct;
 			setProduct(originalProduct);
@@ -35,7 +31,6 @@ export function usePlanData({ originalProduct }: UsePlanDataProps) {
 
 	const diff = useMemo(() => {
 		if (!originalProductRef.current || !product) {
-			console.log("[usePlanData] No product or original, no changes");
 			return {
 				hasChanges: false,
 				willVersion: false,
@@ -46,25 +41,6 @@ export function usePlanData({ originalProduct }: UsePlanDataProps) {
 			newProductV2: product as unknown as ProductV2,
 			curProductV2: originalProductRef.current as unknown as ProductV2,
 			features,
-		});
-
-		console.log("[usePlanData] Comparison:", {
-			comparison,
-			originalId: originalProductRef.current.id,
-			currentId: product.id,
-			originalItems: originalProductRef.current.items?.length || 0,
-			currentItems: product.items?.length || 0,
-		});
-
-		console.log("[usePlanData] hasChanges calculation:", {
-			itemsSame: comparison.itemsSame,
-			onlyEntsChanged: comparison.onlyEntsChanged,
-			detailsSame: comparison.detailsSame,
-			freeTrialsSame: comparison.freeTrialsSame,
-			finalHasChanges:
-				!comparison.itemsSame ||
-				!comparison.detailsSame ||
-				!comparison.freeTrialsSame,
 		});
 
 		return {

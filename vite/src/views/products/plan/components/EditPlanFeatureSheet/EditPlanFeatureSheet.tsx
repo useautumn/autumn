@@ -19,8 +19,9 @@ export function EditPlanFeatureSheet({
 	const { item } = useProductItemContext();
 	const { features } = useFeaturesQuery();
 
-	// console.log("Item", item);
-	if (!item) return null;
+	if (!item) {
+		return null;
+	}
 
 	const feature = getFeature(item?.feature_id ?? "", features);
 	const isFeaturePrice = isFeaturePriceItem(item);
