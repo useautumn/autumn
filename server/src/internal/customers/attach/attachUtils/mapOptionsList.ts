@@ -1,12 +1,15 @@
-import RecaseError from "@/utils/errorUtils.js";
-import { ErrCode } from "@/errors/errCodes.js";
-import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
-import { FullCusProduct, Price, UsagePriceConfig } from "@autumn/shared";
-import { Feature } from "@autumn/shared";
-import { FeatureOptions } from "@autumn/shared";
+import {
+	ErrCode,
+	type Feature,
+	type FeatureOptions,
+	type FullCusProduct,
+	type Price,
+	type UsagePriceConfig,
+} from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
-import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
 
 export const mapOptionsList = ({
 	optionsInput,
@@ -19,7 +22,7 @@ export const mapOptionsList = ({
 	prices: Price[];
 	curCusProduct?: FullCusProduct;
 }) => {
-	let newOptionsList: FeatureOptions[] = [];
+	const newOptionsList: FeatureOptions[] = [];
 
 	for (const options of optionsInput || []) {
 		const feature = features.find(
@@ -47,9 +50,9 @@ export const mapOptionsList = ({
 
 		// const ent = getPriceEntitlement(prepaidPrice, entitlements)
 
-		let config = prepaidPrice.config as UsagePriceConfig;
+		const config = prepaidPrice.config as UsagePriceConfig;
 
-		let dividedQuantity = new Decimal(options.quantity!)
+		const dividedQuantity = new Decimal(options.quantity!)
 			.div(config.billing_units || 1)
 			.ceil()
 			.toNumber();

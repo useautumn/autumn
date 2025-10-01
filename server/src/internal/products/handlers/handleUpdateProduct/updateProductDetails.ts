@@ -1,12 +1,12 @@
 import {
 	type AppEnv,
-	AutumnError,
 	type FreeTrial,
 	type FullProduct,
 	isFreeProductV2,
 	type Organization,
 	type Product,
 	type ProductItem,
+	RecaseError,
 	type RewardProgram,
 	type UpdateProduct,
 } from "@autumn/shared";
@@ -25,23 +25,23 @@ import {
 import { isFreeProduct } from "../../productUtils.js";
 
 const productDetailsSame = (prod1: Product, prod2: UpdateProduct) => {
-	if (notNullish(prod2.id) && prod1.id != prod2.id) {
+	if (notNullish(prod2.id) && prod1.id !== prod2.id) {
 		return false;
 	}
 
-	if (notNullish(prod2.name) && prod1.name != prod2.name) {
+	if (notNullish(prod2.name) && prod1.name !== prod2.name) {
 		return false;
 	}
 
-	if (notNullish(prod2.group) && prod1.group != prod2.group) {
+	if (notNullish(prod2.group) && prod1.group !== prod2.group) {
 		return false;
 	}
 
-	if (notNullish(prod2.is_add_on) && prod1.is_add_on != prod2.is_add_on) {
+	if (notNullish(prod2.is_add_on) && prod1.is_add_on !== prod2.is_add_on) {
 		return false;
 	}
 
-	if (notNullish(prod2.is_default) && prod1.is_default != prod2.is_default) {
+	if (notNullish(prod2.is_default) && prod1.is_default !== prod2.is_default) {
 		return false;
 	}
 
@@ -195,14 +195,14 @@ export const handleUpdateProductDetails = async ({
 		// 1. Check if there are items
 		if (items) {
 			if (items.some((item) => isFeaturePriceItem(item) || isPriceItem(item))) {
-				throw new AutumnError({
+				throw new RecaseError({
 					message:
 						"Cannot make a product default if it has fixed prices or paid features",
 				});
 			}
 		} else {
 			if (!isFreeProduct(curProduct.prices)) {
-				throw new AutumnError({
+				throw new RecaseError({
 					message:
 						"Cannot make a product default if it has fixed prices or paid features",
 				});
@@ -216,13 +216,13 @@ export const handleUpdateProductDetails = async ({
 
 	if (notNullish(newProduct.id) && newProduct.id !== curProduct.id) {
 		if (customersOnAllVersions.length > 0) {
-			throw new AutumnError({
+			throw new RecaseError({
 				message: "Cannot change product ID because it has existing customers",
 			});
 		}
 
 		if (rewardPrograms.length > 0) {
-			throw new AutumnError({
+			throw new RecaseError({
 				message:
 					"Cannot change product ID because existing reward programs are linked to it",
 			});

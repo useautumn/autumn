@@ -22,7 +22,7 @@ import { mapToProductItems } from "../../productV2Utils.js";
 import {
 	disableCurrentDefault,
 	handleCreateProduct,
-} from "../handleCreateProduct.js";
+} from "../handleCreateProduct_old.js";
 import { handleVersionProductV2 } from "../handleVersionProduct.js";
 import { handleUpdateProductDetails } from "./updateProductDetails.js";
 

@@ -2,7 +2,7 @@
  * Base error class for all Autumn API errors
  * This should match the RecaseError interface from the server
  */
-export class AutumnError extends Error {
+export class RecaseError extends Error {
 	code: string;
 	statusCode: number;
 	data?: unknown;
@@ -19,7 +19,7 @@ export class AutumnError extends Error {
 		data?: unknown;
 	}) {
 		super(message);
-		this.name = "AutumnError";
+		this.name = "RecaseError";
 		this.code = code || "invalid_request";
 		this.statusCode = statusCode;
 		this.data = data;

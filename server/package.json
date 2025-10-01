@@ -33,6 +33,7 @@
     "@date-fns/tz": "^1.2.0",
     "@date-fns/utc": "^2.1.0",
     "@hono/node-server": "^1.19.5",
+    "@hono/zod-validator": "^0.7.3",
     "@hyperbrowser/sdk": "^0.54.0",
     "@hyperdx/node-opentelemetry": "^0.8.2",
     "@logtail/node": "^0.5.2",

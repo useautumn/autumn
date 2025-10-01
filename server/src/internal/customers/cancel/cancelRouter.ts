@@ -1,4 +1,8 @@
-import { ErrCode, type FullCusProduct } from "@autumn/shared";
+import {
+	CusProductNotFoundError,
+	ErrCode,
+	type FullCusProduct,
+} from "@autumn/shared";
 import { Router } from "express";
 import { CusService } from "@/internal/customers/CusService.js";
 import RecaseError from "@/utils/errorUtils.js";
@@ -57,9 +61,10 @@ cancelRouter.post("", async (req, res) =>
 			);
 
 			if (!cusProduct) {
-				throw new RecaseError({
-					code: ErrCode.ProductNotFound,
-					message: `Product ${product_id} not found for customer ${customer_id}`,
+				throw new CusProductNotFoundError({
+					customerId: customer_id,
+					productId: product_id,
+					entityId: entity_id,
 				});
 			}
 

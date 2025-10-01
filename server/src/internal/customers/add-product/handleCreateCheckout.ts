@@ -1,7 +1,7 @@
 import {
 	APIVersion,
 	type AttachConfig,
-	AutumnError,
+	RecaseError,
 	SuccessCode,
 } from "@autumn/shared";
 import type Stripe from "stripe";
@@ -47,9 +47,8 @@ export const handleCreateCheckout = async ({
 	});
 
 	if (itemSets.length === 0) {
-		throw new AutumnError({
+		throw new RecaseError({
 			message: `Product ${attachParams.products.map((p) => p.name).join(", ")} has no prices, can't create checkout`,
-			statusCode: 400,
 		});
 	}
 
