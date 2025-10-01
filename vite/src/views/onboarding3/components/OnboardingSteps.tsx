@@ -29,25 +29,43 @@ export const OnboardingSteps = ({
 	return (
 		<div
 			className={cn(
-				"flex items-center justify-between gap-2 w-full",
+				"flex items-center justify-between gap-1 w-full",
 				className,
 			)}
 		>
-			{/* Step indicators */}
-			<div className="flex items-center gap-1 bg-white rounded-full px-2 py-1.5 border border-gray-200 shadow-sm flex-shrink-0">
-				{Array.from({ length: totalSteps }, (_, index) => (
+			{/* Old step indicators (commented out) */}
+			{/*
+			<div className="flex items-center gap-1 bg-white rounded-lg px-2 border border-gray-200 shadow-sm flex-shrink-0 h-6">
+				{Array.from({
+					length: totalSteps,
+				}).map((_, index) => (
 					<div
 						key={index}
 						className={cn(
 							"h-1.5 w-6 rounded-full transition-colors duration-200",
-							index < currentStep
-								? "bg-primary" // Purple for completed steps
-								: "bg-gray-200", // Gray for incomplete steps
+							index < currentStep ? "bg-primary" : "bg-gray-200",
 						)}
 					/>
 				))}
 			</div>
-
+			*/}
+			{/* New step indicators layout */}
+			<div className="self-stretch w-full h-6 px-2.5 py-3 bg-white rounded-lg shadow-[inset_0px_-3px_4px_0px_rgba(0,0,0,0.04)] outline-1 outline-offset-[-1px] outline-neutral-300 inline-flex justify-start items-center gap-1">
+				{Array.from({ length: totalSteps }).map((_, index) => {
+					const isCompleted = index < currentStep;
+					return (
+						<div
+							key={index}
+							className={cn(
+								"flex-1 h-1.5 rounded-sm",
+								isCompleted
+									? "bg-violet-600"
+									: "bg-white shadow-[inset_0px_2px_1px_0px_rgba(0,0,0,0.07)] border border-stone-300",
+							)}
+						/>
+					);
+				})}
+			</div>
 			{/* Navigation buttons */}
 			<div className="flex items-center gap-1.5 flex-shrink-0">
 				<Button
@@ -55,7 +73,7 @@ export const OnboardingSteps = ({
 					onClick={onBack}
 					disabled={backDisabled}
 					size="sm"
-					className="min-w-12 px-2 text-xs"
+					className="min-w-24 px-2 text-xs"
 				>
 					{backText}
 				</Button>
@@ -64,7 +82,7 @@ export const OnboardingSteps = ({
 					onClick={currentStep === totalSteps ? onComplete : onNext}
 					disabled={nextDisabled}
 					size="sm"
-					className="min-w-12 px-2 text-xs"
+					className="min-w-24 px-2 text-xs"
 				>
 					{nextText}
 				</Button>
