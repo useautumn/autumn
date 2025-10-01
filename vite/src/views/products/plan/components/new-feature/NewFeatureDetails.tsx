@@ -2,6 +2,7 @@ import type { CreateFeature } from "@autumn/shared";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
+import { useAutoSlug } from "@/hooks/common/useAutoSlug";
 
 export function NewFeatureDetails({
 	feature,
@@ -10,6 +11,13 @@ export function NewFeatureDetails({
 	feature: CreateFeature;
 	setFeature: (feature: CreateFeature) => void;
 }) {
+	const { setSource, setTarget } = useAutoSlug({
+		state: feature,
+		setState: setFeature as (feature: CreateFeature) => void,
+		sourceKey: "name",
+		targetKey: "id",
+	});
+
 	if (feature)
 		return (
 			<SheetSection title="Feature Details">
@@ -20,9 +28,7 @@ export function NewFeatureDetails({
 							<Input
 								placeholder="eg. Messages"
 								value={feature.name}
-								onChange={(e) =>
-									setFeature({ ...feature, name: e.target.value })
-								}
+								onChange={(e) => setSource(e.target.value)}
 							/>
 						</div>
 
@@ -31,7 +37,7 @@ export function NewFeatureDetails({
 							<Input
 								placeholder="eg. messages"
 								value={feature.id}
-								onChange={(e) => setFeature({ ...feature, id: e.target.value })}
+								onChange={(e) => setTarget(e.target.value)}
 							/>
 						</div>
 					</div>
