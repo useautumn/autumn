@@ -45,7 +45,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
 						idOrInternalId: productId,
 						orgId,
 						env,
-						version: version ? parseInt(version) : undefined,
+						version: version ? parseInt(version, 10) : undefined,
 						allowNotFound: upsert === "true",
 					}),
 					RewardProgramService.getByProductId({
@@ -170,7 +170,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
 			// New full product
 			const newFullProduct = await ProductService.getFull({
 				db,
-				idOrInternalId: fullProduct.id,
+				idOrInternalId: fullProduct.internal_id,
 				orgId,
 				env,
 			});
@@ -212,7 +212,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
 				jobName: JobName.RewardMigration,
 				payload: {
 					oldPrices: fullProduct.prices,
-					productId: fullProduct.id,
+					productId: fullProduct.internal_id,
 					orgId: org.id,
 					env,
 				},

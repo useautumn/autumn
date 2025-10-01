@@ -18,14 +18,13 @@ export const useFeatureNavigation = () => {
 	// Update selected index when editing state changes or items change
 	useEffect(() => {
 		if (editingState.id && filteredItems.length > 0) {
-			const currentIndex = filteredItems.findIndex(
-				(item: ProductItem) => {
-					// Find the actual index in the product items array
-					const actualIndex = product?.items?.findIndex((i: ProductItem) => i === item) ?? 0;
-					const itemId = getItemId({ item, itemIndex: actualIndex });
-					return itemId === editingState.id;
-				},
-			);
+			const currentIndex = filteredItems.findIndex((item: ProductItem) => {
+				// Find the actual index in the product items array
+				const actualIndex =
+					product?.items?.findIndex((i: ProductItem) => i === item) ?? 0;
+				const itemId = getItemId({ item, itemIndex: actualIndex });
+				return itemId === editingState.id;
+			});
 			if (currentIndex !== -1) {
 				setSelectedIndex(currentIndex);
 			}
@@ -56,7 +55,9 @@ export const useFeatureNavigation = () => {
 			const item = filteredItems[clampedIndex];
 			if (item) {
 				// Find the actual index in the product items array
-				const actualIndex = product?.items?.findIndex((i: ProductItem) => i === item) ?? clampedIndex;
+				const actualIndex =
+					product?.items?.findIndex((i: ProductItem) => i === item) ??
+					clampedIndex;
 				const itemId = getItemId({ item, itemIndex: actualIndex });
 				setEditingState({ type: "feature", id: itemId });
 				setSheet("edit-feature");
@@ -89,7 +90,9 @@ export const useFeatureNavigation = () => {
 
 	const addNewFeature = useCallback(() => {
 		// Trigger the add feature popover by clicking the button
-		const addFeatureButton = document.querySelector('[aria-label="Add new feature"]');
+		const addFeatureButton = document.querySelector(
+			'[aria-label="Add new feature"]',
+		);
 		if (addFeatureButton) {
 			(addFeatureButton as HTMLElement).click();
 		}

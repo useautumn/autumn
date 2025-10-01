@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { ArrowLeftIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
@@ -38,18 +39,62 @@ export default function OnboardingContent() {
 	const { refetch } = useFeaturesQuery();
 	const { products, refetch: refetchProducts } = useProductsQuery();
 
-	// Custom hooks for clean separation of concerns
-	const { baseProduct, setBaseProduct, feature, setFeature } =
-		useOnboardingState();
+	const {
+		baseProduct,
+		setBaseProduct: originalSetBaseProduct,
+		feature,
+		setFeature,
+		productCreatedRef,
+		featureCreatedRef,
+	} = useOnboardingState();
 
-	// Use usePlanData for product management and diffing
+	// Wrap setBaseProduct to log changes
+	const setBaseProduct = (newProduct: any) => {
+		console.log("[OnboardingView3] setBaseProduct called with:", {
+			id: newProduct?.id,
+			items: newProduct?.items?.length || 0,
+		});
+		originalSetBaseProduct(newProduct);
+	};
+
+	// HYBRID APPROACH: Use React Query when we have a product ID (Steps 2-4)
+	const hasProductId = Boolean(baseProduct?.id && baseProduct.id !== "");
+
+	const productQueryFetcher = async () => {
+		if (!hasProductId) return null;
+		const response = await axiosInstance.get(
+			`/products/${baseProduct.id}/data2`,
+		);
+		return response.data;
+	};
+
+	const { data: queryData, refetch: refetchProduct } = useQuery({
+		queryKey: ["onboarding-product", baseProduct?.id],
+		queryFn: productQueryFetcher,
+		enabled: hasProductId,
+	});
+
+	// Choose data source: React Query (Steps 2-4) or custom state (Step 1)
+	const originalProduct = hasProductId ? queryData?.product : baseProduct;
+
+	console.log("[OnboardingView3] Data source:", {
+		hasProductId,
+		usingQuery: hasProductId,
+		originalProductId: originalProduct?.id,
+		baseProductId: baseProduct?.id,
+	});
+
 	const { product, setProduct, diff } = usePlanData({
-		originalProduct: baseProduct,
+		originalProduct,
 	});
 
 	const { step, pushStep, popStep, validateStep } = useOnboardingSteps();
 	const { createProduct, createFeature, createProductItem } =
-		useOnboardingActions(axiosInstance);
+		useOnboardingActions({
+			axiosInstance,
+			productCreatedRef,
+			featureCreatedRef,
+		});
 
 	const [sheet, setSheet] = useState<string | null>(null);
 	const [editingState, setEditingState] = useState<{
@@ -58,7 +103,6 @@ export default function OnboardingContent() {
 	}>({ type: null, id: null });
 	const [selectedProductId, setSelectedProductId] = useState<string>("");
 
-	// Set selected product to the current product when it changes
 	useMemo(() => {
 		if (product?.id && selectedProductId !== product.id) {
 			setSelectedProductId(product.id);
@@ -89,12 +133,30 @@ export default function OnboardingContent() {
 			const newItem = createProductItem(createdFeature);
 			setFeature(createdFeature);
 
-			// Add item to product so user can see it live in step 3
+			// Add or update item in product
 			if (product && "items" in product) {
-				setProduct({
-					...product,
-					items: [...(product.items || []), newItem],
-				});
+				const existingItems = product.items || [];
+
+				// Check if we already have a feature item (from previous forward navigation)
+				const hasFeatureItem = existingItems.length > 0;
+
+				if (hasFeatureItem) {
+					// Update existing item's feature_id to match the updated feature
+					setProduct({
+						...product,
+						items: existingItems.map((item, index) =>
+							index === existingItems.length - 1
+								? { ...item, feature_id: createdFeature.id }
+								: item,
+						),
+					});
+				} else {
+					// First time: add new item
+					setProduct({
+						...product,
+						items: [...existingItems, newItem],
+					});
+				}
 			}
 		}
 
@@ -233,6 +295,26 @@ export default function OnboardingContent() {
 		}
 	};
 
+	// Create a unified refetch function for SaveChangesBar
+	const handleRefetch = async () => {
+		if (hasProductId) {
+			// Use React Query refetch for Steps 2-4
+			await refetchProduct();
+		} else {
+			// For Step 1, fetch the complete product manually
+			if (product?.id) {
+				try {
+					const response = await axiosInstance.get(
+						`/products/${product.id}/data2`,
+					);
+					setBaseProduct(response.data.product);
+				} catch (error) {
+					console.error("Failed to refetch product:", error);
+				}
+			}
+		}
+	};
+
 	return (
 		<ProductContext.Provider
 			value={{
@@ -246,6 +328,7 @@ export default function OnboardingContent() {
 				setSheet,
 				editingState,
 				setEditingState,
+				refetch: handleRefetch,
 			}}
 		>
 			<div className="relative w-full h-full flex bg-[#EEEEEE]">
@@ -268,7 +351,11 @@ export default function OnboardingContent() {
 					{(step === OnboardingStep.FeatureConfiguration ||
 						step === OnboardingStep.Playground) && (
 						<div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">
-							<SaveChangesBar isOnboarding={true} />
+							<SaveChangesBar
+								isOnboarding={true}
+								originalProduct={baseProduct as any}
+								setOriginalProduct={setBaseProduct}
+							/>
 						</div>
 					)}
 				</div>
