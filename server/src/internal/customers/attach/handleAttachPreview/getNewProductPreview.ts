@@ -66,7 +66,6 @@ const getNextCycleItems = async ({
 	const items = await getItemsForNewProduct({
 		newProduct,
 		attachParams,
-		now: attachParams.now,
 		logger,
 		withPrepaid,
 		// anchor,
@@ -123,7 +122,6 @@ export const getNewProductPreview = async ({
 	const items = await getItemsForNewProduct({
 		newProduct,
 		attachParams,
-		now: attachParams.now,
 		freeTrial: attachParams.freeTrial,
 		anchor,
 		logger,

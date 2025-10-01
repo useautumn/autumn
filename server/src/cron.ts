@@ -1,15 +1,12 @@
-import dotenv from "dotenv";
-import {
-	CustomerEntitlement,
-	FullCusEntWithProduct,
-	ResetCusEnt,
-} from "@autumn/shared";
-import { CusEntService } from "./internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-import { format } from "date-fns";
-import { CronJob } from "cron";
+import type { CustomerEntitlement, ResetCusEnt } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
-import { initDrizzle } from "./db/initDrizzle.js";
+import { CronJob } from "cron";
+import { format } from "date-fns";
+import dotenv from "dotenv";
 import { resetCustomerEntitlement } from "./cron/cronUtils.js";
+import { runProductCron } from "./cron/productCron/runProductCron.js";
+import { initDrizzle } from "./db/initDrizzle.js";
+import { CusEntService } from "./internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { OrgService } from "./internal/orgs/OrgService.js";
 import { notNullish } from "./utils/genUtils.js";
 
@@ -45,9 +42,9 @@ export const cronTask = async () => {
 				);
 			}
 
-			let results = await Promise.all(batchResets);
+			const results = await Promise.all(batchResets);
 
-			let toUpsert = results.filter(notNullish);
+			const toUpsert = results.filter(notNullish);
 			await CusEntService.upsert({
 				db,
 				data: toUpsert as CustomerEntitlement[],
@@ -68,17 +65,19 @@ export const cronTask = async () => {
 	// await client.end();
 };
 
-const job = new CronJob(
+const main = async () => {
+	await Promise.all([cronTask(), runProductCron()]);
+};
+
+new CronJob(
 	"* * * * *", // Run every minute
-	function () {
-		cronTask();
-	},
+	main,
 	null, // onComplete
 	true, // start immediately
 	"UTC", // timezone (adjust as needed)
 );
 
-cronTask();
+main();
 
 process.on("SIGTERM", async () => {
 	console.log("Received SIGTERM signal, closing database connection...");

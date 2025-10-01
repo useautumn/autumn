@@ -1,19 +1,19 @@
-import chalk from "chalk";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import { expect } from "chai";
+import chalk from "chalk";
 import { setupBefore } from "tests/before.js";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { products } from "tests/global.js";
 import { compareMainProduct } from "tests/utils/compare.js";
-import { completeCheckoutForm } from "tests/utils/stripeUtils.js";
 import { timeout } from "tests/utils/genUtils.js";
+import { completeCheckoutForm } from "tests/utils/stripeUtils.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
 // UNCOMMENT FROM HERE
 const testCase = "basic2";
 describe(`${chalk.yellowBright("basic2: Testing attach pro")}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt();
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt();
 	let db, org, env;
 
 	before(async function () {
@@ -33,7 +33,7 @@ describe(`${chalk.yellowBright("basic2: Testing attach pro")}`, () => {
 		});
 	});
 
-	it("should attach pro through checkout", async function () {
+	it("should attach pro through checkout", async () => {
 		const { checkout_url } = await autumn.attach({
 			customer_id: customerId,
 			product_id: products.pro.id,
@@ -43,7 +43,7 @@ describe(`${chalk.yellowBright("basic2: Testing attach pro")}`, () => {
 		await timeout(12000);
 	});
 
-	it("should have correct product & entitlements", async function () {
+	it("should have correct product & entitlements", async () => {
 		const res = await AutumnCli.getCustomer(customerId);
 		compareMainProduct({
 			sent: products.pro,
@@ -52,7 +52,7 @@ describe(`${chalk.yellowBright("basic2: Testing attach pro")}`, () => {
 		expect(res.invoices.length).to.be.greaterThan(0);
 	});
 
-	it("should have correct result when calling /check", async function () {
+	it("should have correct result when calling /check", async () => {
 		const proEntitlements = products.pro.entitlements;
 
 		for (const entitlement of Object.values(proEntitlements)) {

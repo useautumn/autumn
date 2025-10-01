@@ -1,8 +1,7 @@
-import { BillingInterval, IntervalConfig } from "@autumn/shared";
+import { BillingInterval, type IntervalConfig } from "@autumn/shared";
+import { UTCDate } from "@date-fns/utc";
 import {
-	addMinutes,
 	addMonths,
-	addSeconds,
 	addWeeks,
 	addYears,
 	differenceInSeconds,
@@ -20,7 +19,6 @@ import {
 	subWeeks,
 	subYears,
 } from "date-fns";
-import { UTCDate } from "@date-fns/utc";
 import { formatUnixToDateTime } from "@/utils/genUtils.js";
 
 export const subtractBillingIntervalUnix = ({
@@ -192,13 +190,13 @@ export const getAlignedIntervalUnix = ({
 		console.log("--------------------------------");
 	}
 
-	let anchorAndNaturalDiff = differenceInSeconds(
+	const anchorAndNaturalDiff = differenceInSeconds(
 		naturalBillingDate,
 		nextCycleAnchorUnix,
 	);
 
 	// For insurance, also means you can't set billing cycle anchor to a minute in the future...
-	let anchorAndNowDiff = Math.abs(
+	const anchorAndNowDiff = Math.abs(
 		differenceInSeconds(now, nextCycleAnchorUnix),
 	);
 
@@ -254,8 +252,9 @@ export const subtractFromUnixTillAligned = ({
 	return getTime(alignedDate);
 };
 
-// Subtracts an interval from a period end, preserving end-of-month anchoring
-// e.g. 30 Sep -> 31 Aug (not 30 Aug)
+// Subtracts an interval from a period end, preserving anchor-based end-of-month behavior
+// Uses the anchor date (unixTimestamp) to determine if end-of-month logic should apply
+// e.g. Sep 30 anchor -> Aug 30, Jul 30, Feb 28/29 (follows Stripe behavior)
 export const subtractIntervalForProration = ({
 	unixTimestamp,
 	interval,
@@ -265,68 +264,64 @@ export const subtractIntervalForProration = ({
 	interval: BillingInterval;
 	intervalCount?: number;
 }) => {
-	const endDate = new UTCDate(unixTimestamp);
-
-	const isEndOfMonth = () => {
-		const lastDay = new UTCDate(
-			endDate.getFullYear(),
-			endDate.getMonth() + 1,
-			0,
-		).getDate();
-		return getDate(endDate) === lastDay;
-	};
+	const anchorDate = new UTCDate(unixTimestamp);
+	const anchorDay = getDate(anchorDate);
 
 	const preserveTime = (d: UTCDate) => {
 		let preserved = new UTCDate(d.getTime());
-		preserved = new UTCDate(setHours(preserved, getHours(endDate)).getTime());
 		preserved = new UTCDate(
-			setMinutes(preserved, getMinutes(endDate)).getTime(),
+			setHours(preserved, getHours(anchorDate)).getTime(),
 		);
 		preserved = new UTCDate(
-			setSeconds(preserved, getSeconds(endDate)).getTime(),
+			setMinutes(preserved, getMinutes(anchorDate)).getTime(),
+		);
+		preserved = new UTCDate(
+			setSeconds(preserved, getSeconds(anchorDate)).getTime(),
 		);
 		return preserved;
 	};
 
-	const setToLastDayOfMonth = (d: UTCDate) => {
-		const last = new UTCDate(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-		return new UTCDate(setDate(d, last).getTime());
+	const setToAnchorDayOrEndOfMonth = (d: UTCDate) => {
+		const lastDayOfTargetMonth = new UTCDate(
+			d.getFullYear(),
+			d.getMonth() + 1,
+			0,
+		).getDate();
+
+		// If the anchor day doesn't exist in the target month, go to the last day of that month
+		// This follows Stripe's behavior: Sep 30 -> Feb 28, Jul 31 -> Feb 28, etc.
+		const targetDay = Math.min(anchorDay, lastDayOfTargetMonth);
+		return new UTCDate(setDate(d, targetDay).getTime());
 	};
 
 	switch (interval) {
 		case BillingInterval.Week: {
-			const sub = new UTCDate(subWeeks(endDate, 1 * intervalCount).getTime());
+			const sub = new UTCDate(
+				subWeeks(anchorDate, 1 * intervalCount).getTime(),
+			);
 			return getTime(sub);
 		}
 		case BillingInterval.Month: {
-			let sub = new UTCDate(subMonths(endDate, 1 * intervalCount).getTime());
-			if (isEndOfMonth()) {
-				sub = setToLastDayOfMonth(sub);
-			}
+			let sub = new UTCDate(subMonths(anchorDate, 1 * intervalCount).getTime());
+			sub = setToAnchorDayOrEndOfMonth(sub);
 			sub = preserveTime(sub);
 			return getTime(sub);
 		}
 		case BillingInterval.Quarter: {
-			let sub = new UTCDate(subMonths(endDate, 3 * intervalCount).getTime());
-			if (isEndOfMonth()) {
-				sub = setToLastDayOfMonth(sub);
-			}
+			let sub = new UTCDate(subMonths(anchorDate, 3 * intervalCount).getTime());
+			sub = setToAnchorDayOrEndOfMonth(sub);
 			sub = preserveTime(sub);
 			return getTime(sub);
 		}
 		case BillingInterval.SemiAnnual: {
-			let sub = new UTCDate(subMonths(endDate, 6 * intervalCount).getTime());
-			if (isEndOfMonth()) {
-				sub = setToLastDayOfMonth(sub);
-			}
+			let sub = new UTCDate(subMonths(anchorDate, 6 * intervalCount).getTime());
+			sub = setToAnchorDayOrEndOfMonth(sub);
 			sub = preserveTime(sub);
 			return getTime(sub);
 		}
 		case BillingInterval.Year: {
-			let sub = new UTCDate(subYears(endDate, 1 * intervalCount).getTime());
-			if (isEndOfMonth()) {
-				sub = setToLastDayOfMonth(sub);
-			}
+			let sub = new UTCDate(subYears(anchorDate, 1 * intervalCount).getTime());
+			sub = setToAnchorDayOrEndOfMonth(sub);
 			sub = preserveTime(sub);
 			return getTime(sub);
 		}
@@ -335,8 +330,9 @@ export const subtractIntervalForProration = ({
 	}
 };
 
-// Adds an interval to a period start, preserving end-of-month anchoring
-// e.g. 30 Sep -> 31 Oct (not 30 Oct)
+// Adds an interval to a period start, preserving anchor-based end-of-month behavior
+// Uses the anchor date (unixTimestamp) to determine if end-of-month logic should apply
+// e.g. Sep 30 anchor -> Oct 30, Nov 30, Feb 28/29 (follows Stripe behavior)
 export const addIntervalForProration = ({
 	unixTimestamp,
 	intervalConfig,
@@ -347,68 +343,64 @@ export const addIntervalForProration = ({
 	if (!intervalConfig) return unixTimestamp;
 	let { interval, intervalCount } = intervalConfig;
 	intervalCount = intervalCount ?? 1;
-	const startDate = new UTCDate(unixTimestamp);
-
-	const isEndOfMonth = () => {
-		const lastDay = new UTCDate(
-			startDate.getFullYear(),
-			startDate.getMonth() + 1,
-			0,
-		).getDate();
-		return getDate(startDate) === lastDay;
-	};
+	const anchorDate = new UTCDate(unixTimestamp);
+	const anchorDay = getDate(anchorDate);
 
 	const preserveTime = (d: UTCDate) => {
 		let preserved = new UTCDate(d.getTime());
-		preserved = new UTCDate(setHours(preserved, getHours(startDate)).getTime());
 		preserved = new UTCDate(
-			setMinutes(preserved, getMinutes(startDate)).getTime(),
+			setHours(preserved, getHours(anchorDate)).getTime(),
 		);
 		preserved = new UTCDate(
-			setSeconds(preserved, getSeconds(startDate)).getTime(),
+			setMinutes(preserved, getMinutes(anchorDate)).getTime(),
+		);
+		preserved = new UTCDate(
+			setSeconds(preserved, getSeconds(anchorDate)).getTime(),
 		);
 		return preserved;
 	};
 
-	const setToLastDayOfMonth = (d: UTCDate) => {
-		const last = new UTCDate(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-		return new UTCDate(setDate(d, last).getTime());
+	const setToAnchorDayOrEndOfMonth = (d: UTCDate) => {
+		const lastDayOfTargetMonth = new UTCDate(
+			d.getFullYear(),
+			d.getMonth() + 1,
+			0,
+		).getDate();
+
+		// If the anchor day doesn't exist in the target month, go to the last day of that month
+		// This follows Stripe's behavior: Sep 30 -> Feb 28, Jul 31 -> Feb 28, etc.
+		const targetDay = Math.min(anchorDay, lastDayOfTargetMonth);
+		return new UTCDate(setDate(d, targetDay).getTime());
 	};
 
 	switch (interval) {
 		case BillingInterval.Week: {
-			const add = new UTCDate(addWeeks(startDate, 1 * intervalCount).getTime());
+			const add = new UTCDate(
+				addWeeks(anchorDate, 1 * intervalCount).getTime(),
+			);
 			return getTime(add);
 		}
 		case BillingInterval.Month: {
-			let add = new UTCDate(addMonths(startDate, 1 * intervalCount).getTime());
-			if (isEndOfMonth()) {
-				add = setToLastDayOfMonth(add);
-			}
+			let add = new UTCDate(addMonths(anchorDate, 1 * intervalCount).getTime());
+			add = setToAnchorDayOrEndOfMonth(add);
 			add = preserveTime(add);
 			return getTime(add);
 		}
 		case BillingInterval.Quarter: {
-			let add = new UTCDate(addMonths(startDate, 3 * intervalCount).getTime());
-			if (isEndOfMonth()) {
-				add = setToLastDayOfMonth(add);
-			}
+			let add = new UTCDate(addMonths(anchorDate, 3 * intervalCount).getTime());
+			add = setToAnchorDayOrEndOfMonth(add);
 			add = preserveTime(add);
 			return getTime(add);
 		}
 		case BillingInterval.SemiAnnual: {
-			let add = new UTCDate(addMonths(startDate, 6 * intervalCount).getTime());
-			if (isEndOfMonth()) {
-				add = setToLastDayOfMonth(add);
-			}
+			let add = new UTCDate(addMonths(anchorDate, 6 * intervalCount).getTime());
+			add = setToAnchorDayOrEndOfMonth(add);
 			add = preserveTime(add);
 			return getTime(add);
 		}
 		case BillingInterval.Year: {
-			let add = new UTCDate(addYears(startDate, 1 * intervalCount).getTime());
-			if (isEndOfMonth()) {
-				add = setToLastDayOfMonth(add);
-			}
+			let add = new UTCDate(addYears(anchorDate, 1 * intervalCount).getTime());
+			add = setToAnchorDayOrEndOfMonth(add);
 			add = preserveTime(add);
 			return getTime(add);
 		}

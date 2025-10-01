@@ -43,7 +43,7 @@ export const validateMeteredConfig = (config: MeteredConfig) => {
 		});
 	}
 
-	if (config.aggregate?.type == AggregateType.Count) {
+	if (config.aggregate?.type === AggregateType.Count) {
 		newConfig.aggregate = {
 			type: AggregateType.Count,
 			property: null,
@@ -70,7 +70,7 @@ export const validateMeteredConfig = (config: MeteredConfig) => {
 
 export const validateCreditSystem = (config: CreditSystemConfig) => {
 	const schema = config.schema;
-	if (!schema || schema.length == 0) {
+	if (!schema || schema.length === 0) {
 		throw new RecaseError({
 			message: `At least one metered feature is required for credit system`,
 			code: ErrCode.InvalidFeature,
@@ -140,14 +140,15 @@ export const getObjectsUsingFeature = async ({
 	});
 
 	const entitlements = allEnts.filter(
-		(entitlement) => entitlement.internal_feature_id == feature.internal_id,
+		(entitlement) => entitlement.internal_feature_id === feature.internal_id,
 	);
 	const linkedEntitlements = allEnts.filter(
-		(entitlement) => entitlement.entity_feature_id == feature.id,
+		(entitlement) => entitlement.entity_feature_id === feature.id,
 	);
 
 	const prices = allPrices.filter(
-		(price) => (price.config as any).internal_feature_id == feature.internal_id,
+		(price) =>
+			(price.config as any).internal_feature_id === feature.internal_id,
 	);
 
 	return { entitlements, prices, creditSystems, linkedEntitlements };
@@ -193,10 +194,10 @@ export const runSaveFeatureDisplayTask = async ({
 };
 
 export const getCusFeatureType = ({ feature }: { feature: Feature }) => {
-	if (feature.type == FeatureType.Boolean) {
+	if (feature.type === FeatureType.Boolean) {
 		return ProductItemFeatureType.Static;
-	} else if (feature.type == FeatureType.Metered) {
-		if (feature.config.usage_type == FeatureUsageType.Single) {
+	} else if (feature.type === FeatureType.Metered) {
+		if (feature.config.usage_type === FeatureUsageType.Single) {
 			return ProductItemFeatureType.SingleUse;
 		} else {
 			return ProductItemFeatureType.ContinuousUse;
@@ -207,7 +208,7 @@ export const getCusFeatureType = ({ feature }: { feature: Feature }) => {
 };
 
 export const isCreditSystem = ({ feature }: { feature: Feature }) => {
-	return feature.type == FeatureType.CreditSystem;
+	return feature.type === FeatureType.CreditSystem;
 };
 
 export const isPaidContinuousUse = ({
@@ -218,7 +219,7 @@ export const isPaidContinuousUse = ({
 	fullCus: FullCustomer;
 }) => {
 	const isContinuous =
-		feature.config?.usage_type == FeatureUsageType.Continuous;
+		feature.config?.usage_type === FeatureUsageType.Continuous;
 
 	if (!isContinuous) {
 		return false;
@@ -231,9 +232,11 @@ export const isPaidContinuousUse = ({
 
 	const hasPaid = cusPrices.some((cp) => {
 		const config = cp.price.config as UsagePriceConfig;
-		if (config.internal_feature_id == feature.internal_id) {
+		if (config.internal_feature_id === feature.internal_id) {
 			return true;
 		}
+
+		return false;
 	});
 
 	return hasPaid;

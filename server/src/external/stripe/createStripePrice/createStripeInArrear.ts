@@ -1,4 +1,5 @@
 import {
+	atmnToStripeAmountDecimal,
 	type Entitlement,
 	type EntitlementWithFeature,
 	ErrCode,
@@ -6,6 +7,7 @@ import {
 	type Organization,
 	type Price,
 	type Product,
+	priceToEnt,
 	TierInfinite,
 	type UsagePriceConfig,
 } from "@autumn/shared";
@@ -14,7 +16,6 @@ import { StatusCodes } from "http-status-codes";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
-import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { billingIntervalToStripe } from "../stripePriceUtils.js";
 
@@ -52,7 +53,7 @@ export const searchStripeMeter = async ({
 	logger.info(`Stripe meter list took ${end - start}ms`);
 
 	const stripeMeter = allStripeMeters.find(
-		(m) => m.event_name == eventName || m.id == meterId,
+		(m) => m.event_name === eventName || m.id === meterId,
 	);
 
 	return stripeMeter;
@@ -73,7 +74,6 @@ export const getStripeMeter = async ({
 }) => {
 	const config = price.config as UsagePriceConfig;
 
-	let createNew = false;
 	try {
 		const stripeMeter = await searchStripeMeter({
 			stripeCli,
@@ -82,17 +82,14 @@ export const getStripeMeter = async ({
 			logger,
 		});
 
-		if (!stripeMeter) {
-			createNew = true;
-		} else {
+		if (stripeMeter) {
 			logger.info(
 				`✅ Found existing meter for ${product.name} - ${feature!.name}`,
 			);
 			return stripeMeter;
 		}
-	} catch (error) {
-		createNew = true;
-	}
+	} catch (_error) {}
+
 	const meter = await stripeCli.billing.meters.create({
 		display_name: `${product.name} - ${feature!.name}`,
 		event_name: price.id!,
@@ -104,10 +101,15 @@ export const getStripeMeter = async ({
 };
 
 // IN ARREAR
-export const priceToInArrearTiers = (
-	price: Price,
-	entitlement: Entitlement,
-) => {
+export const priceToInArrearTiers = ({
+	price,
+	entitlement,
+	org,
+}: {
+	price: Price;
+	entitlement: Entitlement;
+	org: Organization;
+}) => {
 	const usageConfig = structuredClone(price.config) as UsagePriceConfig;
 	const tiers: any[] = [];
 	if (entitlement.allowance) {
@@ -118,7 +120,7 @@ export const priceToInArrearTiers = (
 
 		for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
 			const tier = usageConfig.usage_tiers[i];
-			if (tier.to != -1 && tier.to != TierInfinite) {
+			if (tier.to !== -1 && tier.to !== TierInfinite) {
 				usageConfig.usage_tiers[i].to = (tier.to || 0) + entitlement.allowance;
 			}
 		}
@@ -126,15 +128,18 @@ export const priceToInArrearTiers = (
 
 	for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
 		const tier = usageConfig.usage_tiers[i];
-		const amount = new Decimal(tier.amount)
-			.div(usageConfig.billing_units ?? 1)
-			.mul(100)
-			.toDecimalPlaces(10)
-			.toString();
+		const atmnUnitAmount = new Decimal(tier.amount).div(
+			usageConfig.billing_units ?? 1,
+		);
+
+		const stripeUnitAmountDecimal = atmnToStripeAmountDecimal({
+			amount: atmnUnitAmount,
+			currency: org.default_currency || undefined,
+		});
 
 		tiers.push({
-			unit_amount_decimal: amount,
-			up_to: tier.to == -1 ? "inf" : tier.to,
+			unit_amount_decimal: stripeUnitAmountDecimal,
+			up_to: tier.to === -1 ? "inf" : tier.to,
 		});
 	}
 
@@ -169,19 +174,20 @@ export const createStripeInArrearPrice = async ({
 	const config = price.config as UsagePriceConfig;
 
 	// 1. Create meter
-	const relatedEnt = getPriceEntitlement(price, entitlements);
+	const relatedEnt = priceToEnt({
+		price,
+		entitlements,
+	});
 	const feature = relatedEnt?.feature;
-
-	console.log("Price usage tiers:", price.config.usage_tiers);
 
 	// 1. If internal entity ID and not curStripe product, create product
 	if (internalEntityId && !useCheckout) {
 		if (!curStripeProduct) {
 			logger.info(
-				`Creating stripe in arrear product for ${relatedEnt.feature.name} (internal entity ID exists!)`,
+				`Creating stripe in arrear product for ${relatedEnt?.feature.name} (internal entity ID exists!)`,
 			);
 			const stripeProduct = await stripeCli.products.create({
-				name: `${product.name} - ${feature?.name}`,
+				name: `${product.name} - ${feature!.name}`,
 			});
 			config.stripe_product_id = stripeProduct.id;
 
@@ -200,7 +206,7 @@ export const createStripeInArrearPrice = async ({
 	}
 
 	logger.info(
-		`Creating stripe in arrear price for ${relatedEnt.feature.name} (no internal entity ID)`,
+		`Creating stripe in arrear price for ${relatedEnt?.feature.name} (no internal entity ID)`,
 	);
 
 	if (!feature) {
@@ -222,10 +228,11 @@ export const createStripeInArrearPrice = async ({
 
 	config.stripe_meter_id = meter.id;
 
-	const tiers = priceToInArrearTiers(
+	const tiers = priceToInArrearTiers({
 		price,
-		getPriceEntitlement(price, entitlements),
-	);
+		entitlement: relatedEnt,
+		org,
+	});
 
 	let priceAmountData = {};
 	if (tiers.length === 1) {
