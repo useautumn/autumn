@@ -18,15 +18,12 @@ import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 
 import type { ExtendedRequest } from "@/utils/models/Request.js";
-
+import { getEarliestPeriodEnd } from "../stripeSubUtils/convertSubUtils.js";
 import { createStripeCli } from "../utils.js";
-
+import { getOptionsFromCheckoutSession } from "./handleCheckoutCompleted/getOptionsFromCheckout.js";
 import { handleCheckoutSub } from "./handleCheckoutCompleted/handleCheckoutSub.js";
 import { handleRemainingSets } from "./handleCheckoutCompleted/handleRemainingSets.js";
-
 import { handleSetupCheckout } from "./handleCheckoutCompleted/handleSetupCheckout.js";
-import { getOptionsFromCheckoutSession } from "./handleCheckoutCompleted/getOptionsFromCheckout.js";
-import { getEarliestPeriodEnd } from "../stripeSubUtils/convertSubUtils.js";
 
 export const handleCheckoutSessionCompleted = async ({
 	req,
@@ -59,12 +56,12 @@ export const handleCheckoutSessionCompleted = async ({
 	attachParams.req = req;
 	attachParams.stripeCli = stripeCli;
 
-	if (attachParams.org.id != org.id) {
+	if (attachParams.org.id !== org.id) {
 		console.log("checkout.completed: org doesn't match, skipping");
 		return;
 	}
 
-	if (attachParams.customer.env != env) {
+	if (attachParams.customer.env !== env) {
 		console.log("checkout.completed: environments don't match, skipping");
 		return;
 	}

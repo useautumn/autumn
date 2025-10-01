@@ -1,5 +1,8 @@
-import { Entitlement } from "../../models/productModels/entModels/entModels.js";
-import { Price } from "../../models/productModels/priceModels/priceModels.js";
+import type {
+	Entitlement,
+	EntitlementWithFeature,
+} from "../../models/productModels/entModels/entModels.js";
+import type { Price } from "../../models/productModels/priceModels/priceModels.js";
 
 // export const getEntRelatedPrice = (
 //   entitlement: Entitlement,
@@ -43,7 +46,7 @@ export const priceToEnt = ({
 	entitlements,
 }: {
 	price: Price;
-	entitlements: Entitlement[];
+	entitlements: EntitlementWithFeature[];
 }) => {
 	return entitlements.find(
 		(ent) =>
