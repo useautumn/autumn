@@ -1,5 +1,4 @@
-import { ErrCode } from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
+import { ErrCode, ProductNotFoundError } from "@autumn/shared";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
@@ -39,11 +38,7 @@ export const handleGetProduct = async (req: any, res: any) =>
 			]);
 
 			if (!product) {
-				throw new RecaseError({
-					message: `Product ${productId} not found`,
-					code: ErrCode.ProductNotFound,
-					statusCode: StatusCodes.NOT_FOUND,
-				});
+				throw new ProductNotFoundError({ productId: productId });
 			}
 
 			const schemaVersionInt = schemaVersion ? parseInt(schemaVersion) : 2;

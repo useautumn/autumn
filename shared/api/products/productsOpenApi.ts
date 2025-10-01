@@ -14,9 +14,7 @@ export const productOps = {
 			responses: {
 				"200": {
 					description: "200 OK",
-					content: {
-						"application/json": { schema: APIProductSchema },
-					},
+					content: { "application/json": { schema: APIProductSchema } },
 				},
 			},
 		},

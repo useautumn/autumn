@@ -1,10 +1,7 @@
+import { AutumnError, ProductNotFoundError } from "@autumn/shared";
 import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-
 import { ProductService } from "@/internal/products/ProductService.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { AppEnv, ErrCode } from "@autumn/shared";
 
 export const handleDeleteProduct = (req: any, res: any) =>
 	routeHandler({
@@ -24,14 +21,10 @@ export const handleDeleteProduct = (req: any, res: any) =>
 			});
 
 			if (!product) {
-				throw new RecaseError({
-					message: `Product ${productId} not found`,
-					code: ErrCode.ProductNotFound,
-					statusCode: 404,
-				});
+				throw new ProductNotFoundError({ productId: productId });
 			}
 
-			let [latestCounts, allCounts] = await Promise.all([
+			const [latestCounts, allCounts] = await Promise.all([
 				CusProdReadService.getCounts({
 					db,
 					internalProductId: product.internal_id,
@@ -44,37 +37,15 @@ export const handleDeleteProduct = (req: any, res: any) =>
 				}),
 			]);
 
-			let deleteAllVersions = all_versions === "true";
-			let cusProdCount = deleteAllVersions ? allCounts.all : latestCounts.all;
+			const deleteAllVersions = all_versions === "true";
+			const cusProdCount = deleteAllVersions ? allCounts.all : latestCounts.all;
 
 			if (cusProdCount > 0) {
-				throw new RecaseError({
-					message: "Cannot delete product with customers",
-					code: ErrCode.ProductHasCustomers,
+				throw new AutumnError({
+					message: `Product ${productId} has ${cusProdCount} customers (expired or active) on it and therefore cannot be deleted`,
 					statusCode: 400,
 				});
 			}
-
-			// if (cusProdCount > 0 && env == AppEnv.Sandbox) {
-			//   if (cusProdCount > 100) {
-			//     throw new RecaseError({
-			//       message:
-			//         "Cannot delete this product as it has more than 100 customers on it.",
-			//       code: ErrCode.ProductHasCustomers,
-			//       statusCode: 400,
-			//     });
-			//   }
-
-			//   await CusProductService.deleteByProduct({
-			//     db,
-			//     productId: deleteAllVersions ? productId : undefined,
-			//     internalProductId: deleteAllVersions
-			//       ? undefined
-			//       : product.internal_id,
-			//     orgId,
-			//     env,
-			//   });
-			// }
 
 			// 2. Delete prices, entitlements, and product
 			if (deleteAllVersions) {

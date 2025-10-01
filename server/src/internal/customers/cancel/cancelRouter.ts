@@ -1,11 +1,10 @@
+import { ErrCode, type FullCusProduct } from "@autumn/shared";
+import { Router } from "express";
 import { CusService } from "@/internal/customers/CusService.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { routeHandler } from "@/utils/routerUtils.js";
-import { ErrCode, FullCusProduct } from "@autumn/shared";
-import { Router } from "express";
-import { expireCusProduct } from "../handlers/handleCusProductExpired.js";
-import { RELEVANT_STATUSES } from "../cusProducts/CusProductService.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
+import { routeHandler } from "@/utils/routerUtils.js";
+import { RELEVANT_STATUSES } from "../cusProducts/CusProductService.js";
 import { handleCancelProduct } from "./handleCancelProduct.js";
 
 const cancelRouter: Router = Router();
@@ -16,8 +15,8 @@ cancelRouter.post("", async (req, res) =>
 		res,
 		action: "expire",
 		handler: async (req, res) => {
-			let { db, orgId, env, logtail: logger } = req;
-			let {
+			const { db, orgId, env, logtail: logger } = req;
+			const {
 				customer_id,
 				product_id,
 				entity_id,
@@ -25,10 +24,10 @@ cancelRouter.post("", async (req, res) =>
 				prorate: bodyProrate,
 			} = req.body;
 
-			let expireImmediately = cancel_immediately || false;
-			let prorate = notNullish(bodyProrate) ? bodyProrate : true;
+			const expireImmediately = cancel_immediately || false;
+			const prorate = notNullish(bodyProrate) ? bodyProrate : true;
 
-			let fullCus = await CusService.getFull({
+			const fullCus = await CusService.getFull({
 				db,
 				orgId,
 				idOrInternalId: customer_id,
@@ -46,14 +45,14 @@ cancelRouter.post("", async (req, res) =>
 				});
 			}
 
-			let cusProducts = fullCus.customer_products;
-			let entity = fullCus.entity;
+			const cusProducts = fullCus.customer_products;
+			const entity = fullCus.entity;
 
-			let cusProduct = cusProducts.find(
+			const cusProduct = cusProducts.find(
 				(cusProduct: FullCusProduct) =>
-					cusProduct.product.id == product_id &&
+					cusProduct.product.id === product_id &&
 					(entity
-						? cusProduct.internal_entity_id == entity.internal_id
+						? cusProduct.internal_entity_id === entity.internal_id
 						: nullish(cusProduct.internal_entity_id)),
 			);
 

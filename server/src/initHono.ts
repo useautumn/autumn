@@ -2,9 +2,17 @@ import type { AppEnv, AuthType, Feature, Organization } from "@autumn/shared";
 import type { ClickHouseClient } from "@clickhouse/client";
 import { getRequestListener } from "@hono/node-server";
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import type { DrizzleCli } from "./db/initDrizzle.js";
 import type { Logger } from "./external/logtail/logtailUtils.js";
+import { apiVersionMiddleware } from "./honoMiddlewares/apiVersionMiddleware.js";
+import { baseMiddleware } from "./honoMiddlewares/baseMiddleware.js";
+import { errorMiddleware } from "./honoMiddlewares/errorMiddleware.js";
+import { orgConfigMiddleware } from "./honoMiddlewares/orgConfigMiddleware.js";
+import { secretKeyMiddleware } from "./honoMiddlewares/secretKeyMiddleware.js";
+import { traceMiddleware } from "./honoMiddlewares/traceMiddleware.js";
 import { handleCreateProduct } from "./internal/products/honoProductRouter.js";
+import { auth } from "./utils/auth.js";
 
 type RequestContext = {
 	// Variables
@@ -61,47 +69,45 @@ const ALLOWED_HEADERS = [
 export const createHonoApp = () => {
 	const app = new Hono<HonoEnv>();
 
-	// // CORS configuration (must be before routes)
-	// app.use(
-	// 	"*",
-	// 	cors({
-	// 		origin: ALLOWED_ORIGINS,
-	// 		allowHeaders: ALLOWED_HEADERS,
-	// 		allowMethods: ["POST", "GET", "PUT", "DELETE", "PATCH", "OPTIONS"],
-	// 		exposeHeaders: ["Content-Length"],
-	// 		maxAge: 600,
-	// 		credentials: true,
-	// 	}),
-	// );
+	// CORS configuration (must be before routes)
+	app.use(
+		"*",
+		cors({
+			origin: ALLOWED_ORIGINS,
+			allowHeaders: ALLOWED_HEADERS,
+			allowMethods: ["POST", "GET", "PUT", "DELETE", "PATCH", "OPTIONS"],
+			exposeHeaders: ["Content-Length"],
+			maxAge: 600,
+			credentials: true,
+		}),
+	);
 
-	// // Better Auth handler
-	// app.on(["POST", "GET"], "/api/auth/*", (c) => {
-	// 	return auth.handler(c.req.raw);
-	// });
+	// Better Auth handler
+	app.on(["POST", "GET"], "/api/auth/*", (c) => {
+		return auth.handler(c.req.raw);
+	});
 
-	// // Step 1: Base middleware - sets up ctx (db, logger, etc.)
-	// app.use("*", baseMiddleware);
+	// Step 1: Base middleware - sets up ctx (db, logger, etc.)
+	app.use("*", baseMiddleware);
 
-	// // Step 2: Tracing middleware - handles OpenTelemetry spans
-	// app.use("*", traceMiddleware);
+	// Step 2: Tracing middleware - handles OpenTelemetry spans
+	app.use("*", traceMiddleware);
 
-	// // Step 3: API Version middleware - validates x-api-version header
-	// app.use("/v1/*", apiVersionMiddleware);
+	// Step 3: API Version middleware - validates x-api-version header
+	app.use("/v1/*", apiVersionMiddleware);
 
-	// // Step 4: Auth middleware - verifies secret key and populates auth context
-	// app.use("/v1/*", secretKeyMiddleware);
+	// Step 4: Auth middleware - verifies secret key and populates auth context
+	app.use("/v1/*", secretKeyMiddleware);
 
-	// // Step 5: Org config middleware - allows config overrides via header
-	// app.use("/v1/*", orgConfigMiddleware);
+	// Step 5: Org config middleware - allows config overrides via header
+	app.use("/v1/*", orgConfigMiddleware);
 
 	// Step 6: Add pricing middleware, analytics middleware, etc.
 
 	app.post("/v1/products", handleCreateProduct);
 
-	app.onError((err, c) => {
-		console.error(`Route error ${err.message}`);
-		return c.json({ error: "Internal server error" }, 500);
-	});
+	// Error handler - must be defined after all routes and middleware
+	app.onError(errorMiddleware);
 
 	// Create request listener for integration with Express
 	const requestListener = getRequestListener(app.fetch);

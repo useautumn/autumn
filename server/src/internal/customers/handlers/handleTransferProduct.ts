@@ -1,15 +1,23 @@
-import RecaseError from "@/utils/errorUtils.js";
+import { AttachScenario, ErrCode } from "@autumn/shared";
+import {
+	CusProductAlreadyExistsError,
+	CusProductNotFoundError,
+} from "@shared/api/errors/classes/cusProductErrClasses.js";
 import { z } from "zod";
-import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
+import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
+import { ProductService } from "@/internal/products/ProductService.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { nullish } from "@/utils/genUtils.js";
+import type {
+	ExtendedRequest,
+	ExtendedResponse,
+} from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { CusService } from "../CusService.js";
-import { AttachScenario, ErrCode } from "@autumn/shared";
-import { CusProductService } from "../cusProducts/CusProductService.js";
-import { nullish } from "@/utils/genUtils.js";
-import { handleDecreaseAndTransfer } from "./handleTransferProduct/handleDecreaseAndTransfer.js";
-import { ProductService } from "@/internal/products/ProductService.js";
 import { deleteCusCache } from "../cusCache/updateCachedCus.js";
-import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
+import { CusProductService } from "../cusProducts/CusProductService.js";
+import { handleDecreaseAndTransfer } from "./handleTransferProduct/handleDecreaseAndTransfer.js";
+
 const TransferProductSchema = z.object({
 	from_entity_id: z.string().nullish(),
 	to_entity_id: z.string(),
@@ -43,10 +51,9 @@ export const handleTransferProduct = async (req: any, res: any) =>
 			});
 
 			if (!product) {
-				throw new RecaseError({
-					code: ErrCode.ProductNotFound,
-					message: `Product ${product_id} not found`,
-					statusCode: 404,
+				throw new CusProductNotFoundError({
+					customerId: customer_id,
+					productId: product_id,
 				});
 			}
 
@@ -88,18 +95,17 @@ export const handleTransferProduct = async (req: any, res: any) =>
 			);
 
 			if (toCusProduct) {
-				throw new RecaseError({
-					code: ErrCode.ProductAlreadyExists,
-					message: `Entity ${toEntity.id} already has product ${toCusProduct.product.name}`,
-					statusCode: 400,
+				throw new CusProductAlreadyExistsError({
+					productId: product_id,
+					entityId: toEntity.id,
 				});
 			}
 
 			if (!cusProduct) {
-				throw new RecaseError({
-					code: ErrCode.CusProductNotFound,
-					message: `Product ${product_id} not found for entity ${from_entity_id}`,
-					statusCode: 404,
+				throw new CusProductNotFoundError({
+					customerId: customer_id,
+					productId: product_id,
+					entityId: from_entity_id || undefined,
 				});
 			}
 

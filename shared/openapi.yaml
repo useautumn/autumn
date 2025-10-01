@@ -22,10 +22,9 @@ paths:
                 id:
                   type: string
                   minLength: 1
-                  pattern: ^[a-z0-9]+$
+                  pattern: ^[a-zA-Z0-9_-]+$
                 name:
                   type: string
-                  minLength: 1
                 is_add_on:
                   default: false
                   type: boolean
@@ -33,7 +32,6 @@ paths:
                   default: false
                   type: boolean
                 version:
-                  default: 1
                   type: number
                 group:
                   default: ""
@@ -396,6 +394,24 @@ components:
                 - primary_text
               additionalProperties: false
             - type: "null"
+      additionalProperties: false
+    AutumnError:
+      description: An error that occurred in the API
+      type: object
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+        env:
+          type: string
+          enum:
+            - sandbox
+            - live
+      required:
+        - message
+        - code
+        - env
       additionalProperties: false
   securitySchemes:
     secretKey:
