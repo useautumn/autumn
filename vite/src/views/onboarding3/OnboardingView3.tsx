@@ -1,9 +1,9 @@
+import { AppEnv } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeftIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { IconButton } from "@/components/v2/buttons/IconButton";
-import { OnboardingSteps } from "@/components/v2/onboarding/OnboardingSteps";
 import {
 	Select,
 	SelectContent,
@@ -17,6 +17,7 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { navigateTo } from "@/utils/genUtils";
+import { OnboardingSteps } from "@/views/onboarding3/components/OnboardingSteps";
 import { ProductContext } from "@/views/products/product/ProductContext";
 import { SaveChangesBar } from "../products/plan/components/SaveChangesBar";
 import { usePlanData } from "../products/plan/hooks/usePlanData";
@@ -75,13 +76,18 @@ export default function OnboardingContent() {
 	});
 
 	// Choose data source: React Query (Steps 2-4) or custom state (Step 1)
-	const originalProduct = hasProductId ? queryData?.product : baseProduct;
+	// Fall back to baseProduct if React Query data is not yet loaded
+	const originalProduct = hasProductId
+		? queryData?.product || baseProduct
+		: baseProduct;
 
 	console.log("[OnboardingView3] Data source:", {
 		hasProductId,
 		usingQuery: hasProductId,
 		originalProductId: originalProduct?.id,
 		baseProductId: baseProduct?.id,
+		queryDataExists: !!queryData?.product,
+		queryProductId: queryData?.product?.id,
 	});
 
 	const { product, setProduct, diff } = usePlanData({
@@ -180,17 +186,86 @@ export default function OnboardingContent() {
 	const handleBack = () => {
 		setSheet(null);
 		setEditingState({ type: null, id: null });
+
+		// Get the previous step to determine if we need special cleanup
+		const currentStepNum = getStepNumber(step);
+		const willGoToStep1 = currentStepNum === 2; // Going from step 2 back to step 1
+
+		// If going back to Step 1, check if we need to reset state to prevent conflicts
+		if (willGoToStep1) {
+			const originalCreatedProductId = productCreatedRef.current.latestId;
+			const currentProductId = baseProduct?.id;
+
+			// Check if user is in a conflicting state (selected different product in dropdown)
+			const isInConflictState =
+				productCreatedRef.current.created && // A product was created during onboarding
+				originalCreatedProductId &&
+				currentProductId &&
+				originalCreatedProductId !== currentProductId; // But now we have a different product selected
+
+			console.log("[OnboardingView3] Going back to Step 1:", {
+				isInConflictState,
+				originalCreatedProductId,
+				currentProductId,
+				productWasCreated: productCreatedRef.current.created,
+			});
+
+			if (isInConflictState) {
+				// User selected a different existing product in dropdown, which would cause constraint violations
+				// Reset to allow fresh creation or restore original created product
+				console.log(
+					"[OnboardingView3] Conflict detected - resetting to prevent constraint violations",
+				);
+
+				// Reset creation tracking to allow starting over
+				productCreatedRef.current = {
+					created: false,
+					latestId: null,
+				};
+				featureCreatedRef.current = {
+					created: false,
+					latestId: null,
+				};
+
+				// Reset to empty state for fresh creation
+				const initialProduct = {
+					id: "",
+					name: "",
+					items: [],
+					archived: false,
+					created_at: Date.now(),
+					is_add_on: false,
+					is_default: false,
+					version: 1,
+					group: "",
+					env: baseProduct.env || AppEnv.Sandbox,
+					internal_id: "",
+				};
+				setBaseProduct(initialProduct);
+				setSelectedProductId("");
+			}
+			// If no conflict, preserve current state (normal back navigation)
+		}
+
 		popStep();
 	};
 
 	const handlePlanSelect = async (planId: string) => {
 		if (!planId || planId === selectedProductId) return;
 
-		try {
-			const response = await axiosInstance.get(`/products/${planId}/data2`);
-			const productData = response.data.product;
+		console.log("[OnboardingView3] handlePlanSelect:", {
+			planId,
+			selectedProductId,
+		});
 
-			setBaseProduct(productData);
+		try {
+			// Update base product with new ID to trigger React Query fetch
+			const updatedBaseProduct = { ...baseProduct, id: planId };
+			console.log(
+				"[OnboardingView3] Setting base product with new ID:",
+				planId,
+			);
+			setBaseProduct(updatedBaseProduct);
 			setSelectedProductId(planId);
 
 			setSheet("edit-plan");
@@ -227,7 +302,7 @@ export default function OnboardingContent() {
 				return (
 					<SheetHeader
 						title={`Step ${stepNum}: Configure your feature`}
-						description="Set up pricing and usage details for your feature"
+						description="Features can be free/included (100 credits per month), or have included usage with automatic overage pricing (100 credits included, $1 per credit after)"
 						noSeparator={true}
 						className="p-0"
 					/>

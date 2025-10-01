@@ -11,7 +11,11 @@ import { PricedFeatureSettings } from "./PricedFeatureSettings";
 import { PriceTiers } from "./PriceTiers";
 import { UsageReset } from "./UsageReset";
 
-export function EditPlanFeatureSheet() {
+export function EditPlanFeatureSheet({
+	isOnboarding,
+}: {
+	isOnboarding?: boolean;
+}) {
 	const { item } = useProductItemContext();
 	const { features } = useFeaturesQuery();
 
@@ -23,10 +27,12 @@ export function EditPlanFeatureSheet() {
 
 	return (
 		<>
-			<SheetHeader
-				title={`Configure ${feature?.name}`}
-				description="Configure how this feature is used in your app"
-			/>
+			{!isOnboarding && (
+				<SheetHeader
+					title={`Configure ${feature?.name}`}
+					description="Configure how this feature is used in your app"
+				/>
+			)}
 
 			{feature?.type !== FeatureType.Boolean && (
 				<>

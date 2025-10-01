@@ -39,7 +39,7 @@ export const OnboardingPreview = ({ currentStep }: OnboardingPreviewProps) => {
 	};
 
 	return (
-		<Card className="max-w-xl mx-4 bg-card">
+		<Card className="min-w-[28rem] max-w-xl mx-4 bg-card">
 			<CardHeader>
 				<div className="flex flex-row items-center justify-between w-full">
 					<div className="flex flex-row items-center gap-2">
