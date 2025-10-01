@@ -1,4 +1,5 @@
 import {
+	type CreateFeature,
 	CreateFeatureSchema,
 	CreateProductSchema,
 	ProductItemInterval,
@@ -39,7 +40,9 @@ export const useOnboardingActions = ({
 				return null;
 			}
 
-			let createdProduct: ReturnType<typeof ProductService.createProduct>;
+			let createdProduct: Awaited<
+				ReturnType<typeof ProductService.createProduct>
+			>;
 
 			if (!productCreatedRef.current.created) {
 				// First time creating the product
@@ -85,7 +88,7 @@ export const useOnboardingActions = ({
 		}
 	};
 
-	const createFeature = async (feature: any) => {
+	const createFeature = async (feature: CreateFeature) => {
 		const result = CreateFeatureSchema.safeParse(feature);
 		if (result.error) {
 			console.log(result.error.issues);
@@ -142,7 +145,7 @@ export const useOnboardingActions = ({
 		}
 	};
 
-	const createProductItem = (createdFeature: any) => {
+	const createProductItem = (createdFeature: CreateFeature) => {
 		// Map feature type to product item feature type
 		let featureType = null;
 		if (createdFeature.type === "boolean") {

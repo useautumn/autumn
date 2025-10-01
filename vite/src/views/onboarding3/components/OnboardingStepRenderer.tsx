@@ -6,7 +6,7 @@ import { ProductItemContext } from "@/views/products/product/product-item/Produc
 import { EditPlanFeatureSheet } from "../../products/plan/components/EditPlanFeatureSheet/EditPlanFeatureSheet";
 import { EditPlanSheet } from "../../products/plan/components/EditPlanSheet";
 import { NewFeatureSheet } from "../../products/plan/components/new-feature/NewFeatureSheet";
-import { OnboardingStep } from "../utils/OnboardingStep";
+import { OnboardingStep } from "../utils/onboardingUtils";
 import { CompletionStep } from "./CompletionStep";
 import { FeatureConfigurationStep } from "./FeatureConfigurationStep";
 import { FeatureCreationStep } from "./FeatureCreationStep";
@@ -27,7 +27,7 @@ export const OnboardingStepRenderer = ({
 	const { product, setProduct, editingState, sheet } = useProductContext();
 
 	if (editingState?.type === "plan") {
-		return <EditPlanSheet />;
+		return <EditPlanSheet isOnboarding />;
 	}
 
 	if (editingState?.type === "feature") {

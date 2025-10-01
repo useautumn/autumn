@@ -1,5 +1,5 @@
 import { useSteps } from "@/views/products/product/product-item/useSteps";
-import { OnboardingStep } from "../utils/OnboardingStep";
+import { OnboardingStep } from "../utils/onboardingUtils";
 
 export const useOnboardingSteps = () => {
 	const {
