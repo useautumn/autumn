@@ -44,7 +44,9 @@ export const OnboardingPreview = ({ currentStep }: OnboardingPreviewProps) => {
 				<div className="flex flex-row items-center justify-between w-full">
 					<div className="flex flex-row items-center gap-2">
 						<span className="text-main-sec w-fit whitespace-nowrap">
-							{showBasicInfo && product?.name ? product.name : "Your Plan Name"}
+							{showBasicInfo && product?.name
+								? product.name
+								: "Get started in the sidebar ↗️"}
 						</span>
 						{showBasicInfo && product?.id && (
 							<CopyButton text={product.id} className="text-xs" size="sm" />

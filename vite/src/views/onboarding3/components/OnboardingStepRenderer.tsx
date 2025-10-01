@@ -11,7 +11,6 @@ import { CompletionStep } from "./CompletionStep";
 import { FeatureConfigurationStep } from "./FeatureConfigurationStep";
 import { FeatureCreationStep } from "./FeatureCreationStep";
 import { PlanDetailsStep } from "./PlanDetailsStep";
-import { PlaygroundStep } from "./PlaygroundStep";
 
 interface OnboardingStepRendererProps {
 	step: OnboardingStep;
@@ -120,7 +119,8 @@ export const OnboardingStepRenderer = ({
 		}
 
 		case OnboardingStep.Playground:
-			return <PlaygroundStep />;
+			// This case is handled by the useEffect in useOnboardingLogic that opens edit-plan sheet
+			return null;
 
 		case OnboardingStep.Completion:
 			return <CompletionStep />;

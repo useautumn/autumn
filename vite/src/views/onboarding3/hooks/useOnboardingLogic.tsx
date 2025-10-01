@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -8,13 +8,15 @@ import { useEnv } from "@/utils/envUtils";
 import { navigateTo } from "@/utils/genUtils";
 import { usePlanData } from "../../products/plan/hooks/usePlanData";
 import {
+	createFeature,
+	createProduct,
+	createProductItem,
 	getNextStep,
 	handleBackNavigation,
 	handleCreatePlanSuccess,
 	handlePlanSelection,
 	OnboardingStep,
 } from "../utils/onboardingUtils";
-import { useOnboardingActions } from "./useOnboardingActions";
 import { useOnboardingState } from "./useOnboardingState";
 import { useOnboardingSteps } from "./useOnboardingSteps";
 
@@ -27,21 +29,12 @@ export const useOnboardingLogic = () => {
 
 	const {
 		baseProduct,
-		setBaseProduct: originalSetBaseProduct,
+		setBaseProduct,
 		feature,
 		setFeature,
 		productCreatedRef,
 		featureCreatedRef,
 	} = useOnboardingState();
-
-	// Wrap setBaseProduct to log changes
-	const setBaseProduct = (newProduct: any) => {
-		console.log("[OnboardingView3] setBaseProduct called with:", {
-			id: newProduct?.id,
-			items: newProduct?.items?.length || 0,
-		});
-		originalSetBaseProduct(newProduct);
-	};
 
 	// HYBRID APPROACH: Use React Query when we have a product ID (Steps 2-4)
 	const hasProductId = Boolean(baseProduct?.id && baseProduct.id !== "");
@@ -57,31 +50,16 @@ export const useOnboardingLogic = () => {
 	const { data: queryData, refetch: refetchProduct } = useQuery({
 		queryKey: ["onboarding-product", baseProduct?.id],
 		queryFn: productQueryFetcher,
-		enabled: hasProductId,
+		enabled: false, // Disable automatic fetching - only fetch on explicit refetch
 	});
 
-	// Choose data source: React Query (Steps 2-4) or custom state (Step 1)
-	const originalProduct = hasProductId
-		? queryData?.product || baseProduct
-		: baseProduct;
-
-	console.log("[OnboardingView3] Data source:", {
-		hasProductId,
-		usingQuery: hasProductId,
-		originalProductId: originalProduct?.id,
-		baseProductId: baseProduct?.id,
-		queryDataExists: !!queryData?.product,
-		queryProductId: queryData?.product?.id,
-	});
+	// Choose data source: Always use baseProduct during onboarding (user has unsaved changes)
+	// Only merge server data after explicit refetch (e.g., after save)
+	const originalProduct = baseProduct;
 
 	const { product, setProduct, diff } = usePlanData({ originalProduct });
 	const { step, pushStep, popStep, validateStep } = useOnboardingSteps();
-	const { createProduct, createFeature, createProductItem } =
-		useOnboardingActions({
-			axiosInstance,
-			productCreatedRef,
-			featureCreatedRef,
-		});
+	// Note: createProduct, createFeature, createProductItem are now imported as plain functions
 
 	// UI State
 	const [sheet, setSheet] = useState<string | null>(null);
@@ -98,6 +76,14 @@ export const useOnboardingLogic = () => {
 		}
 	}, [product?.id, selectedProductId]);
 
+	// Auto-open edit-plan sheet when entering step 4 (Playground)
+	useEffect(() => {
+		if (step === OnboardingStep.Playground) {
+			setSheet("edit-plan");
+			setEditingState({ type: "plan", id: null });
+		}
+	}, [step]);
+
 	// Navigation handlers
 	const handleNext = async () => {
 		if (!validateStep(step, product, feature)) return;
@@ -106,14 +92,22 @@ export const useOnboardingLogic = () => {
 
 		// Step 1→2: Create product
 		if (step === OnboardingStep.PlanDetails) {
-			const createdProduct = await createProduct(product);
+			const createdProduct = await createProduct(
+				product,
+				axiosInstance,
+				productCreatedRef,
+			);
 			if (!createdProduct) return;
 			setBaseProduct(createdProduct);
 		}
 
 		// Step 2→3: Create feature, ProductItem, and add to product immediately
 		if (step === OnboardingStep.FeatureCreation) {
-			const createdFeature = await createFeature(feature);
+			const createdFeature = await createFeature(
+				feature,
+				axiosInstance,
+				featureCreatedRef,
+			);
 			if (!createdFeature) return;
 
 			await refetch(); // Refresh features list
@@ -127,23 +121,23 @@ export const useOnboardingLogic = () => {
 				const existingItems = product.items || [];
 				const hasFeatureItem = existingItems.length > 0;
 
-				if (hasFeatureItem) {
-					// Update existing item's feature_id to match the updated feature
-					setProduct({
-						...product,
-						items: existingItems.map((item, index) =>
-							index === existingItems.length - 1
-								? { ...item, feature_id: createdFeature.id }
-								: item,
-						),
-					});
-				} else {
-					// First time: add new item
-					setProduct({
-						...product,
-						items: [...existingItems, newItem],
-					});
-				}
+				const updatedProduct = hasFeatureItem
+					? {
+							...product,
+							items: existingItems.map((item, index) =>
+								index === existingItems.length - 1
+									? { ...item, feature_id: createdFeature.id }
+									: item,
+							),
+						}
+					: {
+							...product,
+							items: [...existingItems, newItem],
+						};
+
+				// Update local state (don't save yet - item needs configuration in step 3)
+				setProduct(updatedProduct);
+				setBaseProduct(updatedProduct);
 			}
 		}
 
@@ -215,20 +209,14 @@ export const useOnboardingLogic = () => {
 
 	// Create a unified refetch function for SaveChangesBar
 	const handleRefetch = async () => {
-		if (hasProductId) {
-			// Use React Query refetch for Steps 2-4
-			await refetchProduct();
-		} else {
-			// For Step 1, fetch the complete product manually
-			if (product?.id) {
-				try {
-					const response = await axiosInstance.get(
-						`/products/${product.id}/data2`,
-					);
-					setBaseProduct(response.data.product);
-				} catch (error) {
-					console.error("Failed to refetch product:", error);
-				}
+		if (product?.id) {
+			try {
+				const response = await axiosInstance.get(
+					`/products/${product.id}/data2`,
+				);
+				setBaseProduct(response.data.product);
+			} catch (error) {
+				console.error("Failed to refetch product:", error);
 			}
 		}
 	};

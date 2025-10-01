@@ -39,13 +39,6 @@ export const SaveChangesBar = ({
 		: queryOriginalProduct;
 
 	const handleSaveClicked = async () => {
-		console.log("[SaveChangesBar] Save clicked", {
-			isOnboarding,
-			hasOriginalProductSetter: !!setOnboardingOriginalProduct,
-			productId: product?.id,
-			productItems: product?.items?.length || 0,
-		});
-
 		if (!isOnboarding && isLoading) {
 			toast.error("Product counts are loading");
 			return;
@@ -57,21 +50,16 @@ export const SaveChangesBar = ({
 		}
 
 		setSaving(true);
-		const result = await updateProduct({
+		await updateProduct({
 			axiosInstance,
 			product,
 			onSuccess: async () => {
-				console.log("[SaveChangesBar] Save success, updating base product");
 				if (isOnboarding) {
 					// Use the unified refetch from context (hybrid approach)
 					if (contextRefetch) {
-						console.log(
-							"[SaveChangesBar] Using context refetch (hybrid approach)",
-						);
 						await contextRefetch();
 					} else if (setOnboardingOriginalProduct && product) {
 						// Fallback: manual product update (should not be needed with hybrid approach)
-						console.log("[SaveChangesBar] Fallback: manual product update");
 						const response = await axiosInstance.get(
 							`/products/${product.id}/data2`,
 						);
