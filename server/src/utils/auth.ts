@@ -56,7 +56,8 @@ export const auth = betterAuth({
 		"https://app.useautumn.com",
 		"https://staging.useautumn.com",
 		"https://*.useautumn.com",
-		// process.env.CLIENT_URL!,
+		"https://staging-server-lbpi.onrender.com",
+		process.env.CLIENT_URL || "https://staging.useautumn.com",
 	],
 	emailAndPassword: {
 		enabled: true,
