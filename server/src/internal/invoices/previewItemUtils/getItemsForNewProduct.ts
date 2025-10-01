@@ -122,7 +122,6 @@ export const getProration = ({
 export const getItemsForNewProduct = async ({
 	newProduct,
 	attachParams,
-	now,
 	proration,
 	anchor,
 	freeTrial,
@@ -133,7 +132,6 @@ export const getItemsForNewProduct = async ({
 }: {
 	newProduct: FullProduct;
 	attachParams: AttachParams;
-	now?: number;
 	proration?: {
 		start: number;
 		end: number;
@@ -146,7 +144,7 @@ export const getItemsForNewProduct = async ({
 	skipOneOff?: boolean;
 }) => {
 	const { org, features } = attachParams;
-	now = now || Date.now();
+	const now = attachParams.now || Date.now();
 
 	const items: PreviewLineItem[] = [];
 
@@ -163,6 +161,7 @@ export const getItemsForNewProduct = async ({
 		if (printLogs) {
 			console.log("price", formatPrice({ price }));
 			console.log("now:", formatUnixToDate(now));
+			console.log("anchor", formatUnixToDate(anchor));
 		}
 
 		const finalProration = getProration({

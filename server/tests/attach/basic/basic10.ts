@@ -1,6 +1,7 @@
-import { products } from "tests/global.js";
+import { expect } from "chai";
 
 import chalk from "chalk";
+import { Decimal } from "decimal.js";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { features, oneTimeProducts } from "tests/global.js";
 import { compareMainProduct } from "tests/utils/compare.js";
@@ -11,15 +12,13 @@ import {
 } from "tests/utils/genUtils.js";
 import { initCustomer } from "tests/utils/init.js";
 import { completeCheckoutForm } from "tests/utils/stripeUtils.js";
-import { Decimal } from "decimal.js";
-import { expect } from "chai";
 
 const testCase = "basic10";
 
 describe(`${chalk.yellowBright("basic10: Multi attach, all one off")}`, () => {
-	let customerId = testCase;
-	let quantity = 1000;
-	let options = [
+	const customerId = testCase;
+	const quantity = 1000;
+	const options = [
 		{
 			feature_id: features.metered2.id,
 			quantity,
@@ -34,7 +33,7 @@ describe(`${chalk.yellowBright("basic10: Multi attach, all one off")}`, () => {
 		});
 	});
 
-	it("should attach monthly with one time", async function () {
+	it("should attach monthly with one time", async () => {
 		const res = await AutumnCli.attach({
 			customerId,
 			productIds: [
@@ -48,7 +47,7 @@ describe(`${chalk.yellowBright("basic10: Multi attach, all one off")}`, () => {
 		await timeout(20000);
 	});
 
-	it("should have correct main product and entitlements", async function () {
+	it("should have correct main product and entitlements", async () => {
 		const cusRes = await AutumnCli.getCustomer(customerId);
 
 		compareMainProduct({
@@ -71,7 +70,7 @@ describe(`${chalk.yellowBright("basic10: Multi attach, all one off")}`, () => {
 
 		const metered2Amount = metered2Tiers[0].amount;
 
-		let numBillingUnits = new Decimal(options[0].quantity).div(
+		const numBillingUnits = new Decimal(options[0].quantity).div(
 			oneTimeProducts.oneTimeMetered2.prices[0].config.billing_units,
 		);
 

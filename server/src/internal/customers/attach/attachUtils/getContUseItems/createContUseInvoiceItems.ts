@@ -1,20 +1,19 @@
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import {
-	BillingInterval,
+	type BillingInterval,
 	BillingType,
-	FullCusProduct,
-	FullProduct,
+	cusProductToPrices,
+	type FullCusProduct,
+	type FullProduct,
 	intervalsDifferent,
-	intervalsSame,
+	stripeToAtmnAmount,
 } from "@autumn/shared";
-import Stripe from "stripe";
-import { getContUseInvoiceItems } from "./getContUseInvoiceItems.js";
-import { findPriceInStripeItems } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
-import { cusProductToPrices } from "@autumn/shared";
-import { attachParamsToProduct } from "../convertAttachParams.js";
-import { subToAutumnInterval } from "@/external/stripe/utils.js";
-import { intervalsAreSame } from "../getAttachConfig.js";
+import type Stripe from "stripe";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import { findPriceInStripeItems } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
+import { subToAutumnInterval } from "@/external/stripe/utils.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { attachParamsToProduct } from "../convertAttachParams.js";
+import { getContUseInvoiceItems } from "./getContUseInvoiceItems.js";
 
 export const filterContUsageProrations = async ({
 	sub,
@@ -32,7 +31,7 @@ export const filterContUsageProrations = async ({
 	const curPrices = cusProductToPrices({
 		cusProduct: curCusProduct,
 	});
-	let allPrices = [...curPrices, ...newProduct.prices];
+	const allPrices = [...curPrices, ...newProduct.prices];
 
 	// const upcomingLines = await stripeCli.invoices.listUpcomingLines({
 	//   subscription: sub.id,
@@ -49,7 +48,7 @@ export const filterContUsageProrations = async ({
 		// console.log("LINE ITEM:", item);
 		if (!item.proration) continue;
 
-		let price = findPriceInStripeItems({
+		const price = findPriceInStripeItems({
 			prices: allPrices,
 			lineItem: item,
 			billingType: BillingType.InArrearProrated,
@@ -57,15 +56,16 @@ export const filterContUsageProrations = async ({
 
 		if (!price) continue;
 
+		const atmnAmount = stripeToAtmnAmount({
+			amount: item.amount,
+			currency: item.currency,
+		});
+
 		logger.info(
-			`Deleting ii: ${item.description} - ${item.amount / 100} (${intervalSet.interval}, ${intervalSet.intervalCount})`,
+			`Deleting ii: ${item.description} - ${atmnAmount} (${intervalSet.interval}, ${intervalSet.intervalCount})`,
 		);
 
-		await stripeCli.invoiceItems.del(
-			item.id,
-			// @ts-ignore -- Stripe types are not correct
-			// item.parent.subscription_item_details.invoice_item
-		);
+		await stripeCli.invoiceItems.del(item.id);
 	}
 };
 
@@ -95,7 +95,7 @@ export const createAndFilterContUseItems = async ({
 	//   return { newItems: [], oldItems: [], replaceables: [] };
 	// }
 
-	let { newItems, oldItems, replaceables } = await getContUseInvoiceItems({
+	const { newItems, oldItems, replaceables } = await getContUseInvoiceItems({
 		attachParams,
 		cusProduct: curMainProduct!,
 		sub,
@@ -120,7 +120,7 @@ export const createAndFilterContUseItems = async ({
 			continue;
 		}
 
-		let price =
+		const price =
 			product.prices.find((p) => p.id === item.price_id) ||
 			curPrices.find((p) => p.id === item.price_id);
 

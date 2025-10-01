@@ -7,6 +7,7 @@ import {
 import type { Autumn } from "autumn-js";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 import {
@@ -14,7 +15,6 @@ import {
 	createStripeCustomer,
 } from "../../external/stripe/stripeCusUtils.js";
 import { createStripeCli } from "../../external/stripe/utils.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
 
 export const createCusInStripe = async ({
 	customer,
@@ -188,7 +188,7 @@ export const initCustomerV2 = async ({
 	attachPm,
 	withTestClock = true,
 }: {
-	autumn: Autumn;
+	autumn: Autumn | AutumnInt;
 	customerId: string;
 	org: Organization;
 	env: AppEnv;
@@ -201,7 +201,7 @@ export const initCustomerV2 = async ({
 	const fingerprint_ = "";
 	const stripeCli = createStripeCli({ org, env });
 
-	let testClockId;
+	let testClockId: string | undefined;
 
 	if (withTestClock) {
 		const testClock = await stripeCli.testHelpers.testClocks.create({
@@ -220,7 +220,8 @@ export const initCustomerV2 = async ({
 	// 2. Create customer
 	try {
 		await autumn.customers.delete(customerId);
-	} catch (error) {}
+	} catch (_error) {}
+
 	await autumn.customers.create({
 		id: customerId,
 		name,
