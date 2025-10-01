@@ -7,6 +7,7 @@ import {
 	type FullProduct,
 	type Price,
 	type Product,
+	ProductAlreadyExistsError,
 	type ProductItem,
 } from "@autumn/shared";
 import {
@@ -56,10 +57,8 @@ const validateCreateProduct = async ({ req }: { req: ExtendedRequest }) => {
 
 	// 1. If existing product, throw error
 	if (existing) {
-		throw new RecaseError({
-			message: `Product ${productData.id} already exists`,
-			code: ErrCode.ProductAlreadyExists,
-			statusCode: 400,
+		throw new ProductAlreadyExistsError({
+			productId: productData.id,
 		});
 	}
 
@@ -69,7 +68,6 @@ const validateCreateProduct = async ({ req }: { req: ExtendedRequest }) => {
 		throw new RecaseError({
 			message: "Items must be an array",
 			code: ErrCode.InvalidRequest,
-			statusCode: 400,
 		});
 	} else if (items) {
 		validateProductItems({

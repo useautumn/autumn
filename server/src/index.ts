@@ -57,6 +57,7 @@ const init = async () => {
 			allowedHeaders: [
 				"app_env",
 				"x-api-version",
+				"x-client-type",
 				"Authorization",
 				"Content-Type",
 				"Accept",
@@ -91,7 +92,7 @@ const init = async () => {
 
 		const reqContext = {
 			id: req.id,
-			env: req.headers["app_env"] || undefined,
+			env: req.headers.app_env || undefined,
 			method: req.method,
 			url: req.originalUrl,
 			timestamp: req.timestamp,
@@ -144,10 +145,6 @@ const init = async () => {
 	});
 
 	app.use("/webhooks", webhooksRouter);
-
-	// Smart Hono redirect - checks if route exists in Hono, forwards if match
-	// Otherwise continues to Express flow completely untouched
-	app.use(redirectToHono());
 
 	app.use(express.json());
 	app.use(async (req: any, res: any, next: any) => {

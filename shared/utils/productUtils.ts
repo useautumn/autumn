@@ -1,5 +1,5 @@
 import { Decimal } from "decimal.js";
-import { type ProductItem, type ProductV2 } from "../index.js";
+import type { ProductItem, ProductV2 } from "../index.js";
 import {
 	isFeaturePriceItem,
 	isPriceItem,

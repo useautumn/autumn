@@ -1,7 +1,6 @@
-import { APIVersion, type Feature, FeatureType } from "@autumn/shared";
+import { APIVersion, ErrCode, type Feature, FeatureType } from "@autumn/shared";
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
-import { ErrCode } from "@/errors/errCodes.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { orgToVersion } from "@/utils/versionUtils.js";

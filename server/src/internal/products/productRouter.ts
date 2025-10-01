@@ -1,4 +1,4 @@
-import { ErrCode } from "@autumn/shared";
+import { ProductNotFoundError } from "@autumn/shared";
 
 import { Router } from "express";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
@@ -6,7 +6,7 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { checkStripeProductExists } from "@/internal/products/productUtils.js";
-import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
+import { handleRequestError } from "@/utils/errorUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { CusProductService } from "../customers/cusProducts/CusProductService.js";
 import { handleCopyProduct } from "./handlers/handleCopyProduct.js";
@@ -121,11 +121,7 @@ productRouter.get("/:productId/has_customers", async (req: any, res: any) =>
 			});
 
 			if (!product) {
-				throw new RecaseError({
-					message: `Product with id ${productId} not found`,
-					code: ErrCode.ProductNotFound,
-					statusCode: 404,
-				});
+				throw new ProductNotFoundError({ productId });
 			}
 
 			const cusProductsCurVersion =

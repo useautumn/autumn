@@ -76,21 +76,10 @@ export const ErrCode = {
 	MultipleCustomersFound: "multiple_customers_found",
 	InvalidUpdateCustomerParams: "invalid_update_customer_params",
 
-	// Product
-	InvalidProduct: "invalid_product",
-	ProductNotFound: "product_not_found",
-	ProductHasCustomers: "product_has_customers",
-	ProductHasNoPrices: "product_has_no_prices",
-	ProductHasDifferentRecurringIntervals:
-		"product_has_different_recurring_intervals",
+	// Stripe errors...?
 	CreateStripeProductFailed: "create_stripe_product_failed",
 	DeleteStripeProductFailed: "delete_stripe_product_failed",
 	CreateStripeSubscriptionFailed: "create_stripe_subscription_failed",
-	UpdateCusProductFailed: "update_customer_product_failed",
-	DefaultProductNotAllowedPrice: "default_product_not_allowed_price",
-	UpgradeFailed: "upgrade_failed",
-	ProductAlreadyExists: "product_already_exists",
-	ProductHasRewardPrograms: "product_has_reward_programs",
 
 	// Cus Product
 	CusProductNotFound: "cus_product_not_found",

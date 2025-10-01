@@ -9,3 +9,6 @@ export * from "./products/operations/createProductParams.js";
 // export * from "./products/apiFreeTrial.js";
 // export * from "./products/apiProduct.js";
 // export * from "./products/apiProductItem.js";
+
+// Errors
+export * from "./errors/index.js";

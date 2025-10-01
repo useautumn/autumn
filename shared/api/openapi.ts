@@ -1,5 +1,7 @@
 import { writeFileSync } from "node:fs";
+import { AppEnv } from "@models/genModels/genEnums.js";
 import yaml from "yaml";
+import { z } from "zod/v4";
 import { createDocument } from "zod-openapi";
 import { APIProductSchema } from "./products/apiProduct.js";
 import { CreateProductParamsSchema } from "./products/operations/createProductParams.js";
@@ -12,18 +14,32 @@ const document = createDocument({
 		title: "Autumn API",
 		version: API_VERSION,
 	},
+
 	servers: [
 		{
 			url: "https://api.useautumn.com",
 			description: "Production server",
 		},
 	],
+
 	security: [
 		{
 			secretKey: [],
 		},
 	],
 	components: {
+		schemas: {
+			autumnError: z
+				.object({
+					message: z.string(),
+					code: z.string(),
+					env: z.enum(AppEnv),
+				})
+				.meta({
+					id: "AutumnError",
+					description: "An error that occurred in the API",
+				}),
+		},
 		securitySchemes: {
 			secretKey: {
 				type: "http",
@@ -51,6 +67,14 @@ const document = createDocument({
 						},
 					},
 				},
+				// responses: withErrorResponses({
+				// 	"200": {
+				// 		description: "200 OK",
+				// 		content: {
+				// 			"application/json": { schema: APIProductSchema },
+				// 		},
+				// 	},
+				// }),
 			},
 		},
 	},
