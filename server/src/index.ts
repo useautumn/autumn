@@ -17,6 +17,7 @@ import { ClickHouseManager } from "./external/clickhouse/ClickHouseManager.js";
 import { logger } from "./external/logtail/logtailUtils.js";
 import { createPosthogCli } from "./external/posthog/createPosthogCli.js";
 import webhooksRouter from "./external/webhooks/webhooksRouter.js";
+import { redirectToHono } from "./initHono.js";
 import { apiRouter } from "./internal/api/apiRouter.js";
 import mainRouter from "./internal/mainRouter.js";
 import { QueueManager } from "./queue/QueueManager.js";
@@ -31,6 +32,11 @@ checkEnvVars();
 
 const init = async () => {
 	const app = express();
+	const server = http.createServer(app);
+	server.keepAliveTimeout = 120000; // 120 seconds
+	server.headersTimeout = 120000; // 120 seconds should be >= keepAliveTimeout
+
+	app.use(redirectToHono());
 
 	// Check if this blocks API calls...
 	app.use(
@@ -70,12 +76,7 @@ const init = async () => {
 
 	app.all("/api/auth/*", toNodeHandler(auth));
 
-	const server = http.createServer(app);
 	const posthog = createPosthogCli();
-
-	server.keepAliveTimeout = 120000; // 120 seconds
-	server.headersTimeout = 120000; // 120 seconds should be >= keepAliveTimeout
-
 	await QueueManager.getInstance(); // initialize the queue manager
 	await CacheManager.getInstance();
 	await ClickHouseManager.getInstance();
@@ -144,6 +145,10 @@ const init = async () => {
 
 	app.use("/webhooks", webhooksRouter);
 
+	// Smart Hono redirect - checks if route exists in Hono, forwards if match
+	// Otherwise continues to Express flow completely untouched
+	app.use(redirectToHono());
+
 	app.use(express.json());
 	app.use(async (req: any, res: any, next: any) => {
 		req.logtail.info(`${req.method} ${req.originalUrl}`, {
@@ -154,6 +159,7 @@ const init = async () => {
 		next();
 	});
 
+	// Legacy Express routes
 	app.use(mainRouter);
 	app.use("/v1", apiRouter);
 

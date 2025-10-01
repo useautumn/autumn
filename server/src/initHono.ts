@@ -1,0 +1,160 @@
+import type { AppEnv, AuthType, Feature, Organization } from "@autumn/shared";
+import type { ClickHouseClient } from "@clickhouse/client";
+import { getRequestListener } from "@hono/node-server";
+import { Hono } from "hono";
+import type { DrizzleCli } from "./db/initDrizzle.js";
+import type { Logger } from "./external/logtail/logtailUtils.js";
+import { handleCreateProduct } from "./internal/products/honoProductRouter.js";
+
+type RequestContext = {
+	// Variables
+	org: Organization;
+	env: AppEnv;
+	features: Feature[];
+	userId?: string;
+
+	// Objects
+	db: DrizzleCli;
+	logger: Logger;
+	clickhouseClient: ClickHouseClient;
+
+	// Info
+	id: string;
+	isPublic: boolean;
+	authType: AuthType;
+	apiVersion: string;
+	timestamp: number;
+};
+
+export type HonoEnv = {
+	Variables: { ctx: RequestContext };
+};
+
+const ALLOWED_ORIGINS = [
+	"http://localhost:3000",
+	"http://localhost:5173",
+	"http://localhost:5174",
+	"https://app.useautumn.com",
+	"https://staging.useautumn.com",
+	"https://localhost:8080",
+];
+
+const ALLOWED_HEADERS = [
+	"app_env",
+	"x-api-version",
+	"x-client-type",
+	"Authorization",
+	"Content-Type",
+	"Accept",
+	"Origin",
+	"X-API-Version",
+	"X-Requested-With",
+	"Access-Control-Request-Method",
+	"Access-Control-Request-Headers",
+	"Cache-Control",
+	"If-Match",
+	"If-None-Match",
+	"If-Modified-Since",
+	"If-Unmodified-Since",
+];
+
+export const createHonoApp = () => {
+	const app = new Hono<HonoEnv>();
+
+	// // CORS configuration (must be before routes)
+	// app.use(
+	// 	"*",
+	// 	cors({
+	// 		origin: ALLOWED_ORIGINS,
+	// 		allowHeaders: ALLOWED_HEADERS,
+	// 		allowMethods: ["POST", "GET", "PUT", "DELETE", "PATCH", "OPTIONS"],
+	// 		exposeHeaders: ["Content-Length"],
+	// 		maxAge: 600,
+	// 		credentials: true,
+	// 	}),
+	// );
+
+	// // Better Auth handler
+	// app.on(["POST", "GET"], "/api/auth/*", (c) => {
+	// 	return auth.handler(c.req.raw);
+	// });
+
+	// // Step 1: Base middleware - sets up ctx (db, logger, etc.)
+	// app.use("*", baseMiddleware);
+
+	// // Step 2: Tracing middleware - handles OpenTelemetry spans
+	// app.use("*", traceMiddleware);
+
+	// // Step 3: API Version middleware - validates x-api-version header
+	// app.use("/v1/*", apiVersionMiddleware);
+
+	// // Step 4: Auth middleware - verifies secret key and populates auth context
+	// app.use("/v1/*", secretKeyMiddleware);
+
+	// // Step 5: Org config middleware - allows config overrides via header
+	// app.use("/v1/*", orgConfigMiddleware);
+
+	// Step 6: Add pricing middleware, analytics middleware, etc.
+
+	app.post("/v1/products", handleCreateProduct);
+
+	app.onError((err, c) => {
+		console.error(`Route error ${err.message}`);
+		return c.json({ error: "Internal server error" }, 500);
+	});
+
+	// Create request listener for integration with Express
+	const requestListener = getRequestListener(app.fetch);
+	return { honoApp: app, requestListener };
+};
+
+/**
+ * Smart middleware that checks if Hono has a matching route.
+ * If yes: forwards the request to Hono (fresh, unmodified)
+ * If no: calls next() to continue Express flow (untouched)
+ */
+export const redirectToHono = () => {
+	const { honoApp, requestListener } = createHonoApp();
+
+	// Get all routes from Hono app
+	const routes = honoApp.routes;
+
+	return async (req: any, res: any, next: any) => {
+		const method = req.method;
+		const path = req.path;
+
+		// Check if Hono has a matching route for this method + path
+		const hasMatch = routes.some((route) => {
+			// Check if method matches
+			if (route.method !== method && route.method !== "ALL") {
+				return false;
+			}
+
+			// Check if path matches (handle dynamic routes)
+			const routePath = route.path;
+
+			// Exact match
+			if (routePath === path) {
+				return true;
+			}
+
+			// Check for dynamic routes (e.g., /v1/products/:id)
+			if (routePath.includes(":")) {
+				const routeRegex = new RegExp(
+					"^" + routePath.replace(/:[^/]+/g, "([^/]+)") + "$",
+				);
+				return routeRegex.test(path);
+			}
+
+			return false;
+		});
+
+		if (hasMatch) {
+			// Route exists in Hono - forward the FRESH request
+			return requestListener(req, res);
+		}
+
+		// No match - continue to Express (completely untouched)
+		next();
+	};
+};
