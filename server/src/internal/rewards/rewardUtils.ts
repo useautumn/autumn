@@ -1,25 +1,25 @@
+import {
+	type AppEnv,
+	type CreateReward,
+	DiscountConfigSchema,
+	ErrCode,
+	type Organization,
+	type Price,
+	type Product,
+	type Reward,
+	RewardCategory,
+	RewardType,
+	stripeToAtmnAmount,
+} from "@autumn/shared";
+import { Decimal } from "decimal.js";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { generateId, getUnique, nullish } from "@/utils/genUtils.js";
-import {
-	Reward,
-	CreateReward,
-	RewardType,
-	RewardCategory,
-	ErrCode,
-	DiscountConfigSchema,
-	Price,
-	Organization,
-	AppEnv,
-	Product,
-} from "@autumn/shared";
 import { ProductService } from "../products/ProductService.js";
-
-import { initProductInStripe } from "../products/productUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import Stripe from "stripe";
-import { Decimal } from "decimal.js";
 import { isFixedPrice } from "../products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { formatPrice } from "../products/prices/priceUtils.js";
+import { initProductInStripe } from "../products/productUtils.js";
 
 export const constructReward = ({
 	internalId,
@@ -50,7 +50,7 @@ export const constructReward = ({
 		DiscountConfigSchema.parse(reward.discount_config);
 	}
 
-	let promoCodes = reward.promo_codes.filter((promoCode) => {
+	const promoCodes = reward.promo_codes.filter((promoCode) => {
 		return promoCode.code.length > 0;
 	});
 
@@ -67,7 +67,7 @@ export const constructReward = ({
 		};
 	}
 
-	let newReward = {
+	const newReward = {
 		...reward,
 		...configData,
 		internal_id: internalId || generateId("rew"),
@@ -96,7 +96,7 @@ export enum CouponType {
 export const getCouponType = (reward: Reward) => {
 	if (!reward) return null;
 
-	let config = reward.discount_config;
+	const config = reward.discount_config;
 	if (nullish(config)) {
 		return null;
 	}
@@ -131,7 +131,7 @@ export const initRewardStripePrices = async ({
 	env: AppEnv;
 	logger: any;
 }) => {
-	let pricesToInit = prices.map((p: Price) =>
+	const pricesToInit = prices.map((p: Price) =>
 		nullish(p.config.stripe_price_id),
 	);
 
@@ -139,10 +139,10 @@ export const initRewardStripePrices = async ({
 		return;
 	}
 
-	let internalProductIds = getUnique(
+	const internalProductIds = getUnique(
 		prices.map((p: Price) => p.internal_product_id),
 	);
-	let products = await ProductService.listByInternalIds({
+	const products = await ProductService.listByInternalIds({
 		db,
 		internalIds: internalProductIds,
 	});
@@ -162,7 +162,7 @@ export const initRewardStripePrices = async ({
 	await Promise.all(batchInit);
 
 	for (const price of prices) {
-		let product = products.find(
+		const product = products.find(
 			(p) => p.internal_id === price.internal_product_id,
 		);
 
@@ -174,7 +174,7 @@ export const initRewardStripePrices = async ({
 export const formatReward = ({ reward }: { reward: Reward }) => {
 	if (!reward) return "";
 	const discountString =
-		reward.type == RewardType.PercentageDiscount
+		reward.type === RewardType.PercentageDiscount
 			? `${reward.discount_config?.discount_value}%`
 			: `${reward.discount_config?.discount_value} off`;
 
@@ -191,10 +191,12 @@ export const getAmountAfterReward = ({
 	amount,
 	reward,
 	subDiscounts,
+	currency,
 }: {
 	amount: number;
 	reward: Reward;
 	subDiscounts: Stripe.Discount[];
+	currency?: string;
 }) => {
 	if (subDiscounts.find((d) => d.coupon?.id === reward.id)) {
 		return amount;
@@ -204,7 +206,14 @@ export const getAmountAfterReward = ({
 		const discountValue = new Decimal(
 			reward.discount_config?.discount_value ?? 0,
 		);
-		const discountRatio = new Decimal(1).minus(discountValue.div(100));
+
+		const atmnDiscountValue = stripeToAtmnAmount({
+			amount: discountValue.toNumber(),
+			currency,
+		});
+
+		const discountRatio = new Decimal(1).minus(atmnDiscountValue);
+
 		return new Decimal(amount).mul(discountRatio).toNumber();
 	} else if (reward.type === RewardType.FixedDiscount) {
 		const discountAmount = new Decimal(
@@ -267,11 +276,13 @@ export const getAmountAfterStripeDiscounts = ({
 	amount,
 	product,
 	stripeDiscounts,
+	currency,
 }: {
 	price: Price;
 	product: Product;
 	amount: number;
 	stripeDiscounts: Stripe.Discount[];
+	currency?: string;
 }) => {
 	let amountAfterDiscount = amount;
 
@@ -291,8 +302,13 @@ export const getAmountAfterStripeDiscounts = ({
 				.toNumber();
 		} else if (coupon.amount_off) {
 			// must do some ratio ting here...
+			const atmnDiscountAmount = stripeToAtmnAmount({
+				amount: coupon.amount_off,
+				currency: currency,
+			});
+
 			amountAfterDiscount = new Decimal(amountAfterDiscount)
-				.minus(new Decimal(coupon.amount_off).div(100))
+				.minus(atmnDiscountAmount)
 				.toNumber();
 		}
 	}

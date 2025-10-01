@@ -1,8 +1,14 @@
-import Stripe from "stripe";
-import RecaseError from "@/utils/errorUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import {
+	ErrCode,
+	type InvoiceDiscount,
+	type InvoiceStatus,
+	notNullish,
+	stripeToAtmnAmount,
+} from "@autumn/shared";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
-import { ErrCode, InvoiceDiscount, InvoiceStatus } from "@autumn/shared";
+import RecaseError from "@/utils/errorUtils.js";
 
 // For API calls
 export const getStripeExpandedInvoice = async ({
@@ -75,8 +81,8 @@ export const payForInvoice = async ({
 		}
 	}
 
-	let invoice = await stripeCli.invoices.retrieve(invoiceId);
-	if (invoice.status == "paid") {
+	const invoice = await stripeCli.invoices.retrieve(invoiceId);
+	if (invoice.status === "paid") {
 		logger.info(`Invoice ${invoiceId} is already paid`);
 		return {
 			paid: true,
@@ -102,7 +108,7 @@ export const payForInvoice = async ({
 		if (voidIfFailed) {
 			try {
 				await stripeCli.invoices.voidInvoice(invoiceId);
-			} catch (error) {
+			} catch (_error) {
 				logger.error(`Failed to void failed invoice: ${invoiceId}`);
 			}
 		}
@@ -119,25 +125,6 @@ export const payForInvoice = async ({
 				invoice: null,
 			};
 		}
-
-		// if (isStripeCardDeclined(error)) {
-		//   return {
-		//     paid: false,
-		//     error: new RecaseError({
-		//       message: `Payment declined: ${error.message}`,
-		//       code: ErrCode.StripeCardDeclined,
-		//       statusCode: 400,
-		//     }),
-		//   };
-		// }
-
-		// return {
-		//   paid: false,
-		//   error: new RecaseError({
-		//     message: "Failed to pay invoice",
-		//     code: ErrCode.PayInvoiceFailed,
-		//   }),
-		// };
 	}
 };
 
@@ -175,37 +162,51 @@ export const getInvoiceDiscounts = ({
 }: {
 	expandedInvoice: Stripe.Invoice;
 }) => {
-	try {
-		if (!expandedInvoice.discounts || expandedInvoice.discounts.length === 0) {
-			return [];
-		}
+	if (!expandedInvoice.discounts || expandedInvoice.discounts.length === 0) {
+		return [];
+	}
 
-		if (typeof expandedInvoice.discounts[0] == "string") {
-			return [];
-		}
+	if (typeof expandedInvoice.discounts[0] === "string") {
+		return [];
+	}
 
-		let totalDiscountAmounts = expandedInvoice.total_discount_amounts;
+	const totalDiscountAmounts = expandedInvoice.total_discount_amounts;
+	const autumnDiscounts = expandedInvoice.discounts
+		.map((discount) => {
+			if (typeof discount === "string") return null;
 
-		let autumnDiscounts = expandedInvoice.discounts.map((discount: any) => {
-			const amountOff = discount.coupon.amount_off;
+			const amountOff = totalDiscountAmounts?.find(
+				(item) => item.discount === discount.id,
+			)?.amount;
+
+			if (!amountOff) return null;
+
 			const amountUsed = totalDiscountAmounts?.find(
 				(item) => item.discount === discount.id,
 			)?.amount;
 
-			let autumnDiscount: InvoiceDiscount = {
+			const atmnAmountOff = stripeToAtmnAmount({
+				amount: amountOff,
+				currency: expandedInvoice.currency,
+			});
+
+			const atmnAmountUsed = stripeToAtmnAmount({
+				amount: amountUsed || 0,
+				currency: expandedInvoice.currency,
+			});
+
+			const autumnDiscount: InvoiceDiscount = {
 				stripe_coupon_id: discount.coupon?.id,
-				coupon_name: discount.coupon.name,
-				amount_off: amountOff / 100,
-				amount_used: (amountUsed || 0) / 100,
+				coupon_name: discount.coupon?.name || "",
+				amount_off: atmnAmountOff,
+				amount_used: atmnAmountUsed,
 			};
 
 			return autumnDiscount;
-		});
+		})
+		.filter(notNullish);
 
-		return autumnDiscounts;
-	} catch (error) {
-		throw error;
-	}
+	return autumnDiscounts;
 };
 
 export const getInvoiceExpansion = () => {

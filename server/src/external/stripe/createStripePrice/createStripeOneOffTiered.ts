@@ -1,14 +1,13 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { PriceService } from "@/internal/products/prices/PriceService.js";
-import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
-import {
+import type {
 	EntitlementWithFeature,
 	Price,
 	Product,
 	UsagePriceConfig,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
-import Stripe from "stripe";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { PriceService } from "@/internal/products/prices/PriceService.js";
+import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
 
 export const createStripeOneOffTieredProduct = async ({
 	db,
@@ -23,13 +22,13 @@ export const createStripeOneOffTieredProduct = async ({
 	entitlements: EntitlementWithFeature[];
 	product: Product;
 }) => {
-	let config = price.config as UsagePriceConfig;
-	let relatedEnt = getPriceEntitlement(price, entitlements);
-	let productName = `${product.name} - ${
-		config.billing_units == 1 ? "" : `${config.billing_units} `
+	const config = price.config as UsagePriceConfig;
+	const relatedEnt = getPriceEntitlement(price, entitlements);
+	const productName = `${product.name} - ${
+		config.billing_units === 1 ? "" : `${config.billing_units} `
 	}${relatedEnt.feature.name}`;
 
-	let stripeProduct = await stripeCli.products.create({
+	const stripeProduct = await stripeCli.products.create({
 		name: productName,
 	});
 

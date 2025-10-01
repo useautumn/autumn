@@ -204,5 +204,4 @@ export const handleCreateCheckout = async ({
 			checkout_url: checkout.url,
 		});
 	}
-	return;
 };

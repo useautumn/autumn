@@ -105,10 +105,6 @@ export const getAttachConfig = async ({
 
 	const sameIntervals = intervalsAreSame({ attachParams });
 
-	// let disableMerge =
-	//   branch == AttachBranch.MainIsTrial ||
-	//   org.config.merge_billing_cycles === false;
-
 	const invoiceAndEnable =
 		attachParams.invoiceOnly && attachBody.enable_product_immediately;
 
@@ -128,6 +124,7 @@ export const getAttachConfig = async ({
 			].includes(branch));
 
 	const onlyCheckout = !isFree && checkoutFlow && !freeTrialWithoutCardRequired;
+
 	const disableMerge = branch === AttachBranch.MainIsTrial || onlyCheckout;
 
 	// Require payment method...

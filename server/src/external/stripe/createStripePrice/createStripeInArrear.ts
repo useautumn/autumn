@@ -1,23 +1,23 @@
-import { PriceService } from "@/internal/products/prices/PriceService.js";
-import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
 import {
-	Product,
-	Price,
-	Organization,
-	EntitlementWithFeature,
-	UsagePriceConfig,
-	Feature,
-	TierInfinite,
-	Entitlement,
+	atmnToStripeAmountDecimal,
+	type Entitlement,
+	type EntitlementWithFeature,
 	ErrCode,
+	type Feature,
+	type Organization,
+	type Price,
+	type Product,
+	priceToEnt,
+	TierInfinite,
+	type UsagePriceConfig,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
-import Stripe from "stripe";
-import { billingIntervalToStripe } from "../stripePriceUtils.js";
 import { Decimal } from "decimal.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { PriceService } from "@/internal/products/prices/PriceService.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { billingIntervalToStripe } from "../stripePriceUtils.js";
 
 export const searchStripeMeter = async ({
 	stripeCli,
@@ -30,7 +30,7 @@ export const searchStripeMeter = async ({
 	meterId?: string;
 	logger: any;
 }) => {
-	let allStripeMeters = [];
+	const allStripeMeters = [];
 	let hasMore = true;
 	let startingAfter;
 
@@ -52,8 +52,8 @@ export const searchStripeMeter = async ({
 	const end = performance.now();
 	logger.info(`Stripe meter list took ${end - start}ms`);
 
-	let stripeMeter = allStripeMeters.find(
-		(m) => m.event_name == eventName || m.id == meterId,
+	const stripeMeter = allStripeMeters.find(
+		(m) => m.event_name === eventName || m.id === meterId,
 	);
 
 	return stripeMeter;
@@ -72,29 +72,25 @@ export const getStripeMeter = async ({
 	price: Price;
 	logger: any;
 }) => {
-	let config = price.config as UsagePriceConfig;
+	const config = price.config as UsagePriceConfig;
 
-	let createNew = false;
 	try {
-		let stripeMeter = await searchStripeMeter({
+		const stripeMeter = await searchStripeMeter({
 			stripeCli,
 			eventName: price.id!,
 			meterId: config.stripe_meter_id!,
 			logger,
 		});
 
-		if (!stripeMeter) {
-			createNew = true;
-		} else {
+		if (stripeMeter) {
 			logger.info(
 				`✅ Found existing meter for ${product.name} - ${feature!.name}`,
 			);
 			return stripeMeter;
 		}
-	} catch (error) {
-		createNew = true;
-	}
-	let meter = await stripeCli.billing.meters.create({
+	} catch (_error) {}
+
+	const meter = await stripeCli.billing.meters.create({
 		display_name: `${product.name} - ${feature!.name}`,
 		event_name: price.id!,
 		default_aggregation: {
@@ -105,11 +101,16 @@ export const getStripeMeter = async ({
 };
 
 // IN ARREAR
-export const priceToInArrearTiers = (
-	price: Price,
-	entitlement: Entitlement,
-) => {
-	let usageConfig = structuredClone(price.config) as UsagePriceConfig;
+export const priceToInArrearTiers = ({
+	price,
+	entitlement,
+	org,
+}: {
+	price: Price;
+	entitlement: Entitlement;
+	org: Organization;
+}) => {
+	const usageConfig = structuredClone(price.config) as UsagePriceConfig;
 	const tiers: any[] = [];
 	if (entitlement.allowance) {
 		tiers.push({
@@ -118,8 +119,8 @@ export const priceToInArrearTiers = (
 		});
 
 		for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
-			let tier = usageConfig.usage_tiers[i];
-			if (tier.to != -1 && tier.to != TierInfinite) {
+			const tier = usageConfig.usage_tiers[i];
+			if (tier.to !== -1 && tier.to !== TierInfinite) {
 				usageConfig.usage_tiers[i].to = (tier.to || 0) + entitlement.allowance;
 			}
 		}
@@ -127,15 +128,18 @@ export const priceToInArrearTiers = (
 
 	for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
 		const tier = usageConfig.usage_tiers[i];
-		let amount = new Decimal(tier.amount)
-			.div(usageConfig.billing_units ?? 1)
-			.mul(100)
-			.toDecimalPlaces(10)
-			.toString();
+		const atmnUnitAmount = new Decimal(tier.amount).div(
+			usageConfig.billing_units ?? 1,
+		);
+
+		const stripeUnitAmountDecimal = atmnToStripeAmountDecimal({
+			amount: atmnUnitAmount,
+			currency: org.default_currency || undefined,
+		});
 
 		tiers.push({
-			unit_amount_decimal: amount,
-			up_to: tier.to == -1 ? "inf" : tier.to,
+			unit_amount_decimal: stripeUnitAmountDecimal,
+			up_to: tier.to === -1 ? "inf" : tier.to,
 		});
 	}
 
@@ -167,19 +171,22 @@ export const createStripeInArrearPrice = async ({
 	internalEntityId?: string;
 	useCheckout?: boolean;
 }) => {
-	let config = price.config as UsagePriceConfig;
+	const config = price.config as UsagePriceConfig;
 
 	// 1. Create meter
-	let relatedEnt = getPriceEntitlement(price, entitlements);
-	let feature = relatedEnt?.feature;
+	const relatedEnt = priceToEnt({
+		price,
+		entitlements,
+	});
+	const feature = relatedEnt?.feature;
 
 	// 1. If internal entity ID and not curStripe product, create product
 	if (internalEntityId && !useCheckout) {
 		if (!curStripeProduct) {
 			logger.info(
-				`Creating stripe in arrear product for ${relatedEnt.feature.name} (internal entity ID exists!)`,
+				`Creating stripe in arrear product for ${relatedEnt?.feature.name} (internal entity ID exists!)`,
 			);
-			let stripeProduct = await stripeCli.products.create({
+			const stripeProduct = await stripeCli.products.create({
 				name: `${product.name} - ${feature!.name}`,
 			});
 			config.stripe_product_id = stripeProduct.id;
@@ -199,7 +206,7 @@ export const createStripeInArrearPrice = async ({
 	}
 
 	logger.info(
-		`Creating stripe in arrear price for ${relatedEnt.feature.name} (no internal entity ID)`,
+		`Creating stripe in arrear price for ${relatedEnt?.feature.name} (no internal entity ID)`,
 	);
 
 	if (!feature) {
@@ -211,7 +218,7 @@ export const createStripeInArrearPrice = async ({
 	}
 
 	// 1. Get meter by event_name
-	let meter = await getStripeMeter({
+	const meter = await getStripeMeter({
 		product,
 		feature,
 		stripeCli,
@@ -221,13 +228,14 @@ export const createStripeInArrearPrice = async ({
 
 	config.stripe_meter_id = meter.id;
 
-	const tiers = priceToInArrearTiers(
+	const tiers = priceToInArrearTiers({
 		price,
-		getPriceEntitlement(price, entitlements),
-	);
+		entitlement: relatedEnt,
+		org,
+	});
 
 	let priceAmountData = {};
-	if (tiers.length == 1) {
+	if (tiers.length === 1) {
 		priceAmountData = {
 			unit_amount_decimal: tiers[0].unit_amount_decimal,
 		};

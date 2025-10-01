@@ -1,23 +1,23 @@
 import {
+	BillingInterval,
+	BillingType,
+	type EntitlementWithFeature,
+	type Organization,
+	type Price,
+	type Product,
+	TierInfinite,
+	type UsagePriceConfig,
+} from "@autumn/shared";
+import { Decimal } from "decimal.js";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { PriceService } from "@/internal/products/prices/PriceService.js";
+import {
 	getBillingType,
 	getPriceEntitlement,
 } from "@/internal/products/prices/priceUtils.js";
-import {
-	Price,
-	UsagePriceConfig,
-	TierInfinite,
-	EntitlementWithFeature,
-	Organization,
-	Product,
-	BillingInterval,
-	BillingType,
-} from "@autumn/shared";
-import Stripe from "stripe";
 import { billingIntervalToStripe } from "../stripePriceUtils.js";
 import { priceToInArrearTiers } from "./createStripeInArrear.js";
-import { PriceService } from "@/internal/products/prices/PriceService.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { Decimal } from "decimal.js";
 
 export interface StripeMeteredPriceParams {
 	db: DrizzleCli;
@@ -54,16 +54,20 @@ export const createStripeMeteredPrice = async ({
 			limit: 100,
 			status: "active",
 		});
-		meter = meters.data.find((m) => m.event_name == price.id!);
+		meter = meters.data.find((m) => m.event_name === price.id);
 		if (!meter) {
 			throw error;
 		}
 	}
 
-	const tiers = priceToInArrearTiers(price, ent);
+	const tiers = priceToInArrearTiers({
+		price,
+		entitlement: ent,
+		org,
+	});
 
 	let priceAmountData = {};
-	if (ent.allowance == 0 && tiers.length == 1) {
+	if (ent.allowance === 0 && tiers.length === 1) {
 		priceAmountData = {
 			unit_amount_decimal: tiers[0].unit_amount_decimal,
 		};
@@ -110,7 +114,7 @@ export const arrearProratedToStripeTiers = (
 	price: Price,
 	entitlement: EntitlementWithFeature,
 ) => {
-	let usageConfig = structuredClone(price.config) as UsagePriceConfig;
+	const usageConfig = structuredClone(price.config) as UsagePriceConfig;
 
 	const billingUnits = usageConfig.billing_units;
 	const numFree = entitlement.allowance
@@ -127,10 +131,9 @@ export const arrearProratedToStripeTiers = (
 	}
 	for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
 		const tier = usageConfig.usage_tiers[i];
-		// const amount = tier.amount * 100;
 		const amount = new Decimal(tier.amount).mul(100).toNumber();
 		const upTo =
-			tier.to == -1 || tier.to == TierInfinite
+			tier.to === -1 || tier.to === TierInfinite
 				? "inf"
 				: Math.round((tier.to - numFree) / billingUnits!) + numFree;
 
@@ -162,8 +165,8 @@ export const createStripeArrearProrated = async ({
 }) => {
 	const relatedEnt = getPriceEntitlement(price, entitlements);
 
-	let recurringData = undefined;
-	if (price.config!.interval != BillingInterval.OneOff) {
+	let recurringData;
+	if (price.config!.interval !== BillingInterval.OneOff) {
 		recurringData = billingIntervalToStripe({
 			interval: price.config!.interval,
 			intervalCount: price.config!.interval_count,
@@ -173,11 +176,11 @@ export const createStripeArrearProrated = async ({
 	const config = price.config as UsagePriceConfig;
 
 	// 1. Product name
-	let productName = `${product.name} - ${
-		config.billing_units == 1 ? "" : `${config.billing_units} `
+	const productName = `${product.name} - ${
+		config.billing_units === 1 ? "" : `${config.billing_units} `
 	}${relatedEnt.feature.name}`;
 
-	let productData = curStripeProd
+	const productData = curStripeProd
 		? { product: curStripeProd.id }
 		: {
 				product_data: {
@@ -186,10 +189,14 @@ export const createStripeArrearProrated = async ({
 			};
 
 	// let tiers = arrearProratedToStripeTiers(price, relatedEnt);
-	let tiers = priceToInArrearTiers(price, relatedEnt);
+	const tiers = priceToInArrearTiers({
+		price,
+		entitlement: relatedEnt,
+		org,
+	});
 
 	let priceAmountData = {};
-	if (tiers.length == 1) {
+	if (tiers.length === 1) {
 		priceAmountData = {
 			unit_amount_decimal: tiers[0].unit_amount_decimal,
 		};
@@ -201,7 +208,7 @@ export const createStripeArrearProrated = async ({
 		};
 	}
 
-	let stripePrice = await stripeCli.prices.create({
+	const stripePrice = await stripeCli.prices.create({
 		...productData,
 		currency: org.default_currency || "usd",
 		...priceAmountData,
@@ -213,11 +220,11 @@ export const createStripeArrearProrated = async ({
 
 	config.stripe_price_id = stripePrice.id;
 	config.stripe_product_id = stripePrice.product as string;
-	let billingType = getBillingType(price.config!);
+	const billingType = getBillingType(price.config);
 
 	// CREATE PLACEHOLDER PRICE FOR INARREAR PRORATED PRICING
-	if (billingType == BillingType.InArrearProrated) {
-		let placeholderPrice = await createStripeMeteredPrice({
+	if (billingType === BillingType.InArrearProrated) {
+		const placeholderPrice = await createStripeMeteredPrice({
 			db,
 			stripeCli,
 			price,

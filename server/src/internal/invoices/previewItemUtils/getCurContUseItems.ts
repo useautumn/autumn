@@ -1,27 +1,27 @@
-import { getSubItemAmount } from "@/external/stripe/stripeSubUtils/getSubItemAmount.js";
-import { findPriceInStripeItems } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-
 import {
 	BillingType,
+	cusProductToEnts,
+	cusProductToPrices,
 	getFeatureInvoiceDescription,
-	PreviewLineItem,
-	UsagePriceConfig,
+	type PreviewLineItem,
+	stripeToAtmnAmount,
+	type UsagePriceConfig,
 } from "@autumn/shared";
-import { Decimal } from "decimal.js";
-import Stripe from "stripe";
-import { getProration } from "./getItemsForNewProduct.js";
-import { calculateProrationAmount } from "../prorationUtils.js";
-import { formatUnixToDate } from "@/utils/genUtils.js";
-import { formatAmount } from "@/utils/formatUtils.js";
+import type Stripe from "stripe";
+import { getSubItemAmount } from "@/external/stripe/stripeSubUtils/getSubItemAmount.js";
+import { findPriceInStripeItems } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
+import { attachParamToCusProducts } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { getExistingUsageFromCusProducts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import {
 	priceToFeature,
 	priceToUsageModel,
 } from "@/internal/products/prices/priceUtils/convertPrice.js";
-import { attachParamToCusProducts } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
-import { cusProductToEnts, cusProductToPrices } from "@autumn/shared";
-import { getExistingUsageFromCusProducts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
+import { formatAmount } from "@/utils/formatUtils.js";
+import { formatUnixToDate } from "@/utils/genUtils.js";
+import { calculateProrationAmount } from "../prorationUtils.js";
+import { getProration } from "./getItemsForNewProduct.js";
 
 export const getCurContUseItems = async ({
 	sub,
@@ -38,8 +38,8 @@ export const getCurContUseItems = async ({
 	const curPrices = cusProductToPrices({ cusProduct: curCusProduct });
 	const curEnts = cusProductToEnts({ cusProduct: curCusProduct });
 
-	let items: PreviewLineItem[] = [];
-	let now = attachParams.now || Date.now();
+	const items: PreviewLineItem[] = [];
+	const now = attachParams.now || Date.now();
 
 	for (const item of sub.items.data) {
 		const price = findPriceInStripeItems({
@@ -52,7 +52,12 @@ export const getCurContUseItems = async ({
 
 		const periodEnd = item.current_period_end * 1000;
 		const totalAmountCents = getSubItemAmount({ subItem: item });
-		const totalAmount = new Decimal(totalAmountCents).div(100).toNumber();
+
+		const atmnTotalAmount = stripeToAtmnAmount({
+			amount: totalAmountCents,
+			currency: sub.currency,
+		});
+
 		const ent = getPriceEntitlement(price, curEnts);
 
 		if (now < periodEnd) {
@@ -71,7 +76,7 @@ export const getCurContUseItems = async ({
 				periodEnd: finalProration?.end,
 				periodStart: finalProration?.start,
 				now,
-				amount: totalAmount,
+				amount: atmnTotalAmount,
 			});
 
 			const existingUsage = getExistingUsageFromCusProducts({
