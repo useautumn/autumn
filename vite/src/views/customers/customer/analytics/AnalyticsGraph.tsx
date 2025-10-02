@@ -191,7 +191,7 @@ export function EventsAGGrid({ data }: { data: any }) {
 				paginationPageSize={pageSize}
 				paginationPageSizeSelector={paginationOptions}
 				suppressPaginationPanel={true}
-				className="w-full h-full"
+				className="w-full h-full min-h-38 pb-0"
 				theme={autumnTheme}
 				defaultColDef={{
 					flex: 1,
