@@ -1,16 +1,16 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
-import { constructProduct } from "@/internal/products/productUtils.js";
 import {
 	AppEnv,
 	CreateProductSchema,
 	EntInsertSchema,
-	Entitlement,
-	Feature,
-	Price,
-	Product,
-	ProductV2,
+	type Entitlement,
+	type Feature,
+	type Price,
+	type Product,
+	type ProductV2,
 } from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
+import { constructProduct } from "@/internal/products/productUtils.js";
 
 export const parseChatProducts = async ({
 	db,
@@ -25,13 +25,13 @@ export const parseChatProducts = async ({
 	orgId: string;
 	chatProducts: ProductV2[];
 }) => {
-	let products: Product[] = [];
+	const products: Product[] = [];
 
-	let allPrices: Price[] = [];
-	let allEnts: Entitlement[] = [];
+	const allPrices: Price[] = [];
+	const allEnts: Entitlement[] = [];
 
 	for (const product of chatProducts) {
-		let backendProduct: Product = constructProduct({
+		const backendProduct: Product = constructProduct({
 			productData: CreateProductSchema.parse({
 				...product,
 			}),
@@ -39,7 +39,7 @@ export const parseChatProducts = async ({
 			env: AppEnv.Sandbox,
 		});
 
-		let { prices, entitlements } = await handleNewProductItems({
+		const { prices, entitlements } = await handleNewProductItems({
 			db,
 			curPrices: [],
 			curEnts: [],

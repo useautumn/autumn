@@ -1,4 +1,9 @@
-import type { FullProduct, Price, ProductV2 } from "@autumn/shared";
+import type {
+	CreateProductParams,
+	FullProduct,
+	Price,
+	ProductV2,
+} from "@autumn/shared";
 import { pricesOnlyOneOff } from "../prices/priceUtils.js";
 import { isFeatureItem } from "../product-items/productItemUtils/getItemType.js";
 import { isFreeProduct } from "../productUtils.js";
@@ -31,15 +36,19 @@ export const isMainProduct = ({
 	return !prodIsAddOn({ product }) && !oneOffOrAddOn({ product, prices });
 };
 
-export const isFreeProductV2 = ({ product }: { product: ProductV2 }) => {
-	return product.items.every((item) => isFeatureItem(item));
+export const isFreeProductV2 = ({
+	product,
+}: {
+	product: ProductV2 | CreateProductParams;
+}) => {
+	return (product.items || []).every((item) => isFeatureItem(item));
 };
 
 export const isDefaultTrial = ({
 	product,
 	skipDefault = false,
 }: {
-	product: ProductV2;
+	product: ProductV2 | CreateProductParams;
 	skipDefault?: boolean;
 }) => {
 	return (

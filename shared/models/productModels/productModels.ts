@@ -13,7 +13,7 @@ export const ProductSchema = z.object({
 	version: z.number(),
 	group: z.string(),
 
-	env: z.nativeEnum(AppEnv),
+	env: z.enum(AppEnv),
 	internal_id: z.string(),
 	org_id: z.string(),
 	created_at: z.number(),

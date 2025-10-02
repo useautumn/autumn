@@ -14,7 +14,6 @@ import { handleDeleteProduct } from "./handlers/handleDeleteProduct.js";
 import { handleGetProduct } from "./handlers/handleGetProduct.js";
 import { handleGetProductDeleteInfo } from "./handlers/handleGetProductDeleteInfo.js";
 import { handleListProductsBeta } from "./handlers/handleListProductsBeta.js";
-import { handleUpdateProductV2 } from "./handlers/handleUpdateProduct/handleUpdateProduct.js";
 import { productsAreSame } from "./productUtils/compareProductUtils.js";
 
 export const productBetaRouter: Router = Router();
@@ -24,11 +23,9 @@ export const productRouter: Router = Router();
 
 productRouter.get("", handleListProductsBeta);
 
-// productRouter.post("", handleCreateProduct);
-
 productRouter.get("/:productId", handleGetProduct);
 
-productRouter.post("/:productId", handleUpdateProductV2);
+// productRouter.post("/:productId", handleUpdateProductV2);
 
 productRouter.delete("/:productId", handleDeleteProduct);
 
@@ -148,3 +145,15 @@ productRouter.get("/:productId/has_customers", async (req: any, res: any) =>
 );
 
 productRouter.get("/:productId/deletion_info", handleGetProductDeleteInfo);
+
+import { Hono } from "hono";
+import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { createProduct } from "./handlers/handleCreateProduct.js";
+import { handleUpdateProductV2 } from "./handlers/handleUpdateProduct/handleUpdateProduct.js";
+
+// Create a Hono app for products
+export const honoProductRouter = new Hono<HonoEnv>();
+
+// POST /products - Create a product
+honoProductRouter.post("", ...createProduct);
+honoProductRouter.post("/:productId", ...handleUpdateProductV2);
