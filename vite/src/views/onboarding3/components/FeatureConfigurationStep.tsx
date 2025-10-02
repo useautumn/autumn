@@ -1,5 +1,9 @@
 import { EditPlanFeatureSheet } from "../../products/plan/components/EditPlanFeatureSheet/EditPlanFeatureSheet";
 
 export const FeatureConfigurationStep = () => {
-	return <EditPlanFeatureSheet isOnboarding />;
+	return (
+		<div className="overflow-x-hidden">
+			<EditPlanFeatureSheet isOnboarding />
+		</div>
+	);
 };

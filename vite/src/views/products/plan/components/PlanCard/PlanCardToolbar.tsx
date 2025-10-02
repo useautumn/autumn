@@ -1,5 +1,5 @@
-import { PencilSimple, TrashIcon } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { PencilSimpleIcon, TrashIcon } from "@phosphor-icons/react";
+import { useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,6 @@ interface PlanCardToolbarProps {
 
 export const PlanCardToolbar = ({
 	onEdit,
-	onDelete,
 	editDisabled,
 }: PlanCardToolbarProps) => {
 	const { product } = useProductQuery();
@@ -23,16 +22,12 @@ export const PlanCardToolbar = ({
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const isEditingPlan = editingState.type === "plan";
 
-	useEffect(() => {
-		console.log("Product archived:", product?.archived);
-	}, [product]);
-
 	return (
 		<>
 			<DeletePlanDialog open={deleteOpen} setOpen={setDeleteOpen} />
 			<div className="flex flex-row items-center gap-1">
 				<IconButton
-					icon={<PencilSimple />}
+					icon={<PencilSimpleIcon />}
 					onClick={onEdit}
 					aria-label="Edit plan"
 					variant="muted"

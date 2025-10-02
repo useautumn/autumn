@@ -72,7 +72,8 @@ export const stepConfig = {
 	},
 	[OnboardingStep.Playground]: {
 		title: "Finish your setup",
-		description: "Review and save your plan when ready",
+		description:
+			"Take your time setting up plans and features. Revisit anytime. Use Preview Mode to test features, limits and upgrade/downgrade flows.",
 	},
 	[OnboardingStep.Completion]: {
 		title: "Complete!",
@@ -174,13 +175,16 @@ export const handlePlanSelection = async (
 	setSelectedProductId: (id: string) => void,
 	setSheet: (sheet: string) => void,
 	setEditingState: (state: any) => void,
+	axiosInstance: AxiosInstance,
 ) => {
 	if (!planId || planId === selectedProductId) return;
 
 	try {
-		const updatedBaseProduct = { ...baseProduct, id: planId };
+		// Fetch the actual product data from the server to avoid stale state
+		const response = await axiosInstance.get(`/products/${planId}/data2`);
+		const productData = response.data.product;
 
-		setBaseProduct(updatedBaseProduct);
+		setBaseProduct(productData);
 		setSelectedProductId(planId);
 		setSheet("edit-plan");
 		setEditingState({ type: "plan", id: null });
@@ -354,10 +358,12 @@ export const createProductItem = (createdFeature: CreateFeature) => {
 		featureType = createdFeature.config?.usage_type || "single_use";
 	}
 
+	// Start in "included" billing type by default
+	// User can switch to "priced" in step 3 if needed
 	return {
 		feature_id: createdFeature.id,
 		feature_type: featureType,
-		included_usage: null,
+		included_usage: 0,
 		interval: ProductItemInterval.Month,
 		price: null,
 		tiers: null,

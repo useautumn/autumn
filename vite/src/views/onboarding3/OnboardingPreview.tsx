@@ -3,6 +3,7 @@ import { CrosshairSimpleIcon } from "@phosphor-icons/react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
+import { Separator } from "@/components/v2/separator";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { PlanCardToolbar } from "../products/plan/components/PlanCard/PlanCardToolbar";
 import { PlanFeatureList } from "../products/plan/components/PlanCard/PlanFeatureList";
@@ -25,7 +26,7 @@ export const OnboardingPreview = ({ currentStep }: OnboardingPreviewProps) => {
 
 	if (!product) {
 		return (
-			<Card className="min-w-sm max-w-xl mx-4 bg-card w-[80%] opacity-90">
+			<Card className="min-w-sm max-w-xl mx-4 bg-card bg-card-border w-[80%] opacity-90">
 				<CardContent className="p-8 text-center text-gray-400">
 					Loading preview...
 				</CardContent>
@@ -39,20 +40,18 @@ export const OnboardingPreview = ({ currentStep }: OnboardingPreviewProps) => {
 	};
 
 	return (
-		<Card className="min-w-[28rem] max-w-xl mx-4 bg-card">
-			<CardHeader>
+		<Card className="min-w-[28rem] max-w-xl mx-4 bg-card card-border gap-0 p-4">
+			<CardHeader className="gap-0 px-0">
 				<div className="flex flex-row items-center justify-between w-full">
 					<div className="flex flex-row items-center gap-2">
 						<span className="text-main-sec w-fit whitespace-nowrap">
-							{showBasicInfo && product?.name
-								? product.name
-								: "Get started in the sidebar ↗️"}
+							{showBasicInfo && product?.name ? product.name : "Plan Preview"}
 						</span>
+					</div>
+					<div className="flex flex-row items-center gap-1">
 						{showBasicInfo && product?.id && (
 							<CopyButton text={product.id} className="text-xs" size="sm" />
 						)}
-					</div>
-					<div className="flex flex-row items-center gap-1">
 						{showToolbar && <PlanCardToolbar onEdit={handleEdit} />}
 					</div>
 				</div>
@@ -63,25 +62,35 @@ export const OnboardingPreview = ({ currentStep }: OnboardingPreviewProps) => {
 					</span>
 				)}
 
-				<IconButton
-					variant="secondary"
-					icon={<CrosshairSimpleIcon />}
-					disabled={true}
-					className="mt-2"
-				>
-					{showPricing && basePrice?.amount ? (
-						<span className="text-sm font-medium text-t2">
-							${basePrice.amount}/
-							{keyToTitle(basePrice.interval ?? "once", {
-								exclusionMap: { one_off: "once" },
-							}).toLowerCase()}
+				{showBasicInfo &&
+					!(product?.description || product?.name || basePrice?.amount) && (
+						<span className="text-body-secondary">
+							Enter data on the right to see the preview
 						</span>
-					) : (
-						<span className="text-t4 text-sm">No price set</span>
 					)}
-				</IconButton>
+
+				{showPricing && (
+					<IconButton
+						variant="secondary"
+						icon={<CrosshairSimpleIcon />}
+						className="mt-2 pointer-events-none"
+					>
+						{basePrice?.amount ? (
+							<span className="text-sm font-medium text-t2">
+								${basePrice.amount}/
+								{keyToTitle(basePrice.interval ?? "once", {
+									exclusionMap: { one_off: "once" },
+								}).toLowerCase()}
+							</span>
+						) : (
+							<span className="text-t4 text-sm">No price set</span>
+						)}
+					</IconButton>
+				)}
+
+				{showFeatures && <Separator className="my-2" />}
 			</CardHeader>
-			<CardContent className="max-w-full">
+			<CardContent className="max-w-full px-0 gap-0">
 				{showFeatures && (
 					<div>
 						<PlanFeatureList allowAddFeature={allowAddFeature} />

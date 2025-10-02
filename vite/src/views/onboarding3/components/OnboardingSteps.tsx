@@ -33,7 +33,7 @@ export const OnboardingSteps = ({
 				className,
 			)}
 		>
-			<div className="self-stretch w-full h-6 px-2.5 py-3 bg-white rounded-lg shadow-[inset_0px_-3px_4px_0px_rgba(0,0,0,0.04)] outline-1 outline-offset-[-1px] outline-neutral-300 inline-flex justify-start items-center gap-1">
+			<div className="self-stretch w-full h-6 px-2.5 py-3 bg-white rounded-lg shadow-[inset_0px_-3px_4px_0px_rgba(0,0,0,0.04)] outline-1 outline-offset-[-1px] outline-[#ddd] inline-flex justify-start items-center gap-1">
 				{Array.from({ length: totalSteps }).map((_, index) => {
 					const isCompleted = index < currentStep;
 					return (
@@ -56,7 +56,7 @@ export const OnboardingSteps = ({
 					onClick={onBack}
 					disabled={backDisabled}
 					size="sm"
-					className="min-w-24 px-2 text-xs"
+					className="min-w-24 px-2 text-xs outline-1"
 				>
 					{backText}
 				</Button>

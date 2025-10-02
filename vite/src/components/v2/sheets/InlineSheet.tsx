@@ -9,6 +9,7 @@ interface SheetHeaderProps {
 	children?: React.ReactNode;
 	noSeparator?: boolean;
 	className?: string;
+	isOnboarding?: boolean;
 }
 
 export function SheetHeader({
@@ -17,13 +18,18 @@ export function SheetHeader({
 	children,
 	noSeparator = false,
 	className,
+	isOnboarding = false,
 }: SheetHeaderProps) {
 	return (
 		<div className={cn("p-4 pb-0", className)}>
 			<h2 className="text-main">{title}</h2>
 
 			{/* check typography */}
-			<p className="text-form-text">{description}</p>
+			<p
+				className={cn("text-form-text", isOnboarding && "text-body-secondary")}
+			>
+				{description}
+			</p>
 			{children}
 			{!noSeparator && <Separator className="mt-6" />}
 		</div>

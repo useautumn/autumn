@@ -54,7 +54,6 @@ export const PlanFeatureList = ({
 
 	return (
 		<div className="space-y-2">
-			<h4 className="text-sm font-medium text-foreground mb-2">Features</h4>
 			{filteredItems.map((item: ProductItem, index: number) => {
 				return (
 					<PlanFeatureRow

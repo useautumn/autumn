@@ -77,7 +77,6 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 							aria-label="Add new feature"
 						>
 							<PlusIcon className="size-3" weight="bold" />
-							Add feature
 						</Button>
 					</PopoverTrigger>
 					<PopoverContent className="w-80 p-0" align="start">

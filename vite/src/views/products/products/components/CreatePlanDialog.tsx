@@ -1,8 +1,10 @@
 import type { ProductV2 } from "@autumn/shared";
+import { PlusCircleIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/v2/buttons/Button";
+import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
 	Dialog,
 	DialogContent,
@@ -13,7 +15,6 @@ import {
 import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
-import { slugify } from "@/utils/formatUtils/formatTextUtils";
 import { ProductConfig } from "../../ProductConfig";
 
 const defaultProduct = {
@@ -26,8 +27,10 @@ const defaultProduct = {
 
 function CreatePlanDialog({
 	onSuccess,
+	size = "default",
 }: {
 	onSuccess?: (newProduct: ProductV2) => Promise<void>;
+	size?: "default" | "sm";
 }) {
 	const [loading, setLoading] = useState(false);
 	const [product, setProduct] = useState(defaultProduct);
@@ -78,9 +81,9 @@ function CreatePlanDialog({
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>
-				<Button variant="primary" className="w-full">
+				<IconButton icon={<PlusCircleIcon />} variant={"secondary"}>
 					Add Plan
-				</Button>
+				</IconButton>
 			</DialogTrigger>
 			<DialogContent className="w-[500px]">
 				<DialogTitle>Create Plan</DialogTitle>

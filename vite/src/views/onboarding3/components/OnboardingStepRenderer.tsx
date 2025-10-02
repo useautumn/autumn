@@ -32,6 +32,7 @@ export const OnboardingStepRenderer = ({
 	if (editingState?.type === "feature") {
 		const featureItems = productV2ToFeatureItems({
 			items: product?.items || [],
+			withBasePrice: true,
 		});
 		const isCurrentItem = (item: ProductItem, index: number) => {
 			const itemId = getItemId({ item, itemIndex: index });
@@ -39,21 +40,38 @@ export const OnboardingStepRenderer = ({
 		};
 		const currentItem = featureItems.find(isCurrentItem);
 
+		// Use functional setState to avoid stale closure issues
 		const setCurrentItem = (updatedItem: ProductItem) => {
-			if (!product || !product.items) return;
+			setProduct((prevProduct) => {
+				if (!prevProduct || !prevProduct.items) return prevProduct;
 
-			const filteredItems = productV2ToFeatureItems({
-				items: product.items,
-				withBasePrice: true,
+				const filteredItems = productV2ToFeatureItems({
+					items: prevProduct.items,
+					withBasePrice: true,
+				});
+
+				const currentItemIndex = filteredItems.findIndex((item, index) => {
+					const itemId = getItemId({ item, itemIndex: index });
+					return editingState.id === itemId;
+				});
+
+				if (currentItemIndex === -1) return prevProduct;
+
+				const targetItem = filteredItems[currentItemIndex];
+
+				// Find this item in the ORIGINAL items array
+				const originalIndex = prevProduct.items.findIndex(
+					(item) => item === targetItem,
+				);
+
+				if (originalIndex === -1) return prevProduct;
+
+				// Update that specific index in the original array
+				const updatedItems = [...prevProduct.items];
+				updatedItems[originalIndex] = updatedItem;
+
+				return { ...prevProduct, items: updatedItems };
 			});
-
-			const currentItemIndex = filteredItems.findIndex(isCurrentItem);
-
-			if (currentItemIndex === -1) return;
-
-			const updatedItems = [...filteredItems];
-			updatedItems[currentItemIndex] = updatedItem;
-			setProduct({ ...product, items: updatedItems });
 		};
 
 		return (
@@ -68,14 +86,14 @@ export const OnboardingStepRenderer = ({
 					handleUpdateProductItem: async () => null,
 				}}
 			>
-				<EditPlanFeatureSheet />
+				<EditPlanFeatureSheet isOnboarding />
 			</ProductItemContext.Provider>
 		);
 	}
 
 	// Handle new-feature sheet
 	if (sheet === "new-feature") {
-		return <NewFeatureSheet />;
+		return <NewFeatureSheet isOnboarding />;
 	}
 	switch (step) {
 		case OnboardingStep.PlanDetails:
@@ -85,20 +103,41 @@ export const OnboardingStepRenderer = ({
 			return <FeatureCreationStep feature={feature} setFeature={setFeature} />;
 
 		case OnboardingStep.FeatureConfiguration: {
+			// Use consistent withBasePrice flag
 			const featureItems = productV2ToFeatureItems({
 				items: product?.items || [],
+				withBasePrice: true,
 			});
 			const currentItem = featureItems[featureItems.length - 1] || null;
 
 			// Update the item in the product when it changes
+			// Use functional setState to avoid stale closure issues
 			const setCurrentItem = (updatedItem: ProductItem) => {
-				if (!product?.items || !currentItem) return;
+				setProduct((prevProduct) => {
+					if (!prevProduct?.items) return prevProduct;
 
-				const itemIndex = featureItems.length - 1;
-				const updatedItems = [...featureItems];
-				updatedItems[itemIndex] = updatedItem;
+					// Find the feature items to identify which one we're updating
+					const prevFeatureItems = productV2ToFeatureItems({
+						items: prevProduct.items,
+						withBasePrice: true,
+					});
+					const targetItem = prevFeatureItems[prevFeatureItems.length - 1];
 
-				setProduct({ ...product, items: updatedItems });
+					if (!targetItem) return prevProduct;
+
+					// Find this item in the ORIGINAL items array (not filtered)
+					const originalIndex = prevProduct.items.findIndex(
+						(item) => item === targetItem,
+					);
+
+					if (originalIndex === -1) return prevProduct;
+
+					// Update that specific index in the original array
+					const updatedItems = [...prevProduct.items];
+					updatedItems[originalIndex] = updatedItem;
+
+					return { ...prevProduct, items: updatedItems };
+				});
 			};
 
 			return (

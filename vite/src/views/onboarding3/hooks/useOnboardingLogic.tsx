@@ -141,11 +141,27 @@ export const useOnboardingLogic = () => {
 			}
 		}
 
-		// Step 3→4: Just set up playground view
+		// Step 3→4: Save product changes before moving to playground
 		if (
 			step === OnboardingStep.FeatureConfiguration &&
 			nextStep === OnboardingStep.Playground
 		) {
+			// Only save if there are changes
+			if (diff.hasChanges) {
+				const { updateProduct } = await import(
+					"../../products/product/utils/updateProduct"
+				);
+				const saved = await updateProduct({
+					axiosInstance,
+					product,
+					onSuccess: async () => {
+						await handleRefetch();
+					},
+				});
+
+				if (!saved) return; // Don't proceed if save failed
+			}
+
 			setSheet("edit-plan");
 			setEditingState({ type: "plan", id: null });
 		}
@@ -184,6 +200,7 @@ export const useOnboardingLogic = () => {
 				setSelectedProductId,
 				setSheet,
 				setEditingState,
+				axiosInstance,
 			);
 		} catch (error) {
 			setSelectedProductId(product?.id || "");
