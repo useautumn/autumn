@@ -8,7 +8,7 @@ import { orgConfigMiddleware } from "./honoMiddlewares/orgConfigMiddleware.js";
 import { secretKeyMiddleware } from "./honoMiddlewares/secretKeyMiddleware.js";
 import { traceMiddleware } from "./honoMiddlewares/traceMiddleware.js";
 import type { HonoEnv } from "./honoUtils/HonoEnv.js";
-import { honoProductRouter } from "./internal/products/honoProductRouter.js";
+import { honoProductRouter } from "./internal/products/productRouter.js";
 import { auth } from "./utils/auth.js";
 
 const ALLOWED_ORIGINS = [

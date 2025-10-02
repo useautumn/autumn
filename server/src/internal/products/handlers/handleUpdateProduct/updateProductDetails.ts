@@ -1,5 +1,6 @@
 import {
 	type AppEnv,
+	type CreateFreeTrial,
 	type FreeTrial,
 	type FullProduct,
 	isFreeProductV2,
@@ -15,7 +16,6 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { isStripeConnected } from "@/internal/orgs/orgUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-import { FreeTrialService } from "../../free-trials/FreeTrialService.js";
 import { ProductService } from "../../ProductService.js";
 import { usagePriceToProductName } from "../../prices/priceUtils/usagePriceUtils/convertUsagePrice.js";
 import {
@@ -125,7 +125,7 @@ const willBeDefaultTrial = ({
 }: {
 	newProduct: UpdateProduct;
 	curProduct: FullProduct;
-	newFreeTrial: FreeTrial;
+	newFreeTrial?: FreeTrial | CreateFreeTrial;
 	newItems: ProductItem[];
 }) => {
 	// 1. Get final default
@@ -157,7 +157,7 @@ export const handleUpdateProductDetails = async ({
 	db: DrizzleCli;
 	curProduct: FullProduct;
 	newProduct: UpdateProduct;
-	newFreeTrial: FreeTrial;
+	newFreeTrial?: FreeTrial | CreateFreeTrial;
 	items: ProductItem[];
 	org: Organization;
 	rewardPrograms: RewardProgram[];
@@ -168,11 +168,6 @@ export const handleUpdateProductDetails = async ({
 		productId: curProduct.id,
 		orgId: org.id,
 		env: curProduct.env as AppEnv,
-	});
-
-	const trialConfig = await FreeTrialService.getByProductId({
-		db,
-		productId: curProduct.internal_id,
 	});
 
 	// Should error if:
