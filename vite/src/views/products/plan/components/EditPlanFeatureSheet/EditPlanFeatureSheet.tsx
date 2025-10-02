@@ -56,6 +56,12 @@ export function EditPlanFeatureSheet({
 					<AdvancedSettings />
 				</>
 			)}
+
+			{feature?.type === FeatureType.Boolean && (
+				<span className="p-4 text-body-secondary">
+					to do: better empty state for boolean features
+				</span>
+			)}
 		</>
 	);
 }
