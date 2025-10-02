@@ -17,196 +17,23 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                id:
-                  type: string
-                  minLength: 1
-                  pattern: ^[a-zA-Z0-9_-]+$
-                name:
-                  type: string
-                is_add_on:
-                  default: false
-                  type: boolean
-                is_default:
-                  default: false
-                  type: boolean
-                version:
-                  type: number
-                group:
-                  default: ""
-                  type: string
-                items:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      feature_id:
-                        anyOf:
-                          - type: string
-                          - type: "null"
-                      feature_type:
-                        anyOf:
-                          - type: string
-                            enum:
-                              - single_use
-                              - continuous_use
-                              - boolean
-                              - static
-                          - type: "null"
-                      included_usage:
-                        anyOf:
-                          - anyOf:
-                              - type: number
-                              - type: string
-                                const: inf
-                          - type: "null"
-                      interval:
-                        anyOf:
-                          - type: string
-                            enum:
-                              - minute
-                              - hour
-                              - day
-                              - week
-                              - month
-                              - quarter
-                              - semi_annual
-                              - year
-                          - type: "null"
-                      interval_count:
-                        anyOf:
-                          - type: number
-                          - type: "null"
-                      entity_feature_id:
-                        anyOf:
-                          - type: string
-                          - type: "null"
-                      usage_model:
-                        anyOf:
-                          - type: string
-                            enum:
-                              - prepaid
-                              - pay_per_use
-                          - type: "null"
-                      price:
-                        anyOf:
-                          - type: number
-                          - type: "null"
-                      tiers:
-                        anyOf:
-                          - type: array
-                            items:
-                              type: object
-                              properties:
-                                to:
-                                  anyOf:
-                                    - type: number
-                                    - type: string
-                                      const: inf
-                                amount:
-                                  type: number
-                              required:
-                                - to
-                                - amount
-                          - type: "null"
-                      billing_units:
-                        anyOf:
-                          - type: number
-                          - type: "null"
-                      usage_limit:
-                        anyOf:
-                          - type: number
-                          - type: "null"
-                      reset_usage_when_enabled:
-                        anyOf:
-                          - type: boolean
-                          - type: "null"
-                      config:
-                        anyOf:
-                          - type: object
-                            properties:
-                              on_increase:
-                                anyOf:
-                                  - type: string
-                                    enum:
-                                      - bill_immediately
-                                      - prorate_immediately
-                                      - prorate_next_cycle
-                                      - bill_next_cycle
-                                  - type: "null"
-                              on_decrease:
-                                anyOf:
-                                  - type: string
-                                    enum:
-                                      - prorate
-                                      - prorate_immediately
-                                      - prorate_next_cycle
-                                      - none
-                                      - no_prorations
-                                  - type: "null"
-                              rollover:
-                                anyOf:
-                                  - type: object
-                                    properties:
-                                      max:
-                                        anyOf:
-                                          - type: number
-                                          - type: "null"
-                                      duration:
-                                        default: month
-                                        type: string
-                                        enum:
-                                          - month
-                                          - forever
-                                      length:
-                                        type: number
-                                    required:
-                                      - max
-                                      - length
-                                  - type: "null"
-                          - type: "null"
-                      created_at:
-                        anyOf:
-                          - type: number
-                          - type: "null"
-                      entitlement_id:
-                        anyOf:
-                          - type: string
-                          - type: "null"
-                      price_id:
-                        anyOf:
-                          - type: string
-                          - type: "null"
-                      price_config:
-                        anyOf:
-                          - {}
-                          - type: "null"
-                free_trial:
-                  type: object
-                  properties:
-                    length:
-                      anyOf:
-                        - type: string
-                        - type: number
-                    unique_fingerprint:
-                      default: false
-                      type: boolean
-                    duration:
-                      default: day
-                      type: string
-                      enum:
-                        - day
-                        - month
-                        - year
-                    card_required:
-                      default: true
-                      type: boolean
-                  required:
-                    - length
-              required:
-                - id
-                - name
+              $ref: "#/components/schemas/CreateProductParams"
+      responses:
+        "200":
+          description: 200 OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+    patch:
+      summary: Update Product
+      tags:
+        - products
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProductParams"
       responses:
         "200":
           description: 200 OK
@@ -216,6 +43,390 @@ paths:
                 $ref: "#/components/schemas/Product"
 components:
   schemas:
+    CreateProductParams:
+      description: Create Product
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          pattern: ^[a-zA-Z0-9_-]+$
+        name:
+          type: string
+        is_add_on:
+          default: false
+          type: boolean
+        is_default:
+          default: false
+          type: boolean
+        version:
+          type: number
+        group:
+          default: ""
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              feature_id:
+                anyOf:
+                  - type: string
+                  - type: "null"
+              feature_type:
+                anyOf:
+                  - type: string
+                    enum:
+                      - single_use
+                      - continuous_use
+                      - boolean
+                      - static
+                  - type: "null"
+              included_usage:
+                anyOf:
+                  - anyOf:
+                      - type: number
+                      - type: string
+                        const: inf
+                  - type: "null"
+              interval:
+                anyOf:
+                  - type: string
+                    enum:
+                      - minute
+                      - hour
+                      - day
+                      - week
+                      - month
+                      - quarter
+                      - semi_annual
+                      - year
+                  - type: "null"
+              interval_count:
+                anyOf:
+                  - type: number
+                  - type: "null"
+              entity_feature_id:
+                anyOf:
+                  - type: string
+                  - type: "null"
+              usage_model:
+                anyOf:
+                  - type: string
+                    enum:
+                      - prepaid
+                      - pay_per_use
+                  - type: "null"
+              price:
+                anyOf:
+                  - type: number
+                  - type: "null"
+              tiers:
+                anyOf:
+                  - type: array
+                    items:
+                      type: object
+                      properties:
+                        to:
+                          anyOf:
+                            - type: number
+                            - type: string
+                              const: inf
+                        amount:
+                          type: number
+                      required:
+                        - to
+                        - amount
+                  - type: "null"
+              billing_units:
+                anyOf:
+                  - type: number
+                  - type: "null"
+              usage_limit:
+                anyOf:
+                  - type: number
+                  - type: "null"
+              reset_usage_when_enabled:
+                anyOf:
+                  - type: boolean
+                  - type: "null"
+              config:
+                anyOf:
+                  - type: object
+                    properties:
+                      on_increase:
+                        anyOf:
+                          - type: string
+                            enum:
+                              - bill_immediately
+                              - prorate_immediately
+                              - prorate_next_cycle
+                              - bill_next_cycle
+                          - type: "null"
+                      on_decrease:
+                        anyOf:
+                          - type: string
+                            enum:
+                              - prorate
+                              - prorate_immediately
+                              - prorate_next_cycle
+                              - none
+                              - no_prorations
+                          - type: "null"
+                      rollover:
+                        anyOf:
+                          - type: object
+                            properties:
+                              max:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                              duration:
+                                default: month
+                                type: string
+                                enum:
+                                  - month
+                                  - forever
+                              length:
+                                type: number
+                            required:
+                              - max
+                              - length
+                          - type: "null"
+                  - type: "null"
+              created_at:
+                anyOf:
+                  - type: number
+                  - type: "null"
+              entitlement_id:
+                anyOf:
+                  - type: string
+                  - type: "null"
+              price_id:
+                anyOf:
+                  - type: string
+                  - type: "null"
+              price_config:
+                anyOf:
+                  - {}
+                  - type: "null"
+        free_trial:
+          anyOf:
+            - type: object
+              properties:
+                length:
+                  anyOf:
+                    - type: string
+                    - type: number
+                unique_fingerprint:
+                  default: false
+                  type: boolean
+                duration:
+                  default: day
+                  type: string
+                  enum:
+                    - day
+                    - month
+                    - year
+                card_required:
+                  default: true
+                  type: boolean
+              required:
+                - length
+            - type: "null"
+      required:
+        - id
+        - name
+    UpdateProductParams:
+      description: Update Product
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          pattern: ^[a-zA-Z0-9_-]+$
+        name:
+          type: string
+        is_add_on:
+          type: boolean
+        is_default:
+          type: boolean
+        version:
+          type: number
+        group:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              feature_id:
+                anyOf:
+                  - type: string
+                  - type: "null"
+              feature_type:
+                anyOf:
+                  - type: string
+                    enum:
+                      - single_use
+                      - continuous_use
+                      - boolean
+                      - static
+                  - type: "null"
+              included_usage:
+                anyOf:
+                  - anyOf:
+                      - type: number
+                      - type: string
+                        const: inf
+                  - type: "null"
+              interval:
+                anyOf:
+                  - type: string
+                    enum:
+                      - minute
+                      - hour
+                      - day
+                      - week
+                      - month
+                      - quarter
+                      - semi_annual
+                      - year
+                  - type: "null"
+              interval_count:
+                anyOf:
+                  - type: number
+                  - type: "null"
+              entity_feature_id:
+                anyOf:
+                  - type: string
+                  - type: "null"
+              usage_model:
+                anyOf:
+                  - type: string
+                    enum:
+                      - prepaid
+                      - pay_per_use
+                  - type: "null"
+              price:
+                anyOf:
+                  - type: number
+                  - type: "null"
+              tiers:
+                anyOf:
+                  - type: array
+                    items:
+                      type: object
+                      properties:
+                        to:
+                          anyOf:
+                            - type: number
+                            - type: string
+                              const: inf
+                        amount:
+                          type: number
+                      required:
+                        - to
+                        - amount
+                  - type: "null"
+              billing_units:
+                anyOf:
+                  - type: number
+                  - type: "null"
+              usage_limit:
+                anyOf:
+                  - type: number
+                  - type: "null"
+              reset_usage_when_enabled:
+                anyOf:
+                  - type: boolean
+                  - type: "null"
+              config:
+                anyOf:
+                  - type: object
+                    properties:
+                      on_increase:
+                        anyOf:
+                          - type: string
+                            enum:
+                              - bill_immediately
+                              - prorate_immediately
+                              - prorate_next_cycle
+                              - bill_next_cycle
+                          - type: "null"
+                      on_decrease:
+                        anyOf:
+                          - type: string
+                            enum:
+                              - prorate
+                              - prorate_immediately
+                              - prorate_next_cycle
+                              - none
+                              - no_prorations
+                          - type: "null"
+                      rollover:
+                        anyOf:
+                          - type: object
+                            properties:
+                              max:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                              duration:
+                                default: month
+                                type: string
+                                enum:
+                                  - month
+                                  - forever
+                              length:
+                                type: number
+                            required:
+                              - max
+                              - length
+                          - type: "null"
+                  - type: "null"
+              created_at:
+                anyOf:
+                  - type: number
+                  - type: "null"
+              entitlement_id:
+                anyOf:
+                  - type: string
+                  - type: "null"
+              price_id:
+                anyOf:
+                  - type: string
+                  - type: "null"
+              price_config:
+                anyOf:
+                  - {}
+                  - type: "null"
+        free_trial:
+          anyOf:
+            - type: object
+              properties:
+                length:
+                  anyOf:
+                    - type: string
+                    - type: number
+                unique_fingerprint:
+                  default: false
+                  type: boolean
+                duration:
+                  default: day
+                  type: string
+                  enum:
+                    - day
+                    - month
+                    - year
+                card_required:
+                  default: true
+                  type: boolean
+              required:
+                - length
+            - type: "null"
+        archived:
+          type: boolean
     Product:
       description: A product
       type: object
