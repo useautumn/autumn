@@ -72,6 +72,16 @@ function UpdateReward({
 	const handleUpdate = async () => {
 		setUpdateLoading(true);
 		try {
+			// Validate product selection for discount rewards
+			if (selectedReward.discount_config) {
+				const { apply_to_all, price_ids } = selectedReward.discount_config;
+				if (!apply_to_all && (!price_ids || price_ids.length === 0)) {
+					toast.error("Please select price(s) to apply this reward to");
+					setUpdateLoading(false);
+					return;
+				}
+			}
+
 			// Check migration status and show warning if needed
 			if (products) {
 				const migrationResult = checkRewardMigration(selectedReward, products);
