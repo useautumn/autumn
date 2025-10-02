@@ -56,7 +56,7 @@ export const EditPlanHeader = () => {
 	};
 
 	return (
-		<div className="flex flex-col gap-2 p-4 pb-3 w-full bg-card">
+		<div className="flex flex-col gap-2 p-4 pb-3 w-full bg-card border-none shadow-none">
 			<V2Breadcrumb
 				className="p-0"
 				items={[

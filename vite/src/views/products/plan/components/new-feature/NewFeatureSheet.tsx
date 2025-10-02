@@ -20,7 +20,7 @@ import { NewFeatureBehaviour } from "./NewFeatureBehaviour";
 import { NewFeatureDetails } from "./NewFeatureDetails";
 import { NewFeatureType } from "./NewFeatureType";
 
-export function NewFeatureSheet() {
+export function NewFeatureSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 	const [feature, setFeature] = useState(getDefaultFeature());
 	const { product, setProduct, setSheet, setEditingState } =
 		useProductContext();
@@ -85,12 +85,25 @@ export function NewFeatureSheet() {
 		}
 	};
 
+	const handleCancel = () => {
+		if (isOnboarding) {
+			// In onboarding, just close the sheet and return to previous state
+			setSheet(null);
+			setEditingState({ type: null, id: null });
+		} else {
+			// In normal flow, go back to edit-plan
+			setSheet("edit-plan");
+		}
+	};
+
 	return (
 		<div className="flex flex-col h-full">
-			<SheetHeader
-				title="New Feature"
-				description="Configure how this feature is used in your app"
-			/>
+			{!isOnboarding && (
+				<SheetHeader
+					title="New Feature"
+					description="Configure how this feature is used in your app"
+				/>
+			)}
 
 			<NewFeatureDetails feature={feature} setFeature={setFeature} />
 
@@ -101,11 +114,7 @@ export function NewFeatureSheet() {
 			<NewFeatureAdvanced feature={feature} setFeature={setFeature} />
 
 			<div className="mt-auto p-4 w-full flex-row grid grid-cols-2 gap-2">
-				<Button
-					variant="secondary"
-					className="w-full"
-					onClick={() => setSheet("edit-plan")}
-				>
+				<Button variant="secondary" className="w-full" onClick={handleCancel}>
 					Cancel
 				</Button>
 				<Button className="w-full" onClick={handleCreateFeature}>

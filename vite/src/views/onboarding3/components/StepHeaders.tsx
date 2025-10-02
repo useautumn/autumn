@@ -33,16 +33,17 @@ export const StepHeader = ({
 
 	if (step === OnboardingStep.Playground) {
 		return (
-			<div>
+			<div className="flex flex-col gap-2">
 				<SheetHeader
 					title={`Step ${stepNum}: ${config.title}`}
 					description={config.description}
 					noSeparator={true}
-					className="p-0"
+					className="p-0 sticky"
+					isOnboarding={true}
 				/>
-				<div className="mt-3 grid grid-cols-2 gap-2 p-0">
+				<div className="flex gap-2 items-center justify-end">
 					<Select value={selectedProductId} onValueChange={onPlanSelect}>
-						<SelectTrigger>
+						<SelectTrigger className="max-h-7 h-7 text-xs">
 							<SelectValue placeholder="Select plan" />
 						</SelectTrigger>
 						<SelectContent>
@@ -53,7 +54,7 @@ export const StepHeader = ({
 							))}
 						</SelectContent>
 					</Select>
-					<CreatePlanDialog onSuccess={onCreatePlanSuccess} />
+					<CreatePlanDialog onSuccess={onCreatePlanSuccess} size="sm" />
 				</div>
 			</div>
 		);
@@ -64,7 +65,8 @@ export const StepHeader = ({
 			title={`Step ${stepNum}: ${config.title}`}
 			description={config.description}
 			noSeparator={true}
-			className={step === OnboardingStep.Completion ? "p-2" : "p-0"}
+			className="p-0 sticky"
+			isOnboarding={true}
 		/>
 	);
 };

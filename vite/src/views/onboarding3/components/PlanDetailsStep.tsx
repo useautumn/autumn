@@ -19,7 +19,7 @@ export const PlanDetailsStep = () => {
 		<>
 			<SheetSection title="Plan Details">
 				<div className="space-y-4">
-					<div className="grid grid-cols-2 gap-2">
+					<div className="grid grid-cols-1 gap-4">
 						<div>
 							<FormLabel>Name</FormLabel>
 							<Input
@@ -27,6 +27,11 @@ export const PlanDetailsStep = () => {
 								value={product?.name || ""}
 								onChange={(e) => setSource(e.target.value)}
 							/>
+
+							<span className="text-form-label">
+								Used to create a product in Stripe and show up on your checkout
+								pages.
+							</span>
 						</div>
 						<div>
 							<FormLabel>ID</FormLabel>
@@ -35,8 +40,12 @@ export const PlanDetailsStep = () => {
 								value={product?.id || ""}
 								onChange={(e) => setTarget(e.target.value)}
 							/>
+							<span className="text-form-label">
+								You’ll use this when using Autumn’s APIs or SDKs to refer to
+								this product.
+							</span>
 						</div>
-						<div className="col-span-2">
+						<div className="col-span-1">
 							<FormLabel>Description</FormLabel>
 							<LongInput
 								placeholder="eg. This plan includes 100 credits"
@@ -48,6 +57,7 @@ export const PlanDetailsStep = () => {
 									})
 								}
 							/>
+							<span className="text-form-label"></span>
 						</div>
 					</div>
 				</div>

@@ -44,8 +44,18 @@ export function PriceTiers() {
 		}
 	};
 
-	const handleInputChange = (key: string, value: string) => {
+	const handleInputChange = (
+		key: string,
+		value: string,
+		field: "amount" | "to",
+		tierIndex?: number,
+	) => {
 		setEditingValues((prev) => ({ ...prev, [key]: value }));
+
+		// Live update the item as user types
+		if (tierIndex !== undefined) {
+			updateTier({ item, setItem, index: tierIndex, field, value });
+		}
 	};
 
 	const getDisplayValue = (key: string, actualValue: number | string) => {
@@ -74,7 +84,9 @@ export function PriceTiers() {
 							value={getDisplayValue(amountKey, firstTier.amount)}
 							onFocus={() => handleInputFocus(amountKey, firstTier.amount)}
 							onBlur={() => handleInputBlur(amountKey, "amount", 0)}
-							onChange={(e) => handleInputChange(amountKey, e.target.value)}
+							onChange={(e) =>
+								handleInputChange(amountKey, e.target.value, "amount", 0)
+							}
 							inputMode="decimal"
 							placeholder="0.00"
 						/>
@@ -137,7 +149,8 @@ export function PriceTiers() {
 											!isInfinite && handleInputBlur(toKey, "to", index)
 										}
 										onChange={(e) =>
-											!isInfinite && handleInputChange(toKey, e.target.value)
+											!isInfinite &&
+											handleInputChange(toKey, e.target.value, "to", index)
 										}
 										className="w-full"
 										placeholder={isInfinite ? "∞" : "100"}
@@ -153,7 +166,9 @@ export function PriceTiers() {
 									value={getDisplayValue(amountKey, tier.amount)}
 									onFocus={() => handleInputFocus(amountKey, tier.amount)}
 									onBlur={() => handleInputBlur(amountKey, "amount", index)}
-									onChange={(e) => handleInputChange(amountKey, e.target.value)}
+									onChange={(e) =>
+										handleInputChange(amountKey, e.target.value, "amount", index)
+									}
 									inputMode="decimal"
 									placeholder="0.00"
 								/>
