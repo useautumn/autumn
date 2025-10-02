@@ -104,13 +104,14 @@ export const handleVersionProductV2 = async ({
 	});
 
 	// Handle new free trial
-	if (freeTrial) {
+	if (freeTrial || latestProduct.free_trial) {
 		await handleNewFreeTrial({
 			db,
 			newFreeTrial: freeTrial,
-			curFreeTrial: null,
+			curFreeTrial: latestProduct.free_trial,
 			internalProductId: newProduct.internal_id,
 			isCustom: false,
+			newVersion: true, // This is a new product version
 		});
 	}
 
