@@ -54,26 +54,26 @@ else
     echo "⚠️  Warning: $ROOT_PATH/shared/.env not found"
 fi
 
-# Copy drizzle migration files
-if [ -d "$ROOT_PATH/shared/drizzle" ]; then
-    echo "📋 Copying database migration files..."
-    mkdir -p shared/drizzle
-    cp -r "$ROOT_PATH/shared/drizzle/"* shared/drizzle/
-    echo "✅ Copied migration files"
-fi
+# # Copy drizzle migration files
+# if [ -d "$ROOT_PATH/shared/drizzle" ]; then
+#     echo "📋 Copying database migration files..."
+#     mkdir -p shared/drizzle
+#     cp -r "$ROOT_PATH/shared/drizzle/"* shared/drizzle/
+#     echo "✅ Copied migration files"
+# fi
 
 # Build shared workspace (required for other workspaces)
 echo "🔨 Building shared workspace..."
 bun -F @autumn/shared build
 
-# Run database migrations if DATABASE_URL exists
-if grep -q "DATABASE_URL=" server/.env 2>/dev/null; then
-    echo "🗄️  Running database migrations..."
-    bun db:migrate
-    echo "✅ Database migrations complete"
-else
-    echo "⚠️  Skipping database migrations (no DATABASE_URL found)"
-fi
+# # Run database migrations if DATABASE_URL exists
+# if grep -q "DATABASE_URL=" server/.env 2>/dev/null; then
+#     echo "🗄️  Running database migrations..."
+#     bun db:migrate
+#     echo "✅ Database migrations complete"
+# else
+#     echo "⚠️  Skipping database migrations (no DATABASE_URL found)"
+# fi
 
 echo "🎉 Workspace setup complete!"
 echo ""
