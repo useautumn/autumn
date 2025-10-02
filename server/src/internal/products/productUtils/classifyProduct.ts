@@ -1,7 +1,8 @@
 import type {
-	CreateProductParams,
+	CreateProductV2Params,
 	FullProduct,
 	Price,
+	ProductItem,
 	ProductV2,
 } from "@autumn/shared";
 import { pricesOnlyOneOff } from "../prices/priceUtils.js";
@@ -39,16 +40,18 @@ export const isMainProduct = ({
 export const isFreeProductV2 = ({
 	product,
 }: {
-	product: ProductV2 | CreateProductParams;
+	product: ProductV2 | CreateProductV2Params;
 }) => {
-	return (product.items || []).every((item) => isFeatureItem(item));
+	return (product.items || []).every((item: ProductItem) =>
+		isFeatureItem(item),
+	);
 };
 
 export const isDefaultTrial = ({
 	product,
 	skipDefault = false,
 }: {
-	product: ProductV2 | CreateProductParams;
+	product: ProductV2 | CreateProductV2Params;
 	skipDefault?: boolean;
 }) => {
 	return (

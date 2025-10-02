@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
 
-export const CusReferralResponseSchema = z.object({
+export const APICusReferralSchema = z.object({
 	program_id: z.string(),
 	customer: z.object({
 		id: z.string(),
@@ -11,4 +11,4 @@ export const CusReferralResponseSchema = z.object({
 	created_at: z.number(),
 });
 
-export type CusReferralResponse = z.infer<typeof CusReferralResponseSchema>;
+export type APICusReferralResponse = z.infer<typeof APICusReferralSchema>;

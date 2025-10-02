@@ -1,6 +1,6 @@
 import { ErrCode } from "@autumn/shared";
 import type { Context, Next } from "hono";
-import type { HonoEnv } from "@/initHono.js";
+import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { floatToVersion } from "@/utils/versionUtils.js";
 

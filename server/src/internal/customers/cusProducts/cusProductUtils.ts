@@ -1,9 +1,9 @@
 import {
 	ACTIVE_STATUSES,
+	APICusProductSchema,
 	APIVersion,
 	type AppEnv,
 	AttachScenario,
-	CusProductResponseSchema,
 	CusProductStatus,
 	cusProductToPrices,
 	type Entity,
@@ -508,28 +508,25 @@ export const processFullCusProduct = ({
 	}
 
 	if (apiVersion >= APIVersion.v1_1) {
-		if ((!subIds || subIds.length == 0) && trialing) {
+		if ((!subIds || subIds.length === 0) && trialing) {
 			stripeSubData = {
 				current_period_start: cusProduct.starts_at,
 				current_period_end: cusProduct.trial_ends_at,
 			};
 		}
 
-		return CusProductResponseSchema.parse({
+		return APICusProductSchema.parse({
 			id: cusProduct.product.id,
 			name: cusProduct.product.name,
 			group: cusProduct.product.group || null,
 			status: trialing ? CusProductStatus.Trialing : cusProduct.status,
-			// created_at: cusProduct.created_at,
 			canceled_at: cusProduct.canceled_at,
 			is_default: cusProduct.product.is_default || false,
 			is_add_on: cusProduct.product.is_add_on || false,
-
 			stripe_subscription_ids: cusProduct.subscription_ids || [],
 			started_at: cusProduct.starts_at,
-			// entity_id: cusProduct.entity_id,
 			entity_id: cusProduct.internal_entity_id
-				? entities?.find((e) => e.internal_id == cusProduct.internal_entity_id)
+				? entities?.find((e) => e.internal_id === cusProduct.internal_entity_id)
 						?.id
 				: cusProduct.entity_id || undefined,
 

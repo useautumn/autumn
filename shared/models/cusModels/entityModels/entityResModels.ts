@@ -1,8 +1,8 @@
+import { APICusFeatureSchema } from "@api/customers/components/apiCusFeature.js";
+import { APICusProductSchema } from "@api/customers/components/apiCusProduct.js";
+import { APIInvoiceSchema } from "@api/others/apiInvoice.js";
 import { z } from "zod/v4";
 import { AppEnv } from "../../genModels/genEnums.js";
-import { CusEntResponseV2Schema } from "../cusResModels/cusFeatureResponse.js";
-import { CusProductResponseSchema } from "../cusResModels/cusProductResponse.js";
-import { InvoiceResponseSchema } from "../invoiceModels/invoiceResponseModels.js";
 
 export const EntityResponseSchema = z.object({
 	id: z.string().nullable(),
@@ -11,10 +11,10 @@ export const EntityResponseSchema = z.object({
 	feature_id: z.string().nullish(),
 
 	created_at: z.number(),
-	env: z.nativeEnum(AppEnv),
-	products: z.array(CusProductResponseSchema).optional(),
-	features: z.record(z.string(), CusEntResponseV2Schema).optional(),
-	invoices: z.array(InvoiceResponseSchema).optional(),
+	env: z.enum(AppEnv),
+	products: z.array(APICusProductSchema).optional(),
+	features: z.record(z.string(), APICusFeatureSchema).optional(),
+	invoices: z.array(APIInvoiceSchema).optional(),
 });
 
 export type EntityResponse = z.infer<typeof EntityResponseSchema>;

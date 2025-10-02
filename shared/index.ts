@@ -39,11 +39,9 @@ export * from "./models/cusModels/cusExpand.js";
 
 // 8. Customer Models
 export * from "./models/cusModels/cusModels.js";
-export * from "./models/cusModels/cusResModels/cusFeatureResponse.js";
-export * from "./models/cusModels/cusResModels/cusProductResponse.js";
-export * from "./models/cusModels/cusResModels/cusReferralsResponse.js";
+
 // Cus response
-export * from "./models/cusModels/cusResponseModels.js";
+
 export * from "./models/cusModels/cusTable.js";
 export * from "./models/cusModels/entityModels/entityExpand.js";
 export * from "./models/cusModels/entityModels/entityModels.js";
@@ -51,7 +49,6 @@ export * from "./models/cusModels/entityModels/entityResModels.js";
 export * from "./models/cusModels/entityModels/entityTable.js";
 export * from "./models/cusModels/fullCusModel.js";
 export * from "./models/cusModels/invoiceModels/invoiceModels.js";
-export * from "./models/cusModels/invoiceModels/invoiceResponseModels.js";
 export * from "./models/cusModels/invoiceModels/invoiceTable.js";
 export * from "./models/cusProductModels/cusEntModels/cusEntModels.js";
 export * from "./models/cusProductModels/cusEntModels/cusEntTable.js";

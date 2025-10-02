@@ -1,5 +1,5 @@
 import type { Context, Next } from "hono";
-import type { HonoEnv } from "@/initHono.js";
+import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 
 /**
  * Middleware to handle org-config header and merge with org config
