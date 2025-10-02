@@ -1,7 +1,7 @@
 import { context, trace } from "@opentelemetry/api";
 import type { Context, Next } from "hono";
 import { logger } from "@/external/logtail/logtailUtils.js";
-import type { HonoEnv } from "@/initHono.js";
+import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 
 const tracer = trace.getTracer("hono");
 

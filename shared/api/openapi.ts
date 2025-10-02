@@ -3,8 +3,8 @@ import { AppEnv } from "@models/genModels/genEnums.js";
 import yaml from "yaml";
 import { z } from "zod/v4";
 import { createDocument } from "zod-openapi";
-import { APIProductSchema } from "./products/apiProduct.js";
-import { CreateProductParamsSchema } from "./products/operations/createProductParams.js";
+import { coreOps } from "./core/coreOpenApi.js";
+import { productOps } from "./products/productsOpenApi.js";
 
 const API_VERSION = "1.2.0";
 
@@ -50,33 +50,8 @@ const document = createDocument({
 	},
 
 	paths: {
-		"/products": {
-			post: {
-				summary: "Create Product",
-				tags: ["products"],
-				requestBody: {
-					content: {
-						"application/json": { schema: CreateProductParamsSchema },
-					},
-				},
-				responses: {
-					"200": {
-						description: "200 OK",
-						content: {
-							"application/json": { schema: APIProductSchema },
-						},
-					},
-				},
-				// responses: withErrorResponses({
-				// 	"200": {
-				// 		description: "200 OK",
-				// 		content: {
-				// 			"application/json": { schema: APIProductSchema },
-				// 		},
-				// 	},
-				// }),
-			},
-		},
+		...productOps,
+		...coreOps,
 	},
 });
 

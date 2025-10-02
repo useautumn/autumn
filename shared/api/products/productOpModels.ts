@@ -7,21 +7,26 @@ export const CreateProductItemParamsSchema = ProductItemSchema;
 
 // Base product params
 
-export const CreateProductV2ParamsSchema = z.object({
-	id: z.string().nonempty().regex(idRegex),
+export const CreateProductV2ParamsSchema = z
+	.object({
+		id: z.string().nonempty().regex(idRegex),
 
-	name: z.string().refine((val) => val.length > 0, {
-		message: "name must be a non-empty string",
-	}),
+		name: z.string().refine((val) => val.length > 0, {
+			message: "name must be a non-empty string",
+		}),
 
-	is_add_on: z.boolean().default(false),
-	is_default: z.boolean().default(false),
-	version: z.number().optional(),
-	group: z.string().default(""),
+		is_add_on: z.boolean().default(false),
+		is_default: z.boolean().default(false),
+		version: z.number().optional(),
+		group: z.string().default(""),
 
-	items: z.array(CreateProductItemParamsSchema).optional(),
-	free_trial: CreateFreeTrialSchema.nullish().default(null),
-});
+		items: z.array(CreateProductItemParamsSchema).optional(),
+		free_trial: CreateFreeTrialSchema.nullish().default(null),
+	})
+	.meta({
+		id: "CreateProductParams",
+		description: "Create Product",
+	});
 
 export const UpdateProductV2ParamsSchema = CreateProductV2ParamsSchema.extend({
 	id: z.string().nonempty().regex(idRegex).optional(),
@@ -39,6 +44,9 @@ export const UpdateProductV2ParamsSchema = CreateProductV2ParamsSchema.extend({
 
 	// items: z.array(CreateProductItemParamsSchema).optional(),
 	free_trial: CreateFreeTrialSchema.nullish(),
+}).meta({
+	id: "UpdateProductParams",
+	description: "Update Product",
 });
 
 export const UpdateProductQuerySchema = z.object({

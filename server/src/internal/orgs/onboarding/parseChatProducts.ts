@@ -1,6 +1,6 @@
 import {
 	AppEnv,
-	CreateProductSchema,
+	CreateProductV2ParamsSchema,
 	EntInsertSchema,
 	type Entitlement,
 	type Feature,
@@ -32,7 +32,7 @@ export const parseChatProducts = async ({
 
 	for (const product of chatProducts) {
 		const backendProduct: Product = constructProduct({
-			productData: CreateProductSchema.parse({
+			productData: CreateProductV2ParamsSchema.parse({
 				...product,
 			}),
 			orgId,

@@ -1,6 +1,6 @@
 import { type AppEnv, AuthType, ErrCode } from "@autumn/shared";
 import type { Context, Next } from "hono";
-import type { HonoEnv } from "@/initHono.js";
+import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { auth } from "@/utils/auth.js";
 import RecaseError from "@/utils/errorUtils.js";

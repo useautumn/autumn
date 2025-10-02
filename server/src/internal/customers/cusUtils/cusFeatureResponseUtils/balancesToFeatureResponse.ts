@@ -1,19 +1,19 @@
 import {
-	CreditSchemaItem,
-	CusEntResponse,
+	type CreditSchemaItem,
+	type CusEntResponse,
 	CusEntResponseSchema,
-	CusEntResponseV2,
-	CusRollover,
-	Feature,
+	type CusEntResponseV2,
+	type CusRollover,
+	type Feature,
 	FeatureType,
-	FullCustomerEntitlement,
+	type FullCustomerEntitlement,
 } from "@autumn/shared";
-import { CusFeatureBalance } from "./getCusBalances.js";
 import {
 	getCusFeatureType,
 	isCreditSystem,
 } from "@/internal/features/featureUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
+import type { CusFeatureBalance } from "./getCusBalances.js";
 
 export const sumValues = (
 	entList: CusEntResponse[],
@@ -29,7 +29,7 @@ export const sumValues = (
 };
 
 export const getEarliestNextResetAt = (entList: CusEntResponse[]) => {
-	let earliest = entList.reduce((acc, curr) => {
+	const earliest = entList.reduce((acc, curr) => {
 		if (curr.next_reset_at && curr.next_reset_at < acc) {
 			return curr.next_reset_at;
 		}
@@ -47,21 +47,21 @@ export const featuresToObject = ({
 	features: Feature[];
 	entList: CusEntResponse[];
 }) => {
-	let featureObject: Record<string, CusEntResponseV2> = {};
+	const featureObject: Record<string, CusEntResponseV2> = {};
 
-	for (let entRes of entList) {
-		let feature = features.find((f) => f.id == entRes.feature_id)!;
-		let featureType = getCusFeatureType({ feature });
+	for (const entRes of entList) {
+		const feature = features.find((f) => f.id == entRes.feature_id)!;
+		const featureType = getCusFeatureType({ feature });
 
-		let featureId = feature.id;
-		let unlimited = entRes.unlimited;
-		let relatedEnts = entList.filter((e) => e.feature_id == featureId);
+		const featureId = feature.id;
+		const unlimited = entRes.unlimited;
+		const relatedEnts = entList.filter((e) => e.feature_id == featureId);
 
 		if (featureObject[featureId]) {
 			continue;
 		}
 
-		let includedUsage = sumValues(relatedEnts, "included_usage");
+		const includedUsage = sumValues(relatedEnts, "included_usage");
 		let usageLimit: number | undefined = sumValues(relatedEnts, "usage_limit");
 		if (notNullish(usageLimit) && usageLimit === includedUsage) {
 			usageLimit = undefined;
@@ -69,13 +69,13 @@ export const featuresToObject = ({
 
 		// console.log(`Feature ${featureId} list:`, relatedEnts);
 
-		let hasRollovers = relatedEnts.some((e) => notNullish(e.rollovers));
-		let rollovers = hasRollovers
+		const hasRollovers = relatedEnts.some((e) => notNullish(e.rollovers));
+		const rollovers = hasRollovers
 			? (relatedEnts
 					.flatMap((e) => e.rollovers)
 					.filter(notNullish) as CusRollover[])
 			: undefined;
-		let cusFeature: CusEntResponseV2 = {
+		const cusFeature: CusEntResponseV2 = {
 			id: featureId,
 			name: feature.name,
 			type: featureType,
@@ -124,11 +124,11 @@ export const balancesToFeatureResponse = ({
 	cusEnts: FullCustomerEntitlement[];
 	balances: CusFeatureBalance[];
 }) => {
-	let features = cusEnts.map((cusEnt) => cusEnt.entitlement.feature);
+	const features = cusEnts.map((cusEnt) => cusEnt.entitlement.feature);
 
 	let entList: any = balances.map((b) => {
-		let isBoolean =
-			features.find((f: Feature) => f.id == b.feature_id)?.type ==
+		const isBoolean =
+			features.find((f: Feature) => f.id === b.feature_id)?.type ===
 			FeatureType.Boolean;
 
 		if (b.unlimited || isBoolean) {

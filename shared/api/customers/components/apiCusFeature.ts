@@ -1,15 +1,16 @@
+import { EntInterval } from "@models/productModels/entModels/entEnums.js";
+import { ProductItemFeatureType } from "@models/productV2Models/productItemModels/productItemModels.js";
 import { z } from "zod/v4";
-import { EntInterval } from "../../productModels/entModels/entEnums.js";
-import { ProductItemFeatureType } from "../../productV2Models/productItemModels/productItemModels.js";
 
 export const CusRolloverSchema = z.object({
 	balance: z.number(),
 	expires_at: z.number(),
 });
 
+// OLD CUS FEATURE RESPONSE
 export const CusEntResponseSchema = z.object({
 	feature_id: z.string(),
-	interval: z.nativeEnum(EntInterval).nullish(),
+	interval: z.enum(EntInterval).nullish(),
 	interval_count: z.number().nullish(),
 	unlimited: z.boolean().nullish(),
 	balance: z.number().nullish(), //
@@ -21,8 +22,9 @@ export const CusEntResponseSchema = z.object({
 	rollovers: z.array(CusRolloverSchema).nullish(),
 });
 
-export const CoreCusFeatureResponseSchema = z.object({
-	interval: z.nativeEnum(EntInterval).or(z.literal("multiple")).nullish(),
+// NEW CUS FEATURE RESPONSE
+export const CoreCusFeatureSchema = z.object({
+	interval: z.enum(EntInterval).or(z.literal("multiple")).nullish(),
 	interval_count: z.number().nullish(),
 	unlimited: z.boolean().nullish(),
 	balance: z.number().nullish(),
@@ -34,7 +36,7 @@ export const CoreCusFeatureResponseSchema = z.object({
 	breakdown: z
 		.array(
 			z.object({
-				interval: z.nativeEnum(EntInterval),
+				interval: z.enum(EntInterval),
 				interval_count: z.number().nullish(),
 				balance: z.number().nullish(),
 				usage: z.number().nullish(),
@@ -56,15 +58,15 @@ export const CoreCusFeatureResponseSchema = z.object({
 	rollovers: z.array(CusRolloverSchema).nullish(),
 });
 
-export const CusEntResponseV2Schema = z
+export const APICusFeatureSchema = z
 	.object({
 		id: z.string(),
-		type: z.nativeEnum(ProductItemFeatureType),
+		type: z.enum(ProductItemFeatureType),
 		name: z.string().nullish(),
 	})
-	.extend(CoreCusFeatureResponseSchema.shape);
+	.extend(CoreCusFeatureSchema.shape);
 
-export const CheckResponseSchema = z
+export const CheckResultSchema = z
 	.object({
 		allowed: z.boolean(),
 		customer_id: z.string(),
@@ -73,9 +75,9 @@ export const CheckResponseSchema = z
 		required_balance: z.number(),
 		code: z.string(),
 	})
-	.extend(CoreCusFeatureResponseSchema.shape);
+	.extend(CoreCusFeatureSchema.shape);
 
 export type CusEntResponse = z.infer<typeof CusEntResponseSchema>;
-export type CusEntResponseV2 = z.infer<typeof CusEntResponseV2Schema>;
-export type CheckResponse = z.infer<typeof CheckResponseSchema>;
+export type CusEntResponseV2 = z.infer<typeof APICusFeatureSchema>;
+export type CheckResponse = z.infer<typeof CheckResultSchema>;
 export type CusRollover = z.infer<typeof CusRolloverSchema>;

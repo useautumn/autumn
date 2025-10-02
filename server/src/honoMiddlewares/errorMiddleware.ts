@@ -3,7 +3,7 @@ import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import Stripe from "stripe";
 import { ZodError } from "zod/v4";
-import type { HonoEnv } from "@/initHono.js";
+import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import RecaseError, { formatZodError } from "@/utils/errorUtils.js";
 
 /**
