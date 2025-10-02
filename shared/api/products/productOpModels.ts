@@ -41,6 +41,7 @@ export const UpdateProductV2ParamsSchema = CreateProductV2ParamsSchema.extend({
 	is_default: z.boolean().optional(),
 	version: z.number().optional(),
 	group: z.string().optional(),
+	archived: z.boolean().optional(),
 
 	// items: z.array(CreateProductItemParamsSchema).optional(),
 	free_trial: CreateFreeTrialSchema.nullish(),
