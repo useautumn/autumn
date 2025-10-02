@@ -54,6 +54,25 @@ else
     echo "⚠️  Warning: $ROOT_PATH/shared/.env not found"
 fi
 
+# Copy shell scripts from root
+echo "📋 Copying shell scripts from root repository..."
+
+if [ -f "$ROOT_PATH/run.sh" ]; then
+    cp "$ROOT_PATH/run.sh" run.sh
+    chmod +x run.sh
+    echo "✅ Copied run.sh"
+else
+    echo "⚠️  Warning: $ROOT_PATH/run.sh not found"
+fi
+
+if [ -f "$ROOT_PATH/commands.sh" ]; then
+    cp "$ROOT_PATH/commands.sh" commands.sh
+    chmod +x commands.sh
+    echo "✅ Copied commands.sh"
+else
+    echo "⚠️  Warning: $ROOT_PATH/commands.sh not found"
+fi
+
 # # Copy drizzle migration files
 # if [ -d "$ROOT_PATH/shared/drizzle" ]; then
 #     echo "📋 Copying database migration files..."
