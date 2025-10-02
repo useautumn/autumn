@@ -1,21 +1,23 @@
-import { useEffect, useState } from "react";
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { Input } from "@/components/ui/input";
-import { slugify } from "@/utils/formatUtils/formatTextUtils";
-import { cn } from "@/lib/utils";
-import { Clock, InfoIcon, PlusIcon, XIcon, Zap } from "lucide-react";
-import { Expression, FeatureUsageType, MeteredConfig } from "@autumn/shared";
-import { FeatureType } from "@autumn/shared";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-import { Button } from "@/components/ui/button";
+import {
+	type Expression,
+	FeatureType,
+	FeatureUsageType,
+	type MeteredConfig,
+} from "@autumn/shared";
+import { PlusIcon, XIcon } from "lucide-react";
+import { useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { notNullish, nullish } from "@/utils/genUtils";
+import { cn } from "@/lib/utils";
+import { slugify } from "@/utils/formatUtils/formatTextUtils";
+import { nullish } from "@/utils/genUtils";
 import { SelectFeatureType } from "./SelectFeatureType";
 import { SelectFeatureUsageType } from "./SelectFeatureUsageType";
 
@@ -70,6 +72,14 @@ export function FeatureConfig({
 	);
 	const [idChanged, setIdChanged] = useState(!!feature.id);
 
+	// Helper function to update meteredConfig and sync to parent
+	const updateMeteredConfig = (newConfig: MeteredConfig) => {
+		setMeteredConfig(newConfig);
+		if (feature.type === FeatureType.Metered) {
+			setFeature({ ...feature, config: newConfig });
+		}
+	};
+
 	const showNameAndId = () => {
 		if (nullish(feature.type)) {
 			return false;
@@ -92,7 +102,7 @@ export function FeatureConfig({
 				when purchasing a product
 			</div>
 			<SelectFeatureType feature={feature} setFeature={setFeature} />
-			{feature.type == FeatureType.Metered && (
+			{feature.type === FeatureType.Metered && (
 				<SelectFeatureUsageType feature={feature} setFeature={setFeature} />
 			)}
 
@@ -139,7 +149,7 @@ export function FeatureConfig({
 
 								<FilterInput
 									config={meteredConfig}
-									setConfig={setMeteredConfig}
+									setConfig={updateMeteredConfig}
 									eventNameInput={eventNameInput}
 									setEventNameInput={setEventNameInput}
 									setEventNameChanged={setEventNameChanged}
@@ -150,6 +160,7 @@ export function FeatureConfig({
 									<a
 										href="https://docs.useautumn.com/features/tracking-usage#using-event-names"
 										target="_blank"
+										rel="noreferrer"
 										className="text-primary underline"
 									>
 										here.
@@ -219,7 +230,7 @@ export const FilterInput = ({
 	const enterClicked = () => {
 		let newFilter: Expression;
 
-		if (filter.value.length == 0) {
+		if (filter.value.length === 0) {
 			newFilter = {
 				property: "",
 				operator: "",
@@ -244,12 +255,6 @@ export const FilterInput = ({
 		enableOnFormTags: ["input"],
 		enabled: inputFocused,
 	});
-
-	// useHotkeys(["meta+enter"], enterClicked, {
-	//   enableOnContentEditable: true,
-	//   enabled: inputFocused,
-	// });
-
 	return (
 		<div
 			className={cn(
@@ -266,6 +271,7 @@ export const FilterInput = ({
 				>
 					{value}
 					<button
+						type="button"
 						className="text-zinc-500"
 						onClick={() => onRemoveClicked(index)}
 					>
