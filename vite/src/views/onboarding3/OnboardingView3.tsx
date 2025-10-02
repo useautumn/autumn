@@ -98,7 +98,7 @@ export default function OnboardingContent() {
 									onCreatePlanSuccess={onCreatePlanSuccess}
 								/>
 							</div>
-							<Separator className="mx-4" />
+							<Separator className="mx-4 max-w-[90%]" />
 							<OnboardingStepRenderer
 								step={step}
 								feature={feature}

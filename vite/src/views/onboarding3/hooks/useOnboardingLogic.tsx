@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -35,23 +34,6 @@ export const useOnboardingLogic = () => {
 		productCreatedRef,
 		featureCreatedRef,
 	} = useOnboardingState();
-
-	// HYBRID APPROACH: Use React Query when we have a product ID (Steps 2-4)
-	const hasProductId = Boolean(baseProduct?.id && baseProduct.id !== "");
-
-	const productQueryFetcher = async () => {
-		if (!hasProductId) return null;
-		const response = await axiosInstance.get(
-			`/products/${baseProduct.id}/data2`,
-		);
-		return response.data;
-	};
-
-	const { data: queryData, refetch: refetchProduct } = useQuery({
-		queryKey: ["onboarding-product", baseProduct?.id],
-		queryFn: productQueryFetcher,
-		enabled: false, // Disable automatic fetching - only fetch on explicit refetch
-	});
 
 	// Choose data source: Always use baseProduct during onboarding (user has unsaved changes)
 	// Only merge server data after explicit refetch (e.g., after save)
@@ -202,7 +184,7 @@ export const useOnboardingLogic = () => {
 				setEditingState,
 				axiosInstance,
 			);
-		} catch (error) {
+		} catch (_) {
 			setSelectedProductId(product?.id || "");
 		}
 	};
