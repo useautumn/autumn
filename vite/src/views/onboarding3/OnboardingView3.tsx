@@ -1,10 +1,12 @@
 import { ArrowLeftIcon } from "lucide-react";
+import { useState } from "react";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { Separator } from "@/components/v2/separator";
 import { navigateTo } from "@/utils/genUtils";
 import { OnboardingSteps } from "@/views/onboarding3/components/OnboardingSteps";
 import { ProductContext } from "@/views/products/product/ProductContext";
 import { SaveChangesBar } from "../products/plan/components/SaveChangesBar";
+import ConnectStripeDialog from "./ConnectStripeDialog";
 import { OnboardingStepRenderer } from "./components/OnboardingStepRenderer";
 import { StepHeader } from "./components/StepHeaders";
 import { useOnboardingLogic } from "./hooks/useOnboardingLogic";
@@ -12,6 +14,7 @@ import { OnboardingPreview } from "./OnboardingPreview";
 import { getStepNumber, OnboardingStep } from "./utils/onboardingUtils";
 
 export default function OnboardingContent() {
+	const [connectStripeOpen, setConnectStripeOpen] = useState(false);
 	const {
 		// Data
 		product,
@@ -46,7 +49,9 @@ export default function OnboardingContent() {
 	} = useOnboardingLogic();
 
 	return (
-		<ProductContext.Provider
+		<>
+			<ConnectStripeDialog open={connectStripeOpen} setOpen={setConnectStripeOpen} />
+			<ProductContext.Provider
 			value={{
 				setShowNewVersionDialog: () => {},
 				product,
@@ -78,6 +83,7 @@ export default function OnboardingContent() {
 					<OnboardingPreview
 						currentStep={getStepNumber(step)}
 						playgroundMode={playgroundMode}
+						setConnectStripeOpen={setConnectStripeOpen}
 					/>
 
 					{step === OnboardingStep.Playground && (
@@ -131,5 +137,6 @@ export default function OnboardingContent() {
 				</div>
 			</div>
 		</ProductContext.Provider>
+		</>
 	);
 }
