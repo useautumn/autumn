@@ -1,8 +1,11 @@
+import "dotenv/config";
 import { writeFileSync } from "node:fs";
 import { AppEnv } from "@models/genModels/genEnums.js";
 import yaml from "yaml";
 import { z } from "zod/v4";
 import { createDocument } from "zod-openapi";
+import { CustomerDataSchema } from "./common/customerData.js";
+import { EntityDataSchema } from "./common/entityData.js";
 import { coreOps } from "./core/coreOpenApi.js";
 import { customerOps } from "./customers/customersOpenApi.js";
 import { entityOps } from "./entities/entitiesOpenApi.js";
@@ -36,12 +39,14 @@ const document = createDocument({
 				.object({
 					message: z.string(),
 					code: z.string(),
-					env: z.nativeEnum(AppEnv),
+					env: z.enum(AppEnv),
 				})
 				.meta({
 					id: "AutumnError",
 					description: "An error that occurred in the API",
 				}),
+			customerData: CustomerDataSchema,
+			entityData: EntityDataSchema,
 		},
 		securitySchemes: {
 			secretKey: {
@@ -64,15 +69,24 @@ const document = createDocument({
 // Export to YAML file during build
 if (process.env.NODE_ENV !== "production") {
 	try {
-		// Export as JSON (YAML export has issues with zod schemas)
+		// Convert to JSON first to strip out Zod schemas and function references
 		const jsonStr = JSON.stringify(document, null, 2);
-		writeFileSync("./openapi.json", jsonStr, "utf8");
-		console.log("OpenAPI document exported to openapi.json");
 
-		// TODO: Fix YAML export - currently fails with "Tag not resolved for Function value"
-		// const yamlContent = yaml.stringify(document);
-		// writeFileSync("./openapi.yaml", yamlContent, "utf8");
-		// console.log("OpenAPI document exported to openapi.yaml");
+		// Convert JSON to YAML (this avoids function serialization issues)
+		const jsonObj = JSON.parse(jsonStr);
+		const yamlContent = yaml.stringify(jsonObj);
+
+		if (process.env.STAINLESS_PATH) {
+			writeFileSync(
+				`${process.env.STAINLESS_PATH}/openapi.yml`,
+				yamlContent,
+				"utf8",
+			);
+		}
+
+		console.log(
+			`OpenAPI document exported to ${process.env.STAINLESS_PATH}/openapi.yml`,
+		);
 	} catch (error) {
 		console.error("Failed to export OpenAPI document:", error);
 	}

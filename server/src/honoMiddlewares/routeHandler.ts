@@ -75,6 +75,8 @@ export function createRoute<
 	}
 
 	const wrappedHandler = async (c: ValidatedContext<HonoEnv, Body, Query>) => {
+		c.set("validated", true);
+
 		if (opts.withTx) {
 			const db = c.get("ctx").db;
 

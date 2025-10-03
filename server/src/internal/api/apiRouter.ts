@@ -8,6 +8,7 @@ import { attachRouter } from "../customers/attach/attachRouter.js";
 import { handleSetupPayment } from "../customers/attach/handleSetupPayment.js";
 import cancelRouter from "../customers/cancel/cancelRouter.js";
 import { cusRouter } from "../customers/cusRouter.js";
+import { handleCreateBillingPortal } from "../customers/handlers/handleCreateBillingPortal.js";
 import { featureRouter } from "../features/featureRouter.js";
 import { internalFeatureRouter } from "../features/internalFeatureRouter.js";
 import { migrationRouter } from "../migrations/migrationRouter.js";
@@ -59,6 +60,7 @@ apiRouter.use("/check", checkRouter);
 apiRouter.use("/events", eventsRouter);
 apiRouter.use("/track", eventsRouter);
 apiRouter.post("/setup_payment", handleSetupPayment);
+apiRouter.post("/billing_portal", handleCreateBillingPortal);
 
 // Analytics
 apiRouter.use("/query", analyticsRouter);

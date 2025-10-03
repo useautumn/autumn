@@ -26,5 +26,5 @@ export type RequestContext = {
 export type AutumnContext = RequestContext;
 
 export type HonoEnv = {
-	Variables: { ctx: AutumnContext };
+	Variables: { ctx: AutumnContext; validated: boolean };
 };

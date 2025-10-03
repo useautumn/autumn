@@ -1,8 +1,9 @@
 // Core
 export * from "./core/attachModels.js";
+export * from "./core/checkModels.js";
 export * from "./core/checkoutModels.js";
-export * from "./core/coreOpModels.js";
 export * from "./core/coreOpenApi.js";
+export * from "./core/coreOpModels.js";
 
 // Customers
 
@@ -15,8 +16,8 @@ export * from "./customers/customersOpenApi.js";
 
 // Entities
 export * from "./entities/apiEntity.js";
-export * from "./entities/entityOpModels.js";
 export * from "./entities/entitiesOpenApi.js";
+export * from "./entities/entityOpModels.js";
 
 // Features
 export * from "./features/apiFeature.js";

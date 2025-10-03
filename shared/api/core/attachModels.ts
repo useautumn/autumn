@@ -3,6 +3,8 @@ import { CreateFreeTrialSchema } from "@models/productModels/freeTrialModels/fre
 import { ProductItemSchema } from "@models/productV2Models/productItemModels/productItemModels.js";
 import { z } from "zod/v4";
 import { notNullish } from "../../utils/utils.js";
+import { CustomerDataSchema } from "../common/customerData.js";
+import { EntityDataSchema } from "../common/entityData.js";
 
 export const ProductOptions = z.object({
 	product_id: z.string(),
@@ -18,19 +20,18 @@ export const ExtAttachBodySchema = z.object({
 		.string()
 		.describe("ID of the customer to attach the product to"),
 
-	customer_data: z
-		.any()
-		.nullish()
-		.describe("Customer data if using attach to auto create customer"),
+	customer_data: CustomerDataSchema.nullish().describe(
+		"Customer data if using attach to auto create customer",
+	),
 
 	entity_id: z.string().nullish(),
-	entity_data: z.any().nullish(),
+	entity_data: EntityDataSchema.nullish(),
 
 	// Product Info
 	product_id: z.string().nullish(),
 	product_ids: z.array(z.string()).min(1).nullish(),
 	options: z.array(FeatureOptionsSchema).nullish(),
-	free_trial: z.boolean(),
+	free_trial: z.boolean().optional(),
 
 	// Others
 	success_url: z.string().optional(),

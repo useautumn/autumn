@@ -88,6 +88,7 @@ const handleSpecialErrorCases = (
 		logger.warn(
 			`ATTACH ZOD ERROR (${ctx.org?.slug || "unknown"}): ${formattedError}`,
 		);
+
 		return c.json(
 			{
 				message: formattedError,
@@ -172,18 +173,35 @@ export const errorMiddleware = (err: Error, c: Context<HonoEnv>) => {
 	if (err instanceof ZodError) {
 		const formattedError = formatZodError(err);
 
-		logger.error(
-			`ZOD ERROR (${ctx.org?.slug || "unknown"}): ${formattedError}`,
-		);
+		// 1. If it's validation error
+		if (c.get("validated")) {
+			logger.error(
+				`INTERNAL ZOD ERROR (${ctx.org?.slug || "unknown"}): ${formattedError}`,
+			);
+			logger.error(err);
 
-		return c.json(
-			{
-				message: formattedError,
-				code: ErrCode.InvalidInputs,
-				env: ctx.env,
-			},
-			400,
-		);
+			return c.json(
+				{
+					message: formattedError,
+					code: ErrCode.InvalidInputs,
+					env: ctx.env,
+				},
+				500,
+			);
+		} else {
+			logger.warn(
+				`ZOD ERROR (${ctx.org?.slug || "unknown"}): ${formattedError}`,
+			);
+
+			return c.json(
+				{
+					message: formattedError,
+					code: ErrCode.InvalidInputs,
+					env: ctx.env,
+				},
+				400,
+			);
+		}
 	}
 
 	// 4. Handle unknown errors

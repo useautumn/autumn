@@ -5,7 +5,7 @@ export const APICusProductSchema = z.object({
 	id: z.string(),
 	name: z.string().nullable(),
 	group: z.string().nullable(),
-	status: z.enum(["active", "expired", "scheduled"]),
+	status: z.enum(["active", "expired", "scheduled", "trialing"]),
 
 	canceled_at: z.number().nullish(),
 	started_at: z.number(),

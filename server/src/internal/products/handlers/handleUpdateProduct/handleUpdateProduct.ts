@@ -1,9 +1,9 @@
 import {
-	CreateProductV2ParamsSchema,
+	type FreeTrial,
 	mapToProductV2,
 	notNullish,
 	ProductNotFoundError,
-	ProductV2Schema,
+	type ProductV2,
 	RecaseError,
 	UpdateProductQuerySchema,
 	UpdateProductSchema,
@@ -37,8 +37,6 @@ export const handleUpdateProductV2 = createRoute({
 
 		const { db, org, env, features, logger } = ctx;
 		const { version, upsert, disable_version } = c.req.valid("query");
-		// const { productId } = req.params;
-		// const { orgId, env, logger, db } = req;
 
 		const [fullProduct, rewardPrograms, _defaultProds] = await Promise.all([
 			ProductService.getFull({
@@ -64,11 +62,6 @@ export const handleUpdateProductV2 = createRoute({
 
 		if (!fullProduct) throw new ProductNotFoundError({ productId: productId });
 
-		// // How to go into another route handler?
-		// if (upsert === "true") await handleCreateProduct(c);
-
-		// Start a transaction?
-
 		const cusProductsCurVersion =
 			await CusProductService.getByInternalProductId({
 				db,
@@ -80,14 +73,17 @@ export const handleUpdateProductV2 = createRoute({
 			features,
 		});
 
-		const cusProductExists = cusProductsCurVersion.length > 0;
+		const newFreeTrial = body.free_trial as FreeTrial | undefined;
+		const newProductV2: ProductV2 = {
+			...curProductV2,
+			...body,
+			items: body.items || [],
+			free_trial: newFreeTrial || curProductV2.free_trial || undefined,
+		};
 
 		await disableCurrentDefault({
 			req: ctx,
-			newProduct: CreateProductV2ParamsSchema.parse({
-				...fullProduct,
-				...body,
-			}),
+			newProduct: newProductV2,
 		});
 
 		await handleUpdateProductDetails({
@@ -103,12 +99,8 @@ export const handleUpdateProductV2 = createRoute({
 
 		const itemsExist = notNullish(body.items);
 
+		const cusProductExists = cusProductsCurVersion.length > 0;
 		if (cusProductExists && itemsExist) {
-			const newProductV2 = ProductV2Schema.parse({
-				...body,
-				items: body.items || [],
-			});
-
 			if (disable_version === "true") {
 				throw new RecaseError({
 					message: "Cannot auto save product as there are existing customers",
@@ -116,7 +108,7 @@ export const handleUpdateProductV2 = createRoute({
 			}
 
 			const { itemsSame, freeTrialsSame } = productsAreSame({
-				newProductV2,
+				newProductV2: newProductV2,
 				curProductV1: fullProduct,
 				features,
 			});
@@ -126,7 +118,7 @@ export const handleUpdateProductV2 = createRoute({
 			if (!productSame) {
 				const newProduct = await handleVersionProductV2({
 					ctx,
-					newProductV2,
+					newProductV2: newProductV2,
 					latestProduct: fullProduct,
 					org,
 					env,

@@ -27,7 +27,6 @@ export * from "./models/attachModels/attachEnums/AttachFunction.js";
 
 // Attach Models
 export * from "./models/attachModels/attachPreviewModels.js";
-export * from "./models/attachModels/checkoutModels.js";
 export * from "./models/authModels/membership.js";
 export * from "./models/chatResultModels/chatResultFeature.js";
 export * from "./models/chatResultModels/chatResultFeature.js";

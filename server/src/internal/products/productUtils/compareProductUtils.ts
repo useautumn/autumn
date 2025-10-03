@@ -1,27 +1,25 @@
 import {
 	ErrCode,
-	Feature,
-	FullProduct,
+	type Feature,
+	type FullProduct,
 	OnDecrease,
 	OnIncrease,
-	ProductItem,
-	ProductV2,
+	type ProductItem,
+	type ProductV2,
 } from "@autumn/shared";
-import { mapToProductItems } from "../productV2Utils.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { freeTrialsAreSame } from "../free-trials/freeTrialUtils.js";
 import {
 	findSimilarItem,
 	itemsAreSame,
 } from "../product-items/compareItemUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { freeTrialsAreSame } from "../free-trials/freeTrialUtils.js";
 import {
 	isFeaturePriceItem,
 	isPriceItem,
 } from "../product-items/productItemUtils/getItemType.js";
-import { StatusCodes } from "http-status-codes";
-import { itemToPriceOrTiers } from "../product-items/productItemUtils.js";
-import { nullish } from "@/utils/genUtils.js";
 import { getResetUsage } from "../product-items/productItemUtils/itemToPriceAndEnt.js";
+import { itemToPriceOrTiers } from "../product-items/productItemUtils.js";
+import { mapToProductItems } from "../productV2Utils.js";
 
 const sanitizeItems = ({
 	items,
@@ -31,7 +29,7 @@ const sanitizeItems = ({
 	features: Feature[];
 }) => {
 	return items.map((item) => {
-		let priceData = itemToPriceOrTiers({ item });
+		const priceData = itemToPriceOrTiers({ item });
 		const newItem = {
 			...item,
 			reset_usage_when_enabled: getResetUsage({
@@ -124,7 +122,7 @@ export const productsAreSame = ({
 	}
 
 	for (const item of items1) {
-		let similarItem = findSimilarItem({
+		const similarItem = findSimilarItem({
 			item,
 			items: items2,
 		});
@@ -157,7 +155,7 @@ export const productsAreSame = ({
 	}
 
 	for (const item of items2) {
-		let similarItem = findSimilarItem({
+		const similarItem = findSimilarItem({
 			item,
 			items: items1,
 		});
@@ -173,10 +171,10 @@ export const productsAreSame = ({
 	}
 
 	// Compare free trial
-	let freeTrial1 = curProductV1?.free_trial || curProductV2?.free_trial;
-	let freeTrial2 = newProductV1?.free_trial || newProductV2?.free_trial;
+	const freeTrial1 = curProductV1?.free_trial || curProductV2?.free_trial;
+	const freeTrial2 = newProductV1?.free_trial || newProductV2?.free_trial;
 
-	let freeTrialsSame = freeTrialsAreSame({
+	const freeTrialsSame = freeTrialsAreSame({
 		ft1: freeTrial1,
 		ft2: freeTrial2,
 	});
