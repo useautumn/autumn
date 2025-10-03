@@ -1,24 +1,20 @@
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/v2/selects/Select";
+import type { ProductV2 } from "@autumn/shared";
 import { SheetHeader } from "@/components/v2/sheets/InlineSheet";
-import CreatePlanDialog from "../../products/products/components/CreatePlanDialog";
 import {
 	getStepNumber,
 	OnboardingStep,
 	stepConfig,
 } from "../utils/onboardingUtils";
+import { PlaygroundToolbar } from "./PlaygroundStep/PlaygroundToolbar";
 
 interface StepHeaderProps {
 	step: OnboardingStep;
 	selectedProductId: string;
-	products: any[];
+	products: ProductV2[];
 	onPlanSelect: (planId: string) => void;
-	onCreatePlanSuccess: (newProduct: any) => Promise<void>;
+	onCreatePlanSuccess: (newProduct: ProductV2) => Promise<void>;
+	playgroundMode?: "edit" | "preview";
+	setPlaygroundMode?: (mode: "edit" | "preview") => void;
 }
 
 export const StepHeader = ({
@@ -27,6 +23,8 @@ export const StepHeader = ({
 	products,
 	onPlanSelect,
 	onCreatePlanSuccess,
+	playgroundMode = "edit",
+	setPlaygroundMode,
 }: StepHeaderProps) => {
 	const stepNum = getStepNumber(step);
 	const config = stepConfig[step];
@@ -41,21 +39,14 @@ export const StepHeader = ({
 					className="p-0 sticky"
 					isOnboarding={true}
 				/>
-				<div className="flex gap-2 items-center justify-end">
-					<Select value={selectedProductId} onValueChange={onPlanSelect}>
-						<SelectTrigger className="max-h-7 h-7 text-xs">
-							<SelectValue placeholder="Select plan" />
-						</SelectTrigger>
-						<SelectContent>
-							{products.map((prod) => (
-								<SelectItem key={prod.id} value={prod.id}>
-									{prod.name}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-					<CreatePlanDialog onSuccess={onCreatePlanSuccess} size="sm" />
-				</div>
+				<PlaygroundToolbar
+					playgroundMode={playgroundMode ?? "edit"}
+					setPlaygroundMode={setPlaygroundMode ?? (() => {})}
+					selectedProductId={selectedProductId}
+					products={products}
+					onPlanSelect={onPlanSelect}
+					onCreatePlanSuccess={onCreatePlanSuccess}
+				/>
 			</div>
 		);
 	}

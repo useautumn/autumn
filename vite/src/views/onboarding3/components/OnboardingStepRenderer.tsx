@@ -1,4 +1,4 @@
-import type { CreateFeature, ProductItem } from "@autumn/shared";
+import type { CreateFeature, ProductItem, ProductV2 } from "@autumn/shared";
 import { productV2ToFeatureItems } from "@autumn/shared";
 import { getItemId } from "@/utils/product/productItemUtils";
 import { useProductContext } from "@/views/products/product/ProductContext";
@@ -11,25 +11,33 @@ import { CompletionStep } from "./CompletionStep";
 import { FeatureConfigurationStep } from "./FeatureConfigurationStep";
 import { FeatureCreationStep } from "./FeatureCreationStep";
 import { PlanDetailsStep } from "./PlanDetailsStep";
+import { PlaygroundPreviewMode } from "./PlaygroundStep/PlaygroundPreviewMode";
 
 interface OnboardingStepRendererProps {
 	step: OnboardingStep;
 	feature: CreateFeature;
 	setFeature: (feature: CreateFeature) => void;
+	playgroundMode?: "edit" | "preview";
 }
 
 export const OnboardingStepRenderer = ({
 	step,
 	feature,
 	setFeature,
+	playgroundMode = "edit",
 }: OnboardingStepRendererProps) => {
 	const { product, setProduct, editingState, sheet } = useProductContext();
 
-	if (editingState?.type === "plan") {
+	// Don't render overrides when on Completion step or Playground preview mode - allow the step to render normally
+	const shouldSkipOverrides =
+		step === OnboardingStep.Completion ||
+		(step === OnboardingStep.Playground && playgroundMode === "preview");
+
+	if (!shouldSkipOverrides && editingState?.type === "plan") {
 		return <EditPlanSheet isOnboarding />;
 	}
 
-	if (editingState?.type === "feature") {
+	if (!shouldSkipOverrides && editingState?.type === "feature") {
 		const featureItems = productV2ToFeatureItems({
 			items: product?.items || [],
 			withBasePrice: true,
@@ -42,7 +50,7 @@ export const OnboardingStepRenderer = ({
 
 		// Use functional setState to avoid stale closure issues
 		const setCurrentItem = (updatedItem: ProductItem) => {
-			setProduct((prevProduct) => {
+			setProduct((prevProduct: ProductV2) => {
 				if (!prevProduct || !prevProduct.items) return prevProduct;
 
 				const filteredItems = productV2ToFeatureItems({
@@ -60,9 +68,7 @@ export const OnboardingStepRenderer = ({
 				const targetItem = filteredItems[currentItemIndex];
 
 				// Find this item in the ORIGINAL items array
-				const originalIndex = prevProduct.items.findIndex(
-					(item) => item === targetItem,
-				);
+				const originalIndex = prevProduct.items.indexOf(targetItem);
 
 				if (originalIndex === -1) return prevProduct;
 
@@ -91,8 +97,8 @@ export const OnboardingStepRenderer = ({
 		);
 	}
 
-	// Handle new-feature sheet
-	if (sheet === "new-feature") {
+	// Handle new-feature sheet (but not on Completion step or Playground preview mode)
+	if (!shouldSkipOverrides && sheet === "new-feature") {
 		return <NewFeatureSheet isOnboarding />;
 	}
 	switch (step) {
@@ -103,31 +109,25 @@ export const OnboardingStepRenderer = ({
 			return <FeatureCreationStep feature={feature} setFeature={setFeature} />;
 
 		case OnboardingStep.FeatureConfiguration: {
-			// Use consistent withBasePrice flag
+			// Find the ProductItem that corresponds to the feature being configured
+			// This should be the item with the feature_id matching the current feature
 			const featureItems = productV2ToFeatureItems({
 				items: product?.items || [],
 				withBasePrice: true,
 			});
-			const currentItem = featureItems[featureItems.length - 1] || null;
+
+			// Find the item that matches the current feature being configured
+			const currentItem =
+				featureItems.find((item) => item.feature_id === feature.id) || null;
 
 			// Update the item in the product when it changes
-			// Use functional setState to avoid stale closure issues
 			const setCurrentItem = (updatedItem: ProductItem) => {
-				setProduct((prevProduct) => {
+				setProduct((prevProduct: ProductV2) => {
 					if (!prevProduct?.items) return prevProduct;
 
-					// Find the feature items to identify which one we're updating
-					const prevFeatureItems = productV2ToFeatureItems({
-						items: prevProduct.items,
-						withBasePrice: true,
-					});
-					const targetItem = prevFeatureItems[prevFeatureItems.length - 1];
-
-					if (!targetItem) return prevProduct;
-
-					// Find this item in the ORIGINAL items array (not filtered)
+					// Find the index of the item with matching feature_id in the original items array
 					const originalIndex = prevProduct.items.findIndex(
-						(item) => item === targetItem,
+						(item) => item.feature_id === feature.id,
 					);
 
 					if (originalIndex === -1) return prevProduct;
@@ -145,7 +145,7 @@ export const OnboardingStepRenderer = ({
 					value={{
 						item: currentItem,
 						setItem: setCurrentItem,
-						selectedIndex: featureItems.length - 1,
+						selectedIndex: 0,
 						showCreateFeature: false,
 						setShowCreateFeature: () => {},
 						isUpdate: false,
@@ -158,7 +158,12 @@ export const OnboardingStepRenderer = ({
 		}
 
 		case OnboardingStep.Playground:
-			// This case is handled by the useEffect in useOnboardingLogic that opens edit-plan sheet
+			// Preview mode is handled in OnboardingPreview.tsx
+			// In preview mode, show the preview sidebar content
+			if (playgroundMode === "preview") {
+				return <PlaygroundPreviewMode />;
+			}
+			// In edit mode, handled by the useEffect in useOnboardingLogic that opens edit-plan sheet
 			return null;
 
 		case OnboardingStep.Completion:

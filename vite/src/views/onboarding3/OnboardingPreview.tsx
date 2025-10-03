@@ -1,5 +1,7 @@
 import { productV2ToBasePrice } from "@autumn/shared";
 import { CrosshairSimpleIcon } from "@phosphor-icons/react";
+import { usePricingTable } from "autumn-js/react";
+import PricingTablePreview from "@/components/autumn/pricing-table-preview";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
@@ -11,15 +13,21 @@ import { useProductContext } from "../products/product/ProductContext";
 
 interface OnboardingPreviewProps {
 	currentStep: number;
+	playgroundMode?: "edit" | "preview";
 }
 
-export const OnboardingPreview = ({ currentStep }: OnboardingPreviewProps) => {
+export const OnboardingPreview = ({
+	currentStep,
+	playgroundMode = "edit",
+}: OnboardingPreviewProps) => {
 	const { product, setSheet, setEditingState } = useProductContext();
+	const { products } = usePricingTable();
 	const showBasicInfo = currentStep >= 1;
 	const showPricing = currentStep >= 1;
 	const showFeatures = currentStep >= 3;
 	const showToolbar = currentStep >= 4;
 	const allowAddFeature = currentStep >= 4;
+	const showPricingTable = currentStep === 5;
 
 	// Get the base price from the product (only if product exists and has proper structure)
 	const basePrice = product?.items ? productV2ToBasePrice({ product }) : null;
@@ -39,8 +47,20 @@ export const OnboardingPreview = ({ currentStep }: OnboardingPreviewProps) => {
 		setSheet("edit-plan");
 	};
 
+	// Show preview mode for step 4 (Playground) when in preview mode OR step 5
+	if (showPricingTable || (currentStep === 4 && playgroundMode === "preview")) {
+		return (
+			<div className="overflow-auto max-h-screen">
+				<PricingTablePreview
+					products={products ?? []}
+					setConnectStripeOpen={() => {}}
+				/>
+			</div>
+		);
+	}
+
 	return (
-		<Card className="min-w-[28rem] max-w-xl mx-4 bg-card card-border gap-0 p-4">
+		<Card className="min-w-[28rem] max-w-xl mx-4 bg-card border-[#ddd] border-[0.5px] gap-0 p-4">
 			<CardHeader className="gap-0 px-0">
 				<div className="flex flex-row items-center justify-between w-full">
 					<div className="flex flex-row items-center gap-2">
