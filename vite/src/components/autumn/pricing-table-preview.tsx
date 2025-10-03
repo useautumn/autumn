@@ -2,17 +2,19 @@ import type React from "react";
 import { useCustomer } from "autumn-js/react";
 import { useOrg } from "@/hooks/common/useOrg";
 import type { Product } from "autumn-js";
-import CheckoutDialog from "@/components/autumn/checkout-dialog";
+import OnboardingCheckoutDialog from "@/views/onboarding3/OnboardingCheckoutDialog";
 import { PlanCardPreview } from "./PlanCardPreview";
 
 interface PricingTableProps {
 	products?: Product[];
 	setConnectStripeOpen: (open: boolean) => void;
+	onCheckoutComplete?: () => void;
 }
 
 export default function PricingTablePreview({
 	products,
 	setConnectStripeOpen,
+	onCheckoutComplete,
 }: PricingTableProps) {
 	const { org } = useOrg();
 	const { checkout } = useCustomer();
@@ -22,18 +24,31 @@ export default function PricingTablePreview({
 	}
 
 	const handleSubscribe = async (product: Product) => {
-		if (!org.stripe_connected) {
+		console.log("Subscribe clicked", product);
+		console.log("Checkout function:", checkout);
+		console.log("Org:", org);
+
+		if (!org?.stripe_connected) {
+			console.log("Stripe not connected");
 			setConnectStripeOpen(true);
 			return;
 		}
 
 		if (product.id) {
-			await checkout({
-				productId: product.id,
-				dialog: CheckoutDialog,
-				openInNewTab: true,
-				successUrl: `${window.location.origin}`,
-			});
+			console.log("Initiating checkout for product:", product.id);
+			try {
+				await checkout({
+					productId: product.id,
+					dialog: OnboardingCheckoutDialog,
+					dialogProps: {
+						onComplete: onCheckoutComplete,
+					},
+					openInNewTab: true,
+					successUrl: `${window.location.origin}`,
+				});
+			} catch (error) {
+				console.error("Checkout error:", error);
+			}
 		} else if (product.display?.button_url) {
 			window.open(product.display?.button_url, "_blank");
 		}

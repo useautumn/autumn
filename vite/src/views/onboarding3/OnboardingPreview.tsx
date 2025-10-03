@@ -16,12 +16,19 @@ interface OnboardingPreviewProps {
 	playgroundMode?: "edit" | "preview";
 }
 
+interface OnboardingPreviewProps {
+	currentStep: number;
+	playgroundMode?: "edit" | "preview";
+	setConnectStripeOpen?: (open: boolean) => void;
+}
+
 export const OnboardingPreview = ({
 	currentStep,
 	playgroundMode = "edit",
+	setConnectStripeOpen,
 }: OnboardingPreviewProps) => {
 	const { product, setSheet, setEditingState } = useProductContext();
-	const { products } = usePricingTable();
+	const { products, refetch: refetchPricingTable } = usePricingTable();
 	const showBasicInfo = currentStep >= 1;
 	const showPricing = currentStep >= 1;
 	const showFeatures = currentStep >= 3;
@@ -53,7 +60,8 @@ export const OnboardingPreview = ({
 			<div className="overflow-auto max-h-screen">
 				<PricingTablePreview
 					products={products ?? []}
-					setConnectStripeOpen={() => {}}
+					setConnectStripeOpen={setConnectStripeOpen ?? (() => {})}
+					onCheckoutComplete={refetchPricingTable}
 				/>
 			</div>
 		);
