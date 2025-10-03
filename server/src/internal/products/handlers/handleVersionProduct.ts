@@ -1,12 +1,11 @@
 import {
 	type AppEnv,
-	CreateProductSchema,
-	type FreeTrial,
+	CreateProductV2ParamsSchema,
 	type FullProduct,
 	type Organization,
-	type ProductItem,
+	type ProductV2,
 } from "@autumn/shared";
-import { FeatureService } from "@/internal/features/FeatureService.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { handleNewFreeTrial } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
@@ -22,48 +21,45 @@ import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { getEntsWithFeature } from "../entitlements/entitlementUtils.js";
 
 export const handleVersionProductV2 = async ({
-	req,
-	res,
+	ctx,
+	newProductV2,
 	latestProduct,
 	org,
 	env,
-	items,
-	freeTrial,
+	// items,
+	// freeTrial,
 }: {
-	req: any;
-	res: any;
+	ctx: AutumnContext;
+	newProductV2: ProductV2;
 	latestProduct: FullProduct;
 	org: Organization;
 	env: AppEnv;
-	items: ProductItem[];
-	freeTrial: FreeTrial;
+	// items: ProductItem[];
+	// freeTrial: FreeTrial;
 }) => {
-	const { db } = req;
+	const { db, features } = ctx;
 
 	const curVersion = latestProduct.version;
 	const newVersion = curVersion + 1;
-
-	const features = await FeatureService.getFromReq(req);
 
 	console.log(
 		`Updating product ${latestProduct.id} version from ${curVersion} to ${newVersion}`,
 	);
 
 	const newProduct = constructProduct({
-		productData: CreateProductSchema.parse({
+		productData: CreateProductV2ParamsSchema.parse({
 			...latestProduct,
-			...req.body,
+			...newProductV2,
 			version: newVersion,
 		}),
 		orgId: org.id,
 		env: latestProduct.env as AppEnv,
-		processor: latestProduct.processor,
-		baseVariantId: latestProduct.base_variant_id,
+		processor: latestProduct.processor || undefined,
 	});
 
 	// Validate product items...
 	validateProductItems({
-		newItems: items,
+		newItems: newProductV2.items,
 		features,
 		orgId: org.id,
 		env,
@@ -85,7 +81,7 @@ export const handleVersionProductV2 = async ({
 		db,
 		curPrices: latestProduct.prices,
 		curEnts: latestProduct.entitlements,
-		newItems: items,
+		newItems: newProductV2.items,
 		features,
 		product: newProduct,
 		logger: console,
@@ -104,27 +100,16 @@ export const handleVersionProductV2 = async ({
 	});
 
 	// Handle new free trial
-	if (freeTrial || latestProduct.free_trial) {
+	if (newProductV2.free_trial || latestProduct.free_trial) {
 		await handleNewFreeTrial({
 			db,
-			newFreeTrial: freeTrial,
+			newFreeTrial: newProductV2.free_trial || null,
 			curFreeTrial: latestProduct.free_trial,
 			internalProductId: newProduct.internal_id,
 			isCustom: false,
 			newVersion: true, // This is a new product version
 		});
 	}
-
-	// await addTaskToQueue({
-	//   jobName: JobName.DetectBaseVariant,
-	//   payload: {
-	//     curProduct: {
-	//       ...newProduct,
-	//       // prices: customPrices,
-	//       // entitlements: getEntsWithFeature({ ents: customEnts, features }),
-	//     },
-	//   },
-	// });
 
 	await initProductInStripe({
 		db,
@@ -143,16 +128,10 @@ export const handleVersionProductV2 = async ({
 		payload: {
 			oldPrices: latestProduct.prices,
 			productId: latestProduct.id,
-			// newPrices: customPrices,
-			// product: {
-			// 	...newProduct,
-			// 	prices: customPrices,
-			// 	entitlements: getEntsWithFeature({ ents: customEnts, features }),
-			// },
 			orgId: org.id,
 			env,
 		},
 	});
 
-	res.status(200).send(newProduct);
+	return newProduct;
 };

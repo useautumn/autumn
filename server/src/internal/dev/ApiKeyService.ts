@@ -1,19 +1,17 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { CacheType } from "@/external/caching/cacheActions.js";
-import { CacheManager } from "@/external/caching/CacheManager.js";
-import { getApiVersion } from "@/utils/versionUtils.js";
-
 import {
-	ApiKey,
+	type ApiKey,
+	type AppEnv,
 	apiKeys,
-	AppEnv,
-	Feature,
+	type Feature,
 	features,
-	Organization,
+	type Organization,
 	OrgConfigSchema,
 } from "@autumn/shared";
-
-import { desc, and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { CacheManager } from "@/external/caching/CacheManager.js";
+import { CacheType } from "@/external/caching/cacheActions.js";
+import { getApiVersion } from "@/utils/versionUtils.js";
 
 export class ApiKeyService {
 	static async verifyAndFetch({
@@ -27,7 +25,7 @@ export class ApiKeyService {
 		hashedKey: string;
 		env: AppEnv;
 	}) {
-		let data = await db.query.apiKeys.findFirst({
+		const data = await db.query.apiKeys.findFirst({
 			where: eq(apiKeys.hashed_key, hashedKey),
 			with: {
 				org: {
@@ -45,7 +43,7 @@ export class ApiKeyService {
 			return null;
 		}
 
-		let org = structuredClone(data.org) as Organization & {
+		const org = structuredClone(data.org) as Organization & {
 			features?: Feature[];
 		};
 
@@ -56,14 +54,13 @@ export class ApiKeyService {
 			createdAt: org.created_at!,
 		});
 
-		let result = {
+		const result = {
 			org,
 			features: (data.org.features || []) as Feature[],
 			env,
 			userId: data.user_id,
 		};
 
-		// console.log("result", result);
 		return result;
 	}
 

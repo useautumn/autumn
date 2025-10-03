@@ -1,13 +1,13 @@
 import {
 	APIFeatureType,
-	CreateFeature,
+	type CreateFeature,
 	FeatureType,
 	FeatureUsageType,
 } from "@autumn/shared";
 import { Clock, Zap } from "lucide-react";
-import { defaultMeteredConfig } from "../utils/defaultFeatureConfig";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { SelectType } from "@/components/general/SelectType";
+import { defaultMeteredConfig } from "../utils/defaultFeatureConfig";
 
 export const SelectFeatureUsageType = ({
 	feature,

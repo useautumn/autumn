@@ -1,6 +1,10 @@
-import { APIVersion, type AttachConfig, SuccessCode } from "@autumn/shared";
+import {
+	APIVersion,
+	type AttachConfig,
+	RecaseError,
+	SuccessCode,
+} from "@autumn/shared";
 import type Stripe from "stripe";
-import { ErrCode } from "@/errors/errCodes.js";
 import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
@@ -8,7 +12,6 @@ import { toSuccessUrl } from "@/internal/orgs/orgUtils/convertOrgUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { pricesContainRecurring } from "@/internal/products/prices/priceUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import {
 	type AttachParams,
@@ -45,8 +48,7 @@ export const handleCreateCheckout = async ({
 
 	if (itemSets.length === 0) {
 		throw new RecaseError({
-			code: ErrCode.ProductHasNoPrices,
-			message: "Product has no prices",
+			message: `Product ${attachParams.products.map((p) => p.name).join(", ")} has no prices, can't create checkout`,
 		});
 	}
 

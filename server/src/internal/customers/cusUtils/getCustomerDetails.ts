@@ -1,10 +1,10 @@
 import {
+	APICustomerSchema,
 	APIVersion,
 	type AppEnv,
 	CusEntResponseSchema,
 	CusExpand,
 	CusProductStatus,
-	CusResponseSchema,
 	CustomerResponseSchema,
 	cusProductsToCusEnts,
 	cusProductsToCusPrices,
@@ -142,7 +142,7 @@ export const getCustomerDetails = async ({
 		});
 
 		const cusResponse = {
-			...CusResponseSchema.parse({
+			...APICustomerSchema.parse({
 				...customer,
 				stripe_id: customer.processor?.id,
 				features: entList,

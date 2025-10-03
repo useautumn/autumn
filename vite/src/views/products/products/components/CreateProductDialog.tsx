@@ -1,3 +1,9 @@
+import type { ProductV2 } from "@autumn/shared";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
+import { WarningBox } from "@/components/general/modal-components/WarningBox";
+import { ToggleButton } from "@/components/general/ToggleButton";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -6,19 +12,11 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { ProductService } from "@/services/products/ProductService";
-import { useNavigate } from "react-router";
-
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { ProductConfig } from "../../ProductConfig";
-import { ProductV2 } from "@autumn/shared";
-import { ToggleButton } from "@/components/general/ToggleButton";
-import { WarningBox } from "@/components/general/modal-components/WarningBox";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 
 const defaultProduct = {
 	name: "",

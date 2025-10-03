@@ -1,19 +1,19 @@
-import { getUnlimitedAndUsageAllowed } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
-import { cusEntMatchesFeature } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
-import { getCusBalances } from "@/internal/customers/cusUtils/cusFeatureResponseUtils/getCusBalances.js";
-import { balancesToFeatureResponse } from "@/internal/customers/cusUtils/cusFeatureResponseUtils/balancesToFeatureResponse.js";
 import {
-	CheckResponseSchema,
-	Feature,
+	CheckResultSchema,
+	type Feature,
 	FeatureType,
-	FullCusEntWithFullCusProduct,
-	FullCusProduct,
-	FullCustomer,
-	Organization,
+	type FullCusEntWithFullCusProduct,
+	type FullCusProduct,
+	type FullCustomer,
+	type Organization,
 	SuccessCode,
 } from "@autumn/shared";
-import { notNullish } from "@/utils/genUtils.js";
+import { cusEntMatchesFeature } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
+import { getUnlimitedAndUsageAllowed } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
+import { balancesToFeatureResponse } from "@/internal/customers/cusUtils/cusFeatureResponseUtils/balancesToFeatureResponse.js";
+import { getCusBalances } from "@/internal/customers/cusUtils/cusFeatureResponseUtils/getCusBalances.js";
 import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 export const getFeatureToUse = ({
 	creditSystems,
@@ -25,12 +25,12 @@ export const getFeatureToUse = ({
 	cusEnts: FullCusEntWithFullCusProduct[];
 }) => {
 	// 1. If there's a credit system
-	let featureCusEnts = cusEnts.filter((cusEnt) =>
+	const featureCusEnts = cusEnts.filter((cusEnt) =>
 		cusEntMatchesFeature({ cusEnt, feature }),
 	);
 
 	if (creditSystems.length > 0) {
-		let creditCusEnts = cusEnts.filter((cusEnt) =>
+		const creditCusEnts = cusEnts.filter((cusEnt) =>
 			cusEntMatchesFeature({ cusEnt, feature: creditSystems[0] }),
 		);
 
@@ -95,7 +95,7 @@ export const getV2CheckResponse = async ({
 		apiVersion,
 	});
 
-	let cusFeatures = balancesToFeatureResponse({
+	const cusFeatures = balancesToFeatureResponse({
 		cusEnts: featureCusEnts,
 		balances,
 	});
@@ -104,8 +104,8 @@ export const getV2CheckResponse = async ({
 
 	let allowed = false;
 
-	let totalPaidUsageAllowance = featureCusEnts.reduce((acc, ce) => {
-		let ent = ce.entitlement;
+	const totalPaidUsageAllowance = featureCusEnts.reduce((acc, ce) => {
+		const ent = ce.entitlement;
 		if (notNullish(ent.usage_limit)) {
 			return acc + ent.usage_limit! - (ent.allowance || 0);
 		}
@@ -122,7 +122,7 @@ export const getV2CheckResponse = async ({
 	}
 
 	let finalRequired = notNullish(requiredBalance) ? requiredBalance : 1;
-	if (featureToUse.type == FeatureType.CreditSystem) {
+	if (featureToUse.type === FeatureType.CreditSystem) {
 		finalRequired = featureToCreditSystem({
 			featureId: feature.id,
 			creditSystem: featureToUse,
@@ -130,7 +130,7 @@ export const getV2CheckResponse = async ({
 		});
 	}
 
-	return CheckResponseSchema.parse({
+	return CheckResultSchema.parse({
 		customer_id: fullCus.id,
 		feature_id: featureToUse.id,
 		entity_id: fullCus.entity?.id,

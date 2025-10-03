@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { Feature } from "../../featureModels/featureModels.js";
+import { z } from "zod/v4";
+import type { Feature } from "../../featureModels/featureModels.js";
 
 export const EntitySchema = z.object({
 	id: z.string(),

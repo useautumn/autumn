@@ -1,25 +1,24 @@
+import {
+	type APICusProduct,
+	APIVersion,
+	type AppEnv,
+	type Entity,
+	type EntityExpand,
+	type EntityResponse,
+	ErrCode,
+	type Feature,
+	type FullCusProduct,
+	type FullCustomer,
+	notNullish,
+	type Organization,
+	type Subscription,
+} from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getCusWithCache } from "@/internal/customers/cusCache/getCusWithCache.js";
 import { getCusFeaturesResponse } from "@/internal/customers/cusUtils/cusFeatureResponseUtils/getCusFeaturesResponse.js";
 import { processFullCusProducts } from "@/internal/customers/cusUtils/cusProductResponseUtils/processFullCusProducts.js";
-
 import RecaseError from "@/utils/errorUtils.js";
 import { nullish } from "@/utils/genUtils.js";
-import {
-	type AppEnv,
-	Feature,
-	type Entity,
-	EntityExpand,
-	type EntityResponse,
-	ErrCode,
-	type FullCusProduct,
-	type Organization,
-	type Subscription,
-	CusProductResponse,
-	notNullish,
-	FullCustomer,
-	APIVersion,
-} from "@autumn/shared";
 
 export const getSingleEntityResponse = async ({
 	entityId,
@@ -53,24 +52,24 @@ export const getSingleEntityResponse = async ({
 			if (org.config.entity_product) {
 				return (
 					notNullish(p.internal_entity_id) &&
-					p.internal_entity_id == entity.internal_id
+					p.internal_entity_id === entity.internal_id
 				);
 			}
 
 			return (
-				p.internal_entity_id == entity.internal_id ||
+				p.internal_entity_id === entity.internal_id ||
 				nullish(p.internal_entity_id)
 			);
 		},
 	);
 
-	let entitySubs = (fullCus.subscriptions || []).filter((s: Subscription) =>
+	const entitySubs = (fullCus.subscriptions || []).filter((s: Subscription) =>
 		entityCusProducts.some((p: FullCusProduct) =>
 			p.subscription_ids?.includes(s.stripe_id || ""),
 		),
 	);
 
-	let { main, addOns } = await processFullCusProducts({
+	const { main, addOns } = await processFullCusProducts({
 		fullCusProducts: entityCusProducts,
 		entity,
 		subs: entitySubs,
@@ -79,9 +78,9 @@ export const getSingleEntityResponse = async ({
 		features,
 	});
 
-	let products: CusProductResponse[] = [...main, ...addOns];
+	const products: APICusProduct[] = [...main, ...addOns];
 
-	let cusFeatures = await getCusFeaturesResponse({
+	const cusFeatures = await getCusFeaturesResponse({
 		cusProducts: entityCusProducts,
 		org,
 		entity,
@@ -128,7 +127,7 @@ export const getEntityResponse = async ({
 	logger: any;
 	skipCache?: boolean;
 }) => {
-	let fullCus = await getCusWithCache({
+	const fullCus = await getCusWithCache({
 		db,
 		idOrInternalId: customerId,
 		org,
@@ -151,7 +150,7 @@ export const getEntityResponse = async ({
 
 	for (const entityId of entityIds) {
 		const entity = fullCus.entities.find(
-			(e: Entity) => e.id == entityId || e.internal_id == entityId,
+			(e: Entity) => e.id === entityId || e.internal_id === entityId,
 		);
 
 		if (!entity) {
@@ -162,7 +161,7 @@ export const getEntityResponse = async ({
 			});
 		}
 
-		let entityResponse = await getSingleEntityResponse({
+		const entityResponse = await getSingleEntityResponse({
 			entityId,
 			org,
 			env,

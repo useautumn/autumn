@@ -1,28 +1,17 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-
-import RecaseError from "@/utils/errorUtils.js";
 import {
-	AppEnv,
-	CusProduct,
+	type AppEnv,
+	type CusProduct,
 	CusProductStatus,
+	customerProducts,
 	customers,
 	ErrCode,
-	FullCusProduct,
+	type FullCusProduct,
+	InternalError,
 	products,
 } from "@autumn/shared";
-
-import { customerProducts } from "@autumn/shared";
-
-import {
-	and,
-	arrayContains,
-	eq,
-	inArray,
-	isNotNull,
-	ne,
-	or,
-	sql,
-} from "drizzle-orm";
+import { and, arrayContains, eq, inArray, isNotNull, or } from "drizzle-orm";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import RecaseError from "@/utils/errorUtils.js";
 
 export const ACTIVE_STATUSES = [
 	CusProductStatus.Active,
@@ -45,7 +34,7 @@ export const orgOwnsCusProduct = async ({
 	env: AppEnv;
 }) => {
 	if (!cusProduct.product) return false;
-	let product = cusProduct.product;
+	const product = cusProduct.product;
 
 	if (product.org_id !== orgId || product.env !== env) {
 		return false;
@@ -65,7 +54,7 @@ export const filterByOrgAndEnv = ({
 }) => {
 	return cusProducts.filter((cusProduct) => {
 		if (!cusProduct.product) return false;
-		let product = cusProduct.product;
+		const product = cusProduct.product;
 
 		if (product.org_id !== orgId || product.env !== env) {
 			return false;
@@ -99,7 +88,7 @@ const getFullCusProdRelations = () => {
 
 export class CusProductService {
 	static async getByIdForReset({ db, id }: { db: DrizzleCli; id: string }) {
-		let cusProduct = await db.query.customerProducts.findFirst({
+		const cusProduct = await db.query.customerProducts.findFirst({
 			where: eq(customerProducts.id, id),
 			with: {
 				customer: true,
@@ -135,7 +124,7 @@ export class CusProductService {
 		env: AppEnv;
 		withCustomer?: boolean;
 	}) {
-		let cusProduct = (await db.query.customerProducts.findFirst({
+		const cusProduct = (await db.query.customerProducts.findFirst({
 			where: eq(customerProducts.id, id),
 			with: {
 				customer: withCustomer ? true : undefined,
@@ -196,7 +185,7 @@ export class CusProductService {
 		withCustomer?: boolean;
 		inStatuses?: string[];
 	}) {
-		let cusProducts = await db.query.customerProducts.findMany({
+		const cusProducts = await db.query.customerProducts.findMany({
 			where: and(
 				eq(customerProducts.internal_customer_id, internalCustomerId),
 				inStatuses ? inArray(customerProducts.status, inStatuses) : undefined,
@@ -236,7 +225,7 @@ export class CusProductService {
 		internalProductId: string;
 		limit?: number;
 	}) {
-		let data = await db.query.customerProducts.findMany({
+		const data = await db.query.customerProducts.findMany({
 			where: eq(customerProducts.internal_product_id, internalProductId),
 			limit,
 		});
@@ -257,7 +246,7 @@ export class CusProductService {
 		env: AppEnv;
 		limit?: number;
 	}) {
-		let data = await db
+		const data = await db
 			.select()
 			.from(customerProducts)
 			.innerJoin(
@@ -293,7 +282,7 @@ export class CusProductService {
 		inStatuses?: string[];
 	}) {
 		// sql`${customerProducts.subscription_ids} @> ${sql`ARRAY[${stripeSubId}]`}`,
-		let data = await db.query.customerProducts.findMany({
+		const data = await db.query.customerProducts.findMany({
 			where: (table, { and, or, inArray }) =>
 				and(
 					or(arrayContains(customerProducts.subscription_ids, [stripeSubId])),
@@ -323,7 +312,7 @@ export class CusProductService {
 			},
 		});
 
-		let cusProducts = data as FullCusProduct[];
+		const cusProducts = data as FullCusProduct[];
 
 		return filterByOrgAndEnv({
 			cusProducts,
@@ -343,7 +332,7 @@ export class CusProductService {
 		orgId: string;
 		env: AppEnv;
 	}) {
-		let data = await db.query.customerProducts.findMany({
+		const data = await db.query.customerProducts.findMany({
 			where: (customerProducts, { and, or, eq, sql }) =>
 				and(
 					or(
@@ -378,7 +367,7 @@ export class CusProductService {
 			},
 		});
 
-		let cusProducts = data as FullCusProduct[];
+		const cusProducts = data as FullCusProduct[];
 
 		return filterByOrgAndEnv({
 			cusProducts,
@@ -398,7 +387,7 @@ export class CusProductService {
 		orgId: string;
 		env: AppEnv;
 	}) {
-		let fullCusProdRelations = {
+		const fullCusProdRelations = {
 			customer_entitlements: {
 				with: {
 					entitlement: {
@@ -418,7 +407,7 @@ export class CusProductService {
 			free_trial: true as const,
 		} as const;
 
-		let data = (await db.query.customerProducts.findMany({
+		const data = (await db.query.customerProducts.findMany({
 			where: arrayContains(customerProducts.scheduled_ids, [scheduleId]),
 			with: {
 				product: true,
@@ -461,7 +450,7 @@ export class CusProductService {
 		updates: Partial<CusProduct>;
 		inStatuses?: string[];
 	}) {
-		let updated = await db
+		const updated = await db
 			.update(customerProducts)
 			.set(updates as any)
 			.where(
@@ -474,7 +463,7 @@ export class CusProductService {
 				id: customerProducts.id,
 			});
 
-		let fullUpdated = (await db.query.customerProducts.findMany({
+		const fullUpdated = (await db.query.customerProducts.findMany({
 			where: inArray(
 				customerProducts.id,
 				updated.map((u) => u.id),
@@ -497,7 +486,7 @@ export class CusProductService {
 		stripeScheduledId: string;
 		updates: Partial<CusProduct>;
 	}) {
-		let updated = await db
+		const updated = await db
 			.update(customerProducts)
 			.set(updates as any)
 			.where(
@@ -514,7 +503,7 @@ export class CusProductService {
 				id: customerProducts.id,
 			});
 
-		let fullUpdated = (await db.query.customerProducts.findMany({
+		const fullUpdated = (await db.query.customerProducts.findMany({
 			where: inArray(
 				customerProducts.id,
 				updated.map((u) => u.id),
@@ -553,7 +542,7 @@ export class CusProductService {
 		internalCustomerId: string;
 		fingerprint?: string;
 	}) {
-		let data = await db
+		const data = await db
 			.select()
 			.from(customerProducts)
 			.innerJoin(
@@ -587,7 +576,7 @@ export class CusProductService {
 		freeTrialId: string;
 		internalCustomerId: string;
 	}) {
-		let data = await db.query.customerProducts.findMany({
+		const data = await db.query.customerProducts.findMany({
 			where: and(
 				eq(customerProducts.free_trial_id, freeTrialId),
 				eq(customerProducts.internal_customer_id, internalCustomerId),
@@ -614,7 +603,7 @@ export class CusProductService {
 		env: AppEnv;
 	}) {
 		if (productId) {
-			let res = await db
+			const res = await db
 				.select({
 					internal_id: products.internal_id,
 				})
@@ -627,13 +616,12 @@ export class CusProductService {
 					),
 				);
 
-			let internalProductIds = res.map((r) => r.internal_id);
+			const internalProductIds = res.map((r) => r.internal_id);
 
 			if (internalProductIds.length > 100) {
-				throw new RecaseError({
-					message: "Something went wrong... please try again later.",
-					code: ErrCode.ProductHasCustomers,
-					statusCode: 400,
+				throw new InternalError({
+					message:
+						"Can't delete by product when internal product ids length > 100",
 				});
 			}
 

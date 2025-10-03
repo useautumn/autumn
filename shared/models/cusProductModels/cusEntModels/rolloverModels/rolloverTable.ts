@@ -1,13 +1,13 @@
-import { z } from "zod";
-import { customerEntitlements } from "../cusEntTable.js";
 import {
 	foreignKey,
-	pgTable,
-	numeric,
-	jsonb,
-	text,
 	index,
+	jsonb,
+	numeric,
+	pgTable,
+	text,
 } from "drizzle-orm/pg-core";
+import { z } from "zod/v4";
+import { customerEntitlements } from "../cusEntTable.js";
 
 export const EntityRolloverBalanceSchema = z.object({
 	id: z.string(),
