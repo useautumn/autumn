@@ -85,7 +85,7 @@ export const ExtAttachBodySchema = z
 		invoice: z.boolean().optional(),
 
 		// Checkout params
-		skip_checkout: z.boolean().optional(),
+		// skip_checkout: z.boolean().optional(),
 		setup_payment: z.boolean().optional(),
 	})
 	.meta({

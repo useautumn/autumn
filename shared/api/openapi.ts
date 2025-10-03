@@ -1,5 +1,6 @@
 import "dotenv/config";
-import { writeFileSync } from "node:fs";
+import { execSync } from "node:child_process";
+import { existsSync, writeFileSync } from "node:fs";
 import { AppEnv } from "@models/genModels/genEnums.js";
 import yaml from "yaml";
 import { z } from "zod/v4";
@@ -84,12 +85,31 @@ if (process.env.NODE_ENV !== "production") {
 				yamlContent,
 				"utf8",
 			);
-		}
 
-		console.log(
-			`OpenAPI document exported to ${process.env.STAINLESS_PATH}/openapi.yml`,
-		);
+			console.log(
+				`OpenAPI document exported to ${process.env.STAINLESS_PATH}/openapi.yml`,
+			);
+
+			// Run the run.sh script if it exists
+			const runScriptPath = `${process.env.STAINLESS_PATH}/run.sh`;
+			if (existsSync(runScriptPath)) {
+				try {
+					console.log("Running Stainless generation script...");
+					execSync(`chmod +x ${runScriptPath} && ${runScriptPath}`, {
+						stdio: "inherit",
+						cwd: process.env.STAINLESS_PATH,
+					});
+					console.log("Stainless generation completed successfully");
+				} catch (error) {
+					console.error("Failed to run Stainless generation script:", error);
+				}
+			}
+		}
 	} catch (error) {
 		console.error("Failed to export OpenAPI document:", error);
+		process.exit(1);
 	}
+
+	// Exit the process after completion
+	process.exit(0);
 }

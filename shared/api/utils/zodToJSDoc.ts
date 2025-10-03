@@ -1,5 +1,5 @@
 import type { z } from "zod/v4";
-import type { JSDocParam } from "../openApiHelpers.js";
+import type { JSDocParam } from "./openApiHelpers.js";
 
 type ZodAnyObject = z.ZodObject<z.ZodRawShape>;
 type ZodAnyField = z.ZodTypeAny;

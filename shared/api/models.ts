@@ -6,7 +6,7 @@ export * from "./core/coreOpenApi.js";
 export * from "./core/coreOpModels.js";
 
 // Helpers
-export * from "./openApiHelpers.js";
+export * from "./utils/openApiHelpers.js";
 export * from "./utils/zodToJSDoc.js";
 
 // Customers

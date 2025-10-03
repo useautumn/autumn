@@ -12,7 +12,7 @@ export const ExtCheckoutParamsSchema = ExtAttachBodySchema.extend({
 });
 
 export const CheckoutParamsSchema = AttachBodySchema.extend({
-	skip_checkout: z.boolean().optional(),
+	// skip_checkout: z.boolean().optional(),
 	setup_payment: z.boolean().optional(),
 });
 

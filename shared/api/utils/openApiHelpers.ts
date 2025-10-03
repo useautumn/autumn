@@ -19,7 +19,10 @@ interface JSDocLink {
 interface JSDocOptions {
 	description: string;
 	whenToUse?: string;
-	params: z.ZodObject<z.ZodRawShape>;
+	// Provide the request schemas
+	body?: z.ZodObject<z.ZodRawShape>;
+	query?: z.ZodObject<z.ZodRawShape>;
+	path?: z.ZodObject<z.ZodRawShape>;
 	docs?: JSDocLink[];
 	examples?: JSDocExample[];
 	methodName?: string;
@@ -34,6 +37,7 @@ interface JSDocOptions {
 export function createJSDocDescription(options: JSDocOptions): string {
 	const extractParamsFromSchema = (
 		schema: z.ZodObject<z.ZodRawShape>,
+		prefix?: string,
 	): JSDocParam[] => {
 		const params: JSDocParam[] = [];
 		const shape = schema.shape;
@@ -51,8 +55,9 @@ export function createJSDocDescription(options: JSDocOptions): string {
 			}
 
 			if (description) {
+				const paramName = prefix ? `${prefix}.${fieldName}` : fieldName;
 				params.push({
-					name: fieldName,
+					name: paramName,
 					description,
 					optional:
 						def?.typeName === "ZodOptional" ||
@@ -76,31 +81,7 @@ export function createJSDocDescription(options: JSDocOptions): string {
 		parts.push(options.whenToUse);
 	}
 
-	// Parameters - extract from Zod schema
-	const params = extractParamsFromSchema(options.params);
-	if (params.length > 0) {
-		parts.push("");
-		for (const param of params) {
-			const optional = param.optional ? " (optional)" : "";
-			parts.push(`@param ${param.name} - ${param.description}${optional}`);
-		}
-	}
-
-	// Returns
-	if (options.returns) {
-		parts.push("");
-		parts.push(`@returns ${options.returns}`);
-	}
-
-	// Throws
-	if (options.throws && options.throws.length > 0) {
-		parts.push("");
-		for (const error of options.throws) {
-			parts.push(`@throws {${error.type}} ${error.description}`);
-		}
-	}
-
-	// Examples
+	// Examples (show before params)
 	if (options.examples && options.examples.length > 0) {
 		const methodName = options.methodName || "method";
 
@@ -125,11 +106,75 @@ export function createJSDocDescription(options: JSDocOptions): string {
 		}
 	}
 
+	// Parameters - determine prefix based on Stainless naming logic
+	const allParams: JSDocParam[] = [];
+	const hasBody = !!options.body;
+	const hasQuery = !!options.query;
+	const hasPath = !!options.path;
+
+	// Path params always have no prefix
+	if (hasPath && options.path) {
+		allParams.push(...extractParamsFromSchema(options.path));
+	}
+
+	// Determine prefix for body/query based on Stainless logic:
+	// - Only body → "body"
+	// - Only query → "query"
+	// - Query + Body (mixed) → "params"
+	// - Path + Body → "params"
+	let paramPrefix: string | undefined;
+
+	if (hasBody && hasQuery) {
+		// Mixed query + body → Stainless uses "params"
+		paramPrefix = "params";
+	} else if (hasBody && hasPath) {
+		// Path + body → Stainless uses "params" for body fields
+		paramPrefix = "params";
+	} else if (hasBody) {
+		// Only body → Stainless uses "body"
+		paramPrefix = "body";
+	} else if (hasQuery) {
+		// Only query → Stainless uses "query"
+		paramPrefix = "query";
+	}
+
+	// Extract body params with appropriate prefix
+	if (hasBody && options.body) {
+		allParams.push(...extractParamsFromSchema(options.body, paramPrefix));
+	}
+
+	// Extract query params with appropriate prefix
+	if (hasQuery && options.query) {
+		allParams.push(...extractParamsFromSchema(options.query, paramPrefix));
+	}
+
+	if (allParams.length > 0) {
+		parts.push("");
+		for (const param of allParams) {
+			const optional = param.optional ? " (optional)" : "";
+			parts.push(`@param ${param.name} - ${param.description}${optional}`);
+		}
+	}
+
+	// Returns
+	if (options.returns) {
+		parts.push("");
+		parts.push(`@returns ${options.returns}`);
+	}
+
+	// Throws
+	if (options.throws && options.throws.length > 0) {
+		parts.push("");
+		for (const error of options.throws) {
+			parts.push(`@throws {${error.type}} ${error.description}`);
+		}
+	}
+
 	// Documentation links
 	if (options.docs && options.docs.length > 0) {
 		parts.push("");
 		for (const doc of options.docs) {
-			parts.push(`@see {@link ${doc.url}|${doc.title}}`);
+			parts.push(`@see {@link ${doc.url} ${doc.title}}`);
 		}
 	}
 
