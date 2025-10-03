@@ -289,6 +289,14 @@ export const routeHandler = async <TLoad = undefined>({
 				});
 			}
 
+			if (error.message.includes("not a valid email address")) {
+				req.logtail.warn(`Invalid email address`);
+				return res.status(400).json({
+					message: error.message,
+					code: ErrCode.InvalidRequest,
+				});
+			}
+
 			if (
 				originalUrl.includes("/billing_portal") &&
 				error.message.includes("Provide a configuration or create your default")
