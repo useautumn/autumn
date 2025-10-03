@@ -6,6 +6,7 @@ import {
 	type FullProduct,
 	type Price,
 	ProductAlreadyExistsError,
+	type ProductV2,
 } from "@autumn/shared";
 
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -34,7 +35,7 @@ export const disableCurrentDefault = async ({
 	// freeTrial,
 }: {
 	req: AutumnContext;
-	newProduct: CreateProductV2Params;
+	newProduct: CreateProductV2Params | ProductV2;
 	// items: ProductItem[];
 	// freeTrial: FreeTrial;
 }) => {

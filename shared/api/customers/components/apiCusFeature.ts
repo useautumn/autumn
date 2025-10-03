@@ -66,18 +66,7 @@ export const APICusFeatureSchema = z
 	})
 	.extend(CoreCusFeatureSchema.shape);
 
-export const CheckResultSchema = z
-	.object({
-		allowed: z.boolean(),
-		customer_id: z.string(),
-		feature_id: z.string(),
-		entity_id: z.string().nullish(),
-		required_balance: z.number(),
-		code: z.string(),
-	})
-	.extend(CoreCusFeatureSchema.shape);
-
 export type CusEntResponse = z.infer<typeof CusEntResponseSchema>;
 export type CusEntResponseV2 = z.infer<typeof APICusFeatureSchema>;
-export type CheckResponse = z.infer<typeof CheckResultSchema>;
+
 export type CusRollover = z.infer<typeof CusRolloverSchema>;

@@ -1,36 +1,37 @@
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { AppEnv, Organization } from "@autumn/shared";
-import chalk from "chalk";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "../utils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { defaultApiVersion } from "tests/constants.js";
-import { runMigrationTest } from "./runMigrationTest.js";
-import { timeout } from "@/utils/genUtils.js";
+import type { AppEnv, Organization } from "@autumn/shared";
 import { expect } from "chai";
+import chalk from "chalk";
+import type Stripe from "stripe";
+import { setupBefore } from "tests/before.js";
+import { defaultApiVersion } from "tests/constants.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-let wordsItem = constructArrearItem({
+import { createProducts } from "tests/utils/productUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { timeout } from "@/utils/genUtils.js";
+import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { addPrefixToProducts } from "../utils.js";
+import { runMigrationTest } from "./runMigrationTest.js";
+
+const wordsItem = constructArrearItem({
 	featureId: TestFeature.Words,
 });
 
-export let pro = constructProduct({
+export const pro = constructProduct({
 	items: [wordsItem],
 	type: "pro",
 	isDefault: false,
 });
 
-let newWordsItem = constructArrearItem({
+const newWordsItem = constructArrearItem({
 	featureId: TestFeature.Words,
 	includedUsage: 120100,
 });
 
-let proWithTrial = constructProduct({
+const proWithTrial = constructProduct({
 	items: [newWordsItem],
 	type: "pro",
 	isDefault: false,
@@ -40,13 +41,13 @@ let proWithTrial = constructProduct({
 const testCase = "migrations4";
 
 describe(`${chalk.yellowBright(`${testCase}: Testing migration for pro -> pro with trial (should not start trial)`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: defaultApiVersion });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: defaultApiVersion });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
 
-	let curUnix = new Date().getTime();
+	const curUnix = new Date().getTime();
 
 	before(async function () {
 		await setupBefore(this);
@@ -83,7 +84,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for pro -> pro wi
 		testClockId = testClockId1!;
 	});
 
-	it("should attach pro product", async function () {
+	it("should attach pro product", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,
@@ -95,7 +96,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for pro -> pro wi
 		});
 	});
 
-	it("should update product to new version", async function () {
+	it("should update product to new version", async () => {
 		proWithTrial.version = 2;
 		await autumn.products.update(pro.id, {
 			items: proWithTrial.items,
@@ -103,8 +104,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for pro -> pro wi
 		});
 	});
 
-	it("should attach track usage and get correct balance", async function () {
-		let wordsUsage = 120000;
+	it("should attach track usage and get correct balance", async () => {
+		const wordsUsage = 120000;
 		await autumn.track({
 			customer_id: customerId,
 			value: wordsUsage,

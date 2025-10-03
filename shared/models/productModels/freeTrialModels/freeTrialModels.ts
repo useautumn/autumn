@@ -3,7 +3,7 @@ import { FreeTrialDuration } from "./freeTrialEnums.js";
 
 export const FreeTrialSchema = z.object({
 	id: z.string(),
-	duration: z.nativeEnum(FreeTrialDuration),
+	duration: z.enum(FreeTrialDuration),
 	length: z.number(),
 	unique_fingerprint: z.boolean(),
 

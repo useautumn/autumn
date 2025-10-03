@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { EntityDataSchema } from "../common/entityData.js";
 
 // Create Customer Params (based on handlePostCustomer logic)
 export const CreateCustomerParamsSchema = z
@@ -28,7 +29,6 @@ export const CreateCustomerParamsSchema = z
 			example: "John Doe",
 		}),
 		email: z
-			.string()
 			.email({ message: "not a valid email address" })
 			.or(z.literal(""))
 			.nullish()
@@ -41,10 +41,14 @@ export const CreateCustomerParamsSchema = z
 				"Unique identifier (eg, serial number) to detect duplicate customers and prevent free trial abuse",
 			example: "fp_123abc",
 		}),
-		metadata: z.record(z.any(), z.any()).default({}).nullish().meta({
-			description: "Additional metadata for the customer",
-			example: { company: "Acme Inc" },
-		}),
+		metadata: z
+			.record(z.any(), z.any())
+			.default({})
+			.nullish()
+			.meta({
+				description: "Additional metadata for the customer",
+				example: { company: "Acme Inc" },
+			}),
 		stripe_id: z.string().nullish().meta({
 			description: "Stripe customer ID if you already have one",
 			example: "cus_stripe123",
@@ -53,9 +57,8 @@ export const CreateCustomerParamsSchema = z
 			description: "Entity ID to associate with the customer",
 			example: "entity_123",
 		}),
-		entity_data: z.any().nullish().meta({
+		entity_data: EntityDataSchema.nullish().meta({
 			description: "Data for creating an entity",
-			example: { name: "Team Alpha", feature_id: "seats" },
 		}),
 	})
 	.meta({
@@ -105,11 +108,14 @@ export const UpdateCustomerParamsSchema = z
 				"Unique identifier (eg, serial number) to detect duplicate customers",
 			example: "fp_123abc",
 		}),
-		metadata: z.record(z.any(), z.any()).nullish().meta({
-			description:
-				"Additional metadata for the customer (set individual keys to null to delete them)",
-			example: { company: "Acme Inc" },
-		}),
+		metadata: z
+			.record(z.any(), z.any())
+			.nullish()
+			.meta({
+				description:
+					"Additional metadata for the customer (set individual keys to null to delete them)",
+				example: { company: "Acme Inc" },
+			}),
 		stripe_id: z.string().nullish().meta({
 			description: "Stripe customer ID",
 			example: "cus_stripe123",

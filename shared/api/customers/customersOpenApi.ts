@@ -1,11 +1,12 @@
+import { CusExpand } from "@models/cusModels/cusExpand.js";
 import { z } from "zod/v4";
+import { SuccessResponseSchema } from "../common/commonResponses.js";
 import { APICustomerSchema } from "./apiCustomer.js";
 import {
 	CreateCustomerParamsSchema,
 	ListCustomersResponseSchema,
 	UpdateCustomerParamsSchema,
 } from "./customerOpModels.js";
-import { SuccessResponseSchema } from "../common/commonResponses.js";
 
 export const customerOps = {
 	"/customers": {
@@ -57,7 +58,7 @@ export const customerOps = {
 					customer_id: z.string(),
 				}),
 				query: z.object({
-					expand: z.string().optional(),
+					expand: z.array(z.enum(CusExpand)).optional(),
 				}),
 			},
 			responses: {

@@ -1,4 +1,6 @@
 import { z } from "zod/v4";
+import { CustomerDataSchema } from "../common/customerData.js";
+import { EntityDataSchema } from "../common/entityData.js";
 
 // Cancel Schemas
 export const CancelBodySchema = z
@@ -57,10 +59,9 @@ export const TrackParamsSchema = z
 			description: "The ID of the customer",
 			example: "cus_123",
 		}),
-		customer_data: z.any().nullish().meta({
+		customer_data: CustomerDataSchema.nullish().meta({
 			description:
 				"Customer data to create or update the customer if they don't exist",
-			example: { name: "John Doe", email: "john@example.com" },
 		}),
 		event_name: z.string().nonempty().optional().meta({
 			description: "The name of the event to track",
@@ -71,10 +72,13 @@ export const TrackParamsSchema = z
 				"The ID of the feature (alternative to event_name for usage events)",
 			example: "api_calls",
 		}),
-		properties: z.record(z.string(), z.any()).nullish().meta({
-			description: "Additional properties for the event",
-			example: { endpoint: "/api/users" },
-		}),
+		properties: z
+			.record(z.string(), z.any())
+			.nullish()
+			.meta({
+				description: "Additional properties for the event",
+				example: { endpoint: "/api/users" },
+			}),
 		timestamp: z.number().nullish().meta({
 			description: "Unix timestamp in milliseconds when the event occurred",
 			example: 1717000000000,
@@ -88,16 +92,16 @@ export const TrackParamsSchema = z
 			example: 1,
 		}),
 		set_usage: z.boolean().nullish().meta({
-			description: "Whether to set the usage to this value instead of increment",
+			description:
+				"Whether to set the usage to this value instead of increment",
 			example: false,
 		}),
 		entity_id: z.string().nullish().meta({
 			description: "The ID of the entity this event is associated with",
 			example: "entity_123",
 		}),
-		entity_data: z.any().nullish().meta({
+		entity_data: EntityDataSchema.nullish().meta({
 			description: "Data for creating the entity if it doesn't exist",
-			example: { name: "Team Alpha" },
 		}),
 	})
 	.meta({
@@ -174,9 +178,80 @@ export const QueryResultSchema = z
 		description: "Result of an analytics query",
 	});
 
+export const SetupPaymentParamsSchema = z
+	.object({
+		customer_id: z.string().meta({
+			description: "The ID of the customer",
+			example: "cus_123",
+		}),
+		success_url: z.string().optional().meta({
+			description: "URL to redirect to after successful payment setup",
+			example: "https://example.com/success",
+		}),
+		checkout_session_params: z.record(z.any(), z.any()).optional().meta({
+			description: "Additional parameters for the checkout session",
+		}),
+	})
+	.meta({
+		id: "SetupPaymentParams",
+		description: "Parameters for setting up a payment method",
+	});
+
+export const SetupPaymentResultSchema = z
+	.object({
+		customer_id: z.string().meta({
+			description: "The ID of the customer",
+			example: "cus_123",
+		}),
+		url: z.string().meta({
+			description: "URL to the payment setup page",
+			example: "https://checkout.stripe.com/...",
+		}),
+	})
+	.meta({
+		id: "SetupPaymentResult",
+		description: "Result of setting up a payment method",
+	});
+
+export const BillingPortalParamsSchema = z
+	.object({
+		customer_id: z.string().meta({
+			description: "The ID of the customer",
+			example: "cus_123",
+		}),
+		return_url: z.string().optional().meta({
+			description:
+				"URL to return to after exiting the billing portal. Must include http:// or https://",
+			example: "https://example.com/dashboard",
+		}),
+	})
+	.meta({
+		id: "BillingPortalParams",
+		description: "Parameters for accessing the billing portal",
+	});
+
+export const BillingPortalResultSchema = z
+	.object({
+		customer_id: z.string().meta({
+			description: "The ID of the customer",
+			example: "cus_123",
+		}),
+		url: z.string().meta({
+			description: "URL to the billing portal",
+			example: "https://billing.stripe.com/...",
+		}),
+	})
+	.meta({
+		id: "BillingPortalResult",
+		description: "Result of creating a billing portal session",
+	});
+
 export type CancelBody = z.infer<typeof CancelBodySchema>;
 export type CancelResult = z.infer<typeof CancelResultSchema>;
 export type TrackParams = z.infer<typeof TrackParamsSchema>;
 export type TrackResult = z.infer<typeof TrackResultSchema>;
 export type QueryParams = z.infer<typeof QueryParamsSchema>;
 export type QueryResult = z.infer<typeof QueryResultSchema>;
+export type SetupPaymentParams = z.infer<typeof SetupPaymentParamsSchema>;
+export type BillingPortalParams = z.infer<typeof BillingPortalParamsSchema>;
+export type BillingPortalResult = z.infer<typeof BillingPortalResultSchema>;
