@@ -8,7 +8,7 @@ import {
 	createJSDocDescription,
 	docLink,
 	example,
-} from "@api/openApiHelpers.js";
+} from "@api/utils/openApiHelpers.js";
 import type { ZodOpenApiPathsObject } from "zod-openapi";
 import { CheckParamsSchema, CheckResultSchema } from "./checkModels.js";
 import {
@@ -29,40 +29,21 @@ const attachJsDoc = createJSDocDescription({
 		"Enables a product for a customer and processes payment if their payment method is already on file.",
 	whenToUse:
 		"Use this when the customer already has a payment method saved. For new customers without payment info, use `checkout` instead.",
-	params: ExtAttachBodySchema,
+	body: ExtAttachBodySchema,
 	examples: [
 		example({
 			values: {
 				customer_id: "cus_123",
 				product_id: "pro_plan",
 			},
-		}),
-		example({
-			values: {
-				customer_id: "cus_123",
-				product_id: "pro_plan",
-				entity_id: "entity_123",
-			},
-			description: "Attach to a specific entity",
-		}),
-		example({
-			values: {
-				customer_id: "cus_123",
-				product_id: "pro_plan",
-				success_url: "https://example.com/success",
-			},
-			description: "With a success URL",
+			description: "Attach a product to a customer",
 		}),
 	],
 	methodName: "attach",
 	docs: [
 		docLink({
-			url: "https://docs.useautumn.com/core-concepts/attach",
+			url: "https://docs.useautumn.com/api-reference/core/attach",
 			title: "Product Attachments",
-		}),
-		docLink({
-			url: "https://docs.useautumn.com/payments/overview",
-			title: "Payment Processing",
 		}),
 	],
 });
