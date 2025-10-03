@@ -100,6 +100,7 @@ export const handleUpdateProductV2 = createRoute({
 		const itemsExist = notNullish(body.items);
 
 		const cusProductExists = cusProductsCurVersion.length > 0;
+
 		if (cusProductExists && itemsExist) {
 			if (disable_version === "true") {
 				throw new RecaseError({
