@@ -16,29 +16,72 @@ export const ProductOptions = z.object({
 export const ExtAttachBodySchema = z
 	.object({
 		// Customer / Entity Info
-
-		customer_id: z
+		customer_id: z.string().describe("Your unique identifier for the customer"),
+		// Product Info
+		product_id: z
 			.string()
-			.describe("ID of the customer to attach the product to"),
+			.nullish()
+			.describe(
+				"Product ID, set when creating the product in the Autumn dashboard",
+			),
+
+		entity_id: z
+			.string()
+			.nullish()
+			.describe(
+				"If attaching a product to an entity, can be used to auto create the entity",
+			),
 
 		customer_data: CustomerDataSchema.optional().describe(
-			"Customer data if using attach to auto create customer",
+			"If auto creating a customer, the properties from this field will be used.",
 		),
 
-		entity_id: z.string().nullish(),
-		entity_data: EntityDataSchema.optional(),
+		entity_data: EntityDataSchema.optional().describe(
+			"If attaching a product to an entity and auto creating the entity, the properties from this field will be used. feature_id is required.",
+		),
 
-		// Product Info
-		product_id: z.string().nullish(),
-		product_ids: z.array(z.string()).min(1).nullish(),
-		options: z.array(FeatureOptionsSchema).nullish(),
-		free_trial: z.boolean().optional(),
+		product_ids: z
+			.array(z.string())
+			.min(1)
+			.nullish()
+			.describe(
+				"Can be used to attach multiple products to the customer at once. For example, attaching a main product and an add-on.",
+			),
+
+		options: z
+			.array(FeatureOptionsSchema)
+			.nullish()
+			.describe("Pass in quantities for prepaid features"),
+
+		free_trial: z
+			.boolean()
+			.optional()
+			.describe(
+				"If the product has a free trial, this field can be used to disable it when attaching (by passing in false)",
+			),
 
 		// Others
-		success_url: z.string().optional(),
-		force_checkout: z.boolean().optional(),
-		checkout_session_params: z.any().optional(),
-		reward: z.string().or(z.array(z.string())).optional(),
+		success_url: z
+			.string()
+			.optional()
+			.describe("URL to redirect to after the purchase is successful"),
+		force_checkout: z
+			.boolean()
+			.optional()
+			.describe(
+				"Always return a Stripe Checkout URL, even if the customer's card is already on file",
+			),
+		checkout_session_params: z
+			.any()
+			.optional()
+			.describe(
+				"Additional parameters to pass onto Stripe when creating the checkout session",
+			),
+		reward: z
+			.string()
+			.or(z.array(z.string()))
+			.optional()
+			.describe("An Autumn promo_code or reward_id to apply at checkout"),
 		invoice: z.boolean().optional(),
 
 		// Checkout params
