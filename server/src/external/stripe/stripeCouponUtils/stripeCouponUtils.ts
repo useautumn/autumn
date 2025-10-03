@@ -1,5 +1,6 @@
 import {
 	type AppEnv,
+	atmnToStripeAmount,
 	CouponDurationType,
 	ErrCode,
 	type FixedPriceConfig,
@@ -10,7 +11,6 @@ import {
 	type Reward,
 	RewardType,
 	type UsagePriceConfig,
-	atmnToStripeAmount,
 } from "@autumn/shared";
 import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
@@ -109,7 +109,7 @@ const couponToStripeValue = ({
 		reward.type === RewardType.FixedDiscount ||
 		reward.type === RewardType.InvoiceCredits
 	) {
-		const currency = org.default_currency;
+		const currency = org.default_currency || undefined;
 		return {
 			amount_off: atmnToStripeAmount({
 				amount: discountConfig!.discount_value,

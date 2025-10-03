@@ -1,5 +1,5 @@
-import { APIFeatureSchema, APIFeatureType } from "./apiFeature.js";
 import { z } from "zod/v4";
+import { APIFeatureType } from "./apiFeature.js";
 
 // Create Feature Params
 export const CreateFeatureParamsSchema = z
@@ -52,11 +52,11 @@ export const UpdateFeatureParamsSchema = z
 			description: "The ID of the feature",
 			example: "feature_123",
 		}),
-		name: z.string().nullish().meta({
+		name: z.string().optional().meta({
 			description: "The name of the feature",
 			example: "API Calls",
 		}),
-		type: z.nativeEnum(APIFeatureType).optional().meta({
+		type: z.enum(APIFeatureType).optional().meta({
 			description: "The type of the feature",
 			example: "single_use",
 		}),
@@ -65,7 +65,7 @@ export const UpdateFeatureParamsSchema = z
 				singular: z.string(),
 				plural: z.string(),
 			})
-			.nullish()
+			.optional()
 			.meta({
 				description: "Display names for the feature",
 				example: { singular: "API Call", plural: "API Calls" },
@@ -77,13 +77,13 @@ export const UpdateFeatureParamsSchema = z
 					credit_cost: z.number(),
 				}),
 			)
-			.nullish()
+			.optional()
 			.meta({
 				description:
 					"Credit schema for credit system features (only applicable when type is credit_system)",
 				example: [{ metered_feature_id: "api_calls", credit_cost: 10 }],
 			}),
-		archived: z.boolean().nullish().meta({
+		archived: z.boolean().optional().meta({
 			description: "Whether the feature is archived",
 			example: false,
 		}),

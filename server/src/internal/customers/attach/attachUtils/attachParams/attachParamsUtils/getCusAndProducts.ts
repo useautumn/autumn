@@ -1,6 +1,7 @@
 import {
 	type AttachBody,
 	CusProductStatus,
+	type CustomerData,
 	ErrCode,
 	nullish,
 } from "@autumn/shared";
@@ -79,7 +80,7 @@ export const getCustomerAndProducts = async ({
 		getOrCreateCustomer({
 			req,
 			customerId: attachBody.customer_id,
-			customerData: attachBody.customer_data,
+			customerData: attachBody.customer_data as CustomerData,
 			inStatuses: [
 				CusProductStatus.Active,
 				CusProductStatus.Scheduled,
@@ -87,7 +88,7 @@ export const getCustomerAndProducts = async ({
 			],
 			withEntities: true,
 			entityId: attachBody.entity_id || undefined,
-			entityData: attachBody.entity_data,
+			entityData: attachBody.entity_data || undefined,
 		}),
 		getProductsForAttach({ req, attachBody }),
 	]);
