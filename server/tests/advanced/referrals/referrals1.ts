@@ -1,31 +1,28 @@
-import { products, referralPrograms } from "../../global.js";
+import {
+	type AppEnv,
+	ErrCode,
+	type Organization,
+	type ReferralCode,
+	type RewardRedemption,
+} from "@autumn/shared";
 import { assert } from "chai";
 import chalk from "chalk";
-import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { setupBefore } from "tests/before.js";
-import {
-	AppEnv,
-	Customer,
-	ErrCode,
-	Organization,
-	ReferralCode,
-	RewardRedemption,
-} from "@autumn/shared";
-import { timeout } from "tests/utils/genUtils.js";
-
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addDays } from "date-fns";
-import { Stripe } from "stripe";
-
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import type { Stripe } from "stripe";
+import { addPrefixToProducts } from "tests/attach/utils.js";
+import { setupBefore } from "tests/before.js";
 import { TestFeature } from "tests/setup/v2Features.js";
+import { timeout } from "tests/utils/genUtils.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { addPrefixToProducts } from "tests/attach/utils.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import { products, referralPrograms } from "../../global.js";
 
-let pro = constructProduct({
+const pro = constructProduct({
 	id: "pro",
 	items: [constructFeatureItem({ featureId: TestFeature.Words })],
 	type: "pro",
@@ -36,15 +33,15 @@ let pro = constructProduct({
 describe(`${chalk.yellowBright(
 	"referrals1: Testing referrals (on checkout)",
 )}`, () => {
-	let mainCustomerId = "main-referral-1";
-	let alternateCustomerId = "alternate-referral-1";
-	let redeemers = ["referral1-r1", "referral1-r2", "referral1-r3"];
-	let autumn: AutumnInt = new AutumnInt();
+	const mainCustomerId = "main-referral-1";
+	const alternateCustomerId = "alternate-referral-1";
+	const redeemers = ["referral1-r1", "referral1-r2", "referral1-r3"];
+	const autumn: AutumnInt = new AutumnInt();
 	let stripeCli: Stripe;
 	let testClockId: string;
 	let referralCode: ReferralCode;
 
-	let redemptions: RewardRedemption[] = [];
+	const redemptions: RewardRedemption[] = [];
 	let mainCustomer: any;
 	let db: DrizzleCli;
 	let org: Organization;
@@ -89,8 +86,8 @@ describe(`${chalk.yellowBright(
 			product_id: pro.id,
 		});
 
-		let batchCreate = [];
-		for (let redeemer of redeemers) {
+		const batchCreate = [];
+		for (const redeemer of redeemers) {
 			batchCreate.push(
 				initCustomer({
 					autumn: this.autumnJs,
@@ -117,7 +114,7 @@ describe(`${chalk.yellowBright(
 		await Promise.all(batchCreate);
 	});
 
-	it("should create code once", async function () {
+	it("should create code once", async () => {
 		referralCode = await autumn.referrals.createCode({
 			customerId: mainCustomerId,
 			referralId: referralPrograms.onCheckout.id,
@@ -126,7 +123,7 @@ describe(`${chalk.yellowBright(
 		assert.exists(referralCode.code);
 
 		// Get referral code again
-		let referralCode2 = await autumn.referrals.createCode({
+		const referralCode2 = await autumn.referrals.createCode({
 			customerId: mainCustomerId,
 			referralId: referralPrograms.onCheckout.id,
 		});
@@ -134,7 +131,7 @@ describe(`${chalk.yellowBright(
 		assert.equal(referralCode2.code, referralCode.code);
 	});
 
-	it("should fail if same customer tries to redeem code again", async function () {
+	it("should fail if same customer tries to redeem code again", async () => {
 		try {
 			await autumn.referrals.redeem({
 				customerId: mainCustomerId,
@@ -160,9 +157,9 @@ describe(`${chalk.yellowBright(
 		}
 	});
 
-	it("should create redemption for each redeemer and fail if redeemed again", async function () {
-		for (let redeemer of redeemers) {
-			let redemption: RewardRedemption = await autumn.referrals.redeem({
+	it("should create redemption for each redeemer and fail if redeemed again", async () => {
+		for (const redeemer of redeemers) {
+			const redemption: RewardRedemption = await autumn.referrals.redeem({
 				customerId: redeemer,
 				code: referralCode.code,
 			});
@@ -172,7 +169,7 @@ describe(`${chalk.yellowBright(
 
 		// Try redeem for redeemer1 again
 		try {
-			let redemption1 = await autumn.referrals.redeem({
+			const redemption1 = await autumn.referrals.redeem({
 				customerId: redeemers[0],
 				code: referralCode.code,
 			});
@@ -185,9 +182,9 @@ describe(`${chalk.yellowBright(
 
 	// return;
 
-	it("should be triggered (and applied) when redeemers check out", async function () {
+	it("should be triggered (and applied) when redeemers check out", async () => {
 		for (let i = 0; i < redeemers.length; i++) {
-			let redeemer = redeemers[i];
+			const redeemer = redeemers[i];
 
 			await autumn.attach({
 				customer_id: redeemer,
@@ -197,21 +194,21 @@ describe(`${chalk.yellowBright(
 			await timeout(3000);
 
 			// Get redemption object
-			let redemption = await autumn.redemptions.get(redemptions[i].id);
+			const redemption = await autumn.redemptions.get(redemptions[i].id);
 
 			// Check if redemption is triggered
-			let count = i + 1;
+			const count = i + 1;
 
 			if (count > referralPrograms.onCheckout.max_redemptions) {
 				assert.equal(redemption.triggered, false);
 				assert.equal(redemption.applied, false);
 			} else {
 				assert.equal(redemption.triggered, true);
-				assert.equal(redemption.applied, i == 0);
+				assert.equal(redemption.applied, i === 0);
 			}
 
 			// Check stripe customer
-			let stripeCus = (await stripeCli.customers.retrieve(
+			const stripeCus = (await stripeCli.customers.retrieve(
 				mainCustomer.processor?.id,
 			)) as Stripe.Customer;
 
@@ -220,7 +217,7 @@ describe(`${chalk.yellowBright(
 	});
 
 	let curTime = new Date();
-	it("customer should have discount for first purchase", async function () {
+	it("customer should have discount for first purchase", async () => {
 		curTime = addDays(addDays(curTime, 7), 4);
 		await advanceTestClock({
 			testClockId,
@@ -229,7 +226,7 @@ describe(`${chalk.yellowBright(
 		});
 
 		// 1. Get invoice
-		let { invoices } = await autumn.customers.get(mainCustomerId);
+		const { invoices } = await autumn.customers.get(mainCustomerId);
 		assert.equal(invoices.length, 2);
 		assert.equal(invoices[0].total, 0);
 	});

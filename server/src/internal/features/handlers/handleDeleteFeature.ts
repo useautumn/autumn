@@ -1,4 +1,4 @@
-import { ErrCode } from "@/errors/errCodes.js";
+import { ErrCode } from "@autumn/shared";
 import { getCreditSystemsFromFeature } from "@/internal/features/creditSystemUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
@@ -17,10 +17,10 @@ export const handleDeleteFeature = async (req: any, res: any) =>
 		handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
 			const { db, orgId } = req;
 
-			let { featureId } = req.params;
-			let features = await FeatureService.getFromReq(req);
-			let feature = features.find((f) => f.id === featureId);
-			let creditSystems = getCreditSystemsFromFeature({
+			const { featureId } = req.params;
+			const features = await FeatureService.getFromReq(req);
+			const feature = features.find((f) => f.id === featureId);
+			const creditSystems = getCreditSystemsFromFeature({
 				featureId,
 				features,
 			});

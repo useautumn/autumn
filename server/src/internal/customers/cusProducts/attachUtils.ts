@@ -1,42 +1,38 @@
 import {
-	AppEnv,
+	type AppEnv,
 	BillingType,
 	CusProductStatus,
-	Customer,
-	CustomerData,
-	Entitlement,
-	EntitlementWithFeature,
-	Entity,
-	EntityData,
-	Feature,
-	FeatureOptions,
-	FreeTrial,
-	FullCusProduct,
-	Organization,
-	Price,
-	ProductItem,
-	UsagePriceConfig,
+	type Customer,
+	type CustomerData,
+	type Entitlement,
+	type EntitlementWithFeature,
+	type EntityData,
+	ErrCode,
+	type Feature,
+	type FeatureOptions,
+	type FreeTrial,
+	type FullCusProduct,
+	type Organization,
+	type Price,
+	type ProductItem,
+	type UsagePriceConfig,
 } from "@autumn/shared";
-
-import { ErrCode } from "@/errors/errCodes.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { ProductService } from "@/internal/products/ProductService.js";
-import { notNullish, nullish } from "@/utils/genUtils.js";
-
+import { Decimal } from "decimal.js";
+import { StatusCodes } from "http-status-codes";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import {
 	getFreeTrialAfterFingerprint,
 	handleNewFreeTrial,
 } from "@/internal/products/free-trials/freeTrialUtils.js";
-
-import { StatusCodes } from "http-status-codes";
-import { getExistingCusProducts } from "./cusProductUtils/getExistingCusProducts.js";
-import { getPricesForCusProduct } from "../change-product/scheduleUtils.js";
-import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
-import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
+import { ProductService } from "@/internal/products/ProductService.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
-import { Decimal } from "decimal.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
+import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { notNullish, nullish } from "@/utils/genUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+import { getPricesForCusProduct } from "../change-product/scheduleUtils.js";
+import { getExistingCusProducts } from "./cusProductUtils/getExistingCusProducts.js";
 
 const getProducts = async ({
 	db,
@@ -107,7 +103,7 @@ const getProducts = async ({
 			});
 		}
 
-		if (products.length != productIds.length) {
+		if (products.length !== productIds.length) {
 			// Get product ids that were not found
 			throw new RecaseError({
 				message:
@@ -205,7 +201,7 @@ const getCustomerAndProducts = async ({
 		}),
 	]);
 
-	let cusProducts = customer.customer_products;
+	const cusProducts = customer.customer_products;
 
 	return { customer, cusProducts, products };
 };
@@ -228,7 +224,7 @@ const mapOptionsList = ({
 	features: Feature[];
 	prices: Price[];
 }) => {
-	let newOptionsList: FeatureOptions[] = [];
+	const newOptionsList: FeatureOptions[] = [];
 	for (const options of optionsListInput) {
 		const feature = features.find(
 			(feature) => feature.id === options.feature_id,
@@ -246,8 +242,8 @@ const mapOptionsList = ({
 		if (!nullish(quantity)) {
 			const prepaidPrice = prices.find(
 				(p) =>
-					getBillingType(p.config!) == BillingType.UsageInAdvance &&
-					feature.internal_id ==
+					getBillingType(p.config!) === BillingType.UsageInAdvance &&
+					feature.internal_id ===
 						(p.config as UsagePriceConfig).internal_feature_id,
 			);
 
@@ -259,9 +255,9 @@ const mapOptionsList = ({
 				});
 			}
 
-			let config = prepaidPrice.config as UsagePriceConfig;
+			const config = prepaidPrice.config as UsagePriceConfig;
 
-			let dividedQuantity = new Decimal(options.quantity!)
+			const dividedQuantity = new Decimal(options.quantity!)
 				.div(config.billing_units || 1)
 				.ceil()
 				.toNumber();
@@ -336,7 +332,7 @@ export const getFullCusProductData = async ({
 
 	if (!isCustom) {
 		let freeTrial = null;
-		let freeTrialProduct = products.find((p) => notNullish(p.free_trial));
+		const freeTrialProduct = products.find((p) => notNullish(p.free_trial));
 
 		if (freeTrialProduct) {
 			freeTrial = await getFreeTrialAfterFingerprint({
@@ -357,12 +353,12 @@ export const getFullCusProductData = async ({
 			optionsList: mapOptionsList({
 				optionsListInput,
 				features,
-				prices: products.map((p) => p.prices).flat() as Price[],
+				prices: products.flatMap((p) => p.prices) as Price[],
 			}),
-			prices: products.map((p) => p.prices).flat() as Price[],
-			entitlements: products
-				.map((p) => getEntsWithFeature(p.entitlements, features))
-				.flat() as EntitlementWithFeature[],
+			prices: products.flatMap((p) => p.prices) as Price[],
+			entitlements: products.flatMap((p) =>
+				getEntsWithFeature(p.entitlements, features),
+			) as EntitlementWithFeature[],
 			freeTrial,
 			cusProducts,
 			entities: customer.entities,
@@ -407,7 +403,7 @@ export const getFullCusProductData = async ({
 		curEnts = curMainProduct!.customer_entitlements.map((e) => e.entitlement);
 	}
 
-	let { prices, entitlements } = await handleNewProductItems({
+	const { prices, entitlements } = await handleNewProductItems({
 		db,
 		curPrices,
 		curEnts,

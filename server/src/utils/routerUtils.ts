@@ -1,15 +1,14 @@
-import { AppEnv, ErrCode, Organization } from "@autumn/shared";
+import { ErrCode } from "@autumn/shared";
+import { StatusCodes } from "http-status-codes";
+import qs from "qs";
+import Stripe from "stripe";
+import { ZodAny, ZodError, ZodObject } from "zod";
+import { withSpan as withSpanTracer } from "@/internal/analytics/tracer/spanUtils.js";
 import RecaseError, {
 	formatZodError,
 	handleRequestError,
 } from "./errorUtils.js";
-import { ZodAny, ZodError, ZodObject } from "zod";
-import { StatusCodes } from "http-status-codes";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { ExtendedRequest } from "./models/Request.js";
-import { withSpan as withSpanTracer } from "@/internal/analytics/tracer/spanUtils.js";
-import qs from "qs";
+import type { ExtendedRequest } from "./models/Request.js";
 
 /**
  * Parses query parameters with proper type coercion for validation
@@ -264,21 +263,19 @@ export const routeHandler = async <TLoad = undefined>({
 			});
 		}
 	} catch (error) {
-		try {
-			if (error instanceof RecaseError) {
-				if (error.code === ErrCode.EntityNotFound) {
-					req.logtail.warn(
-						`${error.message}, org: ${req.org?.slug || req.orgId}`,
-					);
-					return res.status(404).json({
-						message: error.message,
-						code: error.code,
-					});
-				}
+		if (error instanceof RecaseError) {
+			if (error.code === ErrCode.EntityNotFound) {
+				req.logtail.warn(
+					`${error.message}, org: ${req.org?.slug || req.orgId}`,
+				);
+				return res.status(404).json({
+					message: error.message,
+					code: error.code,
+				});
 			}
-		} catch (error) {}
+		}
 
-		let originalUrl = req.originalUrl;
+		const originalUrl = req.originalUrl;
 		if (error instanceof Stripe.errors.StripeError) {
 			if (
 				originalUrl.includes("/exchange") &&
@@ -321,7 +318,7 @@ export const routeHandler = async <TLoad = undefined>({
 
 		if (error instanceof ZodError && req.originalUrl.includes("/attach")) {
 			error = new RecaseError({
-				message: formatZodError(error),
+				message: formatZodError(error as any),
 				code: ErrCode.InvalidInputs,
 				statusCode: StatusCodes.BAD_REQUEST,
 			});

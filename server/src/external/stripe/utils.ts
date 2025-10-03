@@ -1,17 +1,15 @@
-import { ErrCode } from "@/errors/errCodes.js";
+import {
+	AppEnv,
+	BillingInterval,
+	ErrCode,
+	type Feature,
+	Infinite,
+	type Organization,
+	type UsagePriceConfig,
+} from "@autumn/shared";
+import Stripe from "stripe";
 import { decryptData } from "@/utils/encryptUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
-import {
-	BillingInterval,
-	Feature,
-	FullProduct,
-	Infinite,
-	Organization,
-	UsagePriceConfig,
-} from "@autumn/shared";
-
-import { AppEnv } from "@autumn/shared";
-import Stripe from "stripe";
 
 export const createStripeCli = ({
 	org,
@@ -24,7 +22,7 @@ export const createStripeCli = ({
 	// apiVersion?: string;
 	legacyVersion?: boolean;
 }) => {
-	let encrypted =
+	const encrypted =
 		env == AppEnv.Sandbox
 			? org.stripe_config?.test_api_key
 			: org.stripe_config?.live_api_key;
@@ -37,7 +35,7 @@ export const createStripeCli = ({
 		});
 	}
 
-	let decrypted = decryptData(encrypted);
+	const decrypted = decryptData(encrypted);
 	return new Stripe(decrypted, {
 		apiVersion: legacyVersion
 			? ("2025-02-24.acacia" as any)
@@ -83,7 +81,7 @@ export const calculateMetered1Price = ({
 };
 
 export const subToAutumnInterval = (sub: Stripe.Subscription) => {
-	let recuringItem = sub.items.data.find((i) => i.price.recurring != null);
+	const recuringItem = sub.items.data.find((i) => i.price.recurring != null);
 	if (!recuringItem) {
 		return {
 			interval: BillingInterval.OneOff,

@@ -1,4 +1,4 @@
-import { ErrCode } from "@/errors/errCodes.js";
+import { ErrCode } from "@autumn/shared";
 import { QueueManager } from "@/queue/QueueManager.js";
 import RecaseError from "@/utils/errorUtils.js";
 
@@ -26,7 +26,7 @@ export const handleAttachRaceCondition = async ({
 		// Create lock with 5 second timeout
 		await redisConn.set(lockKey, "1", "PX", 5000, "NX");
 
-		let originalJson = res.json;
+		const originalJson = res.json;
 		res.json = async function (body: any) {
 			try {
 				await clearLock({ lockKey, logger: req.logtail });
@@ -80,7 +80,7 @@ export const handleCustomerRaceCondition = async ({
 		// Create lock with 5 second timeout
 		await redisConn.set(lockKey, "1", "PX", 5000, "NX");
 
-		let originalJson = res.json;
+		const originalJson = res.json;
 		res.json = async function (body: any) {
 			try {
 				await clearLock({ lockKey, logger });

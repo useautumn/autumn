@@ -1,12 +1,11 @@
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { SelectType } from "@/components/general/SelectType";
 import {
 	APIFeatureType,
-	CreateFeature,
+	type CreateFeature,
 	FeatureType,
-	FeatureUsageType,
 } from "@autumn/shared";
-import { Zap, Clock, ArrowUp01, Flag } from "lucide-react";
+import { ArrowUp01, Flag } from "lucide-react";
+import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import { SelectType } from "@/components/general/SelectType";
 import { defaultMeteredConfig } from "../utils/defaultFeatureConfig";
 
 export const SelectFeatureType = ({

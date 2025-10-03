@@ -5,10 +5,10 @@ import {
 	BillingInterval,
 	type EntitlementWithFeature,
 	type Entity,
-	ErrCode,
 	type FeatureOptions,
 	type FullCusProduct,
 	type FullProduct,
+	InternalError,
 	isUsagePrice,
 	type Organization,
 	type Price,
@@ -31,7 +31,6 @@ import {
 	getPriceEntitlement,
 	getProductForPrice,
 } from "@/internal/products/prices/priceUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import type { ItemSet } from "@/utils/models/ItemSet.js";
 import { priceToStripeItem } from "../priceToStripeItem/priceToStripeItem.js";
@@ -152,10 +151,8 @@ export const getStripeSubItems = async ({
 						},
 					},
 				);
-				throw new RecaseError({
-					code: ErrCode.ProductNotFound,
+				throw new InternalError({
 					message: `Price internal product ID: ${price.internal_product_id} not found in products`,
-					statusCode: 400,
 				});
 			}
 
@@ -277,10 +274,8 @@ export const getStripeSubItems2 = async ({
 					},
 				},
 			);
-			throw new RecaseError({
-				code: ErrCode.ProductNotFound,
+			throw new InternalError({
 				message: `Price internal product ID: ${price.internal_product_id} not found in products`,
-				statusCode: 400,
 			});
 		}
 

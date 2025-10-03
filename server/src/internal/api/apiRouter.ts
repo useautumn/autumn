@@ -1,35 +1,31 @@
-import { apiAuthMiddleware } from "@/middleware/apiAuthMiddleware.js";
 import { Router } from "express";
-import { eventsRouter } from "./events/eventRouter.js";
-import { cusRouter } from "../customers/cusRouter.js";
-import { productBetaRouter, productRouter } from "../products/productRouter.js";
-
-import { featureRouter } from "../features/featureRouter.js";
-import { checkRouter } from "./entitled/checkRouter.js";
-import { attachRouter } from "../customers/attach/attachRouter.js";
-import { pricingMiddleware } from "@/middleware/pricingMiddleware.js";
-import { usageRouter } from "./events/usageRouter.js";
-import { invoiceRouter } from "./invoiceRouter.js";
-import { entityRouter } from "./entities/entityRouter.js";
-import { migrationRouter } from "../migrations/migrationRouter.js";
-
-import { redemptionRouter, referralRouter } from "./rewards/referralRouter.js";
-import { rewardProgramRouter } from "./rewards/rewardProgramRouter.js";
-import { componentRouter } from "./components/componentRouter.js";
 import { analyticsMiddleware } from "@/middleware/analyticsMiddleware.js";
-
-import rewardRouter from "./rewards/rewardRouter.js";
-import cancelRouter from "../customers/cancel/cancelRouter.js";
-import { handleSetupPayment } from "../customers/attach/handleSetupPayment.js";
-import { internalFeatureRouter } from "../features/internalFeatureRouter.js";
+import { apiAuthMiddleware } from "@/middleware/apiAuthMiddleware.js";
+import { pricingMiddleware } from "@/middleware/pricingMiddleware.js";
+import { refreshCacheMiddleware } from "@/middleware/refreshCacheMiddleware.js";
 import { analyticsRouter } from "../analytics/analyticsRouter.js";
+import { attachRouter } from "../customers/attach/attachRouter.js";
+import { handleSetupPayment } from "../customers/attach/handleSetupPayment.js";
+import cancelRouter from "../customers/cancel/cancelRouter.js";
+import { cusRouter } from "../customers/cusRouter.js";
+import { handleCreateBillingPortal } from "../customers/handlers/handleCreateBillingPortal.js";
+import { featureRouter } from "../features/featureRouter.js";
+import { internalFeatureRouter } from "../features/internalFeatureRouter.js";
+import { migrationRouter } from "../migrations/migrationRouter.js";
 import { handleConnectStripe } from "../orgs/handlers/handleConnectStripe.js";
 import { handleDeleteStripe } from "../orgs/handlers/handleDeleteStripe.js";
-
-import { refreshCacheMiddleware } from "@/middleware/refreshCacheMiddleware.js";
-import { platformRouter } from "../platform/platformRouter.js";
-import { batchRouter } from "./batch/batchRouter.js";
 import { handleGetOrg } from "../orgs/handlers/handleGetOrg.js";
+import { platformRouter } from "../platform/platformRouter.js";
+import { productBetaRouter, productRouter } from "../products/productRouter.js";
+import { componentRouter } from "./components/componentRouter.js";
+import { entityRouter } from "./entities/entityRouter.js";
+import { checkRouter } from "./entitled/checkRouter.js";
+import { eventsRouter } from "./events/eventRouter.js";
+import { usageRouter } from "./events/usageRouter.js";
+import { invoiceRouter } from "./invoiceRouter.js";
+import { redemptionRouter, referralRouter } from "./rewards/referralRouter.js";
+import { rewardProgramRouter } from "./rewards/rewardProgramRouter.js";
+import rewardRouter from "./rewards/rewardRouter.js";
 
 const apiRouter: Router = Router();
 
@@ -64,6 +60,7 @@ apiRouter.use("/check", checkRouter);
 apiRouter.use("/events", eventsRouter);
 apiRouter.use("/track", eventsRouter);
 apiRouter.post("/setup_payment", handleSetupPayment);
+apiRouter.post("/billing_portal", handleCreateBillingPortal);
 
 // Analytics
 apiRouter.use("/query", analyticsRouter);

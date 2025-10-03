@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 import { EntitlementSchema } from "../../productModels/entModels/entModels.js";
 
 export const ReplaceableSchema = z.object({

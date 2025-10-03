@@ -20,7 +20,7 @@ export const validateOneOffTrial = async ({
 	freeTrial,
 }: {
 	prices: Price[];
-	freeTrial: FreeTrial | null;
+	freeTrial: FreeTrial | CreateFreeTrial | null;
 }) => {
 	if (isOneOff(prices) && freeTrial) {
 		throw new RecaseError({
