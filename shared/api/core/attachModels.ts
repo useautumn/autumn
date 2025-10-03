@@ -13,37 +13,44 @@ export const ProductOptions = z.object({
 	options: z.array(FeatureOptionsSchema).nullish(),
 });
 
-export const ExtAttachBodySchema = z.object({
-	// Customer / Entity Info
+export const ExtAttachBodySchema = z
+	.object({
+		// Customer / Entity Info
 
-	customer_id: z
-		.string()
-		.describe("ID of the customer to attach the product to"),
+		customer_id: z
+			.string()
+			.describe("ID of the customer to attach the product to"),
 
-	customer_data: CustomerDataSchema.optional().describe(
-		"Customer data if using attach to auto create customer",
-	),
+		customer_data: CustomerDataSchema.optional().describe(
+			"Customer data if using attach to auto create customer",
+		),
 
-	entity_id: z.string().nullish(),
-	entity_data: EntityDataSchema.optional(),
+		entity_id: z.string().nullish(),
+		entity_data: EntityDataSchema.optional(),
 
-	// Product Info
-	product_id: z.string().nullish(),
-	product_ids: z.array(z.string()).min(1).nullish(),
-	options: z.array(FeatureOptionsSchema).nullish(),
-	free_trial: z.boolean().optional(),
+		// Product Info
+		product_id: z.string().nullish(),
+		product_ids: z.array(z.string()).min(1).nullish(),
+		options: z.array(FeatureOptionsSchema).nullish(),
+		free_trial: z.boolean().optional(),
 
-	// Others
-	success_url: z.string().optional(),
-	force_checkout: z.boolean().optional(),
-	checkout_session_params: z.any().optional(),
-	reward: z.string().or(z.array(z.string())).optional(),
-	invoice: z.boolean().optional(),
+		// Others
+		success_url: z.string().optional(),
+		force_checkout: z.boolean().optional(),
+		checkout_session_params: z.any().optional(),
+		reward: z.string().or(z.array(z.string())).optional(),
+		invoice: z.boolean().optional(),
 
-	// Checkout params
-	skip_checkout: z.boolean().optional(),
-	setup_payment: z.boolean().optional(),
-});
+		// Checkout params
+		skip_checkout: z.boolean().optional(),
+		setup_payment: z.boolean().optional(),
+	})
+	.meta({
+		example: {
+			customer_id: "cus_123",
+			product_id: "pro",
+		},
+	});
 
 export const AttachBodySchema = ExtAttachBodySchema.extend({
 	products: z.array(ProductOptions).nullish(),

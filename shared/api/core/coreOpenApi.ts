@@ -4,6 +4,7 @@ import {
 	ExtAttachBodySchema,
 	ExtCheckoutParamsSchema,
 } from "@api/models.js";
+import type { ZodOpenApiPathsObject } from "zod-openapi";
 import { CheckParamsSchema, CheckResultSchema } from "./checkModels.js";
 import {
 	BillingPortalParamsSchema,
@@ -18,14 +19,23 @@ import {
 	TrackResultSchema,
 } from "./coreOpModels.js";
 
-export const coreOps = {
+export const coreOps: ZodOpenApiPathsObject = {
 	"/attach": {
 		post: {
 			summary: "Attach Product",
+			description:
+				"Enables a product and handles a payment if the customer's card is already on file.",
+
 			tags: ["core"],
 			requestBody: {
 				content: {
-					"application/json": { schema: ExtAttachBodySchema },
+					"application/json": {
+						schema: ExtAttachBodySchema,
+						example: {
+							customer_id: "123",
+							product_id: "pro",
+						},
+					},
 				},
 			},
 			responses: {

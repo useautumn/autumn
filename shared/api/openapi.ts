@@ -11,6 +11,7 @@ import { customerOps } from "./customers/customersOpenApi.js";
 import { entityOps } from "./entities/entitiesOpenApi.js";
 import { featureOps } from "./features/featuresOpenApi.js";
 import { productOps } from "./products/productsOpenApi.js";
+import { referralOps } from "./referrals/referralsOpenApi.js";
 
 const API_VERSION = "1.2.0";
 
@@ -63,6 +64,7 @@ const document = createDocument({
 		...featureOps,
 		...customerOps,
 		...entityOps,
+		...referralOps,
 	},
 });
 
