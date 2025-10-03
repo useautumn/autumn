@@ -20,12 +20,12 @@ export const ExtAttachBodySchema = z.object({
 		.string()
 		.describe("ID of the customer to attach the product to"),
 
-	customer_data: CustomerDataSchema.nullish().describe(
+	customer_data: CustomerDataSchema.optional().describe(
 		"Customer data if using attach to auto create customer",
 	),
 
 	entity_id: z.string().nullish(),
-	entity_data: EntityDataSchema.nullish(),
+	entity_data: EntityDataSchema.optional(),
 
 	// Product Info
 	product_id: z.string().nullish(),
@@ -47,6 +47,7 @@ export const ExtAttachBodySchema = z.object({
 
 export const AttachBodySchema = ExtAttachBodySchema.extend({
 	products: z.array(ProductOptions).nullish(),
+	customer_data: CustomerDataSchema.nullish(), // For safety
 
 	// Custom Product
 	is_custom: z.boolean().optional(),

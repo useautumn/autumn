@@ -21,7 +21,7 @@ export const CreateEntitySchema = z.object({
 });
 
 export const EntityDataSchema = z.object({
-	name: z.string(), // Name of entity
+	name: z.string().nullish(), // Name of entity
 	feature_id: z.string(), // Feature ID of entity
 });
 
