@@ -53,4 +53,8 @@ export const APICustomerSchema = z
 		description: "Customer object returned by the API",
 	});
 
+export const APICustomerV1Schema = APICustomerSchema.extend({
+	features: z.any(),
+});
+
 export type APICustomer = z.infer<typeof APICustomerSchema>;

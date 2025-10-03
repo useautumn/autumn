@@ -74,13 +74,13 @@ export const handleMigrate = async (
 		});
 	}
 
-	if (fromProduct.is_add_on || toProduct.is_add_on) {
-		throw new RecaseError({
-			message: `Cannot migrate customers for add on products`,
-			code: ErrCode.InvalidRequest,
-			statusCode: 400,
-		});
-	}
+	// if (fromProduct.is_add_on || toProduct.is_add_on) {
+	// 	throw new RecaseError({
+	// 		message: `Cannot migrate customers for add on products`,
+	// 		code: ErrCode.InvalidRequest,
+	// 		statusCode: 400,
+	// 	});
+	// }
 
 	for (const price of toProduct.prices) {
 		const billingType = getBillingType(price.config);
