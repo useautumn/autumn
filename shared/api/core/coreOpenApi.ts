@@ -4,6 +4,11 @@ import {
 	ExtAttachBodySchema,
 	ExtCheckoutParamsSchema,
 } from "@api/models.js";
+import {
+	createJSDocDescription,
+	docLink,
+	example,
+} from "@api/openApiHelpers.js";
 import type { ZodOpenApiPathsObject } from "zod-openapi";
 import { CheckParamsSchema, CheckResultSchema } from "./checkModels.js";
 import {
@@ -19,29 +24,82 @@ import {
 	TrackResultSchema,
 } from "./coreOpModels.js";
 
+const attachJsDoc = createJSDocDescription({
+	description:
+		"Enables a product for a customer and processes payment if their payment method is already on file.",
+	whenToUse:
+		"Use this when the customer already has a payment method saved. For new customers without payment info, use `checkout` instead.",
+	params: ExtAttachBodySchema,
+	examples: [
+		example({
+			values: {
+				customer_id: "cus_123",
+				product_id: "pro_plan",
+			},
+		}),
+		example({
+			values: {
+				customer_id: "cus_123",
+				product_id: "pro_plan",
+				entity_id: "entity_123",
+			},
+			description: "Attach to a specific entity",
+		}),
+		example({
+			values: {
+				customer_id: "cus_123",
+				product_id: "pro_plan",
+				success_url: "https://example.com/success",
+			},
+			description: "With a success URL",
+		}),
+	],
+	methodName: "attach",
+	docs: [
+		docLink({
+			url: "https://docs.useautumn.com/core-concepts/attach",
+			title: "Product Attachments",
+		}),
+		docLink({
+			url: "https://docs.useautumn.com/payments/overview",
+			title: "Payment Processing",
+		}),
+	],
+});
+
 export const coreOps: ZodOpenApiPathsObject = {
 	"/attach": {
 		post: {
 			summary: "Attach Product",
-			description:
-				"Enables a product and handles a payment if the customer's card is already on file.",
+			description: attachJsDoc,
 
 			tags: ["core"],
 			requestBody: {
 				content: {
 					"application/json": {
 						schema: ExtAttachBodySchema,
-						example: {
-							customer_id: "123",
-							product_id: "pro",
+						examples: {
+							basic: {
+								summary: "Attach a product immediately",
+								description:
+									"Enable a product for a customer with immediate activation",
+								value: {
+									customer_id: "cus_123",
+									product_id: "pro_plan",
+								},
+							},
 						},
 					},
 				},
 			},
 			responses: {
 				"200": {
-					description: "200 OK",
-					content: { "application/json": { schema: AttachResultSchema } },
+					description: "Product attached successfully",
+					content: {
+						"application/json": {
+							schema: AttachResultSchema,
+						},
+					},
 				},
 			},
 		},

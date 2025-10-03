@@ -5,6 +5,10 @@ export * from "./core/checkoutModels.js";
 export * from "./core/coreOpenApi.js";
 export * from "./core/coreOpModels.js";
 
+// Helpers
+export * from "./openApiHelpers.js";
+export * from "./utils/zodToJSDoc.js";
+
 // Customers
 
 export * from "./customers/apiCustomer.js";
