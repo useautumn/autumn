@@ -11,7 +11,7 @@ export const APIFeatureSchema = z
 	.object({
 		id: z.string(),
 		name: z.string().nullish(),
-		type: z.nativeEnum(APIFeatureType),
+		type: z.enum(APIFeatureType),
 		display: z
 			.object({
 				singular: z.string(),

@@ -81,6 +81,7 @@ const handlePrepaidErrors = async ({
 		if (billingType === BillingType.UsageInAdvance) {
 			// Get options for price
 			const priceEnt = getPriceEntitlement(price, entitlements);
+
 			const options = getEntOptions(optionsList, priceEnt);
 
 			// 1. If not checkout, quantity should be defined

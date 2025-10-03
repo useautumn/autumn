@@ -43,9 +43,9 @@ const skipIds = [
 	"DxG668K7uDd0Vahk54YWjvCGVgf2",
 ];
 
-orgSlugs = ["capy"];
-const customerId = null;
-// customerId = "55765cf6-84af-11f0-a94e-3eef481a796b";
+orgSlugs = ["feather"];
+let customerId = null;
+customerId = "3aa8ebee-28cb-4293-97e8-becf55bc2159";
 
 const getSingleCustomer = async ({
 	stripeCli,

@@ -1,5 +1,6 @@
 import {
 	APICustomerSchema,
+	APICustomerV1Schema,
 	APIVersion,
 	type AppEnv,
 	CusEntResponseSchema,
@@ -141,8 +142,11 @@ export const getCustomerDetails = async ({
 			expand,
 		});
 
+		const apiCustomerSchema =
+			apiVersion >= APIVersion.v1_2 ? APICustomerSchema : APICustomerV1Schema;
+
 		const cusResponse = {
-			...APICustomerSchema.parse({
+			...apiCustomerSchema.parse({
 				...customer,
 				stripe_id: customer.processor?.id,
 				features: entList,
