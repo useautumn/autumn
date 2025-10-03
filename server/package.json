@@ -8,8 +8,9 @@
     "email": "email dev -p 3001",
     "start": "bun src/index.ts",
     "dev": "cross-env NODE_ENV=development bunx nodemon --exec bun src/index.ts --ignore scripts --ignore tests",
+    "workers:dev": "cross-env NODE_ENV=development bunx nodemon --exec bun src/workers.ts --watch src/workers.ts --watch src/queue --ignore scripts --ignore tests",
     "workers": "bun src/workers.ts",
-    "workers:dev": "bun --watch src/workers.ts",
+    
     "cron": "bun src/cron.ts",
     "check": "bun src/check.ts",
     "build": "bun build ./src/index.ts ./src/workers.ts ./src/cron.ts --outdir dist --target bun",
