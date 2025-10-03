@@ -37,7 +37,7 @@ export function SheetHeader({
 }
 
 interface SheetSectionProps {
-	title: string | React.ReactNode;
+	title?: string | React.ReactNode;
 	description?: string;
 	checked?: boolean;
 	setChecked?: (checked: boolean) => void;
@@ -47,7 +47,7 @@ interface SheetSectionProps {
 }
 
 export function SheetSection({
-	title,
+	title = "",
 	description,
 	checked = true,
 	setChecked,
@@ -71,9 +71,11 @@ export function SheetSection({
 							/>
 						</div>
 					)}
-					<div className={cn("flex items-center gap-2")}>
-						<h3 className={cn("text-sub select-none")}>{title}</h3>
-					</div>
+					{title && (
+						<div className={cn("flex items-center gap-2")}>
+							<h3 className={cn("text-sub select-none")}>{title}</h3>
+						</div>
+					)}
 				</label>
 				{description && (
 					<p

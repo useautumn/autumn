@@ -27,7 +27,7 @@ export function OnboardingLayout() {
 	// 1. If not loaded, show loading screen
 	if (isPending) {
 		return (
-			<AutumnProvider backendUrl={import.meta.env.VITE_BACKEND_URL}>
+			<AutumnProvider backendUrl={`${import.meta.env.VITE_BACKEND_URL}/demo`}>
 				<div className="w-screen h-screen flex items-center justify-center bg-stone-100">
 					<LoadingScreen />
 				</div>
@@ -43,7 +43,7 @@ export function OnboardingLayout() {
 
 	return (
 		<AutumnProvider
-			backendUrl={import.meta.env.VITE_BACKEND_URL}
+			backendUrl={`${import.meta.env.VITE_BACKEND_URL}/demo`}
 			includeCredentials={true}
 		>
 			<NuqsAdapter>

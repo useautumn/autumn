@@ -1,3 +1,4 @@
+import type { ProductV2 } from "@autumn/shared";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -50,6 +51,9 @@ export const useOnboardingLogic = () => {
 		id: string | null;
 	}>({ type: null, id: null });
 	const [selectedProductId, setSelectedProductId] = useState<string>("");
+	const [playgroundMode, setPlaygroundMode] = useState<"edit" | "preview">(
+		"edit",
+	);
 
 	// Sync selectedProductId with product ID
 	useMemo(() => {
@@ -59,10 +63,14 @@ export const useOnboardingLogic = () => {
 	}, [product?.id, selectedProductId]);
 
 	// Auto-open edit-plan sheet when entering step 4 (Playground)
+	// Clear sheet when entering step 5 (Completion)
 	useEffect(() => {
 		if (step === OnboardingStep.Playground) {
 			setSheet("edit-plan");
 			setEditingState({ type: "plan", id: null });
+		} else if (step === OnboardingStep.Completion) {
+			setSheet(null);
+			setEditingState({ type: null, id: null });
 		}
 	}, [step]);
 
@@ -135,7 +143,7 @@ export const useOnboardingLogic = () => {
 				);
 				const saved = await updateProduct({
 					axiosInstance,
-					product,
+					product: product as ProductV2,
 					onSuccess: async () => {
 						await handleRefetch();
 					},
@@ -189,7 +197,7 @@ export const useOnboardingLogic = () => {
 		}
 	};
 
-	const onCreatePlanSuccess = async (newProduct: any) => {
+	const onCreatePlanSuccess = async (newProduct: ProductV2) => {
 		try {
 			await handleCreatePlanSuccess(
 				newProduct,
@@ -237,6 +245,8 @@ export const useOnboardingLogic = () => {
 		setSheet,
 		editingState,
 		setEditingState,
+		playgroundMode,
+		setPlaygroundMode,
 
 		// Handlers
 		handleNext,

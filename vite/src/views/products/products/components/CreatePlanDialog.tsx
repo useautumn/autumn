@@ -10,7 +10,6 @@ import {
 	DialogContent,
 	DialogFooter,
 	DialogTitle,
-	DialogTrigger,
 } from "@/components/v2/dialogs/Dialog";
 import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -28,9 +27,11 @@ const defaultProduct = {
 function CreatePlanDialog({
 	onSuccess,
 	size = "default",
+	buttonClassName,
 }: {
 	onSuccess?: (newProduct: ProductV2) => Promise<void>;
 	size?: "default" | "sm";
+	buttonClassName?: string;
 }) {
 	const [loading, setLoading] = useState(false);
 	const [product, setProduct] = useState(defaultProduct);
@@ -79,13 +80,18 @@ function CreatePlanDialog({
 	}, [open]);
 
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger asChild>
-				<IconButton icon={<PlusCircleIcon />} variant={"secondary"}>
-					Add Plan
-				</IconButton>
-			</DialogTrigger>
-			<DialogContent className="w-[500px]">
+		<>
+			<IconButton
+				icon={<PlusCircleIcon />}
+				variant={"secondary"}
+				size={size}
+				className={buttonClassName}
+				onClick={() => setOpen(true)}
+			>
+				Add Plan
+			</IconButton>
+			<Dialog open={open} onOpenChange={setOpen}>
+				<DialogContent className="w-[500px]">
 				<DialogTitle>Create Plan</DialogTitle>
 				<ProductConfig
 					product={product}
@@ -105,6 +111,7 @@ function CreatePlanDialog({
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>
+		</>
 	);
 }
 

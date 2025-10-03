@@ -201,3 +201,68 @@
 .panel-icon-unselected {
 	color: rgb(75 85 99);
 }
+
+/* CodeGroup syntax highlighting */
+.code-group-highlight {
+	/* Enable font ligatures for arrow functions and other operators */
+	font-variant-ligatures: normal;
+	font-feature-settings: "liga" 1, "calt" 1;
+
+	/* Default color for symbols without classes */
+	color: #444444 !important;
+
+	& code {
+		color: #444444 !important;
+	}
+
+	/* Keywords: import, from, const, async, if, etc. */
+	& .pl-k {
+		color: #096FFF !important;
+	}
+
+	/* Operators: :, =, !, etc. - override keyword color */
+	& .pl-k.pl-operator {
+		color: #444444 !important;
+	}
+
+	/* Strings */
+	& .pl-s,
+	& .pl-pds {
+		color: #BF00B9 !important;
+	}
+
+	/* JSX tag names */
+	& .pl-ent {
+		color: #008172 !important;
+	}
+
+	/* Variables, properties, identifiers - pl-c1 is used for variable names */
+	& .pl-v,
+	& .pl-s1,
+	& .pl-smi,
+	& .pl-c1 {
+		color: #008172 !important;
+	}
+
+	/* Object property names (custom class added via post-processing) */
+	& .pl-property {
+		color: #008172 !important;
+	}
+
+	/* Function declarations - override pl-c1 green */
+	& .pl-c1.pl-function-name {
+		color: #BF0003 !important;
+	}
+
+	/* Function calls */
+	& .pl-en {
+		color: #BF0003 !important;
+	}
+
+	/* Symbols, punctuation, operators */
+	& .pl-kos,
+	& .pl-pse,
+	& .pl-psc {
+		color: #444444 !important;
+	}
+}
