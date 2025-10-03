@@ -188,7 +188,7 @@ export const SetupPaymentParamsSchema = z
 			description: "URL to redirect to after successful payment setup",
 			example: "https://example.com/success",
 		}),
-		checkout_session_params: z.record(z.any(), z.any()).optional().meta({
+		checkout_session_params: z.record(z.string(), z.unknown()).optional().meta({
 			description: "Additional parameters for the checkout session",
 		}),
 	})

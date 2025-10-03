@@ -6,6 +6,9 @@ import { AttachBodySchema, ExtAttachBodySchema } from "./attachModels.js";
 
 export const ExtCheckoutParamsSchema = ExtAttachBodySchema.extend({
 	setup_payment: z.boolean().optional(),
+}).meta({
+	description:
+		"Returns a Stripe Checkout URL for the customer to make a payment, or returns payment confirmation information.",
 });
 
 export const CheckoutParamsSchema = AttachBodySchema.extend({
@@ -32,8 +35,8 @@ export const CheckoutResponseSchema = z.object({
 	has_prorations: z.boolean().nullish(),
 	next_cycle: z
 		.object({
-			starts_at: z.number().nullish(),
-			total: z.number().nullish(),
+			starts_at: z.number(),
+			total: z.number(),
 		})
 		.nullish(),
 });

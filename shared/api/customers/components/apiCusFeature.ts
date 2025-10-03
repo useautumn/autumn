@@ -64,7 +64,11 @@ export const APICusFeatureSchema = z
 		type: z.enum(ProductItemFeatureType),
 		name: z.string().nullish(),
 	})
-	.extend(CoreCusFeatureSchema.shape);
+	.extend(CoreCusFeatureSchema.shape)
+	.meta({
+		id: "CustomerFeature",
+		description: "Customer feature object returned by the API",
+	});
 
 export type CusEntResponse = z.infer<typeof CusEntResponseSchema>;
 export type CusEntResponseV2 = z.infer<typeof APICusFeatureSchema>;
