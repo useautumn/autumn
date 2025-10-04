@@ -124,9 +124,13 @@ export function EventsBarChart({
 		formatter: {
 			x: (params: FormatterParams<any, unknown>) => {
 				if (params.type !== "category") return;
+				const date = parseUTCTimestamp(params.value as string);
+				if (!isFinite(date.getTime())) {
+					return params.value as string; // Return original value if invalid
+				}
 				return selectedInterval === "24h"
-					? hourFormatter.format(parseUTCTimestamp(params.value as string))
-					: dateFormatter.format(parseUTCTimestamp(params.value as string));
+					? hourFormatter.format(date)
+					: dateFormatter.format(date);
 			},
 		},
 		legend: {
@@ -154,9 +158,11 @@ export function EventsAGGrid({ data }: { data: any }) {
 			field: "timestamp",
 			flex: 1,
 			valueFormatter: (params: ValueFormatterParams<any, unknown>) => {
-				return timestampFormatter.format(
-					parseUTCTimestamp(params.value as string),
-				);
+				const date = parseUTCTimestamp(params.value as string);
+				if (!isFinite(date.getTime())) {
+					return params.value as string; // Return original value if invalid
+				}
+				return timestampFormatter.format(date);
 			},
 			cellStyle: {
 				paddingLeft: "2.5rem",
