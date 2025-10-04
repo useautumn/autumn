@@ -36,10 +36,17 @@ export const IncludedUsage = () => {
 							: item.included_usage || ""
 					}
 					type={item.included_usage === Infinite ? "text" : "number"}
+					min="0"
 					onChange={(e) => {
+						let value = e.target.value;
+						
+						if (value !== "" && Number(value) < 0) {
+							return; // Don't update if negative
+						}
+						
 						const newItem = {
 							...item,
-							included_usage: e.target.value,
+							included_usage: value,
 						};
 
 						setItem(newItem);
