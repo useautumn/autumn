@@ -1,9 +1,9 @@
 import { ErrCode } from "@autumn/shared";
 import type { Context, Next } from "hono";
+import semver, { type SemVer } from "semver";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { floatToVersion } from "@/utils/versionUtils.js";
-
+import { floatToVersion } from "@/utils/versionUtils/legacyVersionUtils.js";
 /**
  * Middleware to verify and set API version from x-api-version header
  */
@@ -24,7 +24,9 @@ export const apiVersionMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		}
 
 		// Store in context
-		ctx.apiVersion = apiVersion.toString();
+		// ctx.apiVersion = apiVersion.toString();
+		ctx.apiVersion = semver.parse(version) as SemVer;
+		// ctx.apiVersion.
 	}
 
 	await next();

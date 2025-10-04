@@ -1,28 +1,24 @@
-import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
-
-import { APIVersion } from "@autumn/shared";
-import { ErrCode } from "@autumn/shared";
-
+import { ErrCode, LegacyVersion } from "@autumn/shared";
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
-import { CusService } from "./CusService.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { handleDeleteCustomer } from "./handlers/handleDeleteCustomer.js";
-import { handleUpdateBalances } from "./handlers/handleUpdateBalances.js";
-import { handleUpdateEntitlement } from "./handlers/handleUpdateEntitlement.js";
-import { handleAddCouponToCus } from "./handlers/handleAddCouponToCus.js";
-import { handlePostCustomerRequest } from "./handlers/handlePostCustomer.js";
-import { entityRouter } from "../api/entities/entityRouter.js";
-import { handleUpdateCustomer } from "./handlers/handleUpdateCustomer.js";
-import { handleCreateBillingPortal } from "./handlers/handleCreateBillingPortal.js";
-import { handleGetCustomer } from "./handlers/handleGetCustomer.js";
-import { CusSearchService } from "@/internal/customers/CusSearchService.js";
 import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
-import { handleTransferProduct } from "./handlers/handleTransferProduct.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
+import { CusSearchService } from "@/internal/customers/CusSearchService.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { handleBatchCustomers } from "../api/batch/handlers/handleBatchCustomers.js";
+import { entityRouter } from "../api/entities/entityRouter.js";
 import { toSuccessUrl } from "../orgs/orgUtils/convertOrgUtils.js";
+import { CusService } from "./CusService.js";
+import { handleAddCouponToCus } from "./handlers/handleAddCouponToCus.js";
+import { handleCreateBillingPortal } from "./handlers/handleCreateBillingPortal.js";
+import { handleDeleteCustomer } from "./handlers/handleDeleteCustomer.js";
+import { handleGetCustomer } from "./handlers/handleGetCustomer.js";
+import { handlePostCustomerRequest } from "./handlers/handlePostCustomer.js";
+import { handleTransferProduct } from "./handlers/handleTransferProduct.js";
+import { handleUpdateBalances } from "./handlers/handleUpdateBalances.js";
+import { handleUpdateCustomer } from "./handlers/handleUpdateCustomer.js";
+import { handleUpdateEntitlement } from "./handlers/handleUpdateEntitlement.js";
 
 export const cusRouter: Router = Router();
 
@@ -72,7 +68,7 @@ cusRouter.post("/:customer_id/balances", handleUpdateBalances);
 
 cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
 	try {
-		let returnUrl = req.query.return_url;
+		const returnUrl = req.query.return_url;
 
 		const customerId = req.params.customer_id;
 
@@ -126,7 +122,7 @@ cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
 					return_url: returnUrl || toSuccessUrl({ org, env: req.env }),
 				});
 
-				if (org.api_version >= APIVersion.v1_1) {
+				if (org.api_version >= LegacyVersion.v1_1) {
 					return res.status(200).json({
 						customer_id: customer.id,
 						url: portal.url,
@@ -144,7 +140,7 @@ cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
 			return_url: returnUrl || toSuccessUrl({ org, env: req.env }),
 		});
 
-		if (org.api_version >= APIVersion.v1_1) {
+		if (org.api_version >= LegacyVersion.v1_1) {
 			res.status(200).json({
 				customer_id: customer.id,
 				url: portal.url,

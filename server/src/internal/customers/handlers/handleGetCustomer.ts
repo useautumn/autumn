@@ -1,7 +1,7 @@
-import { APIVersion, CusExpand, ErrCode } from "@autumn/shared";
+import { CusExpand, ErrCode, LegacyVersion } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { orgToVersion } from "@/utils/versionUtils.js";
+import { orgToVersion } from "@/utils/versionUtils/legacyVersionUtils.js";
 import { getCusWithCache } from "../cusCache/getCusWithCache.js";
 import { parseCusExpand } from "../cusUtils/cusUtils.js";
 import { getCustomerDetails } from "../cusUtils/getCustomerDetails.js";
@@ -23,7 +23,7 @@ export const handleGetCustomer = async (req: any, res: any) =>
 				reqApiVersion: req.apiVersion,
 			});
 
-			const getInvoices = apiVersion < APIVersion.v1_1;
+			const getInvoices = apiVersion < LegacyVersion.v1_1;
 			if (getInvoices) expandArray.push(CusExpand.Invoices);
 
 			logger.info(`getting customer ${customerId} for org ${org.slug}`);

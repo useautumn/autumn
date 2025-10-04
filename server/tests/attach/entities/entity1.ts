@@ -1,4 +1,4 @@
-import { APIVersion, type AppEnv, type Organization } from "@autumn/shared";
+import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
 import chalk from "chalk";
 import type Stripe from "stripe";
 import { setupBefore } from "tests/before.js";
@@ -27,7 +27,7 @@ const pro = constructProduct({
 
 describe(`${chalk.yellowBright(`attach/${testCase}: Testing attach to entity via checkout`)}`, () => {
 	const customerId = testCase;
-	const autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;

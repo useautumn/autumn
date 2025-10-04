@@ -1,34 +1,26 @@
-import chalk from "chalk";
-import { setupBefore } from "tests/before.js";
-import { Stripe } from "stripe";
-import { createProducts } from "tests/utils/productUtils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-	APIVersion,
-	AppEnv,
+	type AppEnv,
 	CusProductStatus,
-	Organization,
+	LegacyVersion,
+	type Organization,
 } from "@autumn/shared";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { addDays } from "date-fns";
-import { expectMultiAttachCorrect } from "tests/utils/expectUtils/expectMultiAttach.js";
+import { expect } from "chai";
+import chalk from "chalk";
+import type { Stripe } from "stripe";
+import { setupBefore } from "tests/before.js";
 import { products } from "tests/global.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { timeout } from "@/utils/genUtils.js";
-import { expect } from "chai";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
 const testCase = "cancel1";
 describe(`${chalk.yellowBright("cancel1: Testing cancel for trial products")}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 	let stripeCli: Stripe;
 	let testClockId: string;
@@ -58,7 +50,7 @@ describe(`${chalk.yellowBright("cancel1: Testing cancel for trial products")}`, 
 		testClockId = testClockId1!;
 	});
 
-	it("should attach pro", async function () {
+	it("should attach pro", async () => {
 		await autumn.attach({
 			customer_id: customerId,
 			product_id: products.pro.id,
@@ -73,7 +65,7 @@ describe(`${chalk.yellowBright("cancel1: Testing cancel for trial products")}`, 
 
 	let sub: Stripe.Subscription | undefined;
 
-	it("should cancel pro product through stripe CLI", async function () {
+	it("should cancel pro product through stripe CLI", async () => {
 		const fullCus = await CusService.getFull({
 			db,
 			idOrInternalId: customerId,
@@ -107,7 +99,7 @@ describe(`${chalk.yellowBright("cancel1: Testing cancel for trial products")}`, 
 	});
 	return;
 
-	it("should renew pro produce through stripe CLI and have it update correctly", async function () {
+	it("should renew pro produce through stripe CLI and have it update correctly", async () => {
 		await stripeCli.subscriptions.update(sub!.id, {
 			cancel_at_period_end: false,
 		});

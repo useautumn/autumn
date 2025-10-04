@@ -10,7 +10,6 @@
     "dev": "cross-env NODE_ENV=development bunx nodemon --exec bun src/index.ts --ignore scripts --ignore tests",
     "workers:dev": "cross-env NODE_ENV=development bunx nodemon --exec bun src/workers.ts --watch src/workers.ts --watch src/queue --ignore scripts --ignore tests",
     "workers": "bun src/workers.ts",
-    
     "cron": "bun src/cron.ts",
     "check": "bun src/check.ts",
     "build": "bun build ./src/index.ts ./src/workers.ts ./src/cron.ts --outdir dist --target bun",
@@ -50,6 +49,7 @@
     "@react-email/components": "^0.0.42",
     "@sentry/node": "^9.30.0",
     "@supabase/supabase-js": "^2.46.2",
+    "@types/semver": "^7.7.1",
     "@upstash/redis": "^1.35.1",
     "ai": "^4.3.10",
     "autumn-js": "^0.1.8",
@@ -91,6 +91,7 @@
     "react": "^18.2.0",
     "recaseai": "^0.0.37",
     "resend": "^4.1.1",
+    "semver": "^7.7.2",
     "stripe": "^18.4.0",
     "svix": "^1.45.1",
     "tsc-alias": "^1.8.16",

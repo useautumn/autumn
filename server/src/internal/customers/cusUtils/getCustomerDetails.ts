@@ -1,6 +1,5 @@
 import {
 	APICustomerSchema,
-	APIVersion,
 	type AppEnv,
 	CusEntResponseSchema,
 	CusExpand,
@@ -13,13 +12,14 @@ import {
 	FeatureType,
 	type FullCusProduct,
 	type FullCustomer,
+	LegacyVersion,
 	type Organization,
 	type RewardResponse,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { invoicesToResponse } from "@/internal/invoices/invoiceUtils.js";
 import { BREAK_API_VERSION } from "@/utils/constants.js";
-import { orgToVersion } from "@/utils/versionUtils.js";
+import { orgToVersion } from "@/utils/versionUtils/legacyVersionUtils.js";
 import { featuresToObject } from "./cusFeatureResponseUtils/balancesToFeatureResponse.js";
 import { getCusBalances } from "./cusFeatureResponseUtils/getCusBalances.js";
 import { processFullCusProducts } from "./cusProductResponseUtils/processFullCusProducts.js";
@@ -85,7 +85,7 @@ export const getCustomerDetails = async ({
 		features,
 	});
 
-	if (apiVersion >= APIVersion.v1_1) {
+	if (apiVersion >= LegacyVersion.v1_1) {
 		let entList: any = balances.map((b) => {
 			const isBoolean =
 				features.find((f: Feature) => f.id === b.feature_id)?.type ===
@@ -103,7 +103,7 @@ export const getCustomerDetails = async ({
 
 		const products: any = [...main, ...addOns];
 
-		if (apiVersion >= APIVersion.v1_2) {
+		if (apiVersion >= LegacyVersion.v1_2) {
 			entList = featuresToObject({
 				features,
 				entList,

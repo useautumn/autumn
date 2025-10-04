@@ -1,6 +1,6 @@
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
-import { APIVersion } from "../../enums/APIVersion.js";
+import { LegacyVersion } from "../../enums/APIVersion.js";
 import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
 import type { FixedPriceConfig } from "../../models/productModels/priceModels/priceConfig/fixedPriceConfig.js";
 import {
@@ -119,7 +119,7 @@ export const isV4Usage = ({
 
 	return (
 		billingType === BillingType.UsageInArrear &&
-		(cusProduct.api_version === APIVersion.v1_4 ||
+		(cusProduct.api_version === LegacyVersion.v1_4 ||
 			notNullish(cusProduct.internal_entity_id))
 	);
 };

@@ -1,34 +1,32 @@
-import { expect } from "chai";
-import chalk from "chalk";
-import { features } from "tests/global.js";
-import { setupBefore } from "tests/before.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-	APIVersion,
-	AppEnv,
+	type AppEnv,
 	BillingInterval,
 	EntInterval,
+	LegacyVersion,
 	ProductItemFeatureType,
 	UsageModel,
 } from "@autumn/shared";
-import { createProduct } from "tests/utils/productUtils.js";
-import { getMainCusProduct } from "tests/utils/cusProductUtils/cusProductUtils.js";
+import { expect } from "chai";
+import chalk from "chalk";
+import { setupBefore } from "tests/before.js";
+import { features } from "tests/global.js";
 import {
 	getLifetimeFreeCusEnt,
 	getUsageCusEnt,
 } from "tests/utils/cusProductUtils/cusEntSearchUtils.js";
-
+import { getMainCusProduct } from "tests/utils/cusProductUtils/cusProductUtils.js";
+import { createProduct } from "tests/utils/productUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
 	constructFeatureItem,
 	constructFeaturePriceItem,
 } from "@/internal/products/product-items/productItemUtils.js";
-
 import { timeout } from "@/utils/genUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
 // Scenario 1: prepaid + pay per use monthly -> prepaid + pay per use monthly
-let pro = {
+const pro = {
 	id: "multiFeature2Pro",
 	name: "Multi Feature 2 Pro",
 	items: {
@@ -48,7 +46,7 @@ let pro = {
 	},
 };
 
-let premium = {
+const premium = {
 	id: "multiFeature2Premium",
 	name: "Multi Feature 2 Premium",
 	items: {
@@ -77,19 +75,19 @@ export const getLifetimeAndUsageCusEnts = async ({
 	env: AppEnv;
 	featureId: string;
 }) => {
-	let mainCusProduct = await getMainCusProduct({
+	const mainCusProduct = await getMainCusProduct({
 		customerId: customerId,
 		db,
 		orgId,
 		env,
 	});
 
-	let lifetimeCusEnt = getLifetimeFreeCusEnt({
+	const lifetimeCusEnt = getLifetimeFreeCusEnt({
 		cusProduct: mainCusProduct!,
 		featureId,
 	});
 
-	let usageCusEnt = getUsageCusEnt({
+	const usageCusEnt = getUsageCusEnt({
 		cusProduct: mainCusProduct!,
 		featureId,
 	});
@@ -102,8 +100,8 @@ describe(`${chalk.yellowBright(
 	"multiFeature2: Testing lifetime + pay per use -> pay per use",
 )}`, () => {
 	let autumn: AutumnInt = new AutumnInt();
-	let autumn2: AutumnInt = new AutumnInt({ version: APIVersion.v1_2 });
-	let customerId = testCase;
+	const autumn2: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_2 });
+	const customerId = testCase;
 
 	let totalUsage = 0;
 
@@ -144,7 +142,7 @@ describe(`${chalk.yellowBright(
 			product_id: pro.id,
 		});
 
-		let { lifetimeCusEnt, usageCusEnt } = await getLifetimeAndUsageCusEnts({
+		const { lifetimeCusEnt, usageCusEnt } = await getLifetimeAndUsageCusEnts({
 			customerId,
 			db: this.db,
 			orgId: this.org.id,
@@ -158,7 +156,7 @@ describe(`${chalk.yellowBright(
 	});
 
 	it("should use lifetime allowance first", async function () {
-		let value = pro.items.lifetime.included_usage as number;
+		const value = pro.items.lifetime.included_usage as number;
 
 		await autumn.events.send({
 			customerId,
@@ -170,7 +168,7 @@ describe(`${chalk.yellowBright(
 
 		await timeout(3000);
 
-		let { lifetimeCusEnt, usageCusEnt } = await getLifetimeAndUsageCusEnts({
+		const { lifetimeCusEnt, usageCusEnt } = await getLifetimeAndUsageCusEnts({
 			customerId,
 			db: this.db,
 			orgId: this.org.id,
@@ -185,7 +183,7 @@ describe(`${chalk.yellowBright(
 	});
 
 	it("should have correct usage after upgrade", async function () {
-		let value = 20;
+		const value = 20;
 
 		await autumn.track({
 			customer_id: customerId,
@@ -201,7 +199,7 @@ describe(`${chalk.yellowBright(
 		});
 
 		// return;
-		let { lifetimeCusEnt, usageCusEnt: newUsageCusEnt } =
+		const { lifetimeCusEnt, usageCusEnt: newUsageCusEnt } =
 			await getLifetimeAndUsageCusEnts({
 				customerId,
 				db: this.db,
@@ -214,10 +212,10 @@ describe(`${chalk.yellowBright(
 		expect(newUsageCusEnt?.balance).to.equal(-50);
 
 		// Check invoice too
-		let res = await autumn2.customers.get(customerId);
-		let invoices = res.invoices;
+		const res = await autumn2.customers.get(customerId);
+		const invoices = res.invoices;
 
-		let invoice0Amount = value * (pro.items.payPerUse.price ?? 0);
+		const invoice0Amount = value * (pro.items.payPerUse.price ?? 0);
 		expect(invoices![0].total).to.equal(
 			invoice0Amount,
 			"Invoice 0 should be 0",

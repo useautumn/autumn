@@ -1,20 +1,19 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import {
+	type AppEnv,
+	type Feature,
+	type FullCusEntWithFullCusProduct,
+	type FullCusProduct,
+	type FullCustomer,
+	LegacyVersion,
+	type Organization,
+	WebhookEventType,
+} from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
-import { EntityService } from "@/internal/api/entities/EntityService.js";
 import { getSingleEntityResponse } from "@/internal/api/entities/getEntityUtils.js";
 import { getV2CheckResponse } from "@/internal/api/entitled/checkUtils/getV2CheckResponse.js";
 import { getCustomerDetails } from "@/internal/customers/cusUtils/getCustomerDetails.js";
 import { toAPIFeature } from "@/internal/features/utils/mapFeatureUtils.js";
-import {
-	FullCusEntWithFullCusProduct,
-	Feature,
-	FullCustomer,
-	Organization,
-	AppEnv,
-	FullCusProduct,
-	APIVersion,
-	WebhookEventType,
-} from "@autumn/shared";
 
 export const mergeNewCusEntsIntoCusProducts = ({
 	cusProducts,
@@ -25,7 +24,7 @@ export const mergeNewCusEntsIntoCusProducts = ({
 }) => {
 	for (const cusProduct of cusProducts) {
 		for (let i = 0; i < cusProduct.customer_entitlements.length; i++) {
-			let correspondingCusEnt = newCusEnts.find(
+			const correspondingCusEnt = newCusEnts.find(
 				(cusEnt) => cusEnt.id == cusProduct.customer_entitlements[i].id,
 			);
 
@@ -135,7 +134,7 @@ export const handleAllowanceUsed = async ({
 		feature,
 		org,
 		cusProducts: fullCus.customer_products,
-		apiVersion: APIVersion.v1_2,
+		apiVersion: LegacyVersion.v1_2,
 	});
 
 	const v2CheckResponse = await getV2CheckResponse({
@@ -145,7 +144,7 @@ export const handleAllowanceUsed = async ({
 		feature,
 		org,
 		cusProducts: fullCus.customer_products,
-		apiVersion: APIVersion.v1_2,
+		apiVersion: LegacyVersion.v1_2,
 	});
 
 	// console.log(`Handling allowance used for feature: ${feature.id}`);
@@ -207,7 +206,7 @@ export const handleThresholdReached = async ({
 			feature,
 			org,
 			cusProducts: fullCus.customer_products,
-			apiVersion: APIVersion.v1_2,
+			apiVersion: LegacyVersion.v1_2,
 		});
 
 		const v2CheckResponse = await getV2CheckResponse({
@@ -217,7 +216,7 @@ export const handleThresholdReached = async ({
 			feature,
 			org,
 			cusProducts: newCusProducts,
-			apiVersion: APIVersion.v1_2,
+			apiVersion: LegacyVersion.v1_2,
 		});
 
 		if (

@@ -47,6 +47,7 @@
         "@react-email/components": "^0.0.42",
         "@sentry/node": "^9.30.0",
         "@supabase/supabase-js": "^2.46.2",
+        "@types/semver": "^7.7.1",
         "@upstash/redis": "^1.35.1",
         "ai": "^4.3.10",
         "autumn-js": "^0.1.8",
@@ -88,6 +89,7 @@
         "react": "^18.2.0",
         "recaseai": "^0.0.37",
         "resend": "^4.1.1",
+        "semver": "^7.7.2",
         "stripe": "^18.4.0",
         "svix": "^1.45.1",
         "tsc-alias": "^1.8.16",
@@ -1186,6 +1188,8 @@
     "@types/react-router-dom": ["@types/react-router-dom@5.3.3", "", { "dependencies": { "@types/history": "^4.7.11", "@types/react": "*", "@types/react-router": "*" } }, "sha512-kpqnYK4wcdm5UaWI3fLcELopqLrHgLqNsdpHauzlQktfkHL3npOSwtj1Uz9oKBAzs7lFtVkV8j83voAz2D8fhw=="],
 
     "@types/recharts": ["@types/recharts@2.0.1", "", { "dependencies": { "recharts": "*" } }, "sha512-/cFs7oiafzByUwBSWA1IzE6FW+ppPwQAWsDTadSgVOwzveY9MESpyLHyyHY0SfPPKLW4+4qVNYHPXd0rFiC8vg=="],
+
+    "@types/semver": ["@types/semver@7.7.1", "", {}, "sha512-FmgJfu+MOcQ370SD0ev7EI8TlCAfKYU+B4m5T3yXc1CiRN94g/SZPtsCkk506aUDtlMnFZvasDwHHUcZUEaYuA=="],
 
     "@types/send": ["@types/send@0.17.5", "", { "dependencies": { "@types/mime": "^1", "@types/node": "*" } }, "sha512-z6F2D3cOStZvuk2SaP6YrwkNO65iTZcwA2ZkSABegdkAh/lf+Aa/YQndZVfmEXT5vgAp6zv06VQ3ejSVjAny4w=="],
 

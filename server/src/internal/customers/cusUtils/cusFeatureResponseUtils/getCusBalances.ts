@@ -1,25 +1,24 @@
 import {
-	APIVersion,
-	EntInterval,
-	EntitlementWithFeature,
-	Entity,
+	type EntInterval,
+	type EntitlementWithFeature,
+	type Entity,
 	FeatureType,
-	FullCusProduct,
-	FullCustomerEntitlement,
-	FullCustomerPrice,
-	Organization,
+	type FullCusProduct,
+	type FullCustomerEntitlement,
+	type FullCustomerPrice,
+	getCusEntBalance,
+	LegacyVersion,
+	type Organization,
 } from "@autumn/shared";
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 
-import { notNullish, notNullOrUndefined } from "@/utils/genUtils.js";
-
 import { BREAK_API_VERSION } from "@/utils/constants.js";
+import { notNullish, notNullOrUndefined } from "@/utils/genUtils.js";
 import {
 	getRelatedCusPrice,
 	getResetBalance,
 	getUnlimitedAndUsageAllowed,
 } from "../../cusProducts/cusEnts/cusEntUtils.js";
-import { getCusEntBalance } from "@autumn/shared";
 
 export interface CusFeatureBalance {
 	feature_id: string;
@@ -48,7 +47,7 @@ export const getV1EntitlementsRes = ({
 	unlimited: boolean;
 	ent: EntitlementWithFeature;
 }) => {
-	let res: any = {
+	const res: any = {
 		feature_id: ent.feature.id,
 		unlimited: isBoolean ? undefined : unlimited,
 		interval: isBoolean || unlimited ? null : ent.interval || undefined,
@@ -76,12 +75,12 @@ export const getRolloverFields = ({
 	cusEnt: FullCustomerEntitlement;
 	entityId?: string;
 }) => {
-	let hasRollover = notNullish(cusEnt.entitlement.rollover);
+	const hasRollover = notNullish(cusEnt.entitlement.rollover);
 	if (!hasRollover) {
 		return null;
 	}
 
-	let rollovers = cusEnt.rollovers || [];
+	const rollovers = cusEnt.rollovers || [];
 
 	if (cusEnt.entitlement.entity_feature_id) {
 		if (entityId) {
@@ -204,10 +203,10 @@ export const getCusBalances = async ({
 		const cusProduct = cusEnt.customer_product;
 		const feature = cusEnt.entitlement.feature;
 		const ent: EntitlementWithFeature = cusEnt.entitlement;
-		let key = `${ent.interval || "no-interval"}-${ent.interval_count || 1}-${feature.id}`;
+		const key = `${ent.interval || "no-interval"}-${ent.interval_count || 1}-${feature.id}`;
 
 		// 1. Handle boolean
-		let isBoolean = feature.type == FeatureType.Boolean;
+		const isBoolean = feature.type == FeatureType.Boolean;
 
 		const { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
 			cusEnts: cusEntsWithCusProduct,
@@ -215,7 +214,7 @@ export const getCusBalances = async ({
 		});
 
 		// 1. Initialize balance object
-		if (!data[key] && apiVersion == APIVersion.v1) {
+		if (!data[key] && apiVersion == LegacyVersion.v1) {
 			data[key] = getV1EntitlementsRes({
 				org,
 				cusEnt,
@@ -266,7 +265,7 @@ export const getCusBalances = async ({
 			continue;
 		}
 
-		let { balance, adjustment, count, unused } = getCusEntBalance({
+		const { balance, adjustment, count, unused } = getCusEntBalance({
 			cusEnt,
 			entityId: entity?.id,
 		});
@@ -274,7 +273,7 @@ export const getCusBalances = async ({
 		data[key].balance += balance || 0;
 		data[key].adjustment += adjustment || 0;
 
-		let total =
+		const total =
 			(getResetBalance({
 				entitlement: ent,
 				options: getEntOptions(cusProduct.options, ent),
@@ -285,7 +284,7 @@ export const getCusBalances = async ({
 		data[key].total += total;
 		data[key].unused += unused || 0;
 
-		let rollover = getRolloverFields({
+		const rollover = getRolloverFields({
 			cusEnt,
 			entityId: entity?.id,
 		});
@@ -313,7 +312,7 @@ export const getCusBalances = async ({
 
 			data[key].allowance += (resetBalance || 0) * count;
 
-			let usageLimit = ent.usage_limit;
+			const usageLimit = ent.usage_limit;
 
 			if (notNullish(usageLimit)) {
 				data[key].usage_limit += usageLimit;
@@ -343,10 +342,10 @@ export const getCusBalances = async ({
 	}
 
 	// Sort balances
-	if (org.api_version == APIVersion.v1) {
+	if (org.api_version == LegacyVersion.v1) {
 		balances.sort((a: any, b: any) => {
-			let featureA = features.find((f) => f.id == a.feature_id);
-			let featureB = features.find((f) => f.id == b.feature_id);
+			const featureA = features.find((f) => f.id == a.feature_id);
+			const featureB = features.find((f) => f.id == b.feature_id);
 
 			if (
 				featureA?.type == FeatureType.Boolean &&
@@ -370,7 +369,7 @@ export const getCusBalances = async ({
 		});
 	}
 
-	// if (org.api_version == APIVersion.v1) {
+	// if (org.api_version == LegacyVersion.v1) {
 
 	// }
 

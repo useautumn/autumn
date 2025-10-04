@@ -1,31 +1,26 @@
-import chalk from "chalk";
-import { setupBefore } from "tests/before.js";
-import { Stripe } from "stripe";
-import { createProducts } from "tests/utils/productUtils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-	APIVersion,
-	AppEnv,
-	AttachBranch,
+	type AppEnv,
 	AttachScenario,
 	CusProductStatus,
-	Organization,
+	LegacyVersion,
+	type Organization,
 } from "@autumn/shared";
-import {
-	constructArrearItem,
-	constructFeatureItem,
-} from "@/utils/scriptUtils/constructItem.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
 import { expect } from "chai";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
+import chalk from "chalk";
+import type { Stripe } from "stripe";
+import { setupBefore } from "tests/before.js";
 import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
+import { TestFeature } from "tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
-let premium = constructProduct({
+const premium = constructProduct({
 	id: "premium",
 	items: [constructArrearItem({ featureId: TestFeature.Words })],
 	type: "premium",
@@ -71,8 +66,8 @@ const renewals = [
 
 const testCase = "mergedCancel1";
 describe(`${chalk.yellowBright("mergedCancel1: Merged cancel")}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 	let stripeCli: Stripe;
 	let testClockId: string;
@@ -129,7 +124,7 @@ describe(`${chalk.yellowBright("mergedCancel1: Merged cancel")}`, () => {
 		},
 	];
 
-	it("should run operations", async function () {
+	it("should run operations", async () => {
 		await autumn.entities.create(customerId, entities);
 
 		for (let index = 0; index < ops.length; index++) {
@@ -153,7 +148,7 @@ describe(`${chalk.yellowBright("mergedCancel1: Merged cancel")}`, () => {
 		}
 	});
 
-	it("should track usage cancel, advance test clock and have correct invoice", async function () {
+	it("should track usage cancel, advance test clock and have correct invoice", async () => {
 		for (const cancel of cancels) {
 			await autumn.cancel({
 				customer_id: customerId,
@@ -172,7 +167,7 @@ describe(`${chalk.yellowBright("mergedCancel1: Merged cancel")}`, () => {
 		}
 	});
 
-	it("should renew both entities", async function () {
+	it("should renew both entities", async () => {
 		for (const renewal of renewals) {
 			const checkout = await autumn.checkout({
 				customer_id: customerId,

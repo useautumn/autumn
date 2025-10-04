@@ -1,10 +1,10 @@
 import {
 	ACTIVE_STATUSES,
 	type APICusProduct,
-	APIVersion,
 	type CusProductStatus,
 	type Entity,
 	type Feature,
+	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
 import { getCusProductResponse } from "./getCusProductResponse.js";
@@ -81,7 +81,7 @@ export const processFullCusProducts = async ({
 		}
 	}
 
-	if (apiVersion >= APIVersion.v1_1) {
+	if (apiVersion >= LegacyVersion.v1_1) {
 		main = mergeCusProductResponses({
 			cusProductResponses: main as APICusProduct[],
 		});

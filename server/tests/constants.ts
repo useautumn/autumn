@@ -1,3 +1,3 @@
-import { APIVersion } from "@autumn/shared";
+import { LegacyVersion } from "@autumn/shared";
 
-export const defaultApiVersion = APIVersion.v1_2;
+export const defaultApiVersion = LegacyVersion.v1_2;

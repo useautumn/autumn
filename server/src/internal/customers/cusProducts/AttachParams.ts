@@ -1,5 +1,4 @@
 import type {
-	APIVersion,
 	AttachReplaceable,
 	AttachScenario,
 	Customer,
@@ -11,6 +10,7 @@ import type {
 	FullCusProduct,
 	FullCustomer,
 	FullProduct,
+	LegacyVersion,
 	Organization,
 	Price,
 	ProductOptions,
@@ -109,7 +109,7 @@ export type InsertCusProductParams = {
 	entityId?: string;
 	internalEntityId?: string;
 	fromMigration?: boolean;
-	apiVersion?: APIVersion;
+	apiVersion?: LegacyVersion;
 	finalizeInvoice?: boolean;
 };
 

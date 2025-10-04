@@ -1,6 +1,6 @@
 import {
-	APIVersion,
 	type AttachConfig,
+	LegacyVersion,
 	RecaseError,
 	SuccessCode,
 } from "@autumn/shared";
@@ -188,8 +188,8 @@ export const handleCreateCheckout = async ({
 		return checkout;
 	}
 
-	const apiVersion = attachParams.apiVersion || APIVersion.v1;
-	if (apiVersion >= APIVersion.v1_1) {
+	const apiVersion = attachParams.apiVersion || LegacyVersion.v1;
+	if (apiVersion >= LegacyVersion.v1_1) {
 		res.status(200).json(
 			AttachResultSchema.parse({
 				checkout_url: checkout.url,

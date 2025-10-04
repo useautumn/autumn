@@ -1,20 +1,18 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { ProductService } from "@/internal/products/ProductService.js";
-import { RewardService } from "@/internal/rewards/RewardService.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import {
-	APIVersion,
-	AppEnv,
+	type AppEnv,
 	CouponDurationType,
-	CreateReward,
-	ProductItemInterval,
+	type CreateReward,
+	LegacyVersion,
 	RewardType,
 } from "@autumn/shared";
 import { TestFeature } from "tests/setup/v2Features.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { ProductService } from "@/internal/products/ProductService.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 
-export let premiumTrial = constructProduct({
+export const premiumTrial = constructProduct({
 	id: "multiReward_premiumTrial",
 	group: "multiReward",
 	items: [
@@ -24,7 +22,7 @@ export let premiumTrial = constructProduct({
 	trial: true,
 });
 
-export let proTrial = constructProduct({
+export const proTrial = constructProduct({
 	id: "multiReward_proTrial",
 	group: "multiReward",
 	items: [
@@ -33,7 +31,7 @@ export let proTrial = constructProduct({
 	type: "pro",
 	trial: true,
 });
-export let multiRewardPremium = constructProduct({
+export const multiRewardPremium = constructProduct({
 	id: "multiReward_premium",
 	group: "multiReward",
 	items: [
@@ -42,7 +40,7 @@ export let multiRewardPremium = constructProduct({
 	type: "premium",
 });
 
-export let multiRewardPro = constructProduct({
+export const multiRewardPro = constructProduct({
 	id: "multiReward_pro",
 	group: "multiReward",
 	items: [
@@ -89,7 +87,7 @@ export const setupMultiRewardBefore = async ({
 	db: DrizzleCli;
 	env: AppEnv;
 }) => {
-	const autumn = new AutumnInt({ version: APIVersion.v1_2 });
+	const autumn = new AutumnInt({ version: LegacyVersion.v1_2 });
 	for (const product of [
 		proTrial,
 		premiumTrial,
@@ -134,7 +132,7 @@ export const setupMultiRewardBefore = async ({
 	];
 
 	for (const reward of [proReward, premiumReward]) {
-		let rewardRes = null;
+		const rewardRes = null;
 		// try {
 		//   rewardRes = await autumn.rewards.get(reward.id);
 		// } catch (error) {}
