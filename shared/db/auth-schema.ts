@@ -1,14 +1,14 @@
 import {
+	boolean,
+	foreignKey,
 	pgTable,
 	text,
 	timestamp,
-	boolean,
-	integer,
-	foreignKey,
 } from "drizzle-orm/pg-core";
-import { organizations } from "./schema.js";
-import { relations } from "drizzle-orm";
-import { Organization } from "../models/orgModels/orgTable.js";
+import {
+	type Organization,
+	organizations,
+} from "../models/orgModels/orgTable.js";
 
 export const user = pgTable(
 	"user",
