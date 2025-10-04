@@ -1,9 +1,14 @@
-import { APIVersion, ErrCode, type Feature, FeatureType } from "@autumn/shared";
+import {
+	ErrCode,
+	type Feature,
+	FeatureType,
+	LegacyVersion,
+} from "@autumn/shared";
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-import { orgToVersion } from "@/utils/versionUtils.js";
+import { orgToVersion } from "@/utils/versionUtils/legacyVersionUtils.js";
 import { handleEventSent } from "../events/eventRouter.js";
 import { getCheckData } from "./checkUtils/getCheckData.js";
 import { getV1CheckResponse } from "./checkUtils/getV1CheckResponse.js";
@@ -185,7 +190,7 @@ checkRouter.post("", async (req: any, res: any) => {
 			}
 		}
 
-		if (apiVersion >= APIVersion.v1_1) {
+		if (apiVersion >= LegacyVersion.v1_1) {
 			res.status(200).json({
 				...v2Response,
 				preview,

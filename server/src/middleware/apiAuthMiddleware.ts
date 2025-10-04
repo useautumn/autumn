@@ -2,7 +2,7 @@ import { AuthType, ErrCode } from "@autumn/shared";
 import { verifyKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
 import { dashboardOrigins } from "@/utils/constants.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { floatToVersion } from "@/utils/versionUtils.js";
+import { floatToVersion } from "@/utils/versionUtils/legacyVersionUtils.js";
 import { withOrgAuth } from "./authMiddleware.js";
 import { verifyBearerPublishableKey } from "./publicAuthMiddleware.js";
 import { trmnlAuthMiddleware, trmnlExclusions } from "./trmnlAuthMiddleware.js";

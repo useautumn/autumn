@@ -1,8 +1,4 @@
-import { itemToPriceOrTiers } from "@/internal/products/product-items/productItemUtils.js";
-import { isFeaturePriceItem } from "@/internal/products/product-items/productItemUtils/getItemType.js";
-
 import {
-	APIVersion,
 	BillingInterval,
 	type Feature,
 	type FreeTrial,
@@ -10,23 +6,20 @@ import {
 	type FullCustomer,
 	type FullCustomerEntitlement,
 	isTrialing,
+	LegacyVersion,
 	type ProductItem,
 	SuccessCode,
 	UsageModel,
 } from "@autumn/shared";
-import { getCheckPreview } from "./getCheckPreview.js";
-
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { getProration } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
-import {
-	formatUnixToDate,
-	formatUnixToDateTime,
-	notNullish,
-} from "@/utils/genUtils.js";
-import { featureToCusPrice } from "@/internal/customers/cusProducts/cusPrices/convertCusPriceUtils.js";
-import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import { Decimal } from "decimal.js";
-import { isOneOffPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { featureToCusPrice } from "@/internal/customers/cusProducts/cusPrices/convertCusPriceUtils.js";
+import { getProration } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
+import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
+import { isFeaturePriceItem } from "@/internal/products/product-items/productItemUtils/getItemType.js";
+import { itemToPriceOrTiers } from "@/internal/products/product-items/productItemUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
+import { getCheckPreview } from "./getCheckPreview.js";
 
 export const getBooleanEntitledResult = async ({
 	db,
@@ -50,20 +43,20 @@ export const getBooleanEntitledResult = async ({
 	allFeatures: Feature[];
 }) => {
 	const allowed = cusEnts.some((cusEnt) => {
-		let featureMatch = cusEnt.internal_feature_id === feature.internal_id;
+		const featureMatch = cusEnt.internal_feature_id === feature.internal_id;
 
-		let entityFeatureId = cusEnt.entitlement.entity_feature_id;
-		let compareEntity =
+		const entityFeatureId = cusEnt.entitlement.entity_feature_id;
+		const compareEntity =
 			notNullish(entityFeatureId) && notNullish(fullCus.entity);
 
-		let entityMatch = compareEntity
+		const entityMatch = compareEntity
 			? entityFeatureId === fullCus.entity!.feature_id
 			: true;
 
 		return featureMatch && entityMatch;
 	});
 
-	if (apiVersion >= APIVersion.v1_1) {
+	if (apiVersion >= LegacyVersion.v1_1) {
 		return res.status(200).json({
 			customer_id: fullCus.id,
 			feature_id: feature.id,
@@ -136,7 +129,7 @@ export const getOptions = ({
 				proration: finalProration,
 			});
 
-			let actualPrice = itemToPriceOrTiers({
+			const actualPrice = itemToPriceOrTiers({
 				item: i,
 			});
 

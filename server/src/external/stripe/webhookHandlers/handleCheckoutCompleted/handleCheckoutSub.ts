@@ -1,16 +1,19 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { APIVersion, BillingType, UsagePriceConfig } from "@autumn/shared";
-import Stripe from "stripe";
-import { SubService } from "@/internal/subscriptions/SubService.js";
-import { constructSub } from "@/internal/subscriptions/subUtils.js";
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import {
+	BillingType,
+	LegacyVersion,
+	type UsagePriceConfig,
+} from "@autumn/shared";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import {
 	findPriceFromPlaceholderId,
 	findPriceFromStripeId,
 } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
-import { getArrearItems } from "../../stripeSubUtils/getStripeSubItems/getArrearItems.js";
-import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";
+import { SubService } from "@/internal/subscriptions/SubService.js";
+import { constructSub } from "@/internal/subscriptions/subUtils.js";
 import { getEmptyPriceItem } from "../../priceToStripeItem/priceToStripeItem.js";
+import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";
 
 export const handleCheckoutSub = async ({
 	stripeCli,
@@ -44,12 +47,12 @@ export const handleCheckoutSub = async ({
 	});
 
 	const curSubItems = subscription.items.data;
-	let itemsUpdate = [];
+	const itemsUpdate = [];
 
 	for (const item of curSubItems) {
-		let stripePriceId = item.price.id;
+		const stripePriceId = item.price.id;
 
-		let arrearProratedPrice = findPriceFromPlaceholderId({
+		const arrearProratedPrice = findPriceFromPlaceholderId({
 			prices: attachParams.prices,
 			placeholderId: stripePriceId,
 		});
@@ -67,7 +70,7 @@ export const handleCheckoutSub = async ({
 			continue;
 		}
 
-		let arrearPrice = findPriceFromStripeId({
+		const arrearPrice = findPriceFromStripeId({
 			prices: attachParams.prices,
 			stripePriceId,
 			billingType: BillingType.UsageInArrear,
@@ -76,7 +79,7 @@ export const handleCheckoutSub = async ({
 		if (
 			arrearPrice &&
 			(attachParams.internalEntityId ||
-				attachParams.apiVersion == APIVersion.v1_4)
+				attachParams.apiVersion == LegacyVersion.v1_4)
 		) {
 			itemsUpdate.push({
 				id: item.id,

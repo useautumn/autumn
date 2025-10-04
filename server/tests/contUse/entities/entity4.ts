@@ -1,34 +1,34 @@
 // Handling per entity features!
 
-import { TestFeature } from "tests/setup/v2Features.js";
-import { expect } from "chai";
-import { timeout } from "@/utils/genUtils.js";
-import { useEntityBalanceAndExpect } from "tests/utils/expectUtils/expectContUse/expectEntityUtils.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-	APIVersion,
-	AppEnv,
+	type AppEnv,
 	CusExpand,
-	LimitedItem,
+	LegacyVersion,
+	type LimitedItem,
 	OnDecrease,
 	OnIncrease,
-	Organization,
+	type Organization,
 } from "@autumn/shared";
+import { expect } from "chai";
 import chalk from "chalk";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type Stripe from "stripe";
 import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "../../attach/utils.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { useEntityBalanceAndExpect } from "tests/utils/expectUtils/expectContUse/expectEntityUtils.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { timeout } from "@/utils/genUtils.js";
 import {
 	constructArrearProratedItem,
 	constructFeatureItem,
 } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { addPrefixToProducts } from "../../attach/utils.js";
 
-let userItem = constructArrearProratedItem({
+const userItem = constructArrearProratedItem({
 	featureId: TestFeature.Users,
 	pricePerUnit: 50,
 	includedUsage: 1,
@@ -38,13 +38,13 @@ let userItem = constructArrearProratedItem({
 	},
 });
 
-let perEntityItem = constructFeatureItem({
+const perEntityItem = constructFeatureItem({
 	featureId: TestFeature.Messages,
 	entityFeatureId: TestFeature.Users,
 	includedUsage: 500,
 }) as LimitedItem;
 
-export let pro = constructProduct({
+export const pro = constructProduct({
 	items: [userItem, perEntityItem],
 	type: "pro",
 });
@@ -52,12 +52,12 @@ export let pro = constructProduct({
 const testCase = "entity4";
 
 describe(`${chalk.yellowBright(`contUse/${testCase}: Testing per entity features`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
-	let curUnix = new Date().getTime();
+	const curUnix = new Date().getTime();
 
 	before(async function () {
 		await setupBefore(this);
@@ -95,7 +95,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing per entity features
 	});
 
 	let usage = 0;
-	let firstEntities = [
+	const firstEntities = [
 		{
 			id: "1",
 			name: "test",
@@ -103,7 +103,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing per entity features
 		},
 	];
 
-	it("should create one entity, then attach pro", async function () {
+	it("should create one entity, then attach pro", async () => {
 		await autumn.entities.create(customerId, firstEntities);
 		usage += firstEntities.length;
 
@@ -124,7 +124,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing per entity features
 		});
 	});
 
-	it("should create 3 entities and have correct message balance", async function () {
+	it("should create 3 entities and have correct message balance", async () => {
 		const newEntities = [
 			{
 				id: "2",
@@ -141,11 +141,11 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing per entity features
 		await autumn.entities.create(customerId, newEntities);
 		usage += newEntities.length;
 
-		let customer = await autumn.customers.get(customerId, {
+		const customer = await autumn.customers.get(customerId, {
 			expand: [CusExpand.Entities],
 		});
 
-		let res = await autumn.check({
+		const res = await autumn.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 		});
@@ -154,9 +154,9 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing per entity features
 			(perEntityItem.included_usage as number) * usage,
 		);
 
-		// @ts-ignore
+		// @ts-expect-error
 		for (const entity of customer.entities) {
-			let entRes = await autumn.check({
+			const entRes = await autumn.check({
 				customer_id: customerId,
 				feature_id: TestFeature.Messages,
 				entity_id: entity.id,
@@ -169,9 +169,9 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing per entity features
 	return;
 
 	// 1. Use from main balance...
-	it("should use from top level balance", async function () {
-		let deduction = 600;
-		let perEntityIncluded = perEntityItem.included_usage as number;
+	it("should use from top level balance", async () => {
+		const deduction = 600;
+		const perEntityIncluded = perEntityItem.included_usage as number;
 
 		await autumn.track({
 			customer_id: customerId,
@@ -180,7 +180,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing per entity features
 		});
 		await timeout(5000);
 
-		let { balance } = await autumn.check({
+		const { balance } = await autumn.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 		});
@@ -188,7 +188,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing per entity features
 		expect(balance).to.equal(perEntityIncluded * usage - deduction);
 	});
 
-	it("should use from entity balance", async function () {
+	it("should use from entity balance", async () => {
 		await useEntityBalanceAndExpect({
 			autumn,
 			customerId,
@@ -205,19 +205,19 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing per entity features
 	});
 
 	// Delete one entity and create a new one and master balance should be same
-	let deletedEntityId = "2";
-	let newEntity = {
+	const deletedEntityId = "2";
+	const newEntity = {
 		id: "4",
 		name: "test",
 		feature_id: TestFeature.Users,
 	};
-	it("should delete one entity and create a new one", async function () {
-		let { balance: masterBalanceBefore } = await autumn.check({
+	it("should delete one entity and create a new one", async () => {
+		const { balance: masterBalanceBefore } = await autumn.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 		});
 
-		let { balance: entityBalanceBefore } = await autumn.check({
+		const { balance: entityBalanceBefore } = await autumn.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			entity_id: deletedEntityId,
@@ -226,14 +226,14 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing per entity features
 		await autumn.entities.delete(customerId, deletedEntityId);
 		await autumn.entities.create(customerId, [newEntity]);
 
-		let { balance: masterBalanceAfter } = await autumn.check({
+		const { balance: masterBalanceAfter } = await autumn.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 		});
 
 		expect(masterBalanceAfter).to.equal(masterBalanceBefore);
 
-		let { balance: entityBalanceAfter } = await autumn.check({
+		const { balance: entityBalanceAfter } = await autumn.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			entity_id: newEntity.id,

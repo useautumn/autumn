@@ -1,9 +1,9 @@
 import {
-	APIVersion,
 	type AttachConfig,
 	AttachScenario,
 	ErrCode,
 	isTrialing,
+	LegacyVersion,
 	SuccessCode,
 } from "@autumn/shared";
 import type Stripe from "stripe";
@@ -249,10 +249,10 @@ export const handlePaidProduct = async ({
 	await Promise.all(batchInsert);
 
 	if (res) {
-		const apiVersion = attachParams.apiVersion || APIVersion.v1;
+		const apiVersion = attachParams.apiVersion || LegacyVersion.v1;
 		const productNames = products.map((p) => p.name).join(", ");
 		const customerName = customer.name || customer.email || customer.id;
-		if (apiVersion >= APIVersion.v1_1) {
+		if (apiVersion >= LegacyVersion.v1_1) {
 			res.status(200).json(
 				AttachResultSchema.parse({
 					message: `Successfully created subscriptions and attached ${productNames} to ${customerName}`,

@@ -1,5 +1,4 @@
 import {
-	APIVersion,
 	type AppEnv,
 	CreateEventSchema,
 	CusProductStatus,
@@ -9,6 +8,7 @@ import {
 	type Feature,
 	FeatureType,
 	type FullCustomer,
+	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
 import { Router } from "express";
@@ -23,7 +23,7 @@ import { addTaskToQueue } from "@/queue/queueUtils.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { generateId, notNullish } from "@/utils/genUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
-import { orgToVersion } from "@/utils/versionUtils.js";
+import { orgToVersion } from "@/utils/versionUtils/legacyVersionUtils.js";
 import { EventService } from "./EventService.js";
 import { getEventTimestamp } from "./eventUtils.js";
 import { handleUsageEvent } from "./usageRouter.js";
@@ -259,7 +259,7 @@ eventsRouter.post("", async (req: any, res: any) => {
 			response.event_name = event.event_name;
 		}
 
-		if (apiVersion >= APIVersion.v1_1) {
+		if (apiVersion >= LegacyVersion.v1_1) {
 			res.status(200).json(response);
 		} else {
 			res.status(200).json({ success: true });

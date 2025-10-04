@@ -1,24 +1,22 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { priceToStripeItem } from "@/external/stripe/priceToStripeItem/priceToStripeItem.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
 import {
+	type AppEnv,
 	cusProductToEnts,
 	cusProductToPrices,
 	cusProductToProduct,
+	type FullCusProduct,
+	LegacyVersion,
+	type Organization,
 } from "@autumn/shared";
+import { expect } from "chai";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { priceToStripeItem } from "@/external/stripe/priceToStripeItem/priceToStripeItem.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import {
 	getPriceEntitlement,
 	getPriceOptions,
 } from "@/internal/products/prices/priceUtils.js";
-import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
-import {
-	APIVersion,
-	AppEnv,
-	FullCusProduct,
-	Organization,
-} from "@autumn/shared";
-import { expect } from "chai";
 
 export const cusProductToSubIds = ({
 	cusProducts,
@@ -83,7 +81,7 @@ export const expectSubToBeCorrect = async ({
 				existingUsage: 0,
 				withEntity: true,
 				isCheckout: false,
-				apiVersion: APIVersion.v1_4,
+				apiVersion: LegacyVersion.v1_4,
 			});
 
 			const lineItem: any = res?.lineItem;
@@ -92,7 +90,7 @@ export const expectSubToBeCorrect = async ({
 					(si: any) => si.price === lineItem.price,
 				);
 				if (existingIndex !== -1) {
-					// @ts-ignore
+					// @ts-expect-error
 					supposedSubItems[existingIndex].quantity += lineItem.quantity!;
 				} else {
 					supposedSubItems.push(res.lineItem);

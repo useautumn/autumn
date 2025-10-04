@@ -1,24 +1,29 @@
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { APIVersion, AppEnv, LimitedItem, Organization } from "@autumn/shared";
-import chalk from "chalk";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "tests/attach/utils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { timeout } from "@/utils/genUtils.js";
+import {
+	type AppEnv,
+	LegacyVersion,
+	type LimitedItem,
+	type Organization,
+} from "@autumn/shared";
 import { expect } from "chai";
+import chalk from "chalk";
+import type Stripe from "stripe";
+import { addPrefixToProducts } from "tests/attach/utils.js";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { timeout } from "@/utils/genUtils.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
 const userItem = constructFeatureItem({
 	featureId: TestFeature.Users,
 	includedUsage: 5,
 }) as LimitedItem;
 
-export let free = constructProduct({
+export const free = constructProduct({
 	items: [userItem],
 	type: "free",
 	isDefault: false,
@@ -27,13 +32,13 @@ export let free = constructProduct({
 const testCase = "track6";
 
 describe(`${chalk.yellowBright(`${testCase}: Testing track cont use, race condition`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
 
-	let curUnix = new Date().getTime();
+	const curUnix = new Date().getTime();
 
 	before(async function () {
 		await setupBefore(this);
@@ -70,7 +75,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing track cont use, race condit
 		testClockId = testClockId1!;
 	});
 
-	it("should track 5 events in a row and have correct balance", async function () {
+	it("should track 5 events in a row and have correct balance", async () => {
 		let startingBalance = userItem.included_usage;
 		await autumn.attach({
 			customer_id: customerId,
@@ -103,8 +108,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing track cont use, race condit
 
 			await timeout(10000);
 
-			let customer = await autumn.customers.get(customerId);
-			let userFeature = customer.features[TestFeature.Users];
+			const customer = await autumn.customers.get(customerId);
+			const userFeature = customer.features[TestFeature.Users];
 			if (userFeature.balance != startingBalance) {
 				for (let i = 0; i < values.length; i++) {
 					console.log(`Value: ${values[i]}, Event ID: ${results[i].id}`);

@@ -1,7 +1,6 @@
 import {
 	ACTIVE_STATUSES,
 	APICusProductSchema,
-	APIVersion,
 	type AppEnv,
 	AttachScenario,
 	CusProductStatus,
@@ -11,6 +10,7 @@ import {
 	type FullCusProduct,
 	type FullCustomer,
 	type FullProduct,
+	LegacyVersion,
 	type Organization,
 	PriceType,
 	type Subscription,
@@ -507,7 +507,7 @@ export const processFullCusProduct = ({
 		};
 	}
 
-	if (apiVersion >= APIVersion.v1_1) {
+	if (apiVersion >= LegacyVersion.v1_1) {
 		if ((!subIds || subIds.length === 0) && trialing) {
 			stripeSubData = {
 				current_period_start: cusProduct.starts_at,

@@ -1,7 +1,7 @@
-import { APIVersion, type AttachBody } from "@autumn/shared";
+import { type AttachBody, LegacyVersion } from "@autumn/shared";
 import { nullish } from "@/utils/genUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
-import { orgToVersion } from "@/utils/versionUtils.js";
+import { orgToVersion } from "@/utils/versionUtils/legacyVersionUtils.js";
 import type { AttachParams } from "../../../cusProducts/AttachParams.js";
 import { processAttachBody } from "./processAttachBody.js";
 
@@ -34,7 +34,7 @@ export const getAttachParams = async ({
 		orgToVersion({
 			org,
 			reqApiVersion: req.apiVersion,
-		}) || APIVersion.v1;
+		}) || LegacyVersion.v1;
 
 	const entityId = attachBody.entity_id;
 	const internalEntityId = entityId ? customer.entity?.internal_id : undefined;

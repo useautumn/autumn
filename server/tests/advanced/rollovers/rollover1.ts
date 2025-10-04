@@ -1,31 +1,32 @@
-import chalk from "chalk";
-import Stripe from "stripe";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-
 import {
-	APIVersion,
-	AppEnv,
-	Customer,
-	LimitedItem,
-	Organization,
+	type AppEnv,
+	type Customer,
+	LegacyVersion,
+	type LimitedItem,
+	type Organization,
 	ProductItemInterval,
 	RolloverDuration,
 } from "@autumn/shared";
-
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { addPrefixToProducts } from "tests/attach/utils.js";
-
 import { expect } from "chai";
+import chalk from "chalk";
+import type Stripe from "stripe";
+import { addPrefixToProducts } from "tests/attach/utils.js";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import { resetAndGetCusEnt } from "./rolloverTestUtils.js";
 
-let rolloverConfig = { max: 500, length: 1, duration: RolloverDuration.Month };
+const rolloverConfig = {
+	max: 500,
+	length: 1,
+	duration: RolloverDuration.Month,
+};
 const messagesItem = constructFeatureItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 400,
@@ -33,7 +34,7 @@ const messagesItem = constructFeatureItem({
 	rolloverConfig,
 }) as LimitedItem;
 
-export let free = constructProduct({
+export const free = constructProduct({
 	items: [messagesItem],
 	type: "free",
 	isDefault: false,
@@ -43,14 +44,14 @@ const testCase = "rollover1";
 // , per entity and regular
 
 describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let customer: Customer;
 	let stripeCli: Stripe;
 
-	let curUnix = new Date().getTime();
+	const curUnix = new Date().getTime();
 
 	before(async function () {
 		await setupBefore(this);
@@ -88,17 +89,17 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`
 		customer = res.customer;
 	});
 
-	it("should attach free product", async function () {
+	it("should attach free product", async () => {
 		await autumn.attach({
 			customer_id: customerId,
 			product_id: free.id,
 		});
 	});
 
-	let messageUsage = 250;
+	const messageUsage = 250;
 	let curBalance = messagesItem.included_usage;
 
-	it("should create track messages, reset, and have correct rollover", async function () {
+	it("should create track messages, reset, and have correct rollover", async () => {
 		await autumn.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -114,25 +115,25 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`
 			featureId: TestFeature.Messages,
 		});
 
-		let cus = await autumn.customers.get(customerId);
-		let msgesFeature = cus.features[TestFeature.Messages];
+		const cus = await autumn.customers.get(customerId);
+		const msgesFeature = cus.features[TestFeature.Messages];
 
-		let expectedRollover = Math.min(
+		const expectedRollover = Math.min(
 			messagesItem.included_usage - messageUsage,
 			rolloverConfig.max,
 		);
 
-		let expectedBalance = messagesItem.included_usage + expectedRollover;
+		const expectedBalance = messagesItem.included_usage + expectedRollover;
 
 		expect(msgesFeature).to.exist;
 		expect(msgesFeature?.balance).to.equal(expectedBalance);
-		// @ts-ignore
+		// @ts-expect-error
 		expect(msgesFeature?.rollovers[0].balance).to.equal(expectedRollover);
 		curBalance = expectedBalance;
 	});
 
 	// let usage2 = 50;
-	it("should reset again and have correct rollover", async function () {
+	it("should reset again and have correct rollover", async () => {
 		await resetAndGetCusEnt({
 			db,
 			customer,
@@ -140,22 +141,22 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`
 			featureId: TestFeature.Messages,
 		});
 
-		let expectedRollover = Math.min(curBalance, rolloverConfig.max);
-		let expectedBalance = messagesItem.included_usage + expectedRollover;
+		const expectedRollover = Math.min(curBalance, rolloverConfig.max);
+		const expectedBalance = messagesItem.included_usage + expectedRollover;
 
-		let cus = await autumn.customers.get(customerId);
-		let msgesFeature = cus.features[TestFeature.Messages];
+		const cus = await autumn.customers.get(customerId);
+		const msgesFeature = cus.features[TestFeature.Messages];
 
 		expect(msgesFeature).to.exist;
 		expect(msgesFeature?.balance).to.equal(expectedBalance);
 
-		// @ts-ignore (oldest rollover should be 100 (150 - 50))
+		// @ts-expect-error (oldest rollover should be 100 (150 - 50))
 		expect(msgesFeature?.rollovers[0].balance).to.equal(100);
-		// @ts-ignore (newest rollover should be 400 (msges.included_usage))
+		// @ts-expect-error (newest rollover should be 400 (msges.included_usage))
 		expect(msgesFeature?.rollovers[1].balance).to.equal(400);
 	});
 
-	it("should track messages and deduct from rollovers first", async function () {
+	it("should track messages and deduct from rollovers first", async () => {
 		await autumn.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -164,19 +165,19 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`
 
 		await timeout(3000);
 
-		let cus = await autumn.customers.get(customerId);
-		let msgesFeature = cus.features[TestFeature.Messages];
+		const cus = await autumn.customers.get(customerId);
+		const msgesFeature = cus.features[TestFeature.Messages];
 
-		// @ts-ignore
-		let rollover1 = msgesFeature?.rollovers[0];
-		// @ts-ignore
-		let rollover2 = msgesFeature?.rollovers[1];
+		// @ts-expect-error
+		const rollover1 = msgesFeature?.rollovers[0];
+		// @ts-expect-error
+		const rollover2 = msgesFeature?.rollovers[1];
 
 		expect(rollover1.balance).to.equal(0);
 		expect(rollover2.balance).to.equal(350);
 	});
 
-	it("should track and deduct from rollover + original balance", async function () {
+	it("should track and deduct from rollover + original balance", async () => {
 		await autumn.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -185,11 +186,11 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`
 
 		await timeout(3000);
 
-		let cus = await autumn.customers.get(customerId);
-		let msgesFeature = cus.features[TestFeature.Messages];
+		const cus = await autumn.customers.get(customerId);
+		const msgesFeature = cus.features[TestFeature.Messages];
 
-		// @ts-ignore
-		let rollovers = msgesFeature.rollovers;
+		// @ts-expect-error
+		const rollovers = msgesFeature.rollovers;
 		expect(rollovers![0].balance).to.equal(0);
 		expect(rollovers![1].balance).to.equal(0);
 		expect(msgesFeature.balance).to.equal(messagesItem.included_usage - 50);

@@ -1,28 +1,28 @@
-import RecaseError from "@/utils/errorUtils.js";
-import { and, eq, sql, inArray } from "drizzle-orm";
 import {
 	AppEnv,
+	apiKeys,
 	ErrCode,
-	Feature,
+	type Feature,
 	features,
 	invitation,
 	member,
-	Organization,
+	type Organization,
 	OrgConfigSchema,
+	organizations,
 	user,
 } from "@autumn/shared";
-
-import { getApiVersion } from "@/utils/versionUtils.js";
+import { and, eq, sql } from "drizzle-orm";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { getApiVersion } from "@/utils/versionUtils/legacyVersionUtils.js";
 import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
-import { organizations, apiKeys } from "@autumn/shared";
-import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export class OrgService {
 	static async getFromReq(req: any) {
 		if (req.org) {
-			let org = structuredClone(req.org);
-			let config = org.config || {};
-			let apiVersion = getApiVersion({
+			const org = structuredClone(req.org);
+			const config = org.config || {};
+			const apiVersion = getApiVersion({
 				createdAt: org.created_at,
 			});
 			return {
@@ -32,7 +32,7 @@ export class OrgService {
 			};
 		}
 
-		return await this.get({ db: req.db, orgId: req.orgId });
+		return await OrgService.get({ db: req.db, orgId: req.orgId });
 	}
 
 	static async getMembers({ db, orgId }: { db: DrizzleCli; orgId: string }) {
@@ -200,7 +200,7 @@ export class OrgService {
 			});
 		}
 
-		let org = structuredClone(result);
+		const org = structuredClone(result);
 		delete (org as any).features;
 		return {
 			org: {
@@ -223,7 +223,7 @@ export class OrgService {
 		pkey: string;
 		env: AppEnv;
 	}) {
-		let org = await db.query.organizations.findFirst({
+		const org = await db.query.organizations.findFirst({
 			where:
 				env === AppEnv.Sandbox
 					? eq(organizations.test_pkey, pkey)
@@ -270,7 +270,7 @@ export class OrgService {
 		updates: any;
 	}) {
 		try {
-			let result = await db
+			const result = await db
 				.update(organizations)
 				.set(updates)
 				.where(eq(organizations.id, orgId))

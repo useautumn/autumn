@@ -1,6 +1,6 @@
+import { type FeatureOptions, LegacyVersion } from "@autumn/shared";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { getAttachTotal } from "./testAttachUtils.js";
-import { APIVersion, FeatureOptions } from "@autumn/shared";
 
 export const getAttachPreviewTotal = async ({
 	customerId,
@@ -13,7 +13,7 @@ export const getAttachPreviewTotal = async ({
 	entityId: string;
 	options?: FeatureOptions[];
 }) => {
-	const autumn = new AutumnInt({ version: APIVersion.v1_2 });
+	const autumn = new AutumnInt({ version: LegacyVersion.v1_2 });
 	const preview = await autumn.attachPreview({
 		customer_id: customerId,
 		product_id: productId,

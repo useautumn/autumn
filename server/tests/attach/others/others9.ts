@@ -1,19 +1,19 @@
+import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
 import chalk from "chalk";
-import Stripe from "stripe";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { APIVersion, AppEnv, Organization } from "@autumn/shared";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type Stripe from "stripe";
 import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "../utils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { addPrefixToProducts } from "../utils.js";
 
-export let free = constructProduct({
+export const free = constructProduct({
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Words,
@@ -31,8 +31,8 @@ export let free = constructProduct({
 const testCase = "others9";
 
 describe(`${chalk.yellowBright(`${testCase}: Testing attach free product again`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
 
@@ -68,7 +68,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach free product again`)
 		});
 	});
 
-	it("should attach free product, then try again and hit error", async function () {
+	it("should attach free product, then try again and hit error", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,

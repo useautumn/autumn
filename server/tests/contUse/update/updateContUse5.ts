@@ -1,26 +1,26 @@
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-	APIVersion,
-	AppEnv,
+	type AppEnv,
+	LegacyVersion,
 	OnDecrease,
 	OnIncrease,
-	Organization,
+	type Organization,
 } from "@autumn/shared";
 import chalk from "chalk";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { addPrefixToProducts } from "tests/attach/utils.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addWeeks } from "date-fns";
+import type Stripe from "stripe";
+import { addPrefixToProducts } from "tests/attach/utils.js";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
-let userItem = constructArrearProratedItem({
+const userItem = constructArrearProratedItem({
 	featureId: TestFeature.Users,
 	pricePerUnit: 50,
 	includedUsage: 1,
@@ -30,11 +30,11 @@ let userItem = constructArrearProratedItem({
 	},
 });
 
-export let pro = constructProduct({
+export const pro = constructProduct({
 	items: [userItem],
 	type: "pro",
 });
-export let proAnnual = constructProduct({
+export const proAnnual = constructProduct({
 	items: [
 		constructArrearProratedItem({
 			featureId: TestFeature.Users,
@@ -53,8 +53,8 @@ export let proAnnual = constructProduct({
 const testCase = "updateContUse5";
 
 describe(`${chalk.yellowBright(`contUse/${testCase}: Testing update contUse included usage, prorate now`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
@@ -114,7 +114,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing update contUse incl
 	];
 
 	let usage = 0;
-	it("should attach pro", async function () {
+	it("should attach pro", async () => {
 		await autumn.entities.create(customerId, firstEntities);
 		usage += firstEntities.length;
 
@@ -135,7 +135,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing update contUse incl
 		});
 	});
 
-	it("should upgrade to pro annual", async function () {
+	it("should upgrade to pro annual", async () => {
 		curUnix = await advanceTestClock({
 			stripeCli,
 			testClockId,

@@ -1,14 +1,14 @@
 import {
+	boolean,
+	foreignKey,
 	pgTable,
 	text,
 	timestamp,
-	boolean,
-	integer,
-	foreignKey,
 } from "drizzle-orm/pg-core";
-import { organizations } from "./schema.js";
-import { relations } from "drizzle-orm";
-import { Organization } from "../models/orgModels/orgTable.js";
+import {
+	type Organization,
+	organizations,
+} from "../models/orgModels/orgTable.js";
 
 export const user = pgTable(
 	"user",
@@ -86,15 +86,6 @@ export const verification = pgTable("verification", {
 		() => /* @__PURE__ */ new Date(),
 	),
 }).enableRLS();
-
-// export const organization = pgTable("organization", {
-//   id: text("id").primaryKey(),
-//   name: text("name").notNull(),
-//   slug: text("slug").unique(),
-//   logo: text("logo"),
-//   createdAt: timestamp("created_at").notNull(),
-//   metadata: text("metadata"),
-// });
 
 export const member = pgTable("member", {
 	id: text("id").primaryKey(),

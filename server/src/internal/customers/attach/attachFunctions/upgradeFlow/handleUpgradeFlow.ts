@@ -1,10 +1,10 @@
 import {
-	APIVersion,
 	AttachBranch,
 	type AttachConfig,
 	AttachScenario,
 	CusProductStatus,
 	cusProductToProduct,
+	LegacyVersion,
 	ProrationBehavior,
 } from "@autumn/shared";
 import type Stripe from "stripe";
@@ -229,8 +229,8 @@ export const handleUpgradeFlow = async ({
 	}
 
 	if (res) {
-		const apiVersion = attachParams.org.api_version || APIVersion.v1;
-		if (apiVersion >= APIVersion.v1_1) {
+		const apiVersion = attachParams.org.api_version || LegacyVersion.v1;
+		if (apiVersion >= LegacyVersion.v1_1) {
 			res.status(200).json(
 				AttachResultSchema.parse({
 					customer_id: attachParams.customer.id,

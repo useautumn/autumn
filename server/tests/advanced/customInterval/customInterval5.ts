@@ -1,21 +1,19 @@
-import chalk from "chalk";
-import Stripe from "stripe";
-
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { APIVersion, AppEnv, FullCustomer, Organization } from "@autumn/shared";
-
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { addPrefixToProducts } from "tests/attach/utils.js";
+import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
+import type { Customer } from "autumn-js";
 import { expect } from "chai";
-import { Customer } from "autumn-js";
-import { timeout } from "@/utils/genUtils.js";
+import chalk from "chalk";
+import type Stripe from "stripe";
+import { addPrefixToProducts } from "tests/attach/utils.js";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { timeout } from "@/utils/genUtils.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
 const testCase = "customInterval5";
 
@@ -31,7 +29,7 @@ const biMonthlyWords = constructFeatureItem({
 	includedUsage,
 });
 
-export let pro = constructProduct({
+export const pro = constructProduct({
 	items: [monthlyWords, biMonthlyWords],
 	intervalCount: 2,
 	type: "pro",
@@ -45,15 +43,15 @@ const getBreakdown = ({
 	intervalCount: number;
 }) => {
 	const wordsFeature = customer.features[TestFeature.Words];
-	// @ts-ignore
+	// @ts-expect-error
 	return wordsFeature.breakdown?.find(
 		(b: any) => b.interval_count == intervalCount,
 	);
 };
 
 describe(`${chalk.yellowBright(`${testCase}: Testing multi interval features with custom intervals`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
@@ -92,7 +90,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing multi interval features wit
 		testClockId = testClockId1!;
 	});
 
-	it("should attach pro product", async function () {
+	it("should attach pro product", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,
@@ -105,7 +103,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing multi interval features wit
 
 		const customer = await autumn.customers.get(customerId);
 		const wordsFeature = customer.features[TestFeature.Words];
-		// @ts-ignore
+		// @ts-expect-error
 		expect(wordsFeature.interval_count).to.equal(null);
 		expect(wordsFeature.breakdown?.length).to.equal(2);
 
@@ -122,7 +120,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing multi interval features wit
 	});
 
 	const trackVal = 300;
-	it("should have correct breakdown after usage", async function () {
+	it("should have correct breakdown after usage", async () => {
 		await autumn.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Words,
