@@ -1,49 +1,85 @@
-import { ArrowRight } from "@phosphor-icons/react";
+import { ArrowRightIcon } from "@phosphor-icons/react";
+import { useCustomer } from "autumn-js/react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
 import { Input } from "@/components/v2/inputs/Input";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 const FeatureTestRow = ({
 	label,
 	usage,
+	handleSend,
 }: {
 	label: string;
 	usage?: string;
-}) => (
-	<div className="flex gap-2 items-end w-full">
-		<div className="flex flex-col gap-1 flex-1">
-			<label
-				className="text-[13px] font-medium text-[#767676] tracking-[-0.039px]"
-				htmlFor={label}
-			>
-				{label}
-			</label>
-			<Input
-				placeholder="Enter any amount to test"
-				className="text-[13px]"
-				disabled
-			/>
-		</div>
-		{usage && (
-			<Button variant="muted" size="sm" disabled>
-				{usage}
+	handleSend: (value: number) => void;
+}) => {
+	const [value, setValue] = useState(0);
+
+	return (
+		<div className="flex gap-2 items-end w-full">
+			<div className="flex flex-col gap-1 flex-1">
+				<label
+					className="text-[13px] font-medium text-[#767676] tracking-[-0.039px]"
+					htmlFor={label}
+				>
+					{label}
+				</label>
+				<Input
+					value={value === 0 ? "" : value}
+					onChange={(e) => setValue(Number(e.target.value))}
+					placeholder="Enter any amount to test"
+					className="text-[13px]"
+				/>
+			</div>
+			{usage && (
+				<div
+					className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none 
+  rounded-lg group/btn transition-none w-fit bg-muted border border-transparent py-1 !px-[7px] text-tiny h-6 select-none cursor-default"
+				>
+					{usage}
+				</div>
+			)}
+			<Button onClick={() => handleSend(value)} variant="secondary" size="sm">
+				Send
+				<ArrowRightIcon className="size-[14px]" />
 			</Button>
-		)}
-		<Button variant="secondary" size="sm" disabled>
-			Send
-			<ArrowRight className="size-[14px]" />
-		</Button>
-	</div>
-);
+		</div>
+	);
+};
 
 export const AvailableFeatures = () => {
+	const { customer, track, refetch } = useCustomer();
+	const { features } = useFeaturesQuery();
+
+	// Memoize the feature rows so they update when customer changes
+	const featureRows = useMemo(() => {
+		return Object.keys(customer?.features || {}).map((x) => (
+			<FeatureTestRow
+				label={
+					features.find((f) => f.id === customer?.features[x].id)?.name || ""
+				}
+				usage={
+					customer?.features[x].unlimited
+						? "Unlimited"
+						: String(customer?.features[x].balance)
+				}
+				key={x}
+				handleSend={(value) => {
+					track({
+						featureId: customer?.features[x].id,
+						value: value,
+					});
+					refetch();
+				}}
+			/>
+		));
+	}, [customer, features, track, refetch]);
+
 	return (
 		<SheetSection title="Available features">
-			<div className="flex flex-col gap-4">
-				<FeatureTestRow label="Messages" usage="Used 200" />
-				<FeatureTestRow label="API Tokens" />
-				<FeatureTestRow label="2000 active users" />
-			</div>
+			<div className="flex flex-col gap-4">{featureRows}</div>
 		</SheetSection>
 	);
 };
