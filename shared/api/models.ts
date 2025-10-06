@@ -8,9 +8,9 @@ export * from "./core/coreOpModels.js";
 // Customers
 
 export * from "./customers/apiCustomer.js";
-export * from "./customers/components/apiCusFeature.js";
 export * from "./customers/components/apiCusProduct.js";
 export * from "./customers/components/apiCusReferral.js";
+export * from "./customers/cusFeatures/apiCusFeature.js";
 export * from "./customers/customerOpModels.js";
 export * from "./customers/customersOpenApi.js";
 

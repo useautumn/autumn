@@ -2,7 +2,7 @@ import { EntityDataSchema } from "@api/common/entityData.js";
 import { APIProductSchema } from "@api/products/apiProduct.js";
 import { z } from "zod/v4";
 import { CustomerDataSchema } from "../common/customerData.js";
-import { CoreCusFeatureSchema } from "../customers/components/apiCusFeature.js";
+import { CoreCusFeatureSchema } from "../customers/cusFeatures/apiCusFeature.js";
 
 // Check Feature Enums
 export const CheckFeatureScenarioSchema = z
