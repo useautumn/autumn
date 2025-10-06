@@ -7,6 +7,7 @@ import {
 	type FullCustomerEntitlement,
 	type FullCustomerPrice,
 	getCusEntBalance,
+	getStartingBalance,
 	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
@@ -16,7 +17,6 @@ import { BREAK_API_VERSION } from "@/utils/constants.js";
 import { notNullish, notNullOrUndefined } from "@/utils/genUtils.js";
 import {
 	getRelatedCusPrice,
-	getResetBalance,
 	getUnlimitedAndUsageAllowed,
 } from "../../cusProducts/cusEnts/cusEntUtils.js";
 
@@ -274,9 +274,9 @@ export const getCusBalances = async ({
 		data[key].adjustment += adjustment || 0;
 
 		const total =
-			(getResetBalance({
+			(getStartingBalance({
 				entitlement: ent,
-				options: getEntOptions(cusProduct.options, ent),
+				options: getEntOptions(cusProduct.options, ent) || undefined,
 				relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
 				productQuantity: cusProduct.quantity || 1,
 			}) || 0) * count;
@@ -303,9 +303,9 @@ export const getCusBalances = async ({
 				data[key].next_reset_at = cusEnt.next_reset_at;
 			}
 
-			const resetBalance = getResetBalance({
+			const resetBalance = getStartingBalance({
 				entitlement: ent,
-				options: getEntOptions(cusProduct.options, ent),
+				options: getEntOptions(cusProduct.options, ent) || undefined,
 				relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
 				productQuantity: cusProduct.quantity || 1,
 			});
@@ -342,19 +342,19 @@ export const getCusBalances = async ({
 	}
 
 	// Sort balances
-	if (org.api_version == LegacyVersion.v1) {
+	if (org.api_version === LegacyVersion.v1) {
 		balances.sort((a: any, b: any) => {
-			const featureA = features.find((f) => f.id == a.feature_id);
-			const featureB = features.find((f) => f.id == b.feature_id);
+			const featureA = features.find((f) => f.id === a.feature_id);
+			const featureB = features.find((f) => f.id === b.feature_id);
 
 			if (
-				featureA?.type == FeatureType.Boolean &&
-				featureB?.type != FeatureType.Boolean
+				featureA?.type === FeatureType.Boolean &&
+				featureB?.type !== FeatureType.Boolean
 			) {
 				return -1;
 			} else if (
-				featureA?.type != FeatureType.Boolean &&
-				featureB?.type == FeatureType.Boolean
+				featureA?.type !== FeatureType.Boolean &&
+				featureB?.type === FeatureType.Boolean
 			) {
 				return 1;
 			}

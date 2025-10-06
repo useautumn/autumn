@@ -2,6 +2,9 @@
 
 // Cus ent utils
 export * from "./cusEntUtils/balanceUtils.js";
+export * from "./cusEntUtils/convertCusEntUtils.js";
+export * from "./cusEntUtils/cusEntUtils.js";
+export * from "./cusEntUtils/getStartingBalance.js";
 export * from "./cusEntUtils/sortCusEntsForDeduction.js";
 // Cus product utils
 export * from "./cusProductUtils/classifyCusProduct.js";

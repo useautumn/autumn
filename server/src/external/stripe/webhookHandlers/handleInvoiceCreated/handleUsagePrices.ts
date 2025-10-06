@@ -130,7 +130,7 @@ export const handleUsagePrices = async ({
 		});
 	}
 
-	if (relatedCusEnt.entitlement.interval == EntInterval.Lifetime) {
+	if (relatedCusEnt.entitlement.interval === EntInterval.Lifetime) {
 		return;
 	}
 
@@ -138,7 +138,7 @@ export const handleUsagePrices = async ({
 
 	const resetBalancesUpdate = getResetBalancesUpdate({
 		cusEnt: relatedCusEnt,
-		allowance: ent.interval == EntInterval.Lifetime ? 0 : ent.allowance!,
+		allowance: ent.interval === EntInterval.Lifetime ? 0 : ent.allowance!,
 	});
 
 	const { end } = subToPeriodStartEnd({ sub: usageSub });

@@ -1,4 +1,4 @@
-import type { APIProduct } from "@api/products/apiProduct.js";
+import type { ApiProduct } from "@api/products/apiProduct.js";
 import type { Infinite } from "../productModels/productEnums.js";
 import type { UsageModel } from "../productV2Models/productItemModels/productItemModels.js";
 
@@ -59,7 +59,7 @@ export interface CheckProductPreview {
 		currency: string;
 	};
 
-	product?: APIProduct;
+	product?: ApiProduct;
 	payment_method?: any;
 }
 
@@ -76,5 +76,5 @@ export interface CheckFeaturePreview {
 	feature_id: string;
 	feature_name: string;
 
-	products: APIProduct[];
+	products: ApiProduct[];
 }

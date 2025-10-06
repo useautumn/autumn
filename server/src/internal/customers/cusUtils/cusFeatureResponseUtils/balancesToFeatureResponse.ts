@@ -1,9 +1,9 @@
 import {
+	type ApiCusFeature,
+	type ApiCusRollover,
 	type CreditSchemaItem,
 	type CusEntResponse,
 	CusEntResponseSchema,
-	type CusEntResponseV2,
-	type CusRollover,
 	type Feature,
 	FeatureType,
 	type FullCustomerEntitlement,
@@ -37,7 +37,7 @@ export const getEarliestNextResetAt = (entList: CusEntResponse[]) => {
 		return acc;
 	}, Infinity);
 
-	return earliest == Infinity ? null : earliest;
+	return earliest === Infinity ? null : earliest;
 };
 
 export const featuresToObject = ({
@@ -47,15 +47,15 @@ export const featuresToObject = ({
 	features: Feature[];
 	entList: CusEntResponse[];
 }) => {
-	const featureObject: Record<string, CusEntResponseV2> = {};
+	const featureObject: Record<string, ApiCusFeature> = {};
 
 	for (const entRes of entList) {
-		const feature = features.find((f) => f.id == entRes.feature_id)!;
+		const feature = features.find((f) => f.id === entRes.feature_id)!;
 		const featureType = getCusFeatureType({ feature });
 
 		const featureId = feature.id;
 		const unlimited = entRes.unlimited;
-		const relatedEnts = entList.filter((e) => e.feature_id == featureId);
+		const relatedEnts = entList.filter((e) => e.feature_id === featureId);
 
 		if (featureObject[featureId]) {
 			continue;
@@ -73,9 +73,9 @@ export const featuresToObject = ({
 		const rollovers = hasRollovers
 			? (relatedEnts
 					.flatMap((e) => e.rollovers)
-					.filter(notNullish) as CusRollover[])
+					.filter(notNullish) as ApiCusRollover[])
 			: undefined;
-		const cusFeature: CusEntResponseV2 = {
+		const cusFeature: ApiCusFeature = {
 			id: featureId,
 			name: feature.name,
 			type: featureType,
@@ -86,9 +86,9 @@ export const featuresToObject = ({
 			usage_limit: usageLimit,
 
 			next_reset_at: getEarliestNextResetAt(relatedEnts),
-			interval: relatedEnts.length == 1 ? relatedEnts[0].interval : "multiple",
+			interval: relatedEnts.length === 1 ? relatedEnts[0].interval : "multiple",
 			interval_count:
-				relatedEnts.length == 1 ? relatedEnts[0].interval_count : null,
+				relatedEnts.length === 1 ? relatedEnts[0].interval_count : null,
 			overage_allowed: relatedEnts.some((e) => e.overage_allowed),
 			breakdown:
 				!unlimited && relatedEnts.length > 1

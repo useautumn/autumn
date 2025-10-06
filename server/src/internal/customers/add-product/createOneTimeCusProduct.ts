@@ -6,6 +6,7 @@ import {
 	type EntitlementWithFeature,
 	type FeatureOptions,
 	type FullCustomerEntitlement,
+	getStartingBalance,
 	type Organization,
 	type Price,
 } from "@autumn/shared";
@@ -17,7 +18,6 @@ import { nullish } from "@/utils/genUtils.js";
 import type { InsertCusProductParams } from "../cusProducts/AttachParams.js";
 import { CusProductService } from "../cusProducts/CusProductService.js";
 import { CusEntService } from "../cusProducts/cusEnts/CusEntitlementService.js";
-import { getResetBalance } from "../cusProducts/cusEnts/cusEntUtils.js";
 import { initCusEntitlement } from "./initCusEnt.js";
 
 const updateOneOffExistingEntitlement = async ({
@@ -51,7 +51,7 @@ const updateOneOffExistingEntitlement = async ({
 		env: env,
 	});
 
-	const resetBalance = getResetBalance({
+	const resetBalance = getStartingBalance({
 		entitlement,
 		options,
 		relatedPrice,

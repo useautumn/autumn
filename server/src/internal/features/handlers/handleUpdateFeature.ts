@@ -26,7 +26,7 @@ import { addTaskToQueue } from "@/queue/queueUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { keyToTitle } from "@/utils/genUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { toAPIFeature } from "../utils/mapFeatureUtils.js";
+import { toApiFeature } from "../utils/mapFeatureUtils.js";
 
 const handleFeatureIdChanged = async ({
 	db,
@@ -291,7 +291,7 @@ export const handleUpdateFeature = async (
 						.status(200)
 						.json(
 							updatedFeature
-								? toAPIFeature({ feature: updatedFeature })
+								? toApiFeature({ feature: updatedFeature })
 								: undefined,
 						);
 				}
@@ -403,7 +403,7 @@ export const handleUpdateFeature = async (
 				.status(200)
 				.json(
 					updatedFeature
-						? toAPIFeature({ feature: updatedFeature })
+						? toApiFeature({ feature: updatedFeature })
 						: undefined,
 				);
 		},

@@ -1,5 +1,5 @@
-import type { ApiVersion } from "../ApiVersion.js";
-import type { ApiVersionClass } from "../ApiVersionClass.js";
+import { type ApiVersion, LATEST_VERSION } from "../ApiVersion.js";
+import { ApiVersionClass } from "../ApiVersionClass.js";
 import { getVersionsBetween } from "../versionRegistryUtils.js";
 import type { AffectedResource } from "./VersionChange.js";
 import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass.js";
@@ -12,12 +12,20 @@ import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass.js";
  *
  * @param input - Data in the newest version format
  * @param data - Additional context data for transformations (optional)
- * @param currentVersion - Version of the input data
+ * @param currentVersion - Version of the input data (defaults to LATEST_VERSION)
  * @param targetVersion - Version to transform to (older)
  * @param resource - Resource being transformed
  *
  * @example
- * // Data is in V1_2 format, transform to V1_1
+ * // Data is in latest format, transform to V1_1 (currentVersion defaults to latest)
+ * const v1_1_data = applyResponseVersionChanges({
+ *   input: latestCustomer,
+ *   targetVersion: new ApiVersionClass(ApiVersion.V1_1),
+ *   resource: AffectedResource.Customer
+ * });
+ *
+ * @example
+ * // Explicitly specify currentVersion
  * const v1_1_data = applyResponseVersionChanges({
  *   input: v1_2_customer,
  *   currentVersion: new ApiVersionClass(ApiVersion.V1_2),
@@ -35,19 +43,21 @@ export function applyResponseVersionChanges<T = any, TData = any>({
 }: {
 	input: T;
 	data?: TData;
-	currentVersion: ApiVersionClass;
+	currentVersion?: ApiVersionClass;
 	targetVersion: ApiVersionClass;
 	resource: AffectedResource;
 }): T {
+	// Default currentVersion to latest if not provided
+	const _currentVersion = currentVersion || new ApiVersionClass(LATEST_VERSION);
 	// If versions are equal, no transformation needed
-	if (currentVersion.eq(targetVersion)) {
+	if (_currentVersion.eq(targetVersion)) {
 		return input;
 	}
 
 	// If target is newer than current, throw error (can't transform forward)
-	if (targetVersion.gt(currentVersion)) {
+	if (targetVersion.gt(_currentVersion)) {
 		throw new Error(
-			`Cannot transform forward from ${currentVersion} to ${targetVersion}. ` +
+			`Cannot transform forward from ${_currentVersion} to ${targetVersion}. ` +
 				"Transforms only work backwards to older versions.",
 		);
 	}
@@ -55,7 +65,7 @@ export function applyResponseVersionChanges<T = any, TData = any>({
 	// Get all versions between current and target (exclusive of target, inclusive of current)
 	const versionsToApply = getVersionsBetween({
 		from: targetVersion.value,
-		to: currentVersion.value,
+		to: _currentVersion.value,
 	}).filter((v) => v !== targetVersion.value); // Exclude target itself
 
 	// Sort versions from newest to oldest (we apply backwards)
@@ -204,12 +214,14 @@ export function applyRequestVersionChanges<T = any, TData = any>({
  *   expandArray.push(CusExpand.Invoices);
  * }
  */
-export function isChangeActive(
-	targetVersion: ApiVersionClass,
-	// biome-ignore lint/suspicious/noExplicitAny: Generic version change class constructor
-	changeClass: new () => any,
-): boolean {
-	const change = new changeClass();
+export function isBeforeChange({
+	targetVersion,
+	versionChange,
+}: {
+	targetVersion: ApiVersionClass;
+	versionChange: new () => any;
+}): boolean {
+	const change = new versionChange();
 	return targetVersion.lt(change.version);
 }
 
@@ -226,7 +238,7 @@ export function applyResponseVersionChangesToArray<T = any, TData = any>({
 }: {
 	inputArray: T[];
 	data?: TData;
-	currentVersion: ApiVersionClass;
+	currentVersion?: ApiVersionClass;
 	targetVersion: ApiVersionClass;
 	resource: AffectedResource;
 }): T[] {

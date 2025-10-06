@@ -1,4 +1,4 @@
-import { APICusFeatureSchema } from "@api/customers/cusFeatures/apiCusFeature.js";
+import { ApiCusFeatureSchema } from "@api/customers/cusFeatures/apiCusFeature.js";
 import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
 import {
 	AffectedResource,
@@ -14,10 +14,10 @@ import { z } from "zod/v4";
  */
 
 // V1_2+ features schema (object format)
-const V1_2_FeaturesSchema = z.record(z.string(), APICusFeatureSchema);
+const V1_2_FeaturesSchema = z.record(z.string(), ApiCusFeatureSchema);
 
 // V1_1 features schema (array format)
-const V1_1_FeaturesSchema = z.array(APICusFeatureSchema);
+const V1_1_FeaturesSchema = z.array(ApiCusFeatureSchema);
 
 export class V1_2_FeaturesArrayToObject extends VersionChange<
 	typeof V1_2_FeaturesSchema,

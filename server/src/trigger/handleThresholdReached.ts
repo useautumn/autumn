@@ -13,7 +13,7 @@ import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
 import { getSingleEntityResponse } from "@/internal/api/entities/getEntityUtils.js";
 import { getV2CheckResponse } from "@/internal/api/entitled/checkUtils/getV2CheckResponse.js";
 import { getCustomerDetails } from "@/internal/customers/cusUtils/getCustomerDetails.js";
-import { toAPIFeature } from "@/internal/features/utils/mapFeatureUtils.js";
+import { toApiFeature } from "@/internal/features/utils/mapFeatureUtils.js";
 
 export const mergeNewCusEntsIntoCusProducts = ({
 	cusProducts,
@@ -86,7 +86,7 @@ export const sendSvixThresholdReachedEvent = async ({
 		data: {
 			threshold_type: thresholdType,
 			customer: cusDetails,
-			feature: toAPIFeature({ feature }),
+			feature: toApiFeature({ feature }),
 		},
 	});
 
@@ -252,7 +252,7 @@ export const handleThresholdReached = async ({
 				data: {
 					threshold_type: "limit_reached",
 					customer: cusDetails,
-					feature: toAPIFeature({ feature }),
+					feature: toApiFeature({ feature }),
 				},
 			});
 

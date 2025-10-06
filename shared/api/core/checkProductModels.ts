@@ -1,7 +1,16 @@
 import { z } from "zod/v4";
 import { CustomerDataSchema } from "../common/customerData.js";
 import { EntityDataSchema } from "../common/entityData.js";
-import { ProductScenarioSchema } from "./checkModels.js";
+
+export const ProductScenarioSchema = z.enum([
+	"scheduled",
+	"active",
+	"new",
+	"renew",
+	"upgrade",
+	"downgrade",
+	"cancel",
+]);
 
 // Check Product Schemas
 export const CheckProductParamsSchema = z
@@ -98,10 +107,7 @@ export const CheckProductPreviewOptionSchema = z
 
 export const CheckProductPreviewSchema = z
 	.object({
-		scenario: ProductScenarioSchema.meta({
-			description: "The scenario type for this product preview",
-			example: "upgrade",
-		}),
+		scenario: ProductScenarioSchema,
 		product_id: z.string().meta({
 			description: "The ID of the product",
 			example: "pro_plan",

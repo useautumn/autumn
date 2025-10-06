@@ -21,8 +21,8 @@ export enum AffectedResource {
  *
  * @example
  * // Features changed from array to object in V1_2
- * const V1_2_FeaturesSchema = z.record(z.string(), APICusFeatureSchema);
- * const V1_1_FeaturesSchema = z.array(APICusFeatureSchema);
+ * const V1_2_FeaturesSchema = z.record(z.string(), ApiCusFeatureSchema);
+ * const V1_1_FeaturesSchema = z.array(ApiCusFeatureSchema);
  *
  * class V1_2_FeaturesArrayToObject extends VersionChange {
  *   version = ApiVersion.V1_2;
