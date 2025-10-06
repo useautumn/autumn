@@ -1,6 +1,6 @@
 import {
-	APIFeatureSchema,
-	APIFeatureType,
+	ApiFeatureSchema,
+	ApiFeatureType,
 	ErrCode,
 	type Feature,
 	FeatureType,
@@ -19,7 +19,7 @@ import { validateFeatureId } from "./featureUtils.js";
 import { handleDeleteFeature } from "./handlers/handleDeleteFeature.js";
 import { handleGetFeatureDeletionInfo } from "./handlers/handleGetFeatureDeletionInfo.js";
 import { handleUpdateFeature } from "./handlers/handleUpdateFeature.js";
-import { fromAPIFeature, toAPIFeature } from "./utils/mapFeatureUtils.js";
+import { fromApiFeature, toApiFeature } from "./utils/mapFeatureUtils.js";
 
 export const featureRouter: Router = express.Router();
 
@@ -41,7 +41,7 @@ featureRouter.get("", async (req: any, res: any) =>
 
 			res
 				.status(200)
-				.json({ list: features.map((feature) => toAPIFeature({ feature })) });
+				.json({ list: features.map((feature) => toApiFeature({ feature })) });
 		},
 	}),
 );
@@ -64,7 +64,7 @@ featureRouter.get("/:featureId", async (req: any, res: any) =>
 				});
 			}
 
-			res.status(200).json(toAPIFeature({ feature }));
+			res.status(200).json(toApiFeature({ feature }));
 		},
 	}),
 );
@@ -75,14 +75,14 @@ featureRouter.post("", async (req: any, res: any) =>
 		res,
 		action: "Create feature",
 		handler: async () => {
-			const apiFeature = APIFeatureSchema.parse(req.body);
+			const apiFeature = ApiFeatureSchema.parse(req.body);
 			if (!apiFeature.name) {
 				apiFeature.name = keyToTitle(apiFeature.id);
 			}
 
 			validateFeatureId(apiFeature.id);
 
-			const feature = fromAPIFeature({
+			const feature = fromApiFeature({
 				apiFeature,
 				orgId: req.orgId,
 				env: req.env,
@@ -138,8 +138,8 @@ featureRouter.post("/:feature_id", async (req: any, res: any) =>
 			let featureType = apiFeature.type as unknown as FeatureType;
 			let usageType: FeatureUsageType | undefined;
 			if (
-				apiFeature.type === APIFeatureType.SingleUsage ||
-				apiFeature.type === APIFeatureType.ContinuousUse
+				apiFeature.type === ApiFeatureType.SingleUsage ||
+				apiFeature.type === ApiFeatureType.ContinuousUse
 			) {
 				featureType = FeatureType.Metered;
 				usageType = apiFeature.type as unknown as FeatureUsageType;

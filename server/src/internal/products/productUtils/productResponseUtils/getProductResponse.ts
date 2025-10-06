@@ -1,9 +1,9 @@
 import {
 	type APIFreeTrial,
 	APIFreeTrialSchema,
-	APIProductItemSchema,
-	APIProductPropertiesSchema,
-	APIProductSchema,
+	ApiProductItemSchema,
+	ApiProductPropertiesSchema,
+	ApiProductSchema,
 	AttachScenario,
 	BillingInterval,
 	type Feature,
@@ -15,7 +15,7 @@ import {
 	UsageModel,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { toAPIFeature } from "@/internal/features/utils/mapFeatureUtils.js";
+import { toApiFeature } from "@/internal/features/utils/mapFeatureUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { getFreeTrialAfterFingerprint } from "../../free-trials/freeTrialUtils.js";
 import { sortProductItems } from "../../pricecn/pricecnUtils.js";
@@ -71,10 +71,10 @@ export const getProductItemResponse = ({
 	}
 
 	const feature = features.find((f) => f.id === item.feature_id);
-	return APIProductItemSchema.parse({
+	return ApiProductItemSchema.parse({
 		type,
 		...item,
-		feature: feature ? toAPIFeature({ feature }) : null,
+		feature: feature ? toApiFeature({ feature }) : null,
 		display: withDisplay ? display : undefined,
 		...priceData,
 		quantity,
@@ -142,7 +142,7 @@ export const getProductProperties = ({
 	const hasFreeTrial =
 		notNullish(freeTrial) && freeTrial?.trial_available !== false;
 
-	return APIProductPropertiesSchema.parse({
+	return ApiProductPropertiesSchema.parse({
 		is_free: isFreeProduct(product.prices) || false,
 		is_one_off: isOneOff(product.prices) || false,
 		interval_group: largestInterval?.interval,
@@ -207,7 +207,7 @@ export const getProductResponse = async ({
 		attachScenario,
 	})) as APIFreeTrial;
 
-	return APIProductSchema.parse({
+	return ApiProductSchema.parse({
 		...product,
 		name: product.name || null,
 		group: product.group || null,

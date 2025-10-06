@@ -1,21 +1,21 @@
 import {
-	APIFeature,
-	APIFeatureType,
-	AppEnv,
-	CreditSchemaItem,
-	Feature,
+	type ApiFeature,
+	ApiFeatureSchema,
+	ApiFeatureType,
+	type AppEnv,
+	type CreditSchemaItem,
+	type Feature,
 	FeatureType,
-	FeatureUsageType,
+	type FeatureUsageType,
 } from "@autumn/shared";
-import { APIFeatureSchema } from "@autumn/shared";
+import RecaseError from "@/utils/errorUtils.js";
 import {
 	constructBooleanFeature,
 	constructCreditSystem,
 	constructMeteredFeature,
 } from "./constructFeatureUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
 
-export const toAPIFeature = ({ feature }: { feature: Feature }) => {
+export const toApiFeature = ({ feature }: { feature: Feature }) => {
 	// return FeatureResponseSchema.parse(feature);
 	// 1. Get feature type
 	let featureType = feature.type;
@@ -23,7 +23,7 @@ export const toAPIFeature = ({ feature }: { feature: Feature }) => {
 		featureType = feature.config.usage_type;
 	}
 
-	let creditSchema = undefined;
+	let creditSchema;
 	if (feature.type == FeatureType.CreditSystem) {
 		creditSchema = feature.config.schema.map((s: CreditSchemaItem) => ({
 			metered_feature_id: s.metered_feature_id,
@@ -31,7 +31,7 @@ export const toAPIFeature = ({ feature }: { feature: Feature }) => {
 		}));
 	}
 
-	return APIFeatureSchema.parse({
+	return ApiFeatureSchema.parse({
 		id: feature.id,
 		name: feature.name,
 		type: featureType,
@@ -44,20 +44,20 @@ export const toAPIFeature = ({ feature }: { feature: Feature }) => {
 	});
 };
 
-export const fromAPIFeature = ({
+export const fromApiFeature = ({
 	apiFeature,
 	orgId,
 	env,
 }: {
-	apiFeature: APIFeature;
+	apiFeature: ApiFeature;
 	orgId: string;
 	env: AppEnv;
 }) => {
-	let isMetered =
-		apiFeature.type == APIFeatureType.SingleUsage ||
-		apiFeature.type == APIFeatureType.ContinuousUse;
+	const isMetered =
+		apiFeature.type == ApiFeatureType.SingleUsage ||
+		apiFeature.type == ApiFeatureType.ContinuousUse;
 
-	let featureType: FeatureType = isMetered
+	const featureType: FeatureType = isMetered
 		? FeatureType.Metered
 		: (apiFeature.type as unknown as FeatureType);
 

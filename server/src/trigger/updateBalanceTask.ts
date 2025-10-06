@@ -1,49 +1,49 @@
 import {
 	AllowanceType,
-	AppEnv,
-	CusProductStatus,
-	Entity,
-	Event,
-	Feature,
-	FullCustomerEntitlement,
-	FullCustomerPrice,
-	Organization,
-	FullCusEntWithFullCusProduct,
+	type AppEnv,
 	BillingType,
+	CusProductStatus,
+	type Customer,
+	type Entity,
+	type Event,
+	type Feature,
+	FeatureType,
 	FeatureUsageType,
+	type FullCusEntWithFullCusProduct,
+	type FullCustomerEntitlement,
+	type FullCustomerPrice,
+	getStartingBalance,
+	type Organization,
 } from "@autumn/shared";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-import { Customer, FeatureType } from "@autumn/shared";
-import { getCusEntsInFeatures } from "@/internal/customers/cusUtils/cusUtils.js";
 import { Decimal } from "decimal.js";
-import { adjustAllowance } from "./adjustAllowance.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { entityFeatureIdExists } from "@/internal/api/entities/entityUtils.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { refreshCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
+import { findCusEnt } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
 import {
-	getMeteredDeduction,
-	getCreditSystemDeduction,
-	performDeduction,
-} from "./deductUtils.js";
-
-import { notNullish, nullish } from "@/utils/genUtils.js";
+	getCusEntMasterBalance,
+	getRelatedCusPrice,
+	getTotalNegativeBalance,
+} from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
+import { deductFromApiCusRollovers } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverDeductionUtils.js";
+import { getCusEntsInFeatures } from "@/internal/customers/cusUtils/cusUtils.js";
 import {
 	creditSystemContainsFeature,
 	featureToCreditSystem,
 } from "@/internal/features/creditSystemUtils.js";
 import {
-	getCusEntMasterBalance,
-	getRelatedCusPrice,
-	getResetBalance,
-	getTotalNegativeBalance,
-} from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
-import { entityFeatureIdExists } from "@/internal/api/entities/entityUtils.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { findCusEnt } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
-import {
 	getBillingType,
 	getEntOptions,
 } from "@/internal/products/prices/priceUtils.js";
-import { deductFromCusRollovers } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverDeductionUtils.js";
-import { refreshCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
+import { notNullish, nullish } from "@/utils/genUtils.js";
+import { adjustAllowance } from "./adjustAllowance.js";
+import {
+	getCreditSystemDeduction,
+	getMeteredDeduction,
+	performDeduction,
+} from "./deductUtils.js";
 import { handleThresholdReached } from "./handleThresholdReached.js";
 
 // Decimal.set({ precision: 12 }); // 12 DP precision
@@ -93,7 +93,7 @@ const getFeatureDeductions = ({
 		}
 
 		// Check if unlimited exists
-		let unlimitedExists = cusEnts.some(
+		const unlimitedExists = cusEnts.some(
 			(cusEnt) =>
 				cusEnt.entitlement.allowance_type === AllowanceType.Unlimited &&
 				cusEnt.entitlement.internal_feature_id == feature.internal_id,
@@ -215,16 +215,16 @@ export const performDeductionOnCusEnt = ({
 	let newAdjustment = structuredClone(cusEnt.adjustment);
 	let deducted = 0;
 
-	let cusProduct = cusEnt.customer_product;
-	let options = notNullish(cusProduct)
+	const cusProduct = cusEnt.customer_product;
+	const options = notNullish(cusProduct)
 		? getEntOptions(cusProduct.options, cusEnt.entitlement)
 		: undefined;
-	let cusPrice = notNullish(cusProduct)
+	const cusPrice = notNullish(cusProduct)
 		? getRelatedCusPrice(cusEnt, cusProduct.customer_prices)
 		: undefined;
-	let resetBalance = notNullish(cusProduct)
-		? getResetBalance({
-				options,
+	const resetBalance = notNullish(cusProduct)
+		? getStartingBalance({
+				options: options || undefined,
 				relatedPrice: cusPrice?.price,
 				entitlement: cusEnt.entitlement,
 			})
@@ -243,9 +243,9 @@ export const performDeductionOnCusEnt = ({
 					break;
 				}
 
-				let entityBalance = cusEnt.entities[entityId].balance;
+				const entityBalance = cusEnt.entities[entityId].balance;
 
-				let {
+				const {
 					newBalance: newEntityBalance,
 					deducted: newDeducted,
 					toDeduct: newToDeduct,
@@ -261,7 +261,7 @@ export const performDeductionOnCusEnt = ({
 				newEntities[entityId].balance = newEntityBalance!;
 
 				if (addAdjustment) {
-					let adjustment = newEntities![entityId!]!.adjustment || 0;
+					const adjustment = newEntities![entityId!]!.adjustment || 0;
 					newEntities![entityId!]!.adjustment = adjustment - newDeducted!;
 				}
 
@@ -276,9 +276,9 @@ export const performDeductionOnCusEnt = ({
 			toDeduct = toDeductCursor;
 		} else {
 			// 2. If entity ID, deduct from that entity
-			let currentEntityBalance = cusEnt.entities?.[entityId!]?.balance;
+			const currentEntityBalance = cusEnt.entities?.[entityId!]?.balance;
 
-			let {
+			const {
 				newBalance: newEntityBalance,
 				deducted: newDeducted,
 				toDeduct: newToDeduct,
@@ -294,7 +294,7 @@ export const performDeductionOnCusEnt = ({
 			newEntities![entityId!]!.balance = newEntityBalance!;
 
 			if (addAdjustment) {
-				let adjustment = newEntities![entityId!]!.adjustment || 0;
+				const adjustment = newEntities![entityId!]!.adjustment || 0;
 				newEntities![entityId!]!.adjustment = adjustment - newDeducted!;
 			}
 
@@ -306,7 +306,7 @@ export const performDeductionOnCusEnt = ({
 			deducted += newDeducted!;
 		}
 	} else {
-		let {
+		const {
 			newBalance: newBalance_,
 			deducted: deducted_,
 			toDeduct: newToDeduct_,
@@ -324,7 +324,7 @@ export const performDeductionOnCusEnt = ({
 		toDeduct = newToDeduct_;
 
 		if (addAdjustment) {
-			let adjustment = cusEnt.adjustment || 0;
+			const adjustment = cusEnt.adjustment || 0;
 			newAdjustment = adjustment - deducted!;
 		}
 	}
@@ -358,7 +358,7 @@ export const deductAllowanceFromCusEnt = async ({
 	)
 		return toDeduct;
 
-	let {
+	const {
 		newBalance,
 		newEntities,
 		deducted,
@@ -371,19 +371,19 @@ export const deductAllowanceFromCusEnt = async ({
 		setZeroAdjustment,
 	});
 
-	let originalGrpBalance = getTotalNegativeBalance({
+	const originalGrpBalance = getTotalNegativeBalance({
 		cusEnt,
 		balance: cusEnt.balance!,
 		entities: cusEnt.entities!,
 	});
 
-	let newGrpBalance = getTotalNegativeBalance({
+	const newGrpBalance = getTotalNegativeBalance({
 		cusEnt,
 		balance: newBalance!,
 		entities: newEntities!,
 	});
 
-	let updates: any = {
+	const updates: any = {
 		balance: newBalance,
 		entities: newEntities,
 	};
@@ -419,7 +419,7 @@ export const deductAllowanceFromCusEnt = async ({
 	// Deduct credit amounts too
 	if (feature.type === FeatureType.Metered && willDeductCredits) {
 		for (let i = 0; i < featureDeductions.length; i++) {
-			let { feature: creditSystem, deduction } = featureDeductions[i];
+			const { feature: creditSystem, deduction } = featureDeductions[i];
 
 			if (
 				creditSystem.type === FeatureType.CreditSystem &&
@@ -429,12 +429,12 @@ export const deductAllowanceFromCusEnt = async ({
 				})
 			) {
 				// toDeduct -= deduction;
-				let creditAmount = featureToCreditSystem({
+				const creditAmount = featureToCreditSystem({
 					featureId: feature.id!,
 					creditSystem: creditSystem,
 					amount: deducted,
 				});
-				let newDeduction = new Decimal(deduction)
+				const newDeduction = new Decimal(deduction)
 					.minus(creditAmount)
 					.toNumber();
 
@@ -497,14 +497,14 @@ export const deductFromUsageBasedCusEnt = async ({
 		return;
 	}
 
-	let cusPrice = getRelatedCusPrice(usageBasedEnt, cusPrices);
-	let billingType = cusPrice?.price
+	const cusPrice = getRelatedCusPrice(usageBasedEnt, cusPrices);
+	const billingType = cusPrice?.price
 		? getBillingType(cusPrice?.price.config!)
 		: undefined;
-	let blockUsageLimit =
+	const blockUsageLimit =
 		billingType === BillingType.InArrearProrated ? false : true;
 
-	let { newBalance, newEntities, deducted } = performDeductionOnCusEnt({
+	const { newBalance, newEntities, deducted } = performDeductionOnCusEnt({
 		cusEnt: usageBasedEnt,
 		toDeduct,
 		allowNegativeBalance: true,
@@ -513,13 +513,13 @@ export const deductFromUsageBasedCusEnt = async ({
 		blockUsageLimit,
 	});
 
-	let oldGrpBalance = getTotalNegativeBalance({
+	const oldGrpBalance = getTotalNegativeBalance({
 		cusEnt: usageBasedEnt,
 		balance: usageBasedEnt.balance!,
 		entities: usageBasedEnt.entities!,
 	});
 
-	let newGrpBalance = getTotalNegativeBalance({
+	const newGrpBalance = getTotalNegativeBalance({
 		cusEnt: usageBasedEnt,
 		balance: newBalance!,
 		entities: newEntities!,
@@ -532,7 +532,7 @@ export const deductFromUsageBasedCusEnt = async ({
 		usageBasedEnt.adjustment = 0;
 	}
 
-	let updates: any = {
+	const updates: any = {
 		balance: newBalance,
 		entities: newEntities,
 	};
@@ -650,7 +650,7 @@ export const updateCustomerBalance = async ({
 				continue;
 			}
 
-			toDeduct = await deductFromCusRollovers({
+			toDeduct = await deductFromApiCusRollovers({
 				toDeduct,
 				cusEnt,
 				deductParams: {

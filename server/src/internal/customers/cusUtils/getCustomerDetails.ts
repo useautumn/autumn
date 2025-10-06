@@ -1,5 +1,5 @@
 import {
-	APICustomerSchema,
+	ApiCustomerSchema,
 	type AppEnv,
 	CusEntResponseSchema,
 	CusExpand,
@@ -142,7 +142,7 @@ export const getCustomerDetails = async ({
 		});
 
 		const cusResponse = {
-			...APICustomerSchema.parse({
+			...ApiCustomerSchema.parse({
 				...customer,
 				stripe_id: customer.processor?.id,
 				features: entList,
@@ -187,6 +187,7 @@ export const getCustomerDetails = async ({
 			return cusResponse;
 		}
 	} else {
+		// Probably don't need items...?
 		const withItems = org.config.api_version >= BREAK_API_VERSION;
 
 		const processedInvoices = await getCusInvoices({

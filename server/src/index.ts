@@ -12,7 +12,11 @@ import { config } from "dotenv";
 
 config();
 
-import "./instrumentation.js";
+// Skip OpenTelemetry instrumentation in development for faster startup
+if (process.env.NODE_ENV !== "development") {
+	await import("./instrumentation.js");
+}
+
 import cluster from "node:cluster";
 import http from "node:http";
 import os from "node:os";
@@ -49,20 +53,31 @@ const init = async () => {
 	app.use(redirectToHono());
 
 	// Check if this blocks API calls...
+	const allowedOrigins = [
+		"http://localhost:3000",
+		"http://localhost:5173",
+		"http://localhost:5174",
+		"https://app.useautumn.com",
+		"https://staging.useautumn.com",
+		"https://*.useautumn.com",
+		"https://localhost:8080",
+		"https://www.alphalog.ai",
+		"https://*.alphalog.ai",
+		process.env.CLIENT_URL || "",
+	];
+
+	// Add dynamic port origins in development
+	if (process.env.NODE_ENV === "development") {
+		// Add ports 3000-3010 and 8080-8090 for multiple instances
+		for (let i = 0; i <= 10; i++) {
+			allowedOrigins.push(`http://localhost:${3000 + i}`);
+			allowedOrigins.push(`http://localhost:${8080 + i}`);
+		}
+	}
+
 	app.use(
 		cors({
-			origin: [
-				"http://localhost:3000",
-				"http://localhost:5173",
-				"http://localhost:5174",
-				"https://app.useautumn.com",
-				"https://staging.useautumn.com",
-				"https://*.useautumn.com",
-				"https://localhost:8080",
-				"https://www.alphalog.ai",
-				"https://*.alphalog.ai",
-				process.env.CLIENT_URL || "",
-			],
+			origin: allowedOrigins,
 			credentials: true,
 			allowedHeaders: [
 				"app_env",
@@ -88,12 +103,16 @@ const init = async () => {
 	app.all("/api/auth/*", toNodeHandler(auth));
 
 	const posthog = createPosthogCli();
-	await QueueManager.getInstance(); // initialize the queue manager
-	await CacheManager.getInstance();
-	await ClickHouseManager.getInstance();
+
+	// Initialize managers in parallel for faster startup
+	await Promise.all([
+		QueueManager.getInstance(),
+		CacheManager.getInstance(),
+		ClickHouseManager.getInstance(),
+	]);
 
 	app.use(async (req: any, res: any, next: any) => {
-		req.env = req.env = req.headers["app_env"] || AppEnv.Sandbox;
+		req.env = req.env = req.headers.app_env || AppEnv.Sandbox;
 		req.db = db;
 		req.clickhouseClient = await ClickHouseManager.getClient();
 		req.posthog = posthog;
@@ -170,7 +189,9 @@ const init = async () => {
 	app.use(mainRouter);
 	app.use("/v1", apiRouter);
 
-	const PORT = 8080;
+	const PORT = process.env.SERVER_PORT
+		? Number.parseInt(process.env.SERVER_PORT)
+		: 8080;
 
 	server.listen(PORT, () => {
 		console.log(`Server running on port ${PORT}`);

@@ -23,13 +23,13 @@ export const createStripeCli = ({
 	legacyVersion?: boolean;
 }) => {
 	const encrypted =
-		env == AppEnv.Sandbox
+		env === AppEnv.Sandbox
 			? org.stripe_config?.test_api_key
 			: org.stripe_config?.live_api_key;
 
 	if (!encrypted) {
 		throw new RecaseError({
-			message: `Please connect your Stripe ${env == AppEnv.Sandbox ? "test" : "live"} secret key. You can find it here: https://dashboard.stripe.com${env == AppEnv.Sandbox ? "/test" : ""}/apikeys`,
+			message: `Please connect your Stripe ${env === AppEnv.Sandbox ? "test" : "live"} secret key. You can find it here: https://dashboard.stripe.com${env === AppEnv.Sandbox ? "/test" : ""}/apikeys`,
 			code: ErrCode.StripeConfigNotFound,
 			statusCode: 400,
 		});
@@ -66,8 +66,8 @@ export const calculateMetered1Price = ({
 	for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
 		const tier = usageConfig.usage_tiers[i];
 
-		let amtUsed;
-		if (tier.to == -1 || tier.to == Infinite) {
+		let amtUsed: number;
+		if (tier.to === -1 || tier.to === Infinite) {
 			amtUsed = usage;
 		} else {
 			amtUsed = Math.min(usage, tier.to);
@@ -89,14 +89,17 @@ export const subToAutumnInterval = (sub: Stripe.Subscription) => {
 		};
 	}
 
+	if (!recuringItem.price.recurring) {
+		return {
+			interval: BillingInterval.OneOff,
+			intervalCount: 1,
+		};
+	}
+
 	return {
-		interval: recuringItem.price.recurring!.interval as BillingInterval,
-		intervalCount: recuringItem.price.recurring!.interval_count || 1,
+		interval: recuringItem.price.recurring.interval as BillingInterval,
+		intervalCount: recuringItem.price.recurring.interval_count || 1,
 	};
-	// return stripeToAutumnInterval({
-	//   interval: recuringItem.price.recurring!.interval,
-	//   intervalCount: recuringItem.price.recurring!.interval_count,
-	// });
 };
 
 // export const stripeToAutumnInterval = ({
