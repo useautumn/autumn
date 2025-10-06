@@ -1,6 +1,6 @@
-import { APICustomerSchema } from "@api/customers/apiCustomer.js";
+import { ApiCustomerSchema } from "@api/customers/apiCustomer.js";
 import { APICusProductSchema } from "@api/customers/components/apiCusProduct.js";
-import { APICusFeatureSchema } from "@api/customers/cusFeatures/apiCusFeature.js";
+import { ApiCusFeatureSchema } from "@api/customers/cusFeatures/apiCusFeature.js";
 import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
 import {
 	AffectedResource,
@@ -16,11 +16,11 @@ import { z } from "zod/v4";
  */
 
 // V1_1+ merged response schema
-const V1_1_CustomerResponseSchema = APICustomerSchema;
+const V1_1_CustomerResponseSchema = ApiCustomerSchema;
 
 // V1_0 split response schema
 const V1_0_CustomerResponseSchema = z.object({
-	customer: APICustomerSchema.omit({
+	customer: ApiCustomerSchema.omit({
 		features: true,
 		products: true,
 		invoices: true,
@@ -28,7 +28,7 @@ const V1_0_CustomerResponseSchema = z.object({
 	}),
 	products: z.array(APICusProductSchema),
 	add_ons: z.array(APICusProductSchema),
-	entitlements: z.array(APICusFeatureSchema),
+	entitlements: z.array(ApiCusFeatureSchema),
 	invoices: z.array(z.any()),
 	trials_used: z.array(z.any()).optional(),
 });

@@ -4,13 +4,11 @@ import { SuccessResponseSchema } from "../common/commonResponses.js";
 import { APIEntitySchema } from "./apiEntity.js";
 import { CreateEntityParamsSchema } from "./entityOpModels.js";
 
-const EntityListResponseSchema = z
-	.object({
-		data: z.array(APIEntitySchema),
-	})
-	.meta({
-		id: "EntityListResponse",
-	});
+// Register schema with .meta() for OpenAPI spec generation
+const APIEntityWithMeta = APIEntitySchema.meta({
+	id: "Entity",
+	description: "Entity object returned by the API",
+});
 
 export const entityOps = {
 	"/customers/{customer_id}/entities": {
@@ -30,7 +28,7 @@ export const entityOps = {
 			responses: {
 				"200": {
 					description: "200 OK",
-					content: { "application/json": { schema: APIEntitySchema } },
+					content: { "application/json": { schema: APIEntityWithMeta } },
 				},
 			},
 		},
@@ -51,7 +49,7 @@ export const entityOps = {
 			responses: {
 				"200": {
 					description: "200 OK",
-					content: { "application/json": { schema: APIEntitySchema } },
+					content: { "application/json": { schema: APIEntityWithMeta } },
 				},
 			},
 		},

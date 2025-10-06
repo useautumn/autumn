@@ -5,9 +5,11 @@ import { apiVersionMiddleware } from "./honoMiddlewares/apiVersionMiddleware.js"
 import { baseMiddleware } from "./honoMiddlewares/baseMiddleware.js";
 import { errorMiddleware } from "./honoMiddlewares/errorMiddleware.js";
 import { orgConfigMiddleware } from "./honoMiddlewares/orgConfigMiddleware.js";
+import { refreshCacheMiddleware } from "./honoMiddlewares/refreshCacheMiddleware.js";
 import { secretKeyMiddleware } from "./honoMiddlewares/secretKeyMiddleware.js";
 import { traceMiddleware } from "./honoMiddlewares/traceMiddleware.js";
 import type { HonoEnv } from "./honoUtils/HonoEnv.js";
+import { cusRouter } from "./internal/customers/cusRouter.js";
 import { honoProductRouter } from "./internal/products/productRouter.js";
 import { auth } from "./utils/auth.js";
 
@@ -75,7 +77,11 @@ export const createHonoApp = () => {
 	// Step 5: Org config middleware - allows config overrides via header
 	app.use("/v1/*", orgConfigMiddleware);
 
-	// Step 6: Add pricing middleware, analytics middleware, etc.
+	// Step 6: Refresh cache middleware - clears customer cache after successful mutations
+	app.use("/v1/*", refreshCacheMiddleware);
+
+	// Step 7: Add pricing middleware, analytics middleware, etc.
+	app.route("v1/customers", cusRouter);
 	app.route("v1/products", honoProductRouter);
 
 	// Error handler - must be defined after all routes and middleware

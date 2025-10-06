@@ -4,6 +4,7 @@ import {
 	EntInterval,
 	type FullCusEntWithProduct,
 	type FullEntitlement,
+	getStartingBalance,
 	type Organization,
 	type ResetCusEnt,
 } from "@autumn/shared";
@@ -15,10 +16,7 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-import {
-	getRelatedCusPrice,
-	getResetBalance,
-} from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
+import { getRelatedCusPrice } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils.js";
 import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils.js";
 import { CusPriceService } from "@/internal/customers/cusProducts/cusPrices/CusPriceService.js";
@@ -61,7 +59,10 @@ const checkSubAnchor = async ({
 	const org = cusProduct.product.org as Organization;
 
 	const stripeCli = createStripeCli({ org, env });
-	if (!cusProduct.subscription_ids || cusProduct.subscription_ids.length == 0) {
+	if (
+		!cusProduct.subscription_ids ||
+		cusProduct.subscription_ids.length === 0
+	) {
 		return nextResetAt;
 	}
 
@@ -164,7 +165,7 @@ export const resetCustomerEntitlement = async ({
 		const ent = cusEnt.entitlement as FullEntitlement;
 
 		if (
-			ent.allowance_type == AllowanceType.Fixed &&
+			ent.allowance_type === AllowanceType.Fixed &&
 			shortDurations.includes(ent.interval as EntInterval)
 		) {
 			return await handleShortDurationCusEnt({
@@ -232,9 +233,9 @@ export const resetCustomerEntitlement = async ({
 			return;
 		}
 
-		const resetBalance = getResetBalance({
+		const resetBalance = getStartingBalance({
 			entitlement: cusEnt.entitlement,
-			options: entOptions,
+			options: entOptions || undefined,
 			relatedPrice: undefined,
 			productQuantity: cusEnt.customer_product.quantity,
 		});

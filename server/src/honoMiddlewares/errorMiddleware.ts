@@ -5,6 +5,7 @@ import Stripe from "stripe";
 import { ZodError } from "zod/v4";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import RecaseError, { formatZodError } from "@/utils/errorUtils.js";
+import { matchRoute } from "./middlewareUtils.js";
 
 /**
  * Handle special error cases that should use warn instead of error logging
@@ -99,6 +100,28 @@ const handleSpecialErrorCases = (
 		);
 	}
 
+	// Special case 6: CustomerNotFound on customer routes
+	const pathname = new URL(url).pathname;
+	if (
+		err instanceof RecaseError &&
+		err.code === ErrCode.CustomerNotFound &&
+		matchRoute({
+			url: pathname,
+			method: c.req.method,
+			pattern: { url: "/customers/:customer_id", method: "GET" },
+		})
+	) {
+		logger.warn(`${err.message}, org: ${ctx.org?.slug || "unknown"}`);
+		return c.json(
+			{
+				message: err.message,
+				code: err.code,
+				env: ctx.env,
+			},
+			404,
+		);
+	}
+
 	// No special case matched
 	return null;
 };
@@ -170,6 +193,7 @@ export const errorMiddleware = (err: Error, c: Context<HonoEnv>) => {
 	}
 
 	// 3. Handle Zod validation errors
+
 	if (err instanceof ZodError) {
 		const formattedError = formatZodError(err);
 

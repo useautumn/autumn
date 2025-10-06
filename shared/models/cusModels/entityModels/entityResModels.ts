@@ -1,5 +1,5 @@
 import { APICusProductSchema } from "@api/customers/components/apiCusProduct.js";
-import { APICusFeatureSchema } from "@api/customers/cusFeatures/apiCusFeature.js";
+import { ApiCusFeatureSchema } from "@api/customers/cusFeatures/apiCusFeature.js";
 import { APIInvoiceSchema } from "@api/others/apiInvoice.js";
 import { z } from "zod/v4";
 import { AppEnv } from "../../genModels/genEnums.js";
@@ -13,7 +13,7 @@ export const EntityResponseSchema = z.object({
 	created_at: z.number(),
 	env: z.enum(AppEnv),
 	products: z.array(APICusProductSchema).optional(),
-	features: z.record(z.string(), APICusFeatureSchema).optional(),
+	features: z.record(z.string(), ApiCusFeatureSchema).optional(),
 	invoices: z.array(APIInvoiceSchema).optional(),
 });
 

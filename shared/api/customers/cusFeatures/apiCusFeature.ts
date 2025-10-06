@@ -1,13 +1,15 @@
+import { ApiFeatureType } from "@api/features/apiFeature.js";
 import { EntInterval } from "@models/productModels/entModels/entEnums.js";
-import { ProductItemFeatureType } from "@models/productV2Models/productItemModels/productItemModels.js";
 import { z } from "zod/v4";
 
-export const CusRolloverSchema = z.object({
+export const ApiCusRolloverSchema = z.object({
 	balance: z.number(),
 	expires_at: z.number(),
 });
 
 // OLD CUS FEATURE RESPONSE
+
+// Version 2 of cus feature response
 export const CusEntResponseSchema = z.object({
 	feature_id: z.string(),
 	interval: z.enum(EntInterval).nullish(),
@@ -19,10 +21,19 @@ export const CusEntResponseSchema = z.object({
 	next_reset_at: z.number().nullish(),
 	overage_allowed: z.boolean().nullish(),
 	usage_limit: z.number().nullish(),
-	rollovers: z.array(CusRolloverSchema).nullish(),
+	rollovers: z.array(ApiCusRolloverSchema).nullish(),
 });
 
-// NEW CUS FEATURE RESPONSE
+// Version 3 of cus feature response
+export const ApiCusFeatureBreakdownSchema = z.object({
+	interval: z.enum(EntInterval),
+	interval_count: z.number().nullish(),
+	balance: z.number().nullish(),
+	usage: z.number().nullish(),
+	included_usage: z.number().nullish(),
+	next_reset_at: z.number().nullish(),
+});
+
 export const CoreCusFeatureSchema = z.object({
 	interval: z.enum(EntInterval).or(z.literal("multiple")).nullish(),
 	interval_count: z.number().nullish(),
@@ -55,17 +66,20 @@ export const CoreCusFeatureSchema = z.object({
 		.nullish(),
 
 	usage_limit: z.number().nullish(),
-	rollovers: z.array(CusRolloverSchema).nullish(),
+	rollovers: z.array(ApiCusRolloverSchema).nullish(),
 });
 
-export const APICusFeatureSchema = z
+export const ApiCusFeatureSchema = z
 	.object({
 		id: z.string(),
-		type: z.enum(ProductItemFeatureType),
+		type: z.enum(ApiFeatureType),
 		name: z.string().nullish(),
 	})
 	.extend(CoreCusFeatureSchema.shape);
 
 export type CusEntResponse = z.infer<typeof CusEntResponseSchema>;
-export type CusEntResponseV2 = z.infer<typeof APICusFeatureSchema>;
-export type CusRollover = z.infer<typeof CusRolloverSchema>;
+export type ApiCusFeature = z.infer<typeof ApiCusFeatureSchema>;
+export type ApiCusRollover = z.infer<typeof ApiCusRolloverSchema>;
+export type ApiCusFeatureBreakdown = z.infer<
+	typeof ApiCusFeatureBreakdownSchema
+>;
