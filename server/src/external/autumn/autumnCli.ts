@@ -282,7 +282,7 @@ export class AutumnInt {
 			return data;
 		},
 
-		create: async (customer: { id: string; email: string; name?: string }) => {
+		create: async (customer: { id: string; email?: string; name?: string }) => {
 			const data = await this.post(`/customers?with_autumn_id=true`, customer);
 			return data;
 		},

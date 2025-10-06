@@ -12,9 +12,9 @@ export * from "./customers/components/apiCusProduct.js";
 export * from "./customers/components/apiCusReferral.js";
 export * from "./customers/cusFeatures/apiCusFeature.js";
 export * from "./customers/cusFeatures/previousVersions/apiCusFeatureV0.js";
-// export * from "./customers/cusFeatures/previousVersions/apiCusFeatureV1.js";
 export * from "./customers/cusFeatures/previousVersions/apiCusFeatureV2.js";
 export * from "./customers/customerOpModels.js";
+
 // NOTE: customersOpenApi.js is NOT exported here - it's only imported by openapi.ts for spec generation
 
 // Entities

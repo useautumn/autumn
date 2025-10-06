@@ -1,7 +1,7 @@
 import {
+	ApiCusFeatureV2Schema,
 	ApiCustomerSchema,
 	type AppEnv,
-	CusEntResponseSchema,
 	CusExpand,
 	CusProductStatus,
 	CustomerResponseSchema,
@@ -94,7 +94,7 @@ export const getCustomerDetails = async ({
 				return b;
 			}
 
-			return CusEntResponseSchema.parse({
+			return ApiCusFeatureV2Schema.parse({
 				...b,
 				usage: b.used,
 				included_usage: b.allowance,

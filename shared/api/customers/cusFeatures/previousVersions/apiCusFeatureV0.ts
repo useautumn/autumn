@@ -14,6 +14,27 @@ import { z } from "zod/v4";
 
 /**
  * ApiCusFeatureV0Schema - The very first version of the customer feature API model
+ *
+ * FEATURE TYPES AND THEIR RESPONSE STRUCTURES:
+ *
+ * 1. BOOLEAN FEATURES:
+ *    - Simple on/off features (e.g., "figma-integration", "apply-code")
+ *    - interval: null (always null for boolean features)
+ *    - Other fields (unlimited, balance, used) are omitted/undefined
+ *
+ * 2. UNLIMITED FEATURES:
+ *    - Features with no usage limits (e.g., "deepseek-messages")
+ *    - unlimited: true
+ *    - interval: null (no reset period needed)
+ *    - balance: null (no balance to track)
+ *    - used: null (no usage counting)
+ *
+ * 3. REGULAR (METERED) FEATURES:
+ *    - Features with usage limits and tracking (e.g., "chat-messages")
+ *    - unlimited: false
+ *    - interval: "month" | "year" | "week" | "day" (reset period)
+ *    - balance: number (remaining usage)
+ *    - used: number (amount consumed)
  */
 export const ApiCusFeatureV0Schema = z.object({
 	feature_id: z.string(),
@@ -23,33 +44,41 @@ export const ApiCusFeatureV0Schema = z.object({
 	used: z.number().nullish(),
 });
 
-// Example
 /**
-
-Boolean response:
-{
-  "feature_id": "figma-integration",
-  "interval": null
-},
-
-Unlimited response:
-{
-  "feature_id": "deepseek-messages",
-  "unlimited": true,
-  "interval": null,
-  "balance": null,
-  "used": null
-},
-
-Regular response:
-{
-  "feature_id": "chat-messages",
-  "unlimited": false,
-  "interval": "month",
-  "balance": 1000,
-  "used": 0
-},
-*/
+ * EXAMPLES OF EACH FEATURE TYPE:
+ *
+ * Boolean Feature:
+ * {
+ *   "feature_id": "figma-integration",
+ *   "interval": null
+ * }
+ *
+ * {
+ *   "feature_id": "apply-code",
+ *   "unlimited": true,
+ *   "interval": null,
+ *   "balance": null,
+ *   "used": null
+ * }
+ *
+ * Unlimited Feature:
+ * {
+ *   "feature_id": "deepseek-messages",
+ *   "unlimited": true,
+ *   "interval": null,
+ *   "balance": null,
+ *   "used": null
+ * }
+ *
+ * Regular/Metered Feature:
+ * {
+ *   "feature_id": "chat-messages",
+ *   "unlimited": false,
+ *   "interval": "month",
+ *   "balance": 1000,
+ *   "used": 0
+ * }
+ */
 
 /**
  * ApiCusFeatureV1Schema - Second version of customer feature API model, includes additional fields...
