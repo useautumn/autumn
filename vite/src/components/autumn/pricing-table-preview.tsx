@@ -14,7 +14,6 @@ interface PricingTableProps {
 export default function PricingTablePreview({
 	products,
 	setConnectStripeOpen,
-	onCheckoutComplete,
 }: PricingTableProps) {
 	const { org } = useOrg();
 	const { checkout } = useCustomer();
@@ -34,9 +33,6 @@ export default function PricingTablePreview({
 				await checkout({
 					productId: product.id,
 					dialog: OnboardingCheckoutDialog,
-					dialogProps: {
-						onComplete: onCheckoutComplete,
-					},
 					openInNewTab: true,
 					successUrl: `${window.location.origin}/onboarding3`,
 				});
@@ -49,7 +45,7 @@ export default function PricingTablePreview({
 	};
 
 	const getButtonText = (product: Product) => {
-		if (product.scenario === "active") {
+		if (product.scenario === "active" || product.scenario === "cancel") {
 			return "Current plan";
 		}
 		if (product.scenario === "downgrade") {
@@ -57,6 +53,9 @@ export default function PricingTablePreview({
 		}
 		if (product.scenario === "upgrade") {
 			return "Upgrade";
+		}
+		if (product.scenario === "scheduled") {
+			return "Scheduled";
 		}
 		return product.display?.button_text || "Subscribe";
 	};

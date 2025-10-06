@@ -29,7 +29,11 @@ export const useOnboardingLogic = () => {
 	const axiosInstance = useAxiosInstance();
 
 	const { refetch, features, isLoading: featuresLoading } = useFeaturesQuery();
-	const { products, isLoading: productsLoading } = useProductsQuery();
+	const {
+		products,
+		isLoading: productsLoading,
+		refetch: refetchProducts,
+	} = useProductsQuery();
 
 	const {
 		baseProduct,
@@ -115,7 +119,7 @@ export const useOnboardingLogic = () => {
 			} else {
 				// No products available - reset to empty state
 				setSelectedProductId("");
-				setBaseProduct(createInitialProductState());
+				setBaseProduct(createInitialProductState() as ProductV2);
 			}
 		}
 	}, [products, selectedProductId, handlePlanSelect, setBaseProduct]);

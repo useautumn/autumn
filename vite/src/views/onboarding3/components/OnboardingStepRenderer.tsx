@@ -11,7 +11,8 @@ import { CompletionStep } from "./CompletionStep";
 import { FeatureConfigurationStep } from "./FeatureConfigurationStep";
 import { FeatureCreationStep } from "./FeatureCreationStep";
 import { PlanDetailsStep } from "./PlanDetailsStep";
-import { PlaygroundPreviewMode } from "./PlaygroundStep/PlaygroundPreviewMode";
+import { AvailableFeatures } from "./PlaygroundStep/AvailableFeatures";
+import { QuickStartCodeGroup } from "./PlaygroundStep/QuickStartCodeGroup";
 
 interface OnboardingStepRendererProps {
 	step: OnboardingStep;
@@ -26,81 +27,88 @@ export const OnboardingStepRenderer = ({
 	setFeature,
 	playgroundMode = "edit",
 }: OnboardingStepRendererProps) => {
-	const { product, setProduct, editingState, sheet } = useProductContext();
+	const { product, setProduct, editingState } = useProductContext();
 
 	// Don't render overrides when on Completion step or Playground preview mode - allow the step to render normally
 	const shouldSkipOverrides =
 		step === OnboardingStep.Completion ||
 		(step === OnboardingStep.Playground && playgroundMode === "preview");
 
-	if (!shouldSkipOverrides && editingState?.type === "plan") {
-		return <EditPlanSheet isOnboarding />;
-	}
+	// Handle all override conditions first (before switch statement)
+	if (!shouldSkipOverrides) {
+		// Plan editing override
+		if (editingState?.type === "plan") {
+			return <EditPlanSheet isOnboarding />;
+		}
 
-	if (!shouldSkipOverrides && editingState?.type === "feature") {
-		const featureItems = productV2ToFeatureItems({
-			items: product?.items || [],
-			withBasePrice: true,
-		});
-		const isCurrentItem = (item: ProductItem, index: number) => {
-			const itemId = getItemId({ item, itemIndex: index });
-			return editingState.id === itemId;
-		};
-		const currentItem = featureItems.find(isCurrentItem);
+		// New feature creation override
+		if (editingState?.type === "feature" && editingState.id === "new") {
+			return <NewFeatureSheet isOnboarding />;
+		}
 
-		// Use functional setState to avoid stale closure issues
-		const setCurrentItem = (updatedItem: ProductItem) => {
-			setProduct((prevProduct: ProductV2) => {
-				if (!prevProduct || !prevProduct.items) return prevProduct;
-
-				const filteredItems = productV2ToFeatureItems({
-					items: prevProduct.items,
-					withBasePrice: true,
-				});
-
-				const currentItemIndex = filteredItems.findIndex((item, index) => {
-					const itemId = getItemId({ item, itemIndex: index });
-					return editingState.id === itemId;
-				});
-
-				if (currentItemIndex === -1) return prevProduct;
-
-				const targetItem = filteredItems[currentItemIndex];
-
-				// Find this item in the ORIGINAL items array
-				const originalIndex = prevProduct.items.indexOf(targetItem);
-
-				if (originalIndex === -1) return prevProduct;
-
-				// Update that specific index in the original array
-				const updatedItems = [...prevProduct.items];
-				updatedItems[originalIndex] = updatedItem;
-
-				return { ...prevProduct, items: updatedItems };
+		// Existing feature editing override
+		if (editingState?.type === "feature" && editingState.id !== "new") {
+			const featureItems = productV2ToFeatureItems({
+				items: product?.items || [],
+				withBasePrice: true,
 			});
-		};
+			const isCurrentItem = (item: ProductItem, index: number) => {
+				const itemId = getItemId({ item, itemIndex: index });
+				return editingState.id === itemId;
+			};
+			const currentItem = featureItems.find(isCurrentItem);
 
-		return (
-			<ProductItemContext.Provider
-				value={{
-					item: currentItem ?? null,
-					setItem: setCurrentItem,
-					selectedIndex: 0,
-					showCreateFeature: false,
-					setShowCreateFeature: () => {},
-					isUpdate: false,
-					handleUpdateProductItem: async () => null,
-				}}
-			>
-				<EditPlanFeatureSheet isOnboarding />
-			</ProductItemContext.Provider>
-		);
+			// Use functional setState to avoid stale closure issues
+			const setCurrentItem = (updatedItem: ProductItem) => {
+				setProduct((prevProduct: ProductV2) => {
+					if (!prevProduct || !prevProduct.items) return prevProduct;
+
+					const filteredItems = productV2ToFeatureItems({
+						items: prevProduct.items,
+						withBasePrice: true,
+					});
+
+					const currentItemIndex = filteredItems.findIndex((item, index) => {
+						const itemId = getItemId({ item, itemIndex: index });
+						return editingState.id === itemId;
+					});
+
+					if (currentItemIndex === -1) return prevProduct;
+
+					const targetItem = filteredItems[currentItemIndex];
+
+					// Find this item in the ORIGINAL items array
+					const originalIndex = prevProduct.items.indexOf(targetItem);
+
+					if (originalIndex === -1) return prevProduct;
+
+					// Update that specific index in the original array
+					const updatedItems = [...prevProduct.items];
+					updatedItems[originalIndex] = updatedItem;
+
+					return { ...prevProduct, items: updatedItems };
+				});
+			};
+
+			return (
+				<ProductItemContext.Provider
+					value={{
+						item: currentItem ?? null,
+						setItem: setCurrentItem,
+						selectedIndex: 0,
+						showCreateFeature: false,
+						setShowCreateFeature: () => {},
+						isUpdate: false,
+						handleUpdateProductItem: async () => null,
+					}}
+				>
+					<EditPlanFeatureSheet isOnboarding />
+				</ProductItemContext.Provider>
+			);
+		}
 	}
 
-	// Handle new-feature sheet (but not on Completion step or Playground preview mode)
-	if (!shouldSkipOverrides && sheet === "new-feature") {
-		return <NewFeatureSheet isOnboarding />;
-	}
+	// Step-based rendering (fallback when no overrides are active)
 	switch (step) {
 		case OnboardingStep.PlanDetails:
 			return <PlanDetailsStep />;
@@ -161,7 +169,12 @@ export const OnboardingStepRenderer = ({
 			// Preview mode is handled in OnboardingPreview.tsx
 			// In preview mode, show the preview sidebar content
 			if (playgroundMode === "preview") {
-				return <PlaygroundPreviewMode />;
+				return (
+					<>
+						<AvailableFeatures />
+						<QuickStartCodeGroup />
+					</>
+				);
 			}
 			// In edit mode, handled by the useEffect in useOnboardingLogic that opens edit-plan sheet
 			return null;

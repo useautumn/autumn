@@ -270,7 +270,7 @@ export const ContinuousUseIcon = () => {
 			fill="none"
 			xmlns="http://www.w3.org/2000/svg"
 		>
-			<title>Continuous Use</title>
+			<title>Allocated</title>
 			<path
 				d="M6.0918 6H3.0918V3"
 				stroke="currentColor"

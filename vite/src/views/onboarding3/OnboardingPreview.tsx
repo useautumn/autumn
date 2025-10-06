@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { Separator } from "@/components/v2/separator";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { PlanCardToolbar } from "../products/plan/components/PlanCard/PlanCardToolbar";
 import { PlanFeatureList } from "../products/plan/components/PlanCard/PlanFeatureList";
@@ -26,6 +27,7 @@ export const OnboardingPreview = ({
 	const { products, refetch: refetchPricingTable } = usePricingTable({
 		customerId: "onboarding_demo_user",
 	});
+	const { products: allProducts } = useProductsQuery();
 
 	const showBasicInfo = currentStep >= 1;
 	const showPricing = currentStep >= 1;
@@ -78,7 +80,17 @@ export const OnboardingPreview = ({
 						{showBasicInfo && product?.id && (
 							<CopyButton text={product.id} className="text-xs" size="sm" />
 						)}
-						{showToolbar && <PlanCardToolbar onEdit={handleEdit} />}
+						{showToolbar && (
+							<PlanCardToolbar
+								onEdit={handleEdit}
+								deleteDisabled={allProducts?.length === 1}
+								deleteTooltip={
+									allProducts?.length === 1
+										? "At least 1+ product is required."
+										: undefined
+								}
+							/>
+						)}
 					</div>
 				</div>
 
