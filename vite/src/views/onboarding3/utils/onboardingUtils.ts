@@ -358,7 +358,22 @@ export const createProductItem = (createdFeature: CreateFeature) => {
 		featureType = createdFeature.config?.usage_type || "single_use";
 	}
 
-	// Start in "included" billing type by default
+	// Boolean features have a simplified structure with no pricing/billing properties
+	if (createdFeature.type === "boolean") {
+		return {
+			feature_id: createdFeature.id,
+			feature_type: featureType,
+			included_usage: null,
+			interval: null,
+			price: null,
+			tiers: null,
+			billing_units: null,
+			entity_feature_id: null,
+			reset_usage_when_enabled: null,
+		};
+	}
+
+	// Non-boolean features start in "included" billing type by default
 	// User can switch to "priced" in step 3 if needed
 	return {
 		feature_id: createdFeature.id,
@@ -371,4 +386,39 @@ export const createProductItem = (createdFeature: CreateFeature) => {
 		entity_feature_id: null,
 		reset_usage_when_enabled: true,
 	};
+};
+
+// Find next closest non-deleted product when a product is deleted
+export const findNextClosestProduct = (
+	deletedProductId: string,
+	products: any[],
+	currentSelectedId?: string,
+): string | null => {
+	// Filter out deleted/archived products
+	const availableProducts = products.filter(
+		(p) => !p.archived && p.id !== deletedProductId,
+	);
+
+	if (availableProducts.length === 0) {
+		return null;
+	}
+
+	// If the deleted product wasn't the currently selected one, keep current selection
+	if (currentSelectedId && currentSelectedId !== deletedProductId) {
+		const currentStillExists = availableProducts.find(
+			(p) => p.id === currentSelectedId,
+		);
+		if (currentStillExists) {
+			return currentSelectedId;
+		}
+	}
+
+	// Sort by creation date (newest first) to get the most recently created product
+	const sortedProducts = availableProducts.sort((a, b) => {
+		const aTime = new Date(a.created_at || 0).getTime();
+		const bTime = new Date(b.created_at || 0).getTime();
+		return bTime - aTime;
+	});
+
+	return sortedProducts[0]?.id || null;
 };

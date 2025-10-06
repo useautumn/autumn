@@ -1,5 +1,6 @@
 import type { ProductV2 } from "@autumn/shared";
-import { useEffect, useMemo, useState } from "react";
+import { isPriceItem } from "@autumn/shared";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -9,8 +10,10 @@ import { navigateTo } from "@/utils/genUtils";
 import { usePlanData } from "../../products/plan/hooks/usePlanData";
 import {
 	createFeature,
+	createInitialProductState,
 	createProduct,
 	createProductItem,
+	findNextClosestProduct,
 	getNextStep,
 	handleBackNavigation,
 	handleCreatePlanSuccess,
@@ -24,8 +27,9 @@ export const useOnboardingLogic = () => {
 	const navigate = useNavigate();
 	const env = useEnv();
 	const axiosInstance = useAxiosInstance();
-	const { refetch } = useFeaturesQuery();
-	const { products, refetch: refetchProducts } = useProductsQuery();
+
+	const { refetch, features, isLoading: featuresLoading } = useFeaturesQuery();
+	const { products, isLoading: productsLoading } = useProductsQuery();
 
 	const {
 		baseProduct,
@@ -62,17 +66,131 @@ export const useOnboardingLogic = () => {
 		}
 	}, [product?.id, selectedProductId]);
 
-	// Auto-open edit-plan sheet when entering step 4 (Playground)
+	const handlePlanSelect = useCallback(
+		async (planId: string) => {
+			try {
+				await handlePlanSelection(
+					planId,
+					selectedProductId,
+					baseProduct,
+					setBaseProduct,
+					setSelectedProductId,
+					setSheet,
+					setEditingState,
+					axiosInstance,
+				);
+			} catch (_) {
+				setSelectedProductId(product?.id || "");
+			}
+		},
+		[
+			selectedProductId,
+			baseProduct,
+			setBaseProduct,
+			axiosInstance,
+			product?.id,
+		],
+	);
+
+	// Handle product deletion/archival - auto-select next closest product
+	useEffect(() => {
+		if (!selectedProductId || !products || products.length === 0) {
+			return;
+		}
+
+		// Check if currently selected product is deleted/archived
+		const selectedProduct = products.find((p) => p.id === selectedProductId);
+		const isSelectedDeleted = !selectedProduct || selectedProduct.archived;
+
+		if (isSelectedDeleted) {
+			const nextProductId = findNextClosestProduct(
+				selectedProductId,
+				products,
+				selectedProductId,
+			);
+
+			if (nextProductId) {
+				// Auto-select next closest product and load its data
+				handlePlanSelect(nextProductId);
+			} else {
+				// No products available - reset to empty state
+				setSelectedProductId("");
+				setBaseProduct(createInitialProductState());
+			}
+		}
+	}, [products, selectedProductId, handlePlanSelect, setBaseProduct]);
+
+	// Auto-skip to step 4 in preview mode when user has completed onboarding
+	const onboardingProcessed = useRef(false);
+	useEffect(() => {
+		// Only process once, and only after we have actual data
+		if (onboardingProcessed.current) {
+			return;
+		}
+
+		// Wait for both queries to complete loading
+		if (productsLoading || featuresLoading) {
+			return;
+		}
+
+		// Additional safety: ensure arrays are defined
+		if (products === undefined || features === undefined) {
+			return;
+		}
+
+		// Check if user has completed onboarding (has at least 1 product and 1 feature)
+		const hasCompletedOnboarding =
+			(products?.length ?? 0) >= 1 && (features?.length ?? 0) >= 1;
+
+		if (hasCompletedOnboarding) {
+			// Auto-skip to step 4 (Playground) in preview mode
+			if (products && products.length > 0) {
+				const firstProduct = products[0];
+
+				// Fetch full product data
+				axiosInstance
+					.get(`/products/${firstProduct.id}/data2`)
+					.then((response) => {
+						const productData = response.data.product;
+						setBaseProduct(productData);
+
+						// Jump directly to step 4 (Playground) in preview mode
+						pushStep(OnboardingStep.FeatureCreation);
+						pushStep(OnboardingStep.FeatureConfiguration);
+						pushStep(OnboardingStep.Playground);
+
+						// Set to preview mode since user has completed onboarding
+						setPlaygroundMode("preview");
+					})
+					.catch((error) => {
+						console.error("Failed to load product:", error);
+					});
+			}
+		}
+
+		// Mark as processed regardless of whether we took action
+		onboardingProcessed.current = true;
+	}, [
+		products,
+		features,
+		productsLoading,
+		featuresLoading,
+		pushStep,
+		axiosInstance,
+		setBaseProduct,
+	]);
+
+	// Auto-open edit-plan sheet when entering step 4 (Playground) in edit mode
 	// Clear sheet when entering step 5 (Completion)
 	useEffect(() => {
-		if (step === OnboardingStep.Playground) {
+		if (step === OnboardingStep.Playground && playgroundMode === "edit") {
 			setSheet("edit-plan");
 			setEditingState({ type: "plan", id: null });
 		} else if (step === OnboardingStep.Completion) {
 			setSheet(null);
 			setEditingState({ type: null, id: null });
 		}
-	}, [step]);
+	}, [step, playgroundMode]);
 
 	// Navigation handlers
 	const handleNext = async () => {
@@ -106,24 +224,34 @@ export const useOnboardingLogic = () => {
 			const newItem = createProductItem(createdFeature);
 			setFeature(createdFeature);
 
-			// Add or update item in product
+			// Add feature item to product (preserving any existing base price item)
 			if (product && "items" in product) {
 				const existingItems = product.items || [];
-				const hasFeatureItem = existingItems.length > 0;
 
-				const updatedProduct = hasFeatureItem
-					? {
-							...product,
-							items: existingItems.map((item, index) =>
-								index === existingItems.length - 1
-									? { ...item, feature_id: createdFeature.id }
-									: item,
-							),
-						}
-					: {
-							...product,
-							items: [...existingItems, newItem],
-						};
+				// Check if we already have a feature item (from previous onboarding attempts)
+				// A feature item has feature_id but is not a price item (base price)
+				const existingFeatureItemIndex = existingItems.findIndex(
+					(item) => item.feature_id && !isPriceItem(item),
+				);
+
+				let updatedItems: typeof existingItems;
+
+				if (existingFeatureItemIndex !== -1) {
+					// Update existing feature item with new feature_id
+					updatedItems = [...existingItems];
+					updatedItems[existingFeatureItemIndex] = {
+						...updatedItems[existingFeatureItemIndex],
+						feature_id: createdFeature.id,
+					};
+				} else {
+					// Add new feature item, preserving any existing base price items
+					updatedItems = [...existingItems, newItem];
+				}
+
+				const updatedProduct = {
+					...product,
+					items: updatedItems,
+				};
 
 				// Update local state (don't save yet - item needs configuration in step 3)
 				setProduct(updatedProduct);
@@ -178,23 +306,6 @@ export const useOnboardingLogic = () => {
 		);
 
 		popStep();
-	};
-
-	const handlePlanSelect = async (planId: string) => {
-		try {
-			await handlePlanSelection(
-				planId,
-				selectedProductId,
-				baseProduct,
-				setBaseProduct,
-				setSelectedProductId,
-				setSheet,
-				setEditingState,
-				axiosInstance,
-			);
-		} catch (_) {
-			setSelectedProductId(product?.id || "");
-		}
 	};
 
 	const onCreatePlanSuccess = async (newProduct: ProductV2) => {

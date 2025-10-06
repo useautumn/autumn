@@ -14,11 +14,6 @@ import { useProductContext } from "../products/product/ProductContext";
 interface OnboardingPreviewProps {
 	currentStep: number;
 	playgroundMode?: "edit" | "preview";
-}
-
-interface OnboardingPreviewProps {
-	currentStep: number;
-	playgroundMode?: "edit" | "preview";
 	setConnectStripeOpen?: (open: boolean) => void;
 }
 
@@ -28,7 +23,10 @@ export const OnboardingPreview = ({
 	setConnectStripeOpen,
 }: OnboardingPreviewProps) => {
 	const { product, setSheet, setEditingState } = useProductContext();
-	const { products, refetch: refetchPricingTable } = usePricingTable();
+	const { products, refetch: refetchPricingTable } = usePricingTable({
+		customerId: "onboarding_demo_user",
+	});
+
 	const showBasicInfo = currentStep >= 1;
 	const showPricing = currentStep >= 1;
 	const showFeatures = currentStep >= 3;
