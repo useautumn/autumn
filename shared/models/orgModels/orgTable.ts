@@ -64,7 +64,7 @@ export const organizations = pgTable(
 		created_at: numeric({ mode: "number" }),
 		config: jsonb().default({}).notNull().$type<OrgConfig>(),
 		created_by: text("created_by"),
-		version: jsonb("version").$type<VersionConfig>().default(sql`'{}'::jsonb`),
+		// version: jsonb("version").$type<VersionConfig>().default(sql`'{}'::jsonb`),
 	},
 	(table) => [
 		unique("organizations_test_pkey_key").on(table.test_pkey),

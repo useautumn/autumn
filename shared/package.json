@@ -13,7 +13,7 @@
 	"author": "Recase Inc.",
 	"license": "Apache-2.0",
 	"scripts": {
-		"build:tsc": "tsc && bun api/openapi.ts",
+		"tsc": "tsc",
 		"api": "bun api/openapi.ts",
 		"build": "bun build ./index.ts --outdir dist --format esm --target bun --external zod",
 		"dev": "bunx nodemon --ext ts --ignore dist --exec \"tsc --emitDeclarationOnly --outDir dist && bun run build:fast\"",

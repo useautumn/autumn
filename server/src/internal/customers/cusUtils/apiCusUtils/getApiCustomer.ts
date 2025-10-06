@@ -14,7 +14,6 @@ export const getApiCustomer = async ({
 	ctx: RequestContext;
 	fullCus: FullCustomer;
 }) => {
-	console.log(`[getApiCustomer] Getting features for customer ${fullCus.id}`);
 	const apiCusFeatures = await getApiCusFeatures({
 		ctx,
 		fullCus,
