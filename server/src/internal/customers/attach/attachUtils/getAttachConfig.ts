@@ -3,6 +3,7 @@ import {
 	AttachBranch,
 	type AttachConfig,
 	cusProductToPrices,
+	cusProductToProduct,
 	intervalToValue,
 	ProrationBehavior,
 } from "@autumn/shared";
@@ -15,6 +16,7 @@ import {
 	attachParamsToProduct,
 	attachParamToCusProducts,
 } from "./convertAttachParams.js";
+import { isDefaultTrialFullProduct } from "@/internal/products/productUtils/classifyProduct.js";
 
 export const intervalsAreSame = ({
 	attachParams,
@@ -111,10 +113,23 @@ export const getAttachConfig = async ({
 	const invoiceCheckout =
 		attachParams.invoiceOnly === true && !attachBody.enable_product_immediately;
 
+	// Check if upgrading from a default trial
+	const { curMainProduct } = attachParamToCusProducts({ attachParams });
+	let isUpgradingFromDefaultTrial = false;
+	if (curMainProduct && branch === AttachBranch.Upgrade) {
+		const product = cusProductToProduct({ cusProduct: curMainProduct });
+		isUpgradingFromDefaultTrial = isDefaultTrialFullProduct({
+			product,
+			skipDefault: true,
+		});
+	}
+
 	const checkoutFlow =
 		isPublic ||
 		forceCheckout ||
 		invoiceCheckout ||
+		branch === AttachBranch.MainIsTrial ||
+		isUpgradingFromDefaultTrial ||
 		(noPaymentMethod &&
 			!invoiceAndEnable &&
 			![
