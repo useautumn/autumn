@@ -276,5 +276,25 @@ export const validateProductItems = ({
 		}
 	}
 
+	// 6. Can't have both weekly and monthly price items in the same product
+	const hasWeeklyPrice = newItems.some(
+		(item) =>
+			(isPriceItem(item) || isFeaturePriceItem(item)) &&
+			item.interval === ProductItemInterval.Week
+	);
+	const hasMonthlyPrice = newItems.some(
+		(item) =>
+			(isPriceItem(item) || isFeaturePriceItem(item)) &&
+			item.interval === ProductItemInterval.Month
+	);
+
+	if (hasWeeklyPrice && hasMonthlyPrice) {
+		throw new RecaseError({
+			message: `Can't have both weekly and monthly price items in the same product`,
+			code: ErrCode.InvalidInputs,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+
 	return { allFeatures, newFeatures };
 };
