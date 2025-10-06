@@ -105,5 +105,9 @@ supabase/
 migration.sh
 stat.sh
 
-CLAUDE.md
+
 interview
+# Allow root scripts folder
+!/scripts/
+# But ignore server scripts folder
+/server/scripts/
