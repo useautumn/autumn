@@ -152,6 +152,12 @@ const CodeGroupCode = React.forwardRef<HTMLPreElement, CodeGroupCodeProps>(
 							'$1<span class="pl-property">$2</span>$3',
 						);
 
+						// Post-process: detect boolean values (true/false) and make them purple like strings
+						html = html.replace(
+							/<span class="pl-c1">(true|false)<\/span>/g,
+							'<span class="pl-c1 pl-boolean">$1</span>',
+						);
+
 						setHighlightedCode(html);
 					} else {
 						setHighlightedCode(children);

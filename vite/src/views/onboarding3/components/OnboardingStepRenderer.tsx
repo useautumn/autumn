@@ -113,7 +113,7 @@ export const OnboardingStepRenderer = ({
 			// This should be the item with the feature_id matching the current feature
 			const featureItems = productV2ToFeatureItems({
 				items: product?.items || [],
-				withBasePrice: true,
+				withBasePrice: false, // Don't include base price when looking for feature items
 			});
 
 			// Find the item that matches the current feature being configured

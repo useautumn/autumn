@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
-import { useCustomer } from "autumn-js/react";
 import type { CheckoutResult } from "autumn-js";
+import { useCustomer } from "autumn-js/react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
 import {
 	Dialog,
@@ -21,7 +21,10 @@ export interface CheckoutDialogProps {
 const formatCurrency = ({
 	amount,
 	currency,
-}: { amount: number; currency: string }) => {
+}: {
+	amount: number;
+	currency: string;
+}) => {
 	return new Intl.NumberFormat("en-US", {
 		style: "currency",
 		currency: currency,

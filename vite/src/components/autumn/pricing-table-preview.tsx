@@ -1,7 +1,7 @@
-import type React from "react";
-import { useCustomer } from "autumn-js/react";
-import { useOrg } from "@/hooks/common/useOrg";
 import type { Product } from "autumn-js";
+import { useCustomer } from "autumn-js/react";
+
+import { useOrg } from "@/hooks/common/useOrg";
 import OnboardingCheckoutDialog from "@/views/onboarding3/OnboardingCheckoutDialog";
 import { PlanCardPreview } from "./PlanCardPreview";
 
@@ -24,18 +24,12 @@ export default function PricingTablePreview({
 	}
 
 	const handleSubscribe = async (product: Product) => {
-		console.log("Subscribe clicked", product);
-		console.log("Checkout function:", checkout);
-		console.log("Org:", org);
-
 		if (!org?.stripe_connected) {
-			console.log("Stripe not connected");
 			setConnectStripeOpen(true);
 			return;
 		}
 
 		if (product.id) {
-			console.log("Initiating checkout for product:", product.id);
 			try {
 				await checkout({
 					productId: product.id,
@@ -44,7 +38,7 @@ export default function PricingTablePreview({
 						onComplete: onCheckoutComplete,
 					},
 					openInNewTab: true,
-					successUrl: `${window.location.origin}`,
+					successUrl: `${window.location.origin}/onboarding3`,
 				});
 			} catch (error) {
 				console.error("Checkout error:", error);
@@ -71,9 +65,21 @@ export default function PricingTablePreview({
 		return !!product.display?.recommend_text;
 	};
 
+	// Dynamic grid classes based on product count
+	const getGridClasses = () => {
+		const productCount = products.length;
+		if (productCount === 1) {
+			return "grid grid-cols-1 gap-6 max-w-md mx-auto px-4"; // Single centered column
+		} else if (productCount === 2) {
+			return "grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto px-4"; // Two columns max
+		} else {
+			return "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto px-4"; // Three columns max
+		}
+	};
+
 	return (
 		<div className="w-full py-10">
-			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto px-4">
+			<div className={getGridClasses()}>
 				{products.map((product, index) => (
 					<PlanCardPreview
 						key={product.id || index}
