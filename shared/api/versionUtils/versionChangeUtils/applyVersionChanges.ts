@@ -94,6 +94,7 @@ export function applyResponseVersionChanges<T = any, TData = any>({
 				continue;
 			}
 
+			console.log(`Applying changes ${change.description}`);
 			// Apply the response transformation (backward)
 			transformedData = change.transformResponse({
 				input: transformedData,

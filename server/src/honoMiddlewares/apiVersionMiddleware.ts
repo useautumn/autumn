@@ -1,6 +1,7 @@
 import {
 	ApiVersionClass,
 	ErrCode,
+	InternalError,
 	legacyToSemVer,
 	parseVersion,
 } from "@autumn/shared";
@@ -31,7 +32,7 @@ export const apiVersionMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const versionHeader = c.req.header("x-api-version");
 	const org = ctx.org;
 
-	let finalVersion: ApiVersionClass;
+	let finalVersion: ApiVersionClass | undefined;
 
 	// 1. Check header first
 	if (versionHeader) {
@@ -39,7 +40,7 @@ export const apiVersionMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 		if (!parsedVersion) {
 			throw new RecaseError({
-				message: `"${versionHeader}" is not a valid API version. Use CalVer (e.g., "2025-04-17") or SemVer (e.g., "1.1.0")`,
+				message: `"${versionHeader}" is not a valid API version`,
 				code: ErrCode.InvalidApiVersion,
 				statusCode: 400,
 			});
@@ -62,13 +63,18 @@ export const apiVersionMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		}
 	}
 
-	// 4. Fallback
+	// 4. Fallback to V0_2 (version 1.0 / 0.2)
 	if (!finalVersion) {
 		const legacyVersion = org?.api_version || org?.config?.api_version || 1.0;
 		const defaultVersion = legacyToSemVer({ legacyVersion });
-		if (defaultVersion) {
-			finalVersion = new ApiVersionClass(defaultVersion);
+
+		if (!defaultVersion) {
+			throw new InternalError({
+				message: "Failed to initialize API version - this should never happen",
+			});
 		}
+
+		finalVersion = new ApiVersionClass(defaultVersion);
 	}
 
 	// Store in context - now you can do ctx.apiVersion.gte(ApiVersion.V1_1)

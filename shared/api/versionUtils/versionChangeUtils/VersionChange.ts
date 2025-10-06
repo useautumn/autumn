@@ -152,3 +152,145 @@ export type VersionChangeConstructor = new () => VersionChange<
 	ZodType,
 	ZodType
 >;
+
+/**
+ * Configuration interface for version changes
+ * Use this with defineVersionChange() for full autocomplete and type safety
+ */
+export interface VersionChangeConfig<
+	TNewSchema extends ZodType = ZodType,
+	TOldSchema extends ZodType = ZodType,
+	TDataSchema extends ZodType = ZodType,
+> {
+	/** The version this change was introduced in */
+	version: ApiVersion;
+
+	/** Human-readable description of the change */
+	description: string;
+
+	/** Resources affected by this change */
+	affectedResources: AffectedResource[];
+
+	/** Zod schema for the newer version format */
+	newSchema: TNewSchema;
+
+	/** Zod schema for the older version format */
+	oldSchema: TOldSchema;
+
+	/** Optional Zod schema for additional context data */
+	dataSchema?: TDataSchema;
+
+	/**
+	 * Whether this change affects request transformations
+	 * @default true
+	 */
+	affectsRequest?: boolean;
+
+	/**
+	 * Whether this change affects response transformations
+	 * @default true
+	 */
+	affectsResponse?: boolean;
+
+	/**
+	 * Whether this change has side effects beyond transformation
+	 * If true, transforms become no-ops and you must handle logic elsewhere
+	 * @default false
+	 */
+	hasSideEffects?: boolean;
+
+	/**
+	 * Transform request data forward (old → new format)
+	 * Applied when user sends old version, we transform to latest
+	 */
+	transformRequest?: (params: {
+		input: z.infer<TOldSchema>;
+		data?: TDataSchema extends ZodType ? z.infer<TDataSchema> : never;
+	}) => z.infer<TNewSchema>;
+
+	/**
+	 * Transform response data backward (new → old format)
+	 * Applied when user expects old version, we transform from latest
+	 *
+	 * Note: Output is validated with safeParse() - validation failures return
+	 * unvalidated data to ensure graceful degradation. Successful validation
+	 * strips extra fields. For compile-time excess property errors, use schema.strict().
+	 */
+	transformResponse?: (params: {
+		input: z.infer<TNewSchema>;
+		data?: TDataSchema extends ZodType ? z.infer<TDataSchema> : never;
+	}) => z.infer<TOldSchema>;
+}
+
+/**
+ * Helper to define version changes with full autocomplete and type safety
+ *
+ * @example
+ * export const V1_2_FeaturesArrayToObject = defineVersionChange({
+ *   version: ApiVersion.V1_2,
+ *   description: "Features: object → array",
+ *   affectedResources: [AffectedResource.Customer],
+ *   newSchema: V1_2_FeaturesSchema,
+ *   oldSchema: V1_1_FeaturesSchema,
+ *   affectsRequest: false,
+ *   affectsResponse: true,
+ *   hasSideEffects: true, // ← Full autocomplete for all options!
+ *   transformResponse: ({ input }) => Object.values(input),
+ * });
+ */
+export function defineVersionChange<
+	TNewSchema extends ZodType,
+	TOldSchema extends ZodType,
+	TDataSchema extends ZodType = ZodType,
+>(
+	config: VersionChangeConfig<TNewSchema, TOldSchema, TDataSchema>,
+): VersionChangeConstructor {
+	return class extends VersionChange<TNewSchema, TOldSchema, TDataSchema> {
+		readonly version = config.version;
+		readonly description = config.description;
+		readonly affectedResources = config.affectedResources;
+		readonly newSchema = config.newSchema;
+		readonly oldSchema = config.oldSchema;
+		readonly dataSchema = config.dataSchema;
+		readonly affectsRequest = config.affectsRequest ?? true;
+		readonly affectsResponse = config.affectsResponse ?? true;
+		readonly hasSideEffects = config.hasSideEffects ?? false;
+
+		transformRequest(params: {
+			input: z.infer<TOldSchema>;
+			data?: TDataSchema extends ZodType ? z.infer<TDataSchema> : never;
+		}): z.infer<TNewSchema> {
+			if (config.transformRequest) {
+				const result = config.transformRequest(params);
+				// Validate with safeParse - gracefully handles failures without throwing
+				const parsed = this.newSchema.safeParse(result);
+				if (!parsed.success) {
+					// Return unvalidated result to avoid breaking the request
+					return result as z.infer<TNewSchema>;
+				}
+				return parsed.data;
+			}
+			return super.transformRequest(params);
+		}
+
+		transformResponse(params: {
+			input: z.infer<TNewSchema>;
+			data?: TDataSchema extends ZodType ? z.infer<TDataSchema> : never;
+		}): z.infer<TOldSchema> {
+			if (config.transformResponse) {
+				const result = config.transformResponse(
+					params,
+				) satisfies z.infer<TOldSchema>;
+				// Validate with safeParse - gracefully handles failures without throwing
+				// Note: TypeScript allows excess properties in spreads. Use .strict() for compile-time errors.
+				const parsed = this.oldSchema.safeParse(result);
+				if (!parsed.success) {
+					// Return unvalidated result to avoid breaking the request
+					return result as z.infer<TOldSchema>;
+				}
+				return parsed.data;
+			}
+			return super.transformResponse(params);
+		}
+	};
+}

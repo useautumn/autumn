@@ -1,98 +1,33 @@
+import type {
+	FullCusEntWithFullCusProduct,
+	FullCustomer,
+} from "@autumn/shared";
 import {
-	AffectedResource,
 	type ApiCusFeatureBreakdown,
 	ApiCusFeatureBreakdownSchema,
 	ApiCusFeatureSchema,
-	type ApiCusRollover,
-	applyResponseVersionChanges,
-	type EntInterval,
-	type Feature,
-	FeatureType,
-	getCusEntBalance,
-} from "@autumn/shared";
-import type { FullCustomer } from "@shared/models/cusModels/fullCusModel.js";
-import type { FullCusEntWithFullCusProduct } from "@shared/models/cusProductModels/cusEntModels/cusEntWithProduct.js";
-import {
 	cusEntToBalance,
 	cusEntToIncludedUsage,
 	cusEntToKey,
 	cusEntToUsageLimit,
-} from "@shared/utils/cusEntUtils/convertCusEntUtils.js";
-import { toApiFeature } from "@shared/utils/featureUtils.js";
-import { notNullish, sumValues } from "@shared/utils/utils.js";
+	type Feature,
+	FeatureType,
+	getCusEntBalance,
+	notNullish,
+	sumValues,
+	toApiFeature,
+} from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { getUnlimitedAndUsageAllowed } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { getCusFeatureType } from "@/internal/features/featureUtils.js";
-import { getRolloverFields } from "../../cusFeatureResponseUtils/getCusBalances.js";
 import {
+	cusEntsToInterval,
+	cusEntsToNextResetAt,
+	cusEntsToRollovers,
 	getBooleanApiCusFeature,
 	getUnlimitedApiCusFeature,
 } from "./apiCusFeatureUtils.js";
-
-export const cusEntsToInterval = ({
-	cusEnts,
-}: {
-	cusEnts: FullCusEntWithFullCusProduct[];
-}): {
-	interval: EntInterval | "multiple" | null;
-	interval_count: number;
-} => {
-	const cusEntKeys = cusEnts.map((cusEnt) => cusEntToKey({ cusEnt }));
-	const uniqueCusEntKeys = [...new Set(cusEntKeys)];
-	if (uniqueCusEntKeys.length === 1) {
-		return {
-			interval: cusEnts[0].entitlement.interval || null,
-			interval_count: cusEnts[0].entitlement.interval_count,
-		};
-	}
-
-	return { interval: "multiple", interval_count: 0 };
-};
-
-const cusEntsToNextResetAt = ({
-	cusEnts,
-}: {
-	cusEnts: FullCusEntWithFullCusProduct[];
-}) => {
-	const result = cusEnts.reduce((acc, curr) => {
-		if (curr.next_reset_at && curr.next_reset_at < acc) {
-			return curr.next_reset_at;
-		}
-		return acc;
-	}, Infinity);
-
-	if (result === Infinity) return null;
-
-	return result;
-};
-
-const cusEntsToRollovers = ({
-	cusEnts,
-	entityId,
-}: {
-	cusEnts: FullCusEntWithFullCusProduct[];
-	entityId?: string;
-}): ApiCusRollover[] | undefined => {
-	// If all cus ents no rollover, return undefined
-
-	if (cusEnts.every((cusEnt) => !cusEnt.entitlement.rollover)) {
-		return undefined;
-	}
-
-	return cusEnts
-		.map((cusEnt) => {
-			const rolloverFields = getRolloverFields({ cusEnt, entityId });
-			if (rolloverFields)
-				return rolloverFields.rollovers.map((rollover) => ({
-					balance: rollover.balance,
-					expires_at: rollover.expires_at || 0,
-				}));
-			return [];
-		})
-		.filter(notNullish)
-		.flat();
-};
 
 const cusEntsToBreakdown = ({
 	ctx,
@@ -163,12 +98,8 @@ export const getApiCusFeature = ({
 	});
 
 	// 2. If feature is unlimited
-	if (unlimited || usageAllowed) {
-		return getUnlimitedApiCusFeature({
-			cusEnts: cusEnts,
-			unlimited,
-			usageAllowed,
-		});
+	if (unlimited) {
+		return getUnlimitedApiCusFeature({ cusEnts: cusEnts });
 	}
 
 	const totalBalanceWithRollovers = sumValues(
@@ -236,7 +167,7 @@ export const getApiCusFeature = ({
 			totalUsageLimit === totalIncludedUsage ? undefined : totalUsageLimit,
 		next_reset_at: nextResetAt,
 		unlimited: false,
-		overage_allowed: false,
+		overage_allowed: usageAllowed,
 		interval,
 		interval_count,
 		rollovers,
@@ -251,9 +182,6 @@ export const getApiCusFeature = ({
 
 	if (error) throw error;
 
-	return applyResponseVersionChanges({
-		input: apiCusFeature,
-		targetVersion: ctx.apiVersion,
-		resource: AffectedResource.CusFeature,
-	});
+	// Return in latest format - version transformation happens at Customer level
+	return apiCusFeature;
 };

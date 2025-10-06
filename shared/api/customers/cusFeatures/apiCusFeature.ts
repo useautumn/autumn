@@ -7,23 +7,6 @@ export const ApiCusRolloverSchema = z.object({
 	expires_at: z.number(),
 });
 
-// OLD CUS FEATURE RESPONSE
-
-// Version 2 of cus feature response
-export const CusEntResponseSchema = z.object({
-	feature_id: z.string(),
-	interval: z.enum(EntInterval).nullish(),
-	interval_count: z.number().nullish(),
-	unlimited: z.boolean().nullish(),
-	balance: z.number().nullish(), //
-	usage: z.number().nullish(),
-	included_usage: z.number().nullish(),
-	next_reset_at: z.number().nullish(),
-	overage_allowed: z.boolean().nullish(),
-	usage_limit: z.number().nullish(),
-	rollovers: z.array(ApiCusRolloverSchema).nullish(),
-});
-
 // Version 3 of cus feature response
 export const ApiCusFeatureBreakdownSchema = z.object({
 	interval: z.enum(EntInterval),
@@ -32,6 +15,8 @@ export const ApiCusFeatureBreakdownSchema = z.object({
 	usage: z.number().nullish(),
 	included_usage: z.number().nullish(),
 	next_reset_at: z.number().nullish(),
+	usage_limit: z.number().nullish(),
+	rollovers: z.array(ApiCusRolloverSchema).nullish(),
 });
 
 export const CoreCusFeatureSchema = z.object({
@@ -44,18 +29,7 @@ export const CoreCusFeatureSchema = z.object({
 	next_reset_at: z.number().nullish(),
 	overage_allowed: z.boolean().nullish(),
 
-	breakdown: z
-		.array(
-			z.object({
-				interval: z.enum(EntInterval),
-				interval_count: z.number().nullish(),
-				balance: z.number().nullish(),
-				usage: z.number().nullish(),
-				included_usage: z.number().nullish(),
-				next_reset_at: z.number().nullish(),
-			}),
-		)
-		.nullish(),
+	breakdown: z.array(ApiCusFeatureBreakdownSchema).nullish(),
 	credit_schema: z
 		.array(
 			z.object({
@@ -77,7 +51,6 @@ export const ApiCusFeatureSchema = z
 	})
 	.extend(CoreCusFeatureSchema.shape);
 
-export type CusEntResponse = z.infer<typeof CusEntResponseSchema>;
 export type ApiCusFeature = z.infer<typeof ApiCusFeatureSchema>;
 export type ApiCusRollover = z.infer<typeof ApiCusRolloverSchema>;
 export type ApiCusFeatureBreakdown = z.infer<

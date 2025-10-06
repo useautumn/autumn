@@ -56,28 +56,6 @@ export const handleGetCustomerV2 = createRoute({
 		});
 
 		return c.json(customer);
-
-		// // Use getApiCustomer - it handles all versioning internally!
-		// // - Calls getApiCusProduct for each product (builds latest + applies transforms)
-		// // - Calls getApiCusFeature for features (field mapping + object↔array)
-		// // - Applies customer-level changes (splits response for V1_0)
-		// const customerResponse = await getApiCustomer({
-		// 	customer,
-		// 	cusProducts: customer.customer_products,
-		// 	balances,
-		// 	features,
-		// 	apiVersion: ctx.apiVersion.semver,
-		// 	invoices,
-		// 	trialsUsed,
-		// 	rewards,
-		// 	entities,
-		// 	referrals,
-		// 	upcomingInvoice,
-		// 	paymentMethod,
-		// 	withAutumnId: with_autumn_id === "true",
-		// });
-
-		return c.json(customerResponse);
 	},
 });
 

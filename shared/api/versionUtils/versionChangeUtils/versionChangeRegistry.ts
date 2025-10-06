@@ -1,16 +1,13 @@
-import { ApiVersion } from "../ApiVersion.js";
-import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass.js";
-import type { VersionChangeConstructor } from "./VersionChange.js";
-
+import { V1_1_LegacyExpandInvoices } from "@api/customers/changes/V1_1_LegacyExpandInvoices.js";
 // Import customer changes
 import { V1_1_MergedResponse } from "@api/customers/changes/V1_1_MergedResponse.js";
-import { V1_1_LegacyExpandInvoices } from "@api/customers/changes/V1_1_LegacyExpandInvoices.js";
-
 // Import customer feature changes
-import { V1_2_FeaturesArrayToObject } from "@api/customers/cusFeatures/changes/V1_2_FeaturesArrayToObject.js";
-
+import { V1_2_FeaturesArrayToObject } from "@api/customers/changes/V1_2_FeaturesArrayToObject.js";
 // Import customer product changes
 import { V0_2_ProductItems } from "@api/customers/cusProducts/changes/V0_2_ProductItems.js";
+import { ApiVersion } from "../ApiVersion.js";
+import type { VersionChangeConstructor } from "./VersionChange.js";
+import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass.js";
 
 /**
  * V1_4 (2025-06-01) - Beta Features

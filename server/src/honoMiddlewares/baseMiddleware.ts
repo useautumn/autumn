@@ -1,4 +1,9 @@
-import { AppEnv, AuthType } from "@autumn/shared";
+import {
+	ApiVersionClass,
+	AppEnv,
+	AuthType,
+	LATEST_VERSION,
+} from "@autumn/shared";
 import type { Context, Next } from "hono";
 import { db } from "@/db/initDrizzle.js";
 import { ClickHouseManager } from "@/external/clickhouse/ClickHouseManager.js";
@@ -43,7 +48,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		id,
 		timestamp,
 		isPublic: false,
-		apiVersion: "0.0.0",
+		apiVersion: new ApiVersionClass(LATEST_VERSION),
 
 		// Auth (will be populated by auth middleware)
 		org: undefined as any,

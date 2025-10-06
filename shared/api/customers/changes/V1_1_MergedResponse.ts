@@ -1,6 +1,9 @@
 import { ApiCustomerSchema } from "@api/customers/apiCustomer.js";
 import { APICusProductSchema } from "@api/customers/components/apiCusProduct.js";
-import { ApiCusFeatureSchema } from "@api/customers/cusFeatures/apiCusFeature.js";
+import {
+	type ApiCusFeature,
+	ApiCusFeatureSchema,
+} from "@api/customers/cusFeatures/apiCusFeature.js";
 import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
 import {
 	AffectedResource,
@@ -32,6 +35,9 @@ const V1_0_CustomerResponseSchema = z.object({
 	invoices: z.array(z.any()),
 	trials_used: z.array(z.any()).optional(),
 });
+
+// Feature changes
+const toV1_0_cusFeature = ({ cusFeature }: { cusFeature: ApiCusFeature }) => {};
 
 export class V1_1_MergedResponse extends VersionChange<
 	typeof V1_1_CustomerResponseSchema,
