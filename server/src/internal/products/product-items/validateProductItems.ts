@@ -102,6 +102,15 @@ const validateProductItem = ({
 		if (nullish(item.included_usage)) {
 			item.included_usage = 0;
 		}
+
+		// 4a. Check if included usage is negative
+		if (typeof item.included_usage === "number" && item.included_usage < 0) {
+			throw new RecaseError({
+				message: `Included usage must be 0 or greater`,
+				code: ErrCode.InvalidInputs,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
 	}
 
 	// 5. If it's a price, can't have day, minute or hour interval
@@ -265,6 +274,26 @@ export const validateProductItems = ({
 				});
 			}
 		}
+	}
+
+	// 6. Can't have both weekly and monthly price items in the same product
+	const hasWeeklyPrice = newItems.some(
+		(item) =>
+			(isPriceItem(item) || isFeaturePriceItem(item)) &&
+			item.interval === ProductItemInterval.Week
+	);
+	const hasMonthlyPrice = newItems.some(
+		(item) =>
+			(isPriceItem(item) || isFeaturePriceItem(item)) &&
+			item.interval === ProductItemInterval.Month
+	);
+
+	if (hasWeeklyPrice && hasMonthlyPrice) {
+		throw new RecaseError({
+			message: `Can't have both weekly and monthly price items in the same product`,
+			code: ErrCode.InvalidInputs,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
 	}
 
 	return { allFeatures, newFeatures };
