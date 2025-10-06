@@ -1,10 +1,14 @@
-import RecaseError from "@/utils/errorUtils.js";
+import {
+	CreateFeatureSchema,
+	ErrCode,
+	ProductAlreadyExistsError,
+} from "@autumn/shared";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { ProductService } from "@/internal/products/ProductService.js";
-import { routeHandler } from "@/utils/routerUtils.js";
-import { CreateFeatureSchema, ErrCode } from "@autumn/shared";
 import { initNewFeature } from "@/internal/features/internalFeatureRouter.js";
+import { ProductService } from "@/internal/products/ProductService.js";
 import { copyProduct } from "@/internal/products/productUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { routeHandler } from "@/utils/routerUtils.js";
 
 export const handleCopyProduct = async (req: any, res: any) =>
 	routeHandler({
@@ -12,7 +16,7 @@ export const handleCopyProduct = async (req: any, res: any) =>
 		res,
 		action: "Copy Product",
 		handler: async (req, res) => {
-			let { db, logtail: logger } = req;
+			const { db, logtail: logger } = req;
 
 			const { productId: fromProductId } = req.params;
 			const orgId = req.orgId;
@@ -27,7 +31,7 @@ export const handleCopyProduct = async (req: any, res: any) =>
 				});
 			}
 
-			if (fromEnv == toEnv && fromProductId == toId) {
+			if (fromEnv === toEnv && fromProductId === toId) {
 				throw new RecaseError({
 					message: "Product ID already exists",
 					code: ErrCode.InvalidRequest,
@@ -44,10 +48,9 @@ export const handleCopyProduct = async (req: any, res: any) =>
 			});
 
 			if (toProduct) {
-				throw new RecaseError({
-					message: "Product already exists in live... can't copy again",
-					code: ErrCode.ProductAlreadyExists,
-					statusCode: 400,
+				throw new ProductAlreadyExistsError({
+					productId: toId,
+					message: `Product ${toId} already exists in ${toEnv}`,
 				});
 			}
 
@@ -71,9 +74,9 @@ export const handleCopyProduct = async (req: any, res: any) =>
 				}),
 			]);
 
-			if (fromEnv != toEnv) {
+			if (fromEnv !== toEnv) {
 				for (const fromFeature of fromFeatures) {
-					const toFeature = toFeatures.find((f) => f.id == fromFeature.id);
+					const toFeature = toFeatures.find((f) => f.id === fromFeature.id);
 
 					if (toFeature && fromFeature.type !== toFeature.type) {
 						throw new RecaseError({
@@ -84,7 +87,7 @@ export const handleCopyProduct = async (req: any, res: any) =>
 					}
 
 					if (!toFeature) {
-						let res = await FeatureService.insert({
+						const res = await FeatureService.insert({
 							db,
 							data: initNewFeature({
 								data: CreateFeatureSchema.parse(fromFeature),

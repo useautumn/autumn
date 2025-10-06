@@ -35,6 +35,10 @@ export const subItemToFixedPrice = ({
 			interval,
 			interval_count: intervalCount,
 			stripe_price_id: price.id,
+
+			stripe_product_id: undefined,
+			feature_id: undefined,
+			internal_feature_id: undefined,
 		},
 	});
 };

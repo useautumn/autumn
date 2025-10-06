@@ -268,7 +268,6 @@ export const createFullCusProduct = async ({
 	db,
 	attachParams,
 	startsAt,
-	// subscriptionId,
 	nextResetAt,
 	disableFreeTrial = false,
 	productOptions,
@@ -278,7 +277,6 @@ export const createFullCusProduct = async ({
 	createdAt = null,
 	subscriptionIds = [],
 	subscriptionScheduleIds = [],
-	// keepResetIntervals = false,
 	anchorToUnix,
 	carryExistingUsages = false,
 	carryOverTrial = false,
@@ -290,7 +288,6 @@ export const createFullCusProduct = async ({
 	db: DrizzleCli;
 	attachParams: InsertCusProductParams;
 	startsAt?: number;
-	// subscriptionId?: string;
 	nextResetAt?: number;
 	billLaterOnly?: boolean;
 	disableFreeTrial?: boolean;

@@ -1,10 +1,10 @@
 import {
+	type APIInvoice,
+	APIInvoiceItemSchema,
 	type Customer,
 	type Feature,
 	type Invoice,
 	type InvoiceItem,
-	InvoiceItemResponseSchema,
-	type InvoiceResponse,
 	type InvoiceStatus,
 	invoices,
 	type Organization,
@@ -41,7 +41,7 @@ export const processInvoice = ({
 						(f) => f.internal_id === i.internal_feature_id,
 					);
 
-					return InvoiceItemResponseSchema.parse({
+					return APIInvoiceItemSchema.parse({
 						description: i.description,
 						period_start: i.period_start,
 						period_end: i.period_end,
@@ -50,7 +50,7 @@ export const processInvoice = ({
 					});
 				})
 			: undefined,
-	} as InvoiceResponse;
+	} as APIInvoice;
 };
 
 export class InvoiceService {

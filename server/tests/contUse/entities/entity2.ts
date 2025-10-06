@@ -48,7 +48,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing entities, prorate n
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
-	let curUnix = new Date().getTime();
+	let curUnix = Date.now();
 
 	before(async function () {
 		await setupBefore(this);

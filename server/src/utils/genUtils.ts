@@ -1,7 +1,7 @@
+import { ErrCode } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
 import { format } from "date-fns";
 import KSUID from "ksuid";
-import { ErrCode } from "@/errors/errCodes.js";
 import RecaseError from "./errorUtils.js";
 
 export const generateId = (prefix: string) => {
@@ -99,7 +99,7 @@ export const validateId = (type: string, id: string) => {
 	if (!id.match(/^[a-zA-Z0-9_-]+$/)) {
 		throw new RecaseError({
 			message: `${type} ID can only contain alphanumeric characters, underscores, and hyphens`,
-			code: ErrCode.InvalidId,
+			code: ErrCode.InvalidInputs,
 			statusCode: 400,
 		});
 	}

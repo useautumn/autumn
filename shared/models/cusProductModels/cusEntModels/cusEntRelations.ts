@@ -1,10 +1,9 @@
 import { relations } from "drizzle-orm";
-
-import { entitlements } from "../../productModels/entModels/entTable.js";
 import { customers } from "../../cusModels/cusTable.js";
 import { features } from "../../featureModels/featureTable.js";
-import { customerEntitlements } from "./cusEntTable.js";
+import { entitlements } from "../../productModels/entModels/entTable.js";
 import { customerProducts } from "../cusProductTable.js";
+import { customerEntitlements } from "./cusEntTable.js";
 import { replaceables } from "./replaceableTable.js";
 import { rollovers } from "./rolloverModels/rolloverTable.js";
 

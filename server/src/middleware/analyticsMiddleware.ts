@@ -1,5 +1,5 @@
 const handleResFinish = (req: any, res: any) => {
-	let skipUrls = ["/v1/customers/all/search"];
+	const skipUrls = ["/v1/customers/all/search"];
 
 	try {
 		if (skipUrls.includes(req.originalUrl)) {
@@ -40,7 +40,7 @@ const parseCustomerIdFromUrl = (url: string): string | undefined => {
 };
 
 export const analyticsMiddleware = async (req: any, res: any, next: any) => {
-	let reqContext = {
+	const reqContext = {
 		org_id: req.org?.id,
 		org_slug: req.org?.slug,
 		env: req.env,
@@ -67,7 +67,7 @@ export const analyticsMiddleware = async (req: any, res: any, next: any) => {
 	});
 
 	// Store JSON response
-	let originalJson = res.json;
+	const originalJson = res.json;
 
 	res.json = function (body: any) {
 		res.locals.responseBody = body;

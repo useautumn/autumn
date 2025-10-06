@@ -124,19 +124,6 @@ export const DiscountConfig = ({
 				</div>
 			</div>
 
-			{/* {config.duration_type !== CouponDurationType.OneOff &&
-        reward.type === RewardType.FixedDiscount && (
-          <div className="w-full ml-1 flex items-center gap-2">
-            <Checkbox
-              checked={config.should_rollover}
-              onCheckedChange={(checked) =>
-                setConfig("should_rollover", checked === true)
-              }
-            />
-            <p className="text-sm text-t3">Rollover credits to next invoice</p>
-          </div>
-        )} */}
-
 			<div className="">
 				{/* <p className="text-t2 mb-2 text-t3">Products</p> */}
 				<FieldLabel>Products</FieldLabel>
@@ -179,6 +166,24 @@ const ProductPriceSelector = ({
 		setConfig("price_ids", newPriceIds);
 	};
 
+	// Handle toggling "Apply to all products"
+	const handleApplyToAllToggle = () => {
+		const newApplyToAll = !config.apply_to_all;
+		// If enabling "Apply to all", clear the price_ids
+		if (newApplyToAll) {
+			setReward({
+				...reward,
+				discount_config: {
+					...config,
+					apply_to_all: newApplyToAll,
+					price_ids: [],
+				},
+			});
+		} else {
+			setConfig("apply_to_all", newApplyToAll);
+		}
+	};
+
 	if (!products || products.length === 0) {
 		return <p className="text-sm text-t3">No products available</p>;
 	}
@@ -192,48 +197,54 @@ const ProductPriceSelector = ({
 					aria-expanded={open}
 					className="w-full min-h-9 flex flex-wrap h-fit py-2 justify-start items-center gap-2 relative hover:bg-zinc-50"
 				>
-					{config.apply_to_all
-						? "All Products"
-						: config.price_ids?.length === 0
-							? "Select Products"
-							: config.price_ids?.map((priceId) => {
-									const item = products
-										.find((p: any) =>
-											p.items.find((i: any) => i.price_id === priceId),
-										)
-										?.items.find((i: any) => i.price_id === priceId);
+					{config.apply_to_all ? (
+						<span className="text-t2">All Products</span>
+					) : config.price_ids?.length === 0 ? (
+						<span className="text-t3">Select products or apply to all</span>
+					) : (
+						config.price_ids?.map((priceId) => {
+							const item = products
+								.find((p: any) =>
+									p.items.find((i: any) => i.price_id === priceId),
+								)
+								?.items.find((i: any) => i.price_id === priceId);
 
-									const text = item
-										? formatProductItemText({
-												item,
-												org,
-												features,
-											})
-										: "Unknown Price";
-									return (
-										<div
-											key={priceId}
-											className="py-1 px-3 text-xs text-t3 border-zinc-300 bg-zinc-100 rounded-full flex items-center gap-2 h-fit max-w-[200px] min-w-0"
-										>
-											<p className="truncate flex-1 min-w-0">{text}</p>
-											<Button
-												variant="ghost"
-												size="icon"
-												onClick={(e) => {
-													e.stopPropagation();
-													handlePriceToggle(priceId);
-												}}
-												className="bg-transparent hover:bg-transparent p-0 w-5 h-5"
-											>
-												<X size={12} className="text-t3" />
-											</Button>
-										</div>
-									);
-								})}
+							const text = item
+								? formatProductItemText({
+										item,
+										org,
+										features,
+									})
+								: "Unknown Price";
+							return (
+								<div
+									key={priceId}
+									className="py-1 px-3 text-xs text-t3 border-zinc-300 bg-zinc-100 rounded-full flex items-center gap-2 h-fit max-w-[200px] min-w-0"
+								>
+									<p className="truncate flex-1 min-w-0">{text}</p>
+									<Button
+										variant="ghost"
+										size="icon"
+										onClick={(e) => {
+											e.stopPropagation();
+											handlePriceToggle(priceId);
+										}}
+										className="bg-transparent hover:bg-transparent p-0 w-5 h-5"
+									>
+										<X size={12} className="text-t3" />
+									</Button>
+								</div>
+							);
+						})
+					)}
 					<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 absolute right-2" />
 				</Button>
 			</PopoverTrigger>
-			<PopoverContent className="w-[400px] p-0" align="start">
+			<PopoverContent
+				className="p-0"
+				align="start"
+				style={{ width: "var(--radix-popover-trigger-width)" }}
+			>
 				<Command>
 					<CommandInput placeholder="Search prices..." className="h-9" />
 					<CommandList className="max-h-[300px] overflow-y-auto">
@@ -241,9 +252,7 @@ const ProductPriceSelector = ({
 							<CommandEmpty>No prices found.</CommandEmpty>
 							<CommandGroup>
 								<CommandItem
-									onSelect={() => {
-										setConfig("apply_to_all", !config.apply_to_all);
-									}}
+									onSelect={handleApplyToAllToggle}
 									className="cursor-pointer"
 								>
 									<p>Apply to all products</p>
@@ -253,19 +262,27 @@ const ProductPriceSelector = ({
 								</CommandItem>
 							</CommandGroup>
 							{!config.apply_to_all &&
-								products.map((product: any) => (
-									<CommandGroup key={product.id} heading={product.name}>
-										{product.items.length > 0 ? (
-											product.items
-												?.filter((item: ProductItem) => {
-													return !isFeatureItem(item);
-												})
-												.map((item: any) => (
+								products
+									.filter((product: any) => {
+										// Filter out products that have no non-feature items
+										const nonFeatureItems = product.items?.filter(
+											(item: ProductItem) => !isFeatureItem(item),
+										);
+										return nonFeatureItems && nonFeatureItems.length > 0;
+									})
+									.map((product: any) => {
+										const nonFeatureItems = product.items.filter(
+											(item: ProductItem) => !isFeatureItem(item),
+										);
+
+										return (
+											<CommandGroup key={product.id} heading={product.name}>
+												{nonFeatureItems.map((item: any) => (
 													<CommandItem
 														key={item.price_id}
 														value={item.price_id}
 														onSelect={() => handlePriceToggle(item.price_id)}
-														className="cursor-pointer overflow-x-hidden max-w-[380px]"
+														className="cursor-pointer overflow-x-hidden"
 													>
 														<span className="truncate overflow-x-hidden">
 															{formatProductItemText({
@@ -279,14 +296,10 @@ const ProductPriceSelector = ({
 															<Check size={12} className="text-t3" />
 														)}
 													</CommandItem>
-												))
-										) : (
-											<CommandItem disabled>
-												<p className="text-sm text-t3">No prices available</p>
-											</CommandItem>
-										)}
-									</CommandGroup>
-								))}
+												))}
+											</CommandGroup>
+										);
+									})}
 						</ScrollArea>
 					</CommandList>
 				</Command>
