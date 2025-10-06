@@ -77,7 +77,7 @@ export class CusService {
 
 				const result = await db.execute(query);
 
-				if (!result || result.length == 0) {
+				if (!result || result.length === 0) {
 					if (allowNotFound) {
 						// @ts-expect-error
 						return null as FullCustomer;

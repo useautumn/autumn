@@ -1,4 +1,4 @@
-import { APIProductItemSchema } from "@api/products/apiProductItem.js";
+import { ApiProductItemSchema } from "@api/products/apiProductItem.js";
 import { z } from "zod/v4";
 
 export const APICusProductSchema = z.object({
@@ -19,7 +19,7 @@ export const APICusProductSchema = z.object({
 
 	entity_id: z.string().nullish(),
 
-	items: z.array(APIProductItemSchema).nullish(),
+	items: z.array(ApiProductItemSchema).nullish(),
 
 	quantity: z.number().optional(),
 });

@@ -1,38 +1,27 @@
 import {
 	AllowanceType,
-	AppEnv,
-	BillingType,
+	type AppEnv,
 	CusProductStatus,
-	Customer,
-	EntInterval,
-	entIntervalsDifferent,
-	entIntervalToValue,
-	Entitlement,
-	EntitlementWithFeature,
-	Entity,
-	Feature,
-	FeatureOptions,
+	type Customer,
+	type EntitlementWithFeature,
+	type Entity,
+	type Feature,
 	FeatureType,
-	FullCusProduct,
-	FullCustomerEntitlement,
-	FullCustomerPrice,
-	Organization,
-	Price,
-	UsagePriceConfig,
+	type FullCusProduct,
+	type FullCustomerEntitlement,
+	type FullCustomerPrice,
+	getStartingBalance,
+	type Organization,
 } from "@autumn/shared";
-import {
-	getBillingType,
-	getEntOptions,
-} from "@/internal/products/prices/priceUtils.js";
+import { logger } from "better-auth";
+import { Decimal } from "decimal.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
+import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
-
 import {
 	getEntityBalance,
 	getSummedEntityBalances,
 } from "./entBalanceUtils.js";
-import { Decimal } from "decimal.js";
-import { logger } from "better-auth";
 
 export const getCusEntMasterBalance = ({
 	cusEnt,
@@ -41,18 +30,18 @@ export const getCusEntMasterBalance = ({
 	cusEnt: FullCustomerEntitlement;
 	entities: Entity[];
 }) => {
-	let ent = cusEnt.entitlement;
-	let feature = ent.feature;
+	const ent = cusEnt.entitlement;
+	const feature = ent.feature;
 
 	if (notNullish(ent.entity_feature_id)) {
-		let totalBalance = Object.values(cusEnt.entities || {}).reduce(
+		const totalBalance = Object.values(cusEnt.entities || {}).reduce(
 			(acc, curr) => {
 				return acc + curr.balance;
 			},
 			0,
 		);
 
-		let totalAdjustment = Object.values(cusEnt.entities || {}).reduce(
+		const totalAdjustment = Object.values(cusEnt.entities || {}).reduce(
 			(acc, curr) => {
 				return acc + curr.adjustment;
 			},
@@ -68,7 +57,7 @@ export const getCusEntMasterBalance = ({
 
 	// Get unused count
 
-	let unusedCount =
+	const unusedCount =
 		entities &&
 		entities.filter(
 			(entity) =>
@@ -90,9 +79,9 @@ export const getCusEntBalance = ({
 	cusEnt: FullCustomerEntitlement;
 	entityId?: string | null;
 }) => {
-	let entitlement = cusEnt.entitlement;
-	let ent = cusEnt.entitlement;
-	let feature = ent.feature;
+	const entitlement = cusEnt.entitlement;
+	const ent = cusEnt.entitlement;
+	const feature = ent.feature;
 
 	if (notNullish(entitlement.entity_feature_id)) {
 		if (nullish(entityId)) {
@@ -125,10 +114,10 @@ export const getRelatedCusPrice = (
 	cusPrices: FullCustomerPrice[],
 ) => {
 	return cusPrices.find((cusPrice) => {
-		let productMatch =
+		const productMatch =
 			cusPrice.customer_product_id == cusEnt.customer_product_id;
 
-		let entMatch = cusPrice.price.entitlement_id == cusEnt.entitlement.id;
+		const entMatch = cusPrice.price.entitlement_id == cusEnt.entitlement.id;
 
 		return productMatch && entMatch;
 	});
@@ -176,44 +165,44 @@ export const updateCusEntInStripe = async ({
 };
 
 // Get balance
-export const getResetBalance = ({
-	entitlement,
-	options,
-	relatedPrice,
-	productQuantity,
-}: {
-	entitlement: Entitlement;
-	options: FeatureOptions | undefined | null;
-	relatedPrice?: Price | null;
-	productQuantity?: number;
-}) => {
-	// 1. No related price
-	if (!relatedPrice) {
-		return (entitlement.allowance || 0) * (productQuantity || 1);
-	}
+// export const getResetBalance = ({
+// 	entitlement,
+// 	options,
+// 	relatedPrice,
+// 	productQuantity,
+// }: {
+// 	entitlement: Entitlement;
+// 	options: FeatureOptions | undefined | null;
+// 	relatedPrice?: Price | null;
+// 	productQuantity?: number;
+// }) => {
+// 	// 1. No related price
+// 	if (!relatedPrice) {
+// 		return (entitlement.allowance || 0) * (productQuantity || 1);
+// 	}
 
-	let config = relatedPrice.config as UsagePriceConfig;
+// 	let config = relatedPrice.config as UsagePriceConfig;
 
-	let billingType = getBillingType(config);
-	if (billingType != BillingType.UsageInAdvance) {
-		return entitlement.allowance || 0;
-	}
+// 	let billingType = getBillingType(config);
+// 	if (billingType != BillingType.UsageInAdvance) {
+// 		return entitlement.allowance || 0;
+// 	}
 
-	let quantity = options?.quantity;
-	let billingUnits = (relatedPrice.config as UsagePriceConfig).billing_units;
-	if (nullish(quantity) || nullish(billingUnits)) {
-		return entitlement.allowance || 0;
-	}
+// 	let quantity = options?.quantity;
+// 	let billingUnits = (relatedPrice.config as UsagePriceConfig).billing_units;
+// 	if (nullish(quantity) || nullish(billingUnits)) {
+// 		return entitlement.allowance || 0;
+// 	}
 
-	try {
-		return (entitlement.allowance || 0) + quantity! * billingUnits!;
-	} catch (error) {
-		console.log(
-			"WARNING: Failed to return quantity * billing units, returning allowance...",
-		);
-		return entitlement.allowance || 0;
-	}
-};
+// 	try {
+// 		return (entitlement.allowance || 0) + quantity! * billingUnits!;
+// 	} catch (error) {
+// 		console.log(
+// 			"WARNING: Failed to return quantity * billing units, returning allowance...",
+// 		);
+// 		return entitlement.allowance || 0;
+// 	}
+// };
 
 export const getUnlimitedAndUsageAllowed = ({
 	cusEnts,
@@ -276,17 +265,17 @@ export const getFeatureBalance = ({
 		let cusEntBalance = cusEnt.balance!;
 
 		// If entity feature id exists, then it is grouped...
-		let entityFeatureId = cusEnt.entitlement.entity_feature_id;
+		const entityFeatureId = cusEnt.entitlement.entity_feature_id;
 
 		if (notNullish(entityFeatureId)) {
 			if (notNullish(entityId)) {
-				let { balance: entityBalance } = getEntityBalance({
+				const { balance: entityBalance } = getEntityBalance({
 					cusEnt,
 					entityId: entityId!,
 				});
 				cusEntBalance = entityBalance!;
 			} else {
-				let summed = getSummedEntityBalances({
+				const summed = getSummedEntityBalances({
 					cusEnt,
 				});
 				cusEntBalance = summed.balance;
@@ -350,7 +339,7 @@ export const getTotalNegativeBalance = ({
 	entities: Record<string, { balance: number; adjustment: number }>;
 	billingUnits?: number;
 }) => {
-	let entityFeatureId = cusEnt.entitlement.entity_feature_id;
+	const entityFeatureId = cusEnt.entitlement.entity_feature_id;
 
 	if (nullish(entityFeatureId)) {
 		return balance;
@@ -373,7 +362,7 @@ export const getTotalNegativeBalance = ({
 
 	if (totalNegative == 0) {
 		if (Object.values(entities).length > 0) {
-			let entityBalances = Object.values(entities).map((e) => e.balance || 0);
+			const entityBalances = Object.values(entities).map((e) => e.balance || 0);
 			return Math.min(...entityBalances);
 		} else {
 			return cusEnt.entitlement.allowance || 0;
@@ -402,7 +391,7 @@ export const getExistingUsageFromCusProducts = ({
 	}
 
 	// Existing usage should also include entities
-	let entityUsage = entities.reduce((acc, entity) => {
+	const entityUsage = entities.reduce((acc, entity) => {
 		if (entity.internal_feature_id !== entitlement.internal_feature_id) {
 			return acc;
 		}
@@ -417,7 +406,7 @@ export const getExistingUsageFromCusProducts = ({
 	let existingUsage = 0;
 
 	// NOTE: Assuming that feature entitlements are unique to each main product...
-	let existingCusEnt = cusProducts
+	const existingCusEnt = cusProducts
 		?.filter(
 			(cp) =>
 				(cp.status === CusProductStatus.Active ||
@@ -445,24 +434,24 @@ export const getExistingUsageFromCusProducts = ({
 	}
 
 	// Get options
-	let cusProduct = cusProducts?.find(
+	const cusProduct = cusProducts?.find(
 		(cp) => cp.id === existingCusEnt.customer_product_id,
 	);
-	let options = getEntOptions(
+	const options = getEntOptions(
 		cusProduct?.options || [],
 		existingCusEnt.entitlement,
 	);
-	let price = getRelatedCusPrice(
+	const price = getRelatedCusPrice(
 		existingCusEnt,
 		cusProduct?.customer_prices || [],
 	);
-	let existingAllowance = getResetBalance({
+	const existingAllowance = getStartingBalance({
 		entitlement: existingCusEnt.entitlement,
-		options: options,
+		options: options || undefined,
 		relatedPrice: price?.price,
 	});
 
-	let { balance, adjustment, count, unused } = getCusEntMasterBalance({
+	const { balance, adjustment, count, unused } = getCusEntMasterBalance({
 		cusEnt: existingCusEnt as any,
 		entities: entities,
 	});

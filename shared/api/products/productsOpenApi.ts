@@ -2,7 +2,13 @@ import {
 	CreateProductV2ParamsSchema,
 	UpdateProductV2ParamsSchema,
 } from "@api/models.js";
-import { APIProductSchema } from "./apiProduct.js";
+import { ApiProductSchema } from "./apiProduct.js";
+
+// Register schema with .meta() for OpenAPI spec generation
+const ApiProductWithMeta = ApiProductSchema.meta({
+	id: "Product",
+	description: "A product",
+});
 
 export const productOps = {
 	"/products": {
@@ -17,7 +23,7 @@ export const productOps = {
 			responses: {
 				"200": {
 					description: "200 OK",
-					content: { "application/json": { schema: APIProductSchema } },
+					content: { "application/json": { schema: ApiProductWithMeta } },
 				},
 			},
 		},
@@ -32,7 +38,7 @@ export const productOps = {
 			responses: {
 				"200": {
 					description: "200 OK",
-					content: { "application/json": { schema: APIProductSchema } },
+					content: { "application/json": { schema: ApiProductWithMeta } },
 				},
 			},
 		},

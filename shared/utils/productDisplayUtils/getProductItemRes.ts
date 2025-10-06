@@ -1,4 +1,4 @@
-import { APIProductItemSchema } from "@api/products/apiProductItem.js";
+import { ApiProductItemSchema } from "@api/products/apiProductItem.js";
 import { Decimal } from "decimal.js";
 import type { FeatureOptions } from "../../models/cusProductModels/cusProductModels.js";
 import type { Feature } from "../../models/featureModels/featureModels.js";
@@ -6,7 +6,7 @@ import {
 	type ProductItem,
 	UsageModel,
 } from "../../models/productV2Models/productItemModels/productItemModels.js";
-import { toAPIFeature } from "../featureUtils.js";
+import { toApiFeature } from "../featureUtils.js";
 import { getProductItemDisplay } from "../productDisplayUtils.js";
 import { notNullish } from "../utils.js";
 import { getItemType } from "./getItemType.js";
@@ -135,10 +135,10 @@ export const getProductItemResponse = ({
 	}
 
 	const feature = features.find((f) => f.id === item.feature_id);
-	return APIProductItemSchema.parse({
+	return ApiProductItemSchema.parse({
 		type,
 		...item,
-		feature: feature ? toAPIFeature({ feature }) : null,
+		feature: feature ? toApiFeature({ feature }) : null,
 		display: withDisplay ? display : undefined,
 		...priceData,
 		quantity,
