@@ -104,6 +104,7 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 									type="button"
 									className="w-full px-3 py-2 text-left text-primary hover:bg-muted/50 transition-colors focus:outline-none text-sm font-medium"
 									onClick={() => {
+										setEditingState({ type: "feature", id: "new" });
 										setSheet("new-feature");
 										setPopoverOpen(false);
 									}}
@@ -121,7 +122,10 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 				<button
 					type="button"
 					className="group/btn flex items-center justify-center bg-white border border-border rounded-lg h-[30px] w-full shadow-[0px_4px_4px_rgba(0,0,0,0.02),_inset_0px_-3px_4px_rgba(0,0,0,0.04)] cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed form-input"
-					onClick={() => setSheet("new-feature")}
+					onClick={() => {
+						setEditingState({ type: "feature", id: "new" });
+						setSheet("new-feature");
+					}}
 					tabIndex={0}
 					disabled={disabled}
 					aria-label="Add new feature"

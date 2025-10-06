@@ -11,7 +11,6 @@ import {
 } from "@/components/v2/CodeGroup";
 import { Input } from "@/components/v2/inputs/Input";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
-import { useProductContext } from "@/views/products/product/ProductContext";
 import {
 	nodejsCode,
 	reactCode,
@@ -52,9 +51,7 @@ const FeatureTestRow = ({
 );
 
 export const CompletionStep = () => {
-	const { product } = useProductContext();
 	const [activeTab, setActiveTab] = useState("react");
-	const [connectStripeOpen, setConnectStripeOpen] = useState(false);
 
 	const getCodeForTab = () => {
 		return (

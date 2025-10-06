@@ -11,11 +11,15 @@ interface PlanCardToolbarProps {
 	onEdit?: () => void;
 	onDelete?: () => void;
 	editDisabled?: boolean;
+	deleteDisabled?: boolean;
+	deleteTooltip?: string;
 }
 
 export const PlanCardToolbar = ({
 	onEdit,
 	editDisabled,
+	deleteDisabled,
+	deleteTooltip,
 }: PlanCardToolbarProps) => {
 	const { product } = useProductQuery();
 	const { editingState } = useProductContext();
@@ -47,6 +51,9 @@ export const PlanCardToolbar = ({
 						aria-label="Delete plan"
 						variant="muted"
 						iconOrientation="center"
+						disabled={deleteDisabled}
+						title={deleteDisabled && deleteTooltip ? deleteTooltip : undefined}
+						className={cn(deleteDisabled && "opacity-50 cursor-not-allowed")}
 					/>
 				)}
 			</div>

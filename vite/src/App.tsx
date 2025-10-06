@@ -37,7 +37,6 @@ export default function App() {
 
 				{/* Onboarding routes without sidebar */}
 				<Route element={<OnboardingLayout />}>
-					<Route path="/onboarding3" element={<OnboardingView3 />} />
 					<Route path="/sandbox/onboarding3" element={<OnboardingView3 />} />
 				</Route>
 

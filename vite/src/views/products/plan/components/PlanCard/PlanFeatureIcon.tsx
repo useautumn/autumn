@@ -59,7 +59,7 @@ const getLeftIcon = (
 		case ProductItemFeatureType.SingleUse:
 			return { icon: UsageBasedIcon, color: "text-primary" }; // Usage-based - pink
 		case ProductItemFeatureType.ContinuousUse:
-			return { icon: ContinuousUseIcon, color: "text-primary" }; // Persistent Usage - pink
+			return { icon: ContinuousUseIcon, color: "text-primary" }; // Allocated Usage - pink
 		case ProductItemFeatureType.Static:
 			return { icon: BooleanIcon, color: "text-primary", size: 2 }; // Static - pink
 		case "metered" as unknown: // Handle metered features from FeatureType enum

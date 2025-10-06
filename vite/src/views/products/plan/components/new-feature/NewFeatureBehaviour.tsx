@@ -3,8 +3,9 @@ import {
 	FeatureType,
 	FeatureUsageType,
 } from "@autumn/shared";
+import { InfoIcon, TicketIcon } from "@phosphor-icons/react";
 import { PanelButton } from "@/components/v2/buttons/PanelButton";
-import { BooleanIcon, UsageBasedIcon } from "@/components/v2/icons/AutumnIcons";
+import { UsageBasedIcon } from "@/components/v2/icons/AutumnIcons";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 
 export function NewFeatureBehaviour({
@@ -36,10 +37,13 @@ export function NewFeatureBehaviour({
 								icon={<UsageBasedIcon color="currentColor" />}
 							/>
 							<div className="flex-1">
-								<div className="text-body-highlight mb-1">Single Use</div>
+								<div className="text-body-highlight mb-1 flex-row flex items-center gap-1">
+									Consumable
+									<InfoIcon size={8} weight="regular" color="#888888" />
+								</div>
 								<div className="text-body-secondary leading-tight">
-									A feature that is consumed and refilled like 'credits' or 'API
-									calls'
+									Used in units and can be refilled (e.g., API calls, tokens or
+									messages in an AI Chatbot)
 								</div>
 							</div>
 						</div>
@@ -58,13 +62,16 @@ export function NewFeatureBehaviour({
 										},
 									});
 								}}
-								icon={<BooleanIcon />}
+								icon={<TicketIcon size={16} color="currentColor" />}
 							/>
 							<div className="flex-1">
-								<div className="text-body-highlight mb-1">Continuous Use</div>
+								<div className="text-body-highlight mb-1 flex-row flex items-center gap-1">
+									Allocated
+									<InfoIcon size={8} weight="regular" color="#888888" />
+								</div>
 								<div className="text-body-secondary leading-tight">
-									A feature that is used on an ongoing basis, like 'seats' or
-									'storage'
+									Fixed usage limits that reset monthly (e.g., 5 seats, 10 GB
+									storage)
 								</div>
 							</div>
 						</div>
