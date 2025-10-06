@@ -1,5 +1,5 @@
-import { APICusFeatureSchema } from "@api/customers/components/apiCusFeature.js";
 import { APICusProductSchema } from "@api/customers/components/apiCusProduct.js";
+import { APICusFeatureSchema } from "@api/customers/cusFeatures/apiCusFeature.js";
 import { APIInvoiceSchema } from "@api/others/apiInvoice.js";
 import { z } from "zod/v4";
 import { AppEnv } from "../../genModels/genEnums.js";

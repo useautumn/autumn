@@ -187,6 +187,7 @@ export const getCustomerDetails = async ({
 			return cusResponse;
 		}
 	} else {
+		// Probably don't need items...?
 		const withItems = org.config.api_version >= BREAK_API_VERSION;
 
 		const processedInvoices = await getCusInvoices({

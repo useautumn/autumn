@@ -6,6 +6,9 @@ export { schemas };
 export * from "./api/models.js";
 export * from "./api/operations.js";
 
+// API VERSIONING SYSTEM
+export * from "./api/versionUtils/versionUtils.js";
+
 // Auth Models
 export * from "./db/auth-schema.js";
 export * from "./enums/APIVersion.js";

@@ -1,6 +1,6 @@
-import { APICusFeatureSchema } from "@api/customers/components/apiCusFeature.js";
 import { APICusProductSchema } from "@api/customers/components/apiCusProduct.js";
 import { APICusReferralSchema } from "@api/customers/components/apiCusReferral.js";
+import { APICusFeatureSchema } from "@api/customers/cusFeatures/apiCusFeature.js";
 import { APICusRewardsSchema } from "@api/models.js";
 import { APIInvoiceSchema } from "@api/others/apiInvoice.js";
 import { EntityResponseSchema } from "@models/cusModels/entityModels/entityResModels.js";
