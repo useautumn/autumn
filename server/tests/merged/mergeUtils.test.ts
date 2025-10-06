@@ -90,7 +90,6 @@ export const expectSubToBeCorrect = async ({
 					(si: any) => si.price === lineItem.price,
 				);
 				if (existingIndex !== -1) {
-					// @ts-expect-error
 					supposedSubItems[existingIndex].quantity += lineItem.quantity!;
 				} else {
 					supposedSubItems.push(res.lineItem);

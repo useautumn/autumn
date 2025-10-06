@@ -1,9 +1,9 @@
 import {
 	type ApiCusFeature,
+	type ApiCusFeatureV2,
+	ApiCusFeatureV2Schema,
 	type ApiCusRollover,
 	type CreditSchemaItem,
-	type CusEntResponse,
-	CusEntResponseSchema,
 	type Feature,
 	FeatureType,
 	type FullCustomerEntitlement,
@@ -16,8 +16,8 @@ import { notNullish } from "@/utils/genUtils.js";
 import type { CusFeatureBalance } from "./getCusBalances.js";
 
 export const sumValues = (
-	entList: CusEntResponse[],
-	key: keyof CusEntResponse,
+	entList: ApiCusFeatureV2[],
+	key: keyof ApiCusFeatureV2,
 ) => {
 	return entList.reduce((acc, curr) => {
 		if (curr[key]) {
@@ -28,7 +28,7 @@ export const sumValues = (
 	}, 0);
 };
 
-export const getEarliestNextResetAt = (entList: CusEntResponse[]) => {
+export const getEarliestNextResetAt = (entList: ApiCusFeatureV2[]) => {
 	const earliest = entList.reduce((acc, curr) => {
 		if (curr.next_reset_at && curr.next_reset_at < acc) {
 			return curr.next_reset_at;
@@ -45,7 +45,7 @@ export const featuresToObject = ({
 	entList,
 }: {
 	features: Feature[];
-	entList: CusEntResponse[];
+	entList: ApiCusFeatureV2[];
 }) => {
 	const featureObject: Record<string, ApiCusFeature> = {};
 
@@ -135,7 +135,7 @@ export const balancesToFeatureResponse = ({
 			return b;
 		}
 
-		return CusEntResponseSchema.parse({
+		return ApiCusFeatureV2Schema.parse({
 			...b,
 			usage: b.used,
 			included_usage: b.allowance,

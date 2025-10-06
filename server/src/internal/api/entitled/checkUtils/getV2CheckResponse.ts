@@ -107,7 +107,7 @@ export const getV2CheckResponse = async ({
 	const totalPaidUsageAllowance = featureCusEnts.reduce((acc, ce) => {
 		const ent = ce.entitlement;
 		if (notNullish(ent.usage_limit)) {
-			return acc + ent.usage_limit! - (ent.allowance || 0);
+			return acc + ent.usage_limit - (ent.allowance || 0);
 		}
 		return acc;
 	}, 0);
@@ -126,7 +126,7 @@ export const getV2CheckResponse = async ({
 		finalRequired = featureToCreditSystem({
 			featureId: feature.id,
 			creditSystem: featureToUse,
-			amount: finalRequired!,
+			amount: finalRequired,
 		});
 	}
 
