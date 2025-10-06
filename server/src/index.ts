@@ -49,20 +49,31 @@ const init = async () => {
 	app.use(redirectToHono());
 
 	// Check if this blocks API calls...
+	const allowedOrigins = [
+		"http://localhost:3000",
+		"http://localhost:5173",
+		"http://localhost:5174",
+		"https://app.useautumn.com",
+		"https://staging.useautumn.com",
+		"https://*.useautumn.com",
+		"https://localhost:8080",
+		"https://www.alphalog.ai",
+		"https://*.alphalog.ai",
+		process.env.CLIENT_URL || "",
+	];
+
+	// Add dynamic port origins in development
+	if (process.env.NODE_ENV === "development") {
+		// Add ports 3000-3010 and 8080-8090 for multiple instances
+		for (let i = 0; i <= 10; i++) {
+			allowedOrigins.push(`http://localhost:${3000 + i}`);
+			allowedOrigins.push(`http://localhost:${8080 + i}`);
+		}
+	}
+
 	app.use(
 		cors({
-			origin: [
-				"http://localhost:3000",
-				"http://localhost:5173",
-				"http://localhost:5174",
-				"https://app.useautumn.com",
-				"https://staging.useautumn.com",
-				"https://*.useautumn.com",
-				"https://localhost:8080",
-				"https://www.alphalog.ai",
-				"https://*.alphalog.ai",
-				process.env.CLIENT_URL || "",
-			],
+			origin: allowedOrigins,
 			credentials: true,
 			allowedHeaders: [
 				"app_env",
@@ -170,7 +181,7 @@ const init = async () => {
 	app.use(mainRouter);
 	app.use("/v1", apiRouter);
 
-	const PORT = 8080;
+	const PORT = process.env.SERVER_PORT ? Number.parseInt(process.env.SERVER_PORT) : 8080;
 
 	server.listen(PORT, () => {
 		console.log(`Server running on port ${PORT}`);
