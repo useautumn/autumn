@@ -39,6 +39,8 @@ export const getPricesAndEnts = async ({
 		internalEntityId: customer.entity?.internal_id,
 	});
 
+	const curCusProduct = curSameProduct || curMainProduct;
+
 	// Not custom
 	if (!is_custom) {
 		const prices = products.flatMap((p: FullProduct) => p.prices);
@@ -63,7 +65,7 @@ export const getPricesAndEnts = async ({
 				optionsInput: optionsInput || [],
 				features,
 				prices,
-				curCusProduct: curMainProduct,
+				curCusProduct,
 			}),
 			prices,
 			entitlements,
