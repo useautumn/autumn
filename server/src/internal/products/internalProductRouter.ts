@@ -1,27 +1,27 @@
-import { Router } from "express";
-import { FeatureService } from "../features/FeatureService.js";
-import { StatusCodes } from "http-status-codes";
-import { ProductService } from "./ProductService.js";
-import { ErrCode, UsageModel } from "@autumn/shared";
-import { FeatureOptions } from "@autumn/shared";
-import { OrgService } from "../orgs/OrgService.js";
-import { RewardService } from "../rewards/RewardService.js";
-import { getGroupToDefaults, getProductVersionCounts } from "./productUtils.js";
-import { getLatestProducts } from "./productUtils.js";
-import { CusProdReadService } from "../customers/cusProducts/CusProdReadService.js";
-import { MigrationService } from "../migrations/MigrationService.js";
-import { RewardProgramService } from "../rewards/RewardProgramService.js";
-import { mapToProductV2 } from "./productV2Utils.js";
-import { isFeaturePriceItem } from "./product-items/productItemUtils/getItemType.js";
-
-import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
-
-import { createOrgResponse } from "../orgs/orgUtils.js";
 import {
-	sortFullProducts,
-	sortProductsByPrice,
-} from "./productUtils/sortProductUtils.js";
+	type FeatureOptions,
+	ProductNotFoundError,
+	UsageModel,
+} from "@autumn/shared";
+import { Router } from "express";
+import { handleFrontendReqError } from "@/utils/errorUtils.js";
+import { CusProdReadService } from "../customers/cusProducts/CusProdReadService.js";
+import { FeatureService } from "../features/FeatureService.js";
+import { MigrationService } from "../migrations/MigrationService.js";
+import { OrgService } from "../orgs/OrgService.js";
+import { createOrgResponse } from "../orgs/orgUtils.js";
+import { RewardProgramService } from "../rewards/RewardProgramService.js";
+import { RewardService } from "../rewards/RewardService.js";
 import { handleGetProductDeleteInfo } from "./handlers/handleGetProductDeleteInfo.js";
+import { ProductService } from "./ProductService.js";
+import { isFeaturePriceItem } from "./product-items/productItemUtils/getItemType.js";
+import { sortFullProducts } from "./productUtils/sortProductUtils.js";
+import {
+	getGroupToDefaults,
+	getLatestProducts,
+	getProductVersionCounts,
+} from "./productUtils.js";
+import { mapToProductV2 } from "./productV2Utils.js";
 
 export const productRouter: Router = Router({ mergeParams: true });
 
@@ -56,22 +56,15 @@ productRouter.get("/products", async (req: any, res) => {
 // Get counts for all products
 productRouter.get("/product_counts", async (req: any, res) => {
 	try {
-		let { db } = req;
-		let products = await ProductService.listFull({
+		const { db } = req;
+		const products = await ProductService.listFull({
 			db,
 			orgId: req.orgId,
 			env: req.env,
 		});
 
-		let counts = await Promise.all(
+		const counts = await Promise.all(
 			products.map(async (product) => {
-				// if (latestVersion) {
-				//   return CusProdReadService.getCounts({
-				//     db,
-				//     internalProductId: product.internal_id,
-				//   });
-				// }
-
 				return CusProdReadService.getCountsForAllVersions({
 					db,
 					productId: product.id,
@@ -81,7 +74,7 @@ productRouter.get("/product_counts", async (req: any, res) => {
 			}),
 		);
 
-		let result: { [key: string]: any } = {};
+		const result: { [key: string]: any } = {};
 		for (let i = 0; i < products.length; i++) {
 			if (!result[products[i].id]) {
 				result[products[i].id] = counts[i];
@@ -150,16 +143,10 @@ productRouter.get("/:productId/data2", async (req: any, res) => {
 		]);
 
 		if (!product) {
-			throw new RecaseError({
-				message: `Product ${productId} ${
-					version ? `(v${version})` : ""
-				} not found`,
-				code: ErrCode.ProductNotFound,
-				statusCode: StatusCodes.NOT_FOUND,
-			});
+			throw new ProductNotFoundError({ productId, version });
 		}
 
-		let productV2 = mapToProductV2({
+		const productV2 = mapToProductV2({
 			product: product,
 			features: req.features,
 		});
@@ -189,13 +176,7 @@ productRouter.get("/:productId/count", async (req: any, res) => {
 		});
 
 		if (!product) {
-			throw new RecaseError({
-				message: `Product ${productId} ${
-					version ? `(v${version})` : ""
-				} not found`,
-				code: ErrCode.ProductNotFound,
-				statusCode: StatusCodes.NOT_FOUND,
-			});
+			throw new ProductNotFoundError({ productId, version });
 		}
 
 		// Get counts from postgres
@@ -237,7 +218,7 @@ productRouter.get("/migrations", async (req: any, res) => {
 
 productRouter.get("/data", async (req: any, res) => {
 	try {
-		let { db } = req;
+		const { db } = req;
 
 		const allVersions = req.query.all_versions === "true";
 
@@ -292,8 +273,8 @@ productRouter.get("/data", async (req: any, res) => {
 
 productRouter.post("/data", async (req: any, res) => {
 	try {
-		let { db } = req;
-		let { showArchived } = req.body;
+		const { db } = req;
+		const { showArchived } = req.body;
 
 		const [products, defaultProds, features, org, coupons, rewardPrograms] =
 			await Promise.all([
@@ -343,8 +324,8 @@ productRouter.post("/data", async (req: any, res) => {
 
 productRouter.get("/counts", async (req: any, res) => {
 	try {
-		let { db } = req;
-		let products = await ProductService.listFull({
+		const { db } = req;
+		const products = await ProductService.listFull({
 			db,
 			orgId: req.orgId,
 			env: req.env,
@@ -353,7 +334,7 @@ productRouter.get("/counts", async (req: any, res) => {
 
 		const latestVersion = req.query.latest_version === "true";
 
-		let counts = await Promise.all(
+		const counts = await Promise.all(
 			products.map(async (product) => {
 				if (latestVersion) {
 					return CusProdReadService.getCounts({
@@ -371,7 +352,7 @@ productRouter.get("/counts", async (req: any, res) => {
 			}),
 		);
 
-		let result: { [key: string]: any } = {};
+		const result: { [key: string]: any } = {};
 		for (let i = 0; i < products.length; i++) {
 			if (!result[products[i].id]) {
 				result[products[i].id] = counts[i];
@@ -416,13 +397,7 @@ productRouter.get("/:productId/data", async (req: any, res) => {
 			]);
 
 		if (!product) {
-			throw new RecaseError({
-				message: `Product ${productId} ${
-					version ? `(v${version})` : ""
-				} not found`,
-				code: ErrCode.ProductNotFound,
-				statusCode: StatusCodes.NOT_FOUND,
-			});
+			throw new ProductNotFoundError({ productId, version });
 		}
 
 		const defaultProds = await ProductService.listDefault({
@@ -447,7 +422,7 @@ productRouter.get("/:productId/data", async (req: any, res) => {
 			return b.id.localeCompare(a.id);
 		});
 
-		let productV2 = mapToProductV2({ product, features });
+		const productV2 = mapToProductV2({ product, features });
 
 		res.status(200).send({
 			product: productV2,
@@ -479,11 +454,10 @@ productRouter.post("/product_options", async (req: any, res: any) => {
 	try {
 		const { items } = req.body;
 
-		const features = await FeatureService.getFromReq(req);
 		const featureToOptions: { [key: string]: FeatureOptions } = {};
 
 		for (const item of items) {
-			if (isFeaturePriceItem(item) && item.usage_model == UsageModel.Prepaid) {
+			if (isFeaturePriceItem(item) && item.usage_model === UsageModel.Prepaid) {
 				featureToOptions[item.feature_id] = {
 					feature_id: item.feature_id,
 					quantity: 0,

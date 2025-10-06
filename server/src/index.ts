@@ -1,31 +1,29 @@
 import { config } from "dotenv";
+
 config();
 
 import "./instrumentation.js";
-import { trace, context } from "@opentelemetry/api";
-
-import http from "http";
-import cluster from "cluster";
-import os from "os";
-import mainRouter from "./internal/mainRouter.js";
-import express from "express";
-import cors from "cors";
-
-import webhooksRouter from "./external/webhooks/webhooksRouter.js";
-
-import { apiRouter } from "./internal/api/apiRouter.js";
-import { QueueManager } from "./queue/QueueManager.js";
+import cluster from "node:cluster";
+import http from "node:http";
+import os from "node:os";
 import { AppEnv } from "@autumn/shared";
+import { context, trace } from "@opentelemetry/api";
+import { toNodeHandler } from "better-auth/node";
+import cors from "cors";
+import express from "express";
+import { client, db } from "./db/initDrizzle.js";
 import { CacheManager } from "./external/caching/CacheManager.js";
+import { ClickHouseManager } from "./external/clickhouse/ClickHouseManager.js";
 import { logger } from "./external/logtail/logtailUtils.js";
 import { createPosthogCli } from "./external/posthog/createPosthogCli.js";
-import { generateId } from "./utils/genUtils.js";
-import { subscribeToOrgUpdates } from "./external/supabase/subscribeToOrgUpdates.js";
-import { client, db } from "./db/initDrizzle.js";
-import { toNodeHandler } from "better-auth/node";
+import webhooksRouter from "./external/webhooks/webhooksRouter.js";
+import { redirectToHono } from "./initHono.js";
+import { apiRouter } from "./internal/api/apiRouter.js";
+import mainRouter from "./internal/mainRouter.js";
+import { QueueManager } from "./queue/QueueManager.js";
 import { auth } from "./utils/auth.js";
+import { generateId } from "./utils/genUtils.js";
 import { checkEnvVars } from "./utils/initUtils.js";
-import { ClickHouseManager } from "./external/clickhouse/ClickHouseManager.js";
 
 const tracer = trace.getTracer("express");
 
@@ -34,26 +32,43 @@ checkEnvVars();
 
 const init = async () => {
 	const app = express();
+	const server = http.createServer(app);
+	server.keepAliveTimeout = 120000; // 120 seconds
+	server.headersTimeout = 120000; // 120 seconds should be >= keepAliveTimeout
+
+	app.use(redirectToHono());
 
 	// Check if this blocks API calls...
+	const allowedOrigins = [
+		"http://localhost:3000",
+		"http://localhost:5173",
+		"http://localhost:5174",
+		"https://app.useautumn.com",
+		"https://staging.useautumn.com",
+		"https://*.useautumn.com",
+		"https://localhost:8080",
+		"https://www.alphalog.ai",
+		"https://*.alphalog.ai",
+		process.env.CLIENT_URL || "",
+	];
+
+	// Add dynamic port origins in development
+	if (process.env.NODE_ENV === "development") {
+		// Add ports 3000-3010 and 8080-8090 for multiple instances
+		for (let i = 0; i <= 10; i++) {
+			allowedOrigins.push(`http://localhost:${3000 + i}`);
+			allowedOrigins.push(`http://localhost:${8080 + i}`);
+		}
+	}
+
 	app.use(
 		cors({
-			origin: [
-				"http://localhost:3000",
-				"http://localhost:5173",
-				"http://localhost:5174",
-				"https://app.useautumn.com",
-				"https://staging.useautumn.com",
-				"https://*.useautumn.com",
-				"https://localhost:8080",
-				"https://www.alphalog.ai",
-				"https://*.alphalog.ai",
-				process.env.CLIENT_URL || "",
-			],
+			origin: allowedOrigins,
 			credentials: true,
 			allowedHeaders: [
 				"app_env",
 				"x-api-version",
+				"x-client-type",
 				"Authorization",
 				"Content-Type",
 				"Accept",
@@ -73,12 +88,7 @@ const init = async () => {
 
 	app.all("/api/auth/*", toNodeHandler(auth));
 
-	const server = http.createServer(app);
 	const posthog = createPosthogCli();
-
-	server.keepAliveTimeout = 120000; // 120 seconds
-	server.headersTimeout = 120000; // 120 seconds should be >= keepAliveTimeout
-
 	await QueueManager.getInstance(); // initialize the queue manager
 	await CacheManager.getInstance();
 	await ClickHouseManager.getInstance();
@@ -93,7 +103,7 @@ const init = async () => {
 
 		const reqContext = {
 			id: req.id,
-			env: req.headers["app_env"] || undefined,
+			env: req.headers.app_env || undefined,
 			method: req.method,
 			url: req.originalUrl,
 			timestamp: req.timestamp,
@@ -157,10 +167,11 @@ const init = async () => {
 		next();
 	});
 
+	// Legacy Express routes
 	app.use(mainRouter);
 	app.use("/v1", apiRouter);
 
-	const PORT = 8080;
+	const PORT = process.env.SERVER_PORT ? Number.parseInt(process.env.SERVER_PORT) : 8080;
 
 	server.listen(PORT, () => {
 		console.log(`Server running on port ${PORT}`);
@@ -171,13 +182,13 @@ if (process.env.NODE_ENV === "development") {
 	init();
 	registerShutdownHandlers();
 } else {
-	let numCPUs = os.cpus().length;
+	const numCPUs = os.cpus().length;
 
 	if (cluster.isPrimary) {
 		console.log(`Master ${process.pid} is running`);
 		console.log("Number of CPUs", numCPUs);
 
-		let numWorkers = 7;
+		const numWorkers = 5;
 
 		for (let i = 0; i < numWorkers; i++) {
 			cluster.fork();

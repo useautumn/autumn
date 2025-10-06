@@ -1,25 +1,22 @@
-import { ErrCode } from "@/errors/errCodes.js";
-import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
-import { APIVersion, type Feature, FeatureType } from "@autumn/shared";
-
+import { APIVersion, ErrCode, type Feature, FeatureType } from "@autumn/shared";
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
-import { handleEventSent } from "../events/eventRouter.js";
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-
-import { handleProductCheck } from "./handlers/handleProductCheck.js";
-import { getBooleanEntitledResult } from "./checkUtils.js";
-import { getCheckPreview } from "./getCheckPreview.js";
 import { orgToVersion } from "@/utils/versionUtils.js";
+import { handleEventSent } from "../events/eventRouter.js";
 import { getCheckData } from "./checkUtils/getCheckData.js";
 import { getV1CheckResponse } from "./checkUtils/getV1CheckResponse.js";
 import { getV2CheckResponse } from "./checkUtils/getV2CheckResponse.js";
+import { getBooleanEntitledResult } from "./checkUtils.js";
+import { getCheckPreview } from "./getCheckPreview.js";
+import { handleProductCheck } from "./handlers/handleProductCheck.js";
 
 export const checkRouter: Router = Router();
 
 checkRouter.post("", async (req: any, res: any) => {
 	try {
-		let {
+		const {
 			customer_id,
 			feature_id,
 			product_id,
@@ -71,9 +68,9 @@ checkRouter.post("", async (req: any, res: any) => {
 
 		let quantity = 1;
 		if (notNullish(requiredBalance)) {
-			let floatQuantity = parseFloat(requiredBalance);
+			const floatQuantity = parseFloat(requiredBalance);
 
-			if (isNaN(floatQuantity)) {
+			if (Number.isNaN(floatQuantity)) {
 				throw new RecaseError({
 					message: "Invalid required_balance",
 					code: ErrCode.InvalidRequest,
@@ -93,7 +90,7 @@ checkRouter.post("", async (req: any, res: any) => {
 			allFeatures,
 		} = await getCheckData({ req });
 
-		let apiVersion = orgToVersion({
+		const apiVersion = orgToVersion({
 			org,
 			reqApiVersion: req.apiVersion,
 		});
@@ -171,7 +168,7 @@ checkRouter.post("", async (req: any, res: any) => {
 			}
 		}
 
-		let preview = undefined;
+		let preview;
 		if (req.body.with_preview) {
 			try {
 				preview = await getCheckPreview({

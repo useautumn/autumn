@@ -1,14 +1,18 @@
-import { Router } from "express";
-import RecaseError from "@/utils/errorUtils.js";
 import {
-	APIVersion,
-	AttachConfig,
+	type AttachConfig,
 	BillingType,
-	FullCusProduct,
+	ErrCode,
+	type FullCusProduct,
 } from "@autumn/shared";
-import { ErrCode } from "@/errors/errCodes.js";
-import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
-
+import { Router } from "express";
+import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
+import {
+	createStripeCusIfNotExists,
+	getCusPaymentMethod,
+} from "@/external/stripe/stripeCusUtils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import {
 	getBillingType,
 	getEntOptions,
@@ -16,32 +20,19 @@ import {
 	getProductForPrice,
 	priceIsOneOffAndTiered,
 } from "@/internal/products/prices/priceUtils.js";
-
 import {
 	checkStripeProductExists,
 	isFreeProduct,
 } from "@/internal/products/productUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
+import RecaseError from "@/utils/errorUtils.js";
 import {
 	notNullish,
 	notNullOrUndefined,
-	nullish,
 	nullOrUndefined,
 } from "@/utils/genUtils.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { orgToVersion } from "@/utils/versionUtils.js";
-import { handleAttachRaceCondition } from "@/external/redis/redisUtils.js";
-import { routeHandler } from "@/utils/routerUtils.js";
-import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
-import { AttachBodySchema } from "@autumn/shared";
-import { processAttachBody } from "./attachUtils/attachParams/processAttachBody.js";
-import { handleAttachPreview } from "./handleAttachPreview/handleAttachPreview.js";
-import { handleAttach } from "./handleAttach.js";
 import { handleCheckout } from "./checkout/handleCheckout.js";
-import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
-import { attachParamsToCurCusProduct } from "./attachUtils/convertAttachParams.js";
+import { handleAttach } from "./handleAttach.js";
+import { handleAttachPreview } from "./handleAttachPreview/handleAttachPreview.js";
 
 export const attachRouter: Router = Router();
 
@@ -62,8 +53,8 @@ export const handlePrepaidErrors = async ({
 
 		if (billingType === BillingType.UsageInAdvance) {
 			// Get options for price
-			let priceEnt = getPriceEntitlement(price, entitlements);
-			let options = getEntOptions(optionsList, priceEnt);
+			const priceEnt = getPriceEntitlement(price, entitlements);
+			const options = getEntOptions(optionsList, priceEnt);
 
 			// 1. If not checkout, quantity should be defined
 			const regularCheckout = useCheckout && !config.invoiceCheckout;
@@ -223,7 +214,7 @@ export const createStripePrices = async ({
 	// const curCusProduct = attachParamsToCurCusProduct({ attachParams });
 
 	for (const price of prices) {
-		let product = getProductForPrice(price, products);
+		const product = getProductForPrice(price, products);
 
 		batchPriceUpdates.push(
 			createStripePriceIFNotExist({

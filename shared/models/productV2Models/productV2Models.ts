@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 import { FreeTrialSchema } from "../productModels/freeTrialModels/freeTrialModels.js";
 import { ProductItemSchema } from "./productItemModels/productItemModels.js";
 

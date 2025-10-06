@@ -1,8 +1,12 @@
-import { AppEnv, Organization, Product } from "@autumn/shared";
-import { createStripeCli } from "./utils.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { ErrCode } from "@/errors/errCodes.js";
+import {
+	AppEnv,
+	ErrCode,
+	type Organization,
+	type Product,
+} from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
+import RecaseError from "@/utils/errorUtils.js";
+import { createStripeCli } from "./utils.js";
 
 export const createStripeProduct = async (
 	org: Organization,
@@ -66,7 +70,7 @@ export const deactivateStripeMeters = async ({
 }) => {
 	const stripeCli = createStripeCli({ org, env });
 
-	let allStripeMeters = [];
+	const allStripeMeters = [];
 	let hasMore = true;
 	let startingAfter;
 
@@ -116,7 +120,7 @@ export const deleteAllStripeProducts = async ({
 		return;
 	}
 
-	let firstProduct = stripeProducts.data[0];
+	const firstProduct = stripeProducts.data[0];
 	if (firstProduct.livemode) {
 		throw new RecaseError({
 			message: "Cannot delete livemode products",
@@ -125,9 +129,9 @@ export const deleteAllStripeProducts = async ({
 		});
 	}
 
-	let batchSize = 50;
+	const batchSize = 50;
 	for (let i = 0; i < stripeProducts.data.length; i += batchSize) {
-		let batch = stripeProducts.data.slice(i, i + batchSize);
+		const batch = stripeProducts.data.slice(i, i + batchSize);
 		await Promise.all(
 			batch.map(async (p) => {
 				try {

@@ -1,28 +1,29 @@
 import {
+	APIVersion,
+	BillingType,
+	type EntitlementWithFeature,
+	ErrCode,
+	type FeatureOptions,
+	type FixedPriceConfig,
+	type FullProduct,
+	InternalError,
+	type Organization,
+	type Price,
+	type ProductOptions,
+	type UsagePriceConfig,
+} from "@autumn/shared";
+import {
 	getBillingType,
 	priceIsOneOffAndTiered,
 } from "@/internal/products/prices/priceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
-
-import {
-	BillingType,
-	ErrCode,
-	FeatureOptions,
-	FixedPriceConfig,
-	FullProduct,
-	Organization,
-	ProductOptions,
-	UsagePriceConfig,
-} from "@autumn/shared";
-import { EntitlementWithFeature, Price, APIVersion } from "@autumn/shared";
-
+import { notNullish } from "@/utils/genUtils.js";
+import { billingIntervalToStripe } from "../stripePriceUtils.js";
+import { priceToInArrearProrated } from "./priceToArrearProrated.js";
 import {
 	priceToOneOffAndTiered,
 	priceToUsageInAdvance,
 } from "./priceToUsageInAdvance.js";
-import { priceToInArrearProrated } from "./priceToArrearProrated.js";
-import { billingIntervalToStripe } from "../stripePriceUtils.js";
-import { notNullish } from "@/utils/genUtils.js";
 
 export const getEmptyPriceItem = ({
 	price,
@@ -80,20 +81,18 @@ export const priceToStripeItem = ({
 		: 1;
 
 	if (!stripeProductId) {
-		throw new RecaseError({
-			code: ErrCode.ProductNotFound,
-			message: "Product not created in Stripe",
-			statusCode: 400,
+		throw new InternalError({
+			message: `product ${product.id} has no stripe product id`,
 		});
 	}
 
-	let lineItemMeta = null;
+	const lineItemMeta = null;
 	let lineItem = null;
 
 	// 1. FIXED PRICE
 	if (
-		billingType == BillingType.FixedCycle ||
-		billingType == BillingType.OneOff
+		billingType === BillingType.FixedCycle ||
+		billingType === BillingType.OneOff
 	) {
 		const config = price.config as FixedPriceConfig;
 
@@ -105,7 +104,7 @@ export const priceToStripeItem = ({
 
 	// 2. PREPAID, TIERED, ONE OFF
 	else if (
-		billingType == BillingType.UsageInAdvance &&
+		billingType === BillingType.UsageInAdvance &&
 		priceIsOneOffAndTiered(price, relatedEnt)
 	) {
 		lineItem = priceToOneOffAndTiered({
@@ -118,7 +117,7 @@ export const priceToStripeItem = ({
 	}
 
 	// 3. PREPAID
-	else if (billingType == BillingType.UsageInAdvance) {
+	else if (billingType === BillingType.UsageInAdvance) {
 		lineItem = priceToUsageInAdvance({
 			price,
 			options,
@@ -128,7 +127,7 @@ export const priceToStripeItem = ({
 	}
 
 	// 4. USAGE IN ARREAR
-	else if (billingType == BillingType.UsageInArrear) {
+	else if (billingType === BillingType.UsageInArrear) {
 		const config = price.config as UsagePriceConfig;
 		const priceId = config.stripe_price_id;
 
@@ -165,7 +164,7 @@ export const priceToStripeItem = ({
 	}
 
 	// 5. USAGE ARREAR PRORATED
-	else if (billingType == BillingType.InArrearProrated) {
+	else if (billingType === BillingType.InArrearProrated) {
 		lineItem = priceToInArrearProrated({
 			price,
 			isCheckout,

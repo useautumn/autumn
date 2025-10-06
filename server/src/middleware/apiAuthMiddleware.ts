@@ -1,17 +1,15 @@
-import { withOrgAuth } from "./authMiddleware.js";
-import { verifyKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
-import { verifyBearerPublishableKey } from "./publicAuthMiddleware.js";
 import { AuthType, ErrCode } from "@autumn/shared";
-import { floatToVersion } from "@/utils/versionUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
+import { verifyKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
 import { dashboardOrigins } from "@/utils/constants.js";
-import { readFile } from "@/external/supabase/storageUtils.js";
-import { ExtendedResponse } from "@/utils/models/Request.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { floatToVersion } from "@/utils/versionUtils.js";
+import { withOrgAuth } from "./authMiddleware.js";
+import { verifyBearerPublishableKey } from "./publicAuthMiddleware.js";
 import { trmnlAuthMiddleware, trmnlExclusions } from "./trmnlAuthMiddleware.js";
 
 const verifyApiVersion = (version: string) => {
-	let versionFloat = parseFloat(version);
-	let apiVersion = floatToVersion(versionFloat);
+	const versionFloat = parseFloat(version);
+	const apiVersion = floatToVersion(versionFloat);
 
 	if (isNaN(versionFloat) || !apiVersion) {
 		throw new RecaseError({
@@ -40,7 +38,7 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
 	}
 
 	if (!authHeader || !authHeader.startsWith("Bearer ")) {
-		let origin = req.get("origin");
+		const origin = req.get("origin");
 		if (dashboardOrigins.includes(origin)) {
 			return withOrgAuth(req, res, next);
 		} else {
@@ -80,7 +78,7 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
 		});
 	}
 
-	let { org, features, env, userId } = data;
+	const { org, features, env, userId } = data;
 	req.orgId = org.id;
 	req.env = env;
 	req.minOrg = {
@@ -95,7 +93,7 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
 	const orgConfig = await req.headers["org-config"];
 	if (orgConfig) {
 		console.log("Org config found!: ", orgConfig);
-		let newConfigFields = JSON.parse(orgConfig);
+		const newConfigFields = JSON.parse(orgConfig);
 		try {
 			req.org.config = {
 				...org.config,
@@ -124,7 +122,7 @@ export const apiAuthMiddleware = async (req: any, res: any, next: any) => {
 	} catch (error: any) {
 		if (error instanceof RecaseError) {
 			if (error.code === ErrCode.InvalidSecretKey) {
-				let apiKey = req.headers["authorization"]?.split(" ")[1];
+				const apiKey = req.headers["authorization"]?.split(" ")[1];
 				error.message = `Invalid secret key: ${maskApiKey(apiKey)}`;
 			}
 

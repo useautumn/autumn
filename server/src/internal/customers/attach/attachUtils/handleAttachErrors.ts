@@ -7,12 +7,12 @@ import {
 	cusProductsToCusEnts,
 	cusProductToPrices,
 	cusProductToProduct,
+	ErrCode,
 	type FullCusProduct,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";
-import { ErrCode } from "@/errors/errCodes.js";
 import { findPriceForFeature } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 import {
 	getBillingType,

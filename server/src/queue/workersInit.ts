@@ -6,6 +6,7 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 import { runSaveFeatureDisplayTask } from "@/internal/features/featureUtils.js";
 import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
+import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigrationTask.js";
 import { detectBaseVariant } from "@/internal/products/productUtils/detectProductVariant.js";
 import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutReward.js";
 import { runUpdateBalanceTask } from "@/trigger/updateBalanceTask.js";
@@ -14,7 +15,6 @@ import { generateId } from "@/utils/genUtils.js";
 import { JobName } from "./JobName.js";
 import { acquireLock, getRedisConnection, releaseLock } from "./lockUtils.js";
 import { QueueManager } from "./QueueManager.js";
-import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigrationTask.js";
 
 const NUM_WORKERS = 10;
 

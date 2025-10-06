@@ -1,11 +1,8 @@
-import { handleRequestError } from "@/utils/errorUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { CusProductStatus, ErrCode } from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
-import { getCustomerDetails } from "../cusUtils/getCustomerDetails.js";
-
-import { getOrCreateCustomer } from "../cusUtils/getOrCreateCustomer.js";
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { parseCusExpand } from "../cusUtils/cusUtils.js";
+import { getCustomerDetails } from "../cusUtils/getCustomerDetails.js";
+import { getOrCreateCustomer } from "../cusUtils/getOrCreateCustomer.js";
 
 export const handlePostCustomerRequest = async (req: any, res: any) => {
 	const logger = req.logtail;
@@ -37,7 +34,7 @@ export const handlePostCustomerRequest = async (req: any, res: any) => {
 			});
 		}
 
-		let customer = await getOrCreateCustomer({
+		const customer = await getOrCreateCustomer({
 			req,
 			customerId: data.id,
 			customerData: data,
@@ -53,7 +50,7 @@ export const handlePostCustomerRequest = async (req: any, res: any) => {
 			withCache: true,
 		});
 
-		let cusDetails = await getCustomerDetails({
+		const cusDetails = await getCustomerDetails({
 			db,
 			customer,
 			org,

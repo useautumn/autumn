@@ -1,8 +1,8 @@
-import axios from "axios";
 // import { endpoint } from "@/utils/constants/constants";
 import { AppEnv } from "@autumn/shared";
-import { useEnv } from "@/utils/envUtils";
+import axios from "axios";
 import { authClient } from "@/lib/auth-client";
+import { useEnv } from "@/utils/envUtils";
 
 const defaultParams = {
 	isAuth: true,
@@ -23,8 +23,9 @@ export function useAxiosInstance(params?: { env?: AppEnv; isAuth?: boolean }) {
 
 	axiosInstance.interceptors.request.use(
 		async (config: any) => {
-			config.headers["app_env"] = trueEnv;
+			config.headers.app_env = trueEnv;
 			config.headers["x-api-version"] = "1.2";
+			config.headers["x-client-type"] = "dashboard";
 
 			return config;
 		},

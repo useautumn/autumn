@@ -1,20 +1,17 @@
 import {
-	pgTable,
-	numeric,
 	boolean,
 	foreignKey,
-	unique,
-	text,
-	jsonb,
 	index,
+	jsonb,
+	numeric,
+	pgTable,
+	text,
 } from "drizzle-orm/pg-core";
-
-import { features } from "../../featureModels/featureTable.js";
-
 import { collatePgColumn } from "../../../db/utils.js";
-import { EntityBalance } from "./cusEntModels.js";
+import { features } from "../../featureModels/featureTable.js";
+import { entitlements } from "../../productModels/entModels/entTable.js";
 import { customerProducts } from "../cusProductTable.js";
-import { entitlements } from "../../../db/schema.js";
+import type { EntityBalance } from "./cusEntModels.js";
 
 export const customerEntitlements = pgTable(
 	"customer_entitlements",

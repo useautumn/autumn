@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 
 const ReferralCodeSchema = z.object({
 	// Code, org id, env should be unique

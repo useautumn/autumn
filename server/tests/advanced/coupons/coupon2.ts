@@ -1,43 +1,35 @@
 import {
-	advanceClockForInvoice,
-	completeCheckoutForm,
-	getDiscount,
-} from "tests/utils/stripeUtils.js";
-
-import chalk from "chalk";
-import Stripe from "stripe";
-
-import { expect } from "chai";
-import {
 	APIVersion,
-	AppEnv,
+	type AppEnv,
 	CouponDurationType,
-	CreateReward,
-	Organization,
+	type CreateReward,
+	type Organization,
 	RewardType,
 } from "@autumn/shared";
-import { getOriginalCouponId } from "@/internal/rewards/rewardUtils.js";
-import { getPriceForOverage } from "@/internal/products/prices/priceUtils.js";
-
-import { timeout } from "tests/utils/genUtils.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import { expect } from "chai";
+import chalk from "chalk";
+import { addHours, addMonths } from "date-fns";
+import { Decimal } from "decimal.js";
+import type Stripe from "stripe";
 import { setupBefore } from "tests/before.js";
-import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
+import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
+import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
+import { timeout } from "tests/utils/genUtils.js";
+import { createProducts, createReward } from "tests/utils/productUtils.js";
+import { completeCheckoutForm, getDiscount } from "tests/utils/stripeUtils.js";
 import {
 	addPrefixToProducts,
 	getBasePrice,
 } from "tests/utils/testProductUtils/testProductUtils.js";
-import { createProducts, createReward } from "tests/utils/productUtils.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { Decimal } from "decimal.js";
-import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { getOriginalCouponId } from "@/internal/rewards/rewardUtils.js";
+import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
-import { addHours, addMonths } from "date-fns";
-import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
 
 const pro = constructProduct({
 	type: "pro",
@@ -66,11 +58,11 @@ describe(
 	chalk.yellow(`${testCase} - Testing one-off rollover, apply to usage only`),
 	() => {
 		let logger: any;
-		let customerId = testCase;
+		const customerId = testCase;
 		let stripeCli: Stripe;
 		let testClockId: string;
 
-		let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+		const autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
 		let org: Organization;
 		let env: AppEnv;
 		let db: DrizzleCli;
@@ -163,7 +155,7 @@ describe(
 				value: usage,
 			});
 
-			let usageTotal = await getExpectedInvoiceTotal({
+			const usageTotal = await getExpectedInvoiceTotal({
 				org,
 				env,
 				db,
@@ -174,7 +166,7 @@ describe(
 				onlyIncludeUsage: true,
 			});
 
-			let basePrice = getBasePrice({ product: pro });
+			const basePrice = getBasePrice({ product: pro });
 
 			couponAmount = couponAmount - usageTotal;
 
