@@ -1,10 +1,10 @@
 import {
 	type AppEnv,
+	createdAtToVersion,
 	type Feature,
 	type FullCusEntWithFullCusProduct,
 	type FullCusProduct,
 	type FullCustomer,
-	LegacyVersion,
 	type Organization,
 	WebhookEventType,
 } from "@autumn/shared";
@@ -25,7 +25,7 @@ export const mergeNewCusEntsIntoCusProducts = ({
 	for (const cusProduct of cusProducts) {
 		for (let i = 0; i < cusProduct.customer_entitlements.length; i++) {
 			const correspondingCusEnt = newCusEnts.find(
-				(cusEnt) => cusEnt.id == cusProduct.customer_entitlements[i].id,
+				(cusEnt) => cusEnt.id === cusProduct.customer_entitlements[i].id,
 			);
 
 			if (correspondingCusEnt) {
@@ -57,6 +57,10 @@ export const sendSvixThresholdReachedEvent = async ({
 	fullCus: FullCustomer;
 	thresholdType: "limit_reached" | "allowance_used";
 }) => {
+	const apiVersion = createdAtToVersion({
+		createdAt: org.created_at || undefined,
+	});
+
 	const cusDetails = await getCustomerDetails({
 		db,
 		customer: fullCus,
@@ -66,6 +70,7 @@ export const sendSvixThresholdReachedEvent = async ({
 		logger,
 		cusProducts: fullCus.customer_products,
 		expand: [],
+		apiVersion,
 	});
 
 	if (fullCus.entity) {
@@ -115,6 +120,10 @@ export const handleAllowanceUsed = async ({
 	features: Feature[];
 	logger: any;
 }) => {
+	const apiVersion = createdAtToVersion({
+		createdAt: org.created_at || undefined,
+	});
+
 	// Allowance used...
 	// Make sure overage allowed is false
 	const oldCusEnts = structuredClone(cusEnts);
@@ -134,7 +143,7 @@ export const handleAllowanceUsed = async ({
 		feature,
 		org,
 		cusProducts: fullCus.customer_products,
-		apiVersion: LegacyVersion.v1_2,
+		apiVersion,
 	});
 
 	const v2CheckResponse = await getV2CheckResponse({
@@ -144,7 +153,7 @@ export const handleAllowanceUsed = async ({
 		feature,
 		org,
 		cusProducts: fullCus.customer_products,
-		apiVersion: LegacyVersion.v1_2,
+		apiVersion,
 	});
 
 	// console.log(`Handling allowance used for feature: ${feature.id}`);
@@ -192,6 +201,10 @@ export const handleThresholdReached = async ({
 	logger: any;
 }) => {
 	try {
+		const apiVersion = createdAtToVersion({
+			createdAt: org.created_at || undefined,
+		});
+
 		const newCusProducts = mergeNewCusEntsIntoCusProducts({
 			cusProducts: fullCus.customer_products,
 			newCusEnts: newCusEnts,
@@ -206,7 +219,7 @@ export const handleThresholdReached = async ({
 			feature,
 			org,
 			cusProducts: fullCus.customer_products,
-			apiVersion: LegacyVersion.v1_2,
+			apiVersion,
 		});
 
 		const v2CheckResponse = await getV2CheckResponse({
@@ -216,7 +229,7 @@ export const handleThresholdReached = async ({
 			feature,
 			org,
 			cusProducts: newCusProducts,
-			apiVersion: LegacyVersion.v1_2,
+			apiVersion,
 		});
 
 		if (
@@ -232,6 +245,7 @@ export const handleThresholdReached = async ({
 				logger,
 				cusProducts: newCusProducts,
 				expand: [],
+				apiVersion,
 			});
 
 			if (fullCus.entity) {

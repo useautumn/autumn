@@ -1,3 +1,4 @@
+import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
 import { z } from "zod/v4";
 import { CustomerSchema } from "../cusModels/cusModels.js";
 import { ProcessorType } from "../genModels/genEnums.js";
@@ -60,7 +61,7 @@ export const CusProductSchema = z.object({
 		.optional(),
 
 	quantity: z.number().default(1),
-	api_version: z.number().nullish(),
+	api_version: z.enum(ApiVersion).nullish(),
 });
 
 export const FullCusProductSchema = CusProductSchema.extend({

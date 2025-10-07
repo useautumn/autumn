@@ -1,7 +1,6 @@
-import { type AttachBody, LegacyVersion } from "@autumn/shared";
+import type { AttachBody } from "@autumn/shared";
 import { nullish } from "@/utils/genUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
-import { orgToVersion } from "@/utils/versionUtils/legacyVersionUtils.js";
 import type { AttachParams } from "../../../cusProducts/AttachParams.js";
 import { processAttachBody } from "./processAttachBody.js";
 
@@ -27,14 +26,6 @@ export const getAttachParams = async ({
 		req,
 		attachBody,
 	});
-
-	const { org } = req;
-
-	const apiVersion =
-		orgToVersion({
-			org,
-			reqApiVersion: req.apiVersion,
-		}) || LegacyVersion.v1;
 
 	const entityId = attachBody.entity_id;
 	const internalEntityId = entityId ? customer.entity?.internal_id : undefined;
@@ -67,8 +58,6 @@ export const getAttachParams = async ({
 		entityId: entityId || undefined,
 		cusProducts: customer.customer_products,
 
-		// Others
-		apiVersion,
 		successUrl: attachBody.success_url,
 		invoiceOnly: attachBody.invoice,
 		productsList: attachBody.products || undefined,
@@ -80,6 +69,9 @@ export const getAttachParams = async ({
 		checkoutSessionParams: attachBody.checkout_session_params,
 		isCustom: attachBody.is_custom,
 		setupPayment: attachBody.setup_payment,
+
+		// Others
+		apiVersion: req.apiVersion.value,
 	};
 
 	return {

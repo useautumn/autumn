@@ -1,6 +1,8 @@
 import {
 	ApiCusFeatureV2Schema,
 	ApiCustomerSchema,
+	ApiVersion,
+	type ApiVersionClass,
 	type AppEnv,
 	CusExpand,
 	CusProductStatus,
@@ -12,14 +14,11 @@ import {
 	FeatureType,
 	type FullCusProduct,
 	type FullCustomer,
-	LegacyVersion,
 	type Organization,
 	type RewardResponse,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { invoicesToResponse } from "@/internal/invoices/invoiceUtils.js";
-import { BREAK_API_VERSION } from "@/utils/constants.js";
-import { orgToVersion } from "@/utils/versionUtils/legacyVersionUtils.js";
 import { featuresToObject } from "./cusFeatureResponseUtils/balancesToFeatureResponse.js";
 import { getCusBalances } from "./cusFeatureResponseUtils/getCusBalances.js";
 import { processFullCusProducts } from "./cusProductResponseUtils/processFullCusProducts.js";
@@ -39,7 +38,7 @@ export const getCustomerDetails = async ({
 	logger,
 	cusProducts,
 	expand,
-	reqApiVersion,
+	apiVersion,
 }: {
 	db: DrizzleCli;
 	customer: FullCustomer;
@@ -50,13 +49,8 @@ export const getCustomerDetails = async ({
 	logger: any;
 	cusProducts: FullCusProduct[];
 	expand: CusExpand[];
-	reqApiVersion?: number;
+	apiVersion: ApiVersionClass;
 }) => {
-	const apiVersion = orgToVersion({
-		org,
-		reqApiVersion,
-	});
-
 	const withRewards = expand.includes(CusExpand.Rewards);
 
 	const inStatuses = org.config.include_past_due
@@ -85,7 +79,7 @@ export const getCustomerDetails = async ({
 		features,
 	});
 
-	if (apiVersion >= LegacyVersion.v1_1) {
+	if (apiVersion.gte(ApiVersion.V1_1)) {
 		let entList: any = balances.map((b) => {
 			const isBoolean =
 				features.find((f: Feature) => f.id === b.feature_id)?.type ===
@@ -103,7 +97,7 @@ export const getCustomerDetails = async ({
 
 		const products: any = [...main, ...addOns];
 
-		if (apiVersion >= LegacyVersion.v1_2) {
+		if (apiVersion.gte(ApiVersion.V1_2)) {
 			entList = featuresToObject({
 				features,
 				entList,
@@ -188,14 +182,15 @@ export const getCustomerDetails = async ({
 		}
 	} else {
 		// Probably don't need items...?
-		const withItems = org.config.api_version >= BREAK_API_VERSION;
+		// const withItems = org.config.api_version >= BREAK_API_VERSION;
+		// const withItems = apiVersion.gte(ApiVersion.V0_2);
 
 		const processedInvoices = await getCusInvoices({
 			db,
 			internalCustomerId: customer.internal_id,
 			invoices: customer.invoices,
 			limit: 20,
-			withItems,
+			withItems: false,
 			features,
 		});
 

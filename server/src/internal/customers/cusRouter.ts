@@ -1,4 +1,4 @@
-import { ErrCode, LegacyVersion } from "@autumn/shared";
+import { ErrCode } from "@autumn/shared";
 import { Router } from "express";
 import { Hono } from "hono";
 import { StatusCodes } from "http-status-codes";
@@ -73,9 +73,7 @@ expressCusRouter.get(
 	async (req: any, res: any) => {
 		try {
 			const returnUrl = req.query.return_url;
-
 			const customerId = req.params.customer_id;
-
 			const [org, customer] = await Promise.all([
 				OrgService.getFromReq(req),
 				CusService.get({
@@ -96,64 +94,42 @@ expressCusRouter.get(
 
 			const stripeCli = createStripeCli({ org, env: req.env });
 
+			let stripeCusId: string = customer.processor?.id;
 			if (!customer.processor?.id) {
-				let newCus;
-				try {
-					newCus = await createStripeCusIfNotExists({
-						db: req.db,
-						org,
-						env: req.env,
-						customer,
-						logger: req.logtail,
-					});
-				} catch (error: any) {
+				const newCus = await createStripeCusIfNotExists({
+					db: req.db,
+					org,
+					env: req.env,
+					customer,
+					logger: req.logtail,
+				});
+
+				if (!newCus) {
 					throw new RecaseError({
 						message: `Failed to create Stripe customer`,
 						code: ErrCode.StripeError,
 						statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
 					});
-				} finally {
-					if (!newCus) {
-						throw new RecaseError({
-							message: `Failed to create Stripe customer`,
-							code: ErrCode.StripeError,
-							statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-						});
-					}
-
-					const portal = await stripeCli.billingPortal.sessions.create({
-						customer: newCus.id,
-						return_url: returnUrl || toSuccessUrl({ org, env: req.env }),
-					});
-
-					if (org.api_version >= LegacyVersion.v1_1) {
-						return res.status(200).json({
-							customer_id: customer.id,
-							url: portal.url,
-						});
-					} else {
-						return res.status(200).json({
-							url: portal.url,
-						});
-					}
 				}
+
+				stripeCusId = newCus.id;
 			}
 
 			const portal = await stripeCli.billingPortal.sessions.create({
-				customer: customer.processor.id,
+				customer: stripeCusId,
 				return_url: returnUrl || toSuccessUrl({ org, env: req.env }),
 			});
 
-			if (org.api_version >= LegacyVersion.v1_1) {
-				res.status(200).json({
-					customer_id: customer.id,
-					url: portal.url,
-				});
-			} else {
-				res.status(200).json({
-					url: portal.url,
-				});
-			}
+			res.status(200).json({
+				customer_id: customer.id || null,
+				url: portal.url,
+			});
+			// if (org.api_version >= LegacyVersion.v1_1) {
+			// } else {
+			// 	res.status(200).json({
+			// 		url: portal.url,
+			// 	});
+			// }
 		} catch (error) {
 			handleRequestError({ req, error, res, action: "get billing portal" });
 		}

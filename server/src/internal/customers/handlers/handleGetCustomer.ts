@@ -60,7 +60,7 @@ export const handleGetCustomer = async (req: any, res: any) =>
 				cusProducts: customer.customer_products,
 				expand: expandArray,
 				features,
-				reqApiVersion: req.apiVersion,
+				apiVersion: req.apiVersion,
 			});
 
 			res.status(200).json(cusData);

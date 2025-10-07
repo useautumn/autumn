@@ -1,4 +1,6 @@
 import {
+	ApiVersion,
+	type ApiVersionClass,
 	BillingInterval,
 	type Feature,
 	type FreeTrial,
@@ -6,7 +8,6 @@ import {
 	type FullCustomer,
 	type FullCustomerEntitlement,
 	isTrialing,
-	LegacyVersion,
 	type ProductItem,
 	SuccessCode,
 	UsageModel,
@@ -37,7 +38,7 @@ export const getBooleanEntitledResult = async ({
 	cusEnts: FullCustomerEntitlement[];
 	res: any;
 	feature: Feature;
-	apiVersion: number;
+	apiVersion: ApiVersionClass;
 	withPreview: boolean;
 	cusProducts: FullCusProduct[];
 	allFeatures: Feature[];
@@ -56,7 +57,7 @@ export const getBooleanEntitledResult = async ({
 		return featureMatch && entityMatch;
 	});
 
-	if (apiVersion >= LegacyVersion.v1_1) {
+	if (apiVersion.gte(ApiVersion.V1_1)) {
 		return res.status(200).json({
 			customer_id: fullCus.id,
 			feature_id: feature.id,
@@ -111,7 +112,9 @@ export const getOptions = ({
 	now = now || Date.now();
 
 	return prodItems
-		.filter((i) => isFeaturePriceItem(i) && i.usage_model == UsageModel.Prepaid)
+		.filter(
+			(i) => isFeaturePriceItem(i) && i.usage_model === UsageModel.Prepaid,
+		)
 		.map((i) => {
 			const finalProration = getProration({
 				anchor,
@@ -144,7 +147,7 @@ export const getOptions = ({
 			}
 
 			const currentOptions = cusProduct?.options.find(
-				(o) => o.feature_id == i.feature_id,
+				(o) => o.feature_id === i.feature_id,
 			);
 
 			let currentQuantity = currentOptions?.quantity;
@@ -179,7 +182,7 @@ export const getOptions = ({
 
 			return {
 				feature_id: i.feature_id,
-				feature_name: features.find((f) => f.id == i.feature_id)?.name,
+				feature_name: features.find((f) => f.id === i.feature_id)?.name,
 				billing_units: i.billing_units,
 				included_usage: i.included_usage || 0,
 				...priceData,

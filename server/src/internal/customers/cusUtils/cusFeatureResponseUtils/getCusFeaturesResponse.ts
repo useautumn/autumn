@@ -1,9 +1,9 @@
 import {
+	type ApiVersionClass,
 	cusProductsToCusEnts,
 	cusProductsToCusPrices,
 	type Entity,
 	type FullCusProduct,
-	type LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
 import { balancesToFeatureResponse } from "./balancesToFeatureResponse.js";
@@ -18,7 +18,7 @@ export const getCusFeaturesResponse = async ({
 	cusProducts: FullCusProduct[];
 	org: Organization;
 	entity?: Entity;
-	apiVersion: LegacyVersion;
+	apiVersion: ApiVersionClass;
 }) => {
 	const cusEnts = cusProductsToCusEnts({ cusProducts }) as any;
 

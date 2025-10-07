@@ -1,9 +1,4 @@
-import {
-	ApiVersionClass,
-	AuthType,
-	ErrCode,
-	parseVersion,
-} from "@autumn/shared";
+import { AuthType, ErrCode } from "@autumn/shared";
 import { verifyKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
 import { dashboardOrigins } from "@/utils/constants.js";
 import RecaseError from "@/utils/errorUtils.js";
@@ -11,32 +6,12 @@ import { withOrgAuth } from "./authMiddleware.js";
 import { verifyBearerPublishableKey } from "./publicAuthMiddleware.js";
 import { trmnlAuthMiddleware, trmnlExclusions } from "./trmnlAuthMiddleware.js";
 
-const verifyApiVersion = (version: string): ApiVersionClass => {
-	const parsedVersion = parseVersion({ versionStr: version });
-
-	if (!parsedVersion) {
-		throw new RecaseError({
-			message: `${version} is not a valid API version. Supported: CalVer (2025-04-17), SemVer (1.1.0), or legacy (0.1, 0.2, 1.1, 1.2)`,
-			code: ErrCode.InvalidApiVersion,
-			statusCode: 400,
-		});
-	}
-
-	return new ApiVersionClass(parsedVersion);
-};
-
 const maskApiKey = (apiKey: string) => {
 	return apiKey.slice(0, 15) + apiKey.slice(15).replace(/./g, "*");
 };
 
 export const verifySecretKey = async (req: any, res: any, next: any) => {
 	const authHeader = req.headers.authorization || req.headers.Authorization;
-
-	const version = req.headers["x-api-version"];
-
-	if (version) {
-		req.apiVersion = verifyApiVersion(version);
-	}
 
 	if (!authHeader || !authHeader.startsWith("Bearer ")) {
 		const origin = req.get("origin");
@@ -100,7 +75,9 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
 				...org.config,
 				...newConfigFields,
 			};
-		} catch (error) {}
+		} catch {
+			// Ignore parsing errors
+		}
 	}
 
 	next();

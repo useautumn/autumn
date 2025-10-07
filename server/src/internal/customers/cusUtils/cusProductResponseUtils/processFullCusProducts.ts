@@ -1,10 +1,11 @@
 import {
 	ACTIVE_STATUSES,
 	type APICusProduct,
+	ApiVersion,
+	type ApiVersionClass,
 	type CusProductStatus,
 	type Entity,
 	type Feature,
-	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
 import { getCusProductResponse } from "./getCusProductResponse.js";
@@ -57,7 +58,7 @@ export const processFullCusProducts = async ({
 	subs: any;
 	org: Organization;
 	entity?: Entity;
-	apiVersion: number;
+	apiVersion: ApiVersionClass;
 	features: Feature[];
 }) => {
 	// Process full cus products
@@ -81,7 +82,7 @@ export const processFullCusProducts = async ({
 		}
 	}
 
-	if (apiVersion >= LegacyVersion.v1_1) {
+	if (apiVersion.gte(ApiVersion.V1_1)) {
 		main = mergeCusProductResponses({
 			cusProductResponses: main as APICusProduct[],
 		});

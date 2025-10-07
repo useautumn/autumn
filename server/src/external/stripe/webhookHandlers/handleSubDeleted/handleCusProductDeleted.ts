@@ -1,10 +1,10 @@
 import {
+	ApiVersion,
 	AttachScenario,
 	BillingType,
 	CusProductStatus,
 	cusProductToPrices,
 	type FullCusProduct,
-	LegacyVersion,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -53,7 +53,7 @@ export const handleCusProductDeleted = async ({
 		stripeId: fullCus.processor?.id,
 	});
 
-	const isV4Usage = cusProduct.api_version === LegacyVersion.v1_4;
+	const isV4Usage = cusProduct.api_version === ApiVersion.Beta;
 
 	// refer to handleUpgradeFlow.ts, when cancel immediately through API / dashboard, this happens...?
 	const isAutumnCancel =

@@ -36,5 +36,5 @@ export const orgToVersion = ({
 	org: Organization;
 	reqApiVersion?: number;
 }) => {
-	return reqApiVersion || org.api_version || LegacyVersion.v1;
+	return reqApiVersion || LegacyVersion.v1;
 };

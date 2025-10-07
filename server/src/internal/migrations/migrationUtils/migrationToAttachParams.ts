@@ -2,7 +2,6 @@ import {
 	type FullCusProduct,
 	type FullCustomer,
 	type FullProduct,
-	LegacyVersion,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { getStripeCusData } from "@/internal/customers/attach/attachUtils/attachParams/attachParamsUtils/getStripeCusData.js";
@@ -22,9 +21,7 @@ export const migrationToAttachParams = async ({
 	cusProduct: FullCusProduct;
 	newProduct: FullProduct;
 }): Promise<AttachParams> => {
-	const { org } = req;
-
-	const apiVersion = org.config.api_version || LegacyVersion.v1;
+	const { org, apiVersion } = req;
 	const internalEntityId = cusProduct.internal_entity_id || undefined;
 
 	const { stripeCus, paymentMethod, now } = await getStripeCusData({
@@ -59,7 +56,7 @@ export const migrationToAttachParams = async ({
 		cusProducts: customer.customer_products,
 
 		// Others
-		apiVersion,
+		apiVersion: apiVersion.value,
 	};
 
 	return attachParams;

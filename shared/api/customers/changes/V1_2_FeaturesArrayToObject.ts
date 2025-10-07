@@ -33,8 +33,9 @@ const V1_1_CustomerSchema = ApiCustomerSchema.extend({
 
 export const V1_2_FeaturesArrayToObject = defineVersionChange({
 	version: ApiVersion.V1_2,
-	description:
+	description: [
 		"Features: object with breakdown → array with expanded intervals",
+	],
 	affectedResources: [AffectedResource.Customer],
 	newSchema: V1_2_CustomerSchema,
 	oldSchema: V1_1_CustomerSchema,
@@ -111,6 +112,8 @@ export const V1_2_FeaturesArrayToObject = defineVersionChange({
 		}
 
 		// Boolean / unlimited features don't have the rest of the fields
+
+		console.log("v1_1_features", v1_1_features);
 
 		// Validation happens automatically in VersionChange base class
 		return {

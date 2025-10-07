@@ -1,6 +1,8 @@
 import {
 	ACTIVE_STATUSES,
 	APICusProductSchema,
+	ApiVersion,
+	type ApiVersionClass,
 	type AppEnv,
 	AttachScenario,
 	CusProductStatus,
@@ -10,7 +12,6 @@ import {
 	type FullCusProduct,
 	type FullCustomer,
 	type FullProduct,
-	LegacyVersion,
 	type Organization,
 	PriceType,
 	type Subscription,
@@ -28,7 +29,6 @@ import {
 } from "@/internal/products/prices/priceUtils.js";
 import { isDefaultTrialFullProduct } from "@/internal/products/productUtils/classifyProduct.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
-import { BREAK_API_VERSION } from "@/utils/constants.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { handleAddProduct } from "../attach/attachFunctions/addProductFlow/handleAddProduct.js";
@@ -92,7 +92,7 @@ export const cancelCusProductSubscriptions = async ({
 
 			logger.info(`Cancelled stripe subscription ${subId}, org: ${org.slug}`);
 		} catch (error: any) {
-			if (error.code != "resource_missing") {
+			if (error.code !== "resource_missing") {
 				console.log(
 					`Error canceling stripe subscription ${error.code}: ${error.message}`,
 				);
@@ -406,14 +406,14 @@ export const processFullCusProduct = ({
 	org: Organization;
 	subs?: Subscription[];
 	entities?: Entity[];
-	apiVersion: number;
+	apiVersion: ApiVersionClass;
 }) => {
 	// Process prices
 
 	const prices = cusProduct.customer_prices.map((cp) => {
 		const price = cp.price;
 
-		if (price.config?.type == PriceType.Fixed) {
+		if (price.config?.type === PriceType.Fixed) {
 			const config = price.config as FixedPriceConfig;
 			return {
 				amount: config.amount,
@@ -430,7 +430,8 @@ export const processFullCusProduct = ({
 
 			const ent = cusEnt?.entitlement;
 
-			const singleTier = ent?.allowance == 0 && config.usage_tiers.length == 1;
+			const singleTier =
+				ent?.allowance === 0 && config.usage_tiers.length === 1;
 
 			if (singleTier) {
 				return {
@@ -450,7 +451,7 @@ export const processFullCusProduct = ({
 							amount: 0,
 						},
 						...config.usage_tiers.map((tier) => {
-							const isLastTier = tier.to == -1 || tier.to == TierInfinite;
+							const isLastTier = tier.to === -1 || tier.to === TierInfinite;
 							return {
 								to: isLastTier ? tier.to : Number(tier.to) + allowance!,
 								amount: tier.amount,
@@ -459,7 +460,7 @@ export const processFullCusProduct = ({
 					];
 				} else {
 					tiers = config.usage_tiers.map((tier) => {
-						const isLastTier = tier.to == -1 || tier.to == TierInfinite;
+						const isLastTier = tier.to === -1 || tier.to === TierInfinite;
 						return {
 							to: isLastTier ? tier.to : Number(tier.to) + allowance!,
 							amount: tier.amount,
@@ -482,13 +483,9 @@ export const processFullCusProduct = ({
 	const subIds = cusProduct.subscription_ids;
 	let stripeSubData = {};
 
-	if (
-		subIds &&
-		subIds.length > 0 &&
-		org.config.api_version >= BREAK_API_VERSION
-	) {
+	if (subIds && subIds.length > 0 && apiVersion.gte(ApiVersion.V0_2)) {
 		const baseSub = subs?.find(
-			(s) => s.id == subIds[0] || (s as Subscription).stripe_id == subIds[0],
+			(s) => s.id === subIds[0] || (s as Subscription).stripe_id === subIds[0],
 		);
 		stripeSubData = {
 			current_period_end: baseSub?.current_period_end
@@ -507,7 +504,7 @@ export const processFullCusProduct = ({
 		};
 	}
 
-	if (apiVersion >= LegacyVersion.v1_1) {
+	if (apiVersion.gte(ApiVersion.V1_1)) {
 		if ((!subIds || subIds.length === 0) && trialing) {
 			stripeSubData = {
 				current_period_start: cusProduct.starts_at,
@@ -549,8 +546,6 @@ export const processFullCusProduct = ({
 			starts_at: cusProduct.starts_at,
 
 			...stripeSubData,
-			// prices: cusProduct.customer_prices,
-			// entitlements: cusProduct.customer_entitlements,
 		};
 
 		return cusProductResponse;

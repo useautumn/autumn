@@ -9,13 +9,14 @@ export { ApiVersionClass } from "./ApiVersionClass.js";
 // Conversion utilities
 export {
 	calVerToSemVer,
+	createdAtToVersion,
 	legacyToSemVer,
 	parseVersion,
 	semVerToCalVer,
 	semVerToLegacy,
 } from "./convertVersionUtils.js";
 // Org-specific utilities (deprecated)
-export { getOrgApiVersion, toLegacyVersion } from "./orgVersionUtils.js";
+// export { getOrgApiVersion, toLegacyVersion } from "./orgVersionUtils.js";
 // Branching utilities
 export {
 	ifVersion,

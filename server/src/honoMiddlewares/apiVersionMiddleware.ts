@@ -1,8 +1,8 @@
 import {
+	ApiVersion,
 	ApiVersionClass,
+	createdAtToVersion,
 	ErrCode,
-	InternalError,
-	legacyToSemVer,
 	parseVersion,
 } from "@autumn/shared";
 import type { Context, Next } from "hono";
@@ -14,9 +14,8 @@ import RecaseError from "@/utils/errorUtils.js";
  *
  * Resolution order:
  * 1. x-api-version header (if provided)
- * 2. org.api_version (version system 2: 1.0, 1.1, 1.2, 1.4)
- * 3. org.config.api_version (version system 1: 0.1, 0.2)
- * 4. Default to org's default version
+ * 2. Calculate from org.created_at timestamp
+ * 3. Default to V0_2 if no org found
  *
  * Supports:
  * - CalVer format (YYYY-MM-DD) e.g., "2025-04-17"
@@ -48,37 +47,21 @@ export const apiVersionMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 		finalVersion = new ApiVersionClass(parsedVersion);
 	}
-	// 2. Check org.api_version (version system 2)
-	else if (org?.api_version) {
-		const semver = legacyToSemVer({ legacyVersion: org.api_version });
-		if (semver) {
-			finalVersion = new ApiVersionClass(semver);
-		}
-	}
-	// 3. Check org.config.api_version (version system 1)
-	else if (org?.config?.api_version) {
-		const semver = legacyToSemVer({ legacyVersion: org.config.api_version });
-		if (semver) {
-			finalVersion = new ApiVersionClass(semver);
-		}
+	// 2. Calculate from org creation date
+	else if (org?.created_at) {
+		finalVersion = createdAtToVersion({
+			createdAt: org.created_at,
+		});
 	}
 
-	// 4. Fallback to V0_2 (version 1.0 / 0.2)
+	// 3. Fallback to V0_2 if no org found
 	if (!finalVersion) {
-		const legacyVersion = org?.api_version || org?.config?.api_version || 1.0;
-		const defaultVersion = legacyToSemVer({ legacyVersion });
-
-		if (!defaultVersion) {
-			throw new InternalError({
-				message: "Failed to initialize API version - this should never happen",
-			});
-		}
-
-		finalVersion = new ApiVersionClass(defaultVersion);
+		finalVersion = new ApiVersionClass(ApiVersion.V0_2);
 	}
 
 	// Store in context - now you can do ctx.apiVersion.gte(ApiVersion.V1_1)
 	ctx.apiVersion = finalVersion;
+	console.log(`Autumn Version: ${finalVersion.semver}`);
 
 	await next();
 };

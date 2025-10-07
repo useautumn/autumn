@@ -1,4 +1,5 @@
 import {
+	type ApiVersionClass,
 	CheckResultSchema,
 	type Feature,
 	FeatureType,
@@ -65,7 +66,7 @@ export const getV2CheckResponse = async ({
 	org: Organization;
 	cusProducts: FullCusProduct[];
 	requiredBalance?: number;
-	apiVersion: number;
+	apiVersion: ApiVersionClass;
 }) => {
 	// 1. Get the feature to use
 	const featureToUse = getFeatureToUse({

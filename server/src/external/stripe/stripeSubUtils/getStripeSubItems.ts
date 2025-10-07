@@ -1,4 +1,5 @@
 import {
+	type ApiVersion,
 	type AttachConfig,
 	type AttachReplaceable,
 	BillingInterval,
@@ -9,7 +10,6 @@ import {
 	type FullProduct,
 	InternalError,
 	isUsagePrice,
-	type LegacyVersion,
 	type Organization,
 	type Price,
 	type ProductOptions,
@@ -79,7 +79,7 @@ export const getStripeSubItems = async ({
 		internalEntityId?: string;
 		cusProducts?: FullCusProduct[];
 		entities: Entity[];
-		apiVersion?: LegacyVersion;
+		apiVersion?: ApiVersion;
 		replaceables: AttachReplaceable[];
 	};
 	isCheckout?: boolean;

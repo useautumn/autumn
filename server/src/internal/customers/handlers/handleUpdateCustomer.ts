@@ -143,7 +143,7 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
 				cusProducts: finalCustomer.customer_products,
 				expand: parseCusExpand(req.query.expand as string),
 				features,
-				reqApiVersion: req.apiVersion,
+				apiVersion: req.apiVersion,
 			});
 
 			res.status(200).json(customerDetails);
