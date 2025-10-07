@@ -1,19 +1,6 @@
-import {
-	type Feature,
-	ProductItemInterval,
-	productV2ToFeatureItems,
-} from "@autumn/shared";
 import { PlusIcon } from "@phosphor-icons/react";
-import { useState } from "react";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
 import { Button } from "@/components/v2/buttons/Button";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { getItemId } from "@/utils/product/productItemUtils";
-import { FeatureTypeBadge } from "@/views/products/features/components/FeatureTypeBadge";
 import { useProductContext } from "@/views/products/product/ProductContext";
 
 interface AddFeatureRowProps {
@@ -23,124 +10,29 @@ interface AddFeatureRowProps {
 
 export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 	const { features } = useFeaturesQuery();
-	const { product, setProduct, setSheet, setEditingState } =
-		useProductContext();
+	const { setSheet, setEditingState } = useProductContext();
 
-	// State for popover
-	const [popoverOpen, setPopoverOpen] = useState(false);
-
-	const handleFeatureSelect = (feature: Feature) => {
-		if (!product || !feature.id) return;
-
-		// Create a new item with the selected feature
-		const newItem = {
-			feature_id: feature.id,
-			included_usage: null,
-			interval: ProductItemInterval.Month,
-			price: null,
-			tiers: null,
-			billing_units: 1,
-			entity_feature_id: null,
-			reset_usage_when_enabled: true,
-		};
-
-		// Add the new item to the product
-		const newItems = [...product.items, newItem];
-		const updatedProduct = { ...product, items: newItems };
-		setProduct(updatedProduct);
-
-		// Close popover
-		setPopoverOpen(false);
-
-		// Open edit sidebar for the new item
-		const featureItems = productV2ToFeatureItems({ items: newItems });
-		const itemIndex = featureItems.length - 1;
-
-		console.log("itemIndex", itemIndex);
-		const itemId = getItemId({ item: newItem, itemIndex });
-		console.log("itemId", itemId);
-
-		setEditingState({ type: "feature", id: itemId });
-		setSheet("edit-feature");
+	const handleAddFeatureClick = () => {
+		if (features.length === 0) {
+			// No features exist, go directly to create flow
+			setEditingState({ type: "feature", id: "new" });
+			setSheet("new-feature");
+		} else {
+			// Features exist, open select sheet
+			setEditingState({ type: "feature", id: "select" });
+			setSheet("select-feature");
+		}
 	};
 
 	return (
-		<div>
-			{features.length > 0 ? (
-				// Show popover with feature dropdown when features exist
-				<Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-					<PopoverTrigger asChild>
-						<Button
-							variant="secondary"
-							className="w-full !h-8"
-							disabled={disabled}
-							aria-label="Add new feature"
-						>
-							<PlusIcon className="size-3" weight="bold" />
-						</Button>
-					</PopoverTrigger>
-					<PopoverContent className="w-80 p-0" align="start">
-						<div className="max-h-60 overflow-y-auto">
-							<div className="px-3 py-2 text-sm font-medium text-muted-foreground border-b">
-								Select a feature
-							</div>
-							{features
-								.filter((feature: Feature) => !feature.archived)
-								.map((feature: Feature) => (
-									<button
-										key={feature.id}
-										type="button"
-										className="w-full px-3 py-2 text-left hover:bg-muted/50 transition-colors focus:outline-none"
-										onClick={() => handleFeatureSelect(feature)}
-									>
-										<div className="flex items-center justify-between gap-2">
-											<span className="truncate text-sm">{feature.name}</span>
-											<FeatureTypeBadge {...feature} />
-										</div>
-									</button>
-								))}
-							<div className="border-t p-1">
-								<button
-									type="button"
-									className="w-full px-3 py-2 text-left text-primary hover:bg-muted/50 transition-colors focus:outline-none text-sm font-medium"
-									onClick={() => {
-										setEditingState({ type: "feature", id: "new" });
-										setSheet("new-feature");
-										setPopoverOpen(false);
-									}}
-								>
-									<div className="flex items-center gap-2">
-										<PlusIcon size={14} />
-										Create new feature
-									</div>
-								</button>
-							</div>
-						</div>
-					</PopoverContent>
-				</Popover>
-			) : (
-				<button
-					type="button"
-					className="group/btn flex items-center justify-center bg-white border border-border rounded-lg h-[30px] w-full shadow-[0px_4px_4px_rgba(0,0,0,0.02),_inset_0px_-3px_4px_rgba(0,0,0,0.04)] cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed form-input"
-					onClick={() => {
-						setEditingState({ type: "feature", id: "new" });
-						setSheet("new-feature");
-					}}
-					tabIndex={0}
-					disabled={disabled}
-					aria-label="Add new feature"
-				>
-					<div
-						className={
-							disabled
-								? "text-t6"
-								: "text-t3 group-hover/btn:text-primary transition-colors"
-						}
-					>
-						<PlusIcon size={16} weight="regular" />
-					</div>
-				</button>
-			)}
-		</div>
+		<Button
+			variant="secondary"
+			className="w-full !h-8"
+			disabled={disabled}
+			onClick={handleAddFeatureClick}
+			aria-label="Add new feature"
+		>
+			<PlusIcon className="size-3" weight="bold" />
+		</Button>
 	);
 };

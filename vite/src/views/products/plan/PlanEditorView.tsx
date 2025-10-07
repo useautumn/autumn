@@ -13,10 +13,11 @@ import { EditPlanSheet } from "./components/EditPlanSheet";
 import { ManagePlan } from "./components/ManagePlan";
 import { NewFeatureSheet } from "./components/new-feature/NewFeatureSheet";
 import { SaveChangesBar } from "./components/SaveChangesBar";
+import { SelectFeatureSheet } from "./components/SelectFeatureSheet";
 import { usePlanData } from "./hooks/usePlanData";
 import ConfirmNewVersionDialog from "./versioning/ConfirmNewVersionDialog";
 
-type Sheets = "edit-plan" | "edit-feature" | "new-feature";
+type Sheets = "edit-plan" | "edit-feature" | "new-feature" | "select-feature";
 
 export default function PlanEditorView() {
 	const {
@@ -129,6 +130,8 @@ export const PlanSheets = ({ sheet }: { sheet: Sheets }) => {
 				);
 			case "new-feature":
 				return <NewFeatureSheet />;
+			case "select-feature":
+				return <SelectFeatureSheet />;
 			default:
 				return <EditPlanSheet />;
 		}

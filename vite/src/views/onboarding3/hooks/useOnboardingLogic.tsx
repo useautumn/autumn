@@ -185,12 +185,12 @@ export const useOnboardingLogic = () => {
 	]);
 
 	// Auto-open edit-plan sheet when entering step 4 (Playground) in edit mode
-	// Clear sheet when entering step 5 (Completion)
+	// Clear sheet when entering step 5 (Integration)
 	useEffect(() => {
 		if (step === OnboardingStep.Playground && playgroundMode === "edit") {
 			setSheet("edit-plan");
 			setEditingState({ type: "plan", id: null });
-		} else if (step === OnboardingStep.Completion) {
+		} else if (step === OnboardingStep.Integration) {
 			setSheet(null);
 			setEditingState({ type: null, id: null });
 		}
@@ -292,7 +292,7 @@ export const useOnboardingLogic = () => {
 			pushStep(nextStep);
 		} else {
 			// Finish onboarding
-			navigateTo("/products", navigate, env);
+			navigateTo("/sandbox/products", navigate, env);
 		}
 	};
 

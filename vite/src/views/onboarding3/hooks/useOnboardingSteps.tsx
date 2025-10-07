@@ -33,7 +33,7 @@ export const useOnboardingSteps = () => {
 				return true;
 			case OnboardingStep.Playground:
 				return true;
-			case OnboardingStep.Completion:
+			case OnboardingStep.Integration:
 				return true;
 			default:
 				return false;

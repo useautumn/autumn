@@ -67,12 +67,13 @@ export default function PricingTablePreview({
 	// Dynamic grid classes based on product count
 	const getGridClasses = () => {
 		const productCount = products.length;
+		// Always one column on small screens (vertical flow), more columns only on larger screens
 		if (productCount === 1) {
-			return "grid grid-cols-1 gap-6 max-w-md mx-auto px-4"; // Single centered column
+			return "flex flex-col gap-6 max-w-md mx-auto px-4"; // Always vertical
 		} else if (productCount === 2) {
-			return "grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto px-4"; // Two columns max
+			return "flex flex-col gap-6 max-w-2xl mx-auto px-4 sm:grid sm:grid-cols-2 sm:flex-none"; // Vertical on mobile, 2 columns on sm+
 		} else {
-			return "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto px-4"; // Three columns max
+			return "flex flex-col gap-6 max-w-7xl mx-auto px-4 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:flex-none"; // Vertical on mobile, 2 columns on sm+, 3 on lg+
 		}
 	};
 

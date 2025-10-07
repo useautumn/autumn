@@ -23,6 +23,12 @@
 	color: var(--color-t2);
 }
 
+.text-sub-secondary {
+	font-size: 15px;
+	font-weight: var(--font-weight-medium);
+	color: var(--color-t2);
+}
+
 .text-body {
 	font-size: 13px;
 	font-weight: var(--font-weight-medium);

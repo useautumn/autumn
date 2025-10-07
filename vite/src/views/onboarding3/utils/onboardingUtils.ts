@@ -18,7 +18,7 @@ export enum OnboardingStep {
 	FeatureCreation = "feature_creation",
 	FeatureConfiguration = "feature_configuration",
 	Playground = "playground",
-	Completion = "completion",
+	Integration = "integration",
 }
 
 // Helper to convert step enum to number for display
@@ -28,7 +28,7 @@ export const getStepNumber = (step: OnboardingStep): number => {
 		OnboardingStep.FeatureCreation,
 		OnboardingStep.FeatureConfiguration,
 		OnboardingStep.Playground,
-		OnboardingStep.Completion,
+		OnboardingStep.Integration,
 	];
 	return stepOrder.indexOf(step) + 1;
 };
@@ -45,8 +45,8 @@ export const getNextStep = (
 		case OnboardingStep.FeatureConfiguration:
 			return OnboardingStep.Playground;
 		case OnboardingStep.Playground:
-			return OnboardingStep.Completion;
-		case OnboardingStep.Completion:
+			return OnboardingStep.Integration;
+		case OnboardingStep.Integration:
 			return null;
 		default:
 			return null;
@@ -75,9 +75,10 @@ export const stepConfig = {
 		description:
 			"Take your time setting up plans and features. Revisit anytime. Use Preview Mode to test features, limits and upgrade/downgrade flows.",
 	},
-	[OnboardingStep.Completion]: {
-		title: "Complete!",
-		description: "Your plan has been created successfully",
+	[OnboardingStep.Integration]: {
+		title: "Integrate",
+		description:
+			"Let's integrate Autumn and get your first customer onto one of your plans",
 	},
 };
 
