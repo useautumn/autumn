@@ -1,4 +1,6 @@
 import {
+	ApiVersion,
+	type ApiVersionClass,
 	type EntInterval,
 	type EntitlementWithFeature,
 	type Entity,
@@ -8,12 +10,10 @@ import {
 	type FullCustomerPrice,
 	getCusEntBalance,
 	getStartingBalance,
-	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 
-import { BREAK_API_VERSION } from "@/utils/constants.js";
 import { notNullish, notNullOrUndefined } from "@/utils/genUtils.js";
 import {
 	getRelatedCusPrice,
@@ -40,12 +40,14 @@ export const getV1EntitlementsRes = ({
 	isBoolean,
 	unlimited,
 	ent,
+	apiVersion,
 }: {
 	org: Organization;
 	cusEnt: FullCustomerEntitlement;
 	isBoolean: boolean;
 	unlimited: boolean;
 	ent: EntitlementWithFeature;
+	apiVersion: ApiVersionClass;
 }) => {
 	const res: any = {
 		feature_id: ent.feature.id,
@@ -58,7 +60,7 @@ export const getV1EntitlementsRes = ({
 		unused: 0,
 	};
 
-	if (org.config.api_version >= BREAK_API_VERSION) {
+	if (apiVersion.gte(ApiVersion.V0_2)) {
 		res.next_reset_at =
 			isBoolean || unlimited ? undefined : cusEnt.next_reset_at;
 		res.allowance = isBoolean || unlimited ? undefined : 0;
@@ -178,7 +180,7 @@ export const getCusBalances = async ({
 	cusPrices: FullCustomerPrice[];
 	org: Organization;
 	entity?: Entity;
-	apiVersion: number;
+	apiVersion: ApiVersionClass;
 }) => {
 	const data: Record<string, any> = {};
 	const features = cusEntsWithCusProduct.map(
@@ -191,7 +193,7 @@ export const getCusBalances = async ({
 
 		if (
 			notNullish(ent.entity_feature_id) &&
-			entity?.feature_id != ent.entity_feature_id
+			entity?.feature_id !== ent.entity_feature_id
 		) {
 			return false;
 		}
@@ -206,7 +208,7 @@ export const getCusBalances = async ({
 		const key = `${ent.interval || "no-interval"}-${ent.interval_count || 1}-${feature.id}`;
 
 		// 1. Handle boolean
-		const isBoolean = feature.type == FeatureType.Boolean;
+		const isBoolean = feature.type === FeatureType.Boolean;
 
 		const { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
 			cusEnts: cusEntsWithCusProduct,
@@ -214,13 +216,14 @@ export const getCusBalances = async ({
 		});
 
 		// 1. Initialize balance object
-		if (!data[key] && apiVersion == LegacyVersion.v1) {
+		if (!data[key] && apiVersion.lt(ApiVersion.V1_1)) {
 			data[key] = getV1EntitlementsRes({
 				org,
 				cusEnt,
 				isBoolean,
 				unlimited,
 				ent,
+				apiVersion,
 			});
 		} else if (!data[key]) {
 			if (isBoolean) {
@@ -251,7 +254,7 @@ export const getCusBalances = async ({
 					overage_allowed: usageAllowed,
 				};
 
-				if (org.config.api_version >= BREAK_API_VERSION) {
+				if (apiVersion.gte(ApiVersion.V0_2)) {
 					data[key].next_reset_at =
 						isBoolean || unlimited ? undefined : cusEnt.next_reset_at;
 					data[key].allowance = isBoolean || unlimited ? undefined : 0;
@@ -295,7 +298,7 @@ export const getCusBalances = async ({
 			data[key].rollovers = rollover.rollovers;
 		}
 
-		if (org.config.api_version >= BREAK_API_VERSION) {
+		if (apiVersion.gte(ApiVersion.V0_2)) {
 			if (
 				!data[key].next_reset_at ||
 				(cusEnt.next_reset_at && cusEnt.next_reset_at < data[key].next_reset_at)
@@ -342,7 +345,7 @@ export const getCusBalances = async ({
 	}
 
 	// Sort balances
-	if (org.api_version === LegacyVersion.v1) {
+	if (apiVersion.lt(ApiVersion.V1_1)) {
 		balances.sort((a: any, b: any) => {
 			const featureA = features.find((f) => f.id === a.feature_id);
 			const featureB = features.find((f) => f.id === b.feature_id);
@@ -368,10 +371,6 @@ export const getCusBalances = async ({
 			return a.feature_id.localeCompare(b.feature_id);
 		});
 	}
-
-	// if (org.api_version == LegacyVersion.v1) {
-
-	// }
 
 	return balances as CusFeatureBalance[];
 };

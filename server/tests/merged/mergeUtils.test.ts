@@ -1,10 +1,10 @@
 import {
+	ApiVersion,
 	type AppEnv,
 	cusProductToEnts,
 	cusProductToPrices,
 	cusProductToProduct,
 	type FullCusProduct,
-	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
 import { expect } from "chai";
@@ -81,7 +81,7 @@ export const expectSubToBeCorrect = async ({
 				existingUsage: 0,
 				withEntity: true,
 				isCheckout: false,
-				apiVersion: LegacyVersion.v1_4,
+				apiVersion: ApiVersion.Beta,
 			});
 
 			const lineItem: any = res?.lineItem;

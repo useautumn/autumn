@@ -1,5 +1,6 @@
 import { LegacyVersion } from "../../enums/APIVersion.js";
 import { ApiVersion } from "./ApiVersion.js";
+import { ApiVersionClass } from "./ApiVersionClass.js";
 import { VERSION_REGISTRY } from "./versionRegistry.js";
 import { CALVER_TO_SEMVER_MAP } from "./versionRegistryUtils.js";
 
@@ -51,7 +52,7 @@ export function legacyToSemVer({
 			return ApiVersion.V1_2;
 		case LegacyVersion.v1_4:
 		case 1.4:
-			return ApiVersion.V1_4;
+			return ApiVersion.Beta;
 		default:
 			return null;
 	}
@@ -75,7 +76,7 @@ export function semVerToLegacy({
 			return LegacyVersion.v1_1;
 		case ApiVersion.V1_2:
 			return LegacyVersion.v1_2;
-		case ApiVersion.V1_4:
+		case ApiVersion.Beta:
 			return LegacyVersion.v1_4;
 		default:
 			return null;
@@ -110,3 +111,36 @@ export function parseVersion({
 
 	return null;
 }
+
+/**
+ * Convert Unix timestamp (milliseconds since epoch) to ApiVersionClass
+ * Based on organization creation date - returns ApiVersionClass with comparison methods
+ * @example createdAtToVersion({ createdAt: 1706572800000 }) // ApiVersionClass(V0_2)
+ * @example createdAtToVersion({ createdAt: Date.now() }).gte(ApiVersion.V1_1) // true
+ * @example createdAtToVersion({ createdAt: Date.now() }).value // Get raw ApiVersion enum
+ */
+export function createdAtToVersion({
+	createdAt,
+}: {
+	createdAt?: number;
+}): ApiVersionClass {
+	const v1_2 = new Date("2025-05-05").getTime();
+	const v1_1 = new Date("2025-04-17").getTime();
+	const v0_2 = new Date("2025-01-30").getTime();
+
+	let version: ApiVersion;
+
+	if (!createdAt || createdAt >= v1_2) {
+		version = ApiVersion.V1_2;
+	} else if (createdAt >= v1_1) {
+		version = ApiVersion.V1_1;
+	} else if (createdAt >= v0_2) {
+		version = ApiVersion.V0_2;
+	} else {
+		version = ApiVersion.V0_1;
+	}
+
+	return new ApiVersionClass(version);
+}
+
+// Convert org creation date

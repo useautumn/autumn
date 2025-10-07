@@ -60,7 +60,7 @@ export const handlePostCustomerRequest = async (req: any, res: any) => {
 			cusProducts: customer.customer_products,
 			expand,
 			features,
-			reqApiVersion: req.apiVersion,
+			apiVersion: req.apiVersion,
 		});
 
 		res.status(200).json(cusDetails);
@@ -76,6 +76,8 @@ export const handlePostCustomerRequest = async (req: any, res: any) => {
 			});
 			return;
 		}
+
+		console.log(`Error: ${error}`);
 		handleRequestError({ req, error, res, action: "create customer" });
 	}
 };

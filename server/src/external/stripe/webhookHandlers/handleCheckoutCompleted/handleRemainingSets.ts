@@ -1,4 +1,4 @@
-import { isUsagePrice, LegacyVersion, type Organization } from "@autumn/shared";
+import { ApiVersion, isUsagePrice, type Organization } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
@@ -38,7 +38,7 @@ export const handleRemainingSets = async ({
 
 		if (
 			attachParams.internalEntityId ||
-			attachParams.apiVersion === LegacyVersion.v1_4
+			attachParams.apiVersion === ApiVersion.Beta
 		) {
 			const replaceIndex = remainingItems.findIndex(
 				(item) => item.price === config.stripe_price_id,

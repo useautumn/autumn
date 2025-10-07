@@ -68,14 +68,14 @@ export const createHonoApp = () => {
 	// Step 2: Tracing middleware - handles OpenTelemetry spans
 	app.use("*", traceMiddleware);
 
-	// Step 3: API Version middleware - validates x-api-version header
-	app.use("/v1/*", apiVersionMiddleware);
-
 	// Step 4: Auth middleware - verifies secret key and populates auth context
 	app.use("/v1/*", secretKeyMiddleware);
 
 	// Step 5: Org config middleware - allows config overrides via header
 	app.use("/v1/*", orgConfigMiddleware);
+
+	// Step 3: API Version middleware - validates x-api-version header
+	app.use("/v1/*", apiVersionMiddleware);
 
 	// Step 6: Refresh cache middleware - clears customer cache after successful mutations
 	app.use("/v1/*", refreshCacheMiddleware);

@@ -1,8 +1,4 @@
-import {
-	BillingType,
-	LegacyVersion,
-	type UsagePriceConfig,
-} from "@autumn/shared";
+import { ApiVersion, BillingType, type UsagePriceConfig } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
@@ -79,7 +75,7 @@ export const handleCheckoutSub = async ({
 		if (
 			arrearPrice &&
 			(attachParams.internalEntityId ||
-				attachParams.apiVersion == LegacyVersion.v1_4)
+				attachParams.apiVersion === ApiVersion.Beta)
 		) {
 			itemsUpdate.push({
 				id: item.id,

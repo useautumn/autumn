@@ -1,5 +1,7 @@
 import {
 	type APICusProduct,
+	ApiVersion,
+	ApiVersionClass,
 	type AppEnv,
 	type Entity,
 	type EntityExpand,
@@ -8,7 +10,6 @@ import {
 	type Feature,
 	type FullCusProduct,
 	type FullCustomer,
-	LegacyVersion,
 	notNullish,
 	type Organization,
 	type Subscription,
@@ -37,7 +38,7 @@ export const getSingleEntityResponse = async ({
 	features: Feature[];
 	withAutumnId?: boolean;
 }) => {
-	const apiVersion = LegacyVersion.v1_2;
+	const apiVersion = new ApiVersionClass(ApiVersion.V1_2);
 
 	if (!entity) {
 		throw new RecaseError({
@@ -74,7 +75,7 @@ export const getSingleEntityResponse = async ({
 		entity,
 		subs: entitySubs,
 		org,
-		apiVersion: LegacyVersion.v1_2,
+		apiVersion,
 		features,
 	});
 

@@ -1,8 +1,8 @@
 import {
+	ApiVersion,
 	BillingInterval,
 	BillingType,
 	type FullCusProduct,
-	LegacyVersion,
 	OnDecrease,
 	OnIncrease,
 	type Price,
@@ -75,7 +75,7 @@ export const isV4Usage = ({
 
 	return (
 		billingType === BillingType.UsageInArrear &&
-		(cusProduct.api_version === LegacyVersion.v1_4 ||
+		(cusProduct.api_version === ApiVersion.Beta ||
 			notNullish(cusProduct.internal_entity_id))
 	);
 };

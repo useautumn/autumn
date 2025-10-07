@@ -50,8 +50,9 @@ export abstract class VersionChange<
 
 	/**
 	 * Human-readable description of the change
+	 * Can be a single string or an array of strings for multiple changes
 	 */
-	abstract readonly description: string;
+	abstract readonly description: string | string[];
 
 	/**
 	 * Resources affected by this change
@@ -165,8 +166,8 @@ export interface VersionChangeConfig<
 	/** The version this change was introduced in */
 	version: ApiVersion;
 
-	/** Human-readable description of the change */
-	description: string;
+	/** Human-readable description of the change (single string or array of strings) */
+	description: string | string[];
 
 	/** Resources affected by this change */
 	affectedResources: AffectedResource[];

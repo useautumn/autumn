@@ -72,6 +72,4 @@ export const organizations = pgTable(
 	],
 );
 
-export type Organization = typeof organizations.$inferSelect & {
-	api_version: number;
-};
+export type Organization = typeof organizations.$inferSelect;

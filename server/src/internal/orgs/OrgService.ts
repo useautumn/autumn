@@ -14,7 +14,6 @@ import {
 import { and, eq, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { getApiVersion } from "@/utils/versionUtils/legacyVersionUtils.js";
 import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
 
 export class OrgService {
@@ -22,13 +21,9 @@ export class OrgService {
 		if (req.org) {
 			const org = structuredClone(req.org);
 			const config = org.config || {};
-			const apiVersion = getApiVersion({
-				createdAt: org.created_at,
-			});
 			return {
 				...org,
 				config: OrgConfigSchema.parse(config),
-				api_version: apiVersion,
 			};
 		}
 
@@ -137,9 +132,6 @@ export class OrgService {
 		return {
 			...result,
 			config: OrgConfigSchema.parse(result.config || {}),
-			api_version: getApiVersion({
-				createdAt: result.created_at!,
-			}),
 		};
 	}
 
@@ -205,9 +197,6 @@ export class OrgService {
 		return {
 			org: {
 				...org,
-				api_version: getApiVersion({
-					createdAt: org.created_at!,
-				}),
 				config: OrgConfigSchema.parse(org.config || {}),
 			},
 			features: result.features || [],

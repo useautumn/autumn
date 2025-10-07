@@ -16,22 +16,6 @@ import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass.js";
  * @param targetVersion - Version to transform to (older)
  * @param resource - Resource being transformed
  *
- * @example
- * // Data is in latest format, transform to V1_1 (currentVersion defaults to latest)
- * const v1_1_data = applyResponseVersionChanges({
- *   input: latestCustomer,
- *   targetVersion: new ApiVersionClass(ApiVersion.V1_1),
- *   resource: AffectedResource.Customer
- * });
- *
- * @example
- * // Explicitly specify currentVersion
- * const v1_1_data = applyResponseVersionChanges({
- *   input: v1_2_customer,
- *   currentVersion: new ApiVersionClass(ApiVersion.V1_2),
- *   targetVersion: new ApiVersionClass(ApiVersion.V1_1),
- *   resource: AffectedResource.Customer
- * });
  */
 // biome-ignore lint/suspicious/noExplicitAny: Generic type parameter needs flexibility
 export function applyResponseVersionChanges<T = any, TData = any>({
@@ -94,7 +78,10 @@ export function applyResponseVersionChanges<T = any, TData = any>({
 				continue;
 			}
 
-			console.log(`Applying changes ${change.description}`);
+			const description = Array.isArray(change.description)
+				? change.description.join("; ")
+				: change.description;
+			console.log(`Applying changes ${description}`);
 			// Apply the response transformation (backward)
 			transformedData = change.transformResponse({
 				input: transformedData,

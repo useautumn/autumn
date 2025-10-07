@@ -4,7 +4,7 @@
  * Internally we use SemVer for comparison (e.g., "1.1.0")
  */
 export enum ApiVersion {
-	V1_4 = "1.4.0",
+	Beta = "beta",
 	V1_2 = "1.2.0",
 	V1_1 = "1.1.0",
 	V0_2 = "0.2.0",

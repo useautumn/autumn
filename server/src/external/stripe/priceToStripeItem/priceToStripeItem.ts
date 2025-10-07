@@ -1,4 +1,5 @@
 import {
+	ApiVersion,
 	BillingType,
 	type EntitlementWithFeature,
 	ErrCode,
@@ -6,7 +7,6 @@ import {
 	type FixedPriceConfig,
 	type FullProduct,
 	InternalError,
-	LegacyVersion,
 	type Organization,
 	type Price,
 	type ProductOptions,
@@ -69,7 +69,7 @@ export const priceToStripeItem = ({
 	existingUsage: number;
 	withEntity: boolean;
 	isCheckout: boolean;
-	apiVersion?: LegacyVersion;
+	apiVersion?: ApiVersion;
 	productOptions?: ProductOptions | undefined;
 }) => {
 	// TODO: Implement this
@@ -140,7 +140,7 @@ export const priceToStripeItem = ({
 			};
 		}
 
-		if (apiVersion === LegacyVersion.v1_4 && !isCheckout) {
+		if (apiVersion === ApiVersion.Beta && !isCheckout) {
 			return {
 				lineItem: {
 					// lineItem: getEmptyPriceItem({ price, org }),

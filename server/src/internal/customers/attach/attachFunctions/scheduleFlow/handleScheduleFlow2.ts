@@ -1,8 +1,8 @@
 import {
+	ApiVersion,
 	type AttachConfig,
 	AttachScenario,
 	ErrCode,
-	LegacyVersion,
 	SuccessCode,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
@@ -208,10 +208,8 @@ export const handleScheduleFunction2 = async ({
 		}
 	}
 
-	const apiVersion = attachParams.apiVersion || LegacyVersion.v1;
-
 	if (res) {
-		if (apiVersion >= LegacyVersion.v1_1) {
+		if (req.apiVersion.gte(ApiVersion.V1_1)) {
 			res.status(200).json(
 				AttachResultSchema.parse({
 					code: SuccessCode.DowngradeScheduled,

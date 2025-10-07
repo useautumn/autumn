@@ -1,4 +1,5 @@
 import {
+	type ApiVersion,
 	CollectionMethod,
 	type CusProduct,
 	CusProductStatus,
@@ -10,7 +11,6 @@ import {
 	type FullCusProduct,
 	type FullProduct,
 	type InsertReplaceable,
-	type LegacyVersion,
 	type Price,
 	ProcessorType,
 	type ProductOptions,
@@ -98,7 +98,7 @@ export const initCusProduct = ({
 	isCustom?: boolean;
 	entityId?: string;
 	internalEntityId?: string;
-	apiVersion?: LegacyVersion;
+	apiVersion?: ApiVersion;
 	quantity?: number;
 }) => {
 	const isFuture = startsAt && startsAt > Date.now();

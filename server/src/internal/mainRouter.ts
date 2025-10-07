@@ -71,7 +71,7 @@ mainRouter.use(
 				invoice.stripe_id,
 			);
 
-			if (stripeInvoice.status == "draft") {
+			if (stripeInvoice.status === "draft") {
 				return res
 					.status(404)
 					.json({ error: "This invoice is in draft status and has no URL" });

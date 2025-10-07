@@ -1,7 +1,7 @@
 import {
+	ApiVersion,
 	AttachBranch,
 	type AttachConfig,
-	LegacyVersion,
 	SuccessCode,
 } from "@autumn/shared";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
@@ -89,10 +89,9 @@ export const handleAddProduct = async ({
 	logger.info("Successfully created full cus product");
 
 	if (res) {
-		const apiVersion = attachParams.org.api_version || LegacyVersion.v1;
 		const productNames = products.map((p) => p.name).join(", ");
 		const customerName = customer.name || customer.email || customer.id;
-		if (apiVersion >= LegacyVersion.v1_1) {
+		if (req.apiVersion.gte(ApiVersion.V1_1)) {
 			res.status(200).json(
 				AttachResultSchema.parse({
 					success: true,
