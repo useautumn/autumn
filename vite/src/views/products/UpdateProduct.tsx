@@ -32,6 +32,10 @@ export const UpdateProductDialog = ({
 	const axiosInstance = useAxiosInstance({ env });
 
 	const handleSave = async () => {
+		if(!product.id){
+			toast.error("Product ID is required");
+			return;
+		}
 		setSaveLoading(true);
 		const originalProductId = originalProduct.current.id;
 
