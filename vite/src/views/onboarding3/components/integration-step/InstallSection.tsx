@@ -13,7 +13,7 @@ export const InstallSection = () => {
 	const [pm, setPm] = useState<"npm" | "pnpm" | "yarn" | "bun">("npm");
 
 	return (
-		<div className="flex flex-col gap-4">
+		<div className="flex flex-col gap-6">
 			<SectionHeader
 				stepNumber={4}
 				title="Install autumn-js"

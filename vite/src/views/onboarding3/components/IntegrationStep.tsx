@@ -1,3 +1,4 @@
+import { Separator } from "@/components/v2/separator";
 import { BackendSection } from "./integration-step/BackendSection";
 import { ConnectStripeSection } from "./integration-step/ConnectStripeSection";
 import { EnvSection } from "./integration-step/EnvSection";
@@ -12,7 +13,7 @@ import { StackSelectionSection } from "./integration-step/StackSelectionSection"
 export const IntegrationStep = () => {
 	return (
 		<IntegrationProvider>
-			<div className="h-screen overflow-y-auto">
+			<div className="h-screen min-w-full overflow-y-auto overflow-x-hidden">
 				<div className="flex flex-col gap-8 p-4">
 					<div className="text-left">
 						<h1 className="text-main-bold">Integrate Autumn</h1>
@@ -21,23 +22,21 @@ export const IntegrationStep = () => {
 							your plans
 						</h3>
 					</div>
-
 					<MCPSection />
-
 					<StackSelectionSection />
-
+					<Separator className="ml-[32px]" />
 					<ConnectStripeSection />
-
+					<Separator className="ml-[32px]" />
 					<EnvSection />
-
+					<Separator className="ml-[32px]" />
 					<InstallSection />
-
+					<Separator className="ml-[32px]" />
 					<BackendSection />
-
+					<Separator className="ml-[32px]" />
 					<FrontendSection />
-
+					<Separator className="ml-[32px]" />
 					<PricingTableSection />
-
+					<Separator className="ml-[32px]" />
 					<NextStepsSection />
 				</div>
 			</div>

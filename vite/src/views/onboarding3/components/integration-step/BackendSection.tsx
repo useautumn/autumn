@@ -1,4 +1,3 @@
-import { Button } from "@/components/v2/buttons/Button";
 import {
 	CodeGroup,
 	CodeGroupCode,
@@ -7,7 +6,6 @@ import {
 	CodeGroupList,
 	CodeGroupTab,
 } from "@/components/v2/CodeGroup";
-import { Input } from "@/components/v2/inputs/Input";
 import { CodeSpan } from "@/views/onboarding2/integrate/components/CodeSpan";
 import { useIntegrationContext } from "./IntegrationContext";
 import { SectionHeader } from "./SectionHeader";
@@ -43,15 +41,6 @@ export const BackendSection = () => {
 
 			<div className="pl-[32px] flex flex-col gap-6">
 				<div className="flex flex-col gap-2.5">
-					<div className="flex flex-row gap-2">
-						<Input
-							placeholder="am_sk_12345"
-							value={secretKey}
-							onChange={(e) => setSecretKey(e.target.value)}
-						/>
-						<Button variant={"skeleton"}>Generate secret key</Button>
-					</div>
-
 					<div className="">
 						<CodeGroup value=".env">
 							<CodeGroupList>

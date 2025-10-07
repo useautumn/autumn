@@ -42,7 +42,7 @@ export const IntegrationProvider = ({ children }: { children: ReactNode }) => {
 	const [selectedStack, setSelectedStack] = useState<StackType>("nextjs");
 	const [selectedAuth, setSelectedAuth] = useState<AuthType>("betterauth");
 	const [customerType, setCustomerType] = useState<CustomerType>("user");
-	const [secretKey, setSecretKey] = useState("am_sk_12345");
+	const [secretKey, setSecretKey] = useState("");
 
 	return (
 		<IntegrationContext.Provider

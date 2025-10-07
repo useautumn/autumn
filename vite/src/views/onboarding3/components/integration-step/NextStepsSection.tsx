@@ -22,7 +22,9 @@ export const NextStepsSection = () => {
 				<div className="flex flex-col gap-2.5">
 					<Card className="gap-1 my-0">
 						<CardHeader className="flex flex-row items-center justify-between">
-							<CardTitle>Checking Access</CardTitle>
+							<CardTitle className="text-sub text-t9">
+								Checking Access
+							</CardTitle>
 							<a
 								href="https://docs.useautumn.com/features/check"
 								target="_blank"
@@ -45,7 +47,7 @@ export const NextStepsSection = () => {
 
 					<Card className="gap-1 my-0">
 						<CardHeader className="flex flex-row items-center justify-between">
-							<CardTitle>Tracking Usage</CardTitle>
+							<CardTitle className="text-sub text-t9">Tracking Usage</CardTitle>
 							<a
 								href="https://docs.useautumn.com/features/tracking-usage"
 								target="_blank"
@@ -68,7 +70,7 @@ export const NextStepsSection = () => {
 
 					<Card className="gap-1 my-0">
 						<CardHeader className="flex flex-row items-center justify-between">
-							<CardTitle>Balances</CardTitle>
+							<CardTitle className="text-sub text-t9">Balances</CardTitle>
 							<a
 								href="https://docs.useautumn.com/features/balances"
 								target="_blank"
@@ -89,7 +91,7 @@ export const NextStepsSection = () => {
 
 					<Card className="gap-1 my-0">
 						<CardHeader className="flex flex-row items-center justify-between">
-							<CardTitle>Credits</CardTitle>
+							<CardTitle className="text-sub text-t9">Credits</CardTitle>
 							<a
 								href="https://docs.useautumn.com/features/credits"
 								target="_blank"
@@ -110,7 +112,7 @@ export const NextStepsSection = () => {
 
 					<Card className="gap-1 my-0">
 						<CardHeader className="flex flex-row items-center justify-between">
-							<CardTitle>Entities</CardTitle>
+							<CardTitle className="text-sub text-t9">Entities</CardTitle>
 							<a
 								href="https://docs.useautumn.com/features/feature-entities"
 								target="_blank"
