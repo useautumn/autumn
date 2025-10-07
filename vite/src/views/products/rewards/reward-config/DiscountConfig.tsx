@@ -60,9 +60,10 @@ export const DiscountConfig = ({
 				<div className="w-6/12">
 					<FieldLabel>Amount</FieldLabel>
 					<Input
+						type="number"
 						value={config.discount_value}
 						onChange={(e) =>
-							setConfig("discount_value", Number(e.target.value))
+							setConfig("discount_value", parseInt(e.target.value))
 						}
 						endContent={
 							<p className="text-t3">
