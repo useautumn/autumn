@@ -1,6 +1,6 @@
 import { createContext, useContext } from "react";
 
-type Sheets = "edit-plan" | "edit-feature";
+type Sheets = "edit-plan" | "edit-feature" | "select-feature";
 
 interface EditingState {
 	type: "plan" | "feature" | null;

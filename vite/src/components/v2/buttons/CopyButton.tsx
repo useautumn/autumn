@@ -41,7 +41,7 @@ export const CopyButton = ({ text, ...props }: CopyButtonProps) => {
 						{...props}
 						iconOrientation="right"
 						onClick={handleCopy}
-						icon={<CopyIcon className="size-3" />}
+						icon={<CopyIcon className="size-3.5" />}
 					>
 						<span className="text-tiny-id">{text}</span>
 					</IconButton>

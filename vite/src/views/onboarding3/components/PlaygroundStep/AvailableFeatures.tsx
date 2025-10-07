@@ -41,7 +41,12 @@ const FeatureTestRow = ({
 					{usage}
 				</div>
 			)}
-			<Button onClick={() => handleSend(value)} variant="secondary" size="sm">
+			<Button
+				disabled={value === 0}
+				onClick={() => handleSend(value)}
+				variant="secondary"
+				size="sm"
+			>
 				Send
 				<ArrowRightIcon className="size-[14px]" />
 			</Button>
@@ -49,7 +54,11 @@ const FeatureTestRow = ({
 	);
 };
 
-export const AvailableFeatures = () => {
+export const AvailableFeatures = ({
+	onTrackSuccess,
+}: {
+	onTrackSuccess?: (response: any) => void;
+}) => {
 	const { customer, track, refetch } = useCustomer();
 	const { features } = useFeaturesQuery();
 
@@ -66,16 +75,25 @@ export const AvailableFeatures = () => {
 						: String(customer?.features[x].balance)
 				}
 				key={x}
-				handleSend={(value) => {
-					track({
-						featureId: customer?.features[x].id,
+				handleSend={async (value) => {
+					const featureId = customer?.features[x].id;
+
+					// Track the usage
+					const { data, error } = await track({
+						featureId: featureId,
 						value: value,
 					});
-					refetch();
+
+					if (!error && data && onTrackSuccess) {
+						onTrackSuccess(data);
+					}
+
+					// Immediately refetch customer data to update balances
+					await refetch();
 				}}
 			/>
 		));
-	}, [customer, features, track, refetch]);
+	}, [customer, features, track, refetch, onTrackSuccess]);
 
 	return (
 		<SheetSection title="Available features">

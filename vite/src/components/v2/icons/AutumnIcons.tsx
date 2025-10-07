@@ -24,55 +24,33 @@ export const IncludedUsageIcon = ({
 }) => {
 	return (
 		<svg
-			width={size}
-			height={size}
-			viewBox="0 0 16 16"
+			width="17"
+			height="16"
+			viewBox="0 0 17 16"
 			fill="none"
-			color={color}
 			xmlns="http://www.w3.org/2000/svg"
 		>
 			<title>Included Usage</title>
 			<path
-				d="M6 7.5C8.76142 7.5 11 6.49264 11 5.25C11 4.00736 8.76142 3 6 3C3.23858 3 1 4.00736 1 5.25C1 6.49264 3.23858 7.5 6 7.5Z"
-				stroke="currentColor"
-				strokeWidth="1.1"
-				strokeLinecap="round"
-				strokeLinejoin="round"
+				d="M13.5 13.5H3.5C3.36739 13.5 3.24021 13.4473 3.14645 13.3536C3.05268 13.2598 3 13.1326 3 13V4.5L4 2.5H13L14 4.5V13C14 13.1326 13.9473 13.2598 13.8536 13.3536C13.7598 13.4473 13.6326 13.5 13.5 13.5Z"
+				stroke={color}
+				stroke-width="1.1"
+				stroke-linecap="round"
+				stroke-linejoin="round"
 			/>
 			<path
-				d="M1 5.25V7.75C1 8.9925 3.23875 10 6 10C8.76125 10 11 8.9925 11 7.75V5.25"
-				stroke="currentColor"
-				strokeWidth="1.1"
-				strokeLinecap="round"
-				strokeLinejoin="round"
+				d="M3 4.5H14"
+				stroke={color}
+				stroke-width="1.1"
+				stroke-linecap="round"
+				stroke-linejoin="round"
 			/>
 			<path
-				d="M11.0001 6.04492C13.2826 6.25367 15.0001 7.16117 15.0001 8.24992C15.0001 9.49242 12.7613 10.4999 10.0001 10.4999C8.77508 10.4999 7.65258 10.3018 6.7832 9.97242"
-				stroke="currentColor"
-				strokeWidth="1.1"
-				strokeLinecap="round"
-				strokeLinejoin="round"
-			/>
-			<path
-				d="M5 9.955V10.75C5 11.9925 7.23875 13 10 13C12.7613 13 15 11.9925 15 10.75V8.25"
-				stroke="currentColor"
-				strokeWidth="1.1"
-				strokeLinecap="round"
-				strokeLinejoin="round"
-			/>
-			<path
-				d="M2.97266 13.0276L13.0298 2.97046"
-				stroke={color === "none" ? "#ede1ff" : "white"}
-				strokeWidth="2"
-				strokeLinecap="round"
-				strokeLinejoin="round"
-			/>
-			<path
-				d="M2.85352 14.5469L14.6465 2.75391"
-				stroke="currentColor"
-				strokeWidth="1.1"
-				strokeLinecap="round"
-				strokeLinejoin="round"
+				d="M6.35742 9.25579L7.64314 10.5415L10.6431 7.5415"
+				stroke={color}
+				stroke-width="1.1"
+				stroke-linecap="round"
+				stroke-linejoin="round"
 			/>
 		</svg>
 	);
@@ -233,7 +211,13 @@ export const CoinsIcon = ({
 	);
 };
 
-export const BooleanIcon = () => {
+export const BooleanIcon = ({
+	size = 16,
+	color = "#8A8A8A",
+}: {
+	size?: number;
+	color?: string;
+}) => {
 	return (
 		<svg
 			width="16"
@@ -244,18 +228,18 @@ export const BooleanIcon = () => {
 		>
 			<title>Boolean</title>
 			<path
-				d="M8 1V8"
-				stroke="currentColor"
-				strokeWidth="1.2"
-				strokeLinecap="round"
-				strokeLinejoin="round"
+				d="M8 2.84253V7.99253"
+				stroke={color}
+				stroke-width="1.2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
 			/>
 			<path
-				d="M4.93 3.07A6 6 0 1 0 11.07 3.07"
-				stroke="currentColor"
-				strokeWidth="1.2"
-				strokeLinecap="round"
-				strokeLinejoin="round"
+				d="M11.0909 3.35742C12.6411 4.36811 13.6659 6.00388 13.6659 7.99242C13.6659 9.49487 13.0691 10.9358 12.0067 11.9982C10.9443 13.0606 9.50339 13.6574 8.00094 13.6574C6.49849 13.6574 5.05757 13.0606 3.99518 11.9982C2.93278 10.9358 2.33594 9.49487 2.33594 7.99242C2.33594 6.00388 3.36079 4.36811 4.91094 3.35742"
+				stroke={color}
+				stroke-width="1.2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
 			/>
 		</svg>
 	);
@@ -298,6 +282,68 @@ export const ContinuousUseIcon = () => {
 				strokeWidth="1.2"
 				strokeLinecap="round"
 				strokeLinejoin="round"
+			/>
+		</svg>
+	);
+};
+
+export const DefaultIcon = ({
+	size = 16,
+	color = "#666666",
+}: {
+	size?: number;
+	color?: string;
+}) => {
+	return (
+		<svg
+			width={size}
+			height={size}
+			viewBox="0 0 15 15"
+			fill="none"
+			xmlns="http://www.w3.org/2000/svg"
+		>
+			<title>Default</title>
+			<path
+				d="M11.875 2.6875H3.125C2.88338 2.6875 2.6875 2.88338 2.6875 3.125V11.875C2.6875 12.1166 2.88338 12.3125 3.125 12.3125H11.875C12.1166 12.3125 12.3125 12.1166 12.3125 11.875V3.125C12.3125 2.88338 12.1166 2.6875 11.875 2.6875Z"
+				stroke={color}
+				stroke-width="1.1"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			/>
+			<circle cx="7.50039" cy="7.50015" r="1.225" fill={color} />
+		</svg>
+	);
+};
+
+export const FreeTrialIcon = ({
+	size = 15,
+	color = "#666666",
+}: {
+	size?: number;
+	color?: string;
+}) => {
+	return (
+		<svg
+			width={size}
+			height={size}
+			viewBox="0 0 15 14"
+			fill="none"
+			xmlns="http://www.w3.org/2000/svg"
+		>
+			<title>Free Trial</title>
+			<path
+				d="M11.875 2.1875H3.125C2.88338 2.1875 2.6875 2.38338 2.6875 2.625V11.375C2.6875 11.6166 2.88338 11.8125 3.125 11.8125H11.875C12.1166 11.8125 12.3125 11.6166 12.3125 11.375V2.625C12.3125 2.38338 12.1166 2.1875 11.875 2.1875Z"
+				stroke={color}
+				stroke-width="1.1"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			/>
+			<path
+				d="M7.22852 4.5V7.5H10.2285"
+				stroke={color}
+				stroke-width="1.1"
+				stroke-linecap="round"
+				stroke-linejoin="round"
 			/>
 		</svg>
 	);

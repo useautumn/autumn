@@ -9,7 +9,14 @@ const getStarryNight = async () => {
 	return await createStarryNight(common);
 };
 
-const CodeGroup = TabsPrimitive.Root;
+interface CodeGroupProps
+	extends React.ComponentPropsWithoutRef<typeof TabsPrimitive.Root> {}
+
+const CodeGroup = React.forwardRef<
+	React.ElementRef<typeof TabsPrimitive.Root>,
+	CodeGroupProps
+>(({ ...props }, ref) => <TabsPrimitive.Root ref={ref} {...props} />);
+CodeGroup.displayName = "CodeGroup";
 
 interface CodeGroupListProps
 	extends React.ComponentPropsWithoutRef<typeof TabsPrimitive.List> {}
@@ -41,7 +48,7 @@ const CodeGroupTab = React.forwardRef<
 			"text-[#444444] transition-none outline-none",
 			"hover:text-[#8838ff]",
 			"focus-visible:text-[#8838ff]",
-			"data-[state=active]:bg-neutral-50 data-[state=active]:text-[#8838ff] data-[state=active]:shadow-[0px_3px_4px_0px_inset_rgba(0,0,0,0.04)]",
+			"data-[state=active]:bg-neutral-50  data-[state=active]:shadow-[0px_3px_4px_0px_inset_rgba(0,0,0,0.04)]",
 			"data-[state=inactive]:shadow-[0px_-3px_4px_0px_inset_rgba(0,0,0,0.04)]",
 			"first:rounded-tl-md first:border-l",
 			className,
@@ -138,11 +145,76 @@ const CodeGroupCode = React.forwardRef<HTMLPreElement, CodeGroupCodeProps>(
 							'<span class="pl-property">$1</span>$2',
 						);
 
-						// Post-process: wrap JSX tag names and attributes
+						// Post-process: wrap HTML/JSX tag names to make them blue like pl-k
 						// Match tag names after < or </
 						html = html.replace(
 							/<span class="pl-k">&lt;(<\/)?<\/span>([a-zA-Z][a-zA-Z0-9]*)/g,
-							'<span class="pl-k">&lt;$1</span><span class="pl-property">$2</span>',
+							'<span class="pl-k">&lt;$1</span><span class="pl-k">$2</span>',
+						);
+
+						// Post-process: handle plain text HTML tags (not already wrapped in spans)
+						// Common HTML tags dictionary
+						const htmlTags = [
+							"html",
+							"head",
+							"body",
+							"div",
+							"span",
+							"p",
+							"a",
+							"img",
+							"button",
+							"input",
+							"form",
+							"h1",
+							"h2",
+							"h3",
+							"h4",
+							"h5",
+							"h6",
+							"ul",
+							"ol",
+							"li",
+							"nav",
+							"header",
+							"footer",
+							"section",
+							"article",
+							"main",
+							"aside",
+							"table",
+							"tr",
+							"td",
+							"th",
+							"thead",
+							"tbody",
+							"br",
+							"hr",
+							"meta",
+							"link",
+							"script",
+							"style",
+							"title",
+							"base",
+							"noscript",
+						];
+
+						const tagPattern = htmlTags.join("|");
+
+						// Match HTML tags in plain text: <tagname> or </tagname> or <tagname/>
+						html = html.replace(
+							new RegExp(
+								`(&lt;)(/?)(${tagPattern})(\\s[^&]*?)?(&gt;|/&gt;)`,
+								"g",
+							),
+							'<span class="pl-k">$1$2$3</span>$4<span class="pl-k">$5</span>',
+						);
+
+						// Post-process: handle self-closing tags and closing brackets for any remaining cases
+						// Match closing > or /> and make them blue
+						html = html.replace(
+							/([a-zA-Z0-9"'\s}])(&gt;|\/&gt;)(?!<\/span>)/g,
+							'$1<span class="pl-k">$2</span>',
 						);
 
 						// Match JSX attributes (word before = in JSX context)
@@ -175,13 +247,16 @@ const CodeGroupCode = React.forwardRef<HTMLPreElement, CodeGroupCodeProps>(
 			<pre
 				ref={ref}
 				className={cn(
-					"code-group-highlight font-mono font-medium text-[13px] leading-[1.6] whitespace-pre-wrap overflow-auto",
+					"code-group-highlight font-mono font-medium text-[13px] leading-[1.6] whitespace-pre-wrap [overflow-wrap:anywhere] max-w-full overflow-x-auto",
 					className,
 				)}
 				{...props}
 			>
 				<code
-					className={cn(`language-${language}`)}
+					className={cn(
+						`language-${language}`,
+						"[overflow-wrap:anywhere] block max-w-full",
+					)}
 					dangerouslySetInnerHTML={{ __html: highlightedCode || children }}
 				/>
 			</pre>

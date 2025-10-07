@@ -1,15 +1,17 @@
 import type { CreateFeature, ProductItem, ProductV2 } from "@autumn/shared";
 import { productV2ToFeatureItems } from "@autumn/shared";
+import { useState } from "react";
 import { getItemId } from "@/utils/product/productItemUtils";
 import { useProductContext } from "@/views/products/product/ProductContext";
 import { ProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { EditPlanFeatureSheet } from "../../products/plan/components/EditPlanFeatureSheet/EditPlanFeatureSheet";
 import { EditPlanSheet } from "../../products/plan/components/EditPlanSheet";
 import { NewFeatureSheet } from "../../products/plan/components/new-feature/NewFeatureSheet";
+import { SelectFeatureSheet } from "../../products/plan/components/SelectFeatureSheet";
 import { OnboardingStep } from "../utils/onboardingUtils";
-import { CompletionStep } from "./CompletionStep";
 import { FeatureConfigurationStep } from "./FeatureConfigurationStep";
 import { FeatureCreationStep } from "./FeatureCreationStep";
+import { IntegrationStep } from "./IntegrationStep";
 import { PlanDetailsStep } from "./PlanDetailsStep";
 import { AvailableFeatures } from "./PlaygroundStep/AvailableFeatures";
 import { QuickStartCodeGroup } from "./PlaygroundStep/QuickStartCodeGroup";
@@ -28,10 +30,11 @@ export const OnboardingStepRenderer = ({
 	playgroundMode = "edit",
 }: OnboardingStepRendererProps) => {
 	const { product, setProduct, editingState } = useProductContext();
+	const [trackResponse, setTrackResponse] = useState<any>(null);
 
-	// Don't render overrides when on Completion step or Playground preview mode - allow the step to render normally
+	// Don't render overrides when on Integration step or Playground preview mode - allow the step to render normally
 	const shouldSkipOverrides =
-		step === OnboardingStep.Completion ||
+		step === OnboardingStep.Integration ||
 		(step === OnboardingStep.Playground && playgroundMode === "preview");
 
 	// Handle all override conditions first (before switch statement)
@@ -44,6 +47,11 @@ export const OnboardingStepRenderer = ({
 		// New feature creation override
 		if (editingState?.type === "feature" && editingState.id === "new") {
 			return <NewFeatureSheet isOnboarding />;
+		}
+
+		// Select feature override
+		if (editingState?.type === "feature" && editingState.id === "select") {
+			return <SelectFeatureSheet isOnboarding />;
 		}
 
 		// Existing feature editing override
@@ -171,16 +179,16 @@ export const OnboardingStepRenderer = ({
 			if (playgroundMode === "preview") {
 				return (
 					<>
-						<AvailableFeatures />
-						<QuickStartCodeGroup />
+						<AvailableFeatures onTrackSuccess={setTrackResponse} />
+						<QuickStartCodeGroup trackResponse={trackResponse} />
 					</>
 				);
 			}
 			// In edit mode, handled by the useEffect in useOnboardingLogic that opens edit-plan sheet
 			return null;
 
-		case OnboardingStep.Completion:
-			return <CompletionStep />;
+		case OnboardingStep.Integration:
+			return <IntegrationStep />;
 
 		default:
 			return null;

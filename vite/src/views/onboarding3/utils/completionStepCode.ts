@@ -29,7 +29,10 @@ const allowed = await autumn.check({
 }`,
 	},
 	checkout: {
-		react: `import { useCustomer, CheckoutDialog } from "autumn-js/react";
+		react: `import { 
+  useCustomer, 
+  CheckoutDialog 
+} from "autumn-js/react";
 
 export default function PurchaseButton() {
   const { checkout } = useCustomer();
@@ -53,14 +56,14 @@ const autumn = new Autumn({
   apiKey: process.env.AUTUMN_API_KEY
 });
 
-const session = await autumn.checkout.create({
+const session = await autumn.checkout({
   customerId: 'cust_123',
   productId: 'pro',
   successUrl: 'https://example.com/success',
   cancelUrl: 'https://example.com/cancel'
 });
 
-console.log(session.url);`,
+console.log(session.checkout_url);`,
 		response: `{
   "url": "https://checkout.stripe.com/c/pay/cs_test_123",
   "customer_id": "cust_123",

@@ -1,5 +1,6 @@
 import { mapToProductV3 } from "@autumn/shared";
 import { CrosshairSimpleIcon } from "@phosphor-icons/react";
+import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { CardHeader } from "@/components/v2/cards/Card";
@@ -22,6 +23,7 @@ export const PlanCardHeader = () => {
 						{product.name}
 					</span>
 					<CopyButton text={product.id} className="text-xs" size="sm" />
+					<PlanTypeBadges product={product} />
 				</div>
 				<PlanCardToolbar
 					onEdit={() => {

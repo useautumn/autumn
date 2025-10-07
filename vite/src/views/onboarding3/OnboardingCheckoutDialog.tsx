@@ -85,32 +85,39 @@ export default function OnboardingCheckoutDialog(params: CheckoutDialogProps) {
 					<p className="text-body-secondary">{message}</p>
 
 					{/* Product items */}
-					<div className="space-y-2">
-						<p className="text-body font-semibold">Price</p>
-						{checkoutResult.product.items
-							.filter((item) => item.type !== "feature")
-							.map((item, index) => (
-								<div key={index} className="flex justify-between text-body">
-									<span className="text-body-secondary">
-										{item.feature?.name || "Subscription"}
-									</span>
-									<span>
-										{item.display?.primary_text} {item.display?.secondary_text}
-									</span>
-								</div>
-							))}
-					</div>
+					{checkoutResult.product.items.filter(
+						(item) => item.type !== "feature",
+					).length > 0 && (
+						<div className="space-y-2">
+							<p className="text-body font-semibold">Price</p>
+							{checkoutResult.product.items
+								.filter((item) => item.type !== "feature")
+								.map((item, index) => (
+									<div key={index} className="flex justify-between text-body">
+										<span className="text-body-secondary">
+											{item.feature?.name || "Subscription"}
+										</span>
+										<span>
+											{item.display?.primary_text}{" "}
+											{item.display?.secondary_text}
+										</span>
+									</div>
+								))}
+						</div>
+					)}
 
 					{/* Total */}
-					<div className="flex justify-between text-body font-semibold pt-2 border-t">
-						<span>Total due today</span>
-						<span>
-							{formatCurrency({
-								amount: checkoutResult.total,
-								currency: checkoutResult.currency,
-							})}
-						</span>
-					</div>
+					{checkoutResult.total > 0 && (
+						<div className="flex justify-between text-body font-semibold pt-2 border-t">
+							<span>Total due today</span>
+							<span>
+								{formatCurrency({
+									amount: checkoutResult.total,
+									currency: checkoutResult.currency,
+								})}
+							</span>
+						</div>
+					)}
 				</div>
 
 				<DialogFooter>

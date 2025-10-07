@@ -1,5 +1,6 @@
 import {
 	BillingInterval,
+	getFeatureName,
 	Infinite,
 	isContUseItem,
 	isFeaturePriceItem,
@@ -62,13 +63,17 @@ export function BillingType() {
 				<PanelButton
 					isSelected={!isFeaturePrice}
 					onClick={() => setBillingType("included")}
-					icon={<IncludedUsageIcon size={18} color="none" />}
+					icon={<IncludedUsageIcon size={18} color="currentColor" />}
 				/>
 				<div className="flex-1">
 					<div className="text-body-highlight mb-1">Included</div>
 					<div className="text-body-secondary leading-tight">
-						Set included usage limits with reset intervals (e.g. 100
-						credits/month)
+						Set included usage limits with reset intervals (e.g. 100{" "}
+						{getFeatureName({
+							feature: features.find((f) => f.id === item.feature_id),
+							plural: true,
+						}) || "credits"}
+						/month)
 					</div>
 				</div>
 			</div>
@@ -80,9 +85,14 @@ export function BillingType() {
 					icon={<CoinsIcon size={20} color="currentColor" />}
 				/>
 				<div className="flex-1">
-					<div className="text-body-highlight mb-1">Pay-per-use</div>
+					<div className="text-body-highlight mb-1">Priced</div>
 					<div className="text-body-secondary leading-tight">
-						Set usage and overage pricing (e.g. 100 credits/month, $1 extra)
+						Set usage and overage pricing (e.g. 100{" "}
+						{getFeatureName({
+							feature: features.find((f) => f.id === item.feature_id),
+							plural: true,
+						}) || "credits"}
+						/month, $1 extra)
 					</div>
 				</div>
 			</div>

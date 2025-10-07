@@ -3,6 +3,7 @@ import { CrosshairSimpleIcon } from "@phosphor-icons/react";
 import { usePricingTable } from "autumn-js/react";
 import PricingTablePreview from "@/components/autumn/pricing-table-preview";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { Separator } from "@/components/v2/separator";
@@ -24,9 +25,7 @@ export const OnboardingPreview = ({
 	setConnectStripeOpen,
 }: OnboardingPreviewProps) => {
 	const { product, setSheet, setEditingState } = useProductContext();
-	const { products, refetch: refetchPricingTable } = usePricingTable({
-		customerId: "onboarding_demo_user",
-	});
+	const { products, refetch: refetchPricingTable } = usePricingTable();
 	const { products: allProducts } = useProductsQuery();
 
 	const showBasicInfo = currentStep >= 1;
@@ -75,11 +74,14 @@ export const OnboardingPreview = ({
 						<span className="text-main-sec w-fit whitespace-nowrap">
 							{showBasicInfo && product?.name ? product.name : "Plan Preview"}
 						</span>
-					</div>
-					<div className="flex flex-row items-center gap-1">
 						{showBasicInfo && product?.id && (
 							<CopyButton text={product.id} className="text-xs" size="sm" />
 						)}
+						{playgroundMode === "edit" && product && (
+							<PlanTypeBadges product={product} />
+						)}
+					</div>
+					<div className="flex flex-row items-center gap-1">
 						{showToolbar && (
 							<PlanCardToolbar
 								onEdit={handleEdit}
