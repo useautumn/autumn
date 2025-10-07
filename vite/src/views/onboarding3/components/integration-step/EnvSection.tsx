@@ -1,3 +1,6 @@
+import { Check, Copy } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/v2/buttons/Button";
 import {
 	CodeGroup,
@@ -8,15 +11,12 @@ import {
 	CodeGroupTab,
 } from "@/components/v2/CodeGroup";
 import { Input } from "@/components/v2/inputs/Input";
-import { CodeSpan } from "@/views/onboarding2/integrate/components/CodeSpan";
-import { SectionHeader } from "./SectionHeader";
-import { useIntegrationContext } from "./IntegrationContext";
-import { useState } from "react";
 import { DevService } from "@/services/DevService";
-import { useEnv } from "@/utils/envUtils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { toast } from "sonner";
-import { Check, Copy } from "lucide-react";
+import { useEnv } from "@/utils/envUtils";
+import { CodeSpan } from "@/views/onboarding2/integrate/components/CodeSpan";
+import { useIntegrationContext } from "./IntegrationContext";
+import { SectionHeader } from "./SectionHeader";
 
 export const EnvSection = () => {
 	const { secretKey, setSecretKey } = useIntegrationContext();
@@ -50,7 +50,7 @@ export const EnvSection = () => {
 	};
 
 	return (
-		<div className="flex flex-col gap-4">
+		<div className="flex flex-col gap-6">
 			<SectionHeader
 				stepNumber={3}
 				title={
@@ -58,6 +58,7 @@ export const EnvSection = () => {
 						Add the Autumn secret key to your <CodeSpan>{".env"}</CodeSpan> file
 					</span>
 				}
+				className="gap-0"
 			/>
 
 			<div className="pl-[32px] flex flex-col gap-6">
@@ -70,11 +71,12 @@ export const EnvSection = () => {
 							className="flex-1"
 						/>
 						{secretKey ? (
-							<Button
-								variant={"secondary"}
-								onClick={handleCopy}
-							>
-								{copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+							<Button variant={"secondary"} onClick={handleCopy}>
+								{copied ? (
+									<Check className="size-4" />
+								) : (
+									<Copy className="size-4" />
+								)}
 								Copy
 							</Button>
 						) : (
