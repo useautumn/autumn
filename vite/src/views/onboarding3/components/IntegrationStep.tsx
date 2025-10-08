@@ -14,7 +14,7 @@ export const IntegrationStep = () => {
 	return (
 		<IntegrationProvider>
 			<div className="h-screen min-w-full overflow-y-auto overflow-x-hidden">
-				<div className="flex flex-col gap-8 p-4">
+				<div className="flex flex-col gap-8 p-4 [>&_.atmn-sep]:ml-[32px]">
 					<div className="text-left">
 						<h1 className="text-main-bold">Integrate Autumn</h1>
 						<h3 className="text-body">

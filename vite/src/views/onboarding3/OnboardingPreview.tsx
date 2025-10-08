@@ -1,7 +1,6 @@
 import { productV2ToBasePrice } from "@autumn/shared";
 import { CrosshairSimpleIcon } from "@phosphor-icons/react";
-import { usePricingTable } from "autumn-js/react";
-import PricingTablePreview from "@/components/autumn/pricing-table-preview";
+import { PricingTableContainer } from "@/components/autumn/PricingTableContainer";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
@@ -25,7 +24,6 @@ export const OnboardingPreview = ({
 	setConnectStripeOpen,
 }: OnboardingPreviewProps) => {
 	const { product, setSheet, setEditingState } = useProductContext();
-	const { products, refetch: refetchPricingTable } = usePricingTable();
 	const { products: allProducts } = useProductsQuery();
 
 	const showBasicInfo = currentStep >= 1;
@@ -57,10 +55,8 @@ export const OnboardingPreview = ({
 	if (showPricingTable || (currentStep === 4 && playgroundMode === "preview")) {
 		return (
 			<div className="overflow-auto max-h-screen">
-				<PricingTablePreview
-					products={products ?? []}
+				<PricingTableContainer
 					setConnectStripeOpen={setConnectStripeOpen ?? (() => {})}
-					onCheckoutComplete={refetchPricingTable}
 				/>
 			</div>
 		);

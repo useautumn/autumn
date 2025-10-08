@@ -151,6 +151,27 @@ export const useOnboardingLogic = () => {
 			if (products && products.length > 0) {
 				const firstProduct = products[0];
 
+				// Mark product as existing for resumability
+				productCreatedRef.current = {
+					created: true,
+					latestId: firstProduct.id,
+				};
+
+				// Pick first feature and mark as existing for resumability
+				if (features && features.length > 0) {
+					const firstFeature = features[0];
+					// Ensure the feature has the proper structure for the UI
+					setFeature({
+						...firstFeature,
+						// Ensure config exists with proper structure
+						config: firstFeature.config || {},
+					});
+					featureCreatedRef.current = {
+						created: true,
+						latestId: firstFeature.id,
+					};
+				}
+
 				// Fetch full product data
 				axiosInstance
 					.get(`/products/${firstProduct.id}/data2`)
@@ -182,6 +203,9 @@ export const useOnboardingLogic = () => {
 		pushStep,
 		axiosInstance,
 		setBaseProduct,
+		setFeature,
+		productCreatedRef,
+		featureCreatedRef,
 	]);
 
 	// Auto-open edit-plan sheet when entering step 4 (Playground) in edit mode
@@ -241,11 +265,12 @@ export const useOnboardingLogic = () => {
 				let updatedItems: typeof existingItems;
 
 				if (existingFeatureItemIndex !== -1) {
-					// Update existing feature item with new feature_id
+					// Update existing feature item with new feature_id and feature_type
 					updatedItems = [...existingItems];
 					updatedItems[existingFeatureItemIndex] = {
 						...updatedItems[existingFeatureItemIndex],
 						feature_id: createdFeature.id,
+						feature_type: newItem.feature_type, // Ensure feature_type matches the updated feature
 					};
 				} else {
 					// Add new feature item, preserving any existing base price items
