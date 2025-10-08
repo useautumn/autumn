@@ -55,13 +55,15 @@ export const PlaygroundToolbar = ({
 			/>
 			<div className="flex gap-2 items-center">
 				<Select value={selectedProductId} onValueChange={onPlanSelect}>
-					<SelectTrigger className="!h-6 text-body px-2 py-1 min-w-0">
-						<SelectValue placeholder="Select plan" />
+					<SelectTrigger className="!h-6 text-body px-2 py-1 min-w-0 max-w-[120px] overflow-x-hidden text-ellipsis whitespace-nowrap">
+						<SelectValue placeholder="Select plan" className="truncate" />
 					</SelectTrigger>
 					<SelectContent>
 						{products.map((prod) => (
 							<SelectItem key={prod.id} value={prod.id} className="text-body">
-								{prod.name}
+								<span className="truncate block max-w-[100px]">
+									{prod.name}
+								</span>
 							</SelectItem>
 						))}
 					</SelectContent>
