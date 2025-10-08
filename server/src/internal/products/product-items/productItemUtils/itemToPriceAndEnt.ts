@@ -20,16 +20,16 @@ import {
 	UsageModel,
 	type UsagePriceConfig,
 } from "@autumn/shared";
+import {
+	itemToBillingInterval,
+	itemToEntInterval,
+} from "@shared/utils/productV2Utils/productItemUtils/itemIntervalUtils.js";
 import { pricesAreSame } from "@/internal/products/prices/priceInitUtils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 import { entsAreSame } from "../../entitlements/entitlementUtils.js";
 import { shouldProrate } from "../../prices/priceUtils/prorationConfigUtils.js";
-import {
-	itemToBillingInterval,
-	itemToEntInterval,
-} from "../itemIntervalUtils.js";
 import { itemCanBeProrated } from "./classifyItem.js";
 import {
 	isFeatureItem,

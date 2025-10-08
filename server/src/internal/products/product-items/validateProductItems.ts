@@ -11,11 +11,11 @@ import {
 	ProductItemSchema,
 	UsageModel,
 } from "@autumn/shared";
+import { itemToEntInterval } from "@shared/utils/productV2Utils/productItemUtils/itemIntervalUtils.js";
 import { StatusCodes } from "http-status-codes";
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import { createFeaturesFromItems } from "./createFeaturesFromItems.js";
-import { itemToEntInterval } from "./itemIntervalUtils.js";
 import {
 	isBooleanFeatureItem,
 	isFeatureItem,
@@ -362,12 +362,12 @@ export const validateProductItems = ({
 	const hasWeeklyPrice = newItems.some(
 		(item) =>
 			(isPriceItem(item) || isFeaturePriceItem(item)) &&
-			item.interval === ProductItemInterval.Week
+			item.interval === ProductItemInterval.Week,
 	);
 	const hasMonthlyPrice = newItems.some(
 		(item) =>
 			(isPriceItem(item) || isFeaturePriceItem(item)) &&
-			item.interval === ProductItemInterval.Month
+			item.interval === ProductItemInterval.Month,
 	);
 
 	if (hasWeeklyPrice && hasMonthlyPrice) {

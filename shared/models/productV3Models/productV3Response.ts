@@ -1,8 +1,8 @@
-import { z } from "zod";
+import { z } from "zod/v4";
+import { ApiProductPropertiesSchema } from "../../api/products/apiProduct.js";
 import { AttachScenario } from "../checkModels/checkPreviewModels.js";
 import { AppEnv } from "../genModels/genEnums.js";
 import { ProductItemInterval } from "../productV2Models/productItemModels/productItemModels.js";
-import { ProductPropertiesSchema } from "../productV2Models/productResponseModels.js";
 
 export const PlanResponseSchema = z.object({
 	id: z.string(),
@@ -30,5 +30,5 @@ export const PlanResponseSchema = z.object({
 	// base_variant_id: z.string().nullable(),
 
 	scenario: z.nativeEnum(AttachScenario).optional(),
-	properties: ProductPropertiesSchema.optional(),
+	properties: ApiProductPropertiesSchema.optional(),
 });
