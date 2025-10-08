@@ -51,27 +51,17 @@ export const StepHeader = ({
 					onPlanSelect={onPlanSelect}
 					onCreatePlanSuccess={onCreatePlanSuccess}
 				/>
-				<div style={{ fontSize: "10px", color: "red", padding: "4px" }}>
-					DEBUG - sheet: {JSON.stringify(sheet)} | editingState:{" "}
-					{JSON.stringify(editingState)}
-				</div>
 			</div>
 		);
 	}
 
 	return (
-		<>
-			<SheetHeader
-				title={`Step ${stepNum}: ${config.title}`}
-				description={config.description}
-				noSeparator={true}
-				className="p-0 sticky"
-				isOnboarding={true}
-			/>
-			<div style={{ fontSize: "10px", color: "red", padding: "4px" }}>
-				DEBUG - sheet: {JSON.stringify(sheet)} | editingState:{" "}
-				{JSON.stringify(editingState)}
-			</div>
-		</>
+		<SheetHeader
+			title={`Step ${stepNum}: ${config.title}`}
+			description={config.description}
+			noSeparator={true}
+			className="p-0 sticky"
+			isOnboarding={true}
+		/>
 	);
 };
