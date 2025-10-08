@@ -36,7 +36,7 @@ export const getOrCreateCustomer = async ({
 	withCache = false,
 }: {
 	req: ExtendedRequest;
-	customerId: string;
+	customerId: string | null;
 	customerData?: CustomerData;
 	inStatuses?: CusProductStatus[];
 	skipGet?: boolean;
@@ -48,13 +48,13 @@ export const getOrCreateCustomer = async ({
 }): Promise<FullCustomer> => {
 	let customer: FullCustomer | undefined;
 
-	const { db, org, env, logtail: logger } = req;
+	const { db, org, env, logger } = req;
 
 	if (!withEntities) {
 		withEntities = expand?.includes(CusExpand.Entities) || false;
 	}
 
-	if (!skipGet) {
+	if (!skipGet && customerId) {
 		if (withCache) {
 			customer = await getCusWithCache({
 				db,
@@ -114,7 +114,7 @@ export const getOrCreateCustomer = async ({
 				env,
 			});
 		} catch (error: any) {
-			if (error?.data?.code === "23505") {
+			if (error?.data?.code === "23505" && customerId) {
 				customer = await CusService.getFull({
 					db,
 					idOrInternalId: customerId,

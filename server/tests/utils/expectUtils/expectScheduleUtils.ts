@@ -1,29 +1,29 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { getStripeSchedules } from "@/external/stripe/stripeSubUtils.js";
-import { findStripePriceFromPrices } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
-import { cusProductToPrices } from "@autumn/shared";
-import { CusService } from "@/internal/customers/CusService.js";
-import { isV4Usage } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import {
-	AppEnv,
+	type AppEnv,
 	AttachBranch,
-	AttachPreview,
+	type AttachPreview,
 	CusProductStatus,
-	FullCusProduct,
-	FullCustomer,
-	Organization,
-	ProductV2,
+	cusProductToPrices,
+	type FullCusProduct,
+	type FullCustomer,
+	type Organization,
+	type ProductV2,
 } from "@autumn/shared";
 import { expect } from "chai";
-import Stripe from "stripe";
-import { expectSubItemsCorrect } from "./expectSubUtils.js";
-import { expectProductAttached } from "./expectProductAttached.js";
-import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
-import { advanceTestClock } from "../stripeUtils.js";
-import { hoursToFinalizeInvoice } from "../constants.js";
 import { addHours } from "date-fns";
+import type Stripe from "stripe";
 import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { findStripePriceFromPrices } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
+import { getStripeSchedules } from "@/external/stripe/stripeSubUtils.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { isV4Usage } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
+import { hoursToFinalizeInvoice } from "../constants.js";
+import { advanceTestClock } from "../stripeUtils.js";
+import { expectProductAttached } from "./expectProductAttached.js";
+import { expectSubItemsCorrect } from "./expectSubUtils.js";
 
 export const expectNextCycleCorrect = async ({
 	autumn,
@@ -108,7 +108,7 @@ export const expectDowngradeCorrect = async ({
 	const customer = await autumn.customers.get(customerId);
 
 	const productCount = customer.products.reduce((acc: number, product: any) => {
-		if (product.group == curProduct.group) {
+		if (product.group === curProduct.group) {
 			return acc + 1;
 		} else return acc;
 	}, 0);
@@ -201,7 +201,7 @@ export const expectSubScheduleCorrect = async ({
 	}
 
 	const cusProduct = fullCus.customer_products.find(
-		(cp: FullCusProduct) => cp.product.id == productId,
+		(cp: FullCusProduct) => cp.product.id === productId,
 	)!;
 
 	const scheduleSets = await getStripeSchedules({
@@ -225,7 +225,6 @@ export const expectSubScheduleCorrect = async ({
 
 		if (isV4Usage({ price: autumnPrice!, cusProduct })) {
 			missingUsageCount++;
-			continue;
 		} else {
 			expect(stripePrice).to.exist;
 		}

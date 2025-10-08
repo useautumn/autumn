@@ -118,7 +118,7 @@ export const runAttachFunction = async ({
 	attachBody: AttachBody;
 	config: AttachConfig;
 }) => {
-	const { logtail: logger, db } = req;
+	const { logger, db } = req;
 	const { stripeCli } = attachParams;
 
 	const attachFunction = await getAttachFunction({

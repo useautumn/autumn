@@ -1,22 +1,27 @@
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { APIVersion, AppEnv, AttachBranch, Organization } from "@autumn/shared";
-import chalk from "chalk";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "../utils.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import {
+	type AppEnv,
+	AttachBranch,
+	LegacyVersion,
+	type Organization,
+} from "@autumn/shared";
 import { expect } from "chai";
+import chalk from "chalk";
+import type Stripe from "stripe";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { addPrefixToProducts } from "../utils.js";
 
 const testCase = "renew1";
 
-export let free = constructProduct({
+export const free = constructProduct({
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Messages,
@@ -27,7 +32,7 @@ export let free = constructProduct({
 	type: "free",
 });
 
-export let pro = constructProduct({
+export const pro = constructProduct({
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Credits,
@@ -39,8 +44,8 @@ export let pro = constructProduct({
 });
 
 describe(`${chalk.yellowBright(`${testCase}: Testing renew pro, force checkout`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
 
@@ -76,7 +81,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing renew pro, force checkout`)
 		});
 	});
 
-	it("should attach pro product", async function () {
+	it("should attach pro product", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,
@@ -88,14 +93,14 @@ describe(`${chalk.yellowBright(`${testCase}: Testing renew pro, force checkout`)
 		});
 	});
 
-	it("should attach free, then pro with force checkout and renew", async function () {
+	it("should attach free, then pro with force checkout and renew", async () => {
 		await autumn.attach({
 			customer_id: customerId,
 			product_id: free.id,
 		});
 
 		// 1. Get attach preview
-		let attachPreview = await autumn.attachPreview({
+		const attachPreview = await autumn.attachPreview({
 			customer_id: customerId,
 			product_id: pro.id,
 		});
@@ -108,7 +113,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing renew pro, force checkout`)
 			force_checkout: true,
 		});
 
-		let customer = await autumn.customers.get(customerId);
+		const customer = await autumn.customers.get(customerId);
 
 		expectProductAttached({
 			customer,

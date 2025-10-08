@@ -1,7 +1,10 @@
-import { routeHandler } from "@/utils/routerUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
+import type {
+	ExtendedRequest,
+	ExtendedResponse,
+} from "@/utils/models/Request.js";
+import { routeHandler } from "@/utils/routerUtils.js";
 import { getProductResponse } from "../productUtils/productResponseUtils/getProductResponse.js";
 
 export const handleListProducts = async (req: any, res: any) =>
@@ -21,7 +24,7 @@ export const handleListProducts = async (req: any, res: any) =>
 				}),
 			]);
 
-			let prods = await Promise.all(
+			const prods = await Promise.all(
 				products.map((p) => getProductResponse({ product: p, features })),
 			);
 

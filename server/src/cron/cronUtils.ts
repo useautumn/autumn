@@ -1,34 +1,30 @@
 import {
 	AllowanceType,
-	AppEnv,
+	type AppEnv,
 	EntInterval,
-	FullCusEntWithProduct,
-	FullEntitlement,
-	Organization,
-	ResetCusEnt,
+	type FullCusEntWithProduct,
+	type FullEntitlement,
+	getStartingBalance,
+	type Organization,
+	type ResetCusEnt,
 } from "@autumn/shared";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-
-import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
-import { getNextResetAt } from "@/utils/timeUtils.js";
-import chalk from "chalk";
-
-import { format, getDate, getMonth, setDate } from "date-fns";
-import {
-	getRelatedCusPrice,
-	getResetBalance,
-} from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
-import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils.js";
-import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
 import { UTCDate } from "@date-fns/utc";
-import { type DrizzleCli } from "../db/initDrizzle.js";
-import { RolloverService } from "../internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService.js";
+import chalk from "chalk";
+import { format, getDate, getMonth, setDate } from "date-fns";
+import { Decimal } from "decimal.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
 import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
+import { getRelatedCusPrice } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
+import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils.js";
+import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils.js";
 import { CusPriceService } from "@/internal/customers/cusProducts/cusPrices/CusPriceService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { Decimal } from "decimal.js";
+import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
+import { getNextResetAt } from "@/utils/timeUtils.js";
+import type { DrizzleCli } from "../db/initDrizzle.js";
+import { RolloverService } from "../internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService.js";
 
 const checkSubAnchor = async ({
 	db,
@@ -63,7 +59,10 @@ const checkSubAnchor = async ({
 	const org = cusProduct.product.org as Organization;
 
 	const stripeCli = createStripeCli({ org, env });
-	if (!cusProduct.subscription_ids || cusProduct.subscription_ids.length == 0) {
+	if (
+		!cusProduct.subscription_ids ||
+		cusProduct.subscription_ids.length === 0
+	) {
 		return nextResetAt;
 	}
 
@@ -101,9 +100,9 @@ const handleShortDurationCusEnt = async ({
 	cusEnt: ResetCusEnt;
 	cacheEnabledOrgs: any[];
 }) => {
-	let ent = cusEnt.entitlement as FullEntitlement;
+	const ent = cusEnt.entitlement as FullEntitlement;
 
-	let resetCusEnt = {
+	const resetCusEnt = {
 		...cusEnt,
 		next_reset_at: getNextResetAt({
 			curReset: new UTCDate(cusEnt.next_reset_at!),
@@ -118,9 +117,9 @@ const handleShortDurationCusEnt = async ({
 				.toNumber(),
 		}),
 	};
-	let newCusEnt = resetCusEnt;
+	const newCusEnt = resetCusEnt;
 
-	let rolloverUpdate = getRolloverUpdates({
+	const rolloverUpdate = getRolloverUpdates({
 		cusEnt,
 		nextResetAt: cusEnt.next_reset_at! as number,
 	});
@@ -137,7 +136,7 @@ const handleShortDurationCusEnt = async ({
 		`Reseting short cus ent (${cusEnt.feature_id}) [${ent.interval}], customer: ${cusEnt.customer_id}, org: ${cusEnt.customer.org_id}`,
 	);
 
-	let org = await OrgService.get({
+	const org = await OrgService.get({
 		db,
 		orgId: cusEnt.customer.org_id,
 	});
@@ -163,10 +162,10 @@ export const resetCustomerEntitlement = async ({
 	cacheEnabledOrgs: any[];
 }) => {
 	try {
-		let ent = cusEnt.entitlement as FullEntitlement;
+		const ent = cusEnt.entitlement as FullEntitlement;
 
 		if (
-			ent.allowance_type == AllowanceType.Fixed &&
+			ent.allowance_type === AllowanceType.Fixed &&
 			shortDurations.includes(ent.interval as EntInterval)
 		) {
 			return await handleShortDurationCusEnt({
@@ -194,7 +193,7 @@ export const resetCustomerEntitlement = async ({
 		);
 
 		// Handle if entitlement changed to unlimited...
-		let entitlement = cusEnt.entitlement;
+		const entitlement = cusEnt.entitlement;
 		if (entitlement.allowance_type === AllowanceType.Unlimited) {
 			await CusEntService.update({
 				db,
@@ -234,9 +233,9 @@ export const resetCustomerEntitlement = async ({
 			return;
 		}
 
-		const resetBalance = getResetBalance({
+		const resetBalance = getStartingBalance({
 			entitlement: cusEnt.entitlement,
-			options: entOptions,
+			options: entOptions || undefined,
 			relatedPrice: undefined,
 			productQuantity: cusEnt.customer_product.quantity,
 		});
@@ -249,12 +248,12 @@ export const resetCustomerEntitlement = async ({
 			intervalCount: cusEnt.entitlement.interval_count,
 		});
 
-		let rolloverUpdate = getRolloverUpdates({
+		const rolloverUpdate = getRolloverUpdates({
 			cusEnt,
 			nextResetAt: cusEnt.next_reset_at! as number,
 		});
 
-		let resetBalanceUpdate = getResetBalancesUpdate({
+		const resetBalanceUpdate = getResetBalancesUpdate({
 			cusEnt,
 			allowance: resetBalance || undefined,
 		});
@@ -304,7 +303,7 @@ export const resetCustomerEntitlement = async ({
 		//   (org) => org.id === cusEnt.customer.org_id
 		// );
 
-		let org = await OrgService.get({
+		const org = await OrgService.get({
 			db,
 			orgId: cusEnt.customer.org_id,
 		});

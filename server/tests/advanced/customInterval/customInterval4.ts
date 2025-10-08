@@ -1,30 +1,27 @@
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { APIVersion, AppEnv, Organization } from "@autumn/shared";
-import chalk from "chalk";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-
-import { addPrefixToProducts } from "tests/attach/utils.js";
-
-import { addMonths } from "date-fns";
+import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
 import { expect } from "chai";
+import chalk from "chalk";
+import { addMonths } from "date-fns";
+import type Stripe from "stripe";
+import { addPrefixToProducts } from "tests/attach/utils.js";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import {
 	expectDowngradeCorrect,
 	expectNextCycleCorrect,
 } from "tests/utils/expectUtils/expectScheduleUtils.js";
+import { createProducts } from "tests/utils/productUtils.js";
 import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
 const testCase = "customInterval4";
 
-export let pro = constructProduct({
+export const pro = constructProduct({
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Words,
@@ -35,7 +32,7 @@ export let pro = constructProduct({
 	type: "pro",
 });
 
-export let premium = constructProduct({
+export const premium = constructProduct({
 	id: "premium",
 	items: [
 		constructFeatureItem({
@@ -48,8 +45,8 @@ export let premium = constructProduct({
 });
 
 describe(`${chalk.yellowBright(`${testCase}: Testing downgrades for custom intervals`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
@@ -88,7 +85,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing downgrades for custom inter
 		testClockId = testClockId1!;
 	});
 
-	it("should attach premium product", async function () {
+	it("should attach premium product", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,
@@ -100,13 +97,13 @@ describe(`${chalk.yellowBright(`${testCase}: Testing downgrades for custom inter
 		});
 	});
 
-	it("should have correct next cycle at on checkout", async function () {
+	it("should have correct next cycle at on checkout", async () => {
 		const checkout = await autumn.checkout({
 			customer_id: customerId,
 			product_id: pro.id,
 		});
 
-		let expectedNextCycle = addMonths(new Date(), 2);
+		const expectedNextCycle = addMonths(new Date(), 2);
 		expect(checkout.next_cycle?.starts_at).to.be.approximately(
 			expectedNextCycle.getTime(),
 			1000 * 60 * 60 * 24,
@@ -116,7 +113,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing downgrades for custom inter
 	});
 
 	let preview: any;
-	it("should downgrade to pro", async function () {
+	it("should downgrade to pro", async () => {
 		const { preview: preview_ } = await expectDowngradeCorrect({
 			autumn,
 			customerId,
@@ -131,7 +128,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing downgrades for custom inter
 		preview = preview_;
 	});
 
-	it("should have pro attached on next cycle", async function () {
+	it("should have pro attached on next cycle", async () => {
 		await expectNextCycleCorrect({
 			preview: preview!,
 			autumn,

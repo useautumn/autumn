@@ -1,26 +1,19 @@
-import { routeHandler } from "@/utils/routerUtils.js";
+import { AppEnv, ErrCode } from "@autumn/shared";
 import Stripe from "stripe";
-import RecaseError from "@/utils/errorUtils.js";
-import { encryptData } from "@/utils/encryptUtils.js";
-
-import { ErrCode } from "@/errors/errCodes.js";
+import { z } from "zod";
+import { ensureStripeProductsWithEnv } from "@/external/stripe/stripeEnsureUtils.js";
 
 import {
 	checkKeyValid,
 	createWebhookEndpoint,
 } from "@/external/stripe/stripeOnboardingUtils.js";
-
+import { encryptData } from "@/utils/encryptUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { nullish } from "@/utils/genUtils.js";
+import { routeHandler } from "@/utils/routerUtils.js";
 import { OrgService } from "../OrgService.js";
-import { AppEnv } from "@autumn/shared";
-import { notNullish, nullish } from "@/utils/genUtils.js";
 import { clearOrgCache } from "../orgUtils/clearOrgCache.js";
-import { z } from "zod";
 import { isStripeConnected } from "../orgUtils.js";
-import {
-	ensureStripeProducts,
-	ensureStripeProductsWithEnv,
-} from "@/external/stripe/stripeEnsureUtils.js";
-import { toSuccessUrl } from "../orgUtils/convertOrgUtils.js";
 
 export const connectStripe = async ({
 	orgId,
@@ -34,9 +27,9 @@ export const connectStripe = async ({
 	// 1. Check if key is valid
 	await checkKeyValid(apiKey);
 
-	let stripe = new Stripe(apiKey);
+	const stripe = new Stripe(apiKey);
 
-	let account = await stripe.accounts.retrieve();
+	const account = await stripe.accounts.retrieve();
 
 	// 2. Disconnect existing webhook endpoints
 	const curWebhooks = await stripe.webhookEndpoints.list();
@@ -47,7 +40,7 @@ export const connectStripe = async ({
 	}
 
 	// 3. Create new webhook endpoint
-	let webhook = await createWebhookEndpoint(apiKey, env, orgId);
+	const webhook = await createWebhookEndpoint(apiKey, env, orgId);
 
 	// 3. Return encrypted
 	if (env === AppEnv.Sandbox) {
@@ -96,9 +89,9 @@ export const connectAllStripe = async ({
 		await checkKeyValid(liveApiKey);
 
 		// Get default currency from Stripe
-		let stripe = new Stripe(testApiKey);
+		const stripe = new Stripe(testApiKey);
 
-		let account = await stripe.accounts.retrieve();
+		const account = await stripe.accounts.retrieve();
 
 		if (nullish(defaultCurrency) && nullish(account.default_currency)) {
 			throw new RecaseError({

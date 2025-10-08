@@ -11,8 +11,6 @@ import {
 	FeatureUsageType,
 	type FixedPriceConfig,
 	Infinite,
-	itemToBillingInterval,
-	itemToEntInterval,
 	OnDecrease,
 	OnIncrease,
 	type Price,
@@ -28,6 +26,10 @@ import RecaseError from "@/utils/errorUtils.js";
 import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 import { entsAreSame } from "../../entitlements/entitlementUtils.js";
 import { shouldProrate } from "../../prices/priceUtils/prorationConfigUtils.js";
+import {
+	itemToBillingInterval,
+	itemToEntInterval,
+} from "../itemIntervalUtils.js";
 import { itemCanBeProrated } from "./classifyItem.js";
 import {
 	isFeatureItem,
@@ -73,6 +75,9 @@ export const toPrice = ({
 		amount: notNullish(item.price) ? item.price : item.tiers![0].amount,
 		interval: itemToBillingInterval({ item }) as BillingInterval,
 		interval_count: item.interval_count || 1,
+		stripe_product_id: null,
+		feature_id: null,
+		internal_feature_id: null,
 	};
 
 	let price: Price = {
@@ -212,7 +217,7 @@ export const toFeatureAndPrice = ({
 		};
 	}
 
-	const entInterval = itemToEntInterval({ item });
+	const entInterval = itemToEntInterval(item);
 
 	const config: UsagePriceConfig = {
 		type: PriceType.Usage,

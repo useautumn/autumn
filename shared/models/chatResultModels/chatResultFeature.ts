@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 
 export const ChatFeatureCreditSchema = z.object({
 	metered_feature_id: z.string().nonempty(),

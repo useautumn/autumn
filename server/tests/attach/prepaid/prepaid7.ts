@@ -1,7 +1,7 @@
 // import { AutumnInt } from "@/external/autumn/autumnCli.js";
 // import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 // import {
-//   APIVersion,
+//   LegacyVersion,
 //   AppEnv,
 //   Customer,
 //   OnDecrease,
@@ -56,7 +56,7 @@
 
 // describe(`${chalk.yellowBright(`attach/${testCase}: prepaid add on, with entities`)}`, () => {
 //   let customerId = testCase;
-//   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+//   let autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 //   let testClockId: string;
 //   let db: DrizzleCli, org: Organization, env: AppEnv;
 //   let stripeCli: Stripe;

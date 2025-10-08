@@ -1,19 +1,19 @@
+import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
 import { expect } from "chai";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { APIVersion, AppEnv, Organization } from "@autumn/shared";
 import chalk from "chalk";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type Stripe from "stripe";
 import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "../utils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { expectAttachCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { addPrefixToProducts } from "../utils.js";
 
-export let pro = constructProduct({
+export const pro = constructProduct({
 	items: [constructArrearItem({ featureId: TestFeature.Words })],
 	type: "pro",
 });
@@ -21,8 +21,8 @@ export let pro = constructProduct({
 const testCase = "others6";
 
 describe(`${chalk.yellowBright(`${testCase}: Testing attach with customer ID and entity ID null`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
@@ -37,7 +37,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach with customer ID and
 
 		stripeCli = this.stripeCli;
 
-		let customer = await CusService.getByEmail({
+		const customer = await CusService.getByEmail({
 			db,
 			orgId: org.id,
 			env,
@@ -64,10 +64,10 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach with customer ID and
 
 	let internalCustomerId = "";
 	let internalEntityId = "";
-	let entityId = "1";
-	it("should attach create customer with no ID", async function () {
-		let customer = await autumn.customers.create({
-			// @ts-ignore
+	const entityId = "1";
+	it("should attach create customer with no ID", async () => {
+		const customer = await autumn.customers.create({
+			// @ts-expect-error
 			id: null,
 			email: `${customerId}@test.com`,
 			name: customerId,
@@ -77,8 +77,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach with customer ID and
 
 		internalCustomerId = customer.autumn_id;
 
-		let data = await autumn.entities.create(internalCustomerId, {
-			// @ts-ignore
+		const data = await autumn.entities.create(internalCustomerId, {
+			// @ts-expect-error
 			id: null,
 			feature_id: TestFeature.Users,
 		});
@@ -88,7 +88,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach with customer ID and
 		expect(internalEntityId, "Entity ID should exist").to.exist;
 	});
 
-	it("should be able to attach pro product, invoice only", async function () {
+	it("should be able to attach pro product, invoice only", async () => {
 		await autumn.attach({
 			customer_id: internalCustomerId,
 			entity_id: internalEntityId,
@@ -108,15 +108,15 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach with customer ID and
 		expect(customer.invoices[0].status).to.equal("draft");
 	});
 
-	it("should create customer with ID, and attach pro product", async function () {
-		let customer = await autumn.customers.create({
+	it("should create customer with ID, and attach pro product", async () => {
+		const customer = await autumn.customers.create({
 			id: customerId,
 			email: `${customerId}@test.com`,
 		});
 
 		expect(customer.autumn_id).to.equal(internalCustomerId);
 
-		let entity = await autumn.entities.create(customer.autumn_id, {
+		const entity = await autumn.entities.create(customer.autumn_id, {
 			id: entityId,
 			feature_id: TestFeature.Users,
 		});

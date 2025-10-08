@@ -186,6 +186,8 @@ analyticsRouter.post("/events", async (req: any, res: any) =>
 				aggregateAll,
 			});
 
+			console.log("events", events);
+
 			res.status(200).json({
 				customer,
 				events,

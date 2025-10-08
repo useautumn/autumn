@@ -1,5 +1,5 @@
+import { z } from "zod/v4";
 import { ProductItemSchema } from "./productItemModels.js";
-import { z } from "zod";
 
 export const FeaturePriceItemSchema = ProductItemSchema.pick({
 	feature_id: true,

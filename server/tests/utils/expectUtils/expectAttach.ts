@@ -1,32 +1,28 @@
-import Stripe from "stripe";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
-	AppEnv,
+	type AppEnv,
 	AttachBranch,
-	CreateEntity,
+	type CreateEntity,
 	CusProductStatus,
-	FeatureOptions,
-	Organization,
-	ProductV2,
+	type FeatureOptions,
+	type Organization,
+	type ProductV2,
 } from "@autumn/shared";
-
-import {
-	getAttachTotal,
-	getCurrentOptions,
-} from "tests/utils/testAttachUtils/testAttachUtils.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { expectInvoicesCorrect } from "tests/utils/expectUtils/expectProductAttached.js";
-import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
-import { notNullish, timeout, toSnakeCase } from "@/utils/genUtils.js";
-import { expectSubItemsCorrect } from "tests/utils/expectUtils/expectSubUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-
+import type { AttachParams, Customer } from "autumn-js";
 import { expect } from "chai";
-import { completeCheckoutForm } from "../stripeUtils.js";
-import { AttachParams, Customer } from "autumn-js";
-import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
-import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
 import { Decimal } from "decimal.js";
+import type Stripe from "stripe";
+import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
+import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
+import {
+	expectInvoicesCorrect,
+	expectProductAttached,
+} from "tests/utils/expectUtils/expectProductAttached.js";
+import { getCurrentOptions } from "tests/utils/testAttachUtils/testAttachUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
+import { timeout, toSnakeCase } from "@/utils/genUtils.js";
+import { completeCheckoutForm } from "../stripeUtils.js";
 
 export const attachAndExpectCorrect = async ({
 	autumn,
@@ -135,9 +131,9 @@ export const attachAndExpectCorrect = async ({
 
 	const productCount = customer.products.reduce((acc: number, p: any) => {
 		if (
-			product.group == p.group &&
+			product.group === p.group &&
 			!p.is_add_on &&
-			(entityId ? p.entity_id == entityId : true)
+			(entityId ? p.entity_id === entityId : true)
 		) {
 			return acc + 1;
 		} else return acc;
@@ -145,7 +141,7 @@ export const attachAndExpectCorrect = async ({
 
 	const branch = preview.branch;
 
-	if (branch == AttachBranch.Downgrade) {
+	if (branch === AttachBranch.Downgrade) {
 		expect(
 			productCount,
 			`customer should only have 2 products (from this group: ${product.group})`,
@@ -162,15 +158,15 @@ export const attachAndExpectCorrect = async ({
 		product,
 		entityId,
 		status:
-			preview.branch == AttachBranch.Downgrade
+			preview.branch === AttachBranch.Downgrade
 				? CusProductStatus.Scheduled
 				: undefined,
 	});
 
 	const skipInvoiceCheck =
-		(preview.branch == AttachBranch.UpdatePrepaidQuantity &&
-			checkoutRes.total == 0) ||
-		preview.branch == AttachBranch.Downgrade;
+		(preview.branch === AttachBranch.UpdatePrepaidQuantity &&
+			checkoutRes.total === 0) ||
+		preview.branch === AttachBranch.Downgrade;
 
 	const freeProduct = isFreeProductV2({ product });
 	if (!skipInvoiceCheck && !freeProduct) {
@@ -195,7 +191,7 @@ export const attachAndExpectCorrect = async ({
 		});
 	}
 
-	if (branch == AttachBranch.OneOff) {
+	if (branch === AttachBranch.OneOff) {
 		return;
 	}
 

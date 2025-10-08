@@ -1,21 +1,20 @@
 import {
-	AppEnv,
+	type AppEnv,
 	ErrCode,
-	Feature,
+	type Feature,
 	FeatureType,
 	FeatureUsageType,
-	ProductItem,
+	type ProductItem,
 	ProductItemFeatureType,
 } from "@autumn/shared";
-import { isBooleanFeatureItem } from "./productItemUtils/getItemType.js";
 import { validateFeatureId } from "@/internal/features/featureUtils.js";
 import {
 	constructBooleanFeature,
 	constructMeteredFeature,
 } from "@/internal/features/utils/constructFeatureUtils.js";
-
 import RecaseError from "@/utils/errorUtils.js";
 import { nullish } from "@/utils/genUtils.js";
+import { isBooleanFeatureItem } from "./productItemUtils/getItemType.js";
 
 export const createFeaturesFromItems = ({
 	items,
@@ -28,22 +27,23 @@ export const createFeaturesFromItems = ({
 	orgId: string;
 	env: AppEnv;
 }) => {
-	let newFeatures: Feature[] = [];
+	const newFeatures: Feature[] = [];
 	for (const item of items) {
 		if (!item.feature_id) {
 			continue;
 		}
 
-		let feature = curFeatures.find((f) => f.id == item.feature_id);
+		const feature = curFeatures.find((f) => f.id === item.feature_id);
+
 		if (feature) {
 			if (nullish(item.feature_type)) {
 				continue;
 			}
 			// 1. Check that feature_type matches
-			if (item.feature_type == ProductItemFeatureType.Static) {
-				let booleanFail =
-					item.feature_type == ProductItemFeatureType.Static &&
-					feature.type != FeatureType.Boolean;
+			if (item.feature_type === ProductItemFeatureType.Static) {
+				const booleanFail =
+					item.feature_type === ProductItemFeatureType.Static &&
+					feature.type !== FeatureType.Boolean;
 
 				if (booleanFail) {
 					throw new RecaseError({
@@ -53,7 +53,7 @@ export const createFeaturesFromItems = ({
 					});
 				}
 			} else {
-				let usageFail = item.feature_type != feature.config?.usage_type;
+				const usageFail = item.feature_type !== feature.config?.usage_type;
 				if (usageFail) {
 					throw new RecaseError({
 						message: `Feature ${item.feature_id} already exists but is not a ${item.feature_type} feature`,
@@ -88,7 +88,7 @@ export const createFeaturesFromItems = ({
 				orgId,
 				env,
 				usageType:
-					item.feature_type == ProductItemFeatureType.ContinuousUse
+					item.feature_type === ProductItemFeatureType.ContinuousUse
 						? FeatureUsageType.Continuous
 						: FeatureUsageType.Single,
 			});

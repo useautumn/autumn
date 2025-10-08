@@ -1,17 +1,17 @@
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
-	pgTable,
-	text,
-	numeric,
-	jsonb,
 	boolean,
 	foreignKey,
+	jsonb,
+	numeric,
+	pgTable,
+	text,
 } from "drizzle-orm/pg-core";
-import { freeTrials } from "../productModels/freeTrialModels/freeTrialTable.js";
-import { customers } from "../cusModels/cusTable.js";
-import { products } from "../productModels/productTable.js";
 import { collatePgColumn } from "../../db/utils.js";
+import { customers } from "../cusModels/cusTable.js";
 import { entities } from "../cusModels/entityModels/entityTable.js";
-import { InferSelectModel, InferInsertModel } from "drizzle-orm";
+import { freeTrials } from "../productModels/freeTrialModels/freeTrialTable.js";
+import { products } from "../productModels/productTable.js";
 
 export type CustomerProductProcessor = {
 	type: "stripe";
@@ -50,6 +50,7 @@ export const customerProducts = pgTable(
 		customer_id: text("customer_id"),
 		entity_id: text("entity_id"),
 		api_version: numeric({ mode: "number" }),
+		api_semver: text("api_semver"),
 	},
 	(table) => [
 		foreignKey({

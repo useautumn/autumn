@@ -1,14 +1,16 @@
 import {
-	APIVersion,
+	ApiBaseEntitySchema,
+	ApiCusFeatureV2Schema,
+	ApiCustomerSchema,
+	ApiCustomerV2Schema,
+	ApiVersion,
+	type ApiVersionClass,
 	type AppEnv,
-	CusEntResponseSchema,
 	CusExpand,
 	CusProductStatus,
-	CusResponseSchema,
 	CustomerResponseSchema,
 	cusProductsToCusEnts,
 	cusProductsToCusPrices,
-	EntityResponseSchema,
 	type Feature,
 	FeatureType,
 	type FullCusProduct,
@@ -18,8 +20,6 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { invoicesToResponse } from "@/internal/invoices/invoiceUtils.js";
-import { BREAK_API_VERSION } from "@/utils/constants.js";
-import { orgToVersion } from "@/utils/versionUtils.js";
 import { featuresToObject } from "./cusFeatureResponseUtils/balancesToFeatureResponse.js";
 import { getCusBalances } from "./cusFeatureResponseUtils/getCusBalances.js";
 import { processFullCusProducts } from "./cusProductResponseUtils/processFullCusProducts.js";
@@ -39,7 +39,7 @@ export const getCustomerDetails = async ({
 	logger,
 	cusProducts,
 	expand,
-	reqApiVersion,
+	apiVersion,
 }: {
 	db: DrizzleCli;
 	customer: FullCustomer;
@@ -50,13 +50,8 @@ export const getCustomerDetails = async ({
 	logger: any;
 	cusProducts: FullCusProduct[];
 	expand: CusExpand[];
-	reqApiVersion?: number;
+	apiVersion: ApiVersionClass;
 }) => {
-	const apiVersion = orgToVersion({
-		org,
-		reqApiVersion,
-	});
-
 	const withRewards = expand.includes(CusExpand.Rewards);
 
 	const inStatuses = org.config.include_past_due
@@ -85,7 +80,7 @@ export const getCustomerDetails = async ({
 		features,
 	});
 
-	if (apiVersion >= APIVersion.v1_1) {
+	if (apiVersion.gte(ApiVersion.V1_1)) {
 		let entList: any = balances.map((b) => {
 			const isBoolean =
 				features.find((f: Feature) => f.id === b.feature_id)?.type ===
@@ -94,7 +89,7 @@ export const getCustomerDetails = async ({
 				return b;
 			}
 
-			return CusEntResponseSchema.parse({
+			return ApiCusFeatureV2Schema.parse({
 				...b,
 				usage: b.used,
 				included_usage: b.allowance,
@@ -103,7 +98,7 @@ export const getCustomerDetails = async ({
 
 		const products: any = [...main, ...addOns];
 
-		if (apiVersion >= APIVersion.v1_2) {
+		if (apiVersion.gte(ApiVersion.V1_2)) {
 			entList = featuresToObject({
 				features,
 				entList,
@@ -141,8 +136,12 @@ export const getCustomerDetails = async ({
 			expand,
 		});
 
+		const apiCustomerSchema = apiVersion.gte(ApiVersion.V1_2)
+			? ApiCustomerSchema
+			: ApiCustomerV2Schema;
+
 		const cusResponse = {
-			...CusResponseSchema.parse({
+			...apiCustomerSchema.parse({
 				...customer,
 				stripe_id: customer.processor?.id,
 				features: entList,
@@ -162,7 +161,7 @@ export const getCustomerDetails = async ({
 				metadata: customer.metadata,
 				entities: expand.includes(CusExpand.Entities)
 					? customer.entities.map((e) =>
-							EntityResponseSchema.parse({
+							ApiBaseEntitySchema.parse({
 								id: e.id,
 								name: e.name,
 								customer_id: customer.id,
@@ -187,14 +186,16 @@ export const getCustomerDetails = async ({
 			return cusResponse;
 		}
 	} else {
-		const withItems = org.config.api_version >= BREAK_API_VERSION;
+		// Probably don't need items...?
+		// const withItems = org.config.api_version >= BREAK_API_VERSION;
+		// const withItems = apiVersion.gte(ApiVersion.V0_2);
 
 		const processedInvoices = await getCusInvoices({
 			db,
 			internalCustomerId: customer.internal_id,
 			invoices: customer.invoices,
 			limit: 20,
-			withItems,
+			withItems: false,
 			features,
 		});
 

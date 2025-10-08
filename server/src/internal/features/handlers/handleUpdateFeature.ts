@@ -1,34 +1,32 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { ErrCode } from "@/errors/errCodes.js";
+import {
+	type AppEnv,
+	EntInterval,
+	type Entitlement,
+	type EntitlementWithFeature,
+	ErrCode,
+	type Feature,
+	FeatureType,
+	FeatureUsageType,
+	notNullish,
+	type Price,
+	type UsagePriceConfig,
+} from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import {
 	getObjectsUsingFeature,
 	validateCreditSystem,
+	validateMeteredConfig,
 } from "@/internal/features/featureUtils.js";
-import { validateMeteredConfig } from "@/internal/features/featureUtils.js";
-import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
+import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { keyToTitle } from "@/utils/genUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import {
-	Entitlement,
-	Feature,
-	FeatureType,
-	Price,
-	UsagePriceConfig,
-	AppEnv,
-	EntitlementWithFeature,
-	EntInterval,
-	FeatureUsageType,
-	notNullish,
-} from "@autumn/shared";
-import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
-import { toAPIFeature } from "../utils/mapFeatureUtils.js";
+import { toApiFeature } from "../utils/mapFeatureUtils.js";
 
 const handleFeatureIdChanged = async ({
 	db,
@@ -54,7 +52,7 @@ const handleFeatureIdChanged = async ({
 	logger: any;
 }) => {
 	// 1. Check if any customer entitlement linked to this feature
-	let cusEnts = await CusEntService.getByFeature({
+	const cusEnts = await CusEntService.getByFeature({
 		db,
 		internalFeatureId: feature.internal_id!,
 	});
@@ -68,9 +66,9 @@ const handleFeatureIdChanged = async ({
 	}
 
 	// 2. Update all linked objects
-	let batchUpdate = [];
+	const batchUpdate = [];
 
-	for (let entitlement of linkedEntitlements) {
+	for (const entitlement of linkedEntitlements) {
 		batchUpdate.push(
 			EntitlementService.update({
 				db,
@@ -85,8 +83,8 @@ const handleFeatureIdChanged = async ({
 	await Promise.all(batchUpdate);
 
 	// 3. Update all linked prices
-	let priceUpdate = [];
-	for (let price of prices) {
+	const priceUpdate = [];
+	for (const price of prices) {
 		priceUpdate.push(
 			PriceService.update({
 				db,
@@ -104,9 +102,9 @@ const handleFeatureIdChanged = async ({
 	await Promise.all(priceUpdate);
 
 	// 4. Update all linked credit systems
-	let creditSystemUpdate = [];
-	for (let creditSystem of creditSystems) {
-		let newSchema = structuredClone(creditSystem.config.schema);
+	const creditSystemUpdate = [];
+	for (const creditSystem of creditSystems) {
+		const newSchema = structuredClone(creditSystem.config.schema);
 		for (let i = 0; i < newSchema.length; i++) {
 			if (newSchema[i].metered_feature_id === feature.id) {
 				newSchema[i].metered_feature_id = newId;
@@ -131,9 +129,9 @@ const handleFeatureIdChanged = async ({
 	await Promise.all(creditSystemUpdate);
 
 	// 5. Update all linked entitlements
-	let entitlementUpdate = [];
+	const entitlementUpdate = [];
 
-	for (let entitlement of entitlements) {
+	for (const entitlement of entitlements) {
 		entitlementUpdate.push(
 			EntitlementService.update({
 				db,
@@ -165,7 +163,7 @@ const handleFeatureUsageTypeChanged = async ({
 	prices: Price[];
 	creditSystems: Feature[];
 }) => {
-	let usageTypeTitle = keyToTitle(newUsageType).toLowerCase();
+	const usageTypeTitle = keyToTitle(newUsageType).toLowerCase();
 	if (creditSystems.length > 0) {
 		throw new RecaseError({
 			message: `Cannot set to ${usageTypeTitle} because it is used in credit system ${creditSystems[0].id}`,
@@ -183,7 +181,7 @@ const handleFeatureUsageTypeChanged = async ({
 	}
 
 	// Get cus product using feature...
-	let cusEnts = await CusEntService.getByFeature({
+	const cusEnts = await CusEntService.getByFeature({
 		db,
 		internalFeatureId: feature.internal_id!,
 	});
@@ -201,8 +199,8 @@ const handleFeatureUsageTypeChanged = async ({
 			`Feature usage type changed to ${newUsageType}, updating entitlements and prices`,
 		);
 		if (newUsageType == FeatureUsageType.Continuous) {
-			let batchEntUpdate = [];
-			for (let entitlement of entitlements) {
+			const batchEntUpdate = [];
+			for (const entitlement of entitlements) {
 				batchEntUpdate.push(
 					EntitlementService.update({
 						db,
@@ -220,9 +218,9 @@ const handleFeatureUsageTypeChanged = async ({
 	}
 
 	if (prices.length > 0) {
-		let batchPriceUpdate = [];
-		for (let price of prices) {
-			let priceConfig = price.config as UsagePriceConfig;
+		const batchPriceUpdate = [];
+		for (const price of prices) {
+			const priceConfig = price.config as UsagePriceConfig;
 
 			batchPriceUpdate.push(
 				PriceService.update({
@@ -259,13 +257,13 @@ export const handleUpdateFeature = async (
 		res,
 		action: "Update feature",
 		handler: async (req: any, res: any) => {
-			let featureId = req.params.feature_id;
-			let data = req.body;
-			let { db, orgId, env, logtail: logger } = req;
+			const featureId = req.params.feature_id;
+			const data = req.body;
+			const { db, orgId, env, logtail: logger } = req;
 
 			// 1. Get feature by ID
-			let features = await FeatureService.getFromReq(req);
-			let feature = features.find((f) => f.id == featureId);
+			const features = await FeatureService.getFromReq(req);
+			const feature = features.find((f) => f.id == featureId);
 
 			if (!feature) {
 				throw new RecaseError({
@@ -278,7 +276,7 @@ export const handleUpdateFeature = async (
 			// If only archiving, skip other checks and just update
 			if (data.archived !== undefined && Object.keys(data).length === 1) {
 				console.log("Updating feature archived to: ", data.archived);
-				let updatedFeature = await FeatureService.update({
+				const updatedFeature = await FeatureService.update({
 					db: req.db,
 					id: featureId,
 					orgId: req.orgId,
@@ -293,7 +291,7 @@ export const handleUpdateFeature = async (
 						.status(200)
 						.json(
 							updatedFeature
-								? toAPIFeature({ feature: updatedFeature })
+								? toApiFeature({ feature: updatedFeature })
 								: undefined,
 						);
 				}
@@ -301,19 +299,20 @@ export const handleUpdateFeature = async (
 			}
 
 			// 1. Check if changing type...
-			let isChangingType = notNullish(data.type) && feature.type !== data.type;
+			const isChangingType =
+				notNullish(data.type) && feature.type !== data.type;
 
-			let isChangingId = notNullish(data.id) && feature.id !== data.id;
+			const isChangingId = notNullish(data.id) && feature.id !== data.id;
 
-			let isChangingUsageType =
+			const isChangingUsageType =
 				feature.type != FeatureType.Boolean &&
 				data.type != FeatureType.Boolean &&
 				feature.config?.usage_type != data.config?.usage_type;
 
-			let isChangingName = feature.name !== data.name;
+			const isChangingName = feature.name !== data.name;
 
 			if (isChangingType || isChangingId || isChangingUsageType) {
-				let { entitlements, prices, creditSystems, linkedEntitlements } =
+				const { entitlements, prices, creditSystems, linkedEntitlements } =
 					await getObjectsUsingFeature({
 						db,
 						orgId: req.orgId,
@@ -374,7 +373,7 @@ export const handleUpdateFeature = async (
 							: data.config
 					: feature.config;
 
-			let updatedFeature = await FeatureService.update({
+			const updatedFeature = await FeatureService.update({
 				db: req.db,
 				id: featureId,
 				orgId: req.orgId,
@@ -404,7 +403,7 @@ export const handleUpdateFeature = async (
 				.status(200)
 				.json(
 					updatedFeature
-						? toAPIFeature({ feature: updatedFeature })
+						? toApiFeature({ feature: updatedFeature })
 						: undefined,
 				);
 		},

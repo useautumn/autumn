@@ -1,24 +1,23 @@
-import { Router } from "express";
 import {
 	CusProductStatus,
 	ErrCode,
-	EventInsert,
+	type EventInsert,
 	FeatureType,
-	FullCustomer,
+	type FullCustomer,
 } from "@autumn/shared";
-import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
-import { generateId, nullish } from "@/utils/genUtils.js";
-
-import { EventService } from "./EventService.js";
+import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
-import { JobName } from "@/queue/JobName.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { creditSystemContainsFeature } from "@/internal/features/creditSystemUtils.js";
-import { addTaskToQueue } from "@/queue/queueUtils.js";
-import { getEventTimestamp } from "./eventUtils.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { runUpdateUsageTask } from "@/trigger/updateUsageTask.js";
 import { isPaidContinuousUse } from "@/internal/features/featureUtils.js";
+import { JobName } from "@/queue/JobName.js";
+import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { runUpdateUsageTask } from "@/trigger/updateUsageTask.js";
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
+import { generateId, nullish } from "@/utils/genUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+import { EventService } from "./EventService.js";
+import { getEventTimestamp } from "./eventUtils.js";
 
 export const eventsRouter: Router = Router();
 export const usageRouter: Router = Router();
@@ -39,7 +38,7 @@ const getCusFeatureAndOrg = async ({
 	// 1. Get customer
 	const { org, features } = req;
 
-	let customer = await getOrCreateCustomer({
+	const customer = await getOrCreateCustomer({
 		req,
 		customerId,
 		customerData,
@@ -49,10 +48,10 @@ const getCusFeatureAndOrg = async ({
 		withEntities: true,
 	});
 
-	let feature = features.find((f) => f.id == featureId);
-	let creditSystems = features.filter(
+	const feature = features.find((f) => f.id === featureId);
+	const creditSystems = features.filter(
 		(f) =>
-			f.type == FeatureType.CreditSystem &&
+			f.type === FeatureType.CreditSystem &&
 			creditSystemContainsFeature({
 				creditSystem: f,
 				meteredFeatureId: featureId,
@@ -166,7 +165,7 @@ export const handleUsageEvent = async ({
 	logger.info(`/track: get customer took ${Date.now() - startTime}ms`);
 	const startTime2 = Date.now();
 
-	let newEvent = await createAndInsertEvent({
+	const newEvent = await createAndInsertEvent({
 		req,
 		customer,
 		featureId: feature_id,
@@ -179,7 +178,7 @@ export const handleUsageEvent = async ({
 
 	const features = [feature, ...creditSystems];
 
-	if (nullish(value) || isNaN(parseFloat(value))) {
+	if (nullish(value) || Number.isNaN(parseFloat(value))) {
 		value = 1;
 	} else {
 		value = parseFloat(value);

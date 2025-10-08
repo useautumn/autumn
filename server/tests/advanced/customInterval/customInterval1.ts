@@ -1,27 +1,25 @@
-import chalk from "chalk";
-import Stripe from "stripe";
-
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { APIVersion, AppEnv, Organization } from "@autumn/shared";
-
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { addPrefixToProducts } from "tests/attach/utils.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { addHours, addMonths } from "date-fns";
+import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
 import { expect } from "chai";
+import chalk from "chalk";
+import { addHours, addMonths } from "date-fns";
+import type Stripe from "stripe";
+import { addPrefixToProducts } from "tests/attach/utils.js";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
-import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
 const testCase = "customInterval1";
 
-export let pro = constructProduct({
+export const pro = constructProduct({
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Words,
@@ -33,7 +31,7 @@ export let pro = constructProduct({
 	type: "pro",
 });
 
-export let premium = constructProduct({
+export const premium = constructProduct({
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Words,
@@ -50,8 +48,8 @@ export let premium = constructProduct({
 });
 
 describe(`${chalk.yellowBright(`${testCase}: Testing custom interval and interval count`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
@@ -90,7 +88,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval and interva
 		testClockId = testClockId1!;
 	});
 
-	it("should attach pro product", async function () {
+	it("should attach pro product", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,
@@ -102,8 +100,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval and interva
 		});
 	});
 
-	let usage = 100012;
-	it("should upgrade to premium product and have correct invoice next cycle", async function () {
+	const usage = 100012;
+	it("should upgrade to premium product and have correct invoice next cycle", async () => {
 		const curUnix = await advanceTestClock({
 			stripeCli,
 			testClockId,
@@ -141,7 +139,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval and interva
 		expect(invoices[0].total).to.equal(getBasePrice({ product: premium }));
 
 		const wordsFeature = customer2.features[TestFeature.Words];
-		// @ts-ignore
+		// @ts-expect-error
 		expect(wordsFeature.interval_count).to.equal(2);
 	});
 });

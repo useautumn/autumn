@@ -1,18 +1,16 @@
+import {
+	type AppEnv,
+	CusProductStatus,
+	LegacyVersion,
+	type Organization,
+} from "@autumn/shared";
 import chalk from "chalk";
+import type { Stripe } from "stripe";
 import { setupBefore } from "tests/before.js";
-import { Stripe } from "stripe";
+import { expectMultiAttachCorrect } from "tests/utils/expectUtils/expectMultiAttach.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-
-import {
-	APIVersion,
-	AppEnv,
-	CusProductStatus,
-	Organization,
-} from "@autumn/shared";
-
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { expectMultiAttachCorrect } from "tests/utils/expectUtils/expectMultiAttach.js";
 import {
 	multiRewardPremium,
 	multiRewardPro,
@@ -23,8 +21,8 @@ import {
 
 const testCase = "multiReward1";
 describe(`${chalk.yellowBright("multiReward1: Testing multi attach with rewards")}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 	let stripeCli: Stripe;
 	let testClockId: string;
@@ -74,7 +72,7 @@ describe(`${chalk.yellowBright("multiReward1: Testing multi attach with rewards"
 		testClockId = testClockId1!;
 	});
 
-	it("should run multi attach through checkout and have correct sub", async function () {
+	it("should run multi attach through checkout and have correct sub", async () => {
 		const productsList = [
 			{
 				product_id: multiRewardPro.id,

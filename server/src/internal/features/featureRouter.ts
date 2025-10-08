@@ -1,23 +1,25 @@
-import express, { Router } from "express";
-import { FeatureService } from "./FeatureService.js";
-import { fromAPIFeature, toAPIFeature } from "./utils/mapFeatureUtils.js";
 import {
-	APIFeatureSchema,
-	APIFeatureType,
+	ApiFeatureSchema,
+	ApiFeatureType,
 	ErrCode,
-	Feature,
+	type Feature,
 	FeatureType,
-	UpdateAPIFeatureSchema,
+	type FeatureUsageType,
+	UpdateFeatureParamsSchema,
 } from "@autumn/shared";
-import { addTaskToQueue } from "@/queue/queueUtils.js";
+
+import express, { type Router } from "express";
 import { JobName } from "@/queue/JobName.js";
+import { addTaskToQueue } from "@/queue/queueUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { keyToTitle } from "@/utils/genUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { handleUpdateFeature } from "./handlers/handleUpdateFeature.js";
-import { handleDeleteFeature } from "./handlers/handleDeleteFeature.js";
-import { keyToTitle, notNullOrUndefined } from "@/utils/genUtils.js";
+import { FeatureService } from "./FeatureService.js";
 import { validateFeatureId } from "./featureUtils.js";
+import { handleDeleteFeature } from "./handlers/handleDeleteFeature.js";
 import { handleGetFeatureDeletionInfo } from "./handlers/handleGetFeatureDeletionInfo.js";
+import { handleUpdateFeature } from "./handlers/handleUpdateFeature.js";
+import { fromApiFeature, toApiFeature } from "./utils/mapFeatureUtils.js";
 
 export const featureRouter: Router = express.Router();
 
@@ -29,7 +31,7 @@ featureRouter.get("", async (req: any, res: any) =>
 		action: "list features",
 		handler: async () => {
 			const includeArchived = req.query.include_archived === "true";
-			let features = await FeatureService.list({
+			const features = await FeatureService.list({
 				db: req.db,
 				orgId: req.orgId,
 				env: req.env,
@@ -39,7 +41,7 @@ featureRouter.get("", async (req: any, res: any) =>
 
 			res
 				.status(200)
-				.json({ list: features.map((feature) => toAPIFeature({ feature })) });
+				.json({ list: features.map((feature) => toApiFeature({ feature })) });
 		},
 	}),
 );
@@ -51,7 +53,7 @@ featureRouter.get("/:featureId", async (req: any, res: any) =>
 		action: "Get feature",
 		handler: async () => {
 			const feature = req.features.find(
-				(f: Feature) => f.id == req.params.featureId,
+				(f: Feature) => f.id === req.params.featureId,
 			);
 
 			if (!feature) {
@@ -62,7 +64,7 @@ featureRouter.get("/:featureId", async (req: any, res: any) =>
 				});
 			}
 
-			res.status(200).json(toAPIFeature({ feature }));
+			res.status(200).json(toApiFeature({ feature }));
 		},
 	}),
 );
@@ -73,14 +75,14 @@ featureRouter.post("", async (req: any, res: any) =>
 		res,
 		action: "Create feature",
 		handler: async () => {
-			let apiFeature = APIFeatureSchema.parse(req.body);
+			const apiFeature = ApiFeatureSchema.parse(req.body);
 			if (!apiFeature.name) {
 				apiFeature.name = keyToTitle(apiFeature.id);
 			}
 
 			validateFeatureId(apiFeature.id);
 
-			let feature = fromAPIFeature({
+			const feature = fromApiFeature({
 				apiFeature,
 				orgId: req.orgId,
 				env: req.env,
@@ -88,7 +90,7 @@ featureRouter.post("", async (req: any, res: any) =>
 
 			const { db, logger, features: curFeatures } = req;
 
-			let curFeature = curFeatures.find((f: Feature) => f.id == feature.id);
+			const curFeature = curFeatures.find((f: Feature) => f.id === feature.id);
 
 			if (curFeature) {
 				throw new RecaseError({
@@ -116,11 +118,14 @@ featureRouter.post("/:feature_id", async (req: any, res: any) =>
 		res,
 		action: "Update feature",
 		handler: async (req: any, res: any) => {
-			let { feature_id: featureId } = req.params;
-			let { features: curFeatures } = req;
-			let apiFeature = UpdateAPIFeatureSchema.parse(req.body);
+			const { feature_id: featureId } = req.params;
+			const { features: curFeatures } = req;
+			const apiFeature = UpdateFeatureParamsSchema.parse(req.body);
 
-			let originalFeature = curFeatures.find((f: Feature) => f.id == featureId);
+			const originalFeature = curFeatures.find(
+				(f: Feature) => f.id === featureId,
+			);
+
 			if (!originalFeature) {
 				throw new RecaseError({
 					message: `Feature with id ${featureId} not found`,
@@ -131,16 +136,16 @@ featureRouter.post("/:feature_id", async (req: any, res: any) =>
 
 			// Replace body...
 			let featureType = apiFeature.type as unknown as FeatureType;
-			let usageType = undefined;
+			let usageType: FeatureUsageType | undefined;
 			if (
-				apiFeature.type == APIFeatureType.SingleUsage ||
-				apiFeature.type == APIFeatureType.ContinuousUse
+				apiFeature.type === ApiFeatureType.SingleUsage ||
+				apiFeature.type === ApiFeatureType.ContinuousUse
 			) {
 				featureType = FeatureType.Metered;
-				usageType = apiFeature.type;
+				usageType = apiFeature.type as unknown as FeatureUsageType;
 			}
 
-			let newConfig = originalFeature.config;
+			const newConfig = originalFeature.config;
 			if (usageType) {
 				newConfig.usage_type = usageType;
 			}
@@ -152,7 +157,7 @@ featureRouter.post("/:feature_id", async (req: any, res: any) =>
 				}));
 			}
 
-			let newBody = {
+			const newBody = {
 				id: req.body.id || undefined,
 				name: req.body.name || undefined,
 				type: featureType,
@@ -163,15 +168,6 @@ featureRouter.post("/:feature_id", async (req: any, res: any) =>
 			req.body = newBody;
 
 			await handleUpdateFeature(req, res, true);
-
-			// let newFeature = await FeatureService.get({
-			//   db: req.db,
-			//   id: featureId,
-			//   orgId: req.orgId,
-			//   env: req.env,
-			// });
-
-			// res.status(200).json(toAPIFeature({ feature: newFeature }));
 		},
 	}),
 );

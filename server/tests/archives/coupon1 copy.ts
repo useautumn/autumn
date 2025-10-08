@@ -1,38 +1,36 @@
-import chalk from "chalk";
-import Stripe from "stripe";
-import { APIVersion, Customer } from "@autumn/shared";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { getOriginalCouponId } from "@/internal/rewards/rewardUtils.js";
-import { getPriceForOverage } from "@/internal/products/prices/priceUtils.js";
+import { type Customer, LegacyVersion } from "@autumn/shared";
 import { expect } from "chai";
+import chalk from "chalk";
 import { addHours, addMonths } from "date-fns";
-import { features, products, rewards } from "tests/global.js";
-import { getFixedPriceAmount, timeout } from "tests/utils/genUtils.js";
+import type Stripe from "stripe";
+import { setupBefore } from "tests/before.js";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
+import { features, products, rewards } from "tests/global.js";
 import { compareMainProduct } from "tests/utils/compare.js";
-
+import { getFixedPriceAmount, timeout } from "tests/utils/genUtils.js";
 import {
 	advanceClockForInvoice,
 	advanceTestClock,
 	completeCheckoutForm,
 	getDiscount,
 } from "tests/utils/stripeUtils.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { setupBefore } from "tests/before.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { getPriceForOverage } from "@/internal/products/prices/priceUtils.js";
+import { getOriginalCouponId } from "@/internal/rewards/rewardUtils.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
 const testCase = "coupon1";
 
 describe(
 	chalk.yellow(`${testCase} -- Testing one-off rollover, apply to all`),
 	() => {
-		let customerId = "coupon1";
+		const customerId = "coupon1";
 		let stripeCli: Stripe;
 		let customer: Customer;
 		let testClockId: string;
 		let db, org, env;
 
-		let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+		let autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 		let couponAmount = rewards.rolloverAll.discount_config.discount_value;
 
@@ -159,7 +157,7 @@ describe(
 		// CYCLE 2
 		it("CYCLE 2: should have $0 invoice and correct new coupon amount after 2nd cycle", async () => {
 			await timeout(20000);
-			let advanceTo = addHours(addMonths(new Date(), 2), 2);
+			const advanceTo = addHours(addMonths(new Date(), 2), 2);
 			await advanceTestClock({
 				stripeCli,
 				testClockId,

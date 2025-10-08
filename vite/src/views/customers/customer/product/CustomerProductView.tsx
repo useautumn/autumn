@@ -1,31 +1,24 @@
 "use client";
 
-import ProductSidebar from "@/views/products/product/ProductSidebar";
-import LoadingScreen from "@/views/general/LoadingScreen";
-import { useState, useEffect, useRef } from "react";
-import {
-	Customer,
-	Entity,
-	Feature,
-	ProductItem,
-	ProductV2,
-} from "@autumn/shared";
-import { useAxiosSWR } from "@/services/useAxiosSwr";
-import { CustomToaster } from "@/components/general/CustomToaster";
-import { ManageProduct } from "@/views/products/product/ManageProduct";
-import { ProductContext } from "@/views/products/product/ProductContext";
+import { type ProductItem, type ProductV2 } from "@autumn/shared";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
-import ErrorScreen from "@/views/general/ErrorScreen";
-import { ProductOptions } from "./ProductOptions";
-import { useEnv } from "@/utils/envUtils";
-import { CustomerProductBreadcrumbs } from "./components/CustomerProductBreadcrumbs";
-import { FrontendProduct, useAttachState } from "./hooks/useAttachState";
-import { sortProductItems } from "@/utils/productUtils";
-import { useCusQuery } from "../hooks/useCusQuery";
+import { CustomToaster } from "@/components/general/CustomToaster";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useCusProductQuery } from "./hooks/useCusProductQuery";
+import { useEnv } from "@/utils/envUtils";
 import { notNullish } from "@/utils/genUtils";
+import { sortProductItems } from "@/utils/productUtils";
+import ErrorScreen from "@/views/general/ErrorScreen";
+import LoadingScreen from "@/views/general/LoadingScreen";
+import { ManageProduct } from "@/views/products/product/ManageProduct";
+import { ProductContext } from "@/views/products/product/ProductContext";
+import ProductSidebar from "@/views/products/product/ProductSidebar";
+import { useCusQuery } from "../hooks/useCusQuery";
+import { CustomerProductBreadcrumbs } from "./components/CustomerProductBreadcrumbs";
+import { useAttachState } from "./hooks/useAttachState";
+import { useCusProductQuery } from "./hooks/useCusProductQuery";
+import { ProductOptions } from "./ProductOptions";
 
 interface OptionValue {
 	feature_id: string;

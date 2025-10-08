@@ -1,4 +1,3 @@
-import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
 	type AppEnv,
 	CusExpand,
@@ -15,6 +14,7 @@ import { setupBefore } from "tests/before.js";
 import { expectProductV1Attached } from "tests/utils/expectUtils/expectProductAttached.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
 
 import { CusService } from "@/internal/customers/CusService.js";
 import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionService.js";

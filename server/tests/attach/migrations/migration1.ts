@@ -1,35 +1,38 @@
-import { expect } from "chai";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { AppEnv, LimitedItem, Organization, ProductV2 } from "@autumn/shared";
+import type {
+	AppEnv,
+	LimitedItem,
+	Organization,
+	ProductV2,
+} from "@autumn/shared";
 import chalk from "chalk";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "../utils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { replaceItems } from "../utils.js";
-import { timeout } from "@/utils/genUtils.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addWeeks } from "date-fns";
+import type Stripe from "stripe";
+import { setupBefore } from "tests/before.js";
 import { defaultApiVersion } from "tests/constants.js";
-import { runMigrationTest } from "./runMigrationTest.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { timeout } from "@/utils/genUtils.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
+import { addPrefixToProducts, replaceItems } from "../utils.js";
+import { runMigrationTest } from "./runMigrationTest.js";
 
-let messagesItem = constructFeatureItem({
+const messagesItem = constructFeatureItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 500,
 }) as LimitedItem;
 
-let wordsItem = constructFeatureItem({
+const wordsItem = constructFeatureItem({
 	featureId: TestFeature.Words,
 	includedUsage: 100,
 }) as LimitedItem;
 
-export let free = constructProduct({
+export const free = constructProduct({
 	items: [messagesItem, wordsItem],
 	type: "free",
 	isDefault: false,
@@ -38,13 +41,13 @@ export let free = constructProduct({
 const testCase = "migrations1";
 
 describe(`${chalk.yellowBright(`${testCase}: Testing migration for free product`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: defaultApiVersion });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: defaultApiVersion });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
 
-	let curUnix = new Date().getTime();
+	const curUnix = new Date().getTime();
 
 	before(async function () {
 		await setupBefore(this);
@@ -81,7 +84,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for free product`
 		testClockId = testClockId1!;
 	});
 
-	it("should attach free product", async function () {
+	it("should attach free product", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,
@@ -95,9 +98,9 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for free product`
 	});
 
 	let newFree: ProductV2;
-	let increaseMessagesBy = 100;
-	let reduceWordsBy = 50;
-	it("should update product to new version", async function () {
+	const increaseMessagesBy = 100;
+	const reduceWordsBy = 50;
+	it("should update product to new version", async () => {
 		newFree = structuredClone(free);
 
 		let newItems = replaceItems({
@@ -126,9 +129,9 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for free product`
 		});
 	});
 
-	it("should attach track usage and get correct balance", async function () {
-		let wordsUsage = 25;
-		let messagesUsage = 20;
+	it("should attach track usage and get correct balance", async () => {
+		const wordsUsage = 25;
+		const messagesUsage = 20;
 		await autumn.track({
 			customer_id: customerId,
 			value: wordsUsage,
@@ -141,6 +144,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for free product`
 			feature_id: TestFeature.Messages,
 		});
 
+		await timeout(2000);
 		await advanceTestClock({
 			stripeCli,
 			testClockId,

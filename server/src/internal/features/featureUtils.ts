@@ -1,5 +1,6 @@
 import {
 	AggregateType,
+	ApiFeatureType,
 	type CreditSystemConfig,
 	cusProductsToCusPrices,
 	ErrCode,
@@ -8,7 +9,6 @@ import {
 	FeatureUsageType,
 	type FullCustomer,
 	type MeteredConfig,
-	ProductItemFeatureType,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
@@ -195,15 +195,15 @@ export const runSaveFeatureDisplayTask = async ({
 
 export const getCusFeatureType = ({ feature }: { feature: Feature }) => {
 	if (feature.type === FeatureType.Boolean) {
-		return ProductItemFeatureType.Static;
+		return ApiFeatureType.Static;
 	} else if (feature.type === FeatureType.Metered) {
 		if (feature.config.usage_type === FeatureUsageType.Single) {
-			return ProductItemFeatureType.SingleUse;
+			return ApiFeatureType.SingleUsage;
 		} else {
-			return ProductItemFeatureType.ContinuousUse;
+			return ApiFeatureType.ContinuousUse;
 		}
 	} else {
-		return ProductItemFeatureType.SingleUse;
+		return ApiFeatureType.SingleUsage;
 	}
 };
 

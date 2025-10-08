@@ -1,45 +1,39 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { CusService } from "@/internal/customers/CusService.js";
 import {
-	APIVersion,
-	AppEnv,
+	type AppEnv,
 	CusProductStatus,
-	FullCustomer,
-	Organization,
-} from "@autumn/shared";
-import { cusProductToSubIds } from "../mergeUtils.test.js";
-import { expect } from "chai";
-import { priceToStripeItem } from "@/external/stripe/priceToStripeItem/priceToStripeItem.js";
-import {
-	cusProductToPrices,
 	cusProductToEnts,
+	cusProductToPrices,
 	cusProductToProduct,
+	type FullCustomer,
+	type Organization,
 } from "@autumn/shared";
+import { notNullish } from "@shared/utils/utils.js";
+import { expect } from "chai";
+import type Stripe from "stripe";
+import { defaultApiVersion } from "tests/constants.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { priceToStripeItem } from "@/external/stripe/priceToStripeItem/priceToStripeItem.js";
+import { subIsCanceled } from "@/external/stripe/stripeSubUtils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
+import {
+	cusProductInPhase,
+	logPhaseItems,
+	similarUnix,
+} from "@/internal/customers/attach/mergeUtils/phaseUtils/phaseUtils.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { ACTIVE_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
+import { getExistingUsageFromCusProducts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
+import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
+import { getUniqueUpcomingSchedulePairs } from "@/internal/customers/cusProducts/cusProductUtils/getUpcomingSchedules.js";
+import { PriceService } from "@/internal/products/prices/PriceService.js";
 import {
 	formatPrice,
 	getPriceEntitlement,
 	getPriceOptions,
 } from "@/internal/products/prices/priceUtils.js";
-import { logSubItems } from "@/utils/scriptUtils/logUtils/logSubItems.js";
-import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
-import { paramsToCurSubSchedule } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
-import { ACTIVE_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
-import Stripe from "stripe";
-import { getUniqueUpcomingSchedulePairs } from "@/internal/customers/cusProducts/cusProductUtils/getUpcomingSchedules.js";
+import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { formatUnixToDateTime, nullish } from "@/utils/genUtils.js";
-import {
-	cusProductInPhase,
-	logPhaseItems,
-	logPhases,
-	similarUnix,
-} from "@/internal/customers/attach/mergeUtils/phaseUtils/phaseUtils.js";
-import { PriceService } from "@/internal/products/prices/PriceService.js";
-import { getExistingUsageFromCusProducts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
-import { subIsCanceled } from "@/external/stripe/stripeSubUtils.js";
-import { defaultApiVersion } from "tests/constants.js";
-import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
-import { notNullish } from "@shared/utils/utils.js";
+import { cusProductToSubIds } from "../mergeUtils.test.js";
 
 const compareActualItems = async ({
 	actualItems,
@@ -196,7 +190,7 @@ export const expectSubToBeCorrect = async ({
 	});
 
 	// console.log(`\n\nChecking sub correct`);
-	let printCusProduct = false;
+	const printCusProduct = false;
 	if (printCusProduct) {
 		console.log(`\n\nChecking sub correct`);
 	}
@@ -208,7 +202,7 @@ export const expectSubToBeCorrect = async ({
 
 		// Add to schedules
 		const scheduleIndexes: number[] = [];
-		const apiVersion = cusProduct.api_version || defaultApiVersion;
+		const apiVersion = cusProduct.api_semver || defaultApiVersion;
 
 		if (isFreeProduct(product.prices)) {
 			expect(cusProduct.subscription_ids, "free product should have no subs").to
@@ -250,7 +244,7 @@ export const expectSubToBeCorrect = async ({
 					cp.product.group === product.group &&
 					cp.status === CusProductStatus.Scheduled &&
 					(cp.internal_entity_id
-						? cp.internal_entity_id == cusProduct.internal_entity_id
+						? cp.internal_entity_id === cusProduct.internal_entity_id
 						: nullish(cp.internal_entity_id)),
 			);
 
@@ -286,7 +280,7 @@ export const expectSubToBeCorrect = async ({
 		for (const price of prices) {
 			const relatedEnt = getPriceEntitlement(price, ents);
 			const options = getPriceOptions(price, cusProduct.options);
-			let existingUsage = getExistingUsageFromCusProducts({
+			const existingUsage = getExistingUsageFromCusProducts({
 				entitlement: relatedEnt,
 				cusProducts,
 				entities: fullCus.entities,
@@ -330,7 +324,6 @@ export const expectSubToBeCorrect = async ({
 					);
 
 					if (existingIndex !== -1) {
-						// @ts-ignore
 						supposedSubItems[existingIndex].quantity += lineItem.quantity;
 					} else {
 						supposedSubItems.push({

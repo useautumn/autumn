@@ -7,6 +7,7 @@ import {
 	type FullProduct,
 	freeTrials,
 	type Product,
+	ProductNotFoundError,
 	prices,
 	products,
 } from "@autumn/shared";
@@ -251,11 +252,7 @@ export class ProductService {
 			for (const id of inIds) {
 				const prod = latestProducts.find((prod) => prod.id === id);
 				if (!prod) {
-					throw new RecaseError({
-						message: `Product ${id} not found`,
-						code: ErrCode.ProductNotFound,
-						statusCode: StatusCodes.NOT_FOUND,
-					});
+					throw new ProductNotFoundError({ productId: id });
 				}
 				newProducts.push(prod);
 			}
@@ -311,11 +308,7 @@ export class ProductService {
 
 		if (!data) {
 			if (allowNotFound) return null as unknown as FullProduct;
-			throw new RecaseError({
-				message: `Product ${idOrInternalId} not found`,
-				code: ErrCode.ProductNotFound,
-				statusCode: StatusCodes.NOT_FOUND,
-			});
+			throw new ProductNotFoundError({ productId: idOrInternalId });
 		}
 
 		return data as FullProduct;
@@ -346,11 +339,7 @@ export class ProductService {
 		});
 
 		if (data.length === 0) {
-			throw new RecaseError({
-				message: `Product ${productId} not found`,
-				code: ErrCode.ProductNotFound,
-				statusCode: StatusCodes.NOT_FOUND,
-			});
+			throw new ProductNotFoundError({ productId: productId });
 		}
 
 		return data[0].version;

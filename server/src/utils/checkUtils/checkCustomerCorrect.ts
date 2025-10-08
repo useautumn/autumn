@@ -1,4 +1,5 @@
 import { expect } from "bun:test";
+import assert from "node:assert";
 import {
 	type AppEnv,
 	CusProductStatus,
@@ -8,7 +9,6 @@ import {
 	type FullCustomer,
 	type Organization,
 } from "@autumn/shared";
-import assert from "assert";
 import type Stripe from "stripe";
 import { defaultApiVersion } from "tests/constants.js";
 import { cusProductToSubIds } from "tests/merged/mergeUtils.test.js";
@@ -187,10 +187,10 @@ const checkAllFreeProducts = async ({
 		const sub = subs.find(
 			(sub) =>
 				sub.customer === fullCus.processor?.id &&
-				(sub.status == "active" || sub.status == "past_due"),
+				(sub.status === "active" || sub.status === "past_due"),
 		);
 
-		if (fullCus.org_id == "6bWdIqEuRHBrReXbTb30l9beMFVZ3Ts3") return true;
+		if (fullCus.org_id === "6bWdIqEuRHBrReXbTb30l9beMFVZ3Ts3") return true;
 
 		assert(
 			!sub,
@@ -267,7 +267,7 @@ export const checkCusSubCorrect = async ({
 
 		// Add to schedules
 		const scheduleIndexes: number[] = [];
-		const apiVersion = cusProduct.api_version || defaultApiVersion;
+		const apiVersion = cusProduct.api_semver || defaultApiVersion;
 
 		if (isFreeProduct(product.prices)) {
 			assert(
@@ -289,7 +289,8 @@ export const checkCusSubCorrect = async ({
 				cusProduct.status === CusProductStatus.Scheduled &&
 				cusProductInPhase({ phaseStartMillis: unix, cusProduct })
 			) {
-				return scheduleIndexes.push(index);
+				scheduleIndexes.push(index);
+				return;
 			}
 
 			if (cusProduct.status === CusProductStatus.Scheduled) return;
@@ -311,7 +312,7 @@ export const checkCusSubCorrect = async ({
 					cp.product.group === product.group &&
 					cp.status === CusProductStatus.Scheduled &&
 					(cp.internal_entity_id
-						? cp.internal_entity_id == cusProduct.internal_entity_id
+						? cp.internal_entity_id === cusProduct.internal_entity_id
 						: nullish(cp.internal_entity_id)),
 			);
 
@@ -394,7 +395,6 @@ export const checkCusSubCorrect = async ({
 					);
 
 					if (existingIndex !== -1) {
-						// @ts-expect-error
 						supposedSubItems[existingIndex].quantity += lineItem.quantity;
 					} else {
 						supposedSubItems.push({

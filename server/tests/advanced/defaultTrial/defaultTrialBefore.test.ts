@@ -1,14 +1,14 @@
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import {
-	APIVersion,
 	FreeTrialDuration,
+	LegacyVersion,
 	ProductItemInterval,
 } from "@autumn/shared";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 
-export let defaultTrialPro = constructProduct({
+export const defaultTrialPro = constructProduct({
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Words,
@@ -29,7 +29,7 @@ export let defaultTrialPro = constructProduct({
 	},
 });
 
-export let defaultTrialFree = constructProduct({
+export const defaultTrialFree = constructProduct({
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Words,
@@ -44,9 +44,9 @@ export let defaultTrialFree = constructProduct({
 });
 
 export const setupDefaultTrialBefore = async ({}: {}) => {
-	const autumn = new AutumnInt({ version: APIVersion.v1_2 });
+	const autumn = new AutumnInt({ version: LegacyVersion.v1_2 });
 	for (const product of [defaultTrialPro, defaultTrialFree]) {
-		let res = await autumn.products.get(product.id);
+		const res = await autumn.products.get(product.id);
 
 		if (res.code === "product_not_found") {
 			try {
