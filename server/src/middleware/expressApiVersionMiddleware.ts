@@ -49,7 +49,7 @@ export const expressApiVersionMiddleware = (
 			finalVersion = new ApiVersionClass(ApiVersion.V0_2);
 		}
 
-		// console.log(`Autumn version: ${finalVersion.semver}`);
+		console.log(`Autumn version: ${finalVersion.semver}`);
 
 		req.apiVersion = finalVersion;
 
