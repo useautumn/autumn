@@ -89,7 +89,7 @@ export const getFeatureItemDisplay = ({
 		item.included_usage === Infinite
 			? "Unlimited "
 			: nullish(item.included_usage) || item.included_usage === 0
-				? ""
+				? "0 "
 				: `${numberWithCommas(item.included_usage)} `;
 
 	const intervalStr = getIntervalString({
