@@ -171,7 +171,7 @@ export const handleBackNavigation = (
 export const handlePlanSelection = async (
 	planId: string,
 	selectedProductId: string,
-	baseProduct: any,
+	_baseProduct: any,
 	setBaseProduct: (product: any) => void,
 	setSelectedProductId: (id: string) => void,
 	setSheet: (sheet: string) => void,
@@ -356,6 +356,7 @@ export const createProductItem = (createdFeature: CreateFeature) => {
 		featureType = "single_use";
 	} else if (createdFeature.type === "metered") {
 		// For metered features, use the usage_type from config
+		// This ensures compatibility with existing features during resumption
 		featureType = createdFeature.config?.usage_type || "single_use";
 	}
 

@@ -29,11 +29,6 @@
 			0 0 8px 1px rgba(136, 56, 255, 0.25),
 			0 4px 4px 0 rgba(0, 0, 0, 0.04);
 	}
-
-	/* Override transition for select elements */
-	&.select-bg {
-		transition: box-shadow 0.15s ease;
-	}
 }
 
 .input-shadow-tiny {

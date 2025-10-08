@@ -16,7 +16,11 @@ export default function PricingTablePreview({
 	setConnectStripeOpen,
 }: PricingTableProps) {
 	const { org } = useOrg();
-	const { checkout } = useCustomer();
+	const { checkout } = useCustomer({
+		swrConfig: {
+			refreshInterval: 0,
+		},
+	});
 
 	if (!products || products.length === 0) {
 		return null;

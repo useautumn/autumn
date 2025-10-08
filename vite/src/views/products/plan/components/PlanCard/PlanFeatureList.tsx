@@ -39,7 +39,6 @@ export const PlanFeatureList = ({
 	if (filteredItems.length === 0) {
 		return (
 			<div className="space-y-1">
-				<h4 className="text-sm font-medium text-foreground mb-2">Features</h4>
 				<div className="space-y-1">
 					<AddFeatureRow
 						onClick={handleAddFeature}
