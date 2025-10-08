@@ -1,5 +1,8 @@
 import {
 	type Feature,
+	FeatureType,
+	FeatureUsageType,
+	ProductItemFeatureType,
 	ProductItemInterval,
 	productV2ToFeatureItems,
 } from "@autumn/shared";
@@ -40,9 +43,28 @@ export function SelectFeatureSheet({
 		const selectedFeature = features.find((f) => f.id === selectedFeatureId);
 		if (!selectedFeature) return;
 
+		// Determine feature_type based on feature.type and config.usage_type
+		let featureType: ProductItemFeatureType;
+		if (selectedFeature.type === FeatureType.Boolean) {
+			featureType = ProductItemFeatureType.Static;
+		} else if (selectedFeature.type === FeatureType.CreditSystem) {
+			featureType = ProductItemFeatureType.SingleUse;
+		} else if (selectedFeature.type === FeatureType.Metered) {
+			const usageType = selectedFeature.config?.usage_type;
+			if (usageType === FeatureUsageType.Continuous) {
+				featureType = ProductItemFeatureType.ContinuousUse;
+			} else {
+				featureType = ProductItemFeatureType.SingleUse;
+			}
+		} else {
+			// Fallback
+			featureType = ProductItemFeatureType.SingleUse;
+		}
+
 		// Create a new item with the selected feature
 		const newItem = {
 			feature_id: selectedFeature.id,
+			feature_type: featureType,
 			included_usage: null,
 			interval: ProductItemInterval.Month,
 			price: null,
@@ -92,24 +114,30 @@ export function SelectFeatureSheet({
 						<SelectTrigger className="w-full">
 							<SelectValue placeholder="Select a feature" />
 						</SelectTrigger>
-						<SelectContent>
-							{filteredFeatures.map((feature: Feature) => (
-								<SelectItem key={feature.id} value={feature.id}>
-									<div className="flex items-center gap-2">
-										<div className="text-primary shrink-0">
-											{getFeatureIcon({ feature })}
+						<SelectContent className="max-h-80">
+							<div className="max-h-60 overflow-y-auto">
+								{filteredFeatures.map((feature: Feature) => (
+									<SelectItem
+										key={feature.id}
+										value={feature.id}
+										className="py-2 px-2.5"
+									>
+										<div className="flex items-center gap-2">
+											<div className="text-primary shrink-0">
+												{getFeatureIcon({ feature })}
+											</div>
+											<span className="truncate">{feature.name}</span>
 										</div>
-										<span className="truncate">{feature.name}</span>
-									</div>
-								</SelectItem>
-							))}
-							<div className="border-t p-1">
+									</SelectItem>
+								))}
+							</div>
+							<div className="border-t pt-2 pb-1 px-2.5 sticky bottom-0 bg-popover">
 								<button
 									type="button"
-									className="w-full px-[6px] py-[4px] rounded-[6px] bg-muted hover:bg-muted-hover transition-colors focus:outline-none text-sm font-medium flex items-center justify-center gap-[6px]"
+									className="w-full px-[6px] py-[4px] rounded-[6px] bg-muted hover:bg-muted-hover transition-colors focus:outline-none text-sm font-medium flex items-center justify-center gap-[6px] text-t2"
 									onClick={handleCreateNew}
 								>
-									<PlusIcon className="size-[14px]" weight="regular" />
+									<PlusIcon className="size-[14px] text-t2" weight="regular" />
 									Add new feature
 								</button>
 							</div>

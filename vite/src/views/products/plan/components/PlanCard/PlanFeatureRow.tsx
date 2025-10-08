@@ -26,7 +26,7 @@ interface PlanFeatureRowProps {
 }
 
 export const PlanFeatureRow = ({
-	item,
+	item: itemProp,
 	onDelete,
 	index,
 }: PlanFeatureRowProps) => {
@@ -37,6 +37,10 @@ export const PlanFeatureRow = ({
 		useProductContext();
 
 	const [isPressed, setIsPressed] = useState(false);
+
+	// Always use the current item from product.items for real-time updates
+	const featureItems = productV2ToFeatureItems({ items: product?.items });
+	const item = featureItems[index] || itemProp;
 
 	const display = getProductItemDisplay({
 		item,
