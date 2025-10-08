@@ -46,6 +46,11 @@ export const ConfigureStripe = () => {
 	};
 
 	const handleConnectStripe = async () => {
+		if(!newStripeConfig.secret_key)	{
+			toast.error("Please provide your stripe secret key");
+			return;
+		}
+
 		if (!newStripeConfig.success_url) {
 			toast.error("Success URL is required");
 			return;
