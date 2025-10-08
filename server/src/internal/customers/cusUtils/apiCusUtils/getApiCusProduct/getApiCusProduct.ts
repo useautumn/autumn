@@ -83,22 +83,11 @@ export const getApiCusProduct = async ({
 	fullCus,
 	cusProduct,
 	entities,
-	// cusProduct,
-	// subs,
-	// org,
-	// apiVersion,
-	// features,
-	// entity,
 }: {
 	ctx: RequestContext;
 	fullCus: FullCustomer;
 	cusProduct: FullCusProduct;
-	entities: Entity[];
-	// org: Organization;
-	// subs?: Subscription[];
-	// apiVersion: ApiVersionClass;
-	// features: Feature[];
-	// entity?: Entity;
+	entities?: Entity[];
 }) => {
 	const { org } = ctx;
 	const trialing =
@@ -114,7 +103,7 @@ export const getApiCusProduct = async ({
 		withDisplay: false,
 	});
 
-	const entity = entities.find(
+	const entity = entities?.find(
 		(e) => e.internal_id === cusProduct.internal_entity_id,
 	);
 

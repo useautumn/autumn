@@ -1,6 +1,9 @@
 import {
+	backwardsChangeActive,
 	CreateCustomerParamsSchema,
 	CreateCustomerQuerySchema,
+	CusExpand,
+	V0_2_InvoicesAlwaysExpanded,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -20,6 +23,16 @@ export const handlePostCustomer = createRoute({
 
 		const { expand = [], with_autumn_id = false } = c.req.valid("query");
 		const createCusParams = c.req.valid("json");
+
+		// SIDE EFFECT
+		if (
+			backwardsChangeActive({
+				apiVersion: ctx.apiVersion,
+				versionChange: V0_2_InvoicesAlwaysExpanded,
+			})
+		) {
+			expand.push(CusExpand.Invoices);
+		}
 
 		const fullCus = await getOrCreateCustomer({
 			req: ctx as ExtendedRequest,

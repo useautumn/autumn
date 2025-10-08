@@ -88,7 +88,7 @@ export function applyResponseVersionChanges<T = any, TLegacyData = any>({
 				? change.description.join("; ")
 				: change.description;
 
-			console.log(`Applying change [${change.oldVersion}]: ${description}`);
+			// console.log(`Applying change [${change.oldVersion}]: ${description}`);
 			// Apply the response transformation (backward)
 			transformedData = change.transformResponse({
 				input: transformedData,

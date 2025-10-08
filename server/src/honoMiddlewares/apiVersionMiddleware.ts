@@ -61,6 +61,7 @@ export const apiVersionMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 	// Store in context - now you can do ctx.apiVersion.gte(ApiVersion.V1_1)
 	ctx.apiVersion = finalVersion;
+	console.log(`Autumn Version: ${finalVersion.semver}`);
 
 	await next();
 };
