@@ -1,4 +1,4 @@
-import { type ProductV2 } from "@autumn/shared";
+import type { ProductV2 } from "@autumn/shared";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useEnv } from "@/utils/envUtils";
@@ -61,10 +61,24 @@ export const useOnboardingLogic = () => {
 		dataHook,
 	]);
 
-	// Auto-open edit-plan sheet when entering step 4 (Playground) in edit mode
+	// Auto-open edit-plan sheet when entering step 3 (FeatureConfiguration) or step 4 (Playground) in edit mode
+	// For step 3, use the tracked feature from dataHook
 	// Clear sheet when entering step 5 (Integration)
 	useEffect(() => {
-		if (
+		if (flowHook.step === OnboardingStep.FeatureConfiguration) {
+			// Use the feature that was created in step 2 or loaded during resumability
+			if (dataHook.feature?.id && dataHook.product?.items) {
+				// Find the item index that matches the feature
+				const itemIndex = dataHook.product.items.findIndex(
+					(item) => item.feature_id === dataHook.feature.id,
+				);
+				if (itemIndex !== -1) {
+					const itemId = `item-${itemIndex}`;
+					setSheet("edit-plan");
+					setEditingState({ type: "feature", id: itemId });
+				}
+			}
+		} else if (
 			flowHook.step === OnboardingStep.Playground &&
 			flowHook.playgroundMode === "edit"
 		) {
@@ -74,7 +88,12 @@ export const useOnboardingLogic = () => {
 			setSheet(null);
 			setEditingState({ type: null, id: null });
 		}
-	}, [flowHook.step, flowHook.playgroundMode]);
+	}, [
+		flowHook.step,
+		flowHook.playgroundMode,
+		dataHook.feature?.id,
+		dataHook.product?.items,
+	]);
 
 	// Create actions hook with all required props
 	const stepActionsHook = useStepActions({

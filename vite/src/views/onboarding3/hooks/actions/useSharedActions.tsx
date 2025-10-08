@@ -25,6 +25,7 @@ interface SharedActionsProps {
 	}>;
 	axiosInstance: AxiosInstance;
 	setBaseProduct: (product: ProductV2) => void;
+	setProduct: (product: ProductV2) => void;
 	setSelectedProductId: (id: string) => void;
 	setSheet: (sheet: string | null) => void;
 	setEditingState: (state: {
@@ -44,6 +45,7 @@ export const useSharedActions = ({
 	featureCreatedRef,
 	axiosInstance,
 	setBaseProduct,
+	setProduct,
 	setSelectedProductId,
 	setSheet,
 	setEditingState,
@@ -62,6 +64,7 @@ export const useSharedActions = ({
 					selectedProductId,
 					baseProduct,
 					setBaseProduct,
+					setProduct,
 					setSelectedProductId,
 					setSheet,
 					setEditingState,
@@ -75,6 +78,7 @@ export const useSharedActions = ({
 			selectedProductId,
 			baseProduct,
 			setBaseProduct,
+			setProduct,
 			axiosInstance,
 			product?.id,
 			setSheet,

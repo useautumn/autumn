@@ -101,13 +101,13 @@ export const QuickStartCodeGroup = ({
 		<SheetSection>
 			<div className="space-y-4">
 				<CodeSnippetSection
+					title="Check feature access"
+					snippets={snippets.allowed}
+				/>
+				<CodeSnippetSection
 					title="Track usage"
 					snippets={snippets.track}
 					trackResponse={trackResponse}
-				/>
-				<CodeSnippetSection
-					title="Check feature access"
-					snippets={snippets.allowed}
 				/>
 				<CodeSnippetSection
 					title="Create checkout session"

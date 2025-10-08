@@ -100,7 +100,6 @@ export const useStepActions = (props: StepActionsProps) => {
 		setFeature,
 		setProduct,
 		setBaseProduct,
-		refetchFeatures,
 		setIsLoading,
 	});
 
@@ -123,6 +122,7 @@ export const useStepActions = (props: StepActionsProps) => {
 		featureCreatedRef,
 		axiosInstance,
 		setBaseProduct,
+		setProduct,
 		setSelectedProductId,
 		setSheet,
 		setEditingState,

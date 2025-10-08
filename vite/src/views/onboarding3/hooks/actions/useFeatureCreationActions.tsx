@@ -7,6 +7,7 @@ import type {
 import { isPriceItem } from "@autumn/shared";
 import type { AxiosInstance } from "axios";
 import { type MutableRefObject, useCallback } from "react";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { createFeature, createProductItem } from "../../utils/onboardingUtils";
 
 interface FeatureCreationActionsProps {
@@ -20,7 +21,6 @@ interface FeatureCreationActionsProps {
 	setFeature: (feature: Feature | CreateFeature | null) => void;
 	setProduct: (product: ProductV2) => void;
 	setBaseProduct: (product: ProductV2) => void;
-	refetchFeatures: () => Promise<unknown>;
 	setIsLoading: (loading: boolean) => void;
 }
 
@@ -32,9 +32,9 @@ export const useFeatureCreationActions = ({
 	setFeature,
 	setProduct,
 	setBaseProduct,
-	refetchFeatures,
 	setIsLoading,
 }: FeatureCreationActionsProps) => {
+	const { refetch: refetchFeatures } = useFeaturesQuery();
 	// Create feature and add to product
 	const handleProceed = useCallback(async (): Promise<boolean> => {
 		const createdFeature = await createFeature(
@@ -47,42 +47,23 @@ export const useFeatureCreationActions = ({
 
 		await refetchFeatures(); // Refresh features list
 
-		// CRITICAL FIX: Re-fetch the specific feature to get the latest data
-		// This ensures we have the most current feature type (e.g., single_use -> continuous_use)
-		let finalFeatureData = createdFeature;
-		try {
-			const freshFeatureResponse = await axiosInstance.get(
-				`/features/${createdFeature.id}`,
-			);
-			if (freshFeatureResponse.data) {
-				finalFeatureData = freshFeatureResponse.data;
-				console.log(
-					"FeatureCreationActions - Using fresh feature data from API",
-				);
-			}
-		} catch (_error) {
-			console.warn(
-				"FeatureCreationActions - Failed to fetch fresh feature, using returned data",
-			);
-		}
-
 		// Debug: Log the feature data used to create product item
-		console.log("FeatureCreationActions - final feature data:", {
-			id: finalFeatureData.id,
-			type: finalFeatureData.type,
-			usage_type: finalFeatureData.config?.usage_type,
-			fullConfig: finalFeatureData.config,
+		console.log("FeatureCreationActions - created feature data:", {
+			id: createdFeature.id,
+			type: createdFeature.type,
+			usage_type: createdFeature.config?.usage_type,
+			fullConfig: createdFeature.config,
 		});
 
 		// Create ProductItem and add to product immediately for live editing
-		const newItem = createProductItem(finalFeatureData);
+		const newItem = createProductItem(createdFeature);
 
 		console.log("FeatureCreationActions - newItem created:", {
 			feature_id: newItem.feature_id,
 			feature_type: newItem.feature_type,
 		});
 
-		setFeature(finalFeatureData);
+		setFeature(createdFeature);
 
 		// Add feature item to product (preserving any existing base price item)
 		if (product && "items" in product) {
@@ -101,14 +82,14 @@ export const useFeatureCreationActions = ({
 				const oldItem = updatedItems[existingFeatureItemIndex];
 				updatedItems[existingFeatureItemIndex] = {
 					...updatedItems[existingFeatureItemIndex],
-					feature_id: finalFeatureData.id,
+					feature_id: createdFeature.id,
 					feature_type: newItem.feature_type,
 				};
 
 				console.log("FeatureCreationActions - updated existing product item:", {
 					oldFeatureType: oldItem.feature_type,
 					newFeatureType: newItem.feature_type,
-					featureId: finalFeatureData.id,
+					featureId: createdFeature.id,
 					changed: oldItem.feature_type !== newItem.feature_type,
 				});
 			} else {

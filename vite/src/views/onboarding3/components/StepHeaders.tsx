@@ -15,6 +15,8 @@ interface StepHeaderProps {
 	onCreatePlanSuccess: (newProduct: ProductV2) => Promise<void>;
 	playgroundMode?: "edit" | "preview";
 	setPlaygroundMode?: (mode: "edit" | "preview") => void;
+	sheet?: string | null;
+	editingState?: { type: "plan" | "feature" | null; id: string | null };
 }
 
 export const StepHeader = ({
@@ -25,6 +27,8 @@ export const StepHeader = ({
 	onCreatePlanSuccess,
 	playgroundMode = "edit",
 	setPlaygroundMode,
+	sheet,
+	editingState,
 }: StepHeaderProps) => {
 	const stepNum = getStepNumber(step);
 	const config = stepConfig[step];
@@ -47,17 +51,27 @@ export const StepHeader = ({
 					onPlanSelect={onPlanSelect}
 					onCreatePlanSuccess={onCreatePlanSuccess}
 				/>
+				<div style={{ fontSize: "10px", color: "red", padding: "4px" }}>
+					DEBUG - sheet: {JSON.stringify(sheet)} | editingState:{" "}
+					{JSON.stringify(editingState)}
+				</div>
 			</div>
 		);
 	}
 
 	return (
-		<SheetHeader
-			title={`Step ${stepNum}: ${config.title}`}
-			description={config.description}
-			noSeparator={true}
-			className="p-0 sticky"
-			isOnboarding={true}
-		/>
+		<>
+			<SheetHeader
+				title={`Step ${stepNum}: ${config.title}`}
+				description={config.description}
+				noSeparator={true}
+				className="p-0 sticky"
+				isOnboarding={true}
+			/>
+			<div style={{ fontSize: "10px", color: "red", padding: "4px" }}>
+				DEBUG - sheet: {JSON.stringify(sheet)} | editingState:{" "}
+				{JSON.stringify(editingState)}
+			</div>
+		</>
 	);
 };
