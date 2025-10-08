@@ -19,7 +19,6 @@ export const usePlanDetailsActions = ({
 	axiosInstance,
 	productCreatedRef,
 	setBaseProduct,
-	setIsLoading,
 }: PlanDetailsActionsProps) => {
 	// Create product and update base state
 	const handleProceed = useCallback(async (): Promise<boolean> => {

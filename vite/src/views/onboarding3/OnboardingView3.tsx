@@ -111,6 +111,8 @@ export default function OnboardingContent() {
 									onCreatePlanSuccess={onCreatePlanSuccess}
 									playgroundMode={playgroundMode}
 									setPlaygroundMode={setPlaygroundMode}
+									sheet={sheet}
+									editingState={editingState}
 								/>
 							</div>
 							<div className="bg-card border-base border rounded-[12px] shadow-sm p-4 w-full">
@@ -175,6 +177,7 @@ export default function OnboardingContent() {
 								currentStep={getStepNumber(step)}
 								playgroundMode={playgroundMode}
 								setConnectStripeOpen={setConnectStripeOpen}
+								feature={feature}
 							/>
 
 							{step === OnboardingStep.Playground && (
@@ -199,6 +202,8 @@ export default function OnboardingContent() {
 										onCreatePlanSuccess={onCreatePlanSuccess}
 										playgroundMode={playgroundMode}
 										setPlaygroundMode={setPlaygroundMode}
+										sheet={sheet}
+										editingState={editingState}
 									/>
 								</div>
 								<div className="bg-card border-base border overflow-x-hidden rounded-[12px] shadow-sm p-0 flex-1 overflow-y-auto">

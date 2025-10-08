@@ -1,6 +1,6 @@
 import { ArrowRightIcon } from "@phosphor-icons/react";
 import { useCustomer } from "autumn-js/react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
 import { Input } from "@/components/v2/inputs/Input";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
@@ -64,49 +64,45 @@ export const AvailableFeatures = ({
 	const { customer, track, refetch } = useCustomer();
 	const { features } = useFeaturesQuery();
 
-	// Memoize the feature rows so they update when customer changes
-	const featureRows = useMemo(() => {
-		return Object.keys(customer?.features || {}).map((x) => (
-			<FeatureTestRow
-				label={
-					features.find((f) => f.id === customer?.features[x].id)?.name || ""
-				}
-				usage={
-					customer?.features[x].unlimited
-						? "Unlimited"
-						: String(customer?.features[x].balance)
-				}
-				key={x}
-				handleSend={async (value) => {
-					const featureId = customer?.features[x].id;
-
-					// Notify parent which feature was used
-					if (onFeatureUsed) {
-						onFeatureUsed(featureId);
-					}
-
-					// Track the usage
-					const { data, error } = await track({
-						featureId: featureId,
-						value: value,
-					});
-
-					if (!error && data && onTrackSuccess) {
-						onTrackSuccess(data);
-					}
-
-					// Immediately refetch customer data to update balances
-					await refetch();
-				}}
-			/>
-		));
-	}, [customer, features, track, refetch, onTrackSuccess, onFeatureUsed]);
-
 	return (
 		<SheetSection title="Available features">
 			<div className="flex flex-col gap-4">
-				{featureRows.length > 0 ? (
-					featureRows
+				{Object.keys(customer?.features || {}).length > 0 ? (
+					Object.keys(customer?.features || {}).map((x) => (
+						<FeatureTestRow
+							label={
+								features.find((f) => f.id === customer?.features[x].id)?.name ||
+								""
+							}
+							usage={
+								customer?.features[x].unlimited
+									? "Unlimited"
+									: String(customer?.features[x].balance)
+							}
+							key={x}
+							handleSend={async (value) => {
+								const featureId = customer?.features[x].id;
+
+								// Notify parent which feature was used
+								if (onFeatureUsed && featureId !== undefined) {
+									onFeatureUsed(featureId);
+								}
+
+								// Track the usage
+								const { data, error } = await track({
+									featureId: featureId,
+									value: value,
+								});
+
+								if (!error && data && onTrackSuccess) {
+									onTrackSuccess(data);
+								}
+
+								// Immediately refetch customer data to update balances
+								await refetch();
+							}}
+						/>
+					))
 				) : (
 					<span className="text-sm text-muted-foreground">
 						Your current plan doesn't have any features. Try purchasing a plan

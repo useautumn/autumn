@@ -1,3 +1,4 @@
+import type { CreateFeature } from "@autumn/shared";
 import { productV2ToBasePrice } from "@autumn/shared";
 import { CrosshairSimpleIcon } from "@phosphor-icons/react";
 import { PricingTableContainer } from "@/components/autumn/PricingTableContainer";
@@ -11,23 +12,27 @@ import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { PlanCardToolbar } from "../products/plan/components/PlanCard/PlanCardToolbar";
 import { PlanFeatureList } from "../products/plan/components/PlanCard/PlanFeatureList";
 import { useProductContext } from "../products/product/ProductContext";
+import { DummyFeatureRow } from "./components/DummyFeatureRow";
 
 interface OnboardingPreviewProps {
 	currentStep: number;
 	playgroundMode?: "edit" | "preview";
 	setConnectStripeOpen?: (open: boolean) => void;
+	feature?: CreateFeature;
 }
 
 export const OnboardingPreview = ({
 	currentStep,
 	playgroundMode = "edit",
 	setConnectStripeOpen,
+	feature,
 }: OnboardingPreviewProps) => {
 	const { product, setSheet, setEditingState } = useProductContext();
 	const { products: allProducts } = useProductsQuery();
 
 	const showBasicInfo = currentStep >= 1;
 	const showPricing = currentStep >= 1;
+	const showDummyFeature = currentStep === 2;
 	const showFeatures = currentStep >= 3;
 	const showToolbar = currentStep >= 4;
 	const allowAddFeature = currentStep >= 4;
@@ -124,7 +129,13 @@ export const OnboardingPreview = ({
 					</IconButton>
 				)}
 
-				{!showFeatures && (
+				{showDummyFeature && feature && (
+					<>
+						<Separator className="my-2" />
+						<DummyFeatureRow feature={feature} />
+					</>
+				)}
+				{!showFeatures && !showDummyFeature && (
 					<span className="text-body-secondary mt-2">
 						Create a feature on the right
 					</span>

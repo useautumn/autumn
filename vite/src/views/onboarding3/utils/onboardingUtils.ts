@@ -179,6 +179,7 @@ export const handlePlanSelection = async (
 	selectedProductId: string,
 	_baseProduct: any,
 	setBaseProduct: (product: any) => void,
+	setProduct: (product: any) => void,
 	setSelectedProductId: (id: string) => void,
 	setSheet: (sheet: string) => void,
 	setEditingState: (state: any) => void,
@@ -192,6 +193,7 @@ export const handlePlanSelection = async (
 		const productData = response.data.product;
 
 		setBaseProduct(productData);
+		setProduct(productData);
 		setSelectedProductId(planId);
 		setSheet("edit-plan");
 		setEditingState({ type: "plan", id: null });
