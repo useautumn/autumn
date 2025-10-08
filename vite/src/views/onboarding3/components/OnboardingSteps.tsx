@@ -1,3 +1,4 @@
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/v2/buttons/Button";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +13,7 @@ interface OnboardingStepsProps {
 	nextText?: string;
 	backText?: string;
 	className?: string;
+	isLoading?: boolean;
 }
 
 export const OnboardingSteps = ({
@@ -25,6 +27,7 @@ export const OnboardingSteps = ({
 	backText = "Back",
 	className,
 	onComplete,
+	isLoading = false,
 }: OnboardingStepsProps) => {
 	return (
 		<div
@@ -63,11 +66,15 @@ export const OnboardingSteps = ({
 				<Button
 					variant="primary"
 					onClick={currentStep === totalSteps ? onComplete : onNext}
-					disabled={nextDisabled}
+					disabled={nextDisabled || isLoading}
 					size="sm"
 					className="min-w-24 px-2 text-xs"
 				>
-					{nextText}
+					{isLoading && (currentStep === 1 || currentStep === 2) ? (
+						<Loader2 className="size-3 animate-spin" />
+					) : (
+						nextText
+					)}
 				</Button>
 			</div>
 		</div>

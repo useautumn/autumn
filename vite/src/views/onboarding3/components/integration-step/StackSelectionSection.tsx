@@ -23,7 +23,7 @@ type StackOption =
 			icon: ReactNode;
 	  };
 
-const FRONTEND_OPTIONS: StackOption[] = [
+const _FRONTEND_OPTIONS: StackOption[] = [
 	{ value: "nextjs", label: "Next.js", asset: "/frameworks/nextjs.png" },
 	{ value: "rr7", label: "RR7", asset: "/frameworks/react-router.svg" },
 	{ value: "vite", label: "Vite SPA", asset: "/frameworks/vite.svg" },
