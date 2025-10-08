@@ -1,13 +1,13 @@
+import { AppEnv } from "@autumn/shared";
+import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/v2/buttons/Button";
 import { Input } from "@/components/v2/inputs/Input";
-import { SectionHeader } from "./SectionHeader";
-import { useState } from "react";
+import { useOrg } from "@/hooks/common/useOrg";
 import { OrgService } from "@/services/OrgService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { AppEnv } from "@autumn/shared";
-import { toast } from "sonner";
 import { getBackendErr } from "@/utils/genUtils";
-import { useOrg } from "@/hooks/common/useOrg";
+import { SectionHeader } from "./SectionHeader";
 
 export const ConnectStripeSection = () => {
 	const { org, mutate: mutateOrg } = useOrg();

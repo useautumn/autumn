@@ -4,7 +4,7 @@ export const getBackendSnippet = (
 	stack: StackType,
 	auth: AuthType,
 	customerType: CustomerType,
-	secretKey: string,
+	_secretKey: string,
 ): string => {
 	switch (stack) {
 		case "nextjs":
@@ -41,7 +41,7 @@ const getNextjsSnippet = (
 };
 
 const getExpressSnippet = (
-	auth: AuthType,
+	_auth: AuthType,
 	customerType: CustomerType,
 ): string => {
 	return `// server.js or app.js
@@ -55,7 +55,7 @@ app.use(express.json());
 app.use("/api/autumn/*", async (req, res) => {
   // Your authentication logic here
   const customerId = "${customerType === "user" ? "user_id" : "org_id"}";
-  
+
   const { statusCode, response } = await autumnHandler({
     customerId,
     customerData: { name: "", email: "" },
@@ -70,7 +70,10 @@ app.use("/api/autumn/*", async (req, res) => {
 });`;
 };
 
-const getHonoSnippet = (auth: AuthType, customerType: CustomerType): string => {
+const getHonoSnippet = (
+	_auth: AuthType,
+	customerType: CustomerType,
+): string => {
 	return `// app.ts
 
 import { Hono } from "hono";
@@ -102,7 +105,7 @@ app.use("/api/autumn/*", async (c) => {
 };
 
 const getElysiaSnippet = (
-	auth: AuthType,
+	_auth: AuthType,
 	customerType: CustomerType,
 ): string => {
 	return `// index.ts
@@ -130,7 +133,7 @@ new Elysia()
       },
     });
 
-    return new Response(JSON.stringify(response), { 
+    return new Response(JSON.stringify(response), {
       status: statusCode,
       headers: { "Content-Type": "application/json" }
     });
@@ -138,7 +141,7 @@ new Elysia()
   .listen(3000);`;
 };
 
-const getRR7Snippet = (auth: AuthType, customerType: CustomerType): string => {
+const getRR7Snippet = (_auth: AuthType, customerType: CustomerType): string => {
 	return `// app/routes/api.autumn.$.tsx
 
 import { autumnHandler } from "autumn-js/backend";
@@ -349,7 +352,7 @@ import { autumnHandler } from "autumn-js/next";
 export const { GET, POST } = autumnHandler({
   identify: async (request) => {
     // Authenticate the request and get the customer ID
-    const customerId = "customer_id"; 
+    const customerId = "customer_id";
     return {
       customerId,
       customerData: { name: "", email: "" },
@@ -357,7 +360,14 @@ export const { GET, POST } = autumnHandler({
   },
 });`;
 
-export const getFrontendSnippet = (stack: StackType): string => {
+export const getFrontendSnippet = (
+	stack: StackType,
+	productId?: string,
+	featureId?: string,
+): string => {
+	const _actualProductId = productId || "your_product_id";
+	const _actualFeatureId = featureId || "your_feature_id";
+
 	switch (stack) {
 		case "nextjs":
 			return `import { AutumnProvider } from "autumn-js/react";
@@ -420,4 +430,51 @@ function App() {
   );
 }`;
 	}
+};
+
+// Usage example showing check() before track()
+export const getUsageSnippet = (featureId?: string): string => {
+	const actualFeatureId = featureId || "your_feature_id";
+
+	return `import { useCustomer } from "autumn-js/react";
+import { useState } from "react";
+
+function MessageInput() {
+  const { customer, check, track } = useCustomer();
+  const [message, setMessage] = useState("");
+
+  const handleSend = async () => {
+    // 1. Check if user has access before tracking
+    const { data } = await check({
+      featureId: "${actualFeatureId}",
+      requiredQuantity: 1
+    });
+
+    if (!data?.allowed) {
+      alert("You've reached your limit!");
+      return;
+    }
+
+    // 2. Track usage after successful check
+    await track({
+      featureId: "${actualFeatureId}",
+      value: 1
+    });
+
+    // 3. Send the message
+    // ... your message sending logic
+  };
+
+  return (
+    <div>
+      <input
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+      />
+      <button onClick={handleSend}>
+        Send Message
+      </button>
+    </div>
+  );
+}`;
 };

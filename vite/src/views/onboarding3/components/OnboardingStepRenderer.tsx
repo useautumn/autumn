@@ -31,6 +31,9 @@ export const OnboardingStepRenderer = ({
 }: OnboardingStepRendererProps) => {
 	const { product, setProduct, editingState } = useProductContext();
 	const [trackResponse, setTrackResponse] = useState<any>(null);
+	const [lastUsedFeatureId, setLastUsedFeatureId] = useState<
+		string | undefined
+	>(undefined);
 
 	// Don't render overrides when on Integration step or Playground preview mode - allow the step to render normally
 	const shouldSkipOverrides =
@@ -179,8 +182,14 @@ export const OnboardingStepRenderer = ({
 			if (playgroundMode === "preview") {
 				return (
 					<>
-						<AvailableFeatures onTrackSuccess={setTrackResponse} />
-						<QuickStartCodeGroup trackResponse={trackResponse} />
+						<AvailableFeatures
+							onTrackSuccess={setTrackResponse}
+							onFeatureUsed={setLastUsedFeatureId}
+						/>
+						<QuickStartCodeGroup
+							trackResponse={trackResponse}
+							featureId={lastUsedFeatureId}
+						/>
 					</>
 				);
 			}

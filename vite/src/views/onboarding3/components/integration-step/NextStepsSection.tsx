@@ -11,7 +11,7 @@ import { SectionHeader } from "./SectionHeader";
 
 export const NextStepsSection = () => {
 	return (
-		<div className="flex flex-col gap-4">
+		<div className="flex flex-col gap-4 pb-4">
 			<SectionHeader
 				stepNumber={8}
 				title={<span>Next Steps</span>}
