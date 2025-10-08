@@ -13,7 +13,7 @@ export const handleGetCustomer = async (req: any, res: any) =>
 		action: "get customer",
 		handler: async () => {
 			const customerId = req.params.customer_id;
-			const { env, db, logtail: logger, org, features } = req;
+			const { env, db, logger, org, features } = req;
 			const { expand } = req.query;
 
 			const expandArray = parseCusExpand(expand);
@@ -41,7 +41,7 @@ export const handleGetCustomer = async (req: any, res: any) =>
 			logger.info(`get customer took ${Date.now() - startTime}ms`);
 
 			if (!customer) {
-				req.logtail.warn(
+				logger.warn(
 					`GET /customers/${customerId}: not found | Org: ${org.slug}`,
 				);
 				res.status(StatusCodes.NOT_FOUND).json({
@@ -56,7 +56,7 @@ export const handleGetCustomer = async (req: any, res: any) =>
 				customer,
 				org,
 				env: req.env,
-				logger: req.logtail,
+				logger,
 				cusProducts: customer.customer_products,
 				expand: expandArray,
 				features,

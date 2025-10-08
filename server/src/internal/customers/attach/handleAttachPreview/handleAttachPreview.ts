@@ -1,10 +1,10 @@
-import { routeHandler } from "@/utils/routerUtils.js";
-
-import { getAttachParams } from "../attachUtils/attachParams/getAttachParams.js";
 import { AttachBodySchema } from "@autumn/shared";
-
-import { ExtendedResponse } from "@/utils/models/Request.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
+import type {
+	ExtendedRequest,
+	ExtendedResponse,
+} from "@/utils/models/Request.js";
+import { routeHandler } from "@/utils/routerUtils.js";
+import { getAttachParams } from "../attachUtils/attachParams/getAttachParams.js";
 
 import { attachParamsToPreview } from "./attachParamsToPreview.js";
 
@@ -14,7 +14,7 @@ export const handleAttachPreview = (req: any, res: any) =>
 		res,
 		action: "attach-preview",
 		handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
-			const { logtail: logger } = req;
+			const { logger } = req;
 			const attachBody = AttachBodySchema.parse(req.body);
 
 			// console.log("attachBody", attachBody);

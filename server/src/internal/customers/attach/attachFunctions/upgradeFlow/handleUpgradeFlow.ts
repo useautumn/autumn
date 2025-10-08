@@ -51,7 +51,7 @@ export const handleUpgradeFlow = async ({
 	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
 	const curSub = await paramsToCurSub({ attachParams });
 
-	const logger = req.logtail;
+	const logger = req.logger;
 
 	if (curCusProduct?.api_semver) {
 		attachParams.apiVersion = curCusProduct.api_semver;

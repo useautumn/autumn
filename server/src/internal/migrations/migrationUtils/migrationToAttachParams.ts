@@ -17,16 +17,16 @@ export const migrationToAttachParams = async ({
 	cusProduct: FullCusProduct;
 	newProduct: FullProduct;
 }): Promise<AttachParams> => {
-	// const { org } = req;
+	const { org, logger } = req;
 	const internalEntityId = cusProduct.internal_entity_id || undefined;
 
 	const { stripeCus, paymentMethod, now } = await getStripeCusData({
 		stripeCli,
 		db: req.db,
-		org: req.org,
+		org,
 		env: req.env,
 		customer,
-		logger: req.logtail,
+		logger,
 		allowNoStripe: true,
 	});
 
@@ -45,7 +45,7 @@ export const migrationToAttachParams = async ({
 		replaceables: [],
 
 		req,
-		org: req.org,
+		org,
 		entities: customer.entities,
 		features: req.features,
 		internalEntityId,

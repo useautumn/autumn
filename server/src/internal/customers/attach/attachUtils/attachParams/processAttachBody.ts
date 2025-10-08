@@ -1,13 +1,12 @@
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { AttachBody } from "@autumn/shared";
+import { type AttachBody, ErrCode } from "@autumn/shared";
+import type Stripe from "stripe";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { getStripeCusData } from "./attachParamsUtils/getStripeCusData.js";
-import { getPricesAndEnts } from "./attachParamsUtils/getPricesAndEnts.js";
-import { getCustomerAndProducts } from "./attachParamsUtils/getCusAndProducts.js";
 import { RewardService } from "@/internal/rewards/RewardService.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { ErrCode } from "@autumn/shared";
-import Stripe from "stripe";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+import { getCustomerAndProducts } from "./attachParamsUtils/getCusAndProducts.js";
+import { getPricesAndEnts } from "./attachParamsUtils/getPricesAndEnts.js";
+import { getStripeCusData } from "./attachParamsUtils/getStripeCusData.js";
 
 export const getRewards = async ({
 	req,
@@ -70,7 +69,7 @@ export const processAttachBody = async ({
 	attachBody: AttachBody;
 }) => {
 	// 1. Get customer and products
-	const { org, env } = req;
+	const { org, env, logger } = req;
 
 	const stripeCli = createStripeCli({ org, env });
 
@@ -86,7 +85,7 @@ export const processAttachBody = async ({
 			org,
 			env,
 			customer,
-			logger: req.logtail,
+			logger,
 		}),
 		getRewards({
 			req,

@@ -30,7 +30,7 @@ export const handleAddProduct = async ({
 	config?: AttachConfig;
 	branch?: AttachBranch;
 }) => {
-	const logger = req.logtail;
+	const { logger } = req;
 	const { customer, products, prices } = attachParams;
 
 	const defaultConfig: AttachConfig = getDefaultAttachConfig();

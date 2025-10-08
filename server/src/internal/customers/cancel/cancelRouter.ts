@@ -19,7 +19,7 @@ cancelRouter.post("", async (req, res) =>
 		res,
 		action: "expire",
 		handler: async (req, res) => {
-			const { db, orgId, env, logtail: logger } = req;
+			const { db, orgId, env } = req;
 			const {
 				customer_id,
 				product_id,
