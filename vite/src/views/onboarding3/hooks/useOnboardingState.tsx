@@ -1,4 +1,9 @@
-import { AppEnv, type ProductItem, type ProductV2 } from "@autumn/shared";
+import {
+	AppEnv,
+	BillingInterval,
+	type ProductItem,
+	type ProductV2,
+} from "@autumn/shared";
 import { useRef, useState } from "react";
 import { getDefaultFeature } from "@/views/products/features/utils/defaultFeature";
 
@@ -7,7 +12,13 @@ export const useOnboardingState = () => {
 	const [baseProduct, setBaseProduct] = useState<ProductV2>({
 		id: "",
 		name: "",
-		items: [] as ProductItem[],
+		items: [
+			{
+				price: "",
+				interval: BillingInterval.Month,
+				isBasePrice: true,
+			},
+		] as ProductItem[],
 		archived: false,
 		created_at: Date.now(),
 		is_add_on: false,
@@ -37,6 +48,9 @@ export const useOnboardingState = () => {
 		latestId: null,
 	});
 
+	// Loading state for onboarding steps
+	const [isLoading, setIsLoading] = useState(false);
+
 	return {
 		// Base product state (for usePlanData)
 		baseProduct,
@@ -49,5 +63,9 @@ export const useOnboardingState = () => {
 		// Creation tracking refs
 		productCreatedRef,
 		featureCreatedRef,
+
+		// Loading state
+		isLoading,
+		setIsLoading,
 	};
 };

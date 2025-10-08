@@ -4,7 +4,13 @@ import {
 	type CreateFeature,
 	CreateFeatureSchema,
 	CreateProductSchema,
+	type Feature,
+	FeatureType,
+	FeatureUsageType,
+	type ProductItem,
+	ProductItemFeatureType,
 	ProductItemInterval,
+	type ProductV2,
 } from "@autumn/shared";
 import type { AxiosError, AxiosInstance } from "axios";
 import type { MutableRefObject } from "react";
@@ -205,15 +211,22 @@ export const handleCreatePlanSuccess = async (
 	setEditingState: (state: any) => void,
 	refetchProducts: () => Promise<void>,
 ) => {
+	// First refetch products to ensure the list is updated
+	await refetchProducts();
+
+	// Then fetch the full product data
 	const response = await axiosInstance.get(`/products/${newProduct.id}/data2`);
 	const productData = response.data.product;
 
-	setBaseProduct(productData);
+	// Update the selected product ID first to ensure proper state synchronization
 	setSelectedProductId(newProduct.id);
+
+	// Then update the base product with the full data
+	setBaseProduct(productData);
+
+	// Finally set the UI state
 	setSheet("edit-plan");
 	setEditingState({ type: "plan", id: null });
-
-	await refetchProducts();
 };
 
 // Product creation helper
@@ -348,20 +361,54 @@ export const createFeature = async (
 
 // Product item creation helper
 export const createProductItem = (createdFeature: CreateFeature) => {
+	console.log("createProductItem - input feature:", {
+		id: createdFeature.id,
+		type: createdFeature.type,
+		config: createdFeature.config,
+	});
+
 	// Map feature type to product item feature type
-	let featureType = null;
-	if (createdFeature.type === "boolean") {
-		featureType = "static";
-	} else if (createdFeature.type === "credit_system") {
-		featureType = "single_use";
-	} else if (createdFeature.type === "metered") {
+	let featureType: ProductItemFeatureType;
+
+	if (
+		createdFeature.type === FeatureType.Boolean ||
+		createdFeature.type === "boolean"
+	) {
+		featureType = ProductItemFeatureType.Static;
+	} else if (
+		createdFeature.type === FeatureType.CreditSystem ||
+		createdFeature.type === "credit_system"
+	) {
+		featureType = ProductItemFeatureType.SingleUse;
+	} else if (
+		createdFeature.type === FeatureType.Metered ||
+		createdFeature.type === "metered"
+	) {
 		// For metered features, use the usage_type from config
 		// This ensures compatibility with existing features during resumption
-		featureType = createdFeature.config?.usage_type || "single_use";
+		const usageType = createdFeature.config?.usage_type;
+		if (usageType === FeatureUsageType.Single || usageType === "single_use") {
+			featureType = ProductItemFeatureType.SingleUse;
+		} else if (
+			usageType === FeatureUsageType.Continuous ||
+			usageType === "continuous_use"
+		) {
+			featureType = ProductItemFeatureType.ContinuousUse;
+		} else {
+			featureType = ProductItemFeatureType.SingleUse; // default
+		}
+	} else {
+		// Unknown feature type - default to SingleUse
+		featureType = ProductItemFeatureType.SingleUse;
 	}
 
+	console.log("createProductItem - mapped to feature type:", featureType);
+
 	// Boolean features have a simplified structure with no pricing/billing properties
-	if (createdFeature.type === "boolean") {
+	if (
+		createdFeature.type === FeatureType.Boolean ||
+		createdFeature.type === "boolean"
+	) {
 		return {
 			feature_id: createdFeature.id,
 			feature_type: featureType,
@@ -423,4 +470,31 @@ export const findNextClosestProduct = (
 	});
 
 	return sortedProducts[0]?.id || null;
+};
+
+// Sync product items with updated features to prevent feature type mismatches
+export const syncProductItemsWithFeature = (
+	product: ProductV2,
+	updatedFeature: CreateFeature | Feature,
+): ProductV2 => {
+	if (!product.items || !updatedFeature.id) return product;
+
+	const updatedItems = product.items.map((item: ProductItem) => {
+		// Only update items that reference this feature
+		if (item.feature_id !== updatedFeature.id) return item;
+
+		// Create a temporary product item to get the correct feature_type mapping
+		const tempItem = createProductItem(updatedFeature);
+
+		// Update only the feature_type to match the updated feature
+		return {
+			...item,
+			feature_type: tempItem.feature_type,
+		};
+	});
+
+	return {
+		...product,
+		items: updatedItems,
+	};
 };
