@@ -43,7 +43,7 @@ export const handleScheduleFunction2 = async ({
 	config: AttachConfig;
 	skipInsertCusProduct?: boolean;
 }) => {
-	const logger = req.logtail;
+	const logger = req.logger;
 	const product = attachParams.products[0];
 	const { stripeCli } = attachParams;
 

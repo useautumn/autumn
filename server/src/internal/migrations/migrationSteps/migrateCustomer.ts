@@ -55,6 +55,7 @@ export const migrateCustomer = async ({
 			env,
 			org,
 			features,
+			logger,
 			logtail: logger,
 			timestamp: Date.now(),
 		} as ExtendedRequest;

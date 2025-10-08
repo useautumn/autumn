@@ -47,7 +47,7 @@ export const handlePaidProduct = async ({
 	attachParams: AttachParams;
 	config: AttachConfig;
 }) => {
-	const logger = req.logtail;
+	const logger = req.logger;
 
 	const {
 		org,
