@@ -3,11 +3,9 @@ import {
 	type ApiCustomer,
 	ApiCustomerSchema,
 	applyResponseVersionChanges,
-	backwardsChangeActive,
-	CusExpand,
+	type CusExpand,
 	type CustomerLegacyData,
 	type FullCustomer,
-	V0_2_InvoicesAlwaysExpanded,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
@@ -26,16 +24,6 @@ export const getApiCustomer = async ({
 	expand: CusExpand[];
 	withAutumnId?: boolean;
 }) => {
-	// SIDE EFFECT
-	if (
-		backwardsChangeActive({
-			apiVersion: ctx.apiVersion,
-			versionChange: V0_2_InvoicesAlwaysExpanded,
-		})
-	) {
-		expand.push(CusExpand.Invoices);
-	}
-
 	const apiCusFeatures = await getApiCusFeatures({
 		ctx,
 		fullCus,

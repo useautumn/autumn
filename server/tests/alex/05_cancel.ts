@@ -1,18 +1,18 @@
-import { attachFailedPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { CusProductStatus, Customer } from "@autumn/shared";
+import { ApiVersion, CusProductStatus, type Customer } from "@autumn/shared";
 import { expect } from "chai";
-import Stripe from "stripe";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { compareMainProduct } from "tests/utils/compare.js";
-import { initCustomer } from "tests/utils/init.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { initCustomerWithTestClock } from "tests/utils/testInitUtils.js";
-import { alexProducts } from "./init.js";
-import { timeout } from "tests/utils/genUtils.js";
 import chalk from "chalk";
 import { addDays, addHours } from "date-fns";
+import type Stripe from "stripe";
+import { AutumnCli } from "tests/cli/AutumnCli.js";
+import { compareMainProduct } from "tests/utils/compare.js";
 import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
+import { timeout } from "tests/utils/genUtils.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { attachFailedPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
+import { initCustomerV2 } from "@/utils/scriptUtils/initCustomer.js";
+import { alexProducts } from "./init.js";
 
 // CANCEL AT
 const getProductFromCusRes = ({
@@ -26,30 +26,30 @@ const getProductFromCusRes = ({
 };
 
 describe(chalk.yellowBright("05_cancel"), () => {
+	const autumn = new AutumnInt({ version: ApiVersion.V1_2 });
 	describe("Testing cancel_at_period_end and cancel now", () => {
 		let stripeCli: Stripe;
-		let customerId = "alex-cancel-customer";
+		const customerId = "alex-cancel-customer";
+		const autumn: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
 		before("initializing customer", async function () {
 			stripeCli = createStripeCli({
 				org: this.org,
 				env: this.env,
 			});
-			await initCustomer({
-				customer_data: {
-					id: customerId,
-					name: "Alex Cancel Customer",
-					email: "alex-cancel-customer@test.com",
-				},
-				db: this.db,
+
+			await initCustomerV2({
+				autumn,
+				customerId,
 				org: this.org,
 				env: this.env,
-				attachPm: true,
+				db: this.db,
+				attachPm: "success",
 			});
 		});
 
-		it("should attach pro product ", async function () {
-			await AutumnCli.attach({
+		it("should attach pro product ", async () => {
+			const result = await AutumnCli.attach({
 				customerId,
 				productId: alexProducts.pro.id,
 			});
@@ -62,7 +62,7 @@ describe(chalk.yellowBright("05_cancel"), () => {
 			});
 		});
 
-		it("should cancel at period end", async function () {
+		it("should cancel at period end", async () => {
 			// 1. Get pro product
 			const cusRes = await AutumnCli.getCustomer(customerId);
 			const proProduct = getProductFromCusRes({
@@ -89,7 +89,7 @@ describe(chalk.yellowBright("05_cancel"), () => {
 			expect(newProProduct.status).to.equal(CusProductStatus.Trialing);
 		});
 
-		it("should cancel now", async function () {
+		it("should cancel now", async () => {
 			const cusRes = await AutumnCli.getCustomer(customerId);
 			const proProduct = getProductFromCusRes({
 				cusRes,
@@ -121,7 +121,7 @@ describe(chalk.yellowBright("05_cancel"), () => {
 	});
 
 	describe("Testing past due", () => {
-		let customerId = "alex-past-due-customer";
+		const customerId = "alex-past-due-customer";
 		let customer: Customer;
 		let testClockId: string;
 		let stripeCli: Stripe;
@@ -130,18 +130,21 @@ describe(chalk.yellowBright("05_cancel"), () => {
 				org: this.org,
 				env: this.env,
 			});
-			const { testClockId: testClockId_, customer: customer_ } =
-				await initCustomerWithTestClock({
-					customerId,
-					org: this.org,
-					env: this.env,
-					db: this.db,
-				});
-			testClockId = testClockId_;
-			customer = customer_;
+
+			const res = await initCustomerV2({
+				autumn,
+				customerId,
+				org: this.org,
+				env: this.env,
+				db: this.db,
+				attachPm: "success",
+			});
+
+			testClockId = res.testClockId;
+			customer = res.customer;
 		});
 
-		it("should attach pro product ", async function () {
+		it("should attach pro product ", async () => {
 			await AutumnCli.attach({
 				customerId,
 				productId: alexProducts.pro.id,
@@ -156,11 +159,11 @@ describe(chalk.yellowBright("05_cancel"), () => {
 			});
 		});
 
-		it("should attach failed card", async function () {
+		it("should attach failed card", async () => {
 			await attachFailedPaymentMethod({ stripeCli, customer });
 		});
 
-		it("should advance clock to next cycle", async function () {
+		it("should advance clock to next cycle", async () => {
 			await advanceTestClock({
 				stripeCli,
 				testClockId,

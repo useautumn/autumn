@@ -1,39 +1,50 @@
-import { compareMainProduct } from "tests/utils/compare.js";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { initCustomer } from "tests/utils/init.js";
-import { alexFeatures, alexProducts } from "./init.js";
 import {
 	AllowanceType,
+	ApiVersion,
 	CusProductStatus,
 	EntInterval,
-	Entitlement,
+	type Entitlement,
 } from "@autumn/shared";
-import { completeCheckoutForm } from "tests/utils/stripeUtils.js";
-import { timeout } from "tests/utils/genUtils.js";
 import { expect } from "chai";
+import chalk from "chalk";
+import { AutumnCli } from "tests/cli/AutumnCli.js";
+import { compareMainProduct } from "tests/utils/compare.js";
+import { timeout } from "tests/utils/genUtils.js";
+import { completeCheckoutForm } from "tests/utils/stripeUtils.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { initCustomerV2 } from "@/utils/scriptUtils/initCustomer.js";
+import { alexFeatures, alexProducts } from "./init.js";
 import {
 	checkFeatureHasCorrectBalance,
 	runEventsAndCheckBalances,
 } from "./utils.js";
-import chalk from "chalk";
 
+const autumn = new AutumnInt({ version: ApiVersion.V1_2 });
 describe(chalk.yellowBright("Top ups"), () => {
-	let customerId = "alex-top-up-customer";
+	const customerId = "alex-top-up-customer";
 	before("initializing customer", async function () {
-		await initCustomer({
-			customer_data: {
-				id: customerId,
-				name: "Alex Top Up Customer",
-				email: "alex-top-up-customer@test.com",
-			},
-			db: this.db,
+		await initCustomerV2({
+			autumn,
+			customerId,
 			org: this.org,
 			env: this.env,
-			attachPm: true,
+			db: this.db,
+			attachPm: "success",
 		});
+		// await initCustomer({
+		// 	customer_data: {
+		// 		id: customerId,
+		// 		name: "Alex Top Up Customer",
+		// 		email: "alex-top-up-customer@test.com",
+		// 	},
+		// 	db: this.db,
+		// 	org: this.org,
+		// 	env: this.env,
+		// 	attachPm: true,
+		// });
 	});
 
-	it("should attach pro product", async function () {
+	it("should attach pro product", async () => {
 		await timeout(5000);
 		await AutumnCli.attach({
 			customerId,
@@ -48,11 +59,12 @@ describe(chalk.yellowBright("Top ups"), () => {
 		});
 	});
 
-	let overrideQuantity = 5;
-	let billingUnits = alexProducts.topUpMessages.prices[0].config.billing_units;
-	let prodEnt = alexProducts.topUpMessages.entitlements.topUpMessage;
+	const overrideQuantity = 5;
+	const billingUnits =
+		alexProducts.topUpMessages.prices[0].config.billing_units;
+	const prodEnt = alexProducts.topUpMessages.entitlements.topUpMessage;
 	let leftoverBalance = 0;
-	it("should attach top up messages through force checkout", async function () {
+	it("should attach top up messages through force checkout", async () => {
 		const res = await AutumnCli.attach({
 			customerId,
 			productId: alexProducts.topUpMessages.id,
@@ -71,7 +83,7 @@ describe(chalk.yellowBright("Top ups"), () => {
 		expect(product.status).to.equal(CusProductStatus.Active);
 
 		// Check quantity is correct
-		let cusEnt = cusRes.entitlements.find(
+		const cusEnt = cusRes.entitlements.find(
 			(e: any) => e.feature_id === alexFeatures.topUpMessage.id,
 		);
 
@@ -81,7 +93,7 @@ describe(chalk.yellowBright("Top ups"), () => {
 	});
 
 	// Try buy again
-	it("should buy top ups again and have correct balance", async function () {
+	it("should buy top ups again and have correct balance", async () => {
 		// 1. Update leftover balance
 		const { allowed, balanceObj }: any = await AutumnCli.entitled(
 			customerId,
@@ -108,7 +120,7 @@ describe(chalk.yellowBright("Top ups"), () => {
 		expect(product.status).to.equal(CusProductStatus.Active);
 
 		// Check quantity is correct
-		let cusEnt = cusRes.entitlements.find(
+		const cusEnt = cusRes.entitlements.find(
 			(e: any) => e.feature_id === alexFeatures.topUpMessage.id,
 		);
 		expect(cusEnt).to.exist;
@@ -120,26 +132,34 @@ describe(chalk.yellowBright("Top ups"), () => {
 });
 
 describe(chalk.yellowBright("Testing o1 message top up"), () => {
-	let customerId = "alex-o1-top-up-customer";
-	let o1TopUpQuantity = Math.floor(Math.random() * 15);
-	let billingUnits = alexProducts.o1TopUps.prices[0].config.billing_units;
-	let proAllowance = alexProducts.pro.entitlements.o1Message.allowance!;
+	const customerId = "alex-o1-top-up-customer";
+	const o1TopUpQuantity = Math.floor(Math.random() * 15);
+	const billingUnits = alexProducts.o1TopUps.prices[0].config.billing_units;
+	const proAllowance = alexProducts.pro.entitlements.o1Message.allowance!;
 
 	before("initializing customer", async function () {
-		await initCustomer({
-			customer_data: {
-				id: customerId,
-				name: "Alex O1 Top Up Customer",
-				email: "alex-o1-top-up-customer@test.com",
-			},
-			db: this.db,
+		await initCustomerV2({
+			autumn,
+			customerId,
 			org: this.org,
 			env: this.env,
-			attachPm: true,
+			db: this.db,
+			attachPm: "success",
 		});
+		// await initCustomer({
+		// 	customer_data: {
+		// 		id: customerId,
+		// 		name: "Alex O1 Top Up Customer",
+		// 		email: "alex-o1-top-up-customer@test.com",
+		// 	},
+		// 	db: this.db,
+		// 	org: this.org,
+		// 	env: this.env,
+		// 	attachPm: true,
+		// });
 	});
 
-	it("should attach pro product", async function () {
+	it("should attach pro product", async () => {
 		await AutumnCli.attach({
 			customerId,
 			productId: alexProducts.pro.id,
@@ -153,7 +173,7 @@ describe(chalk.yellowBright("Testing o1 message top up"), () => {
 		});
 	});
 
-	it("should buy o1 messages and have correct balance", async function () {
+	it("should buy o1 messages and have correct balance", async () => {
 		const res = await AutumnCli.attach({
 			customerId,
 			productId: alexProducts.o1TopUps.id,
@@ -181,8 +201,8 @@ describe(chalk.yellowBright("Testing o1 message top up"), () => {
 		});
 	});
 
-	it("should send events and check balances", async function () {
-		let allowance = o1TopUpQuantity * billingUnits + proAllowance;
+	it("should send events and check balances", async () => {
+		const allowance = o1TopUpQuantity * billingUnits + proAllowance;
 
 		await runEventsAndCheckBalances({
 			customerId,

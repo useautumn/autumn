@@ -1,4 +1,9 @@
-import { GetCustomerQuerySchema } from "@autumn/shared";
+import {
+	backwardsChangeActive,
+	CusExpand,
+	GetCustomerQuerySchema,
+	V0_2_InvoicesAlwaysExpanded,
+} from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getCusWithCache } from "../cusCache/getCusWithCache.js";
 import { getApiCustomer } from "../cusUtils/apiCusUtils/getApiCustomer.js";
@@ -11,8 +16,15 @@ export const handleGetCustomerV2 = createRoute({
 		const { env, db, logger, org } = ctx;
 		const { expand = [] } = c.req.valid("query");
 
-		logger.info(`[V2] Getting customer ${customerId} for org ${org.slug}`);
-		const startTime = Date.now();
+		// SIDE EFFECT
+		if (
+			backwardsChangeActive({
+				apiVersion: ctx.apiVersion,
+				versionChange: V0_2_InvoicesAlwaysExpanded,
+			})
+		) {
+			expand.push(CusExpand.Invoices);
+		}
 
 		const fullCus = await getCusWithCache({
 			db,
@@ -23,8 +35,6 @@ export const handleGetCustomerV2 = createRoute({
 			logger,
 			allowNotFound: false,
 		});
-
-		logger.info(`[V2] Get customer took ${Date.now() - startTime}ms`);
 
 		const customer = await getApiCustomer({
 			ctx,

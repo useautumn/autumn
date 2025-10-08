@@ -54,7 +54,7 @@ export const getOrCreateCustomer = async ({
 		withEntities = expand?.includes(CusExpand.Entities) || false;
 	}
 
-	if (!skipGet) {
+	if (!skipGet && customerId) {
 		if (withCache) {
 			customer = await getCusWithCache({
 				db,
@@ -114,7 +114,7 @@ export const getOrCreateCustomer = async ({
 				env,
 			});
 		} catch (error: any) {
-			if (error?.data?.code === "23505") {
+			if (error?.data?.code === "23505" && customerId) {
 				customer = await CusService.getFull({
 					db,
 					idOrInternalId: customerId,

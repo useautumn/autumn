@@ -1,17 +1,16 @@
 import {
 	AllowanceType,
 	CusProductStatus,
-	Entitlement,
-	Feature,
-	FeatureOptions,
+	type Entitlement,
+	type Feature,
+	type FeatureOptions,
 	FeatureType,
-	FullProduct,
-	UsagePriceConfig,
+	type UsagePriceConfig,
 } from "@autumn/shared";
 import { expect } from "chai";
+import { Decimal } from "decimal.js";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { creditSystems } from "tests/global.js";
-import { Decimal } from "decimal.js";
 
 export const checkProductIsScheduled = ({
 	cusRes,
@@ -47,7 +46,7 @@ export const compareMainProduct = ({
 }) => {
 	const { products, add_ons, entitlements } = cusRes;
 	const prod = products.find(
-		(p: any) => p.id === sent.id && p.status == status && !sent.is_add_on,
+		(p: any) => p.id === sent.id && p.status === status && !sent.is_add_on,
 	);
 
 	try {
@@ -61,8 +60,8 @@ export const compareMainProduct = ({
 	}
 
 	// Check entitlements
-	let sentEntitlements = Object.values(sent.entitlements) as Entitlement[];
-	let recEntitlements = entitlements;
+	const sentEntitlements = Object.values(sent.entitlements) as Entitlement[];
+	const recEntitlements = entitlements;
 
 	// expect(sentEntitlements.length).to.equal(recEntitlements.length);
 	for (const entitlement of sentEntitlements) {
@@ -75,7 +74,7 @@ export const compareMainProduct = ({
 		});
 
 		// If options list provideed, and feature
-		let options = optionsList.find(
+		const options = optionsList.find(
 			(o: any) => o.feature_id === entitlement.feature_id,
 		);
 
@@ -147,7 +146,7 @@ export const checkFeatureHasCorrectBalance = async ({
 	const { allowed, balanceObj }: any = entitledRes;
 	const cusEnt = cusEnts.find(
 		(e: any) =>
-			e.feature_id === feature.id && e.interval == entitlement.interval,
+			e.feature_id === feature.id && e.interval === entitlement.interval,
 	);
 
 	expect(cusEnt).to.exist;
@@ -190,7 +189,7 @@ export const compareProductEntitlements = ({
 	for (const entitlement of Object.values(
 		product.entitlements,
 	) as Entitlement[]) {
-		let feature =
+		const feature =
 			features[entitlement.feature_id!] ||
 			creditSystems[entitlement.feature_id as keyof typeof creditSystems];
 
