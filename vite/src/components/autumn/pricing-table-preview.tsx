@@ -38,7 +38,7 @@ export default function PricingTablePreview({
 					productId: product.id,
 					dialog: OnboardingCheckoutDialog,
 					openInNewTab: true,
-					successUrl: `${window.location.origin}/onboarding3`,
+					successUrl: `${window.location.origin}/sandbox/onboarding3`,
 				});
 			} catch (error) {
 				console.error("Checkout error:", error);
@@ -49,7 +49,7 @@ export default function PricingTablePreview({
 	};
 
 	const getButtonText = (product: Product) => {
-		if (product.scenario === "active" || product.scenario === "cancel") {
+		if (product.scenario === "active") {
 			return "Current plan";
 		}
 		if (product.scenario === "downgrade") {
