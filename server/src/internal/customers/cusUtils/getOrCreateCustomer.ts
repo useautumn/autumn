@@ -48,7 +48,7 @@ export const getOrCreateCustomer = async ({
 }): Promise<FullCustomer> => {
 	let customer: FullCustomer | undefined;
 
-	const { db, org, env, logtail: logger } = req;
+	const { db, org, env, logger } = req;
 
 	if (!withEntities) {
 		withEntities = expand?.includes(CusExpand.Entities) || false;
