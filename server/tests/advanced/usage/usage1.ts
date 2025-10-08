@@ -1,16 +1,16 @@
+import type { Customer } from "@autumn/shared";
 import { expect } from "chai";
+import chalk from "chalk";
+import type Stripe from "stripe";
+import { setupBefore } from "tests/before.js";
 import { v1ProductToBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
+import { calculateMetered1Price } from "@/external/stripe/utils.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import { AutumnCli } from "../../cli/AutumnCli.js";
 import { features, products } from "../../global.js";
 import { compareMainProduct } from "../../utils/compare.js";
-import { advanceClockForInvoice } from "../../utils/stripeUtils.js";
 import { timeout } from "../../utils/genUtils.js";
-import { calculateMetered1Price } from "@/external/stripe/utils.js";
-import chalk from "chalk";
-import { Customer } from "@autumn/shared";
-import { setupBefore } from "tests/before.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import Stripe from "stripe";
+import { advanceClockForInvoice } from "../../utils/stripeUtils.js";
 
 const testCase = "usage1";
 
@@ -39,7 +39,7 @@ describe(`${chalk.yellowBright("usage1: Testing basic usage product")}`, () => {
 		testClockId = testClockId_;
 	});
 
-	it("should attach usage based product", async function () {
+	it("should attach usage based product", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
 			productId: products.proWithOverage.id,
@@ -53,7 +53,7 @@ describe(`${chalk.yellowBright("usage1: Testing basic usage product")}`, () => {
 		});
 	});
 
-	it("usage1: should send metered1 events", async function () {
+	it("usage1: should send metered1 events", async () => {
 		const batchUpdates = [];
 		for (let i = 0; i < NUM_EVENTS; i++) {
 			batchUpdates.push(
@@ -68,7 +68,7 @@ describe(`${chalk.yellowBright("usage1: Testing basic usage product")}`, () => {
 		await timeout(25000);
 	});
 
-	it("should have correct metered1 balance after sending events", async function () {
+	it("should have correct metered1 balance after sending events", async () => {
 		const res: any = await AutumnCli.entitled(customerId, features.metered1.id);
 
 		expect(res!.allowed).to.be.true;
@@ -90,7 +90,7 @@ describe(`${chalk.yellowBright("usage1: Testing basic usage product")}`, () => {
 	});
 
 	// Check invoice
-	it("should advance stripe test clock and wait for event", async function () {
+	it("should advance stripe test clock and wait for event", async () => {
 		await advanceClockForInvoice({
 			stripeCli,
 			testClockId,
@@ -98,7 +98,7 @@ describe(`${chalk.yellowBright("usage1: Testing basic usage product")}`, () => {
 		});
 	});
 
-	it("should have correct invoice amount", async function () {
+	it("should have correct invoice amount", async () => {
 		const cusRes = await AutumnCli.getCustomer(customerId);
 		const invoices = cusRes!.invoices;
 

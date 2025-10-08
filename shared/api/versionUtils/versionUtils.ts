@@ -15,16 +15,7 @@ export {
 	semVerToCalVer,
 	semVerToLegacy,
 } from "./convertVersionUtils.js";
-// Org-specific utilities (deprecated)
-// export { getOrgApiVersion, toLegacyVersion } from "./orgVersionUtils.js";
-// Branching utilities
-export {
-	ifVersion,
-	requireVersion,
-	versionRange,
-	versionSwitch,
-	versionTernary,
-} from "./versionBranchUtils.js";
+
 export {
 	applyRequestVersionChanges,
 	applyRequestVersionChangesToArray,
@@ -33,9 +24,10 @@ export {
 	applyResponseVersionChanges as applyVersionChanges,
 	applyResponseVersionChangesToArray,
 	applyResponseVersionChangesToArray as applyVersionChangesToArray,
+	backwardsChangeActive,
 	getChangesForResource,
-	isBeforeChange,
 } from "./versionChangeUtils/applyVersionChanges.js";
+
 // Version changes
 export {
 	AffectedResource,
@@ -57,3 +49,5 @@ export {
 
 // Auto-register all version changes
 import "./versionChangeUtils/versionChangeRegistry.js";
+
+export * from "./versionChangeUtils/versionChangeRegistry.js";

@@ -16,7 +16,7 @@ export const cusEntsToInterval = ({
 	cusEnts: FullCusEntWithFullCusProduct[];
 }): {
 	interval: EntInterval | "multiple" | null;
-	interval_count: number;
+	interval_count: number | null;
 } => {
 	const cusEntKeys = cusEnts.map((cusEnt) => cusEntToKey({ cusEnt }));
 	const uniqueCusEntKeys = [...new Set(cusEntKeys)];
@@ -27,7 +27,7 @@ export const cusEntsToInterval = ({
 		};
 	}
 
-	return { interval: "multiple", interval_count: 0 };
+	return { interval: "multiple", interval_count: null };
 };
 
 export const cusEntsToNextResetAt = ({

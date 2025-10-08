@@ -225,7 +225,7 @@ describe(`${chalk.yellowBright("multiAttach3: Testing multi attach for trial pro
 		await advanceTestClock({
 			stripeCli,
 			testClockId,
-			advanceTo: addDays(new Date(), 8).getTime(),
+			advanceTo: addDays(new Date(), 10).getTime(),
 			waitForSeconds: 30,
 		});
 

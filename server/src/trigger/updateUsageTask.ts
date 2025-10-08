@@ -43,7 +43,7 @@ const getFeatureDeductions = ({
 		const unlimitedExists = cusEnts.some(
 			(cusEnt) =>
 				cusEnt.entitlement.allowance_type === AllowanceType.Unlimited &&
-				cusEnt.entitlement.internal_feature_id == feature.internal_id,
+				cusEnt.entitlement.internal_feature_id === feature.internal_id,
 		);
 
 		if (unlimitedExists) {
@@ -76,7 +76,7 @@ const getFeatureDeductions = ({
 			deduction = new Decimal(totalBalance).sub(targetBalance).toNumber();
 		}
 
-		if (deduction == 0) {
+		if (deduction === 0) {
 			console.log(`   - Skipping feature ${feature.id} -- deduction is 0`);
 			continue;
 		}
@@ -230,7 +230,7 @@ export const updateUsage = async ({
 		let { feature, deduction: toDeduct } = obj;
 
 		for (const cusEnt of cusEnts) {
-			if (cusEnt.entitlement.internal_feature_id != feature.internal_id) {
+			if (cusEnt.entitlement.internal_feature_id !== feature.internal_id) {
 				continue;
 			}
 
@@ -245,7 +245,7 @@ export const updateUsage = async ({
 				},
 			});
 
-			if (toDeduct == 0) continue;
+			if (toDeduct === 0) continue;
 
 			toDeduct = await deductAllowanceFromCusEnt({
 				toDeduct,

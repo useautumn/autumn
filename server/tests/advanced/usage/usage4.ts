@@ -1,20 +1,18 @@
-import { Customer } from "@autumn/shared";
+import type { Customer } from "@autumn/shared";
+import { expect } from "chai";
 import chalk from "chalk";
-import { compareMainProduct } from "../../utils/compare.js";
+import type Stripe from "stripe";
+import { setupBefore } from "tests/before.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import { AutumnCli } from "../../cli/AutumnCli.js";
 import { advanceProducts, creditSystems } from "../../global.js";
-
-import { expect } from "chai";
-import { advanceClockForInvoice } from "../../utils/stripeUtils.js";
-
 import {
-	sendGPUEvents,
 	checkCreditBalance,
 	checkUsageInvoiceAmount,
+	sendGPUEvents,
 } from "../../utils/advancedUsageUtils.js";
-import Stripe from "stripe";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { setupBefore } from "tests/before.js";
+import { compareMainProduct } from "../../utils/compare.js";
+import { advanceClockForInvoice } from "../../utils/stripeUtils.js";
 
 // THIRD, TEST GPU PRO ANNUAL
 
@@ -30,7 +28,7 @@ describe(`${chalk.yellowBright("usage4: GPU starter annual")}`, () => {
 
 	before(async function () {
 		await setupBefore(this);
-		let res = await initCustomer({
+		const res = await initCustomer({
 			customerId,
 			org: this.org,
 			env: this.env,
@@ -44,7 +42,7 @@ describe(`${chalk.yellowBright("usage4: GPU starter annual")}`, () => {
 		stripeCli = this.stripeCli;
 	});
 
-	it("should attach GPU starter annual", async function () {
+	it("should attach GPU starter annual", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
 			productId: advanceProducts.gpuStarterAnnual.id,
@@ -59,8 +57,8 @@ describe(`${chalk.yellowBright("usage4: GPU starter annual")}`, () => {
 		expect(res!.invoices.length).to.equal(1);
 	});
 
-	it("should send 20 events and have correct balance", async function () {
-		let eventCount = 20;
+	it("should send 20 events and have correct balance", async () => {
+		const eventCount = 20;
 		const { creditsUsed } = await sendGPUEvents({
 			customerId,
 			eventCount,
@@ -76,7 +74,7 @@ describe(`${chalk.yellowBright("usage4: GPU starter annual")}`, () => {
 		});
 	});
 
-	it("should have invoice after a month and correct balance", async function () {
+	it("should have invoice after a month and correct balance", async () => {
 		await advanceClockForInvoice({
 			stripeCli,
 			testClockId,
@@ -86,7 +84,7 @@ describe(`${chalk.yellowBright("usage4: GPU starter annual")}`, () => {
 		const res = await AutumnCli.getCustomer(customerId);
 		const invoices = res!.invoices;
 
-		let invoiceIndex = invoices.findIndex((invoice: any) =>
+		const invoiceIndex = invoices.findIndex((invoice: any) =>
 			invoice.product_ids.includes(advanceProducts.gpuStarterAnnual.id),
 		);
 

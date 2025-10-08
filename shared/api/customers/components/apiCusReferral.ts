@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
 
-export const APICusReferralSchema = z.object({
+export const ApiCusReferralSchema = z.object({
 	program_id: z.string(),
 	customer: z.object({
 		id: z.string(),
@@ -11,4 +11,4 @@ export const APICusReferralSchema = z.object({
 	created_at: z.number(),
 });
 
-export type APICusReferralResponse = z.infer<typeof APICusReferralSchema>;
+export type ApiCusReferralResponse = z.infer<typeof ApiCusReferralSchema>;

@@ -43,9 +43,8 @@ const getBreakdown = ({
 	intervalCount: number;
 }) => {
 	const wordsFeature = customer.features[TestFeature.Words];
-	// @ts-expect-error
 	return wordsFeature.breakdown?.find(
-		(b: any) => b.interval_count == intervalCount,
+		(b: any) => b.interval_count === intervalCount,
 	);
 };
 
@@ -109,12 +108,12 @@ describe(`${chalk.yellowBright(`${testCase}: Testing multi interval features wit
 
 		expect(
 			wordsFeature.breakdown?.some(
-				(b: any) => b.interval_count == 1 && b.interval == "month",
+				(b: any) => b.interval_count === 1 && b.interval === "month",
 			),
 		).to.equal(true);
 		expect(
 			wordsFeature.breakdown?.some(
-				(b: any) => b.interval_count == 2 && b.interval == "month",
+				(b: any) => b.interval_count === 2 && b.interval === "month",
 			),
 		).to.equal(true);
 	});

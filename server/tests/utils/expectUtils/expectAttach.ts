@@ -179,7 +179,7 @@ export const attachAndExpectCorrect = async ({
 		});
 	}
 
-	if (!skipFeatureCheck && branch === AttachBranch.Downgrade) {
+	if (!skipFeatureCheck && branch !== AttachBranch.Downgrade) {
 		expectFeaturesCorrect({
 			customer,
 			product,

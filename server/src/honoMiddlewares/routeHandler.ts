@@ -1,10 +1,10 @@
+import type { AffectedResource, ApiVersion } from "@autumn/shared";
 import type { Context, Env, Handler, MiddlewareHandler } from "hono";
 import type { ZodType, z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { validator } from "./validatorMiddleware.js";
 import { versionedValidator } from "./versionedValidator.js";
-import type { AffectedResource, ApiVersion } from "@autumn/shared";
 
 /**
  * Extended context type that includes validated input
@@ -32,7 +32,9 @@ type ValidatedContext<
 /**
  * Version-specific schemas configuration
  */
-type VersionedSchemas<T extends ZodType> = Partial<Record<ApiVersion, ZodType>> & {
+type VersionedSchemas<T extends ZodType> = Partial<
+	Record<ApiVersion, ZodType>
+> & {
 	latest: T; // Latest version schema (required)
 };
 

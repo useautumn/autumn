@@ -1,3 +1,4 @@
+import type { ApiCusUpcomingInvoice } from "@autumn/shared";
 import {
 	type AppEnv,
 	CusExpand,
@@ -66,7 +67,7 @@ export const getCusUpcomingInvoice = async ({
 
 		lines.push({
 			product_id: cusProd?.product.id || null,
-			description: line.description,
+			description: line.description || "",
 			amount: atmnLineAmount,
 		});
 	}
@@ -95,7 +96,7 @@ export const getCusUpcomingInvoice = async ({
 		currency: upcomingInvoice.currency,
 	});
 
-	const res = {
+	const res: ApiCusUpcomingInvoice = {
 		lines,
 		discounts,
 		subtotal: atmnSubtotal,

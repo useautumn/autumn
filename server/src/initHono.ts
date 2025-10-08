@@ -5,6 +5,7 @@ import { apiVersionMiddleware } from "./honoMiddlewares/apiVersionMiddleware.js"
 import { baseMiddleware } from "./honoMiddlewares/baseMiddleware.js";
 import { errorMiddleware } from "./honoMiddlewares/errorMiddleware.js";
 import { orgConfigMiddleware } from "./honoMiddlewares/orgConfigMiddleware.js";
+import { queryMiddleware } from "./honoMiddlewares/queryMiddleware.js";
 import { refreshCacheMiddleware } from "./honoMiddlewares/refreshCacheMiddleware.js";
 import { secretKeyMiddleware } from "./honoMiddlewares/secretKeyMiddleware.js";
 import { traceMiddleware } from "./honoMiddlewares/traceMiddleware.js";
@@ -81,6 +82,8 @@ export const createHonoApp = () => {
 	app.use("/v1/*", refreshCacheMiddleware);
 
 	// Step 7: Add pricing middleware, analytics middleware, etc.
+
+	app.use("/v1/*", queryMiddleware());
 	app.route("v1/customers", cusRouter);
 	app.route("v1/products", honoProductRouter);
 

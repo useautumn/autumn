@@ -1,9 +1,9 @@
 import {
+	ApiVersion,
 	type Customer,
 	EntInterval,
 	type FullCusProduct,
 	type FullCustomerEntitlement,
-	LegacyVersion,
 	type Organization,
 	type Price,
 	type UsagePriceConfig,
@@ -53,8 +53,8 @@ export const handleUsagePrices = async ({
 		) < 10;
 
 	const invoiceFromUpgrade =
-		invoice.billing_reason == "subscription_update" ||
-		invoice.billing_reason == "manual";
+		invoice.billing_reason === "subscription_update" ||
+		invoice.billing_reason === "manual";
 
 	if (invoiceCreatedRecently) {
 		logger.info("Invoice created recently, skipping");
@@ -84,7 +84,7 @@ export const handleUsagePrices = async ({
 
 	const isNewUsageMethod =
 		activeProduct.internal_entity_id ||
-		activeProduct.api_version === LegacyVersion.v1_4;
+		activeProduct.api_semver === ApiVersion.Beta;
 
 	if (isNewUsageMethod) {
 		const invoiceItem = getInvoiceItemForUsage({

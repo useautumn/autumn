@@ -16,7 +16,7 @@ import { handleAddCouponToCus } from "./handlers/handleAddCouponToCus.js";
 import { handleCreateBillingPortal } from "./handlers/handleCreateBillingPortal.js";
 import { handleDeleteCustomer } from "./handlers/handleDeleteCustomer.js";
 import { handleGetCustomerV2 } from "./handlers/handleGetCustomerV2.js";
-import { handlePostCustomerRequest } from "./handlers/handlePostCustomer.js";
+import { handlePostCustomer } from "./handlers/handlePostCustomerV2.js";
 import { handleTransferProduct } from "./handlers/handleTransferProduct.js";
 import { handleUpdateBalances } from "./handlers/handleUpdateBalances.js";
 import { handleUpdateCustomer } from "./handlers/handleUpdateCustomer.js";
@@ -47,7 +47,7 @@ expressCusRouter.post("/all/search", async (req: any, res: any) => {
 	}
 });
 
-expressCusRouter.post("", handlePostCustomerRequest);
+// expressCusRouter.post("", handlePostCustomerRequest);
 
 // cusRouter.get("/:customer_id", handleGetCustomer);
 
@@ -150,3 +150,4 @@ expressCusRouter.post("/:customer_id/transfer", handleTransferProduct);
 export const cusRouter = new Hono<HonoEnv>();
 
 cusRouter.get("/:customer_id", ...handleGetCustomerV2);
+cusRouter.post("", ...handlePostCustomer);

@@ -1,6 +1,6 @@
 import {
 	ACTIVE_STATUSES,
-	APICusProductSchema,
+	ApiCusProductSchema,
 	ApiVersion,
 	type ApiVersionClass,
 	type AppEnv,
@@ -512,7 +512,7 @@ export const processFullCusProduct = ({
 			};
 		}
 
-		return APICusProductSchema.parse({
+		return ApiCusProductSchema.parse({
 			id: cusProduct.product.id,
 			name: cusProduct.product.name,
 			group: cusProduct.product.group || null,

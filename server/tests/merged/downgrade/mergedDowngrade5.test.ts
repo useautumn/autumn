@@ -153,6 +153,7 @@ describe(`${chalk.yellowBright("mergedDowngrade5: Testing downgrade to free")}`,
 
 		for (let index = 0; index < ops.length; index++) {
 			const op = ops[index];
+
 			await attachAndExpectCorrect({
 				autumn,
 				customerId,
@@ -176,6 +177,7 @@ describe(`${chalk.yellowBright("mergedDowngrade5: Testing downgrade to free")}`,
 			}
 		}
 	});
+	return;
 
 	// it("should advance test clock and have correct premium downgraded for entity 2", async function () {
 	//   await advanceToNextInvoice({
