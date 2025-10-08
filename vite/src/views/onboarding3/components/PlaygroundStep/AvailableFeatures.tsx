@@ -56,8 +56,10 @@ const FeatureTestRow = ({
 
 export const AvailableFeatures = ({
 	onTrackSuccess,
+	onFeatureUsed,
 }: {
 	onTrackSuccess?: (response: any) => void;
+	onFeatureUsed?: (featureId: string) => void;
 }) => {
 	const { customer, track, refetch } = useCustomer();
 	const { features } = useFeaturesQuery();
@@ -78,6 +80,11 @@ export const AvailableFeatures = ({
 				handleSend={async (value) => {
 					const featureId = customer?.features[x].id;
 
+					// Notify parent which feature was used
+					if (onFeatureUsed) {
+						onFeatureUsed(featureId);
+					}
+
 					// Track the usage
 					const { data, error } = await track({
 						featureId: featureId,
@@ -93,7 +100,7 @@ export const AvailableFeatures = ({
 				}}
 			/>
 		));
-	}, [customer, features, track, refetch, onTrackSuccess]);
+	}, [customer, features, track, refetch, onTrackSuccess, onFeatureUsed]);
 
 	return (
 		<SheetSection title="Available features">

@@ -1,3 +1,5 @@
+import type { ProductItem } from "@autumn/shared";
+import type { TrackResult } from "autumn-js";
 import { useEffect, useState } from "react";
 import {
 	CodeGroup,
@@ -8,7 +10,8 @@ import {
 	CodeGroupTab,
 } from "@/components/v2/CodeGroup";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
-import { codeSnippets } from "../../utils/completionStepCode";
+import { useProductContext } from "@/views/products/product/ProductContext";
+import { getCodeSnippets } from "../../utils/completionStepCode";
 
 type CodeLanguage = "react" | "nodejs" | "response";
 
@@ -19,7 +22,7 @@ const CodeSnippetSection = ({
 }: {
 	title: string;
 	snippets: { react: string; nodejs: string; response: string };
-	trackResponse?: any;
+	trackResponse?: TrackResult;
 }) => {
 	const [activeLanguage, setActiveLanguage] = useState<CodeLanguage>("react");
 
@@ -77,24 +80,38 @@ const CodeSnippetSection = ({
 
 export const QuickStartCodeGroup = ({
 	trackResponse,
+	featureId: usedFeatureId,
 }: {
-	trackResponse?: any;
+	trackResponse?: TrackResult;
+	featureId?: string;
 }) => {
+	const { product } = useProductContext();
+
+	// Use the feature that was actually used (if available), otherwise fallback to first feature
+	const firstFeatureItem = product?.items?.find(
+		(item: ProductItem) => item.feature_id,
+	);
+	const featureId = usedFeatureId || firstFeatureItem?.feature_id || undefined;
+	const productId = product?.id || undefined;
+
+	// Generate snippets with actual IDs from onboarding
+	const snippets = getCodeSnippets(featureId, productId);
+
 	return (
 		<SheetSection>
 			<div className="space-y-4">
 				<CodeSnippetSection
 					title="Track usage"
-					snippets={codeSnippets.track}
+					snippets={snippets.track}
 					trackResponse={trackResponse}
 				/>
 				<CodeSnippetSection
 					title="Check feature access"
-					snippets={codeSnippets.allowed}
+					snippets={snippets.allowed}
 				/>
 				<CodeSnippetSection
 					title="Create checkout session"
-					snippets={codeSnippets.checkout}
+					snippets={snippets.checkout}
 				/>
 			</div>
 		</SheetSection>
