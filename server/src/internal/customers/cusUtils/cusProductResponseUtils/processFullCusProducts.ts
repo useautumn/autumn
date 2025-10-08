@@ -1,6 +1,6 @@
 import {
 	ACTIVE_STATUSES,
-	type APICusProduct,
+	type ApiCusProduct,
 	ApiVersion,
 	type ApiVersionClass,
 	type CusProductStatus,
@@ -13,9 +13,9 @@ import { getCusProductResponse } from "./getCusProductResponse.js";
 const mergeCusProductResponses = ({
 	cusProductResponses,
 }: {
-	cusProductResponses: APICusProduct[];
+	cusProductResponses: ApiCusProduct[];
 }) => {
-	const getProductKey = (product: APICusProduct) => {
+	const getProductKey = (product: ApiCusProduct) => {
 		const status = ACTIVE_STATUSES.includes(product.status as CusProductStatus)
 			? "active"
 			: product.status;
@@ -84,10 +84,10 @@ export const processFullCusProducts = async ({
 
 	if (apiVersion.gte(ApiVersion.V1_1)) {
 		main = mergeCusProductResponses({
-			cusProductResponses: main as APICusProduct[],
+			cusProductResponses: main as ApiCusProduct[],
 		});
 		addOns = mergeCusProductResponses({
-			cusProductResponses: addOns as APICusProduct[],
+			cusProductResponses: addOns as ApiCusProduct[],
 		});
 	}
 

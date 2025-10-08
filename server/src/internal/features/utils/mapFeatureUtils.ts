@@ -19,12 +19,12 @@ export const toApiFeature = ({ feature }: { feature: Feature }) => {
 	// return FeatureResponseSchema.parse(feature);
 	// 1. Get feature type
 	let featureType = feature.type;
-	if (feature.type == FeatureType.Metered) {
+	if (feature.type === FeatureType.Metered) {
 		featureType = feature.config.usage_type;
 	}
 
 	let creditSchema;
-	if (feature.type == FeatureType.CreditSystem) {
+	if (feature.type === FeatureType.CreditSystem) {
 		creditSchema = feature.config.schema.map((s: CreditSchemaItem) => ({
 			metered_feature_id: s.metered_feature_id,
 			credit_cost: s.credit_amount,
@@ -54,8 +54,8 @@ export const fromApiFeature = ({
 	env: AppEnv;
 }) => {
 	const isMetered =
-		apiFeature.type == ApiFeatureType.SingleUsage ||
-		apiFeature.type == ApiFeatureType.ContinuousUse;
+		apiFeature.type === ApiFeatureType.SingleUsage ||
+		apiFeature.type === ApiFeatureType.ContinuousUse;
 
 	const featureType: FeatureType = isMetered
 		? FeatureType.Metered
@@ -71,8 +71,8 @@ export const fromApiFeature = ({
 		});
 	}
 
-	if (featureType == FeatureType.CreditSystem) {
-		if (!apiFeature.credit_schema || apiFeature.credit_schema.length == 0) {
+	if (featureType === FeatureType.CreditSystem) {
+		if (!apiFeature.credit_schema || apiFeature.credit_schema.length === 0) {
 			throw new RecaseError({
 				message: "Credit system schema is required",
 				code: "CREDIT_SYSTEM_SCHEMA_REQUIRED",

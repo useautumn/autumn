@@ -1,6 +1,8 @@
 import {
+	ApiBaseEntitySchema,
 	ApiCusFeatureV2Schema,
 	ApiCustomerSchema,
+	ApiCustomerV2Schema,
 	ApiVersion,
 	type ApiVersionClass,
 	type AppEnv,
@@ -9,7 +11,6 @@ import {
 	CustomerResponseSchema,
 	cusProductsToCusEnts,
 	cusProductsToCusPrices,
-	EntityResponseSchema,
 	type Feature,
 	FeatureType,
 	type FullCusProduct,
@@ -135,8 +136,12 @@ export const getCustomerDetails = async ({
 			expand,
 		});
 
+		const apiCustomerSchema = apiVersion.gte(ApiVersion.V1_2)
+			? ApiCustomerSchema
+			: ApiCustomerV2Schema;
+
 		const cusResponse = {
-			...ApiCustomerSchema.parse({
+			...apiCustomerSchema.parse({
 				...customer,
 				stripe_id: customer.processor?.id,
 				features: entList,
@@ -156,7 +161,7 @@ export const getCustomerDetails = async ({
 				metadata: customer.metadata,
 				entities: expand.includes(CusExpand.Entities)
 					? customer.entities.map((e) =>
-							EntityResponseSchema.parse({
+							ApiBaseEntitySchema.parse({
 								id: e.id,
 								name: e.name,
 								customer_id: customer.id,

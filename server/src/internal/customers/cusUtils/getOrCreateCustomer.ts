@@ -36,7 +36,7 @@ export const getOrCreateCustomer = async ({
 	withCache = false,
 }: {
 	req: ExtendedRequest;
-	customerId: string;
+	customerId: string | null;
 	customerData?: CustomerData;
 	inStatuses?: CusProductStatus[];
 	skipGet?: boolean;

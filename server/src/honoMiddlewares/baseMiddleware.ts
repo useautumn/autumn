@@ -58,5 +58,21 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		env: AppEnv.Sandbox, // maybe use app_env headers
 	});
 
+	const method = c.req.method;
+	const path = c.req.path;
+
+	let body = null;
+	if (method === "POST" || method === "PUT" || method === "PATCH") {
+		body = await c.req.json();
+	}
+
+	logger.info(`${method} ${path}`, {
+		context: {
+			body,
+		},
+	});
+
+	logger.info(`URL: ${c.req.url}`);
+
 	await next();
 };

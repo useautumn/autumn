@@ -142,7 +142,7 @@ export const initCusProduct = ({
 		quantity: quantity || 1,
 		internal_entity_id: internalEntityId,
 		entity_id: entityId,
-		api_version: apiVersion,
+		api_semver: apiVersion || null,
 	};
 };
 

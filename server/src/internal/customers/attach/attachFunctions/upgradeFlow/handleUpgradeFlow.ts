@@ -53,8 +53,8 @@ export const handleUpgradeFlow = async ({
 
 	const logger = req.logtail;
 
-	if (curCusProduct?.api_version) {
-		attachParams.apiVersion = curCusProduct.api_version;
+	if (curCusProduct?.api_semver) {
+		attachParams.apiVersion = curCusProduct.api_semver;
 	}
 
 	let sub = curSub;

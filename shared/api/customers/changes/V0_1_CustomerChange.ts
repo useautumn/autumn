@@ -1,21 +1,25 @@
-import { ApiCustomerSchema } from "@api/customers/apiCustomer.js";
 import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
 import {
 	AffectedResource,
 	defineVersionChange,
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
-import { z } from "zod/v4";
+import type { z } from "zod/v4";
 import {
 	type ApiCusFeatureV0,
 	ApiCusFeatureV0Schema,
 } from "../cusFeatures/previousVersions/apiCusFeatureV0.js";
-import { ApiCusFeatureV1Schema } from "../cusFeatures/previousVersions/apiCusFeatureV1.js";
+import { ApiCustomerV0Schema } from "../previousVersions/apiCustomerV0.js";
+import { ApiCustomerV1Schema } from "../previousVersions/apiCustomerV1.js";
 
 /**
- * V0_2: Customer feature field additions
+ * V0_1_CustomerChange: Transforms customer TO V0_1 format
  *
- * This change handles the fields added in V0_2.
- * When transforming to V0_1, we remove: next_reset_at, allowance, usage_limit
+ * Applied when: targetVersion <= V0_1
+ *
+ * Fields added in V0_2 (that we remove here):
+ * - next_reset_at
+ * - allowance
+ * - usage_limit
  *
  * V0_2+ format (V1):
  *   - feature_id, unlimited, interval, balance, used
@@ -26,40 +30,27 @@ import { ApiCusFeatureV1Schema } from "../cusFeatures/previousVersions/apiCusFea
  *   - NO next_reset_at, allowance, usage_limit (original format)
  */
 
-// V0_2+ customer schema (features as array of V1 - with extra fields)
-const V0_2_CustomerSchema = ApiCustomerSchema.extend({
-	features: z.array(ApiCusFeatureV1Schema),
-});
-
-// V0_1 customer schema (features as array of V0 - original format)
-const V0_1_CustomerSchema = ApiCustomerSchema.extend({
-	features: z.array(ApiCusFeatureV0Schema),
-});
-
-export const V0_2_CusFeatureChange = defineVersionChange({
-	version: ApiVersion.V0_2,
+export const V0_1_CustomerChange = defineVersionChange({
+	oldVersion: ApiVersion.V0_1, // Applied when targetVersion <= V0_1
+	newVersion: ApiVersion.V0_2, // Breaking change introduced in V0_2
 	description: [
 		"Features: V1 format (with next_reset_at, allowance) → V0 format (minimal fields)",
 	],
 
 	affectedResources: [AffectedResource.Customer],
-	newSchema: V0_2_CustomerSchema,
-	oldSchema: V0_1_CustomerSchema,
-
-	affectsRequest: false,
-	affectsResponse: true,
-	hasSideEffects: false,
+	oldSchema: ApiCustomerV0Schema,
+	newSchema: ApiCustomerV1Schema,
 
 	// Response: V0_2 Customer → V0_1 Customer
 	// Remove next_reset_at, allowance, usage_limit fields
 	transformResponse: ({
 		input,
 	}: {
-		input: z.infer<typeof V0_2_CustomerSchema>;
+		input: z.infer<typeof ApiCustomerV1Schema>;
 	}) => {
 		const v0_features: ApiCusFeatureV0[] = [];
 
-		for (const feature of input.features) {
+		for (const feature of input.entitlements) {
 			// Unlimited features
 			if (feature.unlimited) {
 				const v0Feature = ApiCusFeatureV0Schema.parse({
@@ -74,7 +65,7 @@ export const V0_2_CusFeatureChange = defineVersionChange({
 			}
 
 			// Boolean/Static features
-			if (!feature.interval && !feature.balance && feature.used === undefined) {
+			if (!feature.interval && !feature.balance && !feature.unlimited) {
 				const v0Feature = ApiCusFeatureV0Schema.parse({
 					feature_id: feature.feature_id,
 					interval: null,
@@ -92,13 +83,29 @@ export const V0_2_CusFeatureChange = defineVersionChange({
 				used: feature.used,
 				// Remove: next_reset_at, allowance, usage_limit
 			});
-			console.log("v0Feature", v0Feature);
+
 			v0_features.push(v0Feature);
 		}
 
+		const products = input.products.map((p) => {
+			const {
+				current_period_start: _currentPeriodStart,
+				current_period_end: _currentPeriodEnd,
+				...rest
+			} = p;
+			return rest;
+		});
+
 		return {
 			...input,
-			features: v0_features,
-		} satisfies z.infer<typeof V0_1_CustomerSchema>;
+			customer: {
+				...input.customer,
+				name: input.customer.name || "",
+				email: input.customer.email || "",
+				fingerprint: input.customer.fingerprint || "",
+			},
+			entitlements: v0_features,
+			products,
+		} satisfies z.infer<typeof ApiCustomerV0Schema>;
 	},
 });

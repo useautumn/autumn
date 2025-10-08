@@ -31,11 +31,14 @@ const V1_1_CustomerSchema = ApiCustomerSchema.extend({
 	features: z.array(ApiCusFeatureV2Schema),
 });
 
-export const V1_2_FeaturesArrayToObject = defineVersionChange({
-	version: ApiVersion.V1_2,
+export const V1_1_FeaturesArrayToObject = defineVersionChange({
+	newVersion: ApiVersion.V1_2,
+	oldVersion: ApiVersion.V1_1,
+
 	description: [
 		"Features: object with breakdown → array with expanded intervals",
 	],
+
 	affectedResources: [AffectedResource.Customer],
 	newSchema: V1_2_CustomerSchema,
 	oldSchema: V1_1_CustomerSchema,
@@ -61,8 +64,7 @@ export const V1_2_FeaturesArrayToObject = defineVersionChange({
 				for (const breakdownItem of feature.breakdown) {
 					v1_1_features.push({
 						feature_id: feature.id,
-						// type: feature.type,
-						// name: feature.name,
+
 						// All interval-specific data from breakdown
 						interval: breakdownItem.interval,
 						interval_count: breakdownItem.interval_count,
@@ -112,8 +114,6 @@ export const V1_2_FeaturesArrayToObject = defineVersionChange({
 		}
 
 		// Boolean / unlimited features don't have the rest of the fields
-
-		console.log("v1_1_features", v1_1_features);
 
 		// Validation happens automatically in VersionChange base class
 		return {

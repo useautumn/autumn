@@ -11,22 +11,22 @@ import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass.js";
  * applying each version change's transformResponse() function.
  *
  * @param input - Data in the newest version format
- * @param data - Additional context data for transformations (optional)
+ * @param legacyData - Legacy fields data for reconstructing deprecated fields (optional)
  * @param currentVersion - Version of the input data (defaults to LATEST_VERSION)
  * @param targetVersion - Version to transform to (older)
  * @param resource - Resource being transformed
  *
  */
 // biome-ignore lint/suspicious/noExplicitAny: Generic type parameter needs flexibility
-export function applyResponseVersionChanges<T = any, TData = any>({
+export function applyResponseVersionChanges<T = any, TLegacyData = any>({
 	input,
-	data,
+	legacyData,
 	currentVersion,
 	targetVersion,
 	resource,
 }: {
 	input: T;
-	data?: TData;
+	legacyData?: TLegacyData;
 	currentVersion?: ApiVersionClass;
 	targetVersion: ApiVersionClass;
 	resource: AffectedResource;
@@ -40,10 +40,11 @@ export function applyResponseVersionChanges<T = any, TData = any>({
 
 	// If target is newer than current, throw error (can't transform forward)
 	if (targetVersion.gt(_currentVersion)) {
-		throw new Error(
-			`Cannot transform forward from ${_currentVersion} to ${targetVersion}. ` +
-				"Transforms only work backwards to older versions.",
-		);
+		targetVersion = _currentVersion;
+		// throw new Error(
+		// 	`Cannot transform forward from ${_currentVersion} to ${targetVersion}. ` +
+		// 		"Transforms only work backwards to older versions.",
+		// );
 	}
 
 	// Get all versions between current and target (exclusive of target, inclusive of current)
@@ -78,15 +79,20 @@ export function applyResponseVersionChanges<T = any, TData = any>({
 				continue;
 			}
 
+			// Apply if targetVersion <= oldVersion
+			// Example: If change.oldVersion = V0_2 and targetVersion = V0_2, then apply
+			const shouldApply = targetVersion.lte(change.oldVersion);
+			if (!shouldApply) continue;
+
 			const description = Array.isArray(change.description)
 				? change.description.join("; ")
 				: change.description;
-			console.log(`Applying changes ${description}`);
+
+			console.log(`Applying change [${change.oldVersion}]: ${description}`);
 			// Apply the response transformation (backward)
 			transformedData = change.transformResponse({
 				input: transformedData,
-				// biome-ignore lint/suspicious/noExplicitAny: Runtime type flexibility needed for version changes
-				data: data as any,
+				legacyData: legacyData,
 			}) as T;
 		}
 	}
@@ -103,7 +109,7 @@ export function applyResponseVersionChanges<T = any, TData = any>({
  * This is used to transform old request formats to the latest version.
  *
  * @param input - Data in the older version format
- * @param data - Additional context data for transformations (optional)
+ * @param legacyData - Legacy fields data for reconstructing deprecated fields (optional)
  * @param targetVersion - User's version (older)
  * @param currentVersion - Latest version (newer)
  * @param resource - Resource being transformed
@@ -118,15 +124,15 @@ export function applyResponseVersionChanges<T = any, TData = any>({
  * });
  */
 // biome-ignore lint/suspicious/noExplicitAny: Generic type parameter needs flexibility
-export function applyRequestVersionChanges<T = any, TData = any>({
+export function applyRequestVersionChanges<T = any, TLegacyData = any>({
 	input,
-	data,
+	legacyData,
 	targetVersion,
 	currentVersion,
 	resource,
 }: {
 	input: T;
-	data?: TData;
+	legacyData?: TLegacyData;
 	targetVersion: ApiVersionClass; // User's version (old)
 	currentVersion: ApiVersionClass; // Latest version (new)
 	resource: AffectedResource;
@@ -180,7 +186,7 @@ export function applyRequestVersionChanges<T = any, TData = any>({
 			transformedData = change.transformRequest({
 				input: transformedData,
 				// biome-ignore lint/suspicious/noExplicitAny: Runtime type flexibility needed for version changes
-				data: data as any,
+				legacyData: legacyData as any,
 			}) as T;
 		}
 	}
@@ -202,30 +208,30 @@ export function applyRequestVersionChanges<T = any, TData = any>({
  *   expandArray.push(CusExpand.Invoices);
  * }
  */
-export function isBeforeChange({
-	targetVersion,
+export function backwardsChangeActive({
+	apiVersion,
 	versionChange,
 }: {
-	targetVersion: ApiVersionClass;
+	apiVersion: ApiVersionClass;
 	versionChange: new () => any;
 }): boolean {
 	const change = new versionChange();
-	return targetVersion.lt(change.version);
+	return apiVersion.lte(change.oldVersion);
 }
 
 /**
  * Helper to apply response changes to an array of objects
  */
 // biome-ignore lint/suspicious/noExplicitAny: Generic type parameter needs flexibility
-export function applyResponseVersionChangesToArray<T = any, TData = any>({
+export function applyResponseVersionChangesToArray<T = any, TLegacyData = any>({
 	inputArray,
-	data,
+	legacyData,
 	currentVersion,
 	targetVersion,
 	resource,
 }: {
 	inputArray: T[];
-	data?: TData;
+	legacyData?: TLegacyData;
 	currentVersion?: ApiVersionClass;
 	targetVersion: ApiVersionClass;
 	resource: AffectedResource;
@@ -233,7 +239,7 @@ export function applyResponseVersionChangesToArray<T = any, TData = any>({
 	return inputArray.map((item) =>
 		applyResponseVersionChanges({
 			input: item,
-			data,
+			legacyData,
 			currentVersion,
 			targetVersion,
 			resource,
@@ -245,15 +251,15 @@ export function applyResponseVersionChangesToArray<T = any, TData = any>({
  * Helper to apply request changes to an array of objects
  */
 // biome-ignore lint/suspicious/noExplicitAny: Generic type parameter needs flexibility
-export function applyRequestVersionChangesToArray<T = any, TData = any>({
+export function applyRequestVersionChangesToArray<T = any, TLegacyData = any>({
 	inputArray,
-	data,
+	legacyData,
 	targetVersion,
 	currentVersion,
 	resource,
 }: {
 	inputArray: T[];
-	data?: TData;
+	legacyData?: TLegacyData;
 	targetVersion: ApiVersionClass;
 	currentVersion: ApiVersionClass;
 	resource: AffectedResource;
@@ -261,7 +267,7 @@ export function applyRequestVersionChangesToArray<T = any, TData = any>({
 	return inputArray.map((item) =>
 		applyRequestVersionChanges({
 			input: item,
-			data,
+			legacyData,
 			targetVersion,
 			currentVersion,
 			resource,

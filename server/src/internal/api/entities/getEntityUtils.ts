@@ -1,5 +1,5 @@
 import {
-	type APICusProduct,
+	type ApiCusProduct,
 	ApiVersion,
 	ApiVersionClass,
 	type AppEnv,
@@ -79,7 +79,7 @@ export const getSingleEntityResponse = async ({
 		features,
 	});
 
-	const products: APICusProduct[] = [...main, ...addOns];
+	const products: ApiCusProduct[] = [...main, ...addOns];
 
 	const cusFeatures = await getCusFeaturesResponse({
 		cusProducts: entityCusProducts,

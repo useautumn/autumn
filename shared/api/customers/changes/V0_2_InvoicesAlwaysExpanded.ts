@@ -6,24 +6,28 @@ import {
 import { z } from "zod/v4";
 
 /**
- * V1_1: Invoices expansion behavior changed (side effect only)
+ * V0_2_InvoicesAlwaysExpanded: Side effect for legacy invoice expansion
  *
- * V1_1+: Invoices require explicit expand parameter
- * V1_0: Invoices always included (side effect - must be handled in handler)
+ * Applied when: targetVersion <= V0_2
+ *
+ * Before V1_1, invoices were always included in customer responses.
+ * After V1_1, invoices require an explicit expand parameter.
  *
  * This change has side effects and doesn't transform data.
- * The handler must add CusExpand.Invoices for V1_0 requests.
+ * The handler must add expand=invoices for requests targeting V0_2 or older.
  */
 
 // Schema is just any since this is a side-effect only change
 const NoOpSchema = z.any();
 
-export class V1_1_LegacyExpandInvoices extends VersionChange<
+export class V0_2_InvoicesAlwaysExpanded extends VersionChange<
 	typeof NoOpSchema,
 	typeof NoOpSchema
 > {
-	readonly version = ApiVersion.V1_1;
-	readonly description = "Invoices always expanded before V1_1";
+	readonly newVersion = ApiVersion.V1_1; // Breaking change introduced in V1_1
+	readonly oldVersion = ApiVersion.V0_2; // Applied when targetVersion <= V0_2
+	readonly description =
+		"Invoices always expanded before V1_1 (requires expand parameter in handler)";
 	readonly affectedResources = [AffectedResource.Customer];
 	readonly hasSideEffects = true;
 

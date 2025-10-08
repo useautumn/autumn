@@ -75,7 +75,7 @@ export const isV4Usage = ({
 
 	return (
 		billingType === BillingType.UsageInArrear &&
-		(cusProduct.api_version === ApiVersion.Beta ||
+		(cusProduct.api_semver === ApiVersion.Beta ||
 			notNullish(cusProduct.internal_entity_id))
 	);
 };

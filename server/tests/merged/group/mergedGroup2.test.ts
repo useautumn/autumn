@@ -68,6 +68,7 @@ const ops = [
 			{ product: g1Pro, status: CusProductStatus.Scheduled },
 		],
 		// otherProducts: [g2Premium],
+		skipFeatureCheck: true,
 	},
 ];
 
@@ -123,6 +124,7 @@ describe(`${chalk.yellowBright("mergedGroup2: Testing products from diff groups"
 				db,
 				org,
 				env,
+				skipFeatureCheck: op.skipFeatureCheck,
 			});
 
 			const customer = await autumn.customers.get(customerId);

@@ -41,12 +41,17 @@ export enum AffectedResource {
 export abstract class VersionChange<
 	TNewSchema extends ZodType = ZodType,
 	TOldSchema extends ZodType = ZodType,
-	TDataSchema extends ZodType = ZodType,
+	TLegacyDataSchema extends ZodType = ZodType,
 > {
 	/**
-	 * The version this change was introduced in
+	 * The newer version where the breaking change was introduced
 	 */
-	abstract readonly version: ApiVersion;
+	abstract readonly newVersion: ApiVersion;
+
+	/**
+	 * The older version - transform is applied when targetVersion <= oldVersion
+	 */
+	abstract readonly oldVersion: ApiVersion;
 
 	/**
 	 * Human-readable description of the change
@@ -70,25 +75,26 @@ export abstract class VersionChange<
 	abstract readonly oldSchema: TOldSchema;
 
 	/**
-	 * Optional Zod schema for additional context data
+	 * Optional Zod schema for legacy fields data (deprecated fields from newer versions)
 	 */
-	readonly dataSchema?: TDataSchema;
+	readonly legacyDataSchema?: TLegacyDataSchema;
 
 	/**
 	 * Whether this change affects request transformations
-	 * Default: true
+	 * @default false
 	 */
-	readonly affectsRequest: boolean = true;
+	readonly affectsRequest: boolean = false;
 
 	/**
 	 * Whether this change affects response transformations
-	 * Default: true
+	 * @default true
 	 */
 	readonly affectsResponse: boolean = true;
 
 	/**
 	 * Whether this change has side effects beyond transformation
 	 * If true, transforms become no-ops and you must handle logic elsewhere
+	 * @default false
 	 */
 	readonly hasSideEffects: boolean = false;
 
@@ -97,15 +103,17 @@ export abstract class VersionChange<
 	 * Applied when user sends old version, we transform to latest
 	 *
 	 * @param input - Request data in previous version format (validated against oldSchema)
-	 * @param data - Additional context data for transformation (validated against dataSchema if provided)
+	 * @param legacyData - Legacy fields data for transformation (validated against legacyDataSchema if provided)
 	 * @returns Data in current version format (should match newSchema)
 	 */
 	transformRequest({
 		input,
-		data: _data,
+		legacyData: _legacyData,
 	}: {
 		input: z.infer<TOldSchema>;
-		data?: TDataSchema extends ZodType ? z.infer<TDataSchema> : never;
+		legacyData?: TLegacyDataSchema extends ZodType
+			? z.infer<TLegacyDataSchema>
+			: never;
 	}): z.infer<TNewSchema> {
 		// Default: no-op (override if change affects requests)
 		return input as unknown as z.infer<TNewSchema>;
@@ -116,15 +124,17 @@ export abstract class VersionChange<
 	 * Applied when user expects old version, we transform from latest
 	 *
 	 * @param input - Response data in current version format (validated against newSchema)
-	 * @param data - Additional context data for transformation (validated against dataSchema if provided)
+	 * @param legacyData - Legacy fields data for transformation (validated against legacyDataSchema if provided)
 	 * @returns Data in previous version format (should match oldSchema)
 	 */
 	transformResponse({
 		input,
-		data: _data,
+		legacyData: _legacyData,
 	}: {
 		input: z.infer<TNewSchema>;
-		data?: TDataSchema extends ZodType ? z.infer<TDataSchema> : never;
+		legacyData?: TLegacyDataSchema extends ZodType
+			? z.infer<TLegacyDataSchema>
+			: never;
 	}): z.infer<TOldSchema> {
 		// Default: no-op (override if change affects responses)
 		return input as unknown as z.infer<TOldSchema>;
@@ -161,10 +171,13 @@ export type VersionChangeConstructor = new () => VersionChange<
 export interface VersionChangeConfig<
 	TNewSchema extends ZodType = ZodType,
 	TOldSchema extends ZodType = ZodType,
-	TDataSchema extends ZodType = ZodType,
+	TLegacyDataSchema extends ZodType = ZodType,
 > {
-	/** The version this change was introduced in */
-	version: ApiVersion;
+	/** The newer version where the breaking change was introduced */
+	newVersion: ApiVersion;
+
+	/** The older version - transform is applied when targetVersion <= oldVersion */
+	oldVersion: ApiVersion;
 
 	/** Human-readable description of the change (single string or array of strings) */
 	description: string | string[];
@@ -178,12 +191,12 @@ export interface VersionChangeConfig<
 	/** Zod schema for the older version format */
 	oldSchema: TOldSchema;
 
-	/** Optional Zod schema for additional context data */
-	dataSchema?: TDataSchema;
+	/** Optional Zod schema for legacy fields data (deprecated fields from newer versions) */
+	legacyDataSchema?: TLegacyDataSchema;
 
 	/**
 	 * Whether this change affects request transformations
-	 * @default true
+	 * @default false
 	 */
 	affectsRequest?: boolean;
 
@@ -206,7 +219,9 @@ export interface VersionChangeConfig<
 	 */
 	transformRequest?: (params: {
 		input: z.infer<TOldSchema>;
-		data?: TDataSchema extends ZodType ? z.infer<TDataSchema> : never;
+		legacyData?: TLegacyDataSchema extends ZodType
+			? z.infer<TLegacyDataSchema>
+			: never;
 	}) => z.infer<TNewSchema>;
 
 	/**
@@ -219,7 +234,9 @@ export interface VersionChangeConfig<
 	 */
 	transformResponse?: (params: {
 		input: z.infer<TNewSchema>;
-		data?: TDataSchema extends ZodType ? z.infer<TDataSchema> : never;
+		legacyData?: TLegacyDataSchema extends ZodType
+			? z.infer<TLegacyDataSchema>
+			: never;
 	}) => z.infer<TOldSchema>;
 }
 
@@ -242,24 +259,31 @@ export interface VersionChangeConfig<
 export function defineVersionChange<
 	TNewSchema extends ZodType,
 	TOldSchema extends ZodType,
-	TDataSchema extends ZodType = ZodType,
+	TLegacyDataSchema extends ZodType = ZodType,
 >(
-	config: VersionChangeConfig<TNewSchema, TOldSchema, TDataSchema>,
+	config: VersionChangeConfig<TNewSchema, TOldSchema, TLegacyDataSchema>,
 ): VersionChangeConstructor {
-	return class extends VersionChange<TNewSchema, TOldSchema, TDataSchema> {
-		readonly version = config.version;
+	return class extends VersionChange<
+		TNewSchema,
+		TOldSchema,
+		TLegacyDataSchema
+	> {
+		readonly newVersion = config.newVersion;
+		readonly oldVersion = config.oldVersion;
 		readonly description = config.description;
 		readonly affectedResources = config.affectedResources;
 		readonly newSchema = config.newSchema;
 		readonly oldSchema = config.oldSchema;
-		readonly dataSchema = config.dataSchema;
-		readonly affectsRequest = config.affectsRequest ?? true;
+		readonly legacyDataSchema = config.legacyDataSchema;
+		readonly affectsRequest = config.affectsRequest ?? false;
 		readonly affectsResponse = config.affectsResponse ?? true;
 		readonly hasSideEffects = config.hasSideEffects ?? false;
 
 		transformRequest(params: {
 			input: z.infer<TOldSchema>;
-			data?: TDataSchema extends ZodType ? z.infer<TDataSchema> : never;
+			legacyData?: TLegacyDataSchema extends ZodType
+				? z.infer<TLegacyDataSchema>
+				: never;
 		}): z.infer<TNewSchema> {
 			if (config.transformRequest) {
 				const result = config.transformRequest(params);
@@ -276,7 +300,9 @@ export function defineVersionChange<
 
 		transformResponse(params: {
 			input: z.infer<TNewSchema>;
-			data?: TDataSchema extends ZodType ? z.infer<TDataSchema> : never;
+			legacyData?: TLegacyDataSchema extends ZodType
+				? z.infer<TLegacyDataSchema>
+				: never;
 		}): z.infer<TOldSchema> {
 			if (config.transformResponse) {
 				const result = config.transformResponse(

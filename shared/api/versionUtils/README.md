@@ -77,10 +77,12 @@ shared/api/
 │       └── applyVersionChanges.ts        # Transform engine
 └── customers/
     └── changes/                   # Customer-specific changes
-        ├── V1_2_FeaturesArrayToObject.ts
-        ├── V1_1_MergedResponse.ts
-        ├── V1_1_LegacyExpandInvoices.ts  # Side effect
-        └── V0_2_ProductItems.ts
+        ├── V1_1_FeaturesArrayToObject.ts  # Transforms TO V1_1
+        ├── V0_2_CustomerChange.ts         # Transforms TO V0_2
+        ├── V0_1_CusFeatureChange.ts       # Transforms TO V0_1
+        └── cusProducts/
+            └── changes/
+                └── V0_1_ProductItems.ts   # Transforms TO V0_1
 ```
 
 ### Change Organization
@@ -90,43 +92,61 @@ shared/api/
 - Product changes → `shared/api/products/changes/`
 - Invoice changes → `shared/api/invoices/changes/`
 
-**Naming convention:** `V{version}_{Description}.ts`
-- `V1_2_FeaturesArrayToObject.ts`
-- `V1_1_MergedResponse.ts`
+**Naming convention:** `V{target_version}_{Description}.ts`
+
+Files are named after the **target version** (the older version we're transforming TO):
+- `V1_1_FeaturesArrayToObject.ts` - Registered at V1_2, transforms TO V1_1
+- `V0_2_CustomerChange.ts` - Registered at V1_1, transforms TO V0_2
+- `V0_1_CusFeatureChange.ts` - Registered at V0_2, transforms TO V0_1
+
+This makes it clear which version format the change produces.
 
 ## Creating Version Changes
 
-### 1. Create Change Class
+**📝 Use the template:** Copy `versionChangeUtils/versionChangeTemplate.ts` as a starting point!
+
+### 1. Create Change File
 
 ```typescript
-// shared/api/customers/changes/V1_3_MyChange.ts
-import { ApiVersion, VersionChange, AffectedResource } from "@autumn/shared";
+// shared/api/customers/changes/V1_2_MyChange.ts
+import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
+import {
+  AffectedResource,
+  defineVersionChange,
+} from "@api/versionUtils/versionChangeUtils/VersionChange.js";
 
-export class V1_3_MyChange extends VersionChange {
-  readonly version = ApiVersion.V1_3;
-  readonly description = "Brief description";
-  readonly affectedResources = [AffectedResource.Customer];
-
-  transform({ data }: { data: any }): any {
+export const V1_2_MyChange = defineVersionChange({
+  oldVersion: ApiVersion.V1_2,  // Applied when targetVersion <= V1_2
+  newVersion: ApiVersion.V1_3,  // Breaking change introduced in V1_3
+  description: "Brief description of the change",
+  affectedResources: [AffectedResource.Customer],
+  newSchema: V1_3_Schema,  // Latest format
+  oldSchema: V1_2_Schema,  // Older format
+  
+  transformResponse: ({ input }) => {
     // Transform FROM V1_3 TO V1_2
-    return { ...data, oldField: data.newField };
-  }
-}
+    const { newField, ...rest } = input;
+    return { ...rest, oldField: newField };
+  },
+});
 ```
 
 ### 2. Register in Registry
 
 ```typescript
 // versionChangeUtils/versionChangeRegistry.ts
-export const V1_3_CHANGES = [
-  V1_3_MyChange,
-  V1_3_AnotherChange,
+import { V1_2_MyChange } from "@api/customers/changes/V1_2_MyChange.js";
+
+// Register at oldVersion (V1_2), applied when targetVersion <= V1_2
+const V1_2_CHANGES = [
+  V1_2_MyChange,
+  V1_2_AnotherChange,
 ];
 
 export function registerAllVersionChanges() {
   VersionChangeRegistryClass.register({
-    version: ApiVersion.V1_3,
-    changes: V1_3_CHANGES
+    version: ApiVersion.V1_2,
+    changes: V1_2_CHANGES
   });
   // ... other versions
 }
@@ -134,15 +154,27 @@ export function registerAllVersionChanges() {
 
 ### Side Effect Changes
 
+For changes that only affect behavior (no data transformation):
+
 ```typescript
-export class V1_3_MySideEffect extends VersionChange {
-  readonly hasSideEffects = true;  // Mark as side effect
-  // ... rest
-}
+import { NoOpSchema } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
+
+export const V0_2_InvoicesAlwaysExpanded = defineVersionChange({
+  oldVersion: ApiVersion.V0_2,
+  newVersion: ApiVersion.V1_1,
+  description: "Invoices were always expanded in V0_2 (no expand param)",
+  affectedResources: [AffectedResource.Customer],
+  hasSideEffects: true,  // This is a side-effect-only change
+  newSchema: NoOpSchema,
+  oldSchema: NoOpSchema,
+  
+  transformResponse: ({ input }) => input,  // No transformation
+});
 
 // In handler:
-if (ctx.apiVersion.lt(ApiVersion.V1_3)) {
-  // Handle side effect logic
+if (ctx.apiVersion.lt(ApiVersion.V1_1)) {
+  // Handle side effect logic (e.g., always expand invoices)
+  expandArray.push(CusExpand.Invoices);
 }
 ```
 

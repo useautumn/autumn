@@ -4,7 +4,7 @@ import {
 } from "@models/rewardModels/rewardModels/rewardEnums.js";
 import { z } from "zod/v4";
 
-export const APIDiscountSchema = z.object({
+export const ApiDiscountSchema = z.object({
 	id: z.string(), // either from Autumn or Stripe
 	name: z.string(),
 
@@ -21,9 +21,9 @@ export const APIDiscountSchema = z.object({
 	total_discount_amount: z.number().nullish(),
 });
 
-export const APICusRewardsSchema = z.object({
-	discounts: z.array(APIDiscountSchema),
+export const ApiCusRewardsSchema = z.object({
+	discounts: z.array(ApiDiscountSchema),
 });
 
-export type APIDiscount = z.infer<typeof APIDiscountSchema>;
-export type APIDiscountList = z.infer<typeof APICusRewardsSchema>;
+export type ApiDiscount = z.infer<typeof ApiDiscountSchema>;
+export type ApiCusRewards = z.infer<typeof ApiCusRewardsSchema>;

@@ -202,7 +202,7 @@ export const expectSubToBeCorrect = async ({
 
 		// Add to schedules
 		const scheduleIndexes: number[] = [];
-		const apiVersion = cusProduct.api_version || defaultApiVersion;
+		const apiVersion = cusProduct.api_semver || defaultApiVersion;
 
 		if (isFreeProduct(product.prices)) {
 			expect(cusProduct.subscription_ids, "free product should have no subs").to
@@ -244,7 +244,7 @@ export const expectSubToBeCorrect = async ({
 					cp.product.group === product.group &&
 					cp.status === CusProductStatus.Scheduled &&
 					(cp.internal_entity_id
-						? cp.internal_entity_id == cusProduct.internal_entity_id
+						? cp.internal_entity_id === cusProduct.internal_entity_id
 						: nullish(cp.internal_entity_id)),
 			);
 
@@ -324,7 +324,6 @@ export const expectSubToBeCorrect = async ({
 					);
 
 					if (existingIndex !== -1) {
-						// @ts-expect-error
 						supposedSubItems[existingIndex].quantity += lineItem.quantity;
 					} else {
 						supposedSubItems.push({

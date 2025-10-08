@@ -1,8 +1,4 @@
-import {
-	EntityExpand,
-	EntityResponseSchema,
-	LegacyVersion,
-} from "@autumn/shared";
+import { ApiEntitySchema, EntityExpand, LegacyVersion } from "@autumn/shared";
 import { invoicesToResponse } from "@/internal/invoices/invoiceUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { routeHandler } from "@/utils/routerUtils.js";
@@ -20,7 +16,7 @@ export const handleGetEntity = async (req: any, res: any) =>
 			const customerId = req.params.customer_id as string;
 			const expand = parseEntityExpand(req.query.expand);
 
-			const { orgId, env, db, logger, features } = req;
+			const { env, db, logger, features } = req;
 
 			const org = await OrgService.getFromReq(req);
 			const apiVersion = orgToVersion({
@@ -50,7 +46,7 @@ export const handleGetEntity = async (req: any, res: any) =>
 			const withInvoices = expand.includes(EntityExpand.Invoices);
 
 			res.status(200).json(
-				EntityResponseSchema.parse({
+				ApiEntitySchema.parse({
 					...entity,
 					invoices: withInvoices
 						? invoicesToResponse({

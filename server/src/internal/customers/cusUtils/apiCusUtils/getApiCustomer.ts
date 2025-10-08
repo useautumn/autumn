@@ -1,25 +1,63 @@
 import {
 	AffectedResource,
+	type ApiCustomer,
 	ApiCustomerSchema,
 	applyResponseVersionChanges,
+	backwardsChangeActive,
+	CusExpand,
+	type CustomerLegacyData,
 	type FullCustomer,
+	V0_2_InvoicesAlwaysExpanded,
 } from "@autumn/shared";
+import { z } from "zod/v4";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { getApiCusFeatures } from "./getApiCusFeature/getApiCusFeatures.js";
+import { getApiCusProducts } from "./getApiCusProduct/getApiCusProducts.js";
+import { getApiCustomerExpand } from "./getApiCustomerExpand.js";
 
 export const getApiCustomer = async ({
 	ctx,
 	fullCus,
+	expand,
+	withAutumnId = false,
 }: {
 	ctx: RequestContext;
 	fullCus: FullCustomer;
+	expand: CusExpand[];
+	withAutumnId?: boolean;
 }) => {
+	// SIDE EFFECT
+	if (
+		backwardsChangeActive({
+			apiVersion: ctx.apiVersion,
+			versionChange: V0_2_InvoicesAlwaysExpanded,
+		})
+	) {
+		expand.push(CusExpand.Invoices);
+	}
+
 	const apiCusFeatures = await getApiCusFeatures({
 		ctx,
 		fullCus,
 	});
 
-	const apiCustomer = ApiCustomerSchema.parse({
+	const { apiCusProducts, legacyData: cusProductLegacyData } =
+		await getApiCusProducts({
+			ctx,
+			fullCus,
+		});
+
+	const apiCusExpand = await getApiCustomerExpand({
+		ctx,
+		fullCus,
+		expand,
+	});
+
+	const apiCustomer = ApiCustomerSchema.extend({
+		autumn_id: z.string().optional(),
+	}).parse({
+		autumn_id: withAutumnId ? fullCus.internal_id : undefined,
+
 		id: fullCus.id || null,
 		created_at: fullCus.created_at,
 		name: fullCus.name || null,
@@ -28,23 +66,18 @@ export const getApiCustomer = async ({
 
 		stripe_id: fullCus.processor?.id || null,
 		env: fullCus.env,
+		metadata: fullCus.metadata,
 
-		products: [],
+		products: apiCusProducts,
 		features: apiCusFeatures,
-
-		// invoices: z.array(APIInvoiceSchema).optional(),
-		// trials_used: z.array(APITrialsUsedSchema).optional(),
-
-		// rewards: APICusRewardsSchema.nullish(),
-		// metadata: z.record(z.any(), z.any()).default({}),
-		// entities: z.array(EntityResponseSchema).optional(),
-		// referrals: z.array(APICusReferralSchema).optional(),
-		// upcoming_invoice: APICusUpcomingInvoiceSchema.nullish(),
-		// payment_method: z.any().nullish(),
+		...apiCusExpand,
 	});
 
-	return applyResponseVersionChanges({
+	return applyResponseVersionChanges<ApiCustomer, CustomerLegacyData>({
 		input: apiCustomer,
+		legacyData: {
+			cusProductLegacyData,
+		},
 		targetVersion: ctx.apiVersion,
 		resource: AffectedResource.Customer,
 	});

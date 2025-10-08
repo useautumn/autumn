@@ -76,7 +76,8 @@ const ops = [
 			{ product: g2Pro, status: CusProductStatus.Active },
 			{ product: g1Pro, status: CusProductStatus.Scheduled },
 		],
-		// otherProducts: [g2Pro],
+		otherProducts: [g2Pro],
+		skipFeatureCheck: true,
 	},
 ];
 
@@ -123,6 +124,9 @@ describe(`${chalk.yellowBright("mergedGroup1: Testing products from diff groups"
 
 	it("should attach pro product", async () => {
 		for (const op of ops) {
+			// console.log(
+			// 	`Op: ${op.product.id}, Other Products: ${op.otherProducts?.map((p) => p.id).join(", ")}`,
+			// );
 			await attachAndExpectCorrect({
 				autumn,
 				customerId,
@@ -132,6 +136,7 @@ describe(`${chalk.yellowBright("mergedGroup1: Testing products from diff groups"
 				db,
 				org,
 				env,
+				skipFeatureCheck: op.skipFeatureCheck,
 			});
 
 			const customer = await autumn.customers.get(customerId);

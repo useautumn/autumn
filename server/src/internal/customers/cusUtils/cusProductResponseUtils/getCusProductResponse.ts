@@ -1,5 +1,5 @@
 import {
-	APICusProductSchema,
+	ApiCusProductSchema,
 	ApiVersion,
 	type ApiVersionClass,
 	CusProductStatus,
@@ -149,7 +149,7 @@ export const getCusProductResponse = async ({
 			options: cusProduct.options,
 		});
 
-		return APICusProductSchema.parse({
+		return ApiCusProductSchema.parse({
 			id: fullProduct.id,
 			name: fullProduct.name,
 			group: fullProduct.group || null,

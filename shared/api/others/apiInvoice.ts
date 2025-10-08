@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
 
-export const APIInvoiceItemSchema = z.object({
+export const ApiInvoiceItemSchema = z.object({
 	description: z.string(),
 	period_start: z.number(),
 	period_end: z.number(),
@@ -9,7 +9,7 @@ export const APIInvoiceItemSchema = z.object({
 	feature_name: z.string().optional(),
 });
 
-export const APIInvoiceSchema = z.object({
+export const ApiInvoiceSchema = z.object({
 	product_ids: z.array(z.string()),
 	stripe_id: z.string(),
 	status: z.string(),
@@ -21,5 +21,4 @@ export const APIInvoiceSchema = z.object({
 	// period_end: z.number().nullish(),
 });
 
-export const APIInvoiceListSchema = z.array(APIInvoiceSchema);
-export type APIInvoice = z.infer<typeof APIInvoiceSchema>;
+export type ApiInvoice = z.infer<typeof ApiInvoiceSchema>;
