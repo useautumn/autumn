@@ -115,6 +115,8 @@ mainRouter.use(
 					cookie: req.headers.cookie,
 					"Content-Type": "application/json",
 					origin: req.get("origin"),
+					"x-client-type": "dashboard",
+					app_env: req.env || req.headers.app_env,
 				},
 			});
 			return client as any;
