@@ -45,7 +45,7 @@ export const handleUpdateProductV2 = createRoute({
 				orgId: org.id,
 				env,
 				version: version ? parseInt(version) : undefined,
-				allowNotFound: upsert === "true",
+				allowNotFound: upsert === true,
 			}),
 			RewardProgramService.getByProductId({
 				db,
@@ -102,7 +102,7 @@ export const handleUpdateProductV2 = createRoute({
 		const cusProductExists = cusProductsCurVersion.length > 0;
 
 		if (cusProductExists && itemsExist) {
-			if (disable_version === "true") {
+			if (disable_version) {
 				throw new RecaseError({
 					message: "Cannot auto save product as there are existing customers",
 				});
