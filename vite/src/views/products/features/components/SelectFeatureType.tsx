@@ -1,12 +1,11 @@
+import {
+	ApiFeatureType,
+	type CreateFeature,
+	FeatureType,
+} from "@autumn/shared";
+import { ArrowUp01, Flag } from "lucide-react";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { SelectType } from "@/components/general/SelectType";
-import {
-	APIFeatureType,
-	CreateFeature,
-	FeatureType,
-	FeatureUsageType,
-} from "@autumn/shared";
-import { Zap, Clock, ArrowUp01, Flag } from "lucide-react";
 import { defaultMeteredConfig } from "../utils/defaultFeatureConfig";
 
 export const SelectFeatureType = ({
@@ -19,12 +18,12 @@ export const SelectFeatureType = ({
 	const featureType = feature.type;
 	const usageType = feature.config?.usage_type;
 
-	const setFeatureType = (type: APIFeatureType) => {
+	const setFeatureType = (type: ApiFeatureType) => {
 		// 1. If type is boolean
-		if (type === APIFeatureType.Boolean) {
+		if (type === ApiFeatureType.Boolean) {
 			setFeature({
 				...feature,
-				type: APIFeatureType.Boolean,
+				type: ApiFeatureType.Boolean,
 				config: undefined,
 			});
 		} else {
@@ -74,7 +73,7 @@ export const SelectFeatureType = ({
             description="Features that are either enabled or disabled, like 'premium models'"
             icon={<ToggleLeft className="h-3 w-3 text-t3" />}
             isSelected={featureType === FeatureType.Boolean}
-            onClick={() => setFeatureType(APIFeatureType.Boolean)}
+            onClick={() => setFeatureType(ApiFeatureType.Boolean)}
           /> */}
 			</div>
 		</div>

@@ -16,6 +16,7 @@ import { beforeSessionCreated } from "./authUtils/beforeSessionCreated.js";
 import { ADMIN_USER_IDs } from "./constants.js";
 
 export const auth = betterAuth({
+	baseURL: process.env.BETTER_AUTH_URL,
 	telemetry: {
 		enabled: false,
 	},
@@ -51,14 +52,24 @@ export const auth = betterAuth({
 			},
 		},
 	},
-	trustedOrigins: [
-		"http://localhost:3000",
-		"https://app.useautumn.com",
-		"https://staging.useautumn.com",
-		"https://*.useautumn.com",
-		"https://staging-server-lbpi.onrender.com",
-		process.env.CLIENT_URL || "https://staging.useautumn.com",
-	],
+	trustedOrigins: (() => {
+		const origins = [
+			"http://localhost:3000",
+			"https://app.useautumn.com",
+			"https://staging.useautumn.com",
+			"https://*.useautumn.com",
+		];
+
+		// Add dynamic port origins in development
+		if (process.env.NODE_ENV === "development") {
+			// Add ports 3000-3010 for multiple instances
+			for (let i = 0; i <= 10; i++) {
+				origins.push(`http://localhost:${3000 + i}`);
+			}
+		}
+
+		return origins;
+	})(),
 	emailAndPassword: {
 		enabled: true,
 		disableSignUp: false,

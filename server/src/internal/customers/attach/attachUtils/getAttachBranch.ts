@@ -5,15 +5,14 @@ import {
 	BillingInterval,
 	cusProductToPrices,
 	cusProductToProduct,
+	ErrCode,
 	type FeatureOptions,
 	type FullCusProduct,
-	productsAreSame,
 } from "@autumn/shared";
-import { ErrCode } from "@/errors/errCodes.js";
 import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 import { hasPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
-
+import { productsAreSame } from "@/internal/products/productUtils/compareProductUtils.js";
 import {
 	isFreeProduct,
 	isProductUpgrade,
@@ -105,7 +104,7 @@ const getOptionsToUpdate = ({
 			internalFeatureId: internalFeatureId!,
 		});
 
-		if (price?.config.interval == BillingInterval.OneOff) continue;
+		if (price?.config.interval === BillingInterval.OneOff) continue;
 
 		if (existingOptions && existingOptions.quantity !== newOptions.quantity) {
 			optionsToUpdate.push({
@@ -220,7 +219,7 @@ const getSameProductBranch = async ({
 
 	// 3. If main product
 	if (curScheduledProduct && !product.is_add_on) {
-		if (curScheduledProduct.product.id == product.id) {
+		if (curScheduledProduct.product.id === product.id) {
 			throw new RecaseError({
 				message: `Product ${product.name} is already scheduled, can't attach again`,
 				code: ErrCode.InvalidRequest,

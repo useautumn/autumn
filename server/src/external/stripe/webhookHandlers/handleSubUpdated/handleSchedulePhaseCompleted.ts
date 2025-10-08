@@ -124,9 +124,15 @@ export const handleSchedulePhaseCompleted = async ({
 				},
 			});
 		} catch (error: any) {
-			logger.error(
-				`schedule.phase.completed: failed to cancel schedule ${schedule.id}, error: ${error.message}`,
-			);
+			if (process.env.NODE_ENV === "development") {
+				logger.warn(
+					`schedule.phase.completed: failed to cancel schedule ${schedule.id}, error: ${error.message}`,
+				);
+			} else {
+				logger.error(
+					`schedule.phase.completed: failed to cancel schedule ${schedule.id}, error: ${error.message}`,
+				);
+			}
 		}
 	}
 };

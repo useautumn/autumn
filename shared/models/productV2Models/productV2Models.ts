@@ -1,5 +1,4 @@
-import { z } from "zod";
-import { AppEnv } from "../genModels/genEnums.js";
+import { z } from "zod/v4";
 import { FreeTrialSchema } from "../productModels/freeTrialModels/freeTrialModels.js";
 import { ProductItemSchema } from "./productItemModels/productItemModels.js";
 

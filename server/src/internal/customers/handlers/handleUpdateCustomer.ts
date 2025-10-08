@@ -1,15 +1,17 @@
-import RecaseError from "@/utils/errorUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { notNullish } from "@/utils/genUtils.js";
-import { routeHandler } from "@/utils/routerUtils.js";
 import { CreateCustomerSchema, ErrCode, ProcessorType } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import { getCustomerDetails } from "../cusUtils/getCustomerDetails.js";
-import { parseCusExpand } from "../cusUtils/cusUtils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
+import { CusService } from "@/internal/customers/CusService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { ExtendedResponse } from "@/utils/models/Request.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
+import type {
+	ExtendedRequest,
+	ExtendedResponse,
+} from "@/utils/models/Request.js";
+import { routeHandler } from "@/utils/routerUtils.js";
+import { parseCusExpand } from "../cusUtils/cusUtils.js";
+import { getCustomerDetails } from "../cusUtils/getCustomerDetails.js";
 
 export const handleUpdateCustomer = async (req: any, res: any) =>
 	routeHandler({
@@ -38,7 +40,7 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
 				});
 			}
 
-			let newCusData: any = CreateCustomerSchema.parse(req.body);
+			const newCusData: any = CreateCustomerSchema.parse(req.body);
 
 			if (req.body.id === null) {
 				throw new RecaseError({
@@ -70,7 +72,7 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
 
 			// Try to update stripe ID
 			let stripeId = originalCustomer.processor?.id;
-			let newStripeId = newCusData.stripe_id;
+			const newStripeId = newCusData.stripe_id;
 
 			if (notNullish(newStripeId) && stripeId !== newStripeId) {
 				const stripeCli = createStripeCli({ org, env: req.env });
@@ -83,16 +85,16 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
 			}
 
 			// 2. Check if customer email is being changed
-			let oldMetadata = originalCustomer.metadata || {};
-			let newMetadata = newCusData.metadata || {};
-			for (let key in newMetadata) {
+			const oldMetadata = originalCustomer.metadata || {};
+			const newMetadata = newCusData.metadata || {};
+			for (const key in newMetadata) {
 				if (newMetadata[key] === null) {
 					delete newMetadata[key];
 					delete oldMetadata[key];
 				}
 			}
 
-			let stripeUpdate = {
+			const stripeUpdate = {
 				email:
 					originalCustomer.email !== newCusData.email
 						? newCusData.email
@@ -123,7 +125,7 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
 				},
 			});
 
-			let finalCustomer = await CusService.getFull({
+			const finalCustomer = await CusService.getFull({
 				db,
 				idOrInternalId: originalCustomer.internal_id,
 				orgId: req.orgId,
@@ -132,7 +134,7 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
 			});
 
 			// res.status(200).json({ customer: updatedCustomer });
-			let customerDetails = await getCustomerDetails({
+			const customerDetails = await getCustomerDetails({
 				db,
 				customer: finalCustomer,
 				org,
@@ -141,7 +143,7 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
 				cusProducts: finalCustomer.customer_products,
 				expand: parseCusExpand(req.query.expand as string),
 				features,
-				reqApiVersion: req.apiVersion,
+				apiVersion: req.apiVersion,
 			});
 
 			res.status(200).json(customerDetails);

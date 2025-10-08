@@ -1,5 +1,5 @@
 import type {
-	APIVersion,
+	ApiVersion,
 	AttachReplaceable,
 	AttachScenario,
 	Customer,
@@ -69,7 +69,7 @@ export type AttachParams = {
 	internalEntityId?: string;
 
 	checkoutSessionParams?: any;
-	apiVersion?: number;
+	apiVersion?: ApiVersion;
 	scenario?: AttachScenario;
 
 	fromMigration?: boolean;
@@ -109,7 +109,7 @@ export type InsertCusProductParams = {
 	entityId?: string;
 	internalEntityId?: string;
 	fromMigration?: boolean;
-	apiVersion?: APIVersion;
+	apiVersion?: ApiVersion;
 	finalizeInvoice?: boolean;
 };
 

@@ -1,19 +1,20 @@
 import dotenv from "dotenv";
+
 dotenv.config();
+
 import {
-	Customer,
-	Feature,
-	FullProduct,
-	MigrationJob,
+	type Customer,
+	type Feature,
+	type FullProduct,
+	type MigrationJob,
 	MigrationJobStep,
 } from "@autumn/shared";
-import { MigrationService } from "../MigrationService.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { migrateCustomer } from "./migrateCustomer.js";
-import { sendMigrationEmail } from "../../emails/sendMigrationEmail.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
+import { MigrationService } from "../MigrationService.js";
+import { migrateCustomer } from "./migrateCustomer.js";
 
 export const migrateCustomers = async ({
 	db,
@@ -41,17 +42,17 @@ export const migrateCustomers = async ({
 	});
 
 	let batchCount = 0;
-	let { org_id: orgId, env } = migrationJob;
+	const { org_id: orgId, env } = migrationJob;
 
-	let org = await OrgService.get({
+	const org = await OrgService.get({
 		db,
 		orgId,
 	});
 
 	// Create stripe prices if they don't exist
-	let stripeCli = createStripeCli({ org, env });
-	let batchCreate = [];
-	for (let price of toProduct.prices) {
+	const stripeCli = createStripeCli({ org, env });
+	const batchCreate = [];
+	for (const price of toProduct.prices) {
 		batchCreate.push(
 			createStripePriceIFNotExist({
 				db,
@@ -67,12 +68,12 @@ export const migrateCustomers = async ({
 
 	await Promise.all(batchCreate);
 
-	let batchSize = 5;
+	const batchSize = 5;
 
 	for (let i = 0; i < customers.length; i += batchSize) {
-		let batchCustomers = customers.slice(i, i + batchSize);
-		let batchPromises = [];
-		for (let customer of batchCustomers) {
+		const batchCustomers = customers.slice(i, i + batchSize);
+		const batchPromises = [];
+		for (const customer of batchCustomers) {
 			if (!customer.id) continue;
 			batchPromises.push(
 				migrateCustomer({
@@ -90,9 +91,9 @@ export const migrateCustomers = async ({
 			);
 		}
 
-		let results = await Promise.all(batchPromises);
-		let numPassed = results.filter((r) => r).length;
-		let numFailed = results.filter((r) => !r).length;
+		const results = await Promise.all(batchPromises);
+		const numPassed = results.filter((r) => r).length;
+		const numFailed = results.filter((r) => !r).length;
 		logger.info(
 			`Job: ${migrationJob.id} - Migrated ${i + batchCustomers.length}/${
 				customers.length
@@ -100,14 +101,14 @@ export const migrateCustomers = async ({
 		);
 
 		// Get current number of customers migrated
-		let curMigrationJob = await MigrationService.getJob({
+		const curMigrationJob = await MigrationService.getJob({
 			db,
 			id: migrationJob.id,
 		});
-		let curSucceeded =
+		const curSucceeded =
 			curMigrationJob.step_details[MigrationJobStep.MigrateCustomers]
 				?.succeeded || 0;
-		let curFailed =
+		const curFailed =
 			curMigrationJob.step_details[MigrationJobStep.MigrateCustomers]?.failed ||
 			0;
 
@@ -134,7 +135,7 @@ export const migrateCustomers = async ({
 	}
 
 	// Get number of errors
-	let migrationDetails: any = {};
+	const migrationDetails: any = {};
 	// try {
 	//   let errors = await MigrationService.getErrors({
 	//     db,
@@ -152,7 +153,7 @@ export const migrateCustomers = async ({
 	//   logger.error(error);
 	// }
 
-	let curMigrationJob = await MigrationService.getJob({
+	const curMigrationJob = await MigrationService.getJob({
 		db,
 		id: migrationJob.id,
 	});

@@ -1,9 +1,9 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 import { FreeTrialDuration } from "./freeTrialEnums.js";
 
 export const FreeTrialSchema = z.object({
 	id: z.string(),
-	duration: z.nativeEnum(FreeTrialDuration),
+	duration: z.enum(FreeTrialDuration),
 	length: z.number(),
 	unique_fingerprint: z.boolean(),
 
@@ -26,15 +26,5 @@ export const CreateFreeTrialSchema = z.object({
 	card_required: z.boolean().default(true),
 });
 
-export const FreeTrialResponseSchema = z.object({
-	// id: z.string(),
-	duration: z.nativeEnum(FreeTrialDuration),
-	length: z.number(),
-	unique_fingerprint: z.boolean(),
-	trial_available: z.boolean().nullish().default(true),
-	card_required: z.boolean().nullish(),
-});
-
 export type FreeTrial = z.infer<typeof FreeTrialSchema>;
 export type CreateFreeTrial = z.infer<typeof CreateFreeTrialSchema>;
-export type FreeTrialResponse = z.infer<typeof FreeTrialResponseSchema>;

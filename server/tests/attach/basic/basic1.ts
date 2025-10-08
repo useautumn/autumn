@@ -1,20 +1,19 @@
+import { LegacyVersion } from "@autumn/shared";
+import { expect } from "chai";
 import chalk from "chalk";
+import { setupBefore } from "tests/before.js";
+import { AutumnCli } from "tests/cli/AutumnCli.js";
+import { features, products } from "tests/global.js";
+import { TestFeature } from "tests/setup/v2Features.js";
+import { compareMainProduct } from "tests/utils/compare.js";
+import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
+import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { expect } from "chai";
-
-import { setupBefore } from "tests/before.js";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { features, products } from "tests/global.js";
-import { compareMainProduct } from "tests/utils/compare.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { APIVersion } from "@autumn/shared";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
 
 const freeProd = constructProduct({
 	type: "free",
@@ -33,8 +32,8 @@ const freeProd = constructProduct({
 // UNCOMMENT FROM HERE
 const testCase = "basic1";
 describe(`${chalk.yellowBright("basic1: Testing attach free product")}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_2 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_2 });
 	let db, org, env;
 
 	before(async function () {
@@ -67,7 +66,7 @@ describe(`${chalk.yellowBright("basic1: Testing attach free product")}`, () => {
 		});
 	});
 
-	it("should create customer and have default free active", async function () {
+	it("should create customer and have default free active", async () => {
 		const data = await AutumnCli.getCustomer(customerId);
 
 		compareMainProduct({
@@ -76,7 +75,7 @@ describe(`${chalk.yellowBright("basic1: Testing attach free product")}`, () => {
 		});
 	});
 
-	it("should have correct entitlements", async function () {
+	it("should have correct entitlements", async () => {
 		const expectedEntitlement = products.free.entitlements.metered1;
 
 		const entitled = (await AutumnCli.entitled(
@@ -94,12 +93,12 @@ describe(`${chalk.yellowBright("basic1: Testing attach free product")}`, () => {
 		expect(metered1Balance.unlimited).to.not.exist;
 	});
 
-	it("should have correct boolean1 entitlement", async function () {
+	it("should have correct boolean1 entitlement", async () => {
 		const entitled = await AutumnCli.entitled(customerId, features.boolean1.id);
 		expect(entitled!.allowed).to.be.false;
 	});
 
-	it("should attach free (with $0 price) and force checkout and succeed", async function () {
+	it("should attach free (with $0 price) and force checkout and succeed", async () => {
 		await autumn.attach({
 			customer_id: customerId,
 			product_id: freeProd.id,

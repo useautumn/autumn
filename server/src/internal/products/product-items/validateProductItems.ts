@@ -5,19 +5,17 @@ import {
 	type Feature,
 	FeatureType,
 	Infinite,
-	itemToEntInterval,
 	OnIncrease,
 	type ProductItem,
 	ProductItemInterval,
 	ProductItemSchema,
-	type RolloverConfig,
-	RolloverDuration,
 	UsageModel,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import { createFeaturesFromItems } from "./createFeaturesFromItems.js";
+import { itemToEntInterval } from "./itemIntervalUtils.js";
 import {
 	isBooleanFeatureItem,
 	isFeatureItem,
@@ -90,6 +88,15 @@ const validateProductItem = ({
 
 		if (nullish(item.included_usage)) {
 			item.included_usage = 0;
+		}
+
+		// 4a. Check if included usage is negative
+		if (typeof item.included_usage === "number" && item.included_usage < 0) {
+			throw new RecaseError({
+				message: `Included usage must be 0 or greater`,
+				code: ErrCode.InvalidInputs,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
 		}
 	}
 
@@ -262,11 +269,11 @@ export const validateProductItems = ({
 
 	for (let index = 0; index < newItems.length; index++) {
 		const item = newItems[index];
-		const entInterval = itemToEntInterval({ item });
+		const entInterval = itemToEntInterval(item);
 		const intervalCount = item.interval_count || 1;
 
 		if (isFeaturePriceItem(item) && entInterval === EntInterval.Lifetime) {
-			const otherItem = newItems.find((i: ProductItem, index2: number) => {
+			const otherItem = newItems.find((i: any, index2: any) => {
 				return i.feature_id === item.feature_id && index2 !== index;
 			});
 
@@ -281,7 +288,7 @@ export const validateProductItems = ({
 
 		// Boolean duplicate
 		if (isBooleanFeatureItem(item)) {
-			const otherItem = newItems.find((i: ProductItem, index2: number) => {
+			const otherItem = newItems.find((i: any, index2: any) => {
 				return (
 					i.feature_id === item.feature_id &&
 					index2 !== index &&
@@ -298,11 +305,11 @@ export const validateProductItems = ({
 			}
 		}
 
-		const otherItem = newItems.find((i: ProductItem, index2: number) => {
+		const otherItem = newItems.find((i: any, index2: any) => {
 			return (
 				i.feature_id === item.feature_id &&
 				index2 !== index &&
-				itemToEntInterval({ item: i }) === entInterval &&
+				itemToEntInterval(i) === entInterval &&
 				(i.interval_count || 1) === intervalCount &&
 				i.entity_feature_id === item.entity_feature_id
 			);
@@ -337,7 +344,7 @@ export const validateProductItems = ({
 		}
 
 		if (isPriceItem(item)) {
-			const otherItem = newItems.find((i: ProductItem, index2: number) => {
+			const otherItem = newItems.find((i: any, index2: any) => {
 				return i.interval === item.interval && index2 !== index;
 			});
 
@@ -349,6 +356,26 @@ export const validateProductItems = ({
 				});
 			}
 		}
+	}
+
+	// 6. Can't have both weekly and monthly price items in the same product
+	const hasWeeklyPrice = newItems.some(
+		(item) =>
+			(isPriceItem(item) || isFeaturePriceItem(item)) &&
+			item.interval === ProductItemInterval.Week
+	);
+	const hasMonthlyPrice = newItems.some(
+		(item) =>
+			(isPriceItem(item) || isFeaturePriceItem(item)) &&
+			item.interval === ProductItemInterval.Month
+	);
+
+	if (hasWeeklyPrice && hasMonthlyPrice) {
+		throw new RecaseError({
+			message: `Can't have both weekly and monthly price items in the same product`,
+			code: ErrCode.InvalidInputs,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
 	}
 
 	return { allFeatures, newFeatures };

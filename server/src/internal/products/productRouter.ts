@@ -1,4 +1,4 @@
-import { ErrCode, productsAreSame } from "@autumn/shared";
+import { ProductNotFoundError } from "@autumn/shared";
 
 import { Router } from "express";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
@@ -6,16 +6,15 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { checkStripeProductExists } from "@/internal/products/productUtils.js";
-import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
+import { handleRequestError } from "@/utils/errorUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { CusProductService } from "../customers/cusProducts/CusProductService.js";
 import { handleCopyProduct } from "./handlers/handleCopyProduct.js";
-import { handleCreateProduct } from "./handlers/handleCreateProduct.js";
 import { handleDeleteProduct } from "./handlers/handleDeleteProduct.js";
 import { handleGetProduct } from "./handlers/handleGetProduct.js";
 import { handleGetProductDeleteInfo } from "./handlers/handleGetProductDeleteInfo.js";
 import { handleListProductsBeta } from "./handlers/handleListProductsBeta.js";
-import { handleUpdateProductV2 } from "./handlers/handleUpdateProduct/handleUpdateProduct.js";
+import { productsAreSame } from "./productUtils/compareProductUtils.js";
 
 export const productBetaRouter: Router = Router();
 productBetaRouter.get("", handleListProductsBeta);
@@ -24,11 +23,9 @@ export const productRouter: Router = Router();
 
 productRouter.get("", handleListProductsBeta);
 
-productRouter.post("", handleCreateProduct);
-
 productRouter.get("/:productId", handleGetProduct);
 
-productRouter.post("/:productId", handleUpdateProductV2);
+// productRouter.post("/:productId", handleUpdateProductV2);
 
 productRouter.delete("/:productId", handleDeleteProduct);
 
@@ -121,11 +118,7 @@ productRouter.get("/:productId/has_customers", async (req: any, res: any) =>
 			});
 
 			if (!product) {
-				throw new RecaseError({
-					message: `Product with id ${productId} not found`,
-					code: ErrCode.ProductNotFound,
-					statusCode: 404,
-				});
+				throw new ProductNotFoundError({ productId });
 			}
 
 			const cusProductsCurVersion =
@@ -152,3 +145,15 @@ productRouter.get("/:productId/has_customers", async (req: any, res: any) =>
 );
 
 productRouter.get("/:productId/deletion_info", handleGetProductDeleteInfo);
+
+import { Hono } from "hono";
+import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { createProduct } from "./handlers/handleCreateProduct.js";
+import { handleUpdateProductV2 } from "./handlers/handleUpdateProduct/handleUpdateProduct.js";
+
+// Create a Hono app for products
+export const honoProductRouter = new Hono<HonoEnv>();
+
+// POST /products - Create a product
+honoProductRouter.post("", ...createProduct);
+honoProductRouter.post("/:productId", ...handleUpdateProductV2);

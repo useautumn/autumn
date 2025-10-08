@@ -1,33 +1,30 @@
-import chalk from "chalk";
-import Stripe from "stripe";
-
-import { expect } from "chai";
-
 import {
-	APIVersion,
-	AppEnv,
+	type AppEnv,
 	CouponDurationType,
-	CreateReward,
-	Organization,
+	type CreateReward,
+	LegacyVersion,
+	type Organization,
 	RewardType,
 } from "@autumn/shared";
-
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import { expect } from "chai";
+import chalk from "chalk";
+import type Stripe from "stripe";
 import { setupBefore } from "tests/before.js";
-import {
-	constructArrearItem,
-	constructFeatureItem,
-} from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { expectAttachCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { createProducts, createReward } from "tests/utils/productUtils.js";
 import {
 	addPrefixToProducts,
 	getBasePrice,
 } from "tests/utils/testProductUtils/testProductUtils.js";
-import { createProducts, createReward } from "tests/utils/productUtils.js";
-import { expectAttachCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import {
+	constructArrearItem,
+	constructFeatureItem,
+} from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
 const pro = constructProduct({
 	type: "pro",
@@ -64,16 +61,16 @@ const reward: CreateReward = {
 
 const testCase = "coupon3";
 describe(chalk.yellow(`${testCase} - Testing attach coupon`), () => {
-	let customerId = testCase;
+	const customerId = testCase;
 	let stripeCli: Stripe;
 	let testClockId: string;
 
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let org: Organization;
 	let env: AppEnv;
 	let db: DrizzleCli;
 
-	let couponAmount = reward.discount_config!.discount_value;
+	const couponAmount = reward.discount_config!.discount_value;
 
 	before(async function () {
 		await setupBefore(this);
@@ -132,7 +129,7 @@ describe(chalk.yellow(`${testCase} - Testing attach coupon`), () => {
 		});
 
 		const invoice = customer.invoices![0];
-		let basePrice = getBasePrice({ product: pro });
+		const basePrice = getBasePrice({ product: pro });
 		expect(invoice.total).to.equal(basePrice - couponAmount);
 	});
 
@@ -150,7 +147,7 @@ describe(chalk.yellow(`${testCase} - Testing attach coupon`), () => {
 		});
 
 		const invoice = customer.invoices![0];
-		let basePrice = getBasePrice({ product: oneOff });
+		const basePrice = getBasePrice({ product: oneOff });
 		expect(invoice.total).to.equal(basePrice - couponAmount);
 		expect(invoice.product_ids).to.include(oneOff.id);
 	});
@@ -169,9 +166,9 @@ describe(chalk.yellow(`${testCase} - Testing attach coupon`), () => {
 		});
 
 		expect(customer.invoices!.length).to.equal(3);
-		let basePrice = getBasePrice({ product: oneOff });
+		const basePrice = getBasePrice({ product: oneOff });
 		for (let i = 0; i < 2; i++) {
-			let invoice = customer.invoices![i];
+			const invoice = customer.invoices![i];
 			expect(invoice.total).to.equal(basePrice - couponAmount);
 			expect(invoice.product_ids).to.include(oneOff.id);
 		}

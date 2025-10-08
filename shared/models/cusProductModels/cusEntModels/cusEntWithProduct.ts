@@ -1,6 +1,6 @@
+import type { z } from "zod/v4";
 import { CusProductSchema, FullCusProductSchema } from "../cusProductModels.js";
 import { FullCustomerEntitlementSchema } from "./cusEntModels.js";
-import { z } from "zod";
 
 export const FullCusEntWithProductSchema = FullCustomerEntitlementSchema.extend(
 	{

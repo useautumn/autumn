@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 import { FeatureSchema } from "../featureModels/featureModels.js";
 import { AppEnv } from "../genModels/genEnums.js";
 import { EntitlementSchema } from "./entModels/entModels.js";
@@ -13,7 +13,7 @@ export const ProductSchema = z.object({
 	version: z.number(),
 	group: z.string(),
 
-	env: z.nativeEnum(AppEnv),
+	env: z.enum(AppEnv),
 	internal_id: z.string(),
 	org_id: z.string(),
 	created_at: z.number(),
@@ -49,23 +49,6 @@ export const UpdateProductSchema = z.object({
 	archived: z.boolean().optional(),
 });
 
-export const FrontendProductSchema = ProductSchema.omit({
-	org_id: true,
-	created_at: true,
-	env: true,
-	processor: true,
-}).extend({
-	isActive: z.boolean(),
-	prices: z.array(PriceSchema),
-	entitlements: z.array(
-		EntitlementSchema.extend({
-			feature: FeatureSchema,
-		}),
-	),
-	free_trial: FreeTrialSchema,
-	options: z.any(),
-});
-
 export const FullProductSchema = ProductSchema.extend({
 	prices: z.array(PriceSchema),
 	entitlements: z.array(
@@ -87,7 +70,6 @@ export type ProductCounts = {
 };
 
 export type Product = z.infer<typeof ProductSchema>;
-export type FrontendProduct = z.infer<typeof FrontendProductSchema>;
 export type FullProduct = z.infer<typeof FullProductSchema>;
 export type CreateProduct = z.infer<typeof CreateProductSchema>;
 export type UpdateProduct = z.infer<typeof UpdateProductSchema>;

@@ -1,13 +1,18 @@
-import { AppEnv, AuthType, Feature, Organization } from "@autumn/shared";
-import { Logtail } from "@logtail/node";
+import type {
+	ApiVersionClass,
+	AppEnv,
+	AuthType,
+	Feature,
+	Organization,
+} from "@autumn/shared";
+import type { ClickHouseClient } from "@clickhouse/client";
+import type { Logtail } from "@logtail/node";
 import type {
 	Request as ExpressRequest,
 	Response as ExpressResponse,
 } from "express";
-
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { PostHog } from "posthog-node";
-import { ClickHouseClient } from "@clickhouse/client";
+import type { PostHog } from "posthog-node";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export interface ExtendedRequest extends ExpressRequest {
 	orgId: string;
@@ -25,7 +30,7 @@ export interface ExtendedRequest extends ExpressRequest {
 	authType?: AuthType;
 
 	posthog?: PostHog;
-	apiVersion?: number;
+	apiVersion: ApiVersionClass;
 
 	timestamp?: number;
 }

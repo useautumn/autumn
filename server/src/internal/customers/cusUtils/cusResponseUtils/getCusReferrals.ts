@@ -1,7 +1,10 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import {
+	ApiCusReferralSchema,
+	CusExpand,
+	type FullCustomer,
+} from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionService.js";
-import { CusExpand, FullCustomer } from "@autumn/shared";
-import { CusReferralResponseSchema } from "@autumn/shared";
 
 export const getCusReferrals = async ({
 	db,
@@ -16,7 +19,7 @@ export const getCusReferrals = async ({
 		return undefined;
 	}
 
-	let referred = await RewardRedemptionService.getByReferrer({
+	const referred = await RewardRedemptionService.getByReferrer({
 		db,
 		internalCustomerId: fullCus.internal_id,
 		withCustomer: true,
@@ -25,7 +28,7 @@ export const getCusReferrals = async ({
 	});
 
 	return referred.map((r) =>
-		CusReferralResponseSchema.parse({
+		ApiCusReferralSchema.parse({
 			program_id: r.reward_program?.id,
 			customer: {
 				id: r.customer.id,

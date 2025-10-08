@@ -2,7 +2,7 @@ import {
 	type AppEnv,
 	BillingInterval,
 	BillingType,
-	type CreateProduct,
+	type CreateProductV2Params,
 	EntInterval,
 	type Entitlement,
 	EntitlementSchema,
@@ -75,21 +75,28 @@ export const constructProduct = ({
 	orgId,
 	env,
 	processor,
-	baseVariantId,
 }: {
-	productData: CreateProduct;
+	productData: CreateProductV2Params;
 	orgId: string;
 	env: AppEnv;
-	processor?: any;
-	baseVariantId?: string | null;
+	processor?: {
+		id: string;
+		type: string;
+	};
 }) => {
 	const newProduct: Product = {
-		...productData,
-		org_id: orgId,
+		id: productData.id,
+		name: productData.name,
+		is_add_on: productData.is_add_on,
+		is_default: productData.is_default,
+		version: productData.version || 1,
+		group: productData.group,
+
 		env,
-		processor,
 		internal_id: generateId("prod"),
+		org_id: orgId,
 		created_at: Date.now(),
+		processor,
 		base_variant_id: null,
 		archived: false,
 	};

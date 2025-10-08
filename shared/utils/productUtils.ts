@@ -1,9 +1,9 @@
 import { Decimal } from "decimal.js";
-import { type ProductItem, type ProductV2 } from "../index.js";
+import type { ProductItem, ProductV2 } from "../index.js";
 import {
 	isFeaturePriceItem,
 	isPriceItem,
-} from "./productV2Utils/productItemUtils/getItemType.js";
+} from "./productDisplayUtils/getItemType.js";
 import { nullish } from "./utils.js";
 
 export const isFreeProductV2 = ({ items }: { items: ProductItem[] }) => {

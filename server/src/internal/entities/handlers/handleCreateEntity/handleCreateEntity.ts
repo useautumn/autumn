@@ -1,12 +1,17 @@
-import { EntityService } from "../../../api/entities/EntityService.js";
-import { APIVersion, CreateEntity, CustomerData, Entity } from "@autumn/shared";
-import { getEntityResponse } from "../../../api/entities/getEntityUtils.js";
-import { orgToVersion } from "@/utils/versionUtils.js";
+import {
+	type CreateEntity,
+	type CustomerData,
+	type Entity,
+	LegacyVersion,
+} from "@autumn/shared";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
+import { orgToVersion } from "@/utils/versionUtils/legacyVersionUtils.js";
+import { EntityService } from "../../../api/entities/EntityService.js";
+import { getEntityResponse } from "../../../api/entities/getEntityUtils.js";
 import { constructEntity } from "../../entityUtils/entityUtils.js";
-import { validateAndGetInputEntities } from "./getInputEntities.js";
 import { createEntityForCusProduct } from "./createEntityForCusProduct.js";
+import { validateAndGetInputEntities } from "./getInputEntities.js";
 
 export const createEntities = async ({
 	req,
@@ -24,7 +29,7 @@ export const createEntities = async ({
 	customerId: string;
 	createEntityData: CreateEntity[] | CreateEntity;
 	withAutumnId?: boolean;
-	apiVersion?: APIVersion;
+	apiVersion?: LegacyVersion;
 	fromAutoCreate?: boolean;
 }) => {
 	const { db, org, env, features } = req;
@@ -59,9 +64,9 @@ export const createEntities = async ({
 		}),
 	);
 
-	let newEntities: Entity[] = [];
+	const newEntities: Entity[] = [];
 	if (existingEntities.some((e: any) => e.id === null)) {
-		let updatedEntity = await EntityService.update({
+		const updatedEntity = await EntityService.update({
 			db,
 			internalId: existingEntities.find((e: any) => e.id === null)!.internal_id,
 			update: {
@@ -74,7 +79,7 @@ export const createEntities = async ({
 		newEntities.push(updatedEntity);
 	}
 
-	let insertedEntities = await EntityService.insert({
+	const insertedEntities = await EntityService.insert({
 		db,
 		data,
 	});
@@ -85,7 +90,7 @@ export const createEntities = async ({
 		return newEntities;
 	}
 
-	let { entities } = await getEntityResponse({
+	const { entities } = await getEntityResponse({
 		db,
 		entityIds: newEntities.map((e: any) => e.id || e.internal_id),
 		org,
@@ -109,12 +114,12 @@ export const handlePostEntityRequest = async (req: any, res: any) =>
 		handler: async (req: any, res: any) => {
 			const { logtail: logger, org } = req;
 
-			let apiVersion = orgToVersion({
+			const apiVersion = orgToVersion({
 				org,
 				reqApiVersion: req.apiVersion,
 			});
 
-			let customerData =
+			const customerData =
 				Array.isArray(req.body) && req.body.length > 0
 					? req.body[0].customer_data
 					: req.body.customer_data;
@@ -131,7 +136,7 @@ export const handlePostEntityRequest = async (req: any, res: any) =>
 
 			logger.info(`  Created / replaced entities!`);
 
-			if (apiVersion < APIVersion.v1_2) {
+			if (apiVersion < LegacyVersion.v1_2) {
 				res.status(200).json({
 					success: true,
 				});

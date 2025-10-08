@@ -1,4 +1,4 @@
-// import { z } from "zod";
+// import { z } from "zod/v4";
 // import { EntityBalance, EntityBalanceSchema } from "../../../index.js";
 // import { jsonb } from "drizzle-orm/pg-core";
 

@@ -1,21 +1,20 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
-	APIVersion,
-	AppEnv,
+	type AppEnv,
 	AttachBranch,
-	Organization,
-	ProductItem,
-	ProductV2,
+	type Organization,
+	type ProductItem,
+	type ProductV2,
 } from "@autumn/shared";
 import { expect } from "chai";
-import Stripe from "stripe";
+import type Stripe from "stripe";
 import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
 import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
 import {
 	expectSubItemsCorrect,
 	getSubsFromCusId,
 } from "tests/utils/expectUtils/expectSubUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 
 const runUpdateEntsTest = async ({
 	autumn,
@@ -87,10 +86,10 @@ const runUpdateEntsTest = async ({
 		env,
 	});
 
-	let invoicesBefore = subsBefore.map((sub) => sub.latest_invoice);
-	let invoicesAfter = subsAfter.map((sub) => sub.latest_invoice);
-	let subIdsBefore = subsBefore.map((sub) => sub.id);
-	let subIdsAfter = subsAfter.map((sub) => sub.id);
+	const invoicesBefore = subsBefore.map((sub) => sub.latest_invoice);
+	const invoicesAfter = subsAfter.map((sub) => sub.latest_invoice);
+	const subIdsBefore = subsBefore.map((sub) => sub.id);
+	const subIdsAfter = subsAfter.map((sub) => sub.id);
 
 	// let periodEndsBefore = subsBefore.map((sub) => sub.current_period_end);
 	// let periodEndsAfter = subsAfter.map((sub) => sub.current_period_end);

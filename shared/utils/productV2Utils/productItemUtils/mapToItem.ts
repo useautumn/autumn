@@ -12,7 +12,6 @@ import type { Price } from "../../../models/productModels/priceModels/priceModel
 import { Infinite } from "../../../models/productModels/productEnums.js";
 import {
 	type ProductItem,
-	type ProductItemConfig,
 	ProductItemFeatureType,
 	TierInfinite,
 	UsageModel,

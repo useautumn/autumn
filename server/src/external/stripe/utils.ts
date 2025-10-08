@@ -1,17 +1,15 @@
-import { ErrCode } from "@/errors/errCodes.js";
+import {
+	AppEnv,
+	BillingInterval,
+	ErrCode,
+	type Feature,
+	Infinite,
+	type Organization,
+	type UsagePriceConfig,
+} from "@autumn/shared";
+import Stripe from "stripe";
 import { decryptData } from "@/utils/encryptUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
-import {
-	BillingInterval,
-	Feature,
-	FullProduct,
-	Infinite,
-	Organization,
-	UsagePriceConfig,
-} from "@autumn/shared";
-
-import { AppEnv } from "@autumn/shared";
-import Stripe from "stripe";
 
 export const createStripeCli = ({
 	org,
@@ -24,20 +22,20 @@ export const createStripeCli = ({
 	// apiVersion?: string;
 	legacyVersion?: boolean;
 }) => {
-	let encrypted =
-		env == AppEnv.Sandbox
+	const encrypted =
+		env === AppEnv.Sandbox
 			? org.stripe_config?.test_api_key
 			: org.stripe_config?.live_api_key;
 
 	if (!encrypted) {
 		throw new RecaseError({
-			message: `Please connect your Stripe ${env == AppEnv.Sandbox ? "test" : "live"} secret key. You can find it here: https://dashboard.stripe.com${env == AppEnv.Sandbox ? "/test" : ""}/apikeys`,
+			message: `Please connect your Stripe ${env === AppEnv.Sandbox ? "test" : "live"} secret key. You can find it here: https://dashboard.stripe.com${env === AppEnv.Sandbox ? "/test" : ""}/apikeys`,
 			code: ErrCode.StripeConfigNotFound,
 			statusCode: 400,
 		});
 	}
 
-	let decrypted = decryptData(encrypted);
+	const decrypted = decryptData(encrypted);
 	return new Stripe(decrypted, {
 		apiVersion: legacyVersion
 			? ("2025-02-24.acacia" as any)
@@ -68,8 +66,8 @@ export const calculateMetered1Price = ({
 	for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
 		const tier = usageConfig.usage_tiers[i];
 
-		let amtUsed;
-		if (tier.to == -1 || tier.to == Infinite) {
+		let amtUsed: number;
+		if (tier.to === -1 || tier.to === Infinite) {
 			amtUsed = usage;
 		} else {
 			amtUsed = Math.min(usage, tier.to);
@@ -83,7 +81,7 @@ export const calculateMetered1Price = ({
 };
 
 export const subToAutumnInterval = (sub: Stripe.Subscription) => {
-	let recuringItem = sub.items.data.find((i) => i.price.recurring != null);
+	const recuringItem = sub.items.data.find((i) => i.price.recurring != null);
 	if (!recuringItem) {
 		return {
 			interval: BillingInterval.OneOff,
@@ -91,14 +89,17 @@ export const subToAutumnInterval = (sub: Stripe.Subscription) => {
 		};
 	}
 
+	if (!recuringItem.price.recurring) {
+		return {
+			interval: BillingInterval.OneOff,
+			intervalCount: 1,
+		};
+	}
+
 	return {
-		interval: recuringItem.price.recurring!.interval as BillingInterval,
-		intervalCount: recuringItem.price.recurring!.interval_count || 1,
+		interval: recuringItem.price.recurring.interval as BillingInterval,
+		intervalCount: recuringItem.price.recurring.interval_count || 1,
 	};
-	// return stripeToAutumnInterval({
-	//   interval: recuringItem.price.recurring!.interval,
-	//   intervalCount: recuringItem.price.recurring!.interval_count,
-	// });
 };
 
 // export const stripeToAutumnInterval = ({

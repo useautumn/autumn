@@ -1,25 +1,25 @@
-import chalk from "chalk";
-import { setupBefore } from "tests/before.js";
-import { Stripe } from "stripe";
-import { createProducts } from "tests/utils/productUtils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-	APIVersion,
-	AppEnv,
+	type AppEnv,
 	CusProductStatus,
-	Organization,
+	LegacyVersion,
+	type Organization,
 } from "@autumn/shared";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import chalk from "chalk";
 import { addDays } from "date-fns";
+import type { Stripe } from "stripe";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { expectMultiAttachCorrect } from "tests/utils/expectUtils/expectMultiAttach.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
-let growth = constructProduct({
+const growth = constructProduct({
 	id: "growth",
 	items: [
 		constructFeatureItem({ featureId: TestFeature.Words, includedUsage: 100 }),
@@ -27,7 +27,7 @@ let growth = constructProduct({
 	type: "growth",
 });
 
-let premium = constructProduct({
+const premium = constructProduct({
 	id: "premium",
 	items: [
 		constructFeatureItem({ featureId: TestFeature.Words, includedUsage: 200 }),
@@ -36,7 +36,7 @@ let premium = constructProduct({
 	trial: true,
 });
 
-let pro = constructProduct({
+const pro = constructProduct({
 	id: "pro",
 	items: [
 		constructFeatureItem({
@@ -63,9 +63,9 @@ const ops = [
 
 const testCase = "multiAttach1";
 describe(`${chalk.yellowBright("multiAttach1: Testing multi attach for trial products and update product quantities mid trial")}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({
-		version: APIVersion.v1_4,
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({
+		version: LegacyVersion.v1_4,
 		orgConfig: { entity_product: true },
 	});
 
@@ -111,7 +111,7 @@ describe(`${chalk.yellowBright("multiAttach1: Testing multi attach for trial pro
 		testClockId = testClockId1!;
 	});
 
-	it("should run multi attach through checkout and have correct sub", async function () {
+	it("should run multi attach through checkout and have correct sub", async () => {
 		const productsList = [
 			{
 				product_id: pro.id,
@@ -143,7 +143,7 @@ describe(`${chalk.yellowBright("multiAttach1: Testing multi attach for trial pro
 		});
 	});
 
-	it("should advance clock and update premium & growth while trialing", async function () {
+	it("should advance clock and update premium & growth while trialing", async () => {
 		const newProducts = [
 			{
 				product_id: premium.id,

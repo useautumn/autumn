@@ -1,17 +1,15 @@
 import {
 	BillingType,
 	ErrCode,
-	FullProduct,
-	Price,
+	type Feature,
+	type FullProduct,
+	type Price,
 	PriceType,
-	Product,
-	UsagePriceConfig,
+	type Product,
+	type UsagePriceConfig,
 } from "@autumn/shared";
-
-import { Feature } from "@autumn/shared";
-import { getBillingType } from "../priceUtils.js";
-import Stripe from "stripe";
 import RecaseError from "@/utils/errorUtils.js";
+import { getBillingType } from "../priceUtils.js";
 
 export const findPrepaidPrice = ({
 	prices,
@@ -21,15 +19,16 @@ export const findPrepaidPrice = ({
 	internalFeatureId?: string;
 }) => {
 	return prices.find((p: Price) => {
-		if (p.config.type != PriceType.Usage) return false;
+		if (p.config.type !== PriceType.Usage) return false;
 
 		const billingType = getBillingType(p.config);
+
 		const config = p.config as UsagePriceConfig;
 
-		if (billingType != BillingType.UsageInAdvance) return false;
+		if (billingType !== BillingType.UsageInAdvance) return false;
 
 		if (internalFeatureId) {
-			return config.internal_feature_id == internalFeatureId;
+			return config.internal_feature_id === internalFeatureId;
 		} else return true;
 	});
 };

@@ -1,30 +1,30 @@
 import {
 	ActionType,
-	AppEnv,
-	AuthType,
-	FullCusProduct,
-	FullProduct,
+	type AppEnv,
+	type AuthType,
+	createdAtToVersion,
+	cusProductToProduct,
+	type FullCusProduct,
+	type FullProduct,
 	notNullish,
-	Organization,
+	type Organization,
 } from "@autumn/shared";
-
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
+import { ActionService } from "@/internal/analytics/ActionService.js";
+import {
+	constructAction,
+	parseReqForAction,
+} from "@/internal/analytics/actionUtils.js";
+import { getSingleEntityResponse } from "@/internal/api/entities/getEntityUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
-
+import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
 import { getCustomerDetails } from "@/internal/customers/cusUtils/getCustomerDetails.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
-import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { ActionService } from "@/internal/analytics/ActionService.js";
-import { constructAction } from "@/internal/analytics/actionUtils.js";
-import { parseReqForAction } from "@/internal/analytics/actionUtils.js";
-import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
-import { cusProductToProduct } from "@autumn/shared";
-import { getSingleEntityResponse } from "@/internal/api/entities/getEntityUtils.js";
+import { addTaskToQueue } from "@/queue/queueUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 
 interface ActionDetails {
 	request_id: string;
@@ -121,10 +121,9 @@ export const handleProductsUpdated = async ({
 	} = data;
 
 	// Product:
-	let product = cusProduct.product;
-	let fullProduct: FullProduct = cusProductToProduct({ cusProduct });
-
-	let customer = await CusService.getFull({
+	const product = cusProduct.product;
+	const fullProduct: FullProduct = cusProductToProduct({ cusProduct });
+	const customer = await CusService.getFull({
 		db,
 		idOrInternalId: data.customerId || data.internalCustomerId,
 		orgId: data.org.id,
@@ -139,6 +138,10 @@ export const handleProductsUpdated = async ({
 		env,
 	});
 
+	const apiVersion = createdAtToVersion({
+		createdAt: org.created_at || Date.now(),
+	});
+
 	const cusDetails = await getCustomerDetails({
 		db,
 		customer: customer,
@@ -148,6 +151,7 @@ export const handleProductsUpdated = async ({
 		logger,
 		cusProducts: customer.customer_products,
 		expand: [],
+		apiVersion,
 	});
 
 	const productRes = await getProductResponse({
@@ -157,7 +161,7 @@ export const handleProductsUpdated = async ({
 
 	try {
 		if (req) {
-			let action = constructAction({
+			const action = constructAction({
 				org,
 				env,
 				customer,
@@ -203,16 +207,6 @@ export const handleProductsUpdated = async ({
 			features,
 		});
 	}
-
-	// console.log(`Sending svix event for customer ${customer.id}`);
-	// console.log(
-	//   "Products:",
-	//   cusDetails.products.map((p) => ({
-	//     id: p.id,
-	//     status: p.status,
-	//     quantity: p.quantity,
-	//   }))
-	// );
 
 	// 2. Send Svix event
 	await sendSvixEvent({

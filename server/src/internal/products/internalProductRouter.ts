@@ -1,7 +1,10 @@
-import { ErrCode, type FeatureOptions, UsageModel } from "@autumn/shared";
+import {
+	type FeatureOptions,
+	ProductNotFoundError,
+	UsageModel,
+} from "@autumn/shared";
 import { Router } from "express";
-import { StatusCodes } from "http-status-codes";
-import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
+import { handleFrontendReqError } from "@/utils/errorUtils.js";
 import { CusProdReadService } from "../customers/cusProducts/CusProdReadService.js";
 import { FeatureService } from "../features/FeatureService.js";
 import { MigrationService } from "../migrations/MigrationService.js";
@@ -62,13 +65,6 @@ productRouter.get("/product_counts", async (req: any, res) => {
 
 		const counts = await Promise.all(
 			products.map(async (product) => {
-				// if (latestVersion) {
-				//   return CusProdReadService.getCounts({
-				//     db,
-				//     internalProductId: product.internal_id,
-				//   });
-				// }
-
 				return CusProdReadService.getCountsForAllVersions({
 					db,
 					productId: product.id,
@@ -147,13 +143,7 @@ productRouter.get("/:productId/data2", async (req: any, res) => {
 		]);
 
 		if (!product) {
-			throw new RecaseError({
-				message: `Product ${productId} ${
-					version ? `(v${version})` : ""
-				} not found`,
-				code: ErrCode.ProductNotFound,
-				statusCode: StatusCodes.NOT_FOUND,
-			});
+			throw new ProductNotFoundError({ productId, version });
 		}
 
 		const productV2 = mapToProductV2({
@@ -190,13 +180,7 @@ productRouter.get("/:productId/count", async (req: any, res) => {
 		});
 
 		if (!product) {
-			throw new RecaseError({
-				message: `Product ${productId} ${
-					version ? `(v${version})` : ""
-				} not found`,
-				code: ErrCode.ProductNotFound,
-				statusCode: StatusCodes.NOT_FOUND,
-			});
+			throw new ProductNotFoundError({ productId, version });
 		}
 
 		// Get counts from postgres
@@ -418,13 +402,7 @@ productRouter.get("/:productId/data", async (req: any, res) => {
 			]);
 
 		if (!product) {
-			throw new RecaseError({
-				message: `Product ${productId} ${
-					version ? `(v${version})` : ""
-				} not found`,
-				code: ErrCode.ProductNotFound,
-				statusCode: StatusCodes.NOT_FOUND,
-			});
+			throw new ProductNotFoundError({ productId, version });
 		}
 
 		const defaultProds = await ProductService.listDefault({
@@ -481,7 +459,6 @@ productRouter.post("/product_options", async (req: any, res: any) => {
 	try {
 		const { items } = req.body;
 
-		const features = await FeatureService.getFromReq(req);
 		const featureToOptions: { [key: string]: FeatureOptions } = {};
 
 		for (const item of items) {

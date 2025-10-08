@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 import { BillingInterval } from "../priceEnums.js";
 import { UsageTierSchema } from "./usagePriceConfig.js";
 

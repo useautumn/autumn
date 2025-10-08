@@ -5,6 +5,7 @@ import {
 	type Customer,
 	customers,
 	type EntityExpand,
+	ErrCode,
 	type FullCusProduct,
 	type FullCustomer,
 	type Organization,
@@ -13,7 +14,6 @@ import { trace } from "@opentelemetry/api";
 import { and, eq, ilike, or, sql } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { ErrCode } from "@/errors/errCodes.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
 import { RELEVANT_STATUSES } from "./cusProducts/CusProductService.js";
@@ -77,7 +77,7 @@ export class CusService {
 
 				const result = await db.execute(query);
 
-				if (!result || result.length == 0) {
+				if (!result || result.length === 0) {
 					if (allowNotFound) {
 						// @ts-expect-error
 						return null as FullCustomer;

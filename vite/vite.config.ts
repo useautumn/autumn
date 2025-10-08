@@ -28,8 +28,8 @@ export default defineConfig({
 	},
 	server: {
 		host: "0.0.0.0", // Required for Docker
-		port: 3000,
-		strictPort: true,
+		port: process.env.VITE_PORT ? Number.parseInt(process.env.VITE_PORT) : 3000,
+		strictPort: false, // Allow fallback to next available port
 		allowedHosts: [
 			"dev.useautumn.com",
 			"client.dev.useautumn.com",
@@ -40,7 +40,7 @@ export default defineConfig({
 			interval: 1000,
 		},
 		hmr: {
-			port: 3000,
+			port: process.env.VITE_PORT ? Number.parseInt(process.env.VITE_PORT) : 3000,
 		},
 	},
 });
