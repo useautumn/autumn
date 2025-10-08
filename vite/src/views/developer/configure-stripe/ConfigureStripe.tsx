@@ -132,15 +132,21 @@ export const ConfigureStripe = () => {
 							</span>
 							<InfoTooltip>
 								<div className="max-w-xs">
-									<p className="mb-2">The following scopes are needed:</p>
-									<ul className="list-disc list-inside space-y-0.5">
-										<li>Core</li>
-										<li>Checkout</li>
-										<li>Billing</li>
-										<li>All webhook</li>
-										<li>Accounts</li>
+                                    <p className="mb-2">The following scopes are needed:</p>
+                                    <ul className="list-disc list-inside space-y-0.5">
+										<li>Core (read & write)</li>
+										<li>Checkout (read & write)</li>
+										<li>Billing (read & write)</li>
+										<li>All webhooks (write)</li>
+										<li>Connect → Account Links (write)</li>
 									</ul>
-								</div>
+
+									<p className="mt-2 mb-2 text-xs">
+										In your Stripe dashboard, go to <strong>Developers → API keys</strong>, click {" "}
+										<strong>Create restricted key</strong>, and enable the scopes above with the 
+										listed permissions.
+									</p>
+                                </div>
 							</InfoTooltip>
 						</div>
 					)}
