@@ -116,9 +116,10 @@ export const BasePriceSection = () => {
 							disabled={disabled}
 							value={basePrice?.amount ?? ""}
 							onChange={(e) => {
-								handleUpdateBasePrice({
-									amount: e.target.value,
-								});
+								if (e.target.value !== "" && Number(e.target.value) >= 0)
+									handleUpdateBasePrice({
+										amount: e.target.value,
+									});
 							}}
 						/>
 					</div>

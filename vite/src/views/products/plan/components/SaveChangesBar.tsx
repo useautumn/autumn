@@ -3,6 +3,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/v2/buttons/Button";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
+import { useProductChangedAlert } from "@/components/v2/hooks";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useProductCountsQuery } from "../../product/hooks/queries/useProductCountsQuery";
 import { useProductQuery } from "../../product/hooks/useProductQuery";
@@ -37,6 +38,11 @@ export const SaveChangesBar = ({
 	const originalProduct = isOnboarding
 		? onboardingOriginalProduct
 		: queryOriginalProduct;
+
+	const { modal } = useProductChangedAlert({
+		hasChanges: diff.hasChanges,
+		disabled: isOnboarding, // Disable navigation blocking in onboarding mode
+	});
 
 	const handleSaveClicked = async () => {
 		if (!isOnboarding && isLoading) {
@@ -82,26 +88,29 @@ export const SaveChangesBar = ({
 	if (!diff.hasChanges) return null;
 
 	return (
-		<div className="w-full flex justify-center items-center h-20 mb-10">
-			<div
-				className={`flex items-center gap-2 p-2 pl-3 rounded-xl border border-input bg-white ${
-					isOnboarding ? "shadow-lg" : ""
-				}`}
-			>
-				<p className="text-body whitespace-nowrap truncate">
-					You have unsaved changes
-				</p>
-				<Button variant="secondary" onClick={handleDiscardClicked}>
-					Discard
-				</Button>
-				<ShortcutButton
-					metaShortcut="s"
-					onClick={handleSaveClicked}
-					isLoading={saving}
+		<>
+			{modal}
+			<div className="w-full flex justify-center items-center h-20 mb-10">
+				<div
+					className={`flex items-center gap-2 p-2 pl-3 rounded-xl border border-input bg-white ${
+						isOnboarding ? "shadow-lg" : ""
+					}`}
 				>
-					Save
-				</ShortcutButton>
+					<p className="text-body whitespace-nowrap truncate">
+						You have unsaved changes
+					</p>
+					<Button variant="secondary" onClick={handleDiscardClicked}>
+						Discard
+					</Button>
+					<ShortcutButton
+						metaShortcut="s"
+						onClick={handleSaveClicked}
+						isLoading={saving}
+					>
+						Save
+					</ShortcutButton>
+				</div>
 			</div>
-		</div>
+		</>
 	);
 };

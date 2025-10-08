@@ -167,7 +167,12 @@ export function PriceTiers() {
 									onFocus={() => handleInputFocus(amountKey, tier.amount)}
 									onBlur={() => handleInputBlur(amountKey, "amount", index)}
 									onChange={(e) =>
-										handleInputChange(amountKey, e.target.value, "amount", index)
+										handleInputChange(
+											amountKey,
+											e.target.value,
+											"amount",
+											index,
+										)
 									}
 									inputMode="decimal"
 									placeholder="0.00"
