@@ -68,7 +68,8 @@ export function BillingType() {
 				<div className="flex-1">
 					<div className="text-body-highlight mb-1">Included</div>
 					<div className="text-body-secondary leading-tight">
-						Set included usage limits with reset intervals (e.g. 100{" "}
+						Set included usage limits with reset intervals (e.g.{" "}
+						{item.included_usage}{" "}
 						{getFeatureName({
 							feature: features.find((f) => f.id === item.feature_id),
 							plural: true,
@@ -87,7 +88,7 @@ export function BillingType() {
 				<div className="flex-1">
 					<div className="text-body-highlight mb-1">Priced</div>
 					<div className="text-body-secondary leading-tight">
-						Set usage and overage pricing (e.g. 100{" "}
+						Set usage and overage pricing (e.g. {item.included_usage}{" "}
 						{getFeatureName({
 							feature: features.find((f) => f.id === item.feature_id),
 							plural: true,

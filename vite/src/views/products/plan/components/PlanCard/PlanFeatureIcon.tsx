@@ -24,8 +24,13 @@ const getFeatureType = (item: ProductItem): ProductItemFeatureType | null => {
 const getBillingType = (
 	item: ProductItem,
 ): "included" | "prepaid" | "paid" | "none" => {
-	// Check if it's included/free (no price and no usage model)
-	if (!item.price && !item.usage_model && !item.price_config) {
+	// Check if it's included/free (no price, no usage model, and no tiers)
+	if (
+		!item.price &&
+		!item.usage_model &&
+		!item.price_config &&
+		(!item.tiers || item.tiers.length === 0)
+	) {
 		return "included";
 	}
 
@@ -65,7 +70,6 @@ const getLeftIcon = (
 		case "metered" as unknown: // Handle metered features from FeatureType enum
 			return { icon: UsageBasedIcon, color: "text-primary" }; // Metered - pink
 		default:
-			console.warn(`Unknown feature type: ${featureType}`);
 			return { icon: UsageBasedIcon, color: "text-primary" }; // Default - pink
 	}
 };

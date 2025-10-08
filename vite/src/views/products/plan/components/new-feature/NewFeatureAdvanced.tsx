@@ -42,6 +42,18 @@ export function NewFeatureAdvanced({
 										})
 									}
 								/>
+								<span className="text-tiny">
+									Event names are only required if you want to link one event
+									from your application to multiple feature balances. Read more{" "}
+									<a
+										href="https://docs.useautumn.com/features/tracking-usage#using-event-names"
+										target="_blank"
+										rel="noreferrer"
+										className="text-primary underline"
+									>
+										here.
+									</a>
+								</span>
 							</div>
 						</div>
 					</div>

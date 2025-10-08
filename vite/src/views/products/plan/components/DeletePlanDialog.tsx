@@ -163,8 +163,8 @@ export const DeletePlanDialog = ({
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogContent onClick={(e) => e.stopPropagation()}>
-				<DialogHeader>
-					<DialogTitle>
+				<DialogHeader className="max-w-full">
+					<DialogTitle className="truncate max-w-[400px]">
 						{product.archived
 							? "Unarchive"
 							: hasCusProducts
@@ -172,7 +172,7 @@ export const DeletePlanDialog = ({
 								: "Delete"}{" "}
 						{product.name}
 					</DialogTitle>
-					<DialogDescription>
+					<DialogDescription className="max-w-[400px] break-words">
 						{getDeleteMessage()
 							.split("\n")
 							.map((line, index) => (
