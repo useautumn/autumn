@@ -1,14 +1,15 @@
 import { ApiProductItemSchema } from "@api/products/apiProductItem.js";
 import { Decimal } from "decimal.js";
-import type { FeatureOptions } from "../../models/cusProductModels/cusProductModels.js";
-import type { Feature } from "../../models/featureModels/featureModels.js";
+import type { FeatureOptions } from "@models/cusProductModels/cusProductModels.js";
+import type { Feature } from "@models/featureModels/featureModels.js";
 import {
+	type PriceTier,
 	type ProductItem,
 	UsageModel,
-} from "../../models/productV2Models/productItemModels/productItemModels.js";
-import { toApiFeature } from "../featureUtils.js";
-import { getProductItemDisplay } from "../productDisplayUtils.js";
-import { notNullish } from "../utils.js";
+} from "@models/productV2Models/productItemModels/productItemModels.js";
+import { toApiFeature } from "@utils/featureUtils.js";
+import { getProductItemDisplay } from "@utils/productDisplayUtils.js";
+import { notNullish } from "@utils/utils.js";
 import { getItemType } from "./getItemType.js";
 
 export const calculateProrationAmount = ({
@@ -67,7 +68,7 @@ export const itemToPriceOrTiers = ({
 		if (item.tiers.length > 1) {
 			return {
 				price: undefined,
-				tiers: item.tiers.map((tier) => ({
+				tiers: item.tiers.map((tier: PriceTier) => ({
 					...tier,
 					amount: proration
 						? calculateProrationAmount({
