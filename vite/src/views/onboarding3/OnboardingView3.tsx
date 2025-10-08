@@ -1,4 +1,4 @@
-import type { FrontendProduct } from "@autumn/shared";
+import type { FrontendProduct, ProductV2 } from "@autumn/shared";
 import { ArrowLeftIcon } from "lucide-react";
 import { useState } from "react";
 import { IconButton } from "@/components/v2/buttons/IconButton";
@@ -39,6 +39,7 @@ export default function OnboardingContent() {
 		setEditingState,
 		playgroundMode,
 		setPlaygroundMode,
+		isLoading,
 
 		// Handlers
 		handleNext,
@@ -122,13 +123,20 @@ export default function OnboardingContent() {
 									onNext={handleNext}
 									onBack={handleBack}
 									backDisabled={false}
-									nextDisabled={!validateStep(step, product, feature)}
+									nextDisabled={
+										!validateStep(
+											step,
+											product as unknown as ProductV2,
+											feature,
+										)
+									}
+									isLoading={isLoading}
 								/>
 							</div>
 						</div>
 
 						{/* Main content - centered between islands */}
-						<div className="w-full h-full flex items-center justify-center overflow-y-auto py-4 pl-[200px] pr-[432px]">
+						<div className="w-full h-full flex justify-center overflow-y-auto py-4 pl-[200px] pr-[432px]">
 							<OnboardingStepRenderer
 								step={step}
 								feature={feature}
@@ -210,7 +218,14 @@ export default function OnboardingContent() {
 											onNext={handleNext}
 											onBack={handleBack}
 											backDisabled={getStepNumber(step) === 1}
-											nextDisabled={!validateStep(step, product, feature)}
+											nextDisabled={
+												!validateStep(
+													step,
+													product as unknown as ProductV2,
+													feature,
+												)
+											}
+											isLoading={isLoading}
 										/>
 									</div>
 								</div>

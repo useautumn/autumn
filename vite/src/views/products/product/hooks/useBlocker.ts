@@ -46,11 +46,11 @@ export function useBlocker(
 		originalReplaceState.current = history.replaceState;
 
 		// Intercept pushState (used by React Router navigate)
-		history.pushState = async function (
+		history.pushState = async (
 			state: any,
 			title: string,
 			url?: string | URL | null,
-		) {
+		) => {
 			if (
 				!isNavigatingRef.current &&
 				url &&
@@ -70,11 +70,11 @@ export function useBlocker(
 		};
 
 		// Intercept replaceState
-		history.replaceState = async function (
+		history.replaceState = async (
 			state: any,
 			title: string,
 			url?: string | URL | null,
-		) {
+		) => {
 			if (
 				!isNavigatingRef.current &&
 				url &&

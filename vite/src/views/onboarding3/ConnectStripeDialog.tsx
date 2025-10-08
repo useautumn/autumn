@@ -49,13 +49,13 @@ export default function ConnectStripeDialog({
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogContent className="w-[500px]">
 				<DialogHeader>
-					<DialogTitle>Connect your Stripe account</DialogTitle>
+					<DialogTitle>Connect your Stripe sandbox account</DialogTitle>
 				</DialogHeader>
 
 				<div className="space-y-4">
 					<p className="text-body-secondary">
-						To enable checkout, connect your Stripe account. Grab your secret
-						key{" "}
+						To preview checkout, please connect your Stripe sandbox account.
+						Grab your test secret key from your API keys page{" "}
 						<a
 							href="https://dashboard.stripe.com/test/apikeys"
 							target="_blank"

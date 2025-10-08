@@ -66,8 +66,8 @@ export const OnboardingPreview = ({
 		<Card className="min-w-[28rem] max-w-xl mx-4 bg-card border-[#ddd] border-[0.5px] gap-0 p-4">
 			<CardHeader className="gap-0 px-0">
 				<div className="flex flex-row items-center justify-between w-full">
-					<div className="flex flex-row items-center gap-2">
-						<span className="text-main-sec w-fit whitespace-nowrap">
+					<div className="flex flex-row items-center gap-2 min-w-0 flex-1">
+						<span className="text-main-sec truncate">
 							{showBasicInfo && product?.name ? product.name : "Plan Preview"}
 						</span>
 						{showBasicInfo && product?.id && (
@@ -124,6 +124,11 @@ export const OnboardingPreview = ({
 					</IconButton>
 				)}
 
+				{!showFeatures && (
+					<span className="text-body-secondary mt-2">
+						Create a feature on the right
+					</span>
+				)}
 				{showFeatures && <Separator className="my-2" />}
 			</CardHeader>
 			<CardContent className="max-w-full px-0 gap-0">
