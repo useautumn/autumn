@@ -1,9 +1,9 @@
 import { PencilSimpleIcon, TrashIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
+import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { cn } from "@/lib/utils";
-import { useProductQuery } from "@/views/products/product/hooks/useProductQuery";
 import { useProductContext } from "@/views/products/product/ProductContext";
 import { DeletePlanDialog } from "../DeletePlanDialog";
 
@@ -21,13 +21,19 @@ export const PlanCardToolbar = ({
 	deleteDisabled,
 	deleteTooltip,
 }: PlanCardToolbarProps) => {
-	const { product } = useProductQuery();
-	const { editingState } = useProductContext();
+	const { editingState, product } = useProductContext();
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const isEditingPlan = editingState.type === "plan";
 
 	return (
 		<>
+			{product?.id && (
+				<CopyButton
+					text={product?.id ? product?.id : ""}
+					className="text-xs"
+					size="sm"
+				/>
+			)}
 			<DeletePlanDialog open={deleteOpen} setOpen={setDeleteOpen} />
 			<div className="flex flex-row items-center gap-1">
 				<IconButton
