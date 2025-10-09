@@ -71,9 +71,14 @@ export const OnboardingPreview = ({
 			<CardHeader className="gap-0 px-0">
 				<div className="flex flex-row items-center justify-between w-full">
 					<div className="flex flex-row items-center gap-2 min-w-0 flex-1">
-						<span className="text-main-sec truncate">
-							{showBasicInfo && product?.name ? product.name : "Plan Preview"}
-						</span>
+						{showBasicInfo && product?.name ? (
+							<span className="text-main-sec truncate">{product.name}</span>
+						) : (
+							<span className="text-main-sec !text-t4 truncate">
+								Name your product
+							</span>
+						)}
+
 						{playgroundMode === "edit" && product && (
 							<PlanTypeBadges product={product} />
 						)}
@@ -99,12 +104,12 @@ export const OnboardingPreview = ({
 					</span>
 				)}
 
-				{showBasicInfo &&
+				{/* {showBasicInfo &&
 					!(product?.description || product?.name || basePrice?.amount) && (
 						<span className="text-body-secondary">
 							Enter data on the right to see the preview
 						</span>
-					)}
+					)} */}
 
 				{showPricing && (
 					<IconButton
@@ -131,11 +136,11 @@ export const OnboardingPreview = ({
 						<DummyFeatureRow feature={feature} />
 					</>
 				)}
-				{!showFeatures && !showDummyFeature && (
+				{/* {!showFeatures && !showDummyFeature && (
 					<span className="text-body-secondary mt-2">
 						Create a feature on the right
 					</span>
-				)}
+				)} */}
 				{showFeatures && <Separator className="my-2" />}
 			</CardHeader>
 			<CardContent className="max-w-full px-0 gap-0">

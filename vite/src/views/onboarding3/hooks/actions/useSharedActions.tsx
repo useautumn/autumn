@@ -88,17 +88,18 @@ export const useSharedActions = ({
 	);
 
 	// Handle back navigation
-	const handleBack = useCallback(() => {
+	const handleBack = useCallback(async () => {
 		setSheet(null);
 		setEditingState({ type: null, id: null });
 
-		handleBackNavigation(
+		await handleBackNavigation(
 			step,
 			productCreatedRef,
 			featureCreatedRef,
 			baseProduct,
 			setBaseProduct,
 			setSelectedProductId,
+			axiosInstance,
 		);
 
 		popStep();
@@ -109,6 +110,7 @@ export const useSharedActions = ({
 		baseProduct,
 		setBaseProduct,
 		setSelectedProductId,
+		axiosInstance,
 		popStep,
 		setSheet,
 		setEditingState,

@@ -28,6 +28,7 @@ function TagInput({
 }: TagInputProps) {
 	const [internalInputValue, setInternalInputValue] = React.useState("");
 	const [isFocused, setIsFocused] = React.useState(false);
+	const inputRef = React.useRef<HTMLInputElement>(null);
 
 	const inputValue =
 		controlledInputValue !== undefined
@@ -80,17 +81,19 @@ function TagInput({
 	});
 
 	return (
-		<div
+		<button
+			type="button"
 			className={cn(
 				"file:text-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input w-full min-w-0 rounded-lg border bg-transparent outline-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
 				"aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
 				"placeholder:text-t6 placeholder:select-none input-base input-shadow shadow-sm min-h-input",
-				"flex items-center flex-wrap gap-2 p-2",
+				"flex items-center flex-wrap gap-2 p-2 cursor-text text-left",
 				isFocused && "data-state-open",
 				className,
 			)}
 			data-slot="input"
 			data-state={isFocused ? "open" : "closed"}
+			onClick={() => inputRef.current?.focus()}
 		>
 			{value.map((tag, index) => {
 				const displayValue = typeof tag === "string" ? tag : String(tag);
@@ -112,6 +115,7 @@ function TagInput({
 			})}
 			<input
 				{...props}
+				ref={inputRef}
 				type="text"
 				className="outline-none bg-transparent flex-grow min-w-[100px] text-base md:text-sm"
 				placeholder={value.length === 0 ? placeholder : ""}
@@ -120,7 +124,7 @@ function TagInput({
 				onFocus={() => setIsFocused(true)}
 				onBlur={() => setIsFocused(false)}
 			/>
-		</div>
+		</button>
 	);
 }
 

@@ -1,6 +1,6 @@
 import type { CreateFeature } from "@autumn/shared";
-import { NewFeatureAdvanced } from "../../products/plan/components/new-feature/NewFeatureAdvanced";
-import { NewFeatureBehaviour } from "../../products/plan/components/new-feature/NewFeatureBehaviour";
+import { NewFeatureAdvanced } from "@/views/products/plan/components/new-feature/NewFeatureAdvanced";
+import { NewFeatureBehaviour } from "@/views/products/plan/components/new-feature/NewFeatureBehaviour";
 import { NewFeatureDetails } from "../../products/plan/components/new-feature/NewFeatureDetails";
 import { NewFeatureType } from "../../products/plan/components/new-feature/NewFeatureType";
 

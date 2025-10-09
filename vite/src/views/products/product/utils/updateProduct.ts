@@ -12,10 +12,12 @@ import { validateItemsBeforeSave } from "../../plan/utils/validateItemsBeforeSav
 
 export const updateProduct = async ({
 	axiosInstance,
+	productId,
 	product,
 	onSuccess,
 }: {
 	axiosInstance: AxiosInstance;
+	productId: string;
 	product: ProductV2;
 	onSuccess: () => Promise<void>;
 }) => {
@@ -33,7 +35,7 @@ export const updateProduct = async ({
 			free_trial: product.free_trial,
 		};
 
-		await ProductService.updateProduct(axiosInstance, product.id, updateData);
+		await ProductService.updateProduct(axiosInstance, productId, updateData);
 
 		toast.success("Product updated successfully");
 

@@ -51,7 +51,7 @@ interface StepActionsProps {
 		type: "plan" | "feature" | null;
 		id: string | null;
 	}) => void;
-	setIsLoading: (loading: boolean) => void;
+	setIsButtonLoading: (loading: boolean) => void;
 }
 
 export const useStepActions = (props: StepActionsProps) => {
@@ -76,7 +76,7 @@ export const useStepActions = (props: StepActionsProps) => {
 		refetchFeatures,
 		setSheet,
 		setEditingState,
-		setIsLoading,
+		setIsButtonLoading,
 	} = props;
 
 	const navigate = useNavigate();
@@ -86,10 +86,10 @@ export const useStepActions = (props: StepActionsProps) => {
 	// Step-specific action hooks
 	const planDetailsActions = usePlanDetailsActions({
 		product,
+		baseProduct,
 		axiosInstance,
 		productCreatedRef,
 		setBaseProduct,
-		setIsLoading,
 	});
 
 	const featureCreationActions = useFeatureCreationActions({
@@ -100,7 +100,6 @@ export const useStepActions = (props: StepActionsProps) => {
 		setFeature,
 		setProduct,
 		setBaseProduct,
-		setIsLoading,
 	});
 
 	const featureConfigActions = useFeatureConfigActions({
@@ -142,7 +141,7 @@ export const useStepActions = (props: StepActionsProps) => {
 			step === OnboardingStep.PlanDetails ||
 			step === OnboardingStep.FeatureCreation
 		) {
-			setIsLoading(true);
+			setIsButtonLoading(true);
 		}
 
 		try {
@@ -174,7 +173,7 @@ export const useStepActions = (props: StepActionsProps) => {
 			}
 		} finally {
 			// Always clear loading state
-			setIsLoading(false);
+			setIsButtonLoading(false);
 		}
 	}, [
 		validateStep,
@@ -187,7 +186,7 @@ export const useStepActions = (props: StepActionsProps) => {
 		pushStep,
 		navigate,
 		env,
-		setIsLoading,
+		setIsButtonLoading,
 	]);
 
 	return {

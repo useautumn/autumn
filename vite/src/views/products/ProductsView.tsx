@@ -1,6 +1,6 @@
 "use client";
 
-import { type AppEnv } from "@autumn/shared";
+import type { AppEnv } from "@autumn/shared";
 import { useAppQueryStates } from "@/hooks/common/useAppQueryStates";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -13,7 +13,7 @@ import { RewardsPage } from "./rewards/RewardsPage";
 
 function ProductsView({ env }: { env: AppEnv }) {
 	const { queryStates, setQueryStates } = useAppQueryStates({
-		defaultTab: "products?tab=products",
+		defaultTab: "products",
 	});
 
 	const { isLoading: isProductsLoading } = useProductsQuery();
