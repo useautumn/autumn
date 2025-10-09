@@ -1,26 +1,19 @@
 "use client";
 
-import LoadingScreen from "../general/LoadingScreen";
-
-import { useState } from "react";
-import { useAxiosSWR } from "@/services/useAxiosSwr";
-import { Product } from "@autumn/shared";
-import { ProductsContext } from "./ProductsContext";
-import { AppEnv } from "@autumn/shared";
-import { Tabs } from "@/components/ui/tabs";
-import { useQueryState } from "nuqs";
-import { useSecondaryTab } from "@/hooks/common/useSecondaryTab";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { ProductsPage } from "./products/ProductsPage";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { FeaturesPage } from "./features/FeaturesPage";
-import { RewardsPage } from "./rewards/RewardsPage";
-import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
+import { type AppEnv } from "@autumn/shared";
 import { useAppQueryStates } from "@/hooks/common/useAppQueryStates";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
+import LoadingScreen from "../general/LoadingScreen";
+import { FeaturesPage } from "./features/FeaturesPage";
+import { ProductsContext } from "./ProductsContext";
+import { ProductsPage } from "./products/ProductsPage";
+import { RewardsPage } from "./rewards/RewardsPage";
 
 function ProductsView({ env }: { env: AppEnv }) {
 	const { queryStates, setQueryStates } = useAppQueryStates({
-		defaultTab: "products",
+		defaultTab: "products?tab=products",
 	});
 
 	const { isLoading: isProductsLoading } = useProductsQuery();
