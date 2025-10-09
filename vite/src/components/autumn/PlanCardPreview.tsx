@@ -97,7 +97,7 @@ export const PlanCardPreview = ({
 					)}
 				</div>
 
-				<Separator className="mt-4 mb-3" />
+				<Separator className="my-3" />
 			</CardHeader>
 
 			<CardContent className="flex flex-col flex-1 gap-4 !pt-0">
@@ -129,6 +129,7 @@ export const PlanCardPreview = ({
 							fill="none"
 							xmlns="http://www.w3.org/2000/svg"
 						>
+							<title>Arrow Right</title>
 							<path
 								d="M11.3316 5.8187L11.3311 2.66919L8.18164 2.6687"
 								stroke="currentColor"
@@ -161,6 +162,7 @@ export const PlanCardPreview = ({
 							fill="none"
 							xmlns="http://www.w3.org/2000/svg"
 						>
+							<title>Arrow Right</title>
 							<path
 								d="M11.3316 5.8187L11.3311 2.66919L8.18164 2.6687"
 								stroke="currentColor"

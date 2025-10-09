@@ -1,5 +1,5 @@
 import { useId } from "react";
-import { Separator } from "@/components/ui/separator";
+import { Separator } from "@/components/v2/separator";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "../checkboxes/Checkbox";
 

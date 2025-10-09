@@ -13,8 +13,8 @@ import { FeatureConfigurationStep } from "./FeatureConfigurationStep";
 import { FeatureCreationStep } from "./FeatureCreationStep";
 import { IntegrationStep } from "./IntegrationStep";
 import { PlanDetailsStep } from "./PlanDetailsStep";
-import { AvailableFeatures } from "./PlaygroundStep/AvailableFeatures";
-import { QuickStartCodeGroup } from "./PlaygroundStep/QuickStartCodeGroup";
+import { AvailableFeatures } from "./playground-step/AvailableFeatures";
+import { QuickStartCodeGroup } from "./playground-step/QuickStartCodeGroup";
 
 interface OnboardingStepRendererProps {
 	step: OnboardingStep;
