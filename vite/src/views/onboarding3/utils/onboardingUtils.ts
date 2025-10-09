@@ -3,7 +3,6 @@ import {
 	AppEnv,
 	type CreateFeature,
 	CreateFeatureSchema,
-	CreateProductSchema,
 	type Feature,
 	FeatureType,
 	FeatureUsageType,
@@ -159,39 +158,39 @@ export const handleBackNavigation = async (
 	setSelectedProductId: (id: string) => void,
 	axiosInstance?: AxiosInstance,
 ) => {
-	// When going back to step 1 from step 2, load the created product
-	const currentStepNum = getStepNumber(step);
-	const willGoToStep1 = currentStepNum === 2;
-
-	if (willGoToStep1 && productCreatedRef.current.created && productCreatedRef.current.latestId) {
-		// Load the created product data
-		if (axiosInstance) {
-			try {
-				const response = await axiosInstance.get(
-					`/products/${productCreatedRef.current.latestId}/data2`,
-				);
-				setBaseProduct(response.data.product);
-				setSelectedProductId(productCreatedRef.current.latestId);
-				return;
-			} catch (error) {
-				console.error("Failed to load product on back navigation:", error);
-			}
-		}
-	}
-
-	const isInConflictState = checkForStateConflicts(
-		step,
-		productCreatedRef,
-		baseProduct,
-	);
-
-	if (isInConflictState) {
-		resetCreationTracking(productCreatedRef, featureCreatedRef);
-
-		const initialProduct = createInitialProductState(baseProduct.env);
-		setBaseProduct(initialProduct);
-		setSelectedProductId("");
-	}
+	// // When going back to step 1 from step 2, load the created product
+	// const currentStepNum = getStepNumber(step);
+	// const willGoToStep1 = currentStepNum === 2;
+	// if (
+	// 	willGoToStep1 &&
+	// 	productCreatedRef.current.created &&
+	// 	productCreatedRef.current.latestId
+	// ) {
+	// 	// Load the created product data
+	// 	if (axiosInstance) {
+	// 		try {
+	// 			const response = await axiosInstance.get(
+	// 				`/products/${productCreatedRef.current.latestId}/data2`,
+	// 			);
+	// 			setBaseProduct(response.data.product);
+	// 			setSelectedProductId(productCreatedRef.current.latestId);
+	// 			return;
+	// 		} catch (error) {
+	// 			console.error("Failed to load product on back navigation:", error);
+	// 		}
+	// 	}
+	// }
+	// const isInConflictState = checkForStateConflicts(
+	// 	step,
+	// 	productCreatedRef,
+	// 	baseProduct,
+	// );
+	// if (isInConflictState) {
+	// 	resetCreationTracking(productCreatedRef, featureCreatedRef);
+	// 	const initialProduct = createInitialProductState(baseProduct.env);
+	// 	setBaseProduct(initialProduct);
+	// 	setSelectedProductId("");
+	// }
 };
 
 // Handle plan selection logic
@@ -262,50 +261,55 @@ export const createProduct = async (
 	}>,
 ) => {
 	try {
-		const result = CreateProductSchema.safeParse({
-			name: product?.name,
-			id: product?.id,
-			items: product?.items || [],
-		});
+		// const result = CreateProductSchema.safeParse({
+		// 	name: product?.name,
+		// 	id: product?.id,
+		// 	items: product?.items || [],
+		// });
 
-		if (result.error) {
-			console.error("Product validation error:", result.error);
-			toast.error("Invalid product data");
-			return null;
-		}
+		// if (result.error) {
+		// 	console.error("Product validation error:", result.error);
+		// 	toast.error("Invalid product data");
+		// 	return null;
+		// }
 
 		let createdProduct: Awaited<
 			ReturnType<typeof ProductService.createProduct>
 		>;
 
-		if (!productCreatedRef.current.created) {
-			// First time creating the product
-			createdProduct = await ProductService.createProduct(
-				axiosInstance,
-				result.data,
-			);
-			productCreatedRef.current = {
-				created: true,
-				latestId: createdProduct.id,
-			};
-			toast.success(`Product "${product?.name}" created successfully!`);
-		} else {
-			// Product already exists, update it (supports ID changes)
-			// Note: Backend creates a new product if ID changed, archives old one
-			await ProductService.updateProduct(
-				axiosInstance,
-				productCreatedRef.current.latestId as string,
-				result.data,
-			);
-			// Fetch the full product after update (same as PlanEditorView does)
-			const response = await axiosInstance.get(
-				`/products/${result.data.id}/data2`,
-			);
-			createdProduct = response.data.product;
+		createdProduct = await ProductService.createProduct(axiosInstance, product);
+		productCreatedRef.current = {
+			created: true,
+			latestId: createdProduct.id,
+		};
+		toast.success(`Product "${product?.name}" created successfully!`);
 
-			productCreatedRef.current.latestId = result.data.id;
-			toast.success(`Product "${product?.name}" updated successfully!`);
-		}
+		// if (!productCreatedRef.current.created) {
+		// 	// First time creating the product
+		// 	createdProduct = await ProductService.createProduct(
+		// 		axiosInstance,
+		// 		product,
+		// 	);
+		// 	productCreatedRef.current = {
+		// 		created: true,
+		// 		latestId: createdProduct.id,
+		// 	};
+		// 	toast.success(`Product "${product?.name}" created successfully!`);
+		// } else {
+		// 	// Product already exists, update it (supports ID changes)
+		// 	// Note: Backend creates a new product if ID changed, archives old one
+		// 	await ProductService.updateProduct(
+		// 		axiosInstance,
+		// 		productCreatedRef.current.latestId as string,
+		// 		product,
+		// 	);
+		// 	// Fetch the full product after update (same as PlanEditorView does)
+		// 	const response = await axiosInstance.get(`/products/${product.id}/data2`);
+		// 	createdProduct = response.data.product;
+
+		// 	productCreatedRef.current.latestId = product.id;
+		// 	toast.success(`Product "${product?.name}" updated successfully!`);
+		// }
 
 		return {
 			...createdProduct,
@@ -393,15 +397,9 @@ export const createProductItem = (createdFeature: CreateFeature) => {
 	// Map feature type to product item feature type
 	let featureType: ProductItemFeatureType;
 
-	if (
-		createdFeature.type === FeatureType.Boolean ||
-		createdFeature.type === "boolean"
-	) {
+	if (createdFeature.type === FeatureType.Boolean) {
 		featureType = ProductItemFeatureType.Static;
-	} else if (
-		createdFeature.type === FeatureType.CreditSystem ||
-		createdFeature.type === "credit_system"
-	) {
+	} else if (createdFeature.type === FeatureType.CreditSystem) {
 		featureType = ProductItemFeatureType.SingleUse;
 	} else if (
 		createdFeature.type === FeatureType.Metered ||
@@ -428,10 +426,7 @@ export const createProductItem = (createdFeature: CreateFeature) => {
 	console.log("createProductItem - mapped to feature type:", featureType);
 
 	// Boolean features have a simplified structure with no pricing/billing properties
-	if (
-		createdFeature.type === FeatureType.Boolean ||
-		createdFeature.type === "boolean"
-	) {
+	if (createdFeature.type === FeatureType.Boolean) {
 		return {
 			feature_id: createdFeature.id,
 			feature_type: featureType,

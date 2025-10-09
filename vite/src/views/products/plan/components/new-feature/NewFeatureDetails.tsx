@@ -18,30 +18,31 @@ export function NewFeatureDetails({
 		targetKey: "id",
 	});
 
-	if (feature)
-		return (
-			<SheetSection title="Feature Details">
-				<div className="space-y-4">
-					<div className="grid grid-cols-2 gap-2">
-						<div>
-							<FormLabel>Name</FormLabel>
-							<Input
-								placeholder="eg. Messages"
-								value={feature.name}
-								onChange={(e) => setSource(e.target.value)}
-							/>
-						</div>
+	if (!feature) return null;
 
-						<div>
-							<FormLabel>ID</FormLabel>
-							<Input
-								placeholder="eg. messages"
-								value={feature.id}
-								onChange={(e) => setTarget(e.target.value)}
-							/>
-						</div>
+	return (
+		<SheetSection title="Feature Details">
+			<div className="space-y-4">
+				<div className="grid grid-cols-2 gap-2">
+					<div>
+						<FormLabel>Name</FormLabel>
+						<Input
+							placeholder="eg. Messages"
+							value={feature.name}
+							onChange={(e) => setSource(e.target.value)}
+						/>
+					</div>
+
+					<div>
+						<FormLabel>ID</FormLabel>
+						<Input
+							placeholder="eg. messages"
+							value={feature.id}
+							onChange={(e) => setTarget(e.target.value)}
+						/>
 					</div>
 				</div>
-			</SheetSection>
-		);
+			</div>
+		</SheetSection>
+	);
 }

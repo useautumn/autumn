@@ -355,8 +355,6 @@ export class ProductService {
 		internalId: string;
 		update: any;
 	}) {
-		console.log("internalId", internalId);
-		console.log("update", update);
 		await db
 			.update(products)
 			.set(update)

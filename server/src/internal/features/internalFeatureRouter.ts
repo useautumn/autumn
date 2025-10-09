@@ -1,15 +1,15 @@
-import express, { Router } from "express";
-
-import { FeatureService } from "./FeatureService.js";
-import { ErrCode, FeatureType, products, entitlements } from "@autumn/shared";
-import { validateCreditSystem, validateFeatureId } from "./featureUtils.js";
-import { generateId } from "@/utils/genUtils.js";
-import { handleUpdateFeature } from "@/internal/features/handlers/handleUpdateFeature.js";
+import { CreateFeatureSchema, ErrCode, FeatureType } from "@autumn/shared";
+import express, { type Router } from "express";
 import { handleDeleteFeature } from "@/internal/features/handlers/handleDeleteFeature.js";
+import { handleUpdateFeature } from "@/internal/features/handlers/handleUpdateFeature.js";
 import RecaseError, { formatZodError } from "@/utils/errorUtils.js";
-import { validateMeteredConfig } from "./featureUtils.js";
-import { CreateFeatureSchema } from "@autumn/shared";
-import { sql, eq, and } from "drizzle-orm";
+import { generateId } from "@/utils/genUtils.js";
+import { FeatureService } from "./FeatureService.js";
+import {
+	validateCreditSystem,
+	validateFeatureId,
+	validateMeteredConfig,
+} from "./featureUtils.js";
 import { handleCreateFeature } from "./handlers/handleCreateFeature.js";
 import { handleGetFeatureDeletionInfo } from "./handlers/handleGetFeatureDeletionInfo.js";
 
@@ -17,20 +17,20 @@ export const internalFeatureRouter: Router = express.Router();
 
 internalFeatureRouter.get("", async (req: any, res: any) => {
 	try {
-		let { showArchived } = req.query;
+		const { showArchived } = req.query;
 
 		if (showArchived !== undefined) {
 			// If showArchived is specified, use FeatureService.list with the parameter
-			let features = await FeatureService.list({
+			const features = await FeatureService.list({
 				db: req.db,
 				orgId: req.orgId,
 				env: req.env,
-				archived: showArchived === "true" ? true : false,
+				archived: showArchived === "true",
 			});
 			res.status(200).json({ features });
 		} else {
 			// If no showArchived parameter, use the original getFromReq method
-			let features = await FeatureService.getFromReq(req);
+			const features = await FeatureService.getFromReq(req);
 			res.status(200).json({ features });
 		}
 	} catch (error: any) {
@@ -40,14 +40,14 @@ internalFeatureRouter.get("", async (req: any, res: any) => {
 });
 
 export const validateFeature = (data: any) => {
-	let featureType = data.type;
+	const featureType = data.type;
 
 	validateFeatureId(data.id);
 
 	let config = data.config;
-	if (featureType == FeatureType.Metered) {
+	if (featureType === FeatureType.Metered) {
 		config = validateMeteredConfig(config);
-	} else if (featureType == FeatureType.CreditSystem) {
+	} else if (featureType === FeatureType.CreditSystem) {
 		config = validateCreditSystem(config);
 	}
 

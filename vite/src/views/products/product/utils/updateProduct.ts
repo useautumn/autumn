@@ -1,7 +1,7 @@
 import {
 	type FrontendProductItem,
 	type ProductV2,
-	UpdateProductSchema,
+	UpdateProductV2ParamsSchema,
 } from "@autumn/shared";
 import type { AxiosError, AxiosInstance } from "axios";
 import { toast } from "sonner";
@@ -29,20 +29,24 @@ export const updateProduct = async ({
 		return false;
 	}
 	try {
-		const updateData = {
-			...UpdateProductSchema.parse(product),
+		const updateData = UpdateProductV2ParamsSchema.parse({
+			...product,
 			items: product.items,
 			free_trial: product.free_trial,
-		};
+		});
 
-		await ProductService.updateProduct(axiosInstance, productId, updateData);
+		const updatedProduct = await ProductService.updateProduct(
+			axiosInstance,
+			productId,
+			updateData,
+		);
 
 		toast.success("Product updated successfully");
 
 		await onSuccess();
-		return true;
+		return updatedProduct;
 	} catch (error) {
-		console.error(error);
+		console.error((error as ZodError).message);
 		toast.error(
 			getBackendErr(error as AxiosError | ZodError, "Failed to update product"),
 		);
