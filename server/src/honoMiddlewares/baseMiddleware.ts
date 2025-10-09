@@ -66,13 +66,11 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		body = await c.req.json();
 	}
 
-	logger.info(`${method} ${path}`, {
+	logger.info(`[HONO] ${method} ${path}`, {
 		context: {
 			body,
 		},
 	});
-
-	logger.info(`URL: ${c.req.url}`);
 
 	await next();
 };

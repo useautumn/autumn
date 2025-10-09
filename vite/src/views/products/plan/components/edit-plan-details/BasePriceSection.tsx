@@ -53,6 +53,7 @@ export const BasePriceSection = () => {
 		intervalCount?: number;
 	}) => {
 		const newItems = [...product.items];
+
 		// Find base price item by isBasePrice flag, not by price match
 		const basePriceIndex = newItems.findIndex((item: ProductItem) =>
 			isPriceItem(item),

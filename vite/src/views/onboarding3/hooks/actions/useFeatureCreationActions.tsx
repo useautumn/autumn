@@ -32,9 +32,11 @@ export const useFeatureCreationActions = ({
 	setProduct,
 	setBaseProduct,
 }: FeatureCreationActionsProps) => {
-	const { refetch: refetchFeatures } = useFeaturesQuery();
+	const { features, refetch: refetchFeatures } = useFeaturesQuery();
+
 	// Create feature and add to product
 	const handleProceed = useCallback(async (): Promise<boolean> => {
+		// 1. If feature already exists, update it, if not create it
 		const createdFeature = await createFeature(
 			feature as CreateFeature,
 			axiosInstance,
@@ -45,21 +47,8 @@ export const useFeatureCreationActions = ({
 
 		await refetchFeatures(); // Refresh features list
 
-		// Debug: Log the feature data used to create product item
-		console.log("FeatureCreationActions - created feature data:", {
-			id: createdFeature.id,
-			type: createdFeature.type,
-			usage_type: createdFeature.config?.usage_type,
-			fullConfig: createdFeature.config,
-		});
-
 		// Create ProductItem and add to product immediately for live editing
 		const newItem = createProductItem(createdFeature);
-
-		console.log("FeatureCreationActions - newItem created:", {
-			feature_id: newItem.feature_id,
-			feature_type: newItem.feature_type,
-		});
 
 		setFeature(createdFeature);
 

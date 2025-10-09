@@ -23,42 +23,34 @@ export const usePlanDetailsActions = ({
 	productCreatedRef,
 	setBaseProduct,
 }: PlanDetailsActionsProps) => {
-	const { products } = useProductsQuery();
+	const { products, refetch: refetchProducts } = useProductsQuery();
 
 	// Create product and update base state
 	const handleProceed = useCallback(async (): Promise<boolean> => {
-		// console.log("Product:", product);
 		// Check if base product exists in products query
+
+		let newProduct: ProductV2;
 		if (products.find((p) => p.id === baseProduct.id)) {
-			// Update product
-			await updateProduct({
+			newProduct = await updateProduct({
 				axiosInstance,
 				productId: baseProduct.id,
 				product: product as ProductV2,
-				onSuccess: async () => {
-					// await handleRefetch();
-				},
+				onSuccess: async () => {},
 			});
-
-			console.log(
-				`Updating product, productId: ${baseProduct.id}, product:`,
-				product,
-			);
-			return true;
 		} else {
-			const createdProduct = await createProduct(
+			newProduct = await createProduct(
 				product,
 				axiosInstance,
 				productCreatedRef,
 			);
-
-			console.log(`Creating product, product:`, createdProduct);
-
-			if (!createdProduct) return false;
-
-			setBaseProduct(createdProduct);
-			return true;
 		}
+
+		if (!newProduct) return false;
+
+		setBaseProduct(newProduct);
+		await refetchProducts();
+
+		return true;
 	}, [
 		product,
 		baseProduct,

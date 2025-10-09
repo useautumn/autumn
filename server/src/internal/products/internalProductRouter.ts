@@ -126,6 +126,14 @@ productRouter.get("/:productId/data2", async (req: any, res) => {
 		const { version } = req.query;
 		const { db, orgId, env } = req;
 
+		console.log("[/data2] Request params:", {
+			productId,
+			version,
+			orgId,
+			env,
+			featuresLength: req.features?.length,
+		});
+
 		const [product, latestProduct] = await Promise.all([
 			ProductService.getFull({
 				db,
@@ -146,9 +154,16 @@ productRouter.get("/:productId/data2", async (req: any, res) => {
 			throw new ProductNotFoundError({ productId, version });
 		}
 
+		console.log(
+			"[/data2] Product found:",
+			product.id,
+			"Features available:",
+			req.features?.length || 0,
+		);
+
 		const productV2 = mapToProductV2({
 			product: product,
-			features: req.features,
+			features: req.features || [],
 		});
 
 		res.status(200).json({
@@ -158,8 +173,13 @@ productRouter.get("/:productId/data2", async (req: any, res) => {
 			},
 			numVersions: latestProduct.version,
 		});
-	} catch (error) {
+	} catch (error: any) {
 		console.error("Failed to get product", error);
+		console.error("Error details:", {
+			message: error?.message,
+			stack: error?.stack,
+			name: error?.name,
+		});
 		res.status(500).send(error);
 	}
 });

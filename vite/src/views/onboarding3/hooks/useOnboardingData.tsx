@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -12,6 +12,7 @@ export const useOnboardingData = () => {
 		isLoading: productsLoading,
 		refetch: refetchProducts,
 	} = useProductsQuery();
+
 	const {
 		features,
 		isLoading: featuresLoading,
@@ -21,8 +22,10 @@ export const useOnboardingData = () => {
 	const {
 		baseProduct,
 		setBaseProduct,
+
 		feature,
 		setFeature,
+
 		productCreatedRef,
 		featureCreatedRef,
 		isButtonLoading,
@@ -65,6 +68,7 @@ export const useOnboardingData = () => {
 				latestId: firstProduct.id,
 			};
 			// loadProductData(firstProduct.id);
+
 			setBaseProduct(firstProduct);
 		}
 
@@ -143,15 +147,11 @@ export const useOnboardingData = () => {
 	// ]);
 
 	// Refetch product data
-	const handleRefetch = useCallback(async () => {
-		// if (product?.id) {
-		// 	await loadProductData(product.id);
-		// }
-	}, [product?.id]);
+	const handleRefetch = () => {};
 
-	useEffect(() => {
-		console.log("[useOnboardingData] Feature: ", feature);
-	}, [feature]);
+	// useEffect(() => {
+	// 	console.log("[useOnboardingData] Feature: ", feature);
+	// }, [feature]);
 
 	const isQueryLoading = useMemo(() => {
 		return productsLoading || featuresLoading;

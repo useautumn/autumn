@@ -1,6 +1,7 @@
 import {
 	AppEnv,
 	BillingInterval,
+	type Feature,
 	type ProductItem,
 	type ProductV2,
 } from "@autumn/shared";
@@ -28,6 +29,8 @@ export const useOnboardingState = () => {
 		env: AppEnv.Sandbox,
 		internal_id: "",
 	});
+
+	const [baseFeature, setBaseFeature] = useState<Feature>(getDefaultFeature());
 
 	// Feature creation state
 	const [feature, setFeature] = useState(() => getDefaultFeature());
