@@ -10,7 +10,7 @@ import {
 } from "./customerOpModels.js";
 
 // Register schema with .meta() for OpenAPI spec generation
-const ApiCustomerWithMeta = ApiCustomerSchema.meta({
+export const ApiCustomerWithMeta = ApiCustomerSchema.meta({
 	id: "Customer",
 	description: "Customer object returned by the API",
 });

@@ -1,6 +1,5 @@
 import "dotenv/config";
-import { execSync } from "node:child_process";
-import { existsSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { AppEnv } from "@models/genModels/genEnums.js";
 import yaml from "yaml";
 import { z } from "zod/v4";
@@ -8,10 +7,24 @@ import { createDocument } from "zod-openapi";
 import { CustomerDataSchema } from "./common/customerData.js";
 import { EntityDataSchema } from "./common/entityData.js";
 import { coreOps } from "./core/coreOpenApi.js";
-import { customerOps } from "./customers/customersOpenApi.js";
-import { entityOps } from "./entities/entitiesOpenApi.js";
-import { featureOps } from "./features/featuresOpenApi.js";
-import { productOps } from "./products/productsOpenApi.js";
+import { ApiCusFeatureSchema } from "./customers/cusFeatures/apiCusFeature.js";
+import { ApiCusProductSchema } from "./customers/cusProducts/apiCusProduct.js";
+import {
+	ApiCustomerWithMeta,
+	customerOps,
+} from "./customers/customersOpenApi.js";
+import {
+	ApiEntityWithMeta,
+	entityOps,
+} from "./entities/entitiesOpenApi.js";
+import {
+	ApiFeatureWithMeta,
+	featureOps,
+} from "./features/featuresOpenApi.js";
+import {
+	ApiProductWithMeta,
+	productOps,
+} from "./products/productsOpenApi.js";
 import { referralOps } from "./referrals/referralsOpenApi.js";
 
 const API_VERSION = "1.2.0";
@@ -37,7 +50,7 @@ const document = createDocument({
 	],
 	components: {
 		schemas: {
-			autumnError: z
+			AutumnError: z
 				.object({
 					message: z.string(),
 					code: z.string(),
@@ -47,14 +60,23 @@ const document = createDocument({
 					id: "AutumnError",
 					description: "An error that occurred in the API",
 				}),
-			customerData: CustomerDataSchema.meta({
+			CustomerData: CustomerDataSchema.meta({
 				id: "CustomerData",
 				description: "Customer data for creating or updating a customer",
 			}),
-			entityData: EntityDataSchema.meta({
+			EntityData: EntityDataSchema.meta({
 				id: "EntityData",
 				description: "Entity data for creating an entity",
 			}),
+			Customer: ApiCustomerWithMeta,
+			CustomerProduct: ApiCusProductSchema,
+			CustomerFeature: ApiCusFeatureSchema.meta({
+				id: "CustomerFeature",
+				description: "Customer feature object returned by the API",
+			}),
+			Product: ApiProductWithMeta,
+			Feature: ApiFeatureWithMeta,
+			Entity: ApiEntityWithMeta,
 		},
 		securitySchemes: {
 			secretKey: {
@@ -87,7 +109,7 @@ if (process.env.NODE_ENV !== "production") {
 
 		if (process.env.STAINLESS_PATH) {
 			writeFileSync(
-				`${process.env.STAINLESS_PATH}/openapi.yml`,
+				`${process.env.STAINLESS_PATH.replace("\\ ", " ")}/openapi.yml`,
 				yamlContent,
 				"utf8",
 			);
@@ -96,20 +118,20 @@ if (process.env.NODE_ENV !== "production") {
 				`OpenAPI document exported to ${process.env.STAINLESS_PATH}/openapi.yml`,
 			);
 
-			// Run the run.sh script if it exists
-			const runScriptPath = `${process.env.STAINLESS_PATH}/run.sh`;
-			if (existsSync(runScriptPath)) {
-				try {
-					console.log("Running Stainless generation script...");
-					execSync(`chmod +x ${runScriptPath} && ${runScriptPath}`, {
-						stdio: "inherit",
-						cwd: process.env.STAINLESS_PATH,
-					});
-					console.log("Stainless generation completed successfully");
-				} catch (error) {
-					console.error("Failed to run Stainless generation script:", error);
-				}
-			}
+			// // Run the run.sh script if it exists
+			// const runScriptPath = `${process.env.STAINLESS_PATH.replace("\\ ", " ")}/run.sh`;
+			// if (existsSync(runScriptPath)) {
+			// 	try {
+			// 		console.log("Running Stainless generation script...");
+			// 		execSync(`chmod +x "${runScriptPath}" && "${runScriptPath}"`, {
+			// 			stdio: "inherit",
+			// 			cwd: process.env.STAINLESS_PATH,
+			// 		});
+			// 		console.log("Stainless generation completed successfully");
+			// 	} catch (error) {
+			// 		console.error("Failed to run Stainless generation script:", error);
+			// 	}
+			// }
 		}
 	} catch (error) {
 		console.error("Failed to export OpenAPI document:", error);
