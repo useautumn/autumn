@@ -4,7 +4,6 @@ import { CrosshairSimpleIcon } from "@phosphor-icons/react";
 import { PricingTableContainer } from "@/components/autumn/PricingTableContainer";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
-import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { Separator } from "@/components/v2/separator";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -75,9 +74,6 @@ export const OnboardingPreview = ({
 						<span className="text-main-sec truncate">
 							{showBasicInfo && product?.name ? product.name : "Plan Preview"}
 						</span>
-						{showBasicInfo && product?.id && (
-							<CopyButton text={product.id} className="text-xs" size="sm" />
-						)}
 						{playgroundMode === "edit" && product && (
 							<PlanTypeBadges product={product} />
 						)}
