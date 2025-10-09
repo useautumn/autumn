@@ -1,5 +1,5 @@
 import {
-	APICusReferralSchema,
+	ApiCusReferralSchema,
 	CusExpand,
 	type FullCustomer,
 } from "@autumn/shared";
@@ -28,7 +28,7 @@ export const getCusReferrals = async ({
 	});
 
 	return referred.map((r) =>
-		APICusReferralSchema.parse({
+		ApiCusReferralSchema.parse({
 			program_id: r.reward_program?.id,
 			customer: {
 				id: r.customer.id,

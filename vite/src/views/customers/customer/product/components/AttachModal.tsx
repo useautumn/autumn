@@ -151,14 +151,12 @@ export const AttachModal = ({
 
 			const redirectUrl = getRedirectUrl(`/customers/${cusId}`, env);
 
-			// console.log("Version", version);
-			// console.log("Product version", product.version);
-
 			const attachBody = getAttachBody({
 				customerId: customer.id || customer.internal_id,
 				entityId,
 				product,
-				optionsInput: options,
+				optionsInput:
+					preview?.branch !== AttachBranch.NewVersion ? options : undefined,
 				attachState,
 				useInvoice,
 				enableProductImmediately,

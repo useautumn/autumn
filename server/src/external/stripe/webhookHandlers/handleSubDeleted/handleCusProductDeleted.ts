@@ -1,5 +1,5 @@
 import {
-	APIVersion,
+	ApiVersion,
 	AttachScenario,
 	BillingType,
 	CusProductStatus,
@@ -53,7 +53,7 @@ export const handleCusProductDeleted = async ({
 		stripeId: fullCus.processor?.id,
 	});
 
-	const isV4Usage = cusProduct.api_version === APIVersion.v1_4;
+	const isV4Usage = cusProduct.api_semver === ApiVersion.Beta;
 
 	// refer to handleUpgradeFlow.ts, when cancel immediately through API / dashboard, this happens...?
 	const isAutumnCancel =

@@ -289,7 +289,10 @@ export const routeHandler = async <TLoad = undefined>({
 				});
 			}
 
-			if (error.message.includes("not a valid email address")) {
+			if (
+				error.message.includes("not a valid email address") ||
+				error.message.includes("email: Invalid input")
+			) {
 				req.logtail.warn(`Invalid email address`);
 				return res.status(400).json({
 					message: error.message,

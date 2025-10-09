@@ -4,13 +4,13 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import {
-	type APIVersion,
 	type AttachBody,
 	type CreateEntity,
 	type CreateRewardProgram,
 	CusExpand,
 	EntityExpand,
 	ErrCode,
+	type LegacyVersion,
 	type OrgConfig,
 	type RewardRedemption,
 } from "@autumn/shared";
@@ -56,7 +56,7 @@ export class AutumnInt {
 		apiKey?: string;
 		secretKey?: string;
 		baseUrl?: string;
-		version?: string | APIVersion;
+		version?: string | LegacyVersion;
 		orgConfig?: Partial<OrgConfig>;
 		liveUrl?: boolean;
 	} = {}) {
@@ -282,7 +282,7 @@ export class AutumnInt {
 			return data;
 		},
 
-		create: async (customer: { id: string; email: string; name?: string }) => {
+		create: async (customer: { id: string; email?: string; name?: string }) => {
 			const data = await this.post(`/customers?with_autumn_id=true`, customer);
 			return data;
 		},

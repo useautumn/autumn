@@ -1,7 +1,7 @@
 import {
-	APIVersion,
 	type AppEnv,
 	type Customer,
+	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
 import { expect } from "chai";
@@ -128,7 +128,7 @@ describe(
 		let org: Organization;
 		let env: AppEnv;
 
-		const autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+		const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 		let couponAmount = rewards.rolloverAll.discount_config.discount_value;
 		let curUnix = new Date().getTime();

@@ -1,24 +1,22 @@
-import chalk from "chalk";
-import Stripe from "stripe";
-
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { APIVersion, AppEnv, Organization } from "@autumn/shared";
-
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "../utils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
+import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
 import { expect } from "chai";
-import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
-import { completeInvoiceCheckout } from "tests/utils/stripeUtils/completeInvoiceCheckout.js";
+import chalk from "chalk";
+import type Stripe from "stripe";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
+import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import { completeInvoiceCheckout } from "tests/utils/stripeUtils/completeInvoiceCheckout.js";
+import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { addPrefixToProducts } from "../utils.js";
 
-export let pro = constructProduct({
+export const pro = constructProduct({
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Messages,
@@ -30,12 +28,12 @@ export let pro = constructProduct({
 
 const testCase = "checkout5";
 describe(`${chalk.yellowBright(`${testCase}: Testing invoice checkout, no product till paid`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_2 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_2 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
-	let curUnix = new Date().getTime();
+	const curUnix = new Date().getTime();
 
 	before(async function () {
 		await setupBefore(this);
@@ -72,7 +70,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing invoice checkout, no produc
 		testClockId = testClockId1!;
 	});
 
-	it("should attach pro  product", async function () {
+	it("should attach pro  product", async () => {
 		const res = await autumn.attach({
 			customer_id: customerId,
 			product_id: pro.id,

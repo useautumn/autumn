@@ -1,9 +1,8 @@
-import { APIVersion, ErrCode, type Feature, FeatureType } from "@autumn/shared";
+import { ApiVersion, ErrCode, type Feature, FeatureType } from "@autumn/shared";
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-import { orgToVersion } from "@/utils/versionUtils.js";
 import { handleEventSent } from "../events/eventRouter.js";
 import { getCheckData } from "./checkUtils/getCheckData.js";
 import { getV1CheckResponse } from "./checkUtils/getV1CheckResponse.js";
@@ -90,11 +89,6 @@ checkRouter.post("", async (req: any, res: any) => {
 			allFeatures,
 		} = await getCheckData({ req });
 
-		const apiVersion = orgToVersion({
-			org,
-			reqApiVersion: req.apiVersion,
-		});
-
 		// 2. If boolean, return true
 		if (feature.type === FeatureType.Boolean) {
 			return await getBooleanEntitledResult({
@@ -103,7 +97,7 @@ checkRouter.post("", async (req: any, res: any) => {
 				res,
 				cusEnts,
 				feature,
-				apiVersion,
+				apiVersion: req.apiVersion,
 				withPreview: req.body.with_preview,
 				cusProducts,
 				allFeatures,
@@ -127,7 +121,7 @@ checkRouter.post("", async (req: any, res: any) => {
 			org,
 			cusProducts,
 			requiredBalance,
-			apiVersion,
+			apiVersion: req.apiVersion,
 		});
 
 		const { allowed, balance } = v2Response;
@@ -185,7 +179,7 @@ checkRouter.post("", async (req: any, res: any) => {
 			}
 		}
 
-		if (apiVersion >= APIVersion.v1_1) {
+		if (req.apiVersion.gte(ApiVersion.V1_1)) {
 			res.status(200).json({
 				...v2Response,
 				preview,

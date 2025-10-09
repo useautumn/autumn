@@ -139,3 +139,7 @@ export const slugify = (
 export const getUnique = (vals: string[]) => {
 	return Array.from(new Set(vals));
 };
+
+export const sumValues = (vals: number[]) => {
+	return vals.reduce((acc, curr) => acc + curr, 0);
+};

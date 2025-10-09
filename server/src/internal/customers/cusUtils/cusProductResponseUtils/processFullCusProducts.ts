@@ -1,7 +1,8 @@
 import {
 	ACTIVE_STATUSES,
-	type APICusProduct,
-	APIVersion,
+	type ApiCusProduct,
+	ApiVersion,
+	type ApiVersionClass,
 	type CusProductStatus,
 	type Entity,
 	type Feature,
@@ -12,9 +13,9 @@ import { getCusProductResponse } from "./getCusProductResponse.js";
 const mergeCusProductResponses = ({
 	cusProductResponses,
 }: {
-	cusProductResponses: APICusProduct[];
+	cusProductResponses: ApiCusProduct[];
 }) => {
-	const getProductKey = (product: APICusProduct) => {
+	const getProductKey = (product: ApiCusProduct) => {
 		const status = ACTIVE_STATUSES.includes(product.status as CusProductStatus)
 			? "active"
 			: product.status;
@@ -57,7 +58,7 @@ export const processFullCusProducts = async ({
 	subs: any;
 	org: Organization;
 	entity?: Entity;
-	apiVersion: number;
+	apiVersion: ApiVersionClass;
 	features: Feature[];
 }) => {
 	// Process full cus products
@@ -81,12 +82,12 @@ export const processFullCusProducts = async ({
 		}
 	}
 
-	if (apiVersion >= APIVersion.v1_1) {
+	if (apiVersion.gte(ApiVersion.V1_1)) {
 		main = mergeCusProductResponses({
-			cusProductResponses: main as APICusProduct[],
+			cusProductResponses: main as ApiCusProduct[],
 		});
 		addOns = mergeCusProductResponses({
-			cusProductResponses: addOns as APICusProduct[],
+			cusProductResponses: addOns as ApiCusProduct[],
 		});
 	}
 

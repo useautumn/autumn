@@ -1,40 +1,31 @@
-import chalk from "chalk";
-import { setupBefore } from "tests/before.js";
-import { Stripe } from "stripe";
-import { createProducts } from "tests/utils/productUtils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-	APIVersion,
-	AppEnv,
+	type AppEnv,
 	CusProductStatus,
-	Organization,
-	organizations,
+	LegacyVersion,
+	type Organization,
 } from "@autumn/shared";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import {
-	addPrefixToProducts,
-	getBasePrice,
-} from "tests/utils/testProductUtils/testProductUtils.js";
+import chalk from "chalk";
+import type { Stripe } from "stripe";
+import { setupBefore } from "tests/before.js";
+import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
+import { TestFeature } from "tests/setup/v2Features.js";
+import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
+import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
 import {
 	expectMultiAttachCorrect,
 	expectResultsCorrect,
 } from "tests/utils/expectUtils/expectMultiAttach.js";
-import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { addDays } from "date-fns";
-import { expect } from "chai";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
-import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
-import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
-import { eq } from "drizzle-orm";
+import { createProducts } from "tests/utils/productUtils.js";
+import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CacheManager } from "@/external/caching/CacheManager.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
-let premium = constructProduct({
+const premium = constructProduct({
 	id: "premium",
 	items: [
 		constructFeatureItem({ featureId: TestFeature.Words, includedUsage: 200 }),
@@ -42,7 +33,7 @@ let premium = constructProduct({
 	type: "premium",
 });
 
-let pro = constructProduct({
+const pro = constructProduct({
 	id: "pro",
 	items: [
 		constructFeatureItem({
@@ -55,8 +46,8 @@ let pro = constructProduct({
 
 const testCase = "multiAttach5";
 describe(`${chalk.yellowBright("multiAttach5: Testing multi attach and get customer")}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 	let stripeCli: Stripe;
 	let testClockId: string;
@@ -111,7 +102,7 @@ describe(`${chalk.yellowBright("multiAttach5: Testing multi attach and get custo
 		testClockId = testClockId1!;
 	});
 
-	it("should run multi attach through checkout and have correct sub", async function () {
+	it("should run multi attach through checkout and have correct sub", async () => {
 		const productsList = [
 			{
 				product_id: pro.id,
@@ -150,7 +141,7 @@ describe(`${chalk.yellowBright("multiAttach5: Testing multi attach and get custo
 		},
 	];
 
-	it("should transfer to entity 1 and 2", async function () {
+	it("should transfer to entity 1 and 2", async () => {
 		await autumn.entities.create(customerId, entities);
 
 		await autumn.transfer(customerId, {
@@ -216,7 +207,7 @@ describe(`${chalk.yellowBright("multiAttach5: Testing multi attach and get custo
 		});
 	});
 
-	it("should try to reduce quantity of pro to less than number of entities and fail", async function () {
+	it("should try to reduce quantity of pro to less than number of entities and fail", async () => {
 		await expectAutumnError({
 			func: async () => {
 				await autumn.attach({
@@ -232,7 +223,7 @@ describe(`${chalk.yellowBright("multiAttach5: Testing multi attach and get custo
 		});
 	});
 
-	it("should update pro product quantity and have correct amount", async function () {
+	it("should update pro product quantity and have correct amount", async () => {
 		await expectMultiAttachCorrect({
 			customerId,
 			products: [
@@ -266,7 +257,7 @@ describe(`${chalk.yellowBright("multiAttach5: Testing multi attach and get custo
 		});
 	});
 
-	it("should decrease pro product quantity and have correct amount", async function () {
+	it("should decrease pro product quantity and have correct amount", async () => {
 		await expectMultiAttachCorrect({
 			customerId,
 			products: [
@@ -300,7 +291,7 @@ describe(`${chalk.yellowBright("multiAttach5: Testing multi attach and get custo
 		});
 	});
 
-	after(async function () {
+	after(async () => {
 		await OrgService.update({
 			db,
 			orgId: org.id,

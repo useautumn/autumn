@@ -1,7 +1,7 @@
 import {
-	APIVersion,
 	type AppEnv,
 	type Customer,
+	LegacyVersion,
 	OnDecrease,
 	OnIncrease,
 	type Organization,
@@ -45,7 +45,7 @@ export const pro = constructProduct({
 
 describe(`${chalk.yellowBright(`attach/${testCase}: update quantity, no proration downgrade, single use`)}`, () => {
 	const customerId = testCase;
-	const autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;

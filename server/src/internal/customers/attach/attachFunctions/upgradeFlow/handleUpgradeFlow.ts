@@ -1,5 +1,5 @@
 import {
-	APIVersion,
+	ApiVersion,
 	AttachBranch,
 	type AttachConfig,
 	AttachScenario,
@@ -51,10 +51,10 @@ export const handleUpgradeFlow = async ({
 	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
 	const curSub = await paramsToCurSub({ attachParams });
 
-	const logger = req.logtail;
+	const logger = req.logger;
 
-	if (curCusProduct?.api_version) {
-		attachParams.apiVersion = curCusProduct.api_version;
+	if (curCusProduct?.api_semver) {
+		attachParams.apiVersion = curCusProduct.api_semver;
 	}
 
 	let sub = curSub;
@@ -229,15 +229,11 @@ export const handleUpgradeFlow = async ({
 	}
 
 	if (res) {
-		const apiVersion = attachParams.org.api_version || APIVersion.v1;
-		if (apiVersion >= APIVersion.v1_1) {
+		if (req.apiVersion.gte(ApiVersion.V1_1)) {
 			res.status(200).json(
 				AttachResultSchema.parse({
 					customer_id: attachParams.customer.id,
 					product_ids: attachParams.products.map((p) => p.id),
-					// invoice: attachParams.invoiceOnly
-					//   ? attachToInvoiceResponse({ invoice: invoices?.[0] })
-					//   : undefined,
 					invoice: attachParams.invoiceOnly
 						? attachToInvoiceResponse({ invoice: latestInvoice || undefined })
 						: undefined,

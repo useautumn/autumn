@@ -1,7 +1,7 @@
 import {
-	APIVersion,
 	type AppEnv,
 	CusProductStatus,
+	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
 import { expect } from "chai";
@@ -52,7 +52,7 @@ const testCase = "multiAttach3";
 describe(`${chalk.yellowBright("multiAttach3: Testing multi attach for trial products transfer to entity, then cancel products on entities...")}`, () => {
 	const customerId = testCase;
 	const autumn: AutumnInt = new AutumnInt({
-		version: APIVersion.v1_4,
+		version: LegacyVersion.v1_4,
 		orgConfig: { entity_product: true },
 	});
 
@@ -225,7 +225,7 @@ describe(`${chalk.yellowBright("multiAttach3: Testing multi attach for trial pro
 		await advanceTestClock({
 			stripeCli,
 			testClockId,
-			advanceTo: addDays(new Date(), 8).getTime(),
+			advanceTo: addDays(new Date(), 10).getTime(),
 			waitForSeconds: 30,
 		});
 

@@ -1,28 +1,28 @@
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-	APIVersion,
-	AppEnv,
+	type AppEnv,
+	LegacyVersion,
 	OnDecrease,
 	OnIncrease,
-	Organization,
+	type Organization,
 } from "@autumn/shared";
-import chalk from "chalk";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
 import { expect } from "chai";
+import chalk from "chalk";
 import { addWeeks } from "date-fns";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import type Stripe from "stripe";
 import { addPrefixToProducts, replaceItems } from "tests/attach/utils.js";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import { expectSubQuantityCorrect } from "tests/utils/expectUtils/expectContUseUtils.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
-let userItem = constructArrearProratedItem({
+const userItem = constructArrearProratedItem({
 	featureId: TestFeature.Users,
 	pricePerUnit: 50,
 	includedUsage: 1,
@@ -32,7 +32,7 @@ let userItem = constructArrearProratedItem({
 	},
 });
 
-export let pro = constructProduct({
+export const pro = constructProduct({
 	items: [userItem],
 	type: "pro",
 });
@@ -40,8 +40,8 @@ export let pro = constructProduct({
 const testCase = "updateContUse1";
 
 describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing update contUse, add included usage`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
@@ -83,7 +83,7 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing update cont
 	});
 
 	let usage = 0;
-	let firstEntities = [
+	const firstEntities = [
 		{
 			id: "1",
 			name: "test",
@@ -101,7 +101,7 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing update cont
 		},
 	];
 
-	it("should create entity, then attach pro", async function () {
+	it("should create entity, then attach pro", async () => {
 		await autumn.entities.create(customerId, firstEntities);
 		usage += 3;
 
@@ -122,8 +122,8 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing update cont
 		});
 	});
 
-	let extraUsage = 2;
-	let newItem = constructArrearProratedItem({
+	const extraUsage = 2;
+	const newItem = constructArrearProratedItem({
 		featureId: TestFeature.Users,
 		pricePerUnit: 50,
 		includedUsage: (userItem.included_usage as number) + extraUsage,
@@ -135,8 +135,8 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing update cont
 
 	return;
 
-	it("should update product with extra included usage", async function () {
-		let customItems = replaceItems({
+	it("should update product with extra included usage", async () => {
+		const customItems = replaceItems({
 			featureId: TestFeature.Users,
 			items: pro.items,
 			newItem,
@@ -178,7 +178,7 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing update cont
 		},
 	];
 
-	it("should create 2 entities and have no invoice", async function () {
+	it("should create 2 entities and have no invoice", async () => {
 		curUnix = await advanceTestClock({
 			stripeCli,
 			testClockId,
@@ -202,8 +202,8 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing update cont
 			numReplaceables: 0,
 		});
 
-		let customer = await autumn.customers.get(customerId);
-		let invoices = customer.invoices;
+		const customer = await autumn.customers.get(customerId);
+		const invoices = customer.invoices;
 		expect(invoices.length).to.equal(2);
 	});
 });

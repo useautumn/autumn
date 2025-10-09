@@ -1,5 +1,5 @@
 import {
-	APIVersion,
+	ApiVersion,
 	type AttachConfig,
 	AttachScenario,
 	ErrCode,
@@ -47,7 +47,7 @@ export const handlePaidProduct = async ({
 	attachParams: AttachParams;
 	config: AttachConfig;
 }) => {
-	const logger = req.logtail;
+	const logger = req.logger;
 
 	const {
 		org,
@@ -249,10 +249,9 @@ export const handlePaidProduct = async ({
 	await Promise.all(batchInsert);
 
 	if (res) {
-		const apiVersion = attachParams.apiVersion || APIVersion.v1;
 		const productNames = products.map((p) => p.name).join(", ");
 		const customerName = customer.name || customer.email || customer.id;
-		if (apiVersion >= APIVersion.v1_1) {
+		if (req.apiVersion.gte(ApiVersion.V1_1)) {
 			res.status(200).json(
 				AttachResultSchema.parse({
 					message: `Successfully created subscriptions and attached ${productNames} to ${customerName}`,

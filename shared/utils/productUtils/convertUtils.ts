@@ -1,3 +1,6 @@
+import type { FullCusEntWithFullCusProduct } from "@models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import type { FullCustomerPrice } from "@models/cusProductModels/cusPriceModels/cusPriceModels.js";
+import type { FeatureOptions } from "@models/cusProductModels/cusProductModels.js";
 import type {
 	Entitlement,
 	EntitlementWithFeature,
@@ -53,4 +56,33 @@ export const priceToEnt = ({
 			ent.id === price.entitlement_id &&
 			ent.internal_product_id === price.internal_product_id,
 	);
+};
+
+export const entToOptions = ({
+	ent,
+	options,
+}: {
+	ent: Entitlement;
+	options: FeatureOptions[];
+}) => {
+	return options.find(
+		(option) => option.internal_feature_id === ent.internal_feature_id,
+	);
+};
+
+export const cusEntToCusPrice = ({
+	cusEnt,
+}: {
+	cusEnt: FullCusEntWithFullCusProduct;
+}) => {
+	const cusProduct = cusEnt.customer_product;
+	const cusPrices = cusProduct.customer_prices;
+	return cusPrices.find((cusPrice: FullCustomerPrice) => {
+		const productMatch =
+			cusPrice.customer_product_id === cusEnt.customer_product_id;
+
+		const entMatch = cusPrice.price.entitlement_id === cusEnt.entitlement.id;
+
+		return productMatch && entMatch;
+	});
 };

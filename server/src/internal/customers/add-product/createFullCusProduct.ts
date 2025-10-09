@@ -1,5 +1,5 @@
 import {
-	type APIVersion,
+	type ApiVersion,
 	CollectionMethod,
 	type CusProduct,
 	CusProductStatus,
@@ -98,7 +98,7 @@ export const initCusProduct = ({
 	isCustom?: boolean;
 	entityId?: string;
 	internalEntityId?: string;
-	apiVersion?: APIVersion;
+	apiVersion?: ApiVersion;
 	quantity?: number;
 }) => {
 	const isFuture = startsAt && startsAt > Date.now();
@@ -142,7 +142,7 @@ export const initCusProduct = ({
 		quantity: quantity || 1,
 		internal_entity_id: internalEntityId,
 		entity_id: entityId,
-		api_version: apiVersion,
+		api_semver: apiVersion || null,
 	};
 };
 

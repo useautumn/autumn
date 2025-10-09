@@ -1,6 +1,7 @@
 import {
-	type APICusProduct,
-	APIVersion,
+	type ApiCusProduct,
+	ApiVersion,
+	ApiVersionClass,
 	type AppEnv,
 	type Entity,
 	type EntityExpand,
@@ -37,7 +38,7 @@ export const getSingleEntityResponse = async ({
 	features: Feature[];
 	withAutumnId?: boolean;
 }) => {
-	const apiVersion = APIVersion.v1_2;
+	const apiVersion = new ApiVersionClass(ApiVersion.V1_2);
 
 	if (!entity) {
 		throw new RecaseError({
@@ -74,11 +75,11 @@ export const getSingleEntityResponse = async ({
 		entity,
 		subs: entitySubs,
 		org,
-		apiVersion: APIVersion.v1_2,
+		apiVersion,
 		features,
 	});
 
-	const products: APICusProduct[] = [...main, ...addOns];
+	const products: ApiCusProduct[] = [...main, ...addOns];
 
 	const cusFeatures = await getCusFeaturesResponse({
 		cusProducts: entityCusProducts,

@@ -1,4 +1,4 @@
-import {
+import type {
 	AppEnv,
 	Entitlement,
 	Feature,
@@ -6,14 +6,13 @@ import {
 	Product,
 	ProductItem,
 } from "@autumn/shared";
-import { itemToPriceAndEnt } from "./itemToPriceAndEnt.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { EntitlementService } from "../../entitlements/EntitlementService.js";
 import { validateProductItems } from "../validateProductItems.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
 import { isFeatureItem } from "./getItemType.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { formatPrice } from "../../prices/priceUtils.js";
+import { itemToPriceAndEnt } from "./itemToPriceAndEnt.js";
 
 const updateDbPricesAndEnts = async ({
 	db,
@@ -62,8 +61,8 @@ const updateDbPricesAndEnts = async ({
 	]);
 
 	// Check if any custom prices use this entitlement...
-	let deletedEntIds = deletedEnts.map((ent) => ent.id!);
-	let customPrices = await PriceService.getCustomInEntIds({
+	const deletedEntIds = deletedEnts.map((ent) => ent.id!);
+	const customPrices = await PriceService.getCustomInEntIds({
 		db,
 		entitlementIds: deletedEntIds,
 	});
@@ -75,9 +74,9 @@ const updateDbPricesAndEnts = async ({
 			ids: deletedEntIds,
 		});
 	} else {
-		let updateOrDelete: any = [];
+		const updateOrDelete: any = [];
 		for (const ent of deletedEnts) {
-			let hasCustomPrice = customPrices.some(
+			const hasCustomPrice = customPrices.some(
 				(price) => price.entitlement_id == ent.id,
 			);
 
@@ -179,7 +178,7 @@ export const handleNewProductItems = async ({
 	}
 
 	// Validate product items...
-	let { allFeatures, newFeatures } = validateProductItems({
+	const { allFeatures, newFeatures } = validateProductItems({
 		newItems,
 		features,
 		orgId: product.org_id!,
@@ -188,14 +187,14 @@ export const handleNewProductItems = async ({
 
 	features = allFeatures;
 
-	let newPrices: Price[] = [];
-	let newEnts: Entitlement[] = [];
+	const newPrices: Price[] = [];
+	const newEnts: Entitlement[] = [];
 
-	let updatedPrices: Price[] = [];
-	let updatedEnts: Entitlement[] = [];
+	const updatedPrices: Price[] = [];
+	const updatedEnts: Entitlement[] = [];
 
-	let deletedPrices: Price[] = curPrices.filter((price) => {
-		let item = newItems.find((item) => item.price_id == price.id);
+	const deletedPrices: Price[] = curPrices.filter((price) => {
+		const item = newItems.find((item) => item.price_id === price.id);
 		if (!item) {
 			return true;
 		}
@@ -203,20 +202,20 @@ export const handleNewProductItems = async ({
 		return isFeatureItem(item);
 	});
 
-	let deletedEnts: Entitlement[] = curEnts.filter(
+	const deletedEnts: Entitlement[] = curEnts.filter(
 		(ent) => !newItems.some((item) => item.entitlement_id == ent.id),
 	);
 
-	let samePrices: Price[] = [];
-	let sameEnts: Entitlement[] = [];
+	const samePrices: Price[] = [];
+	const sameEnts: Entitlement[] = [];
 
 	for (const item of newItems) {
-		let feature = features.find((f) => f.id == item.feature_id);
-		let curEnt = curEnts.find((ent) => ent.id == item.entitlement_id);
-		let curPrice = curPrices.find((price) => price.id == item.price_id);
+		const feature = features.find((f) => f.id == item.feature_id);
+		const curEnt = curEnts.find((ent) => ent.id == item.entitlement_id);
+		const curPrice = curPrices.find((price) => price.id == item.price_id);
 
 		// 2. Update price and entitlement?
-		let { newPrice, newEnt, updatedPrice, updatedEnt, samePrice, sameEnt } =
+		const { newPrice, newEnt, updatedPrice, updatedEnt, samePrice, sameEnt } =
 			itemToPriceAndEnt({
 				item,
 				orgId: product.org_id!,

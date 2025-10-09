@@ -1,18 +1,19 @@
-import { APIFeatureSchema } from "./apiFeature.js";
+import { z } from "zod/v4";
+import {
+	getListResponseSchema,
+	SuccessResponseSchema,
+} from "../common/commonResponses.js";
+import { ApiFeatureSchema } from "./apiFeature.js";
 import {
 	CreateFeatureParamsSchema,
 	UpdateFeatureParamsSchema,
 } from "./featureOpModels.js";
-import { z } from "zod/v4";
-import { SuccessResponseSchema } from "../common/commonResponses.js";
 
-const FeatureListResponseSchema = z
-	.object({
-		list: z.array(APIFeatureSchema),
-	})
-	.meta({
-		id: "FeatureListResponse",
-	});
+// Register the schema with .meta() for OpenAPI spec generation
+const ApiFeatureWithMeta = ApiFeatureSchema.meta({
+	id: "Feature",
+	description: "Feature object returned by the API",
+});
 
 export const featureOps = {
 	"/features": {
@@ -27,7 +28,11 @@ export const featureOps = {
 			responses: {
 				"200": {
 					description: "200 OK",
-					content: { "application/json": { schema: FeatureListResponseSchema } },
+					content: {
+						"application/json": {
+							schema: getListResponseSchema({ schema: ApiFeatureWithMeta }),
+						},
+					},
 				},
 			},
 		},
@@ -42,7 +47,7 @@ export const featureOps = {
 			responses: {
 				"200": {
 					description: "200 OK",
-					content: { "application/json": { schema: APIFeatureSchema } },
+					content: { "application/json": { schema: ApiFeatureWithMeta } },
 				},
 			},
 		},
@@ -59,7 +64,7 @@ export const featureOps = {
 			responses: {
 				"200": {
 					description: "200 OK",
-					content: { "application/json": { schema: APIFeatureSchema } },
+					content: { "application/json": { schema: ApiFeatureWithMeta } },
 				},
 			},
 		},
@@ -79,7 +84,7 @@ export const featureOps = {
 			responses: {
 				"200": {
 					description: "200 OK",
-					content: { "application/json": { schema: APIFeatureSchema } },
+					content: { "application/json": { schema: ApiFeatureWithMeta } },
 				},
 			},
 		},

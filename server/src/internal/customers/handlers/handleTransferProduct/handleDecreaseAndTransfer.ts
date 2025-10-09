@@ -1,24 +1,20 @@
 import {
 	AttachScenario,
-	Entity,
-	ErrCode,
+	cusProductToProduct,
+	type Entity,
 	FeatureType,
-	FullCusProduct,
-	FullCustomer,
+	type FullCusProduct,
+	type FullCustomer,
+	getStartingBalance,
 } from "@autumn/shared";
-import { createFullCusProduct } from "../../add-product/createFullCusProduct.js";
-import { attachToInsertParams } from "@/internal/products/productUtils.js";
-import { cusProductToProduct } from "@autumn/shared";
-import { ExtendedRequest } from "@/utils/models/Request.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import RecaseError from "@/utils/errorUtils.js";
-import {
-	getRelatedCusPrice,
-	getResetBalance,
-} from "../../cusProducts/cusEnts/cusEntUtils.js";
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
-import { CusEntService } from "../../cusProducts/cusEnts/CusEntitlementService.js";
+import { attachToInsertParams } from "@/internal/products/productUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+import { createFullCusProduct } from "../../add-product/createFullCusProduct.js";
 import { CusProductService } from "../../cusProducts/CusProductService.js";
+import { CusEntService } from "../../cusProducts/cusEnts/CusEntitlementService.js";
+import { getRelatedCusPrice } from "../../cusProducts/cusEnts/cusEntUtils.js";
 
 export const handleDecreaseAndTransfer = async ({
 	req,
@@ -41,14 +37,14 @@ export const handleDecreaseAndTransfer = async ({
 	const batchDecrement = [];
 	for (const cusEnt of cusProduct.customer_entitlements) {
 		const feature = cusEnt.entitlement.feature;
-		if (feature.type == FeatureType.Boolean) continue;
+		if (feature.type === FeatureType.Boolean) continue;
 
 		const cusPrice = getRelatedCusPrice(cusEnt, cusProduct.customer_prices);
 
 		const options = getEntOptions(cusProduct.options, cusEnt.entitlement);
-		const resetBalance = getResetBalance({
+		const resetBalance = getStartingBalance({
 			entitlement: cusEnt.entitlement,
-			options: options,
+			options: options || undefined,
 			relatedPrice: cusPrice?.price,
 		});
 

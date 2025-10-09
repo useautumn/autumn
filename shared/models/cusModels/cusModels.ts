@@ -69,7 +69,7 @@ export const CustomerDataSchema = z.object({
 	name: z.string().nullish(),
 	email: z.string().nullish(),
 	fingerprint: z.string().nullish(),
-	metadata: z.record(z.any(), z.any()).nullish().default({}),
+	metadata: z.record(z.any(), z.any()).nullish(),
 	stripe_id: z.string().nullish(),
 });
 

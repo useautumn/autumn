@@ -47,8 +47,14 @@ const document = createDocument({
 					id: "AutumnError",
 					description: "An error that occurred in the API",
 				}),
-			customerData: CustomerDataSchema,
-			entityData: EntityDataSchema,
+			customerData: CustomerDataSchema.meta({
+				id: "CustomerData",
+				description: "Customer data for creating or updating a customer",
+			}),
+			entityData: EntityDataSchema.meta({
+				id: "EntityData",
+				description: "Entity data for creating an entity",
+			}),
 		},
 		securitySchemes: {
 			secretKey: {

@@ -1,6 +1,6 @@
 // import { AutumnInt } from "@/external/autumn/autumnCli.js";
 // import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-// import { APIVersion, AppEnv, Organization } from "@autumn/shared";
+// import { LegacyVersion, AppEnv, Organization } from "@autumn/shared";
 // import chalk from "chalk";
 // import Stripe from "stripe";
 // import { DrizzleCli } from "@/db/initDrizzle.js";
@@ -33,7 +33,7 @@
 
 // describe(`${chalk.yellowBright(`${testCase}: Testing entities`)}`, () => {
 //   let customerId = testCase;
-//   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+//   let autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 //   let testClockId: string;
 //   let db: DrizzleCli, org: Organization, env: AppEnv;
 //   let stripeCli: Stripe;

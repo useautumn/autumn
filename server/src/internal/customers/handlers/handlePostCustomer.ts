@@ -5,8 +5,8 @@ import { getCustomerDetails } from "../cusUtils/getCustomerDetails.js";
 import { getOrCreateCustomer } from "../cusUtils/getOrCreateCustomer.js";
 
 export const handlePostCustomerRequest = async (req: any, res: any) => {
-	const logger = req.logtail;
 	try {
+		const logger = req.logger;
 		const data = req.body;
 
 		const expand = parseCusExpand(req.query.expand);
@@ -60,7 +60,7 @@ export const handlePostCustomerRequest = async (req: any, res: any) => {
 			cusProducts: customer.customer_products,
 			expand,
 			features,
-			reqApiVersion: req.apiVersion,
+			apiVersion: req.apiVersion,
 		});
 
 		res.status(200).json(cusDetails);
@@ -69,13 +69,17 @@ export const handlePostCustomerRequest = async (req: any, res: any) => {
 			error instanceof RecaseError &&
 			error.code === ErrCode.DuplicateCustomerId
 		) {
-			logger.warn(`POST /customers: ${error.message} (org: ${req.org?.slug})`);
+			req.logger.warn(
+				`POST /customers: ${error.message} (org: ${req.org?.slug})`,
+			);
 			res.status(error.statusCode).json({
 				message: error.message,
 				code: error.code,
 			});
 			return;
 		}
+
+		console.log(`Error: ${error}`);
 		handleRequestError({ req, error, res, action: "create customer" });
 	}
 };

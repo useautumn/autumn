@@ -1,5 +1,5 @@
 import {
-	APIVersion,
+	ApiVersion,
 	type AttachConfig,
 	AttachScenario,
 	ErrCode,
@@ -43,7 +43,7 @@ export const handleScheduleFunction2 = async ({
 	config: AttachConfig;
 	skipInsertCusProduct?: boolean;
 }) => {
-	const logger = req.logtail;
+	const logger = req.logger;
 	const product = attachParams.products[0];
 	const { stripeCli } = attachParams;
 
@@ -208,10 +208,8 @@ export const handleScheduleFunction2 = async ({
 		}
 	}
 
-	const apiVersion = attachParams.apiVersion || APIVersion.v1;
-
 	if (res) {
-		if (apiVersion >= APIVersion.v1_1) {
+		if (req.apiVersion.gte(ApiVersion.V1_1)) {
 			res.status(200).json(
 				AttachResultSchema.parse({
 					code: SuccessCode.DowngradeScheduled,

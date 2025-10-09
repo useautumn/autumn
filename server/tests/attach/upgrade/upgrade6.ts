@@ -1,31 +1,30 @@
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { APIVersion, AppEnv, Organization } from "@autumn/shared";
+import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
 import chalk from "chalk";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type Stripe from "stripe";
 import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "../utils.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
+import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
+import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
+import { expectSubItemsCorrect } from "tests/utils/expectUtils/expectSubUtils.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { attachFailedPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { timeout } from "@/utils/genUtils.js";
 import {
 	constructArrearItem,
 	constructArrearProratedItem,
 } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-
-import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
-import { attachFailedPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { timeout } from "@/utils/genUtils.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { expectSubItemsCorrect } from "tests/utils/expectUtils/expectSubUtils.js";
-import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { addPrefixToProducts } from "../utils.js";
 
 const testCase = "upgrade6";
 
-export let pro = constructProduct({
+export const pro = constructProduct({
 	items: [
 		constructArrearItem({ featureId: TestFeature.Words }),
 		constructArrearProratedItem({
@@ -36,7 +35,7 @@ export let pro = constructProduct({
 	type: "pro",
 });
 
-export let premium = constructProduct({
+export const premium = constructProduct({
 	items: [
 		constructArrearItem({ featureId: TestFeature.Words }),
 		constructArrearProratedItem({
@@ -48,8 +47,8 @@ export let premium = constructProduct({
 });
 
 describe(`${chalk.yellowBright(`${testCase}: Testing failed upgrades`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
@@ -88,7 +87,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing failed upgrades`)}`, () => 
 		testClockId = testClockId1!;
 	});
 
-	it("should attach pro product", async function () {
+	it("should attach pro product", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,
@@ -100,8 +99,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing failed upgrades`)}`, () => 
 		});
 	});
 
-	let usage = 100012;
-	it("should upgrade to premium product and fail", async function () {
+	const usage = 100012;
+	it("should upgrade to premium product and fail", async () => {
 		await autumn.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Words,
@@ -109,7 +108,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing failed upgrades`)}`, () => 
 		});
 		await timeout(4000);
 
-		let cus = await CusService.get({
+		const cus = await CusService.get({
 			db,
 			orgId: org.id,
 			idOrInternalId: customerId,
@@ -135,7 +134,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing failed upgrades`)}`, () => 
 		});
 
 		await timeout(4000);
-		let customer = await autumn.customers.get(customerId);
+		const customer = await autumn.customers.get(customerId);
 
 		expectProductAttached({
 			customer,

@@ -1,18 +1,18 @@
-import chalk from "chalk";
-import { setupBefore } from "tests/before.js";
-import { Stripe } from "stripe";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-
 import {
-	APIVersion,
-	AppEnv,
+	type AppEnv,
 	CusProductStatus,
-	Organization,
+	LegacyVersion,
+	type Organization,
 } from "@autumn/shared";
-
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import chalk from "chalk";
+import type { Stripe } from "stripe";
+import { setupBefore } from "tests/before.js";
 import { expectMultiAttachCorrect } from "tests/utils/expectUtils/expectMultiAttach.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
 	multiRewardPremium,
 	multiRewardPro,
@@ -20,14 +20,11 @@ import {
 	proReward,
 	setupMultiRewardBefore,
 } from "./multiRewardUtils.test.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
 
 const testCase = "multiReward2";
 describe(`${chalk.yellowBright("multiReward2: Testing multi attach with rewards -- delete reward and prorate")}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 	let stripeCli: Stripe;
 	let testClockId: string;
@@ -63,7 +60,7 @@ describe(`${chalk.yellowBright("multiReward2: Testing multi attach with rewards 
 		testClockId = testClockId1!;
 	});
 
-	it("should run multi attach through checkout and have correct sub", async function () {
+	it("should run multi attach through checkout and have correct sub", async () => {
 		const productsList = [
 			{
 				product_id: multiRewardPro.id,
@@ -90,7 +87,7 @@ describe(`${chalk.yellowBright("multiReward2: Testing multi attach with rewards 
 		});
 	});
 
-	it("should delete discounts from subscription and prorate correctly", async function () {
+	it("should delete discounts from subscription and prorate correctly", async () => {
 		const fullCus = await CusService.getFull({
 			db,
 			orgId: org.id,
@@ -108,7 +105,7 @@ describe(`${chalk.yellowBright("multiReward2: Testing multi attach with rewards 
 		});
 	});
 
-	it("should update pro quantity and have correct checkout amount", async function () {
+	it("should update pro quantity and have correct checkout amount", async () => {
 		const productsList = [
 			{
 				product_id: multiRewardPro.id,
