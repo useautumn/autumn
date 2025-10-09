@@ -28,7 +28,10 @@ const FeatureTestRow = ({
 				</label>
 				<Input
 					value={value === 0 ? "" : value}
-					onChange={(e) => setValue(Number(e.target.value))}
+					onChange={(e) => {
+						if (Number(e.target.value) || e.target.value === "")
+							setValue(Number(e.target.value));
+					}}
 					placeholder="Enter any amount to test"
 					className="text-[13px]"
 				/>
