@@ -92,25 +92,25 @@ function CreatePlanDialog({
 			</IconButton>
 			<Dialog open={open} onOpenChange={setOpen}>
 				<DialogContent className="w-[500px]">
-				<DialogTitle>Create Plan</DialogTitle>
-				<ProductConfig
-					product={product}
-					setProduct={setProduct}
-					isUpdate={false}
-				/>
+					<DialogTitle>Create Plan</DialogTitle>
+					<ProductConfig
+						product={product as unknown as ProductV2}
+						setProduct={setProduct}
+						isUpdate={false}
+					/>
 
-				<DialogFooter>
-					<Button
-						isLoading={loading}
-						onClick={handleCreateClicked}
-						variant="primary"
-						className="min-w-44 w-44 max-w-44"
-					>
-						Create Plan
-					</Button>
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
+					<DialogFooter>
+						<Button
+							isLoading={loading}
+							onClick={handleCreateClicked}
+							variant="primary"
+							className="min-w-44 w-44 max-w-44"
+						>
+							Create Plan
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</>
 	);
 }
