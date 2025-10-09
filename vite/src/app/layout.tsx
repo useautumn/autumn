@@ -61,7 +61,10 @@ export function MainLayout() {
 	// 1. If not loaded, show loading screen
 	if (isPending) {
 		return (
-			<AutumnProvider backendUrl={import.meta.env.VITE_BACKEND_URL}>
+			<AutumnProvider
+				backendUrl={import.meta.env.VITE_BACKEND_URL}
+				includeCredentials={true}
+			>
 				<div className="w-screen h-screen flex bg-stone-100">
 					<MainSidebar />
 					<div className="w-full h-screen flex flex-col overflow-hidden py-3 pr-3">

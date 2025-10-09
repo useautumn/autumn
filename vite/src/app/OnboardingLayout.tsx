@@ -32,6 +32,7 @@ export function OnboardingLayout() {
 					/([^:]\/)\/+/g,
 					"$1",
 				)}
+				includeCredentials={true}
 			>
 				<div className="w-screen h-screen flex items-center justify-center bg-stone-100">
 					<LoadingScreen />
