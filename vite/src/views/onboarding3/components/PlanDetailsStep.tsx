@@ -46,7 +46,7 @@ export const PlanDetailsStep = () => {
 								className="mb-1"
 							/>
 							<span className="text-form-label block">
-								You’ll use this when using Autumn’s APIs or SDKs to refer to
+								You'll use this when using Autumn's APIs or SDKs to refer to
 								this product.
 							</span>
 						</div>

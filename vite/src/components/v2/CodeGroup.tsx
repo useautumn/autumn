@@ -1,4 +1,4 @@
-import { CopyIcon } from "@phosphor-icons/react";
+import { CheckIcon, CopyIcon } from "@phosphor-icons/react";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
 import { common, createStarryNight } from "@wooorm/starry-night";
 import { toHtml } from "hast-util-to-html";
@@ -66,24 +66,43 @@ interface CodeGroupCopyButtonProps
 const CodeGroupCopyButton = React.forwardRef<
 	HTMLButtonElement,
 	CodeGroupCopyButtonProps
->(({ className, onCopy, ...props }, ref) => (
-	<button
-		ref={ref}
-		type="button"
-		onClick={onCopy}
-		className={cn(
-			"flex items-center justify-center h-6 px-2 py-1",
-			"bg-white border border-[#d1d1d1] rounded-tr-md",
-			"shadow-[0px_-3px_4px_0px_inset_rgba(0,0,0,0.04)]",
-			"hover:text-[#8838ff] transition-none outline-none",
-			"focus-visible:text-[#8838ff]",
-			className,
-		)}
-		{...props}
-	>
-		<CopyIcon className="size-[14px]" />
-	</button>
-));
+>(({ className, onCopy, ...props }, ref) => {
+	const [copied, setCopied] = React.useState(false);
+
+	const handleClick = React.useCallback(
+		(e: React.MouseEvent<HTMLButtonElement>) => {
+			if (onCopy) onCopy();
+			setCopied(true);
+			setTimeout(() => setCopied(false), 1200);
+			if (props.onClick) props.onClick(e);
+		},
+		[onCopy, props.onClick],
+	);
+
+	return (
+		<button
+			ref={ref}
+			type="button"
+			onClick={handleClick}
+			className={cn(
+				"flex items-center justify-center h-6 px-2 py-1",
+				"bg-white border border-[#d1d1d1] rounded-tr-md",
+				"shadow-[0px_-3px_4px_0px_inset_rgba(0,0,0,0.04)]",
+				"hover:text-[#8838ff] transition-none outline-none",
+				"focus-visible:text-[#8838ff]",
+				className,
+			)}
+			aria-label={copied ? "Copied!" : "Copy code"}
+			{...props}
+		>
+			{copied ? (
+				<CheckIcon className="size-[14px] text-[#8838ff]" />
+			) : (
+				<CopyIcon className="size-[14px]" />
+			)}
+		</button>
+	);
+});
 CodeGroupCopyButton.displayName = "CodeGroupCopyButton";
 
 interface CodeGroupContentProps
