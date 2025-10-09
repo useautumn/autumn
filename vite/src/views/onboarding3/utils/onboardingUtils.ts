@@ -144,7 +144,7 @@ export const resetCreationTracking = (
 };
 
 // Handle back navigation logic
-export const handleBackNavigation = (
+export const handleBackNavigation = async (
 	step: OnboardingStep,
 	productCreatedRef: MutableRefObject<{
 		created: boolean;
@@ -157,7 +157,28 @@ export const handleBackNavigation = (
 	baseProduct: any,
 	setBaseProduct: (product: any) => void,
 	setSelectedProductId: (id: string) => void,
+	axiosInstance?: AxiosInstance,
 ) => {
+	// When going back to step 1 from step 2, load the created product
+	const currentStepNum = getStepNumber(step);
+	const willGoToStep1 = currentStepNum === 2;
+
+	if (willGoToStep1 && productCreatedRef.current.created && productCreatedRef.current.latestId) {
+		// Load the created product data
+		if (axiosInstance) {
+			try {
+				const response = await axiosInstance.get(
+					`/products/${productCreatedRef.current.latestId}/data2`,
+				);
+				setBaseProduct(response.data.product);
+				setSelectedProductId(productCreatedRef.current.latestId);
+				return;
+			} catch (error) {
+				console.error("Failed to load product on back navigation:", error);
+			}
+		}
+	}
+
 	const isInConflictState = checkForStateConflicts(
 		step,
 		productCreatedRef,

@@ -1,4 +1,4 @@
-import type { ProductV2 } from "@autumn/shared";
+import type { ProductItem, ProductV2 } from "@autumn/shared";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useEnv } from "@/utils/envUtils";
@@ -50,7 +50,6 @@ export const useOnboardingLogic = () => {
 				dataHook.features.length >= 1
 			) {
 				hasInitializedResumability.current = true;
-				dataHook.initializeWithExistingData();
 			}
 		}
 	}, [
@@ -70,7 +69,7 @@ export const useOnboardingLogic = () => {
 			if (dataHook.feature?.id && dataHook.product?.items) {
 				// Find the item index that matches the feature
 				const itemIndex = dataHook.product.items.findIndex(
-					(item) => item.feature_id === dataHook.feature.id,
+					(item: ProductItem) => item.feature_id === dataHook.feature.id,
 				);
 				if (itemIndex !== -1) {
 					const itemId = `item-${itemIndex}`;
@@ -117,7 +116,7 @@ export const useOnboardingLogic = () => {
 		refetchFeatures: dataHook.refetchFeatures,
 		setSheet,
 		setEditingState,
-		setIsLoading: dataHook.setIsLoading,
+		setIsButtonLoading: dataHook.setIsButtonLoading,
 	});
 
 	return {
@@ -139,7 +138,8 @@ export const useOnboardingLogic = () => {
 		setEditingState,
 		playgroundMode: flowHook.playgroundMode,
 		setPlaygroundMode: flowHook.setPlaygroundMode,
-		isLoading: dataHook.isLoading,
+		isQueryLoading: dataHook.isQueryLoading,
+		isButtonLoading: dataHook.isButtonLoading,
 
 		// Handlers
 		handleNext: stepActionsHook.handleNext,

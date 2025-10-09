@@ -21,7 +21,6 @@ interface FeatureCreationActionsProps {
 	setFeature: (feature: Feature | CreateFeature | null) => void;
 	setProduct: (product: ProductV2) => void;
 	setBaseProduct: (product: ProductV2) => void;
-	setIsLoading: (loading: boolean) => void;
 }
 
 export const useFeatureCreationActions = ({
@@ -32,7 +31,6 @@ export const useFeatureCreationActions = ({
 	setFeature,
 	setProduct,
 	setBaseProduct,
-	setIsLoading,
 }: FeatureCreationActionsProps) => {
 	const { refetch: refetchFeatures } = useFeaturesQuery();
 	// Create feature and add to product

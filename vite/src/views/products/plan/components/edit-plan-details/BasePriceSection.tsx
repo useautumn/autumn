@@ -53,8 +53,9 @@ export const BasePriceSection = () => {
 		intervalCount?: number;
 	}) => {
 		const newItems = [...product.items];
-		const basePriceIndex = newItems.findIndex(
-			(item: ProductItem) => item.price === basePrice?.amount,
+		// Find base price item by isBasePrice flag, not by price match
+		const basePriceIndex = newItems.findIndex((item: ProductItem) =>
+			isPriceItem(item),
 		);
 
 		if (basePriceIndex !== -1) {
@@ -116,7 +117,7 @@ export const BasePriceSection = () => {
 							disabled={disabled}
 							value={basePrice?.amount ?? ""}
 							onChange={(e) => {
-								if (e.target.value !== "" && Number(e.target.value) >= 0)
+								if (Number(e.target.value) >= 0)
 									handleUpdateBasePrice({
 										amount: e.target.value,
 									});

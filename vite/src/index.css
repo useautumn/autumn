@@ -40,9 +40,10 @@ html {
 	--t5: #767676;
 	--t6: #aaa;
 	--t7: #666666;
-	--t8: #388EFF;
+	--t8: #388eff;
 	--t9: #121212;
-	--t10: #D1D1D1;
+	--t10: #d1d1d1;
+	--t11: #e3e3e3;
 	--radius: 0.375rem; /* 6px */
 
 	--primary: #8838ff;
@@ -156,7 +157,8 @@ html {
 	--color-t8: var(--t8);
 	--color-t9: var(--t9);
 	--color-t10: var(--t10);
-	
+	--color-t11: var(--t11);
+
 	--color-input: var(--input);
 	--color-icon1: var(--icon1);
 

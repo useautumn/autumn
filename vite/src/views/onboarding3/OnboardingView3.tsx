@@ -10,6 +10,7 @@ import {
 import { navigateTo } from "@/utils/genUtils";
 import { OnboardingSteps } from "@/views/onboarding3/components/OnboardingSteps";
 import { ProductContext } from "@/views/products/product/ProductContext";
+import LoadingScreen from "../general/LoadingScreen";
 import { SaveChangesBar } from "../products/plan/components/SaveChangesBar";
 import ConnectStripeDialog from "./ConnectStripeDialog";
 import { OnboardingStepRenderer } from "./components/OnboardingStepRenderer";
@@ -39,7 +40,8 @@ export default function OnboardingContent() {
 		setEditingState,
 		playgroundMode,
 		setPlaygroundMode,
-		isLoading,
+		isQueryLoading,
+		isButtonLoading,
 
 		// Handlers
 		handleNext,
@@ -53,6 +55,10 @@ export default function OnboardingContent() {
 		navigate,
 		env,
 	} = useOnboardingLogic();
+
+	if (isQueryLoading) {
+		return <LoadingScreen />;
+	}
 
 	return (
 		<>
@@ -132,7 +138,7 @@ export default function OnboardingContent() {
 											feature,
 										)
 									}
-									isLoading={isLoading}
+									isLoading={isButtonLoading}
 								/>
 							</div>
 						</div>
@@ -191,7 +197,7 @@ export default function OnboardingContent() {
 							)}
 						</div>
 
-						<div className="max-w-[35%] h-full flex flex-col p-3">
+						<div className="h-full flex flex-col p-3 min-w-lg max-w-lg">
 							<div className="rounded-lg h-full flex flex-col p-1 gap-[0.625rem] overflow-x-hidden">
 								<div className="bg-card border-base border overflow-x-hidden rounded-[12px] shadow-sm mt-1 p-4 shrink-0">
 									<StepHeader
@@ -230,7 +236,7 @@ export default function OnboardingContent() {
 													feature,
 												)
 											}
-											isLoading={isLoading}
+											isLoading={isButtonLoading}
 										/>
 									</div>
 								</div>

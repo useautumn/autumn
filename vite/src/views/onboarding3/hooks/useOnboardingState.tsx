@@ -48,8 +48,8 @@ export const useOnboardingState = () => {
 		latestId: null,
 	});
 
-	// Loading state for onboarding steps
-	const [isLoading, setIsLoading] = useState(false);
+	// Loading state for Next button spinner
+	const [isButtonLoading, setIsButtonLoading] = useState(false);
 
 	return {
 		// Base product state (for usePlanData)
@@ -65,7 +65,7 @@ export const useOnboardingState = () => {
 		featureCreatedRef,
 
 		// Loading state
-		isLoading,
-		setIsLoading,
+		isButtonLoading,
+		setIsButtonLoading,
 	};
 };
