@@ -38,6 +38,10 @@ export const EditProductDetails = () => {
 	}, [product]);
 
 	const handleCreateProduct = async () => {
+		if(!details.id){
+			toast.error("Product ID is required")
+			return
+		}
 		setCreateLoading(true);
 		try {
 			await axiosInstance.post("/v1/products", {
