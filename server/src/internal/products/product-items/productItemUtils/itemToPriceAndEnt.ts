@@ -217,7 +217,7 @@ export const toFeatureAndPrice = ({
 		};
 	}
 
-	const entInterval = itemToEntInterval(item);
+	const entInterval = itemToEntInterval({ item });
 
 	const config: UsagePriceConfig = {
 		type: PriceType.Usage,
