@@ -269,7 +269,7 @@ export const validateProductItems = ({
 
 	for (let index = 0; index < newItems.length; index++) {
 		const item = newItems[index];
-		const entInterval = itemToEntInterval(item);
+		const entInterval = itemToEntInterval({ item });
 		const intervalCount = item.interval_count || 1;
 
 		if (isFeaturePriceItem(item) && entInterval === EntInterval.Lifetime) {
@@ -309,7 +309,7 @@ export const validateProductItems = ({
 			return (
 				i.feature_id === item.feature_id &&
 				index2 !== index &&
-				itemToEntInterval(i) === entInterval &&
+				itemToEntInterval({ item: i }) === entInterval &&
 				(i.interval_count || 1) === intervalCount &&
 				i.entity_feature_id === item.entity_feature_id
 			);
