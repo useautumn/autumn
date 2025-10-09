@@ -1,5 +1,5 @@
 import {
-	APIVersion,
+	ApiVersion,
 	BillingType,
 	type EntitlementWithFeature,
 	ErrCode,
@@ -69,7 +69,7 @@ export const priceToStripeItem = ({
 	existingUsage: number;
 	withEntity: boolean;
 	isCheckout: boolean;
-	apiVersion?: APIVersion;
+	apiVersion?: ApiVersion;
 	productOptions?: ProductOptions | undefined;
 }) => {
 	// TODO: Implement this
@@ -140,7 +140,7 @@ export const priceToStripeItem = ({
 			};
 		}
 
-		if (apiVersion === APIVersion.v1_4 && !isCheckout) {
+		if (apiVersion === ApiVersion.Beta && !isCheckout) {
 			return {
 				lineItem: {
 					// lineItem: getEmptyPriceItem({ price, org }),

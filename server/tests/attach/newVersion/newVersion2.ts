@@ -1,7 +1,7 @@
 import {
-	APIVersion,
 	type AppEnv,
 	BillingInterval,
+	LegacyVersion,
 	type Organization,
 	type ProductV2,
 } from "@autumn/shared";
@@ -30,7 +30,7 @@ const testCase = "newVersion2";
 
 describe(`${chalk.yellowBright(`${testCase}: Testing attach new version for trial product`)}`, () => {
 	const customerId = testCase;
-	const autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;

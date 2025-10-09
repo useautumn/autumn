@@ -1,12 +1,12 @@
-import { APIProductItemSchema } from "@api/products/apiProductItem.js";
+import { ApiProductItemSchema } from "@api/products/apiProductItem.js";
 import { z } from "zod/v4";
 
-export const APICusProductSchema = z
+export const ApiCusProductSchema = z
 	.object({
 		id: z.string(),
 		name: z.string().nullable(),
 		group: z.string().nullable(),
-		status: z.enum(["active", "expired", "scheduled", "trialing"]),
+		status: z.enum(["active", "expired", "scheduled", "trialing", "past_due"]),
 
 		canceled_at: z.number().nullish(),
 		started_at: z.number(),
@@ -20,7 +20,7 @@ export const APICusProductSchema = z
 
 		entity_id: z.string().nullish(),
 
-		items: z.array(APIProductItemSchema).nullish(),
+		items: z.array(ApiProductItemSchema).nullish(),
 
 		quantity: z.number().optional(),
 	})
@@ -29,4 +29,4 @@ export const APICusProductSchema = z
 		description: "Customer product object returned by the API",
 	});
 
-export type APICusProduct = z.infer<typeof APICusProductSchema>;
+export type ApiCusProduct = z.infer<typeof ApiCusProductSchema>;

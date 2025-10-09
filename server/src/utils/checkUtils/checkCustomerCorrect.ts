@@ -267,7 +267,7 @@ export const checkCusSubCorrect = async ({
 
 		// Add to schedules
 		const scheduleIndexes: number[] = [];
-		const apiVersion = cusProduct.api_version || defaultApiVersion;
+		const apiVersion = cusProduct.api_semver || defaultApiVersion;
 
 		if (isFreeProduct(product.prices)) {
 			assert(

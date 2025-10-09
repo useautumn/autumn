@@ -1,27 +1,25 @@
 import {
 	AllowanceType,
-	AttachReplaceable,
+	type AttachReplaceable,
 	BillingType,
-	Customer,
-	Entity,
-	EntityBalance,
+	type Customer,
+	type EntitlementWithFeature,
+	type Entity,
+	type EntityBalance,
+	type FeatureOptions,
 	FeatureType,
-	FreeTrial,
-	FullCusProduct,
-	FullCustomerEntitlement,
-	Price,
-	ProductOptions,
+	type FreeTrial,
+	type FullCusProduct,
+	type FullCustomerEntitlement,
+	getStartingBalance,
+	type Price,
+	type ProductOptions,
 } from "@autumn/shared";
-
-import { FeatureOptions } from "@autumn/shared";
-
-import { EntitlementWithFeature } from "@autumn/shared";
-import { getResetBalance } from "../cusProducts/cusEnts/cusEntUtils.js";
-import { generateId, notNullish } from "@/utils/genUtils.js";
-import { getBillingType } from "@/internal/products/prices/priceUtils.js";
-import { entitlementLinkedToEntity } from "@/internal/api/entities/entityUtils.js";
-import { initNextResetAt } from "../cusProducts/insertCusProduct/initCusEnt/initNextResetAt.js";
 import { Decimal } from "decimal.js";
+import { entitlementLinkedToEntity } from "@/internal/api/entities/entityUtils.js";
+import { getBillingType } from "@/internal/products/prices/priceUtils.js";
+import { generateId, notNullish } from "@/utils/genUtils.js";
+import { initNextResetAt } from "../cusProducts/insertCusProduct/initCusEnt/initNextResetAt.js";
 
 export const initCusEntEntities = ({
 	entitlement,
@@ -90,13 +88,13 @@ const initCusEntBalance = ({
 		return { newBalance: null, newEntities: null };
 	}
 
-	const resetBalance = getResetBalance({
+	const resetBalance = getStartingBalance({
 		entitlement,
 		options,
 		relatedPrice,
 	});
 
-	let newEntities: Record<string, EntityBalance> | null = initCusEntEntities({
+	const newEntities: Record<string, EntityBalance> | null = initCusEntEntities({
 		entitlement,
 		entities,
 		resetBalance,
@@ -157,7 +155,7 @@ export const initCusEntitlement = ({
 		(newBalance || 0) -
 		replaceables.filter((r) => r.ent.id === entitlement.id).length;
 
-	let nextResetAtValue = initNextResetAt({
+	const nextResetAtValue = initNextResetAt({
 		entitlement,
 		nextResetAt,
 		// keepResetIntervals,
@@ -169,7 +167,7 @@ export const initCusEntitlement = ({
 	});
 
 	// 3. Define expires at (TODO next time...)
-	let isBooleanFeature = entitlement.feature.type === FeatureType.Boolean;
+	const isBooleanFeature = entitlement.feature.type === FeatureType.Boolean;
 	let usageAllowed = false;
 
 	if (

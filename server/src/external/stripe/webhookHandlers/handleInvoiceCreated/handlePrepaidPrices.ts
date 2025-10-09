@@ -1,21 +1,21 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import {
+	type Customer,
+	EntInterval,
+	type FeatureOptions,
+	type FullCusProduct,
+	type FullCustomerPrice,
+	type UsagePriceConfig,
+} from "@autumn/shared";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService.js";
 import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils.js";
 import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils.js";
 import { getRelatedCusEnt } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-import {
-	Customer,
-	EntInterval,
-	FeatureOptions,
-	FullCusProduct,
-	FullCustomerPrice,
-	UsagePriceConfig,
-} from "@autumn/shared";
-import Stripe from "stripe";
 import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";
 
 export const handlePrepaidPrices = async ({
@@ -58,20 +58,10 @@ export const handlePrepaidPrices = async ({
 
 	const options = getEntOptions(cusProduct.options, cusEnt.entitlement);
 
-	// const resetBalance = getResetBalance({
-	//   entitlement: cusEnt.entitlement,
-	//   options: notNullish(options?.upcoming_quantity)
-	//     ? {
-	//         feature_id: options?.feature_id!,
-	//         quantity: options?.upcoming_quantity!,
-	//       }
-	//     : options,
-	//   relatedPrice: cusPrice.price,
-	// });
-	let resetQuantity = options?.upcoming_quantity || options?.quantity!;
-	let config = cusPrice.price.config as UsagePriceConfig;
-	let billingUnits = config.billing_units || 1;
-	let newAllowance =
+	const resetQuantity = options?.upcoming_quantity || options?.quantity!;
+	const config = cusPrice.price.config as UsagePriceConfig;
+	const billingUnits = config.billing_units || 1;
+	const newAllowance =
 		resetQuantity * billingUnits + (cusEnt.entitlement.allowance || 0);
 
 	const resetUpdate = getResetBalancesUpdate({
@@ -88,7 +78,7 @@ export const handlePrepaidPrices = async ({
 
 	const ent = cusEnt.entitlement;
 
-	let rolloverUpdate = getRolloverUpdates({
+	const rolloverUpdate = getRolloverUpdates({
 		cusEnt,
 		nextResetAt: end * 1000,
 	});
@@ -114,7 +104,7 @@ export const handlePrepaidPrices = async ({
 		});
 
 		if (ent.interval == EntInterval.Lifetime) {
-			let difference = options?.quantity! - options?.upcoming_quantity!;
+			const difference = options?.quantity! - options?.upcoming_quantity!;
 			await CusEntService.decrement({
 				db,
 				id: cusEnt.id,

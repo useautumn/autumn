@@ -1,4 +1,4 @@
-import { APIVersion, type AppEnv, type Organization } from "@autumn/shared";
+import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
 import chalk from "chalk";
 import { addWeeks } from "date-fns";
 import type { Stripe } from "stripe";
@@ -33,7 +33,7 @@ const growth = constructProduct({
 
 describe(`${chalk.yellowBright("upgrade1: Testing usage upgrades")}`, () => {
 	const customerId = "upgrade1";
-	const autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 	let stripeCli: Stripe;
 	let testClockId: string;

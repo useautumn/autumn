@@ -1,29 +1,23 @@
-import chalk from "chalk";
-import Stripe from "stripe";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-	APIVersion,
-	AppEnv,
+	type AppEnv,
 	ErrCode,
-	LimitedItem,
-	Organization,
+	LegacyVersion,
+	type LimitedItem,
+	type Organization,
 } from "@autumn/shared";
-
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import {
-	constructFeatureItem,
-	constructPrepaidItem,
-} from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
+import chalk from "chalk";
+import type Stripe from "stripe";
 import { addPrefixToProducts } from "tests/attach/utils.js";
-import { expect } from "chai";
-import { timeout } from "@/utils/genUtils.js";
-import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
 const messageItem = constructPrepaidItem({
 	featureId: TestFeature.Messages,
@@ -33,7 +27,7 @@ const messageItem = constructPrepaidItem({
 	usageLimit: 500,
 }) as LimitedItem;
 
-export let pro = constructProduct({
+export const pro = constructProduct({
 	items: [messageItem],
 	type: "pro",
 });
@@ -52,13 +46,13 @@ export let pro = constructProduct({
 const testCase = "usageLimit3";
 
 describe(`${chalk.yellowBright(`${testCase}: Testing usage limits for prepaid`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
 
-	let curUnix = new Date().getTime();
+	const curUnix = new Date().getTime();
 
 	before(async function () {
 		await setupBefore(this);
@@ -95,7 +89,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage limits for prepaid`)}
 		testClockId = testClockId1!;
 	});
 
-	it("should attach pro product with quantity exceeding usage limit and get an error", async function () {
+	it("should attach pro product with quantity exceeding usage limit and get an error", async () => {
 		expectAutumnError({
 			errCode: ErrCode.InvalidOptions,
 			func: async () => {
@@ -117,7 +111,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage limits for prepaid`)}
 			},
 		});
 	});
-	it("should attach pro product and update quantity with quantity exceeding usage limit and get an error", async function () {
+	it("should attach pro product and update quantity with quantity exceeding usage limit and get an error", async () => {
 		await autumn.attach({
 			customer_id: customerId,
 			product_id: pro.id,

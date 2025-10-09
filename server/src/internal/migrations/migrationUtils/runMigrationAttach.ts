@@ -40,7 +40,7 @@ export const runMigrationAttach = async ({
 	attachParams: AttachParams;
 	fromProduct: FullProduct;
 }) => {
-	const { logtail: logger } = req;
+	const { logger } = req;
 	const sameIntervals = intervalsAreSame({ attachParams });
 	const branch = AttachBranch.NewVersion;
 

@@ -1,25 +1,24 @@
 import {
-	APIVersion,
-	EntInterval,
-	EntitlementWithFeature,
-	Entity,
+	ApiVersion,
+	type ApiVersionClass,
+	type EntInterval,
+	type EntitlementWithFeature,
+	type Entity,
 	FeatureType,
-	FullCusProduct,
-	FullCustomerEntitlement,
-	FullCustomerPrice,
-	Organization,
+	type FullCusProduct,
+	type FullCustomerEntitlement,
+	type FullCustomerPrice,
+	getCusEntBalance,
+	getStartingBalance,
+	type Organization,
 } from "@autumn/shared";
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 
 import { notNullish, notNullOrUndefined } from "@/utils/genUtils.js";
-
-import { BREAK_API_VERSION } from "@/utils/constants.js";
 import {
 	getRelatedCusPrice,
-	getResetBalance,
 	getUnlimitedAndUsageAllowed,
 } from "../../cusProducts/cusEnts/cusEntUtils.js";
-import { getCusEntBalance } from "@autumn/shared";
 
 export interface CusFeatureBalance {
 	feature_id: string;
@@ -41,14 +40,16 @@ export const getV1EntitlementsRes = ({
 	isBoolean,
 	unlimited,
 	ent,
+	apiVersion,
 }: {
 	org: Organization;
 	cusEnt: FullCustomerEntitlement;
 	isBoolean: boolean;
 	unlimited: boolean;
 	ent: EntitlementWithFeature;
+	apiVersion: ApiVersionClass;
 }) => {
-	let res: any = {
+	const res: any = {
 		feature_id: ent.feature.id,
 		unlimited: isBoolean ? undefined : unlimited,
 		interval: isBoolean || unlimited ? null : ent.interval || undefined,
@@ -59,7 +60,7 @@ export const getV1EntitlementsRes = ({
 		unused: 0,
 	};
 
-	if (org.config.api_version >= BREAK_API_VERSION) {
+	if (apiVersion.gte(ApiVersion.V0_2)) {
 		res.next_reset_at =
 			isBoolean || unlimited ? undefined : cusEnt.next_reset_at;
 		res.allowance = isBoolean || unlimited ? undefined : 0;
@@ -76,12 +77,12 @@ export const getRolloverFields = ({
 	cusEnt: FullCustomerEntitlement;
 	entityId?: string;
 }) => {
-	let hasRollover = notNullish(cusEnt.entitlement.rollover);
+	const hasRollover = notNullish(cusEnt.entitlement.rollover);
 	if (!hasRollover) {
 		return null;
 	}
 
-	let rollovers = cusEnt.rollovers || [];
+	const rollovers = cusEnt.rollovers || [];
 
 	if (cusEnt.entitlement.entity_feature_id) {
 		if (entityId) {
@@ -179,7 +180,7 @@ export const getCusBalances = async ({
 	cusPrices: FullCustomerPrice[];
 	org: Organization;
 	entity?: Entity;
-	apiVersion: number;
+	apiVersion: ApiVersionClass;
 }) => {
 	const data: Record<string, any> = {};
 	const features = cusEntsWithCusProduct.map(
@@ -192,7 +193,7 @@ export const getCusBalances = async ({
 
 		if (
 			notNullish(ent.entity_feature_id) &&
-			entity?.feature_id != ent.entity_feature_id
+			entity?.feature_id !== ent.entity_feature_id
 		) {
 			return false;
 		}
@@ -204,10 +205,10 @@ export const getCusBalances = async ({
 		const cusProduct = cusEnt.customer_product;
 		const feature = cusEnt.entitlement.feature;
 		const ent: EntitlementWithFeature = cusEnt.entitlement;
-		let key = `${ent.interval || "no-interval"}-${ent.interval_count || 1}-${feature.id}`;
+		const key = `${ent.interval || "no-interval"}-${ent.interval_count || 1}-${feature.id}`;
 
 		// 1. Handle boolean
-		let isBoolean = feature.type == FeatureType.Boolean;
+		const isBoolean = feature.type === FeatureType.Boolean;
 
 		const { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
 			cusEnts: cusEntsWithCusProduct,
@@ -215,13 +216,14 @@ export const getCusBalances = async ({
 		});
 
 		// 1. Initialize balance object
-		if (!data[key] && apiVersion == APIVersion.v1) {
+		if (!data[key] && apiVersion.lt(ApiVersion.V1_1)) {
 			data[key] = getV1EntitlementsRes({
 				org,
 				cusEnt,
 				isBoolean,
 				unlimited,
 				ent,
+				apiVersion,
 			});
 		} else if (!data[key]) {
 			if (isBoolean) {
@@ -252,7 +254,7 @@ export const getCusBalances = async ({
 					overage_allowed: usageAllowed,
 				};
 
-				if (org.config.api_version >= BREAK_API_VERSION) {
+				if (apiVersion.gte(ApiVersion.V0_2)) {
 					data[key].next_reset_at =
 						isBoolean || unlimited ? undefined : cusEnt.next_reset_at;
 					data[key].allowance = isBoolean || unlimited ? undefined : 0;
@@ -266,7 +268,7 @@ export const getCusBalances = async ({
 			continue;
 		}
 
-		let { balance, adjustment, count, unused } = getCusEntBalance({
+		const { balance, adjustment, count, unused } = getCusEntBalance({
 			cusEnt,
 			entityId: entity?.id,
 		});
@@ -274,10 +276,10 @@ export const getCusBalances = async ({
 		data[key].balance += balance || 0;
 		data[key].adjustment += adjustment || 0;
 
-		let total =
-			(getResetBalance({
+		const total =
+			(getStartingBalance({
 				entitlement: ent,
-				options: getEntOptions(cusProduct.options, ent),
+				options: getEntOptions(cusProduct.options, ent) || undefined,
 				relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
 				productQuantity: cusProduct.quantity || 1,
 			}) || 0) * count;
@@ -285,7 +287,7 @@ export const getCusBalances = async ({
 		data[key].total += total;
 		data[key].unused += unused || 0;
 
-		let rollover = getRolloverFields({
+		const rollover = getRolloverFields({
 			cusEnt,
 			entityId: entity?.id,
 		});
@@ -296,7 +298,7 @@ export const getCusBalances = async ({
 			data[key].rollovers = rollover.rollovers;
 		}
 
-		if (org.config.api_version >= BREAK_API_VERSION) {
+		if (apiVersion.gte(ApiVersion.V0_2)) {
 			if (
 				!data[key].next_reset_at ||
 				(cusEnt.next_reset_at && cusEnt.next_reset_at < data[key].next_reset_at)
@@ -304,16 +306,16 @@ export const getCusBalances = async ({
 				data[key].next_reset_at = cusEnt.next_reset_at;
 			}
 
-			const resetBalance = getResetBalance({
+			const resetBalance = getStartingBalance({
 				entitlement: ent,
-				options: getEntOptions(cusProduct.options, ent),
+				options: getEntOptions(cusProduct.options, ent) || undefined,
 				relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
 				productQuantity: cusProduct.quantity || 1,
 			});
 
 			data[key].allowance += (resetBalance || 0) * count;
 
-			let usageLimit = ent.usage_limit;
+			const usageLimit = ent.usage_limit;
 
 			if (notNullish(usageLimit)) {
 				data[key].usage_limit += usageLimit;
@@ -343,19 +345,19 @@ export const getCusBalances = async ({
 	}
 
 	// Sort balances
-	if (org.api_version == APIVersion.v1) {
+	if (apiVersion.lt(ApiVersion.V1_1)) {
 		balances.sort((a: any, b: any) => {
-			let featureA = features.find((f) => f.id == a.feature_id);
-			let featureB = features.find((f) => f.id == b.feature_id);
+			const featureA = features.find((f) => f.id === a.feature_id);
+			const featureB = features.find((f) => f.id === b.feature_id);
 
 			if (
-				featureA?.type == FeatureType.Boolean &&
-				featureB?.type != FeatureType.Boolean
+				featureA?.type === FeatureType.Boolean &&
+				featureB?.type !== FeatureType.Boolean
 			) {
 				return -1;
 			} else if (
-				featureA?.type != FeatureType.Boolean &&
-				featureB?.type == FeatureType.Boolean
+				featureA?.type !== FeatureType.Boolean &&
+				featureB?.type === FeatureType.Boolean
 			) {
 				return 1;
 			}
@@ -369,10 +371,6 @@ export const getCusBalances = async ({
 			return a.feature_id.localeCompare(b.feature_id);
 		});
 	}
-
-	// if (org.api_version == APIVersion.v1) {
-
-	// }
 
 	return balances as CusFeatureBalance[];
 };

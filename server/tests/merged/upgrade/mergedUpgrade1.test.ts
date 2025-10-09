@@ -1,43 +1,43 @@
-import chalk from "chalk";
-import { setupBefore } from "tests/before.js";
-import { Stripe } from "stripe";
-import { createProducts } from "tests/utils/productUtils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-	APIVersion,
-	AppEnv,
+	type AppEnv,
 	CusProductStatus,
-	Organization,
+	LegacyVersion,
+	type Organization,
 } from "@autumn/shared";
-import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import { expect } from "chai";
+import chalk from "chalk";
+import { addWeeks } from "date-fns";
+import type { Stripe } from "stripe";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import { advanceToNextInvoice } from "tests/utils/testAttachUtils/testAttachUtils.js";
 import {
 	addPrefixToProducts,
 	getBasePrice,
 } from "tests/utils/testProductUtils/testProductUtils.js";
-import { expect } from "chai";
-import { advanceToNextInvoice } from "tests/utils/testAttachUtils/testAttachUtils.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { addWeeks } from "date-fns";
-import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
-let premium = constructProduct({
+const premium = constructProduct({
 	id: "premium",
 	items: [constructArrearItem({ featureId: TestFeature.Words })],
 	type: "premium",
 });
-let premiumAnnual = constructProduct({
+const premiumAnnual = constructProduct({
 	id: "premiumAnnual",
 	items: [constructArrearItem({ featureId: TestFeature.Words })],
 	type: "premium",
 	isAnnual: true,
 });
 
-let pro = constructProduct({
+const pro = constructProduct({
 	id: "pro",
 	items: [constructArrearItem({ featureId: TestFeature.Words })],
 	type: "pro",
@@ -58,8 +58,8 @@ const ops = [
 
 const testCase = "mergedUpgrade1";
 describe(`${chalk.yellowBright("mergedUpgrade1: Testing merged subs, upgrade 1 & 2 to pro, add premium 2")}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 	let stripeCli: Stripe;
 	let testClockId: string;
@@ -116,7 +116,7 @@ describe(`${chalk.yellowBright("mergedUpgrade1: Testing merged subs, upgrade 1 &
 		},
 	];
 
-	it("should run operations", async function () {
+	it("should run operations", async () => {
 		await autumn.entities.create(customerId, entities);
 
 		for (let index = 0; index < ops.length; index++) {
@@ -144,7 +144,7 @@ describe(`${chalk.yellowBright("mergedUpgrade1: Testing merged subs, upgrade 1 &
 	const entity1Val = 100000;
 	const entity2Val = 300000;
 
-	it("should advance test clock and upgrade entity 1 to premium, and have correct invoice", async function () {
+	it("should advance test clock and upgrade entity 1 to premium, and have correct invoice", async () => {
 		await autumn.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Words,
@@ -178,7 +178,7 @@ describe(`${chalk.yellowBright("mergedUpgrade1: Testing merged subs, upgrade 1 &
 		});
 	});
 
-	it("should advance to next invoice and have correct invoice", async function () {
+	it("should advance to next invoice and have correct invoice", async () => {
 		await advanceToNextInvoice({
 			stripeCli,
 			testClockId,

@@ -1,11 +1,12 @@
-import { balancesToFeatureResponse } from "./balancesToFeatureResponse.js";
 import {
-	FullCusProduct,
-	Organization,
-	Entity,
-	APIVersion,
+	type ApiVersionClass,
+	cusProductsToCusEnts,
+	cusProductsToCusPrices,
+	type Entity,
+	type FullCusProduct,
+	type Organization,
 } from "@autumn/shared";
-import { cusProductsToCusEnts, cusProductsToCusPrices } from "@autumn/shared";
+import { balancesToFeatureResponse } from "./balancesToFeatureResponse.js";
 import { getCusBalances } from "./getCusBalances.js";
 
 export const getCusFeaturesResponse = async ({
@@ -17,9 +18,9 @@ export const getCusFeaturesResponse = async ({
 	cusProducts: FullCusProduct[];
 	org: Organization;
 	entity?: Entity;
-	apiVersion: APIVersion;
+	apiVersion: ApiVersionClass;
 }) => {
-	let cusEnts = cusProductsToCusEnts({ cusProducts }) as any;
+	const cusEnts = cusProductsToCusEnts({ cusProducts }) as any;
 
 	const balances = await getCusBalances({
 		cusEntsWithCusProduct: cusEnts,

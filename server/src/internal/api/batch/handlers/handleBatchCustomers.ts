@@ -1,10 +1,10 @@
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { Response } from "express";
+import { CusProductStatus, ErrCode } from "@autumn/shared";
+import type { Response } from "express";
+import z from "zod";
+import RecaseError from "@/utils/errorUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { CusBatchService } from "../CusBatchService.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { CusProductStatus, ErrCode } from "@autumn/shared";
-import z from "zod";
 
 const schema = z.object({
 	limit: z
@@ -73,7 +73,7 @@ export const handleBatchCustomers = async (req: any, res: any) =>
 				features: req.features,
 				statuses: query.statuses ?? [],
 				logger: req.logtail,
-				reqApiVersion: req.apiVersion,
+				apiVersion: req.apiVersion,
 			});
 		},
 		handler: async (_, res: Response, data, query: z.infer<typeof schema>) => {

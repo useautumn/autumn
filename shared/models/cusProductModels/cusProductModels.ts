@@ -1,3 +1,4 @@
+import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
 import { z } from "zod/v4";
 import { CustomerSchema } from "../cusModels/cusModels.js";
 import { ProcessorType } from "../genModels/genEnums.js";
@@ -52,7 +53,7 @@ export const CusProductSchema = z.object({
 	scheduled_ids: z.array(z.string()).nullish(),
 	processor: z
 		.object({
-			type: z.nativeEnum(ProcessorType),
+			type: z.enum(ProcessorType),
 			subscription_id: z.string().optional().nullable(),
 			subscription_schedule_id: z.string().optional().nullable(),
 			last_invoice_id: z.string().optional().nullable(),
@@ -60,7 +61,7 @@ export const CusProductSchema = z.object({
 		.optional(),
 
 	quantity: z.number().default(1),
-	api_version: z.number().nullish(),
+	api_semver: z.enum(ApiVersion).nullable(),
 });
 
 export const FullCusProductSchema = CusProductSchema.extend({

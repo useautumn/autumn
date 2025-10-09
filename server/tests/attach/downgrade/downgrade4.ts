@@ -1,57 +1,56 @@
-import chalk from "chalk";
-import Stripe from "stripe";
-
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-	APIVersion,
-	AppEnv,
+	type AppEnv,
 	BillingInterval,
-	Customer,
-	Organization,
+	type Customer,
+	LegacyVersion,
+	type Organization,
 } from "@autumn/shared";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import chalk from "chalk";
+import type Stripe from "stripe";
 import { setupBefore } from "tests/before.js";
-
-import { addPrefixToProducts } from "../utils.js";
-import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import {
 	expectDowngradeCorrect,
 	expectNextCycleCorrect,
 } from "tests/utils/expectUtils/expectScheduleUtils.js";
 import { createProducts } from "tests/utils/productUtils.js";
 import { advanceMonths } from "tests/utils/stripeUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { addPrefixToProducts } from "../utils.js";
+
 const testCase = "downgrade4";
 
-let proQuarter = constructProduct({
+const proQuarter = constructProduct({
 	items: [constructArrearItem({ featureId: TestFeature.Words })],
 	type: "pro",
 	interval: BillingInterval.Quarter,
 });
 
-let pro = constructProduct({
+const pro = constructProduct({
 	items: [constructArrearItem({ featureId: TestFeature.Words })],
 	type: "pro",
 });
 
-let premium = constructProduct({
+const premium = constructProduct({
 	items: [constructArrearItem({ featureId: TestFeature.Words })],
 	type: "premium",
 });
 
 describe(`${chalk.yellowBright(`${testCase}: Testing downgrade: pro-quarter -> premium -> pro`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let customer: Customer;
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
 
-	let curUnix = new Date().getTime();
+	const curUnix = new Date().getTime();
 
 	before(async function () {
 		await setupBefore(this);
@@ -90,7 +89,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing downgrade: pro-quarter -> p
 		customer = customer_!;
 	});
 
-	it("should attach pro quarterly product", async function () {
+	it("should attach pro quarterly product", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,
@@ -102,7 +101,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing downgrade: pro-quarter -> p
 		});
 	});
 
-	it("should downgrade to premium", async function () {
+	it("should downgrade to premium", async () => {
 		await expectDowngradeCorrect({
 			autumn,
 			customerId,
@@ -117,7 +116,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing downgrade: pro-quarter -> p
 
 	let preview = null;
 
-	it("should downgrade to pro", async function () {
+	it("should downgrade to pro", async () => {
 		const { preview: preview_ } = await expectDowngradeCorrect({
 			autumn,
 			customerId,
@@ -132,7 +131,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing downgrade: pro-quarter -> p
 		preview = preview_;
 	});
 
-	it("should have correct invoice after cycle", async function () {
+	it("should have correct invoice after cycle", async () => {
 		await advanceMonths({ stripeCli, testClockId, numberOfMonths: 3 });
 
 		await timeout(10000);

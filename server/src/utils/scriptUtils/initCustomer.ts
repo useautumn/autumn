@@ -1,6 +1,7 @@
 import {
 	type AppEnv,
 	type Customer,
+	type CustomerData,
 	type Organization,
 	ProcessorType,
 } from "@autumn/shared";
@@ -182,6 +183,7 @@ export const attachPaymentMethod = async ({
 export const initCustomerV2 = async ({
 	autumn,
 	customerId,
+	customerData,
 	org,
 	env,
 	db,
@@ -190,6 +192,7 @@ export const initCustomerV2 = async ({
 }: {
 	autumn: Autumn | AutumnInt;
 	customerId: string;
+	customerData?: CustomerData;
 	org: Organization;
 	env: AppEnv;
 	db: DrizzleCli;
@@ -226,7 +229,7 @@ export const initCustomerV2 = async ({
 		id: customerId,
 		name,
 		email,
-		fingerprint: fingerprint_,
+		fingerprint: customerData?.fingerprint || fingerprint_,
 		// @ts-expect-error
 		stripe_id: stripeCus.id,
 	});
@@ -240,7 +243,15 @@ export const initCustomerV2 = async ({
 		});
 	}
 
+	const customer = await CusService.getFull({
+		db,
+		idOrInternalId: customerId,
+		orgId: org.id,
+		env: env,
+	});
+
 	return {
 		testClockId: testClockId || "",
+		customer,
 	};
 };

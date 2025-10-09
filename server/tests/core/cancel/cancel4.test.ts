@@ -1,7 +1,7 @@
 import {
-	APIVersion,
 	type AppEnv,
 	CusProductStatus,
+	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
 import { expect } from "chai";
@@ -53,7 +53,7 @@ const ops = [
 const testCase = "cancel4";
 describe(`${chalk.yellowBright("cancel4: Cancelling free add on product")}`, () => {
 	const customerId = testCase;
-	const autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 	let stripeCli: Stripe;
 	let db: DrizzleCli;

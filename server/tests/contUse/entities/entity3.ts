@@ -1,6 +1,6 @@
 import {
-	APIVersion,
 	type AppEnv,
+	LegacyVersion,
 	OnDecrease,
 	OnIncrease,
 	type Organization,
@@ -43,7 +43,7 @@ const testCase = "entity3";
 
 describe(`${chalk.yellowBright(`contUse/${testCase}: Testing replaceables deleted at end of cycle`)}`, () => {
 	const customerId = testCase;
-	const autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;

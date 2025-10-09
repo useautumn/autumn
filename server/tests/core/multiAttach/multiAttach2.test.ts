@@ -1,7 +1,7 @@
 import {
-	APIVersion,
 	type AppEnv,
 	CusProductStatus,
+	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
 import chalk from "chalk";
@@ -64,7 +64,7 @@ const ops = [
 const testCase = "multiAttach2";
 describe(`${chalk.yellowBright("multiAttach2: Testing multi attach for trial products and update product quantities mid trial")}`, () => {
 	const customerId = testCase;
-	const autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 	let stripeCli: Stripe;
 	let testClockId: string;

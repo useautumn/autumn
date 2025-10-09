@@ -1,5 +1,5 @@
 import {
-	type APIInvoice,
+	type ApiInvoice,
 	CusExpand,
 	type Customer,
 	type CustomerData,
@@ -84,7 +84,7 @@ export const getCusInvoices = async ({
 	limit?: number;
 	withItems?: boolean;
 	features?: Feature[];
-}): Promise<APIInvoice[]> => {
+}): Promise<ApiInvoice[]> => {
 	const finalInvoices = notNullish(invoices)
 		? invoices
 		: await InvoiceService.list({

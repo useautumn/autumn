@@ -1,32 +1,32 @@
-import chalk from "chalk";
-import Stripe from "stripe";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-
 import {
-	APIVersion,
-	AppEnv,
-	Customer,
-	LimitedItem,
-	Organization,
+	type AppEnv,
+	type Customer,
+	LegacyVersion,
+	type LimitedItem,
+	type Organization,
 	RolloverDuration,
 } from "@autumn/shared";
-
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { addPrefixToProducts } from "tests/attach/utils.js";
-
 import { expect } from "chai";
-import { timeout } from "@/utils/genUtils.js";
-import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
+import chalk from "chalk";
 import { addMonths } from "date-fns";
-import { resetAndGetCusEnt } from "./rolloverTestUtils.js";
+import type Stripe from "stripe";
+import { addPrefixToProducts } from "tests/attach/utils.js";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { timeout } from "@/utils/genUtils.js";
+import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 
-let rolloverConfig = { max: 400, length: 1, duration: RolloverDuration.Month };
+const rolloverConfig = {
+	max: 400,
+	length: 1,
+	duration: RolloverDuration.Month,
+};
 const messagesItem = constructPrepaidItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 100,
@@ -35,7 +35,7 @@ const messagesItem = constructPrepaidItem({
 	rolloverConfig,
 }) as LimitedItem;
 
-export let pro = constructProduct({
+export const pro = constructProduct({
 	items: [messagesItem],
 	type: "pro",
 	isDefault: false,
@@ -44,8 +44,8 @@ export let pro = constructProduct({
 const testCase = "rollover4";
 
 describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for usage price feature`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let customer: Customer;
@@ -89,8 +89,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for usage price f
 		customer = res.customer;
 	});
 
-	let paidQuantity = 300;
-	let balance = paidQuantity + messagesItem.included_usage;
+	const paidQuantity = 300;
+	const balance = paidQuantity + messagesItem.included_usage;
 	const options = [
 		{
 			feature_id: TestFeature.Messages,
@@ -98,7 +98,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for usage price f
 		},
 	];
 
-	it("should attach pro product", async function () {
+	it("should attach pro product", async () => {
 		await autumn.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -106,8 +106,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for usage price f
 		});
 	});
 
-	let rollover = 50;
-	it("should create track messages, reset, and have correct rollover", async function () {
+	const rollover = 50;
+	it("should create track messages, reset, and have correct rollover", async () => {
 		await autumn.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -123,11 +123,11 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for usage price f
 			waitForSeconds: 20,
 		});
 
-		let cus = await autumn.customers.get(customerId);
-		let msgesFeature = cus.features[TestFeature.Messages];
+		const cus = await autumn.customers.get(customerId);
+		const msgesFeature = cus.features[TestFeature.Messages];
 
-		// @ts-ignore
-		let rollovers = msgesFeature?.rollovers;
+		// @ts-expect-error
+		const rollovers = msgesFeature?.rollovers;
 
 		expect(msgesFeature).to.exist;
 		expect(msgesFeature?.balance).to.equal(balance + rollover);
@@ -135,7 +135,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for usage price f
 	});
 
 	// let usage2 = 50;
-	it("should  reset again and have correct rollover", async function () {
+	it("should  reset again and have correct rollover", async () => {
 		await advanceTestClock({
 			stripeCli,
 			testClockId,
@@ -143,11 +143,11 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for usage price f
 			waitForSeconds: 20,
 		});
 
-		let newRollover = Math.min(balance + rollover, rolloverConfig.max);
-		let cus = await autumn.customers.get(customerId);
-		let msgesFeature = cus.features[TestFeature.Messages];
-		// @ts-ignore
-		let rollovers = msgesFeature?.rollovers;
+		const newRollover = Math.min(balance + rollover, rolloverConfig.max);
+		const cus = await autumn.customers.get(customerId);
+		const msgesFeature = cus.features[TestFeature.Messages];
+		// @ts-expect-error
+		const rollovers = msgesFeature?.rollovers;
 
 		expect(msgesFeature).to.exist;
 		expect(msgesFeature?.balance).to.equal(balance + newRollover);

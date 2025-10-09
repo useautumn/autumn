@@ -1,8 +1,8 @@
-import { RolloverDeductParams } from "@/trigger/updateBalanceTask.js";
-import { FullCusEntWithFullCusProduct, Rollover } from "@autumn/shared";
+import type { FullCusEntWithFullCusProduct, Rollover } from "@autumn/shared";
+import type { RolloverDeductParams } from "@/trigger/updateBalanceTask.js";
 import { RolloverService } from "./RolloverService.js";
 
-export const deductFromCusRollovers = async ({
+export const deductFromApiCusRollovers = async ({
 	toDeduct,
 	deductParams,
 	cusEnt,
@@ -15,19 +15,19 @@ export const deductFromCusRollovers = async ({
 		return toDeduct;
 	}
 
-	let updates = {
+	const updates = {
 		toInsert: [] as Rollover[],
 		toUpdate: [] as Rollover[],
 	};
-	let rollovers = getSortedRollovers({
+	const rollovers = getSortedRollovers({
 		cusEnts: [cusEnt],
 		featureId: deductParams.feature.id,
 		entityId: deductParams.entity?.id,
 	});
 
 	if (deductParams.entity) {
-		for (let rollover of rollovers) {
-			let entityRollover = rollover.entities[deductParams.entity.id];
+		for (const rollover of rollovers) {
+			const entityRollover = rollover.entities[deductParams.entity.id];
 			if (entityRollover) {
 				if (entityRollover.balance >= toDeduct) {
 					entityRollover.balance -= toDeduct;
@@ -38,7 +38,7 @@ export const deductFromCusRollovers = async ({
 					break;
 				} else {
 					if (entityRollover.balance > 0) {
-						let deductedAmount = entityRollover.balance;
+						const deductedAmount = entityRollover.balance;
 						toDeduct -= entityRollover.balance;
 						entityRollover.balance = 0;
 						entityRollover.usage += deductedAmount;

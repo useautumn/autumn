@@ -1,7 +1,7 @@
-import { APIDiscountSchema } from "@api/others/apiDiscount.js";
+import { ApiDiscountSchema } from "@api/others/apiDiscount.js";
 import { z } from "zod/v4";
 
-export const APICusUpcomingInvoiceSchema = z.object({
+export const ApiCusUpcomingInvoiceSchema = z.object({
 	lines: z.array(
 		z.object({
 			product_id: z.string().nullish(),
@@ -9,10 +9,10 @@ export const APICusUpcomingInvoiceSchema = z.object({
 			amount: z.number(),
 		}),
 	),
-	discounts: z.array(APIDiscountSchema),
+	discounts: z.array(ApiDiscountSchema),
 	subtotal: z.number(),
 	total: z.number(),
 	currency: z.string(),
 });
 
-export type APICusUpcomingInvoice = z.infer<typeof APICusUpcomingInvoiceSchema>;
+export type ApiCusUpcomingInvoice = z.infer<typeof ApiCusUpcomingInvoiceSchema>;

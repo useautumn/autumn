@@ -1,4 +1,10 @@
-import type { AppEnv, AuthType, Feature, Organization } from "@autumn/shared";
+import type {
+	ApiVersionClass,
+	AppEnv,
+	AuthType,
+	Feature,
+	Organization,
+} from "@autumn/shared";
 import type { ClickHouseClient } from "@clickhouse/client";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
@@ -19,7 +25,7 @@ export type RequestContext = {
 	id: string;
 	isPublic: boolean;
 	authType: AuthType;
-	apiVersion: string;
+	apiVersion: ApiVersionClass;
 	timestamp: number;
 };
 

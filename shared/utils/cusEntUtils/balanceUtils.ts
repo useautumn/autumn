@@ -1,4 +1,4 @@
-import { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
+import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import { notNullish, nullish } from "../utils.js";
 
 export const getSummedEntityBalances = ({
@@ -16,16 +16,16 @@ export const getSummedEntityBalances = ({
 	}
 
 	return {
-		balance: Object.values(cusEnt.entities!).reduce(
+		balance: Object.values(cusEnt.entities).reduce(
 			(acc, curr) => acc + curr.balance,
 			0,
 		),
-		adjustment: Object.values(cusEnt.entities!).reduce(
+		adjustment: Object.values(cusEnt.entities).reduce(
 			(acc, curr) => acc + curr.adjustment,
 			0,
 		),
 		unused: 0,
-		count: Object.values(cusEnt.entities!).length,
+		count: Object.values(cusEnt.entities).length,
 	};
 };
 
@@ -36,9 +36,7 @@ export const getCusEntBalance = ({
 	cusEnt: FullCustomerEntitlement;
 	entityId?: string | null;
 }) => {
-	let entitlement = cusEnt.entitlement;
-	let ent = cusEnt.entitlement;
-	let feature = ent.feature;
+	const entitlement = cusEnt.entitlement;
 
 	if (notNullish(entitlement.entity_feature_id)) {
 		if (nullish(entityId)) {
@@ -46,8 +44,8 @@ export const getCusEntBalance = ({
 				cusEnt,
 			});
 		} else {
-			let entityBalance = cusEnt.entities?.[entityId!]?.balance;
-			let adjustment = cusEnt.entities?.[entityId!]?.adjustment || 0;
+			const entityBalance = cusEnt.entities?.[entityId]?.balance;
+			const adjustment = cusEnt.entities?.[entityId]?.adjustment || 0;
 
 			if (nullish(entityBalance)) {
 				return { balance: 0, adjustment: 0, unused: 0, count: 1 };
@@ -63,8 +61,8 @@ export const getCusEntBalance = ({
 	}
 
 	return {
-		balance: cusEnt.balance,
-		adjustment: cusEnt.adjustment,
+		balance: cusEnt.balance || 0,
+		adjustment: cusEnt.adjustment || 0,
 		unused: cusEnt.replaceables?.length || 0,
 		count: 1,
 	};

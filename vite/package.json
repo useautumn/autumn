@@ -4,7 +4,7 @@
 	"version": "0.0.0",
 	"type": "module",
 	"scripts": {
-		"dev": "vite --port 3000 --host",
+		"dev": "vite --host",
 		"build": "tsc && vite build",
 		"start": "serve -s dist",
 		"lint": "eslint .",

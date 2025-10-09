@@ -35,7 +35,7 @@ export const handleOneOffFunction = async ({
 	config: AttachConfig;
 	res: any;
 }) => {
-	const logger = req.logtail;
+	const logger = req.logger;
 	logger.info("Scenario 4A: One-off prices");
 
 	const {

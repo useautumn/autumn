@@ -1,7 +1,7 @@
-import { APIVersion, CusExpand, ErrCode } from "@autumn/shared";
+import { CusExpand, ErrCode, LegacyVersion } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { orgToVersion } from "@/utils/versionUtils.js";
+import { orgToVersion } from "@/utils/versionUtils/legacyVersionUtils.js";
 import { getCusWithCache } from "../cusCache/getCusWithCache.js";
 import { parseCusExpand } from "../cusUtils/cusUtils.js";
 import { getCustomerDetails } from "../cusUtils/getCustomerDetails.js";
@@ -13,7 +13,7 @@ export const handleGetCustomer = async (req: any, res: any) =>
 		action: "get customer",
 		handler: async () => {
 			const customerId = req.params.customer_id;
-			const { env, db, logtail: logger, org, features } = req;
+			const { env, db, logger, org, features } = req;
 			const { expand } = req.query;
 
 			const expandArray = parseCusExpand(expand);
@@ -23,7 +23,7 @@ export const handleGetCustomer = async (req: any, res: any) =>
 				reqApiVersion: req.apiVersion,
 			});
 
-			const getInvoices = apiVersion < APIVersion.v1_1;
+			const getInvoices = apiVersion < LegacyVersion.v1_1;
 			if (getInvoices) expandArray.push(CusExpand.Invoices);
 
 			logger.info(`getting customer ${customerId} for org ${org.slug}`);
@@ -41,7 +41,7 @@ export const handleGetCustomer = async (req: any, res: any) =>
 			logger.info(`get customer took ${Date.now() - startTime}ms`);
 
 			if (!customer) {
-				req.logtail.warn(
+				logger.warn(
 					`GET /customers/${customerId}: not found | Org: ${org.slug}`,
 				);
 				res.status(StatusCodes.NOT_FOUND).json({
@@ -56,11 +56,11 @@ export const handleGetCustomer = async (req: any, res: any) =>
 				customer,
 				org,
 				env: req.env,
-				logger: req.logtail,
+				logger,
 				cusProducts: customer.customer_products,
 				expand: expandArray,
 				features,
-				reqApiVersion: req.apiVersion,
+				apiVersion: req.apiVersion,
 			});
 
 			res.status(200).json(cusData);

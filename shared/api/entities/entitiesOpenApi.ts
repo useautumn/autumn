@@ -1,16 +1,15 @@
 import { EntityExpand } from "@models/cusModels/entityModels/entityExpand.js";
 import { z } from "zod/v4";
 import { SuccessResponseSchema } from "../common/commonResponses.js";
-import { APIEntitySchema } from "./apiEntity.js";
+import { queryStringArray } from "../common/queryHelpers.js";
+import { ApiEntitySchema } from "./apiEntity.js";
 import { CreateEntityParamsSchema } from "./entityOpModels.js";
 
-const EntityListResponseSchema = z
-	.object({
-		data: z.array(APIEntitySchema),
-	})
-	.meta({
-		id: "EntityListResponse",
-	});
+// Register schema with .meta() for OpenAPI spec generation
+const ApiEntityWithMeta = ApiEntitySchema.meta({
+	id: "Entity",
+	description: "Entity object returned by the API",
+});
 
 export const entityOps = {
 	"/customers/{customer_id}/entities": {
@@ -30,7 +29,7 @@ export const entityOps = {
 			responses: {
 				"200": {
 					description: "200 OK",
-					content: { "application/json": { schema: APIEntitySchema } },
+					content: { "application/json": { schema: ApiEntityWithMeta } },
 				},
 			},
 		},
@@ -45,13 +44,13 @@ export const entityOps = {
 					entity_id: z.string(),
 				}),
 				query: z.object({
-					expand: z.array(z.enum(EntityExpand)).optional(),
+					expand: queryStringArray(z.enum(EntityExpand)).optional(),
 				}),
 			},
 			responses: {
 				"200": {
 					description: "200 OK",
-					content: { "application/json": { schema: APIEntitySchema } },
+					content: { "application/json": { schema: ApiEntityWithMeta } },
 				},
 			},
 		},

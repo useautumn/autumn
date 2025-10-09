@@ -1,25 +1,24 @@
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
 // Manual customer creation - not using initCustomer to control test clock properly
 import {
-	APIVersion,
-	AppEnv,
+	type AppEnv,
 	CusProductStatus,
-	Organization,
+	LegacyVersion,
+	type Organization,
 } from "@autumn/shared";
 import chalk from "chalk";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import { addDays, addHours } from "date-fns";
+import type Stripe from "stripe";
 import { setupBefore } from "tests/before.js";
+import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
-
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { initCustomerV2 } from "@/utils/scriptUtils/initCustomer.js";
 import {
 	defaultTrialPro,
 	setupDefaultTrialBefore,
 } from "./defaultTrialBefore.test.js";
-import { initCustomerV2 } from "@/utils/scriptUtils/initCustomer.js";
-import { addDays, addHours } from "date-fns";
-import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
 
 // 2.2:
 // -> Creating a new customer with a payment method should attach the pro product with default trial
@@ -28,13 +27,13 @@ import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
 const testCase = "defaultTrial2";
 
 describe(`${chalk.yellowBright(`advanced/${testCase}: ensure trial transitions into full product if payment method is valid`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockID: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
 
-	let curUnix = Math.floor(new Date().getTime() / 1000);
+	const curUnix = Math.floor(new Date().getTime() / 1000);
 
 	before(async function () {
 		await setupBefore(this);
@@ -57,8 +56,8 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure trial transitions i
 		testClockID = res.testClockId;
 	});
 
-	it("should create a customer with the paid default trial", async function () {
-		let customer = await autumn.customers.get(customerId);
+	it("should create a customer with the paid default trial", async () => {
+		const customer = await autumn.customers.get(customerId);
 
 		expectProductAttached({
 			customer,
@@ -66,7 +65,7 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure trial transitions i
 		});
 	});
 
-	it("should be active after 7 days", async function () {
+	it("should be active after 7 days", async () => {
 		await advanceTestClock({
 			stripeCli,
 			testClockId: testClockID,
@@ -77,7 +76,7 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure trial transitions i
 			waitForSeconds: 10,
 		});
 
-		let customer = await autumn.customers.get(customerId);
+		const customer = await autumn.customers.get(customerId);
 
 		expectProductAttached({
 			customer,

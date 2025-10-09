@@ -1,9 +1,9 @@
 import {
+	type ApiCusFeature,
+	type ApiCusFeatureV2,
+	ApiCusFeatureV2Schema,
+	type ApiCusRollover,
 	type CreditSchemaItem,
-	type CusEntResponse,
-	CusEntResponseSchema,
-	type CusEntResponseV2,
-	type CusRollover,
 	type Feature,
 	FeatureType,
 	type FullCustomerEntitlement,
@@ -16,8 +16,8 @@ import { notNullish } from "@/utils/genUtils.js";
 import type { CusFeatureBalance } from "./getCusBalances.js";
 
 export const sumValues = (
-	entList: CusEntResponse[],
-	key: keyof CusEntResponse,
+	entList: ApiCusFeatureV2[],
+	key: keyof ApiCusFeatureV2,
 ) => {
 	return entList.reduce((acc, curr) => {
 		if (curr[key]) {
@@ -28,7 +28,7 @@ export const sumValues = (
 	}, 0);
 };
 
-export const getEarliestNextResetAt = (entList: CusEntResponse[]) => {
+export const getEarliestNextResetAt = (entList: ApiCusFeatureV2[]) => {
 	const earliest = entList.reduce((acc, curr) => {
 		if (curr.next_reset_at && curr.next_reset_at < acc) {
 			return curr.next_reset_at;
@@ -37,7 +37,7 @@ export const getEarliestNextResetAt = (entList: CusEntResponse[]) => {
 		return acc;
 	}, Infinity);
 
-	return earliest == Infinity ? null : earliest;
+	return earliest === Infinity ? null : earliest;
 };
 
 export const featuresToObject = ({
@@ -45,17 +45,17 @@ export const featuresToObject = ({
 	entList,
 }: {
 	features: Feature[];
-	entList: CusEntResponse[];
+	entList: ApiCusFeatureV2[];
 }) => {
-	const featureObject: Record<string, CusEntResponseV2> = {};
+	const featureObject: Record<string, ApiCusFeature> = {};
 
 	for (const entRes of entList) {
-		const feature = features.find((f) => f.id == entRes.feature_id)!;
+		const feature = features.find((f) => f.id === entRes.feature_id)!;
 		const featureType = getCusFeatureType({ feature });
 
 		const featureId = feature.id;
 		const unlimited = entRes.unlimited;
-		const relatedEnts = entList.filter((e) => e.feature_id == featureId);
+		const relatedEnts = entList.filter((e) => e.feature_id === featureId);
 
 		if (featureObject[featureId]) {
 			continue;
@@ -73,9 +73,9 @@ export const featuresToObject = ({
 		const rollovers = hasRollovers
 			? (relatedEnts
 					.flatMap((e) => e.rollovers)
-					.filter(notNullish) as CusRollover[])
+					.filter(notNullish) as ApiCusRollover[])
 			: undefined;
-		const cusFeature: CusEntResponseV2 = {
+		const cusFeature: ApiCusFeature = {
 			id: featureId,
 			name: feature.name,
 			type: featureType,
@@ -86,9 +86,9 @@ export const featuresToObject = ({
 			usage_limit: usageLimit,
 
 			next_reset_at: getEarliestNextResetAt(relatedEnts),
-			interval: relatedEnts.length == 1 ? relatedEnts[0].interval : "multiple",
+			interval: relatedEnts.length === 1 ? relatedEnts[0].interval : "multiple",
 			interval_count:
-				relatedEnts.length == 1 ? relatedEnts[0].interval_count : null,
+				relatedEnts.length === 1 ? relatedEnts[0].interval_count : null,
 			overage_allowed: relatedEnts.some((e) => e.overage_allowed),
 			breakdown:
 				!unlimited && relatedEnts.length > 1
@@ -135,7 +135,7 @@ export const balancesToFeatureResponse = ({
 			return b;
 		}
 
-		return CusEntResponseSchema.parse({
+		return ApiCusFeatureV2Schema.parse({
 			...b,
 			usage: b.used,
 			included_usage: b.allowance,

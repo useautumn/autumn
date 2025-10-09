@@ -1,6 +1,7 @@
 import {
-	APICusProductSchema,
-	APIVersion,
+	ApiCusProductSchema,
+	ApiVersion,
+	type ApiVersionClass,
 	CusProductStatus,
 	type Entity,
 	type Feature,
@@ -17,7 +18,6 @@ import {
 	getUsageTier,
 } from "@/internal/products/prices/priceUtils.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
-import { BREAK_API_VERSION } from "@/utils/constants.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { getRelatedCusEnt } from "../../cusProducts/cusPrices/cusPriceUtils.js";
 import { fullCusProductToProduct } from "../../cusProducts/cusProductUtils.js";
@@ -33,7 +33,7 @@ export const getCusProductResponse = async ({
 	cusProduct: FullCusProduct;
 	org: Organization;
 	subs?: Subscription[];
-	apiVersion: number;
+	apiVersion: ApiVersionClass;
 	features: Feature[];
 	entity?: Entity;
 }) => {
@@ -112,11 +112,7 @@ export const getCusProductResponse = async ({
 	const subIds = cusProduct.subscription_ids;
 	let stripeSubData = {};
 
-	if (
-		subIds &&
-		subIds.length > 0 &&
-		org.config.api_version >= BREAK_API_VERSION
-	) {
+	if (subIds && subIds.length > 0 && apiVersion.gte(ApiVersion.V0_2)) {
 		const baseSub = subs?.find(
 			(s) => s.id === subIds[0] || (s as Subscription).stripe_id === subIds[0],
 		);
@@ -137,7 +133,7 @@ export const getCusProductResponse = async ({
 		};
 	}
 
-	if (apiVersion >= APIVersion.v1_1) {
+	if (apiVersion.gte(ApiVersion.V1_1)) {
 		if ((!subIds || subIds.length === 0) && trialing) {
 			stripeSubData = {
 				current_period_start: cusProduct.starts_at,
@@ -153,7 +149,7 @@ export const getCusProductResponse = async ({
 			options: cusProduct.options,
 		});
 
-		return APICusProductSchema.parse({
+		return ApiCusProductSchema.parse({
 			id: fullProduct.id,
 			name: fullProduct.name,
 			group: fullProduct.group || null,

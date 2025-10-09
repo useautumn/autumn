@@ -1,12 +1,19 @@
-import { CusExpand } from "@models/cusModels/cusExpand.js";
 import { z } from "zod/v4";
 import { SuccessResponseSchema } from "../common/commonResponses.js";
-import { APICustomerSchema } from "./apiCustomer.js";
+import { ApiCustomerSchema } from "./apiCustomer.js";
 import {
 	CreateCustomerParamsSchema,
+	CreateCustomerQuerySchema,
+	GetCustomerQuerySchema,
 	ListCustomersResponseSchema,
 	UpdateCustomerParamsSchema,
 } from "./customerOpModels.js";
+
+// Register schema with .meta() for OpenAPI spec generation
+const ApiCustomerWithMeta = ApiCustomerSchema.meta({
+	id: "Customer",
+	description: "Customer object returned by the API",
+});
 
 export const customerOps = {
 	"/customers": {
@@ -32,9 +39,7 @@ export const customerOps = {
 			summary: "Create Customer",
 			tags: ["customers"],
 			requestParams: {
-				query: z.object({
-					expand: z.string().optional(),
-				}),
+				query: CreateCustomerQuerySchema,
 			},
 			requestBody: {
 				content: {
@@ -44,7 +49,7 @@ export const customerOps = {
 			responses: {
 				"200": {
 					description: "200 OK",
-					content: { "application/json": { schema: APICustomerSchema } },
+					content: { "application/json": { schema: ApiCustomerWithMeta } },
 				},
 			},
 		},
@@ -57,14 +62,12 @@ export const customerOps = {
 				path: z.object({
 					customer_id: z.string(),
 				}),
-				query: z.object({
-					expand: z.array(z.enum(CusExpand)).optional(),
-				}),
+				query: GetCustomerQuerySchema,
 			},
 			responses: {
 				"200": {
 					description: "200 OK",
-					content: { "application/json": { schema: APICustomerSchema } },
+					content: { "application/json": { schema: ApiCustomerWithMeta } },
 				},
 			},
 		},
@@ -87,7 +90,7 @@ export const customerOps = {
 			responses: {
 				"200": {
 					description: "200 OK",
-					content: { "application/json": { schema: APICustomerSchema } },
+					content: { "application/json": { schema: ApiCustomerWithMeta } },
 				},
 			},
 		},

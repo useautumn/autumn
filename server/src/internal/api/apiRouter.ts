@@ -1,13 +1,14 @@
 import { Router } from "express";
 import { analyticsMiddleware } from "@/middleware/analyticsMiddleware.js";
 import { apiAuthMiddleware } from "@/middleware/apiAuthMiddleware.js";
+import { expressApiVersionMiddleware } from "@/middleware/expressApiVersionMiddleware.js";
 import { pricingMiddleware } from "@/middleware/pricingMiddleware.js";
 import { refreshCacheMiddleware } from "@/middleware/refreshCacheMiddleware.js";
 import { analyticsRouter } from "../analytics/analyticsRouter.js";
 import { attachRouter } from "../customers/attach/attachRouter.js";
 import { handleSetupPayment } from "../customers/attach/handleSetupPayment.js";
 import cancelRouter from "../customers/cancel/cancelRouter.js";
-import { cusRouter } from "../customers/cusRouter.js";
+import { expressCusRouter } from "../customers/cusRouter.js";
 import { handleCreateBillingPortal } from "../customers/handlers/handleCreateBillingPortal.js";
 import { featureRouter } from "../features/featureRouter.js";
 import { internalFeatureRouter } from "../features/internalFeatureRouter.js";
@@ -32,9 +33,10 @@ const apiRouter: Router = Router();
 apiRouter.use(apiAuthMiddleware);
 apiRouter.use(pricingMiddleware);
 apiRouter.use(analyticsMiddleware);
+apiRouter.use(expressApiVersionMiddleware as any);
 apiRouter.use(refreshCacheMiddleware);
 
-apiRouter.use("/customers", cusRouter);
+apiRouter.use("/customers", expressCusRouter);
 apiRouter.use("/invoices", invoiceRouter);
 apiRouter.use("/products", productRouter);
 apiRouter.use("/products_beta", productBetaRouter);

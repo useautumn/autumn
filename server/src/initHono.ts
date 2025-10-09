@@ -5,9 +5,12 @@ import { apiVersionMiddleware } from "./honoMiddlewares/apiVersionMiddleware.js"
 import { baseMiddleware } from "./honoMiddlewares/baseMiddleware.js";
 import { errorMiddleware } from "./honoMiddlewares/errorMiddleware.js";
 import { orgConfigMiddleware } from "./honoMiddlewares/orgConfigMiddleware.js";
+import { queryMiddleware } from "./honoMiddlewares/queryMiddleware.js";
+import { refreshCacheMiddleware } from "./honoMiddlewares/refreshCacheMiddleware.js";
 import { secretKeyMiddleware } from "./honoMiddlewares/secretKeyMiddleware.js";
 import { traceMiddleware } from "./honoMiddlewares/traceMiddleware.js";
 import type { HonoEnv } from "./honoUtils/HonoEnv.js";
+import { cusRouter } from "./internal/customers/cusRouter.js";
 import { honoProductRouter } from "./internal/products/productRouter.js";
 import { auth } from "./utils/auth.js";
 
@@ -66,16 +69,22 @@ export const createHonoApp = () => {
 	// Step 2: Tracing middleware - handles OpenTelemetry spans
 	app.use("*", traceMiddleware);
 
-	// Step 3: API Version middleware - validates x-api-version header
-	app.use("/v1/*", apiVersionMiddleware);
-
 	// Step 4: Auth middleware - verifies secret key and populates auth context
 	app.use("/v1/*", secretKeyMiddleware);
 
 	// Step 5: Org config middleware - allows config overrides via header
 	app.use("/v1/*", orgConfigMiddleware);
 
-	// Step 6: Add pricing middleware, analytics middleware, etc.
+	// Step 3: API Version middleware - validates x-api-version header
+	app.use("/v1/*", apiVersionMiddleware);
+
+	// Step 6: Refresh cache middleware - clears customer cache after successful mutations
+	app.use("/v1/*", refreshCacheMiddleware);
+
+	// Step 7: Add pricing middleware, analytics middleware, etc.
+
+	app.use("/v1/*", queryMiddleware());
+	app.route("v1/customers", cusRouter);
 	app.route("v1/products", honoProductRouter);
 
 	// Error handler - must be defined after all routes and middleware

@@ -1,26 +1,28 @@
-import { expect } from "chai";
-import chalk from "chalk";
-import { features } from "tests/global.js";
-import { setupBefore } from "tests/before.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-	APIVersion,
-	AppEnv,
+	type AppEnv,
 	BillingInterval,
+	LegacyVersion,
 	ProductItemFeatureType,
 	UsageModel,
 } from "@autumn/shared";
-import { createProducts } from "tests/utils/productUtils.js";
+import { expect } from "chai";
+import chalk from "chalk";
+import { setupBefore } from "tests/before.js";
+import { features } from "tests/global.js";
+import {
+	getPrepaidCusEnt,
+	getUsageCusEnt,
+} from "tests/utils/cusProductUtils/cusEntSearchUtils.js";
 import { getMainCusProduct } from "tests/utils/cusProductUtils/cusProductUtils.js";
-import { getUsageCusEnt } from "tests/utils/cusProductUtils/cusEntSearchUtils.js";
-import { getPrepaidCusEnt } from "tests/utils/cusProductUtils/cusEntSearchUtils.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeaturePriceItem } from "@/internal/products/product-items/productItemUtils.js";
 import { timeout } from "@/utils/genUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
 // Scenario 1: prepaid + pay per use monthly -> prepaid + pay per use monthly
-let pro = {
+const pro = {
 	id: "multiFeature1Pro",
 	name: "Multi Feature 1 Pro",
 	items: {
@@ -43,7 +45,7 @@ let pro = {
 	},
 };
 
-let premium = {
+const premium = {
 	id: "multiFeature1Premium",
 	name: "Multi Feature 1 Premium",
 	items: {
@@ -82,19 +84,19 @@ export const getPrepaidAndUsageCusEnts = async ({
 	env: AppEnv;
 	featureId: string;
 }) => {
-	let mainCusProduct = await getMainCusProduct({
+	const mainCusProduct = await getMainCusProduct({
 		customerId,
 		db,
 		orgId,
 		env,
 	});
 
-	let prepaidCusEnt = getPrepaidCusEnt({
+	const prepaidCusEnt = getPrepaidCusEnt({
 		cusProduct: mainCusProduct!,
 		featureId,
 	});
 
-	let usageCusEnt = getUsageCusEnt({
+	const usageCusEnt = getUsageCusEnt({
 		cusProduct: mainCusProduct!,
 		featureId,
 	});
@@ -107,17 +109,17 @@ describe(`${chalk.yellowBright(
 	"multiFeature1: Testing prepaid + pay per use -> prepaid + pay per use",
 )}`, () => {
 	let autumn: AutumnInt = new AutumnInt();
-	let autumn2: AutumnInt = new AutumnInt({ version: APIVersion.v1_2 });
-	let customerId = testCase;
+	const autumn2: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_2 });
+	const customerId = testCase;
 
-	let prepaidQuantity = 10;
-	let prepaidAllowance = pro.items.prepaid.included_usage + prepaidQuantity;
+	const prepaidQuantity = 10;
+	const prepaidAllowance = pro.items.prepaid.included_usage + prepaidQuantity;
 	let totalUsage = 0;
 
-	let premiumPrepaidAllowance =
+	const premiumPrepaidAllowance =
 		premium.items.prepaid.included_usage + prepaidQuantity;
 
-	let optionsList = [
+	const optionsList = [
 		{
 			feature_id: features.metered1.id,
 			quantity: prepaidQuantity,
@@ -154,7 +156,7 @@ describe(`${chalk.yellowBright(
 			options: optionsList,
 		});
 
-		let { prepaidCusEnt, usageCusEnt } = await getPrepaidAndUsageCusEnts({
+		const { prepaidCusEnt, usageCusEnt } = await getPrepaidAndUsageCusEnts({
 			customerId,
 			db: this.db,
 			orgId: this.org.id,
@@ -170,7 +172,7 @@ describe(`${chalk.yellowBright(
 	});
 
 	it("should use prepaid allowance first", async function () {
-		let value = 60;
+		const value = 60;
 
 		await autumn.track({
 			customer_id: customerId,
@@ -182,7 +184,7 @@ describe(`${chalk.yellowBright(
 
 		await timeout(3000);
 
-		let { prepaidCusEnt, usageCusEnt } = await getPrepaidAndUsageCusEnts({
+		const { prepaidCusEnt, usageCusEnt } = await getPrepaidAndUsageCusEnts({
 			customerId,
 			db: this.db,
 			orgId: this.org.id,
@@ -195,7 +197,7 @@ describe(`${chalk.yellowBright(
 	});
 
 	it("should have correct usage / invoice after upgrade", async function () {
-		let value = 60;
+		const value = 60;
 		await autumn.track({
 			customer_id: customerId,
 			value,
@@ -206,7 +208,7 @@ describe(`${chalk.yellowBright(
 
 		await timeout(10000);
 
-		let { usageCusEnt } = await getPrepaidAndUsageCusEnts({
+		const { usageCusEnt } = await getPrepaidAndUsageCusEnts({
 			customerId,
 			db: this.db,
 			orgId: this.org.id,
@@ -220,7 +222,7 @@ describe(`${chalk.yellowBright(
 			options: optionsList,
 		});
 
-		let { prepaidCusEnt, usageCusEnt: newUsageCusEnt } =
+		const { prepaidCusEnt, usageCusEnt: newUsageCusEnt } =
 			await getPrepaidAndUsageCusEnts({
 				customerId,
 				db: this.db,
@@ -230,19 +232,19 @@ describe(`${chalk.yellowBright(
 			});
 
 		// Check invoice too
-		let { invoices } = await autumn2.customers.get(customerId);
+		const { invoices } = await autumn2.customers.get(customerId);
 
-		let invoice1Amount =
+		const invoice1Amount =
 			(premium.items.prepaid.price ?? 0) * prepaidQuantity -
 			(pro.items.prepaid.price ?? 0) * prepaidQuantity;
 
-		let invoice0Amount = value * (pro.items.payPerUse.price ?? 0);
+		const invoice0Amount = value * (pro.items.payPerUse.price ?? 0);
 
-		let totalAmount = invoice1Amount + invoice0Amount;
+		const totalAmount = invoice1Amount + invoice0Amount;
 
 		expect(invoices![0].total).to.equal(totalAmount);
 
-		let leftover = premiumPrepaidAllowance - totalUsage + value;
+		const leftover = premiumPrepaidAllowance - totalUsage + value;
 		expect(prepaidCusEnt?.balance).to.equal(Math.max(0, leftover));
 		expect(newUsageCusEnt?.balance).to.equal(0);
 	});

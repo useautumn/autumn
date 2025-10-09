@@ -1,41 +1,34 @@
+import {
+	type AppEnv,
+	CusProductStatus,
+	LegacyVersion,
+	type Organization,
+} from "@autumn/shared";
+import { expect } from "chai";
 import chalk from "chalk";
+import { addDays } from "date-fns";
+import { Decimal } from "decimal.js";
+import type { Stripe } from "stripe";
 import { setupBefore } from "tests/before.js";
-import { Stripe } from "stripe";
+import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
+import { expectMultiAttachCorrect } from "tests/utils/expectUtils/expectMultiAttach.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-
 import {
-	APIVersion,
-	AppEnv,
-	CusProductStatus,
-	Organization,
-} from "@autumn/shared";
-
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { expectMultiAttachCorrect } from "tests/utils/expectUtils/expectMultiAttach.js";
-import {
-	multiRewardPremium,
-	multiRewardPro,
 	premiumReward,
 	premiumTrial,
 	proReward,
 	proTrial,
 	setupMultiRewardBefore,
 } from "./multiRewardUtils.test.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { addDays } from "date-fns";
-import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
-import { expect } from "chai";
-import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
-import { Decimal } from "decimal.js";
 
 const testCase = "multiReward3";
 describe(`${chalk.yellowBright("multiReward3: Testing multi attach with rewards -- advance clock and update pro quantity")}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 	let stripeCli: Stripe;
 	let testClockId: string;
@@ -71,7 +64,7 @@ describe(`${chalk.yellowBright("multiReward3: Testing multi attach with rewards 
 		testClockId = testClockId1!;
 	});
 
-	it("should run multi attach through checkout and have correct sub", async function () {
+	it("should run multi attach through checkout and have correct sub", async () => {
 		const productsList = [
 			{
 				product_id: proTrial.id,
@@ -100,7 +93,7 @@ describe(`${chalk.yellowBright("multiReward3: Testing multi attach with rewards 
 
 	let checkoutRes: any;
 
-	it("should advance clock and update pro quantity", async function () {
+	it("should advance clock and update pro quantity", async () => {
 		const productsList = [
 			{
 				product_id: proTrial.id,
@@ -136,7 +129,7 @@ describe(`${chalk.yellowBright("multiReward3: Testing multi attach with rewards 
 		checkoutRes = res.checkoutRes;
 	});
 
-	it("should advance to trial end and have correct quantity", async function () {
+	it("should advance to trial end and have correct quantity", async () => {
 		await advanceTestClock({
 			stripeCli,
 			testClockId,

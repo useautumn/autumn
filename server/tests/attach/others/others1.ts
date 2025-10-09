@@ -1,47 +1,47 @@
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { APIVersion, AppEnv, Organization } from "@autumn/shared";
+import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
 import chalk from "chalk";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type Stripe from "stripe";
 import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "../utils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import {
 	expectDowngradeCorrect,
 	expectNextCycleCorrect,
 } from "tests/utils/expectUtils/expectScheduleUtils.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { addPrefixToProducts } from "../utils.js";
 
 const testCase = "others1";
 
-export let free = constructProduct({
+export const free = constructProduct({
 	items: [],
 	type: "free",
 	isDefault: false,
 });
 
-export let pro = constructProduct({
+export const pro = constructProduct({
 	items: [],
 	type: "pro",
 	trial: true,
 });
 
-export let premium = constructProduct({
+export const premium = constructProduct({
 	items: [],
 	type: "premium",
 	trial: true,
 });
 
 describe(`${chalk.yellowBright(`${testCase}: Testing trials: pro with trial -> premium with trial -> free`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
 
-	let curUnix = new Date().getTime();
+	const curUnix = new Date().getTime();
 
 	before(async function () {
 		await setupBefore(this);
@@ -78,7 +78,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing trials: pro with trial -> p
 		testClockId = testClockId1!;
 	});
 
-	it("should attach pro product (with trial)", async function () {
+	it("should attach pro product (with trial)", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			stripeCli,
@@ -90,7 +90,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing trials: pro with trial -> p
 		});
 	});
 
-	it("should attach premium product (with trial)", async function () {
+	it("should attach premium product (with trial)", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			stripeCli,
@@ -102,7 +102,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing trials: pro with trial -> p
 		});
 	});
 
-	it("should attach free product at the end of the trial", async function () {
+	it("should attach free product at the end of the trial", async () => {
 		const { preview } = await expectDowngradeCorrect({
 			autumn,
 			stripeCli,

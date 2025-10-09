@@ -1,56 +1,45 @@
-import chalk from "chalk";
-import { setupBefore } from "tests/before.js";
-import { Stripe } from "stripe";
-import { createProducts } from "tests/utils/productUtils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-	APIVersion,
-	AppEnv,
+	type AppEnv,
 	CusProductStatus,
-	Organization,
+	LegacyVersion,
+	type Organization,
 } from "@autumn/shared";
-import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import {
-	addPrefixToProducts,
-	getBasePrice,
-} from "tests/utils/testProductUtils/testProductUtils.js";
-import { expect } from "chai";
-import { expectSubToBeCorrect } from "../mergeUtils.test.js";
-
-import { getAttachPreviewTotal } from "tests/utils/testAttachUtils/getAttachPreviewTotal.js";
-import { advanceToNextInvoice } from "tests/utils/testAttachUtils/testAttachUtils.js";
-import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
-import { timeout } from "@/utils/genUtils.js";
+import chalk from "chalk";
+import type { Stripe } from "stripe";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
 // UNCOMMENT FROM HERE
-let g1Pro = constructProduct({
+const g1Pro = constructProduct({
 	id: "mergedGroups2_g1Pro",
 	group: "mergedG2_1",
 	items: [constructArrearItem({ featureId: TestFeature.Words })],
 	type: "pro",
 });
 
-let g2Pro = constructProduct({
+const g2Pro = constructProduct({
 	id: "mergedGroups2_g2Pro",
 	group: "mergedG2_2",
 	items: [constructArrearItem({ featureId: TestFeature.Words })],
 	type: "pro",
 });
 
-let g1Premium = constructProduct({
+const g1Premium = constructProduct({
 	id: "mergedGroups2_g1Premium",
 	items: [constructArrearItem({ featureId: TestFeature.Words })],
 	type: "premium",
 	group: "mergedG2_1",
 });
 
-let g2Premium = constructProduct({
+const g2Premium = constructProduct({
 	id: "mergedGroups2_g2Premium",
 	group: "mergedG2_2",
 	items: [constructArrearItem({ featureId: TestFeature.Words })],
@@ -79,12 +68,13 @@ const ops = [
 			{ product: g1Pro, status: CusProductStatus.Scheduled },
 		],
 		// otherProducts: [g2Premium],
+		skipFeatureCheck: true,
 	},
 ];
 
 describe(`${chalk.yellowBright("mergedGroup2: Testing products from diff groups")}`, () => {
-	let customerId = "mergedGroup2";
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = "mergedGroup2";
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 	let stripeCli: Stripe;
 	let testClockId: string;
@@ -123,7 +113,7 @@ describe(`${chalk.yellowBright("mergedGroup2: Testing products from diff groups"
 		testClockId = testClockId1!;
 	});
 
-	it("should attach pro product", async function () {
+	it("should attach pro product", async () => {
 		for (const op of ops) {
 			await attachAndExpectCorrect({
 				autumn,
@@ -134,6 +124,7 @@ describe(`${chalk.yellowBright("mergedGroup2: Testing products from diff groups"
 				db,
 				org,
 				env,
+				skipFeatureCheck: op.skipFeatureCheck,
 			});
 
 			const customer = await autumn.customers.get(customerId);
@@ -148,7 +139,7 @@ describe(`${chalk.yellowBright("mergedGroup2: Testing products from diff groups"
 	});
 
 	return;
-	it("should cancel scheduled product (g1Pro)", async function () {
+	it("should cancel scheduled product (g1Pro)", async () => {
 		await autumn.cancel({
 			customer_id: customerId,
 			product_id: g1Pro.id,

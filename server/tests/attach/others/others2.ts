@@ -1,23 +1,23 @@
-import chalk from "chalk";
-import Stripe from "stripe";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { APIVersion, AppEnv, Organization } from "@autumn/shared";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "../utils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
+import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
 import { expect } from "chai";
+import chalk from "chalk";
+import type Stripe from "stripe";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { attachFailedPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { addPrefixToProducts } from "../utils.js";
 
 const testCase = "others2";
 
-export let oneOff = constructProduct({
+export const oneOff = constructProduct({
 	type: "one_off",
 	items: [
 		constructPrepaidItem({
@@ -30,13 +30,13 @@ export let oneOff = constructProduct({
 });
 
 describe(`${chalk.yellowBright(`${testCase}: Testing one-off`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
 
-	let curUnix = new Date().getTime();
+	const curUnix = new Date().getTime();
 
 	before(async function () {
 		await setupBefore(this);
@@ -80,7 +80,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing one-off`)}`, () => {
 		},
 	];
 
-	it("should attach one-off product", async function () {
+	it("should attach one-off product", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			stripeCli,
@@ -99,7 +99,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing one-off`)}`, () => {
 			quantity: 750,
 		},
 	];
-	it("should be able to attach again", async function () {
+	it("should be able to attach again", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			stripeCli,
@@ -120,8 +120,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing one-off`)}`, () => {
 	});
 
 	// Payment failure
-	it("should handle payment failure", async function () {
-		let customer = await CusService.get({
+	it("should handle payment failure", async () => {
+		const customer = await CusService.get({
 			db,
 			idOrInternalId: customerId,
 			orgId: org.id,

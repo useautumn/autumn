@@ -1,5 +1,5 @@
 import {
-	type APIVersion,
+	type ApiVersion,
 	type AttachConfig,
 	type AttachReplaceable,
 	BillingInterval,
@@ -79,7 +79,7 @@ export const getStripeSubItems = async ({
 		internalEntityId?: string;
 		cusProducts?: FullCusProduct[];
 		entities: Entity[];
-		apiVersion?: APIVersion;
+		apiVersion?: ApiVersion;
 		replaceables: AttachReplaceable[];
 	};
 	isCheckout?: boolean;

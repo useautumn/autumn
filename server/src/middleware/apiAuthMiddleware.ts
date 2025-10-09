@@ -2,40 +2,16 @@ import { AuthType, ErrCode } from "@autumn/shared";
 import { verifyKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
 import { dashboardOrigins } from "@/utils/constants.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { floatToVersion } from "@/utils/versionUtils.js";
 import { withOrgAuth } from "./authMiddleware.js";
 import { verifyBearerPublishableKey } from "./publicAuthMiddleware.js";
 import { trmnlAuthMiddleware, trmnlExclusions } from "./trmnlAuthMiddleware.js";
-
-const verifyApiVersion = (version: string) => {
-	const versionFloat = parseFloat(version);
-	const apiVersion = floatToVersion(versionFloat);
-
-	if (isNaN(versionFloat) || !apiVersion) {
-		throw new RecaseError({
-			message: `${version} is not a valid API version`,
-			code: ErrCode.InvalidApiVersion,
-			statusCode: 400,
-		});
-	}
-
-	return apiVersion;
-};
 
 const maskApiKey = (apiKey: string) => {
 	return apiKey.slice(0, 15) + apiKey.slice(15).replace(/./g, "*");
 };
 
 export const verifySecretKey = async (req: any, res: any, next: any) => {
-	const authHeader =
-		req.headers["authorization"] || req.headers["Authorization"];
-
-	const logger = req.logtail;
-	const version = req.headers["x-api-version"];
-
-	if (version) {
-		req.apiVersion = verifyApiVersion(version);
-	}
+	const authHeader = req.headers.authorization || req.headers.Authorization;
 
 	if (!authHeader || !authHeader.startsWith("Bearer ")) {
 		const origin = req.get("origin");
@@ -99,7 +75,9 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
 				...org.config,
 				...newConfigFields,
 			};
-		} catch (error) {}
+		} catch {
+			// Ignore parsing errors
+		}
 	}
 
 	next();

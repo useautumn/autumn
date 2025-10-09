@@ -1,33 +1,33 @@
-import chalk from "chalk";
-import { setupBefore } from "tests/before.js";
-import { Stripe } from "stripe";
-import { createProducts } from "tests/utils/productUtils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-	APIVersion,
-	AppEnv,
+	type AppEnv,
 	CusProductStatus,
-	Organization,
+	LegacyVersion,
+	type Organization,
 } from "@autumn/shared";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import {
-	addPrefixToProducts,
-	getBasePrice,
-} from "tests/utils/testProductUtils/testProductUtils.js";
+import { expect } from "chai";
+import chalk from "chalk";
+import { addDays } from "date-fns";
+import type { Stripe } from "stripe";
+import { setupBefore } from "tests/before.js";
+import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import {
 	expectMultiAttachCorrect,
 	expectResultsCorrect,
 } from "tests/utils/expectUtils/expectMultiAttach.js";
-import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
+import { createProducts } from "tests/utils/productUtils.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { addDays } from "date-fns";
-import { expect } from "chai";
+import {
+	addPrefixToProducts,
+	getBasePrice,
+} from "tests/utils/testProductUtils/testProductUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
-let premium = constructProduct({
+const premium = constructProduct({
 	id: "premium",
 	items: [
 		constructFeatureItem({ featureId: TestFeature.Words, includedUsage: 200 }),
@@ -35,7 +35,7 @@ let premium = constructProduct({
 	type: "premium",
 });
 
-let pro = constructProduct({
+const pro = constructProduct({
 	id: "pro",
 	items: [
 		constructFeatureItem({
@@ -45,7 +45,7 @@ let pro = constructProduct({
 	],
 	type: "pro",
 });
-let proAnnual = constructProduct({
+const proAnnual = constructProduct({
 	id: "proAnnual",
 	items: [
 		constructFeatureItem({
@@ -59,8 +59,8 @@ let proAnnual = constructProduct({
 
 const testCase = "multiAttach4";
 describe(`${chalk.yellowBright("multiAttach4: Testing multi attach for annual products...")}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 	let stripeCli: Stripe;
 	let testClockId: string;
@@ -104,7 +104,7 @@ describe(`${chalk.yellowBright("multiAttach4: Testing multi attach for annual pr
 		testClockId = testClockId1!;
 	});
 
-	it("should run multi attach through checkout and have correct sub", async function () {
+	it("should run multi attach through checkout and have correct sub", async () => {
 		const productsList = [
 			{
 				product_id: pro.id,
@@ -176,7 +176,7 @@ describe(`${chalk.yellowBright("multiAttach4: Testing multi attach for annual pr
 		},
 	];
 
-	it("should transfer to entity and have correct sub", async function () {
+	it("should transfer to entity and have correct sub", async () => {
 		await autumn.entities.create(customerId, entities);
 
 		await autumn.transfer(customerId, {
@@ -201,7 +201,7 @@ describe(`${chalk.yellowBright("multiAttach4: Testing multi attach for annual pr
 		});
 	});
 
-	it("should cancel one entity's sub at end of cycle and have correct schedule...", async function () {
+	it("should cancel one entity's sub at end of cycle and have correct schedule...", async () => {
 		await autumn.cancel({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -216,13 +216,13 @@ describe(`${chalk.yellowBright("multiAttach4: Testing multi attach for annual pr
 		});
 	});
 
-	it("should cancel one entity's sub immediately", async function () {
+	it("should cancel one entity's sub immediately", async () => {
 		await autumn.cancel({
 			customer_id: customerId,
 			product_id: premium.id,
 			entity_id: "1",
 			cancel_immediately: true,
-			// @ts-ignore
+			// @ts-expect-error
 			prorate: false,
 		});
 
@@ -234,7 +234,7 @@ describe(`${chalk.yellowBright("multiAttach4: Testing multi attach for annual pr
 		});
 	});
 
-	it("should advance test clock to end of trial and have correct sub", async function () {
+	it("should advance test clock to end of trial and have correct sub", async () => {
 		await advanceTestClock({
 			stripeCli,
 			testClockId,

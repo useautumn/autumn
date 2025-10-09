@@ -1,30 +1,30 @@
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { APIVersion, AppEnv, Organization } from "@autumn/shared";
+import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
 import chalk from "chalk";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type Stripe from "stripe";
 import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "../utils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { addPrefixToProducts } from "../utils.js";
 
 const testCase = "upgrade7";
 
-export let pro = constructProduct({
+export const pro = constructProduct({
 	items: [],
 	type: "pro",
 });
 
-export let premium = constructProduct({
+export const premium = constructProduct({
 	items: [],
 	type: "premium",
 });
 
 describe(`${chalk.yellowBright(`${testCase}: Testing upgrade via cancel + attach`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
@@ -63,7 +63,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrade via cancel + attach
 		testClockId = testClockId1!;
 	});
 
-	it("should attach pro product", async function () {
+	it("should attach pro product", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,
@@ -75,7 +75,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrade via cancel + attach
 		});
 	});
 
-	it("should cancel than attach premium product", async function () {
+	it("should cancel than attach premium product", async () => {
 		await autumn.cancel({
 			customer_id: customerId,
 			product_id: pro.id,

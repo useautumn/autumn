@@ -11,7 +11,6 @@ import { and, desc, eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { CacheManager } from "@/external/caching/CacheManager.js";
 import { CacheType } from "@/external/caching/cacheActions.js";
-import { getApiVersion } from "@/utils/versionUtils.js";
 
 export class ApiKeyService {
 	static async verifyAndFetch({
@@ -50,9 +49,6 @@ export class ApiKeyService {
 		delete org.features;
 
 		org.config = OrgConfigSchema.parse(org.config || {});
-		org.api_version = getApiVersion({
-			createdAt: org.created_at!,
-		});
 
 		const result = {
 			org,
