@@ -89,6 +89,7 @@ const compareActualItems = async ({
 			await logPhaseItems({
 				db,
 				items: actualItems,
+				withId: true,
 			});
 
 			console.log(`(${type}) Expected items (${expectedItems.length}):`);
@@ -113,6 +114,7 @@ const compareActualItems = async ({
 				await logPhaseItems({
 					db,
 					items: actualItems,
+					withId: true,
 				});
 
 				console.log("Expected items:");
@@ -298,9 +300,11 @@ export const checkCusSubCorrect = async ({
 			if (cusProduct.product.is_add_on) {
 				// 1. If it's canceled
 				if (cusProduct.canceled && (cusProduct.ended_at || 0) > unix) {
-					return scheduleIndexes.push(index);
+					scheduleIndexes.push(index);
+					return;
 				} else if (!cusProduct.canceled) {
-					return scheduleIndexes.push(index);
+					scheduleIndexes.push(index);
+					return;
 				}
 
 				return;
@@ -316,7 +320,10 @@ export const checkCusSubCorrect = async ({
 						: nullish(cp.internal_entity_id)),
 			);
 
-			if (!curScheduledProduct) return scheduleIndexes.push(index);
+			if (!curScheduledProduct) {
+				scheduleIndexes.push(index);
+				return;
+			}
 
 			// If scheduled product NOT in phase, add main product to schedule
 			if (
@@ -429,6 +436,7 @@ export const checkCusSubCorrect = async ({
 	assert(!!sub, `Sub ${subId} should exist`);
 
 	const actualItems = sub!.items.data.map((item: any) => ({
+		id: item.id,
 		price: item.price.id,
 		quantity: item.quantity || 0,
 		stripeProdId: item.price.product,
