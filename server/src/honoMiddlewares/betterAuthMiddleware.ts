@@ -58,6 +58,7 @@ export const betterAuthMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 	// Step 4: Fetch org and features from database
 	ctx.env = c.req.header("app_env") as AppEnv;
+
 	const data = await OrgService.getWithFeatures({
 		db: ctx.db,
 		orgId: orgId,

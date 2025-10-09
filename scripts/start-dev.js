@@ -13,7 +13,7 @@ async function startDev() {
 			"bunx",
 			[
 				"concurrently",
-				`"cd shared && bun run build && bun tsc"`,
+				`"cd shared && bun run dev"`,
 				`"cd server && SERVER_PORT=${serverPort} bun dev"`,
 				`"cd server && bun workers:dev"`,
 				`"cd vite && VITE_PORT=${vitePort} bun dev"`,
