@@ -30,7 +30,7 @@ export function usePlanData({ originalProduct }: UsePlanDataProps) {
 	}, [originalProduct]);
 
 	const diff = useMemo(() => {
-		if (!originalProductRef.current || !product) {
+		if (!originalProduct || !product) {
 			return {
 				hasChanges: false,
 				willVersion: false,
@@ -39,7 +39,7 @@ export function usePlanData({ originalProduct }: UsePlanDataProps) {
 
 		const comparison = productsAreSame({
 			newProductV2: product as unknown as ProductV2,
-			curProductV2: originalProductRef.current as unknown as ProductV2,
+			curProductV2: originalProduct as unknown as ProductV2,
 			features,
 		});
 
@@ -53,7 +53,7 @@ export function usePlanData({ originalProduct }: UsePlanDataProps) {
 				!comparison.itemsSame ||
 				!comparison.freeTrialsSame,
 		};
-	}, [product, features]);
+	}, [product, features, originalProduct]);
 
 	return {
 		product,
