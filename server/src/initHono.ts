@@ -63,27 +63,30 @@ export const createHonoApp = () => {
 		return auth.handler(c.req.raw);
 	});
 
-	// Step 1: Base middleware - sets up ctx (db, logger, etc.)
-	app.use("*", baseMiddleware);
+	// Step 1: Base middleware - sets up ctx (db, logger, etc.) - only for v1 routes
+	app.use("/v1/*", baseMiddleware);
 
-	// Step 2: Tracing middleware - handles OpenTelemetry spans
-	app.use("*", traceMiddleware);
+	// Step 2: Tracing middleware - handles OpenTelemetry spans - only for v1 routes
+	app.use("/v1/*", traceMiddleware);
 
-	// Step 4: Auth middleware - verifies secret key and populates auth context
+	// Step 3: Auth middleware - verifies secret key and populates auth context
 	app.use("/v1/*", secretKeyMiddleware);
 
-	// Step 5: Org config middleware - allows config overrides via header
+	// Step 4: Org config middleware - allows config overrides via header
 	app.use("/v1/*", orgConfigMiddleware);
 
-	// Step 3: API Version middleware - validates x-api-version header
+	// Step 5: API Version middleware - validates x-api-version header
 	app.use("/v1/*", apiVersionMiddleware);
 
 	// Step 6: Refresh cache middleware - clears customer cache after successful mutations
 	app.use("/v1/*", refreshCacheMiddleware);
 
-	// Step 7: Add pricing middleware, analytics middleware, etc.
-
+	// Step 7: Query middleware
 	app.use("/v1/*", queryMiddleware());
+
+	// Additional middleware can be added here as needed
+
+	// Routes
 	app.route("v1/customers", cusRouter);
 	app.route("v1/products", honoProductRouter);
 
