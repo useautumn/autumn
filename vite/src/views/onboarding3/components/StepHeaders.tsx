@@ -5,7 +5,7 @@ import {
 	OnboardingStep,
 	stepConfig,
 } from "../utils/onboardingUtils";
-import { PlaygroundToolbar } from "./PlaygroundStep/PlaygroundToolbar";
+import { PlaygroundToolbar } from "./playground-step/PlaygroundToolbar";
 
 interface StepHeaderProps {
 	step: OnboardingStep;

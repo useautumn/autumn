@@ -31,7 +31,9 @@ export const useOnboardingSteps = () => {
 				if (!basicValid) return false;
 
 				// Base price validation
-				const basePrice = productV2ToBasePrice({ product });
+				const basePrice = productV2ToBasePrice({
+					product: product as unknown as ProductV2,
+				});
 				const hasBasePriceItem = product?.items?.some((item) =>
 					isPriceItem(item),
 				);
@@ -44,12 +46,14 @@ export const useOnboardingSteps = () => {
 			}
 			case OnboardingStep.FeatureCreation:
 				return (
-					feature?.name?.trim() !== "" &&
-					feature?.id?.trim() !== "" &&
-					feature?.type !== null &&
-					(feature.type === FeatureType.Boolean ||
-						feature?.config?.usage_type === FeatureUsageType.Continuous ||
-						feature?.config?.usage_type === FeatureUsageType.Single)
+					(feature &&
+						feature?.name?.trim() !== "" &&
+						feature?.id?.trim() !== "" &&
+						feature?.type !== null &&
+						(feature.type === FeatureType.Boolean ||
+							feature?.config?.usage_type === FeatureUsageType.Continuous ||
+							feature?.config?.usage_type === FeatureUsageType.Single)) ??
+					false
 				);
 			case OnboardingStep.FeatureConfiguration:
 				return true;
