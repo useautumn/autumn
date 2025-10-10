@@ -4,12 +4,17 @@ import {
 	ExtAttachBodySchema,
 	ExtCheckoutParamsSchema,
 } from "@api/models.js";
-import {
-	createJSDocDescription,
-	docLink,
-	example,
-} from "@api/utils/openApiHelpers.js";
 import type { ZodOpenApiPathsObject } from "zod-openapi";
+import {
+	attachJsDoc,
+	billingPortalJsDoc,
+	cancelJsDoc,
+	checkJsDoc,
+	checkoutJsDoc,
+	queryJsDoc,
+	setupPaymentJsDoc,
+	trackJsDoc,
+} from "../common/jsDocs.js";
 import { CheckParamsSchema, CheckResultSchema } from "./checkModels.js";
 import {
 	BillingPortalParamsSchema,
@@ -23,30 +28,6 @@ import {
 	TrackParamsSchema,
 	TrackResultSchema,
 } from "./coreOpModels.js";
-
-const attachJsDoc = createJSDocDescription({
-	description:
-		"Enables a product for a customer and processes payment if their payment method is already on file.",
-	whenToUse:
-		"Use this when the customer already has a payment method saved. For new customers without payment info, use `checkout` instead.",
-	body: ExtAttachBodySchema,
-	examples: [
-		example({
-			values: {
-				customer_id: "cus_123",
-				product_id: "pro_plan",
-			},
-			description: "Attach a product to a customer",
-		}),
-	],
-	methodName: "attach",
-	docs: [
-		docLink({
-			url: "https://docs.useautumn.com/api-reference/core/attach",
-			title: "Product Attachments",
-		}),
-	],
-});
 
 export const coreOps: ZodOpenApiPathsObject = {
 	"/attach": {
@@ -88,6 +69,7 @@ export const coreOps: ZodOpenApiPathsObject = {
 	"/checkout": {
 		post: {
 			summary: "Checkout",
+			description: checkoutJsDoc,
 			tags: ["core"],
 			requestBody: {
 				content: { "application/json": { schema: ExtCheckoutParamsSchema } },
@@ -103,6 +85,7 @@ export const coreOps: ZodOpenApiPathsObject = {
 	"/cancel": {
 		post: {
 			summary: "Cancel Product",
+			description: cancelJsDoc,
 			tags: ["core"],
 			requestBody: {
 				content: {
@@ -120,6 +103,7 @@ export const coreOps: ZodOpenApiPathsObject = {
 	"/track": {
 		post: {
 			summary: "Track Event",
+			description: trackJsDoc,
 			tags: ["core"],
 			requestBody: {
 				content: {
@@ -137,6 +121,7 @@ export const coreOps: ZodOpenApiPathsObject = {
 	"/query": {
 		post: {
 			summary: "Query Analytics",
+			description: queryJsDoc,
 			tags: ["core"],
 			requestBody: {
 				content: {
@@ -154,6 +139,7 @@ export const coreOps: ZodOpenApiPathsObject = {
 	"/check": {
 		post: {
 			summary: "Check Feature Access",
+			description: checkJsDoc,
 			tags: ["core"],
 			requestBody: {
 				content: {
@@ -171,6 +157,7 @@ export const coreOps: ZodOpenApiPathsObject = {
 	"/setup_payment": {
 		post: {
 			summary: "Setup Payment Method",
+			description: setupPaymentJsDoc,
 			tags: ["core"],
 			requestBody: {
 				content: {
@@ -188,6 +175,7 @@ export const coreOps: ZodOpenApiPathsObject = {
 	"/billing_portal": {
 		post: {
 			summary: "Create Billing Portal Session",
+			description: billingPortalJsDoc,
 			tags: ["core"],
 			requestBody: {
 				content: {
