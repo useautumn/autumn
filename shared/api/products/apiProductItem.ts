@@ -97,4 +97,9 @@ export const ApiProductItemSchema = z.object({
 		}),
 });
 
+export const ApiProductItemWithMeta = ApiProductItemSchema.meta({
+	id: "ProductItem",
+	description: "Product item defining features and pricing within a product",
+});
+
 export type ApiProductItem = z.infer<typeof ApiProductItemSchema>;

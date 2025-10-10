@@ -1,5 +1,6 @@
 import "dotenv/config";
-import { writeFileSync } from "node:fs";
+import { execSync } from "node:child_process";
+import { existsSync, writeFileSync } from "node:fs";
 import { AppEnv } from "@models/genModels/genEnums.js";
 import yaml from "yaml";
 import { z } from "zod/v4";
@@ -13,18 +14,10 @@ import {
 	ApiCustomerWithMeta,
 	customerOps,
 } from "./customers/customersOpenApi.js";
-import {
-	ApiEntityWithMeta,
-	entityOps,
-} from "./entities/entitiesOpenApi.js";
-import {
-	ApiFeatureWithMeta,
-	featureOps,
-} from "./features/featuresOpenApi.js";
-import {
-	ApiProductWithMeta,
-	productOps,
-} from "./products/productsOpenApi.js";
+import { ApiEntityWithMeta, entityOps } from "./entities/entitiesOpenApi.js";
+import { ApiFeatureWithMeta, featureOps } from "./features/featuresOpenApi.js";
+import { ApiProductItemWithMeta } from "./products/apiProductItem.js";
+import { ApiProductWithMeta, productOps } from "./products/productsOpenApi.js";
 import { referralOps } from "./referrals/referralsOpenApi.js";
 
 const API_VERSION = "1.2.0";
@@ -75,6 +68,7 @@ const document = createDocument({
 				description: "Customer feature object returned by the API",
 			}),
 			Product: ApiProductWithMeta,
+			ProductItem: ApiProductItemWithMeta,
 			Feature: ApiFeatureWithMeta,
 			Entity: ApiEntityWithMeta,
 		},
@@ -118,20 +112,24 @@ if (process.env.NODE_ENV !== "production") {
 				`OpenAPI document exported to ${process.env.STAINLESS_PATH}/openapi.yml`,
 			);
 
-			// // Run the run.sh script if it exists
-			// const runScriptPath = `${process.env.STAINLESS_PATH.replace("\\ ", " ")}/run.sh`;
-			// if (existsSync(runScriptPath)) {
-			// 	try {
-			// 		console.log("Running Stainless generation script...");
-			// 		execSync(`chmod +x "${runScriptPath}" && "${runScriptPath}"`, {
-			// 			stdio: "inherit",
-			// 			cwd: process.env.STAINLESS_PATH,
-			// 		});
-			// 		console.log("Stainless generation completed successfully");
-			// 	} catch (error) {
-			// 		console.error("Failed to run Stainless generation script:", error);
-			// 	}
-			// }
+			// Run the run.sh script if it exists
+			const runScriptPath = `${process.env.STAINLESS_PATH.replace("\\ ", " ")}/run.sh`;
+			const runStainless = !process.argv.includes("--noEmit");
+			if (existsSync(runScriptPath) && runStainless) {
+				try {
+					console.log("Running Stainless generation script...");
+					execSync(`chmod +x "${runScriptPath}" && "${runScriptPath}"`, {
+						stdio: "inherit",
+						cwd: process.env.STAINLESS_PATH,
+					});
+					console.log("Stainless generation completed successfully");
+				} catch (error) {
+					console.error("Failed to run Stainless generation script:", error);
+				}
+			} else
+				console.log(
+					`\n${!runStainless ? "Stainless generation skipped due to --noEmit flag" : "Stainless generation script not found"}`,
+				);
 		}
 	} catch (error) {
 		console.error("Failed to export OpenAPI document:", error);
