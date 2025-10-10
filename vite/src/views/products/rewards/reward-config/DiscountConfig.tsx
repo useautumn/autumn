@@ -57,7 +57,7 @@ export const DiscountConfig = ({
 	return (
 		<div className="flex flex-col gap-4 w-full">
 			<div className="flex items-center gap-2">
-				<div className="w-6/12">
+				<div className="w-4/12">
 					<FieldLabel>Amount</FieldLabel>
 					<Input
 						value={config.discount_value}
@@ -73,7 +73,7 @@ export const DiscountConfig = ({
 						}
 					/>
 				</div>
-				<div className="w-6/12">
+				<div className="w-4/12">
 					<FieldLabel>Duration</FieldLabel>
 					<div className="flex items-center gap-1">
 						{config.duration_type === CouponDurationType.Months && (
@@ -123,6 +123,20 @@ export const DiscountConfig = ({
 					</div>
 				</div>
 			</div>
+		<div className="w-4/12">
+			<FieldLabel>Maximum Redemptions</FieldLabel>
+			<Input
+				type="number"
+				className="no-spinner"
+				value={config.max_redemptions ?? ""}
+				onChange={(e) => {
+					const { value } = e.target;
+					const parsed = value === "" ? undefined : Number(value);
+					setConfig("max_redemptions", parsed);
+				}}
+				placeholder="Unlimited"
+			/>
+		</div>
 
 			<div className="">
 				{/* <p className="text-t2 mb-2 text-t3">Products</p> */}
