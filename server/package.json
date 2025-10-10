@@ -7,8 +7,8 @@
 	"scripts": {
 		"email": "email dev -p 3001",
 		"start": "bun src/index.ts",
-		"dev": "cross-env NODE_ENV=development bunx nodemon -w ../shared/dist -w src --ext js,ts --exec bun src/index.ts --ignore scripts --ignore tests",
-		"workers:dev": "cross-env NODE_ENV=development bunx nodemon -w ../shared/dist -w src/workers.ts -w src/queue --ext js,ts --exec bun src/workers.ts --ignore scripts --ignore tests",
+		"dev": "cross-env NODE_ENV=development bunx nodemon -w ../shared/dist -w src --ext js,ts --ignore '../shared/dist/**/*.d.ts' --ignore scripts --ignore tests --exec bun src/index.ts",
+		"workers:dev": "cross-env NODE_ENV=development bunx nodemon -w ../shared/dist -w src/workers.ts -w src/queue --ext js,ts --ignore '../shared/dist/**/*.d.ts' --ignore scripts --ignore tests --exec bun src/workers.ts",
 		"workers": "bun src/workers.ts",
 		"cron": "bun src/cron.ts",
 		"check": "bun src/check.ts",
