@@ -13,6 +13,7 @@ export const defaultDiscountConfig: DiscountConfig = {
 	should_rollover: true,
 	apply_to_all: false,
 	price_ids: [],
+	max_redemptions: undefined,
 };
 
 export const defaultFreeProductConfig: FreeProductConfig = {
