@@ -16,6 +16,7 @@
 		"api": "bun api/openapi.ts",
 		"build": "tsc --emitDeclarationOnly --outDir dist && bun build ./index.ts --outdir dist --format esm --target bun --external zod",
 		"dev": "bunx nodemon --ext ts --ignore dist --exec \"tsc --emitDeclarationOnly --outDir dist && bun build ./index.ts --outdir dist --format esm --target bun --external zod\"",
+		"dev:watch": "bun scripts/watch.js",
 		"db:push": "bun db:generate && bun db:migrate",
 		"db:generate": "cross-env NODE_OPTIONS=\"--import tsx\" bunx drizzle-kit generate --config drizzle.config.ts",
 		"db:migrate": "cross-env NODE_OPTIONS=\"--import tsx\" bunx drizzle-kit migrate --config drizzle.config.ts",
