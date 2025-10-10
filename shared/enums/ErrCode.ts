@@ -155,4 +155,5 @@ export const ErrCode = {
 
 	// ClickHouse
 	ClickHouseDisabled: "clickhouse_disabled",
+	FeatureDeductionFailed: "feature_deduction_failed",
 };

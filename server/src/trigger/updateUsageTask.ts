@@ -3,10 +3,14 @@ import {
 	type AppEnv,
 	CusProductStatus,
 	type Customer,
+	customerEntitlements,
+	customers,
+	ErrCode,
 	type Feature,
 	FeatureType,
 	type FullCustomerEntitlement,
 	type Organization,
+	RecaseError,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -21,6 +25,7 @@ import {
 	deductAllowanceFromCusEnt,
 	deductFromUsageBasedCusEnt,
 } from "./updateBalanceTask.js";
+import { DrizzleError, eq, sql, TransactionRollbackError } from "drizzle-orm";
 
 // 2. Get deductions for each feature
 const getFeatureDeductions = ({
@@ -171,6 +176,7 @@ export const updateUsage = async ({
 	logger,
 	entityId,
 	allFeatures,
+	throwOnDeductionFailed = false,
 }: {
 	db: DrizzleCli;
 	customerId: string;
@@ -183,9 +189,23 @@ export const updateUsage = async ({
 	logger: any;
 	entityId?: string;
 	allFeatures: Feature[];
+	throwOnDeductionFailed?: boolean;
 }) => {
+
+	return await db.transaction(async (tx) => {
+		// Lock ALL customer entitlements for this customer using JOIN
+		await tx.execute(sql`
+			SELECT ce.* 
+			FROM ${customerEntitlements} ce
+			INNER JOIN ${customers} c ON ce.internal_customer_id = c.internal_id
+			WHERE c.id = ${customerId} 
+				AND c.org_id = ${org.id}
+				AND c.env = ${env}
+			FOR UPDATE OF ce
+		`);
+
 	const customer = await CusService.getFull({
-		db,
+		db: tx as unknown as DrizzleCli,
 		idOrInternalId: customerId,
 		orgId: org.id,
 		env,
@@ -238,7 +258,7 @@ export const updateUsage = async ({
 				toDeduct,
 				cusEnt,
 				deductParams: {
-					db,
+					db: tx as unknown as DrizzleCli,
 					feature,
 					env,
 					entity: customer.entity ? customer.entity : undefined,
@@ -251,7 +271,7 @@ export const updateUsage = async ({
 				toDeduct,
 				cusEnt,
 				deductParams: {
-					db,
+					db: tx as unknown as DrizzleCli,
 					feature,
 					env,
 					org,
@@ -267,11 +287,11 @@ export const updateUsage = async ({
 		}
 
 		if (toDeduct !== 0) {
-			await deductFromUsageBasedCusEnt({
+			const canFeatureDeduct = await deductFromUsageBasedCusEnt({
 				toDeduct,
 				cusEnts,
 				deductParams: {
-					db,
+					db: tx as unknown as DrizzleCli,
 					feature,
 					env,
 					org,
@@ -281,7 +301,12 @@ export const updateUsage = async ({
 					entity: customer.entity,
 				},
 				setZeroAdjustment: true,
+				shouldReturnSuccess: true,
 			});
+			if(canFeatureDeduct === false && throwOnDeductionFailed) {
+				// throws TransactionRollbackError
+				tx.rollback()
+			}
 		}
 
 		handleThresholdReached({
@@ -297,8 +322,7 @@ export const updateUsage = async ({
 			logger,
 		});
 	}
-
-	return cusEnts;
+})
 };
 
 // MAIN FUNCTION
@@ -334,7 +358,7 @@ export const runUpdateUsageTask = async ({
 			`HANDLING USAGE TASK FOR CUSTOMER (${customerId}), ORG: ${org.slug}, EVENT ID: ${eventId}`,
 		);
 
-		const cusEnts: any = await updateUsage({
+		await updateUsage({
 			db,
 			customerId,
 			features,
@@ -346,6 +370,7 @@ export const runUpdateUsageTask = async ({
 			logger,
 			entityId,
 			allFeatures,
+			throwOnDeductionFailed: true,
 		});
 
 		await refreshCusCache({
@@ -355,12 +380,13 @@ export const runUpdateUsageTask = async ({
 			org,
 			env,
 		});
+		console.log("   ✅ Customer balance updated");
 
-		if (!cusEnts || cusEnts.length === 0) {
+	} catch (error) {
+		if(error instanceof TransactionRollbackError) {
+			console.log("   ❌ Customer balance could not be updated");
 			return;
 		}
-		console.log("   ✅ Customer balance updated");
-	} catch (error) {
 		logger.error(`ERROR UPDATING USAGE`);
 		logger.error(error);
 

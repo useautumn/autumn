@@ -213,10 +213,13 @@ export const handleUsageEvent = async ({
 			throwError: true,
 		});
 	} else {
-		await addTaskToQueue({
-			jobName: JobName.UpdateUsage,
-			payload,
-		});
+		// Change this to be run synchronously
+		// await addTaskToQueue({
+		// 	jobName: JobName.UpdateUsage,
+		// 	payload,
+		// });
+
+		await runUpdateUsageTask({	payload, logger: console, db: req.db, throwError: true });
 	}
 
 	return { event: newEvent, affectedFeatures: features, org };

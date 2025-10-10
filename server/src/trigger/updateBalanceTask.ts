@@ -454,11 +454,13 @@ export const deductFromUsageBasedCusEnt = async ({
 	deductParams,
 	cusEnts,
 	setZeroAdjustment = false,
+	shouldReturnSuccess = false,
 }: {
 	toDeduct: number;
 	deductParams: DeductParams;
 	cusEnts: FullCusEntWithFullCusProduct[];
 	setZeroAdjustment?: boolean;
+	shouldReturnSuccess?: boolean;
 }) => {
 	const { db, feature, env, org, cusPrices, customer, entity } = deductParams;
 
@@ -494,8 +496,11 @@ export const deductFromUsageBasedCusEnt = async ({
 		console.log(
 			`   - Feature ${feature.id}, To deduct: ${toDeduct} -> no usage-based entitlement found`,
 		);
-		return;
+		if(shouldReturnSuccess) {
+			return false;
+		}
 	}
+	console.log("hey there@!!")
 
 	const cusPrice = getRelatedCusPrice(usageBasedEnt, cusPrices);
 	const billingType = cusPrice?.price
@@ -570,7 +575,12 @@ export const deductFromUsageBasedCusEnt = async ({
 	});
 
 	console.log("Usage based cus ent balance", usageBasedEnt.balance);
-};
+
+	if(shouldReturnSuccess) {
+		return true;
+	}
+
+	};
 
 // Main function to update customer balance
 export const updateCustomerBalance = async ({
