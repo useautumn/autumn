@@ -1,7 +1,7 @@
 import { CreateFeatureSchema, ErrCode, FeatureType } from "@autumn/shared";
 import express, { type Router } from "express";
 import { handleDeleteFeature } from "@/internal/features/handlers/handleDeleteFeature.js";
-// import { handleUpdateFeature } from "@/internal/features/handlers/handleUpdateFeature.js";
+import { handleUpdateFeature } from "@/internal/features/handlers/handleUpdateFeature.js";
 import RecaseError, { formatZodError } from "@/utils/errorUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 import { FeatureService } from "./FeatureService.js";
@@ -12,7 +12,6 @@ import {
 } from "./featureUtils.js";
 import { handleCreateFeature } from "./handlers/handleCreateFeature.js";
 import { handleGetFeatureDeletionInfo } from "./handlers/handleGetFeatureDeletionInfo.js";
-import { handleUpdateFeature } from "./handlers/handleUpdateFeature.js";
 
 export const internalFeatureRouter: Router = express.Router();
 

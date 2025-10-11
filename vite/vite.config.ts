@@ -26,9 +26,17 @@ export default defineConfig({
 			"@radix/tooltip": "@radix-ui/react-tooltip",
 		},
 	},
+	optimizeDeps: {
+		// Exclude workspace dependencies from pre-bundling to avoid cache issues
+		exclude: ["@autumn/shared"],
+		// Force re-optimization on server start to catch workspace changes
+		force: process.env.FORCE_OPTIMIZE === "true",
+	},
 	server: {
 		host: "0.0.0.0", // Required for Docker
-		port: process.env.VITE_PORT ? Number.parseInt(process.env.VITE_PORT) : 3000,
+		port: process.env.VITE_PORT
+			? Number.parseInt(process.env.VITE_PORT, 10)
+			: 3000,
 		strictPort: false, // Allow fallback to next available port
 		allowedHosts: [
 			"dev.useautumn.com",
@@ -40,7 +48,13 @@ export default defineConfig({
 			interval: 1000,
 		},
 		hmr: {
-			port: process.env.VITE_PORT ? Number.parseInt(process.env.VITE_PORT) : 3000,
+			port: process.env.VITE_PORT
+				? Number.parseInt(process.env.VITE_PORT)
+				: 3000,
+		},
+		fs: {
+			// Allow serving files from workspace root (monorepo support)
+			allow: [".."],
 		},
 	},
 });

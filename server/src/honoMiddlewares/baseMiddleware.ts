@@ -63,7 +63,9 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 	let body = null;
 	if (method === "POST" || method === "PUT" || method === "PATCH") {
-		body = await c.req.json();
+		try {
+			body = await c.req.json();
+		} catch (_error) {}
 	}
 
 	logger.info(`[HONO] ${method} ${path}`, {

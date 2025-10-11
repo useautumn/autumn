@@ -2,7 +2,6 @@ import {
 	type CreateFeature as CreateFeatureType,
 	FeatureType,
 } from "@autumn/shared";
-import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -50,20 +49,20 @@ export const CreateFeature = ({
 	}, [open, entityCreate]);
 
 	const updateConfig = () => {
-		const config: {
-			filters: {
-				value: string[];
-			}[];
-		} = structuredClone(feature.config);
+		const config: any = structuredClone(feature.config);
+		return config;
+	};
+
+	const getEventNames = () => {
+		const eventNames = feature.event_names || [];
 		if (
 			feature.type === FeatureType.Metered &&
-			eventNameInput &&
-			config.filters[0].value.length === 0
+			eventNameInput.trim() &&
+			eventNames.length === 0
 		) {
-			config.filters[0].value.push(eventNameInput);
+			return [eventNameInput.trim()];
 		}
-
-		return config;
+		return eventNames;
 	};
 
 	const handleCreateFeature = async () => {
@@ -71,8 +70,6 @@ export const CreateFeature = ({
 			toast.error("Please fill out all fields");
 			return;
 		}
-
-		feature.config = updateConfig();
 
 		try {
 			const { data: createdFeature } = await FeatureService.createFeature(
@@ -82,6 +79,7 @@ export const CreateFeature = ({
 					id: feature.id,
 					type: feature.type,
 					config: updateConfig(),
+					event_names: getEventNames(),
 				},
 			);
 

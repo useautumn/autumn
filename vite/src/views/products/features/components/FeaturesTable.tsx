@@ -20,17 +20,9 @@ export const FeaturesTable = () => {
 	const getMeteredEventNames = (feature: Feature) => {
 		if (feature.type !== FeatureType.Metered) return "";
 
-		if (!feature.config?.filters || feature.config?.filters.length === 0)
-			return "";
+		if (!feature.event_names || feature.event_names.length === 0) return "";
 
-		const value = feature.config?.filters[0]?.value;
-
-		// Handle both array and string values
-		if (Array.isArray(value)) {
-			return value.join(", ");
-		}
-
-		return typeof value === "string" ? value : "";
+		return feature.event_names.join(", ");
 	};
 
 	const handleRowClick = (id: string) => {
