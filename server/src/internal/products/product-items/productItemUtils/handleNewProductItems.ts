@@ -67,7 +67,7 @@ const updateDbPricesAndEnts = async ({
 		entitlementIds: deletedEntIds,
 	});
 
-	if (customPrices.length == 0) {
+	if (customPrices.length === 0) {
 		// Update the entitlement to be custom...
 		await EntitlementService.deleteInIds({
 			db,
@@ -77,7 +77,7 @@ const updateDbPricesAndEnts = async ({
 		const updateOrDelete: any = [];
 		for (const ent of deletedEnts) {
 			const hasCustomPrice = customPrices.some(
-				(price) => price.entitlement_id == ent.id,
+				(price) => price.entitlement_id === ent.id,
 			);
 
 			if (hasCustomPrice) {
@@ -137,7 +137,7 @@ const handleCustomProductItems = async ({
 		prices: [...newPrices, ...updatedPrices, ...samePrices],
 		entitlements: [...newEnts, ...updatedEnts, ...sameEnts].map((ent) => ({
 			...ent,
-			feature: features.find((f) => f.id == ent.feature_id),
+			feature: features.find((f) => f.id === ent.feature_id),
 		})),
 		customPrices: [...newPrices, ...updatedPrices],
 		customEnts: [...newEnts, ...updatedEnts],
@@ -203,16 +203,16 @@ export const handleNewProductItems = async ({
 	});
 
 	const deletedEnts: Entitlement[] = curEnts.filter(
-		(ent) => !newItems.some((item) => item.entitlement_id == ent.id),
+		(ent) => !newItems.some((item) => item.entitlement_id === ent.id),
 	);
 
 	const samePrices: Price[] = [];
 	const sameEnts: Entitlement[] = [];
 
 	for (const item of newItems) {
-		const feature = features.find((f) => f.id == item.feature_id);
-		const curEnt = curEnts.find((ent) => ent.id == item.entitlement_id);
-		const curPrice = curPrices.find((price) => price.id == item.price_id);
+		const feature = features.find((f) => f.id === item.feature_id);
+		const curEnt = curEnts.find((ent) => ent.id === item.entitlement_id);
+		const curPrice = curPrices.find((price) => price.id === item.price_id);
 
 		// 2. Update price and entitlement?
 		const { newPrice, newEnt, updatedPrice, updatedEnt, samePrice, sameEnt } =
@@ -290,7 +290,7 @@ export const handleNewProductItems = async ({
 		prices: [...newPrices, ...updatedPrices],
 		entitlements: [...newEnts, ...updatedEnts].map((ent) => ({
 			...ent,
-			feature: features.find((f) => f.id == ent.feature_id),
+			feature: features.find((f) => f.id === ent.feature_id),
 		})),
 		customPrices: [],
 		customEnts: [],
