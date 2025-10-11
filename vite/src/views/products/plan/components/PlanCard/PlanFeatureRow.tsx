@@ -8,10 +8,12 @@ import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useProductStore } from "@/hooks/stores/useProductStore";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { getItemId } from "@/utils/product/productItemUtils";
-import { useProductContext } from "@/views/products/product/ProductContext";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
+import { useOnboardingStore } from "@/views/onboarding3/store/useOnboardingStore";
 import { PlanFeatureIcon } from "./PlanFeatureIcon";
 
 // Custom dot component with bigger height but smaller width
@@ -33,13 +35,16 @@ export const PlanFeatureRow = ({
 	const { org } = useOrg();
 	const { features } = useFeaturesQuery();
 	const { setItem } = useProductItemContext();
-	const { product, setProduct, editingState, setEditingState, setSheet } =
-		useProductContext();
+	const product = useProductStore((s) => s.product);
+	const setProduct = useProductStore((s) => s.setProduct);
+	const itemId = useSheetStore((s) => s.itemId);
+	const setSheet = useSheetStore((s) => s.setSheet);
+	const isOnboarding = useOnboardingStore((s) => s.isOnboarding);
 
 	const [isPressed, setIsPressed] = useState(false);
 
 	// Always use the current item from product.items for real-time updates
-	const featureItems = productV2ToFeatureItems({ items: product?.items });
+	const featureItems = productV2ToFeatureItems({ items: product.items });
 	const item = featureItems[index] || itemProp;
 
 	const display = getProductItemDisplay({
@@ -50,8 +55,8 @@ export const PlanFeatureRow = ({
 		amountFormatOptions: { currencyDisplay: "narrowSymbol" },
 	});
 
-	const itemId = getItemId({ item, itemIndex: index });
-	const isSelected = itemId === editingState.id;
+	const currentItemId = getItemId({ item, itemIndex: index });
+	const isSelected = itemId === currentItemId;
 
 	// Clear pressed state when this item is no longer selected
 	useEffect(() => {
@@ -60,14 +65,14 @@ export const PlanFeatureRow = ({
 
 	// Also clear pressed state whenever editing state changes (catches hotkey navigation)
 	useEffect(() => {
-		if (editingState.id !== itemId) setIsPressed(false);
-	}, [editingState.id, itemId]);
+		if (itemId !== currentItemId) setIsPressed(false);
+	}, [itemId, currentItemId]);
 
 	const handleRowClicked = () => {
-		const itemId = getItemId({ item, itemIndex: index });
+		if (isOnboarding) return;
+		const currentItemId = getItemId({ item, itemIndex: index });
 		setItem(item);
-		setEditingState({ type: "feature", id: itemId });
-		setSheet("edit-feature");
+		setSheet({ type: "edit-feature", itemId: currentItemId });
 	};
 
 	const handleDeleteRow = () => {
@@ -82,8 +87,7 @@ export const PlanFeatureRow = ({
 		setProduct({ ...product, items: newItems });
 
 		if (isSelected) {
-			setEditingState({ type: "plan", id: null });
-			setSheet("edit-plan");
+			setSheet({ type: "edit-plan" });
 		}
 	};
 
@@ -97,22 +101,32 @@ export const PlanFeatureRow = ({
 				"flex w-full group !h-9 group/row input-base input-shadow-tiny select-bg select-none",
 
 				// To prevent flickering when clicking inner buttons
-				!isSelected &&
+				!isOnboarding &&
+					!isSelected &&
 					"hover:!bg-hover-primary focus-visible:!bg-hover-primary focus-visible:!border-primary active:!bg-active-primary",
 
-				isSelected && "!bg-hover-primary !border-primary",
+				!isOnboarding && isSelected && "!bg-hover-primary !border-primary",
+
+				isOnboarding && "pointer-events-none cursor-default",
 
 				// // Custom pressed state that we can control
 				// "data-[pressed=true]:!bg-active-primary data-[pressed=true]:border-primary focus:outline-none active:!bg-transparent active:!border-transparent",
 			)}
 			onMouseDown={(e) => {
+				if (isOnboarding) return;
 				// Only set pressed if we're not clicking on a button
 				if (!(e.target as Element).closest("button")) {
 					setIsPressed(true);
 				}
 			}}
-			onMouseUp={() => setIsPressed(false)}
-			onMouseLeave={() => setIsPressed(false)}
+			onMouseUp={() => {
+				if (isOnboarding) return;
+				setIsPressed(false);
+			}}
+			onMouseLeave={() => {
+				if (isOnboarding) return;
+				setIsPressed(false);
+			}}
 			onClick={handleRowClicked}
 			onKeyDown={(e) => {
 				if (e.key === "Enter" || e.key === " ") {

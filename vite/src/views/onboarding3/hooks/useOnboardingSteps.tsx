@@ -5,36 +5,37 @@ import {
 	isPriceItem,
 	productV2ToBasePrice,
 } from "@autumn/shared";
-import { useSteps } from "@/views/products/product/product-item/useSteps";
 import { OnboardingStep } from "../utils/onboardingUtils";
+import { useOnboarding3QueryState } from "./useOnboarding3QueryState";
 
 export const useOnboardingSteps = () => {
-	const {
-		stepVal: step,
-		pushStep,
-		popStep,
-	} = useSteps({
-		initialStep: OnboardingStep.PlanDetails,
-	});
+	// Use query state instead of local state
+	const { queryStates } = useOnboarding3QueryState();
+	const step = queryStates.step;
 
 	// Step validation
 	const validateStep = (
 		currentStep: OnboardingStep,
-		product: ProductV2 | null,
+		product: ProductV2 | undefined,
 		feature: Feature | CreateFeature | null,
 	): boolean => {
 		switch (currentStep) {
 			case OnboardingStep.PlanDetails: {
+				// Return false if product is null or undefined
+				if (!product) return false;
+
 				// Basic validation for name and ID
 				const basicValid =
 					product?.name?.trim() !== "" && product?.id?.trim() !== "";
 				if (!basicValid) return false;
 
-				// Base price validation
+				// Base price validation - safely check if product has items
+				if (!product.items) return false;
+
 				const basePrice = productV2ToBasePrice({
 					product: product as unknown as ProductV2,
 				});
-				const hasBasePriceItem = product?.items?.some((item) =>
+				const hasBasePriceItem = product.items.some((item) =>
 					isPriceItem(item),
 				);
 
@@ -68,8 +69,6 @@ export const useOnboardingSteps = () => {
 
 	return {
 		step,
-		pushStep,
-		popStep,
 		validateStep,
 	};
 };

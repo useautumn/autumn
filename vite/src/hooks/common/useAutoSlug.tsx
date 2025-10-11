@@ -8,43 +8,46 @@ type StringKeys<T> = {
 
 type UseAutoSlugProps<T, S extends StringKeys<T>, U extends StringKeys<T>> = {
 	state: T;
-	setState: (updater: T) => void;
+	setState: (updater: T | ((prev: T) => T)) => void;
 	sourceKey: S;
 	targetKey: U;
+	disableAutoSlug?: boolean;
 };
 
 export function useAutoSlug<
 	T,
 	S extends StringKeys<T>,
 	U extends StringKeys<T>,
->({ state, setState, sourceKey, targetKey }: UseAutoSlugProps<T, S, U>) {
-	const targetManuallyChangedRef = useRef(false);
+>({ state, setState, sourceKey, targetKey, disableAutoSlug = false }: UseAutoSlugProps<T, S, U>) {
+	const targetManuallyChangedRef = useRef(disableAutoSlug);
 
 	const setSource = useCallback(
 		(newSource: string) => {
-			const updates: T = {
-				...state,
-				[sourceKey]: newSource as T[S],
-			};
+			setState((prevState: T) => {
+				const updates: T = {
+					...prevState,
+					[sourceKey]: newSource as T[S],
+				};
 
-			if (!targetManuallyChangedRef.current) {
-				updates[targetKey] = slugify(newSource) as T[U];
-			}
+				if (!targetManuallyChangedRef.current && !disableAutoSlug) {
+					updates[targetKey] = slugify(newSource) as T[U];
+				}
 
-			setState(updates);
+				return updates;
+			});
 		},
-		[state, setState, sourceKey, targetKey],
+		[setState, sourceKey, targetKey, disableAutoSlug],
 	);
 
 	const setTarget = useCallback(
 		(newTarget: string) => {
 			targetManuallyChangedRef.current = true;
-			setState({
-				...state,
+			setState((prevState: T) => ({
+				...prevState,
 				[targetKey]: newTarget as T[U],
-			});
+			}));
 		},
-		[state, setState, targetKey],
+		[setState, targetKey],
 	);
 
 	return { setSource, setTarget };

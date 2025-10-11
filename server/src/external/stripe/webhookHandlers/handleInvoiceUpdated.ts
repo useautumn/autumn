@@ -1,13 +1,11 @@
-import { AppEnv, InvoiceStatus } from "@autumn/shared";
-import Stripe from "stripe";
-import { getFullStripeInvoice, invoiceToSubId } from "../stripeInvoiceUtils.js";
-import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { getMetadataFromCheckoutSession } from "@/internal/metadata/metadataUtils.js";
-import { MetadataService } from "@/internal/metadata/MetadataService.js";
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { type AppEnv, InvoiceStatus } from "@autumn/shared";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
+import { MetadataService } from "@/internal/metadata/MetadataService.js";
+import { getFullStripeInvoice, invoiceToSubId } from "../stripeInvoiceUtils.js";
 
 const handleInvoiceCheckoutVoided = async ({
 	db,
@@ -51,9 +49,9 @@ const handleInvoiceCheckoutVoided = async ({
 
 	if (!subId) return;
 
-	const cusSubIds = fullCus.customer_products
-		.map((cp) => cp.subscription_ids || [])
-		.flat();
+	const cusSubIds = fullCus.customer_products.flatMap(
+		(cp) => cp.subscription_ids || [],
+	);
 
 	const subIdMatch = cusSubIds.includes(subId);
 

@@ -1,12 +1,15 @@
-import type { FrontendProduct, ProductV2 } from "@autumn/shared";
 import { ArrowLeftIcon } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/v2/tooltips/Tooltip";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useEnv } from "@/utils/envUtils";
 import { navigateTo } from "@/utils/genUtils";
 import { OnboardingSteps } from "@/views/onboarding3/components/OnboardingSteps";
 import { ProductContext } from "@/views/products/product/ProductContext";
@@ -15,46 +18,41 @@ import { SaveChangesBar } from "../products/plan/components/SaveChangesBar";
 import ConnectStripeDialog from "./ConnectStripeDialog";
 import { OnboardingStepRenderer } from "./components/OnboardingStepRenderer";
 import { StepHeader } from "./components/StepHeaders";
+import { useInitFeature } from "./hooks/useInitProductAndFeature";
+import { useInitFeatureItem } from "./hooks/useInitFeatureItem";
+import { useOnboarding3QueryState } from "./hooks/useOnboarding3QueryState";
 import { useOnboardingLogic } from "./hooks/useOnboardingLogic";
+import { useOnboardingProductSync } from "./hooks/useOnboardingProductSync";
 import { OnboardingPreview } from "./OnboardingPreview";
-import { getStepNumber, OnboardingStep } from "./utils/onboardingUtils";
+import { OnboardingStep } from "./utils/onboardingUtils";
 
 export default function OnboardingContent() {
 	const [connectStripeOpen, setConnectStripeOpen] = useState(false);
-	const {
-		// Data
-		product,
-		setProduct,
-		diff,
-		baseProduct,
-		feature,
-		setFeature,
-		step,
-		products,
-		selectedProductId,
+	const navigate = useNavigate();
+	const env = useEnv();
 
-		// UI State
-		sheet,
-		setSheet,
-		editingState,
-		setEditingState,
-		playgroundMode,
-		setPlaygroundMode,
-		isQueryLoading,
-		isButtonLoading,
+	// Get query data
+	const { isLoading: productsLoading } = useProductsQuery();
+	const { isLoading: featuresLoading } = useFeaturesQuery();
 
-		// Handlers
-		handleNext,
-		handleBack,
-		handlePlanSelect,
-		onCreatePlanSuccess,
-		handleRefetch,
+	// Get step from query state
+	const { queryStates } = useOnboarding3QueryState();
+	const step = queryStates.step;
 
-		// Utils
-		validateStep,
-		navigate,
-		env,
-	} = useOnboardingLogic();
+	// Sync product store with products list (like useProductSync but for onboarding)
+	useOnboardingProductSync();
+
+	// Initialize feature data
+	useInitFeature();
+
+	// Initialize feature item for Step 3 (handles refresh scenario)
+	useInitFeatureItem();
+
+	// Initialize onboarding logic and store handlers
+	useOnboardingLogic();
+
+	// Compute loading state
+	const isQueryLoading = productsLoading || featuresLoading;
 
 	if (isQueryLoading) {
 		return <LoadingScreen />;
@@ -69,20 +67,12 @@ export default function OnboardingContent() {
 			<ProductContext.Provider
 				value={{
 					setShowNewVersionDialog: () => {},
-					product,
-					setProduct,
-					entityFeatureIds: [],
-					setEntityFeatureIds: () => {},
-					diff,
-					sheet,
-					setSheet,
-					editingState,
-					setEditingState,
-					refetch: handleRefetch,
+					refetch: async () => {}, // Not needed in onboarding
 				}}
 			>
 				{step === OnboardingStep.Integration ? (
 					// Full-width centered layout for Integration step
+					// NOTE: This section kept with original layout as per user request
 					<div className="relative w-full h-full bg-[#EEEEEE]">
 						{/* Exit button - takes up space on left */}
 						<div className="fixed pt-4 pl-4 z-10">
@@ -109,52 +99,23 @@ export default function OnboardingContent() {
 						{/* Top right: Step header and controls - takes up space on right */}
 						<div className="fixed pt-4 pr-4 right-0 z-10 flex flex-col gap-2 items-end">
 							<div className="bg-card border-base border rounded-[12px] shadow-sm p-4">
-								<StepHeader
-									step={step}
-									selectedProductId={selectedProductId}
-									products={products}
-									onPlanSelect={handlePlanSelect}
-									onCreatePlanSuccess={onCreatePlanSuccess}
-									playgroundMode={playgroundMode}
-									setPlaygroundMode={setPlaygroundMode}
-									sheet={sheet}
-									editingState={editingState}
-								/>
+								{/* Components access Zustand directly - no props! */}
+								<StepHeader />
 							</div>
 							<div className="bg-card border-base border rounded-[12px] shadow-sm p-4 w-full">
-								<OnboardingSteps
-									totalSteps={5}
-									currentStep={getStepNumber(step)}
-									nextText={
-										step === OnboardingStep.Integration ? "Finish" : "Next"
-									}
-									onNext={handleNext}
-									onBack={handleBack}
-									backDisabled={false}
-									nextDisabled={
-										!validateStep(
-											step,
-											product as unknown as ProductV2,
-											feature,
-										)
-									}
-									isLoading={isButtonLoading}
-								/>
+								{/* Components access Zustand directly - no props! */}
+								<OnboardingSteps />
 							</div>
 						</div>
 
 						{/* Main content - centered between islands */}
 						<div className="w-full h-full flex justify-center overflow-y-auto py-4 pl-[200px] pr-[432px]">
-							<OnboardingStepRenderer
-								step={step}
-								feature={feature}
-								setFeature={setFeature}
-								playgroundMode={playgroundMode}
-							/>
+							{/* Components access Zustand directly - no props! */}
+							<OnboardingStepRenderer />
 						</div>
 					</div>
 				) : (
-					// Standard layout for other steps
+					// Standard layout for other steps - NO PROP DRILLING!
 					<div className="relative w-full h-full flex bg-[#EEEEEE]">
 						{/* Exit button */}
 						<div className="absolute top-4 left-4 z-10">
@@ -179,20 +140,12 @@ export default function OnboardingContent() {
 						</div>
 
 						<div className="w-4/5 flex items-center justify-center relative">
-							<OnboardingPreview
-								currentStep={getStepNumber(step)}
-								playgroundMode={playgroundMode}
-								setConnectStripeOpen={setConnectStripeOpen}
-								feature={feature}
-							/>
+							{/* Components access Zustand directly - no props! */}
+							<OnboardingPreview setConnectStripeOpen={setConnectStripeOpen} />
 
 							{step === OnboardingStep.Playground && (
 								<div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">
-									<SaveChangesBar
-										isOnboarding={true}
-										originalProduct={baseProduct as unknown as FrontendProduct}
-										setOriginalProduct={() => {}} // Controlled by useOnboardingLogic
-									/>
+									<SaveChangesBar isOnboarding={true} />
 								</div>
 							)}
 						</div>
@@ -200,44 +153,17 @@ export default function OnboardingContent() {
 						<div className="h-full flex flex-col p-3 min-w-lg max-w-lg">
 							<div className="rounded-lg h-full flex flex-col p-1 gap-[0.625rem] overflow-x-hidden">
 								<div className="bg-card border-base border overflow-x-hidden rounded-[12px] shadow-sm mt-1 p-4 shrink-0">
-									<StepHeader
-										step={step}
-										selectedProductId={selectedProductId}
-										products={products}
-										onPlanSelect={handlePlanSelect}
-										onCreatePlanSuccess={onCreatePlanSuccess}
-										playgroundMode={playgroundMode}
-										setPlaygroundMode={setPlaygroundMode}
-										sheet={sheet}
-										editingState={editingState}
-									/>
+									{/* Components access Zustand directly - no props! */}
+									<StepHeader />
 								</div>
 								<div className="bg-card border-base border overflow-x-hidden rounded-[12px] shadow-sm p-0 flex-1 overflow-y-auto">
-									<OnboardingStepRenderer
-										step={step}
-										feature={feature}
-										setFeature={setFeature}
-										playgroundMode={playgroundMode}
-									/>
+									{/* Components access Zustand directly - no props! */}
+									<OnboardingStepRenderer />
 								</div>
 								<div className="bg-card border-base border rounded-[12px] shadow-sm flex flex-col p-4 shrink-0">
 									<div className="flex items-center justify-center">
-										<OnboardingSteps
-											totalSteps={5}
-											currentStep={getStepNumber(step)}
-											nextText={getStepNumber(step) === 5 ? "Finish" : "Next"}
-											onNext={handleNext}
-											onBack={handleBack}
-											backDisabled={getStepNumber(step) === 1}
-											nextDisabled={
-												!validateStep(
-													step,
-													product as unknown as ProductV2,
-													feature,
-												)
-											}
-											isLoading={isButtonLoading}
-										/>
+										{/* Components access Zustand directly - no props! */}
+										<OnboardingSteps />
 									</div>
 								</div>
 							</div>

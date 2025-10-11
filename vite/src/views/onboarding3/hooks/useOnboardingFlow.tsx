@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { useOnboardingSteps } from "./useOnboardingSteps";
 import { useOnboarding3QueryState } from "./useOnboarding3QueryState";
+import { useOnboardingSteps } from "./useOnboardingSteps";
 
 interface OnboardingFlowState {
 	playgroundMode: "edit" | "preview";
@@ -76,7 +76,9 @@ export const useOnboardingFlow = () => {
 		];
 		const currentIndex = stepOrder.indexOf(queryStates.step);
 		if (currentIndex > 0) {
-			setQueryStates({ step: stepOrder[currentIndex - 1] as typeof queryStates.step });
+			setQueryStates({
+				step: stepOrder[currentIndex - 1] as typeof queryStates.step,
+			});
 		}
 	}, [queryStates.step, setQueryStates]);
 

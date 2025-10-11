@@ -3,6 +3,7 @@ import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useAutoSlug } from "@/hooks/common/useAutoSlug";
+import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
 
 export function NewFeatureDetails({
 	feature,
@@ -11,11 +12,17 @@ export function NewFeatureDetails({
 	feature: CreateFeature;
 	setFeature: (feature: CreateFeature) => void;
 }) {
+	const baseFeature = useFeatureStore((s) => s.baseFeature);
+
+	// Check if feature already exists on backend (has internal_id from database)
+	const isExistingFeature = !!baseFeature?.internal_id;
+
 	const { setSource, setTarget } = useAutoSlug({
 		state: feature,
 		setState: setFeature as (feature: CreateFeature) => void,
 		sourceKey: "name",
 		targetKey: "id",
+		disableAutoSlug: isExistingFeature,
 	});
 
 	if (!feature) return null;

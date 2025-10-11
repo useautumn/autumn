@@ -201,8 +201,7 @@ export const handlePlanSelection = async (
 	setBaseProduct: (product: any) => void,
 	setProduct: (product: any) => void,
 	setSelectedProductId: (id: string) => void,
-	setSheet: (sheet: string) => void,
-	setEditingState: (state: any) => void,
+	setSheet: (params: { type: any; itemId?: string | null }) => void,
 	axiosInstance: AxiosInstance,
 ) => {
 	if (!planId || planId === selectedProductId) return;
@@ -215,8 +214,7 @@ export const handlePlanSelection = async (
 		setBaseProduct(productData);
 		setProduct(productData);
 		setSelectedProductId(planId);
-		setSheet("edit-plan");
-		setEditingState({ type: "plan", id: null });
+		setSheet({ type: "edit-plan" });
 	} catch (error) {
 		console.error("Failed to load selected plan:", error);
 		throw error;
@@ -229,8 +227,7 @@ export const handleCreatePlanSuccess = async (
 	axiosInstance: AxiosInstance,
 	setBaseProduct: (product: any) => void,
 	setSelectedProductId: (id: string) => void,
-	setSheet: (sheet: string) => void,
-	setEditingState: (state: any) => void,
+	setSheet: (params: { type: any; itemId?: string | null }) => void,
 	refetchProducts: () => Promise<void>,
 ) => {
 	// First refetch products to ensure the list is updated
@@ -247,18 +244,13 @@ export const handleCreatePlanSuccess = async (
 	setBaseProduct(productData);
 
 	// Finally set the UI state
-	setSheet("edit-plan");
-	setEditingState({ type: "plan", id: null });
+	setSheet({ type: "edit-plan" });
 };
 
 // Product creation helper
 export const createProduct = async (
 	product: any,
 	axiosInstance: AxiosInstance,
-	productCreatedRef: MutableRefObject<{
-		created: boolean;
-		latestId: string | null;
-	}>,
 ) => {
 	try {
 		// const result = CreateProductSchema.safeParse({
@@ -273,15 +265,14 @@ export const createProduct = async (
 		// 	return null;
 		// }
 
-		let createdProduct: Awaited<
+		const createdProduct: Awaited<
 			ReturnType<typeof ProductService.createProduct>
-		>;
+		> = await ProductService.createProduct(axiosInstance, product);
 
-		createdProduct = await ProductService.createProduct(axiosInstance, product);
-		productCreatedRef.current = {
-			created: true,
-			latestId: createdProduct.id,
-		};
+		// productCreatedRef.current = {
+		// 	created: true,
+		// 	latestId: createdProduct.id,
+		// };
 		toast.success(`Product "${product?.name}" created successfully!`);
 
 		// if (!productCreatedRef.current.created) {
@@ -328,10 +319,6 @@ export const createProduct = async (
 export const createFeature = async (
 	feature: CreateFeature,
 	axiosInstance: AxiosInstance,
-	featureCreatedRef: MutableRefObject<{
-		created: boolean;
-		latestId: string | null;
-	}>,
 ) => {
 	const result = CreateFeatureSchema.safeParse(feature);
 	if (result.error) {
@@ -342,42 +329,19 @@ export const createFeature = async (
 	}
 
 	try {
-		let newFeature: any;
+		// Create the feature
+		const { data } = await FeatureService.createFeature(axiosInstance, {
+			name: feature.name,
+			id: feature.id,
+			type: feature.type,
+			config: feature.config,
+		});
 
-		if (!featureCreatedRef.current.created) {
-			// First time creating the feature
-			const { data } = await FeatureService.createFeature(axiosInstance, {
-				name: feature.name,
-				id: feature.id,
-				type: feature.type,
-				config: feature.config,
-			});
-			newFeature = data;
-			featureCreatedRef.current = {
-				created: true,
-				latestId: data.id,
-			};
-			toast.success(`Feature "${feature.name}" created successfully!`);
-		} else {
-			// Feature already exists, update it (supports ID changes)
-			const { data } = await FeatureService.updateFeature(
-				axiosInstance,
-				featureCreatedRef.current.latestId as string,
-				{
-					name: feature.name,
-					id: feature.id,
-					type: feature.type,
-					config: feature.config,
-				},
-			);
-			newFeature = data;
-			featureCreatedRef.current.latestId = data.id;
-			toast.success(`Feature "${feature.name}" updated successfully!`);
-		}
+		toast.success(`Feature "${feature.name}" created successfully!`);
 
-		if (!newFeature?.id) return null;
+		if (!data?.id) return null;
 
-		return newFeature;
+		return data;
 	} catch (error: unknown) {
 		toast.error(
 			getBackendErr(error as AxiosError, "Failed to create/update feature"),
@@ -515,4 +479,22 @@ export const syncProductItemsWithFeature = (
 		...product,
 		items: updatedItems,
 	};
+};
+
+// Helper to get baseProduct from products array by ID
+export const getBaseProduct = (
+	products: ProductV2[] | undefined,
+	baseProductId: string | null,
+): ProductV2 | null => {
+	if (!products || !baseProductId) return null;
+	return products.find((p) => p.id === baseProductId) || null;
+};
+
+// Helper to get baseFeature from features array by ID
+export const getBaseFeature = (
+	features: (Feature | CreateFeature)[] | undefined,
+	baseFeatureId: string | null,
+): Feature | CreateFeature | null => {
+	if (!features || !baseFeatureId) return null;
+	return features.find((f) => f.id === baseFeatureId) || null;
 };

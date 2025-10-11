@@ -1,4 +1,3 @@
-import type { CreateFeature } from "@autumn/shared";
 import { productV2ToBasePrice } from "@autumn/shared";
 import { CrosshairSimpleIcon } from "@phosphor-icons/react";
 import { PricingTableContainer } from "@/components/autumn/PricingTableContainer";
@@ -7,27 +6,40 @@ import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { Separator } from "@/components/v2/separator";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
+import { useProductStore } from "@/hooks/stores/useProductStore";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { PlanCardToolbar } from "../products/plan/components/PlanCard/PlanCardToolbar";
 import { PlanFeatureList } from "../products/plan/components/PlanCard/PlanFeatureList";
-import { useProductContext } from "../products/product/ProductContext";
 import { DummyFeatureRow } from "./components/DummyFeatureRow";
+import { useOnboarding3QueryState } from "./hooks/useOnboarding3QueryState";
+import { useOnboardingStore } from "./store/useOnboardingStore";
+import { getStepNumber } from "./utils/onboardingUtils";
 
 interface OnboardingPreviewProps {
-	currentStep: number;
-	playgroundMode?: "edit" | "preview";
 	setConnectStripeOpen?: (open: boolean) => void;
-	feature?: CreateFeature;
 }
 
 export const OnboardingPreview = ({
-	currentStep,
-	playgroundMode = "edit",
 	setConnectStripeOpen,
-	feature,
 }: OnboardingPreviewProps) => {
-	const { product, setSheet, setEditingState } = useProductContext();
+	// Get step from query state
+	const { queryStates } = useOnboarding3QueryState();
+	const step = queryStates.step;
+
+	// Get state from Zustand
+	const playgroundMode = useOnboardingStore((state) => state.playgroundMode);
+	const feature = useFeatureStore((state) => state.feature);
+	const setSheet = useSheetStore((state) => state.setSheet);
+	const handleDeletePlanSuccess = useOnboardingStore(
+		(s) => s.handleDeletePlanSuccess,
+	);
+
+	const product = useProductStore((s) => s.product);
 	const { products: allProducts } = useProductsQuery();
+
+	const currentStep = getStepNumber(step);
 
 	const showBasicInfo = currentStep >= 1;
 	const showPricing = currentStep >= 1;
@@ -51,8 +63,7 @@ export const OnboardingPreview = ({
 	}
 
 	const handleEdit = () => {
-		setEditingState({ type: "plan", id: null });
-		setSheet("edit-plan");
+		setSheet({ type: "edit-plan" });
 	};
 
 	// Show preview mode for step 4 (Playground) when in preview mode OR step 5
@@ -87,6 +98,7 @@ export const OnboardingPreview = ({
 						{showToolbar && (
 							<PlanCardToolbar
 								onEdit={handleEdit}
+								onDeleteSuccess={handleDeletePlanSuccess || undefined}
 								deleteDisabled={allProducts?.length === 1}
 								deleteTooltip={
 									allProducts?.length === 1
@@ -98,11 +110,11 @@ export const OnboardingPreview = ({
 					</div>
 				</div>
 
-				{showBasicInfo && product?.description && (
+				{/* {showBasicInfo && product?.description && (
 					<span className="text-sm text-t3 max-w-[80%] line-clamp-2">
 						{product.description}
 					</span>
-				)}
+				)} */}
 
 				{/* {showBasicInfo &&
 					!(product?.description || product?.name || basePrice?.amount) && (

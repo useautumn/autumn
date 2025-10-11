@@ -1,10 +1,11 @@
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
-import { useProductContext } from "@/views/products/product/ProductContext";
+import { useProductStore } from "@/hooks/stores/useProductStore";
 
 export const MainDetailsSection = () => {
-	const { product, setProduct } = useProductContext();
+	const product = useProductStore((s) => s.product);
+	const setProduct = useProductStore((s) => s.setProduct);
 
 	return (
 		<SheetSection title="Plan Details">
@@ -27,7 +28,7 @@ export const MainDetailsSection = () => {
 						/>
 					</div>
 				</div>
-				<div>
+				{/* <div>
 					<div className="text-form-label block mb-1">Description</div>
 					<Input
 						placeholder="eg. This plan includes 100 credits"
@@ -36,7 +37,7 @@ export const MainDetailsSection = () => {
 							setProduct({ ...product, description: e.target.value })
 						}
 					/>
-				</div>
+				</div> */}
 			</div>
 		</SheetSection>
 	);

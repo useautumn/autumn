@@ -1,34 +1,37 @@
-import { Loader2 } from "lucide-react";
 import { Button } from "@/components/v2/buttons/Button";
+import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
+import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
+import { useProductStore } from "@/hooks/stores/useProductStore";
 import { cn } from "@/lib/utils";
+import { useOnboarding3QueryState } from "../hooks/useOnboarding3QueryState";
+import { useOnboardingStore } from "../store/useOnboardingStore";
+import { getStepNumber } from "../utils/onboardingUtils";
 
 interface OnboardingStepsProps {
-	totalSteps: number;
-	currentStep: number;
-	onNext?: () => void;
-	onBack?: () => void;
-	onComplete?: () => void;
-	nextDisabled?: boolean;
-	backDisabled?: boolean;
-	nextText?: string;
-	backText?: string;
 	className?: string;
-	isLoading?: boolean;
 }
 
-export const OnboardingSteps = ({
-	totalSteps,
-	currentStep,
-	onNext,
-	onBack,
-	nextDisabled = false,
-	backDisabled = false,
-	nextText = "Next",
-	backText = "Back",
-	className,
-	onComplete,
-	isLoading = false,
-}: OnboardingStepsProps) => {
+export const OnboardingSteps = ({ className }: OnboardingStepsProps) => {
+	// Get product and feature for validation
+	const product = useProductStore((s) => s.product);
+	const feature = useFeatureStore((state) => state.feature);
+
+	// Get step from query state
+	const { queryStates } = useOnboarding3QueryState();
+	const step = queryStates.step;
+
+	// Get handlers and state from store
+	const isButtonLoading = useOnboardingStore((state) => state.isButtonLoading);
+	const handleNext = useOnboardingStore((state) => state.handleNext);
+	const handleBack = useOnboardingStore((state) => state.handleBack);
+	const validateStep = useOnboardingStore((state) => state.validateStep);
+
+	const currentStep = getStepNumber(step);
+	const totalSteps = 5;
+	const nextDisabled = !validateStep?.(step, product, feature);
+	const backDisabled = currentStep === 1;
+	const nextText = currentStep === 5 ? "Finish" : "Next";
+
 	return (
 		<div
 			className={cn(
@@ -56,26 +59,24 @@ export const OnboardingSteps = ({
 			<div className="flex items-center gap-1.5 flex-shrink-0">
 				<Button
 					variant="secondary"
-					onClick={onBack}
-					disabled={backDisabled}
+					onClick={handleBack || undefined}
+					disabled={backDisabled || !handleBack}
 					size="sm"
 					className="min-w-24 px-2 text-xs outline-1"
 				>
-					{backText}
+					Back
 				</Button>
-				<Button
+				<ShortcutButton
 					variant="primary"
-					onClick={currentStep === totalSteps ? onComplete : onNext}
-					disabled={nextDisabled || isLoading}
+					onClick={handleNext || undefined}
+					disabled={nextDisabled || isButtonLoading || !handleNext}
 					size="sm"
 					className="min-w-24 px-2 text-xs"
+					metaShortcut="enter"
+					isLoading={isButtonLoading}
 				>
-					{isLoading && (currentStep === 1 || currentStep === 2) ? (
-						<Loader2 className="size-3 animate-spin" />
-					) : (
-						nextText
-					)}
-				</Button>
+					{nextText}
+				</ShortcutButton>
 			</div>
 		</div>
 	);

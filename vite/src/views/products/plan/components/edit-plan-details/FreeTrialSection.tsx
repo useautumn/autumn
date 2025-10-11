@@ -11,11 +11,12 @@ import {
 	SelectValue,
 } from "@/components/v2/selects/Select";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
-import { useProductContext } from "@/views/products/product/ProductContext";
+import { useProductStore } from "@/hooks/stores/useProductStore";
 import { getDefaultFreeTrial } from "../../utils/getDefaultFreeTrial";
 
 export const FreeTrialSection = () => {
-	const { product, setProduct } = useProductContext();
+	const product = useProductStore((s) => s.product);
+	const setProduct = useProductStore((s) => s.setProduct);
 	const lengthId = useId();
 
 	return (

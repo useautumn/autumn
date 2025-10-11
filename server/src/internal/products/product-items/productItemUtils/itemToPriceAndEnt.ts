@@ -223,12 +223,12 @@ export const toFeatureAndPrice = ({
 		type: PriceType.Usage,
 
 		bill_when:
-			item.usage_model == UsageModel.Prepaid
+			item.usage_model === UsageModel.Prepaid
 				? BillWhen.StartOfPeriod
 				: BillWhen.EndOfPeriod,
 
 		billing_units: item.billing_units || 1,
-		should_prorate: entInterval == EntInterval.Lifetime,
+		should_prorate: entInterval === EntInterval.Lifetime,
 
 		internal_feature_id: internalFeatureId,
 		feature_id: item.feature_id!,

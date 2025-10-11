@@ -3,13 +3,14 @@ import { useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
+import { useProductStore } from "@/hooks/stores/useProductStore";
+import { useIsEditingPlan } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
-import { useProductContext } from "@/views/products/product/ProductContext";
 import { DeletePlanDialog } from "../DeletePlanDialog";
 
 interface PlanCardToolbarProps {
 	onEdit?: () => void;
-	onDelete?: () => void;
+	onDeleteSuccess?: () => Promise<void>;
 	editDisabled?: boolean;
 	deleteDisabled?: boolean;
 	deleteTooltip?: string;
@@ -17,13 +18,14 @@ interface PlanCardToolbarProps {
 
 export const PlanCardToolbar = ({
 	onEdit,
+	onDeleteSuccess,
 	editDisabled,
 	deleteDisabled,
 	deleteTooltip,
 }: PlanCardToolbarProps) => {
-	const { editingState, product } = useProductContext();
+	const product = useProductStore((s) => s.product);
 	const [deleteOpen, setDeleteOpen] = useState(false);
-	const isEditingPlan = editingState.type === "plan";
+	const isEditingPlan = useIsEditingPlan();
 
 	return (
 		<>
@@ -34,7 +36,11 @@ export const PlanCardToolbar = ({
 					size="sm"
 				/>
 			)}
-			<DeletePlanDialog open={deleteOpen} setOpen={setDeleteOpen} />
+			<DeletePlanDialog
+				open={deleteOpen}
+				setOpen={setDeleteOpen}
+				onDeleteSuccess={onDeleteSuccess}
+			/>
 			<div className="flex flex-row items-center gap-1">
 				<IconButton
 					icon={<PencilSimpleIcon />}

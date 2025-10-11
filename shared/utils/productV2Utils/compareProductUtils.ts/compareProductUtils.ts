@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/suspicious/noDoubleEquals: comparison functions require double equals */
 import type { Feature } from "../../../models/featureModels/featureModels.js";
 import type { FullProduct } from "../../../models/productModels/productModels.js";
 import {
@@ -52,26 +53,38 @@ export const compareDetails = ({
 	newProductV2?: ProductV2;
 	curProductV2?: ProductV2;
 }) => {
-	let detailsSame = true;
+	const checks = {
+		is_add_on: {
+			condition: newProductV2?.is_add_on === curProductV2?.is_add_on,
+			message: `Is add-on different: ${newProductV2?.is_add_on} !== ${curProductV2?.is_add_on}`,
+		},
+		is_default: {
+			condition: newProductV2?.is_default === curProductV2?.is_default,
+			message: `Is default different: ${newProductV2?.is_default} !== ${curProductV2?.is_default}`,
+		},
+		archived: {
+			condition: newProductV2?.archived === curProductV2?.archived,
+			message: `Archived different: ${newProductV2?.archived} !== ${curProductV2?.archived}`,
+		},
+		group: {
+			condition: newProductV2?.group == curProductV2?.group,
+			message: `Group different: ${newProductV2?.group} !== ${curProductV2?.group}`,
+		},
+		name: {
+			condition: newProductV2?.name == curProductV2?.name,
+			message: `Name different: ${newProductV2?.name} !== ${curProductV2?.name}`,
+		},
+	};
 
-	if (newProductV2?.is_add_on !== curProductV2?.is_add_on) {
-		detailsSame = false;
-	}
+	const detailsSame = Object.values(checks).every((d) => d.condition);
 
-	if (newProductV2?.is_default !== curProductV2?.is_default) {
-		detailsSame = false;
-	}
-
-	if (newProductV2?.archived !== curProductV2?.archived) {
-		detailsSame = false;
-	}
-
-	if (newProductV2?.group !== curProductV2?.group) {
-		detailsSame = false;
-	}
-
-	if (newProductV2?.name !== curProductV2?.name) {
-		detailsSame = false;
+	if (!detailsSame) {
+		console.log(
+			"Product details different:",
+			Object.values(checks)
+				.filter((d) => !d.condition)
+				.map((d) => d.message),
+		);
 	}
 
 	return detailsSame;
@@ -148,14 +161,11 @@ export const productsAreSame = ({
 	if (items1.length !== items2.length) itemsSame = false;
 
 	for (const item of items1) {
-		// console.log(`Base ${formatItem({ item, features })}`);
-
+		// console.log("Base item:", formatItem({ item, features }));
 		const similarItem = findSimilarItem({
 			item,
 			items: items2,
 		});
-
-		// console.log(`Similar ${formatItem({ item, features })}`);
 
 		if (!similarItem) {
 			if (isFeaturePriceItem(item) || isPriceItem(item)) {

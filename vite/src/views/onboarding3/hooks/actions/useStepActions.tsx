@@ -1,14 +1,15 @@
 import type { CreateFeature, Feature, ProductV2 } from "@autumn/shared";
-import { type MutableRefObject, useCallback } from "react";
+import { useCallback } from "react";
 import { useNavigate } from "react-router";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
+import { useHasChanges, useProductStore } from "@/hooks/stores/useProductStore";
 import { useEnv } from "@/utils/envUtils";
 import { navigateTo } from "@/utils/genUtils";
+import { useOnboardingStore } from "../../store/useOnboardingStore";
 import { getNextStep, OnboardingStep } from "../../utils/onboardingUtils";
 import { useFeatureConfigActions } from "./useFeatureConfigActions";
 import { useFeatureCreationActions } from "./useFeatureCreationActions";
 import { usePlanDetailsActions } from "./usePlanDetailsActions";
-import { useSharedActions } from "./useSharedActions";
 
 interface StepActionsProps {
 	// Flow state
@@ -17,117 +18,35 @@ interface StepActionsProps {
 	popStep: () => void;
 	validateStep: (
 		step: OnboardingStep,
-		product: ProductV2 | null,
+		product: ProductV2 | undefined,
 		feature: Feature | CreateFeature | null,
 	) => boolean;
-
-	// Data
-	product: ProductV2 | null;
-	setProduct: (product: ProductV2) => void;
-	baseProduct: ProductV2;
-	setBaseProduct: (product: ProductV2) => void;
-	feature: Feature | CreateFeature | null;
-	setFeature: (feature: Feature | CreateFeature | null) => void;
-	diff: { hasChanges: boolean };
-	selectedProductId: string;
-	setSelectedProductId: (id: string) => void;
-	productCreatedRef: MutableRefObject<{
-		created: boolean;
-		latestId: string | null;
-	}>;
-	featureCreatedRef: MutableRefObject<{
-		created: boolean;
-		latestId: string | null;
-	}>;
-
-	// External actions
-	handleRefetch: () => Promise<void>;
-	refetchProducts: () => Promise<unknown>;
-	refetchFeatures: () => Promise<unknown>;
-
-	// UI state setters
-	setSheet: (sheet: string | null) => void;
-	setEditingState: (state: {
-		type: "plan" | "feature" | null;
-		id: string | null;
-	}) => void;
-	setIsButtonLoading: (loading: boolean) => void;
+	// Shared actions (passed from parent)
+	sharedActions: {
+		handlePlanSelect: (planId: string) => Promise<void>;
+		handleBack: () => Promise<void>;
+		onCreatePlanSuccess: (newProduct: ProductV2) => Promise<void>;
+	};
 }
 
 export const useStepActions = (props: StepActionsProps) => {
-	const {
-		step,
-		pushStep,
-		popStep,
-		validateStep,
-		product,
-		setProduct,
-		baseProduct,
-		setBaseProduct,
-		feature,
-		setFeature,
-		diff,
-		selectedProductId,
-		setSelectedProductId,
-		productCreatedRef,
-		featureCreatedRef,
-		handleRefetch,
-		refetchProducts,
-		refetchFeatures,
-		setSheet,
-		setEditingState,
-		setIsButtonLoading,
-	} = props;
+	const { step, pushStep, validateStep, sharedActions } = props;
 
 	const navigate = useNavigate();
 	const env = useEnv();
-	const axiosInstance = useAxiosInstance();
 
-	// Step-specific action hooks
-	const planDetailsActions = usePlanDetailsActions({
-		product,
-		baseProduct,
-		axiosInstance,
-		productCreatedRef,
-		setBaseProduct,
-	});
+	// Get product from product store
+	const product = useProductStore((s) => s.product);
 
-	const featureCreationActions = useFeatureCreationActions({
-		feature,
-		product,
-		axiosInstance,
-		featureCreatedRef,
-		setFeature,
-		setProduct,
-		setBaseProduct,
-	});
+	// Get state from Zustand
+	const feature = useFeatureStore((state) => state.feature);
+	const setIsButtonLoading = useOnboardingStore((s) => s.setIsButtonLoading);
+	const hasChanges = useHasChanges();
 
-	const featureConfigActions = useFeatureConfigActions({
-		product,
-		diff,
-		axiosInstance,
-		handleRefetch,
-		setSheet,
-		setEditingState,
-	});
-
-	// Shared actions
-	const sharedActions = useSharedActions({
-		step,
-		baseProduct,
-		selectedProductId,
-		product,
-		productCreatedRef,
-		featureCreatedRef,
-		axiosInstance,
-		setBaseProduct,
-		setProduct,
-		setSelectedProductId,
-		setSheet,
-		setEditingState,
-		popStep,
-		refetchProducts,
-	});
+	// Step-specific action hooks (they access state directly now)
+	const planDetailsActions = usePlanDetailsActions();
+	const featureCreationActions = useFeatureCreationActions();
+	const featureConfigActions = useFeatureConfigActions();
 
 	// Main navigation handler
 	const handleNext = useCallback(async () => {
@@ -139,8 +58,10 @@ export const useStepActions = (props: StepActionsProps) => {
 		// Set loading for steps 1 and 2
 		if (
 			step === OnboardingStep.PlanDetails ||
-			step === OnboardingStep.FeatureCreation
+			step === OnboardingStep.FeatureCreation ||
+			(step === OnboardingStep.FeatureConfiguration && hasChanges)
 		) {
+			console.log("setting loading to true", step);
 			setIsButtonLoading(true);
 		}
 
@@ -187,6 +108,7 @@ export const useStepActions = (props: StepActionsProps) => {
 		navigate,
 		env,
 		setIsButtonLoading,
+		hasChanges,
 	]);
 
 	return {

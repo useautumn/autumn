@@ -1,7 +1,7 @@
 import { PlusIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/v2/buttons/Button";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useProductContext } from "@/views/products/product/ProductContext";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
 
 interface AddFeatureRowProps {
 	disabled?: boolean;
@@ -10,17 +10,15 @@ interface AddFeatureRowProps {
 
 export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 	const { features } = useFeaturesQuery();
-	const { setSheet, setEditingState } = useProductContext();
+	const setSheet = useSheetStore((s) => s.setSheet);
 
 	const handleAddFeatureClick = () => {
 		if (features.length === 0) {
 			// No features exist, go directly to create flow
-			setEditingState({ type: "feature", id: "new" });
-			setSheet("new-feature");
+			setSheet({ type: "new-feature", itemId: "new" });
 		} else {
 			// Features exist, open select sheet
-			setEditingState({ type: "feature", id: "select" });
-			setSheet("select-feature");
+			setSheet({ type: "select-feature", itemId: "select" });
 		}
 	};
 

@@ -9,7 +9,6 @@ import {
 	DialogTitle,
 } from "@/components/v2/dialogs/Dialog";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useProductContext } from "@/views/products/product/ProductContext";
 
 export const DeleteFeatureRowDialog = ({
 	open,
@@ -23,7 +22,6 @@ export const DeleteFeatureRowDialog = ({
 	onDelete: (item: ProductItem) => void;
 }) => {
 	const { features } = useFeaturesQuery();
-	const { product } = useProductContext();
 	const featureName = features.find((f) => f.id === item.feature_id)?.name;
 
 	return (

@@ -1,64 +1,47 @@
 import type { ProductV2 } from "@autumn/shared";
-import type { AxiosInstance } from "axios";
-import { type MutableRefObject, useCallback } from "react";
+import { useCallback } from "react";
+import { toast } from "sonner";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useProductStore } from "@/hooks/stores/useProductStore";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { updateProduct } from "@/views/products/product/utils/updateProduct";
 import { createProduct } from "../../utils/onboardingUtils";
 
-interface PlanDetailsActionsProps {
-	product: ProductV2 | null;
-	baseProduct: ProductV2;
-	axiosInstance: AxiosInstance;
-	productCreatedRef: MutableRefObject<{
-		created: boolean;
-		latestId: string | null;
-	}>;
-	setBaseProduct: (product: ProductV2) => void;
-}
+export const usePlanDetailsActions = () => {
+	const axiosInstance = useAxiosInstance();
+	const { refetch: refetchProducts } = useProductsQuery();
 
-export const usePlanDetailsActions = ({
-	product,
-	baseProduct,
-	axiosInstance,
-	productCreatedRef,
-	setBaseProduct,
-}: PlanDetailsActionsProps) => {
-	const { products, refetch: refetchProducts } = useProductsQuery();
+	// Get product from product store (working copy)
+	const product = useProductStore((s) => s.product);
+	const baseProduct = useProductStore((s) => s.baseProduct);
 
-	// Create product and update base state
+	// Create or update product
 	const handleProceed = useCallback(async (): Promise<boolean> => {
-		// Check if base product exists in products query
+		if (!product) return false;
 
 		let newProduct: ProductV2;
-		if (products.find((p) => p.id === baseProduct.id)) {
+
+		// If baseProduct exists (update mode), update it
+		if (baseProduct?.id) {
 			newProduct = await updateProduct({
 				axiosInstance,
 				productId: baseProduct.id,
 				product: product as ProductV2,
 				onSuccess: async () => {},
 			});
+			toast.success("Product updated successfully");
 		} else {
-			newProduct = await createProduct(
-				product,
-				axiosInstance,
-				productCreatedRef,
-			);
+			// Create new product
+			newProduct = await createProduct(product, axiosInstance);
 		}
 
 		if (!newProduct) return false;
 
-		setBaseProduct(newProduct);
+		// Refetch products - useOnboardingProductSync will handle syncing product/baseProduct
 		await refetchProducts();
 
 		return true;
-	}, [
-		product,
-		baseProduct,
-		products,
-		axiosInstance,
-		productCreatedRef,
-		setBaseProduct,
-	]);
+	}, [product, baseProduct, axiosInstance, refetchProducts]);
 
 	return {
 		handleProceed,

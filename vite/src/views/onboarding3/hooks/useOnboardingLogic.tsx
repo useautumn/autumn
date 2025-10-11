@@ -1,39 +1,55 @@
-import type { ProductItem, ProductV2 } from "@autumn/shared";
-import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router";
-import { useEnv } from "@/utils/envUtils";
+import { useEffect, useRef } from "react";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { useOnboardingStore } from "../store/useOnboardingStore";
 import { OnboardingStep } from "../utils/onboardingUtils";
+import { useSharedActions } from "./actions/useSharedActions";
 import { useStepActions } from "./actions/useStepActions";
-import { useOnboardingData } from "./useOnboardingData";
 import { useOnboardingFlow } from "./useOnboardingFlow";
 
+/**
+ * Main orchestrator for onboarding logic
+ *
+ * This hook handles side effects and auto-initialization.
+ * Most state should be accessed directly from Zustand in components!
+ *
+ * Only returns action handlers (handleNext, handleBack, etc.)
+ */
 export const useOnboardingLogic = () => {
-	const navigate = useNavigate();
-	const env = useEnv();
 	const hasInitializedResumability = useRef(false);
 
-	// Centralized UI state - keeping this here as discussed since it's shared across many components
-	const [sheet, setSheet] = useState<string | null>(null);
-	const [editingState, setEditingState] = useState<{
-		type: "plan" | "feature" | null;
-		id: string | null;
-	}>({ type: null, id: null });
+	// Get queries
+	const { products, refetch: refetchProducts } = useProductsQuery();
+	const { features } = useFeaturesQuery();
 
-	// Use the focused hooks
+	// Set isOnboarding flag on mount
+	useEffect(() => {
+		const { setIsOnboarding } = useOnboardingStore.getState();
+		setIsOnboarding(true);
+
+		return () => {
+			setIsOnboarding(false);
+		};
+	}, []);
+
+	// Get flow state
 	const flowHook = useOnboardingFlow();
-	const dataHook = useOnboardingData();
+
+	// Get state from sheet store
+	const setSheet = useSheetStore((s) => s.setSheet);
+	const closeSheet = useSheetStore((s) => s.closeSheet);
+
+	// Initialize shared actions (handles plan selection, back navigation, etc.)
+	const sharedActions = useSharedActions({
+		step: flowHook.step,
+		popStep: flowHook.popStep,
+		refetchProducts,
+		products: products || [],
+	});
 
 	// Initialize with existing data ONLY if user has completed onboarding AND auto-skipped to playground
-	// This ensures data seeding only happens when onboarding is fully complete (both products AND features exist)
-	// Use ref to prevent re-initialization and API spam
 	useEffect(() => {
-		// Only initialize if ALL conditions are met:
-		// 1. Not already initialized
-		// 2. Onboarding is FULLY completed (hasCompletedOnboarding = products >= 1 AND features >= 1)
-		// 3. Data is loaded
-		// 4. User was auto-skipped to playground (step 4)
-		// 5. In preview mode (not edit mode)
-		// 6. ADDITIONAL SAFEGUARD: Explicitly verify that products and features exist
 		if (
 			!hasInitializedResumability.current &&
 			flowHook.hasCompletedOnboarding &&
@@ -42,12 +58,11 @@ export const useOnboardingLogic = () => {
 			flowHook.playgroundMode === "preview"
 		) {
 			// Additional safeguard: Double-check that we actually have both products and features
-			// This prevents any edge cases where hasCompletedOnboarding might be true incorrectly
 			if (
-				dataHook.products &&
-				dataHook.features &&
-				dataHook.products.length >= 1 &&
-				dataHook.features.length >= 1
+				products &&
+				features &&
+				products.length >= 1 &&
+				features.length >= 1
 			) {
 				hasInitializedResumability.current = true;
 			}
@@ -57,100 +72,58 @@ export const useOnboardingLogic = () => {
 		flowHook.isLoading,
 		flowHook.step,
 		flowHook.playgroundMode,
-		dataHook,
+		products,
+		features,
 	]);
 
-	// Auto-open edit-plan sheet when entering step 3 (FeatureConfiguration) or step 4 (Playground) in edit mode
-	// For step 3, use the tracked feature from dataHook
-	// Clear sheet when entering step 5 (Integration)
+	// Auto-open edit-plan sheet when entering step 4 (Playground) in edit mode
+	// Close sheet when leaving step 4 or entering Integration
 	useEffect(() => {
-		if (flowHook.step === OnboardingStep.FeatureConfiguration) {
-			// Use the feature that was created in step 2 or loaded during resumability
-			if (dataHook.feature?.id && dataHook.product?.items) {
-				// Find the item index that matches the feature
-				const itemIndex = dataHook.product.items.findIndex(
-					(item: ProductItem) => item.feature_id === dataHook.feature.id,
-				);
-				if (itemIndex !== -1) {
-					const itemId = `item-${itemIndex}`;
-					setSheet("edit-plan");
-					setEditingState({ type: "feature", id: itemId });
-				}
-			}
-		} else if (
+		if (
 			flowHook.step === OnboardingStep.Playground &&
 			flowHook.playgroundMode === "edit"
 		) {
-			setSheet("edit-plan");
-			setEditingState({ type: "plan", id: null });
-		} else if (flowHook.step === OnboardingStep.Integration) {
-			setSheet(null);
-			setEditingState({ type: null, id: null });
+			setSheet({ type: "edit-plan" });
+		} else if (
+			flowHook.step === OnboardingStep.Integration ||
+			flowHook.step === OnboardingStep.FeatureConfiguration
+		) {
+			closeSheet();
 		}
-	}, [
-		flowHook.step,
-		flowHook.playgroundMode,
-		dataHook.feature?.id,
-		dataHook.product?.items,
-	]);
+	}, [flowHook.step, flowHook.playgroundMode, setSheet, closeSheet]);
 
-	// Create actions hook with all required props
+	// Create actions hook (pass shared actions)
 	const stepActionsHook = useStepActions({
 		step: flowHook.step,
 		pushStep: flowHook.pushStep,
 		popStep: flowHook.popStep,
 		validateStep: flowHook.validateStep,
-		product: dataHook.product as unknown as ProductV2,
-		setProduct: dataHook.setProduct,
-		baseProduct: dataHook.baseProduct,
-		setBaseProduct: dataHook.setBaseProduct,
-		feature: dataHook.feature,
-		setFeature: dataHook.setFeature,
-		diff: dataHook.diff,
-		selectedProductId: dataHook.selectedProductId,
-		setSelectedProductId: dataHook.setSelectedProductId,
-		productCreatedRef: dataHook.productCreatedRef,
-		featureCreatedRef: dataHook.featureCreatedRef,
-		handleRefetch: dataHook.handleRefetch,
-		refetchProducts: dataHook.refetchProducts,
-		refetchFeatures: dataHook.refetchFeatures,
-		setSheet,
-		setEditingState,
-		setIsButtonLoading: dataHook.setIsButtonLoading,
+		sharedActions,
 	});
 
-	return {
-		// Data
-		product: dataHook.product,
-		setProduct: dataHook.setProduct,
-		diff: dataHook.diff,
-		baseProduct: dataHook.baseProduct,
-		feature: dataHook.feature,
-		setFeature: dataHook.setFeature,
-		step: flowHook.step,
-		products: dataHook.products,
-		selectedProductId: dataHook.selectedProductId,
+	// Set handlers in store so components can access them directly
+	useEffect(() => {
+		const {
+			setHandleNext,
+			setHandleBack,
+			setHandlePlanSelect,
+			setOnCreatePlanSuccess,
+			setHandleDeletePlanSuccess,
+			setValidateStep,
+		} = useOnboardingStore.getState();
 
-		// UI State
-		sheet,
-		setSheet,
-		editingState,
-		setEditingState,
-		playgroundMode: flowHook.playgroundMode,
-		setPlaygroundMode: flowHook.setPlaygroundMode,
-		isQueryLoading: dataHook.isQueryLoading,
-		isButtonLoading: dataHook.isButtonLoading,
-
-		// Handlers
-		handleNext: stepActionsHook.handleNext,
-		handleBack: stepActionsHook.handleBack,
-		handlePlanSelect: stepActionsHook.handlePlanSelect,
-		onCreatePlanSuccess: stepActionsHook.onCreatePlanSuccess,
-		handleRefetch: dataHook.handleRefetch,
-
-		// Utils
-		validateStep: flowHook.validateStep,
-		navigate,
-		env,
-	};
+		setHandleNext(stepActionsHook.handleNext);
+		setHandleBack(stepActionsHook.handleBack);
+		setHandlePlanSelect(stepActionsHook.handlePlanSelect);
+		setOnCreatePlanSuccess(stepActionsHook.onCreatePlanSuccess);
+		setHandleDeletePlanSuccess(sharedActions.handleDeletePlanSuccess);
+		setValidateStep(flowHook.validateStep);
+	}, [
+		stepActionsHook.handleNext,
+		stepActionsHook.handleBack,
+		stepActionsHook.handlePlanSelect,
+		stepActionsHook.onCreatePlanSuccess,
+		sharedActions.handleDeletePlanSuccess,
+		flowHook.validateStep,
+	]);
 };

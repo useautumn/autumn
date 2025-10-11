@@ -4,26 +4,29 @@ import {
 	productV2ToFeatureItems,
 } from "@autumn/shared";
 import type { AxiosError } from "axios";
-import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/v2/buttons/Button";
 import { SheetHeader } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
+import { useProductStore } from "@/hooks/stores/useProductStore";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { FeatureService } from "@/services/FeatureService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { getItemId } from "@/utils/product/productItemUtils";
-import { getDefaultFeature } from "@/views/products/features/utils/defaultFeature";
-import { useProductContext } from "@/views/products/product/ProductContext";
 import { NewFeatureAdvanced } from "./NewFeatureAdvanced";
 import { NewFeatureBehaviour } from "./NewFeatureBehaviour";
 import { NewFeatureDetails } from "./NewFeatureDetails";
 import { NewFeatureType } from "./NewFeatureType";
 
 export function NewFeatureSheet({ isOnboarding }: { isOnboarding?: boolean }) {
-	const [feature, setFeature] = useState(getDefaultFeature());
-	const { product, setProduct, setSheet, setEditingState } =
-		useProductContext();
+	const feature = useFeatureStore((s) => s.feature);
+	const setFeature = useFeatureStore((s) => s.setFeature);
+	const product = useProductStore((s) => s.product);
+	const setProduct = useProductStore((s) => s.setProduct);
+	const setSheet = useSheetStore((s) => s.setSheet);
+	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const axiosInstance = useAxiosInstance();
 	const { refetch } = useFeaturesQuery();
 
@@ -74,8 +77,7 @@ export function NewFeatureSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 
 				// Use setTimeout to ensure state updates propagate
 				setTimeout(() => {
-					setEditingState({ type: "feature", id: itemId });
-					setSheet("edit-feature");
+					setSheet({ type: "edit-feature", itemId });
 				}, 0);
 			} catch (error: unknown) {
 				toast.error(
@@ -88,11 +90,10 @@ export function NewFeatureSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 	const handleCancel = () => {
 		if (isOnboarding) {
 			// In onboarding, just close the sheet and return to previous state
-			setSheet(null);
-			setEditingState({ type: null, id: null });
+			closeSheet();
 		} else {
 			// In normal flow, go back to edit-plan
-			setSheet("edit-plan");
+			setSheet({ type: "edit-plan" });
 		}
 	};
 

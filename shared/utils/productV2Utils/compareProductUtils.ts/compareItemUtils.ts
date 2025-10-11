@@ -105,18 +105,48 @@ export const featureItemsAreSame = ({
 	item1: FeatureItem;
 	item2: FeatureItem;
 }) => {
-	// Compare config objects (including rollover)
-	const configsAreSame =
-		JSON.stringify(item1.config) === JSON.stringify(item2.config);
+	const checks = {
+		feature_id: {
+			condition: item1.feature_id === item2.feature_id,
+			message: `Feature ID different: ${item1.feature_id} != ${item2.feature_id}`,
+		},
+		included_usage: {
+			condition: item1.included_usage == item2.included_usage,
+			message: `Included usage different: ${item1.included_usage} != ${item2.included_usage}`,
+		},
+		interval: {
+			condition: item1.interval == item2.interval,
+			message: `Interval different: ${item1.interval} != ${item2.interval}`,
+		},
+		interval_count: {
+			condition: (item1.interval_count || 1) == (item2.interval_count || 1),
+			message: `Interval count different: ${item1.interval_count} != ${item2.interval_count}`,
+		},
+		entity_feature_id: {
+			condition: item1.entity_feature_id == item2.entity_feature_id,
+			message: `Entity feature ID different: ${item1.entity_feature_id} != ${item2.entity_feature_id}`,
+		},
+		reset_usage_when_enabled: {
+			condition:
+				item1.reset_usage_when_enabled == item2.reset_usage_when_enabled,
+			message: `Reset usage when enabled different: ${item1.reset_usage_when_enabled} !== ${item2.reset_usage_when_enabled}`,
+		},
+		config: {
+			condition: JSON.stringify(item1.config) === JSON.stringify(item2.config),
+			message: `Config different: ${JSON.stringify(item1.config)} !== ${JSON.stringify(item2.config)}`,
+		},
+	};
 
-	const same =
-		item1.feature_id === item2.feature_id &&
-		item1.included_usage == item2.included_usage &&
-		item1.interval == item2.interval &&
-		(item1.interval_count || 1) == (item2.interval_count || 1) &&
-		item1.entity_feature_id == item2.entity_feature_id &&
-		item1.reset_usage_when_enabled == item2.reset_usage_when_enabled &&
-		configsAreSame;
+	const same = Object.values(checks).every((d) => d.condition);
+
+	if (!same) {
+		console.log(
+			"Feature items different:",
+			Object.values(checks)
+				.filter((d) => !d.condition)
+				.map((d) => d.message),
+		);
+	}
 
 	return same;
 };
