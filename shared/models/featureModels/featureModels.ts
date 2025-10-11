@@ -19,6 +19,7 @@ export const FeatureSchema = z.object({
 		})
 		.nullish(),
 	archived: z.boolean(),
+	event_names: z.array(z.string()).default([]),
 });
 
 export const CreateFeatureSchema = FeatureSchema.pick({
@@ -27,6 +28,7 @@ export const CreateFeatureSchema = FeatureSchema.pick({
 	type: true,
 	config: true,
 	display: true,
+	event_names: true,
 });
 
 export const MinFeatureSchema = z.object({
