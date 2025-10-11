@@ -385,6 +385,7 @@ export const handleUpdateFeature = async (
 					archived:
 						data.archived !== undefined ? data.archived : feature.archived,
 
+					event_names: data.event_names,
 					config: newConfig,
 				},
 			});

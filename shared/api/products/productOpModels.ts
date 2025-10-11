@@ -44,8 +44,8 @@ export const UpdateProductV2ParamsSchema = z.object({
 
 export const UpdateProductQuerySchema = z.object({
 	version: z.string().optional(),
-	upsert: z.string().optional(),
-	disable_version: z.string().optional(),
+	upsert: z.boolean().optional(),
+	disable_version: z.boolean().optional(),
 });
 
 export type CreateProductV2Params = z.infer<typeof CreateProductV2ParamsSchema>;
