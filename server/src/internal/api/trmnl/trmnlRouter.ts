@@ -1,16 +1,12 @@
-import { createSupabaseClient } from "@/external/supabaseUtils.js";
+import { type Feature, getFeatureName } from "@autumn/shared";
+import { Router } from "express";
+import rateLimit from "express-rate-limit";
 import { AnalyticsService } from "@/internal/analytics/AnalyticsService.js";
 import { RevenueService } from "@/internal/analytics/RevenueService.js";
-import { trmnlAuthMiddleware } from "@/middleware/trmnlAuthMiddleware.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { routeHandler } from "@/utils/routerUtils.js";
-import { ErrCode, Feature, getFeatureName } from "@autumn/shared";
-import { Router } from "express";
-import { withOrgAuth } from "@/middleware/authMiddleware.js";
-import { getTrmnlJson } from "./trmnlUtils.js";
-import rateLimit from "express-rate-limit";
-import { writeFile } from "fs/promises";
 import { initUpstash } from "@/internal/customers/cusCache/upstashUtils.js";
+import { withOrgAuth } from "@/middleware/authMiddleware.js";
+import { trmnlAuthMiddleware } from "@/middleware/trmnlAuthMiddleware.js";
+import { routeHandler } from "@/utils/routerUtils.js";
 
 const trmnlLimiter = rateLimit({
 	windowMs: 60 * 1000 * 30,
@@ -38,7 +34,7 @@ trmnlRouter.get("/device_id", withOrgAuth, async (req: any, res: any) => {
 				res.status(500).json({ error: "Failed to connect to upstash" });
 
 			const orgId = req.org.id;
-			let trmnlConfig = await upstash?.get(`trmnl:org:${orgId}`);
+			const trmnlConfig = await upstash?.get(`trmnl:org:${orgId}`);
 
 			res.status(200).json({ trmnlConfig });
 			// let trmnlJson = await getTrmnlJson();
@@ -136,7 +132,7 @@ trmnlRouter.post(
 			res,
 			action: "generate trmnl screen",
 			handler: async () => {
-				let { result }: any = await AnalyticsService.getTopEventNames({
+				const { result }: any = await AnalyticsService.getTopEventNames({
 					req,
 					limit: 1,
 				});
@@ -151,19 +147,13 @@ trmnlRouter.post(
 					return;
 				}
 
-				let feature = req.features.find((feature: Feature) => {
+				const feature = req.features.find((feature: Feature) => {
 					return (
-						feature.id === topEvent ||
-						(feature.config?.filters?.flatMap((x: { value: string[] }) => [
-							...x.value,
-						]) &&
-							feature.config.filters
-								.flatMap((x: { value: string[] }) => [...x.value])
-								.includes(topEvent))
+						feature.id === topEvent || feature.event_names.includes(topEvent)
 					);
 				});
 
-				let featureName = getFeatureName({
+				const featureName = getFeatureName({
 					feature,
 					plural: true,
 				});

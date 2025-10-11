@@ -1,6 +1,6 @@
 import {
-	AggregateType,
 	ApiFeatureType,
+	type AppEnv,
 	type CreditSystemConfig,
 	cusProductsToCusPrices,
 	ErrCode,
@@ -43,27 +43,28 @@ export const validateMeteredConfig = (config: MeteredConfig) => {
 		});
 	}
 
-	if (config.aggregate?.type === AggregateType.Count) {
-		newConfig.aggregate = {
-			type: AggregateType.Count,
-			property: null,
-		}; // to continue testing support for count...
-	} else {
-		newConfig.aggregate = {
-			type: AggregateType.Sum,
-			property: "value",
-		};
-	}
+	// Event names are now stored in feature.event_names, not in config.filters
+	// if (config.aggregate?.type === AggregateType.Count) {
+	// 	newConfig.aggregate = {
+	// 		type: AggregateType.Count,
+	// 		property: null,
+	// 	}; // to continue testing support for count...
+	// } else {
+	// 	newConfig.aggregate = {
+	// 		type: AggregateType.Sum,
+	// 		property: "value",
+	// 	};
+	// }
 
-	if (newConfig?.filters?.length === 0 || !newConfig?.filters) {
-		newConfig.filters = [
-			{
-				property: "",
-				operator: "",
-				value: [],
-			},
-		];
-	}
+	// if (newConfig?.filters?.length === 0 || !newConfig?.filters) {
+	// 	newConfig.filters = [
+	// 		{
+	// 			property: "",
+	// 			operator: "",
+	// 			value: [],
+	// 		},
+	// 	];
+	// }
 
 	return newConfig as MeteredConfig;
 };
@@ -99,7 +100,7 @@ export const validateCreditSystem = (config: CreditSystemConfig) => {
 		const creditAmount = parseFloat(
 			newConfig.schema[i].credit_amount.toString(),
 		);
-		if (isNaN(creditAmount)) {
+		if (Number.isNaN(creditAmount)) {
 			throw new RecaseError({
 				message: `Credit amount should be a number`,
 				code: ErrCode.InvalidFeature,
@@ -122,7 +123,7 @@ export const getObjectsUsingFeature = async ({
 }: {
 	db: DrizzleCli;
 	orgId: string;
-	env: any;
+	env: AppEnv;
 	allFeatures: Feature[];
 	feature: Feature;
 }) => {

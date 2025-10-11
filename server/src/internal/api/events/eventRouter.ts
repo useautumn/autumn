@@ -114,9 +114,8 @@ const getAffectedFeatures = async ({
 	const featuresWithEvent = features.filter((feature) => {
 		return (
 			feature.type === FeatureType.Metered &&
-			feature.config.filters.some((filter: any) => {
-				return filter.value.includes(eventName);
-			})
+			feature.event_names &&
+			feature.event_names.includes(eventName)
 		);
 	});
 

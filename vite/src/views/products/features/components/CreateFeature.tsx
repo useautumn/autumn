@@ -1,24 +1,27 @@
-import { DialogHeader } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
-
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import {
-	CreateFeature as CreateFeatureType,
+	type CreateFeature as CreateFeatureType,
 	FeatureType,
 } from "@autumn/shared";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { FeatureService } from "@/services/FeatureService";
-import { FeatureConfig } from "./FeatureConfig";
-import { getBackendErr } from "@/utils/genUtils";
-import { getDefaultFeature } from "../utils/defaultFeature";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
 	CustomDialogBody,
 	CustomDialogContent,
 } from "@/components/general/modal-components/DialogContentWrapper";
-import { CreateFeatureFooter } from "./CreateFeatureFooter";
+import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "@/components/ui/dialog";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { FeatureService } from "@/services/FeatureService";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { getBackendErr } from "@/utils/genUtils";
+import { getDefaultFeature } from "../utils/defaultFeature";
+import { CreateFeatureFooter } from "./CreateFeatureFooter";
+import { FeatureConfig } from "./FeatureConfig";
 
 export const CreateFeature = ({
 	onSuccess,
@@ -47,15 +50,19 @@ export const CreateFeature = ({
 
 	const updateConfig = () => {
 		const config: any = structuredClone(feature.config);
+		return config;
+	};
+
+	const getEventNames = () => {
+		const eventNames = feature.event_names || [];
 		if (
 			feature.type === FeatureType.Metered &&
-			eventNameInput &&
-			config.filters[0].value.length === 0
+			eventNameInput.trim() &&
+			eventNames.length === 0
 		) {
-			config.filters[0].value.push(eventNameInput);
+			return [eventNameInput.trim()];
 		}
-
-		return config;
+		return eventNames;
 	};
 
 	const handleCreateFeature = async () => {
@@ -63,8 +70,6 @@ export const CreateFeature = ({
 			toast.error("Please fill out all fields");
 			return;
 		}
-
-		feature.config = updateConfig();
 
 		try {
 			const { data: createdFeature } = await FeatureService.createFeature(
@@ -74,6 +79,7 @@ export const CreateFeature = ({
 					id: feature.id,
 					type: feature.type,
 					config: updateConfig(),
+					event_names: getEventNames(),
 				},
 			);
 

@@ -68,13 +68,8 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 								return true;
 							}
 
-							if (feature.config.filters && feature.config.filters.length > 0) {
-								return feature.config.filters.some(
-									(filter: any) =>
-										filter.value &&
-										Array.isArray(filter.value) &&
-										filter.value.includes(eventName),
-								);
+							if (feature.event_names && feature.event_names.length > 0) {
+								return feature.event_names.includes(eventName);
 							}
 							return false;
 						})?.name || x.name.replace("_count", ""),
