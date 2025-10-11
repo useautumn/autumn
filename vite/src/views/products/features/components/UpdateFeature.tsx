@@ -1,19 +1,18 @@
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogTitle } from "@/components/ui/dialog";
-import { useEffect, useRef, useState } from "react";
-import { FeatureService } from "@/services/FeatureService";
-
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { toast } from "sonner";
 import { FeatureType } from "@autumn/shared";
-import { getBackendErr } from "@/utils/genUtils";
+import { CircleArrowUp } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import {
 	CustomDialogBody,
 	CustomDialogContent,
 	CustomDialogFooter,
 } from "@/components/general/modal-components/DialogContentWrapper";
-import { CircleArrowUp, Save } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogTitle } from "@/components/ui/dialog";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { FeatureService } from "@/services/FeatureService";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { getBackendErr } from "@/utils/genUtils";
 import { FeatureConfig } from "@/views/products/features/components/FeatureConfig";
 
 export default function UpdateFeature({
@@ -50,14 +49,19 @@ export default function UpdateFeature({
 
 	const updateConfig = () => {
 		const config: any = structuredClone(selectedFeature.config);
+		return config;
+	};
+
+	const getEventNames = () => {
+		const eventNames = selectedFeature.event_names || [];
 		if (
 			selectedFeature.type === FeatureType.Metered &&
-			eventNameInput &&
-			config.filters[0].value.length === 0
+			eventNameInput.trim() &&
+			eventNames.length === 0
 		) {
-			config.filters[0].value.push(eventNameInput);
+			return [eventNameInput.trim()];
 		}
-		return config;
+		return eventNames;
 	};
 
 	const handleUpdateFeature = async () => {
@@ -71,6 +75,7 @@ export default function UpdateFeature({
 				type: selectedFeature.type,
 				name: selectedFeature.name,
 				config: updateConfig(),
+				event_names: getEventNames(),
 			});
 
 			await refetch();

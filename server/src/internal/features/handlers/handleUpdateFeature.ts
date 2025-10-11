@@ -198,7 +198,7 @@ const handleFeatureUsageTypeChanged = async ({
 		console.log(
 			`Feature usage type changed to ${newUsageType}, updating entitlements and prices`,
 		);
-		if (newUsageType == FeatureUsageType.Continuous) {
+		if (newUsageType === FeatureUsageType.Continuous) {
 			const batchEntUpdate = [];
 			for (const entitlement of entitlements) {
 				batchEntUpdate.push(
@@ -263,7 +263,7 @@ export const handleUpdateFeature = async (
 
 			// 1. Get feature by ID
 			const features = await FeatureService.getFromReq(req);
-			const feature = features.find((f) => f.id == featureId);
+			const feature = features.find((f) => f.id === featureId);
 
 			if (!feature) {
 				throw new RecaseError({
@@ -305,9 +305,9 @@ export const handleUpdateFeature = async (
 			const isChangingId = notNullish(data.id) && feature.id !== data.id;
 
 			const isChangingUsageType =
-				feature.type != FeatureType.Boolean &&
-				data.type != FeatureType.Boolean &&
-				feature.config?.usage_type != data.config?.usage_type;
+				feature.type !== FeatureType.Boolean &&
+				data.type !== FeatureType.Boolean &&
+				feature.config?.usage_type !== data.config?.usage_type;
 
 			const isChangingName = feature.name !== data.name;
 
@@ -366,9 +366,9 @@ export const handleUpdateFeature = async (
 
 			const newConfig =
 				data.config !== undefined
-					? feature.type == FeatureType.CreditSystem
+					? feature.type === FeatureType.CreditSystem
 						? validateCreditSystem(data.config)
-						: feature.type == FeatureType.Metered
+						: feature.type === FeatureType.Metered
 							? validateMeteredConfig(data.config)
 							: data.config
 					: feature.config;
@@ -385,6 +385,7 @@ export const handleUpdateFeature = async (
 					archived:
 						data.archived !== undefined ? data.archived : feature.archived,
 
+					event_names: data.event_names,
 					config: newConfig,
 				},
 			});

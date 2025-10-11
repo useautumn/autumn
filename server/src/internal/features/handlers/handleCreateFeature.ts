@@ -1,18 +1,18 @@
-import { Feature } from "@autumn/shared";
-import { validateFeature } from "../internalFeatureRouter.js";
-import { generateId } from "@/utils/genUtils.js";
+import type { Feature } from "@autumn/shared";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { FeatureService } from "../FeatureService.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { handleFrontendReqError } from "@/utils/errorUtils.js";
+import { generateId } from "@/utils/genUtils.js";
+import { FeatureService } from "../FeatureService.js";
+import { validateFeature } from "../internalFeatureRouter.js";
 
 export const handleCreateFeature = async (req: any, res: any) => {
 	try {
 		console.log("Trying to create feature");
 		const data = req.body;
-		let { db, orgId, env, logtail: logger } = req;
-		let parsedFeature = validateFeature(data);
+		const { db, orgId, env, logtail: logger } = req;
+		const parsedFeature = validateFeature(data);
 
 		const feature: Feature = {
 			archived: false,
@@ -23,8 +23,8 @@ export const handleCreateFeature = async (req: any, res: any) => {
 			...parsedFeature,
 		};
 
-		let org = await OrgService.getFromReq(req);
-		let insertedData = await FeatureService.insert({
+		const org = await OrgService.getFromReq(req);
+		const insertedData = await FeatureService.insert({
 			db,
 			data: feature,
 			logger,
@@ -38,7 +38,7 @@ export const handleCreateFeature = async (req: any, res: any) => {
 			},
 		});
 
-		let insertedFeature =
+		const insertedFeature =
 			insertedData && insertedData.length > 0 ? insertedData[0] : null;
 		res.status(200).json(insertedFeature);
 	} catch (error) {
