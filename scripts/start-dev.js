@@ -6,17 +6,41 @@ async function startDev() {
 		// Detect and set ports
 		const { vitePort, serverPort } = await detectAndSetPorts();
 
-		console.log("\n🚀 Starting development servers...\n");
+		// Step 1: Build shared package first (initial build)
+		console.log("\n📦 Building shared package...\n");
+		const buildShared = spawn("bun", ["run", "build"], {
+			cwd: "shared",
+			stdio: "inherit",
+			shell: true,
+		});
 
-		// Start concurrently with the detected ports
+		await new Promise((resolve, reject) => {
+			buildShared.on("close", (code) => {
+				if (code !== 0) {
+					reject(new Error(`Shared package build failed with code ${code}`));
+				} else {
+					resolve();
+				}
+			});
+			buildShared.on("error", reject);
+		});
+
+		console.log("\n✅ Shared package built successfully!\n");
+		console.log("🚀 Starting development servers in watch mode...\n");
+
+		// Step 2: Start server, workers, and vite first (they'll use the built shared package)
 		const concurrentlyCmd = spawn(
 			"bunx",
 			[
 				"concurrently",
-				`"cd shared && bun run dev"`,
+				"-n",
+				"server,workers,vite,shared",
+				"-c",
+				"green,yellow,blue,cyan",
 				`"cd server && SERVER_PORT=${serverPort} bun dev"`,
 				`"cd server && bun workers:dev"`,
 				`"cd vite && VITE_PORT=${vitePort} bun dev"`,
+				`"cd shared && bun run dev:watch"`,
 			],
 			{
 				stdio: "inherit",

@@ -1,11 +1,10 @@
 import { AreaCheckbox } from "@/components/v2/checkboxes/AreaCheckbox";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
-import { useProductContext } from "@/views/products/product/ProductContext";
+import { useProductStore } from "@/hooks/stores/useProductStore";
 
 export const AdditionalOptions = () => {
-	const { product, setProduct } = useProductContext();
-
-	if (!product) return null;
+	const product = useProductStore((s) => s.product);
+	const setProduct = useProductStore((s) => s.setProduct);
 
 	return (
 		<SheetSection title="Additional Options">

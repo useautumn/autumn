@@ -1,4 +1,3 @@
-import type { ProductV2 } from "@autumn/shared";
 import {
 	PencilSimpleIcon,
 	SquareSplitHorizontalIcon,
@@ -11,25 +10,23 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/v2/selects/Select";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useProductStore } from "@/hooks/stores/useProductStore";
 import CreatePlanDialog from "@/views/products/products/components/CreatePlanDialog";
+import { useOnboardingStore } from "../../store/useOnboardingStore";
 
-interface PlaygroundToolbarProps {
-	playgroundMode: "edit" | "preview";
-	setPlaygroundMode: (mode: "edit" | "preview") => void;
-	selectedProductId: string;
-	products: ProductV2[];
-	onPlanSelect: (planId: string) => void;
-	onCreatePlanSuccess: (newProduct: ProductV2) => Promise<void>;
-}
+export const PlaygroundToolbar = () => {
+	// Get products from query
+	const { products } = useProductsQuery();
 
-export const PlaygroundToolbar = ({
-	playgroundMode,
-	setPlaygroundMode,
-	selectedProductId,
-	products,
-	onPlanSelect,
-	onCreatePlanSuccess,
-}: PlaygroundToolbarProps) => {
+	// Get current product and playground mode from stores
+	const product = useProductStore((s) => s.product);
+	const playgroundMode = useOnboardingStore((s) => s.playgroundMode);
+	const setPlaygroundMode = useOnboardingStore((s) => s.setPlaygroundMode);
+
+	// Get handlers from store
+	const handlePlanSelect = useOnboardingStore((s) => s.handlePlanSelect);
+	const onCreatePlanSuccess = useOnboardingStore((s) => s.onCreatePlanSuccess);
 	return (
 		<div className="flex gap-2 items-center justify-between">
 			<GroupedTabButton
@@ -54,12 +51,15 @@ export const PlaygroundToolbar = ({
 				]}
 			/>
 			<div className="flex gap-2 items-center">
-				<Select value={selectedProductId} onValueChange={onPlanSelect}>
+				<Select
+					value={product?.id}
+					onValueChange={(id) => handlePlanSelect?.(id)}
+				>
 					<SelectTrigger className="!h-6 text-body px-2 py-1 min-w-0 max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap">
 						<SelectValue placeholder="Select plan" className="truncate" />
 					</SelectTrigger>
 					<SelectContent>
-						{products.map((prod) => (
+						{products?.map((prod) => (
 							<SelectItem key={prod.id} value={prod.id} className="text-body">
 								<span className="truncate block max-w-[100px]">
 									{prod.name}
@@ -69,7 +69,7 @@ export const PlaygroundToolbar = ({
 					</SelectContent>
 				</Select>
 				<CreatePlanDialog
-					onSuccess={onCreatePlanSuccess}
+					onSuccess={onCreatePlanSuccess || undefined}
 					size="sm"
 					buttonClassName="!h-6 !px-2 text-body"
 				/>

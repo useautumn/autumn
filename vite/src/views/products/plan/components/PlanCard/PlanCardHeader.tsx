@@ -3,16 +3,17 @@ import { CrosshairSimpleIcon } from "@phosphor-icons/react";
 import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { CardHeader } from "@/components/v2/cards/Card";
+import { useProductStore } from "@/hooks/stores/useProductStore";
+import { useIsEditingPlan, useSheetStore } from "@/hooks/stores/useSheetStore";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
-import { useProductContext } from "@/views/products/product/ProductContext";
 import { PlanCardToolbar } from "./PlanCardToolbar";
 
 export const PlanCardHeader = () => {
-	const { product, setEditingState, setSheet, editingState } =
-		useProductContext();
+	const product = useProductStore((s) => s.product);
+	const setSheet = useSheetStore((s) => s.setSheet);
+	const isPlanBeingEdited = useIsEditingPlan();
 
 	const productV3 = mapToProductV3({ product });
-	const isPlanBeingEdited = editingState.type === "plan";
 
 	return (
 		<CardHeader>
@@ -25,8 +26,7 @@ export const PlanCardHeader = () => {
 				</div>
 				<PlanCardToolbar
 					onEdit={() => {
-						setEditingState({ type: "plan", id: product.id });
-						setSheet("edit-plan");
+						setSheet({ type: "edit-plan", itemId: product.id });
 					}}
 					onDelete={() => console.log("Delete plan:", product.id)}
 					editDisabled={isPlanBeingEdited}
@@ -43,8 +43,7 @@ export const PlanCardHeader = () => {
 				variant="secondary"
 				icon={<CrosshairSimpleIcon />}
 				onClick={() => {
-					setEditingState({ type: "plan", id: product.id });
-					setSheet("edit-plan");
+					setSheet({ type: "edit-plan", itemId: product.id });
 				}}
 				disabled={isPlanBeingEdited}
 				className="mt-2 !opacity-100"

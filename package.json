@@ -9,7 +9,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "node scripts/start-dev.js",
-		"dev:simple": "concurrently \"cd server && bun dev\" \"cd server && bun workers:dev\" \"cd vite && bun dev\" \"cd shared && bun dev\"",
+		"dev:simple": "concurrently \"cd shared && bun dev:watch\" \"cd server && bun dev\" \"cd server && bun workers:dev\" \"cd vite && bun dev\"",
 		"vite:build": "bun -F @autumn/shared build && bun -F @autumn/vite build:bun",
 		"vite:start": "bun -F @autumn/vite start:bun",
 		"shared": "bun -F @autumn/shared build",
@@ -29,9 +29,7 @@
 		"docker:up:ci": "docker compose -f docker-compose.ci.yml up --build",
 		"build:all": "pnpm -F shared build && pnpm -F server prod:build && pnpm -F vite build",
 		"vite:build:bun": "bun -F @autumn/shared build && bun -F @autumn/vite build:bun",
-		"vite:start:bun": "bun -F @autumn/shared build && bun -F @autumn/vite start:bun",
-		"dev:bun": "concurrently \"cd server && bun run dev\" \"cd vite && bun run dev\" \"bun -F @autumn/shared dev:bun\"",
-		"build:all:bun": "bun run -F @autumn/shared build:bun && bun run -F @autumn/server prod:build:bun && bun run -F @autumn/vite build:bun"
+		"vite:start:bun": "bun -F @autumn/shared build && bun -F @autumn/vite start:bun"
 	},
 	"dependencies": {
 		"@wooorm/starry-night": "^3.8.0",

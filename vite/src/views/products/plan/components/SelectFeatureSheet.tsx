@@ -19,9 +19,10 @@ import {
 } from "@/components/v2/selects/Select";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useProductStore } from "@/hooks/stores/useProductStore";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { getItemId } from "@/utils/product/productItemUtils";
 import { getFeatureIcon } from "@/views/products/features/utils/getFeatureIcon";
-import { useProductContext } from "../../product/ProductContext";
 
 export function SelectFeatureSheet({
 	isOnboarding,
@@ -32,8 +33,9 @@ export function SelectFeatureSheet({
 	const [selectOpen, setSelectOpen] = useState(true);
 
 	const { features } = useFeaturesQuery();
-	const { product, setProduct, setSheet, setEditingState } =
-		useProductContext();
+	const product = useProductStore((s) => s.product);
+	const setProduct = useProductStore((s) => s.setProduct);
+	const setSheet = useSheetStore((s) => s.setSheet);
 
 	const filteredFeatures = features.filter((f: Feature) => !f.archived);
 
@@ -84,13 +86,11 @@ export function SelectFeatureSheet({
 		const itemIndex = featureItems.length - 1;
 		const itemId = getItemId({ item: newItem, itemIndex });
 
-		setEditingState({ type: "feature", id: itemId });
-		setSheet("edit-feature");
+		setSheet({ type: "edit-feature", itemId });
 	};
 
 	const handleCreateNew = () => {
-		setEditingState({ type: "feature", id: "new" });
-		setSheet("new-feature");
+		setSheet({ type: "new-feature", itemId: "new" });
 	};
 
 	return (

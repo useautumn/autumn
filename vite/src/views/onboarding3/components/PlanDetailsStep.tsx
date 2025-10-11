@@ -1,22 +1,26 @@
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
-import { LongInput } from "@/components/v2/inputs/LongInput";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useAutoSlug } from "@/hooks/common/useAutoSlug";
-import { useProductContext } from "@/views/products/product/ProductContext";
+import { useProductStore } from "@/hooks/stores/useProductStore";
 import { BasePriceSection } from "../../products/plan/components/edit-plan-details/BasePriceSection";
-import { useOnboardingSteps } from "../hooks/useOnboardingSteps";
-import { OnboardingStep } from "../utils/onboardingUtils";
 
 export const PlanDetailsStep = () => {
-	const { product, setProduct } = useProductContext();
+	// Get product state from ProductContext (working copy being edited)
+	const product = useProductStore((s) => s.product);
+	const baseProduct = useProductStore((s) => s.baseProduct);
+	const setProduct = useProductStore((s) => s.setProduct);
+
+	// Check if product already exists on backend (has internal_id from database)
+	const isExistingProduct = !!baseProduct?.internal_id;
+
 	const { setSource, setTarget } = useAutoSlug({
 		state: product,
 		setState: setProduct,
 		sourceKey: "name",
 		targetKey: "id",
+		disableAutoSlug: isExistingProduct,
 	});
-	const { step } = useOnboardingSteps();
 
 	return (
 		<>
@@ -49,12 +53,12 @@ export const PlanDetailsStep = () => {
 								Used to refer to this product when using Autumn's APIs or SDKs
 							</span>
 						</div>
-						{step === OnboardingStep.Playground && (
+						{/* {step === OnboardingStep.Playground && product && (
 							<div className="col-span-1">
 								<FormLabel>Description</FormLabel>
 								<LongInput
 									placeholder="eg. This plan includes 100 credits"
-									value={product?.description || ""}
+									value={(product).description || ""}
 									onChange={(e) =>
 										setProduct({
 											...product,
@@ -63,7 +67,7 @@ export const PlanDetailsStep = () => {
 									}
 								/>
 							</div>
-						)}
+						)} */}
 					</div>
 				</div>
 			</SheetSection>

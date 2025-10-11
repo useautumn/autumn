@@ -1,5 +1,5 @@
-import type { ProductV2 } from "@autumn/shared";
 import { SheetHeader } from "@/components/v2/sheets/InlineSheet";
+import { useOnboarding3QueryState } from "../hooks/useOnboarding3QueryState";
 import {
 	getStepNumber,
 	OnboardingStep,
@@ -7,29 +7,11 @@ import {
 } from "../utils/onboardingUtils";
 import { PlaygroundToolbar } from "./playground-step/PlaygroundToolbar";
 
-interface StepHeaderProps {
-	step: OnboardingStep;
-	selectedProductId: string;
-	products: ProductV2[];
-	onPlanSelect: (planId: string) => void;
-	onCreatePlanSuccess: (newProduct: ProductV2) => Promise<void>;
-	playgroundMode?: "edit" | "preview";
-	setPlaygroundMode?: (mode: "edit" | "preview") => void;
-	sheet?: string | null;
-	editingState?: { type: "plan" | "feature" | null; id: string | null };
-}
+export const StepHeader = () => {
+	// Get step from query state
+	const { queryStates } = useOnboarding3QueryState();
+	const step = queryStates.step;
 
-export const StepHeader = ({
-	step,
-	selectedProductId,
-	products,
-	onPlanSelect,
-	onCreatePlanSuccess,
-	playgroundMode = "edit",
-	setPlaygroundMode,
-	sheet,
-	editingState,
-}: StepHeaderProps) => {
 	const stepNum = getStepNumber(step);
 	const config = stepConfig[step];
 
@@ -43,14 +25,7 @@ export const StepHeader = ({
 					className="p-0 sticky"
 					isOnboarding={true}
 				/>
-				<PlaygroundToolbar
-					playgroundMode={playgroundMode ?? "edit"}
-					setPlaygroundMode={setPlaygroundMode ?? (() => {})}
-					selectedProductId={selectedProductId}
-					products={products}
-					onPlanSelect={onPlanSelect}
-					onCreatePlanSuccess={onCreatePlanSuccess}
-				/>
+				<PlaygroundToolbar />
 			</div>
 		);
 	}

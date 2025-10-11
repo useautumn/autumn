@@ -1,29 +1,13 @@
 import { createContext, useContext } from "react";
 
-type Sheets = "edit-plan" | "edit-feature" | "select-feature";
-
-interface EditingState {
-	type: "plan" | "feature" | null;
-	id: string | null;
-}
-
 interface ProductContextType {
 	setShowNewVersionDialog: (show: boolean) => void;
-	product: any;
-	setProduct: (product: any) => void;
-	entityFeatureIds: string[];
-	setEntityFeatureIds: (ids: string[]) => void;
-	hasChanges: boolean;
-	willVersion: boolean;
-	setSheet: (sheet: Sheets) => void;
-	editingState: EditingState;
-	setEditingState: (state: EditingState) => void;
 	refetch?: () => Promise<void>;
 }
 
-export const ProductContext = createContext<any | null>(null);
+export const ProductContext = createContext<ProductContextType | null>(null);
 
-export const useProductContext = (): any => {
+export const useProductContext = (): ProductContextType => {
 	const context = useContext(ProductContext);
 
 	if (context === null || context === undefined) {

@@ -11,9 +11,9 @@ import {
 	DialogTrigger,
 } from "@/components/v2/dialogs/Dialog";
 import { Input } from "@/components/v2/inputs/Input";
+import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useProductQuery } from "../../product/hooks/useProductQuery";
-import { useProductContext } from "../../product/ProductContext";
 import { updateProduct } from "../../product/utils/updateProduct";
 
 export default function ConfirmNewVersionDialog({
@@ -26,7 +26,7 @@ export default function ConfirmNewVersionDialog({
 	onVersionCreated?: () => void;
 }) {
 	const axiosInstance = useAxiosInstance();
-	const { product } = useProductContext();
+	const product = useProductStore((s) => s.product);
 	const { refetch } = useProductQuery();
 
 	const [confirmText, setConfirmText] = useState("");
@@ -41,6 +41,7 @@ export default function ConfirmNewVersionDialog({
 		setIsLoading(true);
 		await updateProduct({
 			axiosInstance,
+			productId: product.id,
 			product,
 			onSuccess: async () => {
 				await refetch();

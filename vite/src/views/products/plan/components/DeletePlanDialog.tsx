@@ -19,21 +19,23 @@ import {
 } from "@/components/v2/selects/Select";
 import { useGeneralQuery } from "@/hooks/queries/useGeneralQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useProductStore } from "@/hooks/stores/useProductStore";
 import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useProductQuery } from "../../product/hooks/useProductQuery";
-import { useProductContext } from "../../product/ProductContext";
 
 export const DeletePlanDialog = ({
 	open,
 	setOpen,
+	onDeleteSuccess,
 }: {
 	open: boolean;
 	setOpen: (open: boolean) => void;
+	onDeleteSuccess?: () => Promise<void>;
 }) => {
 	const axiosInstance = useAxiosInstance();
-	const { product } = useProductContext();
+	const product = useProductStore((s) => s.product);
 	const [loading, setLoading] = useState(false);
 	const [deleteAllVersions, setDeleteAllVersions] = useState(false);
 	const { refetch: refetchProducts } = useProductsQuery();
@@ -57,6 +59,11 @@ export const DeletePlanDialog = ({
 			await refetchProducts();
 			setOpen(false);
 			toast.success("Plan deleted successfully");
+
+			// Call onDeleteSuccess callback if provided (for onboarding)
+			if (onDeleteSuccess) {
+				await onDeleteSuccess();
+			}
 		} catch (error: unknown) {
 			toast.error(getBackendErr(error as AxiosError, "Error deleting plan"));
 		} finally {

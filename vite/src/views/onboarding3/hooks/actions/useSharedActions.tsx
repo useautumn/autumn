@@ -1,157 +1,118 @@
 import type { ProductV2 } from "@autumn/shared";
-import type { AxiosInstance } from "axios";
-import { type MutableRefObject, useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useNavigate } from "react-router";
+import { useProductStore } from "@/hooks/stores/useProductStore";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEnv } from "@/utils/envUtils";
-import {
-	handleBackNavigation,
-	handleCreatePlanSuccess,
-	handlePlanSelection,
-	type OnboardingStep,
-} from "../../utils/onboardingUtils";
+import { OnboardingStep } from "../../utils/onboardingUtils";
 
 interface SharedActionsProps {
 	step: OnboardingStep;
-	baseProduct: ProductV2;
-	selectedProductId: string;
-	product: ProductV2 | null;
-	productCreatedRef: MutableRefObject<{
-		created: boolean;
-		latestId: string | null;
-	}>;
-	featureCreatedRef: MutableRefObject<{
-		created: boolean;
-		latestId: string | null;
-	}>;
-	axiosInstance: AxiosInstance;
-	setBaseProduct: (product: ProductV2) => void;
-	setProduct: (product: ProductV2) => void;
-	setSelectedProductId: (id: string) => void;
-	setSheet: (sheet: string | null) => void;
-	setEditingState: (state: {
-		type: "plan" | "feature" | null;
-		id: string | null;
-	}) => void;
 	popStep: () => void;
-	refetchProducts: () => Promise<unknown>;
+	refetchProducts: () => Promise<void>;
+	products: ProductV2[];
 }
 
 export const useSharedActions = ({
 	step,
-	baseProduct,
-	selectedProductId,
-	product,
-	productCreatedRef,
-	featureCreatedRef,
-	axiosInstance,
-	setBaseProduct,
-	setProduct,
-	setSelectedProductId,
-	setSheet,
-	setEditingState,
 	popStep,
 	refetchProducts,
+	products,
 }: SharedActionsProps) => {
 	const navigate = useNavigate();
 	const env = useEnv();
 
+	// Get product from product store (working copy)
+	const product = useProductStore((s) => s.product);
+	const setProduct = useProductStore((s) => s.setProduct);
+	const baseProduct = useProductStore((s) => s.baseProduct);
+	const setBaseProduct = useProductStore((s) => s.setBaseProduct);
+
+	const setSheet = useSheetStore((state) => state.setSheet);
+
 	// Handle plan selection from dropdown
 	const handlePlanSelect = useCallback(
 		async (planId: string) => {
-			try {
-				await handlePlanSelection(
-					planId,
-					selectedProductId,
-					baseProduct,
-					setBaseProduct,
-					setProduct,
-					setSelectedProductId,
-					setSheet,
-					setEditingState,
-					axiosInstance,
-				);
-			} catch (_) {
-				setSelectedProductId(product?.id || "");
+			if (!planId || planId === product.id) return;
+
+			// Find the product in the already-fetched products list
+			const selectedProduct = products.find((p) => p.id === planId);
+
+			if (!selectedProduct) {
+				console.error("Product not found in products list:", planId);
+				return;
 			}
+
+			// Set as base product and working product
+			setBaseProduct(selectedProduct);
+			setProduct(selectedProduct);
+
+			// Keep the edit-plan sheet open
+			setSheet({ type: "edit-plan" });
 		},
-		[
-			selectedProductId,
-			baseProduct,
-			setBaseProduct,
-			setProduct,
-			axiosInstance,
-			product?.id,
-			setSheet,
-			setEditingState,
-			setSelectedProductId,
-		],
+		[product.id, products, setBaseProduct, setProduct, setSheet],
 	);
 
 	// Handle back navigation
 	const handleBack = useCallback(async () => {
-		setSheet(null);
-		setEditingState({ type: null, id: null });
+		const { closeSheet } = useSheetStore.getState();
+		closeSheet();
 
-		await handleBackNavigation(
-			step,
-			productCreatedRef,
-			featureCreatedRef,
-			baseProduct,
-			setBaseProduct,
-			setSelectedProductId,
-			axiosInstance,
-		);
+		// If we're on Step 3 (FeatureConfiguration), reset product to baseProduct
+		// This removes the half-configured feature item that was added in Step 2
+		if (step === OnboardingStep.FeatureConfiguration && baseProduct) {
+			setProduct(baseProduct);
+		}
 
+		// handleBackNavigation logic is mostly commented out in utils
+		// Just pop the step
 		popStep();
-	}, [
-		step,
-		productCreatedRef,
-		featureCreatedRef,
-		baseProduct,
-		setBaseProduct,
-		setSelectedProductId,
-		axiosInstance,
-		popStep,
-		setSheet,
-		setEditingState,
-	]);
+	}, [popStep, step, baseProduct, setProduct]);
 
 	// Handle create plan success from dialog
 	const onCreatePlanSuccess = useCallback(
 		async (newProduct: ProductV2) => {
 			try {
-				await handleCreatePlanSuccess(
-					newProduct,
-					axiosInstance,
-					setBaseProduct,
-					setSelectedProductId,
-					setSheet,
-					setEditingState,
-					async () => {
-						await refetchProducts();
-					},
-				);
+				// Refetch products to update the list
+				// useOnboardingProductSync will sync baseProduct with the backend version
+				await refetchProducts();
+
+				// Set the newly created product as base and working product
+				setBaseProduct(newProduct);
+				setProduct(newProduct);
+
+				// Open edit-plan sheet
+				setSheet({ type: "edit-plan" });
 			} catch (error) {
 				console.error("Failed to load new plan:", error);
 				const { navigateTo } = await import("@/utils/genUtils");
 				navigateTo(`/products/${newProduct.id}`, navigate, env);
 			}
 		},
-		[
-			axiosInstance,
-			setBaseProduct,
-			setSelectedProductId,
-			setSheet,
-			setEditingState,
-			refetchProducts,
-			navigate,
-			env,
-		],
+		[setBaseProduct, setProduct, refetchProducts, setSheet, navigate, env],
 	);
 
-	return {
-		handlePlanSelect,
-		handleBack,
-		onCreatePlanSuccess,
-	};
+	// Handle delete plan success from dialog
+	const handleDeletePlanSuccess = useCallback(async () => {
+		// Refetch products - useOnboardingProductSync will automatically:
+		// - Redirect to step 1 if no products left
+		// - Fallback to products[0] if current product was deleted but others exist
+		// - Sync both baseProduct and product
+		await refetchProducts();
+	}, [refetchProducts]);
+
+	return useMemo(
+		() => ({
+			handlePlanSelect,
+			handleBack,
+			onCreatePlanSuccess,
+			handleDeletePlanSuccess,
+		}),
+		[
+			handlePlanSelect,
+			handleBack,
+			onCreatePlanSuccess,
+			handleDeletePlanSuccess,
+		],
+	);
 };

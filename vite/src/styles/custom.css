@@ -79,6 +79,7 @@
 	&:focus,
 	&[data-state="open"] {
 		background-color: var(--color-active-primary);
+		border-color: var(--primary);
 	}
 }
 

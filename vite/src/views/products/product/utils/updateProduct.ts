@@ -41,7 +41,7 @@ export const updateProduct = async ({
 			updateData,
 		);
 
-		toast.success("Product updated successfully");
+		// toast.success("Product updated successfully");
 
 		await onSuccess();
 		return updatedProduct;

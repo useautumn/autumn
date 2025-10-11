@@ -1,29 +1,31 @@
 import { type ProductItem, productV2ToFeatureItems } from "@autumn/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useProductStore } from "@/hooks/stores/useProductStore";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { getItemId } from "@/utils/product/productItemUtils";
-import { useProductContext } from "@/views/products/product/ProductContext";
 
 export const useFeatureNavigation = () => {
-	const { product, editingState, setEditingState, setSheet } =
-		useProductContext();
+	const product = useProductStore((s) => s.product);
+	const itemId = useSheetStore((s) => s.itemId);
+	const setSheet = useSheetStore((s) => s.setSheet);
 	const [selectedIndex, setSelectedIndex] = useState<number>(0);
 
 	// Get filtered items (non-price items)
-	const filteredItems = productV2ToFeatureItems({ items: product?.items });
+	const filteredItems = productV2ToFeatureItems({ items: product.items });
 	// const filteredItems = useMemo(() => {
 	// 	return productV2ToFeatureItems({ items: product?.items });
 	// }, [product?.items]);
 
 	// Update selected index when editing state changes or items change
 	useEffect(() => {
-		if (editingState.id && filteredItems.length > 0) {
+		if (itemId && filteredItems.length > 0) {
 			const currentIndex = filteredItems.findIndex((item: ProductItem) => {
 				// Find the actual index in the product items array
 				const actualIndex =
 					product?.items?.findIndex((i: ProductItem) => i === item) ?? 0;
-				const itemId = getItemId({ item, itemIndex: actualIndex });
-				return itemId === editingState.id;
+				const currentItemId = getItemId({ item, itemIndex: actualIndex });
+				return currentItemId === itemId;
 			});
 			if (currentIndex !== -1) {
 				setSelectedIndex(currentIndex);
@@ -32,7 +34,7 @@ export const useFeatureNavigation = () => {
 			// Reset selection when no items
 			setSelectedIndex(0);
 		}
-	}, [editingState.id, filteredItems, product?.items]);
+	}, [itemId, filteredItems, product?.items]);
 
 	// Handle when selected index becomes out of bounds (e.g., item deleted)
 	useEffect(() => {
@@ -59,11 +61,10 @@ export const useFeatureNavigation = () => {
 					product?.items?.findIndex((i: ProductItem) => i === item) ??
 					clampedIndex;
 				const itemId = getItemId({ item, itemIndex: actualIndex });
-				setEditingState({ type: "feature", id: itemId });
-				setSheet("edit-feature");
+				setSheet({ type: "edit-feature", itemId });
 			}
 		},
-		[filteredItems, setEditingState, setSheet, product?.items],
+		[filteredItems, setSheet, product?.items],
 	);
 
 	const navigateUp = useCallback(() => {
@@ -84,9 +85,8 @@ export const useFeatureNavigation = () => {
 
 	const editPlan = useCallback(() => {
 		if (!product) return;
-		setEditingState({ type: "plan", id: product.id });
-		setSheet("edit-plan");
-	}, [product, setEditingState, setSheet]);
+		setSheet({ type: "edit-plan", itemId: product.id });
+	}, [product, setSheet]);
 
 	const addNewFeature = useCallback(() => {
 		// Trigger the add feature popover by clicking the button

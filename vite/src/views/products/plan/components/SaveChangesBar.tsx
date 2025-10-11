@@ -1,9 +1,14 @@
-import type { FrontendProduct } from "@autumn/shared";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/v2/buttons/Button";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import { useProductChangedAlert } from "@/components/v2/hooks";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import {
+	useHasChanges,
+	useProductStore,
+	useWillVersion,
+} from "@/hooks/stores/useProductStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useProductCountsQuery } from "../../product/hooks/queries/useProductCountsQuery";
 import { useProductQuery } from "../../product/hooks/useProductQuery";
@@ -12,35 +17,28 @@ import { updateProduct } from "../../product/utils/updateProduct";
 
 interface SaveChangesBarProps {
 	isOnboarding?: boolean;
-	originalProduct?: FrontendProduct;
-	setOriginalProduct?: (product: FrontendProduct) => void;
 }
 
 export const SaveChangesBar = ({
 	isOnboarding = false,
-	originalProduct: onboardingOriginalProduct,
-	setOriginalProduct: setOnboardingOriginalProduct,
 }: SaveChangesBarProps) => {
 	const axiosInstance = useAxiosInstance();
-	const {
-		diff,
-		setProduct,
-		product,
-		setShowNewVersionDialog,
-		refetch: contextRefetch,
-	} = useProductContext();
+	const { setShowNewVersionDialog } = useProductContext();
+
+	// Get product state from store
+	const product = useProductStore((s) => s.product);
+	const setProduct = useProductStore((s) => s.setProduct);
+	const hasChanges = useHasChanges();
+	const willVersion = useWillVersion();
+
 	const [saving, setSaving] = useState(false);
 
+	const { refetch } = useProductsQuery();
 	const { counts, isLoading } = useProductCountsQuery();
-	const { refetch: queryRefetch, product: queryOriginalProduct } =
-		useProductQuery();
-
-	const originalProduct = isOnboarding
-		? onboardingOriginalProduct
-		: queryOriginalProduct;
+	const { refetch: queryRefetch } = useProductQuery();
 
 	const { modal } = useProductChangedAlert({
-		hasChanges: diff.hasChanges,
+		hasChanges,
 		disabled: isOnboarding, // Disable navigation blocking in onboarding mode
 	});
 
@@ -50,7 +48,7 @@ export const SaveChangesBar = ({
 			return;
 		}
 
-		if (!isOnboarding && counts?.all > 0 && diff.willVersion) {
+		if (!isOnboarding && counts?.all > 0 && willVersion) {
 			setShowNewVersionDialog(true);
 			return;
 		}
@@ -58,34 +56,29 @@ export const SaveChangesBar = ({
 		setSaving(true);
 		await updateProduct({
 			axiosInstance,
+			productId: product.id,
 			product,
 			onSuccess: async () => {
 				if (isOnboarding) {
-					// Use the unified refetch from context (hybrid approach)
-					if (contextRefetch) {
-						await contextRefetch();
-					} else if (setOnboardingOriginalProduct && product) {
-						// Fallback: manual product update (should not be needed with hybrid approach)
-						const response = await axiosInstance.get(
-							`/products/${product.id}/data2`,
-						);
-						setOnboardingOriginalProduct(response.data.product);
-					}
+					await refetch();
 				} else {
-					// Normal PEV refetch
 					await queryRefetch();
 				}
 			},
 		});
+		toast.success("Changes saved successfully");
 
 		setSaving(false);
 	};
 
 	const handleDiscardClicked = () => {
-		setProduct(originalProduct as FrontendProduct);
+		const baseProduct = useProductStore.getState().baseProduct;
+		if (baseProduct) {
+			setProduct(baseProduct);
+		}
 	};
 
-	if (!diff.hasChanges) return null;
+	if (!hasChanges) return null;
 
 	return (
 		<>

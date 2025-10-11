@@ -10,13 +10,14 @@ import {
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
-import { useProductContext } from "@/views/products/product/ProductContext";
+import { useProductStore } from "@/hooks/stores/useProductStore";
 import { SelectBillingCycle } from "./SelectBillingCycle";
 
 export const BasePriceSection = () => {
-	const { product, setProduct } = useProductContext();
+	const product = useProductStore((s) => s.product);
+	const setProduct = useProductStore((s) => s.setProduct);
 
-	if (!product) return null;
+	if (!product.items) return null;
 
 	const basePrice = productV2ToBasePrice({ product });
 

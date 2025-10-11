@@ -1,109 +1,93 @@
-import type {
-	CreateFeature,
-	Feature,
-	ProductItem,
-	ProductV2,
-} from "@autumn/shared";
-import { isPriceItem } from "@autumn/shared";
-import type { AxiosInstance } from "axios";
-import { type MutableRefObject, useCallback } from "react";
+import type { CreateFeature } from "@autumn/shared";
+import { apiFeatureToDbFeature, CreateFeatureSchema } from "@autumn/shared";
+import type { AxiosError } from "axios";
+import { useCallback } from "react";
+import { toast } from "sonner";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { createFeature, createProductItem } from "../../utils/onboardingUtils";
+import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
+import { FeatureService } from "@/services/FeatureService";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { getBackendErr } from "@/utils/genUtils";
 
-interface FeatureCreationActionsProps {
-	feature: Feature | CreateFeature | null;
-	product: ProductV2 | null;
-	axiosInstance: AxiosInstance;
-	featureCreatedRef: MutableRefObject<{
-		created: boolean;
-		latestId: string | null;
-	}>;
-	setFeature: (feature: Feature | CreateFeature | null) => void;
-	setProduct: (product: ProductV2) => void;
-	setBaseProduct: (product: ProductV2) => void;
-}
+export const useFeatureCreationActions = () => {
+	const axiosInstance = useAxiosInstance();
+	const { refetch: refetchFeatures } = useFeaturesQuery();
 
-export const useFeatureCreationActions = ({
-	feature,
-	product,
-	axiosInstance,
-	featureCreatedRef,
-	setFeature,
-	setProduct,
-	setBaseProduct,
-}: FeatureCreationActionsProps) => {
-	const { features, refetch: refetchFeatures } = useFeaturesQuery();
+	// Get state from feature store
+	const feature = useFeatureStore((state) => state.feature);
+	const baseFeature = useFeatureStore((state) => state.baseFeature);
+	const setBaseFeature = useFeatureStore((state) => state.setBaseFeature);
+	const setFeature = useFeatureStore((state) => state.setFeature);
 
-	// Create feature and add to product
+	// Create or update feature
 	const handleProceed = useCallback(async (): Promise<boolean> => {
-		// 1. If feature already exists, update it, if not create it
-		const createdFeature = await createFeature(
-			feature as CreateFeature,
-			axiosInstance,
-			featureCreatedRef,
-		);
-
-		if (!createdFeature) return false;
-
-		await refetchFeatures(); // Refresh features list
-
-		// Create ProductItem and add to product immediately for live editing
-		const newItem = createProductItem(createdFeature);
-
-		setFeature(createdFeature);
-
-		// Add feature item to product (preserving any existing base price item)
-		if (product && "items" in product) {
-			const existingItems = product.items || [];
-
-			// Check if we already have a feature item (from previous onboarding attempts)
-			const existingFeatureItemIndex = existingItems.findIndex(
-				(item: ProductItem) => item.feature_id && !isPriceItem(item),
-			);
-
-			let updatedItems: typeof existingItems;
-
-			if (existingFeatureItemIndex !== -1) {
-				// Update existing feature item with new feature_id and feature_type
-				updatedItems = [...existingItems];
-				const oldItem = updatedItems[existingFeatureItemIndex];
-				updatedItems[existingFeatureItemIndex] = {
-					...updatedItems[existingFeatureItemIndex],
-					feature_id: createdFeature.id,
-					feature_type: newItem.feature_type,
-				};
-
-				console.log("FeatureCreationActions - updated existing product item:", {
-					oldFeatureType: oldItem.feature_type,
-					newFeatureType: newItem.feature_type,
-					featureId: createdFeature.id,
-					changed: oldItem.feature_type !== newItem.feature_type,
-				});
-			} else {
-				// Add new feature item, preserving any existing base price items
-				updatedItems = [...existingItems, newItem];
-			}
-
-			const updatedProduct = {
-				...product,
-				items: updatedItems,
-			};
-
-			// Update local state (don't save yet - item needs configuration in step 3)
-			setProduct(updatedProduct);
-			setBaseProduct(updatedProduct);
+		// Validate feature data
+		const result = CreateFeatureSchema.safeParse(feature);
+		if (result.error) {
+			toast.error("Invalid feature", {
+				description: result.error.issues.map((x) => x.message).join(".\n"),
+			});
+			return false;
 		}
 
-		return true;
+		try {
+			let updatedFeature: CreateFeature;
+
+			// If baseFeature exists (update mode), update it
+			if (baseFeature?.id) {
+				const { data } = await FeatureService.updateFeature(
+					axiosInstance,
+					baseFeature.id,
+					{
+						name: feature.name,
+						id: feature.id,
+						type: feature.type,
+						config: feature.config,
+					},
+				);
+
+				updatedFeature = apiFeatureToDbFeature({ apiFeature: data });
+
+				toast.success(`Feature "${feature.name}" updated successfully!`);
+			} else {
+				// Create new feature
+				const { data } = await FeatureService.createFeature(axiosInstance, {
+					name: feature.name,
+					id: feature.id,
+					type: feature.type,
+					config: feature.config,
+				});
+				updatedFeature = apiFeatureToDbFeature({ apiFeature: data });
+				toast.success(`Feature "${feature.name}" created successfully!`);
+			}
+
+			console.log("Updated feature", updatedFeature);
+			if (!updatedFeature?.id) return false;
+
+			await refetchFeatures(); // Refresh features list
+
+			// Update both base and working copy after successful save
+			setBaseFeature(updatedFeature);
+			setFeature(updatedFeature);
+
+			// Note: Feature item creation is now handled by useInitFeatureItem when entering Step 3
+			// This ensures proper initialization on both normal flow and refresh scenarios
+
+			return true;
+		} catch (error: unknown) {
+			console.error("Failed to create/update feature:", error);
+			toast.error(
+				getBackendErr(error as AxiosError, "Failed to create/update feature"),
+			);
+			return false;
+		}
 	}, [
 		feature,
+		baseFeature,
 		axiosInstance,
-		featureCreatedRef,
 		refetchFeatures,
+		setBaseFeature,
 		setFeature,
-		product,
-		setProduct,
-		setBaseProduct,
 	]);
 
 	return {

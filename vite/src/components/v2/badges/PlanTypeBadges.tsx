@@ -1,13 +1,8 @@
+import type { ProductV2 } from "@autumn/shared";
 import { PlanTypeBadge } from "./PlanTypeBadge";
 
 interface PlanTypeBadgesProps {
-	product: {
-		is_default?: boolean;
-		is_add_on?: boolean;
-		free_trial?: {
-			card_required?: boolean;
-		};
-	};
+	product: ProductV2;
 	className?: string;
 }
 

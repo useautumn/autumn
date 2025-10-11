@@ -18,10 +18,16 @@ export const ShortcutButton = ({
 		return "Ctrl";
 	};
 
-	useHotkeys([`meta+${metaShortcut}`], (e) => {
-		e.preventDefault();
-		props?.onClick?.(e as unknown as React.MouseEvent<HTMLButtonElement>);
-	});
+	useHotkeys(
+		[`meta+${metaShortcut}`],
+		(e) => {
+			e.preventDefault();
+			props?.onClick?.(e as unknown as React.MouseEvent<HTMLButtonElement>);
+		},
+		{
+			enableOnFormTags: true,
+		},
+	);
 
 	const keystrokeContainer = (keyStroke: string) => (
 		<div className="bg-[#B07AFF] text-primary-foreground flex items-center justify-center size-4 rounded-md">
@@ -35,7 +41,9 @@ export const ShortcutButton = ({
 			{metaShortcut && (
 				<span className="flex items-center gap-0.5">
 					{keystrokeContainer(getMetaKey())}
-					{keystrokeContainer(metaShortcut.toUpperCase())}
+					{keystrokeContainer(
+						metaShortcut === "enter" ? "↵" : metaShortcut.toUpperCase(),
+					)}
 				</span>
 			)}
 		</Button>

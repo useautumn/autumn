@@ -14,6 +14,7 @@ export * from "./cusProductUtils/cusProductConstants.js";
 export * from "./cusProductUtils/cusProductUtils.js";
 export * from "./cusProductUtils/formatCusProductUtils.js";
 export * from "./cusProductUtils/productIdToCusProduct.js";
+export * from "./featureUtils/apiFeatureToDbFeature.js";
 // Feature utils
 export * from "./featureUtils.js";
 // Product utils

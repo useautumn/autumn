@@ -1,18 +1,13 @@
-import type { CreateFeature } from "@autumn/shared";
+import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
 import { NewFeatureAdvanced } from "@/views/products/plan/components/new-feature/NewFeatureAdvanced";
 import { NewFeatureBehaviour } from "@/views/products/plan/components/new-feature/NewFeatureBehaviour";
 import { NewFeatureDetails } from "../../products/plan/components/new-feature/NewFeatureDetails";
 import { NewFeatureType } from "../../products/plan/components/new-feature/NewFeatureType";
 
-interface FeatureCreationStepProps {
-	feature: CreateFeature;
-	setFeature: (feature: CreateFeature) => void;
-}
+export const FeatureCreationStep = () => {
+	const feature = useFeatureStore((s) => s.feature);
+	const setFeature = useFeatureStore((s) => s.setFeature);
 
-export const FeatureCreationStep = ({
-	feature,
-	setFeature,
-}: FeatureCreationStepProps) => {
 	return (
 		<div className="flex flex-col h-full">
 			<NewFeatureDetails feature={feature} setFeature={setFeature} />
