@@ -96,7 +96,7 @@ const getFeatureDeductions = ({
 		const unlimitedExists = cusEnts.some(
 			(cusEnt) =>
 				cusEnt.entitlement.allowance_type === AllowanceType.Unlimited &&
-				cusEnt.entitlement.internal_feature_id == feature.internal_id,
+				cusEnt.entitlement.internal_feature_id === feature.internal_id,
 		);
 
 		if (unlimitedExists || !deduction) {
@@ -239,7 +239,7 @@ export const performDeductionOnCusEnt = ({
 			}
 			let toDeductCursor = toDeduct;
 			for (const entityId in cusEnt.entities) {
-				if (toDeductCursor == 0) {
+				if (toDeductCursor === 0) {
 					break;
 				}
 
@@ -348,7 +348,7 @@ export const deductAllowanceFromCusEnt = async ({
 }) => {
 	const { db, feature, env, org, cusPrices, customer, entity } = deductParams;
 
-	if (toDeduct == 0) {
+	if (toDeduct === 0) {
 	}
 
 	if (
@@ -478,10 +478,7 @@ export const deductFromUsageBasedCusEnt = async ({
 		),
 	);
 
-	if (
-		!usageBasedEnt &&
-		feature.config?.usage_type == FeatureUsageType.Continuous
-	) {
+	if (!usageBasedEnt && feature.usage_type === FeatureUsageType.ContinuousUse) {
 		console.log(`FALLING BACK TO REGULAR CUS ENT, FEATURE: ${feature.id}`);
 		usageBasedEnt = findCusEnt({
 			cusEnts,
@@ -646,7 +643,7 @@ export const updateCustomerBalance = async ({
 		const originalCusEnts = structuredClone(cusEnts);
 
 		for (const cusEnt of cusEnts) {
-			if (cusEnt.entitlement.internal_feature_id != feature.internal_id) {
+			if (cusEnt.entitlement.internal_feature_id !== feature.internal_id) {
 				continue;
 			}
 
@@ -661,7 +658,7 @@ export const updateCustomerBalance = async ({
 				},
 			});
 
-			if (toDeduct == 0) continue;
+			if (toDeduct === 0) continue;
 
 			toDeduct = await deductAllowanceFromCusEnt({
 				toDeduct,

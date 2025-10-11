@@ -1,3 +1,4 @@
+import { featureToProductItemFeatureType } from "@utils/featureUtils.js";
 import { FeatureType } from "../../../models/featureModels/featureEnums.js";
 import {
 	AllowanceType,
@@ -12,7 +13,6 @@ import type { Price } from "../../../models/productModels/priceModels/priceModel
 import { Infinite } from "../../../models/productModels/productEnums.js";
 import {
 	type ProductItem,
-	ProductItemFeatureType,
 	TierInfinite,
 	UsageModel,
 } from "../../../models/productV2Models/productItemModels/productItemModels.js";
@@ -36,7 +36,7 @@ export const toProductItem = ({
 };
 
 export const toFeatureItem = ({ ent }: { ent: EntitlementWithFeature }) => {
-	if (ent.feature.type == FeatureType.Boolean) {
+	if (ent.feature.type === FeatureType.Boolean) {
 		return {
 			feature_id: ent.feature.id,
 			entitlement_id: ent.id,
@@ -49,7 +49,7 @@ export const toFeatureItem = ({ ent }: { ent: EntitlementWithFeature }) => {
 	const item = {
 		feature_id: ent.feature.id,
 		included_usage:
-			ent.allowance_type == AllowanceType.Unlimited ? Infinite : ent.allowance,
+			ent.allowance_type === AllowanceType.Unlimited ? Infinite : ent.allowance,
 		interval: entToItemInterval(ent.interval!),
 		interval_count: ent.interval_count ?? 1,
 
@@ -78,7 +78,7 @@ export const toFeaturePriceItem = ({
 	const tiers = config.usage_tiers.map((tier) => {
 		return {
 			amount: tier.amount,
-			to: tier.to == -1 ? TierInfinite : tier.to,
+			to: tier.to === -1 ? TierInfinite : tier.to,
 		};
 	});
 
@@ -93,12 +93,11 @@ export const toFeaturePriceItem = ({
 
 	const item: ProductItem = {
 		feature_id: ent.feature.id,
-		feature_type:
-			ent.feature.config?.usage_type || ProductItemFeatureType.SingleUse,
+		feature_type: featureToProductItemFeatureType({ feature: ent.feature }),
 
 		included_usage: ent.allowance,
 
-		interval: billingToItemInterval(config.interval!),
+		interval: billingToItemInterval(config.interval),
 		interval_count: config.interval_count ?? 1,
 
 		price: null,
@@ -108,8 +107,8 @@ export const toFeaturePriceItem = ({
 		entity_feature_id: ent.entity_feature_id,
 		reset_usage_when_enabled: !ent.carry_from_previous,
 		usage_model:
-			config.bill_when == BillWhen.StartOfPeriod ||
-			config.bill_when == BillWhen.InAdvance
+			config.bill_when === BillWhen.StartOfPeriod ||
+			config.bill_when === BillWhen.InAdvance
 				? UsageModel.Prepaid
 				: UsageModel.PayPerUse,
 

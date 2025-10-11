@@ -1,6 +1,8 @@
-import { CreditSchemaItem, FeatureType } from "@autumn/shared";
-
-import { Feature } from "@autumn/shared";
+import {
+	type CreditSchemaItem,
+	type Feature,
+	FeatureType,
+} from "@autumn/shared";
 import { Decimal } from "decimal.js";
 
 export const creditSystemContainsFeature = ({
@@ -30,8 +32,8 @@ export const getCreditSystemsFromFeature = ({
 }) => {
 	return features.filter(
 		(f) =>
-			f.type == FeatureType.CreditSystem &&
-			f.id != featureId &&
+			f.type === FeatureType.CreditSystem &&
+			f.id !== featureId &&
 			creditSystemContainsFeature({
 				creditSystem: f,
 				meteredFeatureId: featureId,
@@ -52,8 +54,8 @@ export const featureToCreditSystem = ({
 
 	for (const schemaItem of schema) {
 		if (schemaItem.metered_feature_id === featureId) {
-			let creditAmount = schemaItem.credit_amount;
-			let featureAmount = schemaItem.feature_amount;
+			const creditAmount = schemaItem.credit_amount;
+			const featureAmount = schemaItem.feature_amount;
 
 			return new Decimal(creditAmount)
 				.div(featureAmount)

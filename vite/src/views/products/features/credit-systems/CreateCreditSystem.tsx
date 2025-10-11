@@ -1,32 +1,36 @@
-import { Button } from "@/components/ui/button";
 import {
-	Dialog,
-	DialogTrigger,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+	type CreateFeature,
+	FeatureType,
+	FeatureUsageType,
+} from "@autumn/shared";
 import { useEffect, useState } from "react";
-import { FeatureService } from "@/services/FeatureService";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { toast } from "sonner";
-
-import { CreateFeature, FeatureType, FeatureUsageType } from "@autumn/shared";
-import { getBackendErr } from "@/utils/genUtils";
-import CreditSystemConfig from "./CreditSystemConfig";
 import {
 	CustomDialogBody,
 	CustomDialogContent,
 	CustomDialogFooter,
 } from "@/components/general/modal-components/DialogContentWrapper";
+import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "@/components/ui/dialog";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { FeatureService } from "@/services/FeatureService";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { getBackendErr } from "@/utils/genUtils";
+import CreditSystemConfig from "./CreditSystemConfig";
 import { validateCreditSystem } from "./utils/validateCreditSystem";
+
 const defaultCreditSystem = {
 	name: "",
 	id: "",
 	type: FeatureType.CreditSystem,
 	config: {
 		schema: [{ metered_feature_id: "", feature_amount: 1, credit_amount: 0 }],
-		usage_type: FeatureUsageType.Single,
+		usage_type: FeatureUsageType.SingleUse,
 	},
 };
 

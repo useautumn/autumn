@@ -1,8 +1,8 @@
 import { relations } from "drizzle-orm";
-import { entities } from "./entityTable.js";
-import { customers } from "../cusTable.js";
 import { features } from "../../featureModels/featureTable.js";
 import { organizations } from "../../orgModels/orgTable.js";
+import { customers } from "../cusTable.js";
+import { entities } from "./entityTable.js";
 
 export const entitiesRelations = relations(entities, ({ one }) => ({
 	customer: one(customers, {

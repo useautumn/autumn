@@ -7,6 +7,7 @@ import {
 	Infinite,
 	OnIncrease,
 	type ProductItem,
+	type ProductItemFeatureType,
 	ProductItemInterval,
 	ProductItemSchema,
 	UsageModel,
@@ -166,20 +167,14 @@ export const validateProductItems = ({
 
 	features = allFeatures;
 
-	// const isOneOff =
-	//   newItems.every((item) => {
-	//     if (isFeatureItem(item)) return true;
-	//     return nullish(item.interval);
-	//   }) &&
-	//   newItems.some((item) => isFeaturePriceItem(item) || isPriceItem(item));
-
 	// 1. Check values
 	for (let index = 0; index < newItems.length; index++) {
 		validateProductItem({ item: newItems[index], features });
 		const feature = features.find((f) => f.id === newItems[index].feature_id);
 
 		if (feature && feature.type === FeatureType.Metered) {
-			newItems[index].feature_type = feature.config?.usage_type;
+			newItems[index].feature_type =
+				feature.usage_type as unknown as ProductItemFeatureType;
 		}
 	}
 
@@ -278,12 +273,12 @@ export const validateProductItems = ({
 	const hasWeeklyPrice = newItems.some(
 		(item) =>
 			(isPriceItem(item) || isFeaturePriceItem(item)) &&
-			item.interval === ProductItemInterval.Week
+			item.interval === ProductItemInterval.Week,
 	);
 	const hasMonthlyPrice = newItems.some(
 		(item) =>
 			(isPriceItem(item) || isFeaturePriceItem(item)) &&
-			item.interval === ProductItemInterval.Month
+			item.interval === ProductItemInterval.Month,
 	);
 
 	if (hasWeeklyPrice && hasMonthlyPrice) {

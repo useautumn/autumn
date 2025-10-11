@@ -1,5 +1,6 @@
-import { PgColumn } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import type { PgColumn } from "drizzle-orm/pg-core";
+
 function collatePgColumn<C extends PgColumn<any>>(col: C, collation: string) {
 	const originalGetSQLType = col.getSQLType;
 	col.getSQLType = function (this: C) {

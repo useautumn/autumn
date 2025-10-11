@@ -16,7 +16,7 @@ export const SelectFeatureType = ({
 	setFeature: any;
 }) => {
 	const featureType = feature.type;
-	const usageType = feature.config?.usage_type;
+	const usageType = feature.usage_type;
 
 	const setFeatureType = (type: ApiFeatureType) => {
 		// 1. If type is boolean
@@ -25,12 +25,14 @@ export const SelectFeatureType = ({
 				...feature,
 				type: ApiFeatureType.Boolean,
 				config: undefined,
+				usage_type: null,
 			});
 		} else {
 			setFeature({
 				...feature,
 				type: FeatureType.Metered,
-				config: { ...defaultMeteredConfig, usage_type: type },
+				usage_type: type,
+				config: { ...defaultMeteredConfig },
 			});
 		}
 	};
@@ -44,13 +46,12 @@ export const SelectFeatureType = ({
 					icon={<ArrowUp01 className="text-t3" size={13} />}
 					isSelected={featureType === FeatureType.Metered}
 					onClick={() => {
-						const curConfig = feature.config;
 						setFeature({
 							...feature,
 							type: FeatureType.Metered,
+							usage_type: feature.usage_type ?? null,
 							config: {
 								...defaultMeteredConfig,
-								usage_type: curConfig?.usage_type ?? null,
 							},
 						});
 					}}
@@ -64,6 +65,7 @@ export const SelectFeatureType = ({
 						setFeature({
 							...feature,
 							type: FeatureType.Boolean,
+							usage_type: null,
 							config: undefined,
 						})
 					}

@@ -1,7 +1,7 @@
-import { Feature } from "../../models/featureModels/featureModels.js";
-import { FullProduct } from "../../models/productModels/productModels.js";
-import { ProductItem } from "../../models/productV2Models/productItemModels/productItemModels.js";
-import { ProductV2 } from "../../models/productV2Models/productV2Models.js";
+import type { Feature } from "../../models/featureModels/featureModels.js";
+import type { FullProduct } from "../../models/productModels/productModels.js";
+import type { ProductItem } from "../../models/productV2Models/productItemModels/productItemModels.js";
+import type { ProductV2 } from "../../models/productV2Models/productV2Models.js";
 import { entToPrice, priceToEnt } from "../productUtils/convertUtils.js";
 import { toProductItem } from "./productItemUtils/mapToItem.js";
 import { getItemFeatureType } from "./productItemUtils/productItemUtils.js";
@@ -13,15 +13,18 @@ export const mapToProductV2 = ({
 	product: FullProduct;
 	features?: Feature[];
 }): ProductV2 => {
-	let items: ProductItem[] = [];
+	const items: ProductItem[] = [];
 
 	for (const ent of product.entitlements) {
-		let relatedPrice = entToPrice({ ent, prices: product.prices });
+		const relatedPrice = entToPrice({ ent, prices: product.prices });
 		items.push(toProductItem({ ent, price: relatedPrice }));
 	}
 
 	for (const price of product.prices) {
-		let relatedEnt = priceToEnt({ price, entitlements: product.entitlements });
+		const relatedEnt = priceToEnt({
+			price,
+			entitlements: product.entitlements,
+		});
 
 		if (!relatedEnt) {
 			items.push(toProductItem({ price }));
@@ -36,7 +39,7 @@ export const mapToProductV2 = ({
 		item.feature_type = getItemFeatureType({ item, features });
 	}
 
-	let productV2: ProductV2 = {
+	const productV2: ProductV2 = {
 		internal_id: product.internal_id,
 
 		id: product.id,

@@ -1,6 +1,6 @@
+import { type Feature, FeatureType, FeatureUsageType } from "@autumn/shared";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Feature, FeatureType, FeatureUsageType } from "@autumn/shared";
 
 interface FeatureTypeBadgeProps {
 	type: string | undefined;
@@ -10,7 +10,7 @@ export function FeatureTypeBadge(feature: Feature) {
 	const badgeType =
 		feature.type == FeatureType.Boolean
 			? "boolean"
-			: feature.config?.usage_type === FeatureUsageType.Continuous
+			: feature.usage_type === FeatureUsageType.ContinuousUse
 				? "continuous use"
 				: "single use";
 

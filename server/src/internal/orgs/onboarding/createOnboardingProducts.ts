@@ -1,21 +1,20 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { generateId, keyToTitle } from "@/utils/genUtils.js";
 import {
-	FeatureType,
 	AggregateType,
-	FeatureUsageType,
-	EntInterval,
 	AllowanceType,
-	PriceType,
 	BillingInterval,
+	EntInterval,
 	// DB Models
 	entitlements,
-	prices,
+	FeatureType,
+	FeatureUsageType,
 	features,
+	PriceType,
+	prices,
 	products,
 } from "@autumn/shared";
-
 import { AppEnv } from "autumn-js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { generateId, keyToTitle } from "@/utils/genUtils.js";
 
 const defaultFeatures = [
 	{
@@ -42,7 +41,7 @@ const defaultFeatures = [
 			aggregate: {
 				type: AggregateType.Count,
 			},
-			usage_type: FeatureUsageType.Single,
+			usage_type: FeatureUsageType.SingleUse,
 			display: {
 				singular: "chat message",
 				plural: "chat messages",
@@ -119,7 +118,7 @@ export const createOnboardingProducts = async ({
 	const batchInsert = [];
 	for (const product of defaultProducts) {
 		const insertProduct = async (product: any) => {
-			let internalProductId = generateId("pr");
+			const internalProductId = generateId("pr");
 
 			await db.insert(products).values({
 				...product,

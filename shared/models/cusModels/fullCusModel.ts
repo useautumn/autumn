@@ -1,9 +1,9 @@
-import { FullCusProduct } from "../cusProductModels/cusProductModels.js";
-import { Event } from "../eventModels/eventTable.js";
-import { Subscription } from "../subModels/subModels.js";
-import { Customer } from "./cusModels.js";
-import { Entity } from "./entityModels/entityModels.js";
-import { Invoice } from "./invoiceModels/invoiceModels.js";
+import type { FullCusProduct } from "../cusProductModels/cusProductModels.js";
+import type { Event } from "../eventModels/eventTable.js";
+import type { Subscription } from "../subModels/subModels.js";
+import type { Customer } from "./cusModels.js";
+import type { Entity } from "./entityModels/entityModels.js";
+import type { Invoice } from "./invoiceModels/invoiceModels.js";
 
 export type FullCustomer = Customer & {
 	customer_products: FullCusProduct[];

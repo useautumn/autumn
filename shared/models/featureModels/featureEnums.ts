@@ -10,6 +10,6 @@ export enum AggregateType {
 }
 
 export enum FeatureUsageType {
-	Single = "single_use",
-	Continuous = "continuous_use",
+	SingleUse = "single_use",
+	ContinuousUse = "continuous_use",
 }

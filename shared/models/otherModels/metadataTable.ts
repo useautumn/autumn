@@ -1,4 +1,4 @@
-import { pgTable, text, numeric, jsonb } from "drizzle-orm/pg-core";
+import { jsonb, numeric, pgTable, text } from "drizzle-orm/pg-core";
 import { sqlNow } from "../../db/utils.js";
 
 export const metadata = pgTable("metadata", {

@@ -1,3 +1,12 @@
+import {
+	type Feature,
+	FeatureUsageType,
+	type ProductItem,
+} from "@autumn/shared";
+import { CheckIcon, PlusIcon } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { CustomDialogContent } from "@/components/general/modal-components/DialogContentWrapper";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import {
@@ -6,15 +15,10 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Feature, FeatureUsageType, ProductItem } from "@autumn/shared";
-import { useState } from "react";
-import { useProductContext } from "../ProductContext";
-import { CheckIcon, PlusIcon } from "lucide-react";
-import { CreateFeature } from "@/views/products/features/components/CreateFeature";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import { CustomDialogContent } from "@/components/general/modal-components/DialogContentWrapper";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { cn } from "@/lib/utils";
+import { CreateFeature } from "@/views/products/features/components/CreateFeature";
+import { useProductContext } from "../ProductContext";
 
 export const EntitiesDropdown = ({
 	open,
@@ -48,8 +52,7 @@ export const EntitiesDropdownContent = () => {
 	const [createFeatureOpen, setCreateFeatureOpen] = useState(false);
 
 	const continuousUseFeatures = features.filter(
-		(feature: Feature) =>
-			feature.config?.usage_type === FeatureUsageType.Continuous,
+		(feature: Feature) => feature.usage_type === FeatureUsageType.ContinuousUse,
 	);
 
 	return (

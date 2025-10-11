@@ -1,6 +1,6 @@
+import { relations } from "drizzle-orm";
 import { customers } from "../cusTable.js";
 import { invoices } from "./invoiceTable.js";
-import { relations } from "drizzle-orm";
 
 export const invoiceRelations = relations(invoices, ({ one }) => ({
 	customer: one(customers, {

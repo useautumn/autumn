@@ -2,8 +2,8 @@ import { relations } from "drizzle-orm";
 
 import { customers } from "../../cusModels/cusTable.js";
 import { prices } from "../../productModels/priceModels/priceTable.js";
-import { customerPrices } from "./cusPriceTable.js";
 import { customerProducts } from "../cusProductTable.js";
+import { customerPrices } from "./cusPriceTable.js";
 
 export const customerPricesRelations = relations(
 	customerPrices,

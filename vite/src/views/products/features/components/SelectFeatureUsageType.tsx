@@ -17,7 +17,7 @@ export const SelectFeatureUsageType = ({
 	setFeature: any;
 }) => {
 	const featureType = feature.type;
-	const usageType = feature.config?.usage_type;
+	const usageType = feature.usage_type;
 
 	const setFeatureType = (type: ApiFeatureType) => {
 		// 1. If type is boolean
@@ -26,12 +26,14 @@ export const SelectFeatureUsageType = ({
 				...feature,
 				type: ApiFeatureType.Boolean,
 				config: undefined,
+				usage_type: null,
 			});
 		} else {
 			setFeature({
 				...feature,
 				type: FeatureType.Metered,
-				config: { ...defaultMeteredConfig, usage_type: type },
+				usage_type: type,
+				config: { ...defaultMeteredConfig },
 			});
 		}
 	};
@@ -45,7 +47,7 @@ export const SelectFeatureUsageType = ({
 					icon={<Zap className="text-t3" size={12} />}
 					isSelected={
 						featureType === FeatureType.Metered &&
-						usageType === FeatureUsageType.Single
+						usageType === FeatureUsageType.SingleUse
 					}
 					onClick={() => setFeatureType(ApiFeatureType.SingleUsage)}
 				/>
@@ -55,7 +57,7 @@ export const SelectFeatureUsageType = ({
 					icon={<Clock className="text-t3" size={12} />}
 					isSelected={
 						featureType === FeatureType.Metered &&
-						usageType === FeatureUsageType.Continuous
+						usageType === FeatureUsageType.ContinuousUse
 					}
 					onClick={() => setFeatureType(ApiFeatureType.ContinuousUse)}
 				/>

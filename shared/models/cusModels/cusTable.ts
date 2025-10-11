@@ -1,14 +1,14 @@
+import { sql } from "drizzle-orm";
 import {
+	foreignKey,
+	jsonb,
+	numeric,
 	pgTable,
 	text,
-	numeric,
-	jsonb,
 	unique,
-	foreignKey,
 } from "drizzle-orm/pg-core";
 import { collatePgColumn } from "../../db/utils.js";
 import { organizations } from "../orgModels/orgTable.js";
-import { sql } from "drizzle-orm";
 
 export type CustomerProcessor = {
 	type: "stripe";

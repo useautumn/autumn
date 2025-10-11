@@ -1,4 +1,4 @@
-import { AppEnv } from "../genModels/genEnums.js";
+import type { AppEnv } from "../genModels/genEnums.js";
 
 export type ApiKey = {
 	id: string;

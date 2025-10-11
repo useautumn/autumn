@@ -52,7 +52,7 @@ export const getResetUsage = ({
 		(isFeatureItem(item) || isFeaturePriceItem(item)) &&
 		feature
 	) {
-		return feature?.config?.usage_type === FeatureUsageType.Single;
+		return feature?.usage_type === FeatureUsageType.SingleUse;
 	}
 	return item.reset_usage_when_enabled;
 };

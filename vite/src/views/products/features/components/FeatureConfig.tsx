@@ -1,5 +1,4 @@
 import {
-	type Expression,
 	FeatureType,
 	FeatureUsageType,
 	type MeteredConfig,
@@ -63,7 +62,7 @@ export function FeatureConfig({
 							value: [],
 						},
 					],
-					usage_type: FeatureUsageType.Single,
+					usage_type: FeatureUsageType.SingleUse,
 				},
 	);
 
@@ -95,10 +94,7 @@ export function FeatureConfig({
 			return false;
 		}
 
-		if (
-			feature.type === FeatureType.Metered &&
-			nullish(feature.config?.usage_type)
-		) {
+		if (feature.type === FeatureType.Metered && nullish(feature.usage_type)) {
 			return false;
 		}
 
@@ -290,7 +286,7 @@ export const FilterInput = ({
         <div className="w-full">
           <div className="flex flex-col gap-2">
             <Tabs
-              defaultValue={FeatureUsageType.Single}
+              defaultValue={FeatureUsageType.SingleUse}
               value={meteredConfig.usage_type}
               onValueChange={(value) => {
                 setMeteredConfig({
@@ -301,14 +297,14 @@ export const FilterInput = ({
             >
               <TabsList className="-mx-2">
                 <TabsTrigger
-                  value={FeatureUsageType.Single}
+                  value={FeatureUsageType.SingleUse}
                   className="flex items-center gap-1"
                 >
                   <Zap className="h-3 w-3 text-t3" />
                   <span>Single Use</span>
                 </TabsTrigger>
                 <TabsTrigger
-                  value={FeatureUsageType.Continuous}
+                  value={FeatureUsageType.ContinuousUse}
                   className="flex items-center gap-1"
                 >
                   <Clock className="h-3 w-3 text-t3" />
@@ -316,7 +312,7 @@ export const FilterInput = ({
                 </TabsTrigger>
               </TabsList>
               <p className="text-sm text-t3 flex items-center gap-1">
-                {meteredConfig.usage_type === FeatureUsageType.Continuous
+                {meteredConfig.usage_type === FeatureUsageType.ContinuousUse
                   ? "For features used on an ongoing basis, like 'seats' or 'storage'"
                   : "For features that are consumed and refilled like 'credits' or 'API calls'"}
                 <Tooltip delayDuration={400}>

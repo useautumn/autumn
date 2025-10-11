@@ -44,14 +44,14 @@ export const initFeature = ({
 			featureId: id,
 			orgId,
 			env: AppEnv.Sandbox,
-			usageType: FeatureUsageType.Single,
+			usageType: FeatureUsageType.SingleUse,
 		});
 	} else {
 		return constructMeteredFeature({
 			featureId: id,
 			orgId,
 			env: AppEnv.Sandbox,
-			usageType: FeatureUsageType.Continuous,
+			usageType: FeatureUsageType.ContinuousUse,
 		});
 	}
 };

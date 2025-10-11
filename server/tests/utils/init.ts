@@ -37,7 +37,7 @@ export const initFeature = ({
 	aggregateType = AggregateType.Sum,
 	groupBy = "",
 	eventName,
-	usageType = FeatureUsageType.Single,
+	usageType = FeatureUsageType.SingleUse,
 }: {
 	id: string;
 	type: FeatureType;
@@ -89,7 +89,7 @@ export const initFeature = ({
 			type,
 			config: {
 				schema: creditSchema,
-				usage_type: FeatureUsageType.Single,
+				usage_type: FeatureUsageType.SingleUse,
 			},
 		} as Feature;
 	}

@@ -1,12 +1,12 @@
-import { invalidNumber, notNullish, nullish } from "@/utils/genUtils";
 import {
-	Feature,
+	type Feature,
 	FeatureUsageType,
-	FrontendProductItem,
-	RolloverConfig,
+	type FrontendProductItem,
+	type RolloverConfig,
 	RolloverDuration,
 } from "@autumn/shared";
 import { toast } from "sonner";
+import { invalidNumber, notNullish, nullish } from "@/utils/genUtils";
 import { isFeatureItem, isFeaturePriceItem } from "../getItemType";
 
 export const validateProductItem = ({
@@ -20,7 +20,7 @@ export const validateProductItem = ({
 
 	if (
 		feature &&
-		feature.config?.usage_type == FeatureUsageType.Continuous &&
+		feature.usage_type == FeatureUsageType.ContinuousUse &&
 		isFeatureItem(item)
 	) {
 		item.interval = null;
@@ -49,7 +49,7 @@ export const validateProductItem = ({
 		item.included_usage = null;
 	} else if (!invalidNumber(item.included_usage)) {
 		item.included_usage = Number(item.included_usage);
-		
+
 		// Check if included usage is negative
 		if (item.included_usage < 0) {
 			toast.error("Included usage must be 0 or greater");

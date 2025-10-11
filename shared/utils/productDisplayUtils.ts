@@ -1,14 +1,14 @@
-import { Feature } from "../models/featureModels/featureModels.js";
+import type { Feature } from "../models/featureModels/featureModels.js";
 import { Infinite } from "../models/productModels/productEnums.js";
 import {
-	ProductItem,
+	type ProductItem,
 	ProductItemFeatureType,
-	ProductItemInterval,
+	type ProductItemInterval,
 } from "../models/productV2Models/productItemModels/productItemModels.js";
 import {
+	formatAmount,
 	getFeatureName,
 	numberWithCommas,
-	formatAmount,
 } from "./displayUtils.js";
 import {
 	isFeatureItem,
@@ -24,7 +24,7 @@ export const formatTiers = ({
 	item: ProductItem;
 	currency?: string | null;
 }) => {
-	let tiers = item.tiers;
+	const tiers = item.tiers;
 	if (tiers) {
 		if (tiers.length == 1) {
 			return formatAmount({
@@ -33,8 +33,8 @@ export const formatTiers = ({
 			});
 		}
 
-		let firstPrice = tiers[0].amount;
-		let lastPrice = tiers[tiers.length - 1].amount;
+		const firstPrice = tiers[0].amount;
+		const lastPrice = tiers[tiers.length - 1].amount;
 
 		return `${formatAmount({
 			currency,
@@ -81,12 +81,12 @@ export const getFeatureItemDisplay = ({
 		};
 	}
 
-	let featureName = getFeatureName({
+	const featureName = getFeatureName({
 		feature,
 		units: item.included_usage,
 	});
 
-	let includedUsageTxt =
+	const includedUsageTxt =
 		item.included_usage == Infinite
 			? "Unlimited "
 			: nullish(item.included_usage) || item.included_usage == 0
@@ -105,7 +105,7 @@ export const getPriceItemDisplay = ({
 	item: ProductItem;
 	currency?: string | null;
 }) => {
-	let primaryText = formatAmount({
+	const primaryText = formatAmount({
 		currency,
 		amount: item.price as number,
 	});
@@ -115,7 +115,7 @@ export const getPriceItemDisplay = ({
 		intervalCount: item.interval_count,
 	});
 
-	let secondaryText = intervalStr || undefined;
+	const secondaryText = intervalStr || undefined;
 
 	return {
 		primary_text: primaryText,
@@ -141,12 +141,12 @@ export const getFeaturePriceItemDisplay = ({
 	}
 
 	// 1. Get included usage
-	let includedFeatureName = getFeatureName({
+	const includedFeatureName = getFeatureName({
 		feature,
 		units: item.included_usage,
 	});
 
-	let includedUsage = item.included_usage as number | null;
+	const includedUsage = item.included_usage as number | null;
 	let includedUsageStr = "";
 	if (notNullish(includedUsage) && includedUsage! > 0) {
 		if (minifyIncluded) {
@@ -156,8 +156,8 @@ export const getFeaturePriceItemDisplay = ({
 		}
 	}
 
-	let priceStr = formatTiers({ item, currency });
-	let billingFeatureName = getFeatureName({
+	const priceStr = formatTiers({ item, currency });
+	const billingFeatureName = getFeatureName({
 		feature,
 		units: item.billing_units,
 	});
@@ -170,7 +170,7 @@ export const getFeaturePriceItemDisplay = ({
 	}
 
 	// let intervalStr = isMainPrice && item.interval ? ` per ${item.interval}` : "";
-	let intervalStr = isMainPrice
+	const intervalStr = isMainPrice
 		? getIntervalString({
 				interval: item.interval!,
 				intervalCount: item.interval_count,

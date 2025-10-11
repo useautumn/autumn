@@ -30,8 +30,8 @@ export const intervalsDifferent = ({
 	intervalA: IntervalConfig;
 	intervalB: IntervalConfig;
 }) => {
-	let valA = intervalToValue(intervalA.interval, intervalA.intervalCount);
-	let valB = intervalToValue(intervalB.interval, intervalB.intervalCount);
+	const valA = intervalToValue(intervalA.interval, intervalA.intervalCount);
+	const valB = intervalToValue(intervalB.interval, intervalB.intervalCount);
 	return valA != valB;
 };
 

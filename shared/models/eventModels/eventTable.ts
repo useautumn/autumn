@@ -1,14 +1,14 @@
 import { sql } from "drizzle-orm";
 import {
+	bigint,
+	boolean,
+	foreignKey,
+	jsonb,
+	numeric,
 	pgTable,
 	text,
-	numeric,
-	boolean,
-	jsonb,
-	foreignKey,
-	unique,
-	bigint,
 	timestamp,
+	unique,
 } from "drizzle-orm/pg-core";
 import { sqlNow } from "../../db/utils.js";
 import { customers } from "../cusModels/cusTable.js";

@@ -50,27 +50,27 @@ export enum RolloverDuration {
 
 export const RolloverConfigSchema = z.object({
 	max: z.number().nullable(),
-	duration: z.nativeEnum(RolloverDuration).default(RolloverDuration.Month),
+	duration: z.enum(RolloverDuration).default(RolloverDuration.Month),
 	length: z.number(),
 });
 
 const ProductItemConfigSchema = z.object({
-	on_increase: z.nativeEnum(OnIncrease).nullish(),
-	on_decrease: z.nativeEnum(OnDecrease).nullish(),
+	on_increase: z.enum(OnIncrease).nullish(),
+	on_decrease: z.enum(OnDecrease).nullish(),
 	rollover: RolloverConfigSchema.nullish(),
 });
 
 export const ProductItemSchema = z.object({
 	// Feature stuff
 	feature_id: z.string().nullish(),
-	feature_type: z.nativeEnum(ProductItemFeatureType).nullish(),
+	feature_type: z.enum(ProductItemFeatureType).nullish(),
 	included_usage: z.union([z.number(), z.literal(Infinite)]).nullish(),
-	interval: z.nativeEnum(ProductItemInterval).nullish(),
+	interval: z.enum(ProductItemInterval).nullish(),
 	interval_count: z.number().nullish(),
 	entity_feature_id: z.string().nullish(),
 
 	// Price config
-	usage_model: z.nativeEnum(UsageModel).nullish(),
+	usage_model: z.enum(UsageModel).nullish(),
 	price: z.number().nullish(),
 	tiers: z.array(PriceTierSchema).nullish(),
 	billing_units: z.number().nullish(), // amount per billing unit (eg. $9 / 250 units)
