@@ -1,6 +1,6 @@
-import { Feature } from "../models/featureModels/featureModels.js";
-import { Organization } from "../models/orgModels/orgTable.js";
 import { format } from "date-fns";
+import type { Feature } from "../models/featureModels/featureModels.js";
+import type { Organization } from "../models/orgModels/orgTable.js";
 import { notNullish, nullish } from "./utils.js";
 export const getFeatureName = ({
 	feature,

@@ -1,8 +1,10 @@
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
+import { type Feature, FeatureType, FeatureUsageType } from "@autumn/shared";
+import { ChevronDown } from "lucide-react";
+import { useState } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Command,
 	CommandEmpty,
@@ -12,19 +14,17 @@ import {
 	CommandList,
 	CommandSeparator,
 } from "@/components/ui/command";
-import { Button } from "@/components/ui/button";
-import { ChevronDown, Check, X, Loader2 } from "lucide-react";
-import { useAnalyticsContext } from "../AnalyticsContext";
-import { Feature, FeatureType, FeatureUsageType } from "@autumn/shared";
-import { toast } from "sonner";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { useSearchParams, useNavigate, useLocation } from "react-router";
+import { useAnalyticsContext } from "../AnalyticsContext";
 import {
 	eventNameBelongsToFeature,
 	getAllEventNames,
 } from "../utils/getAllEventNames";
-import { useEffect, useState } from "react";
-import { Checkbox } from "@/components/ui/checkbox";
 
 const MAX_NUM_SELECTED = 10;
 
@@ -86,7 +86,7 @@ export const SelectFeatureDropdown = ({
 		.filter(
 			(feature: Feature) =>
 				feature.type === FeatureType.Metered &&
-				feature.config.usage_type === FeatureUsageType.Single,
+				feature.usage_type === FeatureUsageType.SingleUse,
 		)
 		.map((feature: Feature) => ({
 			type: "feature" as const,

@@ -20,7 +20,7 @@ export const getFeatureUsageType = ({
 	if (!item.feature_id) return null;
 	const feature = getFeature(item.feature_id, features);
 
-	return feature?.config?.usage_type;
+	return feature?.usage_type;
 };
 
 export const getFeatureCreditSystem = ({

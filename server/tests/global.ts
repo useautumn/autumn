@@ -40,19 +40,19 @@ export const features: Record<string, Feature & { eventName: string }> = {
 		aggregateType: AggregateType.Sum,
 		groupBy: "user_id",
 		eventName: "metered_1",
-		usageType: FeatureUsageType.Single,
+		usageType: FeatureUsageType.SingleUse,
 	}),
 	infinite1: initFeature({
 		id: "infinite1",
 		type: FeatureType.Metered,
-		usageType: FeatureUsageType.Single,
+		usageType: FeatureUsageType.SingleUse,
 	}),
 	metered2: initFeature({
 		id: "metered2",
 		type: FeatureType.Metered,
 		aggregateType: AggregateType.Count,
 		eventName: "metered_2",
-		usageType: FeatureUsageType.Single,
+		usageType: FeatureUsageType.SingleUse,
 	}),
 
 	// GPU SYSTEM
@@ -60,20 +60,20 @@ export const features: Record<string, Feature & { eventName: string }> = {
 		id: "gpu1",
 		type: FeatureType.Metered,
 		groupBy: "user_id",
-		usageType: FeatureUsageType.Single,
+		usageType: FeatureUsageType.SingleUse,
 	}),
 	gpu2: initFeature({
 		id: "gpu2",
 		type: FeatureType.Metered,
 		groupBy: "user_id",
-		usageType: FeatureUsageType.Single,
+		usageType: FeatureUsageType.SingleUse,
 	}),
 
 	// In arrear prorated
 	seats: initFeature({
 		id: "seats",
 		type: FeatureType.Metered,
-		usageType: FeatureUsageType.Continuous,
+		usageType: FeatureUsageType.ContinuousUse,
 	}),
 };
 
@@ -93,7 +93,7 @@ export const creditSystems = {
 				credit_amount: 0.0213,
 			},
 		],
-		usageType: FeatureUsageType.Single,
+		usageType: FeatureUsageType.SingleUse,
 	}),
 };
 

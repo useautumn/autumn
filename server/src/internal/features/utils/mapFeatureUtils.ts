@@ -18,9 +18,11 @@ import {
 export const toApiFeature = ({ feature }: { feature: Feature }) => {
 	// return FeatureResponseSchema.parse(feature);
 	// 1. Get feature type
-	let featureType = feature.type;
+	let featureType: ApiFeatureType = feature.type as unknown as ApiFeatureType;
 	if (feature.type === FeatureType.Metered) {
-		featureType = feature.config.usage_type;
+		featureType =
+			(feature.usage_type as unknown as ApiFeatureType) ||
+			ApiFeatureType.SingleUsage;
 	}
 
 	let creditSchema;

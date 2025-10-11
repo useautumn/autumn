@@ -12,6 +12,7 @@ import { collatePgColumn } from "../../db/utils.js";
 import { organizations } from "../orgModels/orgTable.js";
 import type { CreditSystemConfig } from "./featureConfig/creditConfig.js";
 import type { MeteredConfig } from "./featureConfig/meteredConfig.js";
+import type { FeatureUsageType } from "./featureEnums.js";
 
 type FeatureDisplay = {
 	singular: string;
@@ -29,6 +30,7 @@ export const features = pgTable(
 		id: text().notNull(),
 		name: text(),
 		type: text().notNull(),
+		usage_type: text().$type<FeatureUsageType>(),
 		config: jsonb().$type<MeteredConfig | CreditSystemConfig>(),
 		display: jsonb().default(sql`null`).$type<FeatureDisplay>(),
 		archived: boolean("archived").notNull().default(false),

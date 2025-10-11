@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
 	foreignKey,
 	jsonb,
@@ -5,12 +6,11 @@ import {
 	text,
 	timestamp,
 } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
-import { ActionType, AuthType } from "./actionEnums.js";
-import { organizations } from "../orgModels/orgTable.js";
+import { collatePgColumn } from "../../db/utils.js";
 import { customers } from "../cusModels/cusTable.js";
 import { entities } from "../cusModels/entityModels/entityTable.js";
-import { collatePgColumn } from "../../db/utils.js";
+import { organizations } from "../orgModels/orgTable.js";
+import type { ActionType, AuthType } from "./actionEnums.js";
 
 export const actions = pgTable(
 	"actions",

@@ -1,6 +1,9 @@
-import { ApiVersion, API_VERSIONS } from "./ApiVersion.js";
+import { API_VERSIONS, type ApiVersion } from "./ApiVersion.js";
 import type { VersionMetadata } from "./versionRegistry.js";
-import { getVersionMetadata, getVersionsSorted } from "./versionRegistryUtils.js";
+import {
+	getVersionMetadata,
+	getVersionsSorted,
+} from "./versionRegistryUtils.js";
 
 /**
  * ApiVersionClass - Encapsulates version comparison logic

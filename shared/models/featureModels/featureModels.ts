@@ -1,16 +1,18 @@
 import { z } from "zod/v4";
 import { AppEnv } from "../genModels/genEnums.js";
-import { FeatureType } from "./featureEnums.js";
+import { FeatureType, FeatureUsageType } from "./featureEnums.js";
 
 export const FeatureSchema = z.object({
 	internal_id: z.string(),
 	org_id: z.string(),
 	created_at: z.number(),
-	env: z.nativeEnum(AppEnv),
+	env: z.enum(AppEnv),
 
 	id: z.string().nonempty(),
 	name: z.string().nonempty(),
-	type: z.nativeEnum(FeatureType),
+	type: z.enum(FeatureType),
+	usage_type: z.enum(FeatureUsageType).nullable(),
+
 	config: z.any(),
 	display: z
 		.object({
@@ -29,14 +31,9 @@ export const CreateFeatureSchema = FeatureSchema.pick({
 	config: true,
 	display: true,
 	event_names: true,
-});
-
-export const MinFeatureSchema = z.object({
-	internal_id: z.string(),
-	id: z.string(),
-	name: z.string(),
-	type: z.nativeEnum(FeatureType),
-	config: z.any(),
+	usage_type: true,
+}).extend({
+	usage_type: z.enum(FeatureUsageType).nullish(),
 });
 
 export type Feature = z.infer<typeof FeatureSchema>;

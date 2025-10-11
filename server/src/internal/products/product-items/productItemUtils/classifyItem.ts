@@ -1,7 +1,9 @@
-import { UsageModel } from "@autumn/shared";
-import { ProductItemFeatureType } from "@autumn/shared";
-import { Feature } from "@autumn/shared";
-import { ProductItem } from "@autumn/shared";
+import {
+	type Feature,
+	type ProductItem,
+	ProductItemFeatureType,
+	UsageModel,
+} from "@autumn/shared";
 import { itemToUsageType } from "./convertItem.js";
 
 export const itemCanBeProrated = ({

@@ -1,9 +1,10 @@
-import { AggregateType } from "@autumn/shared";
-
-import { AppEnv, FeatureType, FeatureUsageType } from "@autumn/shared";
-
+import {
+	type AppEnv,
+	type Feature,
+	FeatureType,
+	FeatureUsageType,
+} from "@autumn/shared";
 import { generateId, keyToTitle } from "@/utils/genUtils.js";
-import { Feature } from "@autumn/shared";
 
 export const constructFeature = ({
 	id,
@@ -22,7 +23,7 @@ export const constructFeature = ({
 	config: any;
 	display: any;
 }) => {
-	let newFeature: Feature = {
+	const newFeature: Feature = {
 		internal_id: generateId("fe"),
 		id,
 		name,
@@ -33,6 +34,8 @@ export const constructFeature = ({
 		config,
 		display,
 		archived: false,
+		event_names: [],
+		usage_type: null,
 	};
 
 	return newFeature;
@@ -49,7 +52,7 @@ export const constructBooleanFeature = ({
 	env: AppEnv;
 	name?: string;
 }) => {
-	let newFeature: Feature = {
+	const newFeature: Feature = {
 		internal_id: generateId("fe"),
 		org_id: orgId,
 		env,
@@ -58,6 +61,8 @@ export const constructBooleanFeature = ({
 		id: featureId,
 		name: name || keyToTitle(featureId),
 		type: FeatureType.Boolean,
+		event_names: [],
+		usage_type: null,
 		config: null,
 		archived: false,
 	};
@@ -78,7 +83,7 @@ export const constructMeteredFeature = ({
 	env: AppEnv;
 	usageType: FeatureUsageType;
 }) => {
-	let newFeature: Feature = {
+	const newFeature: Feature = {
 		internal_id: generateId("fe"),
 		org_id: orgId,
 		env,
@@ -87,19 +92,20 @@ export const constructMeteredFeature = ({
 		id: featureId,
 		name: name || keyToTitle(featureId),
 		type: FeatureType.Metered,
+		usage_type: usageType,
+		event_names: [],
 		config: {
-			filters: [
-				{
-					property: "event_name",
-					operator: "eq",
-					value: [],
-				},
-			],
-			aggregate: {
-				type: AggregateType.Sum,
-				property: "value",
-			},
-			usage_type: usageType,
+			// filters: [
+			// 	{
+			// 		property: "event_name",
+			// 		operator: "eq",
+			// 		value: [],
+			// 	},
+			// ],
+			// aggregate: {
+			// 	type: AggregateType.Sum,
+			// 	property: "value",
+			// },
 		},
 		archived: false,
 	};
@@ -129,10 +135,9 @@ export const constructCreditSystem = ({
 			metered_feature_id: item.metered_feature_id,
 			credit_amount: item.credit_cost,
 		})),
-		usage_type: FeatureUsageType.Single,
 	};
 
-	let newFeature: Feature = {
+	const newFeature: Feature = {
 		internal_id: generateId("fe"),
 		org_id: orgId,
 		env,
@@ -141,8 +146,10 @@ export const constructCreditSystem = ({
 		id: featureId,
 		name: name || keyToTitle(featureId),
 		type: FeatureType.CreditSystem,
+		usage_type: FeatureUsageType.SingleUse,
 		config,
 		archived: false,
+		event_names: [],
 	};
 
 	return newFeature;

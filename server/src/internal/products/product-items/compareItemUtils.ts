@@ -1,21 +1,20 @@
 import {
-	Feature,
-	FeatureItem,
+	type Feature,
+	type FeatureItem,
 	FeatureItemSchema,
-	FeaturePriceItem,
+	type FeaturePriceItem,
 	FeaturePriceItemSchema,
 	FeatureUsageType,
-	PriceItem,
+	type PriceItem,
 	PriceItemSchema,
-	ProductItem,
+	type ProductItem,
 } from "@autumn/shared";
+import { itemToFeature } from "./productItemUtils/convertItem.js";
 import {
 	isFeatureItem,
 	isFeaturePriceItem,
 	isPriceItem,
 } from "./productItemUtils/getItemType.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { itemToFeature } from "./productItemUtils/convertItem.js";
 
 export const findSimilarItem = ({
 	item,
@@ -237,12 +236,12 @@ export const itemsAreSame = ({
 
 		same = same_;
 
-		let feature = itemToFeature({
+		const feature = itemToFeature({
 			item: item1,
 			features: features || [],
 		});
 
-		if (feature?.config?.usage_type === FeatureUsageType.Continuous) {
+		if (feature?.usage_type === FeatureUsageType.ContinuousUse) {
 			pricesChanged = true;
 		} else {
 			pricesChanged = pricesChanged_;

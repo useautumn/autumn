@@ -1,19 +1,17 @@
 import {
-	Feature,
+	type Feature,
 	FeatureType,
 	FeatureUsageType,
 	ProductItemFeatureType,
 } from "@autumn/shared";
-
+import { useEffect } from "react";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { cn } from "@/lib/utils";
 import { shouldShowProrationConfig } from "@/utils/product/productItemUtils";
 
-import { cn } from "@/lib/utils";
-import { useEffect, useState } from "react";
-import { useProductItemContext } from "./ProductItemContext";
-
 import { ConfigWithFeature } from "./components/ConfigWithFeature";
+import { useProductItemContext } from "./ProductItemContext";
 import { PriceItemConfig } from "./product-item-config/PriceItemConfig";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export const ProductItemConfig = () => {
 	// HOOKS
@@ -22,10 +20,10 @@ export const ProductItemConfig = () => {
 	const { item, setItem } = useProductItemContext();
 
 	useEffect(() => {
-		const feature = features.find((f: Feature) => f.id == item.feature_id);
+		const feature = features.find((f: Feature) => f.id === item.feature_id);
 
 		if (feature) {
-			if (feature.type == FeatureType.Boolean) {
+			if (feature.type === FeatureType.Boolean) {
 				setItem({
 					feature_id: item.feature_id,
 					feature_type: ProductItemFeatureType.Static,
@@ -33,13 +31,13 @@ export const ProductItemConfig = () => {
 			} else {
 				const showProration = shouldShowProrationConfig({ item, features });
 				const resetUsageWhenEnabled =
-					feature.config?.usage_type == FeatureUsageType.Continuous
+					feature.usage_type === FeatureUsageType.ContinuousUse
 						? false
 						: item.reset_usage_when_enabled;
 
 				const newItem = {
 					...item,
-					feature_type: feature.config?.usage_type,
+					feature_type: feature.usage_type,
 					reset_usage_when_enabled: resetUsageWhenEnabled,
 				};
 

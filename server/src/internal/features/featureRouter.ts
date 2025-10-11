@@ -146,9 +146,6 @@ featureRouter.post("/:feature_id", async (req: any, res: any) =>
 			}
 
 			const newConfig = originalFeature.config;
-			if (usageType) {
-				newConfig.usage_type = usageType;
-			}
 
 			if (apiFeature.credit_schema) {
 				newConfig.schema = apiFeature.credit_schema.map((credit) => ({
@@ -161,6 +158,7 @@ featureRouter.post("/:feature_id", async (req: any, res: any) =>
 				id: req.body.id || undefined,
 				name: req.body.name || undefined,
 				type: featureType,
+				usage_type: usageType,
 				config: newConfig,
 				archived: req.body.archived ?? undefined,
 			};

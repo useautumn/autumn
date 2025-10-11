@@ -5,11 +5,7 @@ import { handleUpdateFeature } from "@/internal/features/handlers/handleUpdateFe
 import RecaseError, { formatZodError } from "@/utils/errorUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 import { FeatureService } from "./FeatureService.js";
-import {
-	validateCreditSystem,
-	validateFeatureId,
-	validateMeteredConfig,
-} from "./featureUtils.js";
+import { validateCreditSystem, validateFeatureId } from "./featureUtils.js";
 import { handleCreateFeature } from "./handlers/handleCreateFeature.js";
 import { handleGetFeatureDeletionInfo } from "./handlers/handleGetFeatureDeletionInfo.js";
 
@@ -25,7 +21,7 @@ internalFeatureRouter.get("", async (req: any, res: any) => {
 				db: req.db,
 				orgId: req.orgId,
 				env: req.env,
-				archived: showArchived === "true" ? true : false,
+				archived: showArchived === "true",
 			});
 			res.status(200).json({ features });
 		} else {
@@ -46,7 +42,15 @@ export const validateFeature = (data: any) => {
 
 	let config = data.config;
 	if (featureType === FeatureType.Metered) {
-		config = validateMeteredConfig(config);
+		if (!data.usage_type) {
+			throw new RecaseError({
+				message:
+					"Usage type (single_use or continuous_use) is required for metered features",
+				code: ErrCode.InvalidFeature,
+				statusCode: 400,
+			});
+		}
+		// config = validateMeteredConfig(config);
 	} else if (featureType === FeatureType.CreditSystem) {
 		config = validateCreditSystem(config);
 	}

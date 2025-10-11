@@ -1,8 +1,7 @@
-import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
-import { and, eq, sql } from "drizzle-orm";
-import { FeatureService } from "../FeatureService.js";
 import { entitlements, products } from "@autumn/shared";
+import { and, eq, sql } from "drizzle-orm";
 import { routeHandler } from "@/utils/routerUtils.js";
+import { FeatureService } from "../FeatureService.js";
 
 export const handleGetFeatureDeletionInfo = async (req: any, res: any) =>
 	routeHandler({
@@ -10,10 +9,10 @@ export const handleGetFeatureDeletionInfo = async (req: any, res: any) =>
 		res,
 		action: "Get feature deletion info",
 		handler: async (req: any, res: any) => {
-			let { db } = req;
-			let { feature_id } = req.params;
+			const { db } = req;
+			const { feature_id } = req.params;
 
-			let feature = await FeatureService.get({
+			const feature = await FeatureService.get({
 				db,
 				id: feature_id,
 				orgId: req.orgId,
@@ -25,7 +24,7 @@ export const handleGetFeatureDeletionInfo = async (req: any, res: any) =>
 			}
 
 			// Use Drizzle query similar to ProductService.getDeletionText
-			let res_data = await db
+			const res_data = await db
 				.select({
 					productName: sql<string>`CASE WHEN ROW_NUMBER() OVER (ORDER BY ${products.created_at}) = 1 THEN ${products.name ?? "Product name not found"} ELSE NULL END`,
 					totalCount: sql<number>`COUNT(*) OVER ()`,

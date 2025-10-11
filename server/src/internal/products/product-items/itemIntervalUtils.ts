@@ -1,11 +1,11 @@
-import { nullish } from "@/utils/genUtils.js";
 import {
 	BillingInterval,
 	EntInterval,
-	ProductItem,
+	type ProductItem,
 	ProductItemFeatureType,
-	ProductItemInterval,
+	type ProductItemInterval,
 } from "@autumn/shared";
+import { nullish } from "@/utils/genUtils.js";
 
 export const billingToItemInterval = (billingInterval: BillingInterval) => {
 	if (billingInterval == BillingInterval.OneOff) {

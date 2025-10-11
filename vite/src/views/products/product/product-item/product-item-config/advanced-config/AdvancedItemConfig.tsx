@@ -1,19 +1,18 @@
-import { useProductItemContext } from "../../ProductItemContext";
+import { FeatureUsageType } from "@autumn/shared";
 
 import { ToggleButton } from "@/components/general/ToggleButton";
-import { OnDecreaseSelect } from "./proration-config/OnDecreaseSelect";
-import { OnIncreaseSelect } from "./proration-config/OnIncreaseSelect";
-import { shouldShowProrationConfig } from "@/utils/product/productItemUtils";
+import { Input } from "@/components/ui/input";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { notNullish } from "@/utils/genUtils";
 import {
 	getFeatureCreditSystem,
 	getFeatureUsageType,
 } from "@/utils/product/entitlementUtils";
-import { FeatureUsageType } from "@autumn/shared";
-import { Input } from "@/components/ui/input";
-
+import { shouldShowProrationConfig } from "@/utils/product/productItemUtils";
+import { useProductItemContext } from "../../ProductItemContext";
+import { OnDecreaseSelect } from "./proration-config/OnDecreaseSelect";
+import { OnIncreaseSelect } from "./proration-config/OnIncreaseSelect";
 import { RolloverConfigView } from "./RolloverConfig";
-import { notNullish } from "@/utils/genUtils";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export const AdvancedItemConfig = () => {
 	const { features } = useFeaturesQuery();
@@ -24,7 +23,7 @@ export const AdvancedItemConfig = () => {
 	const usageType = getFeatureUsageType({ item, features });
 	const hasCreditSystem = getFeatureCreditSystem({ item, features });
 	const showRolloverConfig =
-		(hasCreditSystem || usageType === FeatureUsageType.Single) &&
+		(hasCreditSystem || usageType === FeatureUsageType.SingleUse) &&
 		item.interval !== null &&
 		item.included_usage > 0;
 
@@ -51,7 +50,7 @@ export const AdvancedItemConfig = () => {
 						}
 						className="text-t3 h-fit items-start gap-1"
 						disabled={
-							usageType === FeatureUsageType.Continuous ||
+							usageType === FeatureUsageType.ContinuousUse ||
 							notNullish(item.config?.rollover)
 						}
 						switchClassName="mt-[3px]"

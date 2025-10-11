@@ -17,7 +17,6 @@ import { FeatureService } from "@/internal/features/FeatureService.js";
 import {
 	getObjectsUsingFeature,
 	validateCreditSystem,
-	validateMeteredConfig,
 } from "@/internal/features/featureUtils.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
@@ -198,7 +197,7 @@ const handleFeatureUsageTypeChanged = async ({
 		console.log(
 			`Feature usage type changed to ${newUsageType}, updating entitlements and prices`,
 		);
-		if (newUsageType === FeatureUsageType.Continuous) {
+		if (newUsageType === FeatureUsageType.ContinuousUse) {
 			const batchEntUpdate = [];
 			for (const entitlement of entitlements) {
 				batchEntUpdate.push(
@@ -229,8 +228,7 @@ const handleFeatureUsageTypeChanged = async ({
 					update: {
 						config: {
 							...priceConfig,
-							should_prorate:
-								newUsageType == FeatureUsageType.Continuous ? false : true, // if continuous, don't prorate -> get usage_in_arrear type...
+							should_prorate: newUsageType === FeatureUsageType.ContinuousUse, // if continuous, don't prorate -> get usage_in_arrear type...
 							stripe_price_id: null,
 						},
 					},
@@ -250,7 +248,7 @@ const handleFeatureUsageTypeChanged = async ({
 export const handleUpdateFeature = async (
 	req: any,
 	res: any,
-	fromApi: boolean = false,
+	_fromApi: boolean = false,
 ) =>
 	routeHandler({
 		req,
@@ -307,7 +305,7 @@ export const handleUpdateFeature = async (
 			const isChangingUsageType =
 				feature.type !== FeatureType.Boolean &&
 				data.type !== FeatureType.Boolean &&
-				feature.config?.usage_type !== data.config?.usage_type;
+				feature.usage_type !== data.usage_type;
 
 			const isChangingName = feature.name !== data.name;
 
@@ -351,7 +349,7 @@ export const handleUpdateFeature = async (
 					});
 				}
 
-				if (isChangingUsageType && data.config?.usage_type) {
+				if (isChangingUsageType && data.usage_type) {
 					await handleFeatureUsageTypeChanged({
 						db,
 						feature,
@@ -359,7 +357,7 @@ export const handleUpdateFeature = async (
 						entitlements,
 						prices,
 						creditSystems,
-						newUsageType: data.config.usage_type,
+						newUsageType: data.usage_type,
 					});
 				}
 			}
@@ -368,9 +366,7 @@ export const handleUpdateFeature = async (
 				data.config !== undefined
 					? feature.type === FeatureType.CreditSystem
 						? validateCreditSystem(data.config)
-						: feature.type === FeatureType.Metered
-							? validateMeteredConfig(data.config)
-							: data.config
+						: data.config
 					: feature.config;
 
 			const updatedFeature = await FeatureService.update({

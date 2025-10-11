@@ -1,3 +1,4 @@
+import { type Feature, FeatureUsageType } from "@autumn/shared";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { Input } from "@/components/ui/input";
 import {
@@ -7,8 +8,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { useCustomerContext } from "../../../CustomerContext";
-import { Feature, FeatureUsageType } from "@autumn/shared";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export const EntityConfig = ({
@@ -51,7 +50,7 @@ export const EntityConfig = ({
 						{features
 							.filter(
 								(feature: Feature) =>
-									feature.config?.usage_type == FeatureUsageType.Continuous,
+									feature.usage_type == FeatureUsageType.ContinuousUse,
 							)
 							.map((feature: Feature) => (
 								<SelectItem key={feature.id} value={feature.id}>

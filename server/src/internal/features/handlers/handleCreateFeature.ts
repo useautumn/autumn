@@ -21,6 +21,7 @@ export const handleCreateFeature = async (req: any, res: any) => {
 			created_at: Date.now(),
 			env: env,
 			...parsedFeature,
+			usage_type: parsedFeature.usage_type || null,
 		};
 
 		const org = await OrgService.getFromReq(req);

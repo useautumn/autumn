@@ -1,27 +1,26 @@
 import {
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
-
-import { Select } from "@/components/ui/select";
-import { useProductItemContext } from "../../ProductItemContext";
-import { isFeaturePriceItem } from "@/utils/product/getItemType";
-import {
 	BillingInterval,
 	EntInterval,
 	FeatureUsageType,
 	Infinite,
 } from "@autumn/shared";
-import { itemToEntInterval } from "@/utils/product/itemIntervalUtils";
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { cn } from "@/lib/utils";
-import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
-import { getFeatureUsageType } from "@/utils/product/entitlementUtils";
 import { useState } from "react";
-import { CustomiseIntervalPopover } from "./CusomiseIntervalPopover";
+import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { cn } from "@/lib/utils";
+import { getFeatureUsageType } from "@/utils/product/entitlementUtils";
+import { isFeaturePriceItem } from "@/utils/product/getItemType";
+import { itemToEntInterval } from "@/utils/product/itemIntervalUtils";
+import { useProductItemContext } from "../../ProductItemContext";
+import { CustomiseIntervalPopover } from "./CusomiseIntervalPopover";
 
 const getIntervalText = ({
 	interval,
@@ -61,7 +60,7 @@ export const SelectResetCycle = () => {
 	const isFeaturePrice = isFeaturePriceItem(item);
 	const usageType = getFeatureUsageType({ item, features });
 
-	if (usageType === FeatureUsageType.Continuous) {
+	if (usageType === FeatureUsageType.ContinuousUse) {
 		return null;
 	}
 

@@ -53,7 +53,10 @@ export const createFeaturesFromItems = ({
 					});
 				}
 			} else {
-				const usageFail = item.feature_type !== feature.config?.usage_type;
+				const featureUsageType =
+					item.feature_type as unknown as FeatureUsageType;
+
+				const usageFail = featureUsageType !== feature.usage_type;
 				if (usageFail) {
 					throw new RecaseError({
 						message: `Feature ${item.feature_id} already exists but is not a ${item.feature_type} feature`,
@@ -89,8 +92,8 @@ export const createFeaturesFromItems = ({
 				env,
 				usageType:
 					item.feature_type === ProductItemFeatureType.ContinuousUse
-						? FeatureUsageType.Continuous
-						: FeatureUsageType.Single,
+						? FeatureUsageType.ContinuousUse
+						: FeatureUsageType.SingleUse,
 			});
 			newFeatures.push(feature);
 		}

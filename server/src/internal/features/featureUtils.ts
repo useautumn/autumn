@@ -8,10 +8,8 @@ import {
 	FeatureType,
 	FeatureUsageType,
 	type FullCustomer,
-	type MeteredConfig,
 	type UsagePriceConfig,
 } from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateFeatureDisplay } from "@/external/llm/llmUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
@@ -32,41 +30,14 @@ export const validateFeatureId = (featureId: string) => {
 	return;
 };
 
-export const validateMeteredConfig = (config: MeteredConfig) => {
-	const newConfig = { ...config };
-
-	if (!config.usage_type) {
+export const validateMeteredFeature = ({ feature }: { feature: Feature }) => {
+	if (!feature.usage_type) {
 		throw new RecaseError({
-			message: `Usage type (single or continuous) is required for metered feature`,
+			message: "Usage type is required for metered features",
 			code: ErrCode.InvalidFeature,
-			statusCode: StatusCodes.BAD_REQUEST,
+			statusCode: 400,
 		});
 	}
-
-	// Event names are now stored in feature.event_names, not in config.filters
-	// if (config.aggregate?.type === AggregateType.Count) {
-	// 	newConfig.aggregate = {
-	// 		type: AggregateType.Count,
-	// 		property: null,
-	// 	}; // to continue testing support for count...
-	// } else {
-	// 	newConfig.aggregate = {
-	// 		type: AggregateType.Sum,
-	// 		property: "value",
-	// 	};
-	// }
-
-	// if (newConfig?.filters?.length === 0 || !newConfig?.filters) {
-	// 	newConfig.filters = [
-	// 		{
-	// 			property: "",
-	// 			operator: "",
-	// 			value: [],
-	// 		},
-	// 	];
-	// }
-
-	return newConfig as MeteredConfig;
 };
 
 export const validateCreditSystem = (config: CreditSystemConfig) => {
@@ -93,7 +64,7 @@ export const validateCreditSystem = (config: CreditSystemConfig) => {
 		});
 	}
 
-	const newConfig = { ...config, usage_type: FeatureUsageType.Single };
+	const newConfig = { ...config, usage_type: ApiFeatureType.SingleUsage };
 	for (let i = 0; i < newConfig.schema.length; i++) {
 		newConfig.schema[i].feature_amount = 1;
 
@@ -198,7 +169,7 @@ export const getCusFeatureType = ({ feature }: { feature: Feature }) => {
 	if (feature.type === FeatureType.Boolean) {
 		return ApiFeatureType.Static;
 	} else if (feature.type === FeatureType.Metered) {
-		if (feature.config.usage_type === FeatureUsageType.Single) {
+		if (feature.usage_type === FeatureUsageType.SingleUse) {
 			return ApiFeatureType.SingleUsage;
 		} else {
 			return ApiFeatureType.ContinuousUse;
@@ -219,12 +190,9 @@ export const isPaidContinuousUse = ({
 	feature: Feature;
 	fullCus: FullCustomer;
 }) => {
-	const isContinuous =
-		feature.config?.usage_type === FeatureUsageType.Continuous;
+	const isContinuous = feature.usage_type === FeatureUsageType.ContinuousUse;
 
-	if (!isContinuous) {
-		return false;
-	}
+	if (!isContinuous) return false;
 
 	const cusPrices = cusProductsToCusPrices({
 		cusProducts: fullCus.customer_products,

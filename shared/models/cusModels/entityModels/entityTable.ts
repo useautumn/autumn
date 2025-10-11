@@ -3,12 +3,12 @@ import {
 	foreignKey,
 	numeric,
 	pgTable,
+	text,
 	unique,
 } from "drizzle-orm/pg-core";
-import { text } from "drizzle-orm/pg-core";
-import { customers } from "../cusTable.js";
 import { features } from "../../featureModels/featureTable.js";
 import { organizations } from "../../orgModels/orgTable.js";
+import { customers } from "../cusTable.js";
 
 export const entities = pgTable(
 	"entities",

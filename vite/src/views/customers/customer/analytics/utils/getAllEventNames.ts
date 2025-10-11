@@ -8,8 +8,7 @@ export const getAllEventNames = ({ features }: { features: Feature[] }) => {
 		return eventNames.filter(
 			(name: string) =>
 				!features.some(
-					(f: Feature) =>
-						f.id == name && f.config.usage_type == "continuous_use",
+					(f: Feature) => f.id == name && f.usage_type == "continuous_use",
 				),
 		);
 	});
@@ -25,7 +24,7 @@ export const eventNameBelongsToFeature = ({
 	return features.some(
 		(feature: Feature) =>
 			feature.type === FeatureType.Metered &&
-			feature.config.usage_type === FeatureUsageType.Single &&
+			feature.usage_type === FeatureUsageType.SingleUse &&
 			feature.event_names &&
 			feature.event_names.includes(eventName),
 	);
