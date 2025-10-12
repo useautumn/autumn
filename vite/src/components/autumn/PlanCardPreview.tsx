@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader } from "@/components/v2/cards/Card";
 import { Separator } from "@/components/v2/separator";
 import { cn } from "@/lib/utils";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
-import { PlanFeatureIcon } from "@/views/products/plan/components/PlanCard/PlanFeatureIcon";
+import { PlanFeatureIcon } from "@/views/products/plan/components/plan-card/PlanFeatureIcon";
 
 interface PlanCardPreviewProps {
 	product: Product;

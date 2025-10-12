@@ -1,9 +1,4 @@
-import {
-	AppEnv,
-	type ProductItem,
-	ProductItemInterval,
-	type ProductV2,
-} from "@autumn/shared";
+import { AppEnv, type ProductItem, type ProductV2 } from "@autumn/shared";
 
 // Create a stable default product outside component to prevent re-renders
 export const DEFAULT_PRODUCT: ProductV2 = {
@@ -12,7 +7,7 @@ export const DEFAULT_PRODUCT: ProductV2 = {
 	items: [
 		{
 			price: "",
-			interval: ProductItemInterval.Month,
+			interval: "",
 		} as unknown as ProductItem,
 	],
 	archived: false,

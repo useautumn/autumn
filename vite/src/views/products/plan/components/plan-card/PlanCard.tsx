@@ -1,7 +1,7 @@
 import { useHotkeys } from "react-hotkeys-hook";
 import { Card, CardContent } from "@/components/v2/cards/Card";
 
-import { useFeatureNavigation } from "./hooks/useFeatureNavigation";
+import { useFeatureNavigation } from "../../hooks/useFeatureNavigation";
 import { PlanCardHeader } from "./PlanCardHeader";
 import { PlanFeatureList } from "./PlanFeatureList";
 

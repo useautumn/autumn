@@ -74,6 +74,10 @@ export const compareDetails = ({
 			condition: newProductV2?.name == curProductV2?.name,
 			message: `Name different: ${newProductV2?.name} !== ${curProductV2?.name}`,
 		},
+		id: {
+			condition: newProductV2?.id === curProductV2?.id,
+			message: `ID different: ${newProductV2?.id} !== ${curProductV2?.id}`,
+		},
 	};
 
 	const detailsSame = Object.values(checks).every((d) => d.condition);
@@ -161,7 +165,6 @@ export const productsAreSame = ({
 	if (items1.length !== items2.length) itemsSame = false;
 
 	for (const item of items1) {
-		// console.log("Base item:", formatItem({ item, features }));
 		const similarItem = findSimilarItem({
 			item,
 			items: items2,

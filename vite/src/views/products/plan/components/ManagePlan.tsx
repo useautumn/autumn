@@ -1,4 +1,4 @@
-import PlanCard from "./PlanCard/PlanCard";
+import PlanCard from "./plan-card/PlanCard";
 
 export const ManagePlan = () => {
 	return (

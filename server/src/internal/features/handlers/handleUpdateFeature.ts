@@ -15,7 +15,6 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import {
-	getObjectsUsingFeature,
 	validateCreditSystem,
 	validateMeteredConfig,
 } from "@/internal/features/featureUtils.js";
@@ -27,6 +26,8 @@ import RecaseError from "@/utils/errorUtils.js";
 import { keyToTitle } from "@/utils/genUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { toApiFeature } from "../utils/mapFeatureUtils.js";
+import { getObjectsUsingFeature } from "./handleUpdateFeature/getObjectsUsingFeature.js";
+import { handleFeatureTypeChanged } from "./handleUpdateFeature/handleFeatureTypeChanged.js";
 
 const handleFeatureIdChanged = async ({
 	db,
@@ -312,29 +313,26 @@ export const handleUpdateFeature = async (
 			const isChangingName = feature.name !== data.name;
 
 			if (isChangingType || isChangingId || isChangingUsageType) {
-				const { entitlements, prices, creditSystems, linkedEntitlements } =
-					await getObjectsUsingFeature({
-						db,
-						orgId: req.orgId,
-						env: req.env,
-						allFeatures: features,
-						feature,
-					});
+				const objectsUsingFeature = await getObjectsUsingFeature({
+					db,
+					orgId: req.orgId,
+					env: req.env,
+					allFeatures: features,
+					feature,
+				});
 
 				// 1. Can't change type if any objects are linked to it
-				if (
-					isChangingType &&
-					(linkedEntitlements.length > 0 ||
-						prices.length > 0 ||
-						creditSystems.length > 0 ||
-						entitlements.length > 0)
-				) {
-					throw new RecaseError({
-						message: `Cannot change type of feature ${featureId} because it is used in an entitlement or credit system`,
-						code: ErrCode.InvalidFeature,
-						statusCode: 400,
+				if (isChangingType) {
+					await handleFeatureTypeChanged({
+						ctx: req,
+						objectsUsingFeature,
+						feature,
+						newType: data.type,
 					});
 				}
+
+				const { linkedEntitlements, entitlements, prices, creditSystems } =
+					objectsUsingFeature;
 
 				if (isChangingId) {
 					await handleFeatureIdChanged({

@@ -72,7 +72,7 @@ export const PlanDetailsStep = () => {
 				</div>
 			</SheetSection>
 
-			<BasePriceSection />
+			<BasePriceSection withSeparator={false} />
 		</>
 	);
 };

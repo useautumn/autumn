@@ -18,10 +18,6 @@ export function NewFeatureAdvanced({
 		feature.config?.usage_type &&
 		feature.type !== FeatureType.Boolean;
 
-	const eventNames =
-		feature.config?.filters?.map((filter: { value: string }) => filter.value) ||
-		[];
-
 	if (!showAdvanced) return null;
 
 	return (
@@ -33,18 +29,11 @@ export function NewFeatureAdvanced({
 							<FormLabel>Event Names (optional)</FormLabel>
 							<TagInput
 								placeholder="eg. chat-messages"
-								value={
-									feature.config?.filters?.map(
-										(filter: { value: string }) => filter.value,
-									) || []
-								}
+								value={feature.event_names}
 								onChange={(tags) =>
 									setFeature({
 										...feature,
-										config: {
-											...feature.config,
-											filters: tags.map((tag) => ({ value: tag })),
-										},
+										event_names: tags,
 									})
 								}
 							/>

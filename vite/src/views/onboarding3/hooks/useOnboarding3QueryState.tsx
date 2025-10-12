@@ -1,4 +1,4 @@
-import { parseAsStringLiteral, useQueryStates } from "nuqs";
+import { parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs";
 import { OnboardingStep } from "../utils/onboardingUtils";
 
 export const useOnboarding3QueryState = () => {
@@ -11,6 +11,7 @@ export const useOnboarding3QueryState = () => {
 				OnboardingStep.Playground,
 				OnboardingStep.Integration,
 			] as const).withDefault(OnboardingStep.PlanDetails),
+			product_id: parseAsString,
 		},
 		{
 			history: "push",
