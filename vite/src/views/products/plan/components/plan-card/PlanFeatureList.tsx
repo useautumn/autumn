@@ -1,4 +1,5 @@
 import { type ProductItem, productV2ToFeatureItems } from "@autumn/shared";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import {
 	useIsCreatingFeature,
@@ -19,6 +20,7 @@ export const PlanFeatureList = ({
 	const sheetType = useSheetStore((s) => s.type);
 	const itemId = useSheetStore((s) => s.itemId);
 	const isCreatingFeature = useIsCreatingFeature();
+	const { features } = useFeaturesQuery();
 
 	// Disable add button when select-feature or new-feature sheet is open
 	const isAddButtonDisabled =
@@ -28,6 +30,19 @@ export const PlanFeatureList = ({
 	if (!product) return null;
 
 	const filteredItems = productV2ToFeatureItems({ items: product.items });
+
+	// Group items by entity_feature_id
+	const groupedItems = filteredItems.reduce(
+		(acc, item) => {
+			const key = item.entity_feature_id || "no_entity";
+			if (!acc[key]) {
+				acc[key] = [];
+			}
+			acc[key].push(item);
+			return acc;
+		},
+		{} as Record<string, ProductItem[]>,
+	);
 
 	const handleDelete = (item: ProductItem) => {
 		if (!product.items) return;
@@ -62,16 +77,35 @@ export const PlanFeatureList = ({
 		);
 	}
 
+	const groups = Object.entries(groupedItems);
+	const hasEntityFeatureIds = groups.some(([key]) => key !== "no_entity");
+
 	return (
 		<div className="space-y-2">
-			{filteredItems.map((item: ProductItem, index: number) => {
+			{groups.map(([entityFeatureId, items]) => {
+				const feature = features.find((f) => f.id === entityFeatureId);
+				const showHeader =
+					hasEntityFeatureIds && entityFeatureId !== "no_entity";
+
 				return (
-					<PlanFeatureRow
-						key={item.entitlement_id || item.price_id || index}
-						item={item}
-						index={index}
-						onDelete={handleDelete}
-					/>
+					<div key={entityFeatureId} className="space-y-2">
+						{showHeader && (
+							<div className="text-sm font-medium text-body-secondary px-2 pt-2">
+								{feature?.name || entityFeatureId}
+							</div>
+						)}
+						{items.map((item: ProductItem) => {
+							const itemIndex = filteredItems.indexOf(item);
+							return (
+								<PlanFeatureRow
+									key={item.entitlement_id || item.price_id || itemIndex}
+									item={item}
+									index={itemIndex}
+									onDelete={handleDelete}
+								/>
+							);
+						})}
+					</div>
 				);
 			})}
 

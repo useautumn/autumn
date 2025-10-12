@@ -1,10 +1,8 @@
 import { useState } from "react";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useHasChanges } from "@/hooks/stores/useProductStore";
 import { useProductSync } from "@/hooks/stores/useProductSync";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import LoadingScreen from "@/views/general/LoadingScreen";
-import { useProductChangedAlert } from "../product/hooks/useProductChangedAlert";
 import { useProductQuery } from "../product/hooks/useProductQuery";
 import { ProductContext } from "../product/ProductContext";
 import { EditPlanHeader } from "./components/EditPlanHeader";
@@ -24,9 +22,6 @@ export default function PlanEditorView() {
 
 	// Sync store with backend data
 	useProductSync({ product: originalProduct });
-
-	const hasChanges = useHasChanges();
-	const { modal } = useProductChangedAlert({ hasChanges });
 
 	const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
 	const setSheet = useSheetStore((s) => s.setSheet);
@@ -57,7 +52,6 @@ export default function PlanEditorView() {
 
 				<ProductSheets />
 			</div>
-			{modal}
 		</ProductContext.Provider>
 	);
 }
