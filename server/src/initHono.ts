@@ -20,6 +20,7 @@ const ALLOWED_ORIGINS = [
 	"http://localhost:5174",
 	"https://app.useautumn.com",
 	"https://staging.useautumn.com",
+	"https://api.staging.useautumn.com",
 	"https://localhost:8080",
 ];
 
