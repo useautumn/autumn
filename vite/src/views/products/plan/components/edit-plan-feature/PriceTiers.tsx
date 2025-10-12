@@ -116,7 +116,6 @@ export function PriceTiers() {
 			<div className="text-form-label">Pricing Tiers</div>
 			{tiers.map((tier: PriceTier, index: number) => {
 				const isInfinite = tier.to === Infinite;
-				const _isLastTier = index === tiers.length - 1;
 				const toKey = `tier-${index}-to`;
 				const amountKey = `tier-${index}-amount`;
 

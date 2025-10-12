@@ -30,7 +30,7 @@ export const SelectBillingCycle = ({
 			<FormLabel disabled={disabled}>Billing Interval</FormLabel>
 			<Select
 				disabled={disabled}
-				value={item ? itemToBillingInterval({ item }) : BillingInterval.Month}
+				value={item ? itemToBillingInterval({ item }) : ""}
 				defaultValue={BillingInterval.Month}
 				onValueChange={(value) => {
 					if (!item) return;

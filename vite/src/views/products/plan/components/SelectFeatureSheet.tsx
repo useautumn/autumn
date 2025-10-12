@@ -1,10 +1,4 @@
-import {
-	type Feature,
-	featureToItemFeatureType,
-	ProductItemFeatureType,
-	ProductItemInterval,
-	productV2ToFeatureItems,
-} from "@autumn/shared";
+import { type Feature, productV2ToFeatureItems } from "@autumn/shared";
 import { PlusIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { FormLabel } from "@/components/v2/form/FormLabel";
@@ -21,6 +15,7 @@ import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { getItemId } from "@/utils/product/productItemUtils";
 import { getFeatureIcon } from "@/views/products/features/utils/getFeatureIcon";
+import { getDefaultItem } from "../utils/getDefaultItem";
 
 export function SelectFeatureSheet({
 	isOnboarding,
@@ -42,27 +37,8 @@ export function SelectFeatureSheet({
 		const selectedFeature = features.find((f) => f.id === featureId);
 		if (!selectedFeature) return;
 
-		// Determine feature_type based on feature.type and config.usage_type
-		const itemFeatureType = featureToItemFeatureType({
-			feature: selectedFeature,
-		});
-
 		// Create a new item with the selected feature
-		const newItem = {
-			feature_id: selectedFeature.id,
-			feature_type: itemFeatureType,
-			included_usage: null,
-			interval:
-				itemFeatureType === ProductItemFeatureType.ContinuousUse ||
-				itemFeatureType === ProductItemFeatureType.Static
-					? null
-					: ProductItemInterval.Month,
-			price: null,
-			tiers: null,
-			billing_units: 1,
-			entity_feature_id: null,
-			reset_usage_when_enabled: true,
-		};
+		const newItem = getDefaultItem({ feature: selectedFeature });
 
 		// Add the new item to the product
 		const newItems = [...(product.items || []), newItem];
