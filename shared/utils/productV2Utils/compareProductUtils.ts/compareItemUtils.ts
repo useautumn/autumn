@@ -6,7 +6,11 @@ import type { UsageTier } from "../../../models/productModels/priceModels/priceC
 import type { FeatureItem } from "../../../models/productV2Models/productItemModels/featureItem.js";
 import type { FeaturePriceItem } from "../../../models/productV2Models/productItemModels/featurePriceItem.js";
 import type { PriceItem } from "../../../models/productV2Models/productItemModels/priceItem.js";
-import type { ProductItem } from "../../../models/productV2Models/productItemModels/productItemModels.js";
+import type {
+	ProductItem,
+	ProductItemConfig,
+	RolloverConfig,
+} from "../../../models/productV2Models/productItemModels/productItemModels.js";
 import { entIntervalsSame, intervalsSame } from "../../intervalUtils.js";
 import { itemToFeature } from "../productItemUtils/convertItemUtils.js";
 import {
@@ -170,6 +174,39 @@ export const priceItemsAreSame = ({
 	return same;
 };
 
+const prorationConfigsAreSame = ({
+	config1,
+	config2,
+}: {
+	config1?: ProductItemConfig;
+	config2?: ProductItemConfig;
+}) => {
+	return (
+		config1?.on_increase === config2?.on_increase &&
+		config1?.on_decrease === config2?.on_decrease
+	);
+};
+
+const rolloversAreSame = ({
+	rollover1,
+	rollover2,
+}: {
+	rollover1?: RolloverConfig;
+	rollover2?: RolloverConfig;
+}) => {
+	if (rollover1 && !rollover2) {
+		return false;
+	}
+	if (!rollover1 && rollover2) {
+		return false;
+	}
+	return (
+		rollover1?.max === rollover2?.max &&
+		rollover1?.duration === rollover2?.duration &&
+		rollover1?.length === rollover2?.length
+	);
+};
+
 export const featurePriceItemsAreSame = ({
 	item1,
 	item2,
@@ -177,6 +214,8 @@ export const featurePriceItemsAreSame = ({
 	item1: FeaturePriceItem;
 	item2: FeaturePriceItem;
 }) => {
+	// console.log("Item 1 config:", item1.config);
+	// console.log("Item 2 config:", item2.config);
 	const entsSame = {
 		included_usage: {
 			condition: item1.included_usage == item2.included_usage,
@@ -191,10 +230,29 @@ export const featurePriceItemsAreSame = ({
 				item1.reset_usage_when_enabled == item2.reset_usage_when_enabled,
 			message: `Reset usage when enabled different: ${item1.reset_usage_when_enabled} !== ${item2.reset_usage_when_enabled}`,
 		},
-		config: {
-			condition: JSON.stringify(item1.config) === JSON.stringify(item2.config),
-			message: `Config different: ${JSON.stringify(item1.config)} !== ${JSON.stringify(item2.config)}`,
+		proration_config: {
+			condition: prorationConfigsAreSame({
+				config1: item1.config || undefined,
+				config2: item2.config || undefined,
+			}),
+			message: `Proration config different: ${JSON.stringify(item1.config)} !== ${JSON.stringify(item2.config)}`,
 		},
+		rollover_config: {
+			condition: rolloversAreSame({
+				rollover1: item1.config?.rollover || undefined,
+				rollover2: item2.config?.rollover || undefined,
+			}),
+			message: `Rollover config different: ${JSON.stringify(item1.config?.rollover)} !== ${JSON.stringify(item2.config?.rollover)}`,
+		},
+		entity_feature_id: {
+			condition: item1.entity_feature_id == item2.entity_feature_id,
+			message: `Entity feature ID different: ${item1.entity_feature_id} != ${item2.entity_feature_id}`,
+		},
+
+		// config: {
+		// 	condition: JSON.stringify(item1.config) === JSON.stringify(item2.config),
+		// 	message: `Config different: ${JSON.stringify(item1.config)} !== ${JSON.stringify(item2.config)}`,
+		// },
 	};
 
 	const pricesSame = {
