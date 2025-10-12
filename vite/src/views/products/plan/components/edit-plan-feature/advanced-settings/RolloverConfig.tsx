@@ -105,7 +105,7 @@ export function RolloverConfig() {
 					>
 						<div className="space-y-2">
 							<FormLabel>Maximum rollover amount</FormLabel>
-							<div className="flex items-center gap-2">
+							<div className="flex items-center gap-2 w-2/3">
 								<Input
 									type="number"
 									value={
@@ -115,7 +115,7 @@ export function RolloverConfig() {
 												? ""
 												: rollover?.max
 									}
-									className="w-32"
+									className="flex-1"
 									placeholder={
 										rollover?.max === null ? "Unlimited" : "e.g. 100 credits"
 									}
@@ -142,7 +142,7 @@ export function RolloverConfig() {
 
 						<div className="space-y-2">
 							<FormLabel>Rollover duration</FormLabel>
-							<div className="flex items-center gap-2">
+							<div className="flex items-center gap-2 w-2/3">
 								{rollover?.duration === RolloverDuration.Month && (
 									<Input
 										type="number"
@@ -164,7 +164,7 @@ export function RolloverConfig() {
 									}}
 								>
 									<SelectTrigger
-										className="w-40"
+										className="flex-1"
 										onClick={(e) => e.stopPropagation()}
 									>
 										<SelectValue placeholder="Select duration" />
