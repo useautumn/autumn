@@ -17,6 +17,8 @@
 
 - Functions (unless there's a very good reason) should always take in objects as arguments. Object params are named and easy to understand.
 
+- Prefer Guard clauses "if(!admin) return;" over explicity "if(admin) do X;" Early returns are better
+
 ## Bad example
 / root
 -> components
@@ -32,4 +34,3 @@
 
 ## File Naming
 DON'T name files one word (like index.ts, model.ts, etc.). Give proper indication in the filename to which resource it's targeting. For example, a utility file for organizations should be named orgUtils.ts. This is because it's easier to search for files like this. That being said, the filename shouldn't be overly long (less than three words is ideal)
-
