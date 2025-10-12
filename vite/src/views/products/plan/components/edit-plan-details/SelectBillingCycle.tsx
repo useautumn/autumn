@@ -25,16 +25,15 @@ export const SelectBillingCycle = ({
 	setItem: (item: ProductItem) => void;
 	disabled: boolean;
 }) => {
-	if (!item) return;
-
 	return (
 		<div className="w-full">
-			<FormLabel>Billing Interval</FormLabel>
+			<FormLabel disabled={disabled}>Billing Interval</FormLabel>
 			<Select
 				disabled={disabled}
-				value={itemToBillingInterval({ item: item })}
+				value={item ? itemToBillingInterval({ item }) : BillingInterval.Month}
 				defaultValue={BillingInterval.Month}
 				onValueChange={(value) => {
+					if (!item) return;
 					setItem({
 						...item,
 						interval: billingToItemInterval({

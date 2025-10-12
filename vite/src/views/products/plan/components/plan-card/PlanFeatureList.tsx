@@ -16,8 +16,13 @@ export const PlanFeatureList = ({
 	const product = useProductStore((s) => s.product);
 	const setProduct = useProductStore((s) => s.setProduct);
 	const setSheet = useSheetStore((s) => s.setSheet);
+	const sheetType = useSheetStore((s) => s.type);
 	const itemId = useSheetStore((s) => s.itemId);
 	const isCreatingFeature = useIsCreatingFeature();
+
+	// Disable add button when select-feature or new-feature sheet is open
+	const isAddButtonDisabled =
+		isCreatingFeature || sheetType === "select-feature";
 
 	// Guard against undefined product
 	if (!product) return null;
@@ -50,7 +55,7 @@ export const PlanFeatureList = ({
 				<div className="space-y-1">
 					<AddFeatureRow
 						onClick={handleAddFeature}
-						disabled={isCreatingFeature}
+						disabled={isAddButtonDisabled}
 					/>
 				</div>
 			</div>
@@ -73,7 +78,7 @@ export const PlanFeatureList = ({
 			{allowAddFeature && (
 				<AddFeatureRow
 					onClick={handleAddFeature}
-					disabled={isCreatingFeature}
+					disabled={isAddButtonDisabled}
 				/>
 			)}
 		</div>

@@ -57,15 +57,16 @@ export const OnboardingSteps = ({ className }: OnboardingStepsProps) => {
 			</div>
 			{/* Navigation buttons */}
 			<div className="flex items-center gap-1.5 flex-shrink-0">
-				<Button
+				<ShortcutButton
 					variant="secondary"
 					onClick={handleBack || undefined}
 					disabled={backDisabled || !handleBack}
 					size="sm"
 					className="min-w-24 px-2 text-xs outline-1"
+					metaShortcut="arrowleft"
 				>
 					Back
-				</Button>
+				</ShortcutButton>
 				<ShortcutButton
 					variant="primary"
 					onClick={handleNext || undefined}

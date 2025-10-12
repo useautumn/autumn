@@ -3,6 +3,7 @@
 - Never ever ever write a "TO DO" comment. If you've been told to do something, DO IT. Don't stop halfway. Never give up and just leave a "to do" comment and say - "haha heres working code :)" - that is unacceptible. Always finish your task, no matter how many iterations you need to perform.
 - DO NOT alter .gitignore
 - JS Doc comments should be SHORT and SWEET. Don't need examples unless ABSOLUTELY necessary
+- When using db schemas in Drizzle, import them from '@autumn/shared', and don't do schemas.
 
 # Linting and Codebase rules
 - You can access the biome linter by running `npx biome check <folder or file path>`. Always specify a folder path, as the codebase is quite large and you will get out of scope errors that you are not burdened to correct. If you would like to let biome automatically fix as much as it can, use  `npx biome check --write <folder or file path>`

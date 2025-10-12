@@ -6,7 +6,7 @@ import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { getItemId } from "@/utils/product/productItemUtils";
 import { ProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
-import { EditPlanFeatureSheet } from "../../products/plan/components/EditPlanFeatureSheet/EditPlanFeatureSheet";
+import { EditPlanFeatureSheet } from "../../products/plan/components/edit-plan-feature/EditPlanFeatureSheet";
 import { EditPlanSheet } from "../../products/plan/components/EditPlanSheet";
 import { NewFeatureSheet } from "../../products/plan/components/new-feature/NewFeatureSheet";
 import { SelectFeatureSheet } from "../../products/plan/components/SelectFeatureSheet";

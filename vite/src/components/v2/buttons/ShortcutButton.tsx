@@ -3,13 +3,17 @@ import { Button, type ButtonProps } from "@/components/v2/buttons/Button";
 
 export const ShortcutButton = ({
 	metaShortcut,
+	singleShortcut,
 	children,
 	isLoading,
+	variant,
 	...props
 }: {
-	metaShortcut: string;
+	metaShortcut?: string;
+	singleShortcut?: string;
 	children: React.ReactNode;
 	isLoading?: boolean;
+	variant?: "primary" | "secondary";
 } & ButtonProps) => {
 	const getMetaKey = () => {
 		if (navigator.userAgent.includes("Mac")) {
@@ -19,7 +23,11 @@ export const ShortcutButton = ({
 	};
 
 	useHotkeys(
-		[`meta+${metaShortcut}`],
+		metaShortcut
+			? [`meta+${metaShortcut}`]
+			: singleShortcut
+				? [singleShortcut]
+				: [],
 		(e) => {
 			e.preventDefault();
 			props?.onClick?.(e as unknown as React.MouseEvent<HTMLButtonElement>);
@@ -29,21 +37,48 @@ export const ShortcutButton = ({
 		},
 	);
 
-	const keystrokeContainer = (keyStroke: string) => (
-		<div className="bg-[#B07AFF] text-primary-foreground flex items-center justify-center size-4 rounded-md">
-			{keyStroke}
-		</div>
-	);
+	const keystrokeContainer = (keyStroke: string, isEnter = false) => {
+		const isSingleChar = keyStroke.length === 1;
+		const sizeClasses = isSingleChar ? "w-4" : "px-1";
+		const baseClasses = `flex items-center justify-center ${sizeClasses} h-4 rounded-md text-tiny font-medium`;
+		const variantClasses =
+			variant === "secondary"
+				? "bg-muted text-body-secondary"
+				: "bg-[#B07AFF] !text-primary-foreground";
+
+		return (
+			<div className={`${baseClasses} ${variantClasses}`}>
+				<span
+					className={
+						isEnter ? "inline-block translate-y-[1px] translate-x-[-0.5px]" : ""
+					}
+				>
+					{keyStroke}
+				</span>
+			</div>
+		);
+	};
+
+	const getShortcutDisplay = () => {
+		if (metaShortcut) {
+			if (metaShortcut === "enter") return "↵";
+			if (metaShortcut === "arrowleft") return "←";
+			return metaShortcut.toUpperCase();
+		}
+		if (singleShortcut) {
+			if (singleShortcut === "escape") return "Esc";
+			return singleShortcut.toUpperCase();
+		}
+		return "";
+	};
 
 	return (
-		<Button isLoading={isLoading} {...props}>
+		<Button isLoading={isLoading} variant={variant} {...props}>
 			{children}
-			{metaShortcut && (
+			{(metaShortcut || singleShortcut) && (
 				<span className="flex items-center gap-0.5">
-					{keystrokeContainer(getMetaKey())}
-					{keystrokeContainer(
-						metaShortcut === "enter" ? "↵" : metaShortcut.toUpperCase(),
-					)}
+					{metaShortcut && keystrokeContainer(getMetaKey())}
+					{keystrokeContainer(getShortcutDisplay(), metaShortcut === "enter")}
 				</span>
 			)}
 		</Button>

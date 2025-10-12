@@ -1,14 +1,12 @@
 import {
 	type Feature,
-	FeatureType,
-	FeatureUsageType,
+	featureToItemFeatureType,
 	ProductItemFeatureType,
 	ProductItemInterval,
 	productV2ToFeatureItems,
 } from "@autumn/shared";
 import { PlusIcon } from "@phosphor-icons/react";
 import { useState } from "react";
-import { Button } from "@/components/v2/buttons/Button";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import {
 	Select,
@@ -29,7 +27,6 @@ export function SelectFeatureSheet({
 }: {
 	isOnboarding?: boolean;
 }) {
-	const [selectedFeatureId, setSelectedFeatureId] = useState<string>("");
 	const [selectOpen, setSelectOpen] = useState(true);
 
 	const { features } = useFeaturesQuery();
@@ -39,36 +36,27 @@ export function SelectFeatureSheet({
 
 	const filteredFeatures = features.filter((f: Feature) => !f.archived);
 
-	const handleAddFeature = () => {
-		if (!selectedFeatureId || !product) return;
+	const handleFeatureSelect = (featureId: string) => {
+		if (!featureId || !product) return;
 
-		const selectedFeature = features.find((f) => f.id === selectedFeatureId);
+		const selectedFeature = features.find((f) => f.id === featureId);
 		if (!selectedFeature) return;
 
 		// Determine feature_type based on feature.type and config.usage_type
-		let featureType: ProductItemFeatureType;
-		if (selectedFeature.type === FeatureType.Boolean) {
-			featureType = ProductItemFeatureType.Static;
-		} else if (selectedFeature.type === FeatureType.CreditSystem) {
-			featureType = ProductItemFeatureType.SingleUse;
-		} else if (selectedFeature.type === FeatureType.Metered) {
-			const usageType = selectedFeature.config?.usage_type;
-			if (usageType === FeatureUsageType.Continuous) {
-				featureType = ProductItemFeatureType.ContinuousUse;
-			} else {
-				featureType = ProductItemFeatureType.SingleUse;
-			}
-		} else {
-			// Fallback
-			featureType = ProductItemFeatureType.SingleUse;
-		}
+		const itemFeatureType = featureToItemFeatureType({
+			feature: selectedFeature,
+		});
 
 		// Create a new item with the selected feature
 		const newItem = {
 			feature_id: selectedFeature.id,
-			feature_type: featureType,
+			feature_type: itemFeatureType,
 			included_usage: null,
-			interval: ProductItemInterval.Month,
+			interval:
+				itemFeatureType === ProductItemFeatureType.ContinuousUse ||
+				itemFeatureType === ProductItemFeatureType.Static
+					? null
+					: ProductItemInterval.Month,
 			price: null,
 			tiers: null,
 			billing_units: 1,
@@ -103,11 +91,10 @@ export function SelectFeatureSheet({
 			)}
 
 			<div className="flex-1 overflow-y-auto">
-				<SheetSection title="Feature">
+				<SheetSection title="Feature" withSeparator={false}>
 					<FormLabel>Select a feature</FormLabel>
 					<Select
-						value={selectedFeatureId}
-						onValueChange={(value) => setSelectedFeatureId(value)}
+						onValueChange={handleFeatureSelect}
 						open={selectOpen}
 						onOpenChange={setSelectOpen}
 					>
@@ -144,16 +131,6 @@ export function SelectFeatureSheet({
 						</SelectContent>
 					</Select>
 				</SheetSection>
-			</div>
-
-			<div className="mt-auto p-4">
-				<Button
-					className="w-full"
-					onClick={handleAddFeature}
-					disabled={!selectedFeatureId}
-				>
-					Add Feature
-				</Button>
 			</div>
 		</div>
 	);

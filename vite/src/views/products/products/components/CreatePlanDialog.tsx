@@ -98,13 +98,14 @@ function CreatePlanDialog({
 						setProduct={setProduct}
 						isUpdate={false}
 					/>
-
 					<DialogFooter>
+						<Button onClick={() => setOpen(false)} variant="secondary">
+							Cancel
+						</Button>
 						<Button
 							isLoading={loading}
 							onClick={handleCreateClicked}
 							variant="primary"
-							className="min-w-44 w-44 max-w-44"
 						>
 							Create Plan
 						</Button>
