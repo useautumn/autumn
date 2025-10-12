@@ -36,24 +36,30 @@ export function BillingType() {
 		};
 
 		if (type === "included") {
-			// Remove tiers to switch to included
-			setItem({
-				...item,
-				tiers: null,
-				billing_units: undefined,
-				usage_model: undefined,
-				interval: isContUseItem({ item, features }) ? null : item.interval,
-			});
+			// Only switch if not already included
+			if (isFeaturePrice) {
+				// Remove tiers to switch to included
+				setItem({
+					...item,
+					tiers: null,
+					billing_units: undefined,
+					usage_model: undefined,
+					interval: isContUseItem({ item, features }) ? null : item.interval,
+				});
+			}
 		} else {
-			// Add initial tier to switch to priced
-			setItem({
-				...item,
-				tiers: [{ to: Infinite, amount: 0 }],
-				billing_units: 1,
-				included_usage:
-					item.included_usage === Infinite ? 0 : item.included_usage || 0,
-				interval: getPricedInterval(),
-			});
+			// Only switch if not already priced
+			if (!isFeaturePrice) {
+				// Add initial tier to switch to priced
+				setItem({
+					...item,
+					tiers: [{ to: Infinite, amount: 0 }],
+					billing_units: 1,
+					included_usage:
+						item.included_usage === Infinite ? 0 : item.included_usage || 0,
+					interval: getPricedInterval(),
+				});
+			}
 		}
 	};
 
