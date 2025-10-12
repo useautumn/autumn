@@ -48,7 +48,7 @@ export const validateProductItem = ({
 
 	if (!invalidNumber(item.included_usage)) {
 		item.included_usage = Number(item.included_usage);
-		
+
 		// Check if included usage is negative
 		if (item.included_usage < 0) {
 			toast.error("Included usage must be 0 or greater");
@@ -135,7 +135,7 @@ export const validateProductItem = ({
 				return null;
 			}
 
-			if (tier.to == previousTo) {
+			if (tier.to === previousTo) {
 				toast.error(`tier ${i + 1} should have a greater 'to'`);
 				return null;
 			}
@@ -191,19 +191,13 @@ export const validateProductItem = ({
 			return null;
 		}
 
-		// if (rollover.duration != RolloverDuration.Month) {
-		//   toast.error("Rollovers currently only support monthly cycles.");
-		//   item.config.rollover = undefined;
-		//   return null;
-		// }
-
-		if (typeof rollover.max == "number" && rollover.max < 0) {
+		if (typeof rollover.max === "number" && rollover.max < 0) {
 			toast.error("Please enter a positive rollover max amount");
 			item.config.rollover = undefined;
 			return null;
 		}
 
-		if (rollover.duration == RolloverDuration.Month && rollover.length < 0) {
+		if (rollover.duration === RolloverDuration.Month && rollover.length < 0) {
 			toast.error("Please enter a positive rollover length");
 			item.config.rollover = undefined;
 			return null;

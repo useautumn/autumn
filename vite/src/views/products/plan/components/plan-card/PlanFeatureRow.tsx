@@ -12,8 +12,10 @@ import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { getItemId } from "@/utils/product/productItemUtils";
-import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
+import { useOnboarding3QueryState } from "@/views/onboarding3/hooks/useOnboarding3QueryState";
 import { useOnboardingStore } from "@/views/onboarding3/store/useOnboardingStore";
+import { OnboardingStep } from "@/views/onboarding3/utils/onboardingUtils";
+import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { PlanFeatureIcon } from "./PlanFeatureIcon";
 
 // Custom dot component with bigger height but smaller width
@@ -40,8 +42,16 @@ export const PlanFeatureRow = ({
 	const itemId = useSheetStore((s) => s.itemId);
 	const setSheet = useSheetStore((s) => s.setSheet);
 	const isOnboarding = useOnboardingStore((s) => s.isOnboarding);
+	const playgroundMode = useOnboardingStore((s) => s.playgroundMode);
+	const { queryStates } = useOnboarding3QueryState();
 
 	const [isPressed, setIsPressed] = useState(false);
+
+	// Disable interaction if in onboarding and not in playground edit mode
+	const isDisabled =
+		isOnboarding &&
+		(queryStates.step !== OnboardingStep.Playground ||
+			playgroundMode !== "edit");
 
 	// Always use the current item from product.items for real-time updates
 	const featureItems = productV2ToFeatureItems({ items: product.items });
@@ -54,6 +64,13 @@ export const PlanFeatureRow = ({
 		fullDisplay: true,
 		amountFormatOptions: { currencyDisplay: "narrowSymbol" },
 	});
+
+	// Check if feature has a name
+	const feature = features.find((f) => f.id === item.feature_id);
+	const hasFeatureName = feature?.name && feature.name.trim() !== "";
+	const displayText = hasFeatureName
+		? display.primary_text
+		: "Name your feature";
 
 	const currentItemId = getItemId({ item, itemIndex: index });
 	const isSelected = itemId === currentItemId;
@@ -69,7 +86,7 @@ export const PlanFeatureRow = ({
 	}, [itemId, currentItemId]);
 
 	const handleRowClicked = () => {
-		if (isOnboarding) return;
+		if (isDisabled) return;
 		const currentItemId = getItemId({ item, itemIndex: index });
 		setItem(item);
 		setSheet({ type: "edit-feature", itemId: currentItemId });
@@ -100,31 +117,26 @@ export const PlanFeatureRow = ({
 			className={cn(
 				"flex w-full group !h-9 group/row input-base input-shadow-tiny select-bg select-none",
 
-				// To prevent flickering when clicking inner buttons
-				!isOnboarding &&
+				!isDisabled &&
 					!isSelected &&
 					"hover:!bg-hover-primary focus-visible:!bg-hover-primary focus-visible:!border-primary active:!bg-active-primary",
 
-				!isOnboarding && isSelected && "!bg-hover-primary !border-primary",
+				!isDisabled && isSelected && "!bg-hover-primary !border-primary",
 
-				isOnboarding && "pointer-events-none cursor-default",
-
-				// // Custom pressed state that we can control
-				// "data-[pressed=true]:!bg-active-primary data-[pressed=true]:border-primary focus:outline-none active:!bg-transparent active:!border-transparent",
+				isDisabled && "pointer-events-none cursor-default",
 			)}
 			onMouseDown={(e) => {
-				if (isOnboarding) return;
-				// Only set pressed if we're not clicking on a button
+				if (isDisabled) return;
 				if (!(e.target as Element).closest("button")) {
 					setIsPressed(true);
 				}
 			}}
 			onMouseUp={() => {
-				if (isOnboarding) return;
+				if (isDisabled) return;
 				setIsPressed(false);
 			}}
 			onMouseLeave={() => {
-				if (isOnboarding) return;
+				if (isDisabled) return;
 				setIsPressed(false);
 			}}
 			onClick={handleRowClicked}
@@ -145,7 +157,9 @@ export const PlanFeatureRow = ({
 
 				<div className="flex items-center gap-2 flex-1 min-w-0 max-w-[90%] ">
 					<p className="whitespace-nowrap truncate max-w-full">
-						<span className="text-body">{display.primary_text}</span>
+						<span className={cn("text-body", !hasFeatureName && "!text-t4")}>
+							{displayText}
+						</span>
 						<span className="text-body-secondary">
 							{" "}
 							{display.secondary_text}

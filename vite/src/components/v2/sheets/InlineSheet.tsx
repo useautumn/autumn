@@ -3,6 +3,24 @@ import { Separator } from "@/components/v2/separator";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "../checkboxes/Checkbox";
 
+interface SheetContainerProps {
+	children: React.ReactNode;
+	className?: string;
+}
+
+export function SheetContainer({ children, className }: SheetContainerProps) {
+	return (
+		<div
+			className={cn(
+				"flex flex-col overflow-y-auto [scrollbar-gutter:stable]",
+				className,
+			)}
+		>
+			{children}
+		</div>
+	);
+}
+
 interface SheetHeaderProps {
 	title: string;
 	description: string;

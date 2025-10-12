@@ -15,7 +15,7 @@ export function NewFeatureBehaviour({
 	feature: CreateFeature;
 	setFeature: (feature: CreateFeature) => void;
 }) {
-	if (feature.type && feature.type !== FeatureType.Boolean)
+	if (feature.type && feature.type !== FeatureType.Boolean) {
 		return (
 			<SheetSection title="Feature Behavior">
 				<div className="space-y-4">
@@ -79,4 +79,5 @@ export function NewFeatureBehaviour({
 				</div>
 			</SheetSection>
 		);
+	}
 }

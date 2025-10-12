@@ -1,11 +1,15 @@
 import type { CreateFeature, Feature } from "@autumn/shared";
+import { useMemo } from "react";
 import { create } from "zustand";
+import { compareDbFeature } from "@/components/compareDbFeature";
 import { getDefaultFeature } from "@/views/products/features/utils/defaultFeature";
 
 interface FeatureState {
 	feature: CreateFeature;
 	baseFeature: Feature | null;
-	setFeature: (feature: CreateFeature | ((prev: CreateFeature) => CreateFeature)) => void;
+	setFeature: (
+		feature: CreateFeature | ((prev: CreateFeature) => CreateFeature),
+	) => void;
 	setBaseFeature: (feature: Feature | null) => void;
 	reset: () => void;
 }
@@ -29,3 +33,19 @@ export const useFeatureStore = create<FeatureState>((set) => ({
 	setBaseFeature: (baseFeature) => set({ baseFeature }),
 	reset: () => set(initialState),
 }));
+
+export const useHasFeatureChanges = () => {
+	const feature = useFeatureStore((s) => s.feature);
+	const baseFeature = useFeatureStore((s) => s.baseFeature);
+
+	return useMemo(() => {
+		if (!baseFeature) return false;
+
+		const areSame = compareDbFeature({
+			curFeature: baseFeature,
+			newFeature: feature,
+		});
+
+		return !areSame;
+	}, [feature, baseFeature]);
+};

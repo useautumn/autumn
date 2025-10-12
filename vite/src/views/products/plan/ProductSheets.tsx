@@ -1,10 +1,11 @@
 import { type ProductItem, productV2ToFeatureItems } from "@autumn/shared";
+import { SheetContainer } from "@/components/v2/sheets/InlineSheet";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { getItemId } from "@/utils/product/productItemUtils";
 
 import { ProductItemContext } from "../product/product-item/ProductItemContext";
-import { EditPlanFeatureSheet } from "./components/EditPlanFeatureSheet/EditPlanFeatureSheet";
+import { EditPlanFeatureSheet } from "./components/edit-plan-feature/EditPlanFeatureSheet";
 import { EditPlanSheet } from "./components/EditPlanSheet";
 import { NewFeatureSheet } from "./components/new-feature/NewFeatureSheet";
 import { SelectFeatureSheet } from "./components/SelectFeatureSheet";
@@ -72,8 +73,8 @@ export const ProductSheets = () => {
 	};
 
 	return (
-		<div className="w-full min-w-xs max-w-md bg-card z-50 border-l shadow-sm flex flex-col overflow-y-auto h-full">
+		<SheetContainer className="w-full min-w-xs max-w-md bg-card z-50 border-l shadow-sm h-full">
 			{renderSheet()}
-		</div>
+		</SheetContainer>
 	);
 };

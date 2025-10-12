@@ -84,3 +84,21 @@ export const useWillVersion = () => {
 		);
 	}, [product, baseProduct, features]);
 };
+
+export const useHasDetailsChanged = () => {
+	const product = useProductStore((s) => s.product);
+	const baseProduct = useProductStore((s) => s.baseProduct);
+	const { features = [] } = useFeaturesQuery();
+
+	return useMemo(() => {
+		if (!baseProduct) return false;
+
+		const comparison = productsAreSame({
+			newProductV2: product as unknown as ProductV2,
+			curProductV2: baseProduct as unknown as ProductV2,
+			features,
+		});
+
+		return !comparison.detailsSame;
+	}, [product, baseProduct, features]);
+};

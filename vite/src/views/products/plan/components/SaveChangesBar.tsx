@@ -54,7 +54,7 @@ export const SaveChangesBar = ({
 		}
 
 		setSaving(true);
-		await updateProduct({
+		const result = await updateProduct({
 			axiosInstance,
 			productId: product.id,
 			product,
@@ -66,7 +66,11 @@ export const SaveChangesBar = ({
 				}
 			},
 		});
-		toast.success("Changes saved successfully");
+
+		// Only show success toast if update was successful
+		if (result) {
+			toast.success("Changes saved successfully");
+		}
 
 		setSaving(false);
 	};

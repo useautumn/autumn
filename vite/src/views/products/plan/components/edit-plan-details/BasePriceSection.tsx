@@ -1,10 +1,10 @@
 import {
-	BillingInterval,
-	billingToItemInterval,
+	type BillingInterval,
 	isPriceItem,
 	notNullish,
 	nullish,
 	type ProductItem,
+	ProductItemInterval,
 	productV2ToBasePrice,
 } from "@autumn/shared";
 import { FormLabel } from "@/components/v2/form/FormLabel";
@@ -13,7 +13,11 @@ import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { SelectBillingCycle } from "./SelectBillingCycle";
 
-export const BasePriceSection = () => {
+export const BasePriceSection = ({
+	withSeparator = true,
+}: {
+	withSeparator?: boolean;
+}) => {
 	const product = useProductStore((s) => s.product);
 	const setProduct = useProductStore((s) => s.setProduct);
 
@@ -70,12 +74,11 @@ export const BasePriceSection = () => {
 
 			newItems[basePriceIndex] = {
 				...newItems[basePriceIndex],
-				price: newAmount,
-				interval: interval
-					? billingToItemInterval({ billingInterval: interval })
-					: basePrice?.interval,
+				price: newAmount as number,
+				// interval: interval
+				// 	? billingToItemInterval({ billingInterval: interval })
+				// 	: basePrice?.interval,
 				interval_count: interval ? intervalCount : basePrice?.intervalCount,
-				isBasePrice: true,
 			};
 		}
 
@@ -90,6 +93,7 @@ export const BasePriceSection = () => {
 	return (
 		<SheetSection
 			title="Base Price"
+			withSeparator={withSeparator}
 			checked={!disabled}
 			setChecked={(checked) => {
 				if (checked) {
@@ -99,7 +103,7 @@ export const BasePriceSection = () => {
 							...product.items,
 							{
 								price: 10,
-								interval: BillingInterval.Month,
+								interval: ProductItemInterval.Month,
 							},
 						],
 					});

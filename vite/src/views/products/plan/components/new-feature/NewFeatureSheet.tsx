@@ -5,7 +5,7 @@ import {
 } from "@autumn/shared";
 import type { AxiosError } from "axios";
 import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
+import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import { SheetHeader } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
@@ -15,18 +15,21 @@ import { FeatureService } from "@/services/FeatureService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { getItemId } from "@/utils/product/productItemUtils";
+import { useSaveRestoreFeature } from "../../hooks/useSaveRestoreFeature";
 import { NewFeatureAdvanced } from "./NewFeatureAdvanced";
 import { NewFeatureBehaviour } from "./NewFeatureBehaviour";
 import { NewFeatureDetails } from "./NewFeatureDetails";
 import { NewFeatureType } from "./NewFeatureType";
 
 export function NewFeatureSheet({ isOnboarding }: { isOnboarding?: boolean }) {
+	// Save and restore feature store state when in onboarding mode
+	useSaveRestoreFeature({ enabled: isOnboarding || false });
+
 	const feature = useFeatureStore((s) => s.feature);
 	const setFeature = useFeatureStore((s) => s.setFeature);
 	const product = useProductStore((s) => s.product);
 	const setProduct = useProductStore((s) => s.setProduct);
 	const setSheet = useSheetStore((s) => s.setSheet);
-	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const axiosInstance = useAxiosInstance();
 	const { refetch } = useFeaturesQuery();
 
@@ -46,6 +49,7 @@ export function NewFeatureSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 						id: feature.id,
 						type: feature.type,
 						config: feature.config,
+						event_names: feature.event_names,
 					},
 				);
 
@@ -88,13 +92,9 @@ export function NewFeatureSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 	};
 
 	const handleCancel = () => {
-		if (isOnboarding) {
-			// In onboarding, just close the sheet and return to previous state
-			closeSheet();
-		} else {
-			// In normal flow, go back to edit-plan
-			setSheet({ type: "edit-plan" });
-		}
+		// Always go back to edit-plan sheet
+		// In both onboarding and normal flow, this is the expected behavior
+		setSheet({ type: "edit-plan" });
 	};
 
 	return (
@@ -115,12 +115,21 @@ export function NewFeatureSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 			<NewFeatureAdvanced feature={feature} setFeature={setFeature} />
 
 			<div className="mt-auto p-4 w-full flex-row grid grid-cols-2 gap-2">
-				<Button variant="secondary" className="w-full" onClick={handleCancel}>
+				<ShortcutButton
+					variant="secondary"
+					className="w-full"
+					onClick={handleCancel}
+					singleShortcut="escape"
+				>
 					Cancel
-				</Button>
-				<Button className="w-full" onClick={handleCreateFeature}>
+				</ShortcutButton>
+				<ShortcutButton
+					className="w-full"
+					onClick={handleCreateFeature}
+					metaShortcut="enter"
+				>
 					Create feature
-				</Button>
+				</ShortcutButton>
 			</div>
 		</div>
 	);
