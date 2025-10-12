@@ -52,6 +52,7 @@ export const apiFeatureToDbFeature = ({
 		type: featureType,
 		config: newConfig,
 		archived: apiFeature.archived ?? originalFeature?.archived ?? false,
+		event_names: [],
 	} satisfies Feature;
 };
 
