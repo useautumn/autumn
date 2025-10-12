@@ -2,7 +2,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/v2/buttons/Button";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
-import { useProductChangedAlert } from "@/components/v2/hooks";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
 	useHasChanges,
@@ -14,6 +13,7 @@ import { useProductCountsQuery } from "../../product/hooks/queries/useProductCou
 import { useProductQuery } from "../../product/hooks/useProductQuery";
 import { useProductContext } from "../../product/ProductContext";
 import { updateProduct } from "../../product/utils/updateProduct";
+import { useProductChangedAlert } from "../hooks/useProductChangedAlert";
 
 interface SaveChangesBarProps {
 	isOnboarding?: boolean;
@@ -37,7 +37,7 @@ export const SaveChangesBar = ({
 	const { counts, isLoading } = useProductCountsQuery();
 	const { refetch: queryRefetch } = useProductQuery();
 
-	const { modal } = useProductChangedAlert({
+	useProductChangedAlert({
 		hasChanges,
 		disabled: isOnboarding, // Disable navigation blocking in onboarding mode
 	});
@@ -85,29 +85,26 @@ export const SaveChangesBar = ({
 	if (!hasChanges) return null;
 
 	return (
-		<>
-			{modal}
-			<div className="w-full flex justify-center items-center h-20 mb-10">
-				<div
-					className={`flex items-center gap-2 p-2 pl-3 rounded-xl border border-input bg-white ${
-						isOnboarding ? "shadow-lg" : ""
-					}`}
+		<div className="w-full flex justify-center items-center h-20 mb-10 mt-10">
+			<div
+				className={`flex items-center gap-2 p-2 pl-3 rounded-xl border border-input bg-white ${
+					isOnboarding ? "shadow-lg" : ""
+				}`}
+			>
+				<p className="text-body whitespace-nowrap truncate">
+					You have unsaved changes
+				</p>
+				<Button variant="secondary" onClick={handleDiscardClicked}>
+					Discard
+				</Button>
+				<ShortcutButton
+					metaShortcut="s"
+					onClick={handleSaveClicked}
+					isLoading={saving}
 				>
-					<p className="text-body whitespace-nowrap truncate">
-						You have unsaved changes
-					</p>
-					<Button variant="secondary" onClick={handleDiscardClicked}>
-						Discard
-					</Button>
-					<ShortcutButton
-						metaShortcut="s"
-						onClick={handleSaveClicked}
-						isLoading={saving}
-					>
-						Save
-					</ShortcutButton>
-				</div>
+					Save
+				</ShortcutButton>
 			</div>
-		</>
+		</div>
 	);
 };

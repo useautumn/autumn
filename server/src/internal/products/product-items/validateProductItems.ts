@@ -9,6 +9,8 @@ import {
 	type ProductItem,
 	ProductItemInterval,
 	ProductItemSchema,
+	type RolloverConfig,
+	RolloverDuration,
 	UsageModel,
 } from "@autumn/shared";
 import { itemToEntInterval } from "@shared/utils/productV2Utils/productItemUtils/itemIntervalUtils.js";
@@ -128,6 +130,14 @@ const validateProductItem = ({
 	if ((isPriceItem(item) || isFeaturePriceItem(item)) && item.price === 0) {
 		throw new RecaseError({
 			message: `Price must be 0 or greater`,
+			code: ErrCode.InvalidInputs,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+
+	if (isFeaturePriceItem(item) && nullish(item.usage_model)) {
+		throw new RecaseError({
+			message: `Usage model is required for priced features. Please select one for the feature ${item.feature_id}`,
 			code: ErrCode.InvalidInputs,
 			statusCode: StatusCodes.BAD_REQUEST,
 		});

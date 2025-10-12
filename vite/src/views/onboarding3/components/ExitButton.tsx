@@ -24,7 +24,7 @@ export function ExitButton({ position = "absolute" }: ExitButtonProps) {
 					<IconButton
 						variant="skeleton"
 						size="sm"
-						onClick={() => navigateTo("/products", navigate, env)}
+						onClick={() => navigateTo("/products?tab=products", navigate, env)}
 						icon={<ArrowLeftIcon className="size-4" />}
 					>
 						Exit to Dashboard
