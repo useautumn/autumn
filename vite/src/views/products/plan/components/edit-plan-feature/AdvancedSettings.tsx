@@ -12,12 +12,16 @@ import {
 	getFeatureUsageType,
 } from "@/utils/product/entitlementUtils";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
+import { useHasEntityFeatureId } from "../../hooks/useHasEntityFeatureId";
+import { EntityFeatureConfig } from "./advanced-settings/EntityFeatureConfig";
+import { ProrationConfig } from "./advanced-settings/ProrationConfig";
 import { RolloverConfig } from "./advanced-settings/RolloverConfig";
 import { UsageLimit } from "./advanced-settings/UsageLimit";
 
 export function AdvancedSettings() {
 	const { features } = useFeaturesQuery();
 	const { item, setItem } = useProductItemContext();
+	const { hasEntityFeatureId } = useHasEntityFeatureId();
 
 	if (!item) return null;
 
@@ -25,7 +29,7 @@ export function AdvancedSettings() {
 	const hasCreditSystem = getFeatureCreditSystem({ item, features });
 
 	// Rollover logic
-	const showRolloverConfig =
+	const _showRolloverConfig =
 		(hasCreditSystem || usageType === FeatureUsageType.Single) &&
 		item.interval !== null &&
 		item.included_usage &&
@@ -100,118 +104,12 @@ export function AdvancedSettings() {
 
 					{/* Rollover */}
 					<RolloverConfig />
-					{/* {showRolloverConfig && (
-						<AreaCheckbox
-							title="Rollovers"
-							tooltip="Rollovers carry unused credits to the next billing cycle. Set a maximum rollover amount and specify how many cycles before resetting."
-							checked={hasRollover}
-							onCheckedChange={(checked) => {
-								if (checked) {
-									setItem({
-										...item,
-										reset_usage_when_enabled: true,
-										config: {
-											...(item.config || {}),
-											rollover: defaultRollover,
-										},
-									});
-								} else {
-									setRolloverConfig(null);
-								}
-							}}
-						>
-							<div
-								className="space-y-4"
-								onClick={(e) => e.stopPropagation()}
-								onKeyDown={(e) => e.stopPropagation()}
-							>
-								<div className="space-y-2">
-									<FormLabel>Maximum rollover amount</FormLabel>
-									<div className="flex items-center gap-2">
-										<Input
-											type="number"
-											value={
-												rollover?.max === null
-													? ""
-													: rollover?.max === 0
-														? ""
-														: rollover?.max
-											}
-											className="w-32"
-											placeholder={
-												rollover?.max === null
-													? "Unlimited"
-													: "e.g. 100 credits"
-											}
-											disabled={rollover?.max === null}
-											onChange={(e) => {
-												const value = e.target.value;
-												const numValue =
-													value === "" ? 0 : parseInt(value) || 0;
-												setRolloverConfigKey("max", numValue);
-											}}
-											onClick={(e) => e.stopPropagation()}
-										/>
-										<IconCheckbox
-											icon={<InfinityIcon />}
-											iconOrientation="center"
-											variant="muted"
-											checked={rollover?.max === null}
-											onCheckedChange={(checked) =>
-												setRolloverConfigKey("max", checked ? null : 0)
-											}
-										/>
-									</div>
-								</div>
 
-								<div className="space-y-2">
-									<FormLabel>Rollover duration</FormLabel>
-									<div className="flex items-center gap-2">
-										{rollover?.duration === RolloverDuration.Month && (
-											<Input
-												type="number"
-												value={
-													rollover?.length === 0 ? "" : rollover?.length || ""
-												}
-												onChange={(e) => {
-													const value = e.target.value;
-													const numValue =
-														value === "" ? 0 : parseInt(value) || 0;
-													setRolloverConfigKey("length", numValue);
-												}}
-												className="w-32"
-												placeholder="e.g. 1 month"
-												onClick={(e) => e.stopPropagation()}
-											/>
-										)}
-										<Select
-											value={rollover?.duration}
-											onValueChange={(value) => {
-												setRolloverConfigKey(
-													"duration",
-													value as RolloverDuration,
-												);
-											}}
-										>
-											<SelectTrigger
-												className="w-32"
-												onClick={(e) => e.stopPropagation()}
-											>
-												<SelectValue placeholder="Select duration" />
-											</SelectTrigger>
-											<SelectContent>
-												{Object.values(RolloverDuration).map((duration) => (
-													<SelectItem key={duration} value={duration}>
-														{duration}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-									</div>
-								</div>
-							</div>
-						</AreaCheckbox>
-					)} */}
+					{/* Proration Config */}
+					<ProrationConfig />
+
+					{/* Entity Feature Config */}
+					{hasEntityFeatureId && <EntityFeatureConfig />}
 				</div>
 			</SheetAccordionItem>
 		</SheetAccordion>

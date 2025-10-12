@@ -1,21 +1,12 @@
 import { notNullish } from "@autumn/shared";
 import { AreaCheckbox } from "@/components/v2/checkboxes/AreaCheckbox";
 import { Input } from "@/components/v2/inputs/Input";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import {
-	getFeatureCreditSystem,
-	getFeatureUsageType,
-} from "@/utils/product/entitlementUtils";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
 export function UsageLimit() {
-	const { features } = useFeaturesQuery();
 	const { item, setItem } = useProductItemContext();
 
 	if (!item) return null;
-
-	const usageType = getFeatureUsageType({ item, features });
-	const hasCreditSystem = getFeatureCreditSystem({ item, features });
 
 	return (
 		<AreaCheckbox
@@ -44,7 +35,7 @@ export function UsageLimit() {
 			<Input
 				type="number"
 				value={item.usage_limit || ""}
-				className="w-32"
+				className="w-2/3"
 				onChange={(e) => {
 					const value = e.target.value;
 					const numValue = value === "" ? 0 : parseInt(value) || null;
