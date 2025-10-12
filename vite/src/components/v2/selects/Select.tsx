@@ -21,12 +21,7 @@ function SelectGroup({
 function SelectValue({
 	...props
 }: React.ComponentProps<typeof SelectPrimitive.Value>) {
-	return (
-		<SelectPrimitive.Value
-			data-slot="select-value"
-			{...props}
-		/>
-	);
+	return <SelectPrimitive.Value data-slot="select-value" {...props} />;
 }
 
 function SelectTrigger({
@@ -46,7 +41,7 @@ function SelectTrigger({
 				"[&_svg:not([class*='text-'])]:text-muted-foreground flex items-center justify-between gap-2 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 
 				// Use only custom styles for visual appearance
-				"input-base select-shadow select-bg h-input select-none",
+				"data-placeholder:!text-t6 input-base select-shadow select-bg h-input select-none",
 				className,
 			)}
 			{...props}

@@ -29,19 +29,19 @@ export const PlanCardToolbar = ({
 
 	return (
 		<>
-			{product?.id && (
-				<CopyButton
-					text={product?.id ? product?.id : ""}
-					className="text-xs"
-					size="sm"
-				/>
-			)}
 			<DeletePlanDialog
 				open={deleteOpen}
 				setOpen={setDeleteOpen}
 				onDeleteSuccess={onDeleteSuccess}
 			/>
 			<div className="flex flex-row items-center gap-1">
+				{product?.id && (
+					<CopyButton
+						text={product?.id ? product?.id : ""}
+						className="text-xs"
+						size="sm"
+					/>
+				)}
 				<IconButton
 					icon={<PencilSimpleIcon />}
 					onClick={onEdit}

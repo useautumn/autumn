@@ -1,10 +1,14 @@
-import type { CreateFeature } from "@autumn/shared";
+import type { CreateFeature, ProductV2 } from "@autumn/shared";
 import { apiFeatureToDbFeature, CreateFeatureSchema } from "@autumn/shared";
 import type { AxiosError } from "axios";
 import { useCallback } from "react";
 import { toast } from "sonner";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
+import {
+	useFeatureStore,
+	useHasFeatureChanges,
+} from "@/hooks/stores/useFeatureStore";
+import { useProductStore } from "@/hooks/stores/useProductStore";
 import { FeatureService } from "@/services/FeatureService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
@@ -18,6 +22,11 @@ export const useFeatureCreationActions = () => {
 	const baseFeature = useFeatureStore((state) => state.baseFeature);
 	const setBaseFeature = useFeatureStore((state) => state.setBaseFeature);
 	const setFeature = useFeatureStore((state) => state.setFeature);
+	const hasFeatureChanges = useHasFeatureChanges();
+
+	// Get product store state
+	const baseProduct = useProductStore((s) => s.baseProduct);
+	const setProduct = useProductStore((s) => s.setProduct);
 
 	// Create or update feature
 	const handleProceed = useCallback(async (): Promise<boolean> => {
@@ -28,6 +37,11 @@ export const useFeatureCreationActions = () => {
 				description: result.error.issues.map((x) => x.message).join(".\n"),
 			});
 			return false;
+		}
+
+		// If feature exists and no changes, skip update
+		if (baseFeature?.id && !hasFeatureChanges) {
+			return true;
 		}
 
 		try {
@@ -43,6 +57,7 @@ export const useFeatureCreationActions = () => {
 						id: feature.id,
 						type: feature.type,
 						config: feature.config,
+						event_names: feature.event_names,
 					},
 				);
 
@@ -56,6 +71,7 @@ export const useFeatureCreationActions = () => {
 					id: feature.id,
 					type: feature.type,
 					config: feature.config,
+					event_names: feature.event_names,
 				});
 				updatedFeature = apiFeatureToDbFeature({ apiFeature: data });
 				toast.success(`Feature "${feature.name}" created successfully!`);
@@ -69,6 +85,25 @@ export const useFeatureCreationActions = () => {
 			// Update both base and working copy after successful save
 			setBaseFeature(updatedFeature);
 			setFeature(updatedFeature);
+
+			// Refetch product from backend to sync changes (e.g., entitlement updates when feature type changes)
+			// This is critical because handleFeatureTypeChanged may update entitlements on the backend
+			if (baseProduct?.id) {
+				const { data } = await axiosInstance.get<{
+					products: ProductV2[];
+					groupToDefaults: Record<string, Record<string, ProductV2>>;
+				}>("/products/products");
+
+				const syncedProduct = data.products.find(
+					(p) => p.id === baseProduct.id,
+				);
+
+				if (syncedProduct) {
+					// Sync both base and working copy with backend state
+					useProductStore.getState().setBaseProduct(syncedProduct);
+					setProduct(syncedProduct);
+				}
+			}
 
 			// Note: Feature item creation is now handled by useInitFeatureItem when entering Step 3
 			// This ensures proper initialization on both normal flow and refresh scenarios
@@ -84,10 +119,13 @@ export const useFeatureCreationActions = () => {
 	}, [
 		feature,
 		baseFeature,
+		baseProduct,
 		axiosInstance,
 		refetchFeatures,
 		setBaseFeature,
 		setFeature,
+		setProduct,
+		hasFeatureChanges,
 	]);
 
 	return {

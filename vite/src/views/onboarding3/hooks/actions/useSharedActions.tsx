@@ -1,10 +1,12 @@
-import type { ProductV2 } from "@autumn/shared";
+import { FeatureType, type ProductV2 } from "@autumn/shared";
 import { useCallback, useMemo } from "react";
 import { useNavigate } from "react-router";
+import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEnv } from "@/utils/envUtils";
 import { OnboardingStep } from "../../utils/onboardingUtils";
+import { useOnboarding3QueryState } from "../useOnboarding3QueryState";
 
 interface SharedActionsProps {
 	step: OnboardingStep;
@@ -30,6 +32,12 @@ export const useSharedActions = ({
 
 	const setSheet = useSheetStore((state) => state.setSheet);
 
+	// Get query state setters
+	const { setQueryStates } = useOnboarding3QueryState();
+
+	// Get feature to check if Boolean
+	const feature = useFeatureStore((s) => s.feature);
+
 	// Handle plan selection from dropdown
 	const handlePlanSelect = useCallback(
 		async (planId: string) => {
@@ -43,14 +51,18 @@ export const useSharedActions = ({
 				return;
 			}
 
-			// Set as base product and working product
-			setBaseProduct(selectedProduct);
-			setProduct(selectedProduct);
+			// Set both baseProduct and product atomically using getState() to avoid timing issues
+			const productStore = useProductStore.getState();
+			productStore.setBaseProduct(selectedProduct);
+			productStore.setProduct(selectedProduct);
+
+			// Update product_id in query params
+			setQueryStates({ product_id: planId });
 
 			// Keep the edit-plan sheet open
 			setSheet({ type: "edit-plan" });
 		},
-		[product.id, products, setBaseProduct, setProduct, setSheet],
+		[product.id, products, setQueryStates, setSheet],
 	);
 
 	// Handle back navigation
@@ -64,10 +76,24 @@ export const useSharedActions = ({
 			setProduct(baseProduct);
 		}
 
-		// handleBackNavigation logic is mostly commented out in utils
-		// Just pop the step
+		// If we're on Step 4 (Playground), discard any changes made and reset to baseProduct
+		// This prevents invalid configurations from blocking progress if user goes back to Step 3
+		if (step === OnboardingStep.Playground && baseProduct) {
+			setProduct(baseProduct);
+		}
+
+		// If we're on Step 4 (Playground) and feature is Boolean, skip Step 3 and go to Step 2
+		if (
+			step === OnboardingStep.Playground &&
+			feature?.type === FeatureType.Boolean
+		) {
+			setQueryStates({ step: OnboardingStep.FeatureCreation });
+			return;
+		}
+
+		// Default: pop one step back
 		popStep();
-	}, [popStep, step, baseProduct, setProduct]);
+	}, [popStep, step, baseProduct, setProduct, feature, setQueryStates]);
 
 	// Handle create plan success from dialog
 	const onCreatePlanSuccess = useCallback(
@@ -81,6 +107,9 @@ export const useSharedActions = ({
 				setBaseProduct(newProduct);
 				setProduct(newProduct);
 
+				// Update product_id in query params
+				setQueryStates({ product_id: newProduct.id });
+
 				// Open edit-plan sheet
 				setSheet({ type: "edit-plan" });
 			} catch (error) {
@@ -89,7 +118,15 @@ export const useSharedActions = ({
 				navigateTo(`/products/${newProduct.id}`, navigate, env);
 			}
 		},
-		[setBaseProduct, setProduct, refetchProducts, setSheet, navigate, env],
+		[
+			setBaseProduct,
+			setProduct,
+			refetchProducts,
+			setQueryStates,
+			setSheet,
+			navigate,
+			env,
+		],
 	);
 
 	// Handle delete plan success from dialog

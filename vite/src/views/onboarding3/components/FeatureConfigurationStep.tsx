@@ -1,4 +1,4 @@
-import { EditPlanFeatureSheet } from "../../products/plan/components/EditPlanFeatureSheet/EditPlanFeatureSheet";
+import { EditPlanFeatureSheet } from "../../products/plan/components/edit-plan-feature/EditPlanFeatureSheet";
 
 export const FeatureConfigurationStep = () => {
 	return (

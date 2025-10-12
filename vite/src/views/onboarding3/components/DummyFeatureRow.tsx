@@ -4,7 +4,7 @@ import {
 	type ProductItem,
 	ProductItemFeatureType,
 } from "@autumn/shared";
-import { PlanFeatureIcon } from "@/views/products/plan/components/PlanCard/PlanFeatureIcon";
+import { PlanFeatureIcon } from "@/views/products/plan/components/plan-card/PlanFeatureIcon";
 
 // Custom dot component with bigger height but smaller width
 const CustomDotIcon = () => {
