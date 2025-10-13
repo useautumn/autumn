@@ -1,4 +1,6 @@
+import { ProductCounts, type ProductV2 } from "@autumn/shared";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -7,10 +9,6 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { ProductCounts, ProductV2 } from "@autumn/shared";
-import { ProductService } from "@/services/products/ProductService";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-
 import {
 	Select,
 	SelectContent,
@@ -18,10 +16,11 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { getBackendErr } from "@/utils/genUtils";
-import { toast } from "sonner";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useGeneralQuery } from "@/hooks/queries/useGeneralQuery";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { ProductService } from "@/services/products/ProductService";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { getBackendErr } from "@/utils/genUtils";
 import { useModelPricingContext } from "@/views/onboarding2/model-pricing/ModelPricingContext";
 
 export const DeleteProductDialog = ({

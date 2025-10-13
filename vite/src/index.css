@@ -48,6 +48,9 @@ html {
 
 	--primary: #8838ff;
 	--primary-foreground: white;
+	--hover-primary: #fcfaff;
+	--active-primary: #f6f0ff;
+	--radio-group-hover-primary: #fcfaff;
 
 	--border: #ddd;
 	--card-border: #d1d1d1;
@@ -162,8 +165,9 @@ html {
 	--color-input: var(--input);
 	--color-icon1: var(--icon1);
 
-	--color-hover-primary: #fcfaff;
-	--color-active-primary: #f6f0ff;
+	--color-hover-primary: var(--hover-primary);
+	--color-active-primary: var(--active-primary);
+	--color-radio-group-hover-primary: var(--radio-group-hover-primary);
 	--color-panel-icon-background: #ede1ff;
 
 	--color-primary: var(--primary);
@@ -313,9 +317,9 @@ input[type="number"]::-webkit-inner-spin-button {
 	}
 }
 
-button {
+/* button {
 	cursor: pointer;
-}
+} */
 
 .shimmer {
 	position: relative;

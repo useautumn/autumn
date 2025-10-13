@@ -1,25 +1,26 @@
-import { Button } from "@/components/ui/button";
-import { DialogFooter } from "@/components/ui/dialog";
-
-import { DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { ProductService } from "@/services/products/ProductService";
-import { toast } from "sonner";
+import { AppEnv, type ProductV2 } from "@autumn/shared";
 import React, { useState } from "react";
-import { AppEnv } from "@autumn/shared";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useEnv } from "@/utils/envUtils";
-import { ProductV2 } from "@autumn/shared";
-import { getBackendErr } from "@/utils/genUtils";
+import { toast } from "sonner";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import { Button } from "@/components/ui/button";
+import {
+	DialogContent,
+	DialogFooter,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
-	SelectItem,
+	Select,
 	SelectContent,
+	SelectItem,
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Select } from "@/components/ui/select";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { ProductService } from "@/services/products/ProductService";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useEnv } from "@/utils/envUtils";
+import { getBackendErr } from "@/utils/genUtils";
 
 export const CopyDialog = ({
 	product,

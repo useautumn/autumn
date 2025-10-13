@@ -1,5 +1,6 @@
 import { FeatureUsageType } from "@autumn/shared";
 import { AreaCheckbox } from "@/components/v2/checkboxes/AreaCheckbox";
+import { FormLabel } from "@/components/v2/form/FormLabel";
 import {
 	Select,
 	SelectContent,
@@ -38,7 +39,7 @@ export function EntityFeatureConfig() {
 	return (
 		<AreaCheckbox
 			title="Per entity feature"
-			description="Link this item to a specific feature entity in your app"
+			// description="Link this item to a specific feature entity in your app"
 			checked={item.entity_feature_id != null}
 			onCheckedChange={(checked) => {
 				setItem({
@@ -49,6 +50,9 @@ export function EntityFeatureConfig() {
 				});
 			}}
 		>
+			<FormLabel>
+				Link this item to a specific feature entity in your app
+			</FormLabel>
 			<Select
 				value={item.entity_feature_id || undefined}
 				onValueChange={(value) => {
@@ -58,7 +62,10 @@ export function EntityFeatureConfig() {
 					});
 				}}
 			>
-				<SelectTrigger className="w-2/3" onClick={(e) => e.stopPropagation()}>
+				<SelectTrigger
+					className="w-xs max-w-full"
+					onClick={(e) => e.stopPropagation()}
+				>
 					<SelectValue placeholder="Select a feature" />
 				</SelectTrigger>
 				<SelectContent>

@@ -38,14 +38,14 @@ export default function UpdateFeature({
 		if (open) {
 			originalFeature.current = selectedFeature;
 		}
-	}, [open]);
+	}, [open, selectedFeature]);
 
 	useEffect(() => {
 		if (open) {
 			setEventNameInput("");
 			setEventNameChanged(true);
 		}
-	}, [open, selectedFeature]);
+	}, [open]);
 
 	const updateConfig = () => {
 		const config: any = structuredClone(selectedFeature.config);

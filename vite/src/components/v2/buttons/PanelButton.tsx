@@ -21,16 +21,15 @@ export function PanelButton({
 			data-state={isSelected ? "open" : "closed"}
 			className={cn(
 				// Fixed dimensions
-				"w-[144px] h-[72px] relative flex items-center justify-center overflow-hidden cursor-pointer flex-shrink-0",
-				// Design system classes (following Select pattern)
-				"input-base input-shadow select-bg",
+				"w-[144px] h-[72px] relative flex items-center justify-center overflow-hidden flex-shrink-0 ",
+
 				// Thicker border for panel effect
 				"!rounded-[0.5rem] !border-[0.09375rem]",
 				// Custom panel shadows
 				"shadow-[inset_0px_-8px_22px_0px_rgba(0,0,0,0.04)]",
-				// Selected state shadows
-				// isSelected &&
-				// 	"shadow-[0px_8px_18px_20px_rgba(136,56,255,0.05)] shadow-[0px_2px_8px_0px_rgba(136,56,255,0.25)]",
+
+				// Design system classes (following Select pattern)
+				"input-base input-shadow-default input-state-open outline-none",
 				className,
 			)}
 		>

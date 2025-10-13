@@ -7,8 +7,7 @@ type StringKeys<T> = {
 }[keyof T];
 
 type UseAutoSlugProps<T, S extends StringKeys<T>, U extends StringKeys<T>> = {
-	state: T;
-	setState: (updater: T | ((prev: T) => T)) => void;
+	setState: ((updater: T | ((prev: T) => T)) => void) | ((state: T) => void);
 	sourceKey: S;
 	targetKey: U;
 	disableAutoSlug?: boolean;
@@ -18,7 +17,12 @@ export function useAutoSlug<
 	T,
 	S extends StringKeys<T>,
 	U extends StringKeys<T>,
->({ state, setState, sourceKey, targetKey, disableAutoSlug = false }: UseAutoSlugProps<T, S, U>) {
+>({
+	setState,
+	sourceKey,
+	targetKey,
+	disableAutoSlug = false,
+}: UseAutoSlugProps<T, S, U>) {
 	const targetManuallyChangedRef = useRef(disableAutoSlug);
 
 	const setSource = useCallback(

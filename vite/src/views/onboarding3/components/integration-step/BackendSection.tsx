@@ -53,7 +53,10 @@ export const BackendSection = () => {
 									}
 								/>
 							</CodeGroupList>
-							<CodeGroupContent value=".env">
+							<CodeGroupContent
+								value=".env"
+								copyText={`AUTUMN_SECRET_KEY=${secretKey}`}
+							>
 								<CodeGroupCode>{`AUTUMN_SECRET_KEY=${secretKey}`}</CodeGroupCode>
 							</CodeGroupContent>
 						</CodeGroup>
@@ -73,7 +76,7 @@ export const BackendSection = () => {
 									onCopy={() => navigator.clipboard.writeText(snippet)}
 								/>
 							</CodeGroupList>
-							<CodeGroupContent value="handler">
+							<CodeGroupContent value="handler" copyText={snippet}>
 								<CodeGroupCode language="typescript">{snippet}</CodeGroupCode>
 							</CodeGroupContent>
 						</CodeGroup>

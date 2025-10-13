@@ -2,14 +2,17 @@ import { useState } from "react";
 import { SheetContainer } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { cn } from "@/lib/utils";
 import { ProductContext } from "@/views/products/product/ProductContext";
 import LoadingScreen from "../general/LoadingScreen";
 import { SaveChangesBar } from "../products/plan/components/SaveChangesBar";
 import ConnectStripeDialog from "./ConnectStripeDialog";
 import { ExitButton } from "./components/ExitButton";
+import { IntegrationStep } from "./components/IntegrationStep";
 import { OnboardingStepRenderer } from "./components/OnboardingStepRenderer";
 import { OnboardingSteps } from "./components/OnboardingSteps";
 import { StepHeader } from "./components/StepHeaders";
+import { useAutoSetProductId } from "./hooks/useAutoSetProductId";
 import { useAutoSkipToPlayground } from "./hooks/useAutoSkipToPlayground";
 import { useInitFeatureItem } from "./hooks/useInitFeatureItem";
 import { useOnboarding3QueryState } from "./hooks/useOnboarding3QueryState";
@@ -41,7 +44,10 @@ export default function OnboardingContent() {
 	useInitFeatureItem();
 
 	// Auto-skip to playground if steps 1-3 are already complete
-	useAutoSkipToPlayground();
+	const { isChecking: isCheckingAutoSkip } = useAutoSkipToPlayground();
+
+	// Auto-set product_id in query params when entering playground step
+	useAutoSetProductId();
 
 	// Initialize onboarding logic and store handlers
 	useOnboardingLogic();
@@ -49,7 +55,7 @@ export default function OnboardingContent() {
 	// Compute loading state
 	const isQueryLoading = productsLoading || featuresLoading;
 
-	if (isQueryLoading) {
+	if (isQueryLoading || isCheckingAutoSkip) {
 		return <LoadingScreen />;
 	}
 
@@ -65,68 +71,64 @@ export default function OnboardingContent() {
 					refetch: async () => {}, // Not needed in onboarding
 				}}
 			>
-				{step === OnboardingStep.Integration ? (
-					// Full-width centered layout for Integration step
-					// NOTE: This section kept with original layout as per user request
-					<div className="relative w-full h-full bg-[#EEEEEE]">
-						{/* Exit button - takes up space on left */}
-						<ExitButton position="fixed" />
+				{/* Standard layout for all steps - NO PROP DRILLING! */}
+				<div
+					className={cn(
+						"relative w-full h-full flex bg-[#EEEEEE] [scrollbar-gutter:stable]",
+						step === OnboardingStep.Integration
+							? "overflow-y-auto"
+							: "overflow-y-hidden",
+					)}
+				>
+					{/* Exit button */}
+					<ExitButton />
 
-						{/* Top right: Step header and controls - takes up space on right */}
-						<div className="fixed pt-4 pr-4 right-0 z-10 flex flex-col gap-2 items-end">
-							<div className="bg-card border-base border rounded-[12px] shadow-sm p-4">
-								{/* Components access Zustand directly - no props! */}
+					<div className="w-4/5 flex items-center justify-center relative ">
+						{/* Components access Zustand directly - no props! */}
+						{step === OnboardingStep.Integration ? (
+							<div className="w-full h-full flex items-start justify-center py-8 pl-10">
+								<div className="max-w-3xl w-full">
+									<IntegrationStep />
+								</div>
+							</div>
+						) : (
+							<>
+								<OnboardingPreview
+									setConnectStripeOpen={setConnectStripeOpen}
+								/>
+
+								{step === OnboardingStep.Playground && (
+									<div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">
+										<SaveChangesBar isOnboarding={true} />
+									</div>
+								)}
+							</>
+						)}
+					</div>
+
+					<div
+						className={cn(
+							"h-full flex flex-col p-3 min-w-lg max-w-lg pr-1",
+							step === OnboardingStep.Integration && "sticky top-0",
+						)}
+					>
+						<div className="rounded-lg h-full flex flex-col p-1 gap-[0.625rem] overflow-x-hidden">
+							<div className="bg-card border-base border overflow-x-hidden rounded-[12px] mt-1 p-4 shrink-0">
 								<StepHeader />
 							</div>
-							<div className="bg-card border-base border rounded-[12px] shadow-sm p-4 w-full">
-								{/* Components access Zustand directly - no props! */}
-								<OnboardingSteps />
-							</div>
-						</div>
-
-						{/* Main content - centered between islands */}
-						<div className="w-full h-full flex justify-center overflow-y-auto py-4 pl-[200px] pr-[432px]">
-							{/* Components access Zustand directly - no props! */}
-							<OnboardingStepRenderer />
-						</div>
-					</div>
-				) : (
-					// Standard layout for other steps - NO PROP DRILLING!
-					<div className="relative w-full h-full flex bg-[#EEEEEE]">
-						{/* Exit button */}
-						<ExitButton />
-
-						<div className="w-4/5 flex items-center justify-center relative">
-							{/* Components access Zustand directly - no props! */}
-							<OnboardingPreview setConnectStripeOpen={setConnectStripeOpen} />
-
-							{step === OnboardingStep.Playground && (
-								<div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">
-									<SaveChangesBar isOnboarding={true} />
-								</div>
-							)}
-						</div>
-
-						<div className="h-full flex flex-col p-3 min-w-lg max-w-lg">
-							<div className="rounded-lg h-full flex flex-col p-1 gap-[0.625rem] overflow-x-hidden">
-								<div className="bg-card border-base border overflow-x-hidden rounded-[12px] shadow-sm mt-1 p-4 shrink-0">
-									{/* Components access Zustand directly - no props! */}
-									<StepHeader />
-								</div>
-								<SheetContainer className="bg-card border-base border overflow-x-hidden rounded-[12px] shadow-sm p-0 flex-1 -mr-1">
-									{/* Components access Zustand directly - no props! */}
+							{step !== OnboardingStep.Integration && (
+								<SheetContainer className="bg-card border-base border overflow-x-hidden rounded-[12px] p-0 flex-1 pr-0">
 									<OnboardingStepRenderer />
 								</SheetContainer>
-								<div className="bg-card border-base border rounded-[12px] shadow-sm flex flex-col p-4 shrink-0">
-									<div className="flex items-center justify-center">
-										{/* Components access Zustand directly - no props! */}
-										<OnboardingSteps />
-									</div>
+							)}
+							<div className="bg-card border-base border rounded-[12px] flex flex-col p-4 shrink-0">
+								<div className="flex items-center justify-center">
+									<OnboardingSteps />
 								</div>
 							</div>
 						</div>
 					</div>
-				)}
+				</div>
 			</ProductContext.Provider>
 		</>
 	);

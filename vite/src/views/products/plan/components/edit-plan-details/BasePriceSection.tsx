@@ -111,7 +111,14 @@ export const BasePriceSection = ({
 					handleDeleteBasePrice();
 				}
 			}}
-			description="Fixed recurring price (e.g., $100/month). Leave unchecked for free or usage-based only plans."
+			description={
+				<span>
+					Fixed recurring price (e.g., $100/month). Uncheck this section for{" "}
+					<span className="text-primary font-bold">free</span> or{" "}
+					<span className="text-primary font-bold">usage-based only</span>{" "}
+					plans.
+				</span>
+			}
 		>
 			<div className="space-y-4">
 				<div className="grid grid-cols-2 gap-2">

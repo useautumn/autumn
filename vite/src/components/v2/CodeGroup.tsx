@@ -3,6 +3,7 @@ import * as TabsPrimitive from "@radix-ui/react-tabs";
 import { common, createStarryNight } from "@wooorm/starry-night";
 import { toHtml } from "hast-util-to-html";
 import * as React from "react";
+import { useClickWithoutDrag } from "@/hooks/common/useClickWithoutDrag";
 import { cn } from "@/lib/utils";
 
 const getStarryNight = async () => {
@@ -106,22 +107,115 @@ const CodeGroupCopyButton = React.forwardRef<
 CodeGroupCopyButton.displayName = "CodeGroupCopyButton";
 
 interface CodeGroupContentProps
-	extends React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content> {}
+	extends React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content> {
+	copyText?: string;
+}
 
 const CodeGroupContent = React.forwardRef<
 	React.ElementRef<typeof TabsPrimitive.Content>,
 	CodeGroupContentProps
->(({ className, ...props }, ref) => (
-	<TabsPrimitive.Content
-		ref={ref}
-		className={cn(
-			"bg-white border border-[#d1d1d1] border-t-0 rounded-bl-lg rounded-br-lg",
-			"p-4 outline-none",
-			className,
-		)}
-		{...props}
-	/>
-));
+>(({ className, copyText, children, ...props }, ref) => {
+	const [showCopiedFeedback, setShowCopiedFeedback] = React.useState(false);
+	const [isExiting, setIsExiting] = React.useState(false);
+
+	const handleCopy = React.useCallback(
+		(e: React.MouseEvent<HTMLDivElement>) => {
+			// Get current selection
+			const selection = window.getSelection();
+			const selectedText = selection?.toString() || "";
+
+			// Determine what to copy
+			const textToCopy = selectedText || copyText || "";
+
+			if (textToCopy) {
+				navigator.clipboard.writeText(textToCopy);
+
+				// Show feedback with fade in
+				setIsExiting(false);
+				setShowCopiedFeedback(true);
+
+				// Start fade out after delay
+				setTimeout(() => {
+					setIsExiting(true);
+				}, 1000);
+
+				// Hide completely after fade out animation
+				setTimeout(() => {
+					setShowCopiedFeedback(false);
+					setIsExiting(false);
+				}, 1200);
+			}
+		},
+		[copyText],
+	);
+
+	const { handleMouseDown, handleClick } = useClickWithoutDrag(handleCopy);
+
+	const handleKeyDown = React.useCallback(
+		(e: React.KeyboardEvent<HTMLDivElement>) => {
+			if (e.key === "Enter" || e.key === " ") {
+				e.preventDefault();
+				const textToCopy = copyText || "";
+				if (textToCopy) {
+					navigator.clipboard.writeText(textToCopy);
+					setIsExiting(false);
+					setShowCopiedFeedback(true);
+
+					setTimeout(() => {
+						setIsExiting(true);
+					}, 1000);
+
+					setTimeout(() => {
+						setShowCopiedFeedback(false);
+						setIsExiting(false);
+					}, 1200);
+				}
+			}
+		},
+		[copyText],
+	);
+
+	return (
+		<div className="relative">
+			<TabsPrimitive.Content
+				ref={ref}
+				className={cn(
+					"bg-white border border-[#d1d1d1] border-t-0 rounded-bl-lg rounded-br-lg",
+					"p-4 outline-none",
+					"cursor-pointer transition-colors",
+					"hover:bg-neutral-50/50",
+					className,
+				)}
+				onMouseDown={handleMouseDown}
+				onClick={handleClick}
+				onKeyDown={handleKeyDown}
+				role="button"
+				tabIndex={0}
+				aria-label="Click to copy code"
+				{...props}
+			>
+				{children}
+			</TabsPrimitive.Content>
+
+			{showCopiedFeedback && (
+				<div
+					className={cn(
+						"absolute inset-0 flex items-center justify-center pointer-events-none z-10 rounded-bl-lg rounded-br-lg overflow-hidden",
+						"transition-opacity duration-300",
+						"opacity-0",
+						!isExiting && "opacity-100",
+					)}
+				>
+					<div className="absolute inset-0 bg-white/80 backdrop-blur-[2px]" />
+					<div className="relative flex items-center gap-2 text-neutral-900 text-sm font-medium">
+						<CheckIcon className="size-4" />
+						<span>Copied!</span>
+					</div>
+				</div>
+			)}
+		</div>
+	);
+});
 CodeGroupContent.displayName = "CodeGroupContent";
 
 interface CodeGroupCodeProps extends React.ComponentPropsWithoutRef<"pre"> {

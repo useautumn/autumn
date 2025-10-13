@@ -56,16 +56,16 @@ export const InstallSection = () => {
 									}}
 								/>
 							</CodeGroupList>
-							<CodeGroupContent value="npm">
+							<CodeGroupContent value="npm" copyText="npm install autumn-js">
 								<CodeGroupCode>{`npm install autumn-js`}</CodeGroupCode>
 							</CodeGroupContent>
-							<CodeGroupContent value="pnpm">
+							<CodeGroupContent value="pnpm" copyText="pnpm add autumn-js">
 								<CodeGroupCode>{`pnpm add autumn-js`}</CodeGroupCode>
 							</CodeGroupContent>
-							<CodeGroupContent value="yarn">
+							<CodeGroupContent value="yarn" copyText="yarn add autumn-js">
 								<CodeGroupCode>{`yarn add autumn-js`}</CodeGroupCode>
 							</CodeGroupContent>
-							<CodeGroupContent value="bun">
+							<CodeGroupContent value="bun" copyText="bun add autumn-js">
 								<CodeGroupCode>{`bun add autumn-js`}</CodeGroupCode>
 							</CodeGroupContent>
 						</CodeGroup>

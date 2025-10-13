@@ -1,4 +1,5 @@
 import { OnDecrease, OnIncrease, UsageModel } from "@autumn/shared";
+import { AreaCheckbox } from "@/components/v2/checkboxes/AreaCheckbox";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import {
 	Select,
@@ -101,13 +102,13 @@ export function ProrationConfig() {
 	});
 
 	return (
-		<div>
-			<span className="text-checkbox-label font-medium">
-				Configure proration behaviour
-			</span>
-
-			<div className="space-y-4 mt-2">
-				<div className="space-y-2">
+		<AreaCheckbox
+			title="Configure proration behaviour"
+			checked={true}
+			// disabled={true}
+		>
+			<div className="space-y-4 w-xs max-w-full">
+				<div className="space-y-2 w-full">
 					<FormLabel>{increaseText}</FormLabel>
 					<Select
 						value={onIncreaseValue}
@@ -119,7 +120,7 @@ export function ProrationConfig() {
 						}}
 					>
 						<SelectTrigger
-							className="w-2/3 [&>span]:truncate"
+							className="w-full [&>span]:truncate"
 							onClick={(e) => e.stopPropagation()}
 						>
 							<SelectValue />
@@ -134,7 +135,7 @@ export function ProrationConfig() {
 					</Select>
 				</div>
 
-				<div className="space-y-2">
+				<div className="space-y-2 w-full">
 					<FormLabel>{decreaseText}</FormLabel>
 					<Select
 						value={onDecreaseValue}
@@ -146,7 +147,7 @@ export function ProrationConfig() {
 						}}
 					>
 						<SelectTrigger
-							className="w-2/3 [&>span]:truncate"
+							className="w-full [&>span]:truncate"
 							onClick={(e) => e.stopPropagation()}
 						>
 							<SelectValue />
@@ -154,13 +155,16 @@ export function ProrationConfig() {
 						<SelectContent>
 							{[OnDecrease.Prorate, OnDecrease.None].map((option) => (
 								<SelectItem key={option} value={option}>
-									{getOnDecreaseText({ option, usageModel: item.usage_model })}
+									{getOnDecreaseText({
+										option,
+										usageModel: item.usage_model ?? UsageModel.Prepaid,
+									})}
 								</SelectItem>
 							))}
 						</SelectContent>
 					</Select>
 				</div>
 			</div>
-		</div>
+		</AreaCheckbox>
 	);
 }

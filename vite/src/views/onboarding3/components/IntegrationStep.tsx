@@ -13,7 +13,7 @@ import { StackSelectionSection } from "./integration-step/StackSelectionSection"
 export const IntegrationStep = () => {
 	return (
 		<IntegrationProvider>
-			<div className="flex flex-col gap-8 px-4 [>&_.atmn-sep]:ml-[32px]">
+			<div className="flex flex-col gap-8 px-4 pb-8 [>&_.atmn-sep]:ml-[32px]">
 				<div className="text-left">
 					<h1 className="text-main-bold">Integrate Autumn</h1>
 					<h3 className="text-body">
@@ -23,19 +23,19 @@ export const IntegrationStep = () => {
 				</div>
 				<MCPSection />
 				<StackSelectionSection />
-				<Separator className="ml-[32px]" />
+				<Separator />
 				<ConnectStripeSection />
-				<Separator className="ml-[32px]" />
+				<Separator />
 				<EnvSection />
-				<Separator className="ml-[32px]" />
+				<Separator />
 				<InstallSection />
-				<Separator className="ml-[32px]" />
+				<Separator />
 				<BackendSection />
-				<Separator className="ml-[32px]" />
+				<Separator />
 				<FrontendSection />
-				<Separator className="ml-[32px]" />
+				<Separator />
 				<PricingTableSection />
-				<Separator className="ml-[32px]" />
+				<Separator />
 				<NextStepsSection />
 			</div>
 		</IntegrationProvider>

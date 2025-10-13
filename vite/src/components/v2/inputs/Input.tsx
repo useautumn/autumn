@@ -1,14 +1,39 @@
+import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+const inputVariants = cva(
+	`file:text-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 w-full min-w-0 rounded-lg border bg-transparent text-base outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm placeholder:select-none shadow-sm transition-none p-2
+	
+	// Custom classes
+	h-input input-base input-shadow-default input-state-focus
+	`,
+	{
+		variants: {
+			variant: {
+				default: "",
+				destructive: "input-destructive-base input-destructive-shadow",
+			},
+		},
+		defaultVariants: {
+			variant: "default",
+		},
+	},
+);
+
+export interface InputProps
+	extends React.ComponentProps<"input">,
+		VariantProps<typeof inputVariants> {}
+
 function Input({
 	className,
 	type,
+	variant,
 	onFocus,
 	onBlur,
 	...props
-}: React.ComponentProps<"input">) {
+}: InputProps) {
 	const [isFocused, setIsFocused] = React.useState(false);
 	return (
 		<input
@@ -23,16 +48,7 @@ function Input({
 				onBlur?.(e);
 			}}
 			data-state={isFocused ? "open" : "closed"}
-			className={cn(
-				"file:text-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input w-full min-w-0 rounded-lg border bg-transparent text-base outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-				// "hover:border-purple-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20",
-				"aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
-
-				// Custom classes
-				// "placeholder:text-form-placeholder text-form-text rounded-lg px-2 py-1 input-border transition-none",
-				"placeholder:text-t6 placeholder:select-none input-base input-shadow shadow-sm h-input transition-none",
-				className,
-			)}
+			className={cn(inputVariants({ variant }), className)}
 			{...props}
 		/>
 	);
