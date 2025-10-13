@@ -80,7 +80,7 @@ export function AdvancedSettings() {
 				title="Advanced settings"
 				description="Additional configuration options for this feature"
 			>
-				<div className="space-y-6 pt-2 pb-10">
+				<div className="space-y-6 pt-2 pb-10 [>&_.advanced-input-width]:w-xs">
 					{/* Reset existing usage when product is enabled */}
 					<AreaCheckbox
 						title="Reset existing usage when product is enabled"
@@ -105,11 +105,11 @@ export function AdvancedSettings() {
 					{/* Rollover */}
 					<RolloverConfig />
 
-					{/* Proration Config */}
-					<ProrationConfig />
-
 					{/* Entity Feature Config */}
 					{hasEntityFeatureId && <EntityFeatureConfig />}
+
+					{/* Proration Config */}
+					<ProrationConfig />
 				</div>
 			</SheetAccordionItem>
 		</SheetAccordion>

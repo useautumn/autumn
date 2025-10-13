@@ -102,7 +102,10 @@ export const EnvSection = () => {
 									}
 								/>
 							</CodeGroupList>
-							<CodeGroupContent value=".env">
+							<CodeGroupContent
+								value=".env"
+								copyText={`AUTUMN_SECRET_KEY=${secretKey}`}
+							>
 								<CodeGroupCode>{`AUTUMN_SECRET_KEY=${secretKey}`}</CodeGroupCode>
 							</CodeGroupContent>
 						</CodeGroup>

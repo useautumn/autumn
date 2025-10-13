@@ -29,9 +29,10 @@ export const useInitFeatureItem = () => {
 	useEffect(() => {
 		if (!product?.items || !baseFeature?.id) return;
 
-		// Find existing feature item (non-price item with a feature_id)
+		// Find existing feature item (any item with matching feature_id)
+		// This includes both priced and non-priced items
 		const existingFeatureItemIndex = product.items.findIndex(
-			(item: ProductItem) => item.feature_id && !item.price_id,
+			(item: ProductItem) => item.feature_id === baseFeature.id,
 		);
 
 		const updatedItems = [...product.items];

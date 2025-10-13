@@ -35,7 +35,7 @@ export function UsageLimit() {
 			<Input
 				type="number"
 				value={item.usage_limit || ""}
-				className="w-2/3"
+				className="w-xs max-w-full"
 				onChange={(e) => {
 					const value = e.target.value;
 					const numValue = value === "" ? 0 : parseInt(value) || null;

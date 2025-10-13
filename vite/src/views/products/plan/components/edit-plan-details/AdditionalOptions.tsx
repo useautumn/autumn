@@ -2,12 +2,16 @@ import { AreaCheckbox } from "@/components/v2/checkboxes/AreaCheckbox";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 
-export const AdditionalOptions = () => {
+export const AdditionalOptions = ({
+	withSeparator = true,
+}: {
+	withSeparator?: boolean;
+}) => {
 	const product = useProductStore((s) => s.product);
 	const setProduct = useProductStore((s) => s.setProduct);
 
 	return (
-		<SheetSection title="Additional Options">
+		<SheetSection title="Additional Options" withSeparator={withSeparator}>
 			<div className="space-y-4">
 				<AreaCheckbox
 					title="Default"

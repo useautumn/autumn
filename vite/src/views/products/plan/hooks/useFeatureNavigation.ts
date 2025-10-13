@@ -103,16 +103,39 @@ export const useFeatureNavigation = () => {
 		editPlan();
 	}, [editPlan]);
 
-	// Register hotkeys
-	useHotkeys("up", navigateUp, {
-		preventDefault: true,
-		enabled: filteredItems.length > 0,
-	});
+	// Check if a select or popover is open
+	const isSelectOpen = useCallback(() => {
+		// Check if any element with data-state="open" exists (Select, Popover, etc.)
+		const openElements = document.querySelectorAll('[data-state="open"]');
+		return openElements.length > 0;
+	}, []);
 
-	useHotkeys("down", navigateDown, {
-		preventDefault: true,
-		enabled: filteredItems.length > 0,
-	});
+	// Register hotkeys
+	useHotkeys(
+		"up",
+		(e) => {
+			if (!isSelectOpen()) {
+				navigateUp();
+			}
+		},
+		{
+			preventDefault: true,
+			enabled: filteredItems.length > 0,
+		},
+	);
+
+	useHotkeys(
+		"down",
+		(e) => {
+			if (!isSelectOpen()) {
+				navigateDown();
+			}
+		},
+		{
+			preventDefault: true,
+			enabled: filteredItems.length > 0,
+		},
+	);
 
 	useHotkeys("home", selectFirst, {
 		preventDefault: true,

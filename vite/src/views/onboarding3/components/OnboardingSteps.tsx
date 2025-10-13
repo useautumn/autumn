@@ -1,4 +1,3 @@
-import { Button } from "@/components/v2/buttons/Button";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
 import { useProductStore } from "@/hooks/stores/useProductStore";
@@ -30,7 +29,7 @@ export const OnboardingSteps = ({ className }: OnboardingStepsProps) => {
 	const totalSteps = 5;
 	const nextDisabled = !validateStep?.(step, product, feature);
 	const backDisabled = currentStep === 1;
-	const nextText = currentStep === 5 ? "Finish" : "Next";
+	const nextText = currentStep >= 5 ? "Go to Dashboard" : "Next";
 
 	return (
 		<div
