@@ -7,7 +7,6 @@ import {
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
-import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import {
@@ -76,10 +75,10 @@ export const handleScheduleFunction2 = async ({
 		});
 	}
 
-	const subItems = curSub?.items.data.filter((item) =>
-		subItemInCusProduct({ cusProduct: curCusProduct, subItem: item }),
-	);
-	const expectedEnd = getLatestPeriodEnd({ subItems });
+	// const subItems = curSub?.items.data.filter((item) =>
+	// 	subItemInCusProduct({ cusProduct: curCusProduct, subItem: item }),
+	// );
+	const expectedEnd = getLatestPeriodEnd({ subItems: curSub?.items.data });
 
 	if (schedule) {
 		const newItems = await paramsToScheduleItems({
