@@ -27,6 +27,9 @@ import {
 	attachParamToCusProducts,
 	getCustomerSub,
 } from "./convertAttachParams.js";
+import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
+import { isMainTrialBranch } from "./attachUtils.js";
+import { isDefaultTrialFullProduct } from "@/internal/products/productUtils/classifyProduct.js";
 
 const handleMultiProductErrors = async ({
 	attachParams,
@@ -276,11 +279,26 @@ const getChangeProductBranch = async ({
 		prices2: newPrices,
 	});
 
-	if (isUpgrade) {
-		if (isMainTrialBranch({ attachParams })) {
-			return AttachBranch.MainIsTrial;
+	// Check if it's a trial first
+	const isTrial = isMainTrialBranch({ attachParams });
+
+	if (isTrial) {
+		// If it's a default trial, preserve upgrade/downgrade branch for checkout flow
+		const isDefaultTrial = isDefaultTrialFullProduct({
+			product: mainProduct,
+			skipDefault: true,
+		});
+
+		if (isDefaultTrial) {
+			// Return the actual upgrade/downgrade branch - trial will stay intact
+			return isUpgrade ? AttachBranch.Upgrade : AttachBranch.Downgrade;
 		}
 
+		// Regular trial - cancel it and add new product immediately
+		return AttachBranch.MainIsTrial;
+	}
+
+	if (isUpgrade) {
 		return AttachBranch.Upgrade;
 	}
 

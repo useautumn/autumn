@@ -6,6 +6,7 @@ import {
 	BillingType,
 	cusProductsToCusEnts,
 	cusProductToPrices,
+	cusProductToProduct,
 	ErrCode,
 	type FullCusProduct,
 	getStartingBalance,
@@ -20,6 +21,7 @@ import {
 	getPriceEntitlement,
 	priceIsOneOffAndTiered,
 } from "@/internal/products/prices/priceUtils.js";
+import { isDefaultTrialFullProduct } from "@/internal/products/productUtils/classifyProduct.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish, nullOrUndefined } from "@/utils/genUtils.js";
 import type { AttachParams } from "../../cusProducts/AttachParams.js";
@@ -230,14 +232,32 @@ export const handleAttachErrors = async ({
 	}
 
 	// Invoice no payment enabled: onlyCheckout
+	// Note: Upgrade from trial should proceed to checkout, so only block if NOT from trial
 
 	if (onlyCheckout || flags.isPublic) {
 		const upgradeDowngradeFlows = [
 			AttachBranch.Upgrade,
 			AttachBranch.Downgrade,
-			AttachBranch.MainIsTrial,
 		];
-		if (upgradeDowngradeFlows.includes(branch)) {
+
+		// Check if upgrading from a default trial product
+		const { curMainProduct } = attachParamToCusProducts({ attachParams });
+		let isUpgradingFromDefaultTrial = false;
+
+		if (curMainProduct) {
+			const product = cusProductToProduct({ cusProduct: curMainProduct });
+			isUpgradingFromDefaultTrial = !!isDefaultTrialFullProduct({
+				product,
+				skipDefault: true, // Check trial characteristics even if not marked as default
+			});
+		}
+
+		console.log("isUpgradingFromDefaultTrial", isUpgradingFromDefaultTrial);
+
+		if (
+			upgradeDowngradeFlows.includes(branch) &&
+			!isUpgradingFromDefaultTrial
+		) {
 			handleNonCheckoutErrors({
 				flags,
 				config,
