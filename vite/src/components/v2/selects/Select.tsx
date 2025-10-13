@@ -2,14 +2,50 @@
 
 import * as SelectPrimitive from "@radix-ui/react-select";
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
-import type * as React from "react";
+import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+const SelectContext = React.createContext<{
+	triggerRef: React.RefObject<HTMLButtonElement>;
+} | null>(null);
+
 function Select({
+	onValueChange,
+	onOpenChange,
 	...props
 }: React.ComponentProps<typeof SelectPrimitive.Root>) {
-	return <SelectPrimitive.Root data-slot="select" {...props} />;
+	const triggerRef = React.useRef<HTMLButtonElement>(null);
+
+	const handleValueChange = (value: string) => {
+		onValueChange?.(value);
+	};
+
+	const handleOpenChange = (open: boolean) => {
+		// When dropdown closes, blur the trigger to remove focus ring
+		if (!open) {
+			setTimeout(() => {
+				if (triggerRef.current) {
+					triggerRef.current.blur();
+				} else {
+					// Fallback: blur the active element if ref isn't set
+					(document.activeElement as HTMLElement)?.blur();
+				}
+			}, 0);
+		}
+		onOpenChange?.(open);
+	};
+
+	return (
+		<SelectContext.Provider value={{ triggerRef }}>
+			<SelectPrimitive.Root
+				data-slot="select"
+				onValueChange={handleValueChange}
+				onOpenChange={handleOpenChange}
+				{...props}
+			/>
+		</SelectContext.Provider>
+	);
 }
 
 function SelectGroup({
@@ -32,8 +68,11 @@ function SelectTrigger({
 }: React.ComponentProps<typeof SelectPrimitive.Trigger> & {
 	size?: "sm" | "default";
 }) {
+	const context = React.useContext(SelectContext);
+
 	return (
 		<SelectPrimitive.Trigger
+			ref={context?.triggerRef}
 			data-slot="select-trigger"
 			data-size={size}
 			className={cn(
@@ -41,7 +80,7 @@ function SelectTrigger({
 				"[&_svg:not([class*='text-'])]:text-muted-foreground flex items-center justify-between gap-2 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 
 				// Use only custom styles for visual appearance
-				"data-placeholder:!text-t6 input-base select-shadow select-bg h-input select-none",
+				`h-input input-base input-shadow-default input-state-open`,
 				className,
 			)}
 			{...props}

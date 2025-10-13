@@ -9,7 +9,7 @@ import { useNavigate } from "react-router";
 import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
 import { useHasChanges, useProductStore } from "@/hooks/stores/useProductStore";
 import { useEnv } from "@/utils/envUtils";
-import { navigateTo } from "@/utils/genUtils";
+import { pushPage } from "@/utils/genUtils";
 import { useOnboardingStore } from "../../store/useOnboardingStore";
 import { getNextStep, OnboardingStep } from "../../utils/onboardingUtils";
 import { useFeatureConfigActions } from "./useFeatureConfigActions";
@@ -115,7 +115,7 @@ export const useStepActions = (props: StepActionsProps) => {
 								},
 							],
 						};
-						useProductStore.getState().setProduct(updatedProduct);
+						useProductStore.getState().setProduct(updatedProduct as ProductV2);
 					}
 				}
 			}
@@ -134,7 +134,16 @@ export const useStepActions = (props: StepActionsProps) => {
 				pushStep(nextStep);
 			} else {
 				// Finish onboarding
-				navigateTo("/sandbox/products", navigate, env);
+
+				pushPage({
+					navigate,
+					path: "/products",
+					queryParams: {
+						tab: "products",
+					},
+					preserveParams: true,
+				});
+				// navigateTo("/products?tab=products", navigate, env);
 			}
 		} finally {
 			// Always clear loading state
@@ -149,10 +158,9 @@ export const useStepActions = (props: StepActionsProps) => {
 		featureCreationActions,
 		featureConfigActions,
 		pushStep,
-		navigate,
-		env,
 		setIsButtonLoading,
 		hasChanges,
+		navigate,
 	]);
 
 	return {

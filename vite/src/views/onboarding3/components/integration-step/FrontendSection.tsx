@@ -48,7 +48,7 @@ export const FrontendSection = () => {
 									onCopy={() => navigator.clipboard.writeText(snippet)}
 								/>
 							</CodeGroupList>
-							<CodeGroupContent value="react">
+							<CodeGroupContent value="react" copyText={snippet}>
 								<CodeGroupCode language="jsx">{snippet}</CodeGroupCode>
 							</CodeGroupContent>
 						</CodeGroup>

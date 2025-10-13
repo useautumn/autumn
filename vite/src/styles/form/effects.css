@@ -1,0 +1,44 @@
+/** biome-ignore-all lint/complexity/noImportantStyles: important needed. */
+
+/* Input shadow CSS variables - define once, use everywhere */
+:root {
+	--input-shadow-default: 0 4px 4px 0 rgba(0, 0, 0, 0.02);
+
+	--input-shadow-hover: 0 4px 4px 0 rgba(0, 0, 0, 0.06);
+
+	--input-shadow-focus:
+		0 0 0 0.5px var(--primary), 0 0 8px 1px rgba(136, 56, 255, 0.25), 0 4px 4px
+		0 rgba(0, 0, 0, 0.04);
+
+	--input-shadow-focus-tiny:
+		0 0 0 0.2px var(--primary), 0 4px 4px 0 rgba(0, 0, 0, 0.04);
+}
+
+/* Standalone shadow classes - for direct use */
+.input-shadow-default {
+	box-shadow: var(--input-shadow-default);
+}
+
+.input-shadow-hover {
+	box-shadow: var(--input-shadow-hover);
+}
+
+.input-shadow-focus {
+	box-shadow: var(--input-shadow-focus);
+}
+
+.input-shadow-focus-tiny {
+	box-shadow: var(--input-shadow-focus-tiny);
+}
+
+/* Background effects - for interactive elements like Select */
+
+.bg-interactive {
+	&:hover:not(:disabled):not([data-state="open"]) {
+		background-color: var(--color-hover-primary);
+	}
+
+	&[data-state="open"] {
+		background-color: var(--color-active-primary);
+	}
+}

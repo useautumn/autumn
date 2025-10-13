@@ -27,10 +27,18 @@ const FeatureTestRow = ({
 			</label>
 			<div className="flex gap-2 items-end w-full">
 				<Input
+					type="number"
 					value={value === 0 ? "" : value}
 					onChange={(e) => {
-						if (Number(e.target.value) || e.target.value === "")
-							setValue(Number(e.target.value));
+						const inputValue = e.target.value;
+						if (inputValue === "" || inputValue === "-") {
+							setValue(0);
+						} else {
+							const numValue = Number(inputValue);
+							if (!Number.isNaN(numValue)) {
+								setValue(numValue);
+							}
+						}
 					}}
 					placeholder="Enter any amount to test"
 					className="text-[13px] flex-1"

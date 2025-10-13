@@ -20,6 +20,7 @@ export const useProductSync = ({
 
 		// Check if this is a new product (ID changed) or if product data changed
 		const isNewProduct = lastProductRef.current?.id !== product.id;
+		const isVersionChanged = lastProductRef.current?.version !== product.version;
 		const isProductUpdated = lastProductRef.current !== product;
 
 		if (isNewProduct || isProductUpdated) {
@@ -28,8 +29,8 @@ export const useProductSync = ({
 			// Always update baseProduct to reflect backend state
 			setBaseProduct(product);
 
-			// Only update product on initial load or when switching products
-			if (!hasInitialized.current || isNewProduct) {
+			// Update product on initial load, when switching products, or when version changes
+			if (!hasInitialized.current || isNewProduct || isVersionChanged) {
 				setProduct(product);
 				hasInitialized.current = true;
 			}

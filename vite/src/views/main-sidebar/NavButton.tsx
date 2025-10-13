@@ -1,12 +1,12 @@
-import { cn } from "@/lib/utils";
-import { getRedirectUrl, notNullish, pushPage } from "@/utils/genUtils";
-import { AppEnv } from "@autumn/shared";
-import { Link, useSearchParams } from "react-router";
-import { useEffect, useState } from "react";
-import { useSidebarContext } from "./SidebarContext";
-import { useEnv } from "@/utils/envUtils";
+import type { AppEnv } from "@autumn/shared";
 import { ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { Link, useSearchParams } from "react-router";
 import { useTab } from "@/hooks/common/useTab";
+import { cn } from "@/lib/utils";
+import { useEnv } from "@/utils/envUtils";
+import { notNullish, pushPage } from "@/utils/genUtils";
+import { useSidebarContext } from "./SidebarContext";
 
 export const NavButton = ({
 	value,
@@ -43,7 +43,7 @@ export const NavButton = ({
 	const subTab = searchParams.get("tab");
 
 	const isActive =
-		tab == value && (subValue ? subTab == subValue : true) && isOpen !== true;
+		tab === value && (subValue ? subTab === subValue : true) && isOpen !== true;
 
 	const [isHovered, setIsHovered] = useState(false);
 	const showTooltip = !expanded && isHovered;

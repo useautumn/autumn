@@ -1,20 +1,21 @@
-import { Button } from "@/components/ui/button";
+import type { Feature } from "@autumn/shared";
+import type { AxiosError } from "axios";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/v2/buttons/Button";
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/ui/dialog";
-
-import { Feature } from "@autumn/shared";
-import { useState, useEffect } from "react";
+} from "@/components/v2/dialogs/Dialog";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useGeneralQuery } from "@/hooks/queries/useGeneralQuery";
 import { FeatureService } from "@/services/FeatureService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
-import { toast } from "sonner";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useGeneralQuery } from "@/hooks/queries/useGeneralQuery";
 
 export const DeleteFeatureDialog = ({
 	feature,
@@ -29,12 +30,11 @@ export const DeleteFeatureDialog = ({
 }) => {
 	const { refetch } = useFeaturesQuery();
 	const axiosInstance = useAxiosInstance();
-	const [deleteLoading, setDeleteLoading] = useState(false);
-	const [archiveLoading, setArchiveLoading] = useState(false);
+	const [loading, setLoading] = useState(false);
 
 	const {
 		data: deletionText,
-		isLoading: isFeatureInfoLoading,
+		isLoading,
 		refetch: refetchFeatureInfo,
 	} = useGeneralQuery({
 		url: `/features/data/deletion_text/${feature.id}`,
@@ -46,7 +46,7 @@ export const DeleteFeatureDialog = ({
 		if (open) {
 			refetchFeatureInfo();
 		}
-	}, [open, feature.id]);
+	}, [open, feature.id, refetchFeatureInfo]);
 
 	const hasProducts = deletionText?.totalCount > 0;
 
@@ -57,37 +57,40 @@ export const DeleteFeatureDialog = ({
 
 		if (hasProducts) {
 			if (deletionText?.productName && deletionText?.totalCount) {
-				if (deletionText.totalCount === 1) {
-					return `${deletionText.productName} is using this feature. You must remove this feature from the product first, or archive it instead.`;
-				} else {
-					const otherCount = deletionText.totalCount - 1;
-					return `${deletionText.productName} and ${otherCount} other product${otherCount > 1 ? "s" : ""} are using this feature. You must remove this feature from the products first, or archive it instead.`;
+				const totalCount = Number.parseInt(deletionText.totalCount);
+
+				if (Number.isNaN(totalCount) || totalCount <= 0) {
+					return "There are products using this feature. You must remove this feature from the products first, or archive it instead.";
 				}
-			} else {
-				return "There are products using this feature. You must remove this feature from the products first, or archive it instead.";
+				if (totalCount === 1) {
+					return `${deletionText.productName} is using this feature. You must remove this feature from the product first, or archive it instead.`;
+				}
+				const otherCount = totalCount - 1;
+				return `${deletionText.productName} and ${otherCount} other product${otherCount > 1 ? "s" : ""} are using this feature. You must remove this feature from the products first, or archive it instead.`;
 			}
-		} else {
-			return "Are you sure you want to delete this feature? This action cannot be undone.";
+			return "There are products using this feature. You must remove this feature from the products first, or archive it instead.";
 		}
+		return "Are you sure you want to delete this feature? This action cannot be undone.";
 	};
 
 	const handleDelete = async () => {
-		if (archiveLoading) return;
-		setDeleteLoading(true);
+		setLoading(true);
 		try {
 			await FeatureService.deleteFeature(axiosInstance, feature.id);
 			await refetch();
+			toast.success("Feature deleted successfully");
 			setOpen(false);
-		} catch (error) {
-			console.error("Error deleting feature:", error);
-			toast.error(getBackendErr(error, "Error deleting feature"));
+		} catch (error: unknown) {
+			toast.error(
+				getBackendErr(error as AxiosError, "Error deleting feature"),
+			);
 		} finally {
-			setDeleteLoading(false);
+			setLoading(false);
 		}
 	};
 
 	const handleArchive = async () => {
-		setArchiveLoading(true);
+		setLoading(true);
 		const newArchivedState = !feature.archived;
 		try {
 			await FeatureService.updateFeature(axiosInstance, feature.id, {
@@ -98,62 +101,65 @@ export const DeleteFeatureDialog = ({
 				`Feature ${feature.name} ${newArchivedState ? "archived" : "unarchived"} successfully`,
 			);
 			setOpen(false);
-		} catch (error) {
-			console.error(
-				`Error ${newArchivedState ? "archiving" : "unarchiving"} feature:`,
-				error,
-			);
+		} catch (error: unknown) {
 			toast.error(
 				getBackendErr(
-					error,
+					error as AxiosError,
 					`Error ${newArchivedState ? "archiving" : "unarchiving"} feature`,
 				),
 			);
 		} finally {
-			setArchiveLoading(false);
+			setLoading(false);
 		}
 	};
 
-	if (isFeatureInfoLoading) return <></>;
+	if (isLoading) return null;
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogContent className="w-md" onClick={(e) => e.stopPropagation()}>
-				<DialogHeader>
-					<DialogTitle>
-						{feature.archived ? "Unarchive" : "Delete"} {feature.name}
+			<DialogContent onClick={(e) => e.stopPropagation()}>
+				<DialogHeader className="max-w-full">
+					<DialogTitle className="truncate max-w-[400px]">
+						{feature.archived ? "Unarchive" : hasProducts ? "Archive" : "Delete"}{" "}
+						{feature.name}
 					</DialogTitle>
+					<DialogDescription className="max-w-[400px] break-words">
+						{getDeleteMessage()
+							.split("\n")
+							.map((line, index) => (
+								<span key={index}>
+									{line}
+									{index < getDeleteMessage().split("\n").length - 1 && <br />}
+								</span>
+							))}
+					</DialogDescription>
 				</DialogHeader>
 
-				<div className="flex text-t2 text-sm">
-					<p>{getDeleteMessage()}</p>
-				</div>
 				<DialogFooter>
-					{hasProducts && !feature.archived && (
-						<Button
-							variant="outline"
-							onClick={handleArchive}
-							isLoading={archiveLoading}
-						>
-							{feature.archived ? "Unarchive" : "Archive"}
-						</Button>
-					)}
+					<Button variant="secondary" onClick={() => setOpen(false)}>
+						Cancel
+					</Button>
 					{feature.archived && (
 						<Button
-							variant="outline"
+							variant="primary"
 							onClick={handleArchive}
-							isLoading={archiveLoading}
+							isLoading={loading}
 						>
-							{"Unarchive"}
+							Unarchive
+						</Button>
+					)}
+					{hasProducts && !feature.archived && (
+						<Button variant="primary" onClick={handleArchive} isLoading={loading}>
+							Archive
 						</Button>
 					)}
 					{!hasProducts && !feature.archived && (
 						<Button
 							variant="destructive"
 							onClick={handleDelete}
-							isLoading={deleteLoading}
+							isLoading={loading}
 						>
-							Confirm
+							Delete
 						</Button>
 					)}
 				</DialogFooter>

@@ -17,16 +17,15 @@ export const StepHeader = () => {
 
 	if (step === OnboardingStep.Playground) {
 		return (
-			<div className="flex flex-col gap-2">
-				<SheetHeader
-					title={`Step ${stepNum}: ${config.title}`}
-					description={config.description}
-					noSeparator={true}
-					className="p-0 sticky"
-					isOnboarding={true}
-				/>
+			<SheetHeader
+				title={`Step ${stepNum}: ${config.title}`}
+				description={config.description}
+				noSeparator={true}
+				className="p-0 sticky"
+				isOnboarding={true}
+			>
 				<PlaygroundToolbar />
-			</div>
+			</SheetHeader>
 		);
 	}
 

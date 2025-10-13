@@ -48,6 +48,12 @@
 	color: var(--color-t4);
 }
 
+.text-body-sec-paragraph {
+	font-size: 13px;
+	font-weight: var(--font-weight-medium);
+	color: var(--color-t7);
+}
+
 .text-tiny {
 	font-size: 11px;
 	font-weight: var(--font-weight-normal);
@@ -88,6 +94,7 @@
 	font-size: 13px;
 	font-weight: var(--font-weight-medium);
 	color: var(--color-t2);
+	/* line-height: 1.4; */
 }
 
 .text-form-label {

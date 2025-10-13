@@ -86,9 +86,10 @@ function TagInput({
 			className={cn(
 				"file:text-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input w-full min-w-0 rounded-lg border bg-transparent outline-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
 				"aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
-				"placeholder:text-t6 placeholder:select-none input-base input-shadow shadow-sm min-h-input",
+				"placeholder:text-t6 placeholder:select-none min-h-input",
 				"flex items-center flex-wrap gap-2 p-2 cursor-text text-left",
 				isFocused && "data-state-open",
+				"input-base input-shadow-default input-state-focus-within",
 				className,
 			)}
 			data-slot="input"
@@ -102,13 +103,9 @@ function TagInput({
 						key={index}
 						className="flex items-center gap-1 border border-zinc-300 bg-zinc-50 rounded-lg pl-3 pr-2 py-1 text-xs"
 					>
-						<span>{displayValue}</span>
-						<button
-							type="button"
-							className="text-zinc-500 hover:text-zinc-700"
-							onClick={() => removeTag(index)}
-						>
-							<X size={12} />
+						<span className="text-tiny">{displayValue}</span>
+						<button type="button" className="" onClick={() => removeTag(index)}>
+							<X size={12} className="size-3 text-t4" />
 						</button>
 					</div>
 				);

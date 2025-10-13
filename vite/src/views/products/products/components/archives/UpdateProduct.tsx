@@ -1,19 +1,18 @@
+import { type ProductV2, UpdateProductSchema } from "@autumn/shared";
+import React, { useRef, useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
 	DialogContent,
 	DialogFooter,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { ProductV2, UpdateProductSchema } from "@autumn/shared";
-import { useRef, useState } from "react";
-import { ProductConfig } from "./ProductConfig";
-import React from "react";
-import { Button } from "@/components/ui/button";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { ProductService } from "@/services/products/ProductService";
-import { useEnv } from "@/utils/envUtils";
-import { toast } from "sonner";
-import { getBackendErr } from "@/utils/genUtils";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { ProductService } from "@/services/products/ProductService";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useEnv } from "@/utils/envUtils";
+import { getBackendErr } from "@/utils/genUtils";
+import { ProductConfig } from "./ProductConfig";
 
 export const UpdateProductDialog = ({
 	selectedProduct,

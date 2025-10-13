@@ -8,6 +8,7 @@ import {
 	itemToEntInterval,
 	UsageModel,
 } from "@autumn/shared";
+import { FormLabel } from "@/components/v2/form/FormLabel";
 import {
 	Select,
 	SelectContent,
@@ -51,7 +52,7 @@ export function UsageReset({ showBillingLabel = false }: UsageResetProps) {
 
 	return (
 		<div className={showBillingLabel ? "mt-3" : ""}>
-			<div className="text-form-label block mb-2">{label}</div>
+			<FormLabel>{label}</FormLabel>
 			<Select
 				value={
 					isFeaturePrice
