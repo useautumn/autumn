@@ -2,13 +2,12 @@ import { AppEnv, ErrCode } from "@autumn/shared";
 import Stripe from "stripe";
 import { z } from "zod";
 import { ensureStripeProductsWithEnv } from "@/external/stripe/stripeEnsureUtils.js";
-
 import {
-	checkKeyValid,
-	createWebhookEndpoint,
+	checkKeyValid,	 createWebhookEndpoint,
 } from "@/external/stripe/stripeOnboardingUtils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
 import { encryptData } from "@/utils/encryptUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { nullish } from "@/utils/genUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { OrgService } from "../OrgService.js";
@@ -287,3 +286,17 @@ export const handleConnectStripe = async (req: any, res: any) =>
 			});
 		},
 	});
+
+export const handleGetStripe = async (req: any, res: any) => {
+	try {
+		const org = await OrgService.getFromReq(req);
+
+		const stripeCli = createStripeCli({ org, env: req.env });
+
+		const account_details = await stripeCli.accounts.retrieve();
+
+		res.status(200).json(account_details);
+	} catch (error) {
+		handleRequestError({ req, error, res, action: "Get invoice" });
+	}
+};
