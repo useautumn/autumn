@@ -1,7 +1,25 @@
 import {
-	AttachParams,
+	type AttachConfig,
+	AttachScenario,
+	ErrCode,
+	SuccessCode,
+} from "@autumn/shared";
+import { StatusCodes } from "http-status-codes";
+import type Stripe from "stripe";
+import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
+import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
+import {
+	type AttachParams,
 	AttachResultSchema,
 } from "@/internal/customers/cusProducts/AttachParams.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { addSubIdToCache } from "../../cusCache/subCacheUtils.js";
+import {
+	cusProductToSchedule,
+	cusProductToSub,
+} from "../../cusProducts/cusProductUtils/convertCusProduct.js";
 import {
 	attachParamsToCurCusProduct,
 	attachParamToCusProducts,
@@ -9,18 +27,8 @@ import {
 	paramsToCurSub,
 } from "../attachUtils/convertAttachParams.js";
 import { paramsToScheduleItems } from "../mergeUtils/paramsToScheduleItems.js";
-import { AttachConfig, AttachScenario, SuccessCode } from "@autumn/shared";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import {
-	cusProductToSchedule,
-	cusProductToSub,
-} from "../../cusProducts/cusProductUtils/convertCusProduct.js";
 import { subToNewSchedule } from "../mergeUtils/subToNewSchedule.js";
-import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { updateCurSchedule } from "../mergeUtils/updateCurSchedule.js";
-import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
-import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
-import { addSubIdToCache } from "../../cusCache/subCacheUtils.js";
 
 export const handleRenewProduct = async ({
 	req,
@@ -34,46 +42,46 @@ export const handleRenewProduct = async ({
 	config: AttachConfig;
 }) => {
 	const logger = req.logtail;
-	const { stripeCli, customer: fullCus } = attachParams;
-	const { curScheduledProduct } = attachParamToCusProducts({ attachParams });
+	const { stripeCli } = attachParams;
+	let { curScheduledProduct } = attachParamToCusProducts({ attachParams });
 
 	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
 	const product = attachParams.products[0];
 	const cusProducts = attachParams.customer.customer_products;
+	const curSubId = curCusProduct?.subscription_ids?.[0];
+
+	if (!curCusProduct) {
+		throw new RecaseError({
+			message: `RENEW FLOW, curCusProduct is undefined`,
+			code: ErrCode.InvalidRequest,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+
+	if (curCusProduct.product.is_add_on) {
+		curScheduledProduct = undefined;
+	}
 
 	const schedule = await cusProductToSchedule({
-		cusProduct: curCusProduct!,
+		cusProduct: curCusProduct,
 		stripeCli,
 	});
 
-	// If not add on
-	if (product.is_add_on) {
-		res.status(200).json(
-			AttachResultSchema.parse({
-				code: SuccessCode.RenewedProduct,
-				message: `Successfully renewed product ${product.name}`,
-				product_ids: [product.id],
-			}),
-		);
-		return;
-	}
-
-	const curSubId = curCusProduct?.subscription_ids?.[0];
 	const otherCanceled = cusProducts.some(
 		(cp) =>
-			cp.subscription_ids?.includes(curSubId!) &&
+			cp.subscription_ids?.includes(curSubId || "") &&
 			cp.canceled &&
 			cp.id !== curCusProduct?.id,
 	);
 
-	let expectedEnd = undefined;
+	let expectedEnd: number | undefined;
 	if (curSubId) {
 		const curSub = await getSubForAttach({
 			stripeCli,
 			subId: curSubId,
 		});
 		const subItems = curSub?.items.data.filter((item) =>
-			subItemInCusProduct({ cusProduct: curCusProduct!, subItem: item }),
+			subItemInCusProduct({ cusProduct: curCusProduct, subItem: item }),
 		);
 		expectedEnd = getLatestPeriodEnd({ subItems });
 	}
@@ -93,11 +101,13 @@ export const handleRenewProduct = async ({
 		}
 
 		if (curSubId) {
-			// Add sub id to upstash
+			// Add sub ID to upstash so webhook handler doesn't handle again
 			await addSubIdToCache({
 				subId: curSubId,
 				scenario: AttachScenario.Renew,
 			});
+
+			// Uncancel the sub
 			await stripeCli.subscriptions.update(curSubId, {
 				cancel_at: null,
 			});
@@ -105,13 +115,14 @@ export const handleRenewProduct = async ({
 
 		await CusProductService.update({
 			db: req.db,
-			cusProductId: curCusProduct!.id,
+			cusProductId: curCusProduct.id,
 			updates: {
 				canceled: false,
 				canceled_at: null,
 			},
 		});
 	} else {
+		// Remove scheduled product ONLY if product is not an add on
 		const scheduledProduct = curScheduledProduct;
 
 		// Case 1: Add current cus product back to schedule and remove scheduled product from schedule
@@ -129,20 +140,23 @@ export const handleRenewProduct = async ({
 			});
 
 			if (newItems.phases.length > 1) {
-				const curSub = await paramsToCurSub({ attachParams });
+				const curSub = (await paramsToCurSub({
+					attachParams,
+				})) as Stripe.Subscription;
+
 				await updateCurSchedule({
 					req,
 					attachParams,
 					schedule,
 					newPhases: newItems.phases,
-					sub: curSub!,
+					sub: curSub,
 				});
 
 				await CusProductService.update({
 					db: req.db,
-					cusProductId: curCusProduct!.id,
+					cusProductId: curCusProduct.id,
 					updates: {
-						scheduled_ids: [schedule!.id],
+						scheduled_ids: [schedule.id],
 						canceled: false,
 						canceled_at: null,
 					},
@@ -163,7 +177,7 @@ export const handleRenewProduct = async ({
 
 				await CusProductService.update({
 					db: req.db,
-					cusProductId: curCusProduct!.id,
+					cusProductId: curCusProduct.id,
 					updates: {
 						canceled: false,
 						canceled_at: null,
@@ -175,15 +189,15 @@ export const handleRenewProduct = async ({
 		// Example scenario: Premium 1, Premium 2, Free 1, Free 2, Premium 1
 		else {
 			logger.info(`RENEW FLOW: creating new schedule`);
-			const curSub = await cusProductToSub({
-				cusProduct: curCusProduct!,
+			const curSub = (await cusProductToSub({
+				cusProduct: curCusProduct,
 				stripeCli,
-			});
+			})) as Stripe.Subscription;
 
-			const periodEnd = getLatestPeriodEnd({ sub: curSub! });
+			const periodEnd = getLatestPeriodEnd({ sub: curSub });
 			await subToNewSchedule({
 				req,
-				sub: curSub!,
+				sub: curSub,
 				attachParams,
 				config,
 				endOfBillingPeriod: periodEnd,
@@ -191,7 +205,7 @@ export const handleRenewProduct = async ({
 
 			await CusProductService.update({
 				db: req.db,
-				cusProductId: curCusProduct!.id,
+				cusProductId: curCusProduct.id,
 				updates: {
 					canceled: false,
 					canceled_at: null,
@@ -221,7 +235,7 @@ export const handleRenewProduct = async ({
 	if (curScheduledProduct) {
 		await CusProductService.delete({
 			db: req.db,
-			cusProductId: curScheduledProduct!.id,
+			cusProductId: curScheduledProduct.id,
 		});
 	}
 

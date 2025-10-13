@@ -1,8 +1,7 @@
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import { APIVersion, Organization, UsagePriceConfig } from "@autumn/shared";
-import { isUsagePrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import { ApiVersion, isUsagePrice, type Organization } from "@autumn/shared";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { getEmptyPriceItem } from "../../priceToStripeItem/priceToStripeItem.js";
 
 export const handleRemainingSets = async ({
@@ -23,10 +22,10 @@ export const handleRemainingSets = async ({
 	logger: any;
 }) => {
 	const itemSets = attachParams.itemSets;
-	let remainingSets = itemSets ? itemSets.slice(1) : [];
+	const remainingSets = itemSets ? itemSets.slice(1) : [];
 
 	const remainingItems = remainingSets.flatMap((set) => set.items);
-	let invoiceIds: string[] = checkoutSession.invoice
+	const invoiceIds: string[] = checkoutSession.invoice
 		? [checkoutSession.invoice as string]
 		: [];
 
@@ -34,18 +33,18 @@ export const handleRemainingSets = async ({
 	for (const price of attachParams.prices) {
 		if (!isUsagePrice({ price })) continue;
 
-		const config = price.config as UsagePriceConfig;
+		const config = price.config;
 		const emptyPrice = config.stripe_empty_price_id;
 
 		if (
 			attachParams.internalEntityId ||
-			attachParams.apiVersion == APIVersion.v1_4
+			attachParams.apiVersion === ApiVersion.Beta
 		) {
 			const replaceIndex = remainingItems.findIndex(
-				(item) => item.price == config.stripe_price_id,
+				(item) => item.price === config.stripe_price_id,
 			);
 
-			if (replaceIndex != -1) {
+			if (replaceIndex !== -1) {
 				remainingItems[replaceIndex] = emptyPrice
 					? {
 							price: config.stripe_empty_price_id,

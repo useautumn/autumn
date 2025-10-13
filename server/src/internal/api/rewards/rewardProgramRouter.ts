@@ -1,18 +1,18 @@
+import {
+	ErrCode,
+	nullish,
+	type RewardProgram,
+	RewardTriggerEvent,
+	UpdateRewardProgram,
+} from "@autumn/shared";
 import express, { type Router } from "express";
+import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { routeHandler } from "@/utils/routerUtils.js";
 import {
 	handleCreateRewardProgram,
 	handleDeleteRewardProgram,
 } from "./handlers/rewardPrograms/index.js";
-import { routeHandler } from "@/utils/routerUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
-import {
-	CreateRewardProgram,
-	ErrCode,
-	nullish,
-	RewardTriggerEvent,
-} from "@autumn/shared";
-import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
-import { constructRewardProgram } from "@/internal/rewards/rewardTriggerUtils.js";
 
 export const rewardProgramRouter: Router = express.Router();
 
@@ -39,7 +39,7 @@ rewardProgramRouter.put("/:id", (req, res) =>
 			}
 
 			// Ensure program exists
-			let existingProgram = await RewardProgramService.get({
+			const existingProgram = await RewardProgramService.get({
 				db,
 				idOrInternalId: id,
 				orgId,
@@ -54,21 +54,22 @@ rewardProgramRouter.put("/:id", (req, res) =>
 				});
 			}
 
-			const rewardProgram = constructRewardProgram({
-				rewardProgramData: CreateRewardProgram.parse({
-					...body,
-					id: existingProgram.id, // ID cannot be changed
-				}),
-				orgId,
-				env,
-			});
+			// const rewardProgram = constructRewardProgram({
+			// 	rewardProgramData: CreateRewardProgram.parse({
+			// 		...body,
+			// 		id: existingProgram.id, // ID cannot be changed
+			// 	}),
+			// 	orgId,
+			// 	env,
+			// });
 
 			// Update on existing redemptions? (should be none unless affecting stacked rewards...)
 
+			const data = UpdateRewardProgram.parse(body);
+
 			if (
-				rewardProgram.when == RewardTriggerEvent.Checkout &&
-				(nullish(rewardProgram.product_ids) ||
-					rewardProgram.product_ids!.length == 0)
+				data.when === RewardTriggerEvent.Checkout &&
+				(nullish(data.product_ids) || data.product_ids.length === 0)
 			) {
 				throw new RecaseError({
 					message:
@@ -78,12 +79,12 @@ rewardProgramRouter.put("/:id", (req, res) =>
 				});
 			}
 
-			let updatedRewardProgram = await RewardProgramService.update({
+			const updatedRewardProgram = await RewardProgramService.update({
 				db,
 				idOrInternalId: id,
 				orgId,
 				env,
-				data: rewardProgram,
+				data: data as RewardProgram,
 			});
 
 			return res.status(200).json(updatedRewardProgram);

@@ -1,8 +1,10 @@
 import "dotenv/config";
 
-import { timeout } from "./genUtils.js";
-import { Stripe } from "stripe";
-import { BillingInterval, Customer, FullProduct } from "@autumn/shared";
+import {
+	BillingInterval,
+	type Customer,
+	type FullProduct,
+} from "@autumn/shared";
 import {
 	addDays,
 	addHours,
@@ -10,11 +12,14 @@ import {
 	addMonths,
 	addWeeks,
 	format,
+	subHours,
 } from "date-fns";
 import puppeteer from "puppeteer-core";
-import Browserbase from "@browserbasehq/sdk";
+import type { Stripe } from "stripe";
+import { timeout } from "./genUtils.js";
 
 const STRIPE_TEST_CLOCK_TIMING = 20000; // 30s
+
 import { Hyperbrowser } from "@hyperbrowser/sdk";
 
 const client = new Hyperbrowser({
@@ -186,7 +191,7 @@ export const deleteStripeProduct = async ({
 
 	if (product.processor) {
 		// console.log("Stripe product", stripeProd.active, stripeProd.id);
-		let stripeProdId = product.processor.id;
+		const stripeProdId = product.processor.id;
 		try {
 			await stripeCli.products.del(stripeProdId);
 		} catch (error) {
@@ -260,7 +265,7 @@ export const advanceTestClock = async ({
 	}
 
 	console.log("   - Advancing to: ", format(advanceTo, "dd MMM yyyy HH:mm:ss"));
-	await stripeCli.testHelpers.testClocks.advance(testClockId, {
+	const res = await stripeCli.testHelpers.testClocks.advance(testClockId, {
 		frozen_time: Math.floor(advanceTo / 1000),
 	});
 
@@ -298,11 +303,12 @@ export const advanceClockForInvoice = async ({
 		startingFrom = new Date();
 	}
 
-	if (numberOfDays) {
-		advanceTo = addDays(startingFrom, numberOfDays).getTime();
-	} else {
-		advanceTo = addMinutes(addMonths(startingFrom, 1), 10).getTime();
-	}
+	// if (numberOfDays) {
+	// 	advanceTo = addDays(startingFrom, numberOfDays).getTime();
+	// } else {
+	// 	advanceTo = addMonths(startingFrom, 1).getTime();
+	// }
+	advanceTo = subHours(addMonths(Date.now(), 1), 1).getTime();
 
 	await stripeCli.testHelpers.testClocks.advance(testClockId, {
 		frozen_time: Math.ceil(advanceTo / 1000),
@@ -384,7 +390,7 @@ export const checkBillingMeterEventSummary = async ({
 	stripeMeterId: string;
 	stripeCustomerId: string;
 }) => {
-	let endTime = addMonths(startTime, 1);
+	const endTime = addMonths(startTime, 1);
 	const event = await stripeCli.billing.meters.listEventSummaries(
 		stripeMeterId,
 		{

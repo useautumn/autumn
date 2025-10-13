@@ -1,10 +1,9 @@
-import RecaseError from "@/utils/errorUtils.js";
-import { AppEnv, Feature, features } from "@autumn/shared";
-import { ErrCode } from "@/errors/errCodes.js";
-import { clearOrgCache } from "../orgs/orgUtils/clearOrgCache.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import { type AppEnv, ErrCode, type Feature, features } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
+import { clearOrgCache } from "../orgs/orgUtils/clearOrgCache.js";
 
 export class FeatureService {
 	static async list({
@@ -136,13 +135,13 @@ export class FeatureService {
 		logger: any;
 	}) {
 		try {
-			let insertedData = await db
+			const insertedData = await db
 				.insert(features)
 				.values(data as any) // DRIZZLE TYPE REFACTOR
 				.returning();
 
 			if (insertedData && insertedData.length > 0) {
-				let orgId = insertedData[0].org_id;
+				const orgId = insertedData[0].org_id;
 				await clearOrgCache({
 					db,
 					orgId: orgId!,
@@ -152,7 +151,7 @@ export class FeatureService {
 			return insertedData as Feature[]; // DRIZZLE TYPE REFACTOR
 		} catch (error: any) {
 			if (error.code === "23505") {
-				let id = Array.isArray(data) ? data.map((f) => f.id) : data.id;
+				const id = Array.isArray(data) ? data.map((f) => f.id) : data.id;
 				throw new RecaseError({
 					message: `Feature ${id} already exists`,
 					code: ErrCode.DuplicateFeatureId,
@@ -173,7 +172,7 @@ export class FeatureService {
 		orgId: string;
 		env: AppEnv;
 	}) {
-		let deletedFeatures = await db
+		const deletedFeatures = await db
 			.delete(features)
 			.where(
 				and(

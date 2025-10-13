@@ -1,13 +1,8 @@
+import type { FullCusProduct, FullCustomer, FullProduct } from "@autumn/shared";
+import type Stripe from "stripe";
 import { getStripeCusData } from "@/internal/customers/attach/attachUtils/attachParams/attachParamsUtils/getStripeCusData.js";
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import {
-	APIVersion,
-	FullCusProduct,
-	FullCustomer,
-	FullProduct,
-} from "@autumn/shared";
-import Stripe from "stripe";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const migrationToAttachParams = async ({
 	req,
@@ -22,18 +17,16 @@ export const migrationToAttachParams = async ({
 	cusProduct: FullCusProduct;
 	newProduct: FullProduct;
 }): Promise<AttachParams> => {
-	const { org } = req;
-
-	const apiVersion = org.config.api_version || APIVersion.v1;
+	const { org, logger } = req;
 	const internalEntityId = cusProduct.internal_entity_id || undefined;
 
 	const { stripeCus, paymentMethod, now } = await getStripeCusData({
 		stripeCli,
 		db: req.db,
-		org: req.org,
+		org,
 		env: req.env,
 		customer,
-		logger: req.logtail,
+		logger,
 		allowNoStripe: true,
 	});
 
@@ -52,14 +45,14 @@ export const migrationToAttachParams = async ({
 		replaceables: [],
 
 		req,
-		org: req.org,
+		org,
 		entities: customer.entities,
 		features: req.features,
 		internalEntityId,
 		cusProducts: customer.customer_products,
 
 		// Others
-		apiVersion,
+		apiVersion: cusProduct.api_semver || undefined,
 	};
 
 	return attachParams;

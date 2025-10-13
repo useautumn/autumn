@@ -1,17 +1,13 @@
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import {
-	isArrearPrice,
-	isContUsePrice,
+	type AttachBody,
+	type AttachBranch,
 	isUsagePrice,
-} from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
-import RecaseError from "@/utils/errorUtils.js";
-import {
-	AttachBody,
-	AttachBranch,
 	notNullish,
 	nullish,
-	Price,
+	type Price,
 } from "@autumn/shared";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import RecaseError from "@/utils/errorUtils.js";
 
 export const handleMultiAttachErrors = async ({
 	attachParams,

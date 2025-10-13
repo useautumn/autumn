@@ -1,5 +1,5 @@
 import {
-	ProductItem,
+	type ProductItem,
 	ProductItemType,
 } from "../../models/productV2Models/productItemModels/productItemModels.js";
 import { notNullish, nullish } from "../utils.js";
@@ -7,7 +7,7 @@ import { notNullish, nullish } from "../utils.js";
 export const isBooleanFeatureItem = (item: ProductItem) => {
 	return (
 		notNullish(item.feature_id) &&
-		(nullish(item.price) || item.price == 0) &&
+		(nullish(item.price) || item.price === 0) &&
 		nullish(item.tiers) &&
 		nullish(item.interval) &&
 		nullish(item.included_usage)
@@ -17,7 +17,7 @@ export const isBooleanFeatureItem = (item: ProductItem) => {
 export const isFeatureItem = (item: ProductItem) => {
 	return (
 		notNullish(item.feature_id) &&
-		(nullish(item.price) || item.price == 0) &&
+		(nullish(item.price) || item.price === 0) &&
 		nullish(item.tiers)
 	);
 };

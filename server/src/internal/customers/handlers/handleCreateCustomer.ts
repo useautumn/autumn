@@ -1,20 +1,20 @@
-import { CusService } from "@/internal/customers/CusService.js";
-import RecaseError from "@/utils/errorUtils.js";
 import {
-	AppEnv,
-	CreateCustomer,
+	type AppEnv,
+	type CreateCustomer,
 	CreateCustomerSchema,
-	Customer,
+	type Customer,
 	ErrCode,
-	FullProduct,
-	Organization,
+	type FullProduct,
+	type Organization,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import { notNullish } from "@/utils/genUtils.js";
-import { initProductInStripe } from "@/internal/products/productUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { initProductInStripe } from "@/internal/products/productUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { createNewCustomer } from "../cusUtils/createNewCustomer.js";
 
 export const initStripeCusAndProducts = async ({
@@ -78,7 +78,7 @@ const handleIdIsNull = async ({
 	}
 
 	// 2. Check if email already exists
-	let existingCustomers = await CusService.getByEmail({
+	const existingCustomers = await CusService.getByEmail({
 		db,
 		email: newCus.email,
 		orgId: org.id,
@@ -123,10 +123,12 @@ export const handleCreateCustomerWithId = async ({
 }) => {
 	const { db, org, env, logger } = req;
 
-	// 1. Get by ID
-	let existingCustomer = await CusService.get({
+	if (!newCus.id)
+		throw new Error("Calling handleCreateCustomerWithId with id null");
+
+	const existingCustomer = await CusService.get({
 		db,
-		idOrInternalId: newCus.id!,
+		idOrInternalId: newCus.id,
 		orgId: org.id,
 		env,
 	});
@@ -140,9 +142,9 @@ export const handleCreateCustomerWithId = async ({
 
 	// 2. Check if email exists
 	if (notNullish(newCus.email) && newCus.email !== "") {
-		let cusWithEmail = await CusService.getByEmail({
+		const cusWithEmail = await CusService.getByEmail({
 			db,
-			email: newCus.email!,
+			email: newCus.email,
 			orgId: org.id,
 			env,
 		});
@@ -152,17 +154,17 @@ export const handleCreateCustomerWithId = async ({
 				`POST /customers, email ${newCus.email} and ID null found, updating ID to ${newCus.id} (org: ${org.slug})`,
 			);
 
-			let updatedCustomer = await CusService.update({
+			const updatedCustomer = await CusService.update({
 				db,
 				internalCusId: cusWithEmail[0].internal_id,
 				update: {
-					id: newCus.id!,
+					id: newCus.id,
 					name: newCus.name,
 					fingerprint: newCus.fingerprint,
 				},
 			});
 
-			return updatedCustomer;
+			return updatedCustomer as Customer;
 		}
 	}
 
@@ -186,7 +188,7 @@ export const handleCreateCustomer = async ({
 	const newCus = CreateCustomerSchema.parse(cusData);
 
 	// 1. If no ID and email is not NULL
-	let createdCustomer;
+	let createdCustomer: Customer;
 
 	if (newCus.id === null) {
 		createdCustomer = await handleIdIsNull({

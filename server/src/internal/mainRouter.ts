@@ -1,26 +1,25 @@
 import "dotenv/config";
 
-import { orgRouter } from "./orgs/orgRouter.js";
-import { Router } from "express";
-import { userRouter } from "./users/userRouter.js";
-import { withAuth, withOrgAuth } from "../middleware/authMiddleware.js";
-import { internalFeatureRouter } from "./features/internalFeatureRouter.js";
-import { productRouter } from "./products/internalProductRouter.js";
-import { devRouter } from "./dev/devRouter.js";
-import { cusRouter } from "./customers/internalCusRouter.js";
-import { onboardingRouter } from "./orgs/onboarding/onboardingRouter.js";
-import { handlePostOrg } from "./orgs/handlers/handlePostOrg.js";
-import { withAdminAuth } from "./admin/withAdminAuth.js";
-import { adminRouter } from "./admin/adminRouter.js";
-import { autumnHandler } from "autumn-js/express";
 import { Autumn } from "autumn-js";
-import { analyticsRouter } from "./analytics/internalAnalyticsRouter.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { InvoiceService } from "./invoices/InvoiceService.js";
+import { autumnHandler } from "autumn-js/express";
+import { Router } from "express";
 import rateLimit from "express-rate-limit";
+import { createStripeCli } from "@/external/stripe/utils.js";
+import { withAuth, withOrgAuth } from "../middleware/authMiddleware.js";
+import { adminRouter } from "./admin/adminRouter.js";
+import { withAdminAuth } from "./admin/withAdminAuth.js";
+import { analyticsRouter } from "./analytics/internalAnalyticsRouter.js";
 import { trmnlRouter } from "./api/trmnl/trmnlRouter.js";
-import { trmnlAuthMiddleware } from "@/middleware/trmnlAuthMiddleware.js";
+import { cusRouter } from "./customers/internalCusRouter.js";
+import { devRouter } from "./dev/devRouter.js";
+import { internalFeatureRouter } from "./features/internalFeatureRouter.js";
+import { InvoiceService } from "./invoices/InvoiceService.js";
+import { handlePostOrg } from "./orgs/handlers/handlePostOrg.js";
+import { onboardingRouter } from "./orgs/onboarding/onboardingRouter.js";
+import { orgRouter } from "./orgs/orgRouter.js";
+import { productRouter } from "./products/internalProductRouter.js";
 import { viewsRouter } from "./saved-views/savedViewsRouter.js";
+import { userRouter } from "./users/userRouter.js";
 
 const mainRouter: Router = Router();
 
@@ -53,8 +52,8 @@ mainRouter.use(
 	"/invoices/hosted_invoice_url/:invoiceId",
 	limiter,
 	async (req: any, res: any) => {
-		let invoiceId = req.params.invoiceId;
-		let invoice = await InvoiceService.get({
+		const invoiceId = req.params.invoiceId;
+		const invoice = await InvoiceService.get({
 			db: req.db,
 			id: invoiceId,
 		});
@@ -62,15 +61,17 @@ mainRouter.use(
 		if (!invoice) return res.status(404).json({ error: "Invoice not found" });
 
 		try {
-			let org = invoice.customer.org;
-			let env = invoice.customer.env;
-			let stripeCli = createStripeCli({
+			const org = invoice.customer.org;
+			const env = invoice.customer.env;
+			const stripeCli = createStripeCli({
 				org,
 				env,
 			});
-			let stripeInvoice = await stripeCli.invoices.retrieve(invoice.stripe_id);
+			const stripeInvoice = await stripeCli.invoices.retrieve(
+				invoice.stripe_id,
+			);
 
-			if (stripeInvoice.status == "draft") {
+			if (stripeInvoice.status === "draft") {
 				return res
 					.status(404)
 					.json({ error: "This invoice is in draft status and has no URL" });
@@ -108,12 +109,14 @@ mainRouter.use(
 	withOrgAuth,
 	autumnHandler({
 		autumn: (req: any) => {
-			let client = new Autumn({
+			const client = new Autumn({
 				url: "http://localhost:8080/v1",
 				headers: {
 					cookie: req.headers.cookie,
 					"Content-Type": "application/json",
 					origin: req.get("origin"),
+					"x-client-type": "dashboard",
+					app_env: req.env,
 				},
 			});
 			return client as any;

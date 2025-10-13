@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+
 dotenv.config();
 
 import { initLogger } from "@/errors/logger.js";
@@ -118,3 +119,4 @@ export const createLogger = () => {
 // };
 
 export const logger = createLogger();
+export type Logger = ReturnType<typeof createLogger>;

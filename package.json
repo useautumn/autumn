@@ -8,6 +8,8 @@
 	],
 	"type": "module",
 	"scripts": {
+		"dev": "node scripts/start-dev.js",
+		"dev:simple": "concurrently \"cd shared && bun dev:watch\" \"cd server && bun dev\" \"cd server && bun workers:dev\" \"cd vite && bun dev\"",
 		"vite:build": "bun -F @autumn/shared build && bun -F @autumn/vite build:bun",
 		"vite:start": "bun -F @autumn/vite start:bun",
 		"shared": "bun -F @autumn/shared build",
@@ -17,23 +19,17 @@
 		"check": "bun -F @autumn/shared build && bun -F @autumn/server check",
 		"server:cron": "pnpm -F server cron:start",
 		"server:check": "NODE_ENV=production pnpm -F server check",
-		"dev": "concurrently \"cd server && npm run dev\" \"cd vite && npm run dev\" \"redis-server\"",
-		"dev:wsl": "concurrently \"cd server && npm run dev\" \"cd vite && npm run dev\" \"cd shared && npm run dev\"",
-		"setup": "node setup.js",
-		"setupci": "node setupci",
-
+		"setup": "node scripts/setup.js",
+		"setupci": "node scripts/setupci.js",
 		"db:push": " bun -F @autumn/shared db:push",
 		"db:generate": "bun -F @autumn/shared db:generate",
 		"db:migrate": " bun -F @autumn/shared db:migrate",
-
 		"docker:up": "docker compose -f docker-compose.dev.yml up --build",
 		"docker:up:unix": "docker compose -f docker-compose.unix.yml up --build",
 		"docker:up:ci": "docker compose -f docker-compose.ci.yml up --build",
 		"build:all": "pnpm -F shared build && pnpm -F server prod:build && pnpm -F vite build",
 		"vite:build:bun": "bun -F @autumn/shared build && bun -F @autumn/vite build:bun",
-		"vite:start:bun": "bun -F @autumn/shared build && bun -F @autumn/vite start:bun",
-		"dev:bun": "concurrently \"cd server && bun run dev\" \"cd vite && bun run dev\" \"bun -F @autumn/shared dev:bun\"",
-		"build:all:bun": "bun run -F @autumn/shared build:bun && bun run -F @autumn/server prod:build:bun && bun run -F @autumn/vite build:bun"
+		"vite:start:bun": "bun -F @autumn/shared build && bun -F @autumn/vite start:bun"
 	},
 	"dependencies": {
 		"@wooorm/starry-night": "^3.8.0",

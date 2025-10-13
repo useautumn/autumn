@@ -3,6 +3,7 @@ import {
 	type Customer,
 	ErrCode,
 	type FullRewardProgram,
+	ProductNotFoundError,
 	type ReferralCode,
 	type Reward,
 	RewardReceivedBy,
@@ -89,11 +90,7 @@ export const triggerFreeProduct = async ({
 	//   !isOneOff(fullProduct.prices) && !itemsAreOneOff(fullProduct.entitlements);
 
 	if (!fullProduct) {
-		throw new RecaseError({
-			message: `Product ${productId} not found`,
-			code: ErrCode.ProductNotFound,
-			statusCode: StatusCodes.NOT_FOUND,
-		});
+		throw new ProductNotFoundError({ productId: productId });
 	}
 
 	const [fullReferrer, fullRedeemer] = await Promise.all([

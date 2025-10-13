@@ -2,6 +2,7 @@
 
 import { ErrCode, type FullCustomer } from "@autumn/shared";
 import type { ClickHouseClient } from "@clickhouse/client";
+import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";
 import RecaseError from "@/utils/errorUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
@@ -302,7 +303,7 @@ order by dr.period;
 			resultJson.data.forEach((row: any) => {
 				Object.keys(row).forEach((key: string) => {
 					if (key !== "period") {
-						row[key] = parseInt(row[key]);
+						row[key] = new Decimal(row[key]).toDecimalPlaces(10).toNumber();
 					}
 				});
 			});

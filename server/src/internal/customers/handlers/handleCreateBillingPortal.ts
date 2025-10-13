@@ -1,13 +1,13 @@
+import { ErrCode } from "@autumn/shared";
+import { StatusCodes } from "http-status-codes";
+import type Stripe from "stripe";
 import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { toSuccessUrl } from "@/internal/orgs/orgUtils/convertOrgUtils.js";
-import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { ErrCode } from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
-import Stripe from "stripe";
 
 const createDefaultBillingPortalConfiguration = async (stripeCli: Stripe) => {
 	try {
@@ -48,8 +48,8 @@ export const handleCreateBillingPortal = async (req: any, res: any) =>
 		res,
 		action: "create_billing_portal",
 		handler: async (req: any, res: any) => {
-			const customerId = req.params.customer_id;
-			let returnUrl = req.body.return_url;
+			const customerId = req.params.customer_id || req.body.customer_id;
+			const returnUrl = req.body.return_url;
 
 			const [org, customer] = await Promise.all([
 				OrgService.getFromReq(req),
@@ -116,8 +116,7 @@ export const handleCreateBillingPortal = async (req: any, res: any) =>
 
 				// Check if the error is due to missing default configuration
 				if (
-					error.message &&
-					error.message.includes("default configuration has not been created")
+					error.message?.includes("default configuration has not been created")
 				) {
 					try {
 						// Create a default billing portal configuration

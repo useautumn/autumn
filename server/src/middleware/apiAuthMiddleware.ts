@@ -1,46 +1,20 @@
-import { withOrgAuth } from "./authMiddleware.js";
-import { verifyKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
-import { verifyBearerPublishableKey } from "./publicAuthMiddleware.js";
 import { AuthType, ErrCode } from "@autumn/shared";
-import { floatToVersion } from "@/utils/versionUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
+import { verifyKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
 import { dashboardOrigins } from "@/utils/constants.js";
-import { readFile } from "@/external/supabase/storageUtils.js";
-import { ExtendedResponse } from "@/utils/models/Request.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { withOrgAuth } from "./authMiddleware.js";
+import { verifyBearerPublishableKey } from "./publicAuthMiddleware.js";
 import { trmnlAuthMiddleware, trmnlExclusions } from "./trmnlAuthMiddleware.js";
-
-const verifyApiVersion = (version: string) => {
-	let versionFloat = parseFloat(version);
-	let apiVersion = floatToVersion(versionFloat);
-
-	if (isNaN(versionFloat) || !apiVersion) {
-		throw new RecaseError({
-			message: `${version} is not a valid API version`,
-			code: ErrCode.InvalidApiVersion,
-			statusCode: 400,
-		});
-	}
-
-	return apiVersion;
-};
 
 const maskApiKey = (apiKey: string) => {
 	return apiKey.slice(0, 15) + apiKey.slice(15).replace(/./g, "*");
 };
 
 export const verifySecretKey = async (req: any, res: any, next: any) => {
-	const authHeader =
-		req.headers["authorization"] || req.headers["Authorization"];
-
-	const logger = req.logtail;
-	const version = req.headers["x-api-version"];
-
-	if (version) {
-		req.apiVersion = verifyApiVersion(version);
-	}
+	const authHeader = req.headers.authorization || req.headers.Authorization;
 
 	if (!authHeader || !authHeader.startsWith("Bearer ")) {
-		let origin = req.get("origin");
+		const origin = req.get("origin");
 		if (dashboardOrigins.includes(origin)) {
 			return withOrgAuth(req, res, next);
 		} else {
@@ -80,7 +54,7 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
 		});
 	}
 
-	let { org, features, env, userId } = data;
+	const { org, features, env, userId } = data;
 	req.orgId = org.id;
 	req.env = env;
 	req.minOrg = {
@@ -95,13 +69,15 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
 	const orgConfig = await req.headers["org-config"];
 	if (orgConfig) {
 		console.log("Org config found!: ", orgConfig);
-		let newConfigFields = JSON.parse(orgConfig);
+		const newConfigFields = JSON.parse(orgConfig);
 		try {
 			req.org.config = {
 				...org.config,
 				...newConfigFields,
 			};
-		} catch (error) {}
+		} catch {
+			// Ignore parsing errors
+		}
 	}
 
 	next();
@@ -124,7 +100,7 @@ export const apiAuthMiddleware = async (req: any, res: any, next: any) => {
 	} catch (error: any) {
 		if (error instanceof RecaseError) {
 			if (error.code === ErrCode.InvalidSecretKey) {
-				let apiKey = req.headers["authorization"]?.split(" ")[1];
+				const apiKey = req.headers["authorization"]?.split(" ")[1];
 				error.message = `Invalid secret key: ${maskApiKey(apiKey)}`;
 			}
 

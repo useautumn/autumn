@@ -1,44 +1,44 @@
-import Stripe from "stripe";
+import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
 import { Decimal } from "decimal.js";
-import { notNullish } from "../utils.js";
-import { FixedPriceConfig } from "../../models/productModels/priceModels/priceConfig/fixedPriceConfig.js";
+import type Stripe from "stripe";
+import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
+import type { FixedPriceConfig } from "../../models/productModels/priceModels/priceConfig/fixedPriceConfig.js";
 import {
 	BillWhen,
-	UsagePriceConfig,
+	type UsagePriceConfig,
 } from "../../models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import {
 	BillingInterval,
 	BillingType,
 	PriceType,
 } from "../../models/productModels/priceModels/priceEnums.js";
-import { Price } from "../../models/productModels/priceModels/priceModels.js";
-import { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
+import type { Price } from "../../models/productModels/priceModels/priceModels.js";
 import {
 	OnDecrease,
 	OnIncrease,
 } from "../../models/productV2Models/productItemModels/productItemEnums.js";
-import { APIVersion } from "../../enums/APIVersion.js";
+import { notNullish } from "../utils.js";
 
 export const getBillingType = (config: FixedPriceConfig | UsagePriceConfig) => {
 	// 1. Fixed cycle / one off
 	if (
-		config.type == PriceType.Fixed &&
-		config.interval == BillingInterval.OneOff
+		config.type === PriceType.Fixed &&
+		config.interval === BillingInterval.OneOff
 	) {
 		return BillingType.OneOff;
-	} else if (config.type == PriceType.Fixed) {
+	} else if (config.type === PriceType.Fixed) {
 		return BillingType.FixedCycle;
 	}
 
 	// 2. Prepaid
 
-	let usageConfig = config as UsagePriceConfig;
+	const usageConfig = config as UsagePriceConfig;
 	if (
-		usageConfig.bill_when == BillWhen.InAdvance ||
-		usageConfig.bill_when == BillWhen.StartOfPeriod
+		usageConfig.bill_when === BillWhen.InAdvance ||
+		usageConfig.bill_when === BillWhen.StartOfPeriod
 	) {
 		return BillingType.UsageInAdvance;
-	} else if (usageConfig.bill_when == BillWhen.EndOfPeriod) {
+	} else if (usageConfig.bill_when === BillWhen.EndOfPeriod) {
 		if (usageConfig.should_prorate) {
 			return BillingType.InArrearProrated;
 		}
@@ -49,7 +49,7 @@ export const getBillingType = (config: FixedPriceConfig | UsagePriceConfig) => {
 };
 
 export const isOneOffPrice = ({ price }: { price: Price }) => {
-	return price.config.interval == BillingInterval.OneOff;
+	return price.config.interval === BillingInterval.OneOff;
 };
 
 export const isUsagePrice = ({
@@ -59,40 +59,38 @@ export const isUsagePrice = ({
 	price: Price;
 	featureId?: string;
 }) => {
-	let billingType = getBillingType(price.config);
+	const billingType = getBillingType(price.config);
 
-	let isUsage =
-		billingType == BillingType.UsageInArrear ||
-		billingType == BillingType.InArrearProrated ||
-		billingType == BillingType.UsageInAdvance;
+	const isUsage =
+		billingType === BillingType.UsageInArrear ||
+		billingType === BillingType.InArrearProrated ||
+		billingType === BillingType.UsageInAdvance;
 
 	if (featureId) {
-		return (
-			isUsage && (price.config as UsagePriceConfig).feature_id == featureId
-		);
+		return isUsage && price.config.feature_id === featureId;
 	}
 
 	return isUsage;
 };
 
 export const isPrepaidPrice = ({ price }: { price: Price }) => {
-	let billingType = getBillingType(price.config);
-	return billingType == BillingType.UsageInAdvance;
+	const billingType = getBillingType(price.config);
+	return billingType === BillingType.UsageInAdvance;
 };
 
 export const isPayPerUse = ({ price }: { price: Price }) => {
-	let billingType = getBillingType(price.config);
+	const billingType = getBillingType(price.config);
 	return (
-		billingType == BillingType.UsageInArrear ||
-		billingType == BillingType.InArrearProrated
+		billingType === BillingType.UsageInArrear ||
+		billingType === BillingType.InArrearProrated
 	);
 };
 
 export const isFixedPrice = ({ price }: { price: Price }) => {
-	let billingType = getBillingType(price.config);
+	const billingType = getBillingType(price.config);
 
 	return (
-		billingType == BillingType.FixedCycle || billingType == BillingType.OneOff
+		billingType === BillingType.FixedCycle || billingType === BillingType.OneOff
 	);
 };
 
@@ -104,8 +102,8 @@ export const hasPrepaidPrice = ({
 	excludeOneOff?: boolean;
 }) => {
 	return prices.some((price) => {
-		let isUsage = getBillingType(price.config) == BillingType.UsageInAdvance;
-		let isOneOff = price.config.interval == BillingInterval.OneOff;
+		const isUsage = getBillingType(price.config) === BillingType.UsageInAdvance;
+		const isOneOff = price.config.interval === BillingInterval.OneOff;
 		return isUsage && (excludeOneOff ? !isOneOff : true);
 	});
 };
@@ -120,8 +118,8 @@ export const isV4Usage = ({
 	const billingType = getBillingType(price.config);
 
 	return (
-		billingType == BillingType.UsageInArrear &&
-		(cusProduct.api_version == APIVersion.v1_4 ||
+		billingType === BillingType.UsageInArrear &&
+		(cusProduct.api_semver === ApiVersion.Beta ||
 			notNullish(cusProduct.internal_entity_id))
 	);
 };
@@ -166,10 +164,10 @@ export const roundUsage = ({
 	price: Price;
 	pos?: boolean;
 }) => {
-	let config = price.config as UsagePriceConfig;
-	let billingUnits = config.billing_units || 1;
+	const config = price.config as UsagePriceConfig;
+	const billingUnits = config.billing_units || 1;
 
-	let rounded = new Decimal(usage)
+	const rounded = new Decimal(usage)
 		.div(billingUnits)
 		.ceil()
 		.mul(billingUnits)

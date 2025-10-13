@@ -1,20 +1,20 @@
-import chalk from "chalk";
-import Stripe from "stripe";
+import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
 import { expect } from "chai";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { APIVersion, AppEnv, Organization } from "@autumn/shared";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import chalk from "chalk";
+import type Stripe from "stripe";
 import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "../utils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { expectAttachCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { createProducts } from "tests/utils/productUtils.js";
 import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { addPrefixToProducts } from "../utils.js";
 
-export let pro = constructProduct({
+export const pro = constructProduct({
 	items: [constructArrearItem({ featureId: TestFeature.Words })],
 	type: "pro",
 	trial: true,
@@ -23,8 +23,8 @@ export let pro = constructProduct({
 const testCase = "others7";
 
 describe(`${chalk.yellowBright(`${testCase}: Testing attach with free_trial=False`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
 
@@ -60,7 +60,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach with free_trial=Fals
 		});
 	});
 
-	it("should attach pro product with free_trial=False", async function () {
+	it("should attach pro product with free_trial=False", async () => {
 		await autumn.attach({
 			customer_id: customerId,
 			product_id: pro.id,

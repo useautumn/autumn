@@ -36,7 +36,18 @@ function CreateReward() {
 		(async () => {
 			if (!reward?.id && !reward?.name) {
 				toast.error("ID and name are required");
+				setIsLoading(false);
 				return;
+			}
+
+			// Validate product selection for discount rewards
+			if (reward.discount_config) {
+				const { apply_to_all, price_ids } = reward.discount_config;
+				if (!apply_to_all && (!price_ids || price_ids.length === 0)) {
+					toast.error("Please select price(s) to apply this reward to");
+					setIsLoading(false);
+					return;
+				}
 			}
 
 			try {

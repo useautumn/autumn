@@ -1,24 +1,28 @@
-import { AttachResultSchema } from "@/internal/customers/cusProducts/AttachParams.js";
-import { AttachScenario, UsagePriceConfig } from "@autumn/shared";
-import { SuccessCode } from "@autumn/shared";
-
-import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
+import {
+	type AttachConfig,
+	AttachScenario,
+	SuccessCode,
+	type UsagePriceConfig,
+} from "@autumn/shared";
+import { Decimal } from "decimal.js";
 import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
+import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import {
+	type AttachParams,
+	AttachResultSchema,
+} from "@/internal/customers/cusProducts/AttachParams.js";
 import { newPriceToInvoiceDescription } from "@/internal/invoices/invoiceFormatUtils.js";
-import { getPriceOptions } from "@/internal/products/prices/priceUtils.js";
-import { priceToProduct } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
-import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
-import { AttachConfig } from "@autumn/shared";
-import { attachToInsertParams } from "@/internal/products/productUtils.js";
+import { buildInvoiceMemoFromEntitlements } from "@/internal/invoices/invoiceMemoUtils.js";
 import {
 	attachToInvoiceResponse,
 	insertInvoiceFromAttach,
 } from "@/internal/invoices/invoiceUtils.js";
-import { Decimal } from "decimal.js";
+import { priceToProduct } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
+import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
-import { buildInvoiceMemoFromEntitlements } from "@/internal/invoices/invoiceMemoUtils.js";
+import { getPriceOptions } from "@/internal/products/prices/priceUtils.js";
+import { attachToInsertParams } from "@/internal/products/productUtils.js";
 
 export const handleOneOffFunction = async ({
 	req,
@@ -31,7 +35,7 @@ export const handleOneOffFunction = async ({
 	config: AttachConfig;
 	res: any;
 }) => {
-	const logger = req.logtail;
+	const logger = req.logger;
 	logger.info("Scenario 4A: One-off prices");
 
 	const {
@@ -48,14 +52,14 @@ export const handleOneOffFunction = async ({
 
 	const { invoiceOnly } = config;
 
-	let invoiceItems = [];
+	const invoiceItems = [];
 
 	for (const price of prices) {
 		const options = getPriceOptions(price, optionsList);
 		let quantity = options?.quantity;
 
 		if (quantity) {
-			let config = price.config as UsagePriceConfig;
+			const config = price.config as UsagePriceConfig;
 			quantity = new Decimal(quantity)
 				.mul(config.billing_units || 1)
 				.toNumber();

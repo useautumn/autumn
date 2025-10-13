@@ -1,24 +1,22 @@
-import chalk from "chalk";
-import Stripe from "stripe";
+import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
 import { expect } from "chai";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { APIVersion, AppEnv, Organization } from "@autumn/shared";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import chalk from "chalk";
+import type Stripe from "stripe";
 import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "../utils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
-	constructArrearItem,
 	constructFeatureItem,
 	constructPrepaidItem,
 } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { expectAttachCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
+import { addPrefixToProducts } from "../utils.js";
 
-export let pro = constructProduct({
+export const pro = constructProduct({
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Words,
@@ -37,8 +35,8 @@ export let pro = constructProduct({
 const testCase = "others8";
 
 describe(`${chalk.yellowBright(`${testCase}: Testing annual pro with one off prepaid`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
 
@@ -74,7 +72,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing annual pro with one off pre
 		});
 	});
 
-	it("should attach annual pro product with one off prepaid", async function () {
+	it("should attach annual pro product with one off prepaid", async () => {
 		const options = [
 			{
 				feature_id: TestFeature.Users,

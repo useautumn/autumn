@@ -1,15 +1,14 @@
-import UpdateFeature from "./UpdateFeature";
-import CopyButton from "@/components/general/CopyButton";
-
+import { type Feature, FeatureType } from "@autumn/shared";
 import { useState } from "react";
+import { AdminHover } from "@/components/general/AdminHover";
+import CopyButton from "@/components/general/CopyButton";
+import { Item, Row } from "@/components/general/TableGrid";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import { Feature, FeatureType } from "@autumn/shared";
+import { useProductsQueryState } from "../../hooks/useProductsQueryState";
 import { FeatureRowToolbar } from "../feature-row-toolbar/FeatureRowToolbar";
 import { FeatureTypeBadge } from "./FeatureTypeBadge";
-import { Item, Row } from "@/components/general/TableGrid";
-import { AdminHover } from "@/components/general/AdminHover";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useProductsQueryState } from "../../hooks/useProductsQueryState";
+import UpdateFeature from "./UpdateFeature";
 
 export const FeaturesTable = () => {
 	const { features } = useFeaturesQuery();
@@ -21,10 +20,9 @@ export const FeaturesTable = () => {
 	const getMeteredEventNames = (feature: Feature) => {
 		if (feature.type !== FeatureType.Metered) return "";
 
-		if (!feature.config.filters || feature.config.filters.length === 0)
-			return "";
+		if (!feature.event_names || feature.event_names.length === 0) return "";
 
-		return feature.config.filters[0].value.join(", ");
+		return feature.event_names.join(", ");
 	};
 
 	const handleRowClick = (id: string) => {

@@ -1,74 +1,51 @@
 import {
-	APIVersion,
+	ApiVersion,
 	BillingInterval,
 	BillingType,
-	FullCusProduct,
+	type FullCusProduct,
 	OnDecrease,
 	OnIncrease,
-	Price,
-	UsagePriceConfig,
+	type Price,
+	type UsagePriceConfig,
 } from "@autumn/shared";
-import { formatPrice, getBillingType } from "../../priceUtils.js";
-import { notNullish } from "@/utils/genUtils.js";
-import Stripe from "stripe";
 import { Decimal } from "decimal.js";
+import type Stripe from "stripe";
+import { notNullish } from "@/utils/genUtils.js";
+import { getBillingType } from "../../priceUtils.js";
 
 export const isOneOffPrice = ({ price }: { price: Price }) => {
-	return price.config.interval == BillingInterval.OneOff;
-};
-
-export const isUsagePrice = ({
-	price,
-	featureId,
-}: {
-	price: Price;
-	featureId?: string;
-}) => {
-	let billingType = getBillingType(price.config);
-
-	let isUsage =
-		billingType == BillingType.UsageInArrear ||
-		billingType == BillingType.InArrearProrated ||
-		billingType == BillingType.UsageInAdvance;
-
-	if (featureId) {
-		return (
-			isUsage && (price.config as UsagePriceConfig).feature_id == featureId
-		);
-	}
-
-	return isUsage;
+	return price.config.interval === BillingInterval.OneOff;
 };
 
 export const isArrearPrice = ({ price }: { price?: Price }) => {
 	if (!price) return false;
-	let billingType = getBillingType(price.config);
-	return billingType == BillingType.UsageInArrear;
+	const billingType = getBillingType(price.config);
+	return billingType === BillingType.UsageInArrear;
 };
 export const isContUsePrice = ({ price }: { price?: Price }) => {
 	if (!price) return false;
-	let billingType = getBillingType(price.config);
-	return billingType == BillingType.InArrearProrated;
+	const billingType = getBillingType(price.config);
+	return billingType === BillingType.InArrearProrated;
 };
 
 export const isPrepaidPrice = ({ price }: { price: Price }) => {
-	let billingType = getBillingType(price.config);
-	return billingType == BillingType.UsageInAdvance;
+	const billingType = getBillingType(price.config);
+	return billingType === BillingType.UsageInAdvance;
 };
 
 export const isPayPerUse = ({ price }: { price: Price }) => {
-	let billingType = getBillingType(price.config);
+	const billingType = getBillingType(price.config);
 	return (
-		billingType == BillingType.UsageInArrear ||
-		billingType == BillingType.InArrearProrated
+		billingType === BillingType.UsageInArrear ||
+		billingType === BillingType.InArrearProrated
 	);
 };
 
 export const isFixedPrice = ({ price }: { price: Price }) => {
-	let billingType = getBillingType(price.config);
+	const billingType = getBillingType(price.config);
 
 	return (
-		billingType == BillingType.FixedCycle || billingType == BillingType.OneOff
+		billingType === BillingType.FixedCycle || billingType === BillingType.OneOff
 	);
 };
 
@@ -80,8 +57,8 @@ export const hasPrepaidPrice = ({
 	excludeOneOff?: boolean;
 }) => {
 	return prices.some((price) => {
-		let isUsage = getBillingType(price.config) == BillingType.UsageInAdvance;
-		let isOneOff = price.config.interval == BillingInterval.OneOff;
+		const isUsage = getBillingType(price.config) === BillingType.UsageInAdvance;
+		const isOneOff = price.config.interval === BillingInterval.OneOff;
 
 		return isUsage && (excludeOneOff ? !isOneOff : true);
 	});
@@ -97,8 +74,8 @@ export const isV4Usage = ({
 	const billingType = getBillingType(price.config);
 
 	return (
-		billingType == BillingType.UsageInArrear &&
-		(cusProduct.api_version == APIVersion.v1_4 ||
+		billingType === BillingType.UsageInArrear &&
+		(cusProduct.api_semver === ApiVersion.Beta ||
 			notNullish(cusProduct.internal_entity_id))
 	);
 };
@@ -143,10 +120,10 @@ export const roundUsage = ({
 	price: Price;
 	pos?: boolean;
 }) => {
-	let config = price.config as UsagePriceConfig;
-	let billingUnits = config.billing_units || 1;
+	const config = price.config as UsagePriceConfig;
+	const billingUnits = config.billing_units || 1;
 
-	let rounded = new Decimal(usage)
+	const rounded = new Decimal(usage)
 		.div(billingUnits)
 		.ceil()
 		.mul(billingUnits)

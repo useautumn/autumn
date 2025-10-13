@@ -1,30 +1,29 @@
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-
 import {
-	APIVersion,
-	AppEnv,
+	type AppEnv,
 	AttachErrCode,
-	Organization,
+	LegacyVersion,
+	type Organization,
 } from "@autumn/shared";
 import chalk from "chalk";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "../utils.js";
-import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addWeeks } from "date-fns";
-import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { timeout } from "@/utils/genUtils.js";
+import type Stripe from "stripe";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { timeout } from "@/utils/genUtils.js";
+import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { addPrefixToProducts } from "../utils.js";
 
 const testCase = "updateQuantity1";
 
-export let pro = constructProduct({
+export const pro = constructProduct({
 	items: [
 		constructPrepaidItem({
 			featureId: TestFeature.Users,
@@ -36,14 +35,14 @@ export let pro = constructProduct({
 });
 
 describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with prepaid single use`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
 
 	let curUnix = new Date().getTime();
-	let numUsers = 0;
+	const numUsers = 0;
 
 	before(async function () {
 		await setupBefore(this);
@@ -86,7 +85,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with prepaid singl
 		},
 	];
 
-	it("should attach pro product (arrear prorated)", async function () {
+	it("should attach pro product (arrear prorated)", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,
@@ -99,7 +98,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with prepaid singl
 		});
 	});
 
-	it("should throw error if try to attach same options", async function () {
+	it("should throw error if try to attach same options", async () => {
 		await expectAutumnError({
 			errCode: AttachErrCode.ProductAlreadyAttached,
 			func: async () => {
@@ -119,7 +118,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with prepaid singl
 		},
 	];
 
-	it("should update quantity to 4 users and have usage stay the same", async function () {
+	it("should update quantity to 4 users and have usage stay the same", async () => {
 		await autumn.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Users,

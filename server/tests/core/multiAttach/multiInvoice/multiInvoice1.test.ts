@@ -1,38 +1,23 @@
-import chalk from "chalk";
-import { setupBefore } from "tests/before.js";
-import { Stripe } from "stripe";
-import { createProducts } from "tests/utils/productUtils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-	APIVersion,
-	AppEnv,
+	type AppEnv,
 	CusProductStatus,
-	Organization,
+	LegacyVersion,
+	type Organization,
 } from "@autumn/shared";
-import {
-	constructArrearItem,
-	constructFeatureItem,
-} from "@/utils/scriptUtils/constructItem.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import {
-	addPrefixToProducts,
-	getBasePrice,
-} from "tests/utils/testProductUtils/testProductUtils.js";
-import { expect } from "chai";
-import { advanceToNextInvoice } from "tests/utils/testAttachUtils/testAttachUtils.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import {
-	advanceTestClock,
-	completeCheckoutForm,
-} from "tests/utils/stripeUtils.js";
-import { addDays, addWeeks } from "date-fns";
-import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
+import chalk from "chalk";
+import type { Stripe } from "stripe";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { expectMultiAttachCorrect } from "tests/utils/expectUtils/expectMultiAttach.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
-let premium = constructProduct({
+const premium = constructProduct({
 	id: "premium",
 	items: [
 		constructFeatureItem({ featureId: TestFeature.Words, includedUsage: 200 }),
@@ -41,7 +26,7 @@ let premium = constructProduct({
 	trial: true,
 });
 
-let pro = constructProduct({
+const pro = constructProduct({
 	id: "pro",
 	items: [
 		constructFeatureItem({
@@ -68,8 +53,8 @@ const ops = [
 
 const testCase = "multiInvoice1";
 describe(`${chalk.yellowBright("multiInvoice1: Testing multi attach through invoice flow")}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 	let stripeCli: Stripe;
 	let testClockId: string;
@@ -113,7 +98,7 @@ describe(`${chalk.yellowBright("multiInvoice1: Testing multi attach through invo
 		testClockId = testClockId1!;
 	});
 
-	it("should run multi attach through checkout and have correct sub", async function () {
+	it("should run multi attach through checkout and have correct sub", async () => {
 		const productsList = [
 			{
 				product_id: pro.id,
@@ -143,7 +128,7 @@ describe(`${chalk.yellowBright("multiInvoice1: Testing multi attach through invo
 		});
 	});
 
-	it("should update premium & pro while trialing", async function () {
+	it("should update premium & pro while trialing", async () => {
 		const newProducts = [
 			{
 				product_id: premium.id,

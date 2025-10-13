@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 import { Infinite } from "../../productEnums.js";
 import { BillingInterval } from "../priceEnums.js";
 

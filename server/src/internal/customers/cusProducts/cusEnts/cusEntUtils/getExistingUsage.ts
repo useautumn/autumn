@@ -1,25 +1,24 @@
 import {
-	CustomerEntitlement,
+	type CustomerEntitlement,
 	CustomerEntitlementSchema,
 	EntInterval,
-	EntitlementWithFeature,
-	Entity,
-	Feature,
+	type EntitlementWithFeature,
+	type Entity,
+	type Feature,
 	FeatureType,
-	FullCusEntWithFullCusProduct,
-	FullCusProduct,
-	Price,
+	type FullCusEntWithFullCusProduct,
+	type FullCusProduct,
+	getStartingBalance,
+	type Price,
+	sortCusEntsForDeduction,
 } from "@autumn/shared";
-
+import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
+import { performDeductionOnCusEnt } from "@/trigger/updateBalanceTask.js";
+import { notNullish, nullish } from "@/utils/genUtils.js";
 import {
 	getRelatedCusPrice,
-	getResetBalance,
 	getUnlimitedAndUsageAllowed,
 } from "../cusEntUtils.js";
-import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
-import { notNullish, nullish } from "@/utils/genUtils.js";
-import { performDeductionOnCusEnt } from "@/trigger/updateBalanceTask.js";
-import { sortCusEntsForDeduction } from "@autumn/shared";
 
 export const getExistingCusEntAndUsage = async ({
 	curCusProduct,
@@ -35,7 +34,7 @@ export const getExistingCusEntAndUsage = async ({
 	}
 
 	// 1. If there is only one cus ent, return it and usage
-	let similarCusEnts = curCusProduct.customer_entitlements.filter(
+	const similarCusEnts = curCusProduct.customer_entitlements.filter(
 		(ce) => ce.internal_feature_id === entitlement.internal_feature_id,
 		// &&
 		//   ce.entitlement.interval === entitlement.interval
@@ -64,7 +63,7 @@ export const getExistingUsages = ({
 	entities: Entity[];
 	features: Feature[];
 }) => {
-	let usages: Record<
+	const usages: Record<
 		string,
 		{
 			feature_id: string;
@@ -76,14 +75,14 @@ export const getExistingUsages = ({
 		}
 	> = {};
 
-	let cusPrices = curCusProduct?.customer_prices || [];
+	const cusPrices = curCusProduct?.customer_prices || [];
 
 	// Get entityUsage
 	for (const entity of entities) {
-		let feature = features.find(
+		const feature = features.find(
 			(f) => f.internal_id === entity.internal_feature_id,
 		);
-		let key = `${feature?.id}-${EntInterval.Lifetime}-1`;
+		const key = `${feature?.id}-${EntInterval.Lifetime}-1`;
 
 		if (!usages[key]) {
 			usages[key] = {
@@ -100,12 +99,12 @@ export const getExistingUsages = ({
 	}
 
 	for (const cusEnt of curCusProduct?.customer_entitlements || []) {
-		let ent = cusEnt.entitlement;
-		let key = `${ent.feature_id}-${ent.interval}-${ent.interval_count || 1}`;
-		let feature = ent.feature;
+		const ent = cusEnt.entitlement;
+		const key = `${ent.feature_id}-${ent.interval}-${ent.interval_count || 1}`;
+		const feature = ent.feature;
 		if (feature.type == FeatureType.Boolean) continue;
 
-		let { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
+		const { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
 			cusEnts: curCusProduct.customer_entitlements,
 			internalFeatureId: ent.internal_feature_id!,
 		});
@@ -128,12 +127,12 @@ export const getExistingUsages = ({
 		}
 
 		// 1. To check, does ent options work with multiple features?
-		let relatedCusPrice = getRelatedCusPrice(cusEnt, cusPrices);
-		let options = getEntOptions(curCusProduct.options, ent);
+		const relatedCusPrice = getRelatedCusPrice(cusEnt, cusPrices);
+		const options = getEntOptions(curCusProduct.options, ent);
 
-		let resetBalance = getResetBalance({
+		const resetBalance = getStartingBalance({
 			entitlement: ent,
-			options,
+			options: options || undefined,
 			relatedPrice: relatedCusPrice?.price,
 			// productQuantity: curCusProduct.quantity,
 		});
@@ -182,14 +181,14 @@ export const addExistingUsagesToCusEnts = ({
 		return cusEnts;
 	}
 
-	let existingUsages = getExistingUsages({
+	const existingUsages = getExistingUsages({
 		curCusProduct,
 		entities,
 		features,
 	});
 
-	let fullCusEnts = cusEnts.map((ce) => {
-		let entitlement = entitlements.find((e) => e.id === ce.entitlement_id!);
+	const fullCusEnts = cusEnts.map((ce) => {
+		const entitlement = entitlements.find((e) => e.id === ce.entitlement_id!);
 		return { ...ce, entitlement, customer_product: curCusProduct };
 	}) as FullCusEntWithFullCusProduct[];
 
@@ -211,7 +210,7 @@ export const addExistingUsagesToCusEnts = ({
 
 	for (const key in existingUsages) {
 		let usage = existingUsages[key].usage;
-		let entityUsages = existingUsages[key].entityUsages;
+		const entityUsages = existingUsages[key].entityUsages;
 
 		const {
 			feature_id = "",
@@ -220,22 +219,22 @@ export const addExistingUsagesToCusEnts = ({
 		} = existingUsages[key] || {};
 
 		for (const cusEnt of fullCusEnts) {
-			let ent = cusEnt.entitlement;
-			let fromEntities = existingUsages[key].fromEntities;
+			const ent = cusEnt.entitlement;
+			const fromEntities = existingUsages[key].fromEntities;
 
 			// if (cusEntKey !== key) continue;
 			const isSameFeature = cusEnt.feature_id == feature_id;
 
 			if (!isSameFeature) continue;
 
-			let shouldCarry =
+			const shouldCarry =
 				ent.carry_from_previous || carryExistingUsages || fromEntities;
 
 			if (!shouldCarry) continue;
 
 			if (notNullish(entityUsages)) {
 				for (const entityId in entityUsages) {
-					let { toDeduct, newEntities } = performDeductionOnCusEnt({
+					const { toDeduct, newEntities } = performDeductionOnCusEnt({
 						cusEnt,
 						toDeduct: entityUsages[entityId],
 						allowNegativeBalance: cusEnt.usage_allowed ?? false,
@@ -255,7 +254,7 @@ export const addExistingUsagesToCusEnts = ({
 					cusEnt.entities![entityId]!.balance = newEntities![entityId]!.balance;
 				}
 			} else {
-				let { newBalance, toDeduct } = performDeductionOnCusEnt({
+				const { newBalance, toDeduct } = performDeductionOnCusEnt({
 					cusEnt,
 					toDeduct: usage,
 					allowNegativeBalance: cusEnt.usage_allowed ?? false,

@@ -1,34 +1,31 @@
-import { Router } from "express";
-
 import {
-	APIVersion,
-	AppEnv,
+	ApiVersion,
+	type AppEnv,
 	CreateEventSchema,
 	CusProductStatus,
-	EntityData,
+	type EntityData,
 	ErrCode,
-	EventInsert,
-	Feature,
+	type EventInsert,
+	type Feature,
 	FeatureType,
-	FullCustomer,
-	Organization,
+	type FullCustomer,
+	type Organization,
 } from "@autumn/shared";
-
+import { Router } from "express";
+import { StatusCodes } from "http-status-codes";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
+import { creditSystemContainsFeature } from "@/internal/features/creditSystemUtils.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
+import { JobName } from "@/queue/JobName.js";
+import { addTaskToQueue } from "@/queue/queueUtils.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { generateId, notNullish } from "@/utils/genUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { EventService } from "./EventService.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-import { handleUsageEvent } from "./usageRouter.js";
-import { StatusCodes } from "http-status-codes";
-import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
-import { creditSystemContainsFeature } from "@/internal/features/creditSystemUtils.js";
-import { addTaskToQueue } from "@/queue/queueUtils.js";
-import { JobName } from "@/queue/JobName.js";
-import { orgToVersion } from "@/utils/versionUtils.js";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
 import { getEventTimestamp } from "./eventUtils.js";
+import { handleUsageEvent } from "./usageRouter.js";
 
 export const eventsRouter: Router = Router();
 
@@ -99,7 +96,7 @@ const getEventAndCustomer = async ({
 		internal_entity_id: internalEntityId,
 	};
 
-	let event = await EventService.insert({ db, event: newEvent });
+	const event = await EventService.insert({ db, event: newEvent });
 
 	return { customer, event };
 };
@@ -111,20 +108,19 @@ const getAffectedFeatures = async ({
 	req: any;
 	eventName: string;
 }) => {
-	let features = await FeatureService.getFromReq(req);
+	const features = await FeatureService.getFromReq(req);
 
-	let featuresWithEvent = features.filter((feature) => {
+	const featuresWithEvent = features.filter((feature) => {
 		return (
-			feature.type == FeatureType.Metered &&
-			feature.config.filters.some((filter: any) => {
-				return filter.value.includes(eventName);
-			})
+			feature.type === FeatureType.Metered &&
+			feature.event_names &&
+			feature.event_names.includes(eventName)
 		);
 	});
 
-	let creditSystems = features.filter((cs: Feature) => {
+	const creditSystems = features.filter((cs: Feature) => {
 		return (
-			cs.type == FeatureType.CreditSystem &&
+			cs.type === FeatureType.CreditSystem &&
 			featuresWithEvent.some((f) =>
 				creditSystemContainsFeature({
 					creditSystem: cs,
@@ -156,7 +152,7 @@ export const handleEventSent = async ({
 
 	const { env, db } = req;
 
-	let eventName = event_data.event_name;
+	const eventName = event_data.event_name;
 
 	const org = await OrgService.getFromReq(req);
 	const features = await FeatureService.getFromReq(req);
@@ -166,7 +162,7 @@ export const handleEventSent = async ({
 		eventName,
 	});
 
-	if (affectedFeatures.length == 0) {
+	if (affectedFeatures.length === 0) {
 		throw new RecaseError({
 			message: `No features found for event_name ${event_data.event_name}`,
 			code: ErrCode.InvalidEventName,
@@ -236,19 +232,19 @@ eventsRouter.post("", async (req: any, res: any) => {
 			});
 		}
 
-		let { event, org }: any = await handleEventSent({
+		const { event, org }: any = await handleEventSent({
 			req,
 			customer_id: body.customer_id,
 			customer_data: body.customer_data,
 			event_data: body,
 		});
 
-		let apiVersion = orgToVersion({
-			org,
-			reqApiVersion: req.apiVersion,
-		});
+		// const apiVersion = orgToVersion({
+		// 	org,
+		// 	reqApiVersion: req.apiVersion,
+		// });
 
-		let response: any = {
+		const response: any = {
 			id: event?.id,
 			code: "event_received",
 			customer_id: body.customer_id,
@@ -261,7 +257,7 @@ eventsRouter.post("", async (req: any, res: any) => {
 			response.event_name = event.event_name;
 		}
 
-		if (apiVersion >= APIVersion.v1_1) {
+		if (req.apiVersion.gte(ApiVersion.V1_1)) {
 			res.status(200).json(response);
 		} else {
 			res.status(200).json({ success: true });

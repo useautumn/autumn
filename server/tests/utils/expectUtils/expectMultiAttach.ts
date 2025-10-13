@@ -1,36 +1,19 @@
-import Stripe from "stripe";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
-	APIVersion,
-	AppEnv,
-	AttachBranch,
-	CreateEntity,
-	CreateReward,
-	CusProductStatus,
-	FeatureOptions,
-	Organization,
-	ProductOptions,
-	ProductV2,
+	type AppEnv,
+	type CusProductStatus,
+	LegacyVersion,
+	type Organization,
+	type ProductOptions,
+	type ProductV2,
 } from "@autumn/shared";
-
-import {
-	getAttachTotal,
-	getCurrentOptions,
-} from "tests/utils/testAttachUtils/testAttachUtils.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { expectInvoicesCorrect } from "tests/utils/expectUtils/expectProductAttached.js";
-import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
-import { notNullish, timeout, toSnakeCase } from "@/utils/genUtils.js";
-import { expectSubItemsCorrect } from "tests/utils/expectUtils/expectSubUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-
 import { expect } from "chai";
-import { completeCheckoutForm } from "../stripeUtils.js";
-import { AttachParams, Customer } from "autumn-js";
-import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
 import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
-import { Decimal } from "decimal.js";
+import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { timeout } from "@/utils/genUtils.js";
 import { completeInvoiceCheckout } from "../stripeUtils/completeInvoiceCheckout.js";
+import { completeCheckoutForm } from "../stripeUtils.js";
 
 export const expectMultiAttachCorrect = async ({
 	autumn,
@@ -62,12 +45,12 @@ export const expectMultiAttachCorrect = async ({
 	org: Organization;
 	env: AppEnv;
 }) => {
-	autumn = autumn || new AutumnInt({ version: APIVersion.v1_2 });
+	autumn = autumn || new AutumnInt({ version: LegacyVersion.v1_2 });
 	const checkoutRes = await autumn.checkout({
 		customer_id: customerId,
 		products: products,
 		entity_id: entityId,
-		// @ts-ignore
+		// @ts-expect-error
 		reward: rewards,
 		...attachParams,
 	});
@@ -76,7 +59,7 @@ export const expectMultiAttachCorrect = async ({
 		customer_id: customerId,
 		products: products,
 		entity_id: entityId,
-		// @ts-ignore
+		// @ts-expect-error
 		reward: rewards,
 		...attachParams,
 	});
@@ -139,7 +122,7 @@ export const expectResultsCorrect = async ({
 		entityId?: string;
 	}[];
 }) => {
-	autumn = autumn || new AutumnInt({ version: APIVersion.v1_2 });
+	autumn = autumn || new AutumnInt({ version: LegacyVersion.v1_2 });
 	for (const result of results) {
 		let customer;
 		if (result.entityId) {

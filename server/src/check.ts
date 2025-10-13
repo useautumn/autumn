@@ -1,36 +1,38 @@
 import { config } from "dotenv";
+
 config();
 
+import assert from "node:assert";
+import {
+	AppEnv,
+	CusProductStatus,
+	cusProductToPrices,
+	type Entity,
+	type FullCusProduct,
+	type FullCustomer,
+	type Organization,
+} from "@autumn/shared";
+
+import type Stripe from "stripe";
+import { initDrizzle } from "@/db/initDrizzle.js";
+import { getStripeSchedules } from "@/external/stripe/stripeSubUtils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
+import { createSupabaseClient } from "@/external/supabaseUtils.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
+import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 import {
 	getAllEntities,
 	getAllFullCustomers,
 } from "@/utils/scriptUtils/getAll/getAllAutumnCustomers.js";
-import { initDrizzle } from "@/db/initDrizzle.js";
-import {
-	AppEnv,
-	CusProductStatus,
-	FullCusProduct,
-	FullCustomer,
-	Organization,
-	Entity,
-} from "@autumn/shared";
-import Stripe from "stripe";
-import assert from "assert";
-import { cusProductToPrices } from "@autumn/shared";
-import { notNullish } from "@/utils/genUtils.js";
 import {
 	getAllStripeSchedules,
 	getAllStripeSubscriptions,
 } from "@/utils/scriptUtils/getAll/getAllStripeSubs.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { getStripeSchedules } from "@/external/stripe/stripeSubUtils.js";
-import { createSupabaseClient } from "@/external/supabaseUtils.js";
-import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
+import { EntityService } from "./internal/api/entities/EntityService.js";
 import { getRelatedCusPrice } from "./internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { checkCusSubCorrect } from "./utils/checkUtils/checkCustomerCorrect.js";
-import { EntityService } from "./internal/api/entities/EntityService.js";
 
 const { db } = initDrizzle({ maxConnections: 5 });
 
@@ -43,7 +45,7 @@ const skipIds = [
 
 orgSlugs = ["supermemory"];
 let customerId = null;
-// customerId = "co1VPgUU59q43d5P2rFt4c";
+customerId = "EBbxiRv9QJKXFy5WiAKeHi";
 
 const getSingleCustomer = async ({
 	stripeCli,
@@ -139,15 +141,15 @@ const checkCustomerCorrect = async ({
 	for (const cusProduct of cusProducts) {
 		if (!cusProduct.subscription_ids) continue;
 
-		if (cusProduct.status == CusProductStatus.Scheduled) {
+		if (cusProduct.status === CusProductStatus.Scheduled) {
 			// Check if there's a main product elsewhere
-			let mainCusProd = cusProducts.find(
+			const mainCusProd = cusProducts.find(
 				(cp: FullCusProduct) =>
 					cp.product.group === cusProduct.product.group &&
 					cp.id !== cusProduct.id &&
 					cp.status !== CusProductStatus.Scheduled &&
 					(cusProduct.internal_entity_id
-						? cusProduct.internal_entity_id == cp.internal_entity_id
+						? cusProduct.internal_entity_id === cp.internal_entity_id
 						: true),
 			);
 
@@ -161,14 +163,14 @@ const checkCustomerCorrect = async ({
 			!cusProduct.product.is_add_on &&
 			cusProduct.status !== CusProductStatus.Scheduled
 		) {
-			let group = cusProduct.product.group;
-			let otherCusProd = cusProducts.find(
+			const group = cusProduct.product.group;
+			const otherCusProd = cusProducts.find(
 				(cp: FullCusProduct) =>
 					cp.product.group === group &&
 					cp.id !== cusProduct.id &&
 					!cp.product.is_add_on &&
 					cp.status !== CusProductStatus.Scheduled &&
-					cp.internal_entity_id == cusProduct.internal_entity_id,
+					cp.internal_entity_id === cusProduct.internal_entity_id,
 			);
 
 			assert(
@@ -177,7 +179,7 @@ const checkCustomerCorrect = async ({
 			);
 		}
 
-		let stripeSubs = subs.filter((sub: any) =>
+		const stripeSubs = subs.filter((sub: any) =>
 			cusProduct.subscription_ids!.some((id: string) => id === sub.id),
 		);
 
@@ -193,13 +195,13 @@ const checkCustomerCorrect = async ({
 		if (
 			isOneOff(prices) ||
 			isFreeProduct(prices) ||
-			cusProduct.status == CusProductStatus.Scheduled
+			cusProduct.status === CusProductStatus.Scheduled
 		) {
 			continue;
 		}
 
 		for (const cusEnt of cusProduct.customer_entitlements) {
-			let cusPrice = getRelatedCusPrice(cusEnt, cusProduct.customer_prices);
+			const cusPrice = getRelatedCusPrice(cusEnt, cusProduct.customer_prices);
 
 			if (cusEnt.usage_allowed && !cusPrice) {
 				assert.fail(
@@ -375,7 +377,7 @@ export const check = async () => {
 		`COMPLETED ERROR CHECK FOR ${new Date().toISOString().slice(0, 16)}`,
 	);
 
-	if (process.env.NODE_ENV == "production") {
+	if (process.env.NODE_ENV === "production") {
 		const slackBody = {
 			text: `Completed error check for ${new Date().toISOString().slice(0, 16)}`,
 			blocks: [

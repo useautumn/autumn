@@ -9,16 +9,11 @@ import {
 import { sanitizeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { buildInvoiceMemoFromEntitlements } from "@/internal/invoices/invoiceMemoUtils.js";
-import {
-	freeTrialToStripeTimestamp,
-	rewardTrialToStripeTimestamp,
-} from "@/internal/products/free-trials/freeTrialUtils.js";
+import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 import type { ItemSet } from "@/utils/models/ItemSet.js";
-
-// Get payment method
 
 export const createStripeSub2 = async ({
 	db,
@@ -37,12 +32,7 @@ export const createStripeSub2 = async ({
 	itemSet: ItemSet;
 	logger: any;
 }) => {
-	const { customer, invoiceOnly, freeTrial, org, now, rewards, rewardTrial } =
-		attachParams;
-	// const isDefaultTrial = freeTrial && !freeTrial.card_required;
-	// let shouldErrorIfNoPm = !invoiceOnly;
-	// if (isDefaultTrial) shouldErrorIfNoPm = false;
-	// 	if (rewardTrial) shouldErrorIfNoPm = false;
+	const { customer, invoiceOnly, freeTrial, org, now, rewards } = attachParams;
 
 	const paymentMethod = await getCusPaymentMethod({
 		stripeCli,
@@ -93,18 +83,6 @@ export const createStripeSub2 = async ({
 
 				trial_end: freeTrialToStripeTimestamp({ freeTrial, now }),
 			},
-
-			// ...{
-			//   trial_settings: rewardTrial
-			//     ? {
-			//         end_behavior: {
-			//           missing_payment_method: "cancel",
-			//         },
-			//       }
-			//     : undefined,
-
-			//   trial_end: rewardTrialToStripeTimestamp({ rewardTrial, now }),
-			// },
 		});
 
 		const latestInvoice = subscription.latest_invoice as Stripe.Invoice;

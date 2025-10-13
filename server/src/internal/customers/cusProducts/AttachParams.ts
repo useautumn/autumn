@@ -1,5 +1,5 @@
 import type {
-	APIVersion,
+	ApiVersion,
 	AttachReplaceable,
 	AttachScenario,
 	Customer,
@@ -7,7 +7,6 @@ import type {
 	Entity,
 	Feature,
 	FeatureOptions,
-	FreeProductConfig,
 	FreeTrial,
 	FullCusProduct,
 	FullCustomer,
@@ -40,7 +39,6 @@ export type AttachParams = {
 	entitlements: EntitlementWithFeature[];
 
 	freeTrial: FreeTrial | null;
-	rewardTrial?: FreeProductConfig | null;
 	optionsList: FeatureOptions[];
 	productsList?: ProductOptions[];
 
@@ -71,7 +69,7 @@ export type AttachParams = {
 	internalEntityId?: string;
 
 	checkoutSessionParams?: any;
-	apiVersion?: number;
+	apiVersion?: ApiVersion;
 	scenario?: AttachScenario;
 
 	fromMigration?: boolean;
@@ -111,7 +109,7 @@ export type InsertCusProductParams = {
 	entityId?: string;
 	internalEntityId?: string;
 	fromMigration?: boolean;
-	apiVersion?: APIVersion;
+	apiVersion?: ApiVersion;
 	finalizeInvoice?: boolean;
 };
 

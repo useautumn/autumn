@@ -7,7 +7,7 @@
 // import { AutumnInt } from "@/external/autumn/autumnCli.js";
 // import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 // import {
-//   APIVersion,
+//   LegacyVersion,
 //   AppEnv,
 //   CusProductStatus,
 //   Organization,
@@ -74,7 +74,7 @@
 // const testCase = "cancel1";
 // describe(`${chalk.yellowBright("cancel1: Testing cancelling singular product")}`, () => {
 //   let customerId = testCase;
-//   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+//   let autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 //   let stripeCli: Stripe;
 //   let testClockId: string;
@@ -184,7 +184,7 @@
 //       customer_id: customerId,
 //       product_id: premium.id,
 //       cancel_immediately: true,
-//       // @ts-ignore
+//       // @ts-expect-error
 //       prorate: true,
 //     });
 

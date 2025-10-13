@@ -1,27 +1,25 @@
 import {
-	Feature,
-	FullCustomerPrice,
-	OnIncrease,
-	Organization,
-	Price,
-	Product,
-	UsagePriceConfig,
+	type Feature,
+	type FullCustomerPrice,
+	getFeatureInvoiceDescription,
+	type OnIncrease,
+	type Organization,
+	type Price,
+	type Product,
+	type UsagePriceConfig,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
-import { getFeatureInvoiceDescription } from "@autumn/shared";
-import Stripe from "stripe";
+import type Stripe from "stripe";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
-import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
 import { constructStripeInvoiceItem } from "@/internal/invoices/invoiceItemUtils/invoiceItemUtils.js";
 import { createAndFinalizeInvoice } from "@/internal/invoices/invoiceUtils/createAndFinalizeInvoice.js";
 import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
 import {
-	shouldProrate,
 	shouldBillNow,
+	shouldProrate,
 } from "@/internal/products/prices/priceUtils/prorationConfigUtils.js";
 import { formatUnixToDate } from "@/utils/genUtils.js";
 import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
-import { findStripeItemForPrice } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 
 export const getUpgradeProrationInvoiceItem = ({
 	prevPrice,
@@ -68,12 +66,12 @@ export const getUpgradeProrationInvoiceItem = ({
 			amount: invoiceAmount,
 		});
 
-		let start = formatUnixToDate(now);
-		let end = formatUnixToDate(subItem.current_period_end * 1000);
+		const start = formatUnixToDate(now);
+		const end = formatUnixToDate(subItem.current_period_end * 1000);
 		invoiceDescription = `${invoiceDescription} (from ${start} to ${end})`;
 	}
 
-	let invoiceItem = constructStripeInvoiceItem({
+	const invoiceItem = constructStripeInvoiceItem({
 		product,
 		amount: invoiceAmount,
 		org,
@@ -117,14 +115,14 @@ export const createUpgradeProrationInvoice = async ({
 	onIncrease: OnIncrease;
 	logger: any;
 }) => {
-	let now = await getStripeNow({ stripeCli, stripeSub: sub });
+	const now = await getStripeNow({ stripeCli, stripeSub: sub });
 
 	const paymentMethod = await getCusPaymentMethod({
 		stripeCli,
 		stripeId: sub.customer as string,
 	});
 
-	let invoiceItem = getUpgradeProrationInvoiceItem({
+	const invoiceItem = getUpgradeProrationInvoiceItem({
 		prevPrice,
 		newPrice,
 		now,
@@ -138,12 +136,12 @@ export const createUpgradeProrationInvoice = async ({
 		subItem,
 	});
 
-	let invoiceAmount =
+	const invoiceAmount =
 		invoiceItem?.amount || invoiceItem?.price_data?.unit_amount || 0;
 
-	let invoiceDescription = invoiceItem?.description || "";
+	const invoiceDescription = invoiceItem?.description || "";
 
-	if (invoiceAmount == 0) return;
+	if (invoiceAmount === 0) return;
 
 	logger.info(
 		`🚀 Creating invoice item: ${invoiceDescription} - ${invoiceAmount.toFixed(2)}`,

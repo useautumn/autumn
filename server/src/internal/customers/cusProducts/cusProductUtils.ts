@@ -1,42 +1,42 @@
 import {
-	APIVersion,
-	AppEnv,
+	ACTIVE_STATUSES,
+	ApiCusProductSchema,
+	ApiVersion,
+	type ApiVersionClass,
+	type AppEnv,
 	AttachScenario,
-	CusProductResponseSchema,
 	CusProductStatus,
-	Entity,
-	FixedPriceConfig,
-	FullCusProduct,
-	FullCustomer,
-	Organization,
+	cusProductToPrices,
+	type Entity,
+	type FixedPriceConfig,
+	type FullCusProduct,
+	type FullCustomer,
+	type FullProduct,
+	type Organization,
 	PriceType,
-	Subscription,
+	type Subscription,
 	TierInfinite,
-	UsagePriceConfig,
+	type UsagePriceConfig,
 } from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
+import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
+import { ProductService } from "@/internal/products/ProductService.js";
 import {
 	getPriceOptions,
 	getUsageTier,
 } from "@/internal/products/prices/priceUtils.js";
-import { ProductService } from "@/internal/products/ProductService.js";
-import { CusProductService, RELEVANT_STATUSES } from "./CusProductService.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-
-import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
-import { getRelatedCusEnt } from "./cusPrices/cusPriceUtils.js";
-import { notNullish, nullish } from "@/utils/genUtils.js";
-import { BREAK_API_VERSION } from "@/utils/constants.js";
-import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { getExistingCusProducts } from "./cusProductUtils/getExistingCusProducts.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { cusProductToPrices } from "@autumn/shared";
-import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { isDefaultTrialFullProduct } from "@/internal/products/productUtils/classifyProduct.js";
-import { initStripeCusAndProducts } from "../handlers/handleCreateCustomer.js";
+import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
+import { notNullish, nullish } from "@/utils/genUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { handleAddProduct } from "../attach/attachFunctions/addProductFlow/handleAddProduct.js";
 import { newCusToAttachParams } from "../attach/attachUtils/attachParams/convertToParams.js";
-import { getDefaultAttachConfig } from "../attach/attachUtils/getAttachConfig.js";
+import { initStripeCusAndProducts } from "../handlers/handleCreateCustomer.js";
+import { CusProductService, RELEVANT_STATUSES } from "./CusProductService.js";
+import { getRelatedCusEnt } from "./cusPrices/cusPriceUtils.js";
+import { getExistingCusProducts } from "./cusProductUtils/getExistingCusProducts.js";
 
 // 1. Cancel cusProductSubscriptions
 // CAN DELETE
@@ -65,7 +65,7 @@ export const cancelCusProductSubscriptions = async ({
 
 	let latestSubEnd: number | undefined;
 	if (cusProduct.subscription_ids && cusProduct.subscription_ids.length > 0) {
-		let stripeSubs = await getStripeSubs({
+		const stripeSubs = await getStripeSubs({
 			stripeCli,
 			subIds: cusProduct.subscription_ids,
 		});
@@ -92,7 +92,7 @@ export const cancelCusProductSubscriptions = async ({
 
 			logger.info(`Cancelled stripe subscription ${subId}, org: ${org.slug}`);
 		} catch (error: any) {
-			if (error.code != "resource_missing") {
+			if (error.code !== "resource_missing") {
 				console.log(
 					`Error canceling stripe subscription ${error.code}: ${error.message}`,
 				);
@@ -126,7 +126,7 @@ export const getDefaultProduct = async ({
 		env,
 	});
 
-	let defaultProd = defaultProducts.find(
+	const defaultProd = defaultProducts.find(
 		(p) =>
 			p.group === productGroup && !isDefaultTrialFullProduct({ product: p }),
 	);
@@ -134,6 +134,7 @@ export const getDefaultProduct = async ({
 	return defaultProd;
 };
 
+// This function is only used in cancellation flows
 export const activateDefaultProduct = async ({
 	req,
 	productGroup,
@@ -154,44 +155,38 @@ export const activateDefaultProduct = async ({
 	});
 
 	// Look for a paid default trial first, then fall back to free default
-	let defaultProd = defaultProducts.find(
+	const defaultProd: FullProduct | undefined = defaultProducts.find(
 		(p) =>
-			p.group === productGroup && isDefaultTrialFullProduct({ product: p }),
+			p.group === productGroup && !isDefaultTrialFullProduct({ product: p }),
 	);
 
-	let defaultableProducts = {
-		free: defaultProducts.filter(
-			(p) => p.group === productGroup && isFreeProduct(p.prices),
-		),
-		paid: defaultProducts.filter(
-			(p) =>
-				p.group === productGroup && isDefaultTrialFullProduct({ product: p }),
-		),
-	};
+	// const defaultableProducts = {
+	// 	free: defaultProducts.filter(
+	// 		(p) => p.group === productGroup && isFreeProduct(p.prices),
+	// 	),
+	// 	paid: defaultProducts.filter(
+	// 		(p) =>
+	// 			p.group === productGroup && isDefaultTrialFullProduct({ product: p }),
+	// 	),
+	// };
 
-	// console.log("Found defaultable products:", {
-	// 	free: defaultableProducts.free.map((p) => p.name),
-	// 	paid: defaultableProducts.paid.map((p) => p.name),
-	// });
+	// if (defaultableProducts.paid.length > 0) {
+	// 	defaultProd = defaultableProducts.paid[0];
+	// } else if (defaultableProducts.free.length > 0) {
+	// 	defaultProd = defaultableProducts.free[0];
+	// }
 
-	if (defaultableProducts.paid.length > 0) {
-		defaultProd = defaultableProducts.paid[0];
-	} else if (defaultableProducts.free.length > 0) {
-		defaultProd = defaultableProducts.free[0];
-	} else {
-		return false;
-	}
+	if (!defaultProd) return false;
 
-	if (curCusProduct?.internal_product_id == defaultProd.internal_id) {
+	if (curCusProduct?.internal_product_id === defaultProd.internal_id) {
 		return false;
 	}
 
 	const stripeCli = createStripeCli({ org, env });
-	let defaultIsFree = isFreeProduct(defaultProd.prices);
-	let isDefaultTrial = isDefaultTrialFullProduct({ product: defaultProd });
+	const defaultIsFree = isFreeProduct(defaultProd.prices);
 
 	// Initialize Stripe customer and products if needed (for paid non-trial products)
-	if (!defaultIsFree && !isDefaultTrial) {
+	if (!defaultIsFree) {
 		await initStripeCusAndProducts({
 			db,
 			org,
@@ -202,83 +197,87 @@ export const activateDefaultProduct = async ({
 		});
 	}
 
-	if (!isDefaultTrial) {
-		const existingDefaultProduct = fullCus.customer_products.find(
-			(cp) =>
-				cp.product.internal_id === defaultProd!.internal_id &&
-				(cp.status === CusProductStatus.Active ||
-					cp.status === CusProductStatus.PastDue ||
-					cp.status === CusProductStatus.Trialing),
+	// If default is already active, skip
+	const existingDefaultProduct = fullCus.customer_products.find(
+		(cp) =>
+			cp.product.id === defaultProd?.id && ACTIVE_STATUSES.includes(cp.status),
+	);
+
+	if (existingDefaultProduct) {
+		logger.info(
+			`Default product ${defaultProd?.name} already exists for customer`,
 		);
-
-		if (existingDefaultProduct) {
-			logger.info(
-				`Default product ${defaultProd!.name} already exists for customer`,
-			);
-			return false;
-		}
-
-		await handleAddProduct({
-			req,
-			attachParams: newCusToAttachParams({
-				req,
-				newCus: fullCus,
-				products: [defaultProd],
-				stripeCli,
-			}),
-		});
-
-		// await createFullCusProduct({
-		//   db,
-		//   attachParams: {
-		//     org,
-		//     customer,
-		//     product: defaultProd,
-		//     prices: defaultProd.prices,
-		//     entitlements: defaultProd.entitlements,
-		//     freeTrial: defaultProd.free_trial || null,
-		//     optionsList: [],
-		//     entities: [],
-		//     features: [],
-		//     replaceables: [],
-		//   },
-		//   scenario: AttachScenario.New,
-		//   logger,
-		// });
-
-		// console.log(`   ✅ activated default product: ${defaultProd.group}`);
-		return true;
-	} else if (isDefaultTrial && defaultableProducts.free.length > 0) {
-		defaultProd = defaultableProducts.free[0];
-
-		// Check if the free default product already exists to prevent duplicates
-		const existingFreeProduct = fullCus.customer_products.find(
-			(cp) =>
-				cp.product.internal_id === defaultProd!.internal_id &&
-				(cp.status === CusProductStatus.Active ||
-					cp.status === CusProductStatus.PastDue),
-		);
-
-		if (existingFreeProduct) {
-			logger.info(
-				`Free default product ${defaultProd!.name} already exists for customer`,
-			);
-			return false;
-		}
-
-		await handleAddProduct({
-			req,
-			attachParams: newCusToAttachParams({
-				req,
-				newCus: fullCus,
-				products: [defaultProd],
-				stripeCli,
-			}),
-			config: getDefaultAttachConfig(),
-		});
-
-		return true;
+		return false;
 	}
+
+	await handleAddProduct({
+		req,
+		attachParams: newCusToAttachParams({
+			req,
+			newCus: fullCus,
+			products: [defaultProd],
+			stripeCli,
+		}),
+	});
+
+	return true;
+
+	// if (!isDefaultTrial) {
+	// 	const existingDefaultProduct = fullCus.customer_products.find(
+	// 		(cp) =>
+	// 			cp.product.internal_id === defaultProd?.internal_id &&
+	// 			ACTIVE_STATUSES.includes(cp.status),
+	// 	);
+
+	// 	if (existingDefaultProduct) {
+	// 		logger.info(
+	// 			`Default product ${defaultProd?.name} already exists for customer`,
+	// 		);
+	// 		return false;
+	// 	}
+
+	// 	await handleAddProduct({
+	// 		req,
+	// 		attachParams: newCusToAttachParams({
+	// 			req,
+	// 			newCus: fullCus,
+	// 			products: [defaultProd],
+	// 			stripeCli,
+	// 		}),
+	// 	});
+
+	// 	return true;
+	// } else if (isDefaultTrial && defaultableProducts.free.length > 0) {
+	// 	defaultProd = defaultableProducts.free[0];
+
+	// 	// Check if the free default product already exists to prevent duplicates
+	// 	const existingFreeProduct = fullCus.customer_products.find(
+	// 		(cp) =>
+	// 			cp.product.internal_id === defaultProd!.internal_id &&
+	// 			(cp.status === CusProductStatus.Active ||
+	// 				cp.status === CusProductStatus.PastDue),
+	// 	);
+
+	// 	if (existingFreeProduct) {
+	// 		logger.info(
+	// 			`Free default product ${defaultProd?.name} already exists for customer`,
+	// 		);
+	// 		return false;
+	// 	}
+
+	// 	await handleAddProduct({
+	// 		req,
+	// 		attachParams: newCusToAttachParams({
+	// 			req,
+	// 			newCus: fullCus,
+	// 			products: [defaultProd],
+	// 			stripeCli,
+	// 		}),
+	// 		config: getDefaultAttachConfig(),
+	// 	});
+
+	// 	return true;
+	// }
 };
 
 export const expireAndActivate = async ({
@@ -299,8 +298,8 @@ export const expireAndActivate = async ({
 	});
 
 	// Check if it's one time product
-	let prices = cusProductToPrices({ cusProduct });
-	let product = cusProduct.product;
+	const prices = cusProductToPrices({ cusProduct });
+	const product = cusProduct.product;
 	const isOneOffOrAddOn = product.is_add_on || isOneOff(prices);
 
 	if (isOneOffOrAddOn || notNullish(cusProduct.internal_entity_id)) {
@@ -323,13 +322,13 @@ export const activateFutureProduct = async ({
 }) => {
 	const { db, org, env, logger } = req;
 
-	let cusProducts = await CusProductService.list({
+	const cusProducts = await CusProductService.list({
 		db,
 		internalCustomerId: cusProduct.internal_customer_id,
 		inStatuses: [CusProductStatus.Scheduled],
 	});
 
-	let { curScheduledProduct: futureProduct } = getExistingCusProducts({
+	const { curScheduledProduct: futureProduct } = getExistingCusProducts({
 		product: cusProduct.product,
 		cusProducts,
 		internalEntityId: cusProduct.internal_entity_id,
@@ -407,31 +406,32 @@ export const processFullCusProduct = ({
 	org: Organization;
 	subs?: Subscription[];
 	entities?: Entity[];
-	apiVersion: number;
+	apiVersion: ApiVersionClass;
 }) => {
 	// Process prices
 
 	const prices = cusProduct.customer_prices.map((cp) => {
-		let price = cp.price;
+		const price = cp.price;
 
-		if (price.config?.type == PriceType.Fixed) {
-			let config = price.config as FixedPriceConfig;
+		if (price.config?.type === PriceType.Fixed) {
+			const config = price.config as FixedPriceConfig;
 			return {
 				amount: config.amount,
 				interval: config.interval,
 			};
 		} else {
-			let config = price.config as UsagePriceConfig;
-			let priceOptions = getPriceOptions(price, cusProduct.options);
-			let usageTier = getUsageTier(price, priceOptions?.quantity!);
-			let cusEnt = getRelatedCusEnt({
+			const config = price.config as UsagePriceConfig;
+			const priceOptions = getPriceOptions(price, cusProduct.options);
+			const usageTier = getUsageTier(price, priceOptions?.quantity!);
+			const cusEnt = getRelatedCusEnt({
 				cusPrice: cp,
 				cusEnts: cusProduct.customer_entitlements,
 			});
 
-			let ent = cusEnt?.entitlement;
+			const ent = cusEnt?.entitlement;
 
-			let singleTier = ent?.allowance == 0 && config.usage_tiers.length == 1;
+			const singleTier =
+				ent?.allowance === 0 && config.usage_tiers.length === 1;
 
 			if (singleTier) {
 				return {
@@ -441,7 +441,7 @@ export const processFullCusProduct = ({
 				};
 			} else {
 				// Add allowance to tiers
-				let allowance = ent?.allowance;
+				const allowance = ent?.allowance;
 				let tiers;
 
 				if (notNullish(allowance) && allowance! > 0) {
@@ -451,7 +451,7 @@ export const processFullCusProduct = ({
 							amount: 0,
 						},
 						...config.usage_tiers.map((tier) => {
-							let isLastTier = tier.to == -1 || tier.to == TierInfinite;
+							const isLastTier = tier.to === -1 || tier.to === TierInfinite;
 							return {
 								to: isLastTier ? tier.to : Number(tier.to) + allowance!,
 								amount: tier.amount,
@@ -460,7 +460,7 @@ export const processFullCusProduct = ({
 					];
 				} else {
 					tiers = config.usage_tiers.map((tier) => {
-						let isLastTier = tier.to == -1 || tier.to == TierInfinite;
+						const isLastTier = tier.to === -1 || tier.to === TierInfinite;
 						return {
 							to: isLastTier ? tier.to : Number(tier.to) + allowance!,
 							amount: tier.amount,
@@ -483,13 +483,9 @@ export const processFullCusProduct = ({
 	const subIds = cusProduct.subscription_ids;
 	let stripeSubData = {};
 
-	if (
-		subIds &&
-		subIds.length > 0 &&
-		org.config.api_version >= BREAK_API_VERSION
-	) {
-		let baseSub = subs?.find(
-			(s) => s.id == subIds[0] || (s as Subscription).stripe_id == subIds[0],
+	if (subIds && subIds.length > 0 && apiVersion.gte(ApiVersion.V0_2)) {
+		const baseSub = subs?.find(
+			(s) => s.id === subIds[0] || (s as Subscription).stripe_id === subIds[0],
 		);
 		stripeSubData = {
 			current_period_end: baseSub?.current_period_end
@@ -508,36 +504,33 @@ export const processFullCusProduct = ({
 		};
 	}
 
-	if (apiVersion >= APIVersion.v1_1) {
-		if ((!subIds || subIds.length == 0) && trialing) {
+	if (apiVersion.gte(ApiVersion.V1_1)) {
+		if ((!subIds || subIds.length === 0) && trialing) {
 			stripeSubData = {
 				current_period_start: cusProduct.starts_at,
 				current_period_end: cusProduct.trial_ends_at,
 			};
 		}
 
-		return CusProductResponseSchema.parse({
+		return ApiCusProductSchema.parse({
 			id: cusProduct.product.id,
 			name: cusProduct.product.name,
 			group: cusProduct.product.group || null,
 			status: trialing ? CusProductStatus.Trialing : cusProduct.status,
-			// created_at: cusProduct.created_at,
 			canceled_at: cusProduct.canceled_at,
 			is_default: cusProduct.product.is_default || false,
 			is_add_on: cusProduct.product.is_add_on || false,
-
 			stripe_subscription_ids: cusProduct.subscription_ids || [],
 			started_at: cusProduct.starts_at,
-			// entity_id: cusProduct.entity_id,
 			entity_id: cusProduct.internal_entity_id
-				? entities?.find((e) => e.internal_id == cusProduct.internal_entity_id)
+				? entities?.find((e) => e.internal_id === cusProduct.internal_entity_id)
 						?.id
 				: cusProduct.entity_id || undefined,
 
 			...stripeSubData,
 		});
 	} else {
-		let cusProductResponse = {
+		const cusProductResponse = {
 			id: cusProduct.product.id,
 			name: cusProduct.product.name,
 			group: cusProduct.product.group,
@@ -553,8 +546,6 @@ export const processFullCusProduct = ({
 			starts_at: cusProduct.starts_at,
 
 			...stripeSubData,
-			// prices: cusProduct.customer_prices,
-			// entitlements: cusProduct.customer_entitlements,
 		};
 
 		return cusProductResponse;
@@ -573,11 +564,13 @@ export const fullCusProductToProduct = (cusProduct: FullCusProduct) => {
 export const searchCusProducts = ({
 	productId,
 	internalProductId,
+	internalEntityId,
 	cusProducts,
 	status,
 }: {
 	productId?: string;
 	internalProductId?: string;
+	internalEntityId?: string;
 	cusProducts: FullCusProduct[];
 	status?: CusProductStatus;
 }) => {
@@ -591,7 +584,13 @@ export const searchCusProducts = ({
 		} else if (internalProductId) {
 			prodIdMatch = cusProduct.product.internal_id === internalProductId;
 		}
-		return prodIdMatch && (status ? cusProduct.status === status : true);
+		return (
+			prodIdMatch &&
+			(status ? cusProduct.status === status : true) &&
+			(internalEntityId
+				? cusProduct.internal_entity_id === internalEntityId
+				: nullish(cusProduct.internal_entity_id))
+		);
 	});
 };
 
@@ -604,13 +603,13 @@ export const getMainCusProduct = async ({
 	internalCustomerId: string;
 	productGroup?: string;
 }) => {
-	let cusProducts = await CusProductService.list({
+	const cusProducts = await CusProductService.list({
 		db,
 		internalCustomerId,
 		inStatuses: RELEVANT_STATUSES,
 	});
 
-	let mainCusProduct = cusProducts.find(
+	const mainCusProduct = cusProducts.find(
 		(cusProduct: FullCusProduct) =>
 			!cusProduct.product.is_add_on &&
 			(productGroup ? cusProduct.product.group === productGroup : true),
@@ -644,7 +643,7 @@ export const getFeatureQuantity = ({
 }) => {
 	const options = cusProduct.options;
 	const option = options.find(
-		(o) => o.internal_feature_id == internalFeatureId,
+		(o) => o.internal_feature_id === internalFeatureId,
 	);
 	return nullish(option?.quantity) ? 1 : option?.quantity!;
 };

@@ -19,9 +19,6 @@
 		"enabled": true,
 		"rules": {
 			"recommended": true,
-			"style": {
-				"noNonNullAssertion": "off"
-			},
 			"suspicious": {
 				"noExportsInTest": "off",
 				"noExplicitAny": "off",
@@ -29,6 +26,12 @@
 			},
 			"complexity": {
 				"noStaticOnlyClass": "off"
+			},
+			"correctness": {
+				"useParseIntRadix": "off"
+			},
+			"style": {
+				"noNonNullAssertion": "off"
 			}
 		}
 	},

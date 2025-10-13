@@ -1,18 +1,15 @@
 import {
 	BillingInterval,
-	Price,
-	Feature,
-	Customer,
-	FullCusProduct,
-	UsagePriceConfig,
-	FullProduct,
-	Organization,
+	type Customer,
+	type Feature,
+	type FullCusProduct,
+	type FullProduct,
+	type Organization,
+	type Price,
+	type UsagePriceConfig,
 } from "@autumn/shared";
 
-import Stripe from "stripe";
-import { getPriceForOverage } from "@/internal/products/prices/priceUtils.js";
-
-import { getFeatureName } from "@/internal/features/utils/displayUtils.js";
+import type Stripe from "stripe";
 import { getCusPriceUsage } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
 
 export const createSubMeta = ({ features }: { features: Feature[] }) => {
@@ -88,9 +85,9 @@ export const getInvoiceItemForUsage = ({
 		withProdPrefix: true,
 	});
 
-	let config = price.config! as UsagePriceConfig;
+	const config = price.config! as UsagePriceConfig;
 
-	let invoiceItem: Stripe.InvoiceItemCreateParams = {
+	const invoiceItem: Stripe.InvoiceItemCreateParams = {
 		invoice: stripeInvoiceId,
 		customer: customer.processor.id,
 		currency,

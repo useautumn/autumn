@@ -1,15 +1,14 @@
+import { sql } from "drizzle-orm";
 import {
+	boolean,
+	jsonb,
+	numeric,
 	pgTable,
 	text,
-	numeric,
-	jsonb,
-	boolean,
-	unique,
 	timestamp,
+	unique,
 } from "drizzle-orm/pg-core";
-
-import { OrgConfig } from "./orgConfig.js";
-import { sql } from "drizzle-orm";
+import type { OrgConfig } from "./orgConfig.js";
 
 export type SvixConfig = {
 	sandbox_app_id: string;
@@ -21,7 +20,6 @@ export type StripeConfig = {
 	live_api_key?: string;
 	test_webhook_secret?: string;
 	live_webhook_secret?: string;
-
 	sandbox_success_url?: string;
 	success_url?: string;
 };
@@ -33,6 +31,13 @@ export type OrgProcessorConfig = {
 //   logo: text("logo"),
 //   createdAt: timestamp("created_at").notNull(),
 //   metadata: text("metadata"),
+
+export interface VersionConfig {
+	sandbox?: string;
+	live?: string;
+	// sandbox_webhooks: string;
+	// live_webhooks: string;
+}
 
 export const organizations = pgTable(
 	"organizations",
@@ -59,6 +64,7 @@ export const organizations = pgTable(
 		created_at: numeric({ mode: "number" }),
 		config: jsonb().default({}).notNull().$type<OrgConfig>(),
 		created_by: text("created_by"),
+		// version: jsonb("version").$type<VersionConfig>().default(sql`'{}'::jsonb`),
 	},
 	(table) => [
 		unique("organizations_test_pkey_key").on(table.test_pkey),
@@ -66,6 +72,4 @@ export const organizations = pgTable(
 	],
 );
 
-export type Organization = typeof organizations.$inferSelect & {
-	api_version: number;
-};
+export type Organization = typeof organizations.$inferSelect;

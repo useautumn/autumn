@@ -1,7 +1,6 @@
-import { z } from "zod";
-import { Reward } from "../rewardModels/rewardModels.js";
-import { RewardReceivedBy } from "./rewardProgramEnums.js";
-import { RewardTriggerEvent } from "./rewardProgramEnums.js";
+import { z } from "zod/v4";
+import type { Reward } from "../rewardModels/rewardModels.js";
+import { RewardReceivedBy, RewardTriggerEvent } from "./rewardProgramEnums.js";
 
 export const RewardProgram = z.object({
 	internal_id: z.string(),
@@ -25,6 +24,15 @@ export const RewardProgram = z.object({
 
 export const CreateRewardProgram = z.object({
 	id: z.string(),
+	when: z.nativeEnum(RewardTriggerEvent),
+	product_ids: z.array(z.string()).optional(),
+	exclude_trial: z.boolean().optional(),
+	internal_reward_id: z.string(),
+	max_redemptions: z.number().optional(),
+	received_by: z.nativeEnum(RewardReceivedBy),
+});
+
+export const UpdateRewardProgram = z.object({
 	when: z.nativeEnum(RewardTriggerEvent),
 	product_ids: z.array(z.string()).optional(),
 	exclude_trial: z.boolean().optional(),

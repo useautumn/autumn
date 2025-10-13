@@ -280,7 +280,7 @@ export const setupOrg = async ({
 		features[feature.id].internal_id = feature.internal_id;
 
 		if (feature.type === FeatureType.Metered) {
-			features[feature.id].eventName = feature.config?.filters[0].value[0];
+			features[feature.id].eventName = feature.event_names?.[0] || feature.id;
 		}
 	}
 

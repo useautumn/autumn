@@ -1,26 +1,25 @@
+import {
+	type AppEnv,
+	CusProductStatus,
+	LegacyVersion,
+	type Organization,
+} from "@autumn/shared";
 import chalk from "chalk";
 import { addDays } from "date-fns";
+import type { Stripe } from "stripe";
 import { setupBefore } from "tests/before.js";
-import { Stripe } from "stripe";
-import { createProducts } from "tests/utils/productUtils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { TestFeature } from "tests/setup/v2Features.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import {
-	APIVersion,
-	AppEnv,
-	CusProductStatus,
-	Organization,
-} from "@autumn/shared";
-
-import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
-let premium = constructProduct({
+const premium = constructProduct({
 	id: "premium",
 	items: [constructArrearItem({ featureId: TestFeature.Words })],
 	type: "premium",
@@ -42,8 +41,8 @@ const ops = [
 
 const testCase = "mergedTrial2";
 describe(`${chalk.yellowBright("mergedTrial2: Testing add second trial product after first trial ends")}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 	let stripeCli: Stripe;
 	let testClockId: string;
@@ -100,7 +99,7 @@ describe(`${chalk.yellowBright("mergedTrial2: Testing add second trial product a
 		},
 	];
 
-	it("should attach first trial, and advance clock past trial", async function () {
+	it("should attach first trial, and advance clock past trial", async () => {
 		await autumn.entities.create(customerId, entities);
 
 		await autumn.attach({

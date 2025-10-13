@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 
 export const OrgConfigSchema = z.object({
 	bill_upgrade_immediately: z.boolean().default(true),
@@ -8,12 +8,10 @@ export const OrgConfigSchema = z.object({
 
 	prorate_unused: z.boolean().default(true),
 
-	api_version: z.number().default(0.2),
 	checkout_on_failed_payment: z.boolean().default(true), // false for pipeline?
 	reverse_deduction_order: z.boolean().default(false),
 
 	include_past_due: z.boolean().default(true),
-	// include_check_past_due: z.boolean().default(false),
 
 	sync_status: z.boolean().default(true),
 	merge_billing_cycles: z.boolean().default(true),

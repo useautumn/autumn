@@ -2,7 +2,6 @@ import {
 	type CreateFreeTrial,
 	CreateFreeTrialSchema,
 	ErrCode,
-	type FreeProductConfig,
 	type FreeTrial,
 	FreeTrialDuration,
 	type Price,
@@ -12,6 +11,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { generateId } from "@/utils/genUtils.js";
+import { ProductService } from "../ProductService.js";
 import { isOneOff } from "../productUtils.js";
 import { FreeTrialService } from "./FreeTrialService.js";
 
@@ -20,7 +20,7 @@ export const validateOneOffTrial = async ({
 	freeTrial,
 }: {
 	prices: Price[];
-	freeTrial: FreeTrial | null;
+	freeTrial: FreeTrial | CreateFreeTrial | null;
 }) => {
 	if (isOneOff(prices) && freeTrial) {
 		throw new RecaseError({
@@ -105,21 +105,6 @@ export const freeTrialToStripeTimestamp = ({
 	return Math.ceil(trialEnd.getTime() / 1000);
 };
 
-export const rewardTrialToStripeTimestamp = ({
-	rewardTrial,
-	now,
-}: {
-	rewardTrial: FreeProductConfig | null | undefined;
-	now?: number | undefined;
-}) => {
-	now = now || Date.now();
-	if (!rewardTrial) return undefined;
-	const length = rewardTrial.duration_value;
-	const trialEnd: Date = addMonths(new Date(now), length);
-
-	return Math.ceil(trialEnd.getTime() / 1000);
-};
-
 export const getFreeTrialAfterFingerprint = async ({
 	db,
 	freeTrial,
@@ -167,13 +152,15 @@ export const handleNewFreeTrial = async ({
 	internalProductId,
 	isCustom = false,
 	product,
+	newVersion = false,
 }: {
 	db: DrizzleCli;
-	newFreeTrial: CreateFreeTrial | null;
+	newFreeTrial: CreateFreeTrial | FreeTrial | null;
 	curFreeTrial: FreeTrial | null | undefined;
 	internalProductId: string;
 	isCustom: boolean;
-	product?: any; // Add product parameter for validation
+	product?: any;
+	newVersion?: boolean; // True if creating a new product version
 }) => {
 	// If new free trial is null
 	if (!newFreeTrial) {
@@ -196,17 +183,31 @@ export const handleNewFreeTrial = async ({
 		isCustom,
 	});
 
-	if (isCustom && newFreeTrial) {
+	if (isCustom || newVersion) {
 		await FreeTrialService.insert({
 			db,
 			data: createdFreeTrial,
 		});
-	} else if (!isCustom) {
+	} else {
 		createdFreeTrial.id = curFreeTrial?.id || createdFreeTrial.id;
 
 		await FreeTrialService.upsert({
 			db,
 			data: createdFreeTrial,
+		});
+	}
+
+	// Check if card_required is changing from false to true
+	if (
+		curFreeTrial?.card_required === false &&
+		newFreeTrial?.card_required === true
+	) {
+		await ProductService.updateByInternalId({
+			db,
+			internalId: internalProductId,
+			update: {
+				is_default: false,
+			},
 		});
 	}
 

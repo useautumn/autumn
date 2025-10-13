@@ -1,9 +1,8 @@
-import { IntervalConfig } from "@autumn/shared";
+import type { IntervalConfig } from "@autumn/shared";
 import {
 	addIntervalForProration,
 	subtractIntervalForProration,
 } from "./billingIntervalUtils.js";
-import { formatUnixToDate } from "@/utils/genUtils.js";
 
 export const addIntervalToAnchor = ({
 	intervalConfig,
@@ -45,7 +44,7 @@ export const subtractIntervalFromAnchor = ({
 	now = now || Date.now();
 
 	for (let i = 0; i < 50; i++) {
-		let newAnchor = subtractIntervalForProration({
+		const newAnchor = subtractIntervalForProration({
 			unixTimestamp: anchor,
 			interval: intervalConfig.interval,
 			intervalCount: intervalConfig.intervalCount ?? 1,

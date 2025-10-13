@@ -1,54 +1,51 @@
 import {
-	EntitlementWithFeature,
-	FullProduct,
-	Organization,
-	Price,
-	Feature,
 	BillingInterval,
-	FreeTrial,
-	PreviewLineItem,
 	BillingType,
+	type EntitlementWithFeature,
+	type Feature,
+	type FreeTrial,
+	type FullProduct,
 	getFeatureInvoiceDescription,
-	UsagePriceConfig,
-	UsageModel,
-	AttachConfig,
-	AttachBranch,
-	ProrationBehavior,
-	IntervalConfig,
-} from "@autumn/shared";
-import { AttachParams } from "../../customers/cusProducts/AttachParams.js";
-import {
-	formatPrice,
-	getBillingType,
-	getPriceForOverage,
-	getPriceOptions,
-} from "../../products/prices/priceUtils.js";
-import { getPriceEntitlement } from "../../products/prices/priceUtils.js";
-import {
-	isFixedPrice,
-	isOneOffPrice,
-	isPrepaidPrice,
+	type IntervalConfig,
 	isUsagePrice,
-} from "../../products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
-
-import { newPriceToInvoiceDescription } from "../invoiceFormatUtils.js";
-import { calculateProrationAmount } from "../prorationUtils.js";
-import { getPricecnPrice } from "../../products/pricecn/pricecnUtils.js";
-import { toProductItem } from "@autumn/shared";
-import { formatAmount } from "@/utils/formatUtils.js";
-import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
-import { subtractIntervalForProration } from "../../products/prices/billingIntervalUtils.js";
+	type Organization,
+	type PreviewLineItem,
+	type Price,
+	toProductItem,
+	UsageModel,
+	type UsagePriceConfig,
+} from "@autumn/shared";
+import { Decimal } from "decimal.js";
+import type Stripe from "stripe";
+import { attachParamsToCurCusProduct } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
+import { getContUseInvoiceItems } from "@/internal/customers/attach/attachUtils/getContUseItems/getContUseInvoiceItems.js";
+import { getAlignedUnix } from "@/internal/products/prices/billingIntervalUtils2.js";
 import {
 	priceToFeature,
 	priceToUsageModel,
 } from "@/internal/products/prices/priceUtils/convertPrice.js";
-import { getContUseInvoiceItems } from "@/internal/customers/attach/attachUtils/getContUseItems/getContUseInvoiceItems.js";
-import Stripe from "stripe";
-import { attachParamsToCurCusProduct } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
-import { sortPricesByType } from "@/internal/products/prices/priceUtils/sortPriceUtils.js";
 import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
-import { Decimal } from "decimal.js";
-import { getAlignedUnix } from "@/internal/products/prices/billingIntervalUtils2.js";
+import { sortPricesByType } from "@/internal/products/prices/priceUtils/sortPriceUtils.js";
+import { formatAmount } from "@/utils/formatUtils.js";
+import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
+import type { AttachParams } from "../../customers/cusProducts/AttachParams.js";
+import { getPricecnPrice } from "../../products/pricecn/pricecnUtils.js";
+import { subtractIntervalForProration } from "../../products/prices/billingIntervalUtils.js";
+import {
+	isFixedPrice,
+	isOneOffPrice,
+	isPrepaidPrice,
+} from "../../products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+
+import {
+	formatPrice,
+	getBillingType,
+	getPriceEntitlement,
+	getPriceForOverage,
+	getPriceOptions,
+} from "../../products/prices/priceUtils.js";
+import { newPriceToInvoiceDescription } from "../invoiceFormatUtils.js";
+import { calculateProrationAmount } from "../prorationUtils.js";
 
 export const getDefaultPriceStr = ({
 	org,
@@ -94,7 +91,7 @@ export const getProration = ({
 	intervalCount = intervalCount ?? 1;
 	now = now || Date.now();
 
-	if (interval == BillingInterval.OneOff) return undefined;
+	if (interval === BillingInterval.OneOff) return undefined;
 
 	let end = proration?.end;
 	if (!end && anchor) {
@@ -125,7 +122,6 @@ export const getProration = ({
 export const getItemsForNewProduct = async ({
 	newProduct,
 	attachParams,
-	now,
 	proration,
 	anchor,
 	freeTrial,
@@ -136,7 +132,6 @@ export const getItemsForNewProduct = async ({
 }: {
 	newProduct: FullProduct;
 	attachParams: AttachParams;
-	now?: number;
 	proration?: {
 		start: number;
 		end: number;
@@ -149,7 +144,7 @@ export const getItemsForNewProduct = async ({
 	skipOneOff?: boolean;
 }) => {
 	const { org, features } = attachParams;
-	now = now || Date.now();
+	const now = attachParams.now || Date.now();
 
 	const items: PreviewLineItem[] = [];
 
@@ -166,6 +161,7 @@ export const getItemsForNewProduct = async ({
 		if (printLogs) {
 			console.log("price", formatPrice({ price }));
 			console.log("now:", formatUnixToDate(now));
+			console.log("anchor", formatUnixToDate(anchor));
 		}
 
 		const finalProration = getProration({
@@ -220,7 +216,7 @@ export const getItemsForNewProduct = async ({
 			continue;
 		}
 
-		if (billingType == BillingType.UsageInArrear) {
+		if (billingType === BillingType.UsageInArrear) {
 			items.push({
 				price: getDefaultPriceStr({ org, price, ent: ent!, features }),
 				description: newPriceToInvoiceDescription({
@@ -236,23 +232,21 @@ export const getItemsForNewProduct = async ({
 		}
 
 		if (withPrepaid && isPrepaidPrice({ price })) {
-			let options = getPriceOptions(price, attachParams.optionsList);
-			let quantity = notNullish(options?.quantity) ? options?.quantity! : 1;
+			const options = getPriceOptions(price, attachParams.optionsList);
+			const quantity = notNullish(options?.quantity) ? options?.quantity! : 1;
 
 			const quantityWithBillingUnits = new Decimal(quantity).mul(
 				(price.config as UsagePriceConfig).billing_units || 1,
 			);
 
-			// console.log("price", price);
-			// console.log("Quantity", quantity);
-			let amount = priceToInvoiceAmount({
+			const amount = priceToInvoiceAmount({
 				price,
 				quantity: quantityWithBillingUnits.toNumber(),
 				proration: finalProration,
 				now,
 			});
-			// console.log("Amount", amount);
-			let feature = priceToFeature({
+
+			const feature = priceToFeature({
 				price,
 				features,
 			})!;
@@ -281,7 +275,7 @@ export const getItemsForNewProduct = async ({
 		attachParams,
 	});
 
-	let { newItems } = await getContUseInvoiceItems({
+	const { newItems } = await getContUseInvoiceItems({
 		cusProduct,
 		sub,
 		attachParams,

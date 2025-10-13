@@ -1,17 +1,17 @@
 import { FeatureType } from "../../../models/featureModels/featureEnums.js";
 import {
 	AllowanceType,
-	EntitlementWithFeature,
+	type EntitlementWithFeature,
 } from "../../../models/productModels/entModels/entModels.js";
-import { FixedPriceConfig } from "../../../models/productModels/priceModels/priceConfig/fixedPriceConfig.js";
+import type { FixedPriceConfig } from "../../../models/productModels/priceModels/priceConfig/fixedPriceConfig.js";
 import {
 	BillWhen,
-	UsagePriceConfig,
+	type UsagePriceConfig,
 } from "../../../models/productModels/priceModels/priceConfig/usagePriceConfig.js";
-import { Price } from "../../../models/productModels/priceModels/priceModels.js";
+import type { Price } from "../../../models/productModels/priceModels/priceModels.js";
 import { Infinite } from "../../../models/productModels/productEnums.js";
 import {
-	ProductItem,
+	type ProductItem,
 	ProductItemFeatureType,
 	TierInfinite,
 	UsageModel,
@@ -74,8 +74,8 @@ export const toFeaturePriceItem = ({
 	ent: EntitlementWithFeature;
 	price: Price;
 }) => {
-	let config = price.config as UsagePriceConfig;
-	let tiers = config.usage_tiers.map((tier) => {
+	const config = price.config as UsagePriceConfig;
+	const tiers = config.usage_tiers.map((tier) => {
 		return {
 			amount: tier.amount,
 			to: tier.to == -1 ? TierInfinite : tier.to,
@@ -91,7 +91,7 @@ export const toFeaturePriceItem = ({
 		itemConfig.rollover = ent.rollover;
 	}
 
-	let item: ProductItem = {
+	const item: ProductItem = {
 		feature_id: ent.feature.id,
 		feature_type:
 			ent.feature.config?.usage_type || ProductItemFeatureType.SingleUse,
@@ -127,7 +127,7 @@ export const toFeaturePriceItem = ({
 };
 
 export const toPriceItem = ({ price }: { price: Price }) => {
-	let config = price.config as FixedPriceConfig;
+	const config = price.config as FixedPriceConfig;
 	return {
 		feature_id: null,
 

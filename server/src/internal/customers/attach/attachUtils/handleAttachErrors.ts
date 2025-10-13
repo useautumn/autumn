@@ -1,29 +1,30 @@
-import RecaseError from "@/utils/errorUtils.js";
-import { ErrCode } from "@/errors/errCodes.js";
-import { StatusCodes } from "http-status-codes";
-import { AttachParams } from "../../cusProducts/AttachParams.js";
 import {
+	type AttachBody,
 	AttachBranch,
-	AttachConfig,
+	type AttachConfig,
 	AttachErrCode,
-	UsagePriceConfig,
+	BillingType,
+	cusProductsToCusEnts,
+	cusProductToPrices,
+	ErrCode,
+	type FullCusProduct,
+	getStartingBalance,
+	type UsagePriceConfig,
 } from "@autumn/shared";
-import { AttachBody } from "@autumn/shared";
-import { AttachFlags } from "../models/AttachFlags.js";
-
+import { Decimal } from "decimal.js";
+import { StatusCodes } from "http-status-codes";
+import { findPriceForFeature } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 import {
+	getBillingType,
 	getEntOptions,
+	getPriceEntitlement,
 	priceIsOneOffAndTiered,
 } from "@/internal/products/prices/priceUtils.js";
-import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
-import { getBillingType } from "@/internal/products/prices/priceUtils.js";
-import { BillingType } from "@autumn/shared";
+import RecaseError from "@/utils/errorUtils.js";
 import { notNullish, nullOrUndefined } from "@/utils/genUtils.js";
+import type { AttachParams } from "../../cusProducts/AttachParams.js";
+import type { AttachFlags } from "../models/AttachFlags.js";
 import { attachParamToCusProducts } from "./convertAttachParams.js";
-import { cusProductsToCusEnts, cusProductToPrices } from "@autumn/shared";
-import { findPriceForFeature } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
-import { getResetBalance } from "../../cusProducts/cusEnts/cusEntUtils.js";
-import { Decimal } from "decimal.js";
 import { handleMultiAttachErrors } from "./handleAttachErrors/handleMultiAttachErrors.js";
 
 const handleNonCheckoutErrors = ({
@@ -75,12 +76,13 @@ const handlePrepaidErrors = async ({
 
 	// 2. Check if options are valid
 	for (const price of prices) {
-		const billingType = getBillingType(price.config!);
+		const billingType = getBillingType(price.config);
 
 		if (billingType === BillingType.UsageInAdvance) {
 			// Get options for price
-			let priceEnt = getPriceEntitlement(price, entitlements);
-			let options = getEntOptions(optionsList, priceEnt);
+			const priceEnt = getPriceEntitlement(price, entitlements);
+
+			const options = getEntOptions(optionsList, priceEnt);
 
 			// 1. If not checkout, quantity should be defined
 
@@ -107,7 +109,7 @@ const handlePrepaidErrors = async ({
 			}
 
 			// 3. Quantity cannot be negative
-			if (notNullish(options?.quantity) && options?.quantity! < 0) {
+			if (notNullish(options?.quantity) && options.quantity < 0) {
 				throw new RecaseError({
 					message: `Quantity cannot be negative`,
 					code: ErrCode.InvalidOptions,
@@ -124,11 +126,15 @@ const handlePrepaidErrors = async ({
 				});
 			}
 
-			let usageLimit = priceEnt.usage_limit;
-			let totalQuantity =
-				options?.quantity! * (price.config as UsagePriceConfig).billing_units!;
+			const priceConfig = price.config as UsagePriceConfig;
+			const usageLimit = priceEnt.usage_limit;
+			const totalQuantity =
+				(options?.quantity || 0) * (priceConfig.billing_units || 1);
 
-			if (usageLimit && totalQuantity + priceEnt.allowance! > usageLimit) {
+			if (
+				usageLimit &&
+				totalQuantity + (priceEnt.allowance || 0) > usageLimit
+			) {
 				throw new RecaseError({
 					message: `Quantity + included usage exceeds usage limit of ${usageLimit} for feature ${priceEnt.feature_id}`,
 					code: ErrCode.InvalidOptions,
@@ -152,7 +158,7 @@ const handleUpdateQuantityErrors = async ({
 		return;
 	}
 
-	const cusProduct = curSameProduct || curMainProduct!;
+	const cusProduct = (curSameProduct || curMainProduct) as FullCusProduct;
 	const cusEnts = cusProductsToCusEnts({ cusProducts: [cusProduct] });
 	const prices = cusProductToPrices({ cusProduct });
 
@@ -170,12 +176,12 @@ const handleUpdateQuantityErrors = async ({
 		const totalUsage = cusEnts
 			.reduce((acc, curr) => {
 				if (
-					curr.entitlement.internal_feature_id == option.internal_feature_id
+					curr.entitlement.internal_feature_id === option.internal_feature_id
 				) {
-					const allowance = getResetBalance({
+					const allowance = getStartingBalance({
 						entitlement: curr.entitlement,
 						options: cusProduct.options.find(
-							(o) => o.internal_feature_id == option.internal_feature_id,
+							(o) => o.internal_feature_id === option.internal_feature_id,
 						),
 						relatedPrice: price,
 					});
@@ -226,7 +232,7 @@ export const handleAttachErrors = async ({
 	// Invoice no payment enabled: onlyCheckout
 
 	if (onlyCheckout || flags.isPublic) {
-		let upgradeDowngradeFlows = [
+		const upgradeDowngradeFlows = [
 			AttachBranch.Upgrade,
 			AttachBranch.Downgrade,
 			AttachBranch.MainIsTrial,
@@ -238,7 +244,7 @@ export const handleAttachErrors = async ({
 				action: "perform upgrade or downgrade",
 			});
 		}
-		let updateProductFlows = [
+		const updateProductFlows = [
 			AttachBranch.NewVersion,
 			AttachBranch.SameCustom,
 			AttachBranch.UpdatePrepaidQuantity,
@@ -253,7 +259,7 @@ export const handleAttachErrors = async ({
 	}
 
 	// 2. If same custom ents, not allowed if is public flow...
-	if (branch == AttachBranch.SameCustomEnts) {
+	if (branch === AttachBranch.SameCustomEnts) {
 		if (flags.isPublic) {
 			throw new RecaseError({
 				message:

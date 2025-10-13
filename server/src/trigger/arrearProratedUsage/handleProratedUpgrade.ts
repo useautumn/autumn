@@ -1,23 +1,20 @@
+import {
+	type Entitlement,
+	type FullCusEntWithFullCusProduct,
+	type FullCustomerPrice,
+	OnIncrease,
+	type Organization,
+	type Price,
+	type UsagePriceConfig,
+} from "@autumn/shared";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService.js";
 import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import { shouldCreateInvoiceItem } from "@/internal/products/prices/priceUtils/prorationConfigUtils.js";
-
-import {
-	Entitlement,
-	FullCusEntWithFullCusProduct,
-	FullCusEntWithProduct,
-	FullCustomerPrice,
-	OnIncrease,
-	Organization,
-	Price,
-	UsagePriceConfig,
-} from "@autumn/shared";
-
-import Stripe from "stripe";
-import { createUpgradeProrationInvoice } from "./createUpgradeProrationInvoice.js";
-import { getUsageFromBalance } from "../adjustAllowance.js";
-import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
 import { roundUsage } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import { getUsageFromBalance } from "../adjustAllowance.js";
+import { createUpgradeProrationInvoice } from "./createUpgradeProrationInvoice.js";
 
 interface UsageValues {
 	prevRoundedUsage: number;
@@ -53,7 +50,7 @@ export const getPrevAndNewPriceForUpgrade = ({
 		balance: newBalance,
 	});
 
-	let prevPrice = priceToInvoiceAmount({
+	const prevPrice = priceToInvoiceAmount({
 		price,
 		overage: roundUsage({
 			// usage: prevUsage,
@@ -62,7 +59,7 @@ export const getPrevAndNewPriceForUpgrade = ({
 		}),
 	});
 
-	let newPrice = priceToInvoiceAmount({
+	const newPrice = priceToInvoiceAmount({
 		price,
 		overage: roundUsage({
 			// usage: newUsage,
@@ -90,8 +87,8 @@ export function getReps({
 	prevBalance: number;
 	newBalance: number;
 }) {
-	let usageDiff = prevBalance - newBalance;
-	let reps = cusEnt.replaceables.slice(0, usageDiff);
+	const usageDiff = prevBalance - newBalance;
+	const reps = cusEnt.replaceables.slice(0, usageDiff);
 	return reps;
 }
 
@@ -121,14 +118,14 @@ export const handleProratedUpgrade = async ({
 	logger.info(`Handling quantity increase`);
 
 	// 1. Get num reps to use
-	let reps = getReps({
+	const reps = getReps({
 		cusEnt,
 		prevBalance,
 		newBalance,
 	});
 	newBalance = newBalance + reps.length; // Increase new balance by number of reps
 
-	let { prevPrice, newPrice, newUsage } = getPrevAndNewPriceForUpgrade({
+	const { prevPrice, newPrice, newUsage } = getPrevAndNewPriceForUpgrade({
 		ent: cusEnt.entitlement,
 		price: cusPrice.price,
 		newBalance,
@@ -140,7 +137,7 @@ export const handleProratedUpgrade = async ({
 	const product = cusEnt.customer_product.product;
 	const feature = cusEnt.entitlement.feature;
 
-	let onIncrease =
+	const onIncrease =
 		cusPrice.price.proration_config?.on_increase ||
 		OnIncrease.ProrateImmediately;
 
@@ -150,7 +147,7 @@ export const handleProratedUpgrade = async ({
 	});
 
 	let invoice = null;
-	if (shouldCreateInvoiceItem(onIncrease)) {
+	if (shouldCreateInvoiceItem(onIncrease) && sub.status !== "trialing") {
 		invoice = await createUpgradeProrationInvoice({
 			org,
 			cusPrice,
@@ -168,7 +165,7 @@ export const handleProratedUpgrade = async ({
 		});
 	}
 
-	let deleted = await RepService.deleteInIds({
+	const deleted = await RepService.deleteInIds({
 		db,
 		ids: reps.map((r) => r.id),
 	});

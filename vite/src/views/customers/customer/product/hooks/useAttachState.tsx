@@ -1,24 +1,23 @@
+import {
+	type AttachPreview,
+	type FeatureOptions,
+	type FullCusProduct,
+	isCanceled,
+	type ProductItem,
+	type ProductV2,
+	UsageModel,
+} from "@autumn/shared";
+import { useEffect, useState } from "react";
 import { notNullish } from "@/utils/genUtils";
 import { isFeatureItem } from "@/utils/product/getItemType";
 import { isOneOffProduct } from "@/utils/product/priceUtils";
 import { sortProductItems } from "@/utils/productUtils";
-import {
-	AttachPreview,
-	CusProduct,
-	FeatureOptions,
-	FullCusProduct,
-	isCanceled,
-	ProductItem,
-	ProductV2,
-	UsageModel,
-} from "@autumn/shared";
-import { useEffect, useState } from "react";
 
-export type FrontendProduct = ProductV2 & {
-	isActive: boolean;
-	options: FeatureOptions[];
-	isCanceled: boolean;
-};
+// export type FrontendProduct = ProductV2 & {
+// 	isActive: boolean;
+// 	options: FeatureOptions[];
+// 	isCanceled: boolean;
+// };
 
 export enum AttachCase {
 	AddOn = "Add On",
@@ -31,7 +30,7 @@ export enum AttachCase {
 const productHasPrepaid = (items: ProductItem[]) => {
 	return items.some(
 		(item) =>
-			item.usage_model == UsageModel.Prepaid && notNullish(item.interval),
+			item.usage_model === UsageModel.Prepaid && notNullish(item.interval),
 	);
 };
 

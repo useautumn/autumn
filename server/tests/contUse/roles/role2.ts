@@ -1,42 +1,39 @@
-import chalk from "chalk";
-import Stripe from "stripe";
-
 import {
-	APIVersion,
-	AppEnv,
-	CreateEntity,
-	LimitedItem,
-	Organization,
+	type AppEnv,
+	type CreateEntity,
+	LegacyVersion,
+	type LimitedItem,
+	type Organization,
 } from "@autumn/shared";
-
-import { TestFeature } from "tests/setup/v2Features.js";
 import { expect } from "chai";
-import { timeout } from "@/utils/genUtils.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import chalk from "chalk";
+import { addHours, addMonths } from "date-fns";
+import type Stripe from "stripe";
 import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "../../attach/utils.js";
+import { TestFeature } from "tests/setup/v2Features.js";
+import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { timeout } from "@/utils/genUtils.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
-import { addHours, addMonths } from "date-fns";
-import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
-import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
+import { addPrefixToProducts } from "../../attach/utils.js";
 
-let user = TestFeature.Users;
-let admin = TestFeature.Admin;
+const user = TestFeature.Users;
+const admin = TestFeature.Admin;
 
-let userMessages = constructArrearItem({
+const userMessages = constructArrearItem({
 	featureId: TestFeature.Messages,
 	price: 0.5,
 	entityFeatureId: user,
 }) as LimitedItem;
 
-export let pro = constructProduct({
+export const pro = constructProduct({
 	items: [userMessages],
 	type: "pro",
 });
@@ -44,8 +41,8 @@ export let pro = constructProduct({
 const testCase = "role2";
 
 describe(`${chalk.yellowBright(`contUse/${testCase}: Testing overages for per entity`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
 	let testClockId: string;
@@ -85,10 +82,10 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing overages for per en
 		testClockId = res.testClockId!;
 	});
 
-	let user1 = "user1";
-	let user2 = "user2";
+	const user1 = "user1";
+	const user2 = "user2";
 
-	let firstEntities: CreateEntity[] = [
+	const firstEntities: CreateEntity[] = [
 		{
 			id: user1,
 			name: "test",
@@ -101,7 +98,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing overages for per en
 		},
 	];
 
-	it("should create initial entities, then attach pro", async function () {
+	it("should create initial entities, then attach pro", async () => {
 		await autumn.entities.create(customerId, firstEntities);
 
 		await attachAndExpectCorrect({
@@ -115,15 +112,15 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing overages for per en
 			entities: firstEntities,
 		});
 
-		let customer = await autumn.customers.get(customerId);
+		const customer = await autumn.customers.get(customerId);
 		expect(customer.features[TestFeature.Messages].included_usage).to.equal(
 			userMessages.included_usage * firstEntities.length,
 		);
 	});
 
-	let user1Usage = 125000;
-	let user2Usage = 150000;
-	it("should track correct usage for seat messages", async function () {
+	const user1Usage = 125000;
+	const user2Usage = 150000;
+	it("should track correct usage for seat messages", async () => {
 		await autumn.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -140,9 +137,9 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing overages for per en
 
 		await timeout(4000);
 
-		let includedUsage = userMessages.included_usage;
+		const includedUsage = userMessages.included_usage;
 
-		let { balance: userBalance } = await autumn.check({
+		const { balance: userBalance } = await autumn.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			entity_id: user1,
@@ -150,7 +147,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing overages for per en
 
 		expect(userBalance).to.equal(includedUsage - user1Usage);
 
-		let { balance: user2Balance } = await autumn.check({
+		const { balance: user2Balance } = await autumn.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			entity_id: user2,
@@ -159,7 +156,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing overages for per en
 		expect(user2Balance).to.equal(includedUsage - user2Usage);
 	});
 
-	it("should have correct invoice next cycle", async function () {
+	it("should have correct invoice next cycle", async () => {
 		await advanceTestClock({
 			stripeCli,
 			testClockId,
@@ -170,13 +167,13 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing overages for per en
 			waitForSeconds: 30,
 		});
 
-		let includedUsage = userMessages.included_usage;
-		let user1Overage = user1Usage - includedUsage;
-		let user2Overage = user2Usage - includedUsage;
+		const includedUsage = userMessages.included_usage;
+		const user1Overage = user1Usage - includedUsage;
+		const user2Overage = user2Usage - includedUsage;
 
-		let totalUsage = user1Overage + user2Overage + includedUsage;
+		const totalUsage = user1Overage + user2Overage + includedUsage;
 
-		let expectedInvoiceTotal = await getExpectedInvoiceTotal({
+		const expectedInvoiceTotal = await getExpectedInvoiceTotal({
 			customerId,
 			productId: pro.id,
 			usage: [{ featureId: TestFeature.Messages, value: totalUsage }],
@@ -187,7 +184,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing overages for per en
 			expectExpired: true,
 		});
 
-		let customer = await autumn.customers.get(customerId);
+		const customer = await autumn.customers.get(customerId);
 		expect(customer.invoices[0].total).to.equal(expectedInvoiceTotal);
 	});
 });

@@ -1,15 +1,17 @@
-import Stripe from "stripe";
-import { AttachScenario, CusProductStatus } from "@autumn/shared";
-import { createStripeCli } from "../../utils.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-
-import { notNullish } from "@/utils/genUtils.js";
-import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
-import { activateFutureProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { cusProductToProduct } from "@autumn/shared";
-import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
+import {
+	AttachScenario,
+	CusProductStatus,
+	cusProductToProduct,
+} from "@autumn/shared";
+import type Stripe from "stripe";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import { activateFutureProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
+import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
+import { createStripeCli } from "../../utils.js";
 
 export const handleSchedulePhaseCompleted = async ({
 	req,
@@ -122,14 +124,15 @@ export const handleSchedulePhaseCompleted = async ({
 				},
 			});
 		} catch (error: any) {
-			logger.error(
-				`schedule.phase.completed: failed to cancel schedule ${schedule.id}, error: ${error.message}`,
-			);
+			if (process.env.NODE_ENV === "development") {
+				logger.warn(
+					`schedule.phase.completed: failed to cancel schedule ${schedule.id}, error: ${error.message}`,
+				);
+			} else {
+				logger.error(
+					`schedule.phase.completed: failed to cancel schedule ${schedule.id}, error: ${error.message}`,
+				);
+			}
 		}
 	}
-	// const currentPhase = schedule.phases.find(
-	//   (phase) =>
-	//     phase.start_date <= Math.floor(now / 1000) &&
-	//     phase.end_date > Math.floor(now / 1000)
-	// );
 };

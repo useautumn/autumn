@@ -1,16 +1,16 @@
-import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { RewardService } from "@/internal/rewards/RewardService.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { ErrCode } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
+import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
+import { RewardService } from "@/internal/rewards/RewardService.js";
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 
 export const handleAddCouponToCus = async (req: any, res: any) => {
 	try {
 		const { customer_id, coupon_id } = req.params;
-		const { db, orgId, env, logtail: logger } = req;
+		const { db, orgId, env, logger } = req;
 
 		const [org, customer, coupon] = await Promise.all([
 			OrgService.getFromReq(req),

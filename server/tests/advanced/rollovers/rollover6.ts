@@ -1,33 +1,30 @@
-import chalk from "chalk";
-import Stripe from "stripe";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-
 import {
-	APIVersion,
-	AppEnv,
-	Customer,
-	LimitedItem,
-	Organization,
+	type AppEnv,
+	type Customer,
+	LegacyVersion,
+	type LimitedItem,
+	type Organization,
 	RolloverDuration,
 } from "@autumn/shared";
-
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { addPrefixToProducts } from "tests/attach/utils.js";
-
 import { expect } from "chai";
-import { resetAndGetCusEnt } from "./rolloverTestUtils.js";
-import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
+import chalk from "chalk";
 import { addHours, addMonths } from "date-fns";
+import type Stripe from "stripe";
+import { addPrefixToProducts } from "tests/attach/utils.js";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
+import { resetAndGetCusEnt } from "./rolloverTestUtils.js";
 
-let freeRollover = { max: 600, length: 1, duration: RolloverDuration.Month };
-let proRollover = { max: 1000, length: 1, duration: RolloverDuration.Month };
+const freeRollover = { max: 600, length: 1, duration: RolloverDuration.Month };
+const proRollover = { max: 1000, length: 1, duration: RolloverDuration.Month };
 
 const freeMsges = constructFeatureItem({
 	featureId: TestFeature.Messages,
@@ -55,13 +52,13 @@ const pro = constructProduct({
 const testCase = "rollover6";
 
 describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for upgrade`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let customer: Customer;
 	let stripeCli: Stripe;
-	let curUnix = new Date().getTime();
+	const curUnix = new Date().getTime();
 
 	before(async function () {
 		await setupBefore(this);
@@ -99,14 +96,14 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for upgrade`)}`, 
 		customer = res.customer;
 	});
 
-	it("should attach free product", async function () {
+	it("should attach free product", async () => {
 		await autumn.attach({
 			customer_id: customerId,
 			product_id: pro.id,
 		});
 	});
 
-	it("should create rollovers", async function () {
+	it("should create rollovers", async () => {
 		await resetAndGetCusEnt({
 			customer,
 			db,
@@ -136,18 +133,18 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for upgrade`)}`, 
 			waitForSeconds: 20,
 		});
 
-		let cus = await autumn.customers.get(customerId);
-		let msgesFeature = cus.features[TestFeature.Messages];
-		let proRolloverBalance = proMsges.included_usage * 2;
-		let freeRolloverBalance = Math.min(freeRollover.max, proRolloverBalance);
+		const cus = await autumn.customers.get(customerId);
+		const msgesFeature = cus.features[TestFeature.Messages];
+		const proRolloverBalance = proMsges.included_usage * 2;
+		const freeRolloverBalance = Math.min(freeRollover.max, proRolloverBalance);
 
 		expect(msgesFeature).to.exist;
 		expect(msgesFeature?.balance).to.equal(
 			freeMsges.included_usage + freeRolloverBalance,
 		);
 
-		// @ts-ignore
-		let rollovers = msgesFeature?.rollovers;
+		// @ts-expect-error
+		const rollovers = msgesFeature?.rollovers;
 		expect(rollovers[0].balance).to.equal(100);
 		expect(rollovers[1].balance).to.equal(500);
 	});

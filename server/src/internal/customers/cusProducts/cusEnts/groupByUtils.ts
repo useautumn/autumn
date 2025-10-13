@@ -1,4 +1,4 @@
-import { FullCustomerEntitlement } from "@autumn/shared";
+import type { FullCustomerEntitlement } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
 
 export const getResetBalancesUpdate = ({
@@ -9,14 +9,14 @@ export const getResetBalancesUpdate = ({
 	allowance?: number;
 }) => {
 	let update = {};
-	let newBalance = notNullish(allowance)
+	const newBalance = notNullish(allowance)
 		? allowance!
 		: cusEnt.entitlement.allowance || 0;
 
-	let entitlement = cusEnt.entitlement;
+	const entitlement = cusEnt.entitlement;
 
 	if (notNullish(entitlement.entity_feature_id)) {
-		let newEntities = { ...cusEnt.entities };
+		const newEntities = { ...cusEnt.entities };
 		for (const entityId in newEntities) {
 			newEntities[entityId].balance = newBalance;
 			newEntities[entityId].adjustment = 0;

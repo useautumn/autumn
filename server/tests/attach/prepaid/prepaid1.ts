@@ -1,33 +1,33 @@
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-	APIVersion,
-	AppEnv,
-	Customer,
+	type AppEnv,
+	type Customer,
+	LegacyVersion,
 	OnDecrease,
 	OnIncrease,
-	Organization,
+	type Organization,
 } from "@autumn/shared";
+import { expect } from "chai";
 import chalk from "chalk";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import { addHours, addMonths } from "date-fns";
+import type Stripe from "stripe";
 import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "../utils.js";
-import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
-import { addHours, addMonths } from "date-fns";
-import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
-import { expect } from "chai";
+import { createProducts } from "tests/utils/productUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { getMainCusProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
+import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
+import { addPrefixToProducts } from "../utils.js";
 
 const testCase = "prepaid1";
 
-export let pro = constructProduct({
+export const pro = constructProduct({
 	items: [
 		constructPrepaidItem({
 			featureId: TestFeature.Messages,
@@ -44,13 +44,13 @@ export let pro = constructProduct({
 });
 
 describe(`${chalk.yellowBright(`attach/${testCase}: update quantity, no proration downgrade, single use`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
 
-	let curUnix = new Date().getTime();
+	const curUnix = new Date().getTime();
 	let customer: Customer;
 
 	before(async function () {
@@ -95,7 +95,7 @@ describe(`${chalk.yellowBright(`attach/${testCase}: update quantity, no proratio
 		},
 	];
 
-	it("should attach pro product to customer", async function () {
+	it("should attach pro product to customer", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,
@@ -107,14 +107,14 @@ describe(`${chalk.yellowBright(`attach/${testCase}: update quantity, no proratio
 			options,
 		});
 
-		let customer = await autumn.customers.get(customerId);
+		const customer = await autumn.customers.get(customerId);
 		expectProductAttached({
 			customer,
 			product: pro,
 		});
 	});
 
-	it("should reduce quantity to 200 and have correct sub item quantity + cus product quantity", async function () {
+	it("should reduce quantity to 200 and have correct sub item quantity + cus product quantity", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,
@@ -132,7 +132,7 @@ describe(`${chalk.yellowBright(`attach/${testCase}: update quantity, no proratio
 		});
 	});
 
-	it("should increase quantity to 400 and have correct sub item quantity + invoice..", async function () {
+	it("should increase quantity to 400 and have correct sub item quantity + invoice..", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,
@@ -152,7 +152,7 @@ describe(`${chalk.yellowBright(`attach/${testCase}: update quantity, no proratio
 	});
 
 	const newQuantity = 200;
-	it("should decrease quantity to 200, advance clock to next cycle and have correct balance", async function () {
+	it("should decrease quantity to 200, advance clock to next cycle and have correct balance", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,

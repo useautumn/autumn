@@ -1,5 +1,5 @@
 import {
-	APIVersion,
+	ApiVersion,
 	type AttachConfig,
 	AttachScenario,
 	ErrCode,
@@ -9,6 +9,7 @@ import {
 import type Stripe from "stripe";
 import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
+import { subIsCanceled } from "@/external/stripe/stripeSubUtils.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
 import {
@@ -19,25 +20,21 @@ import {
 	attachToInvoiceResponse,
 	insertInvoiceFromAttach,
 } from "@/internal/invoices/invoiceUtils.js";
-import { attachToInsertParams } from "@/internal/products/productUtils.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { createStripeSub2 } from "./createStripeSub2.js";
+import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
+import { addIntervalToAnchor } from "@/internal/products/prices/billingIntervalUtils2.js";
 import { getSmallestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
-
+import { attachToInsertParams } from "@/internal/products/productUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 import {
 	getCustomerSchedule,
 	getCustomerSub,
-	paramsToCurSubSchedule,
 } from "../../attachUtils/convertAttachParams.js";
 import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
-import { updateStripeSub2 } from "../upgradeFlow/updateStripeSub2.js";
 import { subToNewSchedule } from "../../mergeUtils/subToNewSchedule.js";
-import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
-import { addIntervalToAnchor } from "@/internal/products/prices/billingIntervalUtils2.js";
 import { handleUpgradeFlowSchedule } from "../upgradeFlow/handleUpgradeFlowSchedule.js";
-import { subIsCanceled } from "@/external/stripe/stripeSubUtils.js";
-import { rewardTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
+import { updateStripeSub2 } from "../upgradeFlow/updateStripeSub2.js";
+import { createStripeSub2 } from "./createStripeSub2.js";
 
 export const handlePaidProduct = async ({
 	req,
@@ -50,7 +47,7 @@ export const handlePaidProduct = async ({
 	attachParams: AttachParams;
 	config: AttachConfig;
 }) => {
-	const logger = req.logtail;
+	const logger = req.logger;
 
 	const {
 		org,
@@ -80,7 +77,7 @@ export const handlePaidProduct = async ({
 	let sub: Stripe.Subscription | null = null;
 	let schedule: Stripe.SubscriptionSchedule | null | undefined = null;
 	let invoice: Stripe.Invoice | undefined;
-	let trialEndsAt = undefined;
+	let trialEndsAt;
 
 	// 1. If merge sub
 
@@ -153,7 +150,7 @@ export const handlePaidProduct = async ({
 			}
 		}
 	} else {
-		let billingCycleAnchorUnix = undefined;
+		let billingCycleAnchorUnix;
 		const smallestInterval = getSmallestInterval({
 			prices: attachParams.prices,
 		});
@@ -204,7 +201,7 @@ export const handlePaidProduct = async ({
 			if (
 				error instanceof RecaseError &&
 				!invoiceOnly &&
-				error.code == ErrCode.CreateStripeSubscriptionFailed
+				error.code === ErrCode.CreateStripeSubscriptionFailed
 			) {
 				return await handleCreateCheckout({
 					req,
@@ -244,14 +241,7 @@ export const handlePaidProduct = async ({
 				anchorToUnix,
 				carryExistingUsages: config.carryUsage,
 				scenario: AttachScenario.New,
-				trialEndsAt:
-					trialEndsAt ||
-					(attachParams.rewardTrial
-						? (rewardTrialToStripeTimestamp({
-								rewardTrial: attachParams.rewardTrial,
-								now: attachParams.now,
-							}) || 0) * 1000
-						: undefined),
+				trialEndsAt: trialEndsAt || undefined,
 				logger,
 			}),
 		);
@@ -259,10 +249,9 @@ export const handlePaidProduct = async ({
 	await Promise.all(batchInsert);
 
 	if (res) {
-		const apiVersion = attachParams.apiVersion || APIVersion.v1;
 		const productNames = products.map((p) => p.name).join(", ");
 		const customerName = customer.name || customer.email || customer.id;
-		if (apiVersion >= APIVersion.v1_1) {
+		if (req.apiVersion.gte(ApiVersion.V1_1)) {
 			res.status(200).json(
 				AttachResultSchema.parse({
 					message: `Successfully created subscriptions and attached ${productNames} to ${customerName}`,

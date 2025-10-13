@@ -1,11 +1,11 @@
-import { routeHandler } from "@/utils/routerUtils.js";
-import { getOrCreateCustomer } from "../cusUtils/getOrCreateCustomer.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
+import { ErrCode } from "@autumn/shared";
 import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { ErrCode } from "@/errors/errCodes.js";
 import { toSuccessUrl } from "@/internal/orgs/orgUtils/convertOrgUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+import { routeHandler } from "@/utils/routerUtils.js";
+import { getOrCreateCustomer } from "../cusUtils/getOrCreateCustomer.js";
 
 export const handleSetupPayment = async (req: any, res: any) =>
 	routeHandler({
@@ -16,10 +16,14 @@ export const handleSetupPayment = async (req: any, res: any) =>
 			const { db, env, org } = req;
 			const logger = req.logger;
 
-			let { customer_id, customer_data, success_url, checkout_session_params } =
-				req.body;
+			const {
+				customer_id,
+				customer_data,
+				success_url,
+				checkout_session_params,
+			} = req.body;
 
-			let customer = await getOrCreateCustomer({
+			const customer = await getOrCreateCustomer({
 				req,
 				customerId: customer_id,
 				customerData: customer_data as any,

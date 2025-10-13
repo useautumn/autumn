@@ -1,15 +1,15 @@
-import { FeatureOptions } from "../../models/cusProductModels/cusProductModels.js";
-import { Feature } from "../../models/featureModels/featureModels.js";
-import { ProductItemResponseSchema } from "../../models/productV2Models/productItemModels/prodItemResponseModels.js";
+import { ApiProductItemSchema } from "@api/products/apiProductItem.js";
+import { Decimal } from "decimal.js";
+import type { FeatureOptions } from "../../models/cusProductModels/cusProductModels.js";
+import type { Feature } from "../../models/featureModels/featureModels.js";
 import {
-	ProductItem,
+	type ProductItem,
 	UsageModel,
 } from "../../models/productV2Models/productItemModels/productItemModels.js";
-import { toAPIFeature } from "../featureUtils.js";
+import { toApiFeature } from "../featureUtils.js";
 import { getProductItemDisplay } from "../productDisplayUtils.js";
 import { notNullish } from "../utils.js";
 import { getItemType } from "./getItemType.js";
-import { Decimal } from "decimal.js";
 
 export const calculateProrationAmount = ({
 	periodEnd,
@@ -109,22 +109,22 @@ export const getProductItemResponse = ({
 	options?: FeatureOptions[];
 }) => {
 	// 1. Get item type
-	let type = getItemType(item);
+	const type = getItemType(item);
 
 	// 2. Get display
-	let display = getProductItemDisplay({
+	const display = getProductItemDisplay({
 		item,
 		features,
 		currency,
 	});
 
-	let priceData = itemToPriceOrTiers({ item });
+	const priceData = itemToPriceOrTiers({ item });
 
-	let quantity = undefined;
-	let upcomingQuantity = undefined;
+	let quantity: number | undefined;
+	let upcomingQuantity: number | undefined;
 
-	if (item.usage_model == UsageModel.Prepaid && notNullish(options)) {
-		let option = options!.find((o) => o.feature_id == item.feature_id);
+	if (item.usage_model === UsageModel.Prepaid && notNullish(options)) {
+		const option = options!.find((o) => o.feature_id === item.feature_id);
 		quantity = option?.quantity
 			? option?.quantity * (item.billing_units ?? 1)
 			: undefined;
@@ -134,11 +134,11 @@ export const getProductItemResponse = ({
 			: undefined;
 	}
 
-	let feature = features.find((f) => f.id == item.feature_id);
-	return ProductItemResponseSchema.parse({
+	const feature = features.find((f) => f.id === item.feature_id);
+	return ApiProductItemSchema.parse({
 		type,
 		...item,
-		feature: feature ? toAPIFeature({ feature }) : null,
+		feature: feature ? toApiFeature({ feature }) : null,
 		display: withDisplay ? display : undefined,
 		...priceData,
 		quantity,
