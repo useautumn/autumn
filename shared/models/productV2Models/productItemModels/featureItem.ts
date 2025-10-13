@@ -1,6 +1,6 @@
-import { ProductItemSchema } from "./productItemModels.js";
+import { z } from "zod/v4";
 import { Infinite } from "../../productModels/productEnums.js";
-import { z } from "zod";
+import { ProductItemSchema } from "./productItemModels.js";
 
 export const FeatureItemSchema = ProductItemSchema.pick({
 	feature_id: true,

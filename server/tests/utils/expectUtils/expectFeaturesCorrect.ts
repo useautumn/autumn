@@ -1,14 +1,12 @@
-import { nullish } from "@/utils/genUtils.js";
-import { expect } from "chai";
-import { notNullish } from "@/utils/genUtils.js";
 import {
-	CreateEntity,
-	FeatureOptions,
-	FeatureType,
+	type CreateEntity,
+	type FeatureOptions,
 	Infinite,
-	ProductV2,
+	type ProductV2,
 } from "@autumn/shared";
-import { Customer, Entity } from "autumn-js";
+import type { Customer, Entity } from "autumn-js";
+import { expect } from "chai";
+import { notNullish, nullish } from "@/utils/genUtils.js";
 
 export const expectFeaturesCorrect = ({
 	customer,
@@ -38,22 +36,24 @@ export const expectFeaturesCorrect = ({
 
 	const otherItems = otherProducts?.flatMap((p) => p.items) || [];
 
+	// console.log(`Product:`, product);
+	// console.log("Customer features:", customer.features);
 	for (const featureId of featureIds) {
 		let includedUsage: string | number = 0;
 
-		let item = items.find((i) => i.feature_id === featureId)!;
+		const item = items.find((i) => i.feature_id === featureId)!;
 		expect(item, `Item ${featureId} exists`).to.exist;
 
 		if (item.included_usage === undefined) continue;
 
 		for (const item of [...items, ...otherItems]) {
 			if (item.feature_id !== featureId) continue;
-			if (item.included_usage == Infinite) {
+			if (item.included_usage === Infinite) {
 				includedUsage = Infinite;
 				break;
 			}
 
-			let numEntities =
+			const numEntities =
 				entities?.filter((e) => e.feature_id === item.entity_feature_id)
 					.length || 1;
 
@@ -72,26 +72,25 @@ export const expectFeaturesCorrect = ({
 
 		expect(feature, `Feature ${featureId} exists`).to.exist;
 
-		// @ts-ignore
-
 		// 1. Check that included usage matches
+
 		expect(
 			feature.included_usage,
 			`Feature ${featureId} included usage is correct`,
 		).to.equal(includedUsage);
 
 		// 2. Check that unlimited is set correctly
-		if (item?.included_usage == Infinite) {
+		if (item?.included_usage === Infinite) {
 			expect(feature.unlimited, `Feature ${featureId} is unlimited`).to.be.true;
 		} else {
 			expect(
-				feature.unlimited == false || nullish(feature.unlimited),
+				feature.unlimited === false || nullish(feature.unlimited),
 				`Feature ${featureId} is not unlimited`,
 			);
 		}
 
 		// 3. Check that usage is correct...
-		let featureUsage =
+		const featureUsage =
 			usage?.reduce((acc, curr) => {
 				if (curr.featureId === featureId) {
 					acc += curr.value;

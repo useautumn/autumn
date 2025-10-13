@@ -1,17 +1,17 @@
 import "dotenv/config";
-import { Stripe } from "stripe";
-import fs from "fs";
-import { AppEnv } from "@autumn/shared";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { ProductService } from "@/internal/products/ProductService.js";
+import fs from "node:fs";
+import type { AppEnv } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
 import { subHours } from "date-fns";
-import { FeatureService } from "@/internal/features/FeatureService.js";
+import type { Stripe } from "stripe";
 import { db } from "@/db/initDrizzle.js";
 import { createLogger } from "@/external/logtail/logtailUtils.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
+import { ProductService } from "@/internal/products/ProductService.js";
 import { timeout } from "@/utils/genUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const getAllStripeCustomers = async ({
 	numPages,
@@ -180,7 +180,7 @@ export const initScript = async ({
 		features,
 		logger,
 		logtail: logger,
-	} as ExtendedRequest;
+	} as unknown as ExtendedRequest;
 
 	return { stripeCli, autumnProducts, req };
 };
@@ -188,7 +188,7 @@ export const initScript = async ({
 export const getFirstOfNextMonthUnix = (hoursToSub?: number) => {
 	let firstOfNextMonth = new UTCDate(new Date());
 
-	let nextMonth = firstOfNextMonth.getUTCMonth() + 1;
+	const nextMonth = firstOfNextMonth.getUTCMonth() + 1;
 	firstOfNextMonth.setUTCDate(1);
 	firstOfNextMonth.setUTCHours(12, 0, 0, 0);
 	firstOfNextMonth.setUTCMonth(nextMonth);

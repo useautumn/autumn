@@ -1,18 +1,17 @@
+import { sql } from "drizzle-orm";
 import {
+	boolean,
 	foreignKey,
 	jsonb,
 	numeric,
 	pgTable,
 	text,
 	unique,
-	boolean,
 } from "drizzle-orm/pg-core";
-
-import { relations, sql } from "drizzle-orm";
-import { organizations } from "../orgModels/orgTable.js";
-import { MeteredConfig } from "./featureConfig/meteredConfig.js";
-import { CreditSystemConfig } from "./featureConfig/creditConfig.js";
 import { collatePgColumn } from "../../db/utils.js";
+import { organizations } from "../orgModels/orgTable.js";
+import type { CreditSystemConfig } from "./featureConfig/creditConfig.js";
+import type { MeteredConfig } from "./featureConfig/meteredConfig.js";
 
 type FeatureDisplay = {
 	singular: string;
@@ -33,6 +32,7 @@ export const features = pgTable(
 		config: jsonb().$type<MeteredConfig | CreditSystemConfig>(),
 		display: jsonb().default(sql`null`).$type<FeatureDisplay>(),
 		archived: boolean("archived").notNull().default(false),
+		event_names: text("event_names").array().default([]),
 	},
 	(table) => [
 		foreignKey({

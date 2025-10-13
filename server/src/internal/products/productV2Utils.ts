@@ -1,15 +1,15 @@
 import {
-	EntitlementWithFeature,
-	Feature,
-	FullProduct,
-	Price,
-	ProductItem,
-	ProductV2,
+	type EntitlementWithFeature,
+	type Feature,
+	type FullProduct,
+	getItemFeatureType,
+	type Price,
+	type ProductItem,
+	type ProductV2,
+	toProductItem,
 } from "@autumn/shared";
 import { getEntRelatedPrice } from "./entitlements/entitlementUtils.js";
 import { getPriceEntitlement } from "./prices/priceUtils.js";
-import { toProductItem } from "@autumn/shared";
-import { getItemFeatureType } from "@autumn/shared";
 
 export const mapToProductItems = ({
 	prices,
@@ -22,16 +22,16 @@ export const mapToProductItems = ({
 	features: Feature[];
 	allowFeatureMatch?: boolean;
 }): ProductItem[] => {
-	let items: ProductItem[] = [];
+	const items: ProductItem[] = [];
 
 	for (const ent of entitlements) {
-		let relatedPrice = getEntRelatedPrice(ent, prices, allowFeatureMatch);
-		let item = toProductItem({ ent, price: relatedPrice });
+		const relatedPrice = getEntRelatedPrice(ent, prices, allowFeatureMatch);
+		const item = toProductItem({ ent, price: relatedPrice });
 		items.push(item);
 	}
 
 	for (const price of prices) {
-		let relatedEnt = getPriceEntitlement(
+		const relatedEnt = getPriceEntitlement(
 			price,
 			entitlements,
 			allowFeatureMatch,
@@ -43,7 +43,7 @@ export const mapToProductItems = ({
 	}
 
 	for (const item of items) {
-		let feature = features.find((f) => f.id == item.feature_id);
+		const feature = features.find((f) => f.id == item.feature_id);
 		if (feature) {
 			item.feature_type = getItemFeatureType({ item, features });
 		}
@@ -59,17 +59,17 @@ export const mapToProductV2 = ({
 	product: FullProduct;
 	features: Feature[];
 }): ProductV2 => {
-	let items: ProductItem[] = [];
+	const items: ProductItem[] = [];
 	// console.log("Prices:", product.prices);
 	// console.log("Entitlements:", product.entitlements);
 
 	for (const ent of product.entitlements) {
-		let relatedPrice = getEntRelatedPrice(ent, product.prices);
+		const relatedPrice = getEntRelatedPrice(ent, product.prices);
 		items.push(toProductItem({ ent, price: relatedPrice }));
 	}
 
 	for (const price of product.prices) {
-		let relatedEnt = getPriceEntitlement(price, product.entitlements);
+		const relatedEnt = getPriceEntitlement(price, product.entitlements);
 
 		// console.log("Price:", price.id);
 		// console.log("Related ent:", relatedEnt);
@@ -82,7 +82,7 @@ export const mapToProductV2 = ({
 		item.feature_type = getItemFeatureType({ item, features });
 	}
 
-	let productV2: ProductV2 = {
+	const productV2: ProductV2 = {
 		internal_id: product.internal_id,
 
 		id: product.id,

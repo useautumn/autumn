@@ -1,12 +1,13 @@
 // import { useProductsContext } from "../ProductsContext";
+
+import { type RewardProgram, RewardTriggerEvent } from "@autumn/shared";
 import { useState } from "react";
-import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import { RewardProgram, RewardTriggerEvent } from "@autumn/shared";
-import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
+import { AdminHover } from "@/components/general/AdminHover";
 // import { RewardProgramRowToolbar } from "./RewardProgramRowToolbar";
 import { Item, Row } from "@/components/general/TableGrid";
-import { AdminHover } from "@/components/general/AdminHover";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
+import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
+import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { RewardProgramRowToolbar } from "./RewardProgramRowToolbar";
 import UpdateRewardProgram from "./UpdateRewardPrograms";
 
@@ -58,7 +59,11 @@ export const RewardProgramsTable = () => {
 						</AdminHover>
 					</Item>
 					<Item className="col-span-4">
-						<span className="truncate">{rewardProgram.when}</span>
+						<span className="truncate">
+							{rewardProgram.when === RewardTriggerEvent.CustomerCreation
+								? "Customer Redemption"
+								: keyToTitle(rewardProgram.when)}
+						</span>
 					</Item>
 					<Item className="col-span-4">
 						<div className="flex items-center gap-1">
@@ -70,9 +75,9 @@ export const RewardProgramsTable = () => {
 						</div>
 					</Item>
 					<Item className="col-span-3">
-						{rewardProgram.when == RewardTriggerEvent.CustomerCreation
+						{rewardProgram.when === RewardTriggerEvent.CustomerCreation
 							? "Sign Up"
-							: rewardProgram.when == RewardTriggerEvent.Checkout
+							: rewardProgram.when === RewardTriggerEvent.Checkout
 								? "Checkout"
 								: keyToTitle(rewardProgram.when)}
 					</Item>

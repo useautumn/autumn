@@ -1,26 +1,25 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import {
-	activateFutureProduct,
-	activateDefaultProduct,
-	cancelCusProductSubscriptions,
-} from "@/internal/customers/cusProducts/cusProductUtils.js";
-import { cusProductToPrices } from "@autumn/shared";
-import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import {
-	FullCusProduct,
-	APIVersion,
+	ApiVersion,
+	AttachScenario,
 	BillingType,
 	CusProductStatus,
-	AttachScenario,
+	cusProductToPrices,
+	type FullCusProduct,
 } from "@autumn/shared";
-import Stripe from "stripe";
-import { getCusPaymentMethod } from "../../stripeCusUtils.js";
-import { webhookToAttachParams } from "../../webhookUtils/webhookUtils.js";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { createUsageInvoice } from "@/internal/customers/attach/attachFunctions/upgradeDiffIntFlow/createUsageInvoice.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
+import {
+	activateDefaultProduct,
+	activateFutureProduct,
+} from "@/internal/customers/cusProducts/cusProductUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+import { getCusPaymentMethod } from "../../stripeCusUtils.js";
+import { webhookToAttachParams } from "../../webhookUtils/webhookUtils.js";
 
 export const handleCusProductDeleted = async ({
 	req,
@@ -54,7 +53,7 @@ export const handleCusProductDeleted = async ({
 		stripeId: fullCus.processor?.id,
 	});
 
-	const isV4Usage = cusProduct.api_version === APIVersion.v1_4;
+	const isV4Usage = cusProduct.api_semver === ApiVersion.Beta;
 
 	// refer to handleUpgradeFlow.ts, when cancel immediately through API / dashboard, this happens...?
 	const isAutumnCancel =
@@ -137,13 +136,13 @@ export const handleCusProductDeleted = async ({
 		return;
 	}
 
-	let cusProducts = await CusProductService.list({
+	const cusProducts = await CusProductService.list({
 		db,
-		internalCustomerId: cusProduct.customer!.internal_id,
+		internalCustomerId: cusProduct.internal_customer_id,
 		inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
 	});
 
-	let { curMainProduct } = getExistingCusProducts({
+	const { curMainProduct } = getExistingCusProducts({
 		product: cusProduct.product,
 		cusProducts,
 	});
@@ -154,12 +153,4 @@ export const handleCusProductDeleted = async ({
 		fullCus,
 		curCusProduct: curMainProduct || undefined,
 	});
-
-	// await cancelCusProductSubscriptions({
-	//   cusProduct,
-	//   org,
-	//   env,
-	//   excludeIds: [subscription.id],
-	//   logger,
-	// });
 };

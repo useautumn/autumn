@@ -1,23 +1,23 @@
-import chalk from "chalk";
-import { setupBefore } from "tests/before.js";
-import { Stripe } from "stripe";
-import { createProducts } from "tests/utils/productUtils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-	APIVersion,
-	AppEnv,
+	type AppEnv,
 	CusProductStatus,
-	Organization,
+	LegacyVersion,
+	type Organization,
 } from "@autumn/shared";
-import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
 import { expect } from "chai";
-import { expectSubToBeCorrect } from "../mergeUtils/expectSubCorrect.js";
+import chalk from "chalk";
+import type { Stripe } from "stripe";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { expectSubToBeCorrect } from "../mergeUtils/expectSubCorrect.js";
 
 // OPERATIONS:
 // Premium, Premium
@@ -25,13 +25,13 @@ import { expectProductAttached } from "tests/utils/expectUtils/expectProductAtta
 // Premium, Premium
 
 // UNCOMMENT FROM HERE
-let premium = constructProduct({
+const premium = constructProduct({
 	id: "premium",
 	items: [constructArrearItem({ featureId: TestFeature.Words })],
 	type: "premium",
 });
 
-let pro = constructProduct({
+const pro = constructProduct({
 	id: "pro",
 	items: [constructArrearItem({ featureId: TestFeature.Words })],
 	type: "pro",
@@ -76,8 +76,8 @@ const ops2 = [
 ];
 
 describe(`${chalk.yellowBright("mergedDowngrade1: Testing merged subs, downgrade 2 pros")}`, () => {
-	let customerId = "mergedDowngrade1";
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = "mergedDowngrade1";
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 	let stripeCli: Stripe;
 	let testClockId: string;
@@ -134,7 +134,7 @@ describe(`${chalk.yellowBright("mergedDowngrade1: Testing merged subs, downgrade
 		},
 	];
 
-	it("should attach pro product to both entities", async function () {
+	it("should attach pro product to both entities", async () => {
 		await autumn.entities.create(customerId, entities);
 
 		for (const op of init) {
@@ -146,7 +146,7 @@ describe(`${chalk.yellowBright("mergedDowngrade1: Testing merged subs, downgrade
 		}
 	});
 
-	it("should downgrade both entities to pro and have correct sub + schedule", async function () {
+	it("should downgrade both entities to pro and have correct sub + schedule", async () => {
 		for (const op of ops1) {
 			await autumn.attach({
 				customer_id: customerId,
@@ -175,7 +175,7 @@ describe(`${chalk.yellowBright("mergedDowngrade1: Testing merged subs, downgrade
 		}
 	});
 
-	it("should renew both entities and have correct sub + schedule", async function () {
+	it("should renew both entities and have correct sub + schedule", async () => {
 		for (const op of ops2) {
 			await autumn.attach({
 				customer_id: customerId,

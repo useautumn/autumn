@@ -1,5 +1,5 @@
 import {
-	type APIVersion,
+	type ApiVersion,
 	CollectionMethod,
 	type CusProduct,
 	CusProductStatus,
@@ -98,7 +98,7 @@ export const initCusProduct = ({
 	isCustom?: boolean;
 	entityId?: string;
 	internalEntityId?: string;
-	apiVersion?: APIVersion;
+	apiVersion?: ApiVersion;
 	quantity?: number;
 }) => {
 	const isFuture = startsAt && startsAt > Date.now();
@@ -115,7 +115,7 @@ export const initCusProduct = ({
 		internal_product_id: product.internal_id,
 		product_id: product.id,
 		created_at: createdAt || Date.now(),
-		canceled: notNullish(canceledAt) ? true : false,
+		canceled: notNullish(canceledAt),
 
 		status: subscriptionStatus
 			? subscriptionStatus
@@ -142,7 +142,7 @@ export const initCusProduct = ({
 		quantity: quantity || 1,
 		internal_entity_id: internalEntityId,
 		entity_id: entityId,
-		api_version: apiVersion,
+		api_semver: apiVersion || null,
 	};
 };
 
@@ -268,7 +268,6 @@ export const createFullCusProduct = async ({
 	db,
 	attachParams,
 	startsAt,
-	// subscriptionId,
 	nextResetAt,
 	disableFreeTrial = false,
 	productOptions,
@@ -278,7 +277,6 @@ export const createFullCusProduct = async ({
 	createdAt = null,
 	subscriptionIds = [],
 	subscriptionScheduleIds = [],
-	// keepResetIntervals = false,
 	anchorToUnix,
 	carryExistingUsages = false,
 	carryOverTrial = false,
@@ -290,7 +288,6 @@ export const createFullCusProduct = async ({
 	db: DrizzleCli;
 	attachParams: InsertCusProductParams;
 	startsAt?: number;
-	// subscriptionId?: string;
 	nextResetAt?: number;
 	billLaterOnly?: boolean;
 	disableFreeTrial?: boolean;
@@ -337,6 +334,7 @@ export const createFullCusProduct = async ({
 		internalProductId: product.internal_id,
 		cusProducts: attachParams.cusProducts!,
 		status: CusProductStatus.Active,
+		internalEntityId: attachParams.internalEntityId,
 	});
 
 	if (
@@ -396,9 +394,7 @@ export const createFullCusProduct = async ({
 		newReplaceables.push(...newReplaceables_);
 	}
 
-	// 3. Deduct existing usages
-
-	let deductedCusEnts = addExistingUsagesToCusEnts({
+	const deductedCusEnts = addExistingUsagesToCusEnts({
 		cusEnts: cusEnts,
 		entitlements: entitlements,
 		curCusProduct: curCusProduct as FullCusProduct,
@@ -503,7 +499,7 @@ export const createFullCusProduct = async ({
 		);
 	}
 
-	const finalRollovers = (await Promise.all(rolloverInserts)).flatMap((r) => r);
+	const finalRollovers = (await Promise.all(rolloverInserts)).flat();
 
 	// Get rollovers for each entitlement
 	const cusEntsWithRollovers = await Promise.all(
@@ -517,10 +513,6 @@ export const createFullCusProduct = async ({
 					delete_next_cycle: r.delete_next_cycle || false,
 				})),
 			rollovers: finalRollovers.filter((r) => r.cus_ent_id === ce.id),
-			// await RolloverService.getCurrentRollovers({
-			//   db,
-			//   cusEntID: ce.id,
-			// }),
 		})),
 	);
 
@@ -536,7 +528,6 @@ export const createFullCusProduct = async ({
 
 	try {
 		if (sendWebhook && !attachParams.fromMigration) {
-			// Maybe send two for downgrade? (one for scheduled, one for active)
 			await addProductsUpdatedWebhookTask({
 				req: attachParams.req,
 				internalCustomerId: customer.internal_id,
@@ -549,7 +540,7 @@ export const createFullCusProduct = async ({
 				logger,
 			});
 		}
-	} catch (error) {
+	} catch (_error) {
 		logger.error("Failed to add products updated webhook task to queue");
 	}
 

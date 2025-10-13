@@ -1,34 +1,30 @@
-import chalk from "chalk";
-import { setupBefore } from "tests/before.js";
-import { Stripe } from "stripe";
-import { createProducts } from "tests/utils/productUtils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-	APIVersion,
-	AppEnv,
+	type AppEnv,
 	CusProductStatus,
-	entities,
-	Organization,
+	LegacyVersion,
+	type Organization,
 } from "@autumn/shared";
-import {
-	constructArrearItem,
-	constructFeatureItem,
-} from "@/utils/scriptUtils/constructItem.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
+import chalk from "chalk";
+import type { Stripe } from "stripe";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
 // UNCOMMENT FROM HERE
-let premium = constructProduct({
+const premium = constructProduct({
 	id: "premium",
 	items: [constructFeatureItem({ featureId: TestFeature.Words })],
 	type: "premium",
 });
-let pro = constructProduct({
+const pro = constructProduct({
 	id: "pro",
 	items: [constructFeatureItem({ featureId: TestFeature.Words })],
 	type: "pro",
@@ -62,8 +58,8 @@ const ops = [
 
 const testCase = "mergedAdd3";
 describe(`${chalk.yellowBright(`${testCase}: Testing scheduled, and merged add to subscription`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 	let stripeCli: Stripe;
 	let testClockId: string;
@@ -125,7 +121,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing scheduled, and merged add t
 		},
 	];
 
-	it("should run operations", async function () {
+	it("should run operations", async () => {
 		await autumn.entities.create(customerId, entities);
 
 		for (let index = 0; index < ops.length; index++) {

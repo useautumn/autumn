@@ -1,30 +1,30 @@
-import chalk from "chalk";
-import { setupBefore } from "tests/before.js";
-import { Stripe } from "stripe";
-import { createProducts } from "tests/utils/productUtils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { APIVersion, AppEnv, Organization } from "@autumn/shared";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
+import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
 import { expect } from "chai";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import chalk from "chalk";
 import { addDays } from "date-fns";
-import { toMilliseconds } from "@/utils/timeUtils.js";
+import type { Stripe } from "stripe";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import { getCusSub } from "@/utils/scriptUtils/testUtils/cusTestUtils.js";
+import { toMilliseconds } from "@/utils/timeUtils.js";
 
-let pro = constructProduct({
+const pro = constructProduct({
 	id: "pro",
 	items: [constructFeatureItem({ featureId: TestFeature.Words })],
 	type: "pro",
 	trial: true,
 });
 
-let premium = constructProduct({
+const premium = constructProduct({
 	id: "premium",
 	items: [constructFeatureItem({ featureId: TestFeature.Words })],
 	type: "premium",
@@ -33,8 +33,8 @@ let premium = constructProduct({
 
 const testCase = "interval3";
 describe(`${chalk.yellowBright("interval3: Should upgrade from pro trial to premium trial and have correct next cycle at")}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 	let stripeCli: Stripe;
 	let testClockId: string;
@@ -78,7 +78,7 @@ describe(`${chalk.yellowBright("interval3: Should upgrade from pro trial to prem
 		testClockId = testClockId1!;
 	});
 
-	it("should attach pro and advance test clock", async function () {
+	it("should attach pro and advance test clock", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,
@@ -96,7 +96,7 @@ describe(`${chalk.yellowBright("interval3: Should upgrade from pro trial to prem
 		});
 	});
 
-	it("should upgrade to premium and have correct next cycle at", async function () {
+	it("should upgrade to premium and have correct next cycle at", async () => {
 		const checkoutRes = await autumn.checkout({
 			customer_id: customerId,
 			product_id: premium.id,

@@ -1,10 +1,14 @@
-import Stripe from "stripe";
+import type {
+	FixedPriceConfig,
+	Organization,
+	Price,
+	Product,
+} from "@autumn/shared";
+import { atmnToStripeAmount } from "@autumn/shared";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
-import { Price, Product, Organization, FixedPriceConfig } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { billingIntervalToStripe } from "../stripePriceUtils.js";
-import { Decimal } from "decimal.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const createStripeFixedPrice = async ({
 	db,
@@ -20,13 +24,17 @@ export const createStripeFixedPrice = async ({
 	org: Organization;
 }) => {
 	const config = price.config as FixedPriceConfig;
+	const currency = org.default_currency || "usd";
 
-	let amount = new Decimal(config.amount).mul(100).toNumber();
+	const amount = atmnToStripeAmount({
+		amount: config.amount,
+		currency,
+	});
 
 	const stripePrice = await stripeCli.prices.create({
 		product: product.processor!.id,
 		unit_amount: amount,
-		currency: org.default_currency!,
+		currency,
 		recurring: {
 			...(billingIntervalToStripe({
 				interval: config.interval,

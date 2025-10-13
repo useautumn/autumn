@@ -1,26 +1,23 @@
-import Stripe from "stripe";
+import {
+	BillingInterval,
+	type CusProductStatus,
+	type EntitlementWithFeature,
+	type FullCustomer,
+	type FullProduct,
+	isUsagePrice,
+	type Price,
+	type UsagePriceConfig,
+} from "@autumn/shared";
+import type Stripe from "stripe";
+import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { stripeToAutumnSubStatus } from "@/external/stripe/stripeSubUtils.js";
+import { subToAutumnInterval } from "@/external/stripe/utils.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
-import { isFreeProduct } from "@/internal/products/productUtils.js";
+import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { constructSub } from "@/internal/subscriptions/subUtils.js";
-import {
-	FullCustomer,
-	FullProduct,
-	Price,
-	EntitlementWithFeature,
-	CusProductStatus,
-	UsagePriceConfig,
-	BillingInterval,
-} from "@autumn/shared";
-
 import { notNullish } from "../genUtils.js";
-import { ExtendedRequest } from "../models/Request.js";
-import { isUsagePrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
-import { subToAutumnInterval } from "@/external/stripe/utils.js";
-import { prices as priceTable } from "@autumn/shared";
-import { PriceService } from "@/internal/products/prices/PriceService.js";
-import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import type { ExtendedRequest } from "../models/Request.js";
 
 export const addProductFromSubs = async ({
 	req,
@@ -48,17 +45,17 @@ export const addProductFromSubs = async ({
 	const cusProducts = autumnCus.customer_products;
 	const entity = autumnCus.entity;
 
-	let mainCusProduct = cusProducts.find(
+	const mainCusProduct = cusProducts.find(
 		(cp) =>
 			!cp.product.is_add_on &&
-			cp.product_id == autumnProduct.id &&
+			cp.product_id === autumnProduct.id &&
 			(notNullish(entity)
-				? cp.internal_entity_id == entity!.internal_id
+				? cp.internal_entity_id === entity!.internal_id
 				: true),
 	);
 
 	if (mainCusProduct && !force) {
-		let prices = mainCusProduct.customer_prices.map((cp) => cp.price);
+		const prices = mainCusProduct.customer_prices.map((cp) => cp.price);
 		// let isFree = isFreeProduct(prices);
 
 		if (mainCusProduct) {
@@ -74,12 +71,12 @@ export const addProductFromSubs = async ({
 	}
 
 	// Handle if trialing
-	let trialEndsAt = sub?.trial_end ? sub.trial_end * 1000 : null;
+	const trialEndsAt = sub?.trial_end ? sub.trial_end * 1000 : null;
 
 	// throw new Error("test");
 
 	// 1. Insert custom prices...
-	let customPrices = prices?.filter((p) => p.is_custom);
+	const customPrices = prices?.filter((p) => p.is_custom);
 	if (customPrices && customPrices.length > 0) {
 		await PriceService.upsert({
 			db,
@@ -91,7 +88,7 @@ export const addProductFromSubs = async ({
 		sub,
 	});
 
-	let newCusProduct = await createFullCusProduct({
+	const newCusProduct = await createFullCusProduct({
 		db,
 		attachParams: {
 			replaceables: [],
@@ -132,16 +129,16 @@ export const addProductFromSubs = async ({
 
 	if (sub) {
 		// Create sub
-		let usageFeatures = autumnProduct.prices
+		const usageFeatures = autumnProduct.prices
 			.filter((p) => isUsagePrice({ price: p }))
 			.map((p) => (p.config as UsagePriceConfig).internal_feature_id);
 
-		let subFromDb = await SubService.getInStripeIds({
+		const subFromDb = await SubService.getInStripeIds({
 			db,
 			ids: [sub.id],
 		});
 
-		let subInterval = subToAutumnInterval(sub);
+		const subInterval = subToAutumnInterval(sub);
 
 		if (subFromDb.length === 0) {
 			await SubService.createSub({
@@ -149,7 +146,7 @@ export const addProductFromSubs = async ({
 				sub: constructSub({
 					stripeId: sub.id,
 					usageFeatures:
-						subInterval.interval == BillingInterval.Month ? usageFeatures : [],
+						subInterval.interval === BillingInterval.Month ? usageFeatures : [],
 					orgId: org.id,
 					env,
 					currentPeriodStart: start,

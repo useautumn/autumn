@@ -1,27 +1,23 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import {
-	getRelatedCusPrice,
-	getResetBalance,
-} from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
+	type CreateEntity,
+	ErrCode,
+	type FullCusProduct,
+	type FullCustomer,
+	type FullCustomerEntitlement,
+	type Replaceable,
+} from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import {
 	findLinkedCusEnts,
 	findMainCusEntForFeature,
 } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
+import { getRelatedCusPrice } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { adjustAllowance } from "@/trigger/adjustAllowance.js";
 import { getReps } from "@/trigger/arrearProratedUsage/handleProratedUpgrade.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import {
-	CreateEntity,
-	ErrCode,
-	Feature,
-	FullCusProduct,
-	FullCustomer,
-	FullCustomerEntitlement,
-	Replaceable,
-} from "@autumn/shared";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const updateLinkedCusEnt = async ({
 	db,
@@ -34,10 +30,10 @@ export const updateLinkedCusEnt = async ({
 	inputEntities: CreateEntity[];
 	entityToReplacement: Record<string, string>;
 }) => {
-	let newEntities = structuredClone(linkedCusEnt.entities) || {};
+	const newEntities = structuredClone(linkedCusEnt.entities) || {};
 	for (const entity of inputEntities) {
-		let replaceableId = entityToReplacement[entity.id];
-		let replaceableInEntities = replaceableId
+		const replaceableId = entityToReplacement[entity.id];
+		const replaceableInEntities = replaceableId
 			? newEntities[replaceableId]
 			: null;
 
@@ -48,7 +44,7 @@ export const updateLinkedCusEnt = async ({
 			};
 			delete newEntities[replaceableId];
 		} else {
-			let balance = linkedCusEnt.entitlement.allowance!;
+			const balance = linkedCusEnt.entitlement.allowance!;
 			newEntities[entity.id] = {
 				id: entity.id,
 				balance,
@@ -120,7 +116,7 @@ export const createEntityForCusProduct = async ({
 			const originalBalance = mainCusEnt.balance || 0;
 			const newBalance = originalBalance - inputEntities.length;
 
-			let repsLength = getReps({
+			const repsLength = getReps({
 				cusEnt: mainCusEnt as any,
 				prevBalance: originalBalance,
 				newBalance,

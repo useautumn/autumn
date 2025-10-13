@@ -1,5 +1,4 @@
 import { assert, expect } from "chai";
-import { ErrCode } from "@autumn/shared";
 import AutumnError from "@/external/autumn/autumnCli.js";
 
 export const expectAutumnError = async ({
@@ -12,7 +11,7 @@ export const expectAutumnError = async ({
 	func: () => Promise<any>;
 }) => {
 	try {
-		let result = await func();
+		const result = await func();
 
 		assert.fail(
 			`Expected to receive autumn error ${errCode}, but received none`,

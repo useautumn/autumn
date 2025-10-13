@@ -1,31 +1,31 @@
+import {
+	AttachScenario,
+	BillingInterval,
+	type CreateCustomer,
+	CreateCustomerSchema,
+	type Customer,
+	ErrCode,
+	type FullCustomer,
+	type FullProduct,
+} from "@autumn/shared";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { addCustomerCreatedTask } from "@/internal/analytics/handlers/handleCustomerCreated.js";
-import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
+import { isDefaultTrialFullProduct } from "@/internal/products/productUtils/classifyProduct.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import {
-	CreateCustomer,
-	CreateCustomerSchema,
-	ErrCode,
-	BillingInterval,
-	AttachScenario,
-	FullCustomer,
-	FullProduct,
-} from "@autumn/shared";
-import { Customer } from "@autumn/shared";
+import { generateId } from "@/utils/genUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import { handleAddProduct } from "../attach/attachFunctions/addProductFlow/handleAddProduct.js";
-import { CusService } from "../CusService.js";
-import { initStripeCusAndProducts } from "../handlers/handleCreateCustomer.js";
-import { generateId } from "@/utils/genUtils.js";
-
 import {
 	newCusToAttachParams,
 	newCusToInsertParams,
 } from "../attach/attachUtils/attachParams/convertToParams.js";
-import { isDefaultTrialFullProduct } from "@/internal/products/productUtils/classifyProduct.js";
+import { getDefaultAttachConfig } from "../attach/attachUtils/getAttachConfig.js";
+import { CusService } from "../CusService.js";
+import { initStripeCusAndProducts } from "../handlers/handleCreateCustomer.js";
 
 export const getGroupToDefaultProd = async ({
 	defaultProds,
@@ -162,6 +162,10 @@ export const createNewCustomer = async ({
 
 			await handleAddProduct({
 				req,
+				config: {
+					...getDefaultAttachConfig(),
+					requirePaymentMethod: false,
+				},
 				attachParams: newCusToAttachParams({
 					req,
 					newCus: newCustomer as FullCustomer,
@@ -191,52 +195,6 @@ export const createNewCustomer = async ({
 			});
 		}
 	}
-
-	// if (nonFreeProds.length > 0) {
-	//   const stripeCli = createStripeCli({ org, env });
-
-	// await initStripeCusAndProducts({
-	//   db,
-	//   org,
-	//   env,
-	//   customer: newCustomer,
-	//   products: nonFreeProds,
-	//   logger,
-	// });
-
-	//   await handleAddProduct({
-	//     req,
-	//     attachParams: newCusToAttachParams({
-	//       req,
-	//       newCus: newCustomer as FullCustomer,
-	//       products: nonFreeProds,
-	//       stripeCli,
-	//       freeTrial: defaultPaidTrialProd?.free_trial || null,
-	//     }),
-	//   });
-	// }
-
-	// if (!defaultPaidTrialProd) {
-	//   for (const product of freeProds) {
-	//     await createFullCusProduct({
-	// db,
-	// attachParams: newCusToInsertParams({
-	//   req,
-	//   newCus: newCustomer,
-	//   product,
-	// }),
-	// nextResetAt,
-	// anchorToUnix: org.config.anchor_start_of_month
-	//   ? getNextStartOfMonthUnix({
-	//       interval: BillingInterval.Month,
-	//       intervalCount: 1,
-	//     })
-	//   : undefined,
-	// scenario: AttachScenario.New,
-	// logger,
-	//     });
-	//   }
-	// }
 
 	return newCustomer;
 };

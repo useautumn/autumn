@@ -1,27 +1,25 @@
-import { ExtendedRequest } from "@/utils/models/Request.js";
 import {
-	CusProductStatus,
-	ErrCode,
-	FullCusProduct,
-	FullCustomer,
-	ProrationBehavior,
 	AttachBranch,
-	Price,
-	EntitlementWithFeature,
+	CusProductStatus,
+	cusProductToPrices,
+	cusProductToProduct,
+	type EntitlementWithFeature,
+	ErrCode,
+	type FullCusProduct,
+	type FullCustomer,
+	type Price,
+	ProrationBehavior,
 } from "@autumn/shared";
-import { getExistingCusProducts } from "../cusProducts/cusProductUtils/getExistingCusProducts.js";
-import { cusProductToPrices, cusProductToProduct } from "@autumn/shared";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
+import { createStripeCli } from "@/external/stripe/utils.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
-
-import { cancelImmediately } from "./cancelImmediately.js";
-
+import RecaseError from "@/utils/errorUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { handleRenewProduct } from "../attach/attachFunctions/handleRenewProduct.js";
-import { getDefaultAttachConfig } from "../attach/attachUtils/getAttachConfig.js";
 import { handleScheduleFunction2 } from "../attach/attachFunctions/scheduleFlow/handleScheduleFlow2.js";
 import { handleUpgradeFlow } from "../attach/attachFunctions/upgradeFlow/handleUpgradeFlow.js";
+import { getDefaultAttachConfig } from "../attach/attachUtils/getAttachConfig.js";
+import { getExistingCusProducts } from "../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import {
 	activateDefaultProduct,
 	getDefaultProduct,
@@ -40,7 +38,7 @@ export const handleCancelProduct = async ({
 	expireImmediately: boolean;
 	prorate: boolean;
 }) => {
-	const { db, org, env, logger } = req;
+	const { org, env, logger } = req;
 	logger.info("--------------------------------");
 	logger.info(
 		`🔔 Expiring cutomer product (${
@@ -54,24 +52,16 @@ export const handleCancelProduct = async ({
 		`Product: ${cusProduct.product.name}, Status: ${cusProduct.status}`,
 	);
 
-	const { curMainProduct, curSameProduct, curScheduledProduct } =
-		getExistingCusProducts({
-			product: cusProductToProduct({ cusProduct }),
-			cusProducts: fullCus.customer_products,
-			internalEntityId: cusProduct.internal_entity_id,
-		});
+	const { curScheduledProduct } = getExistingCusProducts({
+		product: cusProductToProduct({ cusProduct }),
+		cusProducts: fullCus.customer_products,
+		internalEntityId: cusProduct.internal_entity_id,
+	});
 
 	const stripeCli = createStripeCli({ org, env });
 
 	// 1. Build attach params
-	if (cusProduct.status == CusProductStatus.Scheduled) {
-		// Equivalent to renewing product
-		// await cancelScheduledProduct({
-		//   req,
-		//   curScheduledProduct,
-		//   fullCus,
-		//   curMainProduct,
-		// });
+	if (cusProduct.status === CusProductStatus.Scheduled) {
 		const { curMainProduct } = getExistingCusProducts({
 			product: cusProduct.product,
 			cusProducts: fullCus.customer_products,
@@ -206,6 +196,7 @@ export const handleCancelProduct = async ({
 			proration: prorate
 				? ProrationBehavior.Immediately
 				: ProrationBehavior.None,
+			requirePaymentMethod: false,
 		},
 		branch: AttachBranch.Cancel,
 	});
@@ -219,36 +210,4 @@ export const handleCancelProduct = async ({
 			curCusProduct: cusProduct,
 		});
 	}
-	return;
-
-	// Expire product immediately
-	await cancelImmediately({
-		req,
-		cusProduct,
-		fullCus,
-		prorate,
-	});
 };
-
-// if (isOneOff(cusProduct.customer_prices.map((p) => p.price))) {
-//   await CusProductService.update({
-//     db,
-//     cusProductId: cusProduct.id,
-//     updates: { status: CusProductStatus.Expired },
-//   });
-// } else {
-//   await CusProductService.update({
-//     db,
-//     cusProductId: cusProduct.id,
-//     updates: { canceled_at: Date.now() },
-//   });
-// }
-
-// return;
-
-// await cancelEndOfCycle({
-//   req,
-//   cusProduct,
-//   fullCus,
-// });
-// return;

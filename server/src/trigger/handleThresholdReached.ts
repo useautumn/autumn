@@ -1,20 +1,19 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import {
+	type AppEnv,
+	createdAtToVersion,
+	type Feature,
+	type FullCusEntWithFullCusProduct,
+	type FullCusProduct,
+	type FullCustomer,
+	type Organization,
+	WebhookEventType,
+} from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
-import { EntityService } from "@/internal/api/entities/EntityService.js";
 import { getSingleEntityResponse } from "@/internal/api/entities/getEntityUtils.js";
 import { getV2CheckResponse } from "@/internal/api/entitled/checkUtils/getV2CheckResponse.js";
 import { getCustomerDetails } from "@/internal/customers/cusUtils/getCustomerDetails.js";
-import { toAPIFeature } from "@/internal/features/utils/mapFeatureUtils.js";
-import {
-	FullCusEntWithFullCusProduct,
-	Feature,
-	FullCustomer,
-	Organization,
-	AppEnv,
-	FullCusProduct,
-	APIVersion,
-	WebhookEventType,
-} from "@autumn/shared";
+import { toApiFeature } from "@/internal/features/utils/mapFeatureUtils.js";
 
 export const mergeNewCusEntsIntoCusProducts = ({
 	cusProducts,
@@ -25,8 +24,8 @@ export const mergeNewCusEntsIntoCusProducts = ({
 }) => {
 	for (const cusProduct of cusProducts) {
 		for (let i = 0; i < cusProduct.customer_entitlements.length; i++) {
-			let correspondingCusEnt = newCusEnts.find(
-				(cusEnt) => cusEnt.id == cusProduct.customer_entitlements[i].id,
+			const correspondingCusEnt = newCusEnts.find(
+				(cusEnt) => cusEnt.id === cusProduct.customer_entitlements[i].id,
 			);
 
 			if (correspondingCusEnt) {
@@ -58,6 +57,10 @@ export const sendSvixThresholdReachedEvent = async ({
 	fullCus: FullCustomer;
 	thresholdType: "limit_reached" | "allowance_used";
 }) => {
+	const apiVersion = createdAtToVersion({
+		createdAt: org.created_at || undefined,
+	});
+
 	const cusDetails = await getCustomerDetails({
 		db,
 		customer: fullCus,
@@ -67,6 +70,7 @@ export const sendSvixThresholdReachedEvent = async ({
 		logger,
 		cusProducts: fullCus.customer_products,
 		expand: [],
+		apiVersion,
 	});
 
 	if (fullCus.entity) {
@@ -87,7 +91,7 @@ export const sendSvixThresholdReachedEvent = async ({
 		data: {
 			threshold_type: thresholdType,
 			customer: cusDetails,
-			feature: toAPIFeature({ feature }),
+			feature: toApiFeature({ feature }),
 		},
 	});
 
@@ -116,6 +120,10 @@ export const handleAllowanceUsed = async ({
 	features: Feature[];
 	logger: any;
 }) => {
+	const apiVersion = createdAtToVersion({
+		createdAt: org.created_at || undefined,
+	});
+
 	// Allowance used...
 	// Make sure overage allowed is false
 	const oldCusEnts = structuredClone(cusEnts);
@@ -135,7 +143,7 @@ export const handleAllowanceUsed = async ({
 		feature,
 		org,
 		cusProducts: fullCus.customer_products,
-		apiVersion: APIVersion.v1_2,
+		apiVersion,
 	});
 
 	const v2CheckResponse = await getV2CheckResponse({
@@ -145,7 +153,7 @@ export const handleAllowanceUsed = async ({
 		feature,
 		org,
 		cusProducts: fullCus.customer_products,
-		apiVersion: APIVersion.v1_2,
+		apiVersion,
 	});
 
 	// console.log(`Handling allowance used for feature: ${feature.id}`);
@@ -193,6 +201,10 @@ export const handleThresholdReached = async ({
 	logger: any;
 }) => {
 	try {
+		const apiVersion = createdAtToVersion({
+			createdAt: org.created_at || undefined,
+		});
+
 		const newCusProducts = mergeNewCusEntsIntoCusProducts({
 			cusProducts: fullCus.customer_products,
 			newCusEnts: newCusEnts,
@@ -207,7 +219,7 @@ export const handleThresholdReached = async ({
 			feature,
 			org,
 			cusProducts: fullCus.customer_products,
-			apiVersion: APIVersion.v1_2,
+			apiVersion,
 		});
 
 		const v2CheckResponse = await getV2CheckResponse({
@@ -217,7 +229,7 @@ export const handleThresholdReached = async ({
 			feature,
 			org,
 			cusProducts: newCusProducts,
-			apiVersion: APIVersion.v1_2,
+			apiVersion,
 		});
 
 		if (
@@ -233,6 +245,7 @@ export const handleThresholdReached = async ({
 				logger,
 				cusProducts: newCusProducts,
 				expand: [],
+				apiVersion,
 			});
 
 			if (fullCus.entity) {
@@ -253,7 +266,7 @@ export const handleThresholdReached = async ({
 				data: {
 					threshold_type: "limit_reached",
 					customer: cusDetails,
-					feature: toAPIFeature({ feature }),
+					feature: toApiFeature({ feature }),
 				},
 			});
 

@@ -1,17 +1,15 @@
-import { cusProductToPrices } from "@autumn/shared";
-import { getBillingType } from "@/internal/products/prices/priceUtils.js";
-import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
-import { notNullish } from "@/utils/genUtils.js";
 import {
-	BillingType,
-	FullCusProduct,
-	Organization,
-	Price,
-	prices,
+	type BillingType,
+	cusProductToPrices,
+	type FullCusProduct,
+	type Price,
 	PriceType,
-	UsagePriceConfig,
+	type UsagePriceConfig,
 } from "@autumn/shared";
-import Stripe from "stripe";
+import type Stripe from "stripe";
+import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import { getBillingType } from "@/internal/products/prices/priceUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 const autumnStripePricesMatch = ({
 	stripePrice,
@@ -24,16 +22,16 @@ const autumnStripePricesMatch = ({
 }) => {
 	const config = autumnPrice.config as UsagePriceConfig;
 
-	if (config.type == PriceType.Fixed) {
+	if (config.type === PriceType.Fixed) {
 		return (
-			config.stripe_price_id == stripePrice.id ||
-			(stripeProdId && stripePrice.product == stripeProdId)
+			config.stripe_price_id === stripePrice.id ||
+			(stripeProdId && stripePrice.product === stripeProdId)
 		);
 	} else {
 		return (
-			config.stripe_price_id == stripePrice.id ||
-			config.stripe_product_id == stripePrice.product ||
-			config.stripe_empty_price_id == stripePrice.id
+			config.stripe_price_id === stripePrice.id ||
+			config.stripe_product_id === stripePrice.product ||
+			config.stripe_empty_price_id === stripePrice.id
 		);
 	}
 };
@@ -79,7 +77,7 @@ export const findStripeItemForPrice = ({
 }) => {
 	if (invoiceLineItems) {
 		return invoiceLineItems.find((li) => {
-			return li.pricing?.price_details?.price == price.config.stripe_price_id;
+			return li.pricing?.price_details?.price === price.config.stripe_price_id;
 		});
 	}
 
@@ -89,9 +87,9 @@ export const findStripeItemForPrice = ({
 				const config = price.config as UsagePriceConfig;
 
 				return (
-					config.stripe_price_id == si.price?.id ||
-					config.stripe_product_id == si.price?.product ||
-					config.stripe_empty_price_id == si.price?.id
+					config.stripe_price_id === si.price?.id ||
+					config.stripe_product_id === si.price?.product ||
+					config.stripe_empty_price_id === si.price?.id
 				);
 			},
 		);
@@ -105,31 +103,14 @@ export const findStripeItemForPrice = ({
 					const config = price.config as UsagePriceConfig;
 
 					return (
-						config.stripe_price_id == si.price?.id ||
-						(stripeProdId && si.price?.product == stripeProdId)
+						config.stripe_price_id === si.price?.id ||
+						(stripeProdId && si.price?.product === stripeProdId)
 					);
 				},
 			);
 		}
 
 		return undefined;
-
-		// return stripeItems.find((si: Stripe.SubscriptionItem | Stripe.LineItem) => {
-		//   const config = price.config as UsagePriceConfig;
-
-		//   if (config.type == PriceType.Fixed) {
-		//     return (
-		//       config.stripe_price_id == si.price?.id ||
-		//       (stripeProdId && si.price?.product == stripeProdId)
-		//     );
-		//   } else {
-		//     return (
-		//       config.stripe_price_id == si.price?.id ||
-		//       config.stripe_product_id == si.price?.product ||
-		//       config.stripe_empty_price_id == si.price?.id
-		//     );
-		//   }
-		// });
 	}
 };
 
@@ -145,24 +126,26 @@ export const findPriceInStripeItems = ({
 	billingType?: BillingType;
 }) => {
 	return prices.find((p: Price) => {
-		let config = p.config;
+		const config = p.config;
 
-		let itemMatch;
+		let itemMatch: boolean = false;
 		if (subItem) {
 			itemMatch =
-				config.stripe_price_id == subItem.price?.id ||
-				config.stripe_product_id == subItem.price?.product;
+				config.stripe_price_id === subItem.price?.id ||
+				config.stripe_product_id === subItem.price?.product;
 		}
 
 		if (lineItem) {
 			const priceDetails = lineItem.pricing?.price_details;
 			itemMatch =
-				config.stripe_price_id == priceDetails?.price ||
-				config.stripe_product_id == priceDetails?.product;
+				config.stripe_price_id === priceDetails?.price ||
+				config.stripe_product_id === priceDetails?.product;
 		}
 
 		const priceBillingType = getBillingType(config);
-		let billingTypeMatch = billingType ? priceBillingType == billingType : true;
+		const billingTypeMatch = billingType
+			? priceBillingType === billingType
+			: true;
 
 		return itemMatch && billingTypeMatch;
 	});
@@ -190,14 +173,14 @@ export const lineItemInCusProduct = ({
 	cusProduct: FullCusProduct;
 	lineItem: Stripe.InvoiceLineItem;
 }) => {
-	let stripeProdId = cusProduct.product.processor?.id;
+	const stripeProdId = cusProduct.product.processor?.id;
 
-	let prices = cusProductToPrices({ cusProduct });
-	let price = findPriceInStripeItems({ prices, lineItem });
+	const prices = cusProductToPrices({ cusProduct });
+	const price = findPriceInStripeItems({ prices, lineItem });
 
 	const priceDetails = lineItem.pricing?.price_details;
 
-	return stripeProdId == priceDetails?.product || notNullish(price);
+	return stripeProdId === priceDetails?.product || notNullish(price);
 };
 
 export const subItemInCusProduct = ({
@@ -207,12 +190,12 @@ export const subItemInCusProduct = ({
 	cusProduct: FullCusProduct;
 	subItem: Stripe.SubscriptionItem;
 }) => {
-	let stripeProdId = cusProduct.product.processor?.id;
+	const stripeProdId = cusProduct.product.processor?.id;
 
-	let prices = cusProductToPrices({ cusProduct });
-	let price = findPriceInStripeItems({ prices, subItem });
+	const prices = cusProductToPrices({ cusProduct });
+	const price = findPriceInStripeItems({ prices, subItem });
 
-	return stripeProdId == subItem.price.product || notNullish(price);
+	return stripeProdId === subItem.price.product || notNullish(price);
 };
 
 export const scheduleItemToPrice = ({
@@ -247,10 +230,10 @@ export const scheduleItemInCusProduct = ({
 	cusProduct: FullCusProduct;
 	scheduleItem: Stripe.SubscriptionSchedule.Phase.Item;
 }) => {
-	let stripeProdId = cusProduct.product.processor?.id;
+	const stripeProdId = cusProduct.product.processor?.id;
 
-	let autumnPrices = cusProductToPrices({ cusProduct });
-	let price = autumnPrices.find((p) => {
+	const autumnPrices = cusProductToPrices({ cusProduct });
+	const price = autumnPrices.find((p) => {
 		const stripePrice = scheduleItem.price as Stripe.Price;
 
 		return autumnStripePricesMatch({
@@ -268,7 +251,7 @@ export const isLicenseItem = ({
 }: {
 	stripeItem: Stripe.SubscriptionItem | Stripe.LineItem;
 }) => {
-	return stripeItem.price?.recurring?.usage_type == "licensed";
+	return stripeItem.price?.recurring?.usage_type === "licensed";
 };
 
 export const isMeteredItem = ({
@@ -276,7 +259,7 @@ export const isMeteredItem = ({
 }: {
 	stripeItem: Stripe.SubscriptionItem | Stripe.LineItem;
 }) => {
-	return stripeItem.price?.recurring?.usage_type == "metered";
+	return stripeItem.price?.recurring?.usage_type === "metered";
 };
 
 // Get sub item from product

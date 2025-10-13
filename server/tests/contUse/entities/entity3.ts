@@ -1,30 +1,30 @@
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-	APIVersion,
-	AppEnv,
+	type AppEnv,
+	LegacyVersion,
 	OnDecrease,
 	OnIncrease,
-	Organization,
+	type Organization,
 } from "@autumn/shared";
-import chalk from "chalk";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "../../attach/utils.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
 import { expect } from "chai";
+import chalk from "chalk";
 import { addHours, addMonths, addWeeks } from "date-fns";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import type Stripe from "stripe";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
-import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import { expectSubQuantityCorrect } from "tests/utils/expectUtils/expectContUseUtils.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { addPrefixToProducts } from "../../attach/utils.js";
 
-let userItem = constructArrearProratedItem({
+const userItem = constructArrearProratedItem({
 	featureId: TestFeature.Users,
 	pricePerUnit: 50,
 	includedUsage: 1,
@@ -34,7 +34,7 @@ let userItem = constructArrearProratedItem({
 	},
 });
 
-export let pro = constructProduct({
+export const pro = constructProduct({
 	items: [userItem],
 	type: "pro",
 });
@@ -42,8 +42,8 @@ export let pro = constructProduct({
 const testCase = "entity3";
 
 describe(`${chalk.yellowBright(`contUse/${testCase}: Testing replaceables deleted at end of cycle`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
@@ -85,7 +85,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing replaceables delete
 	});
 
 	let usage = 0;
-	let firstEntities = [
+	const firstEntities = [
 		{
 			id: "1",
 			name: "test",
@@ -103,7 +103,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing replaceables delete
 		},
 	];
 
-	it("should create three entities, then attach pro", async function () {
+	it("should create three entities, then attach pro", async () => {
 		await autumn.entities.create(customerId, firstEntities);
 		usage += firstEntities.length;
 
@@ -124,7 +124,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing replaceables delete
 		});
 	});
 
-	it("should delete 2 entities and have no new invoice", async function () {
+	it("should delete 2 entities and have no new invoice", async () => {
 		curUnix = await advanceTestClock({
 			stripeCli,
 			testClockId,
@@ -148,12 +148,12 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing replaceables delete
 			itemQuantity: usage - numReplaceables,
 		});
 
-		let customer = await autumn.customers.get(customerId);
-		let invoices = customer.invoices!;
+		const customer = await autumn.customers.get(customerId);
+		const invoices = customer.invoices!;
 		expect(invoices.length).to.equal(1);
 	});
 
-	it("should advance clock to next cycle and have correct invoice", async function () {
+	it("should advance clock to next cycle and have correct invoice", async () => {
 		await advanceTestClock({
 			stripeCli,
 			testClockId,
@@ -168,7 +168,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing replaceables delete
 		const customer = await autumn.customers.get(customerId);
 		const invoices = customer.invoices;
 
-		let basePrice = getBasePrice({ product: pro });
+		const basePrice = getBasePrice({ product: pro });
 		expect(invoices.length).to.equal(2);
 		expect(invoices[0].total).to.equal(basePrice); // 0 entities
 

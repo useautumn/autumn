@@ -1,20 +1,20 @@
-import chalk from "chalk";
-import Stripe from "stripe";
+import { type Customer, LegacyVersion, type LimitedItem } from "@autumn/shared";
 import { expect } from "chai";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
-import { APIVersion, Customer, LimitedItem } from "@autumn/shared";
-import { setupBefore } from "tests/before.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { createProducts } from "tests/utils/productUtils.js";
+import chalk from "chalk";
 import { Decimal } from "decimal.js";
+import type Stripe from "stripe";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
 const creditCost = 0.2;
-let freeProduct = constructProduct({
+const freeProduct = constructProduct({
 	id: "free",
 	items: [constructFeatureItem({ featureId: TestFeature.Action1 })],
 	type: "free",
@@ -24,7 +24,7 @@ let freeProduct = constructProduct({
 const creditFeatureItem = constructFeatureItem({
 	featureId: TestFeature.Credits,
 }) as LimitedItem;
-let pro = constructProduct({
+const pro = constructProduct({
 	id: "pro",
 	items: [creditFeatureItem],
 	type: "pro",
@@ -36,7 +36,7 @@ describe(`${chalk.yellowBright("check1: Checking credit systems")}`, () => {
 	let testClockId: string;
 	let customer: Customer;
 	let stripeCli: Stripe;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 	before(async function () {
 		await setupBefore(this);
@@ -68,18 +68,18 @@ describe(`${chalk.yellowBright("check1: Checking credit systems")}`, () => {
 		testClockId = testClockId_;
 	});
 
-	it("should attach free product and check action1 allowed", async function () {
+	it("should attach free product and check action1 allowed", async () => {
 		await autumn.attach({
 			customer_id: customerId,
 			product_id: freeProduct.id,
 		});
 
-		let actionCheck = await autumn.check({
+		const actionCheck = await autumn.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Action1,
 		});
 
-		let creditsCheck = await autumn.check({
+		const creditsCheck = await autumn.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Credits,
 		});
@@ -88,18 +88,18 @@ describe(`${chalk.yellowBright("check1: Checking credit systems")}`, () => {
 		expect(creditsCheck.allowed).to.be.false;
 	});
 
-	it("should attach pro product and check allowed", async function () {
+	it("should attach pro product and check allowed", async () => {
 		await autumn.attach({
 			customer_id: customerId,
 			product_id: pro.id,
 		});
 
-		let creditsCheck = await autumn.check({
+		const creditsCheck = await autumn.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Credits,
 		});
 
-		let actionCheck = await autumn.check({
+		const actionCheck = await autumn.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Action1,
 		});
@@ -108,11 +108,11 @@ describe(`${chalk.yellowBright("check1: Checking credit systems")}`, () => {
 		expect(creditsCheck.allowed).to.be.true;
 	});
 
-	it("should use up credits and have correct check response", async function () {
-		let usage = 50;
-		let creditUsage = new Decimal(creditCost).mul(usage).toNumber();
+	it("should use up credits and have correct check response", async () => {
+		const usage = 50;
+		const creditUsage = new Decimal(creditCost).mul(usage).toNumber();
 
-		let creditBalance = new Decimal(creditFeatureItem.included_usage)
+		const creditBalance = new Decimal(creditFeatureItem.included_usage)
 			.sub(creditUsage)
 			.toNumber();
 
@@ -124,7 +124,7 @@ describe(`${chalk.yellowBright("check1: Checking credit systems")}`, () => {
 
 		await timeout(3000);
 
-		let creditsCheck = await autumn.check({
+		const creditsCheck = await autumn.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Credits,
 		});

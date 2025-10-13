@@ -1,31 +1,26 @@
-import chalk from "chalk";
-import Stripe from "stripe";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-
 import {
-	APIVersion,
-	AppEnv,
-	Customer,
-	LimitedItem,
-	Organization,
+	type AppEnv,
+	type Customer,
+	LegacyVersion,
+	type LimitedItem,
+	type Organization,
 	ProductItemInterval,
-	RolloverDuration,
 } from "@autumn/shared";
-
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { addPrefixToProducts } from "tests/attach/utils.js";
-
 import { expect } from "chai";
-import { timeout } from "@/utils/genUtils.js";
-import { resetAndGetCusEnt } from "tests/advanced/rollovers/rolloverTestUtils.js";
-import { UTCDate } from "@date-fns/utc";
+import chalk from "chalk";
 import { addDays, addMonths } from "date-fns";
+import type Stripe from "stripe";
+import { resetAndGetCusEnt } from "tests/advanced/rollovers/rolloverTestUtils.js";
+import { addPrefixToProducts } from "tests/attach/utils.js";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { timeout } from "@/utils/genUtils.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
 const messagesItem = constructFeatureItem({
 	featureId: TestFeature.Messages,
@@ -41,7 +36,7 @@ const wordsItem = constructFeatureItem({
 	intervalCount: 4,
 }) as LimitedItem;
 
-export let free = constructProduct({
+export const free = constructProduct({
 	items: [messagesItem, wordsItem],
 	type: "free",
 	isDefault: false,
@@ -50,13 +45,13 @@ export let free = constructProduct({
 const testCase = "reset1";
 
 describe(`${chalk.yellowBright(`${testCase}: Testing custom reset intervals`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let customer: Customer;
 	let stripeCli: Stripe;
-	let curUnix = new Date().getTime();
+	const curUnix = new Date().getTime();
 
 	before(async function () {
 		await setupBefore(this);
@@ -94,17 +89,17 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom reset intervals`)}`,
 		customer = res.customer;
 	});
 
-	it("should attach free product", async function () {
+	it("should attach free product", async () => {
 		await autumn.attach({
 			customer_id: customerId,
 			product_id: free.id,
 		});
 	});
 
-	let messageUsage = 250;
-	let curBalance = messagesItem.included_usage;
+	const messageUsage = 250;
+	const curBalance = messagesItem.included_usage;
 
-	it("should reset messages feature and have correct next reset at", async function () {
+	it("should reset messages feature and have correct next reset at", async () => {
 		await autumn.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -129,7 +124,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom reset intervals`)}`,
 		);
 	});
 
-	it("should reset words feature and have correct next reset at", async function () {
+	it("should reset words feature and have correct next reset at", async () => {
 		await resetAndGetCusEnt({
 			db,
 			customer,

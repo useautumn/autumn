@@ -1,10 +1,10 @@
-import { FeatureOptions, ProductV2 } from "@autumn/shared";
+import type { FeatureOptions, ProductV2 } from "@autumn/shared";
 
-export type FrontendProduct = ProductV2 & {
-	isActive: boolean;
-	options: FeatureOptions[];
-	isCanceled: boolean;
-};
+// export type FrontendProduct = ProductV2 & {
+// 	isActive: boolean;
+// 	options: FeatureOptions[];
+// 	isCanceled: boolean;
+// };
 
 export const getAttachBody = ({
 	customerId,

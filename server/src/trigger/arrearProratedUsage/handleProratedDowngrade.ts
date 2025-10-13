@@ -1,34 +1,31 @@
 import {
-	FullCusEntWithFullCusProduct,
-	FullCustomerPrice,
-	InsertReplaceable,
+	type Feature,
+	type FullCusEntWithFullCusProduct,
+	type FullCustomerPrice,
+	getFeatureInvoiceDescription,
+	type InsertReplaceable,
 	OnDecrease,
-} from "@autumn/shared";
-import Stripe from "stripe";
-
-import {
-	Feature,
-	Organization,
-	Product,
-	UsagePriceConfig,
+	type Organization,
+	type Product,
+	type UsagePriceConfig,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
-import { getFeatureInvoiceDescription } from "@autumn/shared";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService.js";
 import { constructStripeInvoiceItem } from "@/internal/invoices/invoiceItemUtils/invoiceItemUtils.js";
 import { createAndFinalizeInvoice } from "@/internal/invoices/invoiceUtils/createAndFinalizeInvoice.js";
 import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
-import { formatUnixToDate } from "@/utils/genUtils.js";
-import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
-import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { getUsageFromBalance } from "../adjustAllowance.js";
-import { roundUsage } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { getReplaceables } from "@/internal/products/prices/priceUtils/arrearProratedUtils/getContUsageDowngradeItem.js";
-import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService.js";
+import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import {
 	shouldBillNow,
 	shouldProrate,
 } from "@/internal/products/prices/priceUtils/prorationConfigUtils.js";
+import { roundUsage } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import { formatUnixToDate } from "@/utils/genUtils.js";
+import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
+import { getUsageFromBalance } from "../adjustAllowance.js";
 
 export const createDowngradeProrationInvoice = async ({
 	org,
@@ -59,7 +56,7 @@ export const createDowngradeProrationInvoice = async ({
 }) => {
 	const config = cusPrice.price.config as UsagePriceConfig;
 
-	let now = await getStripeNow({ stripeCli, stripeSub: sub });
+	const now = await getStripeNow({ stripeCli, stripeSub: sub });
 	let invoiceAmount = new Decimal(newPrice).minus(prevPrice).toNumber();
 
 	logger.info(`Prev price: ${prevPrice}, New price: ${newPrice}`);
@@ -80,11 +77,11 @@ export const createDowngradeProrationInvoice = async ({
 		allowNegative: true,
 	});
 
-	let start = formatUnixToDate(now);
-	let end = formatUnixToDate(subItem.current_period_end * 1000);
+	const start = formatUnixToDate(now);
+	const end = formatUnixToDate(subItem.current_period_end * 1000);
 	invoiceDescription = `${invoiceDescription} (from ${start} to ${end})`;
 
-	if (invoiceAmount == 0) return;
+	if (invoiceAmount === 0) return;
 
 	logger.info(
 		`🚀 Creating invoice item: ${invoiceDescription} - ${invoiceAmount.toFixed(2)}`,
@@ -157,7 +154,7 @@ export const handleProratedDowngrade = async ({
 		balance: newBalance,
 	});
 
-	let onDecrease =
+	const onDecrease =
 		cusPrice.price.proration_config?.on_decrease ||
 		OnDecrease.ProrateImmediately;
 
@@ -167,9 +164,9 @@ export const handleProratedDowngrade = async ({
 	let invoice = null;
 	let newReplaceables: InsertReplaceable[] = [];
 
-	if (onDecrease == OnDecrease.NoProrations) {
+	if (onDecrease === OnDecrease.NoProrations || sub.status === "trialing") {
 	} else if (shouldProrate(onDecrease)) {
-		let prevPrice = priceToInvoiceAmount({
+		const prevPrice = priceToInvoiceAmount({
 			price: cusPrice.price,
 			overage: roundUsage({
 				usage: prevOverage,
@@ -177,7 +174,7 @@ export const handleProratedDowngrade = async ({
 			}),
 		});
 
-		let newPrice = priceToInvoiceAmount({
+		const newPrice = priceToInvoiceAmount({
 			price: cusPrice.price,
 			overage: roundUsage({
 				usage: newOverage,
@@ -217,10 +214,10 @@ export const handleProratedDowngrade = async ({
 		}
 	}
 
-	let numDeletedReplaceables = cusEnt.replaceables.filter(
+	const numDeletedReplaceables = cusEnt.replaceables.filter(
 		(r) => r.delete_next_cycle,
 	).length;
-	let newQuantity = newUsage - numDeletedReplaceables;
+	const newQuantity = newUsage - numDeletedReplaceables;
 
 	await stripeCli.subscriptionItems.update(subItem.id, {
 		quantity: roundUsage({

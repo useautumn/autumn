@@ -1,31 +1,30 @@
 import {
-	AttachBranch,
-	AttachPreview,
-	CheckoutLine,
+	type AttachBranch,
+	type AttachPreview,
+	type CheckoutLine,
 	CheckoutResponseSchema,
-	UsageModel,
-} from "@autumn/shared";
-
-import { AttachParams } from "../../cusProducts/AttachParams.js";
-import {
-	attachParamsToProduct,
-	attachParamToCusProducts,
-} from "../attachUtils/convertAttachParams.js";
-import {
 	cusProductToEnts,
 	cusProductToPrices,
 	cusProductToProduct,
+	isUsagePrice,
+	type PreviewLineItem,
+	toProductItem,
+	UsageModel,
 } from "@autumn/shared";
-import { ExtendedRequest } from "@/utils/models/Request.js";
+import { Decimal } from "decimal.js";
+import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
+import { isPriceItem } from "@/internal/products/product-items/productItemUtils/getItemType.js";
 import {
 	getProductItemResponse,
 	getProductResponse,
 } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
-import { toProductItem } from "@autumn/shared";
-import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
-import { formatUnixToDateTime, notNullish } from "@/utils/genUtils.js";
-import { isPriceItem } from "@/internal/products/product-items/productItemUtils/getItemType.js";
-import { Decimal } from "decimal.js";
+import { notNullish } from "@/utils/genUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AttachParams } from "../../cusProducts/AttachParams.js";
+import {
+	attachParamsToProduct,
+	attachParamToCusProducts,
+} from "../attachUtils/convertAttachParams.js";
 
 export const previewToCheckoutRes = async ({
 	req,
@@ -42,29 +41,29 @@ export const previewToCheckoutRes = async ({
 	const product = attachParamsToProduct({ attachParams });
 
 	const { curCusProduct } = attachParamToCusProducts({ attachParams });
-	let curPrices = curCusProduct
+	const curPrices = curCusProduct
 		? cusProductToPrices({ cusProduct: curCusProduct })
 		: [];
-	let curEnts = curCusProduct
+	const curEnts = curCusProduct
 		? cusProductToEnts({ cusProduct: curCusProduct })
 		: [];
 
-	let newPrices = attachParams.prices;
-	let newEnts = attachParams.entitlements;
-	let allPrices = [...curPrices, ...newPrices];
-	let allEnts = [...curEnts, ...newEnts];
+	const newPrices = attachParams.prices;
+	const newEnts = attachParams.entitlements;
+	const allPrices = [...curPrices, ...newPrices];
+	const allEnts = [...curEnts, ...newEnts];
 	let lines: CheckoutLine[] = [];
 
 	if (preview.due_today && preview.due_today.line_items.length > 0) {
 		lines = preview.due_today.line_items
-			.map((li: any) => {
-				let price = allPrices.find((p) => p.id == li.price_id);
+			.map((li: PreviewLineItem) => {
+				const price = allPrices.find((p) => p.id === li.price_id);
 
 				if (!price) {
 					return null;
 				}
 
-				let ent = getPriceEntitlement(price, allEnts);
+				const ent = getPriceEntitlement(price, allEnts);
 
 				return {
 					description: li.description || "",
@@ -89,7 +88,7 @@ export const previewToCheckoutRes = async ({
 		fullCus: attachParams.customer,
 	});
 
-	let curProduct = curCusProduct
+	const curProduct = curCusProduct
 		? await getProductResponse({
 				product: cusProductToProduct({ cusProduct: curCusProduct }),
 				features,
@@ -100,7 +99,12 @@ export const previewToCheckoutRes = async ({
 
 	const total = lines.reduce((acc, line) => acc + line.amount, 0);
 
-	let nextCycle = undefined;
+	let nextCycle:
+		| {
+				starts_at: number;
+				total: number;
+		  }
+		| undefined;
 
 	if (
 		notNullish(preview.due_next_cycle) &&
@@ -108,7 +112,7 @@ export const previewToCheckoutRes = async ({
 	) {
 		let total = newProduct.items
 			.reduce((acc, item) => {
-				if (item.usage_model == UsageModel.PayPerUse) {
+				if (item.usage_model === UsageModel.PayPerUse) {
 					return acc;
 				}
 
@@ -116,8 +120,8 @@ export const previewToCheckoutRes = async ({
 					return acc.plus(item.price || 0);
 				}
 
-				let prepaidQuantity =
-					attachParams.optionsList.find((o) => o.feature_id == item.feature_id)
+				const prepaidQuantity =
+					attachParams.optionsList.find((o) => o.feature_id === item.feature_id)
 						?.quantity || 0;
 
 				return acc.plus(prepaidQuantity * (item.price || 0));
@@ -126,8 +130,7 @@ export const previewToCheckoutRes = async ({
 
 		try {
 			if (
-				preview.due_next_cycle &&
-				preview.due_next_cycle.line_items &&
+				preview.due_next_cycle?.line_items &&
 				preview.due_next_cycle.line_items.length > 0
 			) {
 				total = preview.due_next_cycle.line_items
@@ -148,6 +151,28 @@ export const previewToCheckoutRes = async ({
 		};
 	}
 
+	// Options
+	const options = attachParams.optionsList
+		.map((o) => {
+			const price = allPrices.find((p) => {
+				if (isUsagePrice({ price: p })) {
+					return (
+						p.config.internal_feature_id === o.internal_feature_id ||
+						p.config.feature_id === o.feature_id
+					);
+				}
+				return false;
+			});
+
+			if (!price) return undefined;
+
+			return {
+				feature_id: o.feature_id,
+				quantity: o.quantity * (price.config.billing_units || 1),
+			};
+		})
+		.filter(notNullish);
+
 	return CheckoutResponseSchema.parse({
 		customer_id: attachParams.customer.id,
 		lines,
@@ -159,5 +184,6 @@ export const previewToCheckoutRes = async ({
 			? preview.due_next_cycle.due_at
 			: null,
 		next_cycle: nextCycle,
+		options,
 	});
 };

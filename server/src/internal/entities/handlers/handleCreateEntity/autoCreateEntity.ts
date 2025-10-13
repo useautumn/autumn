@@ -1,10 +1,9 @@
-import RecaseError from "@/utils/errorUtils.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { ErrCode, FullCustomer } from "@autumn/shared";
-import { CreateEntity } from "@autumn/shared";
-import { createEntityForCusProduct } from "./createEntityForCusProduct.js";
+import { type CreateEntity, ErrCode, type FullCustomer } from "@autumn/shared";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
+import RecaseError from "@/utils/errorUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { constructEntity } from "../../entityUtils/entityUtils.js";
+import { createEntityForCusProduct } from "./createEntityForCusProduct.js";
 
 export const autoCreateEntity = async ({
 	req,
@@ -56,7 +55,7 @@ export const autoCreateEntity = async ({
 		});
 	}
 
-	let replaceEntity = await EntityService.getNull({
+	const replaceEntity = await EntityService.getNull({
 		db,
 		orgId: customer.org_id,
 		env: customer.env,
@@ -67,7 +66,7 @@ export const autoCreateEntity = async ({
 	if (replaceEntity) {
 		return await EntityService.update({
 			db,
-			internalId: replaceEntity.internal_id!,
+			internalId: replaceEntity.internal_id,
 			update: {
 				id: entityId,
 				name: entityData.name,
@@ -75,7 +74,7 @@ export const autoCreateEntity = async ({
 		});
 	} else {
 		try {
-			const result = await EntityService.insert({
+			const results = await EntityService.insert({
 				db,
 				data: [
 					constructEntity({
@@ -87,8 +86,10 @@ export const autoCreateEntity = async ({
 					}),
 				],
 			});
+
+			return results;
 		} catch (error: any) {
-			if (error.code == "23505") {
+			if (error.code === "23505") {
 				return await EntityService.get({
 					db,
 					id: entityId,

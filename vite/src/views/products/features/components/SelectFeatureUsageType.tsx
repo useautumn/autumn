@@ -1,13 +1,13 @@
 import {
-	APIFeatureType,
-	CreateFeature,
+	ApiFeatureType,
+	type CreateFeature,
 	FeatureType,
 	FeatureUsageType,
 } from "@autumn/shared";
 import { Clock, Zap } from "lucide-react";
-import { defaultMeteredConfig } from "../utils/defaultFeatureConfig";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { SelectType } from "@/components/general/SelectType";
+import { defaultMeteredConfig } from "../utils/defaultFeatureConfig";
 
 export const SelectFeatureUsageType = ({
 	feature,
@@ -19,12 +19,12 @@ export const SelectFeatureUsageType = ({
 	const featureType = feature.type;
 	const usageType = feature.config?.usage_type;
 
-	const setFeatureType = (type: APIFeatureType) => {
+	const setFeatureType = (type: ApiFeatureType) => {
 		// 1. If type is boolean
-		if (type === APIFeatureType.Boolean) {
+		if (type === ApiFeatureType.Boolean) {
 			setFeature({
 				...feature,
-				type: APIFeatureType.Boolean,
+				type: ApiFeatureType.Boolean,
 				config: undefined,
 			});
 		} else {
@@ -47,7 +47,7 @@ export const SelectFeatureUsageType = ({
 						featureType === FeatureType.Metered &&
 						usageType === FeatureUsageType.Single
 					}
-					onClick={() => setFeatureType(APIFeatureType.SingleUsage)}
+					onClick={() => setFeatureType(ApiFeatureType.SingleUsage)}
 				/>
 				<SelectType
 					title="Continuous"
@@ -57,14 +57,14 @@ export const SelectFeatureUsageType = ({
 						featureType === FeatureType.Metered &&
 						usageType === FeatureUsageType.Continuous
 					}
-					onClick={() => setFeatureType(APIFeatureType.ContinuousUse)}
+					onClick={() => setFeatureType(ApiFeatureType.ContinuousUse)}
 				/>
 				{/* <SelectType
           title="Boolean"
           description="Features that are either enabled or disabled, like 'premium models'"
           icon={<ToggleLeft className="h-3 w-3 text-t3" />}
           isSelected={featureType === FeatureType.Boolean}
-          onClick={() => setFeatureType(APIFeatureType.Boolean)}
+          onClick={() => setFeatureType(ApiFeatureType.Boolean)}
         /> */}
 			</div>
 		</div>

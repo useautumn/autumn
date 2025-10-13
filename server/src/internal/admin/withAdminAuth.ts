@@ -1,8 +1,8 @@
-import { ErrCode } from "@/errors/errCodes.js";
+import { ErrCode } from "@autumn/shared";
+import type { NextFunction } from "express";
 import { auth } from "@/utils/auth.js";
 import { ADMIN_USER_IDs } from "@/utils/constants.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { NextFunction } from "express";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const withAdminAuth = async (req: any, res: any, next: NextFunction) => {
 	const { logtail: logger, userId } = req as ExtendedRequest;

@@ -1,35 +1,26 @@
-import { compareObjects, generateId, notNullish } from "@/utils/genUtils.js";
 import {
-	BillWhen,
 	BillingInterval,
 	BillingType,
-	FixedPriceConfig,
-	Price,
-	PriceType,
-	UsagePriceConfig,
-	Entitlement,
-	EntitlementWithFeature,
-	FeatureOptions,
+	BillWhen,
+	type Entitlement,
+	type EntitlementWithFeature,
 	ErrCode,
-	FullProduct,
-	TierInfinite,
-	OnIncrease,
+	type FeatureOptions,
+	type FixedPriceConfig,
+	type FullProduct,
 	OnDecrease,
-	Product,
+	OnIncrease,
+	type Price,
+	PriceType,
+	type Product,
+	TierInfinite,
+	type UsagePriceConfig,
 } from "@autumn/shared";
-
-import RecaseError from "@/utils/errorUtils.js";
-import { StatusCodes } from "http-status-codes";
 import { Decimal } from "decimal.js";
+import { StatusCodes } from "http-status-codes";
+import RecaseError from "@/utils/errorUtils.js";
+import { compareObjects, generateId, notNullish } from "@/utils/genUtils.js";
 import { compareBillingIntervals } from "./priceUtils/priceIntervalUtils.js";
-
-const BillingIntervalOrder = [
-	BillingInterval.Year,
-	BillingInterval.SemiAnnual,
-	BillingInterval.Quarter,
-	BillingInterval.Month,
-	BillingInterval.OneOff,
-];
 
 export const constructPrice = ({
 	internalProductId,
@@ -54,7 +45,7 @@ export const constructPrice = ({
 		});
 	}
 
-	let newPrice: Price = {
+	const newPrice: Price = {
 		id: generateId("pr"),
 		org_id: orgId,
 		internal_product_id: internalProductId,
@@ -74,23 +65,23 @@ export const constructPrice = ({
 export const getBillingType = (config: FixedPriceConfig | UsagePriceConfig) => {
 	// 1. Fixed cycle / one off
 	if (
-		config.type == PriceType.Fixed &&
-		config.interval == BillingInterval.OneOff
+		config.type === PriceType.Fixed &&
+		config.interval === BillingInterval.OneOff
 	) {
 		return BillingType.OneOff;
-	} else if (config.type == PriceType.Fixed) {
+	} else if (config.type === PriceType.Fixed) {
 		return BillingType.FixedCycle;
 	}
 
 	// 2. Prepaid
 
-	let usageConfig = config as UsagePriceConfig;
+	const usageConfig = config as UsagePriceConfig;
 	if (
-		usageConfig.bill_when == BillWhen.InAdvance ||
-		usageConfig.bill_when == BillWhen.StartOfPeriod
+		usageConfig.bill_when === BillWhen.InAdvance ||
+		usageConfig.bill_when === BillWhen.StartOfPeriod
 	) {
 		return BillingType.UsageInAdvance;
-	} else if (usageConfig.bill_when == BillWhen.EndOfPeriod) {
+	} else if (usageConfig.bill_when === BillWhen.EndOfPeriod) {
 		if (usageConfig.should_prorate) {
 			return BillingType.InArrearProrated;
 		}
@@ -140,7 +131,7 @@ export const getBillingInterval = (prices: Price[]) => {
 	//   }))
 	// );
 
-	if (pricesCopy.length == 0) {
+	if (pricesCopy.length === 0) {
 		throw new RecaseError({
 			message: "No prices found, can't get billing interval",
 			code: ErrCode.InvalidRequest,
@@ -156,12 +147,12 @@ export const getBillingInterval = (prices: Price[]) => {
 };
 
 export const pricesOnlyOneOff = (prices: Price[]) => {
-	if (prices.length == 0) return false;
+	if (prices.length === 0) return false;
 
 	return prices.every((price) => {
-		let interval = price.config?.interval;
+		const interval = price.config?.interval;
 
-		if (!interval || interval != BillingInterval.OneOff) {
+		if (!interval || interval !== BillingInterval.OneOff) {
 			return false;
 		}
 		return true;
@@ -173,7 +164,7 @@ export const pricesContainRecurring = (prices: Price[]) => {
 	return prices.some((price) => {
 		const interval = price.config?.interval;
 
-		if (interval && interval != BillingInterval.OneOff) {
+		if (interval && interval !== BillingInterval.OneOff) {
 			return true;
 		}
 
@@ -201,17 +192,18 @@ export const getPriceEntitlement = (
 	entitlements: EntitlementWithFeature[],
 	allowFeatureMatch = false,
 ) => {
-	let config = price.config as UsagePriceConfig;
+	const config = price.config as UsagePriceConfig;
 
 	const entitlement = entitlements.find((ent) => {
-		let entIdMatch =
-			notNullish(price.entitlement_id) && price.entitlement_id == ent.id;
+		const entIdMatch =
+			notNullish(price.entitlement_id) && price.entitlement_id === ent.id;
 
-		let featureIdMatch =
+		const featureIdMatch =
 			notNullish(config.internal_feature_id) &&
-			config.internal_feature_id == ent.internal_feature_id;
+			config.internal_feature_id === ent.internal_feature_id;
 
-		let productIdMatch = ent.internal_product_id == price.internal_product_id;
+		const productIdMatch =
+			ent.internal_product_id === price.internal_product_id;
 
 		if (allowFeatureMatch) {
 			return (entIdMatch || featureIdMatch) && productIdMatch;
@@ -227,7 +219,7 @@ export const getPriceOptions = (
 	price: Price,
 	optionsList: FeatureOptions[],
 ) => {
-	let config = price.config as UsagePriceConfig;
+	const config = price.config as UsagePriceConfig;
 
 	const options = optionsList.find(
 		(options) => options.internal_feature_id === config.internal_feature_id,
@@ -241,7 +233,7 @@ export const pricesAreSame = (price1: Price, price2: Price) => {
 		const originalValue = (price1.config as any)[key];
 		const newValue = (price2.config as any)[key];
 
-		if (key == "usage_tiers") {
+		if (key === "usage_tiers") {
 			for (let i = 0; i < originalValue.length; i++) {
 				const originalTier = originalValue[i];
 				const newTier = newValue[i];
@@ -258,14 +250,14 @@ export const pricesAreSame = (price1: Price, price2: Price) => {
 };
 
 export const getUsageTier = (price: Price, quantity: number) => {
-	let usageConfig = price.config as UsagePriceConfig;
+	const usageConfig = price.config as UsagePriceConfig;
 	for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
-		if (i == usageConfig.usage_tiers.length - 1) {
+		if (i === usageConfig.usage_tiers.length - 1) {
 			return usageConfig.usage_tiers[i];
 		}
 
-		let tier = usageConfig.usage_tiers[i];
-		if (tier.to == TierInfinite || tier.to >= quantity) {
+		const tier = usageConfig.usage_tiers[i];
+		if (tier.to === TierInfinite || tier.to >= quantity) {
 			return tier;
 		}
 	}
@@ -282,15 +274,15 @@ export const getPriceAmount = ({
 	relatedEnt?: EntitlementWithFeature;
 	quantity?: number;
 }) => {
-	let billingType = getBillingType(price.config!);
-	if (billingType == BillingType.OneOff) {
-		let config = price.config as FixedPriceConfig;
+	const billingType = getBillingType(price.config!);
+	if (billingType === BillingType.OneOff) {
+		const config = price.config as FixedPriceConfig;
 		return Number(config.amount.toFixed(2));
-	} else if (billingType == BillingType.UsageInAdvance) {
-		let quantity = options?.quantity!;
-		let config = price.config as UsagePriceConfig;
+	} else if (billingType === BillingType.UsageInAdvance) {
+		const quantity = options?.quantity!;
+		const config = price.config as UsagePriceConfig;
 
-		let overage = new Decimal(quantity)
+		const overage = new Decimal(quantity)
 			.mul(config.billing_units || 1)
 			.toNumber();
 
@@ -301,19 +293,19 @@ export const getPriceAmount = ({
 };
 
 export const getPriceForOverage = (price: Price, overage?: number) => {
-	let usageConfig = price.config as UsagePriceConfig;
-	let billingType = getBillingType(usageConfig);
+	const usageConfig = price.config as UsagePriceConfig;
+	const billingType = getBillingType(usageConfig);
 
 	if (
-		billingType == BillingType.FixedCycle ||
-		billingType == BillingType.OneOff
+		billingType === BillingType.FixedCycle ||
+		billingType === BillingType.OneOff
 	) {
 		const config = price.config as FixedPriceConfig;
 		return config.amount;
 	}
 
 	let amount = 0;
-	let billingUnits = usageConfig.billing_units || 1;
+	const billingUnits = usageConfig.billing_units || 1;
 	let remainingUsage = new Decimal(
 		Math.ceil(new Decimal(overage!).div(billingUnits).toNumber()),
 	)
@@ -322,10 +314,10 @@ export const getPriceForOverage = (price: Price, overage?: number) => {
 
 	let lastTo: number = 0;
 	for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
-		let tier = usageConfig.usage_tiers[i];
+		const tier = usageConfig.usage_tiers[i];
 
 		let amountUsed = 0;
-		if (tier.to == TierInfinite || tier.to == -1) {
+		if (tier.to === TierInfinite || tier.to === -1) {
 			amountUsed = remainingUsage;
 		} else {
 			amountUsed = Math.min(remainingUsage, tier.to - lastTo);
@@ -333,7 +325,7 @@ export const getPriceForOverage = (price: Price, overage?: number) => {
 		}
 
 		// Divide amount by billing units
-		let amountPerUnit = new Decimal(tier.amount)
+		const amountPerUnit = new Decimal(tier.amount)
 			.div(usageConfig.billing_units!)
 			.toNumber();
 
@@ -353,11 +345,11 @@ export const priceToEventName = (productName: string, featureName: string) => {
 };
 
 export const roundPriceAmounts = (price: Price) => {
-	if (price.config!.type == PriceType.Fixed) {
+	if (price.config!.type === PriceType.Fixed) {
 		const config = price.config as FixedPriceConfig;
 		config.amount = Number(config.amount.toFixed(10));
 		price.config = config;
-	} else if (price.config!.type == PriceType.Usage) {
+	} else if (price.config!.type === PriceType.Usage) {
 		const config = price.config as UsagePriceConfig;
 		for (let i = 0; i < config.usage_tiers.length; i++) {
 			config.usage_tiers[i].amount = Number(
@@ -373,13 +365,13 @@ export const priceIsOneOffAndTiered = (
 	price: Price,
 	relatedEnt: EntitlementWithFeature,
 ) => {
-	let config = price.config as UsagePriceConfig;
-	if (config.type == PriceType.Fixed) {
+	const config = price.config as UsagePriceConfig;
+	if (config.type === PriceType.Fixed) {
 		return false;
 	}
 
 	return (
-		config.interval == BillingInterval.OneOff && config.usage_tiers.length > 1
+		config.interval === BillingInterval.OneOff && config.usage_tiers.length > 1
 	);
 };
 
@@ -391,13 +383,13 @@ export const getProductForPrice = (price: Price, products: FullProduct[]) => {
 
 // Price to price / tiers
 export const priceToAmountOrTiers = (price: Price) => {
-	if (price.config!.type == PriceType.Fixed) {
-		let config = price.config as FixedPriceConfig;
+	if (price.config!.type === PriceType.Fixed) {
+		const config = price.config as FixedPriceConfig;
 		return {
 			price: config.amount,
 		};
 	} else {
-		let config = price.config as UsagePriceConfig;
+		const config = price.config as UsagePriceConfig;
 		if (config.usage_tiers.length > 1) {
 			return {
 				tiers: config.usage_tiers,
@@ -417,7 +409,7 @@ export const roundUsage = ({
 	usage: number;
 	billingUnits: number;
 }) => {
-	if (!billingUnits || billingUnits == 1) {
+	if (!billingUnits || billingUnits === 1) {
 		return usage;
 	}
 
@@ -435,24 +427,24 @@ export const formatPrice = ({
 	price: Price;
 	product?: Product;
 }) => {
-	if (price.config.type == PriceType.Fixed) {
+	if (price.config.type === PriceType.Fixed) {
 		const config = price.config as FixedPriceConfig;
-		const formatted = `${config.amount}${config.interval == BillingInterval.OneOff ? "(one off)" : `/ ${config.interval}`}`;
+		const formatted = `${config.amount}${config.interval === BillingInterval.OneOff ? "(one off)" : `/ ${config.interval}`}`;
 		if (product) {
 			return `${product.name} - ${formatted}`;
 		}
 		return formatted;
 	} else {
 		const config = price.config as UsagePriceConfig;
-		let billingType = getBillingType(config);
-		let formatBillingType = {
+		const billingType = getBillingType(config);
+		const formatBillingType = {
 			[BillingType.UsageInAdvance]: "prepaid",
 			[BillingType.UsageInArrear]: "usage",
 			[BillingType.InArrearProrated]: "cont_use",
 			[BillingType.FixedCycle]: "cont_use",
 		};
 
-		let featureId = config.feature_id;
+		const featureId = config.feature_id;
 
 		const formatted = `${formatBillingType[billingType as keyof typeof formatBillingType]} price for feature ${featureId}: $${config.usage_tiers[0].amount}${config.billing_units ? ` ${config.billing_units}` : ""}`;
 		if (product) {

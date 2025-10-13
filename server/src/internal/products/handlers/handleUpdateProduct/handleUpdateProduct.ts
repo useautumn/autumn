@@ -1,220 +1,207 @@
-import { ErrCode, type FullProduct, UpdateProductSchema } from "@autumn/shared";
+import {
+	type FreeTrial,
+	mapToProductV2,
+	notNullish,
+	ProductNotFoundError,
+	type ProductV2,
+	RecaseError,
+	UpdateProductQuerySchema,
+	UpdateProductSchema,
+	UpdateProductV2ParamsSchema,
+} from "@autumn/shared";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-import { handleNewFreeTrial } from "@/internal/products/free-trials/freeTrialUtils.js";
-import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
 import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { notNullish } from "@/utils/genUtils.js";
-import { routeHandler } from "@/utils/routerUtils.js";
-import { getEntsWithFeature } from "../../entitlements/entitlementUtils.js";
-import { validateOneOffTrial } from "../../free-trials/freeTrialUtils.js";
-import { ProductService } from "../../ProductService.js";
-import { productsAreSame } from "../../productUtils/compareProductUtils.js";
-import { initProductInStripe } from "../../productUtils.js";
-import { mapToProductItems } from "../../productV2Utils.js";
 import {
-	disableCurrentDefault,
-	handleCreateProduct,
-} from "../handleCreateProduct.js";
+	handleNewFreeTrial,
+	validateOneOffTrial,
+} from "../../free-trials/freeTrialUtils.js";
+import { ProductService } from "../../ProductService.js";
+import { handleNewProductItems } from "../../product-items/productItemUtils/handleNewProductItems.js";
+import { productsAreSame } from "../../productUtils/compareProductUtils.js";
+import { getProductResponse } from "../../productUtils/productResponseUtils/getProductResponse.js";
+import { initProductInStripe } from "../../productUtils.js";
+import { disableCurrentDefault } from "../handleCreateProduct.js";
 import { handleVersionProductV2 } from "../handleVersionProduct.js";
 import { handleUpdateProductDetails } from "./updateProductDetails.js";
-import { formatPrice } from "../../prices/priceUtils.js";
 
-export const handleUpdateProductV2 = async (req: any, res: any) =>
-	routeHandler({
-		req,
-		res,
-		action: "Update product",
-		handler: async () => {
-			const { productId } = req.params;
-			const { version, upsert, disable_version } = req.query;
-			const { orgId, env, logger, db } = req;
+export const handleUpdateProductV2 = createRoute({
+	body: UpdateProductV2ParamsSchema,
+	query: UpdateProductQuerySchema,
+	handler: async (c) => {
+		const body = c.req.valid("json");
+		const ctx = c.get("ctx");
+		const productId = c.req.param("productId");
 
-			const [features, org, fullProduct, rewardPrograms, _defaultProds] =
-				await Promise.all([
-					FeatureService.getFromReq(req),
-					OrgService.getFromReq(req),
-					ProductService.getFull({
-						db,
-						idOrInternalId: productId,
-						orgId,
-						env,
-						version: version ? parseInt(version) : undefined,
-						allowNotFound: upsert === "true",
-					}),
-					RewardProgramService.getByProductId({
-						db,
-						productIds: [productId],
-						orgId,
-						env,
-					}),
-					ProductService.listDefault({
-						db,
-						orgId,
-						env,
-					}),
-				]);
+		const { db, org, env, features, logger } = ctx;
+		const { version, upsert, disable_version } = c.req.valid("query");
 
-			if (!fullProduct) {
-				if (upsert === "true") {
-					await handleCreateProduct(req, res);
-					return;
-				}
-
-				throw new RecaseError({
-					message: "Product not found",
-					code: ErrCode.ProductNotFound,
-					statusCode: 404,
-				});
-			}
-
-			const cusProductsCurVersion =
-				await CusProductService.getByInternalProductId({
-					db,
-					internalProductId: fullProduct.internal_id,
-				});
-
-			const cusProductExists = cusProductsCurVersion.length > 0;
-
-			// console.log("Updating product", {
-			//   id: fullProduct.id,
-			//   body: req.body,
-			// });
-			await disableCurrentDefault({
-				req,
-				newProduct: {
-					...fullProduct,
-					...req.body,
-				},
-				items:
-					req.body.items ||
-					mapToProductItems({
-						prices: fullProduct.prices,
-						entitlements: fullProduct.entitlements,
-						features,
-					}),
-				freeTrial: req.body.free_trial || fullProduct.free_trial || null,
-			});
-
-			await handleUpdateProductDetails({
+		const [fullProduct, rewardPrograms, _defaultProds] = await Promise.all([
+			ProductService.getFull({
 				db,
-				curProduct: fullProduct,
-				newProduct: UpdateProductSchema.parse(req.body),
-				newFreeTrial: req.body.free_trial,
-				items: req.body.items,
-				org,
-				rewardPrograms,
-				logger,
+				idOrInternalId: productId,
+				orgId: org.id,
+				env,
+				version: version ? parseInt(version) : undefined,
+				allowNotFound: upsert === true,
+			}),
+			RewardProgramService.getByProductId({
+				db,
+				productIds: [productId],
+				orgId: org.id,
+				env,
+			}),
+			ProductService.listDefault({
+				db,
+				orgId: org.id,
+				env,
+			}),
+		]);
+
+		if (!fullProduct) throw new ProductNotFoundError({ productId: productId });
+
+		const cusProductsCurVersion =
+			await CusProductService.getByInternalProductId({
+				db,
+				internalProductId: fullProduct.internal_id,
 			});
 
-			const itemsExist = notNullish(req.body.items);
-			if (cusProductExists && itemsExist) {
-				if (disable_version === "true") {
-					throw new RecaseError({
-						message: "Cannot auto save product as there are existing customers",
-						code: ErrCode.InvalidRequest,
-						statusCode: 400,
-					});
-				}
+		const curProductV2 = mapToProductV2({
+			product: fullProduct,
+			features,
+		});
 
-				const { itemsSame, freeTrialsSame } = productsAreSame({
-					newProductV2: req.body,
-					curProductV1: fullProduct,
-					features,
-				});
-				const productSame = itemsSame && freeTrialsSame;
+		const newFreeTrial = body.free_trial as FreeTrial | undefined;
+		const newProductV2: ProductV2 = {
+			...curProductV2,
+			...body,
+			items: body.items || [],
+			free_trial: newFreeTrial || curProductV2.free_trial || undefined,
+		};
 
-				if (!productSame) {
-					await handleVersionProductV2({
-						req,
-						res,
-						latestProduct: fullProduct,
-						org,
-						env,
-						items: req.body.items,
-						freeTrial: req.body.free_trial,
-					});
-					return;
-				}
-				res.status(200).send(fullProduct);
-				return;
-			}
+		await disableCurrentDefault({
+			req: ctx,
+			newProduct: newProductV2,
+		});
 
-			const { items, free_trial } = req.body;
+		await handleUpdateProductDetails({
+			db,
+			curProduct: fullProduct,
+			newProduct: UpdateProductSchema.parse(body),
+			newFreeTrial: body.free_trial || curProductV2.free_trial || undefined,
+			items: body.items || curProductV2.items,
+			org,
+			rewardPrograms,
+			logger: ctx.logger,
+		});
 
-			if (free_trial !== undefined) {
-				await validateOneOffTrial({
-					prices: fullProduct.prices,
-					freeTrial: free_trial,
+		const itemsExist = notNullish(body.items);
+
+		const cusProductExists = cusProductsCurVersion.length > 0;
+
+		if (cusProductExists && itemsExist) {
+			if (disable_version) {
+				throw new RecaseError({
+					message: "Cannot auto save product as there are existing customers",
 				});
 			}
 
+			const { itemsSame, freeTrialsSame } = productsAreSame({
+				newProductV2: newProductV2,
+				curProductV1: fullProduct,
+				features,
+			});
+
+			const productSame = itemsSame && freeTrialsSame;
+
+			if (!productSame) {
+				const newProduct = await handleVersionProductV2({
+					ctx,
+					newProductV2: newProductV2,
+					latestProduct: fullProduct,
+					org,
+					env,
+				});
+
+				return c.json(newProduct);
+			}
+
+			return c.json(fullProduct);
+		}
+
+		const { free_trial } = body;
+
+		if (body.items) {
 			await handleNewProductItems({
 				db,
 				curPrices: fullProduct.prices,
 				curEnts: fullProduct.entitlements,
-				newItems: items,
+				newItems: body.items,
 				features,
 				product: fullProduct,
-				logger,
+				logger: ctx.logger,
 				isCustom: false,
 			});
+		}
 
-			// New full product
-			const newFullProduct = await ProductService.getFull({
-				db,
-				idOrInternalId: fullProduct.id,
-				orgId,
-				env,
+		// New full product
+		const newFullProduct = await ProductService.getFull({
+			db,
+			idOrInternalId: fullProduct.id,
+			orgId: org.id,
+			env,
+		});
+
+		if (free_trial !== undefined) {
+			await validateOneOffTrial({
+				prices: newFullProduct.prices,
+				freeTrial: free_trial,
 			});
 
-			if (free_trial !== undefined) {
-				await validateOneOffTrial({
-					prices: newFullProduct.prices,
-					freeTrial: free_trial,
-				});
-
-				await handleNewFreeTrial({
-					db,
-					curFreeTrial: fullProduct.free_trial,
-					newFreeTrial: free_trial,
-					internalProductId: fullProduct.internal_id,
-					isCustom: false,
-					product: fullProduct,
-				});
-			}
-
-			// New full product
-			await initProductInStripe({
+			await handleNewFreeTrial({
 				db,
+				curFreeTrial: fullProduct.free_trial,
+				newFreeTrial: free_trial,
+				internalProductId: fullProduct.internal_id,
+				isCustom: false,
+				product: fullProduct,
+			});
+		}
+
+		// New full product
+		await initProductInStripe({
+			db,
+			product: newFullProduct,
+			org,
+			env,
+			logger,
+		});
+
+		logger.info("Adding task to queue to detect base variant");
+		await addTaskToQueue({
+			jobName: JobName.DetectBaseVariant,
+			payload: {
+				curProduct: newFullProduct,
+			},
+		});
+
+		await addTaskToQueue({
+			jobName: JobName.RewardMigration,
+			payload: {
+				oldPrices: fullProduct.prices,
+				productId: fullProduct.id,
+				orgId: org.id,
+				env,
+			},
+		});
+
+		return c.json(
+			getProductResponse({
 				product: newFullProduct,
-				org,
-				env,
-				logger,
-			});
-
-			logger.info("Adding task to queue to detect base variant");
-			await addTaskToQueue({
-				jobName: JobName.DetectBaseVariant,
-				payload: {
-					curProduct: newFullProduct,
-				},
-			});
-
-			await addTaskToQueue({
-				jobName: JobName.RewardMigration,
-				payload: {
-					oldPrices: fullProduct.prices,
-					productId: fullProduct.id,
-					orgId: org.id,
-					env,
-				},
-			});
-			res.status(200).send({ message: "Product updated" });
-			return;
-		},
-	});
+				features,
+			}),
+		);
+	},
+});

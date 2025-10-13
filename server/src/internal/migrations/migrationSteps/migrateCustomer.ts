@@ -1,21 +1,19 @@
-import {
-	MigrationJob,
-	Customer,
-	Organization,
+import type {
 	AppEnv,
-	FullProduct,
-	FullCusProduct,
 	Feature,
+	FullCusProduct,
+	FullProduct,
+	MigrationJob,
+	Organization,
 } from "@autumn/shared";
 
-import { DrizzleCli } from "@/db/initDrizzle.js";
-
-import { CusService } from "@/internal/customers/CusService.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { migrationToAttachParams } from "../migrationUtils/migrationToAttachParams.js";
 import { runMigrationAttach } from "../migrationUtils/runMigrationAttach.js";
-import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 
 export const migrateCustomer = async ({
 	db,
@@ -42,7 +40,7 @@ export const migrateCustomer = async ({
 }) => {
 	try {
 		const stripeCli = createStripeCli({ org, env });
-		let fullCus = await CusService.getFull({
+		const fullCus = await CusService.getFull({
 			db,
 			idOrInternalId: customerId,
 			orgId,
@@ -51,19 +49,21 @@ export const migrateCustomer = async ({
 		});
 
 		// 1. Build req object
-		let req = {
+		const req = {
 			db,
 			orgId,
 			env,
 			org,
 			features,
+			logger,
 			logtail: logger,
 			timestamp: Date.now(),
 		} as ExtendedRequest;
 
 		const cusProducts = fullCus.customer_products;
 		const filteredCusProducts = cusProducts.filter(
-			(cp: FullCusProduct) => cp.product.internal_id == fromProduct.internal_id,
+			(cp: FullCusProduct) =>
+				cp.product.internal_id === fromProduct.internal_id,
 		);
 
 		for (const cusProduct of filteredCusProducts) {

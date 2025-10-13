@@ -1,22 +1,24 @@
-import { InsertCusProductParams } from "../cusProducts/AttachParams.js";
 import {
 	AllowanceType,
-	AppEnv,
+	type AppEnv,
+	AttachScenario,
 	CusProductStatus,
-	EntitlementWithFeature,
-	FeatureOptions,
-	FullCustomerEntitlement,
-	Organization,
-	Price,
+	type EntitlementWithFeature,
+	type FeatureOptions,
+	type FullCustomerEntitlement,
+	getStartingBalance,
+	type Organization,
+	type Price,
 } from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
+import { getEntRelatedPrice } from "@/internal/products/entitlements/entitlementUtils.js";
+import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
+import { nullish } from "@/utils/genUtils.js";
+import type { InsertCusProductParams } from "../cusProducts/AttachParams.js";
+import { CusProductService } from "../cusProducts/CusProductService.js";
 import { CusEntService } from "../cusProducts/cusEnts/CusEntitlementService.js";
 import { initCusEntitlement } from "./initCusEnt.js";
-import { getEntRelatedPrice } from "@/internal/products/entitlements/entitlementUtils.js";
-import { CusProductService } from "../cusProducts/CusProductService.js";
-import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
-import { getResetBalance } from "../cusProducts/cusEnts/cusEntUtils.js";
-import { nullish } from "@/utils/genUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
 
 const updateOneOffExistingEntitlement = async ({
 	db,
@@ -49,7 +51,7 @@ const updateOneOffExistingEntitlement = async ({
 		env: env,
 	});
 
-	const resetBalance = getResetBalance({
+	const resetBalance = getStartingBalance({
 		entitlement,
 		options,
 		relatedPrice,
@@ -87,13 +89,13 @@ export const updateOneTimeCusProduct = async ({
 	attachParams.cusProducts?.sort((a, b) => b.created_at - a.created_at);
 
 	// 2. Get existing same cus product and customer entitlements
-	let existingCusProduct = attachParams.cusProducts?.find(
+	const existingCusProduct = attachParams.cusProducts?.find(
 		(cp) =>
 			cp.product.internal_id === attachParams.product.internal_id &&
 			cp.status === CusProductStatus.Active,
 	)!;
 
-	let existingCusEnts = existingCusProduct.customer_entitlements;
+	const existingCusEnts = existingCusProduct.customer_entitlements;
 
 	// 3. Update existing entitlements
 	for (const entitlement of attachParams.entitlements) {
@@ -101,7 +103,7 @@ export const updateOneTimeCusProduct = async ({
 			(ce) => ce.internal_feature_id === entitlement.internal_feature_id,
 		);
 
-		let relatedPrice = getEntRelatedPrice(entitlement, attachParams.prices);
+		const relatedPrice = getEntRelatedPrice(entitlement, attachParams.prices);
 		const options = getEntOptions(attachParams.optionsList, entitlement);
 
 		if (existingCusEnt) {
@@ -116,7 +118,7 @@ export const updateOneTimeCusProduct = async ({
 				logger,
 			});
 		} else {
-			let newCusEnt = initCusEntitlement({
+			const newCusEnt = initCusEntitlement({
 				entitlement,
 				customer: attachParams.customer,
 				cusProductId: existingCusProduct.id,
@@ -137,7 +139,7 @@ export const updateOneTimeCusProduct = async ({
 	}
 
 	// Update options on full cus product
-	let newOptionsList = [...attachParams.optionsList];
+	const newOptionsList = [...attachParams.optionsList];
 
 	for (const curOptions of existingCusProduct.options) {
 		// Find the option in the new options list
@@ -162,5 +164,19 @@ export const updateOneTimeCusProduct = async ({
 			options: newOptionsList,
 			quantity: existingCusProduct.quantity + 1,
 		},
+	});
+
+	// Send webhook
+	const { customer, org } = attachParams;
+	await addProductsUpdatedWebhookTask({
+		req: attachParams.req,
+		internalCustomerId: customer.internal_id,
+		org,
+		env: customer.env,
+		customerId: customer.id || null,
+		cusProduct: existingCusProduct,
+		scheduledCusProduct: undefined,
+		scenario: AttachScenario.New,
+		logger,
 	});
 };

@@ -1,31 +1,27 @@
+import {
+	type EntitlementWithFeature,
+	type FullProduct,
+	formatAmount,
+	type Organization,
+	type Price,
+	type Reward,
+} from "@autumn/shared";
+import type Stripe from "stripe";
 import { newPriceToInvoiceDescription } from "@/internal/invoices/invoiceFormatUtils.js";
 import { getProration } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
-import {
-	getPriceEntitlement,
-	getPriceForOverage,
-} from "@/internal/products/prices/priceUtils.js";
 import { priceToUsageModel } from "@/internal/products/prices/priceUtils/convertPrice.js";
 import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import {
 	isFixedPrice,
 	isOneOffPrice,
 } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
 import {
 	formatReward,
 	getAmountAfterReward,
 	getAmountAfterStripeDiscounts,
 } from "@/internal/rewards/rewardUtils.js";
 import { formatUnixToDate } from "@/utils/genUtils.js";
-
-import {
-	EntitlementWithFeature,
-	formatAmount,
-	FullProduct,
-	Organization,
-	Price,
-	Reward,
-} from "@autumn/shared";
-import Stripe from "stripe";
 
 export const priceToNewPreviewItem = ({
 	org,
@@ -95,6 +91,7 @@ export const priceToNewPreviewItem = ({
 				amount,
 				reward,
 				subDiscounts: subDiscounts ?? [],
+				currency: org.default_currency || undefined,
 			});
 		}
 
@@ -103,6 +100,7 @@ export const priceToNewPreviewItem = ({
 			amount,
 			product,
 			stripeDiscounts: subDiscounts ?? [],
+			currency: org.default_currency || undefined,
 		});
 
 		let description = newPriceToInvoiceDescription({

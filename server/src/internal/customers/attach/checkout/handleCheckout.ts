@@ -1,29 +1,32 @@
-import { AttachFunction, FeatureOptions } from "@autumn/shared";
-
+import {
+	type AttachBody,
+	AttachBodySchema,
+	AttachFunction,
+	type FeatureOptions,
+} from "@autumn/shared";
+import { priceToFeature } from "@/internal/products/prices/priceUtils/convertPrice.js";
+import { isPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import { getPriceOptions } from "@/internal/products/prices/priceUtils.js";
+import type {
+	ExtendedRequest,
+	ExtendedResponse,
+} from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { getAttachParams } from "../attachUtils/attachParams/getAttachParams.js";
-import { AttachBody, AttachBodySchema } from "@autumn/shared";
-import { ExtendedResponse } from "@/utils/models/Request.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { getAttachBranch } from "../attachUtils/getAttachBranch.js";
-import { getAttachConfig } from "../attachUtils/getAttachConfig.js";
-import { getAttachFunction } from "../attachUtils/getAttachFunction.js";
 import { handleCreateCheckout } from "../../add-product/handleCreateCheckout.js";
+import { handleCreateInvoiceCheckout } from "../../add-product/handleCreateInvoiceCheckout.js";
+import type { AttachParams } from "../../cusProducts/AttachParams.js";
 import {
 	checkStripeConnections,
 	handlePrepaidErrors,
 } from "../attachRouter.js";
-import { attachParamsToPreview } from "../handleAttachPreview/attachParamsToPreview.js";
-import { previewToCheckoutRes } from "./previewToCheckoutRes.js";
-import { AttachParams } from "../../cusProducts/AttachParams.js";
+import { getAttachParams } from "../attachUtils/attachParams/getAttachParams.js";
 import { attachParamsToProduct } from "../attachUtils/convertAttachParams.js";
-import { isPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
-import { priceToFeature } from "@/internal/products/prices/priceUtils/convertPrice.js";
-import { getPriceOptions } from "@/internal/products/prices/priceUtils.js";
+import { getAttachBranch } from "../attachUtils/getAttachBranch.js";
+import { getAttachConfig } from "../attachUtils/getAttachConfig.js";
+import { getAttachFunction } from "../attachUtils/getAttachFunction.js";
+import { attachParamsToPreview } from "../handleAttachPreview/attachParamsToPreview.js";
 import { getHasProrations } from "./getHasProrations.js";
-import { handleCreateInvoiceCheckout } from "../../add-product/handleCreateInvoiceCheckout.js";
-import { z } from "zod";
-import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
+import { previewToCheckoutRes } from "./previewToCheckoutRes.js";
 
 const getAttachVars = async ({
 	req,
@@ -79,13 +82,15 @@ const getCheckoutOptions = async ({
 		isPrepaidPrice({ price: p }),
 	);
 
-	let newOptions: FeatureOptions[] = structuredClone(attachParams.optionsList);
+	const newOptions: FeatureOptions[] = structuredClone(
+		attachParams.optionsList,
+	);
 	for (const prepaidPrice of prepaidPrices) {
 		const feature = priceToFeature({
 			price: prepaidPrice,
 			features: req.features,
 		});
-		let option = getPriceOptions(prepaidPrice, attachParams.optionsList);
+		const option = getPriceOptions(prepaidPrice, attachParams.optionsList);
 		if (!option) {
 			newOptions.push({
 				feature_id: feature?.id!,
@@ -116,7 +121,7 @@ export const handleCheckout = (req: any, res: any) =>
 
 			let checkoutUrl = null;
 
-			if (func == AttachFunction.CreateCheckout) {
+			if (func === AttachFunction.CreateCheckout) {
 				await checkStripeConnections({
 					req,
 					attachParams,
@@ -182,17 +187,9 @@ export const handleCheckout = (req: any, res: any) =>
 				attachParams,
 			});
 
-			if (checkoutRes.next_cycle) {
-				const nextCycle = checkoutRes.next_cycle;
-			}
-
 			res.status(200).json({
 				...checkoutRes,
 				url: checkoutUrl,
-				options: attachParams.optionsList.map((o) => ({
-					quantity: o.quantity,
-					feature_id: o.feature_id,
-				})),
 				has_prorations: hasProrations,
 			});
 

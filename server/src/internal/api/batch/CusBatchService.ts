@@ -1,17 +1,17 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
 import {
-	AppEnv,
-	Organization,
-	CusProductStatus,
-	FullCustomer,
-	Feature,
+	type ApiVersionClass,
+	type AppEnv,
 	CusExpand,
+	type CusProductStatus,
+	type Feature,
+	type FullCustomer,
+	type Organization,
 } from "@autumn/shared";
-
 import type { NodeClickHouseClient } from "@clickhouse/client/dist/client.js";
-import { getPaginatedFullCusQuery } from "../../customers/getFullCusQuery.js";
-import { getCustomerDetails } from "../../customers/cusUtils/getCustomerDetails.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
+import { getCustomerDetails } from "../../customers/cusUtils/getCustomerDetails.js";
+import { getPaginatedFullCusQuery } from "../../customers/getFullCusQuery.js";
 
 export class CusBatchService {
 	static async getByInternalIds({
@@ -25,7 +25,7 @@ export class CusBatchService {
 		env: AppEnv;
 		internalCustomerIds: string[];
 	}) {
-		let query = getPaginatedFullCusQuery({
+		const query = getPaginatedFullCusQuery({
 			orgId: org.id,
 			env,
 			includeInvoices: true,
@@ -36,7 +36,7 @@ export class CusBatchService {
 			offset: 0,
 			internalCustomerIds,
 		});
-		let results = await db.execute(query);
+		const results = await db.execute(query);
 
 		return results as unknown as FullCustomer[];
 	}
@@ -52,7 +52,7 @@ export class CusBatchService {
 		statuses,
 		expand = [],
 		logger = console,
-		reqApiVersion,
+		apiVersion,
 	}: {
 		db: DrizzleCli;
 		ch: NodeClickHouseClient;
@@ -64,7 +64,7 @@ export class CusBatchService {
 		statuses: CusProductStatus[];
 		expand?: CusExpand[];
 		logger?: any;
-		reqApiVersion?: number;
+		apiVersion: ApiVersionClass;
 	}) {
 		if (!limit) limit = 10;
 		if (!offset) offset = 0;
@@ -75,7 +75,7 @@ export class CusBatchService {
 		const withEntities = expand.includes(CusExpand.Entities);
 		const withTrialsUsed = expand.includes(CusExpand.TrialsUsed);
 
-		let query = getPaginatedFullCusQuery({
+		const query = getPaginatedFullCusQuery({
 			orgId: org.id,
 			env,
 			inStatuses: statuses,
@@ -86,11 +86,12 @@ export class CusBatchService {
 			limit,
 			offset,
 		});
-		let results = await db.execute(query);
-		let finals = [];
-		for (let result of results) {
+		const results = await db.execute(query);
+		const finals = [];
+		for (const result of results) {
 			try {
-				const normalizedCustomer = this.normalizeCustomerData(result);
+				const normalizedCustomer =
+					CusBatchService.normalizeCustomerData(result);
 				const customer = normalizedCustomer as FullCustomer;
 				const cusProducts = customer.customer_products || [];
 
@@ -104,7 +105,7 @@ export class CusBatchService {
 					logger: console,
 					cusProducts,
 					expand: expand,
-					reqApiVersion: reqApiVersion,
+					apiVersion: apiVersion,
 				});
 
 				finals.push(customerDetails);

@@ -1,10 +1,10 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type { FullCusProduct } from "@autumn/shared";
+import { differenceInDays, subDays } from "date-fns";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { formatPrice } from "@/internal/products/prices/priceUtils.js";
 import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
-import { FullCusProduct } from "@autumn/shared";
-import { differenceInDays, subDays } from "date-fns";
-import Stripe from "stripe";
 
 export const cusProductInPhase = ({
 	phaseStart,
@@ -40,9 +40,11 @@ export const similarUnix = ({
 export const logPhaseItems = async ({
 	items,
 	db,
+	withId = false,
 }: {
 	items: Stripe.SubscriptionScheduleUpdateParams.Phase.Item[];
 	db: DrizzleCli;
+	withId?: boolean;
 }) => {
 	const priceIds = items
 		.map((item) => {
@@ -60,6 +62,7 @@ export const logPhaseItems = async ({
 		const priceId =
 			typeof item.price === "string" ? item.price : (item.price as any)?.id;
 		console.log({
+			id: withId ? (item as any).id : undefined,
 			price: priceId,
 			quantity: item.quantity,
 			autumnPrice: autumnPrices[priceId]
@@ -105,7 +108,7 @@ export const logPhases = async ({
 	db: DrizzleCli;
 }) => {
 	for (const phase of phases) {
-		// @ts-ignore
+		// @ts-expect-error
 		const timestampInMillis = ensureMilliseconds(phase.start_date);
 		console.log(`Phase ${formatUnixToDate(timestampInMillis)}:`);
 		await logPhaseItems({ items: phase.items, db });

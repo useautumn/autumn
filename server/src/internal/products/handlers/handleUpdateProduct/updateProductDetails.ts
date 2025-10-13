@@ -1,50 +1,47 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { notNullish } from "@/utils/genUtils.js";
 import {
-	AppEnv,
-	CreateFreeTrial,
-	ErrCode,
-	FreeTrial,
-	FullProduct,
+	type AppEnv,
+	type CreateFreeTrial,
+	type FreeTrial,
+	type FullProduct,
 	isFreeProductV2,
-	Organization,
-	Product,
-	ProductItem,
-	RewardProgram,
-	UpdateProduct,
+	type Organization,
+	type Product,
+	type ProductItem,
+	RecaseError,
+	type RewardProgram,
+	type UpdateProduct,
 } from "@autumn/shared";
-import { ProductService } from "../../ProductService.js";
-import { FreeTrialService } from "../../free-trials/FreeTrialService.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import { isStripeConnected } from "@/internal/orgs/orgUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
+import { ProductService } from "../../ProductService.js";
 import { usagePriceToProductName } from "../../prices/priceUtils/usagePriceUtils/convertUsagePrice.js";
 import {
 	isFeaturePriceItem,
 	isPriceItem,
 } from "../../product-items/productItemUtils/getItemType.js";
 import { isFreeProduct } from "../../productUtils.js";
-import { isStripeConnected } from "@/internal/orgs/orgUtils.js";
-import { isDefaultTrialFullProduct } from "../../productUtils/classifyProduct.js";
 
 const productDetailsSame = (prod1: Product, prod2: UpdateProduct) => {
-	if (notNullish(prod2.id) && prod1.id != prod2.id) {
+	if (notNullish(prod2.id) && prod1.id !== prod2.id) {
 		return false;
 	}
 
-	if (notNullish(prod2.name) && prod1.name != prod2.name) {
+	if (notNullish(prod2.name) && prod1.name !== prod2.name) {
 		return false;
 	}
 
-	if (notNullish(prod2.group) && prod1.group != prod2.group) {
+	if (notNullish(prod2.group) && prod1.group !== prod2.group) {
 		return false;
 	}
 
-	if (notNullish(prod2.is_add_on) && prod1.is_add_on != prod2.is_add_on) {
+	if (notNullish(prod2.is_add_on) && prod1.is_add_on !== prod2.is_add_on) {
 		return false;
 	}
 
-	if (notNullish(prod2.is_default) && prod1.is_default != prod2.is_default) {
+	if (notNullish(prod2.is_default) && prod1.is_default !== prod2.is_default) {
 		return false;
 	}
 
@@ -74,7 +71,7 @@ const updateStripeProductNames = async ({
 		org,
 		env: curProduct.env as AppEnv,
 	});
-	let stripeProdId = curProduct.processor?.id;
+	const stripeProdId = curProduct.processor?.id;
 
 	if (!stripeProdId || !newName) {
 		return;
@@ -96,10 +93,10 @@ const updateStripeProductNames = async ({
 	}
 
 	for (const price of curProduct.prices) {
-		let stripeProdId = price.config?.stripe_product_id;
+		const stripeProdId = price.config?.stripe_product_id;
 
 		if (stripeProdId) {
-			let name = usagePriceToProductName({
+			const name = usagePriceToProductName({
 				price,
 				fullProduct: {
 					...curProduct,
@@ -128,7 +125,7 @@ const willBeDefaultTrial = ({
 }: {
 	newProduct: UpdateProduct;
 	curProduct: FullProduct;
-	newFreeTrial: FreeTrial;
+	newFreeTrial?: FreeTrial | CreateFreeTrial;
 	newItems: ProductItem[];
 }) => {
 	// 1. Get final default
@@ -160,7 +157,7 @@ export const handleUpdateProductDetails = async ({
 	db: DrizzleCli;
 	curProduct: FullProduct;
 	newProduct: UpdateProduct;
-	newFreeTrial: FreeTrial;
+	newFreeTrial?: FreeTrial | CreateFreeTrial;
 	items: ProductItem[];
 	org: Organization;
 	rewardPrograms: RewardProgram[];
@@ -171,11 +168,6 @@ export const handleUpdateProductDetails = async ({
 		productId: curProduct.id,
 		orgId: org.id,
 		env: curProduct.env as AppEnv,
-	});
-
-	const trialConfig = await FreeTrialService.getByProductId({
-		db,
-		productId: curProduct.internal_id,
 	});
 
 	// Should error if:
@@ -194,13 +186,6 @@ export const handleUpdateProductDetails = async ({
 			newFreeTrial,
 			newItems: items,
 		})
-		// && !isDefaultTrialFullProduct({
-		//   product: {
-		//     ...newProduct,
-		//     free_trial: newFreeTrial || curProduct.free_trial || null,
-		//   },
-		//   skipDefault: true,
-		// })
 	) {
 		// 1. Check if there are items
 		if (items) {
@@ -208,8 +193,6 @@ export const handleUpdateProductDetails = async ({
 				throw new RecaseError({
 					message:
 						"Cannot make a product default if it has fixed prices or paid features",
-					code: ErrCode.InvalidProduct,
-					statusCode: 400,
 				});
 			}
 		} else {
@@ -217,8 +200,6 @@ export const handleUpdateProductDetails = async ({
 				throw new RecaseError({
 					message:
 						"Cannot make a product default if it has fixed prices or paid features",
-					code: ErrCode.InvalidProduct,
-					statusCode: 400,
 				});
 			}
 		}
@@ -232,8 +213,6 @@ export const handleUpdateProductDetails = async ({
 		if (customersOnAllVersions.length > 0) {
 			throw new RecaseError({
 				message: "Cannot change product ID because it has existing customers",
-				code: ErrCode.ProductHasCustomers,
-				statusCode: 400,
 			});
 		}
 
@@ -241,8 +220,6 @@ export const handleUpdateProductDetails = async ({
 			throw new RecaseError({
 				message:
 					"Cannot change product ID because existing reward programs are linked to it",
-				code: ErrCode.ProductHasRewardPrograms,
-				statusCode: 400,
 			});
 		}
 	}

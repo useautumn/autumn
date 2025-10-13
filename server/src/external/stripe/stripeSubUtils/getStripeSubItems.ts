@@ -1,42 +1,40 @@
-import { getExistingUsageFromCusProducts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import {
-	getPriceEntitlement,
-	getEntOptions,
-	getProductForPrice,
-} from "@/internal/products/prices/priceUtils.js";
-import { notNullish } from "@/utils/genUtils.js";
-import {
-	FullProduct,
-	Price,
-	EntitlementWithFeature,
-	FeatureOptions,
-	Organization,
-	FullCusProduct,
+	type ApiVersion,
+	type AttachConfig,
+	type AttachReplaceable,
 	BillingInterval,
-	Entity,
-	APIVersion,
-	InsertReplaceable,
-	AttachReplaceable,
-	ErrCode,
-	AttachConfig,
-	ProductOptions,
+	type EntitlementWithFeature,
+	type Entity,
+	type FeatureOptions,
+	type FullCusProduct,
+	type FullProduct,
+	InternalError,
+	isUsagePrice,
+	type Organization,
+	type Price,
+	type ProductOptions,
 } from "@autumn/shared";
-import { priceToStripeItem } from "../priceToStripeItem/priceToStripeItem.js";
-import { getArrearItems } from "./getStripeSubItems/getArrearItems.js";
-import {
-	compareBillingIntervals,
-	sortPricesByInterval,
-} from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
-import { isUsagePrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { getExistingUsageFromCusProducts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import {
 	intervalKeyToPrice,
 	priceToIntervalKey,
 	priceToProductOptions,
 } from "@/internal/products/prices/priceUtils/convertPrice.js";
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import { ItemSet } from "@/utils/models/ItemSet.js";
+import {
+	compareBillingIntervals,
+	sortPricesByInterval,
+} from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
+import {
+	getEntOptions,
+	getPriceEntitlement,
+	getProductForPrice,
+} from "@/internal/products/prices/priceUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
+import type { ItemSet } from "@/utils/models/ItemSet.js";
+import { priceToStripeItem } from "../priceToStripeItem/priceToStripeItem.js";
+import { getArrearItems } from "./getStripeSubItems/getArrearItems.js";
 
 const getIntervalToPrices = (prices: Price[]) => {
 	const intervalToPrices: Record<string, Price[]> = {};
@@ -50,14 +48,14 @@ const getIntervalToPrices = (prices: Price[]) => {
 		intervalToPrices[key].push(price);
 	}
 
-	let oneOffPrices =
+	const oneOffPrices =
 		intervalToPrices[BillingInterval.OneOff] &&
 		intervalToPrices[BillingInterval.OneOff].length > 0;
 
 	// If there are multiple intervals, add one off prices to first interval
 	if (oneOffPrices && Object.keys(intervalToPrices).length > 1) {
 		const nextIntervalKey = Object.keys(intervalToPrices)[0];
-		intervalToPrices[nextIntervalKey!].push(
+		intervalToPrices[nextIntervalKey].push(
 			...structuredClone(intervalToPrices[BillingInterval.OneOff]),
 		);
 		delete intervalToPrices[BillingInterval.OneOff];
@@ -81,7 +79,7 @@ export const getStripeSubItems = async ({
 		internalEntityId?: string;
 		cusProducts?: FullCusProduct[];
 		entities: Entity[];
-		apiVersion?: APIVersion;
+		apiVersion?: ApiVersion;
 		replaceables: AttachReplaceable[];
 	};
 	isCheckout?: boolean;
@@ -107,8 +105,8 @@ export const getStripeSubItems = async ({
 	for (const intervalKey in intervalToPrices) {
 		const prices = intervalToPrices[intervalKey];
 
-		let subItems: any[] = [];
-		let usage_features: any[] = [];
+		const subItems: any[] = [];
+		const usage_features: any[] = [];
 
 		for (const price of prices) {
 			const prodOptions = priceToProductOptions({
@@ -128,7 +126,7 @@ export const getStripeSubItems = async ({
 				internalEntityId,
 			});
 
-			let replaceables = priceEnt
+			const replaceables = priceEnt
 				? attachParams.replaceables.filter((r) => r.ent.id === priceEnt.id)
 				: [];
 
@@ -141,7 +139,7 @@ export const getStripeSubItems = async ({
 				});
 			}
 
-			let product = getProductForPrice(price, products)!;
+			const product = getProductForPrice(price, products);
 
 			if (!product) {
 				logger.error(
@@ -153,10 +151,8 @@ export const getStripeSubItems = async ({
 						},
 					},
 				);
-				throw new RecaseError({
-					code: ErrCode.ProductNotFound,
+				throw new InternalError({
 					message: `Price internal product ID: ${price.internal_product_id} not found in products`,
-					statusCode: 400,
 				});
 			}
 
@@ -183,7 +179,7 @@ export const getStripeSubItems = async ({
 		}
 
 		const { interval, intervalCount } = intervalKeyToPrice(intervalKey);
-		if (subItems.length == 0) {
+		if (subItems.length === 0) {
 			subItems.push(
 				...getArrearItems({
 					prices,
@@ -260,13 +256,13 @@ export const getStripeSubItems2 = async ({
 			internalEntityId,
 		});
 
-		let replaceables = priceEnt
+		const replaceables = priceEnt
 			? attachParams.replaceables.filter((r) => r.ent.id === priceEnt.id)
 			: [];
 
 		existingUsage += replaceables.length;
 
-		let product = getProductForPrice(price, attachParams.products)!;
+		const product = getProductForPrice(price, attachParams.products)!;
 
 		if (!product) {
 			logger.error(
@@ -278,10 +274,8 @@ export const getStripeSubItems2 = async ({
 					},
 				},
 			);
-			throw new RecaseError({
-				code: ErrCode.ProductNotFound,
+			throw new InternalError({
 				message: `Price internal product ID: ${price.internal_product_id} not found in products`,
-				statusCode: 400,
 			});
 		}
 

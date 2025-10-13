@@ -1,31 +1,31 @@
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-	APIVersion,
-	AppEnv,
+	type AppEnv,
+	LegacyVersion,
 	OnDecrease,
 	OnIncrease,
-	Organization,
+	type Organization,
 } from "@autumn/shared";
 import chalk from "chalk";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import { addWeeks } from "date-fns";
+import type Stripe from "stripe";
 import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "../../attach/utils.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import {
 	calcProrationAndExpectInvoice,
 	expectSubQuantityCorrect,
 } from "tests/utils/expectUtils/expectContUseUtils.js";
-import { addWeeks } from "date-fns";
+import { createProducts } from "tests/utils/productUtils.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
+import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { addPrefixToProducts } from "../../attach/utils.js";
 
-let userItem = constructArrearProratedItem({
+const userItem = constructArrearProratedItem({
 	featureId: TestFeature.Users,
 	pricePerUnit: 50,
 	includedUsage: 1,
@@ -35,7 +35,7 @@ let userItem = constructArrearProratedItem({
 	},
 });
 
-export let pro = constructProduct({
+const pro = constructProduct({
 	items: [userItem],
 	type: "pro",
 });
@@ -43,12 +43,12 @@ export let pro = constructProduct({
 const testCase = "entity2";
 
 describe(`${chalk.yellowBright(`contUse/${testCase}: Testing entities, prorate now`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
-	let curUnix = new Date().getTime();
+	let curUnix = Date.now();
 
 	before(async function () {
 		await setupBefore(this);
@@ -86,7 +86,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing entities, prorate n
 	});
 
 	let usage = 0;
-	let firstEntities = [
+	const firstEntities = [
 		{
 			id: "1",
 			name: "test",
@@ -94,7 +94,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing entities, prorate n
 		},
 	];
 
-	it("should create entity, then attach pro", async function () {
+	it("should create entity, then attach pro", async () => {
 		await autumn.entities.create(customerId, firstEntities);
 		usage += 1;
 
@@ -128,7 +128,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing entities, prorate n
 		},
 	];
 
-	it("should create 2 entities and have correct invoice", async function () {
+	it("should create 2 entities and have correct invoice", async () => {
 		curUnix = await advanceTestClock({
 			stripeCli,
 			testClockId,
@@ -150,6 +150,8 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing entities, prorate n
 			itemQuantity: usage,
 		});
 
+		await timeout(5000);
+
 		await calcProrationAndExpectInvoice({
 			autumn,
 			stripeSubs,
@@ -161,7 +163,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing entities, prorate n
 		});
 	});
 
-	it("should delete 1 entity and have correct invoice amount", async function () {
+	it("should delete 1 entity and have correct invoice amount", async () => {
 		curUnix = await advanceTestClock({
 			stripeCli,
 			testClockId,

@@ -1,17 +1,17 @@
+import {
+	AttachBranch,
+	type AttachConfig,
+	AttachFunction,
+	type FullProduct,
+	ProrationBehavior,
+} from "@autumn/shared";
 import { handleAddProduct } from "@/internal/customers/attach/attachFunctions/addProductFlow/handleAddProduct.js";
 import { handleUpgradeFlow } from "@/internal/customers/attach/attachFunctions/upgradeFlow/handleUpgradeFlow.js";
 import { checkSameCustom } from "@/internal/customers/attach/attachUtils/getAttachBranch.js";
 import { intervalsAreSame } from "@/internal/customers/attach/attachUtils/getAttachConfig.js";
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import {
-	AttachBranch,
-	AttachConfig,
-	AttachFunction,
-	FullProduct,
-	ProrationBehavior,
-} from "@autumn/shared";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 
 const getAttachFunction = async ({
 	attachParams,
@@ -40,12 +40,12 @@ export const runMigrationAttach = async ({
 	attachParams: AttachParams;
 	fromProduct: FullProduct;
 }) => {
-	const { logtail: logger } = req;
+	const { logger } = req;
 	const sameIntervals = intervalsAreSame({ attachParams });
 	const branch = AttachBranch.NewVersion;
 
 	// Set config
-	let config: AttachConfig = {
+	const config: AttachConfig = {
 		onlyCheckout: false,
 		carryUsage: true,
 		branch,
@@ -57,13 +57,14 @@ export const runMigrationAttach = async ({
 		carryTrial: true,
 		invoiceCheckout: false,
 		finalizeInvoice: true,
+		requirePaymentMethod: false,
 	};
 
 	// Check if branch is update custom ents...
 
-	let attachFunction = await getAttachFunction({ attachParams });
+	const attachFunction = await getAttachFunction({ attachParams });
 
-	let customer = attachParams.customer;
+	const customer = attachParams.customer;
 	logger.info(`--------------------------------`);
 	logger.info(
 		`Running migration for ${customer.id}, function: ${attachFunction}`,
@@ -72,31 +73,32 @@ export const runMigrationAttach = async ({
 	let sameCustomBranch: AttachBranch | undefined;
 	try {
 		const curSameProduct = attachParams.customer.customer_products.find(
-			(cp) => cp.product.internal_id == fromProduct.internal_id,
+			(cp) => cp.product.internal_id === fromProduct.internal_id,
 		);
 		sameCustomBranch = curSameProduct
 			? await checkSameCustom({
 					attachParams,
 					curSameProduct,
+					optionsToUpdate: [],
 				})
 			: undefined;
 	} catch (error) {
 		console.log("Error:", error);
 	}
 
-	if (attachFunction == AttachFunction.AddProduct) {
+	if (attachFunction === AttachFunction.AddProduct) {
 		return await handleAddProduct({
 			req,
 			attachParams,
 			config,
 		});
-	} else if (attachFunction == AttachFunction.UpgradeSameInterval) {
+	} else if (attachFunction === AttachFunction.UpgradeSameInterval) {
 		await handleUpgradeFlow({
 			req,
 			attachParams,
 			config,
 			branch:
-				sameCustomBranch == AttachBranch.SameCustomEnts
+				sameCustomBranch === AttachBranch.SameCustomEnts
 					? AttachBranch.SameCustomEnts
 					: branch,
 		});

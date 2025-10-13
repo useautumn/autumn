@@ -1,33 +1,27 @@
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { APIVersion, AppEnv, Organization } from "@autumn/shared";
+import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
+import { expect } from "chai";
 import chalk from "chalk";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type Stripe from "stripe";
 import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import {
-	constructProduct,
-	constructRawProduct,
-} from "@/utils/scriptUtils/createTestProducts.js";
+import { completeCheckoutForm } from "tests/utils/stripeUtils.js";
+import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { CusService } from "@/internal/customers/CusService.js";
 import {
 	constructFeatureItem,
 	constructPrepaidItem,
 } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { expect } from "chai";
 import {
-	addPrefixToProducts,
-	getBasePrice,
-} from "tests/utils/testProductUtils/testProductUtils.js";
-import { completeInvoiceCheckout } from "tests/utils/stripeUtils/completeInvoiceCheckout.js";
-import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
-import { CusService } from "@/internal/customers/CusService.js";
+	constructProduct,
+	constructRawProduct,
+} from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import { expectSubToBeCorrect } from "../mergeUtils/expectSubCorrect.js";
-import { completeCheckoutForm } from "tests/utils/stripeUtils.js";
 
-export let pro = constructProduct({
+export const pro = constructProduct({
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Messages,
@@ -37,7 +31,7 @@ export let pro = constructProduct({
 	type: "pro",
 });
 
-export let premium = constructProduct({
+export const premium = constructProduct({
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Messages,
@@ -87,12 +81,12 @@ const ops = [
 
 const testCase = "separate2";
 describe(`${chalk.yellowBright(`${testCase}: Testing separate subscriptions because of force checkout`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_2 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_2 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
-	let curUnix = new Date().getTime();
+	const curUnix = new Date().getTime();
 
 	before(async function () {
 		await setupBefore(this);
@@ -129,8 +123,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing separate subscriptions beca
 		testClockId = testClockId1!;
 	});
 
-	let subIds: string[] = [];
-	it("should attach pro  product", async function () {
+	const subIds: string[] = [];
+	it("should attach pro  product", async () => {
 		await autumn.entities.create(customerId, entities);
 		for (const op of ops) {
 			const res = await autumn.attach({
@@ -172,7 +166,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing separate subscriptions beca
 		});
 	});
 
-	it("should upgrade both entities to premium", async function () {
+	it("should upgrade both entities to premium", async () => {
 		for (const id of ["1", "2"]) {
 			await autumn.attach({
 				customer_id: customerId,
@@ -197,7 +191,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing separate subscriptions beca
 		}
 	});
 
-	it("should attach add on to entity 2 and correct sub", async function () {
+	it("should attach add on to entity 2 and correct sub", async () => {
 		await autumn.attach({
 			customer_id: customerId,
 			product_id: addOn.id,

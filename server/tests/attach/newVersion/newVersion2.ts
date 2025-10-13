@@ -1,28 +1,26 @@
-import { expect } from "chai";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-	APIVersion,
-	AppEnv,
+	type AppEnv,
 	BillingInterval,
-	Organization,
-	ProductV2,
+	LegacyVersion,
+	type Organization,
+	type ProductV2,
 } from "@autumn/shared";
 import chalk from "chalk";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type Stripe from "stripe";
 import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "../utils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
-import { replaceItems } from "../utils.js";
-import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
-import runUpdateEntsTest from "../updateEnts/expectUpdateEnts.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
+import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import runUpdateEntsTest from "../updateEnts/expectUpdateEnts.js";
+import { addPrefixToProducts, replaceItems } from "../utils.js";
 
-export let pro = constructProduct({
+export const pro = constructProduct({
 	items: [constructArrearItem({ featureId: TestFeature.Words })],
 	type: "pro",
 	trial: true,
@@ -31,13 +29,13 @@ export let pro = constructProduct({
 const testCase = "newVersion2";
 
 describe(`${chalk.yellowBright(`${testCase}: Testing attach new version for trial product`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
 
-	let curUnix = new Date().getTime();
+	const curUnix = new Date().getTime();
 
 	before(async function () {
 		await setupBefore(this);
@@ -74,7 +72,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach new version for tria
 		testClockId = testClockId1!;
 	});
 
-	it("should attach pro product", async function () {
+	it("should attach pro product", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,
@@ -86,11 +84,11 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach new version for tria
 		});
 	});
 
-	let usage = 50000;
+	const usage = 50000;
 	let newPro: ProductV2;
-	it("should update product to new version", async function () {
+	it("should update product to new version", async () => {
 		newPro = structuredClone(pro);
-		let newItems = replaceItems({
+		const newItems = replaceItems({
 			items: pro.items,
 			interval: BillingInterval.Month,
 			newItem: constructPriceItem({
@@ -109,7 +107,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach new version for tria
 
 	return;
 
-	it("should attach pro v2", async function () {
+	it("should attach pro v2", async () => {
 		await runUpdateEntsTest({
 			autumn,
 			stripeCli,

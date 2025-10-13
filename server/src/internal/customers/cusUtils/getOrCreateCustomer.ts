@@ -1,26 +1,21 @@
-import { updateCustomerDetails } from "./cusUtils.js";
-import { handleCreateCustomer } from "../handlers/handleCreateCustomer.js";
-
-import { CusService } from "../CusService.js";
 import {
-	AppEnv,
 	CusExpand,
 	CusProductStatus,
-	CustomerData,
-	EntityData,
-	ErrCode,
-	Feature,
-	FullCustomer,
-	Organization,
+	type CustomerData,
+	type Entity,
+	type EntityData,
+	type FullCustomer,
 } from "@autumn/shared";
-
-import { ExtendedRequest } from "@/utils/models/Request.js";
 import { autoCreateEntity } from "@/internal/entities/handlers/handleCreateEntity/autoCreateEntity.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+import { CusService } from "../CusService.js";
+import { getCusWithCache } from "../cusCache/getCusWithCache.js";
 import {
 	deleteCusCache,
 	refreshCusCache,
 } from "../cusCache/updateCachedCus.js";
-import { getCusWithCache } from "../cusCache/getCusWithCache.js";
+import { handleCreateCustomer } from "../handlers/handleCreateCustomer.js";
+import { updateCustomerDetails } from "./cusUtils.js";
 
 export const getOrCreateCustomer = async ({
 	req,
@@ -41,7 +36,7 @@ export const getOrCreateCustomer = async ({
 	withCache = false,
 }: {
 	req: ExtendedRequest;
-	customerId: string;
+	customerId: string | null;
 	customerData?: CustomerData;
 	inStatuses?: CusProductStatus[];
 	skipGet?: boolean;
@@ -51,15 +46,15 @@ export const getOrCreateCustomer = async ({
 	entityData?: EntityData;
 	withCache?: boolean;
 }): Promise<FullCustomer> => {
-	let customer;
+	let customer: FullCustomer | undefined;
 
-	const { db, org, features, env, logtail: logger } = req;
+	const { db, org, env, logger } = req;
 
 	if (!withEntities) {
 		withEntities = expand?.includes(CusExpand.Entities) || false;
 	}
 
-	if (!skipGet) {
+	if (!skipGet && customerId) {
 		if (withCache) {
 			customer = await getCusWithCache({
 				db,
@@ -88,7 +83,7 @@ export const getOrCreateCustomer = async ({
 
 	if (!customer) {
 		try {
-			customer = await handleCreateCustomer({
+			customer = (await handleCreateCustomer({
 				req,
 				cusData: {
 					id: customerId,
@@ -98,11 +93,11 @@ export const getOrCreateCustomer = async ({
 					metadata: customerData?.metadata || {},
 					stripe_id: customerData?.stripe_id,
 				},
-			});
+			})) as FullCustomer;
 
 			customer = await CusService.getFull({
 				db,
-				idOrInternalId: customerId || customer!.internal_id,
+				idOrInternalId: customerId || customer.internal_id,
 				orgId: org.id,
 				env,
 				inStatuses,
@@ -114,12 +109,12 @@ export const getOrCreateCustomer = async ({
 
 			await deleteCusCache({
 				db,
-				customerId: customer.id!,
+				customerId: customer.id || customer.internal_id,
 				org,
 				env,
 			});
 		} catch (error: any) {
-			if (error?.data?.code == "23505") {
+			if (error?.data?.code === "23505" && customerId) {
 				customer = await CusService.getFull({
 					db,
 					idOrInternalId: customerId,
@@ -145,27 +140,30 @@ export const getOrCreateCustomer = async ({
 		logger,
 	});
 
+	// Customer is defined by this point!
+	customer = customer as FullCustomer;
+
 	if (entityId && !customer.entity) {
 		logger.info(`Auto creating entity ${entityId} for customer ${customerId}`);
 
-		let newEntity = await autoCreateEntity({
+		const newEntity = (await autoCreateEntity({
 			req,
 			customer,
 			entityId,
 			entityData: {
 				id: entityId,
 				name: entityData?.name,
-				feature_id: entityData?.feature_id!,
+				feature_id: entityData?.feature_id || "",
 			},
 			logger,
-		});
+		})) as Entity;
 
 		customer.entities = [...(customer.entities || []), newEntity];
 		customer.entity = newEntity;
 
 		await refreshCusCache({
 			db,
-			customerId: customer.id!,
+			customerId: customer.id || customer.internal_id,
 			org,
 			env: customer.env,
 		});

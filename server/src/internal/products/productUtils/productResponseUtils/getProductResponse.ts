@@ -1,21 +1,21 @@
 import {
+	type APIFreeTrial,
+	APIFreeTrialSchema,
+	ApiProductItemSchema,
+	ApiProductPropertiesSchema,
+	ApiProductSchema,
 	AttachScenario,
 	BillingInterval,
 	type Feature,
 	type FeatureOptions,
-	type FreeTrialResponse,
-	FreeTrialResponseSchema,
 	type FullCustomer,
 	type FullProduct,
 	type Price,
 	type ProductItem,
-	ProductItemResponseSchema,
-	ProductPropertiesSchema,
-	ProductResponseSchema,
 	UsageModel,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { toAPIFeature } from "@/internal/features/utils/mapFeatureUtils.js";
+import { toApiFeature } from "@/internal/features/utils/mapFeatureUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { getFreeTrialAfterFingerprint } from "../../free-trials/freeTrialUtils.js";
 import { sortProductItems } from "../../pricecn/pricecnUtils.js";
@@ -71,10 +71,10 @@ export const getProductItemResponse = ({
 	}
 
 	const feature = features.find((f) => f.id === item.feature_id);
-	return ProductItemResponseSchema.parse({
+	return ApiProductItemSchema.parse({
 		type,
 		...item,
-		feature: feature ? toAPIFeature({ feature }) : null,
+		feature: feature ? toApiFeature({ feature }) : null,
 		display: withDisplay ? display : undefined,
 		...priceData,
 		quantity,
@@ -106,7 +106,7 @@ export const getFreeTrialResponse = async ({
 		});
 
 		if (attachScenario === AttachScenario.Downgrade) trial = null;
-		return FreeTrialResponseSchema.parse({
+		return APIFreeTrialSchema.parse({
 			duration: product.free_trial?.duration,
 			length: product.free_trial?.length,
 			unique_fingerprint: product.free_trial?.unique_fingerprint,
@@ -116,7 +116,7 @@ export const getFreeTrialResponse = async ({
 	}
 
 	if (product.free_trial) {
-		return FreeTrialResponseSchema.parse({
+		return APIFreeTrialSchema.parse({
 			duration: product.free_trial?.duration,
 			length: product.free_trial?.length,
 			unique_fingerprint: product.free_trial?.unique_fingerprint,
@@ -132,7 +132,7 @@ export const getProductProperties = ({
 	freeTrial,
 }: {
 	product: FullProduct;
-	freeTrial?: FreeTrialResponse | null;
+	freeTrial?: APIFreeTrial | null;
 }) => {
 	const largestInterval = getLargestInterval({
 		prices: product.prices,
@@ -142,7 +142,7 @@ export const getProductProperties = ({
 	const hasFreeTrial =
 		notNullish(freeTrial) && freeTrial?.trial_available !== false;
 
-	return ProductPropertiesSchema.parse({
+	return ApiProductPropertiesSchema.parse({
 		is_free: isFreeProduct(product.prices) || false,
 		is_one_off: isOneOff(product.prices) || false,
 		interval_group: largestInterval?.interval,
@@ -205,9 +205,9 @@ export const getProductResponse = async ({
 		product,
 		fullCus,
 		attachScenario,
-	})) as FreeTrialResponse;
+	})) as APIFreeTrial;
 
-	return ProductResponseSchema.parse({
+	return ApiProductSchema.parse({
 		...product,
 		name: product.name || null,
 		group: product.group || null,
@@ -215,6 +215,5 @@ export const getProductResponse = async ({
 		free_trial: freeTrial || null,
 		scenario: attachScenario,
 		properties: getProductProperties({ product, freeTrial }),
-		archived: product.archived ? true : undefined,
 	});
 };

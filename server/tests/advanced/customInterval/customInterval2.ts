@@ -1,28 +1,25 @@
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { APIVersion, AppEnv, Organization } from "@autumn/shared";
-import chalk from "chalk";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-
-import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
-
-import { addPrefixToProducts } from "tests/attach/utils.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { addHours, addMonths } from "date-fns";
+import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
 import { expect } from "chai";
+import chalk from "chalk";
+import { addHours, addMonths } from "date-fns";
+import type Stripe from "stripe";
+import { addPrefixToProducts } from "tests/attach/utils.js";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
-import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
-import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
 const testCase = "customInterval2";
 
-export let pro = constructRawProduct({
+export const pro = constructRawProduct({
 	id: "pro",
 	items: [
 		constructArrearItem({
@@ -34,8 +31,8 @@ export let pro = constructRawProduct({
 });
 
 describe(`${chalk.yellowBright(`${testCase}: Testing custom interval on arrear prorated price`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
@@ -74,7 +71,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval on arrear p
 		testClockId = testClockId1!;
 	});
 
-	it("should attach pro product", async function () {
+	it("should attach pro product", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,
@@ -86,8 +83,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval on arrear p
 		});
 	});
 
-	let usage = 100012;
-	it("should upgrade to premium product and have correct invoice next cycle", async function () {
+	const usage = 100012;
+	it("should upgrade to premium product and have correct invoice next cycle", async () => {
 		await autumn.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Words,

@@ -1,5 +1,5 @@
 import {
-	APIVersion,
+	ApiVersion,
 	AttachBranch,
 	type AttachConfig,
 	SuccessCode,
@@ -30,7 +30,7 @@ export const handleAddProduct = async ({
 	config?: AttachConfig;
 	branch?: AttachBranch;
 }) => {
-	const logger = req.logtail;
+	const { logger } = req;
 	const { customer, products, prices } = attachParams;
 
 	const defaultConfig: AttachConfig = getDefaultAttachConfig();
@@ -57,9 +57,6 @@ export const handleAddProduct = async ({
 		config: config || defaultConfig,
 		products,
 	});
-
-	// console.log("Free trial:", attachParams.freeTrial);
-	// throw new Error("test");
 
 	for (const product of products) {
 		const curCusProduct = attachParamsToCurCusProduct({ attachParams });
@@ -92,10 +89,9 @@ export const handleAddProduct = async ({
 	logger.info("Successfully created full cus product");
 
 	if (res) {
-		const apiVersion = attachParams.org.api_version || APIVersion.v1;
 		const productNames = products.map((p) => p.name).join(", ");
 		const customerName = customer.name || customer.email || customer.id;
-		if (apiVersion >= APIVersion.v1_1) {
+		if (req.apiVersion.gte(ApiVersion.V1_1)) {
 			res.status(200).json(
 				AttachResultSchema.parse({
 					success: true,

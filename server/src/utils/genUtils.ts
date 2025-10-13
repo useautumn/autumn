@@ -1,8 +1,8 @@
+import { ErrCode } from "@autumn/shared";
+import { UTCDate } from "@date-fns/utc";
 import { format } from "date-fns";
 import KSUID from "ksuid";
 import RecaseError from "./errorUtils.js";
-import { ErrCode } from "@/errors/errCodes.js";
-import { UTCDate } from "@date-fns/utc";
 
 export const generateId = (prefix: string) => {
 	if (!prefix) {
@@ -38,19 +38,23 @@ export const keyToTitle = (key: string) => {
 		.replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
-export const notNullOrUndefined = (value: any) => {
+export const notNullOrUndefined = <T>(
+	value: T | null | undefined,
+): value is T => {
 	return value !== null && value !== undefined;
 };
 
-export const nullOrUndefined = (value: any) => {
+export const nullOrUndefined = <T>(value: T | null | undefined): value is T => {
 	return value === null || value === undefined;
 };
 
-export const nullish = (value: any) => {
+export const nullish = <T>(
+	value: T | null | undefined,
+): value is null | undefined => {
 	return value === null || value === undefined;
 };
 
-export const notNullish = (value: any) => {
+export const notNullish = <T>(value: T | null | undefined): value is T => {
 	return !nullish(value);
 };
 
@@ -95,7 +99,7 @@ export const validateId = (type: string, id: string) => {
 	if (!id.match(/^[a-zA-Z0-9_-]+$/)) {
 		throw new RecaseError({
 			message: `${type} ID can only contain alphanumeric characters, underscores, and hyphens`,
-			code: ErrCode.InvalidId,
+			code: ErrCode.InvalidInputs,
 			statusCode: 400,
 		});
 	}
@@ -128,10 +132,14 @@ export const slugify = (
 ) => {
 	return text
 		.toLowerCase()
-		.replace(/ /g, type == "underscore" ? "_" : "-")
+		.replace(/ /g, type === "underscore" ? "_" : "-")
 		.replace(/[^\w\s-]/g, "");
 };
 
 export const getUnique = (vals: string[]) => {
 	return Array.from(new Set(vals));
+};
+
+export const sumValues = (vals: number[]) => {
+	return vals.reduce((acc, curr) => acc + curr, 0);
 };
