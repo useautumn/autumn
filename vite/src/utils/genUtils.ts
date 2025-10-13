@@ -150,3 +150,10 @@ export const parseNumberInput = ({
 	const numValue = Number.parseFloat(value);
 	return Number.isNaN(numValue) ? fallback : numValue;
 };
+
+export const getMetaKey = () => {
+	if (navigator.userAgent.includes("Mac")) {
+		return "⌘";
+	}
+	return "Ctrl";
+};

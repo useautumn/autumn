@@ -1,21 +1,21 @@
-import {
-	DropdownMenu,
-	DropdownMenuTrigger,
-	DropdownMenuContent,
-	DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
-import { useState } from "react";
-import { ApiKey } from "@autumn/shared";
-import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
+import type { ApiKey } from "@autumn/shared";
 import { Delete } from "lucide-react";
-import { Dialog, DialogTrigger } from "@/components/ui/dialog";
-import { DeleteApiKeyDialog } from "./DeleteApiKeyDialog";
+import { useState } from "react";
+import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
 import {
 	ContextMenu,
 	ContextMenuContent,
 	ContextMenuItem,
 	ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { DeleteApiKeyDialog } from "./DeleteApiKeyDialog";
 
 export const APIKeyToolbarItems = ({
 	apiKey,

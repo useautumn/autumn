@@ -1,6 +1,6 @@
 "use client";
 
-import type { AppEnv } from "@autumn/shared";
+import { type AppEnv, keyToTitle } from "@autumn/shared";
 import { useAppQueryStates } from "@/hooks/common/useAppQueryStates";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -27,7 +27,9 @@ function ProductsView({ env }: { env: AppEnv }) {
 	return (
 		<ProductsContext.Provider value={{}}>
 			<div className="flex flex-col gap-4 h-fit relative w-full text-sm">
-				<h1 className="text-xl font-medium shrink-0 pt-6 pl-10">Products</h1>
+				<h1 className="text-xl font-medium shrink-0 pt-6 pl-10">
+					{keyToTitle(tab)}
+				</h1>
 
 				{tab === "products" && <ProductsPage />}
 				{tab === "features" && <FeaturesPage />}

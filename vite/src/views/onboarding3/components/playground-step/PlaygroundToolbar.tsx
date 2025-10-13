@@ -28,7 +28,7 @@ export const PlaygroundToolbar = () => {
 	const handlePlanSelect = useOnboardingStore((s) => s.handlePlanSelect);
 	const onCreatePlanSuccess = useOnboardingStore((s) => s.onCreatePlanSuccess);
 	return (
-		<div className="flex gap-2 items-center justify-between">
+		<div className="flex gap-2 items-center justify-between mt-4">
 			<GroupedTabButton
 				value={playgroundMode}
 				onValueChange={(val) => setPlaygroundMode(val as "edit" | "preview")}

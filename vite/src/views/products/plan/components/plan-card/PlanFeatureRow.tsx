@@ -113,16 +113,11 @@ export const PlanFeatureRow = ({
 			role="button"
 			tabIndex={0}
 			data-state={isSelected ? "open" : "closed"}
+			{...(isDisabled && { "data-disabled": true })}
 			data-pressed={isPressed}
 			className={cn(
-				"flex w-full group !h-9 group/row input-base input-shadow-tiny select-bg select-none",
-
-				!isDisabled &&
-					!isSelected &&
-					"hover:!bg-hover-primary focus-visible:!bg-hover-primary focus-visible:!border-primary active:!bg-active-primary",
-
-				!isDisabled && isSelected && "!bg-hover-primary !border-primary",
-
+				"flex w-full group !h-9 group/row select-none outline-none",
+				"input-base input-shadow-tiny input-state-open-tiny",
 				isDisabled && "pointer-events-none cursor-default",
 			)}
 			onMouseDown={(e) => {
@@ -167,11 +162,11 @@ export const PlanFeatureRow = ({
 					</p>
 				</div>
 				<CopyButton
-					// hide={true}
 					text={item.feature_id || ""}
 					disableActive={true}
 					size="sm"
 					variant="skeleton"
+					tabIndex={-1}
 					className="absolute right-0 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-50 bg-hover-primary"
 				/>
 			</div>
@@ -188,6 +183,7 @@ export const PlanFeatureRow = ({
 					aria-label="Delete feature"
 					variant="skeleton"
 					disableActive={true}
+					tabIndex={-1}
 				/>
 
 				{/* <div className="group/btn cursor-grab active:cursor-grabbing flex items-center justify-center p-1 w-6 h-6">

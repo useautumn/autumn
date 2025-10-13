@@ -7,7 +7,9 @@ import {
 	TooltipTrigger,
 } from "@/components/v2/tooltips/Tooltip";
 import { useEnv } from "@/utils/envUtils";
-import { navigateTo } from "@/utils/genUtils";
+import { pushPage } from "@/utils/genUtils";
+import { useOnboarding3QueryState } from "../hooks/useOnboarding3QueryState";
+import { OnboardingStep } from "../utils/onboardingUtils";
 
 interface ExitButtonProps {
 	position?: "fixed" | "absolute";
@@ -16,6 +18,24 @@ interface ExitButtonProps {
 export function ExitButton({ position = "absolute" }: ExitButtonProps) {
 	const navigate = useNavigate();
 	const env = useEnv();
+	const { queryStates } = useOnboarding3QueryState();
+	const step = queryStates.step;
+
+	// Hide exit button on integration step (step 5)
+	if (step === OnboardingStep.Integration) {
+		return null;
+	}
+
+	const handleExit = () => {
+		pushPage({
+			navigate,
+			path: "/products",
+			queryParams: {
+				tab: "products",
+			},
+			preserveParams: true,
+		});
+	};
 
 	return (
 		<div className={`${position} top-4 left-4 z-10`}>
@@ -24,7 +44,7 @@ export function ExitButton({ position = "absolute" }: ExitButtonProps) {
 					<IconButton
 						variant="skeleton"
 						size="sm"
-						onClick={() => navigateTo("/products?tab=products", navigate, env)}
+						onClick={handleExit}
 						icon={<ArrowLeftIcon className="size-4" />}
 					>
 						Exit to Dashboard

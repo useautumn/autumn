@@ -146,7 +146,7 @@ const IconCheckbox = React.forwardRef<HTMLButtonElement, IconCheckboxProps>(
 				className={cn(
 					iconButtonVariants({ iconOrientation }),
 					iconToMainClass(),
-					"input-base input-shadow-tiny select-bg",
+					"input-base input-shadow-tiny input-state-open-tiny",
 					className,
 				)}
 				onClick={handleClick}

@@ -3,6 +3,7 @@ import { TrashSimpleIcon } from "@phosphor-icons/react";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { IconButton } from "@/components/v2/buttons/IconButton";
+import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { addTier, removeTier, updateTier } from "../../utils/tierUtils";
@@ -77,7 +78,7 @@ export function PriceTiers() {
 
 		return (
 			<div className="space-y-2">
-				<div className="text-form-label">Pricing Tiers</div>
+				<FormLabel>Pricing Tiers</FormLabel>
 				<div className="flex gap-2 w-full items-center">
 					<div className="w-32">
 						<Input
@@ -113,7 +114,7 @@ export function PriceTiers() {
 	// Multi-tier UI - full tier management
 	return (
 		<div className="space-y-2">
-			<div className="text-form-label">Pricing Tiers</div>
+			<FormLabel>Pricing Tiers</FormLabel>
 			{tiers.map((tier: PriceTier, index: number) => {
 				const isInfinite = tier.to === Infinite;
 				const toKey = `tier-${index}-to`;

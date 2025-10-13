@@ -10,6 +10,24 @@ import { CodeSpan } from "@/views/onboarding2/integrate/components/CodeSpan";
 import { SectionHeader } from "./SectionHeader";
 
 export const PricingTableSection = () => {
+	const snippet = `import { AutumnProvider } from "autumn-js/react";
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode,
+}) {
+  return (
+    <html>
+      <body>
+        <AutumnProvider>
+          {children}
+        </AutumnProvider>
+      </body>
+    </html>
+  );
+}`;
+
 	return (
 		<div className="flex flex-col gap-4">
 			<SectionHeader
@@ -29,31 +47,11 @@ export const PricingTableSection = () => {
 							<CodeGroupList>
 								<CodeGroupTab value="react">layout.tsx</CodeGroupTab>
 								<CodeGroupCopyButton
-									onCopy={() =>
-										navigator.clipboard.writeText(
-											`AUTUMN_SECRET_KEY=am_sk_12345`,
-										)
-									}
+									onCopy={() => navigator.clipboard.writeText(snippet)}
 								/>
 							</CodeGroupList>
-							<CodeGroupContent value="react">
-								<CodeGroupCode language="jsx">{`import { AutumnProvider } from "autumn-js/react";
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode,
-}) {
-  return (
-    <html>
-      <body>
-        <AutumnProvider>
-          {children}
-        </AutumnProvider>
-      </body>
-    </html>
-  );
-}`}</CodeGroupCode>
+							<CodeGroupContent value="react" copyText={snippet}>
+								<CodeGroupCode language="jsx">{snippet}</CodeGroupCode>
 							</CodeGroupContent>
 						</CodeGroup>
 					</div>

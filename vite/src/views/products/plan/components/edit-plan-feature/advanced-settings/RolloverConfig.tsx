@@ -99,13 +99,13 @@ export function RolloverConfig() {
 					}}
 				>
 					<div
-						className="space-y-4"
+						className="space-y-4 w-xs max-w-full"
 						// onClick={(e) => e.stopPropagation()}
 						// onKeyDown={(e) => e.stopPropagation()}
 					>
-						<div className="space-y-2">
+						<div className="space-y-2 w-full">
 							<FormLabel>Maximum rollover amount</FormLabel>
-							<div className="flex items-center gap-2 w-2/3">
+							<div className="flex items-center gap-2">
 								<Input
 									type="number"
 									value={
@@ -142,7 +142,7 @@ export function RolloverConfig() {
 
 						<div className="space-y-2">
 							<FormLabel>Rollover duration</FormLabel>
-							<div className="flex items-center gap-2 w-2/3">
+							<div className="flex items-center gap-2">
 								{rollover?.duration === RolloverDuration.Month && (
 									<Input
 										type="number"
@@ -152,7 +152,7 @@ export function RolloverConfig() {
 											const numValue = value === "" ? 0 : parseInt(value) || 0;
 											setRolloverConfigKey("length", numValue);
 										}}
-										className="w-32"
+										className="w-16"
 										placeholder="e.g. 1 month"
 										onClick={(e) => e.stopPropagation()}
 									/>
