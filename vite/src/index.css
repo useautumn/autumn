@@ -176,7 +176,7 @@ html {
 	--color-primary-foreground: var(--primary-foreground);
 	--color-primary-btn-hover: #a568ff; /* primary button hover */
 	--color-primary-btn-active: #9b5afb; /* primary button active */
-	--color-primary-btn-border: #8838ff; /* primary button border */
+	--color-primary-btn-border: var(--primary); /* primary button border */
 
 	--color-muted-hover: #f2ebff;
 	--color-muted-active: #f2e9ff;

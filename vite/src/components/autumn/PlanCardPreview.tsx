@@ -68,7 +68,7 @@ export const PlanCardPreview = ({
 	return (
 		<Card
 			className={cn(
-				"min-w-[280px] max-w-md bg-white shadow-md flex flex-col border-none shadow-[inset_0_0_0_0.5px_#d1d1d1] !gap-0",
+				"min-w-[280px] max-w-md bg-white shadow-md flex flex-col border-none shadow-[inset_0_0_0_0.5px_var(--t10)] !gap-0",
 				recommended && "ring-2 ring-primary",
 			)}
 		>
