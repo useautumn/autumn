@@ -62,7 +62,7 @@ export default function PlanEditorView() {
 					setSheet({ type: "edit-plan" });
 				}}
 			/>
-			<div className="flex w-full h-full overflow-y-auto bg-[#eee]">
+			<div className="flex w-full h-full overflow-y-auto bg-gray-medium">
 				<div className="flex flex-col justify-between h-full w-full overflow-x-hidden relative">
 					<EditPlanHeader />
 					<ManagePlan />

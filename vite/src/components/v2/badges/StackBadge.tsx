@@ -49,7 +49,7 @@ export default function StackBadge({
 				className={cn(
 					"size-auto p-1 rounded-tl rounded-bl shadow-[inset_0px_-3px_4px_0px_rgba(0,0,0,0.06)] shadow-[inset_0px_3px_4px_0px_rgba(255,255,255,0.10)] outline outline-1 outline-offset-[-1px] flex justify-center items-center gap-2.5",
 					isSelected
-						? "bg-[#f9f5ff] outline-primary"
+						? "bg-light-purple outline-primary"
 						: "bg-neutral-50 outline-neutral-300",
 				)}
 			>

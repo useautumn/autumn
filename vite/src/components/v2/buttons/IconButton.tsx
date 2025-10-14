@@ -55,9 +55,9 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
 				case "skeleton":
 					return "text-t3";
 				case "primary":
-					return "text-[#f3f3f3]";
+					return "text-table-hover";
 				case "destructive":
-					return "text-[#FEE1E1]";
+					return "text-error-light";
 				default:
 					return "text-t3"; // Default fallback
 			}

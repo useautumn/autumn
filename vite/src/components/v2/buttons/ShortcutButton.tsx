@@ -44,7 +44,7 @@ export const ShortcutButton = ({
 		const variantClasses =
 			variant === "secondary"
 				? "bg-muted text-body-secondary"
-				: "bg-[#B07AFF] !text-primary-foreground";
+				: "bg-purple-medium !text-primary-foreground";
 
 		return (
 			<div className={`${baseClasses} ${variantClasses}`}>
@@ -62,7 +62,7 @@ export const ShortcutButton = ({
 	const getShortcutDisplay = () => {
 		if (metaShortcut) {
 			if (metaShortcut === "enter") return "↵";
-			if (metaShortcut === "arrowleft") return "←";
+			if (metaShortcut === "backspace") return "⌫";
 			return metaShortcut.toUpperCase();
 		}
 		if (singleShortcut) {

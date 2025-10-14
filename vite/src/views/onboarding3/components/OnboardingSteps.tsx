@@ -38,7 +38,7 @@ export const OnboardingSteps = ({ className }: OnboardingStepsProps) => {
 				className,
 			)}
 		>
-			<div className="self-stretch w-full h-6 px-2.5 py-3 bg-white rounded-lg shadow-[inset_0px_-3px_4px_0px_rgba(0,0,0,0.04)] outline-1 outline-offset-[-1px] outline-[#ddd] inline-flex justify-start items-center gap-1">
+			<div className="self-stretch w-full h-6 px-2.5 py-3 bg-white rounded-lg shadow-[inset_0px_-3px_4px_0px_rgba(0,0,0,0.04)] outline-1 outline-offset-[-1px] outline-border inline-flex justify-start items-center gap-1">
 				{Array.from({ length: totalSteps }).map((_, index) => {
 					const isCompleted = index < currentStep;
 					return (
@@ -62,7 +62,7 @@ export const OnboardingSteps = ({ className }: OnboardingStepsProps) => {
 					disabled={backDisabled || !handleBack}
 					size="sm"
 					className="min-w-24 px-2 text-xs outline-1"
-					metaShortcut="arrowleft"
+					metaShortcut="backspace"
 				>
 					Back
 				</ShortcutButton>
