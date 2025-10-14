@@ -1,5 +1,5 @@
+import type { Stripe } from "stripe";
 import { timeout } from "@/utils/genUtils.js";
-import { Stripe } from "stripe";
 
 export const getAllStripeSubscriptions = async ({
 	numPages,
@@ -23,6 +23,10 @@ export const getAllStripeSubscriptions = async ({
 			starting_after: startingAfter || undefined,
 			expand: ["data.discounts.coupon"],
 		});
+
+		if (response.data.length === 0) {
+			break;
+		}
 
 		allSubscriptions.push(...response.data);
 
