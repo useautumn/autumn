@@ -1,3 +1,4 @@
+import { queryStringArray } from "@api/common/queryHelpers.js";
 import { z } from "zod/v4";
 
 /**
@@ -5,24 +6,19 @@ import { z } from "zod/v4";
  */
 export const ListPlatformUsersQuerySchema = z.object({
 	limit: z
-		.number({
-			error: "limit must be a number",
-		})
-		.int({ message: "limit must be an integer" })
-		.min(1, { message: "limit must be at least 1" })
-		.max(100, { message: "limit must be at most 100" })
+		.number()
+		.int({ error: "limit must be an integer" })
+		.min(1, { error: "limit must be at least 1" })
+		.max(100, { error: "limit must be at most 100" })
 		.default(10),
 
 	offset: z
-		.number({
-			error: "offset must be a number",
-		})
-		.int({ message: "offset must be an integer" })
-		.min(0, { message: "offset must be at least 0" })
+		.number({ error: "offset must be a number" })
+		.int({ error: "offset must be an integer" })
+		.min(0, { error: "offset must be at least 0" })
 		.default(0),
 
-	expand: z
-		.enum(["organizations"])
+	expand: queryStringArray(z.enum(["organizations"]))
 		.optional()
 		.describe(
 			"Comma-separated list of fields to expand. Currently supports: organizations",
@@ -39,7 +35,9 @@ export type ListPlatformUsersQuery = z.infer<
 export const ApiPlatformOrgSchema = z.object({
 	slug: z.string().describe("Organization slug without the master org prefix"),
 	name: z.string().describe("Organization name"),
-	created_at: z.string().describe("ISO 8601 timestamp of when org was created"),
+	created_at: z
+		.number()
+		.describe("Timestamp of when org was created in milliseconds since epoch"),
 });
 
 export type ApiPlatformOrg = z.infer<typeof ApiPlatformOrgSchema>;
@@ -51,8 +49,8 @@ export const ApiPlatformUserSchema = z.object({
 	name: z.string().describe("User name"),
 	email: z.string().describe("User email"),
 	created_at: z
-		.string()
-		.describe("ISO 8601 timestamp of when user was created"),
+		.number()
+		.describe("Timestamp of when user was created in milliseconds since epoch"),
 	organizations: z
 		.array(ApiPlatformOrgSchema)
 		.optional()
