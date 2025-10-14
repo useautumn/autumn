@@ -1,31 +1,35 @@
-import { Button } from "@/components/ui/button";
-import Step from "@/components/general/OnboardingStep";
-
-import { PageSectionHeader } from "@/components/general/PageSectionHeader";
-import { useEnv } from "@/utils/envUtils";
-import { ManageProduct } from "@/views/products/product/ManageProduct";
-import { ProductContext } from "@/views/products/product/ProductContext";
-import { ProductsContext } from "@/views/products/ProductsContext";
-import { Product, ProductItem, products, ProductV2 } from "@autumn/shared";
 import {
-	DialogContent,
-	DialogTitle,
-	DialogFooter,
-} from "@/components/ui/dialog";
-import { useEffect, useState } from "react";
-import { Dialog } from "@/components/ui/dialog";
-import { ProductService } from "@/services/products/ProductService";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { getBackendErr } from "@/utils/genUtils";
-import { toast } from "sonner";
-import { useSearchParams } from "react-router";
+	Product,
+	type ProductItem,
+	type ProductV2,
+	products,
+} from "@autumn/shared";
 import { Check } from "lucide-react";
-import { CreateFreeTrial } from "@/views/products/product/free-trial/CreateFreeTrial";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router";
+import { toast } from "sonner";
+import Step from "@/components/general/OnboardingStep";
+import { PageSectionHeader } from "@/components/general/PageSectionHeader";
+import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ProductService } from "@/services/products/ProductService";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useEnv } from "@/utils/envUtils";
+import { getBackendErr } from "@/utils/genUtils";
+import { ProductsContext } from "@/views/products/ProductsContext";
+import { CreateFreeTrial } from "@/views/products/product/free-trial/CreateFreeTrial";
+import { ManageProduct } from "@/views/products/product/ManageProduct";
+import { ProductContext } from "@/views/products/product/ProductContext";
 import CreateProduct from "@/views/products/products/components/CreateProductDialog";
 import { ProductsTable } from "@/views/products/products/components/ProductsTable";
 
@@ -72,8 +76,8 @@ export const ProductList = ({
 			number={1}
 			description={
 				<p>
-					Create products for any free plans, paid plans and any add-on or top
-					up products that your application offers.
+					Create products for any free products, paid products and any add-on or
+					top up products that your application offers.
 				</p>
 			}
 		>
@@ -311,6 +315,9 @@ export const EditProductDialog = ({
 					</div>
 				</DialogFooter>
 			</DialogContent>
+		</Dialog>
+	);
+};
 		</Dialog>
 	);
 };

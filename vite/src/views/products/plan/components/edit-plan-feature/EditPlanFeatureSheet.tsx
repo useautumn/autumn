@@ -41,7 +41,9 @@ export function EditPlanFeatureSheet({
 						<BillingType />
 					</SheetSection>
 
-					<SheetSection title="Included usage (optional)">
+					<SheetSection
+						title={`Included usage ${isFeaturePrice ? "(optional)" : ""}`}
+					>
 						<IncludedUsage />
 					</SheetSection>
 
@@ -58,9 +60,13 @@ export function EditPlanFeatureSheet({
 			)}
 
 			{feature?.type === FeatureType.Boolean && (
-				<span className="p-4 text-body-secondary">
-					to do: better empty state for boolean features
-				</span>
+				<div className="p-4 flex flex-col gap-2 min-h-full items-center justify-center">
+					<h1 className="text-sub">Nothing to do here...</h1>
+					<p className="text-body-secondary max-w-[75%]">
+						Boolean features are simply included in the
+						<br /> product without any further configuration.
+					</p>
+				</div>
 			)}
 		</>
 	);

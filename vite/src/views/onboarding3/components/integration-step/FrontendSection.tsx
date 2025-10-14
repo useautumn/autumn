@@ -12,8 +12,8 @@ import { SectionHeader } from "./SectionHeader";
 import { getFrontendSnippet } from "./snippets";
 
 export const FrontendSection = () => {
-	const { selectedStack } = useIntegrationContext();
-	const snippet = getFrontendSnippet(selectedStack);
+	const { selectedFrontend } = useIntegrationContext();
+	const snippet = getFrontendSnippet(selectedFrontend);
 	return (
 		<div className="flex flex-col gap-4">
 			<SectionHeader
@@ -38,9 +38,9 @@ export const FrontendSection = () => {
 						<CodeGroup value="react">
 							<CodeGroupList>
 								<CodeGroupTab value="react">
-									{selectedStack === "nextjs"
+									{selectedFrontend === "nextjs"
 										? "layout.tsx"
-										: selectedStack === "rr7"
+										: selectedFrontend === "rr7"
 											? "app/root.tsx"
 											: "App.tsx"}
 								</CodeGroupTab>

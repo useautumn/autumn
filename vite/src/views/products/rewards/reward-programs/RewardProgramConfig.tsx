@@ -1,4 +1,5 @@
 import {
+	type ProductV2,
 	type Reward,
 	type RewardProgram,
 	RewardReceivedBy,
@@ -7,7 +8,6 @@ import {
 import { Check, ChevronsUpDown, X } from "lucide-react";
 import { useState } from "react";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { Button } from "@/components/ui/button";
 import {
 	Command,
 	CommandEmpty,
@@ -16,20 +16,21 @@ import {
 	CommandItem,
 	CommandList,
 } from "@/components/ui/command";
-import { Input } from "@/components/ui/input";
 import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/v2/buttons/Button";
+import { Input } from "@/components/v2/inputs/Input";
 import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/ui/select";
+} from "@/components/v2/selects/Select";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
@@ -194,7 +195,7 @@ const ProductSelector = ({
 	}
 
 	const getProductText = (productId: string) => {
-		const product = products.find((p: any) => p.id === productId);
+		const product = products.find((p: ProductV2) => p.id === productId);
 		return product?.name || "Unknown Product";
 	};
 
@@ -202,24 +203,22 @@ const ProductSelector = ({
 		<Popover modal open={open} onOpenChange={setOpen}>
 			<PopoverTrigger asChild>
 				<Button
-					variant="outline"
+					variant="muted"
 					role="combobox"
 					aria-expanded={open}
 					className="w-full min-h-9 flex flex-wrap h-fit py-2 justify-start items-center gap-2 relative hover:bg-zinc-50 data-[state=open]:border-focus data-[state=open]:shadow-focus"
 				>
-					{rewardProgram.product_ids?.length === 0 ? (
-						"Select Products"
-					) : (
-						<>
-							{rewardProgram.product_ids?.map((productId: string) => (
+					{rewardProgram.product_ids?.length === 0
+						? "Select Products"
+						: rewardProgram.product_ids?.map((productId: string) => (
 								<div
 									key={productId}
 									className="py-0 px-3 text-xs text-t3 border-zinc-300 bg-zinc-100 rounded-full w-fit flex items-center gap-2 h-fit"
 								>
 									<p className="text-t2">{getProductText(productId)}</p>
 									<Button
-										variant="ghost"
-										size="icon"
+										variant="skeleton"
+										size="sm"
 										onClick={(e) => {
 											e.stopPropagation();
 											handleProductToggle(productId);
@@ -230,8 +229,6 @@ const ProductSelector = ({
 									</Button>
 								</div>
 							))}
-						</>
-					)}
 					<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 absolute right-2" />
 				</Button>
 			</PopoverTrigger>
@@ -242,7 +239,7 @@ const ProductSelector = ({
 						<ScrollArea>
 							<CommandEmpty>No products found.</CommandEmpty>
 							<CommandGroup>
-								{products.map((product: any) => (
+								{products.map((product: ProductV2) => (
 									<CommandItem
 										key={product.id}
 										value={product.id}

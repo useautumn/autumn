@@ -20,6 +20,8 @@
 
 - Prefer Guard clauses "if(!admin) return;" over explicity "if(admin) do X;" Early returns are better
 
+- Do not run "npx tsc" - run "tsc" instead as it is installed globally.
+
 ## Bad example
 / root
 -> components
