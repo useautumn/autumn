@@ -25,7 +25,7 @@ RUN bun run build
 FROM base AS vite-build
 COPY --from=shared-build /app/shared/dist ./shared/dist
 COPY . .
-WORKDIR /app
+WORKDIR /app/vite
 RUN bun run build
 
 # ---- Build backend (server) ----
@@ -38,7 +38,7 @@ WORKDIR /app
 # ---- Production frontend image ----
 FROM vite-build AS vite-prod
 EXPOSE 3000
-WORKDIR /app
+WORKDIR /app/vite
 CMD ["bun", "start"]
 
 FROM server-build AS server-prod
