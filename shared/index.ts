@@ -5,6 +5,7 @@ export { schemas };
 // API MODELS
 export * from "./api/models.js";
 export * from "./api/operations.js";
+export * from "./api/platform/platformModels.js";
 
 // API VERSIONING SYSTEM
 export * from "./api/versionUtils/versionUtils.js";
