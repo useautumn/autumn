@@ -29,42 +29,25 @@ export const useAutoSkipToPlayground = () => {
 		queryStates.step === OnboardingStep.PlanDetails,
 	);
 
-	console.log("Called useAutoSkipToPlayground()", isChecking);
 	useEffect(() => {
-		console.log("inside useAutoSkipToPlayground()");
-
 		// If we're not on the initial step or not on PlanDetails, we're not checking
 		if (initialStep.current !== OnboardingStep.PlanDetails) {
-			console.log(
-				"Skipping as initial step ",
-				initialStep.current,
-				" is not ",
-				OnboardingStep.PlanDetails,
-			);
 			setIsChecking(false);
 			return;
 		}
 
 		if (queryStates.step !== OnboardingStep.PlanDetails) {
-			console.log(
-				"Skipping as current step ",
-				queryStates.step,
-				" is not ",
-				OnboardingStep.PlanDetails,
-			);
 			setIsChecking(false);
 			return;
 		}
 
 		// Only perform the check once when we have data
 		if (hasPerformedCheck.current) {
-			console.log("Already performed check");
 			return;
 		}
 
 		// If features are still loading, wait
 		if (featuresLoading) {
-			console.log("Features still loading, waiting...");
 			return;
 		}
 
@@ -74,7 +57,6 @@ export const useAutoSkipToPlayground = () => {
 
 		// If no product exists (empty org), we can't skip - show Step 1
 		if (!product?.id) {
-			console.log("No product found - showing Step 1 for empty org");
 			setIsChecking(false);
 			return;
 		}
@@ -92,18 +74,20 @@ export const useAutoSkipToPlayground = () => {
 					features.some((f) => f.id === item.feature_id),
 			);
 
-		console.log("Checking conditions - hasProduct:", hasProduct, "hasFeature:", hasFeature, "hasFeatureItem:", hasFeatureItem);
-
 		// If all conditions met, skip to playground
 		if (hasProduct && hasFeature && hasFeatureItem) {
-			console.log("All conditions met - skipping to playground");
 			setQueryStates({ step: OnboardingStep.Playground });
 		}
 
-		// Done checking - always set to false after we've checked
-		console.log("Done checking - setting isChecking to false");
 		setIsChecking(false);
-	}, [product?.id, features, featuresLoading, setQueryStates, queryStates.step]);
+	}, [
+		product?.id,
+		product?.items.some,
+		features,
+		featuresLoading,
+		setQueryStates,
+		queryStates.step,
+	]);
 
 	return { isChecking };
 };
