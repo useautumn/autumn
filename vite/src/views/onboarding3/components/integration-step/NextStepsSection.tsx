@@ -26,7 +26,7 @@ const NextStepCard = ({ title, description, href }: NextStepCardProps) => {
 		>
 			<Card
 				className={cn(
-					"gap-1 my-0 cursor-pointer",
+					"group gap-1 my-0 cursor-pointer",
 					"hover:!bg-hover-primary hover:border-primary",
 				)}
 			>
@@ -36,6 +36,7 @@ const NextStepCard = ({ title, description, href }: NextStepCardProps) => {
 						icon={<ArrowSquareOutIcon className="ml-auto" />}
 						variant="skeleton"
 						disableActive
+						className="pointer-events-none"
 					/>
 				</CardHeader>
 				<CardContent>
