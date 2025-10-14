@@ -43,9 +43,9 @@ const skipIds = [
 	"DxG668K7uDd0Vahk54YWjvCGVgf2",
 ];
 
-orgSlugs = ["supermemory"];
-let customerId = null;
-customerId = "EBbxiRv9QJKXFy5WiAKeHi";
+orgSlugs = ["lumenary"];
+const customerId = null;
+// customerId = "EBbxiRv9QJKXFy5WiAKeHi";
 
 const getSingleCustomer = async ({
 	stripeCli,
