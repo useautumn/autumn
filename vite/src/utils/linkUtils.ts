@@ -11,11 +11,10 @@ export const getStripeCusLink = ({
 	env: AppEnv;
 	accountId?: string;
 }) => {
-	const baseUrl = `https://dashboard.stripe.com${
-		env === AppEnv.Live ? "" : "/test"
-	}`;
+	const baseUrl = `https://dashboard.stripe.com`;
 	const accountPath = accountId ? `/${accountId}` : "";
-	return `${baseUrl}${accountPath}/customers/${customerId}`;
+	const withTest = env === AppEnv.Live ? "" : "/test";
+	return `${baseUrl}${accountPath}${withTest}/customers/${customerId}`;
 };
 
 export const getStripeSubLink = ({
@@ -27,11 +26,10 @@ export const getStripeSubLink = ({
 	env: AppEnv;
 	accountId?: string;
 }) => {
-	const baseUrl = `https://dashboard.stripe.com${
-		env === AppEnv.Live ? "" : "/test"
-	}`;
+	const baseUrl = `https://dashboard.stripe.com`;
 	const accountPath = accountId ? `/${accountId}` : "";
-	return `${baseUrl}${accountPath}/subscriptions/${subscriptionId}`;
+	const withTest = env === AppEnv.Live ? "" : "/test";
+	return `${baseUrl}${accountPath}${withTest}/subscriptions/${subscriptionId}`;
 };
 
 export const getStripeSubScheduleLink = ({
@@ -43,11 +41,10 @@ export const getStripeSubScheduleLink = ({
 	env: AppEnv;
 	accountId?: string;
 }) => {
-	const baseUrl = `https://dashboard.stripe.com${
-		env === AppEnv.Live ? "" : "/test"
-	}`;
+	const baseUrl = `https://dashboard.stripe.com`;
 	const accountPath = accountId ? `/${accountId}` : "";
-	return `${baseUrl}${accountPath}/subscription_schedules/${scheduledId}`;
+	const withTest = env === AppEnv.Live ? "" : "/test";
+	return `${baseUrl}${accountPath}${withTest}/subscription_schedules/${scheduledId}`;
 };
 
 export const getStripeInvoiceLink = ({
@@ -59,9 +56,8 @@ export const getStripeInvoiceLink = ({
 	env: AppEnv;
 	accountId?: string;
 }) => {
-	const baseUrl = `https://dashboard.stripe.com${
-		env === AppEnv.Live ? "" : "/test"
-	}`;
+	const baseUrl = `https://dashboard.stripe.com`;
 	const accountPath = accountId ? `/${accountId}` : "";
-	return `${baseUrl}${accountPath}/invoices/${stripeInvoice.id || stripeInvoice.stripe_id}`;
+	const withTest = env === AppEnv.Live ? "" : "/test";
+	return `${baseUrl}${accountPath}${withTest}/invoices/${stripeInvoice.id || stripeInvoice.stripe_id}`;
 };

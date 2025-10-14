@@ -121,15 +121,13 @@ export const getAttachConfig = async ({
 		isUpgradingFromDefaultTrial = isDefaultTrialFullProduct({
 			product,
 			skipDefault: true,
-		});
+		}) || false;
 	}
 
 	const checkoutFlow =
 		isPublic ||
 		forceCheckout ||
 		invoiceCheckout ||
-		branch === AttachBranch.MainIsTrial ||
-		isUpgradingFromDefaultTrial ||
 		(noPaymentMethod &&
 			!invoiceAndEnable &&
 			![
@@ -174,6 +172,7 @@ export const getAttachConfig = async ({
 			? attachBody.finalize_invoice!
 			: true,
 		requirePaymentMethod: paymentMethodRequired,
+
 	};
 
 	return { flags, config };
