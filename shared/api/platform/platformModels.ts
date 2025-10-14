@@ -6,7 +6,7 @@ import { z } from "zod/v4";
 export const ListPlatformUsersQuerySchema = z.object({
 	limit: z
 		.number({
-			invalid_type_error: "limit must be a number",
+			error: "limit must be a number",
 		})
 		.int({ message: "limit must be an integer" })
 		.min(1, { message: "limit must be at least 1" })
@@ -15,7 +15,7 @@ export const ListPlatformUsersQuerySchema = z.object({
 
 	offset: z
 		.number({
-			invalid_type_error: "offset must be a number",
+			error: "offset must be a number",
 		})
 		.int({ message: "offset must be an integer" })
 		.min(0, { message: "offset must be at least 0" })
