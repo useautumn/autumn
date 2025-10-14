@@ -75,7 +75,7 @@ export const ProductProps = () => {
 						<InfoTooltip>
 							<p>
 								This product will be enabled by default for all new users,
-								typically used for your free plan
+								typically used for your free product
 							</p>
 						</InfoTooltip>
 					</div>

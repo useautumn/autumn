@@ -42,7 +42,7 @@ export function BillingUnits() {
 	});
 
 	return (
-		<div className="flex max-w-28 min-w-28">
+		<div className="flex max-w-28 min-w-fit shrink-0">
 			<Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
 				<PopoverTrigger asChild>
 					<Button
@@ -59,8 +59,8 @@ export function BillingUnits() {
 					>
 						<span className={cn("truncate text-xs")}>
 							{item.billing_units === 1
-								? `${currency} per ${unitName}`
-								: `${currency} per ${item.billing_units} ${unitName}`}
+								? `per ${unitName}`
+								: `per ${item.billing_units} ${unitName}`}
 						</span>
 					</Button>
 				</PopoverTrigger>

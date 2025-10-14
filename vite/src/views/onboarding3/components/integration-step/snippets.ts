@@ -1,7 +1,12 @@
-import type { AuthType, CustomerType, StackType } from "./IntegrationContext";
+import type {
+	AuthType,
+	BackendStackType,
+	CustomerType,
+	FrontendStackType,
+} from "./IntegrationContext";
 
 export const getBackendSnippet = (
-	stack: StackType,
+	stack: BackendStackType,
 	auth: AuthType,
 	customerType: CustomerType,
 	_secretKey: string,
@@ -361,7 +366,7 @@ export const { GET, POST } = autumnHandler({
 });`;
 
 export const getFrontendSnippet = (
-	stack: StackType,
+	stack: FrontendStackType,
 	productId?: string,
 	featureId?: string,
 ): string => {

@@ -18,14 +18,21 @@ export function NewFeatureDetails({
 	const isExistingFeature = !!baseFeature?.internal_id;
 
 	const { setSource, setTarget } = useAutoSlug({
-		state: feature,
-		setState: setFeature as (feature: CreateFeature) => void,
-		sourceKey: "name",
-		targetKey: "id",
+		setState: setFeature,
+		sourceKey: "name" as keyof CreateFeature,
+		targetKey: "id" as keyof CreateFeature,
 		disableAutoSlug: isExistingFeature,
 	});
 
 	if (!feature) return null;
+
+	// Debug logging
+	console.log("NewFeatureDetails debug:", {
+		isExistingFeature,
+		baseFeature,
+		internal_id: baseFeature?.internal_id,
+		feature
+	});
 
 	return (
 		<SheetSection title="Feature Details">

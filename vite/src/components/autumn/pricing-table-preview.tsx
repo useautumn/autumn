@@ -50,7 +50,7 @@ export default function PricingTablePreview({
 
 	const getButtonText = (product: Product) => {
 		if (product.scenario === "active") {
-			return "Current plan";
+			return "Current product";
 		}
 		if (product.scenario === "downgrade") {
 			return "Downgrade";

@@ -8,6 +8,7 @@ import {
 	useProductStore,
 	useWillVersion,
 } from "@/hooks/stores/useProductStore";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useProductCountsQuery } from "../../product/hooks/queries/useProductCountsQuery";
 import { useProductQuery } from "../../product/hooks/useProductQuery";
@@ -28,6 +29,7 @@ export const SaveChangesBar = ({
 	// Get product state from store
 	const product = useProductStore((s) => s.product);
 	const setProduct = useProductStore((s) => s.setProduct);
+	const { type: sheetType, setSheet } = useSheetStore();
 	const hasChanges = useHasChanges();
 	const willVersion = useWillVersion();
 
@@ -79,6 +81,10 @@ export const SaveChangesBar = ({
 		const baseProduct = useProductStore.getState().baseProduct;
 		if (baseProduct) {
 			setProduct(baseProduct);
+		}
+		// If we're editing or creating a feature, go back to edit-plan
+		if (sheetType === "edit-feature" || sheetType === "new-feature") {
+			setSheet({ type: "edit-plan", itemId: null });
 		}
 	};
 

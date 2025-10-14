@@ -16,13 +16,13 @@ export const CreateProductMainDetails = () => {
 	});
 
 	return (
-		<SheetSection title="Plan Details">
+		<SheetSection title="Product Details">
 			<div className="space-y-4">
 				<div className="grid grid-cols-2 gap-2">
 					<div>
 						<FormLabel>Name</FormLabel>
 						<Input
-							placeholder="eg. Pro Plan"
+							placeholder="eg. Pro Product"
 							value={product.name}
 							onChange={(e) => setSource(e.target.value)}
 						/>

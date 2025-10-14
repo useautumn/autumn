@@ -38,8 +38,9 @@ export const DeletePlanDialog = ({
 	const product = useProductStore((s) => s.product);
 	const [loading, setLoading] = useState(false);
 	const [deleteAllVersions, setDeleteAllVersions] = useState(false);
-	const { refetch: refetchProducts } = useProductsQuery();
-	const { refetch: refetchProduct } = useProductQuery();
+	const { invalidate: invalidateProducts } = useProductsQuery();
+	const { invalidate: invalidateProduct, refetch: refetchProduct } =
+		useProductQuery();
 
 	const { data: productInfo, isLoading } = useGeneralQuery({
 		url: `/products/${product.id}/info`,
@@ -56,16 +57,16 @@ export const DeletePlanDialog = ({
 				deleteAllVersions,
 			);
 
-			await refetchProducts();
+			await Promise.all([invalidateProducts(), invalidateProduct()]);
 			setOpen(false);
-			toast.success("Plan deleted successfully");
+			toast.success("Product deleted successfully");
 
 			// Call onDeleteSuccess callback if provided (for onboarding)
 			if (onDeleteSuccess) {
 				await onDeleteSuccess();
 			}
 		} catch (error: unknown) {
-			toast.error(getBackendErr(error as AxiosError, "Error deleting plan"));
+			toast.error(getBackendErr(error as AxiosError, "Error deleting product"));
 		} finally {
 			setLoading(false);
 		}
@@ -79,9 +80,9 @@ export const DeletePlanDialog = ({
 			});
 			toast.success(`${product.name} archived successfully`);
 			setOpen(false);
-			Promise.all([refetchProducts(), refetchProduct()]);
+			await Promise.all([invalidateProducts(), invalidateProduct()]);
 		} catch (error) {
-			toast.error(getBackendErr(error, "Error archiving plan"));
+			toast.error(getBackendErr(error, "Error archiving product"));
 		} finally {
 			setLoading(false);
 		}
@@ -97,7 +98,7 @@ export const DeletePlanDialog = ({
 			toast.success(`${product.name} unarchived successfully`);
 			setOpen(false);
 		} catch (error) {
-			toast.error(getBackendErr(error, "Error unarchiving plan"));
+			toast.error(getBackendErr(error, "Error unarchiving product"));
 		} finally {
 			setLoading(false);
 		}
@@ -118,8 +119,8 @@ export const DeletePlanDialog = ({
 		// \n\nNote: If there are multiple versions, this will unarchive all versions at once.
 
 		const isMultipleVersions = productInfo?.numVersion > 1;
-		const versionText = deleteAllVersions ? "plan" : "version";
-		const productText = isMultipleVersions ? versionText : "plan";
+		const versionText = deleteAllVersions ? "product" : "version";
+		const productText = isMultipleVersions ? versionText : "product";
 
 		const messageTemplates = {
 			withCustomers: {
@@ -130,9 +131,9 @@ export const DeletePlanDialog = ({
 					otherCount: number,
 					productText: string,
 				) =>
-					`${customerName} and ${otherCount} other customer${otherCount > 1 ? "s" : ""} are on this ${productText}. Are you sure you want to archive this plan?`,
+					`${customerName} and ${otherCount} other customer${otherCount > 1 ? "s" : ""} are on this ${productText}. Are you sure you want to archive this product?`,
 				fallback: (productText: string) =>
-					`There are customers on this ${productText}. Deleting this ${productText} will remove it from their accounts. Are you sure you want to continue? You can also archive the plan instead.`,
+					`There are customers on this ${productText}. Deleting this ${productText} will remove it from their accounts. Are you sure you want to continue? You can also archive the product instead.`,
 			},
 			withoutCustomers: (productText: string) =>
 				`Are you sure you want to delete this ${productText}? This action cannot be undone.`,
@@ -203,7 +204,7 @@ export const DeletePlanDialog = ({
 							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value="latest">Delete latest version</SelectItem>
-								<SelectItem value="all">Archive plan</SelectItem>
+								<SelectItem value="all">Archive product</SelectItem>
 							</SelectContent>
 						</Select>
 					)}

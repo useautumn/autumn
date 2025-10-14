@@ -175,10 +175,10 @@
 		"calt" 1;
 
 	/* Default color for symbols without classes */
-	color: #444444 !important;
+	color: var(--color-t12) !important;
 
 	& code {
-		color: #444444 !important;
+		color: var(--color-t12) !important;
 	}
 
 	/* Keywords: import, from, const, async, if, etc. */
@@ -188,7 +188,7 @@
 
 	/* Operators: :, =, !, etc. - override keyword color */
 	& .pl-k.pl-operator {
-		color: #444444 !important;
+		color: var(--color-t12) !important;
 	}
 
 	/* Strings */

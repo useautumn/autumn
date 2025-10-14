@@ -3,8 +3,9 @@ import type { ReactNode } from "react";
 import StackBadge from "@/components/v2/badges/StackBadge";
 import {
 	type AuthType,
+	type BackendStackType,
 	type CustomerType,
-	type StackType,
+	type FrontendStackType,
 	useIntegrationContext,
 } from "./IntegrationContext";
 import { SectionHeader } from "./SectionHeader";
@@ -23,7 +24,7 @@ type StackOption =
 			icon: ReactNode;
 	  };
 
-const _FRONTEND_OPTIONS: StackOption[] = [
+const FRONTEND_OPTIONS: StackOption[] = [
 	{ value: "nextjs", label: "Next.js", asset: "/frameworks/nextjs.png" },
 	{ value: "rr7", label: "RR7", asset: "/frameworks/react-router.svg" },
 	{ value: "vite", label: "Vite SPA", asset: "/frameworks/vite.svg" },
@@ -69,8 +70,10 @@ const CUSTOMER_TYPE_OPTIONS: StackOption[] = [
 
 export const StackSelectionSection = () => {
 	const {
-		selectedStack,
-		setSelectedStack,
+		selectedFrontend,
+		setSelectedFrontend,
+		selectedBackend,
+		setSelectedBackend,
 		selectedAuth,
 		setSelectedAuth,
 		customerType,
@@ -86,18 +89,35 @@ export const StackSelectionSection = () => {
 			/>
 
 			<div className="pl-[32px] flex flex-col gap-6">
+				{/* Frontend */}
+				<div className="flex flex-col gap-2.5">
+					<h3 className="text-sub-secondary text-t12">Frontend</h3>
+					<div className="flex flex-row gap-2 flex-wrap">
+						{FRONTEND_OPTIONS.map((option) => (
+							<StackBadge
+								key={option.value}
+								stack={option.label}
+								asset={option.asset}
+								isSelected={selectedFrontend === option.value}
+								onSelectedChange={() =>
+									setSelectedFrontend(option.value as FrontendStackType)
+								}
+							/>
+						))}
+					</div>
+				</div>
 				{/* Backend */}
 				<div className="flex flex-col gap-2.5">
-					<h3 className="text-sub-secondary text-[#444444]">Framework</h3>
+					<h3 className="text-sub-secondary text-t12">Backend</h3>
 					<div className="flex flex-row gap-2 flex-wrap">
 						{BACKEND_OPTIONS.map((option) => (
 							<StackBadge
 								key={option.value}
 								stack={option.label}
 								asset={option.asset}
-								isSelected={selectedStack === option.value}
+								isSelected={selectedBackend === option.value}
 								onSelectedChange={() =>
-									setSelectedStack(option.value as StackType)
+									setSelectedBackend(option.value as BackendStackType)
 								}
 							/>
 						))}
@@ -106,7 +126,7 @@ export const StackSelectionSection = () => {
 
 				{/* Auth Provider */}
 				<div className="flex flex-col gap-2.5">
-					<h3 className="text-sub-secondary text-[#444444]">Auth Provider</h3>
+					<h3 className="text-sub-secondary text-t12">Auth Provider</h3>
 					<div className="flex flex-row gap-2 flex-wrap">
 						{AUTH_OPTIONS.map((option) => (
 							<StackBadge
@@ -124,7 +144,7 @@ export const StackSelectionSection = () => {
 
 				{/* Customer Type */}
 				<div className="flex flex-col gap-2.5">
-					<h3 className="text-sub-secondary text-[#444444]">Customer Type</h3>
+					<h3 className="text-sub-secondary text-t12">Customer Type</h3>
 					<div className="flex flex-row gap-2 flex-wrap">
 						{CUSTOMER_TYPE_OPTIONS.map((option) => (
 							<StackBadge
