@@ -1,8 +1,8 @@
-import { authClient, useListOrganizations } from "@/lib/auth-client";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { FrontendOrg } from "@autumn/shared";
+import type { FrontendOrg } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
+import { authClient, useListOrganizations } from "@/lib/auth-client";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export const useOrg = () => {
 	const axiosInstance = useAxiosInstance();
