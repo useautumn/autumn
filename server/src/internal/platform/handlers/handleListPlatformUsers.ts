@@ -21,16 +21,45 @@ export const listPlatformUsers = createRoute({
 
 		const { db, org, logger } = ctx;
 
-		const shouldExpandOrgs = query.expand === "organizations";
+		const shouldExpandOrgs = query.expand?.includes("organizations");
 
-		// 1. Get all users that have at least one organization created by ctx.org_id
-		// We need to join through member -> organizations to find users with orgs created by master org
-		const usersData = await db
+		if (!shouldExpandOrgs) {
+			// Simple case: just get users without organizations
+			const usersData = await db
+				.selectDistinct({
+					userId: userTable.id,
+					userName: userTable.name,
+					userEmail: userTable.email,
+					userCreatedAt: userTable.createdAt,
+				})
+				.from(userTable)
+				.innerJoin(member, eq(member.userId, userTable.id))
+				.innerJoin(organizations, eq(organizations.id, member.organizationId))
+				.where(eq(organizations.created_by, org.id))
+				.limit(query.limit)
+				.offset(query.offset);
+
+			logger.info(`Found ${usersData.length} platform users`);
+
+			const users: ApiPlatformUser[] = usersData.map((userData) => ({
+				name: userData.userName,
+				email: userData.userEmail,
+				created_at: userData.userCreatedAt.getTime(),
+			}));
+
+			return c.json({
+				list: users,
+				total: users.length,
+				limit: query.limit,
+				offset: query.offset,
+			});
+		}
+
+		// Complex case: get users WITH their organizations in a single query
+		// First, get the user IDs we want (with pagination)
+		const paginatedUsers = await db
 			.selectDistinct({
 				userId: userTable.id,
-				userName: userTable.name,
-				userEmail: userTable.email,
-				userCreatedAt: userTable.createdAt,
 			})
 			.from(userTable)
 			.innerJoin(member, eq(member.userId, userTable.id))
@@ -39,40 +68,67 @@ export const listPlatformUsers = createRoute({
 			.limit(query.limit)
 			.offset(query.offset);
 
-		logger.info(`Found ${usersData.length} platform users`);
+		if (paginatedUsers.length === 0) {
+			return c.json({
+				list: [],
+				total: 0,
+				limit: query.limit,
+				offset: query.offset,
+			});
+		}
 
-		// 2. If expand=organizations, fetch organizations for each user
-		const userOrgsMap = new Map<string, ApiPlatformOrg[]>();
+		const userIds = paginatedUsers.map((u) => u.userId);
 
-		if (shouldExpandOrgs && usersData.length > 0) {
-			const userIds = usersData.map((u) => u.userId);
+		// Now fetch all user and org data in one query
+		const allData = await db
+			.select({
+				userId: userTable.id,
+				userName: userTable.name,
+				userEmail: userTable.email,
+				userCreatedAt: userTable.createdAt,
+				orgSlug: organizations.slug,
+				orgName: organizations.name,
+				orgCreatedAt: organizations.createdAt,
+			})
+			.from(userTable)
+			.innerJoin(member, eq(member.userId, userTable.id))
+			.innerJoin(organizations, eq(organizations.id, member.organizationId))
+			.where(
+				and(
+					eq(organizations.created_by, org.id),
+					inArray(userTable.id, userIds),
+				),
+			);
 
-			// Fetch all organizations for these users that were created by master org
-			const orgsData = await db
-				.select({
-					userId: member.userId,
-					orgSlug: organizations.slug,
-					orgName: organizations.name,
-					orgCreatedAt: organizations.createdAt,
-				})
-				.from(organizations)
-				.innerJoin(member, eq(member.organizationId, organizations.id))
-				.where(
-					and(
-						eq(organizations.created_by, org.id),
-						inArray(member.userId, userIds),
-					),
-				)
-				.limit(100);
+		logger.info(`Found ${allData.length} user-org relationships`);
 
-			// Group organizations by user
-			for (const orgData of orgsData) {
-				if (!userOrgsMap.has(orgData.userId)) {
-					userOrgsMap.set(orgData.userId, []);
-				}
+		// Group data by user
+		const usersMap = new Map<
+			string,
+			{
+				name: string;
+				email: string;
+				created_at: number;
+				organizations: ApiPlatformOrg[];
+			}
+		>();
 
+		for (const row of allData) {
+			if (!usersMap.has(row.userId)) {
+				usersMap.set(row.userId, {
+					name: row.userName,
+					email: row.userEmail,
+					created_at: row.userCreatedAt.getTime(),
+					organizations: [],
+				});
+			}
+
+			const userData = usersMap.get(row.userId)!;
+
+			// Limit to 100 organizations per user
+			if (userData.organizations.length < 100) {
 				// Remove the master org slug prefix from the organization slug
-				let cleanedSlug = orgData.orgSlug;
+				let cleanedSlug = row.orgSlug;
 				const prefix = `${org.id}_`;
 				if (cleanedSlug.startsWith(prefix)) {
 					cleanedSlug = cleanedSlug.slice(prefix.length);
@@ -83,28 +139,18 @@ export const listPlatformUsers = createRoute({
 					cleanedSlug = cleanedSlug.slice(0, -altPrefix.length);
 				}
 
-				userOrgsMap.get(orgData.userId)?.push({
+				userData.organizations.push({
 					slug: cleanedSlug,
-					name: orgData.orgName,
-					created_at: orgData.orgCreatedAt.toISOString(),
+					name: row.orgName,
+					created_at: row.orgCreatedAt.getTime(),
 				});
 			}
 		}
 
-		// 3. Build response
-		const users: ApiPlatformUser[] = usersData.map((userData) => {
-			const user: ApiPlatformUser = {
-				name: userData.userName,
-				email: userData.userEmail,
-				created_at: userData.userCreatedAt.toISOString(),
-			};
-
-			if (shouldExpandOrgs) {
-				user.organizations = userOrgsMap.get(userData.userId) || [];
-			}
-
-			return user;
-		});
+		// Convert map to array, preserving pagination order
+		const users: ApiPlatformUser[] = userIds
+			.map((userId) => usersMap.get(userId))
+			.filter((user): user is NonNullable<typeof user> => user !== undefined);
 
 		return c.json({
 			list: users,
