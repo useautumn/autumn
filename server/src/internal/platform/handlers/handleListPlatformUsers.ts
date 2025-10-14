@@ -24,18 +24,16 @@ export const listPlatformUsers = createRoute({
 		const shouldExpandOrgs = query.expand?.includes("organizations");
 
 		if (!shouldExpandOrgs) {
-			// Simple case: just get users without organizations
+			// Simple case: just get users without organizations (no join needed)
 			const usersData = await db
-				.selectDistinct({
+				.select({
 					userId: userTable.id,
 					userName: userTable.name,
 					userEmail: userTable.email,
 					userCreatedAt: userTable.createdAt,
 				})
 				.from(userTable)
-				.innerJoin(member, eq(member.userId, userTable.id))
-				.innerJoin(organizations, eq(organizations.id, member.organizationId))
-				.where(eq(organizations.created_by, org.id))
+				.where(eq(userTable.createdBy, org.id))
 				.limit(query.limit)
 				.offset(query.offset);
 
@@ -55,16 +53,14 @@ export const listPlatformUsers = createRoute({
 			});
 		}
 
-		// Complex case: get users WITH their organizations in a single query
-		// First, get the user IDs we want (with pagination)
+		// Complex case: get users WITH their organizations
+		// First, get the paginated user IDs (no join needed - users have created_by)
 		const paginatedUsers = await db
-			.selectDistinct({
+			.select({
 				userId: userTable.id,
 			})
 			.from(userTable)
-			.innerJoin(member, eq(member.userId, userTable.id))
-			.innerJoin(organizations, eq(organizations.id, member.organizationId))
-			.where(eq(organizations.created_by, org.id))
+			.where(eq(userTable.createdBy, org.id))
 			.limit(query.limit)
 			.offset(query.offset);
 
