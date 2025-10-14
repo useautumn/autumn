@@ -14,10 +14,13 @@ export const CustomToaster = () => {
 		<ToasterComponent
 			position={isOnboarding ? "bottom-left" : "top-center"}
 			className={isOnboarding ? "" : "flex justify-center"}
-			duration={6000}
+			duration={6000_00000000000000_0000}
 			toastOptions={{
 				className:
-					"w-96 px-3 pt-3 pb-2.5 bg-white rounded-xl shadow-[0px_4px_4px_0px_rgba(0,0,0,0.02)] shadow-[inset_0px_-4px_6px_0px_rgba(0,0,0,0.04)] outline outline-16 outline-[#D1D1D1] inline-flex flex-row justify-start items-start gap-3 overflow-hidden",
+					"w-96 px-3 pt-3 pb-2.5 bg-white rounded-xl shadow-[0_4px_4px_0_rgba(0,0,0,0.02),inset_0_-4px_6px_0_rgba(0,0,0,0.04),0_4px_24px_0_rgba(0,0,0,0.03)] outline outline-16 inline-flex flex-row justify-start items-start gap-3 overflow-hidden",
+				style: {
+					outlineColor: "#77F7F7",
+				},
 			}}
 			icons={{
 				success: <CheckCircleIcon size={16} weight="fill" color="#00C745" />,

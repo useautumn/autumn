@@ -1,16 +1,16 @@
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
-import { handleAutoSave } from "../model-pricing-utils/modelPricingUtils";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useModelPricingContext } from "../ModelPricingContext";
-import { slugify } from "@/utils/formatUtils/formatTextUtils";
-import { Button } from "@/components/ui/button";
-import { useProductContext } from "@/views/products/product/ProductContext";
-import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
-import { getBackendErr } from "@/utils/genUtils";
 import { toast } from "sonner";
+import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { slugify } from "@/utils/formatUtils/formatTextUtils";
+import { getBackendErr } from "@/utils/genUtils";
+import { useProductContext } from "@/views/products/product/ProductContext";
+import { useModelPricingContext } from "../ModelPricingContext";
+import { handleAutoSave } from "../model-pricing-utils/modelPricingUtils";
 
 export const EditProductDetails = () => {
 	const { productDataState } = useModelPricingContext();
@@ -76,7 +76,7 @@ export const EditProductDetails = () => {
 							id: details.id,
 						});
 					}}
-					placeholder="Eg. Free Plan"
+					placeholder="Eg. Free Product"
 					value={details.name}
 					onChange={(e) => {
 						const newIdData = allowCreate

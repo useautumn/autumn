@@ -24,13 +24,13 @@ export const PlanDetailsStep = () => {
 
 	return (
 		<>
-			<SheetSection title="Plan Details">
+			<SheetSection title="Product Details">
 				<div className="space-y-4">
 					<div className="grid grid-cols-1 gap-4">
 						<div>
 							<FormLabel>Name</FormLabel>
 							<Input
-								placeholder="eg. Pro Plan"
+								placeholder="eg. Pro"
 								value={product?.name || ""}
 								onChange={(e) => setSource(e.target.value)}
 								className="mb-1"
@@ -44,7 +44,7 @@ export const PlanDetailsStep = () => {
 						<div>
 							<FormLabel>ID</FormLabel>
 							<Input
-								placeholder="eg. pro_plan"
+								placeholder="eg. pro_product"
 								value={product?.id || ""}
 								onChange={(e) => setTarget(e.target.value)}
 								className="mb-1"
@@ -57,7 +57,7 @@ export const PlanDetailsStep = () => {
 							<div className="col-span-1">
 								<FormLabel>Description</FormLabel>
 								<LongInput
-									placeholder="eg. This plan includes 100 credits"
+									placeholder="eg. This product includes 100 credits"
 									value={(product).description || ""}
 									onChange={(e) =>
 										setProduct({

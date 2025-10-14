@@ -5,13 +5,20 @@ import { useState } from "react";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
+import {
+	InputGroup,
+	InputGroupAddon,
+	InputGroupInput,
+} from "@/components/v2/inputs/InputGroup";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { addTier, removeTier, updateTier } from "../../utils/tierUtils";
 import { BillingUnits } from "./BillingUnits";
 
 export function PriceTiers() {
 	const { item, setItem } = useProductItemContext();
-
+	const { org } = useOrg();
+	const currency = org?.default_currency?.toUpperCase() ?? "USD";
 	// Track raw input values during editing
 	const [editingValues, setEditingValues] = useState<Record<string, string>>(
 		{},
@@ -78,19 +85,24 @@ export function PriceTiers() {
 
 		return (
 			<div className="space-y-2">
-				<FormLabel>Pricing Tiers</FormLabel>
+				<FormLabel>Price</FormLabel>
 				<div className="flex gap-2 w-full items-center">
 					<div className="w-32">
-						<Input
-							value={getDisplayValue(amountKey, firstTier.amount)}
-							onFocus={() => handleInputFocus(amountKey, firstTier.amount)}
-							onBlur={() => handleInputBlur(amountKey, "amount", 0)}
-							onChange={(e) =>
-								handleInputChange(amountKey, e.target.value, "amount", 0)
-							}
-							inputMode="decimal"
-							placeholder="0.00"
-						/>
+						<InputGroup>
+							<InputGroupInput
+								value={getDisplayValue(amountKey, firstTier.amount)}
+								onFocus={() => handleInputFocus(amountKey, firstTier.amount)}
+								onBlur={() => handleInputBlur(amountKey, "amount", 0)}
+								onChange={(e) =>
+									handleInputChange(amountKey, e.target.value, "amount", 0)
+								}
+								inputMode="decimal"
+								placeholder="0.00"
+							/>
+							<InputGroupAddon align="inline-end">
+								<span className="text-t3 text-xs">{currency}</span>
+							</InputGroupAddon>
+						</InputGroup>
 					</div>
 
 					<BillingUnits />
@@ -122,9 +134,9 @@ export function PriceTiers() {
 
 				return (
 					<div key={index} className="flex gap-2 w-full items-center">
-						<div className="w-full gap-2 flex items-center">
-							<div className="flex w-full items-center">
-								<div className="flex w-full text-sm items-center gap-2">
+						<div className="flex-1 gap-2 flex items-center min-w-0">
+							<div className="flex flex-1 items-center min-w-0">
+								<div className="flex flex-1 text-sm items-center min-w-0">
 									{/* From value - first tier starts from included usage or 0 */}
 									<Input
 										value={
@@ -137,8 +149,10 @@ export function PriceTiers() {
 										disabled
 									/>
 								</div>
-								<span className="px-2 text-body-secondary text-xs">to</span>
-								<div className="flex w-full text-sm">
+								<span className="px-2 text-body-secondary text-xs shrink-0">
+									to
+								</span>
+								<div className="flex flex-1 text-sm items-center min-w-0">
 									{/* To value - disable if infinite (last tier) or if 2nd tier in 2-tier setup */}
 									<Input
 										value={isInfinite ? "∞" : getDisplayValue(toKey, tier.to)}
@@ -160,23 +174,28 @@ export function PriceTiers() {
 								</div>
 							</div>
 
-							{/* Price input - simple v2 input */}
-							<div className="w-32">
-								<Input
-									value={getDisplayValue(amountKey, tier.amount)}
-									onFocus={() => handleInputFocus(amountKey, tier.amount)}
-									onBlur={() => handleInputBlur(amountKey, "amount", index)}
-									onChange={(e) =>
-										handleInputChange(
-											amountKey,
-											e.target.value,
-											"amount",
-											index,
-										)
-									}
-									inputMode="decimal"
-									placeholder="0.00"
-								/>
+							{/* Price input with currency */}
+							<div className="w-24 shrink-0">
+								<InputGroup className="min-w-0">
+									<InputGroupInput
+										value={getDisplayValue(amountKey, tier.amount)}
+										onFocus={() => handleInputFocus(amountKey, tier.amount)}
+										onBlur={() => handleInputBlur(amountKey, "amount", index)}
+										onChange={(e) =>
+											handleInputChange(
+												amountKey,
+												e.target.value,
+												"amount",
+												index,
+											)
+										}
+										inputMode="decimal"
+										placeholder="0.00"
+									/>
+									<InputGroupAddon align="inline-end">
+										<span className="text-t3 text-xs">{currency}</span>
+									</InputGroupAddon>
+								</InputGroup>
 							</div>
 
 							{/* Interactive units display */}
@@ -184,7 +203,7 @@ export function PriceTiers() {
 						</div>
 
 						{/* Action buttons */}
-						<div className="flex items-center gap-1 pl-2">
+						<div className="flex items-center gap-1 shrink-0">
 							<IconButton
 								variant="muted"
 								size="sm"

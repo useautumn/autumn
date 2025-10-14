@@ -1,6 +1,7 @@
 import { nullish, ProductItemInterval, UsageModel } from "@autumn/shared";
-import { RadioGroup } from "@/components/v2/radio-groups/RadioGroup";
+import { FormLabel } from "@/components/v2/form/FormLabel";
 import { AreaRadioGroupItem } from "@/components/v2/radio-groups/AreaRadioGroupItem";
+import { RadioGroup } from "@/components/v2/radio-groups/RadioGroup";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
 export function PricedFeatureSettings() {
@@ -21,11 +22,12 @@ export function PricedFeatureSettings() {
 	};
 
 	return (
-		<div className="mt-6">
+		<div className="mt-3">
+			<FormLabel>Usage Model</FormLabel>
 			<RadioGroup
 				value={item.usage_model}
 				onValueChange={handleUsageModelChange}
-				className="space-y-4"
+				className="space-y-0"
 			>
 				<AreaRadioGroupItem
 					value={UsageModel.PayPerUse}

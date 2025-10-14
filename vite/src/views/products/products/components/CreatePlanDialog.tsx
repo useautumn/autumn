@@ -47,8 +47,8 @@ function CreatePlanDialog({
 		if (!/^[a-zA-Z0-9 _-]+$/.test(productName)) {
 			toast.error(
 				!productName
-					? "Plan name is required"
-					: "Plan name can only contain alphanumeric characters, dashes (-), and underscores (_)",
+					? "Product name is required"
+					: "Product name can only contain alphanumeric characters, dashes (-), and underscores (_)",
 			);
 			return;
 		}
@@ -67,7 +67,7 @@ function CreatePlanDialog({
 			}
 			setOpen(false);
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to create plan"));
+			toast.error(getBackendErr(error, "Failed to create product"));
 		}
 		setLoading(false);
 	};
@@ -88,11 +88,11 @@ function CreatePlanDialog({
 				className={buttonClassName}
 				onClick={() => setOpen(true)}
 			>
-				Add Plan
+				Add Product
 			</IconButton>
 			<Dialog open={open} onOpenChange={setOpen}>
 				<DialogContent className="w-[500px]">
-					<DialogTitle>Create Plan</DialogTitle>
+					<DialogTitle>Create Product</DialogTitle>
 					<ProductConfig
 						product={product as unknown as ProductV2}
 						setProduct={setProduct}
@@ -107,7 +107,7 @@ function CreatePlanDialog({
 							onClick={handleCreateClicked}
 							variant="primary"
 						>
-							Create Plan
+							Create Product
 						</Button>
 					</DialogFooter>
 				</DialogContent>

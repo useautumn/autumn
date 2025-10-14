@@ -14,6 +14,7 @@ const inputVariants = cva(
 			variant: {
 				default: "",
 				destructive: "input-destructive-base input-destructive-shadow",
+				headless: "!border-0 !shadow-none !ring-0 !bg-transparent !p-0 !px-0.5",
 			},
 		},
 		defaultVariants: {

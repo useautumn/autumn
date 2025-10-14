@@ -4,8 +4,8 @@ import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { RewardsTable } from "./components/RewardsTable";
 import { CreateRewardSheet } from "./reward-config/components/CreateRewardSheet";
+import { CreateRewardProgramSheet } from "./reward-programs/CreateRewardProgramSheet";
 import { RewardProgramsTable } from "./reward-programs/RewardProgramsTable";
-import CreateRewardProgram from "./reward-programs/CreateRewardProgram";
 
 export const RewardsPage = () => {
 	const { rewards, rewardPrograms } = useRewardsQuery();
@@ -66,7 +66,7 @@ export const RewardsPage = () => {
 							{rewardPrograms?.length}
 						</span>
 					}
-					endContent={<CreateRewardProgram />}
+					endContent={<CreateRewardProgramSheet />}
 					isSecondary
 				/>
 				<RewardProgramsTable />
