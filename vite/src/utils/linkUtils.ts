@@ -1,36 +1,67 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: can use any*/
+
 import { AppEnv } from "@autumn/shared";
 
-export const getStripeCusLink = (
-  customerId: string,
-  env: AppEnv,
-  accountId?: string
-) => {
-  return `https://dashboard.stripe.com${
-    env == AppEnv.Live ? "" : "/test"
-  }/${accountId}/customers/${customerId}`;
+export const getStripeCusLink = ({
+	customerId,
+	env,
+	accountId,
+}: {
+	customerId: string;
+	env: AppEnv;
+	accountId?: string;
+}) => {
+	const baseUrl = `https://dashboard.stripe.com${
+		env === AppEnv.Live ? "" : "/test"
+	}`;
+	const accountPath = accountId ? `/${accountId}` : "";
+	return `${baseUrl}${accountPath}/customers/${customerId}`;
 };
 
-export const getStripeSubLink = (
-  subscriptionId: string,
-  env: AppEnv,
-  accountId?: string
-) => {
-  return `https://dashboard.stripe.com${
-    env == AppEnv.Live ? "" : "/test"
-  }/${accountId}/subscriptions/${subscriptionId}`;
-};
-export const getStripeSubScheduleLink = (
-  scheduledId: string,
-  env: AppEnv,
-  accountId?: string
-) => {
-  return `https://dashboard.stripe.com${
-    env == AppEnv.Live ? "" : "/test"
-  }/${accountId}/subscription_schedules/${scheduledId}`;
+export const getStripeSubLink = ({
+	subscriptionId,
+	env,
+	accountId,
+}: {
+	subscriptionId: string;
+	env: AppEnv;
+	accountId?: string;
+}) => {
+	const baseUrl = `https://dashboard.stripe.com${
+		env === AppEnv.Live ? "" : "/test"
+	}`;
+	const accountPath = accountId ? `/${accountId}` : "";
+	return `${baseUrl}${accountPath}/subscriptions/${subscriptionId}`;
 };
 
-export const getStripeInvoiceLink = (stripeInvoice: any) => {
-  return `https://dashboard.stripe.com${
-    stripeInvoice.livemode ? "" : "/test"
-  }/invoices/${stripeInvoice.id || stripeInvoice.stripe_id}`;
+export const getStripeSubScheduleLink = ({
+	scheduledId,
+	env,
+	accountId,
+}: {
+	scheduledId: string;
+	env: AppEnv;
+	accountId?: string;
+}) => {
+	const baseUrl = `https://dashboard.stripe.com${
+		env === AppEnv.Live ? "" : "/test"
+	}`;
+	const accountPath = accountId ? `/${accountId}` : "";
+	return `${baseUrl}${accountPath}/subscription_schedules/${scheduledId}`;
+};
+
+export const getStripeInvoiceLink = ({
+	stripeInvoice,
+	env,
+	accountId,
+}: {
+	stripeInvoice: any;
+	env: AppEnv;
+	accountId?: string;
+}) => {
+	const baseUrl = `https://dashboard.stripe.com${
+		env === AppEnv.Live ? "" : "/test"
+	}`;
+	const accountPath = accountId ? `/${accountId}` : "";
+	return `${baseUrl}${accountPath}/invoices/${stripeInvoice.id || stripeInvoice.stripe_id}`;
 };

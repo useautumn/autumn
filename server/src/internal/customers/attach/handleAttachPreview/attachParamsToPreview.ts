@@ -61,7 +61,7 @@ export const attachParamsToPreview = async ({
 	let preview: any = null;
 
 	if (
-		branch == AttachBranch.MultiAttach ||
+		branch === AttachBranch.MultiAttach ||
 		notNullish(attachParams.productsList)
 	) {
 		preview = await getMultiAttachPreview({
@@ -73,9 +73,9 @@ export const attachParamsToPreview = async ({
 			branch,
 		});
 	} else if (
-		func == AttachFunction.AddProduct ||
-		func == AttachFunction.CreateCheckout ||
-		func == AttachFunction.OneOff
+		func === AttachFunction.AddProduct ||
+		func === AttachFunction.CreateCheckout ||
+		func === AttachFunction.OneOff
 	) {
 		preview = await getNewProductPreview({
 			branch,
@@ -86,7 +86,7 @@ export const attachParamsToPreview = async ({
 		});
 	}
 
-	if (func == AttachFunction.ScheduleProduct) {
+	if (func === AttachFunction.ScheduleProduct) {
 		preview = await getDowngradeProductPreview({
 			attachParams,
 			now,
@@ -98,9 +98,9 @@ export const attachParamsToPreview = async ({
 	}
 
 	if (
-		func == AttachFunction.UpgradeDiffInterval ||
-		func == AttachFunction.UpgradeSameInterval ||
-		func == AttachFunction.UpdatePrepaidQuantity
+		func === AttachFunction.UpgradeDiffInterval ||
+		func === AttachFunction.UpgradeSameInterval ||
+		func === AttachFunction.UpdatePrepaidQuantity
 	) {
 		preview = await getUpgradeProductPreview({
 			req,

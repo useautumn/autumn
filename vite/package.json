@@ -18,7 +18,6 @@
 	"dependencies": {
 		"@autumn/shared": "workspace:*",
 		"@better-auth/stripe": "^1.2.12",
-		"@clerk/clerk-react": "^5.24.2",
 		"@fortawesome/free-brands-svg-icons": "^6.7.2",
 		"@fortawesome/react-fontawesome": "^0.2.2",
 		"@heroicons/react": "^2.2.0",

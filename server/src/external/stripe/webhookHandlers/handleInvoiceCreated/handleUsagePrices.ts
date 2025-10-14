@@ -1,5 +1,6 @@
 import {
 	ApiVersion,
+	AppEnv,
 	type Customer,
 	EntInterval,
 	type FullCusProduct,
@@ -20,6 +21,7 @@ import { submitUsageToStripe } from "../../stripeMeterUtils.js";
 import { getInvoiceItemForUsage } from "../../stripePriceUtils.js";
 import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";
 import { findStripeItemForPrice } from "../../stripeSubUtils/stripeSubItemUtils.js";
+import { getAllFullCustomers } from "@/utils/scriptUtils/getAll/getAllAutumnCustomers.js";
 
 export const handleUsagePrices = async ({
 	db,
@@ -133,6 +135,14 @@ export const handleUsagePrices = async ({
 	if (relatedCusEnt.entitlement.interval === EntInterval.Lifetime) {
 		return;
 	}
+
+	const allFullCustomers = await getAllFullCustomers({
+		db,
+		orgId: org.id,
+		env: AppEnv.Live,
+	});
+
+	console.log(`All full customers: ${allFullCustomers.length}`);
 
 	const ent = relatedCusEnt.entitlement;
 

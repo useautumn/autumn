@@ -1,44 +1,36 @@
 import {
+	type AttachConfig,
 	calculateProrationAmount,
-	Feature,
-	FeatureOptions,
-	FullCusProduct,
+	cusProductToProduct,
+	type Feature,
+	type FeatureOptions,
+	type FullCusProduct,
 	getFeatureInvoiceDescription,
 	OnDecrease,
 	priceToInvoiceAmount,
-	UsagePriceConfig,
+	type UsagePriceConfig,
 } from "@autumn/shared";
-
-import { Stripe } from "stripe";
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { Decimal } from "decimal.js";
+import type { Stripe } from "stripe";
+import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { featureToCusPrice } from "@/internal/customers/cusProducts/cusPrices/convertCusPriceUtils.js";
+import { getRelatedCusEnt } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
+import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
+import { constructStripeInvoiceItem } from "@/internal/invoices/invoiceItemUtils/invoiceItemUtils.js";
+import { createAndFinalizeInvoice } from "@/internal/invoices/invoiceUtils/createAndFinalizeInvoice.js";
+import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
 import {
 	shouldBillNow,
 	shouldProrate,
 } from "@/internal/products/prices/priceUtils/prorationConfigUtils.js";
-
-import { Decimal } from "decimal.js";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-import { getRelatedCusEnt } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
-import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
-import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
-import { constructStripeInvoiceItem } from "@/internal/invoices/invoiceItemUtils/invoiceItemUtils.js";
-import { cusProductToProduct } from "@autumn/shared";
-import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
-import { createAndFinalizeInvoice } from "@/internal/invoices/invoiceUtils/createAndFinalizeInvoice.js";
 import { notNullish } from "@/utils/genUtils.js";
-
-const onDecreaseToStripeProration: Record<OnDecrease, string> = {
-	[OnDecrease.ProrateImmediately]: "always_invoice",
-	[OnDecrease.ProrateNextCycle]: "create_prorations",
-	[OnDecrease.Prorate]: "create_prorations",
-	[OnDecrease.None]: "none",
-	[OnDecrease.NoProrations]: "none",
-};
 
 export const handleQuantityDowngrade = async ({
 	req,
 	attachParams,
+	attachConfig,
 	cusProduct,
 	stripeSub,
 	oldOptions,
@@ -47,13 +39,14 @@ export const handleQuantityDowngrade = async ({
 }: {
 	req: any;
 	attachParams: AttachParams;
+	attachConfig: AttachConfig;
 	cusProduct: FullCusProduct;
 	stripeSub: Stripe.Subscription;
 	oldOptions: FeatureOptions;
 	newOptions: FeatureOptions;
 	subItem: Stripe.SubscriptionItem;
 }) => {
-	const { db, logger, org, features } = req;
+	const { db, logger, org } = req;
 	const { stripeCli, paymentMethod } = attachParams;
 
 	const cusPrice = featureToCusPrice({
@@ -64,10 +57,6 @@ export const handleQuantityDowngrade = async ({
 	const onDecrease =
 		cusPrice.price.proration_config?.on_decrease ||
 		OnDecrease.ProrateImmediately;
-
-	const difference = new Decimal(newOptions.quantity)
-		.minus(oldOptions.quantity)
-		.toNumber();
 
 	const subItemDifference = new Decimal(newOptions.quantity)
 		.minus(
@@ -80,18 +69,11 @@ export const handleQuantityDowngrade = async ({
 	const billingUnits =
 		(cusPrice.price.config as UsagePriceConfig).billing_units || 1;
 
-	// const diffWithBillingUnits = new Decimal(difference)
-	//   .mul((cusPrice.price.config as UsagePriceConfig).billing_units || 1)
-	//   .toNumber();
-
 	const newSubItemQuantity = new Decimal(subItem.quantity || 0)
 		.plus(subItemDifference)
 		.toNumber();
 
-	const stripeProration = onDecreaseToStripeProration[
-		onDecrease
-	] as Stripe.SubscriptionItemUpdateParams.ProrationBehavior;
-
+	let invoice = null;
 	const createDowngradeInvoice = async () => {
 		const { start, end } = subToPeriodStartEnd({ sub: stripeSub });
 
@@ -117,7 +99,7 @@ export const handleQuantityDowngrade = async ({
 
 		const product = cusProductToProduct({ cusProduct });
 		const feature = req.features.find(
-			(f: Feature) => f.internal_id == newOptions.internal_feature_id,
+			(f: Feature) => f.internal_id === newOptions.internal_feature_id,
 		)!;
 		const invoiceItem = constructStripeInvoiceItem({
 			product,
@@ -152,8 +134,11 @@ export const handleQuantityDowngrade = async ({
 				stripeCusId: stripeSub.customer as string,
 				stripeSubId: stripeSub.id,
 				paymentMethod: paymentMethod || null,
+				chargeAutomatically: !attachConfig.invoiceOnly,
 				logger,
 			});
+
+			invoice = finalInvoice;
 
 			try {
 				const invoiceItems = await getInvoiceItems({
@@ -199,8 +184,7 @@ export const handleQuantityDowngrade = async ({
 	});
 
 	if (cusEnt) {
-		const config = cusPrice.price.config as UsagePriceConfig;
-		let decrementBy = new Decimal(oldOptions.quantity)
+		const decrementBy = new Decimal(oldOptions.quantity)
 			.minus(new Decimal(newOptions.quantity))
 			.mul(billingUnits)
 			.toNumber();
