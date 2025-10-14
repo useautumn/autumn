@@ -1,16 +1,51 @@
 // @ts-nocheck
 
-await autumn.customerProducts.create({
-  customer_id: "",
-  product_id: "pro",
+import { customers, } from "@autumn/shared";
+
+const entitiesCTE = cte({
+  name: 'entities',
+  from: entities,
+  where: eq(entities.internal_customer_id, customer.internal_id),
+  limit: 100,
 })
 
-await autumn.customerLicenses.create({
-  customer_id: "",
-  product_id: "pro",
-  quantity: 5,
-  license_to: ["ent_1"]
+const cusProductsCTE = cte({
+  name: 'customer_products',
+  from: customer_products,
+  with: {
+    product: cte({
+      from: products,
+      where: eq(products.internal_id, customer_products.internal_product_id),
+    }),
+    customer_prices: cte({
+      from: customer_prices,
+      where: eq(customer_prices.customer_product_id, customer_products.id),
+      with: {
+        price: join({
+          from: prices,
+          where: eq(prices.id, customer_prices.price_id),
+        })
+      }
+    }),
+    free_trial: cte({
+      from: free_trials,
+      where: eq(free_trials.id, customer_products.free_trial_id),
+    })
+  },
+  // where: eq(customer_products.internal_customer_id, customer.internal_id),
+  limit: 100,
 })
+
+const fullCustomerCTE = cte({
+  name: 'full_customer',
+  from: customers, // drizzle table
+  with: {
+    entities: entitiesCTE(),
+    customer_products: cusProductsCTE(),
+    organization: organizationsCTE(), // this is not an array, but buildCTE should be dynamic enough to handle this?
+  }
+});
+await fullCustomerCTE.execute();
 
 const childProduct = {
   product_id: "user_seat",

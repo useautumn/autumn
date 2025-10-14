@@ -30,10 +30,22 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		timestamp,
 	};
 
+	const method = c.req.method;
+	const path = c.req.path;
+
+	let body = null;
+	if (method === "POST" || method === "PUT" || method === "PATCH") {
+		try {
+			body = await c.req.json();
+		} catch (_error) {}
+	}
+
 	// Create child logger
 	const childLogger = logger.child({
 		context: {
 			req: reqContext,
+			body,
+			query: c.req.query(),
 		},
 	});
 
@@ -58,21 +70,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		env: AppEnv.Sandbox, // maybe use app_env headers
 	});
 
-	const method = c.req.method;
-	const path = c.req.path;
-
-	let body = null;
-	if (method === "POST" || method === "PUT" || method === "PATCH") {
-		try {
-			body = await c.req.json();
-		} catch (_error) {}
-	}
-
-	logger.info(`[HONO] ${method} ${path}`, {
-		context: {
-			body,
-		},
-	});
+	childLogger.info(`${method} ${path}`);
 
 	await next();
 };

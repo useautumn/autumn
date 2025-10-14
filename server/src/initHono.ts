@@ -1,6 +1,7 @@
 import { getRequestListener } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { analyticsMiddleware } from "./honoMiddlewares/analyticsMiddleware.js";
 import { apiVersionMiddleware } from "./honoMiddlewares/apiVersionMiddleware.js";
 import { baseMiddleware } from "./honoMiddlewares/baseMiddleware.js";
 import { errorMiddleware } from "./honoMiddlewares/errorMiddleware.js";
@@ -11,6 +12,7 @@ import { secretKeyMiddleware } from "./honoMiddlewares/secretKeyMiddleware.js";
 import { traceMiddleware } from "./honoMiddlewares/traceMiddleware.js";
 import type { HonoEnv } from "./honoUtils/HonoEnv.js";
 import { cusRouter } from "./internal/customers/cusRouter.js";
+import { honoPlatformRouter } from "./internal/platform/honoPlatformRouter.js";
 import { honoProductRouter } from "./internal/products/productRouter.js";
 import { auth } from "./utils/auth.js";
 
@@ -82,14 +84,15 @@ export const createHonoApp = () => {
 	// Step 6: Refresh cache middleware - clears customer cache after successful mutations
 	app.use("/v1/*", refreshCacheMiddleware);
 
-	// Step 7: Query middleware
+	// Step 7: Analytics middleware - enriches logger context and logs responses
+	app.use("/v1/*", analyticsMiddleware);
+
+	// Step 8: Query middleware - handles query parsing and validation
 	app.use("/v1/*", queryMiddleware());
 
-	// Additional middleware can be added here as needed
-
-	// Routes
 	app.route("v1/customers", cusRouter);
 	app.route("v1/products", honoProductRouter);
+	app.route("v1/platform", honoPlatformRouter);
 
 	// Error handler - must be defined after all routes and middleware
 	app.onError(errorMiddleware);
@@ -132,7 +135,7 @@ export const redirectToHono = () => {
 			// Check for dynamic routes (e.g., /v1/products/:id)
 			if (routePath.includes(":")) {
 				const routeRegex = new RegExp(
-					"^" + routePath.replace(/:[^/]+/g, "([^/]+)") + "$",
+					`^${routePath.replace(/:[^/]+/g, "([^/]+)")}$`,
 				);
 				return routeRegex.test(path);
 			}

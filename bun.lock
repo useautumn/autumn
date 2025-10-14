@@ -155,7 +155,6 @@
       "dependencies": {
         "@autumn/shared": "workspace:*",
         "@better-auth/stripe": "^1.2.12",
-        "@clerk/clerk-react": "^5.24.2",
         "@fortawesome/free-brands-svg-icons": "^6.7.2",
         "@fortawesome/react-fontawesome": "^0.2.2",
         "@heroicons/react": "^2.2.0",
@@ -338,9 +337,13 @@
 
     "@clerk/backend": ["@clerk/backend@2.17.2", "", { "dependencies": { "@clerk/shared": "^3.27.3", "@clerk/types": "^4.92.0", "cookie": "1.0.2", "standardwebhooks": "^1.0.0", "tslib": "2.8.1" } }, "sha512-zgKySfoOXySYOMEDc+S2vXLchCldwPVb85tyvP1NnmxvgyAm10yCA+xd4No4dNWm+lwkwHuNWX3rM9ro8khSmw=="],
 
+<<<<<<< HEAD
     "@clerk/clerk-react": ["@clerk/clerk-react@5.51.0", "", { "dependencies": { "@clerk/shared": "^3.27.3", "@clerk/types": "^4.92.0", "tslib": "2.8.1" }, "peerDependencies": { "react": "^18.0.0 || ^19.0.0 || ^19.0.0-0", "react-dom": "^18.0.0 || ^19.0.0 || ^19.0.0-0" } }, "sha512-jBreKiUS4DKm+JUIt59B1699aRr3wQmQ1O+DlWCEY3iEz+F6ETir1SJcRNG5mHVoA9EGn+m93USJSUWZBRG8yQ=="],
 
     "@clerk/express": ["@clerk/express@1.7.37", "", { "dependencies": { "@clerk/backend": "^2.17.2", "@clerk/shared": "^3.27.3", "@clerk/types": "^4.92.0", "tslib": "2.8.1" }, "peerDependencies": { "express": "^4.17.0 || ^5.0.0" } }, "sha512-SGDz+hyP7aXwQ7JhVxf4ANpJ8gIFIp0a2gKxc6uFCeIszFsAKE5kfVtnXF5bhdCgtVRUCvHF09WYNpeygIPHqQ=="],
+=======
+    "@clerk/express": ["@clerk/express@1.7.21", "", { "dependencies": { "@clerk/backend": "^2.9.1", "@clerk/shared": "^3.21.0", "@clerk/types": "^4.78.0", "tslib": "2.8.1" }, "peerDependencies": { "express": "^4.17.0 || ^5.0.0" } }, "sha512-ALtBBhaYU+gfRoJp25hC3OntbNNgcrvLSyIYVShSCQ8gmyFjrJe/u6wb2PJalKtiE0SJUZPCAPCr8QpWSXEIsg=="],
+>>>>>>> staging
 
     "@clerk/shared": ["@clerk/shared@3.27.3", "", { "dependencies": { "@clerk/types": "^4.92.0", "dequal": "2.0.3", "glob-to-regexp": "0.4.1", "js-cookie": "3.0.5", "std-env": "^3.9.0", "swr": "2.3.4" }, "peerDependencies": { "react": "^18.0.0 || ^19.0.0 || ^19.0.0-0", "react-dom": "^18.0.0 || ^19.0.0 || ^19.0.0-0" }, "optionalPeers": ["react", "react-dom"] }, "sha512-OJqWwlQGi6XMVWJVtY1YmOESAkEAflDrynFSjwQQ/sC8c4hmUukIq07XTOlcv6j4u1i4akhtNwy40B1qiRrLdg=="],
 

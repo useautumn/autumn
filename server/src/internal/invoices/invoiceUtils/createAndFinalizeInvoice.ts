@@ -1,5 +1,5 @@
+import type Stripe from "stripe";
 import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
-import Stripe from "stripe";
 
 export const createAndFinalizeInvoice = async ({
 	stripeCli,
@@ -9,6 +9,7 @@ export const createAndFinalizeInvoice = async ({
 	invoiceItems,
 	errorOnPaymentFail = true,
 	voidIfFailed = true,
+	chargeAutomatically = true,
 	logger,
 }: {
 	stripeCli: Stripe;
@@ -18,12 +19,18 @@ export const createAndFinalizeInvoice = async ({
 	invoiceItems?: Stripe.InvoiceItemCreateParams[];
 	errorOnPaymentFail?: boolean;
 	voidIfFailed?: boolean;
+	chargeAutomatically?: boolean;
 	logger?: any;
 }) => {
 	const invoice = await stripeCli.invoices.create({
 		customer: stripeCusId,
 		auto_advance: false,
 		subscription: stripeSubId,
+
+		collection_method: chargeAutomatically
+			? "charge_automatically"
+			: "send_invoice",
+		days_until_due: chargeAutomatically ? undefined : 30,
 	});
 
 	if (invoiceItems) {
@@ -36,11 +43,19 @@ export const createAndFinalizeInvoice = async ({
 		}
 	}
 
+	if (!chargeAutomatically) {
+		let finalInvoice = await stripeCli.invoices.retrieve(invoice.id!);
+		if (finalInvoice.total <= 0) {
+			finalInvoice = await stripeCli.invoices.finalizeInvoice(invoice.id!);
+		}
+		return { invoice: finalInvoice };
+	}
+
 	let finalInvoice = await stripeCli.invoices.finalizeInvoice(invoice.id!, {
 		auto_advance: false,
 	});
 
-	if (finalInvoice.status == "open") {
+	if (finalInvoice.status === "open") {
 		const {
 			paid,
 			error,

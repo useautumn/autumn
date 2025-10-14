@@ -8,7 +8,6 @@ import { AdminView } from "./views/admin/AdminView";
 import { AcceptInvitation } from "./views/auth/AcceptInvitation";
 import { PasswordSignIn } from "./views/auth/components/PasswordSignIn";
 import { SignIn } from "./views/auth/SignIn";
-import CliAuth from "./views/CliAuth";
 import { Otp } from "./views/cli/Otp";
 import CustomersPage from "./views/customers/CustomersPage";
 import { AnalyticsView } from "./views/customers/customer/analytics/AnalyticsView";
@@ -46,8 +45,6 @@ export default function App() {
 					<Route path="/trmnl" element={<TerminalView />} />
 					<Route path="/onboarding" element={<OnboardingView2 />} />
 					<Route path="/sandbox/onboarding" element={<OnboardingView2 />} />
-
-					<Route path="/cli-auth" element={<CliAuth />} />
 
 					<Route
 						path="/products"
