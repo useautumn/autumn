@@ -11,6 +11,7 @@ import { secretKeyMiddleware } from "./honoMiddlewares/secretKeyMiddleware.js";
 import { traceMiddleware } from "./honoMiddlewares/traceMiddleware.js";
 import type { HonoEnv } from "./honoUtils/HonoEnv.js";
 import { cusRouter } from "./internal/customers/cusRouter.js";
+import { honoPlatformRouter } from "./internal/platform/honoPlatformRouter.js";
 import { honoProductRouter } from "./internal/products/productRouter.js";
 import { auth } from "./utils/auth.js";
 
@@ -86,6 +87,7 @@ export const createHonoApp = () => {
 	app.use("/v1/*", queryMiddleware());
 	app.route("v1/customers", cusRouter);
 	app.route("v1/products", honoProductRouter);
+	app.route("v1/platform", honoPlatformRouter);
 
 	// Error handler - must be defined after all routes and middleware
 	app.onError(errorMiddleware);
