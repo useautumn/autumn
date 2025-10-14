@@ -54,11 +54,9 @@ export const getAttachFunction = async ({
 	].includes(branch);
 
 	// Check for upgrade/downgrade from default trial (should also use checkout)
-	const upgradeDowngradeFromTrial =
-		(branch === AttachBranch.Upgrade || branch === AttachBranch.Downgrade) &&
-		onlyCheckout;
+	
 
-	if ((newScenario && onlyCheckout) || upgradeDowngradeFromTrial) {
+	if (newScenario && onlyCheckout) {
 		return AttachFunction.CreateCheckout;
 	} else if (branch === AttachBranch.OneOff) {
 		return AttachFunction.OneOff;

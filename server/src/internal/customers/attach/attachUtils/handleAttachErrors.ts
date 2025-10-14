@@ -5,12 +5,10 @@ import {
 	AttachErrCode,
 	BillingType,
 	cusProductsToCusEnts,
-	cusProductToPrices,
-	cusProductToProduct,
-	ErrCode,
+	cusProductToPrices, ErrCode,
 	type FullCusProduct,
 	getStartingBalance,
-	type UsagePriceConfig,
+	type UsagePriceConfig
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";
@@ -21,7 +19,6 @@ import {
 	getPriceEntitlement,
 	priceIsOneOffAndTiered,
 } from "@/internal/products/prices/priceUtils.js";
-import { isDefaultTrialFullProduct } from "@/internal/products/productUtils/classifyProduct.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish, nullOrUndefined } from "@/utils/genUtils.js";
 import type { AttachParams } from "../../cusProducts/AttachParams.js";
@@ -240,23 +237,11 @@ export const handleAttachErrors = async ({
 			AttachBranch.Downgrade,
 		];
 
-		// Check if upgrading from a default trial product
-		const { curMainProduct } = attachParamToCusProducts({ attachParams });
-		let isUpgradingFromDefaultTrial = false;
 
-		if (curMainProduct) {
-			const product = cusProductToProduct({ cusProduct: curMainProduct });
-			isUpgradingFromDefaultTrial = !!isDefaultTrialFullProduct({
-				product,
-				skipDefault: true, // Check trial characteristics even if not marked as default
-			});
-		}
 
-		console.log("isUpgradingFromDefaultTrial", isUpgradingFromDefaultTrial);
 
 		if (
-			upgradeDowngradeFlows.includes(branch) &&
-			!isUpgradingFromDefaultTrial
+			upgradeDowngradeFlows.includes(branch) 
 		) {
 			handleNonCheckoutErrors({
 				flags,
