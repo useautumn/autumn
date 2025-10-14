@@ -3,7 +3,8 @@ import Stripe from "stripe";
 import { z } from "zod";
 import { ensureStripeProductsWithEnv } from "@/external/stripe/stripeEnsureUtils.js";
 import {
-	checkKeyValid,	 createWebhookEndpoint,
+	checkKeyValid,
+	createWebhookEndpoint,
 } from "@/external/stripe/stripeOnboardingUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { encryptData } from "@/utils/encryptUtils.js";
@@ -290,6 +291,11 @@ export const handleConnectStripe = async (req: any, res: any) =>
 export const handleGetStripe = async (req: any, res: any) => {
 	try {
 		const org = await OrgService.getFromReq(req);
+
+		if (!isStripeConnected({ org, env: req.env })) {
+			res.status(200).json({});
+			return;
+		}
 
 		const stripeCli = createStripeCli({ org, env: req.env });
 

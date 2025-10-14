@@ -13,10 +13,19 @@ export default defineConfig({
 	},
 	optimizeDeps: {
 		// Exclude workspace dependencies from pre-bundling to avoid cache issues
-		exclude: ["@autumn/shared"],
+		exclude: [
+			"@autumn/shared",
+			"better-auth",
+			"better-auth/react",
+			"@better-auth/stripe",
+		],
 		// Force re-optimization on server start to catch workspace changes
 		force: process.env.FORCE_OPTIMIZE === "true",
+		// Include specific dependencies that might cause issues
+		include: [],
 	},
+	// Clear cache on config change
+	cacheDir: "node_modules/.vite",
 	server: {
 		host: "0.0.0.0", // Required for Docker
 		port: process.env.VITE_PORT

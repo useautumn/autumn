@@ -1,25 +1,34 @@
-import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import { useCustomerContext } from "./CustomerContext";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { Invoice, Product } from "@autumn/shared";
+import {
+	type Entity,
+	type Invoice,
+	type InvoiceDiscount,
+	Product,
+} from "@autumn/shared";
 import { toast } from "sonner";
-import { getStripeInvoiceLink } from "@/utils/linkUtils";
-import { Row, Item } from "@/components/general/TableGrid";
 import { AdminHover } from "@/components/general/AdminHover";
+import { Item, Row } from "@/components/general/TableGrid";
+import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { cn } from "@/lib/utils";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useEnv } from "@/utils/envUtils";
+import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
+import { getStripeInvoiceLink } from "@/utils/linkUtils";
+import { useCustomerContext } from "./CustomerContext";
 import { CusProductEntityItem } from "./components/CusProductEntityItem";
 import { useCusQuery } from "./hooks/useCusQuery";
 
 export const InvoicesTable = () => {
 	// const { env, invoices, products, entityId, entities, showEntityView } =
 	//   useCustomerContext();
+	const env = useEnv();
 	const { entityId, showEntityView } = useCustomerContext();
 	const { customer, products, entities } = useCusQuery();
+	const { stripeAccount } = useOrgStripeQuery();
 	const axiosInstance = useAxiosInstance();
 	const invoices = customer.invoices;
 
 	const entity = entities.find(
-		(e: any) => e.id === entityId || e.internal_id === entityId,
+		(e: Entity) => e.id === entityId || e.internal_id === entityId,
 	);
 
 	const getStripeInvoice = async (stripeInvoiceId: string) => {
@@ -28,16 +37,19 @@ export const InvoicesTable = () => {
 				`/v1/invoices/${stripeInvoiceId}/stripe`,
 			);
 			return data;
-		} catch (error) {
+		} catch {
 			toast.error("Failed to get invoice URL");
 			return null;
 		}
 	};
 
 	const getTotalDiscountAmount = (invoice: Invoice) => {
-		return invoice.discounts.reduce((acc: number, discount: any) => {
-			return acc + discount.amount_used;
-		}, 0);
+		return invoice.discounts.reduce(
+			(acc: number, discount: InvoiceDiscount) => {
+				return acc + discount.amount_used;
+			},
+			0,
+		);
 	};
 
 	const invoicesFiltered = invoices.filter((invoice: Invoice) => {
@@ -60,22 +72,17 @@ export const InvoicesTable = () => {
 					<p className="text-t3">No invoice history found</p>
 				</div>
 			) : (
-				<>
-					<Row
-						type="header"
-						className={cn(
-							"grid-cols-12 pr-0",
-							showEntityView && "grid-cols-15",
-						)}
-					>
-						<Item className="col-span-3">Products</Item>
-						{showEntityView && <Item className="col-span-3">Entity</Item>}
-						<Item className="col-span-3">Total</Item>
-						<Item className="col-span-3">Status</Item>
-						<Item className="col-span-2">Created At</Item>
-						<Item className="col-span-1" />
-					</Row>
-				</>
+				<Row
+					type="header"
+					className={cn("grid-cols-12 pr-0", showEntityView && "grid-cols-15")}
+				>
+					<Item className="col-span-3">Products</Item>
+					{showEntityView && <Item className="col-span-3">Entity</Item>}
+					<Item className="col-span-3">Total</Item>
+					<Item className="col-span-3">Status</Item>
+					<Item className="col-span-2">Created At</Item>
+					<Item className="col-span-1" />
+				</Row>
 			)}
 
 			{invoicesFiltered.map((invoice: Invoice) => (
@@ -85,12 +92,18 @@ export const InvoicesTable = () => {
 					onClick={async () => {
 						const stripeInvoice = await getStripeInvoice(invoice.stripe_id);
 						if (!stripeInvoice.hosted_invoice_url) {
-							const livemode = stripeInvoice.livemode;
-							window.open(getStripeInvoiceLink(stripeInvoice), "_blank");
+							window.open(
+								getStripeInvoiceLink({
+									stripeInvoice,
+									env,
+									accountId: stripeAccount?.id,
+								}),
+								"_blank",
+							);
 							return;
 						}
 
-						if (stripeInvoice && stripeInvoice.hosted_invoice_url) {
+						if (stripeInvoice?.hosted_invoice_url) {
 							window.open(stripeInvoice.hosted_invoice_url, "_blank");
 						}
 					}}
