@@ -1,24 +1,21 @@
-import { generateId } from "better-auth";
-import { NextFunction, Router } from "express";
-
 import {
 	AppEnv,
 	member,
-	Organization,
+	type Organization,
 	organizations,
-	StripeConfig,
+	type StripeConfig,
 	user as userTable,
 } from "@autumn/shared";
-
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { routeHandler } from "@/utils/routerUtils.js";
-
-import { and, eq } from "drizzle-orm";
-import { connectStripe } from "../orgs/handlers/handleConnectStripe.js";
-import { z } from "zod";
-import { createKey } from "../dev/api-keys/apiKeyUtils.js";
-import { afterOrgCreated } from "@/utils/authUtils/afterOrgCreated.js";
 import { Autumn } from "autumn-js";
+import { generateId } from "better-auth";
+import { and, eq } from "drizzle-orm";
+import { type NextFunction, Router } from "express";
+import { z } from "zod";
+import { afterOrgCreated } from "@/utils/authUtils/afterOrgCreated.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+import { routeHandler } from "@/utils/routerUtils.js";
+import { createKey } from "../dev/api-keys/apiKeyUtils.js";
+import { connectStripe } from "../orgs/handlers/handleConnectStripe.js";
 
 import { shouldReconnectStripe } from "../orgs/orgUtils.js";
 
@@ -32,7 +29,7 @@ const platformAuthMiddleware = async (
 	if (!process.env.AUTUMN_SECRET_KEY) next();
 
 	try {
-		let autumn = new Autumn();
+		const autumn = new Autumn();
 		const { data, error } = await autumn.check({
 			customer_id: req.org.id,
 			feature_id: "platform",
@@ -84,7 +81,8 @@ platformRouter.post("/exchange", (req: any, res: any) =>
 		res,
 		action: "exchange",
 		handler: async (req: ExtendedRequest, res: any) => {
-			let { organization, email, stripe_test_key, stripe_live_key } = req.body;
+			const { organization, email, stripe_test_key, stripe_live_key } =
+				req.body;
 
 			const { db, logger } = req;
 
@@ -160,13 +158,13 @@ platformRouter.post("/exchange", (req: any, res: any) =>
 					),
 				);
 
-			let membership = data.length > 0 ? data[0] : null;
+			const membership = data.length > 0 ? data[0] : null;
 
 			if (!membership) {
 				logger.info(`Connected to Stripe`);
 
 				// 2. Create org
-				let orgId = generateId();
+				const orgId = generateId();
 
 				[org] = (await db
 					.insert(organizations)
@@ -215,7 +213,7 @@ platformRouter.post("/exchange", (req: any, res: any) =>
 				});
 
 				if (reconnectStripe) {
-					let {
+					const {
 						test_api_key,
 						test_webhook_secret,
 						defaultCurrency: newDefaultCurrency,
@@ -256,7 +254,7 @@ platformRouter.post("/exchange", (req: any, res: any) =>
 
 				if (reconnectStripe) {
 					console.log("Reconnecting stripe live");
-					let {
+					const {
 						live_api_key,
 						live_webhook_secret,
 						defaultCurrency: newDefaultCurrency,
