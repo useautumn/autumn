@@ -1,7 +1,7 @@
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { Input } from "@/components/ui/input";
-import { CreateCustomer } from "@autumn/shared";
+import type { CreateCustomer } from "@autumn/shared";
 import { useRef } from "react";
+import { FormLabel as FieldLabel } from "@/components/v2/form/FormLabel";
+import { Input } from "@/components/v2/inputs/Input";
 
 export const CustomerConfig = ({
 	customer,

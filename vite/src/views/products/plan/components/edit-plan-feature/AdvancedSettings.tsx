@@ -84,7 +84,7 @@ export function AdvancedSettings() {
 					{/* Reset existing usage when product is enabled */}
 					<AreaCheckbox
 						title="Reset existing usage when product is enabled"
-						description="When coming from another plan, this will reset the customer's feature usage to 0."
+						description="When coming from another product, this will reset the customer's feature usage to 0."
 						checked={!!item.reset_usage_when_enabled}
 						// hide={usageType === FeatureUsageType.Continuous}
 						disabled={

@@ -45,7 +45,7 @@ export const PlanCardToolbar = ({
 				<IconButton
 					icon={<PencilSimpleIcon />}
 					onClick={onEdit}
-					aria-label="Edit plan"
+					aria-label="Edit product"
 					variant="muted"
 					disabled={editDisabled}
 					iconOrientation="center"
@@ -60,7 +60,7 @@ export const PlanCardToolbar = ({
 					<IconButton
 						icon={<TrashIcon />}
 						onClick={() => setDeleteOpen(true)}
-						aria-label="Delete plan"
+						aria-label="Delete product"
 						variant="muted"
 						iconOrientation="center"
 						disabled={deleteDisabled}

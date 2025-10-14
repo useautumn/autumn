@@ -42,13 +42,6 @@ export const handleGetProductDeleteInfo = async (req: any, res: any) =>
 					}),
 				]);
 
-				console.log("Getting product info for", req.params.productId);
-				console.log("All versions:", allVersions);
-				console.log("Latest version:", latestVersion);
-				console.log("Deletion text:", deletionText);
-
-				// 2. Get cus products
-
 				res.status(200).send({
 					numVersion: product.version,
 					hasCusProducts: allVersions,

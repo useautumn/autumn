@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useMemo } from "react";
 import { useParams } from "react-router";
@@ -28,6 +28,7 @@ export const useProductQuery = () => {
 	const productId = queryStates.productId || product_id;
 
 	const axiosInstance = useAxiosInstance();
+	const queryClient = useQueryClient();
 	const { getCachedProduct } = useCachedProduct({ productId: productId });
 
 	const cachedProduct = useMemo(getCachedProduct, []);
@@ -50,6 +51,8 @@ export const useProductQuery = () => {
 	const { data, isLoading, refetch, error } = useQuery({
 		queryKey: ["product", productId, queryStates.version],
 		queryFn: fetcher,
+		retry: 1, // Fail faster - only retry once instead of default 3 times
+		retryDelay: 500, // Short delay between retries
 	});
 
 	const { refetch: refetchCounts } = useProductCountsQuery();
@@ -57,6 +60,17 @@ export const useProductQuery = () => {
 
 	const product = data?.product || cachedProduct;
 	const isLoadingWithCache = cachedProduct ? false : isLoading;
+
+	/**
+	 * Invalidates all individual product queries across the app
+	 */
+	const invalidate = async () => {
+		await queryClient.invalidateQueries({ queryKey: ["product"] });
+		await Promise.all([
+			queryClient.invalidateQueries({ queryKey: ["product_counts"] }),
+			queryClient.invalidateQueries({ queryKey: ["migrations"] }),
+		]);
+	};
 
 	return {
 		product,
@@ -66,6 +80,7 @@ export const useProductQuery = () => {
 			await refetch();
 			await Promise.all([refetchMigrations(), refetchCounts()]);
 		},
+		invalidate,
 		error,
 	};
 };

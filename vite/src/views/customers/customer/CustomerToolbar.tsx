@@ -1,27 +1,25 @@
-import React from "react";
+import type { Customer } from "@autumn/shared";
+import { Delete, Settings } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import SmallSpinner from "@/components/general/SmallSpinner";
-import AddCouponDialogContent from "./components/add-coupon/AddCouponDialogContent";
-
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import {
 	DropdownMenu,
-	DropdownMenuTrigger,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState } from "react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { Customer } from "@autumn/shared";
-import { useCustomerContext } from "./CustomerContext";
+import { cn } from "@/lib/utils";
 import { CusService } from "@/services/customers/CusService";
-import { useNavigate } from "react-router";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { navigateTo } from "@/utils/genUtils";
-
-import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import { useCustomerContext } from "./CustomerContext";
+import AddCouponDialogContent from "./components/add-coupon/AddCouponDialogContent";
+import { DeleteCustomerDialog } from "./components/DeleteCustomerDialog";
 import UpdateCustomerDialog from "./components/UpdateCustomerDialog";
-import { Delete, Settings } from "lucide-react";
 
 export const CustomerToolbar = ({
 	className,
@@ -35,6 +33,7 @@ export const CustomerToolbar = ({
 
 	const axiosInstance = useAxiosInstance({ env });
 	const [deleteLoading, setDeleteLoading] = useState(false);
+	const [settingsOpen, setSettingsOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const [modalOpen, setModalOpen] = useState(false);
 	const [modalType, setModalType] = useState<"add-coupon" | "edit">(
@@ -53,11 +52,11 @@ export const CustomerToolbar = ({
 			toast.error("Failed to delete customer");
 		}
 		setDeleteLoading(false);
-		setDeleteOpen(false);
+		setSettingsOpen(false);
 	};
 
 	return (
-		<React.Fragment>
+		<>
 			<Dialog open={modalOpen} onOpenChange={setModalOpen}>
 				<DialogTrigger asChild></DialogTrigger>
 				{modalOpen && modalType === "add-coupon" ? (
@@ -70,7 +69,7 @@ export const CustomerToolbar = ({
 					/>
 				)}
 
-				<DropdownMenu open={deleteOpen} onOpenChange={setDeleteOpen}>
+				<DropdownMenu open={settingsOpen} onOpenChange={setSettingsOpen}>
 					<DropdownMenuTrigger asChild>
 						<Button
 							isIcon
@@ -87,7 +86,8 @@ export const CustomerToolbar = ({
 							onClick={async (e) => {
 								e.stopPropagation();
 								e.preventDefault();
-								await handleDelete();
+								setDeleteOpen(true);
+								setSettingsOpen(false);
 							}}
 						>
 							<div className="flex items-center justify-between w-full gap-2">
@@ -98,6 +98,12 @@ export const CustomerToolbar = ({
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</Dialog>
-		</React.Fragment>
+			<DeleteCustomerDialog
+				customer={customer}
+				open={deleteOpen}
+				setOpen={setDeleteOpen}
+				redirectToCustomersPage
+			/>
+		</>
 	);
 };

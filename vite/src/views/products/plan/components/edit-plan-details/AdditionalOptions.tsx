@@ -16,7 +16,7 @@ export const AdditionalOptions = ({
 				<AreaCheckbox
 					title="Default"
 					description="This product will be enabled by default for all new users,
-                        typically used for your free plan"
+                        typically used for your free product"
 					checked={product.is_default}
 					disabled={product.is_add_on}
 					onCheckedChange={(checked) =>

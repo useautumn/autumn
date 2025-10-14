@@ -46,7 +46,7 @@ function TooltipContent({
 				sideOffset={sideOffset}
 				className={cn(
 					`z-50 overflow-hidden rounded-[6px] px-2 py-[3px]
-          bg-[#444444] text-white
+          bg-t12 text-white
           text-[13px] font-medium leading-[1.6] tracking-[-0.039px]
           shadow-[0px_0px_4px_2px_rgba(0,0,0,0.05)]
           animate-in fade-in-0 zoom-in-95
@@ -58,16 +58,16 @@ function TooltipContent({
           before:absolute before:z-10
           before:data-[side=top]:-bottom-1 before:data-[side=top]:left-1/2 before:data-[side=top]:-translate-x-1/2
           before:data-[side=top]:border-l-[7px] before:data-[side=top]:border-r-[7px] before:data-[side=top]:border-t-[6px]
-          before:data-[side=top]:border-l-transparent before:data-[side=top]:border-r-transparent before:data-[side=top]:border-t-[#444444]
+          before:data-[side=top]:border-l-transparent before:data-[side=top]:border-r-transparent before:data-[side=top]:border-t-t12
           before:data-[side=bottom]:-top-1 before:data-[side=bottom]:left-1/2 before:data-[side=bottom]:-translate-x-1/2
           before:data-[side=bottom]:border-l-[7px] before:data-[side=bottom]:border-r-[7px] before:data-[side=bottom]:border-b-[6px]
-          before:data-[side=bottom]:border-l-transparent before:data-[side=bottom]:border-r-transparent before:data-[side=bottom]:border-b-[#444444]
+          before:data-[side=bottom]:border-l-transparent before:data-[side=bottom]:border-r-transparent before:data-[side=bottom]:border-b-t12
           before:data-[side=left]:-right-1 before:data-[side=left]:top-1/2 before:data-[side=left]:-translate-y-1/2
           before:data-[side=left]:border-t-[7px] before:data-[side=left]:border-b-[7px] before:data-[side=left]:border-l-[6px]
-          before:data-[side=left]:border-t-transparent before:data-[side=left]:border-b-transparent before:data-[side=left]:border-l-[#444444]
+          before:data-[side=left]:border-t-transparent before:data-[side=left]:border-b-transparent before:data-[side=left]:border-l-t12
           before:data-[side=right]:-left-1 before:data-[side=right]:top-1/2 before:data-[side=right]:-translate-y-1/2
           before:data-[side=right]:border-t-[7px] before:data-[side=right]:border-b-[7px] before:data-[side=right]:border-r-[6px]
-          before:data-[side=right]:border-t-transparent before:data-[side=right]:border-b-transparent before:data-[side=right]:border-r-[#444444]
+          before:data-[side=right]:border-t-transparent before:data-[side=right]:border-b-transparent before:data-[side=right]:border-r-t12
           `,
 					className,
 				)}

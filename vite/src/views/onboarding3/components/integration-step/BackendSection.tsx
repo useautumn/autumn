@@ -12,11 +12,16 @@ import { SectionHeader } from "./SectionHeader";
 import { getBackendSnippet } from "./snippets";
 
 export const BackendSection = () => {
-	const { selectedStack, selectedAuth, customerType, secretKey, setSecretKey } =
-		useIntegrationContext();
+	const {
+		selectedBackend,
+		selectedAuth,
+		customerType,
+		secretKey,
+		setSecretKey,
+	} = useIntegrationContext();
 
 	const snippet = getBackendSnippet(
-		selectedStack,
+		selectedBackend,
 		selectedAuth,
 		customerType,
 		secretKey,
@@ -66,11 +71,11 @@ export const BackendSection = () => {
 						<CodeGroup value="handler">
 							<CodeGroupList>
 								<CodeGroupTab value="handler">
-									{selectedStack === "nextjs"
+									{selectedBackend === "nextjs"
 										? "app/api/autumn/[...all]/route.ts"
-										: selectedStack === "rr7"
+										: selectedBackend === "rr7"
 											? "app/routes/api.autumn.$.tsx"
-											: `${selectedStack === "express" ? "server" : "app"}.${selectedStack === "elysia" ? "ts" : "js"}`}
+											: `${selectedBackend === "express" ? "server" : "app"}.${selectedBackend === "elysia" ? "ts" : "js"}`}
 								</CodeGroupTab>
 								<CodeGroupCopyButton
 									onCopy={() => navigator.clipboard.writeText(snippet)}

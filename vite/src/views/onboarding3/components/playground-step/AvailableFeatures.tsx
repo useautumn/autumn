@@ -123,8 +123,8 @@ export const AvailableFeatures = ({
 						))
 				) : (
 					<span className="text-sm text-muted-foreground">
-						Your current plan doesn't have any features. Try purchasing a plan
-						in the preview first.
+						Your current product doesn't have any features. Try purchasing a
+						product in the preview first.
 					</span>
 				)}
 			</div>

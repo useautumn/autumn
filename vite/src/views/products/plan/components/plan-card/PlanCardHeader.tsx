@@ -28,7 +28,6 @@ export const PlanCardHeader = () => {
 					onEdit={() => {
 						setSheet({ type: "edit-plan", itemId: product.id });
 					}}
-					onDelete={() => console.log("Delete plan:", product.id)}
 					editDisabled={isPlanBeingEdited}
 				/>
 			</div>

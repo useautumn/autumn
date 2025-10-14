@@ -1,9 +1,8 @@
 import CodeBlock from "@/views/onboarding/components/CodeBlock";
 import { CodeSpan } from "../components/CodeSpan";
-import { StepHeader } from "../StepHeader";
-import { Frontend } from "../StackEnums";
-import { useIntegrateContext } from "../IntegrateContext";
 import { InfoBox } from "../components/InfoBox";
+import { useIntegrateContext } from "../IntegrateContext";
+import { StepHeader } from "../StepHeader";
 
 const nextjsSnippet = () => {
 	return `import { PricingTable } from "autumn-js/react";
@@ -36,8 +35,8 @@ export const CheckoutPricingTable = () => {
 				}
 			/>
 			<p className="text-t2 text-sm">
-				Display a pricing table with the plans you have created and let your
-				customers choose a plan.
+				Display a pricing table with the products you have created and let your
+				customers choose a product.
 			</p>
 			<CodeBlock
 				snippets={[
@@ -59,6 +58,7 @@ export const CheckoutPricingTable = () => {
 						className="text-t2 font-medium underline"
 						href="https://docs.useautumn.com/setup/shadcn"
 						target="_blank"
+						rel="noopener"
 					>
 						here
 					</a>
