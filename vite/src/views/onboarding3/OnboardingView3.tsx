@@ -79,7 +79,7 @@ export default function OnboardingContent() {
 				{/* Standard layout for all steps - NO PROP DRILLING! */}
 				<div
 					className={cn(
-						"relative w-full h-full flex bg-[#EEEEEE] [scrollbar-gutter:stable]",
+						"relative w-full h-full flex bg-gray-medium [scrollbar-gutter:stable]",
 						step === OnboardingStep.Integration
 							? "overflow-y-auto"
 							: "overflow-y-hidden",

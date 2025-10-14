@@ -16,7 +16,7 @@ export const OrgLogo = ({ org }: { org: FrontendOrg }) => {
 			{org.logo ? (
 				<img src={org.logo} alt={org.name} className="w-full h-full" />
 			) : (
-				<span className="w-5 h-5 flex items-center justify-center bg-gradient-to-r from-purple-600 via-purple-500 to-[#6f47ff] text-white text-xs">
+				<span className="w-5 h-5 flex items-center justify-center bg-gradient-to-r from-purple-600 via-purple-500 to-purple-gradient text-white text-xs">
 					{firstLetter}
 				</span>
 			)}
