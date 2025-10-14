@@ -36,7 +36,7 @@ export const GroupedTabButton = ({
 							"flex items-center gap-1 px-[6px] py-1 h-6 text-body border border-t10 transition-none outline-none whitespace-nowrap",
 							"hover:text-primary focus-visible:text-primary",
 							isActive &&
-								"bg-[#f9f5ff] text-primary shadow-[0px_3px_4px_0px_inset_rgba(0,0,0,0.04)]",
+								"bg-light-purple text-primary shadow-[0px_3px_4px_0px_inset_rgba(0,0,0,0.04)]",
 							!isActive &&
 								"bg-white shadow-[0px_-3px_4px_0px_inset_rgba(0,0,0,0.04)]",
 							isFirst && "rounded-l-md border-l",
