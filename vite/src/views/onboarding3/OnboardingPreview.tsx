@@ -78,7 +78,7 @@ export const OnboardingPreview = ({
 	}
 
 	return (
-		<Card className="min-w-[28rem] max-w-xl mx-4 bg-card border-[#ddd] border-[0.5px] gap-0 p-4">
+		<Card className="min-w-[28rem] max-w-xl mx-4 bg-card border-border border-[0.5px] gap-0 p-4">
 			<CardHeader className="gap-0 px-0">
 				<div className="flex flex-row items-center justify-between w-full">
 					<div className="flex flex-row items-center gap-2 min-w-0 flex-1">

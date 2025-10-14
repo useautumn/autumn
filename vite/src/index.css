@@ -176,7 +176,7 @@ html {
 	--color-primary-foreground: var(--primary-foreground);
 	--color-primary-btn-hover: #a568ff; /* primary button hover */
 	--color-primary-btn-active: #9b5afb; /* primary button active */
-	--color-primary-btn-border: #8838ff; /* primary button border */
+	--color-primary-btn-border: var(--primary); /* primary button border */
 
 	--color-muted-hover: #f2ebff;
 	--color-muted-active: #f2e9ff;
@@ -268,6 +268,16 @@ html {
 	--color-focus: rgba(139, 92, 246, 0.95);
 
 	--color-table-hover: #f3f3f3;
+
+	/* Inline color consolidation */
+	--color-light-purple: #f9f5ff;
+	--color-error-light: #fee1e1;
+	--color-gray-light: #fafafa;
+	--color-gray-medium: #eeeeee;
+	--color-purple-dark: #8231ff;
+	--color-purple-medium: #b07aff;
+	--color-purple-stripe: #665cff;
+	--color-purple-gradient: #6f47ff;
 }
 
 /* Hide number input spinners globally */
