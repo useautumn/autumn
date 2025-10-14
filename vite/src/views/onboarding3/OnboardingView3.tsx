@@ -56,6 +56,11 @@ export default function OnboardingContent() {
 	const isQueryLoading = productsLoading || featuresLoading;
 
 	if (isQueryLoading || isCheckingAutoSkip) {
+		console.log(
+			"Rendering onboarding loader",
+			isQueryLoading,
+			isCheckingAutoSkip,
+		);
 		return <LoadingScreen />;
 	}
 

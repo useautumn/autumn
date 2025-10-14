@@ -1,3 +1,4 @@
+import { FeatureType } from "@autumn/shared";
 import { ArrowRightIcon } from "@phosphor-icons/react";
 import { useCustomer } from "autumn-js/react";
 import { useState } from "react";
@@ -79,41 +80,47 @@ export const AvailableFeatures = ({
 		<SheetSection title="Available features">
 			<div className="flex flex-col gap-4">
 				{Object.keys(customer?.features || {}).length > 0 ? (
-					Object.keys(customer?.features || {}).map((x) => (
-						<FeatureTestRow
-							label={
-								features.find((f) => f.id === customer?.features[x].id)?.name ||
-								""
-							}
-							usage={
-								customer?.features[x].unlimited
-									? "Unlimited"
-									: String(customer?.features[x].balance)
-							}
-							key={x}
-							handleSend={async (value) => {
-								const featureId = customer?.features[x].id;
-
-								// Notify parent which feature was used
-								if (onFeatureUsed && featureId !== undefined) {
-									onFeatureUsed(featureId);
+					Object.keys(customer?.features ?? {})
+						.filter(
+							(x) =>
+								features.find((f) => f.id === customer?.features[x].id)
+									?.type !== FeatureType.Boolean,
+						)
+						.map((x) => (
+							<FeatureTestRow
+								label={
+									features.find((f) => f.id === customer?.features[x].id)
+										?.name || ""
 								}
-
-								// Track the usage
-								const { data, error } = await track({
-									featureId: featureId,
-									value: value,
-								});
-
-								if (!error && data && onTrackSuccess) {
-									onTrackSuccess(data);
+								usage={
+									customer?.features[x].unlimited
+										? "Unlimited"
+										: String(customer?.features[x].balance)
 								}
+								key={x}
+								handleSend={async (value) => {
+									const featureId = customer?.features[x].id;
 
-								// Immediately refetch customer data to update balances
-								await refetch();
-							}}
-						/>
-					))
+									// Notify parent which feature was used
+									if (onFeatureUsed && featureId !== undefined) {
+										onFeatureUsed(featureId);
+									}
+
+									// Track the usage
+									const { data, error } = await track({
+										featureId: featureId,
+										value: value,
+									});
+
+									if (!error && data && onTrackSuccess) {
+										onTrackSuccess(data);
+									}
+
+									// Immediately refetch customer data to update balances
+									await refetch();
+								}}
+							/>
+						))
 				) : (
 					<span className="text-sm text-muted-foreground">
 						Your current plan doesn't have any features. Try purchasing a plan
