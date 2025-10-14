@@ -81,6 +81,8 @@ const createDevLogStream = () => {
 					"context",
 					"req",
 					"data",
+					"body",
+					"query",
 				];
 				const additionalFields = Object.keys(log)
 					.filter((key) => !excludeFields.includes(key))
@@ -90,7 +92,7 @@ const createDevLogStream = () => {
 					}, {} as any);
 
 				if (Object.keys(additionalFields).length > 0) {
-					message += " " + JSON.stringify(additionalFields, null, 2);
+					message += ` ${JSON.stringify(additionalFields, null, 2)}`;
 				}
 
 				// Format the final log line
@@ -98,7 +100,7 @@ const createDevLogStream = () => {
 
 				process.stdout.write(formattedLog);
 				callback();
-			} catch (error) {
+			} catch (_error) {
 				// Fallback for malformed JSON
 				process.stdout.write(chunk);
 				callback();
