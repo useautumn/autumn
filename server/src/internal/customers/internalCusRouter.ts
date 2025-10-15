@@ -6,8 +6,7 @@ import {
 	CusExpand,
 	CusProductStatus,
 	ErrCode,
-	FullCusProduct,
-	productToCusProduct,
+	FullCusProduct, productToCusProduct
 } from "@autumn/shared";
 
 import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
@@ -297,32 +296,12 @@ cusRouter.get(
 					});
 
 			let productV2 = mapToProductV2({ product: product!, features });
-			// let numVersions = await ProductService.getProductVersionCount({
-			//   db,
-			//   orgId: org.id,
-			//   env,
-			//   productId: product_id,
-			// });
+
+			
 
 			res.status(200).json({
 				cusProduct,
 				product: productV2,
-				// customer,
-				// product: cusProduct
-				//   ? {
-				//       ...productV2,
-				//       options: cusProduct.options,
-				//       isActive: cusProduct.status === CusProductStatus.Active,
-				//       isCustom: cusProduct.is_custom,
-				//       isCanceled:
-				//         cusProduct.canceled_at !== null || cusProduct.canceled,
-				//       cusProductId: cusProduct.id,
-				//     }
-				//   : productV2,
-				// features,
-				// numVersions,
-				// entities: customer.entities,
-				// org: createOrgResponse({ org, env }),
 			});
 		} catch (error) {
 			handleFrontendReqError({

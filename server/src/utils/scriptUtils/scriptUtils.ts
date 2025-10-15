@@ -1,6 +1,6 @@
 import "dotenv/config";
 import fs from "node:fs";
-import type { AppEnv } from "@autumn/shared";
+import { ApiVersion, ApiVersionClass, type AppEnv } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
 import { subHours } from "date-fns";
 import type { Stripe } from "stripe";
@@ -180,6 +180,7 @@ export const initScript = async ({
 		features,
 		logger,
 		logtail: logger,
+		apiVersion: new ApiVersionClass(ApiVersion.V1_2),
 	} as unknown as ExtendedRequest;
 
 	return { stripeCli, autumnProducts, req };

@@ -1,39 +1,34 @@
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-
 import {
-	AppEnv,
+	type AppEnv,
 	BillingType,
 	CusProductStatus,
-	Customer,
-	FullCusProduct,
-	FullCustomerEntitlement,
-	FullCustomerPrice,
-	Organization,
+	type Customer,
+	type FullCusProduct,
+	type FullCustomerEntitlement,
+	type FullCustomerPrice,
+	type Organization,
 } from "@autumn/shared";
-import Stripe from "stripe";
-
-import { createStripeCli } from "../../utils.js";
-import { getStripeSubs } from "../../stripeSubUtils.js";
-import { getBillingType } from "@/internal/products/prices/priceUtils.js";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-
-import { getRelatedCusEnt } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
-import { notNullish } from "@/utils/genUtils.js";
-
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
+import { getRelatedCusEnt } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
+import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { getFeatureName } from "@/internal/features/utils/displayUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import { getBillingType } from "@/internal/products/prices/priceUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 import {
 	getFullStripeInvoice,
 	invoiceToSubId,
 } from "../../stripeInvoiceUtils.js";
-import { handleUsagePrices } from "./handleUsagePrices.js";
-import { handleContUsePrices } from "./handleContUsePrices.js";
-import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
-import { handlePrepaidPrices } from "./handlePrepaidPrices.js";
-import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";
+import { getStripeSubs } from "../../stripeSubUtils.js";
+import { createStripeCli } from "../../utils.js";
+import { handleContUsePrices } from "./handleContUsePrices.js";
+import { handlePrepaidPrices } from "./handlePrepaidPrices.js";
+import { handleUsagePrices } from "./handleUsagePrices.js";
 
 const handleInArrearProrated = async ({
 	db,
@@ -82,19 +77,19 @@ const handleInArrearProrated = async ({
 		return;
 	}
 
-	let feature = cusEnt.entitlement.feature;
+	const feature = cusEnt.entitlement.feature;
 	logger.info(
 		`Handling invoice.created for in arrear prorated, feature: ${feature.id}`,
 	);
 
-	let deletedEntities = await EntityService.list({
+	const deletedEntities = await EntityService.list({
 		db,
 		internalCustomerId: customer.internal_id!,
 		inFeatureIds: [feature.internal_id!],
 		isDeleted: true,
 	});
 
-	if (deletedEntities.length == 0) {
+	if (deletedEntities.length === 0) {
 		logger.info("No deleted entities found");
 		return;
 	}
@@ -112,7 +107,7 @@ const handleInArrearProrated = async ({
 
 	for (const linkedCusEnt of cusEnts) {
 		// isLinked
-		let isLinked = linkedCusEnt.entitlement.entity_feature_id == feature.id;
+		const isLinked = linkedCusEnt.entitlement.entity_feature_id === feature.id;
 
 		if (!isLinked) {
 			continue;
@@ -123,14 +118,14 @@ const handleInArrearProrated = async ({
 		);
 
 		// Delete cus ent ids
-		let newEntities = structuredClone(linkedCusEnt.entities!);
+		const newEntities = structuredClone(linkedCusEnt.entities!);
 		for (const entityId in newEntities) {
-			if (deletedEntities.some((e) => e.id == entityId)) {
+			if (deletedEntities.some((e) => e.id === entityId)) {
 				delete newEntities[entityId];
 			}
 		}
 
-		let updated = await CusEntService.update({
+		const updated = await CusEntService.update({
 			db,
 			id: linkedCusEnt.id,
 			updates: {
@@ -198,13 +193,13 @@ export const sendUsageAndReset = async ({
 
 	for (const cusPrice of cusPrices) {
 		const price = cusPrice.price;
-		let billingType = getBillingType(price.config);
+		const billingType = getBillingType(price.config);
 
 		if (isFixedPrice({ price })) {
 			continue;
 		}
 
-		let relatedCusEnt = getRelatedCusEnt({
+		const relatedCusEnt = getRelatedCusEnt({
 			cusPrice,
 			cusEnts,
 		});
@@ -227,19 +222,19 @@ export const sendUsageAndReset = async ({
 
 		const subId = invoiceToSubId({ invoice });
 
-		if (!usageBasedSub || usageBasedSub.id != subId) {
+		if (!usageBasedSub || usageBasedSub.id !== subId) {
 			continue;
 		}
 
 		// If trial just ended, skip
 		const { start, end } = subToPeriodStartEnd({ sub: usageBasedSub });
 
-		if (usageBasedSub.trial_end == start) {
+		if (usageBasedSub.trial_end === start) {
 			logger.info(`Trial just ended, skipping usage invoice.created`);
 			continue;
 		}
 
-		if (billingType == BillingType.UsageInArrear) {
+		if (billingType === BillingType.UsageInArrear) {
 			await handleUsagePrices({
 				db,
 				org,
@@ -254,7 +249,7 @@ export const sendUsageAndReset = async ({
 			});
 		}
 
-		if (billingType == BillingType.InArrearProrated) {
+		if (billingType === BillingType.InArrearProrated) {
 			await handleContUsePrices({
 				db,
 				stripeCli,
@@ -266,7 +261,7 @@ export const sendUsageAndReset = async ({
 			});
 		}
 
-		if (billingType == BillingType.UsageInAdvance) {
+		if (billingType === BillingType.UsageInAdvance) {
 			await handlePrepaidPrices({
 				db,
 				stripeCli,
@@ -324,11 +319,11 @@ export const handleInvoiceCreated = async ({
 			return;
 		}
 
-		let internalEntityId = activeProducts.find(
+		const internalEntityId = activeProducts.find(
 			(p) => p.internal_entity_id,
 		)?.internal_entity_id;
 
-		let features = await FeatureService.list({
+		const features = await FeatureService.list({
 			db,
 			orgId: org.id,
 			env,
@@ -372,7 +367,7 @@ export const handleInvoiceCreated = async ({
 
 		const stripeSubs = await getStripeSubs({
 			stripeCli: createStripeCli({ org, env }),
-			subIds: activeProducts.map((p) => p.subscription_ids || []).flat(),
+			subIds: activeProducts.flatMap((p) => p.subscription_ids || []),
 		});
 
 		for (const activeProduct of activeProducts) {

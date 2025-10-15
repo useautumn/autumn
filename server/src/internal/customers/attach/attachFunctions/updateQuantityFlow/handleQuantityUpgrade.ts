@@ -1,32 +1,30 @@
 import {
+	type AttachConfig,
 	calculateProrationAmount,
-	Feature,
-	FeatureOptions,
-	FullCusProduct,
-	FullCustomerPrice,
-	getAmountForQuantity,
+	cusProductToProduct,
+	type Feature,
+	type FeatureOptions,
+	type FullCusProduct,
+	type FullCustomerPrice,
 	getFeatureInvoiceDescription,
 	OnIncrease,
-	UsagePriceConfig,
+	type UsagePriceConfig,
 } from "@autumn/shared";
-
-import { Stripe } from "stripe";
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-
+import { Decimal } from "decimal.js";
+import type { Stripe } from "stripe";
+import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
+import { getRelatedCusEnt } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
+import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
+import { constructStripeInvoiceItem } from "@/internal/invoices/invoiceItemUtils/invoiceItemUtils.js";
+import { createAndFinalizeInvoice } from "@/internal/invoices/invoiceUtils/createAndFinalizeInvoice.js";
+import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
+import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import {
 	shouldBillNow,
 	shouldProrate,
 } from "@/internal/products/prices/priceUtils/prorationConfigUtils.js";
-import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
-import { constructStripeInvoiceItem } from "@/internal/invoices/invoiceItemUtils/invoiceItemUtils.js";
-import { cusProductToProduct } from "@autumn/shared";
-import { createAndFinalizeInvoice } from "@/internal/invoices/invoiceUtils/createAndFinalizeInvoice.js";
-import { getRelatedCusEnt } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-import { Decimal } from "decimal.js";
-import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
-import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
-import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 
 export const handleQuantityUpgrade = async ({
@@ -34,6 +32,7 @@ export const handleQuantityUpgrade = async ({
 	attachParams,
 	cusProduct,
 	stripeSubs,
+	attachConfig,
 	oldOptions,
 	newOptions,
 	cusPrice,
@@ -43,6 +42,7 @@ export const handleQuantityUpgrade = async ({
 	req: any;
 	attachParams: AttachParams;
 	cusProduct: FullCusProduct;
+	attachConfig: AttachConfig;
 	stripeSubs: Stripe.Subscription[];
 	oldOptions: FeatureOptions;
 	newOptions: FeatureOptions;
@@ -74,10 +74,7 @@ export const handleQuantityUpgrade = async ({
 	const config = cusPrice.price.config as UsagePriceConfig;
 	const billingUnits = config.billing_units || 1;
 
-	const diffWithBillingUnits = new Decimal(difference)
-		.mul((cusPrice.price.config as UsagePriceConfig).billing_units || 1)
-		.toNumber();
-
+	let invoice = null;
 	if (prorate && stripeSub?.status !== "trialing") {
 		const { start, end } = subToPeriodStartEnd({ sub: stripeSub });
 
@@ -101,20 +98,8 @@ export const handleQuantityUpgrade = async ({
 			});
 		}
 
-		// const amount = priceToInvoiceAmount({
-		//   price: cusPrice.price,
-		//   quantity: diffWithBillingUnits,
-		//   proration: prorate
-		//     ? {
-		//         start: start * 1000,
-		//         end: end * 1000,
-		//       }
-		//     : undefined,
-		//   now,
-		// });
-
 		const feature = features.find(
-			(f: Feature) => f.internal_id == newOptions.internal_feature_id,
+			(f: Feature) => f.internal_id === newOptions.internal_feature_id,
 		)!;
 
 		const product = cusProductToProduct({ cusProduct });
@@ -149,6 +134,7 @@ export const handleQuantityUpgrade = async ({
 				stripeCusId: stripeSub.customer as string,
 				stripeSubId: stripeSub.id,
 				paymentMethod: paymentMethod || null,
+				chargeAutomatically: !attachConfig.invoiceOnly,
 				logger,
 			});
 
@@ -173,6 +159,7 @@ export const handleQuantityUpgrade = async ({
 			} catch (error) {
 				logger.error(`Failed to create invoice from stripe: ${error}`);
 			}
+			invoice = finalInvoice;
 		}
 	}
 
@@ -184,7 +171,7 @@ export const handleQuantityUpgrade = async ({
 
 	// Update cus ent
 
-	let cusEnt = getRelatedCusEnt({
+	const cusEnt = getRelatedCusEnt({
 		cusPrice,
 		cusEnts: cusProduct.customer_entitlements,
 	});
@@ -200,4 +187,5 @@ export const handleQuantityUpgrade = async ({
 			amount: incrementBy,
 		});
 	}
+	return { invoice };
 };

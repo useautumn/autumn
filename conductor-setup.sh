@@ -30,47 +30,92 @@ bun install
 # Copy .env files from root repo
 echo "📋 Copying .env files from root repository..."
 
-if [ -f "$ROOT_PATH/server/.env" ]; then
+# Copy all .env* files from server/
+if [ -d "$ROOT_PATH/server" ]; then
     mkdir -p server
-    cp "$ROOT_PATH/server/.env" server/.env
-    echo "✅ Copied server/.env"
+    for env_file in "$ROOT_PATH/server"/.env*; do
+        if [ -f "$env_file" ]; then
+            filename=$(basename "$env_file")
+            cp "$env_file" "server/$filename"
+            echo "✅ Copied server/$filename"
+        fi
+    done
 else
-    echo "⚠️  Warning: $ROOT_PATH/server/.env not found"
+    echo "⚠️  Warning: $ROOT_PATH/server directory not found"
 fi
 
-if [ -f "$ROOT_PATH/vite/.env" ]; then
+# Copy all .env* files from vite/
+if [ -d "$ROOT_PATH/vite" ]; then
     mkdir -p vite
-    cp "$ROOT_PATH/vite/.env" vite/.env
-    echo "✅ Copied vite/.env"
+    for env_file in "$ROOT_PATH/vite"/.env*; do
+        if [ -f "$env_file" ]; then
+            filename=$(basename "$env_file")
+            cp "$env_file" "vite/$filename"
+            echo "✅ Copied vite/$filename"
+        fi
+    done
 else
-    echo "⚠️  Warning: $ROOT_PATH/vite/.env not found"
+    echo "⚠️  Warning: $ROOT_PATH/vite directory not found"
 fi
 
-if [ -f "$ROOT_PATH/shared/.env" ]; then
+# Copy all .env* files from shared/
+if [ -d "$ROOT_PATH/shared" ]; then
     mkdir -p shared
-    cp "$ROOT_PATH/shared/.env" shared/.env
-    echo "✅ Copied shared/.env"
+    for env_file in "$ROOT_PATH/shared"/.env*; do
+        if [ -f "$env_file" ]; then
+            filename=$(basename "$env_file")
+            cp "$env_file" "shared/$filename"
+            echo "✅ Copied shared/$filename"
+        fi
+    done
 else
-    echo "⚠️  Warning: $ROOT_PATH/shared/.env not found"
+    echo "⚠️  Warning: $ROOT_PATH/shared directory not found"
 fi
 
-# Copy shell scripts from root
+# Copy all .sh files from root
 echo "📋 Copying shell scripts from root repository..."
+for sh_file in "$ROOT_PATH"/*.sh; do
+    if [ -f "$sh_file" ]; then
+        filename=$(basename "$sh_file")
+        # Skip conductor-setup.sh itself
+        if [ "$filename" != "conductor-setup.sh" ]; then
+            cp "$sh_file" "$filename"
+            chmod +x "$filename"
+            echo "✅ Copied $filename"
+        fi
+    fi
+done
 
-if [ -f "$ROOT_PATH/run.sh" ]; then
-    cp "$ROOT_PATH/run.sh" run.sh
-    chmod +x run.sh
-    echo "✅ Copied run.sh"
+# Copy all .sh files from server/
+echo "📋 Copying shell scripts from server directory..."
+if [ -d "$ROOT_PATH/server" ]; then
+    mkdir -p server
+    for sh_file in "$ROOT_PATH/server"/*.sh; do
+        if [ -f "$sh_file" ]; then
+            filename=$(basename "$sh_file")
+            cp "$sh_file" "server/$filename"
+            chmod +x "server/$filename"
+            echo "✅ Copied server/$filename"
+        fi
+    done
 else
-    echo "⚠️  Warning: $ROOT_PATH/run.sh not found"
+    echo "⚠️  Warning: $ROOT_PATH/server directory not found"
 fi
 
-if [ -f "$ROOT_PATH/commands.sh" ]; then
-    cp "$ROOT_PATH/commands.sh" commands.sh
-    chmod +x commands.sh
-    echo "✅ Copied commands.sh"
+# Copy all .sh files from server/shell/
+echo "📋 Copying shell scripts from server/shell directory..."
+if [ -d "$ROOT_PATH/server/shell" ]; then
+    mkdir -p server/shell
+    for sh_file in "$ROOT_PATH/server/shell"/*.sh; do
+        if [ -f "$sh_file" ]; then
+            filename=$(basename "$sh_file")
+            cp "$sh_file" "server/shell/$filename"
+            chmod +x "server/shell/$filename"
+            echo "✅ Copied server/shell/$filename"
+        fi
+    done
 else
-    echo "⚠️  Warning: $ROOT_PATH/commands.sh not found"
+    echo "⚠️  Warning: $ROOT_PATH/server/shell directory not found"
 fi
 
 # # Copy drizzle migration files

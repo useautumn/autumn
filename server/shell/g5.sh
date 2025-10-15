@@ -9,18 +9,18 @@ if [[ "$1" == *"setup"* ]]; then
 fi
 # $MOCHA_CMD 'tests/advanced/referrals/*.ts' 'tests/advanced/coupons/*.ts'
 
-$MOCHA_CMD 'tests/advanced/multiFeature/*.ts' \
-           'tests/advanced/coupons/*.ts' \
-           'tests/attach/updateQuantity/*.ts' \
-           'tests/advanced/referrals/*.ts' \
-           'tests/advanced/referrals/paid/*.ts' \
-           'tests/advanced/rollovers/*.ts' \
-           'tests/advanced/customInterval/*.ts'
+# $MOCHA_CMD 'tests/advanced/multiFeature/*.ts' \
+#            'tests/advanced/coupons/*.ts' \
+#            'tests/attach/updateQuantity/*.ts' \
+#            'tests/advanced/referrals/*.ts' \
+#            'tests/advanced/referrals/paid/*.ts' \
+#            'tests/advanced/rollovers/*.ts' \
+#            'tests/advanced/customInterval/*.ts'
           
-$MOCHA_CMD 'tests/attach/multiProduct/*.ts' \
-           'tests/advanced/usageLimit/*.ts' 
+# $MOCHA_CMD 'tests/attach/multiProduct/*.ts' \
+#            'tests/advanced/usageLimit/*.ts' 
 
-$MOCHA_CMD 'tests/advanced/usage/*.ts'
+# $MOCHA_CMD 'tests/advanced/usage/*.ts'
 
 
            

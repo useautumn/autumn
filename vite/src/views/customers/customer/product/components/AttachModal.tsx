@@ -17,6 +17,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { cn } from "@/lib/utils";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -45,6 +46,7 @@ export const AttachModal = ({
 }) => {
 	const { customer, entities } = useCusQuery();
 	const { product, entityId, attachState, version } = useProductContext();
+	const { stripeAccount } = useOrgStripeQuery();
 
 	const navigation = useNavigate();
 	const env = useEnv();
@@ -169,7 +171,14 @@ export const AttachModal = ({
 			if (data.checkout_url) {
 				window.open(data.checkout_url, "_blank");
 			} else if (data.invoice) {
-				window.open(getStripeInvoiceLink(data.invoice), "_blank");
+				window.open(
+					getStripeInvoiceLink({
+						stripeInvoice: data.invoice,
+						env,
+						accountId: stripeAccount?.id,
+					}),
+					"_blank",
+				);
 			}
 			navigateTo(`/customers/${cusId}`, navigation, env);
 

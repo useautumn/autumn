@@ -3,11 +3,11 @@ import {
 	type AttachConfig,
 	AttachScenario,
 	ErrCode,
+	InternalError,
 	SuccessCode,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
-import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import {
@@ -29,6 +29,7 @@ import { paramsToScheduleItems } from "../../mergeUtils/paramsToScheduleItems.js
 import { getCurrentPhaseIndex } from "../../mergeUtils/phaseUtils/phaseUtils.js";
 import { subToNewSchedule } from "../../mergeUtils/subToNewSchedule.js";
 import { updateCurSchedule } from "../../mergeUtils/updateCurSchedule.js";
+import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 
 export const handleScheduleFunction2 = async ({
 	req,
@@ -79,6 +80,14 @@ export const handleScheduleFunction2 = async ({
 	const subItems = curSub?.items.data.filter((item) =>
 		subItemInCusProduct({ cusProduct: curCusProduct, subItem: item }),
 	);
+
+	if (subItems.length == 0) {
+		logger.error(`SCHEDULE FLOW: subItems is empty, curCusProduct: ${curCusProduct.product.name}`);
+		throw new InternalError({
+			message: `SCHEDULE FLOW: subItems is empty, curCusProduct: ${curCusProduct.product.name}`,
+		});
+	}
+
 	const expectedEnd = getLatestPeriodEnd({ subItems });
 
 	if (schedule) {

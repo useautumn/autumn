@@ -1,14 +1,14 @@
-import { useQueryClient } from "@tanstack/react-query";
 import {
 	ACTIVE_STATUSES,
 	cusProductToProduct,
-	FullCusProduct,
-	FullCustomer,
+	type FullCusProduct,
+	type FullCustomer,
 	mapToProductV2,
 	notNullish,
+	type ProductV2,
 	productToCusProduct,
-	ProductV2,
 } from "@autumn/shared";
+import { useQueryClient } from "@tanstack/react-query";
 
 export const useCusProductCache = ({
 	customerId,
@@ -81,15 +81,12 @@ export const useCusProductCache = ({
 						: cachedData.customer.entity?.internal_id;
 
 					const cusProduct = productToCusProduct({
-						productId: productId!,
+						productId,
 						cusProducts,
 						internalEntityId,
 						version: queryStates.version,
 						cusProductId: queryStates.customerProductId,
 						inStatuses: ACTIVE_STATUSES,
-						// version: undefined,
-						// cusProductId: undefined,
-						// inStatuses: ACTIVE_STATUSES,
 					});
 
 					if (cusProduct) {

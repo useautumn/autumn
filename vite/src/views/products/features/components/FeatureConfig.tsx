@@ -67,8 +67,12 @@ export function FeatureConfig({
 				},
 	);
 
+	const [eventNames, setEventNames] = useState<string[]>(
+		feature.event_names || [],
+	);
+
 	const [showEventName, setShowEventName] = useState(
-		feature.config && feature.config.filters?.[0]?.value?.length > 0,
+		feature.event_names && feature.event_names.length > 0,
 	);
 	const [idChanged, setIdChanged] = useState(!!feature.id);
 
@@ -78,6 +82,12 @@ export function FeatureConfig({
 		if (feature.type === FeatureType.Metered) {
 			setFeature({ ...feature, config: newConfig });
 		}
+	};
+
+	// Helper function to update event names and sync to parent
+	const updateEventNames = (newEventNames: string[]) => {
+		setEventNames(newEventNames);
+		setFeature({ ...feature, event_names: newEventNames });
 	};
 
 	const showNameAndId = () => {
@@ -148,8 +158,8 @@ export function FeatureConfig({
 								<FieldLabel>Event Name</FieldLabel>
 
 								<FilterInput
-									config={meteredConfig}
-									setConfig={updateMeteredConfig}
+									eventNames={eventNames}
+									setEventNames={updateEventNames}
 									eventNameInput={eventNameInput}
 									setEventNameInput={setEventNameInput}
 									setEventNameChanged={setEventNameChanged}
@@ -204,51 +214,32 @@ export function FeatureConfig({
 }
 
 export const FilterInput = ({
-	config,
-	setConfig,
+	eventNames,
+	setEventNames,
 	eventNameInput,
 	setEventNameInput,
 	setEventNameChanged,
 }: {
-	config: MeteredConfig;
-	setConfig: any;
+	eventNames: string[];
+	setEventNames: (eventNames: string[]) => void;
 	eventNameInput: string;
 	setEventNameInput: any;
 	setEventNameChanged: any;
 }) => {
 	const [inputFocused, setInputFocused] = useState(false);
 
-	const filter: Expression =
-		config.filters.length > 0
-			? config.filters[0]
-			: {
-					property: "",
-					operator: "",
-					value: [],
-				};
-
 	const enterClicked = () => {
-		let newFilter: Expression;
-
-		if (filter.value.length === 0) {
-			newFilter = {
-				property: "",
-				operator: "",
-				value: [],
-			};
-		} else {
-			newFilter = { ...config.filters[0] };
+		if (eventNameInput.trim()) {
+			setEventNames([...eventNames, eventNameInput.trim()]);
+			setEventNameInput("");
+			setEventNameChanged(true);
 		}
-		newFilter.value.push(eventNameInput);
-		setConfig({ ...config, filters: [newFilter] });
-		setEventNameInput("");
-		setEventNameChanged(true);
 	};
 
 	const onRemoveClicked = (index: number) => {
-		const newFilter: Expression = { ...config.filters[0] };
-		newFilter.value.splice(index, 1);
-		setConfig({ ...config, filters: [newFilter] });
+		const newEventNames = [...eventNames];
+		newEventNames.splice(index, 1);
+		setEventNames(newEventNames);
 	};
 
 	useHotkeys("enter", enterClicked, {
@@ -264,7 +255,7 @@ export const FilterInput = ({
 					"border-primary shadow-[0_0_2px_1px_rgba(139,92,246,0.25)]",
 			)}
 		>
-			{filter.value.map((value: string, index: number) => (
+			{eventNames.map((value: string, index: number) => (
 				<div
 					key={index}
 					className="flex items-center gap-2 border border-zinc-300 bg-zinc-50 rounded-full pl-3 pr-2 py-1 text-xs"
