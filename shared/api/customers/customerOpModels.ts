@@ -177,7 +177,45 @@ export const ListCustomersResponseSchema = z.object({
 	}),
 });
 
+// Update Balances Params (based on handleUpdateBalances logic)
+export const UpdateBalancesParamsSchema = z.object({
+	balances: z
+		.array(
+			z.object({
+				feature_id: z.string().meta({
+					description: "Feature ID to update balance for",
+					example: "api_calls",
+				}),
+				balance: z.number().optional().meta({
+					description: "New balance value (required if unlimited is not true)",
+					example: 1000,
+				}),
+				unlimited: z.boolean().optional().meta({
+					description: "Set to true to make the feature unlimited",
+					example: false,
+				}),
+				interval: z.string().optional().meta({
+					description:
+						"Interval to match for balance update (e.g., 'month', 'year')",
+					example: "month",
+				}),
+				interval_count: z.number().optional().meta({
+					description: "Interval count to match for balance update",
+					example: 1,
+				}),
+				entity_id: z.string().optional().meta({
+					description: "Entity ID for entity-specific balance updates",
+					example: "entity_123",
+				}),
+			}),
+		)
+		.meta({
+			description: "Array of feature balances to update",
+		}),
+});
+
 export type CreateCustomerParams = z.infer<typeof CreateCustomerParamsSchema>;
 export type UpdateCustomerParams = z.infer<typeof UpdateCustomerParamsSchema>;
 export type ListCustomersQuery = z.infer<typeof ListCustomersQuerySchema>;
 export type ListCustomersResponse = z.infer<typeof ListCustomersResponseSchema>;
+export type UpdateBalancesParams = z.infer<typeof UpdateBalancesParamsSchema>;

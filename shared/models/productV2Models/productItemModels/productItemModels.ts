@@ -27,8 +27,14 @@ export enum ProductItemType {
 }
 
 export const PriceTierSchema = z.object({
-	to: z.number().or(z.literal(TierInfinite)),
-	amount: z.number(),
+	to: z.number().or(z.literal(TierInfinite)).meta({
+		description: "The maximum amount of usage for this tier.",
+		example: 100,
+	}),
+	amount: z.number().meta({
+		description: "The price of the product item for this tier.",
+		example: 10,
+	}),
 });
 
 export enum UsageModel {
