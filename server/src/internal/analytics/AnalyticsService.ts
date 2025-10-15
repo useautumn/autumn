@@ -48,12 +48,12 @@ export class AnalyticsService {
 		const { clickhouseClient, org, env } = req;
 
 		const query = `
-    select count(*) as count, event_name 
-    from org_events_view(org_id={org_id:String}, org_slug='', env={env:String}) 
-    where timestamp >= NOW() - INTERVAL '1 month'
-    group by event_name
-    order by count(*) desc
-    limit {limit:UInt32}
+    SELECT COUNT(*) AS count, event_name 
+    FROM org_events_view(org_id={org_id:String}, org_slug='', env={env:String}) 
+    WHERE timestamp >= NOW() - INTERVAL '1 month'
+    GROUP BY event_name
+    ORDER BY COUNT(*) DESC
+    LIMIT {limit:UInt32}
     `;
 		const result = await clickhouseClient.query({
 			query,
@@ -73,7 +73,7 @@ export class AnalyticsService {
 	}
 
 	static async getTopUser({ req }: { req: ExtendedRequest }) {
-		const { clickhouseClient, org, env, db } = req;
+		const { clickhouseClient, org, env } = req;
 
 		const query = `
 SELECT 
@@ -165,7 +165,7 @@ WHERE event_name = {eventName:String}
 	}
 
 	static async getTotalCustomers({ req }: { req: ExtendedRequest }) {
-		const { clickhouseClient, org, env, db } = req;
+		const { clickhouseClient, org, env } = req;
 		const query = `SELECT COUNT(DISTINCT id) AS total_customers 
 FROM customers
 WHERE org_id = {org_id:String} 
@@ -228,35 +228,35 @@ WHERE org_id = {org_id:String}
 
 		if (AnalyticsService.clickhouseAvailable) {
 			const query = `
-with customer_events as (
-    select * 
-    from org_events_view(org_id={org_id:String}, org_slug='', env={env:String}) 
-    ${aggregateAll ? "" : "where customer_id = {customer_id:String}"}
+WITH customer_events AS (
+    SELECT * 
+    FROM org_events_view(org_id={org_id:String}, org_slug='', env={env:String}) 
+    ${aggregateAll ? "" : "WHERE customer_id = {customer_id:String}"}
 )
-select 
+SELECT 
     dr.period, 
     ${countExpressions}
-from date_range_view(bin_size={bin_size:String}, days={days:UInt32}) dr
-    left join customer_events e
-    on date_trunc({bin_size:String}, e.timestamp) = dr.period 
-group by dr.period 
-order by dr.period;
+FROM date_range_view(bin_size={bin_size:String}, days={days:UInt32}) dr
+    LEFT JOIN customer_events e
+    ON date_trunc({bin_size:String}, e.timestamp) = dr.period 
+GROUP BY dr.period 
+ORDER BY dr.period;
 `;
 
 			const queryBillingCycle = `
-with customer_events as (
-    select * 
-    from org_events_view(org_id={org_id:String}, org_slug='', env={env:String}) 
-    ${aggregateAll ? "" : "where customer_id = {customer_id:String}"}
+WITH customer_events AS (
+    SELECT * 
+    FROM org_events_view(org_id={org_id:String}, org_slug='', env={env:String}) 
+    ${aggregateAll ? "" : "WHERE customer_id = {customer_id:String}"}
 )
-select 
+SELECT 
     dr.period, 
     ${countExpressions}
-from date_range_bc_view(bin_size={bin_size:String}, start_date={end_date:DateTime}, days={days:UInt32}) dr
-    left join customer_events e
-    on date_trunc({bin_size:String}, e.timestamp) = dr.period 
-group by dr.period 
-order by dr.period;
+FROM date_range_bc_view(bin_size={bin_size:String}, start_date={end_date:DateTime}, days={days:UInt32}) dr
+    LEFT JOIN customer_events e
+    ON date_trunc({bin_size:String}, e.timestamp) = dr.period 
+GROUP BY dr.period 
+ORDER BY dr.period;
       `;
 
 			const queryParams = {
@@ -377,7 +377,7 @@ order by dr.period;
     AND timestamp < toDateTime({endDate:String})
     ${aggregateAll ? "" : "AND customer_id = {customerId:String}"}
     ORDER BY timestamp DESC
-    limit 10000
+    LIMIT 10000
     `;
 
 		const filledQuery = query
@@ -386,8 +386,6 @@ order by dr.period;
 			.replace("{startDate:String}", finalStartDate)
 			.replace("{endDate:String}", finalEndDate)
 			.replace("{env:String}", env);
-
-		// console.log("filledQuery", filledQuery);
 
 		const result = await clickhouseClient.query({
 			query: query,
@@ -400,8 +398,80 @@ order by dr.period;
 			},
 		});
 
-		// log the actual query... with params filled in...?
-		// console.log("query", query);
+		const resultJson = await result.json();
+
+		return resultJson;
+	}
+
+	static async getEventsByGranularity({
+		req,
+		params,
+		customer,
+		aggregateAll = false,
+	}: {
+		req: ExtendedRequest;
+		params: {
+			customer_id?: string;
+			event_names?: string[];
+			granularity: "minute" | "hour" | "day";
+			days?: number;
+		};
+		customer?: FullCustomer;
+		aggregateAll?: boolean;
+	}) {
+		const { clickhouseClient, org, env } = req;
+
+		AnalyticsService.handleEarlyExit();
+
+		const days = params.days || 7;
+		const granularity = params.granularity || "hour";
+		const eventNames = params.event_names || [];
+
+		const startDate = new Date();
+		startDate.setDate(startDate.getDate() - days);
+
+		const startDateStr = AnalyticsService.formatJsDateToClickHouseDateTime(startDate);
+		const endDateStr = AnalyticsService.formatJsDateToClickHouseDateTime(new Date());
+
+		const eventFilter = eventNames.length > 0 
+			? `AND event_name IN (${eventNames.map(() => '{eventName:String}').join(', ')})`
+			: '';
+
+		const truncateFunction = granularity === "minute" ? "toStartOfMinute" 
+			: granularity === "hour" ? "toStartOfHour" 
+			: "toStartOfDay";
+
+		const query = `
+    SELECT 
+        ${truncateFunction}(timestamp) AS period,
+        event_name,
+        SUM(value) AS total_value,
+        COUNT(*) AS event_count
+    FROM org_events_view(org_id={organizationId:String}, org_slug='', env={env:String})
+    WHERE timestamp >= toDateTime({startDate:String})
+    AND timestamp < toDateTime({endDate:String})
+    ${aggregateAll ? "" : "AND customer_id = {customerId:String}"}
+    ${eventFilter}
+    GROUP BY period, event_name
+    ORDER BY period DESC, event_name
+    `;
+
+		const queryParams: any = {
+			organizationId: org?.id,
+			customerId: params.customer_id,
+			startDate: startDateStr,
+			endDate: endDateStr,
+			env: env,
+		};
+
+		eventNames.forEach((eventName, index) => {
+			queryParams[`eventName${index}`] = eventName;
+		});
+
+		const result = await clickhouseClient.query({
+			query,
+			query_params: queryParams,
+		});
 
 		const resultJson = await result.json();
 
