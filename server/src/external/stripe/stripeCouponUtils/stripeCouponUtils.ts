@@ -136,6 +136,7 @@ export const createStripeCoupon = async ({
 	legacyVersion?: boolean;
 }) => {
 	const discountConfig = reward.discount_config;
+	const maxRedemptions = discountConfig?.max_redemptions;
 
 	const stripeCli = createStripeCli({
 		org,
@@ -185,6 +186,9 @@ export const createStripeCoupon = async ({
 			isOneOffProduct: pricesOnlyOneOff(prices),
 		}) as any),
 		...(couponToStripeValue({ reward, org, prices }) as any),
+		...(maxRedemptions != null
+			? { max_redemptions: maxRedemptions }
+			: {}),
 		name: reward.name,
 		metadata: {
 			autumn_internal_id: reward.internal_id,

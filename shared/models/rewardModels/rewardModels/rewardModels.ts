@@ -12,6 +12,7 @@ export const DiscountConfigSchema = z.object({
 	should_rollover: z.boolean().optional(),
 	apply_to_all: z.boolean().optional(),
 	price_ids: z.array(z.string()).optional(),
+	max_redemptions: z.number().optional(),
 });
 
 export const FreeProductConfigSchema = z.object({
