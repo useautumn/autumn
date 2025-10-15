@@ -24,6 +24,7 @@ import LoadingScreen from "@/views/general/LoadingScreen";
 import { InviteNotifications } from "@/views/general/notifications/InviteNotifications";
 import { MainSidebar } from "@/views/main-sidebar/MainSidebar";
 import { AppContext } from "./AppContext";
+import CommandPaletteComponent from "./CommandPalette";
 
 export function MainLayout() {
 	const env = useEnv();
@@ -114,6 +115,7 @@ export function MainLayout() {
 					<InviteNotifications />
 					<MainContent />
 					<ChatWidget />
+					<CommandPaletteComponent />
 				</main>
 			</NuqsAdapter>
 		</AutumnProvider>
