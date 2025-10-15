@@ -53,7 +53,7 @@ export const initFeature = ({
 }): (Feature & { eventName: string }) | any => {
 	const name = keyToTitle(id);
 
-	if (type == FeatureType.Boolean) {
+	if (type === FeatureType.Boolean) {
 		return {
 			id,
 			name,
@@ -61,19 +61,13 @@ export const initFeature = ({
 		} as Feature;
 	}
 
-	if (type == FeatureType.Metered) {
+	if (type === FeatureType.Metered) {
 		return {
 			id,
 			name,
 			type,
+			event_names: eventName ? [eventName] : [id],
 			config: {
-				filters: [
-					{
-						value: eventName ? [eventName] : [id],
-						property: "",
-						operator: "",
-					},
-				],
 				aggregate: {
 					type: aggregateType,
 					property: "value",
@@ -88,7 +82,7 @@ export const initFeature = ({
 		} as Feature;
 	}
 
-	if (type == FeatureType.CreditSystem) {
+	if (type === FeatureType.CreditSystem) {
 		return {
 			id,
 			name,
@@ -118,7 +112,7 @@ export const initEntitlement = ({
 	entityFeatureId?: string;
 	carryFromPrevious?: boolean;
 }) => {
-	if (feature.type == FeatureType.Boolean) {
+	if (feature.type === FeatureType.Boolean) {
 		return {
 			feature_id: feature.id,
 			internal_feature_id: feature.internal_id,
@@ -126,7 +120,7 @@ export const initEntitlement = ({
 	}
 
 	const isUnlimitedOrNone =
-		allowanceType == AllowanceType.Unlimited || allowance == null;
+		allowanceType === AllowanceType.Unlimited || allowance == null;
 
 	return {
 		feature_id: feature.id,
@@ -161,9 +155,9 @@ export const initPrice = ({
 	oneTier?: boolean;
 	billingUnits?: number;
 }) => {
-	if (type == "monthly" || type == "fixed_cycle") {
+	if (type === "monthly" || type === "fixed_cycle") {
 		return {
-			name: type == "monthly" ? "Monthly" : "Fixed Cycle",
+			name: type === "monthly" ? "Monthly" : "Fixed Cycle",
 			config: {
 				type: PriceType.Fixed,
 				amount: amount,
@@ -176,7 +170,7 @@ export const initPrice = ({
 		throw new Error("Feature is required for in_advance and in_arrears");
 	}
 
-	if (type == "in_advance") {
+	if (type === "in_advance") {
 		return {
 			name: "In Advance",
 			config: {
@@ -196,7 +190,7 @@ export const initPrice = ({
 		};
 	}
 
-	if (type == "in_arrears" || type == "in_arrear_prorated") {
+	if (type === "in_arrears" || type === "in_arrear_prorated") {
 		return {
 			name: "In Arrears",
 			config: {
@@ -205,7 +199,7 @@ export const initPrice = ({
 				feature_id: feature!.id,
 				interval: billingInterval,
 				billing_units: billingUnits,
-				should_prorate: type == "in_arrear_prorated",
+				should_prorate: type === "in_arrear_prorated",
 				usage_tiers: oneTier
 					? [
 							{

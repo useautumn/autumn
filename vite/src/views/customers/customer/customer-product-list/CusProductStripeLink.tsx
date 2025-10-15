@@ -1,9 +1,11 @@
-import { useEnv } from "@/utils/envUtils";
-import { getStripeSubLink, getStripeSubScheduleLink } from "@/utils/linkUtils";
-import { CusProductStatus, FullCusProduct } from "@autumn/shared";
+import { CusProductStatus, type FullCusProduct } from "@autumn/shared";
 import { ArrowUpRightFromSquare } from "lucide-react";
 import React from "react";
 import { Link } from "react-router";
+import { useOrg } from "@/hooks/common/useOrg";
+import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
+import { useEnv } from "@/utils/envUtils";
+import { getStripeSubLink, getStripeSubScheduleLink } from "@/utils/linkUtils";
 
 export const CusProductStripeLink = ({
 	cusProduct,
@@ -11,6 +13,8 @@ export const CusProductStripeLink = ({
 	cusProduct: FullCusProduct;
 }) => {
 	const env = useEnv();
+	const { org } = useOrg();
+	const { stripeAccount } = useOrgStripeQuery();
 	return (
 		<>
 			{cusProduct.subscription_ids &&
@@ -18,12 +22,24 @@ export const CusProductStripeLink = ({
 					<React.Fragment>
 						{cusProduct.subscription_ids.map((subId: string) => {
 							return (
-								<Link
+								<div
 									key={subId}
-									to={getStripeSubLink(subId, env)}
-									target="_blank"
 									onClick={(e) => {
 										e.stopPropagation();
+										if (stripeAccount) {
+											window.open(
+												getStripeSubLink({
+													subscriptionId: subId,
+													env,
+													accountId: stripeAccount.id,
+												}),
+												"_blank",
+											);
+										} else {
+											window.open(
+												getStripeSubLink({ subscriptionId: subId, env }),
+											);
+										}
 									}}
 								>
 									<div className="flex justify-center items-center w-fit px-2 gap-2 h-6">
@@ -32,7 +48,7 @@ export const CusProductStripeLink = ({
 											className="text-[#665CFF]"
 										/>
 									</div>
-								</Link>
+								</div>
 							);
 						})}
 					</React.Fragment>
@@ -43,12 +59,24 @@ export const CusProductStripeLink = ({
 					<React.Fragment>
 						{cusProduct.scheduled_ids.map((subId: string) => {
 							return (
-								<Link
+								<div
 									key={subId}
-									to={getStripeSubScheduleLink(subId, env)}
-									target="_blank"
 									onClick={(e) => {
 										e.stopPropagation();
+										if (stripeAccount) {
+											window.open(
+												getStripeSubScheduleLink({
+													scheduledId: subId,
+													env,
+													accountId: stripeAccount.id,
+												}),
+												"_blank",
+											);
+										} else {
+											window.open(
+												getStripeSubScheduleLink({ scheduledId: subId, env }),
+											);
+										}
 									}}
 								>
 									<div className="flex justify-center items-center w-fit px-2 gap-2 h-6">
@@ -57,7 +85,7 @@ export const CusProductStripeLink = ({
 											className="text-[#665CFF]"
 										/>
 									</div>
-								</Link>
+								</div>
 							);
 						})}
 					</React.Fragment>

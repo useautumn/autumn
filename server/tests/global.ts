@@ -979,7 +979,7 @@ before(async function () {
 					// Ignore this for now
 					// @ts-expect-error eventName is manually set
 					features[featureId as keyof typeof features].eventName =
-						dbFeature.config?.filters[0].value[0];
+						dbFeature.event_names?.[0] || dbFeature.id;
 				}
 			}
 		};

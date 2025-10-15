@@ -229,6 +229,8 @@ export const handleUpgradeFlow = async ({
 	}
 
 	if (res) {
+		
+
 		if (req.apiVersion.gte(ApiVersion.V1_1)) {
 			res.status(200).json(
 				AttachResultSchema.parse({

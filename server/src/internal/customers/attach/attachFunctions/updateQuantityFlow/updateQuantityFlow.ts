@@ -1,13 +1,13 @@
-import { SuccessCode } from "@autumn/shared";
+import { type AttachConfig, SuccessCode } from "@autumn/shared";
+import type Stripe from "stripe";
+import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import {
-	AttachParams,
+	type AttachParams,
 	AttachResultSchema,
 } from "../../../cusProducts/AttachParams.js";
 import { attachParamToCusProducts } from "../../attachUtils/convertAttachParams.js";
 import { handleUpdateFeatureQuantity } from "./updateFeatureQuantity.js";
-import { AttachConfig } from "@autumn/shared";
-import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 
 export const handleUpdateQuantityFunction = async ({
 	req,
@@ -33,15 +33,21 @@ export const handleUpdateQuantityFunction = async ({
 		subIds: cusProduct.subscription_ids || [],
 	});
 
+	const invoices: Stripe.Invoice[] = [];
 	for (const options of optionsToUpdate) {
-		await handleUpdateFeatureQuantity({
+		const result = await handleUpdateFeatureQuantity({
 			req,
 			attachParams,
+			attachConfig: config,
 			cusProduct,
 			stripeSubs,
 			oldOptions: options.old,
 			newOptions: options.new,
 		});
+
+		if (result?.invoice) {
+			invoices.push(result.invoice);
+		}
 	}
 
 	await CusProductService.update({
@@ -54,6 +60,8 @@ export const handleUpdateQuantityFunction = async ({
 		AttachResultSchema.parse({
 			customer_id: customer.id || customer.internal_id,
 			product_ids: attachParams.products.map((p) => p.id),
+			invoice:
+				config.invoiceOnly && invoices.length > 0 ? invoices[0] : undefined,
 			code: SuccessCode.FeaturesUpdated,
 			message: `Successfully updated quantity for features: ${optionsToUpdate.map((o) => o.new.feature_id).join(", ")}`,
 		}),

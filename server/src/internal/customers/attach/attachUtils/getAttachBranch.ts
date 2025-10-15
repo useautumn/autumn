@@ -276,8 +276,11 @@ const getChangeProductBranch = async ({
 		prices2: newPrices,
 	});
 
+	// Check if it's a trial first
+
 	if (isUpgrade) {
-		if (isMainTrialBranch({ attachParams })) {
+		const isTrial = isMainTrialBranch({ attachParams });
+		if (isTrial) {
 			return AttachBranch.MainIsTrial;
 		}
 

@@ -5,11 +5,10 @@ import {
 	AttachErrCode,
 	BillingType,
 	cusProductsToCusEnts,
-	cusProductToPrices,
-	ErrCode,
+	cusProductToPrices, ErrCode,
 	type FullCusProduct,
 	getStartingBalance,
-	type UsagePriceConfig,
+	type UsagePriceConfig
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";
@@ -230,14 +229,20 @@ export const handleAttachErrors = async ({
 	}
 
 	// Invoice no payment enabled: onlyCheckout
+	// Note: Upgrade from trial should proceed to checkout, so only block if NOT from trial
 
 	if (onlyCheckout || flags.isPublic) {
 		const upgradeDowngradeFlows = [
 			AttachBranch.Upgrade,
 			AttachBranch.Downgrade,
-			AttachBranch.MainIsTrial,
 		];
-		if (upgradeDowngradeFlows.includes(branch)) {
+
+
+
+
+		if (
+			upgradeDowngradeFlows.includes(branch) 
+		) {
 			handleNonCheckoutErrors({
 				flags,
 				config,
