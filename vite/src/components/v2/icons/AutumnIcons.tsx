@@ -18,9 +18,11 @@ export const FeatureArrowIcon = () => {
 export const IncludedUsageIcon = ({
 	size = 14,
 	color = "#2BAC11",
+	className = "",
 }: {
 	size?: number;
 	color?: string;
+	className?: string;
 }) => {
 	return (
 		<svg
@@ -29,6 +31,7 @@ export const IncludedUsageIcon = ({
 			viewBox="0 0 17 16"
 			fill="none"
 			xmlns="http://www.w3.org/2000/svg"
+			className={className}
 		>
 			<title>Included Usage</title>
 			<path

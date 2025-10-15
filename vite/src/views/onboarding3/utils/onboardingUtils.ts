@@ -61,19 +61,19 @@ export const getNextStep = (
 // Step configuration for headers and descriptions
 export const stepConfig = {
 	[OnboardingStep.PlanDetails]: {
-		title: "Create your first plan",
+		title: "Create a product",
 		description:
-			"Think of products like pricing plans that can have a price or be free (eg. Starter plans). They include features that customers on this plan get access to.",
+			"Products are the pricing tiers your application offers. You can create your free tiers and your paid tiers too.",
 	},
 	[OnboardingStep.FeatureCreation]: {
-		title: "Create your first feature",
+		title: "Create a feature",
 		description:
 			"Create and add the first feature that customers on this plan get access to. One feature for each part of your app you want to gate based on pricing.",
 	},
 	[OnboardingStep.FeatureConfiguration]: {
-		title: "Configure your feature",
+		title: "Define feature limits or billing",
 		description:
-			"Features can be free/included (100 credits per month), or have included usage with automatic overage pricing (100 credits included, $1 per credit after)",
+			"Features can be included as part of this product, or billed for based on their usage.",
 	},
 	[OnboardingStep.Playground]: {
 		title: "Finish your setup",

@@ -1,14 +1,9 @@
 import type { CustomerSchema } from "@autumn/shared";
-import {
-	ArrowsClockwiseIcon,
-	AtIcon,
-	PackageIcon,
-	StackIcon,
-} from "@phosphor-icons/react";
+import { ArrowsClockwiseIcon, AtIcon, GearIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { AppEnv } from "autumn-js";
-import { CircleUserRoundIcon, GiftIcon } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { CircleUserRoundIcon, GiftIcon, PackageIcon } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useNavigate } from "react-router";
 import type { z } from "zod";
@@ -22,11 +17,13 @@ import {
 } from "@/components/ui/command";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useListOrganizations } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { navigateTo } from "@/utils/genUtils";
 import { impersonateUser } from "@/views/admin/adminUtils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
+import { handleSwitchOrg } from "@/views/main-sidebar/components/OrgDropdown";
 import { handleEnvChange } from "@/views/main-sidebar/EnvDropdown";
 
 type Customer = z.infer<typeof CustomerSchema>;
@@ -108,14 +105,53 @@ const CommandPaletteComponent = () => {
 	const [open, setOpen] = useState<boolean>(false);
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
-	const [currentPage, setCurrentPage] = useState<"main" | "impersonate">(
-		"main",
-	);
+	const [currentPage, setCurrentPage] = useState<
+		"main" | "impersonate" | "orgs"
+	>("main");
+
+	// Refs to persist content during close animation
+	const closeTimeoutRef = useRef<NodeJS.Timeout>();
+	const lastRenderedContentRef = useRef<React.ReactNode>(null);
+	const isTransitioningRef = useRef(false);
 
 	const navigate = useNavigate();
 	const env = useEnv();
+	const { data: orgs, isPending: isLoadingOrgs } = useListOrganizations();
 	const axiosInstance = useAxiosInstance();
 	const { isAdmin } = useAdmin();
+
+	// Improved close dialog function with proper timing
+	const closeDialog = useCallback(() => {
+		// Mark that we're transitioning to prevent state updates during close
+		isTransitioningRef.current = true;
+
+		// Close the dialog immediately
+		setOpen(false);
+
+		// Clear any existing timeout
+		if (closeTimeoutRef.current) {
+			clearTimeout(closeTimeoutRef.current);
+		}
+
+		// Delay state reset to after dialog animation completes (300ms typical for dialog animations)
+		closeTimeoutRef.current = setTimeout(() => {
+			setSearch("");
+			setDebouncedSearch("");
+			setCurrentPage("main");
+			isTransitioningRef.current = false;
+			lastRenderedContentRef.current = null;
+		}, 300);
+	}, []);
+
+	// Helper to switch pages without causing flash
+	const switchToPage = useCallback((page: "main" | "impersonate" | "orgs") => {
+		if (!isTransitioningRef.current) {
+			// Batch state updates to prevent multiple re-renders
+			setCurrentPage(page);
+			setSearch("");
+			setDebouncedSearch("");
+		}
+	}, []);
 
 	const getMetaKey = () => {
 		if (navigator.userAgent.includes("Mac")) {
@@ -128,7 +164,7 @@ const CommandPaletteComponent = () => {
 		const isSingleChar = keyStroke.length === 1;
 		const sizeClasses = isSingleChar ? "w-4" : "px-1";
 		const baseClasses = `flex items-center justify-center ${sizeClasses} h-4 rounded-md text-tiny font-medium`;
-		const variantClasses = "bg-purple-medium/60 !text-primary-foreground";
+		const variantClasses = "bg-t7 !text-primary-foreground";
 
 		return (
 			<div className={`${baseClasses} ${variantClasses}`}>
@@ -212,21 +248,30 @@ const CommandPaletteComponent = () => {
 
 	useHotkeys(
 		"escape",
-		() => {
-			if (currentPage === "impersonate") {
-				setCurrentPage("main");
-				setSearch("");
-				setDebouncedSearch("");
+		(e) => {
+			if (currentPage === "impersonate" || currentPage === "orgs") {
+				e.preventDefault(); // Prevent default ESC behavior (closing dialog)
+				switchToPage("main");
 			}
 		},
 		{ enableOnFormTags: true },
 	);
 
+	// Clean up timeout on unmount
 	useEffect(() => {
-		if (!open) {
-			setSearch("");
-			setDebouncedSearch("");
-			setCurrentPage("main");
+		return () => {
+			if (closeTimeoutRef.current) {
+				clearTimeout(closeTimeoutRef.current);
+			}
+		};
+	}, []);
+
+	// Only reset states when dialog opens (not when it closes)
+	useEffect(() => {
+		if (open) {
+			// Reset transitioning state when opening
+			isTransitioningRef.current = false;
+			lastRenderedContentRef.current = null;
 		}
 	}, [open]);
 
@@ -313,60 +358,65 @@ const CommandPaletteComponent = () => {
 	const navigationItems = [
 		{
 			label: "Go to Products",
-			icon: <PackageIcon className="mr-2 size-3.5" />,
+			icon: <PackageIcon className="mr-1 size-3.5" />,
 			onSelect: () => {
 				navigateTo("/products", navigate, env);
-				setOpen(false);
+				closeDialog();
 			},
 		},
 		{
 			label: "Go to Features",
-			icon: <StackIcon className="mr-2 size-3.5" />,
+			icon: <GearIcon className="mr-1 size-3.5" />,
 			onSelect: () => {
 				navigateTo("/products?tab=features", navigate, env);
-				setOpen(false);
+				closeDialog();
 			},
 		},
 		{
 			label: "Go to Rewards",
-			icon: <GiftIcon className="mr-2 size-3.5" />,
+			icon: <GiftIcon className="mr-1 size-3.5" />,
 			onSelect: () => {
 				navigateTo("/products?tab=rewards", navigate, env);
-				setOpen(false);
+				closeDialog();
 			},
 		},
 		{
 			label: `Go to ${env === AppEnv.Sandbox ? "Production" : "Sandbox"}`,
-			icon: <ArrowsClockwiseIcon className="mr-2 size-3.5" />,
+			icon: <ArrowsClockwiseIcon className="mr-1 size-3.5" />,
 			onSelect: () => {
 				handleEnvChange(
 					env === AppEnv.Sandbox ? AppEnv.Live : AppEnv.Sandbox,
 					true,
 				);
-				setOpen(false);
+				closeDialog();
 			},
 		},
+		...(!isLoadingOrgs && orgs && orgs.length > 1
+			? [
+					{
+						label: "Switch Organization",
+						icon: <AtIcon className="mr-1 size-3.5" />,
+						onSelect: () => switchToPage("orgs"),
+					},
+				]
+			: []),
 		...(isAdmin
 			? [
 					{
 						label: "Impersonate",
-						icon: <CircleUserRoundIcon className="mr-2 size-3.5" />,
-						onSelect: () => {
-							setCurrentPage("impersonate");
-							setSearch("");
-							setDebouncedSearch("");
-						},
+						icon: <CircleUserRoundIcon className="mr-1 size-3.5" />,
+						onSelect: () => switchToPage("impersonate"),
 					},
 				]
 			: []),
 	];
 
+	// Safe keyboard shortcuts - directly call functions instead of relying on array indices
 	useHotkeys(
 		"meta+1",
 		() => {
-			if (navigationItems[0]) {
-				navigationItems[0].onSelect();
-			}
+			navigateTo("/products", navigate, env);
+			closeDialog();
 		},
 		{ enableOnFormTags: true, preventDefault: true },
 	);
@@ -374,9 +424,8 @@ const CommandPaletteComponent = () => {
 	useHotkeys(
 		"meta+2",
 		() => {
-			if (navigationItems[1]) {
-				navigationItems[1].onSelect();
-			}
+			navigateTo("/products?tab=features", navigate, env);
+			closeDialog();
 		},
 		{ enableOnFormTags: true, preventDefault: true },
 	);
@@ -384,9 +433,8 @@ const CommandPaletteComponent = () => {
 	useHotkeys(
 		"meta+3",
 		() => {
-			if (navigationItems[2]) {
-				navigationItems[2].onSelect();
-			}
+			navigateTo("/products?tab=rewards", navigate, env);
+			closeDialog();
 		},
 		{ enableOnFormTags: true, preventDefault: true },
 	);
@@ -394,18 +442,32 @@ const CommandPaletteComponent = () => {
 	useHotkeys(
 		"meta+4",
 		() => {
-			if (navigationItems[3]) {
-				navigationItems[3].onSelect();
+			handleEnvChange(
+				env === AppEnv.Sandbox ? AppEnv.Live : AppEnv.Sandbox,
+				true,
+			);
+			closeDialog();
+		},
+		{ enableOnFormTags: true, preventDefault: true },
+	);
+
+	// CMD+5: Switch Organization (only if user has multiple orgs)
+	useHotkeys(
+		"meta+5",
+		() => {
+			if (!isLoadingOrgs && orgs && orgs.length > 1) {
+				switchToPage("orgs");
 			}
 		},
 		{ enableOnFormTags: true, preventDefault: true },
 	);
 
+	// CMD+6: Impersonate (only if user is admin)
 	useHotkeys(
-		"meta+5",
+		"meta+6",
 		() => {
-			if (navigationItems[4] && isAdmin) {
-				navigationItems[4].onSelect();
+			if (isAdmin) {
+				switchToPage("impersonate");
 			}
 		},
 		{ enableOnFormTags: true, preventDefault: true },
@@ -414,7 +476,7 @@ const CommandPaletteComponent = () => {
 	const renderMainPage = () => (
 		<>
 			{!showResults && (
-				<CommandGroup heading="Navigation" className="text-body-secondary">
+				<CommandGroup>
 					{navigationItems.map((item, index) => (
 						<CommandItem
 							key={item.label}
@@ -425,12 +487,64 @@ const CommandPaletteComponent = () => {
 								{item.icon}
 								{item.label}
 							</div>
-							{index < 5 && (
-								<span className="flex items-center gap-0.5">
-									{keystrokeContainer(getMetaKey())}
-									{keystrokeContainer((index + 1).toString())}
-								</span>
-							)}
+							{(() => {
+								// Show keyboard shortcuts based on item type, not index
+								if (item.label === "Go to Products") {
+									return (
+										<span className="flex items-center gap-0.5">
+											{keystrokeContainer(getMetaKey())}
+											{keystrokeContainer("1")}
+										</span>
+									);
+								}
+								if (item.label === "Go to Features") {
+									return (
+										<span className="flex items-center gap-0.5">
+											{keystrokeContainer(getMetaKey())}
+											{keystrokeContainer("2")}
+										</span>
+									);
+								}
+								if (item.label === "Go to Rewards") {
+									return (
+										<span className="flex items-center gap-0.5">
+											{keystrokeContainer(getMetaKey())}
+											{keystrokeContainer("3")}
+										</span>
+									);
+								}
+								if (item.label.includes("Go to")) {
+									// Environment switch
+									return (
+										<span className="flex items-center gap-0.5">
+											{keystrokeContainer(getMetaKey())}
+											{keystrokeContainer("4")}
+										</span>
+									);
+								}
+								if (
+									item.label === "Switch Organization" &&
+									!isLoadingOrgs &&
+									orgs &&
+									orgs.length > 1
+								) {
+									return (
+										<span className="flex items-center gap-0.5">
+											{keystrokeContainer(getMetaKey())}
+											{keystrokeContainer("5")}
+										</span>
+									);
+								}
+								if (item.label === "Impersonate" && isAdmin) {
+									return (
+										<span className="flex items-center gap-0.5">
+											{keystrokeContainer(getMetaKey())}
+											{keystrokeContainer("6")}
+										</span>
+									);
+								}
+								return null;
+							})()}
 						</CommandItem>
 					))}
 				</CommandGroup>
@@ -457,7 +571,7 @@ const CommandPaletteComponent = () => {
 													navigate,
 													env,
 												);
-												setOpen(false);
+												closeDialog();
 											}}
 										>
 											<CircleUserRoundIcon className="mr-2" size={14} />
@@ -473,13 +587,13 @@ const CommandPaletteComponent = () => {
 									);
 								}
 
-								const product = result.data;
+								const product = result.data as any;
 								return (
 									<CommandItem
 										key={`product-${product.id}`}
 										onSelect={() => {
 											navigateTo(`/products/${product.id}`, navigate, env);
-											setOpen(false);
+											closeDialog();
 										}}
 									>
 										<PackageIcon className="mr-2" size={14} />
@@ -545,8 +659,8 @@ const CommandPaletteComponent = () => {
 											key={`user-${user.id}`}
 											onSelect={async () => {
 												try {
+													closeDialog();
 													await impersonateUser(user.id);
-													setOpen(false);
 												} catch (error) {
 													console.error("Failed to impersonate user:", error);
 												}
@@ -580,7 +694,7 @@ const CommandPaletteComponent = () => {
 											onSelect={async () => {
 												try {
 													await impersonateUser(firstUser.id);
-													setOpen(false);
+													closeDialog();
 												} catch (error) {
 													console.error("Failed to impersonate user:", error);
 												}
@@ -623,19 +737,107 @@ const CommandPaletteComponent = () => {
 		);
 	};
 
+	const renderOrgsPage = () => {
+		return (
+			<>
+				{orgs && orgs.length > 0 && (
+					<CommandGroup>
+						{orgs
+							.filter((org) => {
+								if (!search) return true;
+								const lowerSearch = search.toLowerCase();
+								return (
+									org.name?.toLowerCase().includes(lowerSearch) ||
+									org.slug?.toLowerCase().includes(lowerSearch)
+								);
+							})
+							.map((org) => (
+								<CommandItem
+									key={`org-${org.id}`}
+									onSelect={() => {
+										handleSwitchOrg(org.id);
+									}}
+								>
+									<AtIcon className="mr-2" size={14} />
+									<div className="flex items-center gap-2">
+										<span>{org.name}</span>
+										<span className="text-xs text-muted-foreground">
+											{org.slug}
+										</span>
+									</div>
+								</CommandItem>
+							))}
+					</CommandGroup>
+				)}
+
+				{(!orgs || orgs.length === 0) && !isLoadingOrgs && (
+					<CommandEmpty>No organizations found.</CommandEmpty>
+				)}
+
+				{isLoadingOrgs && (
+					<div className="py-2 px-4">
+						{[...Array(2)].map((_, i) => (
+							<div key={i} className="flex items-center gap-3 py-2">
+								<div className="shrink-0">
+									<Skeleton className="h-5 w-5 rounded-full" />
+								</div>
+								<div className="flex flex-col gap-1 w-full">
+									<Skeleton className="h-4 w-3/5" />
+								</div>
+							</div>
+						))}
+					</div>
+				)}
+			</>
+		);
+	};
+
+	// Memoize the current content to prevent flashes during re-renders
+	// Using a simpler approach to avoid complex dependency issues
+	const currentContent =
+		currentPage === "main"
+			? renderMainPage()
+			: currentPage === "impersonate"
+				? renderImpersonatePage()
+				: renderOrgsPage();
+
+	// Store the last rendered content when we have valid content
+	useEffect(() => {
+		if (currentContent && !isTransitioningRef.current) {
+			lastRenderedContentRef.current = currentContent;
+		}
+	}, [currentContent]);
+
+	// Handle dialog open/close with our improved logic
+	const handleOpenChange = useCallback(
+		(newOpen: boolean) => {
+			if (!newOpen) {
+				closeDialog();
+			} else {
+				setOpen(true);
+			}
+		},
+		[closeDialog],
+	);
+
 	return (
-		<CommandDialog open={open} onOpenChange={setOpen}>
+		<CommandDialog open={open} onOpenChange={handleOpenChange}>
 			<CommandInput
 				placeholder={
 					currentPage === "main"
 						? "Search customers and products..."
-						: "Search users and organizations to impersonate..."
+						: currentPage === "impersonate"
+							? "Search users and organizations to impersonate..."
+							: "Search organizations..."
 				}
 				value={search}
 				onValueChange={setSearch}
 			/>
 			<CommandList>
-				{currentPage === "main" ? renderMainPage() : renderImpersonatePage()}
+				{/* Use last rendered content during transition to prevent flash */}
+				{isTransitioningRef.current && lastRenderedContentRef.current
+					? lastRenderedContentRef.current
+					: currentContent}
 			</CommandList>
 		</CommandDialog>
 	);

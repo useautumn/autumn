@@ -101,7 +101,7 @@ export function SelectFeatureSheet({
 									onClick={handleCreateNew}
 								>
 									<PlusIcon className="size-[14px] text-t2" weight="regular" />
-									Add new feature
+									Create new feature
 								</button>
 							</div>
 						</SelectContent>

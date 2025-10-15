@@ -42,8 +42,8 @@ export function NewFeatureBehaviour({
 									<InfoIcon size={8} weight="regular" color="#888888" />
 								</div>
 								<div className="text-body-secondary leading-tight">
-									Used in units and can be refilled (e.g., API calls, tokens or
-									messages in an AI Chatbot)
+									Used up and refreshed periodically (eg chat messages, video
+									minutes)
 								</div>
 							</div>
 						</div>
@@ -70,8 +70,7 @@ export function NewFeatureBehaviour({
 									<InfoIcon size={8} weight="regular" color="#888888" />
 								</div>
 								<div className="text-body-secondary leading-tight">
-									Fixed usage limits that reset monthly (e.g., 5 seats, 10 GB
-									storage)
+									Assigned and used on an ongoing basis (eg seats, storage)
 								</div>
 							</div>
 						</div>

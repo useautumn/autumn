@@ -14,7 +14,7 @@ export const AdditionalOptions = ({
 		<SheetSection title="Additional Options" withSeparator={withSeparator}>
 			<div className="space-y-4">
 				<AreaCheckbox
-					title="Default"
+					title="Enable by default"
 					description="This product will be enabled by default for all new users,
                         typically used for your free product"
 					checked={product.is_default}

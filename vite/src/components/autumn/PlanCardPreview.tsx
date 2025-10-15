@@ -9,7 +9,13 @@ import { Card, CardContent, CardHeader } from "@/components/v2/cards/Card";
 import { Separator } from "@/components/v2/separator";
 import { cn } from "@/lib/utils";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
+import { CodeSpan } from "@/views/onboarding2/integrate/components/CodeSpan";
 import { PlanFeatureIcon } from "@/views/products/plan/components/plan-card/PlanFeatureIcon";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "../v2/tooltips/Tooltip";
 
 interface PlanCardPreviewProps {
 	product: Product;
@@ -114,79 +120,89 @@ export const PlanCardPreview = ({
 				)}
 
 				{/* Action button */}
-				<Button
-					variant={recommended ? "primary" : "secondary"}
-					className="w-full relative overflow-hidden group mt-auto"
-					onClick={onButtonClick}
-					disabled={disabled}
-				>
-					<div className="flex items-center justify-center gap-2 w-full transition-transform duration-300 group-hover:translate-y-[-130%]">
-						<span>{buttonText}</span>
-						<svg
-							width="14"
-							height="14"
-							viewBox="0 0 14 14"
-							fill="none"
-							xmlns="http://www.w3.org/2000/svg"
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button
+							variant={recommended ? "primary" : "secondary"}
+							className="w-full relative overflow-hidden group mt-auto"
+							onClick={onButtonClick}
+							disabled={disabled}
 						>
-							<title>Arrow Right</title>
-							<path
-								d="M11.3316 5.8187L11.3311 2.66919L8.18164 2.6687"
-								stroke="currentColor"
-								strokeWidth="0.9"
-								strokeLinecap="round"
-								strokeLinejoin="round"
-							/>
-							<path
-								d="M7.39453 6.6062L11.332 2.6687"
-								stroke="currentColor"
-								strokeWidth="0.9"
-								strokeLinecap="round"
-								strokeLinejoin="round"
-							/>
-							<path
-								d="M9.75547 7.39365V10.9374C9.75547 11.0418 9.71399 11.142 9.64014 11.2158C9.5663 11.2897 9.46615 11.3312 9.36172 11.3312H3.06172C2.95729 11.3312 2.85714 11.2897 2.7833 11.2158C2.70945 11.142 2.66797 11.0418 2.66797 10.9374V4.6374C2.66797 4.53297 2.70945 4.43282 2.7833 4.35898C2.85714 4.28514 2.95729 4.24365 3.06172 4.24365H6.60547"
-								stroke="currentColor"
-								strokeWidth="0.9"
-								strokeLinecap="round"
-								strokeLinejoin="round"
-							/>
-						</svg>
-					</div>
-					<div className="flex items-center justify-center gap-2 w-full absolute left-0 right-0 px-[7px] translate-y-[130%] transition-transform duration-300 group-hover:translate-y-0 mt-2 group-hover:mt-0">
-						<span>{buttonText}</span>
-						<svg
-							width="14"
-							height="14"
-							viewBox="0 0 14 14"
-							fill="none"
-							xmlns="http://www.w3.org/2000/svg"
-						>
-							<title>Arrow Right</title>
-							<path
-								d="M11.3316 5.8187L11.3311 2.66919L8.18164 2.6687"
-								stroke="currentColor"
-								strokeWidth="0.9"
-								strokeLinecap="round"
-								strokeLinejoin="round"
-							/>
-							<path
-								d="M7.39453 6.6062L11.332 2.6687"
-								stroke="currentColor"
-								strokeWidth="0.9"
-								strokeLinecap="round"
-								strokeLinejoin="round"
-							/>
-							<path
-								d="M9.75547 7.39365V10.9374C9.75547 11.0418 9.71399 11.142 9.64014 11.2158C9.5663 11.2897 9.46615 11.3312 9.36172 11.3312H3.06172C2.95729 11.3312 2.85714 11.2897 2.7833 11.2158C2.70945 11.142 2.66797 11.0418 2.66797 10.9374V4.6374C2.66797 4.53297 2.70945 4.43282 2.7833 4.35898C2.85714 4.28514 2.95729 4.24365 3.06172 4.24365H6.60547"
-								stroke="currentColor"
-								strokeWidth="0.9"
-								strokeLinecap="round"
-								strokeLinejoin="round"
-							/>
-						</svg>
-					</div>
-				</Button>
+							<div className="flex items-center justify-center gap-2 w-full transition-transform duration-300 group-hover:translate-y-[-130%]">
+								<span>{buttonText}</span>
+								<svg
+									width="14"
+									height="14"
+									viewBox="0 0 14 14"
+									fill="none"
+									xmlns="http://www.w3.org/2000/svg"
+								>
+									<title>Arrow Right</title>
+									<path
+										d="M11.3316 5.8187L11.3311 2.66919L8.18164 2.6687"
+										stroke="currentColor"
+										strokeWidth="0.9"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+									/>
+									<path
+										d="M7.39453 6.6062L11.332 2.6687"
+										stroke="currentColor"
+										strokeWidth="0.9"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+									/>
+									<path
+										d="M9.75547 7.39365V10.9374C9.75547 11.0418 9.71399 11.142 9.64014 11.2158C9.5663 11.2897 9.46615 11.3312 9.36172 11.3312H3.06172C2.95729 11.3312 2.85714 11.2897 2.7833 11.2158C2.70945 11.142 2.66797 11.0418 2.66797 10.9374V4.6374C2.66797 4.53297 2.70945 4.43282 2.7833 4.35898C2.85714 4.28514 2.95729 4.24365 3.06172 4.24365H6.60547"
+										stroke="currentColor"
+										strokeWidth="0.9"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+									/>
+								</svg>
+							</div>
+							<div className="flex items-center justify-center gap-2 w-full absolute left-0 right-0 px-[7px] translate-y-[130%] transition-transform duration-300 group-hover:translate-y-0 mt-2 group-hover:mt-0">
+								<span>{buttonText}</span>
+								<svg
+									width="14"
+									height="14"
+									viewBox="0 0 14 14"
+									fill="none"
+									xmlns="http://www.w3.org/2000/svg"
+								>
+									<title>Arrow Right</title>
+									<path
+										d="M11.3316 5.8187L11.3311 2.66919L8.18164 2.6687"
+										stroke="currentColor"
+										strokeWidth="0.9"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+									/>
+									<path
+										d="M7.39453 6.6062L11.332 2.6687"
+										stroke="currentColor"
+										strokeWidth="0.9"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+									/>
+									<path
+										d="M9.75547 7.39365V10.9374C9.75547 11.0418 9.71399 11.142 9.64014 11.2158C9.5663 11.2897 9.46615 11.3312 9.36172 11.3312H3.06172C2.95729 11.3312 2.85714 11.2897 2.7833 11.2158C2.70945 11.142 2.66797 11.0418 2.66797 10.9374V4.6374C2.66797 4.53297 2.70945 4.43282 2.7833 4.35898C2.85714 4.28514 2.95729 4.24365 3.06172 4.24365H6.60547"
+										stroke="currentColor"
+										strokeWidth="0.9"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+									/>
+								</svg>
+							</div>
+						</Button>
+					</TooltipTrigger>
+					<TooltipContent className="justify-center text-center items-center">
+						When checking out in test mode - <br />
+						use <CodeSpan>4242 4242 4242 4242</CodeSpan> as the card number,
+						<br /> <CodeSpan>04/42</CodeSpan> as the expiry date, and{" "}
+						<CodeSpan>any CVC</CodeSpan>.
+					</TooltipContent>
+				</Tooltip>
 			</CardContent>
 		</Card>
 	);
