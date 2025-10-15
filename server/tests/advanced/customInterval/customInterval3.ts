@@ -1,45 +1,31 @@
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import {
-	APIVersion,
-	AppEnv,
-	BillingInterval,
-	LimitedItem,
-	Organization,
-	Product,
-} from "@autumn/shared";
+import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
+import { expect } from "chai";
 import chalk from "chalk";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import { addDays, addMonths } from "date-fns";
+import type Stripe from "stripe";
+import { addPrefixToProducts } from "tests/attach/utils.js";
 import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
 import { createProducts } from "tests/utils/productUtils.js";
-
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
 import {
-	constructArrearItem,
 	constructFeatureItem,
 	constructPrepaidItem,
 } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
 import {
 	constructProduct,
 	constructRawProduct,
 } from "@/utils/scriptUtils/createTestProducts.js";
-
-import { addPrefixToProducts } from "tests/attach/utils.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { addDays, addHours, addMonths } from "date-fns";
-import { expect } from "chai";
-import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
-import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
-import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
-import { getProration } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
 const testCase = "customInterval3";
 
-export let pro = constructProduct({
+export const pro = constructProduct({
 	type: "pro",
 	items: [
 		constructFeatureItem({
@@ -65,8 +51,8 @@ export const addOn = constructRawProduct({
 });
 
 describe(`${chalk.yellowBright(`${testCase}: Testing custom interval on add on merged product`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
@@ -105,7 +91,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval on add on m
 		testClockId = testClockId1!;
 	});
 
-	it("should attach pro product", async function () {
+	it("should attach pro product", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,
@@ -117,7 +103,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval on add on m
 		});
 	});
 
-	it("should upgrade to attached add on and have correct invoice next cycle", async function () {
+	it("should upgrade to attached add on and have correct invoice next cycle", async () => {
 		const curUnix = await advanceTestClock({
 			stripeCli,
 			testClockId,
@@ -151,7 +137,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval on add on m
 			product: addOn,
 		});
 
-		let expectedPrice = wordsBillingUnits * prepaidWordsItem.price!;
+		const expectedPrice = wordsBillingUnits * prepaidWordsItem.price!;
 		const proratedPrice = calculateProrationAmount({
 			amount: expectedPrice,
 			periodStart: new Date().getTime(),

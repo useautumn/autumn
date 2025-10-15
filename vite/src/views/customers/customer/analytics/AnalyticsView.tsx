@@ -1,20 +1,19 @@
-import { useNavigate, useSearchParams } from "react-router";
-import { AppEnv, ErrCode, Feature, FeatureType } from "@autumn/shared";
+import { AppEnv, ErrCode, type Feature, FeatureType } from "@autumn/shared";
+import type { AgGridReact } from "ag-grid-react";
 import { useEffect, useRef, useState } from "react";
-import { EventsBarChart } from "./AnalyticsGraph";
+import { useNavigate, useSearchParams } from "react-router";
+import { PageSectionHeader } from "@/components/general/PageSectionHeader";
 import { Card, CardContent } from "@/components/ui/card";
-import { QueryTopbar } from "./components/QueryTopbar";
+import { cn } from "@/lib/utils";
 import { AnalyticsContext } from "./AnalyticsContext";
+import { EventsAGGrid, EventsBarChart } from "./AnalyticsGraph";
+import { colors } from "./components/AGGrid";
+import PaginationPanel from "./components/PaginationPanel";
+import { QueryTopbar } from "./components/QueryTopbar";
 import {
 	useAnalyticsData,
 	useRawAnalyticsData,
 } from "./hooks/useAnalyticsData";
-import { PageSectionHeader } from "@/components/general/PageSectionHeader";
-import { EventsAGGrid } from "./AnalyticsGraph";
-import { cn } from "@/lib/utils";
-import { colors } from "./components/AGGrid";
-import PaginationPanel from "./components/PaginationPanel";
-import { AgGridReact } from "ag-grid-react";
 
 export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 	const [searchParams] = useSearchParams();
@@ -69,13 +68,8 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 								return true;
 							}
 
-							if (feature.config.filters && feature.config.filters.length > 0) {
-								return feature.config.filters.some(
-									(filter: any) =>
-										filter.value &&
-										Array.isArray(filter.value) &&
-										filter.value.includes(eventName),
-								);
+							if (feature.event_names && feature.event_names.length > 0) {
+								return feature.event_names.includes(eventName);
 							}
 							return false;
 						})?.name || x.name.replace("_count", ""),
@@ -135,7 +129,7 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 				topEvents,
 			}}
 		>
-			<div className="flex flex-col gap-4 h-full relative w-full text-sm pb-0 overflow-hidden">
+			<div className="flex flex-col gap-4 h-full relative w-full text-sm pb-0">
 				<h1
 					className={cn(
 						"text-xl font-medium shrink-0 pl-10",
@@ -196,7 +190,7 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 					)}
 
 					{rawEvents && !rawQueryLoading && (
-						<Card className="w-full h-full bg-stone-50 border-none rounded-none shadow-none py-0 pb-10">
+						<Card className="w-full h-full bg-stone-50 border-none rounded-none shadow-none py-0 pb-4">
 							<CardContent className="p-0 h-full bg-transparent overflow-hidden">
 								<EventsAGGrid data={rawEvents} />
 							</CardContent>

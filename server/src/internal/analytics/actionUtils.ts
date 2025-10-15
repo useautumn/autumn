@@ -1,14 +1,14 @@
+import {
+	type ActionInsert,
+	type ActionType,
+	type AppEnv,
+	AuthType,
+	type Customer,
+	type Entity,
+	type Organization,
+} from "@autumn/shared";
 import { generateId } from "@/utils/genUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
-import {
-	Entity,
-	Organization,
-	AppEnv,
-	Customer,
-	ActionInsert,
-	ActionType,
-	AuthType,
-} from "@autumn/shared";
 
 export const parseReqForAction = (
 	req: ExtendedRequest,
@@ -40,7 +40,7 @@ export const constructAction = ({
 	req: Partial<ExtendedRequest>;
 	properties?: any;
 }): ActionInsert => {
-	let timestampVal = req.timestamp ? new Date(req.timestamp) : new Date();
+	const timestampVal = req.timestamp ? new Date(req.timestamp) : new Date();
 
 	return {
 		id: generateId("act"),

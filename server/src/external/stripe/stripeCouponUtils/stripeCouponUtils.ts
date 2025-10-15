@@ -1,5 +1,6 @@
 import {
 	type AppEnv,
+	atmnToStripeAmount,
 	CouponDurationType,
 	ErrCode,
 	type FixedPriceConfig,
@@ -92,9 +93,10 @@ const couponToStripeValue = ({
 		);
 
 		console.log("amountOff in couponToStripeValue", amountOff);
+		const currency = org.default_currency || "usd";
 		return {
-			amount_off: Math.round(amountOff * 100),
-			currency: org.default_currency || "usd",
+			amount_off: atmnToStripeAmount({ amount: amountOff, currency }),
+			currency,
 		};
 	}
 
@@ -107,9 +109,13 @@ const couponToStripeValue = ({
 		reward.type === RewardType.FixedDiscount ||
 		reward.type === RewardType.InvoiceCredits
 	) {
+		const currency = org.default_currency || undefined;
 		return {
-			amount_off: Math.round(discountConfig!.discount_value * 100),
-			currency: org.default_currency,
+			amount_off: atmnToStripeAmount({
+				amount: discountConfig!.discount_value,
+				currency,
+			}),
+			currency,
 		};
 	}
 };
@@ -170,10 +176,6 @@ export const createStripeCoupon = async ({
 			});
 		} catch (_) {}
 	}
-
-	console.log("Reward type:", reward.type);
-	console.log("stripeProdIds", stripeProdIds);
-	console.log("Apply to all", discountConfig!.apply_to_all);
 
 	const stripeCoupon = await stripeCli.coupons.create({
 		// id: reward.internal_id,

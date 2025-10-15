@@ -1,15 +1,18 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import {
-	AppEnv,
-	CusProductStatus,
-	FullCustomer,
-	Organization,
-} from "@autumn/shared";
-
-import Stripe from "stripe";
-import { cusProductToSubIds } from "tests/merged/mergeUtils.test.js";
 import { expect } from "bun:test";
-import { getUniqueUpcomingSchedulePairs } from "@/internal/customers/cusProducts/cusProductUtils/getUpcomingSchedules.js";
+import assert from "node:assert";
+import {
+	type AppEnv,
+	CusProductStatus,
+	cusProductToEnts,
+	cusProductToPrices,
+	cusProductToProduct,
+	type FullCustomer,
+	type Organization,
+} from "@autumn/shared";
+import type Stripe from "stripe";
+import { defaultApiVersion } from "tests/constants.js";
+import { cusProductToSubIds } from "tests/merged/mergeUtils.test.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { priceToStripeItem } from "@/external/stripe/priceToStripeItem/priceToStripeItem.js";
 import { subIsCanceled } from "@/external/stripe/stripeSubUtils.js";
 import {
@@ -17,28 +20,22 @@ import {
 	logPhaseItems,
 	similarUnix,
 } from "@/internal/customers/attach/mergeUtils/phaseUtils/phaseUtils.js";
-import { getExistingUsageFromCusProducts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { ACTIVE_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
-import {
-	cusProductToPrices,
-	cusProductToEnts,
-	cusProductToProduct,
-} from "@autumn/shared";
+import { getExistingUsageFromCusProducts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
-import {
-	getPriceEntitlement,
-	getPriceOptions,
-	formatPrice,
-} from "@/internal/products/prices/priceUtils.js";
-import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
-import { defaultApiVersion } from "tests/constants.js";
-import { formatUnixToDateTime, nullish } from "../genUtils.js";
+import { getUniqueUpcomingSchedulePairs } from "@/internal/customers/cusProducts/cusProductUtils/getUpcomingSchedules.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
-import assert from "assert";
 import {
 	isFixedPrice,
 	isOneOffPrice,
 } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import {
+	formatPrice,
+	getPriceEntitlement,
+	getPriceOptions,
+} from "@/internal/products/prices/priceUtils.js";
+import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
+import { formatUnixToDateTime, nullish } from "../genUtils.js";
 
 const compareActualItems = async ({
 	actualItems,
@@ -92,6 +89,7 @@ const compareActualItems = async ({
 			await logPhaseItems({
 				db,
 				items: actualItems,
+				withId: true,
 			});
 
 			console.log(`(${type}) Expected items (${expectedItems.length}):`);
@@ -116,6 +114,7 @@ const compareActualItems = async ({
 				await logPhaseItems({
 					db,
 					items: actualItems,
+					withId: true,
 				});
 
 				console.log("Expected items:");
@@ -190,10 +189,10 @@ const checkAllFreeProducts = async ({
 		const sub = subs.find(
 			(sub) =>
 				sub.customer === fullCus.processor?.id &&
-				(sub.status == "active" || sub.status == "past_due"),
+				(sub.status === "active" || sub.status === "past_due"),
 		);
 
-		if (fullCus.org_id == "6bWdIqEuRHBrReXbTb30l9beMFVZ3Ts3") return true;
+		if (fullCus.org_id === "6bWdIqEuRHBrReXbTb30l9beMFVZ3Ts3") return true;
 
 		assert(
 			!sub,
@@ -258,7 +257,7 @@ export const checkCusSubCorrect = async ({
 	});
 
 	// console.log(`\n\nChecking sub correct`);
-	let printCusProduct = false;
+	const printCusProduct = false;
 	if (printCusProduct) {
 		console.log(`\n\nChecking sub correct`);
 	}
@@ -270,7 +269,7 @@ export const checkCusSubCorrect = async ({
 
 		// Add to schedules
 		const scheduleIndexes: number[] = [];
-		const apiVersion = cusProduct.api_version || defaultApiVersion;
+		const apiVersion = cusProduct.api_semver || defaultApiVersion;
 
 		if (isFreeProduct(product.prices)) {
 			assert(
@@ -292,7 +291,8 @@ export const checkCusSubCorrect = async ({
 				cusProduct.status === CusProductStatus.Scheduled &&
 				cusProductInPhase({ phaseStartMillis: unix, cusProduct })
 			) {
-				return scheduleIndexes.push(index);
+				scheduleIndexes.push(index);
+				return;
 			}
 
 			if (cusProduct.status === CusProductStatus.Scheduled) return;
@@ -300,9 +300,11 @@ export const checkCusSubCorrect = async ({
 			if (cusProduct.product.is_add_on) {
 				// 1. If it's canceled
 				if (cusProduct.canceled && (cusProduct.ended_at || 0) > unix) {
-					return scheduleIndexes.push(index);
+					scheduleIndexes.push(index);
+					return;
 				} else if (!cusProduct.canceled) {
-					return scheduleIndexes.push(index);
+					scheduleIndexes.push(index);
+					return;
 				}
 
 				return;
@@ -314,11 +316,14 @@ export const checkCusSubCorrect = async ({
 					cp.product.group === product.group &&
 					cp.status === CusProductStatus.Scheduled &&
 					(cp.internal_entity_id
-						? cp.internal_entity_id == cusProduct.internal_entity_id
+						? cp.internal_entity_id === cusProduct.internal_entity_id
 						: nullish(cp.internal_entity_id)),
 			);
 
-			if (!curScheduledProduct) return scheduleIndexes.push(index);
+			if (!curScheduledProduct) {
+				scheduleIndexes.push(index);
+				return;
+			}
 
 			// If scheduled product NOT in phase, add main product to schedule
 			if (
@@ -352,7 +357,7 @@ export const checkCusSubCorrect = async ({
 
 			const relatedEnt = getPriceEntitlement(price, ents);
 			const options = getPriceOptions(price, cusProduct.options);
-			let existingUsage = getExistingUsageFromCusProducts({
+			const existingUsage = getExistingUsageFromCusProducts({
 				entitlement: relatedEnt,
 				cusProducts,
 				entities: fullCus.entities,
@@ -397,7 +402,6 @@ export const checkCusSubCorrect = async ({
 					);
 
 					if (existingIndex !== -1) {
-						// @ts-ignore
 						supposedSubItems[existingIndex].quantity += lineItem.quantity;
 					} else {
 						supposedSubItems.push({
@@ -432,6 +436,7 @@ export const checkCusSubCorrect = async ({
 	assert(!!sub, `Sub ${subId} should exist`);
 
 	const actualItems = sub!.items.data.map((item: any) => ({
+		id: item.id,
 		price: item.price.id,
 		quantity: item.quantity || 0,
 		stripeProdId: item.price.product,
@@ -457,19 +462,24 @@ export const checkCusSubCorrect = async ({
 	});
 
 	// Should be canceled
+
 	const cusSubShouldBeCanceled = cusProducts.every((cp) => {
 		if (cp.subscription_ids?.includes(subId!)) {
 			// 1. Get scheduled product
+
 			const { curScheduledProduct } = getExistingCusProducts({
-				cusProducts,
+				cusProducts: fullCus.customer_products,
 				product: cp.product,
 				internalEntityId: cp.internal_entity_id,
 			});
+
+			console.log("Cur scheduled product:", curScheduledProduct?.id);
 
 			if (curScheduledProduct) {
 				const scheduledProduct = cusProductToProduct({
 					cusProduct: curScheduledProduct,
 				});
+
 				if (!isFreeProduct(scheduledProduct.prices)) {
 					return false;
 				}

@@ -1,4 +1,3 @@
-import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { AppEnv } from "@autumn/shared";
 import { clearOrg, setupOrg } from "tests/utils/setup.js";
 import { alexFeatures, alexProducts } from "./init.js";

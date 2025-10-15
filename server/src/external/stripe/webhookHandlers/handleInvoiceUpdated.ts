@@ -1,13 +1,17 @@
-import { AppEnv, InvoiceStatus } from "@autumn/shared";
-import Stripe from "stripe";
-import { getFullStripeInvoice, invoiceToSubId } from "../stripeInvoiceUtils.js";
-import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { getMetadataFromCheckoutSession } from "@/internal/metadata/metadataUtils.js";
-import { MetadataService } from "@/internal/metadata/MetadataService.js";
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import {
+	type AppEnv,
+	type Invoice,
+	InvoiceStatus,
+	stripeToAtmnAmount,
+} from "@autumn/shared";
+import { Decimal } from "decimal.js";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
+import { MetadataService } from "@/internal/metadata/MetadataService.js";
+import { getFullStripeInvoice, invoiceToSubId } from "../stripeInvoiceUtils.js";
 
 const handleInvoiceCheckoutVoided = async ({
 	db,
@@ -34,7 +38,12 @@ const handleInvoiceCheckoutVoided = async ({
 		id: metadataId,
 	});
 
-	const { anchorToUnix, config, ...rest } = metadata?.data;
+	const {
+		anchorToUnix: _anchorToUnix,
+		config: _config,
+		...rest
+	} = metadata?.data || {};
+
 	const attachParams = rest as AttachParams;
 
 	if (!attachParams) return;
@@ -51,9 +60,9 @@ const handleInvoiceCheckoutVoided = async ({
 
 	if (!subId) return;
 
-	const cusSubIds = fullCus.customer_products
-		.map((cp) => cp.subscription_ids || [])
-		.flat();
+	const cusSubIds = fullCus.customer_products.flatMap(
+		(cp) => cp.subscription_ids || [],
+	);
 
 	const subIdMatch = cusSubIds.includes(subId);
 
@@ -83,47 +92,46 @@ export const handleInvoiceUpdated = async ({
 	req: any;
 }) => {
 	const invoiceObject = event.data.object as Stripe.Invoice;
+	const currentInvoice = await InvoiceService.getByStripeId({
+		db: req.db,
+		stripeId: invoiceObject.id!,
+	});
+
 	// const invoice = await getFullStripeInvoice({
 	//   stripeCli,
 	//   stripeId: invoiceObject.id!,
 	// });
 
 	const prevAttributes = event.data.previous_attributes as any;
-	const invoiceVoided =
-		prevAttributes?.status !== "void" && invoiceObject.status === "void";
 
-	const { logger } = req;
+	const updates: Partial<Invoice> = {};
 
-	if (invoiceVoided) {
-		logger.info(`Invoice has been voided!`);
-
-		await handleInvoiceCheckoutVoided({
-			db: req.db,
-			stripeCli,
-			invoiceObject,
-			logger,
-		});
-
-		await InvoiceService.updateByStripeId({
-			db: req.db,
-			stripeId: invoiceObject.id!,
-			updates: {
-				status: InvoiceStatus.Void,
-			},
-		});
+	if (invoiceObject.status === "void") {
+		updates.status = InvoiceStatus.Void;
 	}
 
-	const invoiceOpen =
-		prevAttributes?.status !== "open" && invoiceObject.status === "open";
+	if (invoiceObject.status === "open") {
+		updates.status = InvoiceStatus.Open;
+	}
 
-	if (invoiceOpen) {
-		// logger.info(`Invoice has been opened!`);
+	if (currentInvoice) {
+		const newAtmnTotal = stripeToAtmnAmount({
+			amount: invoiceObject.total,
+			currency: invoiceObject.currency,
+		});
+
+		const totalEquals = new Decimal(newAtmnTotal).eq(currentInvoice.total);
+
+		if (!totalEquals) {
+			updates.total = newAtmnTotal;
+		}
+	}
+
+	if (Object.keys(updates).length > 0 && invoiceObject.id) {
 		await InvoiceService.updateByStripeId({
 			db: req.db,
-			stripeId: invoiceObject.id!,
-			updates: {
-				status: InvoiceStatus.Open,
-			},
+			stripeId: invoiceObject.id,
+			updates,
 		});
 	}
 };

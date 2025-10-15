@@ -1,27 +1,27 @@
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils.js";
 import {
-	FullCustomerEntitlement,
-	Price,
-	FullCusProduct,
-	UsagePriceConfig,
+	ApiVersion,
+	AppEnv,
+	type Customer,
 	EntInterval,
-	Customer,
-	APIVersion,
-	RolloverConfig,
-	Organization,
+	type FullCusProduct,
+	type FullCustomerEntitlement,
+	type Organization,
+	type Price,
+	type UsagePriceConfig,
 } from "@autumn/shared";
 import { differenceInMinutes, subDays } from "date-fns";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
+import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService.js";
+import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils.js";
+import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils.js";
+import { getCusPriceUsage } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
 import { submitUsageToStripe } from "../../stripeMeterUtils.js";
 import { getInvoiceItemForUsage } from "../../stripePriceUtils.js";
-import { getCusPriceUsage } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
-import { findStripeItemForPrice } from "../../stripeSubUtils/stripeSubItemUtils.js";
-import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils.js";
-import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService.js";
-import { notNullish } from "@/utils/genUtils.js";
 import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";
+import { findStripeItemForPrice } from "../../stripeSubUtils/stripeSubItemUtils.js";
+import { getAllFullCustomers } from "@/utils/scriptUtils/getAll/getAllAutumnCustomers.js";
 
 export const handleUsagePrices = async ({
 	db,
@@ -46,7 +46,7 @@ export const handleUsagePrices = async ({
 	logger: any;
 	activeProduct: FullCusProduct;
 }) => {
-	let invoiceCreatedRecently =
+	const invoiceCreatedRecently =
 		Math.abs(
 			differenceInMinutes(
 				new Date(activeProduct.created_at),
@@ -54,9 +54,9 @@ export const handleUsagePrices = async ({
 			),
 		) < 10;
 
-	let invoiceFromUpgrade =
-		invoice.billing_reason == "subscription_update" ||
-		invoice.billing_reason == "manual";
+	const invoiceFromUpgrade =
+		invoice.billing_reason === "subscription_update" ||
+		invoice.billing_reason === "manual";
 
 	if (invoiceCreatedRecently) {
 		logger.info("Invoice created recently, skipping");
@@ -71,7 +71,7 @@ export const handleUsagePrices = async ({
 	logger.info(`✨ Handling usage prices for ${customer.name || customer.id}`);
 	logger.info(`✨ org: ${org.slug}, product: ${activeProduct.product.id}`);
 
-	let config = price.config as UsagePriceConfig;
+	const config = price.config as UsagePriceConfig;
 
 	// If relatedCusEnt's balance > 0 and next_reset_at is null, skip...
 	if (relatedCusEnt.balance! > 0 && !relatedCusEnt.next_reset_at) {
@@ -86,10 +86,10 @@ export const handleUsagePrices = async ({
 
 	const isNewUsageMethod =
 		activeProduct.internal_entity_id ||
-		activeProduct.api_version === APIVersion.v1_4;
+		activeProduct.api_semver === ApiVersion.Beta;
 
 	if (isNewUsageMethod) {
-		let invoiceItem = getInvoiceItemForUsage({
+		const invoiceItem = getInvoiceItemForUsage({
 			stripeInvoiceId: invoice.id!,
 			price,
 			customer,
@@ -132,15 +132,23 @@ export const handleUsagePrices = async ({
 		});
 	}
 
-	if (relatedCusEnt.entitlement.interval == EntInterval.Lifetime) {
+	if (relatedCusEnt.entitlement.interval === EntInterval.Lifetime) {
 		return;
 	}
 
-	let ent = relatedCusEnt.entitlement;
+	const allFullCustomers = await getAllFullCustomers({
+		db,
+		orgId: org.id,
+		env: AppEnv.Live,
+	});
 
-	let resetBalancesUpdate = getResetBalancesUpdate({
+	console.log(`All full customers: ${allFullCustomers.length}`);
+
+	const ent = relatedCusEnt.entitlement;
+
+	const resetBalancesUpdate = getResetBalancesUpdate({
 		cusEnt: relatedCusEnt,
-		allowance: ent.interval == EntInterval.Lifetime ? 0 : ent.allowance!,
+		allowance: ent.interval === EntInterval.Lifetime ? 0 : ent.allowance!,
 	});
 
 	const { end } = subToPeriodStartEnd({ sub: usageSub });
@@ -154,7 +162,7 @@ export const handleUsagePrices = async ({
 		},
 	});
 
-	let rolloverUpdate = getRolloverUpdates({
+	const rolloverUpdate = getRolloverUpdates({
 		cusEnt: relatedCusEnt,
 		nextResetAt: end * 1000,
 	});

@@ -1,8 +1,8 @@
 import "dotenv/config";
-import type { AppEnv } from "@autumn/shared";
+import fs from "node:fs";
+import { ApiVersion, ApiVersionClass, type AppEnv } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
 import { subHours } from "date-fns";
-import fs from "fs";
 import type { Stripe } from "stripe";
 import { db } from "@/db/initDrizzle.js";
 import { createLogger } from "@/external/logtail/logtailUtils.js";
@@ -180,6 +180,7 @@ export const initScript = async ({
 		features,
 		logger,
 		logtail: logger,
+		apiVersion: new ApiVersionClass(ApiVersion.V1_2),
 	} as unknown as ExtendedRequest;
 
 	return { stripeCli, autumnProducts, req };

@@ -5,13 +5,13 @@ import {
 	AttachErrCode,
 	BillingType,
 	cusProductsToCusEnts,
-	cusProductToPrices,
+	cusProductToPrices, ErrCode,
 	type FullCusProduct,
-	type UsagePriceConfig,
+	getStartingBalance,
+	type UsagePriceConfig
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";
-import { ErrCode } from "@/errors/errCodes.js";
 import { findPriceForFeature } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 import {
 	getBillingType,
@@ -22,7 +22,6 @@ import {
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish, nullOrUndefined } from "@/utils/genUtils.js";
 import type { AttachParams } from "../../cusProducts/AttachParams.js";
-import { getResetBalance } from "../../cusProducts/cusEnts/cusEntUtils.js";
 import type { AttachFlags } from "../models/AttachFlags.js";
 import { attachParamToCusProducts } from "./convertAttachParams.js";
 import { handleMultiAttachErrors } from "./handleAttachErrors/handleMultiAttachErrors.js";
@@ -81,6 +80,7 @@ const handlePrepaidErrors = async ({
 		if (billingType === BillingType.UsageInAdvance) {
 			// Get options for price
 			const priceEnt = getPriceEntitlement(price, entitlements);
+
 			const options = getEntOptions(optionsList, priceEnt);
 
 			// 1. If not checkout, quantity should be defined
@@ -177,7 +177,7 @@ const handleUpdateQuantityErrors = async ({
 				if (
 					curr.entitlement.internal_feature_id === option.internal_feature_id
 				) {
-					const allowance = getResetBalance({
+					const allowance = getStartingBalance({
 						entitlement: curr.entitlement,
 						options: cusProduct.options.find(
 							(o) => o.internal_feature_id === option.internal_feature_id,
@@ -229,14 +229,20 @@ export const handleAttachErrors = async ({
 	}
 
 	// Invoice no payment enabled: onlyCheckout
+	// Note: Upgrade from trial should proceed to checkout, so only block if NOT from trial
 
 	if (onlyCheckout || flags.isPublic) {
 		const upgradeDowngradeFlows = [
 			AttachBranch.Upgrade,
 			AttachBranch.Downgrade,
-			AttachBranch.MainIsTrial,
 		];
-		if (upgradeDowngradeFlows.includes(branch)) {
+
+
+
+
+		if (
+			upgradeDowngradeFlows.includes(branch) 
+		) {
 			handleNonCheckoutErrors({
 				flags,
 				config,

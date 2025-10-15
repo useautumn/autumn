@@ -1,31 +1,31 @@
-import chalk from "chalk";
-import { setupBefore } from "tests/before.js";
-import { Stripe } from "stripe";
-import { createProducts } from "tests/utils/productUtils.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { APIVersion, AppEnv, Organization } from "@autumn/shared";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
+import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
 import { expect } from "chai";
-import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import chalk from "chalk";
+import type { Stripe } from "stripe";
+import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { getMainCusProduct } from "tests/utils/cusProductUtils/cusProductUtils.js";
+import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { timeout } from "@/utils/genUtils.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
 // UNCOMMENT FROM HERE
-let pro = constructProduct({
+const pro = constructProduct({
 	id: "pro",
 	items: [constructFeatureItem({ featureId: TestFeature.Words })],
 	type: "pro",
 });
 
 describe(`${chalk.yellowBright("advancedOthers1: Testing convert collection method from send_invoice")}`, () => {
-	let customerId = "advancedOthers1";
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = "advancedOthers1";
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 	let stripeCli: Stripe;
 	let testClockId: string;
@@ -69,7 +69,7 @@ describe(`${chalk.yellowBright("advancedOthers1: Testing convert collection meth
 		testClockId = testClockId1!;
 	});
 
-	it("should attach pro product and pay for it", async function () {
+	it("should attach pro product and pay for it", async () => {
 		const res = await autumn.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -90,7 +90,7 @@ describe(`${chalk.yellowBright("advancedOthers1: Testing convert collection meth
 		await stripeCli.invoices.pay(invoiceStripeId);
 	});
 
-	it("should have collection method charge automatically", async function () {
+	it("should have collection method charge automatically", async () => {
 		await timeout(5000);
 
 		const cusProduct = await getMainCusProduct({

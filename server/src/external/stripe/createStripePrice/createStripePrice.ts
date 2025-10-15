@@ -1,29 +1,28 @@
 import {
+	BillingType,
+	type EntitlementWithFeature,
+	type Organization,
+	type Price,
+	type Product,
+	type UsagePriceConfig,
+} from "@autumn/shared";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { PriceService } from "@/internal/products/prices/PriceService.js";
+import {
 	getBillingType,
 	getPriceEntitlement,
 	priceIsOneOffAndTiered,
 } from "@/internal/products/prices/priceUtils.js";
-import {
-	Price,
-	EntitlementWithFeature,
-	Product,
-	Organization,
-	UsagePriceConfig,
-	BillingType,
-} from "@autumn/shared";
-import Stripe from "stripe";
-
-import { createStripeFixedPrice } from "./createStripeFixedPrice.js";
-import { createStripePrepaid } from "./createStripePrepaid.js";
-import { createStripeOneOffTieredProduct } from "./createStripeOneOffTiered.js";
-import { createStripeInArrearPrice } from "./createStripeInArrear.js";
+import { billingIntervalToStripe } from "../stripePriceUtils.js";
 import {
 	createStripeArrearProrated,
 	createStripeMeteredPrice,
 } from "./createStripeArrearProrated.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { PriceService } from "@/internal/products/prices/PriceService.js";
-import { billingIntervalToStripe } from "../stripePriceUtils.js";
+import { createStripeFixedPrice } from "./createStripeFixedPrice.js";
+import { createStripeInArrearPrice } from "./createStripeInArrear.js";
+import { createStripeOneOffTieredProduct } from "./createStripeOneOffTiered.js";
+import { createStripePrepaid } from "./createStripePrepaid.js";
 
 export const checkCurStripePrice = async ({
 	price,
@@ -34,7 +33,7 @@ export const checkCurStripePrice = async ({
 	stripeCli: Stripe;
 	currency: string;
 }) => {
-	let config = price.config! as UsagePriceConfig;
+	const config = price.config! as UsagePriceConfig;
 
 	let stripePrice: Stripe.Price | null = null;
 	if (!config.stripe_price_id) {
@@ -57,7 +56,7 @@ export const checkCurStripePrice = async ({
 			) {
 				stripePrice = null;
 			}
-		} catch (error) {
+		} catch (_error) {
 			stripePrice = null;
 		}
 	}
@@ -72,7 +71,7 @@ export const checkCurStripePrice = async ({
 			if (!stripeProd.active) {
 				stripeProd = null;
 			}
-		} catch (error) {
+		} catch (_error) {
 			stripeProd = null;
 		}
 	}
@@ -108,23 +107,23 @@ export const createStripePriceIFNotExist = async ({
 
 	const billingType = getBillingType(price.config!);
 
-	let { stripePrice, stripeProd } = await checkCurStripePrice({
+	const { stripePrice, stripeProd } = await checkCurStripePrice({
 		price,
 		stripeCli,
 		currency: org.default_currency || "usd",
 	});
 
-	let config = price.config! as UsagePriceConfig;
+	const config = price.config! as UsagePriceConfig;
 	config.stripe_price_id = stripePrice?.id;
 	config.stripe_product_id = stripeProd?.id;
 
-	let relatedEnt = getPriceEntitlement(price, entitlements);
-	let isOneOffAndTiered = priceIsOneOffAndTiered(price, relatedEnt);
+	const relatedEnt = getPriceEntitlement(price, entitlements);
+	const isOneOffAndTiered = priceIsOneOffAndTiered(price, relatedEnt);
 
 	// 1. If fixed price, just create price
 	if (
-		billingType == BillingType.FixedCycle ||
-		billingType == BillingType.OneOff
+		billingType === BillingType.FixedCycle ||
+		billingType === BillingType.OneOff
 	) {
 		if (!stripePrice) {
 			await createStripeFixedPrice({
@@ -138,7 +137,7 @@ export const createStripePriceIFNotExist = async ({
 	}
 
 	// 2. If prepaid
-	if (billingType == BillingType.UsageInAdvance) {
+	if (billingType === BillingType.UsageInAdvance) {
 		if (isOneOffAndTiered && !stripeProd) {
 			logger.info(`Creating stripe one off tiered product`);
 			await createStripeOneOffTieredProduct({
@@ -164,7 +163,7 @@ export const createStripePriceIFNotExist = async ({
 		}
 	}
 
-	if (billingType == BillingType.InArrearProrated) {
+	if (billingType === BillingType.InArrearProrated) {
 		if (!stripePrice) {
 			logger.info(`Creating stripe in arrear prorated product`);
 			await createStripeArrearProrated({
@@ -178,7 +177,7 @@ export const createStripePriceIFNotExist = async ({
 			});
 		} else if (!config.stripe_placeholder_price_id) {
 			logger.info(`Creating stripe placeholder price`);
-			let placeholderPrice = await createStripeMeteredPrice({
+			const placeholderPrice = await createStripeMeteredPrice({
 				db,
 				stripeCli,
 				price,
@@ -195,7 +194,7 @@ export const createStripePriceIFNotExist = async ({
 		}
 	}
 
-	if (billingType == BillingType.UsageInArrear) {
+	if (billingType === BillingType.UsageInArrear) {
 		await createStripeInArrearPrice({
 			db,
 			stripeCli,

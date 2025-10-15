@@ -1,34 +1,34 @@
-import RecaseError from "@/utils/errorUtils.js";
-
-import { notNullish, nullish } from "@/utils/genUtils.js";
-import { getFeatureName } from "@/internal/features/utils/displayUtils.js";
-
 import {
-	ProductV2,
-	Feature,
-	ProductItem,
-	Organization,
-	ProductItemFeatureType,
-	ErrCode,
-	Infinite,
-	FullCusProduct,
-	numberWithCommas,
 	AttachScenario,
-	FullProduct,
-	FullCustomer,
+	cusProductToProduct,
+	ErrCode,
+	type Feature,
+	type FullCusProduct,
+	type FullCustomer,
+	type FullProduct,
+	Infinite,
+	numberWithCommas,
+	type Organization,
+	type ProductItem,
+	ProductItemFeatureType,
+	type ProductV2,
 } from "@autumn/shared";
-import { isPriceItem } from "../product-items/productItemUtils/getItemType.js";
-import { isFeaturePriceItem } from "../product-items/productItemUtils/getItemType.js";
-import { cusProductToProduct } from "@autumn/shared";
-import { isProductUpgrade } from "../productUtils.js";
-import { getLargestInterval } from "../prices/priceUtils/priceIntervalUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { getFeatureName } from "@/internal/features/utils/displayUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { notNullish, nullish } from "@/utils/genUtils.js";
 import { getFreeTrialAfterFingerprint } from "../free-trials/freeTrialUtils.js";
+import { getLargestInterval } from "../prices/priceUtils/priceIntervalUtils.js";
+import {
+	isFeaturePriceItem,
+	isPriceItem,
+} from "../product-items/productItemUtils/getItemType.js";
+import { isProductUpgrade } from "../productUtils.js";
 
 export const sortProductItems = (items: ProductItem[], features: Feature[]) => {
 	items.sort((a, b) => {
-		let aIsPriceItem = isPriceItem(a);
-		let bIsPriceItem = isPriceItem(b);
+		const aIsPriceItem = isPriceItem(a);
+		const bIsPriceItem = isPriceItem(b);
 
 		if (aIsPriceItem && bIsPriceItem) {
 			return 0;
@@ -43,8 +43,8 @@ export const sortProductItems = (items: ProductItem[], features: Feature[]) => {
 		}
 
 		// 2. Put feature price next
-		let aIsFeatureItem = isFeaturePriceItem(a);
-		let bIsFeatureItem = isFeaturePriceItem(b);
+		const aIsFeatureItem = isFeaturePriceItem(a);
+		const bIsFeatureItem = isFeaturePriceItem(b);
 
 		if (aIsFeatureItem && !bIsFeatureItem) {
 			return -1;
@@ -55,9 +55,9 @@ export const sortProductItems = (items: ProductItem[], features: Feature[]) => {
 		}
 
 		// 3. Put feature price items in alphabetical order
-		let feature = features.find((f) => f.id == a.feature_id);
-		let aFeatureName = feature?.name;
-		let bFeatureName = features.find((f) => f.id == b.feature_id)?.name;
+		const feature = features.find((f) => f.id == a.feature_id);
+		const aFeatureName = feature?.name;
+		const bFeatureName = features.find((f) => f.id == b.feature_id)?.name;
 
 		if (!aFeatureName || !bFeatureName) {
 			return 0;
@@ -101,14 +101,14 @@ export const getPriceText = ({
 		return formatAmount(item.price as number);
 	}
 
-	let tiers = item.tiers;
+	const tiers = item.tiers;
 	if (tiers) {
 		if (tiers.length == 1) {
 			return formatAmount(tiers[0].amount);
 		}
 
-		let firstPrice = tiers[0].amount;
-		let lastPrice = tiers[tiers.length - 1].amount;
+		const firstPrice = tiers[0].amount;
+		const lastPrice = tiers[tiers.length - 1].amount;
 
 		return `${formatAmount(firstPrice)} - ${formatAmount(lastPrice)}`;
 	}
@@ -126,7 +126,9 @@ export const getPricecnPrice = ({
 	items: ProductItem[];
 	isMainPrice?: boolean;
 }) => {
-	let priceExists = items.some((i) => isPriceItem(i) || isFeaturePriceItem(i));
+	const priceExists = items.some(
+		(i) => isPriceItem(i) || isFeaturePriceItem(i),
+	);
 
 	if (!priceExists) {
 		return {
@@ -135,7 +137,7 @@ export const getPricecnPrice = ({
 		};
 	}
 
-	let priceItem = items[0];
+	const priceItem = items[0];
 
 	if (isPriceItem(priceItem)) {
 		return {
@@ -144,8 +146,8 @@ export const getPricecnPrice = ({
 			secondaryText: priceItem.interval ? `per ${priceItem.interval}` : " ",
 		};
 	} else {
-		let feature = features.find((f) => f.id == priceItem.feature_id);
-		let texts = featurePricetoPricecnItem({
+		const feature = features.find((f) => f.id == priceItem.feature_id);
+		const texts = featurePricetoPricecnItem({
 			feature,
 			item: priceItem,
 			org,
@@ -180,12 +182,12 @@ export const featureToPricecnItem = ({
 		};
 	}
 
-	let featureName = getIncludedFeatureName({
+	const featureName = getIncludedFeatureName({
 		feature,
 		item,
 	});
 
-	let includedUsageTxt =
+	const includedUsageTxt =
 		item.included_usage == Infinite
 			? "Unlimited "
 			: nullish(item.included_usage) || item.included_usage == 0
@@ -219,14 +221,14 @@ export const featurePricetoPricecnItem = ({
 	}
 
 	// 1. Get included usage
-	let includedFeatureName = getIncludedFeatureName({
+	const includedFeatureName = getIncludedFeatureName({
 		feature,
 		item,
 	});
 
 	let includedUsageStr = "";
 	if (notNullish(item.included_usage) && (item.included_usage as number) > 0) {
-		let includedUsage = numberWithCommas(item.included_usage as number);
+		const includedUsage = numberWithCommas(item.included_usage as number);
 		if (withNameAfterIncluded) {
 			includedUsageStr = `${includedUsage} ${includedFeatureName}`;
 		} else {
@@ -234,8 +236,8 @@ export const featurePricetoPricecnItem = ({
 		}
 	}
 
-	let priceStr = getPriceText({ item, org });
-	let billingFeatureName = getFeatureName({
+	const priceStr = getPriceText({ item, org });
+	const billingFeatureName = getFeatureName({
 		feature,
 		plural: typeof item.billing_units == "number" && item.billing_units > 1,
 	});
@@ -247,7 +249,8 @@ export const featurePricetoPricecnItem = ({
 		priceStr2 = `${billingFeatureName}`;
 	}
 
-	let intervalStr = isMainPrice && item.interval ? ` per ${item.interval}` : "";
+	const intervalStr =
+		isMainPrice && item.interval ? ` per ${item.interval}` : "";
 
 	if (includedUsageStr) {
 		return {
@@ -288,9 +291,9 @@ export const getAttachScenario = ({
 		return AttachScenario.Scheduled;
 	}
 
-	let curFullProduct = cusProductToProduct({ cusProduct: curMainProduct });
+	const curFullProduct = cusProductToProduct({ cusProduct: curMainProduct });
 
-	let isUpgrade = isProductUpgrade({
+	const isUpgrade = isProductUpgrade({
 		prices1: curFullProduct.prices,
 		prices2: fullProduct.prices,
 	});
@@ -319,29 +322,31 @@ export const toPricecnProduct = async ({
 	curScheduledProduct?: FullCusProduct | null;
 	fullCus?: FullCustomer;
 }) => {
-	let items = structuredClone(product.items);
+	const items = structuredClone(product.items);
 
 	sortProductItems(items, features);
 
-	let price = getPricecnPrice({ org, items, features });
-	let priceExists = items.some((i) => isPriceItem(i) || isFeaturePriceItem(i));
-	let itemsWithoutPrice = priceExists ? items.slice(1) : items;
+	const price = getPricecnPrice({ org, items, features });
+	const priceExists = items.some(
+		(i) => isPriceItem(i) || isFeaturePriceItem(i),
+	);
+	const itemsWithoutPrice = priceExists ? items.slice(1) : items;
 
-	let pricecnItems = itemsWithoutPrice.map((i) => {
+	const pricecnItems = itemsWithoutPrice.map((i) => {
 		let data: {
 			primaryText?: string;
 			secondaryText?: string;
 		};
 
 		if (isPriceItem(i)) {
-			let priceTxt = getPriceText({ item: i, org });
+			const priceTxt = getPriceText({ item: i, org });
 			data = {
 				primaryText: priceTxt,
 				secondaryText: i.interval ? `per ${i.interval}` : undefined,
 			};
 		}
 
-		let feature = features.find((f) => f.id == i.feature_id);
+		const feature = features.find((f) => f.id == i.feature_id);
 		if (isFeaturePriceItem(i)) {
 			data = featurePricetoPricecnItem({
 				feature,
@@ -364,25 +369,25 @@ export const toPricecnProduct = async ({
 		};
 	});
 
-	let isCurrent = curMainProduct?.product.id == product.id;
-	let isScheduled = curScheduledProduct?.product.id == product.id;
+	const isCurrent = curMainProduct?.product.id == product.id;
+	const isScheduled = curScheduledProduct?.product.id == product.id;
 
 	let buttonText = "Get Started";
 
 	if (isCurrent) {
-		let isCanceled = curMainProduct!.canceled_at != null;
+		const isCanceled = curMainProduct!.canceled_at != null;
 		buttonText = isCanceled ? "Renew" : "Current Plan";
 	} else if (isScheduled) {
 		buttonText = "Scheduled";
 	}
 
-	let scenario = getAttachScenario({
+	const scenario = getAttachScenario({
 		curMainProduct,
 		curScheduledProduct,
 		fullProduct,
 	});
 
-	let freeTrial = fullProduct.free_trial;
+	const freeTrial = fullProduct.free_trial;
 
 	let baseVariant = null;
 	if (fullProduct.base_variant_id) {
@@ -401,7 +406,7 @@ export const toPricecnProduct = async ({
 		baseVariant ||
 		otherProducts.some((p) => p.base_variant_id == product.id)
 	) {
-		let intervalSet = getLargestInterval({ prices: fullProduct.prices });
+		const intervalSet = getLargestInterval({ prices: fullProduct.prices });
 		intervalGroup = intervalSet?.interval;
 	}
 
@@ -435,16 +440,7 @@ export const toPricecnProduct = async ({
 			: null,
 		items: pricecnItems,
 		scenario,
-		// free_trial: freeTrial
-		//   ? FreeTrialResponseSchema.parse({
-		//       ...freeTrial,
-		//       trial_available: trialAvailable,
-		//     })
-		//   : null,
 
-		// interval_group: intervalGroup,
-
-		// To deprecate
 		buttonText,
 	};
 };

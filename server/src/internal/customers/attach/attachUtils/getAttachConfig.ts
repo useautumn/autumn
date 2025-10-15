@@ -3,6 +3,7 @@ import {
 	AttachBranch,
 	type AttachConfig,
 	cusProductToPrices,
+	cusProductToProduct,
 	intervalToValue,
 	ProrationBehavior,
 } from "@autumn/shared";
@@ -15,6 +16,7 @@ import {
 	attachParamsToProduct,
 	attachParamToCusProducts,
 } from "./convertAttachParams.js";
+import { isDefaultTrialFullProduct } from "@/internal/products/productUtils/classifyProduct.js";
 
 export const intervalsAreSame = ({
 	attachParams,
@@ -105,15 +107,22 @@ export const getAttachConfig = async ({
 
 	const sameIntervals = intervalsAreSame({ attachParams });
 
-	// let disableMerge =
-	//   branch == AttachBranch.MainIsTrial ||
-	//   org.config.merge_billing_cycles === false;
-
 	const invoiceAndEnable =
 		attachParams.invoiceOnly && attachBody.enable_product_immediately;
 
 	const invoiceCheckout =
 		attachParams.invoiceOnly === true && !attachBody.enable_product_immediately;
+
+	// Check if upgrading from a default trial
+	const { curMainProduct } = attachParamToCusProducts({ attachParams });
+	let isUpgradingFromDefaultTrial = false;
+	if (curMainProduct && branch === AttachBranch.Upgrade) {
+		const product = cusProductToProduct({ cusProduct: curMainProduct });
+		isUpgradingFromDefaultTrial = isDefaultTrialFullProduct({
+			product,
+			skipDefault: true,
+		}) || false;
+	}
 
 	const checkoutFlow =
 		isPublic ||
@@ -128,6 +137,7 @@ export const getAttachConfig = async ({
 			].includes(branch));
 
 	const onlyCheckout = !isFree && checkoutFlow && !freeTrialWithoutCardRequired;
+
 	const disableMerge = branch === AttachBranch.MainIsTrial || onlyCheckout;
 
 	// Require payment method...
@@ -162,6 +172,7 @@ export const getAttachConfig = async ({
 			? attachBody.finalize_invoice!
 			: true,
 		requirePaymentMethod: paymentMethodRequired,
+
 	};
 
 	return { flags, config };

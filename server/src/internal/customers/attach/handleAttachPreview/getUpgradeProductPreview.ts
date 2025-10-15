@@ -146,7 +146,7 @@ export const getUpgradeProductPreview = async ({
 	withPrepaid?: boolean;
 	config: AttachConfig;
 }) => {
-	const { logtail: logger } = req;
+	const { logger } = req;
 
 	const { curMainProduct, curSameProduct } = attachParamToCusProducts({
 		attachParams,
@@ -179,10 +179,10 @@ export const getUpgradeProductPreview = async ({
 		freeTrial = curCusProduct.free_trial;
 	}
 
+	// console.log("Anchor")
 	const newPreviewItems = await getItemsForNewProduct({
 		newProduct,
 		attachParams,
-		now,
 		freeTrial,
 		sub: sub!,
 		logger,

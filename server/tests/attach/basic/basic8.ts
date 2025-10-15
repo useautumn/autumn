@@ -1,19 +1,18 @@
+import { CusProductStatus } from "@autumn/shared";
+import { expect } from "chai";
 import chalk from "chalk";
 import { setupBefore } from "tests/before.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { products } from "tests/global.js";
 import { compareMainProduct } from "tests/utils/compare.js";
-import { CusProductStatus } from "@autumn/shared";
-import { expect } from "chai";
-import { timeout } from "@/utils/genUtils.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
 const testCase = "basic8";
 
 describe(`${chalk.yellowBright("basic8: Testing trial duplicates (same fingerprint)")}`, () => {
 	const customerId = testCase;
-	let customerId2 = testCase + "2";
+	const customerId2 = testCase + "2";
 	const autumn = new AutumnInt();
 
 	before(async function () {
@@ -40,7 +39,7 @@ describe(`${chalk.yellowBright("basic8: Testing trial duplicates (same fingerpri
 		});
 	});
 
-	it("should attach pro with trial and have correct product & invoice", async function () {
+	it("should attach pro with trial and have correct product & invoice", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
 			productId: products.proWithTrial.id,
@@ -59,7 +58,7 @@ describe(`${chalk.yellowBright("basic8: Testing trial duplicates (same fingerpri
 		expect(invoices[0].total).to.equal(0, "Invoice total should be 0");
 	});
 
-	it("should attach pro with trial to second customer and have correct product & invoice (pro with trial, full price)", async function () {
+	it("should attach pro with trial to second customer and have correct product & invoice (pro with trial, full price)", async () => {
 		await autumn.attach({
 			customer_id: customerId2,
 			product_id: products.proWithTrial.id,

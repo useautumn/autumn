@@ -1,4 +1,9 @@
-import { BillingType, ErrCode, type UsagePriceConfig } from "@autumn/shared";
+import {
+	BillingType,
+	ErrCode,
+	ProductNotFoundError,
+	type UsagePriceConfig,
+} from "@autumn/shared";
 import express, { type Router } from "express";
 import { MigrationService } from "@/internal/migrations/MigrationService.js";
 import { constructMigrationJob } from "@/internal/migrations/migrationUtils.js";
@@ -69,13 +74,13 @@ export const handleMigrate = async (
 		});
 	}
 
-	if (fromProduct.is_add_on || toProduct.is_add_on) {
-		throw new RecaseError({
-			message: `Cannot migrate customers for add on products`,
-			code: ErrCode.InvalidRequest,
-			statusCode: 400,
-		});
-	}
+	// if (fromProduct.is_add_on || toProduct.is_add_on) {
+	// 	throw new RecaseError({
+	// 		message: `Cannot migrate customers for add on products`,
+	// 		code: ErrCode.InvalidRequest,
+	// 		statusCode: 400,
+	// 	});
+	// }
 
 	for (const price of toProduct.prices) {
 		const billingType = getBillingType(price.config);
@@ -127,10 +132,9 @@ export const handleMigrate = async (
 	});
 
 	if (!fromProduct || !toProduct) {
-		throw new RecaseError({
-			message: `Product ${from_product_id} version ${from_version} or ${to_product_id} version ${to_version} not found`,
-			code: ErrCode.ProductNotFound,
-			statusCode: 404,
+		throw new ProductNotFoundError({
+			productId: !fromProduct ? from_product_id : to_product_id,
+			version: !fromProduct ? from_version : to_version,
 		});
 	}
 

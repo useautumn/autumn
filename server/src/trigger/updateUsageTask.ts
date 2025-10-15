@@ -1,28 +1,26 @@
 import {
 	AllowanceType,
-	AppEnv,
+	type AppEnv,
 	CusProductStatus,
-	Customer,
-	Feature,
+	type Customer,
+	type Feature,
 	FeatureType,
-	FullCustomerEntitlement,
-	Organization,
+	type FullCustomerEntitlement,
+	type Organization,
 } from "@autumn/shared";
-import { getCusEntsInFeatures } from "@/internal/customers/cusUtils/cusUtils.js";
-
-import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
-import { getFeatureBalance } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { Decimal } from "decimal.js";
-
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { refreshCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
+import { getFeatureBalance } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
+import { deductFromApiCusRollovers } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverDeductionUtils.js";
+import { getCusEntsInFeatures } from "@/internal/customers/cusUtils/cusUtils.js";
+import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
+import { handleThresholdReached } from "./handleThresholdReached.js";
 import {
 	deductAllowanceFromCusEnt,
 	deductFromUsageBasedCusEnt,
 } from "./updateBalanceTask.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { deductFromCusRollovers } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverDeductionUtils.js";
-import { refreshCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
-import { handleThresholdReached } from "./handleThresholdReached.js";
 
 // 2. Get deductions for each feature
 const getFeatureDeductions = ({
@@ -36,16 +34,16 @@ const getFeatureDeductions = ({
 	features: Feature[];
 	shouldSet: boolean;
 }) => {
-	let meteredFeature =
+	const meteredFeature =
 		features.find((f) => f.type === FeatureType.Metered) || features[0];
 
 	const featureDeductions = [];
 	for (const feature of features) {
 		let newValue = value;
-		let unlimitedExists = cusEnts.some(
+		const unlimitedExists = cusEnts.some(
 			(cusEnt) =>
 				cusEnt.entitlement.allowance_type === AllowanceType.Unlimited &&
-				cusEnt.entitlement.internal_feature_id == feature.internal_id,
+				cusEnt.entitlement.internal_feature_id === feature.internal_id,
 		);
 
 		if (unlimitedExists) {
@@ -64,13 +62,13 @@ const getFeatureDeductions = ({
 		let deduction = newValue;
 
 		if (shouldSet) {
-			let totalAllowance = cusEnts.reduce((acc, curr) => {
+			const totalAllowance = cusEnts.reduce((acc, curr) => {
 				return acc + (curr.entitlement.allowance || 0);
 			}, 0);
 
-			let targetBalance = new Decimal(totalAllowance).sub(value).toNumber();
+			const targetBalance = new Decimal(totalAllowance).sub(value).toNumber();
 
-			let totalBalance = getFeatureBalance({
+			const totalBalance = getFeatureBalance({
 				cusEnts,
 				internalFeatureId: feature.internal_id!,
 			})!;
@@ -78,7 +76,7 @@ const getFeatureDeductions = ({
 			deduction = new Decimal(totalBalance).sub(targetBalance).toNumber();
 		}
 
-		if (deduction == 0) {
+		if (deduction === 0) {
 			console.log(`   - Skipping feature ${feature.id} -- deduction is 0`);
 			continue;
 		}
@@ -232,11 +230,11 @@ export const updateUsage = async ({
 		let { feature, deduction: toDeduct } = obj;
 
 		for (const cusEnt of cusEnts) {
-			if (cusEnt.entitlement.internal_feature_id != feature.internal_id) {
+			if (cusEnt.entitlement.internal_feature_id !== feature.internal_id) {
 				continue;
 			}
 
-			toDeduct = await deductFromCusRollovers({
+			toDeduct = await deductFromApiCusRollovers({
 				toDeduct,
 				cusEnt,
 				deductParams: {
@@ -247,7 +245,7 @@ export const updateUsage = async ({
 				},
 			});
 
-			if (toDeduct == 0) continue;
+			if (toDeduct === 0) continue;
 
 			toDeduct = await deductAllowanceFromCusEnt({
 				toDeduct,

@@ -1,6 +1,5 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 import { EntitlementWithFeatureSchema } from "../../productModels/entModels/entModels.js";
-import { Replaceable } from "./replaceableTable.js";
 import { ReplaceableSchema } from "./replaceableSchema.js";
 import { RolloverSchema } from "./rolloverModels/rolloverTable.js";
 

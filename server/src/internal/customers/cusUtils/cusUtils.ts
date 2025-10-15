@@ -1,25 +1,25 @@
-import { z } from "zod";
 import {
+	type ApiInvoice,
 	CusExpand,
-	Customer,
-	CustomerData,
+	type Customer,
+	type CustomerData,
 	ErrCode,
-	Feature,
-	FullCustomer,
-	Invoice,
-	InvoiceResponse,
-	Organization,
+	type Feature,
+	type FullCustomer,
+	type Invoice,
+	type Organization,
 	sortCusEntsForDeduction,
 } from "@autumn/shared";
-
-import { CusService } from "@/internal/customers/CusService.js";
-
-import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import { StatusCodes } from "http-status-codes";
-import { notNullish, nullish } from "@/utils/genUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import { z } from "zod";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import {
+	InvoiceService,
+	processInvoice,
+} from "@/internal/invoices/InvoiceService.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { processInvoice } from "@/internal/invoices/InvoiceService.js";
+import { notNullish, nullish } from "@/utils/genUtils.js";
 import { refreshCusCache } from "../cusCache/updateCachedCus.js";
 
 export const updateCustomerDetails = async ({
@@ -35,7 +35,7 @@ export const updateCustomerDetails = async ({
 	org: Organization;
 	logger: any;
 }) => {
-	let updates: any = {};
+	const updates: any = {};
 	if (!customer.name && customerData?.name) {
 		updates.name = customerData.name;
 	}
@@ -84,7 +84,7 @@ export const getCusInvoices = async ({
 	limit?: number;
 	withItems?: boolean;
 	features?: Feature[];
-}): Promise<InvoiceResponse[]> => {
+}): Promise<ApiInvoice[]> => {
 	const finalInvoices = notNullish(invoices)
 		? invoices
 		: await InvoiceService.list({
@@ -116,7 +116,7 @@ export const getCusEntsInFeatures = async ({
 	logger: any;
 	reverseOrder?: boolean;
 }) => {
-	let cusProducts = customer.customer_products;
+	const cusProducts = customer.customer_products;
 
 	// This is important, attaching customer_product to cus ent is used elsewhere, don't delete.
 	let cusEnts = cusProducts.flatMap((cusProduct) => {
@@ -126,7 +126,7 @@ export const getCusEntsInFeatures = async ({
 		}));
 	});
 
-	let cusPrices = cusProducts.flatMap((cusProduct) => {
+	const cusPrices = cusProducts.flatMap((cusProduct) => {
 		return cusProduct.customer_prices || [];
 	});
 
@@ -137,7 +137,7 @@ export const getCusEntsInFeatures = async ({
 	}
 
 	if (customer.entity) {
-		let entity = customer.entity;
+		const entity = customer.entity;
 		cusEnts = cusEnts.filter(
 			(cusEnt) =>
 				nullish(cusEnt.customer_product.internal_entity_id) ||
@@ -152,8 +152,8 @@ export const getCusEntsInFeatures = async ({
 
 export const parseCusExpand = (expand?: string): CusExpand[] => {
 	if (expand) {
-		let options = expand.split(",");
-		let result: CusExpand[] = [];
+		const options = expand.split(",");
+		const result: CusExpand[] = [];
 		for (const option of options) {
 			if (!Object.values(CusExpand).includes(option as CusExpand)) {
 				throw new RecaseError({
@@ -171,7 +171,7 @@ export const parseCusExpand = (expand?: string): CusExpand[] => {
 };
 
 export const newCusToFullCus = ({ newCus }: { newCus: Customer }) => {
-	let fullCus: FullCustomer = {
+	const fullCus: FullCustomer = {
 		...newCus,
 		customer_products: [],
 		entities: [],

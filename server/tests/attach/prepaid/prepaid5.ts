@@ -1,38 +1,31 @@
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
-	APIVersion,
-	AppEnv,
-	Customer,
+	type AppEnv,
+	type Customer,
+	LegacyVersion,
 	OnDecrease,
 	OnIncrease,
-	Organization,
+	type Organization,
 } from "@autumn/shared";
+import { expect } from "chai";
 import chalk from "chalk";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type Stripe from "stripe";
 import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "../utils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
 	constructFeatureItem,
 	constructPrepaidItem,
 } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
-import { addHours, addMonths, addWeeks } from "date-fns";
-import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
-import { expect } from "chai";
-import { getMainCusProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { addPrefixToProducts } from "../utils.js";
 
 const testCase = "prepaid5";
 
-export let prepaidAddOn = constructProduct({
+export const prepaidAddOn = constructProduct({
 	type: "pro",
 	excludeBase: true,
 	id: "topup",
@@ -50,7 +43,7 @@ export let prepaidAddOn = constructProduct({
 	isAddOn: true,
 });
 
-export let pro = constructProduct({
+export const pro = constructProduct({
 	type: "pro",
 	items: [
 		constructFeatureItem({
@@ -59,7 +52,7 @@ export let pro = constructProduct({
 		}),
 	],
 });
-export let premium = constructProduct({
+export const premium = constructProduct({
 	type: "premium",
 	items: [
 		constructFeatureItem({
@@ -70,13 +63,13 @@ export let premium = constructProduct({
 });
 
 describe(`${chalk.yellowBright(`attach/${testCase}: prepaid add on, with entities`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
 
-	let curUnix = new Date().getTime();
+	const curUnix = new Date().getTime();
 	let customer: Customer;
 
 	before(async function () {
@@ -130,7 +123,7 @@ describe(`${chalk.yellowBright(`attach/${testCase}: prepaid add on, with entitie
 		},
 	];
 
-	it("should attach pro product to entity1", async function () {
+	it("should attach pro product to entity1", async () => {
 		await autumn.entities.create(customerId, entities);
 
 		await attachAndExpectCorrect({
@@ -165,7 +158,7 @@ describe(`${chalk.yellowBright(`attach/${testCase}: prepaid add on, with entitie
 	});
 
 	const oldEntity2Quantity = 300;
-	it("should advance test clock and attach top up to entity2", async function () {
+	it("should advance test clock and attach top up to entity2", async () => {
 		// await advanceTestClock({
 		//   stripeCli,
 		//   testClockId,
@@ -205,7 +198,7 @@ describe(`${chalk.yellowBright(`attach/${testCase}: prepaid add on, with entitie
 		});
 	});
 
-	it("should increase prepaid add on quantity for entity1", async function () {
+	it("should increase prepaid add on quantity for entity1", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,
@@ -228,7 +221,7 @@ describe(`${chalk.yellowBright(`attach/${testCase}: prepaid add on, with entitie
 	});
 
 	const newEntity2Quantity = 200;
-	it("should decrease prepaid add on quantity for entity2", async function () {
+	it("should decrease prepaid add on quantity for entity2", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,
@@ -251,7 +244,9 @@ describe(`${chalk.yellowBright(`attach/${testCase}: prepaid add on, with entitie
 
 		const entity2 = await autumn.entities.get(customerId, entity2Id);
 		expect(entity2.invoices.length).to.equal(2);
-		let creditProd = entity2.products.find((p: any) => p.id == prepaidAddOn.id);
+		const creditProd = entity2.products.find(
+			(p: any) => p.id == prepaidAddOn.id,
+		);
 		expect(creditProd).to.exist;
 		const messagesItem = creditProd!.items.find(
 			(i: any) => i.feature_id == TestFeature.Messages,

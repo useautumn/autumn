@@ -1,5 +1,5 @@
 import {
-	APIVersion,
+	ApiVersion,
 	BillingInterval,
 	BillingType,
 	type FullCusProduct,
@@ -75,7 +75,7 @@ export const isV4Usage = ({
 
 	return (
 		billingType === BillingType.UsageInArrear &&
-		(cusProduct.api_version === APIVersion.v1_4 ||
+		(cusProduct.api_semver === ApiVersion.Beta ||
 			notNullish(cusProduct.internal_entity_id))
 	);
 };

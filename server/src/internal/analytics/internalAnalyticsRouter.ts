@@ -53,7 +53,8 @@ analyticsRouter.get("/event_names", async (req: any, res: any) =>
 					features.some(
 						(feature: Feature) =>
 							feature.type === FeatureType.Metered &&
-							feature.config.filters?.[0]?.value.includes(result[i]),
+							feature.event_names &&
+							feature.event_names.includes(result[i]),
 					)
 				) {
 					eventNames.push(result[i]);
@@ -104,7 +105,8 @@ const getTopEvents = async ({ req }: { req: ExtendedRequest }) => {
 			features.some(
 				(feature: Feature) =>
 					feature.type === FeatureType.Metered &&
-					feature.config.filters?.[0]?.value.includes(result[i]),
+					feature.event_names &&
+					feature.event_names.includes(result[i]),
 			)
 		) {
 			eventNames.push(result[i]);
@@ -185,6 +187,8 @@ analyticsRouter.post("/events", async (req: any, res: any) =>
 				customer,
 				aggregateAll,
 			});
+
+			console.log("events", events);
 
 			res.status(200).json({
 				customer,

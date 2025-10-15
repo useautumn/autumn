@@ -1,23 +1,22 @@
 import {
-	constructBooleanFeature,
-	constructMeteredFeature,
-} from "@/internal/features/utils/constructFeatureUtils.js";
-import {
 	AppEnv,
 	BillingInterval,
 	CouponDurationType,
-	CreateFreeTrial,
+	type CreateFreeTrial,
 	CreateFreeTrialSchema,
-	CreateReward,
+	type CreateReward,
 	FeatureUsageType,
-	FreeTrial,
 	FreeTrialDuration,
-	ProductItem,
-	ProductV2,
+	type ProductItem,
+	type ProductV2,
 	RewardType,
 } from "@autumn/shared";
-import { keyToTitle } from "../genUtils.js";
+import {
+	constructBooleanFeature,
+	constructMeteredFeature,
+} from "@/internal/features/utils/constructFeatureUtils.js";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
+import { keyToTitle } from "../genUtils.js";
 
 export enum TestFeatureType {
 	Boolean = "boolean",
@@ -139,11 +138,11 @@ export const constructProduct = ({
 		);
 	}
 
-	let id_ =
+	const id_ =
 		id ||
 		(isAnnual ? `${type}-annual` : interval ? `${type}-${interval}` : type);
 
-	let product: ProductV2 = {
+	const product: ProductV2 = {
 		id: id_,
 		name: id
 			? keyToTitle(id)

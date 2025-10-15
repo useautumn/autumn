@@ -1,24 +1,23 @@
+import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
 import chalk from "chalk";
-import Stripe from "stripe";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { APIVersion, AppEnv, Organization } from "@autumn/shared";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type Stripe from "stripe";
 import { setupBefore } from "tests/before.js";
+import { TestFeature } from "tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
+import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "../utils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import {
 	constructProduct,
 	constructRawProduct,
 } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
+import { addPrefixToProducts } from "../utils.js";
 
-export let pro = constructProduct({
+export const pro = constructProduct({
 	type: "pro",
 	items: [],
 });
@@ -36,8 +35,8 @@ export const addOn = constructRawProduct({
 const testCase = "addOn2";
 
 describe(`${chalk.yellowBright(`${testCase}: Testing attach free add on twice (should be treated as one off?)`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
 
@@ -73,7 +72,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach free add on twice (s
 		});
 	});
 
-	it("should attach pro product and free add on", async function () {
+	it("should attach pro product and free add on", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,

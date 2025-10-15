@@ -1,24 +1,23 @@
+import {
+	type AttachPreview,
+	type FeatureOptions,
+	type FullCusProduct,
+	isCanceled,
+	type ProductItem,
+	type ProductV2,
+	UsageModel,
+} from "@autumn/shared";
+import { useEffect, useState } from "react";
 import { notNullish } from "@/utils/genUtils";
 import { isFeatureItem } from "@/utils/product/getItemType";
 import { isOneOffProduct } from "@/utils/product/priceUtils";
 import { sortProductItems } from "@/utils/productUtils";
-import {
-	AttachPreview,
-	CusProduct,
-	FeatureOptions,
-	FullCusProduct,
-	isCanceled,
-	ProductItem,
-	ProductV2,
-	UsageModel,
-} from "@autumn/shared";
-import { useEffect, useState } from "react";
 
-export type FrontendProduct = ProductV2 & {
-	isActive: boolean;
-	options: FeatureOptions[];
-	isCanceled: boolean;
-};
+// export type FrontendProduct = ProductV2 & {
+// 	isActive: boolean;
+// 	options: FeatureOptions[];
+// 	isCanceled: boolean;
+// };
 
 export enum AttachCase {
 	AddOn = "Add On",
@@ -31,7 +30,7 @@ export enum AttachCase {
 const productHasPrepaid = (items: ProductItem[]) => {
 	return items.some(
 		(item) =>
-			item.usage_model == UsageModel.Prepaid && notNullish(item.interval),
+			item.usage_model === UsageModel.Prepaid && notNullish(item.interval),
 	);
 };
 
@@ -120,6 +119,8 @@ export const useAttachState = ({
 				free_trial: initialProductRef.current?.free_trial || null,
 			});
 
+		console.log('[UAS] effect', { changed: hasItemsChanged, refLen: initialProductRef.current?.items?.length, hasPrepaid: productHasPrepaid(product.items) });
+
 		setItemsChanged(hasItemsChanged);
 	}, [product]);
 
@@ -164,21 +165,26 @@ export const useAttachState = ({
 	};
 
 	const getButtonText = () => {
-		if (cusProduct && !itemsChanged) {
-			if (flags.isOneOff) {
-				return "Attach Product";
+		const result = (() => {
+			if (cusProduct && !itemsChanged) {
+				if (flags.isOneOff) {
+					return "Attach Product";
+				}
+
+				if (flags.hasPrepaid) {
+					return "Update prepaid quantity";
+				}
 			}
 
-			if (flags.hasPrepaid) {
-				return "Update prepaid quantity";
+			if (flags.isCanceled) {
+				return "Renew Product";
 			}
-		}
 
-		if (flags.isCanceled) {
-			return "Renew Product";
-		}
+			return "Attach Product";
+		})();
 
-		return "Attach Product";
+		console.log('[BTN]', { text: result, cusId: cusProduct?.id, changed: itemsChanged, prepaid: flags.hasPrepaid });
+		return result;
 	};
 
 	return {

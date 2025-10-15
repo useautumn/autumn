@@ -1,23 +1,21 @@
-import { getUsageBasedSub } from "@/external/stripe/stripeSubUtils.js";
-import { findStripeItemForPrice } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
-
-import RecaseError from "@/utils/errorUtils.js";
 import {
+	type AttachConfig,
 	ErrCode,
-	Feature,
-	FeatureOptions,
-	FullCusProduct,
+	type FeatureOptions,
+	type FullCusProduct,
 } from "@autumn/shared";
-
-import { Stripe } from "stripe";
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import type { Stripe } from "stripe";
+import { findStripeItemForPrice } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { featureToCusPrice } from "@/internal/customers/cusProducts/cusPrices/convertCusPriceUtils.js";
-import { handleQuantityUpgrade } from "./handleQuantityUpgrade.js";
+import RecaseError from "@/utils/errorUtils.js";
 import { handleQuantityDowngrade } from "./handleQuantityDowngrade.js";
+import { handleQuantityUpgrade } from "./handleQuantityUpgrade.js";
 
 export const handleUpdateFeatureQuantity = async ({
 	req,
 	attachParams,
+	attachConfig,
 	cusProduct,
 	stripeSubs,
 	oldOptions,
@@ -25,6 +23,7 @@ export const handleUpdateFeatureQuantity = async ({
 }: {
 	req: any;
 	attachParams: AttachParams;
+	attachConfig: AttachConfig;
 	cusProduct: FullCusProduct;
 	stripeSubs: Stripe.Subscription[];
 	oldOptions: FeatureOptions;
@@ -62,7 +61,7 @@ export const handleUpdateFeatureQuantity = async ({
 		});
 	}
 
-	let subItem = findStripeItemForPrice({
+	const subItem = findStripeItemForPrice({
 		price: price!,
 		stripeItems: subToUpdate.items.data,
 	}) as Stripe.SubscriptionItem;
@@ -71,6 +70,7 @@ export const handleUpdateFeatureQuantity = async ({
 		return await handleQuantityDowngrade({
 			req,
 			attachParams,
+			attachConfig,
 			cusProduct,
 			stripeSub: subToUpdate,
 			oldOptions,
@@ -81,6 +81,7 @@ export const handleUpdateFeatureQuantity = async ({
 		return await handleQuantityUpgrade({
 			req,
 			attachParams,
+			attachConfig,
 			cusProduct,
 			stripeSubs,
 			oldOptions,
@@ -90,34 +91,4 @@ export const handleUpdateFeatureQuantity = async ({
 			subItem,
 		});
 	}
-
-	// if (!price) {
-	//   throw new RecaseError({
-	//     message: `updateFeatureQuantity: No price found for feature ${newOptions.feature_id}`,
-	//     code: ErrCode.PriceNotFound,
-	//   });
-	// }
-
-	// if (!subItem) {
-	//   subItem = await stripeCli.subscriptionItems.create({
-	//     subscription: subToUpdate.id,
-	//     price: price.config.stripe_price_id as string,
-	//     quantity: newOptions.quantity,
-	//     proration_behavior: prorationBehavior,
-	//     payment_behavior: "error_if_incomplete",
-	//   });
-
-	//   logger.info(
-	//     `updateFeatureQuantity: Successfully created sub item for feature ${newOptions.feature_id}: ${newOptions.quantity}`,
-	//   );
-	// } else {
-	//   await stripeCli.subscriptionItems.update(subItem.id, {
-	//     quantity: newOptions.quantity,
-	//     proration_behavior: prorationBehavior,
-	//     payment_behavior: "error_if_incomplete",
-	//   });
-	//   logger.info(
-	//     `updateFeatureQuantity: Successfully updated sub item for feature ${newOptions.feature_id}: ${newOptions.quantity}`,
-	//   );
-	// }
 };

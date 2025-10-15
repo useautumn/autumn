@@ -1,4 +1,4 @@
-// import { z } from "zod";
+// import { z } from "zod/v4";
 // import { UsageModel } from "../productItemModels.js";
 
 // export const CheckProdItemSchema = z.object({

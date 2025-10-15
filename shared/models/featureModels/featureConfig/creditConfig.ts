@@ -1,5 +1,5 @@
+import { z } from "zod/v4";
 import { FeatureUsageType } from "../featureEnums.js";
-import { z } from "zod";
 
 export const CreditSchemaItemSchema = z.object({
 	metered_feature_id: z.string(),

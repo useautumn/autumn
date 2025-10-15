@@ -1,10 +1,9 @@
-import { ExtendedRequest } from "@/utils/models/Request.js";
+import { ProductNotFoundError } from "@autumn/shared";
+import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
+import { handleRequestError } from "@/utils/errorUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { ProductService } from "../ProductService.js";
-import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
-import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
-import { ErrCode } from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
 
 export const handleGetProductDeleteInfo = async (req: any, res: any) =>
 	routeHandler({
@@ -15,7 +14,7 @@ export const handleGetProductDeleteInfo = async (req: any, res: any) =>
 			try {
 				// 1. Get number of versions
 				const { db, orgId, env } = req;
-				let product = await ProductService.get({
+				const product = await ProductService.get({
 					db,
 					id: req.params.productId,
 					orgId: req.orgId,
@@ -23,14 +22,10 @@ export const handleGetProductDeleteInfo = async (req: any, res: any) =>
 				});
 
 				if (!product) {
-					throw new RecaseError({
-						message: `Product ${req.params.productId} not found`,
-						code: ErrCode.ProductNotFound,
-						statusCode: StatusCodes.NOT_FOUND,
-					});
+					throw new ProductNotFoundError({ productId: req.params.productId });
 				}
 
-				let [allVersions, latestVersion, deletionText] = await Promise.all([
+				const [allVersions, latestVersion, deletionText] = await Promise.all([
 					CusProdReadService.existsForProduct({
 						db,
 						productId: req.params.productId,

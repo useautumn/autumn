@@ -1,4 +1,8 @@
-import { CouponDurationType, RewardType } from "@autumn/shared";
+import {
+	CouponDurationType,
+	RewardType,
+	stripeToAtmnAmount,
+} from "@autumn/shared";
 import type Stripe from "stripe";
 
 const parseStripeCouponDuration = (coupon: Stripe.Coupon) => {
@@ -37,6 +41,11 @@ export const stripeDiscountToResponse = ({
 		(t) => t.discount === d.id,
 	);
 
+	const totalAtmnDiscountAmount = stripeToAtmnAmount({
+		amount: totalDiscountAmount?.amount || 0,
+		currency: d.coupon?.currency ?? undefined,
+	});
+
 	return {
 		id: d.coupon?.id,
 		name: d.coupon?.name ?? "",
@@ -52,7 +61,7 @@ export const stripeDiscountToResponse = ({
 		duration_value,
 
 		total_discount_amount: totalDiscountAmount?.amount
-			? totalDiscountAmount.amount / 100
+			? totalAtmnDiscountAmount
 			: null,
 	};
 };

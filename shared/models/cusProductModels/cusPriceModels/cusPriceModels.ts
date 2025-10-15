@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 import { PriceSchema } from "../../productModels/priceModels/priceModels.js";
 
 export const CustomerPriceSchema = z.object({

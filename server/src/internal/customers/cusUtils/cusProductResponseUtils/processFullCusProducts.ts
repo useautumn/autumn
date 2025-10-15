@@ -1,20 +1,22 @@
 import {
 	ACTIVE_STATUSES,
-	APIVersion,
-	CusProductResponse,
-	Entity,
-	Feature,
-	Organization,
+	type ApiCusProduct,
+	ApiVersion,
+	type ApiVersionClass,
+	type CusProductStatus,
+	type Entity,
+	type Feature,
+	type Organization,
 } from "@autumn/shared";
 import { getCusProductResponse } from "./getCusProductResponse.js";
 
 const mergeCusProductResponses = ({
 	cusProductResponses,
 }: {
-	cusProductResponses: CusProductResponse[];
+	cusProductResponses: ApiCusProduct[];
 }) => {
-	const getProductKey = (product: CusProductResponse) => {
-		let status = ACTIVE_STATUSES.includes(product.status)
+	const getProductKey = (product: ApiCusProduct) => {
+		const status = ACTIVE_STATUSES.includes(product.status as CusProductStatus)
 			? "active"
 			: product.status;
 		return `${product.id}:${status}`;
@@ -56,14 +58,14 @@ export const processFullCusProducts = async ({
 	subs: any;
 	org: Organization;
 	entity?: Entity;
-	apiVersion: number;
+	apiVersion: ApiVersionClass;
 	features: Feature[];
 }) => {
 	// Process full cus products
 	let main = [];
 	let addOns = [];
 	for (const cusProduct of fullCusProducts) {
-		let processed = await getCusProductResponse({
+		const processed = await getCusProductResponse({
 			cusProduct,
 			subs,
 			org,
@@ -72,7 +74,7 @@ export const processFullCusProducts = async ({
 			features,
 		});
 
-		let isAddOn = cusProduct.product.is_add_on;
+		const isAddOn = cusProduct.product.is_add_on;
 		if (isAddOn) {
 			addOns.push(processed);
 		} else {
@@ -80,12 +82,12 @@ export const processFullCusProducts = async ({
 		}
 	}
 
-	if (apiVersion >= APIVersion.v1_1) {
+	if (apiVersion.gte(ApiVersion.V1_1)) {
 		main = mergeCusProductResponses({
-			cusProductResponses: main as CusProductResponse[],
+			cusProductResponses: main as ApiCusProduct[],
 		});
 		addOns = mergeCusProductResponses({
-			cusProductResponses: addOns as CusProductResponse[],
+			cusProductResponses: addOns as ApiCusProduct[],
 		});
 	}
 

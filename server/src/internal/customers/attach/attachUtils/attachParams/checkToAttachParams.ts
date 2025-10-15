@@ -1,16 +1,9 @@
+import type { FullCustomer, FullProduct } from "@autumn/shared";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import {
-	APIVersion,
-	Feature,
-	FullCusProduct,
-	FullCustomer,
-	FullProduct,
-} from "@autumn/shared";
-import { getStripeCusData } from "./attachParamsUtils/getStripeCusData.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { getFreeTrialAfterFingerprint } from "@/internal/products/free-trials/freeTrialUtils.js";
-import { orgToVersion } from "@/utils/versionUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+import { getStripeCusData } from "./attachParamsUtils/getStripeCusData.js";
 
 export const checkToAttachParams = async ({
 	req,
@@ -25,14 +18,15 @@ export const checkToAttachParams = async ({
 }) => {
 	const { org, env, db } = req;
 
-	const apiVersion =
-		orgToVersion({
-			org,
-			reqApiVersion: req.apiVersion,
-		}) || APIVersion.v1;
+	// const apiVersion =
+	// 	orgToVersion({
+	// 		org,
+	// 		reqApiVersion: req.apiVersion,
+	// 	}) || LegacyVersion.v1;
+	// const apiVersion = req.apiVersion.value;
 
 	const stripeCli = createStripeCli({ org, env });
-	let stripeCusData = await getStripeCusData({
+	const stripeCusData = await getStripeCusData({
 		stripeCli,
 		db,
 		org,
@@ -42,7 +36,7 @@ export const checkToAttachParams = async ({
 		allowNoStripe: true,
 	});
 
-	let freeTrial = await getFreeTrialAfterFingerprint({
+	const freeTrial = await getFreeTrialAfterFingerprint({
 		db,
 		freeTrial: product.free_trial,
 		fingerprint: customer.fingerprint,
@@ -76,7 +70,7 @@ export const checkToAttachParams = async ({
 		cusProducts: customer.customer_products,
 
 		// Others
-		apiVersion,
+		// apiVersion,
 	};
 
 	return attachParams;

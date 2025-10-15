@@ -41,9 +41,6 @@ export const getAttachFunction = async ({
 	config: AttachConfig;
 }) => {
 	const { onlyCheckout } = config;
-	const { curCusProduct } = attachParamToCusProducts({
-		attachParams,
-	});
 
 	// 1. Checkout function
 	const newScenario = [
@@ -56,13 +53,16 @@ export const getAttachFunction = async ({
 		AttachBranch.MainIsTrial,
 	].includes(branch);
 
+	// Check for upgrade/downgrade from default trial (should also use checkout)
+	
+
 	if (newScenario && onlyCheckout) {
 		return AttachFunction.CreateCheckout;
-	} else if (branch == AttachBranch.OneOff) {
+	} else if (branch === AttachBranch.OneOff) {
 		return AttachFunction.OneOff;
 	} else if (
-		branch == AttachBranch.MultiAttach ||
-		branch == AttachBranch.MultiAttachUpdate
+		branch === AttachBranch.MultiAttach ||
+		branch === AttachBranch.MultiAttachUpdate
 	) {
 		return AttachFunction.MultiAttach;
 	} else if (newScenario) {
@@ -86,12 +86,12 @@ export const getAttachFunction = async ({
 	}
 
 	// 3. Downgrade scenarios
-	if (branch == AttachBranch.Downgrade) {
+	if (branch === AttachBranch.Downgrade) {
 		return AttachFunction.ScheduleProduct;
 	}
 
 	// 4. Prepaid scenarios
-	if (branch == AttachBranch.UpdatePrepaidQuantity) {
+	if (branch === AttachBranch.UpdatePrepaidQuantity) {
 		const curSameProduct = attachParamsToCurCusProduct({ attachParams });
 		if (curSameProduct?.free_trial) {
 			attachParams.freeTrial = curSameProduct.free_trial;
@@ -99,7 +99,7 @@ export const getAttachFunction = async ({
 		return AttachFunction.UpdatePrepaidQuantity;
 	}
 
-	if (branch == AttachBranch.Renew) {
+	if (branch === AttachBranch.Renew) {
 		return AttachFunction.Renew;
 	}
 
@@ -121,7 +121,7 @@ export const runAttachFunction = async ({
 	attachBody: AttachBody;
 	config: AttachConfig;
 }) => {
-	const { logtail: logger, db } = req;
+	const { logger, db } = req;
 	const { stripeCli } = attachParams;
 
 	const attachFunction = await getAttachFunction({

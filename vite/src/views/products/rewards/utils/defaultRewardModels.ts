@@ -11,7 +11,7 @@ export const defaultDiscountConfig: DiscountConfig = {
 	duration_type: CouponDurationType.Months,
 	duration_value: 0,
 	should_rollover: true,
-	apply_to_all: true,
+	apply_to_all: false,
 	price_ids: [],
 };
 
