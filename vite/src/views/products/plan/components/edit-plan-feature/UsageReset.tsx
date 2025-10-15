@@ -46,9 +46,10 @@ export function UsageReset({ showBillingLabel = false }: UsageResetProps) {
 		});
 	};
 
-	const label = showBillingLabel
-		? "Usage Reset & Billing Interval"
-		: "Usage Reset";
+	const label = "Interval";
+	// showBillingLabel
+	// 	? "Usage Reset & Billing Interval"
+	// 	: "Usage Reset";
 
 	return (
 		<div className={showBillingLabel ? "mt-3" : ""}>

@@ -15,7 +15,6 @@ export const PlanDetailsStep = () => {
 	const isExistingProduct = !!baseProduct?.internal_id;
 
 	const { setSource, setTarget } = useAutoSlug({
-		state: product,
 		setState: setProduct,
 		sourceKey: "name",
 		targetKey: "id",
@@ -37,8 +36,8 @@ export const PlanDetailsStep = () => {
 							/>
 
 							<span className="text-form-label block">
-								Used to create a product in Stripe and show up on your checkout
-								pages.
+								The display name of the product that will show up on your
+								checkout page
 							</span>
 						</div>
 						<div>
@@ -50,7 +49,8 @@ export const PlanDetailsStep = () => {
 								className="mb-1"
 							/>
 							<span className="text-form-label block">
-								Used to refer to this product when using Autumn's APIs or SDKs
+								A fixed price to charge for the product. Uncheck this section if
+								the product is free or a variable price.
 							</span>
 						</div>
 						{/* {step === OnboardingStep.Playground && product && (

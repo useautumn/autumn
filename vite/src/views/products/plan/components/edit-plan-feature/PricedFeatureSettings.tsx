@@ -32,12 +32,12 @@ export function PricedFeatureSettings() {
 				<AreaRadioGroupItem
 					value={UsageModel.PayPerUse}
 					label="Pay-per-use"
-					description="Charge based on number of units used of this feature"
+					description="Charge for exactly how much is used"
 				/>
 				<AreaRadioGroupItem
 					value={UsageModel.Prepaid}
 					label="Prepaid"
-					description="Specify a quantity of this feature during checkout"
+					description="Specify an upfront quantity during checkout"
 				/>
 			</RadioGroup>
 		</div>

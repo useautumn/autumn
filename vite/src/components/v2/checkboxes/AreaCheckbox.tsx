@@ -52,7 +52,7 @@ function AreaCheckbox({
 					className={cn(
 						"text-checkbox-label font-medium select-none",
 						!disabled && "hover:!text-t1",
-						!checked && "opacity-50",
+						// !checked && "opacity-50",
 						disabled && "cursor-not-allowed",
 					)}
 				>

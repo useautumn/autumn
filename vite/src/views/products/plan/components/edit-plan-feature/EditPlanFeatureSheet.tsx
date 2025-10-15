@@ -37,12 +37,12 @@ export function EditPlanFeatureSheet({
 
 			{feature?.type !== FeatureType.Boolean && (
 				<>
-					<SheetSection title="Billing Type">
+					<SheetSection title="Configuration">
 						<BillingType />
 					</SheetSection>
 
 					<SheetSection
-						title={`Included usage ${isFeaturePrice ? "(optional)" : ""}`}
+						title={`Allowance ${isFeaturePrice ? "(optional)" : ""}`}
 					>
 						<IncludedUsage />
 					</SheetSection>

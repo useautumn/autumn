@@ -1,5 +1,6 @@
 import {
 	BillingInterval,
+	FeatureUsageType,
 	getFeatureName,
 	Infinite,
 	isContUseItem,
@@ -63,6 +64,25 @@ export function BillingType() {
 		}
 	};
 
+	const feature = features.find((f) => f.id === item.feature_id);
+	const featureName =
+		getFeatureName({
+			feature,
+			plural: true,
+		}) || "credits";
+	const singleFeatureName =
+		getFeatureName({
+			feature,
+			plural: false,
+		}) || "credit";
+
+	const usageType =
+		feature?.config?.usage_type ||
+		undefined; /* could be FeatureUsageType.Single or FeatureUsageType.Continuous */
+
+	const isConsumable = usageType === FeatureUsageType.Single;
+	const isAllocated = usageType === FeatureUsageType.Continuous;
+
 	return (
 		<div className="mt-3 space-y-4 billing-type-section">
 			<div className="flex w-full items-center gap-4">
@@ -74,13 +94,11 @@ export function BillingType() {
 				<div className="flex-1">
 					<div className="text-body-highlight mb-1">Included</div>
 					<div className="text-body-secondary leading-tight">
-						Set included usage limits with reset intervals (e.g.{" "}
-						{item.included_usage}{" "}
-						{getFeatureName({
-							feature: features.find((f) => f.id === item.feature_id),
-							plural: true,
-						}) || "credits"}
-						/month)
+						{isConsumable
+							? `Set a usage limit and reset interval for this feature (e.g. 100 ${featureName} per month).`
+							: isAllocated
+								? `Set a usage limit for this feature (e.g. 5 ${featureName}).`
+								: "Set a usage limit for this feature."}
 					</div>
 				</div>
 			</div>
@@ -94,12 +112,11 @@ export function BillingType() {
 				<div className="flex-1">
 					<div className="text-body-highlight mb-1">Priced</div>
 					<div className="text-body-secondary leading-tight">
-						Set usage and overage pricing (e.g. {item.included_usage}{" "}
-						{getFeatureName({
-							feature: features.find((f) => f.id === item.feature_id),
-							plural: true,
-						}) || "credits"}
-						/month, $1 extra)
+						{isConsumable
+							? `Charge a price based on the usage or overage of this feature (e.g. $0.05 per ${singleFeatureName}).`
+							: isAllocated
+								? `Charge a price based on usage of this feature (e.g. $10 per ${singleFeatureName}).`
+								: "Charge a price based on usage of this feature."}
 					</div>
 				</div>
 			</div>

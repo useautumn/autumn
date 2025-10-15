@@ -62,7 +62,7 @@ export function NewFeatureType({
 								<InfoIcon size={8} weight="regular" color="#888888" />
 							</div>
 							<div className="text-body-secondary leading-tight">
-								A feature flag that can be either enabled or disabled
+								A flag that can either be enabled or disabled.
 							</div>
 						</div>
 					</div>

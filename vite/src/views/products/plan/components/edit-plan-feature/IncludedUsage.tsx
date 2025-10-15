@@ -1,4 +1,4 @@
-import { Infinite, isContUseItem } from "@autumn/shared";
+import { getFeatureName, Infinite, isContUseItem } from "@autumn/shared";
 import { InfinityIcon } from "@phosphor-icons/react";
 import { IconCheckbox } from "@/components/v2/checkboxes/IconCheckbox";
 import { Input } from "@/components/v2/inputs/Input";
@@ -37,7 +37,13 @@ export function IncludedUsage() {
 			<div className="w-full h-auto flex items-end gap-2">
 				<div className="flex-1">
 					<div className="text-form-label block mb-1">
-						Included usage before payment
+						Quantity of '
+						{getFeatureName({
+							feature: features.find((f) => f.id === item.feature_id),
+							plural: true,
+						})}
+						' that this customer is granted before{" "}
+						{isFeaturePrice ? "hitting the limit" : "being charged"}.
 					</div>
 					<div className="flex items-center gap-2">
 						<Input
