@@ -10,7 +10,7 @@ import {
 } from "./featureOpModels.js";
 
 // Register the schema with .meta() for OpenAPI spec generation
-const ApiFeatureWithMeta = ApiFeatureSchema.meta({
+export const ApiFeatureWithMeta = ApiFeatureSchema.meta({
 	id: "Feature",
 	description: "Feature object returned by the API",
 });
