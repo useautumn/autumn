@@ -1,4 +1,4 @@
-import { ApiProductItemSchema } from "@api/products/apiProductItem.js";
+import { ApiProductItemSchema } from "@api/products/planFeature/previousVersions/apiProductItem.js";
 import { Decimal } from "decimal.js";
 import type { FeatureOptions } from "../../models/cusProductModels/cusProductModels.js";
 import type { Feature } from "../../models/featureModels/featureModels.js";

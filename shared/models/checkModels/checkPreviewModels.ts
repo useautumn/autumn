@@ -1,4 +1,4 @@
-import type { ApiProduct } from "@api/products/apiProduct.js";
+import type { ApiProduct } from "@api/products/previousVersions/apiProduct.js";
 import type { Infinite } from "../productModels/productEnums.js";
 import type { UsageModel } from "../productV2Models/productItemModels/productItemModels.js";
 

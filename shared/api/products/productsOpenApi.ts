@@ -4,7 +4,7 @@ import {
 	UpdateProductV2ParamsSchema,
 } from "@api/models.js";
 import { z } from "zod/v4";
-import { ApiProductSchema } from "./apiProduct.js";
+import { ApiProductSchema } from "./previousVersions/apiProduct.js";
 
 // Register schema with .meta() for OpenAPI spec generation
 export const ApiProductWithMeta = ApiProductSchema.meta({

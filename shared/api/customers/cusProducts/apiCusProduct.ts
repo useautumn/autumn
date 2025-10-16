@@ -1,4 +1,4 @@
-import { ApiProductItemSchema } from "@api/products/apiProductItem.js";
+import { ApiProductItemSchema } from "@api/products/planFeature/previousVersions/apiProductItem.js";
 import { z } from "zod/v4";
 
 export const ApiCusProductSchema = z
