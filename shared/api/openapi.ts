@@ -16,7 +16,7 @@ import {
 } from "./customers/customersOpenApi.js";
 import { ApiEntityWithMeta, entityOps } from "./entities/entitiesOpenApi.js";
 import { ApiFeatureWithMeta, featureOps } from "./features/featuresOpenApi.js";
-import { ApiProductItemWithMeta } from "./products/apiProductItem.js";
+import { ApiProductItemWithMeta } from "./products/planFeature/previousVersions/apiProductItem.js";
 import { ApiProductWithMeta, productOps } from "./products/productsOpenApi.js";
 import { referralOps } from "./referrals/referralsOpenApi.js";
 

@@ -43,8 +43,8 @@ export * from "./others/apiDiscount.js";
 export * from "./others/apiInvoice.js";
 // Product
 export * from "./products/apiFreeTrial.js";
-export * from "./products/apiProduct.js";
-export * from "./products/apiProductItem.js";
+export * from "./products/planFeature/previousVersions/apiProductItem.js";
+export * from "./products/previousVersions/apiProduct.js";
 export * from "./products/productOpModels.js";
 export * from "./products/productsOpenApi.js";
 // Referrals
@@ -55,6 +55,7 @@ export * from "./referrals/referralsOpenApi.js";
 // NOTE: productsOpenApi.js is NOT exported here - it's only imported by openapi.ts for spec generation
 
 // export * from "./products/apiFreeTrial.js";
+// export * from "./products/ApiFreeTrial.js";
 // export * from "./products/apiProduct.js";
 // export * from "./products/apiProductItem.js";
 
