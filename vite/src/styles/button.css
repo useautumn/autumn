@@ -1,0 +1,67 @@
+/* PRIMARY */
+/** biome-ignore-all lint/complexity/noImportantStyles: important needed. */
+.btn-primary-shadow {
+	box-shadow:
+		0 -3px 4px 0 rgba(0, 0, 0, 0.12) inset,
+		0 4px 4px 0 rgba(0, 0, 0, 0.02);
+}
+
+.btn-primary-shadow:hover {
+	box-shadow:
+		0 -3px 4px 0 rgba(0, 0, 0, 0.12) inset,
+		0 4px 4px 0 rgba(0, 0, 0, 0.06);
+}
+
+.btn-primary-shadow:focus-visible,
+.btn-primary-shadow:active {
+	box-shadow:
+		0 0 0 0.2px var(--color-primary-btn-border),
+		0 -3px 4px 0 rgba(0, 0, 0, 0.04) inset,
+		0 4px 4px 0 rgba(0, 0, 0, 0.04);
+}
+
+/* SECONDARY */
+.btn-secondary-shadow {
+	box-shadow:
+		0 -3px 4px 0 rgba(100, 100, 100, 0.03) inset,
+		0 4px 4px 0 rgba(0, 0, 0, 0.02);
+}
+
+.btn-secondary-shadow:hover {
+	box-shadow:
+		0 -3px 4px 0 rgba(100, 100, 100, 0.03) inset,
+		0 4px 4px 0 rgba(0, 0, 0, 0.06);
+}
+
+.btn-secondary-shadow:focus-visible,
+.btn-secondary-shadow:active {
+	box-shadow:
+		0 0 0 0.2px var(--primary),
+		0 -3px 4px 0 rgba(100, 100, 100, 0.03) inset,
+		0 4px 4px 0 rgba(0, 0, 0, 0.04);
+}
+
+.btn-secondary-active {
+	border: 1px solid var(--primary);
+	background-color: var(--color-active-primary);
+	box-shadow: 0 0 0 0.2px var(--primary);
+}
+
+.btn-destructive-shadow {
+	box-shadow:
+		0 -3px 4px 0 rgba(0, 0, 0, 0.12) inset,
+		0 4px 4px 0 rgba(0, 0, 0, 0.04);
+
+	&:hover {
+		box-shadow:
+			0 -3px 4px 0 rgba(0, 0, 0, 0.08) inset,
+			0 4px 4px 0 rgba(0, 0, 0, 0.06);
+	}
+
+	&:focus-visible,
+	&:active {
+		box-shadow:
+			0 -3px 4px 0 rgba(0, 0, 0, 0.08) inset,
+			0 4px 4px 0 rgba(0, 0, 0, 0.02);
+	}
+}

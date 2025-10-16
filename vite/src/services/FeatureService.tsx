@@ -1,8 +1,12 @@
-import { AxiosInstance } from "axios";
+import type { CreateFeature } from "@autumn/shared";
+import type { AxiosInstance } from "axios";
 
 export class FeatureService {
-	static async createFeature(axiosInstance: AxiosInstance, data: any) {
-		return await axiosInstance.post("/features", data);
+	static async createFeature(
+		axiosInstance: AxiosInstance,
+		data: CreateFeature,
+	) {
+		return await axiosInstance.post<CreateFeature>("/features", data);
 	}
 
 	static async updateFeature(

@@ -1,6 +1,9 @@
 import { AppEnv } from "@autumn/shared";
+import { init } from "@squircle/core";
+import * as React from "react";
 import { BrowserRouter, Route, Routes } from "react-router";
 import { MainLayout } from "./app/layout";
+import { OnboardingLayout } from "./app/OnboardingLayout";
 import { AdminView } from "./views/admin/AdminView";
 import { AcceptInvitation } from "./views/auth/AcceptInvitation";
 import { PasswordSignIn } from "./views/auth/components/PasswordSignIn";
@@ -13,9 +16,15 @@ import CustomerProductView from "./views/customers/customer/product/CustomerProd
 import { DefaultView } from "./views/DefaultView";
 import DevScreen from "./views/developer/DevView";
 import OnboardingView2 from "./views/onboarding2/OnboardingView2";
+import OnboardingView3 from "./views/onboarding3/OnboardingView3";
 import ProductsView from "./views/products/ProductsView";
-import ProductView from "./views/products/product/ProductView";
+import PlanEditorView from "./views/products/plan/PlanEditorView";
 import { TerminalView } from "./views/TerminalView";
+
+export function SquircleProvider({ children }: { children: React.ReactNode }) {
+	React.useEffect(() => void init(), []);
+	return children;
+}
 
 export default function App() {
 	return (
@@ -24,6 +33,12 @@ export default function App() {
 				<Route path="/sign-in" element={<SignIn />} />
 				<Route path="/pw-sign-in" element={<PasswordSignIn />} />
 				<Route path="/accept" element={<AcceptInvitation />} />
+
+				{/* Onboarding routes without sidebar */}
+				<Route element={<OnboardingLayout />}>
+					<Route path="/sandbox/onboarding3" element={<OnboardingView3 />} />
+				</Route>
+
 				<Route element={<MainLayout />}>
 					<Route path="*" element={<DefaultView />} />
 					<Route path="/admin" element={<AdminView />} />
@@ -39,10 +54,21 @@ export default function App() {
 						path="/sandbox/products"
 						element={<ProductsView env={AppEnv.Sandbox} />}
 					/>
-					<Route path="/products/:product_id" element={<ProductView />} />
+					<Route
+						path="/products/:product_id"
+						element={
+							<SquircleProvider>
+								<PlanEditorView />
+							</SquircleProvider>
+						}
+					/>
 					<Route
 						path="/sandbox/products/:product_id"
-						element={<ProductView />}
+						element={
+							<SquircleProvider>
+								<PlanEditorView />
+							</SquircleProvider>
+						}
 					/>
 
 					<Route path="/customers" element={<CustomersPage />} />

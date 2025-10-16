@@ -1,6 +1,6 @@
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useProductQueryState } from "../useProductQuery";
 
 export const useProductCountsQuery = () => {

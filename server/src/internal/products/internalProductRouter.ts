@@ -12,6 +12,7 @@ import { OrgService } from "../orgs/OrgService.js";
 import { createOrgResponse } from "../orgs/orgUtils.js";
 import { RewardProgramService } from "../rewards/RewardProgramService.js";
 import { RewardService } from "../rewards/RewardService.js";
+import { EntitlementService } from "./entitlements/EntitlementService.js";
 import { handleGetProductDeleteInfo } from "./handlers/handleGetProductDeleteInfo.js";
 import { ProductService } from "./ProductService.js";
 import { isFeaturePriceItem } from "./product-items/productItemUtils/getItemType.js";
@@ -126,13 +127,21 @@ productRouter.get("/:productId/data2", async (req: any, res) => {
 		const { version } = req.query;
 		const { db, orgId, env } = req;
 
+		console.log("[/data2] Request params:", {
+			productId,
+			version,
+			orgId,
+			env,
+			featuresLength: req.features?.length,
+		});
+
 		const [product, latestProduct] = await Promise.all([
 			ProductService.getFull({
 				db,
 				idOrInternalId: productId,
 				orgId,
 				env,
-				version: version ? parseInt(version) : undefined,
+				version: version ? parseInt(version, 10) : undefined,
 			}),
 			ProductService.getFull({
 				db,
@@ -146,16 +155,32 @@ productRouter.get("/:productId/data2", async (req: any, res) => {
 			throw new ProductNotFoundError({ productId, version });
 		}
 
+		console.log(
+			"[/data2] Product found:",
+			product.id,
+			"Features available:",
+			req.features?.length || 0,
+		);
+
 		const productV2 = mapToProductV2({
 			product: product,
-			features: req.features,
+			features: req.features || [],
 		});
 
-		res
-			.status(200)
-			.json({ product: productV2, numVersions: latestProduct.version });
-	} catch (error) {
+		res.status(200).json({
+			product: {
+				...productV2,
+				archived: latestProduct.archived,
+			},
+			numVersions: latestProduct.version,
+		});
+	} catch (error: any) {
 		console.error("Failed to get product", error);
+		console.error("Error details:", {
+			message: error?.message,
+			stack: error?.stack,
+			name: error?.name,
+		});
 		res.status(500).send(error);
 	}
 });
@@ -180,6 +205,7 @@ productRouter.get("/:productId/count", async (req: any, res) => {
 		}
 
 		// Get counts from postgres
+
 		const counts = await CusProdReadService.getCounts({
 			db,
 			internalProductId: product.internal_id,
@@ -495,6 +521,27 @@ productRouter.get("/rewards", async (req: any, res: any) => {
 			req,
 			res,
 			action: "Get rewards",
+		});
+	}
+});
+
+productRouter.get("/has_entity_feature_id", async (req: any, res: any) => {
+	try {
+		const { db, orgId, env } = req;
+
+		const hasEntityFeatureId = await EntitlementService.hasEntityFeatureId({
+			db,
+			orgId,
+			env,
+		});
+
+		res.status(200).send({ hasEntityFeatureId });
+	} catch (error) {
+		handleFrontendReqError({
+			error,
+			req,
+			res,
+			action: "Check has entity feature id",
 		});
 	}
 });

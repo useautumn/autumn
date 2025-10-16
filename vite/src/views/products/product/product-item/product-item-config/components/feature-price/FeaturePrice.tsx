@@ -1,14 +1,18 @@
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import {
+	Infinite,
+	type PriceTier,
+	type ProductItem,
+	TierInfinite,
+} from "@autumn/shared";
 import { Plus, X } from "lucide-react";
-
-import { useProductItemContext } from "../../../ProductItemContext";
-import { Infinite, TierInfinite } from "@autumn/shared";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { BillingUnits } from "./BillingUnits";
-import { UsageTierInput } from "./UsageTierInput";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useOrg } from "@/hooks/common/useOrg";
+import { cn } from "@/lib/utils";
+import { useProductItemContext } from "../../../ProductItemContext";
+import { BillingUnits } from "./BillingUnits";
+import { UsageTierInput } from "./UsageTierInput";
 
 export default function FeaturePrice() {
 	const { item, setItem } = useProductItemContext();
@@ -49,7 +53,7 @@ export default function FeaturePrice() {
 	const handleRemoveTier = (index: number) => {
 		const newTiers = [...item.tiers];
 
-		if (newTiers.length == 1) {
+		if (newTiers.length === 1) {
 			handlePriceRemoved();
 			return;
 		}
@@ -88,10 +92,14 @@ const MultiTierPrice = ({
 	handleRemoveTier: (index: number) => void;
 	setUsageTier: (index: number, key: string, value: string | number) => void;
 }) => {
-	const { item, setItem } = useProductItemContext();
+	const {
+		item,
+	}: {
+		item: ProductItem;
+	} = useProductItemContext();
 	return (
 		<>
-			{item.tiers?.map((tier: any, index: number) => (
+			{item.tiers?.map((tier: PriceTier, index: number) => (
 				<div key={index} className="flex gap-2 w-full items-center">
 					<div className="w-full gap-2 flex items-center">
 						<div className="flex w-full items-center">
@@ -101,11 +109,11 @@ const MultiTierPrice = ({
                 )} */}
 								<UsageTierInput
 									value={
-										index == 0
+										index === 0
 											? item.included_usage || 0
-											: item.tiers[index - 1].to
+											: item.tiers?.[index - 1]?.to || 0
 									}
-									onChange={(e) => null}
+									onChange={() => null}
 									type="from"
 								/>
 							</div>
@@ -113,7 +121,7 @@ const MultiTierPrice = ({
 							<div
 								className={cn(
 									"flex w-full text-sm",
-									tier.to == -1 && "bg-transparent",
+									tier.to === -1 && "bg-transparent",
 								)}
 							>
 								<UsageTierInput
@@ -129,7 +137,7 @@ const MultiTierPrice = ({
 						<div
 							className={cn(
 								"flex text-sm",
-								item.tiers?.length == 1 ? "w-full" : "w-32",
+								item.tiers?.length === 1 ? "w-full" : "w-32",
 							)}
 						>
 							<UsageTierInput

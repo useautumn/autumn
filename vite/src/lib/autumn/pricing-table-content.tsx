@@ -1,4 +1,4 @@
-import { type Product } from "autumn-js";
+import type { Product } from "autumn-js";
 
 export const getPricingTableContent = (product: Product) => {
 	const { scenario, free_trial, properties } = product;
@@ -13,18 +13,18 @@ export const getPricingTableContent = (product: Product) => {
 	switch (scenario) {
 		case "scheduled":
 			return {
-				buttonText: <p>Plan Scheduled</p>,
+				buttonText: <p>Product Scheduled</p>,
 			};
 
 		case "active":
 			if (updateable) {
 				return {
-					buttonText: <p>Update Plan</p>,
+					buttonText: <p>Update Product</p>,
 				};
 			}
 
 			return {
-				buttonText: <p>Current Plan</p>,
+				buttonText: <p>Current Product</p>,
 			};
 
 		case "new":
@@ -55,7 +55,7 @@ export const getPricingTableContent = (product: Product) => {
 
 		case "cancel":
 			return {
-				buttonText: <p>Cancel Plan</p>,
+				buttonText: <p>Cancel Product</p>,
 			};
 
 		default:

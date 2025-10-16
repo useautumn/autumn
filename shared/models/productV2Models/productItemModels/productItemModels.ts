@@ -71,7 +71,12 @@ export const ProductItemSchema = z.object({
 	feature_id: z.string().nullish(),
 	feature_type: z.nativeEnum(ProductItemFeatureType).nullish(),
 	included_usage: z.union([z.number(), z.literal(Infinite)]).nullish(),
-	interval: z.nativeEnum(ProductItemInterval).nullish(),
+	interval: z.preprocess((val) => {
+		if (val === "") {
+			throw new Error("Interval cannot be empty.");
+		}
+		return val;
+	}, z.enum(ProductItemInterval).nullish()),
 	interval_count: z.number().nullish(),
 	entity_feature_id: z.string().nullish(),
 

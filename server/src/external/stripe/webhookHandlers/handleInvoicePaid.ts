@@ -238,7 +238,7 @@ export const handleInvoicePaid = async ({
 					cusProducts.map((cp) => `${cp.product.name} - ${cp.product.id}`),
 				);
 
-				if (cusProducts.length == 0) {
+				if (cusProducts.length === 0) {
 					cusProducts = activeCusProducts;
 				}
 			} catch (error) {
