@@ -1,11 +1,10 @@
+import { DropdownMenuGroup } from "@radix-ui/react-dropdown-menu";
+import { ChevronDown, PanelRight, Plus, Settings } from "lucide-react";
+import { useState } from "react";
+import { useSearchParams } from "react-router";
+import { toast } from "sonner";
+import { AdminHover } from "@/components/general/AdminHover";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -17,29 +16,21 @@ import {
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useOrg } from "@/hooks/common/useOrg";
 import {
 	authClient,
 	useListOrganizations,
 	useSession,
 } from "@/lib/auth-client";
-import { DropdownMenuGroup } from "@radix-ui/react-dropdown-menu";
-import { ChevronDown, PanelRight, Plus, Settings } from "lucide-react";
-
-import { useState, useMemo } from "react";
-import { CreateNewOrg } from "./CreateNewOrg";
-import { toast } from "sonner";
-import { LogOutItem } from "./LogOutItem";
 import { cn } from "@/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ManageOrg } from "./ManageOrg";
+import { OrgLogo } from "../org-dropdown/components/OrgLogo";
 import { useMemberships } from "../org-dropdown/hooks/useMemberships";
 import { useSidebarContext } from "../SidebarContext";
-import { OrgLogo } from "../org-dropdown/components/OrgLogo";
-import { AdminHover } from "@/components/general/AdminHover";
-
 import { AdminDropdownItems } from "./AdminDropdownItems";
-import { useSearchParams } from "react-router";
+import { CreateNewOrg } from "./CreateNewOrg";
+import { LogOutItem } from "./LogOutItem";
+import { ManageOrg } from "./ManageOrg";
 
 export const OrgDropdown = () => {
 	const { org, isLoading, error } = useOrg();
@@ -198,34 +189,38 @@ export const OrgDropdown = () => {
 	);
 };
 
+export const handleSwitchOrg = async (
+	orgId: string,
+	setLoading?: (loading: boolean) => void,
+	setSearchParams?: (searchParams: URLSearchParams) => void,
+) => {
+	setLoading?.(true);
+
+	try {
+		setSearchParams?.(new URLSearchParams());
+
+		await authClient.organization.setActive({
+			organizationId: orgId,
+		});
+
+		window.location.reload();
+	} catch (error: any) {
+		toast.error(error.message);
+	} finally {
+		setLoading?.(false);
+	}
+};
+
 const SwitchOrgItem = ({ org, setDropdownOpen }: any) => {
 	const [loading, setLoading] = useState(false);
 	const [_, setSearchParams] = useSearchParams();
-
-	const handleSwitchOrg = async (orgId: string) => {
-		setLoading(true);
-
-		try {
-			setSearchParams(new URLSearchParams());
-
-			await authClient.organization.setActive({
-				organizationId: orgId,
-			});
-
-			window.location.reload();
-		} catch (error: any) {
-			toast.error(error.message);
-		} finally {
-			setLoading(false);
-		}
-	};
 
 	return (
 		<DropdownMenuItem
 			key={org.id}
 			onClick={async (e) => {
 				e.preventDefault();
-				await handleSwitchOrg(org.id);
+				await handleSwitchOrg(org.id, setLoading, setSearchParams);
 				setDropdownOpen(false);
 			}}
 			shimmer={loading}

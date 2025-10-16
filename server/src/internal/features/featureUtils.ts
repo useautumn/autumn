@@ -1,6 +1,5 @@
 import {
 	ApiFeatureType,
-	type AppEnv,
 	type CreditSystemConfig,
 	cusProductsToCusPrices,
 	ErrCode,
@@ -16,8 +15,6 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateFeatureDisplay } from "@/external/llm/llmUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ACTIVE_STATUSES } from "../customers/cusProducts/CusProductService.js";
-import { ProductService } from "../products/ProductService.js";
-import { getCreditSystemsFromFeature } from "./creditSystemUtils.js";
 import { FeatureService } from "./FeatureService.js";
 
 export const validateFeatureId = (featureId: string) => {
@@ -112,47 +109,6 @@ export const validateCreditSystem = (config: CreditSystemConfig) => {
 	}
 
 	return newConfig;
-};
-
-export const getObjectsUsingFeature = async ({
-	db,
-	orgId,
-	env,
-	allFeatures,
-	feature,
-}: {
-	db: DrizzleCli;
-	orgId: string;
-	env: AppEnv;
-	allFeatures: Feature[];
-	feature: Feature;
-}) => {
-	const products = await ProductService.listFull({
-		db,
-		orgId,
-		env,
-	});
-
-	const allPrices = products.flatMap((p) => p.prices);
-	const allEnts = products.flatMap((p) => p.entitlements);
-	const creditSystems = getCreditSystemsFromFeature({
-		featureId: feature.id,
-		features: allFeatures,
-	});
-
-	const entitlements = allEnts.filter(
-		(entitlement) => entitlement.internal_feature_id === feature.internal_id,
-	);
-	const linkedEntitlements = allEnts.filter(
-		(entitlement) => entitlement.entity_feature_id === feature.id,
-	);
-
-	const prices = allPrices.filter(
-		(price) =>
-			(price.config as any).internal_feature_id === feature.internal_id,
-	);
-
-	return { entitlements, prices, creditSystems, linkedEntitlements };
 };
 
 export const runSaveFeatureDisplayTask = async ({

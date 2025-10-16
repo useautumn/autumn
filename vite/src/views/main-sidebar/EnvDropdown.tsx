@@ -1,35 +1,33 @@
+/** biome-ignore-all lint/a11y/noStaticElementInteractions: shush */
 "use client";
+
+import { AppEnv } from "@autumn/shared";
+import { Check } from "lucide-react";
+import { useState } from "react";
 
 import {
 	DropdownMenu,
-	DropdownMenuTrigger,
 	DropdownMenuContent,
 	DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-
-import { AppEnv } from "@autumn/shared";
-import { envToPath } from "@/utils/genUtils";
-
-import { useLocation } from "react-router";
-import { useSidebarContext } from "./SidebarContext";
 import { cn } from "@/lib/utils";
-import { Check } from "lucide-react";
-import { useState } from "react";
+import { envToPath } from "@/utils/genUtils";
 import { ExpandedEnvTrigger } from "./env-dropdown/ExpandedEnvTrigger";
 
+export const handleEnvChange = async (env: AppEnv, reset?: boolean) => {
+	const newPath = envToPath(env, location.pathname);
+	if (newPath && !reset) {
+		const params = new URLSearchParams(location.search);
+		const tab = params.get("tab");
+		const url = tab ? `${newPath}?tab=${encodeURIComponent(tab)}` : newPath;
+		window.location.href = url;
+	} else {
+		window.location.href =
+			env === AppEnv.Sandbox ? "/sandbox/products" : "/products";
+	}
+};
+
 export const EnvDropdown = ({ env }: { env: AppEnv }) => {
-	const location = useLocation();
-
-	const handleEnvChange = async (env: AppEnv) => {
-		const newPath = envToPath(env, location.pathname);
-		if (newPath) {
-			const params = new URLSearchParams(location.search);
-			const tab = params.get("tab");
-			const url = tab ? `${newPath}?tab=${encodeURIComponent(tab)}` : newPath;
-			window.location.href = url;
-		}
-	};
-
 	const [isHovered, setIsHovered] = useState(false);
 	const [open, setOpen] = useState(false);
 

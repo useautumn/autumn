@@ -107,7 +107,7 @@ function CreateProduct({
 							<ToggleButton
 								disabled={product?.is_add_on}
 								buttonText="Default"
-								infoContent="This product is enabled by default for all new users, typically used for your free plan"
+								infoContent="This product is enabled by default for all new users, typically used for your free product"
 								value={product?.is_default}
 								setValue={() =>
 									setProduct({

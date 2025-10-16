@@ -1,0 +1,110 @@
+/* Typography Classes */
+.text-giga {
+	font-size: 23px;
+	font-weight: var(--font-weight-semibold);
+	color: var(--color-t1);
+}
+
+.text-main {
+	font-size: 17px;
+	font-weight: var(--font-weight-semibold);
+	color: var(--color-t1);
+}
+
+.text-main-sec {
+	font-size: 17px;
+	font-weight: var(--font-weight-medium);
+	color: var(--color-t1);
+}
+
+.text-sub {
+	font-size: 15px;
+	font-weight: var(--font-weight-semibold);
+	color: var(--color-t2);
+}
+
+.text-sub-secondary {
+	font-size: 15px;
+	font-weight: var(--font-weight-medium);
+	color: var(--color-t2);
+}
+
+.text-body {
+	font-size: 13px;
+	font-weight: var(--font-weight-medium);
+	color: var(--color-t2);
+}
+
+.text-body-highlight {
+	color: var(--color-t2);
+	font-size: 13px;
+	font-weight: var(--font-weight-semibold);
+	letter-spacing: -0.039px;
+}
+
+.text-body-secondary {
+	font-size: 13px;
+	font-weight: var(--font-weight-normal);
+	color: var(--color-t4);
+}
+
+.text-body-sec-paragraph {
+	font-size: 13px;
+	font-weight: var(--font-weight-medium);
+	color: var(--color-t7);
+}
+
+.text-tiny {
+	font-size: 11px;
+	font-weight: var(--font-weight-normal);
+	color: var(--color-t4);
+}
+
+.text-tiny-id {
+	color: var(--color-t3);
+
+	/* Tiny ID */
+	font-family: "JetBrains Mono", "JetBrains Mono Fallback", monospace;
+	font-size: 11px;
+	font-style: normal;
+	font-weight: 500;
+	line-height: normal;
+	letter-spacing: -0.033px;
+}
+
+.text-checkbox-label {
+	font-size: 13px;
+	font-weight: var(--font-weight-semibold);
+	color: var(--color-t2);
+}
+
+.text-checkbox-descr {
+	font-size: 13px;
+	font-weight: var(--font-weight-semibold);
+	color: var(--color-t3);
+}
+
+.text-checkbox-disabled {
+	font-size: 13px;
+	font-weight: var(--font-weight-semibold);
+	color: var(--color-t6);
+}
+
+.text-form-text {
+	font-size: 13px;
+	font-weight: var(--font-weight-medium);
+	color: var(--color-t2);
+	/* line-height: 1.4; */
+}
+
+.text-form-label {
+	font-size: 13px;
+	font-weight: var(--font-weight-medium);
+	color: var(--color-t5);
+}
+
+.text-form-placeholder {
+	font-size: 13px;
+	font-weight: var(--font-weight-medium);
+	color: var(--color-t6);
+}

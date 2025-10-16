@@ -1,161 +1,126 @@
 import { useEffect, useRef } from "react";
 
-const DEFAULT_MESSAGE =
-	"Are you sure you want to leave without updating the product? Click cancel to stay and save your changes, or click OK to leave without saving.";
-
-export function useBlocker(
-	shouldBlock: boolean,
-	confirmFn: () => Promise<boolean> | boolean = () =>
-		window.confirm(DEFAULT_MESSAGE),
-) {
+/**
+ * Custom navigation blocker for SPAs using BrowserRouter
+ * Works with React Router v7 without requiring a data router
+ */
+export function useBlocker({
+	shouldBlock,
+	confirmFn,
+}: {
+	shouldBlock: boolean;
+	confirmFn: () => boolean;
+}) {
 	const isNavigatingRef = useRef(false);
-	const originalPushState = useRef<typeof history.pushState | null>(null);
-	const originalReplaceState = useRef<typeof history.replaceState | null>(null);
 
-	// Reset navigation flag when shouldBlock changes
-	useEffect(() => {
-		if (!shouldBlock) {
-			isNavigatingRef.current = false;
-		}
-	}, [shouldBlock]);
-
-	// ✅ Handle beforeunload for tab/window close
+	// Intercept programmatic navigation (navigate calls)
 	useEffect(() => {
 		if (!shouldBlock) return;
 
-		const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-			// Don't show native dialog if we're already navigating
-			if (isNavigatingRef.current) return;
+		const originalPushState = window.history.pushState;
+		const originalReplaceState = window.history.replaceState;
 
-			e.preventDefault();
-			const message = DEFAULT_MESSAGE;
-			e.returnValue = message; // For older browsers
-			return message;
-		};
-
-		window.addEventListener("beforeunload", handleBeforeUnload);
-		return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-	}, [shouldBlock]);
-
-	// ✅ Intercept React Router navigation (history.pushState/replaceState)
-	useEffect(() => {
-		if (!shouldBlock) return;
-
-		// Store original methods
-		originalPushState.current = history.pushState;
-		originalReplaceState.current = history.replaceState;
-
-		// Intercept pushState (used by React Router navigate)
-		history.pushState = async function (
-			state: any,
+		// Intercept pushState
+		window.history.pushState = (
+			state: unknown,
 			title: string,
 			url?: string | URL | null,
-		) {
-			if (
-				!isNavigatingRef.current &&
-				url &&
-				url.toString() !== window.location.href
-			) {
-				const confirmed = await confirmFn();
+		) => {
+			const targetUrl = url?.toString() || window.location.href;
+
+			if (!isNavigatingRef.current && targetUrl !== window.location.href) {
+				const confirmed = confirmFn();
 				if (confirmed) {
 					isNavigatingRef.current = true;
-					originalPushState.current!.call(history, state, title, url);
+					originalPushState.call(window.history, state, title, url);
+					// Reset flag after navigation completes
 					setTimeout(() => {
 						isNavigatingRef.current = false;
-					}, 100);
+					}, 0);
 				}
 			} else {
-				originalPushState.current!.call(history, state, title, url);
+				originalPushState.call(window.history, state, title, url);
 			}
 		};
 
 		// Intercept replaceState
-		history.replaceState = async function (
-			state: any,
+		window.history.replaceState = (
+			state: unknown,
 			title: string,
 			url?: string | URL | null,
-		) {
-			if (
-				!isNavigatingRef.current &&
-				url &&
-				url.toString() !== window.location.href
-			) {
-				const confirmed = await confirmFn();
+		) => {
+			const targetUrl = url?.toString() || window.location.href;
+
+			if (!isNavigatingRef.current && targetUrl !== window.location.href) {
+				const confirmed = confirmFn();
 				if (confirmed) {
 					isNavigatingRef.current = true;
-					originalReplaceState.current!.call(history, state, title, url);
+					originalReplaceState.call(window.history, state, title, url);
 					setTimeout(() => {
 						isNavigatingRef.current = false;
-					}, 100);
+					}, 0);
 				}
 			} else {
-				originalReplaceState.current!.call(history, state, title, url);
+				originalReplaceState.call(window.history, state, title, url);
 			}
 		};
 
 		return () => {
-			// Restore original methods on cleanup
-			if (originalPushState.current) {
-				history.pushState = originalPushState.current;
-			}
-			if (originalReplaceState.current) {
-				history.replaceState = originalReplaceState.current;
-			}
+			window.history.pushState = originalPushState;
+			window.history.replaceState = originalReplaceState;
 		};
 	}, [shouldBlock, confirmFn]);
 
-	// ✅ Handle anchor <a> clicks inside the app
+	// Handle browser back/forward buttons
 	useEffect(() => {
-		const handleClick = async (e: MouseEvent) => {
-			const target = e.target as HTMLElement;
-			const anchor = target.closest("a") as HTMLAnchorElement | null;
+		if (!shouldBlock) return;
 
+		const handlePopState = () => {
+			if (isNavigatingRef.current) return;
+
+			const confirmed = confirmFn();
+			if (!confirmed) {
+				// Block navigation by pushing current location back
+				window.history.pushState(null, "", window.location.href);
+			} else {
+				isNavigatingRef.current = true;
+				setTimeout(() => {
+					isNavigatingRef.current = false;
+				}, 0);
+			}
+		};
+
+		window.addEventListener("popstate", handlePopState);
+		return () => window.removeEventListener("popstate", handlePopState);
+	}, [shouldBlock, confirmFn]);
+
+	// Handle anchor link clicks
+	useEffect(() => {
+		if (!shouldBlock) return;
+
+		const handleClick = (e: MouseEvent) => {
+			if (isNavigatingRef.current) return;
+
+			const target = (e.target as HTMLElement).closest("a");
 			if (
-				shouldBlock &&
-				!isNavigatingRef.current &&
-				anchor &&
-				anchor.href &&
-				!anchor.target &&
-				!anchor.hasAttribute("download") &&
-				anchor.origin === window.location.origin
+				target?.href &&
+				target.origin === window.location.origin &&
+				!target.target &&
+				!target.hasAttribute("download")
 			) {
-				e.preventDefault();
-				const confirmed = await confirmFn();
-				if (confirmed) {
-					isNavigatingRef.current = true;
-					window.location.href = anchor.href;
+				const targetUrl = target.href;
+				if (targetUrl !== window.location.href) {
+					e.preventDefault();
+					const confirmed = confirmFn();
+					if (confirmed) {
+						isNavigatingRef.current = true;
+						window.location.href = targetUrl;
+					}
 				}
 			}
 		};
 
 		document.addEventListener("click", handleClick, true);
 		return () => document.removeEventListener("click", handleClick, true);
-	}, [shouldBlock, confirmFn]);
-
-	// ✅ Handle back/forward browser buttons
-	useEffect(() => {
-		if (!shouldBlock) return;
-
-		const handlePopState = async () => {
-			if (isNavigatingRef.current) return;
-
-			const confirmed = await confirmFn();
-			if (!confirmed) {
-				// Push current state again to block history pop
-				history.pushState(null, "", window.location.href);
-			} else {
-				isNavigatingRef.current = true;
-				// Navigate back after confirmation
-				history.back();
-			}
-		};
-
-		// Push current page to history stack to detect backward
-		history.pushState(null, "", window.location.href);
-		window.addEventListener("popstate", handlePopState);
-
-		return () => {
-			window.removeEventListener("popstate", handlePopState);
-		};
 	}, [shouldBlock, confirmFn]);
 }

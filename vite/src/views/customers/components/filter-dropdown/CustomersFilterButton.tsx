@@ -1,3 +1,5 @@
+import { ListFilter, X } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -7,15 +9,12 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-import { ListFilter, X } from "lucide-react";
-import { useState } from "react";
-import { FilterStatusSubMenu } from "./FilterStatusSubMenu";
-import { SavedViews } from "./SavedViews";
 import { useCustomersQueryStates } from "../../hooks/useCustomersQueryStates";
-import { SaveViewPopover } from "./SavedViewPopover";
 import { useSavedViewsQuery } from "../../hooks/useSavedViewsQuery";
+import { FilterStatusSubMenu } from "./FilterStatusSubMenu";
 import { ProductsSubMenu } from "./ProductsSubMenu";
+import { SaveViewPopover } from "./SavedViewPopover";
+import { SavedViews } from "./SavedViews";
 
 function CustomersFilterButton() {
 	const { setQueryStates } = useCustomersQueryStates();

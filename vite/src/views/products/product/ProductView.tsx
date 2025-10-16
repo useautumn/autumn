@@ -1,18 +1,17 @@
 "use client";
 
+import { useState } from "react";
+import { useParams } from "react-router";
 import ErrorScreen from "@/views/general/ErrorScreen";
 import LoadingScreen from "@/views/general/LoadingScreen";
-import ProductSidebar from "./ProductSidebar";
 import ProductViewBreadcrumbs from "./components/ProductViewBreadcrumbs";
-
-import { useState } from "react";
-import { ProductContext } from "./ProductContext";
-import { useParams } from "react-router";
-import { ManageProduct } from "./ManageProduct";
+import { UpdateProductButton } from "./components/UpdateProductButton";
 import { useProductChangedAlert } from "./hooks/useProductChangedAlert";
 import { useProductData } from "./hooks/useProductData";
-import { UpdateProductButton } from "./components/UpdateProductButton";
 import { useProductQuery } from "./hooks/useProductQuery";
+import { ManageProduct } from "./ManageProduct";
+import { ProductContext } from "./ProductContext";
+import ProductSidebar from "./ProductSidebar";
 import ConfirmNewVersionDialog from "./versioning/ConfirmNewVersionDialog";
 
 function ProductView() {
@@ -41,7 +40,7 @@ function ProductView() {
 		);
 	}
 
-	if (!product) return <></>;
+	if (!product) return;
 
 	// const updateProduct = async () => {
 	//   try {

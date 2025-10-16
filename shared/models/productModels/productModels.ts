@@ -7,7 +7,7 @@ import { PriceSchema } from "./priceModels/priceModels.js";
 
 export const ProductSchema = z.object({
 	id: z.string(),
-	name: z.string(),
+	name: z.string().min(1, "Product name cannot be empty"),
 	is_add_on: z.boolean(),
 	is_default: z.boolean(),
 	version: z.number(),
@@ -30,7 +30,10 @@ export const ProductSchema = z.object({
 
 export const CreateProductSchema = z.object({
 	id: z.string(),
-	name: z.string().default(""),
+	name: z
+		.string()
+		.min(1, "Product name cannot be empty")
+		.default("Untitled Product"),
 	is_add_on: z.boolean().default(false),
 	is_default: z.boolean().default(false),
 	version: z.number().optional().default(1),
@@ -39,10 +42,10 @@ export const CreateProductSchema = z.object({
 
 export const UpdateProductSchema = z.object({
 	id: z.string().nullish(),
-	name: z.string().optional(),
+	name: z.string().min(1, "Product name cannot be empty").optional(),
 	is_add_on: z.boolean().optional(),
 	is_default: z.boolean().optional(),
-	group: z.string().optional(),
+	group: z.string().nullish(),
 	archived: z.boolean().optional(),
 });
 
