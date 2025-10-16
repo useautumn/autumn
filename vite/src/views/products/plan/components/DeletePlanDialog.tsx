@@ -1,3 +1,4 @@
+import type { ProductV2 } from "@autumn/shared";
 import type { AxiosError } from "axios";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -26,16 +27,26 @@ import { getBackendErr } from "@/utils/genUtils";
 import { useProductQuery } from "../../product/hooks/useProductQuery";
 
 export const DeletePlanDialog = ({
+	propProduct,
 	open,
 	setOpen,
 	onDeleteSuccess,
 }: {
+	propProduct?: ProductV2;
 	open: boolean;
 	setOpen: (open: boolean) => void;
 	onDeleteSuccess?: () => Promise<void>;
 }) => {
 	const axiosInstance = useAxiosInstance();
-	const product = useProductStore((s) => s.product);
+	const storeProduct = useProductStore((s) => s.product);
+
+	let product: ProductV2;
+	if (propProduct) {
+		product = propProduct;
+	} else {
+		product = storeProduct;
+	}
+
 	const [loading, setLoading] = useState(false);
 	const [deleteAllVersions, setDeleteAllVersions] = useState(false);
 	const { invalidate: invalidateProducts } = useProductsQuery();
@@ -58,13 +69,14 @@ export const DeletePlanDialog = ({
 			);
 
 			await Promise.all([invalidateProducts(), invalidateProduct()]);
-			setOpen(false);
-			toast.success("Product deleted successfully");
 
 			// Call onDeleteSuccess callback if provided (for onboarding)
 			if (onDeleteSuccess) {
 				await onDeleteSuccess();
 			}
+
+			setOpen(false);
+			toast.success("Product deleted successfully");
 		} catch (error: unknown) {
 			toast.error(getBackendErr(error as AxiosError, "Error deleting product"));
 		} finally {
@@ -78,6 +90,10 @@ export const DeletePlanDialog = ({
 			await ProductService.updateProduct(axiosInstance, product.id, {
 				archived: true,
 			});
+
+			if (onDeleteSuccess) {
+				await onDeleteSuccess();
+			}
 			toast.success(`${product.name} archived successfully`);
 			setOpen(false);
 			await Promise.all([invalidateProducts(), invalidateProduct()]);
@@ -94,6 +110,10 @@ export const DeletePlanDialog = ({
 			await ProductService.updateProduct(axiosInstance, product.id, {
 				archived: false,
 			});
+
+			if (onDeleteSuccess) {
+				await onDeleteSuccess();
+			}
 			await refetchProduct();
 			toast.success(`${product.name} unarchived successfully`);
 			setOpen(false);

@@ -1,5 +1,6 @@
 import { mapToProductV3 } from "@autumn/shared";
 import { CrosshairSimpleIcon } from "@phosphor-icons/react";
+import { useNavigate } from "react-router";
 import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { CardHeader } from "@/components/v2/cards/Card";
@@ -9,6 +10,7 @@ import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { PlanCardToolbar } from "./PlanCardToolbar";
 
 export const PlanCardHeader = () => {
+	const navigate = useNavigate();
 	const product = useProductStore((s) => s.product);
 	const setSheet = useSheetStore((s) => s.setSheet);
 	const isPlanBeingEdited = useIsEditingPlan();
