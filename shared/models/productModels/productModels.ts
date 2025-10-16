@@ -50,12 +50,9 @@ export const UpdateProductSchema = z.object({
 });
 
 export const FullProductSchema = ProductSchema.extend({
+	description: z.string().nullable().optional().default(null),
 	prices: z.array(PriceSchema),
-	entitlements: z.array(
-		EntitlementSchema.extend({
-			feature: FeatureSchema,
-		}),
-	),
+	entitlements: z.array(EntitlementSchema.extend({ feature: FeatureSchema })),
 	free_trial: FreeTrialSchema.nullish(),
 	free_trials: z.array(FreeTrialSchema).nullish(),
 	free_trial_ids: z.array(z.string()).nullish(),

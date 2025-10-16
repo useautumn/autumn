@@ -16,4 +16,4 @@ export type ApiVersionString = `${ApiVersion}`;
 
 export const API_VERSIONS = Object.values(ApiVersion);
 
-export const LATEST_VERSION = ApiVersion.V1_2;
+export const LATEST_VERSION = ApiVersion.V2;

@@ -150,4 +150,17 @@ export * from "./utils/productV2Utils/compareProductUtils.ts/compareProductUtils
 export * from "./utils/productV2Utils/productItemUtils/getProductItemRes.js";
 export * from "./utils/productV2Utils/productItemUtils/itemIntervalUtils.js";
 export * from "./utils/productV3Utils/mapToProductV3.js";
+export * from "./utils/productV3Utils/productItemUtils/productV3ItemUtils.js";
 export * from "./utils/rewardUtils/rewardMigrationUtils.js";
+
+export enum ResetInterval {
+	OneOff = "one_off",
+	Minute = "minute",
+	Hour = "hour",
+	Day = "day",
+	Week = "week",
+	Month = "month",
+	Quarter = "quarter",
+	SemiAnnual = "semi_annual",
+	Year = "year",
+}
