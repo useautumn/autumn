@@ -1,5 +1,5 @@
 import { EntityDataSchema } from "@api/common/entityData.js";
-import { ApiProductSchema } from "@api/products/apiProduct.js";
+import { ApiProductSchema } from "@api/products/previousVersions/apiProduct.js";
 import { z } from "zod/v4";
 import { CustomerDataSchema } from "../common/customerData.js";
 import { CoreCusFeatureSchema } from "../customers/cusFeatures/apiCusFeature.js";

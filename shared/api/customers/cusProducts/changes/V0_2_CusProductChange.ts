@@ -1,4 +1,4 @@
-import type { ApiProductItemSchema } from "@api/products/apiProductItem.js";
+import type { ApiProductItemSchema } from "@api/products/planFeature/previousVersions/apiProductItem.js";
 import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
 import {
 	AffectedResource,

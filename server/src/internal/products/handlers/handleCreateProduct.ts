@@ -123,6 +123,7 @@ export const createProduct = createRoute({
 
 		let prices: Price[] = [];
 		let entitlements: Entitlement[] = [];
+
 		if (items) {
 			const res = await handleNewProductItems({
 				db,

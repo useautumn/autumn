@@ -1,8 +1,8 @@
 import { AttachScenario } from "@models/checkModels/checkPreviewModels.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
 import { z } from "zod/v4";
-import { APIFreeTrialSchema } from "./apiFreeTrial.js";
-import { ApiProductItemSchema } from "./apiProductItem.js";
+import { ApiFreeTrialSchema } from "../apiFreeTrial.js";
+import { ApiProductItemSchema } from "../planFeature/previousVersions/apiProductItem.js";
 
 export const ApiProductPropertiesSchema = z.object({
 	is_free: z.boolean().meta({
@@ -101,7 +101,7 @@ export const ApiProductSchema = z.object({
 		],
 	}),
 
-	free_trial: APIFreeTrialSchema.nullable().meta({
+	free_trial: ApiFreeTrialSchema.nullable().meta({
 		description: "Free trial configuration for this product, if available",
 		example: {
 			duration: "<string>",

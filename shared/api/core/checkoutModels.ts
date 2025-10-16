@@ -1,5 +1,5 @@
-import { ApiProductSchema } from "@api/products/apiProduct.js";
-import { ApiProductItemSchema } from "@api/products/apiProductItem.js";
+import { ApiProductItemSchema } from "@api/products/planFeature/previousVersions/apiProductItem.js";
+import { ApiProductSchema } from "@api/products/previousVersions/apiProduct.js";
 import { FeatureOptionsSchema } from "@models/cusProductModels/cusProductModels.js";
 import { z } from "zod/v4";
 import { AttachBodySchema, ExtAttachBodySchema } from "./attachModels.js";
