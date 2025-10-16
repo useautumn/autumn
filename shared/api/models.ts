@@ -42,7 +42,9 @@ export * from "./others/apiDiscount.js";
 export * from "./others/apiInvoice.js";
 // Product
 export * from "./products/apiFreeTrial.js";
+export * from "./products/apiPlan.js";
 export * from "./products/planFeature/previousVersions/apiProductItem.js";
+export * from "./products/planOpModels.js";
 export * from "./products/previousVersions/apiProduct.js";
 export * from "./products/productOpModels.js";
 export * from "./products/productsOpenApi.js";

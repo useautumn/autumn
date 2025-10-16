@@ -77,11 +77,14 @@ export * from "./models/featureModels/featureConfig/creditConfig.js";
 export * from "./models/featureModels/featureConfig/meteredConfig.js";
 export * from "./models/featureModels/featureEnums.js";
 export * from "./models/featureModels/featureModels.js";
+
 // export * from "./models/featureModels/featureResModels.js";
 
+export * from "./api/products/planFeature/apiPlanFeature.js";
+// Plan Models
+export * from "./api/products/planOpModels.js";
 // 2. Feature Models
 export * from "./models/featureModels/featureTable.js";
-
 // Gen Models
 export * from "./models/genModels/genEnums.js";
 export * from "./models/migrationModels/migrationErrorTable.js";
@@ -89,7 +92,6 @@ export * from "./models/migrationModels/migrationJobTable.js";
 export * from "./models/migrationModels/migrationModels.js";
 export * from "./models/orgModels/frontendOrg.js";
 export * from "./models/orgModels/orgConfig.js";
-
 // 1. Org Models
 export * from "./models/orgModels/orgTable.js";
 export * from "./models/otherModels/metadataModels.js";
@@ -116,16 +118,15 @@ export * from "./models/productModels/productTable.js";
 export * from "./models/productV2Models/productItemModels/featureItem.js";
 export * from "./models/productV2Models/productItemModels/featurePriceItem.js";
 export * from "./models/productV2Models/productItemModels/priceItem.js";
-
 export * from "./models/productV2Models/productItemModels/productItemEnums.js";
 export * from "./models/productV2Models/productItemModels/productItemModels.js";
-
 // 6. Product V2 Models
 export * from "./models/productV2Models/productV2Models.js";
 export * from "./models/rewardModels/referralModels/referralCodeTable.js";
 export * from "./models/rewardModels/referralModels/referralModels.js";
 export * from "./models/rewardModels/referralModels/rewardRedemptionTable.js";
 export * from "./models/rewardModels/rewardModels/rewardEnums.js";
+
 // Reward Models
 export * from "./models/rewardModels/rewardModels/rewardModels.js";
 export * from "./models/rewardModels/rewardModels/rewardResponseModels.js";

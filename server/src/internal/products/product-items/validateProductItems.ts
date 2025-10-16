@@ -278,17 +278,25 @@ export const validateProductItems = ({
 	const hasWeeklyPrice = newItems.some(
 		(item) =>
 			(isPriceItem(item) || isFeaturePriceItem(item)) &&
-			item.interval === ProductItemInterval.Week
+			item.interval === ProductItemInterval.Week,
 	);
 	const hasMonthlyPrice = newItems.some(
 		(item) =>
 			(isPriceItem(item) || isFeaturePriceItem(item)) &&
-			item.interval === ProductItemInterval.Month
+			item.interval === ProductItemInterval.Month,
 	);
 
 	if (hasWeeklyPrice && hasMonthlyPrice) {
 		throw new RecaseError({
 			message: `Can't have both weekly and monthly price items in the same product`,
+			code: ErrCode.InvalidInputs,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+
+	if (newItems.filter(isPriceItem).length > 1) {
+		throw new RecaseError({
+			message: `Can't have more than one price item in the same product`,
 			code: ErrCode.InvalidInputs,
 			statusCode: StatusCodes.BAD_REQUEST,
 		});
