@@ -19,12 +19,12 @@ import { useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { navigateTo } from "@/utils/genUtils";
+import CommandBar from "@/views/command-bar/CommandBar";
 import { useCusSearchQuery } from "@/views/customers/hooks/useCusSearchQuery";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { InviteNotifications } from "@/views/general/notifications/InviteNotifications";
 import { MainSidebar } from "@/views/main-sidebar/MainSidebar";
 import { AppContext } from "./AppContext";
-import CommandPaletteComponent from "./CommandPalette";
 
 export function MainLayout() {
 	const env = useEnv();
@@ -115,7 +115,7 @@ export function MainLayout() {
 					<InviteNotifications />
 					<MainContent />
 					<ChatWidget />
-					<CommandPaletteComponent />
+					<CommandBar />
 				</main>
 			</NuqsAdapter>
 		</AutumnProvider>

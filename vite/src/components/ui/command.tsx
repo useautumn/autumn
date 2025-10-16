@@ -1,5 +1,4 @@
 import { Command as CommandPrimitive } from "cmdk";
-import { SearchIcon } from "lucide-react";
 import type * as React from "react";
 import {
 	Dialog,
@@ -18,7 +17,7 @@ function Command({
 		<CommandPrimitive
 			data-slot="command"
 			className={cn(
-				"bg-popover text-popover-foreground flex h-full w-full flex-col overflow-hidden rounded-md",
+				"bg-popover text-popover-foreground flex h-full w-full flex-col overflow-hidden",
 				className,
 			)}
 			{...props}
@@ -69,11 +68,11 @@ function CommandInput({
 			data-slot="command-input-wrapper"
 			className="flex max-h-9 items-center gap-2 border-b px-3"
 		>
-			<SearchIcon className="size-3.5 shrink-0 opacity-50" />
+			{/* <SearchIcon className="size-3.5 shrink-0 opacity-50" /> */}
 			<CommandPrimitive.Input
 				data-slot="command-input"
 				className={cn(
-					"placeholder:text-muted-foreground flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
+					"placeholder:text-muted-foreground flex h-10 w-full rounded-md bg-transparent py-3 outline-hidden disabled:cursor-not-allowed disabled:opacity-50 text-xs",
 					className,
 				)}
 				{...props}
@@ -119,6 +118,7 @@ function CommandGroup({
 			data-slot="command-group"
 			className={cn(
 				"text-foreground [&_[cmdk-group-heading]]:text-muted-foreground overflow-hidden p-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium",
+				"!p-1",
 				className,
 			)}
 			{...props}
