@@ -1,11 +1,13 @@
 import { PencilSimpleIcon, TrashIcon } from "@phosphor-icons/react";
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { Button } from "@/components/v2/buttons/Button";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useIsEditingPlan } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
+import { pushPage } from "@/utils/genUtils";
 import { DeletePlanDialog } from "../DeletePlanDialog";
 
 interface PlanCardToolbarProps {
@@ -18,7 +20,7 @@ interface PlanCardToolbarProps {
 
 export const PlanCardToolbar = ({
 	onEdit,
-	onDeleteSuccess,
+	// onDeleteSuccess,
 	editDisabled,
 	deleteDisabled,
 	deleteTooltip,
@@ -26,13 +28,26 @@ export const PlanCardToolbar = ({
 	const product = useProductStore((s) => s.product);
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const isEditingPlan = useIsEditingPlan();
+	const navigate = useNavigate();
+
+	console.log("deleteOpen", deleteOpen);
 
 	return (
 		<>
 			<DeletePlanDialog
 				open={deleteOpen}
 				setOpen={setDeleteOpen}
-				onDeleteSuccess={onDeleteSuccess}
+				onDeleteSuccess={async () => {
+					console.log("onDeleteSuccess");
+					pushPage({
+						navigate,
+						path: "/products",
+						queryParams: {
+							tab: "products",
+						},
+						preserveParams: true,
+					});
+				}}
 			/>
 			<div className="flex flex-row items-center gap-1">
 				{product?.id && (
