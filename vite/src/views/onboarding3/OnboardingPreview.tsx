@@ -1,14 +1,14 @@
 import { productV2ToBasePrice } from "@autumn/shared";
 import { CrosshairSimpleIcon } from "@phosphor-icons/react";
 import { PricingTableContainer } from "@/components/autumn/PricingTableContainer";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
 import { IconButton } from "@/components/v2/buttons/IconButton";
+import { Card, CardContent, CardHeader } from "@/components/v2/cards/Card";
 import { Separator } from "@/components/v2/separator";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
 import { useProductStore } from "@/hooks/stores/useProductStore";
-import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { useIsEditingPlan, useSheetStore } from "@/hooks/stores/useSheetStore";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { PlanCardToolbar } from "../products/plan/components/plan-card/PlanCardToolbar";
 import { PlanFeatureList } from "../products/plan/components/plan-card/PlanFeatureList";
@@ -32,6 +32,7 @@ export const OnboardingPreview = ({
 	const playgroundMode = useOnboardingStore((state) => state.playgroundMode);
 	const feature = useFeatureStore((state) => state.feature);
 	const setSheet = useSheetStore((state) => state.setSheet);
+	const isPlanBeingEdited = useIsEditingPlan();
 	const handleDeletePlanSuccess = useOnboardingStore(
 		(s) => s.handleDeletePlanSuccess,
 	);
@@ -78,7 +79,7 @@ export const OnboardingPreview = ({
 	}
 
 	return (
-		<Card className="min-w-[28rem] max-w-xl mx-4 bg-card border-border border-[0.5px] gap-0 p-4">
+		<Card className="min-w-[28rem] max-w-xl mx-4 bg-card border-border border-[0.5px] p-4">
 			<CardHeader className="gap-0 px-0">
 				<div className="flex flex-row items-center justify-between w-full">
 					<div className="flex flex-row items-center gap-2 min-w-0 flex-1">
@@ -110,24 +111,13 @@ export const OnboardingPreview = ({
 					</div>
 				</div>
 
-				{/* {showBasicInfo && product?.description && (
-					<span className="text-sm text-t3 max-w-[80%] line-clamp-2">
-						{product.description}
-					</span>
-				)} */}
-
-				{/* {showBasicInfo &&
-					!(product?.description || product?.name || basePrice?.amount) && (
-						<span className="text-body-secondary">
-							Enter data on the right to see the preview
-						</span>
-					)} */}
-
 				{showPricing && (
 					<IconButton
 						variant="secondary"
 						icon={<CrosshairSimpleIcon />}
-						className="mt-2 pointer-events-none"
+						className="mt-2 !opacity-100"
+						onClick={handleEdit}
+						disabled={isPlanBeingEdited}
 					>
 						{basePrice?.amount ? (
 							<span className="text-sm font-medium text-t2">
@@ -141,20 +131,15 @@ export const OnboardingPreview = ({
 						)}
 					</IconButton>
 				)}
-
-				{showDummyFeature && feature && (
-					<>
-						<Separator className="my-2" />
-						<DummyFeatureRow feature={feature} />
-					</>
-				)}
-				{/* {!showFeatures && !showDummyFeature && (
-					<span className="text-body-secondary mt-2">
-						Create a feature on the right
-					</span>
-				)} */}
-				{showFeatures && <Separator className="my-2" />}
 			</CardHeader>
+			{showDummyFeature && feature && (
+				<>
+					<Separator className="my-2" />
+					<DummyFeatureRow feature={feature} />
+				</>
+			)}
+
+			{showFeatures && <Separator />}
 			<CardContent className="max-w-full px-0 gap-0">
 				{showFeatures && (
 					<div>
