@@ -6,7 +6,7 @@ import {
 } from "@models/productV2Models/productItemModels/productItemEnums.js";
 import { UsageModel } from "@models/productV2Models/productItemModels/productItemModels.js";
 import { z } from "zod/v4";
-import { ResetInterval } from "../apiPlan.js";
+import { ResetInterval } from "../planEnums.js";
 
 export const ApiPlanFeatureSchema = z
 	.object({
@@ -14,48 +14,69 @@ export const ApiPlanFeatureSchema = z
 		granted: z.number(),
 		unlimited: z.boolean(),
 
-		reset_interval: z.enum(ResetInterval),
+		reset_interval: z.enum(ResetInterval).optional(),
 		reset_interval_count: z.number().optional(),
-		reset_usage_on_enabled: z.boolean(),
+		reset_usage_on_enabled: z.boolean().optional(),
 
-		price: z.object({
-			amount: z.number().optional(),
-			tiers: z.array(UsageTierSchema).optional(),
+		price: z
+			.object({
+				amount: z.number().optional(),
+				tiers: z.array(UsageTierSchema).optional(),
 
-			interval: z.enum(BillingInterval),
-			interval_count: z.number().optional(),
+				interval: z.enum(BillingInterval),
+				interval_count: z.number().optional(),
 
-			billing_units: z.number(),
-			usage_model: z.enum(UsageModel),
+				billing_units: z.number(),
+				usage_model: z.enum(UsageModel),
 
-			// Use max_purchase for pay per use features
-			max_purchase: z.number(),
-		}),
+				// Use max_purchase for pay per use features
+				max_purchase: z.number().optional(),
+			})
+			.optional(),
 
-		proration: z.object({
-			on_increase: z.enum(OnIncrease),
-			on_decrease: z.enum(OnDecrease),
-		}),
+		proration: z
+			.object({
+				on_increase: z.enum(OnIncrease).optional(),
+				on_decrease: z.enum(OnDecrease).optional(),
+			})
+			.optional(),
 
-		rollover: z.object({
-			max: z.number(),
-			expiry_duration_type: z.enum(ResetInterval),
-			expiry_duration_length: z.number().optional(),
-		}),
+		rollover: z
+			.object({
+				max: z.number().nullable(),
+				expiry_duration_type: z.enum(ResetInterval),
+				expiry_duration_length: z.number().optional(),
+			})
+			.optional(),
 	})
 	.check((ctx) => {
 		const resetGroup =
 			ctx.value.reset_interval || ctx.value.reset_interval_count !== undefined;
 		const intervalGroup =
-			ctx.value.price.interval || ctx.value.price.interval_count !== undefined;
+			ctx.value.price?.interval ||
+			ctx.value.price?.interval_count !== undefined;
 
 		if (resetGroup && intervalGroup) {
 			ctx.issues.push({
 				code: "custom",
 				message:
-					"reset_interval/reset_interval_count and interval/interval_count are mutually exclusive.",
+					"Top level reset intervals and feature price intervals are mutually exclusive.",
 				input: ctx.value,
 			});
+		}
+
+		if (ctx.value.price) {
+			if (
+				ctx.value.price.amount &&
+				ctx.value.price.tiers &&
+				ctx.value.price.tiers.length > 0
+			) {
+				ctx.issues.push({
+					code: "custom",
+					message: "Price amount and tiers are mutually exclusive.",
+					input: ctx.value,
+				});
+			}
 		}
 	});
 

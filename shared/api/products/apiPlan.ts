@@ -5,23 +5,16 @@ import { BillingInterval } from "@models/productModels/priceModels/priceEnums.js
 import { z } from "zod/v4";
 import { ApiPlanFeatureSchema } from "./planFeature/apiPlanFeature.js";
 
-export enum ResetInterval {
-	OneOff = "one_off",
-	Minute = "minute",
-	Hour = "hour",
-	Day = "day",
-	Week = "week",
-	Month = "month",
-	Quarter = "quarter",
-	SemiAnnual = "semi_annual",
-	Year = "year",
-}
+// Re-export for backward compatibility
+export { ResetInterval } from "./planEnums.js";
 
 export const ApiFreeTrialV2Schema = z.object({
 	duration_type: z.enum(FreeTrialDuration),
 	duration_length: z.number(),
 	card_required: z.boolean(),
 });
+
+export type ApiFreeTrialV2 = z.infer<typeof ApiFreeTrialV2Schema>;
 
 export const ApiPlanSchema = z.object({
 	id: z.string(),
@@ -40,7 +33,7 @@ export const ApiPlanSchema = z.object({
 	}),
 
 	features: z.array(ApiPlanFeatureSchema),
-	free_trial: ApiFreeTrialV2Schema.nullable(),
+	free_trial: ApiFreeTrialV2Schema.nullable().optional(),
 
 	// Misc
 	created_at: z.number(),

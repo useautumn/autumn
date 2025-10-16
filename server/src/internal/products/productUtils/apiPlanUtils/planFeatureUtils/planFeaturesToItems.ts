@@ -3,6 +3,7 @@ import {
 	Infinite,
 	type ProductItem,
 	ProductItemSchema,
+	type ResetInterval,
 } from "@autumn/shared";
 import {
 	resetIntvToItemIntv,
@@ -14,18 +15,20 @@ export const planFeaturesToItems = ({
 }: {
 	features: ApiPlanFeature[];
 }): ProductItem[] =>
-	features.map((feature) =>
+	(features ?? []).map((feature) =>
 		ProductItemSchema.parse({
 			feature_id: feature.feature_id,
 			included_usage: feature.unlimited ? Infinite : feature.granted,
-			interval: resetIntvToItemIntv(feature.reset_interval),
+			interval: resetIntvToItemIntv(feature.reset_interval as ResetInterval),
 			interval_count: feature.reset_interval_count,
 
 			config: {
 				rollover: feature.rollover
 					? {
 							max: feature.rollover.max,
-							duration: resetIntvToRollover(feature.rollover.expiry_duration_type),
+							duration: resetIntvToRollover(
+								feature.rollover.expiry_duration_type,
+							),
 							length: feature.rollover.expiry_duration_length ?? 0,
 						}
 					: undefined,
