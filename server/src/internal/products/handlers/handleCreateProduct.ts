@@ -1,4 +1,8 @@
 import {
+	AffectedResource,
+	type ApiPlan,
+	ApiVersion,
+	CreatePlanParamsSchema,
 	type CreateProductV2Params,
 	CreateProductV2ParamsSchema,
 	type Entitlement,
@@ -20,8 +24,9 @@ import {
 } from "../free-trials/freeTrialUtils.js";
 import { ProductService } from "../ProductService.js";
 import { handleNewProductItems } from "../product-items/productItemUtils/handleNewProductItems.js";
+import { planToProductV2 } from "../productUtils/apiPlanUtils/planToProductV2.js";
 import { isDefaultTrial } from "../productUtils/classifyProduct.js";
-import { getProductResponse } from "../productUtils/productResponseUtils/getProductResponse.js";
+import { getPlanResponse } from "../productUtils/productResponseUtils/getPlanResponse.js";
 import {
 	constructProduct,
 	getGroupToDefaults,
@@ -87,11 +92,18 @@ export const disableCurrentDefault = async ({
  * Route: POST /products - Create a product
  */
 export const createProduct = createRoute({
-	body: CreateProductV2ParamsSchema,
+	// body: CreateProductV2ParamsSchema,
+	versionedBody: {
+		latest: CreatePlanParamsSchema,
+		[ApiVersion.V1_1]: CreateProductV2ParamsSchema,
+	},
+	resource: AffectedResource.Product,
 	handler: async (c) => {
 		const body = c.req.valid("json");
 		const ctx = c.get("ctx");
 		// const query = c.req.valid("query");
+
+		const v1_2Body = planToProductV2({ plan: body as ApiPlan });
 
 		const { logger, org, features, env, db } = ctx;
 
@@ -107,19 +119,19 @@ export const createProduct = createRoute({
 
 		await disableCurrentDefault({
 			req: ctx,
-			newProduct: body,
+			newProduct: v1_2Body,
 		});
 
 		const product = await ProductService.insert({
 			db,
 			product: constructProduct({
-				productData: body,
+				productData: v1_2Body as CreateProductV2Params,
 				orgId: org.id,
 				env,
 			}),
 		});
 
-		const { items, free_trial } = body;
+		const { items, free_trial } = v1_2Body;
 
 		let prices: Price[] = [];
 		let entitlements: Entitlement[] = [];
@@ -159,6 +171,7 @@ export const createProduct = createRoute({
 
 		const newFullProduct: FullProduct = {
 			...product,
+			description: body?.description ?? null,
 			prices,
 			entitlements: getEntsWithFeature({ ents: entitlements, features }),
 			free_trial: newFreeTrial,
@@ -179,11 +192,23 @@ export const createProduct = createRoute({
 			},
 		});
 
-		const productResponse = await getProductResponse({
-			product: newFullProduct,
-			features,
-		});
+		// const productResponse = await getProductResponse({
+		// 	product: newFullProduct,
+		// 	features,
+		// });
 
-		return c.json(productResponse);
+		try {
+			const planResponse = await getPlanResponse({
+				product: newFullProduct,
+				features,
+			});
+
+			console.log(`Plan response:\n ${JSON.stringify(planResponse, null, 4)}`);
+
+			return c.json(planResponse);
+		} catch (error) {
+			console.error("Error getting plan response:", error);
+			throw error;
+		}
 	},
 });

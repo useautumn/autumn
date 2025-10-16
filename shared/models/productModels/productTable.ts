@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
 	boolean,
 	foreignKey,
@@ -7,9 +8,8 @@ import {
 	text,
 	unique,
 } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
-import { organizations } from "../orgModels/orgTable.js";
 import { collatePgColumn, sqlNow } from "../../db/utils.js";
+import { organizations } from "../orgModels/orgTable.js";
 
 type ProductProcessor = {
 	type: string;
@@ -22,6 +22,7 @@ export const products = pgTable(
 		internal_id: text("internal_id").primaryKey().notNull(),
 		id: text().notNull(),
 		name: text(),
+		description: text(),
 		org_id: text("org_id").notNull(),
 		created_at: numeric({ mode: "number" }).notNull().default(sqlNow),
 		env: text().notNull(),
