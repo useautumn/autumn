@@ -1,9 +1,9 @@
 // Import customer feature changes
-import { V0_1_CustomerChange } from "@api/customers/changes/V0_1_CustomerChange.js";
+import { V0_1_CustomerChange } from "@api/customers/changes/V0.1_CustomerChange.js";
 // Import customer changes
-import { V0_2_CustomerChange } from "@api/customers/changes/V0_2_CustomerChange.js";
-import { V0_2_InvoicesAlwaysExpanded } from "@api/customers/changes/V0_2_InvoicesAlwaysExpanded.js";
-import { V1_1_FeaturesArrayToObject } from "@api/customers/changes/V1_1_FeaturesArrayToObject.js";
+import { V0_2_CustomerChange } from "@api/customers/changes/V0.2_CustomerChange.js";
+import { V0_2_InvoicesAlwaysExpanded } from "@api/customers/changes/V0.2_InvoicesAlwaysExpanded.js";
+import { V1_1_FeaturesArrayToObject } from "@api/customers/changes/V1.1_FeaturesArrayToObject.js";
 // Import customer product changes
 
 import { ApiVersion } from "../ApiVersion.js";
