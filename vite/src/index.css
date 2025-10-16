@@ -163,7 +163,7 @@ html {
 	--color-t10: var(--t10);
 	--color-t11: var(--t11);
 	--color-t12: var(--t12);
-	
+
 	--color-input: var(--input);
 	--color-icon1: var(--icon1);
 
@@ -278,6 +278,10 @@ html {
 	--color-purple-medium: #b07aff;
 	--color-purple-stripe: #665cff;
 	--color-purple-gradient: #6f47ff;
+
+	/* --breakpoint-xl: 85rem; */
+	/* --breakpoint-2xl: 100rem;
+	--breakpoint-3xl: 120rem; */
 }
 
 /* Hide number input spinners globally */

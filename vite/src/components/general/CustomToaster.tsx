@@ -16,6 +16,7 @@ export const CustomToaster = () => {
 			className={isOnboarding ? "" : "flex justify-center"}
 			duration={6000}
 			toastOptions={{
+				duration: 6000,
 				className:
 					"w-96 px-3 pt-3 pb-2.5 bg-white rounded-xl shadow-[0_4px_4px_0_rgba(0,0,0,0.02),inset_0_-4px_6px_0_rgba(0,0,0,0.04),0_4px_24px_0_rgba(0,0,0,0.03)] outline outline-16 inline-flex flex-row justify-start items-start gap-3 overflow-hidden",
 				style: {
