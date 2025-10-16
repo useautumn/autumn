@@ -1,7 +1,7 @@
 import { OnDecrease, UsageModel } from "@autumn/shared";
+import { nullish } from "@/utils/genUtils";
 import { useProductItemContext } from "../../../ProductItemContext";
 import { ProrationSelect } from "./ProrationSelect";
-import { nullish } from "@/utils/genUtils";
 
 const optionToText = ({
 	option,

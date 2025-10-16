@@ -32,12 +32,12 @@ export function SelectFeatureSheet({
 
 	// Get feature IDs that are already added to the plan
 	const addedFeatureIds = new Set(
-		product.items?.map((item) => item.feature_id).filter(Boolean) || []
+		product.items?.map((item) => item.feature_id).filter(Boolean) || [],
 	);
 
 	// Filter out archived features and features already on the plan
 	const filteredFeatures = features.filter(
-		(f: Feature) => !f.archived && !addedFeatureIds.has(f.id)
+		(f: Feature) => !f.archived && !addedFeatureIds.has(f.id),
 	);
 
 	useEffect(() => {

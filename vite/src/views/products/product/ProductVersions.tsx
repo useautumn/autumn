@@ -1,7 +1,4 @@
-import { getRedirectUrl } from "@/utils/genUtils";
-import { useProductContext } from "./ProductContext";
 import { useNavigate } from "react-router";
-import { useEnv } from "@/utils/envUtils";
 import {
 	Select,
 	SelectContent,
@@ -9,9 +6,12 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { CountAndMigrate } from "./versioning/CountAndMigrate";
+import { useEnv } from "@/utils/envUtils";
 import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
+import { getRedirectUrl } from "@/utils/genUtils";
 import { useProductQuery, useProductQueryState } from "./hooks/useProductQuery";
+import { useProductContext } from "./ProductContext";
+import { CountAndMigrate } from "./versioning/CountAndMigrate";
 
 export const ProductVersions = () => {
 	const { setQueryStates } = useProductQueryState();

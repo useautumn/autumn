@@ -1,16 +1,14 @@
-import React, {
-	useState,
-	forwardRef,
-	cloneElement,
-	isValidElement,
-} from "react";
-import { Check } from "lucide-react";
-import { Tooltip, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
-
-import { TooltipContent } from "../ui/tooltip";
-import { Copy } from "lucide-react";
+import { Check, Copy } from "lucide-react";
+import type React from "react";
+import { cloneElement, forwardRef, isValidElement, useState } from "react";
 import { useSession } from "@/lib/auth-client";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "../ui/tooltip";
 
 export const AdminHover = forwardRef<
 	HTMLElement,

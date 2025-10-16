@@ -1,27 +1,27 @@
-import { Input } from "@/components/ui/input";
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { useProductContext } from "../ProductContext";
-import { SelectCycle } from "../product-item/product-item-config/components/feature-price/SelectBillingCycle";
-import { useProductItemContext } from "../product-item/ProductItemContext";
 import {
 	intervalsDifferent,
-	ProductItem,
+	type ProductItem,
 	ProductItemInterval,
 	UpdateProductSchema,
 } from "@autumn/shared";
-import { isPriceItem } from "@/utils/product/getItemType";
-import { useEffect, useState } from "react";
-import { WarningBox } from "@/components/general/modal-components/WarningBox";
 import { AlertTriangle, ArrowRight } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
+import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import { WarningBox } from "@/components/general/modal-components/WarningBox";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useOrg } from "@/hooks/common/useOrg";
 import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { toast } from "sonner";
-import { getBackendErr, getRedirectUrl } from "@/utils/genUtils";
 import { useEnv } from "@/utils/envUtils";
-import { useNavigate } from "react-router";
-import { useOrg } from "@/hooks/common/useOrg";
+import { getBackendErr, getRedirectUrl } from "@/utils/genUtils";
+import { isPriceItem } from "@/utils/product/getItemType";
 import { useProductCountsQuery } from "../hooks/queries/useProductCountsQuery";
+import { useProductContext } from "../ProductContext";
+import { useProductItemContext } from "../product-item/ProductItemContext";
+import { SelectCycle } from "../product-item/product-item-config/components/feature-price/SelectBillingCycle";
 
 function CreateFixedPrice() {
 	const { item, setItem, selectedIndex } = useProductItemContext();

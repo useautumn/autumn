@@ -1,5 +1,4 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useMemo } from "react";
 import { useParams } from "react-router";
@@ -49,11 +48,6 @@ export const useProductQuery = () => {
 		}
 
 		try {
-			const url = `/products/${productId}/data`;
-			const queryParams = {
-				version: queryStates.version,
-			};
-
 			const { data } = await axiosInstance.get(url, { params: queryParams });
 			return data;
 		} catch (error) {

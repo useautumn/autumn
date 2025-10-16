@@ -1,26 +1,24 @@
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { slugify } from "@/utils/formatUtils/formatTextUtils";
 import {
-	CreateFeature,
-	CreditSchemaItem,
-	Feature,
+	type CreateFeature,
+	type CreditSchemaItem,
+	type Feature,
 	FeatureType,
 } from "@autumn/shared";
-
+import { X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
 	Select,
+	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-	SelectContent,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { toast } from "sonner";
+import { slugify } from "@/utils/formatUtils/formatTextUtils";
 
 function CreditSystemConfig({
 	creditSystem,

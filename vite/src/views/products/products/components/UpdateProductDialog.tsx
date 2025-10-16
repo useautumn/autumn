@@ -47,10 +47,8 @@ export const UpdateProductDialog = ({
 
 			toast.success(`Successfully updated plan ${product.id}`);
 		} catch (error: unknown) {
-			toast.error(
-				getBackendErr(error as AxiosError, "Failed to update plan"),
-			);
-		} finally{
+			toast.error(getBackendErr(error as AxiosError, "Failed to update plan"));
+		} finally {
 			setLoading(false);
 		}
 	};

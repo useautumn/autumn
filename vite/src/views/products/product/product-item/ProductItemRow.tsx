@@ -1,29 +1,28 @@
 // ProductItemRow.tsx
 import {
-	BillingInterval,
-	Feature,
+	type BillingInterval,
+	type Feature,
 	FeatureType,
 	getFeatureName,
 	Infinite,
-	ProductItem,
+	type ProductItem,
 	ProductItemType,
 } from "@autumn/shared";
+import { DollarSign, Flag } from "lucide-react";
+import { AdminHover } from "@/components/general/AdminHover";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
+import { formatIntervalText } from "@/utils/formatUtils/formatTextUtils";
+import { notNullish } from "@/utils/genUtils";
+import { getFeature } from "@/utils/product/entitlementUtils";
+import { isFeatureItem, isPriceItem } from "@/utils/product/getItemType";
 import {
 	formatAmount,
 	getItemType,
 	intervalIsNone,
 } from "@/utils/product/productItemUtils";
-import { AdminHover } from "@/components/general/AdminHover";
-import { getFeature } from "@/utils/product/entitlementUtils";
-import { Badge } from "@/components/ui/badge";
-import { DollarSign } from "lucide-react";
-import { Flag } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { isFeatureItem, isPriceItem } from "@/utils/product/getItemType";
-import { notNullish } from "@/utils/genUtils";
 import { useProductContext } from "../ProductContext";
-import { formatIntervalText } from "@/utils/formatUtils/formatTextUtils";
 
 interface ProductItemRowProps {
 	item: ProductItem;

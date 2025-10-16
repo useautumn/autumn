@@ -1,4 +1,6 @@
+import { BillingInterval, UsageModel } from "@autumn/shared";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
 import {
 	Select,
 	SelectContent,
@@ -6,11 +8,9 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { BillingInterval, UsageModel } from "@autumn/shared";
-import { useProductItemContext } from "../../../ProductItemContext";
-import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
-import { CustomiseIntervalPopover } from "../CusomiseIntervalPopover";
 import { formatIntervalText } from "@/utils/formatUtils/formatTextUtils";
+import { useProductItemContext } from "../../../ProductItemContext";
+import { CustomiseIntervalPopover } from "../CusomiseIntervalPopover";
 
 export const SelectCycle = () => {
 	const { item, setItem } = useProductItemContext();

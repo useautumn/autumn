@@ -64,10 +64,7 @@ export const PlaygroundToolbar = () => {
 							onValueChange={(id) => handlePlanSelect?.(id)}
 						>
 							<SelectTrigger className="!h-6 text-body px-2 py-1 min-w-0 max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap">
-								<SelectValue
-									placeholder="Select plan"
-									className="truncate"
-								/>
+								<SelectValue placeholder="Select plan" className="truncate" />
 							</SelectTrigger>
 							<SelectContent>
 								{products

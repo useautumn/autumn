@@ -1,7 +1,15 @@
 "use client";
 import * as AccordionPrimitive from "@radix-ui/react-accordion";
-import React, { useEffect, useState } from "react";
-import { cn } from "@/lib/utils";
+import type { CheckoutResult, ProductItem } from "autumn-js";
+import { useCustomer } from "autumn-js/react";
+import { ArrowRight, ChevronDown, Loader2 } from "lucide-react";
+import type React from "react";
+import { useEffect, useState } from "react";
+import {
+	Accordion,
+	AccordionContent,
+	AccordionItem,
+} from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -9,21 +17,14 @@ import {
 	DialogFooter,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { getCheckoutContent } from "@/lib/autumn/checkout-content";
-import { useCustomer } from "autumn-js/react";
-import { ArrowRight, ChevronDown, Loader2 } from "lucide-react";
-import type { CheckoutResult, ProductItem } from "autumn-js";
-import {
-	Accordion,
-	AccordionContent,
-	AccordionItem,
-} from "@/components/ui/accordion";
+import { Input } from "@/components/ui/input";
 import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { Input } from "@/components/ui/input";
+import { getCheckoutContent } from "@/lib/autumn/checkout-content";
+import { cn } from "@/lib/utils";
 import { useModelPricingContext } from "@/views/onboarding2/model-pricing/ModelPricingContext";
 
 export interface CheckoutDialogProps {

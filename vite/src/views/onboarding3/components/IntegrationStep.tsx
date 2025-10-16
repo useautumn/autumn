@@ -1,5 +1,6 @@
 import { Separator } from "@/components/v2/separator";
 import { BackendSection } from "./integration-step/BackendSection";
+import { ConnectStripeSection } from "./integration-step/ConnectStripeSection";
 import { EnvSection } from "./integration-step/EnvSection";
 import { FrontendSection } from "./integration-step/FrontendSection";
 import { InstallSection } from "./integration-step/InstallSection";
@@ -22,6 +23,8 @@ export const IntegrationStep = () => {
 				</div>
 				<MCPSection />
 				<StackSelectionSection />
+				<Separator />
+				<ConnectStripeSection />
 				<Separator />
 				<EnvSection />
 				<Separator />

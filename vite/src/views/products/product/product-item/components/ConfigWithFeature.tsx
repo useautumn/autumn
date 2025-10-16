@@ -1,17 +1,17 @@
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { SelectItemFeature } from "./SelectItemFeature";
-import { useProductItemContext } from "../ProductItemContext";
-import { useProductContext } from "../../ProductContext";
 import { FeatureType } from "@autumn/shared";
-import { getFeature } from "@/utils/product/entitlementUtils";
-import { FeatureConfig } from "../product-item-config/FeatureItemConfig";
-import { WarningBox } from "@/components/general/modal-components/WarningBox";
 import { ArrowRight } from "lucide-react";
+import { toast } from "sonner";
+import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import { WarningBox } from "@/components/general/modal-components/WarningBox";
 import { Button } from "@/components/ui/button";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { getFeature } from "@/utils/product/entitlementUtils";
 import { isFeatureItem, isFeaturePriceItem } from "@/utils/product/getItemType";
 import { itemsHaveSameInterval } from "@/utils/product/productItemUtils";
-import { toast } from "sonner";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useProductContext } from "../../ProductContext";
+import { useProductItemContext } from "../ProductItemContext";
+import { FeatureConfig } from "../product-item-config/FeatureItemConfig";
+import { SelectItemFeature } from "./SelectItemFeature";
 
 export const ConfigWithFeature = () => {
 	const { product, setProduct } = useProductContext();

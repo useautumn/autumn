@@ -1,11 +1,11 @@
-import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import { useProductContext } from "@/views/products/product/ProductContext";
 import { Upload } from "lucide-react";
-import { useProductQuery } from "../hooks/useProductQuery";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useProductContext } from "@/views/products/product/ProductContext";
 import { useProductCountsQuery } from "../hooks/queries/useProductCountsQuery";
+import { useProductQuery } from "../hooks/useProductQuery";
 import { updateProduct } from "../utils/updateProduct";
 
 export const UpdateProductButton = () => {

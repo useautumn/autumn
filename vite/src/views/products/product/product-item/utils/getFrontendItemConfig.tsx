@@ -1,9 +1,9 @@
+import type { FrontendProductItem, ProductItem } from "@autumn/shared";
 import {
 	isFeatureItem,
 	isFeaturePriceItem,
 	isPriceItem,
 } from "@/utils/product/getItemType";
-import { FrontendProductItem, ProductItem } from "@autumn/shared";
 
 export const getFrontendItemConfig = (item: ProductItem) => {
 	// 1. Convert included usage + tiers

@@ -1,3 +1,6 @@
+import type { Feature } from "@autumn/shared";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -6,15 +9,11 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-
-import { Feature } from "@autumn/shared";
-import { useState, useEffect } from "react";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useGeneralQuery } from "@/hooks/queries/useGeneralQuery";
 import { FeatureService } from "@/services/FeatureService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
-import { toast } from "sonner";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useGeneralQuery } from "@/hooks/queries/useGeneralQuery";
 
 export const DeleteFeatureDialog = ({
 	feature,

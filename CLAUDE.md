@@ -17,6 +17,14 @@
 - Always prefer foo({ bar }) over foo(bar) method signatures - no matter if we are using only one argument or not, object as param are always better, as in the future when wanting to change the order of parameters, or add new ones - its easier.
 
 - When creating "hooks" folders, don't nest them under "components"
+## Bad example
+/ root
+-> components
+|-> hooks
+## Good example
+/ root
+-> components
+-> hooks
 
 - Functions (unless there's a very good reason) should always take in objects as arguments. Object params are named and easy to understand.
 
@@ -54,15 +62,9 @@
   ```
 - This codebase uses Bun for all of its operations in `/server`, `/vite` and `/shared`. It uses Bun for the package management, Bun for the workspace management and Bun for the runtime. Prefer Bun over PNPM. If you ever want to trace a package dependency tree, run `bun why <package name>` which will tell you why a certain package was installed and by who.
 
-## Bad example
-/ root
--> components
-|-> hooks
+- Prefer Guard clauses "if(!admin) return;" over explicity "if(admin) do X;" Early returns are better
 
-## Good example
-/ root
--> components
--> hooks
+- Do not run "npx tsc" - run "tsc" instead as it is installed globally.
 
 # Figma MCP guidance
 - When you are using the Figma MCP server, you **must** follow our design system. Below is an example implementation of CVA with out design system

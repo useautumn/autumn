@@ -1,6 +1,6 @@
+import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AdvancedItemConfig } from "./advanced-config/AdvancedItemConfig";
-import { ChevronRight } from "lucide-react";
 
 const ADVANCED_SIDEBAR_WIDTH = 340; // 320px = w-80 in Tailwind
 

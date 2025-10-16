@@ -1,12 +1,12 @@
-import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
+import type { ProductCounts, ProductV2 } from "@autumn/shared";
 import {
-	TooltipProvider,
 	Tooltip,
-	TooltipTrigger,
 	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ProductCounts, ProductV2 } from "@autumn/shared";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 
 export const ProductCountsTooltip = ({ product }: { product: ProductV2 }) => {
 	const { counts: allCounts } = useProductsQuery();

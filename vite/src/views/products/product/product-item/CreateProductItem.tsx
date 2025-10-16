@@ -1,32 +1,30 @@
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import {
+	CreateFeature as CreateFeatureType,
+	type FrontendProductItem,
+	Infinite,
+	type ProductItem,
+	ProductItemInterval,
+} from "@autumn/shared";
+import { Plus } from "lucide-react";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { getFeature } from "@/utils/product/entitlementUtils";
+import { isFeatureItem, isFeaturePriceItem } from "@/utils/product/getItemType";
+import { validateProductItem } from "@/utils/product/product-item/validateProductItem";
+import { itemsHaveSameInterval } from "@/utils/product/productItemUtils";
+import { useProductContext } from "../ProductContext";
+import { CreateItemDialogContent } from "./create-product-item/CreateItemDialogContent";
+import { emptyPriceItem } from "./create-product-item/defaultItemConfigs";
 import {
 	ProductItemContext,
 	useProductItemContext,
 } from "./ProductItemContext";
-
-import {
-	ProductItemInterval,
-	ProductItem,
-	CreateFeature as CreateFeatureType,
-	FrontendProductItem,
-	Infinite,
-} from "@autumn/shared";
-
-import { useProductContext } from "../ProductContext";
-import { validateProductItem } from "@/utils/product/product-item/validateProductItem";
-import { CreateItemDialogContent } from "./create-product-item/CreateItemDialogContent";
-import { Plus } from "lucide-react";
 import { useSteps } from "./useSteps";
 import { CreateItemStep } from "./utils/CreateItemStep";
-import { isFeatureItem, isFeaturePriceItem } from "@/utils/product/getItemType";
-import { emptyPriceItem } from "./create-product-item/defaultItemConfigs";
-import { itemsHaveSameInterval } from "@/utils/product/productItemUtils";
-import { toast } from "sonner";
-import { getFeature } from "@/utils/product/entitlementUtils";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export const defaultProductItem: ProductItem = {
 	feature_id: null,

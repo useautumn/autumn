@@ -70,9 +70,13 @@ function UpdateCreditSystemSheet({
 
 		setLoading(true);
 		try {
-			await FeatureService.updateFeature(axiosInstance, selectedCreditSystem.id, {
-				...creditSystem,
-			});
+			await FeatureService.updateFeature(
+				axiosInstance,
+				selectedCreditSystem.id,
+				{
+					...creditSystem,
+				},
+			);
 
 			await refetch();
 			toast.success("Credit system updated successfully");

@@ -4,6 +4,7 @@ import { ArrowUpRightFromSquare } from "lucide-react";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { useEffect } from "react";
 import { Outlet, useNavigate } from "react-router";
+import { ChatWidget } from "@/components/general/ChatWidget";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { Button } from "@/components/ui/button";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
@@ -113,7 +114,7 @@ export function MainLayout() {
 					<MainSidebar />
 					<InviteNotifications />
 					<MainContent />
-					{/* <ChatWidget /> */}
+					<ChatWidget />
 					<CommandBar />
 				</main>
 			</NuqsAdapter>
@@ -150,7 +151,7 @@ const MainContent = () => {
 									variant="default"
 									className="h-6 border border-t8 bg-transparent text-t8 hover:bg-t8 hover:text-white font-mono rounded-xs ml-auto absolute right-4"
 									onClick={() => {
-										navigateTo("/onboarding", navigate, AppEnv.Sandbox);
+										navigateTo("/onboarding3", navigate, AppEnv.Sandbox);
 									}}
 								>
 									Onboarding

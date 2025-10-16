@@ -1,20 +1,19 @@
+import type { RewardProgram } from "@autumn/shared";
+import { Delete } from "lucide-react";
 import { useState } from "react";
-import { useProductsContext } from "../../ProductsContext";
-
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { RewardProgram } from "@autumn/shared";
+import { toast } from "sonner";
+import SmallSpinner from "@/components/general/SmallSpinner";
+import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { getBackendErr } from "@/utils/genUtils";
-import { toast } from "sonner";
-import SmallSpinner from "@/components/general/SmallSpinner";
-import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
-import { Delete } from "lucide-react";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { getBackendErr } from "@/utils/genUtils";
+import { useProductsContext } from "../../ProductsContext";
 
 export const RewardProgramRowToolbar = ({
 	rewardProgram,

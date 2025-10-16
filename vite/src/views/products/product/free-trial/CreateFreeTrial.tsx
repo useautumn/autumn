@@ -1,17 +1,18 @@
-import { DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-
+import { FreeTrialDuration } from "@autumn/shared";
 import { useState } from "react";
-
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogTitle,
+} from "@/components/ui/dialog";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { handleAutoSave } from "@/views/onboarding2/model-pricing/model-pricing-utils/modelPricingUtils";
 import { useProductContext } from "../ProductContext";
-
 // import { FrontendFreeTrial } from "@autumn/shared";
 import { FreeTrialConfig } from "./FreeTrialConfig";
-import { toast } from "sonner";
-import { FreeTrialDuration } from "@autumn/shared";
-import { handleAutoSave } from "@/views/onboarding2/model-pricing/model-pricing-utils/modelPricingUtils";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export const CreateFreeTrial = ({
 	open,

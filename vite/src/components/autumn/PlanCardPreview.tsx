@@ -5,7 +5,6 @@ import {
 	type ProductV2,
 	productV2ToFeatureItems,
 } from "@autumn/shared";
-import { useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
 import { Card, CardContent, CardHeader } from "@/components/v2/cards/Card";
 import { Separator } from "@/components/v2/separator";

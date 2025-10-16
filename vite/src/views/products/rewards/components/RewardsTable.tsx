@@ -1,14 +1,19 @@
-import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
+import {
+	Product,
+	type ProductV2,
+	type Reward,
+	RewardType,
+} from "@autumn/shared";
 import { useState } from "react";
-import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import { Reward, RewardType, Product, ProductV2 } from "@autumn/shared";
 import { AdminHover } from "@/components/general/AdminHover";
 import { Item, Row } from "@/components/general/TableGrid";
-import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
+import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
+import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { UpdateRewardSheet } from "../reward-config/components/UpdateRewardSheet";
 import { RewardRowToolbar } from "./RewardRowToolbar";
-import { useOrg } from "@/hooks/common/useOrg";
 
 export const RewardsTable = () => {
 	const [selectedReward, setSelectedReward] = useState<Reward | null>(null);

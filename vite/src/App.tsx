@@ -1,7 +1,6 @@
 import { AppEnv } from "@autumn/shared";
 import { init } from "@squircle/core";
 import * as React from "react";
-import { useEffect } from "react";
 import { BrowserRouter, Route, Routes } from "react-router";
 import { MainLayout } from "./app/layout";
 import { OnboardingLayout } from "./app/OnboardingLayout";
@@ -32,7 +31,7 @@ export function SquircleProvider({ children }: { children: React.ReactNode }) {
 export default function App() {
 	const { data } = useSession();
 
-	useEffect(() => {
+	React.useEffect(() => {
 		if (data) {
 			identifyUser({
 				email: data.user.email,

@@ -41,8 +41,8 @@ export const ConnectStripeSection = () => {
 				title="Connect Stripe"
 				description={
 					<span>
-						Stripe is required to checkout and add your plans to customers.
-						Grab your API key{" "}
+						Stripe is required to checkout and add your plans to customers. Grab
+						your API key{" "}
 						<a
 							href="https://dashboard.stripe.com/apikeys"
 							className="underline"

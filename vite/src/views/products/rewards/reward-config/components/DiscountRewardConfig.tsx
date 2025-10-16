@@ -38,8 +38,7 @@ export function DiscountRewardConfig({
 		});
 	};
 
-	const showDurationValue =
-		config.duration_type === CouponDurationType.Months;
+	const showDurationValue = config.duration_type === CouponDurationType.Months;
 
 	return (
 		<SheetSection title="Discount Configuration" withSeparator={false}>
@@ -114,7 +113,9 @@ export function DiscountRewardConfig({
 									type="number"
 									placeholder="eg. 3"
 									className="w-20"
-									value={config.duration_value === 0 ? "" : config.duration_value}
+									value={
+										config.duration_value === 0 ? "" : config.duration_value
+									}
 									onChange={(e) => {
 										const value =
 											e.target.value === "" ? 0 : Number(e.target.value);
@@ -135,7 +136,9 @@ export function DiscountRewardConfig({
 									<SelectItem value={CouponDurationType.OneOff}>
 										One-off
 									</SelectItem>
-									<SelectItem value={CouponDurationType.Months}>Months</SelectItem>
+									<SelectItem value={CouponDurationType.Months}>
+										Months
+									</SelectItem>
 									<SelectItem value={CouponDurationType.Forever}>
 										Forever
 									</SelectItem>

@@ -1,19 +1,19 @@
+import type { CreateFeature } from "@autumn/shared";
 import { useState } from "react";
-import CreditSystemConfig from "./CreditSystemConfig";
-import { CreateFeature } from "@autumn/shared";
-import { Dialog, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { FeatureService } from "@/services/FeatureService";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { toast } from "sonner";
 import {
 	CustomDialogBody,
 	CustomDialogContent,
 	CustomDialogFooter,
 } from "@/components/general/modal-components/DialogContentWrapper";
-import { getBackendErr } from "@/utils/genUtils";
-import { validateCreditSystem } from "./utils/validateCreditSystem";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogTitle } from "@/components/ui/dialog";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { FeatureService } from "@/services/FeatureService";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { getBackendErr } from "@/utils/genUtils";
+import CreditSystemConfig from "./CreditSystemConfig";
+import { validateCreditSystem } from "./utils/validateCreditSystem";
 
 function UpdateCreditSystem({
 	open,

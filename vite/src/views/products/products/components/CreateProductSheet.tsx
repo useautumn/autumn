@@ -71,9 +71,7 @@ function CreateProductSheet({
 			}
 			setOpen(false);
 		} catch (error) {
-			toast.error(
-				getBackendErr(error as AxiosError, "Failed to create plan"),
-			);
+			toast.error(getBackendErr(error as AxiosError, "Failed to create plan"));
 		}
 		setLoading(false);
 	};

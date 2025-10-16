@@ -1,8 +1,8 @@
+import { ArrowLeft } from "lucide-react";
+import { useState } from "react";
 import { CustomDialogFooter } from "@/components/general/modal-components/DialogContentWrapper";
 import { Button } from "@/components/ui/button";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { ArrowLeft } from "lucide-react";
-import { useState } from "react";
 
 export const CreateFeatureFooter = ({
 	handleBack,
