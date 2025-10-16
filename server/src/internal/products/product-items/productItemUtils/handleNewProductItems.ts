@@ -185,6 +185,12 @@ export const handleNewProductItems = async ({
 		env: product.env as AppEnv,
 	});
 
+	// addIdsToItems()
+	// //1. Base price -> gets another fixed price ID.
+	// //2. group plan features by feature ID#
+	// //3. sort by price, then usage_model
+	// //3.
+
 	features = allFeatures;
 
 	const newPrices: Price[] = [];

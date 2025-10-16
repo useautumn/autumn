@@ -388,5 +388,13 @@ export const validateProductItems = ({
 		});
 	}
 
+	if (newItems.filter(isPriceItem).length > 1) {
+		throw new RecaseError({
+			message: `Can't have more than one price item in the same product`,
+			code: ErrCode.InvalidInputs,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+
 	return { allFeatures, newFeatures };
 };
