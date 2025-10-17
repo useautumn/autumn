@@ -1,18 +1,19 @@
-import { handleRequestError } from "@/utils/errorUtils.js";
-
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { ErrCode, FullCustomerEntitlement } from "@autumn/shared";
+import {
+	ErrCode,
+	type FullCustomerEntitlement,
+	getCusEntBalance,
+} from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";
-import { adjustAllowance } from "@/trigger/adjustAllowance.js";
-import { CusPriceService } from "@/internal/customers/cusProducts/cusPrices/CusPriceService.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
+import { CusPriceService } from "@/internal/customers/cusProducts/cusPrices/CusPriceService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { getCusEntBalance } from "@autumn/shared";
+import { adjustAllowance } from "@/trigger/adjustAllowance.js";
 import { performDeductionOnCusEnt } from "@/trigger/updateBalanceTask.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { CusProductService } from "../cusProducts/CusProductService.js";
 
 const getCusOrgAndCusPrice = async ({
@@ -41,7 +42,7 @@ const getCusOrgAndCusPrice = async ({
 
 export const handleUpdateEntitlement = async (req: any, res: any) => {
 	try {
-		const { db, logtail: logger } = req;
+		const { db } = req;
 		const { customer_entitlement_id } = req.params;
 		const { balance, next_reset_at, entity_id } = req.body;
 
@@ -96,27 +97,29 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
 			});
 		}
 
-		let { balance: masterBalance } = getCusEntBalance({
+		const { balance: masterBalance } = getCusEntBalance({
 			cusEnt,
 			entityId: entity_id,
 		});
 
 		const deducted = new Decimal(masterBalance!).minus(balance).toNumber();
 
-		let originalBalance = structuredClone(masterBalance);
+		const originalBalance = structuredClone(masterBalance);
 
-		let { newBalance, newEntities, newAdjustment } = performDeductionOnCusEnt({
-			cusEnt: {
-				...cusEnt,
-				customer_product: cusProduct!,
+		const { newBalance, newEntities, newAdjustment } = performDeductionOnCusEnt(
+			{
+				cusEnt: {
+					...cusEnt,
+					customer_product: cusProduct!,
+				},
+				toDeduct: deducted,
+				addAdjustment: true,
+				allowNegativeBalance: cusEnt.usage_allowed || false,
+				entityId: entity_id,
 			},
-			toDeduct: deducted,
-			addAdjustment: true,
-			allowNegativeBalance: cusEnt.usage_allowed || false,
-			entityId: entity_id,
-		});
+		);
 
-		let updates = {
+		const updates = {
 			balance: newBalance,
 			next_reset_at,
 			entities: newEntities,
@@ -130,7 +133,7 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
 		});
 
 		if (cusPrice && customer) {
-			let fullCusProduct = await CusProductService.get({
+			const fullCusProduct = await CusProductService.get({
 				db,
 				id: cusEnt.customer_product_id,
 				orgId: req.orgId,
@@ -150,7 +153,7 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
 				customer: customer,
 				originalBalance: originalBalance!,
 				newBalance: balance,
-				logger: req.logtail,
+				logger: req.logger,
 			});
 
 			if (newReplaceables && newReplaceables.length > 0) {

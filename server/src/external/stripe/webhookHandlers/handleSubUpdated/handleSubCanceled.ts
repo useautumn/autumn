@@ -102,7 +102,7 @@ export const handleSubCanceled = async ({
 
 	const canceledFromPortal = canceled && !isAutumnDowngrade;
 
-	const { db, env, logtail: logger } = req;
+	const { db, env, logger } = req;
 
 	if (!canceledFromPortal || updatedCusProducts.length === 0) return;
 

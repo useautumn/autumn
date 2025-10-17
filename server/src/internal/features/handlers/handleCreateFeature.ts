@@ -11,7 +11,7 @@ export const handleCreateFeature = async (req: any, res: any) => {
 	try {
 		console.log("Trying to create feature");
 		const data = req.body;
-		const { db, orgId, env, logtail: logger } = req;
+		const { db, orgId, env, logger } = req;
 		const parsedFeature = validateFeature(data);
 
 		const feature: Feature = {

@@ -1,11 +1,9 @@
-import { OrgService } from "@/internal/orgs/OrgService.js";
-import { auth } from "@/utils/auth.js";
 import { AuthType, ErrCode } from "@autumn/shared";
 import { verifyToken } from "@clerk/express";
 import { fromNodeHeaders } from "better-auth/node";
-import { NextFunction } from "express";
-import { eq, and } from "drizzle-orm";
-import { member } from "@autumn/shared";
+import type { NextFunction } from "express";
+import { OrgService } from "@/internal/orgs/OrgService.js";
+import { auth } from "@/utils/auth.js";
 
 const getTokenData = async (req: any, res: any) => {
 	let token;
@@ -19,10 +17,10 @@ const getTokenData = async (req: any, res: any) => {
 		throw new Error("clerk token not found in request headers / invalid");
 	}
 
-	let secretKey = process.env.CLERK_SECRET_KEY;
+	const secretKey = process.env.CLERK_SECRET_KEY;
 
 	try {
-		let verified = await verifyToken(token, {
+		const verified = await verifyToken(token, {
 			secretKey: secretKey,
 		});
 
@@ -37,7 +35,7 @@ const getTokenData = async (req: any, res: any) => {
 };
 
 export const withOrgAuth = async (req: any, res: any, next: NextFunction) => {
-	const { logtail: logger } = req;
+	const { logger } = req;
 
 	try {
 		// let tokenData = await getTokenData(req, res);
@@ -69,7 +67,7 @@ export const withOrgAuth = async (req: any, res: any, next: NextFunction) => {
 				.json({ message: "Unauthorized - no user id found" });
 		}
 
-		let data = await OrgService.getWithFeatures({
+		const data = await OrgService.getWithFeatures({
 			db: req.db,
 			orgId: orgId,
 			env: req.env,

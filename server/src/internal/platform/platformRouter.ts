@@ -15,7 +15,7 @@ import { afterOrgCreated } from "@/utils/authUtils/afterOrgCreated.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { createKey } from "../dev/api-keys/apiKeyUtils.js";
-import { connectStripe } from "../orgs/handlers/handleConnectStripe.js";
+import { connectStripe } from "../orgs/handlers/handleConnectStripe_old.js";
 
 import { shouldReconnectStripe } from "../orgs/orgUtils.js";
 
@@ -209,7 +209,7 @@ platformRouter.post("/exchange", (req: any, res: any) =>
 					org,
 					env: AppEnv.Sandbox,
 					stripeKey: stripe_test_key,
-					logger: req.logtail,
+					logger: req.logger,
 				});
 
 				if (reconnectStripe) {

@@ -1,9 +1,12 @@
+import { AppEnv, customers, ErrCode, type Organization } from "@autumn/shared";
+import { and, eq } from "drizzle-orm";
+import type { Response } from "express";
+import Stripe from "stripe";
+import { initMasterStripe } from "@/external/connect/initMasterStripe.js";
+import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { deleteSvixApp } from "@/external/svix/svixHelpers.js";
 import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { AppEnv, customers, ErrCode, Organization } from "@autumn/shared";
-import { and, eq } from "drizzle-orm";
-import { Response } from "express";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { deleteStripeWebhook } from "../orgUtils.js";
 
 const deleteSvixWebhooks = async ({
@@ -61,12 +64,58 @@ const deleteStripeWebhooks = async ({
 	}
 };
 
+const deleteStripeAccounts = async ({
+	org,
+	logger,
+}: {
+	org: Organization;
+	logger: Logger;
+}) => {
+	const stripe = initMasterStripe();
+
+	if (org.stripe_connect.test_account_id) {
+		try {
+			await stripe.accounts.del(org.stripe_connect.test_account_id);
+		} catch (error) {
+			if (error instanceof Stripe.errors.StripeError) {
+				logger.error(
+					`Failed to delete stripe test acocunt ID for ${org.id}, ${org.slug}. ${error.message})`,
+				);
+			}
+		}
+	}
+
+	if (org.stripe_connect.live_account_id) {
+		try {
+			await stripe.accounts.del(org.stripe_connect.live_account_id);
+		} catch (error) {
+			if (error instanceof Stripe.errors.StripeError) {
+				logger.error(
+					`Failed to delete stripe live account ID for ${org.id}, ${org.slug}. ${error.message})`,
+				);
+			}
+		}
+	}
+
+	if (org.stripe_connect.default_account_id) {
+		try {
+			await stripe.accounts.del(org.stripe_connect.default_account_id);
+		} catch (error) {
+			if (error instanceof Stripe.errors.StripeError) {
+				logger.error(
+					`Failed to delete stripe default account ID for ${org.id}, ${org.slug}. ${error.message})`,
+				);
+			}
+		}
+	}
+};
+
 export const handleDeleteOrg = async (req: ExtendedRequest, res: Response) => {
 	try {
-		const { org, db, logtail: logger } = req;
+		const { org, db, logger } = req;
 
 		// 1. Check if any customers
-		let hasCustomers = await db.query.customers.findFirst({
+		const hasCustomers = await db.query.customers.findFirst({
 			where: and(eq(customers.org_id, org.id), eq(customers.env, AppEnv.Live)),
 		});
 
@@ -85,8 +134,12 @@ export const handleDeleteOrg = async (req: ExtendedRequest, res: Response) => {
 		logger.info("2. Deleting stripe webhooks");
 		await deleteStripeWebhooks({ org, logger });
 
+		// 4. Delete stripe accounts
+		logger.info("3. Deleting stripe accounts");
+		await deleteStripeAccounts({ org, logger });
+
 		// 4. Delete all sandbox customers
-		logger.info("3. Deleting sandbox customers");
+		logger.info("4. Deleting sandbox customers");
 		await db
 			.delete(customers)
 			.where(

@@ -1,18 +1,16 @@
 import { expect } from "chai";
+import chalk from "chalk";
+import { addDays, addMonths, format } from "date-fns";
+import { Decimal } from "decimal.js";
+import type Stripe from "stripe";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { advanceProducts, features } from "tests/global.js";
 import { compareMainProduct } from "tests/utils/compare.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { timeout } from "tests/utils/genUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { addDays, addMonths, format } from "date-fns";
-import chalk from "chalk";
-import Stripe from "stripe";
-
-import { initCustomerWithTestClock } from "tests/utils/testInitUtils.js";
 import { checkSubscriptionContainsProducts } from "tests/utils/scheduleCheckUtils.js";
-import { Decimal } from "decimal.js";
-import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import { initCustomerWithTestClock } from "tests/utils/testInitUtils.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 
 const advanceAPThroughBalances = async ({
 	stripeSub,
@@ -32,32 +30,32 @@ const advanceAPThroughBalances = async ({
 	startingBalance?: number;
 }) => {
 	// 1. Get total period
-	let totalPeriod =
+	const totalPeriod =
 		(stripeSub.current_period_end - stripeSub.current_period_start) * 1000;
 
 	// 2. Get allowance
-	let allowance =
+	const allowance =
 		advanceProducts.proratedArrearSeats.entitlements.seats.allowance!;
 
 	// 3. Get starting balance
 	let balance = startingBalance || allowance;
 
 	// 4. Get price per seat
-	let pricePerSeat =
+	const pricePerSeat =
 		advanceProducts.proratedArrearSeats.prices[1].config.usage_tiers[0].amount;
 
-	let skipDays = 2;
+	const skipDays = 2;
 	// 5. Get accrued price
 	let accruedPrice = 0;
 	if (startingBalance && startingBalance < 0) {
-		let proratedPrice =
+		const proratedPrice =
 			(-startingBalance *
 				pricePerSeat *
 				(startingFrom! - stripeSub.current_period_start * 1000)) /
 			totalPeriod;
 
-		let previouslyPaid = pricePerSeat * -startingBalance;
-		let priceToPay = proratedPrice - previouslyPaid;
+		const previouslyPaid = pricePerSeat * -startingBalance;
+		const priceToPay = proratedPrice - previouslyPaid;
 
 		accruedPrice = priceToPay;
 		// accruedPrice = Math.max(accruedPrice, 0);
@@ -66,19 +64,19 @@ const advanceAPThroughBalances = async ({
 	}
 
 	let curTime = startingFrom || stripeSub.current_period_start * 1000;
-	let numberOfEvents = 2;
+	const numberOfEvents = 2;
 
 	console.group();
 	console.group();
 	for (let i = 0; i < numberOfEvents; i++) {
-		let sign = balance > 0 ? 1 : Math.random() > 0.7 ? 1 : -1;
+		const sign = balance > 0 ? 1 : Math.random() > 0.7 ? 1 : -1;
 
-		let currentUsage = allowance - balance;
+		const currentUsage = allowance - balance;
 
-		let nextBoundary =
+		const nextBoundary =
 			Math.ceil((currentUsage + 1) / billingUnits) * billingUnits;
 
-		let prevBoundary = nextBoundary - billingUnits;
+		const prevBoundary = nextBoundary - billingUnits;
 
 		let valueNeeded = 0;
 		if (sign > 0) {
@@ -95,8 +93,8 @@ const advanceAPThroughBalances = async ({
 			);
 		}
 
-		let newBalance = balance - valueNeeded;
-		let totalUsage = allowance - newBalance;
+		const newBalance = balance - valueNeeded;
+		const totalUsage = allowance - newBalance;
 
 		await AutumnCli.usage({
 			customerId,
@@ -106,19 +104,19 @@ const advanceAPThroughBalances = async ({
 
 		await timeout(2000);
 
-		let prevBalance = balance;
+		const prevBalance = balance;
 		balance = newBalance;
 
 		// Calculate prorated price only when crossing boundary
-		let newPrice = Math.max(0, -balance * pricePerSeat);
-		let prevCurTime = curTime;
+		const newPrice = Math.max(0, -balance * pricePerSeat);
+		const prevCurTime = curTime;
 		curTime = addDays(curTime, 2).getTime();
 
 		if (i === numberOfEvents - 1) {
 			curTime = stripeSub.current_period_end * 1000;
 		}
 
-		let proratedPrice = new Decimal(newPrice)
+		const proratedPrice = new Decimal(newPrice)
 			.mul(curTime - prevCurTime)
 			.div(totalPeriod);
 		accruedPrice = new Decimal(accruedPrice)
@@ -145,8 +143,8 @@ const advanceAPThroughBalances = async ({
 
 	// Advance test clock to end of period
 
-	let advanceTo = addDays(addMonths(new Date(), 1), 2);
-	let advanceToStart = startingFrom ? new Date(startingFrom) : new Date();
+	const advanceTo = addDays(addMonths(new Date(), 1), 2);
+	const advanceToStart = startingFrom ? new Date(startingFrom) : new Date();
 
 	await advanceTestClock({
 		stripeCli,
@@ -158,12 +156,12 @@ const advanceAPThroughBalances = async ({
 
 	// Check invoice amount
 	const res = await AutumnCli.getCustomer(customerId);
-	let invoice = res.invoices[0];
+	const invoice = res.invoices[0];
 
-	let basePrice = advanceProducts.proratedArrearSeats.prices[0].config.amount;
-	let nextMonthUsagePrice = Math.max(-balance * pricePerSeat, 0);
+	const basePrice = advanceProducts.proratedArrearSeats.prices[0].config.amount;
+	const nextMonthUsagePrice = Math.max(-balance * pricePerSeat, 0);
 
-	let expectedInvoiceTotal = Number(
+	const expectedInvoiceTotal = Number(
 		(accruedPrice + basePrice + nextMonthUsagePrice).toFixed(2),
 	);
 	console.log(
@@ -192,7 +190,7 @@ describe(`${chalk.yellowBright(
 	let stripeCli: Stripe;
 	let subId = "";
 	let stripeSub: Stripe.Subscription;
-	let billingUnits =
+	const billingUnits =
 		advanceProducts.proratedArrearSeats.prices[1].config.billing_units || 1;
 
 	before(async function () {
@@ -244,7 +242,7 @@ describe(`${chalk.yellowBright(
 	let balance: number;
 	it("arrear_prorated3: should run first cycles and have correct invoice / balance", async () => {
 		// Do it again
-		let { advancedTo: advancedTo1, balance: balance1 } =
+		const { advancedTo: advancedTo1, balance: balance1 } =
 			await advanceAPThroughBalances({
 				stripeSub,
 				stripeCli,
@@ -264,7 +262,7 @@ describe(`${chalk.yellowBright(
 			);
 		}
 
-		let newStripeSub = await stripeCli.subscriptions.retrieve(subId);
+		const newStripeSub = await stripeCli.subscriptions.retrieve(subId);
 		await advanceAPThroughBalances({
 			stripeSub: newStripeSub,
 			stripeCli,

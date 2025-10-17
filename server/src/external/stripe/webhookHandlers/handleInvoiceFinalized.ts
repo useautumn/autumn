@@ -1,23 +1,23 @@
 import {
-	AppEnv,
+	type AppEnv,
 	CusProductStatus,
-	FullCustomerPrice,
-	InvoiceStatus,
-	Organization,
+	type FullCustomerPrice,
+	type InvoiceStatus,
+	type Organization,
 } from "@autumn/shared";
 
-import Stripe from "stripe";
-import { createStripeCli } from "../utils.js";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
+import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
 import {
 	getFullStripeInvoice,
 	getStripeExpandedInvoice,
 	invoiceToSubId,
 	updateInvoiceIfExists,
 } from "../stripeInvoiceUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
-import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
 
 export const handleInvoiceFinalized = async ({
 	db,
@@ -68,11 +68,11 @@ export const handleInvoiceFinalized = async ({
 			return;
 		}
 
-		let prices = activeProducts.flatMap((cp) =>
+		const prices = activeProducts.flatMap((cp) =>
 			cp.customer_prices.map((cpr: FullCustomerPrice) => cpr.price),
 		);
 
-		let invoiceItems = await getInvoiceItems({
+		const invoiceItems = await getInvoiceItems({
 			stripeInvoice: invoice,
 			prices: prices,
 			logger,

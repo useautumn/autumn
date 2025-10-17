@@ -1,6 +1,7 @@
 import { getRequestListener } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { handleConnectWebhook } from "./external/webhooks/connectWebhookRouter.js";
 import { analyticsMiddleware } from "./honoMiddlewares/analyticsMiddleware.js";
 import { apiVersionMiddleware } from "./honoMiddlewares/apiVersionMiddleware.js";
 import { baseMiddleware } from "./honoMiddlewares/baseMiddleware.js";
@@ -12,6 +13,8 @@ import { secretKeyMiddleware } from "./honoMiddlewares/secretKeyMiddleware.js";
 import { traceMiddleware } from "./honoMiddlewares/traceMiddleware.js";
 import type { HonoEnv } from "./honoUtils/HonoEnv.js";
 import { cusRouter } from "./internal/customers/cusRouter.js";
+import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/handleGetOAuthUrl.js";
+import { honoOrgRouter } from "./internal/orgs/orgRouter.js";
 import { honoPlatformRouter } from "./internal/platform/honoPlatformRouter.js";
 import { honoProductRouter } from "./internal/products/productRouter.js";
 import { auth } from "./utils/auth.js";
@@ -65,33 +68,27 @@ export const createHonoApp = () => {
 		return auth.handler(c.req.raw);
 	});
 
+	// OAuth callback (needs to be before middleware)
+	app.get("/stripe/oauth_callback", handleOAuthCallback);
+
 	// Step 1: Base middleware - sets up ctx (db, logger, etc.)
 	app.use("*", baseMiddleware);
-
-	// Step 2: Tracing middleware - handles OpenTelemetry spans
 	app.use("*", traceMiddleware);
 
-	// Step 4: Auth middleware - verifies secret key and populates auth context
+	// Webhook routes (after baseMiddleware for logging, but baseMiddleware skips body parsing)
+	app.post("/webhooks/connect", handleConnectWebhook);
+
 	app.use("/v1/*", secretKeyMiddleware);
-
-	// Step 5: Org config middleware - allows config overrides via header
 	app.use("/v1/*", orgConfigMiddleware);
-
-	// Step 3: API Version middleware - validates x-api-version header
 	app.use("/v1/*", apiVersionMiddleware);
-
-	// Step 6: Refresh cache middleware - clears customer cache after successful mutations
 	app.use("/v1/*", refreshCacheMiddleware);
-
-	// Step 7: Analytics middleware - enriches logger context and logs responses
 	app.use("/v1/*", analyticsMiddleware);
-
-	// Step 8: Query middleware - handles query parsing and validation
 	app.use("/v1/*", queryMiddleware());
 
 	app.route("v1/customers", cusRouter);
 	app.route("v1/products", honoProductRouter);
 	app.route("v1/platform", honoPlatformRouter);
+	app.route("v1/organization", honoOrgRouter);
 
 	// Error handler - must be defined after all routes and middleware
 	app.onError(errorMiddleware);

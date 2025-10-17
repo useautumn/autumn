@@ -10,6 +10,7 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
@@ -25,7 +26,6 @@ import {
 } from "../../stripeInvoiceUtils.js";
 import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";
 import { getStripeSubs } from "../../stripeSubUtils.js";
-import { createStripeCli } from "../../utils.js";
 import { handleContUsePrices } from "./handleContUsePrices.js";
 import { handlePrepaidPrices } from "./handlePrepaidPrices.js";
 import { handleUsagePrices } from "./handleUsagePrices.js";

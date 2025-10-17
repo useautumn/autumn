@@ -8,9 +8,9 @@ import {
 import { StatusCodes } from "http-status-codes";
 import type { Stripe } from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { createStripeCli } from "./utils.js";
 
 export const getStripeCus = async ({
 	stripeCli,

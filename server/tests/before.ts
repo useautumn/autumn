@@ -1,19 +1,20 @@
 import dotenv from "dotenv";
+
 dotenv.config();
 
-import { Autumn as AutumnJS } from "autumn-js";
-import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { AppEnv } from "@autumn/shared";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { initDrizzle } from "@/db/initDrizzle.js";
+import { Autumn as AutumnJS } from "autumn-js";
 import { after } from "mocha";
+import { initDrizzle } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
 
 const ORG_SLUG = process.env.TESTS_ORG!;
 const DEFAULT_ENV = AppEnv.Sandbox;
 
 import { Hyperbrowser } from "@hyperbrowser/sdk";
+
 const hyperbrowser = new Hyperbrowser({
 	apiKey: process.env.HYPERBROWSER_API_KEY,
 });

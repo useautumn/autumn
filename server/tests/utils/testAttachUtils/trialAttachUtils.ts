@@ -1,14 +1,14 @@
+import { type AppEnv, ProcessorType } from "@autumn/shared";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { attachPmToCus } from "@/external/stripe/stripeCusUtils.js";
+import { handleAddProduct } from "@/internal/customers/attach/attachFunctions/addProductFlow/handleAddProduct.js";
+import { newCusToAttachParams } from "@/internal/customers/attach/attachUtils/attachParams/convertToParams.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { isDefaultTrialFullProduct } from "@/internal/products/productUtils/classifyProduct.js";
-import { AppEnv, ProcessorType } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils.js";
-import { newCusToAttachParams } from "@/internal/customers/attach/attachUtils/attachParams/convertToParams.js";
-import { handleAddProduct } from "@/internal/customers/attach/attachFunctions/addProductFlow/handleAddProduct.js";
-import Stripe from "stripe";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { attachPmToCus } from "@/external/stripe/stripeCusUtils.js";
 
 export async function manuallyAttachDefaultTrial({
 	customerId,
@@ -133,7 +133,6 @@ export async function manuallyAttachDefaultTrial({
 			org,
 			env,
 			orgId: org.id,
-			logtail: console,
 			logger: console,
 		} as any;
 
@@ -195,7 +194,7 @@ export async function flipDefaultState({
 	state: boolean;
 }) {
 	try {
-		let productExists = await autumn.products.get(id);
+		const productExists = await autumn.products.get(id);
 		if (productExists) {
 			await autumn.products.update(id, {
 				is_default: state,
@@ -213,7 +212,7 @@ export async function flipDefaultStates({
 	currentCase: number;
 	autumn: AutumnInt;
 }) {
-	let total = 4;
+	const total = 4;
 
 	// Now flip all products from 0 to total-1, only current case should be true
 	for (let i = 0; i < total; i++) {

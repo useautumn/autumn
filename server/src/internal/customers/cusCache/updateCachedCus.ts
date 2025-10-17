@@ -1,14 +1,10 @@
-import {
-	CusExpand,
-	FullCusEntWithFullCusProduct,
-	Organization,
-} from "@autumn/shared";
-import { AppEnv } from "autumn-js";
+import { type CusExpand, type Organization } from "@autumn/shared";
+import type { AppEnv } from "autumn-js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { logger } from "@/external/logtail/logtailUtils.js";
 import { buildBaseCusCacheKey } from "./cusCacheUtils.js";
 import { getCusWithCache } from "./getCusWithCache.js";
 import { initUpstash } from "./upstashUtils.js";
-import { logger } from "@/external/logtail/logtailUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const refreshCusCache = async ({
 	db,
@@ -43,14 +39,14 @@ export const refreshCusCache = async ({
 		for (const key of list) {
 			const refresh = async () => {
 				const keyName = key;
-				let params = keyName.split(":");
-				let expandParam = params.find((p) => p.startsWith("expand_"));
-				let expand = expandParam
+				const params = keyName.split(":");
+				const expandParam = params.find((p) => p.startsWith("expand_"));
+				const expand = expandParam
 					? expandParam.replace("expand_", "").split(",")
 					: [];
 
-				let entityIdParam = params.find((p) => p.startsWith("entity_"));
-				let entityId = entityIdParam
+				const entityIdParam = params.find((p) => p.startsWith("entity_"));
+				const entityId = entityIdParam
 					? entityIdParam.replace("entity_", "")
 					: undefined;
 
