@@ -46,8 +46,8 @@ export const PlanCardHeader = () => {
 				onClick={() => {
 					setSheet({ type: "edit-plan", itemId: product.id });
 				}}
-				disabled={isPlanBeingEdited}
-				className="mt-2 !opacity-100"
+				disabled={true}
+				className="mt-2 !opacity-100 pointer-events-none"
 			>
 				{productV3.price?.amount ? (
 					<span className="text-sm font-medium text-t2">

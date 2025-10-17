@@ -136,9 +136,9 @@ export const OnboardingPreview = ({
 					<IconButton
 						variant="secondary"
 						icon={<CrosshairSimpleIcon />}
-						className="mt-2 !opacity-100"
+						className="mt-2 !opacity-100 pointer-events-none"
 						onClick={handleEdit}
-						disabled={isPlanBeingEdited}
+						disabled={true}
 					>
 						{basePrice?.amount ? (
 							<span className="text-sm font-medium text-t2">
