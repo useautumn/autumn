@@ -30,10 +30,10 @@ export function FreeProductRewardConfig({
 	const isEmpty = freeAddOns.length === 0;
 
 	return (
-		<SheetSection title="Free Product Configuration" withSeparator={false}>
+		<SheetSection title="Free Plan Configuration" withSeparator={false}>
 			{/* Product Selection */}
 			<div>
-				<FormLabel>Product</FormLabel>
+				<FormLabel>Plan</FormLabel>
 				<Select
 					value={reward.free_product_id || undefined}
 					onValueChange={(value) =>
@@ -45,8 +45,8 @@ export function FreeProductRewardConfig({
 						<SelectValue
 							placeholder={
 								isEmpty
-									? "Create a free add-on product first"
-									: "Select a free add-on product"
+									? "Create a free add-on plan first"
+									: "Select a free add-on plan"
 							}
 						/>
 					</SelectTrigger>

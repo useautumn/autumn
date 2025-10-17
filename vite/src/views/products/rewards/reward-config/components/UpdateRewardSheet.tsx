@@ -83,7 +83,7 @@ export function UpdateRewardSheet({
 		}
 
 		if (reward.rewardCategory === "free_product" && !reward.free_product_id) {
-			toast.error("Please select a free product");
+			toast.error("Please select a free plan");
 			return;
 		}
 
@@ -118,7 +118,7 @@ export function UpdateRewardSheet({
 			<SheetContent className="flex flex-col overflow-hidden">
 				<SheetHeader
 					title="Update Reward"
-					description="Modify your discount or free product reward"
+					description="Modify your discount or free plan reward"
 				/>
 
 				<div className="flex-1 overflow-y-auto">

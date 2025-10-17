@@ -70,8 +70,8 @@ export const ProductList = ({
 		<Step
 			title={
 				token || data.products.length > 0
-					? "Your products"
-					: "Create your products"
+					? "Your plans"
+					: "Create your plans"
 			}
 			number={1}
 			description={
@@ -104,7 +104,7 @@ export const ProductList = ({
 				}}
 			>
 				<PageSectionHeader
-					title="Products"
+					title="Plans"
 					isOnboarding={true}
 					addButton={
 						<>
@@ -189,11 +189,11 @@ export const EditProductDialog = ({
 				product.id,
 				product,
 			);
-			toast.success("Product updated successfully");
+			toast.success("Plan updated successfully");
 			await mutate();
 			setOpen(false);
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to update product"));
+			toast.error(getBackendErr(error, "Failed to update plan"));
 		}
 		setCreateProductLoading(false);
 	};

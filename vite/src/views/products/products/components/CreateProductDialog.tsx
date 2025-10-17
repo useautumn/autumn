@@ -107,7 +107,7 @@ function CreateProduct({
 							<ToggleButton
 								disabled={product?.is_add_on}
 								buttonText="Default"
-								infoContent="This product is enabled by default for all new users, typically used for your free product"
+								infoContent="This plan is enabled by default for all new users, typically used for your free plan"
 								value={product?.is_default}
 								setValue={() =>
 									setProduct({
@@ -119,7 +119,7 @@ function CreateProduct({
 							<ToggleButton
 								disabled={product?.is_default}
 								buttonText="Add-on"
-								infoContent="This product is an add-on that can be bought together with your base products (eg, for top ups)"
+								infoContent="This plan is an add-on that can be bought together with your base plans (eg, for top ups)"
 								value={product?.is_add_on}
 								setValue={() =>
 									setProduct({ ...product, is_add_on: !product?.is_add_on })
