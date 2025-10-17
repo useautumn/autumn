@@ -38,7 +38,7 @@ export const usePlanDetailsActions = () => {
 				product: product as ProductV2,
 				onSuccess: async () => {},
 			});
-			toast.success("Product updated successfully");
+			toast.success("Plan updated successfully");
 		} else {
 			// Create new product
 			newProduct = await createProduct(product, axiosInstance);

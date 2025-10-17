@@ -21,9 +21,14 @@ const badgeVariants = cva(
 
 export interface PlanTypeBadgeProps extends VariantProps<typeof badgeVariants> {
 	className?: string;
+	iconOnly?: boolean;
 }
 
-export const PlanTypeBadge = ({ variant, className }: PlanTypeBadgeProps) => {
+export const PlanTypeBadge = ({
+	variant,
+	className,
+	iconOnly,
+}: PlanTypeBadgeProps) => {
 	const getIcon = () => {
 		switch (variant) {
 			case "default":
@@ -53,7 +58,7 @@ export const PlanTypeBadge = ({ variant, className }: PlanTypeBadgeProps) => {
 	return (
 		<div className={cn(badgeVariants({ variant }), className)}>
 			{getIcon()}
-			<span>{getLabel()}</span>
+			{!iconOnly && <span>{getLabel()}</span>}
 		</div>
 	);
 };

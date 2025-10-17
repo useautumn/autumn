@@ -49,7 +49,7 @@ const ToggleProductDialog = ({
 	const getTitle = () => {
 		if (toggleKey === "is_default") {
 			return value
-				? `Make ${product.name} a default product`
+				? `Make ${product.name} a default plan`
 				: `Remove default from ${product.name}`;
 		} else {
 			return value
@@ -119,14 +119,14 @@ export const ToggleDefaultProduct = ({
 			await ProductService.updateProduct(axiosInstance, product.id, data);
 			// mutate();
 			setOpen(false);
-			toast.success("Successfully updated product");
+			toast.success("Successfully updated plan");
 		} catch (error) {
 			setProduct({
 				...product,
 				[toggleKey]: !value,
 			});
 
-			toast.error(getBackendErr(error, "Failed to update product"));
+			toast.error(getBackendErr(error, "Failed to update plan"));
 		} finally {
 			setToggling(false);
 		}
@@ -148,21 +148,21 @@ export const ToggleDefaultProduct = ({
 			if (toggleKey === "is_default") {
 				if (value) {
 					setDialogDescription(
-						`You have ${activeCount} active ${activeCusStr} on this product. Are you sure you want to make this product default?`,
+						`You have ${activeCount} active ${activeCusStr} on this plan. Are you sure you want to make this plan default?`,
 					);
 				} else {
 					setDialogDescription(
-						`You have ${activeCount} active ${activeCusStr} on this product. Are you sure you want to remove this product as default?`,
+						`You have ${activeCount} active ${activeCusStr} on this plan. Are you sure you want to remove this plan as default?`,
 					);
 				}
 			} else {
 				if (value) {
 					setDialogDescription(
-						`You have ${activeCount} active ${activeCusStr} on this product. Are you sure you want to make this product an add-on?`,
+						`You have ${activeCount} active ${activeCusStr} on this plan. Are you sure you want to make this plan an add-on?`,
 					);
 				} else {
 					setDialogDescription(
-						`You have ${activeCount} active ${activeCusStr} on this product. Are you sure you want to remove this product as an add-on?`,
+						`You have ${activeCount} active ${activeCusStr} on this plan. Are you sure you want to remove this plan as an add-on?`,
 					);
 				}
 			}
@@ -180,11 +180,11 @@ export const ToggleDefaultProduct = ({
 			value && product.free_trial && !isFreeProductV2(product);
 
 		if (isDefaultTrial && notNullish(groupDefaults?.defaultTrial)) {
-			return `${groupDefaults.defaultTrial.name} is currently a default trial product. Making ${product.name} a default trial will remove ${groupDefaults.defaultTrial.name} as a default trial product.`;
+			return `${groupDefaults.defaultTrial.name} is currently a default trial plan. Making ${product.name} a default trial will remove ${groupDefaults.defaultTrial.name} as a default trial plan.`;
 		}
 
 		if (value && notNullish(groupDefaults?.free)) {
-			return `${groupDefaults.free.name} is currently a default product. Making ${product.name} a default product will remove ${groupDefaults.free.name} as a default product.`;
+			return `${groupDefaults.free.name} is currently a default plan. Making ${product.name} a default plan will remove ${groupDefaults.free.name} as a default plan.`;
 		}
 	};
 

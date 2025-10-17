@@ -133,14 +133,14 @@ export const DeletePlanDialog = ({
 
 	const getDeleteMessage = () => {
 		if (product.archived) {
-			return `Are you sure you want to unarchive ${product.name}? This will make it visible in your list of products.`;
+			return `Are you sure you want to unarchive ${product.name}? This will make it visible in your list of plans.`;
 		}
 
 		// \n\nNote: If there are multiple versions, this will unarchive all versions at once.
 
 		const isMultipleVersions = productInfo?.numVersion > 1;
-		const versionText = deleteAllVersions ? "product" : "version";
-		const productText = isMultipleVersions ? versionText : "product";
+		const versionText = deleteAllVersions ? "plan" : "version";
+		const productText = isMultipleVersions ? versionText : "plan";
 
 		const messageTemplates = {
 			withCustomers: {
@@ -151,9 +151,9 @@ export const DeletePlanDialog = ({
 					otherCount: number,
 					productText: string,
 				) =>
-					`${customerName} and ${otherCount} other customer${otherCount > 1 ? "s" : ""} are on this ${productText}. Are you sure you want to archive this product?`,
+					`${customerName} and ${otherCount} other customer${otherCount > 1 ? "s" : ""} are on this ${productText}. Are you sure you want to archive this plan?`,
 				fallback: (productText: string) =>
-					`There are customers on this ${productText}. Deleting this ${productText} will remove it from their accounts. Are you sure you want to continue? You can also archive the product instead.`,
+					`There are customers on this ${productText}. Deleting this ${productText} will remove it from their accounts. Are you sure you want to continue? You can also archive the plan instead.`,
 			},
 			withoutCustomers: (productText: string) =>
 				`Are you sure you want to delete this ${productText}? This action cannot be undone.`,
@@ -224,7 +224,7 @@ export const DeletePlanDialog = ({
 							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value="latest">Delete latest version</SelectItem>
-								<SelectItem value="all">Archive product</SelectItem>
+								<SelectItem value="all">Archive plan</SelectItem>
 							</SelectContent>
 						</Select>
 					)}
