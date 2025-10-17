@@ -1,10 +1,10 @@
-import Stripe from "stripe";
-import { AutumnMetadata } from "@autumn/shared";
-import { generateId } from "@/utils/genUtils.js";
+import type { AutumnMetadata } from "@autumn/shared";
 import { addDays } from "date-fns";
-import { MetadataService } from "./MetadataService.js";
-import { AttachParams } from "../customers/cusProducts/AttachParams.js";
+import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { generateId } from "@/utils/genUtils.js";
+import type { AttachParams } from "../customers/cusProducts/AttachParams.js";
+import { MetadataService } from "./MetadataService.js";
 
 export const createCheckoutMetadata = async ({
 	db,
@@ -15,10 +15,15 @@ export const createCheckoutMetadata = async ({
 }) => {
 	const metaId = generateId("meta");
 
-	let { req, checkoutSessionParams, stripeCli, paymentMethod, ...rest } =
-		attachParams;
+	const {
+		req: _req,
+		checkoutSessionParams: _checkoutSessionParams,
+		stripeCli: _stripeCli,
+		paymentMethod: _paymentMethod,
+		...rest
+	} = attachParams;
 
-	let attachClone = structuredClone(rest);
+	const attachClone = structuredClone(rest);
 
 	const metadata: AutumnMetadata = {
 		id: metaId,

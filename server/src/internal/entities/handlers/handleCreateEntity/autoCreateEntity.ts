@@ -87,7 +87,7 @@ export const autoCreateEntity = async ({
 				],
 			});
 
-			return results;
+			return results?.[0];
 		} catch (error: any) {
 			if (error.code === "23505") {
 				return await EntityService.get({
