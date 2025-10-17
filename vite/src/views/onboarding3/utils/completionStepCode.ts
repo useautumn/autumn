@@ -1,6 +1,11 @@
-export const getCodeSnippets = (featureId?: string, productId?: string) => {
+export const getCodeSnippets = (
+	featureId?: string,
+	productId?: string,
+	featureName?: string,
+) => {
 	const actualFeatureId = featureId || "your_feature_id";
 	const actualProductId = productId || "your_product_id";
+	const actualFeatureName = featureName || "Your Feature";
 
 	return {
 		allowed: {
@@ -27,7 +32,7 @@ const allowed = await autumn.check({
   "allowed": true,
   "feature": {
     "id": "${actualFeatureId}",
-    "name": "Your Feature",
+    "name": "${actualFeatureName}",
     "type": "limit"
   }
 }`,
@@ -73,7 +78,7 @@ console.log(session.checkout_url);`,
   "customer_id": "cust_123",
   "product": {
     "id": "${actualProductId}",
-    "name": "Your Product",
+    "name": "Your Plan",
     "items": [
       {
         "type": "price",

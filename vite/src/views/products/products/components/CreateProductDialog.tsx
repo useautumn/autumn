@@ -46,8 +46,8 @@ function CreateProduct({
 		if (!/^[a-zA-Z0-9 _-]+$/.test(productName)) {
 			toast.error(
 				!productName
-					? "Product name is required"
-					: "Product name can only contain alphanumeric characters, dashes (-), and underscores (_)",
+					? "Plan name is required"
+					: "Plan name can only contain alphanumeric characters, dashes (-), and underscores (_)",
 			);
 			return;
 		}
@@ -66,7 +66,7 @@ function CreateProduct({
 			}
 			setOpen(false);
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to create product"));
+			toast.error(getBackendErr(error, "Failed to create plan"));
 		}
 		setLoading(false);
 	};
@@ -83,11 +83,11 @@ function CreateProduct({
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>
 				<Button variant="add" className="w-full">
-					Product
+					Plan
 				</Button>
 			</DialogTrigger>
 			<DialogContent className="w-[500px]">
-				<DialogTitle>Create Product</DialogTitle>
+				<DialogTitle>Create Plan</DialogTitle>
 				<ProductConfig
 					product={product}
 					setProduct={setProduct}
@@ -132,7 +132,7 @@ function CreateProduct({
 							variant="gradientPrimary"
 							className="min-w-44 w-44 max-w-44"
 						>
-							Create Product
+							Create Plan
 						</Button>
 					</div>
 				</DialogFooter>

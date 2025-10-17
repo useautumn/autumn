@@ -8,7 +8,7 @@ export const MainDetailsSection = () => {
 	const setProduct = useProductStore((s) => s.setProduct);
 
 	return (
-		<SheetSection title="Product Details">
+		<SheetSection title="Plan Details">
 			<div className="space-y-4">
 				<div className="grid grid-cols-2 gap-2">
 					<div>

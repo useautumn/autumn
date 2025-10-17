@@ -68,12 +68,14 @@ const FeatureTestRow = ({
 
 export const AvailableFeatures = ({
 	onTrackSuccess,
+	onCheckSuccess,
 	onFeatureUsed,
 }: {
 	onTrackSuccess?: (response: any) => void;
+	onCheckSuccess?: (response: any) => void;
 	onFeatureUsed?: (featureId: string) => void;
 }) => {
-	const { customer, track, refetch } = useCustomer();
+	const { customer, track, refetch, check } = useCustomer();
 	const { features } = useFeaturesQuery();
 
 	return (
@@ -101,6 +103,16 @@ export const AvailableFeatures = ({
 								handleSend={async (value) => {
 									const featureId = customer?.features[x].id;
 
+									// Check the feature access
+									const { data: checkResponse, error: checkError } =
+										await check({
+											featureId: featureId,
+											requiredBalance: value,
+										});
+
+									if (!checkError && checkResponse && onCheckSuccess) {
+										onCheckSuccess(checkResponse);
+									}
 									// Notify parent which feature was used
 									if (onFeatureUsed && featureId !== undefined) {
 										onFeatureUsed(featureId);
@@ -123,8 +135,8 @@ export const AvailableFeatures = ({
 						))
 				) : (
 					<span className="text-sm text-muted-foreground">
-						Your current product doesn't have any features. Try purchasing a
-						product in the preview first.
+						Your current plan doesn't have any features. Try purchasing a
+						plan in the preview first.
 					</span>
 				)}
 			</div>

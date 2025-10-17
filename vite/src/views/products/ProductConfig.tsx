@@ -28,7 +28,7 @@ export const ProductConfig = ({
 			<div className="flex flex-col flex-1">
 				<FieldLabel className="mb-1">Name</FieldLabel>
 				<Input
-					placeholder="eg. Starter Product"
+					placeholder="eg. Starter Plan"
 					value={product.name}
 					onChange={(e) => {
 						setSource(e.target.value);
@@ -40,7 +40,7 @@ export const ProductConfig = ({
 				<div className="flex items-center">
 					<Input
 						autoFocus={idEdit}
-						placeholder="eg. Product ID"
+						placeholder="eg. Plan ID"
 						// disabled={!idEdit}
 						className="disabled:bg-transparent disabled:border-none disabled:shadow-none"
 						value={product.id}

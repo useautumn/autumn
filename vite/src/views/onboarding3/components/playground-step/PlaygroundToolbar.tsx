@@ -50,30 +50,43 @@ export const PlaygroundToolbar = () => {
 					},
 				]}
 			/>
-			<div className="flex gap-2 items-center">
-				<Select
-					value={product?.id}
-					onValueChange={(id) => handlePlanSelect?.(id)}
-				>
-					<SelectTrigger className="!h-6 text-body px-2 py-1 min-w-0 max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap">
-						<SelectValue placeholder="Select product" className="truncate" />
-					</SelectTrigger>
-					<SelectContent>
-						{products?.map((prod) => (
-							<SelectItem key={prod.id} value={prod.id} className="text-body">
-								<span className="truncate block max-w-[100px]">
-									{prod.name}
-								</span>
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-				<CreatePlanDialog
-					onSuccess={onCreatePlanSuccess || undefined}
-					size="sm"
-					buttonClassName="!h-6 !px-2 text-body"
-				/>
-			</div>
+			{playgroundMode === "edit" && (
+				<div className="flex gap-2 items-center">
+					{products.filter((p) => !p.archived).length > 1 && (
+						<Select
+							value={product?.id}
+							onValueChange={(id) => handlePlanSelect?.(id)}
+						>
+							<SelectTrigger className="!h-6 text-body px-2 py-1 min-w-0 max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap">
+								<SelectValue
+									placeholder="Select plan"
+									className="truncate"
+								/>
+							</SelectTrigger>
+							<SelectContent>
+								{products
+									.filter((p) => !p.archived)
+									.map((prod) => (
+										<SelectItem
+											key={prod.id}
+											value={prod.id}
+											className="text-body"
+										>
+											<span className="truncate block max-w-[100px]">
+												{prod.name}
+											</span>
+										</SelectItem>
+									))}
+							</SelectContent>
+						</Select>
+					)}
+					<CreatePlanDialog
+						onSuccess={onCreatePlanSuccess || undefined}
+						size="sm"
+						buttonClassName="!h-6 !px-2 text-body"
+					/>
+				</div>
+			)}
 		</div>
 	);
 };

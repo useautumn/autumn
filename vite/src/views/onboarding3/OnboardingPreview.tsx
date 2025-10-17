@@ -9,6 +9,7 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useIsEditingPlan, useSheetStore } from "@/hooks/stores/useSheetStore";
+import { cn } from "@/lib/utils";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { PlanCardToolbar } from "../products/plan/components/plan-card/PlanCardToolbar";
 import { PlanFeatureList } from "../products/plan/components/plan-card/PlanFeatureList";
@@ -17,6 +18,7 @@ import { useOnboarding3QueryState } from "./hooks/useOnboarding3QueryState";
 import { useOnboardingStore } from "./store/useOnboardingStore";
 import { getStepNumber } from "./utils/onboardingUtils";
 
+const MAX_PLAN_NAME_LENGTH = 20;
 interface OnboardingPreviewProps {
 	setConnectStripeOpen?: (open: boolean) => void;
 }
@@ -79,36 +81,55 @@ export const OnboardingPreview = ({
 	}
 
 	return (
-		<Card className="min-w-[28rem] max-w-xl mx-4 bg-card border-border border-[0.5px] p-4">
-			<CardHeader className="gap-0 px-0">
-				<div className="flex flex-row items-center justify-between w-full">
-					<div className="flex flex-row items-center gap-2 min-w-0 flex-1">
-						{showBasicInfo && product?.name ? (
-							<span className="text-main-sec truncate">{product.name}</span>
-						) : (
-							<span className="text-main-sec !text-t4 truncate">
-								Name your product
-							</span>
-						)}
+		<Card
+			className={cn(
+				"min-w-[28rem] max-w-xl mx-4 bg-card border-border border-[0.5px] p-4",
+				showDummyFeature && !showFeatures && "pb-0",
+			)}
+		>
+			<CardHeader className="gap-0 px-0 relative">
+				{/* Absolutely positioned toolbar - CANNOT MOVE */}
+				{showToolbar && (
+					<div className="absolute top-0 right-0 z-10">
+						<PlanCardToolbar
+							onEdit={handleEdit}
+							onDeleteSuccess={handleDeletePlanSuccess || undefined}
+							deleteDisabled={allProducts?.length === 1}
+							deleteTooltip={
+								allProducts?.length === 1
+									? "At least 1+ plan is required."
+									: undefined
+							}
+						/>
+					</div>
+				)}
 
-						{playgroundMode === "edit" && product && (
-							<PlanTypeBadges product={product} />
+				{/* Left content with padding to avoid toolbar */}
+				<div className={cn("flex items-center gap-2", showToolbar && "pr-20")}>
+					<div className="min-w-0 overflow-hidden">
+						{showBasicInfo && product?.name ? (
+							<div className="text-main-sec min-w-0 max-w-[50%]">
+								<span className="truncate max-w-full">
+									{product.name.length > MAX_PLAN_NAME_LENGTH
+										? `${product.name.slice(0, MAX_PLAN_NAME_LENGTH)}...`
+										: product.name}
+								</span>
+							</div>
+						) : (
+							<div className="text-main-sec !text-t4 truncate">
+								Name your plan
+							</div>
 						)}
 					</div>
-					<div className="flex flex-row items-center gap-1">
-						{showToolbar && (
-							<PlanCardToolbar
-								onEdit={handleEdit}
-								onDeleteSuccess={handleDeletePlanSuccess || undefined}
-								deleteDisabled={allProducts?.length === 1}
-								deleteTooltip={
-									allProducts?.length === 1
-										? "At least 1+ product is required."
-										: undefined
-								}
+
+					{playgroundMode === "edit" && product && (
+						<div className="flex-shrink-0">
+							<PlanTypeBadges
+								product={product}
+								iconOnly={product.name.length > MAX_PLAN_NAME_LENGTH - 10}
 							/>
-						)}
-					</div>
+						</div>
+					)}
 				</div>
 
 				{showPricing && (
@@ -134,7 +155,7 @@ export const OnboardingPreview = ({
 			</CardHeader>
 			{showDummyFeature && feature && (
 				<>
-					<Separator className="my-2" />
+					<Separator className="" />
 					<DummyFeatureRow feature={feature} />
 				</>
 			)}
