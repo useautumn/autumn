@@ -24,13 +24,14 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 
 	return (
 		<Button
-			variant="secondary"
-			className="w-full !h-8"
+			variant="dotted"
+			className="group w-full !h-8 bg-[#FDFDFC] hover:!border-neutral-300 hover:!border-dashed hover:text-primary [&:hover_svg]:text-primary"
 			disabled={disabled}
 			onClick={handleAddFeatureClick}
 			aria-label="Add new feature"
 		>
 			<PlusIcon className="size-3" weight="bold" />
+			<span className="group-hover:text-primary">Add Feature</span>
 		</Button>
 	);
 };
