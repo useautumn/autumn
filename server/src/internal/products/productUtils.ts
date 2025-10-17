@@ -22,8 +22,8 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
 import {
 	getBillingInterval,
 	getBillingType,

@@ -5,8 +5,8 @@ import { UTCDate } from "@date-fns/utc";
 import { subHours } from "date-fns";
 import type { Stripe } from "stripe";
 import { db } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createLogger } from "@/external/logtail/logtailUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
@@ -179,7 +179,6 @@ export const initScript = async ({
 		db,
 		features,
 		logger,
-		logtail: logger,
 		apiVersion: new ApiVersionClass(ApiVersion.V1_2),
 	} as unknown as ExtendedRequest;
 

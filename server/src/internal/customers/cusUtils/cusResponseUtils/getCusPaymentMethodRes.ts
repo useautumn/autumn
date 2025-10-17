@@ -1,7 +1,11 @@
+import {
+	type AppEnv,
+	CusExpand,
+	type FullCustomer,
+	type Organization,
+} from "@autumn/shared";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { AppEnv, CusExpand, FullCustomer, Organization } from "@autumn/shared";
 
 export const getCusPaymentMethodRes = async ({
 	org,
@@ -18,12 +22,12 @@ export const getCusPaymentMethodRes = async ({
 		return undefined;
 	}
 
-	let stripeCli = createStripeCli({
+	const stripeCli = createStripeCli({
 		org,
 		env,
 	});
 
-	let paymentMethod = await getCusPaymentMethod({
+	const paymentMethod = await getCusPaymentMethod({
 		stripeCli,
 		stripeId: fullCus.processor?.id,
 		errorIfNone: false,

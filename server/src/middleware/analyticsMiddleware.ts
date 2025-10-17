@@ -7,7 +7,7 @@ const handleResFinish = (req: any, res: any) => {
 		}
 
 		if (process.env.NODE_ENV !== "development") {
-			req.logtail.info(
+			req.logger.info(
 				`[${res.statusCode}] ${req.method} ${req.originalUrl} (${req.org?.slug})`,
 				{
 					statusCode: res.statusCode,
@@ -16,7 +16,7 @@ const handleResFinish = (req: any, res: any) => {
 			);
 		}
 	} catch (error) {
-		console.error("Failed to log response to logtailAll");
+		console.error("Failed to log response");
 		console.error(error);
 	}
 };
@@ -60,7 +60,7 @@ export const analyticsMiddleware = async (req: any, res: any, next: any) => {
 		});
 	}
 
-	req.logtail = req.logtail.child({
+	req.logger = req.logger.child({
 		context: {
 			context: reqContext,
 		},

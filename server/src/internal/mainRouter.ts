@@ -4,7 +4,7 @@ import { Autumn } from "autumn-js";
 import { autumnHandler } from "autumn-js/express";
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
-import { createStripeCli } from "@/external/stripe/utils.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { withAuth, withOrgAuth } from "../middleware/authMiddleware.js";
 import { adminRouter } from "./admin/adminRouter.js";
 import { withAdminAuth } from "./admin/withAdminAuth.js";

@@ -1,32 +1,29 @@
-import express, { Router } from "express";
-import stripe, { Stripe } from "stripe";
+import { type AppEnv, AuthType, type Organization } from "@autumn/shared";
 import chalk from "chalk";
-
+import express, { type Router } from "express";
+import stripe, { Stripe } from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { AppEnv, AuthType, Organization } from "@autumn/shared";
-
-import { handleCheckoutSessionCompleted } from "./webhookHandlers/handleCheckoutCompleted.js";
-import { handleSubscriptionUpdated } from "./webhookHandlers/handleSubUpdated.js";
-import { handleSubDeleted } from "./webhookHandlers/handleSubDeleted.js";
-import { handleSubCreated } from "./webhookHandlers/handleSubCreated.js";
 import {
 	getStripeWebhookSecret,
 	isStripeConnected,
 	unsetOrgStripeKeys,
 } from "@/internal/orgs/orgUtils.js";
-import { handleInvoicePaid } from "./webhookHandlers/handleInvoicePaid.js";
 import { handleRequestError } from "@/utils/errorUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+import { handleCheckoutSessionCompleted } from "./webhookHandlers/handleCheckoutCompleted.js";
+import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDeleted.js";
 import { handleInvoiceCreated } from "./webhookHandlers/handleInvoiceCreated/handleInvoiceCreated.js";
 import { handleInvoiceFinalized } from "./webhookHandlers/handleInvoiceFinalized.js";
-import { handleSubscriptionScheduleCanceled } from "./webhookHandlers/handleSubScheduleCanceled.js";
-import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDeleted.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { createStripeCli } from "./utils.js";
-import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import { handleInvoicePaid } from "./webhookHandlers/handleInvoicePaid.js";
 import { handleInvoiceUpdated } from "./webhookHandlers/handleInvoiceUpdated.js";
-import { disconnectStripe } from "@/internal/orgs/handlers/handleDeleteStripe.js";
+import { handleSubCreated } from "./webhookHandlers/handleSubCreated.js";
+import { handleSubDeleted } from "./webhookHandlers/handleSubDeleted.js";
+import { handleSubscriptionScheduleCanceled } from "./webhookHandlers/handleSubScheduleCanceled.js";
+import { handleSubscriptionUpdated } from "./webhookHandlers/handleSubUpdated.js";
 
 export const stripeWebhookRouter: Router = express.Router();
 
@@ -37,7 +34,7 @@ const logStripeWebhook = ({
 	req: ExtendedRequest;
 	event: Stripe.Event;
 }) => {
-	req.logtail.info(
+	req.logger.info(
 		`${chalk.yellow("STRIPE").padEnd(18)} ${event.type.padEnd(30)} ${req.org.slug} | ${event.id}`,
 	);
 };
@@ -47,7 +44,7 @@ stripeWebhookRouter.post(
 	express.raw({ type: "application/json" }),
 	async (request: any, response: any) => {
 		const sig = request.headers["stripe-signature"];
-		let event;
+		let event: Stripe.Event;
 
 		const { orgId, env } = request.params;
 		const { db } = request;
@@ -103,13 +100,13 @@ stripeWebhookRouter.post(
 
 		// event = request.body;
 
-		request.logtail = request.logtail.child({
+		request.logger = request.logger.child({
 			context: {
 				context: {
 					// body: request.body,
 					event_type: event.type,
 					event_id: event.id,
-					// @ts-ignore
+					// @ts-expect-error
 					object_id: `${event.data?.object?.id}` || "N/A",
 					authType: AuthType.Stripe,
 					org_id: orgId,
@@ -119,7 +116,7 @@ stripeWebhookRouter.post(
 			},
 		});
 
-		let logger = request.logtail;
+		const logger = request.logger;
 		logStripeWebhook({ req: request, event });
 
 		try {
@@ -135,7 +132,7 @@ stripeWebhookRouter.post(
 					});
 					break;
 
-				case "customer.subscription.updated":
+				case "customer.subscription.updated": {
 					const subscription = event.data.object;
 					await handleSubscriptionUpdated({
 						req: request,
@@ -147,6 +144,7 @@ stripeWebhookRouter.post(
 						logger,
 					});
 					break;
+				}
 
 				case "customer.subscription.deleted":
 					await handleSubDeleted({
@@ -157,7 +155,7 @@ stripeWebhookRouter.post(
 					});
 					break;
 
-				case "checkout.session.completed":
+				case "checkout.session.completed": {
 					const checkoutSession = event.data.object;
 					await handleCheckoutSessionCompleted({
 						req: request,
@@ -168,9 +166,10 @@ stripeWebhookRouter.post(
 						logger,
 					});
 					break;
+				}
 
 				// Triggered when payment through Stripe is successful
-				case "invoice.paid":
+				case "invoice.paid": {
 					const invoice = event.data.object;
 					await handleInvoicePaid({
 						db,
@@ -181,6 +180,7 @@ stripeWebhookRouter.post(
 						req: request,
 					});
 					break;
+				}
 
 				case "invoice.updated":
 					await handleInvoiceUpdated({
@@ -191,7 +191,7 @@ stripeWebhookRouter.post(
 					});
 					break;
 
-				case "invoice.created":
+				case "invoice.created": {
 					const createdInvoice = event.data.object;
 					await handleInvoiceCreated({
 						db,
@@ -201,8 +201,9 @@ stripeWebhookRouter.post(
 						logger,
 					});
 					break;
+				}
 
-				case "invoice.finalized":
+				case "invoice.finalized": {
 					const finalizedInvoice = event.data.object;
 					await handleInvoiceFinalized({
 						db,
@@ -212,8 +213,9 @@ stripeWebhookRouter.post(
 						logger,
 					});
 					break;
+				}
 
-				case "subscription_schedule.canceled":
+				case "subscription_schedule.canceled": {
 					const canceledSchedule = event.data.object;
 					await handleSubscriptionScheduleCanceled({
 						db,
@@ -223,6 +225,7 @@ stripeWebhookRouter.post(
 						logger,
 					});
 					break;
+				}
 
 				case "customer.discount.deleted":
 					await handleCusDiscountDeleted({
@@ -310,7 +313,7 @@ export const handleStripeWebhookRefresh = async ({
 	logger: any;
 }) => {
 	if (coreEvents.includes(eventType)) {
-		let stripeCusId = data.object.customer;
+		const stripeCusId = data.object.customer;
 		if (!stripeCusId) {
 			logger.warn(
 				`stripe webhook cache refresh, object doesn't contain customer id`,
@@ -324,7 +327,7 @@ export const handleStripeWebhookRefresh = async ({
 			return;
 		}
 
-		let cus = await CusService.getByStripeId({
+		const cus = await CusService.getByStripeId({
 			db,
 			stripeId: stripeCusId,
 		});

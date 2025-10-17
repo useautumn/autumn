@@ -1,6 +1,10 @@
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { FullCusProduct, FullCustomer, CusProductStatus } from "@autumn/shared";
+import {
+	CusProductStatus,
+	type FullCusProduct,
+	type FullCustomer,
+} from "@autumn/shared";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { CusProductService } from "../cusProducts/CusProductService.js";
 import { cusProductToSchedule } from "../cusProducts/cusProductUtils/convertCusProduct.js";
 

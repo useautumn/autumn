@@ -11,9 +11,10 @@ import {
 	organizations,
 	user,
 } from "@autumn/shared";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { FeatureService } from "../features/FeatureService.js";
 import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
 
 export class OrgService {
@@ -283,5 +284,55 @@ export class OrgService {
 		});
 
 		return result;
+	}
+
+	static async getByAccountId({
+		db,
+		accountId,
+	}: {
+		db: DrizzleCli;
+		accountId: string;
+	}) {
+		const result = await db.query.organizations.findFirst({
+			where: or(
+				eq(
+					sql`${organizations.stripe_connect}->>'default_account_id'`,
+					accountId,
+				),
+				eq(sql`${organizations.stripe_connect}->>'test_account_id'`, accountId),
+				eq(sql`${organizations.stripe_connect}->>'live_account_id'`, accountId),
+			),
+		});
+
+		if (!result) {
+			throw new RecaseError({
+				message: "Organization not found",
+				code: ErrCode.OrgNotFound,
+				statusCode: 404,
+			});
+		}
+
+		const defaultAccountId = result?.stripe_connect?.default_account_id;
+		const testAccountId = result?.stripe_connect?.test_account_id;
+
+		const env =
+			defaultAccountId === accountId || testAccountId === accountId
+				? AppEnv.Sandbox
+				: AppEnv.Live;
+
+		const features = await FeatureService.list({
+			db,
+			orgId: result?.id || "",
+			env,
+		});
+
+		return {
+			features,
+			org: {
+				...(result as Organization),
+				config: OrgConfigSchema.parse(result.config || {}),
+			},
+			env,
+		};
 	}
 }

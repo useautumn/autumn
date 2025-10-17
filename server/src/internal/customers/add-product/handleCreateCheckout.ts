@@ -5,8 +5,8 @@ import {
 	SuccessCode,
 } from "@autumn/shared";
 import type Stripe from "stripe";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
 import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
 import { toSuccessUrl } from "@/internal/orgs/orgUtils/convertOrgUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
@@ -31,7 +31,7 @@ export const handleCreateCheckout = async ({
 	config: AttachConfig;
 	returnCheckout?: boolean;
 }) => {
-	const { db, logtail: logger } = req;
+	const { db, logger } = req;
 
 	const { customer, org, freeTrial, successUrl, rewards } = attachParams;
 

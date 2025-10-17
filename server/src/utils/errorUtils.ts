@@ -103,7 +103,7 @@ export const handleRequestError = ({
 	action: string;
 }) => {
 	try {
-		const logger = req.logtail;
+		const logger = req.logger;
 		if (error instanceof RecaseError) {
 			logger.warn(
 				`RECASE WARNING (${req.org?.slug || "unknown"}): ${error.message} [${error.code}]`,

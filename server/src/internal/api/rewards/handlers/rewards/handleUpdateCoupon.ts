@@ -1,6 +1,6 @@
 import { ErrCode, PriceType, RewardCategory } from "@autumn/shared";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createStripeCoupon } from "@/external/stripe/stripeCouponUtils/stripeCouponUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
@@ -16,7 +16,7 @@ export default async (req: any, res: any) =>
 		action: "update coupon",
 		handler: async (req, res) => {
 			const { internalId } = req.params;
-			const { orgId, env, db, logtail: logger } = req;
+			const { orgId, env, db, logger } = req;
 			const rewardBody = req.body;
 
 			const org = await OrgService.getFromReq(req);

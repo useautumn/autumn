@@ -1,22 +1,18 @@
-import { handleRequestError } from "@/utils/errorUtils.js";
-
-import { CusService } from "@/internal/customers/CusService.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { ErrCode } from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
-import { getCusEntsInFeatures } from "../cusUtils/cusUtils.js";
+import { ErrCode, getCusEntBalance } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import { StatusCodes } from "http-status-codes";
+import { CusService } from "@/internal/customers/CusService.js";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
+import { getUnlimitedAndUsageAllowed } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
 import {
 	deductAllowanceFromCusEnt,
 	deductFromUsageBasedCusEnt,
 } from "@/trigger/updateBalanceTask.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-
-import { getUnlimitedAndUsageAllowed } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
-import { getCusEntBalance } from "@autumn/shared";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
+import { getCusEntsInFeatures } from "../cusUtils/cusUtils.js";
 
 const getCusFeaturesAndOrg = async (req: any, customerId: string) => {
 	// 1. Get customer
@@ -45,7 +41,7 @@ const getCusFeaturesAndOrg = async (req: any, customerId: string) => {
 
 export const handleUpdateBalances = async (req: any, res: any) => {
 	try {
-		const logger = req.logtail;
+		const logger = req.logger;
 		const cusId = req.params.customer_id;
 		const { env, db, features } = req;
 		const { balances } = req.body;
@@ -75,7 +71,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
 		const { cusEnts, cusPrices } = await getCusEntsInFeatures({
 			customer,
 			internalFeatureIds: featuresToUpdate.map((f: any) => f.internal_id!),
-			logger: req.logtail,
+			logger: req.logger,
 		});
 
 		logger.info("--------------------------------");
@@ -121,7 +117,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
 				continue;
 			}
 
-			let { unlimited } = getUnlimitedAndUsageAllowed({
+			const { unlimited } = getUnlimitedAndUsageAllowed({
 				cusEnts,
 				internalFeatureId: feature!.internal_id!,
 			});
@@ -135,21 +131,21 @@ export const handleUpdateBalances = async (req: any, res: any) => {
 			}
 
 			// Get deductions
-			let newBalance = balance.balance;
+			const newBalance = balance.balance;
 			let curBalance = new Decimal(0);
-			let properties = structuredClone(balance);
+			const properties = structuredClone(balance);
 			delete properties.feature_id;
 			delete properties.balance;
 
 			for (const cusEnt of cusEnts) {
-				let cusEntIntCount = cusEnt.entitlement.interval_count || 1;
-				let deductionIntCount = balance.interval_count || 1;
+				const cusEntIntCount = cusEnt.entitlement.interval_count || 1;
+				const deductionIntCount = balance.interval_count || 1;
 
-				let intCountMatch = notNullish(balance.interval_count)
+				const intCountMatch = notNullish(balance.interval_count)
 					? cusEntIntCount === deductionIntCount
 					: true;
 
-				let intMatch = notNullish(balance.interval)
+				const intMatch = notNullish(balance.interval)
 					? balance.interval === cusEnt.entitlement.interval
 					: true;
 
@@ -161,7 +157,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
 					continue;
 				}
 
-				let { balance: cusEntBalance } = getCusEntBalance({
+				const { balance: cusEntBalance } = getCusEntBalance({
 					cusEnt,
 					entityId: balance.entity_id,
 				});
@@ -169,7 +165,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
 				curBalance = curBalance.add(new Decimal(cusEntBalance!));
 			}
 
-			let toDeduct = curBalance.sub(newBalance).toNumber();
+			const toDeduct = curBalance.sub(newBalance).toNumber();
 
 			if (toDeduct == 0) {
 				logger.info(`Skipping ${feature!.id} -- no change`);
@@ -197,8 +193,8 @@ export const handleUpdateBalances = async (req: any, res: any) => {
 
 					const cusEnt = notNullish(interval)
 						? cusEnts.find((cusEnt) => {
-								let cusEntIntCount = cusEnt.entitlement.interval_count || 1;
-								let deductionIntCount = featureDeduction.intervalCount || 1;
+								const cusEntIntCount = cusEnt.entitlement.interval_count || 1;
+								const deductionIntCount = featureDeduction.intervalCount || 1;
 
 								return (
 									cusEnt.internal_feature_id === feature!.internal_id! &&
@@ -233,14 +229,14 @@ export const handleUpdateBalances = async (req: any, res: any) => {
 				}
 
 				for (const cusEnt of cusEnts) {
-					let cusEntIntCount = cusEnt.entitlement.interval_count || 1;
-					let deductionIntCount = featureDeduction.intervalCount || 1;
+					const cusEntIntCount = cusEnt.entitlement.interval_count || 1;
+					const deductionIntCount = featureDeduction.intervalCount || 1;
 
-					let intCountMatch = notNullish(featureDeduction.intervalCount)
+					const intCountMatch = notNullish(featureDeduction.intervalCount)
 						? cusEntIntCount === deductionIntCount
 						: true;
 
-					let intMatch = notNullish(featureDeduction.interval)
+					const intMatch = notNullish(featureDeduction.interval)
 						? featureDeduction.interval === cusEnt.entitlement.interval
 						: true;
 

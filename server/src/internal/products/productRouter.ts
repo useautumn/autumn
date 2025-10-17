@@ -1,8 +1,8 @@
 import { ProductNotFoundError } from "@autumn/shared";
 
 import { Router } from "express";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { checkStripeProductExists } from "@/internal/products/productUtils.js";
@@ -33,7 +33,7 @@ productRouter.post("/:productId/copy", handleCopyProduct);
 
 productRouter.post("/all/init_stripe", async (req: any, res) => {
 	try {
-		const { orgId, env, logtail: logger, db } = req;
+		const { orgId, env, logger, db } = req;
 
 		const [fullProducts, org] = await Promise.all([
 			ProductService.listFull({

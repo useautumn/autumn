@@ -265,9 +265,7 @@ export const routeHandler = async <TLoad = undefined>({
 	} catch (error) {
 		if (error instanceof RecaseError) {
 			if (error.code === ErrCode.EntityNotFound) {
-				req.logtail.warn(
-					`${error.message}, org: ${req.org?.slug || req.orgId}`,
-				);
+				req.logger.warn(`${error.message}, org: ${req.org?.slug || req.orgId}`);
 				return res.status(404).json({
 					message: error.message,
 					code: error.code,
@@ -281,7 +279,7 @@ export const routeHandler = async <TLoad = undefined>({
 				originalUrl.includes("/exchange") &&
 				error.message.includes("Invalid API Key provided")
 			) {
-				req.logtail.warn(`Exchange router, invalid API Key provided`);
+				req.logger.warn(`Exchange router, invalid API Key provided`);
 
 				return res.status(400).json({
 					message: error.message,
@@ -293,7 +291,7 @@ export const routeHandler = async <TLoad = undefined>({
 				error.message.includes("not a valid email address") ||
 				error.message.includes("email: Invalid input")
 			) {
-				req.logtail.warn(`Invalid email address`);
+				req.logger.warn(`Invalid email address`);
 				return res.status(400).json({
 					message: error.message,
 					code: ErrCode.InvalidRequest,
@@ -304,7 +302,7 @@ export const routeHandler = async <TLoad = undefined>({
 				originalUrl.includes("/billing_portal") &&
 				error.message.includes("Provide a configuration or create your default")
 			) {
-				req.logtail.warn(`Billing portal config error, org: ${req.org?.slug}`);
+				req.logger.warn(`Billing portal config error, org: ${req.org?.slug}`);
 				return res.status(404).json({
 					message: error.message,
 					code: ErrCode.InvalidRequest,
@@ -317,7 +315,7 @@ export const routeHandler = async <TLoad = undefined>({
 					"Invalid URL: An explicit scheme (such as https)",
 				)
 			) {
-				req.logtail.warn(
+				req.logger.warn(
 					`Billing portal return_url error, org: ${req.org?.slug}, return_url: ${req.body.return_url}`,
 				);
 				return res.status(400).json({
