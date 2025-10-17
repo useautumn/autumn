@@ -294,7 +294,7 @@ const CommandBar = () => {
 
 	const navigationItems = [
 		{
-			title: "Go to Products",
+			title: "Go to Plans",
 			icon: <PackageIcon />,
 			shortcutKey: "1",
 			onSelect: () => {
@@ -627,7 +627,7 @@ const CommandBar = () => {
 			<CommandInput
 				placeholder={
 					currentPage === "main"
-						? "Search customers and products..."
+						? "Search customers and plans..."
 						: currentPage === "impersonate"
 							? "Search users and organizations to impersonate..."
 							: "Search organizations..."

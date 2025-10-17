@@ -45,12 +45,12 @@ export const UpdateProductDialog = ({
 			await refetch();
 			setOpen(false);
 
-			toast.success(`Successfully updated product ${product.id}`);
+			toast.success(`Successfully updated plan ${product.id}`);
 		} catch (error: unknown) {
 			toast.error(
-				getBackendErr(error as AxiosError, "Failed to update product"),
+				getBackendErr(error as AxiosError, "Failed to update plan"),
 			);
-		} finally {
+		} finally{
 			setLoading(false);
 		}
 	};
@@ -59,7 +59,7 @@ export const UpdateProductDialog = ({
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogContent onClick={(e) => e.stopPropagation()}>
 				<DialogHeader>
-					<DialogTitle>Edit Product</DialogTitle>
+					<DialogTitle>Edit Plan</DialogTitle>
 				</DialogHeader>
 				<div className="flex flex-col gap-4">
 					<ProductConfig

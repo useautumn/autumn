@@ -41,7 +41,7 @@ const ToggleProductDialog = ({
 			await toggleProduct(value, false);
 			setOpen(false);
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to update product"));
+			toast.error(getBackendErr(error, "Failed to update plan"));
 		}
 		setLoading(false);
 	};

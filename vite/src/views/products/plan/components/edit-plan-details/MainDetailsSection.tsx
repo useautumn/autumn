@@ -31,7 +31,7 @@ export const MainDetailsSection = () => {
 				{/* <div>
 					<div className="text-form-label block mb-1">Description</div>
 					<Input
-						placeholder="eg. This product includes 100 credits"
+						placeholder="eg. This plan includes 100 credits"
 						value={product.description}
 						onChange={(e) =>
 							setProduct({ ...product, description: e.target.value })

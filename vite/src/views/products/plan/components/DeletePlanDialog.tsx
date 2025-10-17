@@ -76,9 +76,9 @@ export const DeletePlanDialog = ({
 			}
 
 			setOpen(false);
-			toast.success("Product deleted successfully");
+			toast.success("Plan deleted successfully");
 		} catch (error: unknown) {
-			toast.error(getBackendErr(error as AxiosError, "Error deleting product"));
+			toast.error(getBackendErr(error as AxiosError, "Error deleting plan"));
 		} finally {
 			setLoading(false);
 		}
@@ -98,7 +98,7 @@ export const DeletePlanDialog = ({
 			setOpen(false);
 			await Promise.all([invalidateProducts(), invalidateProduct()]);
 		} catch (error) {
-			toast.error(getBackendErr(error, "Error archiving product"));
+			toast.error(getBackendErr(error, "Error archiving plan"));
 		} finally {
 			setLoading(false);
 		}
@@ -118,7 +118,7 @@ export const DeletePlanDialog = ({
 			toast.success(`${product.name} unarchived successfully`);
 			setOpen(false);
 		} catch (error) {
-			toast.error(getBackendErr(error, "Error unarchiving product"));
+			toast.error(getBackendErr(error, "Error unarchiving plan"));
 		} finally {
 			setLoading(false);
 		}

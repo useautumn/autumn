@@ -36,12 +36,12 @@ export default function PlanEditorView() {
 
 	if (error || !originalProduct) {
 		// Handle 500 errors from backend when product doesn't exist
-		let errorMessage = `Product ${product_id} not found`;
+		let errorMessage = `Plan ${product_id} not found`;
 
 		if (error instanceof AxiosError && error.response?.status === 500) {
-			errorMessage = `Product ${product_id} not found`;
+			errorMessage = `Plan ${product_id} not found`;
 		} else if (error) {
-			errorMessage = error.message || `Product ${product_id} not found`;
+			errorMessage = error.message || `Plan ${product_id} not found`;
 		}
 
 		return <ErrorScreen returnUrl="/products">{errorMessage}</ErrorScreen>;

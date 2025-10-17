@@ -168,7 +168,7 @@ export const useAttachState = ({
 		const result = (() => {
 			if (cusProduct && !itemsChanged) {
 				if (flags.isOneOff) {
-					return "Attach Product";
+					return "Attach Plan";
 				}
 
 				if (flags.hasPrepaid) {
@@ -177,10 +177,10 @@ export const useAttachState = ({
 			}
 
 			if (flags.isCanceled) {
-				return "Renew Product";
+				return "Renew Plan";
 			}
 
-			return "Attach Product";
+			return "Attach Plan";
 		})();
 
 		console.log('[BTN]', { text: result, cusId: cusProduct?.id, changed: itemsChanged, prepaid: flags.hasPrepaid });
