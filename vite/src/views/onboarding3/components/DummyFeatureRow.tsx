@@ -17,23 +17,28 @@ interface DummyFeatureRowProps {
 
 export const DummyFeatureRow = ({ feature }: DummyFeatureRowProps) => {
 	// Map FeatureType to ProductItemFeatureType for icon display
+	// Using the same logic as getItemFeatureType from shared utils
 	const getFeatureTypeForIcon = (
-		featureType: FeatureType | null,
+		feature: CreateFeature,
 	): ProductItemFeatureType => {
-		if (featureType === FeatureType.Boolean) {
-			return ProductItemFeatureType.Boolean;
+		if (feature.type === FeatureType.Boolean) {
+			return ProductItemFeatureType.Static;
 		}
-		if (featureType === FeatureType.Metered) {
+		if (feature.type === FeatureType.CreditSystem) {
 			return ProductItemFeatureType.SingleUse;
 		}
-		// Default to SingleUse for other types
+		// For Metered features, use the config's usage_type if available
+		if (feature.type === FeatureType.Metered && feature.config?.usage_type) {
+			return feature.config.usage_type as ProductItemFeatureType;
+		}
+		// Default to SingleUse
 		return ProductItemFeatureType.SingleUse;
 	};
 
 	// Create a mock ProductItem for PlanFeatureIcon
 	const mockItem: ProductItem = {
 		feature_id: feature.id || "",
-		feature_type: getFeatureTypeForIcon(feature.type),
+		feature_type: getFeatureTypeForIcon(feature),
 		included_usage: null,
 		interval: null,
 		price: null,
