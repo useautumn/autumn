@@ -154,7 +154,7 @@ export const AutumnHandler = () => {
 	return (
 		<div className="flex flex-col gap-4 w-full">
 			<StepHeader
-				number={5}
+				number={4}
 				title={
 					<p>
 						Mount <CodeSpan>autumnHandler</CodeSpan> to your backend

@@ -13,9 +13,10 @@ import { secretKeyMiddleware } from "./honoMiddlewares/secretKeyMiddleware.js";
 import { traceMiddleware } from "./honoMiddlewares/traceMiddleware.js";
 import type { HonoEnv } from "./honoUtils/HonoEnv.js";
 import { cusRouter } from "./internal/customers/cusRouter.js";
-import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/handleGetOAuthUrl.js";
+import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/handleOAuthCallback.js";
 import { honoOrgRouter } from "./internal/orgs/orgRouter.js";
 import { honoPlatformRouter } from "./internal/platform/honoPlatformRouter.js";
+import { platformBetaRouter } from "./internal/platform/platformBeta/platformBetaRouter.js";
 import { honoProductRouter } from "./internal/products/productRouter.js";
 import { auth } from "./utils/auth.js";
 
@@ -76,8 +77,7 @@ export const createHonoApp = () => {
 	app.use("*", traceMiddleware);
 
 	// Webhook routes (after baseMiddleware for logging, but baseMiddleware skips body parsing)
-	app.post("/webhooks/connect", handleConnectWebhook);
-
+	app.post("/webhooks/connect/:env", handleConnectWebhook);
 	app.use("/v1/*", secretKeyMiddleware);
 	app.use("/v1/*", orgConfigMiddleware);
 	app.use("/v1/*", apiVersionMiddleware);
@@ -88,6 +88,7 @@ export const createHonoApp = () => {
 	app.route("v1/customers", cusRouter);
 	app.route("v1/products", honoProductRouter);
 	app.route("v1/platform", honoPlatformRouter);
+	app.route("v1/platform/beta", platformBetaRouter);
 	app.route("v1/organization", honoOrgRouter);
 
 	// Error handler - must be defined after all routes and middleware

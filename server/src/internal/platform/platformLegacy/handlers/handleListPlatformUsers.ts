@@ -81,9 +81,12 @@ function cleanOrgSlug(slug: string, orgId: string): string {
 		cleanedSlug = cleanedSlug.slice(prefix.length);
 	}
 	// Handle the case where slug is prepended with "slug_orgId"
-	const altPrefix = `_${orgId}`;
-	if (cleanedSlug.endsWith(altPrefix)) {
-		cleanedSlug = cleanedSlug.slice(0, -altPrefix.length);
+	const altPrefix1 = `_${orgId}`;
+	const altPrefix2 = `|${orgId}`;
+	if (cleanedSlug.endsWith(altPrefix1)) {
+		cleanedSlug = cleanedSlug.slice(0, -altPrefix1.length);
+	} else if (cleanedSlug.endsWith(altPrefix2)) {
+		cleanedSlug = cleanedSlug = cleanedSlug.slice(0, -altPrefix2.length);
 	}
 	return cleanedSlug;
 }

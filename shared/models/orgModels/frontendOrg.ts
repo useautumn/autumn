@@ -13,6 +13,14 @@ export const FrontendOrgSchema = z.object({
 	live_pkey: z.string().nullable(),
 
 	stripe_connection: z.string(),
+	master: z
+		.object({
+			id: z.string(),
+			name: z.string(),
+			slug: z.string(),
+		})
+		.nullable(),
+	through_master: z.boolean(),
 });
 
 export type FrontendOrg = z.infer<typeof FrontendOrgSchema>;

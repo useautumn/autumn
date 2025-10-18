@@ -1,8 +1,10 @@
 import { AppEnv, customers, ErrCode, type Organization } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
 import type { Response } from "express";
-import Stripe from "stripe";
-import { initMasterStripe } from "@/external/connect/initMasterStripe.js";
+import {
+	deauthorizeAccount,
+	deleteConnectedAccount,
+} from "@/external/connect/connectUtils.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { deleteSvixApp } from "@/external/svix/svixHelpers.js";
 import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
@@ -71,42 +73,28 @@ const deleteStripeAccounts = async ({
 	org: Organization;
 	logger: Logger;
 }) => {
-	const stripe = initMasterStripe();
-
-	if (org.stripe_connect.test_account_id) {
-		try {
-			await stripe.accounts.del(org.stripe_connect.test_account_id);
-		} catch (error) {
-			if (error instanceof Stripe.errors.StripeError) {
-				logger.error(
-					`Failed to delete stripe test acocunt ID for ${org.id}, ${org.slug}. ${error.message})`,
-				);
-			}
-		}
+	if (org.test_stripe_connect?.account_id) {
+		await deauthorizeAccount({
+			accountId: org.test_stripe_connect.account_id,
+			env: AppEnv.Sandbox,
+			logger,
+		});
 	}
 
-	if (org.stripe_connect.live_account_id) {
-		try {
-			await stripe.accounts.del(org.stripe_connect.live_account_id);
-		} catch (error) {
-			if (error instanceof Stripe.errors.StripeError) {
-				logger.error(
-					`Failed to delete stripe live account ID for ${org.id}, ${org.slug}. ${error.message})`,
-				);
-			}
-		}
+	if (org.live_stripe_connect?.account_id) {
+		await deauthorizeAccount({
+			accountId: org.live_stripe_connect.account_id,
+			env: AppEnv.Live,
+			logger,
+		});
 	}
 
-	if (org.stripe_connect.default_account_id) {
-		try {
-			await stripe.accounts.del(org.stripe_connect.default_account_id);
-		} catch (error) {
-			if (error instanceof Stripe.errors.StripeError) {
-				logger.error(
-					`Failed to delete stripe default account ID for ${org.id}, ${org.slug}. ${error.message})`,
-				);
-			}
-		}
+	if (org.test_stripe_connect?.default_account_id) {
+		await deleteConnectedAccount({
+			accountId: org.test_stripe_connect.default_account_id,
+			env: AppEnv.Sandbox,
+			logger,
+		});
 	}
 };
 

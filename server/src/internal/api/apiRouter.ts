@@ -14,7 +14,7 @@ import { featureRouter } from "../features/featureRouter.js";
 import { internalFeatureRouter } from "../features/internalFeatureRouter.js";
 import { migrationRouter } from "../migrations/migrationRouter.js";
 import { handleGetOrg } from "../orgs/handlers/handleGetOrg.js";
-import { platformRouter } from "../platform/platformRouter.js";
+import { platformRouter } from "../platform/platformLegacy/platformRouter.js";
 import { productBetaRouter, productRouter } from "../products/productRouter.js";
 import { componentRouter } from "./components/componentRouter.js";
 import { entityRouter } from "./entities/entityRouter.js";
