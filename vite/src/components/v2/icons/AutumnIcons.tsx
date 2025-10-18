@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/a11y/noSvgWithoutTitle: needed */
 import { useId } from "react";
 
 export const FeatureArrowIcon = () => {
@@ -279,9 +280,11 @@ export const ContinuousUseIcon = () => {
 export const DefaultIcon = ({
 	size = 16,
 	color = "#666666",
+	hideTitle = false,
 }: {
 	size?: number;
 	color?: string;
+	hideTitle?: boolean;
 }) => {
 	return (
 		<svg
@@ -291,7 +294,7 @@ export const DefaultIcon = ({
 			fill="none"
 			xmlns="http://www.w3.org/2000/svg"
 		>
-			<title>Default</title>
+			{!hideTitle && <title>Default</title>}
 			<path
 				d="M11.875 2.6875H3.125C2.88338 2.6875 2.6875 2.88338 2.6875 3.125V11.875C2.6875 12.1166 2.88338 12.3125 3.125 12.3125H11.875C12.1166 12.3125 12.3125 12.1166 12.3125 11.875V3.125C12.3125 2.88338 12.1166 2.6875 11.875 2.6875Z"
 				stroke={color}
@@ -307,9 +310,11 @@ export const DefaultIcon = ({
 export const FreeTrialIcon = ({
 	size = 15,
 	color = "#666666",
+	hideTitle = false,
 }: {
 	size?: number;
 	color?: string;
+	hideTitle?: boolean;
 }) => {
 	return (
 		<svg
@@ -319,7 +324,7 @@ export const FreeTrialIcon = ({
 			fill="none"
 			xmlns="http://www.w3.org/2000/svg"
 		>
-			<title>Free Trial</title>
+			{!hideTitle && <title>Free Trial</title>}
 			<path
 				d="M11.875 2.1875H3.125C2.88338 2.1875 2.6875 2.38338 2.6875 2.625V11.375C2.6875 11.6166 2.88338 11.8125 3.125 11.8125H11.875C12.1166 11.8125 12.3125 11.6166 12.3125 11.375V2.625C12.3125 2.38338 12.1166 2.1875 11.875 2.1875Z"
 				stroke={color}
