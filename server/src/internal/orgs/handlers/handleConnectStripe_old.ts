@@ -225,6 +225,8 @@ export const handleGetStripe = async (req: any, res: any) => {
 		const stripeCli = createStripeCli({ org, env: req.env });
 		const account_details = await stripeCli.accounts.retrieve();
 
+		// console.log("Account details: ", account_details);
+
 		res.status(200).json(account_details);
 	} catch (error) {
 		handleRequestError({ req, error, res, action: "Get invoice" });

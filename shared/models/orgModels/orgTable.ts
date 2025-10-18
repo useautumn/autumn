@@ -22,6 +22,9 @@ export type StripeConfig = {
 	live_webhook_secret?: string;
 	sandbox_success_url?: string;
 	success_url?: string;
+
+	test_connect_webhook_secret?: string;
+	live_connect_webhook_secret?: string;
 };
 
 export type OrgProcessorConfig = {
@@ -89,7 +92,9 @@ export const organizations = pgTable(
 	],
 );
 
-export type Organization = typeof organizations.$inferSelect;
+export type Organization = typeof organizations.$inferSelect & {
+	master: Organization | null;
+};
 
 // Multi tenancy flow <-> stripe connect...
 // Create org in Autumn, don't need stripe connect key, we create an Autumn connect account for them.

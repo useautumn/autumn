@@ -39,9 +39,11 @@ export const initOrgSvixApps = async ({
 export const afterOrgCreated = async ({
 	org,
 	user,
+	createStripeAccount = true,
 }: {
 	org: Organization;
 	user: User;
+	createStripeAccount?: boolean;
 }) => {
 	logger.info(`Org created: ${org.id} (${org.slug})`);
 	const { id, slug, createdAt } = org;
@@ -56,23 +58,24 @@ export const afterOrgCreated = async ({
 		});
 
 		// 1. Add stripe connect config
-		console.log("Creating stripe connect account");
-		const stripeConnectAccount = await createConnectAccount({
-			org: org,
-			user,
-		});
+		if (createStripeAccount) {
+			console.log("Creating stripe connect account");
+			const stripeConnectAccount = await createConnectAccount({
+				org: org,
+				user,
+			});
 
-		console.log("Stripe connect account:", stripeConnectAccount);
-		await OrgService.update({
-			db,
-			orgId: org.id,
-			updates: {
-				default_currency: "usd",
-				stripe_connect: {
-					default_account_id: stripeConnectAccount.id,
+			await OrgService.update({
+				db,
+				orgId: org.id,
+				updates: {
+					default_currency: "usd",
+					test_stripe_connect: {
+						default_account_id: stripeConnectAccount.id,
+					},
 				},
-			},
-		});
+			});
+		}
 
 		// 1. Create svix webhoooks
 		const { sandboxApp, liveApp } = await initOrgSvixApps({

@@ -1,7 +1,6 @@
 import express, { type Router } from "express";
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { handleGetStripe } from "./handlers/handleConnectStripe_old.js";
 import { handleDeleteOrg } from "./handlers/handleDeleteOrg.js";
 import { handleGetInvites } from "./handlers/handleGetInvites.js";
 import { handleGetOrg } from "./handlers/handleGetOrg.js";
@@ -13,6 +12,7 @@ import { handleGetUploadUrl } from "./handlers/handleGetUploadUrl.js";
 import { handleConnectStripe } from "./handlers/stripeHandlers/handleConnectStripe.js";
 import { handleDeleteStripe } from "./handlers/stripeHandlers/handleDeleteStripe.js";
 import { handleGetOAuthUrl } from "./handlers/stripeHandlers/handleGetOAuthUrl.js";
+import { handleGetStripeAccount } from "./handlers/stripeHandlers/handleGetStripeAccount.js";
 
 export const orgRouter: Router = express.Router();
 orgRouter.get("/members", handleGetOrgMembers);
@@ -29,12 +29,11 @@ orgRouter.delete("/delete-user", async (req: any, res) => {
 
 orgRouter.get("", handleGetOrg);
 
-orgRouter.get("/stripe", handleGetStripe);
-
 // orgRouter.post("/stripe", handleConnectStripe);
 
 export const honoOrgRouter = new Hono<HonoEnv>();
 
+honoOrgRouter.get("/stripe", ...handleGetStripeAccount);
 honoOrgRouter.delete("/stripe", ...handleDeleteStripe);
 honoOrgRouter.post("/stripe", ...handleConnectStripe);
 honoOrgRouter.get("/stripe/oauth_url", ...handleGetOAuthUrl);

@@ -1,38 +1,73 @@
+import { AppEnv } from "@autumn/shared";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { PageSectionHeader } from "@/components/general/PageSectionHeader";
 import { Button } from "@/components/ui/button";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { OrgService } from "@/services/OrgService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
+import { getStripeDashboardLink } from "@/utils/linkUtils";
 import { CurrencySelect } from "@/views/onboarding/ConnectStripe";
+import ConnectStripeDialog from "@/views/onboarding2/ConnectStripeDialog";
+import { DisconnectStripePopover } from "./DisconnectStripePopover";
 
 export const ConfigureStripe = () => {
 	const { org, mutate } = useOrg();
-	const { stripeAccount } = useOrgStripeQuery();
+	const { stripeAccount, isLoading: isLoadingStripeAccount } =
+		useOrgStripeQuery();
 	const axiosInstance = useAxiosInstance();
+	const [searchParams, setSearchParams] = useSearchParams();
+	const flags = useAutumnFlags();
 
 	const [newStripeConfig, setNewStripeConfig] = useState({
 		success_url: org?.success_url,
 		default_currency: org?.default_currency,
-		// secret_key: org?.stripe_connected ? "Stripe connected" : "",
 	});
 
 	const [connecting, setConnecting] = useState(false);
-	const [disconnecting, setDisconnecting] = useState(false);
+	const [showConnectDialog, setShowConnectDialog] = useState(false);
+	const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+	const env = useEnv();
+
+	// Check if user can paste secret keys (feature flagged)
+	const canPasteSecretKey =
+		flags.stripe_key === true || flags.platform === true;
 
 	useEffect(() => {
 		setNewStripeConfig({
 			success_url: org?.success_url,
 			default_currency: org?.default_currency,
-			// stripe_connected: org?.stripe_connected,
 		});
 	}, [org]);
+
+	useEffect(() => {
+		const error = searchParams.get("error");
+		if (error === "account_already_connected") {
+			setShowDuplicateDialog(true);
+		}
+	}, [searchParams]);
 
 	const allowSave = () => {
 		return (
@@ -71,66 +106,145 @@ export const ConfigureStripe = () => {
 		}
 	};
 
-	const handleVisitDashboard = () => {
-		window.open(
-			`https://dashboard.stripe.com/${stripeAccount?.id}/test/dashboard`,
-			"_blank",
-		);
+	const getConnectionStatus = () => {
+		const connection = org?.stripe_connection;
+		const accountName =
+			stripeAccount?.business_profile?.name ||
+			stripeAccount?.settings?.dashboard?.display_name;
+		const accountId = stripeAccount?.id;
+
+		if (connection === "secret_key") {
+			return {
+				description: `You have connected the Stripe account ${accountId}${accountName ? ` (${accountName})` : ""} via secret key.`, // Will show dashboard link in the same line
+				showDisconnect: true,
+				showConnectButtons: false,
+				showDefaultAccountLink: true,
+			};
+		}
+
+		if (connection === "oauth") {
+			const accountName =
+				stripeAccount?.business_profile?.name ||
+				stripeAccount?.settings?.dashboard?.display_name;
+			const accountId = stripeAccount?.id;
+			return {
+				description: `You have connected the Stripe account ${accountId}${accountName ? ` (${accountName})` : ""} via OAuth.`,
+				showDisconnect: true,
+				showConnectButtons: false,
+				showDefaultAccountLink: false,
+			};
+		}
+
+		if (connection === "default") {
+			return {
+				description:
+					env === AppEnv.Live
+						? "To start taking payments in Production, connect your Stripe live account below:"
+						: "You are using Autumn's default test account. To connect your own, click the button below",
+				showDisconnect: false,
+				showConnectButtons: true,
+				showDefaultAccountLink: false, // Don't show for default accounts
+			};
+		}
+
+		return {
+			description:
+				env === AppEnv.Live
+					? "To start taking payments in Production, connect your Stripe live account below:"
+					: "No Stripe account connected",
+			showDisconnect: false,
+			showConnectButtons: true,
+			showDefaultAccountLink: false,
+		};
 	};
 
-	const handleDisconnectStripe = async () => {
-		setDisconnecting(true);
-		try {
-			await axiosInstance.delete("/v1/organization/stripe");
-			await mutate();
-			toast.success("Successfully disconnected account from Stripe");
-		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to disconnect Stripe"));
-		} finally {
-			setDisconnecting(false);
+	const getDashboardUrl = () => {
+		const connection = org?.stripe_connection;
+
+		if (connection === "oauth" && stripeAccount?.id) {
+			return getStripeDashboardLink({
+				env,
+				accountId: stripeAccount?.id,
+			});
 		}
+
+		// For secret_key, link to main dashboard (no account ID)
+		if (connection === "secret_key") {
+			return getStripeDashboardLink({
+				env,
+				accountId: stripeAccount?.id,
+			});
+		}
+
+		return null;
 	};
+
+	const status = getConnectionStatus();
+	const dashboardUrl = getDashboardUrl();
 
 	return (
 		<div className="flex flex-col gap-4">
 			<PageSectionHeader title="Stripe Settings" />
 			<div className="px-10 max-w-[600px] flex flex-col gap-4">
-				<div className="flex flex-col gap-2">
-					{org.stripe_connection !== "default" ? (
-						<div>
-							<Button
-								variant="outline"
-								onClick={handleDisconnectStripe}
-								isLoading={disconnecting}
-							>
-								Disconnect Stripe
-							</Button>
-							<Button variant="outline" onClick={handleVisitDashboard}>
-								{stripeAccount?.id}
-							</Button>
+				<Card className="!p-4 shadow-none">
+					<CardHeader className="px-0">
+						<CardTitle>Connect your Stripe account</CardTitle>
+						{isLoadingStripeAccount ? (
+							<div className="space-y-2">
+								<Skeleton className="h-4 w-full" />
+								<Skeleton className="h-4 w-3/4" />
+							</div>
+						) : (
+							status.description && (
+								<CardDescription>
+									{status.description}
+									{dashboardUrl && (
+										<span className="text-muted-foreground">
+											{" "}
+											Visit the Stripe dashboard{" "}
+											<a
+												href={dashboardUrl}
+												target="_blank"
+												rel="noopener noreferrer"
+												className="underline text-primary"
+											>
+												here
+											</a>
+										</span>
+									)}
+								</CardDescription>
+							)
+						)}
+					</CardHeader>
+
+					<CardContent className="flex flex-col gap-2 px-0">
+						<div className="flex gap-2">
+							{status.showConnectButtons && (
+								<>
+									<Button variant="outline" onClick={handleRedirectToOAuth}>
+										Connect via OAuth
+									</Button>
+									{canPasteSecretKey && (
+										<Button
+											variant="outline"
+											onClick={() => setShowConnectDialog(true)}
+										>
+											Paste secret key
+										</Button>
+									)}
+								</>
+							)}
+
+							{status.showDisconnect && (
+								<DisconnectStripePopover
+									onSuccess={async () => {
+										await mutate();
+									}}
+								/>
+							)}
 						</div>
-					) : (
-						<>
-							<div className="flex gap-2">
-								<Button variant="outline" onClick={handleRedirectToOAuth}>
-									Connect via OAuth
-								</Button>
-								<Button variant="outline">Paste your Stripe secret key</Button>
-							</div>
-							<div>
-								{org.stripe_connection && (
-									<p className="text-t3 text-sm mb-2">
-										Connection: {org.stripe_connection}
-									</p>
-								)}
-								<Button variant="outline" onClick={handleVisitDashboard}>
-									{stripeAccount?.id}
-								</Button>
-							</div>
-						</>
-					)}
-				</div>
-				<Separator />
+					</CardContent>
+				</Card>
 
 				<div>
 					<FieldLabel className="mb-1">
@@ -160,7 +274,6 @@ export const ConfigureStripe = () => {
 						This currency that your prices will be created in. This setting is
 						shared between your sandbox and production environment.
 					</p>
-					{/* <Input value={org.default_currency} /> */}
 					<CurrencySelect
 						defaultCurrency={newStripeConfig.default_currency.toUpperCase()}
 						setDefaultCurrency={(currency) =>
@@ -181,79 +294,62 @@ export const ConfigureStripe = () => {
 					>
 						Save
 					</Button>
-					{/* {org.stripe_connected ? (
-						<DisconnectStripePopover
-							onSuccess={async () => {
-								await mutate();
-								setNewStripeConfig({
-									...newStripeConfig,
-									secret_key: "",
-								});
-							}}
-						/>
-					) : (
-						<div className="w-6/12" />
-					)} */}
 				</div>
 			</div>
+
+			<ConnectStripeDialog
+				open={showConnectDialog}
+				setOpen={setShowConnectDialog}
+			/>
+
+			<Dialog
+				open={showDuplicateDialog}
+				onOpenChange={(open) => {
+					setShowDuplicateDialog(open);
+					if (!open) {
+						// Clear query params when closing dialog
+						searchParams.delete("error");
+						searchParams.delete("account_id");
+						searchParams.delete("account_name");
+						searchParams.delete("connected_org_name");
+						searchParams.delete("connected_org_slug");
+						setSearchParams(searchParams);
+					}
+				}}
+			>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Account Already Connected</DialogTitle>
+						<DialogDescription>
+							The Stripe account{" "}
+							<strong>{searchParams.get("account_id")}</strong>
+							{searchParams.get("account_name") && (
+								<> ({searchParams.get("account_name")})</>
+							)}{" "}
+							is already connected to the Autumn organization{" "}
+							<strong>{searchParams.get("connected_org_name")}</strong>
+							{searchParams.get("connected_org_slug") && (
+								<> ({searchParams.get("connected_org_slug")})</>
+							)}
+							. Please disconnect it from there first before connecting to this
+							organization.
+						</DialogDescription>
+					</DialogHeader>
+					<Button
+						onClick={() => {
+							setShowDuplicateDialog(false);
+							searchParams.delete("error");
+							searchParams.delete("account_id");
+							searchParams.delete("account_name");
+							searchParams.delete("connected_org_name");
+							searchParams.delete("connected_org_slug");
+							setSearchParams(searchParams);
+						}}
+					>
+						OK
+					</Button>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 };
-
-// <p className="text-t3 text-sm mb-2">
-// 						You can retrieve this from your Stripe dashboard{" "}
-// 						<a
-// 							href="https://dashboard.stripe.com/apikeys"
-// 							target="_blank"
-// 							rel="noopener noreferrer"
-// 							className="text-primary underline"
-// 						>
-// 							here
-// 						</a>
-// 						.
-// 					</p>
-// 					{env === AppEnv.Live && (
-// 						<div className="flex items-center gap-2 mb-2">
-// 							<span className="text-t3 text-sm">
-// 								If you want to use a restricted key
-// 							</span>
-// 							<InfoTooltip>
-// 								<div className="max-w-xs">
-// 									<p className="mb-2">The following scopes are needed:</p>
-// 									<ul className="list-disc list-inside space-y-0.5">
-// 										<li>Core (read & write)</li>
-// 										<li>Checkout (read & write)</li>
-// 										<li>Billing (read & write)</li>
-// 										<li>All webhooks (write)</li>
-// 										<li>Connect → Account Links (write)</li>
-// 									</ul>
-
-// 									<p className="mt-2 mb-2 text-xs">
-// 										In your Stripe dashboard, go to{" "}
-// 										<strong>Developers → API keys</strong>, click{" "}
-// 										<strong>Create restricted key</strong>, and enable the
-// 										scopes above with the listed permissions.
-// 									</p>
-// 								</div>
-// 							</InfoTooltip>
-// 						</div>
-// 					)}
-
-// 					{org.stripe_connected ? (
-// 						<Input
-// 							disabled
-// 							value="Stripe connected"
-// 							endContent={<Check size={14} className="text-t3" />}
-// 						/>
-// 					) : (
-// 						<Input
-// 							placeholder={env === AppEnv.Live ? "sk_live_..." : "sk_test_..."}
-// 							value={newStripeConfig.secret_key}
-// 							onChange={(e) =>
-// 								setNewStripeConfig({
-// 									...newStripeConfig,
-// 									secret_key: e.target.value,
-// 								})
-// 							}
-// 						/>
-// 					)}

@@ -10,7 +10,10 @@ import { eq } from "drizzle-orm";
 import Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { CacheManager } from "@/external/caching/CacheManager.js";
-import { orgToAccountId } from "@/external/connect/connectUtils.js";
+import {
+	orgToAccountId,
+	shouldUseMaster,
+} from "@/external/connect/connectUtils.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { decryptData, generatePublishableKey } from "@/utils/encryptUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
@@ -131,7 +134,7 @@ export const deleteStripeWebhook = async ({
 }) => {
 	if (!isStripeConnected({ org, env, throughSecretKey: true })) return;
 
-	const stripeCli = createStripeCli({ org, env });
+	const stripeCli = createStripeCli({ org, env, throughSecretKey: true });
 	const webhookEndpoints = await stripeCli.webhookEndpoints.list({
 		limit: 100,
 	});
@@ -198,11 +201,19 @@ export const createOrgResponse = ({
 			? "oauth"
 			: "default";
 
+	const throughMaster = shouldUseMaster({ org, env });
 	return {
 		id: org.id,
 		name: org.name,
 		logo: org.logo,
 		slug: org.slug,
+		master: org.master
+			? {
+					id: org.master.id,
+					name: org.master.name,
+					slug: org.master.slug,
+				}
+			: null,
 		// sandbox_config: {
 		//   stripe_connected: isStripeConnected({ org, env: AppEnv.Sandbox }),
 		//   default_currency: org.default_currency || "USD",
@@ -217,6 +228,7 @@ export const createOrgResponse = ({
 		success_url: toSuccessUrl({ org, env }) || "",
 		default_currency: org.default_currency || "usd",
 		stripe_connection: stripeConnection,
+		through_master: throughMaster,
 
 		created_at: new Date(org.createdAt).getTime(),
 		test_pkey: org.test_pkey,

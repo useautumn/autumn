@@ -176,9 +176,10 @@ export class OrgService {
 				features: {
 					where: eq(features.env, env),
 				},
+				master: true,
 			},
 		})) as Organization & {
-			features: Feature[];
+			features?: Feature[];
 		};
 
 		if (!result) {
@@ -194,7 +195,8 @@ export class OrgService {
 		}
 
 		const org = structuredClone(result);
-		delete (org as any).features;
+		delete org.features;
+
 		return {
 			org: {
 				...org,
@@ -296,12 +298,15 @@ export class OrgService {
 		const result = await db.query.organizations.findFirst({
 			where: or(
 				eq(
-					sql`${organizations.stripe_connect}->>'default_account_id'`,
+					sql`${organizations.test_stripe_connect}->>'default_account_id'`,
 					accountId,
 				),
-				eq(sql`${organizations.stripe_connect}->>'test_account_id'`, accountId),
-				eq(sql`${organizations.stripe_connect}->>'live_account_id'`, accountId),
+				eq(sql`${organizations.test_stripe_connect}->>'account_id'`, accountId),
+				eq(sql`${organizations.live_stripe_connect}->>'account_id'`, accountId),
 			),
+			with: {
+				master: true,
+			},
 		});
 
 		if (!result) {
@@ -312,8 +317,8 @@ export class OrgService {
 			});
 		}
 
-		const defaultAccountId = result?.stripe_connect?.default_account_id;
-		const testAccountId = result?.stripe_connect?.test_account_id;
+		const defaultAccountId = result?.test_stripe_connect?.default_account_id;
+		const testAccountId = result?.test_stripe_connect?.account_id;
 
 		const env =
 			defaultAccountId === accountId || testAccountId === accountId
@@ -334,5 +339,107 @@ export class OrgService {
 			},
 			env,
 		};
+	}
+
+	static async findByStripeAccountId({
+		db,
+		accountId,
+		env,
+	}: {
+		db: DrizzleCli;
+		accountId: string;
+		env: AppEnv;
+	}): Promise<Organization | undefined> {
+		const result = await db.query.organizations.findFirst({
+			where: or(
+				eq(sql`${organizations.test_stripe_connect}->>'account_id'`, accountId),
+				eq(sql`${organizations.live_stripe_connect}->>'account_id'`, accountId),
+			),
+		});
+
+		return result as Organization;
+	}
+
+	/**
+	 * Update Stripe Connect account ID for an organization
+	 */
+	static async updateStripeConnect({
+		db,
+		orgId,
+		accountId,
+		env,
+	}: {
+		db: DrizzleCli;
+		orgId: string;
+		accountId: string;
+		env: AppEnv;
+	}): Promise<void> {
+		const [org] = await db
+			.select()
+			.from(organizations)
+			.where(eq(organizations.id, orgId))
+			.limit(1);
+
+		if (!org) {
+			throw new RecaseError({
+				message: "Organization not found",
+				code: ErrCode.OrgNotFound,
+				statusCode: 404,
+			});
+		}
+
+		if (env === AppEnv.Sandbox) {
+			const currentConnect = org.test_stripe_connect || {};
+			await db
+				.update(organizations)
+				.set({
+					test_stripe_connect: {
+						...currentConnect,
+						account_id: accountId,
+					},
+				})
+				.where(eq(organizations.id, orgId));
+		} else {
+			const currentConnect = org.live_stripe_connect || {};
+			await db
+				.update(organizations)
+				.set({
+					live_stripe_connect: {
+						...currentConnect,
+						account_id: accountId,
+					},
+				})
+				.where(eq(organizations.id, orgId));
+		}
+
+		await clearOrgCache({ db, orgId });
+	}
+
+	static async updateConnectWebhookSecret({
+		db,
+		orgId,
+		env,
+		secret,
+	}: {
+		db: DrizzleCli;
+		orgId: string;
+		env: AppEnv;
+		secret: string;
+	}) {
+		const prefix = env === AppEnv.Sandbox ? "test" : "live";
+		const org = await OrgService.get({ db, orgId });
+		console.info(`Updating connect webhook secret for ${env} org ${orgId}`);
+		console.info(`Secret: ${secret}`);
+		await db
+			.update(organizations)
+			.set({
+				stripe_config: {
+					...(org.stripe_config || {}),
+					[`${prefix}_connect_webhook_secret`]: secret,
+				},
+			})
+			.where(eq(organizations.id, orgId));
+
+		await clearOrgCache({ db, orgId });
 	}
 }
