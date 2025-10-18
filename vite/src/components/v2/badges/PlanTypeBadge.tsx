@@ -1,6 +1,11 @@
 import { PlusSquareIcon } from "@phosphor-icons/react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { DefaultIcon, FreeTrialIcon } from "@/components/v2/icons/AutumnIcons";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/v2/tooltips/Tooltip";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
@@ -32,13 +37,13 @@ export const PlanTypeBadge = ({
 	const getIcon = () => {
 		switch (variant) {
 			case "default":
-				return <DefaultIcon size={14} color="#666666" />;
+				return <DefaultIcon size={14} color="#666666" hideTitle />;
 			case "freeTrial":
-				return <FreeTrialIcon size={14} color="#666666" />;
+				return <FreeTrialIcon size={14} color="#666666" hideTitle />;
 			case "addon":
 				return <PlusSquareIcon size={14} color="#666666" />;
 			default:
-				return <DefaultIcon size={14} color="#666666" />;
+				return <DefaultIcon size={14} color="#666666" hideTitle />;
 		}
 	};
 
@@ -55,10 +60,31 @@ export const PlanTypeBadge = ({
 		}
 	};
 
+	const getTooltipContent = () => {
+		switch (variant) {
+			case "default":
+				return "This plan will enable by default for all new users.";
+			case "freeTrial":
+				return "This plan has a free trial period.";
+			case "addon":
+				return "This plan is an add-on that can be bought together with your base plans (eg, for top ups).";
+		}
+	};
+
 	return (
-		<div className={cn(badgeVariants({ variant }), className)}>
-			{getIcon()}
-			{!iconOnly && <span>{getLabel()}</span>}
-		</div>
+		<Tooltip>
+			<TooltipTrigger asChild>
+				<div
+					className={cn(badgeVariants({ variant }), className, "select-none")}
+				>
+					{getIcon()}
+					{!iconOnly && <span>{getLabel()}</span>}
+				</div>
+			</TooltipTrigger>
+
+			{getTooltipContent() !== null && (
+				<TooltipContent>{getTooltipContent()}</TooltipContent>
+			)}
+		</Tooltip>
 	);
 };
