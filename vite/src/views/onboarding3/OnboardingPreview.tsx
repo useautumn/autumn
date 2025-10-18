@@ -85,6 +85,7 @@ export const OnboardingPreview = ({
 			className={cn(
 				"min-w-[28rem] max-w-xl mx-4 bg-card border-border border-[0.5px] p-4",
 				showDummyFeature && !showFeatures && "pb-0",
+				currentStep === 1 && "!gap-0",
 			)}
 		>
 			<CardHeader className="gap-0 px-0 relative">
