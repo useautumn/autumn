@@ -1,4 +1,4 @@
-import { API_VERSIONS, ApiVersion } from "./ApiVersion.js";
+import { API_VERSIONS, type ApiVersion } from "./ApiVersion.js";
 import { VERSION_REGISTRY, type VersionMetadata } from "./versionRegistry.js";
 
 /**
@@ -24,7 +24,9 @@ export function getVersionMetadata({
 	return VERSION_REGISTRY[version];
 }
 
-export function isValidVersion(params: { version: string }): params is { version: ApiVersion } {
+export function isValidVersion(params: {
+	version: string;
+}): params is { version: ApiVersion } {
 	return API_VERSIONS.includes(params.version as ApiVersion);
 }
 

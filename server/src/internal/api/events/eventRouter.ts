@@ -178,7 +178,7 @@ export const handleEventSent = async ({
 		customer_id,
 		customer_data,
 		event_data,
-		logger: req.logtail,
+		logger: req.logger,
 		entityId: event_data.entity_id,
 		entityData: event_data.entity_data,
 		features,

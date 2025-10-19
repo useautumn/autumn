@@ -2,8 +2,8 @@ import { ErrCode } from "@autumn/shared";
 import { Router } from "express";
 import { Hono } from "hono";
 import { StatusCodes } from "http-status-codes";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { CusSearchService } from "@/internal/customers/CusSearchService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
@@ -101,7 +101,7 @@ expressCusRouter.get(
 					org,
 					env: req.env,
 					customer,
-					logger: req.logtail,
+					logger: req.logger,
 				});
 
 				if (!newCus) {

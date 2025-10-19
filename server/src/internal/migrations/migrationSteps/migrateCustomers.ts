@@ -10,8 +10,8 @@ import {
 	MigrationJobStep,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { MigrationService } from "../MigrationService.js";
 import { migrateCustomer } from "./migrateCustomer.js";

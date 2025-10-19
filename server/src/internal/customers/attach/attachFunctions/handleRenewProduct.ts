@@ -41,7 +41,7 @@ export const handleRenewProduct = async ({
 	attachParams: AttachParams;
 	config: AttachConfig;
 }) => {
-	const logger = req.logtail;
+	const logger = req.logger;
 	const { stripeCli } = attachParams;
 	let { curScheduledProduct } = attachParamToCusProducts({ attachParams });
 

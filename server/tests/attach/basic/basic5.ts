@@ -1,14 +1,14 @@
-import { createStripeCli } from "@/external/stripe/utils.js";
+import { CusProductStatus } from "@autumn/shared";
+import { expect } from "chai";
+import chalk from "chalk";
+import type Stripe from "stripe";
+import { setupBefore } from "tests/before.js";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { products } from "tests/global.js";
-import chalk from "chalk";
 import { compareMainProduct } from "tests/utils/compare.js";
-import { expect } from "chai";
-import { CusProductStatus } from "@autumn/shared";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { setupBefore } from "tests/before.js";
-import Stripe from "stripe";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { timeout } from "@/utils/genUtils.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
 const testCase = "basic5";
 describe(`${chalk.yellowBright(
@@ -30,7 +30,7 @@ describe(`${chalk.yellowBright(
 		});
 	});
 
-	it("should attach pro product", async function () {
+	it("should attach pro product", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
 			productId: products.pro.id,
@@ -55,7 +55,7 @@ describe(`${chalk.yellowBright(
 
 	return;
 
-	it("should have pro product active, and canceled_at != null, and free scheduled", async function () {
+	it("should have pro product active, and canceled_at != null, and free scheduled", async () => {
 		const cusRes: any = await AutumnCli.getCustomer(customerId);
 		compareMainProduct({
 			sent: products.pro,
@@ -75,7 +75,7 @@ describe(`${chalk.yellowBright(
 		expect(freeProduct.status).to.equal(CusProductStatus.Scheduled);
 	});
 
-	it("should cancel pro product (now)", async function () {
+	it("should cancel pro product (now)", async () => {
 		const cusRes: any = await AutumnCli.getCustomer(customerId);
 		const proProduct = cusRes.products.find(
 			(p: any) => p.id === products.pro.id,
@@ -87,7 +87,7 @@ describe(`${chalk.yellowBright(
 		await timeout(5000);
 	});
 
-	it("should have free product active, and no pro product", async function () {
+	it("should have free product active, and no pro product", async () => {
 		const cusRes: any = await AutumnCli.getCustomer(customerId);
 		compareMainProduct({
 			sent: products.free,

@@ -27,3 +27,48 @@ export function queryStringArray<T extends z.ZodTypeAny>(schema: T) {
 		return val;
 	}, z.array(schema));
 }
+
+/**
+ * Helper to handle query string integers that come in as strings and need to be converted to numbers.
+ * Query parameters are always strings, so this helper parses them to integers for validation.
+ *
+ * @example
+ * ```ts
+ * const schema = z.object({
+ *   limit: queryInteger({ min: 1, max: 100 }).default(10),
+ *   offset: queryInteger({ min: 0 }).default(0),
+ * });
+ * ```
+ */
+export function queryInteger(options?: {
+	min?: number;
+	max?: number;
+	error?: string;
+}) {
+	let schema = z.number().int({ message: options?.error });
+
+	if (options?.min !== undefined) {
+		schema = schema.min(options.min, {
+			message: options?.error || `must be at least ${options.min}`,
+		});
+	}
+
+	if (options?.max !== undefined) {
+		schema = schema.max(options.max, {
+			message: options?.error || `must be at most ${options.max}`,
+		});
+	}
+
+	return z.preprocess((val) => {
+		// If already a number, return as-is
+		if (typeof val === "number") {
+			return val;
+		}
+		// Parse string to integer
+		if (typeof val === "string") {
+			const parsed = Number.parseInt(val, 10);
+			return Number.isNaN(parsed) ? val : parsed;
+		}
+		return val;
+	}, schema);
+}

@@ -12,7 +12,7 @@ import {
 	type UpdateProduct,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { isStripeConnected } from "@/internal/orgs/orgUtils.js";
 import { notNullish } from "@/utils/genUtils.js";

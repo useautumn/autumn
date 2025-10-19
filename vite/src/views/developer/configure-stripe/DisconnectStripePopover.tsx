@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -5,13 +7,9 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { useOrg } from "@/hooks/common/useOrg";
-import { useListOrganizations } from "@/lib/auth-client";
 import { OrgService } from "@/services/OrgService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
-import { useState } from "react";
-import { toast } from "sonner";
 
 export const DisconnectStripePopover = ({
 	onSuccess,
@@ -46,9 +44,7 @@ export const DisconnectStripePopover = ({
 	return (
 		<Popover>
 			<PopoverTrigger asChild>
-				<Button variant="destructive" className="w-6/12">
-					Disconnect Stripe
-				</Button>
+				<Button variant="destructive">Disconnect Stripe</Button>
 			</PopoverTrigger>
 			<PopoverContent align="start" className="border border-zinc-200">
 				<div className="flex flex-col gap-4 text-sm w-fit">

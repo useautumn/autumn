@@ -1,12 +1,12 @@
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useQuery } from "@tanstack/react-query";
-import { parseAsInteger, parseAsString } from "nuqs";
-import { useQueryStates } from "nuqs";
-import { useParams, useSearchParams } from "react-router";
-import { useCachedProduct } from "./getCachedProduct";
+import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useMemo } from "react";
-import { useProductCountsQuery } from "./queries/useProductCountsQuery";
+import { useParams } from "react-router";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { throwBackendError } from "@/utils/genUtils";
+import { useCachedProduct } from "./getCachedProduct";
 import { useMigrationsQuery } from "./queries/useMigrationsQuery.tsx";
+import { useProductCountsQuery } from "./queries/useProductCountsQuery";
 
 // Product query state...
 export const useProductQueryState = () => {
@@ -35,18 +35,25 @@ export const useProductQuery = () => {
 
 	const fetcher = async () => {
 		if (!productId) return null;
-		const url = `/products/${productId}/data2`;
-		const queryParams = {
-			version: queryStates.version,
-		};
 
-		const { data } = await axiosInstance.get(url, { params: queryParams });
-		return data;
+		try {
+			const url = `/products/${productId}/data`;
+			const queryParams = {
+				version: queryStates.version,
+			};
+
+			const { data } = await axiosInstance.get(url, { params: queryParams });
+			return data;
+		} catch (error) {
+			throwBackendError(error);
+		}
 	};
 
 	const { data, isLoading, refetch, error } = useQuery({
 		queryKey: ["product", productId, queryStates.version],
 		queryFn: fetcher,
+		retry: false, // Don't retry on error (e.g., product not found)
+		enabled: !!productId, // Only run query if productId exists
 	});
 
 	const { refetch: refetchCounts } = useProductCountsQuery();

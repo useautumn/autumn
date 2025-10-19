@@ -14,6 +14,7 @@ type ValidatedContext<
 	E extends Env,
 	Body extends ZodType | undefined = undefined,
 	Query extends ZodType | undefined = undefined,
+	Params extends ZodType | undefined = undefined,
 > = Context<
 	E,
 	any,
@@ -21,10 +22,12 @@ type ValidatedContext<
 		in: {
 			json: Body extends ZodType ? z.infer<Body> : unknown;
 			query: Query extends ZodType ? z.infer<Query> : unknown;
+			param: Params extends ZodType ? z.infer<Params> : unknown;
 		};
 		out: {
 			json: Body extends ZodType ? z.infer<Body> : unknown;
 			query: Query extends ZodType ? z.infer<Query> : unknown;
+			param: Params extends ZodType ? z.infer<Params> : unknown;
 		};
 	}
 >;
@@ -41,14 +44,18 @@ type VersionedSchemas<T extends ZodType> = Partial<
 /**
  * Create a type-safe route with validation that preserves full type inference!
  *
- * Supports two patterns:
+ * Supports validation for body, query, and params:
  *
  * **Pattern 1: Single version (most endpoints)**
  * ```ts
  * export const createProduct = createRoute({
  *   body: CreateProductSchema,
+ *   query: ProductQuerySchema,
+ *   params: ProductParamsSchema,
  *   handler: async (c) => {
- *     const body = c.req.valid("json"); // ✅ Fully typed!
+ *     const body = c.req.valid("json");   // ✅ Fully typed!
+ *     const query = c.req.valid("query"); // ✅ Fully typed!
+ *     const params = c.req.valid("param"); // ✅ Fully typed!
  *     return c.json({ success: true });
  *   }
  * });
@@ -74,15 +81,17 @@ type VersionedSchemas<T extends ZodType> = Partial<
 export function createRoute<
 	Body extends ZodType | undefined = undefined,
 	Query extends ZodType | undefined = undefined,
+	Params extends ZodType | undefined = undefined,
 >(opts: {
 	body?: Body;
 	versionedBody?: Body extends ZodType ? VersionedSchemas<Body> : never;
 	query?: Query;
 	versionedQuery?: Query extends ZodType ? VersionedSchemas<Query> : never;
+	params?: Params;
 	resource?: AffectedResource;
 	withTx?: boolean;
 	handler: (
-		c: ValidatedContext<HonoEnv, Body, Query>,
+		c: ValidatedContext<HonoEnv, Body, Query, Params>,
 	) => Response | Promise<Response>;
 }) {
 	const middlewares: MiddlewareHandler[] = [];
@@ -114,7 +123,14 @@ export function createRoute<
 		middlewares.push(validator("query", opts.query));
 	}
 
-	const wrappedHandler = async (c: ValidatedContext<HonoEnv, Body, Query>) => {
+	// Params validator (no versioned variant)
+	if (opts.params) {
+		middlewares.push(validator("param", opts.params));
+	}
+
+	const wrappedHandler = async (
+		c: ValidatedContext<HonoEnv, Body, Query, Params>,
+	) => {
 		c.set("validated", true);
 
 		if (opts.withTx) {

@@ -13,7 +13,6 @@ import { ArrowLeftIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NextSteps } from "./NextSteps";
 import { AutumnProvider } from "autumn-js/react";
-import { ConnectStripeStep } from "./ConnectStripeStep";
 import { useOnboardingQueryState } from "../hooks/useOnboardingQueryState";
 
 export default function IntegrateAutumn() {
@@ -50,7 +49,6 @@ export default function IntegrateAutumn() {
 						<SelectStack />
 						{stackSelected && queryStates.reactTypescript && (
 							<>
-								<ConnectStripeStep />
 								<EnvStep />
 								<Install />
 								<AutumnHandler />
