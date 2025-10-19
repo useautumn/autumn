@@ -12,7 +12,7 @@ import { UTCDate } from "@date-fns/utc";
 import chalk from "chalk";
 import { format, getDate, getMonth, setDate } from "date-fns";
 import { Decimal } from "decimal.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";

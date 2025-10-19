@@ -1,25 +1,25 @@
-import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
-import { EntityService } from "../EntityService.js";
-import { StatusCodes } from "http-status-codes";
 import { CusProductStatus, ErrCode } from "@autumn/shared";
-import { CusService } from "@/internal/customers/CusService.js";
-import { adjustAllowance } from "@/trigger/adjustAllowance.js";
+import { StatusCodes } from "http-status-codes";
 import { handleCustomerRaceCondition } from "@/external/redis/redisUtils.js";
+import { CusService } from "@/internal/customers/CusService.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import {
 	findLinkedCusEnts,
 	findMainCusEntForFeature,
 } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
-import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService.js";
 import {
 	deleteEntityFromCusEnt,
 	replaceEntityInCusEnt,
 } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/linkedCusEntUtils.js";
+import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService.js";
 import { cancelSubsForEntity } from "@/internal/entities/handlers/handleDeleteEntity/cancelSubsForEntity.js";
+import { adjustAllowance } from "@/trigger/adjustAllowance.js";
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
+import { EntityService } from "../EntityService.js";
 
 export const handleDeleteEntity = async (req: any, res: any) => {
 	try {
-		const { org, env, db, logtail: logger, features } = req;
+		const { org, env, db, logger, features } = req;
 		const { customer_id, entity_id } = req.params;
 
 		await handleCustomerRaceCondition({
@@ -73,9 +73,9 @@ export const handleDeleteEntity = async (req: any, res: any) => {
 		const feature = features.find((f: any) => f.id === entity?.feature_id);
 
 		for (const cusProduct of cusProducts) {
-			let cusEnts = cusProduct.customer_entitlements;
+			const cusEnts = cusProduct.customer_entitlements;
 
-			let mainCusEnt = findMainCusEntForFeature({
+			const mainCusEnt = findMainCusEntForFeature({
 				cusEnts,
 				feature,
 			});
@@ -97,12 +97,12 @@ export const handleDeleteEntity = async (req: any, res: any) => {
 				logger,
 			});
 
-			let linkedCusEnts = findLinkedCusEnts({
+			const linkedCusEnts = findLinkedCusEnts({
 				cusEnts: cusProduct.customer_entitlements,
 				feature: mainCusEnt.entitlement.feature,
 			});
 
-			let replaceable =
+			const replaceable =
 				newReplaceables && newReplaceables.length > 0
 					? newReplaceables[0]
 					: null;
@@ -121,14 +121,14 @@ export const handleDeleteEntity = async (req: any, res: any) => {
 			for (const linkedCusEnt of linkedCusEnts) {
 				let newEntities;
 				if (replaceable) {
-					let { newEntities: newEntities_ } = replaceEntityInCusEnt({
+					const { newEntities: newEntities_ } = replaceEntityInCusEnt({
 						cusEnt: linkedCusEnt,
 						entityId: entity.id,
 						replaceable,
 					});
 					newEntities = newEntities_;
 				} else {
-					let { newEntities: newEntities_ } = deleteEntityFromCusEnt({
+					const { newEntities: newEntities_ } = deleteEntityFromCusEnt({
 						cusEnt: linkedCusEnt,
 						entityId: entity.id,
 					});

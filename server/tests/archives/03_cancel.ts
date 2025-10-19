@@ -1,4 +1,3 @@
-// import { createStripeCli } from "@/external/stripe/utils.js";
 // import { AutumnCli } from "../cli/AutumnCli.js";
 // import { features, products } from "../global.js";
 // import { initCustomer } from "../utils/init.js";

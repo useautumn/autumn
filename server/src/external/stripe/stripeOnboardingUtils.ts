@@ -1,6 +1,6 @@
-import RecaseError from "@/utils/errorUtils.js";
-import { AppEnv, ErrCode } from "@autumn/shared";
+import { type AppEnv, ErrCode } from "@autumn/shared";
 import Stripe from "stripe";
+import RecaseError from "@/utils/errorUtils.js";
 
 export const checkKeyValid = async (apiKey: string) => {
 	const stripe = new Stripe(apiKey);

@@ -1,8 +1,11 @@
-import { CusProductStatus, FullCusProduct, SuccessCode } from "@autumn/shared";
-import { notNullish } from "@/utils/genUtils.js";
-import { ProductService } from "@/internal/products/ProductService.js";
+import {
+	CusProductStatus,
+	type FullCusProduct,
+	SuccessCode,
+} from "@autumn/shared";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
-import { getOrgAndFeatures } from "@/internal/orgs/orgUtils.js";
+import { ProductService } from "@/internal/products/ProductService.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 import { getProductCheckPreview } from "./getProductCheckPreview.js";
 
@@ -21,12 +24,10 @@ export const handleProductCheck = async ({
 		with_preview,
 		entity_data,
 	} = req.body;
-	const { orgId, env, logtail: logger, db } = req;
-
-	let { org, features } = await getOrgAndFeatures({ req });
+	const { orgId, env, logger, db } = req;
 
 	// 1. Get customer and org
-	let [customer, product] = await Promise.all([
+	const [customer, product] = await Promise.all([
 		getOrCreateCustomer({
 			req,
 			customerId: customer_id,
@@ -53,15 +54,15 @@ export const handleProductCheck = async ({
 	if (customer.entity) {
 		cusProducts = cusProducts.filter(
 			(cusProduct: FullCusProduct) =>
-				cusProduct.internal_entity_id == customer.entity!.internal_id,
+				cusProduct.internal_entity_id === customer.entity!.internal_id,
 		);
 	}
 
-	let cusProduct: FullCusProduct | undefined = cusProducts.find(
+	const cusProduct: FullCusProduct | undefined = cusProducts.find(
 		(cusProduct: FullCusProduct) => cusProduct.product.id === product_id,
 	);
 
-	let preview = with_preview
+	const preview = with_preview
 		? await getProductCheckPreview({
 				req,
 				customer,
@@ -96,7 +97,7 @@ export const handleProductCheck = async ({
 		return;
 	}
 
-	let onTrial =
+	const onTrial =
 		notNullish(cusProduct.trial_ends_at) &&
 		cusProduct.trial_ends_at! > Date.now();
 

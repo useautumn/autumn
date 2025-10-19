@@ -124,3 +124,13 @@ export const notNullish = (value: any) => {
 export const nullish = (value: any) => {
 	return value === null || value === undefined;
 };
+
+/**
+ * Throws an error with backend message if available, otherwise rethrows original error
+ */
+export const throwBackendError = (error: any): never => {
+	if (error?.response?.data?.message) {
+		throw new Error(error.response.data.message);
+	}
+	throw error;
+};

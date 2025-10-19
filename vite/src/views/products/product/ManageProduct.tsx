@@ -1,18 +1,16 @@
 import { AdminHover } from "@/components/general/AdminHover";
-import { useProductContext } from "./ProductContext";
-import { useNavigate } from "react-router";
-import { useEnv } from "@/utils/envUtils";
-import { ProductItemTable } from "./product-item/ProductItemTable";
 import { SelectEntity } from "@/views/customers/customer/components/customer-header/SelectEntity";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useProductContext } from "./ProductContext";
+import { ProductItemTable } from "./product-item/ProductItemTable";
 
 export const ManageProduct = ({
 	hideAdminHover = false,
 }: {
 	hideAdminHover?: boolean;
 }) => {
-	const { customer } = useCusQuery();
-	const { product, entityId } = useProductContext();
+	const { product, entityId, isCusProductView } = useProductContext();
+	const { customer } = useCusQuery({ enabled: isCusProductView });
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -23,7 +21,7 @@ export const ManageProduct = ({
 							texts={[
 								{
 									key: "internal_product_id",
-									value: product.internal_id!,
+									value: product.internal_id,
 								},
 								{
 									key: "stripe_id",

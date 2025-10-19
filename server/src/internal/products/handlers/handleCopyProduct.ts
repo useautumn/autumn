@@ -16,7 +16,7 @@ export const handleCopyProduct = async (req: any, res: any) =>
 		res,
 		action: "Copy Product",
 		handler: async (req, res) => {
-			const { db, logtail: logger } = req;
+			const { db, logger } = req;
 
 			const { productId: fromProductId } = req.params;
 			const orgId = req.orgId;
