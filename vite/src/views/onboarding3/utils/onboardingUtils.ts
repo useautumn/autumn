@@ -352,12 +352,6 @@ export const createFeature = async (
 
 // Product item creation helper
 export const createProductItem = (createdFeature: CreateFeature) => {
-	console.log("createProductItem - input feature:", {
-		id: createdFeature.id,
-		type: createdFeature.type,
-		config: createdFeature.config,
-	});
-
 	// Map feature type to product item feature type
 	let featureType: ProductItemFeatureType;
 
@@ -386,8 +380,6 @@ export const createProductItem = (createdFeature: CreateFeature) => {
 		// Unknown feature type - default to SingleUse
 		featureType = ProductItemFeatureType.SingleUse;
 	}
-
-	console.log("createProductItem - mapped to feature type:", featureType);
 
 	// Boolean features have a simplified structure with no pricing/billing properties
 	if (createdFeature.type === FeatureType.Boolean) {

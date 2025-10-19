@@ -14,25 +14,29 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 
 const queryClient = new QueryClient({
-	defaultOptions: {
-		// queries: {
-		//   refetchInterval: 0,
-		// },
-	},
+	defaultOptions: {},
 });
+
+const shouldInitializePostHog = process.env.NODE_ENV === "production";
 
 createRoot(document.getElementById("root")!).render(
 	<StrictMode>
 		<QueryClientProvider client={queryClient}>
-			{process.env.NODE_ENV === "development" ? (
-				<App />
-			) : (
+			{/* <App /> */}
+			{shouldInitializePostHog ? (
 				<PostHogProvider
 					apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
-					options={{ api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST }}
+					options={{
+						api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+						autocapture: false,
+						capture_pageview: false,
+						capture_pageleave: false,
+					}}
 				>
 					<App />
 				</PostHogProvider>
+			) : (
+				<App />
 			)}
 			{/* <ReactQueryDevtools initialIsOpen={false} /> */}
 		</QueryClientProvider>

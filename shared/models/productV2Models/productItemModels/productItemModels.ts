@@ -84,8 +84,13 @@ export const ProductItemSchema = z.object({
 	// Others
 	// carry_over_usage: z.boolean().nullish(),
 	reset_usage_when_enabled: z.boolean().nullish(),
-
 	config: ProductItemConfigSchema.nullish(),
+	display: z
+		.object({
+			primary_text: z.string(),
+			secondary_text: z.string().nullish(),
+		})
+		.nullish(),
 
 	// Stored in backend
 	created_at: z.number().nullish(),

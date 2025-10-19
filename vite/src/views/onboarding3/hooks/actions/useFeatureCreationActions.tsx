@@ -12,6 +12,7 @@ import { useProductStore } from "@/hooks/stores/useProductStore";
 import { FeatureService } from "@/services/FeatureService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
+import { trackOnboardingFeatureCreation } from "@/utils/posthogTracking";
 
 export const useFeatureCreationActions = () => {
 	const axiosInstance = useAxiosInstance();
@@ -75,6 +76,11 @@ export const useFeatureCreationActions = () => {
 				});
 				updatedFeature = apiFeatureToDbFeature({ apiFeature: data });
 				toast.success(`Feature "${feature.name}" created successfully!`);
+
+				// Track feature creation in onboarding
+				trackOnboardingFeatureCreation({
+					featureType: feature.type,
+				});
 			}
 
 			console.log("Updated feature", updatedFeature);

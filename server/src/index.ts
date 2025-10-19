@@ -37,7 +37,6 @@ import { QueueManager } from "./queue/QueueManager.js";
 import { auth } from "./utils/auth.js";
 import { generateId } from "./utils/genUtils.js";
 import { checkEnvVars } from "./utils/initUtils.js";
-
 const tracer = trace.getTracer("express");
 
 checkEnvVars();

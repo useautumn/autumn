@@ -1,9 +1,10 @@
 import {
 	mapToProductV3,
 	type ProductItem,
+	type ProductV2,
 	productV2ToFeatureItems,
 } from "@autumn/shared";
-import type { Product } from "autumn-js";
+import { useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
 import { Card, CardContent, CardHeader } from "@/components/v2/cards/Card";
 import { Separator } from "@/components/v2/separator";
@@ -18,7 +19,7 @@ import {
 } from "../v2/tooltips/Tooltip";
 
 interface PlanCardPreviewProps {
-	product: Product;
+	product: ProductV2;
 	buttonText?: string;
 	onButtonClick?: () => void;
 	recommended?: boolean;
@@ -71,10 +72,22 @@ export const PlanCardPreview = ({
 	const productV3 = mapToProductV3({ product });
 	const featureItems = productV2ToFeatureItems({ items: product.items });
 
+	const [buttonLoading, setButtonLoading] = useState(false);
+	const handleButtonClick = async () => {
+		setButtonLoading(true);
+		try {
+			await onButtonClick?.();
+		} catch (error) {
+			console.error(error);
+		} finally {
+			setButtonLoading(false);
+		}
+	};
+
 	return (
 		<Card
 			className={cn(
-				"min-w-[280px] max-w-md bg-white shadow-md flex flex-col border-none shadow-[inset_0_0_0_0.5px_var(--t10)] !gap-0",
+				"min-w-[280px] max-w-md bg-white flex flex-col border-none shadow-md !shadow-[inset_0_0_0_0.5px_var(--t10)] !gap-0",
 				recommended && "ring-2 ring-primary",
 			)}
 		>
@@ -125,8 +138,9 @@ export const PlanCardPreview = ({
 						<Button
 							variant={recommended ? "primary" : "secondary"}
 							className="w-full relative overflow-hidden group mt-auto"
-							onClick={onButtonClick}
+							onClick={handleButtonClick}
 							disabled={disabled}
+							isLoading={buttonLoading}
 						>
 							<div className="flex items-center justify-center gap-2 w-full transition-transform duration-300 group-hover:translate-y-[-130%]">
 								<span>{buttonText}</span>
@@ -196,7 +210,10 @@ export const PlanCardPreview = ({
 							</div>
 						</Button>
 					</TooltipTrigger>
-					<TooltipContent className="justify-center text-center items-center">
+					<TooltipContent
+						side="bottom"
+						className="justify-center text-center items-center"
+					>
 						When checking out in test mode - <br />
 						use <CodeSpan>4242 4242 4242 4242</CodeSpan> as the card number,
 						<br /> <CodeSpan>04/42</CodeSpan> as the expiry date, and{" "}

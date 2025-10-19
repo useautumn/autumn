@@ -2,7 +2,6 @@ import { AppEnv } from "@autumn/shared";
 import { AutumnProvider } from "autumn-js/react";
 import { ArrowUpRightFromSquare } from "lucide-react";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
-import { usePostHog } from "posthog-js/react";
 import { useEffect } from "react";
 import { Outlet, useNavigate } from "react-router";
 import { ChatWidget } from "@/components/general/ChatWidget";
@@ -13,7 +12,6 @@ import { useGlobalErrorHandler } from "@/hooks/common/useGlobalErrorHandler";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
@@ -29,10 +27,10 @@ import { AppContext } from "./AppContext";
 export function MainLayout() {
 	const env = useEnv();
 	const { data, isPending } = useSession();
+	const { org, isLoading: orgLoading } = useOrg();
 	const { handleApiError } = useGlobalErrorHandler();
 
 	const navigate = useNavigate();
-	const posthog = usePostHog();
 
 	// Global error handler for API errors
 	useEffect(() => {
@@ -47,20 +45,14 @@ export function MainLayout() {
 	}, [handleApiError]);
 
 	useEffect(() => {
-		// Identify user
-		if (data && process.env.NODE_ENV !== "development") {
-			const email = data.user.email;
-
-			posthog?.identify(email, {
-				email,
-				name: data.user.name,
-				id: data.user.id,
-			});
+		// Only redirect if org is loaded and user is not onboarded
+		if (!orgLoading && org && !org.onboarded) {
+			navigate("/sandbox/onboarding");
 		}
-	}, [data, posthog]);
+	}, [org, orgLoading, navigate]);
 
 	// 1. If not loaded, show loading screen
-	if (isPending) {
+	if (isPending || orgLoading) {
 		return (
 			<AutumnProvider
 				backendUrl={import.meta.env.VITE_BACKEND_URL}
@@ -128,7 +120,6 @@ const MainContent = () => {
 
 	useDevQuery();
 	useAutumnFlags();
-	useProductsQuery();
 	useFeaturesQuery();
 	useRewardsQuery();
 	useCusSearchQuery();
@@ -152,7 +143,7 @@ const MainContent = () => {
 									variant="default"
 									className="h-6 border border-t8 bg-transparent text-t8 hover:bg-t8 hover:text-white font-mono rounded-xs ml-auto absolute right-4"
 									onClick={() => {
-										navigateTo("/onboarding3", navigate, AppEnv.Sandbox);
+										navigateTo("/onboarding", navigate, AppEnv.Sandbox);
 									}}
 								>
 									Onboarding

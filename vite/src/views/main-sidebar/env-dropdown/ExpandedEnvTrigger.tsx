@@ -16,7 +16,7 @@ export const ExpandedEnvTrigger = ({ isHovered }: { isHovered: boolean }) => {
 	return (
 		<DropdownMenuTrigger
 			className={cn(
-				"ring-0 focus:ring-0 text-t2 rounded-sm w-full flex items-center bg-transparent h-6 transition-all duration-300",
+				"ring-0 focus:ring-0 text-t2 rounded-sm w-full flex items-center bg-transparent h-6 transition-all duration-300 cursor-pointer select-none",
 			)}
 		>
 			<div

@@ -6,10 +6,15 @@ import {
 } from "@autumn/shared";
 import { useCallback } from "react";
 import { useNavigate } from "react-router";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
 import { useHasChanges, useProductStore } from "@/hooks/stores/useProductStore";
-import { useEnv } from "@/utils/envUtils";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { pushPage } from "@/utils/genUtils";
+import {
+	trackOnboardingIntegrationCompleted,
+	trackOnboardingPlaygroundCompleted,
+} from "@/utils/posthogTracking";
 import { useOnboardingStore } from "../../store/useOnboardingStore";
 import { getNextStep, OnboardingStep } from "../../utils/onboardingUtils";
 import { useFeatureConfigActions } from "./useFeatureConfigActions";
@@ -38,7 +43,8 @@ export const useStepActions = (props: StepActionsProps) => {
 	const { step, pushStep, validateStep, sharedActions } = props;
 
 	const navigate = useNavigate();
-	const env = useEnv();
+	const { org, mutate: mutateOrg } = useOrg();
+	const axiosInstance = useAxiosInstance();
 
 	// Get product from product store
 	const product = useProductStore((s) => s.product);
@@ -131,9 +137,25 @@ export const useStepActions = (props: StepActionsProps) => {
 			if (!canProceed) return;
 
 			if (nextStep) {
+				// Track playground completion when moving to integration
+				if (step === OnboardingStep.Playground) {
+					trackOnboardingPlaygroundCompleted();
+				}
+
 				pushStep(nextStep);
 			} else {
+				// Track integration completion
+				if (step === OnboardingStep.Integration) {
+					trackOnboardingIntegrationCompleted();
+				}
+
 				// Finish onboarding
+				if (!org?.onboarded) {
+					await axiosInstance.patch("/v1/organization", {
+						onboarded: true,
+					});
+					await mutateOrg();
+				}
 
 				pushPage({
 					navigate,
@@ -161,6 +183,9 @@ export const useStepActions = (props: StepActionsProps) => {
 		setIsButtonLoading,
 		hasChanges,
 		navigate,
+		org,
+		axiosInstance,
+		mutateOrg,
 	]);
 
 	return {

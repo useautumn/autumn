@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SheetContainer } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { cn } from "@/lib/utils";
+import { trackSignUp } from "@/utils/posthogTracking";
 import { ProductContext } from "@/views/products/product/ProductContext";
 import LoadingScreen from "../general/LoadingScreen";
 import { SaveChangesBar } from "../products/plan/components/SaveChangesBar";
@@ -52,15 +53,15 @@ export default function OnboardingContent() {
 	// Initialize onboarding logic and store handlers
 	useOnboardingLogic();
 
+	// Track sign-up event on first mount
+	useEffect(() => {
+		trackSignUp();
+	}, []);
+
 	// Compute loading state
 	const isQueryLoading = productsLoading || featuresLoading;
 
 	if (isQueryLoading || isCheckingAutoSkip) {
-		console.log(
-			"Rendering onboarding loader",
-			isQueryLoading,
-			isCheckingAutoSkip,
-		);
 		return <LoadingScreen />;
 	}
 

@@ -1,12 +1,12 @@
+import type { ProductV2 } from "@autumn/shared";
 import type { Product } from "autumn-js";
 import { useCustomer } from "autumn-js/react";
-
 import { useOrg } from "@/hooks/common/useOrg";
 import OnboardingCheckoutDialog from "@/views/onboarding3/OnboardingCheckoutDialog";
 import { PlanCardPreview } from "./PlanCardPreview";
 
 interface PricingTableProps {
-	products?: Product[];
+	products?: ProductV2[];
 	setConnectStripeOpen: (open: boolean) => void;
 	onCheckoutComplete?: () => void;
 }
@@ -26,12 +26,7 @@ export default function PricingTablePreview({
 		return null;
 	}
 
-	const handleSubscribe = async (product: Product) => {
-		if (!org?.stripe_connected) {
-			setConnectStripeOpen(true);
-			return;
-		}
-
+	const handleSubscribe = async (product: ProductV2) => {
 		if (product.id) {
 			try {
 				await checkout({
@@ -77,7 +72,7 @@ export default function PricingTablePreview({
 		} else if (productCount === 2) {
 			return "flex flex-col gap-6 max-w-2xl mx-auto px-4 sm:grid sm:grid-cols-2 sm:flex-none"; // Vertical on mobile, 2 columns on sm+
 		} else {
-			return "flex flex-col gap-6 max-w-7xl mx-auto px-4 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:flex-none"; // Vertical on mobile, 2 columns on sm+, 3 on lg+
+			return "flex flex-col gap-6 max-w-7xl mx-auto px-4 sm:grid md:grid-cols-2 xl:grid-cols-3 sm:flex-none"; // Vertical on mobile, 2 columns on sm+, 3 on lg+
 		}
 	};
 
@@ -88,9 +83,9 @@ export default function PricingTablePreview({
 					<PlanCardPreview
 						key={product.id || index}
 						product={product}
-						buttonText={getButtonText(product)}
+						buttonText={getButtonText(product as Product)}
 						onButtonClick={() => handleSubscribe(product)}
-						recommended={isRecommended(product)}
+						recommended={isRecommended(product as Product)}
 						disabled={
 							(product.scenario === "active" &&
 								!product.properties?.updateable) ||

@@ -4,6 +4,7 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useHasChanges, useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { trackOnboardingFeatureConfigured } from "@/utils/posthogTracking";
 import { updateProduct } from "@/views/products/product/utils/updateProduct";
 
 export const useFeatureConfigActions = () => {
@@ -39,6 +40,9 @@ export const useFeatureConfigActions = () => {
 		});
 
 		if (!saved) return false;
+
+		// Track feature configuration completion
+		trackOnboardingFeatureConfigured();
 
 		// Open edit-plan sheet after successful save
 		setSheet({ type: "edit-plan" });
