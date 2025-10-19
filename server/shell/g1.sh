@@ -5,9 +5,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/config.sh"
 
 # If contains setup then run $MOCHA_SETUP
-if [[ "$1" == *"setup"* ]]; then
-  MOCHA_PARALLEL=true $MOCHA_SETUP
-fi
+# if [[ "$1" == *"setup"* ]]; then
+#   MOCHA_PARALLEL=true $MOCHA_SETUP
+# fi
 
 $MOCHA_CMD \
 'tests/attach/basic/*.ts' \
