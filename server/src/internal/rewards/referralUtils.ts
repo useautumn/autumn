@@ -1,40 +1,22 @@
 import {
 	type AppEnv,
-	AttachBranch,
-	type Customer,
 	ErrCode,
-	type FullRewardProgram,
 	type ReferralCode,
 	type Reward,
-	RewardProgram,
-	RewardReceivedBy,
+	type RewardProgram,
 	type RewardRedemption,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
 import RecaseError from "@/utils/errorUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
-import { createFullCusProduct } from "../customers/add-product/createFullCusProduct.js";
-import { handleAddProduct } from "../customers/attach/attachFunctions/addProductFlow/handleAddProduct.js";
-import { rewardProgramToAttachParams } from "../customers/attach/attachUtils/attachParams/convertToParams.js";
 import { CusService } from "../customers/CusService.js";
-import { deleteCusCache } from "../customers/cusCache/updateCachedCus.js";
-import { RewardProgramService } from "./RewardProgramService.js";
-import type { InsertCusProductParams } from "../customers/cusProducts/AttachParams.js";
-import { ProductService } from "../products/ProductService.js";
-import {
-	isFreeProduct,
-	isOneOff,
-	itemsAreOneOff,
-} from "../products/productUtils.js";
 import { RewardRedemptionService } from "./RewardRedemptionService.js";
 import {
 	receivedByRedeemer,
 	receivedByReferrer,
-	triggerFreePaidProduct,
 } from "./referralUtils/triggerFreePaidProduct.js";
 
 export const ReferralResponseCodes = {
@@ -103,7 +85,7 @@ export const triggerRedemption = async ({
 	let applied = false;
 	let redeemerApplied = false;
 	for (let i = 0; i < 2; i++) {
-		let customer = i === 0 ? referrer : redeemer;
+		const customer = i === 0 ? referrer : redeemer;
 
 		if (i === 0 && !receivedByReferrer(rewardProgram.received_by)) {
 			continue;
@@ -119,7 +101,7 @@ export const triggerRedemption = async ({
 			});
 		}
 
-		let stripeCli = createStripeCli({
+		const stripeCli = createStripeCli({
 			org,
 			env,
 			legacyVersion: true,
@@ -133,14 +115,14 @@ export const triggerRedemption = async ({
 			logger,
 		});
 
-		let stripeCusId = customer.processor.id;
-		let stripeCus = (await stripeCli.customers.retrieve(
+		const stripeCusId = customer.processor.id;
+		const stripeCus = (await stripeCli.customers.retrieve(
 			stripeCusId,
 		)) as Stripe.Customer;
 
 		if (!stripeCus.discount) {
 			await stripeCli.customers.update(stripeCusId, {
-				// @ts-ignore
+				// @ts-expect-error
 				coupon: reward.id,
 			});
 
@@ -154,7 +136,7 @@ export const triggerRedemption = async ({
 		}
 	}
 
-	let updatedRedemption = await RewardRedemptionService.update({
+	const updatedRedemption = await RewardRedemptionService.update({
 		db,
 		id: redemption.id,
 		updates: {

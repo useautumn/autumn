@@ -5,7 +5,7 @@ import { ADMIN_USER_IDs } from "@/utils/constants.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const withAdminAuth = async (req: any, res: any, next: NextFunction) => {
-	const { logtail: logger, userId } = req as ExtendedRequest;
+	const { logger } = req as ExtendedRequest;
 
 	try {
 		const data = await auth.api.getSession({

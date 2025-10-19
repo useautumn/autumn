@@ -1,12 +1,15 @@
+import { type AppEnv, ErrCode, type Organization } from "@autumn/shared";
 import chalk from "chalk";
-import RecaseError from "@/utils/errorUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import { StatusCodes } from "http-status-codes";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { deleteStripeCustomer } from "@/external/stripe/stripeCusUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
+import RecaseError from "@/utils/errorUtils.js";
+import type {
+	ExtendedRequest,
+	ExtendedResponse,
+} from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { AppEnv, ErrCode, Organization } from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
 
 export const deleteCusById = async ({
 	db,
@@ -40,7 +43,7 @@ export const deleteCusById = async ({
 		});
 	}
 
-	let response = {
+	const response = {
 		customer,
 		success: true,
 	};
@@ -80,7 +83,7 @@ export const handleDeleteCustomer = async (req: any, res: any) =>
 		res,
 		action: "delete customer",
 		handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
-			const { env, logtail: logger, db, org } = req;
+			const { env, logger, db, org } = req;
 			const { delete_in_stripe } = req.query;
 
 			const data = await deleteCusById({

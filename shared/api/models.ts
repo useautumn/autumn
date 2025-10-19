@@ -43,6 +43,7 @@ export * from "./products/apiFreeTrial.js";
 export * from "./products/apiProduct.js";
 export * from "./products/apiProductItem.js";
 export * from "./products/productOpModels.js";
+
 // NOTE: productsOpenApi.js is NOT exported here - it's only imported by openapi.ts for spec generation
 
 // export * from "./products/apiFreeTrial.js";
@@ -51,3 +52,5 @@ export * from "./products/productOpModels.js";
 
 // Errors
 export * from "./errors/index.js";
+// Models
+export * from "./platform/platformModels.js";

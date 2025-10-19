@@ -7,7 +7,7 @@ import {
 	type FullCustomer,
 	getStartingBalance,
 } from "@autumn/shared";
-import { createStripeCli } from "@/external/stripe/utils.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";

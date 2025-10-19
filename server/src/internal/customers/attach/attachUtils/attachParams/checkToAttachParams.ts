@@ -1,5 +1,5 @@
 import type { FullCustomer, FullProduct } from "@autumn/shared";
-import { createStripeCli } from "@/external/stripe/utils.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { getFreeTrialAfterFingerprint } from "@/internal/products/free-trials/freeTrialUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";

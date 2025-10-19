@@ -172,6 +172,7 @@ export const handleUpdateProductV2 = createRoute({
 		}
 
 		// New full product
+
 		await initProductInStripe({
 			db,
 			product: newFullProduct,

@@ -1,9 +1,14 @@
+import { AppEnv, customers, ErrCode, type Organization } from "@autumn/shared";
+import { and, eq } from "drizzle-orm";
+import type { Response } from "express";
+import {
+	deauthorizeAccount,
+	deleteConnectedAccount,
+} from "@/external/connect/connectUtils.js";
+import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { deleteSvixApp } from "@/external/svix/svixHelpers.js";
 import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { AppEnv, customers, ErrCode, Organization } from "@autumn/shared";
-import { and, eq } from "drizzle-orm";
-import { Response } from "express";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { deleteStripeWebhook } from "../orgUtils.js";
 
 const deleteSvixWebhooks = async ({
@@ -61,12 +66,44 @@ const deleteStripeWebhooks = async ({
 	}
 };
 
+const deleteStripeAccounts = async ({
+	org,
+	logger,
+}: {
+	org: Organization;
+	logger: Logger;
+}) => {
+	if (org.test_stripe_connect?.account_id) {
+		await deauthorizeAccount({
+			accountId: org.test_stripe_connect.account_id,
+			env: AppEnv.Sandbox,
+			logger,
+		});
+	}
+
+	if (org.live_stripe_connect?.account_id) {
+		await deauthorizeAccount({
+			accountId: org.live_stripe_connect.account_id,
+			env: AppEnv.Live,
+			logger,
+		});
+	}
+
+	if (org.test_stripe_connect?.default_account_id) {
+		await deleteConnectedAccount({
+			accountId: org.test_stripe_connect.default_account_id,
+			env: AppEnv.Sandbox,
+			logger,
+		});
+	}
+};
+
 export const handleDeleteOrg = async (req: ExtendedRequest, res: Response) => {
 	try {
-		const { org, db, logtail: logger } = req;
+		const { org, db, logger } = req;
 
 		// 1. Check if any customers
-		let hasCustomers = await db.query.customers.findFirst({
+		const hasCustomers = await db.query.customers.findFirst({
 			where: and(eq(customers.org_id, org.id), eq(customers.env, AppEnv.Live)),
 		});
 
@@ -85,8 +122,12 @@ export const handleDeleteOrg = async (req: ExtendedRequest, res: Response) => {
 		logger.info("2. Deleting stripe webhooks");
 		await deleteStripeWebhooks({ org, logger });
 
+		// 4. Delete stripe accounts
+		logger.info("3. Deleting stripe accounts");
+		await deleteStripeAccounts({ org, logger });
+
 		// 4. Delete all sandbox customers
-		logger.info("3. Deleting sandbox customers");
+		logger.info("4. Deleting sandbox customers");
 		await db
 			.delete(customers)
 			.where(

@@ -1,13 +1,14 @@
+import { AttachScenario, type FullCusProduct } from "@autumn/shared";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
+import { isMultiProductSub } from "@/internal/customers/attach/mergeUtils/mergeUtils.js";
+import { getSubScenarioFromCache } from "@/internal/customers/cusCache/subCacheUtils.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { AttachScenario, FullCusProduct } from "@autumn/shared";
-import Stripe from "stripe";
-import { isMultiProductSub } from "@/internal/customers/attach/mergeUtils/mergeUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { getSubScenarioFromCache } from "@/internal/customers/cusCache/subCacheUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+
 const isSubRenewed = ({
 	previousAttributes,
 	sub,
@@ -62,7 +63,7 @@ export const handleSubRenewed = async ({
 	sub: Stripe.Subscription;
 	updatedCusProducts: FullCusProduct[];
 }) => {
-	const { db, org, env, logtail: logger } = req;
+	const { db, org, env, logger } = req;
 
 	const { renewed } = isSubRenewed({
 		previousAttributes: prevAttributes,
@@ -76,7 +77,7 @@ export const handleSubRenewed = async ({
 	if (subScenario === AttachScenario.Renew) return;
 
 	const customer = updatedCusProducts[0].customer;
-	let cusProducts = await CusProductService.list({
+	const cusProducts = await CusProductService.list({
 		db,
 		internalCustomerId: customer!.internal_id,
 	});
@@ -93,13 +94,13 @@ export const handleSubRenewed = async ({
 
 	if (!org.config.sync_status) return;
 
-	let { curScheduledProduct } = getExistingCusProducts({
+	const { curScheduledProduct } = getExistingCusProducts({
 		product: updatedCusProducts[0].product,
 		cusProducts,
 		internalEntityId: updatedCusProducts[0].internal_entity_id,
 	});
 
-	let deletedCusProducts: FullCusProduct[] = [];
+	const deletedCusProducts: FullCusProduct[] = [];
 
 	if (curScheduledProduct) {
 		logger.info(
@@ -115,7 +116,7 @@ export const handleSubRenewed = async ({
 	}
 
 	try {
-		for (let cusProd of updatedCusProducts) {
+		for (const cusProd of updatedCusProducts) {
 			await addProductsUpdatedWebhookTask({
 				req,
 				internalCustomerId: cusProd.internal_customer_id,

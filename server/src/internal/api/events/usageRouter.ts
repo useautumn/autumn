@@ -141,7 +141,7 @@ export const handleUsageEvent = async ({
 		entity_id,
 		idempotency_key,
 	} = req.body;
-	const { logtail: logger } = req;
+	const { logger } = req;
 
 	if (!customer_id || !feature_id) {
 		throw new RecaseError({
