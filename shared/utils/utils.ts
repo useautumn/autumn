@@ -12,3 +12,23 @@ export const idRegex = /^[a-zA-Z0-9_-]+$/;
 export const sumValues = (vals: number[]) => {
 	return vals.reduce((acc, curr) => acc + curr, 0);
 };
+
+export const keyToTitle = (
+	key: string,
+	options?: { exclusionMap?: Record<string, string> },
+) => {
+	if (options?.exclusionMap?.[key]) {
+		return options.exclusionMap[key];
+	}
+	return key
+		.replace(/[-_]/g, " ")
+		.replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+// export const generateId = (prefix: string) => {
+// 	if (!prefix) {
+// 		return KSUID.randomSync().string;
+// 	} else {
+// 		return `${prefix}_${KSUID.randomSync().string}`;
+// 	}
+// };

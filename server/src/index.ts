@@ -37,7 +37,6 @@ import { QueueManager } from "./queue/QueueManager.js";
 import { auth } from "./utils/auth.js";
 import { generateId } from "./utils/genUtils.js";
 import { checkEnvVars } from "./utils/initUtils.js";
-
 const tracer = trace.getTracer("express");
 
 checkEnvVars();
@@ -58,10 +57,9 @@ const init = async () => {
 		"http://localhost:5174",
 		"https://app.useautumn.com",
 		"https://staging.useautumn.com",
-		"https://*.useautumn.com",
+		"https://api.staging.useautumn.com",
 		"https://localhost:8080",
 		"https://www.alphalog.ai",
-		"https://*.alphalog.ai",
 		process.env.CLIENT_URL || "",
 	];
 
@@ -74,9 +72,36 @@ const init = async () => {
 		}
 	}
 
+	// Wildcard patterns for subdomains
+	const wildcardPatterns = [
+		/^https:\/\/.*\.useautumn\.com$/,
+		/^https:\/\/.*\.alphalog\.ai$/,
+	];
+
 	app.use(
 		cors({
-			origin: allowedOrigins,
+			origin: (origin, callback) => {
+				// Allow requests with no origin (like mobile apps or curl)
+				if (!origin) {
+					callback(null, true);
+					return;
+				}
+
+				// Check explicit allowed origins
+				if (allowedOrigins.includes(origin)) {
+					callback(null, true);
+					return;
+				}
+
+				// Check wildcard patterns
+				if (wildcardPatterns.some((pattern) => pattern.test(origin))) {
+					callback(null, true);
+					return;
+				}
+
+				// Origin not allowed
+				callback(new Error("Not allowed by CORS"));
+			},
 			credentials: true,
 			allowedHeaders: [
 				"app_env",

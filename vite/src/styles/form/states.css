@@ -1,0 +1,83 @@
+/** biome-ignore-all lint/complexity/noImportantStyles: important needed. */
+
+/* Input state modifiers - reference CSS variables from effects.css */
+
+/* For standard inputs that use :focus */
+
+.input-state-focus {
+	&:hover:not([data-disabled="true"]):not(:disabled):not(:focus) {
+		box-shadow: var(--input-shadow-hover);
+		border-color: var(--primary);
+	}
+
+	&:focus {
+		box-shadow: var(--input-shadow-focus);
+		border-color: var(--primary);
+	}
+}
+
+/* For Radix components (Select, etc.) that use [data-state="open"] */
+.input-state-open {
+	&:hover:not([data-disabled]):not(:focus-visible):not([data-state="open"]) {
+		box-shadow: var(--input-shadow-hover);
+		border-color: var(--primary);
+		background-color: var(--color-hover-primary);
+	}
+
+	&:focus-visible {
+		border-color: var(--primary);
+		box-shadow: var(--input-shadow-focus);
+	}
+
+	/* Open state */
+	&[data-state="open"] {
+		box-shadow: var(--input-shadow-focus);
+		border-color: var(--primary);
+		background-color: var(--color-active-primary);
+	}
+}
+
+.input-state-open-tiny {
+	&:hover:not([data-disabled]):not(:focus-visible):not([data-state="open"]) {
+		box-shadow: var(--input-shadow-hover);
+		border-color: var(--primary);
+		background-color: var(--color-hover-primary);
+	}
+
+	&:focus-visible {
+		border-color: var(--primary);
+		box-shadow: var(--input-shadow-focus-tiny);
+	}
+
+	/* Open state */
+	&[data-state="open"] {
+		border-color: var(--primary);
+		background-color: var(--color-active-primary);
+		box-shadow: var(--input-shadow-focus-tiny);
+	}
+}
+
+/* For composite components that use :focus-within */
+.input-state-focus-within {
+	&:hover:not([data-disabled="true"]):not(:focus-within) {
+		box-shadow: var(--input-shadow-hover);
+		border-color: var(--primary);
+	}
+
+	&:focus-within {
+		box-shadow: var(--input-shadow-focus);
+		border-color: var(--primary);
+	}
+}
+
+/* Tiny variants - smaller focus ring */
+.input-state-focus-tiny {
+	&:hover:not([data-disabled="true"]):not(:disabled):not(:focus) {
+		box-shadow: var(--input-shadow-hover);
+	}
+
+	&:focus {
+		box-shadow: var(--input-shadow-focus-tiny);
+		border-color: var(--primary);
+	}
+}

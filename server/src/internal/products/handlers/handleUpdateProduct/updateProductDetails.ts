@@ -205,9 +205,7 @@ export const handleUpdateProductDetails = async ({
 		}
 	}
 
-	if (productDetailsSame(curProduct, newProduct)) {
-		return;
-	}
+	if (productDetailsSame(curProduct, newProduct)) return;
 
 	if (notNullish(newProduct.id) && newProduct.id !== curProduct.id) {
 		if (customersOnAllVersions.length > 0) {
@@ -225,6 +223,7 @@ export const handleUpdateProductDetails = async ({
 	}
 
 	// 2. Update product
+
 	await ProductService.updateByInternalId({
 		db,
 		internalId: curProduct.internal_id,

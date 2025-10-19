@@ -1,22 +1,54 @@
-import CreateProduct from "./components/CreateProductDialog";
+import { useEffect, useState } from "react";
 import { PageSectionHeader } from "@/components/general/PageSectionHeader";
-import { Badge } from "@/components/ui/badge";
-import { ProductsTable } from "./components/ProductsTable";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { HamburgerMenu } from "@/components/general/table-components/HamburgerMenu";
-import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { useClearQueryParams } from "@/hooks/common/useClearQueryParams";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useProductsQueryState } from "../hooks/useProductsQueryState";
+import CreateProductSheet from "./components/CreateProductSheet";
+import { ProductsTable } from "./components/ProductsTable";
 
 export const ProductsPage = () => {
 	const [dropdownOpen, setDropdownOpen] = useState(false);
+	const [createSheetOpen, setCreateSheetOpen] = useState(false);
 	const { queryStates, setQueryStates } = useProductsQueryState();
 
+	// Clean up onboarding-related query params after a delay
+	useClearQueryParams({ queryParams: ["step", "product_id"] });
+
 	const { products } = useProductsQuery();
+
+	// Add keyboard shortcut: N to open create product sheet
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if (
+				e.key === "n" &&
+				!e.metaKey &&
+				!e.ctrlKey &&
+				!e.altKey &&
+				!e.shiftKey
+			) {
+				const target = e.target as HTMLElement;
+				if (
+					target.tagName === "INPUT" ||
+					target.tagName === "TEXTAREA" ||
+					target.isContentEditable
+				) {
+					return;
+				}
+				e.preventDefault();
+				setCreateSheetOpen(true);
+			}
+		};
+
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, []);
 
 	return (
 		<div>
 			<PageSectionHeader
-				title="Products"
+				title="Plans"
 				titleComponent={
 					<>
 						<span className="text-t2 px-1 rounded-md bg-stone-200 mr-2">
@@ -29,7 +61,12 @@ export const ProductsPage = () => {
 						)}
 					</>
 				}
-				addButton={<CreateProduct />}
+				addButton={
+					<CreateProductSheet
+						open={createSheetOpen}
+						onOpenChange={setCreateSheetOpen}
+					/>
+				}
 				menuComponent={
 					<HamburgerMenu
 						dropdownOpen={dropdownOpen}
@@ -38,8 +75,8 @@ export const ProductsPage = () => {
 							{
 								type: "item",
 								label: queryStates.showArchivedProducts
-									? `Show active products`
-									: `Show archived products`,
+									? `Show active plans`
+									: `Show archived plans`,
 								onClick: () =>
 									setQueryStates({
 										...queryStates,

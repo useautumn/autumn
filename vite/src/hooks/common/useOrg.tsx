@@ -12,7 +12,7 @@ export const useOrg = () => {
 		try {
 			const { data } = await axiosInstance.get("/organization");
 			return data;
-		} catch (error) {
+		} catch {
 			return null;
 		}
 	};
@@ -27,25 +27,25 @@ export const useOrg = () => {
 		queryFn: fetcher,
 	});
 
-	const handleNoActiveOrg = async () => {
-		// 1. If there's existing org, set as active
-		if (orgList && orgList.length > 0) {
-			await authClient.organization.setActive({
-				organizationId: orgList[0].id,
-			});
-			window.location.reload();
-		} else {
-			console.log("No org to set active, signing out");
-			await authClient.signOut();
-		}
-	};
-
 	useEffect(() => {
+		const handleNoActiveOrg = async () => {
+			// 1. If there's existing org, set as active
+			if (orgList && orgList.length > 0) {
+				await authClient.organization.setActive({
+					organizationId: orgList[0].id,
+				});
+				window.location.reload();
+			} else {
+				console.log("No org to set active, signing out");
+				await authClient.signOut();
+			}
+		};
+
 		// 1. If no org...
 		if (!org && !isLoading) {
 			handleNoActiveOrg();
 		}
-	}, [org, orgList]);
+	}, [org, orgList, isLoading]);
 
 	return { org: org as FrontendOrg, isLoading, error, mutate: refetch };
 };

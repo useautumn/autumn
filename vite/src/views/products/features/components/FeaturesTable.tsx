@@ -8,14 +8,14 @@ import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { useProductsQueryState } from "../../hooks/useProductsQueryState";
 import { FeatureRowToolbar } from "../feature-row-toolbar/FeatureRowToolbar";
 import { FeatureTypeBadge } from "./FeatureTypeBadge";
-import UpdateFeature from "./UpdateFeature";
+import UpdateFeatureSheet from "./UpdateFeatureSheet";
 
 export const FeaturesTable = () => {
 	const { features } = useFeaturesQuery();
 	const { queryStates } = useProductsQueryState();
 
 	const [open, setOpen] = useState(false);
-	const [selectedFeature, setSelectedFeature] = useState<any>(null);
+	const [selectedFeature, setSelectedFeature] = useState<Feature | null>(null);
 
 	const getMeteredEventNames = (feature: Feature) => {
 		if (feature.type !== FeatureType.Metered) return "";
@@ -27,6 +27,7 @@ export const FeaturesTable = () => {
 
 	const handleRowClick = (id: string) => {
 		const feature = features.find((feature: Feature) => feature.id === id);
+		if (!feature) return;
 		setSelectedFeature(feature);
 		setOpen(true);
 	};
@@ -40,11 +41,10 @@ export const FeaturesTable = () => {
 
 	return (
 		<div>
-			<UpdateFeature
+			<UpdateFeatureSheet
 				open={open}
 				setOpen={setOpen}
 				selectedFeature={selectedFeature}
-				setSelectedFeature={setSelectedFeature}
 			/>
 			{features && features.length > 0 ? (
 				<Row type="header" className="grid-cols-18 -mb-1 items-center">
