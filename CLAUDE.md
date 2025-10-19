@@ -6,7 +6,7 @@
 - When using db schemas in Drizzle, import them from '@autumn/shared', and don't do schemas.
 
 # Linting and Codebase rules
-- You can access the biome linter by running `npx biome check <folder or file path>`. Always specify a folder path, as the codebase is quite large and you will get out of scope errors that you are not burdened to correct. If you would like to let biome automatically fix as much as it can, use  `npx biome check --write <folder or file path>`
+- You can access the biome linter by running `bunx biome check <folder or file path>`. Always specify a folder path, as the codebase is quite large and you will get out of scope errors that you are not burdened to correct. If you would like to let biome automatically fix as much as it can, use  `bunx biome check --write <folder or file path>`
 
 - Note, biome does not perform typechecking. In which case you need to, you may run `tsc --noEmit --skipLibCheck <folder or file path>`
 

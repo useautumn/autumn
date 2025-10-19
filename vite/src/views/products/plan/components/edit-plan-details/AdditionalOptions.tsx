@@ -25,8 +25,8 @@ export const AdditionalOptions = ({
 				/>
 				<AreaCheckbox
 					title="Add On"
-					description="This product is an add-on that can be bought together with your
-                        base products (eg, top ups)"
+					description="This plan is an add-on that can be bought together with your
+                        base plans (eg, top ups)"
 					checked={product.is_add_on}
 					disabled={product.is_default}
 					onCheckedChange={(checked) =>

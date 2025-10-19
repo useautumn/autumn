@@ -28,7 +28,7 @@ function ProductsView({ env }: { env: AppEnv }) {
 		<ProductsContext.Provider value={{}}>
 			<div className="flex flex-col gap-4 h-fit relative w-full text-sm">
 				<h1 className="text-xl font-medium shrink-0 pt-6 pl-10">
-					{keyToTitle(tab)}
+					{keyToTitle(tab, { exclusionMap: { products: "Plans" } })}
 				</h1>
 
 				{tab === "products" && <ProductsPage />}

@@ -196,7 +196,7 @@ const ProductSelector = ({
 
 	const getProductText = (productId: string) => {
 		const product = products.find((p: ProductV2) => p.id === productId);
-		return product?.name || "Unknown Product";
+		return product?.name || "Unknown Plan";
 	};
 
 	return (
@@ -209,7 +209,7 @@ const ProductSelector = ({
 					className="w-full min-h-9 flex flex-wrap h-fit py-2 justify-start items-center gap-2 relative hover:bg-zinc-50 data-[state=open]:border-focus data-[state=open]:shadow-focus"
 				>
 					{rewardProgram.product_ids?.length === 0
-						? "Select Products"
+						? "Select Plans"
 						: rewardProgram.product_ids?.map((productId: string) => (
 								<div
 									key={productId}
@@ -234,7 +234,7 @@ const ProductSelector = ({
 			</PopoverTrigger>
 			<PopoverContent className="w-[400px] p-0" align="start">
 				<Command>
-					<CommandInput placeholder="Search products..." className="h-9" />
+					<CommandInput placeholder="Search plans..." className="h-9" />
 					<CommandList className="max-h-[300px] overflow-y-auto">
 						<ScrollArea>
 							<CommandEmpty>No products found.</CommandEmpty>

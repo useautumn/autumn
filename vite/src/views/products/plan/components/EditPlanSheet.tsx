@@ -14,7 +14,7 @@ export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 		<>
 			{!isOnboarding && (
 				<SheetHeader
-					title={`Configure ${product.name ? product.name : "your new product"}`}
+					title={`Configure ${product.name ? product.name : "your new plan"}`}
 					description="Configure how this feature is used in your app"
 				/>
 			)}

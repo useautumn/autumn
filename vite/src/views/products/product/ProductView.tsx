@@ -35,7 +35,7 @@ function ProductView() {
 	if (error) {
 		return (
 			<ErrorScreen returnUrl="/products">
-				{error ? error.message : `Product ${product_id} not found`}
+				{error ? error.message : `Plan ${product_id} not found`}
 			</ErrorScreen>
 		);
 	}

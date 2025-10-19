@@ -80,7 +80,7 @@ export function CreateRewardProgramSheet({
 				!rewardProgram.product_ids ||
 				rewardProgram.product_ids.length === 0
 			) {
-				toast.error("Please select at least one product for checkout trigger");
+				toast.error("Please select at least one plan for checkout trigger");
 				return;
 			}
 		}

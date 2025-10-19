@@ -46,7 +46,7 @@ export const SaveChangesBar = ({
 
 	const handleSaveClicked = async () => {
 		if (!isOnboarding && isLoading) {
-			toast.error("Product counts are loading");
+			toast.error("Plan counts are loading");
 			return;
 		}
 

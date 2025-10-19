@@ -82,7 +82,7 @@ export function CreateRewardSheet({
 		}
 
 		if (reward.rewardCategory === "free_product" && !reward.free_product_id) {
-			toast.error("Please select a free product");
+			toast.error("Please select a free plan");
 			return;
 		}
 
@@ -119,7 +119,7 @@ export function CreateRewardSheet({
 			<SheetContent className="flex flex-col overflow-hidden">
 				<SheetHeader
 					title="Create Reward"
-					description="Create a discount or free product reward"
+					description="Create a discount or free plan reward"
 				/>
 
 				<div className="flex-1 overflow-y-auto">

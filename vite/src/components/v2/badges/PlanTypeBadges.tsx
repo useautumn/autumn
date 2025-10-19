@@ -4,14 +4,24 @@ import { PlanTypeBadge } from "./PlanTypeBadge";
 interface PlanTypeBadgesProps {
 	product: ProductV2;
 	className?: string;
+	iconOnly?: boolean;
 }
 
-export const PlanTypeBadges = ({ product, className }: PlanTypeBadgesProps) => {
+export const PlanTypeBadges = ({
+	product,
+	className,
+	iconOnly = false,
+}: PlanTypeBadgesProps) => {
 	const badges = [];
 
 	if (product.is_default) {
 		badges.push(
-			<PlanTypeBadge key="default" variant="default" className={className} />,
+			<PlanTypeBadge
+				key="default"
+				variant="default"
+				className={className}
+				iconOnly={iconOnly}
+			/>,
 		);
 	}
 
@@ -21,13 +31,19 @@ export const PlanTypeBadges = ({ product, className }: PlanTypeBadgesProps) => {
 				key="freeTrial"
 				variant="freeTrial"
 				className={className}
+				iconOnly={iconOnly}
 			/>,
 		);
 	}
 
 	if (product.is_add_on) {
 		badges.push(
-			<PlanTypeBadge key="addon" variant="addon" className={className} />,
+			<PlanTypeBadge
+				key="addon"
+				variant="addon"
+				className={className}
+				iconOnly={iconOnly}
+			/>,
 		);
 	}
 

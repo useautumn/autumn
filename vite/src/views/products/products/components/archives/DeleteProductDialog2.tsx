@@ -28,10 +28,12 @@ export const DeleteProductDialog = ({
 	product,
 	open,
 	setOpen,
+	onDeleteSuccess,
 }: {
 	product: ProductV2;
 	open: boolean;
 	setOpen: (open: boolean) => void;
+	onDeleteSuccess?: () => Promise<void>;
 }) => {
 	const axiosInstance = useAxiosInstance();
 	const [loading, setLoading] = useState(false);
@@ -55,6 +57,11 @@ export const DeleteProductDialog = ({
 
 			await refetchProducts();
 			setOpen(false);
+
+			if (onDeleteSuccess) {
+				await onDeleteSuccess();
+			}
+
 			toast.success("Product deleted successfully");
 		} catch (error: unknown) {
 			toast.error(getBackendErr(error as AxiosError, "Error deleting product"));
@@ -71,6 +78,9 @@ export const DeleteProductDialog = ({
 			});
 			toast.success(`${product.name} archived successfully`);
 			setOpen(false);
+			if (onDeleteSuccess) {
+				await onDeleteSuccess();
+			}
 			await refetchProducts();
 		} catch (error: unknown) {
 			toast.error(
@@ -88,6 +98,9 @@ export const DeleteProductDialog = ({
 				archived: false,
 			});
 			await refetchProducts();
+			if (onDeleteSuccess) {
+				await onDeleteSuccess();
+			}
 			toast.success(`${product.name} unarchived successfully`);
 			setOpen(false);
 		} catch (error: unknown) {

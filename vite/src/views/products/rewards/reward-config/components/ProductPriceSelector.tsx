@@ -117,7 +117,7 @@ export function ProductPriceSelector({
 			value={config.price_ids || []}
 			onChange={(values) => setConfig("price_ids", values)}
 			options={priceOptions}
-			placeholder="Select products or apply to all"
+			placeholder="Select plans or apply to all"
 			formatTag={formatPriceTag}
 			showAllProducts={config.apply_to_all}
 			renderContent={(setOpen) => (
