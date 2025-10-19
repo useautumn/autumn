@@ -26,7 +26,7 @@ export const billingIntervalToStripe = ({
 }: {
 	interval: BillingInterval;
 	intervalCount?: number | null;
-}): Stripe.PriceCreateParams.Recurring => {
+}): Stripe.PriceCreateParams.Recurring | Record<string, any> => {
 	const finalCount = intervalCount ?? 1;
 	switch (interval) {
 		case BillingInterval.Week:
@@ -55,7 +55,8 @@ export const billingIntervalToStripe = ({
 				interval_count: finalCount,
 			};
 		default:
-			throw new Error(`billingIntervalToStripe: invalid interval ${interval}`);
+			// throw new Error(`billingIntervalToStripe: invalid interval ${interval}`);
+			return {};
 	}
 };
 

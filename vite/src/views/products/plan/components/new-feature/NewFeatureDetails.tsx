@@ -26,14 +26,6 @@ export function NewFeatureDetails({
 
 	if (!feature) return null;
 
-	// Debug logging
-	console.log("NewFeatureDetails debug:", {
-		isExistingFeature,
-		baseFeature,
-		internal_id: baseFeature?.internal_id,
-		feature
-	});
-
 	return (
 		<SheetSection title="Feature Details">
 			<div className="space-y-4">

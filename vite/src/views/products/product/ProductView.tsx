@@ -42,67 +42,13 @@ function ProductView() {
 
 	if (!product) return;
 
-	// const updateProduct = async () => {
-	//   try {
-	//     await ProductService.updateProduct(axiosInstance, product.id, {
-	//       ...UpdateProductSchema.parse(product),
-	//       items: product.items,
-	//       free_trial: product.free_trial,
-	//     });
-
-	//     if (isNewProduct) {
-	//       toast.success("Product created successfully");
-	//     } else {
-	//       toast.success("Product updated successfully");
-	//     }
-
-	//     await refetch();
-	//     await mutateCount();
-	//   } catch (error) {
-	//     toast.error(getBackendErr(error, "Failed to update product"));
-	//   }
-	// };
-
-	// const updateProductClicked = async () => {
-	//   if (!counts) {
-	//     toast.error("Something went wrong, please try again...");
-	//     return;
-	//   }
-
-	//   if (version && version < data?.numVersions) {
-	//     toast.error("You can only update the latest version of a product");
-	//     return;
-	//   }
-
-	//   if (counts?.all > 0) {
-	//     setShowNewVersionDialog(true);
-	//     return;
-	//   }
-
-	//   await updateProduct();
-	// };
-
 	return (
 		<ProductContext.Provider
 			value={{
-				// ...data,
-				// features,
-				// setFeatures,
-
-				// For versioning?
-				// counts,
-				// version,
-
-				// mutate,
-				// env,
-
 				setShowNewVersionDialog,
 				product,
 				setProduct,
-
-				// mutateCount,
 				actionState,
-				// handleCreateProduct: updateProductClicked,
 				entityFeatureIds,
 				setEntityFeatureIds,
 				hasChanges,

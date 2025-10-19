@@ -1,25 +1,22 @@
-import SidebarBottom from "./SidebarBottom";
-import { NavButton } from "./NavButton";
-import { useEnv } from "@/utils/envUtils";
-import { cn } from "@/lib/utils";
-import { SidebarContext } from "./SidebarContext";
-import { useHotkeys } from "react-hotkeys-hook";
 import {
-	ChartBar,
+	ChartColumnBig,
 	CircleUserRound,
-	Code,
 	Package,
 	PanelLeft,
 	SquareTerminal,
-	ChartColumnBig,
 } from "lucide-react";
-import { EnvDropdown } from "./EnvDropdown";
-import { OrgDropdown } from "./components/OrgDropdown";
+import { useHotkeys } from "react-hotkeys-hook";
 import { Button } from "@/components/ui/button";
-
-import { SidebarGroup } from "./SidebarGroup";
-import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
+import { useLocalStorage } from "@/hooks/common/useLocalStorage";
+import { cn } from "@/lib/utils";
+import { useEnv } from "@/utils/envUtils";
+import { OrgDropdown } from "./components/OrgDropdown";
+import { EnvDropdown } from "./EnvDropdown";
+import { NavButton } from "./NavButton";
+import SidebarBottom from "./SidebarBottom";
+import { SidebarContext } from "./SidebarContext";
+import { SidebarGroup } from "./SidebarGroup";
 
 export const MainSidebar = () => {
 	const env = useEnv();

@@ -16,8 +16,15 @@ export const InfoTooltip = ({
 } & TooltipContentProps) => {
 	return (
 		<Tooltip>
-			<TooltipTrigger className={className}>
-				<InfoIcon size={12} className="text-t3/50" />
+			<TooltipTrigger
+				asChild
+				className={className}
+				tabIndex={-1}
+				onFocus={(e) => e.preventDefault()}
+			>
+				<button type="button" className="outline-none">
+					<InfoIcon size={12} className="text-t3/50" />
+				</button>
 			</TooltipTrigger>
 			<TooltipContent sideOffset={10} {...props}>
 				{children}

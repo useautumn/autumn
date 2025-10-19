@@ -1,5 +1,5 @@
 import { AxiosError } from "axios";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductSync } from "@/hooks/stores/useProductSync";
@@ -31,6 +31,10 @@ export default function PlanEditorView() {
 
 	const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
 	const setSheet = useSheetStore((s) => s.setSheet);
+
+	useEffect(() => {
+		setSheet({ type: "edit-plan" });
+	}, [setSheet]);
 
 	if (featuresLoading || productLoading) return <LoadingScreen />;
 

@@ -6,7 +6,8 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/v2/tooltips/Tooltip";
-import { useEnv } from "@/utils/envUtils";
+import { useOrg } from "@/hooks/common/useOrg";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { pushPage } from "@/utils/genUtils";
 import { useOnboarding3QueryState } from "../hooks/useOnboarding3QueryState";
 import { OnboardingStep } from "../utils/onboardingUtils";
@@ -17,7 +18,8 @@ interface ExitButtonProps {
 
 export function ExitButton({ position = "absolute" }: ExitButtonProps) {
 	const navigate = useNavigate();
-	const env = useEnv();
+	const { org, mutate: mutateOrg } = useOrg();
+	const axiosInstance = useAxiosInstance();
 	const { queryStates } = useOnboarding3QueryState();
 	const step = queryStates.step;
 
@@ -26,7 +28,14 @@ export function ExitButton({ position = "absolute" }: ExitButtonProps) {
 		return null;
 	}
 
-	const handleExit = () => {
+	const handleExit = async () => {
+		if (!org?.onboarded) {
+			await axiosInstance.patch("/v1/organization", {
+				onboarded: true,
+			});
+			await mutateOrg();
+		}
+
 		pushPage({
 			navigate,
 			path: "/products",

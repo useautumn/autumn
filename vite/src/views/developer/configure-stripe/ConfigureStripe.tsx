@@ -2,25 +2,26 @@ import { AppEnv } from "@autumn/shared";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { PageSectionHeader } from "@/components/general/PageSectionHeader";
-import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/v2/buttons/Button";
 import {
 	Card,
 	CardContent,
 	CardDescription,
 	CardHeader,
 	CardTitle,
-} from "@/components/ui/card";
+} from "@/components/v2/cards/Card";
 import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
+} from "@/components/v2/dialogs/Dialog";
+import { FormLabel } from "@/components/v2/form/FormLabel";
+import { Input } from "@/components/v2/inputs/Input";
+import { CurrencySelect } from "@/components/v2/selects/CurrencySelect";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
@@ -29,7 +30,6 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
 import { getStripeDashboardLink } from "@/utils/linkUtils";
-import { CurrencySelect } from "@/views/onboarding/ConnectStripe";
 import ConnectStripeDialog from "@/views/onboarding2/ConnectStripeDialog";
 import { DisconnectStripePopover } from "./DisconnectStripePopover";
 
@@ -186,8 +186,8 @@ export const ConfigureStripe = () => {
 		<div className="flex flex-col gap-4">
 			<PageSectionHeader title="Stripe Settings" />
 			<div className="px-10 max-w-[600px] flex flex-col gap-4">
-				<Card className="!p-4 shadow-none">
-					<CardHeader className="px-0">
+				<Card className="shadow-none bg-white">
+					<CardHeader>
 						<CardTitle>Connect your Stripe account</CardTitle>
 						{isLoadingStripeAccount ? (
 							<div className="space-y-2">
@@ -217,16 +217,16 @@ export const ConfigureStripe = () => {
 						)}
 					</CardHeader>
 
-					<CardContent className="flex flex-col gap-2 px-0">
+					<CardContent className="flex flex-col gap-2">
 						<div className="flex gap-2">
 							{status.showConnectButtons && (
 								<>
-									<Button variant="outline" onClick={handleRedirectToOAuth}>
+									<Button variant="secondary" onClick={handleRedirectToOAuth}>
 										Connect via OAuth
 									</Button>
 									{canPasteSecretKey && (
 										<Button
-											variant="outline"
+											variant="secondary"
 											onClick={() => setShowConnectDialog(true)}
 										>
 											Paste secret key
@@ -247,9 +247,9 @@ export const ConfigureStripe = () => {
 				</Card>
 
 				<div>
-					<FieldLabel className="mb-1">
+					<FormLabel className="mb-1">
 						<span className="text-t2">Success URL</span>
-					</FieldLabel>
+					</FormLabel>
 					<p className="text-t3 text-sm mb-2">
 						This will be the default URL that users are redirected to after a
 						successful checkout session. It can be overriden through the API.
@@ -267,9 +267,9 @@ export const ConfigureStripe = () => {
 				</div>
 
 				<div>
-					<FieldLabel className="mb-1">
+					<FormLabel className="mb-1">
 						<span className="text-t2">Default Currency</span>
-					</FieldLabel>
+					</FormLabel>
 					<p className="text-t3 text-sm mb-2">
 						This currency that your prices will be created in. This setting is
 						shared between your sandbox and production environment.
