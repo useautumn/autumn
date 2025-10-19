@@ -198,26 +198,12 @@ export const handleUsageEvent = async ({
 		entityId: entity_id,
 	};
 
-	// console.log("Customer:", customer);
-	// console.log(
-	//   "Is paid continuous use:",
-	//   isPaidContinuousUse({ feature, fullCus: customer })
-	// );
-
-	if (isPaidContinuousUse({ feature, fullCus: customer })) {
-		console.log(`Running update usage task synchronously`);
-		await runUpdateUsageTask({
-			payload,
-			logger: console,
-			db: req.db,
-			throwError: true,
-		});
-	} else {
-		await addTaskToQueue({
-			jobName: JobName.UpdateUsage,
-			payload,
-		});
-	}
+	await runUpdateUsageTask({
+		payload,
+		logger: console,
+		db: req.db,
+		throwError: true,
+	});
 
 	return { event: newEvent, affectedFeatures: features, org };
 };
