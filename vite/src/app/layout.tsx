@@ -4,7 +4,6 @@ import { ArrowUpRightFromSquare } from "lucide-react";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { useEffect } from "react";
 import { Outlet, useNavigate } from "react-router";
-import { ChatWidget } from "@/components/general/ChatWidget";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { Button } from "@/components/ui/button";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
@@ -106,7 +105,7 @@ export function MainLayout() {
 					<MainSidebar />
 					<InviteNotifications />
 					<MainContent />
-					<ChatWidget />
+					{/* <ChatWidget /> */}
 					<CommandBar />
 				</main>
 			</NuqsAdapter>
