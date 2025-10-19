@@ -110,7 +110,7 @@ export const EditPlanHeader = () => {
 					className="p-0"
 					items={[
 						{
-							name: "Products",
+							name: "Plans",
 							href: "/products?tab=products",
 						},
 						{
