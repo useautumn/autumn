@@ -1,18 +1,17 @@
 import { AppEnv, ErrCode } from "@autumn/shared";
 import Stripe from "stripe";
 import { z } from "zod";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { ensureStripeProductsWithEnv } from "@/external/stripe/stripeEnsureUtils.js";
 import {
 	checkKeyValid,
 	createWebhookEndpoint,
 } from "@/external/stripe/stripeOnboardingUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
 import { encryptData } from "@/utils/encryptUtils.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { nullish } from "@/utils/genUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { OrgService } from "../OrgService.js";
-import { clearOrgCache } from "../orgUtils/clearOrgCache.js";
 import { isStripeConnected } from "../orgUtils.js";
 
 export const connectStripe = async ({
@@ -49,6 +48,10 @@ export const connectStripe = async ({
 			test_webhook_secret: encryptData(webhook.secret as string),
 			env,
 			defaultCurrency: account.default_currency,
+			metadata: {
+				org_id: orgId,
+				env: env,
+			},
 		};
 	} else {
 		return {
@@ -56,90 +59,12 @@ export const connectStripe = async ({
 			live_webhook_secret: encryptData(webhook.secret as string),
 			env,
 			defaultCurrency: account.default_currency,
+			metadata: {
+				org_id: orgId,
+				env: env,
+			},
 		};
 	}
-};
-
-export const connectAllStripe = async ({
-	db,
-	orgId,
-	logger,
-	testApiKey,
-	liveApiKey,
-	defaultCurrency,
-	successUrl,
-}: {
-	db: any;
-	orgId: string;
-	logger: any;
-	testApiKey: string;
-	liveApiKey: string;
-	defaultCurrency?: string;
-	successUrl: string;
-}) => {
-	// 1. Check if API keys are valid
-	try {
-		await clearOrgCache({
-			db,
-			orgId,
-			logger,
-		});
-
-		await checkKeyValid(testApiKey);
-		await checkKeyValid(liveApiKey);
-
-		// Get default currency from Stripe
-		const stripe = new Stripe(testApiKey);
-
-		const account = await stripe.accounts.retrieve();
-
-		if (nullish(defaultCurrency) && nullish(account.default_currency)) {
-			throw new RecaseError({
-				message: "Default currency not set",
-				code: ErrCode.StripeKeyInvalid,
-				statusCode: 500,
-			});
-		} else if (nullish(defaultCurrency)) {
-			defaultCurrency = account.default_currency;
-		}
-	} catch (error: any) {
-		// console.error("Error checking stripe keys", error);
-		throw new RecaseError({
-			message: error.message || "Invalid Stripe API keys",
-			code: ErrCode.StripeKeyInvalid,
-			statusCode: 500,
-			data: error,
-		});
-	}
-	// 2. Create webhook endpoint
-	let testWebhook: Stripe.WebhookEndpoint;
-	let liveWebhook: Stripe.WebhookEndpoint;
-	try {
-		testWebhook = await createWebhookEndpoint(
-			testApiKey,
-			AppEnv.Sandbox,
-			orgId,
-		);
-		liveWebhook = await createWebhookEndpoint(liveApiKey, AppEnv.Live, orgId);
-	} catch (error) {
-		throw new RecaseError({
-			message: "Error creating stripe webhook",
-			code: ErrCode.StripeKeyInvalid,
-			statusCode: 500,
-			data: error,
-		});
-	}
-
-	return {
-		defaultCurrency,
-		stripeConfig: {
-			test_api_key: encryptData(testApiKey),
-			live_api_key: encryptData(liveApiKey),
-			test_webhook_secret: encryptData(testWebhook.secret as string),
-			live_webhook_secret: encryptData(liveWebhook.secret as string),
-			success_url: successUrl,
-		},
-	};
 };
 
 const connectStripeBody = z.object({
@@ -298,8 +223,9 @@ export const handleGetStripe = async (req: any, res: any) => {
 		}
 
 		const stripeCli = createStripeCli({ org, env: req.env });
-
 		const account_details = await stripeCli.accounts.retrieve();
+
+		// console.log("Account details: ", account_details);
 
 		res.status(200).json(account_details);
 	} catch (error) {

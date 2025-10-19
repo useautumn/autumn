@@ -1,13 +1,13 @@
+import { ErrCode } from "@autumn/shared";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { getUploadUrl } from "@/external/supabase/storageUtils.js";
 import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
-import { ErrCode } from "@autumn/shared";
 
 export const handleGetUploadUrl = async (req: any, res: any) => {
 	try {
 		const { org } = req;
 
-		let path = `logo/${org.id}`;
+		const path = `logo/${org.id}`;
 
 		if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
 			logger.warn("Supabase storage not set up");

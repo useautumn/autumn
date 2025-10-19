@@ -1,17 +1,17 @@
-import { validateMeteredConfig } from "@/internal/features/featureUtils.js";
-import { constructFeature } from "@/internal/features/utils/constructFeatureUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { keyToTitle } from "@/utils/genUtils.js";
 import {
 	AggregateType,
 	AppEnv,
 	ChatFeatureCreditSchema,
-	ChatResultFeature,
+	type ChatResultFeature,
+	type CreditSystemConfig,
 	FeatureType,
 	FeatureUsageType,
-	MeteredConfig,
+	type MeteredConfig,
 } from "@autumn/shared";
-import { CreditSystemConfig } from "@autumn/shared";
+import { validateMeteredConfig } from "@/internal/features/featureUtils.js";
+import { constructFeature } from "@/internal/features/utils/constructFeatureUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { keyToTitle } from "@/utils/genUtils.js";
 
 const validateFeatures = (features: ChatResultFeature[]) => {
 	features.forEach((feature) => {
@@ -32,7 +32,7 @@ const validateFeatures = (features: ChatResultFeature[]) => {
 						});
 					}
 
-					let meteredFeature = features.some(
+					const meteredFeature = features.some(
 						(m) => m.id == item.metered_feature_id && m.id != feature.id,
 					);
 					if (!meteredFeature) {
@@ -58,14 +58,14 @@ export const parseChatResultFeatures = ({
 	validateFeatures(features);
 
 	return features.map((feature) => {
-		let type =
+		const type =
 			feature.type == "boolean"
 				? FeatureType.Boolean
 				: feature.type == "credit_system"
 					? FeatureType.CreditSystem
 					: FeatureType.Metered;
 
-		let config: CreditSystemConfig | MeteredConfig | undefined = undefined;
+		let config: CreditSystemConfig | MeteredConfig | undefined;
 		if (type == FeatureType.CreditSystem) {
 			config = {
 				schema: feature.credit_schema!.map((item) => ({
@@ -89,7 +89,7 @@ export const parseChatResultFeatures = ({
 			});
 		}
 
-		let backendFeat = constructFeature({
+		const backendFeat = constructFeature({
 			id: feature.id,
 			name: keyToTitle(feature.id),
 			type,

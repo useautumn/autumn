@@ -28,7 +28,7 @@ export const CheckoutPricingTable = () => {
 	return (
 		<div className="flex flex-col gap-4 w-full">
 			<StepHeader
-				number={7}
+				number={6}
 				title={
 					<p>
 						Drop in <CodeSpan>{"<PricingTable />"}</CodeSpan>

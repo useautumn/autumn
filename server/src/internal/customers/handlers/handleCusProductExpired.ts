@@ -1,30 +1,24 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
+import {
+	CusProductStatus,
+	cusProductToPrices,
+	ErrCode,
+	type FullCusProduct,
+	type FullCustomer,
+} from "@autumn/shared";
+import { StatusCodes } from "http-status-codes";
 import {
 	ACTIVE_STATUSES,
 	CusProductService,
 } from "@/internal/customers/cusProducts/CusProductService.js";
+import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import {
 	cancelCusProductSubscriptions,
 	expireAndActivate,
-	fullCusProductToProduct,
 } from "@/internal/customers/cusProducts/cusProductUtils.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import {
-	ErrCode,
-	CusProductStatus,
-	FullCusProduct,
-	Organization,
-	AppEnv,
-	FullCustomer,
-} from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { CusService } from "../CusService.js";
-import { cusProductToPrices } from "@autumn/shared";
-
 export const expireCusProduct = async ({
 	req,
 	cusProduct, // cus product to expire
@@ -61,8 +55,8 @@ export const expireCusProduct = async ({
 	// }
 
 	// 1. If main product, can't expire if there's scheduled product
-	let isMain = !cusProduct.product.is_add_on;
-	let { curScheduledProduct: futureProduct } = getExistingCusProducts({
+	const isMain = !cusProduct.product.is_add_on;
+	const { curScheduledProduct: futureProduct } = getExistingCusProducts({
 		product: cusProduct.product,
 		cusProducts: fullCus.customer_products,
 		internalEntityId: cusProduct.internal_entity_id,
@@ -173,7 +167,7 @@ export const handleCusProductExpired = async (req: any, res: any) => {
 		const { db } = req;
 
 		const customerProductId = req.params.customer_product_id;
-		let cusProduct = await CusProductService.get({
+		const cusProduct = await CusProductService.get({
 			db,
 			id: customerProductId,
 			orgId: req.orgId,

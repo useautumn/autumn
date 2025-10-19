@@ -1,6 +1,6 @@
 import { CreateCustomerSchema, ErrCode, ProcessorType } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import { createStripeCli } from "@/external/stripe/utils.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import RecaseError from "@/utils/errorUtils.js";
@@ -139,7 +139,7 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
 				customer: finalCustomer,
 				org,
 				env: req.env,
-				logger: req.logtail,
+				logger: req.logger,
 				cusProducts: finalCustomer.customer_products,
 				expand: parseCusExpand(req.query.expand as string),
 				features,
