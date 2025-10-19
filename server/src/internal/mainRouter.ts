@@ -17,7 +17,7 @@ import { InvoiceService } from "./invoices/InvoiceService.js";
 import { handlePostOrg } from "./orgs/handlers/handlePostOrg.js";
 import { onboardingRouter } from "./orgs/onboarding/onboardingRouter.js";
 import { orgRouter } from "./orgs/orgRouter.js";
-import { productRouter } from "./products/internalProductRouter.js";
+import { expressProductRouter } from "./products/internalProductRouter.js";
 import { viewsRouter } from "./saved-views/savedViewsRouter.js";
 import { userRouter } from "./users/userRouter.js";
 
@@ -33,7 +33,7 @@ mainRouter.use("/users", withAuth, userRouter);
 mainRouter.use("/onboarding", withOrgAuth, onboardingRouter);
 mainRouter.use("/organization", withOrgAuth, orgRouter);
 mainRouter.use("/features", withOrgAuth, internalFeatureRouter);
-mainRouter.use("/products", withOrgAuth, productRouter);
+mainRouter.use("/products", withOrgAuth, expressProductRouter);
 mainRouter.use("/dev", devRouter);
 mainRouter.use("/customers", withOrgAuth, cusRouter);
 mainRouter.use("/query", withOrgAuth, analyticsRouter);

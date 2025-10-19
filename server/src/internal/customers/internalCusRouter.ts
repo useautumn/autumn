@@ -7,20 +7,22 @@ import {
 	productToCusProduct,
 } from "@autumn/shared";
 import { Router } from "express";
+import { Hono } from "hono";
 import { StatusCodes } from "http-status-codes";
+import { z } from "zod/v4";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { CusBatchService } from "../api/batch/CusBatchService.js";
 import { EventService } from "../api/events/EventService.js";
-import { isStripeConnected } from "../orgs/orgUtils.js";
 import { ProductService } from "../products/ProductService.js";
 import { mapToProductV2 } from "../products/productV2Utils.js";
-import { RewardRedemptionService } from "../rewards/RewardRedemptionService.js";
-import { CusReadService } from "./CusReadService.js";
 import { CusSearchService } from "./CusSearchService.js";
 import { CusService } from "./CusService.js";
 import { ACTIVE_STATUSES } from "./cusProducts/CusProductService.js";
+import { handleGetCusReferrals } from "./internalHandlers/handleGetCusReferrals.js";
 
 export const cusRouter: Router = Router();
 
@@ -47,45 +49,6 @@ cusRouter.post("/all/search", (req, res) =>
 		},
 	}),
 );
-
-// Customer page
-cusRouter.get("/:customer_id", async (req: any, res: any) => {
-	try {
-		const { db, org, features, env } = req;
-		const { customer_id } = req.params;
-		const orgId = req.orgId;
-
-		const fullCus = await CusService.getFull({
-			db,
-			orgId,
-			env,
-			idOrInternalId: customer_id,
-			withEntities: true,
-			expand: [CusExpand.Invoices],
-			inStatuses: [
-				CusProductStatus.Active,
-				CusProductStatus.PastDue,
-				CusProductStatus.Scheduled,
-				CusProductStatus.Expired,
-			],
-		});
-
-		res.status(200).json({
-			customer: fullCus,
-			// products: getLatestProducts(products),
-			// versionCounts: getProductVersionCounts(products),
-			// invoices,
-			// features,
-			// coupons,
-			// events,
-			// discount,
-			// org,
-			// entities,
-		});
-	} catch (error) {
-		handleFrontendReqError({ req, error, res, action: "get customer data" });
-	}
-});
 
 cusRouter.get("/:customer_id/events", async (req: any, res: any) => {
 	try {
@@ -118,89 +81,6 @@ cusRouter.get("/:customer_id/events", async (req: any, res: any) => {
 		res.status(200).json({ events });
 	} catch (error) {
 		handleFrontendReqError({ req, error, res, action: "get customer events" });
-	}
-});
-
-cusRouter.get("/:customer_id/referrals", async (req: any, res: any) => {
-	try {
-		const { env, db, org } = req;
-		const { customer_id } = req.params;
-		const orgId = req.orgId;
-
-		const internalCustomer = await CusService.get({
-			db,
-			orgId,
-			env,
-			idOrInternalId: customer_id,
-		});
-
-		if (!internalCustomer) {
-			throw new RecaseError({
-				message: "Customer not found",
-				code: ErrCode.CustomerNotFound,
-				statusCode: StatusCodes.NOT_FOUND,
-			});
-		}
-
-		// Get all redemptions for this customer
-		const [referred, redeemed, stripeCus] = await Promise.all([
-			RewardRedemptionService.getByReferrer({
-				db,
-				internalCustomerId: internalCustomer.internal_id,
-				withCustomer: true,
-				limit: 100,
-			}),
-			RewardRedemptionService.getByCustomer({
-				db,
-				internalCustomerId: internalCustomer.internal_id,
-				withReferralCode: true,
-				limit: 100,
-			}),
-			async () => {
-				if (isStripeConnected({ org, env }) && internalCustomer.processor?.id) {
-					const stripeCli = createStripeCli({ org, env });
-					const stripeCus: any = await stripeCli.customers.retrieve(
-						internalCustomer.processor.id,
-					);
-					return stripeCus;
-				}
-				return null;
-			},
-		]);
-
-		const redeemedCustomerIds = redeemed.map(
-			(redemption: any) => redemption.referral_code.internal_customer_id,
-		);
-
-		const redeemedCustomers = await CusReadService.getInInternalIds({
-			db,
-			internalIds: redeemedCustomerIds,
-		});
-
-		for (const redemption of redeemed) {
-			if (redemption.referral_code) {
-				redemption.referral_code.customer = redeemedCustomers.find(
-					(customer: any) =>
-						customer.internal_id ===
-						redemption.referral_code!.internal_customer_id,
-				);
-			}
-		}
-
-		const end = performance.now();
-
-		res.status(200).send({
-			referred,
-			redeemed,
-			stripeCus,
-		});
-	} catch (error) {
-		handleFrontendReqError({
-			req,
-			error,
-			res,
-			action: "get customer referrals",
-		});
 	}
 });
 
@@ -311,11 +191,45 @@ cusRouter.get(
 	},
 );
 
-cusRouter.get("/:customer_id/sub", async (req: any, res: any) => {
-	try {
-		const { org, env, db } = req;
-		const { customer_id } = req.params;
-		const orgId = req.orgId;
+export const internalCusRouter = new Hono<HonoEnv>();
+
+export const handleGetCustomerInternal = createRoute({
+	params: z.object({ customer_id: z.string() }),
+	handler: async (c) => {
+		const { db, org, env } = c.get("ctx");
+		const { customer_id } = c.req.valid("param");
+
+		const fullCus = await CusService.getFull({
+			db,
+			orgId: org.id,
+			env,
+			idOrInternalId: customer_id,
+			withEntities: true,
+			expand: [CusExpand.Invoices],
+			inStatuses: [
+				CusProductStatus.Active,
+				CusProductStatus.PastDue,
+				CusProductStatus.Scheduled,
+				CusProductStatus.Expired,
+			],
+		});
+
+		return c.json({
+			customer: fullCus,
+		});
+	},
+});
+
+export const handleGetCustomerSub = createRoute({
+	params: z.object({
+		customer_id: z.string(),
+	}),
+
+	handler: async (c) => {
+		const ctx = c.get("ctx");
+		const { org, env, db, logger } = ctx;
+		const { customer_id } = c.req.valid("param");
+		const orgId = org.id;
 
 		const fullCus = await CusService.getFull({
 			db,
@@ -328,15 +242,22 @@ cusRouter.get("/:customer_id/sub", async (req: any, res: any) => {
 			(cp: FullCusProduct) => cp.subscription_ids || [],
 		)?.[0];
 
-		if (!subId) return res.status(200).json({ sub: undefined });
+		if (!subId) return c.json({ sub: undefined });
 
-		const stripeCli = createStripeCli({ org, env });
-		const sub = await stripeCli.subscriptions.retrieve(subId, {
-			expand: ["discounts.coupon"],
-		});
+		try {
+			const stripeCli = createStripeCli({ org, env });
+			const sub = await stripeCli.subscriptions.retrieve(subId, {
+				expand: ["discounts.coupon"],
+			});
 
-		res.status(200).json({ sub });
-	} catch (error) {
-		handleFrontendReqError({ req, error, res, action: "get customer rewards" });
-	}
+			return c.json({ sub });
+		} catch (error) {
+			logger.warn(`failed to get customers sub: ${error}`);
+			return c.json({ sub: undefined });
+		}
+	},
 });
+
+internalCusRouter.get("/:customer_id", ...handleGetCustomerInternal);
+internalCusRouter.get("/:customer_id/sub", ...handleGetCustomerSub);
+internalCusRouter.get("/:customer_id/referrals", ...handleGetCusReferrals);

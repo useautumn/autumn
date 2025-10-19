@@ -5,6 +5,7 @@ import { handleConnectWebhook } from "./external/webhooks/connectWebhookRouter.j
 import { analyticsMiddleware } from "./honoMiddlewares/analyticsMiddleware.js";
 import { apiVersionMiddleware } from "./honoMiddlewares/apiVersionMiddleware.js";
 import { baseMiddleware } from "./honoMiddlewares/baseMiddleware.js";
+import { betterAuthMiddleware } from "./honoMiddlewares/betterAuthMiddleware.js";
 import { errorMiddleware } from "./honoMiddlewares/errorMiddleware.js";
 import { orgConfigMiddleware } from "./honoMiddlewares/orgConfigMiddleware.js";
 import { queryMiddleware } from "./honoMiddlewares/queryMiddleware.js";
@@ -13,10 +14,12 @@ import { secretKeyMiddleware } from "./honoMiddlewares/secretKeyMiddleware.js";
 import { traceMiddleware } from "./honoMiddlewares/traceMiddleware.js";
 import type { HonoEnv } from "./honoUtils/HonoEnv.js";
 import { cusRouter } from "./internal/customers/cusRouter.js";
+import { internalCusRouter } from "./internal/customers/internalCusRouter.js";
 import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/handleOAuthCallback.js";
 import { honoOrgRouter } from "./internal/orgs/orgRouter.js";
 import { honoPlatformRouter } from "./internal/platform/honoPlatformRouter.js";
 import { platformBetaRouter } from "./internal/platform/platformBeta/platformBetaRouter.js";
+import { internalProductRouter } from "./internal/products/internalProductRouter.js";
 import { honoProductRouter } from "./internal/products/productRouter.js";
 import { auth } from "./utils/auth.js";
 
@@ -76,8 +79,10 @@ export const createHonoApp = () => {
 	app.use("*", baseMiddleware);
 	app.use("*", traceMiddleware);
 
-	// Webhook routes (after baseMiddleware for logging, but baseMiddleware skips body parsing)
+	// Webhook routes
 	app.post("/webhooks/connect/:env", handleConnectWebhook);
+
+	// API Middleware
 	app.use("/v1/*", secretKeyMiddleware);
 	app.use("/v1/*", orgConfigMiddleware);
 	app.use("/v1/*", apiVersionMiddleware);
@@ -85,13 +90,19 @@ export const createHonoApp = () => {
 	app.use("/v1/*", analyticsMiddleware);
 	app.use("/v1/*", queryMiddleware());
 
+	// API Routes
 	app.route("v1/customers", cusRouter);
 	app.route("v1/products", honoProductRouter);
 	app.route("v1/platform", honoPlatformRouter);
 	app.route("v1/platform/beta", platformBetaRouter);
 	app.route("v1/organization", honoOrgRouter);
 
-	// Error handler - must be defined after all routes and middleware
+	// Internal/dashboard routes - use betterAuthMiddleware for session auth
+	app.use("/products/*", betterAuthMiddleware);
+	app.route("/products", internalProductRouter);
+	app.use("/customers/*", betterAuthMiddleware);
+	app.route("/customers", internalCusRouter);
+
 	app.onError(errorMiddleware);
 
 	// Create request listener for integration with Express
