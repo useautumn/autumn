@@ -8,6 +8,7 @@ import { OrgService } from "../orgs/OrgService.js";
 import { createOrgResponse } from "../orgs/orgUtils.js";
 import { RewardProgramService } from "../rewards/RewardProgramService.js";
 import { RewardService } from "../rewards/RewardService.js";
+import { EntitlementService } from "./entitlements/EntitlementService.js";
 import { handleGetProductDeleteInfo } from "./handlers/handleGetProductDeleteInfo.js";
 import { ProductService } from "./ProductService.js";
 import { isFeaturePriceItem } from "./product-items/productItemUtils/getItemType.js";
@@ -490,6 +491,30 @@ expressProductRouter.get("/rewards", async (req: any, res: any) => {
 		});
 	}
 });
+
+expressProductRouter.get(
+	"/has_entity_feature_id",
+	async (req: any, res: any) => {
+		try {
+			const { db, orgId, env } = req;
+
+			const hasEntityFeatureId = await EntitlementService.hasEntityFeatureId({
+				db,
+				orgId,
+				env,
+			});
+
+			res.status(200).send({ hasEntityFeatureId });
+		} catch (error) {
+			handleFrontendReqError({
+				error,
+				req,
+				res,
+				action: "Check has entity feature id",
+			});
+		}
+	},
+);
 
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";

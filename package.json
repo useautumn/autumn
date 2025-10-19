@@ -39,6 +39,7 @@
 		"tailwind-scrollbar-hide": "^4.0.0"
 	},
 	"devDependencies": {
+		"@biomejs/biome": "^2.2.4",
 		"@types/node": "^24.0.3",
 		"concurrently": "^9.1.2",
 		"dotenv": "^16.5.0",

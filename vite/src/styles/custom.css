@@ -1,0 +1,239 @@
+/* INPUT HEIGHT */
+.h-input {
+	height: 1.75rem; /* 28px, h-7 */
+}
+
+/* .border-base {
+	border: 0.5px solid var(--card-border);
+	box-shadow: 0px 2px 14px 0px rgba(0, 0, 0, 0.03);
+}
+
+.input-shadow {
+	box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.02);
+
+	&:hover:not([data-disabled="true"]):not(:focus):not([data-state="open"]) {
+		box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.06);
+	}
+
+	&[data-state="open"] {
+		box-shadow:
+			0 0 0 0.5px var(--primary),
+			0 0 8px 1px rgba(136, 56, 255, 0.25),
+			0 4px 4px 0 rgba(0, 0, 0, 0.04);
+	}
+}
+
+.input-shadow-tiny {
+	box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.02);
+
+	&:hover:not([data-disabled="true"]):not(:focus):not([data-state="open"]) {
+		box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.06);
+	}
+
+	&:focus,
+	&[data-state="open"] {
+		box-shadow:
+			0 0 0 0.2px var(--primary),
+			0 4px 4px 0 rgba(0, 0, 0, 0.04);
+	}
+}
+
+.form-input:hover:not(:disabled) {
+	border-color: var(--primary);
+}
+
+.select-bg {
+	&:hover:not(:disabled):not(:focus):not([data-state="open"]) {
+		background-color: var(--color-hover-primary);
+	}
+
+	&:focus,
+	&[data-state="open"] {
+		background-color: var(--color-active-primary);
+		border-color: var(--primary);
+	}
+}
+
+.select-shadow {
+	box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.02);
+	transition: none;
+
+	&:hover:not([data-disabled="true"]):not(:focus):not([data-state="open"]) {
+		box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.06);
+	}
+
+	&:focus,
+	&[data-state="open"] {
+		box-shadow:
+			0 0 0 0.5px var(--primary),
+			0 0 8px 1px rgba(136, 56, 255, 0.25),
+			0 4px 4px 0 rgba(0, 0, 0, 0.04);
+	}
+} */
+
+/* PANEL */
+.panel {
+	box-shadow:
+		0 2px 4px rgba(136, 56, 255, 0.25),
+		0 8px 18px rgba(136, 56, 255, 0.05),
+		inset 0 -8px 11px rgba(0, 0, 0, 0.04);
+}
+
+.panel-button {
+	position: relative;
+	border-width: 4px;
+	border-radius: 0.5rem;
+	padding: 0.75rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: fit-content;
+	overflow: hidden;
+	transition: all 0.15s;
+}
+
+.panel-button-selected {
+	background-color: rgb(245 243 255);
+	border-color: rgb(167 139 250);
+	box-shadow:
+		0 2px 4px rgba(136, 56, 255, 0.25),
+		0 8px 18px rgba(136, 56, 255, 0.05),
+		inset 0 -8px 11px rgba(0, 0, 0, 0.04);
+}
+
+.panel-button-unselected {
+	background-color: white;
+	border-color: rgb(229 231 235);
+}
+
+.panel-button-unselected:hover {
+	border-color: rgb(209 213 219);
+}
+
+.panel-seam {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 1px;
+	background-color: rgb(209 213 219);
+	opacity: 0.3;
+	z-index: 0;
+}
+
+.panel-screw {
+	position: absolute;
+	width: 0.5rem;
+	height: 0.5rem;
+	border-radius: 50%;
+	z-index: 10;
+}
+
+.panel-screw-selected {
+	background-color: rgb(221 214 254);
+}
+
+.panel-screw-unselected {
+	background-color: rgb(229 231 235);
+}
+
+.panel-icon-container {
+	width: 2.5rem;
+	height: 2.5rem;
+	border-radius: 0.5rem;
+	border-width: 2px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 20;
+	position: relative;
+}
+
+.panel-icon-container-selected {
+	background-color: rgb(237 233 254);
+	border-color: rgb(196 181 253);
+}
+
+.panel-icon-container-unselected {
+	background-color: rgb(249 250 251);
+	border-color: rgb(209 213 219);
+}
+
+.panel-icon-selected {
+	color: rgb(124 58 237);
+}
+
+.panel-icon-unselected {
+	color: rgb(75 85 99);
+}
+
+/* CodeGroup syntax highlighting */
+.code-group-highlight {
+	/* Enable font ligatures for arrow functions and other operators */
+	font-variant-ligatures: normal;
+	font-feature-settings:
+		"liga" 1,
+		"calt" 1;
+
+	/* Default color for symbols without classes */
+	color: var(--color-t12) !important;
+
+	& code {
+		color: var(--color-t12) !important;
+	}
+
+	/* Keywords: import, from, const, async, if, etc. */
+	& .pl-k {
+		color: #096fff !important;
+	}
+
+	/* Operators: :, =, !, etc. - override keyword color */
+	& .pl-k.pl-operator {
+		color: var(--color-t12) !important;
+	}
+
+	/* Strings */
+	& .pl-s,
+	& .pl-pds {
+		color: #bf00b9 !important;
+	}
+
+	/* JSX tag names */
+	& .pl-ent {
+		color: #008172 !important;
+	}
+
+	/* Variables, properties, identifiers - pl-c1 is used for variable names */
+	& .pl-v,
+	& .pl-s1,
+	& .pl-smi,
+	& .pl-c1 {
+		color: #008172 !important;
+	}
+
+	/* Object property names (custom class added via post-processing) */
+	& .pl-property {
+		color: #008172 !important;
+	}
+
+	/* Function declarations - override pl-c1 green */
+	& .pl-c1.pl-function-name {
+		color: #bf0003 !important;
+	}
+
+	/* Boolean values - override pl-c1 green to match string purple */
+	& .pl-c1.pl-boolean {
+		color: #bf00b9 !important;
+	}
+
+	/* Function calls */
+	& .pl-en {
+		color: #bf0003 !important;
+	}
+
+	/* Symbols, punctuation, operators */
+	& .pl-kos,
+	& .pl-pse,
+	& .pl-psc {
+		color: #444444 !important;
+	}
+}

@@ -20,16 +20,16 @@ import {
 	UsageModel,
 	type UsagePriceConfig,
 } from "@autumn/shared";
+import {
+	itemToBillingInterval,
+	itemToEntInterval,
+} from "@shared/utils/productV2Utils/productItemUtils/itemIntervalUtils.js";
 import { pricesAreSame } from "@/internal/products/prices/priceInitUtils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 import { entsAreSame } from "../../entitlements/entitlementUtils.js";
 import { shouldProrate } from "../../prices/priceUtils/prorationConfigUtils.js";
-import {
-	itemToBillingInterval,
-	itemToEntInterval,
-} from "../itemIntervalUtils.js";
 import { itemCanBeProrated } from "./classifyItem.js";
 import {
 	isFeatureItem,
@@ -72,8 +72,8 @@ export const toPrice = ({
 }) => {
 	const config: FixedPriceConfig = {
 		type: PriceType.Fixed,
-		amount: notNullish(item.price) ? item.price! : item.tiers![0].amount!,
-		interval: itemToBillingInterval(item) as BillingInterval,
+		amount: notNullish(item.price) ? item.price : item.tiers![0].amount,
+		interval: itemToBillingInterval({ item }) as BillingInterval,
 		interval_count: item.interval_count || 1,
 		stripe_product_id: null,
 		feature_id: null,
@@ -139,7 +139,7 @@ export const toFeature = ({
 				? AllowanceType.Unlimited
 				: AllowanceType.Fixed,
 
-		interval: isBoolean ? null : (itemToEntInterval(item) as EntInterval),
+		interval: isBoolean ? null : (itemToEntInterval({ item }) as EntInterval),
 		interval_count: item.interval_count || 1,
 
 		carry_from_previous: !resetUsage,
@@ -197,7 +197,7 @@ export const toFeatureAndPrice = ({
 
 		allowance: (item.included_usage as number) || 0,
 		allowance_type: AllowanceType.Fixed,
-		interval: itemToEntInterval(item) as EntInterval,
+		interval: itemToEntInterval({ item }) as EntInterval,
 		interval_count: item.interval_count || 1,
 
 		carry_from_previous: !resetUsage,
@@ -217,18 +217,18 @@ export const toFeatureAndPrice = ({
 		};
 	}
 
-	const entInterval = itemToEntInterval(item);
+	const entInterval = itemToEntInterval({ item });
 
 	const config: UsagePriceConfig = {
 		type: PriceType.Usage,
 
 		bill_when:
-			item.usage_model == UsageModel.Prepaid
+			item.usage_model === UsageModel.Prepaid
 				? BillWhen.StartOfPeriod
 				: BillWhen.EndOfPeriod,
 
 		billing_units: item.billing_units || 1,
-		should_prorate: entInterval == EntInterval.Lifetime,
+		should_prorate: entInterval === EntInterval.Lifetime,
 
 		internal_feature_id: internalFeatureId,
 		feature_id: item.feature_id!,
@@ -240,7 +240,7 @@ export const toFeatureAndPrice = ({
 					},
 				]
 			: (item.tiers as any),
-		interval: itemToBillingInterval(item) as BillingInterval,
+		interval: itemToBillingInterval({ item }) as BillingInterval,
 		interval_count: item.interval_count || 1,
 	};
 

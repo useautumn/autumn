@@ -1,25 +1,22 @@
-import ConfirmNewVersionDialog from "@/views/products/product/versioning/ConfirmNewVersionDialog";
-import { CreateFreeTrial } from "@/views/products/product/free-trial/CreateFreeTrial";
-import { CreateProductItem2 } from "@/views/products/product/product-item/CreateProductItem2";
-import { ProductItemTable } from "@/views/products/product/product-item/ProductItemTable";
-import { ProductContext } from "@/views/products/product/ProductContext";
-import { AddTrialButton } from "./AddTrialButton";
+import type { Product } from "@autumn/shared";
+import { SaveIcon } from "lucide-react";
 import { useState } from "react";
-import { useEnv } from "@/utils/envUtils";
-import { handleAutoSave } from "./model-pricing-utils/modelPricingUtils";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useModelPricingContext } from "./ModelPricingContext";
-import { isFreeProduct } from "@/utils/product/priceUtils";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { SaveIcon } from "lucide-react";
-import { Product } from "@autumn/shared";
-import { updateProduct } from "@/views/products/product/utils/updateProduct";
-import { getBackendErr } from "@/utils/genUtils";
-import { EditProductDetails } from "./edit-product/EditProductDetails";
-import { ToggleDefaultProduct } from "@/views/products/product/product-sidebar/ToggleDefaultProduct";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { isFreeProduct } from "@/utils/product/priceUtils";
+import { CreateFreeTrial } from "@/views/products/product/free-trial/CreateFreeTrial";
+import { ProductContext } from "@/views/products/product/ProductContext";
+import { CreateProductItem2 } from "@/views/products/product/product-item/CreateProductItem2";
+import { ProductItemTable } from "@/views/products/product/product-item/ProductItemTable";
+import { ToggleDefaultProduct } from "@/views/products/product/product-sidebar/ToggleDefaultProduct";
+import { updateProduct } from "@/views/products/product/utils/updateProduct";
+import ConfirmNewVersionDialog from "@/views/products/product/versioning/ConfirmNewVersionDialog";
+import { AddTrialButton } from "./AddTrialButton";
+import { EditProductDetails } from "./edit-product/EditProductDetails";
+import { useModelPricingContext } from "./ModelPricingContext";
+import { handleAutoSave } from "./model-pricing-utils/modelPricingUtils";
 
 export const EditProduct = ({
 	refetchAutumnProducts,
@@ -81,7 +78,7 @@ export const EditProduct = ({
 
 		// Validate
 		if (key === "is_default" && !isFreeProduct(product.items)) {
-			toast.error("Default product must be a free product");
+			toast.error("Default plan must be a free plan");
 			return;
 		}
 
@@ -146,7 +143,7 @@ export const EditProduct = ({
 
 						{firstProductCreated && (
 							<>
-								{product.items.length == 0 ? (
+								{product.items.length === 0 ? (
 									<p className="text-t2 text-sm w-md mt-4">
 										{/* Next, add items to define what customers with this product
                       get access to, and how much they should be charged for it. */}
@@ -183,7 +180,7 @@ export const EditProduct = ({
 								</div>
 								<div className="text-t3 text-sm" style={{ width: "320px" }}>
 									A default product is enabled by default for all new users,
-									typically used for your free plan.
+									typically used for your free product.
 								</div>
 							</div>
 							<div className="">
@@ -192,8 +189,8 @@ export const EditProduct = ({
 									<ToggleDefaultProduct toggleKey="is_add_on" />
 								</div>
 								<div className="text-t3 text-sm" style={{ width: "320px" }}>
-									A product that can be added on top of a customer's main plan.
-									Eg. one time purchases or top ups.
+									A product that can be added on top of a customer's main
+									product. Eg. one time purchases or top ups.
 								</div>
 							</div>
 							<div>

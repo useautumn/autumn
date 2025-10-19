@@ -233,6 +233,7 @@ export const createOrgResponse = ({
 		created_at: new Date(org.createdAt).getTime(),
 		test_pkey: org.test_pkey,
 		live_pkey: org.live_pkey,
+		onboarded: org.onboarded ?? true,
 	};
 };
 

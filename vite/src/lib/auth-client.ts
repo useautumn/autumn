@@ -14,7 +14,4 @@ export const {
 	signOut,
 	deleteUser,
 	useListOrganizations,
-} = createAuthClient({
-	baseURL: import.meta.env.VITE_BACKEND_URL,
-	plugins: [emailOTPClient(), organizationClient(), adminClient()],
-});
+} = authClient;

@@ -1,4 +1,4 @@
-import type { CreateReward, Reward } from "@autumn/shared";
+import type { CreateReward } from "@autumn/shared";
 
 import type { AxiosInstance } from "axios";
 
@@ -30,7 +30,7 @@ export class RewardService {
 	}: {
 		axiosInstance: AxiosInstance;
 		internalId: string;
-		data: Reward;
+		data: CreateReward;
 	}) {
 		await axiosInstance.post(`/v1/rewards/${internalId}`, data);
 	}

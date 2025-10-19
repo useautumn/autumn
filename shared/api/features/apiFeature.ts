@@ -2,6 +2,7 @@ import { z } from "zod/v4";
 
 export enum ApiFeatureType {
 	Static = "static", // legacy (will deprecate)
+
 	Boolean = "boolean",
 	SingleUsage = "single_use",
 	ContinuousUse = "continuous_use",

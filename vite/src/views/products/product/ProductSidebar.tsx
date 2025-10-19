@@ -1,18 +1,17 @@
-import { Accordion } from "@/components/ui/accordion";
-import { useProductContext } from "./ProductContext";
 import { Minus, Plus } from "lucide-react";
-import { SideAccordion } from "@/components/general/SideAccordion";
 import { useState } from "react";
-import { CreateFreeTrial } from "./free-trial/CreateFreeTrial";
-import { FreeTrialView } from "./free-trial/FreeTrialView";
-import { ProductProps } from "./ProductProps";
-import { ProductVersions } from "./ProductVersions";
-import { notNullish } from "@/utils/genUtils";
+import { SideAccordion } from "@/components/general/SideAccordion";
+import { Accordion } from "@/components/ui/accordion";
+import { isOneOffProduct } from "@/utils/product/priceUtils";
 import { AttachButton } from "@/views/customers/customer/product/components/AttachButton";
 import { CustomerProductBadge } from "@/views/customers/customer/product/components/CustomerProductBadge";
-import { EntitiesSidebar } from "./product-item/EntitiesSidebar";
 import { UpdateProductButton } from "./components/UpdateProductButton";
-import { isOneOffProduct } from "@/utils/product/priceUtils";
+import { CreateFreeTrial } from "./free-trial/CreateFreeTrial";
+import { FreeTrialView } from "./free-trial/FreeTrialView";
+import { useProductContext } from "./ProductContext";
+import { ProductProps } from "./ProductProps";
+import { ProductVersions } from "./ProductVersions";
+import { EntitiesSidebar } from "./product-item/EntitiesSidebar";
 
 export default function ProductSidebar() {
 	const { product, setProduct, isCusProductView } = useProductContext();
@@ -92,7 +91,7 @@ export default function ProductSidebar() {
 						}
 						disabledReason={
 							isOneOffProduct(product.items, product.is_add_on)
-								? "Can't add a free trial to an a one time product"
+								? "Can't add a free trial to an a one time plan"
 								: undefined
 						}
 					>
@@ -101,7 +100,7 @@ export default function ProductSidebar() {
 								<FreeTrialView product={product} />
 							) : (
 								<span className="text-t3">
-									Add a free trial to this product.
+									Add a free trial to this plan.
 								</span>
 							)}
 						</div>

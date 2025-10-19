@@ -26,7 +26,8 @@ export * from "./customers/previousVersions/apiCustomerV2.js";
 export * from "./entities/apiEntity.js";
 // NOTE: entitiesOpenApi.js is NOT exported here - it's only imported by openapi.ts for spec generation
 export * from "./entities/entityOpModels.js";
-
+export * from "./errors/classes/featureErrClasses.js";
+export * from "./errors/codes/featureErrCodes.js";
 // Features
 export * from "./features/apiFeature.js";
 export * from "./features/featureOpModels.js";

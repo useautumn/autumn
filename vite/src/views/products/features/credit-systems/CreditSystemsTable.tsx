@@ -1,19 +1,17 @@
-import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import { CreateFeature, Feature, FeatureType } from "@autumn/shared";
+import { type Feature, FeatureType } from "@autumn/shared";
 import { useState } from "react";
-// import { CreditSystemRowToolbar } from "./CreditSystemRowToolbar";
-// import UpdateCreditSystem from "./UpdateCreditSystem";
-import { Item, Row } from "@/components/general/TableGrid";
 import { AdminHover } from "@/components/general/AdminHover";
+import { Item, Row } from "@/components/general/TableGrid";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import UpdateCreditSystem from "./UpdateCreditSystem";
-import { FeatureRowToolbar } from "../feature-row-toolbar/FeatureRowToolbar";
+import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { useProductsQueryState } from "../../hooks/useProductsQueryState";
+import { FeatureRowToolbar } from "../feature-row-toolbar/FeatureRowToolbar";
+import UpdateCreditSystemSheet from "./components/UpdateCreditSystemSheet";
 
 export const CreditSystemsTable = () => {
 	const { features } = useFeaturesQuery();
 	const [selectedCreditSystem, setSelectedCreditSystem] =
-		useState<CreateFeature | null>(null);
+		useState<Feature | null>(null);
 	const [open, setOpen] = useState(false);
 
 	const { queryStates } = useProductsQueryState();
@@ -24,8 +22,6 @@ export const CreditSystemsTable = () => {
 
 		return feature.type === FeatureType.CreditSystem && !feature.archived;
 	});
-
-	console.log("Credit Systems", creditSystems);
 
 	const handleRowClick = (id: string) => {
 		const creditSystem = creditSystems.find(
@@ -38,11 +34,10 @@ export const CreditSystemsTable = () => {
 
 	return (
 		<>
-			<UpdateCreditSystem
+			<UpdateCreditSystemSheet
 				open={open}
 				setOpen={setOpen}
-				selectedCreditSystem={selectedCreditSystem!}
-				setSelectedCreditSystem={setSelectedCreditSystem}
+				selectedCreditSystem={selectedCreditSystem}
 			/>
 
 			{creditSystems && creditSystems.length > 0 ? (

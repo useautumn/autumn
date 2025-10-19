@@ -4,7 +4,7 @@ import ErrorScreen from "./general/ErrorScreen";
 export const DefaultView = () => {
 	const { pathname } = useLocation();
 
-	if (pathname == "/") {
+	if (pathname === "/") {
 		return <Navigate to="/customers" replace={true} />;
 	}
 
