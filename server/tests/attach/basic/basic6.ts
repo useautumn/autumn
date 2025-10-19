@@ -1,16 +1,15 @@
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { CusProductStatus, type Customer } from "@autumn/shared";
+import { expect } from "chai";
 import chalk from "chalk";
+import { addHours, addMonths } from "date-fns";
+import type Stripe from "stripe";
 import { setupBefore } from "tests/before.js";
-import Stripe from "stripe";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { products } from "tests/global.js";
-import { attachFailedPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
-import { CusProductStatus, Customer } from "@autumn/shared";
-import { addHours, addMonths } from "date-fns";
 import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
-import { expect } from "chai";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import { attachFailedPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
 const testCase = "basic6";
 describe(`${chalk.yellowBright(
@@ -38,7 +37,7 @@ describe(`${chalk.yellowBright(
 		customer = customer_;
 	});
 
-	it("should attach pro product and switch to failed payment method", async function () {
+	it("should attach pro product and switch to failed payment method", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
 			productId: products.pro.id,
@@ -50,7 +49,7 @@ describe(`${chalk.yellowBright(
 		});
 	});
 
-	it("should advance to next cycle", async function () {
+	it("should advance to next cycle", async () => {
 		await advanceTestClock({
 			stripeCli,
 			testClockId,
@@ -62,7 +61,7 @@ describe(`${chalk.yellowBright(
 		});
 	});
 
-	it("should have pro product in past due status", async function () {
+	it("should have pro product in past due status", async () => {
 		const cusRes: any = await AutumnCli.getCustomer(customerId);
 		const proProduct = cusRes.products.find(
 			(p: any) => p.id === products.pro.id,

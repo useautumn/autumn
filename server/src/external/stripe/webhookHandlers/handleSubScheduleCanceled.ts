@@ -1,9 +1,7 @@
-import { AppEnv } from "@autumn/shared";
-import Stripe from "stripe";
-import { Organization } from "@autumn/shared";
-import { createStripeCli } from "../utils.js";
-import { SubService } from "@/internal/subscriptions/SubService.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type { AppEnv, Organization } from "@autumn/shared";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 
 export const handleSubscriptionScheduleCanceled = async ({

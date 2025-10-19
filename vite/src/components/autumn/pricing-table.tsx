@@ -1,16 +1,13 @@
-import React from "react";
-import { Loader2 } from "lucide-react";
-
-import { createContext, useContext, useState } from "react";
-import { cn } from "@/lib/utils";
-import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
-import CheckoutDialog from "@/components/autumn/checkout-dialog";
-import { getPricingTableContent } from "@/lib/autumn/pricing-table-content";
 import type { Product, ProductItem } from "autumn-js";
-
 import { useCustomer } from "autumn-js/react";
+import { Loader2 } from "lucide-react";
+import React, { createContext, useContext, useState } from "react";
+import CheckoutDialog from "@/components/autumn/checkout-dialog";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { useOrg } from "@/hooks/common/useOrg";
+import { getPricingTableContent } from "@/lib/autumn/pricing-table-content";
+import { cn } from "@/lib/utils";
 
 export default function PricingTable({
 	products,
@@ -68,11 +65,6 @@ export default function PricingTable({
 									product.scenario === "scheduled",
 
 								onClick: async () => {
-									if (!org.stripe_connected) {
-										setConnectStripeOpen(true);
-										return;
-									}
-
 									if (product.id) {
 										const result = await checkout({
 											productId: product.id,

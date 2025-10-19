@@ -7,6 +7,7 @@ import {
 } from "@autumn/shared";
 import type { Stripe } from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
@@ -16,10 +17,8 @@ import { getMetadataFromCheckoutSession } from "@/internal/metadata/metadataUtil
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
-
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { getEarliestPeriodEnd } from "../stripeSubUtils/convertSubUtils.js";
-import { createStripeCli } from "../utils.js";
 import { getOptionsFromCheckoutSession } from "./handleCheckoutCompleted/getOptionsFromCheckout.js";
 import { handleCheckoutSub } from "./handleCheckoutCompleted/handleCheckoutSub.js";
 import { handleRemainingSets } from "./handleCheckoutCompleted/handleRemainingSets.js";

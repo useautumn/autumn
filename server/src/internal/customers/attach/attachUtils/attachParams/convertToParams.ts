@@ -12,7 +12,7 @@ import {
 	type Organization,
 } from "@autumn/shared";
 import type Stripe from "stripe";
-import { createStripeCli } from "@/external/stripe/utils.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import type {
 	AttachParams,
 	InsertCusProductParams,

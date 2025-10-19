@@ -1,4 +1,4 @@
-import { AppEnv, Organization } from "@autumn/shared";
+import { AppEnv, type Organization } from "@autumn/shared";
 
 export const toSuccessUrl = ({
 	org,

@@ -8,7 +8,7 @@ import type {
 } from "@autumn/shared";
 
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
@@ -56,7 +56,6 @@ export const migrateCustomer = async ({
 			org,
 			features,
 			logger,
-			logtail: logger,
 			timestamp: Date.now(),
 		} as ExtendedRequest;
 

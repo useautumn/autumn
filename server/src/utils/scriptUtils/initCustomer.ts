@@ -9,13 +9,13 @@ import type { Autumn } from "autumn-js";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 import {
 	attachPmToCus,
 	createStripeCustomer,
 } from "../../external/stripe/stripeCusUtils.js";
-import { createStripeCli } from "../../external/stripe/utils.js";
 
 export const createCusInStripe = async ({
 	customer,

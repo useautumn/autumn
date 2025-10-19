@@ -260,7 +260,7 @@ export const handleUpdateFeature = async (
 		handler: async (req: any, res: any) => {
 			const featureId = req.params.feature_id;
 			const data = req.body;
-			const { db, orgId, env, logtail: logger } = req;
+			const { db, orgId, env, logger } = req;
 
 			// 1. Get feature by ID
 			const features = await FeatureService.getFromReq(req);

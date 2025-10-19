@@ -157,3 +157,12 @@ export const getMetaKey = () => {
 	}
 	return "Ctrl";
 };
+/**
+ * Throws an error with backend message if available, otherwise rethrows original error
+ */
+export const throwBackendError = (error: any): never => {
+	if (error?.response?.data?.message) {
+		throw new Error(error.response.data.message);
+	}
+	throw error;
+};
