@@ -1,9 +1,10 @@
 import { Autumn } from "autumn-js";
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { listPlatformUsers } from "../platformLegacy/handlers/handleListPlatformUsers.js";
 import { handleCreatePlatformOrg } from "./handlers/handleCreatePlatformOrg.js";
 import { handleGetPlatformOAuth } from "./handlers/handleGetPlatformOAuth.js";
+import { handleListPlatformOrgs } from "./handlers/handleListPlatformOrgs.js";
+import { listPlatformUsers } from "./handlers/handleListPlatformUsers.js";
 import { handleUpdateOrganizationStripe } from "./handlers/handleUpdateOrganizationStripe.js";
 
 const platformBetaRouter = new Hono<HonoEnv>();
@@ -61,7 +62,7 @@ platformBetaRouter.use("*", async (c, next) => {
  * POST /organization
  * Creates a new organization for platform users
  */
-platformBetaRouter.post("/organization", ...handleCreatePlatformOrg);
+platformBetaRouter.post("/organizations", ...handleCreatePlatformOrg);
 
 /**
  * POST /oauth_url
@@ -80,4 +81,5 @@ platformBetaRouter.post(
 
 platformBetaRouter.get("/users", ...listPlatformUsers);
 
+platformBetaRouter.get("/organizations", ...handleListPlatformOrgs);
 export { platformBetaRouter };

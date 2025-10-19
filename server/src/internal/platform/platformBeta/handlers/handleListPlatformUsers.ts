@@ -9,6 +9,7 @@ import {
 import { eq } from "drizzle-orm";
 import { cte } from "@/db/cteUtils/buildCte.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { toPlatformOrg } from "./platformOrgUtils.js";
 
 /**
  * Route: GET /platform/users - List users created by master org
@@ -19,7 +20,7 @@ export const listPlatformUsers = createRoute({
 		const query = c.req.valid("query") as ListPlatformUsersQuery;
 		const ctx = c.get("ctx");
 
-		const { db, org, logger } = ctx;
+		const { db, org } = ctx;
 
 		const shouldExpandOrgs = query.expand?.includes("organizations");
 
@@ -54,11 +55,16 @@ export const listPlatformUsers = createRoute({
 			created_at: new Date(user.created_at).getTime(),
 			...(shouldExpandOrgs &&
 				user.organizations && {
-					organizations: user.organizations.map((org: any) => ({
-						slug: cleanOrgSlug(org.slug, org.id),
-						name: org.name,
-						created_at: new Date(org.createdAt).getTime(),
-					})),
+					organizations: user.organizations.map((org: any) =>
+						toPlatformOrg({
+							org: {
+								slug: org.slug,
+								name: org.name,
+								createdAt: org.createdAt,
+							},
+							masterOrgId: ctx.org?.id || "",
+						}),
+					),
 				}),
 		}));
 
@@ -70,23 +76,3 @@ export const listPlatformUsers = createRoute({
 		});
 	},
 });
-
-/**
- * Remove master org ID prefix from organization slug
- */
-function cleanOrgSlug(slug: string, orgId: string): string {
-	let cleanedSlug = slug;
-	const prefix = `${orgId}_`;
-	if (cleanedSlug.startsWith(prefix)) {
-		cleanedSlug = cleanedSlug.slice(prefix.length);
-	}
-	// Handle the case where slug is prepended with "slug_orgId"
-	const altPrefix1 = `_${orgId}`;
-	const altPrefix2 = `|${orgId}`;
-	if (cleanedSlug.endsWith(altPrefix1)) {
-		cleanedSlug = cleanedSlug.slice(0, -altPrefix1.length);
-	} else if (cleanedSlug.endsWith(altPrefix2)) {
-		cleanedSlug = cleanedSlug = cleanedSlug.slice(0, -altPrefix2.length);
-	}
-	return cleanedSlug;
-}

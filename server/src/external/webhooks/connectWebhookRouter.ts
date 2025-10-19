@@ -41,7 +41,10 @@ export const handleConnectWebhook = async (c: Context<HonoEnv>) => {
 	}
 
 	const accountId = event.account;
-	if (!accountId) return c.json({ error: "Account ID not found" }, 200);
+	if (!accountId) {
+		logger.error(`Account ID not found in webhook event`);
+		return c.json({ error: "Account ID not found" }, 200);
+	}
 
 	const { org, features } = await OrgService.getByAccountId({
 		db,
@@ -78,6 +81,6 @@ export const handleConnectWebhook = async (c: Context<HonoEnv>) => {
 		return c.json({ message: "Webhook received" }, 200);
 	} catch (error) {
 		logger.error(`Stripe webhook, error: ${error}`, { error });
-		return c.json({ message: "Internal server error" }, 500);
+		return c.json({ message: "Webhook received, internal server error" }, 200); // 200 to avoid retries / shutdown of webhook...
 	}
 };

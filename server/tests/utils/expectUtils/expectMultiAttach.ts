@@ -6,6 +6,7 @@ import {
 	type ProductOptions,
 	type ProductV2,
 } from "@autumn/shared";
+import type { Customer, Entity } from "autumn-js";
 import { expect } from "chai";
 import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
@@ -75,8 +76,10 @@ export const expectMultiAttachCorrect = async ({
 		await timeout(5000);
 	}
 
+	await timeout(2500);
+
 	for (const result of results) {
-		let customer;
+		let customer: Customer | Entity;
 		if (result.entityId) {
 			customer = await autumn.entities.get(customerId, result.entityId);
 		} else {
@@ -84,7 +87,7 @@ export const expectMultiAttachCorrect = async ({
 		}
 
 		expectProductAttached({
-			customer,
+			customer: customer as Customer,
 			product: result.product,
 			status: result.status,
 			entityId: result.entityId,

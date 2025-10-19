@@ -1,4 +1,4 @@
-import { type AppEnv, type Organization } from "@autumn/shared";
+import type { AppEnv, Organization } from "@autumn/shared";
 import chalk from "chalk";
 import { Stripe } from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -266,6 +266,7 @@ export const handleStripeWebhookEvent = async ({
 		});
 	} catch (error) {
 		logger.error(`Stripe webhook, error refreshing cache!`, { error });
+		return { success: true };
 	}
 
 	return { success: true };
