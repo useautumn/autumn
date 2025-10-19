@@ -25,7 +25,7 @@ internalFeatureRouter.get("", async (req: any, res: any) => {
 				db: req.db,
 				orgId: req.orgId,
 				env: req.env,
-				archived: showArchived === "true" ? true : false,
+				archived: showArchived === "true",
 			});
 			res.status(200).json({ features });
 		} else {

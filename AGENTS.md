@@ -4,6 +4,7 @@
 - DO NOT alter .gitignore
 - JS Doc comments should be SHORT and SWEET. Don't need examples unless ABSOLUTELY necessary
 - When writing DB queries, for the `customers`, `products` and `features` tables (and others possibly not mentioned here), the primary key when updating is `internal_id`, not `id`
+- When using db schemas in Drizzle, import them from '@autumn/shared', and don't do schemas.
 
 # Linting and Codebase rules
 - You can access the biome linter by running `npx biome check <folder or file path>`. Always specify a folder path, as the codebase is quite large and you will get out of scope errors that you are not burdened to correct. If you would like to let biome automatically fix as much as it can, use  `npx biome check --write <folder or file path>`
@@ -63,4 +64,21 @@
 
 ## File Naming
 DON'T name files one word (like index.ts, model.ts, etc.). Give proper indication in the filename to which resource it's targeting. For example, a utility file for organizations should be named orgUtils.ts. This is because it's easier to search for files like this. That being said, the filename shouldn't be overly long (less than three words is ideal)
+
+# Vite
+## Components
+- Always use v2 components from `@/components/v2/` (buttons, inputs, dialogs, sheets, selects, etc.) for new features. Old components in `@/components/ui/` are deprecated.
+
+## Sheets
+- Use `Sheet.tsx` for overlay sheets (modal-style with backdrop). Use `SheetHeader`, `SheetFooter`, `SheetSection` from `SharedSheetComponents.tsx` for consistent styling.
+- `InlineSheet.tsx` provides `SheetContainer` for inline sheets (embedded in page layout). It re-exports shared components for backwards compatibility.
+- Both sheet types support the same header/footer/section components, ensuring consistent UI patterns across overlay and inline implementations.
+
+## Styling
+- DO NOT hardcode styles when possible. Always try to reuse existing Tailwind classes or component patterns from similar components in the codebase.
+- When adding interactive elements (hover, focus, active states), look for existing patterns in similar components and reuse those class combinations.
+- Consistency is key - if a pattern exists, use it rather than creating a new one.
+
+## Form Elements
+- When creating form input elements (inputs, selects, textareas, etc.) in the vite folder, ALWAYS read `vite/FORM_DESIGN_GUIDELINES.md` first to understand the atomic CSS class system.
 

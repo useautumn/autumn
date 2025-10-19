@@ -16,7 +16,8 @@ export class ProductService {
 		const url = notNullish(version)
 			? `/v1/products/${productId}?version=${version}`
 			: `/v1/products/${productId}`;
-		await axiosInstance.post(url, data);
+		const response = await axiosInstance.post(url, data);
+		return response.data;
 	}
 
 	static async deleteProduct(

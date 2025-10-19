@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
+import { Button } from "@/components/v2/buttons/Button";
+import { Input } from "@/components/v2/inputs/Input";
 import { OrgService } from "@/services/OrgService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
@@ -58,7 +58,7 @@ export const DisconnectStripePopover = ({
 						onChange={(e) => setConfirmText(e.target.value)}
 					/>
 					<Button
-						variant="outline"
+						variant="destructive"
 						className="w-fit"
 						isLoading={disconnecting}
 						onClick={handleDeleteClicked}

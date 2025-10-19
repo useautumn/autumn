@@ -6,7 +6,7 @@ import { AdminHover } from "@/components/general/AdminHover";
 import { Item, Row } from "@/components/general/TableGrid";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import UpdateReward from "../reward-config/UpdateReward";
+import { UpdateRewardSheet } from "../reward-config/components/UpdateRewardSheet";
 import { RewardRowToolbar } from "./RewardRowToolbar";
 import { useOrg } from "@/hooks/common/useOrg";
 
@@ -19,11 +19,10 @@ export const RewardsTable = () => {
 
 	return (
 		<>
-			<UpdateReward
+			<UpdateRewardSheet
 				open={open}
 				setOpen={setOpen}
 				selectedReward={selectedReward}
-				setSelectedReward={setSelectedReward}
 			/>
 			{rewards && rewards.length > 0 ? (
 				<Row type="header" className="grid-cols-18 -mb-1">
