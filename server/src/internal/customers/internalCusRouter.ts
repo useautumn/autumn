@@ -1,26 +1,25 @@
-import { Router } from "express";
-import { CusService } from "./CusService.js";
-import { ProductService } from "../products/ProductService.js";
-
 import {
 	CusExpand,
 	CusProductStatus,
+	cusProductToProduct,
 	ErrCode,
-	FullCusProduct, productToCusProduct
+	type FullCusProduct,
+	productToCusProduct,
 } from "@autumn/shared";
-
+import { Router } from "express";
+import { StatusCodes } from "http-status-codes";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
+import { routeHandler } from "@/utils/routerUtils.js";
+import { CusBatchService } from "../api/batch/CusBatchService.js";
 import { EventService } from "../api/events/EventService.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
+import { isStripeConnected } from "../orgs/orgUtils.js";
+import { ProductService } from "../products/ProductService.js";
 import { mapToProductV2 } from "../products/productV2Utils.js";
 import { RewardRedemptionService } from "../rewards/RewardRedemptionService.js";
 import { CusReadService } from "./CusReadService.js";
-import { StatusCodes } from "http-status-codes";
-import { cusProductToProduct } from "@autumn/shared";
-import { isStripeConnected } from "../orgs/orgUtils.js";
-import { routeHandler } from "@/utils/routerUtils.js";
 import { CusSearchService } from "./CusSearchService.js";
-import { CusBatchService } from "../api/batch/CusBatchService.js";
+import { CusService } from "./CusService.js";
 import { ACTIVE_STATUSES } from "./cusProducts/CusProductService.js";
 
 export const cusRouter: Router = Router();
@@ -128,7 +127,7 @@ cusRouter.get("/:customer_id/referrals", async (req: any, res: any) => {
 		const { customer_id } = req.params;
 		const orgId = req.orgId;
 
-		let internalCustomer = await CusService.get({
+		const internalCustomer = await CusService.get({
 			db,
 			orgId,
 			env,
@@ -144,7 +143,7 @@ cusRouter.get("/:customer_id/referrals", async (req: any, res: any) => {
 		}
 
 		// Get all redemptions for this customer
-		let [referred, redeemed, stripeCus] = await Promise.all([
+		const [referred, redeemed, stripeCus] = await Promise.all([
 			RewardRedemptionService.getByReferrer({
 				db,
 				internalCustomerId: internalCustomer.internal_id,
@@ -169,11 +168,11 @@ cusRouter.get("/:customer_id/referrals", async (req: any, res: any) => {
 			},
 		]);
 
-		let redeemedCustomerIds = redeemed.map(
+		const redeemedCustomerIds = redeemed.map(
 			(redemption: any) => redemption.referral_code.internal_customer_id,
 		);
 
-		let redeemedCustomers = await CusReadService.getInInternalIds({
+		const redeemedCustomers = await CusReadService.getInInternalIds({
 			db,
 			internalIds: redeemedCustomerIds,
 		});
@@ -243,7 +242,7 @@ cusRouter.get(
 	"/:customer_id/product/:product_id",
 	async (req: any, res: any) => {
 		try {
-			const { org, env, db, features, logtail: logger } = req;
+			const { org, env, db, features, logger } = req;
 			const { customer_id, product_id } = req.params;
 			const { version, customer_product_id, entity_id } = req.query;
 
@@ -270,10 +269,10 @@ cusRouter.get(
 				});
 			}
 
-			let cusProducts = customer.customer_products;
-			let entity = customer.entity;
+			const cusProducts = customer.customer_products;
+			const entity = customer.entity;
 
-			let cusProduct = productToCusProduct({
+			const cusProduct = productToCusProduct({
 				cusProducts,
 				productId: product_id,
 				internalEntityId: entity?.internal_id,
@@ -282,7 +281,7 @@ cusRouter.get(
 				inStatuses: ACTIVE_STATUSES,
 			});
 
-			let product = cusProduct
+			const product = cusProduct
 				? cusProductToProduct({ cusProduct })
 				: await ProductService.getFull({
 						db,
@@ -295,9 +294,7 @@ cusRouter.get(
 								: undefined,
 					});
 
-			let productV2 = mapToProductV2({ product: product!, features });
-
-			
+			const productV2 = mapToProductV2({ product: product!, features });
 
 			res.status(200).json({
 				cusProduct,

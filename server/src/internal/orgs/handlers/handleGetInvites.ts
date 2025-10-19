@@ -1,6 +1,9 @@
-import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 import { invitation, user as userTable } from "@autumn/shared";
 import { and, eq, gt } from "drizzle-orm";
+import type {
+	ExtendedRequest,
+	ExtendedResponse,
+} from "@/utils/models/Request.js";
 
 export const handleGetInvites = async (
 	req: ExtendedRequest,

@@ -17,6 +17,36 @@
 
 - Functions (unless there's a very good reason) should always take in objects as arguments. Object params are named and easy to understand.
 
+## Error Handling in API Routes
+- NEVER use `c.json({ message: "...", code: "..." }, statusCode)` pattern for input validation or expected errors in Hono routes
+- ALWAYS throw `RecaseError` from `@autumn/shared` for all validation errors, not found errors, forbidden errors, etc.
+- For internal/unexpected errors (like missing configuration, database errors, etc.), throw `InternalError` from `@autumn/shared`
+- The onError middleware automatically converts these errors to appropriate HTTP responses
+- Examples:
+  ```typescript
+  // ❌ BAD - Don't do this
+  if (!org) {
+    return c.json({ message: "Org not found", code: "not_found" }, 404);
+  }
+
+  // ✅ GOOD - Validation/expected errors use RecaseError
+  if (!org) {
+    throw new RecaseError({
+      message: "Org not found",
+      code: ErrCode.NotFound,
+      statusCode: 404,
+    });
+  }
+
+  // ✅ GOOD - Internal/unexpected errors use InternalError
+  if (!upstash) {
+    throw new InternalError({
+      message: "Upstash not configured",
+      code: "upstash_not_configured",
+    });
+  }
+  ```
+
 ## Bad example
 / root
 -> components

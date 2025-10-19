@@ -15,7 +15,7 @@ import {
 } from "@autumn/shared";
 import { logger } from "better-auth";
 import { Decimal } from "decimal.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import {

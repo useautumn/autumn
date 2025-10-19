@@ -1,23 +1,23 @@
-import { withOrgAuth } from "@/middleware/authMiddleware.js";
 import { AppEnv } from "@autumn/shared";
+import * as crypto from "crypto";
 import { Router } from "express";
-import { ApiKeyService } from "./ApiKeyService.js";
-import { OrgService } from "../orgs/OrgService.js";
-import { createKey } from "./api-keys/apiKeyUtils.js";
-import { getSvixDashboardUrl } from "@/external/svix/svixHelpers.js";
-import { handleRequestError } from "@/utils/errorUtils.js";
+import type Stripe from "stripe";
 import { CacheManager } from "@/external/caching/CacheManager.js";
 import { CacheType } from "@/external/caching/cacheActions.js";
-import { routeHandler } from "@/utils/routerUtils.js";
-import { encryptData } from "@/utils/encryptUtils.js";
-import Stripe from "stripe";
 import {
 	checkKeyValid,
 	createWebhookEndpoint,
 } from "@/external/stripe/stripeOnboardingUtils.js";
+import { getSvixDashboardUrl } from "@/external/svix/svixHelpers.js";
+import { withOrgAuth } from "@/middleware/authMiddleware.js";
+import { encryptData } from "@/utils/encryptUtils.js";
+import { handleRequestError } from "@/utils/errorUtils.js";
+import { routeHandler } from "@/utils/routerUtils.js";
+import { OrgService } from "../orgs/OrgService.js";
 import { clearOrgCache } from "../orgs/orgUtils/clearOrgCache.js";
-import * as crypto from "crypto";
 import { isStripeConnected } from "../orgs/orgUtils.js";
+import { ApiKeyService } from "./ApiKeyService.js";
+import { createKey } from "./api-keys/apiKeyUtils.js";
 
 export const devRouter: Router = Router();
 
@@ -82,7 +82,7 @@ devRouter.delete("/api_key/:id", withOrgAuth, async (req: any, res) => {
 		const { db, orgId } = req;
 		const { id } = req.params;
 
-		let data = await ApiKeyService.delete({
+		const data = await ApiKeyService.delete({
 			db,
 			id,
 			orgId,
@@ -94,8 +94,8 @@ devRouter.delete("/api_key/:id", withOrgAuth, async (req: any, res) => {
 			return;
 		}
 
-		let batchInvalidate = [];
-		for (let apiKey of data) {
+		const batchInvalidate = [];
+		for (const apiKey of data) {
 			batchInvalidate.push(
 				CacheManager.invalidate({
 					action: CacheType.SecretKey,
@@ -240,14 +240,14 @@ export const handleGetOtp = async (req: any, res: any) =>
 				userId: req.user?.id,
 			});
 
-			let org = await OrgService.get({
+			const org = await OrgService.get({
 				db: req.db,
 				orgId: cacheData.orgId,
 			});
 
-			let stripeConnected = isStripeConnected({ org, env: AppEnv.Sandbox });
+			const stripeConnected = isStripeConnected({ org, env: AppEnv.Sandbox });
 
-			let responseData = {
+			const responseData = {
 				...cacheData,
 				stripe_connected: stripeConnected,
 				sandboxKey,
@@ -265,9 +265,9 @@ export const handleGetOtp = async (req: any, res: any) =>
 
 			if (!stripeConnected) {
 				// we need to generate a key for the CLI to use.
-				let key = generateRandomKey();
+				const key = generateRandomKey();
 				responseData.stripeFlowAuthKey = key;
-				let stripeCacheData = {
+				const stripeCacheData = {
 					orgId: cacheData.orgId,
 				};
 				await CacheManager.setJson(key, stripeCacheData, OTP_TTL);
@@ -283,7 +283,7 @@ devRouter.post("/cli/stripe", async (req: any, res: any) => {
 		res,
 		action: "Get Stripe Flow Auth Key",
 		handler: async () => {
-			const { db, logtail: logger } = req;
+			const { db, logger } = req;
 			const key = req.headers["authorization"];
 			if (!key) {
 				res.status(401).json({ message: "Unauthorized" });
@@ -345,7 +345,7 @@ devRouter.post("/cli/stripe", async (req: any, res: any) => {
 				},
 			});
 
-			let redisClient = await CacheManager.getClient();
+			const redisClient = await CacheManager.getClient();
 			if (!redisClient) {
 				res.status(500).json({ message: "Cache client not initialized" });
 				return;

@@ -11,13 +11,12 @@ import { generateId } from "better-auth";
 import { and, eq } from "drizzle-orm";
 import { type NextFunction, Router } from "express";
 import { z } from "zod";
+import { createKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
+import { connectStripe } from "@/internal/orgs/handlers/handleConnectStripe_old.js";
+import { shouldReconnectStripe } from "@/internal/orgs/orgUtils.js";
 import { afterOrgCreated } from "@/utils/authUtils/afterOrgCreated.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { createKey } from "../dev/api-keys/apiKeyUtils.js";
-import { connectStripe } from "../orgs/handlers/handleConnectStripe.js";
-
-import { shouldReconnectStripe } from "../orgs/orgUtils.js";
 
 const platformRouter = Router();
 
@@ -190,7 +189,7 @@ platformRouter.post("/exchange", (req: any, res: any) =>
 					createdAt: new Date(),
 				});
 
-				await afterOrgCreated({ org });
+				await afterOrgCreated({ org, user, createStripeAccount: false });
 			} else {
 				// org = (await db.query.organizations.findFirst({
 				//   where: eq(organizations.id, membership.organizationId),
@@ -198,9 +197,10 @@ platformRouter.post("/exchange", (req: any, res: any) =>
 				org = membership.organizations as Organization;
 			}
 
-			let sandboxKey, prodKey;
+			let sandboxKey: string | undefined;
+			let prodKey: string | undefined;
 
-			let finalStripeConfig: any = {};
+			let finalStripeConfig: StripeConfig = {};
 			let defaultCurrency = org.default_currency || "usd";
 
 			// Connect stripe if not exists...
@@ -209,7 +209,7 @@ platformRouter.post("/exchange", (req: any, res: any) =>
 					org,
 					env: AppEnv.Sandbox,
 					stripeKey: stripe_test_key,
-					logger: req.logtail,
+					logger: req.logger,
 				});
 
 				if (reconnectStripe) {

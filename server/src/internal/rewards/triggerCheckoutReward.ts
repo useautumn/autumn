@@ -7,7 +7,7 @@ import {
 	RewardTriggerEvent,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { RewardProgramService } from "../rewards/RewardProgramService.js";
 import { RewardRedemptionService } from "./RewardRedemptionService.js";
 import { triggerFreeProduct } from "./referralUtils/triggerFreeProduct.js";

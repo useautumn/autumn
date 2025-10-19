@@ -7,8 +7,8 @@ import {
 	RewardType,
 } from "@autumn/shared";
 import type Stripe from "stripe";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
 
 export const getCusRewards = async ({
 	org,

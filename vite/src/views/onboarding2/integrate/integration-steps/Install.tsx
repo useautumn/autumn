@@ -9,7 +9,7 @@ const installCodeBun = `bun add autumn-js`;
 export const Install = () => {
 	return (
 		<div className="flex flex-col gap-2 w-full">
-			<StepHeader number={4} title="Install autumn-js" />
+			<StepHeader number={3} title="Install autumn-js" />
 
 			<CodeBlock
 				snippets={[

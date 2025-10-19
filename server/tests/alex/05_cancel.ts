@@ -9,8 +9,8 @@ import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
 import { timeout } from "tests/utils/genUtils.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { attachFailedPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
 import { initCustomerV2 } from "@/utils/scriptUtils/initCustomer.js";
 import { alexProducts } from "./init.js";
 
