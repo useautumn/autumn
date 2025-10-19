@@ -1,4 +1,5 @@
 import type { ProductV2 } from "@autumn/shared";
+import { InfoIcon } from "@phosphor-icons/react";
 import type { Product } from "autumn-js";
 import { useCustomer } from "autumn-js/react";
 import { useOrg } from "@/hooks/common/useOrg";
@@ -77,8 +78,48 @@ export default function PricingTablePreview({
 	};
 
 	return (
-		<div className="w-full py-10">
-			<div className={getGridClasses()}>
+		<div className="w-full min-h-[calc(100vh-112px)] py-10 flex flex-col justify-center">
+			<div className="mb-6 flex justify-center items-center">
+				<div className="px-2.5 py-2 bg-blue-500/10 rounded-md shadow-[0px_4px_4px_0px_rgba(0,0,0,0.02)] outline outline-1 outline-offset-[-1px] outline-blue-500/20 inline-flex justify-center items-center gap-2.5 overflow-hidden">
+					<div className="flex justify-start items-center gap-1.5">
+						<InfoIcon size={12} weight="fill" className="text-blue-500" />
+						<div className="justify-start text-blue-500 text-xs font-medium font-['Inter']">
+							Test mode checkout:
+						</div>
+					</div>
+					<div className="flex justify-start items-center gap-1.5">
+						<div className="justify-start text-blue-500 text-xs font-medium font-['Inter']">
+							Card number
+						</div>
+						<div className="px-1 bg-blue-500 rounded flex justify-center items-center gap-2.5">
+							<div className="justify-start text-stone-50 text-xs font-medium font-['Inter']">
+								4242 4242 4242 4242
+							</div>
+						</div>
+					</div>
+					<div className="flex justify-start items-center gap-1.5">
+						<div className="justify-start text-blue-500 text-xs font-medium font-['Inter']">
+							Expiry date
+						</div>
+						<div className="px-1 bg-blue-500 rounded flex justify-center items-center gap-2.5">
+							<div className="justify-start text-stone-50 text-xs font-medium font-['Inter']">
+								Any
+							</div>
+						</div>
+					</div>
+					<div className="flex justify-start items-center gap-1.5">
+						<div className="justify-start text-blue-500 text-xs font-medium font-['Inter']">
+							CVC
+						</div>
+						<div className="px-1 bg-blue-500 rounded flex justify-center items-center gap-2.5">
+							<div className="justify-start text-stone-50 text-xs font-medium font-['Inter']">
+								Any
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div className={`${getGridClasses()} items-stretch`}>
 				{products.map((product, index) => (
 					<PlanCardPreview
 						key={product.id || index}

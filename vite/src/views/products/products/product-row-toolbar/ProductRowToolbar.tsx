@@ -1,6 +1,7 @@
-import type { ProductV2 } from "@autumn/shared";
-import { Archive, ArchiveRestore, Copy, Pen } from "lucide-react";
+import type { ProductCounts, ProductV2 } from "@autumn/shared";
+import { Archive, ArchiveRestore, Copy, Delete, Pen } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
 import {
 	DropdownMenu,
@@ -8,26 +9,30 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { DeletePlanDialog } from "../../plan/components/DeletePlanDialog";
 import { CopyProductDialog } from "../components/CopyProductDialog";
-import { DeleteProductDialog } from "../components/DeleteProductDialog";
 import { UpdateProductDialog } from "../components/UpdateProductDialog";
 
 export const ProductRowToolbar = ({
 	className,
 	isOnboarding = false,
 	product,
+	productCounts,
 }: {
 	isOnboarding?: boolean;
 	className?: string;
 	product: ProductV2;
+	productCounts: ProductCounts | undefined;
 }) => {
 	const [dropdownOpen, setDropdownOpen] = useState(false);
 	const [updateOpen, setUpdateOpen] = useState(false);
 	const [copyOpen, setCopyOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
+	const navigate = useNavigate();
 
-	let deleteText = "Archive";
-	let DeleteIcon = Archive;
+	const allCount = productCounts?.all || 0;
+	let deleteText = allCount > 0 ? "Archive" : "Delete";
+	let DeleteIcon = allCount > 0 ? Archive : Delete;
 
 	if (product.archived) {
 		deleteText = "Unarchive";
@@ -46,11 +51,29 @@ export const ProductRowToolbar = ({
 				setOpen={setCopyOpen}
 				product={product}
 			/>
-			<DeleteProductDialog
+			<DeletePlanDialog
+				propProduct={product}
+				open={deleteOpen}
+				setOpen={setDeleteOpen}
+				// onDeleteSuccess={async () => {
+				// 	pushPage({
+				// 		navigate,
+				// 		path: "/products",
+				// 		queryParams: {
+				// 			tab: "products",
+				// 		},
+				// 		preserveParams: true,
+				// 	});
+				// }}
+			/>
+			{/* <DeleteProductDialog
 				product={product}
 				open={deleteOpen}
 				setOpen={setDeleteOpen}
-			/>
+
+				// productCounts={productCounts}
+				// dropdownOpen={dropdownOpen}
+			/> */}
 
 			<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
 				<DropdownMenuTrigger asChild>

@@ -278,6 +278,10 @@ html {
 	--color-purple-medium: #b07aff;
 	--color-purple-stripe: #665cff;
 	--color-purple-gradient: #6f47ff;
+
+	/* --breakpoint-xl: 85rem; */
+	/* --breakpoint-2xl: 100rem;
+	--breakpoint-3xl: 120rem; */
 }
 
 /* Hide number input spinners globally */

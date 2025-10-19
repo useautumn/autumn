@@ -79,10 +79,10 @@ export const useProductData = ({
 
 	const actionState = {
 		disabled: !hasChanges,
-		buttonText: isNewProduct ? "Create Product" : "Update Product",
+		buttonText: isNewProduct ? "Create Plan" : "Update Plan",
 		tooltipText: !hasChanges
 			? isNewProduct
-				? "Add entitlements and prices to create a new product"
+				? "Add entitlements and prices to create a new plan"
 				: `Make a change to the entitlements or prices to update ${product?.name}`
 			: isNewProduct
 				? `Create a new product: ${product?.name} `

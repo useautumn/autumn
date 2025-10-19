@@ -81,10 +81,10 @@ export function AdvancedSettings() {
 				description="Additional configuration options for this feature"
 			>
 				<div className="space-y-6 pt-2 pb-10 [>&_.advanced-input-width]:w-xs">
-					{/* Reset existing usage when product is enabled */}
+					{/* Reset existing usage when plan is enabled */}
 					<AreaCheckbox
-						title="Reset existing usage when product is enabled"
-						description="When coming from another product, this will reset the customer's feature usage to 0."
+						title="Reset existing usage when plan is enabled"
+						description="When coming from another plan, this will reset the customer's feature usage to 0."
 						checked={!!item.reset_usage_when_enabled}
 						// hide={usageType === FeatureUsageType.Continuous}
 						disabled={

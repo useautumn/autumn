@@ -22,7 +22,7 @@ export default function ProductViewBreadcrumbs() {
 					onClick={() => navigateTo("/products", navigate, env)}
 					className="cursor-pointer"
 				>
-					Products
+					Plans
 				</BreadcrumbItem>
 				<BreadcrumbSeparator />
 				<BreadcrumbItem className="cursor-pointer">

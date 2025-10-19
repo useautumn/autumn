@@ -97,7 +97,7 @@ function AttachProductDropdown({
 							<Search size={12} className="text-t3" />
 							<Input
 								type="search"
-								placeholder="Search products"
+								placeholder="Search plans"
 								className="h-7 rounded-none shadow-none border-0 focus:ring-0 focus-visible:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:border-none focus-visible:shadow-none"
 								value={searchQuery}
 								onChange={(e) => setSearchQuery(e.target.value)}

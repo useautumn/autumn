@@ -46,7 +46,7 @@ export const EditProductDetails = () => {
 			});
 			await refetch();
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to create product"));
+			toast.error(getBackendErr(error, "Failed to create plan"));
 		} finally {
 			setCreateLoading(false);
 		}
@@ -76,7 +76,7 @@ export const EditProductDetails = () => {
 							id: details.id,
 						});
 					}}
-					placeholder="Eg. Free Product"
+					placeholder="Eg. Free Plan"
 					value={details.name}
 					onChange={(e) => {
 						const newIdData = allowCreate

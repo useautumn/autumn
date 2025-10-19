@@ -1,3 +1,4 @@
+import type { ProductV2 } from "@autumn/shared";
 import type { AxiosError } from "axios";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -26,16 +27,26 @@ import { getBackendErr } from "@/utils/genUtils";
 import { useProductQuery } from "../../product/hooks/useProductQuery";
 
 export const DeletePlanDialog = ({
+	propProduct,
 	open,
 	setOpen,
 	onDeleteSuccess,
 }: {
+	propProduct?: ProductV2;
 	open: boolean;
 	setOpen: (open: boolean) => void;
 	onDeleteSuccess?: () => Promise<void>;
 }) => {
 	const axiosInstance = useAxiosInstance();
-	const product = useProductStore((s) => s.product);
+	const storeProduct = useProductStore((s) => s.product);
+
+	let product: ProductV2;
+	if (propProduct) {
+		product = propProduct;
+	} else {
+		product = storeProduct;
+	}
+
 	const [loading, setLoading] = useState(false);
 	const [deleteAllVersions, setDeleteAllVersions] = useState(false);
 	const { invalidate: invalidateProducts } = useProductsQuery();
@@ -58,15 +69,16 @@ export const DeletePlanDialog = ({
 			);
 
 			await Promise.all([invalidateProducts(), invalidateProduct()]);
-			setOpen(false);
-			toast.success("Product deleted successfully");
 
 			// Call onDeleteSuccess callback if provided (for onboarding)
 			if (onDeleteSuccess) {
 				await onDeleteSuccess();
 			}
+
+			setOpen(false);
+			toast.success("Plan deleted successfully");
 		} catch (error: unknown) {
-			toast.error(getBackendErr(error as AxiosError, "Error deleting product"));
+			toast.error(getBackendErr(error as AxiosError, "Error deleting plan"));
 		} finally {
 			setLoading(false);
 		}
@@ -78,11 +90,15 @@ export const DeletePlanDialog = ({
 			await ProductService.updateProduct(axiosInstance, product.id, {
 				archived: true,
 			});
+
+			if (onDeleteSuccess) {
+				await onDeleteSuccess();
+			}
 			toast.success(`${product.name} archived successfully`);
 			setOpen(false);
 			await Promise.all([invalidateProducts(), invalidateProduct()]);
 		} catch (error) {
-			toast.error(getBackendErr(error, "Error archiving product"));
+			toast.error(getBackendErr(error, "Error archiving plan"));
 		} finally {
 			setLoading(false);
 		}
@@ -94,11 +110,15 @@ export const DeletePlanDialog = ({
 			await ProductService.updateProduct(axiosInstance, product.id, {
 				archived: false,
 			});
+
+			if (onDeleteSuccess) {
+				await onDeleteSuccess();
+			}
 			await refetchProduct();
 			toast.success(`${product.name} unarchived successfully`);
 			setOpen(false);
 		} catch (error) {
-			toast.error(getBackendErr(error, "Error unarchiving product"));
+			toast.error(getBackendErr(error, "Error unarchiving plan"));
 		} finally {
 			setLoading(false);
 		}
@@ -113,14 +133,14 @@ export const DeletePlanDialog = ({
 
 	const getDeleteMessage = () => {
 		if (product.archived) {
-			return `Are you sure you want to unarchive ${product.name}? This will make it visible in your list of products.`;
+			return `Are you sure you want to unarchive ${product.name}? This will make it visible in your list of plans.`;
 		}
 
 		// \n\nNote: If there are multiple versions, this will unarchive all versions at once.
 
 		const isMultipleVersions = productInfo?.numVersion > 1;
-		const versionText = deleteAllVersions ? "product" : "version";
-		const productText = isMultipleVersions ? versionText : "product";
+		const versionText = deleteAllVersions ? "plan" : "version";
+		const productText = isMultipleVersions ? versionText : "plan";
 
 		const messageTemplates = {
 			withCustomers: {
@@ -131,9 +151,9 @@ export const DeletePlanDialog = ({
 					otherCount: number,
 					productText: string,
 				) =>
-					`${customerName} and ${otherCount} other customer${otherCount > 1 ? "s" : ""} are on this ${productText}. Are you sure you want to archive this product?`,
+					`${customerName} and ${otherCount} other customer${otherCount > 1 ? "s" : ""} are on this ${productText}. Are you sure you want to archive this plan?`,
 				fallback: (productText: string) =>
-					`There are customers on this ${productText}. Deleting this ${productText} will remove it from their accounts. Are you sure you want to continue? You can also archive the product instead.`,
+					`There are customers on this ${productText}. Deleting this ${productText} will remove it from their accounts. Are you sure you want to continue? You can also archive the plan instead.`,
 			},
 			withoutCustomers: (productText: string) =>
 				`Are you sure you want to delete this ${productText}? This action cannot be undone.`,
@@ -204,7 +224,7 @@ export const DeletePlanDialog = ({
 							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value="latest">Delete latest version</SelectItem>
-								<SelectItem value="all">Archive product</SelectItem>
+								<SelectItem value="all">Archive plan</SelectItem>
 							</SelectContent>
 						</Select>
 					)}

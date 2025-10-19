@@ -51,8 +51,8 @@ function CreateProductSheet({
 		if (!/^[a-zA-Z0-9 _-]+$/.test(productName)) {
 			toast.error(
 				!productName
-					? "Product name is required"
-					: "Product name can only contain alphanumeric characters, dashes (-), and underscores (_)",
+					? "Plan name is required"
+					: "Plan name can only contain alphanumeric characters, dashes (-), and underscores (_)",
 			);
 			return;
 		}
@@ -72,7 +72,7 @@ function CreateProductSheet({
 			setOpen(false);
 		} catch (error) {
 			toast.error(
-				getBackendErr(error as AxiosError, "Failed to create product"),
+				getBackendErr(error as AxiosError, "Failed to create plan"),
 			);
 		}
 		setLoading(false);
@@ -94,13 +94,13 @@ function CreateProductSheet({
 		<Sheet open={open} onOpenChange={setOpen}>
 			<SheetTrigger asChild>
 				<Button variant="add" className="w-full">
-					Product
+					Plan
 				</Button>
 			</SheetTrigger>
 			<SheetContent className="flex flex-col overflow-hidden">
 				<SheetHeader
-					title="Create new product"
-					description="Configure your product details and pricing"
+					title="Create new plan"
+					description="Configure your plan details and pricing"
 				/>
 
 				<div className="flex-1 overflow-y-auto">
@@ -124,7 +124,7 @@ function CreateProductSheet({
 						metaShortcut="enter"
 						isLoading={loading}
 					>
-						Create product
+						Create plan
 					</ShortcutButton>
 				</SheetFooter>
 			</SheetContent>

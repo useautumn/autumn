@@ -60,15 +60,15 @@ export const DeleteFeatureDialog = ({
 				const totalCount = Number.parseInt(deletionText.totalCount);
 
 				if (Number.isNaN(totalCount) || totalCount <= 0) {
-					return "There are products using this feature. You must remove this feature from the products first, or archive it instead.";
+					return "There are plans using this feature. You must remove this feature from the plans first, or archive it instead.";
 				}
 				if (totalCount === 1) {
-					return `${deletionText.productName} is using this feature. You must remove this feature from the product first, or archive it instead.`;
+					return `${deletionText.productName} is using this feature. You must remove this feature from the plan first, or archive it instead.`;
 				}
 				const otherCount = totalCount - 1;
-				return `${deletionText.productName} and ${otherCount} other product${otherCount > 1 ? "s" : ""} are using this feature. You must remove this feature from the products first, or archive it instead.`;
+				return `${deletionText.productName} and ${otherCount} other plan${otherCount > 1 ? "s" : ""} are using this feature. You must remove this feature from the plans first, or archive it instead.`;
 			}
-			return "There are products using this feature. You must remove this feature from the products first, or archive it instead.";
+			return "There are plans using this feature. You must remove this feature from the plans first, or archive it instead.";
 		}
 		return "Are you sure you want to delete this feature? This action cannot be undone.";
 	};

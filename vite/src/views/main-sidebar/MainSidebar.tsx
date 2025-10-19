@@ -81,7 +81,7 @@ export const MainSidebar = () => {
 								value="products"
 								onClick={onProductTabClick}
 								icon={<Package size={14} />}
-								title="Products"
+								title="Plans"
 								env={env}
 								isOpen={expanded ? productGroupOpen : undefined}
 								isGroup
@@ -90,7 +90,7 @@ export const MainSidebar = () => {
 								value="products"
 								productGroup={productGroupOpen}
 								subTabs={[
-									{ title: "Products", value: "products" },
+									{ title: "Plans", value: "products" },
 									{ title: "Features", value: "features" },
 									{ title: "Rewards", value: "rewards" },
 								]}
@@ -178,7 +178,7 @@ export const MainSidebar = () => {
                 <NavButton
                   value="products"
                   subValue="products"
-                  title="Products"
+                  title="Plans"
                   env={env}
                   isSubNav
                 />
