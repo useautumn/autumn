@@ -1,9 +1,10 @@
 import type { FullProduct, ProductCounts, ProductV2 } from "@autumn/shared";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export const useProductsQuery = () => {
 	const axiosInstance = useAxiosInstance();
+	const queryClient = useQueryClient();
 
 	const fetchProducts = async () => {
 		const { data } = await axiosInstance.get("/products/products");
@@ -30,6 +31,16 @@ export const useProductsQuery = () => {
 		queryFn: fetchProductCounts,
 	});
 
+	/**
+	 * Invalidates all instances of products and product_counts queries across the app
+	 */
+	const invalidate = async () => {
+		await Promise.all([
+			queryClient.invalidateQueries({ queryKey: ["products"] }),
+			queryClient.invalidateQueries({ queryKey: ["product_counts"] }),
+		]);
+	};
+
 	return {
 		products: (data?.products || []) as ProductV2[],
 		counts: countsData || {},
@@ -39,8 +50,6 @@ export const useProductsQuery = () => {
 		refetch: async () => {
 			await Promise.all([countsRefetch(), refetch()]);
 		},
-		// mutate: async () => {
-		//   await Promise.all([countsRefetch(), refetch()]);
-		// },
+		invalidate,
 	};
 };

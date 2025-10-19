@@ -18,7 +18,7 @@ export const UpdateProductButton = () => {
 	const { refetch } = useProductQuery();
 
 	const handleUpdateClicked = async () => {
-		if (isLoading) toast.error("Product counts are loading");
+		if (isLoading) toast.error("Plan counts are loading");
 
 		if (counts?.all > 0) {
 			setShowNewVersionDialog(true);

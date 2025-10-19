@@ -21,7 +21,7 @@ export const createWebhookEndpoint = async (
 	const stripe = new Stripe(apiKey);
 
 	const webhookBaseUrl =
-		process.env.SERVER_URL || process.env.STRIPE_WEBHOOK_URL;
+		process.env.STRIPE_WEBHOOK_URL || process.env.SERVER_URL;
 
 	if (!webhookBaseUrl) {
 		throw new RecaseError({

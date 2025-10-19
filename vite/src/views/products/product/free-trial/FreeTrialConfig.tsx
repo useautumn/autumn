@@ -1,13 +1,12 @@
+import { type CreateFreeTrial, FreeTrialDuration } from "@autumn/shared";
+import { useEffect, useState } from "react";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { useEffect } from "react";
-import { useState } from "react";
-import { CreateFreeTrial, FreeTrialDuration } from "@autumn/shared";
 import {
 	Select,
-	SelectItem,
 	SelectContent,
+	SelectItem,
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
@@ -28,7 +27,9 @@ export const FreeTrialConfig = ({
 
 	useEffect(() => {
 		setFreeTrial(fields);
-	}, [fields, freeTrial, setFreeTrial]);
+	}, [fields, setFreeTrial]);
+
+	if (!freeTrial) return;
 
 	return (
 		<div className="flex flex-col gap-4 text-sm">
@@ -37,7 +38,10 @@ export const FreeTrialConfig = ({
 				<Input
 					value={fields.length}
 					onChange={(e) =>
-						setFields({ ...fields, length: e.target.value as any })
+						setFields({
+							...fields,
+							length: e.target.value as unknown as number,
+						})
 					}
 					type="number"
 					endContent={

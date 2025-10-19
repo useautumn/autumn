@@ -1,7 +1,6 @@
-import { useAxiosSWR } from "@/services/useAxiosSwr";
-import { sortProductItems } from "@/utils/productUtils";
-import { AppEnv, Feature, ProductItem, ProductV2 } from "@autumn/shared";
+import type { ProductItem, ProductV2 } from "@autumn/shared";
 import { useEffect, useRef, useState } from "react";
+import { sortProductItems } from "@/utils/productUtils";
 
 export const useProductData = ({
 	originalProduct,
@@ -9,22 +8,23 @@ export const useProductData = ({
 	originalProduct: ProductV2 | null;
 }) => {
 	const initialProductRef = useRef<ProductV2 | null>(null);
+
 	const [hasChanges, setHasChanges] = useState(false);
 	const [product, setProduct] = useState<ProductV2 | null>(null);
 	const [entityFeatureIds, setEntityFeatureIds] = useState<string[]>([]);
 
-	const initEntityFeatureIds = (product: ProductV2 | null) => {
-		if (!product) return [];
-		return Array.from(
-			new Set(
-				product.items
-					.filter((item: ProductItem) => item.entity_feature_id != null)
-					.map((item: ProductItem) => item.entity_feature_id!),
-			),
-		);
-	};
-
 	useEffect(() => {
+		const initEntityFeatureIds = (product: ProductV2 | null) => {
+			if (!product) return [];
+			return Array.from(
+				new Set(
+					product.items
+						.filter((item: ProductItem) => item.entity_feature_id != null)
+						.map((item: ProductItem) => item.entity_feature_id as string),
+				),
+			);
+		};
+
 		if (originalProduct) {
 			const sortedProduct = {
 				...originalProduct,
@@ -56,11 +56,15 @@ export const useProductData = ({
 			return;
 		}
 
-		// Remove is_default from the product
-		const { is_default, is_add_on, ...rest } = sortedProduct;
 		const {
-			is_default: originalIsDefault,
-			is_add_on: originalIsAddOn,
+			is_default: _is_default,
+			is_add_on: _is_add_on,
+			...rest
+		} = sortedProduct;
+
+		const {
+			is_default: _originalIsDefault,
+			is_add_on: _originalIsAddOn,
 			...originalRest
 		} = originalProduct;
 
@@ -75,10 +79,10 @@ export const useProductData = ({
 
 	const actionState = {
 		disabled: !hasChanges,
-		buttonText: isNewProduct ? "Create Product" : "Update Product",
+		buttonText: isNewProduct ? "Create Plan" : "Update Plan",
 		tooltipText: !hasChanges
 			? isNewProduct
-				? "Add entitlements and prices to create a new product"
+				? "Add entitlements and prices to create a new plan"
 				: `Make a change to the entitlements or prices to update ${product?.name}`
 			: isNewProduct
 				? `Create a new product: ${product?.name} `

@@ -1,11 +1,9 @@
-import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
-
-import { cn } from "@/lib/utils";
 import { LoaderCircle, PlusIcon, Search } from "lucide-react";
-import { Tooltip, TooltipContent } from "./tooltip";
-import { TooltipTrigger } from "./tooltip";
+import * as React from "react";
+import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 // [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0
 
@@ -128,12 +126,12 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 			>
 				{isLoading && <LoaderCircle className="animate-spin" size={14} />}
 				{startIcon && !isLoading && <>{startIcon}</>}
-				{!isLoading && !startIcon && variant == "add" && !disableStartIcon && (
+				{!isLoading && !startIcon && variant === "add" && !disableStartIcon && (
 					<PlusIcon size={12} />
 				)}
 				{!isLoading &&
 					!startIcon &&
-					variant == "analyse" &&
+					variant === "analyse" &&
 					!disableStartIcon && <Search size={12} />}
 				{children}
 				{endIcon && !isLoading && <>{endIcon}</>}
@@ -153,30 +151,6 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 		} else {
 			return Button;
 		}
-		return (
-			<Comp
-				{...props}
-				className={cn(
-					buttonVariants({ variant, size, className }),
-					isIcon && `w-${dim} h-${dim} p-0`,
-				)}
-				ref={ref}
-				onClick={(e) => {
-					if (isLoading) {
-						e.preventDefault();
-						e.stopPropagation();
-						return;
-					}
-					props.onClick?.(e);
-				}}
-			>
-				{isLoading && <LoaderCircle className="animate-spin" size={17} />}
-				{startIcon && !isLoading && <>{startIcon}</>}
-				{variant == "add" && <PlusIcon size={12} />}
-				{children}
-				{endIcon && !isLoading && <>{endIcon}</>}
-			</Comp>
-		);
 	},
 );
 Button.displayName = "Button";

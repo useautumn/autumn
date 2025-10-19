@@ -2,7 +2,7 @@
 
 import "svix-react/style.css";
 import LoadingScreen from "../general/LoadingScreen";
-import { ApiKeysView } from "./api-keys/ApiKeys";
+import { ApiKeysPage } from "./api-keys/ApiKeysPage";
 import { AppPortal } from "svix-react";
 import { PageSectionHeader } from "@/components/general/PageSectionHeader";
 import { PublishableKeySection } from "./publishable-key";
@@ -26,7 +26,7 @@ export default function DevScreen() {
 
 			{(tab === "api_keys" || !tab) && (
 				<div className="flex flex-col gap-16">
-					<ApiKeysView />
+					<ApiKeysPage />
 					{pkey && <PublishableKeySection />}
 				</div>
 			)}
