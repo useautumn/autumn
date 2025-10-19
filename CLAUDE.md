@@ -11,6 +11,8 @@
 
 - This codebase uses Bun as its preferred package manager and Node runtime.
 
+- **ALWAYS import from `zod/v4`**, not from `zod` directly. Example: `import { z } from "zod/v4";`
+
 - Always prefer foo({ bar }) over foo(bar) method signatures - no matter if we are using only one argument or not, object as param are always better, as in the future when wanting to change the order of parameters, or add new ones - its easier.
 
 - When creating "hooks" folders, don't nest them under "components"
