@@ -334,19 +334,26 @@ export const runUpdateUsageTask = async ({
 			`HANDLING USAGE TASK FOR CUSTOMER (${customerId}), ORG: ${org.slug}, EVENT ID: ${eventId}`,
 		);
 
-		const cusEnts: any = await updateUsage({
-			db,
-			customerId,
-			features,
-			value,
-			properties,
-			org,
-			env,
-			setUsage: set_usage,
-			logger,
-			entityId,
-			allFeatures,
-		});
+		const cusEnts = await db.transaction(
+			async (tx) => {
+				return await updateUsage({
+					db: tx as unknown as DrizzleCli,
+					customerId,
+					features,
+					value,
+					properties,
+					org,
+					env,
+					setUsage: set_usage,
+					logger,
+					entityId,
+					allFeatures,
+				});
+			},
+			{
+				isolationLevel: "serializable",
+			},
+		);
 
 		await refreshCusCache({
 			db,
