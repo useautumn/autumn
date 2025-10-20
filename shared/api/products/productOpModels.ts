@@ -17,7 +17,7 @@ export const CreateProductV2ParamsSchema = z.object({
 	is_add_on: z.boolean().default(false),
 	is_default: z.boolean().default(false),
 	version: z.number().optional(),
-	group: z.string().default(""),
+	group: z.string().nullable().default(""),
 
 	items: z.array(CreateProductItemParamsSchema).optional(),
 	free_trial: CreateFreeTrialSchema.nullish().default(null),

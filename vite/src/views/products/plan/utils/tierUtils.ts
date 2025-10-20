@@ -92,6 +92,11 @@ export const updateTier = ({
 
 	const newTiers = [...item.tiers];
 	if (field === "to") {
+		// Don't allow updating the last tier's "to" value - it must always be Infinite
+		if (index === newTiers.length - 1) {
+			return;
+		}
+
 		// Handle empty string, infinity, or numeric values
 		let numValue: number | typeof Infinite;
 		if (value === "" || value === "∞") {
@@ -101,8 +106,15 @@ export const updateTier = ({
 			numValue = Number.isNaN(parsed) ? 0 : parsed;
 		}
 		newTiers[index] = { ...newTiers[index], to: numValue };
+
+		// Update next tier's "to" to match, but ensure last tier stays Infinite
 		if (newTiers[index + 1]) {
-			newTiers[index + 1].to = numValue;
+			if (index + 1 === newTiers.length - 1) {
+				// If next tier is the last tier, keep it as Infinite
+				newTiers[index + 1].to = Infinite;
+			} else {
+				newTiers[index + 1].to = numValue;
+			}
 		}
 	} else if (field === "amount") {
 		// Handle empty string or numeric values
