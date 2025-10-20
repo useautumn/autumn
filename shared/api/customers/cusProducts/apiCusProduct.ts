@@ -92,10 +92,6 @@ export const ApiCusProductSchema = z
 				"The number of units of this product held by the customer, if applicable",
 			example: 1,
 		}),
-	})
-	.meta({
-		id: "CustomerProduct",
-		description: "Customer product object returned by the API",
 	});
 
 export type ApiCusProduct = z.infer<typeof ApiCusProductSchema>;
