@@ -32,21 +32,21 @@ export const Step2CopyProducts = () => {
 			<div className="flex items-center gap-2">
 				<SectionHeader
 					stepNumber={2}
-					title="Copy your products to production"
-					description="Sync all your configured products and features from sandbox to production"
+					title="Copy your plans to production"
+					description="Sync all your configured plans and features from sandbox to production"
 					className="gap-0 flex-1"
 				/>
 			</div>
 
-			<div className="pl-[32px] flex flex-col gap-2">
+			<div className="pl-[32px] flex gap-2">
 				{isCopied ? (
 					<IconButton
 						variant="secondary"
 						disabled
 						icon={<Check size={16} className="text-green-600" />}
-						className="!opacity-100"
+						className="!opacity-100 w-32"
 					>
-						Copied Products
+						Copied Plans
 					</IconButton>
 				) : (
 					<div>
@@ -54,8 +54,9 @@ export const Step2CopyProducts = () => {
 							variant="secondary"
 							onClick={handleCopyProducts}
 							isLoading={isCopying}
+							className="w-32"
 						>
-							Copy Products
+							Copy Plans
 						</Button>
 					</div>
 				)}

@@ -91,14 +91,14 @@ export const Step1ConnectStripe = ({
 				/>
 			</div>
 
-			<div className="pl-[32px] flex flex-col gap-2">
+			<div className="pl-[32px] flex gap-2">
 				{isStripeConnected ? (
 					<div className="flex items-center gap-2">
 						<IconButton
 							variant="secondary"
 							disabled
 							icon={<Check size={16} className="text-green-600" />}
-							className="!opacity-100"
+							className="!opacity-100 w-32"
 						>
 							Stripe Connected
 						</IconButton>
@@ -109,6 +109,7 @@ export const Step1ConnectStripe = ({
 							variant="secondary"
 							onClick={handleConnectStripe}
 							isLoading={isConnectingStripe}
+							className="w-32"
 						>
 							Connect Stripe
 						</Button>

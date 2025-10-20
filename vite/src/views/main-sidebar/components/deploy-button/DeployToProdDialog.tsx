@@ -53,12 +53,11 @@ export const DeployToProdDialog = ({
 	};
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-2xl">
+			<DialogContent className="max-w-xl">
 				<DialogHeader>
 					<DialogTitle>Deploy to Production</DialogTitle>
 					<DialogDescription>
-						If you've set up your products and integrated Autumn into your
-						codebase, you can follow the steps below to deploy to Production
+						Follow the steps below to deploy Autumn to production.
 					</DialogDescription>
 				</DialogHeader>
 

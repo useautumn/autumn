@@ -29,7 +29,7 @@ export const BasePriceDisplay = () => {
 		? `per ${productV3.price.interval}`
 		: "once";
 
-	const priceExists = notNullish(productV3.price);
+	const priceExists = notNullish(productV3.price) && productV3.price.amount > 0;
 	return (
 		<div className={cn(isOnboarding && "mt-1")}>
 			{priceExists ? (
