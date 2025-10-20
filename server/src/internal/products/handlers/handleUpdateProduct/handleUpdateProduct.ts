@@ -1,12 +1,20 @@
 import {
+	AffectedResource,
+	type ApiPlan,
+	ApiVersion,
+	ApiVersionClass,
 	type FreeTrial,
 	mapToProductV2,
 	notNullish,
 	ProductNotFoundError,
 	type ProductV2,
+	planToProductV2,
 	RecaseError,
+	UpdatePlanParamsSchema,
+	UpdatePlanQuerySchema,
 	UpdateProductQuerySchema,
 	UpdateProductSchema,
+	type UpdateProductV2Params,
 	UpdateProductV2ParamsSchema,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -28,15 +36,29 @@ import { handleVersionProductV2 } from "../handleVersionProduct.js";
 import { handleUpdateProductDetails } from "./updateProductDetails.js";
 
 export const handleUpdateProductV2 = createRoute({
-	body: UpdateProductV2ParamsSchema,
-	query: UpdateProductQuerySchema,
+	versionedBody: {
+		latest: UpdatePlanParamsSchema,
+		[ApiVersion.V1_2]: UpdateProductV2ParamsSchema,
+	},
+	versionedQuery: {
+		latest: UpdatePlanQuerySchema,
+		[ApiVersion.V1_2]: UpdateProductQuerySchema,
+	},
+	resource: AffectedResource.Product,
 	handler: async (c) => {
 		const body = c.req.valid("json");
 		const ctx = c.get("ctx");
 		const productId = c.req.param("productId");
 
 		const { db, org, env, features, logger } = ctx;
-		const { version, upsert, disable_version } = c.req.valid("query");
+		const query = c.req.valid("query") || {};
+		const { version, upsert, disable_version } = query;
+
+		// Convert to ProductV2 format only if client sent V2 Plan format
+		// V1.2 clients already send ProductV2, no conversion needed
+		const v1_2Body = ctx.apiVersion.gte(new ApiVersionClass(ApiVersion.V2))
+			? planToProductV2({ plan: body as ApiPlan })
+			: (body as UpdateProductV2Params);
 
 		const [fullProduct, rewardPrograms, _defaultProds] = await Promise.all([
 			ProductService.getFull({
@@ -44,7 +66,7 @@ export const handleUpdateProductV2 = createRoute({
 				idOrInternalId: productId,
 				orgId: org.id,
 				env,
-				version: version ? parseInt(version) : undefined,
+				version: version ? version : undefined,
 				allowNotFound: upsert === true,
 			}),
 			RewardProgramService.getByProductId({
@@ -73,12 +95,12 @@ export const handleUpdateProductV2 = createRoute({
 			features,
 		});
 
-		const newFreeTrial = body.free_trial as FreeTrial | undefined;
+		const newFreeTrial = v1_2Body.free_trial as FreeTrial | undefined;
 		const newProductV2: ProductV2 = {
 			...curProductV2,
-			...body,
-			group: body.group || curProductV2.group || "",
-			items: body.items || [],
+			...v1_2Body,
+			group: v1_2Body.group || curProductV2.group || "",
+			items: v1_2Body.items || [],
 			free_trial: newFreeTrial || curProductV2.free_trial || undefined,
 		};
 
@@ -90,15 +112,15 @@ export const handleUpdateProductV2 = createRoute({
 		await handleUpdateProductDetails({
 			db,
 			curProduct: fullProduct,
-			newProduct: UpdateProductSchema.parse(body),
-			newFreeTrial: body.free_trial || curProductV2.free_trial || undefined,
-			items: body.items || curProductV2.items,
+			newProduct: UpdateProductSchema.parse(v1_2Body),
+			newFreeTrial: v1_2Body.free_trial || curProductV2.free_trial || undefined,
+			items: v1_2Body.items || curProductV2.items,
 			org,
 			rewardPrograms,
 			logger: ctx.logger,
 		});
 
-		const itemsExist = notNullish(body.items);
+		const itemsExist = notNullish(v1_2Body.items);
 
 		const cusProductExists = cusProductsCurVersion.length > 0;
 
@@ -132,14 +154,14 @@ export const handleUpdateProductV2 = createRoute({
 			return c.json(fullProduct);
 		}
 
-		const { free_trial } = body;
+		const { free_trial } = v1_2Body;
 
-		if (body.items) {
+		if (v1_2Body.items) {
 			await handleNewProductItems({
 				db,
 				curPrices: fullProduct.prices,
 				curEnts: fullProduct.entitlements,
-				newItems: body.items,
+				newItems: v1_2Body.items,
 				features,
 				product: fullProduct,
 				logger: ctx.logger,
@@ -150,7 +172,7 @@ export const handleUpdateProductV2 = createRoute({
 		// New full product
 		const newFullProduct = await ProductService.getFull({
 			db,
-			idOrInternalId: body.id || fullProduct.id,
+			idOrInternalId: v1_2Body.id || fullProduct.id,
 			orgId: org.id,
 			env,
 		});
@@ -193,7 +215,7 @@ export const handleUpdateProductV2 = createRoute({
 			jobName: JobName.RewardMigration,
 			payload: {
 				oldPrices: fullProduct.prices,
-				productId: body.id || fullProduct.id,
+				productId: v1_2Body.id || fullProduct.id,
 				orgId: org.id,
 				env,
 			},

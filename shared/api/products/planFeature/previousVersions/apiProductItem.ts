@@ -1,10 +1,15 @@
 import { ApiFeatureSchema } from "@api/features/apiFeature.js";
 import { Infinite } from "@models/productModels/productEnums.js";
 import {
+	OnDecrease,
+	OnIncrease,
+} from "@models/productV2Models/productItemModels/productItemEnums.js";
+import {
 	PriceTierSchema,
 	ProductItemFeatureType,
 	ProductItemInterval,
 	ProductItemType,
+	RolloverConfigSchema,
 	UsageModel,
 } from "@models/productV2Models/productItemModels/productItemModels.js";
 import { z } from "zod/v4";
@@ -84,6 +89,18 @@ export const ApiProductItemSchema = z.object({
 		description: "The entity feature ID of the product item if applicable.",
 		example: "<string>",
 	}),
+
+	config: z
+		.object({
+			rollover: RolloverConfigSchema.nullish(),
+			on_increase: z.enum(OnIncrease).nullish(),
+			on_decrease: z.enum(OnDecrease).nullish(),
+		})
+		.nullish()
+		.meta({
+			description:
+				"Configuration for rollover and proration behavior of the feature.",
+		}),
 
 	display: z
 		.object({

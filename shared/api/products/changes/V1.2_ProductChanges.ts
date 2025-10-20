@@ -3,7 +3,8 @@ import {
 	AffectedResource,
 	defineVersionChange,
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
-import type { BillingInterval } from "@models/productModels/priceModels/priceEnums.js";
+import type { PriceItem } from "@models/productV2Models/productItemModels/priceItem.js";
+import { isPriceItem } from "@utils/index.js";
 import { convertPlanToItems } from "@utils/planFeatureUtils/planToItems.js";
 import { type ApiPlan, ApiPlanSchema } from "../apiPlan.js";
 import {
@@ -51,22 +52,23 @@ export const V1_2_ProductChanges = defineVersionChange({
 	newSchema: ApiPlanSchema,
 	oldSchema: ApiProductSchema,
 
-	// Only transform responses (handler outputs Plan format)
+	// Only transform responses (requests handled manually in handler)
 	affectsRequest: false,
 	affectsResponse: true,
 
-	// Response: V2 Plan <- V1.2 ProductV2
+	// Response: V2 Plan -> V1.2 ProductV2
 	transformResponse: ({ input }: { input: ApiPlan }): ApiProduct => {
 		// Transform Plan format to ProductV2 format for V1.2 clients
 
-		// Extract base price from Plan
-		const basePrice = input.price || {
-			amount: 0,
-			interval: "month" as BillingInterval,
-		};
-
-		// Convert plan to items using shared utility
-		const items = convertPlanToItems({ plan: input });
+		// Convert plan to items using shared utility (handles base price + features)
+		const items = convertPlanToItems({ plan: input }).filter((x) => {
+			if (isPriceItem(x)) {
+				const y: PriceItem = x as unknown as PriceItem;
+				return y.price > 0;
+			} else {
+				return true;
+			}
+		});
 
 		return ApiProductSchema.parse({
 			id: input.id,
@@ -78,7 +80,7 @@ export const V1_2_ProductChanges = defineVersionChange({
 			archived: input.archived,
 			version: input.version,
 			created_at: input.created_at,
-			items: items,
+			items: items, // Already includes base price and features
 			free_trial: input.free_trial
 				? {
 						duration: input.free_trial.duration_type,
@@ -88,14 +90,6 @@ export const V1_2_ProductChanges = defineVersionChange({
 					}
 				: null,
 			base_variant_id: input.base_variant_id,
-			// Properties are computed, not stored in Plan
-			properties: {
-				is_free: basePrice.amount === 0,
-				is_one_off: false,
-				interval_group: basePrice.interval,
-				has_trial: input.free_trial !== null && input.free_trial !== undefined,
-				updateable: true,
-			},
 		});
 	},
 });

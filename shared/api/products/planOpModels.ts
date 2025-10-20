@@ -2,7 +2,7 @@ import { BillingInterval } from "@models/productModels/priceModels/priceEnums.js
 import { idRegex } from "@utils/utils.js";
 import { z } from "zod/v4";
 import { ApiFreeTrialV2Schema } from "./apiPlan.js";
-import { ApiPlanFeatureSchema } from "./planFeature/apiPlanFeature.js";
+import { UpdatePlanFeatureSchema } from "./planFeature/planFeatureOpModels.js";
 
 export const CreatePlanParamsSchema = z.object({
 	id: z.string().nonempty().regex(idRegex),
@@ -23,7 +23,7 @@ export const CreatePlanParamsSchema = z.object({
 		})
 		.optional(),
 
-	features: z.array(ApiPlanFeatureSchema).optional(),
+	features: z.array(UpdatePlanFeatureSchema).optional(),
 	free_trial: ApiFreeTrialV2Schema.nullable().optional(),
 });
 
@@ -52,7 +52,7 @@ export const UpdatePlanParamsSchema = z.object({
 		})
 		.optional(),
 
-	features: z.array(ApiPlanFeatureSchema).optional(),
+	features: z.array(UpdatePlanFeatureSchema).optional(),
 	free_trial: ApiFreeTrialV2Schema.nullish(),
 });
 
@@ -61,3 +61,6 @@ export const UpdatePlanQuerySchema = z.object({
 	upsert: z.boolean().optional(),
 	disable_version: z.boolean().optional(),
 });
+
+export type CreatePlanParams = z.infer<typeof CreatePlanParamsSchema>;
+export type UpdatePlanParams = z.infer<typeof UpdatePlanParamsSchema>;

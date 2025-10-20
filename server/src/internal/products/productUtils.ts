@@ -75,6 +75,7 @@ export const constructProduct = ({
 	orgId,
 	env,
 	processor,
+	description,
 }: {
 	productData: CreateProductV2Params;
 	orgId: string;
@@ -83,10 +84,12 @@ export const constructProduct = ({
 		id: string;
 		type: string;
 	};
+	description?: string | null;
 }) => {
 	const newProduct: Product = {
 		id: productData.id,
 		name: productData.name,
+		description: description ?? null,
 		is_add_on: productData.is_add_on,
 		is_default: productData.is_default,
 		version: productData.version || 1,

@@ -84,7 +84,7 @@ export function applyResponseVersionChanges<T = any, TLegacyData = any>({
 			const shouldApply = targetVersion.lte(change.oldVersion);
 			if (!shouldApply) continue;
 
-			const description = Array.isArray(change.description)
+			const _description = Array.isArray(change.description)
 				? change.description.join("; ")
 				: change.description;
 
@@ -150,11 +150,12 @@ export function applyRequestVersionChanges<T = any, TLegacyData = any>({
 		);
 	}
 
-	// Get all versions between target and current (exclusive of current, inclusive of target)
+	// Get all versions between target and current (INCLUSIVE of both)
+	// For requests, we need to include currentVersion to catch changes registered there
 	const versionsToApply = getVersionsBetween({
 		from: targetVersion.value,
 		to: currentVersion.value,
-	}).filter((v) => v !== currentVersion.value); // Exclude current itself
+	}); // Don't exclude current - changes can be registered at latest version
 
 	// Don't reverse - we want to go forward (old → new)
 	// versionsToApply is already in ascending order from getVersionsBetween
