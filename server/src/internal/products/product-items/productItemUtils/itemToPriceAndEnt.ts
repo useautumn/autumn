@@ -118,7 +118,7 @@ export const toFeature = ({
 	newVersion?: boolean;
 	feature?: Feature;
 }) => {
-	const isBoolean = feature?.type == FeatureType.Boolean;
+	const isBoolean = feature?.type === FeatureType.Boolean;
 
 	const resetUsage = getResetUsage({ item, feature });
 
@@ -132,10 +132,10 @@ export const toFeature = ({
 		internal_feature_id: internalFeatureId,
 		feature_id: item.feature_id!,
 
-		allowance: item.included_usage == Infinite ? null : item.included_usage!,
+		allowance: item.included_usage === Infinite ? null : item.included_usage!,
 		allowance_type: isBoolean
 			? null
-			: item.included_usage == Infinite
+			: item.included_usage === Infinite
 				? AllowanceType.Unlimited
 				: AllowanceType.Fixed,
 

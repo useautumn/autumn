@@ -5,17 +5,18 @@ import { OrgService } from "../OrgService.js";
 export const handleUpdateOrg = createRoute({
 	body: z.object({
 		onboarded: z.boolean().optional(),
+		deployed: z.boolean().optional(),
 	}),
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org } = ctx;
 
-		const { onboarded } = c.req.valid("json");
+		const { onboarded, deployed } = c.req.valid("json");
 
 		await OrgService.update({
 			db,
 			orgId: org.id,
-			updates: { onboarded },
+			updates: { onboarded, deployed },
 		});
 
 		return c.json({ success: true });
