@@ -518,6 +518,7 @@ expressProductRouter.get(
 
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { handleCopyEnvironment } from "./handlers/handleCopyEnvironment.js";
 import { handleGetProductCount } from "./internalHandlers/handleGetProductCount.js";
 import { handleGetProductInternal } from "./internalHandlers/handleGetProductInternal.js";
 
@@ -526,3 +527,4 @@ export const internalProductRouter = new Hono<HonoEnv>();
 
 internalProductRouter.get("/:productId/count", ...handleGetProductCount);
 internalProductRouter.get("/:productId/data", ...handleGetProductInternal);
+internalProductRouter.post("/copy_to_production", ...handleCopyEnvironment);

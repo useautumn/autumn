@@ -30,8 +30,6 @@ export const PlanCardToolbar = ({
 	const isEditingPlan = useIsEditingPlan();
 	const navigate = useNavigate();
 
-	console.log("deleteOpen", deleteOpen);
-
 	return (
 		<>
 			<DeletePlanDialog
