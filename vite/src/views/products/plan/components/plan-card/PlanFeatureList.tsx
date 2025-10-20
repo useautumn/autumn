@@ -31,6 +31,8 @@ export const PlanFeatureList = ({
 
 	const filteredItems = productV2ToFeatureItems({ items: product.items });
 
+	console.log("Filtered items:", filteredItems);
+
 	// Group items by entity_feature_id
 	const groupedItems = filteredItems.reduce(
 		(acc, item) => {
@@ -77,7 +79,12 @@ export const PlanFeatureList = ({
 		);
 	}
 
-	const groups = Object.entries(groupedItems);
+	const groups = Object.entries(groupedItems).sort(([keyA], [keyB]) => {
+		// "no_entity" should always come first
+		if (keyA === "no_entity") return -1;
+		if (keyB === "no_entity") return 1;
+		return 0;
+	});
 	const hasEntityFeatureIds = groups.some(([key]) => key !== "no_entity");
 
 	return (
