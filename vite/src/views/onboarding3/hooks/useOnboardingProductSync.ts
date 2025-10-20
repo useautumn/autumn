@@ -45,8 +45,6 @@ export const useOnboardingProductSync = () => {
 			}
 		}
 
-		console.log("Selected product:", selectedProduct);
-
 		// Set both product and baseProduct
 		setBaseProduct(selectedProduct);
 		setProduct(selectedProduct);

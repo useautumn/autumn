@@ -43,7 +43,7 @@ export const InvoiceCustomerButton = ({
 					endIcon={<ArrowUpRightFromSquare size={12} />}
 					disableStartIcon={true}
 					tabIndex={-1}
-					tooltipContent="This will enable the product for the customer immediately, and redirect you to Stripe to finalize the invoice"
+					tooltipContent="This will enable the plan for the customer immediately, and redirect you to Stripe to finalize the invoice"
 					disabled={disabled}
 				>
 					Invoice Customer
@@ -52,9 +52,9 @@ export const InvoiceCustomerButton = ({
 			<PopoverContent className="w-fit flex p-0">
 				<div className="w-[300px]">
 					<div className="border-r p-4 text-sm flex flex-col gap-2">
-						<p>Enable Product Immediately</p>
+						<p>Enable Plan Immediately</p>
 						<p className="text-t2">
-							This will enable the product for the customer immediately, and
+							This will enable the plan for the customer immediately, and
 							redirect you to Stripe to finalize the invoice
 						</p>
 						<Button
@@ -80,10 +80,10 @@ export const InvoiceCustomerButton = ({
 					preview?.func == AttachFunction.OneOff) && (
 					<div className="w-[300px]">
 						<div className="p-4 text-sm flex flex-col gap-2">
-							<p>Enable Product After Payment</p>
+							<p>Enable Plan After Payment</p>
 							<p className="text-t2">
 								This will generate an invoice link for the customer, and enable
-								the product after they pay the invoice
+								the plan after they pay the invoice
 							</p>
 							<Button
 								isLoading={afterPaymentLoading}

@@ -8,7 +8,7 @@ import {
 	type FullCustomer,
 	type FullProduct,
 } from "@autumn/shared";
-import { createStripeCli } from "@/external/stripe/utils.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { addCustomerCreatedTask } from "@/internal/analytics/handlers/handleCustomerCreated.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";

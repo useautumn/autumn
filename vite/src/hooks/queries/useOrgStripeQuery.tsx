@@ -11,7 +11,7 @@ export const useOrgStripeQuery = () => {
 
 	const fetchStripeAccount = async () => {
 		const { data } = await axiosInstance.get<Stripe.Account>(
-			"/organization/stripe",
+			"/v1/organization/stripe",
 		);
 		return data;
 	};

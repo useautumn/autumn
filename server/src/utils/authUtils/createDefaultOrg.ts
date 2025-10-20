@@ -1,10 +1,10 @@
+import { invitation, user as userTable } from "@autumn/shared";
+import type { Session } from "better-auth";
+import type { Organization } from "better-auth/plugins/organization";
+import { and, eq, gt } from "drizzle-orm";
 import { db } from "@/db/initDrizzle.js";
 import { auth } from "@/utils/auth.js";
-import { Session } from "better-auth";
-import { and, eq, gt } from "drizzle-orm";
-import { invitation, user as userTable } from "@autumn/shared";
 import { slugify } from "@/utils/genUtils.js";
-import { Organization } from "better-auth/plugins/organization";
 
 export const createDefaultOrg = async ({
 	session,

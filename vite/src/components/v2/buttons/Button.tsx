@@ -44,6 +44,12 @@ const buttonVariants = cva(
 					focus-visible:border-destructive-border
 					active:border-destructive-border
 					`,
+
+				dotted: `bg-white border border-dashed border-neutral-300 shadow-[0px_4px_4px_0px_rgba(0,0,0,0.02)]
+					hover:border-primary hover:border-solid
+					focus-visible:border-primary focus-visible:border-solid
+					active:border-primary active:border-solid
+					`,
 			},
 			size: {
 				default: "py-1 !px-[7px] text-body h-input",
@@ -133,6 +139,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
 				case "destructive":
 					return "active:!bg-destructive active:!border-transparent focus-visible:!bg-destructive focus-visible:!border-transparent";
+
+				case "dotted":
+					return "active:!bg-white active:!border-dashed active:!border-neutral-300 focus-visible:!bg-white focus-visible:!border-dashed focus-visible:!border-neutral-300";
 
 				default:
 					return "";

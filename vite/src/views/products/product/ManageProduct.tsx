@@ -9,8 +9,8 @@ export const ManageProduct = ({
 }: {
 	hideAdminHover?: boolean;
 }) => {
-	const { customer } = useCusQuery();
-	const { product, entityId } = useProductContext();
+	const { product, entityId, isCusProductView } = useProductContext();
+	const { customer } = useCusQuery({ enabled: isCusProductView });
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -21,7 +21,7 @@ export const ManageProduct = ({
 							texts={[
 								{
 									key: "internal_product_id",
-									value: product.internal_id!,
+									value: product.internal_id,
 								},
 								{
 									key: "stripe_id",

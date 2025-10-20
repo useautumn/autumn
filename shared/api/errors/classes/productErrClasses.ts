@@ -5,7 +5,7 @@ import { ProductErrorCode } from "../codes/productErrCodes.js";
  * Product not found error
  */
 export class ProductNotFoundError extends RecaseError {
-	constructor(opts: { productId: string; version?: string }) {
+	constructor(opts: { productId: string; version?: string | number }) {
 		super({
 			message: `Product ${opts.productId} ${opts.version ? ` (version ${opts.version})` : ""} not found`,
 			code: ProductErrorCode.ProductNotFound,

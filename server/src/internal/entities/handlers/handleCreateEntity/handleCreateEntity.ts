@@ -112,7 +112,7 @@ export const handlePostEntityRequest = async (req: any, res: any) =>
 		res,
 		action: "create entity",
 		handler: async (req: any, res: any) => {
-			const { logtail: logger, org } = req;
+			const { logger, org } = req;
 
 			const apiVersion = orgToVersion({
 				org,

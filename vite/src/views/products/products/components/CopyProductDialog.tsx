@@ -48,7 +48,7 @@ export const CopyProductDialog = ({
 	const handleCopy = async () => {
 		// 1. If env is the same and id is same, throw error
 		if (env === toEnv && id === product.id) {
-			toast.error("Product ID already exists");
+			toast.error("Plan ID already exists");
 			return;
 		}
 
@@ -61,11 +61,11 @@ export const CopyProductDialog = ({
 			});
 			await refetch();
 
-			toast.success("Successfully copied product");
+			toast.success("Successfully copied plan");
 			setOpen(false);
 		} catch (error: unknown) {
 			console.log("Error copying product", error);
-			toast.error(getBackendErr(error as AxiosError, "Failed to copy product"));
+			toast.error(getBackendErr(error as AxiosError, "Failed to copy plan"));
 		} finally {
 			setLoading(false);
 		}

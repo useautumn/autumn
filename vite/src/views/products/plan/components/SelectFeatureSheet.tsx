@@ -62,7 +62,7 @@ export function SelectFeatureSheet({
 			{!isOnboarding && (
 				<SheetHeader
 					title="Select Feature"
-					description="Choose a feature to add to this product"
+					description="Choose a feature to add to this plan"
 				/>
 			)}
 

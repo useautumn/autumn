@@ -43,7 +43,7 @@ export function IncludedUsage() {
 							plural: true,
 						})}
 						' that this customer is granted before{" "}
-						{isFeaturePrice ? "hitting the limit" : "being charged"}.
+						{!isFeaturePrice ? "hitting the limit" : "being charged"}.
 					</div>
 					<div className="flex items-center gap-2">
 						<Input

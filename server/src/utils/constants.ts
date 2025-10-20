@@ -23,3 +23,18 @@ export const dashboardOrigins = [
 	"https://staging.useautumn.com",
 	process.env.CLIENT_URL!,
 ];
+
+export const WEBHOOK_EVENTS = [
+	"checkout.session.completed",
+	"customer.subscription.created",
+	"customer.subscription.updated",
+	"customer.subscription.deleted",
+	"customer.discount.deleted",
+	"invoice.paid",
+	"invoice.upcoming",
+	"invoice.created",
+	"invoice.finalized",
+	"invoice.updated",
+	"subscription_schedule.canceled",
+	"subscription_schedule.updated",
+];

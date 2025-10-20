@@ -23,6 +23,8 @@ export const useProductCountsQuery = () => {
 	const { data, isLoading, error, refetch } = useQuery({
 		queryKey: ["product_counts", productId, queryStates.version],
 		queryFn: fetchProductCounts,
+		retry: false, // Don't retry on error (e.g., product not found)
+		enabled: !!productId, // Only run query if productId exists
 	});
 
 	return { counts: data, isLoading, error, refetch };

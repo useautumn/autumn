@@ -1,20 +1,18 @@
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
 import {
 	AttachScenario,
 	CusProductStatus,
-	FullCusProduct,
-	FullCustomer,
+	cusProductToProduct,
+	type FullCusProduct,
+	type FullCustomer,
 } from "@autumn/shared";
-
-import { cusProductToProduct } from "@autumn/shared";
-
-import { CusProductService } from "../cusProducts/CusProductService.js";
-import { activateDefaultProduct } from "../cusProducts/cusProductUtils.js";
-import { getExistingCusProducts } from "../cusProducts/cusProductUtils/getExistingCusProducts.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { isOneOff } from "@/internal/products/productUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+import { CusProductService } from "../cusProducts/CusProductService.js";
 import { cusProductToSub } from "../cusProducts/cusProductUtils/convertCusProduct.js";
+import { getExistingCusProducts } from "../cusProducts/cusProductUtils/getExistingCusProducts.js";
+import { activateDefaultProduct } from "../cusProducts/cusProductUtils.js";
 
 export const cancelImmediately = async ({
 	req,

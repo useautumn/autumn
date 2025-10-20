@@ -135,8 +135,8 @@ export const auth = betterAuth({
 
 			organizationCreation: {
 				disabled: false,
-				afterCreate: async ({ organization }) => {
-					await afterOrgCreated({ org: organization as any });
+				afterCreate: async ({ organization, user }) => {
+					await afterOrgCreated({ org: organization, user });
 				},
 			},
 		}),

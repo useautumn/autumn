@@ -1,6 +1,6 @@
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export const useCusReferralQuery = () => {
 	const { customer_id } = useParams();
@@ -23,6 +23,7 @@ export const useCusReferralQuery = () => {
 	} = useQuery({
 		queryKey: ["customer_referrals", customer_id],
 		queryFn: referralFetcher,
+		retry: false,
 	});
 
 	return {

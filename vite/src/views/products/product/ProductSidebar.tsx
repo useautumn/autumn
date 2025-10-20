@@ -91,7 +91,7 @@ export default function ProductSidebar() {
 						}
 						disabledReason={
 							isOneOffProduct(product.items, product.is_add_on)
-								? "Can't add a free trial to an a one time product"
+								? "Can't add a free trial to an a one time plan"
 								: undefined
 						}
 					>
@@ -100,7 +100,7 @@ export default function ProductSidebar() {
 								<FreeTrialView product={product} />
 							) : (
 								<span className="text-t3">
-									Add a free trial to this product.
+									Add a free trial to this plan.
 								</span>
 							)}
 						</div>

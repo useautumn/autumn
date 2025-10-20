@@ -39,7 +39,7 @@ const initWorker = ({
 	const worker = new Worker(
 		"autumn",
 		async (job: Job) => {
-			const logtail = logger.child({
+			const workerLogger = logger.child({
 				context: {
 					worker: {
 						task: job.name,
@@ -55,7 +55,7 @@ const initWorker = ({
 					await detectBaseVariant({
 						db,
 						curProduct: job.data.curProduct,
-						logger: logtail as Logger,
+						logger: workerLogger as Logger,
 					});
 					return;
 				}
@@ -64,7 +64,7 @@ const initWorker = ({
 					await runSaveFeatureDisplayTask({
 						db,
 						feature: job.data.feature,
-						logger: logtail,
+						logger: workerLogger,
 					});
 					return;
 				}
@@ -73,7 +73,7 @@ const initWorker = ({
 					await runMigrationTask({
 						db,
 						payload: job.data,
-						logger: logtail,
+						logger: workerLogger,
 					});
 					return;
 				}
@@ -82,7 +82,7 @@ const initWorker = ({
 					await runActionHandlerTask({
 						queue,
 						job,
-						logger: logtail,
+						logger: workerLogger,
 						db,
 						useBackup,
 					});
@@ -93,11 +93,11 @@ const initWorker = ({
 					await runRewardMigrationTask({
 						db,
 						payload: job.data,
-						logger: logtail,
+						logger: workerLogger,
 					});
 				}
 			} catch (error: any) {
-				logtail.error(`Failed to process bullmq job: ${job.name}`, {
+				workerLogger.error(`Failed to process bullmq job: ${job.name}`, {
 					jobName: job.name,
 					error: {
 						message: error.message,
@@ -126,7 +126,7 @@ const initWorker = ({
 					await runTriggerCheckoutReward({
 						db,
 						payload: job.data,
-						logger: logtail,
+						logger: workerLogger,
 					});
 				} catch (error) {
 					console.error("Error processing job:", error);
@@ -157,13 +157,13 @@ const initWorker = ({
 				if (job.name === JobName.UpdateBalance) {
 					await runUpdateBalanceTask({
 						payload: job.data,
-						logger: logtail,
+						logger: workerLogger,
 						db,
 					});
 				} else if (job.name === JobName.UpdateUsage) {
 					await runUpdateUsageTask({
 						payload: job.data,
-						logger: logtail,
+						logger: workerLogger,
 						db,
 					});
 				}

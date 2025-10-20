@@ -1,8 +1,12 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useMemo } from "react";
 import { useParams } from "react-router";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+
+import { throwBackendError } from "@/utils/genUtils";
+
 import { useCachedProduct } from "./getCachedProduct";
 import { useMigrationsQuery } from "./queries/useMigrationsQuery.tsx";
 import { useProductCountsQuery } from "./queries/useProductCountsQuery";
@@ -44,15 +48,24 @@ export const useProductQuery = () => {
 			queryParams.version = queryStates.version;
 		}
 
-		const { data } = await axiosInstance.get(url, { params: queryParams });
-		return data;
+		try {
+			const url = `/products/${productId}/data`;
+			const queryParams = {
+				version: queryStates.version,
+			};
+
+			const { data } = await axiosInstance.get(url, { params: queryParams });
+			return data;
+		} catch (error) {
+			throwBackendError(error);
+		}
 	};
 
 	const { data, isLoading, refetch, error } = useQuery({
 		queryKey: ["product", productId, queryStates.version],
 		queryFn: fetcher,
-		retry: 1, // Fail faster - only retry once instead of default 3 times
-		retryDelay: 500, // Short delay between retries
+		retry: false, // Don't retry on error (e.g., product not found)
+		enabled: !!productId, // Only run query if productId exists
 	});
 
 	const { refetch: refetchCounts } = useProductCountsQuery();

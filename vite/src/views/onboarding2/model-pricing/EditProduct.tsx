@@ -78,7 +78,7 @@ export const EditProduct = ({
 
 		// Validate
 		if (key === "is_default" && !isFreeProduct(product.items)) {
-			toast.error("Default product must be a free product");
+			toast.error("Default plan must be a free plan");
 			return;
 		}
 

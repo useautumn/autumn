@@ -2,10 +2,10 @@
 import * as schemas from "./db/schema.js";
 export { schemas };
 
+export * from "./api/apiUtils.js";
 // API MODELS
 export * from "./api/models.js";
 export * from "./api/operations.js";
-export * from "./api/platform/platformModels.js";
 
 // API VERSIONING SYSTEM
 export * from "./api/versionUtils/versionUtils.js";
@@ -142,6 +142,10 @@ export * from "./models/subModels/subTable.js";
 export * from "./utils/displayUtils.js";
 export * from "./utils/index.js";
 export * from "./utils/intervalUtils.js";
+export * from "./utils/planFeatureUtils/itemsToPlanFeatures.js";
+export * from "./utils/planFeatureUtils/planFeatureIntervals.js";
+export * from "./utils/planFeatureUtils/planFeaturesToItems.js";
+export * from "./utils/planFeatureUtils/planToItems.js";
 export * from "./utils/productDisplayUtils/sortProductItems.js";
 export * from "./utils/productDisplayUtils.js";
 export * from "./utils/productUtils/priceToInvoiceAmount.js";
@@ -151,10 +155,6 @@ export * from "./utils/productV2Utils/productItemUtils/getProductItemRes.js";
 export * from "./utils/productV2Utils/productItemUtils/itemIntervalUtils.js";
 export * from "./utils/productV3Utils/mapToProductV3.js";
 export * from "./utils/productV3Utils/productItemUtils/productV3ItemUtils.js";
-export * from "./utils/planFeatureUtils/itemsToPlanFeatures.js";
-export * from "./utils/planFeatureUtils/planFeaturesToItems.js";
-export * from "./utils/planFeatureUtils/planFeatureIntervals.js";
-export * from "./utils/planFeatureUtils/planToItems.js";
 export * from "./utils/rewardUtils/rewardMigrationUtils.js";
 
 export enum ResetInterval {

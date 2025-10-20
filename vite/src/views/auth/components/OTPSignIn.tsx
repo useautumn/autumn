@@ -1,3 +1,7 @@
+import { differenceInSeconds } from "date-fns";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
 	InputOTP,
@@ -7,10 +11,6 @@ import {
 } from "@/components/ui/input-otp";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
-import { differenceInSeconds } from "date-fns";
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
-import { toast } from "sonner";
 
 export const OTPSignIn = ({
 	email,
@@ -35,14 +35,12 @@ export const OTPSignIn = ({
 
 	const handleSubmit = async (otp: string) => {
 		setVerifying(true);
+
 		try {
 			const { data, error } = await authClient.signIn.emailOtp({
 				email: email,
 				otp: otp,
 			});
-
-			console.log("Data", data);
-			console.log("Error", error);
 
 			if (error) {
 				toast.error(error.message || "Failed to verify code");
@@ -52,17 +50,25 @@ export const OTPSignIn = ({
 
 			const user = data.user;
 
-			const createdRecently =
-				differenceInSeconds(new Date(), new Date(user.createdAt)) < 20;
+			console.log("Data:", data);
+
+			// Ensure we're comparing UTC timestamps
+
+			const userCreatedAtUTC = new Date(user.createdAt);
+			const nowUTC = new Date();
+			const diffSeconds = differenceInSeconds(nowUTC, userCreatedAtUTC);
+
+			const createdRecently = diffSeconds < 20;
 
 			if (createdRecently) {
 				window.location.href = newPath;
 			} else {
 				window.location.href = callbackPath;
 			}
-		} catch (error) {
+		} catch {
 			toast.error("Failed to verify code");
 		}
+		console.log("OTP verified");
 		setVerifying(false);
 	};
 

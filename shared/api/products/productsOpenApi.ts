@@ -1,9 +1,9 @@
-import { SuccessResponseSchema } from "@api/common/commonResponses.js";
 import {
 	CreateProductV2ParamsSchema,
 	UpdateProductV2ParamsSchema,
 } from "@api/models.js";
 import { z } from "zod/v4";
+
 import { ApiProductSchema } from "./previousVersions/apiProduct.js";
 
 // Note: The meta with id is added in openapi.ts to avoid duplicate registration
@@ -112,7 +112,9 @@ export const productOps = {
 					description: "Product deleted successfully",
 					content: {
 						"application/json": {
-							schema: SuccessResponseSchema,
+							schema: z.object({
+								success: z.boolean(),
+							}),
 						},
 					},
 				},

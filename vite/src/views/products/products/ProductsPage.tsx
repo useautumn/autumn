@@ -48,7 +48,7 @@ export const ProductsPage = () => {
 	return (
 		<div>
 			<PageSectionHeader
-				title="Products"
+				title="Plans"
 				titleComponent={
 					<>
 						<span className="text-t2 px-1 rounded-md bg-stone-200 mr-2">
@@ -75,8 +75,8 @@ export const ProductsPage = () => {
 							{
 								type: "item",
 								label: queryStates.showArchivedProducts
-									? `Show active products`
-									: `Show archived products`,
+									? `Show active plans`
+									: `Show archived plans`,
 								onClick: () =>
 									setQueryStates({
 										...queryStates,

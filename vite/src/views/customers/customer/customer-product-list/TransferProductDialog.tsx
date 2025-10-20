@@ -47,7 +47,7 @@ export const TransferProductDialog = ({
 
 	const handleClicked = async () => {
 		if (!selectedEntity) {
-			toast.error("Please select an entity to transfer the product to");
+			toast.error("Please select an entity to transfer the plan to");
 			return;
 		}
 
@@ -68,11 +68,11 @@ export const TransferProductDialog = ({
 				},
 			);
 			await refetch();
-			toast.success("Product transferred successfully");
+			toast.success("Plan transferred successfully");
 			setOpen(false);
 		} catch (error) {
 			console.log(error);
-			toast.error(getBackendErr(error, "Failed to transfer product"));
+			toast.error(getBackendErr(error, "Failed to transfer plan"));
 		}
 		setLoading(false);
 	};
