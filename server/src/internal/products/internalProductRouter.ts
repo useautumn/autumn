@@ -127,14 +127,6 @@ productRouter.get("/:productId/data2", async (req: any, res) => {
 		const { version } = req.query;
 		const { db, orgId, env } = req;
 
-		console.log("[/data2] Request params:", {
-			productId,
-			version,
-			orgId,
-			env,
-			featuresLength: req.features?.length,
-		});
-
 		const [product, latestProduct] = await Promise.all([
 			ProductService.getFull({
 				db,

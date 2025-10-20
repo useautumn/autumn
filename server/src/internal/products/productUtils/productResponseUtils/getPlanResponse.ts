@@ -98,7 +98,7 @@ export const getPlanResponse = async ({
 	});
 
 	// 6. Convert items to plan features
-	const planFeatures = itemsToPlanFeatures({ items: featureItems });
+	const planFeatures = itemsToPlanFeatures({ items: featureItems ?? [] });
 
 	// 7. Get attach scenario for customer context
 	const attachScenario = getAttachScenario({
@@ -176,19 +176,16 @@ export const getPlanResponse = async ({
 		add_on: product.is_add_on,
 		default: product.is_default,
 
-		// Price field (required in Plan schema)
+		// Price field (optional - only for products with base price)
 		price: basePrice
 			? {
 					amount: basePrice.amount,
 					interval: basePrice.interval as BillingInterval,
 				}
-			: {
-					amount: 0,
-					interval: "month" as BillingInterval,
-				},
+			: undefined,
 
 		// Features array
-		features: planFeatures,
+		features: planFeatures ?? [],
 
 		// Free trial
 		free_trial: freeTrial,
