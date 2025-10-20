@@ -38,7 +38,7 @@ export const AdditionalOptions = ({
 				/>
 				<div className="space-y-2">
 					<AreaCheckbox
-						title="Product Group"
+						title="Group"
 						description="This plan is part of a set of plans separate from your main plans"
 						checked={hasGroup}
 						onCheckedChange={(checked) =>
