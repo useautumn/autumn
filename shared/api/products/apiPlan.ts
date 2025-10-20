@@ -27,10 +27,12 @@ export const ApiPlanSchema = z.object({
 	add_on: z.boolean(),
 	default: z.boolean(),
 
-	price: z.object({
-		amount: z.number(),
-		interval: z.enum(BillingInterval),
-	}),
+	price: z
+		.object({
+			amount: z.number(),
+			interval: z.enum(BillingInterval),
+		})
+		.optional(),
 
 	features: z.array(ApiPlanFeatureSchema),
 	free_trial: ApiFreeTrialV2Schema.nullable().optional(),

@@ -63,12 +63,14 @@ export const toPrice = ({
 	internalProductId,
 	isCustom,
 	newVersion,
+	curPrice,
 }: {
 	item: ProductItem;
 	orgId: string;
 	internalProductId: string;
 	isCustom: boolean;
 	newVersion?: boolean;
+	curPrice?: Price;
 }) => {
 	const config: FixedPriceConfig = {
 		type: PriceType.Fixed,
@@ -81,7 +83,7 @@ export const toPrice = ({
 	};
 
 	let price: Price = {
-		id: item.price_id || generateId("pr"),
+		id: item.price_id || curPrice?.id || generateId("pr"),
 		created_at: item.created_at || Date.now(),
 		org_id: orgId,
 		internal_product_id: internalProductId,
@@ -109,6 +111,7 @@ export const toFeature = ({
 	isCustom,
 	newVersion,
 	feature,
+	curEnt,
 }: {
 	item: ProductItem;
 	orgId: string;
@@ -117,13 +120,14 @@ export const toFeature = ({
 	isCustom: boolean;
 	newVersion?: boolean;
 	feature?: Feature;
+	curEnt?: Entitlement;
 }) => {
 	const isBoolean = feature?.type == FeatureType.Boolean;
 
 	const resetUsage = getResetUsage({ item, feature });
 
 	let ent: Entitlement = {
-		id: item.entitlement_id || generateId("ent"),
+		id: item.entitlement_id || curEnt?.id || generateId("ent"),
 		org_id: orgId,
 		created_at: item.created_at || Date.now(),
 		is_custom: isCustom,
@@ -186,7 +190,7 @@ export const toFeatureAndPrice = ({
 	});
 
 	let ent: Entitlement = {
-		id: item.entitlement_id || generateId("ent"),
+		id: item.entitlement_id || curEnt?.id || generateId("ent"),
 		org_id: orgId,
 		created_at: item.created_at || Date.now(),
 		is_custom: isCustom,
@@ -244,16 +248,17 @@ export const toFeatureAndPrice = ({
 		interval_count: item.interval_count || 1,
 	};
 
+	const canProrate = itemCanBeProrated({ item, features });
+
 	let prorationConfig = null;
-	if (itemCanBeProrated({ item, features })) {
+	if (canProrate) {
 		const onIncrease =
 			item.config?.on_increase || OnIncrease.ProrateImmediately;
 		let onDecrease = item.config?.on_decrease || OnDecrease.Prorate;
 
-		// console.log("Item config:", item.config);
-		if (shouldProrate(onDecrease) || onDecrease == OnDecrease.Prorate) {
+		if (shouldProrate(onDecrease) || onDecrease === OnDecrease.Prorate) {
 			onDecrease =
-				onIncrease == OnIncrease.ProrateImmediately
+				onIncrease === OnIncrease.ProrateImmediately
 					? OnDecrease.ProrateImmediately
 					: OnDecrease.ProrateNextCycle;
 		}
@@ -262,12 +267,10 @@ export const toFeatureAndPrice = ({
 			on_increase: onIncrease,
 			on_decrease: onDecrease,
 		};
-
-		// console.log("Proration config:", prorationConfig);
 	}
 
 	let price: Price = {
-		id: item.price_id || generateId("pr"),
+		id: item.price_id || curPrice?.id || generateId("pr"),
 		created_at: item.created_at || Date.now(),
 		org_id: orgId,
 		internal_product_id: internalProductId,
@@ -350,6 +353,7 @@ export const itemToPriceAndEnt = ({
 			internalProductId,
 			isCustom,
 			newVersion,
+			curPrice,
 		});
 
 		if (!curPrice || newVersion) {
@@ -376,6 +380,7 @@ export const itemToPriceAndEnt = ({
 			isCustom,
 			newVersion,
 			feature,
+			curEnt,
 		});
 
 		if (!curEnt || newVersion) {

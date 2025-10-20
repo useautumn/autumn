@@ -200,7 +200,14 @@ export const handleNewProductItems = async ({
 	const updatedEnts: Entitlement[] = [];
 
 	const deletedPrices: Price[] = curPrices.filter((price) => {
-		const item = newItems.find((item) => item.price_id === price.id);
+		// Check if this price matches any new item (by ID or feature+interval)
+		const item = newItems.find(
+			(item) =>
+				item.price_id === price.id ||
+				(!item.price_id &&
+					price.feature_id === item.feature_id &&
+					price.interval === item.interval),
+		);
 		if (!item) {
 			return true;
 		}
@@ -209,7 +216,14 @@ export const handleNewProductItems = async ({
 	});
 
 	const deletedEnts: Entitlement[] = curEnts.filter(
-		(ent) => !newItems.some((item) => item.entitlement_id === ent.id),
+		(ent) =>
+			!newItems.some(
+				(item) =>
+					item.entitlement_id === ent.id ||
+					(!item.entitlement_id &&
+						item.feature_id === ent.feature_id &&
+						item.interval === ent.interval),
+			),
 	);
 
 	const samePrices: Price[] = [];
@@ -217,8 +231,32 @@ export const handleNewProductItems = async ({
 
 	for (const item of newItems) {
 		const feature = features.find((f) => f.id === item.feature_id);
-		const curEnt = curEnts.find((ent) => ent.id === item.entitlement_id);
-		const curPrice = curPrices.find((price) => price.id === item.price_id);
+
+		// Match existing entitlement by ID (V1.2) or feature_id+interval (V2 Plan format)
+		const curEnt = curEnts.find((ent) => {
+			// Primary: match by entitlement_id if present
+			if (item.entitlement_id) {
+				return ent.id === item.entitlement_id;
+			}
+
+			// Fallback: match by feature_id + interval (V2 Plan format without entitlement_id)
+			return (
+				ent.feature_id === item.feature_id && ent.interval === item.interval
+			);
+		});
+
+		// Match existing price by ID (V1.2) or feature_id+interval (V2)
+		const curPrice = curPrices.find((price) => {
+			// Primary: match by price_id if present
+			if (item.price_id) {
+				return price.id === item.price_id;
+			}
+
+			// Fallback: match by feature_id + interval for usage prices
+			return (
+				price.feature_id === item.feature_id && price.interval === item.interval
+			);
+		});
 
 		// 2. Update price and entitlement?
 		const { newPrice, newEnt, updatedPrice, updatedEnt, samePrice, sameEnt } =
@@ -293,7 +331,7 @@ export const handleNewProductItems = async ({
 	}
 
 	console.log(`
-		Deletion Confirmations:
+		Update Confirmations:
 		- New ${newEnts.length} entitlements: ${JSON.stringify(newEnts, null, 4)}
 		- Updated ${updatedEnts.length} entitlements: ${JSON.stringify(updatedEnts, null, 4)}
 		- Deleted ${deletedEnts.length} entitlements: ${JSON.stringify(deletedEnts, null, 4)}

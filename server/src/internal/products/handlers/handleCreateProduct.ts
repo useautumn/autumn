@@ -2,6 +2,8 @@ import {
 	AffectedResource,
 	type ApiPlan,
 	ApiVersion,
+	ApiVersionClass,
+	applyResponseVersionChanges,
 	CreatePlanParamsSchema,
 	type CreateProductV2Params,
 	CreateProductV2ParamsSchema,
@@ -11,6 +13,7 @@ import {
 	type Price,
 	ProductAlreadyExistsError,
 	type ProductV2,
+	planToProductV2,
 } from "@autumn/shared";
 
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -24,7 +27,6 @@ import {
 } from "../free-trials/freeTrialUtils.js";
 import { ProductService } from "../ProductService.js";
 import { handleNewProductItems } from "../product-items/productItemUtils/handleNewProductItems.js";
-import { planToProductV2 } from "../productUtils/apiPlanUtils/planToProductV2.js";
 import { isDefaultTrial } from "../productUtils/classifyProduct.js";
 import { getPlanResponse } from "../productUtils/productResponseUtils/getPlanResponse.js";
 import {
@@ -95,7 +97,7 @@ export const createProduct = createRoute({
 	// body: CreateProductV2ParamsSchema,
 	versionedBody: {
 		latest: CreatePlanParamsSchema,
-		[ApiVersion.V1_1]: CreateProductV2ParamsSchema,
+		[ApiVersion.V1_2]: CreateProductV2ParamsSchema,
 	},
 	resource: AffectedResource.Product,
 	handler: async (c) => {
@@ -103,7 +105,11 @@ export const createProduct = createRoute({
 		const ctx = c.get("ctx");
 		// const query = c.req.valid("query");
 
-		const v1_2Body = planToProductV2({ plan: body as ApiPlan });
+		// Convert to ProductV2 format only if client sent V2 Plan format
+		// V1.2 clients already send ProductV2, no conversion needed
+		const v1_2Body = ctx.apiVersion.gte(new ApiVersionClass(ApiVersion.V2))
+			? planToProductV2({ plan: body as ApiPlan })
+			: (body as unknown as CreateProductV2Params);
 
 		const { logger, org, features, env, db } = ctx;
 
@@ -119,7 +125,7 @@ export const createProduct = createRoute({
 
 		await disableCurrentDefault({
 			req: ctx,
-			newProduct: v1_2Body,
+			newProduct: v1_2Body as CreateProductV2Params,
 		});
 
 		const product = await ProductService.insert({
@@ -128,6 +134,7 @@ export const createProduct = createRoute({
 				productData: v1_2Body as CreateProductV2Params,
 				orgId: org.id,
 				env,
+				description: (body as ApiPlan).description ?? null,
 			}),
 		});
 
@@ -197,18 +204,18 @@ export const createProduct = createRoute({
 		// 	features,
 		// });
 
-		try {
-			const planResponse = await getPlanResponse({
-				product: newFullProduct,
-				features,
-			});
+		const planResponse = await getPlanResponse({
+			product: newFullProduct,
+			features,
+		});
 
-			console.log(`Plan response:\n ${JSON.stringify(planResponse, null, 4)}`);
+		// Apply version transformations for client
+		const versionedResponse = applyResponseVersionChanges<ApiPlan>({
+			input: planResponse,
+			targetVersion: ctx.apiVersion,
+			resource: AffectedResource.Product,
+		});
 
-			return c.json(planResponse);
-		} catch (error) {
-			console.error("Error getting plan response:", error);
-			throw error;
-		}
+		return c.json(versionedResponse);
 	},
 });
