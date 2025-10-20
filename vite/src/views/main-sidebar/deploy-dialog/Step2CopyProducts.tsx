@@ -44,7 +44,7 @@ export const Step2CopyProducts = () => {
 						variant="secondary"
 						disabled
 						icon={<Check size={16} className="text-green-600" />}
-						className="!opacity-100 w-32"
+						className="!opacity-100"
 					>
 						Copied Plans
 					</IconButton>
