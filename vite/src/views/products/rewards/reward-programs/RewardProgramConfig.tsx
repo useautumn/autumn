@@ -48,18 +48,19 @@ export const RewardProgramConfig = ({
 
 	return (
 		<div className="flex flex-col gap-4">
-			<div className="flex items-center gap-2">
-				<div className="w-6/12">
+			<div className="flex gap-2">
+				<div className="w-full">
 					<FieldLabel>Program ID</FieldLabel>
 					<Input
 						disabled={isUpdate}
 						value={rewardProgram.id || ""}
+						placeholder="Enter program ID"
 						onChange={(e) =>
 							setRewardProgram({ ...rewardProgram, id: e.target.value })
 						}
 					/>
 				</div>
-				<div className="w-6/12">
+				<div className="w-full">
 					<FieldLabel>Reward</FieldLabel>
 					<Select
 						value={rewardProgram.internal_reward_id}
@@ -67,7 +68,7 @@ export const RewardProgramConfig = ({
 							setRewardProgram({ ...rewardProgram, internal_reward_id: value })
 						}
 					>
-						<SelectTrigger>
+						<SelectTrigger className="w-full">
 							<SelectValue placeholder="Select a reward" />
 						</SelectTrigger>
 						<SelectContent>
@@ -80,8 +81,8 @@ export const RewardProgramConfig = ({
 					</Select>
 				</div>
 			</div>
-			<div className="flex items-center gap-2">
-				<div className="w-6/12">
+			<div className="flex gap-2">
+				<div className="w-full">
 					<FieldLabel>Redeem On</FieldLabel>
 					<Select
 						defaultValue={RewardTriggerEvent.CustomerCreation}
@@ -93,7 +94,7 @@ export const RewardProgramConfig = ({
 							})
 						}
 					>
-						<SelectTrigger>
+						<SelectTrigger className="w-full">
 							<SelectValue placeholder="Select a redeem on" />
 						</SelectTrigger>
 						<SelectContent>
@@ -110,7 +111,7 @@ export const RewardProgramConfig = ({
 						</SelectContent>
 					</Select>
 				</div>
-				<div className="w-6/12">
+				<div className="w-full">
 					<FieldLabel>Max Redemptions</FieldLabel>
 					<Input
 						type="number"
@@ -124,44 +125,40 @@ export const RewardProgramConfig = ({
 					/>
 				</div>
 			</div>
-			<div className="flex items-center gap-2">
+			<div className="w-full">
+				<FieldLabel>Received by</FieldLabel>
+				<Select
+					value={rewardProgram.received_by}
+					onValueChange={(value) =>
+						setRewardProgram({
+							...rewardProgram,
+							received_by: value as RewardReceivedBy,
+						})
+					}
+				>
+					<SelectTrigger className="w-full">
+						<SelectValue placeholder="Who should receive the reward" />
+					</SelectTrigger>
+					<SelectContent>
+						{Object.values(RewardReceivedBy).map((receivedBy) => (
+							<SelectItem key={receivedBy} value={receivedBy}>
+								{receivedBy === RewardReceivedBy.All
+									? "Referrer & Redeemer"
+									: keyToTitle(receivedBy)}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+			</div>
+			{rewardProgram.when === RewardTriggerEvent.Checkout && (
 				<div className="w-full">
-					<FieldLabel>Received by</FieldLabel>
-					<Select
-						value={rewardProgram.received_by}
-						onValueChange={(value) =>
-							setRewardProgram({
-								...rewardProgram,
-								received_by: value as RewardReceivedBy,
-							})
-						}
-					>
-						<SelectTrigger>
-							<SelectValue placeholder="Who should receive the reward" />
-						</SelectTrigger>
-						<SelectContent>
-							{Object.values(RewardReceivedBy).map((receivedBy) => (
-								<SelectItem key={receivedBy} value={receivedBy}>
-									{receivedBy === RewardReceivedBy.All
-										? "Referrer & Redeemer"
-										: keyToTitle(receivedBy)}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
+					<FieldLabel>Products</FieldLabel>
+					<ProductSelector
+						rewardProgram={rewardProgram}
+						setRewardProgram={setRewardProgram}
+					/>
 				</div>
-			</div>
-			<div className="flex items-center gap-2">
-				{rewardProgram.when === RewardTriggerEvent.Checkout && (
-					<div className="w-full">
-						<FieldLabel>Products</FieldLabel>
-						<ProductSelector
-							rewardProgram={rewardProgram}
-							setRewardProgram={setRewardProgram}
-						/>
-					</div>
-				)}
-			</div>
+			)}
 		</div>
 	);
 };

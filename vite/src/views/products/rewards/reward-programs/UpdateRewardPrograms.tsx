@@ -1,32 +1,33 @@
-import React, { useState } from "react";
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
+import type { RewardProgram } from "@autumn/shared";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { RewardProgram } from "@autumn/shared";
+import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
+import {
+	SheetFooter,
+	SheetHeader,
+	SheetSection,
+} from "@/components/v2/sheets/SharedSheetComponents";
+import { Sheet, SheetContent } from "@/components/v2/sheets/Sheet";
+import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
+import { RewardProgramService } from "@/services/products/RewardProgramService";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
-import { WarningBox } from "@/components/general/modal-components/WarningBox";
-import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { RewardProgramConfig } from "./RewardProgramConfig";
-import { RewardProgramService } from "@/services/products/RewardProgramService";
+
+interface UpdateRewardProgramProps {
+	open: boolean;
+	setOpen: (open: boolean) => void;
+	selectedRewardProgram: RewardProgram | null;
+	setSelectedRewardProgram: (reward: RewardProgram) => void;
+}
 
 function UpdateRewardProgram({
 	open,
 	setOpen,
 	selectedRewardProgram,
 	setSelectedRewardProgram,
-}: {
-	open: boolean;
-	setOpen: (open: boolean) => void;
-	selectedRewardProgram: RewardProgram | null;
-	setSelectedRewardProgram: (reward: RewardProgram) => void;
-}) {
+}: UpdateRewardProgramProps) {
 	const [updateLoading, setUpdateLoading] = useState(false);
 	const { refetch } = useRewardsQuery();
 
@@ -34,49 +35,69 @@ function UpdateRewardProgram({
 	const axiosInstance = useAxiosInstance({ env });
 
 	const handleUpdate = async () => {
+		if (!selectedRewardProgram) return;
+
 		setUpdateLoading(true);
 		try {
 			await RewardProgramService.updateReward({
 				axiosInstance,
-				internalId: selectedRewardProgram!.internal_id,
-				data: selectedRewardProgram!,
+				internalId: selectedRewardProgram.internal_id,
+				data: selectedRewardProgram,
 			});
-			toast.success("Reward updated successfully");
+			toast.success("Referral program updated successfully");
 			await refetch();
 			setOpen(false);
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to update reward program"));
+			toast.error(getBackendErr(error, "Failed to update referral program"));
+		} finally {
+			setUpdateLoading(false);
 		}
-		setUpdateLoading(false);
+	};
+
+	const handleCancel = () => {
+		setOpen(false);
 	};
 
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogContent className="w-[500px]">
-				<DialogTitle>Update Reward Program</DialogTitle>
-				{/* <WarningBox>
-          Existing customers with this reward program will not be affected
-        </WarningBox> */}
+		<Sheet open={open} onOpenChange={setOpen}>
+			<SheetContent className="flex flex-col overflow-hidden">
+				<SheetHeader
+					title="Update Referral Program"
+					description="Modify your referral program settings"
+				/>
 
-				{selectedRewardProgram && (
-					<RewardProgramConfig
-						rewardProgram={selectedRewardProgram}
-						setRewardProgram={setSelectedRewardProgram}
-						isUpdate={true}
-					/>
-				)}
+				<div className="flex-1 overflow-y-auto">
+					<SheetSection title="Program Configuration" withSeparator={false}>
+						{selectedRewardProgram && (
+							<RewardProgramConfig
+								rewardProgram={selectedRewardProgram}
+								setRewardProgram={setSelectedRewardProgram}
+								isUpdate={true}
+							/>
+						)}
+					</SheetSection>
+				</div>
 
-				<DialogFooter>
-					<Button
-						isLoading={updateLoading}
-						onClick={() => handleUpdate()}
-						variant="gradientPrimary"
+				<SheetFooter>
+					<ShortcutButton
+						variant="secondary"
+						className="w-full"
+						onClick={handleCancel}
+						singleShortcut="escape"
 					>
-						Update
-					</Button>
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
+						Cancel
+					</ShortcutButton>
+					<ShortcutButton
+						className="w-full"
+						onClick={handleUpdate}
+						metaShortcut="enter"
+						isLoading={updateLoading}
+					>
+						Update program
+					</ShortcutButton>
+				</SheetFooter>
+			</SheetContent>
+		</Sheet>
 	);
 }
 
