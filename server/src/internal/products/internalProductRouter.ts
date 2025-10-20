@@ -1,8 +1,4 @@
-import {
-	type FeatureOptions,
-	ProductNotFoundError,
-	UsageModel,
-} from "@autumn/shared";
+import { type FeatureOptions, UsageModel } from "@autumn/shared";
 import { Router } from "express";
 import { handleFrontendReqError } from "@/utils/errorUtils.js";
 import { CusProdReadService } from "../customers/cusProducts/CusProdReadService.js";
@@ -12,6 +8,7 @@ import { OrgService } from "../orgs/OrgService.js";
 import { createOrgResponse } from "../orgs/orgUtils.js";
 import { RewardProgramService } from "../rewards/RewardProgramService.js";
 import { RewardService } from "../rewards/RewardService.js";
+import { EntitlementService } from "./entitlements/EntitlementService.js";
 import { handleGetProductDeleteInfo } from "./handlers/handleGetProductDeleteInfo.js";
 import { ProductService } from "./ProductService.js";
 import { isFeaturePriceItem } from "./product-items/productItemUtils/getItemType.js";
@@ -23,10 +20,10 @@ import {
 } from "./productUtils.js";
 import { mapToProductV2 } from "./productV2Utils.js";
 
-export const productRouter: Router = Router({ mergeParams: true });
+export const expressProductRouter: Router = Router({ mergeParams: true });
 
 // Get list of products
-productRouter.get("/products", async (req: any, res) => {
+expressProductRouter.get("/products", async (req: any, res) => {
 	try {
 		const { db } = req;
 		const products = await ProductService.listFull({
@@ -54,7 +51,7 @@ productRouter.get("/products", async (req: any, res) => {
 });
 
 // Get counts for all products
-productRouter.get("/product_counts", async (req: any, res) => {
+expressProductRouter.get("/product_counts", async (req: any, res) => {
 	try {
 		const { db } = req;
 		const products = await ProductService.listFull({
@@ -89,7 +86,7 @@ productRouter.get("/product_counts", async (req: any, res) => {
 });
 
 // Get list of features
-productRouter.get("/features", async (req: any, res) => {
+expressProductRouter.get("/features", async (req: any, res) => {
 	try {
 		res.status(200).json({ features: req.features });
 	} catch (error) {
@@ -99,7 +96,7 @@ productRouter.get("/features", async (req: any, res) => {
 });
 
 // Get list of rewards
-productRouter.get("/rewards", async (req: any, res) => {
+expressProductRouter.get("/rewards", async (req: any, res) => {
 	try {
 		const { db, orgId, env } = req;
 		const rewards = await RewardService.list({ db, orgId, env });
@@ -119,85 +116,81 @@ productRouter.get("/rewards", async (req: any, res) => {
 	}
 });
 
-// Get single product data
-productRouter.get("/:productId/data2", async (req: any, res) => {
-	try {
-		const { productId } = req.params;
-		const { version } = req.query;
-		const { db, orgId, env } = req;
+// // Get single product data
+// expressProductRouter.get("/:productId/data2", async (req: any, res) => {
+// 	try {
+// 		const { productId } = req.params;
+// 		const { version } = req.query;
+// 		const { db, orgId, env } = req;
 
-		const [product, latestProduct] = await Promise.all([
-			ProductService.getFull({
-				db,
-				idOrInternalId: productId,
-				orgId,
-				env,
-				version: version ? parseInt(version) : undefined,
-			}),
-			ProductService.getFull({
-				db,
-				idOrInternalId: productId,
-				orgId,
-				env,
-			}),
-		]);
+// 		const [product, latestProduct] = await Promise.all([
+// 			ProductService.getFull({
+// 				db,
+// 				idOrInternalId: productId,
+// 				orgId,
+// 				env,
+// 				version: version ? parseInt(version) : undefined,
+// 			}),
+// 			ProductService.getFull({
+// 				db,
+// 				idOrInternalId: productId,
+// 				orgId,
+// 				env,
+// 			}),
+// 		]);
 
-		if (!product) {
-			throw new ProductNotFoundError({ productId, version });
-		}
+// 		const productV2 = mapToProductV2({
+// 			product: product,
+// 			features: req.features,
+// 		});
 
-		const productV2 = mapToProductV2({
-			product: product,
-			features: req.features,
-		});
+// 		res
+// 			.status(200)
+// 			.json({ product: productV2, numVersions: latestProduct.version });
+// 	} catch (error) {
+// 		console.error("Failed to get product", error);
+// 		res.status(500).send(error);
+// 	}
+// });
 
-		res
-			.status(200)
-			.json({ product: productV2, numVersions: latestProduct.version });
-	} catch (error) {
-		console.error("Failed to get product", error);
-		res.status(500).send(error);
-	}
-});
+// // Get counts for a single product
+// expressProductRouter.get("/:productId/count", async (req: any, res) => {
+// 	try {
+// 		const { db, orgId, env } = req;
+// 		const { productId } = req.params;
+// 		const { version } = req.query;
 
-// Get counts for a single product
-productRouter.get("/:productId/count", async (req: any, res) => {
-	try {
-		const { db, orgId, env } = req;
-		const { productId } = req.params;
-		const { version } = req.query;
+// 		const product = await ProductService.get({
+// 			db,
+// 			id: productId,
+// 			orgId,
+// 			env,
+// 			version: version ? parseInt(version) : undefined,
+// 		});
 
-		const product = await ProductService.get({
-			db,
-			id: productId,
-			orgId,
-			env,
-			version: version ? parseInt(version) : undefined,
-		});
+// 		if (!product) {
+// 			throw new ProductNotFoundError({ productId, version });
+// 		}
 
-		if (!product) {
-			throw new ProductNotFoundError({ productId, version });
-		}
+// 		// Get counts from postgres
+// 		const counts = await CusProdReadService.getCounts({
+// 			db,
+// 			internalProductId: product.internal_id,
+// 		});
 
-		// Get counts from postgres
-		const counts = await CusProdReadService.getCounts({
-			db,
-			internalProductId: product.internal_id,
-		});
-
-		res.status(200).send(counts);
-	} catch (error) {
-		handleFrontendReqError({
-			error,
-			req,
-			res,
-			action: "Get product counts (internal)",
-		});
-	}
-});
+// 		res.status(200).send(counts);
+// 	} catch (error) {
+// 		handleFrontendReqError({
+// 			error,
+// 			req,
+// 			res,
+// 			action: "Get product counts (internal)",
+// 		});
+// 	}
+// });
 
 // Get list of migrations
-productRouter.get("/migrations", async (req: any, res) => {
+expressProductRouter.get("/migrations", async (req: any, res) => {
 	try {
 		const { db, orgId, env } = req;
 		const migrations = await MigrationService.getExistingJobs({
@@ -216,7 +209,7 @@ productRouter.get("/migrations", async (req: any, res) => {
 	}
 });
 
-productRouter.get("/data", async (req: any, res) => {
+expressProductRouter.get("/data", async (req: any, res) => {
 	try {
 		const { db } = req;
 
@@ -271,7 +264,7 @@ productRouter.get("/data", async (req: any, res) => {
 	}
 });
 
-productRouter.post("/data", async (req: any, res) => {
+expressProductRouter.post("/data", async (req: any, res) => {
 	try {
 		const { db } = req;
 		const { showArchived } = req.body;
@@ -322,7 +315,7 @@ productRouter.post("/data", async (req: any, res) => {
 	}
 });
 
-productRouter.get("/counts", async (req: any, res) => {
+expressProductRouter.get("/counts", async (req: any, res) => {
 	try {
 		const { db } = req;
 		const products = await ProductService.listFull({
@@ -366,91 +359,91 @@ productRouter.get("/counts", async (req: any, res) => {
 	}
 });
 
-productRouter.get("/:productId/data", async (req: any, res) => {
-	try {
-		const { productId } = req.params;
-		const { version } = req.query;
-		const { db, orgId, env } = req;
+// expressProductRouter.get("/:productId/data", async (req: any, res) => {
+// 	try {
+// 		const { productId } = req.params;
+// 		const { version } = req.query;
+// 		const { db, orgId, env } = req;
 
-		const [product, features, org, numVersions, existingMigrations] =
-			await Promise.all([
-				ProductService.getFull({
-					db,
-					idOrInternalId: productId,
-					orgId,
-					env,
-					version: version ? parseInt(version) : undefined,
-				}),
-				FeatureService.getFromReq(req),
-				OrgService.getFromReq(req),
-				ProductService.getProductVersionCount({
-					db,
-					productId,
-					orgId,
-					env,
-				}),
-				MigrationService.getExistingJobs({
-					db,
-					orgId,
-					env,
-				}),
-			]);
+// 		const [product, features, org, numVersions, existingMigrations] =
+// 			await Promise.all([
+// 				ProductService.getFull({
+// 					db,
+// 					idOrInternalId: productId,
+// 					orgId,
+// 					env,
+// 					version: version ? parseInt(version) : undefined,
+// 				}),
+// 				FeatureService.getFromReq(req),
+// 				OrgService.getFromReq(req),
+// 				ProductService.getProductVersionCount({
+// 					db,
+// 					productId,
+// 					orgId,
+// 					env,
+// 				}),
+// 				MigrationService.getExistingJobs({
+// 					db,
+// 					orgId,
+// 					env,
+// 				}),
+// 			]);
 
-		if (!product) {
-			throw new ProductNotFoundError({ productId, version });
-		}
+// 		if (!product) {
+// 			throw new ProductNotFoundError({ productId, version });
+// 		}
 
-		const defaultProds = await ProductService.listDefault({
-			db,
-			orgId: req.orgId,
-			env: req.env,
-			group: product.group,
-		});
+// 		const defaultProds = await ProductService.listDefault({
+// 			db,
+// 			orgId: req.orgId,
+// 			env: req.env,
+// 			group: product.group,
+// 		});
 
-		const groupDefaults = getGroupToDefaults({
-			defaultProds,
-		})?.[product.group];
+// 		const groupDefaults = getGroupToDefaults({
+// 			defaultProds,
+// 		})?.[product.group];
 
-		let entitlements = product.entitlements;
-		let prices = product.prices;
+// 		let entitlements = product.entitlements;
+// 		let prices = product.prices;
 
-		entitlements = entitlements.sort((a: any, b: any) => {
-			return b.feature.id.localeCompare(a.feature.id);
-		});
+// 		entitlements = entitlements.sort((a: any, b: any) => {
+// 			return b.feature.id.localeCompare(a.feature.id);
+// 		});
 
-		prices = prices.sort((a: any, b: any) => {
-			return b.id.localeCompare(a.id);
-		});
+// 		prices = prices.sort((a: any, b: any) => {
+// 			return b.id.localeCompare(a.id);
+// 		});
 
-		const productV2 = mapToProductV2({ product, features });
+// 		const productV2 = mapToProductV2({ product, features });
 
-		res.status(200).send({
-			product: productV2,
-			entitlements,
-			prices,
-			features,
-			org: {
-				id: org.id,
-				name: org.name,
-				test_pkey: org.test_pkey,
-				live_pkey: org.live_pkey,
-				default_currency: org.default_currency,
-			},
-			numVersions,
-			existingMigrations,
-			groupDefaults: groupDefaults,
-		});
-	} catch (error) {
-		handleFrontendReqError({
-			error,
-			req,
-			res,
-			action: "Get product data (internal)",
-		});
-	}
-});
+// 		res.status(200).send({
+// 			product: productV2,
+// 			entitlements,
+// 			prices,
+// 			features,
+// 			org: {
+// 				id: org.id,
+// 				name: org.name,
+// 				test_pkey: org.test_pkey,
+// 				live_pkey: org.live_pkey,
+// 				default_currency: org.default_currency,
+// 			},
+// 			numVersions,
+// 			existingMigrations,
+// 			groupDefaults: groupDefaults,
+// 		});
+// 	} catch (error) {
+// 		handleFrontendReqError({
+// 			error,
+// 			req,
+// 			res,
+// 			action: "Get product data (internal)",
+// 		});
+// 	}
+// });
 
-productRouter.post("/product_options", async (req: any, res: any) => {
+expressProductRouter.post("/product_options", async (req: any, res: any) => {
 	try {
 		const { items } = req.body;
 
@@ -476,9 +469,9 @@ productRouter.post("/product_options", async (req: any, res: any) => {
 	}
 });
 
-productRouter.get("/:productId/info", handleGetProductDeleteInfo);
+expressProductRouter.get("/:productId/info", handleGetProductDeleteInfo);
 
-productRouter.get("/rewards", async (req: any, res: any) => {
+expressProductRouter.get("/rewards", async (req: any, res: any) => {
 	try {
 		const { db, orgId, env } = req;
 
@@ -498,3 +491,38 @@ productRouter.get("/rewards", async (req: any, res: any) => {
 		});
 	}
 });
+
+expressProductRouter.get(
+	"/has_entity_feature_id",
+	async (req: any, res: any) => {
+		try {
+			const { db, orgId, env } = req;
+
+			const hasEntityFeatureId = await EntitlementService.hasEntityFeatureId({
+				db,
+				orgId,
+				env,
+			});
+
+			res.status(200).send({ hasEntityFeatureId });
+		} catch (error) {
+			handleFrontendReqError({
+				error,
+				req,
+				res,
+				action: "Check has entity feature id",
+			});
+		}
+	},
+);
+
+import { Hono } from "hono";
+import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { handleGetProductCount } from "./internalHandlers/handleGetProductCount.js";
+import { handleGetProductInternal } from "./internalHandlers/handleGetProductInternal.js";
+
+// Hono router for internal/dashboard product routes
+export const internalProductRouter = new Hono<HonoEnv>();
+
+internalProductRouter.get("/:productId/count", ...handleGetProductCount);
+internalProductRouter.get("/:productId/data", ...handleGetProductInternal);

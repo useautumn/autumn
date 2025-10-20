@@ -1,12 +1,11 @@
 import { AppEnv } from "@autumn/shared";
-import { cn } from "@/lib/utils";
 import { FlaskConical, Sailboat } from "lucide-react";
-import { useEnv } from "@/utils/envUtils";
 import { DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import { useEnv } from "@/utils/envUtils";
 import { useSidebarContext } from "../SidebarContext";
 
-export const sandboxStyles =
-	"text-amber-600 bg-amber-100 border-amber-500 w-[100px]";
+export const sandboxStyles = "text-t8 bg-t8/10 border-t8 w-[100px]";
 export const liveStyles = "text-primary bg-purple-100 border-primary w-[120px]";
 
 export const ExpandedEnvTrigger = ({ isHovered }: { isHovered: boolean }) => {
@@ -17,7 +16,7 @@ export const ExpandedEnvTrigger = ({ isHovered }: { isHovered: boolean }) => {
 	return (
 		<DropdownMenuTrigger
 			className={cn(
-				"ring-0 focus:ring-0 text-t2 rounded-sm w-full flex items-center bg-transparent h-6 transition-all duration-300",
+				"ring-0 focus:ring-0 text-t2 rounded-sm w-full flex items-center bg-transparent h-6 transition-all duration-300 cursor-pointer select-none",
 			)}
 		>
 			<div

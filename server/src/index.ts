@@ -29,7 +29,6 @@ import { client, db } from "./db/initDrizzle.js";
 import { CacheManager } from "./external/caching/CacheManager.js";
 import { ClickHouseManager } from "./external/clickhouse/ClickHouseManager.js";
 import { logger } from "./external/logtail/logtailUtils.js";
-import { createPosthogCli } from "./external/posthog/createPosthogCli.js";
 import webhooksRouter from "./external/webhooks/webhooksRouter.js";
 import { redirectToHono } from "./initHono.js";
 import { apiRouter } from "./internal/api/apiRouter.js";
@@ -38,7 +37,6 @@ import { QueueManager } from "./queue/QueueManager.js";
 import { auth } from "./utils/auth.js";
 import { generateId } from "./utils/genUtils.js";
 import { checkEnvVars } from "./utils/initUtils.js";
-
 const tracer = trace.getTracer("express");
 
 checkEnvVars();
@@ -59,10 +57,9 @@ const init = async () => {
 		"http://localhost:5174",
 		"https://app.useautumn.com",
 		"https://staging.useautumn.com",
-		"https://*.useautumn.com",
+		"https://api.staging.useautumn.com",
 		"https://localhost:8080",
 		"https://www.alphalog.ai",
-		"https://*.alphalog.ai",
 		process.env.CLIENT_URL || "",
 	];
 
@@ -75,9 +72,36 @@ const init = async () => {
 		}
 	}
 
+	// Wildcard patterns for subdomains
+	const wildcardPatterns = [
+		/^https:\/\/.*\.useautumn\.com$/,
+		/^https:\/\/.*\.alphalog\.ai$/,
+	];
+
 	app.use(
 		cors({
-			origin: allowedOrigins,
+			origin: (origin, callback) => {
+				// Allow requests with no origin (like mobile apps or curl)
+				if (!origin) {
+					callback(null, true);
+					return;
+				}
+
+				// Check explicit allowed origins
+				if (allowedOrigins.includes(origin)) {
+					callback(null, true);
+					return;
+				}
+
+				// Check wildcard patterns
+				if (wildcardPatterns.some((pattern) => pattern.test(origin))) {
+					callback(null, true);
+					return;
+				}
+
+				// Origin not allowed
+				callback(new Error("Not allowed by CORS"));
+			},
 			credentials: true,
 			allowedHeaders: [
 				"app_env",
@@ -102,8 +126,6 @@ const init = async () => {
 
 	app.all("/api/auth/*", toNodeHandler(auth));
 
-	const posthog = createPosthogCli();
-
 	// Initialize managers in parallel for faster startup
 	await Promise.all([
 		QueueManager.getInstance(),
@@ -115,7 +137,6 @@ const init = async () => {
 		req.env = req.env = req.headers.app_env || AppEnv.Sandbox;
 		req.db = db;
 		req.clickhouseClient = await ClickHouseManager.getClient();
-		req.posthog = posthog;
 		req.id = req.headers["rndr-id"] || generateId("local_req");
 		req.timestamp = Date.now();
 
@@ -139,12 +160,11 @@ const init = async () => {
 		// Store span on request for potential use in other middleware/handlers
 		req.span = span;
 
-		req.logtail = logger.child({
+		req.logger = logger.child({
 			context: {
 				req: reqContext,
 			},
 		});
-		req.logger = req.logtail;
 
 		const endSpan = () => {
 			try {
@@ -177,7 +197,7 @@ const init = async () => {
 
 	app.use(express.json());
 	app.use(async (req: any, res: any, next: any) => {
-		req.logtail.info(`${req.method} ${req.originalUrl}`, {
+		req.logger.info(`${req.method} ${req.originalUrl}`, {
 			context: {
 				body: req.body,
 			},

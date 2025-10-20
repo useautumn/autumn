@@ -38,19 +38,6 @@ const pro = constructProduct({
 	trial: true,
 });
 
-const ops = [
-	{
-		entityId: "1",
-		product: pro,
-		results: [{ product: pro, status: CusProductStatus.Active }],
-	},
-	{
-		entityId: "2",
-		product: pro,
-		results: [{ product: pro, status: CusProductStatus.Active }],
-	},
-];
-
 const testCase = "multiInvoice1";
 describe(`${chalk.yellowBright("multiInvoice1: Testing multi attach through invoice flow")}`, () => {
 	const customerId = testCase;
@@ -98,7 +85,7 @@ describe(`${chalk.yellowBright("multiInvoice1: Testing multi attach through invo
 		testClockId = testClockId1!;
 	});
 
-	it("should run multi attach through checkout and have correct sub", async () => {
+	it("should run multi attach through invoice checkout flow", async () => {
 		const productsList = [
 			{
 				product_id: pro.id,

@@ -1,6 +1,6 @@
-import { Feature } from "../models/featureModels/featureModels.js";
-import { Organization } from "../models/orgModels/orgTable.js";
 import { format } from "date-fns";
+import type { Feature } from "../models/featureModels/featureModels.js";
+import type { Organization } from "../models/orgModels/orgTable.js";
 import { notNullish, nullish } from "./utils.js";
 export const getFeatureName = ({
 	feature,
@@ -20,7 +20,7 @@ export const getFeatureName = ({
 	let featureName = feature.name || "";
 
 	if (feature.display) {
-		let finalPlural;
+		let finalPlural: boolean | undefined;
 		// Case 1: If units and nullish plural
 		if (notNullish(units) && nullish(plural)) {
 			finalPlural = units !== 1;
@@ -93,7 +93,7 @@ export const usageToFeatureName = ({
 }) => {
 	const { singular, plural } = getSingularAndPlural({ feature });
 
-	if (usage == 1) {
+	if (usage === 1) {
 		return singular;
 	}
 
@@ -124,7 +124,7 @@ export const getFeatureInvoiceDescription = ({
 	if (isPrepaid && billingUnits && billingUnits > 1) {
 		result = `${usageStr} x ${billingUnits} ${plural}`; // eg. 4 x 100 credits
 	} else {
-		if (usage == 1) {
+		if (usage === 1) {
 			result = `${usageStr} ${singular}`; // eg. 1 credit
 		} else {
 			result = `${usageStr} ${plural}`; // eg. 4 credits
@@ -148,17 +148,20 @@ export const formatAmount = ({
 	amount,
 	maxFractionDigits = 2,
 	minFractionDigits = 0,
+	amountFormatOptions,
 }: {
 	org?: Organization;
 	currency?: string | null;
 	amount: number;
 	maxFractionDigits?: number;
 	minFractionDigits?: number;
+	amountFormatOptions?: Intl.NumberFormatOptions;
 }) => {
 	return new Intl.NumberFormat(undefined, {
 		style: "currency",
 		currency: currency || org?.default_currency || "USD",
 		minimumFractionDigits: minFractionDigits || 0,
 		maximumFractionDigits: maxFractionDigits || 2,
+		...amountFormatOptions,
 	}).format(amount);
 };

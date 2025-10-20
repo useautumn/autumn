@@ -3,7 +3,6 @@ import { useCustomer } from "autumn-js/react";
 import { Blend, Search } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { toast } from "sonner";
 import SmallSpinner from "@/components/general/SmallSpinner";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,9 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { useOrg } from "@/hooks/common/useOrg";
-import { OrgService } from "@/services/OrgService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { getRedirectUrl, navigateTo } from "@/utils/genUtils";
+import { navigateTo } from "@/utils/genUtils";
 import { AddProductContext } from "../add-product/CreateCheckoutContext";
 import { useCustomerContext } from "../CustomerContext";
 import { useCusQuery } from "../hooks/useCusQuery";
@@ -60,19 +58,19 @@ function AttachProductDropdown({
 	const navigate = useNavigate();
 
 	const handleAddProduct = async (productId: string, setLoading: any) => {
-		let stripeConnected = org?.stripe_connected;
+		// let stripeConnected = org?.stripe_connected;
 
-		if (!stripeConnected) {
-			const { data: org } = await OrgService.get(axiosInstance);
-			stripeConnected = org?.stripe_connected;
-		}
+		// if (!stripeConnected) {
+		// 	const { data: org } = await OrgService.get(axiosInstance);
+		// 	stripeConnected = org?.stripe_connected;
+		// }
 
-		if (!stripeConnected) {
-			toast.error("Connect to Stripe to add products to customers");
-			const redirectUrl = getRedirectUrl(`/customers/${customer.id}`, env);
-			navigateTo(`/dev?tab=stripe`, navigate, env);
-			return;
-		}
+		// if (!stripeConnected) {
+		// 	toast.error("Connect to Stripe to add products to customers");
+		// 	const redirectUrl = getRedirectUrl(`/customers/${customer.id}`, env);
+		// 	navigateTo(`/dev?tab=stripe`, navigate, env);
+		// 	return;
+		// }
 
 		navigateTo(
 			`/customers/${customer.id || customer.internal_id}/${productId}${
@@ -99,7 +97,7 @@ function AttachProductDropdown({
 							<Search size={12} className="text-t3" />
 							<Input
 								type="search"
-								placeholder="Search products"
+								placeholder="Search plans"
 								className="h-7 rounded-none shadow-none border-0 focus:ring-0 focus-visible:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:border-none focus-visible:shadow-none"
 								value={searchQuery}
 								onChange={(e) => setSearchQuery(e.target.value)}

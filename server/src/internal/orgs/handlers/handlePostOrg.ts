@@ -1,4 +1,7 @@
-import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
+import type {
+	ExtendedRequest,
+	ExtendedResponse,
+} from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 
 export const handlePostOrg = async (req: any, res: any) =>

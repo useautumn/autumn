@@ -1,20 +1,16 @@
-import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
+import type { ApiKey } from "@autumn/shared";
 import { useState } from "react";
-
-import { APIKeyToolbar, APIKeyToolbarItems } from "./APIKeyToolbar";
 import { Item, Row } from "@/components/general/TableGrid";
-import { ApiKey } from "@autumn/shared";
 import {
 	ContextMenu,
 	ContextMenuContent,
-	ContextMenuItem,
 	ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
+import { APIKeyToolbar, APIKeyToolbarItems } from "./APIKeyToolbar";
 import { DeleteApiKeyDialog } from "./DeleteApiKeyDialog";
 
 export const APIKeyTable = ({ apiKeys }: { apiKeys: ApiKey[] }) => {
-	const [openKeyId, setOpenKeyId] = useState<string | null>(null);
-
 	return (
 		<div>
 			<Row type="header" className="grid-cols-18">
@@ -24,7 +20,7 @@ export const APIKeyTable = ({ apiKeys }: { apiKeys: ApiKey[] }) => {
 				<Item className="col-span-1"></Item>
 			</Row>
 			{apiKeys.map((key) => (
-				<APIKeyRow apiKey={key} />
+				<APIKeyRow key={key.id} apiKey={key} />
 			))}
 		</div>
 	);

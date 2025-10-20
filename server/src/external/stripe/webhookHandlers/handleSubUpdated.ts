@@ -5,10 +5,10 @@ import {
 	type Organization,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
-import { createStripeCli } from "../utils.js";
 import { handleSchedulePhaseCompleted } from "./handleSubUpdated/handleSchedulePhaseCompleted.js";
 import {
 	handleSubCanceled,

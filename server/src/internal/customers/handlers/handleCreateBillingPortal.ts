@@ -1,8 +1,8 @@
 import { ErrCode } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type Stripe from "stripe";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { toSuccessUrl } from "@/internal/orgs/orgUtils/convertOrgUtils.js";
@@ -81,7 +81,7 @@ export const handleCreateBillingPortal = async (req: any, res: any) =>
 						org,
 						env: req.env,
 						customer,
-						logger: req.logtail,
+						logger: req.logger,
 					});
 
 					if (!newCus) {
@@ -120,14 +120,14 @@ export const handleCreateBillingPortal = async (req: any, res: any) =>
 				) {
 					try {
 						// Create a default billing portal configuration
-						req.logtail?.info(
+						req.logger?.info(
 							`Creating default billing portal configuration for customer ${customer.id}`,
 						);
 
 						const configuration =
 							await createDefaultBillingPortalConfiguration(stripeCli);
 
-						req.logtail?.info(
+						req.logger?.info(
 							"Successfully created billing portal configuration",
 							{
 								configurationId: configuration.id,
@@ -142,13 +142,10 @@ export const handleCreateBillingPortal = async (req: any, res: any) =>
 							configuration: configuration.id,
 						});
 					} catch (configError: any) {
-						req.logtail?.error(
-							"Failed to create billing portal configuration",
-							{
-								error: configError.message,
-								orgId: org.id,
-							},
-						);
+						req.logger?.error("Failed to create billing portal configuration", {
+							error: configError.message,
+							orgId: org.id,
+						});
 						throw new RecaseError({
 							message: `Failed to create billing portal configuration: ${configError.message}`,
 							code: ErrCode.StripeError,

@@ -57,7 +57,6 @@ const reward: CreateReward = {
 describe(
 	chalk.yellow(`${testCase} - Testing one-off rollover, apply to usage only`),
 	() => {
-		let logger: any;
 		const customerId = testCase;
 		let stripeCli: Stripe;
 		let testClockId: string;
@@ -67,7 +66,7 @@ describe(
 		let env: AppEnv;
 		let db: DrizzleCli;
 
-		let couponAmount = reward.discount_config!.discount_value;
+		let couponAmount = reward.discount_config?.discount_value ?? 0;
 
 		before(async function () {
 			await setupBefore(this);

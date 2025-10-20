@@ -8,7 +8,7 @@ import { TierInfinite } from "@models/productV2Models/productItemModels/productI
 import {
 	isFeatureItem,
 	isPriceItem,
-} from "@utils/productDisplayUtils/getItemType.js";
+} from "@utils/productV2Utils/productItemUtils/getItemType.js";
 import { notNullish } from "@utils/utils.js";
 import { z } from "zod/v4";
 import type { CusProductLegacyData } from "../cusProductLegacyData.js";

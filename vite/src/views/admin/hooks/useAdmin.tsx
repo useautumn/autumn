@@ -1,6 +1,6 @@
+import { useEffect, useState } from "react";
 import { useSession } from "@/lib/auth-client";
 import { notNullish } from "@/utils/genUtils";
-import { useEffect, useState } from "react";
 
 export const useAdmin = () => {
 	const { data, isPending } = useSession();
@@ -12,6 +12,8 @@ export const useAdmin = () => {
 			notNullish(data?.session.impersonatedBy)
 		) {
 			setIsAdmin(true);
+		} else {
+			setIsAdmin(false);
 		}
 	}, [data]);
 

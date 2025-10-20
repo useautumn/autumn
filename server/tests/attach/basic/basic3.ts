@@ -1,3 +1,4 @@
+import type { AppEnv, Organization } from "@autumn/shared";
 import { expect } from "chai";
 import chalk from "chalk";
 import { setupBefore } from "tests/before.js";
@@ -7,6 +8,7 @@ import { compareMainProduct } from "tests/utils/compare.js";
 import { timeout } from "tests/utils/genUtils.js";
 import { createProducts } from "tests/utils/productUtils.js";
 import { completeCheckoutForm } from "tests/utils/stripeUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -51,7 +53,7 @@ const testCase = "basic3";
 describe(`${chalk.yellowBright("basic3: Testing attach one time / monthly add ons")}`, () => {
 	const customerId = testCase;
 	const autumn: AutumnInt = new AutumnInt();
-	let db, org, env;
+	let db: DrizzleCli, org: Organization, env: AppEnv;
 
 	before(async function () {
 		await setupBefore(this);

@@ -19,8 +19,8 @@ import {
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import {

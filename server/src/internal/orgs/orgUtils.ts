@@ -1,23 +1,27 @@
-import { decryptData, generatePublishableKey } from "@/utils/encryptUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
 import {
 	AppEnv,
 	ErrCode,
-	FrontendOrg,
-	Organization,
+	type FrontendOrg,
+	type Organization,
+	type OrgConfig,
 	organizations,
-	OrgConfig,
 } from "@autumn/shared";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { OrgService } from "./OrgService.js";
-import { FeatureService } from "../features/FeatureService.js";
-import { notNullish } from "@/utils/genUtils.js";
-import Stripe from "stripe";
-import { toSuccessUrl } from "./orgUtils/convertOrgUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { CacheManager } from "@/external/caching/CacheManager.js";
 import { eq } from "drizzle-orm";
+import Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { CacheManager } from "@/external/caching/CacheManager.js";
+import {
+	orgToAccountId,
+	shouldUseMaster,
+} from "@/external/connect/connectUtils.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { decryptData, generatePublishableKey } from "@/utils/encryptUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
+import { FeatureService } from "../features/FeatureService.js";
+import { OrgService } from "./OrgService.js";
 import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
+import { toSuccessUrl } from "./orgUtils/convertOrgUtils.js";
 
 export const shouldReconnectStripe = async ({
 	org,
@@ -33,7 +37,7 @@ export const shouldReconnectStripe = async ({
 	if (!isStripeConnected({ org, env })) return true;
 
 	try {
-		const stripeCli = createStripeCli({ org, env: env! });
+		const stripeCli = createStripeCli({ org, env });
 		const newKey = new Stripe(stripeKey);
 
 		const oldAccount = await stripeCli.accounts.retrieve();
@@ -49,14 +53,52 @@ export const shouldReconnectStripe = async ({
 export const isStripeConnected = ({
 	org,
 	env,
+	throughSecretKey = false,
+	throughAccountId = false,
+	excludeDefault = false,
 }: {
 	org: Organization;
 	env?: AppEnv;
+	throughSecretKey?: boolean;
+	throughAccountId?: boolean;
+	excludeDefault?: boolean;
 }) => {
+	const testAccountId = orgToAccountId({
+		org,
+		env: AppEnv.Sandbox,
+		noDefaultAccount: excludeDefault,
+	});
+
+	const liveAccountId = orgToAccountId({
+		org,
+		env: AppEnv.Live,
+		noDefaultAccount: excludeDefault,
+	});
+
 	if (env === AppEnv.Sandbox) {
-		return notNullish(org.stripe_config?.test_api_key);
+		if (throughAccountId) {
+			return notNullish(testAccountId);
+		}
+
+		if (throughSecretKey) {
+			return notNullish(org.stripe_config?.test_api_key);
+		}
+
+		return (
+			notNullish(org.stripe_config?.test_api_key) || notNullish(testAccountId)
+		);
 	} else if (env === AppEnv.Live) {
-		return notNullish(org.stripe_config?.live_api_key);
+		if (throughAccountId) {
+			return notNullish(liveAccountId);
+		}
+
+		if (throughSecretKey) {
+			return notNullish(org.stripe_config?.live_api_key);
+		}
+
+		return (
+			notNullish(org.stripe_config?.live_api_key) || notNullish(liveAccountId)
+		);
 	} else {
 		return (
 			notNullish(org.stripe_config?.test_api_key) &&
@@ -90,9 +132,9 @@ export const deleteStripeWebhook = async ({
 	org: Organization;
 	env: AppEnv;
 }) => {
-	if (!isStripeConnected({ org, env })) return;
+	if (!isStripeConnected({ org, env, throughSecretKey: true })) return;
 
-	const stripeCli = createStripeCli({ org, env });
+	const stripeCli = createStripeCli({ org, env, throughSecretKey: true });
 	const webhookEndpoints = await stripeCli.webhookEndpoints.list({
 		limit: 100,
 	});
@@ -146,11 +188,32 @@ export const createOrgResponse = ({
 	org: Organization;
 	env: AppEnv;
 }): FrontendOrg => {
+	const accountId = orgToAccountId({ org, env, noDefaultAccount: true });
+	const secretKeyConnected = isStripeConnected({
+		org,
+		env,
+		throughSecretKey: true,
+	});
+
+	const stripeConnection = secretKeyConnected
+		? "secret_key"
+		: accountId
+			? "oauth"
+			: "default";
+
+	const throughMaster = shouldUseMaster({ org, env });
 	return {
 		id: org.id,
 		name: org.name,
 		logo: org.logo,
 		slug: org.slug,
+		master: org.master
+			? {
+					id: org.master.id,
+					name: org.master.name,
+					slug: org.master.slug,
+				}
+			: null,
 		// sandbox_config: {
 		//   stripe_connected: isStripeConnected({ org, env: AppEnv.Sandbox }),
 		//   default_currency: org.default_currency || "USD",
@@ -164,17 +227,20 @@ export const createOrgResponse = ({
 
 		success_url: toSuccessUrl({ org, env }) || "",
 		default_currency: org.default_currency || "usd",
-		stripe_connected: isStripeConnected({ org, env }),
+		stripe_connection: stripeConnection,
+		through_master: throughMaster,
+
 		created_at: new Date(org.createdAt).getTime(),
 		test_pkey: org.test_pkey,
 		live_pkey: org.live_pkey,
+		onboarded: org.onboarded ?? true,
 	};
 };
 
 export const getOrgAndFeatures = async ({ req }: { req: any }) => {
-	let { orgId, env } = req;
+	const { orgId, env } = req;
 
-	let [org, features] = await Promise.all([
+	const [org, features] = await Promise.all([
 		OrgService.getFromReq(req),
 		FeatureService.getFromReq(req),
 	]);

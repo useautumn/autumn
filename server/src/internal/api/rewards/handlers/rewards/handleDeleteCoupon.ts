@@ -1,5 +1,5 @@
 import { ErrCode } from "@autumn/shared";
-import { createStripeCli } from "@/external/stripe/utils.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { RewardService } from "@/internal/rewards/RewardService.js";
 import RecaseError from "@/utils/errorUtils.js";

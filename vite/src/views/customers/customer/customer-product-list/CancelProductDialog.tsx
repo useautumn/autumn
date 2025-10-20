@@ -50,9 +50,9 @@ export const CancelProductDialog = ({
 			});
 			await refetch();
 			setOpen(false);
-			toast.success("Product cancelled");
+			toast.success("Plan cancelled");
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to cancel product"));
+			toast.error(getBackendErr(error, "Failed to cancel plan"));
 		} finally {
 			if (cancelImmediately) {
 				setImmediateLoading(false);

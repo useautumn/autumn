@@ -40,7 +40,7 @@ export const AttachButton = () => {
 			setOpen(true);
 		} catch (error) {
 			console.log("error", error);
-			toast.error(getBackendErr(error, "Failed to attach product"));
+			toast.error(getBackendErr(error, "Failed to attach plan"));
 		}
 
 		setButtonLoading(false);
