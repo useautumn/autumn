@@ -7,13 +7,14 @@ import { V1_1_FeaturesArrayToObject } from "@api/customers/changes/V1.1_Features
 
 // Import customer product changes
 
+// Import product changes
 import { V1_2_ProductChanges } from "@api/products/changes/V1.2_ProductChanges.js";
 import { ApiVersion } from "../ApiVersion.js";
 import type { VersionChangeConstructor } from "./VersionChange.js";
 import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass.js";
 
 export const V2_CHANGES: VersionChangeConstructor[] = [
-	V1_2_ProductChanges, // Transforms TO V1_2
+	V1_2_ProductChanges, // Transforms Product TO V1.2 format from V2 Plan format
 ];
 
 export const V1_4_CHANGES: VersionChangeConstructor[] = [
