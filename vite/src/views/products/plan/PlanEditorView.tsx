@@ -1,17 +1,23 @@
 import { AxiosError } from "axios";
-import { useEffect, useState } from "react";
+import { motion } from "motion/react";
+import { useState } from "react";
 import { useParams } from "react-router";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductSync } from "@/hooks/stores/useProductSync";
-import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import {
+	useSheetCleanup,
+	useSheetEscapeHandler,
+	useSheetStore,
+} from "@/hooks/stores/useSheetStore";
 import ErrorScreen from "@/views/general/ErrorScreen";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { useProductQuery } from "../product/hooks/useProductQuery";
 import { ProductContext } from "../product/ProductContext";
 import { EditPlanHeader } from "./components/EditPlanHeader";
-import { ManagePlan } from "./components/ManagePlan";
+import PlanCard from "./components/plan-card/PlanCard";
 import { SaveChangesBar } from "./components/SaveChangesBar";
 import { ProductSheets } from "./ProductSheets";
+import { SHEET_ANIMATION } from "./planAnimations";
 import ConfirmNewVersionDialog from "./versioning/ConfirmNewVersionDialog";
 
 export default function PlanEditorView() {
@@ -31,10 +37,14 @@ export default function PlanEditorView() {
 
 	const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
 	const setSheet = useSheetStore((s) => s.setSheet);
+	const closeSheet = useSheetStore((s) => s.closeSheet);
+	const sheetType = useSheetStore((s) => s.type);
 
-	useEffect(() => {
-		setSheet({ type: "edit-plan" });
-	}, [setSheet]);
+	// Handle Escape key to close sheet and unfocus
+	useSheetEscapeHandler();
+
+	// Close sheet when navigating away from this view
+	useSheetCleanup();
 
 	if (featuresLoading || productLoading) return <LoadingScreen />;
 
@@ -66,12 +76,28 @@ export default function PlanEditorView() {
 					setSheet({ type: "edit-plan" });
 				}}
 			/>
-			<div className="flex w-full h-full overflow-y-auto bg-gray-medium">
-				<div className="flex flex-col justify-between h-full w-full overflow-x-hidden relative">
+			<div className="flex w-full h-full overflow-hidden bg-gray-medium relative">
+				<motion.div
+					className="flex flex-col justify-between h-full overflow-x-hidden overflow-y-auto absolute inset-0"
+					animate={{
+						width: sheetType ? "calc(100% - 28rem)" : "100%",
+					}}
+					transition={SHEET_ANIMATION}
+				>
 					<EditPlanHeader />
-					<ManagePlan />
+					{/* <ManagePlan /> */}
+					<div
+						className="flex flex-col w-full h-full bg-gray-medium items-center justify-start pt-20 px-10"
+						// onClick={() => {
+						// 	if (sheetType) {
+						// 		closeSheet();
+						// 	}
+						// }}
+					>
+						<PlanCard />
+					</div>
 					<SaveChangesBar />
-				</div>
+				</motion.div>
 
 				<ProductSheets />
 			</div>

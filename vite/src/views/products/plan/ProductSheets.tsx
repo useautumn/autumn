@@ -1,14 +1,16 @@
 import { type ProductItem, productV2ToFeatureItems } from "@autumn/shared";
+import { AnimatePresence, motion } from "motion/react";
 import { SheetContainer } from "@/components/v2/sheets/InlineSheet";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { getItemId } from "@/utils/product/productItemUtils";
 
 import { ProductItemContext } from "../product/product-item/ProductItemContext";
-import { EditPlanFeatureSheet } from "./components/edit-plan-feature/EditPlanFeatureSheet";
 import { EditPlanSheet } from "./components/EditPlanSheet";
+import { EditPlanFeatureSheet } from "./components/edit-plan-feature/EditPlanFeatureSheet";
 import { NewFeatureSheet } from "./components/new-feature/NewFeatureSheet";
 import { SelectFeatureSheet } from "./components/SelectFeatureSheet";
+import { SHEET_ANIMATION } from "./planAnimations";
 
 export const ProductSheets = () => {
 	const product = useProductStore((s) => s.product);
@@ -73,8 +75,20 @@ export const ProductSheets = () => {
 	};
 
 	return (
-		<SheetContainer className="w-full min-w-xs max-w-md bg-card z-50 border-l shadow-sm h-full">
-			{renderSheet()}
-		</SheetContainer>
+		<AnimatePresence mode="wait">
+			{sheetType && (
+				<motion.div
+					initial={{ x: "100%" }}
+					animate={{ x: 0 }}
+					exit={{ x: "100%" }}
+					transition={SHEET_ANIMATION}
+					className="h-full w-[28rem] absolute right-0 top-0 bottom-0"
+				>
+					<SheetContainer className="w-full bg-card z-50 border-l shadow-sm h-full">
+						{renderSheet()}
+					</SheetContainer>
+				</motion.div>
+			)}
+		</AnimatePresence>
 	);
 };
