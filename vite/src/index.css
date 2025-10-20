@@ -357,7 +357,13 @@ input[type="number"]::-webkit-inner-spin-button {
 	);
 	animation: shimmer 1.5s infinite;
 }
+
 @keyframes shimmer {
+	100% {
+		left: 150%;
+	}
+}
+@-webkit-keyframes shimmer {
 	100% {
 		left: 150%;
 	}
@@ -385,10 +391,12 @@ input[type="number"]::-webkit-inner-spin-button {
 	opacity: 0;
 	transition: opacity 0.2s;
 }
+
 .shimmer-hover:hover::after {
 	animation: shimmer-once 0.8s;
 	opacity: 1;
 }
+
 @keyframes shimmer-once {
 	0% {
 		left: -150%;

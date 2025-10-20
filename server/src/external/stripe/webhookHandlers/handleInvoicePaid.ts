@@ -7,6 +7,7 @@ import type {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { handleInvoiceCheckoutPaid } from "@/internal/customers/attach/attachFunctions/invoiceCheckoutPaid/handleInvoiceCheckoutPaid.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
@@ -22,7 +23,6 @@ import {
 } from "../stripeInvoiceUtils.js";
 import { lineItemInCusProduct } from "../stripeSubUtils/stripeSubItemUtils.js";
 import { getStripeSubs } from "../stripeSubUtils.js";
-import { createStripeCli } from "../utils.js";
 import { handleInvoicePaidDiscount } from "./handleInvoicePaidDiscount.js";
 
 const handleOneOffInvoicePaid = async ({
@@ -153,7 +153,7 @@ export const handleInvoicePaid = async ({
 	env: AppEnv;
 	event: Stripe.Event;
 }) => {
-	const logger = req.logtail;
+	const logger = req.logger;
 	const stripeCli = createStripeCli({ org, env });
 	const invoice = await getFullStripeInvoice({
 		stripeCli,

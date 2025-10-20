@@ -16,8 +16,10 @@
 	"author": "Recase Inc.",
 	"license": "Apache-2.0",
 	"dependencies": {
+		"@amplitude/unified": "^1.0.0-beta.9",
 		"@autumn/shared": "workspace:*",
 		"@better-auth/stripe": "^1.2.12",
+		"@date-fns/utc": "^2.1.1",
 		"@fortawesome/free-brands-svg-icons": "^6.7.2",
 		"@fortawesome/react-fontawesome": "^0.2.2",
 		"@heroicons/react": "^2.2.0",

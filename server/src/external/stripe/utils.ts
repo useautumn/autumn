@@ -1,47 +1,10 @@
 import {
-	AppEnv,
 	BillingInterval,
-	ErrCode,
 	type Feature,
 	Infinite,
-	type Organization,
 	type UsagePriceConfig,
 } from "@autumn/shared";
-import Stripe from "stripe";
-import { decryptData } from "@/utils/encryptUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
-
-export const createStripeCli = ({
-	org,
-	env,
-	// apiVersion,
-	legacyVersion,
-}: {
-	org: Organization;
-	env: AppEnv;
-	// apiVersion?: string;
-	legacyVersion?: boolean;
-}) => {
-	const encrypted =
-		env === AppEnv.Sandbox
-			? org.stripe_config?.test_api_key
-			: org.stripe_config?.live_api_key;
-
-	if (!encrypted) {
-		throw new RecaseError({
-			message: `Please connect your Stripe ${env === AppEnv.Sandbox ? "test" : "live"} secret key. You can find it here: https://dashboard.stripe.com${env === AppEnv.Sandbox ? "/test" : ""}/apikeys`,
-			code: ErrCode.StripeConfigNotFound,
-			statusCode: 400,
-		});
-	}
-
-	const decrypted = decryptData(encrypted);
-	return new Stripe(decrypted, {
-		apiVersion: legacyVersion
-			? ("2025-02-24.acacia" as any)
-			: "2025-07-30.basil",
-	});
-};
+import type Stripe from "stripe";
 
 export const calculateMetered1Price = ({
 	product,

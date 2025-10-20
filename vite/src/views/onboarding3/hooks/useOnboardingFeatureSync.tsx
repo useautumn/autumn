@@ -57,7 +57,6 @@ export const useOnboardingFeatureSync = () => {
 		}
 
 		// Step 3: Sort by metered features first
-		console.log("Candidate features before sorting:", candidateFeatures);
 		candidateFeatures.sort((a, b) => {
 			const aIsBoolean = a.type === FeatureType.Boolean;
 			const bIsBoolean = b.type === FeatureType.Boolean;
@@ -66,7 +65,6 @@ export const useOnboardingFeatureSync = () => {
 			return 0;
 		});
 
-		console.log("Candidate features:", candidateFeatures);
 		// Step 4: Take the first feature
 		const featureToLoad = candidateFeatures[0];
 

@@ -1,7 +1,10 @@
-import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
+import type {
+	ExtendedRequest,
+	ExtendedResponse,
+} from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { createOrgResponse } from "../orgUtils.js";
 import { OrgService } from "../OrgService.js";
+import { createOrgResponse } from "../orgUtils.js";
 
 export const handleGetOrg = async (req: any, res: any) =>
 	routeHandler({

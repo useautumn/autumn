@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { useBlocker } from "@/views/products/product/hooks/useBlocker";
 
 const DEFAULT_MESSAGE =
-	"Are you sure you want to leave without updating the product? Your changes will be lost.";
+	"Are you sure you want to leave without updating the plan? Your changes will be lost.";
 
 export const useProductChangedAlert = ({
 	hasChanges,

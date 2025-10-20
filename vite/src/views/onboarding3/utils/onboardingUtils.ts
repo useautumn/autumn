@@ -61,19 +61,19 @@ export const getNextStep = (
 // Step configuration for headers and descriptions
 export const stepConfig = {
 	[OnboardingStep.PlanDetails]: {
-		title: "Create a product",
+		title: "Create a plan",
 		description:
-			"Products are the pricing tiers your application offers. You can create your free tiers and your paid tiers too.",
+			"Plans are the pricing tiers your application offers. You can create your free tiers and your paid tiers too.",
 	},
 	[OnboardingStep.FeatureCreation]: {
 		title: "Create a feature",
 		description:
-			"Create and add the first feature that customers on this plan get access to. One feature for each part of your app you want to gate based on pricing.",
+			"Features are the benefits customers get access to when using this plan. You can create a feature for things in your app you want to limit, track or bill for.",
 	},
 	[OnboardingStep.FeatureConfiguration]: {
 		title: "Define feature limits or billing",
 		description:
-			"Features can be included as part of this product, or billed for based on their usage.",
+			"Features can be included as part of this plan, or billed for based on their usage.",
 	},
 	[OnboardingStep.Playground]: {
 		title: "Finish your setup",
@@ -273,7 +273,7 @@ export const createProduct = async (
 		// 	created: true,
 		// 	latestId: createdProduct.id,
 		// };
-		toast.success(`Product "${product?.name}" created successfully!`);
+		toast.success(`Plan "${product?.name}" created successfully!`);
 
 		// if (!productCreatedRef.current.created) {
 		// 	// First time creating the product
@@ -352,12 +352,6 @@ export const createFeature = async (
 
 // Product item creation helper
 export const createProductItem = (createdFeature: CreateFeature) => {
-	console.log("createProductItem - input feature:", {
-		id: createdFeature.id,
-		type: createdFeature.type,
-		config: createdFeature.config,
-	});
-
 	// Map feature type to product item feature type
 	let featureType: ProductItemFeatureType;
 
@@ -386,8 +380,6 @@ export const createProductItem = (createdFeature: CreateFeature) => {
 		// Unknown feature type - default to SingleUse
 		featureType = ProductItemFeatureType.SingleUse;
 	}
-
-	console.log("createProductItem - mapped to feature type:", featureType);
 
 	// Boolean features have a simplified structure with no pricing/billing properties
 	if (createdFeature.type === FeatureType.Boolean) {

@@ -6,13 +6,13 @@ import type {
 	Organization,
 } from "@autumn/shared";
 import type { ClickHouseClient } from "@clickhouse/client";
-import type { Logtail } from "@logtail/node";
 import type {
 	Request as ExpressRequest,
 	Response as ExpressResponse,
 } from "express";
 import type { PostHog } from "posthog-node";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { Logger } from "@/external/logtail/logtailUtils.js";
 
 export interface ExtendedRequest extends ExpressRequest {
 	orgId: string;
@@ -20,7 +20,7 @@ export interface ExtendedRequest extends ExpressRequest {
 	org: Organization;
 	features: Feature[];
 	db: DrizzleCli;
-	logtail: Logtail;
+	logtail: Logger;
 	logger: any;
 	clickhouseClient: ClickHouseClient;
 

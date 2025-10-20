@@ -1,7 +1,7 @@
 import { ErrCode } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { RewardService } from "@/internal/rewards/RewardService.js";

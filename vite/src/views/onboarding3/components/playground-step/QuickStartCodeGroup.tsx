@@ -1,5 +1,6 @@
 import type { ProductItem } from "@autumn/shared";
-import type { TrackResult } from "autumn-js";
+import type { CheckResult, TrackResult } from "autumn-js";
+import { useCustomer } from "autumn-js/react";
 import { useEffect, useState } from "react";
 import {
 	CodeGroup,
@@ -10,7 +11,8 @@ import {
 	CodeGroupTab,
 } from "@/components/v2/CodeGroup";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
-import { useProductContext } from "@/views/products/product/ProductContext";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useProductStore } from "@/hooks/stores/useProductStore";
 import { getCodeSnippets } from "../../utils/completionStepCode";
 
 type CodeLanguage = "react" | "nodejs" | "response";
@@ -19,28 +21,34 @@ const CodeSnippetSection = ({
 	title,
 	snippets,
 	trackResponse,
+	checkResponse,
 }: {
 	title: string;
 	snippets: { react: string; nodejs: string; response: string };
 	trackResponse?: TrackResult;
+	checkResponse?: CheckResult;
 }) => {
 	const [activeLanguage, setActiveLanguage] = useState<CodeLanguage>("react");
 
-	// Auto-switch to response tab when trackResponse is available (for track section only)
+	// Auto-switch to response tab when responses are available
 	useEffect(() => {
 		if (trackResponse && title === "Track usage") {
 			setActiveLanguage("response");
 		}
-	}, [trackResponse, title]);
+		if (checkResponse && title === "Check feature access") {
+			setActiveLanguage("response");
+		}
+	}, [trackResponse, checkResponse, title]);
 
 	const getCodeForTab = () => {
-		// Use dynamic trackResponse for track section response tab
-		if (
-			activeLanguage === "response" &&
-			title === "Track usage" &&
-			trackResponse
-		) {
-			return JSON.stringify(trackResponse, null, 2);
+		// Use dynamic responses for response tabs
+		if (activeLanguage === "response") {
+			if (title === "Track usage" && trackResponse) {
+				return JSON.stringify(trackResponse, null, 2);
+			}
+			if (title === "Check feature access" && checkResponse) {
+				return JSON.stringify(checkResponse, null, 2);
+			}
 		}
 		return snippets[activeLanguage];
 	};
@@ -70,7 +78,35 @@ const CodeSnippetSection = ({
 					<CodeGroupCode language="json">
 						{title === "Track usage" && trackResponse
 							? JSON.stringify(trackResponse, null, 2)
-							: snippets.response}
+							: title === "Check feature access" && checkResponse
+								? JSON.stringify(checkResponse, null, 2)
+								: snippets.response}
+					</CodeGroupCode>
+				</CodeGroupContent>
+			</CodeGroup>
+		</div>
+	);
+};
+
+const CustomerSection = () => {
+	const { customer } = useCustomer();
+	const [activeTab, setActiveTab] = useState("customer");
+
+	return (
+		<div className="space-y-2">
+			<h3 className="text-sub">Customer</h3>
+			<CodeGroup value={activeTab} onValueChange={setActiveTab}>
+				<CodeGroupList>
+					<CodeGroupTab value="customer">Customer Response</CodeGroupTab>
+					<CodeGroupCopyButton
+						onCopy={() =>
+							navigator.clipboard.writeText(JSON.stringify(customer, null, 2))
+						}
+					/>
+				</CodeGroupList>
+				<CodeGroupContent value="customer">
+					<CodeGroupCode language="json">
+						{JSON.stringify(customer, null, 2)}
 					</CodeGroupCode>
 				</CodeGroupContent>
 			</CodeGroup>
@@ -80,12 +116,15 @@ const CodeSnippetSection = ({
 
 export const QuickStartCodeGroup = ({
 	trackResponse,
+	checkResponse,
 	featureId: usedFeatureId,
 }: {
 	trackResponse?: TrackResult;
+	checkResponse?: CheckResult;
 	featureId?: string;
 }) => {
-	const { product } = useProductContext();
+	const { product } = useProductStore();
+	const { features } = useFeaturesQuery();
 
 	// Use the feature that was actually used (if available), otherwise fallback to first feature
 	const firstFeatureItem = product?.items?.find(
@@ -94,8 +133,11 @@ export const QuickStartCodeGroup = ({
 	const featureId = usedFeatureId || firstFeatureItem?.feature_id || undefined;
 	const productId = product?.id || undefined;
 
+	// Get the actual feature name from features list
+	const featureName = features.find((f) => f.id === featureId)?.name;
+
 	// Generate snippets with actual IDs from onboarding
-	const snippets = getCodeSnippets(featureId, productId);
+	const snippets = getCodeSnippets(featureId, productId, featureName);
 
 	return (
 		<SheetSection>
@@ -103,6 +145,7 @@ export const QuickStartCodeGroup = ({
 				<CodeSnippetSection
 					title="Check feature access"
 					snippets={snippets.allowed}
+					checkResponse={checkResponse}
 				/>
 				<CodeSnippetSection
 					title="Track usage"
@@ -113,6 +156,7 @@ export const QuickStartCodeGroup = ({
 					title="Create checkout session"
 					snippets={snippets.checkout}
 				/>
+				<CustomerSection />
 			</div>
 		</SheetSection>
 	);

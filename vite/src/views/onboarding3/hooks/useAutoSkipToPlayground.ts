@@ -69,20 +69,17 @@ export const useAutoSkipToPlayground = () => {
 			hasFeature &&
 			product.items?.some(
 				(item) =>
-					item.feature_id &&
-					!item.price_id &&
-					features.some((f) => f.id === item.feature_id),
+					item.feature_id && features.some((f) => f.id === item.feature_id),
 			);
 
-		// If all conditions met, skip to playground
-		if (hasProduct && hasFeature && hasFeatureItem) {
-			setQueryStates({ step: OnboardingStep.Playground });
+		if (hasProduct && hasFeature && !hasFeatureItem) {
+			setQueryStates({ step: OnboardingStep.FeatureConfiguration });
 		}
 
 		setIsChecking(false);
 	}, [
 		product?.id,
-		product?.items.some,
+		product?.items,
 		features,
 		featuresLoading,
 		setQueryStates,

@@ -2,12 +2,14 @@ import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Mail } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router";
+import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { authClient, signIn, useSession } from "@/lib/auth-client";
+import { useOrg } from "@/hooks/common/useOrg";
+import { authClient, signIn } from "@/lib/auth-client";
+import { cn } from "@/lib/utils";
 import { getBackendErr } from "@/utils/genUtils";
 import { OTPSignIn } from "./components/OTPSignIn";
 
@@ -16,30 +18,27 @@ export const SignIn = () => {
 	const [googleLoading, setGoogleLoading] = useState(false);
 	const [sendOtpLoading, setSendOtpLoading] = useState(false);
 	const [otpSent, setOtpSent] = useState(false);
-	const { data: session } = useSession();
+	// const { data: session } = useSession();
+	const { org, isLoading: orgLoading } = useOrg();
+	const navigate = useNavigate();
+	// const [searchParams] = useSearchParams();
+	// const token = searchParams.get("token");
 
-	const [searchParams] = useSearchParams();
-	const token = searchParams.get("token");
-
-	const newPath = token
-		? `/sandbox/onboarding?token=${token}`
-		: "/sandbox/onboarding";
-	const callbackPath = token
-		? `/sandbox/onboarding?token=${token}`
-		: "/customers";
+	const newPath = "/sandbox/onboarding";
+	const callbackPath = "/customers";
 
 	useEffect(() => {
-		if (session?.user) {
-			window.location.href = callbackPath;
+		if (org?.onboarded) {
+			navigate(callbackPath);
 		}
-	}, [session]);
+	}, [org, navigate]);
 
 	const handleEmailSignIn = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setSendOtpLoading(true);
 
 		try {
-			const { data, error } = await authClient.emailOtp.sendVerificationOtp({
+			const { error } = await authClient.emailOtp.sendVerificationOtp({
 				email: email,
 				type: "sign-in",
 			});
@@ -49,7 +48,7 @@ export const SignIn = () => {
 			} else {
 				setOtpSent(true);
 			}
-		} catch (error) {
+		} catch {
 			toast.error("Something went wrong. Please try again.");
 		} finally {
 			setSendOtpLoading(false);
@@ -60,7 +59,7 @@ export const SignIn = () => {
 		setGoogleLoading(true);
 		try {
 			const frontendUrl = import.meta.env.VITE_FRONTEND_URL;
-			const { data, error } = await signIn.social({
+			const { error } = await signIn.social({
 				provider: "google",
 				callbackURL: `${frontendUrl}${callbackPath}`,
 				newUserCallbackURL: `${frontendUrl}${newPath}`,
@@ -104,79 +103,58 @@ export const SignIn = () => {
 				)}
 
 				{!otpSent && (
-					<>
-						<div className="space-y-6">
-							{/* Google Sign In Button */}
-							<Button
-								variant="auth"
-								onClick={handleGoogleSignIn}
-								isLoading={googleLoading}
-								startIcon={
-									<FontAwesomeIcon icon={faGoogle} className="text-stone-400" />
-								}
-								className={height}
-							>
-								Continue with Google
-							</Button>
+					<div className="space-y-6">
+						{/* Google Sign In Button */}
+						<Button
+							variant="auth"
+							onClick={handleGoogleSignIn}
+							isLoading={googleLoading}
+							startIcon={
+								<FontAwesomeIcon icon={faGoogle} className="text-stone-400" />
+							}
+							className={height}
+						>
+							Continue with Google
+						</Button>
 
-							{/* <Button
-                variant="auth"
-                onClick={handleGoogleSignIn}
-                isLoading={googleLoading}
-                startIcon={
-                  <FontAwesomeIcon icon={faStripe} className="text-stone-400" />
-                }
-                className={height}
-              >
-                Continue with Stripe
-              </Button> */}
-
-							{/* Divider */}
-							<div className="relative">
-								<div className="absolute inset-0 flex items-center">
-									<span className="w-full border-t border-border" />
-								</div>
-								<div className="relative flex justify-center text-xs uppercase">
-									<span className="bg-background px-2 text-muted-foreground">
-										Or
-									</span>
-								</div>
+						{/* Divider */}
+						<div className="relative">
+							<div className="absolute inset-0 flex items-center">
+								<span className="w-full border-t border-border" />
 							</div>
-
-							<div className="space-y-4">
-								<div className="space-y-2">
-									<Input
-										type="email"
-										placeholder="Email"
-										value={email}
-										onChange={(e) => setEmail(e.target.value)}
-										required
-										className="text-base"
-										autoComplete="email"
-									/>
-								</div>
-
-								{/* Sign In Button */}
-								<Button
-									type="submit"
-									variant="auth"
-									isLoading={sendOtpLoading}
-									onClick={handleEmailSignIn}
-									className={height}
-									startIcon={<Mail size={14} className="text-stone-500" />}
-								>
-									Continue with email
-								</Button>
+							<div className="relative flex justify-center text-xs uppercase">
+								<span className="bg-background px-2 text-muted-foreground">
+									Or
+								</span>
 							</div>
 						</div>
 
-						{/* Footer */}
-						{/* <div className="text-center space-y-2">
-              <Link to="/sign-up" className="hover:underline text-t3 text-sm">
-                Create an account here
-              </Link>
-            </div> */}
-					</>
+						<div className="space-y-4">
+							<div className="space-y-2">
+								<Input
+									type="email"
+									placeholder="Email"
+									value={email}
+									onChange={(e) => setEmail(e.target.value)}
+									required
+									className="text-base"
+									autoComplete="email"
+								/>
+							</div>
+
+							{/* Sign In Button */}
+							<Button
+								type="submit"
+								variant="auth"
+								isLoading={sendOtpLoading}
+								onClick={handleEmailSignIn}
+								className={cn(height)}
+								startIcon={<Mail size={14} className="text-stone-500" />}
+							>
+								Continue with email
+							</Button>
+						</div>
+					</div>
 				)}
 			</div>
 		</div>

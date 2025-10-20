@@ -15,8 +15,8 @@ import {
 
 import type Stripe from "stripe";
 import { initDrizzle } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { getStripeSchedules } from "@/external/stripe/stripeSubUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
 import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";

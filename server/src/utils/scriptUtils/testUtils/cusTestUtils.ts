@@ -1,9 +1,9 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { Organization } from "@autumn/shared";
+import type { Organization } from "@autumn/shared";
 import { AppEnv } from "autumn-js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 
 export const getCusSub = async ({
 	db,
@@ -25,7 +25,7 @@ export const getCusSub = async ({
 		orgId: org.id,
 	});
 
-	let cusProduct = fullCus.customer_products.find(
+	const cusProduct = fullCus.customer_products.find(
 		(cp) => cp.product.id == productId,
 	);
 

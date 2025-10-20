@@ -5,15 +5,13 @@ import {
 	type Organization,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
-import { createStripeCli } from "../utils.js";
 import { handleSchedulePhaseCompleted } from "./handleSubUpdated/handleSchedulePhaseCompleted.js";
-import {
-	handleSubCanceled,
-	isSubCanceled,
-} from "./handleSubUpdated/handleSubCanceled.js";
+import { handleSubCanceled } from "./handleSubUpdated/handleSubCanceled.js";
+import { handleSubPastDue } from "./handleSubUpdated/handleSubPastDue.js";
 import { handleSubRenewed } from "./handleSubUpdated/handleSubRenewed.js";
 
 export const handleSubscriptionUpdated = async ({
@@ -66,24 +64,12 @@ export const handleSubscriptionUpdated = async ({
 		past_due: CusProductStatus.PastDue,
 	};
 
-	// 1. Fetch subscription
-	const { canceled, canceledAt } = isSubCanceled({
-		previousAttributes,
-		sub: fullSub,
-	});
-
 	const updatedCusProducts = await CusProductService.updateByStripeSubId({
 		db,
 		stripeSubId: subscription.id,
 		updates: {
 			status: subStatusMap[subscription.status] || CusProductStatus.Unknown,
 			collection_method: fullSub.collection_method as CollectionMethod,
-			// canceled_at: canceled ? canceledAt : null,
-			// trial_ends_at:
-			//   previousAttributes.status === "trialing" &&
-			//   subscription.status === "active"
-			//     ? null
-			//     : undefined,
 		},
 	});
 
@@ -96,6 +82,14 @@ export const handleSubscriptionUpdated = async ({
 	}
 
 	await handleSubCanceled({
+		req,
+		previousAttributes,
+		sub: fullSub,
+		updatedCusProducts,
+		org,
+	});
+
+	await handleSubPastDue({
 		req,
 		previousAttributes,
 		sub: fullSub,

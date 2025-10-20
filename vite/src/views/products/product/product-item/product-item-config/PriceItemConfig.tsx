@@ -21,7 +21,7 @@ export const PriceItemConfig = () => {
 				<div className="grid grid-cols-2 gap-2 w-full text-t2">
 					<SelectType
 						title="Fixed"
-						description="Fixed price to charge for this product (eg $10 per month)"
+						description="Fixed price to charge for this plan (eg $10 per month)"
 						icon={<Cog size={14} />}
 						isSelected={item.isVariable === false}
 						onClick={() => {

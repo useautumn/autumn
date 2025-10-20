@@ -39,9 +39,9 @@ export const GroupedTabButton = ({
 								"bg-light-purple text-primary shadow-[0px_3px_4px_0px_inset_rgba(0,0,0,0.04)]",
 							!isActive &&
 								"bg-white shadow-[0px_-3px_4px_0px_inset_rgba(0,0,0,0.04)]",
-							isFirst && "rounded-l-md border-l",
+							isFirst && "rounded-l-lg border-l",
 							!isFirst && "border-l-0",
-							isLast && "rounded-r-md",
+							isLast && "rounded-r-lg",
 						)}
 					>
 						{isTwoTab && isFirst && option.icon && (

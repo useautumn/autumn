@@ -9,6 +9,8 @@ import { useIsEditingPlan, useSheetStore } from "@/hooks/stores/useSheetStore";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { PlanCardToolbar } from "./PlanCardToolbar";
 
+const MAX_PLAN_NAME_LENGTH = 20;
+
 export const PlanCardHeader = () => {
 	const navigate = useNavigate();
 	const product = useProductStore((s) => s.product);
@@ -22,9 +24,14 @@ export const PlanCardHeader = () => {
 			<div className="flex flex-row items-center justify-between w-full">
 				<div className="flex flex-row items-center gap-2">
 					<span className="text-main-sec w-fit whitespace-nowrap">
-						{product.name}
+						{product.name.length > MAX_PLAN_NAME_LENGTH
+							? `${product.name.slice(0, MAX_PLAN_NAME_LENGTH)}...`
+							: product.name}
 					</span>
-					<PlanTypeBadges product={product} />
+					<PlanTypeBadges
+						product={product}
+						iconOnly={product.name.length > MAX_PLAN_NAME_LENGTH - 10}
+					/>
 				</div>
 				<PlanCardToolbar
 					onEdit={() => {
@@ -46,8 +53,8 @@ export const PlanCardHeader = () => {
 				onClick={() => {
 					setSheet({ type: "edit-plan", itemId: product.id });
 				}}
-				disabled={isPlanBeingEdited}
-				className="mt-2 !opacity-100"
+				disabled={true}
+				className="mt-2 !opacity-100 pointer-events-none"
 			>
 				{productV3.price?.amount ? (
 					<span className="text-sm font-medium text-t2">

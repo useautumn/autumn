@@ -1,3 +1,4 @@
+import { ApiProductPropertiesSchema } from "@api/products/previousVersions/apiProduct.js";
 import { z } from "zod/v4";
 import { AttachScenario } from "../checkModels/checkPreviewModels.js";
 import { AppEnv } from "../genModels/genEnums.js";
@@ -29,4 +30,5 @@ export const PlanResponseSchema = z.object({
 	// base_variant_id: z.string().nullable(),
 
 	scenario: z.nativeEnum(AttachScenario).optional(),
+	properties: ApiProductPropertiesSchema.optional(),
 });

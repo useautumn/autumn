@@ -1,5 +1,5 @@
 import { AxiosError } from "axios";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductSync } from "@/hooks/stores/useProductSync";
@@ -32,16 +32,20 @@ export default function PlanEditorView() {
 	const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
 	const setSheet = useSheetStore((s) => s.setSheet);
 
+	useEffect(() => {
+		setSheet({ type: "edit-plan" });
+	}, [setSheet]);
+
 	if (featuresLoading || productLoading) return <LoadingScreen />;
 
 	if (error || !originalProduct) {
 		// Handle 500 errors from backend when product doesn't exist
-		let errorMessage = `Product ${product_id} not found`;
+		let errorMessage = `Plan ${product_id} not found`;
 
 		if (error instanceof AxiosError && error.response?.status === 500) {
-			errorMessage = `Product ${product_id} not found`;
+			errorMessage = `Plan ${product_id} not found`;
 		} else if (error) {
-			errorMessage = error.message || `Product ${product_id} not found`;
+			errorMessage = error.message || `Plan ${product_id} not found`;
 		}
 
 		return <ErrorScreen returnUrl="/products">{errorMessage}</ErrorScreen>;

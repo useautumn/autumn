@@ -8,7 +8,7 @@ export const MainDetailsSection = () => {
 	const setProduct = useProductStore((s) => s.setProduct);
 
 	return (
-		<SheetSection title="Product Details">
+		<SheetSection title="Plan Details">
 			<div className="space-y-4">
 				<div className="grid grid-cols-2 gap-2">
 					<div>
@@ -31,7 +31,7 @@ export const MainDetailsSection = () => {
 				{/* <div>
 					<div className="text-form-label block mb-1">Description</div>
 					<Input
-						placeholder="eg. This product includes 100 credits"
+						placeholder="eg. This plan includes 100 credits"
 						value={product.description}
 						onChange={(e) =>
 							setProduct({ ...product, description: e.target.value })

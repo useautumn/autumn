@@ -34,6 +34,7 @@ export const OnboardingStepRenderer = () => {
 	const sheetType = useSheetStore((s) => s.type);
 	const itemId = useSheetStore((s) => s.itemId);
 	const [trackResponse, setTrackResponse] = useState<any>(null);
+	const [checkResponse, setCheckResponse] = useState<any>(null);
 	const [lastUsedFeatureId, setLastUsedFeatureId] = useState<
 		string | undefined
 	>(undefined);
@@ -183,10 +184,12 @@ export const OnboardingStepRenderer = () => {
 					<>
 						<AvailableFeatures
 							onTrackSuccess={setTrackResponse}
+							onCheckSuccess={setCheckResponse}
 							onFeatureUsed={setLastUsedFeatureId}
 						/>
 						<QuickStartCodeGroup
 							trackResponse={trackResponse}
+							checkResponse={checkResponse}
 							featureId={lastUsedFeatureId}
 						/>
 					</>

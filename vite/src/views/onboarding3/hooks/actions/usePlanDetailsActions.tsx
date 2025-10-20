@@ -7,6 +7,8 @@ import {
 	useProductStore,
 } from "@/hooks/stores/useProductStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { trackOnboardingProductCreation } from "@/utils/posthogTracking";
+import { isPriceItem } from "@/utils/product/getItemType";
 import { updateProduct } from "@/views/products/product/utils/updateProduct";
 import { createProduct } from "../../utils/onboardingUtils";
 
@@ -38,10 +40,21 @@ export const usePlanDetailsActions = () => {
 				product: product as ProductV2,
 				onSuccess: async () => {},
 			});
-			toast.success("Product updated successfully");
+			toast.success("Plan updated successfully");
 		} else {
 			// Create new product
 			newProduct = await createProduct(product, axiosInstance);
+
+			// Track product creation in Amplitude (only on creation, not update)
+			if (newProduct) {
+				const isPaid =
+					newProduct.items?.some((item) => isPriceItem(item)) ?? false;
+				const productType = isPaid ? "paid" : "free";
+
+				trackOnboardingProductCreation({
+					productType,
+				});
+			}
 		}
 
 		if (!newProduct) return false;

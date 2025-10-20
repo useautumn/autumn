@@ -23,7 +23,7 @@ export const PlanDetailsStep = () => {
 
 	return (
 		<>
-			<SheetSection title="Product Details">
+			<SheetSection title="Plan Details">
 				<div className="space-y-4">
 					<div className="grid grid-cols-1 gap-4">
 						<div>
@@ -36,7 +36,7 @@ export const PlanDetailsStep = () => {
 							/>
 
 							<span className="text-form-label block">
-								The display name of the product that will show up on your
+								The display name of the plan that will show up on your
 								checkout page
 							</span>
 						</div>
@@ -49,8 +49,7 @@ export const PlanDetailsStep = () => {
 								className="mb-1"
 							/>
 							<span className="text-form-label block">
-								A fixed price to charge for the product. Uncheck this section if
-								the product is free or a variable price.
+								Used to refer to this plan when using Autumn's APIs or SDKs
 							</span>
 						</div>
 						{/* {step === OnboardingStep.Playground && product && (

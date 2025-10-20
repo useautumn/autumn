@@ -46,7 +46,7 @@ export const EditProductDetails = () => {
 			});
 			await refetch();
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to create product"));
+			toast.error(getBackendErr(error, "Failed to create plan"));
 		} finally {
 			setCreateLoading(false);
 		}

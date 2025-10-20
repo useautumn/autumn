@@ -69,10 +69,16 @@ const updateCusProductCanceled = async ({
 		`Updating cus products for sub ${sub.id} to canceled | canceled_at: ${canceledAt}`,
 	);
 
+	const cancelsAt = sub.cancel_at ? sub.cancel_at * 1000 : undefined;
+
 	await CusProductService.updateByStripeSubId({
 		db,
 		stripeSubId: sub.id,
-		updates: { canceled_at: canceledAt || Date.now(), canceled: true },
+		updates: {
+			canceled_at: canceledAt || Date.now(),
+			canceled: true,
+			ended_at: cancelsAt,
+		},
 	});
 };
 
@@ -102,7 +108,7 @@ export const handleSubCanceled = async ({
 
 	const canceledFromPortal = canceled && !isAutumnDowngrade;
 
-	const { db, env, logtail: logger } = req;
+	const { db, env, logger } = req;
 
 	if (!canceledFromPortal || updatedCusProducts.length === 0) return;
 
