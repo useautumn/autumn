@@ -35,7 +35,7 @@ export const UpdateProductV2ParamsSchema = z.object({
 	is_add_on: z.boolean().optional(),
 	is_default: z.boolean().optional(),
 	version: z.number().optional(),
-	group: z.string().nonempty().nullable(),
+	group: z.string().nonempty().nullable().optional(),
 	archived: z.boolean().optional(),
 
 	items: z.array(CreateProductItemParamsSchema).optional(),
