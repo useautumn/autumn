@@ -114,8 +114,7 @@ export const BasePriceSection = ({
 			description={
 				<span>
 					A fixed price to charge for the plan. Uncheck this section if the plan
-					is <span className="text-primary font-bold">free</span> or{" "}
-					<span className="text-primary font-bold">a variable price</span>.
+					is free or only has usage-based prices.
 				</span>
 			}
 		>

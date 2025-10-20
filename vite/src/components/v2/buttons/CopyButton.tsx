@@ -11,10 +11,15 @@ import { IconButton } from "./IconButton";
 
 interface CopyButtonProps extends IconButtonProps {
 	children?: React.ReactNode;
+	side?: "top" | "bottom" | "left" | "right";
 	text: string;
 }
 
-export const CopyButton = ({ text, ...props }: CopyButtonProps) => {
+export const CopyButton = ({
+	text,
+	side = "right",
+	...props
+}: CopyButtonProps) => {
 	const [copied, setCopied] = useState(false);
 
 	useEffect(() => {
@@ -47,7 +52,7 @@ export const CopyButton = ({ text, ...props }: CopyButtonProps) => {
 					</IconButton>
 				</TooltipTrigger>
 				<TooltipContent
-					side="right"
+					side={side}
 					sideOffset={8}
 					className="bg-white text-body p-2 py-1 border rounded-lg shadow-sm"
 				>
