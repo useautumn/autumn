@@ -1,15 +1,14 @@
+import { CusProductStatus, type FullCusProduct } from "@autumn/shared";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
+	Dialog,
 	DialogContent,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-
-import { toast } from "sonner";
-import { useState } from "react";
-import { CusProductStatus, FullCusProduct } from "@autumn/shared";
-import { Dialog } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { getBackendErr } from "@/utils/genUtils";
@@ -42,8 +41,8 @@ export const CancelProductDialog = ({
 
 		try {
 			await axiosInstance.post(`/v1/cancel`, {
-				customer_id: cusProduct.customer_id || cusProduct.internal_customer_id,
-				product_id: cusProduct.product_id,
+				customer_id: customer.id || customer.internal_id,
+				product_id: cusProduct.product.id,
 				entity_id: entity?.id || entity?.internal_id,
 				cancel_immediately: cancelImmediately,
 				prorate: false,
@@ -63,7 +62,7 @@ export const CancelProductDialog = ({
 	};
 
 	const isDefault = cusProduct.product.is_default;
-	const isScheduled = cusProduct.status == CusProductStatus.Scheduled;
+	const isScheduled = cusProduct.status === CusProductStatus.Scheduled;
 	const hasSubscription =
 		cusProduct.subscription_ids && cusProduct.subscription_ids.length > 0;
 
@@ -71,10 +70,10 @@ export const CancelProductDialog = ({
 		(cp: any) =>
 			!cp.is_add_on &&
 			cp.product_id !== cusProduct.product_id &&
-			cp.product.group == cusProduct.product.group &&
-			(cp.status == CusProductStatus.Active ||
-				cp.status == CusProductStatus.PastDue) &&
-			cp.internal_entity_id == cusProduct.internal_entity_id,
+			cp.product.group === cusProduct.product.group &&
+			(cp.status === CusProductStatus.Active ||
+				cp.status === CusProductStatus.PastDue) &&
+			cp.internal_entity_id === cusProduct.internal_entity_id,
 	);
 
 	return (
