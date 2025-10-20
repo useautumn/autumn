@@ -36,7 +36,7 @@ export const OrgDropdown = () => {
 	const { org, isLoading, error } = useOrg();
 	const { expanded, setExpanded } = useSidebarContext();
 
-	let { data: orgs, isPending } = useListOrganizations();
+	let { data: orgs } = useListOrganizations();
 	const { data: activeOrganization } = authClient.useActiveOrganization();
 
 	// Exclude the active organization from the orgs list (this makes it easier for users to understand which org is active)
@@ -49,12 +49,6 @@ export const OrgDropdown = () => {
 	);
 
 	const { data: session } = useSession();
-
-	// //remove the currect active org from the orgs data
-	// const inactiveOrgs = useMemo(() => {
-	//   if (!orgs || !org) return [];
-	//   return orgs.filter((orgItem: any) => orgItem.id !== org.id);
-	// }, [org, orgs]);
 
 	// To pre-fetch data
 	useMemberships();
