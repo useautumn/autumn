@@ -119,6 +119,7 @@ export const handleRenewProduct = async ({
 			updates: {
 				canceled: false,
 				canceled_at: null,
+				ended_at: null,
 			},
 		});
 	} else {
@@ -159,6 +160,7 @@ export const handleRenewProduct = async ({
 						scheduled_ids: [schedule.id],
 						canceled: false,
 						canceled_at: null,
+						ended_at: null,
 					},
 				});
 			} else {
@@ -181,6 +183,7 @@ export const handleRenewProduct = async ({
 					updates: {
 						canceled: false,
 						canceled_at: null,
+						ended_at: null,
 					},
 				});
 			}
@@ -209,6 +212,7 @@ export const handleRenewProduct = async ({
 				updates: {
 					canceled: false,
 					canceled_at: null,
+					ended_at: null,
 				},
 			});
 		}
