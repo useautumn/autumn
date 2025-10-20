@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { create } from "zustand";
 
 // Sheet types that can be displayed
@@ -52,3 +53,49 @@ export const useIsEditingFeature = () =>
 	useSheetStore((s) => s.type === "edit-feature");
 export const useIsCreatingFeature = () =>
 	useSheetStore((s) => s.type === "new-feature" || s.itemId === "new");
+
+/**
+ * Hook to handle Escape key to close sheet and unfocus active elements
+ * Only closes sheet if no dialog is currently open
+ */
+export const useSheetEscapeHandler = () => {
+	const sheetType = useSheetStore((s) => s.type);
+	const closeSheet = useSheetStore((s) => s.closeSheet);
+
+	useEffect(() => {
+		const handleEscape = (e: KeyboardEvent) => {
+			if (e.key === "Escape" && sheetType) {
+				// Check if any dialog is open (Radix UI, native dialog, etc.)
+				const isDialogOpen =
+					document.querySelector('[role="dialog"]') ||
+					document.querySelector('[data-state="open"][role="alertdialog"]') ||
+					document.querySelector("dialog[open]");
+
+				// Only close sheet if no dialog is open
+				if (!isDialogOpen) {
+					closeSheet();
+					// Unfocus any active element
+					if (document.activeElement instanceof HTMLElement) {
+						document.activeElement.blur();
+					}
+				}
+			}
+		};
+
+		window.addEventListener("keydown", handleEscape);
+		return () => window.removeEventListener("keydown", handleEscape);
+	}, [sheetType, closeSheet]);
+};
+
+/**
+ * Hook to close sheet when component unmounts (e.g., navigating away)
+ */
+export const useSheetCleanup = () => {
+	const closeSheet = useSheetStore((s) => s.closeSheet);
+
+	useEffect(() => {
+		return () => {
+			closeSheet();
+		};
+	}, [closeSheet]);
+};

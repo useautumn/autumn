@@ -17,8 +17,9 @@
 	"linter": {
 		"enabled": true,
 		"rules": {
-			"correctness": {
-				"useExhaustiveDependencies": "off"
+			"a11y": {
+				"noStaticElementInteractions": "off",
+				"useKeyWithClickEvents": "off"
 			},
 			"recommended": true,
 			"complexity": {
@@ -29,7 +30,8 @@
 				"noUnknownAtRules": "off"
 			},
 			"correctness": {
-				"useParseIntRadix": "off"
+				"useParseIntRadix": "off",
+				"useExhaustiveDependencies": "off"
 			}
 		}
 	},
