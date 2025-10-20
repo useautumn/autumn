@@ -61,16 +61,34 @@ const document = createDocument({
 				id: "EntityData",
 				description: "Entity data for creating an entity",
 			}),
-			Customer: ApiCustomerWithMeta,
-			CustomerProduct: ApiCusProductSchema,
+			Customer: ApiCustomerWithMeta.meta({
+				id: "Customer",
+				description: "Customer object returned by the API",
+			}),
+			CustomerProduct: ApiCusProductSchema.meta({
+				id: "CustomerProduct",
+				description: "Customer product object returned by the API",
+			}),
 			CustomerFeature: ApiCusFeatureSchema.meta({
 				id: "CustomerFeature",
 				description: "Customer feature object returned by the API",
 			}),
-			Product: ApiProductWithMeta,
-			ProductItem: ApiProductItemWithMeta,
-			Feature: ApiFeatureWithMeta,
-			Entity: ApiEntityWithMeta,
+			Product: ApiProductWithMeta.meta({
+				id: "Product",
+				description: "A product",
+			}),
+			ProductItem: ApiProductItemWithMeta.meta({
+				id: "ProductItem",
+				description: "Product item defining features and pricing within a product",
+			}),
+			Feature: ApiFeatureWithMeta.meta({
+				id: "Feature",
+				description: "Feature object returned by the API",
+			}),
+			Entity: ApiEntityWithMeta.meta({
+				id: "Entity",
+				description: "Entity object returned by the API",
+			}),
 		},
 		securitySchemes: {
 			secretKey: {

@@ -1,13 +1,15 @@
+import { ResetInterval } from "@api/models.js";
 import {
 	type ApiPlanFeature,
 	ApiPlanFeatureSchema,
-	type BillingInterval,
-	Infinite,
+} from "@api/products/planFeature/apiPlanFeature.js";
+import type { BillingInterval } from "@models/productModels/priceModels/priceEnums.js";
+import { Infinite } from "@models/productModels/productEnums.js";
+import {
 	type ProductItem,
-	ResetInterval,
 	TierInfinite,
 	type UsageModel,
-} from "@autumn/shared";
+} from "@models/productV2Models/productItemModels/productItemModels.js";
 import {
 	itemIntvToResetIntv,
 	rolloverToResetIntv,

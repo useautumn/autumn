@@ -97,9 +97,8 @@ export const ApiProductItemSchema = z.object({
 		}),
 });
 
-export const ApiProductItemWithMeta = ApiProductItemSchema.meta({
-	id: "ProductItem",
-	description: "Product item defining features and pricing within a product",
-});
+// Note: The meta with id is added in openapi.ts to avoid duplicate registration
+// This schema is exported through the main index and should not have an id here
+export const ApiProductItemWithMeta = ApiProductItemSchema;
 
 export type ApiProductItem = z.infer<typeof ApiProductItemSchema>;

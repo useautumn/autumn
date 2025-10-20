@@ -1,8 +1,8 @@
+import { ResetInterval } from "@api/models.js";
 import {
 	ProductItemInterval,
-	ResetInterval,
 	RolloverDuration,
-} from "@autumn/shared";
+} from "@models/productV2Models/productItemModels/productItemModels.js";
 
 export const resetIntvToItemIntv = (
 	resetIntv: ResetInterval,

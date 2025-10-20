@@ -1,10 +1,10 @@
+import type { ResetInterval } from "@api/models.js";
+import type { ApiPlanFeature } from "@api/products/planFeature/apiPlanFeature.js";
+import { Infinite } from "@models/productModels/productEnums.js";
 import {
-	type ApiPlanFeature,
-	Infinite,
 	type ProductItem,
 	ProductItemSchema,
-	type ResetInterval,
-} from "@autumn/shared";
+} from "@models/productV2Models/productItemModels/productItemModels.js";
 import {
 	resetIntvToItemIntv,
 	resetIntvToRollover,
