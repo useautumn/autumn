@@ -18,7 +18,7 @@ import { EnvDropdown } from "./EnvDropdown";
 import { NavButton } from "./NavButton";
 import SidebarBottom from "./SidebarBottom";
 import { SidebarContext } from "./SidebarContext";
-import { SidebarGroup } from "./SidebarGroup";
+import { CollapsibleNavGroup } from "./CollapsibleNavGroup";
 
 export const MainSidebar = () => {
 	const env = useEnv();
@@ -83,26 +83,19 @@ export const MainSidebar = () => {
 						<DeployToProdButton expanded={expanded} />
 					)}
 					<div className="flex flex-col px-2 gap-1">
-						<div>
-							<NavButton
-								value="products"
-								onClick={onProductTabClick}
-								icon={<Package size={14} />}
-								title="Plans"
-								env={env}
-								isOpen={expanded ? productGroupOpen : undefined}
-								isGroup
-							/>
-							<SidebarGroup
-								value="products"
-								productGroup={productGroupOpen}
-								subTabs={[
-									{ title: "Plans", value: "products" },
-									{ title: "Features", value: "features" },
-									{ title: "Rewards", value: "rewards" },
-								]}
-							/>
-						</div>
+						<CollapsibleNavGroup
+							value="products"
+							icon={<Package size={14} />}
+							title="Plans"
+							env={env}
+							isOpen={productGroupOpen}
+							onToggle={onProductTabClick}
+							subTabs={[
+								{ title: "Plans", value: "products" },
+								{ title: "Features", value: "features" },
+								{ title: "Rewards", value: "rewards" },
+							]}
+						/>
 
 						<NavButton
 							value="customers"
@@ -116,49 +109,26 @@ export const MainSidebar = () => {
 							title="Analytics"
 							env={env}
 						/>
-						<div>
-							<NavButton
-								value="dev"
-								icon={<SquareTerminal size={14} />}
-								title="Developer"
-								env={env}
-								onClick={() => setDevGroupOpen((prev) => !prev)}
-								isOpen={expanded ? devGroupOpen : undefined}
-								isGroup
-							/>
-							<SidebarGroup
-								value="dev"
-								productGroup={devGroupOpen}
-								subTabs={
-									webhooks
-										? [
-												{ title: "API Keys", value: "api_keys" },
-												{ title: "Stripe", value: "stripe" },
-												{ title: "Webhooks", value: "webhooks" },
-											]
-										: [
-												{ title: "API Keys", value: "api_keys" },
-												{ title: "Stripe", value: "stripe" },
-											]
-								}
-							/>
-						</div>
-						{/* <div className="flex flex-col my-1 gap-0.5 border-l border-zinc-300 ml-4 -translate-x-[1px] pl-0">
-            <NavButton
-              value="api keys"
-              icon={<KeyRound size={14} className="text-t2/75" />}
-              title="API Keys"
-              env={env}
-              className="text-t2/90"
-            />
-            <NavButton
-              value="stripe"
-              icon={<Workflow size={14} className="text-t2/75" />}
-              title="Connect Stripe"
-              env={env}
-              className="text-t2/90"
-            />
-          </div> */}
+						<CollapsibleNavGroup
+							value="dev"
+							icon={<SquareTerminal size={14} />}
+							title="Developer"
+							env={env}
+							isOpen={devGroupOpen}
+							onToggle={() => setDevGroupOpen((prev) => !prev)}
+							subTabs={
+								webhooks
+									? [
+											{ title: "API Keys", value: "api_keys" },
+											{ title: "Stripe", value: "stripe" },
+											{ title: "Webhooks", value: "webhooks" },
+										]
+									: [
+											{ title: "API Keys", value: "api_keys" },
+											{ title: "Stripe", value: "stripe" },
+										]
+							}
+						/>
 					</div>
 				</div>
 

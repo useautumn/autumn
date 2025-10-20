@@ -44,12 +44,12 @@ export const Step3CreateApiKey = () => {
 		<div className="flex flex-col gap-3">
 			<SectionHeader
 				stepNumber={3}
-				title="Create Production Secret Key"
+				title="Create a production secret key"
 				description="Generate a live secret key for use in your production environment"
 				className="gap-0"
 			/>
 
-			<div className="pl-[32px] flex flex-col gap-3 min-h-[70px]">
+			<div className="pl-[32px] flex  gap-3 min-h-[70px]">
 				<AnimatePresence mode="wait" initial={false}>
 					{apiKey ? (
 						<motion.div
@@ -93,13 +93,13 @@ export const Step3CreateApiKey = () => {
 								bounce: 0.15,
 								duration: 0.3,
 							}}
-							className="flex flex-col gap-2"
+							className="flex flex-col gap-2 w-full"
 						>
 							<Button
 								isLoading={loading}
 								onClick={handleCreate}
 								variant="secondary"
-								className="w-fit"
+								className="w-32"
 							>
 								Generate Key
 							</Button>
