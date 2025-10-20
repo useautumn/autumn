@@ -7,8 +7,8 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import { db } from "@/db/initDrizzle.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
 import type { ObjectsUsingFeature } from "./getObjectsUsingFeature.js";
 
 export const handleFeatureTypeChanged = async ({
@@ -16,7 +16,7 @@ export const handleFeatureTypeChanged = async ({
 	feature,
 	newType,
 }: {
-	ctx: ExtendedRequest;
+	ctx: AutumnContext;
 	objectsUsingFeature: ObjectsUsingFeature;
 	feature: Feature;
 	newType: FeatureType;

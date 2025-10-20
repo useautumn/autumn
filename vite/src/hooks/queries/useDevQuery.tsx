@@ -1,5 +1,5 @@
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useQuery } from "@tanstack/react-query";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export const useDevQuery = () => {
 	const axiosInstance = useAxiosInstance();

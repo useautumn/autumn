@@ -9,8 +9,10 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { Button } from "@/components/ui/button";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useLocalStorage } from "@/hooks/common/useLocalStorage";
+import { useOrg } from "@/hooks/common/useOrg";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
+import { DeployToProdButton } from "./components/deploy-button/DeployToProdButton";
 import { OrgDropdown } from "./components/OrgDropdown";
 import { EnvDropdown } from "./EnvDropdown";
 import { NavButton } from "./NavButton";
@@ -20,6 +22,7 @@ import { SidebarGroup } from "./SidebarGroup";
 
 export const MainSidebar = () => {
 	const env = useEnv();
+	const { org } = useOrg();
 
 	const { webhooks } = useAutumnFlags();
 
@@ -74,7 +77,11 @@ export const MainSidebar = () => {
 					</Button>
 					<OrgDropdown />
 
-					<EnvDropdown env={env} />
+					{org?.deployed ? (
+						<EnvDropdown env={env} />
+					) : (
+						<DeployToProdButton expanded={expanded} />
+					)}
 					<div className="flex flex-col px-2 gap-1">
 						<div>
 							<NavButton
@@ -160,43 +167,3 @@ export const MainSidebar = () => {
 		</SidebarContext.Provider>
 	);
 };
-
-{
-	/* <div
-            className={cn(
-              "grid transition-[grid-template-rows] duration-150 ease-in-out",
-              showProductTab ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-            )}
-          >
-            {expanded && (
-              <div
-                className={cn(
-                  "overflow-hidden flex flex-col my-0 gap-0.5 border-l border-zinc-300 ml-4 -translate-x-[1px] pl-0 transition-opacity duration-150",
-                  showProductTab ? "opacity-100" : "opacity-0"
-                )}
-              >
-                <NavButton
-                  value="products"
-                  subValue="products"
-                  title="Plans"
-                  env={env}
-                  isSubNav
-                />
-                <NavButton
-                  value="products"
-                  subValue="features"
-                  title="Features"
-                  env={env}
-                  isSubNav
-                />
-                <NavButton
-                  value="products"
-                  subValue="rewards"
-                  title="Rewards"
-                  env={env}
-                  isSubNav
-                />
-              </div>
-            )}
-          </div> */
-}

@@ -46,8 +46,16 @@ export function MainLayout() {
 
 	useEffect(() => {
 		// Only redirect if org is loaded and user is not onboarded
-		if (!orgLoading && org && !org.onboarded) {
-			navigate("/sandbox/onboarding");
+		if (!orgLoading && org) {
+			if (!org.onboarded) {
+				navigate("/sandbox/onboarding");
+			} else if (!org.deployed) {
+				const pathname = window.location.pathname;
+				if (!pathname.startsWith("/sandbox")) {
+					const search = window.location.search;
+					navigate(`/sandbox${pathname}${search}`);
+				}
+			}
 		}
 	}, [org, orgLoading, navigate]);
 
