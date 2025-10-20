@@ -98,7 +98,7 @@ export const Step1ConnectStripe = ({
 							variant="secondary"
 							disabled
 							icon={<Check size={16} className="text-green-600" />}
-							className="!opacity-100 w-32"
+							className="!opacity-100"
 						>
 							Stripe Connected
 						</IconButton>
