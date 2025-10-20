@@ -5,11 +5,9 @@ import { queryStringArray } from "../common/queryHelpers.js";
 import { ApiEntitySchema } from "./apiEntity.js";
 import { CreateEntityParamsSchema } from "./entityOpModels.js";
 
-// Register schema with .meta() for OpenAPI spec generation
-export const ApiEntityWithMeta = ApiEntitySchema.meta({
-	id: "Entity",
-	description: "Entity object returned by the API",
-});
+// Note: The meta with id is added in openapi.ts to avoid duplicate registration
+// This schema is exported through the main index and should not have an id here
+export const ApiEntityWithMeta = ApiEntitySchema;
 
 export const entityOps = {
 	"/customers/{customer_id}/entities": {

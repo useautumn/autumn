@@ -9,11 +9,9 @@ import {
 	UpdateFeatureParamsSchema,
 } from "./featureOpModels.js";
 
-// Register the schema with .meta() for OpenAPI spec generation
-export const ApiFeatureWithMeta = ApiFeatureSchema.meta({
-	id: "Feature",
-	description: "Feature object returned by the API",
-});
+// Note: The meta with id is added in openapi.ts to avoid duplicate registration
+// This schema is exported through the main index and should not have an id here
+export const ApiFeatureWithMeta = ApiFeatureSchema;
 
 export const featureOps = {
 	"/features": {

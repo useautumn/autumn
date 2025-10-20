@@ -6,11 +6,9 @@ import {
 import { z } from "zod/v4";
 import { ApiProductSchema } from "./previousVersions/apiProduct.js";
 
-// Register schema with .meta() for OpenAPI spec generation
-export const ApiProductWithMeta = ApiProductSchema.meta({
-	id: "Product",
-	description: "A product",
-});
+// Note: The meta with id is added in openapi.ts to avoid duplicate registration
+// This schema is exported through the main index and should not have an id here
+export const ApiProductWithMeta = ApiProductSchema;
 
 export const productOps = {
 	"/products": {

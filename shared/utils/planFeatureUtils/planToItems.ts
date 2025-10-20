@@ -1,4 +1,6 @@
-import type { ApiPlan, BillingInterval, ProductItem } from "@autumn/shared";
+import type { ApiPlan } from "@api/products/apiPlan.js";
+import type { BillingInterval } from "@models/productModels/priceModels/priceEnums.js";
+import type { ProductItem } from "@models/productV2Models/productItemModels/productItemModels.js";
 import { planFeaturesToItems } from "./planFeaturesToItems.js";
 
 /**

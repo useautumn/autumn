@@ -10,11 +10,9 @@ import {
 	UpdateCustomerParamsSchema,
 } from "./customerOpModels.js";
 
-// Register schema with .meta() for OpenAPI spec generation
-export const ApiCustomerWithMeta = ApiCustomerSchema.meta({
-	id: "Customer",
-	description: "Customer object returned by the API",
-});
+// Note: The meta with id is added in openapi.ts to avoid duplicate registration
+// This schema is exported through the main index and should not have an id here
+export const ApiCustomerWithMeta = ApiCustomerSchema;
 
 export const customerOps = {
 	"/customers": {
