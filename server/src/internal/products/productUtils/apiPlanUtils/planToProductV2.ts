@@ -1,10 +1,9 @@
 import {
 	type CreateProductV2Params,
 	CreateProductV2ParamsSchema,
+	convertPlanToItems,
 } from "@autumn/shared";
 import type { ApiPlan } from "@shared/api/products/apiPlan.js";
-import { constructPriceItem } from "../../product-items/productItemUtils.js";
-import { planFeaturesToItems } from "./planFeatureUtils/planFeaturesToItems.js";
 
 export const planToProductV2 = ({
 	plan,
@@ -12,25 +11,8 @@ export const planToProductV2 = ({
 	plan: ApiPlan;
 }): CreateProductV2Params => {
 	try {
-		const featureItems = planFeaturesToItems({
-			features: plan.features,
-		});
-
-		const items = [...featureItems];
-
-		// Only add price item if there isn't a price on a feature already (aka: a "base price" product)
-		const hasPriceItem = featureItems?.some(
-			(item) => typeof item.price === "number" && item.price > 0,
-		);
-
-		if (plan.price && !hasPriceItem) {
-			items.push(
-				constructPriceItem({
-					price: plan.price.amount,
-					interval: plan.price.interval,
-				}),
-			);
-		}
+		// Convert plan to items using shared utility
+		const items = convertPlanToItems({ plan });
 
 		return CreateProductV2ParamsSchema.parse({
 			id: plan.id,

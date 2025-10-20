@@ -3,10 +3,10 @@ import {
 	ApiPlanSchema,
 	type ApiProduct,
 	isPriceItem,
+	itemsToPlanFeatures,
 	type ProductV2,
 	productV2ToBasePrice,
 } from "@autumn/shared";
-import { itemsToPlanFeatures } from "./planFeatureUtils/itemsToPlanFeatures.js";
 /**
  * Convert Product V2 response format to Plan V2 format
  */
