@@ -9,6 +9,7 @@ import {
 	type FeatureOptions,
 	type FullCustomer,
 	type FullProduct,
+	itemsToPlanFeatures,
 	productV2ToBasePrice,
 	productV2ToFeatureItems,
 } from "@autumn/shared";
@@ -16,7 +17,6 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getFreeTrialAfterFingerprint } from "../../free-trials/freeTrialUtils.js";
 import { sortProductItems } from "../../pricecn/pricecnUtils.js";
 import { mapToProductItems } from "../../productV2Utils.js";
-import { itemsToPlanFeatures } from "../apiPlanUtils/planFeatureUtils/itemsToPlanFeatures.js";
 import { getAttachScenario } from "./getAttachScenario.js";
 
 /**
@@ -32,8 +32,8 @@ const getFreeTrialV2Response = async ({
 	product: FullProduct;
 	fullCus?: FullCustomer;
 	attachScenario: AttachScenario;
-}): Promise<ApiFreeTrialV2 | null> => {
-	if (!product.free_trial) return null;
+}): Promise<ApiFreeTrialV2 | undefined> => {
+	if (!product.free_trial) return undefined;
 
 	// Check trial availability if customer exists
 	if (db && fullCus) {
@@ -48,7 +48,7 @@ const getFreeTrialV2Response = async ({
 
 		// No trial for downgrades
 		if (attachScenario === AttachScenario.Downgrade || !trial) {
-			return null;
+			return undefined;
 		}
 	}
 
@@ -180,7 +180,7 @@ export const getPlanResponse = async ({
 		price: basePrice
 			? {
 					amount: basePrice.amount,
-					interval: basePrice.interval as unknown as BillingInterval,
+					interval: basePrice.interval as BillingInterval,
 				}
 			: {
 					amount: 0,

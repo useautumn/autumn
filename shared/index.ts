@@ -151,6 +151,10 @@ export * from "./utils/productV2Utils/productItemUtils/getProductItemRes.js";
 export * from "./utils/productV2Utils/productItemUtils/itemIntervalUtils.js";
 export * from "./utils/productV3Utils/mapToProductV3.js";
 export * from "./utils/productV3Utils/productItemUtils/productV3ItemUtils.js";
+export * from "./utils/planFeatureUtils/itemsToPlanFeatures.js";
+export * from "./utils/planFeatureUtils/planFeaturesToItems.js";
+export * from "./utils/planFeatureUtils/planFeatureIntervals.js";
+export * from "./utils/planFeatureUtils/planToItems.js";
 export * from "./utils/rewardUtils/rewardMigrationUtils.js";
 
 export enum ResetInterval {

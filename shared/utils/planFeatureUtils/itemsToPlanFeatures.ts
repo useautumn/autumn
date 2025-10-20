@@ -3,8 +3,6 @@ import {
 	ApiPlanFeatureSchema,
 	type BillingInterval,
 	Infinite,
-	type OnDecrease,
-	type OnIncrease,
 	type ProductItem,
 	ResetInterval,
 	TierInfinite,
@@ -46,9 +44,9 @@ export const itemsToPlanFeatures = ({
 			...(item.price
 				? {
 						price: {
-							interval: item.interval as unknown as BillingInterval,
+							interval: (item.interval || "month") as BillingInterval,
 							billing_units: item.billing_units ?? 1,
-							usage_model: item.usage_model as UsageModel,
+							usage_model: (item.usage_model || "pay_per_use") as UsageModel,
 							max_purchase: 1,
 							amount: item.price || 0,
 							tiers: item.tiers?.map((tier) => ({
@@ -77,8 +75,8 @@ export const itemsToPlanFeatures = ({
 			...(item.config?.on_increase || item.config?.on_decrease
 				? {
 						proration: {
-							on_increase: item.config.on_increase as OnIncrease,
-							on_decrease: item.config.on_decrease as OnDecrease,
+							on_increase: item.config.on_increase ?? undefined,
+							on_decrease: item.config.on_decrease ?? undefined,
 						},
 					}
 				: {}),
