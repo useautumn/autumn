@@ -19,7 +19,7 @@ cancelRouter.post("", async (req, res) =>
 		res,
 		action: "expire",
 		handler: async (req, res) => {
-			const { db, orgId, env } = req;
+			const { db, org, env } = req;
 			const {
 				customer_id,
 				product_id,
@@ -33,7 +33,7 @@ cancelRouter.post("", async (req, res) =>
 
 			const fullCus = await CusService.getFull({
 				db,
-				orgId,
+				orgId: org.id,
 				idOrInternalId: customer_id,
 				env,
 				withEntities: true,
