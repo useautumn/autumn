@@ -1,10 +1,10 @@
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionService.js";
 import { RewardService } from "@/internal/rewards/RewardService.js";
 import { notNullish } from "@/utils/genUtils.js";
-import { createStripeCli } from "../utils.js";
 
 export async function handleCusDiscountDeleted({
 	db,

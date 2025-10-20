@@ -45,7 +45,7 @@ export const CusProductStripeLink = ({
 									<div className="flex justify-center items-center w-fit px-2 gap-2 h-6">
 										<ArrowUpRightFromSquare
 											size={12}
-											className="text-[#665CFF]"
+											className="text-purple-stripe"
 										/>
 									</div>
 								</div>
@@ -82,7 +82,7 @@ export const CusProductStripeLink = ({
 									<div className="flex justify-center items-center w-fit px-2 gap-2 h-6">
 										<ArrowUpRightFromSquare
 											size={12}
-											className="text-[#665CFF]"
+											className="text-purple-stripe"
 										/>
 									</div>
 								</div>

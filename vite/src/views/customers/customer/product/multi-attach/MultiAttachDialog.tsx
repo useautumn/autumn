@@ -140,7 +140,7 @@ export const MultiAttachDialog = ({
 
 		for (const option of productOptions) {
 			if (!option.product_id) {
-				toast.error("Can't leave product empty");
+				toast.error("Can't leave plan empty");
 				return;
 			}
 		}
@@ -171,10 +171,10 @@ export const MultiAttachDialog = ({
 			}
 
 			await refetch();
-			toast.success("Products attached successfully");
+			toast.success("Plans attached successfully");
 			setOpen(false);
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to attach products"));
+			toast.error(getBackendErr(error, "Failed to attach plans"));
 			console.log(error);
 		} finally {
 			setLoading(false);
@@ -218,7 +218,7 @@ export const MultiAttachDialog = ({
 											value={option.product_id || undefined}
 										>
 											<SelectTrigger className="col-span-7">
-												<SelectValue placeholder="Select Product" />
+												<SelectValue placeholder="Select Plan" />
 											</SelectTrigger>
 											<SelectContent className="max-h-[300px] overflow-y-auto">
 												{products
@@ -261,7 +261,7 @@ export const MultiAttachDialog = ({
 												startIcon={<X size={12} />}
 												onClick={() => {
 													if (productOptions.length === 1) {
-														toast.error("Must attach at least one product");
+														toast.error("Must attach at least one plan");
 														return;
 													}
 													setProductOptions((prev) => {
@@ -362,7 +362,7 @@ export const MultiAttachDialog = ({
 						disabled={checkoutLoading || attachLoading}
 						disableStartIcon
 					>
-						{checkoutResult?.url ? "Checkout Page" : "Attach Products"}
+						{checkoutResult?.url ? "Checkout Page" : "Attach Plans"}
 					</Button>
 				</CustomDialogFooter>
 			</CustomDialogContent>

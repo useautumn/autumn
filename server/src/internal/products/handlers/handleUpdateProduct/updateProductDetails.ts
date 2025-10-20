@@ -12,7 +12,7 @@ import {
 	type UpdateProduct,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { isStripeConnected } from "@/internal/orgs/orgUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
@@ -205,9 +205,7 @@ export const handleUpdateProductDetails = async ({
 		}
 	}
 
-	if (productDetailsSame(curProduct, newProduct)) {
-		return;
-	}
+	if (productDetailsSame(curProduct, newProduct)) return;
 
 	if (notNullish(newProduct.id) && newProduct.id !== curProduct.id) {
 		if (customersOnAllVersions.length > 0) {
@@ -225,6 +223,7 @@ export const handleUpdateProductDetails = async ({
 	}
 
 	// 2. Update product
+
 	await ProductService.updateByInternalId({
 		db,
 		internalId: curProduct.internal_id,

@@ -19,7 +19,7 @@ export interface IRow {
 }
 
 export const autumnTheme = themeQuartz.withParams({
-	accentColor: "#8838FF70",
+	accentColor: "var(--primary)",
 	backgroundColor: "#FAFAF9",
 	borderColor: "#00000000",
 	browserColorScheme: "light",

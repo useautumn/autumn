@@ -46,7 +46,7 @@ export const CreateFeature = ({
 		if (open) {
 			setFeature(getDefaultFeature(entityCreate));
 		}
-	}, [open]);
+	}, [open, entityCreate]);
 
 	const updateConfig = () => {
 		const config: any = structuredClone(feature.config);
@@ -89,8 +89,10 @@ export const CreateFeature = ({
 			} else {
 				setOpen(false);
 			}
-		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to create feature"));
+		} catch (error: unknown) {
+			toast.error(
+				getBackendErr(error as AxiosError, "Failed to create feature"),
+			);
 		}
 	};
 

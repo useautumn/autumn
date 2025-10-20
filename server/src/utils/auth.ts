@@ -83,7 +83,8 @@ export const auth = betterAuth({
 	socialProviders: {
 		google: {
 			clientId: process.env.GOOGLE_CLIENT_ID!,
-			clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+			clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+			redirectURI: `${process.env.SERVER_URL}/api/auth/callback/google`,
 		},
 	},
 	plugins: [
@@ -134,8 +135,8 @@ export const auth = betterAuth({
 
 			organizationCreation: {
 				disabled: false,
-				afterCreate: async ({ organization }) => {
-					await afterOrgCreated({ org: organization as any });
+				afterCreate: async ({ organization, user }) => {
+					await afterOrgCreated({ org: organization, user });
 				},
 			},
 		}),

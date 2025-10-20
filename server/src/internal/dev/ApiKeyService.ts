@@ -32,6 +32,7 @@ export class ApiKeyService {
 						features: {
 							where: eq(features.env, env),
 						},
+						master: true,
 					},
 				},
 			},

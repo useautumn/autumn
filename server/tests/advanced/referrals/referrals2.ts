@@ -1,6 +1,8 @@
 import {
+	type AppEnv,
 	type Customer,
 	ErrCode,
+	type Organization,
 	type ReferralCode,
 	type RewardRedemption,
 } from "@autumn/shared";
@@ -12,8 +14,9 @@ import { setupBefore } from "tests/before.js";
 import { timeout } from "tests/utils/genUtils.js";
 import { initCustomer } from "tests/utils/init.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { initCustomerWithTestClock } from "tests/utils/testInitUtils.js";
 import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { initCustomerV2 } from "@/utils/scriptUtils/initCustomer.js";
 import { products, referralPrograms } from "../../global.js";
 
 // UNCOMMENT FROM HERE
@@ -29,18 +32,21 @@ describe(`${chalk.yellowBright(
 
 	const redemptions: RewardRedemption[] = [];
 	let mainCustomer: Customer;
-
+	let org: Organization;
+	let env: AppEnv;
 	before(async function () {
 		await setupBefore(this);
 		stripeCli = this.stripeCli;
+		org = this.org;
+		env = this.env;
 
-		const { testClockId: testClockId1, customer } =
-			await initCustomerWithTestClock({
-				customerId: mainCustomerId,
-				db: this.db,
-				org: this.org,
-				env: this.env,
-			});
+		const { testClockId: testClockId1, customer } = await initCustomerV2({
+			customerId: mainCustomerId,
+			db: this.db,
+			org: this.org,
+			env: this.env,
+			autumn,
+		});
 		testClockId = testClockId1;
 		mainCustomer = customer;
 
@@ -95,8 +101,17 @@ describe(`${chalk.yellowBright(
 		}
 
 		// Check stripe customer
-		const stripeCus = (await stripeCli.customers.retrieve(
+		const legacyStripe = createStripeCli({
+			org: org,
+			env: env,
+			legacyVersion: true,
+		});
+
+		const stripeCus = (await legacyStripe.customers.retrieve(
 			mainCustomer.processor?.id,
+			{
+				expand: ["discount"],
+			},
 		)) as Stripe.Customer;
 
 		assert.notEqual(stripeCus.discount, null);

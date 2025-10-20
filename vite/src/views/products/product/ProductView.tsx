@@ -1,18 +1,17 @@
 "use client";
 
+import { useState } from "react";
+import { useParams } from "react-router";
 import ErrorScreen from "@/views/general/ErrorScreen";
 import LoadingScreen from "@/views/general/LoadingScreen";
-import ProductSidebar from "./ProductSidebar";
 import ProductViewBreadcrumbs from "./components/ProductViewBreadcrumbs";
-
-import { useState } from "react";
-import { ProductContext } from "./ProductContext";
-import { useParams } from "react-router";
-import { ManageProduct } from "./ManageProduct";
+import { UpdateProductButton } from "./components/UpdateProductButton";
 import { useProductChangedAlert } from "./hooks/useProductChangedAlert";
 import { useProductData } from "./hooks/useProductData";
-import { UpdateProductButton } from "./components/UpdateProductButton";
 import { useProductQuery } from "./hooks/useProductQuery";
+import { ManageProduct } from "./ManageProduct";
+import { ProductContext } from "./ProductContext";
+import ProductSidebar from "./ProductSidebar";
 import ConfirmNewVersionDialog from "./versioning/ConfirmNewVersionDialog";
 
 function ProductView() {
@@ -36,74 +35,20 @@ function ProductView() {
 	if (error) {
 		return (
 			<ErrorScreen returnUrl="/products">
-				{error ? error.message : `Product ${product_id} not found`}
+				{error ? error.message : `Plan ${product_id} not found`}
 			</ErrorScreen>
 		);
 	}
 
-	if (!product) return <></>;
-
-	// const updateProduct = async () => {
-	//   try {
-	//     await ProductService.updateProduct(axiosInstance, product.id, {
-	//       ...UpdateProductSchema.parse(product),
-	//       items: product.items,
-	//       free_trial: product.free_trial,
-	//     });
-
-	//     if (isNewProduct) {
-	//       toast.success("Product created successfully");
-	//     } else {
-	//       toast.success("Product updated successfully");
-	//     }
-
-	//     await refetch();
-	//     await mutateCount();
-	//   } catch (error) {
-	//     toast.error(getBackendErr(error, "Failed to update product"));
-	//   }
-	// };
-
-	// const updateProductClicked = async () => {
-	//   if (!counts) {
-	//     toast.error("Something went wrong, please try again...");
-	//     return;
-	//   }
-
-	//   if (version && version < data?.numVersions) {
-	//     toast.error("You can only update the latest version of a product");
-	//     return;
-	//   }
-
-	//   if (counts?.all > 0) {
-	//     setShowNewVersionDialog(true);
-	//     return;
-	//   }
-
-	//   await updateProduct();
-	// };
+	if (!product) return;
 
 	return (
 		<ProductContext.Provider
 			value={{
-				// ...data,
-				// features,
-				// setFeatures,
-
-				// For versioning?
-				// counts,
-				// version,
-
-				// mutate,
-				// env,
-
 				setShowNewVersionDialog,
 				product,
 				setProduct,
-
-				// mutateCount,
 				actionState,
-				// handleCreateProduct: updateProductClicked,
 				entityFeatureIds,
 				setEntityFeatureIds,
 				hasChanges,

@@ -1,12 +1,12 @@
-import UpdateCustomerDialog from "../UpdateCustomerDialog";
 import { useState } from "react";
 import { Accordion } from "@/components/ui/accordion";
 import { Dialog } from "@/components/ui/dialog";
-import { CustomerRewards } from "./customer-rewards";
 import { CustomerToolbar } from "../../CustomerToolbar";
+import { useCusQuery } from "../../hooks/useCusQuery";
+import UpdateCustomerDialog from "../UpdateCustomerDialog";
 import { CustomerDetails } from "./CustomerDetails";
 import { CustomerEntities } from "./CustomerEntities";
-import { useCusQuery } from "../../hooks/useCusQuery";
+import { CustomerRewards } from "./customer-rewards";
 
 export const CustomerSidebar = () => {
 	const { customer } = useCusQuery();

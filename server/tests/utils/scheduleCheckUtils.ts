@@ -1,9 +1,9 @@
-import { ProductService } from "@/internal/products/ProductService.js";
-import { AppEnv, Organization } from "@autumn/shared";
+import type { AppEnv, Organization } from "@autumn/shared";
 import { expect } from "chai";
-import Stripe from "stripe";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { ProductService } from "@/internal/products/ProductService.js";
 
 export const checkScheduleContainsProducts = async ({
 	db,
@@ -31,7 +31,7 @@ export const checkScheduleContainsProducts = async ({
 
 	let priceCount = 0;
 	for (const productId of productIds) {
-		let product = await ProductService.getFull({
+		const product = await ProductService.getFull({
 			db,
 			idOrInternalId: productId,
 			orgId: org.id,
@@ -69,7 +69,7 @@ export const checkSubscriptionContainsProducts = async ({
 
 	let totalPriceCount = 0;
 	for (const productId of productIds) {
-		let product = await ProductService.getFull({
+		const product = await ProductService.getFull({
 			db,
 			idOrInternalId: productId,
 			orgId: org.id,

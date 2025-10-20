@@ -1,9 +1,13 @@
-import { createStripeCli } from "@/external/stripe/utils.js";
+import {
+	CusProductStatus,
+	type Entity,
+	type FullCusProduct,
+} from "@autumn/shared";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { cancelCurSubs } from "@/internal/customers/change-product/handleDowngrade/cancelCurSubs.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { cusProductsToStripeSubs } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { CusProductStatus, Entity, FullCusProduct } from "@autumn/shared";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const cancelSubsForEntity = async ({
 	req,
@@ -14,10 +18,10 @@ export const cancelSubsForEntity = async ({
 	cusProducts: FullCusProduct[];
 	entity: Entity;
 }) => {
-	const { org, env, db, logtail: logger } = req;
+	const { org, env, db, logger } = req;
 	try {
-		let stripeCli = createStripeCli({ org, env });
-		let curSubs = await cusProductsToStripeSubs({
+		const stripeCli = createStripeCli({ org, env });
+		const curSubs = await cusProductsToStripeSubs({
 			cusProducts,
 			stripeCli,
 		});

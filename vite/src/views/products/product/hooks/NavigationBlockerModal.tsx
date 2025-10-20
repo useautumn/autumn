@@ -26,7 +26,7 @@ export const NavigationBlockerModal: React.FC<NavigationBlockerModalProps> = ({
 				<DialogHeader>
 					<DialogTitle>Unsaved Changes</DialogTitle>
 					<DialogDescription>
-						Are you sure you want to leave without updating the product? Your
+						Are you sure you want to leave without updating the plan? Your
 						changes will be lost.
 					</DialogDescription>
 				</DialogHeader>

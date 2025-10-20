@@ -8,10 +8,20 @@ export const FrontendOrgSchema = z.object({
 
 	success_url: z.string(),
 	default_currency: z.string(),
-	stripe_connected: z.boolean(),
 	created_at: z.number(),
 	test_pkey: z.string().nullable(),
 	live_pkey: z.string().nullable(),
+
+	stripe_connection: z.string(),
+	master: z
+		.object({
+			id: z.string(),
+			name: z.string(),
+			slug: z.string(),
+		})
+		.nullable(),
+	through_master: z.boolean(),
+	onboarded: z.boolean(),
 });
 
 export type FrontendOrg = z.infer<typeof FrontendOrgSchema>;

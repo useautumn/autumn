@@ -72,7 +72,7 @@ export const handleBatchCustomers = async (req: any, res: any) =>
 				offset: query.offset,
 				features: req.features,
 				statuses: query.statuses ?? [],
-				logger: req.logtail,
+				logger: req.logger,
 				apiVersion: req.apiVersion,
 			});
 		},

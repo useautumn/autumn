@@ -10,8 +10,8 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
 import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionService.js";
 import { RewardService } from "@/internal/rewards/RewardService.js";
-import { triggerRedemption } from "@/internal/rewards/referralUtils.js";
 import { triggerFreeProduct } from "@/internal/rewards/referralUtils/triggerFreeProduct.js";
+import { triggerRedemption } from "@/internal/rewards/referralUtils.js";
 import { getRewardCat } from "@/internal/rewards/rewardUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { generateId, notNullish } from "@/utils/genUtils.js";
@@ -24,7 +24,7 @@ export default async (req: any, res: any) =>
 		res,
 		action: "redeem referral code",
 		handler: async (req, res) => {
-			const { orgId, env, logtail: logger, db } = req;
+			const { orgId, env, logger, db } = req;
 			const { code, customer_id: customerId } = req.body;
 
 			// 1. Get redeemed by customer, and referral code

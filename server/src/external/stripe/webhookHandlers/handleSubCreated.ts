@@ -1,27 +1,26 @@
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import {
+	type AppEnv,
 	BillingType,
-	CusProductStatus,
-	FullCusProduct,
-	FullCustomerPrice,
-	Organization,
-	Price,
+	type FullCusProduct,
+	type FullCustomerPrice,
+	type Organization,
+	type Price,
 } from "@autumn/shared";
-import { AppEnv } from "@autumn/shared";
-import Stripe from "stripe";
-import { createStripeCli } from "../utils.js";
-import { getStripeExpandedInvoice } from "../stripeInvoiceUtils.js";
-import { SubService } from "@/internal/subscriptions/SubService.js";
-import { generateId } from "@/utils/genUtils.js";
-import { getBillingType } from "@/internal/products/prices/priceUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { getFullStripeSub } from "../stripeSubUtils.js";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
+import { getBillingType } from "@/internal/products/prices/priceUtils.js";
+import { SubService } from "@/internal/subscriptions/SubService.js";
+import { generateId } from "@/utils/genUtils.js";
+import { getStripeExpandedInvoice } from "../stripeInvoiceUtils.js";
 import {
 	getEarliestPeriodEnd,
 	getEarliestPeriodStart,
 } from "../stripeSubUtils/convertSubUtils.js";
+import { getFullStripeSub } from "../stripeSubUtils.js";
 
 export const handleSubCreated = async ({
 	db,
@@ -56,7 +55,7 @@ export const handleSubCreated = async ({
 		}
 
 		// Update autumn sub
-		let autumnSub = await SubService.getFromScheduleId({
+		const autumnSub = await SubService.getFromScheduleId({
 			db,
 			scheduleId: subscription.schedule as string,
 		});
@@ -105,9 +104,9 @@ export const handleSubCreated = async ({
 			cusProds.length,
 		);
 
-		let batchUpdate = [];
+		const batchUpdate = [];
 		for (const cusProd of cusProds) {
-			let subIds = cusProd.subscription_ids
+			const subIds = cusProd.subscription_ids
 				? [...cusProd.subscription_ids]
 				: [];
 			subIds.push(subscription.id);
@@ -128,7 +127,7 @@ export const handleSubCreated = async ({
 					stripeInvoiceId: subscription.latest_invoice as string,
 				});
 
-				let invoiceItems = await getInvoiceItems({
+				const invoiceItems = await getInvoiceItems({
 					stripeInvoice: invoice,
 					prices: cusProd.customer_prices.map(
 						(cpr: FullCustomerPrice) => cpr.price,
@@ -155,19 +154,19 @@ export const handleSubCreated = async ({
 	}
 
 	// Get cus prods for sub
-	let cusProds = await CusProductService.getByStripeSubId({
+	const cusProds = await CusProductService.getByStripeSubId({
 		db,
 		stripeSubId: subscription.id,
 		orgId: org.id,
 		env,
 	});
 
-	let handleInArrearWithEntity = async (cusProd: FullCusProduct) => {
+	const handleInArrearWithEntity = async (cusProd: FullCusProduct) => {
 		if (!cusProd.internal_entity_id) {
 			return;
 		}
 
-		let arrearPrices = cusProd.customer_prices
+		const arrearPrices = cusProd.customer_prices
 			.map((cp) => cp.price)
 			.filter(
 				(p: Price) =>
@@ -178,9 +177,9 @@ export const handleSubCreated = async ({
 			return;
 		}
 
-		let itemsToDelete = [];
+		const itemsToDelete = [];
 		for (const arrearPrice of arrearPrices) {
-			let subItem = subscription.items.data.find(
+			const subItem = subscription.items.data.find(
 				(i) => i.price.id == arrearPrice.config?.stripe_price_id,
 			);
 
@@ -211,7 +210,7 @@ export const handleSubCreated = async ({
 		}
 	};
 
-	let batchUpdate = [];
+	const batchUpdate = [];
 	for (const cusProd of cusProds) {
 		batchUpdate.push(handleInArrearWithEntity(cusProd));
 	}

@@ -1,11 +1,10 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { Stripe } from "stripe";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { AppEnv, Organization, products } from "@autumn/shared";
+import type { AppEnv, Organization } from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { initProductInStripe } from "@/internal/products/productUtils.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-import { createStripeCli } from "./utils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 
 export async function ensureStripeProducts({
 	db,
@@ -55,9 +54,9 @@ export async function ensureStripeProductsWithEnv({
 	const updatedOrg = await OrgService.get({ db, orgId: req.org.id });
 
 	const batchInit: Promise<void>[] = [];
-	for (let fullProduct of fullProducts) {
+	for (const fullProduct of fullProducts) {
 		const initProduct = async () => {
-			let existsInStripe = products.data.find(
+			const existsInStripe = products.data.find(
 				(p) => p.id === fullProduct.processor?.id,
 			);
 
