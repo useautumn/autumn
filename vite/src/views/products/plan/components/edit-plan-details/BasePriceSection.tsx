@@ -128,11 +128,20 @@ export const BasePriceSection = ({
 							placeholder="eg. $100"
 							disabled={disabled}
 							value={basePrice?.amount ?? ""}
+							onKeyDown={(e) => {
+								// Prevent typing minus sign
+								if (e.key === "-" || e.key === "Minus") {
+									e.preventDefault();
+								}
+							}}
 							onChange={(e) => {
-								if (Number(e.target.value) >= 0)
+								// extra guard in case value changes programmatically
+								const cleanedValue = e.target.value.replace(/-/g, "");
+								if (Number(cleanedValue) >= 0) {
 									handleUpdateBasePrice({
-										amount: e.target.value,
+										amount: cleanedValue,
 									});
+								}
 							}}
 						/>
 					</div>
