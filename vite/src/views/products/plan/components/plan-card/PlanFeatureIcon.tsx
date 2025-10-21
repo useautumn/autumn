@@ -9,6 +9,11 @@ import {
 	PrepaidUsageIcon,
 	UsageBasedIcon,
 } from "@/components/v2/icons/AutumnIcons";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/v2/tooltips/Tooltip";
 
 interface PlanFeatureIconProps {
 	item: ProductItem;
@@ -98,6 +103,43 @@ const getRightIcon = (
 	}
 };
 
+const getTooltipContent = (item: ProductItem, position: "left" | "right") => {
+	switch (position) {
+		case "left": {
+			const ft = getFeatureType(item);
+			switch (ft) {
+				case ProductItemFeatureType.Boolean:
+					return "Boolean";
+				case ProductItemFeatureType.SingleUse:
+					return "Consumable";
+				case ProductItemFeatureType.ContinuousUse:
+					return "Allocated";
+				case ProductItemFeatureType.Static:
+					return "Boolean";
+				default:
+					return null;
+			}
+		}
+		case "right": {
+			const bt = getBillingType(item);
+			switch (bt) {
+				case "included":
+					return "Included";
+				case "prepaid":
+					return "Prepaid";
+				case "paid":
+					return "Pay-per-use";
+				case "none":
+					return "None";
+				default:
+					return null;
+			}
+		}
+		default:
+			return null;
+	}
+};
+
 export const PlanFeatureIcon = ({ item, position }: PlanFeatureIconProps) => {
 	const iconData = position === "left" ? getLeftIcon(item) : getRightIcon(item);
 	const Icon = iconData.icon;
@@ -107,7 +149,16 @@ export const PlanFeatureIcon = ({ item, position }: PlanFeatureIconProps) => {
 		return null;
 	}
 
-	return (
+	return getTooltipContent(item, position) !== null ? (
+		<Tooltip>
+			<TooltipTrigger asChild>
+				<div className={iconData.color}>
+					<Icon />
+				</div>
+			</TooltipTrigger>
+			<TooltipContent>{getTooltipContent(item, position)}</TooltipContent>
+		</Tooltip>
+	) : (
 		<div className={iconData.color}>
 			<Icon />
 		</div>

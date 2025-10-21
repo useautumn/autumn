@@ -167,7 +167,7 @@ export const PlanFeatureRow = ({
 					size="sm"
 					variant="skeleton"
 					tabIndex={-1}
-					className="absolute right-0 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-50 bg-hover-primary"
+					className="absolute right-0 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-50 bg-hover-primary group-hover:bg-transparent"
 				/>
 			</div>
 
