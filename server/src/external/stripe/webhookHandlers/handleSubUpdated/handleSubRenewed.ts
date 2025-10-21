@@ -70,7 +70,7 @@ export const handleSubRenewed = async ({
 		sub,
 	});
 
-	if (!renewed || updatedCusProducts.length == 0) return;
+	if (!renewed || updatedCusProducts.length === 0) return;
 
 	const subScenario = await getSubScenarioFromCache({ subId: sub.id });
 	console.log(`Renewed: ${renewed}, subScenario: ${subScenario}`);
@@ -89,7 +89,7 @@ export const handleSubRenewed = async ({
 	await CusProductService.updateByStripeSubId({
 		db,
 		stripeSubId: sub.id,
-		updates: { canceled_at: null, canceled: false },
+		updates: { canceled_at: null, canceled: false, ended_at: null },
 	});
 
 	if (!org.config.sync_status) return;

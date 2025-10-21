@@ -43,7 +43,7 @@ export const mapToProductItems = ({
 	}
 
 	for (const item of items) {
-		const feature = features.find((f) => f.id == item.feature_id);
+		const feature = features.find((f) => f.id === item.feature_id);
 		if (feature) {
 			item.feature_type = getItemFeatureType({ item, features });
 		}
@@ -90,9 +90,10 @@ export const mapToProductV2 = ({
 		is_add_on: product.is_add_on,
 		is_default: product.is_default,
 		version: product.version,
-		group: product.group,
+		group: product.group || null,
 		free_trial: product.free_trial,
 		created_at: product.created_at,
+		env: product.env,
 
 		items: items,
 		stripe_id: product.processor?.id || null,

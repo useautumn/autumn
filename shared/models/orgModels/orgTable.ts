@@ -86,6 +86,7 @@ export const organizations = pgTable(
 		config: jsonb().default({}).notNull().$type<OrgConfig>(),
 		created_by: text("created_by"),
 		onboarded: boolean("onboarded").default(false),
+		deployed: boolean("deployed").default(false),
 	},
 	(table) => [
 		unique("organizations_test_pkey_key").on(table.test_pkey),

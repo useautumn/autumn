@@ -41,12 +41,9 @@ export const updateProduct = async ({
 			updateData,
 		);
 
-		// toast.success("Product updated successfully");
-
 		await onSuccess();
 		return updatedProduct;
 	} catch (error) {
-		console.error((error as ZodError).message);
 		toast.error(
 			getBackendErr(error as AxiosError | ZodError, "Failed to update product"),
 		);

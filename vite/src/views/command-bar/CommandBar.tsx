@@ -20,6 +20,7 @@ import {
 	CommandList,
 } from "@/components/ui/command";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useCommandBarStore } from "@/hooks/stores/useCommandBarStore";
 import { useListOrganizations } from "@/lib/auth-client";
@@ -71,6 +72,7 @@ const CommandBar = () => {
 	const { data: orgs, isPending: isLoadingOrgs } = useListOrganizations();
 	const axiosInstance = useAxiosInstance();
 	const { isAdmin } = useAdmin();
+	const { org } = useOrg();
 
 	// Improved close dialog function with proper timing
 	const closeDialog = useCallback(() => {
@@ -325,18 +327,22 @@ const CommandBar = () => {
 				closeDialog();
 			},
 		},
-		{
-			title: `Go to ${env === AppEnv.Sandbox ? "Production" : "Sandbox"}`,
-			icon: <ArrowsClockwiseIcon />,
-			shortcutKey: "4",
-			onSelect: () => {
-				handleEnvChange(
-					env === AppEnv.Sandbox ? AppEnv.Live : AppEnv.Sandbox,
-					true,
-				);
-				closeDialog();
-			},
-		},
+		...(org?.deployed
+			? [
+					{
+						title: `Go to ${env === AppEnv.Sandbox ? "Production" : "Sandbox"}`,
+						icon: <ArrowsClockwiseIcon />,
+						shortcutKey: "4",
+						onSelect: () => {
+							handleEnvChange(
+								env === AppEnv.Sandbox ? AppEnv.Live : AppEnv.Sandbox,
+								true,
+							);
+							closeDialog();
+						},
+					},
+				]
+			: []),
 		...(!isLoadingOrgs && orgs && orgs.length > 1
 			? [
 					{

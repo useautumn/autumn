@@ -54,8 +54,16 @@ export const handleOAuthCallback = async (c: Context<HonoEnv>) => {
 		const env = envStr === "live" ? AppEnv.Live : AppEnv.Sandbox;
 		const isPlatformFlow = master_org_id !== null;
 
-		// Use redirect URI from state (supports both platform and standard flows)
-		redirectUrl = new URL(redirect_uri);
+		// Use custom redirect URI if provided (platform flow)
+		if (isPlatformFlow) {
+			redirectUrl = new URL(redirect_uri);
+		} else {
+			redirectUrl = redirect_uri
+				? new URL(redirect_uri)
+				: new URL(
+						`${frontendUrl}${env === AppEnv.Sandbox ? "/sandbox" : ""}/dev?tab=stripe`,
+					);
+		}
 
 		// Fetch the organization by slug
 		const org = await OrgService.getBySlug({ db, slug: organization_slug });
