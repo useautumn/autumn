@@ -3,12 +3,14 @@ import {
 	type AppEnv,
 	CusProductStatus,
 	type Customer,
+	ErrCode,
 	type Feature,
 	FeatureType,
 	type FullCustomerEntitlement,
 	type Organization,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import { StatusCodes } from "http-status-codes";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { refreshCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
@@ -16,6 +18,7 @@ import { getFeatureBalance } from "@/internal/customers/cusProducts/cusEnts/cusE
 import { deductFromApiCusRollovers } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverDeductionUtils.js";
 import { getCusEntsInFeatures } from "@/internal/customers/cusUtils/cusUtils.js";
 import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
 import { handleThresholdReached } from "./handleThresholdReached.js";
 import {
 	deductAllowanceFromCusEnt,
@@ -108,6 +111,88 @@ const getFeatureDeductions = ({
 	return featureDeductions;
 };
 
+/**
+ * Validate that the deduction is possible given the current balance and usage allowed.
+ * Constraint 1: Insufficient balance without usage_allowed.
+ * Constraint 2: Usage limit exceeded for customer entitlements with usage_allowed.
+ */
+const validateDeductionPossible = ({
+	cusEnts,
+	featureDeductions,
+}: {
+	cusEnts: FullCustomerEntitlement[];
+	featureDeductions: { feature: Feature; deduction: number }[];
+}) => {
+	for (const { feature, deduction } of featureDeductions) {
+		const featureCusEnts = cusEnts.filter(
+			(customerEntitlement) =>
+				customerEntitlement.entitlement.internal_feature_id ===
+				feature.internal_id,
+		);
+
+		// CONSTRAINT 1: Insufficient balance without usage_allowed
+		const totalBalance = featureCusEnts.reduce(
+			(sum, customerEntitlement) =>
+				new Decimal(sum).add(customerEntitlement.balance || 0).toNumber(),
+			0,
+		);
+		const hasUsageAllowed = featureCusEnts.some(
+			(customerEntitlement) => customerEntitlement.usage_allowed,
+		);
+
+		if (totalBalance < deduction && !hasUsageAllowed) {
+			throw new RecaseError({
+				message: `Insufficient balance for feature ${feature.id}. Available: ${totalBalance}, Required: ${deduction}`,
+				code: ErrCode.InsufficientBalance,
+				statusCode: StatusCodes.BAD_REQUEST,
+				data: {
+					feature_id: feature.id,
+					available: totalBalance,
+					required: deduction,
+				},
+			});
+		}
+
+		// CONSTRAINT 2: Usage limit exceeded for customer entitlements with usage_allowed
+		const featureCusEntsWithUsageAllowed = featureCusEnts.filter(
+			(customerEntitlement) => customerEntitlement.usage_allowed,
+		);
+
+		const totalRemainingLimit = featureCusEntsWithUsageAllowed.reduce(
+			(sum, cusEnt) => {
+				const usageLimit = cusEnt.entitlement.usage_limit;
+				if (!usageLimit) {
+					return sum;
+				}
+
+				const allowance = new Decimal(cusEnt.entitlement.allowance || 0);
+				const currentBalance = new Decimal(cusEnt.balance || 0);
+				const currentUsed = allowance.sub(currentBalance);
+				const remainingLimit = new Decimal(usageLimit).sub(currentUsed);
+
+				return new Decimal(sum).add(Decimal.max(0, remainingLimit)).toNumber();
+			},
+			0,
+		);
+
+		if (
+			featureCusEntsWithUsageAllowed.length > 0 &&
+			deduction > totalRemainingLimit
+		) {
+			throw new RecaseError({
+				message: `Usage limit exceeded for feature ${feature.id}. Total remaining capacity: ${totalRemainingLimit}, Requested: ${deduction}`,
+				code: ErrCode.InsufficientBalance,
+				statusCode: StatusCodes.BAD_REQUEST,
+				data: {
+					feature_id: feature.id,
+					total_remaining_capacity: totalRemainingLimit,
+					requested: deduction,
+				},
+			});
+		}
+	}
+};
+
 const logUsageUpdate = ({
 	customer,
 	features,
@@ -141,7 +226,7 @@ const logUsageUpdate = ({
 				if (cusEnt.entitlement.allowance_type === AllowanceType.Unlimited) {
 					balanceStr = "Unlimited";
 				}
-			} catch (error) {
+			} catch (_error) {
 				balanceStr = "failed_to_get_balance";
 			}
 
@@ -224,6 +309,8 @@ export const updateUsage = async ({
 		console.log("   - No customer entitlements or features found");
 		return;
 	}
+
+	validateDeductionPossible({ cusEnts, featureDeductions });
 
 	const originalCusEnts = structuredClone(cusEnts);
 	for (const obj of featureDeductions) {
