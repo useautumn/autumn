@@ -13,6 +13,7 @@ import {
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";
+import { useOnboardingStore } from "../../store/useOnboardingStore";
 import { getCodeSnippets } from "../../utils/completionStepCode";
 
 type CodeLanguage = "react" | "nodejs" | "response";
@@ -125,13 +126,18 @@ export const QuickStartCodeGroup = ({
 }) => {
 	const { product } = useProductStore();
 	const { features } = useFeaturesQuery();
+	const lastUsedProductId = useOnboardingStore(
+		(state) => state.lastUsedProductId,
+	);
 
 	// Use the feature that was actually used (if available), otherwise fallback to first feature
 	const firstFeatureItem = product?.items?.find(
 		(item: ProductItem) => item.feature_id,
 	);
 	const featureId = usedFeatureId || firstFeatureItem?.feature_id || undefined;
-	const productId = product?.id || undefined;
+
+	// Use lastUsedProductId (from pricing card clicks) or fallback to current product
+	const productId = lastUsedProductId || product?.id || undefined;
 
 	// Get the actual feature name from features list
 	const featureName = features.find((f) => f.id === featureId)?.name;

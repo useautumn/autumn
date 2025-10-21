@@ -4,6 +4,7 @@ import type { Product } from "autumn-js";
 import { useCustomer } from "autumn-js/react";
 import { useOrg } from "@/hooks/common/useOrg";
 import OnboardingCheckoutDialog from "@/views/onboarding3/OnboardingCheckoutDialog";
+import { useOnboardingStore } from "@/views/onboarding3/store/useOnboardingStore";
 import { PlanCardPreview } from "./PlanCardPreview";
 
 interface PricingTableProps {
@@ -22,12 +23,20 @@ export default function PricingTablePreview({
 			refreshInterval: 0,
 		},
 	});
+	const setLastUsedProductId = useOnboardingStore(
+		(state) => state.setLastUsedProductId,
+	);
 
 	if (!products || products.length === 0) {
 		return null;
 	}
 
 	const handleSubscribe = async (product: ProductV2) => {
+		// Track the product ID that was clicked
+		if (product.id) {
+			setLastUsedProductId(product.id);
+		}
+
 		if (product.id) {
 			try {
 				await checkout({
