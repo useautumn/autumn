@@ -27,7 +27,13 @@ export function EditPlanFeatureSheet({
 	const isFeaturePrice = isFeaturePriceItem(item);
 
 	return (
-		<>
+		<div
+			className={
+				feature?.type === FeatureType.Boolean
+					? "overflow-y-hidden min-h-full"
+					: ""
+			}
+		>
 			{!isOnboarding && (
 				<SheetHeader
 					title={`Configure ${feature?.name}`}
@@ -60,7 +66,7 @@ export function EditPlanFeatureSheet({
 			)}
 
 			{feature?.type === FeatureType.Boolean && (
-				<div className="p-4 flex flex-col gap-2 min-h-full items-center justify-center">
+				<div className="p-4 flex flex-col gap-2 min-h-full items-center justify-center overflow-y-hidden">
 					<h1 className="text-sub">Nothing to do here...</h1>
 					<p className="text-body-secondary max-w-[75%]">
 						Boolean features are simply included in the
@@ -68,6 +74,6 @@ export function EditPlanFeatureSheet({
 					</p>
 				</div>
 			)}
-		</>
+		</div>
 	);
 }
