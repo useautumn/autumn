@@ -13,6 +13,8 @@ export type SheetType =
 interface SheetState {
 	// Current sheet type being displayed
 	type: SheetType;
+	// Previous sheet type (for animation coordination)
+	previousType: SheetType;
 	// Item ID being edited (e.g., "item-0", "item-1", product.id, or "new"/"select")
 	itemId: string | null;
 
@@ -25,6 +27,7 @@ interface SheetState {
 // Initial state
 const initialState = {
 	type: null as SheetType,
+	previousType: null as SheetType,
 	itemId: null as string | null,
 };
 
@@ -33,12 +36,12 @@ export const useSheetStore = create<SheetState>((set) => ({
 
 	// Set the sheet type and optional itemId
 	setSheet: ({ type, itemId = null }) => {
-		set({ type, itemId });
+		set((state) => ({ previousType: state.type, type, itemId }));
 	},
 
 	// Close the sheet
 	closeSheet: () => {
-		set({ type: null, itemId: null });
+		set((state) => ({ previousType: state.type, type: null, itemId: null }));
 	},
 
 	// Reset to initial state
