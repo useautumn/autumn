@@ -1,6 +1,7 @@
 import { type ProductItem, productV2ToFeatureItems } from "@autumn/shared";
 import { AnimatePresence, motion } from "motion/react";
 import { SheetContainer } from "@/components/v2/sheets/InlineSheet";
+import { SheetCloseButton } from "@/components/v2/sheets/SheetCloseButton";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { getItemId } from "@/utils/product/productItemUtils";
@@ -17,6 +18,7 @@ export const ProductSheets = () => {
 	const setProduct = useProductStore((s) => s.setProduct);
 	const sheetType = useSheetStore((s) => s.type);
 	const itemId = useSheetStore((s) => s.itemId);
+	const closeSheet = useSheetStore((s) => s.closeSheet);
 
 	const featureItems = productV2ToFeatureItems({ items: product.items });
 
@@ -84,7 +86,8 @@ export const ProductSheets = () => {
 					transition={SHEET_ANIMATION}
 					className="h-full w-[28rem] absolute right-0 top-0 bottom-0"
 				>
-					<SheetContainer className="w-full bg-card z-50 border-l shadow-sm h-full">
+					<SheetContainer className="w-full bg-card z-50 border-l shadow-sm h-full relative">
+						<SheetCloseButton onClose={closeSheet} />
 						{renderSheet()}
 					</SheetContainer>
 				</motion.div>
