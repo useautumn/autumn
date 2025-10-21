@@ -1,8 +1,13 @@
-import { pgTable, text, foreignKey, boolean } from "drizzle-orm/pg-core";
-import { numeric } from "drizzle-orm/pg-core";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
+import {
+	boolean,
+	foreignKey,
+	numeric,
+	pgTable,
+	text,
+} from "drizzle-orm/pg-core";
 import { organizations } from "../../orgModels/orgTable.js";
 import { rewards } from "../rewardModels/rewardTable.js";
-import { InferSelectModel, InferInsertModel } from "drizzle-orm";
 
 export const rewardPrograms = pgTable(
 	"reward_programs",

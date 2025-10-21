@@ -48,7 +48,9 @@ export * from "./products/planFeature/previousVersions/apiProductItem.js";
 export * from "./products/planOpModels.js";
 export * from "./products/previousVersions/apiProduct.js";
 export * from "./products/productOpModels.js";
-export * from "./products/productsOpenApi.js";
+
+// NOTE: productsOpenApi.js is NOT exported here - it's only imported by openapi.ts for spec generation
+
 // Referrals
 export * from "./referrals/apiReferralCode.js";
 export * from "./referrals/referralOpModels.js";

@@ -1,14 +1,14 @@
 import {
+	foreignKey,
+	index,
+	jsonb,
+	numeric,
 	pgTable,
 	text,
-	numeric,
-	jsonb,
-	foreignKey,
 	unique,
-	index,
 } from "drizzle-orm/pg-core";
-import { organizations } from "../orgModels/orgTable.js";
 import { collatePgColumn, sqlNow } from "../../db/utils.js";
+import { organizations } from "../orgModels/orgTable.js";
 
 export const apiKeys = pgTable(
 	"api_keys",

@@ -1,15 +1,14 @@
 import {
-	pgTable,
+	bigint,
 	boolean,
 	foreignKey,
-	text,
-	bigint,
 	index,
+	pgTable,
+	text,
 } from "drizzle-orm/pg-core";
-
+import { createInsertSchema } from "drizzle-zod";
 import { collatePgColumn } from "../../../db/utils.js";
 import { customerEntitlements } from "./cusEntTable.js";
-import { createInsertSchema } from "drizzle-zod";
 
 export const replaceables = pgTable(
 	"replaceables",

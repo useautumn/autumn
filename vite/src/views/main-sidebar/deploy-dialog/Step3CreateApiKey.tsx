@@ -49,7 +49,7 @@ export const Step3CreateApiKey = () => {
 				className="gap-0"
 			/>
 
-			<div className="pl-[32px] flex  gap-3 min-h-[70px]">
+			<div className="pl-[32px] flex flex-col gap-3 min-h-[70px]">
 				<AnimatePresence mode="wait" initial={false}>
 					{apiKey ? (
 						<motion.div

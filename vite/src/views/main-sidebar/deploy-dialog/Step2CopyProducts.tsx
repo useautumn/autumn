@@ -38,7 +38,7 @@ export const Step2CopyProducts = () => {
 				/>
 			</div>
 
-			<div className="pl-[32px] flex gap-2">
+			<div className="pl-[32px] flex flex-col gap-2">
 				{isCopied ? (
 					<IconButton
 						variant="secondary"

@@ -1,5 +1,5 @@
-import { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
-import { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
+import type { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
+import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
 import { nullish } from "../utils.js";
 
 export const productToCusProduct = ({
@@ -22,15 +22,17 @@ export const productToCusProduct = ({
 	}
 
 	return cusProducts.find((cusProduct) => {
-		let prodIdMatch = cusProduct.product.id === productId;
+		const prodIdMatch = cusProduct.product.id === productId;
 
-		let entityMatch = internalEntityId
+		const entityMatch = internalEntityId
 			? cusProduct.internal_entity_id === internalEntityId
 			: nullish(cusProduct.internal_entity_id);
 
-		let versionMatch = version ? cusProduct.product.version === version : true;
+		const versionMatch = version
+			? cusProduct.product.version === version
+			: true;
 
-		let statusMatch = inStatuses
+		const statusMatch = inStatuses
 			? inStatuses.includes(cusProduct.status)
 			: true;
 

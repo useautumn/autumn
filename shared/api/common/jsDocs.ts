@@ -1,5 +1,9 @@
 import { ExtAttachBodySchema, ExtCheckoutParamsSchema } from "@api/models.js";
-import { createJSDocDescription, docLink, example } from "@api/utils/openApiHelpers.js";
+import {
+	createJSDocDescription,
+	docLink,
+	example,
+} from "@api/utils/openApiHelpers.js";
 import { CheckParamsSchema } from "../core/checkModels.js";
 import {
 	BillingPortalParamsSchema,
@@ -104,8 +108,7 @@ export const trackJsDoc = createJSDocDescription({
 });
 
 export const cancelJsDoc = createJSDocDescription({
-	description:
-		"Cancel a customer's subscription to a product.",
+	description: "Cancel a customer's subscription to a product.",
 	whenToUse:
 		"Use this when a customer wants to stop their subscription. Supports immediate or end-of-period cancellation.",
 	body: CancelBodySchema,

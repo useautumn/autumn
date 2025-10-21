@@ -90,70 +90,69 @@ export const CheckProductPreviewOptionSchema = z.object({
 		}),
 });
 
-export const CheckProductPreviewSchema = z
-	.object({
-		scenario: ProductScenarioSchema,
-		product_id: z.string().meta({
-			description: "The ID of the product",
-			example: "pro_plan",
-		}),
-		product_name: z.string().meta({
-			description: "The name of the product",
-			example: "Pro Plan",
-		}),
-		recurring: z.boolean().meta({
-			description: "Whether the product is recurring",
-			example: true,
-		}),
-		error_on_attach: z.boolean().optional().meta({
-			description: "Whether there would be an error attaching this product",
-			example: false,
-		}),
-		next_cycle_at: z.number().optional().meta({
-			description: "Timestamp of the next billing cycle",
-			example: 1717000000000,
-		}),
-		current_product_name: z.string().optional().meta({
-			description: "Name of the customer's current product",
-			example: "Basic Plan",
-		}),
-		items: z.array(CheckProductPreviewItemSchema).optional().meta({
-			description: "Individual items in the product",
-		}),
-		options: z.array(CheckProductPreviewOptionSchema).optional().meta({
-			description: "Feature options available in the product",
-		}),
-		due_today: z
-			.object({
-				price: z.number().meta({
-					description: "Amount due today",
-					example: 10,
-				}),
-				currency: z.string().meta({
-					description: "Currency code",
-					example: "usd",
-				}),
-			})
-			.optional()
-			.meta({
-				description: "Payment due today",
+export const CheckProductPreviewSchema = z.object({
+	scenario: ProductScenarioSchema,
+	product_id: z.string().meta({
+		description: "The ID of the product",
+		example: "pro_plan",
+	}),
+	product_name: z.string().meta({
+		description: "The name of the product",
+		example: "Pro Plan",
+	}),
+	recurring: z.boolean().meta({
+		description: "Whether the product is recurring",
+		example: true,
+	}),
+	error_on_attach: z.boolean().optional().meta({
+		description: "Whether there would be an error attaching this product",
+		example: false,
+	}),
+	next_cycle_at: z.number().optional().meta({
+		description: "Timestamp of the next billing cycle",
+		example: 1717000000000,
+	}),
+	current_product_name: z.string().optional().meta({
+		description: "Name of the customer's current product",
+		example: "Basic Plan",
+	}),
+	items: z.array(CheckProductPreviewItemSchema).optional().meta({
+		description: "Individual items in the product",
+	}),
+	options: z.array(CheckProductPreviewOptionSchema).optional().meta({
+		description: "Feature options available in the product",
+	}),
+	due_today: z
+		.object({
+			price: z.number().meta({
+				description: "Amount due today",
+				example: 10,
 			}),
-		due_next_cycle: z
-			.object({
-				price: z.number().meta({
-					description: "Amount due next cycle",
-					example: 50,
-				}),
-				currency: z.string().meta({
-					description: "Currency code",
-					example: "usd",
-				}),
-			})
-			.optional()
-			.meta({
-				description: "Payment due in the next cycle",
+			currency: z.string().meta({
+				description: "Currency code",
+				example: "usd",
 			}),
-	});
+		})
+		.optional()
+		.meta({
+			description: "Payment due today",
+		}),
+	due_next_cycle: z
+		.object({
+			price: z.number().meta({
+				description: "Amount due next cycle",
+				example: 50,
+			}),
+			currency: z.string().meta({
+				description: "Currency code",
+				example: "usd",
+			}),
+		})
+		.optional()
+		.meta({
+			description: "Payment due in the next cycle",
+		}),
+});
 
 export const CheckProductResultSchema = z.object({
 	allowed: z.boolean().meta({

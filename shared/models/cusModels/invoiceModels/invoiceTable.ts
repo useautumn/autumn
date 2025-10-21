@@ -1,9 +1,9 @@
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import { foreignKey, jsonb, numeric, pgTable, text } from "drizzle-orm/pg-core";
 import { collatePgColumn, sqlNow } from "../../../db/utils.js";
-import { InvoiceDiscount, InvoiceItem } from "./invoiceModels.js";
 import { customers } from "../cusTable.js";
 import { entities } from "../entityModels/entityTable.js";
-import { InferSelectModel, InferInsertModel } from "drizzle-orm";
+import type { InvoiceDiscount, InvoiceItem } from "./invoiceModels.js";
 
 export const invoices = pgTable(
 	"invoices",

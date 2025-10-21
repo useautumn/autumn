@@ -1,21 +1,20 @@
+import { sql } from "drizzle-orm";
 import {
 	boolean,
 	foreignKey,
-	unique,
-	pgTable,
-	numeric,
-	jsonb,
-	text,
 	index,
+	jsonb,
+	numeric,
+	pgTable,
+	text,
+	unique,
 } from "drizzle-orm/pg-core";
-
+import { collatePgColumn } from "../../../db/utils.js";
 import { entitlements } from "../entModels/entTable.js";
 import { products } from "../productTable.js";
-import { FixedPriceConfig } from "./priceConfig/fixedPriceConfig.js";
-import { UsagePriceConfig } from "./priceConfig/usagePriceConfig.js";
-import { sql } from "drizzle-orm";
-import { collatePgColumn } from "../../../db/utils.js";
-import { ProrationConfig } from "./priceModels.js";
+import type { FixedPriceConfig } from "./priceConfig/fixedPriceConfig.js";
+import type { UsagePriceConfig } from "./priceConfig/usagePriceConfig.js";
+import type { ProrationConfig } from "./priceModels.js";
 
 export const prices = pgTable(
 	"prices",

@@ -1,9 +1,9 @@
 import {
-	text,
-	foreignKey,
 	boolean,
-	pgTable,
+	foreignKey,
 	numeric,
+	pgTable,
+	text,
 } from "drizzle-orm/pg-core";
 import { customers } from "../../cusModels/cusTable.js";
 import { rewardPrograms } from "../rewardProgramModels/rewardProgramTable.js";

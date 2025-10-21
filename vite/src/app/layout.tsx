@@ -151,7 +151,7 @@ const MainContent = () => {
 									variant="default"
 									className="h-6 border border-t8 bg-transparent text-t8 hover:bg-t8 hover:text-white font-mono rounded-xs ml-auto absolute right-4"
 									onClick={() => {
-										navigateTo("/onboarding3", navigate, AppEnv.Sandbox);
+										navigateTo("/onboarding", navigate, AppEnv.Sandbox);
 									}}
 								>
 									Onboarding

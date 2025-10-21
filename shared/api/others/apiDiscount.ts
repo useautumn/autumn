@@ -58,7 +58,14 @@ export const ApiDiscountSchema = z.object({
 export const ApiCusRewardsSchema = z.object({
 	discounts: z.array(ApiDiscountSchema).meta({
 		description: "Array of active discounts applied to the customer",
-		example: [{ id: "disc_123456", name: "SUMMER20", type: "percentage", discount_value: 20 }],
+		example: [
+			{
+				id: "disc_123456",
+				name: "SUMMER20",
+				type: "percentage",
+				discount_value: 20,
+			},
+		],
 	}),
 });
 

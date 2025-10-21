@@ -91,7 +91,7 @@ export const Step1ConnectStripe = ({
 				/>
 			</div>
 
-			<div className="pl-[32px] flex gap-2">
+			<div className="pl-[32px] flex flex-col gap-2">
 				{isStripeConnected ? (
 					<div className="flex items-center gap-2">
 						<IconButton

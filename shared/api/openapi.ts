@@ -79,7 +79,8 @@ const document = createDocument({
 			}),
 			ProductItem: ApiProductItemWithMeta.meta({
 				id: "ProductItem",
-				description: "Product item defining features and pricing within a product",
+				description:
+					"Product item defining features and pricing within a product",
 			}),
 			Feature: ApiFeatureWithMeta.meta({
 				id: "Feature",
