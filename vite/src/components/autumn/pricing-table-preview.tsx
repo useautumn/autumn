@@ -73,7 +73,7 @@ export default function PricingTablePreview({
 		} else if (productCount === 2) {
 			return "flex flex-col gap-6 max-w-2xl mx-auto px-4 sm:grid sm:grid-cols-2 sm:flex-none"; // Vertical on mobile, 2 columns on sm+
 		} else {
-			return "flex flex-col gap-6 max-w-7xl mx-auto px-4 sm:grid md:grid-cols-2 xl:grid-cols-3 sm:flex-none"; // Vertical on mobile, 2 columns on sm+, 3 on lg+
+			return "flex flex-col gap-6 max-w-7xl mx-auto px-4 sm:grid lg:grid-cols-2 2xl:grid-cols-3 sm:flex-none"; // Vertical on mobile, 2 columns on sm+, 3 on lg+
 		}
 	};
 

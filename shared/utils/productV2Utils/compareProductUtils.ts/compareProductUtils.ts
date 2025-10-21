@@ -190,6 +190,7 @@ export const productsAreSame = ({
 			item1: item,
 			item2: similarItem,
 			features,
+			logDifferences: false,
 		});
 
 		if (!same) {
