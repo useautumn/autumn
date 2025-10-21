@@ -2,7 +2,6 @@ import { UserIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AdminHover } from "@/components/general/AdminHover";
-import { Badge } from "@/components/v2/badges/Badge";
 import { IconBadge } from "@/components/v2/badges/IconBadge";
 import V2Breadcrumb from "@/components/v2/breadcrumb";
 import { Button } from "@/components/v2/buttons/Button";
@@ -16,7 +15,6 @@ import {
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { isOneOffProduct } from "@/utils/product/priceUtils";
-import { PlanTypeBadge } from "../../components/PlanTypeBadge";
 import { useMigrationsQuery } from "../../product/hooks/queries/useMigrationsQuery.tsx.tsx";
 import { useProductCountsQuery } from "../../product/hooks/queries/useProductCountsQuery";
 import {
@@ -132,12 +130,12 @@ export const EditPlanHeader = () => {
 				<div className="flex flex-row justify-between items-center">
 					<div className="flex flex-row gap-2">
 						{/* {badgeType && <Badge variant="muted">{badgeType}</Badge>} */}
-						{product.is_default && <Badge variant="muted">Default</Badge>}
-						{product.is_add_on && <Badge variant="muted">Add-on</Badge>}
+						{/* {product.is_default && <Badge variant="muted">Default</Badge>}
+						{product.is_add_on && <Badge variant="muted">Add-on</Badge>} */}
 						<IconBadge variant="muted" icon={<UserIcon />}>
 							{counts?.active || 0}
 						</IconBadge>
-						<PlanTypeBadge product={product} />
+						{/* <PlanTypeBadge product={product} /> */}
 					</div>
 
 					<div className="flex flex-row gap-2 items-center">
