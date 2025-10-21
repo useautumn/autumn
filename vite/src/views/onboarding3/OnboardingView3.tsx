@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router";
 import { SheetContainer } from "@/components/v2/sheets/InlineSheet";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { cn } from "@/lib/utils";
@@ -20,11 +22,14 @@ import { useOnboarding3QueryState } from "./hooks/useOnboarding3QueryState";
 import { useOnboardingFeatureSync } from "./hooks/useOnboardingFeatureSync";
 import { useOnboardingLogic } from "./hooks/useOnboardingLogic";
 import { useOnboardingProductSync } from "./hooks/useOnboardingProductSync";
+import { useSyncPlaygroundMode } from "./hooks/useSyncPlaygroundMode";
 import { OnboardingPreview } from "./OnboardingPreview";
 import { OnboardingStep } from "./utils/onboardingUtils";
 
 export default function OnboardingContent() {
 	const [connectStripeOpen, setConnectStripeOpen] = useState(false);
+	const [searchParams, setSearchParams] = useSearchParams();
+	const { mutate: refetchOrg } = useOrg();
 
 	// Get query data
 	const { isLoading: productsLoading } = useProductsQuery();
@@ -53,10 +58,25 @@ export default function OnboardingContent() {
 	// Initialize onboarding logic and store handlers
 	useOnboardingLogic();
 
+	// Sync playground mode with query params
+	useSyncPlaygroundMode();
+
 	// Track sign-up event on first mount
 	useEffect(() => {
 		trackSignUp();
 	}, []);
+
+	// Handle OAuth success redirect
+	useEffect(() => {
+		const success = searchParams.get("success");
+		if (success === "true") {
+			// Refetch org data to get updated stripe_connected status
+			refetchOrg();
+			// Clear the success param from URL
+			searchParams.delete("success");
+			setSearchParams(searchParams, { replace: true });
+		}
+	}, [searchParams, refetchOrg, setSearchParams]);
 
 	// Compute loading state
 	const isQueryLoading = productsLoading || featuresLoading;
@@ -82,7 +102,7 @@ export default function OnboardingContent() {
 					className={cn(
 						"relative w-full h-full flex bg-gray-medium [scrollbar-gutter:stable]",
 						step === OnboardingStep.Integration
-							? "overflow-y-auto"
+							? "overflow-y-auto bg-t13"
 							: "overflow-y-hidden",
 					)}
 				>

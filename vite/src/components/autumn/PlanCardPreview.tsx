@@ -5,7 +5,6 @@ import {
 	type ProductV2,
 	productV2ToFeatureItems,
 } from "@autumn/shared";
-import { useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
 import { Card, CardContent, CardHeader } from "@/components/v2/cards/Card";
 import { Separator } from "@/components/v2/separator";
@@ -19,6 +18,7 @@ interface PlanCardPreviewProps {
 	onButtonClick?: () => void;
 	recommended?: boolean;
 	disabled?: boolean;
+	loading?: boolean;
 }
 
 // Custom dot component
@@ -63,23 +63,12 @@ export const PlanCardPreview = ({
 	onButtonClick,
 	recommended = false,
 	disabled = false,
+	loading = false,
 }: PlanCardPreviewProps) => {
 	const productV3 = mapToProductV3({ product: product as ProductV2 });
 	const featureItems = productV2ToFeatureItems({
 		items: product.items as ProductItem[],
 	});
-
-	const [buttonLoading, setButtonLoading] = useState(false);
-	const handleButtonClick = async () => {
-		setButtonLoading(true);
-		try {
-			await onButtonClick?.();
-		} catch (error) {
-			console.error(error);
-		} finally {
-			setButtonLoading(false);
-		}
-	};
 
 	return (
 		<Card
@@ -140,9 +129,9 @@ export const PlanCardPreview = ({
 				<Button
 					variant={disabled ? "primary" : recommended ? "primary" : "secondary"}
 					className="w-full relative overflow-hidden group mt-auto disabled:opacity-100"
-					onClick={handleButtonClick}
+					onClick={onButtonClick}
 					disabled={disabled}
-					isLoading={buttonLoading}
+					isLoading={loading}
 				>
 					<div className="flex items-center justify-center gap-2 w-full transition-transform duration-300 group-hover:translate-y-[-130%]">
 						<span>{buttonText}</span>

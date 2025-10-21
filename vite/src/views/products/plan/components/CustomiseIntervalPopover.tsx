@@ -56,6 +56,9 @@ export const CustomiseIntervalPopover = ({
 						value={intervalCount}
 						onChange={(e) => setIntervalCount(e.target.value)}
 						onKeyDown={(e) => {
+							if (e.key === "-" || e.key === "Minus") {
+								e.preventDefault();
+							}
 							if (e.key === "Enter") {
 								handleSave();
 							}

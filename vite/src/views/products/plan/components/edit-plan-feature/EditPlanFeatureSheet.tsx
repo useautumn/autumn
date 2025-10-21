@@ -27,7 +27,13 @@ export function EditPlanFeatureSheet({
 	const isFeaturePrice = isFeaturePriceItem(item);
 
 	return (
-		<>
+		<div
+			className={
+				feature?.type === FeatureType.Boolean
+					? "overflow-y-hidden min-h-full"
+					: ""
+			}
+		>
 			{!isOnboarding && (
 				<SheetHeader
 					title={`Configure ${feature?.name}`}
@@ -68,6 +74,6 @@ export function EditPlanFeatureSheet({
 					</p>
 				</div>
 			)}
-		</>
+		</div>
 	);
 }
