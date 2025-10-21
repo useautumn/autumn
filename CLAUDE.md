@@ -52,6 +52,7 @@
     });
   }
   ```
+- This codebase uses Bun for all of its operations in `/server`, `/vite` and `/shared`. It uses Bun for the package management, Bun for the workspace management and Bun for the runtime. Prefer Bun over PNPM. If you ever want to trace a package dependency tree, run `bun why <package name>` which will tell you why a certain package was installed and by who.
 
 ## Bad example
 / root

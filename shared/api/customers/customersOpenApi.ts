@@ -6,11 +6,12 @@ import {
 	CreateCustomerQuerySchema,
 	GetCustomerQuerySchema,
 	ListCustomersResponseSchema,
+	UpdateBalancesParamsSchema,
 	UpdateCustomerParamsSchema,
 } from "./customerOpModels.js";
 
 // Register schema with .meta() for OpenAPI spec generation
-const ApiCustomerWithMeta = ApiCustomerSchema.meta({
+export const ApiCustomerWithMeta = ApiCustomerSchema.meta({
 	id: "Customer",
 	description: "Customer object returned by the API",
 });
@@ -109,6 +110,32 @@ export const customerOps = {
 						"application/json": {
 							schema: SuccessResponseSchema,
 						},
+					},
+				},
+			},
+		},
+	},
+	"/customers/{customer_id}/balances": {
+		post: {
+			summary: "Update Feature Balances",
+			description:
+				"Update or set feature balances for a customer. Can set specific balance values or make features unlimited.",
+			tags: ["customers"],
+			requestParams: {
+				path: z.object({
+					customer_id: z.string(),
+				}),
+			},
+			requestBody: {
+				content: {
+					"application/json": { schema: UpdateBalancesParamsSchema },
+				},
+			},
+			responses: {
+				"200": {
+					description: "200 OK",
+					content: {
+						"application/json": { schema: SuccessResponseSchema },
 					},
 				},
 			},

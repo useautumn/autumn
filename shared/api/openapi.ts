@@ -8,10 +8,16 @@ import { createDocument } from "zod-openapi";
 import { CustomerDataSchema } from "./common/customerData.js";
 import { EntityDataSchema } from "./common/entityData.js";
 import { coreOps } from "./core/coreOpenApi.js";
-import { customerOps } from "./customers/customersOpenApi.js";
-import { entityOps } from "./entities/entitiesOpenApi.js";
-import { featureOps } from "./features/featuresOpenApi.js";
-import { productOps } from "./products/productsOpenApi.js";
+import { ApiCusFeatureSchema } from "./customers/cusFeatures/apiCusFeature.js";
+import { ApiCusProductSchema } from "./customers/cusProducts/apiCusProduct.js";
+import {
+	ApiCustomerWithMeta,
+	customerOps,
+} from "./customers/customersOpenApi.js";
+import { ApiEntityWithMeta, entityOps } from "./entities/entitiesOpenApi.js";
+import { ApiFeatureWithMeta, featureOps } from "./features/featuresOpenApi.js";
+import { ApiProductItemWithMeta } from "./products/apiProductItem.js";
+import { ApiProductWithMeta, productOps } from "./products/productsOpenApi.js";
 import { referralOps } from "./referrals/referralsOpenApi.js";
 
 const API_VERSION = "1.2.0";
@@ -37,7 +43,7 @@ const document = createDocument({
 	],
 	components: {
 		schemas: {
-			autumnError: z
+			AutumnError: z
 				.object({
 					message: z.string(),
 					code: z.string(),
@@ -47,14 +53,24 @@ const document = createDocument({
 					id: "AutumnError",
 					description: "An error that occurred in the API",
 				}),
-			customerData: CustomerDataSchema.meta({
+			CustomerData: CustomerDataSchema.meta({
 				id: "CustomerData",
 				description: "Customer data for creating or updating a customer",
 			}),
-			entityData: EntityDataSchema.meta({
+			EntityData: EntityDataSchema.meta({
 				id: "EntityData",
 				description: "Entity data for creating an entity",
 			}),
+			Customer: ApiCustomerWithMeta,
+			CustomerProduct: ApiCusProductSchema,
+			CustomerFeature: ApiCusFeatureSchema.meta({
+				id: "CustomerFeature",
+				description: "Customer feature object returned by the API",
+			}),
+			Product: ApiProductWithMeta,
+			ProductItem: ApiProductItemWithMeta,
+			Feature: ApiFeatureWithMeta,
+			Entity: ApiEntityWithMeta,
 		},
 		securitySchemes: {
 			secretKey: {
@@ -87,7 +103,7 @@ if (process.env.NODE_ENV !== "production") {
 
 		if (process.env.STAINLESS_PATH) {
 			writeFileSync(
-				`${process.env.STAINLESS_PATH}/openapi.yml`,
+				`${process.env.STAINLESS_PATH.replace("\\ ", " ")}/openapi.yml`,
 				yamlContent,
 				"utf8",
 			);
@@ -97,11 +113,12 @@ if (process.env.NODE_ENV !== "production") {
 			);
 
 			// Run the run.sh script if it exists
-			const runScriptPath = `${process.env.STAINLESS_PATH}/run.sh`;
-			if (existsSync(runScriptPath)) {
+			const runScriptPath = `${process.env.STAINLESS_PATH.replace("\\ ", " ")}/run.sh`;
+			const runStainless = !process.argv.includes("--noEmit");
+			if (existsSync(runScriptPath) && runStainless) {
 				try {
 					console.log("Running Stainless generation script...");
-					execSync(`chmod +x ${runScriptPath} && ${runScriptPath}`, {
+					execSync(`chmod +x "${runScriptPath}" && "${runScriptPath}"`, {
 						stdio: "inherit",
 						cwd: process.env.STAINLESS_PATH,
 					});
@@ -109,7 +126,10 @@ if (process.env.NODE_ENV !== "production") {
 				} catch (error) {
 					console.error("Failed to run Stainless generation script:", error);
 				}
-			}
+			} else
+				console.log(
+					`\n${!runStainless ? "Stainless generation skipped due to --noEmit flag" : "Stainless generation script not found"}`,
+				);
 		}
 	} catch (error) {
 		console.error("Failed to export OpenAPI document:", error);
