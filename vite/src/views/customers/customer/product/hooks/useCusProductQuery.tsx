@@ -38,9 +38,6 @@ export const useCusProductQuery = () => {
 		};
 
 		try {
-			console.log(
-				`Fetching customer product ${product_id} with version ${stableStates.version}`,
-			);
 			const { data } = await axiosInstance.get(
 				`/customers/${customer_id}/product/${product_id}`,
 				{ params: queryParams },
@@ -75,6 +72,8 @@ export const useCusProductQuery = () => {
 
 	const finalData = data || cachedCusProduct;
 	const isLoadingWithCache = cachedCusProduct ? false : isLoading;
+	// const finalData = data;
+	// const isLoadingWithCache = isLoading;
 
 	return {
 		cusProduct: finalData?.cusProduct,

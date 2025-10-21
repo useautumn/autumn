@@ -17,7 +17,7 @@ export const CreateProductV2ParamsSchema = z.object({
 	is_add_on: z.boolean().default(false),
 	is_default: z.boolean().default(false),
 	version: z.number().optional(),
-	group: z.string().default(""),
+	group: z.string().nullable().default(""),
 
 	items: z.array(CreateProductItemParamsSchema).optional(),
 	free_trial: CreateFreeTrialSchema.nullish().default(null),
@@ -35,7 +35,7 @@ export const UpdateProductV2ParamsSchema = z.object({
 	is_add_on: z.boolean().optional(),
 	is_default: z.boolean().optional(),
 	version: z.number().optional(),
-	group: z.string().nullish(),
+	group: z.string().nonempty().nullable().optional(),
 	archived: z.boolean().optional(),
 
 	items: z.array(CreateProductItemParamsSchema).optional(),

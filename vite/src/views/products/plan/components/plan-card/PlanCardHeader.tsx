@@ -1,18 +1,16 @@
 import { mapToProductV3 } from "@autumn/shared";
-import { CrosshairSimpleIcon } from "@phosphor-icons/react";
-import { useNavigate } from "react-router";
 import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
-import { IconButton } from "@/components/v2/buttons/IconButton";
 import { CardHeader } from "@/components/v2/cards/Card";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useIsEditingPlan, useSheetStore } from "@/hooks/stores/useSheetStore";
-import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
+import { BasePriceDisplay } from "./BasePriceDisplay";
 import { PlanCardToolbar } from "./PlanCardToolbar";
 
 const MAX_PLAN_NAME_LENGTH = 20;
 
 export const PlanCardHeader = () => {
-	const navigate = useNavigate();
+	const { org } = useOrg();
 	const product = useProductStore((s) => s.product);
 	const setSheet = useSheetStore((s) => s.setSheet);
 	const isPlanBeingEdited = useIsEditingPlan();
@@ -47,7 +45,8 @@ export const PlanCardHeader = () => {
 				</span>
 			)}
 
-			<IconButton
+			<BasePriceDisplay />
+			{/* <IconButton
 				variant="secondary"
 				icon={<CrosshairSimpleIcon />}
 				onClick={() => {
@@ -56,17 +55,8 @@ export const PlanCardHeader = () => {
 				disabled={true}
 				className="mt-2 !opacity-100 pointer-events-none"
 			>
-				{productV3.price?.amount ? (
-					<span className="text-sm font-medium text-t2">
-						${productV3.price.amount}/
-						{keyToTitle(productV3.price.interval ?? "once", {
-							exclusionMap: { one_off: "once" },
-						}).toLowerCase()}
-					</span>
-				) : (
-					<span className="text-t4 text-sm">No price set</span>
-				)}
-			</IconButton>
+				{renderBasePrice()}
+			</IconButton> */}
 		</CardHeader>
 	);
 };

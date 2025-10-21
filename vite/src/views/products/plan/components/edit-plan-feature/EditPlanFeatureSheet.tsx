@@ -66,7 +66,7 @@ export function EditPlanFeatureSheet({
 			)}
 
 			{feature?.type === FeatureType.Boolean && (
-				<div className="p-4 flex flex-col gap-2 min-h-full items-center justify-center overflow-y-hidden">
+				<div className="p-4 flex flex-col gap-2 h-full items-center justify-center">
 					<h1 className="text-sub">Nothing to do here...</h1>
 					<p className="text-body-secondary max-w-[75%]">
 						Boolean features are simply included in the

@@ -28,6 +28,7 @@ export const getAttachParams = async ({
 	});
 
 	const entityId = attachBody.entity_id;
+
 	const internalEntityId = entityId ? customer.entity?.internal_id : undefined;
 	const { stripeCli, stripeCus, paymentMethod, now } = stripeVars;
 

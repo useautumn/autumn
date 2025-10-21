@@ -177,6 +177,7 @@ export const handleUpgradeFlow = async ({
 			updates: {
 				subscription_ids: canceled ? undefined : [],
 				status: CusProductStatus.Expired,
+				ended_at: Date.now(),
 			},
 		});
 
@@ -229,8 +230,6 @@ export const handleUpgradeFlow = async ({
 	}
 
 	if (res) {
-		
-
 		if (req.apiVersion.gte(ApiVersion.V1_1)) {
 			res.status(200).json(
 				AttachResultSchema.parse({

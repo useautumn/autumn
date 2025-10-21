@@ -7,7 +7,8 @@
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js"
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
 		}
 	},
 	"author": "Recase Inc.",
@@ -29,7 +30,6 @@
 		"drizzle-kit": "^0.31.1",
 		"drizzle-orm": "^0.43.1",
 		"drizzle-zod": "^0.8.2",
-		"stripe": "^18.4.0",
 		"yaml": "^2.8.1",
 		"zod-openapi": "^5.4.1"
 	},

@@ -15,7 +15,7 @@ export const DEFAULT_PRODUCT: ProductV2 = {
 	is_add_on: false,
 	is_default: false,
 	version: 1,
-	group: "",
+	group: null,
 	env: AppEnv.Sandbox,
 	internal_id: "",
 };
