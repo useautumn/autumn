@@ -76,6 +76,8 @@ const init = async () => {
 	const wildcardPatterns = [
 		/^https:\/\/.*\.useautumn\.com$/,
 		/^https:\/\/.*\.alphalog\.ai$/,
+		/^https:\/\/.*\.alphalog\.ai$/,
+		/^chrome-extension:\/\/.*/,
 	];
 
 	app.use(
