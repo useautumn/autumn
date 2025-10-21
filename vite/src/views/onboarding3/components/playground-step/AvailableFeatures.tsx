@@ -1,6 +1,6 @@
 import { FeatureType } from "@autumn/shared";
 import { ArrowRightIcon } from "@phosphor-icons/react";
-import { useCustomer } from "autumn-js/react";
+import { PaywallDialog, useCustomer } from "autumn-js/react";
 import { useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
 import { Input } from "@/components/v2/inputs/Input";
@@ -104,11 +104,11 @@ export const AvailableFeatures = ({
 									const featureId = customer?.features[x].id;
 
 									// Check the feature access
-									const { data: checkResponse, error: checkError } =
-										await check({
-											featureId: featureId,
-											requiredBalance: value,
-										});
+									const { data: checkResponse, error: checkError } = check({
+										featureId: featureId,
+										requiredBalance: value,
+										dialog: PaywallDialog,
+									});
 
 									if (!checkError && checkResponse && onCheckSuccess) {
 										onCheckSuccess(checkResponse);
@@ -117,6 +117,8 @@ export const AvailableFeatures = ({
 									if (onFeatureUsed && featureId !== undefined) {
 										onFeatureUsed(featureId);
 									}
+
+									if (!checkResponse?.allowed) return;
 
 									// Track the usage
 									const { data, error } = await track({
@@ -135,8 +137,8 @@ export const AvailableFeatures = ({
 						))
 				) : (
 					<span className="text-sm text-muted-foreground">
-						Your current plan doesn't have any features. Try purchasing a
-						plan in the preview first.
+						Your current plan doesn't have any features. Try purchasing a plan
+						in the preview first.
 					</span>
 				)}
 			</div>

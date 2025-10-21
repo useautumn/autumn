@@ -152,10 +152,7 @@ export const QuickStartCodeGroup = ({
 					snippets={snippets.track}
 					trackResponse={trackResponse}
 				/>
-				<CodeSnippetSection
-					title="Create checkout session"
-					snippets={snippets.checkout}
-				/>
+				<CodeSnippetSection title="Checkout" snippets={snippets.checkout} />
 				<CustomerSection />
 			</div>
 		</SheetSection>

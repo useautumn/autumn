@@ -11,10 +11,14 @@ export const getCodeSnippets = (
 		allowed: {
 			react: `import { useCustomer } from 'autumn-js/react';
 
-const { allowed } = useCustomer();
+const { check } = useCustomer();
 
 const handleCheckFeature = async () => {
-  if ( !allowed({ featureId: '${actualFeatureId}' }) ) {
+  const { data } = await check({
+    featureId: '${actualFeatureId}',
+    requiredQuantity: 1
+  });
+  if (!data?.allowed) {
     alert('Feature not allowed');
   }
 }`,
@@ -24,7 +28,7 @@ const autumn = new Autumn({
   apiKey: process.env.AUTUMN_API_KEY
 });
 
-const allowed = await autumn.check({
+const { data, error } = await autumn.check({
   customerId: 'cust_123',
   featureId: '${actualFeatureId}'
 });`,
