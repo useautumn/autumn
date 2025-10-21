@@ -9,6 +9,7 @@ import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
 import { toSuccessUrl } from "@/internal/orgs/orgUtils/convertOrgUtils.js";
+import { orgToCurrency } from "@/internal/orgs/orgUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { pricesContainRecurring } from "@/internal/products/prices/priceUtils.js";
@@ -124,7 +125,7 @@ export const handleCreateCheckout = async ({
 		line_items: items,
 		subscription_data: subscriptionData,
 		mode: isRecurring ? "subscription" : "payment",
-		currency: org.default_currency,
+		currency: orgToCurrency({ org }),
 		success_url: successUrl || toSuccessUrl({ org, env: customer.env }),
 
 		allow_promotion_codes: allowPromotionCodes,
@@ -166,11 +167,7 @@ export const handleCreateCheckout = async ({
 		);
 	} catch (error: any) {
 		const msg = error.message;
-		if (
-			msg &&
-			msg.includes("No valid payment method types") &&
-			!paymentMethodSet
-		) {
+		if (msg?.includes("No valid payment method types") && !paymentMethodSet) {
 			checkout = await stripeCli.checkout.sessions.create({
 				...sessionParams,
 				payment_method_types: ["card"],

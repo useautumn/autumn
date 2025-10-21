@@ -6,6 +6,7 @@ import {
 import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { getOptions } from "@/internal/api/entitled/checkUtils.js";
 import { getItemsForNewProduct } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
+import { orgToCurrency } from "@/internal/orgs/orgUtils.js";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import type { AttachParams } from "../../cusProducts/AttachParams.js";
 import {
@@ -66,7 +67,7 @@ export const getDowngradeProductPreview = async ({
 	// console.log("Items:", items);
 
 	return {
-		currency: attachParams.org.default_currency,
+		currency: orgToCurrency({ org: attachParams.org }),
 		due_next_cycle: {
 			line_items: items,
 			due_at: nextCycleAt,
