@@ -24,10 +24,12 @@ export const handleGetOAuthUrl = createRoute({
 		const frontendUrl = process.env.CLIENT_URL || "http://localhost:5173";
 
 		// Determine redirect URI based on context
-		const fromOnboarding = c.req.query("from_onboarding") === "true";
+		const fromOnboardingParam = c.req.query("from_onboarding");
+		const fromOnboarding =
+			fromOnboardingParam === "true" || fromOnboardingParam === true;
 		const redirectUri = fromOnboarding
-			? `${frontendUrl}/sandbox/onboarding3?step=playground&m=p`
-			: `${frontendUrl}/dev?tab=stripe`;
+			? `${frontendUrl}/sandbox/onboarding?step=playground&m=p` // Onboarding is always sandbox
+			: `${frontendUrl}${env === AppEnv.Sandbox ? "/sandbox" : ""}/dev?tab=stripe`;
 
 		const stateKey = await generateOAuthState({
 			organizationSlug: org.slug,

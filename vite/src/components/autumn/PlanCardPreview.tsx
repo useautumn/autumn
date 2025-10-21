@@ -19,6 +19,7 @@ interface PlanCardPreviewProps {
 	onButtonClick?: () => void;
 	recommended?: boolean;
 	disabled?: boolean;
+	loading?: boolean;
 }
 
 // Custom dot component
@@ -63,23 +64,12 @@ export const PlanCardPreview = ({
 	onButtonClick,
 	recommended = false,
 	disabled = false,
+	loading = false,
 }: PlanCardPreviewProps) => {
 	const productV3 = mapToProductV3({ product: product as ProductV2 });
 	const featureItems = productV2ToFeatureItems({
 		items: product.items as ProductItem[],
 	});
-
-	const [buttonLoading, setButtonLoading] = useState(false);
-	const handleButtonClick = async () => {
-		setButtonLoading(true);
-		try {
-			await onButtonClick?.();
-		} catch (error) {
-			console.error(error);
-		} finally {
-			setButtonLoading(false);
-		}
-	};
 
 	return (
 		<Card
@@ -142,6 +132,7 @@ export const PlanCardPreview = ({
 					className="w-full relative overflow-hidden group mt-auto disabled:opacity-100"
 					onClick={onButtonClick}
 					disabled={disabled}
+					isLoading={loading}
 				>
 					<div className="flex items-center justify-center gap-2 w-full transition-transform duration-300 group-hover:translate-y-[-130%]">
 						<span>{buttonText}</span>

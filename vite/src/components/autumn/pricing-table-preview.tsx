@@ -2,6 +2,7 @@ import type { ProductV2 } from "@autumn/shared";
 import { InfoIcon } from "@phosphor-icons/react";
 import type { Product } from "autumn-js";
 import { useCustomer } from "autumn-js/react";
+import { useState } from "react";
 import { useOrg } from "@/hooks/common/useOrg";
 import OnboardingCheckoutDialog from "@/views/onboarding3/OnboardingCheckoutDialog";
 import { PlanCardPreview } from "./PlanCardPreview";
@@ -22,19 +23,21 @@ export default function PricingTablePreview({
 			refreshInterval: 0,
 		},
 	});
+	const [loadingProductId, setLoadingProductId] = useState<string | null>(null);
 
 	if (!products || products.length === 0) {
 		return null;
 	}
 
 	const handleSubscribe = async (product: ProductV2) => {
-		// Check if Stripe is connected
-		if (!org?.stripe_connected) {
+		// Check if Stripe is connected (works for both OAuth and API key)
+		if (!org || org.stripe_connection === "default") {
 			setConnectStripeOpen(true);
 			return;
 		}
 
 		if (product.id) {
+			setLoadingProductId(product.id);
 			try {
 				await checkout({
 					productId: product.id,
@@ -44,6 +47,8 @@ export default function PricingTablePreview({
 				});
 			} catch (error) {
 				console.error("Checkout error:", error);
+			} finally {
+				setLoadingProductId(null);
 			}
 		} else if (product.display?.button_url) {
 			window.open(product.display?.button_url, "_blank");
@@ -138,6 +143,7 @@ export default function PricingTablePreview({
 								!product.properties?.updateable) ||
 							product.scenario === "scheduled"
 						}
+						loading={loadingProductId === product.id}
 					/>
 				))}
 			</div>
