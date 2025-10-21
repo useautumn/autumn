@@ -1,34 +1,33 @@
-import UpdateFeature from "./UpdateFeature";
-import CopyButton from "@/components/general/CopyButton";
-
+import { type Feature, FeatureType } from "@autumn/shared";
 import { useState } from "react";
+import { AdminHover } from "@/components/general/AdminHover";
+import CopyButton from "@/components/general/CopyButton";
+import { Item, Row } from "@/components/general/TableGrid";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import { Feature, FeatureType } from "@autumn/shared";
+import { useProductsQueryState } from "../../hooks/useProductsQueryState";
 import { FeatureRowToolbar } from "../feature-row-toolbar/FeatureRowToolbar";
 import { FeatureTypeBadge } from "./FeatureTypeBadge";
-import { Item, Row } from "@/components/general/TableGrid";
-import { AdminHover } from "@/components/general/AdminHover";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useProductsQueryState } from "../../hooks/useProductsQueryState";
+import UpdateFeatureSheet from "./UpdateFeatureSheet";
 
 export const FeaturesTable = () => {
 	const { features } = useFeaturesQuery();
 	const { queryStates } = useProductsQueryState();
 
 	const [open, setOpen] = useState(false);
-	const [selectedFeature, setSelectedFeature] = useState<any>(null);
+	const [selectedFeature, setSelectedFeature] = useState<Feature | null>(null);
 
 	const getMeteredEventNames = (feature: Feature) => {
 		if (feature.type !== FeatureType.Metered) return "";
 
-		if (!feature.config.filters || feature.config.filters.length === 0)
-			return "";
+		if (!feature.event_names || feature.event_names.length === 0) return "";
 
-		return feature.config.filters[0].value.join(", ");
+		return feature.event_names.join(", ");
 	};
 
 	const handleRowClick = (id: string) => {
 		const feature = features.find((feature: Feature) => feature.id === id);
+		if (!feature) return;
 		setSelectedFeature(feature);
 		setOpen(true);
 	};
@@ -42,11 +41,10 @@ export const FeaturesTable = () => {
 
 	return (
 		<div>
-			<UpdateFeature
+			<UpdateFeatureSheet
 				open={open}
 				setOpen={setOpen}
 				selectedFeature={selectedFeature}
-				setSelectedFeature={setSelectedFeature}
 			/>
 			{features && features.length > 0 ? (
 				<Row type="header" className="grid-cols-18 -mb-1 items-center">

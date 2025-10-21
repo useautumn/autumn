@@ -103,20 +103,5 @@ export const createLogger = () => {
 	return createLoggerStructure(pinoLogger);
 };
 
-// export const createLogtailAll = () => {
-//   if (
-//     !process.env.LOGTAIL_ALL_SOURCE_TOKEN ||
-//     !process.env.LOGTAIL_ALL_INGESTING_HOST
-//   ) {
-//     return null;
-//   }
-
-//   const logtail = new Logtail(process.env.LOGTAIL_ALL_SOURCE_TOKEN!, {
-//     endpoint: process.env.LOGTAIL_ALL_INGESTING_HOST!,
-//   });
-
-//   return logtail;
-// };
-
 export const logger = createLogger();
 export type Logger = ReturnType<typeof createLogger>;

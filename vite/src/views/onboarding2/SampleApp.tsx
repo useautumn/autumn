@@ -143,8 +143,8 @@ export const SampleApp = () => {
 							{/* Code Snippets */}
 							<div className="flex flex-col gap-3 w-full max-w-96 min-w-96 ">
 								<div className="flex flex-col gap-4">
-									<div className="flex flex-col gap-1">
-										<div className="flex items-center justify-between">
+									<div className="flex flex-col">
+										<div className="flex items-center justify-between mb-1">
 											<span className="text-sm text-t2">Check feature</span>
 											<Button
 												variant="ghost"
@@ -221,8 +221,8 @@ const { data } = await autumn.check({
 										)}
 									</div>
 
-									<div className="flex flex-col gap-1">
-										<div className="flex items-center justify-between">
+									<div className="flex flex-col">
+										<div className="flex items-center justify-between mb-1">
 											<span className="text-sm text-t2">Track usage</span>
 											<Button
 												variant="ghost"
@@ -298,8 +298,8 @@ const response = await autumn.track({
 										)}
 									</div>
 
-									<div className="flex flex-col gap-1">
-										<div className="flex items-center justify-between">
+									<div className="flex flex-col">
+										<div className="flex items-center justify-between mb-1">
 											<span className="text-sm text-t2">Customer data</span>
 											<Button
 												variant="ghost"

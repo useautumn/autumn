@@ -1,32 +1,28 @@
 import {
-	Entitlement,
-	ErrCode,
-	FullCusEntWithFullCusProduct,
-	FullCusEntWithProduct,
-	Price,
-} from "@autumn/shared";
-import {
-	AppEnv,
+	type AppEnv,
 	BillingType,
-	Customer,
-	Feature,
-	FullCustomerPrice,
-	Organization,
-	UsagePriceConfig,
+	type Customer,
+	type Entitlement,
+	ErrCode,
+	type Feature,
+	type FullCusEntWithFullCusProduct,
+	type FullCustomerPrice,
+	type Organization,
+	type Price,
+	type UsagePriceConfig,
 } from "@autumn/shared";
-
+import { Decimal } from "decimal.js";
+import { StatusCodes } from "http-status-codes";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { findStripeItemForPrice } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
+import { getUsageBasedSub } from "@/external/stripe/stripeSubUtils.js";
 import { getRelatedCusPrice } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
-import { getUsageBasedSub } from "@/external/stripe/stripeSubUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { Decimal } from "decimal.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { findStripeItemForPrice } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
-import { handleProratedUpgrade } from "./arrearProratedUsage/handleProratedUpgrade.js";
-import Stripe from "stripe";
-import { handleProratedDowngrade } from "./arrearProratedUsage/handleProratedDowngrade.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { StatusCodes } from "http-status-codes";
+import { handleProratedDowngrade } from "./arrearProratedUsage/handleProratedDowngrade.js";
+import { handleProratedUpgrade } from "./arrearProratedUsage/handleProratedUpgrade.js";
 
 export const getUsageFromBalance = ({
 	ent,
@@ -37,18 +33,18 @@ export const getUsageFromBalance = ({
 	price: Price;
 	balance: number;
 }) => {
-	let config = price.config as UsagePriceConfig;
-	let billingUnits = config.billing_units || 1;
+	const config = price.config as UsagePriceConfig;
+	const billingUnits = config.billing_units || 1;
 
 	// Should get overage...
-	let overage = -Math.min(0, balance);
-	let roundedOverage = new Decimal(overage)
+	const overage = -Math.min(0, balance);
+	const roundedOverage = new Decimal(overage)
 		.div(billingUnits)
 		.ceil()
 		.mul(billingUnits)
 		.toNumber();
 
-	let usage = new Decimal(ent.allowance!).sub(balance).toNumber();
+	const usage = new Decimal(ent.allowance!).sub(balance).toNumber();
 
 	let roundedUsage = usage;
 	if (overage > 0) {
@@ -90,9 +86,9 @@ export const adjustAllowance = async ({
 	logger: any;
 	errorIfIncomplete?: boolean;
 }) => {
-	let cusPrice = getRelatedCusPrice(cusEnt, cusPrices);
-	let billingType = cusPrice ? getBillingType(cusPrice.price.config!) : null;
-	let cusProduct = cusEnt.customer_product;
+	const cusPrice = getRelatedCusPrice(cusEnt, cusPrices);
+	const billingType = cusPrice ? getBillingType(cusPrice.price.config!) : null;
+	const cusProduct = cusEnt.customer_product;
 
 	// TODO: TRACK
 
@@ -105,7 +101,7 @@ export const adjustAllowance = async ({
 		return { newReplaceables: [], invoice: null, deletedReplaceables: null };
 	}
 
-	let ent = cusEnt.entitlement;
+	const ent = cusEnt.entitlement;
 	if (ent.usage_limit && newBalance < ent.allowance! - (ent.usage_limit || 0)) {
 		throw new RecaseError({
 			message: `Balance exceeds usage limit of ${cusEnt.entitlement.usage_limit}`,
@@ -118,8 +114,8 @@ export const adjustAllowance = async ({
 	logger.info(`Updating arrear prorated usage: ${affectedFeature.name}`);
 	logger.info(`Customer: ${customer.name}, Org: ${org.slug}`);
 
-	let stripeCli = createStripeCli({ org, env });
-	let sub = await getUsageBasedSub({
+	const stripeCli = createStripeCli({ org, env });
+	const sub = await getUsageBasedSub({
 		db,
 		stripeCli,
 		subIds: cusProduct.subscription_ids!,
@@ -131,7 +127,7 @@ export const adjustAllowance = async ({
 		return { newReplaceables: null, invoice: null, deletedReplaceables: null };
 	}
 
-	let subItem = findStripeItemForPrice({
+	const subItem = findStripeItemForPrice({
 		price: cusPrice.price,
 		stripeItems: sub.items.data,
 	});
@@ -141,7 +137,7 @@ export const adjustAllowance = async ({
 		return { newReplaceables: null, invoice: null, deletedReplaceables: null };
 	}
 
-	let isUpgrade = newBalance < originalBalance;
+	const isUpgrade = newBalance < originalBalance;
 
 	if (isUpgrade) {
 		return await handleProratedUpgrade({

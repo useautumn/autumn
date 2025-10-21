@@ -30,13 +30,6 @@ export const checkEnvVars = () => {
 		);
 	}
 
-	if (
-		!process.env.LOGTAIL_SOURCE_TOKEN ||
-		!process.env.LOGTAIL_INGESTING_HOST
-	) {
-		logger.warn("LOGTAIL ENV VARs not found, skipping logtail");
-	}
-
 	if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
 		logger.warn(
 			`SUPABASE_URL or SUPABASE_SERVICE_KEY is not set, some actions will be skipped`,

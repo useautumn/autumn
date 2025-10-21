@@ -1,60 +1,65 @@
-import { Feature } from "../models/featureModels/featureModels.js";
+import { FeatureType } from "../models/featureModels/featureEnums.js";
+import type { Feature } from "../models/featureModels/featureModels.js";
 import { Infinite } from "../models/productModels/productEnums.js";
-import {
+import type {
 	ProductItem,
-	ProductItemFeatureType,
 	ProductItemInterval,
 } from "../models/productV2Models/productItemModels/productItemModels.js";
 import {
+	formatAmount,
 	getFeatureName,
 	numberWithCommas,
-	formatAmount,
 } from "./displayUtils.js";
 import {
 	isFeatureItem,
 	isFeaturePriceItem,
 	isPriceItem,
-} from "./productDisplayUtils/getItemType.js";
+} from "./productV2Utils/productItemUtils/getItemType.js";
 import { notNullish, nullish } from "./utils.js";
 
 export const formatTiers = ({
 	item,
 	currency,
+	amountFormatOptions,
 }: {
 	item: ProductItem;
 	currency?: string | null;
+	amountFormatOptions?: Intl.NumberFormatOptions;
 }) => {
-	let tiers = item.tiers;
+	const tiers = item.tiers;
 	if (tiers) {
-		if (tiers.length == 1) {
+		if (tiers.length === 1) {
 			return formatAmount({
 				currency,
 				amount: tiers[0].amount,
+				amountFormatOptions,
 			});
 		}
 
-		let firstPrice = tiers[0].amount;
-		let lastPrice = tiers[tiers.length - 1].amount;
+		const firstPrice = tiers[0].amount;
+		const lastPrice = tiers[tiers.length - 1].amount;
 
 		return `${formatAmount({
 			currency,
 			amount: firstPrice,
+			amountFormatOptions,
 		})} - ${formatAmount({
 			currency,
 			amount: lastPrice,
+			amountFormatOptions,
 		})}`;
 	}
 };
 
 export const getIntervalString = ({
 	interval,
-	intervalCount,
+	intervalCount = 1,
 }: {
-	interval: ProductItemInterval;
+	interval: ProductItemInterval | null | undefined;
 	intervalCount?: number | null;
 }) => {
 	if (!interval) return "";
-	if (intervalCount == 1) {
+	if (intervalCount === 1) {
 		return `per ${interval}`;
 	}
 	return `per ${intervalCount} ${interval}s`;
@@ -63,38 +68,38 @@ export const getIntervalString = ({
 export const getFeatureItemDisplay = ({
 	item,
 	feature,
+	fullDisplay = false,
 }: {
 	item: ProductItem;
 	feature?: Feature;
+	fullDisplay?: boolean;
 }) => {
-	if (!feature) {
-		throw new Error(`Feature ${item.feature_id} not found`);
-	}
-	// 1. If feature
-	if (item.feature_type == ProductItemFeatureType.Static) {
-		return {
-			primary_text: getFeatureName({
-				feature,
-				plural: false,
-				capitalize: true,
-			}),
-		};
+	if (!feature) throw new Error(`Feature ${item.feature_id} not found`);
+
+	if (feature.type === FeatureType.Boolean) {
+		return { primary_text: feature.name };
 	}
 
-	let featureName = getFeatureName({
+	const featureName = getFeatureName({
 		feature,
 		units: item.included_usage,
 	});
 
-	let includedUsageTxt =
-		item.included_usage == Infinite
+	const includedUsageTxt =
+		item.included_usage === Infinite
 			? "Unlimited "
-			: nullish(item.included_usage) || item.included_usage == 0
-				? ""
-				: `${numberWithCommas(item.included_usage!)} `;
+			: nullish(item.included_usage) || item.included_usage === 0
+				? "0 "
+				: `${numberWithCommas(item.included_usage)} `;
+
+	const intervalStr = getIntervalString({
+		interval: item.interval,
+		intervalCount: item.interval_count,
+	});
 
 	return {
 		primary_text: `${includedUsageTxt}${featureName}`,
+		secondary_text: fullDisplay && intervalStr ? intervalStr : undefined,
 	};
 };
 
@@ -105,17 +110,17 @@ export const getPriceItemDisplay = ({
 	item: ProductItem;
 	currency?: string | null;
 }) => {
-	let primaryText = formatAmount({
+	const primaryText = formatAmount({
 		currency,
 		amount: item.price as number,
 	});
 
 	const intervalStr = getIntervalString({
-		interval: item.interval!,
+		interval: item.interval,
 		intervalCount: item.interval_count,
 	});
 
-	let secondaryText = intervalStr || undefined;
+	const secondaryText = intervalStr || undefined;
 
 	return {
 		primary_text: primaryText,
@@ -128,36 +133,37 @@ export const getFeaturePriceItemDisplay = ({
 	item,
 	currency,
 	isMainPrice = false,
-	minifyIncluded = false,
+	// minifyIncluded = false,
+	amountFormatOptions,
+	fullDisplay = false,
 }: {
 	feature?: Feature;
 	item: ProductItem;
 	currency?: string | null;
 	isMainPrice?: boolean;
-	minifyIncluded?: boolean;
+	// minifyIncluded?: boolean;
+	amountFormatOptions?: Intl.NumberFormatOptions;
+	fullDisplay?: boolean;
 }) => {
 	if (!feature) {
 		throw new Error(`Feature ${item.feature_id} not found`);
 	}
 
 	// 1. Get included usage
-	let includedFeatureName = getFeatureName({
+	const includedFeatureName = getFeatureName({
 		feature,
 		units: item.included_usage,
 	});
 
-	let includedUsage = item.included_usage as number | null;
+	const includedUsage = item.included_usage as number | null;
 	let includedUsageStr = "";
-	if (notNullish(includedUsage) && includedUsage! > 0) {
-		if (minifyIncluded) {
-			includedUsageStr = `${numberWithCommas(includedUsage!)} included`;
-		} else {
-			includedUsageStr = `${numberWithCommas(includedUsage!)} ${includedFeatureName}`;
-		}
+	if (notNullish(includedUsage) && includedUsage > 0) {
+		includedUsageStr = `${numberWithCommas(includedUsage)} ${includedFeatureName}`;
 	}
 
-	let priceStr = formatTiers({ item, currency });
-	let billingFeatureName = getFeatureName({
+	const priceStr = formatTiers({ item, currency, amountFormatOptions });
+
+	const billingFeatureName = getFeatureName({
 		feature,
 		units: item.billing_units,
 	});
@@ -170,12 +176,13 @@ export const getFeaturePriceItemDisplay = ({
 	}
 
 	// let intervalStr = isMainPrice && item.interval ? ` per ${item.interval}` : "";
-	let intervalStr = isMainPrice
-		? getIntervalString({
-				interval: item.interval!,
-				intervalCount: item.interval_count,
-			})
-		: "";
+	const intervalStr =
+		isMainPrice || fullDisplay
+			? getIntervalString({
+					interval: item.interval,
+					intervalCount: item.interval_count,
+				})
+			: "";
 
 	if (includedUsageStr) {
 		return {
@@ -184,7 +191,7 @@ export const getFeaturePriceItemDisplay = ({
 		};
 	}
 
-	if (isMainPrice) {
+	if (isMainPrice || fullDisplay) {
 		return {
 			primary_text: priceStr,
 			secondary_text: `per ${priceStr2} ${intervalStr}`,
@@ -192,7 +199,7 @@ export const getFeaturePriceItemDisplay = ({
 	}
 
 	return {
-		primary_text: priceStr + ` per ${priceStr2} ${intervalStr}`,
+		primary_text: `${priceStr} per ${priceStr2} ${intervalStr}`,
 		secondary_text: "",
 	};
 };
@@ -201,15 +208,20 @@ export const getProductItemDisplay = ({
 	item,
 	features,
 	currency = "usd",
+	fullDisplay = false,
+	amountFormatOptions,
 }: {
 	item: ProductItem;
 	features: Feature[];
 	currency?: string | null;
+	fullDisplay?: boolean;
+	amountFormatOptions?: Intl.NumberFormatOptions;
 }) => {
 	if (isFeatureItem(item)) {
 		return getFeatureItemDisplay({
 			item,
 			feature: features.find((f) => f.id === item.feature_id),
+			fullDisplay,
 		});
 	}
 
@@ -225,6 +237,8 @@ export const getProductItemDisplay = ({
 			item,
 			feature: features.find((f) => f.id === item.feature_id),
 			currency,
+			fullDisplay,
+			amountFormatOptions,
 		});
 	}
 

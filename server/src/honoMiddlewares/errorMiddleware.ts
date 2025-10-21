@@ -5,126 +5,7 @@ import Stripe from "stripe";
 import { ZodError } from "zod/v4";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import RecaseError, { formatZodError } from "@/utils/errorUtils.js";
-import { matchRoute } from "./middlewareUtils.js";
-
-/**
- * Handle special error cases that should use warn instead of error logging
- * Returns a response if the error matches a special case, null otherwise
- */
-const handleSpecialErrorCases = (
-	err: Error,
-	c: Context<HonoEnv>,
-	ctx: any,
-	logger: any,
-) => {
-	const url = c.req.url;
-
-	// Special case 1: EntityNotFound - use warn instead of error
-	if (err instanceof RecaseError && err.code === ErrCode.EntityNotFound) {
-		logger.warn(`${err.message}, org: ${ctx.org?.slug || "unknown"}`);
-		return c.json(
-			{
-				message: err.message,
-				code: err.code,
-				env: ctx.env,
-			},
-			404,
-		);
-	}
-
-	// Special case 2: Stripe exchange router invalid API key
-	if (
-		err instanceof Stripe.errors.StripeError &&
-		url.includes("/exchange") &&
-		err.message.includes("Invalid API Key provided")
-	) {
-		logger.warn("Exchange router, invalid API Key provided");
-		return c.json(
-			{
-				message: err.message,
-				code: ErrCode.InvalidRequest,
-				env: ctx.env,
-			},
-			400,
-		);
-	}
-
-	// Special case 3: Billing portal config error
-	if (
-		err instanceof Stripe.errors.StripeError &&
-		url.includes("/billing_portal") &&
-		err.message.includes("Provide a configuration or create your default")
-	) {
-		logger.warn(`Billing portal config error, org: ${ctx.org?.slug}`);
-		return c.json(
-			{
-				message: err.message,
-				code: ErrCode.InvalidRequest,
-				env: ctx.env,
-			},
-			404,
-		);
-	}
-
-	// Special case 4: Billing portal return_url error
-	if (
-		err instanceof Stripe.errors.StripeError &&
-		url.includes("/billing_portal") &&
-		err.message.includes("Invalid URL: An explicit scheme (such as https)")
-	) {
-		logger.warn(`Billing portal return_url error, org: ${ctx.org?.slug}`);
-		return c.json(
-			{
-				message: err.message,
-				code: ErrCode.InvalidRequest,
-				env: ctx.env,
-			},
-			400,
-		);
-	}
-
-	// Special case 5: Zod error on /attach - convert to RecaseError
-	if (err instanceof ZodError && url.includes("/attach")) {
-		const formattedError = formatZodError(err);
-		logger.warn(
-			`ATTACH ZOD ERROR (${ctx.org?.slug || "unknown"}): ${formattedError}`,
-		);
-
-		return c.json(
-			{
-				message: formattedError,
-				code: ErrCode.InvalidInputs,
-				env: ctx.env,
-			},
-			400,
-		);
-	}
-
-	// Special case 6: CustomerNotFound on customer routes
-	const pathname = new URL(url).pathname;
-	if (
-		err instanceof RecaseError &&
-		err.code === ErrCode.CustomerNotFound &&
-		matchRoute({
-			url: pathname,
-			method: c.req.method,
-			pattern: { url: "/customers/:customer_id", method: "GET" },
-		})
-	) {
-		logger.warn(`${err.message}, org: ${ctx.org?.slug || "unknown"}`);
-		return c.json(
-			{
-				message: err.message,
-				code: err.code,
-				env: ctx.env,
-			},
-			404,
-		);
-	}
-
-	// No special case matched
-	return null;
-};
+import { handleErrorSkip } from "./errorSkipMiddleware.js";
 
 /**
  * Hono error handler middleware
@@ -146,9 +27,9 @@ export const errorMiddleware = (err: Error, c: Context<HonoEnv>) => {
 		);
 	}
 
-	// Check for special error cases first
-	const specialCaseResponse = handleSpecialErrorCases(err, c, ctx, logger);
-	if (specialCaseResponse) return specialCaseResponse;
+	// Check for error skip cases first (warn-level errors)
+	const skipResponse = handleErrorSkip(err, c);
+	if (skipResponse) return skipResponse;
 
 	// 1. Handle RecaseError (our custom errors)
 	if (err instanceof RecaseError || err instanceof SharedRecaseError) {

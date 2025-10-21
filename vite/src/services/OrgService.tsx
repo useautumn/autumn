@@ -1,4 +1,4 @@
-import { AxiosInstance } from "axios";
+import type { AxiosInstance } from "axios";
 
 export class OrgService {
 	static async get(axiosInstance: AxiosInstance) {
@@ -10,10 +10,10 @@ export class OrgService {
 	}
 
 	static async connectStripe(axiosInstance: AxiosInstance, data: any) {
-		return await axiosInstance.post(`/organization/stripe`, data);
+		return await axiosInstance.post(`/v1/organization/stripe`, data);
 	}
 
 	static async disconnectStripe(axiosInstance: AxiosInstance) {
-		return await axiosInstance.delete(`/organization/stripe`);
+		return await axiosInstance.delete(`/v1/organization/stripe`);
 	}
 }

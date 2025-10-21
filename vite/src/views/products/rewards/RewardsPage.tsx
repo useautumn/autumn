@@ -1,13 +1,41 @@
+import { useEffect, useState } from "react";
 import { PageSectionHeader } from "@/components/general/PageSectionHeader";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { RewardsTable } from "./components/RewardsTable";
-import CreateReward from "./reward-config/CreateReward";
+import { CreateRewardSheet } from "./reward-config/components/CreateRewardSheet";
+import { CreateRewardProgramSheet } from "./reward-programs/CreateRewardProgramSheet";
 import { RewardProgramsTable } from "./reward-programs/RewardProgramsTable";
-import CreateRewardProgram from "./reward-programs/CreateRewardProgram";
 
 export const RewardsPage = () => {
 	const { rewards, rewardPrograms } = useRewardsQuery();
+	const [createSheetOpen, setCreateSheetOpen] = useState(false);
+
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if (
+				e.key === "n" &&
+				!e.metaKey &&
+				!e.ctrlKey &&
+				!e.altKey &&
+				!e.shiftKey
+			) {
+				const target = e.target as HTMLElement;
+				if (
+					target.tagName === "INPUT" ||
+					target.tagName === "TEXTAREA" ||
+					target.isContentEditable
+				) {
+					return;
+				}
+				e.preventDefault();
+				setCreateSheetOpen(true);
+			}
+		};
+
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, []);
 
 	return (
 		<div className="flex flex-col gap-16">
@@ -19,7 +47,12 @@ export const RewardsPage = () => {
 							{rewards?.length}
 						</span>
 					}
-					endContent={<CreateReward />}
+					endContent={
+						<CreateRewardSheet
+							open={createSheetOpen}
+							onOpenChange={setCreateSheetOpen}
+						/>
+					}
 				/>
 
 				<RewardsTable />
@@ -33,7 +66,7 @@ export const RewardsPage = () => {
 							{rewardPrograms?.length}
 						</span>
 					}
-					endContent={<CreateRewardProgram />}
+					endContent={<CreateRewardProgramSheet />}
 					isSecondary
 				/>
 				<RewardProgramsTable />

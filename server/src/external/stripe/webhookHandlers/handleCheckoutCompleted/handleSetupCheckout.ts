@@ -1,5 +1,6 @@
 import { AttachBranch } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { handleAddProduct } from "@/internal/customers/attach/attachFunctions/addProductFlow/handleAddProduct.js";
 import { handleOneOffFunction } from "@/internal/customers/attach/attachFunctions/addProductFlow/handleOneOffFunction.js";
 import { getDefaultAttachConfig } from "@/internal/customers/attach/attachUtils/getAttachConfig.js";
@@ -7,7 +8,6 @@ import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams
 import { isOneOff } from "@/internal/products/productUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { getCusPaymentMethod } from "../../stripeCusUtils.js";
-import { createStripeCli } from "../../utils.js";
 
 export const handleSetupCheckout = async ({
 	req,

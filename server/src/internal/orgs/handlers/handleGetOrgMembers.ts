@@ -1,8 +1,7 @@
+import { session as authSession, member } from "@autumn/shared";
+import { and, eq } from "drizzle-orm";
 import { handleFrontendReqError } from "@/utils/errorUtils.js";
 import { OrgService } from "../OrgService.js";
-import { auth } from "@/utils/auth.js";
-import { eq, and } from "drizzle-orm";
-import { member, session as authSession } from "@autumn/shared";
 
 export const handleGetOrgMembers = async (req: any, res: any) => {
 	try {
@@ -77,7 +76,7 @@ export const handleRemoveMember = async (req: any, res: any) => {
 				);
 		} catch (error) {
 			// Log but don't fail the request if session revocation fails
-			req.logtail?.warn(
+			req.logger?.warn(
 				`Failed to revoke sessions for user ${existingMember.userId} in org ${orgId}:`,
 				error,
 			);

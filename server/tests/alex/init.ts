@@ -1,13 +1,18 @@
 import dotenv from "dotenv";
+
 dotenv.config();
+
 import {
 	AggregateType,
 	AllowanceType,
 	AppEnv,
 	BillingInterval,
 	EntInterval,
+	FeatureType,
 } from "@autumn/shared";
-import { FeatureType } from "@autumn/shared";
+import { initDrizzle } from "@/db/initDrizzle.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
 import {
 	initEntitlement,
 	initFeature,
@@ -15,10 +20,6 @@ import {
 	initPrice,
 	initProduct,
 } from "../utils/init.js";
-import { createSupabaseClient } from "@/external/supabaseUtils.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-import { initDrizzle } from "@/db/initDrizzle.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
 
 export const alexFeatures = {
 	chatMessage: initFeature({
@@ -418,7 +419,7 @@ export const alexProducts = {
 	}),
 };
 
-let orgSlug = process.env.TESTS_ORG!;
+const orgSlug = process.env.TESTS_ORG!;
 before(async function () {
 	try {
 		this.env = AppEnv.Sandbox;
@@ -430,15 +431,15 @@ before(async function () {
 			slug: orgSlug,
 		});
 
-		let dbFeatures = await FeatureService.list({
+		const dbFeatures = await FeatureService.list({
 			db: this.db,
 			orgId: this.org.id,
 			env: this.env,
 		});
 
 		for (const featureId in alexFeatures) {
-			let feature = alexFeatures[featureId as keyof typeof alexFeatures];
-			let dbFeature = dbFeatures.find((f: any) => f.id === feature.id);
+			const feature = alexFeatures[featureId as keyof typeof alexFeatures];
+			const dbFeature = dbFeatures.find((f: any) => f.id === feature.id);
 			if (!dbFeature) {
 				continue;
 				throw new Error(`Feature ${feature.id} not found`);
@@ -447,9 +448,8 @@ before(async function () {
 				dbFeature.internal_id;
 			if (feature.type === FeatureType.Metered) {
 				// Ignore this for now
-				// @ts-ignore eventName is manually set
 				alexFeatures[featureId as keyof typeof alexFeatures].eventName =
-					dbFeature.config?.filters[0].value[0];
+					dbFeature.event_names?.[0] || dbFeature.id;
 			}
 		}
 	} catch (error) {

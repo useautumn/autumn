@@ -1,0 +1,24 @@
+/** biome-ignore-all lint/complexity/noImportantStyles: important needed. */
+
+/* Base form element styling - NO state modifiers (hover, focus, active) */
+
+.input-base {
+	padding: 0.25rem 0.5rem;
+	font-size: 13px;
+	font-weight: var(--font-weight-medium);
+
+	border: 1px solid var(--color-input);
+	border-radius: var(--radius);
+	background-color: var(--color-input-background);
+	color: var(--color-t2);
+
+	/* Placeholder styling - applies to both placeholder: and data-placeholder: */
+	&::placeholder {
+		color: var(--color-t6);
+		user-select: none;
+	}
+
+	&[data-placeholder] {
+		color: var(--color-t6);
+	}
+}

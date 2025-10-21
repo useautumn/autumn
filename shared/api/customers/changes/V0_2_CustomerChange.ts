@@ -90,10 +90,18 @@ export const V0_2_CustomerChange = defineVersionChange({
 				}),
 			);
 
+		const processor = customerFields.stripe_id
+			? {
+					type: "stripe",
+					id: customerFields.stripe_id,
+				}
+			: undefined;
+
 		return {
 			customer: {
 				...customerFields,
 				internal_id: "",
+				processor,
 			},
 			products: mainProducts,
 			add_ons: addOns,

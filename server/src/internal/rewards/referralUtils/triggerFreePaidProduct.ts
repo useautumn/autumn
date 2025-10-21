@@ -11,8 +11,8 @@ import {
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type Stripe from "stripe";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
 import { handleAddProduct } from "@/internal/customers/attach/attachFunctions/addProductFlow/handleAddProduct.js";
 import { rewardProgramToAttachParams } from "@/internal/customers/attach/attachUtils/attachParams/convertToParams.js";
 import { getCustomerSub } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";

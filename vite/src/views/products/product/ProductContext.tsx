@@ -1,11 +1,16 @@
 import { createContext, useContext } from "react";
 
-export const ProductContext = createContext<any>(null);
+interface ProductContextType {
+	setShowNewVersionDialog: (show: boolean) => void;
+	refetch?: () => Promise<void>;
+}
 
-export const useProductContext = () => {
+export const ProductContext = createContext<ProductContextType | null>(null);
+
+export const useProductContext = (): ProductContextType => {
 	const context = useContext(ProductContext);
 
-	if (context === undefined) {
+	if (context === null || context === undefined) {
 		throw new Error(
 			"useProductContext must be used within a ProductContextProvider",
 		);

@@ -1,17 +1,16 @@
-import CopyButton from "@/components/general/CopyButton";
-import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { useNavigate } from "react-router";
-import { navigateTo } from "@/utils/genUtils";
 import { AdminHover } from "@/components/general/AdminHover";
+import CopyButton from "@/components/general/CopyButton";
 import { Item, Row } from "@/components/general/TableGrid";
-import { cn } from "@/lib/utils";
-
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { cn } from "@/lib/utils";
+import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
+import { navigateTo } from "@/utils/genUtils";
+import { useProductsQueryState } from "../../hooks/useProductsQueryState";
 import { useProductsContext } from "../../ProductsContext";
 import { ProductCountsTooltip } from "../product-row-toolbar/ProductCountsTooltip";
-import { ProductTypeBadge } from "../product-row-toolbar/ProductTypeBadge";
 import { ProductRowToolbar } from "../product-row-toolbar/ProductRowToolbar";
-import { useProductsQueryState } from "../../hooks/useProductsQueryState";
+import { ProductTypeBadge } from "../product-row-toolbar/ProductTypeBadge";
 
 export const ProductsTable = ({
 	onRowClick,
@@ -178,7 +177,7 @@ export const ProductsTable = ({
 							>
 								<ProductRowToolbar
 									product={product}
-									productCounts={counts?.[product.id]}
+									isOnboarding={onboarding}
 								/>
 							</Item>
 						</Row>

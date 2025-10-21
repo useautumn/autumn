@@ -1,3 +1,0 @@
-<!-- Talk about context -->
-
-<!--  -->

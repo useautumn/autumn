@@ -1,12 +1,12 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
 import {
-	Entitlement,
+	type Entitlement,
+	type EntitlementWithFeature,
 	entitlements,
 	features,
-	EntitlementWithFeature,
 } from "@autumn/shared";
-import { eq, and, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export class EntitlementService {
 	static async getByOrg({
@@ -21,14 +21,14 @@ export class EntitlementService {
 		excludeCustom?: boolean;
 	}) {
 		// 1. get features for org
-		let featuresQuery = db
+		const featuresQuery = db
 			.select({
 				internal_id: features.internal_id,
 			})
 			.from(features)
 			.where(and(eq(features.org_id, orgId), eq(features.env, env)));
 
-		let ents = await db.query.entitlements.findMany({
+		const ents = await db.query.entitlements.findMany({
 			where: (entitlements, { inArray }) =>
 				and(
 					inArray(entitlements.internal_feature_id, featuresQuery),
@@ -64,7 +64,7 @@ export class EntitlementService {
 		db: DrizzleCli;
 		data: Entitlement[] | Entitlement;
 	}) {
-		if (Array.isArray(data) && data.length == 0) {
+		if (Array.isArray(data) && data.length === 0) {
 			return;
 		}
 
@@ -78,7 +78,7 @@ export class EntitlementService {
 		db: DrizzleCli;
 		data: Entitlement[] | Entitlement;
 	}) {
-		if (Array.isArray(data) && data.length == 0) return;
+		if (Array.isArray(data) && data.length === 0) return;
 
 		const updateColumns = buildConflictUpdateColumns(entitlements, ["id"]);
 		await db
@@ -107,5 +107,32 @@ export class EntitlementService {
 
 	static async deleteInIds({ db, ids }: { db: DrizzleCli; ids: string[] }) {
 		await db.delete(entitlements).where(inArray(entitlements.id, ids));
+	}
+
+	static async hasEntityFeatureId({
+		db,
+		orgId,
+		env,
+	}: {
+		db: DrizzleCli;
+		orgId: string;
+		env: string;
+	}) {
+		const featuresQuery = db
+			.select({
+				internal_id: features.internal_id,
+			})
+			.from(features)
+			.where(and(eq(features.org_id, orgId), eq(features.env, env)));
+
+		const entitlement = await db.query.entitlements.findFirst({
+			where: (entitlements, { inArray, isNotNull }) =>
+				and(
+					inArray(entitlements.internal_feature_id, featuresQuery),
+					isNotNull(entitlements.entity_feature_id),
+				),
+		});
+
+		return !!entitlement;
 	}
 }

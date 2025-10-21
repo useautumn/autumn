@@ -113,7 +113,7 @@ export const AddAutumnProvider = () => {
 	return (
 		<div className="flex flex-col gap-4 w-full">
 			<StepHeader
-				number={6}
+				number={5}
 				title={
 					<p>
 						Wrap your React app in <CodeSpan>{"<AutumnProvider />"}</CodeSpan>

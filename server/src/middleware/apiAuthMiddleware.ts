@@ -84,7 +84,7 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
 };
 
 export const apiAuthMiddleware = async (req: any, res: any, next: any) => {
-	const logger = req.logtail;
+	const logger = req.logger;
 
 	if (trmnlExclusions.includes(req.path)) {
 		logger.info(

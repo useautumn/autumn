@@ -1,11 +1,11 @@
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { FullCusProduct, ProductV2 } from "@autumn/shared";
+import type { FullCusProduct, ProductV2 } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
-import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
-import { useParams } from "react-router";
-import { useCusProductCache } from "./useCusProductCache";
-import { useEffect, useMemo, useState } from "react";
 import { debounce } from "lodash";
+import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
+import { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useCusProductCache } from "./useCusProductCache";
 
 export const useCusProductQuery = () => {
 	const axiosInstance = useAxiosInstance();
@@ -28,7 +28,7 @@ export const useCusProductQuery = () => {
 		},
 	});
 
-	const cachedCusProduct = useMemo(getCachedCusProduct, [getCachedCusProduct]);
+	const cachedCusProduct = useMemo(getCachedCusProduct, []);
 
 	const fetcher = async () => {
 		const queryParams = {
@@ -38,9 +38,6 @@ export const useCusProductQuery = () => {
 		};
 
 		try {
-			console.log(
-				`Fetching customer product ${product_id} with version ${stableStates.version}`,
-			);
 			const { data } = await axiosInstance.get(
 				`/customers/${customer_id}/product/${product_id}`,
 				{ params: queryParams },
@@ -75,6 +72,8 @@ export const useCusProductQuery = () => {
 
 	const finalData = data || cachedCusProduct;
 	const isLoadingWithCache = cachedCusProduct ? false : isLoading;
+	// const finalData = data;
+	// const isLoadingWithCache = isLoading;
 
 	return {
 		cusProduct: finalData?.cusProduct,

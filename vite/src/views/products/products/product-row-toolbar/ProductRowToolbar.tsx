@@ -1,20 +1,17 @@
-import SmallSpinner from "@/components/general/SmallSpinner";
-
+import type { ProductCounts, ProductV2 } from "@autumn/shared";
+import { Archive, ArchiveRestore, Copy, Delete, Pen } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
 import {
 	DropdownMenu,
-	DropdownMenuTrigger,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState } from "react";
-
-import { ProductCounts, ProductV2 } from "@autumn/shared";
-import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
-import { Dialog, DialogTrigger } from "@/components/ui/dialog";
-import { Copy, Delete, Pen, ArchiveRestore, Archive } from "lucide-react";
-import { DeleteProductDialog } from "./DeleteProductDialog";
-import { CopyDialog } from "./CopyDialog";
-import { UpdateProductDialog } from "../../UpdateProduct";
+import { DeletePlanDialog } from "../../plan/components/DeletePlanDialog";
+import { CopyProductDialog } from "../components/CopyProductDialog";
+import { UpdateProductDialog } from "../components/UpdateProductDialog";
 
 export const ProductRowToolbar = ({
 	className,
@@ -27,14 +24,11 @@ export const ProductRowToolbar = ({
 	product: ProductV2;
 	productCounts: ProductCounts | undefined;
 }) => {
-	const [deleteLoading, setDeleteLoading] = useState(false);
 	const [dropdownOpen, setDropdownOpen] = useState(false);
-	const [copyLoading, setCopyLoading] = useState(false);
-	const [modalOpen, setModalOpen] = useState(false);
-
-	const [selectedProduct, setSelectedProduct] = useState(product);
-	const [dialogType, setDialogType] = useState<"update" | "copy">("update");
+	const [updateOpen, setUpdateOpen] = useState(false);
+	const [copyOpen, setCopyOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
+	const navigate = useNavigate();
 
 	const allCount = productCounts?.all || 0;
 	let deleteText = allCount > 0 ? "Archive" : "Delete";
@@ -47,91 +41,93 @@ export const ProductRowToolbar = ({
 
 	return (
 		<>
-			<DeleteProductDialog
+			<UpdateProductDialog
+				open={updateOpen}
+				setOpen={setUpdateOpen}
+				selectedProduct={product}
+			/>
+			<CopyProductDialog
+				open={copyOpen}
+				setOpen={setCopyOpen}
+				product={product}
+			/>
+			<DeletePlanDialog
+				propProduct={product}
+				open={deleteOpen}
+				setOpen={setDeleteOpen}
+				// onDeleteSuccess={async () => {
+				// 	pushPage({
+				// 		navigate,
+				// 		path: "/products",
+				// 		queryParams: {
+				// 			tab: "products",
+				// 		},
+				// 		preserveParams: true,
+				// 	});
+				// }}
+			/>
+			{/* <DeleteProductDialog
 				product={product}
 				open={deleteOpen}
 				setOpen={setDeleteOpen}
-				productCounts={productCounts}
-				dropdownOpen={dropdownOpen}
-			/>
-			<Dialog open={modalOpen} onOpenChange={setModalOpen}>
-				{dialogType == "update" ? (
-					<UpdateProductDialog
-						selectedProduct={product}
-						setModalOpen={setModalOpen}
-						setDropdownOpen={setDeleteOpen}
-					/>
-				) : (
-					<CopyDialog product={selectedProduct} setModalOpen={setModalOpen} />
-				)}
-				<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
-					<DropdownMenuTrigger asChild>
-						<ToolbarButton />
-					</DropdownMenuTrigger>
-					<DropdownMenuContent className="text-t2" align="end">
-						{!isOnboarding && (
-							<DialogTrigger asChild>
-								<DropdownMenuItem
-									className="flex items-center text-xs"
-									onClick={async (e) => {
-										e.stopPropagation();
-										e.preventDefault();
-										setSelectedProduct(product);
-										setDialogType("copy");
-										setModalOpen(true);
-									}}
-								>
-									<div className="flex items-center justify-between w-full gap-2">
-										Copy
-										{copyLoading ? (
-											<SmallSpinner />
-										) : (
-											<Copy size={12} className="text-t3" />
-										)}
-									</div>
-								</DropdownMenuItem>
-							</DialogTrigger>
-						)}
-						{!isOnboarding && (
-							<DialogTrigger asChild>
-								<DropdownMenuItem
-									className="flex items-center text-xs"
-									onClick={async (e) => {
-										e.stopPropagation();
-										e.preventDefault();
-										setSelectedProduct(product);
-										setDialogType("update");
-										setModalOpen(true);
-									}}
-								>
-									<div className="flex items-center justify-between w-full gap-2">
-										Edit
-										<Pen size={12} className="text-t3" />
-									</div>
-								</DropdownMenuItem>
-							</DialogTrigger>
-						)}
+
+				// productCounts={productCounts}
+				// dropdownOpen={dropdownOpen}
+			/> */}
+
+			<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+				<DropdownMenuTrigger asChild>
+					<ToolbarButton />
+				</DropdownMenuTrigger>
+				<DropdownMenuContent className="text-t2" align="end">
+					{!isOnboarding && (
 						<DropdownMenuItem
 							className="flex items-center text-xs"
-							onClick={async (e) => {
+							onClick={(e) => {
 								e.stopPropagation();
 								e.preventDefault();
 								setDropdownOpen(false);
-								setDeleteOpen(true);
+								setCopyOpen(true);
 							}}
 						>
 							<div className="flex items-center justify-between w-full gap-2">
-								{deleteText}
-								{deleteLoading ? (
-									<SmallSpinner />
-								) : (
-									<DeleteIcon size={12} className="text-t3" />
-								)}
+								Copy
+								<Copy size={12} className="text-t3" />
 							</div>
 						</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
-			</Dialog>
+					)}
+					{!isOnboarding && (
+						<DropdownMenuItem
+							className="flex items-center text-xs"
+							onClick={(e) => {
+								e.stopPropagation();
+								e.preventDefault();
+								setDropdownOpen(false);
+								setUpdateOpen(true);
+							}}
+						>
+							<div className="flex items-center justify-between w-full gap-2">
+								Edit
+								<Pen size={12} className="text-t3" />
+							</div>
+						</DropdownMenuItem>
+					)}
+					<DropdownMenuItem
+						className="flex items-center text-xs"
+						onClick={(e) => {
+							e.stopPropagation();
+							e.preventDefault();
+							setDropdownOpen(false);
+							setDeleteOpen(true);
+						}}
+					>
+						<div className="flex items-center justify-between w-full gap-2">
+							{deleteText}
+							<DeleteIcon size={12} className="text-t3" />
+						</div>
+					</DropdownMenuItem>
+				</DropdownMenuContent>
+			</DropdownMenu>
 		</>
 	);
 };

@@ -1,44 +1,35 @@
-import { notNullish, nullish } from "@/utils/genUtils.js";
-import {
-	Feature,
-	Event,
-	FeatureType,
-	FullCustomerEntitlement,
-	Entitlement,
-} from "@autumn/shared";
-
-import { AggregateType } from "@autumn/shared";
+import type { Entitlement, Event, Feature } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 const DEFAULT_VALUE = 1;
 
 export const getMeteredDeduction = (meteredFeature: Feature, event: Event) => {
-	let config = meteredFeature.config;
-	let aggregate = config.aggregate;
+	// const config = meteredFeature.config;
+	// const aggregate = config.aggregate;
 
-	if (aggregate.type == AggregateType.Count) {
-		return 1;
-	}
+	// if (aggregate.type === AggregateType.Count) {
+	// 	return 1;
+	// }
 
-	let value = notNullish(event.value)
+	const value = notNullish(event.value)
 		? event.value
 		: notNullish(event.properties?.value)
 			? event.properties?.value
 			: DEFAULT_VALUE;
 
-	let floatVal = parseFloat(value);
-	if (isNaN(floatVal)) {
-		return 0;
-	}
+	const floatVal = parseFloat(value);
+	if (Number.isNaN(floatVal)) return 0;
 
-	if (
-		meteredFeature.type == FeatureType.CreditSystem ||
-		aggregate.type == AggregateType.Sum
-	) {
-		return value;
-	}
+	return value;
+	// if (
+	// 	meteredFeature.type === FeatureType.CreditSystem ||
+	// 	aggregate.type === AggregateType.Sum
+	// ) {
+	// 	return value;
+	// }
 
-	return 0;
+	// return 0;
 };
 
 export const getCreditSystemDeduction = ({
@@ -51,11 +42,11 @@ export const getCreditSystemDeduction = ({
 	event: Event;
 }) => {
 	let creditsUpdate = 0;
-	let meteredFeatureIds = meteredFeatures.map((feature) => feature.id);
+	const meteredFeatureIds = meteredFeatures.map((feature) => feature.id);
 
 	for (const schema of creditSystem.config.schema) {
 		if (meteredFeatureIds.includes(schema.metered_feature_id)) {
-			let meteredFeature = meteredFeatures.find(
+			const meteredFeature = meteredFeatures.find(
 				(feature) => feature.id === schema.metered_feature_id,
 			);
 
@@ -63,11 +54,11 @@ export const getCreditSystemDeduction = ({
 				continue;
 			}
 
-			let meteredDeduction = getMeteredDeduction(meteredFeature, event);
+			const meteredDeduction = getMeteredDeduction(meteredFeature, event);
 
-			let meteredDeductionDecimal = new Decimal(meteredDeduction);
-			let featureAmountDecimal = new Decimal(schema.feature_amount);
-			let creditAmountDecimal = new Decimal(schema.credit_amount);
+			const meteredDeductionDecimal = new Decimal(meteredDeduction);
+			const featureAmountDecimal = new Decimal(schema.feature_amount);
+			const creditAmountDecimal = new Decimal(schema.credit_amount);
 			creditsUpdate += meteredDeductionDecimal
 				.div(featureAmountDecimal)
 				.mul(creditAmountDecimal)
@@ -96,8 +87,8 @@ export const performDeduction = ({
 }) => {
 	// Either deduct from balance or entity balance
 	if (allowNegativeBalance) {
-		let usageLimit = ent.usage_limit;
-		let minBalance = usageLimit
+		const usageLimit = ent.usage_limit;
+		const minBalance = usageLimit
 			? new Decimal(resetBalance).minus(usageLimit).toNumber()
 			: undefined;
 		let newBalance = cusEntBalance.minus(toDeduct).toNumber();
@@ -108,12 +99,12 @@ export const performDeduction = ({
 			new Decimal(newBalance).lt(minBalance)
 		) {
 			newBalance = minBalance;
-			let deducted = new Decimal(cusEntBalance).minus(minBalance).toNumber();
-			let toDeduct_ = new Decimal(toDeduct).minus(deducted).toNumber();
+			const deducted = new Decimal(cusEntBalance).minus(minBalance).toNumber();
+			const toDeduct_ = new Decimal(toDeduct).minus(deducted).toNumber();
 			return { newBalance, deducted, toDeduct: toDeduct_ };
 		} else {
-			let deducted = toDeduct;
-			let toDeduct_ = 0;
+			const deducted = toDeduct;
+			const toDeduct_ = 0;
 			return { newBalance, deducted, toDeduct: toDeduct_ };
 		}
 	}
@@ -123,7 +114,8 @@ export const performDeduction = ({
 	}
 
 	// If toDeduct is negative, add to balance and set toDeduct to 0
-	let newBalance, deducted;
+	let newBalance: number;
+	let deducted: number;
 	if (toDeduct < 0) {
 		newBalance = cusEntBalance.minus(toDeduct).toNumber();
 		deducted = toDeduct;

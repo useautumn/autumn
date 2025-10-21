@@ -10,6 +10,7 @@ import { Decimal } from "decimal.js";
 
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { RewardService } from "@/internal/rewards/RewardService.js";
 import { generateId } from "@/utils/genUtils.js";
 import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
@@ -18,7 +19,6 @@ import {
 	deleteCouponFromSub,
 } from "../stripeCouponUtils/deleteCouponFromCus.js";
 import { invoiceToSubId } from "../stripeInvoiceUtils.js";
-import { createStripeCli } from "../utils.js";
 
 export const handleInvoicePaidDiscount = async ({
 	db,

@@ -1,4 +1,4 @@
-import { type CheckoutResult } from "autumn-js";
+import type { CheckoutResult } from "autumn-js";
 
 export const getCheckoutContent = (checkoutResult: CheckoutResult) => {
 	const { product, current_product, next_cycle } = checkoutResult;
@@ -26,7 +26,7 @@ export const getCheckoutContent = (checkoutResult: CheckoutResult) => {
 	if (scenario == "active" && updateable) {
 		if (updateable) {
 			return {
-				title: <p>Update Plan</p>,
+				title: <p>Update Product</p>,
 				message: (
 					<p>
 						Update your prepaid quantity. You&apos;ll be charged or credited the

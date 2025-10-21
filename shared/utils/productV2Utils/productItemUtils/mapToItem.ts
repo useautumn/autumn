@@ -12,6 +12,7 @@ import type { Price } from "../../../models/productModels/priceModels/priceModel
 import { Infinite } from "../../../models/productModels/productEnums.js";
 import {
 	type ProductItem,
+	type ProductItemConfig,
 	ProductItemFeatureType,
 	TierInfinite,
 	UsageModel,
@@ -20,7 +21,7 @@ import { nullish } from "../../utils.js";
 import {
 	billingToItemInterval,
 	entToItemInterval,
-} from "./productItemUtils.js";
+} from "./itemIntervalUtils.js";
 
 export const toProductItem = ({
 	ent,
@@ -30,13 +31,13 @@ export const toProductItem = ({
 	price?: Price;
 }) => {
 	if (nullish(price)) return toFeatureItem({ ent: ent! }) as ProductItem;
-	if (nullish(ent)) return toPriceItem({ price: price! }) as ProductItem;
+	if (nullish(ent)) return toPriceItem({ price: price }) as ProductItem;
 
-	return toFeaturePriceItem({ ent: ent!, price: price! }) as ProductItem;
+	return toFeaturePriceItem({ ent: ent, price: price }) as ProductItem;
 };
 
 export const toFeatureItem = ({ ent }: { ent: EntitlementWithFeature }) => {
-	if (ent.feature.type == FeatureType.Boolean) {
+	if (ent.feature.type === FeatureType.Boolean) {
 		return {
 			feature_id: ent.feature.id,
 			entitlement_id: ent.id,
@@ -49,8 +50,8 @@ export const toFeatureItem = ({ ent }: { ent: EntitlementWithFeature }) => {
 	const item = {
 		feature_id: ent.feature.id,
 		included_usage:
-			ent.allowance_type == AllowanceType.Unlimited ? Infinite : ent.allowance,
-		interval: entToItemInterval(ent.interval!),
+			ent.allowance_type === AllowanceType.Unlimited ? Infinite : ent.allowance,
+		interval: entToItemInterval({ entInterval: ent.interval }),
 		interval_count: ent.interval_count ?? 1,
 
 		entity_feature_id: ent.entity_feature_id,
@@ -78,12 +79,12 @@ export const toFeaturePriceItem = ({
 	const tiers = config.usage_tiers.map((tier) => {
 		return {
 			amount: tier.amount,
-			to: tier.to == -1 ? TierInfinite : tier.to,
+			to: tier.to === -1 ? TierInfinite : tier.to,
 		};
 	});
 
 	// Build the item config from both price proration config and entitlement rollover
-	let itemConfig: any = {};
+	let itemConfig: ProductItemConfig = {};
 	if (price.proration_config) {
 		itemConfig = { ...price.proration_config };
 	}
@@ -98,7 +99,7 @@ export const toFeaturePriceItem = ({
 
 		included_usage: ent.allowance,
 
-		interval: billingToItemInterval(config.interval!),
+		interval: billingToItemInterval({ billingInterval: config.interval }),
 		interval_count: config.interval_count ?? 1,
 
 		price: null,
@@ -108,8 +109,8 @@ export const toFeaturePriceItem = ({
 		entity_feature_id: ent.entity_feature_id,
 		reset_usage_when_enabled: !ent.carry_from_previous,
 		usage_model:
-			config.bill_when == BillWhen.StartOfPeriod ||
-			config.bill_when == BillWhen.InAdvance
+			config.bill_when === BillWhen.StartOfPeriod ||
+			config.bill_when === BillWhen.InAdvance
 				? UsageModel.Prepaid
 				: UsageModel.PayPerUse,
 
@@ -131,7 +132,7 @@ export const toPriceItem = ({ price }: { price: Price }) => {
 	return {
 		feature_id: null,
 
-		interval: billingToItemInterval(config.interval!),
+		interval: billingToItemInterval({ billingInterval: config.interval }),
 		interval_count: config.interval_count ?? 1,
 		price: config.amount,
 

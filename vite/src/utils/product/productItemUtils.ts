@@ -115,3 +115,14 @@ export const itemsHaveSameInterval = ({
 		(item1.interval_count || 1) === (item2.interval_count || 1)
 	);
 };
+
+export const getItemId = ({
+	item,
+	itemIndex,
+}: {
+	item: ProductItem;
+	itemIndex: number;
+}) => {
+	// || item.entitlement_id || item.price_id;
+	return `item-${itemIndex}`;
+};

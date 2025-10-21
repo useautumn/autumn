@@ -1,15 +1,12 @@
+import { debounce } from "lodash";
 import {
 	parseAsArrayOf,
 	parseAsBoolean,
 	parseAsInteger,
 	parseAsString,
+	useQueryStates,
 } from "nuqs";
-
-import { useQueryStates } from "nuqs";
-import { useLocation } from "react-router";
-import { useCallback, useEffect, useState } from "react";
-import { debounce } from "lodash";
-
+import { useEffect, useState } from "react";
 export const useCustomersQueryStates = () => {
 	const [queryStates, setQueryStates] = useQueryStates(
 		{
@@ -24,6 +21,8 @@ export const useCustomersQueryStates = () => {
 			history: "replace",
 		},
 	);
+
+	// return { queryStates, setQueryStates };
 
 	const [stableStates, setStableStates] = useState(queryStates);
 

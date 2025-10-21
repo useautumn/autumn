@@ -134,7 +134,7 @@ export default function CheckAccessStep({
 					</div>
 					<span>
 						Check whether a customer can access a{" "}
-						{isProduct ? "product" : "feature"} by calling the{" "}
+						{isProduct ? "plan" : "feature"} by calling the{" "}
 						<span className="font-mono text-red-500">
 							<a
 								href="https://docs.useautumn.com/api-reference/entitled"
@@ -188,7 +188,7 @@ export default function CheckAccessStep({
 									</div>
 								) : (
 									<SelectValue
-										placeholder={`Select a ${isProduct ? "product" : "feature"}`}
+										placeholder={`Select a ${isProduct ? "plan" : "feature"}`}
 									/>
 								)}
 							</SelectTrigger>

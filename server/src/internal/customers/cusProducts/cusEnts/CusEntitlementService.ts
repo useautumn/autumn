@@ -1,28 +1,24 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import RecaseError from "@/utils/errorUtils.js";
 import {
-	AppEnv,
-	CusProduct,
+	type AppEnv,
+	type CusProduct,
 	CusProductStatus,
-	Customer,
-	CustomerEntitlement,
-	customerPrices,
+	type Customer,
+	type CustomerEntitlement,
+	customerEntitlements,
+	customerProducts,
 	customers,
-	entitlements,
 	ErrCode,
+	entitlements,
+	type FullCusEntWithProduct,
+	type FullCustomerEntitlement,
 	features,
-	FullCusEntWithProduct,
-	FullCustomerEntitlement,
-	prices,
-	Replaceable,
-	ResetCusEnt,
-	Rollover,
+	type ResetCusEnt,
 } from "@autumn/shared";
-import { customerEntitlements } from "@autumn/shared";
+import { and, eq, lt, sql } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
-import { eq, lt, and, sql } from "drizzle-orm";
-import { customerProducts } from "@autumn/shared";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import RecaseError from "@/utils/errorUtils.js";
 
 export class CusEntService {
 	static async upsert({
@@ -32,7 +28,7 @@ export class CusEntService {
 		db: DrizzleCli;
 		data: CustomerEntitlement[];
 	}) {
-		if (Array.isArray(data) && data.length == 0) return;
+		if (Array.isArray(data) && data.length === 0) return;
 
 		const updateColumns = buildConflictUpdateColumns(customerEntitlements, [
 			"id",

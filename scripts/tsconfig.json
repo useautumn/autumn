@@ -1,0 +1,25 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "ESNext",
+		"lib": ["ES2022"],
+		"moduleResolution": "bundler",
+		"resolveJsonModule": true,
+		"allowJs": true,
+		"checkJs": false,
+		"outDir": "./dist",
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"allowSyntheticDefaultImports": true,
+		"types": ["node"],
+		"baseUrl": ".",
+		"paths": {
+			"@server/*": ["../server/src/*"],
+			"@shared/*": ["../shared/*"]
+		}
+	},
+	"include": ["**/*.ts", "**/*.js"],
+	"exclude": ["node_modules", "dist"]
+}

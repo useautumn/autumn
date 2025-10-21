@@ -1,17 +1,20 @@
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { AttachParams } from "../../cusProducts/AttachParams.js";
-import { AttachBody, AttachBranch } from "@autumn/shared";
+import {
+	type AttachBody,
+	AttachBranch,
+	AttachFunction,
+	cusProductToProduct,
+} from "@autumn/shared";
+import { notNullish } from "@/utils/genUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AttachParams } from "../../cusProducts/AttachParams.js";
+import { attachParamToCusProducts } from "../attachUtils/convertAttachParams.js";
 import { getAttachBranch } from "../attachUtils/getAttachBranch.js";
 import { getAttachConfig } from "../attachUtils/getAttachConfig.js";
-import { AttachFunction } from "@autumn/shared";
 import { getAttachFunction } from "../attachUtils/getAttachFunction.js";
-import { cusProductToProduct } from "@autumn/shared";
-import { attachParamToCusProducts } from "../attachUtils/convertAttachParams.js";
 import { getDowngradeProductPreview } from "./getDowngradeProductPreview.js";
+import { getMultiAttachPreview } from "./getMultiAttachPreview.js";
 import { getNewProductPreview } from "./getNewProductPreview.js";
 import { getUpgradeProductPreview } from "./getUpgradeProductPreview.js";
-import { getMultiAttachPreview } from "./getMultiAttachPreview.js";
-import { notNullish } from "@/utils/genUtils.js";
 
 export const attachParamsToPreview = async ({
 	req,
@@ -53,12 +56,12 @@ export const attachParamsToPreview = async ({
 	logger.info(`ATTACH PREVIEW (org: ${attachParams.org.id})`);
 	logger.info(`Branch: ${branch}, Function: ${func}`);
 
-	let now = attachParams.now || Date.now();
+	const now = attachParams.now || Date.now();
 
 	let preview: any = null;
 
 	if (
-		branch == AttachBranch.MultiAttach ||
+		branch === AttachBranch.MultiAttach ||
 		notNullish(attachParams.productsList)
 	) {
 		preview = await getMultiAttachPreview({
@@ -70,9 +73,9 @@ export const attachParamsToPreview = async ({
 			branch,
 		});
 	} else if (
-		func == AttachFunction.AddProduct ||
-		func == AttachFunction.CreateCheckout ||
-		func == AttachFunction.OneOff
+		func === AttachFunction.AddProduct ||
+		func === AttachFunction.CreateCheckout ||
+		func === AttachFunction.OneOff
 	) {
 		preview = await getNewProductPreview({
 			branch,
@@ -83,20 +86,21 @@ export const attachParamsToPreview = async ({
 		});
 	}
 
-	if (func == AttachFunction.ScheduleProduct) {
+	if (func === AttachFunction.ScheduleProduct) {
 		preview = await getDowngradeProductPreview({
 			attachParams,
 			now,
 			logger,
 			branch,
 			config,
+			withPrepaid,
 		});
 	}
 
 	if (
-		func == AttachFunction.UpgradeDiffInterval ||
-		func == AttachFunction.UpgradeSameInterval ||
-		func == AttachFunction.UpdatePrepaidQuantity
+		func === AttachFunction.UpgradeDiffInterval ||
+		func === AttachFunction.UpgradeSameInterval ||
+		func === AttachFunction.UpdatePrepaidQuantity
 	) {
 		preview = await getUpgradeProductPreview({
 			req,

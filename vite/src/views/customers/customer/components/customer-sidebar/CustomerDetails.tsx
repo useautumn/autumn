@@ -1,14 +1,16 @@
-import CopyButton from "@/components/general/CopyButton";
-import { SideAccordion } from "@/components/general/SideAccordion";
-import { getStripeCusLink } from "@/utils/linkUtils";
 import { faStripe } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ArrowUpRightFromSquare } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
 import { Link } from "react-router";
-import { useEnv } from "@/utils/envUtils";
+import Stripe from "stripe";
+import CopyButton from "@/components/general/CopyButton";
+import { SideAccordion } from "@/components/general/SideAccordion";
 import { SidebarLabel } from "@/components/general/sidebar/sidebar-label";
+import { Button } from "@/components/ui/button";
+import { useOrg } from "@/hooks/common/useOrg";
+import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
+import { useEnv } from "@/utils/envUtils";
+import { getStripeCusLink } from "@/utils/linkUtils";
 import { useCusQuery } from "../../hooks/useCusQuery";
 
 export const CustomerDetails = ({
@@ -20,6 +22,8 @@ export const CustomerDetails = ({
 }) => {
 	const { customer } = useCusQuery();
 	const env = useEnv();
+	const { org } = useOrg();
+	const { stripeAccount } = useOrgStripeQuery();
 
 	return (
 		<div className="flex w-full border-b mt-[2.5px] p-4">
@@ -100,15 +104,28 @@ export const CustomerDetails = ({
 								Stripe
 							</span>
 							<div className="col-span-6">
-								<Link
-									className="!cursor-pointer hover:underline"
-									to={getStripeCusLink(customer.processor?.id, env)}
-									target="_blank"
-								>
+								<div className="!cursor-pointer hover:underline">
 									<div className="flex items-center gap-2 justify-end">
 										<Button
 											variant="sidebarItem"
-											// className="bg-white border shadow-sm rounded-md gap-2 h-6 max-h-6 !py-0"
+											className="!cursor-pointer hover:underline"
+											onClick={() => {
+												if (stripeAccount) {
+													window.open(
+														getStripeCusLink({
+															customerId: customer.processor?.id,
+															env,
+															accountId: stripeAccount.id,
+														}),
+														"_blank",
+													);
+												} else {
+													window.location.href = getStripeCusLink({
+														customerId: customer.processor?.id,
+														env,
+													});
+												}
+											}}
 										>
 											<FontAwesomeIcon
 												icon={faStripe}
@@ -117,7 +134,7 @@ export const CustomerDetails = ({
 											<ArrowUpRightFromSquare size={12} className="text-t2" />
 										</Button>
 									</div>
-								</Link>
+								</div>
 							</div>
 						</>
 					)}

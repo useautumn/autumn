@@ -119,6 +119,8 @@ export const useAttachState = ({
 				free_trial: initialProductRef.current?.free_trial || null,
 			});
 
+		console.log('[UAS] effect', { changed: hasItemsChanged, refLen: initialProductRef.current?.items?.length, hasPrepaid: productHasPrepaid(product.items) });
+
 		setItemsChanged(hasItemsChanged);
 	}, [product]);
 
@@ -163,21 +165,26 @@ export const useAttachState = ({
 	};
 
 	const getButtonText = () => {
-		if (cusProduct && !itemsChanged) {
-			if (flags.isOneOff) {
-				return "Attach Product";
+		const result = (() => {
+			if (cusProduct && !itemsChanged) {
+				if (flags.isOneOff) {
+					return "Attach Plan";
+				}
+
+				if (flags.hasPrepaid) {
+					return "Update prepaid quantity";
+				}
 			}
 
-			if (flags.hasPrepaid) {
-				return "Update prepaid quantity";
+			if (flags.isCanceled) {
+				return "Renew Plan";
 			}
-		}
 
-		if (flags.isCanceled) {
-			return "Renew Product";
-		}
+			return "Attach Plan";
+		})();
 
-		return "Attach Product";
+		console.log('[BTN]', { text: result, cusId: cusProduct?.id, changed: itemsChanged, prepaid: flags.hasPrepaid });
+		return result;
 	};
 
 	return {

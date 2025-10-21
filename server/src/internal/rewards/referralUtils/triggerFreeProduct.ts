@@ -69,7 +69,6 @@ export const triggerFreeProduct = async ({
 			org: req?.org ? req.org : org,
 			env: req?.env ? req.env : env,
 			logger: req?.logger ? req.logger : logger,
-			logtail: req?.logtail ? req.logtail : logger,
 		} as ExtendedRequest;
 	}
 

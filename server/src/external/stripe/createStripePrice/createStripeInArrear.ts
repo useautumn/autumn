@@ -193,7 +193,7 @@ export const createStripeInArrearPrice = async ({
 
 			await PriceService.update({
 				db,
-				id: price.id!,
+				id: price.id,
 				update: { config },
 			});
 		}
@@ -255,7 +255,7 @@ export const createStripeInArrearPrice = async ({
 	} else {
 		productData = {
 			product_data: {
-				name: `${product.name} - ${feature!.name}`,
+				name: `${product.name} - ${feature.name}`,
 			},
 		};
 	}
@@ -263,13 +263,13 @@ export const createStripeInArrearPrice = async ({
 	const stripePrice = await stripeCli.prices.create({
 		...productData,
 		...priceAmountData,
-		currency: org.default_currency!,
+		currency: org.default_currency || "usd",
 		recurring: {
-			...(billingIntervalToStripe({
-				interval: price.config!.interval,
-				intervalCount: price.config!.interval_count,
-			}) as any),
-			meter: meter!.id,
+			...billingIntervalToStripe({
+				interval: price.config.interval,
+				intervalCount: price.config.interval_count,
+			}),
+			meter: meter.id,
 			usage_type: "metered",
 		},
 		nickname: `Autumn Price (${relatedEnt.feature.name})`,
@@ -277,10 +277,11 @@ export const createStripeInArrearPrice = async ({
 
 	config.stripe_price_id = stripePrice.id;
 	config.stripe_product_id = stripePrice.product as string;
-	config.stripe_meter_id = meter!.id;
+	config.stripe_meter_id = meter.id;
+
 	await PriceService.update({
 		db,
-		id: price.id!,
+		id: price.id,
 		update: { config },
 	});
 };

@@ -13,10 +13,8 @@ import { handleCreateBillingPortal } from "../customers/handlers/handleCreateBil
 import { featureRouter } from "../features/featureRouter.js";
 import { internalFeatureRouter } from "../features/internalFeatureRouter.js";
 import { migrationRouter } from "../migrations/migrationRouter.js";
-import { handleConnectStripe } from "../orgs/handlers/handleConnectStripe.js";
-import { handleDeleteStripe } from "../orgs/handlers/handleDeleteStripe.js";
 import { handleGetOrg } from "../orgs/handlers/handleGetOrg.js";
-import { platformRouter } from "../platform/platformRouter.js";
+import { platformRouter } from "../platform/platformLegacy/platformRouter.js";
 import { productBetaRouter, productRouter } from "../products/productRouter.js";
 import { componentRouter } from "./components/componentRouter.js";
 import { entityRouter } from "./entities/entityRouter.js";
@@ -68,9 +66,9 @@ apiRouter.post("/billing_portal", handleCreateBillingPortal);
 apiRouter.use("/query", analyticsRouter);
 apiRouter.use("/platform", platformRouter);
 
-// Used for tests...
-apiRouter.post("/organization/stripe", handleConnectStripe);
-apiRouter.delete("/organization/stripe", handleDeleteStripe);
+// // Used for tests...
+// apiRouter.post("/organization/stripe", ...handleConnectStripe);
+// apiRouter.delete("/organization/stripe", ...handleDeleteStripe);
 apiRouter.get("/organization", handleGetOrg);
 
 export { apiRouter };

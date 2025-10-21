@@ -1,12 +1,15 @@
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useQuery } from "@tanstack/react-query";
-import { parseAsInteger, parseAsString } from "nuqs";
-import { useQueryStates } from "nuqs";
-import { useParams, useSearchParams } from "react-router";
-import { useCachedProduct } from "./getCachedProduct";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+
+import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useMemo } from "react";
-import { useProductCountsQuery } from "./queries/useProductCountsQuery";
+import { useParams } from "react-router";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+
+import { throwBackendError } from "@/utils/genUtils";
+
+import { useCachedProduct } from "./getCachedProduct";
 import { useMigrationsQuery } from "./queries/useMigrationsQuery.tsx";
+import { useProductCountsQuery } from "./queries/useProductCountsQuery";
 
 // Product query state...
 export const useProductQueryState = () => {
@@ -29,24 +32,40 @@ export const useProductQuery = () => {
 	const productId = queryStates.productId || product_id;
 
 	const axiosInstance = useAxiosInstance();
+	const queryClient = useQueryClient();
 	const { getCachedProduct } = useCachedProduct({ productId: productId });
 
-	const cachedProduct = useMemo(getCachedProduct, [getCachedProduct]);
+	const cachedProduct = useMemo(getCachedProduct, []);
 
 	const fetcher = async () => {
 		if (!productId) return null;
-		const url = `/products/${productId}/data2`;
-		const queryParams = {
-			version: queryStates.version,
-		};
 
-		const { data } = await axiosInstance.get(url, { params: queryParams });
-		return data;
+		const url = `/products/${productId}/data2`;
+		const queryParams: { version?: number } = {};
+
+		// Only include version if it's explicitly set, otherwise fetch latest
+		if (queryStates.version) {
+			queryParams.version = queryStates.version;
+		}
+
+		try {
+			const url = `/products/${productId}/data`;
+			const queryParams = {
+				version: queryStates.version,
+			};
+
+			const { data } = await axiosInstance.get(url, { params: queryParams });
+			return data;
+		} catch (error) {
+			throwBackendError(error);
+		}
 	};
 
 	const { data, isLoading, refetch, error } = useQuery({
 		queryKey: ["product", productId, queryStates.version],
 		queryFn: fetcher,
+		retry: false, // Don't retry on error (e.g., product not found)
+		enabled: !!productId, // Only run query if productId exists
 	});
 
 	const { refetch: refetchCounts } = useProductCountsQuery();
@@ -54,6 +73,17 @@ export const useProductQuery = () => {
 
 	const product = data?.product || cachedProduct;
 	const isLoadingWithCache = cachedProduct ? false : isLoading;
+
+	/**
+	 * Invalidates all individual product queries across the app
+	 */
+	const invalidate = async () => {
+		await queryClient.invalidateQueries({ queryKey: ["product"] });
+		await Promise.all([
+			queryClient.invalidateQueries({ queryKey: ["product_counts"] }),
+			queryClient.invalidateQueries({ queryKey: ["migrations"] }),
+		]);
+	};
 
 	return {
 		product,
@@ -63,6 +93,7 @@ export const useProductQuery = () => {
 			await refetch();
 			await Promise.all([refetchMigrations(), refetchCounts()]);
 		},
+		invalidate,
 		error,
 	};
 };

@@ -45,7 +45,7 @@ export const handleUpdateProductV2 = createRoute({
 				orgId: org.id,
 				env,
 				version: version ? parseInt(version) : undefined,
-				allowNotFound: upsert === "true",
+				allowNotFound: upsert === true,
 			}),
 			RewardProgramService.getByProductId({
 				db,
@@ -77,6 +77,7 @@ export const handleUpdateProductV2 = createRoute({
 		const newProductV2: ProductV2 = {
 			...curProductV2,
 			...body,
+			group: body.group || curProductV2.group || "",
 			items: body.items || [],
 			free_trial: newFreeTrial || curProductV2.free_trial || undefined,
 		};
@@ -102,7 +103,7 @@ export const handleUpdateProductV2 = createRoute({
 		const cusProductExists = cusProductsCurVersion.length > 0;
 
 		if (cusProductExists && itemsExist) {
-			if (disable_version === "true") {
+			if (disable_version) {
 				throw new RecaseError({
 					message: "Cannot auto save product as there are existing customers",
 				});
@@ -149,7 +150,7 @@ export const handleUpdateProductV2 = createRoute({
 		// New full product
 		const newFullProduct = await ProductService.getFull({
 			db,
-			idOrInternalId: fullProduct.id,
+			idOrInternalId: body.id || fullProduct.id,
 			orgId: org.id,
 			env,
 		});
@@ -171,6 +172,7 @@ export const handleUpdateProductV2 = createRoute({
 		}
 
 		// New full product
+
 		await initProductInStripe({
 			db,
 			product: newFullProduct,
@@ -191,17 +193,17 @@ export const handleUpdateProductV2 = createRoute({
 			jobName: JobName.RewardMigration,
 			payload: {
 				oldPrices: fullProduct.prices,
-				productId: fullProduct.id,
+				productId: body.id || fullProduct.id,
 				orgId: org.id,
 				env,
 			},
 		});
 
-		return c.json(
-			getProductResponse({
-				product: newFullProduct,
-				features,
-			}),
-		);
+		const productResponse = await getProductResponse({
+			product: newFullProduct,
+			features,
+		});
+
+		return c.json(productResponse);
 	},
 });

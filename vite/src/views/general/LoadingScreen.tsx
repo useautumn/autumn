@@ -6,7 +6,7 @@ import React from "react";
 function LoadingScreen() {
 	const texts = [
 		"Counting pennies",
-		"Forging products",
+		"Forging plans",
 		"Increasing ARR",
 		"Optimizing pricing",
 		"Blasting competitors",

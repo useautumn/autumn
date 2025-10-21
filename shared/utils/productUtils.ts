@@ -3,7 +3,7 @@ import type { ProductItem, ProductV2 } from "../index.js";
 import {
 	isFeaturePriceItem,
 	isPriceItem,
-} from "./productDisplayUtils/getItemType.js";
+} from "./productV2Utils/productItemUtils/getItemType.js";
 import { nullish } from "./utils.js";
 
 export const isFreeProductV2 = ({ items }: { items: ProductItem[] }) => {

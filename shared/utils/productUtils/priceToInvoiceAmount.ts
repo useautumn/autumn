@@ -1,20 +1,20 @@
-import { FixedPriceConfig } from "../../models/productModels/priceModels/priceConfig/fixedPriceConfig.js";
-import { UsagePriceConfig } from "../../models/productModels/priceModels/priceConfig/usagePriceConfig.js";
+import { Decimal } from "decimal.js";
+import type { FixedPriceConfig } from "../../models/productModels/priceModels/priceConfig/fixedPriceConfig.js";
+import type { UsagePriceConfig } from "../../models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import { BillingType } from "../../models/productModels/priceModels/priceEnums.js";
-import { Price } from "../../models/productModels/priceModels/priceModels.js";
+import type { Price } from "../../models/productModels/priceModels/priceModels.js";
 import { Infinite } from "../../models/productModels/productEnums.js";
 import {
-	ProductItem,
+	type ProductItem,
 	UsageModel,
 } from "../../models/productV2Models/productItemModels/productItemModels.js";
-import { isPriceItem } from "../productDisplayUtils/getItemType.js";
+import { isPriceItem } from "../productV2Utils/productItemUtils/getItemType.js";
 import {
 	calculateProrationAmount,
-	Proration,
-} from "../productDisplayUtils/getProductItemRes.js";
+	type Proration,
+} from "../productV2Utils/productItemUtils/getProductItemRes.js";
 import { nullish } from "../utils.js";
 import { getBillingType, isFixedPrice } from "./priceUtils.js";
-import { Decimal } from "decimal.js";
 
 export const getAmountForQuantity = ({
 	price,
@@ -25,7 +25,7 @@ export const getAmountForQuantity = ({
 }) => {
 	const config = price.config as UsagePriceConfig;
 
-	let billingUnits = config.billing_units || 1;
+	const billingUnits = config.billing_units || 1;
 
 	const roundedQuantity = new Decimal(quantity)
 		.div(billingUnits)
@@ -42,19 +42,19 @@ export const getAmountForQuantity = ({
 	// console.log("Usage tiers:", config.usage_tiers);
 
 	for (let i = 0; i < config.usage_tiers.length; i++) {
-		let tier = config.usage_tiers[i];
+		const tier = config.usage_tiers[i];
 
 		let usageWithinTier = new Decimal(0);
-		if (tier.to == Infinite || tier.to == -1) {
+		if (tier.to === Infinite || tier.to === -1) {
 			usageWithinTier = remainingUsage;
 		} else {
-			let tierUsage = new Decimal(tier.to).minus(lastTierTo);
+			const tierUsage = new Decimal(tier.to).minus(lastTierTo);
 			usageWithinTier = Decimal.min(remainingUsage, tierUsage);
 			lastTierTo = tier.to;
 		}
 
-		let amountPerUnit = new Decimal(tier.amount).div(billingUnits);
-		let amountWithinTier = amountPerUnit.mul(usageWithinTier);
+		const amountPerUnit = new Decimal(tier.amount).div(billingUnits);
+		const amountWithinTier = amountPerUnit.mul(usageWithinTier);
 		amount = amount.plus(amountWithinTier);
 		remainingUsage = remainingUsage.minus(usageWithinTier);
 
@@ -86,7 +86,7 @@ export const itemToInvoiceAmount = ({
 		);
 	}
 
-	let price = {
+	const price = {
 		config: {
 			usage_tiers: item.tiers || [
 				{
@@ -98,7 +98,7 @@ export const itemToInvoiceAmount = ({
 		},
 	} as unknown as Price;
 
-	if (item.usage_model == UsageModel.Prepaid) {
+	if (item.usage_model === UsageModel.Prepaid) {
 		amount = getAmountForQuantity({ price, quantity: quantity! });
 	} else {
 		amount = getAmountForQuantity({ price, quantity: overage! });
@@ -131,7 +131,7 @@ export const priceToInvoiceAmount = ({
 			amount = (price.config as FixedPriceConfig).amount;
 		} else {
 			const config = price.config as UsagePriceConfig;
-			let billingType = getBillingType(config);
+			const billingType = getBillingType(config);
 
 			if (!nullish(quantity) && !nullish(overage)) {
 				throw new Error(
@@ -139,7 +139,7 @@ export const priceToInvoiceAmount = ({
 				);
 			}
 
-			if (billingType == BillingType.UsageInAdvance) {
+			if (billingType === BillingType.UsageInAdvance) {
 				amount = getAmountForQuantity({ price, quantity: quantity! });
 			} else {
 				amount = getAmountForQuantity({ price, quantity: overage! });

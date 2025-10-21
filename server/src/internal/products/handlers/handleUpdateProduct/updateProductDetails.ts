@@ -12,7 +12,7 @@ import {
 	type UpdateProduct,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { isStripeConnected } from "@/internal/orgs/orgUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
@@ -33,7 +33,7 @@ const productDetailsSame = (prod1: Product, prod2: UpdateProduct) => {
 		return false;
 	}
 
-	if (notNullish(prod2.group) && prod1.group !== prod2.group) {
+	if (prod2.group !== undefined && prod1.group !== prod2.group) {
 		return false;
 	}
 
@@ -205,9 +205,7 @@ export const handleUpdateProductDetails = async ({
 		}
 	}
 
-	if (productDetailsSame(curProduct, newProduct)) {
-		return;
-	}
+	if (productDetailsSame(curProduct, newProduct)) return;
 
 	if (notNullish(newProduct.id) && newProduct.id !== curProduct.id) {
 		if (customersOnAllVersions.length > 0) {
@@ -225,13 +223,18 @@ export const handleUpdateProductDetails = async ({
 	}
 
 	// 2. Update product
+	console.log("New group:", newProduct.group);
+
 	await ProductService.updateByInternalId({
 		db,
 		internalId: curProduct.internal_id,
 		update: {
 			id: newProduct.id,
 			name: newProduct.name,
-			group: newProduct.group,
+			group:
+				newProduct.group === "" || newProduct.group === null
+					? ""
+					: newProduct.group,
 			is_add_on: newProduct.is_add_on,
 			is_default: newProduct.is_default,
 			archived: newProduct.archived,

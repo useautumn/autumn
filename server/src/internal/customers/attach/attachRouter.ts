@@ -5,12 +5,12 @@ import {
 	type FullCusProduct,
 } from "@autumn/shared";
 import { Router } from "express";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import {
 	createStripeCusIfNotExists,
 	getCusPaymentMethod,
 } from "@/external/stripe/stripeCusUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import {
@@ -140,7 +140,7 @@ export const checkStripeConnections = async ({
 	useCheckout?: boolean;
 }) => {
 	const { org, customer, products, stripeCus, stripeCli } = attachParams;
-	const logger = req.logtail;
+	const logger = req.logger;
 	const env = customer.env;
 
 	// 2. If invoice only and no email, save email

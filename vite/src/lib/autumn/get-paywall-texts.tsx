@@ -1,9 +1,9 @@
-import { type CheckFeaturePreview } from "autumn-js";
+import type { CheckFeaturePreview } from "autumn-js";
 
 export const getPaywallDialogTexts = (preview: CheckFeaturePreview) => {
 	const { scenario, products, feature_name } = preview;
 
-	if (products.length == 0) {
+	if (products.length === 0) {
 		switch (scenario) {
 			case "usage_limit":
 				return {
@@ -33,7 +33,7 @@ export const getPaywallDialogTexts = (preview: CheckFeaturePreview) => {
 	if (isAddOn) {
 		message = `Please purchase the ${nextProduct.name} add-on to continue using ${feature_name}.`;
 	} else {
-		message = `Please upgrade to the ${nextProduct.name} plan to continue using ${feature_name}.`;
+		message = `Please upgrade to the ${nextProduct.name} product to continue using ${feature_name}.`;
 	}
 
 	switch (scenario) {

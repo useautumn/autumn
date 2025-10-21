@@ -11,6 +11,7 @@ export enum AttachScenario {
 	Downgrade = "downgrade",
 	Cancel = "cancel",
 	Expired = "expired",
+	PastDue = "past_due",
 }
 
 export interface PreviewItem {

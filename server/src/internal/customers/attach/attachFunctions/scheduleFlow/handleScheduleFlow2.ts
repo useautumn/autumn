@@ -3,6 +3,7 @@ import {
 	type AttachConfig,
 	AttachScenario,
 	ErrCode,
+	InternalError,
 	SuccessCode,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
@@ -79,6 +80,16 @@ export const handleScheduleFunction2 = async ({
 	const subItems = curSub?.items.data.filter((item) =>
 		subItemInCusProduct({ cusProduct: curCusProduct, subItem: item }),
 	);
+
+	if (subItems.length === 0) {
+		logger.error(
+			`SCHEDULE FLOW: subItems is empty, curCusProduct: ${curCusProduct.product.name}`,
+		);
+		throw new InternalError({
+			message: `SCHEDULE FLOW: subItems is empty, curCusProduct: ${curCusProduct.product.name}`,
+		});
+	}
+
 	const expectedEnd = getLatestPeriodEnd({ subItems });
 
 	if (schedule) {

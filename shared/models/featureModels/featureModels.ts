@@ -8,9 +8,11 @@ export const FeatureSchema = z.object({
 	created_at: z.number(),
 	env: z.nativeEnum(AppEnv),
 
-	id: z.string().nonempty(),
-	name: z.string().nonempty(),
-	type: z.nativeEnum(FeatureType),
+	id: z.string().nonempty("Features must have an ID"),
+	name: z.string().nonempty("Features must have a name"),
+	type: z.nativeEnum(FeatureType, {
+		message: "Features must have a type",
+	}),
 	config: z.any(),
 	display: z
 		.object({
@@ -19,6 +21,7 @@ export const FeatureSchema = z.object({
 		})
 		.nullish(),
 	archived: z.boolean(),
+	event_names: z.array(z.string()).default([]),
 });
 
 export const CreateFeatureSchema = FeatureSchema.pick({
@@ -27,6 +30,7 @@ export const CreateFeatureSchema = FeatureSchema.pick({
 	type: true,
 	config: true,
 	display: true,
+	event_names: true,
 });
 
 export const MinFeatureSchema = z.object({

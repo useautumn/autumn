@@ -1,43 +1,28 @@
 "use client";
 
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import { AppEnv } from "@autumn/shared";
+import { faStripeS } from "@fortawesome/free-brands-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useState } from "react";
+import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
-
+import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import SmallSpinner from "@/components/general/SmallSpinner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/v2/selects/Select";
+import { useOrg } from "@/hooks/common/useOrg";
+import { cn } from "@/lib/utils";
 import { OrgService } from "@/services/OrgService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { AppEnv } from "@autumn/shared";
-import { useSearchParams } from "react-router";
-import { getBackendErr } from "@/utils/genUtils";
 import { stripeCurrencyCodes } from "@/utils/constants/stripeCurrencyCodes";
-import { ChevronsUpDown } from "lucide-react";
-import {
-	Command,
-	CommandEmpty,
-	CommandGroup,
-	CommandInput,
-	CommandItem,
-	CommandList,
-} from "@/components/ui/command";
-
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
-
-import { Check } from "lucide-react";
-import { cn } from "@/lib/utils";
-
-import { useAxiosSWR } from "@/services/useAxiosSwr";
-
-import SmallSpinner from "@/components/general/SmallSpinner";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faStripeS } from "@fortawesome/free-brands-svg-icons";
-import { useNavigate } from "react-router";
-import { useOrg } from "@/hooks/common/useOrg";
+import { getBackendErr } from "@/utils/genUtils";
 
 function ConnectStripe({
 	className,
@@ -201,56 +186,22 @@ export const CurrencySelect = ({
 	className?: string;
 	disabled?: boolean;
 }) => {
-	const [open, setOpen] = useState(false);
 	return (
-		<Popover open={open} onOpenChange={setOpen}>
-			<PopoverTrigger asChild>
-				<Button
-					variant="outline"
-					role="combobox"
-					aria-expanded={open}
-					className={cn(
-						"w-full justify-between transition-colors duration-100 !rounded-md p-2",
-						open && "border-focus !shadow-focus",
-						// "border-[rgb(139,92,246)] shadow-[0_0_2px_1px_rgba(139,92,246,0.25)]",
-						className,
-					)}
-					disabled={disabled}
-				>
-					{defaultCurrency ? defaultCurrency : "Select currency..."}
-					<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-				</Button>
-			</PopoverTrigger>
-			<PopoverContent className="p-0">
-				<Command className="p-0">
-					<CommandInput placeholder="Search currency..." />
-					<CommandEmpty>No currency found.</CommandEmpty>
-					<CommandList className="p-0">
-						<CommandGroup className="p-0">
-							{stripeCurrencyCodes.map((currency) => (
-								<CommandItem
-									key={currency.code}
-									value={currency.code}
-									onSelect={(value) => {
-										setDefaultCurrency(value);
-										setOpen(false);
-									}}
-									className="p-2 flex items-center justify-between"
-								>
-									{currency.currency} - {currency.code}
-									<Check
-										className={`mr-2 h-4 w-4 ${
-											defaultCurrency === currency.code
-												? "opacity-100"
-												: "opacity-0"
-										}`}
-									/>
-								</CommandItem>
-							))}
-						</CommandGroup>
-					</CommandList>
-				</Command>
-			</PopoverContent>
-		</Popover>
+		<Select
+			value={defaultCurrency}
+			onValueChange={(value) => setDefaultCurrency(value.toUpperCase())}
+			disabled={disabled}
+		>
+			<SelectTrigger className={cn("w-full", className)}>
+				<SelectValue placeholder="Select currency..." />
+			</SelectTrigger>
+			<SelectContent>
+				{stripeCurrencyCodes.map((currency) => (
+					<SelectItem key={currency.code} value={currency.code}>
+						{currency.currency} - {currency.code}
+					</SelectItem>
+				))}
+			</SelectContent>
+		</Select>
 	);
 };

@@ -17,12 +17,21 @@
 	"linter": {
 		"enabled": true,
 		"rules": {
+			"a11y": {
+				"noStaticElementInteractions": "off",
+				"useKeyWithClickEvents": "off"
+			},
 			"recommended": true,
 			"complexity": {
 				"noStaticOnlyClass": "off"
 			},
 			"suspicious": {
-				"noArrayIndexKey": "off"
+				"noArrayIndexKey": "off",
+				"noUnknownAtRules": "off"
+			},
+			"correctness": {
+				"useParseIntRadix": "off",
+				"useExhaustiveDependencies": "off"
 			}
 		}
 	},

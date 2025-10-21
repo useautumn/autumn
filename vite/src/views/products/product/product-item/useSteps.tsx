@@ -1,14 +1,13 @@
-import { useEffect, useState } from "react";
-import { CreateItemStep } from "./utils/CreateItemStep";
+import { useState } from "react";
+import type { CreateItemStep } from "./utils/CreateItemStep";
 
-export const useSteps = ({ initialStep }: { initialStep: CreateItemStep }) => {
+export const useSteps = <T = CreateItemStep>({
+	initialStep,
+}: {
+	initialStep: T;
+}) => {
 	const [stepVal, setStepVal] = useState(initialStep);
-	const [stepStack, setStepStack] = useState<CreateItemStep[]>([initialStep]);
-
-	// useEffect(() => {
-	//   setStepStack([initialStep]);
-	//   setStepVal(initialStep);
-	// }, []);
+	const [stepStack, setStepStack] = useState<T[]>([initialStep]);
 
 	const popStep = () => {
 		if (stepStack.length === 1) {
@@ -23,8 +22,7 @@ export const useSteps = ({ initialStep }: { initialStep: CreateItemStep }) => {
 		});
 	};
 
-	const pushStep = (step: CreateItemStep) => {
-		console.log("Pushing step!", step);
+	const pushStep = (step: T) => {
 		setStepStack((prev) => [...prev, step]);
 		setStepVal(step);
 	};
@@ -34,7 +32,7 @@ export const useSteps = ({ initialStep }: { initialStep: CreateItemStep }) => {
 		setStepVal(initialStep);
 	};
 
-	const replaceStep = (step: CreateItemStep) => {
+	const replaceStep = (step: T) => {
 		const curStack = stepStack;
 		if (curStack.length <= 1) {
 			setStepStack([step]);

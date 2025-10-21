@@ -177,6 +177,7 @@ export const handleUpgradeFlow = async ({
 			updates: {
 				subscription_ids: canceled ? undefined : [],
 				status: CusProductStatus.Expired,
+				ended_at: Date.now(),
 			},
 		});
 

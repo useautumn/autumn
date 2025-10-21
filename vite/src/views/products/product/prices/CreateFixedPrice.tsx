@@ -90,7 +90,7 @@ function CreateFixedPrice() {
 		try {
 			if (hasChanges) {
 				if (counts?.all > 0) {
-					toast.error("Please save the current changes to your product first");
+					toast.error("Please save the current changes to your plan first");
 					return;
 				}
 
@@ -111,7 +111,7 @@ function CreateFixedPrice() {
 
 			await navigate(getRedirectUrl(`/products/${newId}`, env));
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to update product"));
+			toast.error(getBackendErr(error, "Failed to update plan"));
 		} finally {
 			setCopyLoading(false);
 		}

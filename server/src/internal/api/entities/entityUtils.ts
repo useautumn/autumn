@@ -1,6 +1,21 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import {
+	type AppEnv,
+	BillingType,
+	type Customer,
+	type Entitlement,
+	type Entity,
+	EntityExpand,
+	ErrCode,
+	type Feature,
+	type FullCustomerEntitlement,
+	type FullCustomerPrice,
+	type Organization,
+	type UsagePriceConfig,
+} from "@autumn/shared";
+import { StatusCodes } from "http-status-codes";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { submitUsageToStripe } from "@/external/stripe/stripeMeterUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import {
 	getBillingType,
@@ -8,21 +23,6 @@ import {
 } from "@/internal/products/prices/priceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-import {
-	AppEnv,
-	BillingType,
-	Customer,
-	Entitlement,
-	Entity,
-	EntityExpand,
-	ErrCode,
-	Feature,
-	FullCustomerEntitlement,
-	FullCustomerPrice,
-	Organization,
-	UsagePriceConfig,
-} from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
 
 export const getLinkedCusEnt = ({
 	linkedFeature,
@@ -32,7 +32,7 @@ export const getLinkedCusEnt = ({
 	cusEnts: any;
 }) => {
 	// Get linked cus ent...
-	let linkedCusEnt = cusEnts.find(
+	const linkedCusEnt = cusEnts.find(
 		(e: any) => e.entitlement.feature.id === linkedFeature.id,
 	);
 
@@ -48,7 +48,7 @@ export const entityFeatureIdExists = ({
 }: {
 	cusEnt: FullCustomerEntitlement;
 }) => {
-	let ent = cusEnt.entitlement;
+	const ent = cusEnt.entitlement;
 	return notNullish(ent.entity_feature_id);
 };
 
@@ -102,7 +102,7 @@ export const removeEntityFromCusEnt = async ({
 	env: AppEnv;
 }) => {
 	// isLinked
-	let isLinked = isLinkedToEntity({
+	const isLinked = isLinkedToEntity({
 		cusEnt,
 		entity,
 	});
@@ -111,22 +111,22 @@ export const removeEntityFromCusEnt = async ({
 		return;
 	}
 
-	let entitlement = cusEnt.entitlement;
+	const entitlement = cusEnt.entitlement;
 	console.log(
 		`Linked cus ent: ${entitlement.feature.id}, isLinked: ${isLinked}`,
 	);
 
 	// Delete cus ent ids
-	let newEntities = structuredClone(cusEnt.entities!);
+	const newEntities = structuredClone(cusEnt.entities!);
 
 	// TODO: Send usage to stripe if cus price exists
-	let stripeCli = createStripeCli({
+	const stripeCli = createStripeCli({
 		org,
 		env,
 	});
 	if (cusPrice) {
-		let config = cusPrice.price.config as UsagePriceConfig;
-		let billingType = getBillingType(config);
+		const config = cusPrice.price.config as UsagePriceConfig;
+		const billingType = getBillingType(config);
 		if (billingType == BillingType.UsageInArrear) {
 			let usage = -newEntities[entity.id]?.balance;
 
@@ -163,8 +163,8 @@ export const removeEntityFromCusEnt = async ({
 
 export const parseEntityExpand = (expand: string): EntityExpand[] => {
 	if (expand) {
-		let options = expand.split(",");
-		let result: EntityExpand[] = [];
+		const options = expand.split(",");
+		const result: EntityExpand[] = [];
 		for (const option of options) {
 			if (!Object.values(EntityExpand).includes(option as EntityExpand)) {
 				throw new RecaseError({

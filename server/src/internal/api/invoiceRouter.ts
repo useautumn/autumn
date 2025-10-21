@@ -1,8 +1,7 @@
-import { createStripeCli } from "@/external/stripe/utils.js";
-
+import { Router } from "express";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { handleRequestError } from "@/utils/errorUtils.js";
-import { Router } from "express";
 
 export const invoiceRouter: Router = Router();
 

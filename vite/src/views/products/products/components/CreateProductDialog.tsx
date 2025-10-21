@@ -46,8 +46,8 @@ function CreateProduct({
 		if (!/^[a-zA-Z0-9 _-]+$/.test(productName)) {
 			toast.error(
 				!productName
-					? "Product name is required"
-					: "Product name can only contain alphanumeric characters, dashes (-), and underscores (_)",
+					? "Plan name is required"
+					: "Plan name can only contain alphanumeric characters, dashes (-), and underscores (_)",
 			);
 			return;
 		}
@@ -66,7 +66,7 @@ function CreateProduct({
 			}
 			setOpen(false);
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to create product"));
+			toast.error(getBackendErr(error, "Failed to create plan"));
 		}
 		setLoading(false);
 	};
@@ -83,11 +83,11 @@ function CreateProduct({
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>
 				<Button variant="add" className="w-full">
-					Product
+					Plan
 				</Button>
 			</DialogTrigger>
 			<DialogContent className="w-[500px]">
-				<DialogTitle>Create Product</DialogTitle>
+				<DialogTitle>Create Plan</DialogTitle>
 				<ProductConfig
 					product={product}
 					setProduct={setProduct}
@@ -107,7 +107,7 @@ function CreateProduct({
 							<ToggleButton
 								disabled={product?.is_add_on}
 								buttonText="Default"
-								infoContent="This product is enabled by default for all new users, typically used for your free plan"
+								infoContent="This plan is enabled by default for all new users, typically used for your free plan"
 								value={product?.is_default}
 								setValue={() =>
 									setProduct({
@@ -119,7 +119,7 @@ function CreateProduct({
 							<ToggleButton
 								disabled={product?.is_default}
 								buttonText="Add-on"
-								infoContent="This product is an add-on that can be bought together with your base products (eg, for top ups)"
+								infoContent="This plan is an add-on that can be bought together with your base plans (eg, for top ups)"
 								value={product?.is_add_on}
 								setValue={() =>
 									setProduct({ ...product, is_add_on: !product?.is_add_on })
@@ -132,7 +132,7 @@ function CreateProduct({
 							variant="gradientPrimary"
 							className="min-w-44 w-44 max-w-44"
 						>
-							Create Product
+							Create Plan
 						</Button>
 					</div>
 				</DialogFooter>

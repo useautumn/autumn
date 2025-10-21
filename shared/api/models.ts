@@ -30,7 +30,8 @@ export * from "./customers/previousVersions/apiCustomerV2.js";
 export * from "./entities/apiEntity.js";
 // NOTE: entitiesOpenApi.js is NOT exported here - it's only imported by openapi.ts for spec generation
 export * from "./entities/entityOpModels.js";
-
+export * from "./errors/classes/featureErrClasses.js";
+export * from "./errors/codes/featureErrCodes.js";
 // Features
 export * from "./features/apiFeature.js";
 export * from "./features/featureOpModels.js";
@@ -51,9 +52,13 @@ export * from "./referrals/apiReferralCode.js";
 export * from "./referrals/referralOpModels.js";
 export * from "./referrals/referralsOpenApi.js";
 
+// NOTE: productsOpenApi.js is NOT exported here - it's only imported by openapi.ts for spec generation
+
 // export * from "./products/apiFreeTrial.js";
 // export * from "./products/apiProduct.js";
 // export * from "./products/apiProductItem.js";
 
 // Errors
 export * from "./errors/index.js";
+// Models
+export * from "./platform/platformModels.js";

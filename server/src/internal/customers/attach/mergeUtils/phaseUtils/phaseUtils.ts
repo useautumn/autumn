@@ -40,9 +40,11 @@ export const similarUnix = ({
 export const logPhaseItems = async ({
 	items,
 	db,
+	withId = false,
 }: {
 	items: Stripe.SubscriptionScheduleUpdateParams.Phase.Item[];
 	db: DrizzleCli;
+	withId?: boolean;
 }) => {
 	const priceIds = items
 		.map((item) => {
@@ -60,6 +62,7 @@ export const logPhaseItems = async ({
 		const priceId =
 			typeof item.price === "string" ? item.price : (item.price as any)?.id;
 		console.log({
+			id: withId ? (item as any).id : undefined,
 			price: priceId,
 			quantity: item.quantity,
 			autumnPrice: autumnPrices[priceId]

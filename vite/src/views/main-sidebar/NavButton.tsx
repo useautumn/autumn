@@ -1,12 +1,12 @@
-import { cn } from "@/lib/utils";
-import { getRedirectUrl, notNullish, pushPage } from "@/utils/genUtils";
-import { AppEnv } from "@autumn/shared";
-import { Link, useSearchParams } from "react-router";
-import { useEffect, useState } from "react";
-import { useSidebarContext } from "./SidebarContext";
-import { useEnv } from "@/utils/envUtils";
+import type { AppEnv } from "@autumn/shared";
 import { ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { Link, useSearchParams } from "react-router";
 import { useTab } from "@/hooks/common/useTab";
+import { cn } from "@/lib/utils";
+import { useEnv } from "@/utils/envUtils";
+import { notNullish, pushPage } from "@/utils/genUtils";
+import { useSidebarContext } from "./SidebarContext";
 
 export const NavButton = ({
 	value,
@@ -43,7 +43,7 @@ export const NavButton = ({
 	const subTab = searchParams.get("tab");
 
 	const isActive =
-		tab == value && (subValue ? subTab == subValue : true) && isOpen !== true;
+		tab === value && (subValue ? subTab === subValue : true) && isOpen !== true;
 
 	const [isHovered, setIsHovered] = useState(false);
 	const showTooltip = !expanded && isHovered;
@@ -88,9 +88,9 @@ export const NavButton = ({
 	};
 
 	const outerDivClass = cn(
-		`!cursor-default font-medium 
+		`!cursor-default font-medium
            text-sm flex items-center text-t1 px-2 h-7 rounded-md w-full`,
-		!isGroup && "hover:bg-zinc-200/50 hover:text-t1",
+		(!isGroup || !expanded) && "hover:bg-zinc-200/50 hover:text-t1",
 		isActive && "bg-zinc-200/80 !text-t1 hover:bg-zinc-200",
 		isSubNav &&
 			"text-t2 pl-4 font-normal rounded-none rounded-tr-md rounded-br-md",
@@ -118,7 +118,7 @@ export const NavButton = ({
 					<TabComponent />
 				</Link>
 			) : (
-				<button className={outerDivClass} onClick={onClick}>
+				<button type="button" className={outerDivClass} onClick={onClick}>
 					<TabComponent />
 				</button>
 			)}

@@ -9,13 +9,15 @@ import {
 	type ProductItem,
 	ProductItemInterval,
 	ProductItemSchema,
+	type RolloverConfig,
+	RolloverDuration,
 	UsageModel,
 } from "@autumn/shared";
+import { itemToEntInterval } from "@shared/utils/productV2Utils/productItemUtils/itemIntervalUtils.js";
 import { StatusCodes } from "http-status-codes";
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import { createFeaturesFromItems } from "./createFeaturesFromItems.js";
-import { itemToEntInterval } from "./itemIntervalUtils.js";
 import {
 	isBooleanFeatureItem,
 	isFeatureItem,
@@ -31,6 +33,7 @@ const validateProductItem = ({
 	features: Feature[];
 }) => {
 	item = ProductItemSchema.parse(item);
+	const feature = features.find((f) => f.id === item.feature_id);
 
 	if (nullish(item.feature_id) && nullish(item.price) && nullish(item.tiers)) {
 		throw new RecaseError({
@@ -50,7 +53,7 @@ const validateProductItem = ({
 	}
 
 	// 2. If amount is set, it must be greater than 0
-	if (notNullish(item.price) && item.price! <= 0) {
+	if (notNullish(item.price) && item.price <= 0) {
 		throw new RecaseError({
 			message: `Price must be greater than 0`,
 			code: ErrCode.InvalidProductItem,
@@ -69,18 +72,6 @@ const validateProductItem = ({
 				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
-
-		// if (item.tiers) {
-		//   item.tiers.forEach((tier) => {
-		//     if (tier.amount.toString().split(".")[1]?.length > 2) {
-		//       throw new RecaseError({
-		//         message: `One off prices can have at most 2 decimal places`,
-		//         code: ErrCode.InvalidInputs,
-		//         statusCode: StatusCodes.BAD_REQUEST,
-		//       });
-		//     }
-		//   });
-		// }
 	}
 
 	// 4. If it's a feature item, it should have included usage as number or inf
@@ -91,7 +82,7 @@ const validateProductItem = ({
 			notNullish(item.included_usage)
 		) {
 			throw new RecaseError({
-				message: `Included usage must be a number or '${Infinite}'`,
+				message: `Included usage for feature ${item.feature_id} must be a number or '${Infinite}'`,
 				code: ErrCode.InvalidInputs,
 				statusCode: StatusCodes.BAD_REQUEST,
 			});
@@ -105,6 +96,16 @@ const validateProductItem = ({
 		if (typeof item.included_usage === "number" && item.included_usage < 0) {
 			throw new RecaseError({
 				message: `Included usage must be 0 or greater`,
+				code: ErrCode.InvalidInputs,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
+	}
+
+	if (isFeatureItem(item)) {
+		if (item.included_usage === 0 && feature?.type !== FeatureType.Boolean) {
+			throw new RecaseError({
+				message: `Included usage for feature ${item.feature_id} must be greater than 0`,
 				code: ErrCode.InvalidInputs,
 				statusCode: StatusCodes.BAD_REQUEST,
 			});
@@ -126,6 +127,52 @@ const validateProductItem = ({
 		}
 	}
 
+	if ((isPriceItem(item) || isFeaturePriceItem(item)) && item.price === 0) {
+		throw new RecaseError({
+			message: `Price must be 0 or greater`,
+			code: ErrCode.InvalidInputs,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+
+	if (isFeaturePriceItem(item) && nullish(item.usage_model)) {
+		throw new RecaseError({
+			message: `Usage model is required for priced features. Please select one for the feature ${item.feature_id}`,
+			code: ErrCode.InvalidInputs,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+
+	if (isFeaturePriceItem(item) && item.tiers) {
+		if (
+			item.tiers.some((x) => {
+				return x.amount <= 0;
+			})
+		) {
+			throw new RecaseError({
+				message: `Price must be a number and greater than 0 for feature ${item.feature_id}`,
+				code: ErrCode.InvalidInputs,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
+
+		if (item.included_usage === Infinite) {
+			throw new RecaseError({
+				message: `Included usage can't be '${Infinite}' for tiered prices`,
+				code: ErrCode.InvalidInputs,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
+
+		if (item.billing_units && item.billing_units <= 0) {
+			throw new RecaseError({
+				message: `Billing units must be greater than 0`,
+				code: ErrCode.InvalidInputs,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
+	}
+
 	if (
 		item.usage_model === UsageModel.Prepaid &&
 		item.config?.on_increase === OnIncrease.BillImmediately
@@ -137,13 +184,60 @@ const validateProductItem = ({
 		});
 	}
 
-	// Rollover
-	// if (item.config?.rollover) {
-	//   let rollover = item.config.rollover;
+	// Rollover validation
+	if (item.config?.rollover) {
+		const rollover = item.config.rollover as RolloverConfig;
 
-	//   if (rollover.duration == RolloverDuration.Month) {
-	//   }
-	// }
+		// Ensure rollover is only allowed for items with intervals and included usage
+		if (
+			item.interval === null ||
+			nullish(item.included_usage) ||
+			item.included_usage === 0
+		) {
+			throw new RecaseError({
+				message:
+					"Rollover is only allowed for items with intervals and included usage",
+				code: ErrCode.InvalidInputs,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
+
+		// Validate rollover max amount
+		if (rollover.max !== null && typeof rollover.max === "number") {
+			if (rollover.max < 0) {
+				throw new RecaseError({
+					message: "Rollover maximum amount must be positive",
+					code: ErrCode.InvalidInputs,
+					statusCode: StatusCodes.BAD_REQUEST,
+				});
+			}
+		}
+
+		// Validate rollover length for monthly durations
+		if (rollover.duration === RolloverDuration.Month) {
+			if (typeof rollover.length !== "number" || rollover.length < 0) {
+				throw new RecaseError({
+					message:
+						"Rollover length must be a positive number for monthly durations",
+					code: ErrCode.InvalidInputs,
+					statusCode: StatusCodes.BAD_REQUEST,
+				});
+			}
+		}
+
+		// Set length to 0 for forever duration
+		if (rollover.duration === RolloverDuration.Forever) {
+			rollover.length = 0;
+		}
+
+		if (notNullish(item.usage_limit) && item.usage_limit <= 0) {
+			throw new RecaseError({
+				message: `Usage limit must be greater than 0`,
+				code: ErrCode.InvalidInputs,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
+	}
 };
 
 export const validateProductItems = ({
@@ -185,7 +279,7 @@ export const validateProductItems = ({
 
 	for (let index = 0; index < newItems.length; index++) {
 		const item = newItems[index];
-		const entInterval = itemToEntInterval(item);
+		const entInterval = itemToEntInterval({ item });
 		const intervalCount = item.interval_count || 1;
 
 		if (isFeaturePriceItem(item) && entInterval === EntInterval.Lifetime) {
@@ -225,7 +319,7 @@ export const validateProductItems = ({
 			return (
 				i.feature_id === item.feature_id &&
 				index2 !== index &&
-				itemToEntInterval(i) === entInterval &&
+				itemToEntInterval({ item: i }) === entInterval &&
 				(i.interval_count || 1) === intervalCount &&
 				i.entity_feature_id === item.entity_feature_id
 			);
@@ -278,12 +372,12 @@ export const validateProductItems = ({
 	const hasWeeklyPrice = newItems.some(
 		(item) =>
 			(isPriceItem(item) || isFeaturePriceItem(item)) &&
-			item.interval === ProductItemInterval.Week
+			item.interval === ProductItemInterval.Week,
 	);
 	const hasMonthlyPrice = newItems.some(
 		(item) =>
 			(isPriceItem(item) || isFeaturePriceItem(item)) &&
-			item.interval === ProductItemInterval.Month
+			item.interval === ProductItemInterval.Month,
 	);
 
 	if (hasWeeklyPrice && hasMonthlyPrice) {

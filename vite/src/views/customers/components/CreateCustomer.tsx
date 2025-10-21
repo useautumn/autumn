@@ -1,26 +1,27 @@
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { Button } from "@/components/ui/button";
+import { useRef, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
+import { Button as OldButton } from "@/components/ui/button";
+import { Button } from "@/components/v2/buttons/Button";
 import {
 	Dialog,
-	DialogTitle,
 	DialogContent,
-	DialogHeader,
-	DialogTrigger,
 	DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "@/components/v2/dialogs/Dialog";
+import { FormLabel as FieldLabel } from "@/components/v2/form/FormLabel";
+import { Input } from "@/components/v2/inputs/Input";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useState } from "react";
-import { useNavigate } from "react-router";
-
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
-import { toast } from "sonner";
-import { useEnv } from "@/utils/envUtils";
 
 function CreateCustomer() {
 	const navigate = useNavigate();
 	const axiosInstance = useAxiosInstance();
+	const [open, setOpen] = useState(false);
 	const [fields, setFields] = useState<{ [key: string]: string }>({
 		name: "",
 		id: "",
@@ -29,6 +30,8 @@ function CreateCustomer() {
 	});
 
 	const [isLoading, setIsLoading] = useState(false);
+
+	const nameInputRef = useRef<HTMLInputElement>(null);
 
 	const handleCreate = async () => {
 		setIsLoading(true);
@@ -58,30 +61,60 @@ function CreateCustomer() {
 		setIsLoading(false);
 	};
 
+	useHotkeys(
+		"n",
+		(event) => {
+			event.preventDefault();
+			setOpen(true);
+			// Focus name input after dialog open (after next tick)
+			setTimeout(() => {
+				nameInputRef.current?.focus();
+			}, 0);
+		},
+		{ enableOnFormTags: false },
+	);
+
+	useHotkeys(
+		"meta+enter",
+		(event) => {
+			event.preventDefault();
+			handleCreate();
+		},
+		{ enableOnFormTags: true },
+	);
+
 	return (
-		<Dialog>
+		<Dialog
+			open={open}
+			onOpenChange={(val) => {
+				setOpen(val);
+				if (val) {
+					// Focus name input when dialog is opened with the button as well
+					setTimeout(() => {
+						nameInputRef.current?.focus();
+					}, 0);
+				}
+			}}
+		>
 			<DialogTrigger asChild className="h-full">
-				<Button
-					variant="add"
-					className="h-full"
-					// startIcon={<PlusIcon size={15} />}
-				>
+				<OldButton variant="add" className="h-full">
 					Customer
-				</Button>
+				</OldButton>
 			</DialogTrigger>
 			<DialogContent className="w-[400px]">
 				<DialogHeader>
 					<DialogTitle>Create Customer</DialogTitle>
 				</DialogHeader>
 				<div className="flex gap-2">
-					<div>
+					<div className="flex-1">
 						<FieldLabel>Name</FieldLabel>
 						<Input
+							ref={nameInputRef}
 							value={fields.name}
 							onChange={(e) => setFields({ ...fields, name: e.target.value })}
 						/>
 					</div>
-					<div>
+					<div className="flex-1">
 						<FieldLabel>ID</FieldLabel>
 						<Input
 							value={fields.id}
@@ -97,21 +130,12 @@ function CreateCustomer() {
 						onChange={(e) => setFields({ ...fields, email: e.target.value })}
 					/>
 				</div>
-				{/* <div>
-          <FieldLabel>Fingerprint</FieldLabel>
-          <Input
-            value={fields.fingerprint}
-            onChange={(e) =>
-              setFields({ ...fields, fingerprint: e.target.value })
-            }
-          />
-        </div> */}
 				<DialogFooter>
 					<Button
 						onClick={handleCreate}
 						isLoading={isLoading}
-						variant="gradientPrimary"
-						disabled={!fields.id.trim() && !fields.email.trim()} // ✅ at least one of id or email
+						variant="primary"
+						disabled={!fields.id.trim() && !fields.email.trim()}
 					>
 						Create
 					</Button>

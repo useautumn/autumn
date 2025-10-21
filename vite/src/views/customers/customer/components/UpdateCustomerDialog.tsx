@@ -1,17 +1,19 @@
-import { Button } from "@/components/ui/button";
-import { DialogFooter } from "@/components/ui/dialog";
-import { getBackendErr, navigateTo } from "@/utils/genUtils";
-import { CreateCustomer, Customer } from "@autumn/shared";
+import type { CreateCustomer, Customer } from "@autumn/shared";
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { DialogTitle } from "@/components/ui/dialog";
-import { DialogContent } from "@/components/ui/dialog";
+import { Button } from "@/components/v2/buttons/Button";
+import {
+	DialogContent,
+	DialogFooter,
+	DialogTitle,
+} from "@/components/v2/dialogs/Dialog";
+import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
-import { CustomerConfig } from "./CustomerConfig";
-import { CusService } from "@/services/customers/CusService";
-import { useNavigate } from "react-router";
+import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { useCusQuery } from "../hooks/useCusQuery";
+import { CustomerConfig } from "./CustomerConfig";
 
 const UpdateCustomerDialog = ({
 	selectedCustomer,
@@ -53,7 +55,7 @@ const UpdateCustomerDialog = ({
 			setOpen(false);
 			await refetch();
 
-			if (customer.id != selectedCustomer.id) {
+			if (customer.id !== selectedCustomer.id) {
 				navigateTo(`/customers/${customer.id}`, navigate, env);
 			}
 		} catch (error) {
@@ -75,7 +77,7 @@ const UpdateCustomerDialog = ({
 
 			<DialogFooter>
 				<Button
-					variant="gradientPrimary"
+					variant="primary"
 					onClick={() => handleAddClicked()}
 					isLoading={loading}
 				>

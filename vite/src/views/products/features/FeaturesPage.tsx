@@ -1,19 +1,47 @@
-import { PageSectionHeader } from "@/components/general/PageSectionHeader";
-import { Badge } from "@/components/ui/badge";
-import { useProductsQueryState } from "../hooks/useProductsQueryState";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { FeatureType } from "@autumn/shared";
+import { useEffect, useState } from "react";
+import { PageSectionHeader } from "@/components/general/PageSectionHeader";
 import { HamburgerMenu } from "@/components/general/table-components/HamburgerMenu";
-import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import CreateFeatureSheet from "@/views/products/features/components/CreateFeatureSheet";
 import { FeaturesTable } from "@/views/products/features/components/FeaturesTable";
-import { CreateFeatureDialog } from "@/views/products/features/components/CreateFeature";
-import CreateCreditSystem from "@/views/products/features/credit-systems/CreateCreditSystem";
+import { CreateCreditSystemSheet } from "@/views/products/features/credit-systems/components/CreateCreditSystemSheet";
+import { useProductsQueryState } from "../hooks/useProductsQueryState";
 import { CreditSystemsTable } from "./credit-systems/CreditSystemsTable";
 
 export const FeaturesPage = () => {
 	const { features } = useFeaturesQuery();
 	const { queryStates, setQueryStates } = useProductsQueryState();
 	const [featuresDropdownOpen, setFeaturesDropdownOpen] = useState(false);
+	const [createFeatureSheetOpen, setCreateFeatureSheetOpen] = useState(false);
+
+	// Add keyboard shortcut: N to open create feature sheet
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if (
+				e.key === "n" &&
+				!e.metaKey &&
+				!e.ctrlKey &&
+				!e.altKey &&
+				!e.shiftKey
+			) {
+				const target = e.target as HTMLElement;
+				if (
+					target.tagName === "INPUT" ||
+					target.tagName === "TEXTAREA" ||
+					target.isContentEditable
+				) {
+					return;
+				}
+				e.preventDefault();
+				setCreateFeatureSheetOpen(true);
+			}
+		};
+
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, []);
 
 	const regularFeatures = features.filter((feature) => {
 		if (queryStates.showArchivedFeatures)
@@ -43,7 +71,12 @@ export const FeaturesPage = () => {
 						)}
 					</>
 				}
-				addButton={<CreateFeatureDialog />}
+				addButton={
+					<CreateFeatureSheet
+						open={createFeatureSheetOpen}
+						onOpenChange={setCreateFeatureSheetOpen}
+					/>
+				}
 				menuComponent={
 					<HamburgerMenu
 						dropdownOpen={featuresDropdownOpen}
@@ -76,7 +109,7 @@ export const FeaturesPage = () => {
 								{creditSystems.length}
 							</span>
 						</div>
-						<CreateCreditSystem />
+						<CreateCreditSystemSheet />
 					</div>
 					<CreditSystemsTable />
 				</div>

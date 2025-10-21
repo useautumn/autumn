@@ -20,12 +20,14 @@ export const getDowngradeProductPreview = async ({
 	logger,
 	branch,
 	config,
+	withPrepaid = false,
 }: {
 	attachParams: AttachParams;
 	now: number;
 	logger: any;
 	branch: AttachBranch;
 	config: AttachConfig;
+	withPrepaid?: boolean;
 }) => {
 	const newProduct = attachParamsToProduct({ attachParams });
 
@@ -36,9 +38,15 @@ export const getDowngradeProductPreview = async ({
 		newProduct,
 		attachParams,
 		logger,
+		withPrepaid,
 	});
 
-	items = items.filter((item) => item.usage_model !== UsageModel.Prepaid);
+	items = items.filter((item) => {
+		if (!withPrepaid && item.usage_model === UsageModel.Prepaid) {
+			return false;
+		}
+		return true;
+	});
 
 	const options = getOptions({
 		prodItems: mapToProductItems({
@@ -54,6 +62,8 @@ export const getDowngradeProductPreview = async ({
 	const nextCycleAt = curCusProduct?.trial_ends_at
 		? curCusProduct.trial_ends_at
 		: latestPeriodEnd;
+
+	// console.log("Items:", items);
 
 	return {
 		currency: attachParams.org.default_currency,

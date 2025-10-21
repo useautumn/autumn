@@ -12,9 +12,9 @@ import {
 	RewardType,
 	type UsagePriceConfig,
 } from "@autumn/shared";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { createStripeCli } from "../utils.js";
 
 const couponToStripeDuration = ({
 	coupon,

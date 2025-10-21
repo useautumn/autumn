@@ -1,8 +1,7 @@
-import { ExtendedResponse } from "@/utils/models/Request.js";
 import { AppEnv, ErrCode } from "@autumn/shared";
-import { readFile } from "@/external/supabase/storageUtils.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
 import { initUpstash } from "@/internal/customers/cusCache/upstashUtils.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
+import type { ExtendedResponse } from "@/utils/models/Request.js";
 
 export const trmnlExclusions = ["/trmnl/screen"];
 
@@ -65,8 +64,6 @@ export const trmnlAuthMiddleware = async (
 		hideRevenue: trmnlConfig.hideRevenue,
 	};
 	req.features = features;
-
-	// const logger = req.logtail;
 
 	// const file = await readFile({ bucket: "private", path: "trmnl.json" });
 	// const fileString = await file.text();

@@ -9,12 +9,8 @@ const defaultParams = {
 };
 
 export function useAxiosInstance(params?: { env?: AppEnv; isAuth?: boolean }) {
-	const finalParams: any = {
-		...defaultParams,
-		...(params || {}),
-	};
-
-	const trueEnv = useEnv();
+	const currentEnv = useEnv();
+	const envToUse = params?.env ?? currentEnv;
 
 	const axiosInstance = axios.create({
 		baseURL: import.meta.env.VITE_BACKEND_URL,
@@ -23,7 +19,7 @@ export function useAxiosInstance(params?: { env?: AppEnv; isAuth?: boolean }) {
 
 	axiosInstance.interceptors.request.use(
 		async (config: any) => {
-			config.headers.app_env = trueEnv;
+			config.headers.app_env = envToUse;
 			config.headers["x-api-version"] = "1.2";
 			config.headers["x-client-type"] = "dashboard";
 
@@ -56,7 +52,7 @@ export function useAxiosInstance(params?: { env?: AppEnv; isAuth?: boolean }) {
 								organizationId: nextOrg.id,
 							});
 							// Redirect to products page of the new organization
-							window.location.href = `/${trueEnv === AppEnv.Sandbox ? "sandbox" : "production"}/products`;
+							window.location.href = `/${currentEnv === AppEnv.Sandbox ? "sandbox" : "production"}/products`;
 							return Promise.reject(
 								new Error("Redirecting to available organization"),
 							);

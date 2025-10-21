@@ -11,7 +11,7 @@ import {
 	ProrationBehavior,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import { createStripeCli } from "@/external/stripe/utils.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";

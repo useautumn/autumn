@@ -1,18 +1,18 @@
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useModelPricingContext } from "./ModelPricingContext";
+import { ChevronDownIcon, Trash } from "lucide-react";
+// import { DeleteProductDialog } from "@/views/products/products/product-row-toolbar/DeleteProductDialog";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { ChevronDownIcon, Trash } from "lucide-react";
-import { DeleteProductDialog } from "@/views/products/products/product-row-toolbar/DeleteProductDialog";
-import { useState } from "react";
-import { cn } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { cn } from "@/lib/utils";
 import { useOnboardingQueryState } from "../hooks/useOnboardingQueryState";
+import { useModelPricingContext } from "./ModelPricingContext";
 
 export const SelectEditProduct = () => {
 	const {
@@ -29,12 +29,12 @@ export const SelectEditProduct = () => {
 	if (products.length > 3) {
 		return (
 			<>
-				<DeleteProductDialog
+				{/* <DeleteProductDialog
 					product={deleteProductSelected}
 					dropdownOpen={deleteProductOpen}
 					open={deleteProductOpen}
 					setOpen={setDeleteProductOpen}
-				/>
+				/> */}
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
 						<Button
@@ -90,12 +90,12 @@ export const SelectEditProduct = () => {
 
 	return (
 		<>
-			<DeleteProductDialog
+			{/* <DeleteProductDialog
 				product={product}
 				open={deleteProductOpen}
 				setOpen={setDeleteProductOpen}
 				dropdownOpen={deleteProductOpen}
-			/>
+			/> */}
 			<Tabs className="" value={product.id}>
 				<TabsList className="gap-1 mr-1">
 					{products.map((p: any) => {

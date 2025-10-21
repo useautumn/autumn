@@ -7,19 +7,17 @@
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js"
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
 		}
 	},
 	"author": "Recase Inc.",
 	"license": "Apache-2.0",
 	"scripts": {
-		"tsc": "tsc",
 		"api": "bun api/openapi.ts",
-		"build": "bun build ./index.ts --outdir dist --format esm --target bun --external zod",
-		"dev": "bunx nodemon --ext ts --ignore dist --exec \"tsc --emitDeclarationOnly --outDir dist && bun run build:fast\"",
-		"dev:dts": "tsc --emitDeclarationOnly --outDir dist --project tsconfig.json",
-		"build:fast": "bun build ./index.ts --outdir dist --format esm --target bun --external zod",
-		"dev:bun": "bun ./index.ts --outdir dist --target bun --external zod --watch",
+		"build": "tsc --emitDeclarationOnly --outDir dist && bun build ./index.ts --outdir dist --format esm --target bun --external zod",
+		"dev": "bunx nodemon --ext ts --ignore dist --exec \"tsc --emitDeclarationOnly --outDir dist && bun build ./index.ts --outdir dist --format esm --target bun --external zod\"",
+		"dev:watch": "bun scripts/watch.js",
 		"db:push": "bun db:generate && bun db:migrate",
 		"db:generate": "cross-env NODE_OPTIONS=\"--import tsx\" bunx drizzle-kit generate --config drizzle.config.ts",
 		"db:migrate": "cross-env NODE_OPTIONS=\"--import tsx\" bunx drizzle-kit migrate --config drizzle.config.ts",
@@ -32,6 +30,7 @@
 		"drizzle-kit": "^0.31.1",
 		"drizzle-orm": "^0.43.1",
 		"drizzle-zod": "^0.8.2",
+		"yaml": "^2.8.1",
 		"zod-openapi": "^5.4.1"
 	},
 	"peerDependencies": {

@@ -7,12 +7,12 @@ import {
 	type ProductItem,
 	type ProductV2,
 } from "@autumn/shared";
-import RecaseError from "@/utils/errorUtils.js";
-import { freeTrialsAreSame } from "../free-trials/freeTrialUtils.js";
 import {
 	findSimilarItem,
 	itemsAreSame,
-} from "../product-items/compareItemUtils.js";
+} from "@shared/utils/productV2Utils/compareProductUtils.ts/compareItemUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { freeTrialsAreSame } from "../free-trials/freeTrialUtils.js";
 import {
 	isFeaturePriceItem,
 	isPriceItem,

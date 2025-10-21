@@ -5,8 +5,8 @@ import {
 	type Product,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { createStripeCli } from "./utils.js";
 
 export const createStripeProduct = async (
 	org: Organization,

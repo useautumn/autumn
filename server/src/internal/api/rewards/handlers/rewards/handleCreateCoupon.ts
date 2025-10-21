@@ -23,7 +23,7 @@ export default async (req: any, res: any) =>
 		res,
 		action: "create coupon",
 		handler: async (req, res) => {
-			const { db, orgId, env, logtail: logger } = req;
+			const { db, orgId, env, logger } = req;
 			const rewardBody = req.body;
 			const rewardData = CreateRewardSchema.parse(rewardBody);
 

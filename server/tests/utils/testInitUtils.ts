@@ -1,8 +1,7 @@
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { AppEnv, Organization } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
+import type { AppEnv, Organization } from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { initCustomer } from "./init.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const initCustomerWithTestClock = async ({
 	customerId,
@@ -22,7 +21,7 @@ export const initCustomerWithTestClock = async ({
 		frozen_time: Math.floor(Date.now() / 1000),
 	});
 
-	let customer = await initCustomer({
+	const customer = await initCustomer({
 		customer_data: {
 			id: customerId,
 			name: customerId,

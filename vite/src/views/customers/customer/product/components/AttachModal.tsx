@@ -17,6 +17,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { cn } from "@/lib/utils";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -45,6 +46,7 @@ export const AttachModal = ({
 }) => {
 	const { customer, entities } = useCusQuery();
 	const { product, entityId, attachState, version } = useProductContext();
+	const { stripeAccount } = useOrgStripeQuery();
 
 	const navigation = useNavigate();
 	const env = useEnv();
@@ -108,7 +110,7 @@ export const AttachModal = ({
 		}
 
 		if (flags.isCanceled) {
-			return "Renew Product";
+			return "Renew Plan";
 		}
 
 		if (preview?.func === AttachFunction.CreateCheckout) {
@@ -169,11 +171,18 @@ export const AttachModal = ({
 			if (data.checkout_url) {
 				window.open(data.checkout_url, "_blank");
 			} else if (data.invoice) {
-				window.open(getStripeInvoiceLink(data.invoice), "_blank");
+				window.open(
+					getStripeInvoiceLink({
+						stripeInvoice: data.invoice,
+						env,
+						accountId: stripeAccount?.id,
+					}),
+					"_blank",
+				);
 			}
 			navigateTo(`/customers/${cusId}`, navigation, env);
 
-			toast.success(data.message || "Successfully attached product");
+			toast.success(data.message || "Successfully attached plan");
 			setOpen(false);
 		} catch (error) {
 			console.log("Error creating product: ", error);
@@ -188,9 +197,9 @@ export const AttachModal = ({
 					env,
 				);
 			} else {
-				toast.error(getBackendErr(error, "Error creating product"));
+				toast.error(getBackendErr(error, "Error creating plan"));
 			}
-		} finally {
+		} finally{
 			setLoading(false);
 		}
 	};
@@ -208,7 +217,7 @@ export const AttachModal = ({
 					>
 						<DialogHeader>
 							<DialogTitle className="text-t2 text-md">
-								Attach product
+								Attach plan
 							</DialogTitle>
 						</DialogHeader>
 
@@ -217,7 +226,7 @@ export const AttachModal = ({
 								<p className="text-t2 font-semibold mb-2">Details</p>
 
 								<PriceItem>
-									<span>Product</span>
+									<span>Plan</span>
 									<span>{product?.name}</span>
 								</PriceItem>
 

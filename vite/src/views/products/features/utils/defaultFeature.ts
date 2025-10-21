@@ -1,4 +1,4 @@
-import { CreateFeature, FeatureType, FeatureUsageType } from "@autumn/shared";
+import { FeatureType, FeatureUsageType } from "@autumn/shared";
 import { defaultMeteredConfig } from "./defaultFeatureConfig";
 
 export const getDefaultFeature = (entityCreate?: boolean): any => {
@@ -8,6 +8,7 @@ export const getDefaultFeature = (entityCreate?: boolean): any => {
 			config: {
 				...defaultMeteredConfig,
 				usage_type: FeatureUsageType.Continuous,
+				filters: [],
 			},
 			name: "",
 			id: "",

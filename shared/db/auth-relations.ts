@@ -1,6 +1,6 @@
 import { relations } from "drizzle-orm";
-import { invitation, member, user } from "./auth-schema.js";
 import { organizations } from "../models/orgModels/orgTable.js";
+import { invitation, member, user } from "./auth-schema.js";
 
 export const userRelations = relations(user, ({ many }) => ({
 	memberships: many(member),

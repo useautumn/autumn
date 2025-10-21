@@ -42,8 +42,6 @@ export const handleGetProductDeleteInfo = async (req: any, res: any) =>
 					}),
 				]);
 
-				// 2. Get cus products
-
 				res.status(200).send({
 					numVersion: product.version,
 					hasCusProducts: allVersions,

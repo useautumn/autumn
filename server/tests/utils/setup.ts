@@ -18,8 +18,8 @@ import { initDrizzle } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CacheManager } from "@/external/caching/CacheManager.js";
 import { CacheType } from "@/external/caching/cacheActions.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { deactivateStripeMeters } from "@/external/stripe/stripeProductUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { hashApiKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
@@ -280,7 +280,7 @@ export const setupOrg = async ({
 		features[feature.id].internal_id = feature.internal_id;
 
 		if (feature.type === FeatureType.Metered) {
-			features[feature.id].eventName = feature.config?.filters[0].value[0];
+			features[feature.id].eventName = feature.event_names?.[0] || feature.id;
 		}
 	}
 

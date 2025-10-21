@@ -1,24 +1,15 @@
-import { notNullish, nullish } from "@/utils/genUtils.js";
 import {
-	EntInterval,
-	ProductItemInterval,
-	BillingInterval,
-	ProductItem,
-	ProductItemType,
-	UsageModel,
-	Infinite,
-	ProductItemFeatureType,
-	Feature,
-	FeatureType,
-} from "@autumn/shared";
-import { isFeatureItem } from "./productItemUtils/getItemType.js";
-import {
+	type BillingInterval,
 	billingToItemInterval,
+	EntInterval,
 	entToItemInterval,
-} from "./itemIntervalUtils.js";
+	type ProductItem,
+	type ProductItemFeatureType,
+	type UsageModel,
+} from "@autumn/shared";
 import {
 	calculateProrationAmount,
-	Proration,
+	type Proration,
 } from "@/internal/invoices/prorationUtils.js";
 
 export const itemToPriceOrTiers = ({
@@ -89,10 +80,10 @@ export const constructFeatureItem = ({
 	entitlement_id?: string;
 	entity_feature_id?: string;
 }) => {
-	let item: ProductItem = {
+	const item: ProductItem = {
 		feature_id,
 		included_usage: included_usage as number,
-		interval: entToItemInterval(interval),
+		interval: entToItemInterval({ entInterval: interval }),
 		entitlement_id,
 		entity_feature_id,
 	};
@@ -109,7 +100,7 @@ export const constructPriceItem = ({
 	interval: BillingInterval | null;
 	intervalCount?: number;
 }) => {
-	let item: ProductItem = {
+	const item: ProductItem = {
 		price: price,
 		interval: interval as any,
 		interval_count: intervalCount || 1,
@@ -140,14 +131,14 @@ export const constructFeaturePriceItem = ({
 	reset_usage_when_enabled?: boolean;
 	entity_feature_id?: string;
 }) => {
-	let item: ProductItem & {
+	const item: ProductItem & {
 		included_usage: number;
 	} = {
 		feature_id,
 		feature_type,
 		included_usage: included_usage as number,
 		price,
-		interval: billingToItemInterval(interval),
+		interval: billingToItemInterval({ billingInterval: interval }),
 		usage_model,
 		billing_units,
 		reset_usage_when_enabled,

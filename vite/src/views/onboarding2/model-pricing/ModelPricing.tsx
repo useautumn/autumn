@@ -236,7 +236,7 @@ const NewProductPopover = () => {
 			setProduct(newProduct);
 			setOpen(false);
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to create product"));
+			toast.error(getBackendErr(error, "Failed to create plan"));
 		} finally {
 			setCreating(false);
 		}

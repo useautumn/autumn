@@ -1,12 +1,11 @@
 "use client";
 
-import { type ProductItem, type ProductV2 } from "@autumn/shared";
+import type { ProductItem, ProductV2 } from "@autumn/shared";
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useEnv } from "@/utils/envUtils";
 import { notNullish } from "@/utils/genUtils";
 import { sortProductItems } from "@/utils/productUtils";
 import ErrorScreen from "@/views/general/ErrorScreen";
@@ -52,7 +51,6 @@ export default function CustomerProductView() {
 	const { isLoading: orgLoading } = useOrg();
 	const { isLoading: featuresLoading } = useFeaturesQuery();
 
-	const env = useEnv();
 	const initialProductRef = useRef<ProductV2 | null>(null);
 
 	const [options, setOptions] = useState<OptionValue[]>([]);
@@ -60,7 +58,6 @@ export default function CustomerProductView() {
 	const [entityFeatureIds, setEntityFeatureIds] = useState<string[]>([]);
 
 	const version = searchParams.get("version");
-	const customer_product_id = searchParams.get("id");
 
 	const {
 		product: originalProduct,
@@ -94,11 +91,16 @@ export default function CustomerProductView() {
 
 		const product = originalProduct;
 
-		setProduct(product);
+		console.log('[CPV] effect', { prodId: originalProduct.id, v: originalProduct.version, cusId: cusProduct?.id });
+
+		// Update initialProductRef BEFORE setProduct to ensure useAttachState
+		// effect has the correct baseline when it runs
 		initialProductRef.current = structuredClone({
 			...product,
 			items: sortProductItems(product.items),
 		});
+
+		setProduct(product);
 
 		setEntityFeatureIds(
 			Array.from(

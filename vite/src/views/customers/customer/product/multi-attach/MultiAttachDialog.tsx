@@ -1,14 +1,17 @@
+import type { ProductV2 } from "@autumn/shared";
+import type { CheckoutResult } from "autumn-js";
+import { ArrowUpRightFromSquare, Loader2, Plus, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
 	CustomDialogBody,
 	CustomDialogContent,
 	CustomDialogFooter,
 } from "@/components/general/modal-components/DialogContentWrapper";
+import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { InvoiceCustomerButton } from "../components/InvoiceCustomerButton";
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { ArrowUpRightFromSquare, Loader2, Plus, X } from "lucide-react";
-
+import { Input } from "@/components/ui/input";
 import {
 	Select,
 	SelectContent,
@@ -16,22 +19,20 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { useEffect, useState } from "react";
-import { ProductV2 } from "@autumn/shared";
-import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
+import { useOrg } from "@/hooks/common/useOrg";
+import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useAxiosSWR } from "@/services/useAxiosSwr";
+import { useEnv } from "@/utils/envUtils";
+import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
 import { getBackendErr } from "@/utils/genUtils";
-import { MultiAtttachLines } from "./MultiAttachLines";
-import { CheckoutResult } from "autumn-js";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
 import { formatAmount } from "@/utils/product/productItemUtils";
-import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
-import { AddRewardButton, MultiAttachRewards } from "./MultiAttachRewards";
-import { useAxiosSWR } from "@/services/useAxiosSwr";
 import { useCusQuery } from "../../hooks/useCusQuery";
-import { useOrg } from "@/hooks/common/useOrg";
+import { InvoiceCustomerButton } from "../components/InvoiceCustomerButton";
 import { getCusProductMinQuantity } from "../utils/getCusProductMinQuantity";
+import { MultiAtttachLines } from "./MultiAttachLines";
+import { AddRewardButton, MultiAttachRewards } from "./MultiAttachRewards";
 
 export const MultiAttachDialog = ({
 	open,
@@ -43,6 +44,8 @@ export const MultiAttachDialog = ({
 	// const { customer, cusMutate, products, org } = useCustomerContext();
 	const { org } = useOrg();
 	const { customer, products, refetch } = useCusQuery();
+	const { stripeAccount } = useOrgStripeQuery();
+	const env = useEnv();
 
 	const axiosInstance = useAxiosInstance();
 
@@ -137,7 +140,7 @@ export const MultiAttachDialog = ({
 
 		for (const option of productOptions) {
 			if (!option.product_id) {
-				toast.error("Can't leave product empty");
+				toast.error("Can't leave plan empty");
 				return;
 			}
 		}
@@ -157,14 +160,21 @@ export const MultiAttachDialog = ({
 			});
 
 			if (data.invoice) {
-				window.open(getStripeInvoiceLink(data.invoice), "_blank");
+				window.open(
+					getStripeInvoiceLink({
+						stripeInvoice: data.invoice,
+						env,
+						accountId: stripeAccount?.id,
+					}),
+					"_blank",
+				);
 			}
 
 			await refetch();
-			toast.success("Products attached successfully");
+			toast.success("Plans attached successfully");
 			setOpen(false);
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to attach products"));
+			toast.error(getBackendErr(error, "Failed to attach plans"));
 			console.log(error);
 		} finally {
 			setLoading(false);
@@ -208,7 +218,7 @@ export const MultiAttachDialog = ({
 											value={option.product_id || undefined}
 										>
 											<SelectTrigger className="col-span-7">
-												<SelectValue placeholder="Select Product" />
+												<SelectValue placeholder="Select Plan" />
 											</SelectTrigger>
 											<SelectContent className="max-h-[300px] overflow-y-auto">
 												{products
@@ -251,7 +261,7 @@ export const MultiAttachDialog = ({
 												startIcon={<X size={12} />}
 												onClick={() => {
 													if (productOptions.length === 1) {
-														toast.error("Must attach at least one product");
+														toast.error("Must attach at least one plan");
 														return;
 													}
 													setProductOptions((prev) => {
@@ -352,7 +362,7 @@ export const MultiAttachDialog = ({
 						disabled={checkoutLoading || attachLoading}
 						disableStartIcon
 					>
-						{checkoutResult?.url ? "Checkout Page" : "Attach Products"}
+						{checkoutResult?.url ? "Checkout Page" : "Attach Plans"}
 					</Button>
 				</CustomDialogFooter>
 			</CustomDialogContent>

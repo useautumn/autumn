@@ -239,15 +239,13 @@ export const getItemsForNewProduct = async ({
 				(price.config as UsagePriceConfig).billing_units || 1,
 			);
 
-			// console.log("price", price);
-			// console.log("Quantity", quantity);
 			const amount = priceToInvoiceAmount({
 				price,
 				quantity: quantityWithBillingUnits.toNumber(),
 				proration: finalProration,
 				now,
 			});
-			// console.log("Amount", amount);
+
 			const feature = priceToFeature({
 				price,
 				features,

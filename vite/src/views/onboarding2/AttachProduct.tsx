@@ -70,7 +70,7 @@ export default function AttachProduct({
 							onValueChange={setSelectedProductId}
 						>
 							<SelectTrigger className="w-full max-w-48">
-								<SelectValue placeholder="Select a product" />
+								<SelectValue placeholder="Select a plan" />
 							</SelectTrigger>
 							<SelectContent>
 								{products.map((product) => (

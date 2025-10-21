@@ -1,5 +1,4 @@
-import { AppEnv } from "@autumn/shared";
-import { Organization } from "@autumn/shared";
+import { AppEnv, type Organization } from "@autumn/shared";
 import { Svix } from "svix";
 import { logger } from "../logtail/logtailUtils.js";
 
@@ -35,7 +34,7 @@ export const getSvixAppId = ({
 	env: AppEnv;
 }) => {
 	const svixConfig = org.svix_config;
-	return env == AppEnv.Live
+	return env === AppEnv.Live
 		? svixConfig?.live_app_id
 		: svixConfig?.sandbox_app_id;
 };

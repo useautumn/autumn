@@ -1,35 +1,34 @@
-import chalk from "chalk";
-import { expect } from "chai";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { features } from "tests/global.js";
-import { setupBefore } from "tests/before.js";
-
+/** biome-ignore-all lint/suspicious/noExportsInTest: needed */
 import {
-	AppEnv,
+	type AppEnv,
 	BillingInterval,
 	EntInterval,
 	ProductItemFeatureType,
 	UsageModel,
 } from "@autumn/shared";
-import { createProducts } from "tests/utils/productUtils.js";
-import { getMainCusProduct } from "tests/utils/cusProductUtils/cusProductUtils.js";
+import { expect } from "chai";
+import chalk from "chalk";
+import { addMonths } from "date-fns";
+import { setupBefore } from "tests/before.js";
+import { features } from "tests/global.js";
 import {
 	getLifetimeFreeCusEnt,
 	getUsageCusEnt,
 } from "tests/utils/cusProductUtils/cusEntSearchUtils.js";
-
+import { getMainCusProduct } from "tests/utils/cusProductUtils/cusProductUtils.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
 	constructFeatureItem,
 	constructFeaturePriceItem,
 } from "@/internal/products/product-items/productItemUtils.js";
 import { timeout } from "@/utils/genUtils.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { initCustomerWithTestClock } from "tests/utils/testInitUtils.js";
-import { addMonths } from "date-fns";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import { initCustomerV2 } from "@/utils/scriptUtils/initCustomer.js";
 
 // Scenario 1: prepaid + pay per use monthly -> prepaid + pay per use monthly
-let pro = {
+const pro = {
 	id: "multiFeature3Pro",
 	name: "Multi Feature 3 Pro",
 	items: {
@@ -62,19 +61,19 @@ export const getLifetimeAndUsageCusEnts = async ({
 	env: AppEnv;
 	featureId: string;
 }) => {
-	let mainCusProduct = await getMainCusProduct({
+	const mainCusProduct = await getMainCusProduct({
 		customerId,
 		db,
 		orgId,
 		env,
 	});
 
-	let lifetimeCusEnt = getLifetimeFreeCusEnt({
+	const lifetimeCusEnt = getLifetimeFreeCusEnt({
 		cusProduct: mainCusProduct!,
 		featureId,
 	});
 
-	let usageCusEnt = getUsageCusEnt({
+	const usageCusEnt = getUsageCusEnt({
 		cusProduct: mainCusProduct!,
 		featureId,
 	});
@@ -86,8 +85,8 @@ export const getLifetimeAndUsageCusEnts = async ({
 describe(`${chalk.yellowBright(
 	"multi-feature/multi_feature3: Testing lifetime + pay per use, advance test clock",
 )}`, () => {
-	let autumn: AutumnInt = new AutumnInt();
-	let customerId = "multiFeature3Customer";
+	const autumn: AutumnInt = new AutumnInt();
+	const customerId = "multiFeature3Customer";
 
 	let totalUsage = 0;
 
@@ -95,17 +94,16 @@ describe(`${chalk.yellowBright(
 	before(async function () {
 		await setupBefore(this);
 
-		let { customer, testClockId: _testClockId } =
-			await initCustomerWithTestClock({
-				customerId,
-				db: this.db,
-				org: this.org,
-				env: this.env,
-			});
+		const res = await initCustomerV2({
+			autumn,
+			customerId,
+			db: this.db,
+			org: this.org,
+			env: this.env,
+			attachPm: "success",
+		});
 
-		testClockId = _testClockId;
-
-		autumn = this.autumn;
+		testClockId = res.testClockId;
 
 		await createProducts({
 			autumn,
@@ -122,7 +120,7 @@ describe(`${chalk.yellowBright(
 			product_id: pro.id,
 		});
 
-		let { lifetimeCusEnt, usageCusEnt } = await getLifetimeAndUsageCusEnts({
+		const { lifetimeCusEnt, usageCusEnt } = await getLifetimeAndUsageCusEnts({
 			customerId,
 			db: this.db,
 			orgId: this.org.id,
@@ -135,7 +133,7 @@ describe(`${chalk.yellowBright(
 		expect(usageCusEnt?.balance).to.equal(pro.items.payPerUse.included_usage);
 	});
 
-	let overageValue = 30;
+	const overageValue = 30;
 	it("should use lifetime allowance + overage", async function () {
 		let value = pro.items.lifetime.included_usage as number;
 		value += overageValue;
@@ -150,7 +148,7 @@ describe(`${chalk.yellowBright(
 
 		await timeout(3000);
 
-		let { lifetimeCusEnt, usageCusEnt } = await getLifetimeAndUsageCusEnts({
+		const { lifetimeCusEnt, usageCusEnt } = await getLifetimeAndUsageCusEnts({
 			customerId,
 			db: this.db,
 			orgId: this.org.id,
@@ -163,14 +161,14 @@ describe(`${chalk.yellowBright(
 	});
 
 	it("cycle 1:should have correct usage after first cycle", async function () {
-		let advanceTo = addMonths(new Date(), 1).getTime();
+		const advanceTo = addMonths(new Date(), 1).getTime();
 		await advanceTestClock({
 			stripeCli: this.stripeCli,
 			testClockId,
 			advanceTo,
 		});
 
-		let { lifetimeCusEnt, usageCusEnt } = await getLifetimeAndUsageCusEnts({
+		const { lifetimeCusEnt, usageCusEnt } = await getLifetimeAndUsageCusEnts({
 			customerId,
 			db: this.db,
 			orgId: this.org.id,

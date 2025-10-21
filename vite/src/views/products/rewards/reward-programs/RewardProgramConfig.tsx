@@ -1,4 +1,5 @@
 import {
+	type ProductV2,
 	type Reward,
 	type RewardProgram,
 	RewardReceivedBy,
@@ -7,7 +8,6 @@ import {
 import { Check, ChevronsUpDown, X } from "lucide-react";
 import { useState } from "react";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { Button } from "@/components/ui/button";
 import {
 	Command,
 	CommandEmpty,
@@ -16,20 +16,21 @@ import {
 	CommandItem,
 	CommandList,
 } from "@/components/ui/command";
-import { Input } from "@/components/ui/input";
 import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/v2/buttons/Button";
+import { Input } from "@/components/v2/inputs/Input";
 import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/ui/select";
+} from "@/components/v2/selects/Select";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
@@ -47,18 +48,19 @@ export const RewardProgramConfig = ({
 
 	return (
 		<div className="flex flex-col gap-4">
-			<div className="flex items-center gap-2">
-				<div className="w-6/12">
+			<div className="flex gap-2">
+				<div className="w-full">
 					<FieldLabel>Program ID</FieldLabel>
 					<Input
 						disabled={isUpdate}
 						value={rewardProgram.id || ""}
+						placeholder="Enter program ID"
 						onChange={(e) =>
 							setRewardProgram({ ...rewardProgram, id: e.target.value })
 						}
 					/>
 				</div>
-				<div className="w-6/12">
+				<div className="w-full">
 					<FieldLabel>Reward</FieldLabel>
 					<Select
 						value={rewardProgram.internal_reward_id}
@@ -66,7 +68,7 @@ export const RewardProgramConfig = ({
 							setRewardProgram({ ...rewardProgram, internal_reward_id: value })
 						}
 					>
-						<SelectTrigger>
+						<SelectTrigger className="w-full">
 							<SelectValue placeholder="Select a reward" />
 						</SelectTrigger>
 						<SelectContent>
@@ -79,8 +81,8 @@ export const RewardProgramConfig = ({
 					</Select>
 				</div>
 			</div>
-			<div className="flex items-center gap-2">
-				<div className="w-6/12">
+			<div className="flex gap-2">
+				<div className="w-full">
 					<FieldLabel>Redeem On</FieldLabel>
 					<Select
 						defaultValue={RewardTriggerEvent.CustomerCreation}
@@ -92,7 +94,7 @@ export const RewardProgramConfig = ({
 							})
 						}
 					>
-						<SelectTrigger>
+						<SelectTrigger className="w-full">
 							<SelectValue placeholder="Select a redeem on" />
 						</SelectTrigger>
 						<SelectContent>
@@ -109,7 +111,7 @@ export const RewardProgramConfig = ({
 						</SelectContent>
 					</Select>
 				</div>
-				<div className="w-6/12">
+				<div className="w-full">
 					<FieldLabel>Max Redemptions</FieldLabel>
 					<Input
 						type="number"
@@ -123,44 +125,40 @@ export const RewardProgramConfig = ({
 					/>
 				</div>
 			</div>
-			<div className="flex items-center gap-2">
+			<div className="w-full">
+				<FieldLabel>Received by</FieldLabel>
+				<Select
+					value={rewardProgram.received_by}
+					onValueChange={(value) =>
+						setRewardProgram({
+							...rewardProgram,
+							received_by: value as RewardReceivedBy,
+						})
+					}
+				>
+					<SelectTrigger className="w-full">
+						<SelectValue placeholder="Who should receive the reward" />
+					</SelectTrigger>
+					<SelectContent>
+						{Object.values(RewardReceivedBy).map((receivedBy) => (
+							<SelectItem key={receivedBy} value={receivedBy}>
+								{receivedBy === RewardReceivedBy.All
+									? "Referrer & Redeemer"
+									: keyToTitle(receivedBy)}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+			</div>
+			{rewardProgram.when === RewardTriggerEvent.Checkout && (
 				<div className="w-full">
-					<FieldLabel>Received by</FieldLabel>
-					<Select
-						value={rewardProgram.received_by}
-						onValueChange={(value) =>
-							setRewardProgram({
-								...rewardProgram,
-								received_by: value as RewardReceivedBy,
-							})
-						}
-					>
-						<SelectTrigger>
-							<SelectValue placeholder="Who should receive the reward" />
-						</SelectTrigger>
-						<SelectContent>
-							{Object.values(RewardReceivedBy).map((receivedBy) => (
-								<SelectItem key={receivedBy} value={receivedBy}>
-									{receivedBy === RewardReceivedBy.All
-										? "Referrer & Redeemer"
-										: keyToTitle(receivedBy)}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
+					<FieldLabel>Products</FieldLabel>
+					<ProductSelector
+						rewardProgram={rewardProgram}
+						setRewardProgram={setRewardProgram}
+					/>
 				</div>
-			</div>
-			<div className="flex items-center gap-2">
-				{rewardProgram.when === RewardTriggerEvent.Checkout && (
-					<div className="w-full">
-						<FieldLabel>Products</FieldLabel>
-						<ProductSelector
-							rewardProgram={rewardProgram}
-							setRewardProgram={setRewardProgram}
-						/>
-					</div>
-				)}
-			</div>
+			)}
 		</div>
 	);
 };
@@ -194,32 +192,30 @@ const ProductSelector = ({
 	}
 
 	const getProductText = (productId: string) => {
-		const product = products.find((p: any) => p.id === productId);
-		return product?.name || "Unknown Product";
+		const product = products.find((p: ProductV2) => p.id === productId);
+		return product?.name || "Unknown Plan";
 	};
 
 	return (
 		<Popover modal open={open} onOpenChange={setOpen}>
 			<PopoverTrigger asChild>
 				<Button
-					variant="outline"
+					variant="muted"
 					role="combobox"
 					aria-expanded={open}
 					className="w-full min-h-9 flex flex-wrap h-fit py-2 justify-start items-center gap-2 relative hover:bg-zinc-50 data-[state=open]:border-focus data-[state=open]:shadow-focus"
 				>
-					{rewardProgram.product_ids?.length === 0 ? (
-						"Select Products"
-					) : (
-						<>
-							{rewardProgram.product_ids?.map((productId: string) => (
+					{rewardProgram.product_ids?.length === 0
+						? "Select Plans"
+						: rewardProgram.product_ids?.map((productId: string) => (
 								<div
 									key={productId}
 									className="py-0 px-3 text-xs text-t3 border-zinc-300 bg-zinc-100 rounded-full w-fit flex items-center gap-2 h-fit"
 								>
 									<p className="text-t2">{getProductText(productId)}</p>
 									<Button
-										variant="ghost"
-										size="icon"
+										variant="skeleton"
+										size="sm"
 										onClick={(e) => {
 											e.stopPropagation();
 											handleProductToggle(productId);
@@ -230,19 +226,17 @@ const ProductSelector = ({
 									</Button>
 								</div>
 							))}
-						</>
-					)}
 					<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 absolute right-2" />
 				</Button>
 			</PopoverTrigger>
 			<PopoverContent className="w-[400px] p-0" align="start">
 				<Command>
-					<CommandInput placeholder="Search products..." className="h-9" />
+					<CommandInput placeholder="Search plans..." className="h-9" />
 					<CommandList className="max-h-[300px] overflow-y-auto">
 						<ScrollArea>
 							<CommandEmpty>No products found.</CommandEmpty>
 							<CommandGroup>
-								{products.map((product: any) => (
+								{products.map((product: ProductV2) => (
 									<CommandItem
 										key={product.id}
 										value={product.id}
