@@ -22,6 +22,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useCommandBarStore } from "@/hooks/stores/useCommandBarStore";
 import { useListOrganizations } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
@@ -53,7 +54,8 @@ type Org = {
 };
 
 const CommandBar = () => {
-	const [open, setOpen] = useState<boolean>(false);
+	const open = useCommandBarStore((state) => state.open);
+	const setOpen = useCommandBarStore((state) => state.setOpen);
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [currentPage, setCurrentPage] = useState<
@@ -93,7 +95,10 @@ const CommandBar = () => {
 			isTransitioningRef.current = false;
 			lastRenderedContentRef.current = null;
 		}, 300);
-	}, []);
+	}, [
+		// Close the dialog immediately
+		setOpen,
+	]);
 
 	// Helper to switch pages without causing flash
 	const switchToPage = useCallback((page: "main" | "impersonate" | "orgs") => {
@@ -625,7 +630,7 @@ const CommandBar = () => {
 				setOpen(true);
 			}
 		},
-		[closeDialog],
+		[closeDialog, setOpen],
 	);
 
 	return (

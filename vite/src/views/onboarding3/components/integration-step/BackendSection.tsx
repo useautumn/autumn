@@ -29,7 +29,7 @@ export const BackendSection = () => {
 	return (
 		<div className="flex flex-col gap-4">
 			<SectionHeader
-				stepNumber={5}
+				stepNumber={4}
 				title={
 					<span>
 						Mount <CodeSpan>{"autumnHandler"}</CodeSpan> to your backend
