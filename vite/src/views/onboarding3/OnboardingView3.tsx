@@ -20,6 +20,7 @@ import { useOnboarding3QueryState } from "./hooks/useOnboarding3QueryState";
 import { useOnboardingFeatureSync } from "./hooks/useOnboardingFeatureSync";
 import { useOnboardingLogic } from "./hooks/useOnboardingLogic";
 import { useOnboardingProductSync } from "./hooks/useOnboardingProductSync";
+import { useSyncPlaygroundMode } from "./hooks/useSyncPlaygroundMode";
 import { OnboardingPreview } from "./OnboardingPreview";
 import { OnboardingStep } from "./utils/onboardingUtils";
 
@@ -53,6 +54,9 @@ export default function OnboardingContent() {
 	// Initialize onboarding logic and store handlers
 	useOnboardingLogic();
 
+	// Sync playground mode with query params
+	useSyncPlaygroundMode();
+
 	// Track sign-up event on first mount
 	useEffect(() => {
 		trackSignUp();
@@ -82,7 +86,7 @@ export default function OnboardingContent() {
 					className={cn(
 						"relative w-full h-full flex bg-gray-medium [scrollbar-gutter:stable]",
 						step === OnboardingStep.Integration
-							? "overflow-y-auto"
+							? "overflow-y-auto bg-t13"
 							: "overflow-y-hidden",
 					)}
 				>

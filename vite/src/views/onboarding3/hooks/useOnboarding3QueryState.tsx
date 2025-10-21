@@ -12,6 +12,7 @@ export const useOnboarding3QueryState = () => {
 				OnboardingStep.Integration,
 			] as const).withDefault(OnboardingStep.PlanDetails),
 			product_id: parseAsString,
+			m: parseAsStringLiteral(["e", "p"] as const),
 		},
 		{
 			history: "push",

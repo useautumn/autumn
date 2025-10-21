@@ -37,7 +37,7 @@ export default function ConnectStripeDialog({
 	const handleRedirectToOAuth = async () => {
 		try {
 			const { data } = await axiosInstance.get(
-				`/v1/organization/stripe/oauth_url`,
+				`/v1/organization/stripe/oauth_url?from_onboarding=true`,
 			);
 			window.open(data.oauth_url, "_blank");
 		} catch (error) {
