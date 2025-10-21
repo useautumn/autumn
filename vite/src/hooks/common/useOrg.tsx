@@ -1,19 +1,40 @@
-import type { FrontendOrg } from "@autumn/shared";
+import type { AppEnv, FrontendOrg } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { authClient, useListOrganizations } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
-export const useOrg = () => {
-	const axiosInstance = useAxiosInstance();
+const ORG_STORAGE_KEY = "autumn_org";
+
+export const useOrg = (params?: { env?: AppEnv }) => {
+	const axiosInstance = useAxiosInstance({ env: params?.env });
 	const { data: orgList } = useListOrganizations();
 
 	const fetcher = async () => {
 		try {
 			const { data } = await axiosInstance.get("/organization");
+			// Store in local storage
+			if (data) {
+				const storageKey = params?.env
+					? `${ORG_STORAGE_KEY}_${params.env}`
+					: ORG_STORAGE_KEY;
+				localStorage.setItem(storageKey, JSON.stringify(data));
+			}
 			return data;
 		} catch {
 			return null;
+		}
+	};
+
+	const getInitialData = () => {
+		try {
+			const storageKey = params?.env
+				? `${ORG_STORAGE_KEY}_${params.env}`
+				: ORG_STORAGE_KEY;
+			const stored = localStorage.getItem(storageKey);
+			return stored ? JSON.parse(stored) : undefined;
+		} catch {
+			return undefined;
 		}
 	};
 
@@ -23,8 +44,9 @@ export const useOrg = () => {
 		error,
 		refetch,
 	} = useQuery({
-		queryKey: ["org"],
+		queryKey: params?.env ? ["org", params.env] : ["org"],
 		queryFn: fetcher,
+		initialData: getInitialData(),
 	});
 
 	useEffect(() => {

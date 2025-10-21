@@ -46,7 +46,7 @@ export const BackendSection = () => {
 
 			<div className="pl-[32px] flex flex-col gap-6">
 				<div className="flex flex-col gap-2.5">
-					<div className="">
+					{/* <div className="">
 						<CodeGroup value=".env">
 							<CodeGroupList>
 								<CodeGroupTab value=".env">.env</CodeGroupTab>
@@ -65,7 +65,7 @@ export const BackendSection = () => {
 								<CodeGroupCode>{`AUTUMN_SECRET_KEY=${secretKey}`}</CodeGroupCode>
 							</CodeGroupContent>
 						</CodeGroup>
-					</div>
+					</div> */}
 
 					<div className="">
 						<CodeGroup value="handler">

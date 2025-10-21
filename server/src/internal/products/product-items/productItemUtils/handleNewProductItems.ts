@@ -224,8 +224,8 @@ export const handleNewProductItems = async ({
 		const { newPrice, newEnt, updatedPrice, updatedEnt, samePrice, sameEnt } =
 			itemToPriceAndEnt({
 				item,
-				orgId: product.org_id!,
-				internalProductId: product.internal_id!,
+				orgId: product.org_id,
+				internalProductId: product.internal_id,
 				feature: feature,
 				curPrice,
 				curEnt,

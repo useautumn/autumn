@@ -1,8 +1,6 @@
 import { productV2ToBasePrice } from "@autumn/shared";
-import { CrosshairSimpleIcon } from "@phosphor-icons/react";
 import { PricingTableContainer } from "@/components/autumn/PricingTableContainer";
 import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
-import { IconButton } from "@/components/v2/buttons/IconButton";
 import { Card, CardContent, CardHeader } from "@/components/v2/cards/Card";
 import { Separator } from "@/components/v2/separator";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -10,7 +8,7 @@ import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useIsEditingPlan, useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
-import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
+import { BasePriceDisplay } from "../products/plan/components/plan-card/BasePriceDisplay";
 import { PlanCardToolbar } from "../products/plan/components/plan-card/PlanCardToolbar";
 import { PlanFeatureList } from "../products/plan/components/plan-card/PlanFeatureList";
 import { DummyFeatureRow } from "./components/DummyFeatureRow";
@@ -134,24 +132,25 @@ export const OnboardingPreview = ({
 				</div>
 
 				{showPricing && (
-					<IconButton
-						variant="secondary"
-						icon={<CrosshairSimpleIcon />}
-						className="mt-2 !opacity-100 pointer-events-none"
-						onClick={handleEdit}
-						disabled={true}
-					>
-						{basePrice?.amount ? (
-							<span className="text-sm font-medium text-t2">
-								${basePrice.amount}/
-								{keyToTitle(basePrice.interval ?? "once", {
-									exclusionMap: { one_off: "once" },
-								}).toLowerCase()}
-							</span>
-						) : (
-							<span className="text-t4 text-sm">No price set</span>
-						)}
-					</IconButton>
+					<BasePriceDisplay />
+					// <IconButton
+					// 	variant="secondary"
+					// 	icon={<CrosshairSimpleIcon />}
+					// 	className="mt-2 !opacity-100 pointer-events-none"
+					// 	onClick={handleEdit}
+					// 	disabled={true}
+					// >
+					// 	{basePrice?.amount ? (
+					// 		<span className="text-sm font-medium text-t2">
+					// 			${basePrice.amount}/
+					// 			{keyToTitle(basePrice.interval ?? "once", {
+					// 				exclusionMap: { one_off: "once" },
+					// 			}).toLowerCase()}
+					// 		</span>
+					// 	) : (
+					// 		<span className="text-t4 text-sm">No price set</span>
+					// 	)}
+					// </IconButton>
 				)}
 			</CardHeader>
 			{showDummyFeature && feature && (

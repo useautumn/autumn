@@ -22,6 +22,7 @@ export const FrontendOrgSchema = z.object({
 		.nullable(),
 	through_master: z.boolean(),
 	onboarded: z.boolean(),
+	deployed: z.boolean(),
 });
 
 export type FrontendOrg = z.infer<typeof FrontendOrgSchema>;

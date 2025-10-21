@@ -1,9 +1,14 @@
 import { AppEnv, ErrCode, RecaseError } from "@autumn/shared";
+import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { generateOAuthState } from "@/internal/platform/platformBeta/utils/oauthStateUtils.js";
 
 export const handleGetOAuthUrl = createRoute({
+	query: z.object({
+		redirect_url: z.string().optional(),
+	}),
 	handler: async (c) => {
+		const { redirect_url } = c.req.query();
 		const ctx = c.get("ctx");
 		const { org, env } = ctx;
 
@@ -23,7 +28,7 @@ export const handleGetOAuthUrl = createRoute({
 		// Generate OAuth state and store in Redis
 		const frontendUrl = process.env.CLIENT_URL || "http://localhost:5173";
 
-		const redirectUri = `${frontendUrl}/dev?tab=stripe`;
+		const redirectUri = redirect_url || `${frontendUrl}/dev?tab=stripe`;
 
 		const stateKey = await generateOAuthState({
 			organizationSlug: org.slug,

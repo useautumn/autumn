@@ -25,6 +25,8 @@ export default defineConfig({
 			"@radix/tabs": "@radix-ui/react-tabs",
 			"@radix/tooltip": "@radix-ui/react-tooltip",
 		},
+		// Preserve symlinks for workspace dependencies
+		preserveSymlinks: true,
 	},
 	optimizeDeps: {
 		// Exclude workspace dependencies from pre-bundling to avoid cache issues
@@ -34,10 +36,6 @@ export default defineConfig({
 			"better-auth/react",
 			"@better-auth/stripe",
 		],
-		// Force re-optimization on server start to catch workspace changes
-		force: process.env.FORCE_OPTIMIZE === "true",
-		// Include specific dependencies that might cause issues
-		include: [],
 	},
 	// Clear cache on config change
 	cacheDir: "node_modules/.vite",
