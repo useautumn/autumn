@@ -118,7 +118,7 @@ export const NavButton = ({
 					<TabComponent />
 				</Link>
 			) : (
-				<button className={outerDivClass} onClick={onClick}>
+				<button type="button" className={outerDivClass} onClick={onClick}>
 					<TabComponent />
 				</button>
 			)}

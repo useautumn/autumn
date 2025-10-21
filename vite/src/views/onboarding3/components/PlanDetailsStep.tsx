@@ -36,8 +36,7 @@ export const PlanDetailsStep = () => {
 							/>
 
 							<span className="text-form-label block">
-								The display name of the plan that will show up on your
-								checkout page
+								This name will be displayed on Stripe's checkout page
 							</span>
 						</div>
 						<div>

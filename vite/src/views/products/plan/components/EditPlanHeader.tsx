@@ -141,12 +141,11 @@ export const EditPlanHeader = () => {
 								size="sm"
 							/>
 						)}
-						{/* {product.is_default && <Badge variant="muted">Default</Badge>}
-						{product.is_add_on && <Badge variant="muted">Add-on</Badge>} */}
+
 						<IconBadge variant="muted" icon={<UserIcon />}>
 							{counts?.active || 0}
 						</IconBadge>
-						{/* <PlanTypeBadge product={product} /> */}
+
 						<PlanToolbar />
 					</div>
 
