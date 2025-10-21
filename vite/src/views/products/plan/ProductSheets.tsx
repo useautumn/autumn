@@ -5,8 +5,8 @@ import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { getItemId } from "@/utils/product/productItemUtils";
 
 import { ProductItemContext } from "../product/product-item/ProductItemContext";
-import { EditPlanFeatureSheet } from "./components/edit-plan-feature/EditPlanFeatureSheet";
 import { EditPlanSheet } from "./components/EditPlanSheet";
+import { EditPlanFeatureSheet } from "./components/edit-plan-feature/EditPlanFeatureSheet";
 import { NewFeatureSheet } from "./components/new-feature/NewFeatureSheet";
 import { SelectFeatureSheet } from "./components/SelectFeatureSheet";
 
@@ -73,7 +73,7 @@ export const ProductSheets = () => {
 	};
 
 	return (
-		<SheetContainer className="w-full min-w-xs max-w-md bg-card z-50 border-l shadow-sm h-full">
+		<SheetContainer className="w-full min-w-xs max-w-md bg-card z-50 border-l shadow-sm h-full border-l-[#EAEAE9]">
 			{renderSheet()}
 		</SheetContainer>
 	);

@@ -28,13 +28,19 @@ export default function PricingTablePreview({
 	}
 
 	const handleSubscribe = async (product: ProductV2) => {
+		// Check if Stripe is connected
+		if (!org?.stripe_connected) {
+			setConnectStripeOpen(true);
+			return;
+		}
+
 		if (product.id) {
 			try {
 				await checkout({
 					productId: product.id,
 					dialog: OnboardingCheckoutDialog,
 					openInNewTab: true,
-					successUrl: `${window.location.origin}/sandbox/onboarding3`,
+					successUrl: `${window.location.origin}/sandbox/onboarding?step=playground&m=p`,
 				});
 			} catch (error) {
 				console.error("Checkout error:", error);

@@ -23,7 +23,11 @@ export const handleGetOAuthUrl = createRoute({
 		// Generate OAuth state and store in Redis
 		const frontendUrl = process.env.CLIENT_URL || "http://localhost:5173";
 
-		const redirectUri = `${frontendUrl}/dev?tab=stripe`;
+		// Determine redirect URI based on context
+		const fromOnboarding = c.req.query("from_onboarding") === "true";
+		const redirectUri = fromOnboarding
+			? `${frontendUrl}/sandbox/onboarding3?step=playground&m=p`
+			: `${frontendUrl}/dev?tab=stripe`;
 
 		const stateKey = await generateOAuthState({
 			organizationSlug: org.slug,

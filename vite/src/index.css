@@ -63,6 +63,7 @@ html {
 	--t10: #d1d1d1;
 	--t11: #e3e3e3;
 	--t12: #444444;
+	--t13: #FAFAF9;
 	--radius: 0.375rem; /* 6px */
 
 	--primary: #8838ff;
@@ -72,6 +73,7 @@ html {
 	--radio-group-hover-primary: #fcfaff;
 
 	--border: #ddd;
+	--border-sheet: #EAEAE9
 	--card-border: #d1d1d1;
 
 	--input: #dddddd;
@@ -181,6 +183,7 @@ html {
 	--color-t10: var(--t10);
 	--color-t11: var(--t11);
 	--color-t12: var(--t12);
+	--color-t13: var(--t13);
 
 	--color-input: var(--input);
 	--color-icon1: var(--icon1);
