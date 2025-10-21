@@ -140,8 +140,9 @@ export const PlanCardPreview = ({
 				<Button
 					variant={disabled ? "primary" : recommended ? "primary" : "secondary"}
 					className="w-full relative overflow-hidden group mt-auto disabled:opacity-100"
-					onClick={onButtonClick}
+					onClick={handleButtonClick}
 					disabled={disabled}
+					isLoading={buttonLoading}
 				>
 					<div className="flex items-center justify-center gap-2 w-full transition-transform duration-300 group-hover:translate-y-[-130%]">
 						<span>{buttonText}</span>
