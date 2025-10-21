@@ -18,18 +18,22 @@ export const SignIn = () => {
 	const [googleLoading, setGoogleLoading] = useState(false);
 	const [sendOtpLoading, setSendOtpLoading] = useState(false);
 	const [otpSent, setOtpSent] = useState(false);
-	// const { data: session } = useSession();
-	const { org, isLoading: orgLoading } = useOrg();
+
+	const { org } = useOrg();
 	const navigate = useNavigate();
-	// const [searchParams] = useSearchParams();
-	// const token = searchParams.get("token");
 
 	const newPath = "/sandbox/onboarding";
-	const callbackPath = "/customers";
+	const callbackPath = "/sandbox/products?tab=products";
 
 	useEffect(() => {
-		if (org?.onboarded) {
-			navigate(callbackPath);
+		if (org) {
+			if (org.deployed) {
+				navigate("/products?tab=products");
+			} else if (org.onboarded) {
+				navigate("/sandbox/products?tab=products");
+			} else {
+				navigate("/sandbox/onboarding");
+			}
 		}
 	}, [org, navigate]);
 

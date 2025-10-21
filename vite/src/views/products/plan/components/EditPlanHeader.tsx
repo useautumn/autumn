@@ -6,6 +6,7 @@ import { Badge } from "@/components/v2/badges/Badge";
 import { IconBadge } from "@/components/v2/badges/IconBadge";
 import V2Breadcrumb from "@/components/v2/breadcrumb";
 import { Button } from "@/components/v2/buttons/Button";
+import { CopyButton } from "@/components/v2/buttons/CopyButton.tsx";
 import {
 	Select,
 	SelectContent,
@@ -13,6 +14,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/v2/selects/Select";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { isOneOffProduct } from "@/utils/product/priceUtils";
@@ -24,6 +26,7 @@ import {
 	useProductQueryState,
 } from "../../product/hooks/useProductQuery";
 import { ConfirmMigrationDialog } from "./ConfirmMigrationDialog";
+import { PlanToolbar } from "./PlanToolbar.tsx";
 
 export const EditPlanHeader = () => {
 	const { product, numVersions } = useProductQuery();
@@ -31,6 +34,7 @@ export const EditPlanHeader = () => {
 	const { refetch: refetchMigrations } = useMigrationsQuery();
 	const { queryStates, setQueryStates } = useProductQueryState();
 	const axiosInstance = useAxiosInstance();
+	const sheetType = useSheetStore((s) => s.type);
 
 	const [confirmMigrateOpen, setConfirmMigrateOpen] = useState(false);
 
@@ -105,12 +109,12 @@ export const EditPlanHeader = () => {
 				startMigration={migrateCustomers}
 				version={version}
 			/>
-			<div className="flex flex-col gap-2 p-4 pb-3 w-full bg-card border-none shadow-none">
+			<div className="flex flex-col gap-2 p-4 pb-3 bg-card border-none shadow-none w-full">
 				<V2Breadcrumb
 					className="p-0"
 					items={[
 						{
-							name: "Products",
+							name: "Plans",
 							href: "/products?tab=products",
 						},
 						{
@@ -131,13 +135,21 @@ export const EditPlanHeader = () => {
 				</div>
 				<div className="flex flex-row justify-between items-center">
 					<div className="flex flex-row gap-2">
-						{/* {badgeType && <Badge variant="muted">{badgeType}</Badge>} */}
+						{product?.id && (
+							<CopyButton
+								side="bottom"
+								text={product?.id ? product?.id : ""}
+								className="text-xs"
+								size="sm"
+							/>
+						)}
 						{product.is_default && <Badge variant="muted">Default</Badge>}
 						{product.is_add_on && <Badge variant="muted">Add-on</Badge>}
 						<IconBadge variant="muted" icon={<UserIcon />}>
 							{counts?.active || 0}
 						</IconBadge>
 						<PlanTypeBadge product={product} />
+						<PlanToolbar />
 					</div>
 
 					<div className="flex flex-row gap-2 items-center">

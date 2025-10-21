@@ -4,7 +4,6 @@ import { ArrowUpRightFromSquare } from "lucide-react";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { useEffect } from "react";
 import { Outlet, useNavigate } from "react-router";
-import { ChatWidget } from "@/components/general/ChatWidget";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { Button } from "@/components/ui/button";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
@@ -46,8 +45,16 @@ export function MainLayout() {
 
 	useEffect(() => {
 		// Only redirect if org is loaded and user is not onboarded
-		if (!orgLoading && org && !org.onboarded) {
-			navigate("/sandbox/onboarding");
+		if (!orgLoading && org) {
+			if (!org.onboarded) {
+				navigate("/sandbox/onboarding");
+			} else if (!org.deployed) {
+				const pathname = window.location.pathname;
+				if (!pathname.startsWith("/sandbox")) {
+					const search = window.location.search;
+					navigate(`/sandbox${pathname}${search}`);
+				}
+			}
 		}
 	}, [org, orgLoading, navigate]);
 
@@ -106,7 +113,7 @@ export function MainLayout() {
 					<MainSidebar />
 					<InviteNotifications />
 					<MainContent />
-					<ChatWidget />
+					{/* <ChatWidget /> */}
 					<CommandBar />
 				</main>
 			</NuqsAdapter>

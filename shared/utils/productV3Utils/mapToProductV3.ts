@@ -1,13 +1,7 @@
-import type { z } from "zod/v4";
 import type { ProductV2 } from "../../models/productV2Models/productV2Models.js";
-import type { PlanResponseSchema } from "../../models/productV3Models/productV3Response.js";
 import { productV2ToBasePrice } from "./productItemUtils/productV3ItemUtils.js";
 
-export function mapToProductV3({
-	product,
-}: {
-	product: ProductV2;
-}): z.infer<typeof PlanResponseSchema> {
+export function mapToProductV3({ product }: { product: ProductV2 }) {
 	const productV3 = {
 		id: product.id,
 		name: product.name,

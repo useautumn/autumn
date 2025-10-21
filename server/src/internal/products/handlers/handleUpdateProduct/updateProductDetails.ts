@@ -33,7 +33,7 @@ const productDetailsSame = (prod1: Product, prod2: UpdateProduct) => {
 		return false;
 	}
 
-	if (notNullish(prod2.group) && prod1.group !== prod2.group) {
+	if (prod2.group !== undefined && prod1.group !== prod2.group) {
 		return false;
 	}
 
@@ -223,6 +223,7 @@ export const handleUpdateProductDetails = async ({
 	}
 
 	// 2. Update product
+	console.log("New group:", newProduct.group);
 
 	await ProductService.updateByInternalId({
 		db,
@@ -230,7 +231,10 @@ export const handleUpdateProductDetails = async ({
 		update: {
 			id: newProduct.id,
 			name: newProduct.name,
-			group: newProduct.group,
+			group:
+				newProduct.group === "" || newProduct.group === null
+					? ""
+					: newProduct.group,
 			is_add_on: newProduct.is_add_on,
 			is_default: newProduct.is_default,
 			archived: newProduct.archived,

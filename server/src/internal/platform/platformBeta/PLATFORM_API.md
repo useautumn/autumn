@@ -180,6 +180,137 @@ curl -X POST https://api.useautumn.com/v1/platform/beta/organization/stripe \
 
 ---
 
+### GET /v1/platform/beta/users
+
+Lists all users created by your master organization. Supports pagination and optional expansion of related organizations.
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `limit` | integer | No | 10 | Number of users to return (1-100). |
+| `offset` | integer | No | 0 | Number of users to skip for pagination. |
+| `expand` | string | No | - | Comma-separated list of fields to expand. Currently supports: `"organizations"`. |
+
+**Response:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `list` | array | Array of user objects. |
+| `list[].email` | string | User's email address. |
+| `list[].created_at` | number | Timestamp (milliseconds since epoch) when the user was created. |
+| `list[].organizations` | array? | Array of organization objects (only if `expand=organizations` is set). |
+| `list[].organizations[].slug` | string | Organization slug (without master org prefix). |
+| `list[].organizations[].name` | string | Organization name. |
+| `list[].organizations[].created_at` | number | Timestamp (milliseconds since epoch) when the organization was created. |
+| `total` | number | Total number of users returned. |
+| `limit` | number | Limit used in the query. |
+| `offset` | number | Offset used in the query. |
+
+**Example:**
+
+```bash
+curl -X GET 'https://api.useautumn.com/v1/platform/beta/users?limit=20&offset=0&expand=organizations' \
+  -H "Authorization: Bearer am_sk_test_..."
+```
+
+**Response:**
+```json
+{
+  "list": [
+    {
+      "email": "tenant1@example.com",
+      "created_at": 1704067200000,
+      "organizations": [
+        {
+          "slug": "tenant-org-1",
+          "name": "Tenant Organization 1",
+          "created_at": 1704067200000
+        }
+      ]
+    },
+    {
+      "email": "tenant2@example.com",
+      "created_at": 1704153600000,
+      "organizations": [
+        {
+          "slug": "tenant-org-2",
+          "name": "Tenant Organization 2",
+          "created_at": 1704153600000
+        }
+      ]
+    }
+  ],
+  "total": 2,
+  "limit": 20,
+  "offset": 0
+}
+```
+
+**Notes:**
+- Only returns users that were created by your master organization
+- Use the `expand` parameter to include the organizations each user belongs to
+- Organizations are limited to 100 per user
+
+---
+
+### GET /v1/platform/beta/orgs
+
+Lists all organizations created by your master organization. Supports pagination.
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `limit` | integer | No | 10 | Number of organizations to return (1-100). |
+| `offset` | integer | No | 0 | Number of organizations to skip for pagination. |
+
+**Response:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `list` | array | Array of organization objects. |
+| `list[].slug` | string | Organization slug (without master org prefix). |
+| `list[].name` | string | Organization name. |
+| `list[].created_at` | number | Timestamp (milliseconds since epoch) when the organization was created. |
+| `total` | number | Total number of organizations returned. |
+| `limit` | number | Limit used in the query. |
+| `offset` | number | Offset used in the query. |
+
+**Example:**
+
+```bash
+curl -X GET 'https://api.useautumn.com/v1/platform/beta/orgs?limit=20&offset=0' \
+  -H "Authorization: Bearer am_sk_test_..."
+```
+
+**Response:**
+```json
+{
+  "list": [
+    {
+      "slug": "tenant-org-1",
+      "name": "Tenant Organization 1",
+      "created_at": 1704067200000
+    },
+    {
+      "slug": "tenant-org-2",
+      "name": "Tenant Organization 2",
+      "created_at": 1704153600000
+    }
+  ],
+  "total": 2,
+  "limit": 20,
+  "offset": 0
+}
+```
+
+**Notes:**
+- Only returns organizations that were created by your master organization
+- Organization slugs in the response do not include the master org ID prefix
+
+---
+
 ## Error Responses
 
 All endpoints return standard error responses:
