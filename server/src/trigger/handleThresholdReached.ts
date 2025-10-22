@@ -10,8 +10,8 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
+import { getV2CheckResponse } from "@/internal/api/check/checkUtils/getV2CheckResponse.js";
 import { getSingleEntityResponse } from "@/internal/api/entities/getEntityUtils.js";
-import { getV2CheckResponse } from "@/internal/api/entitled/checkUtils/getV2CheckResponse.js";
 import { getCustomerDetails } from "@/internal/customers/cusUtils/getCustomerDetails.js";
 import { toApiFeature } from "@/internal/features/utils/mapFeatureUtils.js";
 

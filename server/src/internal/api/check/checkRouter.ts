@@ -1,6 +1,7 @@
 import { ApiVersion, ErrCode, type Feature, FeatureType } from "@autumn/shared";
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { handleEventSent } from "../events/eventRouter.js";
@@ -55,8 +56,11 @@ checkRouter.post("", async (req: any, res: any) => {
 		}
 
 		if (product_id) {
-			await handleProductCheck({ req, res });
-			return;
+			const result = await handleProductCheck({
+				ctx: req as AutumnContext,
+				body: req.body,
+			});
+			return res.status(200).json(result);
 		}
 
 		const requiredBalance = notNullish(required_balance)
