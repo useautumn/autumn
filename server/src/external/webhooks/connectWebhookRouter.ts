@@ -77,9 +77,11 @@ export const handleConnectWebhook = async (c: Context<HonoEnv>) => {
 		org = data.org;
 		features = data.features;
 	} catch {
-		logger.error(
-			`Account ID ${accountId} not linked to any org, skipping Stripe webhook`,
-		);
+		if (process.env.NODE_ENV !== "development") {
+			logger.error(
+				`Account ID ${accountId} not linked to any org, skipping Stripe webhook`,
+			);
+		}
 		return c.json(
 			{ message: "Account ID not linked to any org, skipping Stripe webhook" },
 			200,
