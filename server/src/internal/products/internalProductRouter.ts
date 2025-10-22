@@ -527,4 +527,5 @@ export const internalProductRouter = new Hono<HonoEnv>();
 
 internalProductRouter.get("/:productId/count", ...handleGetProductCount);
 internalProductRouter.get("/:productId/data", ...handleGetProductInternal);
+internalProductRouter.get("/:productId/data2", ...handleGetProductInternal);
 internalProductRouter.post("/copy_to_production", ...handleCopyEnvironment);

@@ -165,6 +165,7 @@ export const PlanFeatureRow = ({
 					text={item.feature_id || ""}
 					disableActive={true}
 					size="sm"
+					side="left"
 					variant="skeleton"
 					tabIndex={-1}
 					className="absolute right-0 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-50 bg-hover-primary group-hover:bg-transparent"

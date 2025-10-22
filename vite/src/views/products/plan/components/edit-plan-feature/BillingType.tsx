@@ -54,6 +54,16 @@ export function BillingType() {
 					billing_units: undefined,
 					usage_model: undefined,
 					interval: isContUseItem({ item, features }) ? null : item.interval,
+					included_usage: 0,
+				});
+			} else if (
+				item.included_usage === undefined ||
+				item.included_usage === null
+			) {
+				// If clicking included but no included_usage set yet, initialize it
+				setItem({
+					...item,
+					included_usage: 0,
 				});
 			}
 		} else {
