@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
+import { WarningBox } from "@/components/general/modal-components/WarningBox";
 import { Button } from "@/components/v2/buttons/Button";
 import {
 	Dialog,
@@ -64,9 +65,13 @@ export const ConfirmMigrationDialog = ({
 					<DialogDescription className="max-w-[400px] break-words flex flex-col gap-3">
 						<p>
 							This will migrate all customers on {product.name} (version{" "}
-							{version}) to the latest version. Custom plans and cancelled plans
-							will not be migrated.
+							{version}) to the latest version.
 						</p>
+						<WarningBox>
+							Features and balances will be immediately migrated. Pricing
+							changes will take effect from the next billing cycle. Custom plans
+							and cancelled plans will not be migrated.
+						</WarningBox>
 						<p>
 							Type <code className="font-mono font-semibold">{product.id}</code>{" "}
 							to continue.

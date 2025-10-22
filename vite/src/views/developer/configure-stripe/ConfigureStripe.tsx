@@ -111,11 +111,16 @@ export const ConfigureStripe = () => {
 		const accountName =
 			stripeAccount?.business_profile?.name ||
 			stripeAccount?.settings?.dashboard?.display_name;
+
 		const accountId = stripeAccount?.id;
+
+		const prefix = accountId
+			? `You have connected the Stripe account ${accountId}`
+			: "You have your connected your Stripe account";
 
 		if (connection === "secret_key") {
 			return {
-				description: `You have connected the Stripe account ${accountId}${accountName ? ` (${accountName})` : ""} via secret key.`, // Will show dashboard link in the same line
+				description: `${prefix} ${accountName ? ` (${accountName})` : ""} via secret key.`, // Will show dashboard link in the same line
 				showDisconnect: true,
 				showConnectButtons: false,
 				showDefaultAccountLink: true,
@@ -126,9 +131,9 @@ export const ConfigureStripe = () => {
 			const accountName =
 				stripeAccount?.business_profile?.name ||
 				stripeAccount?.settings?.dashboard?.display_name;
-			const accountId = stripeAccount?.id;
+
 			return {
-				description: `You have connected the Stripe account ${accountId}${accountName ? ` (${accountName})` : ""} via OAuth.`,
+				description: `${prefix} ${accountName ? ` (${accountName})` : ""} via OAuth.`,
 				showDisconnect: true,
 				showConnectButtons: false,
 				showDefaultAccountLink: false,

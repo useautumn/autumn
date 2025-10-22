@@ -10,6 +10,7 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { orgToCurrency } from "@/internal/orgs/orgUtils.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
 import { billingIntervalToStripe } from "../stripePriceUtils.js";
@@ -105,7 +106,7 @@ export const createStripePrepaid = async ({
 		stripePrice = await stripeCli.prices.create({
 			...productData,
 			unit_amount_decimal: unitAmountDecimalStr,
-			currency: org.default_currency!,
+			currency: orgToCurrency({ org }),
 		});
 
 		config.stripe_product_id = stripePrice.product as string;
@@ -128,7 +129,7 @@ export const createStripePrepaid = async ({
 
 		stripePrice = await stripeCli.prices.create({
 			...productData,
-			currency: org.default_currency!,
+			currency: orgToCurrency({ org }),
 			...priceAmountData,
 			recurring: {
 				...(recurringData as any),

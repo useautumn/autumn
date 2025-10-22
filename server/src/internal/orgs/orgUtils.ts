@@ -306,3 +306,7 @@ export const unsetOrgStripeKeys = async ({
 		},
 	});
 };
+
+export const orgToCurrency = ({ org }: { org: Organization }) => {
+	return org.default_currency || "usd";
+};

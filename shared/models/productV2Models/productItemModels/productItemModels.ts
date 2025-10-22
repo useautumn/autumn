@@ -65,17 +65,22 @@ export const ProductItemSchema = z.object({
 	feature_id: z.string().nullish(),
 	feature_type: z.nativeEnum(ProductItemFeatureType).nullish(),
 	included_usage: z.union([z.number(), z.literal(Infinite)]).nullish(),
-	interval: z.preprocess((val) => {
-		if (val === "") {
-			throw new Error("Interval cannot be empty.");
-		}
-		return val;
-	}, z.enum(ProductItemInterval).nullish()),
+	interval: z
+		.enum(ProductItemInterval, {
+			error: (issue) => {
+				if (issue.input === "") {
+					return {
+						message: "Interval cannot be empty.",
+					};
+				}
+			},
+		})
+		.nullish(),
 	interval_count: z.number().nullish(),
 	entity_feature_id: z.string().nullish(),
 
 	// Price config
-	usage_model: z.nativeEnum(UsageModel).nullish(),
+	usage_model: z.enum(UsageModel).nullish(),
 	price: z.number().nullish(),
 	tiers: z.array(PriceTierSchema).nullish(),
 	billing_units: z.number().nullish(), // amount per billing unit (eg. $9 / 250 units)

@@ -52,28 +52,14 @@ export const PlanCardToolbar = ({
 					aria-label="Edit plan"
 					variant="muted"
 					disabled={editDisabled}
-					size="sm"
-					className={cn(isEditingPlan && "btn-secondary-active !opacity-100 ")}
+					// size="sm"
+					className={cn(
+						// "text-body",
+						isEditingPlan && "btn-secondary-active !opacity-100 ",
+					)}
 				>
-					Edit Details
+					Plan Details
 				</IconButton>
-
-				{/* {product?.archived ? (
-					<Button variant="muted" onClick={() => setDeleteOpen(true)} size="sm">
-						Archived
-					</Button>
-				) : (
-					<IconButton
-						icon={<TrashIcon />}
-						onClick={() => setDeleteOpen(true)}
-						aria-label="Delete plan"
-						variant="muted"
-						iconOrientation="center"
-						disabled={deleteDisabled}
-						title={deleteDisabled && deleteTooltip ? deleteTooltip : undefined}
-						className={cn(deleteDisabled && "opacity-50 cursor-not-allowed")}
-					/>
-				)} */}
 			</div>
 		</>
 	);
