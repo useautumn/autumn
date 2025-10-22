@@ -31,11 +31,13 @@ const getFeatureDeductions = ({
 	value,
 	features,
 	shouldSet,
+	entityId,
 }: {
 	cusEnts: FullCustomerEntitlement[];
 	value: number;
 	features: Feature[];
 	shouldSet: boolean;
+	entityId?: string;
 }) => {
 	const meteredFeature =
 		features.find((f) => f.type === FeatureType.Metered) || features[0];
@@ -74,6 +76,7 @@ const getFeatureDeductions = ({
 			const totalBalance = getFeatureBalance({
 				cusEnts,
 				internalFeatureId: feature.internal_id!,
+				entityId,
 			})!;
 
 			deduction = new Decimal(totalBalance).sub(targetBalance).toNumber();
@@ -357,6 +360,7 @@ export const updateUsage = async ({
 		value,
 		shouldSet: setUsage,
 		features,
+		entityId,
 	});
 
 	logUsageUpdate({
