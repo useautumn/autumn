@@ -131,6 +131,7 @@ export const handleCreateCheckout = async ({
 		allow_promotion_codes: allowPromotionCodes,
 		invoice_creation: !isRecurring ? { enabled: true } : undefined,
 		saved_payment_method_options: { payment_method_save: "enabled" },
+
 		...rewardData,
 		...(attachParams.checkoutSessionParams || {}),
 		metadata: {
