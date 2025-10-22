@@ -1,7 +1,6 @@
 import { ErrCode } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import qs from "qs";
-import Stripe from "stripe";
 import { ZodAny, ZodError, ZodObject } from "zod";
 import { withSpan as withSpanTracer } from "@/internal/analytics/tracer/spanUtils.js";
 import RecaseError, {
@@ -9,6 +8,7 @@ import RecaseError, {
 	handleRequestError,
 } from "./errorUtils.js";
 import type { ExtendedRequest } from "./models/Request.js";
+import { handleExpressErrorSkip } from "./routerUtils/expressErrorSkip.js";
 
 /**
  * Parses query parameters with proper type coercion for validation
@@ -263,78 +263,25 @@ export const routeHandler = async <TLoad = undefined>({
 			});
 		}
 	} catch (error) {
-		if (error instanceof RecaseError) {
-			if (error.code === ErrCode.EntityNotFound) {
-				req.logger.warn(`${error.message}, org: ${req.org?.slug || req.orgId}`);
-				return res.status(404).json({
-					message: error.message,
-					code: error.code,
-				});
-			}
+		// Check if error should be skipped (logged as warning)
+		const skipResponse = handleExpressErrorSkip({ error, req, res });
+		if (skipResponse) {
+			return skipResponse;
 		}
 
-		const originalUrl = req.originalUrl;
-		if (error instanceof Stripe.errors.StripeError) {
-			if (
-				originalUrl.includes("/exchange") &&
-				error.message.includes("Invalid API Key provided")
-			) {
-				req.logger.warn(`Exchange router, invalid API Key provided`);
-
-				return res.status(400).json({
-					message: error.message,
-					code: ErrCode.InvalidRequest,
-				});
-			}
-
-			if (
-				error.message.includes("not a valid email address") ||
-				error.message.includes("email: Invalid input")
-			) {
-				req.logger.warn(`Invalid email address`);
-				return res.status(400).json({
-					message: error.message,
-					code: ErrCode.InvalidRequest,
-				});
-			}
-
-			if (
-				originalUrl.includes("/billing_portal") &&
-				error.message.includes("Provide a configuration or create your default")
-			) {
-				req.logger.warn(`Billing portal config error, org: ${req.org?.slug}`);
-				return res.status(404).json({
-					message: error.message,
-					code: ErrCode.InvalidRequest,
-				});
-			}
-
-			if (
-				originalUrl.includes("/billing_portal") &&
-				error.message.includes(
-					"Invalid URL: An explicit scheme (such as https)",
-				)
-			) {
-				req.logger.warn(
-					`Billing portal return_url error, org: ${req.org?.slug}, return_url: ${req.body.return_url}`,
-				);
-				return res.status(400).json({
-					message: error.message,
-					code: ErrCode.InvalidRequest,
-				});
-			}
-		}
-
+		// Handle Zod errors on /attach endpoint
+		let handledError = error;
 		if (error instanceof ZodError && req.originalUrl.includes("/attach")) {
-			error = new RecaseError({
+			handledError = new RecaseError({
 				message: formatZodError(error as any),
 				code: ErrCode.InvalidInputs,
 				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
+		// Handle all other errors
 		handleRequestError({
-			error,
+			error: handledError,
 			req,
 			res,
 			action,

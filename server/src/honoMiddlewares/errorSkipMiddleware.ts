@@ -77,6 +77,42 @@ const STRIPE_RULES = [
 		statusCode: 400,
 		code: ErrCode.InvalidRequest,
 	},
+	{
+		name: "Card declined error",
+		match: (err: Error) =>
+			err instanceof Stripe.errors.StripeError &&
+			err.message.includes("Your card was declined."),
+		statusCode: 400,
+		code: ErrCode.InvalidRequest,
+	},
+	{
+		name: "Cannot delete org with production customers",
+		match: (err: Error) =>
+			err instanceof Stripe.errors.StripeError &&
+			err.message.includes("Cannot delete org with production mode customers"),
+		statusCode: 400,
+		code: ErrCode.InvalidRequest,
+	},
+	{
+		name: "Webhook endpoint limit reached",
+		match: (err: Error) =>
+			err instanceof Stripe.errors.StripeError &&
+			err.message.includes(
+				"You have reached the maximum of 16 test webhook endpoints",
+			),
+		statusCode: 400,
+		code: ErrCode.InvalidRequest,
+	},
+	{
+		name: "Invalid URL scheme error",
+		match: (err: Error) =>
+			err instanceof Stripe.errors.StripeError &&
+			err.message.includes(
+				"Invalid URL: An explicit scheme (such as https) must be provided",
+			),
+		statusCode: 400,
+		code: ErrCode.InvalidRequest,
+	},
 ] as const;
 
 /** Zod-specific error handling rules */
