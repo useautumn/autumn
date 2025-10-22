@@ -1,11 +1,11 @@
 import {
-	LimitedItem,
+	type LimitedItem,
 	OnDecrease,
 	OnIncrease,
-	ProductItem,
-	ProductItemConfig,
+	type ProductItem,
+	type ProductItemConfig,
 	ProductItemInterval,
-	RolloverConfig,
+	type RolloverConfig,
 	UsageModel,
 } from "@autumn/shared";
 
@@ -16,6 +16,7 @@ export const constructFeatureItem = ({
 	intervalCount = 1,
 	entityFeatureId,
 	isBoolean = false,
+	unlimited = false,
 	rolloverConfig,
 }: {
 	featureId: string;
@@ -25,6 +26,7 @@ export const constructFeatureItem = ({
 	entityFeatureId?: string;
 	isBoolean?: boolean;
 	rolloverConfig?: RolloverConfig;
+	unlimited?: boolean;
 }) => {
 	if (isBoolean) {
 		return {
@@ -32,7 +34,14 @@ export const constructFeatureItem = ({
 			entity_feature_id: entityFeatureId,
 		};
 	}
-	let item: LimitedItem = {
+
+	if (unlimited) {
+		return {
+			feature_id: featureId,
+			included_usage: "inf",
+		} as ProductItem;
+	}
+	const item: LimitedItem = {
 		feature_id: featureId,
 		included_usage: includedUsage,
 		entity_feature_id: entityFeatureId,
@@ -75,7 +84,7 @@ export const constructPrepaidItem = ({
 	usageLimit?: number;
 	intervalCount?: number;
 }) => {
-	let item: ProductItem = {
+	const item: ProductItem = {
 		feature_id: featureId,
 		usage_model: UsageModel.Prepaid,
 
@@ -118,7 +127,7 @@ export const constructArrearItem = ({
 	usageLimit?: number;
 	intervalCount?: number;
 }) => {
-	let item: ProductItem = {
+	const item: ProductItem = {
 		feature_id: featureId,
 		usage_model: UsageModel.PayPerUse,
 		included_usage: includedUsage,
@@ -153,7 +162,7 @@ export const constructArrearProratedItem = ({
 	usageLimit?: number;
 	rolloverConfig?: RolloverConfig;
 }) => {
-	let item: ProductItem = {
+	const item: ProductItem = {
 		feature_id: featureId,
 		usage_model: UsageModel.PayPerUse,
 		included_usage: includedUsage,

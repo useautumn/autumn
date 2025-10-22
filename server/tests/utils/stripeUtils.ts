@@ -34,19 +34,24 @@ export const completeCheckoutForm = async (
 ) => {
 	let browser;
 
-	if (process.env.NODE_ENV === "development" && !isLocal) {
-		const session = await client.sessions.create();
-		browser = await puppeteer.connect({
-			browserWSEndpoint: session!.wsEndpoint,
-			defaultViewport: null,
-		});
-	} else {
-		browser = await puppeteer.launch({
-			headless: false,
-			executablePath: "/Applications/Chromium.app/Contents/MacOS/Chromium",
-			args: ["--no-sandbox", "--disable-setuid-sandbox"],
-		});
-	}
+	// if (process.env.NODE_ENV === "development" && !isLocal) {
+	// 	const session = await client.sessions.create();
+	// 	browser = await puppeteer.connect({
+	// 		browserWSEndpoint: session!.wsEndpoint,
+	// 		defaultViewport: null,
+	// 	});
+	// } else {
+	// 	browser = await puppeteer.launch({
+	// 		headless: false,
+	// 		executablePath: "/Applications/Chromium.app/Contents/MacOS/Chromium",
+	// 		args: ["--no-sandbox", "--disable-setuid-sandbox"],
+	// 	});
+	// }
+	browser = await puppeteer.launch({
+		headless: false,
+		executablePath: "/Applications/Chromium.app/Contents/MacOS/Chromium",
+		args: ["--no-sandbox", "--disable-setuid-sandbox"],
+	});
 
 	try {
 		const page = await browser.newPage();

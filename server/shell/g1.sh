@@ -1,23 +1,26 @@
 #!/bin/bash
 
+# Test Group 1: Upgrade & Downgrade Tests
+# Description: Tests for product upgrades and downgrades
+
 # Source shared configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/config.sh"
 
-# If contains setup then run $MOCHA_SETUP
+# Setup if requested
 if [[ "$1" == *"setup"* ]]; then
-  MOCHA_PARALLEL=true $BUN_SETUP
+  echo "Running test setup..."
+  $BUN_SETUP
 fi
 
-# Run parallel basic tests
-$BUN_PARALLEL tests/attach/basic
-$BUN_PARALLEL tests/check/basic
-
-# # TODO: Refactor these tests to use Bun
-# $MOCHA_CMD 'tests/attach/upgrade/*.ts' 'tests/attach/downgrade/*.ts'
-
-# $MOCHA_CMD \
-# 'tests/attach/checkout/*.ts' \
-# 'tests/attach/entities/*.ts' \
-# 'tests/attach/free/*.ts'\
-# 'tests/attach/addOn/*.ts'
+# Run tests using TypeScript runner with compact mode
+# Adjust --max to control concurrency (default: 6)
+$BUN_PARALLEL_COMPACT \
+  'tests/check/basic' \
+  'tests/attach/basic' \
+  'tests/attach/upgrade' \
+  'tests/attach/downgrade' \
+  'tests/attach/free' \
+  'tests/attach/addOn' \
+  'tests/attach/entities' \
+  'tests/attach/checkout'
