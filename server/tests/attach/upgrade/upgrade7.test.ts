@@ -2,41 +2,30 @@ import { beforeAll, describe, test } from "bun:test";
 import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
 import chalk from "chalk";
 import type Stripe from "stripe";
-import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
 import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import {
-	constructProduct,
-	constructRawProduct,
-} from "@/utils/scriptUtils/createTestProducts.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
+const testCase = "upgrade7";
+
 export const pro = constructProduct({
-	type: "pro",
 	items: [],
+	type: "pro",
 });
 
-export const addOn = constructRawProduct({
-	id: "addOn",
-	isAddOn: true,
-	items: [
-		constructFeatureItem({
-			featureId: TestFeature.Credits,
-		}),
-	],
+export const premium = constructProduct({
+	items: [],
+	type: "premium",
 });
 
-const testCase = "addOn2";
-
-describe(`${chalk.yellowBright(`${testCase}: Testing attach free add on twice (should be treated as one off?)`)}`, () => {
+describe(`${chalk.yellowBright(`${testCase}: Testing upgrade via cancel + attach`)}`, () => {
 	const customerId = testCase;
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
+	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
 
@@ -46,22 +35,24 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach free add on twice (s
 		env = ctx.env;
 		stripeCli = ctx.stripeCli;
 
-		await initCustomerV3({
+		const { testClockId: testClockId1 } = await initCustomerV3({
 			ctx,
 			customerId,
-			customerData: { fingerprint: "test" },
+			customerData: {},
 			attachPm: "success",
 			withTestClock: true,
 		});
 
 		await initProductsV0({
 			ctx,
-			products: [pro, addOn],
+			products: [pro, premium],
 			prefix: testCase,
 		});
+
+		testClockId = testClockId1!;
 	});
 
-	test("should attach pro product and free add on", async () => {
+	test("should attach pro product", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,
@@ -70,23 +61,20 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach free add on twice (s
 			db,
 			org,
 			env,
-			skipSubCheck: true,
+		});
+	});
+
+	test("should cancel than attach premium product", async () => {
+		await autumn.cancel({
+			customer_id: customerId,
+			product_id: pro.id,
+			cancel_immediately: true,
 		});
 
 		await autumn.attach({
 			customer_id: customerId,
-			product_id: addOn.id,
-		});
-
-		const customer = await autumn.customers.get(customerId);
-		expectProductAttached({
-			customer,
-			product: addOn,
-		});
-
-		expectFeaturesCorrect({
-			customer,
-			product: addOn,
+			product_id: premium.id,
+			force_checkout: true,
 		});
 	});
 });

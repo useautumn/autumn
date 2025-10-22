@@ -1,16 +1,16 @@
 import {
-	getFeatureBalance,
+	type Feature,
+	FeatureType,
+	type FullCustomerEntitlement,
+	type Organization,
+} from "@autumn/shared";
+import {
 	cusEntsContainFeature,
-	getUnlimitedAndUsageAllowed,
+	getFeatureBalance,
 	getPaidFeatureBalance,
+	getUnlimitedAndUsageAllowed,
 } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
-import {
-	FullCustomerEntitlement,
-	Feature,
-	FeatureType,
-	Organization,
-} from "@autumn/shared";
 
 const getRequiredAndActualBalance = ({
 	cusEnts,
@@ -84,7 +84,7 @@ export const getV1CheckResponse = ({
 		}
 
 		// 2. Handle unlimited / usage allowed features
-		let { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
+		const { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
 			cusEnts,
 			internalFeatureId: feature.internal_id!,
 		});
@@ -116,12 +116,12 @@ export const getV1CheckResponse = ({
 			entityId,
 		});
 
-		let totalPaidAllowance = getPaidFeatureBalance({
+		const totalPaidAllowance = getPaidFeatureBalance({
 			cusEnts,
 			internalFeatureId: feature.internal_id!,
 		});
 
-		let newBalance: any = {
+		const newBalance: any = {
 			feature_id: feature.id,
 			required,
 			balance: actual,

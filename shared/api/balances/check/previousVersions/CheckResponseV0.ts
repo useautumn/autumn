@@ -1,4 +1,3 @@
-import { EntInterval } from "@models/productModels/entModels/entEnums.js";
 import { z } from "zod/v4";
 
 export const CheckResponseV0Schema = z.object({
@@ -6,10 +5,14 @@ export const CheckResponseV0Schema = z.object({
 	balances: z.array(
 		z.object({
 			feature_id: z.string(),
-			unlimited: z.boolean().nullish(),
-			interval: z.enum(EntInterval).nullish(),
+			required: z.number().nullish(),
 			balance: z.number().nullish(),
-			used: z.number().nullish(),
+			unlimited: z.boolean().optional(),
+			usage_allowed: z.boolean().optional(),
+			// unlimited: z.boolean().nullish(),
+			// interval: z.enum(EntInterval).nullish(),
+			// balance: z.number().nullish(),
+			// used: z.number().nullish(),
 		}),
 	),
 });

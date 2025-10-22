@@ -58,6 +58,11 @@ beforeAll(async () => {
 
 **Before:**
 ```typescript
+addPrefixToProducts({
+    products: [product1, product2],
+    prefix: testCase,
+});
+
 await createProducts({
     db,
     orgId: org.id,
@@ -75,6 +80,8 @@ await initProductsV0({
     prefix: testCase,
 });
 ```
+
+**Important:** `initProductsV0` combines both `addPrefixToProducts` and `createProducts` into a single call.
 
 ### 4. Update Test Functions
 
@@ -207,10 +214,43 @@ beforeAll(async () => {
 - [ ] Remove `this` context references
 - [ ] Test runs successfully
 
+## Critical Rules
+
+### Order of Operations
+**YOU MUST MAINTAIN THE EXACT ORDER** of initialization calls from the original test:
+
+1. **If products are created BEFORE customer init** → Keep that order in migration
+2. **If customer is created BEFORE products** → Keep that order in migration
+
+**Example 1: Products First**
+```typescript
+// Original (Mocha)
+addPrefixToProducts({ products: [pro, premium], prefix: testCase });
+await createProducts({ autumn, products: [pro, premium], db, orgId: org.id, env });
+await initCustomer({ autumn: autumnJs, customerId, db, org, env, attachPm: "success" });
+
+// Migrated (Bun) - SAME ORDER
+await initProductsV0({ ctx, products: [pro, premium], prefix: testCase });
+await initCustomerV3({ ctx, customerId, customerData: {}, attachPm: "success", withTestClock: true });
+```
+
+**Example 2: Customer First**
+```typescript
+// Original (Mocha)
+await initCustomer({ autumn: autumnJs, customerId, db, org, env, attachPm: "success" });
+addPrefixToProducts({ products: [pro, premium], prefix: testCase });
+await createProducts({ autumn, products: [pro, premium], db, orgId: org.id, env });
+
+// Migrated (Bun) - SAME ORDER
+await initCustomerV3({ ctx, customerId, customerData: {}, attachPm: "success", withTestClock: true });
+await initProductsV0({ ctx, products: [pro, premium], prefix: testCase });
+```
+
 ## Notes
 
 - **No timeout needed**: Tests run with `--timeout 0` globally
 - **Keep AutumnCli**: Don't replace with AutumnInt for API calls
 - **Preserve test logic**: Only change framework, not test behavior
 - **ctx is global**: Imported from createTestContext, contains db/org/env/stripeCli
+- **initProductsV0 is a helper**: It combines `addPrefixToProducts` + `createProducts` into one call
 

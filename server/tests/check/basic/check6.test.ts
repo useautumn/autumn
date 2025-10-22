@@ -3,33 +3,43 @@ import {
 	ApiVersion,
 	type CheckResponse,
 	type CheckResponseV0,
-	EntInterval,
+	type LimitedItem,
 	SuccessCode,
 } from "@autumn/shared";
 import chalk from "chalk";
 import { TestFeature } from "tests/setup/v2Features.js";
 import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import {
+	constructArrearItem,
+	constructFeatureItem,
+} from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
-const messagesFeature = constructFeatureItem({
+const monthlyMessages = constructArrearItem({
 	featureId: TestFeature.Messages,
+	price: 0.5,
+	includedUsage: 100,
+}) as LimitedItem;
+
+const lifetimeMessages = constructFeatureItem({
+	featureId: TestFeature.Messages,
+	interval: null,
 	includedUsage: 1000,
-});
+}) as LimitedItem;
 
-const freeProd = constructProduct({
-	type: "free",
+const proProd = constructProduct({
+	type: "pro",
 	isDefault: false,
-	items: [messagesFeature],
+	items: [monthlyMessages, lifetimeMessages],
 });
 
-const testCase = "check3";
+const testCase = "check6";
 
-describe(`${chalk.yellowBright("check3: test /check on metered feature")}`, () => {
-	const customerId = "check3";
+describe(`${chalk.yellowBright("check6: test /check on feature with multiple balances (one off + monthly)")}`, () => {
+	const customerId = "check6";
 	const autumnV0: AutumnInt = new AutumnInt({ version: ApiVersion.V0_2 });
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
@@ -37,18 +47,19 @@ describe(`${chalk.yellowBright("check3: test /check on metered feature")}`, () =
 		await initCustomerV3({
 			ctx,
 			customerId,
+			attachPm: "success",
 			withTestClock: false,
 		});
 
 		await initProductsV0({
 			ctx,
-			products: [freeProd],
+			products: [proProd],
 			prefix: testCase,
 		});
 
 		await autumnV1.attach({
 			customer_id: customerId,
-			product_id: freeProd.id,
+			product_id: proProd.id,
 		});
 	});
 
@@ -58,13 +69,17 @@ describe(`${chalk.yellowBright("check3: test /check on metered feature")}`, () =
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponseV0;
 
+		console.log(res);
+
 		expect(res.allowed).toBe(true);
 		expect(res.balances).toBeDefined();
 		expect(res.balances).toHaveLength(1);
-		expect(res.balances[0]).toStrictEqual({
+		expect(res.balances[0]).toMatchObject({
+			balance: monthlyMessages.included_usage + lifetimeMessages.included_usage,
 			feature_id: TestFeature.Messages,
-			required: 1,
-			balance: 1000,
+			required: null,
+			unlimited: false,
+			usage_allowed: true,
 		});
 	});
 
@@ -74,26 +89,42 @@ describe(`${chalk.yellowBright("check3: test /check on metered feature")}`, () =
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponse;
 
+		const totalIncludedUsage =
+			monthlyMessages.included_usage + lifetimeMessages.included_usage;
+
+		const lifetimeBreakdown = {
+			balance: lifetimeMessages.included_usage,
+			included_usage: lifetimeMessages.included_usage,
+			interval: "lifetime",
+			interval_count: 1,
+			next_reset_at: null,
+			usage: 0,
+		};
+
+		const monthlyBreakdown = {
+			balance: monthlyMessages.included_usage,
+			included_usage: monthlyMessages.included_usage,
+			interval: "month",
+			interval_count: 1,
+			usage: 0,
+		};
+
 		const expectedRes = {
 			allowed: true,
 			customer_id: customerId,
-			feature_id: TestFeature.Messages,
+			feature_id: TestFeature.Messages as string,
 			required_balance: 1,
 			code: SuccessCode.FeatureFound,
-			interval: EntInterval.Month,
-			interval_count: 1,
 			unlimited: false,
-			balance: 1000,
+			balance: totalIncludedUsage,
+			interval: "multiple",
+			interval_count: null,
 			usage: 0,
-			included_usage: 1000,
-			// next_reset_at: 1763833597035,
-			overage_allowed: false,
+			included_usage: totalIncludedUsage,
+			overage_allowed: true,
+			breakdown: [lifetimeBreakdown, monthlyBreakdown],
 		};
 
-		for (const key in expectedRes) {
-			expect(res[key as keyof CheckResponse]).toBe(
-				expectedRes[key as keyof typeof expectedRes],
-			);
-		}
+		expect(res).toMatchObject(expectedRes);
 	});
 });

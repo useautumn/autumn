@@ -981,6 +981,8 @@ export const cleanFeatures = async () => {
 	}
 };
 
+await cleanFeatures();
+
 // before(async function () {
 // 	try {
 // 		this.env = AppEnv.Sandbox;

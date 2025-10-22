@@ -91,10 +91,13 @@ export const CheckResultSchema = z
 			description: "The ID of the entity (if provided)",
 			example: "entity_123",
 		}),
-		required_balance: z.number().meta({
-			description: "The required balance for this check",
-			example: 1,
-		}),
+		required_balance: z
+			.number()
+			.meta({
+				description: "The required balance for this check",
+				example: 1,
+			})
+			.optional(), // not present for boolean features
 		code: z.string().meta({
 			description: "Response code indicating the result",
 			example: "allowed",
