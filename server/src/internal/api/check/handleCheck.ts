@@ -1,13 +1,15 @@
-import { CheckParamsSchema } from "@autumn/shared";
+import { type CheckParams, CheckParamsSchema } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { getCheckData } from "./checkUtils/getCheckData.js";
+import { getV2CheckResponse } from "./checkUtils/getV2CheckResponse.js";
 import { handleProductCheck } from "./handlers/handleProductCheck.js";
 
+const DEFAULT_REQUIRED_BALANCE = 1;
 export const handleCheck = createRoute({
 	body: CheckParamsSchema,
 	handler: async (c) => {
-		console.log("=== HANDLER REACHED ===");
 		const body = c.req.valid("json");
-		console.log("=== VALIDATED BODY ===", body);
+		const ctx = c.get("ctx");
 		const {
 			customer_id,
 			feature_id,
@@ -19,8 +21,6 @@ export const handleCheck = createRoute({
 			send_event,
 		} = body;
 
-		console.log(`Feature ID: ${feature_id}, Product ID: ${product_id}`);
-
 		// Legacy path - product check
 		if (product_id) {
 			const checkProductResult = await handleProductCheck({
@@ -30,11 +30,8 @@ export const handleCheck = createRoute({
 			return c.json(checkProductResult);
 		}
 
-		// const requiredBalance = notNullish(required_balance)
-		// 	? required_balance
-		// 	: notNullish(required_quantity)
-		// 		? required_quantity
-		// 		: null;
+		const requiredBalance =
+			required_balance ?? required_quantity ?? DEFAULT_REQUIRED_BALANCE;
 
 		// let quantity = 1;
 		// if (notNullish(requiredBalance)) {
@@ -50,15 +47,10 @@ export const handleCheck = createRoute({
 		// 	quantity = floatQuantity;
 		// }
 
-		// const {
-		// 	fullCus,
-		// 	cusEnts,
-		// 	feature,
-		// 	creditSystems,
-		// 	org,
-		// 	cusProducts,
-		// 	allFeatures,
-		// } = await getCheckData({ req });
+		const checkData = await getCheckData({
+			ctx,
+			body: body as CheckParams & { feature_id: string },
+		});
 
 		// // 2. If boolean, return true
 		// if (feature.type === FeatureType.Boolean) {
@@ -84,16 +76,13 @@ export const handleCheck = createRoute({
 		// 	org,
 		// });
 
-		// const v2Response = await getV2CheckResponse({
-		// 	fullCus,
-		// 	cusEnts,
-		// 	feature,
-		// 	creditSystems,
-		// 	org,
-		// 	cusProducts,
-		// 	requiredBalance,
-		// 	apiVersion: req.apiVersion,
-		// });
+		const v2Response = await getV2CheckResponse({
+			ctx,
+			checkData,
+			requiredBalance,
+		});
+
+		return c.json(v2Response);
 
 		// const { allowed, balance } = v2Response;
 		// const featureToUse = allFeatures.find(
