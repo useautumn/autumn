@@ -1,15 +1,14 @@
+import {
+	CusProductStatus,
+	cusProductsToCusEnts,
+	ErrCode,
+	type Feature,
+} from "@autumn/shared";
+import { StatusCodes } from "http-status-codes";
 import { cusEntMatchesEntity } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
-import { cusProductsToCusEnts } from "@autumn/shared";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { getCreditSystemsFromFeature } from "@/internal/features/creditSystemUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
-import {
-	CusProductStatus,
-	ErrCode,
-	Feature,
-	FeatureType,
-} from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
 
 // Main functions
 const getFeatureAndCreditSystems = ({
@@ -34,7 +33,7 @@ const getFeatureAndCreditSystems = ({
 };
 
 export const getCheckData = async ({ req }: { req: any }) => {
-	let { customer_id, feature_id, customer_data, entity_id } = req.body;
+	const { customer_id, feature_id, customer_data, entity_id } = req.body;
 
 	const { org, logger } = req;
 
@@ -48,7 +47,7 @@ export const getCheckData = async ({ req }: { req: any }) => {
 
 	logger.info(`running /check for org: ${org.slug}, feature: ${feature_id}`);
 
-	let inStatuses = org.config.include_past_due
+	const inStatuses = org.config.include_past_due
 		? [CusProductStatus.Active, CusProductStatus.PastDue]
 		: [CusProductStatus.Active];
 
@@ -73,7 +72,7 @@ export const getCheckData = async ({ req }: { req: any }) => {
 		});
 	}
 
-	let cusProducts = customer.customer_products;
+	const cusProducts = customer.customer_products;
 
 	let cusEnts = cusProductsToCusEnts({ cusProducts });
 

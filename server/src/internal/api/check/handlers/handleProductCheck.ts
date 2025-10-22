@@ -1,20 +1,24 @@
 import {
+	type CheckParams,
 	CusProductStatus,
 	type FullCusProduct,
 	SuccessCode,
 } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { notNullish } from "@/utils/genUtils.js";
-
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { getProductCheckPreview } from "./getProductCheckPreview.js";
 
 export const handleProductCheck = async ({
-	req,
-	res,
+	ctx,
+	body,
 }: {
-	req: any;
-	res: any;
+	ctx: AutumnContext;
+	body: CheckParams & {
+		product_id: string;
+	};
 }) => {
 	const {
 		customer_id,
@@ -23,13 +27,14 @@ export const handleProductCheck = async ({
 		customer_data,
 		with_preview,
 		entity_data,
-	} = req.body;
-	const { orgId, env, logger, db } = req;
+	} = body;
+
+	const { org, env, logger, db } = ctx;
 
 	// 1. Get customer and org
 	const [customer, product] = await Promise.all([
 		getOrCreateCustomer({
-			req,
+			req: ctx as ExtendedRequest,
 			customerId: customer_id,
 			customerData: customer_data,
 			inStatuses: [
@@ -44,7 +49,7 @@ export const handleProductCheck = async ({
 		}),
 		ProductService.getFull({
 			db,
-			orgId,
+			orgId: org.id,
 			env,
 			idOrInternalId: product_id,
 		}),
@@ -64,44 +69,28 @@ export const handleProductCheck = async ({
 
 	const preview = with_preview
 		? await getProductCheckPreview({
-				req,
+				req: ctx as ExtendedRequest,
 				customer,
 				product,
 				logger,
 			})
 		: undefined;
 
-	// let preview = with_preview
-	//   ? await getAttachPreview({
-	//       db,
-	//       customer,
-	//       org,
-	//       env,
-	//       product: product!,
-	//       cusProducts,
-	//       features,
-	//       logger,
-	//       shouldFormat: with_preview == "formatted",
-	//     })
-	//   : undefined;
-
 	if (!cusProduct) {
-		res.status(200).json({
+		return {
 			customer_id,
 			code: SuccessCode.ProductFound,
 			product_id,
 			allowed: false,
-
 			preview,
-		});
-		return;
+		};
 	}
 
 	const onTrial =
 		notNullish(cusProduct.trial_ends_at) &&
 		cusProduct.trial_ends_at! > Date.now();
 
-	res.status(200).json({
+	return {
 		customer_id,
 		code: SuccessCode.ProductFound,
 		product_id,
@@ -116,7 +105,5 @@ export const handleProductCheck = async ({
 				: cusProduct.status,
 
 		preview,
-	});
-
-	return;
+	};
 };
