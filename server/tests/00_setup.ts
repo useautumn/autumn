@@ -48,7 +48,3 @@ describe("Initialize org for tests", () => {
 		console.log("--------------------------------");
 	});
 });
-
-// after(async function () {
-//   await this.client.end();
-// });

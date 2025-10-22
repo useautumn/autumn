@@ -5,7 +5,6 @@ dotenv.config();
 import {
 	AggregateType,
 	AllowanceType,
-	AppEnv,
 	BillingInterval,
 	CouponDurationType,
 	EntInterval,
@@ -16,9 +15,7 @@ import {
 	RewardTriggerEvent,
 	RewardType,
 } from "@autumn/shared";
-import { initDrizzle } from "@/db/initDrizzle.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
 import {
 	initEntitlement,
 	initFeature,
@@ -28,6 +25,7 @@ import {
 	initReward,
 	initRewardProgram,
 } from "./utils/init.js";
+import { createTestContext } from "./utils/testInitUtils/createTestContext.js";
 
 export const features: Record<string, Feature & { eventName: string }> = {
 	boolean1: initFeature({
@@ -947,22 +945,14 @@ export const referralPrograms = {
 
 const ORG_SLUG = process.env.TESTS_ORG!;
 
-before(async function () {
+export const cleanFeatures = async () => {
+	const ctx = await createTestContext();
+	const { db, org, env } = ctx;
 	try {
-		this.env = AppEnv.Sandbox;
-		const { db, client } = initDrizzle();
-		this.db = db;
-		this.client = client;
-
-		this.org = await OrgService.getBySlug({
-			db: this.db,
-			slug: ORG_SLUG,
-		});
-
 		const dbFeatures = await FeatureService.list({
-			db: this.db,
-			orgId: this.org.id,
-			env: this.env,
+			db,
+			orgId: org.id,
+			env,
 		});
 
 		const cleanFeatures = (features: Record<string, Feature>) => {
@@ -989,8 +979,52 @@ before(async function () {
 	} catch (error) {
 		console.error(error);
 	}
-});
+};
 
-after(async function () {
-	await this.client?.end();
-});
+// before(async function () {
+// 	try {
+// 		this.env = AppEnv.Sandbox;
+// 		const { db, client } = initDrizzle();
+// 		this.db = db;
+// 		this.client = client;
+
+// 		this.org = await OrgService.getBySlug({
+// 			db: this.db,
+// 			slug: ORG_SLUG,
+// 		});
+
+// 		const dbFeatures = await FeatureService.list({
+// 			db: this.db,
+// 			orgId: this.org.id,
+// 			env: this.env,
+// 		});
+
+// 		const cleanFeatures = (features: Record<string, Feature>) => {
+// 			for (const featureId in features) {
+// 				const feature = features[featureId as keyof typeof features];
+// 				const dbFeature = dbFeatures.find((f: any) => f.id === feature.id);
+// 				if (!dbFeature) {
+// 					// throw new Error(`Feature ${feature.id} not found`);
+// 					continue;
+// 				}
+// 				features[featureId as keyof typeof features].internal_id =
+// 					dbFeature.internal_id;
+// 				if (feature.type === FeatureType.Metered) {
+// 					// Ignore this for now
+// 					// @ts-expect-error eventName is manually set
+// 					features[featureId as keyof typeof features].eventName =
+// 						dbFeature.event_names?.[0] || dbFeature.id;
+// 				}
+// 			}
+// 		};
+
+// 		cleanFeatures(features);
+// 		cleanFeatures(creditSystems);
+// 	} catch (error) {
+// 		console.error(error);
+// 	}
+// });
+
+// after(async function () {
+// 	await this.client?.end();
+// });

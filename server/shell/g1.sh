@@ -6,18 +6,18 @@ source "$SCRIPT_DIR/config.sh"
 
 # If contains setup then run $MOCHA_SETUP
 if [[ "$1" == *"setup"* ]]; then
-  MOCHA_PARALLEL=true $MOCHA_SETUP
+  MOCHA_PARALLEL=true $BUN_SETUP
 fi
 
-$MOCHA_CMD \
-'tests/attach/basic/*.ts' \
-'tests/attach/upgrade/*.ts' \
-'tests/attach/downgrade/*.ts'
+# Run parallel basic tests
+$BUN_PARALLEL tests/attach/basic
+$BUN_PARALLEL tests/check/basic
 
-$MOCHA_CMD \
-'tests/attach/checkout/*.ts' \
-'tests/attach/entities/*.ts' \
-'tests/attach/free/*.ts'\
-'tests/attach/addOn/*.ts' \
+# # TODO: Refactor these tests to use Bun
+# $MOCHA_CMD 'tests/attach/upgrade/*.ts' 'tests/attach/downgrade/*.ts'
 
-
+# $MOCHA_CMD \
+# 'tests/attach/checkout/*.ts' \
+# 'tests/attach/entities/*.ts' \
+# 'tests/attach/free/*.ts'\
+# 'tests/attach/addOn/*.ts'
