@@ -132,3 +132,4 @@ export type ExtCheckParams = z.infer<typeof ExtCheckParamsSchema>;
 export type CheckParams = z.infer<typeof CheckParamsSchema>;
 export type CheckResponse = z.infer<typeof CheckResultSchema>;
 export type CheckFeatureScenario = z.infer<typeof CheckFeatureScenarioSchema>;
+export type CheckResult = z.infer<typeof CheckResultSchema>;
