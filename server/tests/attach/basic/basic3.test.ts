@@ -1,23 +1,17 @@
-import type { AppEnv, Organization } from "@autumn/shared";
-import { expect } from "chai";
+import { beforeAll, describe, expect, test } from "bun:test";
 import chalk from "chalk";
-import { setupBefore } from "tests/before.js";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { features, products } from "tests/global.js";
 import { compareMainProduct } from "tests/utils/compare.js";
 import { timeout } from "tests/utils/genUtils.js";
 import { createProducts } from "tests/utils/productUtils.js";
 import { completeCheckoutForm } from "tests/utils/stripeUtils.js";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 
-// const oneTimeQuantity = 2;
-// const oneTimePurchaseCount = 2;
-// const oneTimeOverrideQuantity = 4;
-// const monthlyQuantity = 2;
 const oneTimeItem = constructPrepaidItem({
 	featureId: features.metered1.id,
 	price: 9,
@@ -48,38 +42,30 @@ const monthly = constructRawProduct({
 	],
 });
 
-// UNCOMMENT FROM HERE
 const testCase = "basic3";
+
 describe(`${chalk.yellowBright("basic3: Testing attach one time / monthly add ons")}`, () => {
 	const customerId = testCase;
 	const autumn: AutumnInt = new AutumnInt();
-	let db: DrizzleCli, org: Organization, env: AppEnv;
 
-	before(async function () {
-		await setupBefore(this);
-		db = this.db;
-		org = this.org;
-		env = this.env;
-
-		await initCustomer({
-			autumn: this.autumnJs,
+	beforeAll(async () => {
+		await initCustomerV3({
+			ctx,
 			customerId,
-			db,
-			org,
-			env,
 			attachPm: "success",
+			withTestClock: true,
 		});
 
 		await createProducts({
-			autumn: this.autumnJs,
-			db,
-			orgId: org.id,
-			env,
+			autumn: autumn,
+			db: ctx.db,
+			orgId: ctx.org.id,
+			env: ctx.env,
 			products: [oneTime, monthly],
 		});
 	});
 
-	it("should attach pro", async () => {
+	test("should attach pro", async () => {
 		await autumn.attach({
 			customer_id: customerId,
 			product_id: products.pro.id,
@@ -96,7 +82,7 @@ describe(`${chalk.yellowBright("basic3: Testing attach one time / monthly add on
 	const oneTimeBillingUnits = oneTimeItem.billing_units;
 	const oneTimePurchaseCount = 2;
 
-	it("should attach one time add on twice, force checkout", async () => {
+	test("should attach one time add on twice, force checkout", async () => {
 		for (let i = 0; i < 2; i++) {
 			const res = await autumn.attach({
 				customer_id: customerId,
@@ -112,7 +98,7 @@ describe(`${chalk.yellowBright("basic3: Testing attach one time / monthly add on
 		}
 	});
 
-	it("should have correct product & entitlements", async () => {
+	test("should have correct product & entitlements", async () => {
 		const cusRes = await AutumnCli.getCustomer(customerId);
 
 		const addOnBalance = cusRes.entitlements.find(
@@ -124,37 +110,25 @@ describe(`${chalk.yellowBright("basic3: Testing attach one time / monthly add on
 
 		const expectedAmt = oneTimeQuantity * oneTimePurchaseCount;
 
-		expect(addOnBalance!.balance).to.equal(
-			expectedAmt,
-			"add on balance should be correct",
-		);
+		expect(addOnBalance!.balance).toBe(expectedAmt);
 
-		expect(cusRes.add_ons).to.have.lengthOf(
-			1,
-			"should only have one add on product after two purchases (since they combine)",
-		);
-		expect(cusRes.add_ons[0].id).to.equal(
-			oneTime.id,
-			"add on product should exist",
-		);
-		expect(cusRes.invoices.length).to.equal(
-			1 + oneTimePurchaseCount,
-			"invoices should be correct",
-		);
+		expect(cusRes.add_ons).toHaveLength(1);
+		expect(cusRes.add_ons[0].id).toBe(oneTime.id);
+		expect(cusRes.invoices.length).toBe(1 + oneTimePurchaseCount);
 	});
 
-	it("should have correct /check result for metered1", async () => {
+	test("should have correct /check result for metered1", async () => {
 		const res: any = await AutumnCli.entitled(customerId, features.metered1.id);
 
-		expect(res!.allowed).to.be.true;
+		expect(res!.allowed).toBe(true);
 
 		const proMetered1Amt = products.pro.entitlements.metered1.allowance;
 		const addOnBalance = res!.balances.find(
 			(b: any) => b.feature_id === features.metered1.id,
 		);
 
-		expect(res!.allowed).to.be.true;
-		expect(addOnBalance!.balance).to.equal(
+		expect(res!.allowed).toBe(true);
+		expect(addOnBalance!.balance).toBe(
 			proMetered1Amt! + oneTimeQuantity * oneTimePurchaseCount,
 		);
 	});

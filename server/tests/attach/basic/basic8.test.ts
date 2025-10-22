@@ -1,12 +1,12 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
-import { expect } from "chai";
 import chalk from "chalk";
-import { setupBefore } from "tests/before.js";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { products } from "tests/global.js";
 import { compareMainProduct } from "tests/utils/compare.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 
 const testCase = "basic8";
 
@@ -14,32 +14,27 @@ describe(`${chalk.yellowBright("basic8: Testing trial duplicates (same fingerpri
 	const customerId = testCase;
 	const customerId2 = testCase + "2";
 	const autumn = new AutumnInt();
+	const randFingerprint = Math.random().toString(36).substring(2, 15);
 
-	before(async function () {
-		const randFingerprint = Math.random().toString(36).substring(2, 15);
-		await setupBefore(this);
-		await initCustomer({
+	beforeAll(async () => {
+		await initCustomerV3({
+			ctx,
 			customerId,
-			db: this.db,
-			org: this.org,
-			env: this.env,
-			autumn: this.autumnJs,
-			fingerprint: randFingerprint,
+			customerData: { fingerprint: randFingerprint },
 			attachPm: "success",
+			withTestClock: true,
 		});
 
-		await initCustomer({
+		await initCustomerV3({
+			ctx,
 			customerId: customerId2,
-			db: this.db,
-			org: this.org,
-			env: this.env,
-			autumn: this.autumnJs,
-			fingerprint: randFingerprint,
+			customerData: { fingerprint: randFingerprint },
 			attachPm: "success",
+			withTestClock: true,
 		});
 	});
 
-	it("should attach pro with trial and have correct product & invoice", async () => {
+	test("should attach pro with trial and have correct product & invoice", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
 			productId: products.proWithTrial.id,
@@ -54,17 +49,16 @@ describe(`${chalk.yellowBright("basic8: Testing trial duplicates (same fingerpri
 		});
 
 		const invoices = customer.invoices;
-		expect(invoices.length).to.equal(1, "Invoice length should be 1");
-		expect(invoices[0].total).to.equal(0, "Invoice total should be 0");
+		expect(invoices.length).toBe(1);
+		expect(invoices[0].total).toBe(0);
 	});
 
-	it("should attach pro with trial to second customer and have correct product & invoice (pro with trial, full price)", async () => {
+	test("should attach pro with trial to second customer and have correct product & invoice (pro with trial, full price)", async () => {
 		await autumn.attach({
 			customer_id: customerId2,
 			product_id: products.proWithTrial.id,
 		});
 
-		// await timeout(5000); // for webhook to be processed
 		const customer = await AutumnCli.getCustomer(customerId2);
 
 		compareMainProduct({
@@ -73,12 +67,8 @@ describe(`${chalk.yellowBright("basic8: Testing trial duplicates (same fingerpri
 			status: CusProductStatus.Active,
 		});
 
-		// Check invoice is equal monthly price
 		const invoices = customer.invoices;
-		expect(invoices.length).to.equal(1, "Invoice length should be 1");
-		expect(invoices[0].total).to.equal(
-			10,
-			"Invoice total should be full price",
-		);
+		expect(invoices.length).toBe(1);
+		expect(invoices[0].total).toBe(10);
 	});
 });

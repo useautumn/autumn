@@ -51,10 +51,18 @@ export const completeCheckoutForm = async (
 	try {
 		const page = await browser.newPage();
 		await page.setViewport({ width: 1280, height: 800 }); // Set standard desktop viewport size
-		await page.goto(url);
+		await page.goto(url, { waitUntil: "networkidle2" });
 
-		// await page.waitForSelector("#payment-method-accordion-item-title-card");
-		// await page.click("#payment-method-accordion-item-title-card");
+		// Try to click accordion if it exists (wait up to 2 seconds)
+		try {
+			await page.waitForSelector("#payment-method-accordion-item-title-card", {
+				timeout: 2000,
+			});
+			await page.click("#payment-method-accordion-item-title-card");
+			await timeout(500); // Brief wait for accordion to expand
+		} catch (e) {
+			// Accordion doesn't exist or didn't appear, continue without clicking
+		}
 
 		await page.waitForSelector("#cardNumber");
 		await page.type("#cardNumber", "4242424242424242");

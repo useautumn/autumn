@@ -1,44 +1,39 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
-import { expect } from "chai";
 import chalk from "chalk";
 import type Stripe from "stripe";
-import { setupBefore } from "tests/before.js";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { products } from "tests/global.js";
 import { compareMainProduct } from "tests/utils/compare.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { timeout } from "@/utils/genUtils.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 
 const testCase = "basic5";
-describe(`${chalk.yellowBright(
-	"basic5: Testing cancel through Stripe at period end and now",
-)}`, () => {
+
+describe(`${chalk.yellowBright("basic5: Testing cancel through Stripe at period end and now")}`, () => {
 	const customerId = testCase;
 	let stripeCli: Stripe;
 
-	before(async function () {
-		await setupBefore(this);
-		stripeCli = this.stripeCli;
-		await initCustomer({
+	beforeAll(async () => {
+		stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+		await initCustomerV3({
+			ctx,
 			customerId,
-			db: this.db,
-			org: this.org,
-			env: this.env,
-			autumn: this.autumnJs,
 			attachPm: "success",
+			withTestClock: true,
 		});
 	});
 
-	it("should attach pro product", async () => {
+	test("should attach pro product", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
 			productId: products.pro.id,
 		});
 	});
 
-	it("should cancel pro product (at period end)", async function () {
-		const stripeCli = createStripeCli({ org: this.org, env: this.env });
+	test("should cancel pro product (at period end)", async () => {
 		const cusRes: any = await AutumnCli.getCustomer(customerId);
 
 		const proProduct = cusRes.products.find(
@@ -53,9 +48,7 @@ describe(`${chalk.yellowBright(
 		await timeout(5000);
 	});
 
-	return;
-
-	it("should have pro product active, and canceled_at != null, and free scheduled", async () => {
+	test.skip("should have pro product active, and canceled_at != null, and free scheduled", async () => {
 		const cusRes: any = await AutumnCli.getCustomer(customerId);
 		compareMainProduct({
 			sent: products.pro,
@@ -65,17 +58,17 @@ describe(`${chalk.yellowBright(
 		const proProduct = cusRes.products.find(
 			(p: any) => p.id === products.pro.id,
 		);
-		expect(proProduct.canceled_at).to.not.equal(null);
-		expect(proProduct.status).to.equal(CusProductStatus.Active);
+		expect(proProduct.canceled_at).not.toBe(null);
+		expect(proProduct.status).toBe(CusProductStatus.Active);
 
 		const freeProduct = cusRes.products.find(
 			(p: any) => p.id === products.free.id,
 		);
-		expect(freeProduct).to.exist;
-		expect(freeProduct.status).to.equal(CusProductStatus.Scheduled);
+		expect(freeProduct).toBeDefined();
+		expect(freeProduct.status).toBe(CusProductStatus.Scheduled);
 	});
 
-	it("should cancel pro product (now)", async () => {
+	test("should cancel pro product (now)", async () => {
 		const cusRes: any = await AutumnCli.getCustomer(customerId);
 		const proProduct = cusRes.products.find(
 			(p: any) => p.id === products.pro.id,
@@ -87,7 +80,7 @@ describe(`${chalk.yellowBright(
 		await timeout(5000);
 	});
 
-	it("should have free product active, and no pro product", async () => {
+	test("should have free product active, and no pro product", async () => {
 		const cusRes: any = await AutumnCli.getCustomer(customerId);
 		compareMainProduct({
 			sent: products.free,

@@ -1,19 +1,19 @@
+import { beforeAll, describe, test } from "bun:test";
 import chalk from "chalk";
-import { features } from "tests/global.js";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { products } from "tests/global.js";
+import { features, products } from "tests/global.js";
 import { timeout } from "tests/utils/genUtils.js";
-import { initCustomer } from "tests/utils/init.js";
 import { completeCheckoutForm } from "tests/utils/stripeUtils.js";
 import { compareMainProduct } from "tests/utils/compare.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 
 const testCase = "basic9";
-describe(`${chalk.yellowBright(
-	"basic9: attach monthly with one time prepaid, and quantity = 0",
-)}`, () => {
-	let customerId = testCase;
 
-	let options = [
+describe(`${chalk.yellowBright("basic9: attach monthly with one time prepaid, and quantity = 0")}`, () => {
+	const customerId = testCase;
+
+	const options = [
 		{
 			feature_id: features.metered1.id,
 			quantity: 0,
@@ -23,16 +23,16 @@ describe(`${chalk.yellowBright(
 			quantity: 4,
 		},
 	];
-	before(async function () {
-		await initCustomer({
+
+	beforeAll(async () => {
+		await initCustomerV3({
+			ctx,
 			customerId,
-			db: this.db,
-			org: this.org,
-			env: this.env,
+			withTestClock: true,
 		});
 	});
 
-	it("should attach monthly with one time", async function () {
+	test("should attach monthly with one time", async () => {
 		const res = await AutumnCli.attach({
 			customerId,
 			productId: products.monthlyWithOneTime.id,
@@ -43,7 +43,7 @@ describe(`${chalk.yellowBright(
 		await timeout(12000);
 	});
 
-	it("should have correct main product and entitlements", async function () {
+	test("should have correct main product and entitlements", async () => {
 		const cusRes = await AutumnCli.getCustomer(customerId);
 
 		compareMainProduct({

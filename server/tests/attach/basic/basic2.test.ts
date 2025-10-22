@@ -1,39 +1,30 @@
-import { expect } from "chai";
+import { beforeAll, describe, expect, test } from "bun:test";
 import chalk from "chalk";
-import { setupBefore } from "tests/before.js";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { products } from "tests/global.js";
 import { compareMainProduct } from "tests/utils/compare.js";
 import { timeout } from "tests/utils/genUtils.js";
 import { completeCheckoutForm } from "tests/utils/stripeUtils.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 
-// UNCOMMENT FROM HERE
 const testCase = "basic2";
+
 describe(`${chalk.yellowBright("basic2: Testing attach pro")}`, () => {
 	const customerId = testCase;
 	const autumn: AutumnInt = new AutumnInt();
-	let db, org, env;
 
-	before(async function () {
-		await setupBefore(this);
-
-		db = this.db;
-		org = this.org;
-		env = this.env;
-
-		await initCustomer({
-			autumn: this.autumnJs,
+	beforeAll(async () => {
+		await initCustomerV3({
+			ctx,
 			customerId,
-			db,
-			org,
-			env,
-			fingerprint: "test",
+			customerData: { fingerprint: "test" },
+			withTestClock: true,
 		});
 	});
 
-	it("should attach pro through checkout", async () => {
+	test("should attach pro through checkout", async () => {
 		const { checkout_url } = await autumn.attach({
 			customer_id: customerId,
 			product_id: products.pro.id,
@@ -43,16 +34,16 @@ describe(`${chalk.yellowBright("basic2: Testing attach pro")}`, () => {
 		await timeout(12000);
 	});
 
-	it("should have correct product & entitlements", async () => {
+	test("should have correct product & entitlements", async () => {
 		const res = await AutumnCli.getCustomer(customerId);
 		compareMainProduct({
 			sent: products.pro,
 			cusRes: res,
 		});
-		expect(res.invoices.length).to.be.greaterThan(0);
+		expect(res.invoices.length).toBeGreaterThan(0);
 	});
 
-	it("should have correct result when calling /check", async () => {
+	test("should have correct result when calling /check", async () => {
 		const proEntitlements = products.pro.entitlements;
 
 		for (const entitlement of Object.values(proEntitlements)) {
@@ -68,12 +59,11 @@ describe(`${chalk.yellowBright("basic2: Testing attach pro")}`, () => {
 			);
 
 			try {
-				expect(res!.allowed).to.be.true;
-				expect(entBalance).to.exist;
+				expect(res!.allowed).toBe(true);
+				expect(entBalance).toBeDefined();
 				if (entitlement.allowance) {
-					expect(entBalance!.balance).to.equal(allowance);
+					expect(entBalance!.balance).toBe(allowance);
 				}
-				// console.log(`   - ${entitlement.feature_id} -- Passed`);
 			} catch (error) {
 				console.group();
 				console.group();

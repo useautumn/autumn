@@ -43,7 +43,12 @@ function fuzzyMatchScore({
 	const pathLower = filePath.toLowerCase();
 	const fileName = pathLower.split("/").pop() || "";
 
-	// Check if search matches exactly in filename (highest priority)
+	// Check if path ends with the exact search pattern (highest priority for path-based searches)
+	if (pathLower.endsWith(`${searchLower}.ts`)) {
+		return 10000;
+	}
+
+	// Check if search matches exactly in filename
 	if (fileName === `${searchLower}.ts`) {
 		return 1000;
 	}
@@ -81,6 +86,30 @@ function fuzzyMatchScore({
 }
 
 /**
+ * Detects whether a test file uses Bun or Mocha framework
+ */
+function detectTestFramework({
+	filePath,
+}: {
+	filePath: string;
+}): "bun" | "mocha" {
+	try {
+		const { readFileSync } = require("node:fs");
+		const content = readFileSync(filePath, "utf-8");
+		// Check first 20 lines for bun:test import
+		const lines = content.split("\n").slice(0, 20);
+		const hasBunTest = lines.some(
+			(line) =>
+				line.includes('from "bun:test"') || line.includes("from 'bun:test'"),
+		);
+		return hasBunTest ? "bun" : "mocha";
+	} catch (_error) {
+		// Default to mocha if we can't read the file
+		return "mocha";
+	}
+}
+
+/**
  * Runs shell test scripts from server/shell/ directory or individual test files
  */
 async function runTest() {
@@ -92,9 +121,12 @@ async function runTest() {
 			chalk.red("❌ Please provide a shell script or test file name"),
 		);
 		console.log(
-			chalk.cyan("\nUsage: bun tests <script-name|test-name> [args...]"),
+			chalk.cyan("\nUsage: bun tests <script-name|test-name|setup> [args...]"),
 		);
 		console.log(chalk.gray("Examples:"));
+		console.log(
+			chalk.gray("  bun tests setup           # run test setup script"),
+		);
 		console.log(chalk.gray("  bun tests g1"));
 		console.log(chalk.gray("  bun tests g1 setup"));
 		console.log(
@@ -106,7 +138,40 @@ async function runTest() {
 		process.exit(1);
 	}
 
-	const serverDir = resolve(process.cwd(), "server");
+	// Detect if we're already in the server directory (e.g., when run via server/run.sh)
+	const cwd = process.cwd();
+	const serverDir =
+		cwd.endsWith("/server") || cwd.endsWith("\\server")
+			? cwd
+			: resolve(cwd, "server");
+
+	// Handle special "setup" command
+	if (scriptName === "setup") {
+		const setupScript = resolve(serverDir, "tests", "setupMain.ts");
+		console.log(chalk.cyan("🏗️  Running test setup...\n"));
+
+		const child = spawn("bun", [setupScript], {
+			cwd: serverDir,
+			stdio: "inherit",
+			env: { ...process.env, NODE_ENV: "production" },
+		});
+
+		child.on("exit", (code) => {
+			if (code === 0) {
+				console.log(chalk.green("\n✅ Setup completed successfully"));
+			} else {
+				console.log(chalk.red(`\n❌ Setup failed with code ${code}`));
+				process.exit(code || 1);
+			}
+		});
+
+		child.on("error", (error) => {
+			console.log(chalk.red(`\n❌ Error running setup: ${error.message}`));
+			process.exit(1);
+		});
+		return;
+	}
+
 	const shellScript = resolve(serverDir, "shell", `${scriptName}.sh`);
 
 	// First try to find a shell script
@@ -117,43 +182,23 @@ async function runTest() {
 			chalk.cyan(`🧪 Running shell script: ${scriptName}.sh${argsDisplay}\n`),
 		);
 
-		// Create a new process group by spawning with detached: true
 		const child = spawn("bash", [shellScript, ...additionalArgs], {
 			cwd: serverDir,
 			stdio: "inherit",
 			env: { ...process.env, NODE_ENV: "production" },
-			detached: true,
 		});
 
-		// Store the process group ID
-		const pgid = child.pid;
-
-		// Forward termination signals to entire process group
-		const killProcessGroup = () => {
-			if (pgid) {
-				try {
-					// Kill the entire process group with SIGKILL (force kill)
-					process.kill(-pgid, "SIGKILL");
-				} catch (_err) {
-					// Process group might already be dead
-				}
-			}
-		};
-
+		// Forward termination signals to child process
 		process.on("SIGINT", () => {
-			console.log(chalk.yellow("\n⚠️  Received SIGINT, killing all test processes...\n"));
-			killProcessGroup();
+			console.log(chalk.yellow("\n⚠️  Received SIGINT, stopping tests...\n"));
+			child.kill("SIGINT");
 			process.exit(130);
 		});
 
 		process.on("SIGTERM", () => {
-			console.log(chalk.yellow("\n⚠️  Received SIGTERM, killing all test processes...\n"));
-			killProcessGroup();
+			console.log(chalk.yellow("\n⚠️  Received SIGTERM, stopping tests...\n"));
+			child.kill("SIGTERM");
 			process.exit(143);
-		});
-
-		process.on("exit", () => {
-			killProcessGroup();
 		});
 
 		child.on("exit", (code) => {
@@ -216,15 +261,29 @@ async function runTest() {
 
 	const testFile = bestMatch;
 	console.log(chalk.green(`✓ Found: ${testFile.relative}\n`));
-	console.log(chalk.cyan(`🧪 Running test file...\n`));
 
-	// Run the test file with mocha
-	const child = spawn("bunx", ["mocha", "--timeout", "0", testFile.path], {
-		cwd: serverDir,
-		stdio: "inherit",
-		env: { ...process.env, NODE_ENV: "production" },
-		detached: true,
-	});
+	// Detect test framework
+	const framework = detectTestFramework({ filePath: testFile.path });
+	const frameworkLabel = framework === "bun" ? "Bun" : "Mocha";
+	console.log(chalk.cyan(`🧪 Running test file with ${frameworkLabel}...\n`));
+
+	// Run the test file with the appropriate framework
+	const child =
+		framework === "bun"
+			? spawn("bun", ["test", "--timeout", "0", testFile.relative], {
+					cwd: serverDir,
+					stdio: "inherit",
+					env: { ...process.env, NODE_ENV: "production" },
+				})
+			: spawn(
+					"npx",
+					["mocha", "--bail", "--timeout", "10000000", testFile.relative],
+					{
+						cwd: serverDir,
+						stdio: "inherit",
+						env: { ...process.env, NODE_ENV: "production" },
+					},
+				);
 
 	// Store the process group ID
 	const pgid = child.pid;
@@ -242,13 +301,17 @@ async function runTest() {
 	};
 
 	process.on("SIGINT", () => {
-		console.log(chalk.yellow("\n⚠️  Received SIGINT, killing test process...\n"));
+		console.log(
+			chalk.yellow("\n⚠️  Received SIGINT, killing test process...\n"),
+		);
 		killProcessGroup();
 		process.exit(130);
 	});
 
 	process.on("SIGTERM", () => {
-		console.log(chalk.yellow("\n⚠️  Received SIGTERM, killing test process...\n"));
+		console.log(
+			chalk.yellow("\n⚠️  Received SIGTERM, killing test process...\n"),
+		);
 		killProcessGroup();
 		process.exit(143);
 	});
