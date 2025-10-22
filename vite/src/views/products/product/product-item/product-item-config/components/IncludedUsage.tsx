@@ -9,20 +9,6 @@ import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
 import { ToggleDisplayButton } from "@/components/general/ToggleDisplayButton";
 import { Input } from "@/components/ui/input";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/v2/buttons/Button";
-import { formatIntervalText } from "@/utils/formatUtils/formatTextUtils";
 import { isFeaturePriceItem } from "@/utils/product/getItemType";
 import { itemIsUnlimited } from "@/utils/product/productItemUtils";
 import { useProductItemContext } from "../../ProductItemContext";
@@ -121,94 +107,6 @@ export const IncludedUsage = () => {
 					>
 						♾️
 					</ToggleDisplayButton>
-				</div>
-			</div>
-
-			<div className="space-y-2">
-				<FieldLabel className="flex items-center gap-2">
-					Usage Reset & Billing Interval
-					<InfoTooltip>
-						<span className="">
-							How often usage counts reset for this feature. Choose "no reset"
-							for items that don't expire.
-						</span>
-					</InfoTooltip>
-				</FieldLabel>
-				<div className="flex flex-col gap-2">
-					<Select
-						value={currentInterval}
-						onValueChange={handleBillingIntervalSelected}
-					>
-						<SelectTrigger>
-							<SelectValue placeholder="Select reset interval" />
-						</SelectTrigger>
-						<SelectContent>
-							{/* Add EntInterval.Lifetime for "no reset" */}
-							<SelectItem value={EntInterval.Lifetime}>
-								{formatIntervalText({
-									interval: EntInterval.Lifetime,
-									intervalCount: item.interval_count,
-								})}
-							</SelectItem>
-							{/* Add BillingInterval options */}
-							{Object.values(BillingInterval).map((interval) => (
-								<SelectItem key={interval} value={interval}>
-									{formatIntervalText({
-										billingInterval: interval,
-										intervalCount: item.interval_count,
-										isBillingInterval: true,
-									})}
-								</SelectItem>
-							))}
-							{/* Custom interval option */}
-							<Popover open={open} onOpenChange={setOpen}>
-								<PopoverTrigger asChild>
-									<Button
-										className="w-full justify-start px-2"
-										variant="skeleton"
-										disabled={
-											item.included_usage === Infinite || item.interval == null
-										}
-									>
-										<p className="text-t3">Customise Interval</p>
-									</Button>
-								</PopoverTrigger>
-								<PopoverContent
-									align="start"
-									className="p-3 w-[200px]"
-									sideOffset={-1}
-									onOpenAutoFocus={(e) => e.preventDefault()}
-									onCloseAutoFocus={(e) => e.preventDefault()}
-								>
-									<div className="mb-2">
-										<FieldLabel>Interval Count</FieldLabel>
-									</div>
-									<div className="flex items-center gap-2">
-										<Input
-											className="flex-1"
-											value={intervalCount}
-											onChange={(e) => setIntervalCount(e.target.value)}
-											onKeyDown={(e) => {
-												if (e.key === "Enter") {
-													handleSaveCustomInterval();
-												}
-												if (e.key === "Escape") {
-													setOpen(false);
-												}
-											}}
-										/>
-										<Button
-											variant="secondary"
-											className="px-4 h-7"
-											onClick={handleSaveCustomInterval}
-										>
-											Save
-										</Button>
-									</div>
-								</PopoverContent>
-							</Popover>
-						</SelectContent>
-					</Select>
 				</div>
 			</div>
 		</div>

@@ -1,8 +1,8 @@
 import { FeatureType } from "../models/featureModels/featureEnums.js";
 import type { Feature } from "../models/featureModels/featureModels.js";
 import { Infinite } from "../models/productModels/productEnums.js";
-import type {
-	ProductItem,
+import {
+	type ProductItem,
 	ProductItemInterval,
 } from "../models/productV2Models/productItemModels/productItemModels.js";
 import {
@@ -58,11 +58,19 @@ export const getIntervalString = ({
 	interval: ProductItemInterval | null | undefined;
 	intervalCount?: number | null;
 }) => {
+	let intervalStr: string = interval || "";
+
+	if (interval === ProductItemInterval.SemiAnnual) {
+		intervalStr = "half year";
+	}
+
+	console.log("intervalStr", intervalStr);
+
 	if (!interval) return "";
 	if (intervalCount === 1) {
-		return `per ${interval}`;
+		return `per ${intervalStr}`;
 	}
-	return `per ${intervalCount} ${interval}s`;
+	return `per ${intervalCount} ${intervalStr}s`;
 };
 
 export const getFeatureItemDisplay = ({

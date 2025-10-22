@@ -190,6 +190,18 @@ const CommandBar = () => {
 		setOpen(true);
 	});
 
+	// Direct shortcut to open impersonation search (admin only)
+	useHotkeys(
+		"meta+6",
+		() => {
+			if (isAdmin) {
+				setOpen(true);
+				setCurrentPage("impersonate");
+			}
+		},
+		[isAdmin],
+	);
+
 	useHotkeys(
 		"escape",
 		(e) => {
@@ -463,17 +475,6 @@ const CommandBar = () => {
 
 		return (
 			<>
-				{!showResults && (
-					<CommandGroup
-						heading="Search users and organizations to impersonate"
-						className="text-body-secondary p-1.5"
-					>
-						<div className="px-2 py-1 text-sm text-muted-foreground">
-							Start typing to search...
-						</div>
-					</CommandGroup>
-				)}
-
 				{showResults && (
 					<>
 						{userResults.length > 0 && (
