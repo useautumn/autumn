@@ -112,6 +112,47 @@ const getFeatureDeductions = ({
 };
 
 /**
+ * Calculate total available rollover balance for a feature
+ */
+const calculateAvailableRolloverBalance = ({
+	cusEnts,
+	feature,
+	entityId,
+}: {
+	cusEnts: FullCustomerEntitlement[];
+	feature: Feature;
+	entityId?: string;
+}) => {
+	const featureCusEnts = cusEnts.filter(
+		(cusEnt) => cusEnt.entitlement.internal_feature_id === feature.internal_id,
+	);
+
+	if (!entityId) {
+		// Non-entity: sum rollover.balance
+		return featureCusEnts.reduce((sum, cusEnt) => {
+			const rolloverSum = cusEnt.rollovers.reduce(
+				(rSum, rollover) =>
+					new Decimal(rSum).add(rollover.balance || 0).toNumber(),
+				0,
+			);
+			return new Decimal(sum).add(rolloverSum).toNumber();
+		}, 0);
+	} else {
+		// Entity: sum rollover.entities[entityId].balance
+		return featureCusEnts.reduce((sum, cusEnt) => {
+			const rolloverSum = cusEnt.rollovers.reduce((rSum, rollover) => {
+				const entityRollover = rollover.entities?.[entityId];
+				if (entityRollover) {
+					return new Decimal(rSum).add(entityRollover.balance || 0).toNumber();
+				}
+				return rSum;
+			}, 0);
+			return new Decimal(sum).add(rolloverSum).toNumber();
+		}, 0);
+	}
+};
+
+/**
  * Validate that the deduction is possible given the current balance and usage allowed.
  * Constraint 1: Insufficient balance without usage_allowed.
  * Constraint 2: Usage limit exceeded for customer entitlements with usage_allowed.
@@ -119,9 +160,11 @@ const getFeatureDeductions = ({
 const validateDeductionPossible = ({
 	cusEnts,
 	featureDeductions,
+	entityId,
 }: {
 	cusEnts: FullCustomerEntitlement[];
 	featureDeductions: { feature: Feature; deduction: number }[];
+	entityId?: string;
 }) => {
 	for (const { feature, deduction } of featureDeductions) {
 		const featureCusEnts = cusEnts.filter(
@@ -131,64 +174,86 @@ const validateDeductionPossible = ({
 		);
 
 		// CONSTRAINT 1: Insufficient balance without usage_allowed
-		const totalBalance = featureCusEnts.reduce(
+		const cusEntBalance = featureCusEnts.reduce(
 			(sum, customerEntitlement) =>
 				new Decimal(sum).add(customerEntitlement.balance || 0).toNumber(),
 			0,
 		);
+		const rolloverBalance = calculateAvailableRolloverBalance({
+			cusEnts,
+			feature,
+			entityId,
+		});
+		const totalBalance = new Decimal(cusEntBalance)
+			.add(rolloverBalance)
+			.toNumber();
+
 		const hasUsageAllowed = featureCusEnts.some(
 			(customerEntitlement) => customerEntitlement.usage_allowed,
 		);
 
 		if (totalBalance < deduction && !hasUsageAllowed) {
 			throw new RecaseError({
-				message: `Insufficient balance for feature ${feature.id}. Available: ${totalBalance}, Required: ${deduction}`,
+				message: `Insufficient balance for feature ${feature.id}. Available: ${totalBalance} (${cusEntBalance} + ${rolloverBalance} rollover), Required: ${deduction}`,
 				code: ErrCode.InsufficientBalance,
 				statusCode: StatusCodes.BAD_REQUEST,
 				data: {
 					feature_id: feature.id,
 					available: totalBalance,
+					cus_ent_balance: cusEntBalance,
+					rollover_balance: rolloverBalance,
 					required: deduction,
 				},
 			});
 		}
 
 		// CONSTRAINT 2: Usage limit exceeded for customer entitlements with usage_allowed
-		const featureCusEntsWithUsageAllowed = featureCusEnts.filter(
-			(customerEntitlement) => customerEntitlement.usage_allowed,
-		);
+		const entitlementDeduction =
+			new Decimal(deduction).sub(rolloverBalance).toNumber() > 0
+				? new Decimal(deduction).sub(rolloverBalance).toNumber()
+				: 0;
 
-		const totalRemainingLimit = featureCusEntsWithUsageAllowed.reduce(
-			(sum, cusEnt) => {
-				const usageLimit = cusEnt.entitlement.usage_limit;
-				if (!usageLimit) {
-					return sum;
-				}
+		if (entitlementDeduction > 0) {
+			const featureCusEntsWithUsageAllowed = featureCusEnts.filter(
+				(customerEntitlement) => customerEntitlement.usage_allowed,
+			);
 
-				const allowance = new Decimal(cusEnt.entitlement.allowance || 0);
-				const currentBalance = new Decimal(cusEnt.balance || 0);
-				const currentUsed = allowance.sub(currentBalance);
-				const remainingLimit = new Decimal(usageLimit).sub(currentUsed);
+			const totalRemainingLimit = featureCusEntsWithUsageAllowed.reduce(
+				(sum, cusEnt) => {
+					const usageLimit = cusEnt.entitlement.usage_limit;
+					if (!usageLimit) {
+						return sum;
+					}
 
-				return new Decimal(sum).add(Decimal.max(0, remainingLimit)).toNumber();
-			},
-			0,
-		);
+					const allowance = new Decimal(cusEnt.entitlement.allowance || 0);
+					const currentBalance = new Decimal(cusEnt.balance || 0);
+					const currentUsed = allowance.sub(currentBalance);
+					const remainingLimit = new Decimal(usageLimit).sub(currentUsed);
 
-		if (
-			featureCusEntsWithUsageAllowed.length > 0 &&
-			deduction > totalRemainingLimit
-		) {
-			throw new RecaseError({
-				message: `Usage limit exceeded for feature ${feature.id}. Total remaining capacity: ${totalRemainingLimit}, Requested: ${deduction}`,
-				code: ErrCode.InsufficientBalance,
-				statusCode: StatusCodes.BAD_REQUEST,
-				data: {
-					feature_id: feature.id,
-					total_remaining_capacity: totalRemainingLimit,
-					requested: deduction,
+					return new Decimal(sum)
+						.add(Decimal.max(0, remainingLimit))
+						.toNumber();
 				},
-			});
+				0,
+			);
+
+			if (
+				featureCusEntsWithUsageAllowed.length > 0 &&
+				entitlementDeduction > totalRemainingLimit
+			) {
+				throw new RecaseError({
+					message: `Usage limit exceeded for feature ${feature.id}. Total remaining capacity: ${totalRemainingLimit}, Requested from entitlement: ${entitlementDeduction} (${rolloverBalance} covered by rollovers)`,
+					code: ErrCode.InsufficientBalance,
+					statusCode: StatusCodes.BAD_REQUEST,
+					data: {
+						feature_id: feature.id,
+						total_remaining_capacity: totalRemainingLimit,
+						requested_from_entitlement: entitlementDeduction,
+						covered_by_rollovers: rolloverBalance,
+						total_requested: deduction,
+					},
+				});
+			}
 		}
 	}
 };
@@ -310,7 +375,7 @@ export const updateUsage = async ({
 		return;
 	}
 
-	validateDeductionPossible({ cusEnts, featureDeductions });
+	validateDeductionPossible({ cusEnts, featureDeductions, entityId });
 
 	const originalCusEnts = structuredClone(cusEnts);
 	for (const obj of featureDeductions) {
