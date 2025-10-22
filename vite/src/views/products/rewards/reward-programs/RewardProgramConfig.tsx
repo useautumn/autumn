@@ -193,11 +193,7 @@ const ProductSelector = ({
 
 	const getProductText = (productId: string) => {
 		const product = products.find((p: ProductV2) => p.id === productId);
-<<<<<<< HEAD
 		return product?.name || "Unknown Plan";
-=======
-		return product?.name || "Unknown Product";
->>>>>>> 6a1fa62f (feat: 🎸 merge in plan editor)
 	};
 
 	return (
@@ -210,11 +206,7 @@ const ProductSelector = ({
 					className="w-full min-h-9 flex flex-wrap h-fit py-2 justify-start items-center gap-2 relative hover:bg-zinc-50 data-[state=open]:border-focus data-[state=open]:shadow-focus"
 				>
 					{rewardProgram.product_ids?.length === 0
-<<<<<<< HEAD
 						? "Select Plans"
-=======
-						? "Select Products"
->>>>>>> 6a1fa62f (feat: 🎸 merge in plan editor)
 						: rewardProgram.product_ids?.map((productId: string) => (
 								<div
 									key={productId}

@@ -26,7 +26,6 @@ export default function SidebarBottom() {
 					icon={<CommandIcon size={16} />}
 					title="Command Palette"
 					onClick={openCommandBar}
-					isGroup={true}
 				/>
 				<NavButton
 					value="docs"
