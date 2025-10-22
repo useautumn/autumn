@@ -45,7 +45,9 @@ describe(chalk.yellowBright("Plan V2 - Complex Real-World Scenarios"), () => {
 				{
 					feature_id: features.metered1.id,
 					granted: 10000,
-					reset_interval: ResetInterval.Month,
+					reset: {
+						interval: ResetInterval.Month,
+					},
 					rollover: {
 						max: 20000,
 						expiry_duration_type: ResetInterval.Month,
@@ -56,7 +58,9 @@ describe(chalk.yellowBright("Plan V2 - Complex Real-World Scenarios"), () => {
 				{
 					feature_id: features.seats.id,
 					granted: 10,
-					reset_interval: ResetInterval.Month,
+					reset: {
+						interval: ResetInterval.Month,
+					},
 					proration: {
 						on_increase: OnIncrease.ProrateImmediately,
 						on_decrease: OnDecrease.Prorate,
@@ -125,7 +129,7 @@ describe(chalk.yellowBright("Plan V2 - Complex Real-World Scenarios"), () => {
 				{
 					feature_id: features.seats.id,
 					granted: 10,
-					// Proration requires pricing - using price.interval, not reset_interval
+					// Proration requires pricing - using price.interval, not reset.interval
 					price: {
 						amount: 10,
 						interval: BillingInterval.Month,
@@ -164,7 +168,9 @@ describe(chalk.yellowBright("Plan V2 - Complex Real-World Scenarios"), () => {
 				{
 					feature_id: features.metered1.id,
 					granted: 1000,
-					reset_interval: ResetInterval.Month,
+					reset: {
+						interval: ResetInterval.Month,
+					},
 					rollover: {
 						max: 2000,
 						expiry_duration_type: ResetInterval.Month,
@@ -205,7 +211,9 @@ describe(chalk.yellowBright("Plan V2 - Complex Real-World Scenarios"), () => {
 					{
 						feature_id: features.metered1.id,
 						granted: 100,
-						reset_interval: reset,
+						reset: {
+							interval: reset,
+						},
 					},
 				],
 			} as CreatePlanParams);
@@ -229,7 +237,7 @@ describe(chalk.yellowBright("Plan V2 - Complex Real-World Scenarios"), () => {
 			features: [
 				// Boolean feature (SSO enabled)
 				{ feature_id: features.boolean1.id },
-				// Metered API calls with tiered pricing (no reset_interval - using price.interval)
+				// Metered API calls with tiered pricing (no reset.interval - using price.interval)
 				{
 					feature_id: features.metered1.id,
 					granted: 100000,

@@ -147,7 +147,9 @@ describe(chalk.yellowBright("Plan V2 - Basic CREATE Tests"), () => {
 				{
 					feature_id: features.metered1.id,
 					granted: 1000,
-					reset_interval: ResetInterval.Month,
+					reset: {
+						interval: ResetInterval.Month,
+					},
 				},
 			],
 		} as CreatePlanParams)) as ApiPlan;
@@ -197,7 +199,7 @@ describe(chalk.yellowBright("Plan V2 - Basic CREATE Tests"), () => {
 			features: [
 				{
 					feature_id: features.metered1.id,
-					// No reset_interval - using price.interval instead (mutually exclusive)
+					// No reset.interval - using price.interval instead (mutually exclusive)
 					price: {
 						amount: 10,
 						interval: BillingInterval.Month,

@@ -22,7 +22,7 @@ describe(chalk.yellowBright("Plan V2 - Mutual Exclusivity Validation"), () => {
 		_env = this.env;
 	});
 
-	it("REJECT: reset_interval + price.interval both set", async () => {
+	it("REJECT: reset.interval + price.interval both set", async () => {
 		const productId = "invalid_both";
 		try {
 			await autumnV2.products.delete(productId);
@@ -36,7 +36,9 @@ describe(chalk.yellowBright("Plan V2 - Mutual Exclusivity Validation"), () => {
 					{
 						feature_id: features.metered1.id,
 						granted: 100,
-						reset_interval: ResetInterval.Month,
+						reset: {
+							interval: ResetInterval.Month,
+						},
 						price: {
 							amount: 10,
 							interval: BillingInterval.Month,
@@ -51,7 +53,7 @@ describe(chalk.yellowBright("Plan V2 - Mutual Exclusivity Validation"), () => {
 		}
 	});
 
-	it("ACCEPT: only reset_interval (metered, no price)", async () => {
+	it("ACCEPT: only reset.interval (metered, no price)", async () => {
 		const productId = "only_reset";
 		try {
 			await autumnV2.products.delete(productId);
@@ -64,7 +66,9 @@ describe(chalk.yellowBright("Plan V2 - Mutual Exclusivity Validation"), () => {
 				{
 					feature_id: features.metered1.id,
 					granted: 100,
-					reset_interval: ResetInterval.Month,
+					reset: {
+						interval: ResetInterval.Month,
+					},
 				},
 			],
 		} as CreatePlanParams);

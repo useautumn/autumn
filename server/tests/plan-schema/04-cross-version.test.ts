@@ -42,7 +42,9 @@ describe(chalk.yellowBright("Plan V2 - Cross-Version Consistency"), () => {
 				{
 					feature_id: features.metered1.id,
 					granted: 100,
-					reset_interval: ResetInterval.Month,
+					reset: {
+						interval: ResetInterval.Month,
+					},
 				},
 			],
 		} as CreatePlanParams);
@@ -79,7 +81,9 @@ describe(chalk.yellowBright("Plan V2 - Cross-Version Consistency"), () => {
 				{
 					feature_id: features.metered1.id,
 					granted: 500,
-					reset_interval: ResetInterval.Month,
+					reset: {
+						interval: ResetInterval.Month,
+					},
 				},
 			],
 		};

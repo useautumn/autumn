@@ -65,7 +65,9 @@ describe(
 					{
 						feature_id: features.metered1.id,
 						granted: 2000,
-						reset_interval: ResetInterval.Month,
+						reset: {
+							interval: ResetInterval.Month,
+						},
 					},
 				],
 			} as UpdatePlanParams);
@@ -119,7 +121,9 @@ describe(
 					{
 						feature_id: features.metered1.id,
 						granted: 1500,
-						reset_interval: ResetInterval.Quarter,
+						reset: {
+							interval: ResetInterval.Quarter,
+						},
 					},
 				],
 			} as UpdatePlanParams);
@@ -173,7 +177,9 @@ describe(
 					{
 						feature_id: features.metered1.id,
 						granted: 3000,
-						reset_interval: ResetInterval.Quarter,
+						reset: {
+							interval: ResetInterval.Quarter,
+						},
 					},
 				],
 			} as UpdatePlanParams);
@@ -236,12 +242,16 @@ describe(
 					{
 						feature_id: features.metered1.id,
 						granted: 1500,
-						reset_interval: ResetInterval.Month,
+						reset: {
+							interval: ResetInterval.Month,
+						},
 					},
 					{
 						feature_id: features.metered1.id,
 						granted: 4500,
-						reset_interval: ResetInterval.Quarter,
+						reset: {
+							interval: ResetInterval.Quarter,
+						},
 					},
 				],
 			} as UpdatePlanParams);

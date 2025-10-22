@@ -30,6 +30,29 @@ export const itemsToPlanFeatures = ({
 			(item.tiers && item.tiers.length > 0) ||
 			item.usage_model;
 
+		// Build reset object if needed
+		const hasResetInterval = !hasPrice && item.interval;
+		const hasResetWhenEnabled = item.reset_usage_when_enabled !== undefined;
+		const resetObj =
+			hasResetInterval || hasResetWhenEnabled
+				? {
+						...(hasResetInterval
+							? {
+									interval: itemIntvToResetIntv(
+										item.interval!,
+									) as ResetInterval,
+									...(item.interval_count !== undefined &&
+									item.interval_count !== null
+										? { interval_count: item.interval_count }
+										: {}),
+								}
+							: {}),
+						...(hasResetWhenEnabled
+							? { when_enabled: item.reset_usage_when_enabled ?? undefined }
+							: {}),
+					}
+				: undefined;
+
 		return ApiPlanFeatureSchema.parse({
 			feature_id: item.feature_id!,
 
@@ -38,22 +61,8 @@ export const itemsToPlanFeatures = ({
 				item.included_usage === Infinite ? 0 : (item.included_usage ?? 0),
 			unlimited: item.included_usage === Infinite,
 
-			// Conditionally set reset_interval OR price.interval (mutually exclusive)
-			// If has pricing: interval goes in price
-			// If no pricing: interval goes in reset_interval
-			...(!hasPrice && item.interval
-				? {
-						reset_interval: itemIntvToResetIntv(
-							item.interval!,
-						) as ResetInterval,
-						...(item.interval_count !== undefined &&
-						item.interval_count !== null
-							? {
-									reset_interval_count: item.interval_count,
-								}
-							: {}),
-					}
-				: {}),
+			// Conditionally set reset object
+			...(resetObj ? { reset: resetObj } : {}),
 
 			// Convert price if exists
 			...(hasPrice
@@ -111,10 +120,6 @@ export const itemsToPlanFeatures = ({
 						},
 					}
 				: {}),
-
-			// Other fields
-			reset_usage_on_enabled: item.reset_usage_when_enabled ?? true,
-			// entity_feature_id: item.entity_feature_id,
 		} satisfies ApiPlanFeature);
 	});
 };

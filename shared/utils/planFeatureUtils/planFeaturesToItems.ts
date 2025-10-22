@@ -16,9 +16,9 @@ export const planFeaturesToItems = ({
 	features: ApiPlanFeature[];
 }): ProductItem[] =>
 	(features ?? []).map((feature) => {
-		// Determine interval: use reset_interval if present, otherwise use price.interval
-		const interval = feature.reset_interval
-			? resetIntvToItemIntv(feature.reset_interval as ResetInterval)
+		// Determine interval: use reset.interval if present, otherwise use price.interval
+		const interval = feature.reset?.interval
+			? resetIntvToItemIntv(feature.reset.interval as ResetInterval)
 			: feature.price?.interval
 				? (feature.price.interval as any)
 				: null;
@@ -28,7 +28,7 @@ export const planFeaturesToItems = ({
 			included_usage: feature.unlimited ? Infinite : feature.granted,
 			interval,
 			interval_count:
-				feature.reset_interval_count ?? feature.price?.interval_count,
+				feature.reset?.interval_count ?? feature.price?.interval_count,
 
 			config: {
 				rollover: feature.rollover
@@ -56,6 +56,6 @@ export const planFeaturesToItems = ({
 			usage_limit: feature.price?.max_purchase
 				? feature.price.max_purchase + (feature.granted ?? 0)
 				: undefined,
-			reset_usage_when_enabled: feature.reset_usage_on_enabled,
+			reset_usage_when_enabled: feature.reset?.when_enabled,
 		} satisfies ProductItem);
 	});

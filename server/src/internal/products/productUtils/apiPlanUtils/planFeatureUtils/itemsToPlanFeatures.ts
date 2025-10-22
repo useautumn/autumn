@@ -19,8 +19,37 @@ export const itemsToPlanFeatures = ({
 }: {
 	items: ProductItem[];
 }): ApiPlanFeature[] => {
-	return items.map((item) =>
-		ApiPlanFeatureSchema.parse({
+	return items.map((item) => {
+		// Check if item has pricing (determines where interval goes)
+		const hasPrice =
+			(item.price && item.price > 0) ||
+			(item.tiers && item.tiers.length > 0) ||
+			item.usage_model;
+
+		// Build reset object if needed
+		const hasResetInterval = item.interval && !hasPrice;
+		const hasResetWhenEnabled = item.reset_usage_when_enabled !== undefined;
+		const resetObj =
+			hasResetInterval || hasResetWhenEnabled
+				? {
+						...(hasResetInterval
+							? {
+									interval:
+										(itemIntvToResetIntv(item.interval!) as ResetInterval) ||
+										ResetInterval.OneOff,
+									...(item.interval_count !== undefined &&
+									item.interval_count !== null
+										? { interval_count: item.interval_count }
+										: {}),
+								}
+							: {}),
+						...(hasResetWhenEnabled
+							? { when_enabled: item.reset_usage_when_enabled ?? undefined }
+							: {}),
+					}
+				: undefined;
+
+		return ApiPlanFeatureSchema.parse({
 			feature_id: item.feature_id!,
 
 			// Handle unlimited vs granted
@@ -28,20 +57,11 @@ export const itemsToPlanFeatures = ({
 				item.included_usage === Infinite ? 0 : (item.included_usage ?? 0),
 			unlimited: item.included_usage === Infinite,
 
-			// Convert intervals
-			reset_interval: item.interval
-				? (itemIntvToResetIntv(item.interval!) as ResetInterval)
-				: ResetInterval.OneOff,
-			...(item.interval_count !== undefined && item.interval_count !== null
-				? {
-						reset_interval_count: item.interval_count,
-					}
-				: {}),
+			// Conditionally set reset object
+			...(resetObj ? { reset: resetObj } : {}),
 
 			// Convert price if exists (only if there's actual pricing information)
-			...((item.price && item.price > 0) ||
-			(item.tiers && item.tiers.length > 0) ||
-			item.usage_model
+			...(hasPrice
 				? {
 						price: {
 							interval: (item.interval || "month") as BillingInterval,
@@ -80,10 +100,6 @@ export const itemsToPlanFeatures = ({
 						},
 					}
 				: {}),
-
-			// Other fields
-			reset_usage_on_enabled: item.reset_usage_when_enabled ?? true,
-			// entity_feature_id: item.entity_feature_id,
-		} satisfies ApiPlanFeature),
-	);
+		} satisfies ApiPlanFeature);
+	});
 };

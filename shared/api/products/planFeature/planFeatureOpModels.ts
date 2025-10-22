@@ -14,9 +14,13 @@ export const UpdatePlanFeatureSchema = z
 		granted: z.number().optional(),
 		unlimited: z.boolean().optional(),
 
-		reset_interval: z.enum(ResetInterval).optional(),
-		reset_interval_count: z.number().optional(),
-		reset_usage_on_enabled: z.boolean().optional(),
+		reset: z
+			.object({
+				interval: z.enum(ResetInterval).optional(),
+				interval_count: z.number().optional(),
+				when_enabled: z.boolean().optional(),
+			})
+			.optional(),
 
 		price: z
 			.object({
@@ -49,7 +53,8 @@ export const UpdatePlanFeatureSchema = z
 	})
 	.check((ctx) => {
 		const resetGroup =
-			ctx.value.reset_interval || ctx.value.reset_interval_count !== undefined;
+			ctx.value.reset?.interval ||
+			ctx.value.reset?.interval_count !== undefined;
 		const intervalGroup =
 			ctx.value.price?.interval ||
 			ctx.value.price?.interval_count !== undefined;
@@ -58,7 +63,7 @@ export const UpdatePlanFeatureSchema = z
 			ctx.issues.push({
 				code: "custom",
 				message:
-					"reset_interval/reset_interval_count and interval/interval_count are mutually exclusive.",
+					"reset.interval/reset.interval_count and price.interval/price.interval_count are mutually exclusive.",
 				input: ctx.value,
 			});
 		}
