@@ -38,7 +38,6 @@ export const useCusProductQuery = () => {
 		};
 
 		try {
-			console.log("Query params:", queryParams);
 			const { data } = await axiosInstance.get(
 				`/customers/${customer_id}/product/${product_id}`,
 				{ params: queryParams },
