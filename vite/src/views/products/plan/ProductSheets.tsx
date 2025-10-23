@@ -86,7 +86,7 @@ export const ProductSheets = () => {
 					transition={SHEET_ANIMATION}
 					className="h-full w-[28rem] absolute right-0 top-0 bottom-0"
 				>
-					<SheetContainer className="w-full bg-card z-50 border-l shadow-sm h-full relative">
+					<SheetContainer className="w-full bg-card z-50 border-l border-l-(--border-sheet) shadow-sm h-full relative">
 						<SheetCloseButton onClose={closeSheet} />
 						{renderSheet()}
 					</SheetContainer>
