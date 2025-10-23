@@ -171,7 +171,12 @@ export const PlanFeatureRow = ({
 				/>
 			</div>
 
-			<div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-50">
+			<div
+				className={cn(
+					"flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-50",
+					isSelected && "opacity-100",
+				)}
+			>
 				<IconButton
 					icon={<TrashIcon size={16} weight="regular" />}
 					iconOrientation="center"
