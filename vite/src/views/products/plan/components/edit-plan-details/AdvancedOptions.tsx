@@ -13,7 +13,7 @@ export const AdvancedOptions = () => {
 	const hasGroup = product.group !== null;
 
 	return (
-		<SheetAccordion>
+		<SheetAccordion withSeparator={false}>
 			<SheetAccordionItem
 				title="Advanced Options"
 				value="advanced"
