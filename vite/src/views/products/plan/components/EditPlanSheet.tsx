@@ -1,6 +1,7 @@
 import { SheetHeader } from "@/components/v2/sheets/InlineSheet";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { AdditionalOptions } from "./edit-plan-details/AdditionalOptions";
+import { AdvancedOptions } from "./edit-plan-details/AdvancedOptions";
 import { BasePriceSection } from "./edit-plan-details/BasePriceSection";
 import { FreeTrialSection } from "./edit-plan-details/FreeTrialSection";
 import { MainDetailsSection } from "./edit-plan-details/MainDetailsSection";
@@ -23,6 +24,7 @@ export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 
 			<AdditionalOptions />
 			<FreeTrialSection />
+			<AdvancedOptions />
 		</>
 	);
 }

@@ -30,7 +30,7 @@ export const FreeTrialSection = () => {
 					setProduct({ ...product, free_trial: null });
 				}
 			}}
-			withSeparator={false}
+			withSeparator={true}
 		>
 			<div className="flex flex-col gap-4 text-sm">
 				<div className="grid grid-cols-2 gap-2 w-full">
