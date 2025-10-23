@@ -53,8 +53,6 @@ describe(`${chalk.yellowBright(
 		await timeout(5000);
 	});
 
-	return;
-
 	it("should have pro product active, and canceled_at != null, and free scheduled", async () => {
 		const cusRes: any = await AutumnCli.getCustomer(customerId);
 		compareMainProduct({

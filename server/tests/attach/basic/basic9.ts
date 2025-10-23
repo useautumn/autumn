@@ -1,19 +1,18 @@
 import chalk from "chalk";
-import { features } from "tests/global.js";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { products } from "tests/global.js";
+import { features, products } from "tests/global.js";
+import { compareMainProduct } from "tests/utils/compare.js";
 import { timeout } from "tests/utils/genUtils.js";
 import { initCustomer } from "tests/utils/init.js";
 import { completeCheckoutForm } from "tests/utils/stripeUtils.js";
-import { compareMainProduct } from "tests/utils/compare.js";
 
 const testCase = "basic9";
 describe(`${chalk.yellowBright(
 	"basic9: attach monthly with one time prepaid, and quantity = 0",
 )}`, () => {
-	let customerId = testCase;
+	const customerId = testCase;
 
-	let options = [
+	const options = [
 		{
 			feature_id: features.metered1.id,
 			quantity: 0,
@@ -32,7 +31,7 @@ describe(`${chalk.yellowBright(
 		});
 	});
 
-	it("should attach monthly with one time", async function () {
+	it("should attach monthly with one time", async () => {
 		const res = await AutumnCli.attach({
 			customerId,
 			productId: products.monthlyWithOneTime.id,
@@ -43,7 +42,7 @@ describe(`${chalk.yellowBright(
 		await timeout(12000);
 	});
 
-	it("should have correct main product and entitlements", async function () {
+	it("should have correct main product and entitlements", async () => {
 		const cusRes = await AutumnCli.getCustomer(customerId);
 
 		compareMainProduct({
