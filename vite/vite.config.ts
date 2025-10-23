@@ -26,7 +26,7 @@ export default defineConfig({
 			"@radix/tooltip": "@radix-ui/react-tooltip",
 		},
 		// Preserve symlinks for workspace dependencies
-		preserveSymlinks: true,
+		// preserveSymlinks: true,
 	},
 	optimizeDeps: {
 		// Exclude workspace dependencies from pre-bundling to avoid cache issues
