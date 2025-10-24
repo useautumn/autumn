@@ -112,7 +112,7 @@ export const ApiProductSchema = z.object({
 
 	base_variant_id: z.string().nullable().meta({
 		description: "ID of the base variant this product is derived from",
-		example: "var_1234567890abcdef",
+		example: "pro_monthly",
 	}),
 
 	scenario: z.enum(AttachScenario).optional().meta({

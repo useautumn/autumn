@@ -7,21 +7,53 @@ export const CreateProductItemParamsSchema = ProductItemSchema;
 
 // Base product params
 
-export const CreateProductV2ParamsSchema = z.object({
-	id: z.string().nonempty().regex(idRegex),
+const CREATE_PRODUCT_EXAMPLE = {
+	id: "Pro Product",
+	name: "Pro Plan",
+	is_add_on: false,
+	is_default: false,
+	items: [
+		{
+			// Price
+			price: 20,
+			interval: "month",
+		},
+		{
+			// Priced Feature
+			feature_id: "messages",
+			included_usage: 1000,
+			price: 0.5,
+			interval: "month",
+			usage_model: "pay_per_use",
+		},
+	],
+	free_trial: {
+		duration: "day",
+		length: 7,
+		unique_fingerprint: false,
+		card_required: true,
+	},
+};
 
-	name: z.string().refine((val) => val.length > 0, {
-		message: "name must be a non-empty string",
-	}),
+export const CreateProductV2ParamsSchema = z
+	.object({
+		id: z.string().nonempty().regex(idRegex),
 
-	is_add_on: z.boolean().default(false),
-	is_default: z.boolean().default(false),
-	version: z.number().optional(),
-	group: z.string().nullable().default(""),
+		name: z.string().refine((val) => val.length > 0, {
+			message: "name must be a non-empty string",
+		}),
 
-	items: z.array(CreateProductItemParamsSchema).optional(),
-	free_trial: CreateFreeTrialSchema.nullish().default(null),
-});
+		is_add_on: z.boolean().default(false),
+		is_default: z.boolean().default(false),
+		version: z.number().optional(),
+		group: z.string().nullable().default(""),
+
+		items: z.array(CreateProductItemParamsSchema).optional(),
+		free_trial: CreateFreeTrialSchema.nullish().default(null),
+	})
+	.meta({
+		examples: [CREATE_PRODUCT_EXAMPLE],
+	});
 
 export const UpdateProductV2ParamsSchema = z.object({
 	id: z.string().nonempty().regex(idRegex).optional(),
@@ -34,7 +66,7 @@ export const UpdateProductV2ParamsSchema = z.object({
 
 	is_add_on: z.boolean().optional(),
 	is_default: z.boolean().optional(),
-	version: z.number().optional(),
+	// version: z.number().optional(),
 	group: z.string().nonempty().nullable().optional(),
 	archived: z.boolean().optional(),
 
