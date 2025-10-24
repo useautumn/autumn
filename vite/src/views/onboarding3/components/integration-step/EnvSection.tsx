@@ -52,7 +52,7 @@ export const EnvSection = () => {
 	return (
 		<div className="flex flex-col gap-6">
 			<SectionHeader
-				stepNumber={3}
+				stepNumber={2}
 				title={
 					<span>
 						Add the Autumn secret key to your <CodeSpan>{".env"}</CodeSpan> file

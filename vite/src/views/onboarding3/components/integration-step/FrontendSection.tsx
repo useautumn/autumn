@@ -17,7 +17,7 @@ export const FrontendSection = () => {
 	return (
 		<div className="flex flex-col gap-4">
 			<SectionHeader
-				stepNumber={6}
+				stepNumber={5}
 				title={
 					<span>
 						Wrap your React app in <CodeSpan>{"<AutumnProvider />"}</CodeSpan>

@@ -9,8 +9,7 @@ export const OrgLogo = ({ org }: { org: FrontendOrg }) => {
 	return (
 		<div
 			className={cn(
-				"rounded-md overflow-hidden flex items-center justify-center scale-100 translate-x-[1px] bg-zinc-200",
-				expanded ? "w-5 h-5" : "min-w-5 min-h-5",
+				"rounded-md overflow-hidden flex items-center justify-center scale-100 translate-x-[1px] bg-zinc-200 w-5 h-5 min-w-5 min-h-5",
 			)}
 		>
 			{org.logo ? (

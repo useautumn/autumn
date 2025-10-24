@@ -24,6 +24,14 @@ export function BillingType() {
 	// Derive billing type from item state
 	const isFeaturePrice = isFeaturePriceItem(item);
 
+	// Determine if we should preselect based on explicit configuration
+	const hasExplicitConfig =
+		isFeaturePrice || // Has tiers, so it's priced
+		(item.included_usage !== undefined && item.included_usage !== null) || // Has explicit included usage
+		item.usage_model !== undefined; // Has explicit usage model
+
+	const shouldPreselect = hasExplicitConfig;
+
 	const setBillingType = (type: "included" | "priced") => {
 		const getPricedInterval = () => {
 			if (
@@ -87,7 +95,7 @@ export function BillingType() {
 		<div className="mt-3 space-y-4 billing-type-section">
 			<div className="flex w-full items-center gap-4">
 				<PanelButton
-					isSelected={!isFeaturePrice}
+					isSelected={shouldPreselect && !isFeaturePrice}
 					onClick={() => setBillingType("included")}
 					icon={<IncludedUsageIcon size={18} color="currentColor" />}
 				/>
@@ -105,7 +113,7 @@ export function BillingType() {
 
 			<div className="flex w-full items-center gap-4">
 				<PanelButton
-					isSelected={isFeaturePrice}
+					isSelected={shouldPreselect && isFeaturePrice}
 					onClick={() => setBillingType("priced")}
 					icon={<CoinsIcon size={20} color="currentColor" />}
 				/>

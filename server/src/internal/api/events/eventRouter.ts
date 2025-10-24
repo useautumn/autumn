@@ -207,6 +207,8 @@ eventsRouter.post("", async (req: any, res: any) => {
 	try {
 		const body = req.body;
 
+		console.log("body", body);
+
 		if (!body.event_name && !body.feature_id) {
 			throw new RecaseError({
 				message: "event_name or feature_id is required",

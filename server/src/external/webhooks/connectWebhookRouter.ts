@@ -29,7 +29,13 @@ export const handleConnectWebhook = async (c: Context<HonoEnv>) => {
 		body,
 	});
 
-	const masterStripe = initMasterStripe();
+	let masterStripe: Stripe;
+	try {
+		masterStripe = initMasterStripe();
+	} catch (error) {
+		logger.error(`Failed to initialize master stripe client ${error}`);
+		return c.json(200);
+	}
 	let event: Stripe.Event;
 
 	// Step 1: Get webhook secret

@@ -72,6 +72,9 @@ export function BillingUnits() {
 						onChange={(e) => setBillingUnits(Number(e.target.value))}
 						placeholder="e.g. 100 units"
 						onKeyDown={(e) => {
+							if (e.key === "-" || e.key === "Minus") {
+								e.preventDefault();
+							}
 							if (e.key === "Enter") {
 								if (popoverOpen) {
 									handleEnterClick();

@@ -13,12 +13,6 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 const ORG_SLUG = process.env.TESTS_ORG!;
 const DEFAULT_ENV = AppEnv.Sandbox;
 
-import { Hyperbrowser } from "@hyperbrowser/sdk";
-
-const hyperbrowser = new Hyperbrowser({
-	apiKey: process.env.HYPERBROWSER_API_KEY,
-});
-
 export const setupBefore = async (instance: any) => {
 	try {
 		const { db, client } = initDrizzle();

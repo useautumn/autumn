@@ -58,6 +58,8 @@ export * from "./referrals/referralsOpenApi.js";
 // export * from "./products/apiProduct.js";
 // export * from "./products/apiProductItem.js";
 
+// Balances
+export * from "./balances/check/previousVersions/CheckResponseV0.js";
 // Errors
 export * from "./errors/index.js";
 // Models

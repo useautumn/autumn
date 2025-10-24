@@ -14,11 +14,8 @@ elif [[ "$filename" == *"/tests/"* ]]; then
     path_after_tests=$(echo "$filename" | sed 's/.*\/tests\///')
     # Remove .ts extension if present
     path_after_tests="${path_after_tests%.ts}"
-    if [ -n "$2" ]; then
-        ./test.sh custom "$path_after_tests" "$2"
-    else
-        ./test.sh custom "$path_after_tests"
-    fi
+    # Use scripts/test.ts which auto-detects framework
+    bun ../scripts/test.ts "$path_after_tests"
 
 elif [[ "$filename" == *".sh"* ]]; then
     "$filename"

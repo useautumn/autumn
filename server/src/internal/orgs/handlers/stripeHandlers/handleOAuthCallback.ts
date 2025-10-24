@@ -58,9 +58,11 @@ export const handleOAuthCallback = async (c: Context<HonoEnv>) => {
 		if (isPlatformFlow) {
 			redirectUrl = new URL(redirect_uri);
 		} else {
-			redirectUrl = new URL(
-				`${frontendUrl}${env === AppEnv.Sandbox ? "/sandbox" : ""}/dev?tab=stripe`,
-			);
+			redirectUrl = redirect_uri
+				? new URL(redirect_uri)
+				: new URL(
+						`${frontendUrl}${env === AppEnv.Sandbox ? "/sandbox" : ""}/dev?tab=stripe`,
+					);
 		}
 
 		// Fetch the organization by slug
