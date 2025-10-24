@@ -16,7 +16,7 @@ import {
 } from "./customers/customersOpenApi.js";
 import { ApiEntityWithMeta, entityOps } from "./entities/entitiesOpenApi.js";
 import { ApiFeatureWithMeta, featureOps } from "./features/featuresOpenApi.js";
-import { ApiProductItemWithMeta } from "./products/apiProductItem.js";
+import { ApiProductItemSchema } from "./products/apiProductItem.js";
 import { ApiProductWithMeta, productOps } from "./products/productsOpenApi.js";
 import { referralOps } from "./referrals/referralsOpenApi.js";
 
@@ -68,7 +68,7 @@ const document = createDocument({
 				description: "Customer feature object returned by the API",
 			}),
 			Product: ApiProductWithMeta,
-			ProductItem: ApiProductItemWithMeta,
+			ProductItem: ApiProductItemSchema,
 			Feature: ApiFeatureWithMeta,
 			Entity: ApiEntityWithMeta,
 		},
@@ -130,6 +130,21 @@ if (process.env.NODE_ENV !== "production") {
 				console.log(
 					`\n${!runStainless ? "Stainless generation skipped due to --noEmit flag" : "Stainless generation script not found"}`,
 				);
+		}
+
+		// If docs path, run bun pull to update documentation
+		if (process.env.DOCS_PATH) {
+			const docsPath = process.env.DOCS_PATH.replace("\\ ", " ");
+			try {
+				console.log("Updating documentation with Mintlify...");
+				execSync("bun pull", {
+					stdio: "inherit",
+					cwd: docsPath,
+				});
+				console.log("Documentation updated successfully");
+			} catch (error) {
+				console.error("Failed to update documentation:", error);
+			}
 		}
 	} catch (error) {
 		console.error("Failed to export OpenAPI document:", error);
