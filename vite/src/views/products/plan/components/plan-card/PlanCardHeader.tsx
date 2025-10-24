@@ -1,4 +1,5 @@
 import { mapToProductV3 } from "@autumn/shared";
+import { AdminHover } from "@/components/general/AdminHover";
 import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
 import { CardHeader } from "@/components/v2/cards/Card";
 import { useOrg } from "@/hooks/common/useOrg";
@@ -16,16 +17,30 @@ export const PlanCardHeader = () => {
 	const isPlanBeingEdited = useIsEditingPlan();
 
 	const productV3 = mapToProductV3({ product });
+	const adminHoverText = () => {
+		return [
+			{
+				key: "Price ID",
+				value: productV3.price?.priceId || "N/A",
+			},
+			{
+				key: "Stripe Price ID",
+				value: productV3.price?.config?.stripe_price_id || "N/A",
+			},
+		];
+	};
 
 	return (
 		<CardHeader>
 			<div className="flex flex-row items-center justify-between w-full">
 				<div className="flex flex-row items-center gap-2">
-					<span className="text-main-sec w-fit whitespace-nowrap">
-						{product.name.length > MAX_PLAN_NAME_LENGTH
-							? `${product.name.slice(0, MAX_PLAN_NAME_LENGTH)}...`
-							: product.name}
-					</span>
+					<AdminHover texts={adminHoverText()} side="top">
+						<span className="text-main-sec w-fit whitespace-nowrap">
+							{product.name.length > MAX_PLAN_NAME_LENGTH
+								? `${product.name.slice(0, MAX_PLAN_NAME_LENGTH)}...`
+								: product.name}
+						</span>
+					</AdminHover>
 					<PlanTypeBadges
 						product={product}
 						iconOnly={product.name.length > MAX_PLAN_NAME_LENGTH - 10}

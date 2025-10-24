@@ -447,6 +447,7 @@ export const copyProduct = async ({
 		db,
 		product: {
 			...ProductSchema.parse(newProduct),
+			// group: newProduct.group || "",
 			version: 1,
 		},
 	});

@@ -135,7 +135,7 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Testing downgrade entity pro
 
 		const entity2Res = await autumn.entities.get(customerId, entity2.id);
 		const premiumProd = entity2Res.products.find(
-			(p: any) => p.id == premium.id,
+			(p: any) => p.id === premium.id,
 		);
 		expect(premiumProd).toBeDefined();
 		expect(premiumProd.status).toBe(CusProductStatus.Active);

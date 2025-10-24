@@ -1,16 +1,13 @@
-import React, {
-	useState,
-	forwardRef,
-	cloneElement,
-	isValidElement,
-} from "react";
-import { Check } from "lucide-react";
-import { Tooltip, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
-
-import { TooltipContent } from "../ui/tooltip";
-import { Copy } from "lucide-react";
-import { useSession } from "@/lib/auth-client";
+import { Check, Copy } from "lucide-react";
+import type React from "react";
+import { cloneElement, forwardRef, isValidElement, useState } from "react";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "../ui/tooltip";
 
 export const AdminHover = forwardRef<
 	HTMLElement,
@@ -19,8 +16,9 @@ export const AdminHover = forwardRef<
 		texts: (string | { key: string; value: string } | undefined | null)[];
 		hide?: boolean;
 		asChild?: boolean;
+		side?: "top" | "bottom" | "left" | "right";
 	}
->(({ children, texts, hide = false, asChild = false }, ref) => {
+>(({ children, texts, hide = false, asChild = true, side = "bottom" }, ref) => {
 	const { isAdmin } = useAdmin();
 
 	if (!isAdmin || hide) return <>{children}</>;
@@ -34,14 +32,12 @@ export const AdminHover = forwardRef<
 	return (
 		<TooltipProvider>
 			<Tooltip>
-				<TooltipTrigger className="w-fit !cursor-default" asChild={asChild}>
-					{triggerChild}
-				</TooltipTrigger>
+				<TooltipTrigger asChild={asChild}>{triggerChild}</TooltipTrigger>
 				{isAdmin && (
 					<TooltipContent
 						className="bg-white/50 backdrop-blur-sm shadow-sm border-1 px-2 pr-6 py-2 max-w-none"
 						align="start"
-						side="bottom"
+						side={side}
 					>
 						<div className="text-xs text-gray-500 flex flex-col gap-2">
 							{texts.map((text: any) => {
