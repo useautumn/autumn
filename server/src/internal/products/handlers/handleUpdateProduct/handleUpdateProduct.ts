@@ -4,6 +4,7 @@ import {
 	notNullish,
 	ProductNotFoundError,
 	type ProductV2,
+	productsAreSame,
 	RecaseError,
 	UpdateProductQuerySchema,
 	UpdateProductSchema,
@@ -20,7 +21,6 @@ import {
 } from "../../free-trials/freeTrialUtils.js";
 import { ProductService } from "../../ProductService.js";
 import { handleNewProductItems } from "../../product-items/productItemUtils/handleNewProductItems.js";
-import { productsAreSame } from "../../productUtils/compareProductUtils.js";
 import { getProductResponse } from "../../productUtils/productResponseUtils/getProductResponse.js";
 import { initProductInStripe } from "../../productUtils.js";
 import { disableCurrentDefault } from "../handleCreateProduct.js";

@@ -19,7 +19,7 @@ const conformProductToSchema = (
 		name: product.name,
 		is_add_on: product.is_add_on,
 		is_default: product.is_default,
-		group: product.group ?? undefined,
+		group: product.group ?? "",
 		archived: product.archived ?? undefined,
 		items: product.items,
 		free_trial: product.free_trial
