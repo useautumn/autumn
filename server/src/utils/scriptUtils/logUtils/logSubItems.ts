@@ -5,9 +5,13 @@ import { subItemToAutumnInterval } from "@/external/stripe/utils.js";
 export const logSubItems = ({
 	sub,
 	subItems,
+	withPriceId = false,
+	withItemId = false,
 }: {
 	sub?: Stripe.Subscription;
 	subItems?: Stripe.SubscriptionItem[];
+	withPriceId?: boolean;
+	withItemId?: boolean;
 }) => {
 	const finalSubItems = subItems || sub!.items.data;
 	for (const item of finalSubItems) {
@@ -24,7 +28,7 @@ export const logSubItems = ({
 			const price = atmnPrice;
 			const subInterval = subItemToAutumnInterval(item);
 			console.log(
-				`${price} ${item.price.currency}${item.quantity !== 1 ? ` x ${item.quantity}` : ""} / ${subInterval?.intervalCount} ${subInterval?.interval}`,
+				`${price} ${item.price.currency}${item.quantity !== 1 ? ` x ${item.quantity}` : ""} / ${subInterval?.intervalCount} ${subInterval?.interval} ${withPriceId ? `(${item.price.id})` : ""} ${withItemId ? `(${item.id})` : ""}`,
 			);
 		}
 	}
