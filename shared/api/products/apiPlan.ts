@@ -9,9 +9,18 @@ import { ApiPlanFeatureSchema } from "./planFeature/apiPlanFeature.js";
 export { ResetInterval } from "./planEnums.js";
 
 export const ApiFreeTrialV2Schema = z.object({
-	duration_type: z.enum(FreeTrialDuration),
-	duration_length: z.number(),
-	card_required: z.boolean(),
+	duration_type: z.enum(FreeTrialDuration).meta({
+		description: "Unit of time: 'day', 'month', or 'year'",
+		example: "day",
+	}),
+	duration_length: z.number().meta({
+		description: "Number of duration units",
+		example: 14,
+	}),
+	card_required: z.boolean().meta({
+		description: "Whether credit card is required upfront",
+		example: true,
+	}),
 });
 
 export type ApiFreeTrialV2 = z.infer<typeof ApiFreeTrialV2Schema>;

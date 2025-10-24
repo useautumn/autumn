@@ -10,6 +10,7 @@ import {
 	type FullCustomer,
 	type FullProduct,
 	itemsToPlanFeatures,
+	notNullish,
 	productV2ToBasePrice,
 	productV2ToFeatureItems,
 } from "@autumn/shared";
@@ -198,9 +199,9 @@ export const getPlanResponse = async ({
 
 		// Customer context (optional)
 		// Uncomment when ready to add customer context
-		// customer_context: {
-		//     trial_available: notNullish(freeTrial),
-		//     scenario: attachScenario,
-		// },
+		customer_context: {
+			trial_available: notNullish(freeTrial),
+			scenario: attachScenario,
+		},
 	});
 };

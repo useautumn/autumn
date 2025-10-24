@@ -10,46 +10,116 @@ import { ResetInterval } from "../apiPlan.js";
 
 export const UpdatePlanFeatureSchema = z
 	.object({
-		feature_id: z.string(),
-		granted: z.number().optional(),
-		unlimited: z.boolean().optional(),
+		feature_id: z.string().meta({
+			description: "Reference to the feature being configured",
+			example: "seats",
+		}),
+		granted: z.number().optional().meta({
+			description: "Amount of usage granted to customers",
+			example: 1000,
+		}),
+		unlimited: z.boolean().optional().meta({
+			description: "Whether usage is unlimited",
+			example: false,
+		}),
 
 		reset: z
 			.object({
-				interval: z.enum(ResetInterval).optional(),
-				interval_count: z.number().optional(),
-				when_enabled: z.boolean().optional(),
+				interval: z.enum(ResetInterval).optional().meta({
+					description: "How often usage resets",
+					example: "month",
+				}),
+				interval_count: z.number().optional().meta({
+					description: "Number of intervals between resets",
+					example: 1,
+				}),
+				when_enabled: z.boolean().optional().meta({
+					description: "Whether to reset usage when feature is enabled",
+					example: true,
+				}),
 			})
-			.optional(),
+			.optional()
+			.meta({
+				description: "Reset configuration for metered features",
+				example: { interval: "month" },
+			}),
 
 		price: z
 			.object({
-				amount: z.number().optional(),
-				tiers: z.array(UsageTierSchema).optional(),
+				amount: z.number().optional().meta({
+					description: "Flat price per unit in cents",
+					example: 1000,
+				}),
+				tiers: z.array(UsageTierSchema).optional().meta({
+					description: "Tiered pricing structure based on usage ranges",
+					example: [{ to: 10, amount: 1000 }, { to: "inf", amount: 800 }],
+				}),
 
-				interval: z.enum(BillingInterval),
-				interval_count: z.number().default(1).optional(),
+				interval: z.enum(BillingInterval).meta({
+					description: "Billing frequency (cannot be used with reset.interval)",
+					example: "month",
+				}),
+				interval_count: z.number().default(1).optional().meta({
+					description: "Number of intervals between billing",
+					example: 1,
+				}),
 
-				billing_units: z.number().default(1).optional(),
-				usage_model: z.enum(UsageModel),
-				max_purchase: z.number().optional(),
+				billing_units: z.number().default(1).optional().meta({
+					description: "Number of units per billing cycle",
+					example: 1,
+				}),
+				usage_model: z.enum(UsageModel).meta({
+					description: "Billing model: 'prepaid' or 'pay_per_use'",
+					example: "pay_per_use",
+				}),
+				max_purchase: z.number().optional().meta({
+					description: "Maximum purchasable quantity",
+					example: 100,
+				}),
 			})
-			.optional(),
+			.optional()
+			.meta({
+				description: "Pricing configuration for usage-based billing",
+				example: { interval: "month", usage_model: "pay_per_use" },
+			}),
 
 		proration: z
 			.object({
-				on_increase: z.enum(OnIncrease),
-				on_decrease: z.enum(OnDecrease),
+				on_increase: z.enum(OnIncrease).meta({
+					description: "Behavior when quantity increases",
+					example: "prorate",
+				}),
+				on_decrease: z.enum(OnDecrease).meta({
+					description: "Behavior when quantity decreases",
+					example: "no_action",
+				}),
 			})
-			.optional(),
+			.optional()
+			.meta({
+				description: "Proration rules for quantity changes",
+				example: { on_increase: "prorate", on_decrease: "no_action" },
+			}),
 
 		rollover: z
 			.object({
-				max: z.number(),
-				expiry_duration_type: z.enum(ResetInterval),
-				expiry_duration_length: z.number().optional(),
+				max: z.number().meta({
+					description: "Maximum amount that can roll over",
+					example: 1000,
+				}),
+				expiry_duration_type: z.enum(ResetInterval).meta({
+					description: "How long rollover lasts before expiring",
+					example: "month",
+				}),
+				expiry_duration_length: z.number().optional().meta({
+					description: "Duration length for rollover expiry",
+					example: 1,
+				}),
 			})
-			.optional(),
+			.optional()
+			.meta({
+				description: "Rollover policy for unused usage",
+				example: { max: 1000, expiry_duration_type: "month" },
+			}),
 	})
 	.check((ctx) => {
 		const resetGroup =
