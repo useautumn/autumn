@@ -3,7 +3,11 @@ import { ProductItemSchema } from "@models/productV2Models/productItemModels/pro
 import { idRegex } from "@utils/utils.js";
 import { z } from "zod/v4";
 
-export const CreateProductItemParamsSchema = ProductItemSchema;
+// Use the full ProductItemSchema but mark backend fields as internal
+export const CreateProductItemParamsSchema = ProductItemSchema.meta({
+	id: "CreateProductItemParams",
+	description: "Product item defining features and pricing within a product",
+});
 
 // Base product params
 
@@ -35,43 +39,95 @@ const CREATE_PRODUCT_EXAMPLE = {
 	},
 };
 
+const descriptions = {
+	id: "The ID of the product. Used to identify the product in other API calls like checkout or update product.",
+	name: "The name of the product",
+	is_add_on:
+		"Whether the product is an add-on. Add-on products can be attached multiple times and don't to through upgrade / downgrade flows.",
+	is_default:
+		"Whether the product is the default product. Default products are enabled by default for new customers.",
+	group:
+		"Product group which this product belongs to. Products within a group have upgrade / downgrade logic when the customer moves between them.",
+	items:
+		"Array of product items that define the product's features and pricing",
+	free_trial: "Free trial configuration for this product, if available",
+
+	// Update only
+	archived:
+		"Archive this product using this flag. Archived products are hidden on the dashboard.",
+};
+
 export const CreateProductV2ParamsSchema = z
 	.object({
-		id: z.string().nonempty().regex(idRegex),
-
-		name: z.string().refine((val) => val.length > 0, {
-			message: "name must be a non-empty string",
+		id: z.string().nonempty().regex(idRegex).meta({
+			description: descriptions.id,
 		}),
 
-		is_add_on: z.boolean().default(false),
-		is_default: z.boolean().default(false),
-		version: z.number().optional(),
-		group: z.string().nullable().default(""),
+		name: z
+			.string()
+			.refine((val) => val.length > 0, {
+				message: "name must be a non-empty string",
+			})
+			.meta({
+				description: descriptions.name,
+			}),
 
-		items: z.array(CreateProductItemParamsSchema).optional(),
-		free_trial: CreateFreeTrialSchema.nullish().default(null),
+		is_add_on: z.boolean().default(false).meta({
+			description: descriptions.is_add_on,
+		}),
+
+		is_default: z.boolean().default(false).meta({
+			description: descriptions.is_default,
+		}),
+
+		group: z.string().nullable().default("").meta({
+			description: descriptions.group,
+		}),
+
+		items: z.array(CreateProductItemParamsSchema).optional().meta({
+			description: descriptions.items,
+		}),
+
+		free_trial: CreateFreeTrialSchema.nullish().default(null).meta({
+			description: descriptions.free_trial,
+		}),
 	})
 	.meta({
 		examples: [CREATE_PRODUCT_EXAMPLE],
 	});
 
 export const UpdateProductV2ParamsSchema = z.object({
-	id: z.string().nonempty().regex(idRegex).optional(),
+	id: z.string().nonempty().regex(idRegex).optional().meta({
+		description: descriptions.id,
+	}),
 	name: z
 		.string()
 		.refine((val) => val.length > 0, {
 			message: "name must be a non-empty string",
 		})
-		.optional(),
+		.optional()
+		.meta({
+			description: descriptions.name,
+		}),
 
-	is_add_on: z.boolean().optional(),
-	is_default: z.boolean().optional(),
+	is_add_on: z.boolean().optional().meta({
+		description: descriptions.is_add_on,
+	}),
+	is_default: z.boolean().optional().meta({
+		description: descriptions.is_default,
+	}),
 	// version: z.number().optional(),
-	group: z.string().nonempty().nullable().optional(),
-	archived: z.boolean().optional(),
+	group: z.string().nonempty().nullable().optional().meta({
+		description: descriptions.group,
+	}),
+	archived: z.boolean().optional().meta({
+		description: descriptions.archived,
+	}),
 
 	items: z.array(CreateProductItemParamsSchema).optional(),
-	free_trial: CreateFreeTrialSchema.nullish(),
+	free_trial: CreateFreeTrialSchema.nullish().meta({
+		description: descriptions.free_trial,
+	}),
 });
 
 export const UpdateProductQuerySchema = z.object({
