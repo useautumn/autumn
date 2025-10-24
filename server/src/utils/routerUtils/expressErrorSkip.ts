@@ -145,6 +145,15 @@ export const handleExpressErrorSkip = ({
 				code: ErrCode.InvalidRequest,
 			});
 		}
+
+		// Not a valid URL error
+		if (error.message.includes("Not a valid URL")) {
+			req.logger.warn(`Not a valid URL error, org: ${req.org?.slug}`);
+			return res.status(400).json({
+				message: error.message,
+				code: ErrCode.InvalidRequest,
+			});
+		}
 	}
 
 	// No skip case matched

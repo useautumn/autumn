@@ -113,6 +113,14 @@ const STRIPE_RULES = [
 		statusCode: 400,
 		code: ErrCode.InvalidRequest,
 	},
+	{
+		name: "Not a valid URL error",
+		match: (err: Error) =>
+			err instanceof Stripe.errors.StripeError &&
+			err.message.includes("Not a valid URL"),
+		statusCode: 400,
+		code: ErrCode.InvalidRequest,
+	},
 ] as const;
 
 /** Zod-specific error handling rules */
@@ -121,6 +129,13 @@ const ZOD_RULES = [
 		name: "Zod error on /attach",
 		match: (err: Error, c: Context<HonoEnv>) =>
 			err instanceof ZodError && c.req.url.includes("/attach"),
+		statusCode: 400,
+		format: (err: ZodError) => formatZodError(err),
+	},
+	{
+		name: "Zod error on /checkout (email validation)",
+		match: (err: Error, c: Context<HonoEnv>) =>
+			err instanceof ZodError && c.req.url.includes("/checkout"),
 		statusCode: 400,
 		format: (err: ZodError) => formatZodError(err),
 	},
