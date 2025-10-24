@@ -11,6 +11,8 @@ import {
 	FeatureUsageType,
 	type FixedPriceConfig,
 	Infinite,
+	itemToBillingInterval,
+	itemToEntInterval,
 	OnDecrease,
 	OnIncrease,
 	type Price,
@@ -20,10 +22,6 @@ import {
 	UsageModel,
 	type UsagePriceConfig,
 } from "@autumn/shared";
-import {
-	itemToBillingInterval,
-	itemToEntInterval,
-} from "@shared/utils/productV2Utils/productItemUtils/itemIntervalUtils.js";
 import { pricesAreSame } from "@/internal/products/prices/priceInitUtils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
@@ -182,7 +180,7 @@ export const toFeatureAndPrice = ({
 }) => {
 	const resetUsage = getResetUsage({
 		item,
-		feature: features.find((f) => f.id == item.feature_id),
+		feature: features.find((f) => f.id === item.feature_id),
 	});
 
 	let ent: Entitlement = {
@@ -251,9 +249,9 @@ export const toFeatureAndPrice = ({
 		let onDecrease = item.config?.on_decrease || OnDecrease.Prorate;
 
 		// console.log("Item config:", item.config);
-		if (shouldProrate(onDecrease) || onDecrease == OnDecrease.Prorate) {
+		if (shouldProrate(onDecrease) || onDecrease === OnDecrease.Prorate) {
 			onDecrease =
-				onIncrease == OnIncrease.ProrateImmediately
+				onIncrease === OnIncrease.ProrateImmediately
 					? OnDecrease.ProrateImmediately
 					: OnDecrease.ProrateNextCycle;
 		}
@@ -279,9 +277,9 @@ export const toFeatureAndPrice = ({
 
 	const billingType = getBillingType(price.config!);
 	if (
-		(billingType == BillingType.UsageInArrear ||
-			billingType == BillingType.InArrearProrated) &&
-		price.config!.interval == BillingInterval.OneOff
+		(billingType === BillingType.UsageInArrear ||
+			billingType === BillingType.InArrearProrated) &&
+		price.config!.interval === BillingInterval.OneOff
 	) {
 		throw new RecaseError({
 			message: `Usage prices cannot be one-off if not set to prepaid (feature: ${item.feature_id})`,
@@ -366,7 +364,7 @@ export const itemToPriceAndEnt = ({
 				code: ErrCode.InvalidRequest,
 			});
 		}
-		const isBoolean = feature?.type == FeatureType.Boolean;
+		const isBoolean = feature?.type === FeatureType.Boolean;
 
 		const { ent } = toFeature({
 			item,
