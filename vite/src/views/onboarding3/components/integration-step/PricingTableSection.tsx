@@ -31,7 +31,7 @@ export default function RootLayout({
 	return (
 		<div className="flex flex-col gap-4">
 			<SectionHeader
-				stepNumber={7}
+				stepNumber={6}
 				title={
 					<span>
 						Drop in <CodeSpan>{"<PricingTable />"}</CodeSpan>

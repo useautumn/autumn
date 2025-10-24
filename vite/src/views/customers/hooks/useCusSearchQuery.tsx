@@ -1,19 +1,8 @@
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { useCustomersQueryStates } from "./useCustomersQueryStates";
-import {
-	CusProductSchema,
-	CustomerSchema,
-	ProductSchema,
-} from "@autumn/shared";
-import { z } from "zod";
+import type { CustomerWithProducts } from "@autumn/shared";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
-const CustomerWithProductsSchema = CustomerSchema.extend({
-	customer_products: z.array(
-		CusProductSchema.extend({ product: ProductSchema }),
-	),
-});
-type CustomerWithProducts = z.infer<typeof CustomerWithProductsSchema>;
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useCustomersQueryStates } from "./useCustomersQueryStates";
 
 export const useCusSearchQuery = () => {
 	const { queryStates } = useCustomersQueryStates();
@@ -72,22 +61,3 @@ export const useCusSearchQuery = () => {
 		isFetchingUncached,
 	};
 };
-
-// const { data, isLoading, error, mutate } = useAxiosPostSWR({
-//   url: `/v1/customers/all/search`,
-//   env,
-//   data: {
-//     search: queryStates.q || "",
-//     filters: {
-//       status: queryStates.status,
-//       product_id: queryStates.product_id,
-//       version: queryStates.version,
-//       none: queryStates.none,
-//     },
-//     page: queryStates.page,
-//     page_size: pageSize,
-//     last_item: queryStates.lastItemId
-//       ? { internal_id: queryStates.lastItemId }
-//       : null,
-//   },
-// });

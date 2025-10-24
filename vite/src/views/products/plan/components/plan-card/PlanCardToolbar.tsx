@@ -1,8 +1,6 @@
-import { PencilSimpleIcon, TrashIcon } from "@phosphor-icons/react";
+import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { Button } from "@/components/v2/buttons/Button";
-import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useIsEditingPlan } from "@/hooks/stores/useSheetStore";
@@ -30,8 +28,6 @@ export const PlanCardToolbar = ({
 	const isEditingPlan = useIsEditingPlan();
 	const navigate = useNavigate();
 
-	console.log("deleteOpen", deleteOpen);
-
 	return (
 		<>
 			<DeletePlanDialog
@@ -50,24 +46,19 @@ export const PlanCardToolbar = ({
 				}}
 			/>
 			<div className="flex flex-row items-center gap-1">
-				{product?.id && (
-					<CopyButton
-						text={product?.id ? product?.id : ""}
-						className="text-xs"
-						size="sm"
-					/>
-				)}
 				<IconButton
 					icon={<PencilSimpleIcon />}
 					onClick={onEdit}
 					aria-label="Edit plan"
 					variant="muted"
 					disabled={editDisabled}
-					iconOrientation="center"
+					size="sm"
 					className={cn(isEditingPlan && "btn-secondary-active !opacity-100 ")}
-				/>
+				>
+					Edit Details
+				</IconButton>
 
-				{product?.archived ? (
+				{/* {product?.archived ? (
 					<Button variant="muted" onClick={() => setDeleteOpen(true)} size="sm">
 						Archived
 					</Button>
@@ -82,7 +73,7 @@ export const PlanCardToolbar = ({
 						title={deleteDisabled && deleteTooltip ? deleteTooltip : undefined}
 						className={cn(deleteDisabled && "opacity-50 cursor-not-allowed")}
 					/>
-				)}
+				)} */}
 			</div>
 		</>
 	);

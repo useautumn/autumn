@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -9,8 +11,6 @@ import { useOrg } from "@/hooks/common/useOrg";
 import { authClient, useListOrganizations } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
-import { useState } from "react";
-import { toast } from "sonner";
 import { useMemberships } from "../hooks/useMemberships";
 
 export const DeleteOrgPopover = () => {
@@ -64,6 +64,7 @@ export const DeleteOrgPopover = () => {
 		try {
 			await deleteOrg();
 		} catch (error) {
+			console.log("Error:", error);
 			toast.error(getBackendErr(error, "Failed to delete org"));
 		}
 

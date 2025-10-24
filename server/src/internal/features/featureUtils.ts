@@ -40,29 +40,6 @@ export const validateMeteredConfig = (config: MeteredConfig) => {
 		});
 	}
 
-	// Event names are now stored in feature.event_names, not in config.filters
-	// if (config.aggregate?.type === AggregateType.Count) {
-	// 	newConfig.aggregate = {
-	// 		type: AggregateType.Count,
-	// 		property: null,
-	// 	}; // to continue testing support for count...
-	// } else {
-	// 	newConfig.aggregate = {
-	// 		type: AggregateType.Sum,
-	// 		property: "value",
-	// 	};
-	// }
-
-	// if (newConfig?.filters?.length === 0 || !newConfig?.filters) {
-	// 	newConfig.filters = [
-	// 		{
-	// 			property: "",
-	// 			operator: "",
-	// 			value: [],
-	// 		},
-	// 	];
-	// }
-
 	return newConfig as MeteredConfig;
 };
 
@@ -137,7 +114,7 @@ export const runSaveFeatureDisplayTask = async ({
 
 		await FeatureService.update({
 			db,
-			internalId: feature.internal_id!,
+			internalId: feature.internal_id,
 			updates: {
 				display,
 			},

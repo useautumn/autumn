@@ -17,7 +17,6 @@ import { cusRouter } from "./internal/customers/cusRouter.js";
 import { internalCusRouter } from "./internal/customers/internalCusRouter.js";
 import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/handleOAuthCallback.js";
 import { honoOrgRouter } from "./internal/orgs/orgRouter.js";
-import { honoPlatformRouter } from "./internal/platform/honoPlatformRouter.js";
 import { platformBetaRouter } from "./internal/platform/platformBeta/platformBetaRouter.js";
 import { internalProductRouter } from "./internal/products/internalProductRouter.js";
 import { honoProductRouter } from "./internal/products/productRouter.js";
@@ -94,7 +93,7 @@ export const createHonoApp = () => {
 	// API Routes
 	app.route("v1/customers", cusRouter);
 	app.route("v1/products", honoProductRouter);
-	app.route("v1/platform", honoPlatformRouter);
+	app.route("v1/platform", platformBetaRouter);
 	app.route("v1/platform/beta", platformBetaRouter);
 	app.route("v1/organization", honoOrgRouter);
 

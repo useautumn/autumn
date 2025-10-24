@@ -1,11 +1,11 @@
-import { ProductNotFoundError } from "@autumn/shared";
+import { ProductNotFoundError, queryInteger } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
 const GetProductCountQuerySchema = z.object({
-	version: z.coerce.number().optional(),
+	version: queryInteger().optional(),
 });
 
 /**
