@@ -12,64 +12,61 @@ import { z } from "zod/v4";
 export const ApiProductItemSchema = z
 	.object({
 		// Feature stuff
-		type: z.enum(ProductItemType).nullish().meta({
-			description: "The type of the product item",
-			example: "<string>",
-		}),
-		feature_id: z.string().nullish().meta({
-			description:
-				"The feature ID of the product item. Should be `null` for prices.",
-			example: "<string>",
-		}),
+		type: z
+			.enum(ProductItemType)
+			.nullish()
+			.describe("The type of the product item"),
+
+		feature_id: z
+			.string()
+			.nullish()
+			.describe(
+				"The feature ID of the product item. If the item is a fixed price, should be `null`",
+			),
+
 		feature_type: z.enum(ProductItemFeatureType).nullish().meta({
 			description:
 				"Single use features are used once and then depleted, like API calls or credits. Continuous use features are those being used on an ongoing-basis, like storage or seats.",
-			example: "<string>",
 		}),
 
 		// Feature response
 		feature: ApiFeatureSchema.nullish().meta({
-			description: "The feature itself",
+			internal: true,
 		}),
 
 		included_usage: z.number().or(z.literal(Infinite)).nullish().meta({
 			description: "The amount of usage included for this feature.",
-			example: 123,
 		}),
 
 		interval: z.enum(ProductItemInterval).nullish().meta({
 			description:
 				"The reset or billing interval of the product item. If null, feature will have no reset date, and if there's a price, it will be billed one-off.",
 		}),
+
 		interval_count: z.number().nullish().meta({
-			description: "The number of intervals between resets",
+			description: "The interval count of the product item.",
 		}),
 
 		// Price config
 		price: z.number().nullish().meta({
 			description:
 				"The price of the product item. Should be `null` if tiered pricing is set.",
-			example: 123,
 		}),
-		tiers: z
-			.array(PriceTierSchema)
-			.nullish()
-			.meta({
-				description: "Tiered pricing for the product item.",
-				example: [
-					{ to: 100, amount: 10 },
-					{ to: 200, amount: 20 },
-				],
-			}),
+
+		tiers: z.array(PriceTierSchema).nullish().meta({
+			description:
+				"Tiered pricing for the product item. Not applicable for fixed price items.",
+		}),
+
 		usage_model: z.enum(UsageModel).nullish().meta({
 			description:
 				"Whether the feature should be prepaid upfront or billed for how much they use end of billing period.",
-			example: "<string>",
 		}),
+
 		billing_units: z.number().nullish().meta({
 			description: "The amount per billing unit (eg. $9 / 250 units)",
-			example: 250,
 		}),
+
 		reset_usage_when_enabled: z.boolean().nullish().meta({
 			description:
 				"Whether the usage should be reset when the product is enabled.",
@@ -77,7 +74,6 @@ export const ApiProductItemSchema = z
 
 		entity_feature_id: z.string().nullish().meta({
 			description: "The entity feature ID of the product item if applicable.",
-			example: "<string>",
 		}),
 
 		display: z
@@ -88,16 +84,16 @@ export const ApiProductItemSchema = z
 			.nullish()
 			.meta({
 				description: "The display of the product item.",
-				example: { primary_text: "<string>", secondary_text: "<string>" },
 			}),
 
 		quantity: z.number().nullish().meta({
-			description: "The quantity of the product item.",
-			example: 123,
+			description:
+				"Used in customer context. Quantity of the feature the customer has prepaid for.",
 		}),
+
 		next_cycle_quantity: z.number().nullish().meta({
-			description: "The quantity of the product item in the next cycle.",
-			example: 123,
+			description:
+				"Used in customer context. Quantity of the feature the customer will prepay for in the next cycle.",
 		}),
 	})
 	.meta({

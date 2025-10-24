@@ -1,99 +1,103 @@
 import "dotenv/config";
 import { execSync } from "node:child_process";
 import { existsSync, writeFileSync } from "node:fs";
-import { AppEnv } from "@models/genModels/genEnums.js";
 import yaml from "yaml";
-import { z } from "zod/v4";
 import { createDocument } from "zod-openapi";
 import { CustomerDataSchema } from "./common/customerData.js";
 import { EntityDataSchema } from "./common/entityData.js";
-import { coreOps } from "./core/coreOpenApi.js";
 import { ApiCusFeatureSchema } from "./customers/cusFeatures/apiCusFeature.js";
 import { ApiCusProductSchema } from "./customers/cusProducts/apiCusProduct.js";
-import {
-	ApiCustomerWithMeta,
-	customerOps,
-} from "./customers/customersOpenApi.js";
-import { ApiEntityWithMeta, entityOps } from "./entities/entitiesOpenApi.js";
-import { ApiFeatureWithMeta, featureOps } from "./features/featuresOpenApi.js";
+import { ApiCustomerWithMeta } from "./customers/customersOpenApi.js";
+import { ApiEntityWithMeta } from "./entities/entitiesOpenApi.js";
+import { ApiFeatureWithMeta } from "./features/featuresOpenApi.js";
 import { ApiProductItemSchema } from "./products/apiProductItem.js";
 import { ApiProductWithMeta, productOps } from "./products/productsOpenApi.js";
-import { referralOps } from "./referrals/referralsOpenApi.js";
 
 const API_VERSION = "1.2.0";
 
-const document = createDocument({
-	openapi: "3.1.0",
-	info: {
-		title: "Autumn API",
-		version: API_VERSION,
-	},
-
-	servers: [
-		{
-			url: "https://api.useautumn.com",
-			description: "Production server",
+const document = createDocument(
+	{
+		openapi: "3.1.0",
+		info: {
+			title: "Autumn API",
+			version: API_VERSION,
 		},
-	],
 
-	security: [
-		{
-			secretKey: [],
-		},
-	],
-	components: {
-		schemas: {
-			AutumnError: z
-				.object({
-					message: z.string(),
-					code: z.string(),
-					env: z.enum(AppEnv),
-				})
-				.meta({
-					id: "AutumnError",
-					description: "An error that occurred in the API",
+		servers: [
+			{
+				url: "https://api.useautumn.com",
+				description: "Production server",
+			},
+		],
+
+		security: [
+			{
+				secretKey: [],
+			},
+		],
+		components: {
+			schemas: {
+				CustomerData: CustomerDataSchema.meta({
+					id: "CustomerData",
+					description: "Customer data for creating or updating a customer",
 				}),
-			CustomerData: CustomerDataSchema.meta({
-				id: "CustomerData",
-				description: "Customer data for creating or updating a customer",
-			}),
-			EntityData: EntityDataSchema.meta({
-				id: "EntityData",
-				description: "Entity data for creating an entity",
-			}),
-			Customer: ApiCustomerWithMeta,
-			CustomerProduct: ApiCusProductSchema,
-			CustomerFeature: ApiCusFeatureSchema.meta({
-				id: "CustomerFeature",
-				description: "Customer feature object returned by the API",
-			}),
-			Product: ApiProductWithMeta,
-			ProductItem: ApiProductItemSchema,
-			Feature: ApiFeatureWithMeta,
-			Entity: ApiEntityWithMeta,
-		},
-		securitySchemes: {
-			secretKey: {
-				type: "http",
-				scheme: "bearer",
-				bearerFormat: "JWT",
+				EntityData: EntityDataSchema.meta({
+					id: "EntityData",
+					description: "Entity data for creating an entity",
+				}),
+				Customer: ApiCustomerWithMeta,
+				CustomerProduct: ApiCusProductSchema,
+				CustomerFeature: ApiCusFeatureSchema.meta({
+					id: "CustomerFeature",
+					description: "Customer feature object returned by the API",
+				}),
+				Product: ApiProductWithMeta,
+				ProductItem: ApiProductItemSchema,
+				Feature: ApiFeatureWithMeta,
+				Entity: ApiEntityWithMeta,
+			},
+			securitySchemes: {
+				secretKey: {
+					type: "http",
+					scheme: "bearer",
+					bearerFormat: "JWT",
+				},
 			},
 		},
-	},
 
-	paths: {
-		...productOps,
-		...coreOps,
-		...featureOps,
-		...customerOps,
-		...entityOps,
-		...referralOps,
+		paths: {
+			...productOps,
+			// ...coreOps,
+			// ...featureOps,
+			// ...customerOps,
+			// ...entityOps,
+			// ...referralOps,
+		},
 	},
-});
+	{
+		// Disable the "Output" suffix that zod-openapi adds to response schemas
+		outputIdSuffix: "",
+	},
+);
 
 // Export to YAML file during build
 if (process.env.NODE_ENV !== "production") {
 	try {
+		// If --no-build flag is present, return after writing openapi.yml
+		if (process.argv.includes("--no-build")) {
+			const yamlContent = yaml.stringify(
+				JSON.parse(JSON.stringify(document, null, 2)),
+			);
+			writeFileSync(
+				`${process.env.STAINLESS_PATH?.replace("\\ ", " ")}/openapi.yml`,
+				yamlContent,
+				"utf8",
+			);
+			console.log(
+				`OpenAPI document exported to ${process.env.STAINLESS_PATH}/openapi.yml`,
+			);
+			process.exit(0);
+		}
 		// Convert to JSON first to strip out Zod schemas and function references
 		const jsonStr = JSON.stringify(document, null, 2);
 
