@@ -136,3 +136,21 @@ export const getPlaceholderItem = ({
 		quantity: 0,
 	};
 };
+
+export const createEmptySubItem = ({
+	recurring,
+	stripeProductId,
+}: {
+	recurring: Stripe.PriceCreateParams.Recurring;
+	stripeProductId: string;
+}) => {
+	return {
+		price_data: {
+			product: stripeProductId,
+			unit_amount: 1,
+			currency: "usd",
+			recurring,
+		},
+		quantity: 0,
+	} satisfies Stripe.SubscriptionCreateParams.Item;
+};

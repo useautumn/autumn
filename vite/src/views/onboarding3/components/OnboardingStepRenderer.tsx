@@ -1,6 +1,6 @@
 import type { ProductItem, ProductV2 } from "@autumn/shared";
 import { productV2ToFeatureItems } from "@autumn/shared";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
@@ -27,17 +27,29 @@ export const OnboardingStepRenderer = () => {
 
 	// Get state from Zustand
 	const playgroundMode = useOnboardingStore((state) => state.playgroundMode);
+	const setLastUsedProductId = useOnboardingStore(
+		(state) => state.setLastUsedProductId,
+	);
 	const feature = useFeatureStore((state) => state.feature);
 
 	const product = useProductStore((s) => s.product);
 	const setProduct = useProductStore((s) => s.setProduct);
 	const sheetType = useSheetStore((s) => s.type);
 	const itemId = useSheetStore((s) => s.itemId);
+
 	const [trackResponse, setTrackResponse] = useState<any>(null);
 	const [checkResponse, setCheckResponse] = useState<any>(null);
+
 	const [lastUsedFeatureId, setLastUsedFeatureId] = useState<
 		string | undefined
 	>(undefined);
+
+	// Track product ID changes when in playground mode
+	useEffect(() => {
+		if (step === OnboardingStep.Playground && product?.id) {
+			setLastUsedProductId(product.id);
+		}
+	}, [product?.id, step, setLastUsedProductId]);
 
 	// Don't render overrides when on Integration step or Playground preview mode - allow the step to render normally
 	const shouldSkipOverrides =

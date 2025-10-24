@@ -22,13 +22,6 @@ export default function SidebarBottom() {
           env={env}
         /> */}
 				<NavButton
-					value="cmdk"
-					icon={<CommandIcon size={16} />}
-					title="Command Palette"
-					onClick={openCommandBar}
-					isGroup={true}
-				/>
-				<NavButton
 					value="docs"
 					icon={<Book size={14} />}
 					title="Documentation"

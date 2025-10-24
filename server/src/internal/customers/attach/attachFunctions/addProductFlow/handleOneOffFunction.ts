@@ -18,6 +18,7 @@ import {
 	attachToInvoiceResponse,
 	insertInvoiceFromAttach,
 } from "@/internal/invoices/invoiceUtils.js";
+import { orgToCurrency } from "@/internal/orgs/orgUtils.js";
 import { priceToProduct } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
@@ -99,7 +100,7 @@ export const handleOneOffFunction = async ({
 				description,
 				price_data: {
 					unit_amount: new Decimal(amount).mul(100).round().toNumber(),
-					currency: org.default_currency,
+					currency: orgToCurrency({ org }),
 					product: price.config?.stripe_product_id || product?.processor?.id!,
 				},
 			};
@@ -135,7 +136,7 @@ export const handleOneOffFunction = async ({
 	let stripeInvoice = await stripeCli.invoices.create({
 		customer: customer.processor.id!,
 		auto_advance: false,
-		currency: org.default_currency!,
+		currency: orgToCurrency({ org }),
 		discounts: rewards ? rewards.map((r) => ({ coupon: r.id })) : undefined,
 		collection_method: attachParams.invoiceOnly ? "send_invoice" : undefined,
 		days_until_due: attachParams.invoiceOnly ? 30 : undefined,

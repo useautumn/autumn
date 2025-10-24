@@ -48,7 +48,7 @@ describe(`${chalk.yellowBright("basic5: Testing cancel through Stripe at period 
 		await timeout(5000);
 	});
 
-	test.skip("should have pro product active, and canceled_at != null, and free scheduled", async () => {
+	test("should have pro product active, and canceled_at != null, and free scheduled", async () => {
 		const cusRes: any = await AutumnCli.getCustomer(customerId);
 		compareMainProduct({
 			sent: products.pro,

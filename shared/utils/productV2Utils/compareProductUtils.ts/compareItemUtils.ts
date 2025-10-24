@@ -105,9 +105,11 @@ const tiersAreSame = (
 export const featureItemsAreSame = ({
 	item1,
 	item2,
+	logDifferences = false,
 }: {
 	item1: FeatureItem;
 	item2: FeatureItem;
+	logDifferences?: boolean;
 }) => {
 	const checks = {
 		feature_id: {
@@ -135,15 +137,22 @@ export const featureItemsAreSame = ({
 				item1.reset_usage_when_enabled == item2.reset_usage_when_enabled,
 			message: `Reset usage when enabled different: ${item1.reset_usage_when_enabled} !== ${item2.reset_usage_when_enabled}`,
 		},
-		config: {
-			condition: JSON.stringify(item1.config) === JSON.stringify(item2.config),
-			message: `Config different: ${JSON.stringify(item1.config)} !== ${JSON.stringify(item2.config)}`,
+		rollover_config: {
+			condition: rolloversAreSame({
+				rollover1: item1.config?.rollover || undefined,
+				rollover2: item2.config?.rollover || undefined,
+			}),
+			message: `Rollover config different: ${JSON.stringify(item1.config?.rollover)} !== ${JSON.stringify(item2.config?.rollover)}`,
 		},
+		// config: {
+		// 	condition: JSON.stringify(item1.config) === JSON.stringify(item2.config),
+		// 	message: `Config different: ${JSON.stringify(item1.config)} !== ${JSON.stringify(item2.config)}`,
+		// },
 	};
 
 	const same = Object.values(checks).every((d) => d.condition);
 
-	if (!same) {
+	if (!same && logDifferences) {
 		console.log(
 			"Feature items different:",
 			Object.values(checks)
@@ -158,16 +167,18 @@ export const featureItemsAreSame = ({
 export const priceItemsAreSame = ({
 	item1,
 	item2,
+	logDifferences = false,
 }: {
 	item1: PriceItem;
 	item2: PriceItem;
+	logDifferences?: boolean;
 }) => {
 	const same =
 		item1.price === item2.price &&
 		item1.interval == item2.interval &&
 		(item1.interval_count || 1) == (item2.interval_count || 1);
 
-	if (!same) {
+	if (!same && logDifferences) {
 		console.log(`Price items different: ${item1.price}`);
 	}
 
@@ -210,9 +221,11 @@ const rolloversAreSame = ({
 export const featurePriceItemsAreSame = ({
 	item1,
 	item2,
+	logDifferences = false,
 }: {
 	item1: FeaturePriceItem;
 	item2: FeaturePriceItem;
+	logDifferences?: boolean;
 }) => {
 	// console.log("Item 1 config:", item1.config);
 	// console.log("Item 2 config:", item2.config);
@@ -297,7 +310,7 @@ export const featurePriceItemsAreSame = ({
 
 	const pricesChanged = Object.values(pricesSame).some((d) => !d.condition);
 
-	if (!same) {
+	if (!same && logDifferences) {
 		console.log(
 			"Feature price items different:",
 			Object.values(entsSame)
@@ -319,10 +332,12 @@ export const itemsAreSame = ({
 	item1,
 	item2,
 	features,
+	logDifferences = false,
 }: {
 	item1: ProductItem;
 	item2: ProductItem;
 	features?: Feature[];
+	logDifferences?: boolean;
 }) => {
 	// 1. If feature item
 	let same = false;
@@ -339,6 +354,7 @@ export const itemsAreSame = ({
 		same = featureItemsAreSame({
 			item1: item1 as FeatureItem,
 			item2: item2 as FeatureItem,
+			logDifferences,
 		});
 
 		pricesChanged = false;
@@ -356,6 +372,7 @@ export const itemsAreSame = ({
 			featurePriceItemsAreSame({
 				item1: item1 as FeaturePriceItem,
 				item2: item2 as FeaturePriceItem,
+				logDifferences,
 			});
 
 		same = same_;
@@ -377,6 +394,7 @@ export const itemsAreSame = ({
 		same = priceItemsAreSame({
 			item1: item1 as PriceItem,
 			item2: item2 as PriceItem,
+			logDifferences,
 		});
 		if (!same) {
 			pricesChanged = true;
