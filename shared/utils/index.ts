@@ -28,4 +28,5 @@ export * from "./productV2Utils/productItemUtils/getItemType.js";
 // Item utils
 export * from "./productV2Utils/productItemUtils/mapToItem.js";
 export * from "./productV2Utils/productItemUtils/productItemUtils.js";
+export * from "./productV2Utils/productV2ToV1.js";
 export * from "./utils.js";

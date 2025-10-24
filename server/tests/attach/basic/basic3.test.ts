@@ -1,135 +1,105 @@
 import { beforeAll, describe, expect, test } from "bun:test";
+import { ApiVersion, CusProductStatus } from "@autumn/shared";
 import chalk from "chalk";
+import type Stripe from "stripe";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { features, products } from "tests/global.js";
-import { compareMainProduct } from "tests/utils/compare.js";
-import { timeout } from "tests/utils/genUtils.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { completeCheckoutForm } from "tests/utils/stripeUtils.js";
+import { expectCustomerV0Correct } from "tests/utils/expectUtils/expectCustomerV0Correct.js";
 import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
-import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { timeout } from "@/utils/genUtils.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
-
-const oneTimeItem = constructPrepaidItem({
-	featureId: features.metered1.id,
-	price: 9,
-	billingUnits: 250,
-	isOneOff: true,
-});
-
-const oneTime = constructRawProduct({
-	id: "basic3_one_off",
-	items: [oneTimeItem],
-	isAddOn: true,
-});
-
-const monthlyItem = constructPrepaidItem({
-	featureId: features.metered1.id,
-	price: 9,
-	billingUnits: 250,
-});
-
-const monthly = constructRawProduct({
-	id: "basic3_monthly",
-	items: [
-		constructPrepaidItem({
-			featureId: features.metered1.id,
-			price: 9,
-			billingUnits: 250,
-		}),
-	],
-});
+import { sharedDefaultFree, sharedProProduct } from "./sharedProducts.js";
 
 const testCase = "basic3";
+const customerId = testCase;
 
-describe(`${chalk.yellowBright("basic3: Testing attach one time / monthly add ons")}`, () => {
-	const customerId = testCase;
-	const autumn: AutumnInt = new AutumnInt();
+describe(`${chalk.yellowBright("basic3: Testing cancel through Stripe at period end and now")}`, () => {
+	const autumnV1 = new AutumnInt({
+		secretKey: ctx.orgSecretKey,
+		version: ApiVersion.V1_2,
+	});
+
+	let stripeCli: Stripe;
 
 	beforeAll(async () => {
+		stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+
+		// Then create customer with payment method
 		await initCustomerV3({
 			ctx,
 			customerId,
 			attachPm: "success",
 			withTestClock: true,
-		});
-
-		await createProducts({
-			autumn: autumn,
-			db: ctx.db,
-			orgId: ctx.org.id,
-			env: ctx.env,
-			products: [oneTime, monthly],
+			withDefault: true,
 		});
 	});
 
-	test("should attach pro", async () => {
-		await autumn.attach({
+	test("should attach pro product", async () => {
+		await autumnV1.attach({
 			customer_id: customerId,
-			product_id: products.pro.id,
+			product_id: sharedProProduct.id,
 		});
 
 		const res = await AutumnCli.getCustomer(customerId);
-		compareMainProduct({
-			sent: products.pro,
+		await expectCustomerV0Correct({
+			sent: sharedProProduct,
 			cusRes: res,
 		});
 	});
 
-	const oneTimeQuantity = 500;
-	const oneTimeBillingUnits = oneTimeItem.billing_units;
-	const oneTimePurchaseCount = 2;
+	test("should cancel pro product (at period end)", async () => {
+		const cusRes: any = await AutumnCli.getCustomer(customerId);
 
-	test("should attach one time add on twice, force checkout", async () => {
-		for (let i = 0; i < 2; i++) {
-			const res = await autumn.attach({
-				customer_id: customerId,
-				product_id: oneTime.id,
-				force_checkout: true,
+		const proProduct = cusRes.products.find(
+			(p: any) => p.id === sharedProProduct.id,
+		);
+
+		for (const subId of proProduct.subscription_ids) {
+			await stripeCli.subscriptions.update(subId, {
+				cancel_at_period_end: true,
 			});
-
-			await completeCheckoutForm(
-				res.checkout_url,
-				oneTimeQuantity / oneTimeBillingUnits!,
-			);
-			await timeout(15000);
 		}
+		await timeout(5000);
 	});
 
-	test("should have correct product & entitlements", async () => {
-		const cusRes = await AutumnCli.getCustomer(customerId);
+	test("should have pro product active, and canceled_at != null, and free scheduled", async () => {
+		const cusRes: any = await AutumnCli.getCustomer(customerId);
+		await expectCustomerV0Correct({
+			sent: sharedProProduct,
+			cusRes: cusRes,
+		});
 
-		const addOnBalance = cusRes.entitlements.find(
-			(e: any) =>
-				e.feature_id === features.metered1.id &&
-				e.interval ===
-					products.oneTimeAddOnMetered1.entitlements.metered1.interval,
+		const proProduct = cusRes.products.find(
+			(p: any) => p.id === sharedProProduct.id,
 		);
+		expect(proProduct.canceled_at).not.toBe(null);
+		expect(proProduct.status).toBe(CusProductStatus.Active);
 
-		const expectedAmt = oneTimeQuantity * oneTimePurchaseCount;
-
-		expect(addOnBalance!.balance).toBe(expectedAmt);
-
-		expect(cusRes.add_ons).toHaveLength(1);
-		expect(cusRes.add_ons[0].id).toBe(oneTime.id);
-		expect(cusRes.invoices.length).toBe(1 + oneTimePurchaseCount);
+		const freeProduct = cusRes.products.find(
+			(p: any) => p.id === sharedDefaultFree.id,
+		);
+		expect(freeProduct).toBeDefined();
+		expect(freeProduct.status).toBe(CusProductStatus.Scheduled);
 	});
 
-	test("should have correct /check result for metered1", async () => {
-		const res: any = await AutumnCli.entitled(customerId, features.metered1.id);
-
-		expect(res!.allowed).toBe(true);
-
-		const proMetered1Amt = products.pro.entitlements.metered1.allowance;
-		const addOnBalance = res!.balances.find(
-			(b: any) => b.feature_id === features.metered1.id,
+	test("should cancel pro product (now)", async () => {
+		const cusRes: any = await AutumnCli.getCustomer(customerId);
+		const proProduct = cusRes.products.find(
+			(p: any) => p.id === sharedProProduct.id,
 		);
 
-		expect(res!.allowed).toBe(true);
-		expect(addOnBalance!.balance).toBe(
-			proMetered1Amt! + oneTimeQuantity * oneTimePurchaseCount,
-		);
+		for (const subId of proProduct.subscription_ids) {
+			await stripeCli.subscriptions.cancel(subId);
+		}
+		await timeout(5000);
+	});
+
+	test("should have free product active, and no pro product", async () => {
+		const cusRes: any = await AutumnCli.getCustomer(customerId);
+		await expectCustomerV0Correct({
+			sent: sharedDefaultFree,
+			cusRes: cusRes,
+		});
 	});
 });

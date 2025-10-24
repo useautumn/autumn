@@ -1,7 +1,7 @@
 import {
+	type CreateCustomerParams,
 	CusExpand,
 	CusProductStatus,
-	type CustomerData,
 	type Entity,
 	type EntityData,
 	type FullCustomer,
@@ -37,7 +37,7 @@ export const getOrCreateCustomer = async ({
 }: {
 	req: ExtendedRequest;
 	customerId: string | null;
-	customerData?: CustomerData;
+	customerData?: CreateCustomerParams;
 	inStatuses?: CusProductStatus[];
 	skipGet?: boolean;
 	withEntities?: boolean;
@@ -92,7 +92,9 @@ export const getOrCreateCustomer = async ({
 					fingerprint: customerData?.fingerprint,
 					metadata: customerData?.metadata || {},
 					stripe_id: customerData?.stripe_id,
+					default_product_id: customerData?.default_product_id,
 				},
+				createDefaultProducts: customerData?.disable_default !== true,
 			})) as FullCustomer;
 
 			customer = await CusService.getFull({

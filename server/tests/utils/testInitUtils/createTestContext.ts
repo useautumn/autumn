@@ -9,13 +9,13 @@ const __dirname = dirname(__filename);
 // dotenv.config({ path: resolve(__dirname, ".env") });
 dotenv.config({ path: resolve(__dirname, "..", "..", "..", ".env") });
 
-import { AppEnv, type Organization } from "@autumn/shared";
+import { AppEnv, type Feature, type Organization } from "@autumn/shared";
 import type Stripe from "stripe";
 import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
-const ORG_SLUG = process.env.TESTS_ORG!;
 const DEFAULT_ENV = AppEnv.Sandbox;
 
 export type TestContext = {
@@ -23,22 +23,55 @@ export type TestContext = {
 	env: AppEnv;
 	stripeCli: Stripe;
 	db: DrizzleCli;
+	orgSecretKey: string;
+	features: Feature[];
 };
 
 export const createTestContext = async () => {
 	const { db } = initDrizzle();
 
-	const org = await OrgService.getBySlug({ db, slug: ORG_SLUG });
-	if (!org) throw new Error("Org not found");
+	// Support dynamic org slug from environment (for parallel test groups)
+	// Falls back to TESTS_ORG for legacy tests
+	const orgSlug = process.env.TESTS_ORG;
+	if (!orgSlug) {
+		throw new Error(
+			"TESTS_ORG environment variable is required (set by test runner)",
+		);
+	}
+
+	const org = await OrgService.getBySlug({ db, slug: orgSlug });
+	if (!org) {
+		throw new Error(`Org with slug "${orgSlug}" not found`);
+	}
 
 	const env = DEFAULT_ENV;
 	const stripeCli = createStripeCli({ org, env });
+
+	// Get org secret key for API calls
+	// Priority: 1. Environment variable (set by test runner), 2. Org's secret_keys field
+	const orgSecretKey =
+		process.env.UNIT_TEST_AUTUMN_SECRET_KEY || org.secret_keys?.[env] || "";
+	if (!orgSecretKey) {
+		throw new Error(
+			`No secret key found for org "${orgSlug}" in environment "${env}". ` +
+				`Make sure UNIT_TEST_AUTUMN_SECRET_KEY is set or org has secret_keys.${env}`,
+		);
+	}
+
+	// Fetch and cache features for this org
+	const features = await FeatureService.list({
+		db,
+		orgId: org.id,
+		env,
+	});
 
 	return {
 		org,
 		env,
 		stripeCli,
 		db,
+		orgSecretKey,
+		features,
 	};
 };
 
