@@ -1,12 +1,12 @@
-import { AnalyticsService } from "@/internal/analytics/AnalyticsService.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { routeHandler } from "@/utils/routerUtils.js";
-import { ErrCode, FullCustomer } from "@autumn/shared";
+import { ErrCode, type FullCustomer } from "@autumn/shared";
 import { format } from "date-fns";
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
 import z from "zod";
+import { AnalyticsService } from "@/internal/analytics/AnalyticsService.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { routeHandler } from "@/utils/routerUtils.js";
 
 const analyticsRouter = Router();
 
@@ -60,7 +60,7 @@ analyticsRouter.post("", (req, res) =>
 			if (Array.isArray(feature_id)) featureIds = feature_id;
 			else featureIds = [feature_id];
 
-			let events = await AnalyticsService.getTimeseriesEvents({
+			const events = await AnalyticsService.getTimeseriesEvents({
 				req,
 				params: {
 					interval: range,
@@ -83,7 +83,7 @@ analyticsRouter.post("", (req, res) =>
 				event["period"] = parseInt(format(new Date(event["period"]), "T"));
 			});
 
-			let usageList = events.data.filter(
+			const usageList = events.data.filter(
 				(event: any) => event.period <= Date.now(),
 			);
 
