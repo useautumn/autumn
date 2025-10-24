@@ -5,6 +5,7 @@ import { useCustomer } from "autumn-js/react";
 import { useState } from "react";
 import { useOrg } from "@/hooks/common/useOrg";
 import OnboardingCheckoutDialog from "@/views/onboarding3/OnboardingCheckoutDialog";
+import { useOnboardingStore } from "@/views/onboarding3/store/useOnboardingStore";
 import { PlanCardPreview } from "./PlanCardPreview";
 
 interface PricingTableProps {
@@ -23,6 +24,9 @@ export default function PricingTablePreview({
 			refreshInterval: 0,
 		},
 	});
+	const setLastUsedProductId = useOnboardingStore(
+		(state) => state.setLastUsedProductId,
+	);
 	const [loadingProductId, setLoadingProductId] = useState<string | null>(null);
 
 	if (!products || products.length === 0) {
@@ -30,10 +34,9 @@ export default function PricingTablePreview({
 	}
 
 	const handleSubscribe = async (product: ProductV2) => {
-		// Check if Stripe is connected (works for both OAuth and API key)
-		if (!org || org.stripe_connection === "default") {
-			setConnectStripeOpen(true);
-			return;
+		// Track the product ID that was clicked
+		if (product.id) {
+			setLastUsedProductId(product.id);
 		}
 
 		if (product.id) {
@@ -84,7 +87,7 @@ export default function PricingTablePreview({
 		} else if (productCount === 2) {
 			return "flex flex-col gap-6 max-w-2xl mx-auto px-4 sm:grid sm:grid-cols-2 sm:flex-none"; // Vertical on mobile, 2 columns on sm+
 		} else {
-			return "flex flex-col gap-6 max-w-7xl mx-auto px-4 sm:grid md:grid-cols-2 xl:grid-cols-3 sm:flex-none"; // Vertical on mobile, 2 columns on sm+, 3 on lg+
+			return "flex flex-col gap-6 max-w-7xl mx-auto px-4 sm:grid lg:grid-cols-2 2xl:grid-cols-3 sm:flex-none"; // Vertical on mobile, 2 columns on sm+, 3 on lg+
 		}
 	};
 

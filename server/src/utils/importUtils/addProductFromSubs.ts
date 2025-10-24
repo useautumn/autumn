@@ -88,6 +88,8 @@ export const addProductFromSubs = async ({
 		sub,
 	});
 
+	const disableFreeTrial = true;
+
 	const newCusProduct = await createFullCusProduct({
 		db,
 		attachParams: {
@@ -108,10 +110,12 @@ export const addProductFromSubs = async ({
 			entityId: entity?.id,
 			isCustom: isCustom,
 		},
+
+		disableFreeTrial,
 		logger,
 		trialEndsAt: trialEndsAt || undefined,
 		subscriptionIds: sub ? [sub.id] : [],
-		anchorToUnix: anchorToUnix || end,
+		anchorToUnix: anchorToUnix || end * 1000,
 
 		subscriptionStatus: sub?.status
 			? (stripeToAutumnSubStatus(sub?.status) as CusProductStatus)

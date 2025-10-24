@@ -1,59 +1,52 @@
+import React from "react";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { isFeatureItem, isFeaturePriceItem } from "@/utils/product/getItemType";
 import { useProductItemContext } from "../ProductItemContext";
-import { BillingInterval, FeatureUsageType, Infinite } from "@autumn/shared";
+import FeaturePrice from "./components/feature-price/FeaturePrice";
 import { SelectCycle } from "./components/feature-price/SelectBillingCycle";
 import { IncludedUsage } from "./components/IncludedUsage";
 import { SelectResetCycle } from "./components/SelectResetCycle";
-import FeaturePrice from "./components/feature-price/FeaturePrice";
-import { isFeatureItem, isFeaturePriceItem } from "@/utils/product/getItemType";
-import React from "react";
-
-import { notNullish } from "@/utils/genUtils";
-import {
-	getFeature,
-	getFeatureUsageType,
-} from "@/utils/product/entitlementUtils";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export const FeatureConfig = () => {
 	const { features } = useFeaturesQuery();
 	const { item, setItem } = useProductItemContext();
 
-	if (!item.feature_id) return null;
+	if (!item?.feature_id) return null;
 
 	const isFeaturePrice = isFeaturePriceItem(item);
 	const isFeature = isFeatureItem(item);
 
-	const handleAddUsagePrice = () => {
-		const newIncludedUsage =
-			item.included_usage == Infinite ? 0 : item.included_usage;
+	// const handleAddUsagePrice = () => {
+	// 	const newIncludedUsage =
+	// 		item.included_usage == Infinite ? 0 : item.included_usage;
 
-		let newInterval = item.interval;
-		if (
-			notNullish(item.interval) &&
-			!Object.values(BillingInterval).includes(item.interval)
-		) {
-			newInterval = BillingInterval.Month;
-		}
+	// 	let newInterval = item.interval;
+	// 	if (
+	// 		notNullish(item.interval) &&
+	// 		!Object.values(BillingInterval).includes(item.interval)
+	// 	) {
+	// 		newInterval = BillingInterval.Month;
+	// 	}
 
-		setItem({
-			...item,
-			included_usage: newIncludedUsage,
-			tiers: [{ to: Infinite, amount: 0 }],
-			interval: newInterval,
-		});
-	};
+	// 	setItem({
+	// 		...item,
+	// 		included_usage: newIncludedUsage,
+	// 		tiers: [{ to: Infinite, amount: 0 }],
+	// 		interval: newInterval,
+	// 	});
+	// };
 
-	const price =
-		getFeatureUsageType({ item, features }) == FeatureUsageType.Continuous
-			? "10"
-			: "1";
+	// const price =
+	// 	getFeatureUsageType({ item, features }) == FeatureUsageType.Continuous
+	// 		? "10"
+	// 		: "1";
 
-	const feature = getFeature(item?.feature_id, features);
+	// const feature = getFeature(item?.feature_id, features);
 
 	return (
 		<>
 			{isFeature && (
-				<div className="flex items-center gap-2 w-full">
+				<div className="flex items-start gap-2 w-full">
 					<IncludedUsage />
 					<SelectResetCycle />
 				</div>

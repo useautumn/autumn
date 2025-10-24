@@ -3,6 +3,7 @@ import {
 	member,
 	type Organization,
 	organizations,
+	RecaseError,
 	user as userTable,
 } from "@autumn/shared";
 import { generateId } from "better-auth";
@@ -82,19 +83,25 @@ export const handleCreatePlatformOrg = createRoute({
 			)
 			.limit(1);
 
-		const orgExists = OrgService.getBySlug({
+		const orgExists = await OrgService.getBySlug({
 			db,
 			slug: orgSlug,
 		});
 
-		let org: Organization;
+		if (orgExists && existingMembership.length === 0) {
+			throw new RecaseError({
+				message: `Organization with slug '${orgSlug}' already exists but ${user_email} is not a member`,
+			});
+		}
+
+		let org: Organization & { master?: Organization | null };
 		if (existingMembership.length === 0) {
 			// Create new organization
 			const orgId = generateId();
 
 			console.log(`Creating new organization: ${orgId} (${orgSlug})`);
 
-			[org] = await db
+			const [insertedOrg] = await db
 				.insert(organizations)
 				.values({
 					id: orgId,
@@ -106,6 +113,8 @@ export const handleCreatePlatformOrg = createRoute({
 					created_by: masterOrg.id,
 				})
 				.returning();
+
+			org = { ...insertedOrg, master: masterOrg };
 
 			// Create membership
 			await db.insert(member).values({
@@ -121,7 +130,7 @@ export const handleCreatePlatformOrg = createRoute({
 
 			logger.info(`Created new organization: ${org.id} (${orgSlug})`);
 		} else {
-			org = existingMembership[0].organizations;
+			org = { ...existingMembership[0].organizations, master: masterOrg };
 			logger.info(`Found existing organization: ${org.id} (${orgSlug})`);
 		}
 

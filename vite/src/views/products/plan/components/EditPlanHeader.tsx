@@ -141,9 +141,11 @@ export const EditPlanHeader = () => {
 								size="sm"
 							/>
 						)}
+
 						<IconBadge variant="muted" icon={<UserIcon />}>
 							{counts?.active || 0}
 						</IconBadge>
+
 						<PlanToolbar />
 					</div>
 
