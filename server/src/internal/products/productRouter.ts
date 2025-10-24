@@ -154,5 +154,4 @@ export const honoProductRouter = new Hono<HonoEnv>();
 
 // POST /products - Create a product
 honoProductRouter.post("", ...createProduct);
-honoProductRouter.patch("/:productId", ...handleUpdateProductV2);
 honoProductRouter.post("/:productId", ...handleUpdateProductV2); // will be deprecated

@@ -68,7 +68,7 @@ export const mapOptionsList = ({
 	if (isOneOff(prices) || isFreeProduct(prices)) return newOptionsList;
 
 	const curOptionsList = curCusProduct?.options || [];
-	console.log("Current options list:", curOptionsList);
+
 	for (const option of curOptionsList) {
 		const inNewOptions = newOptionsList.find(
 			(newOption) => newOption.feature_id === option.feature_id,
@@ -83,8 +83,6 @@ export const mapOptionsList = ({
 			newOptionsList.push(option);
 		}
 	}
-
-	console.log(`New options list:`, newOptionsList);
 
 	return newOptionsList;
 };

@@ -1,37 +1,34 @@
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-
 import {
-	AttachReplaceable,
+	type AttachReplaceable,
 	BillingType,
-	FullCusProduct,
-	FullCustomerEntitlement,
-	FullEntitlement,
+	type FullCusProduct,
+	type FullCustomerEntitlement,
+	type FullEntitlement,
 	getFeatureInvoiceDescription,
-	intervalsSame,
-	PreviewLineItem,
-	Price,
+	type PreviewLineItem,
+	type Price,
 } from "@autumn/shared";
-import Stripe from "stripe";
-import { attachParamsToProduct } from "../convertAttachParams.js";
-import {
-	getBillingType,
-	getPriceEntitlement,
-	getPriceForOverage,
-} from "@/internal/products/prices/priceUtils.js";
+import { Decimal } from "decimal.js";
+import type Stripe from "stripe";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { findCusEnt } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
 import {
 	getExistingUsageFromCusProducts,
 	getRelatedCusPrice,
 } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
-import { subToAutumnInterval } from "@/external/stripe/utils.js";
-import { Decimal } from "decimal.js";
-import { getCurContUseItems } from "@/internal/invoices/previewItemUtils/getCurContUseItems.js";
-import { intervalsAreSame } from "../getAttachConfig.js";
 import { newPriceToInvoiceDescription } from "@/internal/invoices/invoiceFormatUtils.js";
+import { getCurContUseItems } from "@/internal/invoices/previewItemUtils/getCurContUseItems.js";
 import { getDefaultPriceStr } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
 import { priceToUsageModel } from "@/internal/products/prices/priceUtils/convertPrice.js";
-import { priceToContUseItem } from "./priceToContUseItem.js";
 import { shouldProrate } from "@/internal/products/prices/priceUtils/prorationConfigUtils.js";
+import {
+	getBillingType,
+	getPriceEntitlement,
+	getPriceForOverage,
+} from "@/internal/products/prices/priceUtils.js";
+import { attachParamsToProduct } from "../convertAttachParams.js";
+import { intervalsAreSame } from "../getAttachConfig.js";
+import { priceToContUseItem } from "./priceToContUseItem.js";
 
 export const getContUseNewItems = async ({
 	price,
@@ -56,14 +53,14 @@ export const getContUseNewItems = async ({
 		internalEntityId: attachParams.internalEntityId,
 	});
 
-	let description = newPriceToInvoiceDescription({
+	const description = newPriceToInvoiceDescription({
 		org,
 		price,
 		product: newProduct,
 		quantity: usage,
 	});
 
-	if (usage == 0) {
+	if (usage === 0) {
 		return {
 			price_id: price.id,
 			price: getDefaultPriceStr({ org, price, ent, features }),
@@ -80,8 +77,8 @@ export const getContUseNewItems = async ({
 			prevCusEnt &&
 			!shouldProrate(price.proration_config?.on_decrease)
 		) {
-			let isDowngrade = ent.allowance! > prevCusEnt.entitlement.allowance!;
-			let prevBalance = prevCusEnt.balance!;
+			const isDowngrade = ent.allowance! > prevCusEnt.entitlement.allowance!;
+			const prevBalance = prevCusEnt.balance!;
 
 			if (isDowngrade && prevBalance < 0) {
 				overage = new Decimal(prevBalance).abs().toNumber();
@@ -89,8 +86,8 @@ export const getContUseNewItems = async ({
 			}
 		}
 
-		let amount = getPriceForOverage(price, overage);
-		let description = getFeatureInvoiceDescription({
+		const amount = getPriceForOverage(price, overage);
+		const description = getFeatureInvoiceDescription({
 			feature: ent.feature,
 			usage: usage,
 			prodName: newProduct.name,
@@ -130,28 +127,33 @@ export const getContUseInvoiceItems = async ({
 			})
 		: [];
 
-	let newEnts = product.entitlements;
-	let oldItems: PreviewLineItem[] = [];
-	let newItems: PreviewLineItem[] = [];
-	let replaceables: AttachReplaceable[] = [];
+	const newEnts = product.entitlements;
+	const oldItems: PreviewLineItem[] = [];
+	const newItems: PreviewLineItem[] = [];
+	const replaceables: AttachReplaceable[] = [];
 
 	for (const price of product.prices) {
-		let billingType = getBillingType(price.config);
+		const billingType = getBillingType(price.config);
 		if (billingType !== BillingType.InArrearProrated) {
 			continue;
 		}
 
-		let ent = getPriceEntitlement(price, newEnts);
-		let prevCusEnt = findCusEnt({
+		const ent = getPriceEntitlement(price, newEnts);
+
+		const prevCusEnt = findCusEnt({
 			cusEnts,
 			feature: ent.feature,
 		});
 
-		let prevCusPrice = prevCusEnt
+		const prevCusPrice = prevCusEnt
 			? getRelatedCusPrice(prevCusEnt, cusPrices)!
 			: undefined;
 
-		if (!prevCusEnt || !sub) {
+		const curItem = curItems.find(
+			(item) => item.price_id === prevCusPrice?.price.id,
+		);
+
+		if (!prevCusEnt || !sub || !curItem) {
 			const newItem = await getContUseNewItems({
 				price,
 				ent,
@@ -159,24 +161,20 @@ export const getContUseInvoiceItems = async ({
 				prevCusEnt,
 			});
 
-			const prevItem = curItems.find(
-				(item) => item.price_id === prevCusPrice?.price.id,
-			);
+			// const prevItem = curItems.find(
+			// 	(item) => item.price_id === prevCusPrice?.price.id,
+			// );
 
 			newItems.push(newItem);
 
-			if (prevItem) {
-				oldItems.push(prevItem);
+			if (curItem) {
+				oldItems.push(curItem);
 			}
 
 			continue;
 		}
 
-		const curItem = curItems.find(
-			(item) => item.price_id === prevCusPrice?.price.id,
-		);
-
-		let {
+		const {
 			oldItem,
 			newItems: newItems_,
 			replaceables: replaceables_,

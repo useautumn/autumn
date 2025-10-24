@@ -67,7 +67,7 @@ export const productOps = {
 				},
 			},
 		},
-		patch: {
+		post: {
 			summary: "Update Product",
 			tags: ["products"],
 			requestParams: {
