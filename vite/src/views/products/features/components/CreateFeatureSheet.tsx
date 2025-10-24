@@ -27,9 +27,13 @@ import { getDefaultFeature } from "../utils/defaultFeature";
 function CreateFeatureSheet({
 	open: controlledOpen,
 	onOpenChange: controlledOnOpenChange,
+	onSuccess,
+	isControlled = false,
 }: {
 	open?: boolean;
 	onOpenChange?: (open: boolean) => void;
+	onSuccess?: (featureId: string) => void;
+	isControlled?: boolean;
 } = {}) {
 	const [loading, setLoading] = useState(false);
 	const [internalOpen, setInternalOpen] = useState(false);
@@ -55,17 +59,24 @@ function CreateFeatureSheet({
 			setLoading(false);
 		} else {
 			try {
-				await FeatureService.createFeature(axiosInstance, {
-					name: feature.name,
-					id: feature.id,
-					type: feature.type,
-					config: feature.config,
-					event_names: feature.event_names,
-				});
+				const { data: createdFeature } = await FeatureService.createFeature(
+					axiosInstance,
+					{
+						name: feature.name,
+						id: feature.id,
+						type: feature.type,
+						config: feature.config,
+						event_names: feature.event_names,
+					},
+				);
 
 				await refetch();
 				toast.success("Feature created successfully");
 				setOpen(false);
+
+				if (onSuccess && createdFeature.id) {
+					onSuccess(createdFeature.id);
+				}
 			} catch (error: unknown) {
 				toast.error(
 					getBackendErr(error as AxiosError, "Failed to create feature"),
@@ -90,22 +101,18 @@ function CreateFeatureSheet({
 
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
-			<SheetTrigger asChild>
-				<Button variant="add" className="w-full">
-					Feature
-				</Button>
-			</SheetTrigger>
+			{!isControlled && (
+				<SheetTrigger asChild>
+					<Button variant="add" className="w-full">
+						Feature
+					</Button>
+				</SheetTrigger>
+			)}
 			<SheetContent className="flex flex-col overflow-hidden">
 				<SheetHeader
 					title="Create new feature"
 					description="Configure how this feature is used in your app"
 				/>
-				{/* <SheetHeader>
-					<SheetTitle>New Feature</SheetTitle>
-					<SheetDescription>
-						Configure how this feature is used in your app
-					</SheetDescription>
-				</SheetHeader> */}
 
 				<div className="flex-1 overflow-y-auto">
 					<NewFeatureDetails feature={feature} setFeature={setFeature} />

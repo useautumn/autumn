@@ -1,4 +1,4 @@
-import Stripe from "stripe";
+import type Stripe from "stripe";
 
 export const getLatestPeriodEnd = ({
 	sub,
@@ -34,7 +34,7 @@ export const getEarliestPeriodStart = ({
 }: {
 	sub: Stripe.Subscription;
 }) => {
-	if (sub.items.data.length == 0) {
+	if (sub.items.data.length === 0) {
 		return Date.now();
 	}
 
@@ -43,7 +43,7 @@ export const getEarliestPeriodStart = ({
 	}, sub.items.data[0].current_period_start);
 };
 export const getLatestPeriodStart = ({ sub }: { sub: Stripe.Subscription }) => {
-	if (sub.items.data.length == 0) {
+	if (sub.items.data.length === 0) {
 		return Date.now();
 	}
 
@@ -53,7 +53,7 @@ export const getLatestPeriodStart = ({ sub }: { sub: Stripe.Subscription }) => {
 };
 
 export const subToPeriodStartEnd = ({ sub }: { sub?: Stripe.Subscription }) => {
-	if (!sub || sub.items.data.length == 0) {
+	if (!sub || sub.items.data.length === 0) {
 		return {
 			start: Date.now(),
 			end: Date.now(),

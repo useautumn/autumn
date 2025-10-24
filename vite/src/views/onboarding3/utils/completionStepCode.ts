@@ -11,10 +11,14 @@ export const getCodeSnippets = (
 		allowed: {
 			react: `import { useCustomer } from 'autumn-js/react';
 
-const { allowed } = useCustomer();
+const { check } = useCustomer();
 
 const handleCheckFeature = async () => {
-  if ( !allowed({ featureId: '${actualFeatureId}' }) ) {
+  const { data } = await check({
+    featureId: '${actualFeatureId}',
+    requiredQuantity: 1
+  });
+  if (!data?.allowed) {
     alert('Feature not allowed');
   }
 }`,
@@ -24,7 +28,7 @@ const autumn = new Autumn({
   apiKey: process.env.AUTUMN_API_KEY
 });
 
-const allowed = await autumn.check({
+const { data, error } = await autumn.check({
   customerId: 'cust_123',
   featureId: '${actualFeatureId}'
 });`,
@@ -92,21 +96,9 @@ console.log(session.checkout_url);`,
 		track: {
 			react: `import { useCustomer } from 'autumn-js/react';
 
-const { check, track } = useCustomer();
+const { track } = useCustomer();
 
 const handleAction = async () => {
-  // 1. Check if user has access first
-  const { data } = await check({
-    featureId: '${actualFeatureId}',
-    requiredQuantity: 1
-  });
-
-  if (!data?.allowed) {
-    alert("You've reached your limit!");
-    return;
-  }
-
-  // 2. Track usage after successful check
   await track({
     featureId: '${actualFeatureId}',
     value: 1,

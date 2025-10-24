@@ -2,9 +2,9 @@ import { beforeAll, describe, test } from "bun:test";
 import chalk from "chalk";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { features, products } from "tests/global.js";
+import { compareMainProduct } from "tests/utils/compare.js";
 import { timeout } from "tests/utils/genUtils.js";
 import { completeCheckoutForm } from "tests/utils/stripeUtils.js";
-import { compareMainProduct } from "tests/utils/compare.js";
 import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 
