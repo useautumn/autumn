@@ -22,9 +22,7 @@ export enum TestFeature {
 	Credits = "credits", // credit system
 }
 
-const orgId = process.env.TESTS_ORG_ID!;
-
-export const features = {
+export const getFeatures = ({ orgId }: { orgId: string }) => ({
 	[TestFeature.Dashboard]: constructBooleanFeature({
 		featureId: TestFeature.Dashboard,
 		orgId,
@@ -86,4 +84,4 @@ export const features = {
 			},
 		],
 	}),
-};
+});

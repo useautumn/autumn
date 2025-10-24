@@ -90,7 +90,7 @@ export const constructProduct = ({
 		is_add_on: productData.is_add_on,
 		is_default: productData.is_default,
 		version: productData.version || 1,
-		group: productData.group,
+		group: productData.group || "",
 
 		env,
 		internal_id: generateId("prod"),

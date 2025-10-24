@@ -1,22 +1,69 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { CusProductStatus } from "@autumn/shared";
+import {
+	ApiVersion,
+	CusProductStatus,
+	FreeTrialDuration,
+	ProductItemInterval,
+} from "@autumn/shared";
 import chalk from "chalk";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { products } from "tests/global.js";
-import { compareMainProduct } from "tests/utils/compare.js";
+import { TestFeature } from "tests/setup/v2Features.js";
+import { expectCustomerV0Correct } from "tests/utils/expectUtils/expectCustomerV0Correct.js";
 import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+
+// Pro product with trial (matches global products.proWithTrial)
+const proWithTrial = constructProduct({
+	type: "pro",
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Dashboard,
+			isBoolean: true,
+		}),
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 10,
+			interval: ProductItemInterval.Month,
+		}),
+		constructFeatureItem({
+			featureId: TestFeature.Admin,
+			unlimited: true,
+		}),
+	],
+	freeTrial: {
+		length: 7,
+		duration: FreeTrialDuration.Day,
+		unique_fingerprint: true,
+		card_required: true,
+	},
+});
 
 const testCase = "basic8";
+const customerId = testCase;
+const customerId2 = `${testCase}2`;
 
 describe(`${chalk.yellowBright("basic8: Testing trial duplicates (same fingerprint)")}`, () => {
-	const customerId = testCase;
-	const customerId2 = testCase + "2";
-	const autumn = new AutumnInt();
+	const autumnV1 = new AutumnInt({
+		secretKey: ctx.orgSecretKey,
+		version: ApiVersion.V1_2,
+	});
+
 	const randFingerprint = Math.random().toString(36).substring(2, 15);
 
 	beforeAll(async () => {
+		// Create products FIRST before customer creation
+		await initProductsV0({
+			ctx,
+			products: [proWithTrial],
+			prefix: testCase,
+			customerIds: [customerId, customerId2],
+		});
+
+		// Create first customer with fingerprint
 		await initCustomerV3({
 			ctx,
 			customerId,
@@ -25,6 +72,7 @@ describe(`${chalk.yellowBright("basic8: Testing trial duplicates (same fingerpri
 			withTestClock: true,
 		});
 
+		// Create second customer with same fingerprint
 		await initCustomerV3({
 			ctx,
 			customerId: customerId2,
@@ -35,15 +83,15 @@ describe(`${chalk.yellowBright("basic8: Testing trial duplicates (same fingerpri
 	});
 
 	test("should attach pro with trial and have correct product & invoice", async () => {
-		await AutumnCli.attach({
-			customerId: customerId,
-			productId: products.proWithTrial.id,
+		await autumnV1.attach({
+			customer_id: customerId,
+			product_id: proWithTrial.id,
 		});
 
 		const customer = await AutumnCli.getCustomer(customerId);
 
-		compareMainProduct({
-			sent: products.proWithTrial,
+		await expectCustomerV0Correct({
+			sent: proWithTrial,
 			cusRes: customer,
 			status: CusProductStatus.Trialing,
 		});
@@ -54,21 +102,21 @@ describe(`${chalk.yellowBright("basic8: Testing trial duplicates (same fingerpri
 	});
 
 	test("should attach pro with trial to second customer and have correct product & invoice (pro with trial, full price)", async () => {
-		await autumn.attach({
+		await autumnV1.attach({
 			customer_id: customerId2,
-			product_id: products.proWithTrial.id,
+			product_id: proWithTrial.id,
 		});
 
 		const customer = await AutumnCli.getCustomer(customerId2);
 
-		compareMainProduct({
-			sent: products.proWithTrial,
+		await expectCustomerV0Correct({
+			sent: proWithTrial,
 			cusRes: customer,
 			status: CusProductStatus.Active,
 		});
 
 		const invoices = customer.invoices;
 		expect(invoices.length).toBe(1);
-		expect(invoices[0].total).toBe(10);
+		expect(invoices[0].total).toBe(20);
 	});
 });
