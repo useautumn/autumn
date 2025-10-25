@@ -5,6 +5,9 @@
 - JS Doc comments should be SHORT and SWEET. Don't need examples unless ABSOLUTELY necessary
 - When using db schemas in Drizzle, import them from '@autumn/shared', and don't do schemas.
 
+# Testing
+- When writing tests, ALWAYS consult the corresponding guide in `server/tests/_guides/` to understand the proper patterns and structure. For example, when writing `/check` endpoint tests, read `server/tests/_guides/check-endpoint-tests.md` first.
+
 # Linting and Codebase rules
 - You can access the biome linter by running `bunx biome check <folder or file path>`. Always specify a folder path, as the codebase is quite large and you will get out of scope errors that you are not burdened to correct. If you would like to let biome automatically fix as much as it can, use  `bunx biome check --write <folder or file path>`
 
