@@ -50,6 +50,16 @@ export const getV2CheckResponse = async ({
 		});
 	}
 
+	// if (cusEnts.length === 0) {
+	// 	return CheckResultSchema.parse({
+	// 		allowed: false,
+	// 		customer_id: fullCus.id || fullCus.internal_id,
+	// 		feature_id: featureToUse.id,
+	// 		required_balance: requiredBalance,
+	// 		code: SuccessCode.FeatureFound,
+	// 	});
+	// }
+
 	const apiCusFeature = getApiCusFeature({
 		ctx,
 		fullCus,
