@@ -10,7 +10,6 @@ if [ "$1" == "custom" ]; then
     else
         npx mocha --bail --timeout 10000000 "tests/$FILE_TO_TEST.ts"
     fi
-
 fi
 
 # MOCHA_SETUP="npx mocha tests/00_setup.ts"

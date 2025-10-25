@@ -1,4 +1,10 @@
-import { type CheckParams, CheckParamsSchema } from "@autumn/shared";
+import {
+	AffectedResource,
+	applyResponseVersionChanges,
+	type CheckParams,
+	CheckParamsSchema,
+	type CheckResult,
+} from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getCheckData } from "./checkUtils/getCheckData.js";
 import { getV2CheckResponse } from "./checkUtils/getV2CheckResponse.js";
@@ -82,7 +88,19 @@ export const handleCheck = createRoute({
 			requiredBalance,
 		});
 
-		return c.json(v2Response);
+		console.log("API Version:", ctx.apiVersion.value);
+		// console.log("V2 Response:", v2Response);
+
+		// Apply version transformations based on API version
+		const transformedResponse = applyResponseVersionChanges<CheckResult>({
+			input: v2Response,
+			targetVersion: ctx.apiVersion,
+			resource: AffectedResource.Check,
+		});
+
+		// console.log("Transformed Response:", transformedResponse);
+
+		return c.json(transformedResponse);
 
 		// const { allowed, balance } = v2Response;
 		// const featureToUse = allFeatures.find(
@@ -151,7 +169,6 @@ export const handleCheck = createRoute({
 		// 	});
 		// }
 
-		return c.json({ success: true });
 		// const body = c.req.valid("json");
 		// const res = await handleCheck(body);
 		// return c.json(res);

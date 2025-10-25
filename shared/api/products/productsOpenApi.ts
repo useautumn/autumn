@@ -1,14 +1,15 @@
+import { SuccessResponseSchema } from "@api/common/commonResponses.js";
+import { z } from "zod/v4";
+import { ApiProductSchema, PRODUCT_EXAMPLE } from "./apiProduct.js";
 import {
 	CreateProductV2ParamsSchema,
 	UpdateProductV2ParamsSchema,
-} from "@api/models.js";
-import { z } from "zod/v4";
-import { ApiProductSchema } from "./apiProduct.js";
+} from "./productOpModels.js";
 
 // Register schema with .meta() for OpenAPI spec generation
-const ApiProductWithMeta = ApiProductSchema.meta({
-	id: "Product",
-	description: "A product",
+export const ApiProductWithMeta = ApiProductSchema.meta({
+	// id: "Product",
+	examples: [PRODUCT_EXAMPLE],
 });
 
 export const productOps = {
@@ -16,14 +17,14 @@ export const productOps = {
 		get: {
 			summary: "List Products",
 			tags: ["products"],
-			requestParams: {
-				query: z.object({
-					customer_id: z.string().optional(),
-				}),
-			},
+			// requestParams: {
+			// 	query: z.object({
+			// 		customer_id: z.string().optional(),
+			// 	}),
+			// },
 			responses: {
 				"200": {
-					description: "200 OK",
+					description: "",
 					content: {
 						"application/json": {
 							schema: z.object({
@@ -44,7 +45,7 @@ export const productOps = {
 			},
 			responses: {
 				"200": {
-					description: "200 OK",
+					description: "",
 					content: { "application/json": { schema: ApiProductWithMeta } },
 				},
 			},
@@ -61,25 +62,17 @@ export const productOps = {
 			},
 			responses: {
 				"200": {
-					description: "Product retrieved successfully",
+					description: "",
 					content: { "application/json": { schema: ApiProductWithMeta } },
-				},
-				"404": {
-					description: "Product not found",
 				},
 			},
 		},
-		patch: {
+		post: {
 			summary: "Update Product",
 			tags: ["products"],
 			requestParams: {
 				path: z.object({
 					product_id: z.string(),
-				}),
-				query: z.object({
-					version: z.string().optional(),
-					upsert: z.string().optional(),
-					disable_version: z.string().optional(),
 				}),
 			},
 			requestBody: {
@@ -89,11 +82,8 @@ export const productOps = {
 			},
 			responses: {
 				"200": {
-					description: "200 OK",
+					description: "",
 					content: { "application/json": { schema: ApiProductWithMeta } },
-				},
-				"404": {
-					description: "Product not found",
 				},
 			},
 		},
@@ -110,21 +100,12 @@ export const productOps = {
 			},
 			responses: {
 				"200": {
-					description: "Product deleted successfully",
+					description: "",
 					content: {
 						"application/json": {
-							schema: z.object({
-								success: z.boolean(),
-							}),
+							schema: SuccessResponseSchema,
 						},
 					},
-				},
-				"400": {
-					description:
-						"Product cannot be deleted because it has been attached to customers",
-				},
-				"404": {
-					description: "Product not found",
 				},
 			},
 		},

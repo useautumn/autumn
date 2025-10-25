@@ -78,6 +78,10 @@ platformBetaRouter.post(
 	"/organization/stripe",
 	...handleUpdateOrganizationStripe,
 );
+platformBetaRouter.post(
+	"/organizations/stripe",
+	...handleUpdateOrganizationStripe,
+);
 
 platformBetaRouter.get("/users", ...listPlatformUsers);
 

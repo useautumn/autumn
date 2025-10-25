@@ -1,5 +1,4 @@
-import { ProductNotFoundError } from "@autumn/shared";
-
+import { ProductNotFoundError, productsAreSame } from "@autumn/shared";
 import { Router } from "express";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
@@ -14,7 +13,6 @@ import { handleDeleteProduct } from "./handlers/handleDeleteProduct.js";
 import { handleGetProduct } from "./handlers/handleGetProduct.js";
 import { handleGetProductDeleteInfo } from "./handlers/handleGetProductDeleteInfo.js";
 import { handleListProductsBeta } from "./handlers/handleListProductsBeta.js";
-import { productsAreSame } from "./productUtils/compareProductUtils.js";
 
 export const productBetaRouter: Router = Router();
 productBetaRouter.get("", handleListProductsBeta);
@@ -156,4 +154,4 @@ export const honoProductRouter = new Hono<HonoEnv>();
 
 // POST /products - Create a product
 honoProductRouter.post("", ...createProduct);
-honoProductRouter.post("/:productId", ...handleUpdateProductV2);
+honoProductRouter.post("/:productId", ...handleUpdateProductV2); // will be deprecated

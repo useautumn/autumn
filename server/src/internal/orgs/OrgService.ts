@@ -133,7 +133,7 @@ export class OrgService {
 		return {
 			...result,
 			config: OrgConfigSchema.parse(result.config || {}),
-		};
+		} as Organization;
 	}
 
 	static async getWithKeys({
