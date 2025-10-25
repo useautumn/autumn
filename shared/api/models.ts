@@ -5,6 +5,10 @@ export * from "./core/checkoutModels.js";
 // NOTE: coreOpenApi.js is NOT exported here - it's only imported by openapi.ts for spec generation
 export * from "./core/coreOpModels.js";
 
+// Helpers
+export * from "./utils/openApiHelpers.js";
+export * from "./utils/zodToJSDoc.js";
+
 // Customers
 
 export * from "./customers/apiCustomer.js";
@@ -37,12 +41,16 @@ export * from "./features/featureOpModels.js";
 // Others
 export * from "./others/apiDiscount.js";
 export * from "./others/apiInvoice.js";
-
 // Product
 export * from "./products/apiFreeTrial.js";
 export * from "./products/apiProduct.js";
 export * from "./products/apiProductItem.js";
 export * from "./products/productOpModels.js";
+export * from "./products/productsOpenApi.js";
+// Referrals
+export * from "./referrals/apiReferralCode.js";
+export * from "./referrals/referralOpModels.js";
+export * from "./referrals/referralsOpenApi.js";
 
 // NOTE: productsOpenApi.js is NOT exported here - it's only imported by openapi.ts for spec generation
 
@@ -50,6 +58,8 @@ export * from "./products/productOpModels.js";
 // export * from "./products/apiProduct.js";
 // export * from "./products/apiProductItem.js";
 
+// Balances
+export * from "./balances/check/previousVersions/CheckResponseV0.js";
 // Errors
 export * from "./errors/index.js";
 // Models

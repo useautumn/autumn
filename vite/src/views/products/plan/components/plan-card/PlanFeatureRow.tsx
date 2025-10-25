@@ -4,6 +4,7 @@ import type { ProductItem } from "@autumn/shared";
 import { getProductItemDisplay, productV2ToFeatureItems } from "@autumn/shared";
 import { TrashIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
+import { AdminHover } from "@/components/general/AdminHover";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useOrg } from "@/hooks/common/useOrg";
@@ -108,6 +109,51 @@ export const PlanFeatureRow = ({
 		}
 	};
 
+	const adminHoverText = () => {
+		return [
+			...(item.entitlement_id
+				? [
+						{
+							key: "Entitlement ID",
+							value: item.entitlement_id || "N/A",
+						},
+					]
+				: []),
+			...(item.price_id
+				? [
+						{
+							key: "Price ID",
+							value: item.price_id || "N/A",
+						},
+					]
+				: []),
+			...(item.price_config?.stripe_price_id
+				? [
+						{
+							key: "Stripe Price ID",
+							value: item.price_config?.stripe_price_id || "N/A",
+						},
+					]
+				: []),
+			...(item.price_config?.stripe_empty_price_id
+				? [
+						{
+							key: "Stripe Empty Price ID",
+							value: item.price_config?.stripe_empty_price_id || "N/A",
+						},
+					]
+				: []),
+			...(item.price_config?.stripe_product_id
+				? [
+						{
+							key: "Stripe Product ID",
+							value: item.price_config?.stripe_product_id || "N/A",
+						},
+					]
+				: []),
+		];
+	};
+
 	return (
 		<div
 			role="button"
@@ -144,23 +190,29 @@ export const PlanFeatureRow = ({
 		>
 			{/* Left side - Icons and text */}
 			<div className="flex flex-row items-center flex-1 gap-4 min-w-0 relative">
-				<div className="flex flex-row items-center gap-1 flex-shrink-0">
-					<PlanFeatureIcon item={item} position="left" />
-					<CustomDotIcon />
-					<PlanFeatureIcon item={item} position="right" />
-				</div>
+				<AdminHover texts={adminHoverText()}>
+					<div className="flex flex-row items-center gap-1 flex-shrink-0">
+						<PlanFeatureIcon item={item} position="left" />
+
+						<CustomDotIcon />
+
+						<PlanFeatureIcon item={item} position="right" />
+					</div>
+				</AdminHover>
 
 				<div className="flex items-center gap-2 flex-1 min-w-0 max-w-[90%] ">
 					<p className="whitespace-nowrap truncate max-w-full">
 						<span className={cn("text-body", !hasFeatureName && "!text-t4")}>
 							{displayText}
 						</span>
+
 						<span className="text-body-secondary">
 							{" "}
 							{display.secondary_text}
 						</span>
 					</p>
 				</div>
+
 				<CopyButton
 					text={item.feature_id || ""}
 					disableActive={true}

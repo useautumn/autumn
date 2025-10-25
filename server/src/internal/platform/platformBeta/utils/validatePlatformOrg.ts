@@ -45,5 +45,8 @@ export const validatePlatformOrg = async ({
 		});
 	}
 
-	return org;
+	return {
+		...org,
+		master: masterOrg,
+	} satisfies Organization;
 };

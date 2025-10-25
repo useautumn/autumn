@@ -1,10 +1,10 @@
-import chalk from "chalk";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { features, products } from "tests/global.js";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { timeout } from "../../utils/genUtils.js";
 import { expect } from "chai";
+import chalk from "chalk";
 import { setupBefore } from "tests/before.js";
+import { AutumnCli } from "tests/cli/AutumnCli.js";
+import { features, products } from "tests/global.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { timeout } from "../../utils/genUtils.js";
 
 const checkEntitledOnProduct = async ({
 	customerId,
@@ -112,7 +112,7 @@ describe(`${chalk.yellowBright(
 	let curAllowance = 0;
 	const oneTimeBillingUnits =
 		products.oneTimeAddOnMetered1.prices[0].config.billing_units!;
-	let oneTimeQuantity = 2 * oneTimeBillingUnits;
+	const oneTimeQuantity = 2 * oneTimeBillingUnits;
 
 	before(async function () {
 		await setupBefore(this);
@@ -134,14 +134,14 @@ describe(`${chalk.yellowBright(
 	//   });
 	// });
 
-	it("should attach pro", async function () {
+	it("should attach pro", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
 			productId: products.pro.id,
 		});
 	});
 
-	it("should have correct entitlements (pro)", async function () {
+	it("should have correct entitlements (pro)", async () => {
 		const used = await checkEntitledOnProduct({
 			customerId: customerId,
 			product: products.pro,
@@ -151,7 +151,7 @@ describe(`${chalk.yellowBright(
 		curAllowance = products.pro.entitlements.metered1.allowance! - used;
 	});
 
-	it("should attach one time top up", async function () {
+	it("should attach one time top up", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
 			productId: products.oneTimeAddOnMetered1.id,
@@ -164,7 +164,7 @@ describe(`${chalk.yellowBright(
 		});
 	});
 
-	it("should have correct entitlements (one time top up)", async function () {
+	it("should have correct entitlements (one time top up)", async () => {
 		// const oneTimeAmt = oneTimeBillingUnits * oneTimeQuantity;
 
 		await checkEntitledOnProduct({
@@ -195,14 +195,14 @@ describe(`${chalk.yellowBright(
 	});
 
 	// PRO WITH OVERAGE
-	it("should attach pro (with overage)", async function () {
+	it("should attach pro (with overage)", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
 			productId: products.proWithOverage.id,
 		});
 	});
 
-	it("should have correct entitlements (pro with overage)", async function () {
+	it("should have correct entitlements (pro with overage)", async () => {
 		await checkEntitledOnProduct({
 			customerId: customerId,
 			product: products.proWithOverage,
@@ -212,7 +212,7 @@ describe(`${chalk.yellowBright(
 		});
 	});
 
-	it("should have correct usage-based balance (balance < 0)", async function () {
+	it("should have correct usage-based balance (balance < 0)", async () => {
 		const { allowed, balanceObj }: any = await AutumnCli.entitled(
 			customerId,
 			features.metered1.id,

@@ -1,9 +1,11 @@
 // Import customer feature changes
+
+// Import check changes
+import { V0_2_CheckChange } from "@api/balances/check/changes/V0.2_CheckChange.js";
 import { V0_1_CustomerChange } from "@api/customers/changes/V0_1_CustomerChange.js";
 // Import customer changes
 import { V0_2_CustomerChange } from "@api/customers/changes/V0_2_CustomerChange.js";
 import { V0_2_InvoicesAlwaysExpanded } from "@api/customers/changes/V0_2_InvoicesAlwaysExpanded.js";
-import { V1_1_FeaturesArrayToObject } from "@api/customers/changes/V1_1_FeaturesArrayToObject.js";
 // Import customer product changes
 
 import { ApiVersion } from "../ApiVersion.js";
@@ -15,12 +17,13 @@ export const V1_4_CHANGES: VersionChangeConstructor[] = [
 ];
 
 export const V1_2_CHANGES: VersionChangeConstructor[] = [
-	V1_1_FeaturesArrayToObject, // Transforms TO V1_1
+	// V1_1_FeaturesArrayToObject, // Transforms TO V1_1
 ];
 
 export const V1_1_CHANGES: VersionChangeConstructor[] = [
 	V0_2_CustomerChange, // Transforms TO V0_2: splits structure + transforms features
 	V0_2_InvoicesAlwaysExpanded, // Side effect: invoices always expanded for V0_2 and older
+	V0_2_CheckChange, // Transforms TO V0_2: check response to balances array format
 ];
 
 export const V0_2_CHANGES: VersionChangeConstructor[] = [

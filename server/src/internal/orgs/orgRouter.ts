@@ -9,6 +9,7 @@ import {
 	handleRemoveMember,
 } from "./handlers/handleGetOrgMembers.js";
 import { handleGetUploadUrl } from "./handlers/handleGetUploadUrl.js";
+import { handleResetDefaultAccount } from "./handlers/handleResetDefaultAccount.js";
 import { handleUpdateOrg } from "./handlers/handleUpdateOrg.js";
 import { handleConnectStripe } from "./handlers/stripeHandlers/handleConnectStripe.js";
 import { handleDeleteStripe } from "./handlers/stripeHandlers/handleDeleteStripe.js";
@@ -39,3 +40,4 @@ honoOrgRouter.get("/stripe", ...handleGetStripeAccount);
 honoOrgRouter.delete("/stripe", ...handleDeleteStripe);
 honoOrgRouter.post("/stripe", ...handleConnectStripe);
 honoOrgRouter.get("/stripe/oauth_url", ...handleGetOAuthUrl);
+honoOrgRouter.post("/reset_default_account", ...handleResetDefaultAccount);

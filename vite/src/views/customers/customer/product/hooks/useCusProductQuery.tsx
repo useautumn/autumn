@@ -12,7 +12,7 @@ export const useCusProductQuery = () => {
 	const { customer_id, product_id } = useParams();
 	const [queryStates] = useQueryStates({
 		version: parseAsInteger,
-		customer_product_id: parseAsString,
+		id: parseAsString,
 		entity_id: parseAsString,
 	});
 
@@ -23,7 +23,7 @@ export const useCusProductQuery = () => {
 		productId: product_id,
 		queryStates: {
 			version: stableStates.version ?? undefined,
-			customerProductId: stableStates.customer_product_id ?? undefined,
+			customerProductId: stableStates.id ?? undefined,
 			entityId: stableStates.entity_id ?? undefined,
 		},
 	});
@@ -33,7 +33,7 @@ export const useCusProductQuery = () => {
 	const fetcher = async () => {
 		const queryParams = {
 			version: stableStates.version,
-			customer_product_id: stableStates.customer_product_id,
+			customer_product_id: stableStates.id,
 			entity_id: stableStates.entity_id,
 		};
 
@@ -57,7 +57,7 @@ export const useCusProductQuery = () => {
 			customer_id,
 			product_id,
 			stableStates.version,
-			stableStates.customer_product_id,
+			stableStates.id,
 			stableStates.entity_id,
 		],
 		queryFn: fetcher,

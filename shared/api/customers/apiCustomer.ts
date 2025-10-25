@@ -1,12 +1,12 @@
 import { ApiCusReferralSchema } from "@api/customers/components/apiCusReferral.js";
 import { ApiCusFeatureSchema } from "@api/customers/cusFeatures/apiCusFeature.js";
-import { ApiCusProductSchema } from "@api/customers/cusProducts/apiCusProduct.js";
 import { ApiBaseEntitySchema } from "@api/entities/apiEntity.js";
 import { ApiCusRewardsSchema } from "@api/others/apiDiscount.js";
 import { ApiInvoiceSchema } from "@api/others/apiInvoice.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
 import { z } from "zod/v4";
 import { ApiCusUpcomingInvoiceSchema } from "./components/apiCusUpcomingInvoice.js";
+import { ApiCusProductSchema } from "./cusProducts/apiCusProduct.js";
 
 export const ApiTrialsUsedSchema = z.object({
 	product_id: z.string(),
@@ -30,23 +30,40 @@ export const ApiCustomerSchema = z.object({
 		description: "Your internal ID for the customer",
 		example: "cus_123",
 	}),
-
 	created_at: z.number().meta({
-		description:
-			"The date and time the customer was created in milliseconds since epoch",
+		description: "Timestamp of customer creation in milliseconds since epoch",
 		example: 1717000000,
 	}),
-
-	name: z.string().nullable(),
-	email: z.string().nullable(),
-	fingerprint: z.string().nullable(),
-	stripe_id: z.string().nullable().default(null),
-	env: z.enum(AppEnv),
+	name: z.string().nullable().meta({
+		description: "Customer’s name",
+		example: "John Doe",
+	}),
+	email: z.string().nullable().meta({
+		description: "Customer’s email address",
+		example: "john@doe.com",
+	}),
+	fingerprint: z.string().nullable().meta({
+		description:
+			"Unique identifier (eg. serial number) to detect duplicate customers and prevent key leaks",
+		example: "fp_9184And92839123hda",
+	}),
+	stripe_id: z.string().nullable().default(null).meta({
+		description: "Stripe customer ID",
+		example: "cus_J8A5c31A8tlpwN",
+	}),
+	env: z.enum(AppEnv).meta({
+		description: "Environment the customer is in",
+		example: "production",
+	}),
 	metadata: z.record(z.any(), z.any()).default({}),
-
-	products: z.array(ApiCusProductSchema),
-	features: z.record(z.string(), ApiCusFeatureSchema),
-
+	products: z.array(ApiCusProductSchema).meta({
+		description: "List of products the customer has access to",
+		example: [],
+	}),
+	features: z.record(z.string(), ApiCusFeatureSchema).meta({
+		description: "List of features the customer has access to",
+		example: {},
+	}),
 	...ApiCusExpandSchema.shape,
 });
 

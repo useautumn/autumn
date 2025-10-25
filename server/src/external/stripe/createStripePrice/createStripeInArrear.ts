@@ -260,15 +260,18 @@ export const createStripeInArrearPrice = async ({
 		};
 	}
 
+	const recurringData = billingIntervalToStripe({
+		interval: price.config.interval!,
+		intervalCount: price.config.interval_count,
+	});
+
 	const stripePrice = await stripeCli.prices.create({
 		...productData,
 		...priceAmountData,
 		currency: org.default_currency || "usd",
 		recurring: {
-			...billingIntervalToStripe({
-				interval: price.config.interval,
-				intervalCount: price.config.interval_count,
-			}),
+			interval: recurringData.interval,
+			interval_count: recurringData.interval_count,
 			meter: meter.id,
 			usage_type: "metered",
 		},
