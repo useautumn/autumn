@@ -13,6 +13,7 @@ import {
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import CreatePlanDialog from "@/views/products/products/components/CreatePlanDialog";
+import { useOnboarding3QueryState } from "../../hooks/useOnboarding3QueryState";
 import { useOnboardingStore } from "../../store/useOnboardingStore";
 
 export const PlaygroundToolbar = () => {
@@ -22,7 +23,9 @@ export const PlaygroundToolbar = () => {
 	// Get current product and playground mode from stores
 	const product = useProductStore((s) => s.product);
 	const playgroundMode = useOnboardingStore((s) => s.playgroundMode);
-	const setPlaygroundMode = useOnboardingStore((s) => s.setPlaygroundMode);
+
+	// Get query state setters to update URL
+	const { setQueryStates } = useOnboarding3QueryState();
 
 	// Get handlers from store
 	const handlePlanSelect = useOnboardingStore((s) => s.handlePlanSelect);
@@ -31,7 +34,10 @@ export const PlaygroundToolbar = () => {
 		<div className="flex gap-2 items-center justify-between mt-4">
 			<GroupedTabButton
 				value={playgroundMode}
-				onValueChange={(val) => setPlaygroundMode(val as "edit" | "preview")}
+				onValueChange={(val) => {
+					// Update query param, which will sync to store
+					setQueryStates({ m: val === "edit" ? "e" : "p" });
+				}}
 				options={[
 					{
 						value: "edit",

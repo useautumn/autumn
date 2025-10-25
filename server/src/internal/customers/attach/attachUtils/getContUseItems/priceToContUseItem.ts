@@ -132,8 +132,8 @@ export const priceToContUseItem = async ({
 
 	// Clean up items
 	// 1. If old item and new item same, remove both
-	const oldAmount = res.oldItem?.amount ?? 0;
-	const newAmount = res.newItem?.amount ?? 0;
+	const oldAmount = res.oldItem?.amount!;
+	const newAmount = res.newItem?.amount!;
 
 	if (new Decimal(oldAmount).add(newAmount).eq(0)) {
 		return {

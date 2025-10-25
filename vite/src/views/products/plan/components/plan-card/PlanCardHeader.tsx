@@ -1,33 +1,46 @@
 import { mapToProductV3 } from "@autumn/shared";
-import { CrosshairSimpleIcon } from "@phosphor-icons/react";
-import { useNavigate } from "react-router";
+import { AdminHover } from "@/components/general/AdminHover";
 import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
-import { IconButton } from "@/components/v2/buttons/IconButton";
 import { CardHeader } from "@/components/v2/cards/Card";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useIsEditingPlan, useSheetStore } from "@/hooks/stores/useSheetStore";
-import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
+import { BasePriceDisplay } from "./BasePriceDisplay";
 import { PlanCardToolbar } from "./PlanCardToolbar";
 
 const MAX_PLAN_NAME_LENGTH = 20;
 
 export const PlanCardHeader = () => {
-	const navigate = useNavigate();
+	const { org } = useOrg();
 	const product = useProductStore((s) => s.product);
 	const setSheet = useSheetStore((s) => s.setSheet);
 	const isPlanBeingEdited = useIsEditingPlan();
 
 	const productV3 = mapToProductV3({ product });
+	const adminHoverText = () => {
+		return [
+			{
+				key: "Price ID",
+				value: productV3.price?.priceId || "N/A",
+			},
+			{
+				key: "Stripe Price ID",
+				value: productV3.price?.config?.stripe_price_id || "N/A",
+			},
+		];
+	};
 
 	return (
 		<CardHeader>
 			<div className="flex flex-row items-center justify-between w-full">
 				<div className="flex flex-row items-center gap-2">
-					<span className="text-main-sec w-fit whitespace-nowrap">
-						{product.name.length > MAX_PLAN_NAME_LENGTH
-							? `${product.name.slice(0, MAX_PLAN_NAME_LENGTH)}...`
-							: product.name}
-					</span>
+					<AdminHover texts={adminHoverText()} side="top">
+						<span className="text-main-sec w-fit whitespace-nowrap">
+							{product.name.length > MAX_PLAN_NAME_LENGTH
+								? `${product.name.slice(0, MAX_PLAN_NAME_LENGTH)}...`
+								: product.name}
+						</span>
+					</AdminHover>
 					<PlanTypeBadges
 						product={product}
 						iconOnly={product.name.length > MAX_PLAN_NAME_LENGTH - 10}
@@ -47,7 +60,8 @@ export const PlanCardHeader = () => {
 				</span>
 			)}
 
-			<IconButton
+			<BasePriceDisplay />
+			{/* <IconButton
 				variant="secondary"
 				icon={<CrosshairSimpleIcon />}
 				onClick={() => {
@@ -56,17 +70,8 @@ export const PlanCardHeader = () => {
 				disabled={true}
 				className="mt-2 !opacity-100 pointer-events-none"
 			>
-				{productV3.price?.amount ? (
-					<span className="text-sm font-medium text-t2">
-						${productV3.price.amount}/
-						{keyToTitle(productV3.price.interval ?? "once", {
-							exclusionMap: { one_off: "once" },
-						}).toLowerCase()}
-					</span>
-				) : (
-					<span className="text-t4 text-sm">No price set</span>
-				)}
-			</IconButton>
+				{renderBasePrice()}
+			</IconButton> */}
 		</CardHeader>
 	);
 };

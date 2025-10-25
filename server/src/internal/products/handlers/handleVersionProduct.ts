@@ -50,8 +50,8 @@ export const handleVersionProductV2 = async ({
 		productData: CreateProductV2ParamsSchema.parse({
 			...latestProduct,
 			...newProductV2,
-			version: newVersion,
 		}),
+		version: newVersion,
 		orgId: org.id,
 		env: latestProduct.env as AppEnv,
 		processor: latestProduct.processor || undefined,

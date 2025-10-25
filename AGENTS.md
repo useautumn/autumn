@@ -6,12 +6,19 @@
 - When writing DB queries, for the `customers`, `products` and `features` tables (and others possibly not mentioned here), the primary key when updating is `internal_id`, not `id`
 - When using db schemas in Drizzle, import them from '@autumn/shared', and don't do schemas.
 
+# Testing
+- When writing tests, ALWAYS consult the corresponding guide in `server/tests/_guides/` to understand the proper patterns and structure. For example, when writing `/check` endpoint tests, read `server/tests/_guides/check-endpoint-tests.md` first.
+
 # Linting and Codebase rules
 - You can access the biome linter by running `npx biome check <folder or file path>`. Always specify a folder path, as the codebase is quite large and you will get out of scope errors that you are not burdened to correct. If you would like to let biome automatically fix as much as it can, use  `npx biome check --write <folder or file path>`
 
 - Note, biome does not perform typechecking. In which case you need to, you may run `tsc --noEmit --skipLibCheck <folder or file path>`
 
 - This codebase uses Bun as its preferred package manager and Node runtime.
+
+- **ALWAYS import from `zod/v4`**, not from `zod` directly. Example: `import { z } from "zod/v4";`
+
+- **ALWAYS use `.meta()` for zod-openapi schema registration**, NOT `.openapi()`. Example: `ApiProductSchema.meta({ id: "Product" })`
 
 - Always prefer foo({ bar }) over foo(bar) method signatures - no matter if we are using only one argument or not, object as param are always better, as in the future when wanting to change the order of parameters, or add new ones - its easier.
 

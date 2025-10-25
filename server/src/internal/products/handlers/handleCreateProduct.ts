@@ -58,7 +58,7 @@ export const disableCurrentDefault = async ({
 
 	const defaults = getGroupToDefaults({
 		defaultProds,
-	})?.[newProduct.group];
+	})?.[newProduct.group || ""];
 
 	const willBeDefaultTrial = isDefaultTrial({ product: newProduct });
 

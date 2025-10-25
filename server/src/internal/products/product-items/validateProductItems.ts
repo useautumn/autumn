@@ -5,6 +5,7 @@ import {
 	type Feature,
 	FeatureType,
 	Infinite,
+	itemToEntInterval,
 	OnIncrease,
 	type ProductItem,
 	ProductItemInterval,
@@ -13,7 +14,6 @@ import {
 	RolloverDuration,
 	UsageModel,
 } from "@autumn/shared";
-import { itemToEntInterval } from "@shared/utils/productV2Utils/productItemUtils/itemIntervalUtils.js";
 import { StatusCodes } from "http-status-codes";
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";

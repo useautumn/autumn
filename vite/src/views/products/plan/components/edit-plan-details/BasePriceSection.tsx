@@ -114,8 +114,7 @@ export const BasePriceSection = ({
 			description={
 				<span>
 					A fixed price to charge for the plan. Uncheck this section if the plan
-					is <span className="text-primary font-bold">free</span> or{" "}
-					<span className="text-primary font-bold">a variable price</span>.
+					is free or only has usage-based prices.
 				</span>
 			}
 		>
@@ -128,11 +127,20 @@ export const BasePriceSection = ({
 							placeholder="eg. $100"
 							disabled={disabled}
 							value={basePrice?.amount ?? ""}
+							onKeyDown={(e) => {
+								// Prevent typing minus sign
+								if (e.key === "-" || e.key === "Minus") {
+									e.preventDefault();
+								}
+							}}
 							onChange={(e) => {
-								if (Number(e.target.value) >= 0)
+								// extra guard in case value changes programmatically
+								const cleanedValue = e.target.value.replace(/-/g, "");
+								if (Number(cleanedValue) >= 0) {
 									handleUpdateBasePrice({
-										amount: e.target.value,
+										amount: cleanedValue,
 									});
+								}
 							}}
 						/>
 					</div>

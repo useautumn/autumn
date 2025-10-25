@@ -18,6 +18,7 @@ import CustomerView from "./views/customers/customer/CustomerView";
 import CustomerProductView from "./views/customers/customer/product/CustomerProductView";
 import { DefaultView } from "./views/DefaultView";
 import DevScreen from "./views/developer/DevView";
+import { CloseScreen } from "./views/general/CloseScreen";
 import OnboardingView3 from "./views/onboarding3/OnboardingView3";
 import ProductsView from "./views/products/ProductsView";
 import PlanEditorView from "./views/products/plan/PlanEditorView";
@@ -45,6 +46,7 @@ export default function App() {
 				<Route path="/sign-in" element={<SignIn />} />
 				<Route path="/pw-sign-in" element={<PasswordSignIn />} />
 				<Route path="/accept" element={<AcceptInvitation />} />
+				<Route path="/close" element={<CloseScreen />} />
 
 				{/* Onboarding routes without sidebar */}
 				<Route element={<OnboardingLayout />}>

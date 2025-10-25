@@ -62,6 +62,6 @@ export const handleDeleteFeature = async (req: any, res: any) =>
 				env: req.env,
 			});
 
-			res.status(200).json({ message: "Feature deleted" });
+			res.status(200).json({ success: true });
 		},
 	});

@@ -1,28 +1,24 @@
-import Stripe from "stripe";
-
-import { attachParamToCusProducts } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
-import { cusProductToPrices } from "@autumn/shared";
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-
-import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import {
-	AttachBranch,
-	AttachConfig,
+	type AttachBranch,
+	type AttachConfig,
 	BillingType,
-	PreviewLineItem,
+	cusProductToPrices,
+	type PreviewLineItem,
 } from "@autumn/shared";
-
-import { formatAmount } from "@/utils/formatUtils.js";
+import type Stripe from "stripe";
+import { priceToUnusedPreviewItem } from "@/internal/customers/attach/attachPreviewUtils/priceToUnusedPreviewItem.js";
+import { attachParamToCusProducts } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
+import { getContUseInvoiceItems } from "@/internal/customers/attach/attachUtils/getContUseItems/getContUseInvoiceItems.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 
 import { getCusPriceUsage } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
 import { priceToUsageModel } from "@/internal/products/prices/priceUtils/convertPrice.js";
-import { getContUseInvoiceItems } from "@/internal/customers/attach/attachUtils/getContUseItems/getContUseInvoiceItems.js";
-
 import {
 	isArrearPrice,
 	isContUsePrice,
 } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
-import { priceToUnusedPreviewItem } from "@/internal/customers/attach/attachPreviewUtils/priceToUnusedPreviewItem.js";
+import { getBillingType } from "@/internal/products/prices/priceUtils.js";
+import { formatAmount } from "@/utils/formatUtils.js";
 
 export const getItemsForCurProduct = async ({
 	sub,
@@ -71,7 +67,7 @@ export const getItemsForCurProduct = async ({
 
 	// console.log("items: ", items);
 
-	let { oldItems } = await getContUseInvoiceItems({
+	const { oldItems } = await getContUseInvoiceItems({
 		sub,
 		attachParams,
 		logger,
@@ -81,9 +77,9 @@ export const getItemsForCurProduct = async ({
 	items = [...items, ...oldItems];
 
 	for (const price of curPrices) {
-		let billingType = getBillingType(price.config);
+		const billingType = getBillingType(price.config);
 
-		if (billingType == BillingType.UsageInArrear) {
+		if (billingType === BillingType.UsageInArrear) {
 			const { amount, description } = getCusPriceUsage({
 				price,
 				cusProduct: curCusProduct,

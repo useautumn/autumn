@@ -74,9 +74,6 @@ export const CustomerDataSchema = z.object({
 });
 
 export const CustomerResponseSchema = CustomerSchema.omit({
-	// created_at: true,
-	// env: true,
-	// processor: true,
 	org_id: true,
 });
 

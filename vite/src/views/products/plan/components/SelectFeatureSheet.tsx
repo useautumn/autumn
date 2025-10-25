@@ -1,6 +1,6 @@
 import { type Feature, productV2ToFeatureItems } from "@autumn/shared";
 import { PlusIcon } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import {
 	Select,
@@ -22,14 +22,35 @@ export function SelectFeatureSheet({
 }: {
 	isOnboarding?: boolean;
 }) {
-	const [selectOpen, setSelectOpen] = useState(true);
+	const previousSheetType = useSheetStore((s) => s.previousType);
+	const [selectOpen, setSelectOpen] = useState(false);
 
 	const { features } = useFeaturesQuery();
 	const product = useProductStore((s) => s.product);
 	const setProduct = useProductStore((s) => s.setProduct);
 	const setSheet = useSheetStore((s) => s.setSheet);
 
-	const filteredFeatures = features.filter((f: Feature) => !f.archived);
+	// Get feature IDs that are already added to the plan
+	const addedFeatureIds = new Set(
+		product.items?.map((item) => item.feature_id).filter(Boolean) || []
+	);
+
+	// Filter out archived features and features already on the plan
+	const filteredFeatures = features.filter(
+		(f: Feature) => !f.archived && !addedFeatureIds.has(f.id)
+	);
+
+	useEffect(() => {
+		// If we're switching from another sheet, open immediately
+		if (previousSheetType && previousSheetType !== "select-feature") {
+			setSelectOpen(true);
+		} else {
+			// Otherwise, delay to let sheet animate in
+			const timer = setTimeout(() => setSelectOpen(true), 250);
+			return () => clearTimeout(timer);
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
 	const handleFeatureSelect = (featureId: string) => {
 		if (!featureId || !product) return;

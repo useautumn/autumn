@@ -98,6 +98,12 @@ export function PriceTiers() {
 								}
 								inputMode="decimal"
 								placeholder="0.00"
+								onKeyDown={(e) => {
+									// Prevent typing minus sign
+									if (e.key === "-" || e.key === "Minus") {
+										e.preventDefault();
+									}
+								}}
 							/>
 							<InputGroupAddon align="inline-end">
 								<span className="text-t3 text-xs">{currency}</span>

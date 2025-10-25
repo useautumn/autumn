@@ -1,22 +1,16 @@
 "use client";
 
-import { NavButton } from "./NavButton";
+import { CommandIcon } from "@phosphor-icons/react";
+import { Book } from "lucide-react";
+import { useCommandBarStore } from "@/hooks/stores/useCommandBarStore";
 import { useEnv } from "@/utils/envUtils";
+import { NavButton } from "./NavButton";
 import { SidebarContact } from "./SidebarContact";
-import { useSidebarContext } from "./SidebarContext";
-import { cn } from "@/lib/utils";
-import { Blocks, Book } from "lucide-react";
-import { useSession } from "@/lib/auth-client";
-import { UserButton } from "./components/UserButton";
 
 export default function SidebarBottom() {
 	const env = useEnv();
 	// const { user, isLoaded } = useUser();
-	const { state } = useSidebarContext();
-	const expanded = state == "expanded";
-
-	const { data: session } = useSession();
-	const user = session?.user;
+	const openCommandBar = useCommandBarStore((state) => state.openCommandBar);
 
 	return (
 		<div className="">
