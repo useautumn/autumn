@@ -50,15 +50,15 @@ export const getV2CheckResponse = async ({
 		});
 	}
 
-	// if (cusEnts.length === 0) {
-	// 	return CheckResultSchema.parse({
-	// 		allowed: false,
-	// 		customer_id: fullCus.id || fullCus.internal_id,
-	// 		feature_id: featureToUse.id,
-	// 		required_balance: requiredBalance,
-	// 		code: SuccessCode.FeatureFound,
-	// 	});
-	// }
+	if (cusEnts.length === 0) {
+		return CheckResultSchema.parse({
+			allowed: false,
+			customer_id: fullCus.id || fullCus.internal_id,
+			feature_id: featureToUse.id,
+			required_balance: requiredBalance,
+			code: SuccessCode.FeatureFound,
+		});
+	}
 
 	const apiCusFeature = getApiCusFeature({
 		ctx,
@@ -75,19 +75,19 @@ export const getV2CheckResponse = async ({
 		apiCusFeature.type === ApiFeatureType.Boolean ||
 		apiCusFeature.type === ApiFeatureType.Static
 	) {
-		console.log("Boolean or static");
+		// console.log("Boolean or static");
 		allowed = true;
 	}
 
 	// Case 2: Unlimited or overage allowed
 	if (apiCusFeature.unlimited || apiCusFeature.overage_allowed) {
-		console.log("Unlimited or overage allowed");
+		// console.log("Unlimited or overage allowed");
 		allowed = true;
 	}
 
 	// Case 3: Required balance is negative
 	if (requiredBalance < 0) {
-		console.log("Required balance is negative");
+		// console.log("Required balance is negative");
 		allowed = true;
 	}
 
@@ -106,7 +106,7 @@ export const getV2CheckResponse = async ({
 			.plus(totalPaidUsageAllowance)
 			.gte(requiredBalance)
 	) {
-		console.log("Balance + total paid usage allowance >= required balance");
+		// console.log("Balance + total paid usage allowance >= required balance");
 		allowed = true;
 	}
 

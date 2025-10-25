@@ -4,7 +4,12 @@ import {
 	defineVersionChange,
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
 import type { z } from "zod/v4";
+import { FeatureType } from "../../../../models/featureModels/featureEnums.js";
 import { CheckResultSchema } from "../../../core/checkModels.js";
+import {
+	type CheckLegacyData,
+	CheckLegacyDataSchema,
+} from "../checkLegacyData.js";
 import {
 	type CheckResponseV0,
 	CheckResponseV0Schema,
@@ -40,13 +45,16 @@ export const V0_2_CheckChange = defineVersionChange({
 	affectedResources: [AffectedResource.Check],
 	newSchema: CheckResultSchema,
 	oldSchema: CheckResponseV0Schema,
+	legacyDataSchema: CheckLegacyDataSchema,
 	affectsResponse: true,
 
 	// Response: V1.1+ (CheckResult) → V0_2 (CheckResponseV0)
 	transformResponse: ({
 		input,
+		legacyData,
 	}: {
 		input: z.infer<typeof CheckResultSchema>;
+		legacyData?: CheckLegacyData;
 	}): CheckResponseV0 => {
 		const {
 			allowed,
@@ -57,8 +65,14 @@ export const V0_2_CheckChange = defineVersionChange({
 			overage_allowed,
 		} = input;
 
-		// If not allowed and no entitlements, return empty balances array
-		if (!allowed && balance === null && !unlimited) {
+		if (!legacyData) {
+			throw new Error("Legacy data is required");
+		}
+
+		const { noCusEnts, featureToUse } = legacyData;
+
+		// No customer entitlements
+		if (noCusEnts && !allowed) {
 			return {
 				allowed: false,
 				balances: [],
@@ -69,6 +83,20 @@ export const V0_2_CheckChange = defineVersionChange({
 		const balanceObj: CheckResponseV0["balances"][number] = {
 			feature_id,
 		};
+
+		if (featureToUse.type === FeatureType.Boolean) {
+			return {
+				allowed,
+				balances: [
+					{
+						feature_id,
+						balance: null,
+					},
+				],
+			};
+		}
+
+		// How to tell if it's boolean...
 
 		// Case 1: Boolean/Static features (no balance, no unlimited, no overage)
 		if (
