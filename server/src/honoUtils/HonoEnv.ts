@@ -19,7 +19,7 @@ export type RequestContext = {
 	// Objects
 	db: DrizzleCli;
 	logger: Logger;
-	clickhouseClient: ClickHouseClient;
+	clickhouseClient?: ClickHouseClient;
 
 	// Info
 	id: string;
@@ -27,6 +27,9 @@ export type RequestContext = {
 	authType: AuthType;
 	apiVersion: ApiVersionClass;
 	timestamp: number;
+
+	// Query params
+	expand: string[];
 };
 
 export type AutumnContext = RequestContext;

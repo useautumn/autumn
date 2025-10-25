@@ -6,4 +6,8 @@ export enum CusExpand {
 	Referrals = "referrals",
 	PaymentMethod = "payment_method",
 	UpcomingInvoice = "upcoming_invoice",
+	// PlansPlan = "plans.plan",
+	// FeaturesFeature = "features.feature",
+	Plan = "plan",
+	Feature = "feature",
 }

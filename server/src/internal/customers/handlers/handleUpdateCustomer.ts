@@ -1,6 +1,7 @@
 import { CreateCustomerSchema, ErrCode, ProcessorType } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import RecaseError from "@/utils/errorUtils.js";
@@ -10,8 +11,8 @@ import type {
 	ExtendedResponse,
 } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
+import { getApiCustomer } from "../cusUtils/apiCusUtils/getApiCustomer.js";
 import { parseCusExpand } from "../cusUtils/cusUtils.js";
-import { getCustomerDetails } from "../cusUtils/getCustomerDetails.js";
 
 export const handleUpdateCustomer = async (req: any, res: any) =>
 	routeHandler({
@@ -134,16 +135,10 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
 			});
 
 			// res.status(200).json({ customer: updatedCustomer });
-			const customerDetails = await getCustomerDetails({
-				db,
-				customer: finalCustomer,
-				org,
-				env: req.env,
-				logger: req.logger,
-				cusProducts: finalCustomer.customer_products,
+			const customerDetails = await getApiCustomer({
+				ctx: req as AutumnContext,
+				fullCus: finalCustomer,
 				expand: parseCusExpand(req.query.expand as string),
-				features,
-				apiVersion: req.apiVersion,
 			});
 
 			res.status(200).json(customerDetails);

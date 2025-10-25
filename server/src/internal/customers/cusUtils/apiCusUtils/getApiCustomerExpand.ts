@@ -1,6 +1,6 @@
 import {
 	ApiBaseEntitySchema,
-	type ApiCustomerExpand,
+	type ApiCusExpand,
 	CusExpand,
 	type FullCusProduct,
 	type FullCustomer,
@@ -15,13 +15,12 @@ import { getCusUpcomingInvoice } from "../cusResponseUtils/getCusUpcomingInvoice
 export const getApiCustomerExpand = async ({
 	ctx,
 	fullCus,
-	expand,
 }: {
 	ctx: AutumnContext;
 	fullCus: FullCustomer;
-	expand: CusExpand[];
-}): Promise<ApiCustomerExpand> => {
-	const { org, env, db, logger } = ctx;
+}): Promise<ApiCusExpand> => {
+	const { org, env, db, logger, expand } = ctx;
+	console.log("Expand: ", expand);
 	const getCusTrialsUsed = () => {
 		if (expand.includes(CusExpand.TrialsUsed)) {
 			return fullCus.trials_used;
@@ -43,6 +42,8 @@ export const getApiCustomerExpand = async ({
 			})
 		: undefined;
 
+	const cusExpand = expand as CusExpand[];
+
 	const [rewards, upcomingInvoice, referrals, paymentMethod] =
 		await Promise.all([
 			getCusRewards({
@@ -52,25 +53,25 @@ export const getApiCustomerExpand = async ({
 				subIds: fullCus.customer_products.flatMap(
 					(cp: FullCusProduct) => cp.subscription_ids || [],
 				),
-				expand,
+				expand: cusExpand,
 			}),
 			getCusUpcomingInvoice({
 				db,
 				org,
 				env,
 				fullCus,
-				expand,
+				expand: cusExpand,
 			}),
 			getCusReferrals({
 				db,
 				fullCus,
-				expand,
+				expand: cusExpand,
 			}),
 			getCusPaymentMethodRes({
 				org,
 				env,
 				fullCus,
-				expand,
+				expand: cusExpand,
 			}),
 		]);
 

@@ -5,7 +5,7 @@
  */
 export enum ApiVersion {
 	V2 = "2.0.0",
-	Beta = "beta",
+	V1_Beta = "beta",
 	V1_2 = "1.2.0",
 	V1_1 = "1.1.0",
 	V0_2 = "0.2.0",

@@ -75,7 +75,7 @@ export const handleCheckoutSub = async ({
 		if (
 			arrearPrice &&
 			(attachParams.internalEntityId ||
-				attachParams.apiVersion === ApiVersion.Beta)
+				attachParams.apiVersion === ApiVersion.V1_Beta)
 		) {
 			itemsUpdate.push({
 				id: item.id,

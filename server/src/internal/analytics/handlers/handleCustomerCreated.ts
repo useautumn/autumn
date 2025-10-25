@@ -1,11 +1,12 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
-import { ActionType, AppEnv, Organization } from "@autumn/shared";
-import { addTaskToQueue } from "@/queue/queueUtils.js";
-import { JobName } from "@/queue/JobName.js";
-import { constructAction, parseReqForAction } from "../actionUtils.js";
+import { ActionType, type AppEnv, type Organization } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { JobName } from "@/queue/JobName.js";
+import { addTaskToQueue } from "@/queue/queueUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { HandleCustomerCreatedData } from "@/utils/workerUtils/jobTypes/HandleCustomerCreatedData.js";
 import { ActionService } from "../ActionService.js";
+import { constructAction, parseReqForAction } from "../actionUtils.js";
 
 export const addCustomerCreatedTask = async ({
 	req,
@@ -23,31 +24,30 @@ export const addCustomerCreatedTask = async ({
 		payload: {
 			req: req ? parseReqForAction(req) : undefined,
 			internalCustomerId,
-			org,
+			orgId: org.id,
 			env,
 		},
 	});
 };
 
 export const handleCustomerCreated = async ({
-	db,
-	logger,
+	ctx,
 	data,
 }: {
-	db: DrizzleCli;
-	logger: any;
-	data: any;
+	ctx: AutumnContext;
+	data: HandleCustomerCreatedData;
 }) => {
-	const { req, internalCustomerId, org, env } = data;
+	const { req, internalCustomerId } = data;
+	const { db, org, env } = ctx;
 
-	let customer = await CusService.getFull({
+	const customer = await CusService.getFull({
 		db,
 		idOrInternalId: internalCustomerId,
 		orgId: org.id,
 		env,
 	});
 
-	let action = constructAction({
+	const action = constructAction({
 		org,
 		env,
 		customer,

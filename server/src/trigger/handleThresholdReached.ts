@@ -1,5 +1,6 @@
 import {
 	type AppEnv,
+	AuthType,
 	createdAtToVersion,
 	type Feature,
 	type FullCusEntWithFullCusProduct,
@@ -10,10 +11,12 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getSingleEntityResponse } from "@/internal/api/entities/getEntityUtils.js";
 import { getV2CheckResponse } from "@/internal/api/entitled/checkUtils/getV2CheckResponse.js";
-import { getCustomerDetails } from "@/internal/customers/cusUtils/getCustomerDetails.js";
+import { getApiCustomer } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomer.js";
 import { toApiFeature } from "@/internal/features/utils/mapFeatureUtils.js";
+import { generateId } from "@/utils/genUtils.js";
 
 export const mergeNewCusEntsIntoCusProducts = ({
 	cusProducts,
@@ -39,45 +42,27 @@ export const mergeNewCusEntsIntoCusProducts = ({
 };
 
 export const sendSvixThresholdReachedEvent = async ({
-	db,
-	org,
-	env,
-	features,
-	logger,
+	ctx,
 	feature,
 	fullCus,
 	thresholdType,
 }: {
-	db: DrizzleCli;
-	org: Organization;
-	env: AppEnv;
-	features: Feature[];
-	logger: any;
+	ctx: AutumnContext;
 	feature: Feature;
 	fullCus: FullCustomer;
 	thresholdType: "limit_reached" | "allowance_used";
 }) => {
-	const apiVersion = createdAtToVersion({
-		createdAt: org.created_at || undefined,
-	});
+	const { org, env, logger } = ctx;
 
-	const cusDetails = await getCustomerDetails({
-		db,
-		customer: fullCus,
-		org,
-		env,
-		features,
-		logger,
-		cusProducts: fullCus.customer_products,
+	const cusDetails = await getApiCustomer({
+		ctx,
+		fullCus,
 		expand: [],
-		apiVersion,
 	});
 
 	if (fullCus.entity) {
 		await getSingleEntityResponse({
-			org,
-			env,
-			features,
+			ctx,
 			fullCus,
 			entity: fullCus.entity,
 			entityId: fullCus.entity.id,
@@ -100,31 +85,20 @@ export const sendSvixThresholdReachedEvent = async ({
 };
 
 export const handleAllowanceUsed = async ({
-	db,
-	org,
-	env,
-	features,
-	logger,
+	ctx,
 	cusEnts,
 	newCusEnts,
 	feature,
 	fullCus,
 }: {
-	db: DrizzleCli;
-	org: Organization;
-	env: AppEnv;
+	ctx: AutumnContext;
 	cusEnts: FullCusEntWithFullCusProduct[];
 	newCusEnts: FullCusEntWithFullCusProduct[];
 	feature: Feature;
 	fullCus: FullCustomer;
-	features: Feature[];
-	logger: any;
 }) => {
-	const apiVersion = createdAtToVersion({
-		createdAt: org.created_at || undefined,
-	});
+	const { org, env, apiVersion } = ctx;
 
-	// Allowance used...
 	// Make sure overage allowed is false
 	const oldCusEnts = structuredClone(cusEnts);
 	for (const cusEnt of oldCusEnts) {
@@ -166,13 +140,9 @@ export const handleAllowanceUsed = async ({
 
 	if (prevCheckResponse.allowed === true && v2CheckResponse.allowed === false) {
 		await sendSvixThresholdReachedEvent({
-			db,
-			org,
-			env,
-			features,
-			logger,
-			feature,
+			ctx,
 			fullCus,
+			feature,
 			thresholdType: "allowance_used",
 		});
 	}
@@ -200,6 +170,21 @@ export const handleThresholdReached = async ({
 	features: Feature[];
 	logger: any;
 }) => {
+	const ctx: AutumnContext = {
+		db,
+		org,
+		env,
+		features,
+		logger,
+		apiVersion: createdAtToVersion({
+			createdAt: org.created_at || undefined,
+		}),
+		id: generateId("local_req"),
+		isPublic: false,
+		authType: AuthType.Unknown,
+		timestamp: Date.now(),
+	};
+
 	try {
 		const apiVersion = createdAtToVersion({
 			createdAt: org.created_at || undefined,
@@ -236,26 +221,18 @@ export const handleThresholdReached = async ({
 			prevCheckResponse.allowed === true &&
 			v2CheckResponse.allowed === false
 		) {
-			const cusDetails = await getCustomerDetails({
-				db,
-				customer: fullCus,
-				org,
-				env,
-				features,
-				logger,
-				cusProducts: newCusProducts,
+			const cusDetails = await getApiCustomer({
+				ctx,
+				fullCus,
 				expand: [],
-				apiVersion,
 			});
 
 			if (fullCus.entity) {
 				await getSingleEntityResponse({
-					org,
-					env,
-					features,
-					entity: fullCus.entity,
-					fullCus,
+					ctx,
 					entityId: fullCus.entity.id,
+					fullCus,
+					entity: fullCus.entity,
 				});
 			}
 
@@ -276,11 +253,7 @@ export const handleThresholdReached = async ({
 			return;
 		}
 		await handleAllowanceUsed({
-			db,
-			org,
-			env,
-			features,
-			logger,
+			ctx,
 			cusEnts,
 			newCusEnts,
 			feature,

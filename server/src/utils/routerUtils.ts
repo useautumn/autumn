@@ -3,11 +3,9 @@ import { StatusCodes } from "http-status-codes";
 import qs from "qs";
 import Stripe from "stripe";
 import { ZodAny, ZodError, ZodObject } from "zod";
+import { formatZodError } from "@/errors/formatZodError.js";
 import { withSpan as withSpanTracer } from "@/internal/analytics/tracer/spanUtils.js";
-import RecaseError, {
-	formatZodError,
-	handleRequestError,
-} from "./errorUtils.js";
+import RecaseError, { handleRequestError } from "./errorUtils.js";
 import type { ExtendedRequest } from "./models/Request.js";
 
 /**

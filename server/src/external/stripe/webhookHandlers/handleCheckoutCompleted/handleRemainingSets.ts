@@ -38,7 +38,7 @@ export const handleRemainingSets = async ({
 
 		if (
 			attachParams.internalEntityId ||
-			attachParams.apiVersion === ApiVersion.Beta
+			attachParams.apiVersion === ApiVersion.V1_Beta
 		) {
 			const replaceIndex = remainingItems.findIndex(
 				(item) => item.price === config.stripe_price_id,

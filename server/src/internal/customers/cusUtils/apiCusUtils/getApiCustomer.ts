@@ -3,25 +3,22 @@ import {
 	type ApiCustomer,
 	ApiCustomerSchema,
 	applyResponseVersionChanges,
-	type CusExpand,
 	type CustomerLegacyData,
 	type FullCustomer,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { getApiCusFeatures } from "./getApiCusFeature/getApiCusFeatures.js";
-import { getApiCusProducts } from "./getApiCusProduct/getApiCusProducts.js";
+import { getApiCusPlans } from "./getApiCusPlan/getApiCusPlans.js";
 import { getApiCustomerExpand } from "./getApiCustomerExpand.js";
 
 export const getApiCustomer = async ({
 	ctx,
 	fullCus,
-	expand,
 	withAutumnId = false,
 }: {
 	ctx: RequestContext;
 	fullCus: FullCustomer;
-	expand: CusExpand[];
 	withAutumnId?: boolean;
 }) => {
 	const apiCusFeatures = await getApiCusFeatures({
@@ -29,8 +26,8 @@ export const getApiCustomer = async ({
 		fullCus,
 	});
 
-	const { apiCusProducts, legacyData: cusProductLegacyData } =
-		await getApiCusProducts({
+	const { apiCusPlans, legacyData: cusProductLegacyData } =
+		await getApiCusPlans({
 			ctx,
 			fullCus,
 		});
@@ -38,7 +35,6 @@ export const getApiCustomer = async ({
 	const apiCusExpand = await getApiCustomerExpand({
 		ctx,
 		fullCus,
-		expand,
 	});
 
 	const apiCustomer = ApiCustomerSchema.extend({
@@ -56,16 +52,16 @@ export const getApiCustomer = async ({
 		env: fullCus.env,
 		metadata: fullCus.metadata,
 
-		products: apiCusProducts,
+		plans: apiCusPlans,
+
 		features: apiCusFeatures,
+
 		...apiCusExpand,
 	});
 
 	return applyResponseVersionChanges<ApiCustomer, CustomerLegacyData>({
 		input: apiCustomer,
-		legacyData: {
-			cusProductLegacyData,
-		},
+		legacyData: { cusProductLegacyData },
 		targetVersion: ctx.apiVersion,
 		resource: AffectedResource.Customer,
 	});

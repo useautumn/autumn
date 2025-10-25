@@ -1,33 +1,38 @@
 import {
 	type ApiCusFeature,
 	type ApiCusRollover,
-	ApiFeatureType,
+	type ApiFeature,
 	cusEntToKey,
-	type EntInterval,
+	entIntvToResetIntv,
 	type FullCusEntWithFullCusProduct,
 	getRolloverFields,
 	notNullish,
+	ResetInterval,
+	toIntervalCountResponse,
 } from "@autumn/shared";
-import { getCusFeatureType } from "@/internal/features/featureUtils.js";
 
 export const cusEntsToInterval = ({
 	cusEnts,
 }: {
 	cusEnts: FullCusEntWithFullCusProduct[];
 }): {
-	interval: EntInterval | "multiple" | null;
-	interval_count: number | null;
+	interval: ResetInterval | null;
+	interval_count: number | undefined;
 } => {
 	const cusEntKeys = cusEnts.map((cusEnt) => cusEntToKey({ cusEnt }));
 	const uniqueCusEntKeys = [...new Set(cusEntKeys)];
 	if (uniqueCusEntKeys.length === 1) {
 		return {
-			interval: cusEnts[0].entitlement.interval || null,
-			interval_count: cusEnts[0].entitlement.interval_count,
+			interval: entIntvToResetIntv({
+				entInterval: cusEnts[0].entitlement.interval,
+			}),
+			interval_count: toIntervalCountResponse({
+				intervalCount: cusEnts[0].entitlement.interval_count,
+			}),
 		};
 	}
 
-	return { interval: "multiple", interval_count: null };
+	return { interval: null, interval_count: undefined };
 };
 
 export const cusEntsToNextResetAt = ({
@@ -76,39 +81,66 @@ export const cusEntsToRollovers = ({
 
 export const getBooleanApiCusFeature = ({
 	cusEnts,
+	apiFeature,
 }: {
 	cusEnts: FullCusEntWithFullCusProduct[];
+	apiFeature?: ApiFeature;
 }): ApiCusFeature => {
 	const feature = cusEnts[0].entitlement.feature;
 	return {
-		id: feature.id,
-		type: ApiFeatureType.Static,
-		name: feature.name,
+		feature: apiFeature,
+		feature_id: feature.id,
+
+		unlimited: false,
+
+		starting_balance: 0,
 		balance: 0,
 		usage: 0,
-		included_usage: 0,
-		next_reset_at: null,
-		unlimited: false,
-		overage_allowed: false,
-	};
+
+		resets_at: null,
+		reset_interval: ResetInterval.OneOff,
+		reset_interval_count: undefined,
+
+		breakdown: undefined,
+		rollovers: undefined,
+
+		// Old
+		// id: feature.id,
+		// type: ApiFeatureType.Static,
+		// name: feature.name,
+		// balance: 0,
+		// usage: 0,
+		// included_usage: 0,
+		// next_reset_at: null,
+		// unlimited: false,
+		// overage_allowed: false,
+	} as ApiCusFeature;
 };
 
 export const getUnlimitedApiCusFeature = ({
+	apiFeature,
 	cusEnts,
 }: {
+	apiFeature?: ApiFeature;
 	cusEnts: FullCusEntWithFullCusProduct[];
 }): ApiCusFeature => {
 	const feature = cusEnts[0].entitlement.feature;
 
 	return {
-		id: feature.id,
-		type: getCusFeatureType({ feature }),
-		name: feature.name,
+		feature: apiFeature,
+		feature_id: feature.id,
+
+		unlimited: true,
+
+		starting_balance: 0,
 		balance: 0,
 		usage: 0,
-		included_usage: 0,
-		next_reset_at: null,
-		unlimited: true,
-		overage_allowed: false,
+
+		resets_at: null,
+		reset_interval: ResetInterval.OneOff,
+		reset_interval_count: undefined,
+
+		breakdown: undefined,
+		rollovers: undefined,
 	};
 };

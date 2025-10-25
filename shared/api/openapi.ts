@@ -9,7 +9,7 @@ import { CustomerDataSchema } from "./common/customerData.js";
 import { EntityDataSchema } from "./common/entityData.js";
 import { coreOps } from "./core/coreOpenApi.js";
 import { ApiCusFeatureSchema } from "./customers/cusFeatures/apiCusFeature.js";
-import { ApiCusProductSchema } from "./customers/cusProducts/apiCusProduct.js";
+import { ApiCusPlanSchema } from "./customers/cusPlans/apiCusPlan.js";
 import {
 	ApiCustomerWithMeta,
 	customerOps,
@@ -65,9 +65,9 @@ const document = createDocument({
 				id: "Customer",
 				description: "Customer object returned by the API",
 			}),
-			CustomerProduct: ApiCusProductSchema.meta({
-				id: "CustomerProduct",
-				description: "Customer product object returned by the API",
+			CustomerPlan: ApiCusPlanSchema.meta({
+				id: "CustomerPlan",
+				description: "Customer plan object returned by the API",
 			}),
 			CustomerFeature: ApiCusFeatureSchema.meta({
 				id: "CustomerFeature",
@@ -79,7 +79,8 @@ const document = createDocument({
 			}),
 			ProductItem: ApiProductItemWithMeta.meta({
 				id: "ProductItem",
-				description: "Product item defining features and pricing within a product",
+				description:
+					"Product item defining features and pricing within a product",
 			}),
 			Feature: ApiFeatureWithMeta.meta({
 				id: "Feature",

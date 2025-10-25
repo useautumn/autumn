@@ -17,11 +17,11 @@ import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRol
 import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils.js";
 import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils.js";
 import { getCusPriceUsage } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
+import { getAllFullCustomers } from "@/utils/scriptUtils/getAll/getAllAutumnCustomers.js";
 import { submitUsageToStripe } from "../../stripeMeterUtils.js";
 import { getInvoiceItemForUsage } from "../../stripePriceUtils.js";
 import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";
 import { findStripeItemForPrice } from "../../stripeSubUtils/stripeSubItemUtils.js";
-import { getAllFullCustomers } from "@/utils/scriptUtils/getAll/getAllAutumnCustomers.js";
 
 export const handleUsagePrices = async ({
 	db,
@@ -86,7 +86,7 @@ export const handleUsagePrices = async ({
 
 	const isNewUsageMethod =
 		activeProduct.internal_entity_id ||
-		activeProduct.api_semver === ApiVersion.Beta;
+		activeProduct.api_semver === ApiVersion.V1_Beta;
 
 	if (isNewUsageMethod) {
 		const invoiceItem = getInvoiceItemForUsage({

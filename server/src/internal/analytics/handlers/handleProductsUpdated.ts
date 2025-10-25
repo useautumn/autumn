@@ -2,15 +2,14 @@ import {
 	ActionType,
 	type AppEnv,
 	type AuthType,
-	createdAtToVersion,
 	cusProductToProduct,
 	type FullCusProduct,
 	type FullProduct,
 	notNullish,
 	type Organization,
 } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ActionService } from "@/internal/analytics/ActionService.js";
 import {
 	constructAction,
@@ -19,7 +18,7 @@ import {
 import { getSingleEntityResponse } from "@/internal/api/entities/getEntityUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
-import { getCustomerDetails } from "@/internal/customers/cusUtils/getCustomerDetails.js";
+import { getApiCustomer } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomer.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
 import { JobName } from "@/queue/JobName.js";
@@ -66,8 +65,10 @@ export const addProductsUpdatedWebhookTask = async ({
 			payload: {
 				req: req ? parseReqForAction(req) : undefined,
 				internalCustomerId,
-				org,
+				orgId: org.id,
 				env,
+				// org,
+				// env,
 				customerId,
 				cusProduct,
 				scheduledCusProduct,
@@ -90,18 +91,16 @@ export const addProductsUpdatedWebhookTask = async ({
 };
 
 export const handleProductsUpdated = async ({
-	db,
-	logger,
+	ctx,
 	data,
 }: {
-	db: DrizzleCli;
-	logger: any;
+	ctx: AutumnContext;
 	data: {
 		req: Partial<ExtendedRequest>;
 		actionDetails: ActionDetails;
 		internalCustomerId: string;
-		org: Organization;
-		env: AppEnv;
+		// org: Organization;
+		// env: AppEnv;
 		customerId: string;
 		product: FullProduct;
 		scenario: string;
@@ -110,15 +109,10 @@ export const handleProductsUpdated = async ({
 		deletedCusProduct?: FullCusProduct;
 	};
 }) => {
-	const {
-		req,
-		org,
-		env,
-		scenario,
-		cusProduct,
-		scheduledCusProduct,
-		deletedCusProduct,
-	} = data;
+	const { req, scenario, cusProduct, scheduledCusProduct, deletedCusProduct } =
+		data;
+
+	const { db, org, env, logger } = ctx;
 
 	// Product:
 	const product = cusProduct.product;
@@ -126,8 +120,8 @@ export const handleProductsUpdated = async ({
 	const customer = await CusService.getFull({
 		db,
 		idOrInternalId: data.customerId || data.internalCustomerId,
-		orgId: data.org.id,
-		env: data.env,
+		orgId: org.id,
+		env: env,
 		inStatuses: RELEVANT_STATUSES,
 		entityId: cusProduct.internal_entity_id || undefined,
 	});
@@ -138,20 +132,10 @@ export const handleProductsUpdated = async ({
 		env,
 	});
 
-	const apiVersion = createdAtToVersion({
-		createdAt: org.created_at || Date.now(),
-	});
-
-	const cusDetails = await getCustomerDetails({
-		db,
-		customer: customer,
-		org,
-		env,
-		features,
-		logger,
-		cusProducts: customer.customer_products,
+	const apiCustomer = await getApiCustomer({
+		ctx,
+		fullCus: customer,
 		expand: [],
-		apiVersion,
 	});
 
 	const productRes = await getProductResponse({
@@ -199,12 +183,10 @@ export const handleProductsUpdated = async ({
 	let entityRes = null;
 	if (notNullish(customer?.entity)) {
 		entityRes = await getSingleEntityResponse({
+			ctx,
 			entityId: customer.entity!.id,
-			org,
-			env,
 			fullCus: customer,
 			entity: customer.entity!,
-			features,
 		});
 	}
 
@@ -215,7 +197,7 @@ export const handleProductsUpdated = async ({
 		eventType: "customer.products.updated",
 		data: {
 			scenario,
-			customer: cusDetails,
+			customer: apiCustomer,
 			entity: entityRes,
 			updated_product: productRes,
 		},

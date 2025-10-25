@@ -1,44 +1,34 @@
 import {
-	type ApiCusProduct,
-	ApiVersion,
-	ApiVersionClass,
-	type AppEnv,
+	type ApiEntity,
 	type Entity,
 	type EntityExpand,
-	type EntityResponse,
 	ErrCode,
-	type Feature,
 	type FullCusProduct,
 	type FullCustomer,
 	notNullish,
-	type Organization,
 	type Subscription,
 } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { getCusWithCache } from "@/internal/customers/cusCache/getCusWithCache.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { getApiCusPlans } from "@/internal/customers/cusUtils/apiCusUtils/getApiCusPlan/getApiCusPlans.js";
 import { getCusFeaturesResponse } from "@/internal/customers/cusUtils/cusFeatureResponseUtils/getCusFeaturesResponse.js";
-import { processFullCusProducts } from "@/internal/customers/cusUtils/cusProductResponseUtils/processFullCusProducts.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { nullish } from "@/utils/genUtils.js";
 
 export const getSingleEntityResponse = async ({
+	ctx,
 	entityId,
-	org,
-	env,
 	fullCus,
 	entity,
-	features,
 	withAutumnId = false,
 }: {
+	ctx: AutumnContext;
 	entityId: string;
-	org: Organization;
-	env: AppEnv;
 	fullCus: FullCustomer;
 	entity: Entity;
-	features: Feature[];
 	withAutumnId?: boolean;
 }) => {
-	const apiVersion = new ApiVersionClass(ApiVersion.V1_2);
+	const { org, env, apiVersion } = ctx;
 
 	if (!entity) {
 		throw new RecaseError({
@@ -70,16 +60,24 @@ export const getSingleEntityResponse = async ({
 		),
 	);
 
-	const { main, addOns } = await processFullCusProducts({
-		fullCusProducts: entityCusProducts,
-		entity,
-		subs: entitySubs,
-		org,
-		apiVersion,
-		features,
-	});
+	const fullEntity = structuredClone(fullCus);
+	fullEntity.customer_products = entityCusProducts;
+	fullEntity.subscriptions = entitySubs;
 
-	const products: ApiCusProduct[] = [...main, ...addOns];
+	// const { main, addOns } = await processFullCusProducts({
+	// 	fullCusProducts: entityCusProducts,
+	// 	entity,
+	// 	subs: entitySubs,
+	// 	org,
+	// 	apiVersion,
+	// 	features,
+	// });
+
+	// const products: ApiCusProduct[] = [...main, ...addOns];
+	const { apiCusPlans } = await getApiCusPlans({
+		ctx,
+		fullCus: fullEntity,
+	});
 
 	const cusFeatures = await getCusFeaturesResponse({
 		cusProducts: entityCusProducts,
@@ -96,47 +94,52 @@ export const getSingleEntityResponse = async ({
 		// feature_id: entity.feature_id,
 		customer_id: fullCus.id || fullCus.internal_id,
 		env,
-		products,
+		plans: apiCusPlans,
 		features: cusFeatures,
-	};
+	} satisfies ApiEntity;
 };
 
 export const getEntityResponse = async ({
-	db,
+	ctx,
 	entityIds,
-	org,
-	env,
 	customerId,
 	expand,
 	entityId,
 	withAutumnId = false,
-	apiVersion,
-	features,
-	logger,
 	skipCache = false,
 }: {
-	db: DrizzleCli;
+	ctx: AutumnContext;
 	entityIds: string[];
-	org: Organization;
-	env: AppEnv;
 	customerId: string;
 	expand?: EntityExpand[];
 	entityId?: string;
 	withAutumnId?: boolean;
-	apiVersion: number;
-	features: Feature[];
-	logger: any;
 	skipCache?: boolean;
 }) => {
-	const fullCus = await getCusWithCache({
+	// const fullCus = await getCusWithCache({
+	// 	db,
+	// 	idOrInternalId: customerId,
+	// 	org,
+	// 	env,
+	// 	expand,
+	// 	entityId,
+	// 	logger,
+	// 	skipCache,
+	// });
+
+	// don't use cache anymore?
+
+	const { org, env, features, db } = ctx;
+
+	const fullCus = await CusService.getFull({
 		db,
 		idOrInternalId: customerId,
-		org,
+		orgId: org.id,
 		env,
-		expand,
 		entityId,
-		logger,
-		skipCache,
+		expand,
+		withSubs: true,
+		withEntities: true,
 	});
 
 	if (!fullCus) {
@@ -147,7 +150,7 @@ export const getEntityResponse = async ({
 		});
 	}
 
-	const entityResponses: EntityResponse[] = [];
+	const entityResponses: ApiEntity[] = [];
 
 	for (const entityId of entityIds) {
 		const entity = fullCus.entities.find(
@@ -163,12 +166,10 @@ export const getEntityResponse = async ({
 		}
 
 		const entityResponse = await getSingleEntityResponse({
+			ctx,
 			entityId,
-			org,
-			env,
 			fullCus,
 			entity,
-			features,
 			withAutumnId,
 		});
 

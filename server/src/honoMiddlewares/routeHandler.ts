@@ -5,6 +5,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { validator } from "./validatorMiddleware.js";
 import { versionedValidator } from "./versionedValidator.js";
+import { expandMiddleware } from "./expandMiddleware.js";
 
 /**
  * Extended context type that includes validated input
@@ -126,6 +127,11 @@ export function createRoute<
 	// Params validator (no versioned variant)
 	if (opts.params) {
 		middlewares.push(validator("param", opts.params));
+	}
+
+	// Add expand middleware after query validation
+	if (opts.query || opts.versionedQuery) {
+		middlewares.push(expandMiddleware());
 	}
 
 	const wrappedHandler = async (

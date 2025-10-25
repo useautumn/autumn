@@ -1,7 +1,7 @@
 import { ApiCusReferralSchema } from "@api/customers/components/apiCusReferral.js";
 import { ApiCusUpcomingInvoiceSchema } from "@api/customers/components/apiCusUpcomingInvoice.js";
 import { ApiCusFeatureV2Schema } from "@api/customers/cusFeatures/previousVersions/apiCusFeatureV2.js";
-import { ApiCusProductV2Schema } from "@api/customers/cusProducts/previousVersions/apiCusProductV2.js";
+import { ApiCusProductV2Schema } from "@api/customers/cusPlans/previousVersions/apiCusProductV2.js";
 import { ApiEntitySchema } from "@api/entities/apiEntity.js";
 import { ApiCusRewardsSchema } from "@api/models.js";
 import { ApiInvoiceSchema } from "@api/others/apiInvoice.js";

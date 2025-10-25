@@ -4,12 +4,12 @@ import {
 	type ApiPlan,
 	ApiPlanSchema,
 	AttachScenario,
-	type BillingInterval,
 	type Feature,
 	type FeatureOptions,
 	type FullCustomer,
 	type FullProduct,
 	itemsToPlanFeatures,
+	itemToBillingInterval,
 	productV2ToBasePrice,
 	productV2ToFeatureItems,
 } from "@autumn/shared";
@@ -114,62 +114,13 @@ export const getPlanResponse = async ({
 		attachScenario,
 	});
 
-	console.log(
-		`New feature:\n ${JSON.stringify(
-			{
-				// Basic fields
-				id: product.id,
-				name: product.name || "",
-				description: product.description, // Products don't have descriptions
-				group: product.group,
-				version: product.version,
-
-				// Boolean flags
-				add_on: product.is_add_on,
-				default: product.is_default,
-
-				// Price field (required in Plan schema)
-				price: basePrice
-					? {
-							amount: basePrice.amount,
-							interval: basePrice.interval as unknown as BillingInterval,
-						}
-					: {
-							amount: 0,
-							interval: "month" as BillingInterval,
-						},
-
-				// Features array
-				features: planFeatures,
-
-				// Free trial
-				free_trial: freeTrial,
-
-				// Metadata fields
-				created_at: product.created_at,
-				env: product.env,
-				archived: product.archived,
-				base_variant_id: product.base_variant_id,
-
-				// Customer context (optional)
-				// Uncomment when ready to add customer context
-				// customer_context: {
-				//     trial_available: notNullish(freeTrial),
-				//     scenario: attachScenario,
-				// },
-			},
-			null,
-			4,
-		)}`,
-	);
-
 	// 9. Build Plan response
 	return ApiPlanSchema.parse({
 		// Basic fields
 		id: product.id,
-		name: product.name || "",
-		description: product.description, // Products don't have descriptions
-		group: product.group,
+		name: product.name || null,
+		description: product.description || null, // Products don't have descriptions
+		group: product.group || null,
 		version: product.version,
 
 		// Boolean flags
@@ -180,12 +131,11 @@ export const getPlanResponse = async ({
 		price: basePrice
 			? {
 					amount: basePrice.amount,
-					interval: basePrice.interval as BillingInterval,
+					interval: itemToBillingInterval({ item: basePrice }),
+					interval_count:
+						basePrice.intervalCount !== 1 ? basePrice.intervalCount : undefined,
 				}
-			: {
-					amount: 0,
-					interval: "month" as BillingInterval,
-				},
+			: null,
 
 		// Features array
 		features: planFeatures,
