@@ -11,12 +11,11 @@ import { ResetInterval } from "../planEnums.js";
 export const ApiPlanFeatureSchema = z
 	.object({
 		feature_id: z.string(),
-		granted: z.number(),
+		granted_balance: z.number(),
 		unlimited: z.boolean(),
-
 		reset_interval: z.enum(ResetInterval).optional(),
 		reset_interval_count: z.number().optional(),
-		reset_usage_on_enabled: z.boolean().optional(),
+		reset_usage_when_enabled: z.boolean().optional(),
 
 		price: z
 			.object({
@@ -46,6 +45,13 @@ export const ApiPlanFeatureSchema = z
 				max: z.number().nullable(),
 				expiry_duration_type: z.enum(ResetInterval),
 				expiry_duration_length: z.number().optional(),
+			})
+			.optional(),
+
+		display: z
+			.object({
+				primary_text: z.string(),
+				secondary_text: z.string().optional(),
 			})
 			.optional(),
 	})

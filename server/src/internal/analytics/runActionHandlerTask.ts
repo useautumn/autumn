@@ -1,54 +1,47 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type { Job, Queue } from "bullmq";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { JobName } from "@/queue/JobName.js";
 import { getLock, releaseLock } from "@/queue/lockUtils.js";
-import { Queue } from "bullmq";
-import { Job } from "bullmq";
-import { handleProductsUpdated } from "./handlers/handleProductsUpdated.js";
 import { handleCustomerCreated } from "./handlers/handleCustomerCreated.js";
+import { handleProductsUpdated } from "./handlers/handleProductsUpdated.js";
 
 export const runActionHandlerTask = async ({
 	queue,
 	job,
-	logger,
-	db,
 	useBackup,
+	ctx,
 }: {
 	queue: Queue;
 	job: Job;
-	logger: any;
-	db: DrizzleCli;
 	useBackup: boolean;
+	ctx: AutumnContext;
 }) => {
-	let payload = job.data;
-	let internalCustomerId = payload.internalCustomerId;
-	let lockKey = `action:${internalCustomerId}`;
+	const payload = job.data;
+	const internalCustomerId = payload.internalCustomerId;
+	const lockKey = `action:${internalCustomerId}`;
+
+	const { logger } = ctx;
 
 	try {
-		let lock = await getLock({ queue, job, lockKey, useBackup });
+		const lock = await getLock({ queue, job, lockKey, useBackup });
 		if (!lock) return;
 
 		switch (job.name) {
 			case JobName.HandleProductsUpdated:
 				await handleProductsUpdated({
-					db,
-					logger,
+					ctx,
 					data: payload,
 				});
 				break;
 			case JobName.HandleCustomerCreated:
 				await handleCustomerCreated({
-					db,
-					logger,
+					ctx,
 					data: payload,
 				});
 				break;
 		}
 	} catch (error: any) {
-		logger.error("Error processing action handler job:", {
-			// jobName: job.name,
-			// payload,
-			message: error.message,
-		});
+		logger.error(`Error processing action handler job: ${error.message}`);
 	} finally {
 		await releaseLock({ lockKey, useBackup });
 	}

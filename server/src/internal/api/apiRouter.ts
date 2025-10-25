@@ -17,7 +17,7 @@ import { handleGetOrg } from "../orgs/handlers/handleGetOrg.js";
 import { platformRouter } from "../platform/platformLegacy/platformRouter.js";
 import { productBetaRouter, productRouter } from "../products/productRouter.js";
 import { componentRouter } from "./components/componentRouter.js";
-import { entityRouter } from "./entities/entityRouter.js";
+import { expressEntityRouter } from "./entities/entityRouter.js";
 import { checkRouter } from "./entitled/checkRouter.js";
 import { eventsRouter } from "./events/eventRouter.js";
 import { usageRouter } from "./events/usageRouter.js";
@@ -44,7 +44,7 @@ apiRouter.use("/features", featureRouter);
 apiRouter.use("/internal_features", internalFeatureRouter);
 
 apiRouter.use("/usage", usageRouter);
-apiRouter.use("/entities", entityRouter);
+apiRouter.use("/entities", expressEntityRouter);
 apiRouter.use("/migrations", migrationRouter);
 
 // REWARDS

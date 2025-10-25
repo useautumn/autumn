@@ -1,6 +1,7 @@
 import {
 	type ApiVersionClass,
 	type AppEnv,
+	AuthType,
 	CusExpand,
 	type CusProductStatus,
 	type Feature,
@@ -10,7 +11,8 @@ import {
 import type { NodeClickHouseClient } from "@clickhouse/client/dist/client.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
-import { getCustomerDetails } from "../../customers/cusUtils/getCustomerDetails.js";
+import { getApiCustomer } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomer.js";
+import { generateId } from "@/utils/genUtils.js";
 import { getPaginatedFullCusQuery } from "../../customers/getFullCusQuery.js";
 
 export class CusBatchService {
@@ -95,20 +97,24 @@ export class CusBatchService {
 				const customer = normalizedCustomer as FullCustomer;
 				const cusProducts = customer.customer_products || [];
 
-				const customerDetails = await getCustomerDetails({
-					db,
-					customer,
-					features,
-					org,
-					env,
-					params: {},
-					logger: console,
-					cusProducts,
+				const apiCustomer = await getApiCustomer({
+					ctx: {
+						db,
+						org,
+						env,
+						features,
+						logger,
+						apiVersion,
+						id: generateId("local_req"),
+						isPublic: false,
+						authType: AuthType.Unknown,
+						timestamp: Date.now(),
+					},
+					fullCus: customer,
 					expand: expand,
-					apiVersion: apiVersion,
 				});
 
-				finals.push(customerDetails);
+				finals.push(apiCustomer);
 			} catch (error) {
 				console.error(`Failed to process customer ${result.id}:`, error);
 			}
@@ -124,7 +130,7 @@ export class CusBatchService {
 		const normalizeTimestamp = (value: any): number => {
 			if (typeof value === "string") {
 				const parsed = parseInt(value, 10);
-				return isNaN(parsed) ? Date.now() : parsed;
+				return Number.isNaN(parsed) ? Date.now() : parsed;
 			}
 			return typeof value === "number" ? value : Date.now();
 		};

@@ -12,6 +12,7 @@ import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutRewa
 import { runUpdateBalanceTask } from "@/trigger/updateBalanceTask.js";
 import { runUpdateUsageTask } from "@/trigger/updateUsageTask.js";
 import { generateId } from "@/utils/genUtils.js";
+import { createWorkerAutumnContext } from "@/utils/workerUtils/createAutumnContext.js";
 import { JobName } from "./JobName.js";
 import { acquireLock, getRedisConnection, releaseLock } from "./lockUtils.js";
 import { QueueManager } from "./QueueManager.js";
@@ -79,11 +80,18 @@ const initWorker = ({
 				}
 
 				if (actionHandlers.includes(job.name as JobName)) {
+					const ctx = await createWorkerAutumnContext({
+						db,
+						orgId: job.data.orgId,
+						env: job.data.env,
+						logger: workerLogger,
+						workerId: id.toString(),
+					});
+
 					await runActionHandlerTask({
 						queue,
 						job,
-						logger: workerLogger,
-						db,
+						ctx,
 						useBackup,
 					});
 					return;

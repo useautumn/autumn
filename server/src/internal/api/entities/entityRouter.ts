@@ -1,24 +1,23 @@
 import { Router } from "express";
-
-import { routeHandler } from "@/utils/routerUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { handleGetEntity } from "./handlers/handleGetEntity.js";
+import { routeHandler } from "@/utils/routerUtils.js";
 import { handlePostEntityRequest } from "../../entities/handlers/handleCreateEntity/handleCreateEntity.js";
 import { handleDeleteEntity } from "./handlers/handleDeleteEntity.js";
+import { handleGetEntity } from "./handlers/handleGetEntity.js";
 
-export const entityRouter: Router = Router({ mergeParams: true });
+export const expressEntityRouter: Router = Router({ mergeParams: true });
 
 // List entityes
-entityRouter.get("", (req: any, res: any) =>
+expressEntityRouter.get("", (req: any, res: any) =>
 	routeHandler({
 		req,
 		res,
 		action: "listEntities",
 		handler: async (req, res) => {
 			const customerId = String(req.params.customer_id);
-			let { orgId, env } = req;
+			const { orgId, env } = req;
 
-			let customer = await CusService.getFull({
+			const customer = await CusService.getFull({
 				db: req.db,
 				idOrInternalId: customerId,
 				orgId,
@@ -34,10 +33,14 @@ entityRouter.get("", (req: any, res: any) =>
 );
 
 // 1. Create entity
-entityRouter.post("", handlePostEntityRequest);
+expressEntityRouter.post("", handlePostEntityRequest);
 
 // 2. Delete entity
-entityRouter.delete("/:entity_id", handleDeleteEntity);
+expressEntityRouter.delete("/:entity_id", handleDeleteEntity);
 
 // 3. Get entity
-entityRouter.get("/:entity_id", handleGetEntity);
+expressEntityRouter.get("/:entity_id", handleGetEntity);
+
+// export const entityRouter = new Hono<HonoEnv>();
+
+// entityRouter.get("/:entity_id", ...handleGetEntity);

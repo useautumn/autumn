@@ -1,10 +1,10 @@
-import { BillingInterval, FullProduct } from "@autumn/shared";
-import { generateObject } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
+import { BillingInterval, type FullProduct } from "@autumn/shared";
+import { generateObject } from "ai";
+import type { Logger } from "pino";
 import { z } from "zod";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { nullish } from "@/utils/genUtils.js";
-import { Logger } from "pino";
-import { DrizzleCli } from "@/db/initDrizzle.js";
 import { ProductService } from "../ProductService.js";
 
 const prompt = `Detect whether a given product (called "product_to_detect") is an interval variant of a base product from the list of existing products (called "existing_products").
@@ -35,7 +35,7 @@ export const detectBaseVariant = async ({
 	logger.info(`Detecting base variant for ${curProduct.id}`);
 	if (!process.env.ANTHROPIC_API_KEY) return;
 
-	let existingProducts = (await ProductService.listFull({
+	const existingProducts = (await ProductService.listFull({
 		db,
 		orgId: curProduct.org_id,
 		env: curProduct.env,
@@ -43,8 +43,8 @@ export const detectBaseVariant = async ({
 	})) as FullProduct[];
 
 	// if (product.base_variant_id == baseVariantId) {
-	let curPrices = curProduct.prices;
-	let intervals = curPrices.map((price) => price.config.interval);
+	const curPrices = curProduct.prices;
+	const intervals = curPrices.map((price) => price.config.interval);
 
 	// 1. Return null if add on
 	if (curProduct.is_add_on) return null;
@@ -58,17 +58,17 @@ export const detectBaseVariant = async ({
 
 	const filteredExistingProducts = existingProducts.filter(
 		(p) =>
-			p.id != curProduct.id &&
+			p.id !== curProduct.id &&
 			nullish(p.base_variant_id) &&
 			!p.is_add_on &&
 			p.prices.length > 0 &&
 			p.prices.every(
-				(price) => price.config.interval == BillingInterval.Month,
+				(price) => price.config.interval === BillingInterval.Month,
 			) &&
-			p.group == curProduct.group,
+			p.group === curProduct.group,
 	);
 
-	if (filteredExistingProducts.length == 0) {
+	if (filteredExistingProducts.length === 0) {
 		logger.info(`No base product to search for`);
 		return null;
 	}
@@ -95,13 +95,13 @@ export const detectBaseVariant = async ({
 </existing_products>
 `;
 
-	let { object } = await generateObject({
+	const { object } = await generateObject({
 		model: anthropic("claude-3-5-haiku-latest"),
 		schema: z.object({ base_variant_id: z.string().nullable() }),
 		prompt: `${prompt}\n\n${variables}`,
 	});
 
-	let baseVariantId = object.base_variant_id;
+	const baseVariantId = object.base_variant_id;
 
 	logger.info(
 		`llm response for base variant of ${curProduct.id}: ${baseVariantId}`,

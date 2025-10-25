@@ -53,3 +53,21 @@ export function getVersionsBetween({
 
 	return sorted.slice(fromIndex, toIndex + 1);
 }
+
+export function getVersionsForRequestTransform({
+	from,
+	to,
+}: {
+	from: ApiVersion;
+	to: ApiVersion;
+}): ApiVersion[] {
+	const sorted = getVersionsSorted();
+	const fromIndex = sorted.indexOf(from);
+	const toIndex = sorted.indexOf(to);
+
+	if (fromIndex === -1 || toIndex === -1) {
+		throw new Error(`Invalid version range: ${from} to ${to}`);
+	}
+
+	return sorted.slice(fromIndex + 1, toIndex + 2);
+}

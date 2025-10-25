@@ -1,8 +1,9 @@
 import { CreateFeatureSchema, ErrCode, FeatureType } from "@autumn/shared";
 import express, { type Router } from "express";
+import { formatZodError } from "@/errors/formatZodError.js";
 import { handleDeleteFeature } from "@/internal/features/handlers/handleDeleteFeature.js";
 import { handleUpdateFeature } from "@/internal/features/handlers/handleUpdateFeature.js";
-import RecaseError, { formatZodError } from "@/utils/errorUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 import { FeatureService } from "./FeatureService.js";
 import {

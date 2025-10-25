@@ -9,7 +9,7 @@ import {
 	ApiCusFeatureV1Schema,
 } from "../cusFeatures/previousVersions/apiCusFeatureV1.js";
 import type { ApiCusFeatureV2 } from "../cusFeatures/previousVersions/apiCusFeatureV2.js";
-import { transformCusProductV2ToV1 } from "../cusProducts/changes/V0_2_CusProductChange.js";
+import { transformCusProductV2ToV1 } from "../cusPlans/changes/V0.2_CusProductChange.js";
 import {
 	type CustomerLegacyData,
 	CustomerLegacyDataSchema,

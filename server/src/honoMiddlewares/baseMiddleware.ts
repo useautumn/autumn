@@ -68,6 +68,9 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		userId: undefined,
 		authType: AuthType.Unknown,
 		env: AppEnv.Sandbox, // maybe use app_env headers
+
+		// Query params
+		expand: [],
 	});
 
 	childLogger.info(`${method} ${path}`);

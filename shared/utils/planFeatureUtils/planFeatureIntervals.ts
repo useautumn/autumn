@@ -1,4 +1,5 @@
 import { ResetInterval } from "@api/models.js";
+import { EntInterval } from "@models/productModels/entModels/entEnums.js";
 import {
 	ProductItemInterval,
 	RolloverDuration,
@@ -84,4 +85,39 @@ export const rolloverToResetIntv = (
 		default:
 			return ResetInterval.Month;
 	}
+};
+
+export const entIntvToResetIntv = ({
+	entInterval,
+}: {
+	entInterval: EntInterval | null | undefined;
+}) => {
+	if (entInterval === EntInterval.Lifetime || !entInterval) {
+		return ResetInterval.OneOff;
+	}
+
+	return entInterval as unknown as ResetInterval;
+};
+
+export const resetIntvToEntIntv = ({
+	resetIntv,
+}: {
+	resetIntv: ResetInterval;
+}) => {
+	if (resetIntv === ResetInterval.OneOff) {
+		return EntInterval.Lifetime;
+	}
+
+	return resetIntv as unknown as EntInterval;
+};
+
+export const toIntervalCountResponse = ({
+	intervalCount,
+}: {
+	intervalCount: number | undefined;
+}) => {
+	if (intervalCount === 1) {
+		return undefined;
+	}
+	return intervalCount;
 };

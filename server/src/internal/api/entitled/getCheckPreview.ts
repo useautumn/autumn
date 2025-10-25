@@ -1,4 +1,5 @@
 import {
+	cusProductToProduct,
 	type Feature,
 	FeaturePreviewScenario,
 	type FullCusProduct,
@@ -6,7 +7,6 @@ import {
 	type FullProduct,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { fullCusProductToProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
 import {
@@ -43,7 +43,7 @@ export const getCheckPreview = async ({
 	);
 
 	const cusOwnedProducts = mainCusProds.map((cp: FullCusProduct) =>
-		fullCusProductToProduct(cp),
+		cusProductToProduct({ cusProduct: cp }),
 	);
 
 	sortProductsByPrice({ products: cusOwnedProducts });

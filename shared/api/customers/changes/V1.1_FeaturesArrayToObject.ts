@@ -1,4 +1,3 @@
-import { ApiCustomerSchema } from "@api/customers/apiCustomer.js";
 import { ApiFeatureType } from "@api/features/apiFeature.js";
 import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
 import {
@@ -10,6 +9,7 @@ import {
 	type ApiCusFeatureV2,
 	ApiCusFeatureV2Schema,
 } from "../cusFeatures/previousVersions/apiCusFeatureV2.js";
+import { ApiCustomerV3Schema } from "../previousVersions/apiCustomerV3.js";
 
 /**
  * V1_2: Features changed from array to object AND merged multi-interval features
@@ -24,10 +24,10 @@ import {
  */
 
 // V1_2+ customer schema (features as object with breakdown)
-const V1_2_CustomerSchema = ApiCustomerSchema;
+const V1_2_CustomerSchema = ApiCustomerV3Schema;
 
 // V1_1 customer schema (features as array without breakdown)
-const V1_1_CustomerSchema = ApiCustomerSchema.extend({
+const V1_1_CustomerSchema = ApiCustomerV3Schema.extend({
 	features: z.array(ApiCusFeatureV2Schema),
 });
 

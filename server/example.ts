@@ -1,14 +1,8 @@
 // @ts-nocheck
-{
-  id: "team_plan",
-  // other fields,
-  licenses: [
-    { plan_id: "dev_seat" },
-    { 
-      plan_id: "pro_seat", price: 50 // to override price 
-    },
-  ]
-}
+
+
+// Old customer object
+
 
 // Global namesapce:
 //

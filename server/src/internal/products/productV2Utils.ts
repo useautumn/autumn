@@ -43,7 +43,7 @@ export const mapToProductItems = ({
 	}
 
 	for (const item of items) {
-		const feature = features.find((f) => f.id == item.feature_id);
+		const feature = features.find((f) => f.id === item.feature_id);
 		if (feature) {
 			item.feature_type = getItemFeatureType({ item, features });
 		}
@@ -84,7 +84,7 @@ export const mapToProductV2 = ({
 
 	const productV2: ProductV2 = {
 		internal_id: product.internal_id,
-
+		env: product.env,
 		id: product.id,
 		name: product.name,
 		is_add_on: product.is_add_on,

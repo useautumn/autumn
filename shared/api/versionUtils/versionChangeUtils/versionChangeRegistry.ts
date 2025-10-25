@@ -4,16 +4,20 @@ import { V0_1_CustomerChange } from "@api/customers/changes/V0.1_CustomerChange.
 import { V0_2_CustomerChange } from "@api/customers/changes/V0.2_CustomerChange.js";
 import { V0_2_InvoicesAlwaysExpanded } from "@api/customers/changes/V0.2_InvoicesAlwaysExpanded.js";
 import { V1_1_FeaturesArrayToObject } from "@api/customers/changes/V1.1_FeaturesArrayToObject.js";
+
 // Import customer product changes
 
+import { V1_2_CustomerChange } from "@api/customers/changes/V1.2_CustomerChange.js";
+import { V1_2_CustomerQueryChange } from "@api/customers/requestChanges/V1.2_CustomerQueryChange.js";
 // Import product changes
 import { V1_2_ProductChanges } from "@api/products/changes/V1.2_ProductChanges.js";
-
 import { ApiVersion } from "../ApiVersion.js";
 import type { VersionChangeConstructor } from "./VersionChange.js";
 import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass.js";
 
 export const V2_CHANGES: VersionChangeConstructor[] = [
+	V1_2_CustomerChange, // Transforms Customer TO V1.2 format from V2 format
+	V1_2_CustomerQueryChange, // Transforms Customer Query TO V2.0 format (adds expand options)
 	V1_2_ProductChanges, // Transforms Product TO V1.2 format from V2 Plan format
 ];
 
@@ -42,7 +46,7 @@ export function registerAllVersionChanges() {
 		changes: V2_CHANGES,
 	});
 	VersionChangeRegistryClass.register({
-		version: ApiVersion.Beta,
+		version: ApiVersion.V1_Beta,
 		changes: V1_4_CHANGES,
 	});
 	VersionChangeRegistryClass.register({

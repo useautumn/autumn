@@ -1,5 +1,5 @@
-import { ApiCusFeatureSchema } from "@api/customers/cusFeatures/apiCusFeature.js";
-import { ApiCusProductSchema } from "@api/customers/cusProducts/apiCusProduct.js";
+import { ApiCusFeatureV3Schema } from "@api/customers/cusFeatures/previousVersions/apiCusFeatureV3.js";
+import { ApiCusPlanSchema } from "@api/customers/cusPlans/apiCusPlan.js";
 import { ApiInvoiceSchema } from "@api/others/apiInvoice.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
 import { z } from "zod/v4";
@@ -29,11 +29,11 @@ export const ApiBaseEntitySchema = z.object({
 });
 
 export const ApiEntitySchema = ApiBaseEntitySchema.extend({
-	products: z.array(ApiCusProductSchema).optional().meta({
-		description: "Products associated with this entity",
+	plans: z.array(ApiCusPlanSchema).optional().meta({
+		description: "Plans associated with this entity",
 		example: [],
 	}),
-	features: z.record(z.string(), ApiCusFeatureSchema).optional().meta({
+	features: z.record(z.string(), ApiCusFeatureV3Schema).optional().meta({
 		description: "Features associated with this entity",
 		example: {},
 	}),
@@ -44,4 +44,4 @@ export const ApiEntitySchema = ApiBaseEntitySchema.extend({
 	}),
 });
 
-export type EntityResponse = z.infer<typeof ApiEntitySchema>;
+export type ApiEntity = z.infer<typeof ApiEntitySchema>;

@@ -1,7 +1,13 @@
 import { type ApiVersion, LATEST_VERSION } from "../ApiVersion.js";
 import { ApiVersionClass } from "../ApiVersionClass.js";
-import { getVersionsBetween } from "../versionRegistryUtils.js";
-import type { AffectedResource } from "./VersionChange.js";
+import {
+	getVersionsBetween,
+	getVersionsForRequestTransform,
+} from "../versionRegistryUtils.js";
+import type {
+	AffectedResource,
+	VersionChangeConstructor,
+} from "./VersionChange.js";
 import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass.js";
 
 /**
@@ -33,6 +39,7 @@ export function applyResponseVersionChanges<T = any, TLegacyData = any>({
 }): T {
 	// Default currentVersion to latest if not provided
 	const _currentVersion = currentVersion || new ApiVersionClass(LATEST_VERSION);
+
 	// If versions are equal, no transformation needed
 	if (_currentVersion.eq(targetVersion)) {
 		return input;
@@ -58,6 +65,7 @@ export function applyResponseVersionChanges<T = any, TLegacyData = any>({
 
 	// Apply each version's changes
 	let transformedData = input;
+
 	for (const version of versionsToApply) {
 		const changes = VersionChangeRegistryClass.getChangesForVersion({
 			version,
@@ -88,7 +96,7 @@ export function applyResponseVersionChanges<T = any, TLegacyData = any>({
 				? change.description.join("; ")
 				: change.description;
 
-			// console.log(`Applying change [${change.oldVersion}]: ${description}`);
+			console.log(`Applying change [${change.oldVersion}]: ${description}`);
 			// Apply the response transformation (backward)
 			transformedData = change.transformResponse({
 				input: transformedData,
@@ -127,34 +135,34 @@ export function applyResponseVersionChanges<T = any, TLegacyData = any>({
 export function applyRequestVersionChanges<T = any, TLegacyData = any>({
 	input,
 	legacyData,
-	targetVersion,
-	currentVersion,
+	fromVersion,
+	toVersion,
 	resource,
 }: {
 	input: T;
 	legacyData?: TLegacyData;
-	targetVersion: ApiVersionClass; // User's version (old)
-	currentVersion: ApiVersionClass; // Latest version (new)
+	fromVersion: ApiVersionClass; // User's version (old)
+	toVersion: ApiVersionClass; // Latest version (new)
 	resource: AffectedResource;
 }): T {
 	// If versions are equal, no transformation needed
-	if (targetVersion.eq(currentVersion)) {
+	if (fromVersion.eq(toVersion)) {
 		return input;
 	}
 
 	// If target is newer than current, throw error
-	if (targetVersion.gt(currentVersion)) {
+	if (fromVersion.gt(toVersion)) {
 		throw new Error(
-			`Cannot transform forward from ${currentVersion} to ${targetVersion}. ` +
+			`Cannot transform forward from ${fromVersion} to ${toVersion}. ` +
 				"Current version should be >= target version.",
 		);
 	}
 
 	// Get all versions between target and current (exclusive of current, inclusive of target)
-	const versionsToApply = getVersionsBetween({
-		from: targetVersion.value,
-		to: currentVersion.value,
-	}).filter((v) => v !== currentVersion.value); // Exclude current itself
+	const versionsToApply = getVersionsForRequestTransform({
+		from: fromVersion.value,
+		to: toVersion.value,
+	});
 
 	// Don't reverse - we want to go forward (old → new)
 	// versionsToApply is already in ascending order from getVersionsBetween
@@ -213,7 +221,7 @@ export function backwardsChangeActive({
 	versionChange,
 }: {
 	apiVersion: ApiVersionClass;
-	versionChange: new () => any;
+	versionChange: VersionChangeConstructor;
 }): boolean {
 	const change = new versionChange();
 	return apiVersion.lte(change.oldVersion);
@@ -254,22 +262,22 @@ export function applyResponseVersionChangesToArray<T = any, TLegacyData = any>({
 export function applyRequestVersionChangesToArray<T = any, TLegacyData = any>({
 	inputArray,
 	legacyData,
-	targetVersion,
-	currentVersion,
+	fromVersion,
+	toVersion,
 	resource,
 }: {
 	inputArray: T[];
 	legacyData?: TLegacyData;
-	targetVersion: ApiVersionClass;
-	currentVersion: ApiVersionClass;
+	fromVersion: ApiVersionClass;
+	toVersion: ApiVersionClass;
 	resource: AffectedResource;
 }): T[] {
 	return inputArray.map((item) =>
 		applyRequestVersionChanges({
 			input: item,
 			legacyData,
-			targetVersion,
-			currentVersion,
+			fromVersion,
+			toVersion,
 			resource,
 		}),
 	);

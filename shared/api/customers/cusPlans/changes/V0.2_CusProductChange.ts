@@ -10,8 +10,11 @@ import {
 	isPriceItem,
 } from "@utils/productV2Utils/productItemUtils/getItemType.js";
 import { notNullish } from "@utils/utils.js";
-import { z } from "zod/v4";
-import type { CusProductLegacyData } from "../cusProductLegacyData.js";
+import type { z } from "zod/v4";
+import {
+	type CusProductLegacyData,
+	CusProductLegacyDataSchema,
+} from "../cusProductLegacyData.js";
 import { ApiCusProductV1Schema } from "../previousVersions/apiCusProductV1.js";
 import { ApiCusProductV2Schema } from "../previousVersions/apiCusProductV2.js";
 
@@ -131,10 +134,6 @@ export function transformCusProductV2ToV1({
 
 	return v1CusProduct;
 }
-
-const CusProductLegacyDataSchema = z.object({
-	subscription_id: z.string().optional(),
-});
 
 export const V0_2_CusProductChange = defineVersionChange({
 	newVersion: ApiVersion.V1_1, // Breaking change introduced in V1_1

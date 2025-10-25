@@ -55,28 +55,39 @@ export const versionedValidator = ({
 		const versionKey = userVersion.value as ApiVersion;
 		const schema = schemas[versionKey] ?? schemas.latest;
 
-		// Validate with version-specific schema using zValidator
-		const validatorMiddleware = zValidator(target, schema, (result, _c) => {
+		let validatedData: Record<string, unknown>;
+
+		// For query validation, use the parsed query from queryMiddleware
+		if (target === "query") {
+			const parsedQuery = c.req.query();
+			const result = schema.safeParse(parsedQuery);
 			if (!result.success) {
-				// Validation errors reference fields from user's version ✅
 				throw result.error;
 			}
-		});
+			validatedData = result.data as Record<string, unknown>;
+			c.req.addValidatedData(target, result.data);
+		} else {
+			// For other targets, use zValidator
+			const validatorMiddleware = zValidator(target, schema, (result, _c) => {
+				if (!result.success) {
+					// Validation errors reference fields from user's version ✅
+					throw result.error;
+				}
+			});
 
-		// Run validation
-		await validatorMiddleware(c, async () => {});
+			// Run validation
+			await validatorMiddleware(c, async () => {});
 
-		// Get validated data - type assertion needed due to Hono's dynamic validation target typing
-		type ValidData = Record<string, unknown>;
-		// biome-ignore lint/suspicious/noExplicitAny: Hono's typing requires dynamic target access
-		const validatedData = (c.req as any).valid(target) as ValidData;
+			// Get validated data - type assertion needed due to Hono's dynamic validation target typing
+			validatedData = (c.req as any).valid(target) as Record<string, unknown>;
+		}
 
 		// If user is on older version, transform to latest
 		if (!userVersion.eq(new ApiVersionClass(LATEST_VERSION))) {
 			const transformed = applyRequestVersionChanges({
 				input: validatedData,
-				targetVersion: userVersion,
-				currentVersion: new ApiVersionClass(LATEST_VERSION),
+				fromVersion: userVersion,
+				toVersion: new ApiVersionClass(LATEST_VERSION),
 				resource,
 			});
 

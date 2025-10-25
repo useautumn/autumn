@@ -5,6 +5,7 @@ import {
 	type FullCustomerEntitlement,
 	getCusEntBalance,
 	getStartingBalance,
+	notNullish,
 } from "../../index.js";
 import { cusEntToCusPrice } from "../productUtils/convertUtils.js";
 import { getRolloverFields } from "./getRolloverFields.js";
@@ -93,7 +94,7 @@ export const cusEntToIncludedUsage = ({
 	// }
 };
 
-export const cusEntToUsageLimit = ({
+export const cusEntToMaxPurchase = ({
 	cusEnt,
 }: {
 	cusEnt: FullCusEntWithFullCusProduct;
@@ -102,6 +103,13 @@ export const cusEntToUsageLimit = ({
 		cusEnt,
 	});
 
-	if (cusEnt.entitlement.usage_limit) return cusEnt.entitlement.usage_limit;
-	return startingBalance;
+	const usageLimit = cusEnt.entitlement.usage_limit;
+	// if (cusEnt.entitlement.usage_limit) return cusEnt.entitlement.usage_limit;
+	// return startingBalance;
+
+	if (notNullish(usageLimit) && notNullish(startingBalance)) {
+		return new Decimal(usageLimit).sub(startingBalance).toNumber();
+	}
+
+	return 0;
 };

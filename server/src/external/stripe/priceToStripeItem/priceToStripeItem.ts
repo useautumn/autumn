@@ -140,7 +140,7 @@ export const priceToStripeItem = ({
 			};
 		}
 
-		if (apiVersion === ApiVersion.Beta && !isCheckout) {
+		if (apiVersion === ApiVersion.V1_Beta && !isCheckout) {
 			return {
 				lineItem: {
 					// lineItem: getEmptyPriceItem({ price, org }),

@@ -4,6 +4,7 @@ import {
 	type Entity,
 	LegacyVersion,
 } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { orgToVersion } from "@/utils/versionUtils/legacyVersionUtils.js";
@@ -91,16 +92,10 @@ export const createEntities = async ({
 	}
 
 	const { entities } = await getEntityResponse({
-		db,
+		ctx: req as AutumnContext,
 		entityIds: newEntities.map((e: any) => e.id || e.internal_id),
-		org,
-		env,
 		customerId: customer.id || customer.internal_id,
 		withAutumnId,
-		apiVersion: apiVersion!,
-		features,
-		logger,
-		skipCache: true,
 	});
 
 	return entities;

@@ -196,20 +196,3 @@ checkRouter.post("", async (req: any, res: any) => {
 		handleRequestError({ req, error, res, action: "Failed to GET entitled" });
 	}
 });
-
-// let features = [feature, ...creditSystems];
-// let balanceObj: any, featureToUse: any;
-// try {
-//   balanceObj = balances.length > 0 ? balances[0] : null;
-
-//   featureToUse =
-//     notNullish(balanceObj) && balanceObj.feature_id !== feature.id
-//       ? features.find((f) => f.id === balanceObj.feature_id)
-//       : creditSystems.length > 0
-//         ? creditSystems[0]
-//         : feature;
-// } catch (error) {
-//   logger.error(`/check: failed to get balance & feature to use`, error);
-// }
-
-// 3. If with preview, get preview
