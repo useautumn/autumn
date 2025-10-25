@@ -3,6 +3,7 @@ import {
 	ApiVersion,
 	type CheckResponse,
 	type CheckResponseV0,
+	SuccessCode,
 } from "@autumn/shared";
 import chalk from "chalk";
 import { TestFeature } from "tests/setup/v2Features.js";
@@ -56,11 +57,13 @@ describe(`${chalk.yellowBright("check1: test /check when no feature attached")}`
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponse;
 
-		expect(res.allowed).toBe(false);
-		expect(res.customer_id).toBe(customerId);
-		expect(res.feature_id).toBe(TestFeature.Messages);
-		expect(res.code).toBeDefined();
-		expect(res.required_balance).toBe(1);
+		expect(res).toStrictEqual({
+			allowed: false,
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			required_balance: 1,
+			code: SuccessCode.FeatureFound,
+		});
 	});
 
 	test("should have correct check response when feature not attached (v0)", async () => {

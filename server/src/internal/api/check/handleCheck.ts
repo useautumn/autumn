@@ -88,24 +88,18 @@ export const handleCheck = createRoute({
 			requiredBalance,
 		});
 
-		console.log("API Version:", ctx.apiVersion.value);
-		// console.log("V2 Response:", v2Response);
-
 		// Apply version transformations based on API version
 		const transformedResponse = applyResponseVersionChanges<CheckResult>({
 			input: v2Response,
 			targetVersion: ctx.apiVersion,
 			resource: AffectedResource.Check,
+			legacyData: {
+				noCusEnts: checkData.cusEnts.length === 0,
+				featureToUse: checkData.featureToUse,
+			},
 		});
 
-		// console.log("Transformed Response:", transformedResponse);
-
 		return c.json(transformedResponse);
-
-		// const { allowed, balance } = v2Response;
-		// const featureToUse = allFeatures.find(
-		// 	(f: Feature) => f.id === v2Response.feature_id,
-		// );
 
 		// if (allowed && req.isPublic !== true) {
 		// 	if (send_event) {
