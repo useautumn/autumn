@@ -3,29 +3,29 @@ import {
 	getListResponseSchema,
 	SuccessResponseSchema,
 } from "../common/commonResponses.js";
-import { ApiFeatureSchema } from "./apiFeature.js";
+import { ApiFeatureSchema, FEATURE_EXAMPLE } from "./apiFeature.js";
 import {
 	CreateFeatureParamsSchema,
 	UpdateFeatureParamsSchema,
 } from "./featureOpModels.js";
 
-// Note: The meta with id is added in openapi.ts to avoid duplicate registration
-// This schema is exported through the main index and should not have an id here
-export const ApiFeatureWithMeta = ApiFeatureSchema;
+// Register the schema with .meta() for OpenAPI spec generation
+export const ApiFeatureWithMeta = ApiFeatureSchema.extend({
+	type: z.enum(["boolean", "single_use", "continuous_use", "credit_system"]),
+}).meta({
+	id: "Feature",
+	description: "",
+	example: FEATURE_EXAMPLE,
+});
 
 export const featureOps = {
 	"/features": {
 		get: {
 			summary: "List Features",
 			tags: ["features"],
-			requestParams: {
-				query: z.object({
-					include_archived: z.boolean().optional(),
-				}),
-			},
 			responses: {
 				"200": {
-					description: "200 OK",
+					description: "",
 					content: {
 						"application/json": {
 							schema: getListResponseSchema({ schema: ApiFeatureWithMeta }),
@@ -44,24 +44,24 @@ export const featureOps = {
 			},
 			responses: {
 				"200": {
-					description: "200 OK",
+					description: "",
 					content: { "application/json": { schema: ApiFeatureWithMeta } },
 				},
 			},
 		},
 	},
-	"/features/{featureId}": {
+	"/features/{feature_id}": {
 		get: {
 			summary: "Get Feature",
 			tags: ["features"],
 			requestParams: {
 				path: z.object({
-					featureId: z.string(),
+					feature_id: z.string(),
 				}),
 			},
 			responses: {
 				"200": {
-					description: "200 OK",
+					description: "",
 					content: { "application/json": { schema: ApiFeatureWithMeta } },
 				},
 			},
@@ -71,7 +71,7 @@ export const featureOps = {
 			tags: ["features"],
 			requestParams: {
 				path: z.object({
-					featureId: z.string(),
+					feature_id: z.string(),
 				}),
 			},
 			requestBody: {
@@ -81,7 +81,7 @@ export const featureOps = {
 			},
 			responses: {
 				"200": {
-					description: "200 OK",
+					description: "",
 					content: { "application/json": { schema: ApiFeatureWithMeta } },
 				},
 			},
@@ -91,12 +91,12 @@ export const featureOps = {
 			tags: ["features"],
 			requestParams: {
 				path: z.object({
-					featureId: z.string(),
+					feature_id: z.string(),
 				}),
 			},
 			responses: {
 				"200": {
-					description: "200 OK",
+					description: "",
 					content: {
 						"application/json": {
 							schema: SuccessResponseSchema,

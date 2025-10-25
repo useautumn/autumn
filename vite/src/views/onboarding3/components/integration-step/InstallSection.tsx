@@ -15,7 +15,7 @@ export const InstallSection = () => {
 	return (
 		<div className="flex flex-col gap-6">
 			<SectionHeader
-				stepNumber={4}
+				stepNumber={3}
 				title="Install autumn-js"
 				className="gap-0"
 			/>

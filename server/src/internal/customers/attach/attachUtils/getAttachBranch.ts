@@ -8,11 +8,11 @@ import {
 	ErrCode,
 	type FeatureOptions,
 	type FullCusProduct,
+	productsAreSame,
 } from "@autumn/shared";
 import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 import { hasPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
-import { productsAreSame } from "@/internal/products/productUtils/compareProductUtils.js";
 import {
 	isFreeProduct,
 	isProductUpgrade,

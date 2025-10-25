@@ -234,6 +234,7 @@ export const createOrgResponse = ({
 		test_pkey: org.test_pkey,
 		live_pkey: org.live_pkey,
 		onboarded: org.onboarded ?? true,
+		deployed: org.deployed ?? true,
 	};
 };
 
@@ -304,4 +305,8 @@ export const unsetOrgStripeKeys = async ({
 			stripe_config: newStripeConfig,
 		},
 	});
+};
+
+export const orgToCurrency = ({ org }: { org: Organization }) => {
+	return org.default_currency || "usd";
 };

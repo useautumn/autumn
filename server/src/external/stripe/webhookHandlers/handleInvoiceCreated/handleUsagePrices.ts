@@ -1,6 +1,5 @@
 import {
 	ApiVersion,
-	AppEnv,
 	type Customer,
 	EntInterval,
 	type FullCusProduct,
@@ -135,14 +134,6 @@ export const handleUsagePrices = async ({
 	if (relatedCusEnt.entitlement.interval === EntInterval.Lifetime) {
 		return;
 	}
-
-	const allFullCustomers = await getAllFullCustomers({
-		db,
-		orgId: org.id,
-		env: AppEnv.Live,
-	});
-
-	console.log(`All full customers: ${allFullCustomers.length}`);
 
 	const ent = relatedCusEnt.entitlement;
 

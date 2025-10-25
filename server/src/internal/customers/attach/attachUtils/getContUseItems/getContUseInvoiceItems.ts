@@ -148,7 +148,11 @@ export const getContUseInvoiceItems = async ({
 			? getRelatedCusPrice(prevCusEnt, cusPrices)!
 			: undefined;
 
-		if (!prevCusEnt || !sub) {
+		const curItem = curItems.find(
+			(item) => item.price_id === prevCusPrice?.price.id,
+		);
+
+		if (!prevCusEnt || !sub || !curItem) {
 			const newItem = await getContUseNewItems({
 				price,
 				ent,
@@ -156,22 +160,18 @@ export const getContUseInvoiceItems = async ({
 				prevCusEnt,
 			});
 
-			const prevItem = curItems.find(
-				(item) => item.price_id === prevCusPrice?.price.id,
-			);
+			// const prevItem = curItems.find(
+			// 	(item) => item.price_id === prevCusPrice?.price.id,
+			// );
 
 			newItems.push(newItem);
 
-			if (prevItem) {
-				oldItems.push(prevItem);
+			if (curItem) {
+				oldItems.push(curItem);
 			}
 
 			continue;
 		}
-
-		const curItem = curItems.find(
-			(item) => item.price_id === prevCusPrice?.price.id,
-		);
 
 		const {
 			oldItem,

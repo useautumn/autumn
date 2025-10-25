@@ -1,7 +1,7 @@
 import type { Job, Queue } from "bullmq";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { JobName } from "@/queue/JobName.js";
 import { getLock, releaseLock } from "@/queue/lockUtils.js";
+import type { AutumnContext } from "../../honoUtils/HonoEnv.js";
 import { handleCustomerCreated } from "./handlers/handleCustomerCreated.js";
 import { handleProductsUpdated } from "./handlers/handleProductsUpdated.js";
 
@@ -19,7 +19,6 @@ export const runActionHandlerTask = async ({
 	const payload = job.data;
 	const internalCustomerId = payload.internalCustomerId;
 	const lockKey = `action:${internalCustomerId}`;
-
 	const { logger } = ctx;
 
 	try {

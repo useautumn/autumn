@@ -130,7 +130,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing create entity payme
 
 	it("should try to create entities and fail", async () => {
 		await expectAutumnError({
-			errMessage: "(Stripe Error) Your card was declined.",
+			errMessage: "Your card was declined.",
 			func: async () => {
 				await autumn.entities.create(customerId, [
 					{

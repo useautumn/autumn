@@ -1,3 +1,4 @@
+import type { FixedPriceConfig } from "@models/productModels/priceModels/priceConfig/fixedPriceConfig.js";
 import type {
 	ProductItem,
 	ProductItemInterval,
@@ -14,6 +15,8 @@ export function productV2ToBasePrice({ product }: { product: ProductV2 }): {
 	interval: ProductItemInterval;
 	intervalCount: number;
 	item: ProductItem;
+	config: FixedPriceConfig;
+	priceId: string;
 } | null {
 	const item = product.items.find((x) => isPriceItem(x));
 
@@ -23,6 +26,8 @@ export function productV2ToBasePrice({ product }: { product: ProductV2 }): {
 			interval: (item.interval as unknown as ProductItemInterval) || null,
 			intervalCount: item.interval_count || 1,
 			item: item,
+			config: item.price_config as FixedPriceConfig,
+			priceId: item.price_id || "",
 		};
 	}
 

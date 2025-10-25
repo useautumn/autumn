@@ -2,8 +2,10 @@ import type { ProductV2 } from "@autumn/shared";
 import { InfoIcon } from "@phosphor-icons/react";
 import type { Product } from "autumn-js";
 import { useCustomer } from "autumn-js/react";
+import { useState } from "react";
 import { useOrg } from "@/hooks/common/useOrg";
 import OnboardingCheckoutDialog from "@/views/onboarding3/OnboardingCheckoutDialog";
+import { useOnboardingStore } from "@/views/onboarding3/store/useOnboardingStore";
 import { PlanCardPreview } from "./PlanCardPreview";
 
 interface PricingTableProps {
@@ -22,22 +24,34 @@ export default function PricingTablePreview({
 			refreshInterval: 0,
 		},
 	});
+	const setLastUsedProductId = useOnboardingStore(
+		(state) => state.setLastUsedProductId,
+	);
+	const [loadingProductId, setLoadingProductId] = useState<string | null>(null);
 
 	if (!products || products.length === 0) {
 		return null;
 	}
 
 	const handleSubscribe = async (product: ProductV2) => {
+		// Track the product ID that was clicked
 		if (product.id) {
+			setLastUsedProductId(product.id);
+		}
+
+		if (product.id) {
+			setLoadingProductId(product.id);
 			try {
 				await checkout({
 					productId: product.id,
 					dialog: OnboardingCheckoutDialog,
 					openInNewTab: true,
-					successUrl: `${window.location.origin}/sandbox/onboarding3`,
+					successUrl: `${window.location.origin}/sandbox/onboarding?step=playground&m=p`,
 				});
 			} catch (error) {
 				console.error("Checkout error:", error);
+			} finally {
+				setLoadingProductId(null);
 			}
 		} else if (product.display?.button_url) {
 			window.open(product.display?.button_url, "_blank");
@@ -73,7 +87,7 @@ export default function PricingTablePreview({
 		} else if (productCount === 2) {
 			return "flex flex-col gap-6 max-w-2xl mx-auto px-4 sm:grid sm:grid-cols-2 sm:flex-none"; // Vertical on mobile, 2 columns on sm+
 		} else {
-			return "flex flex-col gap-6 max-w-7xl mx-auto px-4 sm:grid md:grid-cols-2 xl:grid-cols-3 sm:flex-none"; // Vertical on mobile, 2 columns on sm+, 3 on lg+
+			return "flex flex-col gap-6 max-w-7xl mx-auto px-4 sm:grid lg:grid-cols-2 2xl:grid-cols-3 sm:flex-none"; // Vertical on mobile, 2 columns on sm+, 3 on lg+
 		}
 	};
 
@@ -132,6 +146,7 @@ export default function PricingTablePreview({
 								!product.properties?.updateable) ||
 							product.scenario === "scheduled"
 						}
+						loading={loadingProductId === product.id}
 					/>
 				))}
 			</div>
