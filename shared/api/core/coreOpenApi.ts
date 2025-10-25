@@ -5,6 +5,8 @@ import {
 	ExtCheckoutParamsSchema,
 } from "@api/models.js";
 import type { ZodOpenApiPathsObject } from "zod-openapi";
+import { SetUsageParamsSchema } from "../balances/usageModels.js";
+import { SuccessResponseSchema } from "../common/commonResponses.js";
 import {
 	attachJsDoc,
 	billingPortalJsDoc,
@@ -12,6 +14,7 @@ import {
 	checkJsDoc,
 	checkoutJsDoc,
 	queryJsDoc,
+	setUsageJsDoc,
 	setupPaymentJsDoc,
 	trackJsDoc,
 } from "../common/jsDocs.js";
@@ -118,24 +121,7 @@ export const coreOps: ZodOpenApiPathsObject = {
 			},
 		},
 	},
-	"/usage": {
-		post: {
-			summary: "Set Usage",
-			description: "Set or increment usage for a metered feature. This is similar to /track but specifically for usage-based features with the set_usage flag enabled by default.",
-			tags: ["core"],
-			requestBody: {
-				content: {
-					"application/json": { schema: TrackParamsSchema },
-				},
-			},
-			responses: {
-				"200": {
-					description: "200 OK",
-					content: { "application/json": { schema: TrackResultSchema } },
-				},
-			},
-		},
-	},
+
 	"/query": {
 		post: {
 			summary: "Query Analytics",
@@ -206,6 +192,25 @@ export const coreOps: ZodOpenApiPathsObject = {
 					content: {
 						"application/json": { schema: BillingPortalResultSchema },
 					},
+				},
+			},
+		},
+	},
+
+	"/usage": {
+		post: {
+			summary: "Set Usage",
+			description: setUsageJsDoc,
+			tags: ["core"],
+			requestBody: {
+				content: {
+					"application/json": { schema: SetUsageParamsSchema },
+				},
+			},
+			responses: {
+				"200": {
+					description: "200 OK",
+					content: { "application/json": { schema: SuccessResponseSchema } },
 				},
 			},
 		},
