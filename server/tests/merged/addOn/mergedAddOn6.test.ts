@@ -140,7 +140,7 @@ describe(`${chalk.yellowBright("mergedAddOn6: testing update add on quantities o
 	let org: Organization;
 	let env: AppEnv;
 
-	before(async function () {
+	beforeAll(async function () {
 		await setupBefore(this);
 		const { autumnJs } = this;
 		db = this.db;
