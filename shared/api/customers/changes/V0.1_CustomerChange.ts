@@ -31,6 +31,7 @@ import { ApiCustomerV1Schema } from "../previousVersions/apiCustomerV1.js";
  */
 
 export const V0_1_CustomerChange = defineVersionChange({
+	name: "V0_1_CustomerChange",
 	oldVersion: ApiVersion.V0_1, // Applied when targetVersion <= V0_1
 	newVersion: ApiVersion.V0_2, // Breaking change introduced in V0_2
 	description: [

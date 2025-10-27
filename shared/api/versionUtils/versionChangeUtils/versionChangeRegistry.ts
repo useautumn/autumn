@@ -11,6 +11,7 @@ import { V1_2_CustomerChange } from "@api/customers/changes/V1.2_CustomerChange.
 import { V1_2_CustomerQueryChange } from "@api/customers/requestChanges/V1.2_CustomerQueryChange.js";
 // Import product changes
 import { V1_2_ProductChanges } from "@api/products/changes/V1.2_ProductChanges.js";
+import { V0_2_CheckChange } from "../../balances/check/changes/V0.2_CheckChange.js";
 import { ApiVersion } from "../ApiVersion.js";
 import type { VersionChangeConstructor } from "./VersionChange.js";
 import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass.js";
@@ -32,6 +33,7 @@ export const V1_2_CHANGES: VersionChangeConstructor[] = [
 export const V1_1_CHANGES: VersionChangeConstructor[] = [
 	V0_2_CustomerChange, // Transforms TO V0_2: splits structure + transforms features
 	V0_2_InvoicesAlwaysExpanded, // Side effect: invoices always expanded for V0_2 and older
+	V0_2_CheckChange, // Transforms TO V0_2: check response to balances array format
 ];
 
 export const V0_2_CHANGES: VersionChangeConstructor[] = [

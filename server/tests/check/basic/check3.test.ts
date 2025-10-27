@@ -58,13 +58,15 @@ describe(`${chalk.yellowBright("check3: test /check on metered feature")}`, () =
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponseV0;
 
-		expect(res.allowed).toBe(true);
-		expect(res.balances).toBeDefined();
-		expect(res.balances).toHaveLength(1);
-		expect(res.balances[0]).toStrictEqual({
-			feature_id: TestFeature.Messages,
-			required: 1,
-			balance: 1000,
+		expect(res).toStrictEqual({
+			allowed: true,
+			balances: [
+				{
+					feature_id: TestFeature.Messages,
+					required: 1,
+					balance: 1000,
+				},
+			],
 		});
 	});
 
