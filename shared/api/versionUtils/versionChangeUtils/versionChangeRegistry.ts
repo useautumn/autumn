@@ -6,8 +6,10 @@ import { V0_1_CustomerChange } from "@api/customers/changes/V0_1_CustomerChange.
 // Import customer changes
 import { V0_2_CustomerChange } from "@api/customers/changes/V0_2_CustomerChange.js";
 import { V0_2_InvoicesAlwaysExpanded } from "@api/customers/changes/V0_2_InvoicesAlwaysExpanded.js";
+
 // Import customer product changes
 
+import { V1_1_FeaturesArrayToObject } from "../../customers/changes/V1_1_FeaturesArrayToObject.js";
 import { ApiVersion } from "../ApiVersion.js";
 import type { VersionChangeConstructor } from "./VersionChange.js";
 import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass.js";
@@ -17,7 +19,7 @@ export const V1_4_CHANGES: VersionChangeConstructor[] = [
 ];
 
 export const V1_2_CHANGES: VersionChangeConstructor[] = [
-	// V1_1_FeaturesArrayToObject, // Transforms TO V1_1
+	V1_1_FeaturesArrayToObject, // Transforms TO V1_1
 ];
 
 export const V1_1_CHANGES: VersionChangeConstructor[] = [

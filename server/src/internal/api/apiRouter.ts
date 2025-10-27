@@ -16,7 +16,6 @@ import { migrationRouter } from "../migrations/migrationRouter.js";
 import { handleGetOrg } from "../orgs/handlers/handleGetOrg.js";
 import { platformRouter } from "../platform/platformLegacy/platformRouter.js";
 import { productBetaRouter, productRouter } from "../products/productRouter.js";
-import { checkRouter } from "./check/checkRouter.js";
 import { componentRouter } from "./components/componentRouter.js";
 import { entityRouter } from "./entities/entityRouter.js";
 // import { checkRouter } from "./entitled/checkRouter.js";
@@ -57,7 +56,7 @@ apiRouter.use("/redemptions", redemptionRouter);
 apiRouter.use("", attachRouter);
 apiRouter.use("/cancel", cancelRouter);
 
-apiRouter.use("/entitled", checkRouter);
+// apiRouter.use("/entitled", checkRouter);
 // apiRouter.use("/check", checkRouter);
 
 apiRouter.use("/events", eventsRouter);

@@ -16,27 +16,12 @@ export const getV2CheckResponse = async ({
 	ctx,
 	checkData,
 	requiredBalance,
-	// fullCus,
-	// cusEnts,
-	// feature,
-	// creditSystems,
-	// cusProducts,
-	// requiredBalance,
-	// apiVersion,
 }: {
 	ctx: AutumnContext;
 	checkData: CheckData;
 	requiredBalance: number;
-	// fullCus: FullCustomer;
-	// cusEnts: FullCusEntWithFullCusProduct[];
-	// feature: Feature;
-	// creditSystems: Feature[];
-	// cusProducts: FullCusProduct[];
-	// requiredBalance?: number;
-	// apiVersion: ApiVersionClass;
 }) => {
-	const { fullCus, cusEnts, originalFeature, featureToUse, cusProducts } =
-		checkData;
+	const { fullCus, cusEnts, originalFeature, featureToUse } = checkData;
 
 	// If credit system used, need to convert required balance to credit system required balance
 	if (
@@ -101,12 +86,12 @@ export const getV2CheckResponse = async ({
 	}, 0);
 
 	if (
-		apiCusFeature.balance &&
+		notNullish(apiCusFeature.balance) &&
 		new Decimal(apiCusFeature.balance)
 			.plus(totalPaidUsageAllowance)
 			.gte(requiredBalance)
 	) {
-		// console.log("Balance + total paid usage allowance >= required balance");
+		console.log("Balance + total paid usage allowance >= required balance");
 		allowed = true;
 	}
 

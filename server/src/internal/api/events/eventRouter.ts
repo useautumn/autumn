@@ -17,7 +17,6 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { creditSystemContainsFeature } from "@/internal/features/creditSystemUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
@@ -150,12 +149,9 @@ export const handleEventSent = async ({
 		});
 	}
 
-	const { env, db } = req;
+	const { env, db, org, features } = req;
 
 	const eventName = event_data.event_name;
-
-	const org = await OrgService.getFromReq(req);
-	const features = await FeatureService.getFromReq(req);
 
 	const affectedFeatures = await getAffectedFeatures({
 		req,

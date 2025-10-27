@@ -4,6 +4,7 @@ import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { verifyKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { betterAuthMiddleware } from "./betterAuthMiddleware.js";
+import { publicKeyMiddleware } from "./publicKeyMiddleware.js";
 
 const maskApiKey = (apiKey: string) => {
 	return apiKey.slice(0, 15) + apiKey.slice(15).replace(/./g, "*");
@@ -12,13 +13,15 @@ const maskApiKey = (apiKey: string) => {
 /**
  * Middleware to verify secret key and populate auth context
  * Falls back to Better Auth (dashboard session) if request is from dashboard
+ * Delegates to publicKeyMiddleware if key is a publishable key (am_pk)
  *
  * Steps:
  * 1. Check if Authorization header is present
  * 2. If from dashboard and no auth header, use Better Auth
  * 3. Check if it has correct Bearer format
- * 4. Verify the API key
- * 5. Store org, features, env, userId, authType in context
+ * 4. Handle publishable key verification if key starts with am_pk
+ * 5. Verify the secret API key
+ * 6. Store org, features, env, userId, authType in context
  */
 export const secretKeyMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const ctx = c.get("ctx");
@@ -51,12 +54,12 @@ export const secretKeyMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		});
 	}
 
-	// TODO: Handle publishable key (am_pk) verification
-	// if (apiKey.startsWith("am_pk")) {
-	//   await verifyPublishableKey(...)
-	// }
+	// Step 3: Handle publishable key verification
+	if (apiKey.startsWith("am_pk")) {
+		return publicKeyMiddleware(c, apiKey, next);
+	}
 
-	// Step 3: Verify the API key
+	// Step 4: Verify the API key
 	const { valid, data } = await verifyKey({
 		db: ctx.db,
 		key: apiKey,
@@ -71,7 +74,7 @@ export const secretKeyMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		});
 	}
 
-	// Step 4: Store auth data in context
+	// Step 5: Store auth data in context
 	const { org, features, env, userId } = data;
 
 	ctx.org = org;
