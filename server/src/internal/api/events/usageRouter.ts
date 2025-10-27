@@ -104,7 +104,7 @@ const createAndInsertEvent = async ({
 
 	const newEvent: EventInsert = {
 		id: generateId("evt"),
-		org_id: req.orgId,
+		org_id: req.org.id,
 		org_slug: req.org.slug,
 		env: req.env,
 		internal_customer_id: customer.internal_id,
@@ -153,17 +153,13 @@ export const handleUsageEvent = async ({
 
 	properties = properties || {};
 
-	logger.info(`/track: customer ${customer_id}, feature ${feature_id}`);
-	const startTime = Date.now();
-	const { customer, org, feature, creditSystems } = await getCusFeatureAndOrg({
+	const { customer, feature, creditSystems } = await getCusFeatureAndOrg({
 		req,
 		customerId: customer_id,
 		featureId: feature_id,
 		customerData: customer_data,
 		entityId: entity_id,
 	});
-	logger.info(`/track: get customer took ${Date.now() - startTime}ms`);
-	const startTime2 = Date.now();
 
 	const newEvent = await createAndInsertEvent({
 		req,
@@ -174,7 +170,6 @@ export const handleUsageEvent = async ({
 		properties,
 		idempotencyKey: idempotency_key,
 	});
-	logger.info(`/track: insert event took ${Date.now() - startTime2}ms`);
 
 	const features = [feature, ...creditSystems];
 
@@ -190,7 +185,7 @@ export const handleUsageEvent = async ({
 		eventId: newEvent.id,
 		features,
 		allFeatures: req.features,
-		org,
+		org: req.org,
 		env: req.env,
 		properties,
 		value,
@@ -219,7 +214,7 @@ export const handleUsageEvent = async ({
 		});
 	}
 
-	return { event: newEvent, affectedFeatures: features, org };
+	return { event: newEvent, affectedFeatures: features, org: req.org };
 };
 
 usageRouter.post("", async (req: any, res: any) => {

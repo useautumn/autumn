@@ -56,16 +56,17 @@ export function applyResponseVersionChanges<T = any, TLegacyData = any>({
 	// Sort versions from newest to oldest (we apply backwards)
 	versionsToApply.reverse();
 
+	const printLogs = false;
+
 	// Apply each version's changes
 	let transformedData = input;
 	for (const version of versionsToApply) {
 		const changes = VersionChangeRegistryClass.getChangesForVersion({
 			version,
 		});
-		// console.log(`Changes for version ${version}`);
-		// for (const change of changes) {
-		// 	console.log(`[${change.oldVersion}]`, change.name);
-		// }
+		if (printLogs) {
+			console.log(`Changes for version ${version}`);
+		}
 
 		for (const change of changes) {
 			// Skip if this change doesn't affect our resource
@@ -87,6 +88,10 @@ export function applyResponseVersionChanges<T = any, TLegacyData = any>({
 			// Example: If change.oldVersion = V0_2 and targetVersion = V0_2, then apply
 			const shouldApply = targetVersion.lte(change.oldVersion);
 			if (!shouldApply) continue;
+
+			if (printLogs) {
+				console.log(`Applying change ${change.name} for version ${version}`);
+			}
 
 			// Apply the response transformation (backward)
 			transformedData = change.transformResponse({

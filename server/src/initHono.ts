@@ -92,6 +92,7 @@ export const createHonoApp = () => {
 	app.use("/v1/*", queryMiddleware());
 
 	// API Routes
+	app.post("/v1/entitled", ...handleCheck);
 	app.post("/v1/check", ...handleCheck);
 	app.route("v1/customers", cusRouter);
 	app.route("v1/products", honoProductRouter);

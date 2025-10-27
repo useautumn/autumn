@@ -1,10 +1,13 @@
 import {
 	type CheckParams,
 	CusProductStatus,
+	cusEntToBalance,
 	cusProductsToCusEnts,
 	ErrCode,
 	type Feature,
 	type FullCusEntWithFullCusProduct,
+	notNullish,
+	sumValues,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -60,13 +63,35 @@ export const getFeatureToUse = ({
 			cusEntMatchesFeature({ cusEnt, feature: creditSystems[0] }),
 		);
 
-		if (creditCusEnts.length > 0) {
-			return creditSystems[0];
-		}
+		const totalFeatureCusEntBalance = sumValues(
+			featureCusEnts
+				.map((cusEnt) =>
+					cusEntToBalance({
+						cusEnt,
+						withRollovers: true,
+					}),
+				)
+				.filter(notNullish),
+		);
 
-		if (featureCusEnts.length > 0) {
+		const totalCreditCusEntBalance = sumValues(
+			creditCusEnts
+				.map((cusEnt) =>
+					cusEntToBalance({
+						cusEnt,
+						withRollovers: true,
+					}),
+				)
+				.filter(notNullish),
+		);
+
+		if (featureCusEnts.length > 0 && totalFeatureCusEntBalance > 0) {
 			return feature;
 		}
+
+		// if (creditCusEnts.length > 0) {
+		// 	return creditSystems[0];
+		// }
 
 		return creditSystems[0];
 	}
