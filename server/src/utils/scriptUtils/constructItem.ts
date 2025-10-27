@@ -88,7 +88,7 @@ export const constructPrepaidItem = ({
 		feature_id: featureId,
 		usage_model: UsageModel.Prepaid,
 
-		price: price,
+		price: tiers ? undefined : price,
 		tiers: tiers,
 		billing_units: billingUnits || 100,
 		interval: isOneOff ? null : ProductItemInterval.Month,

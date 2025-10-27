@@ -1,7 +1,13 @@
-import { spawn } from "node:child_process";
+import { exec, spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { detectAndSetPorts } from "./detect-ports.js";
+import readline from "node:readline";
+import { promisify } from "node:util";
+
+const execAsync = promisify(exec);
+
+const VITE_PORT = 3000;
+const SERVER_PORT = 8080;
 
 /**
  * Read environment variable from .env file
@@ -24,6 +30,101 @@ function getEnvVariable(filePath, key) {
 	return null;
 }
 
+/**
+ * Get the process info using a specific port
+ */
+async function getProcessOnPort(port) {
+	try {
+		const { stdout } = await execAsync(`lsof -ti:${port}`);
+		const pid = stdout.trim();
+		if (pid) {
+			const { stdout: psOut } = await execAsync(`ps -p ${pid} -o comm=`);
+			const processName = psOut.trim();
+			return { pid: parseInt(pid), processName };
+		}
+		return null;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Kill a process by PID
+ */
+async function killProcess(pid) {
+	try {
+		await execAsync(`kill -9 ${pid}`);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Prompt user for confirmation
+ */
+function promptUser(question) {
+	const rl = readline.createInterface({
+		input: process.stdin,
+		output: process.stdout,
+	});
+
+	return new Promise((resolve) => {
+		rl.question(question, (answer) => {
+			rl.close();
+			resolve(answer.toLowerCase() === "y" || answer.toLowerCase() === "yes");
+		});
+	});
+}
+
+/**
+ * Check and kill processes on ports 3000 and 8080
+ */
+async function handlePorts() {
+	const viteProcess = await getProcessOnPort(VITE_PORT);
+	const serverProcess = await getProcessOnPort(SERVER_PORT);
+
+	const processesToKill = [];
+	if (viteProcess) processesToKill.push({ port: VITE_PORT, ...viteProcess });
+	if (serverProcess)
+		processesToKill.push({ port: SERVER_PORT, ...serverProcess });
+
+	if (processesToKill.length === 0) {
+		console.log("✅ Ports 3000 and 8080 are available\n");
+		return;
+	}
+
+	console.log("\n⚠️  Found processes on required ports:");
+	for (const proc of processesToKill) {
+		console.log(`   Port ${proc.port}: ${proc.processName} (PID: ${proc.pid})`);
+	}
+
+	const shouldKill = await promptUser(
+		"\nKill these processes and continue? (y/n): ",
+	);
+
+	if (!shouldKill) {
+		console.log("❌ Aborted by user");
+		process.exit(0);
+	}
+
+	console.log("\n🔨 Killing processes...");
+	for (const proc of processesToKill) {
+		const killed = await killProcess(proc.pid);
+		if (killed) {
+			console.log(`   ✅ Killed process ${proc.pid} on port ${proc.port}`);
+		} else {
+			console.log(
+				`   ❌ Failed to kill process ${proc.pid} on port ${proc.port}`,
+			);
+		}
+	}
+
+	// Wait for ports to be released
+	await new Promise((r) => setTimeout(r, 500));
+	console.log("");
+}
+
 async function startDev() {
 	try {
 		// Check if using remote backend (api.useautumn.com)
@@ -31,20 +132,16 @@ async function startDev() {
 		const projectRoot = path.join(rootDir, "..");
 		const viteEnvPath = path.join(projectRoot, "vite", ".env");
 		const backendUrl =
-			process.env.VITE_BACKEND_URL || getEnvVariable(viteEnvPath, "VITE_BACKEND_URL");
-		const isUsingRemoteBackend = backendUrl && backendUrl.includes("api.useautumn.com");
-
-		let vitePort = 3000;
-		let serverPort = 8080;
+			process.env.VITE_BACKEND_URL ||
+			getEnvVariable(viteEnvPath, "VITE_BACKEND_URL");
+		const isUsingRemoteBackend = backendUrl?.includes("api.useautumn.com");
 
 		if (isUsingRemoteBackend) {
 			console.log("\n🌐 Using remote backend (api.useautumn.com)");
-			console.log("⏭️  Skipping port detection...\n");
+			console.log("⏭️  Skipping port cleanup...\n");
 		} else {
-			// Detect and set ports
-			const ports = await detectAndSetPorts();
-			vitePort = ports.vitePort;
-			serverPort = ports.serverPort;
+			// Check and kill processes on ports 3000 and 8080 if needed
+			await handlePorts();
 		}
 
 		// Step 1: Build shared package first (initial build)
@@ -78,9 +175,9 @@ async function startDev() {
 				"server,workers,vite,shared",
 				"-c",
 				"green,yellow,blue,cyan",
-				`"cd server && SERVER_PORT=${serverPort} bun dev"`,
+				`"cd server && SERVER_PORT=${SERVER_PORT} bun dev"`,
 				`"cd server && bun workers:dev"`,
-				`"cd vite && VITE_PORT=${vitePort} bun dev"`,
+				`"cd vite && VITE_PORT=${VITE_PORT} bun dev"`,
 				`"cd shared && bun run dev:watch"`,
 			],
 			{
@@ -88,8 +185,8 @@ async function startDev() {
 				shell: true,
 				env: {
 					...process.env,
-					VITE_PORT: vitePort.toString(),
-					SERVER_PORT: serverPort.toString(),
+					VITE_PORT: VITE_PORT.toString(),
+					SERVER_PORT: SERVER_PORT.toString(),
 				},
 			},
 		);
