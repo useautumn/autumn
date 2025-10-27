@@ -4,6 +4,7 @@ import {
 	OnIncrease,
 	type ProductItem,
 	type ProductItemConfig,
+	type ProductItemFeatureType,
 	ProductItemInterval,
 	type RolloverConfig,
 	UsageModel,
@@ -146,6 +147,7 @@ export const constructArrearItem = ({
 
 export const constructArrearProratedItem = ({
 	featureId,
+	featureType,
 	pricePerUnit = 10,
 	includedUsage = 1,
 	config = {
@@ -156,6 +158,7 @@ export const constructArrearProratedItem = ({
 	rolloverConfig,
 }: {
 	featureId: string;
+	featureType?: ProductItemFeatureType;
 	pricePerUnit?: number;
 	includedUsage?: number;
 	config?: ProductItemConfig;
@@ -174,6 +177,7 @@ export const constructArrearProratedItem = ({
 			...(rolloverConfig ? { rollover: rolloverConfig } : {}),
 		},
 		usage_limit: usageLimit,
+		...(featureType ? { feature_type: featureType } : {}),
 	};
 
 	return item;
