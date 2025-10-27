@@ -110,14 +110,6 @@ export const updateStripeSub2 = async ({
 		logger,
 	});
 
-	// // // 3. Create prorations for continuous use items
-	// let { replaceables, newItems } = await getContUseInvoiceItems({
-	//   attachParams,
-	//   cusProduct: curMainProduct!,
-	//   sub: curSub,
-	//   logger,
-	// });
-
 	const { replaceables } = await createAndFilterContUseItems({
 		attachParams,
 		curMainProduct: curMainProduct!,
@@ -151,24 +143,3 @@ export const updateStripeSub2 = async ({
 		replaceables,
 	};
 };
-
-// await SubService.addUsageFeatures({
-//   db,
-//   stripeId: curSub.id,
-//   usageFeatures: itemSet.usageFeatures,
-//   orgId: org.id,
-//   env: customer.env,
-// });
-
-// if (invoiceOnly && attachParams.finalizeInvoice) {
-//   logger.info(`FINALIZING INVOICE ${latestInvoice?.id}`);
-//   try {
-//     latestInvoice = await stripeCli.invoices.finalizeInvoice(
-//       latestInvoice?.id as string
-//     );
-//   } catch (error) {
-//     logger.error(`Failed to finalize invoice ${latestInvoice?.id}`, {
-//       error,
-//     });
-//   }
-// }

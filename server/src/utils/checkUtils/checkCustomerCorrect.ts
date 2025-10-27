@@ -473,8 +473,6 @@ export const checkCusSubCorrect = async ({
 				internalEntityId: cp.internal_entity_id,
 			});
 
-			console.log("Cur scheduled product:", curScheduledProduct?.id);
-
 			if (curScheduledProduct) {
 				const scheduledProduct = cusProductToProduct({
 					cusProduct: curScheduledProduct,
