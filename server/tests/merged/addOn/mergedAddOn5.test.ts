@@ -98,7 +98,7 @@ describe(`${chalk.yellowBright("mergedAddOn5: testing cancelling add on immediat
 	let org: Organization;
 	let env: AppEnv;
 
-	before(async function () {
+	beforeAll(async function () {
 		await setupBefore(this);
 		const { autumnJs } = this;
 		db = this.db;
