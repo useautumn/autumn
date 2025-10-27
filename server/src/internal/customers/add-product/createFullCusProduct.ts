@@ -451,7 +451,7 @@ export const createFullCusProduct = async ({
 	});
 
 	// Expire previous product if not one off and add on...?
-	if (!isOneOff(prices) && product.is_add_on) {
+	if (isFreeProduct(prices) && product.is_add_on) {
 		const { curSameProduct } = getExistingCusProducts({
 			product,
 			cusProducts: attachParams.cusProducts!,
