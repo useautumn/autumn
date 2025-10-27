@@ -63,6 +63,7 @@ export const SignIn = () => {
 		setGoogleLoading(true);
 		try {
 			const frontendUrl = import.meta.env.VITE_FRONTEND_URL;
+
 			const { error } = await signIn.social({
 				provider: "google",
 				callbackURL: `${frontendUrl}${callbackPath}`,

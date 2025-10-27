@@ -137,7 +137,7 @@ export const createAndFilterContUseItems = async ({
 		}
 
 		logger.info(
-			`Adding invoice item: ${item.description}, ${item.description}, interval: ${interval}`,
+			`Adding invoice item: ${item.description}, amount: ${item.amount}, interval: ${interval}`,
 		);
 
 		const { start, end } = subToPeriodStartEnd({ sub });
