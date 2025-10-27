@@ -13,6 +13,7 @@ export type TestGroup = {
 };
 
 export const testGroups: TestGroup[] = [
+	// G1.sh test groups (48 test files)
 	{
 		slug: "check-basic",
 		paths: ["tests/check/basic"],
@@ -25,10 +26,64 @@ export const testGroups: TestGroup[] = [
 		slug: "upgrade",
 		paths: ["tests/attach/upgrade"],
 	},
-	// {
-	// 	slug: "checkout",
-	// 	paths: ["tests/attach/checkout"],
-	// },
+	{
+		slug: "downgrade",
+		paths: ["tests/attach/downgrade"],
+	},
+	{
+		slug: "free",
+		paths: ["tests/attach/free"],
+	},
+	{
+		slug: "addOn",
+		paths: ["tests/attach/addOn"],
+	},
+	{
+		slug: "entities",
+		paths: ["tests/attach/entities"],
+	},
+	{
+		slug: "checkout",
+		paths: ["tests/attach/checkout"],
+	},
+
+	// G2.sh test groups (28+ test files)
+	{
+		slug: "migrations",
+		paths: ["tests/attach/migrations"],
+	},
+	{
+		slug: "newVersion",
+		paths: ["tests/attach/newVersion"],
+	},
+	{
+		slug: "upgradeOld",
+		paths: ["tests/attach/upgradeOld"],
+	},
+	{
+		slug: "others",
+		paths: ["tests/attach/others"],
+	},
+	{
+		slug: "updateEnts",
+		paths: ["tests/attach/updateEnts"],
+	},
+	{
+		slug: "prepaid",
+		paths: ["tests/attach/prepaid"],
+	},
+	{
+		slug: "advanced-check",
+		paths: ["tests/advanced/check"],
+	},
+	{
+		slug: "interval-upgrade",
+		paths: ["tests/interval/upgrade"],
+	},
+	{
+		slug: "interval-multiSub",
+		paths: ["tests/interval/multiSub"],
+	},
 
 	// Debug single test - NEW MIGRATED VERSION
 	// {
