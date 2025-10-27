@@ -69,7 +69,7 @@ describe(`${chalk.yellowBright("multiAttach4: Testing multi attach for annual pr
 	let org: Organization;
 	let env: AppEnv;
 
-	before(async function () {
+	beforeAll(async function () {
 		await setupBefore(this);
 		const { autumnJs } = this;
 		db = this.db;

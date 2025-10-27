@@ -29,7 +29,7 @@ describe(`${chalk.yellowBright("cancel1: Testing cancel for trial products")}`, 
 	let org: Organization;
 	let env: AppEnv;
 
-	before(async function () {
+	beforeAll(async function () {
 		await setupBefore(this);
 		const { autumnJs } = this;
 		db = this.db;

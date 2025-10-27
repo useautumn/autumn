@@ -39,7 +39,7 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure default trials are 
 
 	const curUnix = Math.floor(new Date().getTime() / 1000);
 
-	before(async function () {
+	beforeAll(async function () {
 		await setupBefore(this);
 		await setupDefaultTrialBefore({});
 		const { autumnJs } = this;
