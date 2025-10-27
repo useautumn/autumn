@@ -111,3 +111,4 @@ interview
 !/scripts/
 # But ignore server scripts folder
 /server/scripts/
+server/chrome
