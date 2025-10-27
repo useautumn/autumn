@@ -251,7 +251,7 @@ export function PriceTiers() {
 							</div>
 
 							{/* Price input with currency */}
-							<div className="w-24 shrink-0">
+							<div className="w-22 shrink-0">
 								<InputGroup className="min-w-0">
 									<InputGroupInput
 										value={getDisplayValue(amountKey, tier.amount)}
