@@ -70,7 +70,19 @@ export const getContUseNewItems = async ({
 			feature_id: ent.feature_id,
 		} as PreviewLineItem;
 	} else {
-		let overage = new Decimal(usage).sub(ent.allowance!).toNumber();
+		/* 
+			For example, free plan comes with 3 users, and usage is 3
+			- Pro plan is 0 free, $10 per user
+			- We need to calculate usage for the pro plan, and then charge for that
+			---
+			- When allowance increases though, how do we handle it? Don't allow negative overage.
+		*/
+
+		// let overage = new Decimal(usage).sub(ent.allowance!).toNumber();
+		let overage = Math.max(
+			new Decimal(usage).sub(ent.allowance!).toNumber(),
+			0,
+		);
 
 		if (
 			intervalsSame &&
@@ -151,6 +163,8 @@ export const getContUseInvoiceItems = async ({
 		const curItem = curItems.find(
 			(item) => item.price_id === prevCusPrice?.price.id,
 		);
+
+		// TO DELETE
 
 		if (!prevCusEnt || !sub || !curItem) {
 			const newItem = await getContUseNewItems({

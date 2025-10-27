@@ -75,8 +75,6 @@ describe(`${chalk.yellowBright("check4: test /check on unlimited feature")}`, ()
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponse;
 
-		console.log(res);
-
 		const expectedRes = {
 			allowed: true,
 			customer_id: customerId,
@@ -84,11 +82,13 @@ describe(`${chalk.yellowBright("check4: test /check on unlimited feature")}`, ()
 			required_balance: 1,
 			code: SuccessCode.FeatureFound,
 			unlimited: true,
-			balance: null,
 			usage: 0,
 			included_usage: 0,
 			next_reset_at: null,
 			overage_allowed: false,
+
+			// Unlimited features, balance is 0...
+			balance: 0,
 		};
 
 		expect(expectedRes).toMatchObject(res);

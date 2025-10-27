@@ -16,6 +16,7 @@ fi
 # Adjust --max to control concurrency (default: 6)
 BUN_PARALLEL_COMPACT \
   'server/tests/check/basic' \
+  'server/tests/check/credit-systems' \
   'server/tests/attach/basic' \
   'server/tests/attach/upgrade' \
   'server/tests/attach/downgrade' \

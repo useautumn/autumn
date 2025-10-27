@@ -11,12 +11,13 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getV2CheckResponse } from "@/internal/api/check/checkUtils/getV2CheckResponse.js";
 import { getSingleEntityResponse } from "@/internal/api/entities/getEntityUtils.js";
-import { getV2CheckResponse } from "@/internal/api/entitled/checkUtils/getV2CheckResponse.js";
-import { getApiCustomer } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomer.js";
 import { toApiFeature } from "@/internal/features/utils/mapFeatureUtils.js";
-import { generateId } from "@/utils/genUtils.js";
+import type { AutumnContext } from "../honoUtils/HonoEnv.js";
+import type { CheckData } from "../internal/api/check/checkTypes/CheckData.js";
+import { getApiCustomer } from "../internal/customers/cusUtils/apiCusUtils/getApiCustomer.js";
+import { generateId } from "../utils/genUtils.js";
 
 export const mergeNewCusEntsIntoCusProducts = ({
 	cusProducts,
@@ -57,7 +58,6 @@ export const sendSvixThresholdReachedEvent = async ({
 	const cusDetails = await getApiCustomer({
 		ctx,
 		fullCus,
-		expand: [],
 	});
 
 	if (fullCus.entity) {
@@ -97,7 +97,7 @@ export const handleAllowanceUsed = async ({
 	feature: Feature;
 	fullCus: FullCustomer;
 }) => {
-	const { org, env, apiVersion } = ctx;
+	const { db, org, env, features, logger } = ctx;
 
 	// Make sure overage allowed is false
 	const oldCusEnts = structuredClone(cusEnts);
@@ -110,33 +110,34 @@ export const handleAllowanceUsed = async ({
 		cusEnt.usage_allowed = false;
 	}
 
-	const prevCheckResponse = await getV2CheckResponse({
+	const prevCheckData: CheckData = {
 		fullCus,
 		cusEnts: oldCusEnts,
-		creditSystems: [],
-		feature,
-		org,
+		originalFeature: feature,
+		featureToUse: feature,
 		cusProducts: fullCus.customer_products,
-		apiVersion,
+		entity: fullCus.entity,
+	};
+
+	const newCheckData: CheckData = {
+		fullCus,
+		cusEnts: clonedNewCusEnts,
+		originalFeature: feature,
+		featureToUse: feature,
+		cusProducts: fullCus.customer_products,
+		entity: fullCus.entity,
+	};
+	const prevCheckResponse = await getV2CheckResponse({
+		ctx,
+		checkData: prevCheckData,
+		requiredBalance: 1,
 	});
 
 	const v2CheckResponse = await getV2CheckResponse({
-		fullCus,
-		cusEnts: clonedNewCusEnts,
-		creditSystems: [],
-		feature,
-		org,
-		cusProducts: fullCus.customer_products,
-		apiVersion,
+		ctx,
+		checkData: newCheckData,
+		requiredBalance: 1,
 	});
-
-	// console.log(`Handling allowance used for feature: ${feature.id}`);
-	// console.log(
-	//   `Prev: allowed (${prevCheckResponse.allowed}), balance (${prevCheckResponse.balance})`
-	// );
-	// console.log(
-	//   `Current: allowed (${v2CheckResponse.allowed}), balance (${v2CheckResponse.balance})`
-	// );
 
 	if (prevCheckResponse.allowed === true && v2CheckResponse.allowed === false) {
 		await sendSvixThresholdReachedEvent({
@@ -170,24 +171,40 @@ export const handleThresholdReached = async ({
 	features: Feature[];
 	logger: any;
 }) => {
-	const ctx: AutumnContext = {
-		db,
-		org,
-		env,
-		features,
-		logger,
-		apiVersion: createdAtToVersion({
-			createdAt: org.created_at || undefined,
-		}),
-		id: generateId("local_req"),
-		isPublic: false,
-		authType: AuthType.Unknown,
-		timestamp: Date.now(),
-	};
-
 	try {
 		const apiVersion = createdAtToVersion({
 			createdAt: org.created_at || undefined,
+		});
+
+		const ctx: AutumnContext = {
+			db,
+			org,
+			env,
+			features,
+			logger,
+
+			isPublic: false,
+			authType: AuthType.SecretKey,
+			apiVersion,
+			timestamp: Date.now(),
+			id: generateId("local_req"),
+			clickhouseClient: null as any,
+			expand: [],
+		};
+
+		const checkData1: CheckData = {
+			fullCus,
+			cusEnts,
+			originalFeature: feature,
+			featureToUse: feature,
+			cusProducts: fullCus.customer_products,
+			entity: fullCus.entity,
+		};
+
+		const prevCheckResponse = await getV2CheckResponse({
+			ctx,
+			checkData: checkData1,
+			requiredBalance: 1,
 		});
 
 		const newCusProducts = mergeNewCusEntsIntoCusProducts({
@@ -197,34 +214,28 @@ export const handleThresholdReached = async ({
 
 		fullCus.customer_products = newCusProducts;
 
-		const prevCheckResponse = await getV2CheckResponse({
-			fullCus,
-			cusEnts: cusEnts,
-			creditSystems: [],
-			feature,
-			org,
-			cusProducts: fullCus.customer_products,
-			apiVersion,
-		});
-
-		const v2CheckResponse = await getV2CheckResponse({
+		const checkData2: CheckData = {
 			fullCus,
 			cusEnts: newCusEnts,
-			creditSystems: [],
-			feature,
-			org,
+			originalFeature: feature,
+			featureToUse: feature,
 			cusProducts: newCusProducts,
-			apiVersion,
+			entity: fullCus.entity,
+		};
+
+		const newCheckResponse = await getV2CheckResponse({
+			ctx,
+			checkData: checkData2,
+			requiredBalance: 1,
 		});
 
 		if (
 			prevCheckResponse.allowed === true &&
-			v2CheckResponse.allowed === false
+			newCheckResponse.allowed === false
 		) {
 			const cusDetails = await getApiCustomer({
 				ctx,
 				fullCus,
-				expand: [],
 			});
 
 			if (fullCus.entity) {
