@@ -6,7 +6,9 @@ import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { creditSystems } from "tests/global.js";
 import { timeout } from "./genUtils.js";
 import { features } from "tests/global.js";
-import { Feature } from "@autumn/shared";
+import { Feature, ProductV2 } from "@autumn/shared";
+import { convertProductV2ToV1 } from "@/internal/products/productUtils/productV2Utils/convertProductV2ToV1.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
 
 const PRECISION = 10;
 const CREDIT_MULTIPLIER = 100000;
@@ -160,4 +162,41 @@ export const sendGPUEvents = async ({
 	await timeout(10000);
 
 	return { creditsUsed: totalCreditsUsed };
+};
+
+/**
+ * V2 wrapper for checkUsageInvoiceAmount that accepts ProductV2
+ * Converts ProductV2 → ProductV1 internally, then calls original helper
+ */
+export const checkUsageInvoiceAmountV2 = async ({
+	invoices,
+	totalUsage,
+	product,
+	featureId,
+	invoiceIndex,
+	includeBase = true,
+}: {
+	invoices: any;
+	totalUsage: number;
+	product: ProductV2;
+	featureId: string;
+	invoiceIndex?: number;
+	includeBase?: boolean;
+}) => {
+	// Convert V2 → V1 using production utilities
+	const productV1 = convertProductV2ToV1({
+		productV2: product,
+		orgId: ctx.org.id,
+		features: ctx.features,
+	});
+
+	// Call original helper with converted product
+	return checkUsageInvoiceAmount({
+		invoices,
+		totalUsage,
+		product: productV1,
+		featureId,
+		invoiceIndex,
+		includeBase,
+	});
 };
