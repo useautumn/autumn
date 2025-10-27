@@ -15,6 +15,70 @@ import { useProductItemContext } from "@/views/products/product/product-item/Pro
 import { addTier, removeTier, updateTier } from "../../utils/tierUtils";
 import { BillingUnits } from "./BillingUnits";
 
+const getTierToDisplay = ({
+	tiers,
+	index,
+	includedUsage,
+}: {
+	tiers: PriceTier[];
+	index: number;
+	includedUsage: number | string | null;
+}) => {
+	const tier = tiers[index];
+	if (!tier) return "0";
+
+	// 1. If infinite, return "∞"
+	if (tier.to === Infinite) return "∞";
+
+	// 2. Return tier.to + includedUsage
+	if (typeof includedUsage === "number" && includedUsage > 0) {
+		return ((tier.to || 0) + includedUsage).toString();
+	}
+
+	// 3. Return tier.to + 0
+	return (tier.to || 0).toString();
+};
+
+const TierToInput = ({ index }: { index: number }) => {
+	const { item, setItem } = useProductItemContext();
+	const tiers = item?.tiers || [];
+	const includedUsage =
+		typeof item?.included_usage === "number" ? item?.included_usage : 0;
+
+	const isInfinite = index === tiers.length - 1;
+
+	const handleInputBlur = (value: string) => {
+		if (isInfinite) return;
+		// Set tier value in tiers array...
+		const valueWithIncludedUsage =
+			parseFloat(value) -
+			(typeof includedUsage === "number" ? includedUsage : 0);
+		const newTiers = [...tiers];
+		newTiers[index] = { ...newTiers[index], to: valueWithIncludedUsage };
+		setItem({ ...item, tiers: newTiers });
+	};
+
+	const [tierVal, setTierVal] = useState<string>(
+		getTierToDisplay({ tiers, index, includedUsage }),
+	);
+
+	return (
+		<Input
+			// value={isInfinite ? "∞" : getDisplayValue(toKey, tier.to)}
+			value={tierVal}
+			// onFocus={() =>
+			// 	!isInfinite && handleInputFocus(toKey, tier.to)
+			// }
+			onBlur={() => handleInputBlur(tierVal)}
+			onChange={(e) => setTierVal(e.target.value)}
+			className="w-full"
+			placeholder={isInfinite ? "∞" : "100"}
+			inputMode="decimal"
+			disabled={isInfinite || (tiers.length === 2 && index === 1)} // Disable infinity or 2nd tier in 2-tier setup
+		/>
+	);
+};
+
 export function PriceTiers() {
 	const { item, setItem } = useProductItemContext();
 	const { org } = useOrg();
@@ -148,7 +212,11 @@ export function PriceTiers() {
 										value={
 											index === 0
 												? (includedUsage || 0).toString()
-												: (tiers[index - 1]?.to || 0).toString()
+												: getTierToDisplay({
+														tiers,
+														index: index - 1,
+														includedUsage,
+													})
 										}
 										onChange={() => null} // Read-only for "from" value
 										className="w-full"
@@ -160,23 +228,25 @@ export function PriceTiers() {
 								</span>
 								<div className="flex flex-1 text-sm items-center min-w-0">
 									{/* To value - disable if infinite (last tier) or if 2nd tier in 2-tier setup */}
-									<Input
-										value={isInfinite ? "∞" : getDisplayValue(toKey, tier.to)}
-										onFocus={() =>
-											!isInfinite && handleInputFocus(toKey, tier.to)
-										}
-										onBlur={() =>
-											!isInfinite && handleInputBlur(toKey, "to", index)
-										}
-										onChange={(e) =>
-											!isInfinite &&
-											handleInputChange(toKey, e.target.value, "to", index)
-										}
+									<TierToInput index={index} />
+									{/* <Input
+										// value={isInfinite ? "∞" : getDisplayValue(toKey, tier.to)}
+										value={getTierToDisplay(index)}
+										// onFocus={() =>
+										// 	!isInfinite && handleInputFocus(toKey, tier.to)
+										// }
+										// onBlur={() =>
+										// 	!isInfinite && handleInputBlur(toKey, "to", index)
+										// }
+										// onChange={(e) =>
+										// 	!isInfinite &&
+										// 	handleInputChange(toKey, e.target.value, "to", index)
+										// }
 										className="w-full"
 										placeholder={isInfinite ? "∞" : "100"}
 										inputMode="decimal"
 										disabled={isInfinite || (tiers.length === 2 && index === 1)} // Disable infinity or 2nd tier in 2-tier setup
-									/>
+									/> */}
 								</div>
 							</div>
 
