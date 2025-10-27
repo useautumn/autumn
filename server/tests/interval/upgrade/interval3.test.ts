@@ -43,7 +43,7 @@ describe(`${chalk.yellowBright("interval3: Should upgrade from pro trial to prem
 	let org: Organization;
 	let env: AppEnv;
 
-	before(async function () {
+	beforeAll(async function () {
 		await setupBefore(this);
 		const { autumnJs } = this;
 		db = this.db;

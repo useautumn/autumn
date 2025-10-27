@@ -48,7 +48,7 @@ describe(`${chalk.yellowBright("multiSubInterval3: Should attach pro and pro ann
 	let org: Organization;
 	let env: AppEnv;
 
-	before(async function () {
+	beforeAll(async function () {
 		await setupBefore(this);
 		const { autumnJs } = this;
 		db = this.db;
