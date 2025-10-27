@@ -1,25 +1,19 @@
-import type {
-	AppEnv,
-	LimitedItem,
-	Organization,
-	ProductV2,
-} from "@autumn/shared";
+import { beforeAll, describe, test } from "bun:test";
+import type { LimitedItem, ProductV2 } from "@autumn/shared";
 import chalk from "chalk";
 import { addWeeks } from "date-fns";
-import type Stripe from "stripe";
-import { setupBefore } from "tests/before.js";
 import { defaultApiVersion } from "tests/constants.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
-import { addPrefixToProducts, replaceItems } from "../utils.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { replaceItems } from "../utils.js";
 import { runMigrationTest } from "./runMigrationTest.js";
 
 const messagesItem = constructFeatureItem({
@@ -44,55 +38,37 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for free product`
 	const customerId = testCase;
 	const autumn: AutumnInt = new AutumnInt({ version: defaultApiVersion });
 	let testClockId: string;
-	let db: DrizzleCli, org: Organization, env: AppEnv;
-	let stripeCli: Stripe;
 
 	const curUnix = new Date().getTime();
 
-	before(async function () {
-		await setupBefore(this);
-		const { autumnJs } = this;
-		db = this.db;
-		org = this.org;
-		env = this.env;
-
-		stripeCli = this.stripeCli;
-
-		addPrefixToProducts({
+	beforeAll(async () => {
+		await initProductsV0({
+			ctx,
 			products: [free],
 			prefix: testCase,
-		});
-
-		await createProducts({
-			db,
-			orgId: org.id,
-			env,
-			autumn,
-			products: [free],
 			customerId,
 		});
 
-		const { testClockId: testClockId1 } = await initCustomer({
-			autumn: autumnJs,
+		const { testClockId: testClockId1 } = await initCustomerV3({
+			ctx,
 			customerId,
-			db,
-			org,
-			env,
+			customerData: {},
 			attachPm: "success",
+			withTestClock: true,
 		});
 
 		testClockId = testClockId1!;
 	});
 
-	it("should attach free product", async () => {
+	test("should attach free product", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,
 			product: free,
-			stripeCli,
-			db,
-			org,
-			env,
+			stripeCli: ctx.stripeCli,
+			db: ctx.db,
+			org: ctx.org,
+			env: ctx.env,
 			skipSubCheck: true,
 		});
 	});
@@ -100,7 +76,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for free product`
 	let newFree: ProductV2;
 	const increaseMessagesBy = 100;
 	const reduceWordsBy = 50;
-	it("should update product to new version", async () => {
+	test("should update product to new version", async () => {
 		newFree = structuredClone(free);
 
 		let newItems = replaceItems({
@@ -129,7 +105,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for free product`
 		});
 	});
 
-	it("should attach track usage and get correct balance", async () => {
+	test("should attach track usage and get correct balance", async () => {
 		const wordsUsage = 25;
 		const messagesUsage = 20;
 		await autumn.track({
@@ -146,7 +122,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for free product`
 
 		await timeout(2000);
 		await advanceTestClock({
-			stripeCli,
+			stripeCli: ctx.stripeCli,
 			testClockId,
 			advanceTo: addWeeks(Date.now(), 1).getTime(),
 			waitForSeconds: 30,
@@ -161,20 +137,20 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for free product`
 			to_version: 2,
 		});
 
-		await timeout(4000);
+		await new Promise((resolve) => setTimeout(resolve, 4000));
 
 		// 1. Get features
 		customer = await autumn.customers.get(customerId);
 
 		await runMigrationTest({
 			autumn,
-			stripeCli,
+			stripeCli: ctx.stripeCli,
 			customerId,
 			fromProduct: free,
 			toProduct: newFree,
-			db,
-			org,
-			env,
+			db: ctx.db,
+			org: ctx.org,
+			env: ctx.env,
 			usage: [
 				{
 					featureId: TestFeature.Words,

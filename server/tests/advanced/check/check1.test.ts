@@ -1,17 +1,15 @@
 import { type Customer, LegacyVersion, type LimitedItem } from "@autumn/shared";
-import { expect } from "chai";
+import { beforeAll, describe, expect, test } from "bun:test";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
-import type Stripe from "stripe";
-import { setupBefore } from "tests/before.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { TestFeature } from "tests/setup/v2Features.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
 const creditCost = 0.2;
 const freeProduct = constructProduct({
@@ -35,40 +33,29 @@ describe(`${chalk.yellowBright("check1: Checking credit systems")}`, () => {
 	const customerId = testCase;
 	let testClockId: string;
 	let customer: Customer;
-	let stripeCli: Stripe;
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
-	before(async function () {
-		await setupBefore(this);
-		stripeCli = this.stripeCli;
-
+	beforeAll(async () => {
 		const { customer: customer_, testClockId: testClockId_ } =
-			await initCustomer({
+			await initCustomerV3({
+				ctx,
 				customerId,
-				org: this.org,
-				env: this.env,
-				db: this.db,
-				autumn: this.autumnJs,
+				customerData: {},
 				attachPm: "success",
+				withTestClock: true,
 			});
 
-		addPrefixToProducts({
+		await initProductsV0({
+			ctx,
 			products: [freeProduct, pro],
 			prefix: testCase,
-		});
-		await createProducts({
-			products: [freeProduct, pro],
-			orgId: this.org.id,
-			env: this.env,
-			autumn: this.autumnJs,
-			db: this.db,
 		});
 
 		customer = customer_;
 		testClockId = testClockId_;
 	});
 
-	it("should attach free product and check action1 allowed", async () => {
+	test("should attach free product and check action1 allowed", async () => {
 		await autumn.attach({
 			customer_id: customerId,
 			product_id: freeProduct.id,
@@ -84,11 +71,11 @@ describe(`${chalk.yellowBright("check1: Checking credit systems")}`, () => {
 			feature_id: TestFeature.Credits,
 		});
 
-		expect(actionCheck.allowed).to.be.true;
-		expect(creditsCheck.allowed).to.be.false;
+		expect(actionCheck.allowed).toBe(true);
+		expect(creditsCheck.allowed).toBe(false);
 	});
 
-	it("should attach pro product and check allowed", async () => {
+	test("should attach pro product and check allowed", async () => {
 		await autumn.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -104,11 +91,11 @@ describe(`${chalk.yellowBright("check1: Checking credit systems")}`, () => {
 			feature_id: TestFeature.Action1,
 		});
 
-		expect(actionCheck.allowed).to.be.true;
-		expect(creditsCheck.allowed).to.be.true;
+		expect(actionCheck.allowed).toBe(true);
+		expect(creditsCheck.allowed).toBe(true);
 	});
 
-	it("should use up credits and have correct check response", async () => {
+	test("should use up credits and have correct check response", async () => {
 		const usage = 50;
 		const creditUsage = new Decimal(creditCost).mul(usage).toNumber();
 
@@ -129,6 +116,6 @@ describe(`${chalk.yellowBright("check1: Checking credit systems")}`, () => {
 			feature_id: TestFeature.Credits,
 		});
 
-		expect(creditsCheck.balance).to.be.equal(creditBalance);
+		expect(creditsCheck.balance).toBe(creditBalance);
 	});
 });
