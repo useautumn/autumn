@@ -1,30 +1,27 @@
 import {
-	type AppEnv,
 	BillingInterval,
 	LegacyVersion,
-	type Organization,
 	type ProductV2,
 } from "@autumn/shared";
-import { expect } from "chai";
+import { beforeAll, describe, expect, test } from "bun:test";
 import chalk from "chalk";
 import { addHours, addMonths, addWeeks } from "date-fns";
-import type Stripe from "stripe";
-import { setupBefore } from "tests/before.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
-import { createProducts } from "tests/utils/productUtils.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
 import { timeout } from "@/utils/genUtils.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 import runUpdateEntsTest from "../updateEnts/expectUpdateEnts.js";
-import { addPrefixToProducts, replaceItems } from "../utils.js";
+import { replaceItems } from "../utils.js";
+
 export const pro = constructProduct({
 	items: [constructArrearItem({ featureId: TestFeature.Words })],
 	type: "pro",
@@ -36,61 +33,43 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach with new version`)}`
 	const customerId = testCase;
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
-	let db: DrizzleCli, org: Organization, env: AppEnv;
-	let stripeCli: Stripe;
 
 	const curUnix = new Date().getTime();
 
-	before(async function () {
-		await setupBefore(this);
-		const { autumnJs } = this;
-		db = this.db;
-		org = this.org;
-		env = this.env;
-
-		stripeCli = this.stripeCli;
-
-		addPrefixToProducts({
+	beforeAll(async () => {
+		await initProductsV0({
+			ctx,
 			products: [pro],
 			prefix: testCase,
-		});
-
-		await createProducts({
-			db,
-			orgId: org.id,
-			env,
-			autumn,
-			products: [pro],
 			customerId,
 		});
 
-		const { testClockId: testClockId1 } = await initCustomer({
-			autumn: autumnJs,
+		const { testClockId: testClockId1 } = await initCustomerV3({
+			ctx,
 			customerId,
-			db,
-			org,
-			env,
+			customerData: {},
 			attachPm: "success",
+			withTestClock: true,
 		});
 
 		testClockId = testClockId1!;
 	});
 
-	it("should attach pro product", async () => {
+	test("should attach pro product", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,
 			product: pro,
-			stripeCli,
-			db,
-			org,
-			env,
+			stripeCli: ctx.stripeCli,
+			db: ctx.db,
+			org: ctx.org,
+			env: ctx.env,
 		});
 	});
 
 	const usage = 50000;
 	let newPro: ProductV2;
-	it("should update product to new version", async () => {
+	test("should update product to new version", async () => {
 		newPro = structuredClone(pro);
 		let newItems = replaceItems({
 			items: pro.items,
@@ -118,9 +97,9 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach with new version`)}`
 		});
 	});
 
-	it("should attach pro v2", async () => {
+	test("should attach pro v2", async () => {
 		await advanceTestClock({
-			stripeCli,
+			stripeCli: ctx.stripeCli,
 			testClockId,
 			advanceTo: addWeeks(Date.now(), 1).getTime(),
 		});
@@ -135,13 +114,13 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach with new version`)}`
 
 		await runUpdateEntsTest({
 			autumn,
-			stripeCli,
+			stripeCli: ctx.stripeCli,
 			customerId,
 			customProduct: newPro,
 			newVersion: 2,
-			db,
-			org,
-			env,
+			db: ctx.db,
+			org: ctx.org,
+			env: ctx.env,
 			usage: [
 				{
 					featureId: TestFeature.Words,
@@ -151,14 +130,14 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach with new version`)}`
 		});
 	});
 
-	it("should have correct invoice total on next cycle", async () => {
+	test("should have correct invoice total on next cycle", async () => {
 		const invoiceTotal = await getExpectedInvoiceTotal({
-			org,
-			env,
+			org: ctx.org,
+			env: ctx.env,
 			customerId,
 			productId: pro.id,
-			stripeCli,
-			db,
+			stripeCli: ctx.stripeCli,
+			db: ctx.db,
 			usage: [
 				{
 					featureId: TestFeature.Words,
@@ -170,14 +149,14 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach with new version`)}`
 
 		let curUnix = Date.now();
 		curUnix = await advanceTestClock({
-			stripeCli,
+			stripeCli: ctx.stripeCli,
 			testClockId,
 			advanceTo: addMonths(curUnix, 1).getTime(),
 			waitForSeconds: 30,
 		});
 
 		await advanceTestClock({
-			stripeCli,
+			stripeCli: ctx.stripeCli,
 			testClockId,
 			advanceTo: addHours(curUnix, hoursToFinalizeInvoice).getTime(),
 			waitForSeconds: 10,
@@ -185,9 +164,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach with new version`)}`
 
 		const customer = await autumn.customers.get(customerId);
 		const invoice = customer.invoices[0];
-		expect(invoice.total).to.equal(
-			invoiceTotal,
-			"invoice total after 1 cycle should be correct",
-		);
+		expect(invoice.total).toBe(invoiceTotal);
 	});
 });

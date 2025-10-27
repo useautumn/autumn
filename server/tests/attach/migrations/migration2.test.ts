@@ -1,18 +1,9 @@
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import {
-	AppEnv,
-	BillingInterval,
-	Organization,
-	ProductItemInterval,
-	ProductV2,
-} from "@autumn/shared";
+import { BillingInterval, ProductItemInterval, ProductV2 } from "@autumn/shared";
+import { beforeAll, describe, expect, test } from "bun:test";
 import chalk from "chalk";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { setupBefore } from "tests/before.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "../utils.js";
+import type Stripe from "stripe";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
@@ -23,6 +14,8 @@ import { addWeeks } from "date-fns";
 import { defaultApiVersion } from "tests/constants.js";
 import { runMigrationTest } from "./runMigrationTest.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
 let wordsItem = constructArrearItem({
 	featureId: TestFeature.Words,
@@ -37,64 +30,46 @@ export let pro = constructProduct({
 const testCase = "migrations2";
 
 describe(`${chalk.yellowBright(`${testCase}: Testing migration for pro usage product`)}`, () => {
-	let customerId = testCase;
-	let autumn: AutumnInt = new AutumnInt({ version: defaultApiVersion });
+	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: defaultApiVersion });
 	let testClockId: string;
-	let db: DrizzleCli, org: Organization, env: AppEnv;
-	let stripeCli: Stripe;
 
-	let curUnix = new Date().getTime();
+	const curUnix = new Date().getTime();
 
-	before(async function () {
-		await setupBefore(this);
-		const { autumnJs } = this;
-		db = this.db;
-		org = this.org;
-		env = this.env;
-
-		stripeCli = this.stripeCli;
-
-		addPrefixToProducts({
+	beforeAll(async () => {
+		await initProductsV0({
+			ctx,
 			products: [pro],
 			prefix: testCase,
-		});
-
-		await createProducts({
-			db,
-			orgId: org.id,
-			env,
-			autumn,
-			products: [pro],
 			customerId,
 		});
 
-		const { testClockId: testClockId1 } = await initCustomer({
-			autumn: autumnJs,
+		const { testClockId: testClockId1 } = await initCustomerV3({
+			ctx,
 			customerId,
-			db,
-			org,
-			env,
+			customerData: {},
 			attachPm: "success",
+			withTestClock: true,
 		});
 
 		testClockId = testClockId1!;
 	});
 
-	it("should attach free product", async function () {
+	test("should attach free product", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,
 			product: pro,
-			stripeCli,
-			db,
-			org,
-			env,
+			stripeCli: ctx.stripeCli,
+			db: ctx.db,
+			org: ctx.org,
+			env: ctx.env,
 		});
 	});
 
 	let newPro: ProductV2;
-	let increaseWordsBy = 1500;
-	it("should update product to new version", async function () {
+	const increaseWordsBy = 1500;
+	test("should update product to new version", async () => {
 		newPro = structuredClone(pro);
 
 		let newItems = replaceItems({
@@ -121,8 +96,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for pro usage pro
 		});
 	});
 
-	it("should attach track usage and get correct balance", async function () {
-		let wordsUsage = 120000;
+	test("should attach track usage and get correct balance", async () => {
+		const wordsUsage = 120000;
 		await autumn.track({
 			customer_id: customerId,
 			value: wordsUsage,
@@ -130,7 +105,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for pro usage pro
 		});
 
 		await advanceTestClock({
-			stripeCli,
+			stripeCli: ctx.stripeCli,
 			testClockId,
 			advanceTo: addWeeks(Date.now(), 1).getTime(),
 		});
@@ -146,13 +121,13 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for pro usage pro
 
 		await runMigrationTest({
 			autumn,
-			stripeCli,
+			stripeCli: ctx.stripeCli,
 			customerId,
 			fromProduct: pro,
 			toProduct: newPro,
-			db,
-			org,
-			env,
+			db: ctx.db,
+			org: ctx.org,
+			env: ctx.env,
 			usage: [
 				{
 					featureId: TestFeature.Words,

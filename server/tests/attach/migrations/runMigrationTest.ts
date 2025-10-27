@@ -7,7 +7,7 @@ import {
 	getSubsFromCusId,
 } from "tests/utils/expectUtils/expectSubUtils.js";
 import Stripe from "stripe";
-import { expect } from "chai";
+import { expect } from "bun:test";
 import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
 import { expectResetAtCorrect } from "tests/utils/expectUtils/expectAttach/expectResetAtCorrect.js";
 import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
@@ -30,9 +30,9 @@ export const expectSubsSame = ({
 	const periodsBefore = subsBefore.map((sub) => subToPeriodStartEnd({ sub }));
 	const periodsAfter = subsAfter.map((sub) => subToPeriodStartEnd({ sub }));
 
-	// expect(invoicesAfter).to.deep.equal(invoicesBefore);
-	expect(subIdsAfter).to.deep.equal(subIdsBefore);
-	expect(periodsBefore).to.deep.equal(periodsAfter);
+	// expect(invoicesAfter).toEqual(invoicesBefore);
+	expect(subIdsAfter).toEqual(subIdsBefore);
+	expect(periodsBefore).toEqual(periodsAfter);
 };
 
 export const runMigrationTest = async ({
