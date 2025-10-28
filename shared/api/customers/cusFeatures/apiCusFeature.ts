@@ -30,10 +30,10 @@ export const ApiCusFeatureSchema = z.object({
 
 	unlimited: z.boolean(),
 
-	granted_balance: z.number(), // 0
-	purchased_balance: z.number(), // 3
-	current_balance: z.number(), // 1
-	usage: z.number(), // 2
+	granted_balance: z.number(),
+	purchased_balance: z.number(),
+	current_balance: z.number(),
+	usage: z.number(),
 
 	resets_at: z.number().nullable(),
 

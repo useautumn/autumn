@@ -11,23 +11,24 @@ import { SetUsageParamsSchema } from "../balances/usageModels.js";
 import { CustomerDataSchema } from "../common/customerData.js";
 import { EntityDataSchema } from "../common/entityData.js";
 import { setUsageJsDoc } from "../common/jsDocs.js";
+import { ApiCusProductV3Schema } from "../customers/cusPlans/previousVersions/apiCusProductV3.js";
 import { ApiEntityWithMeta } from "../entities/entitiesOpenApi.js";
 import {
 	ApiCusFeatureSchema,
-	ApiCusProductSchema,
 	ApiCustomerSchema,
 	ApiFeatureSchema,
 	ApiProductItemSchema,
+	ApiProductSchema,
 	CreateCustomerParamsSchema,
 	CreateCustomerQuerySchema,
 	CreateFeatureParamsSchema,
 	FEATURE_EXAMPLE,
 	GetCustomerQuerySchema,
 	ListCustomersResponseSchema,
+	PRODUCT_EXAMPLE,
 	UpdateCustomerParamsSchema,
 	UpdateFeatureParamsSchema,
 } from "../models.js";
-import { ApiProductSchema, PRODUCT_EXAMPLE } from "../products/apiProduct.js";
 import {
 	CreateProductV2ParamsSchema,
 	UpdateProductV2ParamsSchema,
@@ -412,7 +413,7 @@ const OPENAPI_1_2_0 = createDocument(
 					description: "Entity data for creating an entity",
 				}),
 				Customer: ApiCustomerWithMeta,
-				CustomerProduct: ApiCusProductSchema,
+				CustomerProduct: ApiCusProductV3Schema,
 				CustomerFeature: ApiCusFeatureSchema.meta({
 					id: "CustomerFeature",
 					description: "Customer feature object returned by the API",

@@ -1,6 +1,5 @@
 import type { ResetInterval } from "@api/models.js";
 import type { ApiPlanFeature } from "@api/products/planFeature/apiPlanFeature.js";
-import { Infinite } from "@models/productModels/productEnums.js";
 import {
 	type ProductItem,
 	ProductItemSchema,
@@ -18,7 +17,7 @@ export const planFeaturesToItems = ({
 	(features ?? []).map((feature) =>
 		ProductItemSchema.parse({
 			feature_id: feature.feature_id,
-			included_usage: feature.unlimited ? Infinite : feature.granted,
+			// included_usage: feature.unlimited ? Infinite : feature.granted,
 			interval: resetIntvToItemIntv(feature.reset_interval as ResetInterval),
 			interval_count: feature.reset_interval_count,
 
@@ -46,8 +45,8 @@ export const planFeaturesToItems = ({
 			usage_model: feature.price?.usage_model,
 			billing_units: feature.price?.billing_units,
 			usage_limit: feature.price?.max_purchase
-				? feature.price.max_purchase + (feature.granted ?? 0)
+				? feature.price.max_purchase + (feature.granted_balance ?? 0)
 				: undefined,
-			reset_usage_when_enabled: feature.reset_usage_on_enabled,
+			reset_usage_when_enabled: feature.reset_usage_when_enabled,
 		} satisfies ProductItem),
 	);

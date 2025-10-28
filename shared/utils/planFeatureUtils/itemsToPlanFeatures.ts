@@ -28,8 +28,9 @@ export const itemsToPlanFeatures = ({
 			feature_id: item.feature_id!,
 
 			// Handle unlimited vs granted
-			granted:
+			granted_balance:
 				item.included_usage === Infinite ? 0 : (item.included_usage ?? 0),
+
 			unlimited: item.included_usage === Infinite,
 
 			// Convert intervals
@@ -84,7 +85,7 @@ export const itemsToPlanFeatures = ({
 				: {}),
 
 			// Other fields
-			reset_usage_on_enabled: item.reset_usage_when_enabled ?? true,
+			// reset_usage_on_enabled: item.reset_usage_when_enabled ?? true,
 			// entity_feature_id: item.entity_feature_id,
 		} satisfies ApiPlanFeature),
 	);

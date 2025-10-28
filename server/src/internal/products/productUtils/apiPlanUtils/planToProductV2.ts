@@ -1,4 +1,5 @@
 import {
+	type CreatePlanParams,
 	type CreateProductV2Params,
 	CreateProductV2ParamsSchema,
 	convertPlanToItems,
@@ -8,7 +9,7 @@ import type { ApiPlan } from "@shared/api/products/apiPlan.js";
 export const planToProductV2 = ({
 	plan,
 }: {
-	plan: ApiPlan;
+	plan: ApiPlan | CreatePlanParams;
 }): CreateProductV2Params => {
 	try {
 		// Convert plan to items using shared utility
@@ -19,7 +20,6 @@ export const planToProductV2 = ({
 			name: plan.name,
 			is_add_on: plan.add_on,
 			is_default: plan.default,
-			version: plan.version,
 			group: plan.group ?? "",
 			items,
 			free_trial: plan.free_trial
