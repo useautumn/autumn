@@ -1,6 +1,5 @@
 import { ArrowRightIcon } from "@phosphor-icons/react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
 	Dialog,
@@ -33,7 +32,6 @@ export const DeployToProdDialog = ({
 	const [loading, setLoading] = useState(false);
 	const axiosInstance = useAxiosInstance();
 	const { mutate: mutateOrg } = useOrg();
-	const navigate = useNavigate();
 
 	const handleGoToProduction = async () => {
 		setLoading(true);
