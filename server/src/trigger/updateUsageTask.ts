@@ -10,6 +10,7 @@ import {
 	type Organization,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import { sql } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -379,7 +380,15 @@ export const updateUsage = async ({
 		return;
 	}
 
-	validateDeductionPossible({ cusEnts, featureDeductions, entityId });
+	console.log(`   ✅ Validation starting with cusEnts:`, cusEnts.map(ce => `${ce.feature_id}=${ce.balance}`).join(', '));
+
+	try {
+		validateDeductionPossible({ cusEnts, featureDeductions, entityId });
+		console.log(`   ✅ Validation passed! Proceeding with deductions...`);
+	} catch (error) {
+		console.log(`   ❌ Validation failed:`, error.message);
+		throw error;
+	}
 
 	const originalCusEnts = structuredClone(cusEnts);
 	for (const obj of featureDeductions) {
@@ -492,6 +501,17 @@ export const runUpdateUsageTask = async ({
 
 		const cusEnts = await db.transaction(
 			async (tx) => {
+				// Acquire advisory lock for this customer to serialize concurrent requests
+				// Compute hash in application code to ensure consistency
+				const lockKeyStr = `${internalCustomerId}_${org.id}_${env}`;
+				const hash = lockKeyStr.split('').reduce((acc, char) => {
+					return ((acc << 5) - acc) + char.charCodeAt(0);
+				}, 0) | 0; // Convert to 32-bit integer
+
+				console.log(`   🔒 [${eventId}] Acquiring advisory lock (hash=${hash}) for: ${lockKeyStr}`);
+				await tx.execute(sql`SELECT pg_advisory_xact_lock(${hash})`);
+				console.log(`   🔓 [${eventId}] Advisory lock acquired, proceeding with update`);
+
 				return await updateUsage({
 					db: tx as unknown as DrizzleCli,
 					customerId,
@@ -507,7 +527,7 @@ export const runUpdateUsageTask = async ({
 				});
 			},
 			{
-				isolationLevel: "serializable",
+				isolationLevel: "read committed",
 			},
 		);
 

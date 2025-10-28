@@ -12,7 +12,6 @@ import { addPrefixToProducts } from "tests/attach/utils.js";
 import { createProducts } from "tests/utils/productUtils.js";
 import { initCustomerV2 } from "@/utils/scriptUtils/initCustomer.js";
 import { TestFeature } from "tests/setup/v2Features.js";
-import { EventService } from "@/internal/api/events/EventService.js";
 
 const testCase = "sync4";
 const customerId = `${testCase}_cus1`;
@@ -48,7 +47,6 @@ describe(`${chalk.yellowBright(`sync/${testCase}: Testing usage_limits with PayP
         autumnJs = this.autumnJs;
 		try {
 			await (autumnInt as AutumnInt).customers.delete(customerId);
-			await EventService.del
 		} catch (_) {}
 
         await addPrefixToProducts({
@@ -132,24 +130,43 @@ describe(`${chalk.yellowBright(`sync/${testCase}: Testing usage_limits with PayP
 		results.forEach((result, index) => {
 			if (result.status === "rejected") {
 				console.log(`  [${index}] ❌ REJECTED:`, result.reason?.message || result.reason);
+				console.log(`       Error code:`, result.reason?.code);
+				console.log(`       Status code:`, result.reason?.statusCode);
 			} else {
-				console.log(`  [${index}] ✅ FULFILLED:`, JSON.stringify(result.value));
+				console.log(`  [${index}] ✅ FULFILLED (HTTP 200):`, JSON.stringify(result.value));
 			}
 		});
 
 		const successCount = results.filter(r => r.status === "fulfilled").length;
 		const rejectedCount = results.filter(r => r.status === "rejected").length;
-		console.log(`\n📈 Summary: ${successCount} succeeded, ${rejectedCount} rejected (expected: 3 succeeded, 2 rejected)`);
-		console.log(`   Reason: usage_limit=10 means max 10 total units in billing cycle. 3 requests × 3 = 9 ≤ 10, but 4th would be 12 > 10\n`);
+		console.log(`\n📈 Summary: ${successCount} HTTP 200 responses, ${rejectedCount} HTTP errors`);
+		console.log(`   Note: With advisory locks, all requests serialize but HTTP response count may vary\n`);
+
+		// Wait for any async processing to complete
+		console.log(`⏳ Waiting 3s for all updates to persist...`);
+		await new Promise(resolve => setTimeout(resolve, 3000));
 
 		const { data: balances, error } = await autumnJs.customers.get(
 			customerId,
 		);
 
 		console.log(`📦 Final state after all requests:`);
-		console.log(`- Balance: ${balances?.features[TestFeature.Messages]?.balance}`);
-		console.log(`- Usage limit: ${balances?.features[TestFeature.Messages]?.usage_limit}`);
-		console.log(`- Full feature data:`, JSON.stringify(balances?.features[TestFeature.Messages], null, 4));
+		console.log(`- Balance: ${balances?.features[TestFeature.Messages]?.balance} (expected: -4)`);
+		console.log(`- Usage: ${balances?.features[TestFeature.Messages]?.usage} (expected: 9)`);
+		console.log(`- Usage limit: ${balances?.features[TestFeature.Messages]?.usage_limit} (expected: 10)`);
+
+		expect(balances?.features[TestFeature.Messages]?.balance).to.equal(
+			-4,
+			`Balance should be -4 (5 included - 9 used), got ${balances?.features[TestFeature.Messages]?.balance}`,
+		);
+		expect(balances?.features[TestFeature.Messages]?.usage).to.equal(
+			9,
+			`Usage should be 9, got ${balances?.features[TestFeature.Messages]?.usage}`,
+		);
+		expect(balances?.features[TestFeature.Messages]?.usage_limit).to.equal(
+			10,
+			`Usage limit should remain 10, got ${balances?.features[TestFeature.Messages]?.usage_limit}`,
+		);
 		// With usage_limit of 10, only 3 requests of value 3 can succeed (9 total)
 		// The 4th request would bring total to 12, exceeding the usage_limit
 		// expect(successCount).to.equal(3, `Expected exactly 3 successes (3x3=9 <= usage_limit of 10), got ${successCount} | Results: ${results.map(r => r.status).join(", ")}`);
