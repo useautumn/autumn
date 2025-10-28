@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { UpdateBalancesParamsSchema } from "../balances/updateBalanceModels.js";
+import { UpdateBalancesParamsSchema } from "../balances/legacyUpdateBalanceModels.js";
 import { SuccessResponseSchema } from "../common/commonResponses.js";
 import { ApiCustomerSchema } from "./apiCustomer.js";
 import {

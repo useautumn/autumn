@@ -96,7 +96,7 @@ export const adjustAllowance = async ({
 		!cusProduct ||
 		!cusPrice ||
 		billingType !== BillingType.InArrearProrated ||
-		originalBalance == newBalance
+		originalBalance === newBalance
 	) {
 		return { newReplaceables: [], invoice: null, deletedReplaceables: null };
 	}
@@ -167,3 +167,8 @@ export const adjustAllowance = async ({
 		});
 	}
 };
+
+// Today in DB:
+// Balance: How much is given every month
+// granted_adjustment: how much free balance is granted (for that cycle)
+// free_balance: how much free balance is left

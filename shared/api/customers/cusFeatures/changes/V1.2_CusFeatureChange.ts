@@ -9,6 +9,10 @@ import { nullish } from "@utils/utils.js";
 import { Decimal } from "decimal.js";
 import type { z } from "zod/v4";
 import { ApiCusFeatureSchema } from "../apiCusFeature.js";
+import {
+	type CusFeatureLegacyData,
+	CusFeatureLegacyDataSchema,
+} from "../cusFeatureLegacyData.js";
 import { ApiCusFeatureV3Schema } from "../previousVersions/apiCusFeatureV3.js";
 // overage_allowed: z.boolean().nullish().meta({
 // 	description: "Whether overage usage beyond the limit is allowed",
@@ -21,8 +25,10 @@ import { ApiCusFeatureV3Schema } from "../previousVersions/apiCusFeatureV3.js";
  */
 export function transformCusFeatureToV3({
 	input,
+	legacyData,
 }: {
 	input: z.infer<typeof ApiCusFeatureSchema>;
+	legacyData?: CusFeatureLegacyData;
 }): z.infer<typeof ApiCusFeatureV3Schema> {
 	const toUsageLimit = ({
 		maxPurchase,
@@ -45,6 +51,21 @@ export function transformCusFeatureToV3({
 	const itemInterval = nullish(input.reset?.interval)
 		? "multiple"
 		: resetIntvToEntIntv({ resetIntv: input.reset?.interval });
+
+	// 1. Get included usage
+	const includedUsage = new Decimal(input.granted_balance)
+		.add(new Decimal(legacyData?.prepaid_quantity ?? 0))
+		.toNumber();
+
+	// 2. Current balance
+	// Included usage - usage + adjustment = current balance?
+	const currentBalance = new Decimal(includedUsage)
+		.sub(new Decimal(input.usage))
+		.sub(new Decimal(legacyData?.total_adjustment ?? 0))
+		.toNumber();
+	// const balance = new Decimal(input.current_balance)
+	// 	.add(new Decimal(legacyData?.purchased_balance ?? 0))
+	// 	.toNumber();
 
 	// const usageLimit = toUsageLimit({
 	// 	maxPurchase: input.max_purchase,
@@ -79,6 +100,8 @@ export function transformCusFeatureToV3({
 	// 	});
 	// }
 
+	// 1. Included usage: granted_balance, or if prepaid, granted_balance + purchased_balance (?)
+
 	const v3Type = toV3Type({
 		type: input.feature?.type ?? ApiFeatureType.SingleUsage,
 	});
@@ -92,8 +115,8 @@ export function transformCusFeatureToV3({
 		name: input.feature?.name ?? null,
 		unlimited: input.unlimited,
 
-		included_usage: input.granted_balance,
-		balance: input.current_balance,
+		included_usage: includedUsage,
+		balance: currentBalance,
 		usage: input.usage,
 		next_reset_at: input.resets_at,
 
@@ -144,6 +167,7 @@ export const V1_2_CusFeatureChange = defineVersionChange({
 	affectedResources: [AffectedResource.Customer],
 	newSchema: ApiCusFeatureSchema,
 	oldSchema: ApiCusFeatureV3Schema,
+	legacyDataSchema: CusFeatureLegacyDataSchema,
 
 	transformResponse: transformCusFeatureToV3,
 });

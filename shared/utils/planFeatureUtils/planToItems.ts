@@ -39,12 +39,8 @@ export const convertPlanToItems = ({
 
 	const items = [...featureItems];
 
-	// Only add price item if there isn't a price on a feature already (aka: a "base price" product)
-	const hasPriceItem = featureItems?.some(
-		(item) => typeof item.price === "number" && item.price > 0,
-	);
-
-	if (plan.price && !hasPriceItem) {
+	// Add base price if plan has one (independent of feature pricing)
+	if (plan.price) {
 		items.push(
 			constructPriceItem({
 				price: plan.price.amount,

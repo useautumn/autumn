@@ -9,6 +9,7 @@ export const getSummedEntityBalances = ({
 	if (nullish(cusEnt.entities)) {
 		return {
 			balance: 0,
+			free_balance: 0,
 			adjustment: 0,
 			unused: 0,
 			count: 0,
@@ -16,6 +17,10 @@ export const getSummedEntityBalances = ({
 	}
 
 	return {
+		free_balance: Object.values(cusEnt.entities).reduce(
+			(acc, curr) => acc + curr.free_balance,
+			0,
+		),
 		balance: Object.values(cusEnt.entities).reduce(
 			(acc, curr) => acc + curr.balance,
 			0,
@@ -35,7 +40,13 @@ export const getCusEntBalance = ({
 }: {
 	cusEnt: FullCustomerEntitlement;
 	entityId?: string | null;
-}) => {
+}): {
+	balance: number;
+	free_balance: number;
+	adjustment: number;
+	unused: number;
+	count: number;
+} => {
 	const entitlement = cusEnt.entitlement;
 
 	if (notNullish(entitlement.entity_feature_id)) {
@@ -48,11 +59,18 @@ export const getCusEntBalance = ({
 			const adjustment = cusEnt.entities?.[entityId]?.adjustment || 0;
 
 			if (nullish(entityBalance)) {
-				return { balance: 0, adjustment: 0, unused: 0, count: 1 };
+				return {
+					balance: 0,
+					free_balance: 0,
+					adjustment: 0,
+					unused: 0,
+					count: 1,
+				};
 			}
 
 			return {
 				balance: entityBalance || 0,
+				free_balance: cusEnt.entities?.[entityId]?.free_balance || 0,
 				adjustment,
 				unused: 0,
 				count: 1,
@@ -62,6 +80,7 @@ export const getCusEntBalance = ({
 
 	return {
 		balance: cusEnt.balance || 0,
+		free_balance: cusEnt.free_balance || 0,
 		adjustment: cusEnt.adjustment || 0,
 		unused: cusEnt.replaceables?.length || 0,
 		count: 1,

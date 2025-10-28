@@ -7,11 +7,14 @@ import {
 } from "../../productUtils/convertUtils.js";
 import { getBillingType } from "../../productUtils/priceUtils.js";
 import { nullish } from "../../utils.js";
+import { getCusEntBalance } from "../balanceUtils.js";
 
 export const cusEntToPurchasedBalance = ({
 	cusEnt,
+	entityId,
 }: {
 	cusEnt: FullCusEntWithFullCusProduct;
+	entityId?: string;
 }) => {
 	// return 0;
 	// 1. If prepaid
@@ -37,6 +40,14 @@ export const cusEntToPurchasedBalance = ({
 		return quantityWithBillingUnits;
 	}
 
-	// Return negative amount of balance...
-	return -(cusEnt.balance || 0);
+	const { balance, adjustment } = getCusEntBalance({
+		cusEnt,
+		entityId,
+	});
+
+	// Balance always includes adjustment. Purchased balance should NOT include adjustment
+	return new Decimal(balance).sub(adjustment).toNumber();
+
+	// // Return negative amount of balance...
+	// return Math.max(0, -(cusEnt.balance || 0));
 };

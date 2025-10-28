@@ -1,6 +1,8 @@
 import {
 	AffectedResource,
+	type ApiPlan,
 	ApiVersion,
+	applyResponseVersionChanges,
 	CreatePlanParamsSchema,
 	type CreateProductV2Params,
 	CreateProductV2ParamsSchema,
@@ -10,6 +12,7 @@ import {
 	type Price,
 	ProductAlreadyExistsError,
 	type ProductV2,
+	planToProductV2,
 } from "@autumn/shared";
 
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -23,7 +26,6 @@ import {
 } from "../free-trials/freeTrialUtils.js";
 import { ProductService } from "../ProductService.js";
 import { handleNewProductItems } from "../product-items/productItemUtils/handleNewProductItems.js";
-import { planToProductV2 } from "../productUtils/apiPlanUtils/planToProductV2.js";
 import { isDefaultTrial } from "../productUtils/classifyProduct.js";
 import { getPlanResponse } from "../productUtils/productResponseUtils/getPlanResponse.js";
 import {
@@ -119,7 +121,7 @@ export const createProduct = createRoute({
 
 		await disableCurrentDefault({
 			req: ctx,
-			newProduct: v1_2Body,
+			newProduct: v1_2Body as CreateProductV2Params,
 		});
 
 		const product = await ProductService.insert({
@@ -197,18 +199,18 @@ export const createProduct = createRoute({
 		// 	features,
 		// });
 
-		try {
-			const planResponse = await getPlanResponse({
-				product: newFullProduct,
-				features,
-			});
+		const planResponse = await getPlanResponse({
+			product: newFullProduct,
+			features,
+		});
 
-			console.log(`Plan response:\n ${JSON.stringify(planResponse, null, 4)}`);
+		// Apply version transformations for client
+		const versionedResponse = applyResponseVersionChanges<ApiPlan>({
+			input: planResponse,
+			targetVersion: ctx.apiVersion,
+			resource: AffectedResource.Product,
+		});
 
-			return c.json(planResponse);
-		} catch (error) {
-			console.error("Error getting plan response:", error);
-			throw error;
-		}
+		return c.json(versionedResponse);
 	},
 });

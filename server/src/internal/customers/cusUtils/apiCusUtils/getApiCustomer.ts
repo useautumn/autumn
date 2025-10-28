@@ -21,10 +21,11 @@ export const getApiCustomer = async ({
 	fullCus: FullCustomer;
 	withAutumnId?: boolean;
 }) => {
-	const apiCusFeatures = await getApiCusFeatures({
-		ctx,
-		fullCus,
-	});
+	const { apiCusFeatures, legacyData: cusFeaturesLegacyData } =
+		await getApiCusFeatures({
+			ctx,
+			fullCus,
+		});
 
 	const { apiCusPlans, legacyData: cusProductLegacyData } =
 		await getApiCusPlans({
@@ -61,7 +62,10 @@ export const getApiCustomer = async ({
 
 	return applyResponseVersionChanges<ApiCustomer, CustomerLegacyData>({
 		input: apiCustomer,
-		legacyData: { cusProductLegacyData },
+		legacyData: {
+			cusProductLegacyData,
+			cusFeatureLegacyData: cusFeaturesLegacyData,
+		},
 		targetVersion: ctx.apiVersion,
 		resource: AffectedResource.Customer,
 	});

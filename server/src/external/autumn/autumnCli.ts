@@ -5,6 +5,7 @@ dotenv.config();
 
 import {
 	type AttachBody,
+	type BalancesUpdateParams,
 	type CreateEntity,
 	type CreateRewardProgram,
 	CusExpand,
@@ -183,6 +184,27 @@ export class AutumnInt {
 
 		return data;
 	}
+
+	async updateCusEnt({
+		customerId,
+		customerEntitlementId,
+		updates,
+	}: {
+		customerId: string;
+		customerEntitlementId: string;
+		updates: {
+			balance?: number;
+			next_reset_at?: number;
+			entity_id?: string;
+		};
+	}) {
+		const data = await this.post(
+			`/customers/${customerId}/entitlements/${customerEntitlementId}`,
+			updates,
+		);
+		return data;
+	}
+
 	async checkout(
 		params: CheckoutParams & { invoice?: boolean; force_checkout?: boolean },
 	) {
@@ -507,5 +529,12 @@ export class AutumnInt {
 
 	initStripe = async () => {
 		await this.post(`/products/all/init_stripe`, {});
+	};
+
+	balances = {
+		update: async (params: BalancesUpdateParams) => {
+			const data = await this.post(`/balances/update`, params);
+			return data;
+		},
 	};
 }

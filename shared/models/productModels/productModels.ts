@@ -8,6 +8,7 @@ import { PriceSchema } from "./priceModels/priceModels.js";
 export const ProductSchema = z.object({
 	id: z.string(),
 	name: z.string().min(1, "Product name cannot be empty"),
+	description: z.string().nullable(),
 	is_add_on: z.boolean(),
 	is_default: z.boolean(),
 	version: z.number(),
