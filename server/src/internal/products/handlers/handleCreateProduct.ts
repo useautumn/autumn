@@ -1,6 +1,5 @@
 import {
 	AffectedResource,
-	type ApiPlan,
 	ApiVersion,
 	CreatePlanParamsSchema,
 	type CreateProductV2Params,
@@ -95,15 +94,16 @@ export const createProduct = createRoute({
 	// body: CreateProductV2ParamsSchema,
 	versionedBody: {
 		latest: CreatePlanParamsSchema,
-		[ApiVersion.V1_1]: CreateProductV2ParamsSchema,
+		[ApiVersion.V1_2]: CreateProductV2ParamsSchema,
 	},
 	resource: AffectedResource.Product,
 	handler: async (c) => {
 		const body = c.req.valid("json");
 		const ctx = c.get("ctx");
-		// const query = c.req.valid("query");
 
-		const v1_2Body = planToProductV2({ plan: body as ApiPlan });
+		const v1_2Body = (
+			ctx.apiVersion.gte(ApiVersion.V2) ? planToProductV2({ plan: body }) : body
+		) as CreateProductV2Params;
 
 		const { logger, org, features, env, db } = ctx;
 

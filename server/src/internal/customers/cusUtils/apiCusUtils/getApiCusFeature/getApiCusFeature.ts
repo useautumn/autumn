@@ -8,9 +8,10 @@ import {
 	ApiCusFeatureSchema,
 	CusExpand,
 	cusEntToBalance,
-	cusEntToIncludedUsage,
+	cusEntToGrantedBalance,
 	cusEntToKey,
 	cusEntToMaxPurchase,
+	cusEntToPurchasedBalance,
 	type Feature,
 	FeatureType,
 	getCusEntBalance,
@@ -110,18 +111,6 @@ export const getApiCusFeature = ({
 		return getUnlimitedApiCusFeature({ apiFeature, cusEnts });
 	}
 
-	const totalBalanceWithRollovers = sumValues(
-		cusEnts
-			.map((cusEnt) =>
-				cusEntToBalance({
-					cusEnt,
-					entityId,
-					withRollovers: true,
-				}),
-			)
-			.filter(notNullish),
-	);
-
 	const totalAdjustment = sumValues(
 		cusEnts.map((cusEnt) => {
 			const { adjustment } = getCusEntBalance({ cusEnt, entityId });
@@ -142,20 +131,56 @@ export const getApiCusFeature = ({
 		cusEnts.map((cusEnt) => cusEntToMaxPurchase({ cusEnt })),
 	);
 
-	const totalIncludedUsage = sumValues(
-		cusEnts.map((cusEnt) => cusEntToIncludedUsage({ cusEnt, entityId })),
-	);
+	// const totalIncludedUsage = sumValues(
+	// 	cusEnts.map((cusEnt) => cusEntToIncludedUsage({ cusEnt, entityId })),
+	// );
 
-	const totalIncludedUsageWithRollovers = sumValues(
+	// const totalIncludedUsageWithRollovers = sumValues(
+	// 	cusEnts.map((cusEnt) =>
+	// 		cusEntToIncludedUsage({ cusEnt, entityId, withRollovers: true }),
+	// 	),
+	// );
+
+	// const totalUsage = new Decimal(totalIncludedUsageWithRollovers)
+	// 	.add(totalAdjustment)
+	// 	.sub(totalBalanceWithRollovers)
+	// 	.sub(totalUnused)
+	// 	.toNumber();
+
+	// 1. Granted balance
+	const totalGrantedBalanceWithRollovers = sumValues(
 		cusEnts.map((cusEnt) =>
-			cusEntToIncludedUsage({ cusEnt, entityId, withRollovers: true }),
+			cusEntToGrantedBalance({ cusEnt, entityId, withRollovers: true }),
 		),
 	);
 
-	const totalUsage = new Decimal(totalIncludedUsageWithRollovers)
-		.add(totalAdjustment)
+	// 2. Purchased balance
+	const totalPurchasedBalance = sumValues(
+		cusEnts.map((cusEnt) => cusEntToPurchasedBalance({ cusEnt })),
+	);
+
+	// 3. Current balance
+	const totalBalanceWithRollovers = sumValues(
+		cusEnts
+			.map((cusEnt) =>
+				cusEntToBalance({
+					cusEnt,
+					entityId,
+					withRollovers: true,
+				}),
+			)
+			.filter(notNullish),
+	);
+	const currentBalance = new Decimal(totalBalanceWithRollovers)
+		.add(totalUnused)
+		.toNumber();
+
+	// 4. Usage
+	const totalUsage = new Decimal(totalGrantedBalanceWithRollovers)
+		.add(totalPurchasedBalance)
 		.sub(totalBalanceWithRollovers)
 		.sub(totalUnused)
+		.sub(totalAdjustment)
 		.toNumber();
 
 	const { interval, interval_count } = cusEntsToInterval({ cusEnts });
@@ -171,12 +196,18 @@ export const getApiCusFeature = ({
 
 		unlimited: false,
 
-		starting_balance: totalIncludedUsageWithRollovers,
-		balance: totalBalanceWithRollovers,
-
+		granted_balance: totalGrantedBalanceWithRollovers,
+		purchased_balance: totalPurchasedBalance,
+		current_balance: currentBalance,
 		usage: totalUsage,
 
+		// starting_balance: totalIncludedUsageWithRollovers,
+		// balance: totalBalanceWithRollovers,
+
+		// usage: totalUsage,
+
 		resets_at: nextResetAt,
+
 		reset_interval: interval,
 		reset_interval_count: interval_count !== 1 ? interval_count : undefined,
 

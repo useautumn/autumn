@@ -1,6 +1,7 @@
 import type { ApiPlan } from "@api/products/apiPlan.js";
 import type { BillingInterval } from "@models/productModels/priceModels/priceEnums.js";
 import type { ProductItem } from "@models/productV2Models/productItemModels/productItemModels.js";
+import type { CreatePlanParams } from "../../api/products/planOpModels.js";
 import { planFeaturesToItems } from "./planFeaturesToItems.js";
 
 /**
@@ -29,7 +30,7 @@ export const constructPriceItem = ({
 export const convertPlanToItems = ({
 	plan,
 }: {
-	plan: ApiPlan;
+	plan: ApiPlan | CreatePlanParams;
 }): ProductItem[] => {
 	// Convert features to items
 	const featureItems = planFeaturesToItems({

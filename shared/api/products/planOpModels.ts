@@ -61,3 +61,5 @@ export const UpdatePlanQuerySchema = z.object({
 	upsert: z.boolean().optional(),
 	disable_version: z.boolean().optional(),
 });
+
+export type CreatePlanParams = z.infer<typeof CreatePlanParamsSchema>;

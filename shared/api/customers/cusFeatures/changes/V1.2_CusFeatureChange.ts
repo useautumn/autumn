@@ -9,10 +9,7 @@ import { nullish } from "@utils/utils.js";
 import { Decimal } from "decimal.js";
 import type { z } from "zod/v4";
 import { ApiCusFeatureSchema } from "../apiCusFeature.js";
-import {
-	type ApiCusFeatureV3Breakdown,
-	ApiCusFeatureV3Schema,
-} from "../previousVersions/apiCusFeatureV3.js";
+import { ApiCusFeatureV3Schema } from "../previousVersions/apiCusFeatureV3.js";
 // overage_allowed: z.boolean().nullish().meta({
 // 	description: "Whether overage usage beyond the limit is allowed",
 // 	example: true,
@@ -45,43 +42,42 @@ export function transformCusFeatureToV3({
 		} else return type;
 	};
 
-	const itemInterval =
-		input.reset_interval === null
-			? "multiple"
-			: resetIntvToEntIntv({ resetIntv: input.reset_interval });
+	const itemInterval = nullish(input.reset?.interval)
+		? "multiple"
+		: resetIntvToEntIntv({ resetIntv: input.reset?.interval });
 
-	const usageLimit = toUsageLimit({
-		maxPurchase: input.max_purchase,
-		startingBalance: input.starting_balance,
-	});
+	// const usageLimit = toUsageLimit({
+	// 	maxPurchase: input.max_purchase,
+	// 	startingBalance: input.starting_balance,
+	// });
 
-	const overageAllowed =
-		Boolean(input.pay_per_use) && nullish(input.max_purchase);
+	// const overageAllowed =
+	// 	Boolean(input.pay_per_use) && nullish(input.max_purchase);
 
-	let newBreakdown: ApiCusFeatureV3Breakdown[] | undefined;
-	if (input.breakdown && input.breakdown.length > 0) {
-		newBreakdown = input.breakdown.map((breakdown) => {
-			const interval = resetIntvToEntIntv({
-				resetIntv: breakdown.reset_interval,
-			});
+	// let newBreakdown: ApiCusFeatureV3Breakdown[] | undefined;
+	// if (input.breakdown && input.breakdown.length > 0) {
+	// 	newBreakdown = input.breakdown.map((breakdown) => {
+	// 		const interval = resetIntvToEntIntv({
+	// 			resetIntv: breakdown.reset_interval,
+	// 		});
 
-			const usageLimit = toUsageLimit({
-				maxPurchase: breakdown.max_purchase,
-				startingBalance: breakdown.starting_balance,
-			});
+	// 		const usageLimit = toUsageLimit({
+	// 			maxPurchase: breakdown.max_purchase,
+	// 			startingBalance: breakdown.starting_balance,
+	// 		});
 
-			return {
-				interval,
-				interval_count: breakdown.reset_interval_count || 1,
+	// 		return {
+	// 			interval,
+	// 			interval_count: breakdown.reset_interval_count || 1,
 
-				balance: breakdown.balance,
-				usage: breakdown.usage,
-				included_usage: breakdown.starting_balance,
-				next_reset_at: breakdown.resets_at,
-				usage_limit: usageLimit,
-			} satisfies ApiCusFeatureV3Breakdown;
-		});
-	}
+	// 			balance: breakdown.balance,
+	// 			usage: breakdown.usage,
+	// 			included_usage: breakdown.starting_balance,
+	// 			next_reset_at: breakdown.resets_at,
+	// 			usage_limit: usageLimit,
+	// 		} satisfies ApiCusFeatureV3Breakdown;
+	// 	});
+	// }
 
 	const v3Type = toV3Type({
 		type: input.feature?.type ?? ApiFeatureType.SingleUsage,
@@ -96,8 +92,8 @@ export function transformCusFeatureToV3({
 		name: input.feature?.name ?? null,
 		unlimited: input.unlimited,
 
-		included_usage: input.starting_balance,
-		balance: input.balance,
+		included_usage: input.granted_balance,
+		balance: input.current_balance,
 		usage: input.usage,
 		next_reset_at: input.resets_at,
 
@@ -106,9 +102,9 @@ export function transformCusFeatureToV3({
 			? undefined
 			: itemInterval === "multiple"
 				? null
-				: input.reset_interval_count || 1,
+				: input.reset?.interval_count || 1,
 
-		overage_allowed: overageAllowed,
+		overage_allowed: input.pay_per_use,
 
 		credit_schema: input.feature?.credit_schema
 			? input.feature.credit_schema.map((credit) => ({
@@ -117,8 +113,8 @@ export function transformCusFeatureToV3({
 				}))
 			: undefined,
 
-		breakdown: newBreakdown,
-		usage_limit: usageLimit,
+		// breakdown: newBreakdown,
+		// usage_limit: usageLimit,
 		rollovers: input.rollovers,
 	};
 }

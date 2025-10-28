@@ -1,5 +1,6 @@
 // Cus ent utils
 
+export * from "./cusEntUtils/balanceUtils/cusEntToPurchasedBalance.js";
 export * from "./cusEntUtils/balanceUtils.js";
 export * from "./cusEntUtils/convertCusEntUtils.js";
 export * from "./cusEntUtils/cusEntUtils.js";
