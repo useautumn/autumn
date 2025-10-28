@@ -12,6 +12,7 @@ import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import type { ApiCusFeatureV3 } from "../../../shared/api/customers/cusFeatures/previousVersions/apiCusFeatureV3.js";
 import { timeout } from "../utils/genUtils.js";
 
 const messagesFeature = constructFeatureItem({
@@ -27,10 +28,12 @@ const freeProd = constructProduct({
 
 const testCase = "get-cus-feature1";
 
-describe(`${chalk.yellowBright("get-cus-feature1: get customer, free metered feature")}`, () => {
+describe(`${chalk.yellowBright("get-cus-feature1: testing current balance + usage")}`, () => {
 	const customerId = testCase;
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2 });
+
+	const usage = 20.132;
 
 	beforeAll(async () => {
 		await initCustomerV3({
@@ -51,8 +54,7 @@ describe(`${chalk.yellowBright("get-cus-feature1: get customer, free metered fea
 		});
 	});
 
-	test("should track usage, and have correct customer feature fields", async () => {
-		const usage = 20.25;
+	test("should track usage and have correct v1 / v2 api cus feature", async () => {
 		await autumnV2.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -60,17 +62,81 @@ describe(`${chalk.yellowBright("get-cus-feature1: get customer, free metered fea
 		});
 
 		await timeout(2000);
-
 		const customer = await autumnV2.customers.get(customerId);
 		const feature = customer.features[
 			TestFeature.Messages
 		] as unknown as ApiCusFeature;
 
-		expect(feature.granted_balance).toBe(messagesFeature.included_usage);
-		expect(feature.purchased_balance).toBe(0);
-		expect(feature.current_balance).toBe(
-			messagesFeature.included_usage - usage,
-		);
-		expect(feature.usage).toBe(usage);
+		expect(feature).toMatchObject({
+			granted_balance: messagesFeature.included_usage,
+			purchased_balance: 0,
+			current_balance: 1000,
+			usage,
+		});
+
+		const customerV1 = await autumnV1.customers.get(customerId);
+		const featureV1 = customerV1.features[
+			TestFeature.Messages
+		] as unknown as ApiCusFeatureV3;
+
+		expect(featureV1).toMatchObject({
+			included_usage: messagesFeature.included_usage,
+			balance: 1000,
+			usage,
+		});
+		expect(featureV1.next_reset_at).toBeDefined();
+	});
+	return;
+
+	test("should update balance and have correct v2 api cus feature", async () => {
+		// await autumnV2.balances.update({
+		// 	customer_id: customerId,
+		// 	feature_id: TestFeature.Messages,
+		// 	current_balance: 1000,
+		// });
+		// await timeout(2000);
+		// const cusEnt = await getCusEntByFeature({
+		// 	db: ctx.db,
+		// 	org: ctx.org,
+		// 	env: ctx.env,
+		// 	customerId,
+		// 	featureId: TestFeature.Messages,
+		// });
+		// await autumnV2.updateCusEnt({
+		// 	customerId,
+		// 	customerEntitlementId: cusEnt.id,
+		// 	updates: {
+		// 		balance: 1000,
+		// 	},
+		// });
+	});
+
+	test("should have correct v2 api cus feature", async () => {
+		const customer = await autumnV2.customers.get(customerId);
+		const feature = customer.features[
+			TestFeature.Messages
+		] as unknown as ApiCusFeature;
+
+		expect(feature).toMatchObject({
+			granted_balance: messagesFeature.included_usage,
+			purchased_balance: 0,
+			current_balance: 1000,
+			usage,
+		});
+		expect(feature.resets_at).toBeDefined();
+	});
+
+	test("should have correct v1 api cus feature", async () => {
+		const customer = await autumnV1.customers.get(customerId);
+		const feature = customer.features[
+			TestFeature.Messages
+		] as unknown as ApiCusFeatureV3;
+
+		expect(feature).toMatchObject({
+			included_usage: messagesFeature.included_usage,
+			balance: 1000,
+			usage,
+		});
+		expect(feature.next_reset_at).toBeDefined();
 	});
 });

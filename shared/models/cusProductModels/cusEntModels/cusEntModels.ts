@@ -7,6 +7,9 @@ export const EntityBalanceSchema = z.object({
 	id: z.string(),
 	balance: z.number(),
 	adjustment: z.number(),
+
+	additional_balance: z.number(),
+	additional_granted_balance: z.number(),
 });
 
 export const CustomerEntitlementSchema = z.object({
@@ -24,6 +27,9 @@ export const CustomerEntitlementSchema = z.object({
 	// Balance fields
 	unlimited: z.boolean().nullish(),
 	balance: z.number().nullish().default(0),
+
+	additional_balance: z.number().default(0),
+	additional_granted_balance: z.number().default(0),
 
 	usage_allowed: z.boolean().nullable(),
 	next_reset_at: z.number().nullable(),

@@ -5,6 +5,7 @@ import {
 	CusProductStatus,
 	type Customer,
 	type Entity,
+	type EntityBalance,
 	type Event,
 	type Feature,
 	FeatureType,
@@ -45,8 +46,6 @@ import {
 	performDeduction,
 } from "./deductUtils.js";
 import { handleThresholdReached } from "./handleThresholdReached.js";
-
-// Decimal.set({ precision: 12 }); // 12 DP precision
 
 export type DeductParams = {
 	db: DrizzleCli;
@@ -96,7 +95,7 @@ const getFeatureDeductions = ({
 		const unlimitedExists = cusEnts.some(
 			(cusEnt) =>
 				cusEnt.entitlement.allowance_type === AllowanceType.Unlimited &&
-				cusEnt.entitlement.internal_feature_id == feature.internal_id,
+				cusEnt.entitlement.internal_feature_id === feature.internal_id,
 		);
 
 		if (unlimitedExists || !deduction) {
@@ -201,6 +200,7 @@ export const performDeductionOnCusEnt = ({
 	addAdjustment = false,
 	setZeroAdjustment = false,
 	blockUsageLimit = true,
+	field = "balance",
 }: {
 	cusEnt: FullCusEntWithFullCusProduct;
 	toDeduct: number;
@@ -209,19 +209,34 @@ export const performDeductionOnCusEnt = ({
 	addAdjustment?: boolean;
 	setZeroAdjustment?: boolean;
 	blockUsageLimit?: boolean;
-}) => {
-	let newEntities = structuredClone(cusEnt.entities);
-	let newBalance = structuredClone(cusEnt.balance);
-	let newAdjustment = structuredClone(cusEnt.adjustment);
+	field?: "balance" | "additional_balance" | "additional_granted_balance";
+}): {
+	newBalance: number;
+	newEntities: Record<string, EntityBalance>;
+	deducted: number;
+	toDeduct: number;
+	newAdjustment?: number;
+} => {
+	let newEntities: Record<string, EntityBalance> =
+		structuredClone(cusEnt.entities) || {};
+
+	let newBalance: number = structuredClone(cusEnt[field]) ?? 0;
 	let deducted = 0;
 
+	// To deprecate: adjustment.
+	let newAdjustment = structuredClone(cusEnt.adjustment);
+
 	const cusProduct = cusEnt.customer_product;
+
+	// 2. Get options, related price and starting balance!
 	const options = notNullish(cusProduct)
 		? getEntOptions(cusProduct.options, cusEnt.entitlement)
 		: undefined;
+
 	const cusPrice = notNullish(cusProduct)
 		? getRelatedCusPrice(cusEnt, cusProduct.customer_prices)
 		: undefined;
+
 	const resetBalance = notNullish(cusProduct)
 		? getStartingBalance({
 				options: options || undefined,
@@ -231,19 +246,20 @@ export const performDeductionOnCusEnt = ({
 		: cusEnt.entitlement.allowance || 0;
 
 	if (entityFeatureIdExists({ cusEnt })) {
+		// CASE 1: Deduct from entity balances
+
 		if (nullish(entityId)) {
-			// 1. If no entity ID, deduct from all
-			newEntities = structuredClone(cusEnt.entities);
-			if (!newEntities) {
-				newEntities = {};
-			}
+			newEntities = structuredClone(cusEnt.entities) as Record<
+				string,
+				EntityBalance
+			>;
+			if (!newEntities) newEntities = {};
+
 			let toDeductCursor = toDeduct;
 			for (const entityId in cusEnt.entities) {
-				if (toDeductCursor == 0) {
-					break;
-				}
+				if (toDeductCursor === 0) break;
 
-				const entityBalance = cusEnt.entities[entityId].balance;
+				const entityBalance = cusEnt.entities[entityId][field];
 
 				const {
 					newBalance: newEntityBalance,
@@ -258,25 +274,27 @@ export const performDeductionOnCusEnt = ({
 					blockUsageLimit,
 				});
 
-				newEntities[entityId].balance = newEntityBalance!;
+				newEntities[entityId][field] = newEntityBalance!;
 
 				if (addAdjustment) {
-					const adjustment = newEntities![entityId!]!.adjustment || 0;
-					newEntities![entityId!]!.adjustment = adjustment - newDeducted!;
+					const adjustment = newEntities[entityId].adjustment || 0;
+					newEntities[entityId].adjustment = adjustment - newDeducted!;
 				}
 
 				if (setZeroAdjustment) {
-					newEntities![entityId!]!.adjustment = 0;
+					newEntities[entityId].adjustment = 0;
 				}
 
-				toDeductCursor = newToDeduct!;
-				deducted += newDeducted!;
+				toDeductCursor = newToDeduct;
+				deducted += newDeducted;
 			}
 
 			toDeduct = toDeductCursor;
-		} else {
-			// 2. If entity ID, deduct from that entity
-			const currentEntityBalance = cusEnt.entities?.[entityId!]?.balance;
+		}
+
+		// CASE 2: Deduct from entity balance
+		else {
+			const currentEntityBalance = cusEnt.entities?.[entityId]?.[field];
 
 			const {
 				newBalance: newEntityBalance,
@@ -291,27 +309,32 @@ export const performDeductionOnCusEnt = ({
 				blockUsageLimit,
 			});
 
-			newEntities![entityId!]!.balance = newEntityBalance!;
+			newEntities[entityId][field] = newEntityBalance!;
 
 			if (addAdjustment) {
-				const adjustment = newEntities![entityId!]!.adjustment || 0;
-				newEntities![entityId!]!.adjustment = adjustment - newDeducted!;
+				const adjustment = newEntities[entityId].adjustment || 0;
+				newEntities[entityId].adjustment = adjustment - newDeducted!;
 			}
 
 			if (setZeroAdjustment) {
-				newEntities![entityId!]!.adjustment = 0;
+				newEntities[entityId].adjustment = 0;
 			}
 
-			toDeduct = newToDeduct!;
-			deducted += newDeducted!;
+			toDeduct = newToDeduct;
+			deducted += newDeducted;
 		}
-	} else {
+	}
+
+	// CASE 3: Deduct from balance
+	else {
+		const currentBalance = cusEnt[field] || 0;
+
 		const {
 			newBalance: newBalance_,
 			deducted: deducted_,
 			toDeduct: newToDeduct_,
 		} = performDeduction({
-			cusEntBalance: new Decimal(cusEnt.balance!),
+			cusEntBalance: new Decimal(currentBalance),
 			toDeduct,
 			allowNegativeBalance,
 			ent: cusEnt.entitlement,
@@ -328,7 +351,14 @@ export const performDeductionOnCusEnt = ({
 			newAdjustment = adjustment - deducted!;
 		}
 	}
-	return { newBalance, newEntities, deducted, toDeduct, newAdjustment };
+
+	return {
+		newBalance,
+		newEntities,
+		deducted,
+		toDeduct,
+		newAdjustment: newAdjustment ?? undefined,
+	};
 };
 
 export const deductAllowanceFromCusEnt = async ({
@@ -347,9 +377,6 @@ export const deductAllowanceFromCusEnt = async ({
 	setZeroAdjustment?: boolean;
 }) => {
 	const { db, feature, env, org, cusPrices, customer, entity } = deductParams;
-
-	if (toDeduct == 0) {
-	}
 
 	if (
 		entity &&
@@ -480,7 +507,7 @@ export const deductFromUsageBasedCusEnt = async ({
 
 	if (
 		!usageBasedEnt &&
-		feature.config?.usage_type == FeatureUsageType.Continuous
+		feature.config?.usage_type === FeatureUsageType.Continuous
 	) {
 		console.log(`FALLING BACK TO REGULAR CUS ENT, FEATURE: ${feature.id}`);
 		usageBasedEnt = findCusEnt({
@@ -646,7 +673,7 @@ export const updateCustomerBalance = async ({
 		const originalCusEnts = structuredClone(cusEnts);
 
 		for (const cusEnt of cusEnts) {
-			if (cusEnt.entitlement.internal_feature_id != feature.internal_id) {
+			if (cusEnt.entitlement.internal_feature_id !== feature.internal_id) {
 				continue;
 			}
 
@@ -661,7 +688,7 @@ export const updateCustomerBalance = async ({
 				},
 			});
 
-			if (toDeduct == 0) continue;
+			if (toDeduct === 0) continue;
 
 			toDeduct = await deductAllowanceFromCusEnt({
 				toDeduct,

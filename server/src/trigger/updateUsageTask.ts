@@ -1,11 +1,14 @@
 import {
 	AllowanceType,
+	ApiVersionClass,
 	type AppEnv,
+	AuthType,
 	CusProductStatus,
 	type Customer,
 	type Feature,
 	FeatureType,
 	type FullCustomerEntitlement,
+	LATEST_VERSION,
 	type Organization,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -16,6 +19,8 @@ import { getFeatureBalance } from "@/internal/customers/cusProducts/cusEnts/cusE
 import { deductFromApiCusRollovers } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverDeductionUtils.js";
 import { getCusEntsInFeatures } from "@/internal/customers/cusUtils/cusUtils.js";
 import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
+import { deductFromFreeBalance } from "../internal/balances/deductUtils/deductFromAdditionalGrantedBalance.js";
+import { generateId } from "../utils/genUtils.js";
 import { handleThresholdReached } from "./handleThresholdReached.js";
 import {
 	deductAllowanceFromCusEnt,
@@ -229,44 +234,74 @@ export const updateUsage = async ({
 	for (const obj of featureDeductions) {
 		let { feature, deduction: toDeduct } = obj;
 
-		for (const cusEnt of cusEnts) {
-			if (cusEnt.entitlement.internal_feature_id !== feature.internal_id) {
-				continue;
+		const performFeatureDeduction = async () => {
+			// 1. Deduct from rollovers
+			for (const cusEnt of cusEnts) {
+				if (cusEnt.entitlement.internal_feature_id !== feature.internal_id) {
+					continue;
+				}
+
+				toDeduct = await deductFromApiCusRollovers({
+					toDeduct,
+					cusEnt,
+					deductParams: {
+						db,
+						feature,
+						env,
+						entity: customer.entity ? customer.entity : undefined,
+					},
+				});
 			}
 
-			toDeduct = await deductFromApiCusRollovers({
-				toDeduct,
-				cusEnt,
-				deductParams: {
-					db,
-					feature,
-					env,
-					entity: customer.entity ? customer.entity : undefined,
-				},
-			});
+			if (toDeduct === 0) return;
 
-			if (toDeduct === 0) continue;
-
-			toDeduct = await deductAllowanceFromCusEnt({
+			// 2. Deduct from free balance
+			toDeduct = await deductFromFreeBalance({
 				toDeduct,
-				cusEnt,
-				deductParams: {
+				cusEnts,
+				feature,
+				entity: customer.entity,
+				ctx: {
 					db,
-					feature,
-					env,
+					features,
 					org,
-					cusPrices: cusPrices as any[],
-					customer,
-					properties,
-					entity: customer.entity,
+					env,
+					logger,
+					id: generateId("test"),
+					isPublic: false,
+					authType: AuthType.SecretKey,
+					apiVersion: new ApiVersionClass(LATEST_VERSION),
+					timestamp: Date.now(),
+					expand: [],
 				},
-				featureDeductions,
-				willDeductCredits: true,
-				setZeroAdjustment: true,
 			});
-		}
 
-		if (toDeduct !== 0) {
+			if (toDeduct === 0) return;
+
+			// 3. Deduct from allowance
+			for (const cusEnt of cusEnts) {
+				toDeduct = await deductAllowanceFromCusEnt({
+					toDeduct,
+					cusEnt,
+					deductParams: {
+						db,
+						feature,
+						env,
+						org,
+						cusPrices: cusPrices as any[],
+						customer,
+						properties,
+						entity: customer.entity,
+					},
+					featureDeductions,
+					willDeductCredits: true,
+					setZeroAdjustment: true,
+				});
+			}
+
+			if (toDeduct === 0) return;
+
+			// 4. Deduct from usage-based entitlement
 			await deductFromUsageBasedCusEnt({
 				toDeduct,
 				cusEnts,
@@ -282,7 +317,9 @@ export const updateUsage = async ({
 				},
 				setZeroAdjustment: true,
 			});
-		}
+		};
+
+		await performFeatureDeduction();
 
 		handleThresholdReached({
 			org,

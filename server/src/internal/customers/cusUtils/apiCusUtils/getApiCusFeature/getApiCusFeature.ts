@@ -56,7 +56,7 @@ const cusEntsToBreakdown = ({
 		const feature = cusEnts[0].entitlement.feature;
 		const { interval, interval_count } = cusEntsToInterval({ cusEnts });
 
-		const breakdownItem = getApiCusFeature({
+		const { apiCusFeature: breakdownItem } = getApiCusFeature({
 			ctx,
 			fullCus,
 			cusEnts,
@@ -73,6 +73,36 @@ const cusEntsToBreakdown = ({
 	}
 
 	return breakdown;
+};
+
+const cusEntsToPrepaidQuantity = ({
+	cusEnts,
+	feature,
+}: {
+	cusEnts: FullCusEntWithFullCusProduct[];
+	feature: Feature;
+}) => {
+	const cusProducts = [
+		...new Set(cusEnts.map((cusEnt) => cusEnt.customer_product.id)),
+	].map(
+		(id) =>
+			cusEnts.find((cusEnt) => cusEnt.customer_product.id === id)!
+				.customer_product,
+	);
+
+	const prepaidQuantity = cusProducts.reduce((acc, cusProduct) => {
+		const featureOptions = cusProduct.options.filter(
+			(option) => option.internal_feature_id === feature.internal_id,
+		);
+		return (
+			acc +
+			featureOptions.reduce((acc, featureOption) => {
+				return acc + featureOption.quantity;
+			}, 0)
+		);
+	}, 0);
+
+	return prepaidQuantity;
 };
 
 export const getApiCusFeature = ({
@@ -94,10 +124,13 @@ export const getApiCusFeature = ({
 
 	// 1. If feature is boolean
 	if (feature.type === FeatureType.Boolean) {
-		return getBooleanApiCusFeature({
-			cusEnts,
-			apiFeature,
-		});
+		return {
+			apiCusFeature: getBooleanApiCusFeature({
+				cusEnts,
+				apiFeature,
+			}),
+			legacyData: undefined,
+		};
 	}
 
 	const { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
@@ -108,7 +141,10 @@ export const getApiCusFeature = ({
 
 	// 2. If feature is unlimited
 	if (unlimited) {
-		return getUnlimitedApiCusFeature({ apiFeature, cusEnts });
+		return {
+			apiCusFeature: getUnlimitedApiCusFeature({ apiFeature, cusEnts }),
+			legacyData: undefined,
+		};
 	}
 
 	const totalAdjustment = sumValues(
@@ -122,6 +158,13 @@ export const getApiCusFeature = ({
 		cusEnts.map((cusEnt) => {
 			const { unused } = getCusEntBalance({ cusEnt, entityId });
 			return unused;
+		}),
+	);
+
+	const totalFreeBalance = sumValues(
+		cusEnts.map((cusEnt) => {
+			const { free_balance } = getCusEntBalance({ cusEnt, entityId });
+			return free_balance;
 		}),
 	);
 
@@ -156,7 +199,7 @@ export const getApiCusFeature = ({
 
 	// 2. Purchased balance
 	const totalPurchasedBalance = sumValues(
-		cusEnts.map((cusEnt) => cusEntToPurchasedBalance({ cusEnt })),
+		cusEnts.map((cusEnt) => cusEntToPurchasedBalance({ cusEnt, entityId })),
 	);
 
 	// 3. Current balance
@@ -171,16 +214,17 @@ export const getApiCusFeature = ({
 			)
 			.filter(notNullish),
 	);
-	const currentBalance = new Decimal(totalBalanceWithRollovers)
+
+	const currentBalance = new Decimal(Math.max(0, totalBalanceWithRollovers))
 		.add(totalUnused)
+		.add(totalFreeBalance)
 		.toNumber();
 
 	// 4. Usage
 	const totalUsage = new Decimal(totalGrantedBalanceWithRollovers)
 		.add(totalPurchasedBalance)
-		.sub(totalBalanceWithRollovers)
-		.sub(totalUnused)
-		.sub(totalAdjustment)
+		.add(totalAdjustment)
+		.sub(currentBalance)
 		.toNumber();
 
 	const { interval, interval_count } = cusEntsToInterval({ cusEnts });
@@ -201,11 +245,6 @@ export const getApiCusFeature = ({
 		current_balance: currentBalance,
 		usage: totalUsage,
 
-		// starting_balance: totalIncludedUsageWithRollovers,
-		// balance: totalBalanceWithRollovers,
-
-		// usage: totalUsage,
-
 		resets_at: nextResetAt,
 
 		reset_interval: interval,
@@ -217,33 +256,44 @@ export const getApiCusFeature = ({
 
 		breakdown: cusEntsToBreakdown({ ctx, fullCus, cusEnts }),
 		rollovers,
-
-		// Old stuff...
-		// id: feature.id,
-		// name: feature.name,
-		// type: getCusFeatureType({ feature }),
-		// balance: totalBalanceWithRollovers,
-		// usage: totalUsage,
-		// included_usage: totalIncludedUsage,
-		// usage_limit:
-		// 	totalUsageLimit === totalIncludedUsage ? undefined : totalUsageLimit,
-		// next_reset_at: nextResetAt,
-		// unlimited: false,
-		// overage_allowed: usageAllowed,
-		// interval,
-		// interval_count,
-		// rollovers,
-		// credit_schema:
-		// 	apiFeature.credit_schema?.map((credit) => ({
-		// 		feature_id: credit.metered_feature_id,
-		// 		credit_amount: credit.credit_cost,
-		// 	})) || undefined,
-
-		// breakdown: cusEntsToBreakdown({ ctx, fullCus, cusEnts }),
 	});
 
 	if (error) throw error;
 
 	// Return in latest format - version transformation happens at Customer level
-	return apiCusFeature;
+	return {
+		apiCusFeature,
+		legacyData: {
+			prepaid_quantity: cusEntsToPrepaidQuantity({ cusEnts, feature }),
+			total_adjustment: totalAdjustment,
+		},
+	};
 };
+
+// Old stuff...
+// id: feature.id,
+// name: feature.name,
+// type: getCusFeatureType({ feature }),
+// balance: totalBalanceWithRollovers,
+// usage: totalUsage,
+// included_usage: totalIncludedUsage,
+// usage_limit:
+// 	totalUsageLimit === totalIncludedUsage ? undefined : totalUsageLimit,
+// next_reset_at: nextResetAt,
+// unlimited: false,
+// overage_allowed: usageAllowed,
+// interval,
+// interval_count,
+// rollovers,
+// credit_schema:
+// 	apiFeature.credit_schema?.map((credit) => ({
+// 		feature_id: credit.metered_feature_id,
+// 		credit_amount: credit.credit_cost,
+// 	})) || undefined,
+
+// breakdown: cusEntsToBreakdown({ ctx, fullCus, cusEnts }),
+
+// starting_balance: totalIncludedUsageWithRollovers,
+// balance: totalBalanceWithRollovers,
+
+// usage: totalUsage,

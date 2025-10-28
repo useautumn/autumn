@@ -93,13 +93,16 @@ export const getBooleanApiCusFeature = ({
 
 		unlimited: false,
 
-		starting_balance: 0,
-		balance: 0,
+		granted_balance: 0,
+		purchased_balance: 0,
+		current_balance: 0,
 		usage: 0,
 
 		resets_at: null,
-		reset_interval: ResetInterval.OneOff,
-		reset_interval_count: undefined,
+		reset: {
+			interval: ResetInterval.OneOff,
+			interval_count: undefined,
+		},
 
 		breakdown: undefined,
 		rollovers: undefined,
@@ -132,13 +135,16 @@ export const getUnlimitedApiCusFeature = ({
 
 		unlimited: true,
 
-		starting_balance: 0,
-		balance: 0,
+		granted_balance: 0,
+		purchased_balance: 0,
+		current_balance: 0,
 		usage: 0,
 
 		resets_at: null,
-		reset_interval: ResetInterval.OneOff,
-		reset_interval_count: undefined,
+		reset: {
+			interval: ResetInterval.OneOff,
+			interval_count: undefined,
+		},
 
 		breakdown: undefined,
 		rollovers: undefined,

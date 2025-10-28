@@ -11,7 +11,7 @@ export const deductFromApiCusRollovers = async ({
 	deductParams: RolloverDeductParams;
 	cusEnt: FullCusEntWithFullCusProduct;
 }) => {
-	if (toDeduct == 0) {
+	if (toDeduct === 0) {
 		return toDeduct;
 	}
 

@@ -90,6 +90,7 @@ export const constructProduct = ({
 	const newProduct: Product = {
 		id: productData.id,
 		name: productData.name,
+		description: productData.description ?? null,
 		is_add_on: productData.is_add_on,
 		is_default: productData.is_default,
 		version: version,

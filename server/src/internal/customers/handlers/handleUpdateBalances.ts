@@ -167,7 +167,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
 
 			const toDeduct = curBalance.sub(newBalance).toNumber();
 
-			if (toDeduct == 0) {
+			if (toDeduct === 0) {
 				logger.info(`Skipping ${feature!.id} -- no change`);
 			}
 
@@ -266,7 +266,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
 					});
 				}
 
-				if (toDeduct == 0) {
+				if (toDeduct === 0) {
 					return;
 				}
 

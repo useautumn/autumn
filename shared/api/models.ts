@@ -18,6 +18,7 @@ export * from "./customers/cusFeatures/apiCusFeature.js";
 export * from "./customers/cusFeatures/previousVersions/apiCusFeatureV0.js";
 export * from "./customers/cusFeatures/previousVersions/apiCusFeatureV1.js";
 export * from "./customers/cusFeatures/previousVersions/apiCusFeatureV2.js";
+export * from "./customers/cusFeatures/previousVersions/apiCusFeatureV3.js";
 export * from "./customers/cusPlans/apiCusPlan.js";
 export * from "./customers/cusPlans/cusProductLegacyData.js";
 export * from "./customers/customerLegacyData.js";
@@ -60,6 +61,7 @@ export * from "./referrals/referralsOpenApi.js";
 // export * from "./products/apiProduct.js";
 // export * from "./products/apiProductItem.js";
 
+export * from "./balances/balancesUpdateModels.js";
 // Balances
 export * from "./balances/check/previousVersions/CheckResponseV0.js";
 // Errors
