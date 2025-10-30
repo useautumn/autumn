@@ -6,6 +6,7 @@ import {
 	ErrCode,
 	type Feature,
 	FeatureType,
+	FeatureUsageType,
 	type FullCustomerEntitlement,
 	type Organization,
 } from "@autumn/shared";
@@ -178,11 +179,16 @@ const validateDeductionPossible = ({
 		);
 
 		// CONSTRAINT 1: Insufficient balance without usage_allowed
-		const cusEntBalance = featureCusEnts.reduce(
-			(sum, customerEntitlement) =>
-				new Decimal(sum).add(customerEntitlement.balance || 0).toNumber(),
-			0,
-		);
+		const cusEntBalance = getFeatureBalance({
+			cusEnts: featureCusEnts,
+			internalFeatureId: feature.internal_id!,
+			entityId,
+		});
+
+		// If unlimited, skip validation
+		if (cusEntBalance === null) {
+			continue;
+		}
 		const rolloverBalance = calculateAvailableRolloverBalance({
 			cusEnts,
 			feature,
@@ -196,7 +202,17 @@ const validateDeductionPossible = ({
 			(customerEntitlement) => customerEntitlement.usage_allowed,
 		);
 
-		if (totalBalance < deduction && !hasUsageAllowed) {
+		// Check if this is a "free" feature (single-use with included_usage but no pricing)
+		// Only apply to SingleUse features; ContinuousUse (allocated) features should reject
+		const isFreeFeature = feature.type === FeatureType.Metered &&
+			feature.config?.usage_type === FeatureUsageType.Single &&
+			featureCusEnts.some(
+				(cusEnt) => cusEnt.entitlement.allowance && cusEnt.entitlement.allowance > 0
+			) && !hasUsageAllowed;
+
+		// For free SingleUse features, allow tracking beyond balance (will cap at 0 in performDeduction)
+		// For prepaid/allocated/other features without usage_allowed, reject insufficient balance
+		if (totalBalance < deduction && !hasUsageAllowed && !isFreeFeature) {
 			throw new RecaseError({
 				message: `Insufficient balance for feature ${feature.id}. Available: ${totalBalance} (${cusEntBalance} + ${rolloverBalance} rollover), Required: ${deduction}`,
 				code: ErrCode.InsufficientBalance,
@@ -229,8 +245,19 @@ const validateDeductionPossible = ({
 						return sum;
 					}
 
+					const featureBalance = getFeatureBalance({
+						cusEnts: [cusEnt],
+						internalFeatureId: feature.internal_id!,
+						entityId
+					});
+
+					// Skip if unlimited
+					if (featureBalance === null) {
+						return sum;
+					}
+
 					const allowance = new Decimal(cusEnt.entitlement.allowance || 0);
-					const currentBalance = new Decimal(cusEnt.balance || 0);
+					const currentBalance = new Decimal(featureBalance);
 					const currentUsed = allowance.sub(currentBalance);
 					const remainingLimit = new Decimal(usageLimit).sub(currentUsed);
 
@@ -380,15 +407,7 @@ export const updateUsage = async ({
 		return;
 	}
 
-	console.log(`   ✅ Validation starting with cusEnts:`, cusEnts.map(ce => `${ce.feature_id}=${ce.balance}`).join(', '));
-
-	try {
-		validateDeductionPossible({ cusEnts, featureDeductions, entityId });
-		console.log(`   ✅ Validation passed! Proceeding with deductions...`);
-	} catch (error) {
-		console.log(`   ❌ Validation failed:`, error.message);
-		throw error;
-	}
+	validateDeductionPossible({ cusEnts, featureDeductions, entityId });
 
 	const originalCusEnts = structuredClone(cusEnts);
 	for (const obj of featureDeductions) {
@@ -501,9 +520,9 @@ export const runUpdateUsageTask = async ({
 
 		const cusEnts = await db.transaction(
 			async (tx) => {
-				// Acquire advisory lock for this customer to serialize concurrent requests
-				// Compute hash in application code to ensure consistency
-				const lockKeyStr = `${internalCustomerId}_${org.id}_${env}`;
+				// Acquire advisory lock for this customer (and entity if provided) to serialize concurrent requests
+				// Include entity_id in lock key so different entities can update concurrently
+				const lockKeyStr = `${internalCustomerId}_${org.id}_${env}${entityId ? `_${entityId}` : ''}`;
 				const hash = lockKeyStr.split('').reduce((acc, char) => {
 					return ((acc << 5) - acc) + char.charCodeAt(0);
 				}, 0) | 0; // Convert to 32-bit integer

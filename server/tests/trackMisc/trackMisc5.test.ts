@@ -13,7 +13,7 @@ import { createProducts } from "tests/utils/productUtils.js";
 import { initCustomerV2 } from "@/utils/scriptUtils/initCustomer.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 
-const testCase = "sync5";
+const testCase = "trackMisc5";
 const customerId = `${testCase}_cus1`;
 
 const seatItem = constructFeatureItem({
@@ -36,7 +36,7 @@ const pro = constructProduct({
     type: "pro",
 })
 
-describe(`${chalk.yellowBright(`sync/${testCase}: Testing per-entity sync track with concurrent requests`)}`, () => {
+describe(`${chalk.yellowBright(`trackMisc/${testCase}: Testing per-entity trackMisc track with concurrent requests`)}`, () => {
 	let db: DrizzleCli;
 	let org: Organization;
 	let env: AppEnv;
@@ -170,36 +170,42 @@ describe(`${chalk.yellowBright(`sync/${testCase}: Testing per-entity sync track 
 		results.forEach((result, index) => {
 			if (result.status === "rejected") {
 				console.log(`  [${index}] ❌ REJECTED:`, result.reason?.message || result.reason);
+				console.log(`       Error code:`, result.reason?.code);
 			} else {
-				console.log(`  [${index}] ✅ FULFILLED:`, JSON.stringify(result.value));
+				console.log(`  [${index}] ✅ FULFILLED (HTTP 200):`, JSON.stringify(result.value));
 			}
 		});
 
 		const successCount = results.filter(r => r.status === "fulfilled").length;
 		const rejectedCount = results.filter(r => r.status === "rejected").length;
-		console.log(`\n📈 Summary: ${successCount} succeeded, ${rejectedCount} rejected (expected: 3 succeeded, 2 rejected)`);
-		console.log(`   Reason: usage_limit=600 per seat means max 600 units. 3 requests × 200 = 600, 4th would be 800 > 600\n`);
+		console.log(`\n📈 Summary: ${successCount} HTTP 200 responses, ${rejectedCount} HTTP errors`);
+
+		expect(successCount).to.equal(3, `Expected exactly 3 HTTP 200 responses, got ${successCount}`);
+		expect(rejectedCount).to.equal(2, `Expected exactly 2 HTTP errors (usage_limit exceeded), got ${rejectedCount}`);
 
 		// Get final state
 		const finalEntityRes = await autumnInt.entities.get(customerId, entityId);
-		console.log(`📦 Final state for ${entityId}:`);
-		console.log(`- Balance: ${finalEntityRes.features[TestFeature.Messages].balance}`);
-		console.log(`- Usage: ${finalEntityRes.features[TestFeature.Messages].usage}`);
-		console.log(`- Usage limit: ${finalEntityRes.features[TestFeature.Messages].usage_limit}`);
-		console.log(`- Full feature data:`, JSON.stringify(finalEntityRes.features[TestFeature.Messages], null, 2));
+		console.log(`\n📦 Final state for ${entityId}:`);
+		console.log(`- Balance: ${finalEntityRes.features[TestFeature.Messages].balance} (expected: -100)`);
+		console.log(`- Usage: ${finalEntityRes.features[TestFeature.Messages].usage} (expected: 600)`);
+		console.log(`- Usage limit: ${finalEntityRes.features[TestFeature.Messages].usage_limit} (expected: 600)`);
 
-		// Comment out expectations for now to see actual behavior
-		// expect(successCount).to.equal(3, `Expected exactly 3 successes (3×200=600 <= usage_limit of 600), got ${successCount} | Results: ${results.map(r => r.status).join(", ")}`);
-		// expect(rejectedCount).to.equal(2, `Expected exactly 2 rejections, got ${rejectedCount} | Results: ${results.map(r => r.status).join(", ")}`);
+		expect(finalEntityRes.features[TestFeature.Messages].balance).to.equal(
+			-100,
+			`Balance should be -100 (500 included - 600 used), got ${finalEntityRes.features[TestFeature.Messages].balance}`,
+		);
+		expect(finalEntityRes.features[TestFeature.Messages].usage).to.equal(
+			600,
+			`Usage should be 600, got ${finalEntityRes.features[TestFeature.Messages].usage}`,
+		);
 
 		// Verify other seats remain untouched at 500
 		for (const seatId of ["seat2", "seat3", "seat4", "seat5"]) {
 			const otherSeatRes = await autumnInt.entities.get(customerId, seatId);
-			console.log(`\n📦 ${seatId} balance: ${otherSeatRes.features[TestFeature.Messages].balance}`);
-			// expect(otherSeatRes.features[TestFeature.Messages].balance).to.equal(
-			// 	500,
-			// 	`${seatId} should still have 500 messages, got ${otherSeatRes.features[TestFeature.Messages].balance}`,
-			// );
+			expect(otherSeatRes.features[TestFeature.Messages].balance).to.equal(
+				500,
+				`${seatId} should still have 500 messages, got ${otherSeatRes.features[TestFeature.Messages].balance}`,
+			);
 		}
 	});
 });
