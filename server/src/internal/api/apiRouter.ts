@@ -19,7 +19,6 @@ import { productBetaRouter, productRouter } from "../products/productRouter.js";
 import { componentRouter } from "./components/componentRouter.js";
 import { entityRouter } from "./entities/entityRouter.js";
 // import { checkRouter } from "./entitled/checkRouter.js";
-import { eventsRouter } from "./events/eventRouter.js";
 import { usageRouter } from "./events/usageRouter.js";
 import { invoiceRouter } from "./invoiceRouter.js";
 import { redemptionRouter, referralRouter } from "./rewards/referralRouter.js";
@@ -59,8 +58,8 @@ apiRouter.use("/cancel", cancelRouter);
 // apiRouter.use("/entitled", checkRouter);
 // apiRouter.use("/check", checkRouter);
 
-apiRouter.use("/events", eventsRouter);
-apiRouter.use("/track", eventsRouter);
+// apiRouter.use("/events", eventsRouter);
+// apiRouter.use("/track", eventsRouter);
 apiRouter.post("/setup_payment", handleSetupPayment);
 apiRouter.post("/billing_portal", handleCreateBillingPortal);
 

@@ -14,6 +14,7 @@ import { secretKeyMiddleware } from "./honoMiddlewares/secretKeyMiddleware.js";
 import { traceMiddleware } from "./honoMiddlewares/traceMiddleware.js";
 import type { HonoEnv } from "./honoUtils/HonoEnv.js";
 import { handleCheck } from "./internal/api/check/handleCheck.js";
+import { handleTrack } from "./internal/balances/track/handleTrack.js";
 import { cusRouter } from "./internal/customers/cusRouter.js";
 import { internalCusRouter } from "./internal/customers/internalCusRouter.js";
 import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/handleOAuthCallback.js";
@@ -92,6 +93,9 @@ export const createHonoApp = () => {
 	app.use("/v1/*", queryMiddleware());
 
 	// API Routes
+	app.post("/v1/events", ...handleTrack);
+	app.post("/v1/track", ...handleTrack);
+
 	app.post("/v1/entitled", ...handleCheck);
 	app.post("/v1/check", ...handleCheck);
 	app.route("v1/customers", cusRouter);
