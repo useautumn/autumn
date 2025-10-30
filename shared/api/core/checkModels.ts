@@ -11,7 +11,7 @@ export const CheckFeatureScenarioSchema = z.enum([
 ]);
 
 // Check Feature Schemas
-export const CheckParamsSchema = z.object({
+export const ExtCheckParamsSchema = z.object({
 	customer_id: z.string().meta({
 		description: "The ID of the customer to check",
 		example: "cus_123",
@@ -28,10 +28,12 @@ export const CheckParamsSchema = z.object({
 		description: "The ID of the entity (optional)",
 		example: "entity_123",
 	}),
+
 	customer_data: CustomerDataSchema.optional().meta({
 		description:
 			"Customer data to create or update the customer if they don't exist",
 	}),
+
 	required_balance: z.number().optional().meta({
 		description: "The required balance for the check",
 		example: 1,
@@ -48,6 +50,26 @@ export const CheckParamsSchema = z.object({
 		description: "Entity data to create the entity if it doesn't exist",
 	}),
 });
+
+export const CheckParamsSchema = ExtCheckParamsSchema.extend({
+	required_quantity: z.number().optional(),
+}).refine(
+	(data) => {
+		if (data.product_id && data.feature_id) {
+			return false;
+		}
+
+		if (!data.product_id && !data.feature_id) {
+			return false;
+		}
+
+		return true;
+	},
+	{
+		message: "Must provide either product_id or feature_id",
+		path: [],
+	},
+);
 
 // Check Feature Preview Schemas
 export const CheckFeaturePreviewSchema = z.object({
@@ -91,10 +113,13 @@ export const CheckResultSchema = z
 			description: "The ID of the entity (if provided)",
 			example: "entity_123",
 		}),
-		required_balance: z.number().meta({
-			description: "The required balance for this check",
-			example: 1,
-		}),
+		required_balance: z
+			.number()
+			.meta({
+				description: "The required balance for this check",
+				example: 1,
+			})
+			.optional(), // not present for boolean features
 		code: z.string().meta({
 			description: "Response code indicating the result",
 			example: "allowed",
@@ -106,6 +131,8 @@ export const CheckResultSchema = z
 	.extend(CoreCusFeatureSchema.shape);
 
 // Export Types
+export type ExtCheckParams = z.infer<typeof ExtCheckParamsSchema>;
 export type CheckParams = z.infer<typeof CheckParamsSchema>;
 export type CheckResponse = z.infer<typeof CheckResultSchema>;
 export type CheckFeatureScenario = z.infer<typeof CheckFeatureScenarioSchema>;
+export type CheckResult = z.infer<typeof CheckResultSchema>;

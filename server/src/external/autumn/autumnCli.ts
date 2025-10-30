@@ -463,6 +463,13 @@ export class AutumnInt {
 		},
 	};
 
+	organization = {
+		resetDefaultAccount: async () => {
+			const data = await this.post(`/organization/reset_default_account`, {});
+			return data;
+		},
+	};
+
 	track = async (params: TrackParams & { timestamp?: number }) => {
 		const data = await this.post(`/track`, params);
 		return data;

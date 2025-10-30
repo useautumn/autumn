@@ -1,15 +1,11 @@
 import "dotenv/config";
 
-import { Stripe } from "stripe";
 import puppeteer from "puppeteer-core";
-import Browserbase from "@browserbasehq/sdk";
-
-import { Hyperbrowser } from "@hyperbrowser/sdk";
 import { timeout } from "../genUtils.js";
 
-const client = new Hyperbrowser({
-	apiKey: process.env.HYPERBROWSER_API_KEY,
-});
+// const client = new Hyperbrowser({
+// 	apiKey: process.env.HYPERBROWSER_API_KEY,
+// });
 
 export const completeInvoiceCheckout = async ({
 	url,
@@ -20,19 +16,20 @@ export const completeInvoiceCheckout = async ({
 }) => {
 	let browser;
 
-	if (process.env.NODE_ENV === "development" && !isLocal) {
-		const session = await client.sessions.create();
-		browser = await puppeteer.connect({
-			browserWSEndpoint: session!.wsEndpoint,
-			defaultViewport: null,
-		});
-	} else {
-		browser = await puppeteer.launch({
-			headless: false,
-			executablePath: "/Applications/Chromium.app/Contents/MacOS/Chromium",
-			args: ["--no-sandbox", "--disable-setuid-sandbox"],
-		});
-	}
+	// if (process.env.NODE_ENV === "development" && !isLocal) {
+	// 	const session = await client.sessions.create();
+	// 	browser = await puppeteer.connect({
+	// 		browserWSEndpoint: session!.wsEndpoint,
+	// 		defaultViewport: null,
+	// 	});
+	// } else {
+
+	// }
+	browser = await puppeteer.launch({
+		headless: false,
+		executablePath: "/Applications/Chromium.app/Contents/MacOS/Chromium",
+		args: ["--no-sandbox", "--disable-setuid-sandbox"],
+	});
 
 	try {
 		const page = await browser.newPage();
@@ -151,7 +148,7 @@ export const completeInvoiceCheckout = async ({
 			);
 			if (postalInput) {
 				await postalInput.click();
-				await postalInput.type("SW79SJ");
+				await postalInput.type("123123");
 			}
 		} catch (error) {
 			console.log("Could not find postal code input:", error);

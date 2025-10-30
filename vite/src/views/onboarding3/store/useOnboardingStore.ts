@@ -11,6 +11,7 @@ interface OnboardingState {
 
 	// UI state
 	isButtonLoading: boolean;
+	lastUsedProductId: string | undefined;
 
 	// Action handlers (set by initialization hooks)
 	handleNext: (() => void) | null;
@@ -33,6 +34,7 @@ interface OnboardingState {
 
 	// Actions - UI
 	setIsButtonLoading: (loading: boolean) => void;
+	setLastUsedProductId: (productId: string | undefined) => void;
 
 	// Actions - Set handlers (called by initialization hooks)
 	setHandleNext: (handler: () => void) => void;
@@ -63,6 +65,7 @@ const createInitialState = () => ({
 
 	// UI
 	isButtonLoading: false,
+	lastUsedProductId: undefined as string | undefined,
 
 	// Action handlers (initialized by hooks)
 	handleNext: null as (() => void) | null,
@@ -84,6 +87,7 @@ export const useOnboardingStore = create<OnboardingState>((set) => ({
 
 	// UI actions
 	setIsButtonLoading: (isButtonLoading) => set({ isButtonLoading }),
+	setLastUsedProductId: (lastUsedProductId) => set({ lastUsedProductId }),
 
 	// Set action handlers (called by initialization hooks)
 	setHandleNext: (handleNext) => set({ handleNext }),

@@ -26,7 +26,7 @@ export const getCusSub = async ({
 	});
 
 	const cusProduct = fullCus.customer_products.find(
-		(cp) => cp.product.id == productId,
+		(cp) => cp.product.id === productId,
 	);
 
 	const sub = await cusProductToSub({ cusProduct, stripeCli });

@@ -1,4 +1,4 @@
-import { type SQL, sql } from "drizzle-orm";
+import { type SQL } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 import type { CTEConfig } from "../buildCte.js";
 import { CTEBuilder } from "../buildCte.js";
@@ -47,6 +47,7 @@ export function parseJoinCondition({
 	// Extract column names from SQL
 	// Expected format: "target_table.child_key = parent_table.parent_key"
 	try {
+		// @ts-expect-error
 		const sqlString = joinCondition.getSQL().sql;
 
 		// Try to parse pattern: table.column = table.column

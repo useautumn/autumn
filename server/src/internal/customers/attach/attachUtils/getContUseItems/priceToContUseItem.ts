@@ -1,25 +1,25 @@
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import {
-	FullCustomerEntitlement,
-	FullEntitlement,
-	PreviewLineItem,
-	Price,
+	cusProductsToCusPrices,
+	type FullCustomerEntitlement,
+	type FullEntitlement,
+	type PreviewLineItem,
+	type Price,
 } from "@autumn/shared";
-import Stripe from "stripe";
-import { attachParamsToProduct } from "../convertAttachParams.js";
+import { Decimal } from "decimal.js";
+import type Stripe from "stripe";
+import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import { findStripeItemForPrice } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import {
 	getExistingUsageFromCusProducts,
 	getRelatedCusPrice,
 } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
-import { getContUseDowngradeItems } from "./getContUseDowngradeItems.js";
-import { shouldProrate } from "@/internal/products/prices/priceUtils/prorationConfigUtils.js";
-import { getContUseUpgradeItems } from "./getContUseUpgradeItems.js";
 import { priceToInvoiceItem } from "@/internal/products/prices/priceUtils/priceToInvoiceItem.js";
-import { Decimal } from "decimal.js";
+import { shouldProrate } from "@/internal/products/prices/priceUtils/prorationConfigUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-import { cusProductsToCusPrices } from "@autumn/shared";
-import { findStripeItemForPrice } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
-import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import { attachParamsToProduct } from "../convertAttachParams.js";
+import { getContUseDowngradeItems } from "./getContUseDowngradeItems.js";
+import { getContUseUpgradeItems } from "./getContUseUpgradeItems.js";
 
 export const priceToContUseItem = async ({
 	price,
@@ -74,7 +74,7 @@ export const priceToContUseItem = async ({
 		: shouldProrate(price.proration_config?.on_increase);
 
 	// 1. Get current usage
-	let curUsage = getExistingUsageFromCusProducts({
+	const curUsage = getExistingUsageFromCusProducts({
 		entitlement: ent,
 		cusProducts,
 		entities,
@@ -132,8 +132,8 @@ export const priceToContUseItem = async ({
 
 	// Clean up items
 	// 1. If old item and new item same, remove both
-	let oldAmount = res.oldItem?.amount!;
-	let newAmount = res.newItem?.amount!;
+	const oldAmount = res.oldItem?.amount!;
+	const newAmount = res.newItem?.amount!;
 
 	if (new Decimal(oldAmount).add(newAmount).eq(0)) {
 		return {

@@ -1,14 +1,16 @@
 import dotenv from "dotenv";
+
 dotenv.config();
 
+import { AppEnv, FeatureUsageType } from "@autumn/shared";
 import {
 	constructBooleanFeature,
 	constructCreditSystem,
 	constructMeteredFeature,
 } from "@/internal/features/utils/constructFeatureUtils.js";
-import { AppEnv, FeatureUsageType, UsageModel } from "@autumn/shared";
 
 export enum TestFeature {
+	Dashboard = "dashboard", // boolean feature
 	Messages = "messages", // single use (prepaid)
 	Users = "users", // cont use
 	Admin = "admin", // cont use
@@ -23,6 +25,11 @@ export enum TestFeature {
 const orgId = process.env.TESTS_ORG_ID!;
 
 export const features = {
+	[TestFeature.Dashboard]: constructBooleanFeature({
+		featureId: TestFeature.Dashboard,
+		orgId,
+		env: AppEnv.Sandbox,
+	}),
 	[TestFeature.AdminRights]: constructBooleanFeature({
 		featureId: TestFeature.AdminRights,
 		orgId,

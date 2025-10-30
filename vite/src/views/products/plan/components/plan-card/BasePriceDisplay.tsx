@@ -1,5 +1,6 @@
 import {
 	formatAmount,
+	getIntervalString,
 	mapToProductV3,
 	type Organization,
 } from "@autumn/shared";
@@ -26,7 +27,7 @@ export const BasePriceDisplay = () => {
 	});
 
 	const secondaryText = productV3.price?.interval
-		? `per ${productV3.price.interval}`
+		? `${getIntervalString({ interval: productV3.price.interval, intervalCount: productV3.price.intervalCount })}`
 		: "once";
 
 	const priceExists = notNullish(productV3.price) && productV3.price.amount > 0;
