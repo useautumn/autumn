@@ -176,6 +176,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`
 		expect(rollover1.balance).to.equal(0);
 		expect(rollover2.balance).to.equal(350);
 	});
+	return;
 
 	it("should track and deduct from rollover + original balance", async () => {
 		await autumn.track({

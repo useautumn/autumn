@@ -13,6 +13,7 @@ import {
 	type LegacyVersion,
 	type OrgConfig,
 	type RewardRedemption,
+	type TrackParams,
 } from "@autumn/shared";
 import type {
 	CancelParams,
@@ -21,7 +22,6 @@ import type {
 	CheckParams,
 	CheckResult,
 	Customer,
-	TrackParams,
 	UsageParams,
 } from "autumn-js";
 
@@ -470,7 +470,7 @@ export class AutumnInt {
 		},
 	};
 
-	track = async (params: TrackParams & { timestamp?: number }) => {
+	track = async (params: TrackParams) => {
 		const data = await this.post(`/track`, params);
 		return data;
 	};

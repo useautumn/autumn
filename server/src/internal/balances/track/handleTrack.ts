@@ -1,4 +1,8 @@
-import { TrackParamsSchema } from "@autumn/shared";
+import {
+	InsufficientBalanceError,
+	SuccessCode,
+	TrackParamsSchema,
+} from "@autumn/shared";
 import { createRoute } from "../../../honoMiddlewares/routeHandler.js";
 import {
 	getTrackEventNameDeductions,
@@ -31,24 +35,48 @@ export const handleTrack = createRoute({
 					value: body.value,
 				});
 
-		const start = Date.now();
-		await runDeductionTx({
-			ctx,
-			customerId: body.customer_id,
-			entityId: body.entity_id,
-			deductions: featureDeductions,
-			eventInfo: {
-				event_name: body.feature_id || body.event_name!,
-				value: body.value ?? 1,
-				properties: body.properties,
-				timestamp: body.timestamp,
-				idempotency_key: body.idempotency_key,
-			},
-		});
+		try {
+			const start = Date.now();
+			const { fullCus, event } = await runDeductionTx({
+				ctx,
+				customerId: body.customer_id,
+				entityId: body.entity_id,
+				deductions: featureDeductions,
+				overageBehaviour: body.overage_behaviour,
+				eventInfo: {
+					event_name: body.feature_id || body.event_name!,
+					value: body.value ?? 1,
+					properties: body.properties,
+					timestamp: body.timestamp,
+					idempotency_key: body.idempotency_key,
+				},
+			});
 
-		const elapsed = Date.now() - start;
-		ctx.logger.info(`[handleTrack] runDeductionTx ms: ${elapsed}`);
+			const elapsed = Date.now() - start;
+			ctx.logger.info(`[handleTrack] runDeductionTx ms: ${elapsed}`);
 
-		return c.json({ success: true });
+			const response: any = {
+				id: event?.id || "",
+				code: SuccessCode.EventReceived,
+				customer_id: body.customer_id,
+				entity_id: body.entity_id,
+				feature_id: body.feature_id,
+				event_name: body.event_name,
+			};
+
+			return c.json(response);
+		} catch (error) {
+			if (error instanceof InsufficientBalanceError) {
+				return c.json({
+					id: "",
+					code: "insufficient_balance",
+					customer_id: body.customer_id,
+					entity_id: body.entity_id,
+					feature_id: body.feature_id,
+					event_name: body.event_name,
+				});
+			}
+			throw error;
+		}
 	},
 });

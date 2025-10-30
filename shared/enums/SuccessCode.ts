@@ -1,5 +1,6 @@
 export enum SuccessCode {
-	// Events
+	// Track
+	SuccessfullyDeducted = "successfully_deducted",
 	EventReceived = "event_received",
 	EventReceivedCustomerCreated = "event_received_customer_created",
 
