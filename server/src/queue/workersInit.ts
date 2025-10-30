@@ -23,6 +23,8 @@ const actionHandlers = [
 	JobName.HandleCustomerCreated,
 ];
 
+const SKIP_IDs = ["cus_34AzftbE2hvBuUjhprchPk8O8M3"];
+
 const { db } = initDrizzle({ maxConnections: 10 });
 
 const initWorker = ({
@@ -139,6 +141,10 @@ const initWorker = ({
 
 			// EVENT HANDLERS
 			const { internalCustomerId } = job.data; // customerId is internal customer id
+
+			if (SKIP_IDs.includes(internalCustomerId)) {
+				return;
+			}
 
 			while (
 				!(await acquireLock({

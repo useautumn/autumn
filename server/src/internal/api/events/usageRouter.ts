@@ -198,12 +198,6 @@ export const handleUsageEvent = async ({
 		entityId: entity_id,
 	};
 
-	// console.log("Customer:", customer);
-	// console.log(
-	//   "Is paid continuous use:",
-	//   isPaidContinuousUse({ feature, fullCus: customer })
-	// );
-
 	if (isPaidContinuousUse({ feature, fullCus: customer })) {
 		console.log(`Running update usage task synchronously`);
 		await runUpdateUsageTask({
