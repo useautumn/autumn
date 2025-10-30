@@ -1,12 +1,10 @@
-import { getPriceForOverage } from "@/internal/products/prices/priceUtils.js";
+import type { Feature } from "@autumn/shared";
 import assert from "assert";
-import { expect } from "chai";
 import { Decimal } from "decimal.js";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { creditSystems } from "tests/global.js";
+import { creditSystems, features } from "tests/global.js";
+import { getPriceForOverage } from "@/internal/products/prices/priceUtils.js";
 import { timeout } from "./genUtils.js";
-import { features } from "tests/global.js";
-import { Feature } from "@autumn/shared";
 
 const PRECISION = 10;
 const CREDIT_MULTIPLIER = 100000;
@@ -16,7 +14,7 @@ export const getCreditsUsed = (
 	meteredFeatureId: string,
 	value: number,
 ) => {
-	let schemaItem = creditSystem.config.schema.find(
+	const schemaItem = creditSystem.config.schema.find(
 		(item: any) => item.metered_feature_id === meteredFeatureId,
 	);
 
@@ -80,8 +78,8 @@ export const checkUsageInvoiceAmount = async ({
 		(entitlement: any) => entitlement.feature_id === featureId,
 	);
 
-	let meteredPrice = product.prices[product.prices.length - 1];
-	let overage = new Decimal(totalUsage)
+	const meteredPrice = product.prices[product.prices.length - 1];
+	const overage = new Decimal(totalUsage)
 		.minus(featureEntitlement.allowance)
 		.toNumber();
 	const overagePrice = getPriceForOverage(meteredPrice, overage);
@@ -91,14 +89,14 @@ export const checkUsageInvoiceAmount = async ({
 		basePrice = product.prices[0].config.amount;
 	}
 
-	let totalPrice = new Decimal(overagePrice.toFixed(2))
+	const totalPrice = new Decimal(overagePrice.toFixed(2))
 		.plus(basePrice)
 		.toNumber();
 
 	try {
 		for (let i = 0; i < invoices.length; i++) {
-			let invoice = invoices[i];
-			if (invoice.total == totalPrice) {
+			const invoice = invoices[i];
+			if (invoice.total === totalPrice) {
 				invoiceIndex = i;
 				assert.equal(invoice.product_ids[0], product.id);
 				return;
@@ -132,12 +130,12 @@ export const sendGPUEvents = async ({
 	let totalCreditsUsed = 0;
 	const batchEvents = [];
 	for (let i = 0; i < eventCount; i++) {
-		let randomVal = new Decimal(Math.random().toFixed(PRECISION))
+		const randomVal = new Decimal(Math.random().toFixed(PRECISION))
 			.mul(CREDIT_MULTIPLIER)
 			.toNumber();
-		let gpuId = i % 2 == 0 ? features.gpu1.id : features.gpu2.id;
+		const gpuId = i % 2 === 0 ? features.gpu1.id : features.gpu2.id;
 
-		let creditsUsed = getCreditsUsed(
+		const creditsUsed = getCreditsUsed(
 			creditSystems.gpuCredits,
 			gpuId,
 			randomVal,
@@ -157,7 +155,7 @@ export const sendGPUEvents = async ({
 	}
 
 	await Promise.all(batchEvents);
-	await timeout(10000);
+	await timeout(15000);
 
 	return { creditsUsed: totalCreditsUsed };
 };

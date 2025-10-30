@@ -1,9 +1,11 @@
-import { AggregateType } from "@autumn/shared";
-
-import { AppEnv, FeatureType, FeatureUsageType } from "@autumn/shared";
-
+import {
+	AggregateType,
+	type AppEnv,
+	type Feature,
+	FeatureType,
+	FeatureUsageType,
+} from "@autumn/shared";
 import { generateId, keyToTitle } from "@/utils/genUtils.js";
-import { Feature } from "@autumn/shared";
 
 export const constructFeature = ({
 	id,
@@ -22,7 +24,7 @@ export const constructFeature = ({
 	config: any;
 	display: any;
 }) => {
-	let newFeature: Feature = {
+	const newFeature: Feature = {
 		internal_id: generateId("fe"),
 		id,
 		name,
@@ -33,6 +35,7 @@ export const constructFeature = ({
 		config,
 		display,
 		archived: false,
+		event_names: [],
 	};
 
 	return newFeature;
@@ -49,7 +52,7 @@ export const constructBooleanFeature = ({
 	env: AppEnv;
 	name?: string;
 }) => {
-	let newFeature: Feature = {
+	const newFeature: Feature = {
 		internal_id: generateId("fe"),
 		org_id: orgId,
 		env,
@@ -60,6 +63,7 @@ export const constructBooleanFeature = ({
 		type: FeatureType.Boolean,
 		config: null,
 		archived: false,
+		event_names: [],
 	};
 
 	return newFeature;
@@ -78,7 +82,7 @@ export const constructMeteredFeature = ({
 	env: AppEnv;
 	usageType: FeatureUsageType;
 }) => {
-	let newFeature: Feature = {
+	const newFeature: Feature = {
 		internal_id: generateId("fe"),
 		org_id: orgId,
 		env,
@@ -102,6 +106,7 @@ export const constructMeteredFeature = ({
 			usage_type: usageType,
 		},
 		archived: false,
+		event_names: [],
 	};
 
 	return newFeature;
@@ -132,7 +137,7 @@ export const constructCreditSystem = ({
 		usage_type: FeatureUsageType.Single,
 	};
 
-	let newFeature: Feature = {
+	const newFeature: Feature = {
 		internal_id: generateId("fe"),
 		org_id: orgId,
 		env,
@@ -143,6 +148,7 @@ export const constructCreditSystem = ({
 		type: FeatureType.CreditSystem,
 		config,
 		archived: false,
+		event_names: [],
 	};
 
 	return newFeature;

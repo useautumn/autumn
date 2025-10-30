@@ -27,8 +27,14 @@ export enum ProductItemType {
 }
 
 export const PriceTierSchema = z.object({
-	to: z.number().or(z.literal(TierInfinite)),
-	amount: z.number(),
+	to: z.number().or(z.literal(TierInfinite)).meta({
+		description: "The maximum amount of usage for this tier.",
+		example: 100,
+	}),
+	amount: z.number().meta({
+		description: "The price of the product item for this tier.",
+		example: 10,
+	}),
 });
 
 export enum UsageModel {
@@ -55,48 +61,111 @@ export const RolloverConfigSchema = z.object({
 });
 
 const ProductItemConfigSchema = z.object({
-	on_increase: z.nativeEnum(OnIncrease).nullish(),
-	on_decrease: z.nativeEnum(OnDecrease).nullish(),
+	on_increase: z.enum(OnIncrease).nullish(),
+	on_decrease: z.enum(OnDecrease).nullish(),
 	rollover: RolloverConfigSchema.nullish(),
 });
 
 export const ProductItemSchema = z.object({
 	// Feature stuff
-	feature_id: z.string().nullish(),
-	feature_type: z.nativeEnum(ProductItemFeatureType).nullish(),
-	included_usage: z.union([z.number(), z.literal(Infinite)]).nullish(),
-	interval: z.preprocess((val) => {
-		if (val === "") {
-			throw new Error("Interval cannot be empty.");
-		}
-		return val;
-	}, z.enum(ProductItemInterval).nullish()),
-	interval_count: z.number().nullish(),
-	entity_feature_id: z.string().nullish(),
+	feature_id: z.string().nullish().meta({
+		description:
+			"The feature ID of the product item. Should be null for fixed price items.",
+	}),
+
+	feature_type: z.enum(ProductItemFeatureType).nullish().meta({
+		internal: true,
+	}),
+
+	included_usage: z
+		.union([z.number(), z.literal(Infinite)])
+		.nullish()
+		.meta({
+			description:
+				"The amount of usage included for this feature (per interval).",
+		}),
+
+	interval: z
+		.preprocess((val) => {
+			if (val === "") {
+				throw new Error("Interval cannot be empty.");
+			}
+			return val;
+		}, z.enum(ProductItemInterval).nullish())
+		.meta({
+			description:
+				"The reset or billing interval of the product item. If null, feature will have no reset date, and if there's a price, it will be billed one-off.",
+		}),
+
+	interval_count: z.number().nullish().meta({
+		description: "Interval count of the feature.",
+	}),
+
+	entity_feature_id: z.string().nullish().meta({
+		description:
+			"The feature ID of the entity (like seats) to track sub-balances for.",
+	}),
 
 	// Price config
-	usage_model: z.nativeEnum(UsageModel).nullish(),
-	price: z.number().nullish(),
-	tiers: z.array(PriceTierSchema).nullish(),
-	billing_units: z.number().nullish(), // amount per billing unit (eg. $9 / 250 units)
-	usage_limit: z.number().nullish(),
+	usage_model: z.enum(UsageModel).nullish().meta({
+		description:
+			"Whether the feature should be prepaid upfront or billed for how much they use end of billing period.",
+	}),
+
+	price: z.number().nullish().meta({
+		description:
+			"The price of the product item. Should be null if tiered pricing is set.",
+	}),
+
+	tiers: z.array(PriceTierSchema).nullish().meta({
+		description:
+			"Tiered pricing for the product item. Not applicable for fixed price items.",
+	}),
+
+	billing_units: z.number().nullish().meta({
+		description:
+			"The billing units of the product item (eg $1 for 30 credits).",
+	}),
 
 	// Others
 	// carry_over_usage: z.boolean().nullish(),
-	reset_usage_when_enabled: z.boolean().nullish(),
-	config: ProductItemConfigSchema.nullish(),
+	reset_usage_when_enabled: z.boolean().nullish().meta({
+		description:
+			"Whether the usage should be reset when the product is enabled.",
+	}),
+
 	display: z
 		.object({
 			primary_text: z.string(),
 			secondary_text: z.string().nullish(),
 		})
-		.nullish(),
+		.nullish()
+		.meta({
+			internal: true,
+		}),
+
+	// Hidden from users for now.
+	usage_limit: z.number().nullish().meta({
+		internal: true,
+	}),
+
+	config: ProductItemConfigSchema.nullish().meta({
+		internal: true,
+	}),
 
 	// Stored in backend
-	created_at: z.number().nullish(),
-	entitlement_id: z.string().nullish(),
-	price_id: z.string().nullish(),
-	price_config: z.any().nullish(),
+	created_at: z.number().nullish().meta({
+		internal: true,
+	}),
+	entitlement_id: z.string().nullish().meta({
+		internal: true,
+	}),
+	price_id: z.string().nullish().meta({
+		internal: true,
+	}),
+	price_config: z.any().nullish().meta({
+		internal: true,
+	}),
 });
 
 export const LimitedItemSchema = ProductItemSchema.extend({

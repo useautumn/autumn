@@ -6,7 +6,7 @@ import { ApiEntitySchema } from "./apiEntity.js";
 import { CreateEntityParamsSchema } from "./entityOpModels.js";
 
 // Register schema with .meta() for OpenAPI spec generation
-const ApiEntityWithMeta = ApiEntitySchema.meta({
+export const ApiEntityWithMeta = ApiEntitySchema.meta({
 	id: "Entity",
 	description: "Entity object returned by the API",
 });

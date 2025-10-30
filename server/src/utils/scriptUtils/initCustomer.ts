@@ -229,8 +229,7 @@ export const initCustomerV2 = async ({
 		id: customerId,
 		name,
 		email,
-		fingerprint: customerData?.fingerprint || fingerprint_,
-		// @ts-expect-error
+		fingerprint: customerData?.fingerprint || undefined,
 		stripe_id: stripeCus.id,
 	});
 

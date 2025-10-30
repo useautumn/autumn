@@ -1,12 +1,12 @@
 import {
-	LimitedItem,
+	type LimitedItem,
 	OnDecrease,
 	OnIncrease,
-	ProductItem,
-	ProductItemConfig,
-	ProductItemFeatureType,
+	type ProductItem,
+	type ProductItemConfig,
+	type ProductItemFeatureType,
 	ProductItemInterval,
-	RolloverConfig,
+	type RolloverConfig,
 	UsageModel,
 } from "@autumn/shared";
 
@@ -17,8 +17,9 @@ export const constructFeatureItem = ({
 	intervalCount = 1,
 	entityFeatureId,
 	isBoolean = false,
+	unlimited = false,
 	rolloverConfig,
-	featureType
+	featureType,
 }: {
 	featureId: string;
 	includedUsage?: number;
@@ -28,6 +29,7 @@ export const constructFeatureItem = ({
 	isBoolean?: boolean;
 	rolloverConfig?: RolloverConfig;
 	featureType?: ProductItemFeatureType;
+	unlimited?: boolean;
 }) => {
 	if (isBoolean) {
 		return {
@@ -35,7 +37,14 @@ export const constructFeatureItem = ({
 			entity_feature_id: entityFeatureId,
 		};
 	}
-	let item: LimitedItem = {
+
+	if (unlimited) {
+		return {
+			feature_id: featureId,
+			included_usage: "inf",
+		} as ProductItem;
+	}
+	const item: LimitedItem = {
 		feature_id: featureId,
 		included_usage: includedUsage,
 		entity_feature_id: entityFeatureId,
@@ -79,11 +88,11 @@ export const constructPrepaidItem = ({
 	usageLimit?: number;
 	intervalCount?: number;
 }) => {
-	let item: ProductItem = {
+	const item: ProductItem = {
 		feature_id: featureId,
 		usage_model: UsageModel.Prepaid,
 
-		price: price,
+		price: tiers ? undefined : price,
 		tiers: tiers,
 		billing_units: billingUnits || 100,
 		interval: isOneOff ? null : ProductItemInterval.Month,
@@ -122,7 +131,7 @@ export const constructArrearItem = ({
 	usageLimit?: number;
 	intervalCount?: number;
 }) => {
-	let item: ProductItem = {
+	const item: ProductItem = {
 		feature_id: featureId,
 		usage_model: UsageModel.PayPerUse,
 		included_usage: includedUsage,
@@ -157,7 +166,7 @@ export const constructArrearProratedItem = ({
 	usageLimit?: number;
 	rolloverConfig?: RolloverConfig;
 }) => {
-	let item: ProductItem = {
+	const item: ProductItem = {
 		feature_id: featureId,
 		usage_model: UsageModel.PayPerUse,
 		included_usage: includedUsage,

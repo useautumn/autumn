@@ -24,17 +24,20 @@ export const VersionChangeRegistryClass = {
 
 	getChangesForVersion({ version }: { version: ApiVersion }): VersionChange[] {
 		const changeClasses = changes.get(version) || [];
-		return changeClasses.map((ChangeClass) => {
-			const key = `${version}-${ChangeClass.name}`;
-			if (!instances.has(key)) {
-				instances.set(key, new ChangeClass());
-			}
-			const instance = instances.get(key);
-			if (!instance) {
-				throw new Error(`Failed to create instance for ${ChangeClass.name}`);
-			}
-			return instance;
-		});
+		// Simply instantiate each change class - no caching needed since they're stateless
+		return changeClasses.map((ChangeClass) => new ChangeClass());
+		// const changeClasses = changes.get(version) || [];
+		// return changeClasses.map((ChangeClass) => {
+		// 	const key = `${version}-${ChangeClass.name}`;
+		// 	if (!instances.has(key)) {
+		// 		instances.set(key, new ChangeClass());
+		// 	}
+		// 	const instance = instances.get(key);
+		// 	if (!instance) {
+		// 		throw new Error(`Failed to create instance for ${ChangeClass.name}`);
+		// 	}
+		// 	return instance;
+		// });
 	},
 
 	getRegisteredVersions(): ApiVersion[] {

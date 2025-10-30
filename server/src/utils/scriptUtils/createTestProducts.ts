@@ -74,6 +74,7 @@ export const constructRawProduct = ({
 		version: 1,
 		group: "",
 		created_at: Date.now(),
+		env: AppEnv.Sandbox,
 	};
 };
 
@@ -107,11 +108,11 @@ export const constructProduct = ({
 	forcePaidDefault?: boolean;
 }) => {
 	let price = 0;
-	if (type == "pro") {
+	if (type === "pro") {
 		price = 20;
-	} else if (type == "premium") {
+	} else if (type === "premium") {
 		price = 50;
-	} else if (type == "growth") {
+	} else if (type === "growth") {
 		price = 100;
 	}
 
@@ -129,7 +130,7 @@ export const constructProduct = ({
 		);
 	}
 
-	if (type == "one_off") {
+	if (type === "one_off") {
 		items.push(
 			constructPriceItem({
 				price: 10,
@@ -152,8 +153,9 @@ export const constructProduct = ({
 					? `${keyToTitle(type)} (${interval})`
 					: keyToTitle(type),
 		items,
+		env: AppEnv.Sandbox,
 		is_add_on: isAddOn,
-		is_default: (type == "free" && isDefault) || forcePaidDefault,
+		is_default: (type === "free" && isDefault) || forcePaidDefault,
 		version: 1,
 		group: group || "",
 		free_trial:

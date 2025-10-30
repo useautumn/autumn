@@ -1,12 +1,12 @@
+import { beforeAll, describe, test } from "bun:test";
 import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
 import chalk from "chalk";
 import type Stripe from "stripe";
-import { setupBefore } from "tests/before.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { createProducts } from "tests/utils/productUtils.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
@@ -14,8 +14,8 @@ import {
 	constructProduct,
 	constructRawProduct,
 } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { addPrefixToProducts } from "../utils.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
 export const pro = constructProduct({
 	type: "pro",
@@ -40,39 +40,28 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach free add on twice (s
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
 
-	before(async function () {
-		await setupBefore(this);
-		db = this.db;
-		org = this.org;
-		env = this.env;
+	beforeAll(async () => {
+		db = ctx.db;
+		org = ctx.org;
+		env = ctx.env;
+		stripeCli = ctx.stripeCli;
 
-		stripeCli = this.stripeCli;
-
-		await initCustomer({
-			db,
-			org,
-			env,
-			autumn: this.autumnJs,
+		await initCustomerV3({
+			ctx,
 			customerId,
-			fingerprint: "test",
+			customerData: { fingerprint: "test" },
 			attachPm: "success",
+			withTestClock: true,
 		});
 
-		addPrefixToProducts({
+		await initProductsV0({
+			ctx,
 			products: [pro, addOn],
 			prefix: testCase,
 		});
-
-		await createProducts({
-			db,
-			orgId: org.id,
-			env,
-			autumn,
-			products: [pro, addOn],
-		});
 	});
 
-	it("should attach pro product and free add on", async () => {
+	test("should attach pro product and free add on", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,

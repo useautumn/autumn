@@ -11,6 +11,7 @@ import {
 	type FixedPriceConfig,
 	type FullProduct,
 	intervalsSame,
+	nullish,
 	type Organization,
 	type Price,
 	PriceSchema,
@@ -72,11 +73,13 @@ export const getProductVersionCounts = (products: FullProduct[]) => {
 // Construct product
 export const constructProduct = ({
 	productData,
+	version = 1,
 	orgId,
 	env,
 	processor,
 }: {
 	productData: CreateProductV2Params;
+	version?: number;
 	orgId: string;
 	env: AppEnv;
 	processor?: {
@@ -89,8 +92,8 @@ export const constructProduct = ({
 		name: productData.name,
 		is_add_on: productData.is_add_on,
 		is_default: productData.is_default,
-		version: productData.version || 1,
-		group: productData.group,
+		version: version,
+		group: productData.group || "",
 
 		env,
 		internal_id: generateId("prod"),
@@ -141,7 +144,9 @@ export const isProductUpgrade = ({
 		let totalPrice = new Decimal(0);
 		for (const price of prices) {
 			if ("usage_tiers" in price.config!) {
-				totalPrice = totalPrice.plus(price.config!.usage_tiers[0].amount);
+				const tiers = price.config!.usage_tiers;
+				if (nullish(tiers) || tiers.length === 0) continue;
+				totalPrice = totalPrice.plus(tiers[0].amount);
 			} else {
 				totalPrice = totalPrice.plus(price.config!.amount);
 			}
@@ -176,10 +181,9 @@ export const isFreeProduct = (prices: Price[]) => {
 	let totalPrice = 0;
 	for (const price of prices) {
 		if ("usage_tiers" in price.config!) {
-			totalPrice += price.config!.usage_tiers.reduce(
-				(acc, tier) => acc + tier.amount,
-				0,
-			);
+			const tiers = price.config!.usage_tiers;
+			if (nullish(tiers) || tiers.length === 0) continue;
+			totalPrice += tiers.reduce((acc, tier) => acc + tier.amount, 0);
 		} else {
 			totalPrice += price.config!.amount;
 		}
@@ -447,6 +451,7 @@ export const copyProduct = async ({
 		db,
 		product: {
 			...ProductSchema.parse(newProduct),
+			// group: newProduct.group || "",
 			version: 1,
 		},
 	});

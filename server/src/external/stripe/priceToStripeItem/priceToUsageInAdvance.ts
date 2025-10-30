@@ -1,9 +1,14 @@
+import type {
+	EntitlementWithFeature,
+	FeatureOptions,
+	Organization,
+	Price,
+	UsagePriceConfig,
+} from "@autumn/shared";
+import { Decimal } from "decimal.js";
+import { orgToCurrency } from "@/internal/orgs/orgUtils.js";
 import { getPriceForOverage } from "@/internal/products/prices/priceUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
-import { FeatureOptions, Organization, UsagePriceConfig } from "@autumn/shared";
-import { EntitlementWithFeature } from "@autumn/shared";
-import { Price } from "@autumn/shared";
-import { Decimal } from "decimal.js";
 
 export const priceToOneOffAndTiered = ({
 	price,
@@ -19,8 +24,8 @@ export const priceToOneOffAndTiered = ({
 	stripeProductId: string;
 }) => {
 	const config = price.config as UsagePriceConfig;
-	let quantity = options?.quantity!;
-	let overage = new Decimal(quantity).mul(config.billing_units!).toNumber();
+	const quantity = options?.quantity!;
+	const overage = new Decimal(quantity).mul(config.billing_units!).toNumber();
 	// let overage = quantity * config.billing_units! - relatedEnt.allowance!;
 
 	// if (overage <= 0) {
@@ -39,7 +44,7 @@ export const priceToOneOffAndTiered = ({
 				? config.stripe_product_id
 				: stripeProductId,
 			unit_amount: Number(amount.toFixed(2)) * 100,
-			currency: org.default_currency,
+			currency: orgToCurrency({ org }),
 		},
 
 		quantity: 1,
@@ -58,11 +63,11 @@ export const priceToUsageInAdvance = ({
 	isCheckout: boolean;
 }) => {
 	const config = price.config as UsagePriceConfig;
-	let optionsQuantity = options?.quantity;
+	const optionsQuantity = options?.quantity;
 	let finalQuantity = optionsQuantity;
 
 	// 1. If adjustable quantity is set, use that, else if quantity is undefined, adjustable is true, else false
-	let adjustable = notNullish(options?.adjustable_quantity)
+	const adjustable = notNullish(options?.adjustable_quantity)
 		? options!.adjustable_quantity
 		: nullish(optionsQuantity)
 			? true
