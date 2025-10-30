@@ -13,16 +13,16 @@ import { createProducts } from "tests/utils/productUtils.js";
 import { initCustomerV2 } from "@/utils/scriptUtils/initCustomer.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 
-const testCase = "sync2";
+const testCase = "trackMisc1";
 const customerId = `${testCase}_cus1`;
 
 const pro = constructProduct({
     id: "pro",
-    items: [constructFeatureItem({ featureId: TestFeature.Users, includedUsage: 1, featureType: ProductItemFeatureType.ContinuousUse })],
+    items: [constructFeatureItem({ featureId: TestFeature.Messages, includedUsage: 5, featureType: ProductItemFeatureType.SingleUse })],
     type: "pro",
 })
 
-describe(`${chalk.yellowBright(`sync/${testCase}: Testing sync track allocated feature with concurrent requests`)}`, () => {
+describe(`${chalk.yellowBright(`trackMisc/${testCase}: Testing trackMisc track consumable usage`)}`, () => {
 	let db: DrizzleCli;
 	let org: Organization;
 	let env: AppEnv;
@@ -76,54 +76,55 @@ describe(`${chalk.yellowBright(`sync/${testCase}: Testing sync track allocated f
         })
 	});
 
-	it("should only allow one concurrent track with balance of 1", async () => {
+	it("should allow all requests to pass and cap balance at 0", async () => {
 		const customer = await autumnInt.customers.get(customerId);
-		const balance = customer.features[TestFeature.Users].balance;
-		expect(balance).to.equal(1, `Balance should be 1, got ${balance} | Balances: ${JSON.stringify(customer.features)}`);
+		const balance = customer.features[TestFeature.Messages].balance;
+		expect(balance).to.equal(5, `Balance should be 5, got ${balance} | Balances: ${JSON.stringify(customer.features)}`);
 
 		const promises = [
 			autumnInt.track({
 				customer_id: customerId,
-				feature_id: TestFeature.Users,
-				value: 1,
+				feature_id: TestFeature.Messages,
+				value: 10,
 			}),
 			autumnInt.track({
 				customer_id: customerId,
-				feature_id: TestFeature.Users,
-				value: 1,
+				feature_id: TestFeature.Messages,
+				value: 10,
 			}),
 			autumnInt.track({
 				customer_id: customerId,
-				feature_id: TestFeature.Users,
-				value: 1,
+				feature_id: TestFeature.Messages,
+				value: 10,
 			}),
 			autumnInt.track({
 				customer_id: customerId,
-				feature_id: TestFeature.Users,
-				value: 1,
+				feature_id: TestFeature.Messages,
+				value: 10,
 			}),
 			autumnInt.track({
 				customer_id: customerId,
-				feature_id: TestFeature.Users,
-				value: 1,
+				feature_id: TestFeature.Messages,
+				value: 10,
 			}),
 		];
 
 		let results = await Promise.allSettled(promises);
 
-		const successCount = results.filter(r => r.status === "fulfilled").length;
-		const rejectedCount = results.filter(r => r.status === "rejected").length;
-
-        expect(successCount).to.equal(1, `Expected exactly 1 success, got ${successCount} | Results: ${results.map(r => r.status).join(", ")}`);
-		expect(rejectedCount).to.equal(4, `Expected exactly 4 rejections, got ${rejectedCount} | Results: ${results.map(r => r.status).join(", ")}`);
+		// With free feature capping, all requests pass (cap at 0 instead of rejecting)
+		expect(results.every(r => r.status === "fulfilled")).to.equal(true, `${results.map(r => r.status).join(", ")} <- all should pass`);
 
 		const { data: balances, error } = await autumnJs.customers.get(
 			customerId,
 		);
 		expect(error).to.be.null;
-		expect(balances?.features[TestFeature.Users]?.balance).to.equal(
+		expect(balances?.features[TestFeature.Messages]?.balance).to.equal(
 			0,
-			`Balance should be 0 (allocated feature), got ${balances?.features[TestFeature.Users]?.balance}`,
+			`Balance should cap at 0, got ${balances?.features[TestFeature.Messages]?.balance}`,
+		);
+		expect(balances?.features[TestFeature.Messages]?.usage).to.equal(
+			5,
+			`Usage should be 5 (only what was available), got ${balances?.features[TestFeature.Messages]?.usage}`,
 		);
 	});
 });

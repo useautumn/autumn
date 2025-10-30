@@ -13,7 +13,7 @@ import { createProducts } from "tests/utils/productUtils.js";
 import { initCustomerV2 } from "@/utils/scriptUtils/initCustomer.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 
-const testCase = "sync6";
+const testCase = "trackMisc6";
 const prepaidCustomerId = `${testCase}_prepaid_cus`;
 const payPerUseCustomerId = `${testCase}_payperuse_cus`;
 
@@ -44,7 +44,7 @@ const payPerUseProduct = constructProduct({
     type: "pro",
 });
 
-describe(`${chalk.yellowBright(`sync/${testCase}: Testing prepaid vs PayPerUse overage behavior`)}`, () => {
+describe(`${chalk.yellowBright(`trackMisc/${testCase}: Testing prepaid vs PayPerUse overage behavior`)}`, () => {
 	let db: DrizzleCli;
 	let org: Organization;
 	let env: AppEnv;
