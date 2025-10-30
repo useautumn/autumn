@@ -60,6 +60,9 @@ export const TrackParamsSchema = z
 		entity_data: EntityDataSchema.optional().meta({
 			description: "Data for creating the entity if it doesn't exist",
 		}),
+		overage_behaviour: z.enum(["cap", "reject"]).optional().meta({
+			description: "The behavior when the balance is insufficient",
+		}),
 	})
 	.refine(
 		(data) => {
@@ -78,7 +81,7 @@ export const TrackParamsSchema = z
 		},
 	);
 
-export const TrackResultSchema = z.object({
+export const TrackResponseSchema = z.object({
 	id: z.string().meta({
 		description: "The ID of the created event",
 	}),
@@ -100,3 +103,4 @@ export const TrackResultSchema = z.object({
 });
 
 export type TrackParams = z.infer<typeof TrackParamsSchema>;
+export type TrackResponse = z.infer<typeof TrackResponseSchema>;

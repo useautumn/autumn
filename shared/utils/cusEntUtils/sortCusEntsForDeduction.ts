@@ -1,5 +1,5 @@
-import { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
-import { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
+import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
+import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
 import { FeatureType } from "../../models/featureModels/featureEnums.js";
 import { AllowanceType } from "../../models/productModels/entModels/entModels.js";
 import { entIntervalToValue } from "../intervalUtils.js";
@@ -15,41 +15,41 @@ export const sortCusEntsForDeduction = (
 		const bEnt = b.entitlement;
 
 		// 1. If boolean, go first
-		if (aEnt.feature.type == FeatureType.Boolean) {
+		if (aEnt.feature.type === FeatureType.Boolean) {
 			return -1;
 		}
 
-		if (bEnt.feature.type == FeatureType.Boolean) {
+		if (bEnt.feature.type === FeatureType.Boolean) {
 			return 1;
 		}
 
 		// 1. If a is credit system and b is not, a should go last
 		if (
-			aEnt.feature.type == FeatureType.CreditSystem &&
-			bEnt.feature.type != FeatureType.CreditSystem
+			aEnt.feature.type === FeatureType.CreditSystem &&
+			bEnt.feature.type !== FeatureType.CreditSystem
 		) {
 			return 1;
 		}
 
 		// 2. If a is not credit system and b is, a should go first
 		if (
-			aEnt.feature.type != FeatureType.CreditSystem &&
-			bEnt.feature.type == FeatureType.CreditSystem
+			aEnt.feature.type !== FeatureType.CreditSystem &&
+			bEnt.feature.type === FeatureType.CreditSystem
 		) {
 			return -1;
 		}
 
 		// 2. Sort by unlimited (unlimited goes first)
 		if (
-			aEnt.allowance_type == AllowanceType.Unlimited &&
-			bEnt.allowance_type != AllowanceType.Unlimited
+			aEnt.allowance_type === AllowanceType.Unlimited &&
+			bEnt.allowance_type !== AllowanceType.Unlimited
 		) {
 			return -1;
 		}
 
 		if (
-			aEnt.allowance_type != AllowanceType.Unlimited &&
-			bEnt.allowance_type == AllowanceType.Unlimited
+			aEnt.allowance_type !== AllowanceType.Unlimited &&
+			bEnt.allowance_type === AllowanceType.Unlimited
 		) {
 			return 1;
 		}
@@ -64,7 +64,7 @@ export const sortCusEntsForDeduction = (
 		}
 
 		// If one has a next_reset_at, it should go first
-		let nextResetFirst = reverseOrder ? 1 : -1;
+		const nextResetFirst = reverseOrder ? 1 : -1;
 
 		if (a.next_reset_at && !b.next_reset_at) {
 			return nextResetFirst;
@@ -76,8 +76,8 @@ export const sortCusEntsForDeduction = (
 		}
 
 		// 3. Sort by interval
-		let aVal = entIntervalToValue(aEnt.interval, aEnt.interval_count);
-		let bVal = entIntervalToValue(bEnt.interval, bEnt.interval_count);
+		const aVal = entIntervalToValue(aEnt.interval, aEnt.interval_count);
+		const bVal = entIntervalToValue(bEnt.interval, bEnt.interval_count);
 		if (aEnt.interval && bEnt.interval && !aVal.eq(bVal)) {
 			if (reverseOrder) {
 				return bVal.sub(aVal).toNumber();
@@ -89,8 +89,8 @@ export const sortCusEntsForDeduction = (
 		}
 
 		// Check if a is main product
-		let aIsAddOn = a.customer_product?.product?.is_add_on;
-		let bIsAddOn = b.customer_product?.product?.is_add_on;
+		const aIsAddOn = a.customer_product?.product?.is_add_on;
+		const bIsAddOn = b.customer_product?.product?.is_add_on;
 
 		if (aIsAddOn && !bIsAddOn) {
 			return 1;

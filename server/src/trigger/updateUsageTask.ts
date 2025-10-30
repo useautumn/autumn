@@ -3,6 +3,8 @@ import {
 	type AppEnv,
 	CusProductStatus,
 	type Customer,
+	customerEntitlements,
+	customers,
 	ErrCode,
 	type Feature,
 	FeatureType,
@@ -521,21 +523,31 @@ export const runUpdateUsageTask = async ({
 
 		const cusEnts = await db.transaction(
 			async (tx) => {
+				// Lock ALL customer entitlements for this customer using JOIN
+				await tx.execute(sql`
+					SELECT ce.* 
+					FROM ${customerEntitlements} ce
+					INNER JOIN ${customers} c ON ce.internal_customer_id = c.internal_id
+					WHERE c.id = ${customerId} 
+						AND c.org_id = ${org.id}
+						AND c.env = ${env}
+					FOR UPDATE OF ce
+				`);
 				// Acquire advisory lock for this customer (and entity if provided) to serialize concurrent requests
 				// Include entity_id in lock key so different entities can update concurrently
-				const lockKeyStr = `${internalCustomerId}_${org.id}_${env}${entityId ? `_${entityId}` : ""}`;
-				const hash =
-					lockKeyStr.split("").reduce((acc, char) => {
-						return (acc << 5) - acc + char.charCodeAt(0);
-					}, 0) | 0; // Convert to 32-bit integer
+				// const lockKeyStr = `${internalCustomerId}_${org.id}_${env}${entityId ? `_${entityId}` : ""}`;
+				// const hash =
+				// 	lockKeyStr.split("").reduce((acc, char) => {
+				// 		return (acc << 5) - acc + char.charCodeAt(0);
+				// 	}, 0) | 0; // Convert to 32-bit integer
 
-				console.log(
-					`   🔒 [${eventId}] Acquiring advisory lock (hash=${hash}) for: ${lockKeyStr}`,
-				);
-				await tx.execute(sql`SELECT pg_advisory_xact_lock(${hash})`);
-				console.log(
-					`   🔓 [${eventId}] Advisory lock acquired, proceeding with update`,
-				);
+				// console.log(
+				// 	`   🔒 [${eventId}] Acquiring advisory lock (hash=${hash}) for: ${lockKeyStr}`,
+				// );
+				// await tx.execute(sql`SELECT pg_advisory_xact_lock(${hash})`);
+				// console.log(
+				// 	`   🔓 [${eventId}] Advisory lock acquired, proceeding with update`,
+				// );
 
 				return await updateUsage({
 					db: tx as unknown as DrizzleCli,

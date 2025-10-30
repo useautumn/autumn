@@ -18,12 +18,16 @@ if (process.env.NODE_ENV !== "development") {
 }
 
 import cluster from "node:cluster";
+import { readFileSync } from "node:fs";
 import http from "node:http";
 import os from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { AppEnv } from "@autumn/shared";
 import { context, trace } from "@opentelemetry/api";
 import { toNodeHandler } from "better-auth/node";
 import cors from "cors";
+import { sql } from "drizzle-orm";
 import express from "express";
 import { client, db } from "./db/initDrizzle.js";
 import { CacheManager } from "./external/caching/CacheManager.js";
@@ -38,10 +42,42 @@ import { auth } from "./utils/auth.js";
 import { generateId } from "./utils/genUtils.js";
 import { checkEnvVars } from "./utils/initUtils.js";
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
 const tracer = trace.getTracer("express");
 
 checkEnvVars();
 // subscribeToOrgUpdates({ db });
+
+const initializeDatabaseFunctions = async () => {
+	try {
+		console.log("Initializing database functions...");
+
+		const deductRpcPath = join(
+			__dirname,
+			"internal/balances/track/trackUtils/deductRpc",
+		);
+
+		// Load SQL files in order: helpers first, then main function
+		const sqlFiles = [
+			"deductFromSingleEntity.sql",
+			"deductFromAllEntities.sql",
+			"deductFromRollovers.sql",
+			"deductAllowance.sql",
+		];
+
+		for (const file of sqlFiles) {
+			const sqlContent = readFileSync(join(deductRpcPath, file), "utf-8");
+			await db.execute(sql.raw(sqlContent));
+			console.log(`  ✓ Loaded ${file}`);
+		}
+
+		console.log("Database functions initialized successfully");
+	} catch (error) {
+		console.error("Failed to initialize database functions:", error);
+		throw error;
+	}
+};
 
 const init = async () => {
 	const app = express();
@@ -135,6 +171,9 @@ const init = async () => {
 		CacheManager.getInstance(),
 		ClickHouseManager.getInstance(),
 	]);
+
+	// Initialize database functions
+	await initializeDatabaseFunctions();
 
 	app.use(async (req: any, res: any, next: any) => {
 		req.env = req.env = req.headers.app_env || AppEnv.Sandbox;

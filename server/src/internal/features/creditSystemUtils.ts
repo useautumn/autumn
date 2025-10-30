@@ -73,12 +73,15 @@ export const featureToCreditSystem = ({
 export const getCreditCost = ({
 	featureId,
 	creditSystem,
-	amount,
+	amount = 1,
 }: {
 	featureId: string;
 	creditSystem: Feature;
-	amount: number;
+	amount?: number;
 }) => {
+	if (creditSystem.type !== FeatureType.CreditSystem) {
+		return amount;
+	}
 	const schema: CreditSchemaItem[] = creditSystem.config.schema;
 
 	for (const schemaItem of schema) {
