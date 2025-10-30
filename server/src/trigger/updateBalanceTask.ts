@@ -54,7 +54,7 @@ export type DeductParams = {
 	org: Organization;
 	cusPrices: FullCustomerPrice[];
 	customer: Customer;
-	properties: any;
+	// properties: any;
 	feature: Feature;
 	entity?: Entity;
 };
@@ -347,9 +347,6 @@ export const deductAllowanceFromCusEnt = async ({
 	setZeroAdjustment?: boolean;
 }) => {
 	const { db, feature, env, org, cusPrices, customer, entity } = deductParams;
-
-	if (toDeduct == 0) {
-	}
 
 	if (
 		entity &&

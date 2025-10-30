@@ -204,11 +204,14 @@ const validateDeductionPossible = ({
 
 		// Check if this is a "free" feature (single-use with included_usage but no pricing)
 		// Only apply to SingleUse features; ContinuousUse (allocated) features should reject
-		const isFreeFeature = feature.type === FeatureType.Metered &&
+		const isFreeFeature =
+			feature.type === FeatureType.Metered &&
 			feature.config?.usage_type === FeatureUsageType.Single &&
 			featureCusEnts.some(
-				(cusEnt) => cusEnt.entitlement.allowance && cusEnt.entitlement.allowance > 0
-			) && !hasUsageAllowed;
+				(cusEnt) =>
+					cusEnt.entitlement.allowance && cusEnt.entitlement.allowance > 0,
+			) &&
+			!hasUsageAllowed;
 
 		// For free SingleUse features, allow tracking beyond balance (will cap at 0 in performDeduction)
 		// For prepaid/allocated/other features without usage_allowed, reject insufficient balance
@@ -248,7 +251,7 @@ const validateDeductionPossible = ({
 					const featureBalance = getFeatureBalance({
 						cusEnts: [cusEnt],
 						internalFeatureId: feature.internal_id!,
-						entityId
+						entityId,
 					});
 
 					// Skip if unlimited
@@ -441,7 +444,6 @@ export const updateUsage = async ({
 					org,
 					cusPrices: cusPrices as any[],
 					customer,
-					properties,
 					entity: customer.entity,
 				},
 				featureDeductions,
@@ -461,7 +463,6 @@ export const updateUsage = async ({
 					org,
 					cusPrices: cusPrices as any[],
 					customer,
-					properties,
 					entity: customer.entity,
 				},
 				setZeroAdjustment: true,
@@ -522,14 +523,19 @@ export const runUpdateUsageTask = async ({
 			async (tx) => {
 				// Acquire advisory lock for this customer (and entity if provided) to serialize concurrent requests
 				// Include entity_id in lock key so different entities can update concurrently
-				const lockKeyStr = `${internalCustomerId}_${org.id}_${env}${entityId ? `_${entityId}` : ''}`;
-				const hash = lockKeyStr.split('').reduce((acc, char) => {
-					return ((acc << 5) - acc) + char.charCodeAt(0);
-				}, 0) | 0; // Convert to 32-bit integer
+				const lockKeyStr = `${internalCustomerId}_${org.id}_${env}${entityId ? `_${entityId}` : ""}`;
+				const hash =
+					lockKeyStr.split("").reduce((acc, char) => {
+						return (acc << 5) - acc + char.charCodeAt(0);
+					}, 0) | 0; // Convert to 32-bit integer
 
-				console.log(`   🔒 [${eventId}] Acquiring advisory lock (hash=${hash}) for: ${lockKeyStr}`);
+				console.log(
+					`   🔒 [${eventId}] Acquiring advisory lock (hash=${hash}) for: ${lockKeyStr}`,
+				);
 				await tx.execute(sql`SELECT pg_advisory_xact_lock(${hash})`);
-				console.log(`   🔓 [${eventId}] Advisory lock acquired, proceeding with update`);
+				console.log(
+					`   🔓 [${eventId}] Advisory lock acquired, proceeding with update`,
+				);
 
 				return await updateUsage({
 					db: tx as unknown as DrizzleCli,
@@ -557,11 +563,6 @@ export const runUpdateUsageTask = async ({
 			org,
 			env,
 		});
-
-		if (!cusEnts || cusEnts.length === 0) {
-			return;
-		}
-		console.log("   ✅ Customer balance updated");
 	} catch (error) {
 		logger.error(`ERROR UPDATING USAGE`);
 		logger.error(error);
