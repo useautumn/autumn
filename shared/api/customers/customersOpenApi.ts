@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { UpdateBalancesParamsSchema } from "../balances/updateBalanceModels.js";
 import { SuccessResponseSchema } from "../common/commonResponses.js";
 import { ApiCustomerSchema } from "./apiCustomer.js";
 import {
@@ -6,7 +7,6 @@ import {
 	CreateCustomerQuerySchema,
 	GetCustomerQuerySchema,
 	ListCustomersResponseSchema,
-	UpdateBalancesParamsSchema,
 	UpdateCustomerParamsSchema,
 } from "./customerOpModels.js";
 

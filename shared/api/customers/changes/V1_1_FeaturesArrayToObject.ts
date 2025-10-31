@@ -32,6 +32,7 @@ const V1_1_CustomerSchema = ApiCustomerSchema.extend({
 });
 
 export const V1_1_FeaturesArrayToObject = defineVersionChange({
+	name: "V1_1_FeaturesArrayToObject",
 	newVersion: ApiVersion.V1_2,
 	oldVersion: ApiVersion.V1_1,
 

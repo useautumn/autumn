@@ -9,11 +9,12 @@ const __dirname = dirname(__filename);
 // dotenv.config({ path: resolve(__dirname, ".env") });
 dotenv.config({ path: resolve(__dirname, "..", "..", "..", ".env") });
 
-import { AppEnv, type Organization } from "@autumn/shared";
+import { AppEnv, type Feature, type Organization } from "@autumn/shared";
 import type Stripe from "stripe";
 import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { FeatureService } from "../../../src/internal/features/FeatureService.js";
 
 const ORG_SLUG = process.env.TESTS_ORG!;
 const DEFAULT_ENV = AppEnv.Sandbox;
@@ -23,6 +24,7 @@ export type TestContext = {
 	env: AppEnv;
 	stripeCli: Stripe;
 	db: DrizzleCli;
+	features: Feature[];
 };
 
 export const createTestContext = async () => {
@@ -33,12 +35,14 @@ export const createTestContext = async () => {
 
 	const env = DEFAULT_ENV;
 	const stripeCli = createStripeCli({ org, env });
+	const features = await FeatureService.list({ db, orgId: org.id, env });
 
 	return {
 		org,
 		env,
 		stripeCli,
 		db,
+		features,
 	};
 };
 

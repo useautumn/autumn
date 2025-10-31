@@ -69,8 +69,6 @@ describe(`${chalk.yellowBright("check6: test /check on feature with multiple bal
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponseV0;
 
-		console.log(res);
-
 		expect(res.allowed).toBe(true);
 		expect(res.balances).toBeDefined();
 		expect(res.balances).toHaveLength(1);

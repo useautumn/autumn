@@ -62,13 +62,23 @@ describe(`${chalk.yellowBright("check2: test /check on boolean feature")}`, () =
 			feature_id: TestFeature.Dashboard,
 		})) as unknown as CheckResponseV0;
 
-		expect(res.allowed).toBe(true);
-		expect(res.balances).toBeDefined();
-		expect(res.balances).toHaveLength(1);
-		expect(res.balances[0]).toStrictEqual({
-			feature_id: TestFeature.Dashboard,
-			balance: null,
+		expect(res).toStrictEqual({
+			allowed: true,
+			balances: [
+				{
+					feature_id: TestFeature.Dashboard,
+					balance: null,
+				},
+			],
 		});
+
+		// expect(res.allowed).toBe(true);
+		// expect(res.balances).toBeDefined();
+		// expect(res.balances).toHaveLength(1);
+		// expect(res.balances[0]).toStrictEqual({
+		// 	feature_id: TestFeature.Dashboard,
+		// 	balance: null,
+		// });
 	});
 
 	test("v1 response", async () => {
@@ -82,6 +92,15 @@ describe(`${chalk.yellowBright("check2: test /check on boolean feature")}`, () =
 			feature_id: TestFeature.Dashboard,
 			code: SuccessCode.FeatureFound,
 			allowed: true,
+
+			// New fields for boolean?
+			balance: 0,
+			included_usage: 0,
+			usage: 0,
+			next_reset_at: null,
+			overage_allowed: false,
+			required_balance: 1,
+			unlimited: false,
 		});
 	});
 });
