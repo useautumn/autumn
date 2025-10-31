@@ -13,6 +13,7 @@ import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js"
 import {
 	sharedProProduct,
 	sharedPremiumProduct,
+	initDowngradeSharedProducts,
 } from "./sharedProducts.js";
 
 const testCase = "downgrade5";
@@ -24,6 +25,9 @@ describe(`${chalk.yellowBright(`${testCase}: testing basic downgrade (paid to pa
 
 	beforeAll(async () => {
 		stripeCli = ctx.stripeCli;
+
+		// Explicitly ensure shared products exist
+		await initDowngradeSharedProducts();
 
 		const { testClockId: testClockId_ } = await initCustomerV3({
 			ctx,
@@ -111,7 +115,6 @@ describe(`${chalk.yellowBright(`${testCase}: testing basic downgrade (paid to pa
 		expectCustomerV0Correct({
 			sent: sharedProProduct,
 			cusRes: res,
-			ctx,
 		});
 	});
 });

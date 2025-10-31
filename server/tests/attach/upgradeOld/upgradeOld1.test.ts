@@ -1,16 +1,17 @@
-import chalk from "chalk";
 import { beforeAll, describe, expect, test } from "bun:test";
-import { Customer } from "@autumn/shared";
-import { expectCustomerV0Correct } from "tests/utils/expectUtils/expectCustomerV0Correct.js";
+import type { Customer } from "@autumn/shared";
+import chalk from "chalk";
 import { addDays } from "date-fns";
+import type Stripe from "stripe";
+import { expectCustomerV0Correct } from "tests/utils/expectUtils/expectCustomerV0Correct.js";
 import ctx from "tests/utils/testInitUtils/createTestContext.js";
-import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
-import type Stripe from "stripe";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import {
-	sharedProWithTrialProduct,
+	initUpgradeOldSharedProducts,
 	sharedPremiumProduct,
+	sharedProWithTrialProduct,
 } from "./sharedProducts.js";
 
 describe(`${chalk.yellowBright(
@@ -19,11 +20,23 @@ describe(`${chalk.yellowBright(
 	const customerId = "upgradeOld1";
 	let testClockId: string;
 	let customer: Customer;
-	const autumn: AutumnInt = new AutumnInt();
 	let stripeCli: Stripe;
+
+	const autumn = new AutumnInt({
+		secretKey: ctx.orgSecretKey,
+	});
+
+	const autumnV1 = new AutumnInt({
+		secretKey: ctx.orgSecretKey,
+		version: "0.1",
+	});
 
 	beforeAll(async () => {
 		stripeCli = ctx.stripeCli;
+
+		// Explicitly ensure shared products exist
+		await initUpgradeOldSharedProducts();
+
 		const { customer: customer_, testClockId: testClockId_ } =
 			await initCustomerV3({
 				ctx,
@@ -59,11 +72,10 @@ describe(`${chalk.yellowBright(
 	});
 
 	test("should check product, ents and invoices", async () => {
-		const res = await autumn.customers.get(customerId);
+		const res = await autumnV1.customers.get(customerId);
 		expectCustomerV0Correct({
 			sent: sharedPremiumProduct,
 			cusRes: res,
-			ctx,
 		});
 
 		const invoices = await res.invoices;

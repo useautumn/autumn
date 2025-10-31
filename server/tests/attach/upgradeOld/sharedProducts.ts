@@ -18,6 +18,7 @@ import { createSharedProducts } from "@/utils/scriptUtils/testUtils/createShared
 export const sharedProProduct = constructProduct({
 	id: "shared-upgradeold-pro",
 	type: "pro",
+	excludeBase: true,
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Dashboard,
@@ -42,6 +43,7 @@ export const sharedProProduct = constructProduct({
 export const sharedProWithTrialProduct = constructProduct({
 	id: "shared-upgradeold-pro-trial",
 	type: "pro",
+	excludeBase: true,
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Dashboard,
@@ -72,6 +74,7 @@ export const sharedProWithTrialProduct = constructProduct({
 export const sharedPremiumProduct = constructProduct({
 	id: "shared-upgradeold-premium",
 	type: "premium",
+	excludeBase: true,
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Messages,
@@ -88,6 +91,7 @@ export const sharedPremiumProduct = constructProduct({
 export const sharedPremiumWithTrialProduct = constructProduct({
 	id: "shared-upgradeold-premium-trial",
 	type: "premium",
+	excludeBase: true,
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Messages,
@@ -107,7 +111,7 @@ export const sharedPremiumWithTrialProduct = constructProduct({
 	},
 });
 
-await (async () => {
+export const initUpgradeOldSharedProducts = async () => {
 	await createSharedProducts({
 		ctx,
 		products: [
@@ -117,4 +121,7 @@ await (async () => {
 			sharedPremiumWithTrialProduct,
 		],
 	});
-})();
+};
+
+// Auto-init on import (backwards compat)
+await initUpgradeOldSharedProducts();

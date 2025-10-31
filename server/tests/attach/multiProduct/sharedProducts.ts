@@ -154,7 +154,7 @@ export const sharedFreeGroup2 = constructProduct({
 	],
 });
 
-await (async () => {
+export const initMultiProductSharedProducts = async () => {
 	await createSharedProducts({
 		ctx,
 		products: [
@@ -167,4 +167,7 @@ await (async () => {
 			sharedFreeGroup2,
 		],
 	});
-})();
+};
+
+// Auto-init on import (backwards compat)
+await initMultiProductSharedProducts();

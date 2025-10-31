@@ -43,9 +43,12 @@ export const sharedProProduct = constructProduct({
 	],
 });
 
-await (async () => {
+export const initBasicSharedProducts = async () => {
 	await createSharedProducts({
 		ctx,
 		products: [sharedDefaultFree, sharedProProduct],
 	});
-})();
+};
+
+// Auto-init on import (backwards compat)
+await initBasicSharedProducts();
