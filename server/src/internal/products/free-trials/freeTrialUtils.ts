@@ -164,7 +164,9 @@ export const handleNewFreeTrial = async ({
 }) => {
 	// If new free trial is null
 	if (!newFreeTrial) {
-		if (!isCustom && curFreeTrial) {
+		// Don't delete the old free trial when creating a new version
+		// The old version needs to keep its free trial for existing customers
+		if (!isCustom && curFreeTrial && !newVersion) {
 			await FreeTrialService.delete({
 				db,
 				id: curFreeTrial.id,
