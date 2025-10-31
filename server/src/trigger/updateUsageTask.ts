@@ -3,10 +3,13 @@ import {
 	type AppEnv,
 	CusProductStatus,
 	type Customer,
+	cusEntToIncludedUsage,
 	type Feature,
 	FeatureType,
+	type FullCusEntWithFullCusProduct,
 	type FullCustomerEntitlement,
 	type Organization,
+	sumValues,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -28,11 +31,13 @@ const getFeatureDeductions = ({
 	value,
 	features,
 	shouldSet,
+	entityId,
 }: {
 	cusEnts: FullCustomerEntitlement[];
 	value: number;
 	features: Feature[];
 	shouldSet: boolean;
+	entityId?: string;
 }) => {
 	const meteredFeature =
 		features.find((f) => f.type === FeatureType.Metered) || features[0];
@@ -62,11 +67,21 @@ const getFeatureDeductions = ({
 		let deduction = newValue;
 
 		if (shouldSet) {
-			const totalAllowance = cusEnts.reduce((acc, curr) => {
-				return acc + (curr.entitlement.allowance || 0);
-			}, 0);
+			// const totalAllowance = cusEnts.reduce((acc, curr) => {
+			// 	return acc + (curr.entitlement.allowance || 0);
+			// }, 0);
+			const totalIncludedUsage = sumValues(
+				cusEnts.map((cusEnt) => {
+					return cusEntToIncludedUsage({
+						cusEnt: cusEnt as FullCusEntWithFullCusProduct,
+						entityId: entityId,
+					});
+				}),
+			);
 
-			const targetBalance = new Decimal(totalAllowance).sub(value).toNumber();
+			const targetBalance = new Decimal(totalIncludedUsage)
+				.sub(value)
+				.toNumber();
 
 			const totalBalance = getFeatureBalance({
 				cusEnts,
@@ -207,6 +222,7 @@ export const updateUsage = async ({
 		value,
 		shouldSet: setUsage,
 		features,
+		entityId,
 	});
 
 	logUsageUpdate({
