@@ -15,6 +15,7 @@ export const sharedFreeProduct = constructProduct({
 	id: "shared-downgrade-free",
 	type: "free",
 	isDefault: true,
+	excludeBase: true,
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Messages,
@@ -27,6 +28,7 @@ export const sharedFreeProduct = constructProduct({
 export const sharedProProduct = constructProduct({
 	id: "shared-downgrade-pro",
 	type: "pro",
+	excludeBase: true,
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Dashboard,
@@ -51,6 +53,7 @@ export const sharedProProduct = constructProduct({
 export const sharedPremiumProduct = constructProduct({
 	id: "shared-downgrade-premium",
 	type: "premium",
+	excludeBase: true,
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Messages,
@@ -64,9 +67,12 @@ export const sharedPremiumProduct = constructProduct({
 	],
 });
 
-await (async () => {
+export const initDowngradeSharedProducts = async () => {
 	await createSharedProducts({
 		ctx,
 		products: [sharedFreeProduct, sharedProProduct, sharedPremiumProduct],
 	});
-})();
+};
+
+// Auto-init on import (backwards compat)
+await initDowngradeSharedProducts();

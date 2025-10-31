@@ -34,9 +34,12 @@ export const sharedProWithOverage = constructProduct({
 	],
 });
 
-await (async () => {
+export const initUsageSharedProducts = async () => {
 	await createSharedProducts({
 		ctx,
 		products: [sharedProWithOverage],
 	});
-})();
+};
+
+// Auto-init on import (backwards compat)
+await initUsageSharedProducts();

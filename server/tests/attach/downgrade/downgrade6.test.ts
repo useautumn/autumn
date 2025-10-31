@@ -9,6 +9,7 @@ import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js"
 import {
 	sharedFreeProduct,
 	sharedPremiumProduct,
+	initDowngradeSharedProducts,
 } from "./sharedProducts.js";
 
 const testCase = "downgrade6";
@@ -19,6 +20,9 @@ describe(`${chalk.yellowBright(`${testCase}: testing expire button`)}`, () => {
 	let customer: Customer;
 
 	beforeAll(async () => {
+		// Explicitly ensure shared products exist
+		await initDowngradeSharedProducts();
+
 		const { testClockId: testClockId_, customer: customer_ } =
 			await initCustomerV3({
 				ctx,
@@ -59,7 +63,6 @@ describe(`${chalk.yellowBright(`${testCase}: testing expire button`)}`, () => {
 		expectCustomerV0Correct({
 			sent: sharedFreeProduct,
 			cusRes: res,
-			ctx,
 		});
 	});
 });

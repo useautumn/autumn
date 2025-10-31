@@ -1,16 +1,16 @@
-import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type AppEnv,
 	CusProductStatus,
 	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
+import { beforeAll, describe, expect, test } from "bun:test";
 import chalk from "chalk";
 import type { Stripe } from "stripe";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
 import { advanceToNextInvoice } from "tests/utils/testAttachUtils/testAttachUtils.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -77,17 +77,6 @@ describe(`${chalk.yellowBright("mergedDowngrade4: Testing advance clock, schedul
 	let env: AppEnv;
 
 	beforeAll(async () => {
-		db = ctx.db;
-		org = ctx.org;
-		env = ctx.env;
-
-		stripeCli = ctx.stripeCli;
-
-		addPrefixToProducts({
-			products: [pro, premium, premiumAnnual],
-			prefix: testCase,
-		});
-
 		await initProductsV0({
 			ctx,
 			products: [pro, premium, premiumAnnual],
@@ -98,9 +87,15 @@ describe(`${chalk.yellowBright("mergedDowngrade4: Testing advance clock, schedul
 		const res = await initCustomerV3({
 			ctx,
 			customerId,
+			customerData: {},
+			attachPm: "success",
 			withTestClock: true,
 		});
 
+		stripeCli = ctx.stripeCli;
+		db = ctx.db;
+		org = ctx.org;
+		env = ctx.env;
 		testClockId = res.testClockId!;
 	});
 

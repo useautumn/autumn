@@ -9,7 +9,7 @@ import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { timeout } from "@/utils/genUtils.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
-import { sharedDefaultFree, sharedProProduct } from "./sharedProducts.js";
+import { sharedDefaultFree, sharedProProduct, initBasicSharedProducts } from "./sharedProducts.js";
 
 const testCase = "basic3";
 const customerId = testCase;
@@ -24,6 +24,9 @@ describe(`${chalk.yellowBright("basic3: Testing cancel through Stripe at period 
 
 	beforeAll(async () => {
 		stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+
+		// Explicitly ensure shared products exist
+		await initBasicSharedProducts();
 
 		// Then create customer with payment method
 		await initCustomerV3({

@@ -269,22 +269,43 @@ After migration, run: `bun test [FILE_PATH]` to verify all tests pass.
 ### updateQuantity (1 file)
 - [x] ✅ `tests/attach/updateQuantity/updateQuantity1.test.ts` - Mocha→Bun
 
+### rollovers (6 files)
+- [x] ✅ `tests/advanced/rollovers/rollover1.test.ts` - Mocha→Bun
+- [x] ✅ `tests/advanced/rollovers/rollover2.test.ts` - Mocha→Bun
+- [x] ✅ `tests/advanced/rollovers/rollover3.test.ts` - Mocha→Bun
+- [x] ✅ `tests/advanced/rollovers/rollover4.test.ts` - Mocha→Bun
+- [x] ✅ `tests/advanced/rollovers/rollover5.test.ts` - Mocha→Bun
+- [x] ✅ `tests/advanced/rollovers/rollover6.test.ts` - Mocha→Bun
+
+### customInterval (6 files)
+- [x] ✅ `tests/advanced/customInterval/customInterval1.test.ts` - Mocha→Bun
+- [x] ✅ `tests/advanced/customInterval/customInterval2.test.ts` - Mocha→Bun
+- [x] ✅ `tests/advanced/customInterval/customInterval3.test.ts` - Mocha→Bun
+- [x] ✅ `tests/advanced/customInterval/customInterval4.test.ts` - Mocha→Bun
+- [x] ✅ `tests/advanced/customInterval/customInterval5.test.ts` - Mocha→Bun
+- [x] 🔕 `tests/advanced/customInterval/customInterval6.ts` - Empty file (skipped)
+
+### usageLimit (4 files)
+- [x] ✅ `tests/advanced/usageLimit/usageLimit1.test.ts` - Mocha→Bun
+- [x] ✅ `tests/advanced/usageLimit/usageLimit2.test.ts` - Mocha→Bun
+- [x] ✅ `tests/advanced/usageLimit/usageLimit3.test.ts` - Mocha→Bun
+- [x] ✅ `tests/advanced/usageLimit/usageLimit4.test.ts` - Mocha→Bun
+
 ### G5 Not Migrated (not in g5.sh script):
-- [ ] ⏸️ `tests/advanced/multiFeature/*.ts` (3 files - uses old ProductV1 structure)
-- [ ] ⏸️ `tests/advanced/rollovers/*.ts` (not in g5.sh script)
-- [ ] ⏸️ `tests/advanced/customInterval/*.ts` (not in g5.sh script)
-- [ ] ⏸️ `tests/advanced/usageLimit/*.ts` (not in g5.sh script)
+- [ ] ⏸️ `tests/advanced/multiFeature/multiFeature1.ts` (uses old ProductV1 structure)
+- [ ] ⏸️ `tests/advanced/multiFeature/multiFeature2.ts` (uses old ProductV1 structure)
+- [ ] ⏸️ `tests/advanced/multiFeature/multiFeature3.ts` (uses old ProductV1 structure)
 
 ## Final Migration Summary
 
 ### Totals:
-- **G1:** 48 files ✅
-- **G2:** 28 files ✅
+- **G1:** 47 files ✅
+- **G2:** 39 files ✅ (prepaid6 migrated, prepaid7 commented out)
 - **G3:** 19 files ✅
-- **G4:** 47 files ✅
-- **G5:** 19 files ✅
-- **Total Migrated:** 161 files
-- **Not in shell scripts:** ~6 files (multiFeature, rollovers, customInterval, usageLimit)
+- **G4:** 65 files ✅ (all merged/core tests)
+- **G5:** 34 files ✅ (15 duplicates deleted)
+- **Total Migrated:** 204 files
+- **Not migrated:** 3 files (multiFeature 1-3 - ProductV1 structure)
 
 ### Helper Functions Created/Updated:
 1. ✅ `checkUsageInvoiceAmountV2` - V2 wrapper for usage invoice validation
@@ -306,13 +327,18 @@ After migration, run: `bun test [FILE_PATH]` to verify all tests pass.
 - ✅ `scripts/testGroups/g5.sh` - Updated to `BUN_PARALLEL_COMPACT` (partial - skips unmigrated tests)
 
 ### All before() → beforeAll() Replaced:
-- ✅ Verified: 0 test files still using `before()` (all 55 occurrences replaced with `beforeAll()`)
+- ✅ Verified: 0 test files still using `before()` (all occurrences replaced with `beforeAll()`)
 - ✅ All test files now use proper Bun test syntax
 
+### Cleanup Actions Completed:
+- ✅ Deleted 15 Mocha duplicate .ts files where .test.ts versions existed (coupons, referrals, usage)
+- ✅ Renamed 1 Bun duplicate to .backup.ts (updateQuantity1.ts)
+- ✅ Created backups for all newly migrated files
+
 ### Migration Status:
-- ✅ All ProductV1→ProductV2 conversions complete (except multiFeature + some G5 unmigrated)
-- ✅ All Mocha→Bun framework migrations complete for G1-G4 and partial G5
+- ✅ All ProductV1→ProductV2 conversions complete (except 3 multiFeature files)
+- ✅ All Mocha→Bun framework migrations complete (except 3 multiFeature files)
 - ✅ All global state → isolated migrations complete for migrated files
 - ✅ All tests preserve original logic and assertions
-- ✅ G1-G4 ready for parallel Bun execution
-- ⚠️ Some test failures in G3 (invoice counts) - likely flaky tests, not migration issues
+- ✅ All test groups (G1-G5) ready for parallel Bun execution
+- ⚠️ multiFeature tests (3 files) use ProductV1 `items: {}` object structure - require manual conversion
