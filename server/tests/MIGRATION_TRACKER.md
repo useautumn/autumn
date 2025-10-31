@@ -109,7 +109,7 @@ After migration, run: `bun test [FILE_PATH]` to verify all tests pass.
 - ✅ tests/attach/checkout (8 files)
 
 ### G2.sh Test Suite Status
-**All 28 active test files migrated to Bun:**
+**All 35 active test files migrated to Bun:**
 - ✅ Migrations (5 files)
 - ✅ NewVersion (3 files)
 - ✅ UpgradeOld (5 files including sharedProducts)
@@ -117,14 +117,17 @@ After migration, run: `bun test [FILE_PATH]` to verify all tests pass.
 - ✅ UpdateEnts (5 files including utility)
 - ✅ Prepaid (5 files, 2 commented out)
 - ✅ Advanced/check (1 file)
+- ✅ Interval/upgrade (3 files)
+- ✅ Interval/multiSub (3 files)
+- ✅ Interval utility (1 file)
 
 ## Progress Summary
-- **Total Test Files in g1+g2**: 76
-- **Migrated**: 76 (100%)
+- **Total Test Files in g1+g2**: 83
+- **Migrated**: 83 (100%)
 - **In Progress**: 0 (0%)
 - **Remaining**: 0 (0%)
 
-## ✅ G2.sh Migration Complete! (All 28 files migrated)
+## ✅ G2.sh Migration Complete! (All 35 files migrated)
 
 ### Migration Tests (5 files)
 - [x] ✅ `tests/attach/migrations/migration1.test.ts` - Mocha→Bun
@@ -174,6 +177,15 @@ After migration, run: `bun test [FILE_PATH]` to verify all tests pass.
 
 ### Advanced Tests (1 file)
 - [x] ✅ `tests/advanced/check/check1.test.ts` - Mocha→Bun
+
+### Interval Tests (7 files)
+- [x] ✅ `tests/interval/upgrade/interval1.test.ts` - Mocha→Bun
+- [x] ✅ `tests/interval/upgrade/interval2.test.ts` - Mocha→Bun
+- [x] ✅ `tests/interval/upgrade/interval3.test.ts` - Mocha→Bun
+- [x] ✅ `tests/interval/multiSub/multiSubInterval1.test.ts` - Mocha→Bun
+- [x] ✅ `tests/interval/multiSub/multiSubInterval2.test.ts` - Mocha→Bun
+- [x] ✅ `tests/interval/multiSub/multiSubInterval3.test.ts` - Mocha→Bun
+- [x] ✅ `tests/interval/intervalUtils1.test.ts` - Mocha→Bun
 
 ## G3 Migration Complete! (All 19 files)
 
@@ -235,7 +247,7 @@ After migration, run: `bun test [FILE_PATH]` to verify all tests pass.
 ### Utility Files Updated:
 - [x] ✅ `tests/merged/mergeUtils/expectSubCorrect.ts` - Chai→Bun assertions (kept as .ts)
 
-## G5 Migration Complete! (19 files)
+## G5 Migration Complete! (34 files migrated, but only 19 in g5.sh script)
 
 ### multiProduct (2 files + sharedProducts)
 - [x] ✅ `tests/attach/multiProduct/multiProduct1.test.ts` - Mocha→Bun + global→isolated
@@ -269,43 +281,69 @@ After migration, run: `bun test [FILE_PATH]` to verify all tests pass.
 ### updateQuantity (1 file)
 - [x] ✅ `tests/attach/updateQuantity/updateQuantity1.test.ts` - Mocha→Bun
 
-### rollovers (6 files)
-- [x] ✅ `tests/advanced/rollovers/rollover1.test.ts` - Mocha→Bun
-- [x] ✅ `tests/advanced/rollovers/rollover2.test.ts` - Mocha→Bun
-- [x] ✅ `tests/advanced/rollovers/rollover3.test.ts` - Mocha→Bun
-- [x] ✅ `tests/advanced/rollovers/rollover4.test.ts` - Mocha→Bun
-- [x] ✅ `tests/advanced/rollovers/rollover5.test.ts` - Mocha→Bun
-- [x] ✅ `tests/advanced/rollovers/rollover6.test.ts` - Mocha→Bun
+### rollovers (6 files) ⚠️ NOT IN g5.sh SCRIPT
+- [x] ✅ `tests/advanced/rollovers/rollover1.test.ts` - Mocha→Bun (migrated but not in g5.sh)
+- [x] ✅ `tests/advanced/rollovers/rollover2.test.ts` - Mocha→Bun (migrated but not in g5.sh)
+- [x] ✅ `tests/advanced/rollovers/rollover3.test.ts` - Mocha→Bun (migrated but not in g5.sh)
+- [x] ✅ `tests/advanced/rollovers/rollover4.test.ts` - Mocha→Bun (migrated but not in g5.sh)
+- [x] ✅ `tests/advanced/rollovers/rollover5.test.ts` - Mocha→Bun (migrated but not in g5.sh)
+- [x] ✅ `tests/advanced/rollovers/rollover6.test.ts` - Mocha→Bun (migrated but not in g5.sh)
 
-### customInterval (6 files)
-- [x] ✅ `tests/advanced/customInterval/customInterval1.test.ts` - Mocha→Bun
-- [x] ✅ `tests/advanced/customInterval/customInterval2.test.ts` - Mocha→Bun
-- [x] ✅ `tests/advanced/customInterval/customInterval3.test.ts` - Mocha→Bun
-- [x] ✅ `tests/advanced/customInterval/customInterval4.test.ts` - Mocha→Bun
-- [x] ✅ `tests/advanced/customInterval/customInterval5.test.ts` - Mocha→Bun
+### customInterval (5 files) ⚠️ NOT IN g5.sh SCRIPT
+- [x] ✅ `tests/advanced/customInterval/customInterval1.test.ts` - Mocha→Bun (migrated but not in g5.sh)
+- [x] ✅ `tests/advanced/customInterval/customInterval2.test.ts` - Mocha→Bun (migrated but not in g5.sh)
+- [x] ✅ `tests/advanced/customInterval/customInterval3.test.ts` - Mocha→Bun (migrated but not in g5.sh)
+- [x] ✅ `tests/advanced/customInterval/customInterval4.test.ts` - Mocha→Bun (migrated but not in g5.sh)
+- [x] ✅ `tests/advanced/customInterval/customInterval5.test.ts` - Mocha→Bun (migrated but not in g5.sh)
 - [x] 🔕 `tests/advanced/customInterval/customInterval6.ts` - Empty file (skipped)
 
-### usageLimit (4 files)
-- [x] ✅ `tests/advanced/usageLimit/usageLimit1.test.ts` - Mocha→Bun
-- [x] ✅ `tests/advanced/usageLimit/usageLimit2.test.ts` - Mocha→Bun
-- [x] ✅ `tests/advanced/usageLimit/usageLimit3.test.ts` - Mocha→Bun
-- [x] ✅ `tests/advanced/usageLimit/usageLimit4.test.ts` - Mocha→Bun
+### usageLimit (4 files) ⚠️ NOT IN g5.sh SCRIPT
+- [x] ✅ `tests/advanced/usageLimit/usageLimit1.test.ts` - Mocha→Bun (migrated but not in g5.sh)
+- [x] ✅ `tests/advanced/usageLimit/usageLimit2.test.ts` - Mocha→Bun (migrated but not in g5.sh)
+- [x] ✅ `tests/advanced/usageLimit/usageLimit3.test.ts` - Mocha→Bun (migrated but not in g5.sh)
+- [x] ✅ `tests/advanced/usageLimit/usageLimit4.test.ts` - Mocha→Bun (migrated but not in g5.sh)
 
 ### G5 Not Migrated (not in g5.sh script):
 - [ ] ⏸️ `tests/advanced/multiFeature/multiFeature1.ts` (uses old ProductV1 structure)
 - [ ] ⏸️ `tests/advanced/multiFeature/multiFeature2.ts` (uses old ProductV1 structure)
 - [ ] ⏸️ `tests/advanced/multiFeature/multiFeature3.ts` (uses old ProductV1 structure)
 
+**⚠️ ACTION REQUIRED:** The g5.sh comment says "rollovers, customInterval, usageLimit still use Mocha (not migrated yet)" but these 15 files ARE migrated. Either:
+1. Add these directories to g5.sh script, OR
+2. Create a new test group (g7.sh) for these migrated advanced tests
+
+## G6 - Alex Tests (⏳ NOT MIGRATED - Still Using Mocha)
+
+### Alex Integration Tests (6 test files)
+- [ ] ⏳ `tests/alex/01_free.ts` - Uses Mocha (not migrated)
+- [ ] ⏳ `tests/alex/02_pro.ts` - Uses Mocha (not migrated)
+- [ ] ⏳ `tests/alex/03_premium.ts` - Uses Mocha (not migrated)
+- [ ] ⏳ `tests/alex/04_topups.ts` - Uses Mocha (not migrated)
+- [ ] ⏳ `tests/alex/05_cancel.ts` - Uses Mocha (not migrated)
+- [ ] ⏳ `tests/alex/06_switch.ts` - Uses Mocha (not migrated)
+
+### Utility Files (3 files)
+- `tests/alex/00_setup.ts` - Setup file (ignored in g6.sh)
+- `tests/alex/utils.ts` - Helper utilities
+- `tests/alex/init.ts` - Initialization utilities
+
+**Note:** g6.sh runs these tests using `npx mocha --parallel` with comment "will be migrated later"
+
 ## Final Migration Summary
 
 ### Totals:
 - **G1:** 47 files ✅
-- **G2:** 39 files ✅ (prepaid6 migrated, prepaid7 commented out)
+- **G2:** 35 files ✅ (includes 7 interval tests)
 - **G3:** 19 files ✅
 - **G4:** 65 files ✅ (all merged/core tests)
-- **G5:** 34 files ✅ (15 duplicates deleted)
-- **Total Migrated:** 204 files
-- **Not migrated:** 3 files (multiFeature 1-3 - ProductV1 structure)
+- **G5:** 19 files in script ✅ + 15 files migrated but not in script ⚠️
+- **G6:** 6 files ⏳ (NOT migrated - still using Mocha)
+- **Total Migrated to Bun:** 219 files (204 in scripts + 15 orphaned)
+- **Total in Test Scripts (g1-g5):** 185 files
+- **Not migrated:**
+  - 3 files (multiFeature 1-3 - ProductV1 structure) ⏸️
+  - 6 files (alex tests - still using Mocha) ⏳
+  - 15 files (rollovers, customInterval, usageLimit - migrated but not in g5.sh) ⚠️
 
 ### Helper Functions Created/Updated:
 1. ✅ `checkUsageInvoiceAmountV2` - V2 wrapper for usage invoice validation
@@ -318,13 +356,15 @@ After migration, run: `bun test [FILE_PATH]` to verify all tests pass.
 4. ✅ `tests/attach/multiProduct/sharedProducts.ts`
 5. ✅ `tests/advanced/usage/sharedProducts.ts`
 
-### Shell Scripts Updated:
-- ✅ `server/shell/g1.sh` - Uses `$BUN_PARALLEL_COMPACT`
-- ✅ `scripts/testGroups/g1.sh` - Uses `BUN_PARALLEL_COMPACT`
-- ✅ `scripts/testGroups/g2.sh` - Updated to `BUN_PARALLEL_COMPACT`
-- ✅ `scripts/testGroups/g3.sh` - Updated to `BUN_PARALLEL_COMPACT`
-- ✅ `scripts/testGroups/g4.sh` - Updated to `BUN_PARALLEL_COMPACT`
-- ✅ `scripts/testGroups/g5.sh` - Updated to `BUN_PARALLEL_COMPACT` (partial - skips unmigrated tests)
+### Shell Scripts Status:
+- ✅ `scripts/testGroups/g1.sh` - Uses `BUN_PARALLEL_COMPACT` (47 files)
+- ✅ `scripts/testGroups/g2.sh` - Uses `BUN_PARALLEL_COMPACT` (35 files, includes interval tests)
+- ✅ `scripts/testGroups/g3.sh` - Uses `BUN_PARALLEL_COMPACT` (19 files)
+- ✅ `scripts/testGroups/g4.sh` - Uses `BUN_PARALLEL_COMPACT` (65 files)
+- ⚠️ `scripts/testGroups/g5.sh` - Uses `BUN_PARALLEL_COMPACT` (19 files)
+  - **MISSING:** rollovers (6), customInterval (5), usageLimit (4) directories
+  - Comment says these "still use Mocha" but they ARE migrated
+- ⏳ `scripts/testGroups/g6.sh` - Uses `npx mocha --parallel` (6 files, not migrated)
 
 ### All before() → beforeAll() Replaced:
 - ✅ Verified: 0 test files still using `before()` (all occurrences replaced with `beforeAll()`)
@@ -336,9 +376,82 @@ After migration, run: `bun test [FILE_PATH]` to verify all tests pass.
 - ✅ Created backups for all newly migrated files
 
 ### Migration Status:
-- ✅ All ProductV1→ProductV2 conversions complete (except 3 multiFeature files)
-- ✅ All Mocha→Bun framework migrations complete (except 3 multiFeature files)
+- ✅ All ProductV1→ProductV2 conversions complete (except 3 multiFeature files + 6 alex files)
+- ✅ All Mocha→Bun framework migrations complete (except 3 multiFeature files + 6 alex files)
 - ✅ All global state → isolated migrations complete for migrated files
 - ✅ All tests preserve original logic and assertions
-- ✅ All test groups (G1-G5) ready for parallel Bun execution
-- ⚠️ multiFeature tests (3 files) use ProductV1 `items: {}` object structure - require manual conversion
+- ✅ Test groups G1-G4 ready for parallel Bun execution
+- ⚠️ G5 is partial - missing 15 migrated test files (rollovers, customInterval, usageLimit)
+- ⏳ G6 (alex tests) still uses Mocha framework
+
+---
+
+## 🚨 CRITICAL DISCREPANCIES FOUND
+
+### Issue 1: G2 Missing Interval Tests in Tracker
+**Status:** FIXED ✅
+- Added 7 interval test files to tracker (interval/upgrade, interval/multiSub)
+- Updated G2 count from 28 to 35 files
+
+### Issue 2: G5 - Orphaned Migrated Tests
+**Status:** ⚠️ NEEDS ACTION
+- **15 test files are migrated but NOT in g5.sh script:**
+  - `tests/advanced/rollovers/` (6 files)
+  - `tests/advanced/customInterval/` (5 files)
+  - `tests/advanced/usageLimit/` (4 files)
+- **g5.sh comment is outdated:** Says these "still use Mocha (not migrated yet)" but they ARE migrated
+- **Action needed:** Either add these to g5.sh OR create g7.sh for them
+
+### Issue 3: G6 Not Tracked
+**Status:** FIXED ✅
+- Added G6 section tracking 6 alex test files (still using Mocha)
+- These are integration tests that will need migration later
+
+### Issue 4: Incorrect Total Counts
+**Status:** FIXED ✅
+- Old claim: "204 files migrated"
+- **Actual:** 219 files migrated to Bun (but only 185 are in test scripts g1-g5)
+- 15 orphaned files exist but aren't run by any script
+
+---
+
+## 📋 RECOMMENDED ACTIONS
+
+1. **Update g5.sh to include orphaned tests:**
+   ```bash
+   # Add to scripts/testGroups/g5.sh:
+   BUN_PARALLEL_COMPACT \
+     'server/tests/advanced/coupons' \
+     'server/tests/attach/updateQuantity' \
+     'server/tests/advanced/referrals' \
+     'server/tests/advanced/referrals/paid' \
+     'server/tests/attach/multiProduct' \
+     'server/tests/advanced/usage' \
+     'server/tests/advanced/rollovers' \
+     'server/tests/advanced/customInterval' \
+     'server/tests/advanced/usageLimit' \
+     --max=6
+   ```
+
+2. **Update g5.sh comment:**
+   - Remove: "Note: advanced/multiFeature, advanced/rollovers, advanced/customInterval, advanced/usageLimit still use Mocha (not migrated yet)"
+   - Replace: "Note: advanced/multiFeature still uses Mocha (not migrated yet)"
+
+3. **Consider migrating G6 (alex tests):**
+   - 6 integration test files still using Mocha
+   - Would complete the Mocha→Bun migration (except multiFeature)
+
+---
+
+## ✅ VERIFIED COUNTS (Post-Sweep)
+
+- **G1:** 47 files ✅ (matches script)
+- **G2:** 35 files ✅ (matches script - corrected from 28)
+- **G3:** 19 files ✅ (matches script)
+- **G4:** 65 files ✅ (matches script)
+- **G5:** 19 files in script, 15 files orphaned ⚠️
+- **G6:** 6 files using Mocha ⏳
+- **Total in scripts (g1-g5):** 185 files
+- **Total migrated to Bun:** 219 files
+- **Orphaned (migrated but not in scripts):** 15 files
+- **Still using Mocha:** 9 files (3 multiFeature + 6 alex)
