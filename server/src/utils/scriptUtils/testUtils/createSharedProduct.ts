@@ -58,5 +58,9 @@ export const createSharedProducts = async ({
 			autumn,
 			products,
 		});
-	} catch (_error) {}
+	} catch (error) {
+		console.error('[createSharedProducts] Failed to create shared products:', error);
+		console.error('Product IDs:', products.map(p => p.id));
+		throw error;
+	}
 };
