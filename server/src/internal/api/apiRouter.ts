@@ -18,7 +18,7 @@ import { platformRouter } from "../platform/platformLegacy/platformRouter.js";
 import { productBetaRouter, productRouter } from "../products/productRouter.js";
 import { componentRouter } from "./components/componentRouter.js";
 import { entityRouter } from "./entities/entityRouter.js";
-import { checkRouter } from "./entitled/checkRouter.js";
+// import { checkRouter } from "./entitled/checkRouter.js";
 import { eventsRouter } from "./events/eventRouter.js";
 import { usageRouter } from "./events/usageRouter.js";
 import { invoiceRouter } from "./invoiceRouter.js";
@@ -55,8 +55,10 @@ apiRouter.use("/redemptions", redemptionRouter);
 // Cus Product
 apiRouter.use("", attachRouter);
 apiRouter.use("/cancel", cancelRouter);
-apiRouter.use("/entitled", checkRouter);
-apiRouter.use("/check", checkRouter);
+
+// apiRouter.use("/entitled", checkRouter);
+// apiRouter.use("/check", checkRouter);
+
 apiRouter.use("/events", eventsRouter);
 apiRouter.use("/track", eventsRouter);
 apiRouter.post("/setup_payment", handleSetupPayment);

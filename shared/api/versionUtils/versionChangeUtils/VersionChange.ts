@@ -11,6 +11,7 @@ export enum AffectedResource {
 	CusBalance = "cus_balance",
 	Invoice = "invoice",
 	Product = "product",
+	Check = "check",
 	// Add more as needed
 }
 
@@ -43,6 +44,11 @@ export abstract class VersionChange<
 	TOldSchema extends ZodType = ZodType,
 	TLegacyDataSchema extends ZodType = ZodType,
 > {
+	/**
+	 * Optional name for debugging purposes
+	 */
+	readonly name?: string;
+
 	/**
 	 * The newer version where the breaking change was introduced
 	 */
@@ -146,13 +152,6 @@ export abstract class VersionChange<
 	affects(resource: AffectedResource): boolean {
 		return this.affectedResources.includes(resource);
 	}
-
-	/**
-	 * Get the name of this change class
-	 */
-	get name(): string {
-		return this.constructor.name;
-	}
 }
 
 /**
@@ -173,6 +172,9 @@ export interface VersionChangeConfig<
 	TOldSchema extends ZodType = ZodType,
 	TLegacyDataSchema extends ZodType = ZodType,
 > {
+	/** Optional name for debugging purposes */
+	name?: string;
+
 	/** The newer version where the breaking change was introduced */
 	newVersion: ApiVersion;
 
@@ -268,6 +270,7 @@ export function defineVersionChange<
 		TOldSchema,
 		TLegacyDataSchema
 	> {
+		readonly name = config.name;
 		readonly newVersion = config.newVersion;
 		readonly oldVersion = config.oldVersion;
 		readonly description = config.description;

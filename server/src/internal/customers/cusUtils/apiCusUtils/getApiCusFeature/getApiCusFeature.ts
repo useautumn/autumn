@@ -44,7 +44,8 @@ const cusEntsToBreakdown = ({
 		keyToCusEnts[key] = [...(keyToCusEnts[key] || []), cusEnt];
 	}
 
-	if (Object.keys(keyToCusEnts).length === 1) return undefined;
+	const cusEntCount = Object.keys(keyToCusEnts).length;
+	if (cusEntCount <= 1) return undefined;
 
 	const breakdown: ApiCusFeatureBreakdown[] = [];
 

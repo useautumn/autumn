@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 
 interface UseClearQueryParamsProps {
 	/** Query param keys to clear */
