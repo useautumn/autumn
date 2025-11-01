@@ -130,12 +130,7 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 			}}
 		>
 			<div className="flex flex-col gap-4 h-full relative w-full text-sm pb-0">
-				<h1
-					className={cn(
-						"text-xl font-medium shrink-0 pl-10",
-						env === AppEnv.Sandbox ? "pt-4" : "pt-6",
-					)}
-				>
+				<h1 className="text-xl font-medium shrink-0 pt-6 pl-10">
 					Analytics
 				</h1>
 				<div className="max-h-[400px] min-h-[400px] pb-6">
