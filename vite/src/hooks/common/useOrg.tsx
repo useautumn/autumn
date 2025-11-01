@@ -47,7 +47,6 @@ export const useOrg = (params?: { env?: AppEnv }) => {
 		queryKey: params?.env ? ["org", params.env] : ["org"],
 		queryFn: fetcher,
 		initialData: getInitialData(),
-		retry: false,
 	});
 
 	useEffect(() => {
