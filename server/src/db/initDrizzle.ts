@@ -10,7 +10,7 @@ export const client = postgres(process.env.DATABASE_URL!);
 export const db = drizzle(client, { schema });
 
 export const initDrizzle = (params?: { maxConnections?: number }) => {
-	const maxConnections = params?.maxConnections;
+	const maxConnections = params?.maxConnections || 20;
 	const client = postgres(process.env.DATABASE_URL!, {
 		max: maxConnections,
 	});

@@ -1,11 +1,10 @@
-import { notNullish } from "@/utils/genUtils.js";
 import {
-	Entity,
-	EntityWithFeature,
-	Feature,
-	FullCusEntWithFullCusProduct,
-	FullCustomerEntitlement,
+	type Entity,
+	type Feature,
+	type FullCusEntWithFullCusProduct,
+	type FullCustomerEntitlement,
 } from "@autumn/shared";
+import { notNullish } from "@/utils/genUtils.js";
 
 export const cusEntMatchesEntity = ({
 	cusEnt,
@@ -32,7 +31,7 @@ export const cusEntMatchesEntity = ({
 
 	if (notNullish(cusEnt.entitlement.entity_feature_id)) {
 		entityFeatureIdMatch =
-			cusEnt.entitlement.entity_feature_id == entity.feature_id;
+			cusEnt.entitlement.entity_feature_id === entity.feature_id;
 	}
 
 	return cusProductMatch && entityFeatureIdMatch;
@@ -55,7 +54,7 @@ export const findMainCusEntForFeature = ({
 	cusEnts: FullCustomerEntitlement[];
 	feature: Feature;
 }) => {
-	let mainCusEnt = cusEnts.find(
+	const mainCusEnt = cusEnts.find(
 		(e: any) => e.entitlement.feature.internal_id === feature.internal_id,
 	);
 
@@ -88,12 +87,12 @@ export const findCusEnt = ({
 	features?: Feature[];
 }) => {
 	return cusEnts.find((ce: any) => {
-		let featureMatch =
+		const featureMatch =
 			ce.entitlement.feature.internal_id === feature.internal_id;
 
-		let entityMatch = cusEntMatchesEntity({ cusEnt: ce, entity, features });
+		const entityMatch = cusEntMatchesEntity({ cusEnt: ce, entity, features });
 
-		let usageMatch = onlyUsageAllowed ? ce.usage_allowed : true;
+		const usageMatch = onlyUsageAllowed ? ce.usage_allowed : true;
 
 		return featureMatch && entityMatch && usageMatch;
 	});

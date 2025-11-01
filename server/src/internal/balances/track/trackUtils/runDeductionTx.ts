@@ -82,6 +82,7 @@ const deductFromCusEnts = async ({
 			cusProducts: fullCus.customer_products,
 			featureIds: relevantFeatures.map((f) => f.id),
 			reverseOrder: org.config?.reverse_deduction_order,
+			entity: fullCus.entity,
 		});
 
 		const { unlimited } = getUnlimitedAndUsageAllowed({

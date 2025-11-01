@@ -1,10 +1,11 @@
-import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
+import type { Entity } from "../../models/cusModels/entityModels/entityModels.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import type { FullCustomerPrice } from "../../models/cusProductModels/cusPriceModels/cusPriceModels.js";
 import { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
 import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
 import type { BillingType } from "../../models/productModels/priceModels/priceEnums.js";
 import type { FullProduct } from "../../models/productModels/productModels.js";
+import { cusEntMatchesEntity } from "../cusEntUtils/cusEntUtils.js";
 import { sortCusEntsForDeduction } from "../cusEntUtils/sortCusEntsForDeduction.js";
 import { getBillingType } from "../productUtils/priceUtils.js";
 
@@ -51,14 +52,16 @@ export const cusProductsToCusEnts = ({
 	reverseOrder = false,
 	featureId,
 	featureIds,
+	entity,
 }: {
 	cusProducts: FullCusProduct[];
 	inStatuses?: CusProductStatus[];
 	reverseOrder?: boolean;
 	featureId?: string;
 	featureIds?: string[];
+	entity?: Entity;
 }) => {
-	let cusEnts: FullCustomerEntitlement[] = [];
+	let cusEnts: FullCusEntWithFullCusProduct[] = [];
 
 	for (const cusProduct of cusProducts) {
 		if (!inStatuses.includes(cusProduct.status)) {
@@ -82,6 +85,15 @@ export const cusProductsToCusEnts = ({
 	if (featureIds) {
 		cusEnts = cusEnts.filter((cusEnt) =>
 			featureIds.includes(cusEnt.entitlement.feature.id),
+		);
+	}
+
+	if (entity) {
+		cusEnts = cusEnts.filter((cusEnt) =>
+			cusEntMatchesEntity({
+				cusEnt: cusEnt,
+				entity,
+			}),
 		);
 	}
 

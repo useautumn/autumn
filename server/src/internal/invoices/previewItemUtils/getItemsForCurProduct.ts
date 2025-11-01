@@ -44,6 +44,7 @@ export const getItemsForCurProduct = async ({
 	let items: PreviewLineItem[] = [];
 	const subItems = sub?.items.data || [];
 	const curPrices = cusProductToPrices({ cusProduct: curCusProduct });
+	// const anchor = sub?.billing_cycle_anchor ? sub.billing_cycle_anchor * 1000 : undefined;
 
 	for (const price of curPrices) {
 		if (isArrearPrice({ price }) || isContUsePrice({ price })) {
@@ -51,6 +52,9 @@ export const getItemsForCurProduct = async ({
 		}
 
 		const previewLineItem = priceToUnusedPreviewItem({
+			anchor: sub?.billing_cycle_anchor
+				? sub.billing_cycle_anchor * 1000
+				: undefined,
 			price,
 			stripeItems: subItems,
 			cusProduct: curCusProduct,

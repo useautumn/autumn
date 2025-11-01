@@ -1,4 +1,5 @@
 import {
+	ApiVersion,
 	InsufficientBalanceError,
 	SuccessCode,
 	TrackParamsSchema,
@@ -64,7 +65,8 @@ export const handleTrack = createRoute({
 				event_name: body.event_name,
 			};
 
-			return c.json(response);
+			if (ctx.apiVersion.gte(ApiVersion.V1_1)) return c.json(response);
+			return c.json({ success: true });
 		} catch (error) {
 			if (error instanceof InsufficientBalanceError) {
 				return c.json({
