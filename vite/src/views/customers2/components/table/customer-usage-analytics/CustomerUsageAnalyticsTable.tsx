@@ -1,9 +1,4 @@
 import {
-	getCoreRowModel,
-	getFilteredRowModel,
-	useReactTable,
-} from "@tanstack/react-table";
-import {
 	parseAsArrayOf,
 	parseAsInteger,
 	parseAsString,
@@ -12,6 +7,7 @@ import {
 import { useEffect, useMemo } from "react";
 import { Table } from "@/components/general/table";
 import { useCusEventsQuery } from "@/views/customers/customer/hooks/useCusEventsQuery";
+import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { CustomerUsageAnalyticsChart } from "./CustomerUsageAnalyticsChart";
 import { CustomerUsageAnalyticsColumns } from "./CustomerUsageAnalyticsColumns";
 import { CustomerUsageAnalyticsFullButton } from "./CustomerUsageAnalyticsFullButton";
@@ -74,12 +70,9 @@ export function CustomerUsageAnalyticsTable() {
 	}, [events, selectedDays, selectedFeatures]);
 
 	const enableSorting = false;
-	const table = useReactTable({
+	const table = useCustomerTable({
 		data: filteredEvents,
 		columns: CustomerUsageAnalyticsColumns,
-		getCoreRowModel: getCoreRowModel(),
-		getFilteredRowModel: getFilteredRowModel(),
-		enableSorting,
 	});
 
 	return (

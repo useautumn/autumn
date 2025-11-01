@@ -1,8 +1,5 @@
-import {
-	CusProductStatus,
-	type FullCusProduct,
-	type FullCustomer,
-} from "@autumn/shared";
+import type { FullCusProduct, FullCustomer } from "@autumn/shared";
+import { filterByExpiredStatus } from "@/views/customers2/utils/tableFilterUtils";
 
 export function filterCustomerProducts({
 	customer,
@@ -11,24 +8,8 @@ export function filterCustomerProducts({
 	customer: FullCustomer;
 	showExpired: boolean;
 }): FullCusProduct[] {
-	return customer.customer_products
-		.filter((cp: FullCusProduct) => {
-			if (showExpired) {
-				return true;
-			}
-
-			return cp.status !== CusProductStatus.Expired;
-		})
-		.sort((a: FullCusProduct, b: FullCusProduct) => {
-			if (a.status !== b.status) {
-				// Simple status comparison - Active first, then others
-				if (a.status === CusProductStatus.Active) return -1;
-				if (b.status === CusProductStatus.Active) return 1;
-				return 0;
-			}
-
-			return (
-				new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-			);
-		});
+	return filterByExpiredStatus({
+		items: customer.customer_products,
+		showExpired,
+	});
 }

@@ -1,12 +1,9 @@
-import {
-	getCoreRowModel,
-	getFilteredRowModel,
-	getPaginationRowModel,
-	useReactTable,
-} from "@tanstack/react-table";
+import type { Invoice } from "@autumn/shared";
+import { getPaginationRowModel } from "@tanstack/react-table";
 import { useMemo } from "react";
 import { Table } from "@/components/general/table";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { CustomerInvoicesColumns } from "./CustomerInvoicesColumns";
 
 export function CustomerInvoicesTable() {
@@ -14,10 +11,14 @@ export function CustomerInvoicesTable() {
 
 	const invoices = useMemo(
 		() =>
-			customer?.invoices.map((invoice: any) => ({
+			customer?.invoices.map((invoice: Invoice) => ({
 				...invoice,
 				productNames: invoice.product_ids
-					.map((id: string) => products?.find((p: any) => p.id === id)?.name)
+					.map(
+						(id: string) =>
+							products?.find((p: { id: string; name: string }) => p.id === id)
+								?.name,
+					)
 					.filter(Boolean)
 					.join(", "),
 			})) ?? [],
@@ -25,16 +26,15 @@ export function CustomerInvoicesTable() {
 	);
 
 	const enableSorting = false;
-	const table = useReactTable({
+	const table = useCustomerTable({
 		data: invoices,
 		columns: CustomerInvoicesColumns,
-		getCoreRowModel: getCoreRowModel(),
-		getFilteredRowModel: getFilteredRowModel(),
-		getPaginationRowModel: getPaginationRowModel(),
-		enableSorting,
-		initialState: {
-			pagination: {
-				pageSize: 10,
+		options: {
+			getPaginationRowModel: getPaginationRowModel(),
+			initialState: {
+				pagination: {
+					pageSize: 10,
+				},
 			},
 		},
 	});

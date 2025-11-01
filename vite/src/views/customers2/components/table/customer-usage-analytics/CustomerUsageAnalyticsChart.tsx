@@ -18,8 +18,6 @@ export function CustomerUsageAnalyticsChart({
 	daysToShow?: number;
 }) {
 	const { chartData, chartConfig, eventNames, maxValue } = useMemo(() => {
-		console.log("Chart events:", events);
-
 		const uniqueEventNames =
 			events && events.length > 0
 				? Array.from(new Set(events.map((e: Event) => e.event_name)))
@@ -72,10 +70,10 @@ export function CustomerUsageAnalyticsChart({
 
 		const max = Math.max(
 			...data.map((day) =>
-				uniqueEventNames.reduce(
-					(sum, eventName) => sum + (day[eventName] || 0),
-					0,
-				),
+				uniqueEventNames.reduce((sum, eventName) => {
+					const value = (day as Record<string, number | string>)[eventName];
+					return sum + (typeof value === "number" ? value : 0);
+				}, 0),
 			),
 			0,
 		);
@@ -96,9 +94,8 @@ export function CustomerUsageAnalyticsChart({
 			<BarChart
 				accessibilityLayer
 				data={chartData}
-				barSize={128}
-				maxBarSize={128}
 				className="[&_.recharts-cartesian-grid-bg]:fill-white [&_.recharts-cartesian-grid-bg]:stroke-border [&_.recharts-cartesian-grid-bg]:stroke-1 [&_.recharts-cartesian-grid-bg]:[rx:8px]"
+				barCategoryGap={4}
 			>
 				<CartesianGrid vertical={false} fill="white" />
 				<XAxis

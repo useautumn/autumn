@@ -1,6 +1,6 @@
 import type { Invoice } from "@autumn/shared";
 import type { Row } from "@tanstack/react-table";
-import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
+import { createDateTimeColumn } from "@/views/customers2/utils/ColumnHelpers";
 import { CustomerInvoiceStatus } from "./CustomerInvoiceStatus";
 
 export const CustomerInvoicesColumns = [
@@ -30,17 +30,8 @@ export const CustomerInvoicesColumns = [
 			return <CustomerInvoiceStatus status={row.original.status} />;
 		},
 	},
-	{
+	createDateTimeColumn<Invoice & { productNames: string }>({
 		header: "Created At",
 		accessorKey: "created_at",
-		cell: ({ row }: { row: Row<Invoice> }) => {
-			const invoice = row.original;
-			const { date, time } = formatUnixToDateTime(invoice.created_at);
-			return (
-				<div className="text-xs text-t3">
-					{date} {time}
-				</div>
-			);
-		},
-	},
+	}),
 ];

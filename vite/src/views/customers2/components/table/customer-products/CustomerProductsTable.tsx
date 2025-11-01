@@ -1,15 +1,11 @@
 import type { FullCusProduct } from "@autumn/shared";
-import {
-	getCoreRowModel,
-	getFilteredRowModel,
-	useReactTable,
-} from "@tanstack/react-table";
 import { parseAsBoolean, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useFullCusSearchQuery } from "@/views/customers/hooks/useFullCusSearchQuery";
 import { useSavedViewsQuery } from "@/views/customers/hooks/useSavedViewsQuery";
+import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { AttachProductDropdown } from "./AttachProductDropdown";
 import { CancelProductDialog } from "./CancelProductDialog";
 import { CustomerProductsColumns } from "./CustomerProductsColumns";
@@ -52,17 +48,16 @@ export function CustomerProductsTable() {
 	};
 
 	const enableSorting = false;
-	const table = useReactTable({
+	const table = useCustomerTable({
 		data: filteredCustomers,
 		columns: attachedProductsTableColumns,
-		getCoreRowModel: getCoreRowModel(),
-		getFilteredRowModel: getFilteredRowModel(),
-		globalFilterFn: "includesString",
-		enableGlobalFilter: true,
-		enableSorting,
-		meta: {
-			filterCustomerProducts,
-			onCancelClick: handleCancelClick,
+		options: {
+			globalFilterFn: "includesString",
+			enableGlobalFilter: true,
+			meta: {
+				filterCustomerProducts,
+				onCancelClick: handleCancelClick,
+			},
 		},
 	});
 

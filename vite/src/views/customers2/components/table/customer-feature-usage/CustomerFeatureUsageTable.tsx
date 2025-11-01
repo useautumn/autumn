@@ -1,23 +1,23 @@
 import type {
+	CreditSchemaItem,
 	FullCusEntWithFullCusProduct,
 	FullCusProduct,
 	FullCustomerEntitlement,
 } from "@autumn/shared";
 import { FeatureType } from "@autumn/shared";
-import {
-	type ExpandedState,
-	getCoreRowModel,
-	getExpandedRowModel,
-	getFilteredRowModel,
-	useReactTable,
-} from "@tanstack/react-table";
+import { type ExpandedState, getExpandedRowModel } from "@tanstack/react-table";
 import { parseAsBoolean, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { ShowExpiredActionButton } from "../customer-products/ShowExpiredActionButton";
 import { CustomerFeatureUsageColumns } from "./CustomerFeatureUsageColumns";
 import { filterCustomerFeatureUsage } from "./customerFeatureUsageTableFilters";
+import type {
+	CustomerFeatureUsageRowData,
+	FullCusEntWithSubRows,
+} from "./customerFeatureUsageTypes";
 
 export function CustomerFeatureUsageTable() {
 	const { customer, features, isLoading } = useCusQuery();
@@ -56,20 +56,16 @@ export function CustomerFeatureUsageTable() {
 
 	const deduplicatedCusEnts = useMemo(() => {
 		// Group by feature ID
-		const featureMap = new Map<
-			string,
-			FullCusEntWithFullCusProduct[]
-		>();
+		const featureMap = new Map<string, FullCusEntWithFullCusProduct[]>();
 
 		for (const ent of filteredCusEnts) {
 			const featureId = ent.entitlement.feature.id;
 			if (!featureMap.has(featureId)) {
 				featureMap.set(featureId, []);
 			}
-			featureMap.get(featureId)!.push(ent);
+			featureMap.get(featureId)?.push(ent);
 		}
 
-		// Combine entitlements with same feature ID
 		const combined: FullCusEntWithFullCusProduct[] = [];
 
 		for (const ents of featureMap.values()) {
@@ -79,7 +75,10 @@ export function CustomerFeatureUsageTable() {
 			} else {
 				// Combine multiple entitlements
 				const first = ents[0];
-				const summedBalance = ents.reduce((sum, e) => sum + (e.balance ?? 0), 0);
+				const summedBalance = ents.reduce(
+					(sum, e) => sum + (e.balance ?? 0),
+					0,
+				);
 				const summedAllowance = ents.reduce(
 					(sum, e) => sum + (e.entitlement.allowance ?? 0),
 					0,
@@ -130,10 +129,10 @@ export function CustomerFeatureUsageTable() {
 				(ent: FullCusEntWithFullCusProduct) =>
 					ent.entitlement.feature.type !== FeatureType.Boolean,
 			)
-			.map((ent: FullCusEntWithFullCusProduct) => {
+			.map((ent: FullCusEntWithFullCusProduct): FullCusEntWithSubRows => {
 				if (ent.entitlement.feature.type === FeatureType.CreditSystem) {
 					const creditSchema = ent.entitlement.feature.config?.schema || [];
-					const subRows = creditSchema.map((schemaItem: any) => {
+					const subRows = creditSchema.map((schemaItem: CreditSchemaItem) => {
 						const meteredFeature = featuresMap.get(
 							schemaItem.metered_feature_id,
 						);
@@ -171,28 +170,25 @@ export function CustomerFeatureUsageTable() {
 	);
 
 	const enableSorting = false;
-	const table = useReactTable({
+	const table = useCustomerTable<CustomerFeatureUsageRowData>({
 		data: nonBooleanEnts,
 		columns: CustomerFeatureUsageColumns,
-		getCoreRowModel: getCoreRowModel(),
-		getFilteredRowModel: getFilteredRowModel(),
-		getExpandedRowModel: getExpandedRowModel(),
-		getSubRows: (row: FullCusEntWithFullCusProduct) => row.subRows,
-		getRowCanExpand: (row) =>
-			row.original.entitlement?.feature?.type === FeatureType.CreditSystem,
-		enableSorting,
-		state: {
-			expanded,
+		options: {
+			getExpandedRowModel: getExpandedRowModel(),
+			getSubRows: (row) => ("subRows" in row ? row.subRows : undefined),
+			getRowCanExpand: (row) =>
+				"entitlement" in row.original &&
+				row.original.entitlement?.feature?.type === FeatureType.CreditSystem,
+			state: {
+				expanded,
+			},
+			onExpandedChange: setExpanded,
 		},
-		onExpandedChange: setExpanded,
 	});
 
-	const booleanTable = useReactTable({
+	const booleanTable = useCustomerTable<CustomerFeatureUsageRowData>({
 		data: booleanEnts,
 		columns: CustomerFeatureUsageColumns,
-		getCoreRowModel: getCoreRowModel(),
-		getFilteredRowModel: getFilteredRowModel(),
-		enableSorting,
 	});
 
 	return (

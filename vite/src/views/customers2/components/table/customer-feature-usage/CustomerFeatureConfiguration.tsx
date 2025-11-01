@@ -1,16 +1,35 @@
-import { FeatureType } from "@autumn/shared";
+import { type Feature, FeatureType } from "@autumn/shared";
+import {
+	BooleanIcon,
+	CoinsIcon,
+	UsageBasedIcon,
+} from "@/components/v2/icons/AutumnIcons";
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/v2/tooltips/Tooltip";
-import { getFeatureIcon } from "@/views/products/features/utils/getFeatureIcon";
 
 interface CustomerFeatureConfigurationProps {
-	feature: any;
+	feature: Feature | undefined;
 }
 
-const getFeatureTypeLabel = (type: FeatureType): string => {
+const FeatureIcon = ({ type }: { type: FeatureType }) => {
+	const iconClassName = "text-gray-600";
+
+	switch (type) {
+		case FeatureType.Boolean:
+			return <BooleanIcon className={iconClassName} />;
+		case FeatureType.Metered:
+			return <UsageBasedIcon className={iconClassName} />;
+		case FeatureType.CreditSystem:
+			return <CoinsIcon className={iconClassName} />;
+		default:
+			return <UsageBasedIcon className={iconClassName} />;
+	}
+};
+
+const FeatureTypeLabel = ({ type }: { type: FeatureType }) => {
 	switch (type) {
 		case FeatureType.Boolean:
 			return "Boolean";
@@ -34,9 +53,13 @@ export function CustomerFeatureConfiguration({
 		<div>
 			<Tooltip>
 				<TooltipTrigger asChild>
-					<span className="inline-flex">{getFeatureIcon({ feature })}</span>
+					<span className="inline-flex items-center justify-center size-6 rounded-lg bg-gray-100">
+						<FeatureIcon type={feature.type} />
+					</span>
 				</TooltipTrigger>
-				<TooltipContent>{getFeatureTypeLabel(feature.type)}</TooltipContent>
+				<TooltipContent>
+					<FeatureTypeLabel type={feature.type} />
+				</TooltipContent>
 			</Tooltip>
 		</div>
 	);

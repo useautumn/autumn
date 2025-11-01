@@ -28,6 +28,7 @@ export const CheckboxButton = React.forwardRef<
 				ref={ref}
 				onClick={(e) => e.preventDefault()}
 				className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+				{...props}
 			/>
 			{props.children}
 		</Button>
