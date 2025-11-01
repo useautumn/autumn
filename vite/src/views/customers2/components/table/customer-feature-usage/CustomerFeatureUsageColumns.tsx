@@ -1,10 +1,4 @@
-// add the edge case where if usage is greater than allowance it's just a red bar
-
-import {
-	AllowanceType,
-	FeatureType,
-	type FullCusEntWithFullCusProduct,
-} from "@autumn/shared";
+import { AllowanceType, type Feature, FeatureType } from "@autumn/shared";
 import { CaretDownIcon, CaretRightIcon } from "@phosphor-icons/react";
 import type { Row } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
@@ -12,28 +6,23 @@ import { CustomerFeatureConfiguration } from "./CustomerFeatureConfiguration";
 import { CustomerFeatureResetDate } from "./CustomerFeatureResetDate";
 import { CustomerFeatureUsageBar } from "./CustomerFeatureUsageBar";
 import { CustomerFeatureUsageDisplay } from "./CustomerFeatureUsageDisplay";
+import type {
+	CreditSystemSubRow,
+	CustomerFeatureUsageRowData,
+	FullCusEntWithSubRows,
+} from "./customerFeatureUsageTypes";
 
-interface SubRowData {
-	isSubRow: boolean;
-	meteredCusEnt?: FullCusEntWithFullCusProduct;
-	feature?: any;
-	credit_amount?: number;
-}
-
-const getSubRowData = (cusEnt: any): SubRowData | null => {
-	if (!cusEnt.isSubRow) return null;
-	return {
-		isSubRow: true,
-		meteredCusEnt: cusEnt.meteredCusEnt,
-		feature: cusEnt.feature,
-		credit_amount: cusEnt.credit_amount,
-	};
+const getSubRowData = (
+	cusEnt: CustomerFeatureUsageRowData,
+): CreditSystemSubRow | null => {
+	if (!("isSubRow" in cusEnt) || !cusEnt.isSubRow) return null;
+	return cusEnt;
 };
 
 export const CustomerFeatureUsageColumns = [
 	{
 		header: "Feature",
-		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => {
+		cell: ({ row }: { row: Row<CustomerFeatureUsageRowData> }) => {
 			const cusEnt = row.original;
 			const subRowData = getSubRowData(cusEnt);
 			let allowance: number;
@@ -44,53 +33,50 @@ export const CustomerFeatureUsageColumns = [
 			let featureType: FeatureType;
 
 			if (subRowData) {
-				// For subrows, calculate progress based on credit spending vs parent's total
-				const parentAllowance = cusEnt.entitlement?.allowance ?? 0;
-				const parentQuantity = cusEnt.customer_product.quantity || 1;
+				const parentAllowance = subRowData.entitlement?.allowance ?? 0;
+				const parentQuantity = subRowData.customer_product.quantity || 1;
 				const parentTotal = parentAllowance * parentQuantity;
 
-				// Calculate metered feature usage
 				const meteredCusEnt = subRowData.meteredCusEnt;
 				if (meteredCusEnt?.entitlement) {
-					const meteredAllowance =
-						meteredCusEnt.entitlement.allowance || 0;
+					const meteredAllowance = meteredCusEnt.entitlement.allowance || 0;
 					const meteredQuantity = meteredCusEnt.customer_product.quantity || 1;
 					const meteredTotal = meteredAllowance * meteredQuantity;
 					const meteredBalance = meteredCusEnt.balance || 0;
 					const meteredUsed = meteredTotal - meteredBalance;
 
-					// Calculate credits spent
 					const creditAmount = subRowData.credit_amount || 0;
 					const creditsSpent = meteredUsed * creditAmount;
 
-					// Use parent's allowance but effective balance based on credits
 					allowance = parentAllowance;
 					quantity = parentQuantity;
 					balance = parentTotal - creditsSpent;
 				} else {
-					// Fallback if no metered entitlement data
-					allowance = cusEnt.entitlement?.allowance ?? 0;
+					allowance = subRowData.entitlement?.allowance ?? 0;
 					balance = subRowData.meteredCusEnt?.balance ?? 0;
-					quantity = cusEnt.customer_product.quantity || 1;
+					quantity = subRowData.customer_product.quantity || 1;
 				}
 
-				featureName = subRowData.feature.name;
-				featureType = subRowData.feature.type;
+				featureName = subRowData.feature?.name ?? "";
+				featureType = subRowData.feature?.type ?? FeatureType.Boolean;
 				className = "pl-4";
 			} else {
-				allowance = cusEnt.entitlement?.allowance ?? 0;
-				balance = cusEnt?.balance ?? 0;
-				quantity = cusEnt.customer_product.quantity || 1;
-				featureName = cusEnt.entitlement.feature.name;
-				featureType = cusEnt.entitlement.feature.type;
+				const parentEnt = cusEnt as FullCusEntWithSubRows;
+				allowance = parentEnt.entitlement?.allowance || 0;
+				balance = parentEnt?.balance || 0;
+				quantity = parentEnt.customer_product.quantity || 1;
+				featureName = parentEnt.entitlement.feature?.name || "";
+				featureType =
+					parentEnt.entitlement.feature?.type || FeatureType.Boolean;
 			}
 
-			// For credit systems, calculate effective balance from subrows
 			if (!subRowData && featureType === FeatureType.CreditSystem) {
-				const subRows = (cusEnt as any).subRows || [];
+				const subRows = (cusEnt as FullCusEntWithSubRows).subRows || [];
 				let totalSpent = 0;
 
 				for (const subRow of subRows) {
+					if (!("isSubRow" in subRow) || !subRow.isSubRow) continue;
+
 					const meteredCusEnt = subRow.meteredCusEnt;
 					const creditCost = subRow.credit_amount;
 
@@ -98,7 +84,8 @@ export const CustomerFeatureUsageColumns = [
 						const subEnt = meteredCusEnt.entitlement;
 						if (subEnt.allowance_type !== AllowanceType.Unlimited) {
 							const subTotal =
-								subEnt.allowance * (meteredCusEnt.customer_product.quantity || 1);
+								(subEnt.allowance || 0) *
+								(meteredCusEnt.customer_product.quantity || 1);
 							const subRemaining = meteredCusEnt.balance || 0;
 							const subUsed = subTotal - subRemaining;
 							totalSpent += subUsed * creditCost;
@@ -129,7 +116,7 @@ export const CustomerFeatureUsageColumns = [
 	{
 		header: "Usage",
 		accessorKey: "usage",
-		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => {
+		cell: ({ row }: { row: Row<CustomerFeatureUsageRowData> }) => {
 			const cusEnt = row.original;
 			const subRowData = getSubRowData(cusEnt);
 			let featureType: FeatureType;
@@ -139,7 +126,7 @@ export const CustomerFeatureUsageColumns = [
 			let quantity: number;
 			let isSubRow: boolean;
 			let creditAmount: number | undefined;
-			let subRows: any[] | undefined;
+			let subRows: CustomerFeatureUsageRowData[] | undefined;
 
 			if (subRowData) {
 				const { meteredCusEnt, credit_amount } = subRowData;
@@ -149,20 +136,24 @@ export const CustomerFeatureUsageColumns = [
 				}
 
 				featureType = meteredCusEnt.entitlement.feature.type;
-				allowanceType = meteredCusEnt.entitlement.allowance_type;
+				allowanceType =
+					meteredCusEnt.entitlement.allowance_type || AllowanceType.Unlimited;
 				allowance = meteredCusEnt.entitlement.allowance || 0;
 				balance = meteredCusEnt.balance || 0;
 				quantity = meteredCusEnt.customer_product.quantity || 1;
 				isSubRow = true;
 				creditAmount = credit_amount;
 			} else {
-				featureType = cusEnt.entitlement.feature.type;
-				allowanceType = cusEnt.entitlement.allowance_type;
-				allowance = cusEnt.entitlement.allowance || 0;
-				balance = cusEnt.balance || 0;
-				quantity = cusEnt.customer_product.quantity || 1;
+				// Not a subrow, so cusEnt is FullCusEntWithSubRows
+				const parentEnt = cusEnt as FullCusEntWithSubRows;
+				featureType = parentEnt.entitlement.feature.type;
+				allowanceType =
+					parentEnt.entitlement.allowance_type || AllowanceType.Unlimited;
+				allowance = parentEnt.entitlement.allowance || 0;
+				balance = parentEnt.balance || 0;
+				quantity = parentEnt.customer_product.quantity || 1;
 				isSubRow = false;
-				subRows = (cusEnt as any).subRows;
+				subRows = parentEnt.subRows;
 			}
 
 			return (
@@ -182,7 +173,7 @@ export const CustomerFeatureUsageColumns = [
 	{
 		header: "Resets At",
 		accessorKey: "resets_at",
-		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => {
+		cell: ({ row }: { row: Row<CustomerFeatureUsageRowData> }) => {
 			const cusEnt = row.original;
 			const subRowData = getSubRowData(cusEnt);
 			let resetTimestamp: number | null | undefined;
@@ -190,7 +181,8 @@ export const CustomerFeatureUsageColumns = [
 			if (subRowData) {
 				resetTimestamp = subRowData.meteredCusEnt?.next_reset_at;
 			} else {
-				resetTimestamp = cusEnt.next_reset_at;
+				const parentEnt = cusEnt as FullCusEntWithSubRows;
+				resetTimestamp = parentEnt.next_reset_at;
 			}
 
 			return <CustomerFeatureResetDate resetTimestamp={resetTimestamp} />;
@@ -199,15 +191,16 @@ export const CustomerFeatureUsageColumns = [
 	{
 		header: "Configuration",
 		accessorKey: "configuration",
-		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => {
+		cell: ({ row }: { row: Row<CustomerFeatureUsageRowData> }) => {
 			const cusEnt = row.original;
 			const subRowData = getSubRowData(cusEnt);
-			let feature: any;
+			let feature: Feature | undefined;
 
 			if (subRowData) {
 				feature = subRowData.feature;
 			} else {
-				feature = cusEnt.entitlement.feature;
+				const parentEnt = cusEnt as FullCusEntWithSubRows;
+				feature = parentEnt.entitlement.feature;
 			}
 
 			return <CustomerFeatureConfiguration feature={feature} />;
@@ -217,7 +210,7 @@ export const CustomerFeatureUsageColumns = [
 		id: "expander",
 		header: "",
 		size: 40,
-		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => {
+		cell: ({ row }: { row: Row<CustomerFeatureUsageRowData> }) => {
 			const cusEnt = row.original;
 			const canExpand = row.getCanExpand();
 			const isExpanded = row.getIsExpanded();

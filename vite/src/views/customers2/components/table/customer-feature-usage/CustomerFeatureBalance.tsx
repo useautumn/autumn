@@ -24,7 +24,7 @@ export const CusEntBalance = ({
 	const rollovers = cusEnt.rollovers;
 
 	if (feature.type === FeatureType.Boolean) {
-		return <></>;
+		return null;
 	}
 
 	if (ent.allowance_type === AllowanceType.Unlimited) {
@@ -34,7 +34,7 @@ export const CusEntBalance = ({
 	if (entityId && cusEnt.entities?.[entityId]) {
 		const entityBalance = cusEnt.entities?.[entityId]?.balance;
 		const rolloverAmount = rollovers
-			.filter((x) => x.entities && x.entities[entityId!])
+			.filter((x) => x.entities?.[entityId])
 			.reduce(
 				(sum, rollover) => sum + (rollover.entities?.[entityId]?.balance || 0),
 				0,
@@ -62,11 +62,11 @@ export const CusEntBalance = ({
 		);
 
 		const rolloverAmount = cusEnt.rollovers.reduce((sum, rollover) => {
-			// Add global rollover balance
 			return (
 				sum +
 				Object.values(rollover.entities).reduce(
-					(entitySum: number, entity: any) => entitySum + (entity.balance || 0),
+					(entitySum: number, entity: { balance: number }) =>
+						entitySum + (entity.balance || 0),
 					0,
 				)
 			);

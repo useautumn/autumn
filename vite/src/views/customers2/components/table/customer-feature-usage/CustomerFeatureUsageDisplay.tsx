@@ -1,6 +1,7 @@
 import { AllowanceType, FeatureType } from "@autumn/shared";
 import { PokerChipIcon } from "@phosphor-icons/react";
 import { calculateUsageMetrics } from "./calculateUsageMetrics";
+import type { CustomerFeatureUsageRowData } from "./customerFeatureUsageTypes";
 
 interface CustomerFeatureUsageDisplayProps {
 	featureType: FeatureType;
@@ -10,7 +11,7 @@ interface CustomerFeatureUsageDisplayProps {
 	quantity: number;
 	isSubRow?: boolean;
 	creditAmount?: number;
-	subRows?: any[];
+	subRows?: CustomerFeatureUsageRowData[];
 }
 
 export function CustomerFeatureUsageDisplay({
@@ -23,19 +24,16 @@ export function CustomerFeatureUsageDisplay({
 	creditAmount,
 	subRows = [],
 }: CustomerFeatureUsageDisplayProps) {
-	// Boolean features don't show usage
 	if (!isSubRow && featureType === FeatureType.Boolean) {
-		return <></>;
+		return null;
 	}
 
-	// Unlimited allowance
 	if (allowanceType === AllowanceType.Unlimited) {
 		return (
 			<div className={isSubRow ? "text-sm text-t3" : "text-t3"}>Unlimited</div>
 		);
 	}
 
-	// Subrow display (metered feature in credit system)
 	if (isSubRow) {
 		const { used } = calculateUsageMetrics({
 			allowance,
@@ -51,11 +49,13 @@ export function CustomerFeatureUsageDisplay({
 		);
 	}
 
-	// Credit system display
 	if (featureType === FeatureType.CreditSystem) {
 		let totalSpent = 0;
 
 		for (const subRow of subRows) {
+			// Only process CreditSystemSubRow items
+			if (!("isSubRow" in subRow) || !subRow.isSubRow) continue;
+
 			const meteredCusEnt = subRow.meteredCusEnt;
 			const creditCost = subRow.credit_amount;
 
@@ -81,7 +81,6 @@ export function CustomerFeatureUsageDisplay({
 		);
 	}
 
-	// Standard metered display
 	const { total, used } = calculateUsageMetrics({
 		allowance,
 		balance,
