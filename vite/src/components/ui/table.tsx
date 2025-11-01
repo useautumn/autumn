@@ -1,4 +1,4 @@
-import * as React from "react";
+import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -23,7 +23,7 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
 			data-slot="table-header"
 			// className={cn("[&_tr]:border-b", className)}
 			className={cn(
-				"bg-stone-50 [&:hover_tr]:!bg-transparent [&_tr]:border-b",
+				"bg-stone-50 [&:hover_tr]:!bg-transparent border-b",
 				className,
 			)}
 			{...props}
