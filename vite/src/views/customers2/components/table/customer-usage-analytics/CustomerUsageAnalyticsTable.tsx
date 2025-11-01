@@ -13,6 +13,10 @@ import { CustomerUsageAnalyticsColumns } from "./CustomerUsageAnalyticsColumns";
 import { CustomerUsageAnalyticsFullButton } from "./CustomerUsageAnalyticsFullButton";
 import { CustomerUsageAnalyticsSelectDays } from "./CustomerUsageAnalyticsSelectDays";
 import { CustomerUsageAnalyticsSelectFeatures } from "./CustomerUsageAnalyticsSelectFeatures";
+import {
+	filterEventsByTimeAndFeatures,
+	getAvailableFeatures,
+} from "./customerUsageAnalyticsUtils";
 
 export function CustomerUsageAnalyticsTable() {
 	const { events, isLoading } = useCusEventsQuery();
@@ -27,14 +31,11 @@ export function CustomerUsageAnalyticsTable() {
 		parseAsArrayOf(parseAsString).withDefault([]),
 	);
 
-	const availableFeatures = useMemo(() => {
-		if (!events || events.length === 0) return [];
-		return Array.from(
-			new Set(events.map((e: Event & { event_name: string }) => e.event_name)),
-		);
-	}, [events]);
+	const availableFeatures = useMemo(
+		() => getAvailableFeatures({ events: events ?? [] }),
+		[events],
+	);
 
-	// Initialize selectedFeatures with all features on first load
 	useEffect(() => {
 		if (
 			availableFeatures.length > 0 &&
@@ -45,29 +46,15 @@ export function CustomerUsageAnalyticsTable() {
 		}
 	}, [availableFeatures, selectedFeatures, setSelectedFeatures]);
 
-	const filteredEvents = useMemo(() => {
-		if (!events || !selectedDays) return events ?? [];
-
-		const cutoffDate = new Date();
-		cutoffDate.setDate(cutoffDate.getDate() - selectedDays);
-		const cutoffTime = cutoffDate.getTime();
-
-		const filtered = events.filter(
-			(event: Event & { timestamp: number; event_name: string }) => {
-				const eventTime =
-					typeof event.timestamp === "number"
-						? event.timestamp * 1000
-						: new Date(event.timestamp).getTime();
-
-				const withinTimeRange = eventTime >= cutoffTime;
-				const matchesFeature = selectedFeatures?.includes(event.event_name);
-
-				return withinTimeRange && matchesFeature;
-			},
-		);
-
-		return filtered;
-	}, [events, selectedDays, selectedFeatures]);
+	const filteredEvents = useMemo(
+		() =>
+			filterEventsByTimeAndFeatures({
+				events: events ?? [],
+				selectedDays,
+				selectedFeatures,
+			}),
+		[events, selectedDays, selectedFeatures],
+	);
 
 	const enableSorting = false;
 	const table = useCustomerTable({
