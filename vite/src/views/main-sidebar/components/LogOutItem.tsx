@@ -16,7 +16,7 @@ export const LogOutItem = () => {
 					try {
 						setLoading(true);
 						await authClient.signOut();
-						await navigate("/sign-in");
+						window.location.href = "/sign-in";
 					} catch (error) {
 						console.error("Error signing out:", error);
 					} finally {

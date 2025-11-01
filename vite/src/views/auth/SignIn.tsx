@@ -7,8 +7,7 @@ import { toast } from "sonner";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useOrg } from "@/hooks/common/useOrg";
-import { authClient, signIn } from "@/lib/auth-client";
+import { authClient, signIn, useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { getBackendErr } from "@/utils/genUtils";
 import { OTPSignIn } from "./components/OTPSignIn";
@@ -19,23 +18,18 @@ export const SignIn = () => {
 	const [sendOtpLoading, setSendOtpLoading] = useState(false);
 	const [otpSent, setOtpSent] = useState(false);
 
-	const { org } = useOrg();
+	const { data: session } = useSession();
 	const navigate = useNavigate();
 
 	const newPath = "/sandbox/onboarding";
 	const callbackPath = "/sandbox/products?tab=products";
 
 	useEffect(() => {
-		if (org) {
-			if (org.deployed) {
-				navigate("/products?tab=products");
-			} else if (org.onboarded) {
-				navigate("/sandbox/products?tab=products");
-			} else {
-				navigate("/sandbox/onboarding");
-			}
+		// If user is authenticated, redirect to home and let MainLayout handle org routing
+		if (session?.user) {
+			navigate("/");
 		}
-	}, [org, navigate]);
+	}, [session, navigate]);
 
 	const handleEmailSignIn = async (e: React.FormEvent) => {
 		e.preventDefault();
