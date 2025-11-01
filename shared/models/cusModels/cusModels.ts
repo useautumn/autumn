@@ -80,7 +80,28 @@ export const CustomerResponseSchema = CustomerSchema.omit({
 	org_id: true,
 });
 
+export const CustomerSearchFiltersSchema = z.object({
+  status: z.array(z.string()).optional(),
+  version: z.array(z.string()).optional(),
+  none: z.string().optional(),
+  product_id: z.string().optional(),
+}).optional().default({});
+
+export const CustomerSearchInputSchema = z.object({
+  search: z.string().default(""),
+  page_size: z.number().int().min(1).max(1000).default(50),
+  page: z.number().int().min(1).default(1),
+  last_item: z.object({
+    internal_id: z.string(),
+    created_at: z.string().optional(),
+    name: z.string().optional(),
+  }).nullable().optional(),
+  filters: CustomerSearchFiltersSchema,
+});
+
 export type Customer = z.infer<typeof CustomerSchema>;
 export type CustomerData = z.infer<typeof CustomerDataSchema>;
 export type CustomerResponse = z.infer<typeof CustomerResponseSchema>;
 export type CreateCustomer = z.infer<typeof CreateCustomerSchema>;
+export type CustomerSearchInputSchema = z.infer<typeof CustomerSearchInputSchema>;
+export type CustomerSearchFilters = z.infer<typeof CustomerSearchFiltersSchema>;

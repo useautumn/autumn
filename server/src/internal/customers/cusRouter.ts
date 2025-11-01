@@ -21,30 +21,43 @@ import { handleTransferProduct } from "./handlers/handleTransferProduct.js";
 import { handleUpdateBalances } from "./handlers/handleUpdateBalances.js";
 import { handleUpdateCustomer } from "./handlers/handleUpdateCustomer.js";
 import { handleUpdateEntitlement } from "./handlers/handleUpdateEntitlement.js";
+import { CustomerSearchInputSchema } from "@autumn/shared";
 
 export const expressCusRouter: Router = Router();
 
 expressCusRouter.get("", handleBatchCustomers);
 
 expressCusRouter.post("/all/search", async (req: any, res: any) => {
-	try {
-		const { search, page_size = 50, page = 1, last_item, filters } = req.body;
+  try {
+    const validationResult = CustomerSearchInputSchema.safeParse(req.body);
+    
+    if (!validationResult.success) {
+      return res.status(400).json({
+        error: "Invalid search parameters",
+        details: validationResult.error.issues.map(issue => ({
+          field: issue.path.join('.'),
+          message: issue.message
+        }))
+      });
+    }
+    
+    const { search, page_size, page, last_item, filters } = validationResult.data;
 
-		const { data: customers, count } = await CusSearchService.search({
-			db: req.db,
-			orgId: req.orgId,
-			env: req.env,
-			search,
-			filters,
-			lastItem: last_item,
-			pageNumber: page,
-			pageSize: page_size,
-		});
+    const { data: customers, count } = await CusSearchService.search({
+      db: req.db,
+      orgId: req.orgId,
+      env: req.env,
+      search,
+      filters,
+      lastItem: last_item,
+      pageNumber: page,
+      pageSize: page_size,
+    });
 
-		res.status(200).json({ customers, totalCount: Number(count) });
-	} catch (error) {
-		handleRequestError({ req, error, res, action: "search customers" });
-	}
+    res.status(200).json({ customers, totalCount: Number(count) });
+  } catch (error) {
+    handleRequestError({ req, error, res, action: "search customers" });
+  }
 });
 
 // expressCusRouter.post("", handlePostCustomerRequest);
