@@ -51,7 +51,7 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Testing attach pro diff enti
 		},
 		{
 			id: "2",
-			name: "Entity 1",
+			name: "Entity 2",
 			feature_id: TestFeature.Users,
 		},
 	];
@@ -127,8 +127,6 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Testing attach pro diff enti
 			feature_id: TestFeature.Words,
 			value: entity2Usage,
 		});
-
-		await timeout(3000);
 
 		const entity1Res = await autumn.entities.get(customerId, entity1.id);
 		const entity2Res = await autumn.entities.get(customerId, entity2.id);

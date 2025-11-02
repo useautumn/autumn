@@ -5,7 +5,6 @@ import type {
 	ProductV2,
 } from "@autumn/shared";
 import chalk from "chalk";
-import { addWeeks } from "date-fns";
 import type Stripe from "stripe";
 import { setupBefore } from "tests/before.js";
 import { defaultApiVersion } from "tests/constants.js";
@@ -18,7 +17,6 @@ import { timeout } from "@/utils/genUtils.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 import { addPrefixToProducts, replaceItems } from "../utils.js";
 import { runMigrationTest } from "./runMigrationTest.js";
 
@@ -144,13 +142,13 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for free product`
 			feature_id: TestFeature.Messages,
 		});
 
-		await timeout(2000);
-		await advanceTestClock({
-			stripeCli,
-			testClockId,
-			advanceTo: addWeeks(Date.now(), 1).getTime(),
-			waitForSeconds: 30,
-		});
+		// await timeout(2000);
+		// await advanceTestClock({
+		// 	stripeCli,
+		// 	testClockId,
+		// 	advanceTo: addWeeks(Date.now(), 1).getTime(),
+		// 	waitForSeconds: 30,
+		// });
 
 		let customer = await autumn.customers.get(customerId);
 

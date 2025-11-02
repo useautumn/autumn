@@ -95,7 +95,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing failed upgrades`)}`, () => 
 			feature_id: TestFeature.Words,
 			value: usage,
 		});
-		await timeout(4000);
 
 		const cus = await CusService.get({
 			db,

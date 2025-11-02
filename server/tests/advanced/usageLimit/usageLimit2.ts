@@ -127,9 +127,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage limits, usage prices`
 
 		expect(check.balance).to.equal(expectedBalance);
 		expect(check.allowed).to.equal(false);
-		// @ts-expect-error
 		expect(check.usage_limit!).to.equal(messageItem.usage_limit!);
-		// @ts-expect-error
 		expect(customer.features[TestFeature.Messages].usage_limit).to.equal(
 			messageItem.usage_limit!,
 		);
@@ -154,11 +152,10 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage limits, usage prices`
 		expect(check.balance).to.equal(expectedBalance);
 		expect(check.allowed).to.equal(true);
 
-		// @ts-expect-error
 		expect(check.usage_limit!).to.equal(
 			messageItem.usage_limit! + addOnMessages.included_usage,
 		);
-		// @ts-expect-error
+
 		expect(customer.features[TestFeature.Messages].usage_limit).to.equal(
 			messageItem.usage_limit! + addOnMessages.included_usage,
 		);
@@ -181,13 +178,14 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage limits, usage prices`
 
 		const expectedBalance =
 			messageItem.included_usage - messageItem.usage_limit!;
+
 		expect(check.balance).to.equal(expectedBalance);
 		expect(check.allowed).to.equal(false);
-		// @ts-expect-error
+
 		expect(check.usage_limit!).to.equal(
 			messageItem.usage_limit! + addOnMessages.included_usage,
 		);
-		// @ts-expect-error
+
 		expect(customer.features[TestFeature.Messages].usage_limit).to.equal(
 			messageItem.usage_limit! + addOnMessages.included_usage,
 		);

@@ -7,7 +7,8 @@ import {
 	notNullish,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { handleEventSent } from "../events/eventRouter.js";
+import { getTrackFeatureDeductions } from "../../balances/track/trackUtils/getFeatureDeductions.js";
+import { runDeductionTx } from "../../balances/track/trackUtils/runDeductionTx.js";
 import { getCheckData } from "./checkUtils/getCheckData.js";
 import { getV2CheckResponse } from "./checkUtils/getV2CheckResponse.js";
 import { getCheckPreview } from "./getCheckPreview.js";
@@ -68,24 +69,42 @@ export const handleCheck = createRoute({
 			: undefined;
 
 		if (v2Response.allowed && ctx.isPublic !== true) {
-			if (send_event) {
-				await handleEventSent({
-					req: {
-						...ctx,
-						body: {
-							...body,
-							value: requiredBalance,
-						},
-					},
-					customer_id: customer_id,
-					customer_data: customer_data,
-					event_data: {
-						customer_id: customer_id,
-						feature_id: feature_id,
+			if (send_event && feature_id) {
+				const featureDeductions = getTrackFeatureDeductions({
+					ctx,
+					featureId: feature_id,
+					value: requiredBalance,
+				});
+
+				await runDeductionTx({
+					ctx,
+					customerId: body.customer_id,
+					entityId: body.entity_id,
+					deductions: featureDeductions,
+					overageBehaviour: "cap",
+					eventInfo: {
+						event_name: feature_id,
 						value: requiredBalance,
-						entity_id: entity_id,
+						properties: body.properties,
 					},
 				});
+				// await handleEventSent({
+				// 	req: {
+				// 		...ctx,
+				// 		body: {
+				// 			...body,
+				// 			value: requiredBalance,
+				// 		},
+				// 	},
+				// 	customer_id: customer_id,
+				// 	customer_data: customer_data,
+				// 	event_data: {
+				// 		customer_id: customer_id,
+				// 		feature_id: feature_id,
+				// 		value: requiredBalance,
+				// 		entity_id: entity_id,
+				// 	},
+				// });
 			}
 
 			// else if (notNullish(event_data)) {

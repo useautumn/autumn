@@ -22,10 +22,10 @@
       "@/*": ["src/*"],
       "@shared/*": ["../shared/*"],
       "@scripts/*": ["scripts/*"],
-      "@emails/*": ["emails/*"]
+      "@emails/*": ["emails/*"],
     }
   },
-  "include": ["src", "tests", "scripts", "emails"],
+  "include": ["src", "tests", "scripts", "emails", "experiments"],
   "references": [
     {
       "path": "../shared"

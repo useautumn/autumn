@@ -16,7 +16,6 @@ import {
 	queryJsDoc,
 	setUsageJsDoc,
 	setupPaymentJsDoc,
-	trackJsDoc,
 } from "../common/jsDocs.js";
 import { CheckParamsSchema, CheckResultSchema } from "./checkModels.js";
 import {
@@ -28,8 +27,6 @@ import {
 	QueryResultSchema,
 	SetupPaymentParamsSchema,
 	SetupPaymentResultSchema,
-	TrackParamsSchema,
-	TrackResultSchema,
 } from "./coreOpModels.js";
 
 export const coreOps: ZodOpenApiPathsObject = {
@@ -103,24 +100,24 @@ export const coreOps: ZodOpenApiPathsObject = {
 			},
 		},
 	},
-	"/track": {
-		post: {
-			summary: "Track Event",
-			description: trackJsDoc,
-			tags: ["core"],
-			requestBody: {
-				content: {
-					"application/json": { schema: TrackParamsSchema },
-				},
-			},
-			responses: {
-				"200": {
-					description: "200 OK",
-					content: { "application/json": { schema: TrackResultSchema } },
-				},
-			},
-		},
-	},
+	// "/track": {
+	// 	post: {
+	// 		summary: "Track Event",
+	// 		description: trackJsDoc,
+	// 		tags: ["core"],
+	// 		requestBody: {
+	// 			content: {
+	// 				"application/json": { schema: TrackParamsSchema },
+	// 			},
+	// 		},
+	// 		responses: {
+	// 			"200": {
+	// 				description: "200 OK",
+	// 				content: { "application/json": { schema: TrackResultSchema } },
+	// 			},
+	// 		},
+	// 	},
+	// },
 
 	"/query": {
 		post: {

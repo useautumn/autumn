@@ -75,12 +75,14 @@ export const constructMeteredFeature = ({
 	orgId,
 	env,
 	usageType,
+	eventNames = [],
 }: {
 	featureId: string;
 	name?: string;
 	orgId: string;
 	env: AppEnv;
 	usageType: FeatureUsageType;
+	eventNames?: string[];
 }) => {
 	const newFeature: Feature = {
 		internal_id: generateId("fe"),
@@ -106,7 +108,7 @@ export const constructMeteredFeature = ({
 			usage_type: usageType,
 		},
 		archived: false,
-		event_names: [],
+		event_names: eventNames,
 	};
 
 	return newFeature;

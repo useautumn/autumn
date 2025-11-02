@@ -2,6 +2,7 @@ import { ApiFeatureSchema } from "@api/features/apiFeature.js";
 import type { CreditSchemaItem } from "../models/featureModels/featureConfig/creditConfig.js";
 import { FeatureType } from "../models/featureModels/featureEnums.js";
 import type { Feature } from "../models/featureModels/featureModels.js";
+import { creditSystemContainsFeature } from "./featureUtils/creditSystemUtils.js";
 // import {
 // 	constructBooleanFeature,
 // 	constructCreditSystem,
@@ -34,4 +35,21 @@ export const toApiFeature = ({ feature }: { feature: Feature }) => {
 		},
 		credit_schema: creditSchema,
 	});
+};
+
+export const getRelevantFeatures = ({
+	features,
+	featureId,
+}: {
+	features: Feature[];
+	featureId: string;
+}) => {
+	return features.filter(
+		(f) =>
+			f.id === featureId ||
+			creditSystemContainsFeature({
+				creditSystem: f,
+				meteredFeatureId: featureId,
+			}),
+	);
 };

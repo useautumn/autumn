@@ -13,6 +13,7 @@ import {
 	type LegacyVersion,
 	type OrgConfig,
 	type RewardRedemption,
+	type TrackParams,
 } from "@autumn/shared";
 import type {
 	CancelParams,
@@ -21,7 +22,6 @@ import type {
 	CheckParams,
 	CheckResult,
 	Customer,
-	TrackParams,
 	UsageParams,
 } from "autumn-js";
 
@@ -97,12 +97,20 @@ export class AutumnInt {
 		});
 
 		if (response.status !== 200) {
+			// Handle rate limit errors
+			if (response.status === 429) {
+				throw new AutumnError({
+					message: `request failed, rate limit exceeded`,
+					code: "rate_limit_exceeded",
+				});
+			}
+
 			let error: any;
 			try {
 				error = await response.json();
 			} catch (error) {
 				throw new AutumnError({
-					message: `AutumnInt post request failed, error: ${error}`,
+					message: `request failed, error: ${error}`,
 					code: ErrCode.InternalError,
 				});
 			}
@@ -470,7 +478,7 @@ export class AutumnInt {
 		},
 	};
 
-	track = async (params: TrackParams & { timestamp?: number }) => {
+	track = async (params: TrackParams) => {
 		const data = await this.post(`/track`, params);
 		return data;
 	};
