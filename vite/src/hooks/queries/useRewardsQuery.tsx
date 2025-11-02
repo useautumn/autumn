@@ -1,9 +1,11 @@
 import type { Reward, RewardProgram } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useEnv } from "@/utils/envUtils";
 
 export const useRewardsQuery = () => {
 	const axiosInstance = useAxiosInstance();
+	const env = useEnv();
 
 	const fetchRewards = async () => {
 		const { data } = await axiosInstance.get("/products/rewards");
@@ -11,7 +13,7 @@ export const useRewardsQuery = () => {
 	};
 
 	const { data, isLoading, error, refetch } = useQuery({
-		queryKey: ["rewards"],
+		queryKey: ["rewards", env],
 		queryFn: fetchRewards,
 	});
 
