@@ -20,6 +20,9 @@ export enum TestFeature {
 	Action1 = "action1", // single use (pay per use)
 	Action2 = "action2", // single use (pay per use)
 	Credits = "credits", // credit system
+
+	Action3 = "action3", // single use (pay per use)
+	Credits2 = "credits2", // credit system
 }
 
 const orgId = process.env.TESTS_ORG_ID!;
@@ -64,12 +67,21 @@ export const features = {
 		orgId,
 		env: AppEnv.Sandbox,
 		usageType: FeatureUsageType.Single,
+		eventNames: ["action-event"],
 	}),
 	[TestFeature.Action2]: constructMeteredFeature({
 		featureId: TestFeature.Action2,
 		orgId,
 		env: AppEnv.Sandbox,
 		usageType: FeatureUsageType.Single,
+		// eventNames: ["action-event"],
+	}),
+	[TestFeature.Action3]: constructMeteredFeature({
+		featureId: TestFeature.Action3,
+		orgId,
+		env: AppEnv.Sandbox,
+		usageType: FeatureUsageType.Single,
+		eventNames: ["action-event"],
 	}),
 	[TestFeature.Credits]: constructCreditSystem({
 		featureId: TestFeature.Credits,
@@ -83,6 +95,17 @@ export const features = {
 			{
 				metered_feature_id: TestFeature.Action2,
 				credit_cost: 0.6,
+			},
+		],
+	}),
+	[TestFeature.Credits2]: constructCreditSystem({
+		featureId: TestFeature.Credits2,
+		orgId,
+		env: AppEnv.Sandbox,
+		schema: [
+			{
+				metered_feature_id: TestFeature.Action3,
+				credit_cost: 1.4,
 			},
 		],
 	}),

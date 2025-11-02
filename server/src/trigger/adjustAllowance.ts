@@ -96,7 +96,7 @@ export const adjustAllowance = async ({
 		!cusProduct ||
 		!cusPrice ||
 		billingType !== BillingType.InArrearProrated ||
-		originalBalance == newBalance
+		originalBalance === newBalance
 	) {
 		return { newReplaceables: [], invoice: null, deletedReplaceables: null };
 	}

@@ -72,6 +72,7 @@ const initWorker = ({
 				}
 
 				if (job.name === JobName.Migration) {
+					console.log("running migration task:", job.data);
 					await runMigrationTask({
 						db,
 						payload: job.data,
