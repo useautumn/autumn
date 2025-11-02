@@ -89,7 +89,7 @@ export function TableHeader({ className }: { className?: string }) {
 					{headerGroup.headers.map((header, index) => (
 						<TableHead
 							className={cn(
-								"h-6 p-2 text-muted-foreground",
+								"h-6 p-2 font-medium text-t3",
 								index === 0 && "pl-4",
 							)}
 							key={header.id}

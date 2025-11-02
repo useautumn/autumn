@@ -25,7 +25,7 @@ export const CustomerUsageAnalyticsColumns = [
 			return (
 				<div className="font-mono">
 					<span className="text-t3">POST </span>
-					<span className="text-lime-600">200</span>
+					<span className="text-lime-600 dark:text-lime-400">200</span>
 				</div>
 			);
 		},

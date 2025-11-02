@@ -5,6 +5,7 @@ import { Table } from "@/components/general/table";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { CustomerInvoicesColumns } from "./CustomerInvoicesColumns";
+import { CustomerInvoicesShowAllButton } from "./CustomerInvoicesShowAllButton";
 
 export function CustomerInvoicesTable() {
 	const { customer, products, isLoading } = useCusQuery();
@@ -51,6 +52,9 @@ export function CustomerInvoicesTable() {
 			<Table.Container>
 				<Table.Toolbar>
 					<Table.Heading>Invoices</Table.Heading>
+					<Table.Actions>
+						<CustomerInvoicesShowAllButton />
+					</Table.Actions>
 				</Table.Toolbar>
 				<Table.Content>
 					<Table.Header />

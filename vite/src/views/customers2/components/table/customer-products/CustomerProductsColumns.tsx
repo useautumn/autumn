@@ -1,5 +1,5 @@
 import type { FullCusProduct } from "@autumn/shared";
-import type { Row } from "@tanstack/react-table";
+import type { Row, Table } from "@tanstack/react-table";
 import { Delete } from "lucide-react";
 import { TableDropdownMenuCell } from "@/components/general/table/table-dropdown-menu-cell";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
@@ -37,7 +37,13 @@ export const CustomerProductsColumns = [
 		id: "actions",
 		header: "",
 		size: 50,
-		cell: ({ row, table }: { row: Row<FullCusProduct>; table: any }) => {
+		cell: ({
+			row,
+			table,
+		}: {
+			row: Row<FullCusProduct>;
+			table: Table<FullCusProduct>;
+		}) => {
 			const meta = table.options.meta as {
 				onCancelClick?: (product: FullCusProduct) => void;
 			};
@@ -47,7 +53,7 @@ export const CustomerProductsColumns = [
 			return (
 				<TableDropdownMenuCell>
 					<DropdownMenuItem
-						className="flex items-center gap-2 text-xs text-red-500"
+						className="flex items-center gap-2 text-xs text-red-500 dark:text-red-400"
 						onClick={() => meta.onCancelClick?.(row.original)}
 					>
 						<Delete size={16} /> Cancel

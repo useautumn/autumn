@@ -10,7 +10,7 @@ const StatusItem = ({
 	text: string;
 }) => {
 	return (
-		<div className="flex items-center gap-2 text-t3">
+		<div className="flex items-center gap-1.5 text-t3">
 			{children}
 			<span className="text-sm">{text}</span>
 		</div>
@@ -27,8 +27,8 @@ export const CustomerProductsStatus = ({
 			return (
 				<StatusItem text="Active">
 					<CheckIcon
-						className="text-white bg-green-500 rounded-full p-0.5"
-						size={16}
+						className="text-white bg-green-500 dark:bg-green-600 rounded-full p-0.5"
+						size={12}
 					/>
 				</StatusItem>
 			);
@@ -36,8 +36,8 @@ export const CustomerProductsStatus = ({
 			return (
 				<StatusItem text="Inactive">
 					<XIcon
-						className="text-white bg-red-500 rounded-full p-0.5"
-						size={16}
+						className="text-white bg-red-500 dark:bg-red-600 rounded-full p-0.5"
+						size={12}
 					/>
 				</StatusItem>
 			);
@@ -46,8 +46,8 @@ export const CustomerProductsStatus = ({
 			return (
 				<StatusItem text="Trial">
 					<ClockIcon
-						className="text-white bg-blue-500 rounded-full m-0.5"
-						size={16}
+						className="text-white bg-blue-500 dark:bg-blue-600 rounded-full m-0.5"
+						size={12}
 					/>
 				</StatusItem>
 			);
@@ -56,8 +56,8 @@ export const CustomerProductsStatus = ({
 			return (
 				<StatusItem text="Expired">
 					<XIcon
-						className="text-white bg-red-500 rounded-full p-0.5"
-						size={16}
+						className="text-white bg-red-500 dark:bg-red-600 rounded-full p-0.5"
+						size={12}
 					/>
 				</StatusItem>
 			);

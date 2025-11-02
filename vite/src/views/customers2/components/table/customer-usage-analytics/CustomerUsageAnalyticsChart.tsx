@@ -30,10 +30,13 @@ export function CustomerUsageAnalyticsChart({
 			<BarChart
 				accessibilityLayer
 				data={chartData}
-				className="[&_.recharts-cartesian-grid-bg]:fill-white [&_.recharts-cartesian-grid-bg]:stroke-border [&_.recharts-cartesian-grid-bg]:stroke-1 [&_.recharts-cartesian-grid-bg]:[rx:8px]"
+				className="[&_.recharts-cartesian-grid-bg]:fill-white dark:[&_.recharts-cartesian-grid-bg]:fill-gray-900 [&_.recharts-cartesian-grid-bg]:stroke-border [&_.recharts-cartesian-grid-bg]:stroke-1 [&_.recharts-cartesian-grid-bg]:[rx:8px]"
 				barCategoryGap={4}
 			>
-				<CartesianGrid vertical={false} fill="white" />
+				<CartesianGrid
+					vertical={false}
+					className="fill-white dark:fill-gray-900"
+				/>
 				<XAxis
 					dataKey="date"
 					tickLine={false}
