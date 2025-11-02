@@ -17,7 +17,7 @@ export function TableDropdownMenuCell({
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
 				<Button variant="ghost" size="icon" className="p-0 size-4">
-					<EllipsisVertical size={16} />
+					<EllipsisVertical size={12} />
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent>{children}</DropdownMenuContent>

@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/v2/buttons/Button";
 import { Separator } from "@/components/v2/separator";
-import { cn } from "@/lib/utils";
 import { useTableContext } from "./table-context";
 
 const paginationButtonClassName =
@@ -60,26 +59,21 @@ export function TablePagination() {
 					aria-live="polite"
 					className="flex gap-1 whitespace-nowrap text-muted-foreground text-sm"
 				>
-					Showing
-					<span className="text-foreground">
-						{table.getState().pagination.pageIndex *
-							table.getState().pagination.pageSize +
-							1}
-						-
-						{Math.min(
-							Math.max(
-								table.getState().pagination.pageIndex *
-									table.getState().pagination.pageSize +
-									table.getState().pagination.pageSize,
-								0,
-							),
-							table.getRowCount(),
-						)}
-					</span>{" "}
-					out of
-					<span className="text-foreground">
-						{table.getRowCount().toString()}
-					</span>
+					Showing{" "}
+					{table.getState().pagination.pageIndex *
+						table.getState().pagination.pageSize +
+						1}
+					-
+					{Math.min(
+						Math.max(
+							table.getState().pagination.pageIndex *
+								table.getState().pagination.pageSize +
+								table.getState().pagination.pageSize,
+							0,
+						),
+						table.getRowCount(),
+					)}{" "}
+					out of {table.getRowCount().toString()}
 				</p>
 			</div>
 

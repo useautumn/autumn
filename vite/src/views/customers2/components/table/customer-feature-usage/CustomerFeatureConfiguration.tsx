@@ -15,7 +15,7 @@ interface CustomerFeatureConfigurationProps {
 }
 
 const FeatureIcon = ({ type }: { type: FeatureType }) => {
-	const iconClassName = "text-gray-600";
+	const iconClassName = "text-gray-600 dark:text-gray-400";
 
 	switch (type) {
 		case FeatureType.Boolean:
@@ -53,7 +53,7 @@ export function CustomerFeatureConfiguration({
 		<div>
 			<Tooltip>
 				<TooltipTrigger asChild>
-					<span className="inline-flex items-center justify-center size-6 rounded-lg bg-gray-100">
+					<span className="inline-flex items-center justify-center size-6 rounded-lg bg-gray-100 dark:bg-gray-800">
 						<FeatureIcon type={feature.type} />
 					</span>
 				</TooltipTrigger>

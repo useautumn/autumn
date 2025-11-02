@@ -3,18 +3,20 @@ import type { Row } from "@tanstack/react-table";
 import { createDateTimeColumn } from "@/views/customers2/utils/ColumnHelpers";
 import { CustomerInvoiceStatus } from "./CustomerInvoiceStatus";
 
+type CustomerInvoice = Invoice & { productNames: string };
+
 export const CustomerInvoicesColumns = [
 	{
 		header: "Products",
 		accessorKey: "productNames",
-		cell: ({ row }: { row: Row<Invoice & { productNames: string }> }) => {
+		cell: ({ row }: { row: Row<CustomerInvoice> }) => {
 			return <div>{row.original.productNames}</div>;
 		},
 	},
 	{
 		header: "Total",
 		accessorKey: "total",
-		cell: ({ row }: { row: Row<Invoice> }) => {
+		cell: ({ row }: { row: Row<CustomerInvoice> }) => {
 			const invoice = row.original;
 			return (
 				<div>
@@ -26,11 +28,11 @@ export const CustomerInvoicesColumns = [
 	{
 		header: "Status",
 		accessorKey: "status",
-		cell: ({ row }: { row: Row<Invoice> }) => {
+		cell: ({ row }: { row: Row<CustomerInvoice> }) => {
 			return <CustomerInvoiceStatus status={row.original.status} />;
 		},
 	},
-	createDateTimeColumn<Invoice & { productNames: string }>({
+	createDateTimeColumn<CustomerInvoice>({
 		header: "Created At",
 		accessorKey: "created_at",
 	}),

@@ -7,7 +7,7 @@ import { useCustomerContext } from "../../../customer/CustomerContext";
 
 const BalanceWrapper = ({ children }: { children: React.ReactNode }) => {
 	return (
-		<div className="flex items-center font-mono font-medium rounded-md border-b border-stone-300 border-dashed ">
+		<div className="flex items-center font-mono font-medium rounded-md border-b border-stone-300 dark:border-stone-700 border-dashed ">
 			{children}
 		</div>
 	);

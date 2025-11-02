@@ -97,17 +97,13 @@ export const CustomerFeatureUsageColumns = [
 				balance = total - totalSpent;
 			}
 
-			const isBoolean = featureType === FeatureType.Boolean;
-
 			return (
 				<div className={cn("flex items-center gap-2.5 py-2", className)}>
-					{!isBoolean && (
-						<CustomerFeatureUsageBar
-							allowance={allowance}
-							balance={balance}
-							quantity={quantity}
-						/>
-					)}
+					<CustomerFeatureUsageBar
+						allowance={allowance}
+						balance={balance}
+						quantity={quantity}
+					/>
 					<span>{featureName}</span>
 				</div>
 			);
