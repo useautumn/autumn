@@ -111,14 +111,19 @@ After deduction, system automatically:
 
 ## SQL Helper Functions
 
-### `deduct_from_single_entity(entities, entity_id, amount, allow_negative, min_balance)`
-Deducts from a specific entity's balance in JSONB.
+### `deduct_from_rollovers(rollover_ids, amount, target_entity_id, has_entity_scope)`
+Deducts from rollover balances first (if available).
 
-### `deduct_from_all_entities(entities, amount, allow_negative, min_balance)`
-Iteratively deducts from all entities in JSONB.
+### `deduct_from_main_balance(current_balance, current_entities, current_adjustment, amount, credit_cost, allow_negative, has_entity_scope, target_entity_id, min_balance, add_to_adjustment)`
+Core deduction logic that handles three cases:
+- CASE 1: Entity-scoped - all entities (iterative deduction)
+- CASE 2: Entity-scoped - single entity (targeted deduction)
+- CASE 3: Top-level balance (direct balance deduction)
 
-### `deduct_allowance_from_entitlements(sorted_entitlements, amount, target_entity_id)`
-Main function that orchestrates the entire deduction process.
+### `deduct_allowance_from_entitlements(sorted_entitlements, amount, target_entity_id, rollover_ids)`
+Main function that orchestrates the two-pass deduction process:
+- **Pass 1**: Deducts all entitlements to 0 (regardless of usage_allowed)
+- **Pass 2**: Allows usage_allowed=true entitlements to go negative (respecting min_balance)
 
 ## Example Usage
 

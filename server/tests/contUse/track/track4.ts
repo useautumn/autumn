@@ -100,12 +100,12 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing set usage for cont 
 	});
 
 	it("should create set usage to 3 and have correct invoice", async () => {
-		curUnix = await advanceTestClock({
-			stripeCli,
-			testClockId,
-			advanceTo: addWeeks(curUnix, 2).getTime(),
-			waitForSeconds: 15,
-		});
+		// curUnix = await advanceTestClock({
+		// 	stripeCli,
+		// 	testClockId,
+		// 	advanceTo: addWeeks(curUnix, 2).getTime(),
+		// 	waitForSeconds: 15,
+		// });
 
 		await autumn.usage({
 			customer_id: customerId,

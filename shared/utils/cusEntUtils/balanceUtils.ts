@@ -83,7 +83,7 @@ export const getMaxOverage = ({
 	if (!cusEnt.usage_allowed) return undefined;
 
 	const maxOverage = new Decimal(usageLimit)
-		.sub(cusEnt.balance || 0)
+		.sub(cusEnt.entitlement.allowance || 0)
 		.toNumber();
 
 	return maxOverage;

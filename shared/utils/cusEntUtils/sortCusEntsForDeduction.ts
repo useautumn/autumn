@@ -1,13 +1,10 @@
-import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
-import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
+import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import { FeatureType } from "../../models/featureModels/featureEnums.js";
 import { AllowanceType } from "../../models/productModels/entModels/entModels.js";
 import { entIntervalToValue } from "../intervalUtils.js";
 
 export const sortCusEntsForDeduction = (
-	cusEnts: (FullCustomerEntitlement & {
-		customer_product?: FullCusProduct;
-	})[],
+	cusEnts: FullCusEntWithFullCusProduct[],
 	reverseOrder: boolean = false,
 ) => {
 	cusEnts.sort((a, b) => {
@@ -54,14 +51,14 @@ export const sortCusEntsForDeduction = (
 			return 1;
 		}
 
-		// If one has usage_allowed, it should go last
-		if (!a.usage_allowed && b.usage_allowed) {
-			return -1;
-		}
+		// // If one has usage_allowed, it should go last
+		// if (!a.usage_allowed && b.usage_allowed) {
+		// 	return -1;
+		// }
 
-		if (!b.usage_allowed && a.usage_allowed) {
-			return 1;
-		}
+		// if (!b.usage_allowed && a.usage_allowed) {
+		// 	return 1;
+		// }
 
 		// If one has a next_reset_at, it should go first
 		const nextResetFirst = reverseOrder ? 1 : -1;

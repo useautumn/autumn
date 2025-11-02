@@ -21,6 +21,7 @@ import { adjustAllowance } from "../../../../trigger/adjustAllowance.js";
 import { EventService } from "../../../api/events/EventService.js";
 import { CusService } from "../../../customers/CusService.js";
 import { refreshCusCache } from "../../../customers/cusCache/updateCachedCus.js";
+import { CusEntService } from "../../../customers/cusProducts/cusEnts/CusEntitlementService.js";
 import {
 	getTotalNegativeBalance,
 	getUnlimitedAndUsageAllowed,
@@ -115,6 +116,8 @@ const deductFromCusEnts = async ({
 			};
 		});
 
+		// console.log("Cus ent input", cusEntInput);
+
 		// Collect and sort rollovers by expires_at (oldest first)
 		const sortedRollovers = cusEnts
 			.flatMap((ce) => ce.rollovers || [])
@@ -197,7 +200,7 @@ const deductFromCusEnts = async ({
 				entities: update.entities,
 			});
 
-			await adjustAllowance({
+			const { newReplaceables, deletedReplaceables } = await adjustAllowance({
 				db,
 				env,
 				org,
@@ -209,6 +212,24 @@ const deductFromCusEnts = async ({
 				newBalance: newGrpBalance,
 				logger: ctx.logger,
 			});
+
+			// Adjust balance based on replaceables
+			let reUpdatedBalance = update.balance;
+			if (newReplaceables && newReplaceables.length > 0) {
+				reUpdatedBalance = reUpdatedBalance - newReplaceables.length;
+			} else if (deletedReplaceables && deletedReplaceables.length > 0) {
+				reUpdatedBalance = reUpdatedBalance + deletedReplaceables.length;
+			}
+
+			if (reUpdatedBalance !== update.balance) {
+				await CusEntService.update({
+					db,
+					id: cusEntId,
+					updates: {
+						balance: reUpdatedBalance,
+					},
+				});
+			}
 
 			updateCusEntInFullCus({
 				fullCus,

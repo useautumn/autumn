@@ -60,10 +60,9 @@ const initializeDatabaseFunctions = async () => {
 
 		// Load SQL files in order: helpers first, then main function
 		const sqlFiles = [
-			"deductFromSingleEntity.sql",
-			"deductFromAllEntities.sql",
 			"deductFromRollovers.sql",
-			"deductAllowance.sql",
+			"deductFromMainBalance.sql",
+			"performDeduction.sql",
 		];
 
 		for (const file of sqlFiles) {

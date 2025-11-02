@@ -1,6 +1,5 @@
 import {
 	type AppEnv,
-	ErrCode,
 	LegacyVersion,
 	type LimitedItem,
 	type Organization,
@@ -12,7 +11,6 @@ import { addPrefixToProducts } from "tests/attach/utils.js";
 import { setupBefore } from "tests/before.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
 import { createProducts } from "tests/utils/productUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -78,7 +76,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage limits for cont use i
 		testClockId = testClockId1!;
 	});
 
-	it("should attach pro product with quantity exceeding usage limit and get an error", async () => {
+	it("should attach pro product", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,
@@ -89,16 +87,12 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage limits for cont use i
 			env,
 		});
 	});
-	it("should attach pro product and update quantity with quantity exceeding usage limit and get an error", async () => {
-		await expectAutumnError({
-			errCode: ErrCode.InvalidInputs,
-			func: async () => {
-				await autumn.track({
-					customer_id: customerId,
-					feature_id: TestFeature.Users,
-					value: messageItem.usage_limit! + 1,
-				});
-			},
+
+	it("should track usage exceeding usage limit (for users) and only have usage limit deducted", async () => {
+		await autumn.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Users,
+			value: messageItem.usage_limit! + 1,
 		});
 
 		const check = await autumn.check({
@@ -106,7 +100,9 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage limits for cont use i
 			feature_id: TestFeature.Users,
 		});
 
-		expect(check.balance).to.equal(0);
-		expect(check.allowed).to.equal(true);
+		expect(check.balance).to.equal(
+			messageItem.included_usage - messageItem.usage_limit!,
+		);
+		expect(check.allowed).to.equal(false);
 	});
 });

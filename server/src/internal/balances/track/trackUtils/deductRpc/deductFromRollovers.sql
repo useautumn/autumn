@@ -1,5 +1,4 @@
 -- Helper: Deduct from rollovers before deducting from main entitlements
-DROP FUNCTION IF EXISTS deduct_from_rollovers(text[], numeric, text);
 DROP FUNCTION IF EXISTS deduct_from_rollovers(text[], numeric, text, boolean);
 
 CREATE FUNCTION deduct_from_rollovers(
