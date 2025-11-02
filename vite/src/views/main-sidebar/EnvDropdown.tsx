@@ -12,10 +12,14 @@ import {
 	DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { queryClient } from "@/main";
 import { envToPath } from "@/utils/genUtils";
 import { ExpandedEnvTrigger } from "./env-dropdown/ExpandedEnvTrigger";
 
 export const handleEnvChange = async (env: AppEnv, navigate: (path: string) => void, reset?: boolean) => {
+	// Invalidate all queries when switching environments to ensure fresh data
+	await queryClient.invalidateQueries();
+
 	const newPath = envToPath(env, location.pathname);
 	if (newPath && !reset) {
 		const params = new URLSearchParams(location.search);
