@@ -3,15 +3,17 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useCustomersQueryStates } from "./useCustomersQueryStates";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useEnv } from "@/utils/envUtils";
 
 export const useFullCusSearchQuery = () => {
 	const { queryStates } = useCustomersQueryStates();
 	const axiosInstance = useAxiosInstance();
+	const env = useEnv();
 
 	const { refetch } = useQuery<{
 		fullCustomers: FullCustomer[];
 	}>({
-		queryKey: ["full_customers"],
+		queryKey: ["full_customers", env],
 		// Pass AbortSignal so previous requests are canceled when a new refetch starts
 		queryFn: async ({ signal }) => {
 			const { data } = await axiosInstance.post(
