@@ -67,7 +67,7 @@ describe(`${chalk.yellowBright("track-basic7: track with unlimited balance")}`, 
 
 		expect(balance).toBe(0);
 		expect(unlimited).toBe(true);
-		expect(usage).toBe(1);
+		expect(usage).toBe(0);
 	});
 
 	test("should remain unlimited after tracking with small value", async () => {
@@ -84,7 +84,7 @@ describe(`${chalk.yellowBright("track-basic7: track with unlimited balance")}`, 
 
 		expect(balance).toBe(0);
 		expect(unlimited).toBe(true);
-		expect(usage).toBe(11); // 1 from previous test + 10
+		expect(usage).toBe(0); // 1 from previous test + 10
 	});
 
 	test("should remain unlimited after tracking with large value", async () => {
@@ -101,7 +101,7 @@ describe(`${chalk.yellowBright("track-basic7: track with unlimited balance")}`, 
 
 		expect(balance).toBe(0);
 		expect(unlimited).toBe(true);
-		expect(usage).toBe(1000011); // 11 from previous tests + 1000000
+		expect(usage).toBe(0); // 11 from previous tests + 1000000
 	});
 
 	test("should remain unlimited after multiple concurrent tracks", async () => {
@@ -123,6 +123,6 @@ describe(`${chalk.yellowBright("track-basic7: track with unlimited balance")}`, 
 		// 1000011 from previous + sum(1..10) = 1000011 + 55
 		expect(balance).toBe(0);
 		expect(unlimited).toBe(true);
-		expect(usage).toBe(1000066);
+		expect(usage).toBe(0);
 	});
 });

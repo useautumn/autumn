@@ -10,14 +10,14 @@ import chalk from "chalk";
 import { TestFeature } from "tests/setup/v2Features.js";
 import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import {
+	featureToCreditSystem,
+	getCreditCost,
+} from "@/internal/features/creditSystemUtils.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import {
-	featureToCreditSystem,
-	getCreditCost,
-} from "../../../src/internal/features/creditSystemUtils.js";
 
 const creditsFeature = constructFeatureItem({
 	featureId: TestFeature.Credits,

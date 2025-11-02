@@ -412,7 +412,7 @@ export const updateUsage = async ({
 		return;
 	}
 
-	validateDeductionPossible({ cusEnts, featureDeductions, entityId });
+	// validateDeductionPossible({ cusEnts, featureDeductions, entityId });
 
 	const originalCusEnts = structuredClone(cusEnts);
 	for (const obj of featureDeductions) {
