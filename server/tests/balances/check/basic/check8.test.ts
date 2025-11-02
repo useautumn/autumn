@@ -4,11 +4,11 @@ import chalk from "chalk";
 import { TestFeature } from "tests/setup/v2Features.js";
 import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { timeout } from "@/utils/genUtils.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { timeout } from "../../utils/genUtils.js";
 
 const messagesFeature = constructFeatureItem({
 	featureId: TestFeature.Messages,
