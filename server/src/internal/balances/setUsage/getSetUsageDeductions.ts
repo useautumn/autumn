@@ -5,6 +5,7 @@ import {
 	type Feature,
 	FeatureType,
 	getRelevantFeatures,
+	RecaseError,
 	type SetUsageParams,
 	sumValues,
 } from "@autumn/shared";
@@ -15,8 +16,27 @@ import {
 	getFeatureBalance,
 	getUnlimitedAndUsageAllowed,
 } from "../../customers/cusProducts/cusEnts/cusEntUtils.js";
-import { featureToCreditSystem } from "../../features/creditSystemUtils.js";
+import {
+	getCreditCost,
+	getCreditSystemsFromFeature,
+} from "../../features/creditSystemUtils.js";
 import type { FeatureDeduction } from "../track/trackUtils/getFeatureDeductions.js";
+
+// Helper: Check if cusEnts has balance for a feature
+const cusEntsHasFeatureBalance = ({
+	cusEnts,
+	featureInternalId,
+}: {
+	cusEnts: ReturnType<typeof cusProductsToCusEnts>;
+	featureInternalId: string;
+}): boolean => {
+	const balance = getFeatureBalance({
+		cusEnts,
+		internalFeatureId: featureInternalId,
+		entityId: undefined,
+	});
+	return balance !== null && balance > 0;
+};
 
 // 2. Get deductions for each feature
 export const getSetUsageDeductions = async ({
@@ -29,11 +49,6 @@ export const getSetUsageDeductions = async ({
 	const { db, org, env, features: allFeatures } = ctx;
 	const { value, entity_id } = setUsageParams;
 
-	const features = getRelevantFeatures({
-		features: allFeatures,
-		featureId: setUsageParams.feature_id,
-	});
-
 	const fullCus = await CusService.getFull({
 		db: ctx.db,
 		idOrInternalId: setUsageParams.customer_id,
@@ -43,81 +58,113 @@ export const getSetUsageDeductions = async ({
 		entityId: setUsageParams.entity_id,
 	});
 
-	const cusEnts = cusProductsToCusEnts({
-		cusProducts: fullCus.customer_products,
-		reverseOrder: org.config?.reverse_deduction_order,
-	});
-
-	const meteredFeature =
-		features.find((f: Feature) => f.type === FeatureType.Metered) ||
-		features[0];
-
-	const featureDeductions = [];
-	for (const feature of features) {
-		let newValue = value;
-
-		const { unlimited } = getUnlimitedAndUsageAllowed({
-			cusEnts,
-			internalFeatureId: feature.internal_id!,
-		});
-
-		if (unlimited) continue;
-
-		if (feature.type === FeatureType.CreditSystem) {
-			newValue = featureToCreditSystem({
-				featureId: meteredFeature.id,
-				creditSystem: feature,
-				amount: value,
-			});
-		}
-
-		// If it's set
-		let deduction = newValue;
-
-		const totalAllowance = sumValues(
-			cusEnts.map((cusEnt) =>
-				cusEntToIncludedUsage({ cusEnt, entityId: setUsageParams.entity_id }),
-			),
-		);
-
-		const targetBalance = new Decimal(totalAllowance).sub(value).toNumber();
-
-		const totalBalance = getFeatureBalance({
-			cusEnts,
-			internalFeatureId: feature.internal_id!,
-			entityId: entity_id,
-		})!;
-
-		deduction = new Decimal(totalBalance).sub(targetBalance).toNumber();
-
-		if (deduction === 0) {
-			console.log(`   - Skipping feature ${feature.id} -- deduction is 0`);
-			continue;
-		}
-
-		featureDeductions.push({
-			feature,
-			deduction,
+	// Find the target feature
+	const targetFeature = allFeatures.find(
+		(f) => f.id === setUsageParams.feature_id,
+	);
+	if (!targetFeature) {
+		throw new RecaseError({
+			message: `Feature ${setUsageParams.feature_id} not found`,
+			code: "feature_not_found",
 		});
 	}
 
-	featureDeductions.sort((a, b) => {
-		if (
-			a.feature.type === FeatureType.CreditSystem &&
-			b.feature.type !== FeatureType.CreditSystem
-		) {
-			return 1;
-		}
+	const isSettingCreditSystem = targetFeature.type === FeatureType.CreditSystem;
 
-		if (
-			a.feature.type !== FeatureType.CreditSystem &&
-			b.feature.type === FeatureType.CreditSystem
-		) {
-			return -1;
-		}
-
-		return a.feature.id.localeCompare(b.feature.id);
+	// Find credit systems that contain this feature
+	const creditSystems = getCreditSystemsFromFeature({
+		featureId: targetFeature.id,
+		features: allFeatures,
 	});
 
-	return featureDeductions;
+	// Get cusEnts for the target feature
+	const targetFeatureCusEnts = cusProductsToCusEnts({
+		cusProducts: fullCus.customer_products,
+		reverseOrder: org.config?.reverse_deduction_order,
+		featureId: targetFeature.id,
+	});
+
+	// Check if customer has balance for the target feature directly
+	const hasTargetFeatureBalance = cusEntsHasFeatureBalance({
+		cusEnts: targetFeatureCusEnts,
+		featureInternalId: targetFeature.internal_id!,
+	});
+
+	// Check if customer has balance for any credit system containing this feature
+	const creditSystemWithBalance = creditSystems.find((cs) => {
+		const csCusEnts = cusProductsToCusEnts({
+			cusProducts: fullCus.customer_products,
+			reverseOrder: org.config?.reverse_deduction_order,
+			featureId: cs.id,
+		});
+		return cusEntsHasFeatureBalance({
+			cusEnts: csCusEnts,
+			featureInternalId: cs.internal_id!,
+		});
+	});
+
+	// Validate: can't have both regular feature and credit system (unless setting credit system itself)
+	if (!isSettingCreditSystem && hasTargetFeatureBalance && creditSystemWithBalance) {
+		throw new RecaseError({
+			message: `Cannot set usage for feature '${targetFeature.id}' because customer has both direct feature entitlements and credit system entitlements. Please use one or the other.`,
+			code: "dual_deduction_not_allowed",
+		});
+	}
+
+	// Determine which feature to use for deductions
+	const deductionFeature = creditSystemWithBalance || targetFeature;
+	const deductionFeatureId = deductionFeature.id;
+
+	const cusEnts = cusProductsToCusEnts({
+		cusProducts: fullCus.customer_products,
+		reverseOrder: org.config?.reverse_deduction_order,
+		featureId: deductionFeatureId,
+	});
+
+	const { unlimited } = getUnlimitedAndUsageAllowed({
+		cusEnts,
+		internalFeatureId: deductionFeature.internal_id!,
+	});
+
+	if (unlimited) {
+		return [];
+	}
+
+	const totalAllowance = sumValues(
+		cusEnts.map((cusEnt) =>
+			cusEntToIncludedUsage({ cusEnt, entityId: setUsageParams.entity_id }),
+		),
+	);
+
+	console.log("totalAllowance", totalAllowance);
+
+	// Calculate target balance based on whether we're using credit system
+	let targetBalance: number;
+	if (creditSystemWithBalance && !isSettingCreditSystem) {
+		// Feature is part of a credit system: targetBalance = totalAllowance - (credit_cost * value)
+		const creditCost = getCreditCost({
+			featureId: targetFeature.id,
+			creditSystem: creditSystemWithBalance,
+			amount: value,
+		});
+		targetBalance = new Decimal(totalAllowance).sub(creditCost).toNumber();
+	} else {
+		// Regular feature or setting credit system directly: targetBalance = totalAllowance - value
+		targetBalance = new Decimal(totalAllowance).sub(value).toNumber();
+	}
+
+	const totalBalance = getFeatureBalance({
+		cusEnts,
+		internalFeatureId: deductionFeature.internal_id!,
+		entityId: entity_id,
+	})!;
+
+	const deduction = new Decimal(totalBalance).sub(targetBalance).toNumber();
+
+	if (deduction === 0) {
+		console.log(`   - Skipping feature ${deductionFeature.id} -- deduction is 0`);
+		return [];
+	}
+
+	return [{ feature: deductionFeature, deduction }];
 };
