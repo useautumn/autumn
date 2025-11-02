@@ -58,6 +58,15 @@ export const envToPath = (env: AppEnv, currentPath: string) => {
 		return env === AppEnv.Sandbox ? "/sandbox/customers" : "/customers";
 	}
 
+	// Check if we're on a product detail page
+	const productDetailPattern = /^(\/sandbox)?\/products\/[^/]+/;
+	const isProductDetailPage = productDetailPattern.test(currentPath);
+
+	if (isProductDetailPage) {
+		// Redirect to products list instead of trying to preserve product ID
+		return env === AppEnv.Sandbox ? "/sandbox/products" : "/products";
+	}
+
 	if (env === AppEnv.Sandbox && !currentPath.includes("/sandbox")) {
 		return `/sandbox${currentPath}`;
 	} else if (env === AppEnv.Live && currentPath.includes("/sandbox")) {
