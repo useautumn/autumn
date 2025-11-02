@@ -79,7 +79,7 @@ export const handleUpdateProductV2 = createRoute({
 			...body,
 			group: body.group || curProductV2.group || "",
 			items: body.items || [],
-			free_trial: newFreeTrial || curProductV2.free_trial || undefined,
+			free_trial: "free_trial" in body ? newFreeTrial : curProductV2.free_trial,
 		};
 
 		await disableCurrentDefault({
@@ -91,7 +91,8 @@ export const handleUpdateProductV2 = createRoute({
 			db,
 			curProduct: fullProduct,
 			newProduct: UpdateProductSchema.parse(body),
-			newFreeTrial: body.free_trial || curProductV2.free_trial || undefined,
+			newFreeTrial:
+				"free_trial" in body ? body.free_trial : curProductV2.free_trial,
 			items: body.items || curProductV2.items,
 			org,
 			rewardPrograms,
@@ -102,7 +103,9 @@ export const handleUpdateProductV2 = createRoute({
 
 		const cusProductExists = cusProductsCurVersion.length > 0;
 
-		if (cusProductExists && itemsExist) {
+		// Check if versioning is needed (customers exist AND items or free trial changed)
+		const freeTrialProvided = "free_trial" in body;
+		if (cusProductExists && (itemsExist || freeTrialProvided)) {
 			if (disable_version) {
 				throw new RecaseError({
 					message: "Cannot auto save product as there are existing customers",

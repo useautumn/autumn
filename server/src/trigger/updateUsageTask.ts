@@ -3,14 +3,17 @@ import {
 	type AppEnv,
 	CusProductStatus,
 	type Customer,
+	cusEntToIncludedUsage,
 	customerEntitlements,
 	customers,
 	ErrCode,
 	type Feature,
 	FeatureType,
 	FeatureUsageType,
+	type FullCusEntWithFullCusProduct,
 	type FullCustomerEntitlement,
 	type Organization,
+	sumValues,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { sql } from "drizzle-orm";
@@ -71,11 +74,21 @@ const getFeatureDeductions = ({
 		let deduction = newValue;
 
 		if (shouldSet) {
-			const totalAllowance = cusEnts.reduce((acc, curr) => {
-				return acc + (curr.entitlement.allowance || 0);
-			}, 0);
+			// const totalAllowance = cusEnts.reduce((acc, curr) => {
+			// 	return acc + (curr.entitlement.allowance || 0);
+			// }, 0);
+			const totalIncludedUsage = sumValues(
+				cusEnts.map((cusEnt) => {
+					return cusEntToIncludedUsage({
+						cusEnt: cusEnt as FullCusEntWithFullCusProduct,
+						entityId: entityId,
+					});
+				}),
+			);
 
-			const targetBalance = new Decimal(totalAllowance).sub(value).toNumber();
+			const targetBalance = new Decimal(totalIncludedUsage)
+				.sub(value)
+				.toNumber();
 
 			const totalBalance = getFeatureBalance({
 				cusEnts,
