@@ -49,6 +49,15 @@ export const getEnvFromPath = (path: string) => {
 };
 
 export const envToPath = (env: AppEnv, currentPath: string) => {
+	// Check if we're on a customer detail page
+	const customerDetailPattern = /^(\/sandbox)?\/customers\/[^/]+/;
+	const isCustomerDetailPage = customerDetailPattern.test(currentPath);
+
+	if (isCustomerDetailPage) {
+		// Redirect to customers list instead of trying to preserve customer ID
+		return env === AppEnv.Sandbox ? "/sandbox/customers" : "/customers";
+	}
+
 	if (env === AppEnv.Sandbox && !currentPath.includes("/sandbox")) {
 		return `/sandbox${currentPath}`;
 	} else if (env === AppEnv.Live && currentPath.includes("/sandbox")) {
