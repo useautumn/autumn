@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { useParams } from "react-router";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
+import { useEnv } from "@/utils/envUtils";
 import { throwBackendError } from "@/utils/genUtils";
 
 import { useCachedProduct } from "./getCachedProduct";
@@ -32,6 +33,7 @@ export const useProductQuery = () => {
 	const productId = queryStates.productId || product_id;
 
 	const axiosInstance = useAxiosInstance();
+	const env = useEnv();
 	const queryClient = useQueryClient();
 	const { getCachedProduct } = useCachedProduct({ productId: productId });
 
@@ -62,7 +64,7 @@ export const useProductQuery = () => {
 	};
 
 	const { data, isLoading, refetch, error } = useQuery({
-		queryKey: ["product", productId, queryStates.version],
+		queryKey: ["product", env, productId, queryStates.version],
 		queryFn: fetcher,
 		retry: false, // Don't retry on error (e.g., product not found)
 		enabled: !!productId, // Only run query if productId exists
@@ -78,10 +80,10 @@ export const useProductQuery = () => {
 	 * Invalidates all individual product queries across the app
 	 */
 	const invalidate = async () => {
-		await queryClient.invalidateQueries({ queryKey: ["product"] });
+		await queryClient.invalidateQueries({ queryKey: ["product", env] });
 		await Promise.all([
-			queryClient.invalidateQueries({ queryKey: ["product_counts"] }),
-			queryClient.invalidateQueries({ queryKey: ["migrations"] }),
+			queryClient.invalidateQueries({ queryKey: ["product_counts", env] }),
+			queryClient.invalidateQueries({ queryKey: ["migrations", env] }),
 		]);
 	};
 
