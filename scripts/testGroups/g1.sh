@@ -15,8 +15,8 @@ fi
 # Run tests using TypeScript runner with compact mode
 # Adjust --max to control concurrency (default: 6)
 BUN_PARALLEL_COMPACT \
-  'server/tests/check/basic' \
-  'server/tests/check/credit-systems' \
+  'server/tests/balances/check' \
+  'server/tests/balances/track' \
   'server/tests/attach/basic' \
   'server/tests/attach/upgrade' \
   'server/tests/attach/downgrade' \

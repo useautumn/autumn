@@ -1,18 +1,19 @@
 import {
 	AffectedResource,
 	type ApiCustomer,
-	ApiCustomerSchema,
 	applyResponseVersionChanges,
 	type CusExpand,
 	type CustomerLegacyData,
 	type FullCustomer,
 } from "@autumn/shared";
-import { z } from "zod/v4";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
-import { getApiCusFeatures } from "./getApiCusFeature/getApiCusFeatures.js";
 import { getApiCusProducts } from "./getApiCusProduct/getApiCusProducts.js";
+import { getApiCustomerBase } from "./getApiCustomerBase.js";
 import { getApiCustomerExpand } from "./getApiCustomerExpand.js";
 
+/**
+ * Get full ApiCustomer with expand fields and version changes applied
+ */
 export const getApiCustomer = async ({
 	ctx,
 	fullCus,
@@ -24,41 +25,30 @@ export const getApiCustomer = async ({
 	expand: CusExpand[];
 	withAutumnId?: boolean;
 }) => {
-	const apiCusFeatures = await getApiCusFeatures({
+	// Get base customer (cacheable)
+	const baseCustomer = await getApiCustomerBase({
 		ctx,
 		fullCus,
+		withAutumnId,
 	});
 
-	const { apiCusProducts, legacyData: cusProductLegacyData } =
-		await getApiCusProducts({
-			ctx,
-			fullCus,
-		});
-
+	// Get expand fields (not cacheable)
 	const apiCusExpand = await getApiCustomerExpand({
 		ctx,
 		fullCus,
 		expand,
 	});
 
-	const apiCustomer = ApiCustomerSchema.extend({
-		autumn_id: z.string().optional(),
-	}).parse({
-		autumn_id: withAutumnId ? fullCus.internal_id : undefined,
-
-		id: fullCus.id || null,
-		created_at: fullCus.created_at,
-		name: fullCus.name || null,
-		email: fullCus.email || null,
-		fingerprint: fullCus.fingerprint || null,
-
-		stripe_id: fullCus.processor?.id || null,
-		env: fullCus.env,
-		metadata: fullCus.metadata,
-
-		products: apiCusProducts,
-		features: apiCusFeatures,
+	// Merge expand fields
+	const apiCustomer = {
+		...baseCustomer,
 		...apiCusExpand,
+	};
+
+	// Get legacy data for version changes
+	const { legacyData: cusProductLegacyData } = await getApiCusProducts({
+		ctx,
+		fullCus,
 	});
 
 	return applyResponseVersionChanges<ApiCustomer, CustomerLegacyData>({
