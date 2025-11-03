@@ -6,7 +6,7 @@ import {
 import yaml from "yaml";
 import { z } from "zod/v4";
 import { createDocument, type ZodOpenApiPathsObject } from "zod-openapi";
-import { UpdateBalancesParamsSchema } from "../balances/legacyUpdateBalanceModels.js";
+import { UpdateBalancesParamsSchema } from "../balances/prevVersions/legacyUpdateBalanceModels.js";
 import { SetUsageParamsSchema } from "../balances/usageModels.js";
 import { CustomerDataSchema } from "../common/customerData.js";
 import { EntityDataSchema } from "../common/entityData.js";

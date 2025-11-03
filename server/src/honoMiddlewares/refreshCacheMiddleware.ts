@@ -49,6 +49,10 @@ const coreUrls = [
 		method: "POST",
 		url: "/cancel",
 	},
+	{
+		method: "POST",
+		url: "/balances/update",
+	},
 ];
 
 /**

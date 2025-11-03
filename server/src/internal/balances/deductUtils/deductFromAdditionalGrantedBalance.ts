@@ -31,8 +31,17 @@ export const deductFromAdditionalGrantedBalance = async ({
 		features,
 	}) as FullCusEntWithFullCusProduct[];
 
+	const printLogs = false;
 	for (let i = 0; i < filteredCusEnts.length; i++) {
 		const cusEnt = filteredCusEnts[i];
+
+		if (printLogs) {
+			console.log("BEFORE DEDUCTION:", {
+				additional_granted_balance: cusEnt.additional_granted_balance,
+				additional_balance: cusEnt.additional_balance,
+				toDeduct,
+			});
+		}
 
 		const {
 			newBalance,
@@ -48,40 +57,47 @@ export const deductFromAdditionalGrantedBalance = async ({
 			field: "additional_granted_balance",
 		});
 
-		// Update cus ent in place
-		filteredCusEnts[i] = {
+		const toDeduct2 = new Decimal(toDeduct).minus(newToDeduct).toNumber();
+
+		// Use updated cusEnt with new additional_granted_balance
+		const updatedCusEnt = {
 			...cusEnt,
 			additional_granted_balance: newBalance,
 			entities: newEntities,
 		};
 
-		const deducted = new Decimal(toDeduct).minus(newToDeduct).toNumber();
-
 		const { newBalance: newBalance2, newEntities: newEntities2 } =
 			performDeductionOnCusEnt({
-				cusEnt,
-				toDeduct: deducted,
+				cusEnt: updatedCusEnt,
+				toDeduct: toDeduct2,
 				entityId: entity?.id,
 				allowNegativeBalance: true,
 				setZeroAdjustment: false,
 				blockUsageLimit: true,
-				field: "additional_granted_balance",
+				field: "additional_balance",
 			});
 
 		// Update cus ent in place
 		filteredCusEnts[i] = {
-			...cusEnt,
-			additional_granted_balance: newBalance2,
-			additional_balance: newBalance,
+			...updatedCusEnt,
+			additional_balance: newBalance2,
 			entities: newEntities2,
 		};
+
+		if (printLogs) {
+			console.log("FINAL UPDATE:", {
+				additional_granted_balance: newBalance,
+				additional_balance: newBalance2,
+			});
+		}
 
 		await CusEntService.update({
 			db,
 			id: cusEnt.id,
 			updates: {
-				additional_balance: newBalance,
-				entities: newEntities,
+				additional_balance: newBalance2,
+				additional_granted_balance: newBalance,
+				entities: newEntities2,
 			},
 		});
 

@@ -19,7 +19,7 @@ import { getFeatureBalance } from "@/internal/customers/cusProducts/cusEnts/cusE
 import { deductFromApiCusRollovers } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverDeductionUtils.js";
 import { getCusEntsInFeatures } from "@/internal/customers/cusUtils/cusUtils.js";
 import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
-import { deductFromFreeBalance } from "../internal/balances/deductUtils/deductFromAdditionalGrantedBalance.js";
+import { deductFromAdditionalBalance } from "../internal/balances/deductUtils/deductFromAdditionalBalance.js";
 import { generateId } from "../utils/genUtils.js";
 import { handleThresholdReached } from "./handleThresholdReached.js";
 import {
@@ -255,8 +255,8 @@ export const updateUsage = async ({
 
 			if (toDeduct === 0) return;
 
-			// 2. Deduct from free balance
-			toDeduct = await deductFromFreeBalance({
+			// 2. Deduct from additional balance
+			toDeduct = await deductFromAdditionalBalance({
 				toDeduct,
 				cusEnts,
 				feature,

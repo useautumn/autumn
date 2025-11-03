@@ -46,8 +46,8 @@ export const cusEntToPurchasedBalance = ({
 	});
 
 	// Balance always includes adjustment. Purchased balance should NOT include adjustment
-	return new Decimal(balance).sub(adjustment).toNumber();
+	// return new Decimal(balance).sub(adjustment).toNumber();
 
 	// // Return negative amount of balance...
-	// return Math.max(0, -(cusEnt.balance || 0));
+	return Math.max(0, -(cusEnt.balance || 0));
 };

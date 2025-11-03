@@ -11,12 +11,18 @@ import { ResetInterval } from "../apiPlan.js";
 export const UpdatePlanFeatureSchema = z
 	.object({
 		feature_id: z.string(),
-		granted: z.number().optional(),
+		granted_balance: z.number().optional(),
 		unlimited: z.boolean().optional(),
 
-		reset_interval: z.enum(ResetInterval).optional(),
-		reset_interval_count: z.number().optional(),
-		reset_usage_on_enabled: z.boolean().optional(),
+		// reset_interval: z.enum(ResetInterval).optional(),
+		// reset_interval_count: z.number().optional(),
+		reset: z
+			.object({
+				interval: z.enum(ResetInterval).optional(),
+				interval_count: z.number().optional(),
+				when_enabled: z.boolean().optional(),
+			})
+			.optional(),
 
 		price: z
 			.object({
@@ -49,7 +55,9 @@ export const UpdatePlanFeatureSchema = z
 	})
 	.check((ctx) => {
 		const resetGroup =
-			ctx.value.reset_interval || ctx.value.reset_interval_count !== undefined;
+			ctx.value.reset?.interval ||
+			ctx.value.reset?.interval_count !== undefined;
+
 		const intervalGroup =
 			ctx.value.price?.interval ||
 			ctx.value.price?.interval_count !== undefined;
@@ -86,3 +94,5 @@ export const UpdatePlanFeatureSchema = z
 			}
 		}
 	});
+
+export type UpdatePlanFeatureParams = z.infer<typeof UpdatePlanFeatureSchema>;
