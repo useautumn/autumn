@@ -49,6 +49,10 @@ export const ExtCheckParamsSchema = z.object({
 	entity_data: EntityDataSchema.optional().meta({
 		description: "Entity data to create the entity if it doesn't exist",
 	}),
+	properties: z.record(z.string(), z.any()).optional().meta({
+		description: "Properties to pass to the check",
+		internal: true,
+	}),
 });
 
 export const CheckParamsSchema = ExtCheckParamsSchema.extend({

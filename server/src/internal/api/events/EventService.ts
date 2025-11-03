@@ -1,9 +1,8 @@
-import { ErrCode, EventInsert } from "@autumn/shared";
-import RecaseError from "@/utils/errorUtils.js";
+import { ErrCode, type EventInsert, events } from "@autumn/shared";
+import { and, desc, eq } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
-import { events } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { and, eq, desc } from "drizzle-orm";
+import RecaseError from "@/utils/errorUtils.js";
 
 export class EventService {
 	static async insert({ db, event }: { db: DrizzleCli; event: EventInsert }) {
@@ -24,7 +23,7 @@ export class EventService {
 
 			return results[0];
 		} catch (error: any) {
-			if (error.code == "23505") {
+			if (error.code === "23505") {
 				throw new RecaseError({
 					message:
 						"Event (event_name, customer_id, idempotency_key) already exists.",
@@ -49,7 +48,7 @@ export class EventService {
 		env: string;
 		limit?: number;
 	}) {
-		let results = await db
+		const results = await db
 			.select({
 				id: events.id,
 				event_name: events.event_name,

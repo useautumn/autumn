@@ -1,4 +1,4 @@
-import type { AppEnv, FullProduct, Price } from "@autumn/shared";
+import type { AppEnv, Price } from "@autumn/shared";
 import RecaseError from "@/utils/errorUtils.js";
 import { JobName } from "./JobName.js";
 import { QueueManager } from "./QueueManager.js";

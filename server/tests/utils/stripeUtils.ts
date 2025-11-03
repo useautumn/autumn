@@ -12,7 +12,6 @@ import {
 	addMonths,
 	addWeeks,
 	format,
-	subHours,
 } from "date-fns";
 import puppeteer from "puppeteer-core";
 import type { Stripe } from "stripe";
@@ -316,12 +315,12 @@ export const advanceClockForInvoice = async ({
 		startingFrom = new Date();
 	}
 
-	// if (numberOfDays) {
-	// 	advanceTo = addDays(startingFrom, numberOfDays).getTime();
-	// } else {
-	// 	advanceTo = addMonths(startingFrom, 1).getTime();
-	// }
-	advanceTo = subHours(addMonths(Date.now(), 1), 1).getTime();
+	if (numberOfDays) {
+		advanceTo = addDays(startingFrom, numberOfDays).getTime();
+	} else {
+		advanceTo = addMonths(startingFrom, 1).getTime();
+	}
+	// advanceTo = subHours(addMonths(Date.now(), 1), 1).getTime();
 
 	await stripeCli.testHelpers.testClocks.advance(testClockId, {
 		frozen_time: Math.ceil(advanceTo / 1000),

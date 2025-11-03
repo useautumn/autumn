@@ -53,7 +53,7 @@ export type DeductParams = {
 	org: Organization;
 	cusPrices: FullCustomerPrice[];
 	customer: Customer;
-	properties: any;
+	// properties: any;
 	feature: Feature;
 	entity?: Entity;
 };

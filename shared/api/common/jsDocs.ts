@@ -4,6 +4,7 @@ import {
 	docLink,
 	example,
 } from "@api/utils/openApiHelpers.js";
+import { TrackParamsSchema } from "../balances/trackModels.js";
 import { SetUsageParamsSchema } from "../balances/usageModels.js";
 import { CheckParamsSchema } from "../core/checkModels.js";
 import {
@@ -11,9 +12,7 @@ import {
 	CancelBodySchema,
 	QueryParamsSchema,
 	SetupPaymentParamsSchema,
-	TrackParamsSchema,
 } from "../core/coreOpModels.js";
-
 /**
  * Centralized JSDoc declarations for all core API methods.
  * These are used by the OpenAPI spec generator and propagate to SDK documentation.

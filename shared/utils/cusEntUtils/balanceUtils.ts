@@ -1,4 +1,6 @@
+import { Decimal } from "decimal.js";
 import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
+import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import { notNullish, nullish } from "../utils.js";
 
 export const getSummedEntityBalances = ({
@@ -96,4 +98,23 @@ export const getCusEntBalance = ({
 		unused: cusEnt.replaceables?.length || 0,
 		count: 1,
 	};
+};
+
+export const getMaxOverage = ({
+	cusEnt,
+}: {
+	cusEnt: FullCusEntWithFullCusProduct;
+}) => {
+	const usageLimit = cusEnt.entitlement.usage_limit;
+	if (nullish(usageLimit)) return undefined;
+
+	// const cusPrice = cusEntToCusPrice({ cusEnt });
+	// if (cusPrice && isPrepaidPrice({ price: cusPrice.price })) return undefined;
+	if (!cusEnt.usage_allowed) return undefined;
+
+	const maxOverage = new Decimal(usageLimit)
+		.sub(cusEnt.entitlement.allowance || 0)
+		.toNumber();
+
+	return maxOverage;
 };

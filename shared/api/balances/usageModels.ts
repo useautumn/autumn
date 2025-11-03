@@ -20,3 +20,5 @@ export const SetUsageParamsSchema = z.object({
 
 	customer_data: CustomerDataSchema.optional(),
 });
+
+export type SetUsageParams = z.infer<typeof SetUsageParamsSchema>;

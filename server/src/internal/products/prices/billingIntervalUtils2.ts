@@ -59,6 +59,38 @@ export const subtractIntervalFromAnchor = ({
 	return now;
 };
 
+// Finds the period start by advancing from anchor until reaching the period that contains targetEnd
+// Returns the start of the period that ends at or after targetEnd
+export const getPeriodStartForEnd = ({
+	anchor,
+	intervalConfig,
+	targetEnd,
+}: {
+	anchor: number;
+	intervalConfig: IntervalConfig;
+	targetEnd: number;
+}) => {
+	let periodStart = anchor;
+	let periodEnd = addIntervalForProration({
+		unixTimestamp: anchor,
+		intervalConfig,
+	});
+
+	// Keep advancing until we find the period containing targetEnd
+	const maxIterations = 50;
+	let iterations = 0;
+	while (periodEnd < targetEnd && iterations < maxIterations) {
+		periodStart = periodEnd;
+		periodEnd = addIntervalForProration({
+			unixTimestamp: periodEnd,
+			intervalConfig,
+		});
+		iterations++;
+	}
+
+	return periodStart;
+};
+
 export const getAlignedUnix = ({
 	anchor,
 	intervalConfig,
