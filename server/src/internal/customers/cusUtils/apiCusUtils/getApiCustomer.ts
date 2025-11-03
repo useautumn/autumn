@@ -6,8 +6,6 @@ import {
 	type FullCustomer,
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
-import { getApiCusFeatures } from "./getApiCusFeature/getApiCusFeatures.js";
-import { getApiCusPlans } from "./getApiCusPlan/getApiCusPlans.js";
 import { getApiCustomerBase } from "./getApiCustomerBase.js";
 import { getApiCustomerExpand } from "./getApiCustomerExpand.js";
 
@@ -23,18 +21,6 @@ export const getApiCustomer = async ({
 	fullCus: FullCustomer;
 	withAutumnId?: boolean;
 }) => {
-	const { apiCusFeatures, legacyData: cusFeaturesLegacyData } =
-		await getApiCusFeatures({
-			ctx,
-			fullCus,
-		});
-
-	const { apiCusPlans, legacyData: cusProductLegacyData } =
-		await getApiCusPlans({
-			ctx,
-			fullCus,
-		});
-
 	// Get base customer (cacheable)
 	const baseCustomer = await getApiCustomerBase({
 		ctx,
@@ -50,7 +36,7 @@ export const getApiCustomer = async ({
 
 	// Merge expand fields
 	const apiCustomer = {
-		...baseCustomer,
+		...baseCustomer.cus,
 		...apiCusExpand,
 	};
 
@@ -58,8 +44,8 @@ export const getApiCustomer = async ({
 	return applyResponseVersionChanges<ApiCustomer, CustomerLegacyData>({
 		input: apiCustomer,
 		legacyData: {
-			cusProductLegacyData,
-			cusFeatureLegacyData: cusFeaturesLegacyData,
+			cusProductLegacyData: baseCustomer.legacyData.cusProductLegacyData,
+			cusFeatureLegacyData: baseCustomer.legacyData.cusFeaturesLegacyData,
 		},
 		targetVersion: ctx.apiVersion,
 		resource: AffectedResource.Customer,
