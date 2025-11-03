@@ -1,4 +1,4 @@
-import type { Customer, ReferralCode, RewardRedemption } from "@autumn/shared";
+import type { ReferralCode, RewardRedemption } from "@autumn/shared";
 import { assert } from "chai";
 import chalk from "chalk";
 import { addDays, addHours } from "date-fns";
@@ -7,10 +7,9 @@ import { setupBefore } from "tests/before.js";
 import { compareProductEntitlements } from "tests/utils/compare.js";
 import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
 import { timeout } from "tests/utils/genUtils.js";
-import { initCustomer } from "tests/utils/init.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { initCustomerWithTestClock } from "tests/utils/testInitUtils.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { initCustomerV2 } from "../../../src/utils/scriptUtils/initCustomer.js";
 import { features, products, referralPrograms } from "../../global.js";
 
 // UNCOMMENT FROM HERE
@@ -26,8 +25,6 @@ describe(`${chalk.yellowBright(
 	let referralCode: ReferralCode;
 
 	const redemptions: RewardRedemption[] = [];
-	let mainCustomer: Customer;
-	let redeemer: Customer;
 
 	let testClockId: string;
 	before(async function () {
@@ -35,12 +32,13 @@ describe(`${chalk.yellowBright(
 		autumn = this.autumn;
 		stripeCli = this.stripeCli;
 
-		await initCustomer({
+		await initCustomerV2({
+			autumn,
 			customerId: mainCustomerId,
-			db: this.db,
 			org: this.org,
 			env: this.env,
-			attachPm: true,
+			db: this.db,
+			attachPm: "success",
 		});
 
 		await autumn.attach({
@@ -48,16 +46,16 @@ describe(`${chalk.yellowBright(
 			product_id: products.proWithTrial.id,
 		});
 
-		const { testClockId: testClockId1, customer } =
-			await initCustomerWithTestClock({
-				customerId: redeemerId,
-				db: this.db,
-				org: this.org,
-				env: this.env,
-			});
+		const { testClockId: testClockId1 } = await initCustomerV2({
+			autumn,
+			customerId: redeemerId,
+			db: this.db,
+			org: this.org,
+			env: this.env,
+			attachPm: "success",
+		});
 
 		testClockId = testClockId1;
-		redeemer = customer;
 	});
 
 	it("should create referral code", async () => {

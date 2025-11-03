@@ -15,7 +15,7 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
-import { getOptions } from "@/internal/api/entitled/checkUtils.js";
+import { getOptions } from "@/internal/api/check/checkUtils.js";
 import { getItemsForCurProduct } from "@/internal/invoices/previewItemUtils/getItemsForCurProduct.js";
 import { getItemsForNewProduct } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";

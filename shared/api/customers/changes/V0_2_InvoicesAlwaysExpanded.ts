@@ -24,6 +24,7 @@ export class V0_2_InvoicesAlwaysExpanded extends VersionChange<
 	typeof NoOpSchema,
 	typeof NoOpSchema
 > {
+	readonly name = "V0_2_InvoicesAlwaysExpanded";
 	readonly newVersion = ApiVersion.V1_1; // Breaking change introduced in V1_1
 	readonly oldVersion = ApiVersion.V0_2; // Applied when targetVersion <= V0_2
 	readonly description =

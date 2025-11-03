@@ -3,6 +3,7 @@ import {
 	ApiVersion,
 	type CheckResponse,
 	type CheckResponseV0,
+	SuccessCode,
 } from "@autumn/shared";
 import chalk from "chalk";
 import { TestFeature } from "tests/setup/v2Features.js";
@@ -50,6 +51,21 @@ describe(`${chalk.yellowBright("check1: test /check when no feature attached")}`
 		});
 	});
 
+	test("should have correct check response when feature not attached (v1)", async () => {
+		const res = (await autumnV1.check({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+		})) as unknown as CheckResponse;
+
+		expect(res).toStrictEqual({
+			allowed: false,
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			required_balance: 1,
+			code: SuccessCode.FeatureFound,
+		});
+	});
+
 	test("should have correct check response when feature not attached (v0)", async () => {
 		const res = (await autumnV0.check({
 			customer_id: customerId,
@@ -59,18 +75,5 @@ describe(`${chalk.yellowBright("check1: test /check when no feature attached")}`
 		expect(res.allowed).toBe(false);
 		expect(res.balances).toBeDefined();
 		expect(res.balances).toHaveLength(0);
-	});
-
-	test("should have correct check response when feature not attached (v1)", async () => {
-		const res = (await autumnV1.check({
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-		})) as unknown as CheckResponse;
-
-		expect(res.allowed).toBe(false);
-		expect(res.customer_id).toBe(customerId);
-		expect(res.feature_id).toBe(TestFeature.Messages);
-		expect(res.code).toBeDefined();
-		expect(res.required_balance).toBe(1);
 	});
 });

@@ -50,7 +50,9 @@ export const SaveChangesBar = ({
 			return;
 		}
 
-		if (!isOnboarding && counts?.all > 0 && willVersion) {
+		// If changes require versioning and we can't confirm there are 0 customers, show dialog
+		// This errs on the side of caution when counts data is unavailable
+		if (!isOnboarding && willVersion && (!counts || counts.all !== 0)) {
 			setShowNewVersionDialog(true);
 			return;
 		}

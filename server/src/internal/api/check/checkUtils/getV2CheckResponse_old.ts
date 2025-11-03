@@ -74,6 +74,7 @@ export const getV2CheckResponse = async ({
 		feature,
 		cusEnts,
 	});
+	console.log("featureToUse", featureToUse);
 
 	const featureCusEnts = cusEnts.filter((cusEnt) =>
 		cusEntMatchesFeature({ cusEnt, feature: featureToUse }),

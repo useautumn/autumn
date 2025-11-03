@@ -1,5 +1,10 @@
 import { ExtAttachBodySchema, ExtCheckoutParamsSchema } from "@api/models.js";
-import { createJSDocDescription, docLink, example } from "@api/utils/openApiHelpers.js";
+import {
+	createJSDocDescription,
+	docLink,
+	example,
+} from "@api/utils/openApiHelpers.js";
+import { SetUsageParamsSchema } from "../balances/usageModels.js";
 import { CheckParamsSchema } from "../core/checkModels.js";
 import {
 	BillingPortalParamsSchema,
@@ -104,8 +109,7 @@ export const trackJsDoc = createJSDocDescription({
 });
 
 export const cancelJsDoc = createJSDocDescription({
-	description:
-		"Cancel a customer's subscription to a product.",
+	description: "Cancel a customer's subscription to a product.",
 	whenToUse:
 		"Use this when a customer wants to stop their subscription. Supports immediate or end-of-period cancellation.",
 	body: CancelBodySchema,
@@ -196,6 +200,30 @@ export const queryJsDoc = createJSDocDescription({
 		docLink({
 			url: "https://docs.useautumn.com/api-reference/core/query",
 			title: "Analytics Queries",
+		}),
+	],
+});
+
+export const setUsageJsDoc = createJSDocDescription({
+	description:
+		"Set usage for a feature. This is similar to /track instead of incrementing usage, it sets the usage value to exactly what is provided.",
+	whenToUse: "Use this to set usage for a feature instead of incrementing it.",
+	body: SetUsageParamsSchema,
+	examples: [
+		example({
+			values: {
+				customer_id: "123",
+				feature_id: "api_calls",
+				value: 10000,
+			},
+			description: "Set usage for a feature",
+		}),
+	],
+	methodName: "usage",
+	docs: [
+		docLink({
+			url: "https://docs.useautumn.com/api-reference/core/usage",
+			title: "Set Usage",
 		}),
 	],
 });
