@@ -94,11 +94,16 @@ const creditsFeature = constructFeatureItem({
 
 ```typescript
 const proProd = constructProduct({
-  type: "pro",
+  type: "free",  // IMPORTANT: Set type to "free" for immediate attachment
   isDefault: false,
   items: [messagesFeature, dashboardFeature],
 });
 ```
+
+**IMPORTANT: Product Type**
+- **`type: "free"`** - Feature is attached to customer **immediately** after `attach()` call
+- **`type: "pro"` or other paid types** - Feature requires payment/subscription flow and may not be immediately available for testing
+- **Rule of thumb:** For track/check tests, always use `type: "free"` unless specifically testing paid subscription flows
 
 ### Step 3: Initialize Test Environment
 

@@ -11,4 +11,7 @@ export enum JobName {
 
 	HandleProductsUpdated = "handle-products-updated",
 	HandleCustomerCreated = "handle-customer-created",
+
+	SyncBalanceBatch = "sync-balance-batch",
+	InsertEventBatch = "insert-event-batch",
 }

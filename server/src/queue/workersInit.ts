@@ -4,6 +4,8 @@ import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { CacheManager } from "@/external/caching/CacheManager.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
+import { runInsertEventBatch } from "@/internal/balances/track/eventUtils/runInsertEventBatch.js";
+import { runSyncBalanceBatch } from "@/internal/balances/track/syncUtils/runSyncBalanceBatch.js";
 import { runSaveFeatureDisplayTask } from "@/internal/features/featureUtils.js";
 import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
 import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigrationTask.js";
@@ -12,8 +14,9 @@ import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutRewa
 import { runUpdateBalanceTask } from "@/trigger/updateBalanceTask.js";
 import { runUpdateUsageTask } from "@/trigger/updateUsageTask.js";
 import { generateId } from "@/utils/genUtils.js";
+import { workerRedis } from "./initQueue.js";
 import { JobName } from "./JobName.js";
-import { acquireLock, getRedisConnection, releaseLock } from "./lockUtils.js";
+import { acquireLock, releaseLock } from "./lockUtils.js";
 import { QueueManager } from "./QueueManager.js";
 
 const NUM_WORKERS = 10;
@@ -87,7 +90,6 @@ const initWorker = ({
 						job,
 						logger: workerLogger,
 						db,
-						useBackup,
 					});
 					return;
 				}
@@ -98,6 +100,25 @@ const initWorker = ({
 						payload: job.data,
 						logger: workerLogger,
 					});
+					return;
+				}
+
+				if (job.name === JobName.SyncBalanceBatch) {
+					await runSyncBalanceBatch({
+						db,
+						payload: job.data,
+						logger: workerLogger as Logger,
+					});
+					return;
+				}
+
+				if (job.name === JobName.InsertEventBatch) {
+					await runInsertEventBatch({
+						db,
+						payload: job.data,
+						logger: workerLogger as Logger,
+					});
+					return;
 				}
 			} catch (error: any) {
 				workerLogger.error(`Failed to process bullmq job: ${job.name}`, {
@@ -116,7 +137,6 @@ const initWorker = ({
 					!(await acquireLock({
 						lockKey,
 						timeout: 10000,
-						useBackup,
 					}))
 				) {
 					await queue.add(job.name, job.data, {
@@ -134,7 +154,7 @@ const initWorker = ({
 				} catch (error) {
 					console.error("Error processing job:", error);
 				} finally {
-					await releaseLock({ lockKey, useBackup });
+					await releaseLock({ lockKey });
 				}
 
 				return;
@@ -151,7 +171,6 @@ const initWorker = ({
 				!(await acquireLock({
 					lockKey: `event:${internalCustomerId}`,
 					timeout: 10000,
-					useBackup,
 				}))
 			) {
 				await queue.add(job.name, job.data, {
@@ -179,12 +198,11 @@ const initWorker = ({
 			} finally {
 				await releaseLock({
 					lockKey: `event:${internalCustomerId}`,
-					useBackup,
 				});
 			}
 		},
 		{
-			...getRedisConnection({ useBackup }),
+			connection: workerRedis,
 			concurrency: 1,
 			removeOnComplete: {
 				count: 0,

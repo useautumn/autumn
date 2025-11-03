@@ -1,4 +1,9 @@
-import type { ApiCustomer, AppEnv } from "@autumn/shared";
+import {
+	type ApiCustomer,
+	ApiCustomerSchema,
+	type AppEnv,
+	type CustomerLegacyData,
+} from "@autumn/shared";
 import { redis } from "../../../../external/redis/initRedis.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { CusService } from "../../CusService.js";
@@ -21,14 +26,19 @@ export const buildCachedApiCustomerKey = ({
 /**
  * Get ApiCustomer from Redis cache
  * If not found, fetch from DB, cache it, and return
+ * If skipCache is true, always fetch from DB
  */
 export const getCachedApiCustomer = async ({
 	ctx,
 	customerId,
+	withAutumnId = false,
+	skipCache = false,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
-}): Promise<ApiCustomer> => {
+	withAutumnId?: boolean;
+	skipCache?: boolean;
+}): Promise<{ apiCustomer: ApiCustomer; legacyData: CustomerLegacyData }> => {
 	const { org, env, db } = ctx;
 
 	const cacheKey = buildCachedApiCustomerKey({
@@ -37,20 +47,34 @@ export const getCachedApiCustomer = async ({
 		env,
 	});
 
-	// Try to get from cache using Lua script
-	const cachedResult = await redis.eval(
-		GET_CUSTOMER_SCRIPT,
-		1, // number of keys
-		cacheKey, // KEYS[1]
-	);
+	// Try to get from cache using Lua script (unless skipCache is true)
+	if (!skipCache) {
+		const cachedResult = await redis.eval(
+			GET_CUSTOMER_SCRIPT,
+			1, // number of keys
+			cacheKey, // KEYS[1]
+		);
 
-	// If found in cache, parse and return
-	if (cachedResult) {
-		const customer = JSON.parse(cachedResult as string) as ApiCustomer;
-		return customer;
+		// If found in cache, parse and return
+		if (cachedResult) {
+			const cached = JSON.parse(cachedResult as string) as ApiCustomer & {
+				legacyData: CustomerLegacyData;
+			};
+
+			// Extract legacyData and reconstruct apiCustomer with correct key order
+			const { legacyData, ...rest } = cached;
+
+			return {
+				apiCustomer: ApiCustomerSchema.parse({
+					...rest,
+					autumn_id: withAutumnId ? customerId : undefined,
+				}),
+				legacyData,
+			};
+		}
 	}
 
-	// Cache miss - fetch from DB
+	// Cache miss or skipCache - fetch from DB
 	const fullCus = await CusService.getFull({
 		db,
 		idOrInternalId: customerId,
@@ -62,19 +86,27 @@ export const getCachedApiCustomer = async ({
 	});
 
 	// Build ApiCustomer (base only, no expand)
-	const apiCustomer = await getApiCustomerBase({
+	const { apiCustomer, legacyData } = await getApiCustomerBase({
 		ctx,
 		fullCus,
-		withAutumnId: false,
+		withAutumnId: !skipCache,
 	});
 
-	// Store in cache using Lua script
-	await redis.eval(
-		SET_CUSTOMER_SCRIPT,
-		1, // number of keys
-		cacheKey, // KEYS[1]
-		JSON.stringify(apiCustomer), // ARGV[1]
-	);
+	// Store in cache (only if not skipping cache)
+	if (!skipCache) {
+		await redis.eval(
+			SET_CUSTOMER_SCRIPT,
+			1, // number of keys
+			cacheKey, // KEYS[1]
+			JSON.stringify({ ...apiCustomer, legacyData }), // ARGV[1]
+		);
+	}
 
-	return apiCustomer;
+	return {
+		apiCustomer: ApiCustomerSchema.parse({
+			...apiCustomer,
+			autumn_id: withAutumnId ? fullCus.internal_id : undefined,
+		}),
+		legacyData,
+	};
 };

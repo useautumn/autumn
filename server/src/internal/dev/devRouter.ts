@@ -13,6 +13,7 @@ import { withOrgAuth } from "@/middleware/authMiddleware.js";
 import { encryptData } from "@/utils/encryptUtils.js";
 import { handleRequestError } from "@/utils/errorUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
+import { redis } from "../../external/redis/initRedis.js";
 import { OrgService } from "../orgs/OrgService.js";
 import { clearOrgCache } from "../orgs/orgUtils/clearOrgCache.js";
 import { isStripeConnected } from "../orgs/orgUtils.js";
@@ -345,13 +346,7 @@ devRouter.post("/cli/stripe", async (req: any, res: any) => {
 				},
 			});
 
-			const redisClient = await CacheManager.getClient();
-			if (!redisClient) {
-				res.status(500).json({ message: "Cache client not initialized" });
-				return;
-			}
-
-			await redisClient.del(key);
+			await redis.del(key);
 
 			res.status(200).json({
 				message: "Stripe keys updated",

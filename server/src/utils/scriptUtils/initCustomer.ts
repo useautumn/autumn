@@ -39,7 +39,9 @@ export const createCusInStripe = async ({
 
 	await CusService.update({
 		db,
-		internalCusId: customer.internal_id,
+		idOrInternalId: customer.internal_id,
+		orgId: org.id,
+		env,
 		update: {
 			processor: {
 				type: ProcessorType.Stripe,

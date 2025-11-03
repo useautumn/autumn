@@ -12,6 +12,7 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { timeout } from "@/utils/genUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
+import { createReadOnlyStripeCli } from "./readOnlyStripe.js";
 
 export const getAllStripeCustomers = async ({
 	numPages,
@@ -169,6 +170,62 @@ export const initScript = async ({
 	]);
 
 	const stripeCli: Stripe = createStripeCli({ org, env });
+
+	const logger = createLogger();
+
+	const req: ExtendedRequest = {
+		orgId,
+		env,
+		org,
+		db,
+		features,
+		logger,
+		apiVersion: new ApiVersionClass(ApiVersion.V1_2),
+	} as unknown as ExtendedRequest;
+
+	return { stripeCli, autumnProducts, req };
+};
+
+/**
+ * Initializes a read-only script context for safe investigations.
+ * This variant wraps the Stripe client in a read-only proxy that blocks all write operations.
+ *
+ * Use this for investigation scripts to prevent accidental data modifications.
+ *
+ * @example
+ * ```typescript
+ * const { stripeCli, autumnProducts, req } = await initReadScript({ orgId, env });
+ *
+ * // ✅ Read operations work
+ * await stripeCli.invoices.retrieve("in_xxx");
+ *
+ * // ❌ Write operations throw ReadOnlyStripeError
+ * await stripeCli.invoices.create({ customer: "cus_xxx" });
+ * ```
+ */
+export const initReadScript = async ({
+	orgId,
+	env,
+}: {
+	orgId: string;
+	env: AppEnv;
+}) => {
+	const [org, autumnProducts, features] = await Promise.all([
+		OrgService.get({ db, orgId }),
+		ProductService.listFull({
+			db,
+			orgId,
+			env,
+		}),
+		FeatureService.list({
+			db,
+			orgId,
+			env,
+		}),
+	]);
+
+	const stripeCliRaw: Stripe = createStripeCli({ org, env });
+	const stripeCli = createReadOnlyStripeCli(stripeCliRaw);
 
 	const logger = createLogger();
 

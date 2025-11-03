@@ -10,20 +10,18 @@ export const runActionHandlerTask = async ({
 	job,
 	logger,
 	db,
-	useBackup,
 }: {
 	queue: Queue;
 	job: Job;
 	logger: any;
 	db: DrizzleCli;
-	useBackup: boolean;
 }) => {
 	const payload = job.data;
 	const internalCustomerId = payload.internalCustomerId;
 	const lockKey = `action:${internalCustomerId}`;
 
 	try {
-		const lock = await getLock({ queue, job, lockKey, useBackup });
+		const lock = await getLock({ queue, job, lockKey });
 		if (!lock) return;
 
 		switch (job.name) {
@@ -45,6 +43,6 @@ export const runActionHandlerTask = async ({
 	} catch (error: any) {
 		logger.error(`Error processing action handler job: ${error.message}`);
 	} finally {
-		await releaseLock({ lockKey, useBackup });
+		await releaseLock({ lockKey });
 	}
 };

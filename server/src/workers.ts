@@ -8,12 +8,6 @@ console.warn = (...args: any[]) => {
 	originalWarn.apply(console, args);
 };
 
-import { QueueManager } from "./queue/QueueManager.js";
-import { initWorkers } from "./queue/workersInit.js";
+import { initWorkers } from "./queue/initWorkers.js";
 
-const init = async () => {
-	await QueueManager.getInstance(); // initialize the queue manager
-	await initWorkers();
-};
-
-init();
+await initWorkers();

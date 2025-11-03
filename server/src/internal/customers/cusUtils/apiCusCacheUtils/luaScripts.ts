@@ -15,8 +15,3 @@ export const SET_CUSTOMER_SCRIPT = readFileSync(
 	join(__dirname, "setCustomer.lua"),
 	"utf-8",
 );
-
-export const BATCH_DEDUCTION_SCRIPT = readFileSync(
-	join(__dirname, "batchDeduction.lua"),
-	"utf-8",
-);

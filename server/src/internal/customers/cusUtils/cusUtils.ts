@@ -1,4 +1,5 @@
 import {
+	type ApiCustomer,
 	type ApiInvoice,
 	CusExpand,
 	type Customer,
@@ -7,7 +8,6 @@ import {
 	type Feature,
 	type FullCustomer,
 	type Invoice,
-	type Organization,
 	sortCusEntsForDeduction,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
@@ -20,21 +20,22 @@ import {
 } from "@/internal/invoices/InvoiceService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
-import { refreshCusCache } from "../cusCache/updateCachedCus.js";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
+import { refreshCachedApiCustomer } from "./apiCusCacheUtils/refreshCachedApiCustomer.js";
 
 export const updateCustomerDetails = async ({
-	db,
+	ctx,
 	customer,
 	customerData,
-	org,
-	logger,
 }: {
-	db: DrizzleCli;
-	customer: any;
+	ctx: AutumnContext;
+	customer: FullCustomer | ApiCustomer;
 	customerData?: CustomerData;
-	org: Organization;
-	logger: any;
 }) => {
+	const { db, logger } = ctx;
+
+	const idOrInternalId = customer.id || (customer as FullCustomer).internal_id;
+
 	const updates: any = {};
 	if (!customer.name && customerData?.name) {
 		updates.name = customerData.name;
@@ -52,22 +53,23 @@ export const updateCustomerDetails = async ({
 		logger.info(`Updating customer details:`, {
 			data: updates,
 		});
+
 		await CusService.update({
 			db,
-			internalCusId: customer.internal_id,
+			idOrInternalId,
+			orgId: ctx.org.id,
+			env: customer.env,
 			update: updates,
 		});
 		customer = { ...customer, ...updates };
 
-		await refreshCusCache({
-			db,
-			customerId: customer.id!,
-			org: org,
-			env: customer.env,
+		await refreshCachedApiCustomer({
+			ctx,
+			customerId: idOrInternalId,
 		});
-	}
 
-	return customer;
+		return true;
+	}
 };
 
 export const getCusInvoices = async ({

@@ -268,6 +268,7 @@ export class AutumnInt {
 			customerId: string,
 			params?: {
 				expand?: CusExpand[];
+				skip_cache?: string;
 			},
 		): Promise<
 			Customer & {
@@ -282,6 +283,9 @@ export class AutumnInt {
 			const finalParams = { ...defaultParams, ...params };
 			if (finalParams.expand) {
 				queryParams.append("expand", finalParams.expand.join(","));
+			}
+			if (finalParams.skip_cache) {
+				queryParams.append("skip_cache", finalParams.skip_cache);
 			}
 
 			const data = await this.get(

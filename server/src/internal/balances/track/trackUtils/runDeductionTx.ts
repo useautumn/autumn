@@ -20,12 +20,12 @@ import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { adjustAllowance } from "../../../../trigger/adjustAllowance.js";
 import { EventService } from "../../../api/events/EventService.js";
 import { CusService } from "../../../customers/CusService.js";
-import { refreshCusCache } from "../../../customers/cusCache/updateCachedCus.js";
 import { CusEntService } from "../../../customers/cusProducts/cusEnts/CusEntitlementService.js";
 import {
 	getTotalNegativeBalance,
 	getUnlimitedAndUsageAllowed,
 } from "../../../customers/cusProducts/cusEnts/cusEntUtils.js";
+import { refreshCachedApiCustomer } from "../../../customers/cusUtils/apiCusCacheUtils/refreshCachedApiCustomer.js";
 import { getCreditCost } from "../../../features/creditSystemUtils.js";
 import { constructEvent, type EventInfo } from "./eventUtils.js";
 import type { FeatureDeduction } from "./getFeatureDeductions.js";
@@ -244,6 +244,7 @@ const deductFromCusEnts = async ({
 
 export const runDeductionTx = async (
 	params: DeductionTxParams,
+	refreshCache = true,
 ): Promise<{
 	fullCus: FullCustomer | undefined;
 	event: Event | undefined;
@@ -287,114 +288,23 @@ export const runDeductionTx = async (
 		},
 	);
 
-	await refreshCusCache({
-		db,
-		customerId: params.customerId,
-		entityId: params.entityId,
-		org,
-		env,
-	});
+	if (refreshCache) {
+		await refreshCachedApiCustomer({
+			ctx,
+			customerId: params.customerId,
+			entityId: params.entityId,
+		});
+	}
+	// await refreshCusCache({
+	// 	db,
+	// 	customerId: params.customerId,
+	// 	entityId: params.entityId,
+	// 	org,
+	// 	env,
+	// });
 
 	return {
 		fullCus,
 		event,
 	};
 };
-
-// const customer = await CusService.getFull({
-// 	db,
-// 	idOrInternalId: customerId,
-// 	orgId: org.id,
-// 	env,
-// 	inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
-// 	entityId,
-// 	withSubs: true,
-// });
-
-// const cusEnts = cusProductsToCusEnts({
-// 	cusProducts: customer.customer_products,
-// 	featureIds: deductions.map((d) => d.feature.id),
-// 	reverseOrder: org.config?.reverse_deduction_order,
-// });
-
-// const cusPrices = cusProductsToCusPrices({
-// 	cusProducts: customer.customer_products,
-// });
-
-// if (cusEnts.length === 0) return;
-
-// validateDeductionPossible({ cusEnts, deductions, entityId });
-
-// const originalCusEnts = structuredClone(cusEnts);
-// for (const obj of deductions) {
-// 	const { feature, deduction } = obj;
-// 	let toDeduct = deduction;
-
-// 	for (const cusEnt of cusEnts) {
-// 		if (cusEnt.entitlement.internal_feature_id !== feature.internal_id) {
-// 			continue;
-// 		}
-
-// 		toDeduct = await deductFromApiCusRollovers({
-// 			toDeduct,
-// 			cusEnt,
-// 			deductParams: {
-// 				db,
-// 				feature,
-// 				env,
-// 				entity: customer.entity ? customer.entity : undefined,
-// 			},
-// 		});
-
-// 		if (toDeduct === 0) continue;
-
-// 		toDeduct = await deductAllowanceFromCusEnt({
-// 			toDeduct,
-// 			cusEnt,
-// 			deductParams: {
-// 				db,
-// 				feature,
-// 				env,
-// 				org,
-// 				cusPrices: cusPrices as any[],
-// 				customer,
-// 				entity: customer.entity,
-// 			},
-// 			featureDeductions: deductions,
-// 			willDeductCredits: true,
-// 			setZeroAdjustment: true,
-// 		});
-// 	}
-
-// 	if (toDeduct !== 0) {
-// 		await deductFromUsageBasedCusEnt({
-// 			toDeduct,
-// 			cusEnts,
-// 			deductParams: {
-// 				db,
-// 				feature,
-// 				env,
-// 				org,
-// 				cusPrices: cusPrices as any[],
-// 				customer,
-// 				entity: customer.entity,
-// 			},
-// 			setZeroAdjustment: true,
-// 		});
-// 	}
-
-// 	handleThresholdReached({
-// 		org,
-// 		env,
-// 		features: ctx.features,
-// 		db,
-// 		feature,
-// 		cusEnts: originalCusEnts,
-// 		newCusEnts: cusEnts,
-// 		fullCus: customer,
-// 		logger: ctx.logger,
-// 	});
-
-// 	// Insert event into database
-// 	return customer;
-// }
