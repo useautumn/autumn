@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type ApiCusFeature,
+	type ApiCusFeatureV3,
 	ApiVersion,
 	type LimitedItem,
 } from "@autumn/shared";
@@ -13,8 +14,7 @@ import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import type { ApiCusFeatureV3 } from "../../../shared/api/customers/cusFeatures/previousVersions/apiCusFeatureV3.js";
-import { timeout } from "../utils/genUtils.js";
+import { timeout } from "../../utils/genUtils.js";
 
 const messagesFeature = constructFeatureItem({
 	featureId: TestFeature.Messages,
@@ -27,9 +27,9 @@ const freeProd = constructProduct({
 	items: [messagesFeature],
 });
 
-const testCase = "get-cus-feature1";
+const testCase = "balances-update1";
 
-describe(`${chalk.yellowBright("get-cus-feature1: testing current balance + usage")}`, () => {
+describe(`${chalk.yellowBright("balances-update1: testing update balance after track (metered feature)")}`, () => {
 	const customerId = testCase;
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2 });
@@ -55,11 +55,12 @@ describe(`${chalk.yellowBright("get-cus-feature1: testing current balance + usag
 		});
 	});
 
+	const usageAmount = 20.132;
 	test("should track usage and have correct v1 / v2 api cus feature", async () => {
 		await autumnV2.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
-			value: usage,
+			value: usageAmount,
 		});
 
 		await timeout(2000);
@@ -74,9 +75,9 @@ describe(`${chalk.yellowBright("get-cus-feature1: testing current balance + usag
 
 		expect(feature).toMatchObject({
 			granted_balance: messagesFeature.included_usage,
-			purchased_balance: 0,
 			current_balance: currentBalance,
 			usage,
+			purchased_balance: 0,
 		});
 
 		const customerV1 = await autumnV1.customers.get(customerId);
@@ -91,57 +92,34 @@ describe(`${chalk.yellowBright("get-cus-feature1: testing current balance + usag
 		});
 		expect(featureV1.next_reset_at).toBeDefined();
 	});
-	return;
 
-	test("should update balance and have correct v2 api cus feature", async () => {
-		// await autumnV2.balances.update({
-		// 	customer_id: customerId,
-		// 	feature_id: TestFeature.Messages,
-		// 	current_balance: 1000,
-		// });
-		// await timeout(2000);
-		// const cusEnt = await getCusEntByFeature({
-		// 	db: ctx.db,
-		// 	org: ctx.org,
-		// 	env: ctx.env,
-		// 	customerId,
-		// 	featureId: TestFeature.Messages,
-		// });
-		// await autumnV2.updateCusEnt({
-		// 	customerId,
-		// 	customerEntitlementId: cusEnt.id,
-		// 	updates: {
-		// 		balance: 1000,
-		// 	},
-		// });
-	});
+	test("should update balance and have correct v1/v2 api cus feature", async () => {
+		// Restore back to original granted balance (new granted is 20.132)
+		await autumnV2.balances.update({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			current_balance: messagesFeature.included_usage,
+		});
 
-	test("should have correct v2 api cus feature", async () => {
+		await timeout(2000);
+
 		const customer = await autumnV2.customers.get(customerId);
-		const feature = customer.features[
-			TestFeature.Messages
-		] as unknown as ApiCusFeature;
+		const feature = customer.features[TestFeature.Messages];
 
 		expect(feature).toMatchObject({
-			granted_balance: messagesFeature.included_usage,
+			granted_balance: messagesFeature.included_usage + usageAmount,
+			current_balance: messagesFeature.included_usage,
+			usage: usageAmount,
 			purchased_balance: 0,
-			current_balance: 1000,
-			usage,
 		});
-		expect(feature.resets_at).toBeDefined();
-	});
 
-	test("should have correct v1 api cus feature", async () => {
-		const customer = await autumnV1.customers.get(customerId);
-		const feature = customer.features[
-			TestFeature.Messages
-		] as unknown as ApiCusFeatureV3;
+		const customerV1 = await autumnV1.customers.get(customerId);
+		const featureV1 = customerV1.features[TestFeature.Messages];
 
-		expect(feature).toMatchObject({
-			included_usage: messagesFeature.included_usage,
-			balance: 1000,
-			usage,
+		expect(featureV1).toMatchObject({
+			included_usage: messagesFeature.included_usage + usageAmount,
+			balance: messagesFeature.included_usage,
+			usage: usageAmount,
 		});
-		expect(feature.next_reset_at).toBeDefined();
 	});
 });

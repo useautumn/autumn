@@ -4,6 +4,7 @@ import {
 	type ProductItem,
 	ProductItemSchema,
 } from "@models/productV2Models/productItemModels/productItemModels.js";
+import type { UpdatePlanFeatureParams } from "../../api/products/planFeature/planFeatureOpModels.js";
 import {
 	resetIntvToItemIntv,
 	resetIntvToRollover,
@@ -12,12 +13,12 @@ import {
 export const planFeaturesToItems = ({
 	features,
 }: {
-	features: ApiPlanFeature[];
+	features: (ApiPlanFeature | UpdatePlanFeatureParams)[];
 }): ProductItem[] =>
 	(features ?? []).map((feature) => {
 		// Determine interval: use reset_interval if present, otherwise use price.interval
-		const interval = feature.reset_interval
-			? resetIntvToItemIntv(feature.reset_interval as ResetInterval)
+		const interval = feature.reset?.interval
+			? resetIntvToItemIntv(feature.reset.interval as ResetInterval)
 			: feature.price?.interval
 				? (feature.price.interval as any)
 				: null;
@@ -25,8 +26,8 @@ export const planFeaturesToItems = ({
 		return ProductItemSchema.parse({
 			feature_id: feature.feature_id,
 			// included_usage: feature.unlimited ? Infinite : feature.granted,
-			interval: resetIntvToItemIntv(feature.reset_interval as ResetInterval),
-			interval_count: feature.reset_interval_count,
+			interval: resetIntvToItemIntv(feature.reset?.interval as ResetInterval),
+			interval_count: feature.reset?.interval_count,
 
 			config: {
 				rollover: feature.rollover
@@ -54,6 +55,6 @@ export const planFeaturesToItems = ({
 			usage_limit: feature.price?.max_purchase
 				? feature.price.max_purchase + (feature.granted_balance ?? 0)
 				: undefined,
-			reset_usage_when_enabled: feature.reset_usage_when_enabled,
+			reset_usage_when_enabled: feature.reset?.when_enabled,
 		} satisfies ProductItem);
 	});

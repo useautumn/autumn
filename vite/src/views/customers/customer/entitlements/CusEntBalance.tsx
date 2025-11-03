@@ -1,7 +1,7 @@
 import {
 	AllowanceType,
 	FeatureType,
-	FullCusEntWithFullCusProduct,
+	type FullCusEntWithFullCusProduct,
 } from "@autumn/shared";
 import { useCustomerContext } from "../CustomerContext";
 
@@ -23,11 +23,11 @@ export const CusEntBalance = ({
 	const feature = ent.feature;
 	const rollovers = cusEnt.rollovers;
 
-	if (feature.type == FeatureType.Boolean) {
+	if (feature.type === FeatureType.Boolean) {
 		return <></>;
 	}
 
-	if (ent.allowance_type == AllowanceType.Unlimited) {
+	if (ent.allowance_type === AllowanceType.Unlimited) {
 		return <BalanceWrapper>Unlimited</BalanceWrapper>;
 	}
 

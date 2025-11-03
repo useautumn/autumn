@@ -161,10 +161,10 @@ export const getApiCusFeature = ({
 		}),
 	);
 
-	const totalFreeBalance = sumValues(
+	const totalAdditionalBalance = sumValues(
 		cusEnts.map((cusEnt) => {
-			const { free_balance } = getCusEntBalance({ cusEnt, entityId });
-			return free_balance;
+			const { additional_balance } = getCusEntBalance({ cusEnt, entityId });
+			return additional_balance;
 		}),
 	);
 
@@ -197,6 +197,20 @@ export const getApiCusFeature = ({
 		),
 	);
 
+	const totalAdditionalGrantedBalance = sumValues(
+		cusEnts.map((cusEnt) => {
+			const { additional_granted_balance } = getCusEntBalance({
+				cusEnt,
+				entityId,
+			});
+			return additional_granted_balance;
+		}),
+	);
+
+	const grantedBalance = new Decimal(totalGrantedBalanceWithRollovers)
+		.add(totalAdditionalGrantedBalance)
+		.toNumber();
+
 	// 2. Purchased balance
 	const totalPurchasedBalance = sumValues(
 		cusEnts.map((cusEnt) => cusEntToPurchasedBalance({ cusEnt, entityId })),
@@ -216,14 +230,14 @@ export const getApiCusFeature = ({
 	);
 
 	const currentBalance = new Decimal(Math.max(0, totalBalanceWithRollovers))
-		.add(totalUnused)
-		.add(totalFreeBalance)
+		.add(totalAdditionalBalance)
 		.toNumber();
+	// .add(totalUnused)
 
 	// 4. Usage
-	const totalUsage = new Decimal(totalGrantedBalanceWithRollovers)
+	const totalUsage = new Decimal(grantedBalance)
 		.add(totalPurchasedBalance)
-		.add(totalAdjustment)
+		// .add(totalAdjustment)
 		.sub(currentBalance)
 		.toNumber();
 
@@ -240,13 +254,19 @@ export const getApiCusFeature = ({
 
 		unlimited: false,
 
-		granted_balance: totalGrantedBalanceWithRollovers,
+		// Granted balance = granted balance + additional granted balance
+		granted_balance: grantedBalance,
+
+		// Purchased balance = negative balance
 		purchased_balance: totalPurchasedBalance,
+
+		// Current balance = balance + additional balance
 		current_balance: currentBalance,
+
+		// Usage = granted balance + purchased balance - current balance
 		usage: totalUsage,
 
 		resets_at: nextResetAt,
-
 		reset_interval: interval,
 		reset_interval_count: interval_count !== 1 ? interval_count : undefined,
 

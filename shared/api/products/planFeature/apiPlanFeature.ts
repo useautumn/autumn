@@ -13,9 +13,14 @@ export const ApiPlanFeatureSchema = z
 		feature_id: z.string(),
 		granted_balance: z.number(),
 		unlimited: z.boolean(),
-		reset_interval: z.enum(ResetInterval).optional(),
-		reset_interval_count: z.number().optional(),
-		reset_usage_when_enabled: z.boolean().optional(),
+
+		reset: z
+			.object({
+				interval: z.enum(ResetInterval).optional(),
+				interval_count: z.number().optional(),
+				when_enabled: z.boolean().optional(),
+			})
+			.optional(),
 
 		price: z
 			.object({
@@ -57,7 +62,9 @@ export const ApiPlanFeatureSchema = z
 	})
 	.check((ctx) => {
 		const resetGroup =
-			ctx.value.reset_interval || ctx.value.reset_interval_count !== undefined;
+			ctx.value.reset?.interval ||
+			ctx.value.reset?.interval_count !== undefined;
+
 		const intervalGroup =
 			ctx.value.price?.interval ||
 			ctx.value.price?.interval_count !== undefined;

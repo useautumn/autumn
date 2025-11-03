@@ -212,13 +212,13 @@ export const performDeductionOnCusEnt = ({
 	field?: "balance" | "additional_balance" | "additional_granted_balance";
 }): {
 	newBalance: number;
-	newEntities: Record<string, EntityBalance>;
+	newEntities: Record<string, EntityBalance> | undefined;
 	deducted: number;
 	toDeduct: number;
 	newAdjustment?: number;
 } => {
-	let newEntities: Record<string, EntityBalance> =
-		structuredClone(cusEnt.entities) || {};
+	let newEntities: Record<string, EntityBalance> | undefined =
+		structuredClone(cusEnt.entities) ?? undefined;
 
 	let newBalance: number = structuredClone(cusEnt[field]) ?? 0;
 	let deducted = 0;
@@ -294,6 +294,8 @@ export const performDeductionOnCusEnt = ({
 
 		// CASE 2: Deduct from entity balance
 		else {
+			if (!newEntities) newEntities = {};
+
 			const currentEntityBalance = cusEnt.entities?.[entityId]?.[field];
 
 			const {
