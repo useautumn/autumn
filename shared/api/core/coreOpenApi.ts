@@ -3,6 +3,8 @@ import {
 	CheckoutResponseSchema,
 	ExtAttachBodySchema,
 	ExtCheckoutParamsSchema,
+	TrackParamsSchema,
+	TrackResponseSchema,
 } from "@api/models.js";
 import type { ZodOpenApiPathsObject } from "zod-openapi";
 import { SetUsageParamsSchema } from "../balances/usageModels.js";
@@ -16,6 +18,7 @@ import {
 	queryJsDoc,
 	setUsageJsDoc,
 	setupPaymentJsDoc,
+	trackJsDoc,
 } from "../common/jsDocs.js";
 import { CheckParamsSchema, CheckResultSchema } from "./checkModels.js";
 import {
@@ -113,7 +116,7 @@ export const coreOps: ZodOpenApiPathsObject = {
 			responses: {
 				"200": {
 					description: "200 OK",
-					content: { "application/json": { schema: TrackResultSchema } },
+					content: { "application/json": { schema: TrackResponseSchema } },
 				},
 			},
 		},
