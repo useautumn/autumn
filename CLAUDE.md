@@ -5,6 +5,11 @@
 - JS Doc comments should be SHORT and SWEET. Don't need examples unless ABSOLUTELY necessary
 - When using db schemas in Drizzle, import them from '@autumn/shared', and don't do schemas.
 
+# Testing
+- When writing tests, ALWAYS read:
+  1. `server/tests/_guides/general-test-guide.md` - Common patterns, client initialization, public keys
+  2. Case-specific guide (e.g., `server/tests/_guides/check-endpoint-tests.md` for `/check` tests)
+
 # Linting and Codebase rules
 - You can access the biome linter by running `bunx biome check <folder or file path>`. Always specify a folder path, as the codebase is quite large and you will get out of scope errors that you are not burdened to correct. If you would like to let biome automatically fix as much as it can, use  `bunx biome check --write <folder or file path>`
 
@@ -24,6 +29,8 @@
 - Prefer Guard clauses "if(!admin) return;" over explicity "if(admin) do X;" Early returns are better
 
 - Do not run "npx tsc" - run "tsc" instead as it is installed globally.
+
+- **ALWAYS use `.meta()` for zod-openapi schema registration**, NOT `.openapi()`. Example: `ApiProductSchema.meta({ id: "Product" })`
 ## Error Handling in API Routes
 - NEVER use `c.json({ message: "...", code: "..." }, statusCode)` pattern for input validation or expected errors in Hono routes
 - ALWAYS throw `RecaseError` from `@autumn/shared` for all validation errors, not found errors, forbidden errors, etc.

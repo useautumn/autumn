@@ -1,102 +1,154 @@
-// import { beforeAll, describe, expect, test } from "bun:test";
-// import {
-// 	ApiVersion,
-// 	type CheckResponse,
-// 	type CheckResponseV0,
-// 	type LimitedItem,
-// 	SuccessCode,
-// } from "@autumn/shared";
-// import chalk from "chalk";
-// import { TestFeature } from "tests/setup/v2Features.js";
-// import ctx from "tests/utils/testInitUtils/createTestContext.js";
-// import { AutumnInt } from "@/external/autumn/autumnCli.js";
-// import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
-// import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-// import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
-// import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { beforeAll, describe, expect, test } from "bun:test";
+import { ApiVersion, type CheckResponse, SuccessCode } from "@autumn/shared";
+import chalk from "chalk";
+import { TestFeature } from "tests/setup/v2Features.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { timeout } from "../../utils/genUtils.js";
 
-// const messagesFeature = constructArrearItem({
-// 	featureId: TestFeature.Messages,
-// 	price: 0.5,
-// 	includedUsage: 100,
-// 	usageLimit: 500,
-// }) as LimitedItem;
+const messagesFeature = constructFeatureItem({
+	featureId: TestFeature.Messages,
+	includedUsage: 1000,
+});
 
-// const proProd = constructProduct({
-// 	type: "pro",
-// 	isDefault: false,
-// 	items: [messagesFeature],
-// });
+const freeProd = constructProduct({
+	type: "free",
+	isDefault: false,
+	items: [messagesFeature],
+});
 
-// const testCase = "check7";
+const testCase = "check8";
+const customerId = "check8";
 
-// describe(`${chalk.yellowBright("check7: test /check on feature with credit system")}`, () => {
-// 	const customerId = "check7";
-// 	const autumnV0: AutumnInt = new AutumnInt({ version: ApiVersion.V0_2 });
-// 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
+describe(`${chalk.yellowBright("check8: test public key & send_event")}`, () => {
+	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
+	let autumnPublic: AutumnInt;
 
-// 	beforeAll(async () => {
-// 		await initCustomerV3({
-// 			ctx,
-// 			customerId,
-// 			attachPm: "success",
-// 			withTestClock: false,
-// 		});
+	beforeAll(async () => {
+		await initCustomerV3({
+			ctx,
+			customerId,
+			withTestClock: false,
+		});
 
-// 		await initProductsV0({
-// 			ctx,
-// 			products: [proProd],
-// 			prefix: testCase,
-// 		});
+		await initProductsV0({
+			ctx,
+			products: [freeProd],
+			prefix: testCase,
+		});
 
-// 		await autumnV1.attach({
-// 			customer_id: customerId,
-// 			product_id: proProd.id,
-// 		});
-// 	});
+		await autumnV1.attach({
+			customer_id: customerId,
+			product_id: freeProd.id,
+		});
 
-// 	test("v0 response", async () => {
-// 		const res = (await autumnV0.check({
-// 			customer_id: customerId,
-// 			feature_id: TestFeature.Messages,
-// 			required_balance: messagesFeature.usage_limit! + 1,
-// 		})) as unknown as CheckResponseV0;
+		// Initialize Autumn client with public key
+		autumnPublic = new AutumnInt({
+			version: ApiVersion.V1_2,
+			secretKey: ctx.org.test_pkey!,
+		});
+	});
 
-// 		expect(res.allowed).toBe(false);
-// 		expect(res.balances).toBeDefined();
-// 		expect(res.balances).toHaveLength(1);
-// 		expect(res.balances[0]).toMatchObject({
-// 			balance: messagesFeature.included_usage,
-// 			required: messagesFeature.usage_limit! + 1,
-// 			feature_id: TestFeature.Messages,
-// 		});
-// 	});
+	test("should work with public key for /check endpoint", async () => {
+		const res = (await autumnPublic.check({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			required_balance: 100,
+		})) as unknown as CheckResponse;
 
-// 	test("v1 response", async () => {
-// 		const res = (await autumnV1.check({
-// 			customer_id: customerId,
-// 			feature_id: TestFeature.Messages,
-// 			required_balance: messagesFeature.usage_limit! + 1,
-// 		})) as unknown as CheckResponse;
+		expect(res).toMatchObject({
+			allowed: true,
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			balance: 1000,
+			required_balance: 100,
+			code: SuccessCode.FeatureFound,
+			usage: 0,
+			included_usage: 1000,
+			overage_allowed: false,
+		});
 
-// 		const expectedRes = {
-// 			allowed: false,
-// 			customer_id: customerId,
-// 			balance: messagesFeature.included_usage,
-// 			feature_id: TestFeature.Messages as string,
-// 			required_balance: messagesFeature.usage_limit! + 1,
-// 			code: SuccessCode.FeatureFound,
-// 			unlimited: false,
-// 			usage: 0,
-// 			included_usage: messagesFeature.included_usage,
-// 			overage_allowed: false,
+		expect(res.next_reset_at).toBeDefined();
+	});
 
-// 			usage_limit: messagesFeature.usage_limit!,
-// 			interval: "month",
-// 			interval_count: 1,
-// 		};
+	test("should not track usage when send_event: true with public key", async () => {
+		// Get current balance before
+		const customerBefore: any = await autumnV1.customers.get(customerId);
+		const balanceBefore = customerBefore.features[TestFeature.Messages].balance;
+		const usedBefore = customerBefore.features[TestFeature.Messages].used;
 
-// 		expect(res).toMatchObject(expectedRes);
-// 		expect(res.next_reset_at).toBeDefined();
-// 	});
-// });
+		// Call check with public key and send_event: true
+		// This should succeed but NOT send events (silently skipped)
+		const checkRes = (await autumnPublic.check({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			required_balance: 50,
+			send_event: true,
+		})) as unknown as CheckResponse;
+
+		expect(checkRes.allowed).toBe(true);
+
+		// Wait for potential event processing
+		await new Promise((resolve) => setTimeout(resolve, 2000));
+
+		// Get customer and verify balance stayed the same
+		const customerAfter: any = await autumnV1.customers.get(customerId);
+		const balanceAfter = customerAfter.features[TestFeature.Messages].balance;
+
+		expect(balanceAfter).toBe(balanceBefore);
+		expect(customerAfter.features[TestFeature.Messages].used).toBe(usedBefore);
+	});
+
+	test("should track usage when send_event: true with secret key", async () => {
+		// Call check with send_event: true
+		const checkRes = (await autumnV1.check({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			required_balance: 150,
+			send_event: true,
+		})) as unknown as CheckResponse;
+
+		expect(checkRes.allowed).toBe(true);
+		expect(checkRes.balance).toBe(1000);
+
+		// Wait for event to be processed
+		await timeout(2000);
+
+		// Get customer and verify balance decreased
+		const customer: any = await autumnV1.customers.get(customerId);
+		const balanceAfter = customer.features[TestFeature.Messages].balance;
+
+		expect(balanceAfter).toBe(850); // 1000 - 150
+		expect(customer.features[TestFeature.Messages].usage).toBe(150);
+	});
+
+	test("should not track usage when send_event: true but insufficient balance", async () => {
+		// Get current balance first
+		const customerBefore: any = await autumnV1.customers.get(customerId);
+		const balanceBefore = customerBefore.features[TestFeature.Messages].balance;
+
+		// Call check with required_balance > current balance
+		const checkRes = (await autumnV1.check({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			required_balance: 900, // More than available (850)
+			send_event: true,
+		})) as unknown as CheckResponse;
+
+		expect(checkRes.allowed).toBe(false);
+
+		// Wait for potential event processing
+		await timeout(2000);
+
+		// Get customer and verify balance stayed the same
+		const customerAfter: any = await autumnV1.customers.get(customerId);
+		const balanceAfter = customerAfter.features[TestFeature.Messages].balance;
+
+		expect(balanceAfter).toBe(balanceBefore);
+		expect(customerAfter.features[TestFeature.Messages].usage).toBe(150); // Same as before
+	});
+});

@@ -5,7 +5,7 @@ import {
 	type FullProduct,
 	isTrialing,
 } from "@autumn/shared";
-import { getOptions } from "@/internal/api/entitled/checkUtils.js";
+import { getOptions } from "@/internal/api/check/checkUtils.js";
 import { getItemsForNewProduct } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";

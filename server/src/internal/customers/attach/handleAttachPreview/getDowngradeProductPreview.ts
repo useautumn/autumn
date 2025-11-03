@@ -4,7 +4,7 @@ import {
 	UsageModel,
 } from "@autumn/shared";
 import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
-import { getOptions } from "@/internal/api/entitled/checkUtils.js";
+import { getOptions } from "@/internal/api/check/checkUtils.js";
 import { getItemsForNewProduct } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
 import { orgToCurrency } from "@/internal/orgs/orgUtils.js";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";

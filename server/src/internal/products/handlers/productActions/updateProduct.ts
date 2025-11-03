@@ -85,7 +85,8 @@ export const updateProduct = async ({
 		...updates,
 		group: updates.group || curProductV2.group || "",
 		items: updates.items || [],
-		free_trial: newFreeTrial || curProductV2.free_trial || undefined,
+		free_trial:
+			"free_trial" in updates ? newFreeTrial : curProductV2.free_trial,
 	};
 
 	await disableCurrentDefault({
@@ -97,7 +98,8 @@ export const updateProduct = async ({
 		db,
 		curProduct: fullProduct,
 		newProduct: UpdateProductSchema.parse(updates),
-		newFreeTrial: updates.free_trial || curProductV2.free_trial || undefined,
+		newFreeTrial:
+			"free_trial" in updates ? updates.free_trial : curProductV2.free_trial,
 		items: updates.items || curProductV2.items,
 		org,
 		rewardPrograms,
@@ -108,7 +110,9 @@ export const updateProduct = async ({
 
 	const cusProductExists = cusProductsCurVersion.length > 0;
 
-	if (cusProductExists && itemsExist) {
+	// Check if versioning is needed (customers exist AND items or free trial changed)
+	const freeTrialProvided = "free_trial" in updates;
+	if (cusProductExists && (itemsExist || freeTrialProvided)) {
 		if (disable_version) {
 			throw new RecaseError({
 				message: "Cannot auto save product as there are existing customers",
