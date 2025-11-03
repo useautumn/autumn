@@ -39,6 +39,10 @@ export const SignIn = () => {
 
 	const handleEmailSignIn = async (e: React.FormEvent) => {
 		e.preventDefault();
+		if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+			toast.error("Please enter a valid email address.");
+			return;
+		}
 		setSendOtpLoading(true);
 
 		try {
