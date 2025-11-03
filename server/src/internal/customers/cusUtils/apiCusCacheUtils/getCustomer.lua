@@ -1,9 +1,9 @@
 -- getCustomer.lua
 -- Atomically retrieves a customer object from Redis, reconstructing from base JSON and feature HSETs
--- KEYS[1]: customer ID
+-- KEYS[1]: cache key (e.g., "org_id:env:customer:customer_id")
 
-local customerId = KEYS[1]
-local baseKey = "customer:" .. customerId
+local cacheKey = KEYS[1]
+local baseKey = cacheKey
 
 -- Get base customer JSON
 local baseJson = redis.call("GET", baseKey)
@@ -18,7 +18,7 @@ local featureIds = baseCustomer._featureIds or {}
 local features = {}
 
 for _, featureId in ipairs(featureIds) do
-    local featureKey = "customer:" .. customerId .. ":features:" .. featureId
+    local featureKey = cacheKey .. ":features:" .. featureId
     local featureHash = redis.call("HGETALL", featureKey)
     
     -- If feature key is missing, return nil (partial eviction detected)
@@ -33,7 +33,7 @@ for _, featureId in ipairs(featureIds) do
             local value = featureHash[i + 1]
             
             -- Parse numeric values
-            if key == "balance" or key == "usage" or key == "included_usage" or key == "usage_limit" or key == "interval_count" or key == "_breakdown_count" or key == "_rollover_count" then
+            if key == "balance" or key == "usage" or key == "included_usage" or key == "usage_limit" or key == "interval_count" or key == "next_reset_at" or key == "_breakdown_count" or key == "_rollover_count" then
                 featureData[key] = tonumber(value)
             elseif key == "unlimited" or key == "overage_allowed" then
                 featureData[key] = (value == "true")
@@ -58,7 +58,7 @@ for _, featureId in ipairs(featureIds) do
     -- Fetch rollover items
     local rollovers = {}
     for i = 0, rolloverCount - 1 do
-        local rolloverKey = "customer:" .. customerId .. ":features:" .. featureId .. ":rollover:" .. i
+        local rolloverKey = cacheKey .. ":features:" .. featureId .. ":rollover:" .. i
         local rolloverHash = redis.call("HGETALL", rolloverKey)
         
         -- If rollover key is missing, return nil (partial eviction detected)
@@ -93,7 +93,7 @@ for _, featureId in ipairs(featureIds) do
     -- Fetch breakdown items
     local breakdown = {}
     for i = 0, breakdownCount - 1 do
-        local breakdownKey = "customer:" .. customerId .. ":features:" .. featureId .. ":breakdown:" .. i
+        local breakdownKey = cacheKey .. ":features:" .. featureId .. ":breakdown:" .. i
         local breakdownHash = redis.call("HGETALL", breakdownKey)
         
         -- If breakdown key is missing, return nil (partial eviction detected)
@@ -106,8 +106,10 @@ for _, featureId in ipairs(featureIds) do
                     local key = breakdownHash[j]
                     local value = breakdownHash[j + 1]
                     
-                    if key == "balance" or key == "usage" or key == "included_usage" or key == "usage_limit" or key == "interval_count" then
+                    if key == "balance" or key == "usage" or key == "included_usage" or key == "usage_limit" or key == "interval_count" or key == "next_reset_at" then
                         breakdownData[key] = tonumber(value)
+                    elseif key == "overage_allowed" then
+                        breakdownData[key] = (value == "true")
                     elseif value == "null" then
                         breakdownData[key] = cjson.null
                     else

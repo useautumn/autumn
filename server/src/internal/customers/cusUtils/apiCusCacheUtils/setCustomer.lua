@@ -1,9 +1,9 @@
 -- setCustomer.lua
 -- Atomically stores a customer object with base data as JSON and features/breakdowns as HSETs
--- KEYS[1]: customer ID
+-- KEYS[1]: cache key (e.g., "org_id:env:customer:customer_id")
 -- ARGV[1]: serialized customer data JSON string
 
-local customerId = KEYS[1]
+local cacheKey = KEYS[1]
 local customerDataJson = ARGV[1]
 
 -- Decode the customer data
@@ -32,11 +32,12 @@ local baseCustomer = {
     metadata = customerData.metadata,
     products = customerData.products,
     invoices = customerData.invoices,
+    legacyData = customerData.legacyData,
     _featureIds = featureIds
 }
 
 -- Store base customer as JSON
-local baseKey = "customer:" .. customerId
+local baseKey = cacheKey
 redis.call("SET", baseKey, cjson.encode(baseCustomer))
 
 -- Helper function to convert values to strings, handling cjson.null
@@ -50,7 +51,7 @@ end
 -- Store each feature as HSET
 if customerData.features then
     for featureId, featureData in pairs(customerData.features) do
-        local featureKey = "customer:" .. customerId .. ":features:" .. featureId
+        local featureKey = cacheKey .. ":features:" .. featureId
         
         -- Store breakdown count for reconstruction
         local breakdownCount = 0
@@ -92,7 +93,7 @@ if customerData.features then
         -- Store each rollover item as separate HSET (single call per rollover)
         if featureData.rollovers then
             for index, rolloverItem in ipairs(featureData.rollovers) do
-                local rolloverKey = "customer:" .. customerId .. ":features:" .. featureId .. ":rollover:" .. (index - 1)
+                local rolloverKey = cacheKey .. ":features:" .. featureId .. ":rollover:" .. (index - 1)
                 
                 redis.call("HSET", rolloverKey,
                     "balance", toString(rolloverItem.balance),
@@ -104,7 +105,7 @@ if customerData.features then
         -- Store each breakdown item as separate HSET (single call per breakdown)
         if featureData.breakdown then
             for index, breakdownItem in ipairs(featureData.breakdown) do
-                local breakdownKey = "customer:" .. customerId .. ":features:" .. featureId .. ":breakdown:" .. (index - 1)
+                local breakdownKey = cacheKey .. ":features:" .. featureId .. ":breakdown:" .. (index - 1)
                 
                 redis.call("HSET", breakdownKey,
                     "interval", toString(breakdownItem.interval),
@@ -113,7 +114,8 @@ if customerData.features then
                     "usage", toString(breakdownItem.usage),
                     "included_usage", toString(breakdownItem.included_usage),
                     "next_reset_at", toString(breakdownItem.next_reset_at),
-                    "usage_limit", toString(breakdownItem.usage_limit)
+                    "usage_limit", toString(breakdownItem.usage_limit),
+                    "overage_allowed", toString(breakdownItem.overage_allowed)
                 )
             end
         end

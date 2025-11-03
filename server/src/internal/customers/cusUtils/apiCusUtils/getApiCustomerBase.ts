@@ -1,6 +1,7 @@
 import {
 	type ApiCustomer,
 	ApiCustomerSchema,
+	type CustomerLegacyData,
 	type FullCustomer,
 } from "@autumn/shared";
 import { z } from "zod/v4";
@@ -20,16 +21,17 @@ export const getApiCustomerBase = async ({
 	ctx: RequestContext;
 	fullCus: FullCustomer;
 	withAutumnId?: boolean;
-}): Promise<ApiCustomer> => {
+}): Promise<{ apiCustomer: ApiCustomer; legacyData: CustomerLegacyData }> => {
 	const apiCusFeatures = await getApiCusFeatures({
 		ctx,
 		fullCus,
 	});
 
-	const { apiCusProducts } = await getApiCusProducts({
-		ctx,
-		fullCus,
-	});
+	const { apiCusProducts, legacyData: cusProductLegacyData } =
+		await getApiCusProducts({
+			ctx,
+			fullCus,
+		});
 
 	const apiCustomer = ApiCustomerSchema.extend({
 		autumn_id: z.string().optional(),
@@ -50,5 +52,10 @@ export const getApiCustomerBase = async ({
 		features: apiCusFeatures,
 	});
 
-	return apiCustomer;
+	return {
+		apiCustomer,
+		legacyData: {
+			cusProductLegacyData,
+		},
+	};
 };

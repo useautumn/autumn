@@ -30,14 +30,12 @@ import cors from "cors";
 import { sql } from "drizzle-orm";
 import express from "express";
 import { client, db } from "./db/initDrizzle.js";
-import { CacheManager } from "./external/caching/CacheManager.js";
 import { ClickHouseManager } from "./external/clickhouse/ClickHouseManager.js";
 import { logger } from "./external/logtail/logtailUtils.js";
 import webhooksRouter from "./external/webhooks/webhooksRouter.js";
 import { redirectToHono } from "./initHono.js";
 import { apiRouter } from "./internal/api/apiRouter.js";
 import mainRouter from "./internal/mainRouter.js";
-import { QueueManager } from "./queue/QueueManager.js";
 import { auth } from "./utils/auth.js";
 import { generateId } from "./utils/genUtils.js";
 import { checkEnvVars } from "./utils/initUtils.js";
@@ -166,8 +164,8 @@ const init = async () => {
 
 	// Initialize managers in parallel for faster startup
 	await Promise.all([
-		QueueManager.getInstance(),
-		CacheManager.getInstance(),
+		// QueueManager.getInstance(),
+		// CacheManager.getInstance(),
 		ClickHouseManager.getInstance(),
 	]);
 

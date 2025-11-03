@@ -1,7 +1,5 @@
-import {
-	deleteCusCache,
-	refreshCusCache,
-} from "@/internal/customers/cusCache/updateCachedCus.js";
+import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
+import { deleteCachedApiCustomer } from "../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 
 const cusPrefixedUrls = [
 	{
@@ -93,6 +91,12 @@ const handleRefreshCache = async (req: any, res: any) => {
 			org: req.org,
 			env: req.env,
 		});
+
+		await deleteCachedApiCustomer({
+			customerId,
+			orgId: req.org.id,
+			env: req.env,
+		});
 	}
 
 	const coreMatch = coreUrls.find(
@@ -107,6 +111,12 @@ const handleRefreshCache = async (req: any, res: any) => {
 			db: req.db,
 			customerId: req.body.customer_id,
 			org: req.org,
+			env: req.env,
+		});
+
+		await deleteCachedApiCustomer({
+			customerId: req.body.customer_id,
+			orgId: req.org.id,
 			env: req.env,
 		});
 	}

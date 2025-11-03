@@ -96,6 +96,7 @@ export const getApiCusFeature = ({
 	const { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
 		cusEnts: cusEnts,
 		internalFeatureId: feature.internal_id,
+		includeUsageLimit: false,
 	});
 
 	// 2. If feature is unlimited

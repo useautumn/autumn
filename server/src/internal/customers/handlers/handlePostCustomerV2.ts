@@ -7,9 +7,7 @@ import {
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
-import { getApiCustomer } from "../cusUtils/apiCusUtils/getApiCustomer.js";
-import { getOrCreateCustomer } from "../cusUtils/getOrCreateCustomer.js";
+import { getOrCreateApiCustomer } from "../cusUtils/getOrCreateApiCustomer.js";
 
 export const handlePostCustomer = createRoute({
 	query: CreateCustomerQuerySchema.extend({
@@ -34,23 +32,37 @@ export const handlePostCustomer = createRoute({
 			expand.push(CusExpand.Invoices);
 		}
 
-		const fullCus = await getOrCreateCustomer({
-			req: ctx as ExtendedRequest,
+		const apiCustomer = await getOrCreateApiCustomer({
+			ctx,
 			customerId: createCusParams.id,
 			customerData: createCusParams,
-			expand,
-			entityId: createCusParams.entity_id,
-			entityData: createCusParams.entity_data,
-			withCache: true,
-		});
-
-		const customer = await getApiCustomer({
-			ctx,
-			fullCus: fullCus,
-			expand,
 			withAutumnId: with_autumn_id,
 		});
 
-		return c.json(customer);
+		return c.json(apiCustomer);
+
+		// // Check if cached customer exists
+		// const fullCus = await getOrCreateCustomer({
+		// 	req: ctx as ExtendedRequest,
+		// 	customerId: createCusParams.id,
+		// 	customerData: createCusParams,
+		// 	expand,
+		// 	entityId: createCusParams.entity_id,
+		// 	entityData: createCusParams.entity_data,
+		// 	withCache: true,
+		// });
+
+		// console.log("Full Cus:", fullCus);
+
+		// const customer = await getApiCustomer({
+		// 	ctx,
+		// 	fullCus: fullCus,
+		// 	expand,
+		// 	withAutumnId: with_autumn_id,
+		// });
+
+		// console.log("Customer:", customer);
+
+		// return c.json(customer);
 	},
 });

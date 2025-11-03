@@ -10,7 +10,7 @@ export async function queryWithCache({
 	key: string;
 	fn: () => Promise<any>;
 }) {
-	let cacheKey = `${action}:${key}`;
+	const cacheKey = `${action}:${key}`;
 	// Try to get from cache
 	try {
 		const cachedResult = await CacheManager.getJson(cacheKey);

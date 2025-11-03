@@ -5,7 +5,6 @@ import {
 	V0_2_InvoicesAlwaysExpanded,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { getCusWithCache } from "../cusCache/getCusWithCache.js";
 import { getApiCustomer } from "../cusUtils/apiCusUtils/getApiCustomer.js";
 
 export const handleGetCustomerV2 = createRoute({
@@ -13,8 +12,7 @@ export const handleGetCustomerV2 = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const customerId = c.req.param("customer_id");
-		const { env, db, logger, org } = ctx;
-		const { expand = [] } = c.req.valid("query");
+		const { expand = [], skip_cache = false } = c.req.valid("query");
 
 		// SIDE EFFECT
 		if (
@@ -26,20 +24,11 @@ export const handleGetCustomerV2 = createRoute({
 			expand.push(CusExpand.Invoices);
 		}
 
-		const fullCus = await getCusWithCache({
-			db,
-			idOrInternalId: customerId,
-			org,
-			env,
-			expand,
-			logger,
-			allowNotFound: false,
-		});
-
 		const customer = await getApiCustomer({
 			ctx,
-			fullCus: fullCus,
+			customerId,
 			expand,
+			skipCache: skip_cache,
 		});
 
 		return c.json(customer);

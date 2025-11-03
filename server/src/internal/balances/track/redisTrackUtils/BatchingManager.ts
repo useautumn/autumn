@@ -1,27 +1,26 @@
-import type { Redis } from "ioredis";
+import { redis } from "../../../../external/redis/initRedis.js";
+import { buildCachedApiCustomerKey } from "../../../customers/cusUtils/apiCusCacheUtils/getCachedApiCustomer.js";
 import { executeBatchDeduction } from "./executeBatchDeduction.js";
 
-interface BatchRequest {
+interface FeatureDeduction {
+	featureId: string;
 	amount: number;
-	timestamp: number;
-	properties: Record<string, any>;
-	resolve: (result: { success: boolean; error?: string }) => void;
-	reject: (error: Error) => void;
 }
 
-export interface BatchContext {
-	customerId: string;
-	featureId: string;
-	orgId: string;
-	orgSlug: string;
-	env: string;
-	entityId?: string;
+interface BatchRequest {
+	featureDeductions: FeatureDeduction[];
+	overageBehavior: "cap" | "reject";
+	resolve: (result: { success: boolean; error?: string }) => void;
+	reject: (error: Error) => void;
 }
 
 interface Batch {
 	requests: BatchRequest[];
 	timer: NodeJS.Timeout | null;
-	context?: BatchContext;
+	customerId: string;
+	orgId: string;
+	env: string;
+	entityId?: string;
 }
 
 /**
@@ -43,23 +42,26 @@ export class BatchingManager {
 	 * Returns a promise that resolves when the batch is processed
 	 */
 	async deduct({
-		redis,
-		cacheKey,
-		featureId,
-		amount,
-		timestamp,
-		properties,
-		context,
+		customerId,
+		featureDeductions,
+		orgId,
+		env,
+		entityId,
+		overageBehavior = "cap",
 	}: {
-		redis: Redis;
-		cacheKey: string;
-		featureId: string;
-		amount: number;
-		timestamp: number;
-		properties: Record<string, any>;
-		context: BatchContext;
+		customerId: string;
+		featureDeductions: FeatureDeduction[];
+		orgId: string;
+		env: string;
+		entityId?: string;
+		overageBehavior?: "cap" | "reject";
 	}): Promise<{ success: boolean; error?: string }> {
-		const batchKey = `${cacheKey}:${featureId}`;
+		const cacheKey = buildCachedApiCustomerKey({
+			customerId,
+			orgId,
+			env,
+		});
+		const batchKey = cacheKey; // Batch by customer only
 
 		return new Promise((resolve, reject) => {
 			// Create batch if it doesn't exist
@@ -67,11 +69,14 @@ export class BatchingManager {
 				this.batches.set(batchKey, {
 					requests: [],
 					timer: null,
-					context,
+					customerId,
+					orgId,
+					env,
+					entityId,
 				});
 
 				// Schedule batch execution
-				this.scheduleBatch(batchKey, redis, cacheKey, featureId);
+				this.scheduleBatch(batchKey);
 			}
 
 			const batch = this.batches.get(batchKey);
@@ -82,16 +87,15 @@ export class BatchingManager {
 
 			// Add request to batch
 			batch.requests.push({
-				amount,
-				timestamp,
-				properties,
+				featureDeductions,
+				overageBehavior,
 				resolve,
 				reject,
 			});
 
 			// Force flush if batch is full
 			if (batch.requests.length >= this.MAX_BATCH_SIZE) {
-				this.executeBatch(batchKey, redis, cacheKey, featureId);
+				this.executeBatch(batchKey);
 			}
 		});
 	}
@@ -99,29 +103,19 @@ export class BatchingManager {
 	/**
 	 * Schedule batch execution after window expires
 	 */
-	private scheduleBatch(
-		batchKey: string,
-		redis: Redis,
-		cacheKey: string,
-		featureId: string,
-	): void {
+	private scheduleBatch(batchKey: string): void {
 		const batch = this.batches.get(batchKey);
 		if (!batch) return;
 
 		batch.timer = setTimeout(() => {
-			this.executeBatch(batchKey, redis, cacheKey, featureId);
+			this.executeBatch(batchKey);
 		}, this.BATCH_WINDOW_MS);
 	}
 
 	/**
 	 * Execute the batch - process all requests in one Lua script
 	 */
-	private async executeBatch(
-		batchKey: string,
-		redis: Redis,
-		cacheKey: string,
-		featureId: string,
-	): Promise<void> {
+	private async executeBatch(batchKey: string): Promise<void> {
 		// CRITICAL: Remove batch from map FIRST to prevent race condition
 		// New requests will create a new batch instead of adding to this one
 		const batch = this.batches.get(batchKey);
@@ -137,11 +131,17 @@ export class BatchingManager {
 		this.batches.delete(batchKey);
 
 		const requests = batch.requests;
-		const amounts = requests.map((r) => r.amount);
 		const batchSize = requests.length;
 
+		// Build cache key from batch context
+		const cacheKey = buildCachedApiCustomerKey({
+			customerId: batch.customerId,
+			orgId: batch.orgId,
+			env: batch.env,
+		});
+
 		console.log(
-			`🚀 Executing batch with ${batchSize} requests for feature ${featureId}`,
+			`🚀 Executing batch with ${batchSize} requests for customer ${batch.customerId}`,
 		);
 
 		try {
@@ -149,29 +149,25 @@ export class BatchingManager {
 			const result = await executeBatchDeduction({
 				redis,
 				cacheKey,
-				targetFeatureId: featureId,
-				amounts,
+				requests: requests.map((r) => ({
+					featureDeductions: r.featureDeductions,
+					overageBehavior: r.overageBehavior,
+				})),
 			});
 
-			console.log(
-				`✅ Batch completed (${batchSize} requests, ${result.successCount} succeeded)`,
-			);
+			console.log(`✅ Batch completed (${batchSize} requests)`);
 
-			// Resolve each request based on success/fail counts
-			if (result.success) {
-				const successCount = result.successCount || 0;
-
+			// Resolve each request based on its individual result
+			if (result.success && result.results) {
 				// TODO: Queue Postgres sync job for successful deductions if needed
 				// This can be added later when integrating with the sync system
 
-				// First N requests succeed, rest fail
+				// Match each request with its result
 				for (let i = 0; i < requests.length; i++) {
+					const requestResult = result.results[i];
 					requests[i].resolve({
-						success: i < successCount,
-						error:
-							i < successCount
-								? undefined
-								: result.error || "INSUFFICIENT_BALANCE",
+						success: requestResult?.success || false,
+						error: requestResult?.error,
 					});
 				}
 			} else {
