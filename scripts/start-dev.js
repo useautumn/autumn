@@ -140,8 +140,9 @@ async function startDev() {
 			console.log("\n🌐 Using remote backend (api.useautumn.com)");
 			console.log("⏭️  Skipping port cleanup...\n");
 		} else {
-			// Check and kill processes on ports 3000 and 8080 if needed
-			await handlePorts();
+			// Port cleanup disabled (detection is unreliable)
+			console.log("⏭️  Skipping port cleanup...\n");
+			// await handlePorts();
 		}
 
 		// Step 1: Build shared package first (initial build)
