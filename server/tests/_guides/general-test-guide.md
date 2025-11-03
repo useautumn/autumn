@@ -49,17 +49,50 @@ const balance = customer.features[TestFeature.Messages].balance;
 const used = customer.features[TestFeature.Messages].used;
 ```
 
-### Expect Error
+### Expect Error (Use This Instead of try-catch!)
+
+**Always use `expectAutumnError` instead of manual try-catch blocks:**
+
 ```typescript
 import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
 
+// ✅ GOOD - Use expectAutumnError
 await expectAutumnError({
   errCode: ErrCode.CustomerNotFound,
   func: async () => {
     await autumn.customers.get("invalid-id");
   },
 });
+
+// ✅ GOOD - Test for duplicate idempotency key
+await expectAutumnError({
+  errCode: ErrCode.DuplicateIdempotencyKey,
+  func: async () => {
+    await autumn.track({
+      customer_id: customerId,
+      feature_id: TestFeature.Messages,
+      idempotency_key: "same-key",
+    });
+  },
+});
+
+// ❌ BAD - Don't use try-catch
+let errorThrown = false;
+try {
+  await autumn.customers.get("invalid-id");
+} catch (error) {
+  errorThrown = true;
+}
+expect(errorThrown).toBe(true);
 ```
+
+**Common Error Codes:**
+- `ErrCode.CustomerNotFound`
+- `ErrCode.ProductNotFound`
+- `ErrCode.FeatureNotFound`
+- `ErrCode.InsufficientBalance`
+- `ErrCode.DuplicateIdempotencyKey`
+- `ErrCode.InvalidRequest`
 
 ## Public Key Restrictions
 
@@ -79,6 +112,38 @@ Public keys CANNOT:
 - `beforeAll` - Setup (create customers, products, attach)
 - `test` - Individual test cases
 - Use descriptive test names with `chalk.yellowBright()`
+
+## Customer Initialization
+
+### Payment Methods
+**IMPORTANT:** If your product has ANY price (overage, per-seat, usage-based, etc.), you MUST attach a payment method:
+
+```typescript
+// ✅ GOOD - Product with prices requires payment method
+await initCustomerV3({
+  ctx,
+  customerId,
+  attachPm: "success",  // Required for any paid features
+  withTestClock: false,
+});
+
+// ❌ BAD - Product with prices but no payment method
+await initCustomerV3({
+  ctx,
+  customerId,
+  withTestClock: false,  // Missing attachPm: "success"
+});
+```
+
+Use `attachPm: "success"` when:
+- Product has overage pricing (arrear items)
+- Product has per-seat pricing
+- Product has usage-based billing
+- Any feature can trigger billing
+
+Omit `attachPm` only for:
+- Completely free products (no prices at all)
+- Tests that don't require billing
 
 ## Imports
 

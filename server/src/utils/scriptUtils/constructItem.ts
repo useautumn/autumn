@@ -4,6 +4,7 @@ import {
 	OnIncrease,
 	type ProductItem,
 	type ProductItemConfig,
+	type ProductItemFeatureType,
 	ProductItemInterval,
 	type RolloverConfig,
 	UsageModel,
@@ -18,6 +19,7 @@ export const constructFeatureItem = ({
 	isBoolean = false,
 	unlimited = false,
 	rolloverConfig,
+	featureType,
 }: {
 	featureId: string;
 	includedUsage?: number;
@@ -26,6 +28,7 @@ export const constructFeatureItem = ({
 	entityFeatureId?: string;
 	isBoolean?: boolean;
 	rolloverConfig?: RolloverConfig;
+	featureType?: ProductItemFeatureType;
 	unlimited?: boolean;
 }) => {
 	if (isBoolean) {
@@ -45,6 +48,7 @@ export const constructFeatureItem = ({
 		feature_id: featureId,
 		included_usage: includedUsage,
 		entity_feature_id: entityFeatureId,
+		feature_type: featureType,
 		interval: interval,
 		interval_count: intervalCount,
 	};

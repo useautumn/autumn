@@ -147,7 +147,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item 
 		await resetAndGetCusEnt({
 			db,
 			customer,
-			productGroup: free.group,
+			productGroup: free.group!,
 			featureId: TestFeature.Messages,
 		});
 
@@ -166,7 +166,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item 
 		await resetAndGetCusEnt({
 			db,
 			customer,
-			productGroup: free.group,
+			productGroup: free.group!,
 			featureId: TestFeature.Messages,
 		});
 

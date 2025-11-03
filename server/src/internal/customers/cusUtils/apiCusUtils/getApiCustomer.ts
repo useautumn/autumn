@@ -1,17 +1,19 @@
 import {
 	AffectedResource,
 	type ApiCustomer,
-	ApiCustomerSchema,
 	applyResponseVersionChanges,
 	type CustomerLegacyData,
 	type FullCustomer,
 } from "@autumn/shared";
-import { z } from "zod/v4";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { getApiCusFeatures } from "./getApiCusFeature/getApiCusFeatures.js";
 import { getApiCusPlans } from "./getApiCusPlan/getApiCusPlans.js";
+import { getApiCustomerBase } from "./getApiCustomerBase.js";
 import { getApiCustomerExpand } from "./getApiCustomerExpand.js";
 
+/**
+ * Get full ApiCustomer with expand fields and version changes applied
+ */
 export const getApiCustomer = async ({
 	ctx,
 	fullCus,
@@ -33,33 +35,26 @@ export const getApiCustomer = async ({
 			fullCus,
 		});
 
+	// Get base customer (cacheable)
+	const baseCustomer = await getApiCustomerBase({
+		ctx,
+		fullCus,
+		withAutumnId,
+	});
+
+	// Get expand fields (not cacheable)
 	const apiCusExpand = await getApiCustomerExpand({
 		ctx,
 		fullCus,
 	});
 
-	const apiCustomer = ApiCustomerSchema.extend({
-		autumn_id: z.string().optional(),
-	}).parse({
-		autumn_id: withAutumnId ? fullCus.internal_id : undefined,
-
-		id: fullCus.id || null,
-		created_at: fullCus.created_at,
-		name: fullCus.name || null,
-		email: fullCus.email || null,
-		fingerprint: fullCus.fingerprint || null,
-
-		stripe_id: fullCus.processor?.id || null,
-		env: fullCus.env,
-		metadata: fullCus.metadata,
-
-		plans: apiCusPlans,
-
-		features: apiCusFeatures,
-
+	// Merge expand fields
+	const apiCustomer = {
+		...baseCustomer,
 		...apiCusExpand,
-	});
+	};
 
+	// Get legacy data for version changes
 	return applyResponseVersionChanges<ApiCustomer, CustomerLegacyData>({
 		input: apiCustomer,
 		legacyData: {

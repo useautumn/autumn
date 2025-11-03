@@ -19,7 +19,10 @@ import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 import { attachParamsToCurCusProduct } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
 import { getContUseInvoiceItems } from "@/internal/customers/attach/attachUtils/getContUseItems/getContUseInvoiceItems.js";
-import { getAlignedUnix } from "@/internal/products/prices/billingIntervalUtils2.js";
+import {
+	getAlignedUnix,
+	getPeriodStartForEnd,
+} from "@/internal/products/prices/billingIntervalUtils2.js";
 import {
 	priceToFeature,
 	priceToUsageModel,
@@ -103,7 +106,17 @@ export const getProration = ({
 	}
 
 	let start = proration?.start;
-	if (!start && end) {
+	if (!start && end && anchor) {
+		// Find the period start by iterating from the anchor until we reach the period that contains 'now'
+		// This ensures we get the correct period even when the anchor day doesn't exist in some months
+		// e.g., anchor=31 Oct, now=14 Nov, end=30 Nov -> start should be 31 Oct, not 30 Oct
+		start = getPeriodStartForEnd({
+			anchor,
+			intervalConfig,
+			targetEnd: end,
+		});
+	} else if (!start && end) {
+		// Fallback to old behavior if no anchor is provided
 		start = subtractIntervalForProration({
 			unixTimestamp: end!,
 			interval,

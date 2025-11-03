@@ -17,6 +17,7 @@ fi
 # Adjust --max to control concurrency (default: 6)
 $BUN_PARALLEL_COMPACT \
   'tests/check/basic' \
+  'tests/balances/track' \
   'tests/attach/basic' \
   'tests/attach/upgrade' \
   'tests/attach/downgrade' \

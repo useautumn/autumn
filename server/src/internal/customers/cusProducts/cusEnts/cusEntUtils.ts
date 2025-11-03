@@ -57,18 +57,11 @@ export const getCusEntMasterBalance = ({
 
 	// Get unused count
 
-	const unusedCount =
-		entities &&
-		entities.filter(
-			(entity) =>
-				entity.internal_feature_id == feature.internal_id && entity.deleted,
-		).length;
-
 	return {
 		balance: cusEnt.balance,
 		adjustment: cusEnt.adjustment,
 		count: 1,
-		unused: unusedCount,
+		unused: cusEnt.replaceables?.length || 0,
 	};
 };
 
@@ -115,9 +108,9 @@ export const getRelatedCusPrice = (
 ) => {
 	return cusPrices.find((cusPrice) => {
 		const productMatch =
-			cusPrice.customer_product_id == cusEnt.customer_product_id;
+			cusPrice.customer_product_id === cusEnt.customer_product_id;
 
-		const entMatch = cusPrice.price.entitlement_id == cusEnt.entitlement.id;
+		const entMatch = cusPrice.price.entitlement_id === cusEnt.entitlement.id;
 
 		return productMatch && entMatch;
 	});

@@ -3,7 +3,20 @@ import type {
 	Feature,
 	FullCusEntWithFullCusProduct,
 	FullCustomerEntitlement,
-} from "@autumn/shared";
+import
+{
+	type Entity
+	,
+	type Feature
+	,
+	type FullCusEntWithFullCusProduct
+	,
+	type FullCustomerEntitlement
+	,
+}
+from;
+("@autumn/shared");
+
 import { notNullish } from "@/utils/genUtils.js";
 
 export const cusEntMatchesEntity = ({

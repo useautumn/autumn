@@ -9,9 +9,6 @@ import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { creditSystemContainsFeature } from "@/internal/features/creditSystemUtils.js";
-import { isPaidContinuousUse } from "@/internal/features/featureUtils.js";
-import { JobName } from "@/queue/JobName.js";
-import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { runUpdateUsageTask } from "@/trigger/updateUsageTask.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { generateId, nullish } from "@/utils/genUtils.js";
@@ -193,26 +190,12 @@ export const handleUsageEvent = async ({
 		entityId: entity_id,
 	};
 
-	// console.log("Customer:", customer);
-	// console.log(
-	//   "Is paid continuous use:",
-	//   isPaidContinuousUse({ feature, fullCus: customer })
-	// );
-
-	if (isPaidContinuousUse({ feature, fullCus: customer })) {
-		console.log(`Running update usage task synchronously`);
-		await runUpdateUsageTask({
-			payload,
-			logger: console,
-			db: req.db,
-			throwError: true,
-		});
-	} else {
-		await addTaskToQueue({
-			jobName: JobName.UpdateUsage,
-			payload,
-		});
-	}
+	await runUpdateUsageTask({
+		payload,
+		logger: console,
+		db: req.db,
+		throwError: true,
+	});
 
 	return { event: newEvent, affectedFeatures: features, org: req.org };
 };

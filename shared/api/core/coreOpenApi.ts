@@ -16,7 +16,6 @@ import {
 	queryJsDoc,
 	setUsageJsDoc,
 	setupPaymentJsDoc,
-	trackJsDoc,
 } from "../common/jsDocs.js";
 import { CheckParamsSchema, CheckResultSchema } from "./checkModels.js";
 import {
@@ -28,8 +27,6 @@ import {
 	QueryResultSchema,
 	SetupPaymentParamsSchema,
 	SetupPaymentResultSchema,
-	TrackParamsSchema,
-	TrackResultSchema,
 } from "./coreOpModels.js";
 
 export const coreOps: ZodOpenApiPathsObject = {
