@@ -1,9 +1,8 @@
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import Stripe from "stripe";
-import { payForInvoice } from "../../stripeInvoiceUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@autumn/shared";
-import { buildInvoiceMemoFromEntitlements } from "@/internal/invoices/invoiceMemoUtils.js";
+import type Stripe from "stripe";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { payForInvoice } from "../../stripeInvoiceUtils.js";
 
 export const undoSubUpdate = async ({
 	stripeCli,
@@ -14,31 +13,43 @@ export const undoSubUpdate = async ({
 	curSub: Stripe.Subscription;
 	updatedSub: Stripe.Subscription;
 }) => {
-	const prevItems = curSub.items.data.map((item) => {
+	// For each price in the old subscription, find the corresponding item in the updated subscription
+	// and update it back to the old quantity, or delete it if it doesn't exist in the old sub
+	const itemsToUpdate = updatedSub.items.data.map((updatedItem) => {
+		const oldItem = curSub.items.data.find(
+			(item) => item.price.id === updatedItem.price.id,
+		);
+
+		if (oldItem) {
+			// Item exists in both old and new - revert to old quantity
+			return {
+				id: updatedItem.id,
+				price: oldItem.price.id,
+				quantity: oldItem.quantity,
+			};
+		}
+		// Item only exists in updated sub - delete it
 		return {
-			price: item.price.id,
-			quantity: item.quantity,
+			id: updatedItem.id,
+			deleted: true,
 		};
 	});
 
-	const deleteNewItems = updatedSub.items.data
+	// For prices that existed in old sub but were removed in the update, we need to add them back
+	const itemsToAdd = curSub.items.data
 		.filter(
-			(item) =>
-				!prevItems.some((prevItem) =>
-					curSub.items.data.some(
-						(curItem) => curItem.price.id === item.price.id,
-					),
+			(oldItem) =>
+				!updatedSub.items.data.some(
+					(updatedItem) => updatedItem.price.id === oldItem.price.id,
 				),
 		)
-		.map((item) => {
-			return {
-				id: item.id,
-				deleted: true,
-			};
-		});
+		.map((oldItem) => ({
+			price: oldItem.price.id,
+			quantity: oldItem.quantity,
+		}));
 
 	await stripeCli.subscriptions.update(curSub.id, {
-		items: [...prevItems, ...deleteNewItems],
+		items: [...itemsToUpdate, ...itemsToAdd] as any,
 		proration_behavior: "none",
 	});
 };
@@ -58,14 +69,14 @@ export const createProrationInvoice = async ({
 }) => {
 	const { stripeCli, customer, paymentMethod } = attachParams;
 
-	let proratedItems = [];
+	const proratedItems = [];
 	// How to retrieve upcoming invoice items?
 	const items = await stripeCli.invoiceItems.list({
 		customer: customer.processor.id,
 		pending: true,
 	});
 
-	if (items.data.length == 0) {
+	if (items.data.length === 0) {
 		logger.info(`No items to prorate, skipping invoice creation`);
 		return null;
 	}
@@ -79,7 +90,7 @@ export const createProrationInvoice = async ({
 	//     })
 	//   : undefined;
 
-	let invoice = await stripeCli.invoices.create({
+	const invoice = await stripeCli.invoices.create({
 		customer: customer.processor.id,
 		subscription: curSub.id,
 		auto_advance: false,
