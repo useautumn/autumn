@@ -251,6 +251,14 @@ export const handleStripeWebhookEvent = async ({
 			}
 		}
 
+		if (
+			process.env.NODE_ENV === "development" &&
+			error instanceof Error &&
+			error.message.includes("No stripe account linked to organization")
+		) {
+			return;
+		}
+
 		logger.error(`Stripe webhook, error: ${error}`, { error });
 		throw error;
 	}
