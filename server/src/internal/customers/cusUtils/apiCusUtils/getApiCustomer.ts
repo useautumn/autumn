@@ -29,6 +29,14 @@ export const getApiCustomer = async ({
 	skipCache?: boolean;
 }) => {
 	// Get base customer (cacheable or direct from DB)
+	// await redis.del(
+	// 	buildCachedApiCustomerKey({
+	// 		customerId: customerId || "",
+	// 		orgId: ctx.org.id,
+	// 		env: ctx.env,
+	// 	}),
+	// );
+
 	const { apiCustomer: baseCustomer, legacyData: cusLegacyData } =
 		await getCachedApiCustomer({
 			ctx,

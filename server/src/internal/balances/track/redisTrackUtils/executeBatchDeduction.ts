@@ -32,10 +32,14 @@ export const executeBatchDeduction = async ({
 	redis,
 	cacheKey,
 	requests,
+	orgId,
+	env,
 }: {
 	redis: Redis;
 	cacheKey: string;
 	requests: BatchRequest[];
+	orgId: string;
+	env: string;
 }): Promise<BatchDeductionResult> => {
 	try {
 		// Execute Lua script (hot reload in dev)
@@ -44,6 +48,8 @@ export const executeBatchDeduction = async ({
 			1, // number of keys
 			cacheKey, // KEYS[1]
 			JSON.stringify(requests), // ARGV[1]
+			orgId, // ARGV[2]
+			env, // ARGV[3]
 		);
 
 		// Parse result

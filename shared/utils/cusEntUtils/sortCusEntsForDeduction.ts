@@ -2,14 +2,32 @@ import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels
 import { FeatureType } from "../../models/featureModels/featureEnums.js";
 import { AllowanceType } from "../../models/productModels/entModels/entModels.js";
 import { entIntervalToValue } from "../intervalUtils.js";
+import { isEntityCusEnt } from "./cusEntUtils.js";
 
 export const sortCusEntsForDeduction = (
 	cusEnts: FullCusEntWithFullCusProduct[],
 	reverseOrder: boolean = false,
+	entityId?: string,
 ) => {
 	cusEnts.sort((a, b) => {
 		const aEnt = a.entitlement;
 		const bEnt = b.entitlement;
+
+		// 0. Sort customer-level vs entity-level based on tracking context
+		// If entityId is provided: entity-level goes first (deduct entity's own resources first)
+		// If entityId is null: customer-level goes first (deduct customer resources first)
+		const aIsEntity = isEntityCusEnt({ cusEnt: a });
+		const bIsEntity = isEntityCusEnt({ cusEnt: b });
+
+		if (aIsEntity !== bIsEntity) {
+			if (entityId) {
+				// Entity-level tracking: entity entitlements go first
+				return aIsEntity ? -1 : 1;
+			} else {
+				// Customer-level tracking: customer entitlements go first
+				return aIsEntity ? 1 : -1;
+			}
+		}
 
 		// 1. If boolean, go first
 		if (aEnt.feature.type === FeatureType.Boolean) {
@@ -82,6 +100,19 @@ export const sortCusEntsForDeduction = (
 			} else {
 				return aVal.sub(bVal).toNumber();
 				// return intervalOrder[aEnt.interval] - intervalOrder[bEnt.interval];
+			}
+		}
+
+		// 0a. If both are entity products (attached to entities), sort by entity_id for consistent ordering
+		const aIsProductEntity = !!a.customer_product?.internal_entity_id;
+		const bIsProductEntity = !!b.customer_product?.internal_entity_id;
+
+		if (aIsProductEntity && bIsProductEntity) {
+			const aEntityId = a.customer_product?.entity_id;
+			const bEntityId = b.customer_product?.entity_id;
+
+			if (aEntityId && bEntityId && aEntityId !== bEntityId) {
+				return aEntityId.localeCompare(bEntityId);
 			}
 		}
 

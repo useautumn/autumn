@@ -20,6 +20,7 @@ export const CreateEntityParamsSchema = z.object({
 // Get Entity Query Params
 export const GetEntityQuerySchema = z.object({
 	expand: queryStringArray(z.enum(EntityExpand)).default([]),
+	skip_cache: z.boolean().optional(),
 });
 
 export const CreateEntityQuerySchema = z.object({

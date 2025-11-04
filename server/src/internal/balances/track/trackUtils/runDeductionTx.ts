@@ -137,6 +137,9 @@ export const deductFromCusEnts = async ({
 
 		const rolloverIds = sortedRollovers.map((r) => r.id);
 
+		// Extract entitlement IDs for locking
+		const cusEntIds = cusEntInput.map((ce) => ce.customer_entitlement_id);
+
 		// Call the stored function to deduct from entitlements with credit costs
 		const result = await db.execute(
 			sql`SELECT * FROM deduct_allowance_from_entitlements(
@@ -144,7 +147,8 @@ export const deductFromCusEnts = async ({
 				${toDeduct},
 				${targetBalance ?? null},
 				${entityId || null},
-				${rolloverIds.length > 0 ? sql.raw(`ARRAY[${rolloverIds.map((id) => `'${id}'`).join(",")}]`) : null}
+				${rolloverIds.length > 0 ? sql.raw(`ARRAY[${rolloverIds.map((id) => `'${id}'`).join(",")}]`) : null},
+				${cusEntIds.length > 0 ? sql.raw(`ARRAY[${cusEntIds.map((id) => `'${id}'`).join(",")}]`) : null}
 			)`,
 		);
 
@@ -184,8 +188,11 @@ export const deductFromCusEnts = async ({
 				(sum, update) => sum + update.deducted,
 				0,
 			);
+			const entityInfo = entityId
+				? `Entity: ${entityId}`
+				: "Entity: customer-level";
 			ctx.logger.info(
-				`[Sync] Feature ${feature.id} | Target: ${targetBalance} | Deducted: ${totalDeducted} | Updated ${
+				`[Sync] Feature ${feature.id} | ${entityInfo} | Target: ${targetBalance} | Deducted: ${totalDeducted} | Updated ${
 					Object.keys(updates).length
 				} entitlements | Remaining: ${remaining}`,
 			);
@@ -304,7 +311,10 @@ export const runDeductionTx = async (
 				const newEvent = await constructEvent({
 					ctx: txParams.ctx,
 					eventInfo: params.eventInfo,
-					fullCus,
+					internalCustomerId: fullCus.internal_id,
+					internalEntityId: fullCus.entity?.internal_id,
+					customerId: fullCus.id ?? "",
+					entityId: fullCus.entity?.id,
 				});
 
 				event = await EventService.insert({

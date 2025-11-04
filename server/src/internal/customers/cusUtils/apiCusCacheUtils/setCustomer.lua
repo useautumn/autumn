@@ -1,10 +1,15 @@
 -- setCustomer.lua
 -- Atomically stores a customer object with base data as JSON and features/breakdowns as HSETs
+-- Separates master customer features from entity features
 -- KEYS[1]: cache key (e.g., "org_id:env:customer:customer_id")
 -- ARGV[1]: serialized customer data JSON string
+-- ARGV[2]: org_id (for building entity cache keys)
+-- ARGV[3]: env (for building entity cache keys)
 
 local cacheKey = KEYS[1]
 local customerDataJson = ARGV[1]
+local orgId = ARGV[2]
+local env = ARGV[3]
 
 -- Decode the customer data
 local customerData = cjson.decode(customerDataJson)
@@ -17,8 +22,19 @@ if customerData.features then
     end
 end
 
--- Store feature IDs in the base data for retrieval
+-- Extract entity IDs from entities array
+local entityIds = {}
+if customerData.entities then
+    for _, entity in ipairs(customerData.entities) do
+        if entity.id then
+            table.insert(entityIds, entity.id)
+        end
+    end
+end
+
+-- Store feature IDs and entity IDs in the base data for retrieval
 customerData._featureIds = featureIds
+customerData._entityIds = entityIds
 
 -- Build base customer object (everything except features)
 local baseCustomer = {
@@ -33,7 +49,9 @@ local baseCustomer = {
     products = customerData.products,
     invoices = customerData.invoices,
     legacyData = customerData.legacyData,
-    _featureIds = featureIds
+    entities = customerData.entities,
+    _featureIds = featureIds,
+    _entityIds = entityIds
 }
 
 -- Store base customer as JSON

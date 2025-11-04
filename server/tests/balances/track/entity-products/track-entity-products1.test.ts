@@ -12,7 +12,6 @@ import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js"
 const messagesItem = constructFeatureItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 100,
-	entityFeatureId: TestFeature.Users, // Makes this PER entity
 });
 
 const freeProd = constructProduct({
@@ -21,25 +20,25 @@ const freeProd = constructProduct({
 	items: [messagesItem],
 });
 
-const testCase = "track-entity-balances3";
+const testCase = "track-entity-products1";
 
-describe(`${chalk.yellowBright("track-entity-balances3: per-entity balance tracking")}`, () => {
-	const customerId = "track-entity-balances3";
+describe(`${chalk.yellowBright("track-entity-products1: entity product tracking")}`, () => {
+	const customerId = "track-entity-products1";
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
 	const entities = [
 		{
-			id: "track-entity-balances3-user-1",
+			id: `${customerId}-user-1`,
 			name: "User 1",
 			feature_id: TestFeature.Users,
 		},
 		{
-			id: "track-entity-balances3-user-2",
+			id: `${customerId}-user-2`,
 			name: "User 2",
 			feature_id: TestFeature.Users,
 		},
 		{
-			id: "track-entity-balances3-user-3",
+			id: `${customerId}-user-3`,
 			name: "User 3",
 			feature_id: TestFeature.Users,
 		},
@@ -58,12 +57,15 @@ describe(`${chalk.yellowBright("track-entity-balances3: per-entity balance track
 			prefix: testCase,
 		});
 
-		await autumnV1.attach({
-			customer_id: customerId,
-			product_id: freeProd.id,
-		});
-
 		await autumnV1.entities.create(customerId, entities);
+
+		for (const entity of entities) {
+			await autumnV1.attach({
+				customer_id: customerId,
+				entity_id: entity.id,
+				product_id: freeProd.id,
+			});
+		}
 
 		// Initialize caches
 		await autumnV1.customers.get(customerId);

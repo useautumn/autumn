@@ -29,17 +29,17 @@ describe(`${chalk.yellowBright("track-entity-balances1: basic entity cache test"
 
 	const entities = [
 		{
-			id: "user-1",
+			id: "track-entity-balances1-user-1",
 			name: "User 1",
 			feature_id: TestFeature.Users,
 		},
 		{
-			id: "user-2",
+			id: "track-entity-balances1-user-2",
 			name: "User 2",
 			feature_id: TestFeature.Users,
 		},
 		{
-			id: "user-3",
+			id: "track-entity-balances1-user-3",
 			name: "User 3",
 			feature_id: TestFeature.Users,
 		},
@@ -104,6 +104,37 @@ describe(`${chalk.yellowBright("track-entity-balances1: basic entity cache test"
 				product: freeProd,
 				// entityId: entity.id,
 			});
+		}
+	});
+
+	test("verify database state matches cache", async () => {
+		// Wait for database sync
+		await new Promise((resolve) => setTimeout(resolve, 2000));
+
+		// Read from database (skip cache)
+		const customerFromDb = await autumnV1.customers.get(customerId, {
+			skip_cache: "true",
+		});
+		const customerFromCache = await autumnV1.customers.get(customerId);
+
+		// Customer should match
+		expect(customerFromDb.features[TestFeature.Dashboard]).toEqual(
+			customerFromCache.features[TestFeature.Dashboard],
+		);
+
+		// All entities should match
+		for (const entity of entities) {
+			const entityFromDb = await autumnV1.entities.get(customerId, entity.id, {
+				skip_cache: "true",
+			});
+			const entityFromCache = await autumnV1.entities.get(
+				customerId,
+				entity.id,
+			);
+
+			expect(entityFromDb.features[TestFeature.Dashboard]).toEqual(
+				entityFromCache.features[TestFeature.Dashboard],
+			);
 		}
 	});
 });

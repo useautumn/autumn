@@ -52,6 +52,8 @@ export const refreshCachedApiCustomer = async ({
 		1, // number of keys
 		cacheKey, // KEYS[1]
 		JSON.stringify({ ...apiCustomer, legacyData }), // ARGV[1]
+		org.id, // ARGV[2]
+		env, // ARGV[3]
 	);
 
 	return {

@@ -8,7 +8,7 @@ import {
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { getApiCusFeature } from "./getApiCusFeature.js";
 
-export const getApiCusFeaturesObject = async ({
+export const getApiCusFeatures = async ({
 	ctx,
 	fullCus,
 }: {
@@ -22,6 +22,7 @@ export const getApiCusFeaturesObject = async ({
 		inStatuses: org.config.include_past_due
 			? [CusProductStatus.Active, CusProductStatus.PastDue]
 			: [CusProductStatus.Active],
+		entity: fullCus.entity,
 	});
 
 	const featureToCusEnt: Record<string, FullCusEntWithFullCusProduct[]> = {};
@@ -51,14 +52,4 @@ export const getApiCusFeaturesObject = async ({
 	}
 
 	return apiCusFeatures;
-};
-
-export const getApiCusFeatures = async ({
-	ctx,
-	fullCus,
-}: {
-	ctx: RequestContext;
-	fullCus: FullCustomer;
-}) => {
-	return getApiCusFeaturesObject({ ctx, fullCus });
 };

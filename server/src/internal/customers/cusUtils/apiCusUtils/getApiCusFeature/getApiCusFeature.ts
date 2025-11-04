@@ -133,7 +133,7 @@ export const getApiCusFeature = ({
 	const nextResetAt = cusEntsToNextResetAt({ cusEnts });
 
 	const totalUsageLimit = sumValues(
-		cusEnts.map((cusEnt) => cusEntToUsageLimit({ cusEnt })),
+		cusEnts.map((cusEnt) => cusEntToUsageLimit({ cusEnt, entityId })),
 	);
 
 	const totalIncludedUsage = sumValues(

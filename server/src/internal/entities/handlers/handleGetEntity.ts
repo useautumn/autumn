@@ -7,13 +7,14 @@ export const handleGetEntity = createRoute({
 	handler: async (c) => {
 		const { customer_id, entity_id } = c.req.param();
 		const ctx = c.get("ctx");
-		const { expand } = c.req.valid("query");
+		const { expand, skip_cache } = c.req.valid("query");
 
 		const apiEntity = await getApiEntity({
 			ctx,
 			customerId: customer_id,
 			entityId: entity_id,
 			expand,
+			skipCache: skip_cache,
 		});
 
 		return c.json(apiEntity);

@@ -5,7 +5,7 @@ import { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.
 import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
 import type { BillingType } from "../../models/productModels/priceModels/priceEnums.js";
 import type { FullProduct } from "../../models/productModels/productModels.js";
-import { cusEntMatchesEntity } from "../cusEntUtils/cusEntUtils.js";
+import { cusEntMatchesEntity } from "../cusEntUtils/filterCusEntUtils.js";
 import { sortCusEntsForDeduction } from "../cusEntUtils/sortCusEntsForDeduction.js";
 import { getBillingType } from "../productUtils/priceUtils.js";
 
@@ -97,7 +97,7 @@ export const cusProductsToCusEnts = ({
 		);
 	}
 
-	sortCusEntsForDeduction(cusEnts, reverseOrder);
+	sortCusEntsForDeduction(cusEnts, reverseOrder, entity?.id);
 
 	return cusEnts as FullCusEntWithFullCusProduct[];
 };

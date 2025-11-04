@@ -1,8 +1,4 @@
-import {
-	type ApiEntity,
-	type EntityExpand,
-	type FullCustomer,
-} from "@autumn/shared";
+import type { ApiEntity, EntityExpand, FullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getCachedApiEntity } from "../apiEntityCacheUtils/getCachedApiEntity.js";
 import { getApiEntityExpand } from "./getApiEntityExpand.js";

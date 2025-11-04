@@ -1,6 +1,5 @@
-import { AppEnv } from "@autumn/shared";
-import { CusProductStatus } from "@autumn/shared";
-import { sql, SQL } from "drizzle-orm";
+import type { AppEnv, CusProductStatus } from "@autumn/shared";
+import { type SQL, sql } from "drizzle-orm";
 
 const buildOptimizedCusProductsCTE = (inStatuses?: CusProductStatus[]) => {
 	const withStatusFilter = () => {
@@ -91,9 +90,12 @@ const buildEntitiesCTE = (withEntities: boolean) => {
           json_agg(row_to_json(e) ORDER BY e.internal_id DESC),
           '[]'::json
         ) AS entities
-      FROM entities e
-      WHERE e.internal_customer_id = (SELECT internal_id FROM customer_record)
-      LIMIT 100
+      FROM (
+        SELECT * FROM entities e
+        WHERE e.internal_customer_id = (SELECT internal_id FROM customer_record)
+        ORDER BY e.internal_id DESC
+        LIMIT 1000
+      ) e
     )
   `;
 };
@@ -171,7 +173,7 @@ const buildSubscriptionsCTE = (
 };
 
 const buildInvoicesCTE = (hasEntityCTE: boolean) => {
-	let entityFilter = hasEntityCTE
+	const entityFilter = hasEntityCTE
 		? sql`AND (
       NOT EXISTS (SELECT 1 FROM entity_record) 
       OR i.internal_entity_id = (SELECT internal_id FROM entity_record LIMIT 1)
