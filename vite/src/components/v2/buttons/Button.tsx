@@ -24,7 +24,7 @@ const buttonVariants = cva(
 				focus-visible:bg-primary-btn-active focus-visible:border-primary-btn-border
 				`,
 
-				secondary: `bg-input-background border border-[var(--color-input)] hover:border-primary hover:bg-hover-primary btn-secondary-shadow
+				secondary: `bg-stone-50 border border-[var(--color-input)] hover:border-primary hover:bg-hover-primary btn-secondary-shadow
 				focus-visible:bg-active-primary focus-visible:border-primary 
 				active:bg-active-primary active:border-primary
 				`,
@@ -54,6 +54,8 @@ const buttonVariants = cva(
 			size: {
 				default: "py-1 !px-[7px] text-body h-input",
 				sm: "py-1 !px-[7px] text-tiny h-6",
+				mini: "py-1 !px-1.5 text-sm h-6",
+				icon: "p-1 h-6 text-xs",
 			},
 		},
 		defaultVariants: {
