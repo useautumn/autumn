@@ -35,7 +35,7 @@ export const handlePostCustomer = createRoute({
 		}
 
 		const fullCus = await getOrCreateCustomer({
-			req: ctx as ExtendedRequest,
+			req: ctx as unknown as ExtendedRequest,
 			customerId: createCusParams.id,
 			customerData: createCusParams,
 			expand,
@@ -47,7 +47,6 @@ export const handlePostCustomer = createRoute({
 		const customer = await getApiCustomer({
 			ctx,
 			fullCus: fullCus,
-			expand,
 			withAutumnId: with_autumn_id,
 		});
 

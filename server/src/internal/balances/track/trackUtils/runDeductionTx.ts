@@ -38,6 +38,8 @@ export type DeductionTxParams = {
 	eventInfo?: EventInfo;
 	overageBehaviour?: "cap" | "reject";
 	addToAdjustment?: boolean;
+	skipAdditionalBalance?: boolean;
+	alterGrantedBalance?: boolean;
 };
 
 const deductFromCusEnts = async ({
@@ -47,6 +49,8 @@ const deductFromCusEnts = async ({
 	deductions,
 	overageBehaviour = "cap",
 	addToAdjustment = false,
+	skipAdditionalBalance = false,
+	alterGrantedBalance = false,
 }: DeductionTxParams) => {
 	const { db, org, env } = ctx;
 	const fullCus = await CusService.getFull({
@@ -133,10 +137,12 @@ const deductFromCusEnts = async ({
 		// Call the stored function to deduct from entitlements with credit costs
 		const result = await db.execute(
 			sql`SELECT * FROM deduct_allowance_from_entitlements(
-				${JSON.stringify(cusEntInput)}::jsonb, 
+				${JSON.stringify(cusEntInput)}::jsonb,
 				${toDeduct},
 				${entityId || null},
-				${rolloverIds.length > 0 ? sql.raw(`ARRAY[${rolloverIds.map((id) => `'${id}'`).join(",")}]`) : null}
+				${rolloverIds.length > 0 ? sql.raw(`ARRAY[${rolloverIds.map((id) => `'${id}'`).join(",")}]`) : null},
+				${skipAdditionalBalance},
+				${alterGrantedBalance}
 			)`,
 		);
 
@@ -146,9 +152,12 @@ const deductFromCusEnts = async ({
 				string,
 				{
 					balance: number;
+					additional_balance: number;
+					additional_granted_balance?: number;
 					entities: any;
 					adjustment: number;
 					deducted: number;
+					additional_deducted?: number;
 				}
 			>;
 			remaining: number;

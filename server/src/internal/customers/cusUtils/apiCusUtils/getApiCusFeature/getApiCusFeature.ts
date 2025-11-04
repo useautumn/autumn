@@ -65,9 +65,17 @@ const cusEntsToBreakdown = ({
 
 		breakdown.push(
 			ApiCusFeatureBreakdownSchema.parse({
-				...breakdownItem,
-				reset_interval: interval,
-				reset_interval_count: interval_count,
+				reset: interval
+					? {
+							interval: interval,
+							interval_count: interval_count !== 1 ? interval_count : undefined,
+						}
+					: undefined,
+				starting_balance: breakdownItem.granted_balance,
+				balance: breakdownItem.current_balance,
+				usage: breakdownItem.usage,
+				resets_at: breakdownItem.resets_at,
+				max_purchase: breakdownItem.max_purchase,
 			}),
 		);
 	}

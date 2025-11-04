@@ -38,12 +38,17 @@ export const handleTrack = createRoute({
 
 		try {
 			const start = Date.now();
+
+			// Skip additional_balance for negative amounts (returns/refunds)
+			const skipAdditionalBalance = body.value !== undefined && body.value < 0;
+
 			const { fullCus, event } = await runDeductionTx({
 				ctx,
 				customerId: body.customer_id,
 				entityId: body.entity_id,
 				deductions: featureDeductions,
 				overageBehaviour: body.overage_behaviour,
+				skipAdditionalBalance,
 				eventInfo: {
 					event_name: body.feature_id || body.event_name!,
 					value: body.value ?? 1,
