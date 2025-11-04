@@ -12,6 +12,7 @@ export * from "./cusProductUtils/classifyCusProduct.js";
 export * from "./cusProductUtils/convertCusProduct.js";
 export * from "./cusProductUtils/cusProductConstants.js";
 export * from "./cusProductUtils/cusProductUtils.js";
+export * from "./cusProductUtils/filterCusProductUtils.js";
 export * from "./cusProductUtils/formatCusProductUtils.js";
 export * from "./cusProductUtils/productIdToCusProduct.js";
 export * from "./featureUtils/apiFeatureToDbFeature.js";

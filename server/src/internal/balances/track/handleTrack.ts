@@ -11,6 +11,7 @@ import { createRoute } from "../../../honoMiddlewares/routeHandler.js";
 import { globalEventBatchingManager } from "./eventUtils/EventBatchingManager.js";
 import { runRedisDeduction } from "./redisTrackUtils/runRedisDeduction.js";
 import { globalSyncBatchingManager } from "./syncUtils/SyncBatchingManager.js";
+import { constructEvent } from "./trackUtils/eventUtils.js";
 import type { FeatureDeduction } from "./trackUtils/getFeatureDeductions.js";
 import {
 	getTrackEventNameDeductions,
@@ -136,18 +137,22 @@ export const handleTrack = createRoute({
 			}
 
 			// Queue event insertion (skip if skip_event is true)
-			if (!body.skip_event) {
-				globalEventBatchingManager.addEvent({
-					orgId: org.id,
-					orgSlug: org.slug,
-					env,
-					customerId: body.customer_id,
-					entityId: body.entity_id,
-					eventName: body.feature_id || body.event_name!,
-					value: body.value,
-					properties: body.properties,
-					timestamp: body.timestamp,
-				});
+			if (!body.skip_event && result.internalCustomerId) {
+				globalEventBatchingManager.addEvent(
+					constructEvent({
+						ctx,
+						eventInfo: {
+							event_name: body.feature_id || body.event_name!,
+							value: body.value,
+							properties: body.properties,
+							timestamp: body.timestamp,
+						},
+						internalCustomerId: result.internalCustomerId,
+						internalEntityId: result.internalEntityId,
+						customerId: body.customer_id,
+						entityId: body.entity_id,
+					}),
+				);
 			}
 
 			const response = {

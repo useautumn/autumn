@@ -28,6 +28,7 @@ BUN_PARALLEL_COMPACT \
   # 'server/tests/attach/addOn' \
   # 'server/tests/attach/entities' \
   # 'server/tests/attach/checkout' \
+  # 'server/tests/attach/misc' \
   # --max=6 \
 
 

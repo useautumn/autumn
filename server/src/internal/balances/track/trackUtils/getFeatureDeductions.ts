@@ -5,6 +5,7 @@ import { getCreditSystemsFromFeature } from "../../../features/creditSystemUtils
 export type FeatureDeduction = {
 	feature: Feature;
 	deduction: number;
+	targetBalance?: number;
 };
 
 const DEFAULT_VALUE = 1;

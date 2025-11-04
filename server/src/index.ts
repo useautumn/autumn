@@ -60,7 +60,7 @@ const initializeDatabaseFunctions = async () => {
 		const sqlFiles = [
 			"deductFromRollovers.sql",
 			"deductFromMainBalance.sql",
-			"performDeduction.sql",
+			"performDeductionV2.sql",
 		];
 
 		for (const file of sqlFiles) {
