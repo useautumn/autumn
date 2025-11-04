@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
-import { EntityDataSchema } from "../../models/cusModels/entityModels/entityModels.js";
 import { CustomerDataSchema } from "../common/customerData.js";
+import { EntityDataSchema } from "../common/entityData.js";
 
 const trackDescriptions = {
 	customer_id: "The ID of the customer",

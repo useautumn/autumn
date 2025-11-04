@@ -10,6 +10,7 @@ interface FeatureDeduction {
 interface BatchRequest {
 	featureDeductions: FeatureDeduction[];
 	overageBehavior: "cap" | "reject";
+	entityId?: string;
 	resolve: (result: { success: boolean; error?: string }) => void;
 	reject: (error: Error) => void;
 }
@@ -89,6 +90,7 @@ export class BatchingManager {
 			batch.requests.push({
 				featureDeductions,
 				overageBehavior,
+				entityId,
 				resolve,
 				reject,
 			});
@@ -152,6 +154,7 @@ export class BatchingManager {
 				requests: requests.map((r) => ({
 					featureDeductions: r.featureDeductions,
 					overageBehavior: r.overageBehavior,
+					entityId: r.entityId,
 				})),
 			});
 

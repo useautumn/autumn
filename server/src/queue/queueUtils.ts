@@ -1,4 +1,4 @@
-import type { AppEnv, Price } from "@autumn/shared";
+import type { AppEnv, EventInsert, Price } from "@autumn/shared";
 import { queue } from "./initQueue.js";
 import { JobName } from "./JobName.js";
 
@@ -21,17 +21,7 @@ export interface Payloads {
 		}>;
 	};
 	[JobName.InsertEventBatch]: {
-		events: Array<{
-			orgId: string;
-			orgSlug: string;
-			env: string;
-			customerId: string;
-			entityId?: string;
-			eventName: string;
-			value?: number;
-			properties?: Record<string, any>;
-			timestamp?: number;
-		}>;
+		events: EventInsert[];
 	};
 	[key: string]: any;
 }

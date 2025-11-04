@@ -21,6 +21,8 @@ interface RunRedisDeductionParams {
 interface DeductionResult {
 	success: boolean;
 	error?: string;
+	internalCustomerId?: string;
+	internalEntityId?: string;
 }
 
 /**
@@ -37,7 +39,7 @@ export const runRedisDeduction = async ({
 	const { org, env } = ctx;
 
 	// Ensure customer is in cache
-	await getCachedApiCustomer({
+	const { apiCustomer: cachedCustomer } = await getCachedApiCustomer({
 		ctx,
 		customerId,
 	});
@@ -80,5 +82,9 @@ export const runRedisDeduction = async ({
 	// 	lifetimeBalance: after?.features?.credits?.breakdown?.[1]?.balance,
 	// });
 
-	return result;
+	return {
+		success: result.success,
+		internalCustomerId: cachedCustomer?.autumn_id,
+		internalEntityId: undefined, // TODO: Get from cached entity when entity support is added
+	};
 };

@@ -1,28 +1,32 @@
 import { z } from "zod/v4";
+import { EntityExpand } from "../../models/cusModels/entityModels/entityExpand.js";
+import { queryStringArray } from "../apiUtils.js";
+import { CustomerDataSchema } from "../common/customerData.js";
 
 // Create Entity Params (based on CreateEntitySchema from shared/models)
 export const CreateEntityParamsSchema = z.object({
-	id: z.string().meta({
+	id: z.string().nullable().meta({
 		description: "The ID of the entity",
-		example: "entity_123",
 	}),
 	name: z.string().nullish().meta({
 		description: "The name of the entity",
-		example: "Team Alpha",
 	}),
 	feature_id: z.string().meta({
 		description: "The ID of the feature this entity is associated with",
-		example: "seats",
 	}),
+	customer_data: CustomerDataSchema.optional(),
 });
 
 // Get Entity Query Params
 export const GetEntityQuerySchema = z.object({
-	expand: z.string().optional().meta({
-		description: "Comma-separated list of fields to expand (e.g., 'invoices')",
-		example: "invoices",
-	}),
+	expand: queryStringArray(z.enum(EntityExpand)).default([]),
+});
+
+export const CreateEntityQuerySchema = z.object({
+	with_autumn_id: z.boolean().default(false),
+	from_auto_create: z.boolean().default(false),
 });
 
 export type CreateEntityParams = z.infer<typeof CreateEntityParamsSchema>;
 export type GetEntityQuery = z.infer<typeof GetEntityQuerySchema>;
+export type CreateEntityQuery = z.infer<typeof CreateEntityQuerySchema>;

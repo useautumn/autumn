@@ -1,27 +1,9 @@
+import type { EventInsert } from "@autumn/shared";
 import { JobName } from "../../../../queue/JobName.js";
 import { addTaskToQueue } from "../../../../queue/queueUtils.js";
 
-interface EventContext {
-	// Org and env
-	orgId: string;
-	orgSlug: string;
-	env: string;
-
-	// Customer
-	customerId: string;
-
-	// Entity (optional)
-	entityId?: string;
-
-	// Event details
-	eventName: string;
-	value?: number;
-	properties?: Record<string, any>;
-	timestamp?: number;
-}
-
 class BatchingManager {
-	private events: Map<string, EventContext> = new Map();
+	private events: Map<string, EventInsert> = new Map();
 	private timer: NodeJS.Timeout | null = null;
 	private readonly batchWindow = 100; // 100ms batching window
 	private readonly maxBatchSize = 5000; // Max events per batch (PostgreSQL has ~65k param limit, ~11 fields per event = ~5.9k max)
@@ -29,10 +11,10 @@ class BatchingManager {
 	/**
 	 * Add an event to the batch
 	 */
-	addEvent(event: EventContext): void {
+	addEvent(event: EventInsert): void {
 		// Generate a unique key for deduplication
-		// Use timestamp + customer + event to allow same customer/event multiple times
-		const key = `${event.customerId}:${event.eventName}:${Date.now()}:${Math.random()}`;
+		// Use event ID as the key (already unique)
+		const key = event.id;
 
 		this.events.set(key, event);
 

@@ -5,7 +5,7 @@ dotenv.config();
 
 import {
 	type AttachBody,
-	type CreateEntity,
+	type CreateEntityParams,
 	type CreateRewardProgram,
 	CusExpand,
 	EntityExpand,
@@ -323,7 +323,7 @@ export class AutumnInt {
 
 		create: async (
 			customerId: string,
-			entity: CreateEntity | CreateEntity[],
+			entity: CreateEntityParams | CreateEntityParams[],
 		) => {
 			// let entities = Array.isArray(entity) ? entity : [entity];
 			const data = await this.post(

@@ -23,6 +23,7 @@ import { handleSetUsage } from "./internal/balances/setUsage/handleSetUsage.js";
 import { handleTrack } from "./internal/balances/track/handleTrack.js";
 import { cusRouter } from "./internal/customers/cusRouter.js";
 import { internalCusRouter } from "./internal/customers/internalCusRouter.js";
+import { entityRouter } from "./internal/entities/entityRouter.js";
 import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/handleOAuthCallback.js";
 import { honoOrgRouter } from "./internal/orgs/orgRouter.js";
 import { platformBetaRouter } from "./internal/platform/platformBeta/platformBetaRouter.js";
@@ -106,8 +107,9 @@ export const createHonoApp = () => {
 	app.post("/v1/track", customerTrackRateLimiter, ...handleTrack);
 	app.post("/v1/entitled", customerCheckRateLimiter, ...handleCheck);
 	app.post("/v1/check", customerCheckRateLimiter, ...handleCheck);
-
 	app.post("/v1/usage", ...handleSetUsage);
+
+	app.route("v1", entityRouter);
 	app.route("v1/customers", cusRouter);
 	app.route("v1/products", honoProductRouter);
 	app.route("v1/platform", platformBetaRouter);

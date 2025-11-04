@@ -38,26 +38,33 @@ export type DeductionTxParams = {
 	eventInfo?: EventInfo;
 	overageBehaviour?: "cap" | "reject";
 	addToAdjustment?: boolean;
+	fullCus?: FullCustomer; // if provided from function above!
+	refreshCache?: boolean; // Whether to refresh Redis cache after deduction (default: true for track, false for sync)
 };
 
-const deductFromCusEnts = async ({
+export const deductFromCusEnts = async ({
 	ctx,
 	customerId,
 	entityId,
 	deductions,
 	overageBehaviour = "cap",
 	addToAdjustment = false,
+	fullCus,
+	refreshCache = true, // Default to true for backwards compatibility
 }: DeductionTxParams) => {
 	const { db, org, env } = ctx;
-	const fullCus = await CusService.getFull({
-		db,
-		idOrInternalId: customerId,
-		orgId: org.id,
-		env,
-		inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
-		entityId,
-		withSubs: true,
-	});
+
+	if (!fullCus) {
+		fullCus = await CusService.getFull({
+			db,
+			idOrInternalId: customerId,
+			orgId: org.id,
+			env,
+			inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+			entityId,
+			withSubs: true,
+		});
+	}
 
 	const printLogs = false;
 
@@ -72,7 +79,7 @@ const deductFromCusEnts = async ({
 	}
 	// Need to deduct from customer entitlement...
 	for (const deduction of deductions) {
-		const { feature, deduction: toDeduct } = deduction;
+		const { feature, deduction: toDeduct, targetBalance } = deduction;
 
 		const relevantFeatures = getRelevantFeatures({
 			features: ctx.features,
@@ -135,6 +142,7 @@ const deductFromCusEnts = async ({
 			sql`SELECT * FROM deduct_allowance_from_entitlements(
 				${JSON.stringify(cusEntInput)}::jsonb, 
 				${toDeduct},
+				${targetBalance ?? null},
 				${entityId || null},
 				${rolloverIds.length > 0 ? sql.raw(`ARRAY[${rolloverIds.map((id) => `'${id}'`).join(",")}]`) : null}
 			)`,
@@ -169,11 +177,25 @@ const deductFromCusEnts = async ({
 			});
 		}
 
-		ctx.logger.info(
-			`Deducted ${toDeduct - remaining} from feature ${feature.id}. Updated ${
-				Object.keys(updates).length
-			} entitlements. Remaining: ${remaining}`,
-		);
+		// Log deduction details
+		if (targetBalance !== undefined) {
+			// Calculate total deducted from the updates (sum of all deducted amounts)
+			const totalDeducted = Object.values(updates).reduce(
+				(sum, update) => sum + update.deducted,
+				0,
+			);
+			ctx.logger.info(
+				`[Sync] Feature ${feature.id} | Target: ${targetBalance} | Deducted: ${totalDeducted} | Updated ${
+					Object.keys(updates).length
+				} entitlements | Remaining: ${remaining}`,
+			);
+		} else {
+			ctx.logger.info(
+				`[Track] Deducted ${toDeduct - remaining} from feature ${feature.id}. Updated ${
+					Object.keys(updates).length
+				} entitlements. Remaining: ${remaining}`,
+			);
+		}
 
 		// Bill on Stripe for each updated entitlement
 		const cusPrices = cusProductsToCusPrices({
@@ -239,18 +261,26 @@ const deductFromCusEnts = async ({
 		}
 	}
 
+	// Refresh cache if requested (skip for sync operations)
+	if (refreshCache) {
+		await refreshCachedApiCustomer({
+			ctx,
+			customerId,
+			entityId,
+		});
+	}
+
 	return fullCus;
 };
 
 export const runDeductionTx = async (
 	params: DeductionTxParams,
-	refreshCache = true,
 ): Promise<{
 	fullCus: FullCustomer | undefined;
 	event: Event | undefined;
 }> => {
 	const ctx = params.ctx;
-	const { db, org, env } = ctx;
+	const { db } = ctx;
 
 	let fullCus: FullCustomer | undefined;
 	let event: Event | undefined;
@@ -288,20 +318,7 @@ export const runDeductionTx = async (
 		},
 	);
 
-	if (refreshCache) {
-		await refreshCachedApiCustomer({
-			ctx,
-			customerId: params.customerId,
-			entityId: params.entityId,
-		});
-	}
-	// await refreshCusCache({
-	// 	db,
-	// 	customerId: params.customerId,
-	// 	entityId: params.entityId,
-	// 	org,
-	// 	env,
-	// });
+	// Note: refreshCache is now handled inside deductFromCusEnts
 
 	return {
 		fullCus,
