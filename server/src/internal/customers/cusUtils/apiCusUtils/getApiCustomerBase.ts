@@ -8,7 +8,7 @@ import type { CusFeatureLegacyData } from "@shared/api/customers/cusFeatures/cus
 import { z } from "zod/v4";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { getApiCusFeatures } from "./getApiCusFeature/getApiCusFeatures.js";
-import { getApiCusProducts } from "./getApiCusProduct/getApiCusProducts.js";
+import { getApiCusPlans } from "./getApiCusPlan/getApiCusPlans.js";
 
 /**
  * Get base ApiCustomer without expand fields
@@ -35,8 +35,8 @@ export const getApiCustomerBase = async ({
 			fullCus,
 		});
 
-	const { apiCusProducts: apiCusPlans, legacyData: cusProductLegacyData } =
-		await getApiCusProducts({
+	const { apiCusPlans, legacyData: cusProductLegacyData } =
+		await getApiCusPlans({
 			ctx,
 			fullCus,
 		});
@@ -56,7 +56,7 @@ export const getApiCustomerBase = async ({
 		env: fullCus.env,
 		metadata: fullCus.metadata,
 
-		products: apiCusPlans,
+		plans: apiCusPlans,
 		features: apiCusFeatures,
 	});
 

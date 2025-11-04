@@ -1,15 +1,7 @@
-import {
-	CusProductStatus,
-	cusProductsToCusEnts,
-	FeatureNotFoundError,
-	notNullish,
-} from "@autumn/shared";
-import { Decimal } from "decimal.js";
+import { FeatureNotFoundError, notNullish } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "../../../honoMiddlewares/routeHandler.js";
-import { CusService } from "../../customers/CusService.js";
-import { getApiCusFeature } from "../../customers/cusUtils/apiCusUtils/getApiCusFeature/getApiCusFeature.js";
-import { deductFromAdditionalGrantedBalance } from "../deductUtils/deductFromAdditionalGrantedBalance.js";
+import { runDeductionTx } from "../track/trackUtils/runDeductionTx.js";
 
 export const handleUpdateBalance = createRoute({
 	body: z
@@ -39,49 +31,30 @@ export const handleUpdateBalance = createRoute({
 		const body = c.req.valid("json");
 		const ctx = c.get("ctx");
 
-		const { db, org, env, features } = ctx;
-
-		const fullCus = await CusService.getFull({
-			db,
-			idOrInternalId: body.customer_id,
-			orgId: org.id,
-			env,
-		});
+		const { features } = ctx;
 
 		const feature = features.find((f) => f.id === body.feature_id);
 		if (!feature) {
 			throw new FeatureNotFoundError({ featureId: body.feature_id });
 		}
 
-		const cusEnts = cusProductsToCusEnts({
-			cusProducts: fullCus.customer_products,
-			inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
-		});
-
-		const { apiCusFeature } = getApiCusFeature({
-			ctx,
-			fullCus,
-			cusEnts,
-			feature,
-		});
-
-		// Udpate balance...
+		// Update balance using SQL with alter_granted=true
 		if (notNullish(body.current_balance)) {
-			const toDeduct = new Decimal(apiCusFeature.current_balance)
-				.minus(body.current_balance)
-				.toNumber();
-
-			// Add to additional granted balance
-			await deductFromAdditionalGrantedBalance({
-				toDeduct,
-				cusEnts,
-				feature,
-				entity: fullCus.entity,
+			await runDeductionTx({
 				ctx,
+				customerId: body.customer_id,
+				entityId: body.entity_id,
+				deductions: [
+					{
+						feature,
+						deduction: body.current_balance, // Target balance
+					},
+				],
+				skipAdditionalBalance: false,
+				alterGrantedBalance: true,
 			});
 		}
 
-		// Return apiCusFeature
 		return c.json({ success: true });
 	},
 });

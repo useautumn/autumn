@@ -64,7 +64,7 @@ export const getApiCusPlan = async ({
 	const status = cusProductToPlanStatus({ status: cusProduct.status });
 
 	// Check if we should expand the plan object
-	const shouldExpandPlan = ctx.expand.includes(CusExpand.Plan);
+	const shouldExpandPlan = (ctx.expand ?? []).includes(CusExpand.Plan);
 	const apiPlan = shouldExpandPlan
 		? await getPlanResponse({
 				product: fullProduct,

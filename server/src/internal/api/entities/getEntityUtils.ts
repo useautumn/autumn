@@ -74,7 +74,7 @@ export const getSingleEntityResponse = async ({
 	// });
 
 	// const products: ApiCusProduct[] = [...main, ...addOns];
-	const { apiCusPlans } = await getApiCusPlans({
+	const { apiCusPlans, legacyData } = await getApiCusPlans({
 		ctx,
 		fullCus: fullEntity,
 	});
@@ -87,16 +87,19 @@ export const getSingleEntityResponse = async ({
 	});
 
 	return {
-		...(withAutumnId ? { autumn_id: entity.internal_id } : {}),
-		id: entity.id,
-		name: entity.name,
-		created_at: entity.created_at,
-		// feature_id: entity.feature_id,
-		customer_id: fullCus.id || fullCus.internal_id,
-		env,
-		plans: apiCusPlans,
-		features: cusFeatures,
-	} satisfies ApiEntity;
+		entity: {
+			...(withAutumnId ? { autumn_id: entity.internal_id } : {}),
+			id: entity.id,
+			name: entity.name,
+			created_at: entity.created_at,
+			// feature_id: entity.feature_id,
+			customer_id: fullCus.id || fullCus.internal_id,
+			env,
+			plans: apiCusPlans,
+			features: cusFeatures,
+		} satisfies ApiEntity,
+		legacyData,
+	};
 };
 
 export const getEntityResponse = async ({
@@ -165,15 +168,16 @@ export const getEntityResponse = async ({
 			});
 		}
 
-		const entityResponse = await getSingleEntityResponse({
-			ctx,
-			entityId,
-			fullCus,
-			entity,
-			withAutumnId,
-		});
+		const { entity: entityData, legacyData: entityLegacyData } =
+			await getSingleEntityResponse({
+				ctx,
+				entityId,
+				fullCus,
+				entity,
+				withAutumnId,
+			});
 
-		entityResponses.push(entityResponse);
+		entityResponses.push({ entity: entityData, legacyData: entityLegacyData });
 	}
 
 	return {
