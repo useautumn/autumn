@@ -58,40 +58,60 @@ export const runSyncBalanceBatch = async ({
 		}
 	}
 
-	// Step 2: Process each sync item
+	// Step 2: Sort items by timestamp (oldest first) to maintain chronological order
+	const sortedItems = items.sort((a, b) => a.timestamp - b.timestamp);
+
+	// Step 3: Group items by customer to process sequentially per customer
+	const itemsByCustomer = new Map<string, typeof items>();
+	for (const item of sortedItems) {
+		const customerKey = `${item.orgId}:${item.env}:${item.customerId}`;
+		if (!itemsByCustomer.has(customerKey)) {
+			itemsByCustomer.set(customerKey, []);
+		}
+		itemsByCustomer.get(customerKey)!.push(item);
+	}
+
+	// Step 4: Process each customer's items sequentially (customers can run in parallel)
 	let successCount = 0;
 	let errorCount = 0;
 
-	for (const item of items) {
-		try {
-			const key = `${item.orgId}:${item.env}`;
-			const orgData = orgMap.get(key);
+	const customerPromises = Array.from(itemsByCustomer.entries()).map(
+		async ([customerKey, customerItems]) => {
+			for (const item of customerItems) {
+				try {
+					const key = `${item.orgId}:${item.env}`;
+					const orgData = orgMap.get(key);
 
-			if (!orgData) {
-				logger.warn(`Organization not found: ${key}`);
-				errorCount++;
-				continue;
+					if (!orgData) {
+						logger.warn(`Organization not found: ${key}`);
+						errorCount++;
+						continue;
+					}
+
+					// Create worker context
+					const ctx = createWorkerContext({
+						db,
+						org: orgData.org,
+						env: item.env as AppEnv,
+						features: orgData.features,
+						logger,
+					});
+
+					// Sync the item sequentially
+					await syncItem({ item, ctx });
+					successCount++;
+				} catch (error) {
+					errorCount++;
+					logger.error(
+						`❌ Failed to sync item ${item.customerId}:${item.featureId}: ${error instanceof Error ? error.message : String(error)}`,
+					);
+				}
 			}
+		},
+	);
 
-			// Create worker context
-			const ctx = createWorkerContext({
-				db,
-				org: orgData.org,
-				env: item.env as AppEnv,
-				features: orgData.features,
-				logger,
-			});
-
-			// Sync the item
-			await syncItem({ item, ctx });
-			successCount++;
-		} catch (error) {
-			errorCount++;
-			logger.error(
-				`❌ Failed to sync item ${item.customerId}:${item.featureId}: ${error instanceof Error ? error.message : String(error)}`,
-			);
-		}
-	}
+	// Wait for all customer syncs to complete
+	await Promise.all(customerPromises);
 
 	logger.info(
 		`Sync batch complete: ${successCount} succeeded, ${errorCount} failed`,

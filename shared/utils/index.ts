@@ -3,6 +3,7 @@
 export * from "./cusEntUtils/balanceUtils.js";
 export * from "./cusEntUtils/convertCusEntUtils.js";
 export * from "./cusEntUtils/cusEntUtils.js";
+export * from "./cusEntUtils/filterCusEntUtils.js";
 // Cus ent utils
 export * from "./cusEntUtils/getRolloverFields.js";
 export * from "./cusEntUtils/getStartingBalance.js";
@@ -12,6 +13,7 @@ export * from "./cusProductUtils/classifyCusProduct.js";
 export * from "./cusProductUtils/convertCusProduct.js";
 export * from "./cusProductUtils/cusProductConstants.js";
 export * from "./cusProductUtils/cusProductUtils.js";
+export * from "./cusProductUtils/filterCusProductUtils.js";
 export * from "./cusProductUtils/filterCusProductUtils.js";
 export * from "./cusProductUtils/formatCusProductUtils.js";
 export * from "./cusProductUtils/productIdToCusProduct.js";

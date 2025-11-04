@@ -156,6 +156,8 @@ export class BatchingManager {
 					overageBehavior: r.overageBehavior,
 					entityId: r.entityId,
 				})),
+				orgId: batch.orgId,
+				env: batch.env,
 			});
 
 			console.log(`✅ Batch completed (${batchSize} requests)`);

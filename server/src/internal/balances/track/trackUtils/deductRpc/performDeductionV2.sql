@@ -4,14 +4,15 @@
 -- Two-pass strategy: 
 --   Pass 1: Deduct all entitlements to 0
 --   Pass 2: Allow usage_allowed=true entitlements to go negative
-DROP FUNCTION IF EXISTS deduct_allowance_from_entitlements(jsonb, numeric, numeric, text, text[]);
+DROP FUNCTION IF EXISTS deduct_allowance_from_entitlements(jsonb, numeric, numeric, text, text[], text[]);
 
 CREATE FUNCTION deduct_allowance_from_entitlements(
   sorted_entitlements jsonb,
   amount_to_deduct numeric DEFAULT NULL,
   target_balance numeric DEFAULT NULL,
   target_entity_id text DEFAULT NULL,
-  rollover_ids text[] DEFAULT NULL
+  rollover_ids text[] DEFAULT NULL,
+  cus_ent_ids text[] DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -55,16 +56,12 @@ BEGIN
   -- STEP 0: Lock all rows upfront to prevent deadlocks
   -- ============================================================================
   
-  -- Lock all entitlement rows
-  FOR ent_obj IN SELECT * FROM jsonb_array_elements(sorted_entitlements)
-  LOOP
-    ent_id := ent_obj->>'customer_entitlement_id';
-    
-    -- Lock the row
-    PERFORM 1 FROM customer_entitlements ce WHERE ce.id = ent_id FOR UPDATE;
-  END LOOP;
+  -- Lock all entitlement rows at once (prevents interleaved locking deadlocks)
+  IF cus_ent_ids IS NOT NULL AND array_length(cus_ent_ids, 1) > 0 THEN
+    PERFORM 1 FROM customer_entitlements ce WHERE ce.id = ANY(cus_ent_ids) FOR UPDATE;
+  END IF;
   
-  -- Lock all rollover rows
+  -- Lock all rollover rows at once
   IF rollover_ids IS NOT NULL AND array_length(rollover_ids, 1) > 0 THEN
     PERFORM 1 FROM rollovers r WHERE r.id = ANY(rollover_ids) FOR UPDATE;
   END IF;
@@ -93,8 +90,8 @@ BEGIN
           entity_balance := COALESCE((current_entities->target_entity_id->>'balance')::numeric, 0);
           total_balance := total_balance + entity_balance;
         ELSE
-          -- All entities
-          FOR entity_key IN SELECT jsonb_object_keys(current_entities)
+          -- All entities (sorted for consistency with Redis)
+          FOR entity_key IN SELECT jsonb_object_keys(current_entities) ORDER BY 1
           LOOP
             entity_balance := COALESCE((current_entities->entity_key->>'balance')::numeric, 0);
             total_balance := total_balance + entity_balance;
@@ -126,8 +123,8 @@ BEGIN
             entity_balance := COALESCE((current_entities->target_entity_id->>'balance')::numeric, 0);
             total_balance := total_balance + entity_balance;
           ELSE
-            -- All entities
-            FOR entity_key IN SELECT jsonb_object_keys(current_entities)
+            -- All entities (sorted for consistency with Redis)
+            FOR entity_key IN SELECT jsonb_object_keys(current_entities) ORDER BY 1
             LOOP
               entity_balance := COALESCE((current_entities->entity_key->>'balance')::numeric, 0);
               total_balance := total_balance + entity_balance;

@@ -11,9 +11,13 @@
 --     },
 --     ...
 --   ]
+-- ARGV[2]: org_id
+-- ARGV[3]: env
 
 local cacheKey = KEYS[1]
 local requestsJson = ARGV[1]
+local orgId = ARGV[2]
+local env = ARGV[3]
 
 -- Parse requests
 local requests = cjson.decode(requestsJson)
@@ -199,36 +203,15 @@ local function deductFromMainBalance(cusFeature, amount)
     local deltas = {}
     local stateChanges = {}
     
-    -- Handle negative amounts (refunds) - just add to balance and subtract from usage
-    if amount < 0 then
-        local creditAmount = -amount
-        table.insert(deltas, {key = cusFeature._key, field = "balance", delta = creditAmount})
-        table.insert(deltas, {key = cusFeature._key, field = "usage", delta = -creditAmount})
-        table.insert(stateChanges, {
-            type = "cusFeature",
-            field = "balance",
-            delta = creditAmount
-        })
-        table.insert(stateChanges, {
-            type = "cusFeature",
-            field = "usage",
-            delta = -creditAmount
-        })
-        return {
-            remaining = 0,
-            deltas = deltas,
-            stateChanges = stateChanges
-        }
-    end
-    
     -- If cusFeature has breakdowns, deduct from breakdowns
     if #cusFeature.breakdowns > 0 then
-        -- Pass 1: Deduct from breakdown balances
+        -- Pass 1: Deduct from breakdown balances (or refund to breakdown)
         for index, breakdown in ipairs(cusFeature.breakdowns) do
             if remaining == 0 then break end
             
             local breakdownBalance = breakdown.balance or 0
-            if breakdownBalance > 0 then
+            -- For refunds (negative amount), always apply. For deductions, only if balance > 0
+            if remaining < 0 or breakdownBalance > 0 then
                 local toDeduct = math.min(remaining, breakdownBalance)
                 
                 -- Collect Redis deltas
@@ -324,9 +307,10 @@ local function deductFromMainBalance(cusFeature, amount)
             end
         end
     else
-        -- No breakdowns: deduct from top-level balance
+        -- No breakdowns: deduct from top-level balance (or refund to top-level)
         local topLevelBalance = cusFeature.balance or 0
-        if topLevelBalance > 0 then
+        -- For refunds (negative amount), always apply. For deductions, only if balance > 0
+        if remaining < 0 or topLevelBalance > 0 then
             local toDeduct = math.min(remaining, topLevelBalance)
             
             -- Collect Redis deltas
@@ -434,6 +418,168 @@ local function deductFromCusFeature(cusFeature, amount)
     }
 end
 
+-- Deduct from customer feature AND entity features
+-- If targetEntityId is provided, only deduct from that entity (entity-level tracking)
+-- If targetEntityId is nil, deduct from ALL entities (customer-level tracking)
+-- Returns: { remaining: number, deltas: array, customerStateChanges: array, entityStateChanges: { [entityId] = array } }
+local function deductFromFeatureWithEntities(customerFeature, entityFeaturesMap, amount, targetEntityId)
+    local allDeltas = {}
+    local customerStateChanges = {}
+    local entityStateChanges = {}
+    
+    local remaining = amount
+    
+    if targetEntityId then
+        -- Entity-level tracking: deduct from entity FIRST, then customer
+        
+        -- Step 1: Deduct from entity rollovers
+        local entityFeatures = entityFeaturesMap[targetEntityId]
+        if entityFeatures then
+            local entityFeature = entityFeatures[customerFeature.id]
+            if entityFeature and remaining > 0 then
+                local entityRolloverResult = deductFromRollovers(entityFeature, remaining)
+                remaining = entityRolloverResult.remaining
+                for _, delta in ipairs(entityRolloverResult.deltas) do
+                    table.insert(allDeltas, delta)
+                end
+                if not entityStateChanges[targetEntityId] then
+                    entityStateChanges[targetEntityId] = {}
+                end
+                for _, change in ipairs(entityRolloverResult.stateChanges) do
+                    table.insert(entityStateChanges[targetEntityId], change)
+                end
+            end
+        end
+        
+        -- Step 2: Deduct from entity main balance
+        if entityFeatures then
+            local entityFeature = entityFeatures[customerFeature.id]
+            if entityFeature and remaining > 0 then
+                local entityMainResult = deductFromMainBalance(entityFeature, remaining)
+                remaining = entityMainResult.remaining
+                for _, delta in ipairs(entityMainResult.deltas) do
+                    table.insert(allDeltas, delta)
+                end
+                if not entityStateChanges[targetEntityId] then
+                    entityStateChanges[targetEntityId] = {}
+                end
+                for _, change in ipairs(entityMainResult.stateChanges) do
+                    table.insert(entityStateChanges[targetEntityId], change)
+                end
+            end
+        end
+        
+        -- Step 3: Deduct from customer rollovers
+        if remaining > 0 then
+            local customerRolloverResult = deductFromRollovers(customerFeature, remaining)
+            remaining = customerRolloverResult.remaining
+            for _, delta in ipairs(customerRolloverResult.deltas) do
+                table.insert(allDeltas, delta)
+            end
+            for _, change in ipairs(customerRolloverResult.stateChanges) do
+                table.insert(customerStateChanges, change)
+            end
+        end
+        
+        -- Step 4: Deduct from customer main balance
+        if remaining > 0 then
+            local customerMainResult = deductFromMainBalance(customerFeature, remaining)
+            remaining = customerMainResult.remaining
+            for _, delta in ipairs(customerMainResult.deltas) do
+                table.insert(allDeltas, delta)
+            end
+            for _, change in ipairs(customerMainResult.stateChanges) do
+                table.insert(customerStateChanges, change)
+            end
+        end
+    else
+        -- Customer-level tracking: deduct from customer FIRST, then all entities
+        
+        -- Step 1: Deduct from customer rollovers
+        local customerRolloverResult = deductFromRollovers(customerFeature, remaining)
+        remaining = customerRolloverResult.remaining
+        for _, delta in ipairs(customerRolloverResult.deltas) do
+            table.insert(allDeltas, delta)
+        end
+        for _, change in ipairs(customerRolloverResult.stateChanges) do
+            table.insert(customerStateChanges, change)
+        end
+        
+        -- Step 2: Deduct from customer main balance
+        if remaining > 0 then
+            local customerMainResult = deductFromMainBalance(customerFeature, remaining)
+            remaining = customerMainResult.remaining
+            for _, delta in ipairs(customerMainResult.deltas) do
+                table.insert(allDeltas, delta)
+            end
+            for _, change in ipairs(customerMainResult.stateChanges) do
+                table.insert(customerStateChanges, change)
+            end
+        end
+        
+        -- Step 3: Deduct from all entity rollovers (sorted for consistency)
+        if remaining > 0 then
+            local sortedEntityIds = {}
+            for entityId in pairs(entityFeaturesMap) do
+                table.insert(sortedEntityIds, entityId)
+            end
+            table.sort(sortedEntityIds)
+            
+            for _, entityId in ipairs(sortedEntityIds) do
+                local entityFeatures = entityFeaturesMap[entityId]
+                local entityFeature = entityFeatures[customerFeature.id]
+                if entityFeature and remaining > 0 then
+                    local entityRolloverResult = deductFromRollovers(entityFeature, remaining)
+                    remaining = entityRolloverResult.remaining
+                    for _, delta in ipairs(entityRolloverResult.deltas) do
+                        table.insert(allDeltas, delta)
+                    end
+                    if not entityStateChanges[entityId] then
+                        entityStateChanges[entityId] = {}
+                    end
+                    for _, change in ipairs(entityRolloverResult.stateChanges) do
+                        table.insert(entityStateChanges[entityId], change)
+                    end
+                end
+            end
+        end
+        
+        -- Step 4: Deduct from all entity main balances (sorted for consistency)
+        if remaining > 0 then
+            local sortedEntityIds = {}
+            for entityId in pairs(entityFeaturesMap) do
+                table.insert(sortedEntityIds, entityId)
+            end
+            table.sort(sortedEntityIds)
+            
+            for _, entityId in ipairs(sortedEntityIds) do
+                local entityFeatures = entityFeaturesMap[entityId]
+                local entityFeature = entityFeatures[customerFeature.id]
+                if entityFeature and remaining > 0 then
+                    local entityMainResult = deductFromMainBalance(entityFeature, remaining)
+                    remaining = entityMainResult.remaining
+                    for _, delta in ipairs(entityMainResult.deltas) do
+                        table.insert(allDeltas, delta)
+                    end
+                    if not entityStateChanges[entityId] then
+                        entityStateChanges[entityId] = {}
+                    end
+                    for _, change in ipairs(entityMainResult.stateChanges) do
+                        table.insert(entityStateChanges[entityId], change)
+                    end
+                end
+            end
+        end
+    end
+    
+    return {
+        remaining = remaining,
+        deltas = allDeltas,
+        customerStateChanges = customerStateChanges,
+        entityStateChanges = entityStateChanges
+    }
+end
+
 -- ============================================================================
 -- REQUEST PROCESSING
 -- ============================================================================
@@ -471,9 +617,10 @@ end
 
 -- Process a single request (one unit with multiple cusFeature deductions)
 -- Returns: { success: boolean, error?: string }
-local function processRequest(request, loadedCusFeatures)
+local function processRequest(request, loadedCusFeatures, entityFeatureStates)
     local featureDeductions = request.featureDeductions
     local overageBehavior = request.overageBehavior or "cap"
+    local entityId = request.entityId -- nil for customer-level tracking, set for entity-level tracking
     
     -- Collect all deltas and state changes for this request
     local requestDeltas = {}
@@ -489,27 +636,104 @@ local function processRequest(request, loadedCusFeatures)
         local remainingAmount = amount
         
         if cusFeature then
-            -- DEPRECATED: Will be removed in future version
-            -- Continuous use features are now allowed to dip below 0
-            -- Previously required PostgreSQL tracking, now handled in Redis
-            
+            -- Customer has this feature - deduct from customer + entities
             if not cusFeature.unlimited then
-                local result = deductFromCusFeature(cusFeature, amount)
+                local result = deductFromFeatureWithEntities(cusFeature, entityFeatureStates, amount, entityId)
                 
-                -- Collect deltas and state changes
+                -- Collect deltas
                 for _, delta in ipairs(result.deltas) do
                     table.insert(requestDeltas, delta)
                 end
+                
+                -- Collect customer state changes
                 table.insert(requestStateChanges, {
+                    target = "customer",
                     cusFeature = cusFeature,
-                    changes = result.stateChanges
+                    changes = result.customerStateChanges
                 })
+                
+                -- Collect entity state changes
+                for entityIdKey, changes in pairs(result.entityStateChanges) do
+                    table.insert(requestStateChanges, {
+                        target = "entity",
+                        entityId = entityIdKey,
+                        cusFeature = entityFeatureStates[entityIdKey][cusFeature.id],
+                        changes = changes
+                    })
+                end
                 
                 -- Update remaining amount
                 remainingAmount = result.remaining
             else
                 -- Unlimited feature covers everything
                 remainingAmount = 0
+            end
+        else
+            -- Entity-only feature - customer doesn't have it, only entities do
+            -- Deduct directly from entity/entities
+            if entityId then
+                -- Entity-level tracking: deduct from specific entity only
+                local entityFeatures = entityFeatureStates[entityId]
+                if entityFeatures and entityFeatures[featureId] then
+                    local entityFeature = entityFeatures[featureId]
+                    if not entityFeature.unlimited then
+                        local result = deductFromCusFeature(entityFeature, amount)
+                        
+                        -- Collect deltas
+                        for _, delta in ipairs(result.deltas) do
+                            table.insert(requestDeltas, delta)
+                        end
+                        
+                        -- Collect entity state changes
+                        table.insert(requestStateChanges, {
+                            target = "entity",
+                            entityId = entityId,
+                            cusFeature = entityFeature,
+                            changes = result.stateChanges
+                        })
+                        
+                        remainingAmount = result.remaining
+                    else
+                        remainingAmount = 0
+                    end
+                end
+            else
+                -- Customer-level tracking: deduct from ALL entities (sorted for consistency)
+                local sortedEntityIds = {}
+                for entId in pairs(entityFeatureStates) do
+                    table.insert(sortedEntityIds, entId)
+                end
+                table.sort(sortedEntityIds)
+                
+                local totalDeducted = 0
+                for _, entId in ipairs(sortedEntityIds) do
+                    local entityFeatures = entityFeatureStates[entId]
+                    local entityFeature = entityFeatures[featureId]
+                    if entityFeature and remainingAmount > 0 then
+                        if not entityFeature.unlimited then
+                            local result = deductFromCusFeature(entityFeature, remainingAmount)
+                            
+                            -- Collect deltas
+                            for _, delta in ipairs(result.deltas) do
+                                table.insert(requestDeltas, delta)
+                            end
+                            
+                            -- Collect entity state changes
+                            table.insert(requestStateChanges, {
+                                target = "entity",
+                                entityId = entId,
+                                cusFeature = entityFeature,
+                                changes = result.stateChanges
+                            })
+                            
+                            totalDeducted = totalDeducted + (amount - result.remaining)
+                            remainingAmount = result.remaining
+                        else
+                            remainingAmount = 0
+                            break
+                        end
+                    end
+                end
             end
         end
         
@@ -525,16 +749,29 @@ local function processRequest(request, loadedCusFeatures)
                             local creditAmount = remainingAmount * creditItem.credit_amount
                             
                             if not otherCusFeature.unlimited then
-                                local result = deductFromCusFeature(otherCusFeature, creditAmount)
+                                local result = deductFromFeatureWithEntities(otherCusFeature, entityFeatureStates, creditAmount, entityId)
                                 
-                                -- Collect deltas and state changes
+                                -- Collect deltas
                                 for _, delta in ipairs(result.deltas) do
                                     table.insert(requestDeltas, delta)
                                 end
+                                
+                                -- Collect customer state changes
                                 table.insert(requestStateChanges, {
+                                    target = "customer",
                                     cusFeature = otherCusFeature,
-                                    changes = result.stateChanges
+                                    changes = result.customerStateChanges
                                 })
+                                
+                                -- Collect entity state changes
+                                for entityId, changes in pairs(result.entityStateChanges) do
+                                    table.insert(requestStateChanges, {
+                                        target = "entity",
+                                        entityId = entityId,
+                                        cusFeature = entityFeatureStates[entityId][otherCusFeature.id],
+                                        changes = changes
+                                    })
+                                end
                                 
                                 -- Update remaining based on what credit system could cover
                                 -- If credit system couldn't cover all, calculate how much of original remains
@@ -615,10 +852,111 @@ for _, featureId in ipairs(allFeatureIds) do
     end
 end
 
+-- Get entity IDs from customer
+local baseCustomer = cjson.decode(baseJson)
+local entityIds = baseCustomer._entityIds or {}
+
+-- Load all entity features: { [entityId] = { [featureId] = entityFeature } }
+local entityFeatureStates = {}
+for _, entityId in ipairs(entityIds) do
+    local entityCacheKey = orgId .. ":" .. env .. ":entity:" .. entityId
+    local entityBaseJson = redis.call("GET", entityCacheKey)
+    
+    if entityBaseJson then
+        local entityBase = cjson.decode(entityBaseJson)
+        local entityFeatureIds = entityBase._featureIds or {}
+        entityFeatureStates[entityId] = {}
+        
+        for _, featureId in ipairs(entityFeatureIds) do
+            -- Load entity feature inline (similar to loadCusFeature but with entity keys)
+            local entityFeatureKey = entityCacheKey .. ":features:" .. featureId
+            local entityFeatureHash = redis.call("HGETALL", entityFeatureKey)
+            
+            if #entityFeatureHash > 0 then
+                local entityFeature = { id = featureId, _key = entityFeatureKey }
+                
+                -- Parse entity feature fields
+                for i = 1, #entityFeatureHash, 2 do
+                    local key = entityFeatureHash[i]
+                    local value = entityFeatureHash[i + 1]
+                    
+                    if key == "balance" or key == "usage" or key == "usage_limit" or key == "included_usage" or key == "_breakdown_count" or key == "_rollover_count" then
+                        entityFeature[key] = tonumber(value)
+                    elseif key == "unlimited" or key == "overage_allowed" then
+                        entityFeature[key] = (value == "true")
+                    elseif key == "type" then
+                        entityFeature[key] = value
+                    elseif key == "credit_schema" then
+                        if value ~= "null" and value ~= "" then
+                            entityFeature[key] = cjson.decode(value)
+                        else
+                            entityFeature[key] = nil
+                        end
+                    elseif value == "null" then
+                        entityFeature[key] = nil
+                    else
+                        entityFeature[key] = value
+                    end
+                end
+                
+                -- Load entity breakdowns
+                local breakdownCount = entityFeature._breakdown_count or 0
+                entityFeature.breakdowns = {}
+                for i = 0, breakdownCount - 1 do
+                    local breakdownKey = entityCacheKey .. ":features:" .. featureId .. ":breakdown:" .. i
+                    local breakdownHash = redis.call("HGETALL", breakdownKey)
+                    
+                    if #breakdownHash > 0 then
+                        local breakdown = { _index = i, _key = breakdownKey }
+                        for j = 1, #breakdownHash, 2 do
+                            local key = breakdownHash[j]
+                            local value = breakdownHash[j + 1]
+                            
+                            if key == "balance" or key == "usage" or key == "usage_limit" then
+                                breakdown[key] = tonumber(value)
+                            elseif key == "overage_allowed" then
+                                breakdown[key] = (value == "true")
+                            else
+                                breakdown[key] = value
+                            end
+                        end
+                        table.insert(entityFeature.breakdowns, breakdown)
+                    end
+                end
+                
+                -- Load entity rollovers
+                local rolloverCount = entityFeature._rollover_count or 0
+                entityFeature.rollovers = {}
+                for i = 0, rolloverCount - 1 do
+                    local rolloverKey = entityCacheKey .. ":features:" .. featureId .. ":rollover:" .. i
+                    local rolloverHash = redis.call("HGETALL", rolloverKey)
+                    
+                    if #rolloverHash > 0 then
+                        local rollover = { _index = i, _key = rolloverKey }
+                        for j = 1, #rolloverHash, 2 do
+                            local key = rolloverHash[j]
+                            local value = rolloverHash[j + 1]
+                            
+                            if key == "balance" or key == "expires_at" then
+                                rollover[key] = tonumber(value)
+                            else
+                                rollover[key] = value
+                            end
+                        end
+                        table.insert(entityFeature.rollovers, rollover)
+                    end
+                end
+                
+                entityFeatureStates[entityId][featureId] = entityFeature
+            end
+        end
+    end
+end
+
 -- Process all requests
 local results = {}
 for i, request in ipairs(requests) do
-    local result = processRequest(request, loadedCusFeatures)
+    local result = processRequest(request, loadedCusFeatures, entityFeatureStates)
     table.insert(results, result)
 end
 

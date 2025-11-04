@@ -7,6 +7,7 @@ interface SyncPairContext {
 	orgId: string;
 	env: string;
 	entityId?: string;
+	timestamp: number;
 }
 
 interface Batch {
@@ -42,7 +43,7 @@ export class SyncBatchingManager {
 		orgId,
 		env,
 		entityId,
-	}: SyncPairContext): void {
+	}: Omit<SyncPairContext, "timestamp">): void {
 		// Create unique key for this pair
 		const pairKey = `${orgId}:${env}:${customerId}:${featureId}${entityId ? `:${entityId}` : ""}`;
 
@@ -52,12 +53,15 @@ export class SyncBatchingManager {
 		}
 
 		// Add or update pair (Map handles deduplication)
+		// Use the earliest timestamp if the pair already exists, otherwise use current time
+		const existingPair = this.batch.pairs.get(pairKey);
 		this.batch.pairs.set(pairKey, {
 			customerId,
 			featureId,
 			orgId,
 			env,
 			entityId,
+			timestamp: existingPair?.timestamp ?? Date.now(),
 		});
 
 		// Force flush if batch is full

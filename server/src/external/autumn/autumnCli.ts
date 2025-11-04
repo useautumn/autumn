@@ -314,9 +314,29 @@ export class AutumnInt {
 	};
 
 	entities = {
-		get: async (customerId: string, entityId: string) => {
+		get: async (
+			customerId: string,
+			entityId: string,
+			params?: {
+				expand?: EntityExpand[];
+				skip_cache?: string;
+			},
+		) => {
+			const queryParams = new URLSearchParams();
+			const defaultParams = {
+				expand: [EntityExpand.Invoices],
+			};
+
+			const finalParams = { ...defaultParams, ...params };
+			if (finalParams.expand) {
+				queryParams.append("expand", finalParams.expand.join(","));
+			}
+			if (finalParams.skip_cache) {
+				queryParams.append("skip_cache", finalParams.skip_cache);
+			}
+
 			const data = await this.get(
-				`/customers/${customerId}/entities/${entityId}?expand=${EntityExpand.Invoices}`,
+				`/customers/${customerId}/entities/${entityId}?${queryParams.toString()}`,
 			);
 			return data;
 		},

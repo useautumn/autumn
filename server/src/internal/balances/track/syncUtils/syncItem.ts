@@ -1,8 +1,13 @@
-import { getRelevantFeatures } from "@autumn/shared";
+import {
+	type ApiCustomer,
+	type ApiEntity,
+	getRelevantFeatures,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
 import { getCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/getCachedApiCustomer.js";
+import { getCachedApiEntity } from "../../../entities/entityUtils/apiEntityCacheUtils/getCachedApiEntity.js";
 import type { FeatureDeduction } from "../trackUtils/getFeatureDeductions.js";
 import { deductFromCusEnts } from "../trackUtils/runDeductionTx.js";
 
@@ -12,6 +17,7 @@ export interface SyncItem {
 	orgId: string;
 	env: string;
 	entityId?: string;
+	timestamp: number;
 }
 
 /**
@@ -29,10 +35,21 @@ export const syncItem = async ({
 	const { db, org, env } = ctx;
 
 	// Get cached customer from Redis
-	const { apiCustomer: redisCustomer } = await getCachedApiCustomer({
-		ctx,
-		customerId,
-	});
+	let redisEntity: ApiCustomer | ApiEntity;
+	if (entityId) {
+		const { apiEntity } = await getCachedApiEntity({
+			ctx,
+			customerId,
+			entityId,
+		});
+		redisEntity = apiEntity;
+	} else {
+		const { apiCustomer } = await getCachedApiCustomer({
+			ctx,
+			customerId,
+		});
+		redisEntity = apiCustomer;
+	}
 
 	// Get fresh customer from DB (no locking - let deduction handle it)
 	const fullCus = await CusService.getFull({
@@ -63,8 +80,9 @@ export const syncItem = async ({
 	// 	"SYNC LAYER, REDIS CUSTOMER FEATURES:",
 	// 	JSON.stringify(redisCustomer.features, null, 2),
 	// );
+
 	for (const relevantFeature of relevantFeatures) {
-		const redisCusFeature = redisCustomer.features[relevantFeature.id];
+		const redisCusFeature = redisEntity.features?.[relevantFeature.id];
 		featureDeductions.push({
 			feature: relevantFeature,
 			deduction: 0,
@@ -72,16 +90,8 @@ export const syncItem = async ({
 		});
 	}
 
-	// console.log(
-	// 	`SYNC LAYER, FEATURE DEDUCTIONS:`,
-	// 	featureDeductions.map((d) => ({
-	// 		feature_id: d.feature.id,
-	// 		deduction: d.deduction,
-	// 		targetBalance: d.targetBalance,
-	// 	})),
-	// );
-
 	// Sync from Redis to Postgres - deduct using target balance
+
 	await deductFromCusEnts({
 		ctx,
 		customerId,

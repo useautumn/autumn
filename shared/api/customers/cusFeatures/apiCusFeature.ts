@@ -54,6 +54,12 @@ export const ApiCusFeatureBreakdownSchema = z.object({
 			description: "Array of rollover balances from previous periods",
 			example: [{ balance: 100, expires_at: 1759247877000 }],
 		}),
+	entity_breakdown: z
+		.object({
+			master: z.number(),
+			entities: z.number(),
+		})
+		.optional(),
 });
 
 export const CoreCusFeatureSchema = z.object({
@@ -131,6 +137,13 @@ export const CoreCusFeatureSchema = z.object({
 			description: "Array of rollover balances from previous periods",
 			example: [{ balance: 100, expires_at: 1759247877000 }],
 		}),
+
+	entity_breakdown: z
+		.object({
+			master: z.number(),
+			entities: z.number(),
+		})
+		.optional(),
 });
 
 export const ApiCusFeatureSchema = z
