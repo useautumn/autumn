@@ -1,18 +1,17 @@
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { type FullCusProduct, isTrialing } from "@autumn/shared";
+import type Stripe from "stripe";
+import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
+import { subToAutumnInterval } from "@/external/stripe/utils.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import {
 	getLargestInterval,
 	intervalsDifferent,
 } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
-import { subToAutumnInterval } from "@/external/stripe/utils.js";
-import Stripe from "stripe";
+import { ACTIVE_STATUSES } from "../../cusProducts/CusProductService.js";
 import {
 	attachParamsToProduct,
 	attachParamToCusProducts,
 } from "./convertAttachParams.js";
-import { FullCusProduct } from "@autumn/shared";
-import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
-import { isTrialing } from "@autumn/shared";
-import { ACTIVE_STATUSES } from "../../cusProducts/CusProductService.js";
 
 export const getCycleWillReset = ({
 	attachParams,
@@ -45,7 +44,7 @@ export const removeCurCusProductItems = async ({
 
 	const newItems: any[] = structuredClone(subItems);
 	for (const item of sub.items.data) {
-		let shouldRemove = subItemInCusProduct({
+		const shouldRemove = subItemInCusProduct({
 			cusProduct,
 			subItem: item,
 		});
@@ -84,7 +83,7 @@ export const isMainTrialBranch = ({
 			cp.subscription_ids?.includes(subId),
 	);
 
-	if (otherCusProductsOnSub.length > 1) {
+	if (otherCusProductsOnSub.length >= 1) {
 		return false;
 	}
 
