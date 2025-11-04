@@ -30,15 +30,15 @@ export function SelectFeatureSheet({
 	const setProduct = useProductStore((s) => s.setProduct);
 	const setSheet = useSheetStore((s) => s.setSheet);
 
-	// Get feature IDs that are already added to the plan
-	const addedFeatureIds = new Set(
-		product.items?.map((item) => item.feature_id).filter(Boolean) || []
-	);
+	// // Get feature IDs that are already added to the plan
+	// const addedFeatureIds = new Set(
+	// 	product.items?.map((item) => item.feature_id).filter(Boolean) || []
+	// );
 
-	// Filter out archived features and features already on the plan
-	const filteredFeatures = features.filter(
-		(f: Feature) => !f.archived && !addedFeatureIds.has(f.id)
-	);
+	// // Filter out archived features and features already on the plan
+	// const filteredFeatures = features.filter(
+	// 	(f: Feature) => !f.archived && !addedFeatureIds.has(f.id)
+	// );
 
 	useEffect(() => {
 		// If we're switching from another sheet, open immediately
@@ -100,7 +100,7 @@ export function SelectFeatureSheet({
 						</SelectTrigger>
 						<SelectContent className="max-h-80">
 							<div className="max-h-60 overflow-y-auto">
-								{filteredFeatures.map((feature: Feature) => (
+								{features.map((feature: Feature) => (
 									<SelectItem
 										key={feature.id}
 										value={feature.id}
