@@ -1,5 +1,6 @@
 import { z } from "zod/v4";
 import { AppEnv } from "../genModels/genEnums.js";
+import type { ExternalProcessors } from "./cusTable.js";
 
 export const CustomerSchema = z.object({
 	id: z.string().nullish(), // given by user
@@ -63,6 +64,7 @@ export const CreateCustomerSchema = z.object({
 	fingerprint: z.string().nullish(),
 	metadata: z.record(z.any(), z.any()).default({}).nullish(),
 	stripe_id: z.string().nullish(),
+	processors: z.object<ExternalProcessors>().nullish(),
 });
 
 // export const CustomerDataSchema = z.object({
