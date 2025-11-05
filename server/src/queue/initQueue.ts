@@ -8,7 +8,7 @@ if (!process.env.QUEUE_URL) {
 
 const caText = await loadCaCert({
 	caPath: process.env.QUEUE_CERT_PATH,
-	caEnvVar: process.env.QUEUE_CERT,
+	caValue: process.env.QUEUE_CERT,
 	type: "queue",
 });
 

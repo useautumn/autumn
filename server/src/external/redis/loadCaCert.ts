@@ -1,23 +1,18 @@
 export const loadCaCert = async ({
 	caPath,
-	caEnvVar,
 	type,
+	caValue,
 }: {
 	caPath?: string;
-	caEnvVar?: string;
 	type: "queue" | "cache";
+	caValue?: string;
 }) => {
 	try {
-		if (caEnvVar) {
-			return caEnvVar;
-			// // Handle escaped newlines - Railway and other platforms often store
-			// // certificates with literal \n strings instead of actual newlines
-			// const processedCert = certContent.replace(/\\n/g, "\n");
-
-			// return processedCert;
+		if (caValue) {
+			return caValue;
 		}
 
-		const ca = Bun.file(caPath || `/etc/secrets/${type}.pem`);
+		const ca = Bun.file(caPath || `/etc/secrets/${type}-cert.pem`);
 		const caText = await ca.text();
 		return caText;
 	} catch (_error) {
