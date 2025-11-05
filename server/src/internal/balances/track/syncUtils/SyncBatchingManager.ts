@@ -108,6 +108,7 @@ export class SyncBatchingManager {
 					items,
 				},
 			});
+			console.log(`Queued sync batch with ${items.length} items`);
 		} catch (error) {
 			console.error(`❌ Failed to queue sync batch:`, error);
 			// TODO: Consider retry logic or dead letter queue

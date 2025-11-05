@@ -1,4 +1,4 @@
-import { redis } from "../redis/initRedis.js";
+import { redis } from "../../external/redis/initRedis.js";
 
 export class CacheManager {
 	public static async getJson(key: string) {

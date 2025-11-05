@@ -174,7 +174,7 @@ export async function cleanupQueueAndCache() {
 	}
 
 	try {
-		const { CacheManager } = await import("@/external/caching/CacheManager.js");
+		const { CacheManager } = await import("@/utils/cacheUtils/CacheManager.js");
 		const cacheInstance = await CacheManager.getInstance();
 		if ((cacheInstance as any).connection) {
 			await (cacheInstance as any).connection.quit();

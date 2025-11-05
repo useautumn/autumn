@@ -8,7 +8,11 @@ import { redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
-import { normalizeCachedData } from "@/utils/cacheUtils/cacheUtils.js";
+import {
+	normalizeCachedData,
+	tryRedisRead,
+	tryRedisWrite,
+} from "@/utils/cacheUtils/cacheUtils.js";
 import { getApiEntityBase } from "../apiEntityUtils/getApiEntityBase.js";
 import { GET_ENTITY_SCRIPT, SET_ENTITY_SCRIPT } from "./luaScripts.js";
 
@@ -21,7 +25,7 @@ export const buildCachedApiEntityKey = ({
 	orgId: string;
 	env: string;
 }) => {
-	return `${orgId}:${env}:entity:${entityId}`;
+	return `{${orgId}}:${env}:entity:${entityId}`;
 };
 
 /**
@@ -50,14 +54,14 @@ export const getCachedApiEntity = async ({
 		env,
 	});
 
-	// await redis.del(cacheKey);
-
 	// Try to get from cache using Lua script (unless skipCache is true)
 	if (!skipCache) {
-		const cachedResult = await redis.eval(
-			GET_ENTITY_SCRIPT,
-			1, // number of keys
-			cacheKey, // KEYS[1]
+		const cachedResult = await tryRedisRead(() =>
+			redis.eval(
+				GET_ENTITY_SCRIPT,
+				1, // number of keys
+				cacheKey, // KEYS[1]
+			),
 		);
 
 		// If found in cache, parse and return
@@ -94,29 +98,31 @@ export const getCachedApiEntity = async ({
 
 	// Store in cache (only if not skipping cache)
 	if (!skipCache) {
-		// Build ApiEntity (base only, no expand)
+		// Build ApiEntity with filtered entity-level products for caching
 		const entityCusProducts = filterEntityLevelCusProducts({
 			cusProducts: fullCus.customer_products,
 		});
-		const { apiEntity } = await getApiEntityBase({
+		const { apiEntity: apiEntityForCache } = await getApiEntityBase({
 			ctx,
 			entity,
 			fullCus: {
 				...fullCus,
 				customer_products: entityCusProducts,
 			},
-			withAutumnId: !skipCache,
+			withAutumnId: true,
 		});
 
-		await redis.eval(
-			SET_ENTITY_SCRIPT,
-			1, // number of keys
-			cacheKey, // KEYS[1]
-			JSON.stringify(apiEntity), // ARGV[1]
+		await tryRedisWrite(() =>
+			redis.eval(
+				SET_ENTITY_SCRIPT,
+				1, // number of keys
+				cacheKey, // KEYS[1]
+				JSON.stringify(apiEntityForCache), // ARGV[1]
+			),
 		);
 	}
 
-	// Build ApiEntity (base only, no expand)
+	// Build ApiEntity with full products for return
 	const { apiEntity } = await getApiEntityBase({
 		ctx,
 		entity,

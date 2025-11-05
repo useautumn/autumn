@@ -1,14 +1,14 @@
 import { AppEnv } from "@autumn/shared";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { CacheManager } from "@/external/caching/CacheManager.js";
-import { CacheType } from "@/external/caching/cacheActions.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { hashApiKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { RewardService } from "@/internal/rewards/RewardService.js";
+import { CacheManager } from "@/utils/cacheUtils/CacheManager.js";
+import { CacheType } from "@/utils/cacheUtils/CacheType.js";
 
 export const clearOrg = async ({
 	orgSlug,

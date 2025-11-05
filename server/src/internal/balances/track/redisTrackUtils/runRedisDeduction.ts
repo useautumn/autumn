@@ -1,5 +1,8 @@
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { getCachedApiCustomer } from "../../../customers/cusUtils/apiCusCacheUtils/getCachedApiCustomer.js";
+import { globalEventBatchingManager } from "../eventUtils/EventBatchingManager.js";
+import { globalSyncBatchingManager } from "../syncUtils/SyncBatchingManager.js";
+import { constructEvent, type EventInfo } from "../trackUtils/eventUtils.js";
 import { globalBatchingManager } from "./BatchingManager.js";
 
 interface FeatureDeduction {
@@ -16,6 +19,8 @@ interface RunRedisDeductionParams {
 	entityId?: string;
 	featureDeductions: FeatureDeduction[];
 	overageBehavior: "cap" | "reject";
+	skipEvent?: boolean;
+	eventInfo?: EventInfo;
 }
 
 interface DeductionResult {
@@ -35,6 +40,8 @@ export const runRedisDeduction = async ({
 	entityId,
 	featureDeductions,
 	overageBehavior,
+	skipEvent = false,
+	eventInfo,
 }: RunRedisDeductionParams): Promise<DeductionResult> => {
 	const { org, env } = ctx;
 
@@ -43,12 +50,6 @@ export const runRedisDeduction = async ({
 		ctx,
 		customerId,
 	});
-
-	// console.log("Credits before track:", {
-	// 	balance: cachedCustomer?.features?.credits?.balance,
-	// 	monthlyBalance: cachedCustomer?.features?.credits?.breakdown?.[0]?.balance,
-	// 	lifetimeBalance: cachedCustomer?.features?.credits?.breakdown?.[1]?.balance,
-	// });
 
 	// Map feature deductions to the format expected by batching manager
 	const mappedDeductions = featureDeductions.map(({ feature, deduction }) => ({
@@ -71,6 +72,42 @@ export const runRedisDeduction = async ({
 		);
 	}
 
+	// Fallback to PostgreSQL for continuous_use + overage features
+	if (!result.success && result.error === "REQUIRES_POSTGRES_TRACKING") {
+		throw new Error(result.error);
+	}
+
+	// Redis deduction successful: queue sync jobs and event insertion
+	if (result.success) {
+		for (const deduction of featureDeductions) {
+			globalSyncBatchingManager.addSyncPair({
+				customerId: customerId,
+				featureId: deduction.feature.id,
+				orgId: org.id,
+				env,
+				entityId: entityId,
+			});
+		}
+
+		// Queue event insertion (skip if skip_event is true)
+		if (!skipEvent && cachedCustomer?.autumn_id && eventInfo) {
+			globalEventBatchingManager.addEvent(
+				constructEvent({
+					ctx,
+					eventInfo: eventInfo,
+					internalCustomerId: cachedCustomer?.autumn_id,
+
+					internalEntityId:
+						cachedCustomer?.entities?.find((entity) => entity.id === entityId)
+							?.autumn_id ?? undefined,
+
+					customerId: customerId,
+					entityId: entityId,
+				}),
+			);
+		}
+	}
+
 	// const after = await getCachedApiCustomer({
 	// 	ctx,
 	// 	customerId,
@@ -84,7 +121,6 @@ export const runRedisDeduction = async ({
 
 	return {
 		success: result.success,
-		internalCustomerId: cachedCustomer?.autumn_id,
-		internalEntityId: undefined, // TODO: Get from cached entity when entity support is added
+		error: result.error,
 	};
 };

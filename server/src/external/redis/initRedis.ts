@@ -1,7 +1,29 @@
 import { Redis } from "ioredis";
+import { logger } from "../logtail/logtailUtils.js";
+import { loadCaCert } from "./loadCaCert.js";
 
-if (!process.env.REDIS_URL) {
-	throw new Error("REDIS_URL is not set");
+if (!process.env.CACHE_URL) {
+	throw new Error("CACHE_URL (redis) is not set");
 }
 
-export const redis = new Redis(process.env.REDIS_URL);
+let redis: Redis;
+
+const caText = await loadCaCert({
+	caPath: process.env.CACHE_CERT_PATH,
+	type: "cache",
+});
+
+redis = new Redis(process.env.CACHE_URL, {
+	tls: caText ? { ca: caText } : undefined,
+});
+
+redis.on("error", (error) => {
+	logger.error(`redis (cache) error: ${error.message}`);
+});
+
+export { redis };
+// export const redis = new Redis(process.env.CACHE_URL, {
+// 	tls: {
+// 		ca: process.env.CACHE_CA,
+// 	},
+// });

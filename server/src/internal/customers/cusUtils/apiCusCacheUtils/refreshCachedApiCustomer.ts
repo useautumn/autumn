@@ -1,6 +1,7 @@
 import type { ApiCustomer, AppEnv, CustomerLegacyData } from "@autumn/shared";
 import { redis } from "../../../../external/redis/initRedis.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
+import { tryRedisWrite } from "../../../../utils/cacheUtils/cacheUtils.js";
 import { CusService } from "../../CusService.js";
 import { RELEVANT_STATUSES } from "../../cusProducts/CusProductService.js";
 import { getApiCustomerBase } from "../apiCusUtils/getApiCustomerBase.js";
@@ -46,15 +47,16 @@ export const refreshCachedApiCustomer = async ({
 		withAutumnId: false,
 	});
 
-	// Update cache with fresh data using Lua script
-	await redis.eval(
-		SET_CUSTOMER_SCRIPT,
-		1, // number of keys
-		cacheKey, // KEYS[1]
-		JSON.stringify({ ...apiCustomer, legacyData }), // ARGV[1]
-		org.id, // ARGV[2]
-		env, // ARGV[3]
-	);
+	await tryRedisWrite(async () => {
+		await redis.eval(
+			SET_CUSTOMER_SCRIPT,
+			1, // number of keys
+			cacheKey, // KEYS[1]
+			JSON.stringify({ ...apiCustomer, legacyData }), // ARGV[1]
+			org.id, // ARGV[2]
+			env, // ARGV[3]
+		);
+	});
 
 	return {
 		apiCustomer,

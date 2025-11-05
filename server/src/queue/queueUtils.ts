@@ -34,23 +34,4 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 	payload: Payloads[T];
 }) => {
 	await queue.add(jobName as string, payload);
-	// try {
-	// 	const queue = await QueueManager.getQueue({ useBackup: false });
-	// 	await queue.add(jobName as string, payload);
-	// } catch (error: any) {
-	// 	try {
-	// 		console.log(`Adding ${jobName} to backup queue`);
-	// 		const backupQueue = await QueueManager.getQueue({ useBackup: true });
-	// 		await backupQueue.add(jobName as string, payload);
-	// 	} catch (error: any) {
-	// 		throw new RecaseError({
-	// 			message: `Failed to add ${jobName} to queue (backup)`,
-	// 			code: "EVENT_QUEUE_ERROR",
-	// 			statusCode: 500,
-	// 			data: {
-	// 				message: error.message,
-	// 			},
-	// 		});
-	// 	}
-	// }
 };
