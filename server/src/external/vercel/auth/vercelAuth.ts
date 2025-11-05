@@ -1,6 +1,6 @@
+import type { Organization } from "@autumn/shared";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { JWTExpired, JWTInvalid } from "jose/errors";
-import { env } from "../env";
 
 const JWKS = createRemoteJWKSet(
 	new URL(`https://marketplace.vercel.com/.well-known/jwks`),
@@ -20,11 +20,17 @@ export interface OidcClaims {
 	user_avatar_url?: string;
 }
 
-export async function verifyToken(token: string): Promise<OidcClaims> {
+export async function verifyToken({
+	token,
+	org,
+}: {
+	token: string;
+	org: Organization;
+}): Promise<OidcClaims> {
 	try {
 		const { payload: claims } = await jwtVerify<OidcClaims>(token, JWKS);
 
-		if (claims.aud !== env.INTEGRATION_CLIENT_ID) {
+		if (claims.aud !== org.processor_configs?.vercel?.client_integration_id) {
 			throw new AuthError("Invalid audience");
 		}
 
