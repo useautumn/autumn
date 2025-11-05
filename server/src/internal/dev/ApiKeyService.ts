@@ -35,7 +35,6 @@ export class ApiKeyService {
 		});
 
 		if (!data || !data.org) {
-			console.warn(`verify secret key returned null`);
 			return null;
 		}
 
