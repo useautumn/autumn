@@ -6,8 +6,10 @@ if (!process.env.QUEUE_URL) {
 	throw new Error("QUEUE_URL is not set");
 }
 
+console.log("QUEUE CA CERT:", process.env.QUEUE_CERT);
 const caText = await loadCaCert({
 	caPath: process.env.QUEUE_CERT_PATH,
+	caEnvVar: process.env.QUEUE_CERT,
 	type: "queue",
 });
 
