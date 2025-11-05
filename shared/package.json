@@ -30,6 +30,7 @@
 		"dotenv": "^16.5.0",
 		"drizzle-kit": "catalog:",
 		"drizzle-orm": "catalog:",
+		"drizzle-zod": "^0.8.2",
 		"yaml": "^2.8.1",
 		"zod-openapi": "^5.4.1"
 	},
