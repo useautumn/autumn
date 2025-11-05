@@ -8,12 +8,12 @@ if (!process.env.CACHE_URL) {
 
 let redis: Redis;
 
-console.log("CA CERT:", process.env.CACHE_CERT);
 const caText = await loadCaCert({
 	caPath: process.env.CACHE_CERT_PATH,
 	caEnvVar: process.env.CACHE_CERT,
 	type: "cache",
 });
+console.log(`CA TEXT:`, caText);
 
 redis = new Redis(process.env.CACHE_URL, {
 	tls: caText ? { ca: caText } : undefined,
