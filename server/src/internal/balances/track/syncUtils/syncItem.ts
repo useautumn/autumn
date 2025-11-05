@@ -100,4 +100,8 @@ export const syncItem = async ({
 		fullCus, // to prevent fetching full customer again
 		refreshCache: false, // CRITICAL: Don't refresh cache after sync (Redis is the source of truth)
 	});
+
+	const logText = `sync complete | customer: ${customerId}, feature:${featureId}${entityId ? `, entity:${entityId}` : ""} [${org.slug}, ${env}]`;
+	console.log(logText);
+	ctx.logger.info(logText);
 };

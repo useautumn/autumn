@@ -49,6 +49,7 @@ export const runRedisDeduction = async ({
 	const { apiCustomer: cachedCustomer } = await getCachedApiCustomer({
 		ctx,
 		customerId,
+		withAutumnId: true,
 	});
 
 	// Map feature deductions to the format expected by batching manager
@@ -90,6 +91,7 @@ export const runRedisDeduction = async ({
 		}
 
 		// Queue event insertion (skip if skip_event is true)
+
 		if (!skipEvent && cachedCustomer?.autumn_id && eventInfo) {
 			globalEventBatchingManager.addEvent(
 				constructEvent({

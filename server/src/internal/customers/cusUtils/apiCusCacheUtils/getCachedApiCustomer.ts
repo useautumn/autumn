@@ -57,6 +57,8 @@ export const getCachedApiCustomer = async ({
 		env,
 	});
 
+	// skipCache = true;
+
 	// Try to get from cache using Lua script (unless skipCache is true)
 	if (!skipCache) {
 		const start = performance.now();
@@ -79,7 +81,7 @@ export const getCachedApiCustomer = async ({
 				// ← This returns from getCachedApiCustomer!
 				apiCustomer: ApiCustomerSchema.parse({
 					...rest,
-					autumn_id: withAutumnId ? customerId : undefined,
+					autumn_id: withAutumnId ? rest.autumn_id : undefined,
 				}),
 				legacyData,
 			};
@@ -102,7 +104,7 @@ export const getCachedApiCustomer = async ({
 	const { apiCustomer, legacyData } = await getApiCustomerBase({
 		ctx,
 		fullCus,
-		withAutumnId: !skipCache,
+		withAutumnId: true,
 	});
 
 	// Build master api customer (customer-level features only)
@@ -114,7 +116,7 @@ export const getCachedApiCustomer = async ({
 				cusProducts: fullCus.customer_products,
 			}),
 		},
-		withAutumnId: !skipCache,
+		withAutumnId: true,
 	});
 
 	// Build entity api customers (entity-level features only)
@@ -173,11 +175,7 @@ export const getCachedApiCustomer = async ({
 	}
 
 	return {
-		apiCustomer: ApiCustomerSchema.parse({
-			...apiCustomer,
-
-			autumn_id: withAutumnId ? fullCus.internal_id : undefined,
-		}),
+		apiCustomer: ApiCustomerSchema.parse(apiCustomer),
 		legacyData,
 	};
 };

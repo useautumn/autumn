@@ -39,6 +39,7 @@ customerData._entityIds = entityIds
 -- Build base customer object (everything except features)
 local baseCustomer = {
     id = customerData.id,
+    autumn_id = customerData.autumn_id,
     created_at = customerData.created_at,
     name = customerData.name,
     email = customerData.email,
