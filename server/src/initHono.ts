@@ -97,6 +97,16 @@ export const createHonoApp = () => {
 		c.header("x-render-hostname", externalHostname);
 	});
 
+	app.get("/railway_debug", (c) => {
+		// Get all env variables with railway prefix
+		const railwayEnvVars = Object.keys(process.env).filter((key) =>
+			key.startsWith("RAILWAY_"),
+		);
+		return c.json({
+			railwayEnvVars,
+		});
+	});
+
 	// Webhook routes
 	app.post("/webhooks/connect/:env", handleConnectWebhook);
 
