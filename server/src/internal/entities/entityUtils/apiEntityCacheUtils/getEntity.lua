@@ -1,10 +1,14 @@
 -- getEntity.lua
 -- Atomically retrieves an entity object from Redis, reconstructing from base JSON and feature HSETs
 -- Merges entity features with customer features
--- KEYS[1]: cache key (e.g., "org_id:env:entity:entity_id")
+-- KEYS[1]: cache key (e.g., "{org_id}:env:entity:entity_id")
+-- ARGV[1]: org_id (for building customer cache keys)
+-- ARGV[2]: env (for building customer cache keys)
 
 local cacheKey = KEYS[1]
 local baseKey = cacheKey
+local orgId = ARGV[1]
+local env = ARGV[2]
 
 -- Get base entity JSON
 local baseJson = redis.call("GET", baseKey)
@@ -14,14 +18,6 @@ end
 
 local baseEntity = cjson.decode(baseJson)
 local entityFeatureIds = baseEntity._featureIds or {}
-
--- Extract orgId and env from cache key (format: "orgId:env:entity:entityId")
-local keyParts = {}
-for part in string.gmatch(cacheKey, "[^:]+") do
-    table.insert(keyParts, part)
-end
-local orgId = keyParts[1]
-local env = keyParts[2]
 
 -- ============================================================================
 -- FETCH ENTITY FEATURES

@@ -6,19 +6,20 @@ if (!process.env.QUEUE_URL) {
 	throw new Error("QUEUE_URL is not set");
 }
 
+const caText = await loadCaCert({
+	caPath: process.env.QUEUE_CERT_PATH,
+	type: "queue",
+});
+
 export const queue = new Queue("autumn", {
 	connection: {
 		url: process.env.QUEUE_URL,
+		tls: caText ? { ca: caText } : undefined,
 		enableOfflineQueue: false,
 		retryStrategy: () => {
 			return 5000;
 		},
 	},
-});
-
-const caText = await loadCaCert({
-	caPath: process.env.QUEUE_CERT_PATH,
-	type: "queue",
 });
 
 export const queueRedis = new Redis(process.env.QUEUE_URL, {

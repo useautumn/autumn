@@ -3,6 +3,7 @@ import {
 	ApiEntitySchema,
 	type AppEnv,
 	filterEntityLevelCusProducts,
+	filterOutEntitiesFromCusProducts,
 } from "@autumn/shared";
 import { redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -13,6 +14,12 @@ import {
 	tryRedisRead,
 	tryRedisWrite,
 } from "@/utils/cacheUtils/cacheUtils.js";
+import { buildCachedApiCustomerKey } from "../../../customers/cusUtils/apiCusCacheUtils/getCachedApiCustomer.js";
+import {
+	GET_CUSTOMER_SCRIPT,
+	SET_CUSTOMER_SCRIPT,
+} from "../../../customers/cusUtils/apiCusCacheUtils/luaScripts.js";
+import { getApiCustomerBase } from "../../../customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
 import { getApiEntityBase } from "../apiEntityUtils/getApiEntityBase.js";
 import { GET_ENTITY_SCRIPT, SET_ENTITY_SCRIPT } from "./luaScripts.js";
 
@@ -61,6 +68,8 @@ export const getCachedApiEntity = async ({
 				GET_ENTITY_SCRIPT,
 				1, // number of keys
 				cacheKey, // KEYS[1]
+				org.id, // ARGV[1]
+				env, // ARGV[2]
 			),
 		);
 
@@ -98,28 +107,75 @@ export const getCachedApiEntity = async ({
 
 	// Store in cache (only if not skipping cache)
 	if (!skipCache) {
+		const { apiCustomer: masterApiCustomer, legacyData } =
+			await getApiCustomerBase({
+				ctx,
+				fullCus: {
+					...structuredClone(fullCus),
+					customer_products: filterOutEntitiesFromCusProducts({
+						cusProducts: fullCus.customer_products,
+					}),
+				},
+				withAutumnId: !skipCache,
+			});
+
 		// Build ApiEntity with filtered entity-level products for caching
 		const entityCusProducts = filterEntityLevelCusProducts({
 			cusProducts: fullCus.customer_products,
 		});
-		const { apiEntity: apiEntityForCache } = await getApiEntityBase({
-			ctx,
-			entity,
-			fullCus: {
-				...fullCus,
-				customer_products: entityCusProducts,
-			},
-			withAutumnId: true,
-		});
+		const { apiEntity: apiEntityForCache, legacyData: entityLegacyData } =
+			await getApiEntityBase({
+				ctx,
+				entity,
+				fullCus: {
+					...fullCus,
+					customer_products: entityCusProducts,
+				},
+				withAutumnId: true,
+			});
 
-		await tryRedisWrite(() =>
-			redis.eval(
+		await tryRedisWrite(async () => {
+			// Get customer
+			const customerCacheKey = buildCachedApiCustomerKey({
+				customerId,
+				orgId: org.id,
+				env,
+			});
+			const cachedCustomer = await redis.eval(
+				GET_CUSTOMER_SCRIPT,
+				1,
+				customerCacheKey,
+				org.id,
+				env,
+			);
+
+			console.log(`cachedCustomer: ${cachedCustomer}`);
+
+			if (!cachedCustomer) {
+				await redis.eval(
+					SET_CUSTOMER_SCRIPT,
+					1,
+					customerCacheKey,
+					JSON.stringify({
+						...masterApiCustomer,
+						entities: fullCus.entities,
+						legacyData,
+					}),
+					org.id,
+					env,
+				);
+			}
+
+			await redis.eval(
 				SET_ENTITY_SCRIPT,
 				1, // number of keys
 				cacheKey, // KEYS[1]
-				JSON.stringify(apiEntityForCache), // ARGV[1]
-			),
-		);
+				JSON.stringify({
+					...apiEntityForCache,
+					legacyData: entityLegacyData,
+				}), // ARGV[1]
+			);
+		});
 	}
 
 	// Build ApiEntity with full products for return
