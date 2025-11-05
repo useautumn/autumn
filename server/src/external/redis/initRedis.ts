@@ -8,16 +8,17 @@ if (!process.env.CACHE_URL) {
 let redis: Redis;
 
 const regionToCacheUrl = {
-	"us-east-1": process.env.US_EAST_CACHE,
-	"us-west-1": process.env.US_WEST_CACHE,
+	"us-east4-eqdc4a": process.env.US_EAST_CACHE,
+	"us-west2": process.env.US_WEST_CACHE,
 };
-
-console.log("RAILWAY REPLICA REGION:", process.env.RAILWAY_REPLICA_REGION);
 
 const replicaRegion = process.env
 	.RAILWAY_REPLICA_REGION as keyof typeof regionToCacheUrl;
 
 const regionalCacheUrl = regionToCacheUrl[replicaRegion];
+
+console.log("RAILWAY REPLICA REGION:", process.env.RAILWAY_REPLICA_REGION);
+console.log(`REGIONAL CACHE EXISTS: ${regionalCacheUrl ? "YES" : "NO"}`);
 
 const caText = await loadCaCert({
 	caPath: process.env.CACHE_CERT_PATH,
