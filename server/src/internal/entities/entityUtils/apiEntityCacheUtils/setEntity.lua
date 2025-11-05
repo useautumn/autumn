@@ -23,6 +23,7 @@ entityData._featureIds = featureIds
 -- Build base entity object (everything except features)
 local baseEntity = {
     id = entityData.id,
+    autumn_id = entityData.autumn_id,
     name = entityData.name,
     customer_id = entityData.customer_id,
     created_at = entityData.created_at,

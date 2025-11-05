@@ -21,9 +21,17 @@ export const runInsertEventBatch = async ({
 }) => {
 	const { events: eventInserts } = payload;
 
-	if (!eventInserts || eventInserts.length === 0) {
-		return;
-	}
+	if (!eventInserts || eventInserts.length === 0) return;
+
+	eventInserts.forEach((event) => {
+		try {
+			if (event.timestamp && typeof event.timestamp === "string") {
+				event.timestamp = new Date(event.timestamp);
+			}
+		} catch {
+			event.timestamp = new Date();
+		}
+	});
 
 	// Batch insert events directly - no DB lookups needed
 	try {

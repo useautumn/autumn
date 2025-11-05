@@ -13,7 +13,6 @@ const caText = await loadCaCert({
 	caValue: process.env.CACHE_CERT,
 	type: "cache",
 });
-console.log(`CACHE CA TEXT:`, caText);
 
 redis = new Redis(process.env.CACHE_URL, {
 	tls: caText ? { ca: caText } : undefined,
