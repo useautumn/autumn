@@ -88,6 +88,15 @@ export const createHonoApp = () => {
 	app.use("*", baseMiddleware);
 	app.use("*", traceMiddleware);
 
+	// Add Render region identifier header for load balancer verification
+	app.use("*", async (c, next) => {
+		await next();
+		const serviceName = process.env.RENDER_SERVICE_NAME || "unknown";
+		const externalHostname = process.env.RENDER_EXTERNAL_HOSTNAME || "unknown";
+		c.header("x-render-service", serviceName);
+		c.header("x-render-hostname", externalHostname);
+	});
+
 	// Webhook routes
 	app.post("/webhooks/connect/:env", handleConnectWebhook);
 
