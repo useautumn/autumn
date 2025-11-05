@@ -14,6 +14,15 @@ export const deleteCachedApiCustomer = async ({
 	orgId: string;
 	env: string;
 }): Promise<void> => {
+	// Check if Redis is ready before attempting deletion
+	if (redis.status !== "ready") {
+		console.warn("❗️ Redis not ready, skipping cache deletion", {
+			status: redis.status,
+			customerId,
+		});
+		return;
+	}
+
 	const cacheKey = buildCachedApiCustomerKey({
 		customerId,
 		orgId,

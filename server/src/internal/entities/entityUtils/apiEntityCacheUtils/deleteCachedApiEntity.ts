@@ -14,6 +14,15 @@ export const deleteCachedApiEntity = async ({
 	customerId: string;
 	entityId: string;
 }): Promise<void> => {
+	// Check if Redis is ready before attempting deletion
+	if (redis.status !== "ready") {
+		ctx.logger.warn("❗️ Redis not ready, skipping entity cache deletion", {
+			status: redis.status,
+			entityId,
+		});
+		return;
+	}
+
 	const { org, env } = ctx;
 
 	const cacheKey = buildCachedApiEntityKey({

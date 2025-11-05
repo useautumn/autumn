@@ -14,6 +14,8 @@ export const handleAttachRaceCondition = async ({
 	const env = req.env;
 	const lockKey = `attach_${customerId}_${orgId}_${env}`;
 
+	console.log("Queue status:", queueRedis.status);
+
 	// Check if Redis is ready before attempting lock
 	if (queueRedis.status !== "ready") {
 		req.logger.warn("❗️❗️ Redis not ready, proceeding without lock", {
@@ -139,6 +141,14 @@ export const clearLock = async ({
 	lockKey: string;
 	logger: any;
 }) => {
+	if (queueRedis.status !== "ready") {
+		logger.warn("❗️❗️ Redis not ready, skipping lock clear", {
+			status: queueRedis.status,
+			lockKey,
+		});
+		return;
+	}
+
 	try {
 		await queueRedis.del(lockKey);
 	} catch (error) {
