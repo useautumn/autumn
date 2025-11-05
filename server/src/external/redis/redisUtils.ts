@@ -12,9 +12,20 @@ export const handleAttachRaceCondition = async ({
 	const customerId = req.body.customer_id;
 	const orgId = req.orgId;
 	const env = req.env;
+	const lockKey = `attach_${customerId}_${orgId}_${env}`;
+
+	// Check if Redis is ready before attempting lock
+	if (queueRedis.status !== "ready") {
+		req.logger.warn("❗️❗️ Redis not ready, proceeding without lock", {
+			status: queueRedis.status,
+			customerId,
+		});
+		return null;
+	}
+
 	try {
-		const lockKey = `attach_${customerId}_${orgId}_${env}`;
 		const existingLock = await queueRedis.get(lockKey);
+
 		if (existingLock) {
 			throw new RecaseError({
 				message: `Attach already runnning for customer ${customerId}, try again in a few seconds`,
@@ -39,12 +50,15 @@ export const handleAttachRaceCondition = async ({
 
 		return lockKey;
 	} catch (error) {
+		// Only throw if it's a lock conflict error
 		if (error instanceof RecaseError) {
 			throw error;
 		}
 
-		req.logger.warn("❗️❗️ Error acquiring lock", {
+		// Redis is down - log warning but allow operation to proceed
+		req.logger.warn("❗️❗️ Redis unavailable, proceeding without lock", {
 			error,
+			customerId,
 		});
 		return null;
 	}
@@ -65,8 +79,19 @@ export const handleCustomerRaceCondition = async ({
 	res: any;
 	logger: any;
 }) => {
+	const lockKey = `${action}_${customerId}_${orgId}_${env}`;
+
+	// Check if Redis is ready before attempting lock
+	if (queueRedis.status !== "ready") {
+		logger.warn("❗️❗️ Redis not ready, proceeding without lock", {
+			status: queueRedis.status,
+			action,
+			customerId,
+		});
+		return null;
+	}
+
 	try {
-		const lockKey = `${action}_${customerId}_${orgId}_${env}`;
 		const existingLock = await queueRedis.get(lockKey);
 		if (existingLock) {
 			throw new RecaseError({
@@ -83,20 +108,26 @@ export const handleCustomerRaceCondition = async ({
 			try {
 				await clearLock({ lockKey, logger });
 			} catch (error) {
-				logger.warn("❗️❗️ Error clearing lock");
-				logger.warn(error);
+				logger.warn("❗️❗️ Error clearing lock", {
+					error,
+				});
 			}
 			originalJson.call(this, body);
 		};
 
 		return lockKey;
 	} catch (error) {
+		// Only throw if it's a lock conflict error
 		if (error instanceof RecaseError) {
 			throw error;
 		}
 
-		logger.warn("❗️❗️ Error acquiring lock");
-		logger.warn(error);
+		// Redis is down - log warning but allow operation to proceed
+		logger.warn("❗️❗️ Redis unavailable, proceeding without lock", {
+			error,
+			action,
+			customerId,
+		});
 		return null;
 	}
 };

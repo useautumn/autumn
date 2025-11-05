@@ -169,6 +169,12 @@ const init = async () => {
 	await initializeDatabaseFunctions();
 
 	app.use(async (req: any, res: any, next: any) => {
+		// Add Render region identifier headers for load balancer verification
+		const serviceName = process.env.RENDER_SERVICE_NAME || "unknown";
+		const externalHostname = process.env.RENDER_EXTERNAL_HOSTNAME || "unknown";
+		res.setHeader("x-render-service", serviceName);
+		res.setHeader("x-render-hostname", externalHostname);
+
 		req.env = req.env = req.headers.app_env || AppEnv.Sandbox;
 		req.db = db;
 		req.clickhouseClient = await ClickHouseManager.getClient();
