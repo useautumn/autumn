@@ -24,7 +24,7 @@ export const getApiEntityBase = async ({
 	entity: Entity;
 	fullCus: FullCustomer;
 	withAutumnId?: boolean;
-}): Promise<{ apiEntity: ApiEntity }> => {
+}): Promise<{ apiEntity: ApiEntity; legacyData: undefined }> => {
 	const { org } = ctx;
 
 	// Filter customer products for this entity
@@ -70,5 +70,6 @@ export const getApiEntityBase = async ({
 
 	return {
 		apiEntity,
+		legacyData: undefined,
 	};
 };
