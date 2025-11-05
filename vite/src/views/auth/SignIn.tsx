@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { getBackendErr } from "@/utils/genUtils";
 import { OTPSignIn } from "./components/OTPSignIn";
 
-const emailSchema = z.email();
+export const emailSchema = z.email();
 
 export const SignIn = () => {
 	const [email, setEmail] = useState("");
