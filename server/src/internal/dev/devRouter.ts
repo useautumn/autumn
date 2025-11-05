@@ -2,14 +2,14 @@ import { AppEnv } from "@autumn/shared";
 import * as crypto from "crypto";
 import { Router } from "express";
 import type Stripe from "stripe";
-import { CacheManager } from "@/external/caching/CacheManager.js";
-import { CacheType } from "@/external/caching/cacheActions.js";
 import {
 	checkKeyValid,
 	createWebhookEndpoint,
 } from "@/external/stripe/stripeOnboardingUtils.js";
 import { getSvixDashboardUrl } from "@/external/svix/svixHelpers.js";
 import { withOrgAuth } from "@/middleware/authMiddleware.js";
+import { CacheManager } from "@/utils/cacheUtils/CacheManager.js";
+import { CacheType } from "@/utils/cacheUtils/CacheType.js";
 import { encryptData } from "@/utils/encryptUtils.js";
 import { handleRequestError } from "@/utils/errorUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";

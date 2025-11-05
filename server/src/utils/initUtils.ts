@@ -14,8 +14,13 @@ export const checkEnvVars = () => {
 		process.exit(1);
 	}
 
-	if (!process.env.REDIS_URL) {
-		console.error(`REDIS_URL is not set`);
+	if (!process.env.CACHE_URL) {
+		console.error(`CACHE_URL (redis) is not set`);
+		process.exit(1);
+	}
+
+	if (!process.env.QUEUE_URL) {
+		console.error(`QUEUE_URL is not set`);
 		process.exit(1);
 	}
 

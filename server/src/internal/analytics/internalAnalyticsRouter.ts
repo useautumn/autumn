@@ -7,8 +7,7 @@ import {
 } from "@autumn/shared";
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
-import { CacheType } from "@/external/caching/cacheActions.js";
-import { queryWithCache } from "@/external/caching/cacheUtils.js";
+import { queryWithCache } from "@/utils/cacheUtils/queryWithCache.js";
 import RecaseError from "@/utils/errorUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
@@ -23,12 +22,11 @@ analyticsRouter.get("/event_names", async (req: any, res: any) =>
 		res,
 		action: "query event names",
 		handler: async () => {
-			const { db, org, env, features } = req;
-			const { interval, event_names, customer_id } = req.body;
+			const { org, env, features } = req;
 
 			const result = await queryWithCache({
-				action: CacheType.TopEvents,
-				key: `${org.id}_${env}`,
+				ttl: 3600,
+				key: `top_events:${org.id}_${env}`,
 				fn: async () => {
 					const res = await AnalyticsService.getTopEventNames({
 						req,
@@ -77,18 +75,6 @@ analyticsRouter.get("/event_names", async (req: any, res: any) =>
 
 const getTopEvents = async ({ req }: { req: ExtendedRequest }) => {
 	const { org, env, features } = req;
-
-	// const result = await queryWithCache({
-	//   action: CacheType.TopEvents,
-	//   key: `${org.id}_${env}`,
-	//   fn: async () => {
-	//     const res = await AnalyticsService.getTopEventNames({
-	//       req,
-	//     });
-
-	//     return res?.eventNames;
-	//   },
-	// });
 
 	const topEventNamesRes = await AnalyticsService.getTopEventNames({
 		req,

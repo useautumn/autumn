@@ -140,7 +140,7 @@ end
 local entityFeatureData = {} -- {[entityId][featureId] = featureData}
 
 for _, entityId in ipairs(entityIds) do
-    local entityCacheKey = orgId .. ":" .. env .. ":entity:" .. entityId
+    local entityCacheKey = "{" .. orgId .. "}:" .. env .. ":entity:" .. entityId
     local entityBaseJson = redis.call("GET", entityCacheKey)
     
     if entityBaseJson then

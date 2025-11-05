@@ -1,6 +1,6 @@
 import { ErrCode } from "@autumn/shared";
-import { QueueManager } from "@/queue/QueueManager.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { queueRedis } from "../../queue/initQueue.js";
 
 export const handleAttachRaceCondition = async ({
 	req,
@@ -9,13 +9,12 @@ export const handleAttachRaceCondition = async ({
 	req: any;
 	res: any;
 }) => {
-	const redisConn = await QueueManager.getConnection({ useBackup: false });
 	const customerId = req.body.customer_id;
 	const orgId = req.orgId;
 	const env = req.env;
 	try {
 		const lockKey = `attach_${customerId}_${orgId}_${env}`;
-		const existingLock = await redisConn.get(lockKey);
+		const existingLock = await queueRedis.get(lockKey);
 		if (existingLock) {
 			throw new RecaseError({
 				message: `Attach already runnning for customer ${customerId}, try again in a few seconds`,
@@ -24,7 +23,7 @@ export const handleAttachRaceCondition = async ({
 			});
 		}
 		// Create lock with 5 second timeout
-		await redisConn.set(lockKey, "1", "PX", 5000, "NX");
+		await queueRedis.set(lockKey, "1", "PX", 5000, "NX");
 
 		const originalJson = res.json;
 		res.json = async function (body: any) {
@@ -66,10 +65,9 @@ export const handleCustomerRaceCondition = async ({
 	res: any;
 	logger: any;
 }) => {
-	const redisConn = await QueueManager.getConnection({ useBackup: false });
 	try {
 		const lockKey = `${action}_${customerId}_${orgId}_${env}`;
-		const existingLock = await redisConn.get(lockKey);
+		const existingLock = await queueRedis.get(lockKey);
 		if (existingLock) {
 			throw new RecaseError({
 				message: `Action ${action} already running for customer ${customerId}, try again in a few seconds`,
@@ -78,7 +76,7 @@ export const handleCustomerRaceCondition = async ({
 			});
 		}
 		// Create lock with 5 second timeout
-		await redisConn.set(lockKey, "1", "PX", 5000, "NX");
+		await queueRedis.set(lockKey, "1", "PX", 5000, "NX");
 
 		const originalJson = res.json;
 		res.json = async function (body: any) {
@@ -111,8 +109,7 @@ export const clearLock = async ({
 	logger: any;
 }) => {
 	try {
-		const redisConn = await QueueManager.getConnection({ useBackup: false });
-		await redisConn.del(lockKey);
+		await queueRedis.del(lockKey);
 	} catch (error) {
 		logger.warn("❗️❗️ Error clearing lock");
 		logger.warn(error);

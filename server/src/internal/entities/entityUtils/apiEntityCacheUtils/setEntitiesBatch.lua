@@ -26,7 +26,7 @@ for _, entityWrapper in ipairs(entities) do
     local entityData = entityWrapper.entityData
     
     -- Build cache key for this entity
-    local cacheKey = orgId .. ":" .. env .. ":entity:" .. entityId
+    local cacheKey = "{" .. orgId .. "}:" .. env .. ":entity:" .. entityId
     
     -- Extract feature IDs for tracking
     local featureIds = {}

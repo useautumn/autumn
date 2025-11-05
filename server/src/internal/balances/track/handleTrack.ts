@@ -8,10 +8,8 @@ import {
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { createRoute } from "../../../honoMiddlewares/routeHandler.js";
-import { globalEventBatchingManager } from "./eventUtils/EventBatchingManager.js";
+import { tryRedisWrite } from "../../../utils/cacheUtils/cacheUtils.js";
 import { runRedisDeduction } from "./redisTrackUtils/runRedisDeduction.js";
-import { globalSyncBatchingManager } from "./syncUtils/SyncBatchingManager.js";
-import { constructEvent } from "./trackUtils/eventUtils.js";
 import type { FeatureDeduction } from "./trackUtils/getFeatureDeductions.js";
 import {
 	getTrackEventNameDeductions,
@@ -44,6 +42,7 @@ const executePostgresTracking = async ({
 			timestamp: body.timestamp,
 			idempotency_key: body.idempotency_key,
 		},
+		refreshCache: true,
 	});
 
 	return {
@@ -103,66 +102,30 @@ export const handleTrack = createRoute({
 			return c.json({ success: true });
 		}
 
+		let code: string = SuccessCode.EventReceived;
+
 		// Scenario 2: Try Redis first, fallback to PostgreSQL if needed
-		const result = await runRedisDeduction({
-			ctx,
-			customerId: body.customer_id,
-			entityId: body.entity_id,
-			featureDeductions,
-			overageBehavior: body.overage_behavior || "cap",
+		const success = await tryRedisWrite(async () => {
+			const { error } = await runRedisDeduction({
+				ctx,
+				customerId: body.customer_id,
+				entityId: body.entity_id,
+				featureDeductions,
+				overageBehavior: body.overage_behavior || "cap",
+			});
+
+			if (error) code = "insufficient_balance";
 		});
 
-		// Fallback to PostgreSQL for continuous_use + overage features
-		if (!result.success && result.error === "REQUIRES_POSTGRES_TRACKING") {
+		if (!success) {
+			console.log(`Falling back to postgres tracking`);
 			const response = await executePostgresTracking({
 				ctx,
 				body,
 				featureDeductions,
 			});
 
-			if (ctx.apiVersion.gte(ApiVersion.V1_1)) return c.json(response);
-			return c.json({ success: true });
-		}
-
-		// Redis deduction successful: queue sync jobs and event insertion
-		if (result.success) {
-			for (const deduction of featureDeductions) {
-				globalSyncBatchingManager.addSyncPair({
-					customerId: body.customer_id,
-					featureId: deduction.feature.id,
-					orgId: org.id,
-					env,
-					entityId: body.entity_id,
-				});
-			}
-
-			// Queue event insertion (skip if skip_event is true)
-			if (!body.skip_event && result.internalCustomerId) {
-				globalEventBatchingManager.addEvent(
-					constructEvent({
-						ctx,
-						eventInfo: {
-							event_name: body.feature_id || body.event_name!,
-							value: body.value,
-							properties: body.properties,
-							timestamp: body.timestamp,
-						},
-						internalCustomerId: result.internalCustomerId,
-						internalEntityId: result.internalEntityId,
-						customerId: body.customer_id,
-						entityId: body.entity_id,
-					}),
-				);
-			}
-
-			const response = {
-				id: "",
-				code: SuccessCode.EventReceived,
-				customer_id: body.customer_id,
-				entity_id: body.entity_id,
-				feature_id: body.feature_id,
-				event_name: body.event_name,
-			};
+			console.log(`Response: ${JSON.stringify(response)}`);
 
 			if (ctx.apiVersion.gte(ApiVersion.V1_1)) return c.json(response);
 			return c.json({ success: true });
@@ -171,7 +134,7 @@ export const handleTrack = createRoute({
 		// Redis deduction failed (e.g., insufficient balance)
 		const response = {
 			id: "",
-			code: "insufficient_balance",
+			code: code,
 			customer_id: body.customer_id,
 			entity_id: body.entity_id,
 			feature_id: body.feature_id,

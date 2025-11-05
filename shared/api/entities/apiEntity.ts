@@ -14,6 +14,8 @@ const entityDescriptions = {
 };
 
 export const ApiBaseEntitySchema = z.object({
+	autumn_id: z.string().optional(),
+
 	id: z.string().nullable().meta({
 		description: entityDescriptions.id,
 	}),

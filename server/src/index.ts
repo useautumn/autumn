@@ -163,11 +163,7 @@ const init = async () => {
 	app.all("/api/auth/*", toNodeHandler(auth));
 
 	// Initialize managers in parallel for faster startup
-	await Promise.all([
-		// QueueManager.getInstance(),
-		// CacheManager.getInstance(),
-		ClickHouseManager.getInstance(),
-	]);
+	await Promise.all([ClickHouseManager.getInstance()]);
 
 	// Initialize database functions
 	await initializeDatabaseFunctions();

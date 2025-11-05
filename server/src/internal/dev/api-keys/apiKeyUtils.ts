@@ -1,11 +1,10 @@
-import { generateId } from "@/utils/genUtils.js";
-import { ApiKey, AppEnv } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
+import { type ApiKey, AppEnv } from "@autumn/shared";
 import crypto from "crypto";
-import { ApiKeyService, CachedKeyService } from "../ApiKeyService.js";
-import { CacheType } from "@/external/caching/cacheActions.js";
-import { queryWithCache } from "@/external/caching/cacheUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { queryWithCache } from "@/utils/cacheUtils/queryWithCache.js";
+import { generateId } from "@/utils/genUtils.js";
+import { ApiKeyService } from "../ApiKeyService.js";
+import { buildSecretKeyCacheKey } from "./cacheApiKeyUtils.js";
 
 function generateApiKey(length = 32, prefix = "") {
 	try {
@@ -80,12 +79,11 @@ export const verifyKey = async ({
 	const env = key.startsWith("am_sk_test") ? AppEnv.Sandbox : AppEnv.Live;
 
 	const data = await queryWithCache({
-		action: CacheType.SecretKey,
-		key: hashedKey,
+		ttl: 3600,
+		key: buildSecretKeyCacheKey(hashedKey),
 		fn: async () =>
-			await ApiKeyService.verifyAndFetch({
+			ApiKeyService.verifyAndFetch({
 				db,
-				secretKey: key,
 				hashedKey,
 				env,
 			}),
@@ -103,3 +101,13 @@ export const verifyKey = async ({
 		data: data,
 	};
 };
+
+// let data = await tryRedisRead(() => redis.get(buildSecretKeyCacheKey(hashedKey)));
+// if (!data) {
+// 	data = await ApiKeyService.verifyAndFetch({
+// 		db,
+// 		secretKey: key,
+// 		hashedKey,
+// 		env,
+// 	});
+// }

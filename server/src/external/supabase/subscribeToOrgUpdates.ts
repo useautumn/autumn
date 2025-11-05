@@ -1,5 +1,5 @@
+import { client, type DrizzleCli } from "@/db/initDrizzle.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
-import { DrizzleCli, client } from "@/db/initDrizzle.js";
 
 export const subscribeToOrgUpdates = async ({ db }: { db: DrizzleCli }) => {
 	try {

@@ -144,7 +144,7 @@ local customerFeatures = {}
 local customerId = baseEntity.customer_id
 
 if customerId then
-    local customerCacheKey = orgId .. ":" .. env .. ":customer:" .. customerId
+    local customerCacheKey = "{" .. orgId .. "}:" .. env .. ":customer:" .. customerId
     local customerBaseJson = redis.call("GET", customerCacheKey)
     
     if customerBaseJson then

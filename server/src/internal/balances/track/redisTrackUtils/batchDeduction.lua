@@ -859,7 +859,7 @@ local entityIds = baseCustomer._entityIds or {}
 -- Load all entity features: { [entityId] = { [featureId] = entityFeature } }
 local entityFeatureStates = {}
 for _, entityId in ipairs(entityIds) do
-    local entityCacheKey = orgId .. ":" .. env .. ":entity:" .. entityId
+    local entityCacheKey = "{" .. orgId .. "}:" .. env .. ":entity:" .. entityId
     local entityBaseJson = redis.call("GET", entityCacheKey)
     
     if entityBaseJson then

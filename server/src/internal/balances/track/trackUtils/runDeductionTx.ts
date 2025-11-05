@@ -50,7 +50,6 @@ export const deductFromCusEnts = async ({
 	overageBehaviour = "cap",
 	addToAdjustment = false,
 	fullCus,
-	refreshCache = true, // Default to true for backwards compatibility
 }: DeductionTxParams) => {
 	const { db, org, env } = ctx;
 
@@ -202,6 +201,8 @@ export const deductFromCusEnts = async ({
 					Object.keys(updates).length
 				} entitlements. Remaining: ${remaining}`,
 			);
+
+			// Log cus ent ids:
 		}
 
 		// Bill on Stripe for each updated entitlement
@@ -268,15 +269,6 @@ export const deductFromCusEnts = async ({
 		}
 	}
 
-	// Refresh cache if requested (skip for sync operations)
-	if (refreshCache) {
-		await refreshCachedApiCustomer({
-			ctx,
-			customerId,
-			entityId,
-		});
-	}
-
 	return fullCus;
 };
 
@@ -328,7 +320,14 @@ export const runDeductionTx = async (
 		},
 	);
 
-	// Note: refreshCache is now handled inside deductFromCusEnts
+	// Refresh cache if requested (skip for sync operations)
+	if (params?.refreshCache) {
+		await refreshCachedApiCustomer({
+			ctx,
+			customerId: fullCus?.id ?? "",
+			entityId: fullCus?.entity?.id ?? "",
+		});
+	}
 
 	return {
 		fullCus,
