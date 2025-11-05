@@ -10,6 +10,7 @@ let redis: Redis;
 
 const caText = await loadCaCert({
 	caPath: process.env.CACHE_CERT_PATH,
+	caEnvVar: process.env.CACHE_CERT,
 	type: "cache",
 });
 
