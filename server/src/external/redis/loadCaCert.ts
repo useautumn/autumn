@@ -8,15 +8,13 @@ export const loadCaCert = async ({
 	type: "queue" | "cache";
 }) => {
 	try {
-		if (caEnvVar && process.env[caEnvVar]) {
-			console.log(`loading ca from env var: ${caEnvVar}`);
-			const certContent = process.env[caEnvVar];
+		if (caEnvVar) {
+			return caEnvVar;
+			// // Handle escaped newlines - Railway and other platforms often store
+			// // certificates with literal \n strings instead of actual newlines
+			// const processedCert = certContent.replace(/\\n/g, "\n");
 
-			// Handle escaped newlines - Railway and other platforms often store
-			// certificates with literal \n strings instead of actual newlines
-			const processedCert = certContent.replace(/\\n/g, "\n");
-
-			return processedCert;
+			// return processedCert;
 		}
 
 		const ca = Bun.file(caPath || `/etc/secrets/${type}.pem`);
