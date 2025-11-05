@@ -10,7 +10,7 @@ export const CustomerDataSchema = z
 		email: z.string().nullish().meta({
 			description: "Customer's email address",
 		}),
-		fingerprint: z.string().nullish().meta({
+		fingerprint: z.string().optional().meta({
 			description:
 				"Unique identifier (eg, serial number) to detect duplicate customers and prevent free trial abuse",
 		}),
@@ -28,7 +28,7 @@ export const CustomerDataSchema = z
 	.meta({
 		id: "CustomerData",
 		description:
-			"Used to add customer details like name or email when auto-creating a customer.",
+			"Unique identifier (eg, serial number) to detect duplicate customers and prevent free trial abuse",
 	});
 
 export type CustomerData = z.infer<typeof CustomerDataSchema>;

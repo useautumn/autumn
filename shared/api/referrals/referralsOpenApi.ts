@@ -8,6 +8,17 @@ import {
 	RedeemReferralCodeParamsSchema,
 } from "./referralOpModels.js";
 
+const ReferralCodeSchema = CreateReferralCodeResponseSchema.meta({
+	id: "ReferralCode",
+	description: "Referral code object returned by the API",
+});
+
+const RedeemReferralCodeResponseSchemaWithMeta =
+	RedeemReferralCodeResponseSchema.meta({
+		id: "RedeemReferralCodeResponse",
+		description: "Redemption response object returned by the API",
+	});
+
 export const referralOps: ZodOpenApiPathsObject = {
 	"/referrals/code": {
 		post: {
@@ -22,7 +33,9 @@ export const referralOps: ZodOpenApiPathsObject = {
 				"200": {
 					description: "Referral code generated successfully",
 					content: {
-						"application/json": { schema: CreateReferralCodeResponseSchema },
+						"application/json": {
+							schema: ReferralCodeSchema,
+						},
 					},
 				},
 			},
@@ -41,7 +54,9 @@ export const referralOps: ZodOpenApiPathsObject = {
 				"200": {
 					description: "Referral code redeemed successfully",
 					content: {
-						"application/json": { schema: RedeemReferralCodeResponseSchema },
+						"application/json": {
+							schema: RedeemReferralCodeResponseSchemaWithMeta,
+						},
 					},
 				},
 			},

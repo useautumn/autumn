@@ -406,19 +406,30 @@ const OPENAPI_1_2_0 = createDocument(
 		],
 		components: {
 			schemas: {
-				CustomerData: CustomerDataSchema,
+				CustomerData: CustomerDataSchema.meta({
+					id: "CustomerData",
+					description:
+						"Used to add customer details like name or email when auto-creating a customer.",
+				}),
 				EntityData: EntityDataSchema.meta({
 					id: "EntityData",
 					description: "Entity data for creating an entity",
 				}),
 				Customer: ApiCustomerWithMeta,
-				CustomerProduct: ApiCusProductSchema,
+				CustomerProduct: ApiCusProductSchema.meta({
+					id: "CustomerProduct",
+					description: "Customer product object returned by the API",
+				}),
 				CustomerFeature: ApiCusFeatureSchema.meta({
 					id: "CustomerFeature",
 					description: "Customer feature object returned by the API",
 				}),
 				Product: ApiProductWithMeta,
-				ProductItem: ApiProductItemSchema,
+				ProductItem: ApiProductItemSchema.meta({
+					id: "ProductItem",
+					description:
+						"Product item defining features and pricing within a product",
+				}),
 				Feature: ApiFeatureWithMeta,
 				Entity: ApiEntityWithMeta,
 			},
