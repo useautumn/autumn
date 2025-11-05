@@ -1,5 +1,4 @@
 import { Redis } from "ioredis";
-import { logger } from "../logtail/logtailUtils.js";
 import { loadCaCert } from "./loadCaCert.js";
 
 if (!process.env.CACHE_URL) {
@@ -19,7 +18,7 @@ redis = new Redis(process.env.CACHE_URL, {
 });
 
 redis.on("error", (error) => {
-	logger.error(`redis (cache) error: ${error.message}`);
+	// logger.error(`redis (cache) error: ${error.message}`);
 });
 
 export { redis };
