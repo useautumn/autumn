@@ -3,7 +3,6 @@ import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { getAuthorizationToken, verifyToken } from "./auth/vercelAuth.js";
 
 export const vercelSeederMiddleware = async (
 	c: Context<HonoEnv>,
@@ -34,11 +33,11 @@ export const vercelSeederMiddleware = async (
 			env: ctx.env ?? AppEnv.Sandbox,
 		});
 	}
-	if (c.req.header("Authorization")) {
-		const token = getAuthorizationToken(c.req.header() as unknown as Headers);
-		const claims = await verifyToken(token);
-		ctx.vercelClaims = claims;
-	}
+	// if (c.req.header("Authorization")) {
+	// 	const token = getAuthorizationToken(c.req.header() as unknown as Headers);
+	// 	const claims = await verifyToken(token);
+	// 	ctx.vercelClaims = claims;
+	// }
 
 	await next();
 };
