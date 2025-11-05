@@ -166,7 +166,7 @@ const init = async () => {
 	await Promise.all([ClickHouseManager.getInstance()]);
 
 	// Initialize database functions
-	await initializeDatabaseFunctions();
+	// await initializeDatabaseFunctions();
 
 	app.use(async (req: any, res: any, next: any) => {
 		// Add Render region identifier headers for load balancer verification
