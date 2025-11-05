@@ -23,7 +23,7 @@ export const CustomerBreadcrumbs = () => {
 	const entity = customer.entities.find((e: any) => e.id === entityId);
 
 	return (
-		<Breadcrumb className="text-t3 pt-6 pl-10 flex justify-start ">
+		<Breadcrumb className="text-t3 pl-10 flex justify-start ">
 			<BreadcrumbList className="text-t3 text-xs">
 				<BreadcrumbItem>
 					<BreadcrumbLink

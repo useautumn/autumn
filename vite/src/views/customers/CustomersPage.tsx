@@ -39,7 +39,7 @@ function CustomersPage() {
 							<CustomersTable customers={customers} />
 						</div>
 					) : (
-						<div className="flex flex-col px-10 mt-3 text-t3 text-sm w-full min-h-[60vh] gap-4">
+						<div className="flex justify-start items-center h-10 text-t3 text-sm px-10">
 							<span>
 								{queryStates.q?.trim()
 									? "No matching results found. Try a different search."
