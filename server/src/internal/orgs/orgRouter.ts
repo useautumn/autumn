@@ -41,3 +41,4 @@ honoOrgRouter.delete("/stripe", ...handleDeleteStripe);
 honoOrgRouter.post("/stripe", ...handleConnectStripe);
 honoOrgRouter.get("/stripe/oauth_url", ...handleGetOAuthUrl);
 honoOrgRouter.post("/reset_default_account", ...handleResetDefaultAccount);
+honoOrgRouter.get("/vercel", ...handleGetVercelConfig);
