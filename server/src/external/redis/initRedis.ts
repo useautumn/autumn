@@ -8,8 +8,8 @@ if (!process.env.CACHE_URL) {
 let redis: Redis;
 
 const regionToCacheUrl = {
-	"us-east4-eqdc4a": process.env.US_EAST_CACHE,
-	"us-west2": process.env.US_WEST_CACHE,
+	"us-east4-eqdc4a": process.env.CACHE_US_EAST,
+	"us-west2": process.env.CACHE_US_WEST,
 };
 
 const replicaRegion = process.env
