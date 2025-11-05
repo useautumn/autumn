@@ -4,6 +4,7 @@ import { Mail } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { z } from "zod";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,8 @@ import { authClient, signIn } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { getBackendErr } from "@/utils/genUtils";
 import { OTPSignIn } from "./components/OTPSignIn";
+
+const emailSchema = z.email();
 
 export const SignIn = () => {
 	const [email, setEmail] = useState("");
@@ -39,7 +42,7 @@ export const SignIn = () => {
 
 	const handleEmailSignIn = async (e: React.FormEvent) => {
 		e.preventDefault();
-		if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+		if (!email || !emailSchema.safeParse(email).success) {
 			toast.error("Please enter a valid email address.");
 			return;
 		}
