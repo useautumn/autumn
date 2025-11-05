@@ -8,6 +8,7 @@ if (!process.env.CACHE_URL) {
 
 let redis: Redis;
 
+console.log("CA CERT:", process.env.CACHE_CERT);
 const caText = await loadCaCert({
 	caPath: process.env.CACHE_CERT_PATH,
 	caEnvVar: process.env.CACHE_CERT,
