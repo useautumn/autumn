@@ -126,13 +126,25 @@ export const coreOps: ZodOpenApiPathsObject = {
 			tags: ["core"],
 			requestBody: {
 				content: {
-					"application/json": { schema: QueryParamsSchema },
+					"application/json": {
+						schema: QueryParamsSchema.meta({
+							id: "QueryParams",
+							description: "Parameters for querying analytics data",
+						}),
+					},
 				},
 			},
 			responses: {
 				"200": {
 					description: "200 OK",
-					content: { "application/json": { schema: QueryResultSchema } },
+					content: {
+						"application/json": {
+							schema: QueryResultSchema.meta({
+								id: "QueryResult",
+								description: "Result of an analytics query",
+							}),
+						},
+					},
 				},
 			},
 		},
@@ -162,13 +174,25 @@ export const coreOps: ZodOpenApiPathsObject = {
 			tags: ["core"],
 			requestBody: {
 				content: {
-					"application/json": { schema: SetupPaymentParamsSchema },
+					"application/json": {
+						schema: SetupPaymentParamsSchema.meta({
+							id: "SetupPaymentParams",
+							description: "Parameters for setting up a payment method",
+						}),
+					},
 				},
 			},
 			responses: {
 				"200": {
 					description: "200 OK",
-					content: { "application/json": { schema: SetupPaymentResultSchema } },
+					content: {
+						"application/json": {
+							schema: SetupPaymentResultSchema.meta({
+								id: "SetupPaymentResult",
+								description: "Result of setting up a payment method",
+							}),
+						},
+					},
 				},
 			},
 		},
