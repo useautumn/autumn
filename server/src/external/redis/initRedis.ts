@@ -8,7 +8,7 @@ if (!process.env.CACHE_URL) {
 let redis: Redis;
 
 const regionToCacheUrl: Record<string, string | undefined> = {
-	"us-east": process.env.CACHE_URL_US_EAST,
+	"us-east-2": process.env.CACHE_URL_US_EAST,
 };
 
 const awsRegion = process.env.AWS_REGION as keyof typeof regionToCacheUrl;
