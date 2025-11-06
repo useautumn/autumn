@@ -40,7 +40,7 @@ export default PricingTableComponent`;
 					<div className="">
 						<CodeGroup value="react">
 							<CodeGroupList>
-								<CodeGroupTab value="react">layout.tsx</CodeGroupTab>
+								<CodeGroupTab value="react">PricingTableComponent.tsx</CodeGroupTab>
 								<CodeGroupCopyButton
 									onCopy={() => navigator.clipboard.writeText(snippet)}
 								/>
