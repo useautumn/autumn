@@ -82,6 +82,11 @@ export const createHonoApp = () => {
 	});
 
 	// OAuth callback (needs to be before middleware)
+	// Health check endpoint for AWS/ECS load balancer
+	app.get("/", (c) => {
+		return c.text("Hello from Autumn 🍂🍂🍂");
+	});
+
 	app.get("/stripe/oauth_callback", handleOAuthCallback);
 
 	// Step 1: Base middleware - sets up ctx (db, logger, etc.)
