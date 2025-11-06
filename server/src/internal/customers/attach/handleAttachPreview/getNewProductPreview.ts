@@ -119,6 +119,10 @@ export const getNewProductPreview = async ({
 		});
 	}
 
+	if (config.disableTrial) {
+		attachParams.freeTrial = null;
+	}
+
 	const items = await getItemsForNewProduct({
 		newProduct,
 		attachParams,
