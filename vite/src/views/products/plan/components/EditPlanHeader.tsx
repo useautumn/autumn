@@ -28,7 +28,9 @@ import { PlanToolbar } from "./PlanToolbar.tsx";
 
 export const EditPlanHeader = () => {
 	const { product, numVersions } = useProductQuery();
-	const { counts } = useProductCountsQuery();
+	const { counts } = useProductCountsQuery(
+		product.version ? { version: product.version } : {},
+	);
 	const { refetch: refetchMigrations } = useMigrationsQuery();
 	const { queryStates, setQueryStates } = useProductQueryState();
 	const axiosInstance = useAxiosInstance();
