@@ -10,7 +10,7 @@ import { CodeSpan } from "@/views/onboarding2/integrate/components/CodeSpan";
 import { SectionHeader } from "./SectionHeader";
 
 export const PricingTableSection = () => {
-	const snippet = `import { PricingTable } from 'autumn-js/react'
+	const snippet = `import { PricingTable } from "autumn-js/react";
 
 const PricingTableComponent = () => {
     return (
