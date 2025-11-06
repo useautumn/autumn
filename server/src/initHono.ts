@@ -96,25 +96,7 @@ export const createHonoApp = () => {
 	// Add Render region identifier header for load balancer verification
 	app.use("*", async (c, next) => {
 		await next();
-		const serviceName = process.env.RENDER_SERVICE_NAME || "unknown";
-		const externalHostname = process.env.RENDER_EXTERNAL_HOSTNAME || "unknown";
-		c.header("x-render-service", serviceName);
-		c.header("x-render-hostname", externalHostname);
-		c.header(
-			"x-railway-region",
-			process.env.RAILWAY_REPLICA_REGION || "unknown",
-		);
-	});
-
-	app.get("/railway_debug", (c) => {
-		("railwayEnvVars");
-		// :["RAILWAY_BETA_ENABLE_RUNTIME_V2","RAILWAY_GIT_BRANCH","RAILWAY_SNAPSHOT_ID","RAILWAY_STATIC_URL","RAILWAY_PROJECT_NAME","RAILWAY_PUBLIC_DOMAIN","RAILWAY_REPLICA_ID","RAILWAY_GIT_COMMIT_SHA","RAILWAY_SERVICE_SERVER_URL","RAILWAY_GIT_COMMIT_MESSAGE","RAILWAY_ENVIRONMENT_NAME","RAILWAY_GIT_REPO_OWNER","RAILWAY_GIT_REPO_NAME","RAILWAY_PRIVATE_DOMAIN","RAILWAY_PROJECT_ID","RAILWAY_GIT_AUTHOR","RAILWAY_DEPLOYMENT_ID","RAILWAY_SERVICE_NAME","RAILWAY_ENVIRONMENT","RAILWAY_SERVICE_ID","RAILWAY_ENVIRONMENT_ID","RAILWAY_REPLICA_REGION"]
-		const railwayEnvVars = Object.keys(process.env).filter((key) =>
-			key.startsWith("RAILWAY_"),
-		);
-		return c.json({
-			railwayEnvVars,
-		});
+		c.header("x-region", process.env.AWS_REGION);
 	});
 
 	// Webhook routes

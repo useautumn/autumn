@@ -38,6 +38,7 @@
 		"@hono/zod-validator": "^0.7.3",
 		"@hyperbrowser/sdk": "^0.54.0",
 		"@hyperdx/node-opentelemetry": "^0.8.2",
+		"@infisical/sdk": "^4.0.6",
 		"@logtail/node": "^0.5.2",
 		"@opentelemetry/api": "^1.9.0",
 		"@opentelemetry/auto-instrumentations-node": "^0.60.1",

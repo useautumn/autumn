@@ -7,18 +7,15 @@ if (!process.env.CACHE_URL) {
 
 let redis: Redis;
 
-const regionToCacheUrl = {
-	"us-east4-eqdc4a": process.env.CACHE_US_EAST,
-	"us-west2": process.env.CACHE_US_WEST,
+const regionToCacheUrl: Record<string, string | undefined> = {
+	"us-east": process.env.CACHE_URL_US_EAST,
 };
 
-const replicaRegion = process.env
-	.RAILWAY_REPLICA_REGION as keyof typeof regionToCacheUrl;
-
-const regionalCacheUrl = regionToCacheUrl[replicaRegion];
-
-console.log("RAILWAY REPLICA REGION:", process.env.RAILWAY_REPLICA_REGION);
-console.log(`REGIONAL CACHE EXISTS: ${regionalCacheUrl ? "YES" : "NO"}`);
+const awsRegion = process.env.AWS_REGION as keyof typeof regionToCacheUrl;
+const regionalCacheUrl = regionToCacheUrl[awsRegion];
+if (regionalCacheUrl) {
+	console.log(`Using regional cache: ${awsRegion}`);
+}
 
 const caText = await loadCaCert({
 	caPath: process.env.CACHE_CERT_PATH,
