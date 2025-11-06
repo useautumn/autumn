@@ -8,6 +8,11 @@ console.warn = (...args: any[]) => {
 	originalWarn.apply(console, args);
 };
 
-import { initWorkers } from "./queue/initWorkers.js";
+import "dotenv/config";
+import { initInfisical } from "./external/infisical/initInfisical.js";
+
+await initInfisical();
+
+const { initWorkers } = await import("./queue/initWorkers.js");
 
 await initWorkers();
