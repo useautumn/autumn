@@ -85,12 +85,6 @@ const handleRefreshCache = async (req: any, res: any) => {
 		logger.info(
 			`Clearing cache for customer ${customerId}, url: ${req.originalUrl}`,
 		);
-		await deleteCusCache({
-			db: req.db,
-			customerId,
-			org: req.org,
-			env: req.env,
-		});
 
 		await deleteCachedApiCustomer({
 			customerId,

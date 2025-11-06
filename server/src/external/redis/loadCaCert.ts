@@ -9,12 +9,17 @@ export const loadCaCert = async ({
 }) => {
 	try {
 		if (caValue) {
-			return caValue;
+			if (caValue.startsWith("-----BEGIN CERTIFICATE-----")) {
+				return caValue;
+			}
+
+			return undefined;
 		}
 
 		const ca = Bun.file(caPath || `/etc/secrets/${type}-cert.pem`);
 		const caText = await ca.text();
-		return caText;
+
+		return undefined;
 	} catch (_error) {
 		return;
 	}

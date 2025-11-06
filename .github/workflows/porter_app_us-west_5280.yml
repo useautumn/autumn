@@ -1,0 +1,27 @@
+on:
+  push:
+    branches:
+    - feat/global-redis
+name: Deploy to Porter
+jobs:
+  porter-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - name: Set Github tag
+      id: vars
+      run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+    - name: Setup porter
+      uses: porter-dev/setup-porter@v0.1.0
+    - name: Deploy stack
+      timeout-minutes: 30
+      run: exec porter apply -f porter.yaml
+      env:
+        PORTER_CLUSTER: 5280
+        PORTER_HOST: https://dashboard.porter.run
+        PORTER_PROJECT: 17736
+        PORTER_APP_NAME: us-west
+        PORTER_TAG: ${{ steps.vars.outputs.sha_short }}
+        PORTER_TOKEN: ${{ secrets.PORTER_APP_17736_5280 }}
+        

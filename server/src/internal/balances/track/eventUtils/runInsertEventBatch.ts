@@ -33,6 +33,8 @@ export const runInsertEventBatch = async ({
 		}
 	});
 
+	console.log("Event Inserts", eventInserts);
+
 	// Batch insert events directly - no DB lookups needed
 	try {
 		await db.insert(events).values(eventInserts as any);
