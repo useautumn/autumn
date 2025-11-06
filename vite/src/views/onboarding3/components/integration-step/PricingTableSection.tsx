@@ -10,23 +10,18 @@ import { CodeSpan } from "@/views/onboarding2/integrate/components/CodeSpan";
 import { SectionHeader } from "./SectionHeader";
 
 export const PricingTableSection = () => {
-	const snippet = `import { AutumnProvider } from "autumn-js/react";
+	const snippet = `import { PricingTable } from 'autumn-js/react'
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode,
-}) {
-  return (
-    <html>
-      <body>
-        <AutumnProvider>
-          {children}
-        </AutumnProvider>
-      </body>
-    </html>
-  );
-}`;
+const PricingTableComponent = () => {
+    return (
+        <section className="max-w-7xl mx-auto pt-24 pb-16" id="pricing">
+            <h2 className="text-3xl md:text-4xl text-center font-bold mb-6">Pricing</h2>
+            <PricingTable />
+        </section>
+    )
+}
+
+export default PricingTableComponent`;
 
 	return (
 		<div className="flex flex-col gap-4">
