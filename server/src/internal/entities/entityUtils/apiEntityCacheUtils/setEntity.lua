@@ -1,6 +1,6 @@
 -- setEntity.lua
 -- Atomically stores an entity object with base data as JSON and features/breakdowns as HSETs
--- KEYS[1]: cache key (e.g., "org_id:env:entity:entity_id")
+-- KEYS[1]: cache key (e.g., "{org_id}:env:customer:customer_id:entity:entity_id")
 -- ARGV[1]: serialized entity data JSON string
 
 local cacheKey = KEYS[1]

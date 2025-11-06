@@ -27,6 +27,7 @@ export const deleteCachedApiEntity = async ({
 
 	const cacheKey = buildCachedApiEntityKey({
 		entityId,
+		customerId,
 		orgId: org.id,
 		env,
 	});

@@ -10,7 +10,6 @@ import { UTCDate } from "@date-fns/utc";
 import { applyTrialToEntitlement } from "@/internal/products/entitlements/entitlementUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { getNextEntitlementReset } from "@/utils/timeUtils.js";
-import { formatUnixToDateTime } from "../../../../../utils/genUtils.js";
 import { getAlignedUnix } from "../../../../products/prices/billingIntervalUtils2.js";
 
 export const initNextResetAt = ({
@@ -64,12 +63,12 @@ export const initNextResetAt = ({
 		entitlement.interval_count || 1,
 	).getTime();
 
-	console.log(`--------------------------------`);
-	console.log(`Interval: `, entitlement.interval);
-	console.log(`Interval count: `, entitlement.interval_count);
-	console.log(`Now: `, formatUnixToDateTime(now));
-	console.log(`Next reset at: `, formatUnixToDateTime(nextResetAtCalculated));
-	console.log(`Anchor to unix: `, formatUnixToDateTime(anchorToUnix));
+	// console.log(`--------------------------------`);
+	// console.log(`Interval: `, entitlement.interval);
+	// console.log(`Interval count: `, entitlement.interval_count);
+	// console.log(`Now: `, formatUnixToDateTime(now));
+	// console.log(`Next reset at: `, formatUnixToDateTime(nextResetAtCalculated));
+	// console.log(`Anchor to unix: `, formatUnixToDateTime(anchorToUnix));
 
 	// If anchorToUnix, align next reset at to anchorToUnix...
 	if (

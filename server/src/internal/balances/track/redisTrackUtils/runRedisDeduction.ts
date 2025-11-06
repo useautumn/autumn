@@ -1,5 +1,5 @@
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
-import { getCachedApiCustomer } from "../../../customers/cusUtils/apiCusCacheUtils/getCachedApiCustomer.js";
+import { getOrCreateApiCustomer } from "../../../customers/cusUtils/getOrCreateApiCustomer.js";
 import { globalEventBatchingManager } from "../eventUtils/EventBatchingManager.js";
 import { globalSyncBatchingManager } from "../syncUtils/SyncBatchingManager.js";
 import { constructEvent, type EventInfo } from "../trackUtils/eventUtils.js";
@@ -46,7 +46,7 @@ export const runRedisDeduction = async ({
 	const { org, env } = ctx;
 
 	// Ensure customer is in cache
-	const { apiCustomer: cachedCustomer } = await getCachedApiCustomer({
+	const cachedCustomer = await getOrCreateApiCustomer({
 		ctx,
 		customerId,
 		withAutumnId: true,

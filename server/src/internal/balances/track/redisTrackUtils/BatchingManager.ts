@@ -158,6 +158,7 @@ export class BatchingManager {
 				})),
 				orgId: batch.orgId,
 				env: batch.env,
+				customerId: batch.customerId,
 			});
 
 			console.log(`✅ Batch completed (${batchSize} requests)`);

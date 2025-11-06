@@ -1,10 +1,13 @@
-import { FullCustomer, FullCusEntWithFullCusProduct, Feature, FullCusProduct, Entity } from "@autumn/shared";
+import { Feature, ApiCusFeature } from "@autumn/shared";
 
 export interface CheckData {
-	fullCus: FullCustomer;
-	cusEnts: FullCusEntWithFullCusProduct[];
+	customerId: string;
+	entityId?: string;
+	// apiCustomer: ApiCustomer;
+	cusFeature?: ApiCusFeature
+	// cusEnts: FullCusEntWithFullCusProduct[];
 	originalFeature: Feature;
 	featureToUse: Feature;
-	cusProducts: FullCusProduct[];
-	entity?: Entity;
+	// cusProducts: FullCusProduct[];
+	// entity?: Entity;
 }

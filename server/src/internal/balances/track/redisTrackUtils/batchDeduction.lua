@@ -13,11 +13,13 @@
 --   ]
 -- ARGV[2]: org_id
 -- ARGV[3]: env
+-- ARGV[4]: customer_id
 
 local cacheKey = KEYS[1]
 local requestsJson = ARGV[1]
 local orgId = ARGV[2]
 local env = ARGV[3]
+local customerId = ARGV[4]
 
 -- Parse requests
 local requests = cjson.decode(requestsJson)
@@ -859,7 +861,7 @@ local entityIds = baseCustomer._entityIds or {}
 -- Load all entity features: { [entityId] = { [featureId] = entityFeature } }
 local entityFeatureStates = {}
 for _, entityId in ipairs(entityIds) do
-    local entityCacheKey = "{" .. orgId .. "}:" .. env .. ":entity:" .. entityId
+    local entityCacheKey = "{" .. orgId .. "}:" .. env .. ":customer:" .. customerId .. ":entity:" .. entityId
     local entityBaseJson = redis.call("GET", entityCacheKey)
     
     if entityBaseJson then

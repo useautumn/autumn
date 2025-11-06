@@ -4,11 +4,13 @@
 -- KEYS[1]: cache key (e.g., "org_id:env:customer:customer_id")
 -- ARGV[1]: org_id (for building entity cache keys)
 -- ARGV[2]: env (for building entity cache keys)
+-- ARGV[3]: customer_id (for building entity cache keys)
 
 local cacheKey = KEYS[1]
 local baseKey = cacheKey
 local orgId = ARGV[1]
 local env = ARGV[2]
+local customerId = ARGV[3]
 
 -- Get base customer JSON
 local baseJson = redis.call("GET", baseKey)
@@ -140,7 +142,7 @@ end
 local entityFeatureData = {} -- {[entityId][featureId] = featureData}
 
 for _, entityId in ipairs(entityIds) do
-    local entityCacheKey = "{" .. orgId .. "}:" .. env .. ":entity:" .. entityId
+    local entityCacheKey = "{" .. orgId .. "}:" .. env .. ":customer:" .. customerId .. ":entity:" .. entityId
     local entityBaseJson = redis.call("GET", entityCacheKey)
     
     if entityBaseJson then
@@ -310,23 +312,21 @@ for entityId, entityFeatures in pairs(entityFeatureData) do
         if not features[featureId] then
             -- This feature doesn't exist in customer, add it
             -- Initialize with zero balance, then we'll aggregate all entity balances
-            if not features[featureId] then
-                features[featureId] = {
-                    id = entityFeature.id,
-                    type = entityFeature.type,
-                    name = entityFeature.name,
-                    interval = entityFeature.interval,
-                    interval_count = entityFeature.interval_count,
-                    unlimited = entityFeature.unlimited,
-                    balance = 0,
-                    usage = 0,
-                    included_usage = 0,
-                    next_reset_at = cjson.null,
-                    overage_allowed = entityFeature.overage_allowed,
-                    usage_limit = entityFeature.usage_limit,
-                    credit_schema = entityFeature.credit_schema
-                }
-            end
+            features[featureId] = {
+                id = entityFeature.id,
+                type = entityFeature.type,
+                name = entityFeature.name,
+                interval = entityFeature.interval,
+                interval_count = entityFeature.interval_count,
+                unlimited = entityFeature.unlimited,
+                balance = 0,
+                usage = 0,
+                included_usage = 0,
+                next_reset_at = cjson.null,
+                overage_allowed = entityFeature.overage_allowed,
+                usage_limit = entityFeature.usage_limit,
+                credit_schema = entityFeature.credit_schema
+            }
         end
     end
 end
