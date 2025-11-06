@@ -122,7 +122,7 @@ export const getPricesAndEnts = async ({
 			optionsInput: optionsInput || [],
 			features,
 			prices,
-			curCusProduct: curMainProduct,
+			curCusProduct,
 		}),
 		prices,
 		entitlements: getEntsWithFeature({
