@@ -14,7 +14,7 @@
 		"vite:build": "bun -F @autumn/shared build && bun -F @autumn/vite build:bun",
 		"vite:start": "bun -F @autumn/vite start:bun",
 		"shared": "bun -F @autumn/shared build",
-		"server": "bun -F @autumn/shared build && bun -F @autumn/server start",
+		"server": "cd server && bun start",
 		"workers": "bun -F @autumn/shared build && bun -F @autumn/server workers",
 		"cron": "bun -F @autumn/shared build && bun -F @autumn/server cron",
 		"check": "bun -F @autumn/shared build && bun -F @autumn/server check",
