@@ -254,7 +254,8 @@ const init = async () => {
 		? Number.parseInt(process.env.SERVER_PORT)
 		: 8080;
 
-	server.listen(PORT, () => {
+	// Bind to 0.0.0.0 for AWS ECS/Docker containers
+	server.listen(PORT, "0.0.0.0", () => {
 		console.log(`Server running on port ${PORT}`);
 	});
 };
@@ -269,7 +270,7 @@ if (process.env.NODE_ENV === "development") {
 		console.log(`Master ${process.pid} is running`);
 		console.log("Number of CPUs", numCPUs);
 
-		const numWorkers = 5;
+		const numWorkers = 2;
 
 		for (let i = 0; i < numWorkers; i++) {
 			cluster.fork();
