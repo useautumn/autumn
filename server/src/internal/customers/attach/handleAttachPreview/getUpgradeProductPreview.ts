@@ -1,6 +1,7 @@
 import {
 	AttachBranch,
 	type AttachConfig,
+	CouponDurationType,
 	cusProductToPrices,
 	cusProductToProduct,
 	type FreeTrial,
@@ -24,6 +25,8 @@ import { getLargestInterval } from "@/internal/products/prices/priceUtils/priceI
 import { isPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";
+import { getAmountAfterReward } from "@/internal/rewards/rewardUtils.js";
+import { formatAmount } from "@/utils/formatUtils.js";
 import { nullish } from "@/utils/genUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import type { AttachParams } from "../../cusProducts/AttachParams.js";
@@ -155,6 +158,8 @@ export const getUpgradeProductPreview = async ({
 	const curCusProduct = curSameProduct || curMainProduct!;
 	const sub = await paramsToCurSub({ attachParams });
 
+	// Use internal preview with in-house discount calculation
+
 	const curPreviewItems = await getItemsForCurProduct({
 		sub: sub!,
 		attachParams,
@@ -211,8 +216,48 @@ export const getUpgradeProductPreview = async ({
 		});
 
 		if (nextCycleAt) {
+			// Apply discount math to next cycle items (only for multi-cycle discounts)
+			let discountedNextCycleItems = nextCycleItems;
+			if (attachParams.rewards && attachParams.rewards.length > 0) {
+				// Filter rewards that should apply to next cycle
+				const nextCycleRewards = attachParams.rewards.filter((reward) => {
+					const durationType = reward.discount_config?.duration_type;
+					return (
+						durationType === CouponDurationType.Forever ||
+						(durationType === CouponDurationType.Months &&
+							(reward.discount_config?.duration_value || 0) > 1)
+					);
+				});
+
+				if (nextCycleRewards.length > 0) {
+					discountedNextCycleItems = nextCycleItems.map((item) => {
+						if (!item.amount) return item;
+						let discountedAmount = item.amount;
+
+						// Apply each multi-cycle reward discount
+						for (const reward of nextCycleRewards) {
+							discountedAmount = getAmountAfterReward({
+								amount: discountedAmount,
+								reward,
+								subDiscounts: [], // Don't consider existing sub discounts in preview
+								currency: attachParams.org.default_currency || undefined,
+							});
+						}
+
+						return {
+							...item,
+							amount: discountedAmount,
+							price: formatAmount({
+								org: attachParams.org,
+								amount: discountedAmount,
+							}),
+						};
+					});
+				}
+			}
+
 			dueNextCycle = {
-				line_items: nextCycleItems,
+				line_items: discountedNextCycleItems,
 				due_at: nextCycleAt,
 			};
 		}
@@ -234,6 +279,33 @@ export const getUpgradeProductPreview = async ({
 		if (newItemAmount.add(curItemAmount).eq(0)) {
 			items = items.filter((i) => i.price_id !== priceId);
 		}
+	}
+
+	// Apply discount math locally for upgrade/downgrade previews
+	if (attachParams.rewards && attachParams.rewards.length > 0) {
+		items = items.map((item) => {
+			if (!item.amount) return item;
+			let discountedAmount = item.amount;
+
+			// Apply each reward discount
+			for (const reward of attachParams.rewards!) {
+				discountedAmount = getAmountAfterReward({
+					amount: discountedAmount,
+					reward,
+					subDiscounts: [], // Don't consider existing sub discounts in preview
+					currency: attachParams.org.default_currency || undefined,
+				});
+			}
+
+			return {
+				...item,
+				amount: discountedAmount,
+				price: formatAmount({
+					org: attachParams.org,
+					amount: discountedAmount,
+				}),
+			};
+		});
 	}
 
 	const dueTodayAmt = items
