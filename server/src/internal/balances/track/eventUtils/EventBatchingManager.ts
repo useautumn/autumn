@@ -6,7 +6,7 @@ class BatchingManager {
 	private events: Map<string, EventInsert> = new Map();
 	private timer: NodeJS.Timeout | null = null;
 	private readonly batchWindow = 100; // 100ms batching window
-	private readonly maxBatchSize = 5000; // Max events per batch (PostgreSQL has ~65k param limit, ~11 fields per event = ~5.9k max)
+	private readonly maxBatchSize = 1000; // Max events per batch (PostgreSQL has ~65k param limit, ~11 fields per event = ~5.9k max)
 
 	/**
 	 * Add an event to the batch

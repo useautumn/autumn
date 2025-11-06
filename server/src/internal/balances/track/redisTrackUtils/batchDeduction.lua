@@ -398,7 +398,7 @@ local function deductFromCusFeature(cusFeature, amount)
     end
     
     -- Step 2: Deduct remaining from main balance
-    if remaining > 0 then
+    if remaining ~= 0 then
         local mainResult = deductFromMainBalance(cusFeature, remaining)
         remaining = mainResult.remaining
         
@@ -454,7 +454,7 @@ local function deductFromFeatureWithEntities(customerFeature, entityFeaturesMap,
         -- Step 2: Deduct from entity main balance
         if entityFeatures then
             local entityFeature = entityFeatures[customerFeature.id]
-            if entityFeature and remaining > 0 then
+            if entityFeature and remaining ~= 0 then
                 local entityMainResult = deductFromMainBalance(entityFeature, remaining)
                 remaining = entityMainResult.remaining
                 for _, delta in ipairs(entityMainResult.deltas) do
@@ -482,7 +482,7 @@ local function deductFromFeatureWithEntities(customerFeature, entityFeaturesMap,
         end
         
         -- Step 4: Deduct from customer main balance
-        if remaining > 0 then
+        if remaining ~= 0 then
             local customerMainResult = deductFromMainBalance(customerFeature, remaining)
             remaining = customerMainResult.remaining
             for _, delta in ipairs(customerMainResult.deltas) do
@@ -506,7 +506,7 @@ local function deductFromFeatureWithEntities(customerFeature, entityFeaturesMap,
         end
         
         -- Step 2: Deduct from customer main balance
-        if remaining > 0 then
+        if remaining ~= 0 then
             local customerMainResult = deductFromMainBalance(customerFeature, remaining)
             remaining = customerMainResult.remaining
             for _, delta in ipairs(customerMainResult.deltas) do
@@ -545,7 +545,7 @@ local function deductFromFeatureWithEntities(customerFeature, entityFeaturesMap,
         end
         
         -- Step 4: Deduct from all entity main balances (sorted for consistency)
-        if remaining > 0 then
+        if remaining ~= 0 then
             local sortedEntityIds = {}
             for entityId in pairs(entityFeaturesMap) do
                 table.insert(sortedEntityIds, entityId)
@@ -555,7 +555,7 @@ local function deductFromFeatureWithEntities(customerFeature, entityFeaturesMap,
             for _, entityId in ipairs(sortedEntityIds) do
                 local entityFeatures = entityFeaturesMap[entityId]
                 local entityFeature = entityFeatures[customerFeature.id]
-                if entityFeature and remaining > 0 then
+                if entityFeature and remaining ~= 0 then
                     local entityMainResult = deductFromMainBalance(entityFeature, remaining)
                     remaining = entityMainResult.remaining
                     for _, delta in ipairs(entityMainResult.deltas) do
@@ -709,7 +709,7 @@ local function processRequest(request, loadedCusFeatures, entityFeatureStates)
                 for _, entId in ipairs(sortedEntityIds) do
                     local entityFeatures = entityFeatureStates[entId]
                     local entityFeature = entityFeatures[featureId]
-                    if entityFeature and remainingAmount > 0 then
+                    if entityFeature and remainingAmount ~= 0 then
                         if not entityFeature.unlimited then
                             local result = deductFromCusFeature(entityFeature, remainingAmount)
                             
