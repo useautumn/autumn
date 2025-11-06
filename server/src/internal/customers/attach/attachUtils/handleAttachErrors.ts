@@ -5,10 +5,11 @@ import {
 	AttachErrCode,
 	BillingType,
 	cusProductsToCusEnts,
-	cusProductToPrices, ErrCode,
+	cusProductToPrices,
+	ErrCode,
 	type FullCusProduct,
 	getStartingBalance,
-	type UsagePriceConfig
+	type UsagePriceConfig,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";
@@ -237,12 +238,7 @@ export const handleAttachErrors = async ({
 			AttachBranch.Downgrade,
 		];
 
-
-
-
-		if (
-			upgradeDowngradeFlows.includes(branch) 
-		) {
+		if (upgradeDowngradeFlows.includes(branch)) {
 			handleNonCheckoutErrors({
 				flags,
 				config,
