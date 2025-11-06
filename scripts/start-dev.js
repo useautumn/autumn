@@ -78,6 +78,25 @@ function promptUser(question) {
 }
 
 /**
+ * Clear Vite cache to prevent optimization errors
+ */
+async function clearViteCache() {
+	const rootDir = path.dirname(new URL(import.meta.url).pathname);
+	const projectRoot = path.join(rootDir, "..");
+	const viteCachePath = path.join(projectRoot, "vite", "node_modules", ".vite");
+
+	if (fs.existsSync(viteCachePath)) {
+		try {
+			console.log("🧹 Clearing Vite cache...");
+			fs.rmSync(viteCachePath, { recursive: true, force: true });
+			console.log("✅ Vite cache cleared\n");
+		} catch (error) {
+			console.warn("⚠️  Failed to clear Vite cache:", error.message);
+		}
+	}
+}
+
+/**
  * Check and kill processes on ports 3000 and 8080
  */
 async function handlePorts() {
@@ -127,6 +146,9 @@ async function handlePorts() {
 
 async function startDev() {
 	try {
+		// Clear Vite cache first to prevent optimization errors
+		await clearViteCache();
+
 		// Check if using remote backend (api.useautumn.com)
 		const rootDir = path.dirname(new URL(import.meta.url).pathname);
 		const projectRoot = path.join(rootDir, "..");
@@ -137,7 +159,7 @@ async function startDev() {
 		const isUsingRemoteBackend = backendUrl?.includes("api.useautumn.com");
 
 		if (isUsingRemoteBackend) {
-			console.log("\n🌐 Using remote backend (api.useautumn.com)");
+			console.log("🌐 Using remote backend (api.useautumn.com)");
 			console.log("⏭️  Skipping port cleanup...\n");
 		} else {
 			// Check and kill processes on ports 3000 and 8080 if needed
