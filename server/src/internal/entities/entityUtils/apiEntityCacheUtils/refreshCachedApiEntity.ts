@@ -23,6 +23,7 @@ export const refreshCachedApiEntity = async ({
 
 	const cacheKey = buildCachedApiEntityKey({
 		entityId,
+		customerId,
 		orgId: org.id,
 		env,
 	});

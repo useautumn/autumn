@@ -1,7 +1,7 @@
 -- getEntity.lua
 -- Atomically retrieves an entity object from Redis, reconstructing from base JSON and feature HSETs
 -- Merges entity features with customer features
--- KEYS[1]: cache key (e.g., "{org_id}:env:entity:entity_id")
+-- KEYS[1]: cache key (e.g., "{org_id}:env:customer:customer_id:entity:entity_id")
 -- ARGV[1]: org_id (for building customer cache keys)
 -- ARGV[2]: env (for building customer cache keys)
 

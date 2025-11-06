@@ -57,14 +57,14 @@ export const handleCheck = createRoute({
 
 		const preview = with_preview
 			? await getCheckPreview({
-					db: ctx.db,
+					ctx,
 					allowed: v2Response.allowed,
 					balance: notNullish(v2Response.balance)
 						? v2Response.balance
 						: undefined,
 					feature: checkData.featureToUse!,
-					cusProducts: checkData.cusProducts,
-					allFeatures: ctx.features,
+					customerId: customer_id,
+					entityId: entity_id,
 				})
 			: undefined;
 
@@ -82,43 +82,14 @@ export const handleCheck = createRoute({
 					entityId: body.entity_id,
 					deductions: featureDeductions,
 					overageBehaviour: "cap",
+					refreshCache: true,
 					eventInfo: {
 						event_name: feature_id,
 						value: requiredBalance,
 						properties: body.properties,
 					},
 				});
-				// await handleEventSent({
-				// 	req: {
-				// 		...ctx,
-				// 		body: {
-				// 			...body,
-				// 			value: requiredBalance,
-				// 		},
-				// 	},
-				// 	customer_id: customer_id,
-				// 	customer_data: customer_data,
-				// 	event_data: {
-				// 		customer_id: customer_id,
-				// 		feature_id: feature_id,
-				// 		value: requiredBalance,
-				// 		entity_id: entity_id,
-				// 	},
-				// });
 			}
-
-			// else if (notNullish(event_data)) {
-			// 	await handleEventSent({
-			// 		req,
-			// 		customer_id: customer_id,
-			// 		customer_data: customer_data,
-			// 		event_data: {
-			// 			customer_id: customer_id,
-			// 			feature_id: feature_id,
-			// 			...event_data,
-			// 		},
-			// 	});
-			// }
 		}
 
 		// Apply version transformations based on API version
@@ -127,7 +98,7 @@ export const handleCheck = createRoute({
 			targetVersion: ctx.apiVersion,
 			resource: AffectedResource.Check,
 			legacyData: {
-				noCusEnts: checkData.cusEnts.length === 0,
+				noCusEnts: checkData.cusFeature === undefined,
 				featureToUse: checkData.featureToUse,
 			},
 		});
@@ -176,3 +147,34 @@ export const handleCheck = createRoute({
 // 	}
 // 	quantity = floatQuantity;
 // }
+
+// else if (notNullish(event_data)) {
+// 	await handleEventSent({
+// 		req,
+// 		customer_id: customer_id,
+// 		customer_data: customer_data,
+// 		event_data: {
+// 			customer_id: customer_id,
+// 			feature_id: feature_id,
+// 			...event_data,
+// 		},
+// 	});
+// }
+
+// await handleEventSent({
+// 	req: {
+// 		...ctx,
+// 		body: {
+// 			...body,
+// 			value: requiredBalance,
+// 		},
+// 	},
+// 	customer_id: customer_id,
+// 	customer_data: customer_data,
+// 	event_data: {
+// 		customer_id: customer_id,
+// 		feature_id: feature_id,
+// 		value: requiredBalance,
+// 		entity_id: entity_id,
+// 	},
+// });

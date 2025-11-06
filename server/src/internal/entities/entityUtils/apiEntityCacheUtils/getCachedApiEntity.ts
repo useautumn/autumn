@@ -25,14 +25,16 @@ import { GET_ENTITY_SCRIPT, SET_ENTITY_SCRIPT } from "./luaScripts.js";
 
 export const buildCachedApiEntityKey = ({
 	entityId,
+	customerId,
 	orgId,
 	env,
 }: {
 	entityId: string;
+	customerId: string;
 	orgId: string;
 	env: string;
 }) => {
-	return `{${orgId}}:${env}:entity:${entityId}`;
+	return `{${orgId}}:${env}:customer:${customerId}:entity:${entityId}`;
 };
 
 /**
@@ -57,6 +59,7 @@ export const getCachedApiEntity = async ({
 
 	const cacheKey = buildCachedApiEntityKey({
 		entityId,
+		customerId,
 		orgId: org.id,
 		env,
 	});
@@ -147,9 +150,8 @@ export const getCachedApiEntity = async ({
 				customerCacheKey,
 				org.id,
 				env,
+				customerId,
 			);
-
-			console.log(`cachedCustomer: ${cachedCustomer}`);
 
 			if (!cachedCustomer) {
 				await redis.eval(

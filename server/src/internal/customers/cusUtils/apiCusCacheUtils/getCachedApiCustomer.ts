@@ -57,13 +57,11 @@ export const getCachedApiCustomer = async ({
 		env,
 	});
 
-	// skipCache = true;
-
 	// Try to get from cache using Lua script (unless skipCache is true)
 	if (!skipCache) {
 		const start = performance.now();
 		const cachedResult = await tryRedisRead(() =>
-			redis.eval(GET_CUSTOMER_SCRIPT, 1, cacheKey, org.id, env),
+			redis.eval(GET_CUSTOMER_SCRIPT, 1, cacheKey, org.id, env, customerId),
 		);
 		const end = performance.now();
 		logger.info(`get customer from cache took ${Math.round(end - start)}ms`);
@@ -99,6 +97,8 @@ export const getCachedApiCustomer = async ({
 		withEntities: true,
 		withSubs: true,
 	});
+
+	console.log("Entities:", fullCus.entities);
 
 	// Build ApiCustomer (base only, no expand)
 	const { apiCustomer, legacyData } = await getApiCustomerBase({

@@ -1,5 +1,5 @@
 import {
-	type CreateEntity,
+	type CreateEntityParams,
 	type CustomerData,
 	type Entity,
 	LegacyVersion,
@@ -27,7 +27,7 @@ export const createEntities = async ({
 	customerData?: CustomerData;
 	logger: any;
 	customerId: string;
-	createEntityData: CreateEntity[] | CreateEntity;
+	createEntityData: CreateEntityParams[] | CreateEntityParams;
 	withAutumnId?: boolean;
 	apiVersion?: LegacyVersion;
 	fromAutoCreate?: boolean;

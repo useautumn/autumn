@@ -11,6 +11,7 @@ import {
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { timeout } from "../../../utils/genUtils.js";
 import { trackWasSuccessful } from "../trackTestUtils.js";
 
 const testCase = "concurrentTrack5";
@@ -83,12 +84,16 @@ describe(`${chalk.yellowBright(`${testCase}: Testing per-entity track with concu
 		}
 
 		// Verify each seat has 500 messages
-		const updatedEntity = await autumnV1.entities.get(
-			customerId,
-			entities[0].id,
-		);
+		for (const entity of entities) {
+			const entityRes = await autumnV1.entities.get(customerId, entity.id);
+			expect(entityRes.features[TestFeature.Messages].balance).toBe(500);
+		}
 
-		expect(updatedEntity.features[TestFeature.Messages].balance).toBe(500);
+		// Verify customer has 500 * 5 = 2500 messages
+		const customerRes = await autumnV1.customers.get(customerId);
+
+		expect(customerRes.features[TestFeature.Messages]).toBeDefined();
+		expect(customerRes.features[TestFeature.Messages].balance).toBe(500 * 5);
 	});
 
 	test("should enforce usage_limit of 600 per seat with concurrent 200-unit requests", async () => {
@@ -183,30 +188,30 @@ describe(`${chalk.yellowBright(`${testCase}: Testing per-entity track with concu
 		}
 	});
 
-	// test("should reflect concurrent per-entity deductions in non-cached customer after 2s", async () => {
-	// 	const entityId = "seat1";
+	test("should reflect concurrent per-entity deductions in non-cached customer after 2s", async () => {
+		const entityId = "seat1";
 
-	// 	// Expected: 3 successful requests × 200 units each = 600 units used
-	// 	// Starting balance: 500, usage: 600, final balance: 500 - 600 = -100
+		// Expected: 3 successful requests × 200 units each = 600 units used
+		// Starting balance: 500, usage: 600, final balance: 500 - 600 = -100
 
-	// 	// Wait 2 seconds for DB sync
-	// 	await timeout(2000);
+		// Wait 2 seconds for DB sync
+		await timeout(2000);
 
-	// 	// Fetch entity with skip_cache=true
-	// 	const finalEntityRes = await autumnV1.entities.get(customerId, entityId, {
-	// 		skip_cache: "true",
-	// 	});
+		// Fetch entity with skip_cache=true
+		const finalEntityRes = await autumnV1.entities.get(customerId, entityId, {
+			skip_cache: "true",
+		});
 
-	// 	expect(finalEntityRes.features[TestFeature.Messages].balance).toBe(-100);
-	// 	expect(finalEntityRes.features[TestFeature.Messages].usage).toBe(600);
-	// 	expect(finalEntityRes.features[TestFeature.Messages].usage_limit).toBe(600);
+		expect(finalEntityRes.features[TestFeature.Messages].balance).toBe(-100);
+		expect(finalEntityRes.features[TestFeature.Messages].usage).toBe(600);
+		expect(finalEntityRes.features[TestFeature.Messages].usage_limit).toBe(600);
 
-	// 	// Verify other seats still at 500 in database
-	// 	for (const seatId of ["seat2", "seat3", "seat4", "seat5"]) {
-	// 		const otherSeatRes = await autumnV1.entities.get(customerId, seatId, {
-	// 			skip_cache: "true",
-	// 		});
-	// 		expect(otherSeatRes.features[TestFeature.Messages].balance).toBe(500);
-	// 	}
-	// });
+		// Verify other seats still at 500 in database
+		for (const seatId of ["seat2", "seat3", "seat4", "seat5"]) {
+			const otherSeatRes = await autumnV1.entities.get(customerId, seatId, {
+				skip_cache: "true",
+			});
+			expect(otherSeatRes.features[TestFeature.Messages].balance).toBe(500);
+		}
+	});
 });

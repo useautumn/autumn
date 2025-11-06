@@ -4,6 +4,7 @@ import { StatusCodes } from "http-status-codes";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { deleteStripeCustomer } from "@/external/stripe/stripeCusUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import RecaseError from "@/utils/errorUtils.js";
 import type {
 	ExtendedRequest,
@@ -72,6 +73,13 @@ export const deleteCusById = async ({
 		internalId: customer.internal_id,
 		orgId,
 		env: env,
+	});
+
+	// Delete customer and all entity caches atomically
+	await deleteCachedApiCustomer({
+		customerId: customer.id,
+		orgId,
+		env,
 	});
 
 	return response;

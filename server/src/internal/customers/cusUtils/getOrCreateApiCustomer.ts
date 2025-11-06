@@ -1,6 +1,7 @@
 import {
 	type ApiCustomer,
 	type CustomerData,
+	type CustomerLegacyData,
 	CustomerNotFoundError,
 } from "@autumn/shared";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
@@ -24,6 +25,7 @@ export const getOrCreateApiCustomer = async ({
 	// Phase 1: Get or Create Customer
 	// ========================================
 	let apiCustomer: ApiCustomer;
+	let legacyData: CustomerLegacyData;
 
 	// Path A: customerId is NULL - always create new customer
 	if (!customerId) {
@@ -39,12 +41,14 @@ export const getOrCreateApiCustomer = async ({
 			},
 		});
 
-		const { apiCustomer: createdApiCustomer } = await getCachedApiCustomer({
+		const res = await getCachedApiCustomer({
 			ctx,
 			customerId: newCustomer.id || newCustomer.internal_id,
 			withAutumnId,
 		});
-		apiCustomer = createdApiCustomer;
+
+		apiCustomer = res.apiCustomer;
+		legacyData = res.legacyData;
 	}
 	// Path B: customerId is NOT NULL - try to get, create if not found
 	else {
@@ -52,12 +56,13 @@ export const getOrCreateApiCustomer = async ({
 		let apiCustomerOrUndefined: ApiCustomer | undefined;
 
 		try {
-			const { apiCustomer: existingApiCustomer } = await getCachedApiCustomer({
+			const res = await getCachedApiCustomer({
 				ctx,
 				customerId,
 				withAutumnId,
 			});
-			apiCustomerOrUndefined = existingApiCustomer;
+			apiCustomerOrUndefined = res?.apiCustomer;
+			legacyData = res?.legacyData;
 		} catch (_error) {
 			if (_error instanceof CustomerNotFoundError) {
 			} else {
@@ -81,21 +86,23 @@ export const getOrCreateApiCustomer = async ({
 					},
 				});
 
-				const { apiCustomer: createdApiCustomer } = await getCachedApiCustomer({
+				const res = await getCachedApiCustomer({
 					ctx,
 					customerId: newCustomer.id || newCustomer.internal_id,
 					withAutumnId,
 				});
-				apiCustomerOrUndefined = createdApiCustomer;
+				apiCustomerOrUndefined = res?.apiCustomer;
+				legacyData = res?.legacyData;
 			} catch (error: any) {
 				// Handle race condition: another request created the customer
 				if (error?.data?.code === "23505") {
-					const { apiCustomer: racedApiCustomer } = await getCachedApiCustomer({
+					const res = await getCachedApiCustomer({
 						ctx,
 						customerId,
 						withAutumnId,
 					});
-					apiCustomerOrUndefined = racedApiCustomer;
+					apiCustomerOrUndefined = res?.apiCustomer;
+					legacyData = res?.legacyData;
 				} else {
 					throw error;
 				}
@@ -116,12 +123,13 @@ export const getOrCreateApiCustomer = async ({
 
 	// If updated, refresh the cache and get the latest ApiCustomer
 	if (updated) {
-		const { apiCustomer: refreshedApiCustomer } = await getCachedApiCustomer({
+		const res = await getCachedApiCustomer({
 			ctx,
 			customerId: apiCustomer.id || "",
 			withAutumnId,
 		});
-		apiCustomer = refreshedApiCustomer;
+		apiCustomer = res?.apiCustomer;
+		legacyData = res?.legacyData;
 	}
 
 	return apiCustomer;

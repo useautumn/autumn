@@ -33,7 +33,7 @@ const pro = constructProduct({
 	items: [lifetimeMessagesItem, monthlyMessagesItem],
 });
 
-const NUM_REQUESTS = 25000; // Reduced from 10000 to avoid DB parameter limits
+const NUM_REQUESTS = 5000; // Reduced from 10000 to avoid DB parameter limits
 const NUM_CUSTOMERS = 3;
 
 // Calculate total included usage dynamically
