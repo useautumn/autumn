@@ -193,7 +193,7 @@ export const getCheckData = async ({
 	return {
 		customerId: customer_id,
 		entityId: entity_id,
-		cusFeature: apiEntity.features?.[feature.id],
+		cusFeature: apiEntity.features?.[featureToUse.id],
 		// cusEnts: filteredCusEnts,
 		originalFeature: feature,
 		featureToUse,

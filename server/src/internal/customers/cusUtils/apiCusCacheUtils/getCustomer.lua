@@ -6,6 +6,12 @@
 -- ARGV[2]: env (for building entity cache keys)
 -- ARGV[3]: customer_id (for building entity cache keys)
 
+-- Helper function to safely convert values to numbers for arithmetic
+-- Returns the value if it's a number, otherwise returns 0
+local function toNum(value)
+    return type(value) == "number" and value or 0
+end
+
 local cacheKey = KEYS[1]
 local baseKey = cacheKey
 local orgId = ARGV[1]
@@ -40,20 +46,20 @@ for _, featureId in ipairs(featureIds) do
             local key = featureHash[i]
             local value = featureHash[i + 1]
             
-            -- Parse numeric values
-            if key == "balance" or key == "usage" or key == "included_usage" or key == "usage_limit" or key == "interval_count" or key == "next_reset_at" or key == "_breakdown_count" or key == "_rollover_count" then
+            -- Check for null first before parsing
+            if value == "null" then
+                featureData[key] = cjson.null
+            elseif key == "balance" or key == "usage" or key == "included_usage" or key == "usage_limit" or key == "interval_count" or key == "next_reset_at" or key == "_breakdown_count" or key == "_rollover_count" then
                 featureData[key] = tonumber(value)
             elseif key == "unlimited" or key == "overage_allowed" then
                 featureData[key] = (value == "true")
             elseif key == "credit_schema" then
                 -- Parse credit_schema JSON array
-                if value ~= "null" and value ~= "" then
+                if value ~= "" then
                     featureData[key] = cjson.decode(value)
                 else
                     featureData[key] = cjson.null
                 end
-            elseif value == "null" then
-                featureData[key] = cjson.null
             else
                 featureData[key] = value
             end
@@ -79,10 +85,10 @@ for _, featureId in ipairs(featureIds) do
             local key = rolloverHash[j]
             local value = rolloverHash[j + 1]
             
-            if key == "balance" or key == "expires_at" then
-                rolloverData[key] = tonumber(value)
-            elseif value == "null" then
+            if value == "null" then
                 rolloverData[key] = cjson.null
+            elseif key == "balance" or key == "expires_at" then
+                rolloverData[key] = tonumber(value)
             else
                 rolloverData[key] = value
             end
@@ -114,12 +120,12 @@ for _, featureId in ipairs(featureIds) do
                     local key = breakdownHash[j]
                     local value = breakdownHash[j + 1]
                     
-                    if key == "balance" or key == "usage" or key == "included_usage" or key == "usage_limit" or key == "interval_count" or key == "next_reset_at" then
+                    if value == "null" then
+                        breakdownData[key] = cjson.null
+                    elseif key == "balance" or key == "usage" or key == "included_usage" or key == "usage_limit" or key == "interval_count" or key == "next_reset_at" then
                         breakdownData[key] = tonumber(value)
                     elseif key == "overage_allowed" then
                         breakdownData[key] = (value == "true")
-                    elseif value == "null" then
-                        breakdownData[key] = cjson.null
                     else
                         breakdownData[key] = value
                     end
@@ -161,12 +167,12 @@ for _, entityId in ipairs(entityIds) do
                     local key = entityFeatureHash[i]
                     local value = entityFeatureHash[i + 1]
                     
-                    if key == "balance" or key == "usage" or key == "included_usage" or key == "usage_limit" or key == "interval_count" or key == "next_reset_at" or key == "_breakdown_count" or key == "_rollover_count" then
+                    if value == "null" then
+                        entityFeature[key] = cjson.null
+                    elseif key == "balance" or key == "usage" or key == "included_usage" or key == "usage_limit" or key == "interval_count" or key == "next_reset_at" or key == "_breakdown_count" or key == "_rollover_count" then
                         entityFeature[key] = tonumber(value)
                     elseif key == "unlimited" or key == "overage_allowed" then
                         entityFeature[key] = (value == "true")
-                    elseif value == "null" then
-                        entityFeature[key] = cjson.null
                     else
                         entityFeature[key] = value
                     end
@@ -187,12 +193,12 @@ for _, entityId in ipairs(entityIds) do
                             local key = breakdownHash[j]
                             local value = breakdownHash[j + 1]
                             
-                            if key == "balance" or key == "usage" or key == "included_usage" or key == "usage_limit" or key == "interval_count" or key == "next_reset_at" then
+                            if value == "null" then
+                                breakdownData[key] = cjson.null
+                            elseif key == "balance" or key == "usage" or key == "included_usage" or key == "usage_limit" or key == "interval_count" or key == "next_reset_at" then
                                 breakdownData[key] = tonumber(value)
                             elseif key == "overage_allowed" then
                                 breakdownData[key] = (value == "true")
-                            elseif value == "null" then
-                                breakdownData[key] = cjson.null
                             else
                                 breakdownData[key] = value
                             end
@@ -216,10 +222,10 @@ for _, entityId in ipairs(entityIds) do
                             local key = rolloverHash[j]
                             local value = rolloverHash[j + 1]
                             
-                            if key == "balance" or key == "expires_at" then
-                                rolloverData[key] = tonumber(value)
-                            elseif value == "null" then
+                            if value == "null" then
                                 rolloverData[key] = cjson.null
+                            elseif key == "balance" or key == "expires_at" then
+                                rolloverData[key] = tonumber(value)
                             else
                                 rolloverData[key] = value
                             end
@@ -250,18 +256,18 @@ for featureId, customerFeature in pairs(features) do
         for entityId, entityFeatures in pairs(entityFeatureData) do
             local entityFeature = entityFeatures[featureId]
             if entityFeature then
-                entityTotalBalance = entityTotalBalance + (entityFeature.balance or 0)
-                entityTotalUsage = entityTotalUsage + (entityFeature.usage or 0)
-                entityTotalIncludedUsage = entityTotalIncludedUsage + (entityFeature.included_usage or 0)
-                entityTotalUsageLimit = entityTotalUsageLimit + (entityFeature.usage_limit or 0)
+                entityTotalBalance = entityTotalBalance + toNum(entityFeature.balance)
+                entityTotalUsage = entityTotalUsage + toNum(entityFeature.usage)
+                entityTotalIncludedUsage = entityTotalIncludedUsage + toNum(entityFeature.included_usage)
+                entityTotalUsageLimit = entityTotalUsageLimit + toNum(entityFeature.usage_limit)
             end
         end
         
         -- Merge top-level balance and usage
-        customerFeature.balance = (customerFeature.balance or 0) + entityTotalBalance
-        customerFeature.usage = (customerFeature.usage or 0) + entityTotalUsage
-        customerFeature.included_usage = (customerFeature.included_usage or 0) + entityTotalIncludedUsage
-        customerFeature.usage_limit = (customerFeature.usage_limit or 0) + entityTotalUsageLimit
+        customerFeature.balance = toNum(customerFeature.balance) + entityTotalBalance
+        customerFeature.usage = toNum(customerFeature.usage) + entityTotalUsage
+        customerFeature.included_usage = toNum(customerFeature.included_usage) + entityTotalIncludedUsage
+        customerFeature.usage_limit = toNum(customerFeature.usage_limit) + entityTotalUsageLimit
         
         -- Merge breakdown balances and usage
         if customerFeature.breakdown and #customerFeature.breakdown > 0 then
@@ -274,17 +280,17 @@ for featureId, customerFeature in pairs(features) do
                 for entityId, entityFeatures in pairs(entityFeatureData) do
                     local entityFeature = entityFeatures[featureId]
                     if entityFeature and entityFeature.breakdowns and entityFeature.breakdowns[i] then
-                        entityBreakdownBalance = entityBreakdownBalance + (entityFeature.breakdowns[i].balance or 0)
-                        entityBreakdownUsage = entityBreakdownUsage + (entityFeature.breakdowns[i].usage or 0)
-                        entityBreakdownIncludedUsage = entityBreakdownIncludedUsage + (entityFeature.breakdowns[i].included_usage or 0)
-                        entityBreakdownUsageLimit = entityBreakdownUsageLimit + (entityFeature.breakdowns[i].usage_limit or 0)
+                        entityBreakdownBalance = entityBreakdownBalance + toNum(entityFeature.breakdowns[i].balance)
+                        entityBreakdownUsage = entityBreakdownUsage + toNum(entityFeature.breakdowns[i].usage)
+                        entityBreakdownIncludedUsage = entityBreakdownIncludedUsage + toNum(entityFeature.breakdowns[i].included_usage)
+                        entityBreakdownUsageLimit = entityBreakdownUsageLimit + toNum(entityFeature.breakdowns[i].usage_limit)
                     end
                 end
                 
-                breakdown.balance = (breakdown.balance or 0) + entityBreakdownBalance
-                breakdown.usage = (breakdown.usage or 0) + entityBreakdownUsage
-                breakdown.included_usage = (breakdown.included_usage or 0) + entityBreakdownIncludedUsage
-                breakdown.usage_limit = (breakdown.usage_limit or 0) + entityBreakdownUsageLimit
+                breakdown.balance = toNum(breakdown.balance) + entityBreakdownBalance
+                breakdown.usage = toNum(breakdown.usage) + entityBreakdownUsage
+                breakdown.included_usage = toNum(breakdown.included_usage) + entityBreakdownIncludedUsage
+                breakdown.usage_limit = toNum(breakdown.usage_limit) + entityBreakdownUsageLimit
             end
         end
         
@@ -296,11 +302,11 @@ for featureId, customerFeature in pairs(features) do
                 for entityId, entityFeatures in pairs(entityFeatureData) do
                     local entityFeature = entityFeatures[featureId]
                     if entityFeature and entityFeature.rollovers and entityFeature.rollovers[i] then
-                        entityRolloverBalance = entityRolloverBalance + (entityFeature.rollovers[i].balance or 0)
+                        entityRolloverBalance = entityRolloverBalance + toNum(entityFeature.rollovers[i].balance)
                     end
                 end
                 
-                rollover.balance = (rollover.balance or 0) + entityRolloverBalance
+                rollover.balance = toNum(rollover.balance) + entityRolloverBalance
             end
         end
     end
@@ -344,13 +350,13 @@ for featureId, customerFeature in pairs(features) do
         for entityId, entityFeatures in pairs(entityFeatureData) do
             local entityFeature = entityFeatures[featureId]
             if entityFeature then
-                entityTotalBalance = entityTotalBalance + (entityFeature.balance or 0)
-                entityTotalUsage = entityTotalUsage + (entityFeature.usage or 0)
-                entityTotalIncludedUsage = entityTotalIncludedUsage + (entityFeature.included_usage or 0)
-                entityTotalUsageLimit = entityTotalUsageLimit + (entityFeature.usage_limit or 0)
+                entityTotalBalance = entityTotalBalance + toNum(entityFeature.balance)
+                entityTotalUsage = entityTotalUsage + toNum(entityFeature.usage)
+                entityTotalIncludedUsage = entityTotalIncludedUsage + toNum(entityFeature.included_usage)
+                entityTotalUsageLimit = entityTotalUsageLimit + toNum(entityFeature.usage_limit)
                 
                 -- Find minimum next_reset_at across all entities
-                if entityFeature.next_reset_at then
+                if type(entityFeature.next_reset_at) == "number" then
                     if not minNextResetAt or entityFeature.next_reset_at < minNextResetAt then
                         minNextResetAt = entityFeature.next_reset_at
                     end

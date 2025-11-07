@@ -14,6 +14,7 @@ import type Stripe from "stripe";
 import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { logger } from "../../../src/external/logtail/logtailUtils.js";
 import { FeatureService } from "../../../src/internal/features/FeatureService.js";
 
 const ORG_SLUG = process.env.TESTS_ORG!;
@@ -43,6 +44,7 @@ export const createTestContext = async () => {
 		stripeCli,
 		db,
 		features,
+		logger,
 	};
 };
 
