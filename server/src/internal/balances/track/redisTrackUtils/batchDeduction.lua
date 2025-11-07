@@ -7,7 +7,10 @@
 --   [
 --     {
 --       featureDeductions: [{ featureId: "credits", amount: 10 }, ...],
---       overageBehavior: "cap" | "reject"
+--       overageBehavior: "cap" | "reject",
+--       syncMode: boolean (optional) - If true, sync cache to targetBalance instead of deducting
+--       targetBalance: number (optional) - Target balance for sync mode (per feature)
+--       entityId: string (optional) - Entity ID for entity-level tracking
 --     },
 --     ...
 --   ]
@@ -27,6 +30,28 @@ local requests = cjson.decode(requestsJson)
 -- Check if customer exists
 local customerExists = redis.call("EXISTS", cacheKey)
 if customerExists == 0 then
+    -- For sync mode requests, skip silently (cache will be populated lazily)
+    local allSyncMode = true
+    for _, request in ipairs(requests) do
+        if not request.syncMode then
+            allSyncMode = false
+            break
+        end
+    end
+    
+    if allSyncMode then
+        -- All requests are sync mode - return success without doing anything
+        local syncResults = {}
+        for i = 1, #requests do
+            table.insert(syncResults, { success = true })
+        end
+        return cjson.encode({
+            success = true,
+            results = syncResults
+        })
+    end
+    
+    -- At least one regular deduction - return error
     return cjson.encode({
         success = false,
         error = "CUSTOMER_NOT_FOUND",
@@ -586,6 +611,36 @@ end
 -- REQUEST PROCESSING
 -- ============================================================================
 
+-- Helper: Calculate sync deltas for sync mode requests
+-- In sync mode, we want to adjust cache to match the target balance from Postgres
+-- This requires loading the MERGED balance (customer + all entities) to calculate the correct delta
+local function calculateSyncDeltas(featureDeductions, targetBalance)
+    -- Load merged customer features (customer + entities) to get accurate current balance
+    local mergedFeatures = loadCusFeatures(cacheKey, orgId, env, customerId)
+    
+    if not mergedFeatures then
+        return -- Customer not in cache, no-op
+    end
+    
+    for _, featureDeduction in ipairs(featureDeductions) do
+        local featureId = featureDeduction.featureId
+        local mergedFeature = mergedFeatures[featureId]
+        
+        if mergedFeature and not mergedFeature.unlimited then
+            -- Get current MERGED balance (includes entities)
+            local currentBalance = mergedFeature.balance or 0
+            
+            -- Calculate delta (positive means deduct, negative means refund)
+            -- Example: currentBalance=10, targetBalance=7 → delta=3 (need to deduct 3)
+            -- Example: currentBalance=5, targetBalance=7 → delta=-2 (need to refund 2)
+            local delta = currentBalance - targetBalance
+            
+            -- Override the amount with the calculated delta
+            featureDeduction.amount = delta
+        end
+    end
+end
+
 -- Helper: Apply state changes to a cusFeature object
 local function applyStateChanges(cusFeature, stateChanges)
     for _, change in ipairs(stateChanges) do
@@ -623,10 +678,18 @@ local function processRequest(request, loadedCusFeatures, entityFeatureStates)
     local featureDeductions = request.featureDeductions
     local overageBehavior = request.overageBehavior or "cap"
     local entityId = request.entityId -- nil for customer-level tracking, set for entity-level tracking
+    local syncMode = request.syncMode or false
+    local targetBalance = request.targetBalance
     
     -- Collect all deltas and state changes for this request
     local requestDeltas = {}
     local requestStateChanges = {}
+    
+    -- SYNC MODE: Calculate delta to bring cache to target balance
+    -- Note: syncMode requests should only have ONE feature deduction
+    if syncMode and targetBalance then
+        calculateSyncDeltas(featureDeductions, targetBalance)
+    end
     
     -- Try to deduct from all features (primary + credit systems)
     for _, featureDeduction in ipairs(featureDeductions) do

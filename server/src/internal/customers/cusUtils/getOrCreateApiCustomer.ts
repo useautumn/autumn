@@ -90,6 +90,7 @@ export const getOrCreateApiCustomer = async ({
 					ctx,
 					customerId: newCustomer.id || newCustomer.internal_id,
 					withAutumnId,
+					source: "getOrCreateApiCustomer",
 				});
 				apiCustomerOrUndefined = res?.apiCustomer;
 				legacyData = res?.legacyData;

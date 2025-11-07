@@ -1,4 +1,5 @@
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
+import { getCachedApiCustomer } from "../../../customers/cusUtils/apiCusCacheUtils/getCachedApiCustomer.js";
 import { getOrCreateApiCustomer } from "../../../customers/cusUtils/getOrCreateApiCustomer.js";
 import { globalEventBatchingManager } from "../eventUtils/EventBatchingManager.js";
 import { globalSyncBatchingManager } from "../syncUtils/SyncBatchingManager.js";
@@ -111,16 +112,20 @@ export const runRedisDeduction = async ({
 		}
 	}
 
-	// const after = await getCachedApiCustomer({
-	// 	ctx,
-	// 	customerId,
-	// });
+	const apiCustomer = await getCachedApiCustomer({
+		ctx,
+		customerId,
+	});
 
-	// console.log("Credits after track:", {
-	// 	balance: after?.features?.credits?.balance,
-	// 	monthlyBalance: after?.features?.credits?.breakdown?.[0]?.balance,
-	// 	lifetimeBalance: after?.features?.credits?.breakdown?.[1]?.balance,
-	// });
+	const msgesFeature = apiCustomer.apiCustomer.features?.messages?.balance;
+	console.log(
+		`Feature deductions:`,
+		featureDeductions.map((d) => ({
+			featureId: d.feature.id,
+			deduction: d.deduction,
+		})),
+	);
+	console.log(`Post track, messages balance:`, msgesFeature);
 
 	return {
 		success: result.success,

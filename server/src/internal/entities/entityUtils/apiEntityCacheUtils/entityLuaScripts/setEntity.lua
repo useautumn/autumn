@@ -6,6 +6,11 @@
 local cacheKey = KEYS[1]
 local entityDataJson = ARGV[1]
 
+-- Check if complete cache already exists
+if checkCacheExists(cacheKey) then
+    return "CACHE_EXISTS"
+end
+
 -- Decode the entity data
 local entityData = cjson.decode(entityDataJson)
 

@@ -25,7 +25,6 @@ import {
 	getTotalNegativeBalance,
 	getUnlimitedAndUsageAllowed,
 } from "../../../customers/cusProducts/cusEnts/cusEntUtils.js";
-import { refreshCachedApiCustomer } from "../../../customers/cusUtils/apiCusCacheUtils/refreshCachedApiCustomer.js";
 import { getCreditCost } from "../../../features/creditSystemUtils.js";
 import { constructEvent, type EventInfo } from "./eventUtils.js";
 import type { FeatureDeduction } from "./getFeatureDeductions.js";
@@ -324,13 +323,42 @@ export const runDeductionTx = async (
 		},
 	);
 
-	// Refresh cache if requested (skip for sync operations)
-	if (params?.refreshCache) {
-		await refreshCachedApiCustomer({
-			ctx,
-			customerId: fullCus?.id ?? "",
-			entityId: fullCus?.entity?.id ?? "",
-		});
+	// Sync cache if requested (default: true for track, false for sync)
+	if (params?.refreshCache && fullCus) {
+		// Sync Redis cache for each affected feature
+		// This prevents race conditions with concurrent Redis track operations
+		const { syncCacheBalance } = await import(
+			"../redisTrackUtils/syncCacheBalance.js"
+		);
+
+		for (const deduction of params.deductions) {
+			const feature = deduction.feature;
+
+			// Find the customer entitlement for this feature to get the new balance
+			const cusEnts = cusProductsToCusEnts({
+				cusProducts: fullCus.customer_products,
+				featureIds: [feature.id],
+				reverseOrder: false,
+				entity: fullCus.entity,
+			});
+
+			if (cusEnts.length > 0) {
+				// Calculate total balance across all entitlements for this feature
+				const totalBalance = cusEnts.reduce(
+					(sum, ce) => sum + (ce.balance ?? 0),
+					0,
+				);
+
+				// Sync cache to match Postgres balance
+				await syncCacheBalance({
+					ctx,
+					customerId: fullCus.id ?? "",
+					featureId: feature.id,
+					targetBalance: totalBalance,
+					entityId: params.entityId,
+				});
+			}
+		}
 	}
 
 	return {

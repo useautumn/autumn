@@ -38,11 +38,13 @@ export const getCachedApiCustomer = async ({
 	customerId,
 	withAutumnId = false,
 	skipCache = false,
+	source,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	withAutumnId?: boolean;
 	skipCache?: boolean;
+	source?: string;
 }): Promise<{ apiCustomer: ApiCustomer; legacyData: CustomerLegacyData }> => {
 	const { org, env, db, logger } = ctx;
 
@@ -105,6 +107,7 @@ export const getCachedApiCustomer = async ({
 			ctx,
 			fullCus,
 			customerId,
+			source,
 		});
 	}
 

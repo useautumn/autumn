@@ -23,7 +23,7 @@ export const deleteCachedApiCustomer = async ({
 	customerId: string;
 	orgId: string;
 	env: string;
-	source?: unknown;
+	source?: string;
 }): Promise<void> => {
 	if (redis.status !== "ready") {
 		console.warn("❗️ Redis not ready, skipping cache deletion", {
@@ -49,8 +49,7 @@ export const deleteCachedApiCustomer = async ({
 		);
 
 		logger.info(
-			`Deleted ${deletedCount} cache keys for customer ${customerId}, source:`,
-			source,
+			`Deleted ${deletedCount} cache keys for customer ${customerId}, source: ${source}`,
 		);
 	} catch (error) {
 		console.error("Error deleting customer with entities:", error);
