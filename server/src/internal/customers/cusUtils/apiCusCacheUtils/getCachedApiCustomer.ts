@@ -98,7 +98,7 @@ export const getCachedApiCustomer = async ({
 		withSubs: true,
 	});
 
-	console.log("Entities:", fullCus.entities);
+
 
 	// Build ApiCustomer (base only, no expand)
 	const { apiCustomer, legacyData } = await getApiCustomerBase({

@@ -53,6 +53,7 @@ class BatchingManager {
 
 		try {
 			const eventItems = Array.from(currentEvents.values());
+			// Queue event batch (uses random MessageGroupId for SQS FIFO ordering)
 			await addTaskToQueue({
 				jobName: JobName.InsertEventBatch,
 				payload: {

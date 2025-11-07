@@ -1,6 +1,6 @@
 import { ErrCode } from "@autumn/shared";
 import RecaseError from "@/utils/errorUtils.js";
-import { queueRedis } from "../../queue/initQueue.js";
+import { redis } from "./initRedis.js";
 
 export const handleAttachRaceCondition = async ({
 	req,
@@ -14,19 +14,19 @@ export const handleAttachRaceCondition = async ({
 	const env = req.env;
 	const lockKey = `attach_${customerId}_${orgId}_${env}`;
 
-	console.log("Queue status:", queueRedis.status);
+	console.log("Queue status:", redis.status);
 
 	// Check if Redis is ready before attempting lock
-	if (queueRedis.status !== "ready") {
+	if (redis.status !== "ready") {
 		req.logger.warn("❗️❗️ Redis not ready, proceeding without lock", {
-			status: queueRedis.status,
+			status: redis.status,
 			customerId,
 		});
 		return null;
 	}
 
 	try {
-		const existingLock = await queueRedis.get(lockKey);
+		const existingLock = await redis.get(lockKey);
 
 		if (existingLock) {
 			throw new RecaseError({
@@ -36,7 +36,7 @@ export const handleAttachRaceCondition = async ({
 			});
 		}
 		// Create lock with 5 second timeout
-		await queueRedis.set(lockKey, "1", "PX", 5000, "NX");
+		await redis.set(lockKey, "1", "PX", 5000, "NX");
 
 		const originalJson = res.json;
 		res.json = async function (body: any) {
@@ -84,9 +84,9 @@ export const handleCustomerRaceCondition = async ({
 	const lockKey = `${action}_${customerId}_${orgId}_${env}`;
 
 	// Check if Redis is ready before attempting lock
-	if (queueRedis.status !== "ready") {
+	if (redis.status !== "ready") {
 		logger.warn("❗️❗️ Redis not ready, proceeding without lock", {
-			status: queueRedis.status,
+			status: redis.status,
 			action,
 			customerId,
 		});
@@ -94,7 +94,7 @@ export const handleCustomerRaceCondition = async ({
 	}
 
 	try {
-		const existingLock = await queueRedis.get(lockKey);
+		const existingLock = await redis.get(lockKey);
 		if (existingLock) {
 			throw new RecaseError({
 				message: `Action ${action} already running for customer ${customerId}, try again in a few seconds`,
@@ -103,7 +103,7 @@ export const handleCustomerRaceCondition = async ({
 			});
 		}
 		// Create lock with 5 second timeout
-		await queueRedis.set(lockKey, "1", "PX", 5000, "NX");
+		await redis.set(lockKey, "1", "PX", 5000, "NX");
 
 		const originalJson = res.json;
 		res.json = async function (body: any) {
@@ -141,16 +141,16 @@ export const clearLock = async ({
 	lockKey: string;
 	logger: any;
 }) => {
-	if (queueRedis.status !== "ready") {
+	if (redis.status !== "ready") {
 		logger.warn("❗️❗️ Redis not ready, skipping lock clear", {
-			status: queueRedis.status,
+			status: redis.status,
 			lockKey,
 		});
 		return;
 	}
 
 	try {
-		await queueRedis.del(lockKey);
+		await redis.del(lockKey);
 	} catch (error) {
 		logger.warn("❗️❗️ Error clearing lock");
 		logger.warn(error);

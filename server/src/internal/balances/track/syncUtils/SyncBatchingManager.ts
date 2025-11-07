@@ -10,28 +10,27 @@ interface SyncPairContext {
 	timestamp: number;
 }
 
-interface Batch {
+interface CustomerBatch {
 	pairs: Map<string, SyncPairContext>;
 	timer: NodeJS.Timeout | null;
 }
 
 /**
  * Batching manager for syncing Redis balance deductions to PostgreSQL
- * Accumulates unique (customerId, featureId) pairs and flushes to BullMQ for async sync
+ * Maintains separate batches per customer for proper FIFO ordering in SQS
  *
  * Benefits:
  * - Deduplication: Same pair only synced once per batch window
- * - Reduced DB load: Multiple pairs batched together
+ * - Per-customer ordering: Each customer's updates maintain FIFO order
+ * - Reduced DB load: Multiple pairs batched together per customer
  * - Non-blocking: Track endpoint returns immediately
  */
 export class SyncBatchingManager {
-	private batch: Batch = {
-		pairs: new Map(),
-		timer: null,
-	};
+	// Map of customerId -> batch
+	private customerBatches: Map<string, CustomerBatch> = new Map();
 
-	private readonly BATCH_WINDOW_MS = 100; // 100ms batching window
-	private readonly MAX_BATCH_SIZE = 10000; // Max unique pairs per batch
+	private readonly BATCH_WINDOW_MS = 500; // 100ms batching window
+	private readonly MAX_BATCH_SIZE_PER_CUSTOMER = 1000; // Max unique pairs per customer batch
 
 	/**
 	 * Add a (customerId, featureId) pair to the sync batch
@@ -44,18 +43,28 @@ export class SyncBatchingManager {
 		env,
 		entityId,
 	}: Omit<SyncPairContext, "timestamp">): void {
-		// Create unique key for this pair
-		const pairKey = `${orgId}:${env}:${customerId}:${featureId}${entityId ? `:${entityId}` : ""}`;
+		// Get or create batch for this customer
+		let customerBatch = this.customerBatches.get(customerId);
+		if (!customerBatch) {
+			customerBatch = {
+				pairs: new Map(),
+				timer: null,
+			};
+			this.customerBatches.set(customerId, customerBatch);
+		}
 
-		// If this is the first pair, schedule batch execution
-		if (this.batch.pairs.size === 0) {
-			this.scheduleBatch();
+		// Create unique key for this pair (within customer scope)
+		const pairKey = `${orgId}:${env}:${featureId}${entityId ? `:${entityId}` : ""}`;
+
+		// If this is the first pair for this customer, schedule batch execution
+		if (customerBatch.pairs.size === 0) {
+			this.scheduleCustomerBatch({ customerId });
 		}
 
 		// Add or update pair (Map handles deduplication)
 		// Use the earliest timestamp if the pair already exists, otherwise use current time
-		const existingPair = this.batch.pairs.get(pairKey);
-		this.batch.pairs.set(pairKey, {
+		const existingPair = customerBatch.pairs.get(pairKey);
+		customerBatch.pairs.set(pairKey, {
 			customerId,
 			featureId,
 			orgId,
@@ -65,33 +74,41 @@ export class SyncBatchingManager {
 		});
 
 		// Force flush if batch is full
-		if (this.batch.pairs.size >= this.MAX_BATCH_SIZE) {
-			this.executeBatch();
+		if (customerBatch.pairs.size >= this.MAX_BATCH_SIZE_PER_CUSTOMER) {
+			this.executeCustomerBatch({ customerId });
 		}
 	}
 
 	/**
-	 * Schedule batch execution after window expires
+	 * Schedule batch execution for a specific customer after window expires
 	 */
-	private scheduleBatch(): void {
-		this.batch.timer = setTimeout(() => {
-			this.executeBatch();
+	private scheduleCustomerBatch({ customerId }: { customerId: string }): void {
+		const customerBatch = this.customerBatches.get(customerId);
+		if (!customerBatch) return;
+
+		customerBatch.timer = setTimeout(() => {
+			this.executeCustomerBatch({ customerId });
 		}, this.BATCH_WINDOW_MS);
 	}
 
 	/**
-	 * Execute the batch - flush all accumulated pairs to BullMQ
+	 * Execute the batch for a specific customer - flush to SQS
 	 */
-	private async executeBatch(): Promise<void> {
+	private async executeCustomerBatch({
+		customerId,
+	}: { customerId: string }): Promise<void> {
+		const customerBatch = this.customerBatches.get(customerId);
+		if (!customerBatch) return;
+
 		// Clear timer
-		if (this.batch.timer) {
-			clearTimeout(this.batch.timer);
-			this.batch.timer = null;
+		if (customerBatch.timer) {
+			clearTimeout(customerBatch.timer);
+			customerBatch.timer = null;
 		}
 
-		// Snapshot current batch and reset for new requests
-		const currentPairs = this.batch.pairs;
-		this.batch.pairs = new Map();
+		// Snapshot current batch and remove from map
+		const currentPairs = customerBatch.pairs;
+		this.customerBatches.delete(customerId);
 
 		if (currentPairs.size === 0) {
 			return;
@@ -101,16 +118,22 @@ export class SyncBatchingManager {
 			// Convert Map to array for job payload
 			const items = Array.from(currentPairs.values());
 
-			// Queue the sync job
+			// Queue the sync job with customer ID as MessageGroupId (for SQS FIFO)
 			await addTaskToQueue({
 				jobName: JobName.SyncBalanceBatch,
 				payload: {
 					items,
 				},
+				messageGroupId: customerId,
 			});
-			console.log(`Queued sync batch with ${items.length} items`);
+			console.log(
+				`Queued sync batch for customer ${customerId} with ${items.length} items`,
+			);
 		} catch (error) {
-			console.error(`❌ Failed to queue sync batch:`, error);
+			console.error(
+				`❌ Failed to queue sync batch for customer ${customerId}:`,
+				error,
+			);
 			// TODO: Consider retry logic or dead letter queue
 		}
 	}
@@ -119,20 +142,33 @@ export class SyncBatchingManager {
 	 * Get current batch statistics (for monitoring)
 	 */
 	getStats(): {
-		pendingPairs: number;
-		timerActive: boolean;
+		totalCustomers: number;
+		totalPendingPairs: number;
+		activeTimers: number;
 	} {
+		let totalPairs = 0;
+		let activeTimers = 0;
+
+		for (const batch of this.customerBatches.values()) {
+			totalPairs += batch.pairs.size;
+			if (batch.timer !== null) activeTimers++;
+		}
+
 		return {
-			pendingPairs: this.batch.pairs.size,
-			timerActive: this.batch.timer !== null,
+			totalCustomers: this.customerBatches.size,
+			totalPendingPairs: totalPairs,
+			activeTimers,
 		};
 	}
 
 	/**
-	 * Force flush the current batch (useful for graceful shutdown)
+	 * Force flush all customer batches (useful for graceful shutdown)
 	 */
 	async flush(): Promise<void> {
-		await this.executeBatch();
+		const customerIds = Array.from(this.customerBatches.keys());
+		await Promise.all(
+			customerIds.map((customerId) => this.executeCustomerBatch({ customerId })),
+		);
 	}
 }
 
