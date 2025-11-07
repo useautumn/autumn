@@ -97,7 +97,7 @@ export const getV2CheckResponse = async ({
 
 		const usageLimit = apiCusFeature.usage_limit || 0;
 		const usage = apiCusFeature.usage || 0;
-		if (usage < usageLimit) {
+		if (new Decimal(usage).plus(requiredBalance).lt(usageLimit)) {
 			allowed = true;
 		}
 	}
@@ -115,6 +115,10 @@ export const getV2CheckResponse = async ({
 	// 	allowed = false;
 	// }
 
+	const apiOverageAllowed = notNullish(apiCusFeature.usage_limit)
+		? false
+		: apiCusFeature.overage_allowed;
+
 	return CheckResultSchema.parse({
 		allowed,
 		customer_id: customerId,
@@ -123,6 +127,7 @@ export const getV2CheckResponse = async ({
 		required_balance: requiredBalance,
 		code: SuccessCode.FeatureFound,
 		...apiCusFeature,
+		overage_allowed: apiOverageAllowed,
 	} satisfies CheckResult);
 
 	// return;
