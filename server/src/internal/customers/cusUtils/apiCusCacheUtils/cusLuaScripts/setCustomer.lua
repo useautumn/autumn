@@ -11,6 +11,11 @@ local customerDataJson = ARGV[1]
 local orgId = ARGV[2]
 local env = ARGV[3]
 
+-- Check if complete cache already exists
+if checkCacheExists(cacheKey) then
+    return "CACHE_EXISTS"
+end
+
 -- Decode the customer data
 local customerData = cjson.decode(customerDataJson)
 

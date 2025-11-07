@@ -2,7 +2,6 @@ import { expect } from "bun:test";
 import type { ProductV2 } from "@autumn/shared";
 import { AutumnCli } from "../../../cli/AutumnCli.js";
 import { TestFeature } from "../../../setup/v2Features.js";
-import { timeout } from "../../../utils/genUtils.js";
 
 export const checkEntitledOnProduct = async ({
 	customerId,
@@ -44,7 +43,7 @@ export const checkEntitledOnProduct = async ({
 	}
 
 	await Promise.all(batchUpdates);
-	await timeout(timeoutMs);
+	// await timeout(timeoutMs);
 	let used = randomNum;
 
 	// 2. Check entitled
@@ -73,7 +72,7 @@ export const checkEntitledOnProduct = async ({
 		);
 	}
 	await Promise.all(batchUpdates2);
-	await timeout(timeoutMs);
+	// await timeout(timeoutMs);
 	used += allowance - randomNum;
 
 	// 3. Check entitled again

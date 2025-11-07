@@ -22,12 +22,14 @@ export const setCachedApiCustomer = async ({
 	ctx,
 	fullCus,
 	customerId,
+	source,
 }: {
 	ctx: AutumnContext;
 	fullCus: FullCustomer;
 	customerId: string;
+	source?: string;
 }) => {
-	const { org, env } = ctx;
+	const { org, env, logger } = ctx;
 
 	const cacheKey = buildCachedApiCustomerKey({
 		customerId,
@@ -99,4 +101,5 @@ export const setCachedApiCustomer = async ({
 			);
 		}
 	});
+	logger.info(`Set cached api customer ${customerId}, source: ${source}`);
 };

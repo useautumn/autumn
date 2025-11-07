@@ -63,7 +63,6 @@ describe(`${chalk.yellowBright("track-legacy2: Testing /entitled & /events, for 
 			usageBased: true,
 		});
 	});
-	return;
 
 	test("should have correct usage-based balance (balance < 0)", async () => {
 		const { allowed, balanceObj }: any = await AutumnCli.entitled(
@@ -81,7 +80,7 @@ describe(`${chalk.yellowBright("track-legacy2: Testing /entitled & /events, for 
 			batchUpdates.push(
 				AutumnCli.sendEvent({
 					customerId: customerId,
-					eventName: TestFeature.Messages,
+					featureId: TestFeature.Messages,
 				}),
 			);
 		}

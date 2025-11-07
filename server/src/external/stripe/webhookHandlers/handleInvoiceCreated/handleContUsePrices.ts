@@ -1,11 +1,14 @@
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type {
+	FullCustomerEntitlement,
+	FullCustomerPrice,
+} from "@autumn/shared";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { findLinkedCusEnts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
 import { removeReplaceablesFromCusEnt } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/linkedCusEntUtils.js";
-import { getRelatedCusEnt } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
-import { FullCustomerEntitlement, FullCustomerPrice } from "@autumn/shared";
 import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService.js";
+import { getRelatedCusEnt } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
 import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";
 
 export const handleContUsePrices = async ({
@@ -25,7 +28,7 @@ export const handleContUsePrices = async ({
 	invoice: Stripe.Invoice;
 	usageSub: Stripe.Subscription;
 	logger: any;
-}) => {
+}): Promise<boolean> => {
 	const cusEnt = getRelatedCusEnt({
 		cusPrice,
 		cusEnts,
@@ -33,7 +36,7 @@ export const handleContUsePrices = async ({
 
 	if (!cusEnt) {
 		console.log("No related cus ent found");
-		return;
+		return false;
 	}
 
 	// If invoice is not for new period (eg. upgrades, etc, skip)
@@ -42,29 +45,29 @@ export const handleContUsePrices = async ({
 	});
 	const isNewPeriod = invoice.period_start !== start;
 	if (!isNewPeriod) {
-		return;
+		return false;
 	}
 
-	let feature = cusEnt.entitlement.feature;
+	const feature = cusEnt.entitlement.feature;
 	logger.info(
 		`Handling invoice.created for in arrear prorated, feature: ${feature.id}`,
 	);
 
-	let replaceables = cusEnt.replaceables.filter((r) => r.delete_next_cycle);
+	const replaceables = cusEnt.replaceables.filter((r) => r.delete_next_cycle);
 
-	if (replaceables.length == 0) {
-		return;
+	if (replaceables.length === 0) {
+		return false;
 	}
 
 	logger.info(`🚀 Deleting replaceables for ${feature.id}`);
 
-	let linkedCusEnts = findLinkedCusEnts({
+	const linkedCusEnts = findLinkedCusEnts({
 		cusEnts,
 		feature,
 	});
 
 	for (const linkedCusEnt of linkedCusEnts) {
-		let { newEntities } = removeReplaceablesFromCusEnt({
+		const { newEntities } = removeReplaceablesFromCusEnt({
 			cusEnt: linkedCusEnt,
 			replaceableIds: replaceables.map((r) => r.id),
 		});
@@ -78,21 +81,6 @@ export const handleContUsePrices = async ({
 		});
 	}
 
-	// let subItem = findStripeItemForPrice({
-	//   stripeItems: usageSub.items.data,
-	//   price: cusPrice.price,
-	// });
-
-	// if (subItem) {
-	//   let newQuantity = (subItem.quantity || 0) - replaceables.length;
-	//   newQuantity = Math.max(0, newQuantity);
-	//   await stripeCli.subscriptionItems.update(subItem.id, {
-	//     quantity: newQuantity,
-	//     proration_behavior: "always_invoice",
-	//   });
-	//   logger.info(`Update sub item quantity to ${newQuantity}`);
-	// }
-
 	await CusEntService.increment({
 		db,
 		id: cusEnt.id,
@@ -103,4 +91,6 @@ export const handleContUsePrices = async ({
 		db,
 		ids: replaceables.map((r) => r.id),
 	});
+
+	return true;
 };

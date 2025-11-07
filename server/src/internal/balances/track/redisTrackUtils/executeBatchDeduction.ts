@@ -9,6 +9,9 @@ interface FeatureDeduction {
 interface BatchRequest {
 	featureDeductions: FeatureDeduction[];
 	overageBehavior: "cap" | "reject";
+	syncMode?: boolean; // If true, sync cache to target balance instead of deducting
+	targetBalance?: number; // Target balance for sync mode (per feature)
+	entityId?: string;
 }
 
 interface RequestResult {

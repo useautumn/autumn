@@ -6,6 +6,8 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { unsetOrgStripeKeys } from "@/internal/orgs/orgUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import type { AutumnContext } from "../../honoUtils/HonoEnv.js";
+import { deleteCachedApiCustomer } from "../../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
+import { setCachedApiCusProducts } from "../../internal/customers/cusUtils/apiCusCacheUtils/setCachedApiCusProducts.js";
 import type { Logger } from "../logtail/logtailUtils.js";
 import { handleCheckoutSessionCompleted } from "./webhookHandlers/handleCheckoutCompleted.js";
 import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDeleted.js";
@@ -80,32 +82,30 @@ const handleStripeWebhookRefresh = async ({
 			return;
 		}
 
-		// if (updateProductEvents.includes(eventType)) {
-		// 	const fullCus = await CusService.getFull({
-		// 		db,
-		// 		idOrInternalId: cus.id!,
-		// 		orgId: org.id,
-		// 		env,
-		// 		withEntities: true,
-		// 		withSubs: true,
-		// 	});
+		if (updateProductEvents.includes(eventType)) {
+			const fullCus = await CusService.getFull({
+				db,
+				idOrInternalId: cus.id!,
+				orgId: org.id,
+				env,
+				withEntities: true,
+				withSubs: true,
+			});
 
-		// 	await setCachedApiCusProducts({
-		// 		ctx,
-		// 		fullCus,
-		// 		customerId: cus.id!,
-		// 	});
-		// } else {
-		// 	await deleteCachedApiCustomer({
-		// 		customerId: cus.id!,
-		// 		orgId: org.id,
-		// 		env,
-		// 		source: {
-		// 			stripeWebhook: true,
-		// 			eventType,
-		// 		},
-		// 	});
-		// }
+			await setCachedApiCusProducts({
+				ctx,
+				fullCus,
+				customerId: cus.id!,
+			});
+		} else {
+			logger.info(`Attempting delete cached api customer! ${eventType}`);
+			await deleteCachedApiCustomer({
+				customerId: cus.id!,
+				orgId: org.id,
+				env,
+				source: `handleStripeWebhookRefresh: ${eventType}`,
+			});
+		}
 	}
 };
 

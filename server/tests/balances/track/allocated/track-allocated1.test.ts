@@ -9,7 +9,7 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
-const testCase = "concurrentTrack2";
+const testCase = "track-allocated1";
 const customerId = testCase;
 
 const pro = constructProduct({
@@ -24,7 +24,7 @@ const pro = constructProduct({
 	],
 });
 
-describe(`${chalk.yellowBright(`concurrentTrack2: Testing concurrent track, allocated feature`)}`, () => {
+describe(`${chalk.yellowBright(`track-allocated1: Tracking allocated feature `)}`, () => {
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
 	beforeAll(async () => {
@@ -85,20 +85,19 @@ describe(`${chalk.yellowBright(`concurrentTrack2: Testing concurrent track, allo
 
 		await Promise.all(promises);
 
-		// console.log(results);
-		// return;
-
-		// const successCount = results.filter((r) => r.status === "fulfilled").length;
-		// const rejectedCount = results.filter((r) => r.status === "rejected").length;
-
-		// // Only 1 should succeed, 4 should be rejected due to insufficient balance
-		// expect(successCount).toBe(1);
-		// expect(rejectedCount).toBe(4);
-
 		// Check final balance
 		const customer = await autumnV1.customers.get(customerId);
 		const finalBalance = customer.features[TestFeature.Users].balance;
 
 		expect(finalBalance).toBe(-4);
+
+		// Get non-cached customer
+		const nonCachedCustomer = await autumnV1.customers.get(customerId, {
+			skip_cache: "true",
+		});
+		const nonCachedFinalBalance =
+			nonCachedCustomer.features[TestFeature.Users].balance;
+
+		expect(nonCachedFinalBalance).toBe(-4);
 	});
 });

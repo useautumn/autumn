@@ -105,6 +105,7 @@ export const handleSchedulePhaseCompleted = async ({
 				customerId: cusProduct.internal_customer_id || "",
 				orgId: org.id,
 				env,
+				source: "handleSchedulePhaseCompleted",
 			});
 		}
 	}

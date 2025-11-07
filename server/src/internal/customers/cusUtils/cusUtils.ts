@@ -21,7 +21,7 @@ import {
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
-import { refreshCachedApiCustomer } from "./apiCusCacheUtils/refreshCachedApiCustomer.js";
+import { setCachedApiCusDetails } from "./apiCusCacheUtils/setCachedApiCusDetails.js";
 
 export const updateCustomerDetails = async ({
 	ctx,
@@ -63,9 +63,11 @@ export const updateCustomerDetails = async ({
 		});
 		customer = { ...customer, ...updates };
 
-		await refreshCachedApiCustomer({
+		// Update cache if it exists
+		await setCachedApiCusDetails({
 			ctx,
-			customerId: idOrInternalId,
+			customer,
+			updates,
 		});
 
 		return true;
