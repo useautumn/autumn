@@ -11,7 +11,6 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 import {
 	attachPmToCus,
 	createStripeCustomer,
@@ -93,12 +92,6 @@ export const initCustomer = async ({
 
 	if (customer) {
 		await autumn.customers.delete(customerId);
-		await deleteCusCache({
-			db,
-			customerId: customerId,
-			org,
-			env: env,
-		});
 	}
 
 	try {

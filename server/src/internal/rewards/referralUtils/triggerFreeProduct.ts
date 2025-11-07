@@ -13,12 +13,12 @@ import { StatusCodes } from "http-status-codes";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 import type { InsertCusProductParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
+import { deleteCachedApiCustomer } from "../../customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import { RewardRedemptionService } from "../RewardRedemptionService.js";
 import { ReferralResponseCodes } from "../referralUtils.js";
 import { triggerFreePaidProduct } from "./triggerFreePaidProduct.js";
@@ -145,10 +145,9 @@ export const triggerFreeProduct = async ({
 		});
 		logger.info(`✅ Added ${fullProduct.name} to redeemer`);
 
-		await deleteCusCache({
-			db,
+		await deleteCachedApiCustomer({
 			customerId: fullRedeemer.id!,
-			org,
+			orgId: org.id,
 			env,
 		});
 	}
@@ -163,10 +162,10 @@ export const triggerFreeProduct = async ({
 			},
 			logger,
 		});
-		await deleteCusCache({
-			db,
+
+		await deleteCachedApiCustomer({
 			customerId: fullReferrer.id!,
-			org,
+			orgId: org.id,
 			env,
 		});
 		logger.info(`✅ Added ${fullProduct.name} to referrer`);

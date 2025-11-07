@@ -13,7 +13,6 @@ import {
 } from "@/external/connect/initStripeCli.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { handleWebhookErrorSkip } from "../../utils/routerUtils/webhookErrorSkip.js";
 import { handleStripeWebhookEvent } from "../stripe/handleStripeWebhookEvent.js";
 
@@ -109,12 +108,8 @@ export const handleConnectWebhook = async (c: Context<HonoEnv>) => {
 
 	try {
 		await handleStripeWebhookEvent({
+			ctx,
 			event,
-			db,
-			org,
-			env: env as AppEnv,
-			logger,
-			req: ctx as ExtendedRequest,
 		});
 		return c.json({ message: "Webhook received" }, 200);
 	} catch (error) {

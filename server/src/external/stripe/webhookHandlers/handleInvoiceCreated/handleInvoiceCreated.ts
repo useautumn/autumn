@@ -20,6 +20,7 @@ import { FeatureService } from "@/internal/features/FeatureService.js";
 import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
+import { deleteCachedApiCustomer } from "../../../../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import {
 	getFullStripeInvoice,
 	invoiceToSubId,
@@ -208,13 +209,6 @@ export const sendUsageAndReset = async ({
 			continue;
 		}
 
-		// let usageBasedSub = await getUsageBasedSub({
-		//   db,
-		//   stripeCli,
-		//   subIds: activeProduct.subscription_ids || [],
-		//   feature: relatedCusEnt.entitlement.feature,
-		//   stripeSubs,
-		// });
 		const usageBasedSub = await cusProductToSub({
 			cusProduct: activeProduct,
 			stripeCli,
@@ -312,7 +306,7 @@ export const handleInvoiceCreated = async ({
 			],
 		});
 
-		if (activeProducts.length == 0) {
+		if (activeProducts.length === 0) {
 			logger.warn(
 				`Stripe invoice.created -- no active products found (${org.slug})`,
 			);
@@ -379,6 +373,12 @@ export const handleInvoiceCreated = async ({
 				stripeSubs,
 				invoice,
 				logger,
+			});
+
+			await deleteCachedApiCustomer({
+				customerId: activeProduct.customer?.id || "",
+				orgId: org.id,
+				env: activeProduct.customer?.env || "",
 			});
 		}
 	}

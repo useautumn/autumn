@@ -1,10 +1,11 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { redis } from "@/external/redis/initRedis.js";
+import { logger } from "../../../../external/logtail/logtailUtils.js";
 import { buildCachedApiCustomerKey } from "./getCachedApiCustomer.js";
 
 const DELETE_CUSTOMER_SCRIPT = readFileSync(
-	join(import.meta.dir, "deleteCustomer.lua"),
+	join(import.meta.dir, "cusLuaScripts", "deleteCustomer.lua"),
 	"utf-8",
 );
 
@@ -17,10 +18,12 @@ export const deleteCachedApiCustomer = async ({
 	customerId,
 	orgId,
 	env,
+	source,
 }: {
 	customerId: string;
 	orgId: string;
 	env: string;
+	source?: unknown;
 }): Promise<void> => {
 	if (redis.status !== "ready") {
 		console.warn("❗️ Redis not ready, skipping cache deletion", {
@@ -29,6 +32,8 @@ export const deleteCachedApiCustomer = async ({
 		});
 		return;
 	}
+
+	if (!customerId) return;
 
 	const cacheKey = buildCachedApiCustomerKey({
 		customerId,
@@ -43,8 +48,9 @@ export const deleteCachedApiCustomer = async ({
 			cacheKey, // The base pattern: {orgId}:env:customer:customerId
 		);
 
-		console.log(
-			`🗑️ Deleted ${deletedCount} cache keys for customer ${customerId}`,
+		logger.info(
+			`Deleted ${deletedCount} cache keys for customer ${customerId}, source:`,
+			source,
 		);
 	} catch (error) {
 		console.error("Error deleting customer with entities:", error);

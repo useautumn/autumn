@@ -166,4 +166,5 @@ export const handleUsagePrices = async ({
 	}
 
 	logger.info("✅ Successfully reset balance");
+	return true;
 };

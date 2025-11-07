@@ -13,7 +13,6 @@ import chalk from "chalk";
 import { format, getDate, getMonth, setDate } from "date-fns";
 import { Decimal } from "decimal.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { getRelatedCusPrice } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
@@ -25,6 +24,7 @@ import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { getNextResetAt } from "@/utils/timeUtils.js";
 import type { DrizzleCli } from "../db/initDrizzle.js";
 import { RolloverService } from "../internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService.js";
+import { deleteCachedApiCustomer } from "../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 
 const checkSubAnchor = async ({
 	db,
@@ -140,10 +140,10 @@ const handleShortDurationCusEnt = async ({
 		db,
 		orgId: cusEnt.customer.org_id,
 	});
-	await deleteCusCache({
-		db,
+
+	await deleteCachedApiCustomer({
 		customerId: cusEnt.customer.id!,
-		org: org,
+		orgId: org.id,
 		env: cusEnt.customer.env,
 	});
 
@@ -307,20 +307,12 @@ export const resetCustomerEntitlement = async ({
 			db,
 			orgId: cusEnt.customer.org_id,
 		});
-		await deleteCusCache({
-			db,
+
+		await deleteCachedApiCustomer({
 			customerId: cusEnt.customer.id!,
-			org: org,
+			orgId: org.id,
 			env: cusEnt.customer.env,
 		});
-		// if (cacheOrg) {
-		//   await deleteCusCache({
-		//     db,
-		//     customerId: cusEnt.customer.id!,
-		//     org: cacheOrg,
-		//     env: cusEnt.customer.env,
-		//   });
-		// }
 	} catch (error: any) {
 		console.log(
 			`Failed to reset ${cusEnt.id} | ${cusEnt.customer_id} | ${cusEnt.feature_id}, error: ${error}`,

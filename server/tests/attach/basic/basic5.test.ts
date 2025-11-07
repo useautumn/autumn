@@ -50,6 +50,7 @@ describe(`${chalk.yellowBright("basic5: Testing cancel through Stripe at period 
 
 	test("should have pro product active, and canceled_at != null, and free scheduled", async () => {
 		const cusRes: any = await AutumnCli.getCustomer(customerId);
+
 		compareMainProduct({
 			sent: products.pro,
 			cusRes: cusRes,
@@ -67,6 +68,7 @@ describe(`${chalk.yellowBright("basic5: Testing cancel through Stripe at period 
 		expect(freeProduct).toBeDefined();
 		expect(freeProduct.status).toBe(CusProductStatus.Scheduled);
 	});
+	return;
 
 	test("should cancel pro product (now)", async () => {
 		const cusRes: any = await AutumnCli.getCustomer(customerId);

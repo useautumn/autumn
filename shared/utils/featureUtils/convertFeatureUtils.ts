@@ -25,3 +25,7 @@ export const featureToItemFeatureType = ({ feature }: { feature: Feature }) => {
 
 	return featureType;
 };
+
+export const isContUseFeature = ({ feature }: { feature: Feature }) => {
+	return feature.config?.usage_type === FeatureUsageType.Continuous;
+};

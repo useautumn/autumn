@@ -93,7 +93,9 @@ describe(`${chalk.yellowBright(`${testCase}: Testing per-entity track with concu
 		const customerRes = await autumnV1.customers.get(customerId);
 
 		expect(customerRes.features[TestFeature.Messages]).toBeDefined();
-		expect(customerRes.features[TestFeature.Messages].balance).toBe(500 * 5);
+		expect(customerRes.features[TestFeature.Messages].balance).toBe(
+			500 * entities.length,
+		);
 	});
 
 	test("should enforce usage_limit of 600 per seat with concurrent 200-unit requests", async () => {

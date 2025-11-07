@@ -20,3 +20,8 @@ export const SET_ENTITIES_BATCH_SCRIPT = readFileSync(
 	join(__dirname, "setEntitiesBatch.lua"),
 	"utf-8",
 );
+
+export const SET_ENTITY_PRODUCTS_SCRIPT = readFileSync(
+	join(__dirname, "setEntityProducts.lua"),
+	"utf-8",
+);

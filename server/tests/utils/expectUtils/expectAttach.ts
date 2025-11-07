@@ -1,7 +1,7 @@
 import {
 	type AppEnv,
 	AttachBranch,
-	type CreateEntity,
+	type CreateEntityParams,
 	CusProductStatus,
 	type FeatureOptions,
 	type Organization,
@@ -65,7 +65,7 @@ export const attachAndExpectCorrect = async ({
 	skipFeatureCheck?: boolean;
 	skipSubCheck?: boolean;
 	numSubs?: number;
-	entities?: CreateEntity[];
+	entities?: CreateEntityParams[];
 	shouldBeCanceled?: boolean;
 	checkNotTrialing?: boolean;
 	attachParams?: AttachParams;

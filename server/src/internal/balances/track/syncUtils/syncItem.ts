@@ -63,23 +63,12 @@ export const syncItem = async ({
 		entityId,
 	});
 
-	// const { apiCustomer: pgCustomer } = await getApiCustomerBase({
-	// 	ctx,
-	// 	fullCus,
-	// 	withAutumnId: false,
-	// });
-
 	const relevantFeatures = getRelevantFeatures({
 		features: ctx.features,
 		featureId,
 	});
 
 	const featureDeductions: FeatureDeduction[] = [];
-
-	// console.log(
-	// 	"SYNC LAYER, REDIS CUSTOMER FEATURES:",
-	// 	JSON.stringify(redisCustomer.features, null, 2),
-	// );
 
 	for (const relevantFeature of relevantFeatures) {
 		const redisCusFeature = redisEntity.features?.[relevantFeature.id];
@@ -101,7 +90,15 @@ export const syncItem = async ({
 		refreshCache: false, // CRITICAL: Don't refresh cache after sync (Redis is the source of truth)
 	});
 
-	const logText = `sync complete | customer: ${customerId}, feature:${featureId}${entityId ? `, entity:${entityId}` : ""} [${org.slug}, ${env}]`;
-	console.log(logText);
-	ctx.logger.info(logText);
+	// const logText = `sync complete | customer: ${customerId}, feature:${featureId}${entityId ? `, entity:${entityId}` : ""} [${org.slug}, ${env}]`;
+	// console.log(logText);
+	// ctx.logger.info(logText);
+	ctx.logger.info(
+		`[SYNC COMPLETE] customer ${customerId}, feature ${featureId}, target: ${featureDeductions?.[0]?.targetBalance}`,
+	);
+	ctx.logger.info(`[SYNC COMPLETE] org: ${org.slug}, env: ${env}`);
+	if (process.env.NODE_ENV === "production") {
+		console.log(`synced customer ${customerId}, feature ${featureId}`);
+		console.log(`org: ${org.slug}, env: ${env}`);
+	}
 };

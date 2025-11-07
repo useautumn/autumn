@@ -103,13 +103,6 @@ export const getOrCreateCustomer = async ({
 				expand,
 				withSubs: true,
 			});
-
-			// await deleteCusCache({
-			// 	db,
-			// 	customerId: customer.id || customer.internal_id,
-			// 	org,
-			// 	env,
-			// });
 		} catch (error: any) {
 			if (error?.data?.code === "23505" && customerId) {
 				customer = await CusService.getFull({

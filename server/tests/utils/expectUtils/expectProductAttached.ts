@@ -164,39 +164,4 @@ export const expectInvoicesCorrect = ({
 		console.log(`invoice for ${first.productId}, ${first.total} not found`);
 		throw error;
 	}
-
-	// if (first) {
-
-	// }
-
-	// if (second) {
-	//   const totalAmount = new Decimal(invoices![0].total)
-	//     .plus(invoices![1].total)
-	//     .toDecimalPlaces(2)
-	//     .toNumber();
-	//   // console.log("First invoice:", invoices![0].total, invoices![0].product_ids);
-	//   // console.log(
-	//   //   "Second invoice:",
-	//   //   invoices![1].total,
-	//   //   invoices![1].product_ids,
-	//   // );
-	//   try {
-	//     expect(totalAmount).to.approximately(
-	//       second.total,
-	//       0.01,
-	//       `first & second invoice total should sum to ${second.total}`,
-	//     );
-	//     expect(
-	//       invoices![0].product_ids.includes(second.productId),
-	//       `invoice 1 includes product ${second.productId}`,
-	//     ).to.be.true;
-	//     expect(
-	//       invoices![1].product_ids.includes(second.productId),
-	//       `invoice 2 includes product ${second.productId}`,
-	//     ).to.be.true;
-	//   } catch (error) {
-	//     console.log(`invoice for ${second.productId}, ${second.total} not found`);
-	//     throw error;
-	//   }
-	// }
 };
