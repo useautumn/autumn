@@ -15,6 +15,7 @@ import {
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { performDeductionOnCusEnt } from "@/trigger/updateBalanceTask.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
+import { isOneOff } from "../../../../products/productUtils.js";
 import {
 	getRelatedCusPrice,
 	getUnlimitedAndUsageAllowed,
@@ -102,7 +103,7 @@ export const getExistingUsages = ({
 		const ent = cusEnt.entitlement;
 		const key = `${ent.feature_id}-${ent.interval}-${ent.interval_count || 1}`;
 		const feature = ent.feature;
-		if (feature.type == FeatureType.Boolean) continue;
+		if (feature.type === FeatureType.Boolean) continue;
 
 		const { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
 			cusEnts: curCusProduct.customer_entitlements,
@@ -161,6 +162,7 @@ export const getExistingUsages = ({
 export const addExistingUsagesToCusEnts = ({
 	cusEnts,
 	entitlements,
+	prices,
 	curCusProduct,
 	carryExistingUsages = false,
 	printLogs = false,
@@ -170,6 +172,7 @@ export const addExistingUsagesToCusEnts = ({
 }: {
 	cusEnts: CustomerEntitlement[];
 	entitlements: EntitlementWithFeature[];
+	prices: Price[];
 	curCusProduct: FullCusProduct;
 	carryExistingUsages?: boolean;
 	printLogs?: boolean;
@@ -177,9 +180,7 @@ export const addExistingUsagesToCusEnts = ({
 	entities: Entity[];
 	features: Feature[];
 }) => {
-	if (isDowngrade) {
-		return cusEnts;
-	}
+	if (isDowngrade || isOneOff(prices)) return cusEnts;
 
 	const existingUsages = getExistingUsages({
 		curCusProduct,
@@ -223,7 +224,7 @@ export const addExistingUsagesToCusEnts = ({
 			const fromEntities = existingUsages[key].fromEntities;
 
 			// if (cusEntKey !== key) continue;
-			const isSameFeature = cusEnt.feature_id == feature_id;
+			const isSameFeature = cusEnt.feature_id === feature_id;
 
 			if (!isSameFeature) continue;
 
