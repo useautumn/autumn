@@ -95,6 +95,7 @@ describe(`${chalk.yellowBright("check2: test /check on boolean feature")}`, () =
 
 			// New fields for boolean?
 			interval: null,
+			interval_count: null,
 			balance: 0,
 			included_usage: 0,
 			usage: 0,

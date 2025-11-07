@@ -89,6 +89,10 @@ export const normalizeCachedData = <T extends ApiCustomer | ApiEntity>(
 				feature.credit_schema = undefined;
 			}
 
+			// if (feature.interval_count === undefined) {
+			// 	feature.interval_count = null;
+			// }
+
 			// // interval should be null if undefined
 			// if (feature.interval === undefined) {
 			// 	feature.interval = null;
@@ -100,6 +104,10 @@ export const normalizeCachedData = <T extends ApiCustomer | ApiEntity>(
 					if (breakdown.usage_limit === 0) {
 						breakdown.usage_limit = undefined;
 					}
+
+					// if (breakdown.next_reset_at === undefined) {
+					// 	breakdown.next_reset_at = null;
+					// }
 				}
 			}
 		}
