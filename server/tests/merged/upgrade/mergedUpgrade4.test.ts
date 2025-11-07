@@ -85,7 +85,7 @@ describe(`${chalk.yellowBright("mergedUpgrade4: Upgrading when there's a cancel"
 	let org: Organization;
 	let env: AppEnv;
 
-	before(async function () {
+	beforeAll(async function () {
 		await setupBefore(this);
 		const { autumnJs } = this;
 		db = this.db;

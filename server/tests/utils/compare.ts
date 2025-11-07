@@ -1,3 +1,4 @@
+import { expect } from "bun:test";
 import {
 	AllowanceType,
 	CusProductStatus,
@@ -7,7 +8,8 @@ import {
 	FeatureType,
 	type UsagePriceConfig,
 } from "@autumn/shared";
-import { expect } from "chai";
+import type { ApiCustomerV1 } from "@shared/api/customers/previousVersions/apiCustomerV1.js";
+// import { expect } from "chai";
 import { Decimal } from "decimal.js";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { creditSystems } from "tests/global.js";
@@ -22,8 +24,8 @@ export const checkProductIsScheduled = ({
 	const { products, add_ons, entitlements } = cusRes;
 	const prod = products.find((p: any) => p.id === product.id);
 	try {
-		expect(prod).to.exist;
-		expect(prod.status).to.equal(CusProductStatus.Scheduled);
+		expect(prod).toBeDefined();
+		expect(prod.status).toEqual(CusProductStatus.Scheduled);
 	} catch (error) {
 		console.group();
 		console.log(`Expected product ${product.id} to be scheduled`);
@@ -49,29 +51,31 @@ export const compareMainProduct = ({
 		(p: any) => p.id === sent.id && p.status === status && !sent.is_add_on,
 	);
 
-	try {
-		expect(prod).to.exist;
-		expect(sent.id).to.equal(prod.id);
-	} catch (error) {
-		console.log(`Failed to compare main product ${sent.id}`);
-		console.log("Sent: ", sent);
-		console.log("Received: ", cusRes);
-		throw error;
-	}
+	expect(
+		prod,
+		`Product ${sent.id} not found (status: ${status}), (${sent.is_add_on ? "add-on" : "main"})`,
+	).toBeDefined();
 
 	// Check entitlements
 	const sentEntitlements = Object.values(sent.entitlements) as Entitlement[];
 	const recEntitlements = entitlements;
 
-	// expect(sentEntitlements.length).to.equal(recEntitlements.length);
 	for (const entitlement of sentEntitlements) {
 		// Corresponding entitlement in received
-		const recEntitlement = recEntitlements.find((e: any) => {
-			if (e.feature_id !== entitlement.feature_id) return false;
-			if (entitlement.interval && e.interval !== entitlement.interval)
-				return false;
-			return true;
-		});
+		const recEntitlement = recEntitlements.find(
+			(e: ApiCustomerV1["entitlements"][number]) => {
+				if (e.feature_id !== entitlement.feature_id) return false;
+
+				if (entitlement.allowance_type === AllowanceType.Unlimited) {
+					return true;
+				}
+
+				if (entitlement.interval && e.interval !== entitlement.interval) {
+					return false;
+				}
+				return true;
+			},
+		);
 
 		// If options list provideed, and feature
 		const options = optionsList.find(
@@ -90,22 +94,25 @@ export const compareMainProduct = ({
 				.toNumber();
 		}
 
-		try {
-			expect(recEntitlement).to.exist;
-			if (entitlement.allowance_type === AllowanceType.Unlimited) {
-				expect(recEntitlement.unlimited).to.equal(true);
-				expect(recEntitlement.balance).to.equal(null);
-				expect(recEntitlement.used).to.equal(null);
-			} else if ("balance" in entitlement) {
-				expect(recEntitlement.balance).to.equal(expectedBalance);
-			}
-		} catch (error) {
-			console.log(
-				`Failed to compare main product (entitlements) ${entitlement.feature_id}`,
-			);
-			console.log("Looking for entitlement: ", entitlement);
-			console.log("Received entitlements: ", entitlements);
-			throw error;
+		expect(
+			recEntitlement,
+			`Entitlement ${entitlement.feature_id} not found`,
+		).toBeDefined();
+
+		if (entitlement.allowance_type === AllowanceType.Unlimited) {
+			// expect(recEntitlement.unlimited).toStrictEqual(true);
+			// expect(recEntitlement.balance).toStrictEqual(null);
+			// expect(recEntitlement.used).toStrictEqual(null);
+			expect(recEntitlement).toMatchObject({
+				unlimited: true,
+				balance: null,
+				used: null,
+			});
+		} else if ("balance" in entitlement) {
+			expect(
+				recEntitlement.balance,
+				`Balance for ${entitlement.feature_id} does not match expected balance`,
+			).toStrictEqual(expectedBalance);
 		}
 	}
 };
@@ -129,7 +136,9 @@ export const checkFeatureHasCorrectBalance = async ({
 	if (feature.type === FeatureType.Boolean) {
 		console.log("     - Checking boolean feature: ", feature.id);
 		const { allowed, balanceObj }: any = entitledRes;
-		expect(allowed).to.equal(true);
+		expect(allowed, `Allowed for ${feature.id} is not true`).toStrictEqual(
+			true,
+		);
 		return;
 	}
 
@@ -149,30 +158,59 @@ export const checkFeatureHasCorrectBalance = async ({
 			e.feature_id === feature.id && e.interval === entitlement.interval,
 	);
 
-	expect(cusEnt).to.exist;
+	expect(cusEnt, `Cus ent for ${feature.id} not found`).toBeDefined();
 
 	if (entitlement.allowance_type === AllowanceType.Unlimited) {
 		// Cus ent
-		expect(cusEnt.balance).to.equal(null);
-		expect(cusEnt.used).to.equal(null);
-		expect(cusEnt.unlimited).to.equal(true);
+		expect(
+			cusEnt.balance,
+			`Balance for ${feature.id} is not null`,
+		).toStrictEqual(null);
+		expect(cusEnt.used, `Used for ${feature.id} is not null`).toStrictEqual(
+			null,
+		);
+		expect(
+			cusEnt.unlimited,
+			`Unlimited for ${feature.id} is not true`,
+		).toStrictEqual(true);
 
 		// Entitled res
-		expect(allowed).to.equal(true);
-		expect(balanceObj?.balance).to.equal(null);
-		expect(balanceObj?.unlimited).to.equal(true);
+		expect(allowed, `Allowed for ${feature.id} is not true`).toStrictEqual(
+			true,
+		);
+		expect(
+			balanceObj?.balance,
+			`Balance for ${feature.id} is not null`,
+		).toStrictEqual(null);
+		expect(
+			balanceObj?.unlimited,
+			`Unlimited for ${feature.id} is not true`,
+		).toStrictEqual(true);
 		return;
 	}
 
 	if (expectedBalance === 0) {
-		expect(allowed).to.equal(false);
-		expect(balanceObj?.balance).to.equal(0);
-		expect(cusEnt.balance).to.equal(0);
+		expect(allowed, `Allowed for ${feature.id} is not false`).toStrictEqual(
+			false,
+		);
+		expect(
+			balanceObj?.balance,
+			`Balance for ${feature.id} is not 0`,
+		).toStrictEqual(0);
+		expect(cusEnt.balance, `Balance for ${feature.id} is not 0`).toStrictEqual(
+			0,
+		);
 		return;
 	}
 
-	expect(balanceObj?.balance).to.equal(expectedBalance);
-	expect(cusEnt.balance).to.equal(expectedBalance);
+	expect(
+		balanceObj?.balance,
+		`Balance for ${feature.id} does not match expected balance`,
+	).toStrictEqual(expectedBalance);
+	expect(
+		cusEnt.balance,
+		`Balance for ${feature.id} does not match expected balance`,
+	).toStrictEqual(expectedBalance);
 };
 
 export const compareProductEntitlements = ({

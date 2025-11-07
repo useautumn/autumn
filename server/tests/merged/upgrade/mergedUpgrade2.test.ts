@@ -82,7 +82,7 @@ describe(`${chalk.yellowBright("mergedUpgrade2: Upgrading when there's a schedul
 	let org: Organization;
 	let env: AppEnv;
 
-	before(async function () {
+	beforeAll(async function () {
 		await setupBefore(this);
 		const { autumnJs } = this;
 		db = this.db;

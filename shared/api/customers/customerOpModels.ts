@@ -90,6 +90,8 @@ export const CreateCustomerParamsSchema = z.object({
 	entity_data: EntityDataSchema.optional().meta({
 		description: "Data for creating an entity",
 	}),
+
+	disable_default: z.boolean().optional(),
 });
 
 // Update Customer Params (based on handleUpdateCustomer logic)

@@ -123,9 +123,6 @@ describe(`${chalk.yellowBright("check6: test /check on feature with multiple bal
 			// breakdown: [monthlyBreakdown, lifetimeBreakdown],
 		};
 
-		console.log("Res:", res);
-		console.log("Expected res:", expectedRes);
-
 		expect(res).toMatchObject(expectedRes);
 		expect(res.breakdown).toHaveLength(2);
 		expect(res.breakdown?.[0]).toMatchObject(monthlyBreakdown);

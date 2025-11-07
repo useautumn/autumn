@@ -12,18 +12,15 @@ if [[ "$1" == *"setup"* ]]; then
   BUN_SETUP
 fi
 
-# These tests still use Mocha - will be migrated later
+# Note: advanced/multiFeature, advanced/rollovers, advanced/customInterval,
+# advanced/usageLimit still use Mocha (not migrated yet)
 
-MOCHA_CMD 'tests/advanced/multiFeature/*.ts' \
-           'tests/advanced/coupons/*.ts' \
-           'tests/attach/updateQuantity/*.ts' \
-           'tests/advanced/referrals/*.ts' \
-           'tests/advanced/referrals/paid/*.ts' \
-           'tests/advanced/rollovers/*.ts' \
-           'tests/advanced/customInterval/*.ts'
-          
-MOCHA_CMD 'tests/attach/multiProduct/*.ts' \
-           'tests/advanced/usageLimit/*.ts'
-
-MOCHA_CMD 'tests/advanced/usage/*.ts'
+BUN_PARALLEL_COMPACT \
+  'server/tests/advanced/coupons' \
+  'server/tests/attach/updateQuantity' \
+  'server/tests/advanced/referrals' \
+  'server/tests/advanced/referrals/paid' \
+  'server/tests/attach/multiProduct' \
+  'server/tests/advanced/usage' \
+  --max=6
 

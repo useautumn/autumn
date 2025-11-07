@@ -88,7 +88,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing separate subscriptions beca
 	let stripeCli: Stripe;
 	const curUnix = new Date().getTime();
 
-	before(async function () {
+	beforeAll(async function () {
 		await setupBefore(this);
 		const { autumnJs } = this;
 		db = this.db;

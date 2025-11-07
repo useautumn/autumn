@@ -1,4 +1,8 @@
-import { type Feature, FeatureNotFoundError } from "@autumn/shared";
+import {
+	type Feature,
+	FeatureNotFoundError,
+	RecaseError,
+} from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { getCreditSystemsFromFeature } from "../../../features/creditSystemUtils.js";
 
@@ -79,6 +83,12 @@ export const getTrackEventNameDeductions = ({
 			value,
 		}),
 	);
+
+	if (featureDeductions.length === 0) {
+		throw new RecaseError({
+			message: `No features found for event name: ${eventName}`,
+		});
+	}
 
 	return featureDeductions;
 };

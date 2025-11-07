@@ -62,7 +62,7 @@ describe(`${chalk.yellowBright("mergedTrial5: Testing cancel at end of cycle and
 	let org: Organization;
 	let env: AppEnv;
 
-	before(async function () {
+	beforeAll(async function () {
 		await setupBefore(this);
 		const { autumnJs } = this;
 		db = this.db;

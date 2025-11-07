@@ -96,7 +96,9 @@ export class SyncBatchingManager {
 	 */
 	private async executeCustomerBatch({
 		customerId,
-	}: { customerId: string }): Promise<void> {
+	}: {
+		customerId: string;
+	}): Promise<void> {
 		const customerBatch = this.customerBatches.get(customerId);
 		if (!customerBatch) return;
 
@@ -167,7 +169,9 @@ export class SyncBatchingManager {
 	async flush(): Promise<void> {
 		const customerIds = Array.from(this.customerBatches.keys());
 		await Promise.all(
-			customerIds.map((customerId) => this.executeCustomerBatch({ customerId })),
+			customerIds.map((customerId) =>
+				this.executeCustomerBatch({ customerId }),
+			),
 		);
 	}
 }

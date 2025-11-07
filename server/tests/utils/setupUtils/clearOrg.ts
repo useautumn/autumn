@@ -61,7 +61,13 @@ export const clearOrg = async ({
 		throw new Error(`Org ${orgSlug} not found`);
 	}
 
-	if (!(org.slug === "unit-test-org" || org.slug === "ci_cd")) {
+	// Allow unit-test-org, ci_cd, and platform test orgs (test-*|org_...)
+	const isAllowed =
+		org.slug === "unit-test-org" ||
+		org.slug === "ci_cd" ||
+		org.slug.startsWith("test-");
+
+	if (!isAllowed) {
 		console.error("Cannot clear non-unit-test-orgs");
 		process.exit(1);
 	}

@@ -100,7 +100,7 @@ describe(`${chalk.yellowBright("mergedDowngrade5: Testing downgrade to free")}`,
 	let org: Organization;
 	let env: AppEnv;
 
-	before(async function () {
+	beforeAll(async function () {
 		await setupBefore(this);
 		const { autumnJs } = this;
 		db = this.db;
