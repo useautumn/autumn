@@ -89,6 +89,11 @@ export const normalizeCachedData = <T extends ApiCustomer | ApiEntity>(
 				feature.credit_schema = undefined;
 			}
 
+			// // interval should be null if undefined
+			// if (feature.interval === undefined) {
+			// 	feature.interval = null;
+			// }
+
 			// Fix breakdown usage_limit
 			if (feature.breakdown) {
 				for (const breakdown of feature.breakdown) {
