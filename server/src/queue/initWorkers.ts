@@ -149,125 +149,6 @@ let isRunning = true;
 const isFifoQueue = QUEUE_URL.endsWith(".fifo");
 let abortController: AbortController;
 
-// Concurrency limit for processing messages
-const MAX_CONCURRENT_MESSAGES = 10;
-const CONCURRENCY_LIMIT = 10; // Process up to 10 messages concurrently
-
-/**
- * Simple concurrency limiter
- */
-const limitConcurrency = async <T>(
-	tasks: (() => Promise<T>)[],
-	limit: number,
-): Promise<PromiseSettledResult<T>[]> => {
-	const results: PromiseSettledResult<T>[] = [];
-	const executing: Promise<void>[] = [];
-
-	for (const task of tasks) {
-		const promise = Promise.resolve(task())
-			.then(
-				(value) => {
-					results.push({ status: "fulfilled", value });
-				},
-				(reason) => {
-					results.push({ status: "rejected", reason });
-				},
-			)
-			.finally(() => {
-				// Remove this promise from executing array when it completes
-				const index = executing.indexOf(promise);
-				if (index > -1) {
-					executing.splice(index, 1);
-				}
-			});
-
-		executing.push(promise);
-
-		if (executing.length >= limit) {
-			await Promise.race(executing);
-		}
-	}
-
-	// Wait for all remaining tasks to complete
-	await Promise.all(executing);
-	return results;
-};
-
-/**
- * Process a batch of messages concurrently with a concurrency limit
- */
-const processMessageBatch = async ({
-	messages,
-	db,
-}: {
-	messages: Message[];
-	db: DrizzleCli;
-}) => {
-	// Create tasks for each message
-	const tasks = messages.map(
-		(message) => async () => {
-			// Check if we should stop before processing
-			if (!isRunning) {
-				return { messageId: message.MessageId, skipped: true };
-			}
-
-			let processed = false;
-			try {
-				await processMessage({ message, db, workerId: 1 });
-				processed = true;
-			} catch (error: any) {
-				console.error(
-					`❌ Failed to process message ${message.MessageId}:`,
-					error.message,
-				);
-				// Continue to delete message anyway (at-most-once delivery)
-			}
-
-			// Always delete message after processing attempt
-			if (message.ReceiptHandle) {
-				try {
-					await sqs.send(
-						new DeleteMessageCommand({
-							QueueUrl: QUEUE_URL,
-							ReceiptHandle: message.ReceiptHandle,
-						}),
-					);
-				} catch (deleteError: any) {
-					console.error(
-						`Failed to delete message ${message.MessageId}:`,
-						deleteError.message,
-					);
-				}
-			}
-
-			return { messageId: message.MessageId, processed };
-		},
-	);
-
-	// Process with concurrency limit
-	const results = await limitConcurrency(tasks, CONCURRENCY_LIMIT);
-
-	// Log summary
-	const successful = results.filter(
-		(r) =>
-			r.status === "fulfilled" &&
-			r.value &&
-			!r.value.skipped &&
-			r.value.processed,
-	).length;
-	const failed = results.filter(
-		(r) =>
-			r.status === "rejected" ||
-			(r.status === "fulfilled" &&
-				r.value &&
-				(!r.value.processed || r.value.skipped)),
-	).length;
-
-	if (successful > 0 || failed > 0) {
-		logger.info(`Processed batch: ${successful} successful, ${failed} failed`);
-	}
-};
-
 /**
  * Single SQS polling loop - runs continuously until shutdown
  */
@@ -279,7 +160,7 @@ const startPollingLoop = async ({ db }: { db: DrizzleCli }) => {
 		try {
 			const command = new ReceiveMessageCommand({
 				QueueUrl: QUEUE_URL,
-				MaxNumberOfMessages: MAX_CONCURRENT_MESSAGES, // Receive up to 10 messages at once
+				MaxNumberOfMessages: 10, // Receive up to 10 messages at once
 				WaitTimeSeconds: 20, // Long polling
 				VisibilityTimeout: 60, // 60 seconds to process the message
 				// For FIFO queues, add ReceiveRequestAttemptId for deduplication
@@ -294,10 +175,37 @@ const startPollingLoop = async ({ db }: { db: DrizzleCli }) => {
 
 			if (response.Messages && response.Messages.length > 0) {
 				// Process all messages concurrently
-				await processMessageBatch({
-					messages: response.Messages,
-					db,
-				});
+				await Promise.allSettled(
+					response.Messages.map(async (message) => {
+						// Check if we should stop before processing
+						if (!isRunning) return;
+
+						try {
+							await processMessage({ message, db, workerId: 1 });
+						} catch (error: any) {
+							logger.error(
+								`Failed to process message ${message.MessageId}: ${error.message}`,
+							);
+						}
+
+						// Always delete message, even on error (receive once only)
+						if (message.ReceiptHandle) {
+							try {
+								await sqs.send(
+									new DeleteMessageCommand({
+										QueueUrl: QUEUE_URL,
+										ReceiptHandle: message.ReceiptHandle,
+									}),
+								);
+							} catch (deleteError: any) {
+								console.error(
+									`Failed to delete message ${message.MessageId}:`,
+									deleteError.message,
+								);
+							}
+						}
+					}),
+				);
 			}
 		} catch (error: any) {
 			// Ignore abort errors during shutdown
