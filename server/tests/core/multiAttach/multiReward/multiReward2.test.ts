@@ -33,7 +33,7 @@ describe(`${chalk.yellowBright("multiReward2: Testing multi attach with rewards 
 	let org: Organization;
 	let env: AppEnv;
 
-	before(async function () {
+	beforeAll(async function () {
 		await setupBefore(this);
 		const { autumnJs } = this;
 		db = this.db;

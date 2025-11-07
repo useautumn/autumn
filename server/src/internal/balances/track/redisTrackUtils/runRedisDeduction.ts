@@ -79,6 +79,7 @@ export const runRedisDeduction = async ({
 	}
 
 	// Redis deduction successful: queue sync jobs and event insertion
+
 	if (result.success) {
 		for (const deduction of featureDeductions) {
 			globalSyncBatchingManager.addSyncPair({

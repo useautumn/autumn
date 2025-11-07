@@ -40,7 +40,9 @@ export const createProduct = async ({
 		}
 
 		await Promise.all(batchDelete);
-	} catch (error) {}
+	} catch (error) {
+		// Ignore deletion errors (might have customers attached)
+	}
 
 	const clone = structuredClone(product);
 	if (typeof clone.items === "object") {
@@ -52,7 +54,19 @@ export const createProduct = async ({
 		clone.name = `${prefix} ${clone.name}`;
 	}
 
-	await autumn.products.create(clone);
+	try {
+		await autumn.products.create(clone);
+	} catch (error: any) {
+		// If product already exists (race condition), silently continue
+		if (
+			error?.message?.includes("already exists") ||
+			error?.message?.includes("duplicate") ||
+			error?.code === "PRODUCT_EXISTS"
+		) {
+			return;
+		}
+		throw error;
+	}
 };
 
 export const createProducts = async ({

@@ -17,7 +17,7 @@ import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js"
 
 const testCase = "upgrade3";
 
-export const pro = constructProduct({
+const pro = constructProduct({
 	items: [
 		constructArrearProratedItem({
 			featureId: TestFeature.Users,
@@ -27,7 +27,7 @@ export const pro = constructProduct({
 	type: "pro",
 });
 
-export const premium = constructProduct({
+const premium = constructProduct({
 	items: [
 		constructArrearProratedItem({
 			featureId: TestFeature.Users,
@@ -37,7 +37,7 @@ export const premium = constructProduct({
 	type: "premium",
 });
 
-export const proAnnual = constructProduct({
+const proAnnual = constructProduct({
 	items: [
 		constructArrearProratedItem({
 			featureId: TestFeature.Users,

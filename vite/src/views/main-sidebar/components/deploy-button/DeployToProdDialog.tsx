@@ -32,7 +32,6 @@ export const DeployToProdDialog = ({
 	const [loading, setLoading] = useState(false);
 	const axiosInstance = useAxiosInstance();
 	const { mutate: mutateOrg } = useOrg();
-	// const navigate = useNavigate();
 
 	const handleGoToProduction = async () => {
 		setLoading(true);

@@ -118,11 +118,13 @@ export class ProductService {
 		orgId,
 		env,
 		group,
+		inIds,
 	}: {
 		db: DrizzleCli;
 		orgId: string;
 		env: AppEnv;
 		group?: string;
+		inIds?: string[];
 	}) {
 		const prods = (await db.query.products.findMany({
 			where: and(
@@ -131,6 +133,7 @@ export class ProductService {
 				eq(products.is_default, true),
 				ne(products.archived, true),
 				group ? eq(products.group, group) : undefined,
+				inIds ? inArray(products.id, inIds) : undefined,
 			),
 			with: {
 				entitlements: {

@@ -21,6 +21,7 @@ fi
 #   'server/tests/balances/track/legacy' \
 #   'server/tests/balances/check/basic' \
 #   'server/tests/balances/check/credit-systems' \
+#   'server/tests/balances/check/misc' \
 
 BUN_PARALLEL_COMPACT \
   'server/tests/attach/basic' \

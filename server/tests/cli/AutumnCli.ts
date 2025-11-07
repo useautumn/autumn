@@ -1,6 +1,6 @@
+import type { CreateReward } from "@autumn/shared";
 import RecaseError from "@/utils/errorUtils.js";
 import { getAxiosInstance } from "../utils/setup.js";
-import { CreateReward } from "@autumn/shared";
 
 const handleAxiosError = (error: any) => {
 	if (error.response.data) {
@@ -102,10 +102,12 @@ export class AutumnCli {
 	static async sendEvent({
 		customerId,
 		eventName,
+		featureId,
 		properties,
 	}: {
 		customerId: string;
-		eventName: string;
+		eventName?: string;
+		featureId?: string;
 		properties?: any;
 	}) {
 		try {
@@ -113,6 +115,7 @@ export class AutumnCli {
 			const { data } = await axiosInstance.post(`/v1/events`, {
 				customer_id: customerId,
 				event_name: eventName,
+				feature_id: featureId,
 				properties,
 			});
 

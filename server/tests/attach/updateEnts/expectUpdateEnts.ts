@@ -5,7 +5,7 @@ import {
 	type ProductItem,
 	type ProductV2,
 } from "@autumn/shared";
-import { expect } from "chai";
+import { expect } from "bun:test";
 import type Stripe from "stripe";
 import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
 import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
@@ -62,10 +62,10 @@ const runUpdateEntsTest = async ({
 	});
 
 	if (newVersion) {
-		expect(preview.branch).to.equal(AttachBranch.NewVersion);
+		expect(preview.branch).toBe(AttachBranch.NewVersion);
 	} else {
-		expect(preview.branch).to.equal(AttachBranch.SameCustomEnts);
-		expect(preview.due_today).to.be.undefined;
+		expect(preview.branch).toBe(AttachBranch.SameCustomEnts);
+		expect(preview.due_today).toBeUndefined();
 	}
 
 	await autumn.attach({
@@ -94,12 +94,12 @@ const runUpdateEntsTest = async ({
 	// let periodEndsBefore = subsBefore.map((sub) => sub.current_period_end);
 	// let periodEndsAfter = subsAfter.map((sub) => sub.current_period_end);
 
-	expect(invoicesAfter).to.deep.equal(invoicesBefore);
-	expect(subIdsAfter).to.deep.equal(subIdsBefore);
-	// expect(periodEndsAfter).to.deep.equal(periodEndsBefore);
+	expect(invoicesAfter).toEqual(invoicesBefore);
+	expect(subIdsAfter).toEqual(subIdsBefore);
+	// expect(periodEndsAfter).toEqual(periodEndsBefore);
 
 	if (customItems) {
-		expect(cusProduct.is_custom).to.be.true;
+		expect(cusProduct.is_custom).toBe(true);
 	}
 
 	const customer = await autumn.customers.get(customerId);

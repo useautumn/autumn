@@ -22,11 +22,11 @@ BUN_SETUP="$BUN_CMD tests/setupMain.ts"
 
 # Test runner functions (using new TypeScript runner)
 BUN_PARALLEL() {
-  cd "$PROJECT_ROOT" && $BUN_CMD scripts/testScripts/runTests.ts "$@"
+  cd "$PROJECT_ROOT" && $BUN_CMD server/tests/testRunner/runTests.ts "$@"
 }
 
 BUN_PARALLEL_COMPACT() {
-  cd "$PROJECT_ROOT" && $BUN_CMD scripts/testScripts/runTests.ts "$@" --compact
+  cd "$PROJECT_ROOT" && $BUN_CMD server/tests/testRunner/runTests.ts "$@" --compact
 }
 
 # Mocha command (for tests not yet migrated)

@@ -125,7 +125,10 @@ export const handleTrack = createRoute({
 				},
 			});
 
-			if (error) code = "insufficient_balance";
+			if (error) {
+				console.log(`Redis deduction error: ${error}`);
+				code = "insufficient_balance";
+			}
 		});
 
 		if (!success) {
