@@ -4,9 +4,9 @@ import { Stripe } from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 import { unsetOrgStripeKeys } from "@/internal/orgs/orgUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
+import { deleteCachedApiCustomer } from "../../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import type { Logger } from "../logtail/logtailUtils.js";
 import { handleCheckoutSessionCompleted } from "./webhookHandlers/handleCheckoutCompleted.js";
 import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDeleted.js";
@@ -86,10 +86,15 @@ const handleStripeWebhookRefresh = async ({
 			return;
 		}
 
-		await deleteCusCache({
-			db,
+		// await deleteCusCache({
+		// 	db,
+		// 	customerId: cus.id!,
+		// 	org,
+		// 	env,
+		// });
+		await deleteCachedApiCustomer({
 			customerId: cus.id!,
-			org,
+			orgId: org.id,
 			env,
 		});
 	}
