@@ -15,7 +15,6 @@ import type {
 } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { CusService } from "../CusService.js";
-import { deleteCusCache } from "../cusCache/updateCachedCus.js";
 import { CusProductService } from "../cusProducts/CusProductService.js";
 import { handleDecreaseAndTransfer } from "./handleTransferProduct/handleDecreaseAndTransfer.js";
 
@@ -143,13 +142,6 @@ export const handleTransferProduct = async (req: any, res: any) =>
 					logger: req.logger,
 				});
 			}
-
-			await deleteCusCache({
-				db: req.db,
-				customerId: customer.id || customer.internal_id,
-				org: req.org,
-				env: req.env,
-			});
 
 			res.status(200).json({
 				// message: "Product transferred successfully",

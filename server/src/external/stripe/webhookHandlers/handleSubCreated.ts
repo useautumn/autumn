@@ -41,6 +41,7 @@ export const handleSubCreated = async ({
 		stripeId: subData.id,
 	});
 
+	// 1. can ignore
 	if (subscription.schedule) {
 		const cusProds = await CusProductService.getByStripeScheduledId({
 			db,
@@ -170,17 +171,17 @@ export const handleSubCreated = async ({
 			.map((cp) => cp.price)
 			.filter(
 				(p: Price) =>
-					getBillingType(p.config as any) == BillingType.UsageInArrear,
+					getBillingType(p.config as any) === BillingType.UsageInArrear,
 			);
 
-		if (arrearPrices.length == 0) {
+		if (arrearPrices.length === 0) {
 			return;
 		}
 
 		const itemsToDelete = [];
 		for (const arrearPrice of arrearPrices) {
 			const subItem = subscription.items.data.find(
-				(i) => i.price.id == arrearPrice.config?.stripe_price_id,
+				(i) => i.price.id === arrearPrice.config?.stripe_price_id,
 			);
 
 			if (!subItem) {

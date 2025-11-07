@@ -24,96 +24,53 @@ export const runSyncBalanceBatch = async ({
 }) => {
 	const { items } = payload;
 
-	if (!items || items.length === 0) {
+	if (!items || items.length === 0) return;
+
+	// All items belong to the same customer (grouped by messageGroupId in SQS)
+	const firstItem = items[0];
+	const { orgId, env, customerId } = firstItem;
+
+	// Fetch org with features once for all items
+	const orgData = await OrgService.getWithFeatures({
+		db,
+		orgId,
+		env: env as AppEnv,
+	});
+
+	if (!orgData) {
+		logger.error(`Organization not found: ${orgId}, env: ${env}`);
 		return;
 	}
 
-	// Step 1: Gather unique (orgId, env) pairs and fetch orgs with features
-	const uniqueOrgEnvPairs = new Map<
-		string,
-		{ orgIds: Set<string>; env: string }
-	>();
+	// Create worker context once
+	const ctx = createWorkerContext({
+		db,
+		org: orgData.org,
+		env: env as AppEnv,
+		features: orgData.features,
+		logger,
+	});
 
-	for (const item of items) {
-		const envKey = item.env;
-		if (!uniqueOrgEnvPairs.has(envKey)) {
-			uniqueOrgEnvPairs.set(envKey, { orgIds: new Set(), env: envKey });
-		}
-		uniqueOrgEnvPairs.get(envKey)!.orgIds.add(item.orgId);
-	}
-
-	// Fetch orgs with features for each environment
-	const orgMap = new Map<string, { org: any; features: any[] }>();
-
-	for (const [, { orgIds, env }] of uniqueOrgEnvPairs.entries()) {
-		const orgsWithFeatures = await OrgService.listWithFeatures({
-			db,
-			env: env as AppEnv,
-			orgIds: Array.from(orgIds),
-		});
-
-		for (const orgData of orgsWithFeatures) {
-			const key = `${orgData.org.id}:${env}`;
-			orgMap.set(key, orgData);
-		}
-	}
-
-	// Step 2: Sort items by timestamp (oldest first) to maintain chronological order
+	// Sort items by timestamp (oldest first) to maintain chronological order
 	const sortedItems = items.sort((a, b) => a.timestamp - b.timestamp);
 
-	// Step 3: Group items by customer to process sequentially per customer
-	const itemsByCustomer = new Map<string, typeof items>();
-	for (const item of sortedItems) {
-		const customerKey = `${item.orgId}:${item.env}:${item.customerId}`;
-		if (!itemsByCustomer.has(customerKey)) {
-			itemsByCustomer.set(customerKey, []);
-		}
-		itemsByCustomer.get(customerKey)!.push(item);
-	}
-
-	// Step 4: Process each customer's items sequentially (customers can run in parallel)
+	// Process each item sequentially for this customer
 	let successCount = 0;
 	let errorCount = 0;
 
-	const customerPromises = Array.from(itemsByCustomer.entries()).map(
-		async ([customerKey, customerItems]) => {
-			for (const item of customerItems) {
-				try {
-					const key = `${item.orgId}:${item.env}`;
-					const orgData = orgMap.get(key);
-
-					if (!orgData) {
-						logger.warn(`Organization not found: ${key}`);
-						errorCount++;
-						continue;
-					}
-
-					// Create worker context
-					const ctx = createWorkerContext({
-						db,
-						org: orgData.org,
-						env: item.env as AppEnv,
-						features: orgData.features,
-						logger,
-					});
-
-					// Sync the item sequentially
-					await syncItem({ item, ctx });
-					successCount++;
-				} catch (error) {
-					errorCount++;
-					logger.error(
-						`❌ Failed to sync item ${item.customerId}:${item.featureId}: ${error instanceof Error ? error.message : String(error)}`,
-					);
-				}
-			}
-		},
-	);
-
-	// Wait for all customer syncs to complete
-	await Promise.all(customerPromises);
+	for (const item of sortedItems) {
+		try {
+			await syncItem({ item, ctx });
+			successCount++;
+		} catch (error) {
+			errorCount++;
+			logger.error(
+				`❌ Failed to sync item ${item.customerId}:${item.featureId}: ${error instanceof Error ? error.message : String(error)}`,
+			);
+		}
+	}
 
 	logger.info(
-		`Sync batch complete: ${successCount} succeeded, ${errorCount} failed`,
+		`Synced ${successCount}/${items.length} items for customer ${customerId}`,
 	);
 };

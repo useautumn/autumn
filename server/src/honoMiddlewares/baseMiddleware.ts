@@ -70,7 +70,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		env: AppEnv.Sandbox, // maybe use app_env headers
 	});
 
-	childLogger.info(`${method} ${path}`);
+	// childLogger.info(`${method} ${path}`);
 
 	await next();
 };

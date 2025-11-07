@@ -190,11 +190,15 @@ export const deductFromCusEnts = async ({
 			const entityInfo = entityId
 				? `Entity: ${entityId}`
 				: "Entity: customer-level";
-			ctx.logger.info(
-				`[Sync] Feature ${feature.id} | ${entityInfo} | Target: ${targetBalance} | Deducted: ${totalDeducted} | Updated ${
-					Object.keys(updates).length
-				} entitlements | Remaining: ${remaining}`,
-			);
+			ctx.logger.info(`[Sync] Feature ${feature.id} | ${entityInfo}`, {
+				data: {
+					featureId: feature.id,
+					entityInfo,
+					totalDeducted,
+					updates: Object.keys(updates).length,
+					remaining,
+				},
+			});
 		} else {
 			ctx.logger.info(
 				`[Track] Deducted ${toDeduct - remaining} from feature ${feature.id}. Updated ${

@@ -4,8 +4,8 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
 import { getApiEntityBase } from "../apiEntityUtils/getApiEntityBase.js";
+import { SET_ENTITY_SCRIPT } from "./entityLuaScripts/luaScripts.js";
 import { buildCachedApiEntityKey } from "./getCachedApiEntity.js";
-import { SET_ENTITY_SCRIPT } from "./luaScripts.js";
 
 /**
  * Refresh ApiEntity in Redis cache by fetching fresh data from DB

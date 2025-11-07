@@ -20,7 +20,6 @@ import { sql } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { refreshCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 import { getFeatureBalance } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { deductFromApiCusRollovers } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverDeductionUtils.js";
 import { getCusEntsInFeatures } from "@/internal/customers/cusUtils/cusUtils.js";
@@ -580,14 +579,6 @@ export const runUpdateUsageTask = async ({
 				isolationLevel: "read committed",
 			},
 		);
-
-		await refreshCusCache({
-			db,
-			customerId,
-			entityId,
-			org,
-			env,
-		});
 	} catch (error) {
 		logger.error(`ERROR UPDATING USAGE`);
 		logger.error(error);

@@ -1,11 +1,12 @@
 import {
-	type CreateEntity,
+	type CreateEntityParams,
 	type FeatureOptions,
 	Infinite,
 	type ProductV2,
 } from "@autumn/shared";
 import type { Customer, Entity } from "autumn-js";
 import { expect } from "chai";
+import { Decimal } from "decimal.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 
 export const expectFeaturesCorrect = ({
@@ -26,7 +27,7 @@ export const expectFeaturesCorrect = ({
 		featureId: string;
 		value: number;
 	}[];
-	entities?: CreateEntity[];
+	entities?: CreateEntityParams[];
 }) => {
 	const items = product.items;
 
@@ -98,8 +99,9 @@ export const expectFeaturesCorrect = ({
 				return acc;
 			}, 0) || 0;
 
-		expect(feature.usage, `Feature ${featureId} usage is correct`).to.equal(
-			featureUsage,
-		);
+		expect(
+			new Decimal(feature.usage ?? 0).toDP(8).toNumber(),
+			`Feature ${featureId} usage is correct`,
+		).to.equal(new Decimal(featureUsage).toDP(8).toNumber());
 	}
 };

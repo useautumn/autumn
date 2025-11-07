@@ -5,8 +5,8 @@ import { tryRedisWrite } from "../../../../utils/cacheUtils/cacheUtils.js";
 import { CusService } from "../../CusService.js";
 import { RELEVANT_STATUSES } from "../../cusProducts/CusProductService.js";
 import { getApiCustomerBase } from "../apiCusUtils/getApiCustomerBase.js";
+import { SET_CUSTOMER_SCRIPT } from "./cusLuaScripts/luaScripts.js";
 import { buildCachedApiCustomerKey } from "./getCachedApiCustomer.js";
-import { SET_CUSTOMER_SCRIPT } from "./luaScripts.js";
 
 /**
  * Refresh ApiCustomer in Redis cache by fetching fresh data from DB

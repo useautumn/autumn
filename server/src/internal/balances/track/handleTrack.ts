@@ -1,6 +1,7 @@
 import {
 	ApiVersion,
 	ErrCode,
+	isContUseFeature,
 	RecaseError,
 	SuccessCode,
 	type TrackParams,
@@ -60,7 +61,6 @@ export const handleTrack = createRoute({
 	handler: async (c) => {
 		const body = c.req.valid("json");
 		const ctx = c.get("ctx");
-		const { org, env } = ctx;
 
 		// Legacy: support value in properties
 		if (body.properties?.value) {
@@ -90,8 +90,12 @@ export const handleTrack = createRoute({
 					value: body.value,
 				});
 
+		const hasContUseFeature = featureDeductions.some((deduction) =>
+			isContUseFeature({ feature: deduction.feature }),
+		);
+
 		// Scenario 1: idempotency_key requires PostgreSQL (for event persistence)
-		if (body.idempotency_key) {
+		if (body.idempotency_key || hasContUseFeature) {
 			const response = await executePostgresTracking({
 				ctx,
 				body,

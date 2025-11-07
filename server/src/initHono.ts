@@ -106,8 +106,8 @@ export const createHonoApp = () => {
 	app.use("/v1/*", secretKeyMiddleware);
 	app.use("/v1/*", orgConfigMiddleware);
 	app.use("/v1/*", apiVersionMiddleware);
-	app.use("/v1/*", refreshCacheMiddleware);
 	app.use("/v1/*", analyticsMiddleware);
+	app.use("/v1/*", refreshCacheMiddleware);
 	app.use("/v1/*", queryMiddleware());
 
 	// General org rate limiter for all other /v1/* routes
