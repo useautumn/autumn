@@ -1,6 +1,6 @@
 import { Queue } from "bullmq";
 import { Redis } from "ioredis";
-import { loadCaCert } from "../external/redis/loadCaCert.js";
+import { loadCaCert } from "../../external/redis/loadCaCert.js";
 
 if (!process.env.QUEUE_URL) {
 	throw new Error("QUEUE_URL is not set");
@@ -42,3 +42,4 @@ queueRedis.on("error", (error) => {
 workerRedis.on("error", (error) => {
 	// logger.error(`redis (queue) error: ${error.message}`);
 });
+
