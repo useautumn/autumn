@@ -402,6 +402,7 @@ export const createFullCusProduct = async ({
 		isDowngrade,
 		entities: attachParams.entities,
 		features: attachParams.features,
+		prices,
 	});
 
 	// 4. Get new rollovers
