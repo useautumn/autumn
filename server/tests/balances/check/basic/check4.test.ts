@@ -89,6 +89,8 @@ describe(`${chalk.yellowBright("check4: test /check on unlimited feature")}`, ()
 
 			// Unlimited features, balance is 0...
 			balance: 0,
+			interval: null,
+			interval_count: null,
 		};
 
 		expect(expectedRes).toMatchObject(res);
