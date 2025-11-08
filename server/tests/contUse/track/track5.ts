@@ -1,31 +1,33 @@
-import chalk from "chalk";
-import Stripe from "stripe";
-
+import {
+	type AppEnv,
+	OnDecrease,
+	OnIncrease,
+	type Organization,
+} from "@autumn/shared";
 import { expect } from "chai";
-import { features } from "tests/global.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-
+import chalk from "chalk";
 import { addDays, addHours } from "date-fns";
-
 import { Decimal } from "decimal.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import type Stripe from "stripe";
 import { setupBefore } from "tests/before.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { AppEnv, OnDecrease, OnIncrease, Organization } from "@autumn/shared";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
+import { defaultApiVersion } from "tests/constants.js";
+import { features } from "tests/global.js";
+import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { getSubsFromCusId } from "tests/utils/expectUtils/expectSubUtils.js";
+import { createProducts } from "tests/utils/productUtils.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import {
 	addPrefixToProducts,
 	getBasePrice,
 } from "tests/utils/testProductUtils/testProductUtils.js";
-import { createProducts } from "tests/utils/productUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { defaultApiVersion } from "tests/constants.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { getSubsFromCusId } from "tests/utils/expectUtils/expectSubUtils.js";
-import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
-import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
+import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
 const seatsItem = constructArrearProratedItem({
 	featureId: features.seats.id,
@@ -75,11 +77,11 @@ const simulateOneCycle = async ({
 		productId: seatsProduct.id,
 	});
 
-	let sub = subs[0];
+	const sub = subs[0];
 
 	let accruedPrice = 0;
 	for (const usageValue of usageValues) {
-		let daysToAdvance = Math.round(Math.random() * 10) + 1;
+		const daysToAdvance = Math.round(Math.random() * 10) + 1;
 		curUnix = await advanceTestClock({
 			stripeCli,
 			testClockId,
@@ -87,14 +89,14 @@ const simulateOneCycle = async ({
 			waitForSeconds: 10,
 		});
 
-		let customer = await autumn.customers.get(customerId);
-		let prevBalance = customer.features[seatsItem.feature_id!].balance!;
-		let prevUsage = includedUsage - prevBalance;
+		const customer = await autumn.customers.get(customerId);
+		const prevBalance = customer.features[seatsItem.feature_id!].balance!;
+		const prevUsage = includedUsage - prevBalance;
 
-		let usageDiff = usageValue - prevUsage;
+		const usageDiff = usageValue - prevUsage;
 
-		let value1 = Math.floor(usageDiff / 2);
-		let value2 = usageDiff - value1;
+		const value1 = Math.floor(usageDiff / 2);
+		const value2 = usageDiff - value1;
 
 		await autumn.track({
 			customer_id: customerId,
@@ -108,14 +110,14 @@ const simulateOneCycle = async ({
 			value: value2,
 		});
 
-		let newBalance = includedUsage - usageValue;
-		let prevOverage = Math.max(0, -prevBalance);
-		let newOverage = Math.max(0, -newBalance);
+		const newBalance = includedUsage - usageValue;
+		const prevOverage = Math.max(0, -prevBalance);
+		const newOverage = Math.max(0, -newBalance);
 
-		let newPrice = (newOverage - prevOverage) * seatsItem.price!;
+		const newPrice = (newOverage - prevOverage) * seatsItem.price!;
 
 		const { start, end } = subToPeriodStartEnd({ sub });
-		let proratedPrice = calculateProrationAmount({
+		const proratedPrice = calculateProrationAmount({
 			periodStart: start * 1000,
 			periodEnd: end * 1000,
 			now: curUnix,
@@ -126,12 +128,12 @@ const simulateOneCycle = async ({
 		accruedPrice = new Decimal(accruedPrice).plus(proratedPrice).toNumber();
 	}
 
-	let customer = await autumn.customers.get(customerId);
-	let balance = customer.features[seatsItem.feature_id!].balance!;
+	const customer = await autumn.customers.get(customerId);
+	const balance = customer.features[seatsItem.feature_id!].balance!;
 
-	let overage = Math.min(0, includedUsage - balance);
-	let usagePrice = overage * seatsItem.price!;
-	let basePrice = getBasePrice({ product: seatsProduct });
+	const overage = Math.min(0, includedUsage - balance);
+	const usagePrice = overage * seatsItem.price!;
+	const basePrice = getBasePrice({ product: seatsProduct });
 
 	const totalPrice = new Decimal(accruedPrice)
 		.plus(usagePrice)
@@ -147,9 +149,9 @@ const simulateOneCycle = async ({
 		waitForSeconds: 30,
 	});
 
-	let cusAfter = await autumn.customers.get(customerId);
-	let invoices = cusAfter.invoices;
-	let invoice = invoices[0];
+	const cusAfter = await autumn.customers.get(customerId);
+	const invoices = cusAfter.invoices;
+	const invoice = invoices[0];
 
 	expect(invoice.total).to.approximately(
 		totalPrice,
@@ -171,7 +173,7 @@ describe(`${chalk.yellowBright("conUse/track5: Testing update cont use through /
 	let db: DrizzleCli;
 	let org: Organization;
 	let env: AppEnv;
-	let autumn = new AutumnInt({ version: defaultApiVersion });
+	const autumn = new AutumnInt({ version: defaultApiVersion });
 	let curUnix = Date.now();
 
 	before(async function () {
@@ -180,7 +182,7 @@ describe(`${chalk.yellowBright("conUse/track5: Testing update cont use through /
 		env = this.env;
 		db = this.db;
 
-		let res = await initCustomer({
+		const res = await initCustomer({
 			customerId,
 			org,
 			env,
@@ -225,7 +227,7 @@ describe(`${chalk.yellowBright("conUse/track5: Testing update cont use through /
 	// return;
 
 	it("simulate first cycle and have correct invoice / balance", async () => {
-		let res = await simulateOneCycle({
+		const res = await simulateOneCycle({
 			customerId,
 			db,
 			org,
@@ -241,7 +243,7 @@ describe(`${chalk.yellowBright("conUse/track5: Testing update cont use through /
 	});
 
 	it("simulate second cycle and have correct invoice / balance", async () => {
-		let res = await simulateOneCycle({
+		const res = await simulateOneCycle({
 			customerId,
 			db,
 			org,
