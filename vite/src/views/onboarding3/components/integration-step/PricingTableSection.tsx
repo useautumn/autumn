@@ -10,21 +10,13 @@ import { CodeSpan } from "@/views/onboarding2/integrate/components/CodeSpan";
 import { SectionHeader } from "./SectionHeader";
 
 export const PricingTableSection = () => {
-	const snippet = `import { AutumnProvider } from "autumn-js/react";
+	const snippet = `import { PricingTable } from "autumn-js/react";
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode,
-}) {
+export default function Home() {
   return (
-    <html>
-      <body>
-        <AutumnProvider>
-          {children}
-        </AutumnProvider>
-      </body>
-    </html>
+    <div className="w-full h-full">
+      <PricingTable productDetails={productDetails} />
+    </div>
   );
 }`;
 
@@ -37,7 +29,7 @@ export default function RootLayout({
 						Drop in <CodeSpan>{"<PricingTable />"}</CodeSpan>
 					</span>
 				}
-				description="This allows you to use our React hooks and components in your app. If your server URL is different to your client, you will need to pass in the backend URL as a prop."
+				description="This will display your pricing plans in a table format. You can customize the table by passing in the product details as a prop."
 			/>
 
 			<div className="pl-[32px] flex flex-col gap-6">

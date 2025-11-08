@@ -41,7 +41,7 @@ const BACKEND_OPTIONS: StackOption[] = [
 	{ value: "hono", label: "Hono", asset: "/frameworks/hono.png" },
 	{ value: "express", label: "Express", asset: "/frameworks/express.png" },
 	{ value: "elysia", label: "Elysia", asset: "/frameworks/elysia.png" },
-	{ value: "general", label: "Other", asset: "/frameworks/react.png" },
+	{ value: "general", label: "Other", asset: "/frameworks/nodejs.svg" },
 ];
 
 const AUTH_OPTIONS: StackOption[] = [
@@ -52,7 +52,7 @@ const AUTH_OPTIONS: StackOption[] = [
 	},
 	{ value: "supabase", label: "Supabase", asset: "/frameworks/supabase.png" },
 	{ value: "clerk", label: "Clerk", asset: "/frameworks/clerk.png" },
-	{ value: "other", label: "Other", asset: "/frameworks/react.png" },
+	{ value: "other", label: "Other", asset: "/auth-key.png" },
 ];
 
 const CUSTOMER_TYPE_OPTIONS: StackOption[] = [
