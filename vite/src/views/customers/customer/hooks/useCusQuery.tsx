@@ -4,12 +4,14 @@ import { useParams } from "react-router";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useEnv } from "@/utils/envUtils";
 import { throwBackendError } from "@/utils/genUtils";
 import { useCachedCustomer } from "./useCachedCustomer";
 
 export const useCusQuery = ({ enabled = true }: { enabled?: boolean } = {}) => {
 	const { customer_id } = useParams();
 	const axiosInstance = useAxiosInstance();
+	const env = useEnv();
 	const { getCachedCustomer } = useCachedCustomer(customer_id);
 
 	const cachedCustomer = useMemo(getCachedCustomer, [getCachedCustomer]);
@@ -29,7 +31,7 @@ export const useCusQuery = ({ enabled = true }: { enabled?: boolean } = {}) => {
 		error,
 		refetch,
 	} = useQuery({
-		queryKey: ["customer", customer_id],
+		queryKey: ["customer", env, customer_id],
 		queryFn: fetcher,
 		enabled: enabled && !!customer_id,
 		retry: false,

@@ -1,10 +1,12 @@
 import type { FullProduct, ProductCounts, ProductV2 } from "@autumn/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useEnv } from "@/utils/envUtils";
 
 export const useProductsQuery = () => {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
+	const env = useEnv();
 
 	const fetchProducts = async () => {
 		const { data } = await axiosInstance.get("/products/products");
@@ -20,14 +22,14 @@ export const useProductsQuery = () => {
 		products: ProductV2[];
 		groupToDefaults: Record<string, Record<string, FullProduct>>;
 	}>({
-		queryKey: ["products"],
+		queryKey: ["products", env],
 		queryFn: fetchProducts,
 	});
 
 	const { data: countsData, refetch: countsRefetch } = useQuery<
 		Record<string, ProductCounts>
 	>({
-		queryKey: ["product_counts"],
+		queryKey: ["product_counts", env],
 		queryFn: fetchProductCounts,
 	});
 
@@ -36,8 +38,8 @@ export const useProductsQuery = () => {
 	 */
 	const invalidate = async () => {
 		await Promise.all([
-			queryClient.invalidateQueries({ queryKey: ["products"] }),
-			queryClient.invalidateQueries({ queryKey: ["product_counts"] }),
+			queryClient.invalidateQueries({ queryKey: ["products", env] }),
+			queryClient.invalidateQueries({ queryKey: ["product_counts", env] }),
 		]);
 	};
 

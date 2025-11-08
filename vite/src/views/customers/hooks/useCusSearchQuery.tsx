@@ -2,12 +2,14 @@ import type { CustomerWithProducts } from "@autumn/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useEnv } from "@/utils/envUtils";
 import { useCustomersQueryStates } from "./useCustomersQueryStates";
 
 export const useCusSearchQuery = () => {
 	const { queryStates } = useCustomersQueryStates();
 
 	const axiosInstance = useAxiosInstance();
+	const env = useEnv();
 	const fetcher = async () => {
 		const { data } = await axiosInstance.post(`/customers/all/search`, {
 			search: queryStates.q || "",
@@ -37,6 +39,7 @@ export const useCusSearchQuery = () => {
 	}>({
 		queryKey: [
 			"customers",
+			env,
 			queryStates.page,
 			queryStates.status,
 			queryStates.version,

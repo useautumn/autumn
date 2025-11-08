@@ -1,9 +1,11 @@
 import type { Feature } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useEnv } from "@/utils/envUtils";
 
 export const useFeaturesQuery = () => {
 	const axiosInstance = useAxiosInstance();
+	const env = useEnv();
 
 	const fetchFeatures = async () => {
 		const { data } = await axiosInstance.get("/products/features");
@@ -13,7 +15,7 @@ export const useFeaturesQuery = () => {
 	const { data, isLoading, error, refetch } = useQuery<{
 		features: Feature[];
 	}>({
-		queryKey: ["features"],
+		queryKey: ["features", env],
 		queryFn: fetchFeatures,
 	});
 

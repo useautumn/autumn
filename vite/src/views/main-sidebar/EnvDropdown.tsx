@@ -4,6 +4,7 @@
 import { AppEnv } from "@autumn/shared";
 import { Check } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router";
 
 import {
 	DropdownMenu,
@@ -11,25 +12,29 @@ import {
 	DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { queryClient } from "@/main";
 import { envToPath } from "@/utils/genUtils";
 import { ExpandedEnvTrigger } from "./env-dropdown/ExpandedEnvTrigger";
 
-export const handleEnvChange = async (env: AppEnv, reset?: boolean) => {
+export const handleEnvChange = async (env: AppEnv, navigate: (path: string) => void, reset?: boolean) => {
+	// Invalidate all queries when switching environments to ensure fresh data
+	await queryClient.invalidateQueries();
+
 	const newPath = envToPath(env, location.pathname);
 	if (newPath && !reset) {
 		const params = new URLSearchParams(location.search);
 		const tab = params.get("tab");
 		const url = tab ? `${newPath}?tab=${encodeURIComponent(tab)}` : newPath;
-		window.location.href = url;
+		navigate(url);
 	} else {
-		window.location.href =
-			env === AppEnv.Sandbox ? "/sandbox/products" : "/products";
+		navigate(env === AppEnv.Sandbox ? "/sandbox/products" : "/products");
 	}
 };
 
 export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 	const [isHovered, setIsHovered] = useState(false);
 	const [open, setOpen] = useState(false);
+	const navigate = useNavigate();
 
 	return (
 		<div
@@ -44,7 +49,7 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 					<DropdownMenuItem
 						className="flex justify-between items-center text-t2"
 						onClick={() => {
-							handleEnvChange(AppEnv.Sandbox);
+							handleEnvChange(AppEnv.Sandbox, navigate);
 						}}
 					>
 						<span>Sandbox</span>
@@ -56,7 +61,7 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 					<DropdownMenuItem
 						className="flex justify-between items-center text-t2"
 						onClick={() => {
-							handleEnvChange(AppEnv.Live);
+							handleEnvChange(AppEnv.Live, navigate);
 						}}
 					>
 						<span>Production</span>

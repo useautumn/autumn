@@ -70,6 +70,7 @@ export const useCommandBarHotkeys = ({
 		() => {
 			handleEnvChange(
 				env === AppEnv.Sandbox ? AppEnv.Live : AppEnv.Sandbox,
+				navigate,
 				true,
 			);
 			closeDialog();

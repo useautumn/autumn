@@ -348,6 +348,7 @@ const CommandBar = () => {
 						onSelect: () => {
 							handleEnvChange(
 								env === AppEnv.Sandbox ? AppEnv.Live : AppEnv.Sandbox,
+								navigate,
 								true,
 							);
 							closeDialog();

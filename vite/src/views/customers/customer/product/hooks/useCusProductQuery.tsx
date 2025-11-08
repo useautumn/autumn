@@ -5,10 +5,12 @@ import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useEnv } from "@/utils/envUtils";
 import { useCusProductCache } from "./useCusProductCache";
 
 export const useCusProductQuery = () => {
 	const axiosInstance = useAxiosInstance();
+	const env = useEnv();
 	const { customer_id, product_id } = useParams();
 	const [queryStates] = useQueryStates({
 		version: parseAsInteger,
@@ -54,6 +56,7 @@ export const useCusProductQuery = () => {
 	}>({
 		queryKey: [
 			"customer_product",
+			env,
 			customer_id,
 			product_id,
 			stableStates.version,
