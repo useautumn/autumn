@@ -1,12 +1,16 @@
 import {
 	type ApiCustomer,
+	ApiEntitySchema,
 	type CustomerData,
 	type CustomerLegacyData,
 	CustomerNotFoundError,
+	type EntityData,
 } from "@autumn/shared";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import type { ExtendedRequest } from "../../../utils/models/Request.js";
+import { autoCreateEntity } from "../../entities/handlers/handleCreateEntity/autoCreateEntity.js";
 import { handleCreateCustomer } from "../handlers/handleCreateCustomer.js";
+import { deleteCachedApiCustomer } from "./apiCusCacheUtils/deleteCachedApiCustomer.js";
 import { getCachedApiCustomer } from "./apiCusCacheUtils/getCachedApiCustomer.js";
 import { updateCustomerDetails } from "./cusUtils.js";
 
@@ -14,10 +18,14 @@ export const getOrCreateApiCustomer = async ({
 	ctx,
 	customerId,
 	customerData,
+	entityId,
+	entityData,
 }: {
 	ctx: AutumnContext;
 	customerId: string | null;
 	customerData?: CustomerData;
+	entityId?: string;
+	entityData?: EntityData;
 }): Promise<{ apiCustomer: ApiCustomer; legacyData?: CustomerLegacyData }> => {
 	// ========================================
 	// Phase 1: Get or Create Customer
@@ -124,6 +132,37 @@ export const getOrCreateApiCustomer = async ({
 		});
 		apiCustomer = res?.apiCustomer;
 		legacyData = res?.legacyData;
+	}
+
+	// AUTO CREATE ENTITY
+
+	if (
+		entityId &&
+		customerId &&
+		!apiCustomer.entities?.some((e) => e.id === entityId)
+	) {
+		ctx.logger.info(
+			`[getOrCreateApiCustomer] Auto creating entity ${entityId} for customer ${customerId}`,
+		);
+
+		const newEntity = await autoCreateEntity({
+			ctx,
+			customerId: customerId || "",
+			entityId,
+			entityData: {
+				name: entityData?.name,
+				feature_id: entityData?.feature_id || "",
+			},
+		});
+
+		await deleteCachedApiCustomer({
+			customerId,
+			orgId: ctx.org.id,
+			env: ctx.env,
+		});
+
+		const apiEntity = ApiEntitySchema.parse(newEntity);
+		apiCustomer.entities = [...(apiCustomer.entities || []), apiEntity];
 	}
 
 	return {

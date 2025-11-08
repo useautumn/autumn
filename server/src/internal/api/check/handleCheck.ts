@@ -25,7 +25,6 @@ export const handleCheck = createRoute({
 			feature_id,
 			product_id,
 			entity_id,
-			customer_data,
 			required_quantity,
 			required_balance,
 			send_event,

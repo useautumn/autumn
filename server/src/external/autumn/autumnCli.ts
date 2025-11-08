@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import {
+	type ApiEntity,
 	type AttachBody,
 	type CreateEntityParams,
 	type CreateRewardProgram,
@@ -270,10 +271,13 @@ export class AutumnInt {
 			params?: {
 				expand?: CusExpand[];
 				skip_cache?: string;
+				with_autumn_id?: boolean;
 			},
 		): Promise<
 			Customer & {
 				invoices: any[];
+				autumn_id?: string;
+				entities?: ApiEntity[];
 			}
 		> => {
 			const queryParams = new URLSearchParams();
@@ -288,7 +292,12 @@ export class AutumnInt {
 			if (finalParams.skip_cache) {
 				queryParams.append("skip_cache", finalParams.skip_cache);
 			}
-
+			if (finalParams.with_autumn_id) {
+				queryParams.append(
+					"with_autumn_id",
+					finalParams.with_autumn_id ? "true" : "false",
+				);
+			}
 			const data = await this.get(
 				`/customers/${customerId}?${queryParams.toString()}`,
 			);

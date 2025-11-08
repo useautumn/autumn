@@ -45,7 +45,6 @@ export const createEntities = async ({
 		customerId,
 		customerData,
 		createEntityData,
-		logger,
 	});
 
 	for (const cusProduct of cusProducts) {

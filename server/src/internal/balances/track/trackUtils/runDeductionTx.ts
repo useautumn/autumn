@@ -61,6 +61,7 @@ export const deductFromCusEnts = async ({
 }> => {
 	const { db, org, env } = ctx;
 
+	// Need to getOrCreateCustomer here too...
 	if (!fullCus) {
 		fullCus = await CusService.getFull({
 			db,
