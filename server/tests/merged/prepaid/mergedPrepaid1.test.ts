@@ -1,16 +1,15 @@
+import { beforeAll, describe, test } from "bun:test";
 import {
 	type AppEnv,
 	CusProductStatus,
 	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
-import { beforeAll, describe, expect, test } from "bun:test";
 import chalk from "chalk";
 import type { Stripe } from "stripe";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
@@ -94,8 +93,6 @@ describe(`${chalk.yellowBright("mergedPrepaid1: Testing merged subs, upgrade 1 &
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 	let stripeCli: Stripe;
-	let testClockId: string;
-	let curUnix: number;
 	let db: DrizzleCli;
 	let org: Organization;
 	let env: AppEnv;
@@ -108,7 +105,7 @@ describe(`${chalk.yellowBright("mergedPrepaid1: Testing merged subs, upgrade 1 &
 			customerId,
 		});
 
-		const res = await initCustomerV3({
+		await initCustomerV3({
 			ctx,
 			customerId,
 			customerData: {},
@@ -120,7 +117,6 @@ describe(`${chalk.yellowBright("mergedPrepaid1: Testing merged subs, upgrade 1 &
 		db = ctx.db;
 		org = ctx.org;
 		env = ctx.env;
-		testClockId = res.testClockId!;
 	});
 
 	const entities = [

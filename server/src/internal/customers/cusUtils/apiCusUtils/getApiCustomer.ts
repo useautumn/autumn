@@ -20,6 +20,7 @@ export const getApiCustomer = async ({
 	customerId,
 	fullCus,
 	skipCache = false,
+	baseData,
 }: {
 	ctx: RequestContext;
 	expand: CusExpand[];
@@ -27,23 +28,30 @@ export const getApiCustomer = async ({
 	customerId?: string;
 	fullCus?: FullCustomer;
 	skipCache?: boolean;
+	baseData?: { apiCustomer: ApiCustomer; legacyData: CustomerLegacyData };
 }) => {
-	// Get base customer (cacheable or direct from DB)
-	// await redis.del(
-	// 	buildCachedApiCustomerKey({
-	// 		customerId: customerId || "",
-	// 		orgId: ctx.org.id,
-	// 		env: ctx.env,
-	// 	}),
-	// );
+	let baseCustomer: ApiCustomer;
+	let cusLegacyData: CustomerLegacyData;
 
-	const { apiCustomer: baseCustomer, legacyData: cusLegacyData } =
-		await getCachedApiCustomer({
+	if (!baseData) {
+		const { apiCustomer, legacyData } = await getCachedApiCustomer({
 			ctx,
 			customerId: customerId || "",
-			withAutumnId,
 			skipCache,
 		});
+		baseCustomer = apiCustomer;
+		cusLegacyData = legacyData;
+	} else {
+		baseCustomer = baseData.apiCustomer;
+		cusLegacyData = baseData.legacyData;
+	}
+
+	// Clean api customer
+	baseCustomer = {
+		...baseCustomer,
+		entities: undefined,
+		autumn_id: withAutumnId ? baseCustomer.autumn_id : undefined,
+	};
 
 	// Get expand fields (not cacheable)
 	const apiCusExpand = await getApiCustomerExpand({

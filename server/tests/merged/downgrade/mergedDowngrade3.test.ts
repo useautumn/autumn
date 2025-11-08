@@ -1,16 +1,15 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type AppEnv,
 	CusProductStatus,
 	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
-import { beforeAll, describe, expect, test } from "bun:test";
 import chalk from "chalk";
 import type { Stripe } from "stripe";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
@@ -83,6 +82,19 @@ describe(`${chalk.yellowBright("mergedDowngrade3: Testing merged subs, pro 1, pr
 	let org: Organization;
 	let env: AppEnv;
 
+	const entities = [
+		{
+			id: "1",
+			name: "Entity 1",
+			feature_id: TestFeature.Users,
+		},
+		{
+			id: "2",
+			name: "Entity 2",
+			feature_id: TestFeature.Users,
+		},
+	];
+
 	beforeAll(async () => {
 		await initProductsV0({
 			ctx,
@@ -104,26 +116,13 @@ describe(`${chalk.yellowBright("mergedDowngrade3: Testing merged subs, pro 1, pr
 		org = ctx.org;
 		env = ctx.env;
 		testClockId = res.testClockId!;
+
+		await autumn.entities.create(customerId, entities);
 	});
 
-	const entities = [
-		{
-			id: "1",
-			name: "Entity 1",
-			feature_id: TestFeature.Users,
-		},
-		{
-			id: "2",
-			name: "Entity 2",
-			feature_id: TestFeature.Users,
-		},
-	];
-
-	test("should run operations", async () => {
-		await autumn.entities.create(customerId, entities);
-
-		for (let index = 0; index < ops.length; index++) {
-			const op = ops[index];
+	for (let index = 0; index < ops.length; index++) {
+		const op = ops[index];
+		test(`should attach ${op.product.id} to entity ${op.entityId}`, async () => {
 			try {
 				await autumn.attach({
 					customer_id: customerId,
@@ -140,7 +139,7 @@ describe(`${chalk.yellowBright("mergedDowngrade3: Testing merged subs, pro 1, pr
 					});
 				}
 				expect(
-					entity.products.filter((p: any) => p.group == premium.group).length,
+					entity.products.filter((p: any) => p.group === premium.group).length,
 				).toBe(op.results.length);
 
 				await expectSubToBeCorrect({
@@ -155,6 +154,6 @@ describe(`${chalk.yellowBright("mergedDowngrade3: Testing merged subs, pro 1, pr
 				);
 				throw error;
 			}
-		}
-	});
+		});
+	}
 });

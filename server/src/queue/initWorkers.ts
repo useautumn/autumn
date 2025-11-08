@@ -15,6 +15,7 @@ import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigration
 import { detectBaseVariant } from "@/internal/products/productUtils/detectProductVariant.js";
 import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutReward.js";
 import { generateId } from "@/utils/genUtils.js";
+import { createWorkerContext } from "./createWorkerContext.js";
 import { QUEUE_URL, sqs } from "./initSqs.js";
 import { JobName } from "./JobName.js";
 
@@ -56,7 +57,13 @@ const processMessage = async ({
 			},
 		},
 	});
-	// workerLogger.info(`Received message ${message.MessageId}`);
+
+	const ctx = await createWorkerContext({
+		db,
+		orgId: job.data.orgId,
+		env: job.data.env,
+		logger: workerLogger,
+	});
 
 	try {
 		if (job.name === JobName.DetectBaseVariant) {
@@ -109,9 +116,8 @@ const processMessage = async ({
 
 		if (job.name === JobName.SyncBalanceBatch) {
 			await runSyncBalanceBatch({
-				db,
+				ctx,
 				payload: job.data,
-				logger: workerLogger as Logger,
 			});
 			return;
 		}

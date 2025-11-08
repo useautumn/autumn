@@ -1,18 +1,16 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
-import { expect } from "chai";
 import chalk from "chalk";
-import type Stripe from "stripe";
-import { setupBefore } from "tests/before.js";
 import { TestFeature } from "tests/setup/v2Features.js";
-import { createProducts } from "tests/utils/productUtils.js";
 import { completeInvoiceCheckout } from "tests/utils/stripeUtils/completeInvoiceCheckout.js";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 import { expectSubToBeCorrect } from "../mergeUtils/expectSubCorrect.js";
 
 export const pro = constructProduct({
@@ -63,49 +61,34 @@ const testCase = "separate1";
 describe(`${chalk.yellowBright(`${testCase}: Testing separate subscriptions because of invoice checkout`)}`, () => {
 	const customerId = testCase;
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_2 });
-	let testClockId: string;
-	let db: DrizzleCli, org: Organization, env: AppEnv;
-	let stripeCli: Stripe;
-	const curUnix = new Date().getTime();
+	let db: DrizzleCli;
+	let org: Organization;
+	let env: AppEnv;
 
-	beforeAll(async function () {
-		await setupBefore(this);
-		const { autumnJs } = this;
-		db = this.db;
-		org = this.org;
-		env = this.env;
-
-		stripeCli = this.stripeCli;
-
-		addPrefixToProducts({
+	beforeAll(async () => {
+		await initProductsV0({
+			ctx,
 			products: [pro, premium],
 			prefix: testCase,
-		});
-
-		await createProducts({
-			autumn,
-			products: [pro, premium],
 			customerId,
-			db,
-			orgId: org.id,
-			env,
 		});
 
-		const { testClockId: testClockId1 } = await initCustomer({
-			autumn: autumnJs,
+		await initCustomerV3({
+			ctx,
 			customerId,
-			db,
-			org,
-			env,
-			// attachPm: "success",
+			customerData: {},
+			withTestClock: true,
 		});
 
-		testClockId = testClockId1!;
+		db = ctx.db;
+		org = ctx.org;
+		env = ctx.env;
+
+		await autumn.entities.create(customerId, entities);
 	});
 
 	const subIds: string[] = [];
-	it("should attach pro  product", async () => {
-		await autumn.entities.create(customerId, entities);
+	test("should attach pro  product", async () => {
 		for (const op of ops) {
 			const res = await autumn.attach({
 				customer_id: customerId,
@@ -132,7 +115,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing separate subscriptions beca
 		const entity1SubId = entity1Prod?.subscription_ids?.[0];
 		const entity2SubId = entity2Prod?.subscription_ids?.[0];
 
-		expect(entity1SubId).to.not.equal(entity2SubId);
+		expect(entity1SubId).not.toBe(entity2SubId);
 
 		subIds.push(entity1SubId!);
 		subIds.push(entity2SubId!);
@@ -146,7 +129,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing separate subscriptions beca
 		});
 	});
 
-	it("should upgrade both entities to premium", async () => {
+	test("should upgrade both entities to premium", async () => {
 		await autumn.attach({
 			customer_id: customerId,
 			product_id: premium.id,

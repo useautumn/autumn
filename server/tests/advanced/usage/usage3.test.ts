@@ -1,42 +1,99 @@
+import { beforeAll, describe, expect, test } from "bun:test";
+import {
+	BillingInterval,
+	ProductItemInterval,
+	UsageModel,
+} from "@autumn/shared";
 import chalk from "chalk";
-import { advanceProducts } from "../../global.js";
-import { AutumnCli } from "../../cli/AutumnCli.js";
-import { sendGPUEvents } from "../../utils/advancedUsageUtils.js";
-import { advanceTestClock } from "../../utils/stripeUtils.js";
-import { expect } from "bun:test";
 import { Decimal } from "decimal.js";
+import type Stripe from "stripe";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { expectCustomerV0Correct } from "tests/utils/expectUtils/expectCustomerV0Correct.js";
-import { checkSubscriptionContainsProducts } from "tests/utils/scheduleCheckUtils.js";
-import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
-import { beforeAll, describe, test } from "bun:test";
-import Stripe from "stripe";
-import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
-import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
 import { getSubsFromCusId } from "tests/utils/expectUtils/expectSubUtils.js";
-import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import { checkSubscriptionContainsProducts } from "tests/utils/scheduleCheckUtils.js";
 import ctx from "tests/utils/testInitUtils/createTestContext.js";
-
-// NOTE: This test uses GPU products from global.ts (advanceProducts.gpuSystemStarter, gpuSystemPro)
-// These products are not yet converted to ProductV2 format in sharedProducts.ts
-// The test has been migrated to Bun but still uses ProductV1 from global.ts
+import { v1ProductToBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
+import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
+import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
+import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
+import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
+import { convertProductV2ToV1 } from "@/internal/products/productUtils/productV2Utils/convertProductV2ToV1.js";
+import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { AutumnCli } from "../../cli/AutumnCli.js";
+import { advanceTestClock } from "../../utils/stripeUtils.js";
 
 const testCase = "usage3";
-const ASSERT_INVOICE_AMOUNT = true;
+const PRECISION = 10;
+const CREDIT_MULTIPLIER = 100000;
+
+// Find credit system feature from test context
+const creditsFeature = ctx.features.find((f) => f.id === TestFeature.Credits);
+
+if (!creditsFeature) {
+	throw new Error("Credits feature not found in test context");
+}
+
+const gpuSystemStarter = constructRawProduct({
+	id: "gpu-system-starter",
+	items: [
+		constructPriceItem({
+			price: 20, // $20/month
+			interval: BillingInterval.Month,
+		}),
+		{
+			feature_id: TestFeature.Credits,
+			usage_model: UsageModel.PayPerUse,
+			included_usage: 500,
+			interval: ProductItemInterval.Month,
+			billing_units: 5,
+			price: 0.01,
+			reset_usage_when_enabled: true,
+		},
+	],
+});
+
+const gpuSystemPro = constructRawProduct({
+	id: "gpu-system-pro",
+	items: [
+		constructPriceItem({
+			price: 100, // $100/month
+			interval: BillingInterval.Month,
+		}),
+		{
+			feature_id: TestFeature.Credits,
+			usage_model: UsageModel.PayPerUse,
+			included_usage: 5000,
+			interval: ProductItemInterval.Month,
+			billing_units: 1,
+			price: 0.01,
+			reset_usage_when_enabled: true,
+		},
+	],
+});
 
 describe(`${chalk.yellowBright(
 	"usage3: upgrade from GPU starter monthly to GPU pro monthly",
 )}`, () => {
-	const customerId = "usage3";
+	const customerId = testCase;
 	let testClockId = "";
 	let totalCreditsUsed = 0;
 	let stripeCli: Stripe;
 	let curUnix = 0;
 
 	beforeAll(async () => {
-		let { testClockId: insertedTestClockId } = await initCustomerV3({
+		await initProductsV0({
+			ctx,
+			products: [gpuSystemStarter, gpuSystemPro],
+			prefix: testCase,
+			customerId,
+		});
+
+		const { testClockId: insertedTestClockId } = await initCustomerV3({
 			ctx,
 			customerId,
-			customerData: { fingerprint: "test" },
 			withTestClock: true,
 			attachPm: "success",
 		});
@@ -49,19 +106,42 @@ describe(`${chalk.yellowBright(
 	test("usage3: should attach GPU starter monthly", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
-			productId: advanceProducts.gpuSystemStarter.id,
+			productId: gpuSystemStarter.id,
 		});
 	});
 
 	// 2. Send 20 events
 	test("usage3: should send 20 events", async () => {
-		let eventCount = 20;
-		const { creditsUsed } = await sendGPUEvents({
-			customerId,
-			eventCount,
-		});
+		const eventCount = 20;
+		const batchEvents = [];
+		for (let i = 0; i < eventCount; i++) {
+			const randomVal = new Decimal(Math.random().toFixed(PRECISION))
+				.mul(CREDIT_MULTIPLIER)
+				.mul(Math.random() > 0.2 ? 1 : -1)
+				.toNumber();
+			const featureId = i % 2 === 0 ? TestFeature.Action1 : TestFeature.Action2;
 
-		totalCreditsUsed = creditsUsed;
+			const creditsUsed = getCreditCost({
+				creditSystem: creditsFeature,
+				featureId: featureId,
+				amount: randomVal,
+			});
+
+			totalCreditsUsed = new Decimal(totalCreditsUsed)
+				.plus(creditsUsed)
+				.toNumber();
+
+			batchEvents.push(
+				AutumnCli.sendEvent({
+					customerId: customerId,
+					featureId: featureId,
+					properties: { value: randomVal },
+				}),
+			);
+		}
+
+		await Promise.all(batchEvents);
+		await new Promise((resolve) => setTimeout(resolve, 15000));
 	});
 
 	// 3. Advance test clock by 15 days and upgrade
@@ -74,25 +154,24 @@ describe(`${chalk.yellowBright(
 
 		await AutumnCli.attach({
 			customerId: customerId,
-			productId: advanceProducts.gpuSystemPro.id,
+			productId: gpuSystemPro.id,
 		});
 
 		// MAKE SURE STRIPE SUB ONLY HAS GPU PRO
 
 		const res = await AutumnCli.getCustomer(customerId);
-		expectCustomerV0Correct({
-			sent: advanceProducts.gpuSystemPro,
+		await expectCustomerV0Correct({
+			sent: gpuSystemPro,
 			cusRes: res,
-			ctx,
 		});
 
-		let subscriptionId = res.products[0].subscription_ids![0]!;
+		const subscriptionId = res.products[0].subscription_ids![0]!;
 		await checkSubscriptionContainsProducts({
 			db: ctx.db,
 			org: ctx.org,
 			env: ctx.env,
 			subscriptionId,
-			productIds: [advanceProducts.gpuSystemPro.id],
+			productIds: [gpuSystemPro.id],
 		});
 	});
 
@@ -101,22 +180,35 @@ describe(`${chalk.yellowBright(
 		const res = await AutumnCli.getCustomer(customerId);
 		const invoices = res!.invoices;
 
-		let basePrice1 = advanceProducts.gpuSystemStarter.prices[0].config.amount;
-		let basePrice2 = advanceProducts.gpuSystemPro.prices[0].config.amount;
+		// Convert V2 products to V1 to access prices
+		const starterV1 = convertProductV2ToV1({
+			productV2: gpuSystemStarter,
+			orgId: ctx.org.id,
+			features: ctx.features,
+		});
 
-		let { subs } = await getSubsFromCusId({
+		const proV1 = convertProductV2ToV1({
+			productV2: gpuSystemPro,
+			orgId: ctx.org.id,
+			features: ctx.features,
+		});
+
+		const basePrice1 = v1ProductToBasePrice({ prices: starterV1.prices });
+		const basePrice2 = v1ProductToBasePrice({ prices: proV1.prices });
+
+		const { subs } = await getSubsFromCusId({
 			db: ctx.db,
 			org: ctx.org,
 			env: ctx.env,
 			customerId,
 			stripeCli,
-			productId: advanceProducts.gpuSystemPro.id,
+			productId: gpuSystemPro.id,
 		});
 
-		let sub = subs[0];
+		const sub = subs[0];
 
 		const { start, end } = subToPeriodStartEnd({ sub });
-		let baseDiff = calculateProrationAmount({
+		const baseDiff = calculateProrationAmount({
 			periodStart: start * 1000,
 			periodEnd: end * 1000,
 			now: curUnix,
@@ -124,17 +216,17 @@ describe(`${chalk.yellowBright(
 			allowNegative: true,
 		});
 
-		let usagePrice = advanceProducts.gpuSystemStarter.prices[1];
-		let overage =
-			totalCreditsUsed -
-			advanceProducts.gpuSystemStarter.entitlements.gpuCredits.allowance!;
+		const usagePrice = starterV1.prices[1];
+		const starterAllowance =
+			starterV1.entitlements[TestFeature.Credits]?.allowance!;
+		const overage = totalCreditsUsed - starterAllowance;
 
-		let overagePrice = priceToInvoiceAmount({
+		const overagePrice = priceToInvoiceAmount({
 			price: usagePrice,
 			overage,
 		});
 
-		let calculatedTotal = new Decimal(baseDiff)
+		const calculatedTotal = new Decimal(baseDiff)
 			.plus(overagePrice)
 			.toDecimalPlaces(2)
 			.toNumber();

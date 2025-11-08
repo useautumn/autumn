@@ -1,3 +1,4 @@
+import { beforeAll, describe, test } from "bun:test";
 import {
 	type AppEnv,
 	CusProductStatus,
@@ -6,17 +7,16 @@ import {
 } from "@autumn/shared";
 import chalk from "chalk";
 import type { Stripe } from "stripe";
-import { setupBefore } from "tests/before.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
 // UNCOMMENT FROM HERE
 
@@ -76,46 +76,9 @@ describe(`${chalk.yellowBright("mergedUpgrade2: Upgrading when there's a schedul
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 	let stripeCli: Stripe;
-	let testClockId: string;
-	let curUnix: number;
 	let db: DrizzleCli;
 	let org: Organization;
 	let env: AppEnv;
-
-	beforeAll(async function () {
-		await setupBefore(this);
-		const { autumnJs } = this;
-		db = this.db;
-		org = this.org;
-		env = this.env;
-
-		stripeCli = this.stripeCli;
-
-		addPrefixToProducts({
-			products: [pro, free, premium, growth],
-			prefix: testCase,
-		});
-
-		await createProducts({
-			autumn: autumnJs,
-			products: [pro, free, premium, growth],
-			db,
-			orgId: org.id,
-			env,
-			customerId,
-		});
-
-		const { testClockId: testClockId1 } = await initCustomer({
-			autumn: autumnJs,
-			customerId,
-			db,
-			org,
-			env,
-			attachPm: "success",
-		});
-
-		testClockId = testClockId1!;
-	});
 
 	const entities = [
 		{
@@ -130,11 +93,31 @@ describe(`${chalk.yellowBright("mergedUpgrade2: Upgrading when there's a schedul
 		},
 	];
 
-	it("should run operations", async () => {
-		await autumn.entities.create(customerId, entities);
+	beforeAll(async () => {
+		await initProductsV0({
+			ctx,
+			products: [pro, free, premium, growth],
+			prefix: testCase,
+			customerId,
+		});
 
-		for (let index = 0; index < ops.length; index++) {
-			const op = ops[index];
+		await initCustomerV3({
+			ctx,
+			customerId,
+			attachPm: "success",
+			withTestClock: true,
+		});
+
+		stripeCli = ctx.stripeCli;
+		db = ctx.db;
+		org = ctx.org;
+		env = ctx.env;
+
+		await autumn.entities.create(customerId, entities);
+	});
+
+	for (const op of ops) {
+		test(`should attach ${op.product.id} to entity ${op.entityId}`, async () => {
 			await attachAndExpectCorrect({
 				autumn,
 				customerId,
@@ -155,6 +138,6 @@ describe(`${chalk.yellowBright("mergedUpgrade2: Upgrading when there's a schedul
 					status: result.status,
 				});
 			}
-		}
-	});
+		});
+	}
 });

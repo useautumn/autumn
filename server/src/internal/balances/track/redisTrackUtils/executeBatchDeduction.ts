@@ -1,5 +1,5 @@
+import { getBatchDeductionScript } from "@lua/luaScripts.js";
 import type { Redis } from "ioredis";
-import { getBatchDeductionScript } from "./luaScripts.js";
 
 interface FeatureDeduction {
 	featureId: string;
@@ -23,6 +23,8 @@ interface BatchDeductionResult {
 	success: boolean;
 	results: RequestResult[];
 	error?: string;
+	customerChanged?: boolean; // True if customer-level features were modified
+	changedEntityIds?: string[]; // Array of entity IDs that were modified
 	debug?: any; // For debugging purposes
 }
 

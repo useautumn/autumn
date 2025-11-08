@@ -1,5 +1,6 @@
 import { redis } from "../../../../external/redis/initRedis.js";
 import { buildCachedApiCustomerKey } from "../../../customers/cusUtils/apiCusCacheUtils/getCachedApiCustomer.js";
+import { buildCachedApiEntityKey } from "../../../entities/entityUtils/apiEntityCacheUtils/getCachedApiEntity.js";
 import { executeBatchDeduction } from "./executeBatchDeduction.js";
 
 interface FeatureDeduction {
@@ -7,11 +8,17 @@ interface FeatureDeduction {
 	amount: number;
 }
 
+interface DeductionResult {
+	success: boolean;
+	error?: string;
+	customerChanged?: boolean;
+	changedEntityIds?: string[];
+}
+
 interface BatchRequest {
 	featureDeductions: FeatureDeduction[];
 	overageBehavior: "cap" | "reject";
-	entityId?: string;
-	resolve: (result: { success: boolean; error?: string }) => void;
+	resolve: (result: DeductionResult) => void;
 	reject: (error: Error) => void;
 }
 
@@ -56,13 +63,14 @@ export class BatchingManager {
 		env: string;
 		entityId?: string;
 		overageBehavior?: "cap" | "reject";
-	}): Promise<{ success: boolean; error?: string }> {
-		const cacheKey = buildCachedApiCustomerKey({
-			customerId,
-			orgId,
-			env,
-		});
-		const batchKey = cacheKey; // Batch by customer only
+	}): Promise<DeductionResult> {
+		// CRITICAL: Batch by customer AND entity (if entity-level deduction)
+		// This ensures entity-level deductions are atomic per entity
+		// Customer-level: {orgId}:env:customer:{customerId}
+		// Entity-level: {orgId}:env:customer:{customerId}:entity:{entityId}
+		const batchKey = entityId
+			? buildCachedApiEntityKey({ entityId, customerId, orgId, env })
+			: buildCachedApiCustomerKey({ customerId, orgId, env });
 
 		return new Promise((resolve, reject) => {
 			// Create batch if it doesn't exist
@@ -90,7 +98,6 @@ export class BatchingManager {
 			batch.requests.push({
 				featureDeductions,
 				overageBehavior,
-				entityId,
 				resolve,
 				reject,
 			});
@@ -135,26 +142,30 @@ export class BatchingManager {
 		const requests = batch.requests;
 		const batchSize = requests.length;
 
-		// Build cache key from batch context
+		// Build cache key from batch context (always customer cache key for the Lua script)
 		const cacheKey = buildCachedApiCustomerKey({
 			customerId: batch.customerId,
 			orgId: batch.orgId,
 			env: batch.env,
 		});
 
+		const batchType = batch.entityId
+			? `entity ${batch.entityId}`
+			: "customer-level";
 		console.log(
-			`🚀 Executing batch with ${batchSize} requests for customer ${batch.customerId}`,
+			`🚀 Executing batch with ${batchSize} requests for customer ${batch.customerId} (${batchType})`,
 		);
 
 		try {
 			// Execute batch Lua script
+			// All requests in this batch have the same entityId (batch-level)
 			const result = await executeBatchDeduction({
 				redis,
 				cacheKey,
 				requests: requests.map((r) => ({
 					featureDeductions: r.featureDeductions,
 					overageBehavior: r.overageBehavior,
-					entityId: r.entityId,
+					entityId: batch.entityId, // Use batch-level entityId (same for all requests)
 				})),
 				orgId: batch.orgId,
 				env: batch.env,
@@ -165,15 +176,15 @@ export class BatchingManager {
 
 			// Resolve each request based on its individual result
 			if (result.success && result.results) {
-				// TODO: Queue Postgres sync job for successful deductions if needed
-				// This can be added later when integrating with the sync system
-
 				// Match each request with its result
+				// All requests in this batch get the same customerChanged/changedEntityIds
 				for (let i = 0; i < requests.length; i++) {
 					const requestResult = result.results[i];
 					requests[i].resolve({
 						success: requestResult?.success || false,
 						error: requestResult?.error,
+						customerChanged: result.customerChanged,
+						changedEntityIds: result.changedEntityIds,
 					});
 				}
 			} else {

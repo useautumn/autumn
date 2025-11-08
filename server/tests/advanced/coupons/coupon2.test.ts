@@ -1,3 +1,4 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type AppEnv,
 	CouponDurationType,
@@ -6,7 +7,6 @@ import {
 	type Organization,
 	RewardType,
 } from "@autumn/shared";
-import { beforeAll, describe, expect, test } from "bun:test";
 import chalk from "chalk";
 import { addHours, addMonths } from "date-fns";
 import { Decimal } from "decimal.js";
@@ -18,11 +18,11 @@ import { expectProductAttached } from "tests/utils/expectUtils/expectProductAtta
 import { timeout } from "tests/utils/genUtils.js";
 import { createProducts, createReward } from "tests/utils/productUtils.js";
 import { completeCheckoutForm, getDiscount } from "tests/utils/stripeUtils.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import {
 	addPrefixToProducts,
 	getBasePrice,
 } from "tests/utils/testProductUtils/testProductUtils.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { getOriginalCouponId } from "@/internal/rewards/rewardUtils.js";

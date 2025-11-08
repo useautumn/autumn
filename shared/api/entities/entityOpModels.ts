@@ -21,6 +21,7 @@ export const CreateEntityParamsSchema = z.object({
 export const GetEntityQuerySchema = z.object({
 	expand: queryStringArray(z.enum(EntityExpand)).default([]),
 	skip_cache: z.boolean().optional(),
+	with_autumn_id: z.boolean().optional(),
 });
 
 export const CreateEntityQuerySchema = z.object({

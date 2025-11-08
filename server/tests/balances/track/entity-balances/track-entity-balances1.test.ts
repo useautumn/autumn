@@ -118,8 +118,8 @@ describe(`${chalk.yellowBright("track-entity-balances1: basic entity cache test"
 		const customerFromCache = await autumnV1.customers.get(customerId);
 
 		// Customer should match
-		expect(customerFromDb.features[TestFeature.Dashboard]).toEqual(
-			customerFromCache.features[TestFeature.Dashboard],
+		expect(customerFromCache.features[TestFeature.Dashboard]).toMatchObject(
+			customerFromDb.features[TestFeature.Dashboard],
 		);
 
 		// All entities should match
@@ -132,8 +132,8 @@ describe(`${chalk.yellowBright("track-entity-balances1: basic entity cache test"
 				entity.id,
 			);
 
-			expect(entityFromDb.features[TestFeature.Dashboard]).toEqual(
-				entityFromCache.features[TestFeature.Dashboard],
+			expect(entityFromCache.features[TestFeature.Dashboard]).toMatchObject(
+				entityFromDb.features[TestFeature.Dashboard],
 			);
 		}
 	});

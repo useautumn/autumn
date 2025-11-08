@@ -1,3 +1,4 @@
+import type { AppEnv } from "@autumn/shared";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 
@@ -5,7 +6,7 @@ interface SyncPairContext {
 	customerId: string;
 	featureId: string;
 	orgId: string;
-	env: string;
+	env: AppEnv;
 	entityId?: string;
 	timestamp: number;
 }
@@ -125,6 +126,8 @@ export class SyncBatchingManager {
 			await addTaskToQueue({
 				jobName: JobName.SyncBalanceBatch,
 				payload: {
+					orgId: items?.[0]?.orgId,
+					env: items?.[0]?.env,
 					items,
 				},
 				messageGroupId: customerId,

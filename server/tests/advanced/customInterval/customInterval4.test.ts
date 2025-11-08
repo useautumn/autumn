@@ -1,15 +1,15 @@
-import { LegacyVersion } from "@autumn/shared";
 import { beforeAll, describe, expect, test } from "bun:test";
+import { LegacyVersion } from "@autumn/shared";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
 import type Stripe from "stripe";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import {
 	expectDowngradeCorrect,
 	expectNextCycleCorrect,
 } from "tests/utils/expectUtils/expectScheduleUtils.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
@@ -51,19 +51,19 @@ describe(`${chalk.yellowBright(`${testCase}: Testing downgrades for custom inter
 	beforeAll(async () => {
 		stripeCli = ctx.stripeCli;
 
+		await initProductsV0({
+			ctx,
+			products: [pro, premium],
+			prefix: testCase,
+			customerId,
+		});
+
 		const { testClockId: testClockId1 } = await initCustomerV3({
 			ctx,
 			customerId,
 			customerData: {},
 			attachPm: "success",
 			withTestClock: true,
-		});
-
-		await initProductsV0({
-			ctx,
-			products: [pro, premium],
-			prefix: testCase,
-			customerId,
 		});
 
 		testClockId = testClockId1!;

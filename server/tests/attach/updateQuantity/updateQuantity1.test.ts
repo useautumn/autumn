@@ -1,10 +1,10 @@
+import { beforeAll, describe, test } from "bun:test";
 import {
 	type AppEnv,
 	AttachErrCode,
 	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
-import { beforeAll, describe, test } from "bun:test";
 import chalk from "chalk";
 import { addWeeks } from "date-fns";
 import type Stripe from "stripe";
@@ -13,8 +13,8 @@ import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js"
 import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
 import { createProducts } from "tests/utils/productUtils.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
 import ctx from "tests/utils/testInitUtils/createTestContext.js";
+import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";

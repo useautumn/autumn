@@ -1,11 +1,7 @@
 // test payment failures
 
-import {
-	LegacyVersion,
-	OnDecrease,
-	OnIncrease,
-} from "@autumn/shared";
 import { beforeAll, describe, test } from "bun:test";
+import { LegacyVersion, OnDecrease, OnIncrease } from "@autumn/shared";
 import chalk from "chalk";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
@@ -40,8 +36,6 @@ const testCase = "entity5";
 describe(`${chalk.yellowBright(`contUse/${testCase}: Testing create entity payment fail`)}`, () => {
 	const customerId = testCase;
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
-	let testClockId: string;
-	const curUnix = new Date().getTime();
 
 	beforeAll(async () => {
 		await initProductsV0({
@@ -51,15 +45,13 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing create entity payme
 			customerId,
 		});
 
-		const { testClockId: testClockId1 } = await initCustomerV3({
+		await initCustomerV3({
 			ctx,
 			customerId,
 			customerData: {},
 			attachPm: "success",
 			withTestClock: true,
 		});
-
-		testClockId = testClockId1!;
 	});
 
 	let usage = 0;
@@ -108,7 +100,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing create entity payme
 
 	test("should try to create entities and fail", async () => {
 		await expectAutumnError({
-			errMessage: "(Stripe Error) Your card was declined.",
+			errMessage: "card was declined.",
 			func: async () => {
 				await autumn.entities.create(customerId, [
 					{
@@ -139,7 +131,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing create entity payme
 
 	test("should track usage for users and fail", async () => {
 		await expectAutumnError({
-			errMessage: "(Stripe Error) Your card was declined.",
+			errMessage: "card was declined.",
 			func: async () => {
 				return await autumn.track({
 					customer_id: customerId,

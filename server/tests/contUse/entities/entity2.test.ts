@@ -1,9 +1,5 @@
-import {
-	LegacyVersion,
-	OnDecrease,
-	OnIncrease,
-} from "@autumn/shared";
 import { beforeAll, describe, test } from "bun:test";
+import { LegacyVersion, OnDecrease, OnIncrease } from "@autumn/shared";
 import chalk from "chalk";
 import { addWeeks } from "date-fns";
 import { TestFeature } from "tests/setup/v2Features.js";

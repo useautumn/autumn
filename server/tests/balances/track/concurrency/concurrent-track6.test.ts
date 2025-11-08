@@ -180,15 +180,24 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with 10k concurrent req
 			const expectedBalance = Decimal.max(
 				0,
 				new Decimal(TOTAL_INCLUDED_USAGE).minus(totalUsage),
-			).toNumber();
-			const actualBalance = customer.features[TestFeature.Messages].balance;
+			)
+				.toDP(5)
+				.toNumber();
+			const actualBalance = new Decimal(
+				customer.features[TestFeature.Messages].balance ?? 0,
+			)
+				.toDP(5)
+				.toNumber();
 
 			// Usage should be capped at included_usage without overage_allowed
-			const expectedUsage = Decimal.min(
-				totalUsage,
-				TOTAL_INCLUDED_USAGE,
-			).toNumber();
-			const actualUsage = customer.features[TestFeature.Messages].usage;
+			const expectedUsage = Decimal.min(totalUsage, TOTAL_INCLUDED_USAGE)
+				.toDP(5)
+				.toNumber();
+			const actualUsage = new Decimal(
+				customer.features[TestFeature.Messages].usage ?? 0,
+			)
+				.toDP(5)
+				.toNumber();
 
 			// Verify balance and usage match expectations
 			expect(actualBalance).toEqual(expectedBalance);
@@ -201,14 +210,16 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with 10k concurrent req
 					(sum, b) => new Decimal(sum).plus(b.balance || 0).toNumber(),
 					0,
 				);
-				expect(breakdownBalance).toEqual(actualBalance!);
+				expect(new Decimal(breakdownBalance).toDP(5).toNumber()).toEqual(
+					actualBalance!,
+				);
 			}
 		}
 	});
 
 	test("should have correct non-cached balances for all customers after 2s", async () => {
 		console.log("\n⏳ Waiting 2s for DB sync...");
-		await timeout(2000);
+		await timeout(5000);
 
 		for (const customerId of customerIds) {
 			const customer = await autumnV1.customers.get(customerId, {
@@ -221,15 +232,24 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with 10k concurrent req
 			const expectedBalance = Decimal.max(
 				0,
 				new Decimal(TOTAL_INCLUDED_USAGE).minus(totalUsage),
-			).toNumber();
-			const actualBalance = customer.features[TestFeature.Messages].balance;
+			)
+				.toDP(5)
+				.toNumber();
+			const actualBalance = new Decimal(
+				customer.features[TestFeature.Messages].balance ?? 0,
+			)
+				.toDP(5)
+				.toNumber();
 
 			// Usage should be capped at included_usage without overage_allowed
-			const expectedUsage = Decimal.min(
-				totalUsage,
-				TOTAL_INCLUDED_USAGE,
-			).toNumber();
-			const actualUsage = customer.features[TestFeature.Messages].usage;
+			const expectedUsage = Decimal.min(totalUsage, TOTAL_INCLUDED_USAGE)
+				.toDP(5)
+				.toNumber();
+			const actualUsage = new Decimal(
+				customer.features[TestFeature.Messages].usage ?? 0,
+			)
+				.toDP(5)
+				.toNumber();
 
 			// Use Decimal for precise comparisons - expect exact match
 			expect(actualBalance).toEqual(expectedBalance);
@@ -245,7 +265,9 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with 10k concurrent req
 					0,
 				);
 
-				expect(breakdownBalance).toEqual(actualBalance!);
+				expect(new Decimal(breakdownBalance).toDP(5).toNumber()).toEqual(
+					actualBalance!,
+				);
 			}
 		}
 

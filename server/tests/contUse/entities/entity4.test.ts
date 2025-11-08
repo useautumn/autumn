@@ -1,5 +1,6 @@
 // Handling per entity features!
 
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	CusExpand,
 	LegacyVersion,
@@ -7,7 +8,6 @@ import {
 	OnDecrease,
 	OnIncrease,
 } from "@autumn/shared";
-import { beforeAll, describe, expect, test } from "bun:test";
 import chalk from "chalk";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
@@ -49,8 +49,6 @@ const testCase = "entity4";
 describe(`${chalk.yellowBright(`contUse/${testCase}: Testing per entity features`)}`, () => {
 	const customerId = testCase;
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
-	let testClockId: string;
-	const curUnix = new Date().getTime();
 
 	beforeAll(async () => {
 		await initProductsV0({
@@ -60,15 +58,13 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing per entity features
 			customerId,
 		});
 
-		const { testClockId: testClockId1 } = await initCustomerV3({
+		await initCustomerV3({
 			ctx,
 			customerId,
 			customerData: {},
 			attachPm: "success",
 			withTestClock: true,
 		});
-
-		testClockId = testClockId1!;
 	});
 
 	let usage = 0;
@@ -127,9 +123,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing per entity features
 			feature_id: TestFeature.Messages,
 		});
 
-		expect(res.balance).toBe(
-			(perEntityItem.included_usage as number) * usage,
-		);
+		expect(res.balance).toBe((perEntityItem.included_usage as number) * usage);
 
 		// @ts-expect-error
 		for (const entity of customer.entities) {
@@ -142,8 +136,6 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing per entity features
 			expect(entRes.balance).toBe(perEntityItem.included_usage);
 		}
 	});
-
-	return;
 
 	// 1. Use from main balance...
 	test("should use from top level balance", async () => {

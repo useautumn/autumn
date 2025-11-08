@@ -1,18 +1,17 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type AppEnv,
 	CusProductStatus,
 	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
-import { beforeAll, describe, expect, test } from "bun:test";
 import chalk from "chalk";
 import type { Stripe } from "stripe";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
 import { advanceToNextInvoice } from "tests/utils/testAttachUtils/testAttachUtils.js";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
@@ -81,10 +80,22 @@ describe(`${chalk.yellowBright("mergedDowngrade9: Testing merged subs, downgrade
 
 	let stripeCli: Stripe;
 	let testClockId: string;
-	let curUnix: number;
 	let db: DrizzleCli;
 	let org: Organization;
 	let env: AppEnv;
+
+	const entities = [
+		{
+			id: "1",
+			name: "Entity 1",
+			feature_id: TestFeature.Users,
+		},
+		{
+			id: "2",
+			name: "Entity 2",
+			feature_id: TestFeature.Users,
+		},
+	];
 
 	beforeAll(async () => {
 		await initProductsV0({
@@ -107,26 +118,13 @@ describe(`${chalk.yellowBright("mergedDowngrade9: Testing merged subs, downgrade
 		org = ctx.org;
 		env = ctx.env;
 		testClockId = res.testClockId!;
+
+		await autumn.entities.create(customerId, entities);
 	});
 
-	const entities = [
-		{
-			id: "1",
-			name: "Entity 1",
-			feature_id: TestFeature.Users,
-		},
-		{
-			id: "2",
-			name: "Entity 2",
-			feature_id: TestFeature.Users,
-		},
-	];
-
-	test("should run operations", async () => {
-		await autumn.entities.create(customerId, entities);
-
-		for (let index = 0; index < ops.length; index++) {
-			const op = ops[index];
+	for (let index = 0; index < ops.length; index++) {
+		const op = ops[index];
+		test(`should attach ${op.product.id} to entity ${op.entityId}`, async () => {
 			try {
 				await attachAndExpectCorrect({
 					autumn,
@@ -138,36 +136,14 @@ describe(`${chalk.yellowBright("mergedDowngrade9: Testing merged subs, downgrade
 					env,
 					entityId: op.entityId,
 				});
-				// await autumn.attach({
-				//   customer_id: customerId,
-				//   product_id: op.product.id,
-				//   entity_id: op.entityId,
-				// });
-				// const entity = await autumn.entities.get(customerId, op.entityId);
-				// for (const result of op.results) {
-				//   expectProductAttached({
-				//     customer: entity,
-				//     product: result.product,
-				//     entityId: op.entityId,
-				//   });
-				// }
-				// expect(
-				//   entity.products.filter((p: any) => p.group == premium.group).length
-				// ).to.equal(op.results.length);
-				// await expectSubToBeCorrect({
-				//   db,
-				//   customerId,
-				//   org,
-				//   env,
-				// });
 			} catch (error) {
 				console.log(
 					`Operation failed: ${op.entityId} ${op.product.id}, index: ${index}`,
 				);
 				throw error;
 			}
-		}
-	});
+		});
+	}
 
 	test("should advance test clock and have correct products for entity 1 & 2", async () => {
 		const results = [
@@ -199,7 +175,7 @@ describe(`${chalk.yellowBright("mergedDowngrade9: Testing merged subs, downgrade
 				});
 			}
 			const products = entity.products.filter(
-				(p: any) => p.group == premium.group,
+				(p: any) => p.group === premium.group,
 			);
 			expect(products.length).toBe(result.products.length);
 		}

@@ -4,6 +4,7 @@ export enum AuthType {
 	Dashboard = "dashboard",
 	Stripe = "stripe",
 	Unknown = "unknown",
+	Worker = "worker",
 }
 
 export enum ActionType {

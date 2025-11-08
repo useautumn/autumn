@@ -23,6 +23,7 @@
       "@shared/*": ["../shared/*"],
       "@scripts/*": ["scripts/*"],
       "@emails/*": ["emails/*"],
+      "@lua/*": ["src/_luaScripts/*"],
     }
   },
   "include": ["src", "tests", "scripts", "emails", "experiments"],

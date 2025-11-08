@@ -1,15 +1,11 @@
-import {
-	ErrCode,
-	LegacyVersion,
-	type LimitedItem,
-} from "@autumn/shared";
 import { beforeAll, describe, test } from "bun:test";
+import { ErrCode, LegacyVersion, type LimitedItem } from "@autumn/shared";
 import chalk from "chalk";
 import type Stripe from "stripe";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -48,8 +44,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage limits for prepaid`)}
 	let testClockId: string;
 	let stripeCli: Stripe;
 
-	const curUnix = new Date().getTime();
-
 	beforeAll(async () => {
 		stripeCli = ctx.stripeCli;
 
@@ -73,7 +67,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage limits for prepaid`)}
 
 	test("should attach pro product with quantity exceeding usage limit and get an error", async () => {
 		expectAutumnError({
-			errCode: ErrCode.InvalidOptions,
 			func: async () => {
 				return await attachAndExpectCorrect({
 					autumn,

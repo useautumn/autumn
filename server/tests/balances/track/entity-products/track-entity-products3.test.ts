@@ -1,350 +1,283 @@
-// import { beforeAll, describe, expect, test } from "bun:test";
-// import { ApiVersion, type LimitedItem } from "@autumn/shared";
-// import chalk from "chalk";
-// import { Decimal } from "decimal.js";
-// import { TestFeature } from "tests/setup/v2Features.js";
-// import { timeout } from "tests/utils/genUtils.js";
-// import ctx from "tests/utils/testInitUtils/createTestContext.js";
-// import { AutumnInt } from "@/external/autumn/autumnCli.js";
-// import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-// import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-// import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
-// import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { beforeAll, describe, expect, test } from "bun:test";
+import { ApiVersion, ProductItemFeatureType } from "@autumn/shared";
+import chalk from "chalk";
+import { TestFeature } from "tests/setup/v2Features.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { timeout } from "../../../utils/genUtils.js";
 
-// const testCase = "track-entity-products3";
+const testCase = "track-entity-products3";
+const customerId = testCase;
 
-// // Entity-level messages (monthly, per entity)
-// const entityMessagesItem = constructFeatureItem({
-// 	featureId: TestFeature.Messages,
-// 	includedUsage: 5000,
-// 	interval: "month" as any,
-// 	intervalCount: 1,
-// }) as LimitedItem;
+// Continuous use feature (Postgres track)
+const cusUserItem = constructFeatureItem({
+	featureId: TestFeature.Workflows,
+	includedUsage: 10,
+	featureType: ProductItemFeatureType.ContinuousUse,
+});
 
-// const freeProd = constructProduct({
-// 	type: "free",
-// 	isDefault: false,
-// 	items: [entityMessagesItem],
-// });
+// Single use feature (Redis track)
+const cusMessagesItem = constructFeatureItem({
+	featureId: TestFeature.Messages,
+	includedUsage: 100,
+	featureType: ProductItemFeatureType.SingleUse,
+});
 
-// const NUM_REQUESTS = 5000;
-// const NUM_CUSTOMERS = 1;
-// const NUM_ENTITIES = 2;
+const entUserItem = constructFeatureItem({
+	featureId: TestFeature.Workflows,
+	includedUsage: 5,
+	featureType: ProductItemFeatureType.ContinuousUse,
+});
 
-// // Helper to generate random decimal between min and max
-// const randomDecimal = (min: number, max: number): Decimal => {
-// 	const value = Math.random() * (max - min) + min;
-// 	return new Decimal(value).toDecimalPlaces(2);
-// };
+const entMessagesItem = constructFeatureItem({
+	featureId: TestFeature.Messages,
+	includedUsage: 50,
+	featureType: ProductItemFeatureType.SingleUse,
+});
 
-// // Helper to randomly choose an entity or null (for customer-level)
-// const randomEntityOrNull = (entities: { id: string }[]): string | null => {
-// 	// 50% chance customer-level, 50% chance entity-level
-// 	if (Math.random() < 0.5) {
-// 		return null; // Customer-level
-// 	}
-// 	// Randomly pick an entity
-// 	const randomIndex = Math.floor(Math.random() * entities.length);
-// 	return entities[randomIndex].id;
-// };
+const customerProd = constructProduct({
+	type: "free",
+	isDefault: false,
+	items: [cusUserItem, cusMessagesItem],
+});
 
-// describe(`${chalk.yellowBright(`${testCase}: Concurrent entity product tracking`)}`, () => {
-// 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
+const entityProd = constructProduct({
+	type: "free",
+	isDefault: false,
+	id: "entity_prod",
+	items: [entUserItem, entMessagesItem],
+});
 
-// 	// Create multiple customers with their entities
-// 	const customers = Array.from({ length: NUM_CUSTOMERS }, (_, i) => {
-// 		const customerId = `${testCase}-customer-${i + 1}`;
-// 		return {
-// 			id: customerId,
-// 			entities: Array.from({ length: NUM_ENTITIES }, (_, i) => ({
-// 				id: `${customerId}-user-${i + 1}`,
-// 				name: `User ${i + 1}`,
-// 				feature_id: TestFeature.Users,
-// 			})),
-// 		};
-// 	});
+describe(`${chalk.yellowBright(
+	`track-entity-products3: Tracking customer / entity balance concurrently`,
+)}`, () => {
+	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
-// 	// Track expected balances per customer
-// 	const expectedCustomerBalances: Record<string, Decimal> = {};
-// 	const expectedEntityBalances: Record<string, Decimal> = {};
+	const entity1Id = "track-entity-products3-user-1";
+	const entity2Id = "track-entity-products3-user-2";
 
-// 	// Initialize expected balances
-// 	for (const customer of customers) {
-// 		expectedCustomerBalances[customer.id] = new Decimal(0);
-// 		for (const entity of customer.entities) {
-// 			expectedEntityBalances[entity.id] = new Decimal(0);
-// 		}
-// 	}
+	const entities = [
+		{
+			id: entity1Id,
+			name: "User 1",
+			feature_id: TestFeature.Users,
+		},
+		{
+			id: entity2Id,
+			name: "User 2",
+			feature_id: TestFeature.Users,
+		},
+	];
 
-// 	beforeAll(async () => {
-// 		// Initialize products once
-// 		await initProductsV0({
-// 			ctx,
-// 			products: [freeProd],
-// 			prefix: testCase,
-// 		});
+	beforeAll(async () => {
+		await initCustomerV3({
+			ctx,
+			customerId,
+			withTestClock: false,
+		});
 
-// 		// Initialize all customers and attach products to entities
-// 		for (const customer of customers) {
-// 			await initCustomerV3({
-// 				ctx,
-// 				customerId: customer.id,
-// 				withTestClock: false,
-// 			});
+		await initProductsV0({
+			ctx,
+			products: [customerProd, entityProd],
+			prefix: testCase,
+		});
 
-// 			await autumnV1.entities.create(customer.id, customer.entities);
+		// Attach product to customer
+		await autumnV1.attach({
+			customer_id: customerId,
+			product_id: customerProd.id,
+		});
 
-// 			// Attach product to each entity
-// 			for (const entity of customer.entities) {
-// 				await autumnV1.attach({
-// 					customer_id: customer.id,
-// 					entity_id: entity.id,
-// 					product_id: freeProd.id,
-// 				});
-// 			}
+		await autumnV1.entities.create(customerId, entities);
 
-// 			// Initialize caches
-// 			await autumnV1.customers.get(customer.id);
-// 			for (const entity of customer.entities) {
-// 				await autumnV1.entities.get(customer.id, entity.id);
-// 			}
-// 		}
-// 	});
+		for (const entity of entities) {
+			await autumnV1.attach({
+				customer_id: customerId,
+				entity_id: entity.id,
+				product_id: entityProd.id,
+			});
+		}
+	});
 
-// 	test("should have initial balances", async () => {
-// 		for (const customer of customers) {
-// 			const customerData = await autumnV1.customers.get(customer.id);
+	test("Initial balances after attach", async () => {
+		// Wait for cache to populate
+		await timeout(1000);
 
-// 			console.log(`\n🔍 Initial state for ${customer.id}:`);
-// 			console.log(
-// 				`  Customer balance: ${customerData.features[TestFeature.Messages].balance}`,
-// 			);
-// 			console.log(
-// 				`  Customer usage: ${customerData.features[TestFeature.Messages].usage}`,
-// 			);
+		const customer = await autumnV1.customers.get(customerId);
 
-// 			// Customer should have: 5000 * NUM_ENTITIES (entity-level products attached to entities)
-// 			expect(customerData.features[TestFeature.Messages].balance).toBe(
-// 				entityMessagesItem.included_usage * NUM_ENTITIES,
-// 			);
+		// Customer level: workflows (10) + messages (50)
+		// Entity level: workflows (3+3=6) + messages (100+100=200)
+		expect(customer.features[TestFeature.Workflows].balance).toBe(20); // 10 + 5 * 2
+		expect(customer.features[TestFeature.Messages].balance).toBe(200); // 100 + 50 * 2
 
-// 			// Each entity should have: 5000 (entity-level)
-// 			for (const entity of customer.entities) {
-// 				const _entity = await autumnV1.entities.get(customer.id, entity.id);
-// 				console.log(
-// 					`  Entity ${entity.id} balance: ${_entity.features[TestFeature.Messages].balance}`,
-// 				);
-// 				expect(_entity.features[TestFeature.Messages].balance).toBe(
-// 					entityMessagesItem.included_usage,
-// 				);
-// 			}
-// 		}
-// 	});
+		// Verify entity balances
+		for (const entity of entities) {
+			const _entity = await autumnV1.entities.get(customerId, entity.id);
+			expect(_entity.features[TestFeature.Workflows].balance).toBe(10 + 5); // 3 + 10
+			expect(_entity.features[TestFeature.Messages].balance).toBe(100 + 50); // 100 + 50
+		}
+	});
 
-// 	test(`should handle ${NUM_REQUESTS} concurrent requests with mixed entity/customer tracking`, async () => {
-// 		console.log(
-// 			`\n🚀 Starting ${NUM_REQUESTS} concurrent track requests across ${NUM_CUSTOMERS} customers...`,
-// 		);
+	test("Random concurrent tracks across all 6 feature combinations", async () => {
+		// Generate random track amounts for all 6 combinations
+		const numCustomerMessages = Math.floor(Math.random() * 20) + 5; // 5-25
+		const numCustomerWorkflows = Math.floor(Math.random() * 3) + 2; // 1-3
+		const numEntity1Messages = Math.floor(Math.random() * 10) + 2; // 2-12
+		const numEntity1Workflows = Math.floor(Math.random() * 2) + 1; // 1-2
+		const numEntity2Messages = Math.floor(Math.random() * 10) + 2; // 2-12
+		const numEntity2Workflows = Math.floor(Math.random() * 2) + 1; // 1-2
 
-// 		const allPromises: Promise<void>[] = [];
-// 		const trackingLogs: Record<
-// 			string,
-// 			Array<{ entityId: string | null; value: Decimal }>
-// 		> = {};
+		const summedCustomerMessagesResult =
+			200 - numCustomerMessages - numEntity1Messages - numEntity2Messages;
 
-// 		// Initialize tracking logs per customer
-// 		for (const customer of customers) {
-// 			trackingLogs[customer.id] = [];
-// 		}
+		const summedEntity1MessagesResult =
+			150 - numCustomerMessages - numEntity1Messages;
 
-// 		for (let i = 0; i < NUM_REQUESTS; i++) {
-// 			// Randomly pick a customer
-// 			const customer = customers[Math.floor(Math.random() * customers.length)];
+		const summedEntity2MessagesResult =
+			150 - numCustomerMessages - numEntity2Messages;
 
-// 			// Generate random value between 0.01 and 2.00
-// 			const decimalValue = randomDecimal(0.01, 2.0);
-// 			const value = decimalValue.toNumber();
+		console.log(`
+Table of initial customer message balances and deducted messages:
++-----------+-----------+----------+-----------------+----------------------+--------------------------+
+|   Scope   | Workflows | Messages | Summed Messages | Summed Msg Result    | Deducted Messages        |
++-----------+-----------+----------+-----------------+----------------------+--------------------------+
+| Customer  |    10     |   100    |      200        |    ${summedCustomerMessagesResult.toString().padEnd(19)}|  ${numCustomerMessages
+			.toString()
+			.padEnd(24)}|
+| Entity1   |     5     |    50    |      150        |    ${summedEntity1MessagesResult.toString().padEnd(19)}|  ${numEntity1Messages
+			.toString()
+			.padEnd(24)}|
+| Entity2   |     5     |    50    |      150        |    ${summedEntity2MessagesResult.toString().padEnd(19)}|  ${numEntity2Messages
+			.toString()
+			.padEnd(24)}|
++-----------+-----------+----------+-----------------+----------------------+--------------------------+
+Total messages: 200, Total workflows: 20
 
-// 			// Randomly choose entity or customer-level
-// 			const entityId = randomEntityOrNull(customer.entities);
+(Deducted = how many messages were deducted at each level)
+`);
 
-// 			// Store for tracking
-// 			trackingLogs[customer.id].push({ entityId, value: decimalValue });
+		console.log(`Tracking:
+  Customer: ${numCustomerMessages} messages, ${numCustomerWorkflows} workflows
+  Entity1: ${numEntity1Messages} messages, ${numEntity1Workflows} workflows
+  Entity2: ${numEntity2Messages} messages, ${numEntity2Workflows} workflows`);
 
-// 			// Create track request
-// 			const promise = autumnV1.track({
-// 				customer_id: customer.id,
-// 				entity_id: entityId || undefined,
-// 				feature_id: TestFeature.Messages,
-// 				value: value,
-// 				skip_event: true,
-// 			});
+		// Initial balances (from setup)
+		const initialCusMessages = 100; // Customer-level messages
+		const initialCusWorkflows = 10; // Customer-level workflows
+		const initialEnt1Messages = 50; // Entity1-level messages
+		const initialEnt1Workflows = 5; // Entity1-level workflows
+		const initialEnt2Messages = 50; // Entity2-level messages
+		const initialEnt2Workflows = 5; // Entity2-level workflows
 
-// 			allPromises.push(promise);
-// 		}
+		const trackPromises = [];
 
-// 		// Execute all requests concurrently
-// 		const startTime = Date.now();
-// 		await Promise.all(allPromises);
-// 		const endTime = Date.now();
+		// 1. Customer messages (Redis/single_use)
+		for (let i = 0; i < numCustomerMessages; i++) {
+			trackPromises.push(
+				autumnV1.track({
+					customer_id: customerId,
+					feature_id: TestFeature.Messages,
+					value: 1,
+				}),
+			);
+		}
 
-// 		console.log(
-// 			`\n✅ Completed ${NUM_REQUESTS} requests in ${endTime - startTime}ms`,
-// 		);
-// 		console.log(
-// 			`   Average: ${((endTime - startTime) / NUM_REQUESTS).toFixed(2)}ms per request`,
-// 		);
+		// 3. Entity1 messages (Redis/single_use)
+		for (let i = 0; i < numEntity1Messages; i++) {
+			trackPromises.push(
+				autumnV1.track({
+					customer_id: customerId,
+					entity_id: entity1Id,
+					feature_id: TestFeature.Messages,
+					value: 1,
+				}),
+			);
+		}
 
-// 		// Calculate expected balances by simulating deduction logic for each customer
-// 		console.log(`\n📊 Calculating expected balances per customer...`);
+		// 5. Entity2 messages (Redis/single_use)
+		for (let i = 0; i < numEntity2Messages; i++) {
+			trackPromises.push(
+				autumnV1.track({
+					customer_id: customerId,
+					entity_id: entity2Id,
+					feature_id: TestFeature.Messages,
+					value: 1,
+				}),
+			);
+		}
 
-// 		for (const customer of customers) {
-// 			const trackingLog = trackingLogs[customer.id];
+		await Promise.all(trackPromises);
 
-// 			console.log(`\n  ${customer.id}:`);
-// 			console.log(`    Tracks: ${trackingLog.length}`);
+		// Wait for sync to complete
+		await timeout(2000);
 
-// 			// Initialize balances (entity-only, no customer-level entitlements)
-// 			const entityBalances: Record<string, Decimal> = {};
-// 			for (const entity of customer.entities) {
-// 				entityBalances[entity.id] = new Decimal(
-// 					entityMessagesItem.included_usage,
-// 				);
-// 			}
+		// Calculate expected balances after tracking
+		const expectedCusMessages = initialCusMessages - numCustomerMessages;
+		const expectedEnt1Messages = initialEnt1Messages - numEntity1Messages;
+		const expectedEnt2Messages = initialEnt2Messages - numEntity2Messages;
 
-// 			let customerLevelTracks = 0;
-// 			let entityLevelTracks = 0;
+		// Customer-level totals (customer + all entities)
+		const expectedCustomerTotalMessages =
+			expectedCusMessages + expectedEnt1Messages + expectedEnt2Messages;
 
-// 			// Process each track sequentially to calculate expected state
-// 			for (const log of trackingLog) {
-// 				let remaining = log.value;
+		// Verify customer-level balances
+		const customer = await autumnV1.customers.get(customerId);
+		expect(customer.features[TestFeature.Messages].balance).toBe(
+			expectedCustomerTotalMessages,
+		);
 
-// 				if (log.entityId === null) {
-// 					// Customer-level tracking: deduct from entities in alphabetical order
-// 					customerLevelTracks++;
+		await timeout(2000);
 
-// 					const sortedEntityIds = Object.keys(entityBalances).sort();
-// 					for (const entityId of sortedEntityIds) {
-// 						if (remaining.lte(0)) break;
+		// Verify non-cached to ensure Postgres matches
+		const nonCachedCustomer = await autumnV1.customers.get(customerId, {
+			skip_cache: "true",
+		});
+		expect(nonCachedCustomer.features[TestFeature.Messages].balance).toBe(
+			expectedCustomerTotalMessages,
+		);
 
-// 						const entityBalance = entityBalances[entityId];
-// 						const deducted = Decimal.min(entityBalance, remaining);
-// 						entityBalances[entityId] = entityBalance.minus(deducted);
-// 						remaining = remaining.minus(deducted);
-// 					}
-// 				} else {
-// 					// Entity-level tracking: deduct from specific entity's balance
-// 					entityLevelTracks++;
+		// Entity-level totals (entity + customer inherited)
+		const expectedEntity1TotalMessages =
+			expectedEnt1Messages + expectedCusMessages;
+		const expectedEntity2TotalMessages =
+			expectedEnt2Messages + expectedCusMessages;
 
-// 					const entityBalance = entityBalances[log.entityId];
-// 					const deducted = Decimal.min(entityBalance, remaining);
-// 					entityBalances[log.entityId] = entityBalance.minus(deducted);
-// 					remaining = remaining.minus(deducted);
-// 				}
-// 			}
+		// Verify entity-level balances (entity + customer inherited)
+		const entity1 = await autumnV1.entities.get(customerId, entity1Id);
+		const entity2 = await autumnV1.entities.get(customerId, entity2Id);
 
-// 			console.log(`    Customer-level tracks: ${customerLevelTracks}`);
-// 			console.log(`    Entity-level tracks: ${entityLevelTracks}`);
-// 			for (const entity of customer.entities) {
-// 				console.log(
-// 					`    Expected ${entity.id} balance: ${entityBalances[entity.id].toFixed(2)}`,
-// 				);
-// 			}
+		expect(entity1.features[TestFeature.Messages].balance).toBe(
+			expectedEntity1TotalMessages,
+		);
 
-// 			// Store expected values for next test (no separate customer balance)
-// 			expectedCustomerBalances[customer.id] = new Decimal(0);
-// 			for (const entity of customer.entities) {
-// 				expectedEntityBalances[entity.id] = entityBalances[entity.id];
-// 			}
-// 		}
-// 	});
+		expect(entity2.features[TestFeature.Messages].balance).toBe(
+			expectedEntity2TotalMessages,
+		);
 
-// 	test("should have correct cached balances after concurrent tracking", async () => {
-// 		for (const customer of customers) {
-// 			const customerData = await autumnV1.customers.get(customer.id);
+		const nonCachedEntity1 = await autumnV1.entities.get(
+			customerId,
+			entity1Id,
+			{
+				skip_cache: "true",
+			},
+		);
+		expect(nonCachedEntity1.features[TestFeature.Messages].balance).toBe(
+			expectedEntity1TotalMessages,
+		);
 
-// 			console.log(`\n🔍 Final cached state for ${customer.id}:`);
-
-// 			// Get expected entity balances for this customer
-// 			const expectedCusEntityBalances = customer.entities.reduce(
-// 				(acc, entity) => {
-// 					acc[entity.id] = expectedEntityBalances[entity.id];
-// 					return acc;
-// 				},
-// 				{} as Record<string, Decimal>,
-// 			);
-
-// 			// Customer cache shows aggregated balance (sum of all entity balances)
-// 			const expectedAggregatedBalance = Object.values(
-// 				expectedCusEntityBalances,
-// 			).reduce((sum, b) => sum.plus(b), new Decimal(0));
-
-// 			console.log(
-// 				`  Actual customer balance: ${customerData.features[TestFeature.Messages].balance}`,
-// 			);
-// 			console.log(
-// 				`  Expected customer balance: ${expectedAggregatedBalance.toFixed(2)}`,
-// 			);
-
-// 			expect(customerData.features[TestFeature.Messages].balance).toBe(
-// 				expectedAggregatedBalance.toNumber(),
-// 			);
-
-// 			// Each entity cache shows entity balance only
-// 			for (const entity of customer.entities) {
-// 				const _entity = await autumnV1.entities.get(customer.id, entity.id);
-// 				const expectedEntityBalance = expectedEntityBalances[entity.id];
-
-// 				console.log(
-// 					`  Actual ${entity.id} balance: ${_entity.features[TestFeature.Messages].balance}`,
-// 				);
-// 				console.log(
-// 					`  Expected ${entity.id} balance: ${expectedEntityBalance.toFixed(2)}`,
-// 				);
-
-// 				expect(_entity.features[TestFeature.Messages].balance).toBe(
-// 					expectedEntityBalance.toNumber(),
-// 				);
-// 			}
-// 		}
-// 	});
-
-// 	test("verify database state matches cache after all tracking", async () => {
-// 		console.log("\n⏳ Waiting 4s for DB sync...");
-// 		await timeout(4000);
-
-// 		for (const customer of customers) {
-// 			// Read from database (skip cache)
-// 			const customerFromDb = await autumnV1.customers.get(customer.id, {
-// 				skip_cache: "true",
-// 			});
-// 			const customerFromCache = await autumnV1.customers.get(customer.id);
-
-// 			// Customer features should match
-// 			expect(customerFromDb.features[TestFeature.Messages]).toEqual(
-// 				customerFromCache.features[TestFeature.Messages],
-// 			);
-
-// 			// All entities should match
-// 			for (const entity of customer.entities) {
-// 				const entityFromDb = await autumnV1.entities.get(
-// 					customer.id,
-// 					entity.id,
-// 					{
-// 						skip_cache: "true",
-// 					},
-// 				);
-// 				const entityFromCache = await autumnV1.entities.get(
-// 					customer.id,
-// 					entity.id,
-// 				);
-
-// 				expect(entityFromDb.features[TestFeature.Messages]).toEqual(
-// 					entityFromCache.features[TestFeature.Messages],
-// 				);
-// 			}
-// 		}
-
-// 		console.log("\n✅ All balances verified successfully!");
-// 	});
-// });
+		const nonCachedEntity2 = await autumnV1.entities.get(
+			customerId,
+			entity2Id,
+			{
+				skip_cache: "true",
+			},
+		);
+		expect(nonCachedEntity2.features[TestFeature.Messages].balance).toBe(
+			expectedEntity2TotalMessages,
+		);
+	});
+});

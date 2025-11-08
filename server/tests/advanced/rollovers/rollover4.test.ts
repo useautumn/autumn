@@ -113,6 +113,17 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for usage price f
 		expect(msgesFeature).toBeDefined();
 		expect(msgesFeature?.balance).toBe(balance + rollover);
 		expect(rollovers[0].balance).toBe(rollover);
+
+		// Verify non-cached customer balance
+		await timeout(2000);
+		const nonCachedCustomer = await autumn.customers.get(customerId, {
+			skip_cache: "true",
+		});
+		const nonCachedMsgesFeature = nonCachedCustomer.features[TestFeature.Messages];
+		// @ts-expect-error
+		const nonCachedRollovers = nonCachedMsgesFeature?.rollovers;
+		expect(nonCachedMsgesFeature?.balance).toBe(balance + rollover);
+		expect(nonCachedRollovers[0].balance).toBe(rollover);
 	});
 
 	// let usage2 = 50;
@@ -134,5 +145,17 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for usage price f
 		expect(msgesFeature?.balance).toBe(balance + newRollover);
 		expect(rollovers[0].balance).toBe(0);
 		expect(rollovers[1].balance).toBe(400);
+
+		// Verify non-cached customer balance
+		await timeout(2000);
+		const nonCachedCustomer = await autumn.customers.get(customerId, {
+			skip_cache: "true",
+		});
+		const nonCachedMsgesFeature = nonCachedCustomer.features[TestFeature.Messages];
+		// @ts-expect-error
+		const nonCachedRollovers = nonCachedMsgesFeature?.rollovers;
+		expect(nonCachedMsgesFeature?.balance).toBe(balance + newRollover);
+		expect(nonCachedRollovers[0].balance).toBe(0);
+		expect(nonCachedRollovers[1].balance).toBe(400);
 	});
 });

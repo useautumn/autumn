@@ -1,33 +1,72 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type AppEnv,
+	CouponDurationType,
+	type CreateReward,
+	type CreateRewardProgram,
 	ErrCode,
 	type Organization,
 	type ReferralCode,
+	RewardReceivedBy,
 	type RewardRedemption,
+	RewardTriggerEvent,
+	RewardType,
 } from "@autumn/shared";
-import { beforeAll, describe, expect, test } from "bun:test";
 import chalk from "chalk";
 import { addDays } from "date-fns";
 import type { Stripe } from "stripe";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { timeout } from "tests/utils/genUtils.js";
-import { createProducts } from "tests/utils/productUtils.js";
+import { createReferralProgram } from "tests/utils/productUtils.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
 import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
-import { products, referralPrograms } from "../../global.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
-const pro = constructProduct({
+const testCase = "referrals1";
+
+const proWithTrial = constructProduct({
 	id: "pro",
 	items: [constructFeatureItem({ featureId: TestFeature.Words })],
 	type: "pro",
 	trial: true,
 });
+
+const pro = constructProduct({
+	id: "proNoTrial",
+	items: [constructFeatureItem({ featureId: TestFeature.Words })],
+	type: "pro",
+});
+
+// Reward: 100% discount for 1 month
+const monthOffReward: CreateReward = {
+	id: `${testCase}MonthOff`,
+
+	name: "Month Off",
+	type: RewardType.PercentageDiscount,
+	promo_codes: [],
+	discount_config: {
+		discount_value: 100,
+		duration_type: CouponDurationType.Months,
+		duration_value: 1,
+		apply_to_all: true,
+		price_ids: [],
+	},
+};
+
+// Referral program: triggers on checkout, applies to pro and proWithTrial
+const onCheckoutProgram: CreateRewardProgram = {
+	id: `${testCase}OnCheckout`,
+	when: RewardTriggerEvent.Checkout,
+	product_ids: [proWithTrial.id, pro.id],
+	internal_reward_id: monthOffReward.id,
+	max_redemptions: 2,
+	received_by: RewardReceivedBy.Referrer,
+};
 
 describe(`${chalk.yellowBright(
 	"referrals1: Testing referrals (on checkout)",
@@ -52,18 +91,26 @@ describe(`${chalk.yellowBright(
 		org = ctx.org;
 		env = ctx.env;
 
-		addPrefixToProducts({
-			products: [pro],
-			prefix: mainCustomerId,
+		await initProductsV0({
+			ctx,
+			products: [proWithTrial, pro],
+			prefix: testCase,
+			customerId: mainCustomerId,
 		});
 
-		await createProducts({
-			autumn: new AutumnInt({ secretKey: ctx.orgSecretKey }),
-			products: [pro],
+		// Create referral program - product IDs are already prefixed by initProductsV0
+		const referralProgram: CreateRewardProgram = {
+			...onCheckoutProgram,
+			product_ids: [proWithTrial.id, pro.id],
+		};
+
+		await createReferralProgram({
 			db,
 			orgId: org.id,
 			env,
-			customerId: mainCustomerId,
+			autumn: new AutumnInt({ secretKey: ctx.orgSecretKey }),
+			reward: monthOffReward,
+			rewardProgram: referralProgram,
 		});
 
 		const res = await initCustomerV3({
@@ -78,7 +125,7 @@ describe(`${chalk.yellowBright(
 
 		await autumn.attach({
 			customer_id: mainCustomerId,
-			product_id: pro.id,
+			product_id: proWithTrial.id,
 		});
 
 		const batchCreate = [];
@@ -106,7 +153,7 @@ describe(`${chalk.yellowBright(
 	test("should create code once", async () => {
 		referralCode = await autumn.referrals.createCode({
 			customerId: mainCustomerId,
-			referralId: referralPrograms.onCheckout.id,
+			referralId: onCheckoutProgram.id,
 		});
 
 		expect(referralCode.code).toBeDefined();
@@ -114,7 +161,7 @@ describe(`${chalk.yellowBright(
 		// Get referral code again
 		const referralCode2 = await autumn.referrals.createCode({
 			customerId: mainCustomerId,
-			referralId: referralPrograms.onCheckout.id,
+			referralId: onCheckoutProgram.id,
 		});
 
 		expect(referralCode2.code).toBe(referralCode.code);
@@ -129,7 +176,9 @@ describe(`${chalk.yellowBright(
 			throw new Error("Own customer should not be able to redeem code");
 		} catch (error) {
 			expect(error).toBeInstanceOf(AutumnError);
-			expect((error as AutumnError).code).toBe(ErrCode.CustomerCannotRedeemOwnCode);
+			expect((error as AutumnError).code).toBe(
+				ErrCode.CustomerCannotRedeemOwnCode,
+			);
 		}
 
 		try {
@@ -142,7 +191,9 @@ describe(`${chalk.yellowBright(
 			);
 		} catch (error) {
 			expect(error).toBeInstanceOf(AutumnError);
-			expect((error as AutumnError).code).toBe(ErrCode.CustomerCannotRedeemOwnCode);
+			expect((error as AutumnError).code).toBe(
+				ErrCode.CustomerCannotRedeemOwnCode,
+			);
 		}
 	});
 
@@ -158,14 +209,16 @@ describe(`${chalk.yellowBright(
 
 		// Try redeem for redeemer1 again
 		try {
-			const redemption1 = await autumn.referrals.redeem({
+			await autumn.referrals.redeem({
 				customerId: redeemers[0],
 				code: referralCode.code,
 			});
 			throw new Error("Should not be able to redeem again");
 		} catch (error) {
 			expect(error).toBeInstanceOf(AutumnError);
-			expect((error as AutumnError).code).toBe(ErrCode.CustomerAlreadyRedeemedReferralCode);
+			expect((error as AutumnError).code).toBe(
+				ErrCode.CustomerAlreadyRedeemedReferralCode,
+			);
 		}
 	});
 
@@ -175,7 +228,7 @@ describe(`${chalk.yellowBright(
 
 			await autumn.attach({
 				customer_id: redeemer,
-				product_id: products.pro.id,
+				product_id: pro.id,
 			});
 
 			await timeout(3000);
@@ -186,7 +239,7 @@ describe(`${chalk.yellowBright(
 			// Check if redemption is triggered
 			const count = i + 1;
 
-			if (count > referralPrograms.onCheckout.max_redemptions) {
+			if (count > onCheckoutProgram.max_redemptions!) {
 				expect(redemption.triggered).toBe(false);
 				expect(redemption.applied).toBe(false);
 			} else {

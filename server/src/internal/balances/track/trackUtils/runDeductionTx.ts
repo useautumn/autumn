@@ -14,6 +14,7 @@ import {
 	nullish,
 	updateCusEntInFullCus,
 } from "@autumn/shared";
+import chalk from "chalk";
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "../../../../db/initDrizzle.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
@@ -26,6 +27,7 @@ import {
 	getUnlimitedAndUsageAllowed,
 } from "../../../customers/cusProducts/cusEnts/cusEntUtils.js";
 import { getCreditCost } from "../../../features/creditSystemUtils.js";
+import { isPaidContinuousUse } from "../../../features/featureUtils.js";
 import { constructEvent, type EventInfo } from "./eventUtils.js";
 import type { FeatureDeduction } from "./getFeatureDeductions.js";
 
@@ -41,6 +43,10 @@ export type DeductionTxParams = {
 	refreshCache?: boolean; // Whether to refresh Redis cache after deduction (default: true for track, false for sync)
 };
 
+export type ActualDeductions = {
+	[featureId: string]: number; // Actual amount deducted from Postgres
+};
+
 export const deductFromCusEnts = async ({
 	ctx,
 	customerId,
@@ -49,7 +55,10 @@ export const deductFromCusEnts = async ({
 	overageBehaviour = "cap",
 	addToAdjustment = false,
 	fullCus,
-}: DeductionTxParams) => {
+}: DeductionTxParams): Promise<{
+	fullCus: FullCustomer | undefined;
+	actualDeductions: ActualDeductions;
+}> => {
 	const { db, org, env } = ctx;
 
 	if (!fullCus) {
@@ -75,6 +84,21 @@ export const deductFromCusEnts = async ({
 			})),
 		);
 	}
+
+	const isPaidAllocated = deductions.some((d) =>
+		isPaidContinuousUse({
+			feature: d.feature,
+			fullCus,
+		}),
+	);
+
+	console.log(`Is paid allocated: ${isPaidAllocated}`);
+
+	if (isPaidAllocated) overageBehaviour = "reject";
+
+	// Track actual deductions per feature
+	const actualDeductions: ActualDeductions = {};
+
 	// Need to deduct from customer entitlement...
 	for (const deduction of deductions) {
 		const { feature, deduction: toDeduct, targetBalance } = deduction;
@@ -84,12 +108,27 @@ export const deductFromCusEnts = async ({
 			featureId: feature.id,
 		});
 
+		if (printLogs) {
+			console.log(`Entity Mode: ${entityId ? "Yes" : "No"}`);
+		}
+
 		const cusEnts = cusProductsToCusEnts({
 			cusProducts: fullCus.customer_products,
 			featureIds: relevantFeatures.map((f) => f.id),
 			reverseOrder: org.config?.reverse_deduction_order,
 			entity: fullCus.entity,
 		});
+
+		if (printLogs) {
+			console.log(
+				`Cus Ents: `,
+				cusEnts.map((ce) => ({
+					balance: ce.balance,
+					entity_id: ce.customer_product.entity_id,
+					cus_ent_id: ce.id,
+				})),
+			);
+		}
 
 		const { unlimited } = getUnlimitedAndUsageAllowed({
 			cusEnts,
@@ -120,8 +159,6 @@ export const deductFromCusEnts = async ({
 				add_to_adjustment: addToAdjustment,
 			};
 		});
-
-		// console.log("Cus ent input", cusEntInput);
 
 		// Collect and sort rollovers by expires_at (oldest first)
 		const sortedRollovers = cusEnts
@@ -164,6 +201,11 @@ export const deductFromCusEnts = async ({
 			remaining: number;
 		};
 
+		// log updates
+		if (printLogs) {
+			console.log(`Updates: `, resultJson.updates);
+		}
+
 		if (!resultJson) {
 			throw new InternalError({
 				message: "Failed to deduct from entitlements",
@@ -179,13 +221,17 @@ export const deductFromCusEnts = async ({
 			});
 		}
 
+		// Calculate total deducted from the updates (sum of all deducted amounts)
+		const totalDeducted = Object.values(updates).reduce(
+			(sum, update) => sum + update.deducted,
+			0,
+		);
+
+		// Store actual deduction for this feature
+		actualDeductions[feature.id] = totalDeducted;
+
 		// Log deduction details
 		if (targetBalance !== undefined) {
-			// Calculate total deducted from the updates (sum of all deducted amounts)
-			const totalDeducted = Object.values(updates).reduce(
-				(sum, update) => sum + update.deducted,
-				0,
-			);
 			const entityInfo = entityId
 				? `Entity: ${entityId}`
 				: "Entity: customer-level";
@@ -200,12 +246,10 @@ export const deductFromCusEnts = async ({
 			});
 		} else {
 			ctx.logger.info(
-				`[Track] Deducted ${toDeduct - remaining} from feature ${feature.id}. Updated ${
+				`[Track] Deducted ${totalDeducted} from feature ${feature.id}. Updated ${
 					Object.keys(updates).length
 				} entitlements. Remaining: ${remaining}`,
 			);
-
-			// Log cus ent ids:
 		}
 
 		// Bill on Stripe for each updated entitlement
@@ -248,10 +292,14 @@ export const deductFromCusEnts = async ({
 
 			// Adjust balance based on replaceables
 			let reUpdatedBalance = update.balance;
+			let replaceableAdjustment = 0;
+
 			if (newReplaceables && newReplaceables.length > 0) {
 				reUpdatedBalance = reUpdatedBalance - newReplaceables.length;
+				replaceableAdjustment = newReplaceables.length;
 			} else if (deletedReplaceables && deletedReplaceables.length > 0) {
 				reUpdatedBalance = reUpdatedBalance + deletedReplaceables.length;
+				replaceableAdjustment = -deletedReplaceables.length;
 			}
 
 			if (reUpdatedBalance !== update.balance) {
@@ -262,6 +310,10 @@ export const deductFromCusEnts = async ({
 						balance: reUpdatedBalance,
 					},
 				});
+
+				// Adjust the actual deduction to reflect replaceables
+				actualDeductions[feature.id] =
+					(actualDeductions[feature.id] || 0) + replaceableAdjustment;
 			}
 
 			updateCusEntInFullCus({
@@ -272,7 +324,10 @@ export const deductFromCusEnts = async ({
 		}
 	}
 
-	return fullCus;
+	return {
+		fullCus,
+		actualDeductions,
+	};
 };
 
 export const runDeductionTx = async (
@@ -280,12 +335,14 @@ export const runDeductionTx = async (
 ): Promise<{
 	fullCus: FullCustomer | undefined;
 	event: Event | undefined;
+	actualDeductions: ActualDeductions;
 }> => {
 	const ctx = params.ctx;
-	const { db } = ctx;
+	const { db, logger } = ctx;
 
 	let fullCus: FullCustomer | undefined;
 	let event: Event | undefined;
+	let actualDeductions: ActualDeductions = {};
 
 	await db.transaction(
 		async (tx) => {
@@ -298,12 +355,14 @@ export const runDeductionTx = async (
 				},
 			};
 
-			fullCus = await deductFromCusEnts(txParams);
+			const result = await deductFromCusEnts(txParams);
+			fullCus = result.fullCus;
+			actualDeductions = result.actualDeductions;
 
 			if (!fullCus) return;
 
 			if (params.eventInfo) {
-				const newEvent = await constructEvent({
+				const newEvent = constructEvent({
 					ctx: txParams.ctx,
 					eventInfo: params.eventInfo,
 					internalCustomerId: fullCus.internal_id,
@@ -317,52 +376,51 @@ export const runDeductionTx = async (
 					event: newEvent,
 				});
 			}
+
+			if (params?.refreshCache && fullCus) {
+				// Deduct the actual amounts from Redis cache (if exists)
+				// This prevents race conditions by directly deducting the exact Postgres amount
+				const { deductFromCache } = await import(
+					"../redisTrackUtils/deductFromCache.js"
+				);
+
+				const printLogs = true;
+
+				for (const [featureId, deductedAmount] of Object.entries(
+					actualDeductions,
+				)) {
+					if (deductedAmount !== 0) {
+						// Only deduct if something was actually deducted
+						await deductFromCache({
+							ctx,
+							customerId: fullCus.id ?? "",
+							featureId,
+							amount: deductedAmount,
+							entityId: params.entityId,
+						});
+
+						if (printLogs) {
+							logger.info(
+								`[REDIS] Deduced users from cache: ${chalk.yellow(actualDeductions.users)}`,
+							);
+							// logger.info(
+							// 	`[REDIS] balance after deduction for ${featureId}: ${chalk.yellow(balance)}`,
+							// );
+						}
+					}
+				}
+			}
 		},
 		{
 			isolationLevel: "read committed",
 		},
 	);
 
-	// Sync cache if requested (default: true for track, false for sync)
-	if (params?.refreshCache && fullCus) {
-		// Sync Redis cache for each affected feature
-		// This prevents race conditions with concurrent Redis track operations
-		const { syncCacheBalance } = await import(
-			"../redisTrackUtils/syncCacheBalance.js"
-		);
-
-		for (const deduction of params.deductions) {
-			const feature = deduction.feature;
-
-			// Find the customer entitlement for this feature to get the new balance
-			const cusEnts = cusProductsToCusEnts({
-				cusProducts: fullCus.customer_products,
-				featureIds: [feature.id],
-				reverseOrder: false,
-				entity: fullCus.entity,
-			});
-
-			if (cusEnts.length > 0) {
-				// Calculate total balance across all entitlements for this feature
-				const totalBalance = cusEnts.reduce(
-					(sum, ce) => sum + (ce.balance ?? 0),
-					0,
-				);
-
-				// Sync cache to match Postgres balance
-				await syncCacheBalance({
-					ctx,
-					customerId: fullCus.id ?? "",
-					featureId: feature.id,
-					targetBalance: totalBalance,
-					entityId: params.entityId,
-				});
-			}
-		}
-	}
+	// Deduct from Redis cache if requested (default: true for track, false for sync)
 
 	return {
 		fullCus,
 		event,
+		actualDeductions,
 	};
 };

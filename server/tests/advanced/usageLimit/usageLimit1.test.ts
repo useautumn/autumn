@@ -1,14 +1,10 @@
-import {
-	ErrCode,
-	LegacyVersion,
-} from "@autumn/shared";
 import { beforeAll, describe, expect, test } from "bun:test";
+import { ErrCode, LegacyVersion, type LimitedItem } from "@autumn/shared";
 import chalk from "chalk";
-import type Stripe from "stripe";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -20,7 +16,7 @@ const userItem = constructArrearProratedItem({
 	pricePerUnit: 50,
 	includedUsage: 0,
 	usageLimit: 2,
-});
+}) as LimitedItem;
 
 export const pro = constructProduct({
 	items: [userItem],
@@ -32,14 +28,8 @@ const testCase = "usageLimit1";
 describe(`${chalk.yellowBright(`${testCase}: Testing usage limits for entities`)}`, () => {
 	const customerId = testCase;
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
-	let testClockId: string;
-	let stripeCli: Stripe;
-
-	const curUnix = new Date().getTime();
 
 	beforeAll(async () => {
-		stripeCli = ctx.stripeCli;
-
 		await initProductsV0({
 			ctx,
 			products: [pro],
@@ -47,15 +37,13 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage limits for entities`)
 			customerId,
 		});
 
-		const { testClockId: testClockId1 } = await initCustomerV3({
+		await initCustomerV3({
 			ctx,
 			customerId,
 			customerData: {},
 			attachPm: "success",
 			withTestClock: true,
 		});
-
-		testClockId = testClockId1!;
 	});
 
 	const entities = [
@@ -121,12 +109,11 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage limits for entities`)
 		const customer = await autumn.customers.get(customerId);
 
 		expect(check.balance).toBe(-2);
-		// @ts-expect-error
-		expect(check.usage_limit).toBe(userItem.usage_limit);
 
-		// @ts-expect-error
+		expect(check.usage_limit).toBe(userItem.usage_limit!);
+
 		expect(customer.features[TestFeature.Users].usage_limit).toBe(
-			userItem.usage_limit,
+			userItem.usage_limit!,
 		);
 	});
 });

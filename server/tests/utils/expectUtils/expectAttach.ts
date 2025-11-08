@@ -242,10 +242,12 @@ export const expectAttachCorrect = async ({
 	customer,
 	product,
 	entityId,
+	otherProducts,
 }: {
 	customer: Customer;
 	product: ProductV2;
 	entityId?: string;
+	otherProducts?: ProductV2[];
 }) => {
 	expectProductAttached({
 		customer,
@@ -256,5 +258,6 @@ export const expectAttachCorrect = async ({
 	expectFeaturesCorrect({
 		customer,
 		product,
+		otherProducts,
 	});
 };

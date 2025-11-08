@@ -1,12 +1,12 @@
-import { LegacyVersion } from "@autumn/shared";
 import { beforeAll, describe, expect, test } from "bun:test";
+import { LegacyVersion } from "@autumn/shared";
 import chalk from "chalk";
 import { addDays, addMonths } from "date-fns";
 import type Stripe from "stripe";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
 import {
@@ -17,9 +17,9 @@ import {
 	constructProduct,
 	constructRawProduct,
 } from "@/utils/scriptUtils/createTestProducts.js";
+import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 
 const testCase = "customInterval3";
 
@@ -57,19 +57,19 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval on add on m
 	beforeAll(async () => {
 		stripeCli = ctx.stripeCli;
 
+		await initProductsV0({
+			ctx,
+			products: [pro, addOn],
+			prefix: testCase,
+			customerId,
+		});
+
 		const { testClockId: testClockId1 } = await initCustomerV3({
 			ctx,
 			customerId,
 			customerData: {},
 			attachPm: "success",
 			withTestClock: true,
-		});
-
-		await initProductsV0({
-			ctx,
-			products: [pro, addOn],
-			prefix: testCase,
-			customerId,
 		});
 
 		testClockId = testClockId1!;

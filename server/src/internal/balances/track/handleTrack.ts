@@ -1,11 +1,13 @@
 import {
 	ApiVersion,
 	ErrCode,
+	InsufficientBalanceError,
 	isContUseFeature,
 	RecaseError,
 	SuccessCode,
 	type TrackParams,
 	TrackParamsSchema,
+	type TrackResponse,
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { createRoute } from "../../../honoMiddlewares/routeHandler.js";
@@ -30,30 +32,40 @@ const executePostgresTracking = async ({
 	body: TrackParams;
 	featureDeductions: FeatureDeduction[];
 }) => {
-	const { event } = await runDeductionTx({
-		ctx,
-		customerId: body.customer_id,
-		entityId: body.entity_id,
-		deductions: featureDeductions,
-		overageBehaviour: body.overage_behavior,
-		eventInfo: {
-			event_name: body.feature_id || body.event_name!,
-			value: body.value ?? 1,
-			properties: body.properties,
-			timestamp: body.timestamp,
-			idempotency_key: body.idempotency_key,
-		},
-		refreshCache: true,
-	});
-
-	return {
-		id: event?.id || "",
+	const response: TrackResponse = {
+		id: "",
 		code: SuccessCode.EventReceived,
 		customer_id: body.customer_id,
 		entity_id: body.entity_id,
 		feature_id: body.feature_id,
 		event_name: body.event_name,
 	};
+	try {
+		const { event } = await runDeductionTx({
+			ctx,
+			customerId: body.customer_id,
+			entityId: body.entity_id,
+			deductions: featureDeductions,
+			overageBehaviour: body.overage_behavior,
+			eventInfo: {
+				event_name: body.feature_id || body.event_name!,
+				value: body.value ?? 1,
+				properties: body.properties,
+				timestamp: body.timestamp,
+				idempotency_key: body.idempotency_key,
+			},
+			refreshCache: true,
+		});
+		response.id = event?.id || "";
+	} catch (error) {
+		if (error instanceof InsufficientBalanceError) {
+			response.code = "insufficient_balance";
+		} else {
+			throw error;
+		}
+	}
+
+	return response;
 };
 
 export const handleTrack = createRoute({

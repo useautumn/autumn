@@ -11,8 +11,9 @@ import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigration
 import { detectBaseVariant } from "@/internal/products/productUtils/detectProductVariant.js";
 import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutReward.js";
 import { generateId } from "@/utils/genUtils.js";
-import { queue, workerRedis } from "./initBullMq.js";
+import { createWorkerContext } from "../createWorkerContext.js";
 import { JobName } from "../JobName.js";
+import { queue, workerRedis } from "./initBullMq.js";
 
 const NUM_WORKERS = 10;
 
@@ -36,6 +37,11 @@ const initWorker = ({ id, db }: { id: number; db: DrizzleCli }) => {
 						workerId: id,
 					},
 				},
+			});
+
+			const ctx = await createWorkerContext({
+				db,
+				logger: workerLogger,
 			});
 
 			try {
@@ -87,9 +93,8 @@ const initWorker = ({ id, db }: { id: number; db: DrizzleCli }) => {
 
 				if (job.name === JobName.SyncBalanceBatch) {
 					await runSyncBalanceBatch({
-						db,
+						ctx,
 						payload: job.data,
-						logger: workerLogger as Logger,
 					});
 					return;
 				}
@@ -167,4 +172,3 @@ export const initWorkers = async () => {
 
 	return workers;
 };
-

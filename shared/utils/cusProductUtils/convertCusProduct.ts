@@ -48,7 +48,7 @@ export const cusProductsToCusPrices = ({
 
 export const cusProductsToCusEnts = ({
 	cusProducts,
-	inStatuses = [CusProductStatus.Active],
+	inStatuses = [CusProductStatus.Active, CusProductStatus.PastDue],
 	reverseOrder = false,
 	featureId,
 	featureIds,
@@ -64,9 +64,7 @@ export const cusProductsToCusEnts = ({
 	let cusEnts: FullCusEntWithFullCusProduct[] = [];
 
 	for (const cusProduct of cusProducts) {
-		if (!inStatuses.includes(cusProduct.status)) {
-			continue;
-		}
+		if (!inStatuses.includes(cusProduct.status)) continue;
 
 		cusEnts.push(
 			...cusProduct.customer_entitlements.map((cusEnt) => ({

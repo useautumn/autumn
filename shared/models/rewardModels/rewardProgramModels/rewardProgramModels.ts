@@ -29,7 +29,7 @@ export const CreateRewardProgram = z.object({
 	exclude_trial: z.boolean().optional(),
 	internal_reward_id: z.string(),
 	max_redemptions: z.number().optional(),
-	received_by: z.nativeEnum(RewardReceivedBy),
+	received_by: z.enum(["referrer", "all"]),
 });
 
 export const UpdateRewardProgram = z.object({

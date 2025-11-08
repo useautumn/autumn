@@ -1,22 +1,66 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type AppEnv,
+	CouponDurationType,
+	type CreateReward,
+	type CreateRewardProgram,
 	type Customer,
 	ErrCode,
 	type Organization,
 	type ReferralCode,
+	RewardReceivedBy,
 	type RewardRedemption,
+	RewardTriggerEvent,
+	RewardType,
 } from "@autumn/shared";
-import { beforeAll, describe, expect, test } from "bun:test";
 import chalk from "chalk";
 import { addDays } from "date-fns";
 import type { Stripe } from "stripe";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { timeout } from "tests/utils/genUtils.js";
+import { createReferralProgram } from "tests/utils/productUtils.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
-import { products, referralPrograms } from "../../global.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+
+const testCase = "referrals2";
+
+const proWithTrial = constructProduct({
+	id: "pro",
+	items: [constructFeatureItem({ featureId: TestFeature.Words })],
+	type: "pro",
+	trial: true,
+});
+
+// Reward: 100% discount for 1 month
+const monthOffReward: CreateReward = {
+	id: `${testCase}MonthOff`,
+	name: "Month Off",
+	type: RewardType.PercentageDiscount,
+	promo_codes: [],
+	discount_config: {
+		discount_value: 100,
+		duration_type: CouponDurationType.Months,
+		duration_value: 1,
+		apply_to_all: true,
+		price_ids: [],
+	},
+};
+
+// Referral program: triggers immediately on customer creation
+const immediateProgram: CreateRewardProgram = {
+	id: `${testCase}Immediate`,
+	when: RewardTriggerEvent.CustomerCreation,
+	product_ids: [],
+	internal_reward_id: monthOffReward.id,
+	max_redemptions: 2,
+	received_by: RewardReceivedBy.Referrer,
+};
 
 describe(`${chalk.yellowBright(
 	"referrals2: Testing referrals (immediate redemption)",
@@ -37,6 +81,23 @@ describe(`${chalk.yellowBright(
 		stripeCli = ctx.stripeCli;
 		org = ctx.org;
 		env = ctx.env;
+
+		await initProductsV0({
+			ctx,
+			products: [proWithTrial],
+			prefix: testCase,
+			customerId: mainCustomerId,
+		});
+
+		// Create referral program
+		await createReferralProgram({
+			db: ctx.db,
+			orgId: org.id,
+			env,
+			autumn: new AutumnInt({ secretKey: ctx.orgSecretKey }),
+			reward: monthOffReward,
+			rewardProgram: immediateProgram,
+		});
 
 		const { testClockId: testClockId1, customer } = await initCustomerV3({
 			ctx,
@@ -62,7 +123,7 @@ describe(`${chalk.yellowBright(
 	test("should create code once", async () => {
 		referralCode = await autumn.referrals.createCode({
 			customerId: mainCustomerId,
-			referralId: referralPrograms.immediate.id,
+			referralId: immediateProgram.id,
 		});
 
 		expect(referralCode.code).toBeDefined();
@@ -79,16 +140,18 @@ describe(`${chalk.yellowBright(
 				});
 				redemptions.push(redemption);
 
-				if (count > referralPrograms.immediate.max_redemptions) {
+				if (count > immediateProgram.max_redemptions!) {
 					expect(redemption.triggered).toBe(false);
 					expect(redemption.applied).toBe(false);
 				} else {
 					throw new Error("Should not be able to redeem again");
 				}
 			} catch (error) {
-				if (count > referralPrograms.immediate.max_redemptions) {
+				if (count > immediateProgram.max_redemptions!) {
 					expect(error).toBeInstanceOf(AutumnError);
-					expect((error as AutumnError).code).toBe(ErrCode.ReferralCodeMaxRedemptionsReached);
+					expect((error as AutumnError).code).toBe(
+						ErrCode.ReferralCodeMaxRedemptionsReached,
+					);
 				}
 			}
 		}
@@ -114,7 +177,7 @@ describe(`${chalk.yellowBright(
 	test("customer should have discount for first purchase", async () => {
 		await autumn.attach({
 			customer_id: mainCustomerId,
-			product_id: products.proWithTrial.id,
+			product_id: proWithTrial.id,
 		});
 
 		await timeout(3000);

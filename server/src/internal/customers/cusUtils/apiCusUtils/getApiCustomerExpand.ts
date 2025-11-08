@@ -35,6 +35,8 @@ export const getApiCustomerExpand = async ({
 			orgId: org.id,
 			env,
 			expand,
+			withEntities: expand.includes(CusExpand.Entities),
+			withSubs: true,
 		});
 	}
 

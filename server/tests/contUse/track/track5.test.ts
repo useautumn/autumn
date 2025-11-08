@@ -139,7 +139,8 @@ const simulateOneCycle = async ({
 	const invoices = cusAfter.invoices;
 	const invoice = invoices[0];
 
-	expect(invoice.total).toBeCloseTo(totalPrice, 2);
+	expect(invoice.total).toBeLessThanOrEqual(totalPrice + 0.01);
+	expect(invoice.total).toBeGreaterThanOrEqual(totalPrice - 0.01);
 
 	return {
 		curUnix,

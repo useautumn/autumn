@@ -1,36 +1,35 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type AppEnv,
-	type Customer,
+	CouponDurationType,
+	type CreateReward,
 	LegacyVersion,
 	type Organization,
+	RewardType,
 } from "@autumn/shared";
-import { beforeAll, describe, expect, test } from "bun:test";
 import chalk from "chalk";
 import { addHours, addMonths } from "date-fns";
 import type Stripe from "stripe";
-import { rewards } from "tests/global.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
 import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
 import { timeout } from "tests/utils/genUtils.js";
-import { createProducts } from "tests/utils/productUtils.js";
+import { createReward } from "tests/utils/productUtils.js";
 import {
 	advanceTestClock,
 	completeCheckoutForm,
 	getDiscount,
 } from "tests/utils/stripeUtils.js";
-import {
-	addPrefixToProducts,
-	getBasePrice,
-} from "tests/utils/testProductUtils/testProductUtils.js";
 import ctx from "tests/utils/testInitUtils/createTestContext.js";
+import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { getOriginalCouponId } from "@/internal/rewards/rewardUtils.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
 const testCase = "coupon1";
 
@@ -38,6 +37,24 @@ const pro = constructProduct({
 	type: "pro",
 	items: [constructArrearItem({ featureId: TestFeature.Words })],
 });
+
+// Create reward inline - matching rolloverAll config from global.ts
+const rewardId = `${testCase}rolloverAll`;
+const promoCode = `${testCase}rolloverAllCode`;
+const reward: CreateReward = {
+	id: rewardId,
+	name: "Rollover All",
+	type: RewardType.InvoiceCredits,
+	promo_codes: [{ code: promoCode }],
+	discount_config: {
+		discount_value: 1000,
+		duration_type: CouponDurationType.Forever,
+		duration_value: 0,
+		should_rollover: true,
+		apply_to_all: true,
+		price_ids: [],
+	},
+};
 
 const simulateOneCycle = async ({
 	customerId,
@@ -100,13 +117,9 @@ const simulateOneCycle = async ({
 
 	expect(cusDiscount).toBeDefined();
 
-	expect(getOriginalCouponId(cusDiscount.coupon?.id)).toBe(
-		rewards.rolloverAll.id,
-	);
+	expect(getOriginalCouponId(cusDiscount.coupon?.id)).toBe(rewardId);
 
-	expect(cusDiscount.coupon?.amount_off).toBe(
-		Math.round(couponAmount * 100),
-	);
+	expect(cusDiscount.coupon?.amount_off).toBe(Math.round(couponAmount * 100));
 
 	return {
 		couponAmount,
@@ -121,7 +134,6 @@ describe(
 	() => {
 		const customerId = "coupon1";
 		let stripeCli: Stripe;
-		let customer: Customer;
 		let testClockId: string;
 		let db: DrizzleCli;
 		let org: Organization;
@@ -129,8 +141,8 @@ describe(
 
 		const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
-		let couponAmount = rewards.rolloverAll.discount_config.discount_value;
-		let curUnix = new Date().getTime();
+		let couponAmount = reward.discount_config!.discount_value;
+		let curUnix = Date.now();
 
 		beforeAll(async () => {
 			db = ctx.db;
@@ -138,26 +150,28 @@ describe(
 			env = ctx.env;
 			stripeCli = ctx.stripeCli;
 
+			await initProductsV0({
+				ctx,
+				products: [pro],
+				prefix: testCase,
+				customerId,
+			});
+
 			const res = await initCustomerV3({
 				ctx,
 				customerId,
 			});
 
-			addPrefixToProducts({
-				products: [pro],
-				prefix: testCase,
-			});
-
-			await createProducts({
-				products: [pro],
+			await createReward({
 				orgId: org.id,
 				env,
 				db,
 				autumn,
+				reward,
+				productId: pro.id,
 			});
 
 			testClockId = res.testClockId;
-			customer = res.customer;
 		});
 
 		// CYCLE 0
@@ -167,11 +181,7 @@ describe(
 				product_id: pro.id,
 			});
 
-			await completeCheckoutForm(
-				res.checkout_url,
-				undefined,
-				rewards.rolloverAll.id,
-			);
+			await completeCheckoutForm(res.checkout_url, undefined, promoCode);
 
 			await timeout(10000);
 
@@ -182,15 +192,17 @@ describe(
 
 			expect(customer.invoices![0].total).toBe(0);
 
+			console.log("Customer", customer);
+
 			const cusDiscount = await getDiscount({
 				stripeCli,
 				stripeId: customer.stripe_id!,
 			});
 
+			// console.log("CusDiscount", cusDiscount);
+
 			expect(cusDiscount).toBeDefined();
-			expect(getOriginalCouponId(cusDiscount.coupon?.id)).toBe(
-				rewards.rolloverAll.id,
-			);
+			expect(getOriginalCouponId(cusDiscount.coupon?.id)).toBe(rewardId);
 			expect(cusDiscount.coupon?.amount_off).toBe(couponAmount * 100);
 		});
 
@@ -204,7 +216,7 @@ describe(
 				autumn,
 				testClockId,
 				couponAmount,
-				curUnix: new Date().getTime(),
+				curUnix: Date.now(),
 			});
 
 			couponAmount = res.couponAmount;
@@ -213,7 +225,7 @@ describe(
 
 		// CYCLE 1
 		test("should run another cycle and have correct invoice + coupon amount", async () => {
-			const res = await simulateOneCycle({
+			await simulateOneCycle({
 				customerId,
 				db,
 				org,
