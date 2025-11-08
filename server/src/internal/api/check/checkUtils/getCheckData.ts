@@ -2,7 +2,6 @@ import {
 	type ApiCustomer,
 	type ApiEntity,
 	type CheckParams,
-	CusProductStatus,
 	ErrCode,
 	type Feature,
 	InternalError,
@@ -109,10 +108,10 @@ export const getCheckData = async ({
 	ctx: AutumnContext;
 	body: CheckParams & { feature_id: string };
 }): Promise<CheckData> => {
-	const { customer_id, feature_id, customer_data, entity_id } = body;
-	const { org } = ctx;
+	const { customer_id, feature_id, entity_id, entity_data, customer_data } =
+		body;
 
-	const { feature, creditSystems, allFeatures } = getFeatureAndCreditSystems({
+	const { feature, creditSystems } = getFeatureAndCreditSystems({
 		features: ctx.features,
 		featureId: feature_id,
 	});
@@ -125,24 +124,13 @@ export const getCheckData = async ({
 		});
 	}
 
-	const inStatuses = org.config.include_past_due
-		? [CusProductStatus.Active, CusProductStatus.PastDue]
-		: [CusProductStatus.Active];
-
-	// const customer = await getOrCreateCustomer({
-	// 	req: ctx as ExtendedRequest,
-	// 	customerId: customer_id,
-	// 	customerData: customer_data,
-	// 	inStatuses,
-	// 	entityId: entity_id,
-	// 	entityData: body.entity_data,
-	// 	withCache: true,
-	// });
-
 	let apiEntity: ApiCustomer | ApiEntity | undefined;
 	const { apiCustomer } = await getOrCreateApiCustomer({
 		ctx,
 		customerId: customer_id,
+		customerData: customer_data,
+		entityId: entity_id,
+		entityData: entity_data,
 	});
 	apiEntity = apiCustomer;
 
@@ -161,23 +149,6 @@ export const getCheckData = async ({
 			message: "failed to get entity object from cache",
 		});
 	}
-	// if (entity_id) {
-	// 	const cusFeature = apiCustomer.features[feature.id];
-	// }
-
-	// const cusProducts = customer.customer_products;
-
-	// let cusEnts = cusProductsToCusEnts({ cusProducts });
-
-	// if (customer.entity) {
-	// 	cusEnts = cusEnts.filter((cusEnt) =>
-	// 		cusEntMatchesEntity({
-	// 			cusEnt,
-	// 			entity: customer.entity!,
-	// 			features: allFeatures,
-	// 		}),
-	// 	);
-	// }
 
 	const featureToUse = getFeatureToUse({
 		creditSystems,
@@ -202,3 +173,35 @@ export const getCheckData = async ({
 		// entity: customer.entity,
 	};
 };
+
+// if (entity_id) {
+// 	const cusFeature = apiCustomer.features[feature.id];
+// }
+
+// const cusProducts = customer.customer_products;
+
+// let cusEnts = cusProductsToCusEnts({ cusProducts });
+
+// if (customer.entity) {
+// 	cusEnts = cusEnts.filter((cusEnt) =>
+// 		cusEntMatchesEntity({
+// 			cusEnt,
+// 			entity: customer.entity!,
+// 			features: allFeatures,
+// 		}),
+// 	);
+// }
+
+// const inStatuses = org.config.include_past_due
+// 	? [CusProductStatus.Active, CusProductStatus.PastDue]
+// 	: [CusProductStatus.Active];
+
+// const customer = await getOrCreateCustomer({
+// 	req: ctx as ExtendedRequest,
+// 	customerId: customer_id,
+// 	customerData: customer_data,
+// 	inStatuses,
+// 	entityId: entity_id,
+// 	entityData: body.entity_data,
+// 	withCache: true,
+// });

@@ -151,15 +151,13 @@ export const getOrCreateCustomer = async ({
 		logger.info(`Auto creating entity ${entityId} for customer ${customerId}`);
 
 		const newEntity = (await autoCreateEntity({
-			req,
-			customer,
+			ctx: req as AutumnContext,
+			customerId: customer.id || customer.internal_id,
 			entityId,
 			entityData: {
-				id: entityId,
 				name: entityData?.name,
 				feature_id: entityData?.feature_id || "",
 			},
-			logger,
 		})) as Entity;
 
 		customer.entities = [...(customer.entities || []), newEntity];

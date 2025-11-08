@@ -6,6 +6,7 @@ import { queryStringArray } from "../common/queryHelpers.js";
 export const GetCustomerQuerySchema = z.object({
 	expand: queryStringArray(z.enum(CusExpand)).optional(),
 	skip_cache: z.boolean().optional(),
+	with_autumn_id: z.boolean().default(false),
 });
 
 export const CreateCustomerQuerySchema = z.object({

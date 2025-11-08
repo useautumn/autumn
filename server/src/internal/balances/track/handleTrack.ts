@@ -1,5 +1,6 @@
 import {
 	ApiVersion,
+	CusProductStatus,
 	ErrCode,
 	InsufficientBalanceError,
 	isContUseFeature,
@@ -12,6 +13,8 @@ import {
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { createRoute } from "../../../honoMiddlewares/routeHandler.js";
 import { tryRedisWrite } from "../../../utils/cacheUtils/cacheUtils.js";
+import type { ExtendedRequest } from "../../../utils/models/Request.js";
+import { getOrCreateCustomer } from "../../customers/cusUtils/getOrCreateCustomer.js";
 import { runRedisDeduction } from "./redisTrackUtils/runRedisDeduction.js";
 import type { FeatureDeduction } from "./trackUtils/getFeatureDeductions.js";
 import {
@@ -40,6 +43,17 @@ const executePostgresTracking = async ({
 		feature_id: body.feature_id,
 		event_name: body.event_name,
 	};
+
+	const fullCus = await getOrCreateCustomer({
+		req: ctx as unknown as ExtendedRequest,
+		customerId: body.customer_id,
+		customerData: body.customer_data,
+		entityId: body.entity_id,
+		entityData: body.entity_data,
+		inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+		withEntities: true,
+	});
+
 	try {
 		const { event } = await runDeductionTx({
 			ctx,
@@ -55,6 +69,7 @@ const executePostgresTracking = async ({
 				idempotency_key: body.idempotency_key,
 			},
 			refreshCache: true,
+			fullCus,
 		});
 		response.id = event?.id || "";
 	} catch (error) {
@@ -126,6 +141,8 @@ export const handleTrack = createRoute({
 				ctx,
 				customerId: body.customer_id,
 				entityId: body.entity_id,
+				customerData: body.customer_data,
+				entityData: body.entity_data,
 				featureDeductions,
 				overageBehavior: body.overage_behavior || "cap",
 				eventInfo: {

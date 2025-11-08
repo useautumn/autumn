@@ -1,3 +1,5 @@
+import type { EntityData } from "@autumn/shared";
+import type { CustomerData } from "../../../../../../shared/api/common/customerData.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { getCachedApiCustomer } from "../../../customers/cusUtils/apiCusCacheUtils/getCachedApiCustomer.js";
 import { getOrCreateApiCustomer } from "../../../customers/cusUtils/getOrCreateApiCustomer.js";
@@ -17,7 +19,9 @@ interface FeatureDeduction {
 interface RunRedisDeductionParams {
 	ctx: AutumnContext;
 	customerId: string;
+	customerData?: CustomerData;
 	entityId?: string;
+	entityData?: EntityData;
 	featureDeductions: FeatureDeduction[];
 	overageBehavior: "cap" | "reject";
 	skipEvent?: boolean;
@@ -38,7 +42,9 @@ interface DeductionResult {
 export const runRedisDeduction = async ({
 	ctx,
 	customerId,
+	customerData,
 	entityId,
+	entityData,
 	featureDeductions,
 	overageBehavior,
 	skipEvent = false,
@@ -50,6 +56,9 @@ export const runRedisDeduction = async ({
 	const { apiCustomer: cachedCustomer } = await getOrCreateApiCustomer({
 		ctx,
 		customerId,
+		customerData,
+		entityId,
+		entityData,
 	});
 
 	// Map feature deductions to the format expected by batching manager

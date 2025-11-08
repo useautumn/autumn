@@ -12,7 +12,11 @@ export const handleGetCustomerV2 = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const customerId = c.req.param("customer_id");
-		const { expand = [], skip_cache = false } = c.req.valid("query");
+		const {
+			expand = [],
+			skip_cache = false,
+			with_autumn_id,
+		} = c.req.valid("query");
 
 		// SIDE EFFECT
 		if (
@@ -29,6 +33,7 @@ export const handleGetCustomerV2 = createRoute({
 			customerId,
 			expand,
 			skipCache: skip_cache,
+			withAutumnId: with_autumn_id,
 		});
 
 		return c.json(customer);

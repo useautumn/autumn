@@ -1,5 +1,4 @@
 import {
-	type CreateEntity,
 	type CreateEntityParams,
 	type CustomerData,
 	type Entity,
@@ -16,13 +15,11 @@ export const validateAndGetInputEntities = async ({
 	customerId,
 	customerData,
 	createEntityData,
-	logger,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	customerData?: CustomerData;
 	createEntityData: CreateEntityParams[] | CreateEntityParams;
-	logger: any;
 }) => {
 	const { features } = ctx;
 
@@ -63,7 +60,9 @@ export const validateAndGetInputEntities = async ({
 	const existingEntities = customer.entities;
 
 	const noIdEntities = existingEntities.filter((e: Entity) => !e.id);
-	const noIdNewEntities = inputEntities.filter((e: CreateEntity) => !e.id);
+	const noIdNewEntities = inputEntities.filter(
+		(e: CreateEntityParams) => !e.id,
+	);
 
 	if (noIdEntities.length + noIdNewEntities.length > 1) {
 		throw new RecaseError({
