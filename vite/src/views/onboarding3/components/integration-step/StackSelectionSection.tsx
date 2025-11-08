@@ -41,7 +41,7 @@ const BACKEND_OPTIONS: StackOption[] = [
 	{ value: "hono", label: "Hono", asset: "/frameworks/hono.png" },
 	{ value: "express", label: "Express", asset: "/frameworks/express.png" },
 	{ value: "elysia", label: "Elysia", asset: "/frameworks/elysia.png" },
-	{ value: "general", label: "Other", asset: "/frameworks/nodejs.png" },
+	{ value: "general", label: "Other", asset: "/frameworks/nodejs.svg" },
 ];
 
 const AUTH_OPTIONS: StackOption[] = [
