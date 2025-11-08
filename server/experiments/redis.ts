@@ -1,8 +1,8 @@
 import { AppEnv } from "@autumn/shared";
 import { globalBatchingManager } from "../src/internal/balances/track/redisTrackUtils/BatchingManager.js";
 import {
-  buildCachedApiCustomerKey,
-  getCachedApiCustomer,
+	buildCachedApiCustomerKey,
+	getCachedApiCustomer,
 } from "../src/internal/customers/cusUtils/apiCusCacheUtils/getCachedApiCustomer.js";
 import { initDrizzle } from "../src/db/initDrizzle.js";
 import { initScript } from "../src/utils/scriptUtils/scriptUtils.js";
@@ -12,7 +12,7 @@ const DEDUCTION_COUNT = 100_000;
 const DEDUCTION_AMOUNT = 1;
 
 const logCredits = (label: string, customer: Awaited<ReturnType<typeof getCachedApiCustomer>>) => {
-	const credits = customer?.features?.credits;
+	const credits = customer?.apiCustomer?.features?.credits;
 	console.log(`\n${label}`);
 	console.log(`  Total Balance:    ${credits?.balance ?? "N/A"}`);
 	console.log(`  Monthly Credits:  ${credits?.breakdown?.[0]?.balance ?? "N/A"}`);

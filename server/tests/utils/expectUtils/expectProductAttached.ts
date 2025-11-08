@@ -31,12 +31,10 @@ export const expectProductAttached = ({
 			p.id === finalProductId && (entityId ? p.entity_id === entityId : true),
 	);
 
-	if (!productAttached) {
-		console.log(`product ${finalProductId} not attached`);
-		console.log(cusProducts);
-	}
-
-	expect(productAttached, `product ${finalProductId} is attached`).to.exist;
+	expect(
+		productAttached,
+		`product ${finalProductId} not attached to ${customer.id}`,
+	).to.exist;
 
 	if (status) {
 		expect(productAttached?.status).to.equal(

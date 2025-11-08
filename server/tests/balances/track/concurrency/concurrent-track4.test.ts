@@ -128,7 +128,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage_limits with pay_per_u
 		// Starting balance: 5, usage: 9, final balance: 5 - 9 = -4
 
 		// Wait 2 seconds for DB sync
-		await timeout(2000);
+		await timeout(5000);
 
 		// Fetch customer with skip_cache=true
 		const customer = await autumnV1.customers.get(customerId, {

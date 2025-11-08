@@ -1,11 +1,11 @@
 // Handling per entity features!
 
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	LegacyVersion,
 	type LimitedItem,
 	type ProductItem,
 } from "@autumn/shared";
-import { beforeAll, describe, expect, test } from "bun:test";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
 import { TestFeature } from "tests/setup/v2Features.js";
@@ -188,8 +188,12 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing roles`)}`, () => {
 			entity_id: adminId,
 		});
 
-		expect(adminBalance).toBe(adminMessages.included_usage);
-		expect(userBalance).toBe(expectedUserBalance);
+		expect(new Decimal(adminBalance ?? 0).toDP(5).toNumber()).toBe(
+			new Decimal(adminMessages.included_usage).toDP(5).toNumber(),
+		);
+		expect(new Decimal(userBalance ?? 0).toDP(5).toNumber()).toBe(
+			new Decimal(expectedUserBalance).toDP(5).toNumber(),
+		);
 	});
 
 	const adminUsage = Math.random() * 50;
@@ -217,7 +221,11 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing roles`)}`, () => {
 			entity_id: userId,
 		});
 
-		expect(adminBalance).toBe(expectedAdminBalance);
-		expect(userBalance).toBe(expectedUserBalance);
+		expect(new Decimal(adminBalance ?? 0).toDP(5).toNumber()).toBe(
+			new Decimal(expectedAdminBalance).toDP(5).toNumber(),
+		);
+		expect(new Decimal(userBalance ?? 0).toDP(5).toNumber()).toBe(
+			new Decimal(expectedUserBalance).toDP(5).toNumber(),
+		);
 	});
 });

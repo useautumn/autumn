@@ -1,22 +1,23 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type Customer,
 	LegacyVersion,
 	type LimitedItem,
 	RolloverDuration,
 } from "@autumn/shared";
-import { beforeAll, describe, expect, test } from "bun:test";
 import chalk from "chalk";
 import { addHours, addMonths } from "date-fns";
 import type Stripe from "stripe";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
+import { timeout } from "../../utils/genUtils.js";
 import { resetAndGetCusEnt } from "./rolloverTestUtils.js";
 
 const freeRollover = { max: 600, length: 1, duration: RolloverDuration.Month };
@@ -124,9 +125,27 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for upgrade`)}`, 
 			freeMsges.included_usage + freeRolloverBalance,
 		);
 
-		// @ts-expect-error
 		const rollovers = msgesFeature?.rollovers;
-		expect(rollovers[0].balance).toBe(100);
+		// @ts-expect-error (rollovers is an array of rollovers)
+		expect(rollovers?.[0].balance).toBe(100);
+		// @ts-expect-error (rollovers is an array of rollovers)
 		expect(rollovers[1].balance).toBe(500);
+
+		// Verify non-cached customer balance
+		await timeout(2000);
+		const nonCachedCustomer = await autumn.customers.get(customerId, {
+			skip_cache: "true",
+		});
+		const nonCachedMsgesFeature =
+			nonCachedCustomer.features[TestFeature.Messages];
+		expect(nonCachedMsgesFeature?.balance).toBe(
+			freeMsges.included_usage + freeRolloverBalance,
+		);
+
+		const nonCachedRollovers = nonCachedMsgesFeature?.rollovers;
+		// @ts-expect-error (rollovers is an array of rollovers)
+		expect(nonCachedRollovers?.[0].balance).toBe(100);
+		// @ts-expect-error (rollovers is an array of rollovers)
+		expect(nonCachedRollovers[1].balance).toBe(500);
 	});
 });

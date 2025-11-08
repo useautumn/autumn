@@ -62,6 +62,7 @@ export * from "./referrals/referralsOpenApi.js";
 export * from "./balances/check/previousVersions/CheckResponseV0.js";
 export * from "./balances/trackModels.js";
 export * from "./balances/usageModels.js";
+export * from "./common/customerData.js";
 export * from "./common/entityData.js";
 // Errors
 export * from "./errors/index.js";

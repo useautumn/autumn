@@ -1,6 +1,6 @@
 import { Box, Text, render } from "ink";
 import Spinner from "ink-spinner";
-import React, { useEffect, useState } from "react";
+import React from "react";
 
 export type TestFileStatus = "pending" | "running" | "passed" | "failed";
 

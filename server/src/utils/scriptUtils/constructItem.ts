@@ -76,6 +76,7 @@ export const constructPrepaidItem = ({
 	rolloverConfig,
 	usageLimit,
 	intervalCount = 1,
+	resetUsageWhenEnabled,
 }: {
 	featureId: string;
 	price?: number;
@@ -87,6 +88,7 @@ export const constructPrepaidItem = ({
 	rolloverConfig?: RolloverConfig;
 	usageLimit?: number;
 	intervalCount?: number;
+	resetUsageWhenEnabled?: boolean;
 }) => {
 	const item: ProductItem = {
 		feature_id: featureId,
@@ -104,6 +106,7 @@ export const constructPrepaidItem = ({
 			...(rolloverConfig ? { rollover: rolloverConfig } : {}),
 		},
 		usage_limit: usageLimit,
+		reset_usage_when_enabled: resetUsageWhenEnabled,
 	};
 
 	return item;

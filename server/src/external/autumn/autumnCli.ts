@@ -295,8 +295,27 @@ export class AutumnInt {
 			return data;
 		},
 
-		create: async (customer: { id: string; email?: string; name?: string }) => {
-			const data = await this.post(`/customers?with_autumn_id=true`, customer);
+		create: async ({
+			id,
+			email,
+			name,
+			withAutumnId = true,
+			expand = [],
+		}: {
+			id: string;
+			email?: string;
+			name?: string;
+			withAutumnId?: boolean;
+			expand?: CusExpand[];
+		}) => {
+			const data = await this.post(
+				`/customers?with_autumn_id=${withAutumnId ? "true" : "false"}${expand && expand.length > 0 ? `&expand=${expand.join(",")}` : ""}`,
+				{
+					id,
+					email,
+					name,
+				},
+			);
 			return data;
 		},
 		delete: async (

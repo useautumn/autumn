@@ -1,5 +1,5 @@
-import { SendMessageCommand } from "@aws-sdk/client-sqs";
 import type { AppEnv, EventInsert, Price } from "@autumn/shared";
+import { SendMessageCommand } from "@aws-sdk/client-sqs";
 import { generateId } from "@/utils/genUtils.js";
 import { JobName } from "./JobName.js";
 
@@ -11,6 +11,8 @@ export interface Payloads {
 		env: AppEnv;
 	};
 	[JobName.SyncBalanceBatch]: {
+		orgId: string;
+		env: AppEnv;
 		items: Array<{
 			customerId: string;
 			featureId: string;
@@ -45,7 +47,9 @@ const initializeQueue = async () => {
 		const { queue } = await import("./bullmq/initBullMq.js");
 		bullmqQueue = queue;
 	} else {
-		throw new Error("No queue configured. Set either SQS_QUEUE_URL or QUEUE_URL");
+		throw new Error(
+			"No queue configured. Set either SQS_QUEUE_URL or QUEUE_URL",
+		);
 	}
 };
 

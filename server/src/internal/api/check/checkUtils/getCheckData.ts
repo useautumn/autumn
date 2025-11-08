@@ -140,18 +140,17 @@ export const getCheckData = async ({
 	// });
 
 	let apiEntity: ApiCustomer | ApiEntity | undefined;
-	apiEntity = await getOrCreateApiCustomer({
+	const { apiCustomer } = await getOrCreateApiCustomer({
 		ctx,
 		customerId: customer_id,
-		withAutumnId: true,
 	});
+	apiEntity = apiCustomer;
 
 	if (entity_id) {
 		const { apiEntity: apiEntityResult } = await getCachedApiEntity({
 			ctx,
 			customerId: customer_id,
 			entityId: entity_id,
-			withAutumnId: false,
 		});
 
 		apiEntity = apiEntityResult;

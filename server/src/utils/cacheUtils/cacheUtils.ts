@@ -50,29 +50,54 @@ export const tryRedisRead = async <T>(
 };
 
 /**
+ * Helper function to normalize empty objects {} to empty arrays []
+ * Lua's cjson converts empty arrays to empty objects, so we need to fix this
+ */
+const normalizeArray = (value: unknown): unknown => {
+	if (
+		value &&
+		typeof value === "object" &&
+		!Array.isArray(value) &&
+		Object.keys(value).length === 0
+	) {
+		return [];
+	}
+	return value;
+};
+
+/**
  * Fix Lua cjson quirks when parsing cached data:
- * - Converts products[].items from {} back to [] if it's an empty object
+ * - Converts empty objects {} back to [] for all array fields
  * - Converts usage_limit: 0 to undefined (when all sources were undefined)
  */
 export const normalizeCachedData = <T extends ApiCustomer | ApiEntity>(
 	data: T,
 ): T => {
+	// Normalize top-level products array
 	if (data.products) {
+		if (!Array.isArray(data.products)) {
+			data.products = [];
+		}
+
+		// Normalize nested arrays in products
 		for (const product of data.products) {
-			if (
-				product.items &&
-				typeof product.items === "object" &&
-				!Array.isArray(product.items) &&
-				Object.keys(product.items).length === 0
-			) {
-				product.items = [];
+			// Normalize product.items array
+			if (product.items) {
+				product.items = normalizeArray(product.items) as typeof product.items;
+			}
+
+			// Normalize product.stripe_subscription_ids array
+			if (product.stripe_subscription_ids) {
+				product.stripe_subscription_ids = normalizeArray(
+					product.stripe_subscription_ids,
+				) as typeof product.stripe_subscription_ids;
 			}
 		}
 	}
 
-	// Convert empty entities to []
-	if ("entities" in data && data.entities && !Array.isArray(data.entities)) {
-		data.entities = [];
+	// Normalize entities array (included in Lua script)
+	if ("entities" in data && data.entities) {
+		data.entities = normalizeArray(data.entities) as typeof data.entities;
 	}
 
 	// Fix usage_limit: 0 -> undefined
@@ -80,7 +105,7 @@ export const normalizeCachedData = <T extends ApiCustomer | ApiEntity>(
 	if (data.features) {
 		for (const featureId in data.features) {
 			const feature = data.features[featureId];
-			if (feature.usage_limit === 0) {
+			if (feature.usage_limit === 0 || feature.usage_limit === null) {
 				feature.usage_limit = undefined;
 			}
 
@@ -109,6 +134,13 @@ export const normalizeCachedData = <T extends ApiCustomer | ApiEntity>(
 					// 	breakdown.next_reset_at = null;
 					// }
 				}
+			}
+
+			// Normalize feature.credit_schema array
+			if (feature.credit_schema) {
+				feature.credit_schema = normalizeArray(
+					feature.credit_schema,
+				) as typeof feature.credit_schema;
 			}
 		}
 	}

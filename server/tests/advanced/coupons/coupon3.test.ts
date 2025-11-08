@@ -1,3 +1,4 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type AppEnv,
 	CouponDurationType,
@@ -6,17 +7,16 @@ import {
 	type Organization,
 	RewardType,
 } from "@autumn/shared";
-import { beforeAll, describe, expect, test } from "bun:test";
 import chalk from "chalk";
 import type Stripe from "stripe";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { expectAttachCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import { createProducts, createReward } from "tests/utils/productUtils.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import {
 	addPrefixToProducts,
 	getBasePrice,
 } from "tests/utils/testProductUtils/testProductUtils.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
@@ -25,6 +25,7 @@ import {
 } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { expectProductAttached } from "../../utils/expectUtils/expectProductAttached.js";
 
 const pro = constructProduct({
 	type: "pro",
@@ -136,7 +137,7 @@ describe(chalk.yellow(`${testCase} - Testing attach coupon`), () => {
 		});
 
 		const customer = await autumn.customers.get(customerId);
-		expectAttachCorrect({
+		expectProductAttached({
 			customer,
 			product: oneOff,
 		});
@@ -155,9 +156,10 @@ describe(chalk.yellow(`${testCase} - Testing attach coupon`), () => {
 		});
 
 		const customer = await autumn.customers.get(customerId);
-		expectAttachCorrect({
+		expectProductAttached({
 			customer,
 			product: oneOff,
+			quantity: 2,
 		});
 
 		expect(customer.invoices!.length).toBe(3);

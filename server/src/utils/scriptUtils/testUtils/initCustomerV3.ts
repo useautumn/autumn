@@ -58,7 +58,7 @@ export const initCustomerV3 = async ({
 		name,
 		email,
 		// @ts-expect-error
-		fingerprint: customerData?.fingerprint || fingerprint_,
+		fingerprint: customerData?.fingerprint,
 		stripe_id: stripeCus.id,
 		disable_default: !withDefault,
 		default_product_id: defaultProductId,

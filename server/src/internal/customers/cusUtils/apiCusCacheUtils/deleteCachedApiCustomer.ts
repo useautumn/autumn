@@ -1,13 +1,7 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { DELETE_CUSTOMER_SCRIPT } from "@lua/luaScripts.js";
 import { redis } from "@/external/redis/initRedis.js";
 import { logger } from "../../../../external/logtail/logtailUtils.js";
 import { buildCachedApiCustomerKey } from "./getCachedApiCustomer.js";
-
-const DELETE_CUSTOMER_SCRIPT = readFileSync(
-	join(import.meta.dir, "cusLuaScripts", "deleteCustomer.lua"),
-	"utf-8",
-);
 
 /**
  * Delete all cached ApiCustomer data from Redis

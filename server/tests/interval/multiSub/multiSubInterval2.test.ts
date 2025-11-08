@@ -1,5 +1,5 @@
-import { LegacyVersion } from "@autumn/shared";
 import { beforeAll, describe, expect, test } from "bun:test";
+import { LegacyVersion } from "@autumn/shared";
 import chalk from "chalk";
 import { addMonths, addYears, differenceInDays } from "date-fns";
 import { TestFeature } from "tests/setup/v2Features.js";
@@ -9,9 +9,9 @@ import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { getCusSub } from "@/utils/scriptUtils/testUtils/cusTestUtils.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { getCusSub } from "@/utils/scriptUtils/testUtils/cusTestUtils.js";
 import { toMilliseconds } from "@/utils/timeUtils.js";
 
 const pro = constructProduct({
@@ -36,21 +36,20 @@ describe(`${chalk.yellowBright("multiSubInterval2: Should attach pro and pro ann
 	let curUnix: number;
 
 	beforeAll(async () => {
-		const { testClockId: testClockId1 } = await initCustomerV3({
-			ctx,
-			customerId,
-			attachPm: "success",
-			withTestClock: true,
-		});
-
-		testClockId = testClockId1!;
-
 		await initProductsV0({
 			ctx,
 			products: [pro, proAnnual],
 			prefix: testCase,
 			customerId,
 		});
+
+		const { testClockId: testClockId1 } = await initCustomerV3({
+			ctx,
+			customerId,
+			attachPm: "success",
+		});
+
+		testClockId = testClockId1!;
 	});
 
 	const entities = [
@@ -94,8 +93,9 @@ describe(`${chalk.yellowBright("multiSubInterval2: Should attach pro and pro ann
 		});
 
 		expect(checkoutRes.next_cycle).toBeDefined();
-		const expectedDate = addYears(curUnix, 1).getTime();
+		const expectedDate = addYears(Date.now(), 1).getTime();
 		const actualDate = checkoutRes.next_cycle?.starts_at!;
+
 		const daysDiff = Math.abs(differenceInDays(expectedDate, actualDate));
 
 		expect(daysDiff).toBeLessThanOrEqual(1);

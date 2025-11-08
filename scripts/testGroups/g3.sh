@@ -13,9 +13,9 @@ if [[ "$1" == *"setup"* ]]; then
 fi
 
 BUN_PARALLEL_COMPACT \
-  'server/tests/contUse/entities' \
-  'server/tests/contUse/update' \
   'server/tests/contUse/track' \
   'server/tests/contUse/roles' \
+  'server/tests/contUse/update' \
+  'server/tests/contUse/entities' \
   --max=6
 

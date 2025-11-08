@@ -14,18 +14,16 @@ export const getOrCreateApiCustomer = async ({
 	ctx,
 	customerId,
 	customerData,
-	withAutumnId = false,
 }: {
 	ctx: AutumnContext;
 	customerId: string | null;
 	customerData?: CustomerData;
-	withAutumnId?: boolean;
-}): Promise<ApiCustomer> => {
+}): Promise<{ apiCustomer: ApiCustomer; legacyData?: CustomerLegacyData }> => {
 	// ========================================
 	// Phase 1: Get or Create Customer
 	// ========================================
 	let apiCustomer: ApiCustomer;
-	let legacyData: CustomerLegacyData;
+	let legacyData: CustomerLegacyData | undefined;
 
 	// Path A: customerId is NULL - always create new customer
 	if (!customerId) {
@@ -44,7 +42,6 @@ export const getOrCreateApiCustomer = async ({
 		const res = await getCachedApiCustomer({
 			ctx,
 			customerId: newCustomer.id || newCustomer.internal_id,
-			withAutumnId,
 		});
 
 		apiCustomer = res.apiCustomer;
@@ -59,7 +56,6 @@ export const getOrCreateApiCustomer = async ({
 			const res = await getCachedApiCustomer({
 				ctx,
 				customerId,
-				withAutumnId,
 			});
 			apiCustomerOrUndefined = res?.apiCustomer;
 			legacyData = res?.legacyData;
@@ -89,7 +85,6 @@ export const getOrCreateApiCustomer = async ({
 				const res = await getCachedApiCustomer({
 					ctx,
 					customerId: newCustomer.id || newCustomer.internal_id,
-					withAutumnId,
 					source: "getOrCreateApiCustomer",
 				});
 				apiCustomerOrUndefined = res?.apiCustomer;
@@ -100,7 +95,6 @@ export const getOrCreateApiCustomer = async ({
 					const res = await getCachedApiCustomer({
 						ctx,
 						customerId,
-						withAutumnId,
 					});
 					apiCustomerOrUndefined = res?.apiCustomer;
 					legacyData = res?.legacyData;
@@ -127,11 +121,13 @@ export const getOrCreateApiCustomer = async ({
 		const res = await getCachedApiCustomer({
 			ctx,
 			customerId: apiCustomer.id || "",
-			withAutumnId,
 		});
 		apiCustomer = res?.apiCustomer;
 		legacyData = res?.legacyData;
 	}
 
-	return apiCustomer;
+	return {
+		apiCustomer,
+		legacyData,
+	};
 };

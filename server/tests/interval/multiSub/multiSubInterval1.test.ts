@@ -35,6 +35,12 @@ describe(`${chalk.yellowBright("multiSubInterval1: Should attach pro and pro ann
 	let testClockId: string;
 
 	beforeAll(async () => {
+		await initProductsV0({
+			ctx,
+			products: [pro, proAnnual],
+			prefix: testCase,
+			customerId,
+		});
 		const { testClockId: testClockId1 } = await initCustomerV3({
 			ctx,
 			customerId,
@@ -43,13 +49,6 @@ describe(`${chalk.yellowBright("multiSubInterval1: Should attach pro and pro ann
 		});
 
 		testClockId = testClockId1!;
-
-		await initProductsV0({
-			ctx,
-			products: [pro, proAnnual],
-			prefix: testCase,
-			customerId,
-		});
 	});
 
 	const entities = [

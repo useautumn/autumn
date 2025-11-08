@@ -1,15 +1,9 @@
-import {
-	LegacyVersion,
-	OnDecrease,
-	OnIncrease,
-} from "@autumn/shared";
 import { beforeAll, describe, expect, test } from "bun:test";
+import { LegacyVersion, OnDecrease, OnIncrease } from "@autumn/shared";
 import chalk from "chalk";
-import { addWeeks } from "date-fns";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import { expectSubQuantityCorrect } from "tests/utils/expectUtils/expectContUseUtils.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
@@ -41,7 +35,6 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing create / delete ent
 	const customerId = testCase;
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
-	let curUnix = new Date().getTime();
 
 	beforeAll(async () => {
 		await initProductsV0({
@@ -106,12 +99,12 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing create / delete ent
 	];
 
 	test("should create 2 entities and have correct invoice", async () => {
-		curUnix = await advanceTestClock({
-			stripeCli: ctx.stripeCli,
-			testClockId,
-			advanceTo: addWeeks(new Date(), 2).getTime(),
-			waitForSeconds: 30,
-		});
+		// await advanceTestClock({
+		// 	stripeCli: ctx.stripeCli,
+		// 	testClockId,
+		// 	advanceTo: addWeeks(new Date(), 2).getTime(),
+		// 	waitForSeconds: 30,
+		// });
 
 		await autumn.entities.create(customerId, entities);
 		await timeout(3000);

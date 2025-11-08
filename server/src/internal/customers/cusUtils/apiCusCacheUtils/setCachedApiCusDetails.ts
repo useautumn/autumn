@@ -1,8 +1,8 @@
 import type { ApiCustomer, FullCustomer } from "@autumn/shared";
+import { SET_CUSTOMER_DETAILS_SCRIPT } from "@lua/luaScripts.js";
 import { redis } from "../../../../external/redis/initRedis.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "../../../../utils/cacheUtils/cacheUtils.js";
-import { SET_CUSTOMER_DETAILS_SCRIPT } from "./cusLuaScripts/luaScripts.js";
 import { buildCachedApiCustomerKey } from "./getCachedApiCustomer.js";
 
 /**

@@ -1,5 +1,5 @@
-import { LegacyVersion } from "@autumn/shared";
 import { beforeAll, describe, expect, test } from "bun:test";
+import { LegacyVersion } from "@autumn/shared";
 import chalk from "chalk";
 import { addMonths, addYears, differenceInDays } from "date-fns";
 import { TestFeature } from "tests/setup/v2Features.js";
@@ -12,9 +12,9 @@ import {
 	constructFeatureItem,
 } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { getCusSub } from "@/utils/scriptUtils/testUtils/cusTestUtils.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { getCusSub } from "@/utils/scriptUtils/testUtils/cusTestUtils.js";
 import { toMilliseconds } from "@/utils/timeUtils.js";
 
 const pro = constructProduct({
@@ -41,6 +41,13 @@ describe(`${chalk.yellowBright("multiSubInterval3: Should attach pro and pro ann
 	let testClockId: string;
 
 	beforeAll(async () => {
+		await initProductsV0({
+			ctx,
+			products: [pro, proAnnual],
+			prefix: testCase,
+			customerId,
+		});
+
 		const { testClockId: testClockId1 } = await initCustomerV3({
 			ctx,
 			customerId,
@@ -49,13 +56,6 @@ describe(`${chalk.yellowBright("multiSubInterval3: Should attach pro and pro ann
 		});
 
 		testClockId = testClockId1!;
-
-		await initProductsV0({
-			ctx,
-			products: [pro, proAnnual],
-			prefix: testCase,
-			customerId,
-		});
 	});
 
 	const entities = [

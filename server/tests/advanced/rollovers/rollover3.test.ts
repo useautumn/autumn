@@ -104,5 +104,15 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for usage price f
 		// @ts-expect-error
 		expect(msgesFeature?.rollovers[0].balance).toBe(rollover);
 		curBalance = expectedBalance;
+
+		// Verify non-cached customer balance
+		await timeout(2000);
+		const nonCachedCustomer = await autumn.customers.get(customerId, {
+			skip_cache: "true",
+		});
+		const nonCachedMsgesFeature = nonCachedCustomer.features[TestFeature.Messages];
+		expect(nonCachedMsgesFeature?.balance).toBe(expectedBalance);
+		// @ts-expect-error
+		expect(nonCachedMsgesFeature?.rollovers[0].balance).toBe(rollover);
 	});
 });

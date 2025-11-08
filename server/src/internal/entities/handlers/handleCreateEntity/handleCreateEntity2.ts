@@ -12,6 +12,7 @@ import { createRoute } from "../../../../honoMiddlewares/routeHandler.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import type { ExtendedRequest } from "../../../../utils/models/Request.js";
 import { EntityService } from "../../../api/entities/EntityService.js";
+import { getApiEntity } from "../../entityUtils/apiEntityUtils/getApiEntity.js";
 import { constructEntity } from "../../entityUtils/entityUtils.js";
 import { createEntityForCusProduct } from "./createEntityForCusProduct.js";
 import { validateAndGetInputEntities } from "./getInputEntities.js";
@@ -89,25 +90,26 @@ export const createEntities = async ({
 
 	newEntities.push(...insertedEntities);
 
-	// // Get api entity for each entity...
-	// const apiEntities = [];
-	// for (const entity of newEntities) {
-	// 	// Cloned fullCus
-	// 	const clonedFullCus = structuredClone(fullCus);
-	// 	clonedFullCus.entity = entity;
-	// 	const apiEntity = await getApiEntity({
-	// 		ctx,
-	// 		expand: [],
-	// 		customerId,
-	// 		entityId: entity.id,
-	// 		fullCus: clonedFullCus,
-	// 		withAutumnId,
-	// 	});
-	// 	apiEntities.push(apiEntity);
-	// }
-	return newEntities;
+	// Get api entity for each entity...
+	const apiEntities = [];
+	for (const entity of newEntities) {
+		// Cloned fullCus
 
-	// return apiEntities;
+		const clonedFullCus = structuredClone(fullCus);
+		clonedFullCus.entity = entity;
+		const apiEntity = await getApiEntity({
+			ctx,
+			expand: [],
+			customerId,
+			entityId: entity.id,
+			fullCus: clonedFullCus,
+			withAutumnId,
+			skipCache: true,
+		});
+		apiEntities.push(apiEntity);
+	}
+
+	return apiEntities;
 };
 
 export const handleCreateEntity = createRoute({

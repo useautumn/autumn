@@ -47,10 +47,9 @@ export const runRedisDeduction = async ({
 	const { org, env } = ctx;
 
 	// Ensure customer is in cache
-	const cachedCustomer = await getOrCreateApiCustomer({
+	const { apiCustomer: cachedCustomer } = await getOrCreateApiCustomer({
 		ctx,
 		customerId,
-		withAutumnId: true,
 	});
 
 	// Map feature deductions to the format expected by batching manager
@@ -82,14 +81,32 @@ export const runRedisDeduction = async ({
 	// Redis deduction successful: queue sync jobs and event insertion
 
 	if (result.success) {
+		// Only queue sync pairs for scopes that were actually modified
+		// This prevents unnecessary syncs and race conditions
 		for (const deduction of featureDeductions) {
-			globalSyncBatchingManager.addSyncPair({
-				customerId: customerId,
-				featureId: deduction.feature.id,
-				orgId: org.id,
-				env,
-				entityId: entityId,
-			});
+			// If customer was changed, queue customer-level sync
+			if (result.customerChanged) {
+				globalSyncBatchingManager.addSyncPair({
+					customerId: customerId,
+					featureId: deduction.feature.id,
+					orgId: org.id,
+					env,
+					entityId: undefined, // Customer-level sync
+				});
+			}
+
+			// For each changed entity, queue entity-level sync
+			if (result.changedEntityIds && result.changedEntityIds.length > 0) {
+				for (const changedEntityId of result.changedEntityIds) {
+					globalSyncBatchingManager.addSyncPair({
+						customerId: customerId,
+						featureId: deduction.feature.id,
+						orgId: org.id,
+						env,
+						entityId: changedEntityId,
+					});
+				}
+			}
 		}
 
 		// Queue event insertion (skip if skip_event is true)

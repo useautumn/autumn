@@ -1,21 +1,53 @@
 import { beforeAll, describe, expect, test } from "bun:test";
+import {
+	BillingInterval,
+	ProductItemInterval,
+	UsageModel,
+} from "@autumn/shared";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
-import { advanceClockForInvoice } from "tests/utils/stripeUtils.js";
-import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
-import { AutumnCli } from "../../cli/AutumnCli.js";
-import { advanceProducts, creditSystems, features } from "../../global.js";
-import { getCreditsUsed } from "../../utils/advancedUsageUtils.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { expectCustomerV0Correct } from "tests/utils/expectUtils/expectCustomerV0Correct.js";
-import { timeout } from "../../utils/genUtils.js";
+import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
+import { advanceClockForInvoice } from "tests/utils/stripeUtils.js";
 import ctx from "tests/utils/testInitUtils/createTestContext.js";
-
-// NOTE: This test uses GPU products from global.ts (advanceProducts.gpuSystemStarter)
-// These products are not yet converted to ProductV2 format in sharedProducts.ts
-// The test has been migrated to Bun but still uses ProductV1 from global.ts
+import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
+import { convertProductV2ToV1 } from "@/internal/products/productUtils/productV2Utils/convertProductV2ToV1.js";
+import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { getCreditCost } from "../../../src/internal/features/creditSystemUtils.js";
+import { AutumnCli } from "../../cli/AutumnCli.js";
 
 const testCase = "usage2";
+
+// Find credit system feature from test context
+const creditsFeature = ctx.features.find((f) => f.id === TestFeature.Credits);
+
+if (!creditsFeature) {
+	throw new Error("Credits feature not found in test context");
+}
+
+const gpuSystemStarter = constructRawProduct({
+	id: "gpu-system-starter",
+	items: [
+		constructPriceItem({
+			price: 20, // $20/month
+			interval: BillingInterval.Month,
+		}),
+		{
+			feature_id: TestFeature.Credits,
+			usage_model: UsageModel.PayPerUse,
+			included_usage: 500,
+			interval: ProductItemInterval.Month,
+			billing_units: 5,
+			price: 0.01,
+			reset_usage_when_enabled: true,
+		},
+	],
+});
+
 describe(`${chalk.yellowBright("usage2: Testing basic usage product")}`, () => {
 	const customerId = testCase;
 	const PRECISION = 10;
@@ -28,10 +60,16 @@ describe(`${chalk.yellowBright("usage2: Testing basic usage product")}`, () => {
 	let stripeCli: Stripe;
 
 	beforeAll(async () => {
+		await initProductsV0({
+			ctx,
+			products: [gpuSystemStarter],
+			prefix: testCase,
+			customerId,
+		});
+
 		const { testClockId: createdTestClockId } = await initCustomerV3({
 			ctx,
 			customerId,
-			customerData: { fingerprint: "test" },
 			withTestClock: true,
 			attachPm: "success",
 		});
@@ -44,14 +82,13 @@ describe(`${chalk.yellowBright("usage2: Testing basic usage product")}`, () => {
 	test("should attach gpu system starter", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
-			productId: advanceProducts.gpuSystemStarter.id,
+			productId: gpuSystemStarter.id,
 		});
 
 		const res = await AutumnCli.getCustomer(customerId);
-		expectCustomerV0Correct({
-			sent: advanceProducts.gpuSystemStarter,
+		await expectCustomerV0Correct({
+			sent: gpuSystemStarter,
 			cusRes: res,
-			ctx,
 		});
 	});
 
@@ -65,13 +102,13 @@ describe(`${chalk.yellowBright("usage2: Testing basic usage product")}`, () => {
 				.mul(CREDIT_MULTIPLIER)
 				.mul(Math.random() > 0.2 ? 1 : -1)
 				.toNumber();
-			const gpuId = i % 2 === 0 ? features.gpu1.id : features.gpu2.id;
+			const featureId = i % 2 === 0 ? TestFeature.Action1 : TestFeature.Action2;
 
-			const creditsUsed = getCreditsUsed(
-				creditSystems.gpuCredits,
-				gpuId,
-				randomVal,
-			);
+			const creditsUsed = getCreditCost({
+				creditSystem: creditsFeature,
+				featureId: featureId,
+				amount: randomVal,
+			});
 
 			totalCreditsUsed = new Decimal(totalCreditsUsed)
 				.plus(creditsUsed)
@@ -80,7 +117,7 @@ describe(`${chalk.yellowBright("usage2: Testing basic usage product")}`, () => {
 			batchEvents.push(
 				AutumnCli.sendEvent({
 					customerId: customerId,
-					eventName: gpuId,
+					featureId: featureId,
 					properties: { value: randomVal },
 				}),
 			);
@@ -88,16 +125,23 @@ describe(`${chalk.yellowBright("usage2: Testing basic usage product")}`, () => {
 
 		await Promise.all(batchEvents);
 
-		await timeout(10000);
+		// await timeout(10000);
 
 		const { allowed, balanceObj }: any = await AutumnCli.entitled(
 			customerId,
-			creditSystems.gpuCredits.id,
+			TestFeature.Credits,
 			true,
 		);
 
+		// Convert V2 product to V1 to get allowance
+		const productV1 = convertProductV2ToV1({
+			productV2: gpuSystemStarter,
+			orgId: ctx.org.id,
+			features: ctx.features,
+		});
+
 		const creditAllowance =
-			advanceProducts.gpuSystemStarter.entitlements.gpuCredits.allowance!;
+			productV1.entitlements[TestFeature.Credits]?.allowance!;
 
 		expect(allowed).toBe(true);
 		expect(balanceObj!.balance).toBe(
@@ -112,5 +156,37 @@ describe(`${chalk.yellowBright("usage2: Testing basic usage product")}`, () => {
 			testClockId,
 			waitForMeterUpdate: ASSERT_INVOICE_AMOUNT,
 		});
+
+		const cusRes = await AutumnCli.getCustomer(customerId);
+		const invoices = cusRes!.invoices;
+
+		// Calculate expected invoice total using getExpectedInvoiceTotal
+		// We need to convert credits used to the actual usage value
+		// Since credits are calculated from Action1/Action2 events, we need to track the actual usage
+		// For now, we'll use totalCreditsUsed as the value for the Credits feature
+		const expectedTotal = await getExpectedInvoiceTotal({
+			customerId,
+			productId: gpuSystemStarter.id,
+			usage: [
+				{
+					featureId: TestFeature.Credits,
+					value: totalCreditsUsed,
+				},
+			],
+			stripeCli,
+			db: ctx.db,
+			org: ctx.org,
+			env: ctx.env,
+		});
+
+		// Find the invoice that matches our product
+		const invoice = invoices.find((inv: any) =>
+			inv.product_ids.includes(gpuSystemStarter.id),
+		);
+
+		expect(invoice, "Invoice should exist").toBeDefined();
+		expect(invoice!.total, "invoice total should match expected total").toBe(
+			expectedTotal,
+		);
 	});
 });

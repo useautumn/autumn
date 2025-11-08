@@ -17,6 +17,7 @@ const wordsItem = constructArrearItem({
 });
 
 const pro = constructProduct({
+	id: "pro",
 	items: [wordsItem],
 	type: "pro",
 	isDefault: false,
@@ -43,7 +44,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for pro -> pro wi
 	beforeAll(async () => {
 		await initProductsV0({
 			ctx,
-			products: [pro, proWithTrial],
+			products: [pro],
 			prefix: testCase,
 			customerId,
 		});
@@ -71,7 +72,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for pro -> pro wi
 
 	test("should update product to new version", async () => {
 		proWithTrial.version = 2;
-		await autumn.products.update(pro.id, {
+		await autumn.products.update(proWithTrial.id, {
 			items: proWithTrial.items,
 			free_trial: proWithTrial.free_trial,
 		});

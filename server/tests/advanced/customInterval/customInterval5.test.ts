@@ -1,11 +1,11 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import { LegacyVersion } from "@autumn/shared";
 import type { Customer } from "autumn-js";
-import { beforeAll, describe, expect, test } from "bun:test";
 import chalk from "chalk";
 import type Stripe from "stripe";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
@@ -55,14 +55,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing multi interval features wit
 	beforeAll(async () => {
 		stripeCli = ctx.stripeCli;
 
-		const { testClockId: testClockId1 } = await initCustomerV3({
-			ctx,
-			customerId,
-			customerData: {},
-			attachPm: "success",
-			withTestClock: true,
-		});
-
 		await initProductsV0({
 			ctx,
 			products: [pro],
@@ -70,6 +62,13 @@ describe(`${chalk.yellowBright(`${testCase}: Testing multi interval features wit
 			customerId,
 		});
 
+		const { testClockId: testClockId1 } = await initCustomerV3({
+			ctx,
+			customerId,
+			customerData: {},
+			attachPm: "success",
+			withTestClock: true,
+		});
 		testClockId = testClockId1!;
 	});
 

@@ -3,13 +3,15 @@ import {
 	filterCusProductsByEntity,
 	filterOutEntitiesFromCusProducts,
 } from "@autumn/shared";
+import {
+	SET_CUSTOMER_PRODUCTS_SCRIPT,
+	SET_ENTITY_PRODUCTS_SCRIPT,
+} from "@lua/luaScripts.js";
 import { redis } from "../../../../external/redis/initRedis.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "../../../../utils/cacheUtils/cacheUtils.js";
-import { SET_ENTITY_PRODUCTS_SCRIPT } from "../../../entities/entityUtils/apiEntityCacheUtils/entityLuaScripts/luaScripts.js";
 import { buildCachedApiEntityKey } from "../../../entities/entityUtils/apiEntityCacheUtils/getCachedApiEntity.js";
 import { getApiCusProducts } from "../apiCusUtils/getApiCusProduct/getApiCusProducts.js";
-import { SET_CUSTOMER_PRODUCTS_SCRIPT } from "./cusLuaScripts/luaScripts.js";
 import { buildCachedApiCustomerKey } from "./getCachedApiCustomer.js";
 
 /**

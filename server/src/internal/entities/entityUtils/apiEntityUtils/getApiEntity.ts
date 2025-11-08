@@ -24,13 +24,19 @@ export const getApiEntity = async ({
 	skipCache?: boolean;
 }): Promise<ApiEntity> => {
 	// Get base entity (cacheable or direct from DB)
-	const { apiEntity: baseEntity } = await getCachedApiEntity({
+	let { apiEntity: baseEntity } = await getCachedApiEntity({
 		ctx,
 		customerId,
 		entityId,
-		withAutumnId,
 		skipCache,
+		fullCus,
 	});
+
+	// Clean api entity
+	baseEntity = {
+		...baseEntity,
+		autumn_id: withAutumnId ? baseEntity.autumn_id : undefined,
+	};
 
 	// Get expand fields (not cacheable)
 	const apiEntityExpand = await getApiEntityExpand({
