@@ -23,6 +23,7 @@
 		"@fortawesome/free-brands-svg-icons": "^6.7.2",
 		"@fortawesome/react-fontawesome": "^0.2.2",
 		"@heroicons/react": "^2.2.0",
+		"@jsx-tool/jsx-tool": "^0.0.21",
 		"@phosphor-icons/react": "^2.1.10",
 		"@radix-ui/react-accordion": "^1.2.11",
 		"@radix-ui/react-checkbox": "^1.1.4",
