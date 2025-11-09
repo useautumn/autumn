@@ -11,90 +11,95 @@ import { CancelProductDialog } from "./CancelProductDialog";
 import { CustomerProductsColumns } from "./CustomerProductsColumns";
 import { filterCustomerProducts } from "./customerProductsTableFilters";
 import { ShowExpiredActionButton } from "./ShowExpiredActionButton";
+import { Package } from "lucide-react";
+import { Cube } from "@phosphor-icons/react";
 
 export function CustomerProductsTable() {
-	const { customer, isLoading } = useCusQuery();
+  const { customer, isLoading } = useCusQuery();
 
-	const [showExpired, setShowExpired] = useQueryState(
-		"customerProductsShowExpired",
-		parseAsBoolean.withDefault(true),
-	);
+  const [showExpired, setShowExpired] = useQueryState(
+    "customerProductsShowExpired",
+    parseAsBoolean.withDefault(true)
+  );
 
-	const [cancelOpen, setCancelOpen] = useState(false);
-	const [selectedProduct, setSelectedProduct] = useState<FullCusProduct | null>(
-		null,
-	);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<FullCusProduct | null>(
+    null
+  );
 
-	useSavedViewsQuery();
-	useFullCusSearchQuery();
+  useSavedViewsQuery();
+  useFullCusSearchQuery();
 
-	const filteredCustomers = useMemo(
-		() =>
-			filterCustomerProducts({
-				customer,
-				showExpired: showExpired ?? true,
-			}),
-		[customer, showExpired],
-	);
+  const filteredCustomers = useMemo(
+    () =>
+      filterCustomerProducts({
+        customer,
+        showExpired: showExpired ?? true,
+      }),
+    [customer, showExpired]
+  );
 
-	const attachedProductsTableColumns = useMemo(
-		() => CustomerProductsColumns,
-		[],
-	);
+  const attachedProductsTableColumns = useMemo(
+    () => CustomerProductsColumns,
+    []
+  );
 
-	const handleCancelClick = (product: FullCusProduct) => {
-		setSelectedProduct(product);
-		setCancelOpen(true);
-	};
+  const handleCancelClick = (product: FullCusProduct) => {
+    setSelectedProduct(product);
+    setCancelOpen(true);
+  };
 
-	const enableSorting = false;
-	const table = useCustomerTable({
-		data: filteredCustomers,
-		columns: attachedProductsTableColumns,
-		options: {
-			globalFilterFn: "includesString",
-			enableGlobalFilter: true,
-			meta: {
-				filterCustomerProducts,
-				onCancelClick: handleCancelClick,
-			},
-		},
-	});
+  const enableSorting = false;
+  const table = useCustomerTable({
+    data: filteredCustomers,
+    columns: attachedProductsTableColumns,
+    options: {
+      globalFilterFn: "includesString",
+      enableGlobalFilter: true,
+      meta: {
+        filterCustomerProducts,
+        onCancelClick: handleCancelClick,
+      },
+    },
+  });
 
-	return (
-		<>
-			{selectedProduct && (
-				<CancelProductDialog
-					cusProduct={selectedProduct}
-					open={cancelOpen}
-					setOpen={setCancelOpen}
-				/>
-			)}
-			<Table.Provider
-				config={{
-					table,
-					numberOfColumns: attachedProductsTableColumns.length,
-					enableSorting,
-					isLoading,
-				}}
-			>
-				<Table.Container>
-					<Table.Toolbar>
-						<Table.Heading>Attached Products</Table.Heading>
-						<Table.Actions>
-							<ShowExpiredActionButton
-								showExpired={showExpired}
-								setShowExpired={setShowExpired}
-							/>
-							<AttachProductDropdown />
-						</Table.Actions>
-					</Table.Toolbar>
-					<Table.Content>
-						<Table.Header />
-						<Table.Body />
-					</Table.Content>
-				</Table.Container>
-			</Table.Provider>
-		</>
-	);
+  return (
+    <>
+      {selectedProduct && (
+        <CancelProductDialog
+          cusProduct={selectedProduct}
+          open={cancelOpen}
+          setOpen={setCancelOpen}
+        />
+      )}
+      <Table.Provider
+        config={{
+          table,
+          numberOfColumns: attachedProductsTableColumns.length,
+          enableSorting,
+          isLoading,
+        }}
+      >
+        <Table.Container>
+          <Table.Toolbar>
+            <Table.Heading>
+              <Cube size={16} weight="fill" className="text-t5" />
+              Plans
+            </Table.Heading>
+            <Table.Actions>
+              <ShowExpiredActionButton
+                showExpired={showExpired}
+                setShowExpired={setShowExpired}
+              />
+              <AttachProductDropdown />
+            </Table.Actions>
+          </Table.Toolbar>
+          <Table.Content>
+            <Table.Header />
+            <Table.Body />
+          </Table.Content>
+        </Table.Container>
+      </Table.Provider>
+    </>
+  );
 }

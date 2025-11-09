@@ -10,48 +10,52 @@ import { getStripeCusLink } from "@/utils/linkUtils";
 import { useCustomerContext } from "./CustomerContext";
 
 const mutedDivClassName =
-	"py-0.5 px-1.5 bg-muted rounded-lg text-t3 text-sm flex items-center justify-center gap-1 h-6";
+  "py-0.5 px-1.5 bg-muted rounded-lg text-t3 text-sm flex items-center gap-1 h-6 max-w-48 truncate ";
 
 const placeholderText = "NULL";
 
 export const CustomerPageDetails = () => {
-	const { customer } = useCustomerContext();
-	const env = useEnv();
-	const { stripeAccount } = useOrgStripeQuery();
+  const { customer } = useCustomerContext();
+  const env = useEnv();
+  const { stripeAccount } = useOrgStripeQuery();
 
-	return (
-		<div className="flex gap-2">
-			<CopyButton
-				text={customer.id ?? placeholderText}
-				size="sm"
-				innerClassName="!text-sm !font-sans"
-			/>
-			<div className={mutedDivClassName}>
-				{customer.email ?? placeholderText}
-			</div>
-			<div className={mutedDivClassName}>
-				<FingerprintIcon size={16} />
-				{customer.fingerprint ?? placeholderText}
-			</div>
-			{customer.processor?.id && (
-				<Button
-					variant="muted"
-					size="sm"
-					onClick={() => {
-						window.open(
-							getStripeCusLink({
-								customerId: customer.processor.id,
-								env,
-								accountId: stripeAccount?.id,
-							}),
-							"_blank",
-						);
-					}}
-				>
-					<FontAwesomeIcon icon={faStripe} className="!h-6 !w-6 text-t3" />
-					<ArrowSquareOutIcon size={12} />
-				</Button>
-			)}
-		</div>
-	);
+  return (
+    <div className="flex gap-2">
+      <CopyButton
+        text={customer.id ?? placeholderText}
+        size="sm"
+        innerClassName="!text-sm !font-sans max-w-48 truncate"
+      />
+      {customer.email && (
+        <div className={mutedDivClassName}>
+          <span className="truncate">{customer.email ?? placeholderText}</span>
+        </div>
+      )}
+      {customer.fingerprint && (
+        <div className={mutedDivClassName}>
+          <FingerprintIcon size={16} />
+          {customer.fingerprint ?? placeholderText}
+        </div>
+      )}
+      {customer.processor?.id && (
+        <Button
+          variant="muted"
+          size="sm"
+          onClick={() => {
+            window.open(
+              getStripeCusLink({
+                customerId: customer.processor.id,
+                env,
+                accountId: stripeAccount?.id,
+              }),
+              "_blank"
+            );
+          }}
+        >
+          <FontAwesomeIcon icon={faStripe} className="!h-6 !w-6 text-t3" />
+          <ArrowSquareOutIcon size={12} />
+        </Button>
+      )}
+    </div>
+  );
 };
