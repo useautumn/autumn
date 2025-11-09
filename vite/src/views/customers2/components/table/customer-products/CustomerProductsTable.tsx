@@ -19,7 +19,7 @@ export function CustomerProductsTable() {
 
   const [showExpired, setShowExpired] = useQueryState(
     "customerProductsShowExpired",
-    parseAsBoolean.withDefault(true)
+    parseAsBoolean.withDefault(false)
   );
 
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -34,7 +34,7 @@ export function CustomerProductsTable() {
     () =>
       filterCustomerProducts({
         customer,
-        showExpired: showExpired ?? true,
+        showExpired: showExpired ?? false,
       }),
     [customer, showExpired]
   );
