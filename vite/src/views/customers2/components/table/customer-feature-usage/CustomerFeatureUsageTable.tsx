@@ -1,4 +1,4 @@
-import { FeatureType } from "@autumn/shared";
+import { FeatureType, FullCustomerEntitlement } from "@autumn/shared";
 import { type ExpandedState, getExpandedRowModel } from "@tanstack/react-table";
 import { parseAsBoolean, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
@@ -17,16 +17,20 @@ import {
   processNonBooleanEntitlements,
 } from "./customerFeatureUsageUtils";
 import { PuzzlePiece } from "@phosphor-icons/react";
+import UpdateCusEntitlement from "@/views/customers/customer/entitlements/UpdateCusEntitlement";
 
 export function CustomerFeatureUsageTable() {
   const { customer, features, isLoading } = useCusQuery();
 
   const [showExpired, setShowExpired] = useQueryState(
     "customerFeatureUsageShowExpired",
-    parseAsBoolean.withDefault(true)
+    parseAsBoolean.withDefault(false)
   );
 
   const [expanded, setExpanded] = useState<ExpandedState>({});
+
+  const [selectedCusEntitlement, setSelectedCusEntitlement] =
+    useState<FullCustomerEntitlement | null>(null);
 
   const cusEnts = useMemo(
     () =>
@@ -94,12 +98,24 @@ export function CustomerFeatureUsageTable() {
 
   return (
     <>
+      <UpdateCusEntitlement
+        selectedCusEntitlement={selectedCusEntitlement}
+        setSelectedCusEntitlement={setSelectedCusEntitlement}
+      />
       <Table.Provider
         config={{
           table,
           numberOfColumns: CustomerFeatureUsageColumns.length,
           enableSorting,
           isLoading,
+          onRowClick: (row) => {
+            if ("isSubRow" in row && row.isSubRow) {
+              // Handle subrow case - maybe extract parent entitlement?
+              return;
+            }
+            setSelectedCusEntitlement(row as FullCustomerEntitlement);
+            console.log(row);
+          },
         }}
       >
         <Table.Container>
