@@ -32,7 +32,7 @@ export const createStripeSub2 = async ({
 	itemSet: ItemSet;
 	logger: any;
 }) => {
-	const { customer, invoiceOnly, freeTrial, org, now, rewards } = attachParams;
+	const { customer, invoiceOnly, freeTrial, org, now, rewards, metadata } = attachParams;
 
 	const paymentMethod = await getCusPaymentMethod({
 		stripeCli,
@@ -53,6 +53,9 @@ export const createStripeSub2 = async ({
 		? rewards.map((reward) => ({ coupon: reward.id }))
 		: undefined;
 
+	// Check if using custom payment method (Vercel, etc.)
+	const isCustomPaymentMethod = paymentMethod?.type === "custom";
+
 	try {
 		const subscription = await stripeCli.subscriptions.create({
 			...paymentMethodData,
@@ -60,7 +63,11 @@ export const createStripeSub2 = async ({
 			items: sanitizeSubItems(subItems),
 
 			billing_mode: { type: "flexible" },
-			payment_behavior: "error_if_incomplete",
+			// For custom payment methods (e.g., Vercel), start subscription as incomplete
+			// The subscription will become active after external payment is confirmed via Payment Records API
+			payment_behavior: isCustomPaymentMethod
+				? "default_incomplete"
+				: "error_if_incomplete",
 			add_invoice_items: invoiceItems,
 			collection_method: invoiceOnly ? "send_invoice" : "charge_automatically",
 			days_until_due: invoiceOnly ? 30 : undefined,
@@ -70,6 +77,17 @@ export const createStripeSub2 = async ({
 
 			discounts,
 			expand: ["latest_invoice"],
+
+			// Pass metadata from attachParams (e.g., Vercel installation/billing plan IDs)
+			metadata: metadata || undefined,
+
+			// For custom payment methods, save the payment method on the subscription
+			// so it's available in webhook handlers and for future renewals
+			...(isCustomPaymentMethod && {
+				payment_settings: {
+					save_default_payment_method: "on_subscription",
+				},
+			}),
 
 			...{
 				trial_settings:
