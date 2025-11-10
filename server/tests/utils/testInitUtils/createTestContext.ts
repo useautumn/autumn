@@ -51,8 +51,7 @@ export const createTestContext = async () => {
 
 	// Get org secret key for API calls
 	// Priority: 1. Environment variable (set by test runner), 2. Org's secret_keys field
-	const orgSecretKey =
-		process.env.UNIT_TEST_AUTUMN_SECRET_KEY || org.secret_keys?.[env] || "";
+	const orgSecretKey = process.env.UNIT_TEST_AUTUMN_SECRET_KEY || "";
 	if (!orgSecretKey) {
 		throw new Error(
 			`No secret key found for org "${orgSlug}" in environment "${env}". ` +

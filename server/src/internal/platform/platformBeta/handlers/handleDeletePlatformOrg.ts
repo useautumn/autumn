@@ -2,21 +2,19 @@ import {
 	AppEnv,
 	customers,
 	ErrCode,
-	RecaseError,
-	organizations,
 	member,
+	organizations,
+	RecaseError,
 } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
-import { zValidator } from "@hono/zod-validator";
 import { z } from "zod/v4";
-import type { Context } from "hono";
-import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import {
 	deleteStripeAccounts,
-	deleteSvixWebhooks,
 	deleteStripeWebhooks,
+	deleteSvixWebhooks,
 } from "@/internal/orgs/orgUtils/deleteOrgUtils.js";
+import { createRoute } from "../../../../honoMiddlewares/routeHandler.js";
 
 const deleteOrgSchema = z.object({
 	slug: z.string().min(1, "Organization slug is required"),
@@ -26,9 +24,9 @@ const deleteOrgSchema = z.object({
  * DELETE /organizations
  * Deletes a platform organization by slug (for test cleanup)
  */
-export const handleDeletePlatformOrg = [
-	zValidator("json", deleteOrgSchema),
-	async (c: Context<HonoEnv>) => {
+export const handleDeletePlatformOrg = createRoute({
+	body: deleteOrgSchema,
+	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, logger, org: masterOrg } = ctx;
 
@@ -42,8 +40,6 @@ export const handleDeletePlatformOrg = [
 		if (!org) {
 			throw new RecaseError({
 				message: `Organization with slug "${slug}" not found`,
-				code: ErrCode.NotFound,
-				statusCode: 404,
 			});
 		}
 
@@ -93,4 +89,4 @@ export const handleDeletePlatformOrg = [
 			message: `Organization "${slug}" deleted successfully`,
 		});
 	},
-];
+});

@@ -1,4 +1,6 @@
 import {
+	type FullCusEntWithFullCusProduct,
+	type FullCustomer,
 	filterEntityProductCusEnts,
 	filterOutEntityCusEnts,
 	filterPerEntityCusEnts,
@@ -6,8 +8,7 @@ import {
 	sumValues,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
-import type { FullCustomer } from "../../../../../../../shared/models/cusModels/fullCusModel.js";
-import type { FullCusEntWithFullCusProduct } from "../../../../../../../shared/models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+
 import type { RequestContext } from "../../../../../honoUtils/HonoEnv.js";
 
 export const cusEntsToEntityBreakdown = ({

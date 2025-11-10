@@ -1,5 +1,5 @@
+import type { CreateRewardProgram, RewardProgram } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils.js";
-import { CreateRewardProgram, RewardProgram } from "@autumn/shared";
 
 export const constructRewardProgram = ({
 	rewardProgramData,
@@ -10,7 +10,7 @@ export const constructRewardProgram = ({
 	orgId: string;
 	env: string;
 }) => {
-	let rewardProgram: RewardProgram = {
+	const rewardProgram: RewardProgram = {
 		...rewardProgramData,
 		internal_id: generateId("rs"),
 		unlimited_redemptions: false,

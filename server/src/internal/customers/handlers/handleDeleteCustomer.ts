@@ -77,7 +77,7 @@ export const deleteCusById = async ({
 
 	// Delete customer and all entity caches atomically
 	await deleteCachedApiCustomer({
-		customerId: customer.id,
+		customerId: customer.id ?? "",
 		orgId,
 		env,
 	});
