@@ -2,23 +2,23 @@ import type { Table as TanstackTable } from "@tanstack/react-table";
 import { createContext, useContext } from "react";
 
 export interface TableProps<T> {
-  table: TanstackTable<T>;
-  numberOfColumns: number;
-  isLoading: boolean;
-  enableSelection?: boolean;
-  enableSorting?: boolean;
-  onRowClick?: (row: T) => void;
+	table: TanstackTable<T>;
+	numberOfColumns: number;
+	isLoading: boolean;
+	enableSelection?: boolean;
+	enableSorting?: boolean;
+	onRowClick?: (row: T) => void;
 }
 
 //biome-ignore lint/suspicious/noExplicitAny: type could be any here
 export const TableContext = createContext<TableProps<any> | null>(null);
 
 export function useTableContext<T>(): TableProps<T> {
-  const context = useContext(TableContext);
+	const context = useContext(TableContext);
 
-  if (!context) {
-    throw new Error("Table context is not available");
-  }
+	if (!context) {
+		throw new Error("Table context is not available");
+	}
 
-  return context as TableProps<T>;
+	return context as TableProps<T>;
 }
