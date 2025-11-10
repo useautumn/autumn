@@ -24,7 +24,7 @@ const buttonVariants = cva(
 				focus-visible:bg-primary-btn-active focus-visible:border-primary-btn-border
 				`,
 
-				secondary: `bg-stone-50 border border-[var(--color-input)] hover:border-primary hover:bg-hover-primary btn-secondary-shadow
+				secondary: `bg-input-background border border-[var(--color-input)] hover:border-primary hover:bg-hover-primary btn-secondary-shadow
 				focus-visible:bg-active-primary focus-visible:border-primary 
 				active:bg-active-primary active:border-primary
 				`,

@@ -7,6 +7,7 @@ export interface TableProps<T> {
 	isLoading: boolean;
 	enableSelection?: boolean;
 	enableSorting?: boolean;
+	onRowClick?: (row: T) => void;
 }
 
 //biome-ignore lint/suspicious/noExplicitAny: type could be any here
