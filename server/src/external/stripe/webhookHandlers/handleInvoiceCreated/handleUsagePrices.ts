@@ -82,9 +82,15 @@ export const handleUsagePrices = async ({
 		stripeItems: usageSub.items.data,
 	});
 
+	// Use new invoice items method (not Stripe Meters) for:
+	// - Entity-based customers
+	// - Beta API customers
+	// - Vercel custom payment method subscriptions (meter timing issue with invoice.created)
+	const isVercelSubscription = !!usageSub.metadata?.vercel_installation_id;
 	const isNewUsageMethod =
 		activeProduct.internal_entity_id ||
-		activeProduct.api_semver === ApiVersion.Beta;
+		activeProduct.api_semver === ApiVersion.Beta ||
+		isVercelSubscription;
 
 	if (isNewUsageMethod) {
 		const invoiceItem = getInvoiceItemForUsage({
