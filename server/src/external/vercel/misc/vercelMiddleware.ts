@@ -10,15 +10,6 @@ export const vercelSeederMiddleware = async (
 ) => {
 	const { orgId, env } = c.req.param();
 	const ctx = c.get("ctx");
-	const headers = c.req.header();
-	console.log("Vercel webhook headers", JSON.stringify(headers, null, 4));
-
-	console.log("Vercel Seeder Middleware: orgId", orgId);
-	console.log("Vercel Seeder Middleware: env", env);
-
-	console.log("Will skip org fetch?", !ctx.org && orgId);
-	console.log("Will skip env fetch?", !ctx.env && env);
-	console.log("Will skip features fetch?", !ctx.features && orgId);
 
 	if (!ctx.org && orgId) {
 		ctx.org = await OrgService.get({ db: ctx.db, orgId });
@@ -33,11 +24,6 @@ export const vercelSeederMiddleware = async (
 			env: ctx.env ?? AppEnv.Sandbox,
 		});
 	}
-	// if (c.req.header("Authorization")) {
-	// 	const token = getAuthorizationToken(c.req.header() as unknown as Headers);
-	// 	const claims = await verifyToken(token);
-	// 	ctx.vercelClaims = claims;
-	// }
 
 	await next();
 };
