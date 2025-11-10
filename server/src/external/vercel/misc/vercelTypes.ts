@@ -96,3 +96,90 @@ export type VercelUpsertInstallation = {
 		};
 	};
 };
+
+/**
+ * Type for a Vercel Provisioned Resource.
+ * Represents all configuration and status for a user's provisioned integration resource.
+ */
+export type VercelProvisionResource = {
+	id: string; // The partner-specific ID of the resource
+	productId: string; // The partner-specific ID/slug of the product, eg. "redis"
+	protocolSettings?: {
+		experimentation?: {
+			edgeConfigSyncingEnabled?: boolean;
+			edgeConfigId?: string;
+			edgeConfigTokenId?: string;
+		};
+	};
+	billingPlan?: {
+		id: string; // eg. "pro200"
+		type: "prepayment" | "subscription";
+		name: string; // Plan name, eg. "Hobby"
+		scope?: "installation" | "resource";
+		description: string; // eg. "Use all you want up to 20G"
+		paymentMethodRequired?: boolean;
+		preauthorizationAmount?: number;
+		initialCharge?: string;
+		minimumAmount?: string;
+		maximumAmount?: string;
+		maximumAmountAutoPurchasePerPeriod?: string;
+		cost?: string;
+		details?: Array<{
+			label: string;
+			value?: string;
+		}>;
+		highlightedDetails?: Array<{
+			label: string;
+			value?: string;
+		}>;
+		quote?: Array<{
+			line: string;
+			amount: string;
+		}>;
+		effectiveDate?: string;
+		disabled?: boolean;
+	};
+	name: string; // User-inputted name for the resource
+	metadata: {
+		[key: string]: string | number | boolean | string[] | number[];
+	};
+	status:
+		| "ready"
+		| "pending"
+		| "onboarding"
+		| "suspended"
+		| "resumed"
+		| "uninstalled"
+		| "error";
+	notification?: {
+		level: "info" | "warn" | "error";
+		title: string;
+		message?: string;
+		href?: string;
+	} | null;
+	secrets: Array<{
+		name: string;
+		value: string;
+		prefix?: string;
+		environmentOverrides?: {
+			development?: string;
+			preview?: string;
+			production?: string;
+		};
+	}>; // Secret values for this resource
+};
+
+export type VercelMarketplaceInvoice = {
+	configuration: {
+		id: string;
+	};
+	installationId: string;
+	invoiceId: string;
+	externalInvoiceId: string | null;
+	period: {
+		start: string; // ISO Date string
+		end: string; // ISO Date string
+	};
+	invoiceDate: string; // ISO Date string
+	invoiceTotal: string; // Decimal as string
+};
