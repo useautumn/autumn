@@ -79,14 +79,16 @@ export const updateProduct = async ({
 		features,
 	});
 
-	const newFreeTrial = updates.free_trial as FreeTrial | undefined;
+	const newFreeTrial =
+		"free_trial" in updates
+			? (updates.free_trial as FreeTrial | undefined)
+			: curProductV2.free_trial;
 	const newProductV2: ProductV2 = {
 		...curProductV2,
 		...updates,
 		group: updates.group || curProductV2.group || "",
 		items: updates.items || [],
-		free_trial:
-			"free_trial" in updates ? newFreeTrial : curProductV2.free_trial,
+		free_trial: newFreeTrial,
 	};
 
 	await disableCurrentDefault({
@@ -98,8 +100,7 @@ export const updateProduct = async ({
 		db,
 		curProduct: fullProduct,
 		newProduct: UpdateProductSchema.parse(updates),
-		newFreeTrial:
-			"free_trial" in updates ? updates.free_trial : curProductV2.free_trial,
+		newFreeTrial: newFreeTrial || undefined,
 		items: updates.items || curProductV2.items,
 		org,
 		rewardPrograms,

@@ -55,7 +55,7 @@ export const parseChatProducts = async ({
 
 		allEnts.push(
 			...entitlements.map((ent) => {
-				return ent as unknown as Entitlement;
+				return ent;
 			}),
 		);
 	}
