@@ -7,7 +7,7 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useFullCusSearchQuery } from "@/views/customers/hooks/useFullCusSearchQuery";
 import { useSavedViewsQuery } from "@/views/customers/hooks/useSavedViewsQuery";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
-import { AttachProductDropdown } from "./AttachProductDropdown";
+import { AttachProductSheetTrigger } from "./AttachProductSheetTrigger";
 import { CancelProductDialog } from "./CancelProductDialog";
 import { CustomerProductsColumns } from "./CustomerProductsColumns";
 import { filterCustomerProducts } from "./customerProductsTableFilters";
@@ -90,7 +90,7 @@ export function CustomerProductsTable() {
 								showExpired={showExpired}
 								setShowExpired={setShowExpired}
 							/>
-							<AttachProductDropdown />
+							<AttachProductSheetTrigger />
 						</Table.Actions>
 					</Table.Toolbar>
 					<Table.Content>

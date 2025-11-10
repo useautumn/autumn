@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
+import { Separator } from "@/components/ui/separator";
 import { pushPage } from "@/utils/genUtils";
 import ErrorScreen from "@/views/general/ErrorScreen";
 import LoadingScreen from "@/views/general/LoadingScreen";
@@ -15,6 +16,7 @@ import { CustomerActions } from "./CustomerActions";
 import { CustomerBreadcrumbs } from "./CustomerBreadcrumbs2";
 import { CustomerContext } from "./CustomerContext";
 import { CustomerPageDetails } from "./CustomerPageDetails";
+import { CustomerSheets } from "./CustomerSheets";
 
 export default function CustomerView2() {
 	const [searchParams] = useSearchParams();
@@ -54,24 +56,30 @@ export default function CustomerView2() {
 		<CustomerContext.Provider
 			value={{ customer, entityId: entityId, setEntityId }}
 		>
-			<div className="flex flex-col [&>*:not([data-slot=separator-root])]:px-4 [&>*:not([data-slot=separator-root])]:py-8 [&>*:not([data-slot=separator-root])]:max-w-4xl [&>*:not([data-slot=separator-root])]:mx-auto">
-				<div className="flex items-end justify-between w-full gap-4">
-					<div className="flex flex-col w-full">
-						<CustomerBreadcrumbs />
-						<h3 className="text-md font-semibold text-t2 pt-2.5 pb-2">
-							{customer.name}
-						</h3>
-						<CustomerPageDetails />
+			<div className="relative w-full h-full flex overflow-y-hidden">
+				<div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden flex justify-center">
+					<div className="flex flex-col w-full max-w-4xl [&>*:not([data-slot=separator-root])]:px-4 [&>*:not([data-slot=separator-root])]:py-8">
+						<div className="flex items-end justify-between w-full gap-4">
+							<div className="flex flex-col w-full">
+								<CustomerBreadcrumbs />
+								<h3 className="text-md font-semibold text-t2 pt-2.5 pb-2">
+									{customer.name}
+								</h3>
+								<CustomerPageDetails />
+							</div>
+							<CustomerActions />
+						</div>
+						<Separator />
+						<CustomerProductsTable />
+						<Separator />
+						<CustomerFeatureUsageTable />
+						<Separator />
+						<CustomerUsageAnalyticsTable />
+						<Separator />
+						<CustomerInvoicesTable />
 					</div>
-					<CustomerActions />
 				</div>
-				{/* <Separator className="my-2" /> */}
-				<div className="flex flex-col gap-20 mt-4">
-					<CustomerProductsTable />
-					<CustomerFeatureUsageTable />
-					<CustomerUsageAnalyticsTable />
-					<CustomerInvoicesTable />
-				</div>
+				<CustomerSheets />
 			</div>
 		</CustomerContext.Provider>
 	);
