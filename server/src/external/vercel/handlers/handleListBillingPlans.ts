@@ -10,9 +10,9 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getProductItemDisplay } from "@/internal/products/productUtils/productResponseUtils/getProductItemDisplay.js";
 import { formatAmount } from "@/utils/formatUtils.js";
-import type { VercelBillingPlan } from "../vercelTypes.js";
+import type { VercelBillingPlan } from "../misc/vercelTypes.js";
 
-function productToBillingPlan({
+export function productToBillingPlan({
 	product,
 	orgCurrency,
 }: {
@@ -22,6 +22,8 @@ function productToBillingPlan({
 	const hasRecurringPrice = product.prices.some(
 		(x) => !isOneOffPrice({ price: x }),
 	);
+	// const paymentMethodRequired = isFreeProduct(product.prices);
+	const paymentMethodRequired = false;
 
 	const productV2 = mapToProductV2({ product });
 	const basePrice = productV2ToBasePrice({ product: productV2 });
@@ -42,12 +44,16 @@ function productToBillingPlan({
 					item: x,
 					features: product.entitlements.map((e) => e.feature),
 				});
+				console.log("Product Item Display", d);
 				return {
 					label: d.primary_text,
-					value: d.secondary_text,
+					value:
+						d.secondary_text?.trim() !== ""
+							? d.secondary_text?.trim()
+							: undefined,
 				};
 			}),
-		paymentMethodRequired: hasRecurringPrice,
+		paymentMethodRequired,
 		disabled: product.archived || false,
 	} satisfies VercelBillingPlan;
 
@@ -55,7 +61,7 @@ function productToBillingPlan({
 	return bp;
 }
 
-export const handleListBillingPlans = createRoute({
+export const handleListBillingPlansPerInstall = createRoute({
 	handler: async (c) => {
 		const { orgId, env, integrationConfigurationId } = c.req.param();
 		const { db, org, features } = c.get("ctx");
@@ -77,7 +83,7 @@ export const handleListBillingPlans = createRoute({
 		console.log(
 			"Vercel GetBillingPlans requested",
 			integrationConfigurationId,
-			plans,
+			JSON.stringify(plans, null, 4),
 		);
 		return c.json({ plans });
 	},
