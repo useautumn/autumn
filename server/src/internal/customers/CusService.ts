@@ -12,7 +12,7 @@ import {
 	type Organization,
 } from "@autumn/shared";
 import { trace } from "@opentelemetry/api";
-import { and, eq, ilike, or, sql } from "drizzle-orm";
+import { and, eq, ilike, or, sql, type Table } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import RecaseError from "@/utils/errorUtils.js";
@@ -80,8 +80,7 @@ export class CusService {
 
 				if (!result || result.length === 0) {
 					if (allowNotFound) {
-						// @ts-expect-error
-						return null as FullCustomer;
+						return null as unknown as FullCustomer;
 					}
 
 					throw new CustomerNotFoundError({
@@ -217,6 +216,17 @@ export class CusService {
 				return null;
 			}
 		} catch (error: any) {
+			// Log the full error details for debugging
+			console.error("CusService.insert error details:", {
+				message: error.message,
+				code: error.code,
+				detail: error.detail,
+				constraint: error.constraint,
+				table: error.table,
+				cause: error.cause,
+				stack: error.stack,
+			});
+
 			if (error.code === "23505") {
 				throw new RecaseError({
 					code: ErrCode.DuplicateCustomerId,
@@ -240,7 +250,7 @@ export class CusService {
 		idOrInternalId: string;
 		orgId: string;
 		env: AppEnv;
-		update: any;
+		update: Partial<Customer>;
 	}) {
 		try {
 			const results = await db
@@ -308,5 +318,46 @@ export class CusService {
 			.returning();
 
 		return results;
+	}
+
+	static async getByVercelId({
+		db,
+		vercelInstallationId,
+		orgId,
+		env,
+		expand,
+	}: {
+		db: DrizzleCli;
+		vercelInstallationId: string;
+		orgId: string;
+		env: AppEnv;
+		expand?: (CusExpand | EntityExpand)[];
+	}) {
+		// This assumes the "processors" column is a JSONB object that can have a "vercel" object with "installation_id"
+		const results = await db
+			.select()
+			.from(customers as unknown as Table)
+			.where(
+				and(
+					eq(customers.org_id, orgId),
+					eq(customers.env, env),
+					// This JSON path works for Postgres jsonb column
+					// Check for 'vercel.installation_id' inside the processors JSONB column
+					sql`${customers.processors}->'vercel'->>'installation_id' = ${vercelInstallationId}`,
+				),
+			);
+
+		const customer = results[0] ?? null;
+
+		if (!customer) return null;
+		else {
+			return (await CusService.getFull({
+				db,
+				idOrInternalId: customer.internal_id,
+				orgId,
+				env,
+				expand,
+			})) as FullCustomer;
+		}
 	}
 }
