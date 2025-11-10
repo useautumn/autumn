@@ -1,4 +1,4 @@
-import type { AffectedResource, ApiVersion } from "@autumn/shared";
+import { type AffectedResource, type ApiVersion } from "@autumn/shared";
 import type { Context, Env, Handler, MiddlewareHandler } from "hono";
 import type { ZodType, z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -93,6 +93,7 @@ export function createRoute<
 	handler: (
 		c: ValidatedContext<HonoEnv, Body, Query, Params>,
 	) => Response | Promise<Response>;
+	assertIdempotence?: string | undefined;
 }) {
 	const middlewares: MiddlewareHandler[] = [];
 
@@ -127,6 +128,29 @@ export function createRoute<
 	if (opts.params) {
 		middlewares.push(validator("param", opts.params));
 	}
+
+	// if (
+	// 	opts.assertIdempotence !== undefined &&
+	// 	opts.assertIdempotence !== null &&
+	// 	opts.assertIdempotence?.trim() !== ""
+	// ) {
+	// 	middlewares.push(async (c, next) => {
+	// 		const db = c.get("ctx").db;
+	// 		const id = c.req.header(opts.assertIdempotence as string);
+	// 		if (!id) {
+	// 			throw new RecaseError({
+	// 				message: "Idempotency key not found",
+	// 				code: ErrCode.IdempotencyKeyNotFound,
+	// 				statusCode: StatusCodes.NOT_FOUND,
+	// 			});
+	// 		}
+	// 		await IdempotencyService.validate({
+	// 			db,
+	// 			id,
+	// 		});
+	// 		return await next();
+	// 	});
+	// }
 
 	const wrappedHandler = async (
 		c: ValidatedContext<HonoEnv, Body, Query, Params>,
