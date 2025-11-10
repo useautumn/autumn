@@ -1,7 +1,6 @@
 import { redis } from "../../../../external/redis/initRedis.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "../../../../utils/cacheUtils/cacheUtils.js";
-import { buildCachedApiCustomerKey } from "../../../customers/cusUtils/apiCusCacheUtils/getCachedApiCustomer.js";
 import { executeBatchDeduction } from "./executeBatchDeduction.js";
 
 /**
@@ -28,17 +27,10 @@ export const deductFromCache = async ({
 }): Promise<void> => {
 	const { org, env } = ctx;
 
-	const cacheKey = buildCachedApiCustomerKey({
-		customerId,
-		orgId: org.id,
-		env,
-	});
-
 	// Execute Redis deduction directly (no batching to avoid race conditions)
 	await tryRedisWrite(async () => {
 		const result = await executeBatchDeduction({
 			redis,
-			cacheKey,
 			requests: [
 				{
 					featureDeductions: [

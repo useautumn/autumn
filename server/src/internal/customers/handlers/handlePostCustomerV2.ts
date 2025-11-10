@@ -39,8 +39,6 @@ export const handlePostCustomer = createRoute({
 			customerData: createCusParams,
 		});
 
-		console.log("Expand:", expand);
-
 		const apiCustomer = await getApiCustomer({
 			ctx,
 			customerId: createCusParams.id || "",

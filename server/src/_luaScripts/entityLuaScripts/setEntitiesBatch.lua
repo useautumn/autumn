@@ -1,6 +1,5 @@
 -- setEntitiesBatch.lua
 -- Atomically stores multiple entity objects in a single call
--- KEYS: none (we'll build keys dynamically)
 -- ARGV[1]: JSON array of entity data objects: [{entityId: "...", entityData: {...}}, ...]
 -- ARGV[2]: org_id
 -- ARGV[3]: env
@@ -25,9 +24,9 @@ for _, entityWrapper in ipairs(entities) do
     local entityId = entityWrapper.entityId
     local entityData = entityWrapper.entityData
     
-    -- Build cache key for this entity (includes customer_id for hierarchy)
+    -- Build versioned cache key for this entity using shared utility
     local customerId = entityData.customer_id
-    local cacheKey = "{" .. orgId .. "}:" .. env .. ":customer:" .. customerId .. ":entity:" .. entityId
+    local cacheKey = buildEntityCacheKey(orgId, env, customerId, entityId)
     
     -- Extract feature IDs for tracking
     local featureIds = {}
@@ -49,8 +48,9 @@ for _, entityWrapper in ipairs(entities) do
         _featureIds = featureIds
     }
     
-    -- Store base entity as JSON
+    -- Store base entity as JSON with TTL
     redis.call("SET", cacheKey, cjson.encode(baseEntity))
+    redis.call("EXPIRE", cacheKey, CACHE_TTL_SECONDS)
     
     -- Store each feature as HSET
     if entityData.features then
@@ -75,7 +75,7 @@ for _, entityWrapper in ipairs(entities) do
                 creditSchemaJson = cjson.encode(featureData.credit_schema)
             end
             
-            -- Store all top-level feature fields in a single HSET call
+            -- Store all top-level feature fields in a single HSET call with TTL
             redis.call("HSET", featureKey,
                 "id", toString(featureData.id),
                 "type", toString(featureData.type),
@@ -93,8 +93,9 @@ for _, entityWrapper in ipairs(entities) do
                 "_breakdown_count", toString(breakdownCount),
                 "_rollover_count", toString(rolloverCount)
             )
+            redis.call("EXPIRE", featureKey, CACHE_TTL_SECONDS)
             
-            -- Store each rollover item as separate HSET (single call per rollover)
+            -- Store each rollover item as separate HSET with TTL (single call per rollover)
             if featureData.rollovers then
                 for index, rolloverItem in ipairs(featureData.rollovers) do
                     local rolloverKey = cacheKey .. ":features:" .. featureId .. ":rollover:" .. (index - 1)
@@ -103,10 +104,11 @@ for _, entityWrapper in ipairs(entities) do
                         "balance", toString(rolloverItem.balance),
                         "expires_at", toString(rolloverItem.expires_at)
                     )
+                    redis.call("EXPIRE", rolloverKey, CACHE_TTL_SECONDS)
                 end
             end
             
-            -- Store each breakdown item as separate HSET (single call per breakdown)
+            -- Store each breakdown item as separate HSET with TTL (single call per breakdown)
             if featureData.breakdown then
                 for index, breakdownItem in ipairs(featureData.breakdown) do
                     local breakdownKey = cacheKey .. ":features:" .. featureId .. ":breakdown:" .. (index - 1)
@@ -121,6 +123,7 @@ for _, entityWrapper in ipairs(entities) do
                         "usage_limit", toString(breakdownItem.usage_limit),
                         "overage_allowed", toString(breakdownItem.overage_allowed)
                     )
+                    redis.call("EXPIRE", breakdownKey, CACHE_TTL_SECONDS)
                 end
             end
         end

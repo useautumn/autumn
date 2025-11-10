@@ -12,9 +12,9 @@ import {
 	InternalError,
 	notNullish,
 	nullish,
+	orgToInStatuses,
 	updateCusEntInFullCus,
 } from "@autumn/shared";
-import chalk from "chalk";
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "../../../../db/initDrizzle.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
@@ -118,6 +118,7 @@ export const deductFromCusEnts = async ({
 			featureIds: relevantFeatures.map((f) => f.id),
 			reverseOrder: org.config?.reverse_deduction_order,
 			entity: fullCus.entity,
+			inStatuses: orgToInStatuses({ org }),
 		});
 
 		if (printLogs) {
@@ -385,7 +386,7 @@ export const runDeductionTx = async (
 					"../redisTrackUtils/deductFromCache.js"
 				);
 
-				const printLogs = true;
+				const printLogs = false;
 
 				for (const [featureId, deductedAmount] of Object.entries(
 					actualDeductions,
@@ -401,12 +402,10 @@ export const runDeductionTx = async (
 						});
 
 						if (printLogs) {
-							logger.info(
-								`[REDIS] Deduced users from cache: ${chalk.yellow(actualDeductions.users)}`,
-							);
-							// logger.info(
-							// 	`[REDIS] balance after deduction for ${featureId}: ${chalk.yellow(balance)}`,
-							// );
+							console.log("Deducted from Redis cache", {
+								featureId,
+								deductedAmount,
+							});
 						}
 					}
 				}

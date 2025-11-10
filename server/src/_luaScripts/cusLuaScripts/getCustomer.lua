@@ -1,10 +1,9 @@
 -- getCustomer.lua
 -- Atomically retrieves a customer object from Redis, reconstructing from base JSON and feature HSETs
 -- Merges master customer features with entity features (unless skipEntityMerge is true)
--- KEYS[1]: cache key (e.g., "org_id:env:customer:customer_id")
--- ARGV[1]: org_id (for building entity cache keys)
--- ARGV[2]: env (for building entity cache keys)
--- ARGV[3]: customer_id (for building entity cache keys)
+-- ARGV[1]: org_id
+-- ARGV[2]: env
+-- ARGV[3]: customer_id
 -- ARGV[4]: skipEntityMerge (optional, "true" to skip merging with entities)
 
 -- Helper function to merge products array by product ID and normalized status
@@ -93,11 +92,13 @@ local function mergeProducts(productsArray)
     return mergedProducts
 end
 
-local cacheKey = KEYS[1]
 local orgId = ARGV[1]
 local env = ARGV[2]
 local customerId = ARGV[3]
 local skipEntityMerge = ARGV[4] == "true"
+
+-- Build versioned cache key using shared utility
+local cacheKey = buildCustomerCacheKey(orgId, env, customerId)
 
 -- Load features based on merge mode
 -- If skipEntityMerge is true, only load customer's own features (no entity merging)
@@ -131,7 +132,7 @@ local entityIds = baseCustomer._entityIds or {}
 -- Build entity base data map for product access
 local entityBaseData = {}
 for _, entityId in ipairs(entityIds) do
-    local entityCacheKey = "{" .. orgId .. "}:" .. env .. ":customer:" .. customerId .. ":entity:" .. entityId
+    local entityCacheKey = buildEntityCacheKey(orgId, env, customerId, entityId)
     local entityBaseJson = redis.call("GET", entityCacheKey)
     
     if entityBaseJson then

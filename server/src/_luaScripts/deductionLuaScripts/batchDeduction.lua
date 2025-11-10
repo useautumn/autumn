@@ -2,7 +2,6 @@
 -- Atomically processes a batch of track requests for a customer
 -- Each request can deduct from multiple features
 --
--- KEYS[1]: cache key (e.g., "org_id:env:customer:customer_id")
 -- ARGV[1]: JSON array of requests:
 --   [
 --     {
@@ -18,11 +17,13 @@
 -- ARGV[3]: env
 -- ARGV[4]: customer_id
 
-local cacheKey = KEYS[1]
 local requestsJson = ARGV[1]
 local orgId = ARGV[2]
 local env = ARGV[3]
 local customerId = ARGV[4]
+
+-- Build versioned customer cache key using shared utility
+local cacheKey = buildCustomerCacheKey(orgId, env, customerId)
 
 -- Parse requests
 local requests = cjson.decode(requestsJson)
@@ -972,7 +973,7 @@ local entityIds = baseCustomer._entityIds or {}
 -- Load all entity features: { [entityId] = { [featureId] = entityFeature } }
 local entityFeatureStates = {}
 for _, entityId in ipairs(entityIds) do
-    local entityCacheKey = "{" .. orgId .. "}:" .. env .. ":customer:" .. customerId .. ":entity:" .. entityId
+    local entityCacheKey = buildEntityCacheKey(orgId, env, customerId, entityId)
     local entityBaseJson = redis.call("GET", entityCacheKey)
     
     if entityBaseJson then

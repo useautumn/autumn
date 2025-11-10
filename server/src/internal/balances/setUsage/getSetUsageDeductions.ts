@@ -7,6 +7,7 @@ import {
 	FeatureNotFoundError,
 	FeatureType,
 	type FullCustomerEntitlement,
+	orgToInStatuses,
 	RecaseError,
 	type SetUsageParams,
 	sumValues,
@@ -72,6 +73,7 @@ export const getSetUsageDeductions = async ({
 		cusProducts: fullCus.customer_products,
 		reverseOrder: org.config?.reverse_deduction_order,
 		featureId: feature.id,
+		inStatuses: orgToInStatuses({ org }),
 	});
 
 	// ==========================================
@@ -143,6 +145,7 @@ export const getSetUsageDeductions = async ({
 		cusProducts: fullCus.customer_products,
 		reverseOrder: org.config?.reverse_deduction_order,
 		featureId: deductionFeature.id,
+		inStatuses: orgToInStatuses({ org }),
 	});
 
 	const { unlimited } = getUnlimitedAndUsageAllowed({

@@ -21,6 +21,8 @@ export * from "./featureUtils/apiFeatureToDbFeature.js";
 export * from "./featureUtils/convertFeatureUtils.js";
 // Feature utils
 export * from "./featureUtils.js";
+// Org utils
+export * from "./orgUtils/convertOrgUtils.js";
 // Product utils
 export * from "./productUtils/convertUtils.js";
 export * from "./productUtils/priceUtils/convertAmountUtils.js";
@@ -32,4 +34,5 @@ export * from "./productV2Utils/productItemUtils/getItemType.js";
 export * from "./productV2Utils/productItemUtils/mapToItem.js";
 export * from "./productV2Utils/productItemUtils/productItemUtils.js";
 export * from "./productV2Utils/productV2ToV1.js";
+export * from "./productV3Utils/productItemUtils/productV3ItemUtils.js";
 export * from "./utils.js";

@@ -1,8 +1,8 @@
-import { notNullish, nullish } from "@utils/utils.js";
 import type { Entity } from "../../models/cusModels/entityModels/entityModels.js";
 import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
 import type { Organization } from "../../models/orgModels/orgTable.js";
+import { notNullish } from "../utils.js";
 
 /**
  * Filter customer products by entity

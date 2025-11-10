@@ -1,6 +1,5 @@
 import {
 	ApiVersion,
-	CusProductStatus,
 	ErrCode,
 	InsufficientBalanceError,
 	isContUseFeature,
@@ -50,7 +49,6 @@ const executePostgresTracking = async ({
 		customerData: body.customer_data,
 		entityId: body.entity_id,
 		entityData: body.entity_data,
-		inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
 		withEntities: true,
 	});
 

@@ -163,8 +163,8 @@ end
 -- Parameters: cacheKey (customer cache key), orgId, env, customerId, entityId
 -- Returns: merged features table (entity + customer) or nil
 local function loadEntityLevelFeatures(cacheKey, orgId, env, customerId, entityId)
-    -- Build entity cache key
-    local entityCacheKey = "{" .. orgId .. "}:" .. env .. ":customer:" .. customerId .. ":entity:" .. entityId
+    -- Build versioned entity cache key using shared utility
+    local entityCacheKey = buildEntityCacheKey(orgId, env, customerId, entityId)
     
     -- Get entity base JSON
     local entityBaseJson = redis.call("GET", entityCacheKey)
@@ -411,7 +411,7 @@ local function loadCusFeatures(cacheKey, orgId, env, customerId, entityId)
     local entityBaseData = {} -- {[entityId] = entityBase} - Store entity base for product access
 
     for _, entityId in ipairs(entityIds) do
-        local entityCacheKey = "{" .. orgId .. "}:" .. env .. ":customer:" .. customerId .. ":entity:" .. entityId
+        local entityCacheKey = buildEntityCacheKey(orgId, env, customerId, entityId)
         local entityBaseJson = redis.call("GET", entityCacheKey)
         
         if entityBaseJson then

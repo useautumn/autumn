@@ -1,4 +1,4 @@
-import type { FixedPriceConfig } from "@models/productModels/priceModels/priceConfig/fixedPriceConfig.js";
+import type { FixedPriceConfig } from "../../../models/productModels/priceModels/priceConfig/fixedPriceConfig.js";
 import type {
 	ProductItem,
 	ProductItemInterval,

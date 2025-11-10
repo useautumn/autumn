@@ -211,6 +211,8 @@ BEGIN
       END IF;
       
       -- Track in updates_json
+      -- Convert deducted (credit amount) back to original feature amount
+      -- If credit_cost is NULL or 1, no conversion needed (not a credit system)
       updates_json := jsonb_set(
         updates_json,
         ARRAY[ent_id],
@@ -218,11 +220,12 @@ BEGIN
           'balance', new_balance,
           'entities', new_entities,
           'adjustment', new_adjustment,
-          'deducted', deducted
+          'deducted', CASE WHEN credit_cost IS NULL OR credit_cost = 1 THEN deducted ELSE deducted / credit_cost END
         )
       );
       
-      remaining_amount := remaining_amount - (deducted / credit_cost);
+      -- Subtract from remaining_amount (convert credit amount back to feature amount)
+      remaining_amount := remaining_amount - CASE WHEN credit_cost IS NULL OR credit_cost = 1 THEN deducted ELSE deducted / credit_cost END;
     END IF;
   END LOOP;
   
@@ -287,6 +290,8 @@ BEGIN
         END IF;
         
         -- Update or create entry in updates_json
+        -- Convert deducted (credit amount) back to original feature amount
+        -- If credit_cost is NULL or 1, no conversion needed (not a credit system)
         IF updates_json ? ent_id THEN
           -- Update existing entry (entitlement was updated in both passes)
           updates_json := jsonb_set(
@@ -296,7 +301,7 @@ BEGIN
               'balance', new_balance,
               'entities', new_entities,
               'adjustment', new_adjustment,
-              'deducted', (updates_json->ent_id->>'deducted')::numeric + deducted
+              'deducted', (updates_json->ent_id->>'deducted')::numeric + CASE WHEN credit_cost IS NULL OR credit_cost = 1 THEN deducted ELSE deducted / credit_cost END
             )
           );
         ELSE
@@ -308,12 +313,13 @@ BEGIN
               'balance', new_balance,
               'entities', new_entities,
               'adjustment', new_adjustment,
-              'deducted', deducted
+              'deducted', CASE WHEN credit_cost IS NULL OR credit_cost = 1 THEN deducted ELSE deducted / credit_cost END
             )
           );
         END IF;
         
-        remaining_amount := remaining_amount - (deducted / credit_cost);
+        -- Subtract from remaining_amount (convert credit amount back to feature amount)
+      remaining_amount := remaining_amount - CASE WHEN credit_cost IS NULL OR credit_cost = 1 THEN deducted ELSE deducted / credit_cost END;
       END IF;
     END LOOP;
   END IF;

@@ -6,6 +6,7 @@ dotenv.config();
 import {
 	type ApiEntity,
 	type AttachBody,
+	type CreateCustomerParams,
 	type CreateEntityParams,
 	type CreateRewardProgram,
 	CusExpand,
@@ -305,24 +306,17 @@ export class AutumnInt {
 		},
 
 		create: async ({
-			id,
-			email,
-			name,
 			withAutumnId = true,
 			expand = [],
+			...customerData
 		}: {
-			id: string;
-			email?: string;
-			name?: string;
 			withAutumnId?: boolean;
 			expand?: CusExpand[];
-		}) => {
+		} & CreateCustomerParams) => {
 			const data = await this.post(
 				`/customers?with_autumn_id=${withAutumnId ? "true" : "false"}${expand && expand.length > 0 ? `&expand=${expand.join(",")}` : ""}`,
 				{
-					id,
-					email,
-					name,
+					...customerData,
 				},
 			);
 			return data;

@@ -35,14 +35,12 @@ interface BatchDeductionResult {
  */
 export const executeBatchDeduction = async ({
 	redis,
-	cacheKey,
 	requests,
 	orgId,
 	env,
 	customerId,
 }: {
 	redis: Redis;
-	cacheKey: string;
 	requests: BatchRequest[];
 	orgId: string;
 	env: string;
@@ -52,8 +50,7 @@ export const executeBatchDeduction = async ({
 		// Execute Lua script (hot reload in dev)
 		const result = await redis.eval(
 			getBatchDeductionScript(),
-			1, // number of keys
-			cacheKey, // KEYS[1]
+			0, // No KEYS, all params in ARGV
 			JSON.stringify(requests), // ARGV[1]
 			orgId, // ARGV[2]
 			env, // ARGV[3]

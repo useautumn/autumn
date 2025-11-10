@@ -13,7 +13,6 @@ import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "../../../../utils/cacheUtils/cacheUtils.js";
 import { getApiEntityBase } from "../../../entities/entityUtils/apiEntityUtils/getApiEntityBase.js";
 import { getApiCustomerBase } from "../apiCusUtils/getApiCustomerBase.js";
-import { buildCachedApiCustomerKey } from "./getCachedApiCustomer.js";
 
 /**
  * Set customer cache in Redis with all entities
@@ -32,12 +31,6 @@ export const setCachedApiCustomer = async ({
 	source?: string;
 }) => {
 	const { org, env, logger } = ctx;
-
-	const cacheKey = buildCachedApiCustomerKey({
-		customerId,
-		orgId: org.id,
-		env,
-	});
 
 	// Build master api customer (customer-level features only)
 	const { apiCustomer: masterApiCustomer, legacyData } =
@@ -82,8 +75,7 @@ export const setCachedApiCustomer = async ({
 	await tryRedisWrite(async () => {
 		await redis.eval(
 			SET_CUSTOMER_SCRIPT,
-			1,
-			cacheKey,
+			0, // No KEYS, all params in ARGV
 			JSON.stringify({
 				...masterApiCustomer,
 				entities: fullCus.entities,
@@ -91,6 +83,7 @@ export const setCachedApiCustomer = async ({
 			}),
 			org.id,
 			env,
+			customerId,
 		);
 
 		if (entityBatch.length > 0) {

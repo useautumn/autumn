@@ -21,7 +21,8 @@
     "noEmitOnError": false,
     "paths": {
       "@/*": ["src/*"],
-      "@emails/*": ["emails/*"]
+      "@emails/*": ["emails/*"],
+      "@lua/*": ["src/_luaScripts/*"],
     }
   },
   "include": ["src", "emails", "src/external/clickhouse/queries"],

@@ -5,6 +5,7 @@ import {
 	type FullCustomer,
 	filterEntityLevelCusProducts,
 } from "@autumn/shared";
+import { CACHE_CUSTOMER_VERSION } from "@lua/cacheConfig.js";
 import { GET_ENTITY_SCRIPT } from "@lua/luaScripts.js";
 import { redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -28,7 +29,7 @@ export const buildCachedApiEntityKey = ({
 	orgId: string;
 	env: string;
 }) => {
-	return `{${orgId}}:${env}:customer:${customerId}:entity:${entityId}`;
+	return `{${orgId}}:${env}:customer:${CACHE_CUSTOMER_VERSION}:${customerId}:entity:${entityId}`;
 };
 
 /**
@@ -53,20 +54,12 @@ export const getCachedApiEntity = async ({
 }): Promise<{ apiEntity: ApiEntity }> => {
 	const { org, env, db } = ctx;
 
-	const cacheKey = buildCachedApiEntityKey({
-		entityId,
-		customerId,
-		orgId: org.id,
-		env,
-	});
-
 	// Try to get from cache using Lua script (unless skipCache is true)
 	if (!skipCache) {
 		const cachedResult = await tryRedisRead(() =>
 			redis.eval(
 				GET_ENTITY_SCRIPT,
-				1, // number of keys
-				cacheKey, // KEYS[1]
+				0, // No KEYS, all params in ARGV
 				org.id, // ARGV[1]
 				env, // ARGV[2]
 				customerId, // ARGV[3]

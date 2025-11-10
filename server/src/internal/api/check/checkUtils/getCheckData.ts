@@ -156,52 +156,11 @@ export const getCheckData = async ({
 		apiEntity,
 	});
 
-	// const filteredCusEnts = cusEnts.filter((cusEnt) =>
-	// 	cusEntMatchesFeature({ cusEnt, feature: featureToUse }),
-	// );
-
 	return {
 		customerId: customer_id,
 		entityId: entity_id,
 		cusFeature: apiEntity.features?.[featureToUse.id],
-		// cusEnts: filteredCusEnts,
 		originalFeature: feature,
 		featureToUse,
-		// cusProducts,
-		// entity: customer.entity,
-		// allFeatures,
-		// entity: customer.entity,
 	};
 };
-
-// if (entity_id) {
-// 	const cusFeature = apiCustomer.features[feature.id];
-// }
-
-// const cusProducts = customer.customer_products;
-
-// let cusEnts = cusProductsToCusEnts({ cusProducts });
-
-// if (customer.entity) {
-// 	cusEnts = cusEnts.filter((cusEnt) =>
-// 		cusEntMatchesEntity({
-// 			cusEnt,
-// 			entity: customer.entity!,
-// 			features: allFeatures,
-// 		}),
-// 	);
-// }
-
-// const inStatuses = org.config.include_past_due
-// 	? [CusProductStatus.Active, CusProductStatus.PastDue]
-// 	: [CusProductStatus.Active];
-
-// const customer = await getOrCreateCustomer({
-// 	req: ctx as ExtendedRequest,
-// 	customerId: customer_id,
-// 	customerData: customer_data,
-// 	inStatuses,
-// 	entityId: entity_id,
-// 	entityData: body.entity_data,
-// 	withCache: true,
-// });

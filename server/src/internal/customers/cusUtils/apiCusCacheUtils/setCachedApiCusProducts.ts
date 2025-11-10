@@ -10,9 +10,7 @@ import {
 import { redis } from "../../../../external/redis/initRedis.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "../../../../utils/cacheUtils/cacheUtils.js";
-import { buildCachedApiEntityKey } from "../../../entities/entityUtils/apiEntityCacheUtils/getCachedApiEntity.js";
 import { getApiCusProducts } from "../apiCusUtils/getApiCusProduct/getApiCusProducts.js";
-import { buildCachedApiCustomerKey } from "./getCachedApiCustomer.js";
 
 /**
  * Set customer products cache in Redis with all entities
@@ -30,12 +28,6 @@ export const setCachedApiCusProducts = async ({
 }) => {
 	const { org, env, logger } = ctx;
 
-	const cacheKey = buildCachedApiCustomerKey({
-		customerId,
-		orgId: org.id,
-		env,
-	});
-
 	// Build master api customer products (customer-level products only)
 	const { apiCusProducts: masterApiCusProducts } = await getApiCusProducts({
 		ctx,
@@ -52,9 +44,11 @@ export const setCachedApiCusProducts = async ({
 		// Update customer products
 		await redis.eval(
 			SET_CUSTOMER_PRODUCTS_SCRIPT,
-			1,
-			cacheKey,
+			0, // No KEYS, all params in ARGV
 			JSON.stringify(masterApiCusProducts),
+			org.id,
+			env,
+			customerId,
 		);
 		logger.info(
 			`Updated customer products cache for customer ${customerId} (${masterApiCusProducts.length} products)`,
@@ -78,18 +72,14 @@ export const setCachedApiCusProducts = async ({
 				},
 			});
 
-			const entityCacheKey = buildCachedApiEntityKey({
-				entityId: entity.id,
-				customerId,
-				orgId: org.id,
-				env,
-			});
-
 			await redis.eval(
 				SET_ENTITY_PRODUCTS_SCRIPT,
-				1,
-				entityCacheKey,
+				0, // No KEYS, all params in ARGV
 				JSON.stringify(entityProducts),
+				org.id,
+				env,
+				customerId,
+				entity.id,
 			);
 			logger.info(
 				`Updated entity products cache for entity ${entity.id} (${entityProducts.length} products)`,
