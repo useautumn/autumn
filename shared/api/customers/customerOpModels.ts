@@ -71,13 +71,9 @@ export const CreateCustomerParamsSchema = z.object({
 		example: "fp_123abc",
 	}),
 
-	metadata: z
-		.record(z.string(), z.any())
-		.default({})
-		.meta({
-			description: "Additional metadata for the customer",
-			example: { company: "Acme Inc" },
-		}),
+	metadata: z.record(z.string(), z.any()).default({}).meta({
+		description: "Additional metadata for the customer",
+	}),
 
 	stripe_id: z.string().optional().meta({
 		description: "Stripe customer ID if you already have one",

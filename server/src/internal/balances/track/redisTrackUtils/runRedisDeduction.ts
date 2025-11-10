@@ -1,5 +1,4 @@
-import type { EntityData } from "@autumn/shared";
-import type { CustomerData } from "../../../../../../shared/api/common/customerData.js";
+import type { CustomerData, EntityData } from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { getCachedApiCustomer } from "../../../customers/cusUtils/apiCusCacheUtils/getCachedApiCustomer.js";
 import { getOrCreateApiCustomer } from "../../../customers/cusUtils/getOrCreateApiCustomer.js";

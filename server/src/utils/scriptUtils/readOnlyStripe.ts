@@ -84,7 +84,7 @@ function createResourceProxy(resource: any, resourceName: string): any {
 export function createReadOnlyStripeCli(stripeCli: Stripe): Stripe {
 	return new Proxy(stripeCli, {
 		get(target, prop: string) {
-			const value = target[prop];
+			const value = target[prop as keyof typeof target];
 
 			// If accessing a resource (customers, invoices, etc.)
 			if (value && typeof value === "object" && !Array.isArray(value)) {

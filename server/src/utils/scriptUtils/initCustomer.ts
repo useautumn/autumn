@@ -81,6 +81,7 @@ export const initCustomer = async ({
 		name: customerId,
 		email: `${customerId}@example.com`,
 		fingerprint,
+		metadata: {},
 	};
 
 	const customer = await CusService.get({
@@ -226,6 +227,7 @@ export const initCustomerV2 = async ({
 		email,
 		fingerprint: customerData?.fingerprint || undefined,
 		stripe_id: stripeCus.id,
+		metadata: {},
 	});
 
 	// 3. Attach payment method

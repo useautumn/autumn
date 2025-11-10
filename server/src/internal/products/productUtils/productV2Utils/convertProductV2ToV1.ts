@@ -1,5 +1,5 @@
 import type {
-	type CreateFreeTrial,
+	CreateFreeTrial,
 	Entitlement,
 	Feature,
 	Price,
@@ -83,7 +83,7 @@ export const convertProductV2ToV1 = ({
 		is_add_on: productV2.is_add_on,
 		entitlements: entitlementsRecord,
 		prices,
-		free_trial: productV2.free_trial,
-		group: productV2.group,
+		free_trial: productV2.free_trial ?? null,
+		group: productV2.group ?? "",
 	};
 };
