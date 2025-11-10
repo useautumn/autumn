@@ -670,7 +670,6 @@ export const updateCustomerBalance = async ({
 					org,
 					cusPrices: cusPrices as any[],
 					customer,
-					properties: event.properties,
 					entity: customer.entity,
 				},
 				featureDeductions,
@@ -689,7 +688,6 @@ export const updateCustomerBalance = async ({
 					org,
 					cusPrices: cusPrices as any[],
 					customer,
-					properties: event.properties,
 					entity: customer.entity,
 				},
 			});
