@@ -1,9 +1,9 @@
 import {
 	type ApiCusFeature,
-	CusProductStatus,
 	cusProductsToCusEnts,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomer,
+	orgToInStatuses,
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { getApiCusFeature } from "./getApiCusFeature.js";
@@ -19,9 +19,7 @@ export const getApiCusFeatures = async ({
 
 	const cusEntsWithCusProduct = cusProductsToCusEnts({
 		cusProducts: fullCus.customer_products,
-		inStatuses: org.config.include_past_due
-			? [CusProductStatus.Active, CusProductStatus.PastDue]
-			: [CusProductStatus.Active],
+		inStatuses: orgToInStatuses({ org }),
 		entity: fullCus.entity,
 	});
 

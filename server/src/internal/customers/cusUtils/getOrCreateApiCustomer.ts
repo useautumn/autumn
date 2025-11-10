@@ -161,6 +161,11 @@ export const getOrCreateApiCustomer = async ({
 			env: ctx.env,
 		});
 
+		await getCachedApiCustomer({
+			ctx,
+			customerId,
+		});
+
 		const apiEntity = ApiEntitySchema.parse(newEntity);
 		apiCustomer.entities = [...(apiCustomer.entities || []), apiEntity];
 	}

@@ -5,6 +5,7 @@ import {
 	type CustomerLegacyData,
 	filterOutEntitiesFromCusProducts,
 } from "@autumn/shared";
+import { CACHE_CUSTOMER_VERSION } from "@lua/cacheConfig.js";
 import { GET_CUSTOMER_SCRIPT } from "@lua/luaScripts.js";
 import { redis } from "../../../../external/redis/initRedis.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
@@ -13,7 +14,6 @@ import {
 	tryRedisRead,
 } from "../../../../utils/cacheUtils/cacheUtils.js";
 import { CusService } from "../../CusService.js";
-import { RELEVANT_STATUSES } from "../../cusProducts/CusProductService.js";
 import { getApiCustomerBase } from "../apiCusUtils/getApiCustomerBase.js";
 import { setCachedApiCustomer } from "./setCachedApiCustomer.js";
 
@@ -26,7 +26,7 @@ export const buildCachedApiCustomerKey = ({
 	orgId: string;
 	env: string;
 }) => {
-	return `{${orgId}}:${env}:customer:${customerId}`;
+	return `{${orgId}}:${env}:customer:${CACHE_CUSTOMER_VERSION}:${customerId}`;
 };
 
 /**
@@ -49,19 +49,12 @@ export const getCachedApiCustomer = async ({
 }): Promise<{ apiCustomer: ApiCustomer; legacyData: CustomerLegacyData }> => {
 	const { org, env, db } = ctx;
 
-	const cacheKey = buildCachedApiCustomerKey({
-		customerId,
-		orgId: org.id,
-		env,
-	});
-
 	// Try to get from cache using Lua script (unless skipCache is true)
 	if (!skipCache) {
 		const cachedResult = await tryRedisRead(() =>
 			redis.eval(
 				GET_CUSTOMER_SCRIPT,
-				1,
-				cacheKey,
+				0, // No KEYS, all params in ARGV
 				org.id,
 				env,
 				customerId,
@@ -93,7 +86,6 @@ export const getCachedApiCustomer = async ({
 		idOrInternalId: customerId,
 		orgId: org.id,
 		env: env as AppEnv,
-		inStatuses: RELEVANT_STATUSES,
 		withEntities: true,
 		withSubs: true,
 	});

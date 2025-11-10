@@ -42,17 +42,18 @@ describe(`${chalk.yellowBright(`${testCase}: Testing deduction order with monthl
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
 	beforeAll(async () => {
+		await initProductsV0({
+			ctx,
+			products: [monthlyProduct],
+			prefix: testCase,
+			customerId,
+		});
+
 		await initCustomerV3({
 			ctx,
 			customerId,
 			withTestClock: false,
 			attachPm: "success",
-		});
-
-		await initProductsV0({
-			ctx,
-			products: [monthlyProduct],
-			prefix: testCase,
 		});
 
 		// Attach monthly product first

@@ -142,13 +142,6 @@ export class BatchingManager {
 		const requests = batch.requests;
 		const batchSize = requests.length;
 
-		// Build cache key from batch context (always customer cache key for the Lua script)
-		const cacheKey = buildCachedApiCustomerKey({
-			customerId: batch.customerId,
-			orgId: batch.orgId,
-			env: batch.env,
-		});
-
 		const batchType = batch.entityId
 			? `entity ${batch.entityId}`
 			: "customer-level";
@@ -157,11 +150,10 @@ export class BatchingManager {
 		);
 
 		try {
-			// Execute batch Lua script
+			// Execute batch Lua script (Lua builds cache key internally)
 			// All requests in this batch have the same entityId (batch-level)
 			const result = await executeBatchDeduction({
 				redis,
-				cacheKey,
 				requests: requests.map((r) => ({
 					featureDeductions: r.featureDeductions,
 					overageBehavior: r.overageBehavior,

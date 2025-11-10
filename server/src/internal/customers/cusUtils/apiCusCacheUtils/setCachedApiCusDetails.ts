@@ -3,7 +3,6 @@ import { SET_CUSTOMER_DETAILS_SCRIPT } from "@lua/luaScripts.js";
 import { redis } from "../../../../external/redis/initRedis.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "../../../../utils/cacheUtils/cacheUtils.js";
-import { buildCachedApiCustomerKey } from "./getCachedApiCustomer.js";
 
 /**
  * Update customer detail fields in Redis cache if key exists
@@ -25,13 +24,7 @@ export const setCachedApiCusDetails = async ({
 }): Promise<boolean> => {
 	const { org, env, logger } = ctx;
 
-	// Build the cache key
 	const customerId = customer.id || (customer as FullCustomer).internal_id;
-	const cacheKey = buildCachedApiCustomerKey({
-		customerId,
-		orgId: org.id,
-		env,
-	});
 
 	let wasUpdated = false;
 
@@ -39,9 +32,11 @@ export const setCachedApiCusDetails = async ({
 	await tryRedisWrite(async () => {
 		const result = await redis.eval(
 			SET_CUSTOMER_DETAILS_SCRIPT,
-			1,
-			cacheKey,
+			0, // No KEYS, all params in ARGV
 			JSON.stringify(updates),
+			org.id,
+			env,
+			customerId,
 		);
 
 		if (result === "OK") {

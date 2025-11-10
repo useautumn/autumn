@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { CACHE_CUSTOMER_VERSION, CACHE_TTL_SECONDS } from "./cacheConfig.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -8,6 +9,18 @@ const __dirname = dirname(__filename);
 // ============================================================================
 // SHARED LUA FUNCTIONS
 // ============================================================================
+
+// Load cache key utilities and inject version constants
+const CACHE_KEY_UTILS_RAW = readFileSync(
+	join(__dirname, "cacheKeyUtils.lua"),
+	"utf-8",
+);
+
+// Inject cache version and TTL constants into cache key utils
+const CACHE_KEY_UTILS = CACHE_KEY_UTILS_RAW.replace(
+	/{CUSTOMER_VERSION}/g,
+	CACHE_CUSTOMER_VERSION,
+).replace("{TTL_SECONDS}", CACHE_TTL_SECONDS.toString());
 
 // Load shared feature loading function (used by customer, entity, and deduction scripts)
 const LOAD_CUS_FEATURES = readFileSync(
@@ -25,34 +38,40 @@ const CHECK_CACHE_EXISTS = readFileSync(
 	"utf-8",
 );
 
-// Prepend loadCusFeatures to GET_CUSTOMER_SCRIPT so it can use the function
+// Prepend cache key utils and loadCusFeatures to GET_CUSTOMER_SCRIPT
 const getCustomerScript = readFileSync(
 	join(__dirname, "cusLuaScripts/getCustomer.lua"),
 	"utf-8",
 );
-export const GET_CUSTOMER_SCRIPT = `${LOAD_CUS_FEATURES}\n${getCustomerScript}`;
+export const GET_CUSTOMER_SCRIPT = `${CACHE_KEY_UTILS}\n${LOAD_CUS_FEATURES}\n${getCustomerScript}`;
 
-// Prepend validation function to SET_CUSTOMER_SCRIPT
+// Prepend cache key utils and validation function to SET_CUSTOMER_SCRIPT
 const setCustomerScript = readFileSync(
 	join(__dirname, "cusLuaScripts/setCustomer.lua"),
 	"utf-8",
 );
-export const SET_CUSTOMER_SCRIPT = `${CHECK_CACHE_EXISTS}\n${setCustomerScript}`;
+export const SET_CUSTOMER_SCRIPT = `${CACHE_KEY_UTILS}\n${CHECK_CACHE_EXISTS}\n${setCustomerScript}`;
 
-export const SET_CUSTOMER_PRODUCTS_SCRIPT = readFileSync(
+// Prepend cache key utils to SET_CUSTOMER_PRODUCTS_SCRIPT
+const setCustomerProductsScript = readFileSync(
 	join(__dirname, "cusLuaScripts/setCustomerProducts.lua"),
 	"utf-8",
 );
+export const SET_CUSTOMER_PRODUCTS_SCRIPT = `${CACHE_KEY_UTILS}\n${setCustomerProductsScript}`;
 
-export const SET_CUSTOMER_DETAILS_SCRIPT = readFileSync(
+// Prepend cache key utils to SET_CUSTOMER_DETAILS_SCRIPT
+const setCustomerDetailsScript = readFileSync(
 	join(__dirname, "cusLuaScripts/setCustomerDetails.lua"),
 	"utf-8",
 );
+export const SET_CUSTOMER_DETAILS_SCRIPT = `${CACHE_KEY_UTILS}\n${setCustomerDetailsScript}`;
 
-export const DELETE_CUSTOMER_SCRIPT = readFileSync(
+// Prepend cache key utils to DELETE_CUSTOMER_SCRIPT
+const deleteCustomerScript = readFileSync(
 	join(__dirname, "cusLuaScripts/deleteCustomer.lua"),
 	"utf-8",
 );
+export const DELETE_CUSTOMER_SCRIPT = `${CACHE_KEY_UTILS}\n${deleteCustomerScript}`;
 
 // ============================================================================
 // ENTITY SCRIPTS
@@ -64,29 +83,33 @@ const CHECK_ENTITY_CACHE_EXISTS = readFileSync(
 	"utf-8",
 );
 
-// Prepend loadCusFeatures to GET_ENTITY_SCRIPT so it can use the function
+// Prepend cache key utils and loadCusFeatures to GET_ENTITY_SCRIPT
 const getEntityScript = readFileSync(
 	join(__dirname, "entityLuaScripts/getEntity.lua"),
 	"utf-8",
 );
-export const GET_ENTITY_SCRIPT = `${LOAD_CUS_FEATURES}\n${getEntityScript}`;
+export const GET_ENTITY_SCRIPT = `${CACHE_KEY_UTILS}\n${LOAD_CUS_FEATURES}\n${getEntityScript}`;
 
-// Prepend validation function to SET_ENTITY_SCRIPT
+// Prepend cache key utils and validation function to SET_ENTITY_SCRIPT
 const setEntityScript = readFileSync(
 	join(__dirname, "entityLuaScripts/setEntity.lua"),
 	"utf-8",
 );
-export const SET_ENTITY_SCRIPT = `${CHECK_ENTITY_CACHE_EXISTS}\n${setEntityScript}`;
+export const SET_ENTITY_SCRIPT = `${CACHE_KEY_UTILS}\n${CHECK_ENTITY_CACHE_EXISTS}\n${setEntityScript}`;
 
-export const SET_ENTITIES_BATCH_SCRIPT = readFileSync(
+// Prepend cache key utils to SET_ENTITIES_BATCH_SCRIPT
+const setEntitiesBatchScript = readFileSync(
 	join(__dirname, "entityLuaScripts/setEntitiesBatch.lua"),
 	"utf-8",
 );
+export const SET_ENTITIES_BATCH_SCRIPT = `${CACHE_KEY_UTILS}\n${setEntitiesBatchScript}`;
 
-export const SET_ENTITY_PRODUCTS_SCRIPT = readFileSync(
+// Prepend cache key utils to SET_ENTITY_PRODUCTS_SCRIPT
+const setEntityProductsScript = readFileSync(
 	join(__dirname, "entityLuaScripts/setEntityProducts.lua"),
 	"utf-8",
 );
+export const SET_ENTITY_PRODUCTS_SCRIPT = `${CACHE_KEY_UTILS}\n${setEntityProductsScript}`;
 
 // ============================================================================
 // DEDUCTION SCRIPTS
@@ -99,7 +122,7 @@ const batchDeduction = readFileSync(
 );
 
 export function getBatchDeductionScript(): string {
-	return `${LOAD_CUS_FEATURES}\n${batchDeduction}`;
+	return `${CACHE_KEY_UTILS}\n${LOAD_CUS_FEATURES}\n${batchDeduction}`;
 }
 
 export const BATCH_DEDUCTION_SCRIPT = getBatchDeductionScript();

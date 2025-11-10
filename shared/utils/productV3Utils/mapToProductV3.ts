@@ -16,5 +16,3 @@ export function mapToProductV3({ product }: { product: ProductV2 }) {
 	};
 	return productV3;
 }
-
-export * from "./productItemUtils/productV3ItemUtils.js";

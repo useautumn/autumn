@@ -1,9 +1,17 @@
 -- deleteCustomer.lua
 -- Atomically deletes a customer and all its associated entity caches
--- KEYS[1]: customer cache key pattern (e.g., "{org_id}:env:customer:customer_id")
+-- ARGV[1]: org_id
+-- ARGV[2]: env
+-- ARGV[3]: customer_id
 -- Returns: number of keys deleted
 
-local basePattern = KEYS[1] .. "*"
+local orgId = ARGV[1]
+local env = ARGV[2]
+local customerId = ARGV[3]
+
+-- Build versioned cache key using shared utility
+local cacheKey = buildCustomerCacheKey(orgId, env, customerId)
+local basePattern = cacheKey .. "*"
 local keysToDelete = {}
 
 -- Scan for all keys matching the pattern
