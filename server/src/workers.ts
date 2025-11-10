@@ -22,6 +22,13 @@ const NUM_PROCESSES =
 if (cluster.isPrimary) {
 	await initInfisical();
 
+	// Check if queue is configured before starting workers
+	if (!process.env.SQS_QUEUE_URL && !process.env.QUEUE_URL) {
+		console.log("⏭️  No queue configured. Skipping workers startup.");
+		console.log("   Set either SQS_QUEUE_URL or QUEUE_URL to enable workers.");
+		process.exit(0);
+	}
+
 	console.log(`Starting ${NUM_PROCESSES} worker processes`);
 
 	// Fork workers
