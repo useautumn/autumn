@@ -1,10 +1,9 @@
+import type { Customer } from "@autumn/shared";
 import { resetCustomerEntitlement } from "@/cron/cronUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-import { getMainCusProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
 import { cusProductToCusEnt } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
-import { Customer } from "@autumn/shared";
-import { TestFeature } from "tests/setup/v2Features.js";
+import { getMainCusProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
 
 export const resetAndGetCusEnt = async ({
 	db,

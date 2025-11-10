@@ -1,93 +1,19 @@
 import {
-	ApiVersion,
-	type ApiVersionClass,
 	BillingInterval,
 	type Feature,
 	type FreeTrial,
 	type FullCusProduct,
-	type FullCustomer,
-	type FullCustomerEntitlement,
 	isTrialing,
 	type ProductItem,
-	SuccessCode,
 	UsageModel,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { featureToCusPrice } from "@/internal/customers/cusProducts/cusPrices/convertCusPriceUtils.js";
 import { getProration } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
 import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import { isFeaturePriceItem } from "@/internal/products/product-items/productItemUtils/getItemType.js";
 import { itemToPriceOrTiers } from "@/internal/products/product-items/productItemUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-import { getCheckPreview } from "./getCheckPreview.js";
-
-export const getBooleanEntitledResult = async ({
-	db,
-	fullCus,
-	cusEnts,
-	res,
-	feature,
-	apiVersion,
-	withPreview,
-	cusProducts,
-	allFeatures,
-}: {
-	db: DrizzleCli;
-	fullCus: FullCustomer;
-	cusEnts: FullCustomerEntitlement[];
-	res: any;
-	feature: Feature;
-	apiVersion: ApiVersionClass;
-	withPreview: boolean;
-	cusProducts: FullCusProduct[];
-	allFeatures: Feature[];
-}) => {
-	const allowed = cusEnts.some((cusEnt) => {
-		const featureMatch = cusEnt.internal_feature_id === feature.internal_id;
-
-		const entityFeatureId = cusEnt.entitlement.entity_feature_id;
-		const compareEntity =
-			notNullish(entityFeatureId) && notNullish(fullCus.entity);
-
-		const entityMatch = compareEntity
-			? entityFeatureId === fullCus.entity!.feature_id
-			: true;
-
-		return featureMatch && entityMatch;
-	});
-
-	if (apiVersion.gte(ApiVersion.V1_1)) {
-		return res.status(200).json({
-			customer_id: fullCus.id,
-			feature_id: feature.id,
-			code: SuccessCode.FeatureFound,
-			allowed,
-			preview: withPreview
-				? await getCheckPreview({
-						db,
-						allowed,
-						balance: undefined,
-						feature,
-						cusProducts,
-						allFeatures,
-					})
-				: undefined,
-		});
-	} else {
-		return res.status(200).json({
-			allowed,
-			balances: allowed
-				? [
-						{
-							feature_id: feature.id,
-							balance: null,
-						},
-					]
-				: [],
-		});
-	}
-};
 
 export const getOptions = ({
 	prodItems,
@@ -151,14 +77,15 @@ export const getOptions = ({
 			);
 
 			let currentQuantity = currentOptions?.quantity;
+			const internalFeatureId = currentOptions?.internal_feature_id;
 			let prorationAmount = 0;
 
-			if (currentQuantity) {
+			if (currentQuantity && internalFeatureId) {
 				currentQuantity = currentQuantity * (i.billing_units || 1);
 
 				const curPrice = featureToCusPrice({
-					internalFeatureId: currentOptions?.internal_feature_id!,
-					cusPrices: cusProduct?.customer_prices!,
+					internalFeatureId: internalFeatureId,
+					cusPrices: cusProduct?.customer_prices ?? [],
 				})?.price;
 
 				const curPriceAmount = priceToInvoiceAmount({

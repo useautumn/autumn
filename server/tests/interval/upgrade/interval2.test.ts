@@ -1,20 +1,17 @@
-import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
-import { expect } from "chai";
+import { beforeAll, describe, expect, test } from "bun:test";
+import { LegacyVersion } from "@autumn/shared";
 import chalk from "chalk";
 import { addMonths, addWeeks, addYears } from "date-fns";
-import type { Stripe } from "stripe";
-import { setupBefore } from "tests/before.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { createProducts } from "tests/utils/productUtils.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import { getCusSub } from "@/utils/scriptUtils/testUtils/cusTestUtils.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 import { toMilliseconds } from "@/utils/timeUtils.js";
 
 const pro = constructProduct({
@@ -35,76 +32,54 @@ describe(`${chalk.yellowBright("interval2: Should upgrade from pro to pro annual
 	const customerId = testCase;
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
-	let stripeCli: Stripe;
 	let testClockId: string;
-	let curUnix: number;
-	let db: DrizzleCli;
-	let org: Organization;
-	let env: AppEnv;
 
-	before(async function () {
-		await setupBefore(this);
-		const { autumnJs } = this;
-		db = this.db;
-		org = this.org;
-		env = this.env;
-
-		stripeCli = this.stripeCli;
-
-		addPrefixToProducts({
+	beforeAll(async () => {
+		await initProductsV0({
+			ctx,
 			products: [pro, proAnnual],
 			prefix: testCase,
-		});
-
-		await createProducts({
-			autumn: autumnJs,
-			products: [pro, proAnnual],
-			db,
-			orgId: org.id,
-			env,
 			customerId,
 		});
 
-		const { testClockId: testClockId1 } = await initCustomer({
-			autumn: autumnJs,
+		const { testClockId: testClockId1 } = await initCustomerV3({
+			ctx,
 			customerId,
-			db,
-			org,
-			env,
 			attachPm: "success",
+			withTestClock: true,
 		});
 
 		testClockId = testClockId1!;
 	});
 
-	it("should attach pro and advance test clock", async () => {
+	test("should attach pro and advance test clock", async () => {
 		await attachAndExpectCorrect({
 			autumn,
 			customerId,
 			product: pro,
-			stripeCli,
-			db,
-			org,
-			env,
+			stripeCli: ctx.stripeCli,
+			db: ctx.db,
+			org: ctx.org,
+			env: ctx.env,
 		});
 
 		await advanceTestClock({
-			stripeCli,
+			stripeCli: ctx.stripeCli,
 			testClockId,
 			advanceTo: addWeeks(addMonths(new Date(), 1), 2).getTime(),
 		});
 	});
 
-	it("should upgrade to pro annual and have correct next cycle at", async () => {
+	test("should upgrade to pro annual and have correct next cycle at", async () => {
 		const checkoutRes = await autumn.checkout({
 			customer_id: customerId,
 			product_id: proAnnual.id,
 		});
 
-		expect(checkoutRes.next_cycle).to.exist;
-		expect(checkoutRes.next_cycle?.starts_at).to.approximately(
+		expect(checkoutRes.next_cycle).toBeDefined();
+		expect(checkoutRes.next_cycle?.starts_at).toBeCloseTo(
 			addYears(new Date(), 1).getTime(),
-			toMilliseconds.days(1), // +- 1 day
+			-Math.log10(toMilliseconds.days(1)), // +- 1 day
 		);
 
 		await autumn.attach({
@@ -113,16 +88,16 @@ describe(`${chalk.yellowBright("interval2: Should upgrade from pro to pro annual
 		});
 
 		const sub = await getCusSub({
-			db,
-			org,
+			db: ctx.db,
+			org: ctx.org,
 			customerId,
 			productId: proAnnual.id,
 		});
 
 		const subItem = sub!.items.data[0];
-		expect(subItem.current_period_end * 1000).to.approximately(
+		expect(subItem.current_period_end * 1000).toBeCloseTo(
 			checkoutRes.next_cycle?.starts_at!,
-			toMilliseconds.days(1), // +- 1 day
+			-Math.log10(toMilliseconds.days(1)), // +- 1 day
 		);
 	});
 });

@@ -1,30 +1,26 @@
 import {
-	AllowanceType,
 	FeatureType,
-	FullCusEntWithFullCusProduct,
-	FullCusProduct,
-	FullCustomerEntitlement,
+	type FullCusEntWithFullCusProduct,
+	type FullCusProduct,
+	type FullCustomerEntitlement,
 } from "@autumn/shared";
+import { useState } from "react";
+import { AdminHover } from "@/components/general/AdminHover";
+import { Item, Row } from "@/components/general/TableGrid";
 
-import { useCustomerContext } from "../CustomerContext";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import {
 	formatUnixToDate,
 	formatUnixToDateTime,
 } from "@/utils/formatUtils/formatDateUtils";
-
-import { useState } from "react";
-
-import { Badge } from "@/components/ui/badge";
-import UpdateCusEntitlement from "./UpdateCusEntitlement";
-import { AdminHover } from "@/components/general/AdminHover";
-import { Item, Row } from "@/components/general/TableGrid";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { useCustomerContext } from "../CustomerContext";
 import { CusProductEntityItem } from "../components/CusProductEntityItem";
-import { CusEntBalance } from "./CusEntBalance";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useCusQuery } from "../hooks/useCusQuery";
+import { CusEntBalance } from "./CusEntBalance";
+import UpdateCusEntitlement from "./UpdateCusEntitlement";
 
 export const CustomerEntitlementsList = () => {
 	const [featureType, setFeatureType] = useState<FeatureType>(

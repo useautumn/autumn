@@ -25,6 +25,7 @@ export const ApiCusExpandSchema = z.object({
 });
 
 export const ApiCustomerSchema = z.object({
+	autumn_id: z.string().optional(),
 	// Internal fields
 	id: z.string().nullable().meta({
 		description: "Your internal ID for the customer",

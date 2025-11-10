@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
-import { EntityDataSchema } from "../../models/cusModels/entityModels/entityModels.js";
 import { CustomerDataSchema } from "../common/customerData.js";
+import { EntityDataSchema } from "../common/entityData.js";
 
 const trackDescriptions = {
 	customer_id: "The ID of the customer",
@@ -16,6 +16,8 @@ const trackDescriptions = {
 	set_usage: "Whether to set the usage to this value instead of increment",
 	entity_id: "The ID of the entity this event is associated with",
 	entity_data: "Data for creating the entity if it doesn't exist",
+	skip_event:
+		"Skip event insertion (for stress tests). Balance is still deducted, but event is not persisted to database.",
 };
 
 // Track Schemas
@@ -60,8 +62,11 @@ export const TrackParamsSchema = z
 		entity_data: EntityDataSchema.optional().meta({
 			description: "Data for creating the entity if it doesn't exist",
 		}),
-		overage_behaviour: z.enum(["cap", "reject"]).optional().meta({
+		overage_behavior: z.enum(["cap", "reject"]).optional().meta({
 			description: "The behavior when the balance is insufficient",
+		}),
+		skip_event: z.boolean().optional().meta({
+			description: trackDescriptions.skip_event,
 		}),
 	})
 	.refine(

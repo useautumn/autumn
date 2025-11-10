@@ -12,10 +12,10 @@ if [[ "$1" == *"setup"* ]]; then
   BUN_SETUP
 fi
 
-# These tests still use Mocha - will be migrated later
-
-MOCHA_CMD 'tests/contUse/entities/*.ts'
-MOCHA_CMD 'tests/contUse/update/*.ts'
-MOCHA_CMD 'tests/contUse/track/*.ts'
-MOCHA_CMD 'tests/contUse/roles/*.ts'
+BUN_PARALLEL_COMPACT \
+  'server/tests/contUse/track' \
+  'server/tests/contUse/roles' \
+  'server/tests/contUse/update' \
+  'server/tests/contUse/entities' \
+  --max=6
 

@@ -120,9 +120,12 @@ describe(`${chalk.yellowBright("check6: test /check on feature with multiple bal
 			usage: 0,
 			included_usage: totalIncludedUsage,
 			overage_allowed: true,
-			breakdown: [monthlyBreakdown, lifetimeBreakdown],
+			// breakdown: [monthlyBreakdown, lifetimeBreakdown],
 		};
 
 		expect(res).toMatchObject(expectedRes);
+		expect(res.breakdown).toHaveLength(2);
+		expect(res.breakdown?.[0]).toMatchObject(monthlyBreakdown);
+		expect(res.breakdown?.[1]).toMatchObject(lifetimeBreakdown);
 	});
 });

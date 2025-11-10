@@ -76,7 +76,7 @@ BEGIN
       new_entities := current_entities;
       deduct_amount := 0;
       
-      FOR entity_key IN SELECT jsonb_object_keys(current_entities)
+      FOR entity_key IN SELECT jsonb_object_keys(current_entities) ORDER BY 1
       LOOP
         EXIT WHEN remaining_amount <= 0;
         

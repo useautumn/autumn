@@ -101,7 +101,6 @@ describe(`${chalk.yellowBright("upgrade2: Testing usage upgrades with monthly ->
 			testClockId,
 			advanceTo: addWeeks(curUnix, 2).getTime(),
 		});
-		return;
 
 		await attachAndExpectCorrect({
 			autumn,
@@ -113,7 +112,6 @@ describe(`${chalk.yellowBright("upgrade2: Testing usage upgrades with monthly ->
 			env,
 		});
 	});
-	return;
 
 	test("should attach premium annual product", async () => {
 		await autumn.track({

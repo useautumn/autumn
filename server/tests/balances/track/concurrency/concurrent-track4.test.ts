@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion } from "@autumn/shared";
 import chalk from "chalk";
 import { TestFeature } from "tests/setup/v2Features.js";
+import { timeout } from "tests/utils/genUtils.js";
 import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
@@ -71,36 +72,36 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage_limits with pay_per_u
 				customer_id: customerId,
 				feature_id: TestFeature.Messages,
 				value: 3,
-				overage_behaviour: "reject",
+				overage_behavior: "reject",
 			}),
 			autumnV1.track({
 				customer_id: customerId,
 				feature_id: TestFeature.Messages,
 				value: 3,
-				overage_behaviour: "reject",
+				overage_behavior: "reject",
 			}),
 			autumnV1.track({
 				customer_id: customerId,
 				feature_id: TestFeature.Messages,
 				value: 3,
-				overage_behaviour: "reject",
+				overage_behavior: "reject",
 			}),
 			autumnV1.track({
 				customer_id: customerId,
 				feature_id: TestFeature.Messages,
 				value: 3,
-				overage_behaviour: "reject",
+				overage_behavior: "reject",
 			}),
 			autumnV1.track({
 				customer_id: customerId,
 				feature_id: TestFeature.Messages,
 				value: 3,
-				overage_behaviour: "reject",
+				overage_behavior: "reject",
 			}),
 		];
 
 		const results = await Promise.all(promises);
-		console.log(results);
+		// console.log(results);
 
 		const successCount = results.filter((r) =>
 			trackWasSuccessful({ res: r }),
@@ -114,21 +115,25 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage_limits with pay_per_u
 		expect(rejectedCount).toBe(2);
 
 		// Wait for any async processing to complete
-		console.log(`⏳ Waiting 3s for all updates to persist...`);
-		await new Promise((resolve) => setTimeout(resolve, 3000));
 
 		const customer = await autumnV1.customers.get(customerId);
 
-		console.log(`📦 Final state after all requests:`);
-		console.log(
-			`- Balance: ${customer.features[TestFeature.Messages]?.balance} (expected: -4)`,
-		);
-		console.log(
-			`- Usage: ${customer.features[TestFeature.Messages]?.usage} (expected: 9)`,
-		);
-		console.log(
-			`- Usage limit: ${customer.features[TestFeature.Messages]?.usage_limit} (expected: 10)`,
-		);
+		expect(customer.features[TestFeature.Messages]?.balance).toBe(-4);
+		expect(customer.features[TestFeature.Messages]?.usage).toBe(9);
+		expect(customer.features[TestFeature.Messages]?.usage_limit).toBe(10);
+	});
+
+	test("should reflect concurrent deductions in non-cached customer after 2s", async () => {
+		// Expected: 3 successful requests × 3 units each = 9 units used
+		// Starting balance: 5, usage: 9, final balance: 5 - 9 = -4
+
+		// Wait 2 seconds for DB sync
+		await timeout(5000);
+
+		// Fetch customer with skip_cache=true
+		const customer = await autumnV1.customers.get(customerId, {
+			skip_cache: "true",
+		});
 
 		expect(customer.features[TestFeature.Messages]?.balance).toBe(-4);
 		expect(customer.features[TestFeature.Messages]?.usage).toBe(9);

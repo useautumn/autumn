@@ -1,26 +1,105 @@
 import {
 	ApiVersion,
+	ErrCode,
 	InsufficientBalanceError,
+	isContUseFeature,
+	RecaseError,
 	SuccessCode,
+	type TrackParams,
 	TrackParamsSchema,
+	type TrackResponse,
 } from "@autumn/shared";
+import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { createRoute } from "../../../honoMiddlewares/routeHandler.js";
+import { tryRedisWrite } from "../../../utils/cacheUtils/cacheUtils.js";
+import type { ExtendedRequest } from "../../../utils/models/Request.js";
+import { getOrCreateCustomer } from "../../customers/cusUtils/getOrCreateCustomer.js";
+import { runRedisDeduction } from "./redisTrackUtils/runRedisDeduction.js";
+import type { FeatureDeduction } from "./trackUtils/getFeatureDeductions.js";
 import {
 	getTrackEventNameDeductions,
 	getTrackFeatureDeductions,
 } from "./trackUtils/getFeatureDeductions.js";
 import { runDeductionTx } from "./trackUtils/runDeductionTx.js";
 
+/**
+ * Execute PostgreSQL-based tracking with full transaction support
+ */
+const executePostgresTracking = async ({
+	ctx,
+	body,
+	featureDeductions,
+}: {
+	ctx: RequestContext;
+	body: TrackParams;
+	featureDeductions: FeatureDeduction[];
+}) => {
+	const response: TrackResponse = {
+		id: "",
+		code: SuccessCode.EventReceived,
+		customer_id: body.customer_id,
+		entity_id: body.entity_id,
+		feature_id: body.feature_id,
+		event_name: body.event_name,
+	};
+
+	const fullCus = await getOrCreateCustomer({
+		req: ctx as unknown as ExtendedRequest,
+		customerId: body.customer_id,
+		customerData: body.customer_data,
+		entityId: body.entity_id,
+		entityData: body.entity_data,
+		withEntities: true,
+	});
+
+	try {
+		const { event } = await runDeductionTx({
+			ctx,
+			customerId: body.customer_id,
+			entityId: body.entity_id,
+			deductions: featureDeductions,
+			overageBehaviour: body.overage_behavior,
+			eventInfo: {
+				event_name: body.feature_id || body.event_name!,
+				value: body.value ?? 1,
+				properties: body.properties,
+				timestamp: body.timestamp,
+				idempotency_key: body.idempotency_key,
+			},
+			refreshCache: true,
+			fullCus,
+		});
+		response.id = event?.id || "";
+	} catch (error) {
+		if (error instanceof InsufficientBalanceError) {
+			response.code = "insufficient_balance";
+		} else {
+			throw error;
+		}
+	}
+
+	return response;
+};
+
 export const handleTrack = createRoute({
 	body: TrackParamsSchema,
 	handler: async (c) => {
-		// 1. Get feature deductions
 		const body = c.req.valid("json");
 		const ctx = c.get("ctx");
 
-		// Legacy
+		// Legacy: support value in properties
 		if (body.properties?.value) {
 			body.value = body.properties.value;
+		}
+
+		// Validate: event_name cannot be used with overage_behavior: "reject"
+		if (body.event_name && body.overage_behavior === "reject") {
+			throw new RecaseError({
+				message:
+					'overage_behavior "reject" is not supported with event_name. Use feature_id or set overage_behavior to "cap".',
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
 		}
 
 		// Build feature deductions
@@ -36,14 +115,34 @@ export const handleTrack = createRoute({
 					value: body.value,
 				});
 
-		try {
-			const start = Date.now();
-			const { fullCus, event } = await runDeductionTx({
+		const hasContUseFeature = featureDeductions.some((deduction) =>
+			isContUseFeature({ feature: deduction.feature }),
+		);
+
+		// Scenario 1: idempotency_key requires PostgreSQL (for event persistence)
+		if (body.idempotency_key || hasContUseFeature) {
+			const response = await executePostgresTracking({
+				ctx,
+				body,
+				featureDeductions,
+			});
+
+			if (ctx.apiVersion.gte(ApiVersion.V1_1)) return c.json(response);
+			return c.json({ success: true });
+		}
+
+		let code: string = SuccessCode.EventReceived;
+
+		// Scenario 2: Try Redis first, fallback to PostgreSQL if needed
+		const success = await tryRedisWrite(async () => {
+			const { error } = await runRedisDeduction({
 				ctx,
 				customerId: body.customer_id,
 				entityId: body.entity_id,
-				deductions: featureDeductions,
-				overageBehaviour: body.overage_behaviour,
+				customerData: body.customer_data,
+				entityData: body.entity_data,
+				featureDeductions,
+				overageBehavior: body.overage_behavior || "cap",
 				eventInfo: {
 					event_name: body.feature_id || body.event_name!,
 					value: body.value ?? 1,
@@ -53,32 +152,85 @@ export const handleTrack = createRoute({
 				},
 			});
 
-			const elapsed = Date.now() - start;
-			ctx.logger.info(`[handleTrack] runDeductionTx ms: ${elapsed}`);
+			if (error) {
+				console.log(`Redis deduction error: ${error}`);
+				code = "insufficient_balance";
+			}
+		});
 
-			const response: any = {
-				id: event?.id || "",
-				code: SuccessCode.EventReceived,
-				customer_id: body.customer_id,
-				entity_id: body.entity_id,
-				feature_id: body.feature_id,
-				event_name: body.event_name,
-			};
+		if (!success) {
+			console.log(`Falling back to postgres tracking`);
+			const response = await executePostgresTracking({
+				ctx,
+				body,
+				featureDeductions,
+			});
+
+			console.log(`Response: ${JSON.stringify(response)}`);
 
 			if (ctx.apiVersion.gte(ApiVersion.V1_1)) return c.json(response);
 			return c.json({ success: true });
-		} catch (error) {
-			if (error instanceof InsufficientBalanceError) {
-				return c.json({
-					id: "",
-					code: "insufficient_balance",
-					customer_id: body.customer_id,
-					entity_id: body.entity_id,
-					feature_id: body.feature_id,
-					event_name: body.event_name,
-				});
-			}
-			throw error;
 		}
+
+		// Redis deduction failed (e.g., insufficient balance)
+		const response = {
+			id: "",
+			code: code,
+			customer_id: body.customer_id,
+			entity_id: body.entity_id,
+			feature_id: body.feature_id,
+			event_name: body.event_name,
+		};
+
+		if (ctx.apiVersion.gte(ApiVersion.V1_1)) return c.json(response);
+		return c.json({ success: false });
 	},
 });
+
+// Original PostgreSQL-based implementation (commented out for reference)
+// 1. Run track deduction tx
+
+// try {
+// 	const start = Date.now();
+// 	const { fullCus, event } = await runDeductionTx({
+// 		ctx,
+// 		customerId: body.customer_id,
+// 		entityId: body.entity_id,
+// 		deductions: featureDeductions,
+// 		overageBehavior: body.overage_behavior,
+// 		eventInfo: {
+// 			event_name: body.feature_id || body.event_name!,
+// 			value: body.value ?? 1,
+// 			properties: body.properties,
+// 			timestamp: body.timestamp,
+// 			idempotency_key: body.idempotency_key,
+// 		},
+// 	});
+
+// 	const elapsed = Date.now() - start;
+// 	ctx.logger.info(`[handleTrack] runDeductionTx ms: ${elapsed}`);
+
+// 	const response: any = {
+// 		id: event?.id || "",
+// 		code: SuccessCode.EventReceived,
+// 		customer_id: body.customer_id,
+// 		entity_id: body.entity_id,
+// 		feature_id: body.feature_id,
+// 		event_name: body.event_name,
+// 	};
+
+// 	if (ctx.apiVersion.gte(ApiVersion.V1_1)) return c.json(response);
+// 	return c.json({ success: true });
+// } catch (error) {
+// 	if (error instanceof InsufficientBalanceError) {
+// 		return c.json({
+// 			id: "",
+// 			code: "insufficient_balance",
+// 			customer_id: body.customer_id,
+// 			entity_id: body.entity_id,
+// 			feature_id: body.feature_id,
+// 			event_name: body.event_name,
+// 		});
+// 	}
+// 	throw error;
+// }

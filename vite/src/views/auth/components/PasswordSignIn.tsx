@@ -1,14 +1,11 @@
-import { Mail } from "lucide-react";
-import { toast } from "sonner";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router";
+import { toast } from "sonner";
+import { CustomToaster } from "@/components/general/CustomToaster";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useSearchParams } from "react-router";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGoogle } from "@fortawesome/free-brands-svg-icons";
-import { authClient, signIn, useSession } from "@/lib/auth-client";
-import { CustomToaster } from "@/components/general/CustomToaster";
-import { getBackendErr } from "@/utils/genUtils";
+import { authClient, useSession } from "@/lib/auth-client";
+import { emailSchema } from "../SignIn";
 
 export const PasswordSignIn = () => {
 	const [email, setEmail] = useState("");
@@ -28,6 +25,10 @@ export const PasswordSignIn = () => {
 
 	const handleEmailSignIn = async (e: React.FormEvent) => {
 		e.preventDefault();
+		if (!email || !emailSchema.safeParse(email).success) {
+			toast.error("Please enter a valid email address.");
+			return;
+		}
 		setLoading(true);
 
 		try {

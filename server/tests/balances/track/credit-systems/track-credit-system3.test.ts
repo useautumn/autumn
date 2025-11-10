@@ -3,6 +3,7 @@ import { ApiVersion, type LimitedItem } from "@autumn/shared";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
 import { TestFeature } from "tests/setup/v2Features.js";
+import { timeout } from "tests/utils/genUtils.js";
 import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
@@ -141,6 +142,61 @@ describe(`${chalk.yellowBright("track-credit-system3: test deduction order - act
 		// Credits should be deducted
 		expect(customer.features[TestFeature.Credits].balance).toBe(
 			new Decimal(creditsBefore!).minus(creditCost).toNumber(),
+		);
+	});
+
+	test("should reflect all deductions in non-cached customer after 2s", async () => {
+		// Calculate expected final balances based on all previous deductions:
+		// 1. Deduct 40.5 from action1 -> action1: 59.5, credits: 200
+		// 2. Deduct 80 from action1 -> action1: 0, credits: 200 - (20.5 * credit_cost)
+		// 3. Deduct 50.75 from action1 -> action1: 0, credits: previous - (50.75 * credit_cost)
+
+		const deduct1 = 40.5;
+		const deduct2 = 80;
+		const deduct3 = 50.75;
+
+		const overflow2 = deduct2 - (100 - deduct1); // 20.5
+		const creditCost2 = getCreditCost({
+			featureId: TestFeature.Action1,
+			creditSystem: creditFeature!,
+			amount: overflow2,
+		});
+
+		const creditCost3 = getCreditCost({
+			featureId: TestFeature.Action1,
+			creditSystem: creditFeature!,
+			amount: deduct3,
+		});
+
+		const expectedAction1Balance = 0;
+		const expectedAction1Usage = 100;
+		const expectedCreditsBalance = new Decimal(200)
+			.minus(creditCost2)
+			.minus(creditCost3)
+			.toNumber();
+		const expectedCreditsUsage = new Decimal(creditCost2)
+			.plus(creditCost3)
+			.toNumber();
+
+		// Wait 2 seconds for DB sync
+		await timeout(2000);
+
+		// Fetch customer with skip_cache=true
+		const customer = await autumnV1.customers.get(customerId, {
+			skip_cache: "true",
+		});
+
+		expect(customer.features[TestFeature.Action1].balance).toBe(
+			expectedAction1Balance,
+		);
+		expect(customer.features[TestFeature.Action1].usage).toBe(
+			expectedAction1Usage,
+		);
+		expect(customer.features[TestFeature.Credits].balance).toBe(
+			expectedCreditsBalance,
+		);
+		expect(customer.features[TestFeature.Credits].usage).toBe(
+			expectedCreditsUsage,
 		);
 	});
 });

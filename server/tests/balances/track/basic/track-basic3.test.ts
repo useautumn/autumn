@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion } from "@autumn/shared";
 import chalk from "chalk";
 import { TestFeature } from "tests/setup/v2Features.js";
+import { timeout } from "tests/utils/genUtils.js";
 import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
@@ -62,6 +63,23 @@ describe(`${chalk.yellowBright("track-basic3: track with event_name instead of f
 		});
 
 		const customer = await autumnV1.customers.get(customerId);
+		const balance = customer.features[TestFeature.Action1].balance;
+		const usage = customer.features[TestFeature.Action1].usage;
+
+		expect(balance).toBe(150 - deductValue);
+		expect(usage).toBe(deductValue);
+	});
+
+	test("should reflect deduction in non-cached customer after 2s", async () => {
+		const deductValue = 37.89;
+
+		// Wait 2 seconds for DB sync
+		await timeout(2000);
+
+		// Fetch customer with skip_cache=true
+		const customer = await autumnV1.customers.get(customerId, {
+			skip_cache: "true",
+		});
 		const balance = customer.features[TestFeature.Action1].balance;
 		const usage = customer.features[TestFeature.Action1].usage;
 

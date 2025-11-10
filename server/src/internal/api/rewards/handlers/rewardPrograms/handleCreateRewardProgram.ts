@@ -8,6 +8,7 @@ import { constructRewardProgram } from "@/internal/rewards/rewardTriggerUtils.js
 import RecaseError from "@/utils/errorUtils.js";
 import { nullish } from "@/utils/genUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
+import { RewardService } from "../../../../rewards/RewardService.js";
 
 export default async (req: any, res: any) =>
 	routeHandler({
@@ -49,19 +50,29 @@ export default async (req: any, res: any) =>
 				});
 			}
 
-			const rewardProgram = constructRewardProgram({
-				rewardProgramData: CreateRewardProgram.parse(req.body),
+			const reward = await RewardService.get({
+				db,
+				idOrInternalId: body.internal_reward_id,
 				orgId,
 				env,
 			});
 
-			// Fetch reward ID
-			// let reward = await RewardService.get({
-			//   db,
-			//   id: rewardProgram.internal_reward_id,
-			//   orgId,
-			//   env,
-			// });
+			if (!reward) {
+				throw new RecaseError({
+					message: "Reward not found",
+					code: ErrCode.InvalidRequest,
+					statusCode: 400,
+				});
+			}
+
+			const rewardProgram = constructRewardProgram({
+				rewardProgramData: CreateRewardProgram.parse({
+					...req.body,
+					internal_reward_id: reward.internal_id,
+				}),
+				orgId,
+				env,
+			});
 
 			if (
 				rewardProgram.when === RewardTriggerEvent.Checkout &&

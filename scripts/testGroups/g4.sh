@@ -12,20 +12,22 @@ if [[ "$1" == *"setup"* ]]; then
   BUN_SETUP
 fi
 
-# These tests still use Mocha - will be migrated later
+BUN_PARALLEL_COMPACT \
+  'server/tests/merged/separate' \
+  'server/tests/merged/downgrade' \
+  'server/tests/merged/add' \
+  'server/tests/merged/group' \
+  'server/tests/merged/prepaid' \
+  'server/tests/merged/upgrade' \
+  'server/tests/merged/addOn' \
+  'server/tests/merged/trial' \
+  'server/tests/core/cancel' \
+  --max=6
 
-MOCHA_CMD 'tests/merged/group/*.ts'
 
-MOCHA_CMD 'tests/merged/add/*.ts' \
-'tests/merged/downgrade/*.ts' \
-'tests/merged/prepaid/*.ts' \
-'tests/merged/separate/*.ts' \
-'tests/merged/upgrade/*.ts' \
-'tests/merged/trial/*.ts'
 
-MOCHA_CMD 'tests/merged/addOn/*.ts' \
-'tests/core/cancel/*.ts' \
-'tests/core/multiAttach/*.ts' \
-'tests/core/multiAttach/multiInvoice/*.ts' \
-'tests/core/multiAttach/multiUpgrade/*.ts'
-
+# deprecated tests(?)
+# 'server/tests/core/multiAttach' \
+# 'server/tests/core/multiAttach/multiInvoice' \
+# 'server/tests/core/multiAttach/multiUpgrade' \
+# 'sever/tests/core/multiAttach/multiReward'

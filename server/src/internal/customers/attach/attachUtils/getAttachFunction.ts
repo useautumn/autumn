@@ -54,7 +54,6 @@ export const getAttachFunction = async ({
 	].includes(branch);
 
 	// Check for upgrade/downgrade from default trial (should also use checkout)
-	
 
 	if (newScenario && onlyCheckout) {
 		return AttachFunction.CreateCheckout;
@@ -147,7 +146,7 @@ export const runAttachFunction = async ({
 
 	logger.info(`--------------------------------`);
 	logger.info(
-		`ATTACHING ${productIdsStr} to ${customer.name} (${customer.id || customer.email}), org: ${org.slug}\n`,
+		`ATTACHING ${productIdsStr} to ${customer.name} (${customer.id || customer.email}), org: ${org.slug}`,
 	);
 	if (customer.entity) {
 		logger.info(`Entity: ${customer.entity.name} (${customer.entity.id})`);

@@ -5,6 +5,8 @@ import { queryStringArray } from "../common/queryHelpers.js";
 
 export const GetCustomerQuerySchema = z.object({
 	expand: queryStringArray(z.enum(CusExpand)).optional(),
+	skip_cache: z.boolean().optional(),
+	with_autumn_id: z.boolean().default(false),
 });
 
 export const CreateCustomerQuerySchema = z.object({
@@ -69,13 +71,9 @@ export const CreateCustomerParamsSchema = z.object({
 		example: "fp_123abc",
 	}),
 
-	metadata: z
-		.record(z.string(), z.any())
-		.default({})
-		.meta({
-			description: "Additional metadata for the customer",
-			example: { company: "Acme Inc" },
-		}),
+	metadata: z.record(z.string(), z.any()).default({}).meta({
+		description: "Additional metadata for the customer",
+	}),
 
 	stripe_id: z.string().optional().meta({
 		description: "Stripe customer ID if you already have one",
@@ -89,6 +87,8 @@ export const CreateCustomerParamsSchema = z.object({
 	entity_data: EntityDataSchema.optional().meta({
 		description: "Data for creating an entity",
 	}),
+
+	disable_default: z.boolean().optional(),
 });
 
 // Update Customer Params (based on handleUpdateCustomer logic)

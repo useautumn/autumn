@@ -1,11 +1,12 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import { type AppEnv, AttachScenario, type Organization } from "@autumn/shared";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { MetadataService } from "@/internal/metadata/MetadataService.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { AppEnv, AttachScenario, Organization } from "@autumn/shared";
-import Stripe from "stripe";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+import { deleteCachedApiCustomer } from "../../../cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 
 export const handleInvoiceCheckoutPaid = async ({
 	req,
@@ -30,12 +31,10 @@ export const handleInvoiceCheckoutPaid = async ({
 		id: metadataId,
 	});
 
-	const { subIds, anchorToUnix, config, ...rest } = metadata?.data;
+	const { subIds, anchorToUnix, config, ...rest } = metadata?.data ?? {};
 	const attachParams = rest as AttachParams;
 
-	if (!attachParams) {
-		return;
-	}
+	if (!attachParams) return;
 
 	const reqMatch =
 		attachParams.org.id === org.id && attachParams.customer.env === env;
@@ -94,4 +93,10 @@ export const handleInvoiceCheckoutPaid = async ({
 	req.logger.info(
 		`✅ invoice.paid, successfully inserted cus products: ${attachParams.products.map((p) => p.id).join(", ")}`,
 	);
+
+	await deleteCachedApiCustomer({
+		customerId: attachParams.customer.id || "",
+		orgId: org.id,
+		env,
+	});
 };

@@ -24,7 +24,7 @@ export const ShortcutButton = ({
 
 	useHotkeys(
 		metaShortcut
-			? [`meta+${metaShortcut}`]
+			? [`mod+${metaShortcut}`]
 			: singleShortcut
 				? [singleShortcut]
 				: [],

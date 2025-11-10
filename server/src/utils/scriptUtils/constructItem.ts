@@ -76,6 +76,7 @@ export const constructPrepaidItem = ({
 	rolloverConfig,
 	usageLimit,
 	intervalCount = 1,
+	resetUsageWhenEnabled,
 }: {
 	featureId: string;
 	price?: number;
@@ -87,6 +88,7 @@ export const constructPrepaidItem = ({
 	rolloverConfig?: RolloverConfig;
 	usageLimit?: number;
 	intervalCount?: number;
+	resetUsageWhenEnabled?: boolean;
 }) => {
 	const item: ProductItem = {
 		feature_id: featureId,
@@ -104,6 +106,7 @@ export const constructPrepaidItem = ({
 			...(rolloverConfig ? { rollover: rolloverConfig } : {}),
 		},
 		usage_limit: usageLimit,
+		reset_usage_when_enabled: resetUsageWhenEnabled,
 	};
 
 	return item;
@@ -150,6 +153,7 @@ export const constructArrearItem = ({
 
 export const constructArrearProratedItem = ({
 	featureId,
+	featureType,
 	pricePerUnit = 10,
 	includedUsage = 1,
 	config = {
@@ -160,6 +164,7 @@ export const constructArrearProratedItem = ({
 	rolloverConfig,
 }: {
 	featureId: string;
+	featureType?: ProductItemFeatureType;
 	pricePerUnit?: number;
 	includedUsage?: number;
 	config?: ProductItemConfig;
@@ -178,6 +183,7 @@ export const constructArrearProratedItem = ({
 			...(rolloverConfig ? { rollover: rolloverConfig } : {}),
 		},
 		usage_limit: usageLimit,
+		...(featureType ? { feature_type: featureType } : {}),
 	};
 
 	return item;

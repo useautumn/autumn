@@ -35,7 +35,7 @@ export const apiFeatureToDbFeature = ({
 	}
 
 	if (apiFeature.credit_schema) {
-		newConfig.schema = apiFeature.credit_schema.map((credit) => ({
+		newConfig.schema = apiFeature.credit_schema.map((credit: { metered_feature_id: string; credit_cost: number }) => ({
 			metered_feature_id: credit.metered_feature_id,
 			credit_amount: credit.credit_cost,
 		}));

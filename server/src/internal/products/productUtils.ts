@@ -276,10 +276,6 @@ export const checkStripeProductExists = async ({
 			},
 		});
 
-		console.log(
-			`Updated product ${product.name} with stripe product ${stripeProduct.id}`,
-		);
-
 		product.processor = {
 			id: stripeProduct.id,
 			type: ProcessorType.Stripe,

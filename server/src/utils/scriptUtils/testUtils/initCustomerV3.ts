@@ -12,18 +12,25 @@ export const initCustomerV3 = async ({
 	customerData,
 	attachPm,
 	withTestClock = true,
+	withDefault = false,
+	defaultProductId,
 }: {
 	ctx: TestContext;
 	customerId: string;
 	attachPm?: "success" | "fail";
 	customerData?: CustomerData;
 	withTestClock?: boolean;
+	withDefault?: boolean;
+	defaultProductId?: string;
 }) => {
 	const name = customerId;
 	const email = `${customerId}@example.com`;
 	const fingerprint_ = "";
 	const { stripeCli } = ctx;
-	const autumn = new AutumnInt({ version: ApiVersion.V1_2 });
+	const autumn = new AutumnInt({
+		version: ApiVersion.V1_2,
+		secretKey: ctx.orgSecretKey,
+	});
 
 	let testClockId: string | undefined;
 
@@ -51,8 +58,10 @@ export const initCustomerV3 = async ({
 		name,
 		email,
 		// @ts-expect-error
-		fingerprint: customerData?.fingerprint || fingerprint_,
+		fingerprint: customerData?.fingerprint,
 		stripe_id: stripeCus.id,
+		disable_default: !withDefault,
+		default_product_id: defaultProductId,
 	});
 
 	// 3. Attach payment method

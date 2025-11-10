@@ -1,27 +1,31 @@
+import {
+	type CreateEntityParams,
+	type CustomerData,
+	type Entity,
+	ErrCode,
+} from "@autumn/shared";
+import { StatusCodes } from "http-status-codes";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { CreateEntity, CustomerData, Entity, ErrCode } from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 
 export const validateAndGetInputEntities = async ({
-	req,
+	ctx,
 	customerId,
 	customerData,
 	createEntityData,
-	logger,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	customerId: string;
 	customerData?: CustomerData;
-	createEntityData: CreateEntity[] | CreateEntity;
-	logger: any;
+	createEntityData: CreateEntityParams[] | CreateEntityParams;
 }) => {
-	const { features } = req;
+	const { features } = ctx;
 
 	// 1. Get customer
-	let customer = await getOrCreateCustomer({
-		req,
+	const customer = await getOrCreateCustomer({
+		req: ctx as unknown as ExtendedRequest,
 		customerId,
 		customerData,
 		withEntities: true,
@@ -43,7 +47,7 @@ export const validateAndGetInputEntities = async ({
 	}
 
 	for (const entity of inputEntities) {
-		let feature = features.find((f: any) => f.id === entity.feature_id);
+		const feature = features.find((f: any) => f.id === entity.feature_id);
 		if (!feature) {
 			throw new RecaseError({
 				message: `Feature ${entity.feature_id} not found`,
@@ -52,11 +56,13 @@ export const validateAndGetInputEntities = async ({
 		}
 	}
 
-	let cusProducts = customer.customer_products;
-	let existingEntities = customer.entities;
+	const cusProducts = customer.customer_products;
+	const existingEntities = customer.entities;
 
-	let noIdEntities = existingEntities.filter((e: Entity) => !e.id);
-	let noIdNewEntities = inputEntities.filter((e: CreateEntity) => !e.id);
+	const noIdEntities = existingEntities.filter((e: Entity) => !e.id);
+	const noIdNewEntities = inputEntities.filter(
+		(e: CreateEntityParams) => !e.id,
+	);
 
 	if (noIdEntities.length + noIdNewEntities.length > 1) {
 		throw new RecaseError({
@@ -83,8 +89,6 @@ export const validateAndGetInputEntities = async ({
 		customer,
 		features,
 		inputEntities,
-		// feature_id,
-		// feature,
 		cusProducts,
 		existingEntities,
 	};

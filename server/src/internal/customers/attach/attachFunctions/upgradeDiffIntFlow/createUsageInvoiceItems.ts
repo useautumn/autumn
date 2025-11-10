@@ -1,27 +1,26 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-
+import {
+	type BillingInterval,
+	BillingType,
+	CusProductStatus,
+	cusProductsToCusEnts,
+	cusProductsToCusPrices,
+	type FullCusProduct,
+	intervalsDifferent,
+	type UsagePriceConfig,
+} from "@autumn/shared";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { subToAutumnInterval } from "@/external/stripe/utils.js";
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import {
 	getCusPriceUsage,
 	getRelatedCusEnt,
 } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
-import { cusProductsToCusEnts, cusProductsToCusPrices } from "@autumn/shared";
 import {
 	formatPrice,
 	getBillingType,
 } from "@/internal/products/prices/priceUtils.js";
-import {
-	FullCusProduct,
-	UsagePriceConfig,
-	BillingType,
-	BillingInterval,
-	intervalsDifferent,
-	CusProductStatus,
-} from "@autumn/shared";
-
-import Stripe from "stripe";
 
 export const getUsageInvoiceItems = async ({
 	db,
@@ -93,7 +92,7 @@ export const getUsageInvoiceItems = async ({
 
 		cusEntIds.push(cusEnt.id);
 
-		let invoiceItem = {
+		const invoiceItem = {
 			description,
 			price_data: {
 				product: config.stripe_product_id!,
@@ -194,7 +193,7 @@ export const resetUsageBalances = async ({
 			},
 		});
 
-		let index = cusProduct.customer_entitlements.findIndex(
+		const index = cusProduct.customer_entitlements.findIndex(
 			(ce) => ce.id === cusEntId,
 		);
 

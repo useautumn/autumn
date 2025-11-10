@@ -9,18 +9,14 @@ import {
 } from "@autumn/shared";
 import { and, desc, eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { CacheManager } from "@/external/caching/CacheManager.js";
-import { CacheType } from "@/external/caching/cacheActions.js";
 
 export class ApiKeyService {
 	static async verifyAndFetch({
 		db,
-		secretKey,
 		hashedKey,
 		env,
 	}: {
 		db: DrizzleCli;
-		secretKey: string;
 		hashedKey: string;
 		env: AppEnv;
 	}) {
@@ -39,7 +35,6 @@ export class ApiKeyService {
 		});
 
 		if (!data || !data.org) {
-			console.warn(`verify secret key ${secretKey} returned null`);
 			return null;
 		}
 
@@ -94,20 +89,5 @@ export class ApiKeyService {
 			.delete(apiKeys)
 			.where(and(eq(apiKeys.id, id), eq(apiKeys.org_id, orgId)))
 			.returning();
-	}
-}
-
-export class CachedKeyService {
-	static async clearCache({ hashedKey }: { hashedKey: string }) {
-		try {
-			await CacheManager.invalidate({
-				action: CacheType.SecretKey,
-				value: hashedKey,
-			});
-		} catch (error) {
-			console.error(
-				`(warning) failed to clear cache for verify action: ${error}`,
-			);
-		}
 	}
 }

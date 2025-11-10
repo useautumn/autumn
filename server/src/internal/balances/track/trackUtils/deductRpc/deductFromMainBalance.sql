@@ -51,8 +51,8 @@ BEGIN
     result_entities := current_entities;
     deducted_amount := 0;
     
-    -- Loop through all entities and deduct iteratively
-    FOR entity_key IN SELECT jsonb_object_keys(current_entities)
+    -- Loop through all entities and deduct iteratively (sorted for consistency with Redis)
+    FOR entity_key IN SELECT jsonb_object_keys(current_entities) ORDER BY 1
     LOOP
       EXIT WHEN remaining = 0;
       

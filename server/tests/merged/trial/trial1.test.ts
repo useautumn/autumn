@@ -1,3 +1,4 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type AppEnv,
 	AttachBranch,
@@ -5,23 +6,21 @@ import {
 	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
-import { expect } from "chai";
 import chalk from "chalk";
 import { addDays } from "date-fns";
 import type { Stripe } from "stripe";
-import { setupBefore } from "tests/before.js";
 import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { createProducts } from "tests/utils/productUtils.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
 // Premium, Premium
 // Cancel End, Cancel Immediately
@@ -65,42 +64,29 @@ describe(`${chalk.yellowBright("trial1: Testing main trial branch, upgrade from 
 	let org: Organization;
 	let env: AppEnv;
 
-	before(async function () {
-		await setupBefore(this);
-		const { autumnJs } = this;
-		db = this.db;
-		org = this.org;
-		env = this.env;
-
-		stripeCli = this.stripeCli;
-
-		addPrefixToProducts({
+	beforeAll(async () => {
+		await initProductsV0({
+			ctx,
 			products: [pro, premium],
 			prefix: testCase,
-		});
-
-		await createProducts({
-			autumn: autumnJs,
-			products: [pro, premium],
-			db,
-			orgId: org.id,
-			env,
 			customerId,
 		});
 
-		const { testClockId: testClockId1 } = await initCustomer({
-			autumn: autumnJs,
+		const res = await initCustomerV3({
+			ctx,
 			customerId,
-			db,
-			org,
-			env,
 			attachPm: "success",
+			withTestClock: true,
 		});
 
-		testClockId = testClockId1!;
+		stripeCli = ctx.stripeCli;
+		db = ctx.db;
+		org = ctx.org;
+		env = ctx.env;
+		testClockId = res.testClockId!;
 	});
 
-	it("should attach first trial, and advance clock past trial", async () => {
+	test("should attach first trial, and advance clock past trial", async () => {
 		for (const op of ops) {
 			await attachAndExpectCorrect({
 				autumn,
@@ -121,20 +107,19 @@ describe(`${chalk.yellowBright("trial1: Testing main trial branch, upgrade from 
 		});
 	});
 
-	it("should advance test clock to before trial ends and attach premium", async () => {
+	test("should advance test clock to before trial ends and attach premium", async () => {
 		curUnix = await advanceTestClock({
 			stripeCli,
 			testClockId,
 			advanceTo: addDays(new Date(), 2).getTime(),
 		});
-		// return;
 
 		const attachPreview = await autumn.attachPreview({
 			customer_id: customerId,
 			product_id: premium.id,
 		});
 
-		expect(attachPreview?.branch).to.equal(AttachBranch.MainIsTrial);
+		expect(attachPreview?.branch).toBe(AttachBranch.MainIsTrial);
 
 		await autumn.attach({
 			customer_id: customerId,
@@ -148,8 +133,10 @@ describe(`${chalk.yellowBright("trial1: Testing main trial branch, upgrade from 
 			status: CusProductStatus.Trialing,
 		});
 		const product = customer.products.find((p) => p.id === premium.id)!;
-		expect(product.current_period_end).to.be.approximately(
-			addDays(curUnix, 7).getTime(),
+		expect(product.current_period_end).toBeDefined();
+		expect(
+			Math.abs(product.current_period_end! - addDays(curUnix, 7).getTime()),
+		).toBeLessThanOrEqual(
 			1000 * 60 * 30, // 30 minutes
 		);
 
