@@ -13,6 +13,7 @@ import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDel
 import { handleInvoiceCreated } from "./webhookHandlers/handleInvoiceCreated/handleInvoiceCreated.js";
 import { handleInvoiceFinalized } from "./webhookHandlers/handleInvoiceFinalized.js";
 import { handleInvoicePaid } from "./webhookHandlers/handleInvoicePaid.js";
+import { handleInvoicePaymentAttemptRequired } from "./webhookHandlers/handleInvoicePaymentAttemptRequired.js";
 import { handleInvoiceUpdated } from "./webhookHandlers/handleInvoiceUpdated.js";
 import { handleSubCreated } from "./webhookHandlers/handleSubCreated.js";
 import { handleSubDeleted } from "./webhookHandlers/handleSubDeleted.js";
@@ -228,6 +229,18 @@ export const handleStripeWebhookEvent = async ({
 					db,
 					org,
 					data: finalizedInvoice,
+					env,
+					logger,
+				});
+				break;
+			}
+
+			case "invoice.payment_attempt_required": {
+				const invoice = event.data.object;
+				await handleInvoicePaymentAttemptRequired({
+					db,
+					org,
+					invoice,
 					env,
 					logger,
 				});
