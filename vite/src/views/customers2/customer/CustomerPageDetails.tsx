@@ -1,7 +1,6 @@
 import { faStripe } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ArrowSquareOutIcon, FingerprintIcon } from "@phosphor-icons/react";
-import { ArrowUpRightFromSquare } from "lucide-react";
 import { Button } from "@/components/v2/buttons/Button";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
@@ -10,7 +9,7 @@ import { getStripeCusLink } from "@/utils/linkUtils";
 import { useCustomerContext } from "./CustomerContext";
 
 const mutedDivClassName =
-	"py-0.5 px-1.5 bg-muted rounded-lg text-t3 text-sm flex items-center justify-center gap-1 h-6";
+	"py-0.5 px-1.5 bg-muted rounded-lg text-t3 text-sm flex items-center gap-1 h-6 max-w-48 truncate ";
 
 const placeholderText = "NULL";
 
@@ -24,15 +23,19 @@ export const CustomerPageDetails = () => {
 			<CopyButton
 				text={customer.id ?? placeholderText}
 				size="sm"
-				innerClassName="!text-sm !font-sans"
+				innerClassName="!text-sm !font-sans max-w-48 truncate"
 			/>
-			<div className={mutedDivClassName}>
-				{customer.email ?? placeholderText}
-			</div>
-			<div className={mutedDivClassName}>
-				<FingerprintIcon size={16} />
-				{customer.fingerprint ?? placeholderText}
-			</div>
+			{customer.email && (
+				<div className={mutedDivClassName}>
+					<span className="truncate">{customer.email ?? placeholderText}</span>
+				</div>
+			)}
+			{customer.fingerprint && (
+				<div className={mutedDivClassName}>
+					<FingerprintIcon size={16} />
+					{customer.fingerprint ?? placeholderText}
+				</div>
+			)}
 			{customer.processor?.id && (
 				<Button
 					variant="muted"

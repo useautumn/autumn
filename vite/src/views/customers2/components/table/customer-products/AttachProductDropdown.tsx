@@ -43,8 +43,8 @@ export function AttachProductDropdown() {
 		<DropdownMenu open={open} onOpenChange={setOpen}>
 			<DropdownMenuTrigger asChild>
 				<Button variant="primary" size="mini" className="gap-1 font-medium">
-					<PlusIcon />
-					Attach Product
+					<PlusIcon className="size-3.5" />
+					Attach Plan
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent

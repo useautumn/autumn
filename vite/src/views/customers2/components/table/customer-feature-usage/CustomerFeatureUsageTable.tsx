@@ -1,8 +1,10 @@
-import { FeatureType } from "@autumn/shared";
+import { FeatureType, type FullCustomerEntitlement } from "@autumn/shared";
+import { PuzzlePiece } from "@phosphor-icons/react";
 import { type ExpandedState, getExpandedRowModel } from "@tanstack/react-table";
 import { parseAsBoolean, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
+import UpdateCusEntitlement from "@/views/customers/customer/entitlements/UpdateCusEntitlement";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { ShowExpiredActionButton } from "../customer-products/ShowExpiredActionButton";
@@ -22,10 +24,13 @@ export function CustomerFeatureUsageTable() {
 
 	const [showExpired, setShowExpired] = useQueryState(
 		"customerFeatureUsageShowExpired",
-		parseAsBoolean.withDefault(true),
+		parseAsBoolean.withDefault(false),
 	);
 
 	const [expanded, setExpanded] = useState<ExpandedState>({});
+
+	const [selectedCusEntitlement, setSelectedCusEntitlement] =
+		useState<FullCustomerEntitlement | null>(null);
 
 	const cusEnts = useMemo(
 		() =>
@@ -93,17 +98,32 @@ export function CustomerFeatureUsageTable() {
 
 	return (
 		<>
+			<UpdateCusEntitlement
+				selectedCusEntitlement={selectedCusEntitlement}
+				setSelectedCusEntitlement={setSelectedCusEntitlement}
+			/>
 			<Table.Provider
 				config={{
 					table,
 					numberOfColumns: CustomerFeatureUsageColumns.length,
 					enableSorting,
 					isLoading,
+					onRowClick: (row) => {
+						if ("isSubRow" in row && row.isSubRow) {
+							// Handle subrow case - maybe extract parent entitlement?
+							return;
+						}
+						setSelectedCusEntitlement(row as FullCustomerEntitlement);
+						console.log(row);
+					},
 				}}
 			>
 				<Table.Container>
 					<Table.Toolbar>
-						<Table.Heading>Feature Usage</Table.Heading>
+						<Table.Heading>
+							<PuzzlePiece size={16} weight="fill" className="text-t5" />
+							Balances
+						</Table.Heading>
 						<Table.Actions>
 							<ShowExpiredActionButton
 								showExpired={showExpired}

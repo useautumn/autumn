@@ -1,3 +1,4 @@
+import { ChartBar } from "@phosphor-icons/react";
 import {
 	parseAsArrayOf,
 	parseAsInteger,
@@ -73,7 +74,10 @@ export function CustomerUsageAnalyticsTable() {
 		>
 			<Table.Container>
 				<Table.Toolbar>
-					<Table.Heading>Usage Analytics</Table.Heading>
+					<Table.Heading>
+						<ChartBar size={16} weight="fill" className="text-t5" />
+						Usage Analytics
+					</Table.Heading>
 					<Table.Actions>
 						<CustomerUsageAnalyticsSelectFeatures
 							availableFeatures={availableFeatures as string[]}
