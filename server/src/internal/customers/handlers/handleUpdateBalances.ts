@@ -258,7 +258,6 @@ export const handleUpdateBalances = async (req: any, res: any) => {
 							org,
 							cusPrices: cusPrices as any[],
 							customer,
-							properties,
 						},
 						cusEnt,
 						featureDeductions: [], // not important because not deducting credits
@@ -280,7 +279,6 @@ export const handleUpdateBalances = async (req: any, res: any) => {
 						org,
 						cusPrices: cusPrices as any[],
 						customer,
-						properties,
 					},
 				});
 			};
