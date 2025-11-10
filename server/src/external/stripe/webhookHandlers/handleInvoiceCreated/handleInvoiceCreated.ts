@@ -20,6 +20,7 @@ import { FeatureService } from "@/internal/features/FeatureService.js";
 import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
+import { deleteCachedApiCustomer } from "../../../../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import {
 	getFullStripeInvoice,
 	invoiceToSubId,
@@ -191,30 +192,20 @@ export const sendUsageAndReset = async ({
 	const cusPrices = activeProduct.customer_prices;
 	const customer = activeProduct.customer!;
 
+	const handled: boolean[] = [];
 	for (const cusPrice of cusPrices) {
 		const price = cusPrice.price;
 		const billingType = getBillingType(price.config);
 
-		if (isFixedPrice({ price })) {
-			continue;
-		}
+		if (isFixedPrice({ price })) continue;
 
 		const relatedCusEnt = getRelatedCusEnt({
 			cusPrice,
 			cusEnts,
 		});
 
-		if (!relatedCusEnt) {
-			continue;
-		}
+		if (!relatedCusEnt) continue;
 
-		// let usageBasedSub = await getUsageBasedSub({
-		//   db,
-		//   stripeCli,
-		//   subIds: activeProduct.subscription_ids || [],
-		//   feature: relatedCusEnt.entitlement.feature,
-		//   stripeSubs,
-		// });
 		const usageBasedSub = await cusProductToSub({
 			cusProduct: activeProduct,
 			stripeCli,
@@ -222,12 +213,10 @@ export const sendUsageAndReset = async ({
 
 		const subId = invoiceToSubId({ invoice });
 
-		if (!usageBasedSub || usageBasedSub.id !== subId) {
-			continue;
-		}
+		if (!usageBasedSub || usageBasedSub.id !== subId) continue;
 
 		// If trial just ended, skip
-		const { start, end } = subToPeriodStartEnd({ sub: usageBasedSub });
+		const { start } = subToPeriodStartEnd({ sub: usageBasedSub });
 
 		if (usageBasedSub.trial_end === start) {
 			logger.info(`Trial just ended, skipping usage invoice.created`);
@@ -235,7 +224,7 @@ export const sendUsageAndReset = async ({
 		}
 
 		if (billingType === BillingType.UsageInArrear) {
-			await handleUsagePrices({
+			const handledUsage = await handleUsagePrices({
 				db,
 				org,
 				invoice,
@@ -247,10 +236,12 @@ export const sendUsageAndReset = async ({
 				logger,
 				activeProduct,
 			});
+
+			handled.push(handledUsage);
 		}
 
 		if (billingType === BillingType.InArrearProrated) {
-			await handleContUsePrices({
+			const handledContUse = await handleContUsePrices({
 				db,
 				stripeCli,
 				cusEnts,
@@ -259,10 +250,12 @@ export const sendUsageAndReset = async ({
 				usageSub: usageBasedSub,
 				logger,
 			});
+
+			handled.push(handledContUse);
 		}
 
 		if (billingType === BillingType.UsageInAdvance) {
-			await handlePrepaidPrices({
+			const handledPrepaid = await handlePrepaidPrices({
 				db,
 				stripeCli,
 				cusPrice,
@@ -272,7 +265,18 @@ export const sendUsageAndReset = async ({
 				invoice,
 				logger,
 			});
+
+			handled.push(handledPrepaid);
 		}
+	}
+
+	if (handled.some((h) => Boolean(h))) {
+		await deleteCachedApiCustomer({
+			customerId: customer.id!,
+			orgId: org.id,
+			env,
+			source: `handleInvoiceCreated: ${invoice.id}`,
+		});
 	}
 };
 
@@ -312,7 +316,7 @@ export const handleInvoiceCreated = async ({
 			],
 		});
 
-		if (activeProducts.length == 0) {
+		if (activeProducts.length === 0) {
 			logger.warn(
 				`Stripe invoice.created -- no active products found (${org.slug})`,
 			);

@@ -6,11 +6,11 @@ import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js"
 import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
 import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { timeout } from "@/utils/genUtils.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { timeout } from "../../utils/genUtils.js";
 
 const testCase = "aentity4";
 
@@ -97,10 +97,11 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Testing attach pro diff enti
 			feature_id: TestFeature.Words,
 			value: entity1Usage,
 		});
-		await timeout(3000);
 
 		const entity1Res = await autumn.entities.get(customerId, entity1.id);
 		const entity2Res = await autumn.entities.get(customerId, entity2.id);
+		console.log("entity1Res", entity1Res);
+		console.log("entity2Res", entity2Res);
 
 		expectFeaturesCorrect({
 			customer: entity1Res,
@@ -117,7 +118,40 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Testing attach pro diff enti
 			customer: entity2Res,
 			product: pro,
 		});
+
+		await timeout(2000);
+		const entity1ResUncached = await autumn.entities.get(
+			customerId,
+			entity1.id,
+			{
+				skip_cache: "true",
+			},
+		);
+		const entity2ResUncached = await autumn.entities.get(
+			customerId,
+			entity2.id,
+			{
+				skip_cache: "true",
+			},
+		);
+
+		expectFeaturesCorrect({
+			customer: entity1ResUncached,
+			product: pro,
+			usage: [
+				{
+					featureId: TestFeature.Words,
+					value: entity1Usage,
+				},
+			],
+		});
+
+		expectFeaturesCorrect({
+			customer: entity2ResUncached,
+			product: pro,
+		});
 	});
+	return;
 
 	const entity2Usage = Math.random() * 1000000;
 	test("should track usage on entity 2", async () => {

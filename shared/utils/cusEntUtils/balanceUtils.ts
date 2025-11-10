@@ -18,14 +18,12 @@ export const getSummedEntityBalances = ({
 	}
 
 	return {
-		balance: Object.values(cusEnt.entities).reduce(
-			(acc, curr) => acc + curr.balance,
-			0,
-		),
-		adjustment: Object.values(cusEnt.entities).reduce(
-			(acc, curr) => acc + curr.adjustment,
-			0,
-		),
+		balance: Object.values(cusEnt.entities)
+			.reduce((acc, curr) => acc.add(curr.balance), new Decimal(0))
+			.toNumber(),
+		adjustment: Object.values(cusEnt.entities)
+			.reduce((acc, curr) => acc.add(curr.adjustment), new Decimal(0))
+			.toNumber(),
 		unused: 0,
 		count: Object.values(cusEnt.entities).length,
 	};

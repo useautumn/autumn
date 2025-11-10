@@ -12,6 +12,7 @@ import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
+import { deleteCachedApiCustomer } from "../../../../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 
 export const handleSchedulePhaseCompleted = async ({
 	req,
@@ -100,6 +101,12 @@ export const handleSchedulePhaseCompleted = async ({
 			}
 
 			// Maybe activate default product?
+			await deleteCachedApiCustomer({
+				customerId: cusProduct.internal_customer_id || "",
+				orgId: org.id,
+				env,
+				source: "handleSchedulePhaseCompleted",
+			});
 		}
 	}
 

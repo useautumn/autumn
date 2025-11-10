@@ -59,7 +59,7 @@ export const entityMatchesFeature = ({
 	feature: Feature;
 	entity: Entity;
 }) => {
-	return feature.id == entity.feature_id;
+	return feature.id === entity.feature_id;
 };
 
 export const entitlementLinkedToEntity = ({
@@ -69,7 +69,7 @@ export const entitlementLinkedToEntity = ({
 	entitlement: Entitlement;
 	entity: Entity;
 }) => {
-	return entitlement.entity_feature_id == entity.feature_id;
+	return entitlement.entity_feature_id === entity.feature_id;
 };
 
 export const isLinkedToEntity = ({
@@ -79,7 +79,7 @@ export const isLinkedToEntity = ({
 	cusEnt: FullCustomerEntitlement;
 	entity: Entity;
 }) => {
-	return cusEnt.entitlement.entity_feature_id == entity.feature_id;
+	return cusEnt.entitlement.entity_feature_id === entity.feature_id;
 };
 
 export const removeEntityFromCusEnt = async ({
@@ -127,7 +127,7 @@ export const removeEntityFromCusEnt = async ({
 	if (cusPrice) {
 		const config = cusPrice.price.config as UsagePriceConfig;
 		const billingType = getBillingType(config);
-		if (billingType == BillingType.UsageInArrear) {
+		if (billingType === BillingType.UsageInArrear) {
 			let usage = -newEntities[entity.id]?.balance;
 
 			usage = roundUsage({

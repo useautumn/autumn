@@ -7,6 +7,7 @@ import {
 	isStripeConnected,
 } from "@/internal/orgs/orgUtils.js";
 import { handleRequestError } from "@/utils/errorUtils.js";
+import type { AutumnContext } from "../../honoUtils/HonoEnv.js";
 import { handleStripeWebhookEvent } from "./handleStripeWebhookEvent.js";
 
 export const stripeWebhookRouter: Router = express.Router();
@@ -70,8 +71,6 @@ stripeWebhookRouter.post(
 			console.log("Error parsing body", error);
 		}
 
-		// event = request.body;
-
 		request.logger = request.logger.child({
 			context: {
 				context: {
@@ -88,16 +87,10 @@ stripeWebhookRouter.post(
 			},
 		});
 
-		const logger = request.logger;
-
 		try {
 			await handleStripeWebhookEvent({
+				ctx: request as AutumnContext,
 				event,
-				db,
-				org,
-				env,
-				logger,
-				req: request,
 			});
 			response.status(200).send();
 		} catch (error) {

@@ -13,6 +13,7 @@ export enum TestFeature {
 	Dashboard = "dashboard", // boolean feature
 	Messages = "messages", // single use (prepaid)
 	Users = "users", // cont use
+	Workflows = "workflows", // cont use
 	Admin = "admin", // cont use
 	AdminRights = "admin_rights", // cont use
 	Words = "words", // single use (pay per use)
@@ -25,13 +26,17 @@ export enum TestFeature {
 	Credits2 = "credits2", // credit system
 }
 
-const orgId = process.env.TESTS_ORG_ID!;
-
-export const features = {
+export const getFeatures = ({ orgId }: { orgId: string }) => ({
 	[TestFeature.Dashboard]: constructBooleanFeature({
 		featureId: TestFeature.Dashboard,
 		orgId,
 		env: AppEnv.Sandbox,
+	}),
+	[TestFeature.Workflows]: constructMeteredFeature({
+		featureId: TestFeature.Workflows,
+		orgId,
+		env: AppEnv.Sandbox,
+		usageType: FeatureUsageType.Continuous,
 	}),
 	[TestFeature.AdminRights]: constructBooleanFeature({
 		featureId: TestFeature.AdminRights,
@@ -109,4 +114,4 @@ export const features = {
 			},
 		],
 	}),
-};
+});

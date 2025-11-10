@@ -4,8 +4,6 @@ import {
 	ApiVersionClass,
 	type AppEnv,
 	type Entity,
-	type EntityExpand,
-	type EntityResponse,
 	ErrCode,
 	type Feature,
 	type FullCusProduct,
@@ -14,8 +12,6 @@ import {
 	type Organization,
 	type Subscription,
 } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { getCusWithCache } from "@/internal/customers/cusCache/getCusWithCache.js";
 import { getCusFeaturesResponse } from "@/internal/customers/cusUtils/cusFeatureResponseUtils/getCusFeaturesResponse.js";
 import { processFullCusProducts } from "@/internal/customers/cusUtils/cusProductResponseUtils/processFullCusProducts.js";
 import RecaseError from "@/utils/errorUtils.js";
@@ -98,87 +94,5 @@ export const getSingleEntityResponse = async ({
 		env,
 		products,
 		features: cusFeatures,
-	};
-};
-
-export const getEntityResponse = async ({
-	db,
-	entityIds,
-	org,
-	env,
-	customerId,
-	expand,
-	entityId,
-	withAutumnId = false,
-	apiVersion,
-	features,
-	logger,
-	skipCache = false,
-}: {
-	db: DrizzleCli;
-	entityIds: string[];
-	org: Organization;
-	env: AppEnv;
-	customerId: string;
-	expand?: EntityExpand[];
-	entityId?: string;
-	withAutumnId?: boolean;
-	apiVersion: number;
-	features: Feature[];
-	logger: any;
-	skipCache?: boolean;
-}) => {
-	const fullCus = await getCusWithCache({
-		db,
-		idOrInternalId: customerId,
-		org,
-		env,
-		expand,
-		entityId,
-		logger,
-		skipCache,
-	});
-
-	if (!fullCus) {
-		throw new RecaseError({
-			message: `Customer ${customerId} not found`,
-			code: ErrCode.CustomerNotFound,
-			statusCode: 400,
-		});
-	}
-
-	const entityResponses: EntityResponse[] = [];
-
-	for (const entityId of entityIds) {
-		const entity = fullCus.entities.find(
-			(e: Entity) => e.id === entityId || e.internal_id === entityId,
-		);
-
-		if (!entity) {
-			throw new RecaseError({
-				message: `Entity ${entityId} not found for customer ${fullCus.id}`,
-				code: ErrCode.EntityNotFound,
-				statusCode: 400,
-			});
-		}
-
-		const entityResponse = await getSingleEntityResponse({
-			entityId,
-			org,
-			env,
-			fullCus,
-			entity,
-			features,
-			withAutumnId,
-		});
-
-		entityResponses.push(entityResponse);
-	}
-
-	return {
-		entities: entityResponses,
-		customer: fullCus,
-		fullEntities: fullCus.entities,
-		invoices: fullCus.invoices,
 	};
 };

@@ -5,7 +5,6 @@ import {
 	type FullEntitlement,
 	type FullProduct,
 } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { fullCusProductToProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
@@ -18,25 +17,36 @@ import {
 	isProductUpgrade,
 } from "@/internal/products/productUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
+import { CusService } from "../../customers/CusService.js";
 
 export const getCheckPreview = async ({
-	db,
+	ctx,
 	allowed,
 	balance,
 	feature,
-	cusProducts,
-	allFeatures,
+	customerId,
+	entityId,
 }: {
-	db: DrizzleCli;
+	ctx: AutumnContext;
 	allowed: boolean;
 	balance?: number | null;
 	feature: Feature;
-	cusProducts: FullCusProduct[];
-	allFeatures: Feature[];
+	customerId: string;
+	entityId?: string;
 }) => {
-	if (allowed) {
-		return null;
-	}
+	if (allowed) return null;
+
+	const { db, org, env, features: allFeatures } = ctx;
+	const fullCus = await CusService.getFull({
+		db,
+		idOrInternalId: customerId,
+		orgId: org.id,
+		env,
+		entityId,
+	});
+
+	const cusProducts = fullCus.customer_products;
 
 	const mainCusProds = cusProducts.filter(
 		(cp: FullCusProduct) => !cp.product.is_add_on,

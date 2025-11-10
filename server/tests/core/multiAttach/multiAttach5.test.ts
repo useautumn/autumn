@@ -19,8 +19,8 @@ import { createProducts } from "tests/utils/productUtils.js";
 import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { CacheManager } from "@/external/caching/CacheManager.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { CacheManager } from "@/utils/cacheUtils/CacheManager.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
@@ -56,7 +56,7 @@ describe(`${chalk.yellowBright("multiAttach5: Testing multi attach and get custo
 	let org: Organization;
 	let env: AppEnv;
 
-	before(async function () {
+	beforeAll(async function () {
 		await setupBefore(this);
 		const { autumnJs } = this;
 		db = this.db;

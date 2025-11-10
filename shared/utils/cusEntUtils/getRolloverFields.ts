@@ -26,7 +26,7 @@ export const getRolloverFields = ({
 	if (cusEnt.entitlement.entity_feature_id) {
 		if (entityId) {
 			return rollovers.reduce(
-				(acc, rollover) => {
+				(acc: RolloverFields, rollover) => {
 					if (rollover.entities[entityId]) {
 						return {
 							balance: acc.balance + rollover.entities[entityId].balance,
@@ -51,7 +51,7 @@ export const getRolloverFields = ({
 			);
 		} else {
 			return rollovers.reduce(
-				(acc, rollover) => {
+				(acc: RolloverFields, rollover) => {
 					let newBalance = 0;
 					let newUsage = 0;
 
@@ -82,7 +82,7 @@ export const getRolloverFields = ({
 		}
 	} else {
 		return rollovers.reduce(
-			(acc, rollover) => {
+			(acc: RolloverFields, rollover) => {
 				return {
 					balance: acc.balance + rollover.balance,
 					usage: acc.usage + rollover.usage,

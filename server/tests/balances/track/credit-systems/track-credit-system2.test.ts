@@ -3,6 +3,7 @@ import { ApiVersion, type LimitedItem } from "@autumn/shared";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
 import { TestFeature } from "tests/setup/v2Features.js";
+import { timeout } from "tests/utils/genUtils.js";
 import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
@@ -101,5 +102,42 @@ describe(`${chalk.yellowBright("track-credit-system2: track metered features usi
 		expect(balance).toBe(
 			new Decimal(balanceBefore).minus(expectedCreditCost).toNumber(),
 		);
+	});
+
+	test("should reflect all deductions in non-cached customer after 2s", async () => {
+		const action1Value = 50.25;
+		const action1CreditCost = getCreditCost({
+			featureId: TestFeature.Action1,
+			creditSystem: creditFeature!,
+			amount: action1Value,
+		});
+
+		const action2Value = 33.67;
+		const action2CreditCost = getCreditCost({
+			featureId: TestFeature.Action2,
+			creditSystem: creditFeature!,
+			amount: action2Value,
+		});
+
+		const expectedBalance = new Decimal(200)
+			.minus(action1CreditCost)
+			.minus(action2CreditCost)
+			.toNumber();
+		const expectedUsage = new Decimal(action1CreditCost)
+			.plus(action2CreditCost)
+			.toNumber();
+
+		// Wait 2 seconds for DB sync
+		await timeout(2000);
+
+		// Fetch customer with skip_cache=true
+		const customer = await autumnV1.customers.get(customerId, {
+			skip_cache: "true",
+		});
+		const balance = customer.features[TestFeature.Credits].balance;
+		const usage = customer.features[TestFeature.Credits].usage;
+
+		expect(balance).toBe(expectedBalance);
+		expect(usage).toBe(expectedUsage);
 	});
 });

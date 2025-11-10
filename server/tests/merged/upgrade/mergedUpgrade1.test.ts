@@ -1,29 +1,26 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type AppEnv,
 	CusProductStatus,
 	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
-import { expect } from "chai";
 import chalk from "chalk";
 import { addWeeks } from "date-fns";
 import type { Stripe } from "stripe";
-import { setupBefore } from "tests/before.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
-import { createProducts } from "tests/utils/productUtils.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { advanceToNextInvoice } from "tests/utils/testAttachUtils/testAttachUtils.js";
-import {
-	addPrefixToProducts,
-	getBasePrice,
-} from "tests/utils/testProductUtils/testProductUtils.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
+import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
 const premium = constructProduct({
 	id: "premium",
@@ -63,45 +60,9 @@ describe(`${chalk.yellowBright("mergedUpgrade1: Testing merged subs, upgrade 1 &
 
 	let stripeCli: Stripe;
 	let testClockId: string;
-	let curUnix: number;
 	let db: DrizzleCli;
 	let org: Organization;
 	let env: AppEnv;
-
-	before(async function () {
-		await setupBefore(this);
-		const { autumnJs } = this;
-		db = this.db;
-		org = this.org;
-		env = this.env;
-
-		stripeCli = this.stripeCli;
-
-		addPrefixToProducts({
-			products: [pro, premium, premiumAnnual],
-			prefix: testCase,
-		});
-
-		await createProducts({
-			autumn: autumnJs,
-			products: [pro, premium, premiumAnnual],
-			db,
-			orgId: org.id,
-			env,
-			customerId,
-		});
-
-		const { testClockId: testClockId1 } = await initCustomer({
-			autumn: autumnJs,
-			customerId,
-			db,
-			org,
-			env,
-			attachPm: "success",
-		});
-
-		testClockId = testClockId1!;
-	});
 
 	const entities = [
 		{
@@ -116,11 +77,34 @@ describe(`${chalk.yellowBright("mergedUpgrade1: Testing merged subs, upgrade 1 &
 		},
 	];
 
-	it("should run operations", async () => {
-		await autumn.entities.create(customerId, entities);
+	beforeAll(async () => {
+		await initProductsV0({
+			ctx,
+			products: [pro, premium, premiumAnnual],
+			prefix: testCase,
+			customerId,
+		});
 
-		for (let index = 0; index < ops.length; index++) {
-			const op = ops[index];
+		const res = await initCustomerV3({
+			ctx,
+			customerId,
+
+			attachPm: "success",
+			withTestClock: true,
+		});
+
+		stripeCli = ctx.stripeCli;
+		db = ctx.db;
+		org = ctx.org;
+		env = ctx.env;
+		testClockId = res.testClockId!;
+
+		await autumn.entities.create(customerId, entities);
+	});
+
+	for (let index = 0; index < ops.length; index++) {
+		const op = ops[index];
+		test(`should attach ${op.product.id} to entity ${op.entityId}`, async () => {
 			try {
 				await attachAndExpectCorrect({
 					autumn,
@@ -138,13 +122,13 @@ describe(`${chalk.yellowBright("mergedUpgrade1: Testing merged subs, upgrade 1 &
 				);
 				throw error;
 			}
-		}
-	});
+		});
+	}
 
 	const entity1Val = 100000;
 	const entity2Val = 300000;
 
-	it("should advance test clock and upgrade entity 1 to premium, and have correct invoice", async () => {
+	test("should advance test clock and upgrade entity 1 to premium, and have correct invoice", async () => {
 		await autumn.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Words,
@@ -178,7 +162,7 @@ describe(`${chalk.yellowBright("mergedUpgrade1: Testing merged subs, upgrade 1 &
 		});
 	});
 
-	it("should advance to next invoice and have correct invoice", async () => {
+	test("should advance to next invoice and have correct invoice", async () => {
 		await advanceToNextInvoice({
 			stripeCli,
 			testClockId,
@@ -204,6 +188,6 @@ describe(`${chalk.yellowBright("mergedUpgrade1: Testing merged subs, upgrade 1 &
 		const invoice = customer.invoices[0];
 		const basePrice =
 			getBasePrice({ product: pro }) + getBasePrice({ product: premium });
-		expect(invoice.total).to.equal(basePrice + expectedTotal);
+		expect(invoice.total).toBe(basePrice + expectedTotal);
 	});
 });

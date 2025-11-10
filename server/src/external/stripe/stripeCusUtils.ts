@@ -72,7 +72,9 @@ export const createStripeCusIfNotExists = async ({
 
 		await CusService.update({
 			db,
-			internalCusId: customer.internal_id,
+			idOrInternalId: customer.internal_id,
+			orgId: org.id,
+			env,
 			update: {
 				processor: {
 					id: stripeCustomer.id,
@@ -234,7 +236,9 @@ export const attachPmToCus = async ({
 
 		await CusService.update({
 			db,
-			internalCusId: customer.internal_id,
+			idOrInternalId: customer.internal_id,
+			orgId: org.id,
+			env,
 			update: {
 				processor: {
 					id: stripeCustomer.id,

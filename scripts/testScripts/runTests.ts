@@ -2,9 +2,13 @@
 
 import { spawn } from "bun";
 import chalk from "chalk";
+import dotenv from "dotenv";
 import { readdir } from "fs/promises";
 import pLimit from "p-limit";
 import { basename, resolve } from "path";
+
+// Load environment variables from server/.env
+dotenv.config({ path: resolve(process.cwd(), "server", ".env") });
 
 interface TestResult {
 	file: string;
@@ -342,6 +346,7 @@ class TestRunner {
 			const proc = spawn(["bun", "test", "--timeout", "0", file], {
 				stdout: "pipe",
 				stderr: "pipe",
+				env: { ...process.env },
 			});
 
 			let output = "";

@@ -95,11 +95,14 @@ export const cusEntToIncludedUsage = ({
 
 export const cusEntToUsageLimit = ({
 	cusEnt,
+	entityId,
 }: {
 	cusEnt: FullCusEntWithFullCusProduct;
+	entityId?: string;
 }) => {
 	const startingBalance = cusEntToIncludedUsage({
 		cusEnt,
+		entityId,
 	});
 
 	if (cusEnt.entitlement.usage_limit) return cusEnt.entitlement.usage_limit;

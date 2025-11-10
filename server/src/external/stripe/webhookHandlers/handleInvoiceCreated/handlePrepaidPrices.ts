@@ -36,13 +36,11 @@ export const handlePrepaidPrices = async ({
 	customer: Customer;
 	invoice: Stripe.Invoice;
 	logger: any;
-}) => {
+}): Promise<boolean> => {
 	const { start, end } = subToPeriodStartEnd({ sub: usageSub });
 	const isNewPeriod = invoice.period_start !== start;
 
-	if (!isNewPeriod) {
-		return;
-	}
+	if (!isNewPeriod) return false;
 
 	const cusEnt = getRelatedCusEnt({
 		cusPrice,
@@ -53,7 +51,7 @@ export const handlePrepaidPrices = async ({
 		logger.error(
 			`Tried to handle prepaid price for ${cusPrice.id} (${cusPrice.price.id}) but no cus ent found`,
 		);
-		return;
+		return false;
 	}
 
 	const options = getEntOptions(cusProduct.options, cusEnt.entitlement);
@@ -85,7 +83,7 @@ export const handlePrepaidPrices = async ({
 
 	if (notNullish(options?.upcoming_quantity)) {
 		const newOptions = cusProduct.options.map((o) => {
-			if (o.feature_id == ent.feature_id) {
+			if (o.feature_id === ent.feature_id) {
 				return {
 					...o,
 					quantity: o.upcoming_quantity,
@@ -103,19 +101,19 @@ export const handlePrepaidPrices = async ({
 			},
 		});
 
-		if (ent.interval == EntInterval.Lifetime) {
+		if (ent.interval === EntInterval.Lifetime) {
 			const difference = options?.quantity! - options?.upcoming_quantity!;
 			await CusEntService.decrement({
 				db,
 				id: cusEnt.id,
 				amount: difference,
 			});
-			return;
+			return true;
 		}
 	}
 
-	if (ent.interval == EntInterval.Lifetime) {
-		return;
+	if (ent.interval === EntInterval.Lifetime) {
+		return false;
 	}
 
 	if (rolloverUpdate?.toInsert && rolloverUpdate.toInsert.length > 0) {
@@ -134,4 +132,6 @@ export const handlePrepaidPrices = async ({
 			next_reset_at: end * 1000,
 		},
 	});
+
+	return true;
 };

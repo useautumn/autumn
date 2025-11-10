@@ -5,6 +5,7 @@ import {
 	type Entity,
 	type FullCusProduct,
 	type Organization,
+	orgToInStatuses,
 } from "@autumn/shared";
 import { balancesToFeatureResponse } from "./balancesToFeatureResponse.js";
 import { getCusBalances } from "./getCusBalances.js";
@@ -20,7 +21,10 @@ export const getCusFeaturesResponse = async ({
 	entity?: Entity;
 	apiVersion: ApiVersionClass;
 }) => {
-	const cusEnts = cusProductsToCusEnts({ cusProducts }) as any;
+	const cusEnts = cusProductsToCusEnts({
+		cusProducts,
+		inStatuses: orgToInStatuses({ org }),
+	}) as any;
 
 	const balances = await getCusBalances({
 		cusEntsWithCusProduct: cusEnts,

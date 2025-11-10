@@ -20,6 +20,10 @@ export const CustomerDataSchema = z
 		stripe_id: z.string().nullish().meta({
 			description: "Stripe customer ID if you already have one",
 		}),
+		disable_default: z.boolean().optional().meta({
+			description:
+				"Disable default products from being attached to the customer",
+		}),
 	})
 	.meta({
 		id: "CustomerData",

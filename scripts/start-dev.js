@@ -140,8 +140,9 @@ async function startDev() {
 			console.log("\n🌐 Using remote backend (api.useautumn.com)");
 			console.log("⏭️  Skipping port cleanup...\n");
 		} else {
-			// Check and kill processes on ports 3000 and 8080 if needed
-			await handlePorts();
+			// Port cleanup disabled (detection is unreliable)
+			console.log("⏭️  Skipping port cleanup...\n");
+			// await handlePorts();
 		}
 
 		// Step 1: Build shared package first (initial build)
@@ -164,6 +165,19 @@ async function startDev() {
 		});
 
 		console.log("\n✅ Shared package built successfully!\n");
+
+		// Clear Vite cache to prevent dep optimization issues
+		const viteCachePath = path.join(
+			projectRoot,
+			"vite",
+			"node_modules",
+			".vite",
+		);
+		if (fs.existsSync(viteCachePath)) {
+			console.log("🧹 Clearing Vite cache...\n");
+			fs.rmSync(viteCachePath, { recursive: true, force: true });
+		}
+
 		console.log("🚀 Starting development servers in watch mode...\n");
 
 		// Step 2: Start server, workers, and vite first (they'll use the built shared package)

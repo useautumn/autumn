@@ -43,15 +43,29 @@ export const ApiCusFeatureBreakdownSchema = z.object({
 		description: "The maximum usage allowed",
 		example: 1000,
 	}),
-	rollovers: z.array(ApiCusRolloverSchema).nullish().meta({
-		description: "Array of rollover balances from previous periods",
-		example: [{ balance: 100, expires_at: 1759247877000 }],
+	overage_allowed: z.boolean().nullish().meta({
+		description: "Whether overage usage beyond the limit is allowed",
+		example: true,
 	}),
+	rollovers: z
+		.array(ApiCusRolloverSchema)
+		.nullish()
+		.meta({
+			description: "Array of rollover balances from previous periods",
+			example: [{ balance: 100, expires_at: 1759247877000 }],
+		}),
+	entity_breakdown: z
+		.object({
+			master: z.number(),
+			entities: z.number(),
+		})
+		.optional(),
 });
 
 export const CoreCusFeatureSchema = z.object({
 	interval: z.enum(EntInterval).or(z.literal("multiple")).nullish().meta({
-		description: "The billing interval or 'multiple' if the feature has multiple intervals",
+		description:
+			"The billing interval or 'multiple' if the feature has multiple intervals",
 		example: "month",
 	}),
 	interval_count: z.number().nullish().meta({
@@ -83,10 +97,16 @@ export const CoreCusFeatureSchema = z.object({
 		example: true,
 	}),
 
-	breakdown: z.array(ApiCusFeatureBreakdownSchema).nullish().meta({
-		description: "Detailed breakdown by interval for features with multiple intervals",
-		example: [{ interval: "month", interval_count: 1, balance: 500, usage: 250 }],
-	}),
+	breakdown: z
+		.array(ApiCusFeatureBreakdownSchema)
+		.nullish()
+		.meta({
+			description:
+				"Detailed breakdown by interval for features with multiple intervals",
+			example: [
+				{ interval: "month", interval_count: 1, balance: 500, usage: 250 },
+			],
+		}),
 	credit_schema: z
 		.array(
 			z.object({
@@ -110,10 +130,20 @@ export const CoreCusFeatureSchema = z.object({
 		description: "The maximum usage allowed",
 		example: 1000,
 	}),
-	rollovers: z.array(ApiCusRolloverSchema).nullish().meta({
-		description: "Array of rollover balances from previous periods",
-		example: [{ balance: 100, expires_at: 1759247877000 }],
-	}),
+	rollovers: z
+		.array(ApiCusRolloverSchema)
+		.nullish()
+		.meta({
+			description: "Array of rollover balances from previous periods",
+			example: [{ balance: 100, expires_at: 1759247877000 }],
+		}),
+
+	entity_breakdown: z
+		.object({
+			master: z.number(),
+			entities: z.number(),
+		})
+		.optional(),
 });
 
 export const ApiCusFeatureSchema = z

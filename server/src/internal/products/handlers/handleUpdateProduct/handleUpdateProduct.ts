@@ -73,13 +73,16 @@ export const handleUpdateProductV2 = createRoute({
 			features,
 		});
 
-		const newFreeTrial = body.free_trial as FreeTrial | undefined;
+		const newFreeTrial =
+			"free_trial" in body
+				? (body.free_trial as FreeTrial | undefined)
+				: curProductV2.free_trial;
 		const newProductV2: ProductV2 = {
 			...curProductV2,
 			...body,
 			group: body.group || curProductV2.group || "",
 			items: body.items || [],
-			free_trial: "free_trial" in body ? newFreeTrial : curProductV2.free_trial,
+			free_trial: newFreeTrial,
 		};
 
 		await disableCurrentDefault({
@@ -91,8 +94,7 @@ export const handleUpdateProductV2 = createRoute({
 			db,
 			curProduct: fullProduct,
 			newProduct: UpdateProductSchema.parse(body),
-			newFreeTrial:
-				"free_trial" in body ? body.free_trial : curProductV2.free_trial,
+			newFreeTrial: newFreeTrial || undefined,
 			items: body.items || curProductV2.items,
 			org,
 			rewardPrograms,

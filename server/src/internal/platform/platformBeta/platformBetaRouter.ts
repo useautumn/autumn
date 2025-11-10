@@ -2,6 +2,7 @@ import { Autumn } from "autumn-js";
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleCreatePlatformOrg } from "./handlers/handleCreatePlatformOrg.js";
+import { handleDeletePlatformOrg } from "./handlers/handleDeletePlatformOrg.js";
 import { handleGetPlatformOAuth } from "./handlers/handleGetPlatformOAuth.js";
 import { handleListPlatformOrgs } from "./handlers/handleListPlatformOrgs.js";
 import { listPlatformUsers } from "./handlers/handleListPlatformUsers.js";
@@ -86,4 +87,11 @@ platformBetaRouter.post(
 platformBetaRouter.get("/users", ...listPlatformUsers);
 
 platformBetaRouter.get("/organizations", ...handleListPlatformOrgs);
+
+/**
+ * DELETE /organizations
+ * Deletes a platform organization by slug
+ */
+platformBetaRouter.delete("/organizations", ...handleDeletePlatformOrg);
+
 export { platformBetaRouter };

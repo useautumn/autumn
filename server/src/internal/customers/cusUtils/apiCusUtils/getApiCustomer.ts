@@ -7,8 +7,7 @@ import {
 	type FullCustomer,
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
-import { getApiCusProducts } from "./getApiCusProduct/getApiCusProducts.js";
-import { getApiCustomerBase } from "./getApiCustomerBase.js";
+import { getCachedApiCustomer } from "../apiCusCacheUtils/getCachedApiCustomer.js";
 import { getApiCustomerExpand } from "./getApiCustomerExpand.js";
 
 /**
@@ -16,27 +15,50 @@ import { getApiCustomerExpand } from "./getApiCustomerExpand.js";
  */
 export const getApiCustomer = async ({
 	ctx,
-	fullCus,
 	expand,
 	withAutumnId = false,
+	customerId,
+	fullCus,
+	skipCache = false,
+	baseData,
 }: {
 	ctx: RequestContext;
-	fullCus: FullCustomer;
 	expand: CusExpand[];
 	withAutumnId?: boolean;
+	customerId?: string;
+	fullCus?: FullCustomer;
+	skipCache?: boolean;
+	baseData?: { apiCustomer: ApiCustomer; legacyData: CustomerLegacyData };
 }) => {
-	// Get base customer (cacheable)
-	const baseCustomer = await getApiCustomerBase({
-		ctx,
-		fullCus,
-		withAutumnId,
-	});
+	let baseCustomer: ApiCustomer;
+	let cusLegacyData: CustomerLegacyData;
+
+	if (!baseData) {
+		const { apiCustomer, legacyData } = await getCachedApiCustomer({
+			ctx,
+			customerId: customerId || "",
+			skipCache,
+		});
+		baseCustomer = apiCustomer;
+		cusLegacyData = legacyData;
+	} else {
+		baseCustomer = baseData.apiCustomer;
+		cusLegacyData = baseData.legacyData;
+	}
+
+	// Clean api customer
+	baseCustomer = {
+		...baseCustomer,
+		entities: undefined,
+		autumn_id: withAutumnId ? baseCustomer.autumn_id : undefined,
+	};
 
 	// Get expand fields (not cacheable)
 	const apiCusExpand = await getApiCustomerExpand({
 		ctx,
-		fullCus,
+		customerId,
 		expand,
+		fullCus,
 	});
 
 	// Merge expand fields
@@ -45,17 +67,9 @@ export const getApiCustomer = async ({
 		...apiCusExpand,
 	};
 
-	// Get legacy data for version changes
-	const { legacyData: cusProductLegacyData } = await getApiCusProducts({
-		ctx,
-		fullCus,
-	});
-
 	return applyResponseVersionChanges<ApiCustomer, CustomerLegacyData>({
 		input: apiCustomer,
-		legacyData: {
-			cusProductLegacyData,
-		},
+		legacyData: cusLegacyData,
 		targetVersion: ctx.apiVersion,
 		resource: AffectedResource.Customer,
 	});

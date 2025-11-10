@@ -1,4 +1,4 @@
-import type { EventInsert, FullCustomer } from "@autumn/shared";
+import type { EventInsert } from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { generateId } from "../../../../utils/genUtils.js";
 
@@ -10,13 +10,24 @@ export type EventInfo = {
 	idempotency_key?: string;
 };
 
-export const constructEvent = async (params: {
+export const constructEvent = (params: {
 	ctx: AutumnContext;
 	eventInfo: EventInfo;
-	fullCus: FullCustomer;
+	internalCustomerId: string;
+	internalEntityId?: string;
+	customerId: string;
+	entityId?: string;
 }) => {
-	const { ctx, eventInfo, fullCus } = params;
-	const { db, org, env, logger } = ctx;
+	const {
+		ctx,
+		eventInfo,
+		internalCustomerId,
+		internalEntityId,
+		customerId,
+		entityId,
+	} = params;
+
+	const { org, env } = ctx;
 
 	const timestampDate = eventInfo.timestamp
 		? new Date(eventInfo.timestamp)
@@ -28,10 +39,10 @@ export const constructEvent = async (params: {
 		org_slug: org.slug,
 		env: env,
 
-		internal_customer_id: fullCus.internal_id,
-		customer_id: fullCus.id || "",
-		internal_entity_id: fullCus.entity?.internal_id,
-		entity_id: fullCus.entity?.id,
+		internal_customer_id: internalCustomerId,
+		customer_id: customerId,
+		internal_entity_id: internalEntityId,
+		entity_id: entityId,
 
 		event_name: eventInfo.event_name,
 		created_at: timestampDate.getTime(),
@@ -39,6 +50,7 @@ export const constructEvent = async (params: {
 		value: eventInfo.value ?? 1,
 		properties: eventInfo.properties ?? {},
 		idempotency_key: eventInfo.idempotency_key ?? null,
+		set_usage: false,
 	} satisfies EventInsert;
 
 	return newEvent;

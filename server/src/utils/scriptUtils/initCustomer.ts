@@ -11,7 +11,6 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 import {
 	attachPmToCus,
 	createStripeCustomer,
@@ -39,7 +38,9 @@ export const createCusInStripe = async ({
 
 	await CusService.update({
 		db,
-		internalCusId: customer.internal_id,
+		idOrInternalId: customer.internal_id,
+		orgId: org.id,
+		env,
 		update: {
 			processor: {
 				type: ProcessorType.Stripe,
@@ -80,6 +81,7 @@ export const initCustomer = async ({
 		name: customerId,
 		email: `${customerId}@example.com`,
 		fingerprint,
+		metadata: {},
 	};
 
 	const customer = await CusService.get({
@@ -91,12 +93,6 @@ export const initCustomer = async ({
 
 	if (customer) {
 		await autumn.customers.delete(customerId);
-		await deleteCusCache({
-			db,
-			customerId: customerId,
-			org,
-			env: env,
-		});
 	}
 
 	try {
@@ -231,6 +227,7 @@ export const initCustomerV2 = async ({
 		email,
 		fingerprint: customerData?.fingerprint || undefined,
 		stripe_id: stripeCus.id,
+		metadata: {},
 	});
 
 	// 3. Attach payment method

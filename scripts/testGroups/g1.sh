@@ -14,21 +14,26 @@ fi
 
 # Run tests using TypeScript runner with compact mode
 # Adjust --max to control concurrency (default: 6)
+# BUN_PARALLEL_COMPACT \
+#   'server/tests/balances/track/basic' \
+#   'server/tests/balances/track/concurrency' \
+#   'server/tests/balances/track/allocated' \
+#   'server/tests/balances/track/credit-systems' \
+#   'server/tests/balances/track/entity-balances' \
+#   'server/tests/balances/track/entity-products' \
+#   'server/tests/balances/track/legacy' \
+#   'server/tests/balances/check/basic' \
+#   'server/tests/balances/check/credit-systems' \
+#   'server/tests/balances/check/misc' \
+
 BUN_PARALLEL_COMPACT \
-  'server/tests/balances/track/basic' \
-  'server/tests/balances/track/concurrency' \
-  'server/tests/balances/track/credit-systems' \
-  'server/tests/balances/track/legacy' \
-  'server/tests/balances/check/basic' \
-  'server/tests/balances/check/credit-systems' \
-  # 'server/tests/attach/basic' \
-  # 'server/tests/attach/upgrade' \
-  # 'server/tests/attach/downgrade' \
-  # 'server/tests/attach/free' \
-  # 'server/tests/attach/addOn' \
-  # 'server/tests/attach/entities' \
-  # 'server/tests/attach/checkout' \
-  # --max=6 \
-
-
-
+  'server/tests/attach/basic' \
+  'server/tests/attach/entities' \
+  'server/tests/attach/upgrade' \
+  'server/tests/attach/downgrade' \
+  'server/tests/attach/free' \
+  'server/tests/attach/addOn' \
+  'server/tests/attach/entities' \
+  'server/tests/attach/checkout' \
+  'server/tests/attach/misc' \
+  --max=6 \

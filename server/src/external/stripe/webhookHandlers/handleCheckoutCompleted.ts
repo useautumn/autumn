@@ -220,7 +220,9 @@ export const handleCheckoutSessionCompleted = async ({
 	if (updates.name || updates.email) {
 		await CusService.update({
 			db,
-			internalCusId: attachParams.customer.internal_id,
+			idOrInternalId: attachParams.customer.internal_id,
+			orgId: org.id,
+			env,
 			update: updates,
 		});
 	}
