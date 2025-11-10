@@ -15,8 +15,11 @@
 	},
 	"type": "module",
 	"scripts": {
-		"dev": "node scripts/start-dev.js",
-		"dev:simple": "concurrently \"cd shared && bun dev:watch\" \"cd server && bun dev\" \"cd server && bun workers:dev\" \"cd vite && bun dev\"",
+		"dev": "bun scripts/start-dev.js",
+
+		"d": "ENV_FILE=.env infisical run --env=dev -- bun scripts/start-dev.js",
+		"p": "ENV_FILE=.env.prod infisical run --env=prod -- bun scripts/start-dev.js",
+
 		"vite:build": "bun -F @autumn/shared build && bun -F @autumn/vite build:bun",
 		"vite:start": "bun -F @autumn/vite start:bun",
 		"shared": "bun -F @autumn/shared build",
