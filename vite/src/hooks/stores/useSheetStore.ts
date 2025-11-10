@@ -7,6 +7,7 @@ export type SheetType =
 	| "edit-feature"
 	| "new-feature"
 	| "select-feature"
+	| "attach-product"
 	| null;
 
 // Store state interface
@@ -56,6 +57,8 @@ export const useIsEditingFeature = () =>
 	useSheetStore((s) => s.type === "edit-feature");
 export const useIsCreatingFeature = () =>
 	useSheetStore((s) => s.type === "new-feature" || s.itemId === "new");
+export const useIsAttachingProduct = () =>
+	useSheetStore((s) => s.type === "attach-product");
 
 /**
  * Hook to handle Escape key to close sheet and unfocus active elements
