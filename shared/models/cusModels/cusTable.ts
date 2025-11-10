@@ -8,20 +8,15 @@ import {
 	unique,
 } from "drizzle-orm/pg-core";
 import { collatePgColumn } from "../../db/utils.js";
+import type {
+	ExternalProcessors,
+	VercelProcessor,
+} from "../genModels/processorSchemas.js";
 import { organizations } from "../orgModels/orgTable.js";
 
 export type CustomerProcessor = {
 	type: "stripe";
 	id: string;
-};
-
-export type ExternalProcessors = {
-	vercel?: VercelProcessor;
-};
-
-export type VercelProcessor = {
-	installation_id: string;
-	access_token: string;
 };
 
 export const customers = pgTable(
