@@ -20,6 +20,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { AdditionalOptions } from "../../plan/components/edit-plan-details/AdditionalOptions";
 import { BasePriceSection } from "../../plan/components/edit-plan-details/BasePriceSection";
+import { PriceTypeSection } from "../../plan/components/edit-plan-details/PriceTypeSection";
 import { DEFAULT_PRODUCT } from "../../plan/utils/defaultProduct";
 import { CreateProductMainDetails } from "./CreateProductMainDetails";
 
@@ -71,9 +72,7 @@ function CreateProductSheet({
 			}
 			setOpen(false);
 		} catch (error) {
-			toast.error(
-				getBackendErr(error as AxiosError, "Failed to create plan"),
-			);
+			toast.error(getBackendErr(error as AxiosError, "Failed to create plan"));
 		}
 		setLoading(false);
 	};
@@ -99,12 +98,14 @@ function CreateProductSheet({
 			</SheetTrigger>
 			<SheetContent className="flex flex-col overflow-hidden">
 				<SheetHeader
-					title="Create new plan"
-					description="Configure your plan details and pricing"
+					title="Create Plan"
+					description="Create a new free or paid plan for your application"
+					noSeparator={true}
 				/>
 
 				<div className="flex-1 overflow-y-auto">
 					<CreateProductMainDetails />
+					<PriceTypeSection />
 					<BasePriceSection />
 					<AdditionalOptions withSeparator={false} />
 				</div>
