@@ -1,4 +1,5 @@
 import type { Invoice } from "@autumn/shared";
+import { Receipt } from "@phosphor-icons/react";
 import { getPaginationRowModel } from "@tanstack/react-table";
 import { useMemo } from "react";
 import { Table } from "@/components/general/table";
@@ -51,7 +52,10 @@ export function CustomerInvoicesTable() {
 		>
 			<Table.Container>
 				<Table.Toolbar>
-					<Table.Heading>Invoices</Table.Heading>
+					<Table.Heading>
+						<Receipt size={16} weight="fill" className="text-t5" />
+						Invoices
+					</Table.Heading>
 					<Table.Actions>
 						<CustomerInvoicesShowAllButton />
 					</Table.Actions>

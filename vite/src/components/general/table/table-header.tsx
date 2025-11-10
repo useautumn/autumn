@@ -74,7 +74,10 @@ export function TableHeader({ className }: { className?: string }) {
 	return (
 		<ShadcnTableHeader className={className}>
 			{headerGroups.map((headerGroup) => (
-				<TableRow className="hover:bg-transparent" key={headerGroup.id}>
+				<TableRow
+					className="hover:bg-transparent border-b border-border-table"
+					key={headerGroup.id}
+				>
 					{enableSelection && table && (
 						<TableHead className="w-[50px]">
 							<Checkbox
@@ -89,7 +92,7 @@ export function TableHeader({ className }: { className?: string }) {
 					{headerGroup.headers.map((header, index) => (
 						<TableHead
 							className={cn(
-								"h-6 p-2 font-medium text-t3",
+								"h-7 px-2 font-medium text-t4 text-tiny",
 								index === 0 && "pl-4",
 							)}
 							key={header.id}

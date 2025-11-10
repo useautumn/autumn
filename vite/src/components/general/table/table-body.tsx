@@ -10,7 +10,7 @@ import SmallSpinner from "../SmallSpinner";
 import { useTableContext } from "./table-context";
 
 export function TableBody() {
-	const { table, numberOfColumns, enableSelection, isLoading } =
+	const { table, numberOfColumns, enableSelection, isLoading, onRowClick } =
 		useTableContext();
 	const rows = table.getRowModel().rows;
 
@@ -18,7 +18,7 @@ export function TableBody() {
 		return (
 			<ShadcnTableBody>
 				<TableRow>
-					<TableCell className="h-24 text-center" colSpan={numberOfColumns}>
+					<TableCell className="h-16 text-center" colSpan={numberOfColumns}>
 						{isLoading ? (
 							<div className="flex justify-center items-center">
 								<SmallSpinner />
@@ -33,12 +33,13 @@ export function TableBody() {
 	}
 
 	return (
-		<ShadcnTableBody className="divide-y divide-stone-200">
+		<ShadcnTableBody className="divide-y divide-border-table">
 			{rows.map((row) => (
 				<TableRow
-					className={cn("h-14 py-4 hover:bg-muted/50 text-t3")}
+					className={cn("h-16 py-4 hover:bg-muted/50 text-t3")}
 					data-state={row.getIsSelected() && "selected"}
 					key={row.id}
+					onClick={() => onRowClick?.(row.original)}
 				>
 					{enableSelection && (
 						<TableCell className="w-[50px]">

@@ -22,7 +22,7 @@ export const CustomerProductsColumns = [
 		displayKey: "product_id",
 	}),
 	{
-		header: "Stauts",
+		header: "Status",
 		accessorKey: "status",
 		cell: ({ row }: { row: Row<FullCusProduct> }) => {
 			return <CustomerProductsStatus status={row.original.status} />;
