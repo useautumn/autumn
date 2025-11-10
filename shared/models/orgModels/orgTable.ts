@@ -8,6 +8,7 @@ import {
 	timestamp,
 	unique,
 } from "drizzle-orm/pg-core";
+import type { ProcessorConfigs } from "../genModels/processorSchemas.js";
 import type { OrgConfig } from "./orgConfig.js";
 
 export type SvixConfig = {
@@ -37,16 +38,6 @@ export type StripeConnectConfig = {
 	default_account_id?: string;
 	account_id?: string;
 	master_org_id?: string;
-};
-
-export type VercelProcessorConfig = {
-	client_integration_id: string;
-	client_secret: string;
-	webhook_url: string;
-};
-
-export type ProcessorConfigs = {
-	vercel?: VercelProcessorConfig;
 };
 
 export const organizations = pgTable(
