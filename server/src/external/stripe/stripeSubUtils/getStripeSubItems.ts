@@ -251,7 +251,7 @@ export const getStripeSubItems2 = async ({
 		let existingUsage = getExistingUsageFromCusProducts({
 			entitlement: priceEnt,
 			cusProducts,
-			entities: customer.entities,
+			entities: customer.entities ?? [],
 			carryExistingUsages: config.carryUsage,
 			internalEntityId,
 		});
