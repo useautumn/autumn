@@ -1,28 +1,31 @@
 import {
-	DialogTrigger,
-	DialogTitle,
-	DialogHeader,
-	DialogFooter,
-} from "@/components/ui/dialog";
-import { DialogContent } from "@/components/ui/dialog";
-import { Dialog } from "@/components/ui/dialog";
-import { FullCusProduct, FullCustomerEntitlement } from "@autumn/shared";
+	type FullCusProduct,
+	type FullCustomerEntitlement,
+	getCusEntBalance,
+} from "@autumn/shared";
+import { AlertCircle, Info, InfoIcon } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useCustomerContext } from "../CustomerContext";
+import { toast } from "sonner";
+import CopyButton from "@/components/general/CopyButton";
+import { DateInputUnix } from "@/components/general/DateInputUnix";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { Input } from "@/components/ui/input";
 
 import { Button } from "@/components/ui/button";
-
-import { DateInputUnix } from "@/components/general/DateInputUnix";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { CusService } from "@/services/customers/CusService";
-import { toast } from "sonner";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, notNullish } from "@/utils/genUtils";
-import CopyButton from "@/components/general/CopyButton";
-import { AlertCircle, Info, InfoIcon } from "lucide-react";
+// import { useCustomerContext } from "../../customers2/customer/CustomerContext";
+import { useCustomerContext } from "../../../customers2/customer/CustomerContext";
 import { useCusQuery } from "../hooks/useCusQuery";
-import { getCusEntBalance } from "@autumn/shared";
 
 function UpdateCusEntitlement({
 	selectedCusEntitlement,

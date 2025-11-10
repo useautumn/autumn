@@ -25,7 +25,7 @@ export function CustomerUsageAnalyticsChart({
 	return (
 		<ChartContainer
 			config={chartConfig}
-			className="max-h-[300px] border pl-0 mb-4 p-2 rounded-2xl"
+			className="max-h-[300px] border border-border-table pl-0 mb-4 p-2 rounded-2xl"
 		>
 			<BarChart
 				accessibilityLayer
@@ -35,7 +35,7 @@ export function CustomerUsageAnalyticsChart({
 			>
 				<CartesianGrid
 					vertical={false}
-					className="fill-white dark:fill-gray-900"
+					className="fill-white dark:fill-gray-900 "
 				/>
 				<XAxis
 					dataKey="date"

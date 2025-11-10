@@ -1,4 +1,5 @@
 import type { FullCusProduct } from "@autumn/shared";
+import { Cube } from "@phosphor-icons/react";
 import { parseAsBoolean, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
@@ -17,7 +18,7 @@ export function CustomerProductsTable() {
 
 	const [showExpired, setShowExpired] = useQueryState(
 		"customerProductsShowExpired",
-		parseAsBoolean.withDefault(true),
+		parseAsBoolean.withDefault(false),
 	);
 
 	const [cancelOpen, setCancelOpen] = useState(false);
@@ -32,7 +33,7 @@ export function CustomerProductsTable() {
 		() =>
 			filterCustomerProducts({
 				customer,
-				showExpired: showExpired ?? true,
+				showExpired: showExpired ?? false,
 			}),
 		[customer, showExpired],
 	);
@@ -80,7 +81,10 @@ export function CustomerProductsTable() {
 			>
 				<Table.Container>
 					<Table.Toolbar>
-						<Table.Heading>Attached Products</Table.Heading>
+						<Table.Heading>
+							<Cube size={16} weight="fill" className="text-t5" />
+							Plans
+						</Table.Heading>
 						<Table.Actions>
 							<ShowExpiredActionButton
 								showExpired={showExpired}
