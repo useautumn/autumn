@@ -220,7 +220,10 @@ export const CustomerFeatureUsageColumns = [
 				<div className="flex justify-end pr-4">
 					<button
 						type="button"
-						onClick={row.getToggleExpandedHandler()}
+						onClick={(e) => {
+							e.stopPropagation();
+							row.getToggleExpandedHandler()(e);
+						}}
 						className="text-t3 hover:text-t2"
 					>
 						{isExpanded ? (
