@@ -6,6 +6,7 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import type { IconButtonProps } from "./IconButton";
 import { IconButton } from "./IconButton";
 
@@ -13,11 +14,13 @@ interface CopyButtonProps extends IconButtonProps {
 	children?: React.ReactNode;
 	side?: "top" | "bottom" | "left" | "right";
 	text: string;
+	innerClassName?: string;
 }
 
 export const CopyButton = ({
 	text,
 	side = "right",
+	innerClassName = "",
 	...props
 }: CopyButtonProps) => {
 	const [copied, setCopied] = useState(false);
@@ -48,7 +51,7 @@ export const CopyButton = ({
 						onClick={handleCopy}
 						icon={<CopyIcon className="size-3.5" />}
 					>
-						<span className="text-tiny-id">{text}</span>
+						<span className={cn("text-tiny-id", innerClassName)}>{text}</span>
 					</IconButton>
 				</TooltipTrigger>
 				<TooltipContent
