@@ -1,15 +1,12 @@
 import {
-	pgTable,
+	bigint,
 	boolean,
 	foreignKey,
-	text,
-	bigint,
 	index,
+	pgTable,
+	text,
 } from "drizzle-orm/pg-core";
-
-import { collatePgColumn } from "../../../db/utils.js";
 import { customerEntitlements } from "./cusEntTable.js";
-import { createInsertSchema } from "drizzle-zod";
 
 export const replaceables = pgTable(
 	"replaceables",
@@ -30,8 +27,5 @@ export const replaceables = pgTable(
 	],
 ).enableRLS();
 
-collatePgColumn(replaceables.id, "C");
-
-export const InsertReplaceableSchema = createInsertSchema(replaceables);
 export type Replaceable = typeof replaceables.$inferSelect;
 export type InsertReplaceable = typeof replaceables.$inferInsert;
